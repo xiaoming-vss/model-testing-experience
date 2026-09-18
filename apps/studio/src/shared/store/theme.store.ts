@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 
+// Keep the legacy storage key so existing MTX users retain their saved state.
 export const THEME_KEY = 'testpilot_theme_mode'
 
 export type ThemeMode = 'light' | 'dark'

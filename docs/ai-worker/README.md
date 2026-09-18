@@ -1,8 +1,8 @@
-# Testing Agent AI Worker
+# MTX AI Worker
 
 > 文档统一维护于此；以下项目命令在仓库根目录的 `apps/ai-worker/` 中执行。整套平台的配置与部署见 [统一部署指南](../deployment.md)。
 
-`testing-agent-ai-worker` is a polling-based Python worker that generates API,
+`mtx-ai-worker` is a polling-based Python worker that generates API,
 functional, and UI test cases, requirement analysis results, and test reports
 for the testing agent platform.
 
@@ -78,13 +78,13 @@ $env:PYTHONPATH = "src"
 Run the two-step nanobot chain demo:
 
 ```powershell
-uv run testing-agent-ai-chain-demo --openapi-json-path "D:\tmp\openapi.json"
+uv run mtx-ai-chain-demo --openapi-json-path "D:\tmp\openapi.json"
 ```
 
 Create local configuration with `python3 ../../scripts/manage.py configure --mode local` from this project directory (or copy `config/worker.example.toml` to `config/worker.toml` for standalone use), then run the worker:
 
 ```powershell
-uv run testing-agent-ai-worker
+uv run mtx-ai-worker
 ```
 
 Before connecting to a platform, provide runtime values through environment
@@ -104,7 +104,7 @@ Never commit provider API keys or worker tokens.
 Build the production image from the repository root:
 
 ```powershell
-docker build --tag testing-agent-ai-worker:dev .
+docker build --tag mtx/ai-worker:local .
 ```
 
 Run the worker with platform configuration supplied at runtime. The platform
@@ -113,14 +113,16 @@ URL must be reachable from inside the container; on Docker Desktop, use
 
 ```powershell
 docker run --detach `
-  --name testing-agent-ai-worker `
+  --name mtx-ai-worker `
   --restart unless-stopped `
   --env TESTING_AGENT_PLATFORM_BASE_URL=http://host.docker.internal:9000 `
   --env TESTING_AGENT_WORKER_TOKEN=<worker-token> `
   --volume testing-agent-runtime:/data/runtime `
   --volume testing-agent-logs:/app/logs `
-  testing-agent-ai-worker:dev
+  mtx/ai-worker:local
 ```
+
+The standalone volume names `testing-agent-runtime` and `testing-agent-logs` are retained for compatibility with existing installations. They do not change when the image is renamed.
 
 The image runs as the non-root user `worker` (`uid=10001`) and stores mutable
 nanobot data under `/data/runtime`. Logs are written to `/app/logs` as well as

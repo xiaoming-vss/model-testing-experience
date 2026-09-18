@@ -1,8 +1,8 @@
-# testing-agent-control-plane
+# mtx-control-plane
 
 > 文档统一维护于此；以下项目命令在仓库根目录的 `apps/control-plane/` 中执行。整套平台的配置与部署见 [统一部署指南](../deployment.md)。
 
-Python control-plane rewrite for `testing-agent`.
+Model Testing Experience（MTX）的 Python 控制面。
 
 ## Scope
 
@@ -39,7 +39,7 @@ password: password
 ```powershell
 uv sync --extra dev
 uv run alembic upgrade head
-uv run testing-agent-control-plane --config config/local.toml
+uv run mtx-control-plane --config config/local.toml
 uv run pytest
 ```
 
@@ -105,7 +105,7 @@ that concurrent group deletion actually waits for the binding transaction.
 - [项目协作与个人授权接口](api/project-membership.md)
 - [项目共享服务与个人授权](api/shared-services.md)
 - [代码绑定与风险分析 — 需求总览](specs/code-binding-and-risk-analysis-overview.md)
-- [模块需求:testing-agent-control-plane(控制面)](specs/code-binding-and-risk-analysis.md)
+- [模块需求:mtx-control-plane(控制面)](specs/code-binding-and-risk-analysis.md)
 - [新增 UI 测试用例生成任务并解耦候选结果审核与导入](specs/ui-case-generate-and-import-workflow.md)
 - [04 工单补充：以当前源码包作为 UI 用例生成来源](specs/ui-case-source-archive-addendum.md)
 - [AI 生成运行存储与验证](verification/ai-generation-storage.md)

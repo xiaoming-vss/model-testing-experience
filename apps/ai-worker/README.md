@@ -1,4 +1,4 @@
-# Testing Agent AI Worker
+# MTX AI Worker
 
 项目文档已统一到 [docs/ai-worker](../../docs/ai-worker/README.md)。
 
@@ -9,5 +9,5 @@
 安装依赖并生成配置后，在本目录独立启动：
 
 ```sh
-uv run testing-agent-ai-worker
+uv run mtx-ai-worker
 ```

@@ -1,8 +1,8 @@
-# TestPilot Studio 设计文档
+# MTX Studio 设计文档
 
 ## 1. 文档说明
 
-本文档基于当前前端仓库代码反向梳理而成，描述 TestPilot Studio 的前端系统设计、模块职责、数据流转和当前实现边界。
+本文档基于当前前端仓库代码反向梳理而成，描述 MTX Studio 的前端系统设计、模块职责、数据流转和当前实现边界。
 
 - 文档范围：当前 React 前端工作台
 - 技术基线：React 19、TypeScript、Vite、Ant Design、TanStack React Query、Zustand
@@ -11,7 +11,7 @@
 
 ## 2. 项目概览
 
-TestPilot Studio 是一个围绕测试活动构建的前端工作台，核心目标是把项目、迭代、需求和多种测试资产组织在同一个协作界面内。当前前端的主线能力包括：
+MTX Studio 是一个围绕测试活动构建的前端工作台，核心目标是把项目、迭代、需求和多种测试资产组织在同一个协作界面内。当前前端的主线能力包括：
 
 - 项目、迭代、需求管理
 - 需求维度的测试工作台
@@ -68,7 +68,7 @@ UI 层以 Ant Design 为基础组件库，辅以大量业务样式文件实现�
 
 - 组件来源
   - Ant Design：表单、弹窗、抽屉、分页、选择器、卡片、提示等
-  - 自研共享组件：`PageFrame`、`JsonEditor`、`TextCodeEditor`、`TestPilotLogo`
+  - 自研共享组件：`PageFrame`、`JsonEditor`、`TextCodeEditor`、`MTXLogo`
 - 样式组织
   - `src/app/styles`：全局布局、主题和工作台基础样式
   - `src/shared/styles`：共享组件样式
@@ -508,7 +508,7 @@ type ApiEnvelope<T> = {
 
 ## 10. 结论
 
-当前 TestPilot Studio 前端已经不是通用模板项目，而是一个具备明确测试平台结构的业务工作台。其设计核心是：
+当前 MTX Studio 前端已经不是通用模板项目，而是一个具备明确测试平台结构的业务工作台。其设计核心是：
 
 - 用项目、迭代、需求组织测试资产
 - 用统一工作台承接功能、API、UI、AI 和外部集成能力

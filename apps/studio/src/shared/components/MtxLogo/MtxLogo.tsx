@@ -1,12 +1,12 @@
 import { useId } from 'react'
 
-type TestPilotLogoProps = {
+type MtxLogoProps = {
   size?: number
   className?: string
   title?: string
 }
 
-export function TestPilotLogo({ size = 28, className, title = 'MTX Logo' }: TestPilotLogoProps) {
+export function MtxLogo({ size = 28, className, title = 'MTX Logo' }: MtxLogoProps) {
   const logoClassName = ['mtx-logo', className].filter(Boolean).join(' ')
   const plateGradientId = `mtx-logo-plate-${useId().replace(/:/g, '')}`
 

@@ -1,4 +1,4 @@
-# testing-agent-api-ui-worker
+# mtx-api-ui-worker
 
 项目文档已统一到 [docs/api-ui-worker](../../docs/api-ui-worker/README.md)。
 
@@ -9,5 +9,5 @@
 安装依赖并生成配置后，在本目录独立启动：
 
 ```sh
-uv run testing-agent-api-ui-worker
+uv run mtx-api-ui-worker
 ```

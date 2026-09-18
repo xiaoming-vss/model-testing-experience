@@ -327,9 +327,9 @@ def main():
     configure("local")
     name = "control-plane" if args.action == "migrate" else args.service
     commands = {
-        "control-plane": ["uv", "run", "--locked", "testing-agent-control-plane"],
-        "ai-worker": ["uv", "run", "--locked", "testing-agent-ai-worker"],
-        "api-ui-worker": ["uv", "run", "--locked", "testing-agent-api-ui-worker"],
+        "control-plane": ["uv", "run", "--locked", "mtx-control-plane"],
+        "ai-worker": ["uv", "run", "--locked", "mtx-ai-worker"],
+        "api-ui-worker": ["uv", "run", "--locked", "mtx-api-ui-worker"],
         "zentao": ["uv", "run", "--locked", "python", "main.py"],
         "studio": ["npm", "run", "dev"],
     }

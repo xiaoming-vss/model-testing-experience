@@ -1,4 +1,4 @@
-# testing-agent-control-plane
+# mtx-control-plane
 
 项目文档已统一到 [docs/control-plane](../../docs/control-plane/README.md)。
 
@@ -9,5 +9,5 @@
 安装依赖并生成配置后，在本目录独立启动：
 
 ```sh
-uv run testing-agent-control-plane
+uv run mtx-control-plane
 ```

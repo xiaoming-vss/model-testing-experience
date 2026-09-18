@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -24,6 +25,7 @@ class ManagementTests(unittest.TestCase):
             ignore=shutil.ignore_patterns("platform.toml"),
         )
         shutil.copy2(ROOT / "compose.yaml", self.root / "compose.yaml")
+        shutil.copytree(ROOT / "deploy", self.root / "deploy")
         for name, project in manage.PROJECTS.items():
             src = ROOT / project
             dst = self.root / project
@@ -129,6 +131,43 @@ class ManagementTests(unittest.TestCase):
         self.assertEqual(
             call.call_args.args[0][-4:], ["-p", "isolated-check", "config", "--quiet"]
         )
+
+    @unittest.skipUnless(shutil.which("docker"), "Docker Compose is required")
+    def test_branding_preserves_legacy_data_and_isolated_deployments(self):
+        manage.configure("docker", self.root)
+        command = manage.compose_command(self.root)
+        normal = json.loads(
+            subprocess.check_output(command + ["config", "--format", "json"], text=True)
+        )
+        self.assertEqual(normal["name"], "mtx")
+        isolated = json.loads(
+            subprocess.check_output(
+                command + ["-p", "mtx-isolated-check", "config", "--format", "json"],
+                text=True,
+            )
+        )
+        legacy = json.loads(
+            subprocess.check_output(
+                command
+                + [
+                    "-f",
+                    str(self.root / "deploy/compose.legacy-data.yaml"),
+                    "config",
+                    "--format",
+                    "json",
+                ],
+                text=True,
+            )
+        )
+        for volume in normal["volumes"]:
+            self.assertEqual(normal["volumes"][volume]["name"], f"mtx_{volume}")
+            self.assertEqual(
+                isolated["volumes"][volume]["name"], f"mtx-isolated-check_{volume}"
+            )
+            self.assertEqual(
+                legacy["volumes"][volume]["name"], f"testing-agent_{volume}"
+            )
+            self.assertTrue(legacy["volumes"][volume]["external"])
 
     def test_duplicate_ports_rejected(self):
         self.data["shared"]["studio_port"] = self.data["shared"]["mysql_port"]

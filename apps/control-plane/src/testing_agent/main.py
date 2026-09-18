@@ -8,7 +8,7 @@ from testing_agent.core.config import load_settings
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="testing-agent Python control plane")
+    parser = argparse.ArgumentParser(description="MTX Python control plane")
     parser.add_argument("--config", "-c", default="config/local.toml", help="config file path")
     args = parser.parse_args()
     settings = load_settings(args.config)

@@ -52,3 +52,19 @@
 - 文档总索引、各项目目录和 CONTEXT-MAP 提供导航；各应用只保留简短 README 与 AGENTS 入口。
 - 已检查本地 Markdown 相对链接，目标文件或目录均存在；所有 Python 项目 `pyproject.toml` 声明的 README 文件保留有效。
 - 本次只修改文档及其组织方式，未修改业务代码、依赖、运行配置或部署编排，因此未重复运行完整业务测试或重建镜像。
+
+## MTX 产品命名统一验证（2026-09-18）
+
+仓库改为 `/home/xiaoming/GitCloneData/model-testing-experience`，页面品牌、HTML 标题、OpenAPI 标题、发行包、默认启动命令、Compose 项目和镜像统一使用 MTX 名称。Python 内部模块名、旧命令别名、环境变量、数据库标识及浏览器存储键保持兼容；说明见 [命名与兼容](naming.md)。
+
+- 配置管理测试 7 项通过，包括默认 `mtx_*` 卷名、独立 `-p` 项目隔离，以及显式引用旧 `testing-agent_*` 外部卷的覆盖配置。
+- AI Worker 161 项、API/UI Worker 34 项、禅道服务 62 项、控制面 HTTP 契约 4 项、前端登录页 1 项测试通过。
+- 前端类型检查、Lint、生产构建通过。
+- 四个 Python 发行包的安装元数据及新旧控制台命令可加载；所有第三方依赖锁定条目与改名前一致。
+- 五个 `mtx/*:local` 镜像构建成功。
+- 独立项目 `mtx-brand-check` 在临时端口启动，完成空库迁移；首页、代理健康接口、控制面健康接口、禅道就绪接口均返回 HTTP 200。
+- 前端 HTML 标题为 `Model Testing Experience · MTX`，OpenAPI 标题为 `Model Testing Experience API`。
+- AI / API / UI 任务领取接口均收到已认证的轮询，对空队列返回 HTTP 204。
+- 检查后清理临时容器和其专属数据卷。旧数据卷覆盖仅检查配置解析，本机没有旧平台卷，未模拟或操作真实历史业务数据。
+
+本次针对改名相关功能验证，未重复运行此前已记录失败的完整前端和控制面业务测试套件。

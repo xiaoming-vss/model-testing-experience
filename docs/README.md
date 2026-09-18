@@ -5,6 +5,7 @@
 ## 平台公共文档
 
 - [统一配置、部署与本地开发](deployment.md)
+- [MTX 命名与旧部署兼容](naming.md)
 - [领域上下文导航](../CONTEXT-MAP.md)
 - [单仓库迁移说明](monorepo-migration.md)
 - [验证结果与已知问题](verification.md)

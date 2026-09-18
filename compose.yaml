@@ -1,4 +1,4 @@
-name: testing-agent
+name: mtx
 services:
   mysql:
     image: mysql:8.4
@@ -20,7 +20,7 @@ services:
       start_period: 30s
 
   migrate:
-    image: testing-agent/control-plane:local
+    image: mtx/control-plane:local
     build: ./apps/control-plane
     restart: "no"
     command: [alembic, upgrade, head]
@@ -31,7 +31,7 @@ services:
         condition: service_healthy
 
   control-plane:
-    image: testing-agent/control-plane:local
+    image: mtx/control-plane:local
     build: ./apps/control-plane
     restart: unless-stopped
     ports:
@@ -46,7 +46,7 @@ services:
         condition: service_healthy
 
   zentao:
-    image: testing-agent/zentao:local
+    image: mtx/zentao:local
     build: ./apps/connector-zentao
     restart: unless-stopped
     ports:
@@ -55,7 +55,7 @@ services:
       - ./.runtime/docker/zentao.toml:/app/config/zentao.toml:ro
 
   ai-worker:
-    image: testing-agent/ai-worker:local
+    image: mtx/ai-worker:local
     build: ./apps/ai-worker
     restart: unless-stopped
     volumes:
@@ -67,7 +67,7 @@ services:
         condition: service_healthy
 
   api-ui-worker:
-    image: testing-agent/api-ui-worker:local
+    image: mtx/api-ui-worker:local
     build: ./apps/api-ui-worker
     restart: unless-stopped
     ports:
@@ -81,7 +81,7 @@ services:
         condition: service_healthy
 
   studio:
-    image: testing-agent/studio:local
+    image: mtx/studio:local
     build: ./apps/studio
     restart: unless-stopped
     environment:

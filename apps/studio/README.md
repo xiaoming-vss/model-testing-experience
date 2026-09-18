@@ -1,4 +1,4 @@
-# TestPilot Studio
+# MTX Studio
 
 项目文档已统一到 [docs/studio](../../docs/studio/README.md)。
 

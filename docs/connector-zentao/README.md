@@ -100,7 +100,7 @@ verify_ssl = true
 在项目根目录构建镜像：
 
 ```bash
-docker build -t testing-agent-connector-zentao:latest .
+docker build -t mtx/zentao:local .
 ```
 
 启动容器：
@@ -109,7 +109,7 @@ docker build -t testing-agent-connector-zentao:latest .
 docker run -d --name zentao-service \
   --restart unless-stopped \
   -p 8010:8010 \
-  testing-agent-connector-zentao:latest
+  mtx/zentao:local
 ```
 
 镜像使用 Python 3.12，按照 `uv.lock` 安装生产依赖，以非 root 用户运行。
@@ -129,7 +129,7 @@ docker run -d --name zentao-service \
   --restart unless-stopped \
   -p 8010:8010 \
   --mount type=bind,src="$(pwd)/config/zentao.toml",dst=/app/config/zentao.toml,readonly \
-  testing-agent-connector-zentao:latest
+  mtx/zentao:local
 ```
 
 以上两种启动方式任选其一。配置文件需允许容器用户（UID `10001`）读取。

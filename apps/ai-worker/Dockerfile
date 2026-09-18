@@ -46,4 +46,4 @@ USER 10001:10001
 
 STOPSIGNAL SIGTERM
 
-CMD ["testing-agent-ai-worker"]
+CMD ["mtx-ai-worker"]

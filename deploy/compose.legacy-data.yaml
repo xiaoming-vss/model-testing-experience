@@ -1,0 +1,17 @@
+# Optional: reuse pre-MTX named volumes. Missing volumes must fail rather than create empty data.
+volumes:
+  ai-logs:
+    external: true
+    name: testing-agent_ai-logs
+  ai-runtime:
+    external: true
+    name: testing-agent_ai-runtime
+  control-plane-storage:
+    external: true
+    name: testing-agent_control-plane-storage
+  mysql-data:
+    external: true
+    name: testing-agent_mysql-data
+  worker-artifacts:
+    external: true
+    name: testing-agent_worker-artifacts

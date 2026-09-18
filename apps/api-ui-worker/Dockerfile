@@ -30,4 +30,4 @@ EXPOSE 9010
 # The official Playwright image runs trusted end-to-end tests as root so
 # Chromium can launch without a custom seccomp profile. Harden the runtime
 # separately when executing tests against untrusted sites.
-CMD ["testing-agent-api-ui-worker"]
+CMD ["mtx-api-ui-worker"]

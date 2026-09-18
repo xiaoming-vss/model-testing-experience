@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { User } from '@/services/api'
 
+// Keep the legacy storage key so existing MTX users retain their saved state.
 export const TOKEN_KEY = 'testpilot_access_token'
 
 type AuthState = {

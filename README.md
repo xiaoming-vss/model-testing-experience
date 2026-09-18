@@ -1,6 +1,6 @@
-# Testing Agent 单仓库
+# Model Testing Experience（MTX）
 
-包含前端、控制面、AI Worker、API/UI Worker 和禅道连接服务。各项目保留自己的依赖、锁文件、Dockerfile、测试和独立启动入口。
+Model Testing Experience（简称 MTX）是面向测试协作的平台，包含前端、控制面、AI Worker、API/UI Worker 和禅道连接服务。各项目保留自己的依赖、锁文件、Dockerfile、测试和独立启动入口。
 
 | Compose/脚本名称 | 项目目录 | 作用 |
 | --- | --- | --- |
@@ -15,13 +15,14 @@
 ## 目录结构
 
 ```text
-testing-agent/
+model-testing-experience/
 ├── apps/
 │   ├── studio/
 │   ├── control-plane/
 │   ├── ai-worker/
 │   ├── api-ui-worker/
 │   └── connector-zentao/
+├── deploy/         # 可选部署覆盖配置
 ├── config/          # 统一配置与示例
 ├── scripts/         # 配置生成与启动入口
 ├── tests/           # 仓库级配置、部署测试
@@ -29,7 +30,7 @@ testing-agent/
 └── compose.yaml
 ```
 
-各应用的源码、依赖文件、锁文件、Dockerfile 和业务测试保留在各自目录内。目录名缩短后，Python 包名、npm 包名及原启动命令保持兼容。根目录 README 提供快速入口，详细说明集中维护在 `docs/`。
+各应用的源码、依赖文件、锁文件、Dockerfile 和业务测试保留在各自目录内。包名和镜像统一使用 MTX 命名，旧启动命令保留兼容入口，详见 [命名与兼容说明](docs/naming.md)。根目录 README 提供快速入口，详细说明集中维护在 `docs/`。
 
 ## 快速启动
 
@@ -46,6 +47,7 @@ python3 scripts/manage.py compose up -d --build
 
 - [文档总索引](docs/README.md)
 - [统一配置、部署与本地开发](docs/deployment.md)
+- [MTX 命名与旧部署兼容](docs/naming.md)
 - [领域上下文导航](CONTEXT-MAP.md)
 - [单仓库迁移说明](docs/monorepo-migration.md)
 - [验证结果与已知问题](docs/verification.md)

@@ -89,7 +89,7 @@ def _install_go_contract_openapi(app: FastAPI) -> None:
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
-    app = FastAPI(title="testing-agent API", version="1.0.0", lifespan=lifespan)
+    app = FastAPI(title="Model Testing Experience API", version="1.0.0", lifespan=lifespan)
     app.state.settings = settings
 
     @app.exception_handler(AppError)
@@ -114,7 +114,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/", response_model=ApiResponse[MessageData])
     async def root():
-        return success_payload({"message": "testing-agent server is running"})
+        return success_payload({"message": "MTX server is running"})
 
     @app.get("/swagger/index.html", response_model=ApiResponse[UrlData])
     async def swagger_compat():

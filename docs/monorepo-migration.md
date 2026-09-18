@@ -3,7 +3,9 @@
 来源：`/home/xiaoming/GitCloneData-bak` 下五个项目的当前工作目录。
 首次整合位置：`/home/xiaoming/testing-agent`。
 
-当前仓库位置：`/home/xiaoming/GitCloneData/testing-agent`（2026-09-18 按用户指定目录整体移动）。
+仓库曾于 2026-09-18 移至 `/home/xiaoming/GitCloneData/testing-agent`，随后按产品名称统一命名。
+
+当前仓库位置：`/home/xiaoming/GitCloneData/model-testing-experience`。
 
 以当前磁盘文件为准，保留未提交修改和未被忽略的新增源码，已删除文件不恢复。旧 `.git` 不复制，也不合并提交历史；原备份目录不修改。依赖缓存、虚拟环境、构建产物、被忽略的本机配置、运行数据以及个人 Agent/IDE 工具目录不迁移。复制清单记录在 `migration-files.json`。
 
@@ -40,3 +42,7 @@ AI Worker 原 `config/worker.toml` 含本地凭据和机器路径，转为无凭
 - `migration-files.json` 是第一次复制时的历史清单，不是当前路径索引。历史清单中的 `docs/`、CONTEXT 等文档条目应按本节规则定位。
 
 文档中的普通源码路径和命令仍相对对应应用目录；文档链接已按集中后的目录重新计算。未提交的历史 `.scratch` 规格不补造内容；已有失效链接改为历史说明并指向现有验证记录。
+
+## 产品名称统一
+
+平台统一命名为 Model Testing Experience（MTX），仓库目录改为 `model-testing-experience`。当前包名、启动命令、镜像名称与旧数据兼容方式见 [命名说明](naming.md)。原始仓库名称、迁移清单、历史验证记录和已有数据库标识保留以便追溯。

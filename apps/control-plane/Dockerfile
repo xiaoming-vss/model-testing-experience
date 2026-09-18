@@ -51,4 +51,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 STOPSIGNAL SIGTERM
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
-CMD ["testing-agent-control-plane", "--config", "/app/config/local.toml"]
+CMD ["mtx-control-plane", "--config", "/app/config/local.toml"]

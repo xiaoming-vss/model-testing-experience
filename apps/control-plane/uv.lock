@@ -1200,7 +1200,7 @@ wheels = [
 ]
 
 [[package]]
-name = "testing-agent-control-plane"
+name = "mtx-control-plane"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

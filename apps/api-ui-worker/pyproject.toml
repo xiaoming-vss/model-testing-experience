@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "testing-agent-api-ui-worker"
+name = "mtx-api-ui-worker"
 version = "0.1.0"
-description = "Python test execution worker for testing-agent UI and API tasks"
+description = "MTX worker for UI and API test execution"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -21,6 +21,8 @@ dev = [
 ]
 
 [project.scripts]
+mtx-api-ui-worker = "test_worker.__main__:main"
+# Compatibility alias for existing deployments.
 testing-agent-api-ui-worker = "test_worker.__main__:main"
 
 [tool.setuptools.packages.find]

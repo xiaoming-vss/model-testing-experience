@@ -1,8 +1,8 @@
-# testing-agent-api-ui-worker
+# mtx-api-ui-worker
 
 > 文档统一维护于此；以下项目命令在仓库根目录的 `apps/api-ui-worker/` 中执行。整套平台的配置与部署见 [统一部署指南](../deployment.md)。
 
-`testing-agent-api-ui-worker` 是 `testing-agent` 的独立 API/UI 测试执行器项目。它在一个 worker 进程内支持：
+`mtx-api-ui-worker` 是 `Model Testing Experience（MTX）` 的独立 API/UI 测试执行器项目。它在一个 worker 进程内支持：
 
 - UI Playwright 用例和测试集任务
 - API HTTP 单用例和集合任务
@@ -12,7 +12,7 @@
 ## 项目结构
 
 ```text
-testing-agent-api-ui-worker/
+mtx-api-ui-worker/
 ├── config.toml
 ├── config.example.toml
 ├── pyproject.toml
@@ -113,7 +113,7 @@ uv run python -m test_worker
 安装后也可以使用脚本入口：
 
 ```powershell
-uv run testing-agent-api-ui-worker
+uv run mtx-api-ui-worker
 ```
 
 ## Docker 运行
@@ -122,7 +122,7 @@ uv run testing-agent-api-ui-worker
 Linux 系统依赖。构建镜像：
 
 ```powershell
-docker build -t testing-agent-api-ui-worker:dev .
+docker build -t mtx/api-ui-worker:local .
 ```
 
 复制一份容器专用配置，不要把实际令牌写进镜像：
@@ -143,7 +143,7 @@ worker_token = "replace-with-worker-token"
 artifacts_dir = "/app/artifacts"
 artifacts_bind_host = "0.0.0.0"
 artifacts_port = 9010
-# 改成浏览器或 testing-agent 前端能够访问的 worker 地址。
+# 改成浏览器或 MTX 前端能够访问的 worker 地址。
 artifacts_base_url = "http://127.0.0.1:9010"
 headless = true
 ```
@@ -152,11 +152,11 @@ headless = true
 
 ```powershell
 docker run --rm --init --ipc=host `
-  --name testing-agent-api-ui-worker `
+  --name mtx-api-ui-worker `
   -p 9010:9010 `
   -v "${PWD}/config.docker.toml:/app/config.toml:ro" `
   -v "${PWD}/artifacts:/app/artifacts" `
-  testing-agent-api-ui-worker:dev
+  mtx/api-ui-worker:local
 ```
 
 Worker 会把容器的 SIGTERM/SIGINT 转换为异步取消，以便停止心跳、清理浏览器和截图

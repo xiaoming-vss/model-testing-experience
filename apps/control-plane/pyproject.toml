@@ -1,7 +1,7 @@
 [project]
-name = "testing-agent-control-plane"
+name = "mtx-control-plane"
 version = "0.1.0"
-description = "Python control plane rewrite for testing-agent"
+description = "Model Testing Experience control plane"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -35,6 +35,8 @@ dev = [
 ]
 
 [project.scripts]
+mtx-control-plane = "testing_agent.main:main"
+# Compatibility alias for existing deployments.
 testing-agent-control-plane = "testing_agent.main:main"
 
 [build-system]

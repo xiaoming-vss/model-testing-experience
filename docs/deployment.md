@@ -18,6 +18,8 @@ python3 scripts/manage.py init
 
 ## Docker 整体启动
 
+当前 Compose 项目名是 `mtx`。从旧 `testing-agent` 部署升级时，先阅读 [旧数据卷兼容说明](naming.md#已有-docker-部署的数据卷)，避免创建另一套空卷。
+
 要求 Docker Engine 和支持健康检查依赖的 Docker Compose v2+。
 
 ```sh

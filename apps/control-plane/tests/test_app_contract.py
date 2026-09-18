@@ -25,7 +25,7 @@ def test_root_returns_go_style_response():
     assert response.json() == {
         "code": 0,
         "message": "ok",
-        "data": {"message": "testing-agent server is running"},
+        "data": {"message": "MTX server is running"},
     }
 
 

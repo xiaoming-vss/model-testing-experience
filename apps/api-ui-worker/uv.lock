@@ -421,7 +421,7 @@ wheels = [
 ]
 
 [[package]]
-name = "testing-agent-api-ui-worker"
+name = "mtx-api-ui-worker"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

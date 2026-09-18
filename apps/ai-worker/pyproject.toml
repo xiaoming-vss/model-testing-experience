@@ -1,7 +1,7 @@
 [project]
-name = "testing-agent-ai-worker"
+name = "mtx-ai-worker"
 version = "0.1.0"
-description = "Testing agent worker for platform-driven API and functional test generation."
+description = "MTX worker for platform-driven API and functional test generation."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -12,8 +12,14 @@ dependencies = [
 ]
 
 [project.scripts]
+mtx-ai-demo = "testing_agent_ai_worker.cli.nanobot_demo:main"
+# Compatibility alias for existing deployments.
 testing-agent-ai-demo = "testing_agent_ai_worker.cli.nanobot_demo:main"
+mtx-ai-chain-demo = "testing_agent_ai_worker.cli.nanobot_chain_demo:main"
+# Compatibility alias for existing deployments.
 testing-agent-ai-chain-demo = "testing_agent_ai_worker.cli.nanobot_chain_demo:main"
+mtx-ai-worker = "testing_agent_ai_worker.main:main"
+# Compatibility alias for existing deployments.
 testing-agent-ai-worker = "testing_agent_ai_worker.main:main"
 
 [build-system]
@@ -35,3 +41,6 @@ select = ["E4", "E7", "E9", "F", "I"]
 dev = [
     "ruff==0.16.7",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/testing_agent_ai_worker"]

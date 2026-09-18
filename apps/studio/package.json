@@ -1,5 +1,5 @@
 {
-  "name": "testpilot-studio",
+  "name": "@mtx/studio",
   "private": true,
   "version": "0.0.0",
   "type": "module",

@@ -1,8 +1,8 @@
-# TestPilot Studio
+# MTX Studio
 
 > 文档统一维护于此；以下项目命令在仓库根目录的 `apps/studio/` 中执行。整套平台的配置与部署见 [统一部署指南](../deployment.md)。
 
-TestPilot Studio 是一个面向测试协作的前端工作台，用于围绕项目、迭代和需求管理测试资产与测试活动。
+MTX Studio 是一个面向测试协作的前端工作台，用于围绕项目、迭代和需求管理测试资产与测试活动。
 
 ## 功能范围
 
@@ -45,7 +45,7 @@ npm run verify
 构建生产镜像：
 
 ```bash
-docker build -t testpilot-studio .
+docker build -t mtx/studio:local .
 ```
 
 启动容器，并将 API 请求代理到宿主机的 `8080` 端口：
@@ -53,7 +53,7 @@ docker build -t testpilot-studio .
 ```bash
 docker run --rm -p 8081:80 \
   -e API_UPSTREAM=http://host.docker.internal:8080 \
-  testpilot-studio
+  mtx/studio:local
 ```
 
 浏览器访问 `http://localhost:8081`。在 Docker Compose 或同一容器网络中，`API_UPSTREAM` 可改为后端服务名，例如 `http://api:8080`。
@@ -63,7 +63,7 @@ docker run --rm -p 8081:80 \
 ```bash
 docker build \
   --build-arg VITE_API_BASE_URL=https://api.example.com \
-  -t testpilot-studio .
+  -t mtx/studio:local .
 ```
 
 说明：
@@ -95,15 +95,15 @@ docker build \
 ## 文档目录
 
 - [MTX](CONTEXT.md)
-- [风险分析报告条目级字段契约由 testpilot-studio 规范定义,worker 按此实装](adr/0001-risk-analysis-report-contract.md)
+- [风险分析报告条目级字段契约由 MTX Studio 规范定义,worker 按此实装](adr/0001-risk-analysis-report-contract.md)
 - [统一操作按钮](components/action-button.md)
 - [项目彩色图标库](components/icons.md)
 - [Design QA — Three Testing Lists](design-qa.md)
 - [UI 用例 AI 生成与源码包上传——前端适配确认稿](frontend-ui-ai-generation-source-archive-confirmation.md)
 - [已审核 UI 候选用例导入正式套件：前端适配确认稿](frontend-ui-case-import-confirmation.md)
-- [TestPilot Studio 功能文档](functional-specification.md)
+- [MTX Studio 功能文档](functional-specification.md)
 - [项目协作与个人授权前端接入](integration/project-membership.md)
-- [模块需求:testpilot-studio(前端工作台)](specs/code-binding-risk-analysis.md)
+- [模块需求:MTX Studio(前端工作台)](specs/code-binding-risk-analysis.md)
 - [已审核 UI 候选用例导入现有 UI 测试套件](specs/ui-approved-candidate-import.md)
 - [ui-case-ai-generation-source-archive](specs/ui-case-ai-generation-source-archive.md)
-- [TestPilot Studio 设计文档](system-design.md)
+- [MTX Studio 设计文档](system-design.md)

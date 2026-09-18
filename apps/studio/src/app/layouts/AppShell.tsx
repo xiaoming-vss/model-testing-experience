@@ -25,7 +25,7 @@ import { BaseServicesPage } from '@/features/base-services/pages/BaseServicesPag
 import { TestingPage } from '@/features/testing/pages/TestingPage'
 import { FunctionTestSuiteDetailPage } from '@/features/test-cases/pages/FunctionTestSuiteDetailPage'
 import { UiTestSuiteCasePage } from '@/features/ui-automation/pages/UiTestSuiteCasePage'
-import { TestPilotLogo } from '@/shared/components/TestPilotLogo/TestPilotLogo'
+import { MtxLogo } from '@/shared/components/MtxLogo/MtxLogo'
 import { useThemeStore } from '@/shared/store/theme.store'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { normalizeProjectId } from '@/utils/format'
@@ -77,8 +77,8 @@ export function AppShell() {
       >
         <div className="brand-row">
           <button className="brand" type="button" onClick={() => navigate('/projects')}>
-            <TestPilotLogo size={36} className="brand-logo" />
-            <span className="brand-text">TestPilot</span>
+            <MtxLogo size={36} className="brand-logo" />
+            <span className="brand-text">MTX</span>
           </button>
         </div>
         <Menu
