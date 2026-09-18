@@ -1,0 +1,26 @@
+mode = "poll"
+
+[control_plane]
+base_url = "http://127.0.0.1:8011"
+worker_token = "replace-with-worker-token"
+
+[worker]
+id = ""
+poll_interval_ms = 3000
+request_timeout_ms = 15000
+heartbeat_interval_ms = 10000
+
+[ui]
+artifacts_dir = "./artifacts"
+# 临时方案：worker 直接以只读 HTTP 服务暴露截图目录。
+artifacts_bind_host = "127.0.0.1"
+artifacts_port = 9010
+# 前端必须能够访问该地址；部署到其他机器时替换为 worker 的 IP 或域名。
+artifacts_base_url = "http://127.0.0.1:9010"
+headless = true
+slow_mo_ms = 0
+trace_enabled = true
+screenshot_on_failure = true
+
+[once]
+snapshot_file = ""

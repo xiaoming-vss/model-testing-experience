@@ -1,0 +1,43 @@
+# python3 scripts/manage.py init 会生成本地 platform.toml 并随机填入密钥。
+[shared]
+# 浏览器可访问的主机名/IP；部署到服务器时修改此处，不包含协议或端口。
+public_host = "127.0.0.1"
+# Docker 发布端口的监听地址；需要远程访问时改为 0.0.0.0。
+bind_host = "127.0.0.1"
+# 本地开发时连接后端、禅道服务及数据库的主机。
+local_host = "127.0.0.1"
+studio_port = 8081
+control_plane_port = 19000
+zentao_port = 8010
+artifacts_port = 9010
+mysql_port = 13306
+worker_token = "GENERATE"
+jwt_key = "GENERATE"
+integration_key = "GENERATE"
+
+[database]
+name = "testing_agent"
+user = "testing_agent"
+password = "GENERATE"
+root_password = "GENERATE"
+
+# 以下配置覆盖各项目的示例配置；地址、令牌和存储路径由 shared 统一生成。
+[control_plane.code_overview]
+cache_ttl_seconds = 300
+
+[ai_worker.worker]
+max_concurrent_tasks = 2
+poll_interval_seconds = 5
+
+[ai_worker.nanobot]
+stream_idle_timeout_seconds = 300
+provider_request_timeout_seconds = 300
+
+[api_ui_worker.ui]
+headless = true
+trace_enabled = true
+screenshot_on_failure = true
+
+[zentao.zentao]
+timeout_seconds = 15
+verify_ssl = true

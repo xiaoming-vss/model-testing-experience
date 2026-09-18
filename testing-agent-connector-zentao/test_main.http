@@ -1,0 +1,109 @@
+# Health
+GET http://127.0.0.1:8010/api/v1/health/live
+Accept: application/json
+
+###
+
+# Service readiness
+GET http://127.0.0.1:8010/api/v1/health/ready
+Accept: application/json
+
+###
+
+# Zentao project list
+GET http://127.0.0.1:8010/api/v1/zentao/projects?base_url=https://your-zentao-host&page=1&page_size=100
+Accept: application/json
+Authorization: Bearer your-zentao-token
+
+###
+
+# Zentao project detail
+GET http://127.0.0.1:8010/api/v1/zentao/projects/1?base_url=https://your-zentao-host
+Accept: application/json
+Authorization: Bearer your-zentao-token
+
+###
+
+# Zentao execution list under project
+GET http://127.0.0.1:8010/api/v1/zentao/projects/1/executions?base_url=https://your-zentao-host&page=1&page_size=100
+Accept: application/json
+Authorization: Bearer your-zentao-token
+
+###
+
+# Zentao execution detail
+GET http://127.0.0.1:8010/api/v1/zentao/executions/1?base_url=https://your-zentao-host
+Accept: application/json
+Authorization: Bearer your-zentao-token
+
+###
+
+# Zentao story list under execution
+GET http://127.0.0.1:8010/api/v1/zentao/executions/1/stories?base_url=https://your-zentao-host
+Accept: application/json
+Authorization: Bearer your-zentao-token
+
+###
+
+# Zentao test task list under execution
+GET http://127.0.0.1:8010/api/v1/zentao/executions/1/testtasks?base_url=https://your-zentao-host&page=1&page_size=100
+Accept: application/json
+Authorization: Bearer your-zentao-token
+
+###
+
+# Zentao test task detail
+GET http://127.0.0.1:8010/api/v1/zentao/testtasks/1?base_url=https://your-zentao-host
+Accept: application/json
+Authorization: Bearer your-zentao-token
+
+###
+
+# Zentao testcase details under execution
+GET http://127.0.0.1:8010/api/v1/zentao/executions/1/cases?base_url=https://your-zentao-host&page=1&page_size=100
+Accept: application/json
+Authorization: Bearer your-zentao-token
+
+###
+
+# Zentao testcase batch create
+POST http://127.0.0.1:8010/api/v1/zentao/testcases?base_url=https://your-zentao-host
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer your-zentao-token
+
+{
+  "productID": 1,
+  "project": 2,
+  "execution": 3,
+  "cases": [
+    {
+      "title": "测试压敏模块显示是否正常",
+      "module": 0,
+      "story": 0,
+      "pri": 3,
+      "precondition": "已进入压敏模块页面",
+      "steps": [
+        "步骤1",
+        "步骤2"
+      ],
+      "expects": [
+        "期望1",
+        "期望2"
+      ]
+    },
+    {
+      "title": "第二条测试用例",
+      "module": 0,
+      "story": 0,
+      "pri": 3,
+      "precondition": "",
+      "steps": [
+        "步骤A"
+      ],
+      "expects": [
+        "期望A"
+      ]
+    }
+  ]
+}

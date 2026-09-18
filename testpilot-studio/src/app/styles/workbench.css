@@ -1,0 +1,3611 @@
+.settings-page {
+  min-height: calc(100vh - 64px);
+  background: #faf9ff;
+}
+
+.settings-context-bar {
+  min-height: 88px;
+  padding: 18px 32px;
+  display: flex;
+  align-items: center;
+  background: #faf9ff;
+  border-bottom: 1px solid #d8d9e5;
+}
+
+.settings-eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: #727786;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.settings-context-bar h3.ant-typography {
+  margin: 0;
+  color: #181b23;
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+}
+
+.settings-content {
+  padding: 24px 32px;
+  display: grid;
+  grid-template-columns: 280px minmax(420px, 720px);
+  gap: 24px;
+  align-items: start;
+}
+
+.settings-summary,
+.settings-panel {
+  background: #fff;
+  border: 1px solid #c1c6d7;
+  border-radius: 2px;
+}
+
+.settings-summary {
+  padding: 28px 24px;
+  min-height: 260px;
+}
+
+.settings-avatar {
+  margin-bottom: 18px;
+  background: #1677ff;
+}
+
+.settings-summary h4.ant-typography {
+  margin: 0 0 6px;
+  color: #181b23;
+}
+
+.settings-summary-meta {
+  margin-top: 28px;
+  padding-top: 18px;
+  display: flex;
+  gap: 8px;
+  color: #727786;
+  font-size: 13px;
+  line-height: 20px;
+  border-top: 1px solid #e0e2ed;
+}
+
+.settings-panel {
+  padding: 0;
+}
+
+.settings-panel-header {
+  min-height: 88px;
+  padding: 22px 24px;
+  border-bottom: 1px solid #d8d9e5;
+}
+
+.settings-panel-header h4.ant-typography {
+  margin: 0 0 4px;
+  color: #181b23;
+}
+
+.settings-panel-header .ant-typography {
+  margin-bottom: 0;
+}
+
+.settings-form {
+  padding: 24px;
+  max-width: 480px;
+}
+
+.settings-form .ant-input {
+  height: 40px;
+  border-radius: 2px;
+}
+
+.settings-form .ant-btn {
+  height: 36px;
+  border-radius: 2px;
+}
+
+.danger-zone {
+  margin: 0 24px 24px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #fff7f7;
+  border: 1px solid #ffccc7;
+  border-radius: 2px;
+}
+
+.danger-zone .ant-typography {
+  margin-bottom: 0;
+}
+
+@media (max-width: 1100px) {
+  .settings-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .settings-context-bar,
+  .settings-content {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .danger-zone {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.requirement-icon {
+  color: #1677ff;
+  font-size: 16px;
+}
+
+.requirement-sprint {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  color: #0057c2;
+  background: #eef5ff;
+  border: 1px solid #cfe3ff;
+  border-radius: 2px;
+  font-size: 13px;
+}
+
+.compact-header {
+  height: 48px;
+  padding: 0 24px;
+  justify-content: flex-end;
+  background: #fff;
+}
+
+.compact-header .app-header-actions .ant-btn-circle {
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+}
+
+.workbench-page,
+.settings-page {
+  min-height: calc(100vh - 48px);
+}
+
+.project-context-bar {
+  min-height: 64px;
+  padding: 0 32px;
+  background: #fff;
+}
+
+.project-selector-wrap {
+  gap: 10px;
+  font-size: 15px;
+}
+
+.project-selector-label {
+  color: #727786;
+  font-size: 13px;
+}
+
+.project-select {
+  min-width: 260px;
+}
+
+.project-select .ant-select-selection-item,
+.project-select .ant-select-selection-placeholder {
+  color: #181b23;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.project-actions .ant-btn {
+  height: 32px;
+}
+
+.project-actions .ant-btn-text {
+  width: 32px;
+  padding: 0;
+  border-radius: 2px;
+}
+
+.workbench-tabs {
+  padding: 20px 32px 32px;
+}
+
+@media (max-width: 900px) {
+  .compact-header {
+    height: 48px;
+    padding: 0 16px;
+  }
+
+  .project-context-bar {
+    padding: 14px 16px;
+  }
+
+  .project-select {
+    min-width: 200px;
+  }
+
+  .project-select .ant-select-selection-item,
+  .project-select .ant-select-selection-placeholder {
+    font-size: 18px;
+  }
+
+  .workbench-tabs {
+    padding: 16px;
+  }
+}
+
+.compact-header {
+  height: 56px;
+  padding: 0 24px;
+  gap: 16px;
+}
+
+.app-header-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.project-header-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.project-header-bar .project-selector-wrap {
+  min-width: 0;
+}
+
+.project-header-bar .project-actions {
+  flex: 0 0 auto;
+}
+
+.workbench-page,
+.settings-page {
+  min-height: calc(100vh - 56px);
+}
+
+.workbench-tabs {
+  padding-top: 18px;
+}
+
+@media (max-width: 900px) {
+  .compact-header {
+    height: auto;
+    min-height: 56px;
+    align-items: flex-start;
+    flex-direction: column-reverse;
+    padding: 10px 16px;
+  }
+
+  .app-header-main,
+  .project-header-bar,
+  .project-actions {
+    width: 100%;
+  }
+
+  .project-header-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.project-header-bar-select-only {
+  justify-content: flex-start;
+}
+
+.compact-header .project-header-bar-select-only {
+  width: auto;
+}
+
+.compact-header .project-selector-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0;
+  color: #cbd6ea;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.compact-header .project-selector-label {
+  color: #7f8aa3;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.compact-header .project-separator {
+  color: #66738d;
+}
+
+.project-selector-divider {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 16px;
+  margin: 0 2px;
+  background: rgba(15, 23, 42, 0.12);
+}
+
+.compact-header .project-select {
+  min-width: 0;
+  width: auto;
+  max-width: 220px;
+  flex: 0 1 auto;
+}
+
+.compact-header .sprint-select {
+  max-width: 160px;
+}
+
+.compact-header .project-select .ant-select-selector {
+  padding-inline: 0 !important;
+}
+
+.compact-header .project-select .ant-select-selection-item,
+.compact-header .project-select .ant-select-selection-placeholder {
+  color: #f4f8ff;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 600;
+}
+
+.compact-header .project-select .ant-select-arrow {
+  color: #9aa8c0;
+  font-size: 11px;
+}
+
+.workbench-project-toolbar {
+  margin: 20px 32px 0;
+  min-height: 64px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #fff;
+  border: 1px solid #c1c6d7;
+  border-radius: 2px;
+}
+
+.workbench-project-toolbar h4.ant-typography {
+  margin: 0 0 2px;
+  color: #181b23;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.workbench-project-toolbar .ant-typography {
+  margin-bottom: 0;
+}
+
+@media (max-width: 900px) {
+  .workbench-project-toolbar {
+    margin: 16px 16px 0;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.workbench-project-toolbar {
+  min-height: 52px;
+  margin: 14px 24px 0;
+  padding: 10px 16px;
+  border-radius: 6px;
+}
+
+.workbench-project-toolbar h4.ant-typography {
+  margin-bottom: 0;
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.workbench-project-toolbar .ant-typography-secondary {
+  display: block;
+  max-width: 680px;
+  overflow: hidden;
+  color: #727786;
+  font-size: 13px;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workbench-tabs {
+  padding: 14px 24px 24px;
+}
+
+.workbench-tabs > .ant-tabs-nav {
+  margin-bottom: 14px;
+}
+
+.workbench-panel {
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.panel-header {
+  min-height: 52px;
+  padding: 10px 16px;
+}
+
+.workbench-panel .ant-table-tbody > tr > td {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.workbench-panel .ant-pagination {
+  padding: 8px 16px 10px;
+  margin: 0;
+}
+
+.workbench-empty {
+  border-radius: 6px;
+}
+
+@media (max-width: 900px) {
+  .workbench-project-toolbar {
+    margin: 12px 16px 0;
+  }
+
+  .workbench-project-toolbar .ant-typography-secondary {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .workbench-tabs {
+    padding: 12px 16px 16px;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+.app-shell {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-shell > .ant-layout,
+.app-content {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.workbench-page {
+  height: calc(100vh - 56px);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.workbench-project-toolbar {
+  flex: 0 0 auto;
+  min-height: 48px;
+  margin: 12px 24px 0;
+  padding: 8px 14px;
+}
+
+.workbench-tabs {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 12px 24px 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: 12px;
+}
+
+.workbench-panel {
+  height: 100%;
+  min-height: 0;
+}
+
+.workbench-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.workbench-board-switcher {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.workbench-board-switcher .ant-segmented {
+  padding: 4px;
+  background: #eef3fb;
+  border-radius: 999px;
+}
+
+.workbench-board-switcher .ant-segmented-item {
+  min-width: 88px;
+  border-radius: 999px;
+  color: #5b6477;
+  font-weight: 600;
+}
+
+.workbench-board-switcher .ant-segmented-item-selected {
+  color: #0f4fbf;
+}
+
+.workbench-board-panel {
+  flex: 1 1 auto;
+}
+
+.panel-header {
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 8px 14px;
+}
+
+.workbench-panel .ant-table-wrapper {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.workbench-panel .ant-spin-nested-loading,
+.workbench-panel .ant-spin-container {
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.workbench-panel .ant-table {
+  flex: 1 1 auto;
+}
+
+.workbench-panel .ant-table-container {
+  height: 100%;
+}
+
+.workbench-panel .ant-table-tbody > tr > td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.workbench-panel .ant-pagination {
+  flex: 0 0 auto;
+  padding: 6px 14px 8px;
+}
+
+@media (max-width: 900px) {
+  body {
+    overflow: auto;
+  }
+
+  .app-shell,
+  .app-content,
+  .workbench-page {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .workbench-tabs,
+  .workbench-panel {
+    overflow: visible;
+  }
+
+  .workbench-board-switcher {
+    width: 100%;
+  }
+
+  .workbench-board-switcher .ant-segmented {
+    width: 100%;
+  }
+}
+
+:root {
+  --tp-border: #e5e7ef;
+  --tp-border-soft: #eef0f6;
+  --tp-text: #181b23;
+  --tp-text-secondary: #414755;
+  --tp-text-muted: #727786;
+  --tp-card-radius: 8px;
+}
+
+.app-sider {
+  border-right-color: var(--tp-border-soft) !important;
+}
+
+.brand-row {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--tp-border-soft);
+}
+
+.brand-row .brand {
+  width: 100%;
+  justify-content: center;
+  padding: 0;
+  border-bottom: 0;
+}
+
+.brand-text {
+  display: none;
+}
+
+.app-sider {
+  width: 76px !important;
+  min-width: 76px !important;
+  max-width: 76px !important;
+  flex: 0 0 76px !important;
+}
+
+.app-sider .ant-menu {
+  padding: 8px 0 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.app-sider .ant-menu-item {
+  height: 72px;
+  width: 64px;
+  margin: 0 auto;
+  padding: 10px 6px 8px !important;
+  box-sizing: border-box;
+  border-radius: 10px;
+  color: #667085;
+  font-size: 12px;
+  line-height: 18px;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
+  display: grid !important;
+  grid-template-rows: 20px minmax(18px, auto);
+  justify-items: center;
+  align-content: center;
+  row-gap: 8px;
+}
+
+.app-sider .ant-menu-item .ant-menu-title-content {
+  display: block !important;
+  width: 100%;
+  margin-top: 0;
+  margin-inline-start: 0 !important;
+  overflow: visible;
+  color: inherit;
+  line-height: 18px;
+  text-align: center;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.app-sider .ant-menu-item .anticon {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.app-sider .ant-menu-item .anticon + span {
+  margin-inline-start: 0 !important;
+}
+
+.app-sider .ant-menu-item,
+.app-sider .ant-menu-submenu-title,
+.app-sider .ant-menu-inline > .ant-menu-item {
+  padding-inline: 0 !important;
+  justify-content: center;
+}
+
+.app-sider .ant-menu-item-selected {
+  background: transparent !important;
+  color: #6d5dfc !important;
+  font-weight: 600;
+}
+
+.app-sider .ant-menu-item-selected .anticon,
+.app-sider .ant-menu-item-selected .ant-menu-title-content {
+  color: #6d5dfc !important;
+}
+
+.app-sider .ant-menu-item:hover {
+  background: rgba(109, 93, 252, 0.08) !important;
+  color: #6d5dfc;
+}
+
+.compact-header {
+  border-bottom-color: var(--tp-border-soft);
+}
+
+.workbench-project-toolbar {
+  min-height: 64px;
+  margin: 16px 24px 0;
+  padding: 12px 18px;
+  border-color: var(--tp-border);
+  border-radius: var(--tp-card-radius);
+  box-shadow: 0 1px 2px rgba(24, 27, 35, 0.03);
+}
+
+.workbench-project-toolbar h4.ant-typography {
+  margin-bottom: 3px;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.workbench-tabs {
+  padding: 14px 24px 20px;
+}
+
+.workbench-tabs > .ant-tabs-nav {
+  margin-bottom: 12px;
+  border-bottom-color: var(--tp-border-soft);
+}
+
+.workbench-tabs .ant-tabs-tab {
+  padding: 8px 16px 12px;
+}
+
+.workbench-panel {
+  border-color: var(--tp-border);
+  border-radius: var(--tp-card-radius);
+  box-shadow: 0 1px 2px rgba(24, 27, 35, 0.03);
+}
+
+.panel-header {
+  min-height: 56px;
+  padding: 12px 18px;
+  border-bottom-color: var(--tp-border-soft);
+}
+
+.workbench-panel .ant-table-thead > tr > th {
+  background: #fbfcff;
+  border-bottom-color: var(--tp-border-soft);
+}
+
+.workbench-panel .ant-table-tbody > tr > td {
+  border-bottom-color: var(--tp-border-soft);
+}
+
+.workbench-panel .ant-table-wrapper {
+  height: 100%;
+}
+
+.workbench-panel .ant-spin-container {
+  height: 100%;
+}
+
+.workbench-panel .ant-pagination {
+  margin-top: auto;
+  padding: 10px 16px;
+  border-top: 1px solid var(--tp-border-soft);
+  background: #fff;
+}
+
+.workbench-panel .ant-table-cell::before {
+  background-color: var(--tp-border-soft) !important;
+}
+
+@media (max-width: 900px) {
+  .brand-row {
+    display: none;
+  }
+
+  .workbench-project-toolbar {
+    min-height: 64px;
+    margin: 12px 16px 0;
+  }
+}
+
+.table-body-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  background: #fff;
+}
+
+.table-body-scroll .ant-table-wrapper,
+.table-body-scroll .ant-spin-nested-loading,
+.table-body-scroll .ant-spin-container {
+  min-height: 100%;
+}
+
+.table-body-scroll .ant-table {
+  min-height: 100%;
+}
+
+.table-body-scroll .ant-table-container {
+  min-height: 100%;
+}
+
+.workbench-panel .ant-table-wrapper {
+  height: auto;
+  flex: none;
+  display: block;
+}
+
+.workbench-panel .ant-spin-nested-loading,
+.workbench-panel .ant-spin-container {
+  display: block;
+  flex: none;
+}
+
+.workbench-panel .ant-table {
+  flex: none;
+}
+
+.workbench-panel .ant-table-container {
+  height: auto;
+}
+
+.table-footer {
+  flex: 0 0 auto;
+  min-height: 58px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--tp-border-soft);
+  background: #fff;
+}
+
+.table-footer .ant-typography {
+  color: #727786;
+  font-size: 13px;
+}
+
+.table-footer .ant-pagination {
+  margin: 0;
+  padding: 0;
+  border-top: 0;
+}
+
+.table-footer .ant-pagination .ant-pagination-item,
+.table-footer .ant-pagination .ant-pagination-prev,
+.table-footer .ant-pagination .ant-pagination-next,
+.table-footer .ant-pagination .ant-select-selector {
+  border-radius: 8px;
+}
+
+.workbench-panel .ant-table-placeholder .ant-table-cell {
+  border-bottom: 0;
+}
+
+
+/* macOS simple white sidebar refinement */
+.app-shell .app-sider {
+  position: relative;
+  z-index: 5;
+  overflow: hidden;
+  border-right: 1px solid rgba(15, 23, 42, 0.07) !important;
+  background: rgba(247, 249, 252, 0.76) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  backdrop-filter: saturate(180%) blur(22px);
+  box-shadow:
+    inset -1px 0 0 rgba(255, 255, 255, 0.72),
+    10px 0 28px rgba(31, 41, 55, 0.035);
+}
+
+.app-shell .app-sider::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 42% 2%, rgba(52, 120, 246, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.54), rgba(255, 255, 255, 0.2));
+}
+
+.app-shell .brand-row {
+  position: relative;
+  z-index: 1;
+  height: 64px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.app-shell .brand-row .brand {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  margin: 10px auto;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 8px 18px rgba(31, 41, 55, 0.08);
+}
+
+.app-shell .app-sider .ant-menu {
+  position: relative;
+  z-index: 1;
+  padding: 12px 0;
+  gap: 8px;
+  background: transparent !important;
+}
+
+.app-shell .app-sider .ant-menu-item {
+  width: 58px;
+  height: 64px;
+  margin: 0 auto;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  color: rgba(23, 32, 51, 0.54);
+  background: transparent !important;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.app-shell .app-sider .ant-menu-item .anticon {
+  color: rgba(23, 32, 51, 0.48);
+  font-size: 17px;
+}
+
+.app-shell .app-sider .ant-menu-item:hover {
+  color: #1f64e0 !important;
+  border-color: rgba(52, 120, 246, 0.1);
+  background: rgba(255, 255, 255, 0.56) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+}
+
+.app-shell .app-sider .ant-menu-item-selected {
+  color: #172033 !important;
+  border-color: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.9) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    0 8px 20px rgba(31, 41, 55, 0.085);
+}
+
+.app-shell .app-sider .ant-menu-item-selected::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 18px;
+  width: 3px;
+  height: 28px;
+  border-radius: 999px;
+  background: #3478f6;
+}
+
+.app-shell .app-sider .ant-menu-item-selected .anticon {
+  color: #3478f6 !important;
+}
+
+/* macOS simple white global header refinement */
+.app-shell .app-header.compact-header {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  height: 56px;
+  padding: 0 22px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.065);
+  background: rgba(247, 249, 252, 0.72);
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  backdrop-filter: saturate(180%) blur(22px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    0 10px 28px rgba(31, 41, 55, 0.035);
+}
+
+.app-shell .app-header-main,
+.app-shell .app-header-actions {
+  position: relative;
+  z-index: 1;
+}
+
+.app-shell .project-header-bar.project-header-bar-select-only {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.app-shell .project-selector-wrap {
+  width: fit-content;
+  min-height: 34px;
+  padding: 0 10px 0 12px;
+  gap: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.58);
+  color: rgba(23, 32, 51, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+}
+
+.app-shell .project-selector-label {
+  color: rgba(23, 32, 51, 0.48);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.app-shell .project-separator {
+  color: rgba(23, 32, 51, 0.28);
+}
+
+.app-shell .project-select {
+  min-width: 158px;
+}
+
+.app-shell .sprint-select {
+  min-width: 132px;
+  max-width: 200px;
+}
+
+.app-shell .project-select .ant-select-selector {
+  color: #172033 !important;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.app-shell .app-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.app-shell .app-header-actions .ant-btn-circle {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  color: rgba(23, 32, 51, 0.56);
+  font-size: 17px;
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.app-shell .app-header-actions .ant-btn-circle:hover {
+  color: #1f64e0;
+  border-color: rgba(15, 23, 42, 0.06);
+  background: rgba(255, 255, 255, 0.68);
+}
+
+/* Lighter macOS sidebar selected state */
+.app-shell .app-sider {
+  border-right-color: rgba(15, 23, 42, 0.055) !important;
+  background: rgba(248, 250, 252, 0.76) !important;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.68);
+}
+
+.app-shell .app-sider::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.12));
+}
+
+.app-shell .app-sider .ant-menu {
+  gap: 4px;
+  padding-top: 12px;
+}
+
+.app-shell .app-sider .ant-menu-item {
+  width: 58px;
+  height: 58px;
+  border: 0;
+  border-radius: 12px;
+  color: rgba(23, 32, 51, 0.5) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.app-shell .app-sider .ant-menu-item .anticon,
+.app-shell .app-sider .ant-menu-item .ant-menu-title-content {
+  color: inherit !important;
+}
+
+.app-shell .app-sider .ant-menu-item:hover {
+  color: #0a84ff !important;
+  border: 0;
+  background: rgba(255, 255, 255, 0.54) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.app-shell .app-sider .ant-menu-item-selected {
+  color: #0a84ff !important;
+  border: 0;
+  background: rgba(10, 132, 255, 0.08) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  font-weight: 650;
+}
+
+.app-shell .app-sider .ant-menu-item-selected::before {
+  display: none;
+}
+
+.app-shell .app-sider .ant-menu-item-selected .anticon,
+.app-shell .app-sider .ant-menu-item-selected .ant-menu-title-content {
+  color: #0a84ff !important;
+}
+
+.app-shell .brand-row .brand {
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 6px 14px rgba(31, 41, 55, 0.06);
+}
+
+:root[data-theme='dark'] .app-shell .app-sider {
+  border-right-color: rgba(148, 163, 184, 0.12) !important;
+  background: rgba(14, 19, 30, 0.76) !important;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04);
+}
+
+:root[data-theme='dark'] .app-shell .app-sider .ant-menu-item {
+  color: rgba(226, 232, 240, 0.54) !important;
+}
+
+:root[data-theme='dark'] .app-shell .app-sider .ant-menu-item:hover,
+:root[data-theme='dark'] .app-shell .app-sider .ant-menu-item-selected {
+  color: #64a9ff !important;
+  background: rgba(100, 169, 255, 0.1) !important;
+}
+
+:root[data-theme='dark'] .app-shell .app-sider .ant-menu-item-selected .anticon,
+:root[data-theme='dark'] .app-shell .app-sider .ant-menu-item-selected .ant-menu-title-content {
+  color: #64a9ff !important;
+}
+
+/* Base services scoped macOS white glass shell */
+.app-shell.app-shell-base-services {
+  --mac-glass-page: #f5f7fa;
+  --mac-glass-sidebar: rgba(246, 248, 251, 0.78);
+  --mac-glass-header: rgba(246, 248, 251, 0.78);
+  --mac-glass-panel: rgba(255, 255, 255, 0.68);
+  --mac-glass-panel-strong: rgba(255, 255, 255, 0.82);
+  --mac-glass-border: rgba(15, 23, 42, 0.065);
+  --mac-glass-border-soft: rgba(15, 23, 42, 0.045);
+  --mac-glass-text: #172033;
+  --mac-glass-muted: rgba(23, 32, 51, 0.52);
+  --mac-glass-blue: #0a84ff;
+}
+
+.app-shell.app-shell-base-services,
+.app-shell.app-shell-base-services > .ant-layout,
+.app-shell.app-shell-base-services .app-content {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(10, 132, 255, 0.055), transparent 26%),
+    var(--mac-glass-page) !important;
+}
+
+.app-shell.app-shell-base-services .app-sider {
+  border-right-color: var(--mac-glass-border) !important;
+  background: var(--mac-glass-sidebar) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.72) !important;
+}
+
+.app-shell.app-shell-base-services .app-sider::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.46), rgba(255, 255, 255, 0.1)) !important;
+}
+
+.app-shell.app-shell-base-services .brand-row {
+  border-bottom-color: var(--mac-glass-border-soft);
+}
+
+.app-shell.app-shell-base-services .brand-row .brand {
+  background: var(--mac-glass-panel) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 6px 14px rgba(31, 41, 55, 0.045) !important;
+}
+
+.app-shell.app-shell-base-services .app-sider .ant-menu-item {
+  color: var(--mac-glass-muted) !important;
+  background: transparent !important;
+}
+
+.app-shell.app-shell-base-services .app-sider .ant-menu-item:hover {
+  color: var(--mac-glass-blue) !important;
+  background: rgba(255, 255, 255, 0.48) !important;
+}
+
+.app-shell.app-shell-base-services .app-sider .ant-menu-item-selected {
+  color: var(--mac-glass-blue) !important;
+  background: rgba(10, 132, 255, 0.075) !important;
+}
+
+.app-shell.app-shell-base-services .app-sider .ant-menu-item-selected .anticon,
+.app-shell.app-shell-base-services .app-sider .ant-menu-item-selected .ant-menu-title-content {
+  color: var(--mac-glass-blue) !important;
+}
+
+.app-shell.app-shell-base-services .app-header.compact-header {
+  border-bottom-color: var(--mac-glass-border) !important;
+  background: var(--mac-glass-header) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    0 8px 22px rgba(31, 41, 55, 0.03) !important;
+}
+
+.app-shell.app-shell-base-services .project-selector-wrap {
+  border-color: var(--mac-glass-border);
+  background: var(--mac-glass-panel) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78) !important;
+}
+
+.app-shell.app-shell-base-services .project-selector-label,
+.app-shell.app-shell-base-services .project-separator,
+.app-shell.app-shell-base-services .app-header-actions .ant-btn-circle {
+  color: var(--mac-glass-muted) !important;
+}
+
+.app-shell.app-shell-base-services .project-select .ant-select-selector {
+  color: var(--mac-glass-text) !important;
+}
+
+.app-shell.app-shell-base-services .app-header-actions .ant-btn-circle:hover {
+  color: var(--mac-glass-blue) !important;
+  border-color: var(--mac-glass-border);
+  background: var(--mac-glass-panel) !important;
+}
+
+/* Global macOS white glass palette */
+.app-shell.app-shell-macos {
+  --mac-glass-page: #f5f7fa;
+  --mac-glass-sidebar: rgba(246, 248, 251, 0.78);
+  --mac-glass-header: rgba(246, 248, 251, 0.78);
+  --mac-glass-panel: rgba(255, 255, 255, 0.68);
+  --mac-glass-panel-strong: rgba(255, 255, 255, 0.82);
+  --mac-glass-card: rgba(255, 255, 255, 0.72);
+  --mac-glass-border: rgba(15, 23, 42, 0.065);
+  --mac-glass-border-soft: rgba(15, 23, 42, 0.045);
+  --mac-glass-text: #172033;
+  --mac-glass-muted: rgba(23, 32, 51, 0.52);
+  --mac-glass-subtle: rgba(23, 32, 51, 0.38);
+  --mac-glass-blue: #0a84ff;
+  --mac-glass-green: #3f995b;
+}
+
+.app-shell.app-shell-macos,
+.app-shell.app-shell-macos > .ant-layout,
+.app-shell.app-shell-macos .app-content {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(10, 132, 255, 0.05), transparent 26%),
+    var(--mac-glass-page) !important;
+}
+
+.app-shell.app-shell-macos .app-sider {
+  border-right-color: var(--mac-glass-border) !important;
+  background: var(--mac-glass-sidebar) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.72) !important;
+}
+
+.app-shell.app-shell-macos .app-sider::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.46), rgba(255, 255, 255, 0.1)) !important;
+}
+
+.app-shell.app-shell-macos .brand-row,
+.app-shell.app-shell-macos .compact-header,
+.app-shell.app-shell-macos .panel-header,
+.app-shell.app-shell-macos .table-footer {
+  border-color: var(--mac-glass-border-soft) !important;
+}
+
+.app-shell.app-shell-macos .brand-row .brand,
+.app-shell.app-shell-macos .project-selector-wrap,
+.app-shell.app-shell-macos .workbench-project-toolbar,
+.app-shell.app-shell-macos .workbench-panel,
+.app-shell.app-shell-macos .api-collection-card,
+.app-shell.app-shell-macos .sprint-card,
+.app-shell.app-shell-macos .ant-card {
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  backdrop-filter: saturate(180%) blur(22px);
+}
+
+.app-shell.app-shell-macos .brand-row .brand {
+  background: var(--mac-glass-panel) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 6px 14px rgba(31, 41, 55, 0.045) !important;
+}
+
+.app-shell.app-shell-macos .app-sider .ant-menu-item {
+  color: var(--mac-glass-muted) !important;
+  background: transparent !important;
+}
+
+.app-shell.app-shell-macos .app-sider .ant-menu-item:hover {
+  color: var(--mac-glass-blue) !important;
+  background: rgba(255, 255, 255, 0.48) !important;
+}
+
+.app-shell.app-shell-macos .app-sider .ant-menu-item-selected,
+.app-shell.app-shell-macos .app-sider .ant-menu-item-selected .anticon,
+.app-shell.app-shell-macos .app-sider .ant-menu-item-selected .ant-menu-title-content {
+  color: var(--mac-glass-blue) !important;
+}
+
+.app-shell.app-shell-macos .app-sider .ant-menu-item-selected {
+  background: rgba(10, 132, 255, 0.075) !important;
+}
+
+.app-shell.app-shell-macos .app-header.compact-header {
+  height: 56px;
+  border-bottom-color: var(--mac-glass-border) !important;
+  background: var(--mac-glass-header) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    0 8px 22px rgba(31, 41, 55, 0.03) !important;
+}
+
+.app-shell.app-shell-macos .project-selector-wrap {
+  border-color: var(--mac-glass-border) !important;
+  background: var(--mac-glass-panel) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78) !important;
+}
+
+.app-shell.app-shell-macos .project-selector-label,
+.app-shell.app-shell-macos .project-separator,
+.app-shell.app-shell-macos .app-header-actions .ant-btn-circle {
+  color: var(--mac-glass-muted) !important;
+}
+
+.app-shell.app-shell-macos .project-select .ant-select-selector,
+.app-shell.app-shell-macos .panel-header .ant-typography,
+.app-shell.app-shell-macos .workbench-panel .ant-typography,
+.app-shell.app-shell-macos .api-collection-inline-value {
+  color: var(--mac-glass-text) !important;
+}
+
+.app-shell.app-shell-macos .app-header-actions .ant-btn-circle:hover {
+  color: var(--mac-glass-blue) !important;
+  border-color: var(--mac-glass-border) !important;
+  background: var(--mac-glass-panel) !important;
+}
+
+.app-shell.app-shell-macos .workbench-project-toolbar,
+.app-shell.app-shell-macos .workbench-panel {
+  border-color: var(--mac-glass-border) !important;
+  background: var(--mac-glass-panel) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.84),
+    0 10px 24px rgba(31, 41, 55, 0.045) !important;
+}
+
+.app-shell.app-shell-macos .panel-header,
+.app-shell.app-shell-macos .table-footer {
+  background: rgba(255, 255, 255, 0.5) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+}
+
+.app-shell.app-shell-macos .api-collection-card,
+.app-shell.app-shell-macos .sprint-card,
+.app-shell.app-shell-macos .ant-card {
+  border-color: var(--mac-glass-border) !important;
+  background: var(--mac-glass-card) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 10px 24px rgba(31, 41, 55, 0.045) !important;
+}
+
+.app-shell.app-shell-macos .api-collection-card:hover,
+.app-shell.app-shell-macos .sprint-card:hover,
+.app-shell.app-shell-macos .ant-card-hoverable:hover {
+  border-color: rgba(10, 132, 255, 0.18) !important;
+  background: var(--mac-glass-panel-strong) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 14px 30px rgba(31, 41, 55, 0.065) !important;
+}
+
+.app-shell.app-shell-macos .sprint-card-label,
+.app-shell.app-shell-macos .api-collection-description,
+.app-shell.app-shell-macos .table-footer .ant-typography {
+  color: var(--mac-glass-muted) !important;
+}
+
+.app-shell.app-shell-macos .action-btn-create.ant-btn-primary,
+.app-shell.app-shell-macos .panel-header .ant-btn-primary {
+  border: 1px solid rgba(10, 132, 255, 0.26) !important;
+  border-radius: 10px !important;
+  background: linear-gradient(180deg, #2f9bff, #0a84ff) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    0 8px 18px rgba(10, 132, 255, 0.18) !important;
+}
+
+.app-shell.app-shell-macos .ant-pagination .ant-pagination-item,
+.app-shell.app-shell-macos .ant-pagination .ant-pagination-prev,
+.app-shell.app-shell-macos .ant-pagination .ant-pagination-next,
+.app-shell.app-shell-macos .ant-pagination .ant-select-selector {
+  border-radius: 10px !important;
+}
+
+.app-shell.app-shell-macos .ant-pagination .ant-pagination-item-active {
+  border-color: rgba(10, 132, 255, 0.36) !important;
+  background: rgba(255, 255, 255, 0.84) !important;
+  box-shadow: 0 6px 14px rgba(31, 41, 55, 0.05) !important;
+}
+
+/* Project overview macOS glass alignment */
+.app-shell.app-shell-macos .workbench-page {
+  color: var(--mac-glass-text);
+}
+
+.app-shell.app-shell-macos .workbench-project-toolbar h4.ant-typography {
+  color: var(--mac-glass-text) !important;
+  letter-spacing: 0;
+}
+
+.app-shell.app-shell-macos .zentao-binding-toolbar-line,
+.app-shell.app-shell-macos .project-description-text,
+.app-shell.app-shell-macos .project-time-text {
+  color: var(--mac-glass-muted) !important;
+}
+
+.app-shell.app-shell-macos .workbench-tabs {
+  gap: 12px;
+}
+
+.app-shell.app-shell-macos .workbench-board-switcher {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px;
+  border: 1px solid var(--mac-glass-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.56);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 8px 18px rgba(31, 41, 55, 0.04);
+}
+
+.app-shell.app-shell-macos .workbench-board-switcher .ant-segmented {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.app-shell.app-shell-macos .workbench-board-switcher .ant-segmented-thumb,
+.app-shell.app-shell-macos .workbench-board-switcher .ant-segmented-item-selected {
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 6px 14px rgba(31, 41, 55, 0.06) !important;
+}
+
+.app-shell.app-shell-macos .workbench-board-switcher .ant-segmented-item {
+  min-width: 76px;
+  border-radius: 10px;
+  color: var(--mac-glass-muted);
+}
+
+.app-shell.app-shell-macos .workbench-board-switcher .ant-segmented-item-selected {
+  color: var(--mac-glass-blue) !important;
+}
+
+.app-shell.app-shell-macos .workbench-board-panel {
+  overflow: hidden;
+  min-height: calc(100vh - 214px);
+}
+
+.app-shell.app-shell-macos .sprint-card-scroll {
+  background: transparent !important;
+}
+
+.app-shell.app-shell-macos .sprint-card-grid-workbench {
+  gap: 18px;
+  padding: 20px;
+}
+
+.app-shell.app-shell-macos .sprint-card .ant-card-body {
+  height: 100%;
+}
+
+.app-shell.app-shell-macos .sprint-card-title {
+  color: var(--mac-glass-text) !important;
+  letter-spacing: 0;
+}
+
+.app-shell.app-shell-macos .sprint-card-meta {
+  border-bottom-color: var(--mac-glass-border-soft) !important;
+}
+
+.app-shell.app-shell-macos .sprint-card-value {
+  color: var(--mac-glass-text) !important;
+}
+
+.app-shell.app-shell-macos .sprint-card-description {
+  color: var(--mac-glass-muted) !important;
+}
+
+.app-shell.app-shell-macos .sprint-card-status .ant-tag,
+.app-shell.app-shell-macos .zentao-binding-summary-tag,
+.app-shell.app-shell-macos .ant-tag {
+  border-radius: 999px;
+  border-color: rgba(10, 132, 255, 0.12) !important;
+  background: rgba(10, 132, 255, 0.075) !important;
+  color: rgba(10, 96, 190, 0.86) !important;
+}
+
+/* Semantic task-status palette. These selectors intentionally override the generic tag treatment above. */
+.app-shell.app-shell-macos .ant-tag.ant-tag-default {
+  border-color: rgba(89, 89, 89, 0.18) !important;
+  background: #fafafa !important;
+  color: #595959 !important;
+}
+
+.app-shell.app-shell-macos .ant-tag.ant-tag-gold,
+.app-shell.app-shell-macos .ant-tag.ant-tag-warning {
+  border-color: rgba(173, 104, 0, 0.2) !important;
+  background: #fffbe6 !important;
+  color: #ad6800 !important;
+}
+
+.app-shell.app-shell-macos .ant-tag.ant-tag-cyan {
+  border-color: rgba(8, 151, 156, 0.2) !important;
+  background: #e6fffb !important;
+  color: #08979c !important;
+}
+
+.app-shell.app-shell-macos .ant-tag.ant-tag-purple {
+  border-color: rgba(109, 90, 158, 0.18) !important;
+  background: #f4f1fb !important;
+  color: #6d5a9e !important;
+}
+
+.app-shell.app-shell-macos .ant-tag.ant-tag-green,
+.app-shell.app-shell-macos .ant-tag.ant-tag-processing {
+  border-color: rgba(61, 122, 87, 0.2) !important;
+  background: #edf7ef !important;
+  color: #3d7a57 !important;
+}
+
+.app-shell.app-shell-macos .ant-tag.ant-tag-success {
+  border-color: rgba(37, 111, 75, 0.2) !important;
+  background: #e5f4eb !important;
+  color: #256f4b !important;
+}
+
+.app-shell.app-shell-macos .ant-tag.ant-tag-error {
+  border-color: rgba(207, 19, 34, 0.2) !important;
+  background: #fff1f0 !important;
+  color: #cf1322 !important;
+}
+
+.app-shell.app-shell-macos .ant-tag.ant-tag-volcano {
+  border-color: rgba(212, 107, 8, 0.2) !important;
+  background: #fff7e6 !important;
+  color: #d46b08 !important;
+}
+
+.app-shell.app-shell-macos .sprint-card-actions .ant-btn,
+.app-shell.app-shell-macos .project-actions .ant-btn-text,
+.app-shell.app-shell-macos .project-actions .action-btn-read {
+  border-radius: 10px !important;
+  color: var(--mac-glass-muted) !important;
+}
+
+.app-shell.app-shell-macos .sprint-card-actions .ant-btn:hover,
+.app-shell.app-shell-macos .project-actions .ant-btn-text:hover,
+.app-shell.app-shell-macos .project-actions .action-btn-read:hover {
+  color: var(--mac-glass-blue) !important;
+  background: rgba(255, 255, 255, 0.68) !important;
+}
+
+.app-shell.app-shell-macos .workbench-empty {
+  border-color: var(--mac-glass-border) !important;
+  background: var(--mac-glass-panel) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  backdrop-filter: saturate(180%) blur(22px);
+}
+
+/* Project overview aligned to base-services macOS glass style */
+.app-shell.app-shell-macos .project-overview-page {
+  --project-overview-border: rgba(15, 23, 42, 0.065);
+  --project-overview-panel: rgba(255, 255, 255, 0.68);
+  --project-overview-panel-soft: rgba(255, 255, 255, 0.5);
+  --project-overview-card: rgba(255, 255, 255, 0.72);
+  --project-overview-card-hover: rgba(255, 255, 255, 0.82);
+  --project-overview-text: #172033;
+  --project-overview-secondary: rgba(23, 32, 51, 0.58);
+  --project-overview-muted: rgba(23, 32, 51, 0.44);
+  --project-overview-blue: #0a84ff;
+  background: transparent !important;
+}
+
+.app-shell.app-shell-macos .project-overview-page .workbench-tabs {
+  padding: 12px 24px 16px;
+  gap: 12px;
+}
+
+.app-shell.app-shell-macos .project-overview-page .workbench-project-toolbar,
+.app-shell.app-shell-macos .project-overview-page .workbench-board-panel,
+.app-shell.app-shell-macos .project-overview-page .workbench-empty {
+  border: 1px solid var(--project-overview-border) !important;
+  background: var(--project-overview-panel) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 10px 24px rgba(31, 41, 55, 0.045) !important;
+}
+
+.app-shell.app-shell-macos .project-overview-page .workbench-project-toolbar {
+  min-height: 58px;
+  padding: 14px 18px;
+  border-radius: 18px;
+}
+
+.app-shell.app-shell-macos .project-overview-page .workbench-project-toolbar h4.ant-typography,
+.app-shell.app-shell-macos .project-overview-page .panel-header .ant-typography,
+.app-shell.app-shell-macos .project-overview-page .sprint-card-title {
+  color: var(--project-overview-text) !important;
+  font-weight: 700;
+}
+
+.app-shell.app-shell-macos .project-overview-page .project-description-text,
+.app-shell.app-shell-macos .project-overview-page .zentao-binding-toolbar-line,
+.app-shell.app-shell-macos .project-overview-page .sprint-card-label,
+.app-shell.app-shell-macos .project-overview-page .sprint-card-description,
+.app-shell.app-shell-macos .project-overview-page .table-footer .ant-typography {
+  color: var(--project-overview-muted) !important;
+}
+
+.app-shell.app-shell-macos .project-overview-page .workbench-board-switcher {
+  width: fit-content;
+  padding: 0;
+  border: 0 !important;
+  background: transparent !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell-macos .project-overview-page .workbench-board-switcher .ant-segmented {
+  padding: 4px;
+  border: 1px solid rgba(15, 23, 42, 0.055) !important;
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.68) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76) !important;
+}
+
+.app-shell.app-shell-macos .project-overview-page .workbench-board-switcher .ant-segmented-item {
+  min-width: 72px;
+  border-radius: 10px;
+  color: var(--project-overview-muted) !important;
+}
+
+.app-shell.app-shell-macos .project-overview-page .workbench-board-switcher .ant-segmented-item:hover {
+  color: var(--project-overview-blue) !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+}
+
+.app-shell.app-shell-macos .project-overview-page .workbench-board-switcher .ant-segmented-thumb,
+.app-shell.app-shell-macos .project-overview-page .workbench-board-switcher .ant-segmented-item-selected {
+  color: var(--project-overview-text) !important;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.94) !important;
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell-macos .project-overview-page .workbench-board-panel {
+  height: auto !important;
+  min-height: 0 !important;
+  flex: 1 1 auto;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--project-overview-panel) !important;
+}
+
+.app-shell.app-shell-macos .project-overview-page .panel-header,
+.app-shell.app-shell-macos .project-overview-page .table-footer {
+  min-height: 58px;
+  padding: 0 18px;
+  border-color: rgba(15, 23, 42, 0.055) !important;
+  background: var(--project-overview-panel-soft) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+}
+
+.app-shell.app-shell-macos .project-overview-page .sprint-card-scroll {
+  padding: 16px 18px;
+  background: transparent !important;
+}
+
+.app-shell.app-shell-macos .project-overview-page .sprint-card-grid-workbench {
+  gap: 18px;
+  padding: 0;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 310px));
+}
+
+.app-shell.app-shell-macos .project-overview-page .requirement-card-grid-workbench {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+@media (max-width: 1200px) {
+  .app-shell.app-shell-macos .project-overview-page .requirement-card-grid-workbench {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .app-shell.app-shell-macos .project-overview-page .requirement-card-grid-workbench {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .app-shell.app-shell-macos .project-overview-page .requirement-card-grid-workbench {
+    grid-template-columns: 1fr;
+  }
+}
+
+.app-shell.app-shell-macos .project-overview-page .sprint-card.ant-card {
+  min-height: 172px;
+  border: 1px solid rgba(255, 255, 255, 0.68) !important;
+  border-radius: 14px !important;
+  background: var(--project-overview-card) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 10px 24px rgba(31, 41, 55, 0.045) !important;
+}
+
+.app-shell.app-shell-macos .project-overview-page .sprint-card.ant-card:hover {
+  border-color: rgba(10, 132, 255, 0.18) !important;
+  background: var(--project-overview-card-hover) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 14px 30px rgba(31, 41, 55, 0.065) !important;
+  transform: translateY(-2px);
+}
+
+.app-shell.app-shell-macos .project-overview-page .sprint-card .ant-card-body {
+  min-height: 172px;
+  padding: 16px !important;
+}
+
+.app-shell.app-shell-macos .project-overview-page .sprint-card-meta {
+  border-bottom-color: rgba(15, 23, 42, 0.055) !important;
+}
+
+.app-shell.app-shell-macos .project-overview-page .sprint-card-value {
+  color: var(--project-overview-text) !important;
+  font-weight: 650;
+}
+
+.app-shell.app-shell-macos .project-overview-page .action-btn-create.ant-btn-primary {
+  border: 1px solid rgba(10, 132, 255, 0.26) !important;
+  border-radius: 10px !important;
+  background: linear-gradient(180deg, #2f9bff, #0a84ff) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    0 8px 18px rgba(10, 132, 255, 0.18) !important;
+}
+
+
+/* Project overview requirement list: functional-test style with requirement fields. */
+.project-overview-page .project-requirement-list-table.ant-table-wrapper {
+  width: 100%;
+}
+
+.project-overview-page .project-requirement-list-table .ant-table {
+  color: var(--project-overview-text, #172033);
+  background: transparent;
+  border-spacing: 0 6px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+.project-overview-page .project-requirement-list-table .ant-table-container {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell {
+  height: 48px;
+  padding: 0 18px;
+  color: rgba(86, 96, 112, 0.68) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(247, 250, 255, 0.66)) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.72) !important;
+  border-bottom: 1px solid rgba(84, 104, 132, 0.12) !important;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  white-space: nowrap;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.88),
+    0 8px 20px rgba(31, 41, 55, 0.045);
+}
+
+.project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell:first-child {
+  border-left: 1px solid rgba(255, 255, 255, 0.64) !important;
+  border-start-start-radius: 12px !important;
+  border-end-start-radius: 12px !important;
+}
+
+.project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell:last-child {
+  border-right: 1px solid rgba(255, 255, 255, 0.64) !important;
+  border-start-end-radius: 12px !important;
+  border-end-end-radius: 12px !important;
+}
+
+.project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell::before {
+  background: rgba(84, 104, 132, 0.045) !important;
+}
+
+.project-overview-page .project-requirement-list-table .ant-table-tbody > tr > td {
+  height: 52px;
+  padding: 8px 18px;
+  border-bottom: 1px solid rgba(80, 96, 128, 0.065);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.42);
+  color: rgba(79, 93, 115, 0.76) !important;
+  background: rgba(255, 255, 255, 0.28) !important;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.project-overview-page .project-requirement-list-table .ant-table-tbody > tr:hover > td {
+  background: rgba(91, 122, 196, 0.055) !important;
+}
+
+.project-requirement-list-name {
+  width: 100%;
+  min-width: 0;
+}
+
+.project-requirement-list-name .ant-space-item:last-child {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.project-requirement-list-name .ant-typography {
+  max-width: 100%;
+  color: rgba(31, 41, 55, 0.88) !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  line-height: 20px;
+}
+
+.project-requirement-list-status-dot {
+  width: 5px;
+  height: 5px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgba(126, 148, 224, 0.22);
+}
+
+.project-overview-page .project-requirement-list-table .ant-table-tbody .ant-typography,
+.project-overview-page .project-requirement-list-table .ant-table-tbody span,
+.project-overview-page .project-requirement-list-info.ant-typography {
+  color: rgba(72, 84, 104, 0.78) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+  text-shadow: none !important;
+  -webkit-text-stroke: 0 !important;
+}
+
+.project-overview-page .project-requirement-list-table .ant-table-tbody .ant-typography-secondary {
+  color: rgba(79, 93, 115, 0.7) !important;
+  font-weight: 400 !important;
+}
+
+.project-overview-page .project-requirement-list-table .project-requirement-document-link.ant-btn-link {
+  height: auto;
+  padding: 0;
+  color: rgba(66, 103, 194, 0.72);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.project-overview-page .project-requirement-list-table .project-requirement-document-link.ant-btn-link:hover {
+  color: rgba(34, 101, 210, 0.86);
+}
+
+.project-overview-page .project-requirement-list-table .ant-tag {
+  margin-inline-end: 0;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+}
+
+
+.project-overview-page .project-requirement-list-binding-info .zentao-binding-summary {
+  min-width: 0;
+  justify-content: flex-start;
+}
+
+.project-overview-page .project-requirement-list-binding-info .zentao-binding-summary-main {
+  min-width: 0;
+}
+
+.project-overview-page .project-requirement-list-binding-info .zentao-binding-summary .ant-tag,
+.project-overview-page .project-requirement-list-binding-info .zentao-binding-summary-key,
+.project-overview-page .project-requirement-list-binding-info .zentao-binding-summary-separator,
+.project-overview-page .project-requirement-list-binding-info .zentao-binding-summary-meta {
+  display: none;
+}
+
+.project-overview-page .project-requirement-list-binding-info .zentao-binding-summary-name {
+  overflow: hidden;
+  max-width: 220px;
+  color: rgba(72, 84, 104, 0.78) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-overview-page .project-requirement-list-binding-info .zentao-binding-summary-status {
+  display: inline-flex;
+  flex: 0 0 auto;
+  margin-left: 8px;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+}
+
+
+.project-overview-page .project-requirement-list-table .project-requirement-list-name .ant-typography {
+  color: rgba(31, 41, 55, 0.88) !important;
+}
+
+.project-requirement-list-actions {
+  justify-content: flex-end;
+}
+
+.project-requirement-list-actions .ant-btn {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  color: rgba(110, 122, 139, 0.52);
+}
+
+.project-requirement-list-actions .ant-btn:hover {
+  color: rgba(72, 86, 150, 0.78);
+  background: rgba(255, 255, 255, 0.62) !important;
+}
+
+.app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-container {
+  border: 0 !important;
+  background: transparent !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell {
+  color: rgba(86, 96, 112, 0.7) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(247, 250, 255, 0.7)) !important;
+  border-top-color: rgba(255, 255, 255, 0.78) !important;
+  border-bottom-color: rgba(84, 104, 132, 0.1) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  backdrop-filter: saturate(180%) blur(22px);
+}
+
+.app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-tbody > tr > td {
+  color: rgba(79, 93, 115, 0.76) !important;
+  background: rgba(255, 255, 255, 0.28) !important;
+}
+
+.app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-tbody > tr:hover > td {
+  background: rgba(91, 122, 196, 0.055) !important;
+}
+
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .ant-table {
+  color: var(--project-overview-text, #f0f6fc);
+  background: transparent !important;
+}
+
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .ant-table-container {
+  background: transparent !important;
+}
+
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell,
+:root[data-theme='dark'] .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell {
+  color: var(--github-dark-muted, rgba(203, 213, 225, 0.54)) !important;
+  background:
+    linear-gradient(180deg, rgba(30, 36, 50, 0.9), rgba(20, 26, 38, 0.82)) !important;
+  border-top-color: rgba(148, 163, 184, 0.12) !important;
+  border-bottom-color: rgba(148, 163, 184, 0.14) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 8px 20px rgba(7, 10, 16, 0.16);
+}
+
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell:first-child {
+  border-left-color: rgba(148, 163, 184, 0.12) !important;
+}
+
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell:last-child {
+  border-right-color: rgba(148, 163, 184, 0.12) !important;
+}
+
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell::before {
+  background: rgba(148, 163, 184, 0.1) !important;
+}
+
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .ant-table-tbody > tr > td,
+:root[data-theme='dark'] .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-tbody > tr > td {
+  color: var(--github-dark-muted, rgba(226, 232, 240, 0.68)) !important;
+  background: rgba(22, 27, 34, 0.46) !important;
+  border-bottom-color: rgba(148, 163, 184, 0.14) !important;
+  box-shadow: inset 0 -1px 0 rgba(7, 10, 16, 0.18);
+}
+
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .ant-table-tbody > tr:hover > td,
+:root[data-theme='dark'] .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-tbody > tr:hover > td {
+  background: rgba(56, 139, 253, 0.12) !important;
+}
+
+:root[data-theme='dark'] .project-requirement-list-name .ant-typography,
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .project-requirement-list-name .ant-typography {
+  color: var(--github-dark-text, #f0f6fc) !important;
+}
+
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .ant-table-tbody .ant-typography,
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .ant-table-tbody span,
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-info.ant-typography,
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-binding-info .zentao-binding-summary-name {
+  color: var(--github-dark-muted, rgba(203, 213, 225, 0.54)) !important;
+}
+
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .ant-table-tbody .ant-typography-secondary {
+  color: var(--github-dark-subtle, rgba(203, 213, 225, 0.48)) !important;
+}
+
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .project-requirement-document-link.ant-btn-link {
+  color: var(--github-dark-blue, #58a6ff) !important;
+}
+
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .project-requirement-document-link.ant-btn-link:hover {
+  color: #d6e8ff !important;
+}
+
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .ant-tag {
+  border-color: rgba(88, 166, 255, 0.24) !important;
+  background: rgba(56, 139, 253, 0.12) !important;
+  color: var(--github-dark-blue, #58a6ff) !important;
+}
+
+:root[data-theme='dark'] .project-requirement-list-actions .ant-btn {
+  color: var(--github-dark-muted, rgba(203, 213, 225, 0.54));
+  background: rgba(22, 27, 34, 0.54);
+}
+
+:root[data-theme='dark'] .project-requirement-list-actions .ant-btn:hover {
+  color: var(--github-dark-blue, #58a6ff);
+  background: rgba(56, 139, 253, 0.16) !important;
+}
+
+/* Project requirement list: align with the shared flat-list visual language. */
+.project-overview-page .project-requirement-list-table .ant-table {
+  border-collapse: separate;
+}
+
+.project-overview-page .project-requirement-list-table .ant-table-thead {
+  overflow: hidden;
+  border-radius: 8px;
+  clip-path: inset(0 round 8px);
+}
+
+:root:not([data-theme='dark']) .project-overview-page .project-requirement-list-table .ant-table {
+  border-spacing: 0;
+}
+
+:root:not([data-theme='dark']) .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell,
+:root:not([data-theme='dark']) .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell {
+  height: 42px;
+  padding: 0 16px;
+  color: #7b8494 !important;
+  background: #f7f9fc !important;
+  border-top: 0 !important;
+  border-bottom: 1px solid #e8ecf2 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+:root:not([data-theme='dark']) .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell:first-child {
+  border-left: 0 !important;
+  border-start-start-radius: 8px !important;
+  border-end-start-radius: 8px !important;
+  border-top-left-radius: 8px !important;
+  border-bottom-left-radius: 8px !important;
+}
+
+:root:not([data-theme='dark']) .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell:last-child {
+  border-right: 0 !important;
+  border-start-end-radius: 8px !important;
+  border-end-end-radius: 8px !important;
+  border-top-right-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+}
+
+:root:not([data-theme='dark']) .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell::before {
+  display: none;
+}
+
+:root:not([data-theme='dark']) .project-overview-page .project-requirement-list-table .ant-table-tbody > tr > td,
+:root:not([data-theme='dark']) .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-tbody > tr > td {
+  height: 48px;
+  padding: 8px 16px;
+  color: #697386 !important;
+  background: #fff !important;
+  border-bottom: 1px solid #edf0f5 !important;
+  box-shadow: none !important;
+}
+
+:root:not([data-theme='dark']) .project-overview-page .project-requirement-list-table .ant-table-tbody > tr:hover > td,
+:root:not([data-theme='dark']) .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-tbody > tr:hover > td {
+  background: #f5f8ff !important;
+}
+
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .ant-table {
+  border-spacing: 0;
+}
+
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell,
+:root[data-theme='dark'] .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell {
+  height: 42px;
+  padding: 0 16px;
+  color: rgba(203, 213, 225, 0.62) !important;
+  background: #1d2432 !important;
+  border-top: 0 !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell:first-child {
+  border-left: 0 !important;
+  border-start-start-radius: 8px !important;
+  border-end-start-radius: 8px !important;
+  border-top-left-radius: 8px !important;
+  border-bottom-left-radius: 8px !important;
+}
+
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell:last-child {
+  border-right: 0 !important;
+  border-start-end-radius: 8px !important;
+  border-end-end-radius: 8px !important;
+  border-top-right-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+}
+
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell::before {
+  display: none;
+}
+
+:root[data-theme='dark'] .project-overview-page .project-requirement-list-table .ant-table-tbody > tr > td,
+:root[data-theme='dark'] .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-tbody > tr > td {
+  height: 48px;
+  padding: 8px 16px;
+  color: rgba(226, 232, 240, 0.7) !important;
+  background: #171d29 !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12) !important;
+  box-shadow: none !important;
+}
+
+.project-overview-page .project-requirement-list-status-dot {
+  display: none;
+}
+
+:root:not([data-theme='dark']) .project-overview-page .project-requirement-list-table .project-requirement-list-name .ant-typography,
+:root:not([data-theme='dark']) .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .project-requirement-list-name .ant-typography {
+  color: #3f6fc6 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  cursor: pointer;
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+
+:root:not([data-theme='dark']) .project-overview-page .project-requirement-list-table .ant-table-tbody > tr:hover .project-requirement-list-name .ant-typography {
+  color: #2859b3 !important;
+  text-decoration: underline;
+}
+
+.project-requirement-list-actions .project-requirement-primary-action.ant-btn {
+  height: 28px;
+  padding-inline: 12px;
+  border-color: #e1e6ee;
+  border-radius: 7px;
+  color: #667085;
+  background: #fff;
+  box-shadow: none;
+  font-size: 12px;
+}
+
+.project-requirement-list-actions .project-requirement-primary-action.ant-btn:hover {
+  border-color: #b8cdf6;
+  color: #3f6fc6;
+  background: #f7f9ff;
+}
+
+.project-requirement-list-actions .project-requirement-more-action.ant-btn {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  color: #98a2b3;
+  background: transparent;
+}
+
+.project-requirement-list-actions .project-requirement-more-action.ant-btn:hover {
+  color: #3f6fc6;
+  background: #f0f4ff !important;
+}
+/* macOS simple-white button system for Project Overview, Testing, AI Testing, and Base Services. */
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .testing-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) {
+  --mac-action-blue: #0a84ff;
+  --mac-action-blue-hover: #1677ff;
+  --mac-action-blue-soft: rgba(10, 132, 255, 0.08);
+  --mac-action-blue-border: rgba(10, 132, 255, 0.18);
+  --mac-action-text: #172033;
+  --mac-action-muted: rgba(23, 32, 51, 0.52);
+  --mac-action-danger: #ff3b30;
+  --mac-action-danger-soft: rgba(255, 59, 48, 0.08);
+  --mac-action-danger-border: rgba(255, 59, 48, 0.18);
+  --mac-action-surface: rgba(255, 255, 255, 0.72);
+  --mac-action-surface-hover: rgba(255, 255, 255, 0.88);
+}
+
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .testing-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) :is(.action-btn-create, .action-btn-save, .action-btn-run).ant-btn-primary,
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .testing-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) .panel-header .ant-btn-primary,
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .testing-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) .ant-empty .ant-btn-primary {
+  border: 1px solid var(--mac-action-blue-border) !important;
+  border-radius: 10px !important;
+  background: linear-gradient(180deg, #2f9bff, var(--mac-action-blue)) !important;
+  color: #fff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 8px 18px rgba(10, 132, 255, 0.16) !important;
+}
+
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .testing-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) :is(.action-btn-create, .action-btn-save, .action-btn-run).ant-btn-primary:hover,
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .testing-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) .panel-header .ant-btn-primary:hover,
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .testing-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) .ant-empty .ant-btn-primary:hover {
+  border-color: rgba(10, 132, 255, 0.26) !important;
+  background: linear-gradient(180deg, #43a5ff, var(--mac-action-blue-hover)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.36),
+    0 10px 22px rgba(10, 132, 255, 0.2) !important;
+}
+
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .testing-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) :is(.action-btn-create, .action-btn-save, .action-btn-run).ant-btn:not(.ant-btn-primary),
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .testing-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) :is(.action-btn-read, .action-btn-update).ant-btn,
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .testing-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) .panel-header .ant-btn:not(.ant-btn-primary) {
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: var(--mac-action-muted) !important;
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .testing-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) :is(.action-btn-create, .action-btn-save, .action-btn-run).ant-btn:not(.ant-btn-primary):hover,
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .testing-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) :is(.action-btn-read, .action-btn-update).ant-btn:hover,
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .testing-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) .panel-header .ant-btn:not(.ant-btn-primary):hover {
+  border-color: rgba(15, 23, 42, 0.055) !important;
+  background: var(--mac-action-surface-hover) !important;
+  color: var(--mac-action-blue) !important;
+}
+
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .testing-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) .action-btn-delete.ant-btn,
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .testing-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) .ant-btn-dangerous {
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: rgba(23, 32, 51, 0.42) !important;
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .testing-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) .action-btn-delete.ant-btn:hover,
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .testing-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) .ant-btn-dangerous:hover {
+  border-color: var(--mac-action-danger-border) !important;
+  background: var(--mac-action-danger-soft) !important;
+  color: var(--mac-action-danger) !important;
+}
+
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .testing-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) .ant-btn:active {
+  transform: scale(0.95);
+}
+
+/* Portal overlays opened from these modules share the same button language. */
+.ant-drawer .action-btn-save.ant-btn-primary,
+.ant-modal .action-btn-save.ant-btn-primary,
+.ant-drawer .action-btn-create.ant-btn-primary,
+.ant-modal .action-btn-create.ant-btn-primary {
+  border: 1px solid rgba(10, 132, 255, 0.18) !important;
+  border-radius: 10px !important;
+  background: linear-gradient(180deg, #2f9bff, #0a84ff) !important;
+  color: #fff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 8px 18px rgba(10, 132, 255, 0.16) !important;
+}
+
+.ant-drawer .action-btn-save.ant-btn-primary:hover,
+.ant-modal .action-btn-save.ant-btn-primary:hover,
+.ant-drawer .action-btn-create.ant-btn-primary:hover,
+.ant-modal .action-btn-create.ant-btn-primary:hover {
+  background: linear-gradient(180deg, #43a5ff, #1677ff) !important;
+}
+
+.app-shell.app-shell-macos :is(.ai-testing-page, .ai-testing-overview-page) :is(.ai-testing-hero-action, .ai-skill-library-empty .ant-btn-primary).ant-btn-primary {
+  border: 1px solid rgba(10, 132, 255, 0.18) !important;
+  border-radius: 10px !important;
+  background: linear-gradient(180deg, #2f9bff, #0a84ff) !important;
+  color: #fff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 8px 18px rgba(10, 132, 255, 0.16) !important;
+}
+
+.app-shell.app-shell-macos :is(.ai-testing-page, .ai-testing-overview-page) :is(.ai-testing-hero-action, .ai-skill-library-empty .ant-btn-primary).ant-btn-primary:hover {
+  border-color: rgba(10, 132, 255, 0.26) !important;
+  background: linear-gradient(180deg, #43a5ff, #1677ff) !important;
+}
+
+/* Extend the same button system to sub-pages under Project Overview and Testing. */
+.app-shell.app-shell-macos :is(
+  .sprint-overview-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page
+) :is(.action-btn-create, .action-btn-save, .action-btn-run).ant-btn-primary,
+.app-shell.app-shell-macos :is(
+  .sprint-overview-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page
+) .panel-header .ant-btn-primary,
+.app-shell.app-shell-macos :is(
+  .sprint-overview-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page
+) .ant-empty .ant-btn-primary {
+  border: 1px solid rgba(10, 132, 255, 0.18) !important;
+  border-radius: 10px !important;
+  background: linear-gradient(180deg, #2f9bff, #0a84ff) !important;
+  color: #fff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 8px 18px rgba(10, 132, 255, 0.16) !important;
+}
+
+.app-shell.app-shell-macos :is(
+  .sprint-overview-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page
+) :is(.action-btn-create, .action-btn-save, .action-btn-run).ant-btn-primary:hover,
+.app-shell.app-shell-macos :is(
+  .sprint-overview-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page
+) .panel-header .ant-btn-primary:hover,
+.app-shell.app-shell-macos :is(
+  .sprint-overview-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page
+) .ant-empty .ant-btn-primary:hover {
+  border-color: rgba(10, 132, 255, 0.26) !important;
+  background: linear-gradient(180deg, #43a5ff, #1677ff) !important;
+}
+
+.app-shell.app-shell-macos :is(
+  .sprint-overview-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page
+) :is(.action-btn-create, .action-btn-save, .action-btn-run).ant-btn:not(.ant-btn-primary),
+.app-shell.app-shell-macos :is(
+  .sprint-overview-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page
+) :is(.action-btn-read, .action-btn-update).ant-btn,
+.app-shell.app-shell-macos :is(
+  .sprint-overview-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page
+) .panel-header .ant-btn:not(.ant-btn-primary) {
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: rgba(23, 32, 51, 0.52) !important;
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell-macos :is(
+  .sprint-overview-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page
+) :is(.action-btn-create, .action-btn-save, .action-btn-run).ant-btn:not(.ant-btn-primary):hover,
+.app-shell.app-shell-macos :is(
+  .sprint-overview-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page
+) :is(.action-btn-read, .action-btn-update).ant-btn:hover,
+.app-shell.app-shell-macos :is(
+  .sprint-overview-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page
+) .panel-header .ant-btn:not(.ant-btn-primary):hover {
+  border-color: rgba(15, 23, 42, 0.055) !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  color: #0a84ff !important;
+}
+
+.app-shell.app-shell-macos :is(
+  .sprint-overview-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page
+) .action-btn-delete.ant-btn,
+.app-shell.app-shell-macos :is(
+  .sprint-overview-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page
+) .ant-btn-dangerous {
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: rgba(23, 32, 51, 0.42) !important;
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell-macos :is(
+  .sprint-overview-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page
+) .action-btn-delete.ant-btn:hover,
+.app-shell.app-shell-macos :is(
+  .sprint-overview-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page
+) .ant-btn-dangerous:hover {
+  border-color: rgba(255, 59, 48, 0.18) !important;
+  background: rgba(255, 59, 48, 0.08) !important;
+  color: #ff3b30 !important;
+}
+
+/* GitHub-dark inspired macOS glass mode for core workbench modules. */
+:root[data-theme='dark'] .app-shell.app-shell-macos {
+  --mac-dark-canvas: #0d1117;
+  --mac-dark-canvas-soft: #10151d;
+  --mac-dark-panel: rgba(22, 27, 34, 0.78);
+  --mac-dark-panel-strong: rgba(33, 38, 45, 0.84);
+  --mac-dark-card: rgba(22, 27, 34, 0.72);
+  --mac-dark-card-hover: rgba(33, 38, 45, 0.86);
+  --mac-dark-border: rgba(48, 54, 61, 0.86);
+  --mac-dark-border-soft: rgba(48, 54, 61, 0.56);
+  --mac-dark-text: #f0f6fc;
+  --mac-dark-muted: #8b949e;
+  --mac-dark-subtle: #6e7681;
+  --mac-dark-blue: #58a6ff;
+  --mac-dark-blue-strong: #388bfd;
+  --mac-dark-blue-soft: rgba(56, 139, 253, 0.14);
+  --mac-dark-danger: #ff7b72;
+  --mac-dark-danger-soft: rgba(248, 81, 73, 0.14);
+  --mac-dark-success: #3fb950;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos,
+:root[data-theme='dark'] .app-shell.app-shell-macos > .ant-layout,
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-content {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(88, 166, 255, 0.08), transparent 28%),
+    var(--mac-dark-canvas) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-sider,
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-header.compact-header {
+  border-color: var(--mac-dark-border-soft) !important;
+  background: rgba(13, 17, 23, 0.76) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow: none !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .brand-row,
+:root[data-theme='dark'] .app-shell.app-shell-macos .panel-header,
+:root[data-theme='dark'] .app-shell.app-shell-macos .table-footer {
+  border-color: var(--mac-dark-border-soft) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .brand-row .brand,
+:root[data-theme='dark'] .app-shell.app-shell-macos .project-selector-wrap {
+  border-color: var(--mac-dark-border-soft) !important;
+  background: rgba(22, 27, 34, 0.72) !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-sider .ant-menu-item {
+  color: var(--mac-dark-muted) !important;
+  background: transparent !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-sider .ant-menu-item:hover {
+  color: var(--mac-dark-blue) !important;
+  background: rgba(56, 139, 253, 0.1) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-sider .ant-menu-item-selected,
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-sider .ant-menu-item-selected .anticon,
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-sider .ant-menu-item-selected .ant-menu-title-content {
+  color: var(--mac-dark-blue) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-sider .ant-menu-item-selected {
+  background: var(--mac-dark-blue-soft) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) {
+  color: var(--mac-dark-text);
+  --mac-action-blue: var(--mac-dark-blue-strong);
+  --mac-action-blue-hover: var(--mac-dark-blue);
+  --mac-action-blue-soft: var(--mac-dark-blue-soft);
+  --mac-action-blue-border: rgba(88, 166, 255, 0.28);
+  --mac-action-text: var(--mac-dark-text);
+  --mac-action-muted: var(--mac-dark-muted);
+  --mac-action-danger: var(--mac-dark-danger);
+  --mac-action-danger-soft: var(--mac-dark-danger-soft);
+  --mac-action-danger-border: rgba(255, 123, 114, 0.28);
+  --mac-action-surface: rgba(22, 27, 34, 0.68);
+  --mac-action-surface-hover: rgba(33, 38, 45, 0.86);
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) :is(.workbench-project-toolbar, .workbench-panel, .workbench-empty, .api-detail-hover-panel, .functional-case-section-card, .functional-case-meta-panel) {
+  border-color: var(--mac-dark-border) !important;
+  background: var(--mac-dark-panel) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 12px 28px rgba(1, 4, 9, 0.28) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) :is(.panel-header, .table-footer, .base-services-toolbar) {
+  border-color: var(--mac-dark-border-soft) !important;
+  background: rgba(22, 27, 34, 0.62) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) :is(.ant-card, .sprint-card, .api-collection-card, .base-services-connection-card, .ai-task-card, .functional-suite-card, .ui-test-suite-card) {
+  border-color: var(--mac-dark-border) !important;
+  background: var(--mac-dark-card) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  backdrop-filter: saturate(180%) blur(22px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 10px 24px rgba(1, 4, 9, 0.24) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) :is(.ant-card-hoverable:hover, .sprint-card:hover, .api-collection-card:hover, .base-services-connection-card:hover, .ai-task-card:hover) {
+  border-color: rgba(88, 166, 255, 0.34) !important;
+  background: var(--mac-dark-card-hover) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 14px 32px rgba(1, 4, 9, 0.34) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) :is(.ant-typography, .sprint-card-title, .base-services-connection-title, .ai-task-card-title, .api-collection-inline-value, .sprint-card-value) {
+  color: var(--mac-dark-text) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) :is(.sprint-card-label, .api-collection-description, .base-services-connection-url, .project-description-text, .project-time-text, .table-footer .ant-typography, .ant-typography-secondary) {
+  color: var(--mac-dark-muted) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) :is(.sprint-card-meta, .api-detail-meta-row, .functional-suite-context-chip, .base-services-connection-card .sprint-card-meta) {
+  border-color: var(--mac-dark-border-soft) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) .ant-tag {
+  border-color: rgba(88, 166, 255, 0.24) !important;
+  background: rgba(56, 139, 253, 0.12) !important;
+  color: var(--mac-dark-blue) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) :is(.action-btn-create, .action-btn-save, .action-btn-run).ant-btn-primary,
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) .panel-header .ant-btn-primary,
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) .ant-empty .ant-btn-primary {
+  border-color: rgba(88, 166, 255, 0.28) !important;
+  background: linear-gradient(180deg, #4697f2, #2380e8) !important;
+  color: #fff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 8px 20px rgba(56, 139, 253, 0.22) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) :is(.action-btn-create, .action-btn-save, .action-btn-run).ant-btn-primary:hover,
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) .panel-header .ant-btn-primary:hover,
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) .ant-empty .ant-btn-primary:hover {
+  background: linear-gradient(180deg, #58a6ff, #388bfd) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) :is(.action-btn-read, .action-btn-update, .action-btn-create, .action-btn-save, .action-btn-run).ant-btn:not(.ant-btn-primary),
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) .panel-header .ant-btn:not(.ant-btn-primary) {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--mac-dark-muted) !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) :is(.action-btn-read, .action-btn-update, .action-btn-create, .action-btn-save, .action-btn-run).ant-btn:not(.ant-btn-primary):hover,
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) .panel-header .ant-btn:not(.ant-btn-primary):hover {
+  border-color: var(--mac-dark-border-soft) !important;
+  background: rgba(33, 38, 45, 0.72) !important;
+  color: var(--mac-dark-blue) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .base-services-page
+) :is(.action-btn-delete, .ant-btn-dangerous).ant-btn:hover {
+  border-color: rgba(255, 123, 114, 0.28) !important;
+  background: rgba(248, 81, 73, 0.14) !important;
+  color: var(--mac-dark-danger) !important;
+}
+
+:root[data-theme='dark'] .ant-drawer-content,
+:root[data-theme='dark'] :is(.ant-modal-container, .ant-modal-content) {
+  border-color: rgba(48, 54, 61, 0.86) !important;
+  background: rgba(22, 27, 34, 0.92) !important;
+  color: #f0f6fc !important;
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow: 0 20px 48px rgba(1, 4, 9, 0.42) !important;
+}
+
+:root[data-theme='dark'] .ant-drawer-header,
+:root[data-theme='dark'] .ant-modal-header,
+:root[data-theme='dark'] .ant-modal-footer {
+  border-color: rgba(48, 54, 61, 0.56) !important;
+  background: rgba(22, 27, 34, 0.76) !important;
+}
+
+:root[data-theme='dark'] .ant-drawer-title,
+:root[data-theme='dark'] .ant-modal-title,
+:root[data-theme='dark'] .ant-form-item-label > label,
+:root[data-theme='dark'] .ant-descriptions-item-label,
+:root[data-theme='dark'] .ant-descriptions-item-content {
+  color: #f0f6fc !important;
+}
+
+:root[data-theme='dark'] .ant-input,
+:root[data-theme='dark'] .ant-input-affix-wrapper,
+:root[data-theme='dark'] .ant-input-number,
+:root[data-theme='dark'] .ant-select-selector,
+:root[data-theme='dark'] .ant-picker {
+  border-color: rgba(48, 54, 61, 0.86) !important;
+  background: rgba(13, 17, 23, 0.72) !important;
+  color: #f0f6fc !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme='dark'] .ant-input::placeholder,
+:root[data-theme='dark'] .ant-input-number-input::placeholder {
+  color: #6e7681 !important;
+}
+
+:root[data-theme='dark'] .ant-input:focus,
+:root[data-theme='dark'] .ant-input-focused,
+:root[data-theme='dark'] .ant-input-affix-wrapper-focused,
+:root[data-theme='dark'] .ant-select-focused .ant-select-selector,
+:root[data-theme='dark'] .ant-picker-focused {
+  border-color: #58a6ff !important;
+  box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.18) !important;
+}
+
+:root[data-theme='dark'] .ant-drawer .action-btn-save.ant-btn-primary,
+:root[data-theme='dark'] .ant-modal .action-btn-save.ant-btn-primary,
+:root[data-theme='dark'] .ant-drawer .action-btn-create.ant-btn-primary,
+:root[data-theme='dark'] .ant-modal .action-btn-create.ant-btn-primary,
+:root[data-theme='dark'] .ant-modal .ant-btn-primary {
+  border-color: rgba(88, 166, 255, 0.28) !important;
+  background: linear-gradient(180deg, #4697f2, #2380e8) !important;
+  color: #fff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 8px 20px rgba(56, 139, 253, 0.22) !important;
+}
+
+:root[data-theme='dark'] .ant-drawer .action-btn-save.ant-btn-primary:hover,
+:root[data-theme='dark'] .ant-modal .action-btn-save.ant-btn-primary:hover,
+:root[data-theme='dark'] .ant-drawer .action-btn-create.ant-btn-primary:hover,
+:root[data-theme='dark'] .ant-modal .action-btn-create.ant-btn-primary:hover,
+:root[data-theme='dark'] .ant-modal .ant-btn-primary:hover {
+  background: linear-gradient(180deg, #58a6ff, #388bfd) !important;
+}
+
+/* Final scoped button pass for Project Overview, Testing, AI Testing, and Base Services. */
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .functional-test-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page,
+  .app-header-actions
+) .ant-btn-primary:not(:disabled) {
+  border-color: rgba(10, 132, 255, 0.26) !important;
+  background: linear-gradient(180deg, #2f9bff 0%, #0a84ff 100%) !important;
+  color: #fff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    0 8px 18px rgba(10, 132, 255, 0.18) !important;
+}
+
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .functional-test-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page,
+  .app-header-actions
+) .ant-btn-primary:not(:disabled):hover,
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .functional-test-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page,
+  .app-header-actions
+) .ant-btn-primary:not(:disabled):focus-visible {
+  border-color: rgba(10, 132, 255, 0.34) !important;
+  background: linear-gradient(180deg, #43a5ff 0%, #1677ff 100%) !important;
+}
+
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .functional-test-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page
+) :is(
+  .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous),
+  .api-case-import-trigger.ant-btn,
+  .api-env-var-picker-trigger.ant-btn,
+  .json-editor-toolbar-btn.ant-btn,
+  .json-editor-toolbar-link.ant-btn,
+  .ui-template-picker-trigger.ant-btn
+) {
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  background: rgba(255, 255, 255, 0.58) !important;
+  color: #506070 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  backdrop-filter: saturate(180%) blur(14px);
+}
+
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .functional-test-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page
+) :is(
+  .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous),
+  .api-case-import-trigger.ant-btn,
+  .api-env-var-picker-trigger.ant-btn,
+  .json-editor-toolbar-btn.ant-btn,
+  .json-editor-toolbar-link.ant-btn,
+  .ui-template-picker-trigger.ant-btn
+):not(:disabled):hover {
+  border-color: rgba(10, 132, 255, 0.2) !important;
+  background: rgba(239, 248, 255, 0.82) !important;
+  color: #0a84ff !important;
+}
+
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .functional-test-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page
+) .ant-btn-dashed:not(:disabled) {
+  border-color: rgba(10, 132, 255, 0.22) !important;
+  background: rgba(255, 255, 255, 0.46) !important;
+  color: #0a84ff !important;
+}
+
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .functional-test-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page
+) :is(.ant-btn-dangerous, .action-btn-delete).ant-btn {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: #ff453a !important;
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .functional-test-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page
+) :is(.ant-btn-dangerous, .action-btn-delete).ant-btn:not(:disabled):hover {
+  border-color: rgba(255, 69, 58, 0.16) !important;
+  background: rgba(255, 69, 58, 0.08) !important;
+  color: #ff453a !important;
+}
+
+.ant-modal .ant-btn-primary:not(:disabled),
+.ant-drawer .ant-btn-primary:not(:disabled) {
+  border-color: rgba(10, 132, 255, 0.26) !important;
+  background: linear-gradient(180deg, #2f9bff 0%, #0a84ff 100%) !important;
+  color: #fff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    0 8px 18px rgba(10, 132, 255, 0.18) !important;
+}
+
+.ant-modal .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous),
+.ant-drawer .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous) {
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  background: rgba(255, 255, 255, 0.64) !important;
+  color: #506070 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .functional-test-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page,
+  .app-header-actions
+) .ant-btn-primary:not(:disabled) {
+  border-color: rgba(88, 166, 255, 0.3) !important;
+  background: linear-gradient(180deg, #4697f2 0%, #2380e8 100%) !important;
+  color: #fff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 8px 20px rgba(56, 139, 253, 0.22) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .functional-test-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page,
+  .app-header-actions
+) .ant-btn-primary:not(:disabled):hover {
+  border-color: rgba(88, 166, 255, 0.4) !important;
+  background: linear-gradient(180deg, #58a6ff 0%, #388bfd 100%) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .functional-test-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page
+) :is(
+  .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous),
+  .api-case-import-trigger.ant-btn,
+  .api-env-var-picker-trigger.ant-btn,
+  .json-editor-toolbar-btn.ant-btn,
+  .json-editor-toolbar-link.ant-btn,
+  .ui-template-picker-trigger.ant-btn
+) {
+  border-color: rgba(48, 54, 61, 0.86) !important;
+  background: rgba(22, 27, 34, 0.58) !important;
+  color: #8b949e !important;
+  box-shadow: inset 0 1px 0 rgba(240, 246, 252, 0.04) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  backdrop-filter: saturate(180%) blur(14px);
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .functional-test-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page
+) :is(
+  .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous),
+  .api-case-import-trigger.ant-btn,
+  .api-env-var-picker-trigger.ant-btn,
+  .json-editor-toolbar-btn.ant-btn,
+  .json-editor-toolbar-link.ant-btn,
+  .ui-template-picker-trigger.ant-btn
+):not(:disabled):hover {
+  border-color: rgba(88, 166, 255, 0.26) !important;
+  background: rgba(33, 38, 45, 0.82) !important;
+  color: #58a6ff !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .functional-test-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page
+) .ant-btn-dashed:not(:disabled) {
+  border-color: rgba(88, 166, 255, 0.28) !important;
+  background: rgba(13, 17, 23, 0.46) !important;
+  color: #58a6ff !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .functional-test-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page
+) :is(.ant-btn-dangerous, .action-btn-delete).ant-btn {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: #ff7b72 !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .functional-test-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page
+) :is(.ant-btn-dangerous, .action-btn-delete).ant-btn:not(:disabled):hover {
+  border-color: rgba(255, 123, 114, 0.28) !important;
+  background: rgba(248, 81, 73, 0.14) !important;
+  color: #ff7b72 !important;
+}
+
+:root[data-theme='dark'] :is(.ant-modal, .ant-drawer) .ant-btn-primary:not(:disabled) {
+  border-color: rgba(88, 166, 255, 0.3) !important;
+  background: linear-gradient(180deg, #4697f2 0%, #2380e8 100%) !important;
+  color: #fff !important;
+}
+
+:root[data-theme='dark'] :is(.ant-modal, .ant-drawer) .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous) {
+  border-color: rgba(48, 54, 61, 0.86) !important;
+  background: rgba(22, 27, 34, 0.64) !important;
+  color: #8b949e !important;
+}
+
+:root[data-theme='dark'] :is(.ant-modal, .ant-drawer) .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):not(:disabled):hover {
+  border-color: rgba(88, 166, 255, 0.26) !important;
+  background: rgba(33, 38, 45, 0.82) !important;
+  color: #58a6ff !important;
+}
+
+:root[data-theme='dark'] :is(.ant-modal, .ant-drawer) .ant-btn-dangerous:not(:disabled):hover {
+  border-color: rgba(255, 123, 114, 0.28) !important;
+  background: rgba(248, 81, 73, 0.14) !important;
+  color: #ff7b72 !important;
+}
+
+/* Override the older green macOS primary action rule that predated the shared button system. */
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .functional-test-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page,
+  .app-header-actions
+) :is(.action-btn-create, .action-btn-save, .action-btn-run).ant-btn-primary:not(:disabled),
+.app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .functional-test-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page,
+  .app-header-actions
+) .panel-header .ant-btn-primary:not(:disabled) {
+  border: 1px solid rgba(10, 132, 255, 0.26) !important;
+  background: linear-gradient(180deg, #2f9bff 0%, #0a84ff 100%) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .functional-test-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page,
+  .app-header-actions
+) :is(.action-btn-create, .action-btn-save, .action-btn-run).ant-btn-primary:not(:disabled),
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-suite-detail-page,
+  .functional-test-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page,
+  .app-header-actions
+) .panel-header .ant-btn-primary:not(:disabled) {
+  border: 1px solid rgba(88, 166, 255, 0.3) !important;
+  background: linear-gradient(180deg, #4697f2 0%, #2380e8 100%) !important;
+}
+
+/* Project requirement action buttons aligned with functional-test list actions. */
+.app-shell.app-shell-macos .project-overview-page .project-requirement-list-actions {
+  justify-content: flex-end;
+}
+
+.app-shell.app-shell-macos .project-overview-page .project-requirement-list-actions .ant-btn:not(.action-btn-delete) {
+  width: 30px !important;
+  min-width: 30px !important;
+  height: 30px !important;
+  color: rgba(110, 122, 139, 0.52) !important;
+}
+
+.app-shell.app-shell-macos .project-overview-page .project-requirement-list-actions .ant-btn:not(.action-btn-delete):hover {
+  color: rgba(72, 86, 150, 0.78) !important;
+  background: rgba(255, 255, 255, 0.62) !important;
+}
+
+/* Requirement names use the same clickable-name treatment as task-list names. */
+:root[data-theme='dark'] .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .project-requirement-list-name .ant-typography {
+  color: #78aef2 !important;
+  font-weight: 500 !important;
+  line-height: 22px !important;
+  cursor: pointer;
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-tbody > tr:hover .project-requirement-list-name .ant-typography {
+  color: #9bc4f5 !important;
+  text-decoration: underline;
+}
+.ui-import-conflict-comparison {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.ui-import-conflict-side {
+  min-width: 0;
+}
+
+.ui-import-conflict-side h4 {
+  margin: 0 0 12px;
+}
+
+.ui-import-conflict-text,
+.ui-import-conflict-json {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ui-import-conflict-json {
+  margin: 0;
+  font-family: var(--font-family-mono, monospace);
+}
+
+@media (max-width: 900px) {
+  .ui-import-conflict-comparison {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Text actions must not inherit the fixed square sizing of header icons. */
+.app-shell .app-header-actions { flex-shrink: 0; }
+.app-shell .app-header-actions .app-header-create-project {
+  width: auto;
+  height: 32px;
+  flex-shrink: 0;
+  padding-inline: 14px;
+  margin-inline-end: 8px;
+  border-radius: 8px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* Persistent feedback contact in the center of the shared navigation bar. */
+.app-shell .app-header.compact-header .app-header-main {
+  flex: 0 1 auto;
+}
+
+.app-header-feedback {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  min-width: 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 20px;
+  text-align: center;
+}
+
+.app-header-feedback-badge {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 6px;
+  color: #1677ff;
+  background: rgba(22, 119, 255, 0.09);
+  font-weight: 600;
+}
+
+.app-header-feedback a {
+  color: #1677ff;
+  font-weight: 500;
+  white-space: nowrap;
+  text-underline-offset: 3px;
+}
+
+.app-header-feedback a:hover,
+.app-header-feedback a:focus-visible {
+  color: #4096ff;
+  text-decoration: underline;
+}
+
+:root[data-theme='dark'] .app-header-feedback { color: #a8b4c8; }
+:root[data-theme='dark'] .app-header-feedback-badge { color: #7bb5ff; background: rgba(75, 150, 255, 0.14); }
+:root[data-theme='dark'] .app-header-feedback a { color: #7bb5ff; }
+
+@media (max-width: 1400px) {
+  .app-shell.app-shell-macos .app-header.compact-header {
+    height: auto;
+    min-height: 56px;
+    padding-block: 8px;
+  }
+}
+
+@media (max-width: 900px) {
+  .app-header-feedback { width: 100%; }
+}

@@ -1,0 +1,17 @@
+.git
+.gitignore
+.scratch
+.trae
+_stitch_ref
+dist
+node_modules
+previews
+*.log
+*.tmp
+*.tmp.png
+.env
+.env.*
+!.env.example
+Dockerfile*
+docker-compose*.yml
+docker-compose*.yaml

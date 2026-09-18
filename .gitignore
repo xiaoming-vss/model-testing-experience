@@ -1,0 +1,22 @@
+# Local settings and generated deployment files
+/config/platform.toml
+/.runtime/
+**/.env
+**/.env.*
+!**/.env.example
+**/.venv/
+**/node_modules/
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.ruff_cache/
+**/.mypy_cache/
+**/.coverage
+**/dist/
+**/build/
+**/*.egg-info/
+**/logs/
+**/.scratch/
+**/.trellis/
+**/.idea/
+**/.zcode/

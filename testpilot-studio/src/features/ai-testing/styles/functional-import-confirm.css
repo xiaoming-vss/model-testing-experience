@@ -1,0 +1,93 @@
+.functional-import-confirm-modal .ant-modal-container,
+.functional-import-confirm-modal .ant-modal-content {
+  padding: 28px;
+  border-radius: 16px;
+}
+.functional-import-confirm-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 24px;
+  font-size: 18px;
+  font-weight: 600;
+}
+.functional-import-confirm-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--ant-color-primary-bg);
+  color: var(--ant-color-primary);
+  font-size: 20px;
+}
+.functional-import-confirm-description {
+  margin: 16px 0 20px;
+  color: var(--ant-color-text-secondary);
+  line-height: 1.8;
+}
+.functional-import-confirm-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 10px;
+  background: var(--ant-color-fill-quaternary);
+  overflow-wrap: anywhere;
+}
+.functional-import-confirm-label {
+  color: var(--ant-color-text-tertiary);
+  font-size: 12px;
+}
+.functional-import-confirm-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-top: 4px;
+  color: var(--ant-color-text-secondary);
+}
+.functional-import-confirm-counts b {
+  margin-right: 4px;
+  color: var(--ant-color-text);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.functional-import-confirm-check {
+  margin-top: 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--ant-color-border);
+  border-radius: 10px;
+  transition: background 150ms, border-color 150ms;
+}
+.functional-import-confirm-check.is-checked {
+  background: var(--ant-color-primary-bg);
+  border-color: var(--ant-color-primary-border);
+}
+.functional-import-confirm-check .ant-checkbox-wrapper {
+  width: 100%;
+  line-height: 1.7;
+}
+.functional-import-confirm-modal .ant-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--ant-color-border-secondary);
+}
+.functional-import-confirm-modal .ant-modal-footer .ant-btn {
+  min-width: 88px;
+  height: 38px;
+  margin-inline-start: 0;
+  border-radius: 8px;
+  box-shadow: none;
+}
+@media (max-width: 600px) {
+  .functional-import-confirm-modal .ant-modal-container,
+  .functional-import-confirm-modal .ant-modal-content {
+    padding: 20px;
+  }
+}

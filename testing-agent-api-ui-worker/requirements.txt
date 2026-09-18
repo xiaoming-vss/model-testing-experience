@@ -1,0 +1,2 @@
+playwright>=1.52.0
+httpx>=0.28.0

@@ -1,0 +1,120 @@
+from __future__ import annotations
+
+from fastapi import APIRouter
+
+from testing_agent.handlers.integration_connection import (
+    create_project_zentao_connection,
+    delete_project_zentao_connection,
+    delete_zentao_connection,
+    get_project_zentao_connection,
+    get_zentao_connection,
+    list_project_zentao_connections,
+    list_project_zentao_execution_cases,
+    list_project_zentao_execution_stories,
+    list_project_zentao_execution_testtasks,
+    list_project_zentao_project_executions,
+    list_project_zentao_projects,
+    list_zentao_connections,
+    list_zentao_execution_cases,
+    list_zentao_execution_stories,
+    list_zentao_execution_testtasks,
+    list_zentao_project_executions,
+    list_zentao_projects,
+    reauth_project_zentao_connection,
+    reauth_zentao_connection,
+    update_project_zentao_connection,
+    update_zentao_connection,
+)
+from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
+from testing_agent.schemas.integrations import (
+    IntegrationConnectionResponse,
+    RemoteResourceListResponse,
+)
+
+router = APIRouter()
+
+router.post(
+    "/projects/{project_id}/integrations/zentao/connections",
+    response_model=ApiResponse[IntegrationConnectionResponse],
+)(create_project_zentao_connection)
+router.get(
+    "/projects/{project_id}/integrations/zentao/connections",
+    response_model=ApiResponse[ListResponse[IntegrationConnectionResponse]],
+)(list_project_zentao_connections)
+router.get(
+    "/projects/{project_id}/integrations/zentao/connections/{connection_id}",
+    response_model=ApiResponse[IntegrationConnectionResponse],
+)(get_project_zentao_connection)
+router.patch(
+    "/projects/{project_id}/integrations/zentao/connections/{connection_id}",
+    response_model=ApiResponse[IntegrationConnectionResponse],
+)(update_project_zentao_connection)
+router.post(
+    "/projects/{project_id}/integrations/zentao/connections/{connection_id}/reauth",
+    response_model=ApiResponse[IntegrationConnectionResponse],
+)(reauth_project_zentao_connection)
+router.delete(
+    "/projects/{project_id}/integrations/zentao/connections/{connection_id}",
+    response_model=ApiResponse[EmptyData],
+)(delete_project_zentao_connection)
+router.get(
+    "/projects/{project_id}/integrations/zentao/connections/{connection_id}/projects",
+    response_model=ApiResponse[RemoteResourceListResponse],
+)(list_project_zentao_projects)
+router.get(
+    "/projects/{project_id}/integrations/zentao/connections/{connection_id}/projects/{remote_project_id}/executions",
+    response_model=ApiResponse[RemoteResourceListResponse],
+)(list_project_zentao_project_executions)
+router.get(
+    "/projects/{project_id}/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/testtasks",
+    response_model=ApiResponse[RemoteResourceListResponse],
+)(list_project_zentao_execution_testtasks)
+router.get(
+    "/projects/{project_id}/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/stories",
+    response_model=ApiResponse[RemoteResourceListResponse],
+)(list_project_zentao_execution_stories)
+router.get(
+    "/projects/{project_id}/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/cases",
+    response_model=ApiResponse[RemoteResourceListResponse],
+)(list_project_zentao_execution_cases)
+
+router.get(
+    "/integrations/zentao/connections",
+    response_model=ApiResponse[ListResponse[IntegrationConnectionResponse]],
+)(list_zentao_connections)
+router.get(
+    "/integrations/zentao/connections/{connection_id}",
+    response_model=ApiResponse[IntegrationConnectionResponse],
+)(get_zentao_connection)
+router.patch(
+    "/integrations/zentao/connections/{connection_id}",
+    response_model=ApiResponse[IntegrationConnectionResponse],
+)(update_zentao_connection)
+router.post(
+    "/integrations/zentao/connections/{connection_id}/reauth",
+    response_model=ApiResponse[IntegrationConnectionResponse],
+)(reauth_zentao_connection)
+router.delete(
+    "/integrations/zentao/connections/{connection_id}",
+    response_model=ApiResponse[EmptyData],
+)(delete_zentao_connection)
+router.get(
+    "/integrations/zentao/connections/{connection_id}/projects",
+    response_model=ApiResponse[RemoteResourceListResponse],
+)(list_zentao_projects)
+router.get(
+    "/integrations/zentao/connections/{connection_id}/projects/{remote_project_id}/executions",
+    response_model=ApiResponse[RemoteResourceListResponse],
+)(list_zentao_project_executions)
+router.get(
+    "/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/testtasks",
+    response_model=ApiResponse[RemoteResourceListResponse],
+)(list_zentao_execution_testtasks)
+router.get(
+    "/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/stories",
+    response_model=ApiResponse[RemoteResourceListResponse],
+)(list_zentao_execution_stories)
+router.get(
+    "/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/cases",
+    response_model=ApiResponse[RemoteResourceListResponse],
+)(list_zentao_execution_cases)

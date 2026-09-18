@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "testing-agent-api-ui-worker"
+version = "0.1.0"
+description = "Python test execution worker for testing-agent UI and API tasks"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "playwright>=1.52.0",
+    "httpx>=0.28.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "mypy>=1.15.0",
+    "ruff>=0.9.0",
+]
+
+[project.scripts]
+testing-agent-api-ui-worker = "test_worker.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

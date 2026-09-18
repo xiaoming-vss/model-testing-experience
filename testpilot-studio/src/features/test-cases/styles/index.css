@@ -1,0 +1,1134 @@
+.functional-suite-detail-page {
+  height: 100%;
+}
+
+.functional-suite-detail-page .api-automation-content {
+  height: 100%;
+}
+
+.functional-suite-detail-page .page-frame {
+  min-height: 0;
+}
+
+.functional-suite-detail-layout {
+  align-items: stretch;
+}
+
+.functional-suite-detail-panel {
+  flex: 0 0 auto;
+}
+
+.functional-suite-context {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.8fr) minmax(120px, 0.9fr) minmax(220px, 1.6fr) minmax(80px, 0.45fr);
+  gap: 10px;
+}
+
+.functional-suite-context-chip {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(31, 41, 55, 0.06);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.82);
+}
+
+.functional-suite-context-chip span {
+  flex: 0 0 auto;
+  color: var(--tp-text-secondary, #6b7280);
+  font-size: 12px;
+}
+
+.functional-suite-context-chip strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--tp-text, #111827);
+  font-size: 13px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.functional-case-sidebar {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.functional-case-nav-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.functional-case-selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(79, 159, 114, 0.12);
+  border-radius: 12px;
+  background: rgba(79, 159, 114, 0.06);
+  color: var(--tp-text-secondary, #6b7280);
+  font-size: 12px;
+}
+
+.functional-case-selection-bar .ant-checkbox-wrapper {
+  color: var(--tp-text, #111827);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.functional-case-nav-list {
+  gap: 6px;
+}
+
+.functional-case-nav-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+
+.functional-case-nav-checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.functional-case-nav-checkbox-placeholder {
+  width: 18px;
+  height: 18px;
+}
+
+.functional-case-nav-item {
+  position: relative;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 12px;
+  border: 1px solid rgba(31, 41, 55, 0.06);
+  border-left: 3px solid transparent;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.functional-case-nav-item.selected {
+  border-left-color: #4f9f72;
+  border-color: rgba(79, 159, 114, 0.28);
+  background: linear-gradient(90deg, rgba(79, 159, 114, 0.1), rgba(255, 255, 255, 0.96));
+  box-shadow: 0 8px 22px rgba(25, 74, 45, 0.08);
+}
+
+.functional-case-nav-item-main {
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.functional-case-nav-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 auto;
+}
+
+.functional-case-nav-title-row {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.functional-case-nav-title-row .ant-tooltip-open {
+  min-width: 0;
+}
+
+.functional-case-nav-item-name {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  color: var(--tp-text, #111827);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 20px;
+}
+
+.functional-case-nav-item-path {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--tp-text-secondary, #6b7280);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.functional-case-nav-title-row .ant-tag {
+  flex: 0 0 auto;
+  margin-inline-end: 0;
+}
+
+.functional-case-nav-item-actions {
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-width: 94px;
+}
+
+.functional-case-nav-item-tags {
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  flex-wrap: nowrap;
+  max-width: 94px;
+}
+
+.functional-case-nav-item-tags .ant-tag {
+  max-width: 58px;
+  margin-inline-end: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.05);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.functional-case-nav-item-tags .ant-tag:first-child {
+  max-width: 32px;
+}
+
+.functional-case-editor-panel {
+  overflow: hidden;
+}
+
+.functional-case-empty-editor {
+  min-height: 100%;
+}
+
+.functional-case-editor-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 18px 24px 24px;
+  background:
+    radial-gradient(circle at 20px 20px, rgba(79, 159, 114, 0.08), transparent 26px),
+    linear-gradient(180deg, rgba(248, 250, 252, 0.94), rgba(255, 255, 255, 0.98));
+}
+
+.functional-case-editor-sticky-head {
+  margin-bottom: 0;
+}
+
+.functional-case-editor-hero {
+  padding: 18px;
+  border: 1px solid rgba(31, 41, 55, 0.07);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
+}
+
+.functional-case-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.functional-case-name-block {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.functional-case-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.functional-case-inline-label {
+  color: #4f9f72;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.functional-case-name-item {
+  margin-bottom: 8px;
+}
+
+.functional-case-title-input.ant-input {
+  min-height: 42px;
+  padding: 8px 0;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid rgba(31, 41, 55, 0.1);
+  background: transparent;
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.functional-case-title-input.ant-input:focus,
+.functional-case-title-input.ant-input-focused {
+  border-bottom-color: rgba(79, 159, 114, 0.55);
+  box-shadow: none;
+}
+
+.functional-case-title-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  color: var(--tp-text-secondary, #6b7280);
+  font-size: 12px;
+}
+
+.functional-case-title-meta .ant-typography {
+  margin: 0;
+}
+
+.functional-case-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 30px;
+  flex: 0 0 auto;
+}
+
+.functional-case-zentao-import-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.functional-case-zentao-import-modal .ant-input-number {
+  width: 100%;
+}
+
+.functional-case-zentao-import-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.functional-suite-card .api-collection-meta-inline {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.functional-suite-card .api-collection-description {
+  min-height: 40px;
+}
+
+.functional-suite-card .api-collection-inline-value {
+  min-width: 0;
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.functional-suite-card .sprint-card-actions {
+  gap: 6px;
+}
+
+.functional-case-editor-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 18px;
+}
+
+.functional-case-editor-description {
+  margin-bottom: 0;
+  color: var(--tp-text-secondary, #5b6477);
+}
+
+.functional-case-editor-grid {
+  gap: 14px 16px;
+}
+
+.functional-case-meta-panel {
+  padding: 14px 16px 0;
+  border: 1px solid rgba(31, 41, 55, 0.06);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.functional-case-section-item {
+  margin-bottom: 0;
+}
+
+.functional-case-section-card {
+  padding: 14px 16px 16px;
+  border: 1px solid rgba(31, 41, 55, 0.07);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.04);
+}
+
+.functional-case-section-card .ant-form-item-label > label,
+.functional-case-meta-panel .ant-form-item-label > label {
+  color: var(--tp-text, #111827);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.functional-case-editor-split-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.functional-case-section-item .ant-input,
+.functional-case-section-item .ant-input-number,
+.functional-case-section-item .ant-select-selector,
+.functional-case-form-grid .ant-input,
+.functional-case-form-grid .ant-input-number,
+.functional-case-form-grid .ant-select-selector {
+  min-height: 36px;
+  border-color: rgba(31, 41, 55, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.functional-case-section-item .ant-input:focus,
+.functional-case-section-item .ant-input-focused,
+.functional-case-form-grid .ant-input:focus,
+.functional-case-form-grid .ant-input-focused {
+  border-color: rgba(79, 159, 114, 0.45);
+  box-shadow: 0 0 0 3px rgba(79, 159, 114, 0.1);
+}
+
+.functional-case-section-item .ant-input-textarea textarea {
+  resize: vertical;
+  line-height: 1.7;
+}
+
+.functional-case-brief {
+  color: var(--tp-text-secondary, #5b6477);
+}
+
+.functional-case-brief-stack {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--tp-text-secondary, #5b6477);
+}
+
+.functional-case-brief-stack span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.functional-case-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
+:root[data-theme='dark'] .functional-case-brief,
+:root[data-theme='dark'] .functional-case-brief-stack {
+  color: var(--tp-text-secondary);
+}
+
+:root[data-theme='dark'] .functional-suite-context-chip,
+:root[data-theme='dark'] .functional-case-selection-bar {
+  border-color: rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.42);
+}
+
+:root[data-theme='dark'] .functional-case-nav-item {
+  border-color: rgba(148, 163, 184, 0.12);
+  background: rgba(18, 23, 35, 0.72);
+}
+
+:root[data-theme='dark'] .functional-case-nav-item.selected {
+  border-color: rgba(110, 231, 183, 0.34);
+  border-left-color: #6ee7b7;
+  background: linear-gradient(90deg, rgba(79, 159, 114, 0.18), rgba(24, 30, 44, 0.92));
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18);
+}
+
+:root[data-theme='dark'] .functional-case-nav-item-tags .ant-tag {
+  background: rgba(148, 163, 184, 0.12);
+}
+
+:root[data-theme='dark'] .functional-case-editor-form {
+  background:
+    radial-gradient(circle at 20px 20px, rgba(110, 231, 183, 0.08), transparent 28px),
+    linear-gradient(180deg, rgba(20, 25, 37, 0.96), rgba(15, 19, 29, 0.98));
+}
+
+:root[data-theme='dark'] .functional-case-editor-hero,
+:root[data-theme='dark'] .functional-case-meta-panel,
+:root[data-theme='dark'] .functional-case-section-card {
+  border-color: rgba(148, 163, 184, 0.14);
+  background: rgba(30, 36, 52, 0.9);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
+}
+
+:root[data-theme='dark'] .functional-case-title-input.ant-input {
+  color: var(--tp-text);
+  border-bottom-color: rgba(148, 163, 184, 0.18);
+  background: transparent;
+}
+
+:root[data-theme='dark'] .functional-case-title-input.ant-input::placeholder,
+:root[data-theme='dark'] .functional-case-section-item .ant-input::placeholder,
+:root[data-theme='dark'] .functional-case-form-grid .ant-input::placeholder {
+  color: rgba(148, 163, 184, 0.62);
+}
+
+:root[data-theme='dark'] .functional-case-section-card .ant-form-item-label > label,
+:root[data-theme='dark'] .functional-case-meta-panel .ant-form-item-label > label,
+:root[data-theme='dark'] .functional-case-title-meta .ant-typography,
+:root[data-theme='dark'] .functional-suite-context-chip strong,
+:root[data-theme='dark'] .functional-case-nav-item-name {
+  color: var(--tp-text);
+}
+
+:root[data-theme='dark'] .functional-suite-context-chip span,
+:root[data-theme='dark'] .functional-case-nav-item-path,
+:root[data-theme='dark'] .functional-case-selection-bar {
+  color: var(--tp-text-secondary);
+}
+
+:root[data-theme='dark'] .functional-case-selection-bar .ant-checkbox-wrapper {
+  color: var(--tp-text);
+}
+
+:root[data-theme='dark'] .functional-case-section-item .ant-input,
+:root[data-theme='dark'] .functional-case-section-item .ant-input-number,
+:root[data-theme='dark'] .functional-case-section-item .ant-select-selector,
+:root[data-theme='dark'] .functional-case-form-grid .ant-input,
+:root[data-theme='dark'] .functional-case-form-grid .ant-input-number,
+:root[data-theme='dark'] .functional-case-form-grid .ant-select-selector {
+  color: var(--tp-text);
+  border-color: rgba(148, 163, 184, 0.16);
+  background: rgba(15, 19, 29, 0.82);
+}
+
+:root[data-theme='dark'] .functional-case-section-item textarea.ant-input,
+:root[data-theme='dark'] .functional-case-form-grid textarea.ant-input {
+  color: var(--tp-text);
+  background: rgba(15, 19, 29, 0.82);
+}
+
+:root[data-theme='dark'] .functional-case-form-grid .ant-select-selection-item,
+:root[data-theme='dark'] .functional-case-form-grid .ant-select-selection-placeholder,
+:root[data-theme='dark'] .functional-case-form-grid .ant-input-number-input,
+:root[data-theme='dark'] .functional-case-section-item .ant-select-selection-item,
+:root[data-theme='dark'] .functional-case-section-item .ant-select-selection-placeholder,
+:root[data-theme='dark'] .functional-case-section-item .ant-input-number-input {
+  color: var(--tp-text);
+}
+
+:root[data-theme='dark'] .functional-case-form-grid .ant-select-arrow,
+:root[data-theme='dark'] .functional-case-form-grid .ant-select-clear,
+:root[data-theme='dark'] .functional-case-section-item .ant-select-arrow,
+:root[data-theme='dark'] .functional-case-section-item .ant-select-clear {
+  color: var(--tp-text-secondary);
+  background: transparent;
+}
+
+@media (max-width: 900px) {
+  .functional-case-toolbar {
+    flex-direction: column;
+  }
+
+  .functional-case-toolbar-actions {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 0;
+  }
+
+  .functional-case-editor-split-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .functional-case-nav-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .functional-case-selection-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .functional-case-nav-row {
+    grid-template-columns: 18px minmax(0, 1fr);
+  }
+
+  .functional-case-nav-item-actions {
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-start;
+  }
+
+  .functional-case-nav-item-tags {
+    justify-content: flex-start;
+    max-width: 100%;
+  }
+
+  .functional-case-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .functional-case-zentao-import-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* macOS compact functional suite cards */
+.app-shell-macos .functional-test-page .functional-suite-scroll {
+  padding: 14px 16px 16px;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-auto-rows: auto;
+  align-items: start;
+  gap: 16px;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card {
+  height: auto !important;
+  min-height: 146px !important;
+  border: 1px solid rgba(15, 23, 42, 0.065) !important;
+  border-radius: 14px !important;
+  background: rgba(255, 255, 255, 0.66) !important;
+  backdrop-filter: saturate(180%) blur(22px);
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84), 0 10px 24px rgba(15, 23, 42, 0.04) !important;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card:hover {
+  border-color: rgba(10, 132, 255, 0.18) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 14px 28px rgba(15, 23, 42, 0.065) !important;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card .ant-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card .api-collection-card-top {
+  min-height: 22px;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card .api-collection-card-top .ant-typography {
+  color: #172033;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card .api-collection-description {
+  min-height: 18px;
+  margin: 0;
+  color: rgba(23, 32, 51, 0.5) !important;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card .sprint-card-meta {
+  min-height: 22px;
+  padding-bottom: 0;
+  border-bottom-color: rgba(15, 23, 42, 0.045);
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card .sprint-card-label {
+  color: rgba(23, 32, 51, 0.48);
+  font-size: 12px;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card .api-collection-inline-value {
+  color: rgba(23, 32, 51, 0.72);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card .sprint-card-actions {
+  min-height: 26px;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 2px;
+  opacity: 0.62;
+  transition: opacity 0.18s ease;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card:hover .sprint-card-actions {
+  opacity: 1;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card .sprint-card-actions .ant-btn {
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  color: rgba(23, 32, 51, 0.52);
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card .sprint-card-actions .ant-btn:hover {
+  background: rgba(10, 132, 255, 0.08) !important;
+  color: rgba(10, 75, 160, 0.78) !important;
+}
+
+@media (max-width: 1800px) {
+  .app-shell-macos .functional-test-page .functional-suite-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1280px) {
+  .app-shell-macos .functional-test-page .functional-suite-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .app-shell-macos .functional-test-page .functional-suite-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .app-shell-macos .functional-test-page .functional-suite-scroll {
+    padding: 12px;
+  }
+
+  .app-shell-macos .functional-test-page .functional-suite-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* macOS frosted white functional case editor */
+.app-shell-macos .functional-suite-detail-page .functional-suite-context-chip,
+.app-shell-macos .functional-suite-detail-page .functional-case-selection-bar,
+.app-shell-macos .functional-suite-detail-page .functional-case-editor-hero,
+.app-shell-macos .functional-suite-detail-page .functional-case-meta-panel,
+.app-shell-macos .functional-suite-detail-page .functional-case-section-card {
+  border-color: rgba(15, 23, 42, 0.065) !important;
+  background: rgba(255, 255, 255, 0.68) !important;
+  backdrop-filter: saturate(180%) blur(22px);
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86), 0 10px 24px rgba(15, 23, 42, 0.04) !important;
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-editor-form {
+  padding: 18px 20px 22px;
+  background: transparent !important;
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-editor-body {
+  gap: 16px;
+  padding-top: 16px;
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-editor-hero {
+  padding: 18px 20px;
+  border-radius: 18px;
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-title-input.ant-input {
+  min-height: 40px;
+  border-bottom-color: rgba(15, 23, 42, 0.08) !important;
+  background: transparent !important;
+  color: #172033;
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-title-input.ant-input:focus,
+.app-shell-macos .functional-suite-detail-page .functional-case-title-input.ant-input-focused {
+  border-bottom-color: rgba(10, 132, 255, 0.34) !important;
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-inline-label {
+  color: rgba(23, 32, 51, 0.72);
+  letter-spacing: 0;
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-title-meta,
+.app-shell-macos .functional-suite-detail-page .functional-suite-context-chip span,
+.app-shell-macos .functional-suite-detail-page .functional-case-selection-bar,
+.app-shell-macos .functional-suite-detail-page .functional-case-editor-description {
+  color: rgba(23, 32, 51, 0.56) !important;
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-suite-context-chip strong,
+.app-shell-macos .functional-suite-detail-page .functional-case-section-card .ant-form-item-label > label,
+.app-shell-macos .functional-suite-detail-page .functional-case-meta-panel .ant-form-item-label > label,
+.app-shell-macos .functional-suite-detail-page .functional-case-nav-item-name {
+  color: #172033 !important;
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-nav-shell {
+  gap: 10px;
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-selection-bar {
+  padding: 8px 10px;
+  border-radius: 12px;
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-nav-list {
+  gap: 8px;
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-nav-row {
+  gap: 8px;
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-nav-item {
+  border-left-width: 1px;
+  border-color: rgba(15, 23, 42, 0.065) !important;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-nav-item:hover {
+  border-color: rgba(10, 132, 255, 0.2) !important;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.055), inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-nav-item.selected {
+  border-color: rgba(10, 132, 255, 0.28) !important;
+  background: rgba(245, 249, 255, 0.88) !important;
+  box-shadow: 0 0 0 1px rgba(10, 132, 255, 0.08), 0 10px 22px rgba(15, 23, 42, 0.06);
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-nav-item-path {
+  color: rgba(23, 32, 51, 0.52) !important;
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-nav-item-tags .ant-tag {
+  background: rgba(10, 132, 255, 0.08);
+  color: rgba(10, 75, 160, 0.72);
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-meta-panel,
+.app-shell-macos .functional-suite-detail-page .functional-case-section-card {
+  border-radius: 16px;
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-meta-panel {
+  padding: 14px 16px 0;
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-section-card {
+  padding: 14px 16px 16px;
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-section-item .ant-input,
+.app-shell-macos .functional-suite-detail-page .functional-case-section-item .ant-input-number,
+.app-shell-macos .functional-suite-detail-page .functional-case-section-item .ant-select-selector,
+.app-shell-macos .functional-suite-detail-page .functional-case-form-grid .ant-input,
+.app-shell-macos .functional-suite-detail-page .functional-case-form-grid .ant-input-number,
+.app-shell-macos .functional-suite-detail-page .functional-case-form-grid .ant-select-selector {
+  border-color: rgba(15, 23, 42, 0.09) !important;
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+  box-shadow: none !important;
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-section-item .ant-input:focus,
+.app-shell-macos .functional-suite-detail-page .functional-case-section-item .ant-input-focused,
+.app-shell-macos .functional-suite-detail-page .functional-case-form-grid .ant-input:focus,
+.app-shell-macos .functional-suite-detail-page .functional-case-form-grid .ant-input-focused {
+  border-color: rgba(10, 132, 255, 0.34) !important;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.08) !important;
+}
+
+.app-shell-macos .functional-suite-detail-page .functional-case-toolbar-actions .ant-btn {
+  border-radius: 10px;
+}
+
+@media (max-width: 900px) {
+  .app-shell-macos .functional-suite-detail-page .functional-case-editor-form {
+    padding: 16px;
+  }
+}
+
+
+
+/* Functional suite cards: align layout with AI requirement-analysis task cards. */
+.functional-suite-card-top {
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.functional-suite-card-title {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 20px;
+}
+
+.functional-suite-card-tags {
+  flex: 0 0 auto;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-scroll {
+  padding: 18px !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-grid {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
+  grid-auto-rows: minmax(178px, auto) !important;
+  align-content: start !important;
+  align-items: stretch !important;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-grid-fill-page {
+  flex: 0 0 auto;
+  min-height: 0;
+  grid-template-rows: none !important;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card.ant-card {
+  min-height: 178px !important;
+  border: 1px solid rgba(15, 23, 42, 0.052) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,0.78), rgba(255,255,255,0.54)), rgba(255,255,255,0.58) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 22px rgba(31,41,55,0.042) !important;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card.ant-card:hover {
+  border-color: rgba(10, 132, 255, 0.16) !important;
+  background: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(255,255,255,0.64)), rgba(255,255,255,0.72) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.94), 0 12px 28px rgba(31,41,55,0.065) !important;
+  transform: translateY(-1px);
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card .ant-card-body {
+  gap: 10px !important;
+  height: 100% !important;
+  min-height: 178px !important;
+  padding: 15px 16px !important;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card-title {
+  color: var(--mac-glass-text) !important;
+  font-size: 14px !important;
+  font-weight: 720 !important;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card-tags .ant-tag {
+  margin-inline-end: 0;
+  border-color: rgba(10,132,255,0.11) !important;
+  background: rgba(10,132,255,0.07) !important;
+  color: rgba(10,96,190,0.82) !important;
+  font-weight: 650;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card-description.ant-typography {
+  min-height: 36px !important;
+  margin: 0 !important;
+  color: rgba(23,32,51,0.46) !important;
+  line-height: 18px !important;
+}
+
+.app-shell-macos .functional-test-page .functional-suite-card-actions {
+  margin-top: auto !important;
+}
+
+@media (max-width: 1100px) {
+  .app-shell-macos .functional-test-page .functional-suite-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
+  }
+}
+
+@media (max-width: 680px) {
+  .app-shell-macos .functional-test-page .functional-suite-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Dark macOS polish: functional suite case editor hero. */
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-editor-hero,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-toolbar,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-meta-panel,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-section-card,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-suite-context-chip,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-selection-bar {
+  border-color: rgba(48, 54, 61, 0.9) !important;
+  background: rgba(22, 27, 34, 0.78) !important;
+  color: #f0f6fc !important;
+  box-shadow: inset 0 1px 0 rgba(240, 246, 252, 0.04) !important;
+}
+
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-editor-sticky-head,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-editor-form,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-editor-body,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-editor-grid {
+  background: transparent !important;
+}
+
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-title-input.ant-input,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-section-item .ant-input,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-section-item .ant-input-number,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-section-item .ant-select-selector,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-form-grid .ant-input,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-form-grid .ant-input-number,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-form-grid .ant-select-selector {
+  border-color: rgba(48, 54, 61, 0.9) !important;
+  background: rgba(13, 17, 23, 0.72) !important;
+  color: #f0f6fc !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-title-input.ant-input {
+  background: rgba(13, 17, 23, 0.88) !important;
+}
+
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-inline-label,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-suite-context-chip strong,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-section-card .ant-form-item-label > label,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-meta-panel .ant-form-item-label > label,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-nav-item-name {
+  color: #f0f6fc !important;
+}
+
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-title-meta,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-suite-context-chip span,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-selection-bar,
+:root[data-theme='dark'] .app-shell-macos .functional-suite-detail-page .functional-case-editor-description {
+  color: #8b949e !important;
+}
+
+/* Both step fields stretch to the taller auto-sized textarea. */
+.functional-case-step-inputs {
+  align-items: stretch;
+}
+
+.functional-case-step-inputs > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.functional-case-step-inputs > div > textarea.ant-input {
+  flex-grow: 1;
+}
+
+/* Functional case editor: paired editing panels (design C). */
+.functional-suite-detail-page .functional-case-meta-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.functional-case-meta-label .anticon {
+  color: #1687ff;
+}
+
+.functional-suite-detail-page .functional-case-editor-body .functional-case-meta-panel {
+  padding: 0;
+  border: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none;
+}
+
+.functional-suite-detail-page .functional-case-meta-panel > .ant-form-item {
+  margin-bottom: 0;
+  padding: 14px;
+  border: 1px solid var(--tp-border, #e8edf4);
+  border-radius: 14px;
+  background: var(--tp-surface, #fff);
+}
+
+.functional-case-comparison-card {
+  overflow: hidden;
+  padding: 0 12px 12px;
+  border: 1px solid var(--tp-border, #e8edf4);
+  border-radius: 14px;
+  background: var(--tp-surface, #fff);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.025);
+}
+
+.functional-case-field-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 -12px 12px;
+  padding: 13px 16px;
+  background: rgba(22, 135, 255, 0.055);
+  color: var(--tp-text, #172033);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 22px;
+}
+
+.functional-case-field-heading .anticon {
+  color: #1687ff;
+  font-size: 17px;
+}
+
+.functional-case-comparison-expected .functional-case-field-heading {
+  background: rgba(16, 185, 129, 0.07);
+}
+
+.functional-case-comparison-expected .anticon {
+  color: #0ca789;
+}
+
+.functional-suite-detail-page .functional-case-section-card.functional-case-preconditions {
+  overflow: hidden;
+  padding: 0 12px 12px;
+}
+
+.functional-case-preconditions .ant-form-item {
+  margin-bottom: 0;
+}
+
+.functional-case-preconditions textarea.ant-input,
+.functional-case-comparison-card textarea.ant-input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  line-height: 1.8;
+}
+
+:root[data-theme='dark'] .functional-case-comparison-card,
+:root[data-theme='dark'] .functional-suite-detail-page .functional-case-meta-panel > .ant-form-item {
+  background: #161b22;
+  border-color: rgba(148, 163, 184, 0.16);
+}
+
+:root[data-theme='dark'] .functional-case-field-heading {
+  color: #f0f6fc;
+  background: rgba(22, 135, 255, 0.12);
+}
+
+:root[data-theme='dark'] .functional-case-comparison-expected .functional-case-field-heading {
+  background: rgba(16, 185, 129, 0.12);
+}
+
+@media (max-width: 900px) {
+  .functional-case-step-inputs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

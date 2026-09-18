@@ -1,0 +1,47 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+coverage
+output
+
+node_modules
+dist
+dist-ssr
+*.local
+tmp
+temp
+.cache
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Local helper / generated folders
+_stitch_ref
+*.tmp.png
+.agents/
+.codex/
+.trellis/
+.scratch/
+.trae/
+.zcode/
+skills-lock.json
+docs/superpowers/plans/
+docs/superpowers/specs/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

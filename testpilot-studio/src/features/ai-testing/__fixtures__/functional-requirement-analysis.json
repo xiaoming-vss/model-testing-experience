@@ -1,0 +1,394 @@
+{
+  "businessRules": [
+    {
+      "name": "本地 server 侧解绑等同删除设备，并按设备接入方式判定解绑渠道",
+      "ruleId": "R01",
+      "trigger": "对设备执行解绑（删除）操作",
+      "category": "主流程",
+      "preconditions": [
+        "在本地 server 侧对设备进行解绑"
+      ],
+      "applicableObject": "参与设备解绑（删除）流程的设备",
+      "expectedBehavior": [
+        "解绑等同于删除该设备",
+        "根据设备接入方式走对应的解绑渠道",
+        "判断是否需要调用解绑设备逻辑"
+      ],
+      "sourceReferences": [
+        "1.1 这个功能是做什么的",
+        "1.4 这个功能使用下来，用户看到的完整流程"
+      ],
+      "observableOutcome": null,
+      "confirmationStatus": "需求明确",
+      "relatedQuestionIds": [
+        "Q02",
+        "Q03"
+      ],
+      "prohibitedOrSkippedBehavior": []
+    },
+    {
+      "name": "设备绑定页面的设备管理列表提供“取消绑定”操作入口",
+      "ruleId": "R02",
+      "trigger": "在操作列点击目标设备所在行的“取消绑定”",
+      "category": "入口与权限",
+      "preconditions": [
+        "用户已进入设备绑定页面",
+        "用户处于设备管理列表",
+        "目标设备存在于设备管理列表中"
+      ],
+      "applicableObject": "设备管理列表中的设备",
+      "expectedBehavior": [
+        "对目标设备执行解绑（删除）"
+      ],
+      "sourceReferences": [
+        "1.2 这个功能怎么进入",
+        "1.4 这个功能使用下来，用户看到的完整流程"
+      ],
+      "observableOutcome": null,
+      "confirmationStatus": "需求明确",
+      "relatedQuestionIds": [
+        "Q02"
+      ],
+      "prohibitedOrSkippedBehavior": []
+    },
+    {
+      "name": "有直接绑定关系的设备只能在 site 端解绑",
+      "ruleId": "R03",
+      "trigger": "对该设备执行解绑",
+      "category": "渠道限制",
+      "preconditions": [
+        "设备为有直接绑定关系的设备（如遁甲）"
+      ],
+      "applicableObject": "有直接绑定关系的设备（如遁甲）",
+      "expectedBehavior": [
+        "只能到 site 端执行解绑"
+      ],
+      "sourceReferences": [
+        "1.3.1 有直接绑定关系的设备（如遁甲）",
+        "1.4 这个功能使用下来，用户看到的完整流程"
+      ],
+      "observableOutcome": null,
+      "confirmationStatus": "需求明确",
+      "relatedQuestionIds": [
+        "Q02",
+        "Q04"
+      ],
+      "prohibitedOrSkippedBehavior": [
+        "在本地 server 侧以简单删除代替该类设备的解绑",
+        "在云端渠道对该类设备执行解绑"
+      ]
+    },
+    {
+      "name": "有直接绑定关系的设备解绑时调用解绑设备逻辑并清理设备内绑定平台信息",
+      "ruleId": "R04",
+      "trigger": "在 site 端对该设备执行解绑",
+      "category": "状态变化",
+      "preconditions": [
+        "设备为有直接绑定关系的设备（如遁甲）",
+        "在 site 端对该设备执行解绑"
+      ],
+      "applicableObject": "有直接绑定关系的设备（如遁甲）",
+      "expectedBehavior": [
+        "调用解绑设备逻辑",
+        "清理遁甲设备内绑定平台的信息"
+      ],
+      "sourceReferences": [
+        "1.3.1 有直接绑定关系的设备（如遁甲）",
+        "1.4 这个功能使用下来，用户看到的完整流程"
+      ],
+      "observableOutcome": null,
+      "confirmationStatus": "需求明确",
+      "relatedQuestionIds": [
+        "Q03"
+      ],
+      "prohibitedOrSkippedBehavior": []
+    },
+    {
+      "name": "遁甲设备离线状态下不可解绑和绑定",
+      "ruleId": "R05",
+      "trigger": "对离线遁甲设备执行解绑或绑定",
+      "category": "异常与限制",
+      "preconditions": [
+        "遁甲设备处于离线状态"
+      ],
+      "applicableObject": "有直接绑定关系的设备（如遁甲）",
+      "expectedBehavior": [
+        "不执行解绑操作",
+        "不执行绑定操作"
+      ],
+      "sourceReferences": [
+        "1.3.1 有直接绑定关系的设备（如遁甲）",
+        "1.5 当前还不够明确的地方"
+      ],
+      "observableOutcome": null,
+      "confirmationStatus": "需求明确",
+      "relatedQuestionIds": [
+        "Q01"
+      ],
+      "prohibitedOrSkippedBehavior": [
+        "对离线遁甲设备执行解绑",
+        "对离线遁甲设备执行绑定"
+      ]
+    },
+    {
+      "name": "简单接入的设备支持云端和 site 端两个渠道解绑",
+      "ruleId": "R06",
+      "trigger": "对该设备执行解绑",
+      "category": "渠道支持",
+      "preconditions": [
+        "设备为简单接入的设备（如虚拟动力）"
+      ],
+      "applicableObject": "简单接入的设备（如虚拟动力）",
+      "expectedBehavior": [
+        "可在云端渠道执行解绑",
+        "可在 site 端渠道执行解绑"
+      ],
+      "sourceReferences": [
+        "1.3.2 简单接入的设备（如虚拟动力）",
+        "1.4 这个功能使用下来，用户看到的完整流程"
+      ],
+      "observableOutcome": null,
+      "confirmationStatus": "需求明确",
+      "relatedQuestionIds": [
+        "Q02",
+        "Q04"
+      ],
+      "prohibitedOrSkippedBehavior": []
+    },
+    {
+      "name": "直接导入数据的设备不参与设备解绑（删除）流程",
+      "ruleId": "R07",
+      "trigger": null,
+      "category": "适用范围",
+      "preconditions": [
+        "设备为直接导入数据、没有设备关联关系的设备"
+      ],
+      "applicableObject": "直接导入数据的设备（如墨现、奥比中光）",
+      "expectedBehavior": [
+        "不参与设备解绑（删除）流程"
+      ],
+      "sourceReferences": [
+        "1.3.3 直接导入数据的设备（如墨现、奥比中光）",
+        "1.4 这个功能使用下来，用户看到的完整流程"
+      ],
+      "observableOutcome": null,
+      "confirmationStatus": "需求明确",
+      "relatedQuestionIds": [
+        "Q05"
+      ],
+      "prohibitedOrSkippedBehavior": [
+        "对该类设备执行解绑逻辑"
+      ]
+    }
+  ],
+  "openQuestions": [
+    {
+      "question": "遁甲设备离线状态下不可解绑和绑定这一限制，是否影响解绑、绑定之外的其他环节交互，以及是否以按钮置灰、提示等方式呈现、提示内容是什么？",
+      "questionId": "Q01",
+      "blockedWork": "该场景的页面状态预期与检查方法（是否置灰、是否有提示及提示内容）无法确定",
+      "affectedScope": "R05、S03"
+    },
+    {
+      "question": "云端与 site 端的解绑入口分别位于哪个页面、以何种操作执行解绑？",
+      "questionId": "Q02",
+      "blockedWork": "云端与 site 端场景的具体操作步骤与端侧验证步骤无法编写",
+      "affectedScope": "R01、R03、R06、S02、S04、S05"
+    },
+    {
+      "question": "设备解绑（删除）成功后用户可观察到的结果是什么，设备本身及关联数据的清理或影响范围包含哪些？",
+      "questionId": "Q03",
+      "blockedWork": "成功预期与检查方法（列表是否移除、关联数据如何处理）无法确定",
+      "affectedScope": "R01、R04、可观察结果字段"
+    },
+    {
+      "question": "除遁甲、虚拟动力、墨现、奥比中光外还有哪些设备接入方式，每种接入方式应归属哪一类解绑渠道的判定依据是什么？",
+      "questionId": "Q04",
+      "blockedWork": "分支判定与渠道归属场景的覆盖范围及条件定义无法确定",
+      "affectedScope": "R01、R03、R06、R07、F01"
+    },
+    {
+      "question": "直接导入数据的设备（如墨现、奥比中光）在设备管理列表及操作列中的展示与可操作方式是什么？",
+      "questionId": "Q05",
+      "blockedWork": "该类设备场景的前置操作节点与观察点无法确定",
+      "affectedScope": "R07、S06"
+    }
+  ],
+  "scenarioFactors": [
+    {
+      "name": "设备接入方式",
+      "factorId": "F01",
+      "defaultValue": null,
+      "confirmedValues": [
+        "有直接绑定关系的设备（如遁甲）",
+        "简单接入的设备（如虚拟动力）",
+        "直接导入数据的设备（如墨现、奥比中光）"
+      ],
+      "clarificationNeeded": "除已列举示例外还有哪些接入方式，以及每种接入方式归属哪一类解绑渠道的判定依据未明确"
+    },
+    {
+      "name": "解绑渠道",
+      "factorId": "F02",
+      "defaultValue": null,
+      "confirmedValues": [
+        "云端",
+        "site 端",
+        "本地 server 侧"
+      ],
+      "clarificationNeeded": "云端与 site 端的具体解绑入口、页面路径及操作方式未明确"
+    },
+    {
+      "name": "设备在线状态",
+      "factorId": "F03",
+      "defaultValue": null,
+      "confirmedValues": [
+        "在线",
+        "离线"
+      ],
+      "clarificationNeeded": "断言“离线不可解绑和绑定”时是否置灰、是否有提示及提示内容未明确，是否影响流程其他环节交互也未明确"
+    }
+  ],
+  "scenarioBreakdown": [
+    {
+      "trigger": "在 site 端对遁甲设备执行解绑",
+      "conditions": [
+        "设备为有直接绑定关系的设备（如遁甲）",
+        "设备处于在线状态",
+        "解绑渠道为 site 端"
+      ],
+      "scenarioId": "S01",
+      "blockingReason": null,
+      "derivationType": "需求直接描述",
+      "relatedRuleIds": [
+        "R02",
+        "R03",
+        "R04"
+      ],
+      "relatedQuestionIds": [],
+      "verificationObjective": "在 site 端对在线遁甲设备解绑生效，并调用解绑设备逻辑清理遁甲设备内绑定平台的信息",
+      "readyForTestPointGeneration": true
+    },
+    {
+      "trigger": "在云端或本地 server 侧对遁甲设备执行解绑",
+      "conditions": [
+        "设备为有直接绑定关系的设备（如遁甲）",
+        "解绑渠道为云端或本地 server 侧"
+      ],
+      "scenarioId": "S02",
+      "blockingReason": null,
+      "derivationType": "基于规则推导",
+      "relatedRuleIds": [
+        "R01",
+        "R03"
+      ],
+      "relatedQuestionIds": [
+        "Q02"
+      ],
+      "verificationObjective": "非 site 端渠道不执行遁甲设备解绑，且不以本地简单删除代替解绑",
+      "readyForTestPointGeneration": true
+    },
+    {
+      "trigger": "在 site 端对离线遁甲设备执行解绑",
+      "conditions": [
+        "设备为有直接绑定关系的设备（如遁甲）",
+        "设备处于离线状态",
+        "解绑渠道为 site 端"
+      ],
+      "scenarioId": "S03",
+      "blockingReason": null,
+      "derivationType": "基于规则推导",
+      "relatedRuleIds": [
+        "R05"
+      ],
+      "relatedQuestionIds": [
+        "Q01"
+      ],
+      "verificationObjective": "遁甲设备离线时解绑不执行、被限制",
+      "readyForTestPointGeneration": true
+    },
+    {
+      "trigger": "在云端对虚拟动力设备执行解绑",
+      "conditions": [
+        "设备为简单接入的设备（如虚拟动力）",
+        "解绑渠道为云端"
+      ],
+      "scenarioId": "S04",
+      "blockingReason": null,
+      "derivationType": "需求直接描述",
+      "relatedRuleIds": [
+        "R06"
+      ],
+      "relatedQuestionIds": [
+        "Q02"
+      ],
+      "verificationObjective": "云端渠道可对简单接入的设备（如虚拟动力）执行解绑并生效",
+      "readyForTestPointGeneration": true
+    },
+    {
+      "trigger": "在 site 端对虚拟动力设备执行解绑",
+      "conditions": [
+        "设备为简单接入的设备（如虚拟动力）",
+        "解绑渠道为 site 端"
+      ],
+      "scenarioId": "S05",
+      "blockingReason": null,
+      "derivationType": "需求直接描述",
+      "relatedRuleIds": [
+        "R06"
+      ],
+      "relatedQuestionIds": [
+        "Q02"
+      ],
+      "verificationObjective": "site 端渠道可对简单接入的设备（如虚拟动力）执行解绑并生效",
+      "readyForTestPointGeneration": true
+    },
+    {
+      "trigger": "在设备管理列表对目标行尝试执行解绑操作",
+      "conditions": [
+        "设备为直接导入数据的设备（如墨现、奥比中光）",
+        "该设备无设备关联关系"
+      ],
+      "scenarioId": "S06",
+      "blockingReason": null,
+      "derivationType": "基于规则推导",
+      "relatedRuleIds": [
+        "R07"
+      ],
+      "relatedQuestionIds": [
+        "Q05"
+      ],
+      "verificationObjective": "直接导入数据的设备不参与设备解绑（删除）流程，不执行解绑逻辑",
+      "readyForTestPointGeneration": true
+    }
+  ],
+  "functionalOverview": {
+    "actors": [
+      "用户"
+    ],
+    "purpose": "在本地 server 侧对设备执行解绑（删除），按设备接入方式走对应的解绑渠道，并判断是否需要调用解绑设备逻辑",
+    "entryPoints": [
+      {
+        "path": "设备绑定页面 → 设备管理列表 → 操作列",
+        "action": "点击目标设备所在行的“取消绑定”",
+        "function": "设备解绑（删除）——本地 server 侧"
+      },
+      {
+        "path": null,
+        "action": "在 site 端对设备执行解绑（具体入口与操作未明确）",
+        "function": "设备解绑（删除）——site 端（有直接绑定关系的设备，如遁甲）"
+      },
+      {
+        "path": null,
+        "action": "在云端对设备执行解绑（具体入口与操作未明确）",
+        "function": "设备解绑（删除）——云端（简单接入的设备，如虚拟动力）"
+      }
+    ],
+    "applicableObjects": [
+      "有直接绑定关系的设备（如遁甲）",
+      "简单接入的设备（如虚拟动力）",
+      "直接导入数据的设备（如墨现、奥比中光）"
+    ],
+    "explicitExclusions": [
+      "直接导入数据、没有设备关联关系的设备（如墨现、奥比中光）没有解绑逻辑，不参与设备解绑（删除）流程"
+    ]
+  }
+}

@@ -1,0 +1,136 @@
+/* One global button palette, including portal-rendered dialogs and drawers.
+   Important declarations in this layer outrank legacy unlayered page overrides,
+   so feature CSS import order cannot bring back gradients or colored shadows. */
+@layer app-buttons {
+  :root {
+    --button-text: #526176;
+    --button-bg: #ffffff;
+    --button-border: #dce3ec;
+    --button-hover-bg: #f3f6fa;
+    --button-hover-border: #bdcadb;
+    --button-active-bg: #e9eef5;
+    --button-primary-text: #24578f;
+    --button-primary-bg: #e3edf9;
+    --button-primary-border: #b5cbe5;
+    --button-primary-hover-bg: #e1edfc;
+    --button-primary-hover-border: #a9c5e9;
+    --button-primary-active-bg: #d5e5f9;
+    --button-danger-text: #b54550;
+    --button-danger-bg: #fff2f3;
+    --button-danger-border: #efcdd2;
+    --button-danger-hover-bg: #fde6e9;
+    --button-danger-active-bg: #f9d9de;
+    --button-disabled-text: #98a2b3;
+    --button-disabled-bg: #f4f6f8;
+    --button-disabled-border: #e4e8ee;
+    --button-focus: #8bb2e5;
+  }
+
+  :root[data-theme='dark'] {
+    --button-text: #c4cfdf;
+    --button-bg: #252d3b;
+    --button-border: #3a4659;
+    --button-hover-bg: #303b4c;
+    --button-hover-border: #566982;
+    --button-active-bg: #39485d;
+    --button-primary-text: #abcdf7;
+    --button-primary-bg: #25364d;
+    --button-primary-border: #3a5576;
+    --button-primary-hover-bg: #2e4461;
+    --button-primary-hover-border: #577aa6;
+    --button-primary-active-bg: #385477;
+    --button-danger-text: #f0a8b0;
+    --button-danger-bg: #3d2933;
+    --button-danger-border: #66424d;
+    --button-danger-hover-bg: #50323e;
+    --button-danger-active-bg: #61404c;
+    --button-disabled-text: #788498;
+    --button-disabled-bg: #232a36;
+    --button-disabled-border: #333d4d;
+    --button-focus: #729cce;
+  }
+
+  .ant-btn {
+    --button-current-text: var(--button-text);
+    --button-current-bg: var(--button-bg);
+    --button-current-border: var(--button-border);
+    --button-current-hover: var(--button-hover-bg);
+    --button-current-hover-border: var(--button-hover-border);
+    --button-current-active: var(--button-active-bg);
+    color: var(--button-current-text) !important;
+    background: var(--button-current-bg) !important;
+    border-color: var(--button-current-border) !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    transform: none !important;
+    font-weight: 500 !important;
+  }
+
+  .ant-btn:not(.ant-btn-circle):not(.ant-btn-round) {
+    border-radius: 8px !important;
+  }
+
+  .ant-btn-primary {
+    --button-current-text: var(--button-primary-text);
+    --button-current-bg: var(--button-primary-bg);
+    --button-current-border: var(--button-primary-border);
+    --button-current-hover: var(--button-primary-hover-bg);
+    --button-current-hover-border: var(--button-primary-hover-border);
+    --button-current-active: var(--button-primary-active-bg);
+  }
+
+  .ant-btn-dangerous,
+  .ant-btn.action-btn-delete {
+    --button-current-text: var(--button-danger-text);
+    --button-current-bg: var(--button-danger-bg);
+    --button-current-border: var(--button-danger-border);
+    --button-current-hover: var(--button-danger-hover-bg);
+    --button-current-hover-border: var(--button-danger-border);
+    --button-current-active: var(--button-danger-active-bg);
+  }
+
+  .ant-btn:is(.ant-btn-text, .ant-btn-link, .ant-btn-background-ghost) {
+    --button-current-bg: transparent;
+  }
+
+  .ant-btn:is(.ant-btn-text, .ant-btn-link) {
+    --button-current-border: transparent;
+    --button-current-hover-border: transparent;
+  }
+
+  .ant-btn-link:not(.ant-btn-dangerous):not(.action-btn-delete) {
+    --button-current-text: var(--button-primary-text);
+  }
+
+  .ant-btn-link {
+    --button-current-hover: transparent;
+    --button-current-active: transparent;
+  }
+
+  .ant-btn:not(:disabled):not(.ant-btn-disabled):not(.ant-btn-loading):hover {
+    background: var(--button-current-hover) !important;
+    border-color: var(--button-current-hover-border) !important;
+  }
+
+  .ant-btn:not(:disabled):not(.ant-btn-disabled):not(.ant-btn-loading):active {
+    background: var(--button-current-active) !important;
+  }
+
+  .ant-btn:focus-visible {
+    outline: 2px solid var(--button-focus) !important;
+    outline-offset: 2px !important;
+  }
+
+  .ant-btn:disabled,
+  .ant-btn.ant-btn-disabled {
+    color: var(--button-disabled-text) !important;
+    background: var(--button-disabled-bg) !important;
+    border-color: var(--button-disabled-border) !important;
+    cursor: not-allowed !important;
+  }
+
+  :is(.ant-btn-text, .ant-btn-link):is(:disabled, .ant-btn-disabled) {
+    background: transparent !important;
+    border-color: transparent !important;
+  }
+}

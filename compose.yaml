@@ -1,0 +1,100 @@
+name: testing-agent
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?Run manage.py configure first}
+      MYSQL_USER: ${MYSQL_USER:?Run manage.py configure first}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Run manage.py configure first}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Run manage.py configure first}
+    ports:
+      - "${BIND_HOST}:${MYSQL_PORT}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: [CMD-SHELL, 'MYSQL_PWD="$$MYSQL_PASSWORD" mysql --protocol=TCP -h 127.0.0.1 -u "$$MYSQL_USER" "$$MYSQL_DATABASE" -e "SELECT 1" >/dev/null']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  migrate:
+    image: testing-agent/control-plane:local
+    build: ./testing-agent-control-plane
+    restart: "no"
+    command: [alembic, upgrade, head]
+    volumes:
+      - ./.runtime/docker/control-plane.toml:/app/config/local.toml:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  control-plane:
+    image: testing-agent/control-plane:local
+    build: ./testing-agent-control-plane
+    restart: unless-stopped
+    ports:
+      - "${BIND_HOST}:${CONTROL_PLANE_PORT}:9000"
+    volumes:
+      - ./.runtime/docker/control-plane.toml:/app/config/local.toml:ro
+      - control-plane-storage:/app/storage
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      zentao:
+        condition: service_healthy
+
+  zentao:
+    image: testing-agent/zentao:local
+    build: ./testing-agent-connector-zentao
+    restart: unless-stopped
+    ports:
+      - "${BIND_HOST}:${ZENTAO_PORT}:8010"
+    volumes:
+      - ./.runtime/docker/zentao.toml:/app/config/zentao.toml:ro
+
+  ai-worker:
+    image: testing-agent/ai-worker:local
+    build: ./testing-agent-ai-worker
+    restart: unless-stopped
+    volumes:
+      - ./.runtime/docker/ai-worker.toml:/app/config/worker.toml:ro
+      - ai-runtime:/data/runtime
+      - ai-logs:/app/logs
+    depends_on:
+      control-plane:
+        condition: service_healthy
+
+  api-ui-worker:
+    image: testing-agent/api-ui-worker:local
+    build: ./testing-agent-api-ui-worker
+    restart: unless-stopped
+    ports:
+      - "${BIND_HOST}:${ARTIFACTS_PORT}:9010"
+    volumes:
+      - ./.runtime/docker/api-ui-worker.toml:/app/config.toml:ro
+      - worker-artifacts:/app/artifacts
+    shm_size: 1gb
+    depends_on:
+      control-plane:
+        condition: service_healthy
+
+  studio:
+    image: testing-agent/studio:local
+    build: ./testpilot-studio
+    restart: unless-stopped
+    environment:
+      API_UPSTREAM: http://control-plane:9000
+    ports:
+      - "${BIND_HOST}:${STUDIO_PORT}:80"
+    depends_on:
+      control-plane:
+        condition: service_healthy
+
+volumes:
+  mysql-data:
+  control-plane-storage:
+  ai-runtime:
+  ai-logs:
+  worker-artifacts:

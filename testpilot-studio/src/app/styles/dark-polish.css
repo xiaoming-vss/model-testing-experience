@@ -1,0 +1,898 @@
+/* Final dark-mode polish for the four workbench modules. Keep this import last. */
+:root[data-theme='dark'] .app-shell.app-shell-macos {
+  --github-dark-canvas: #0d1117;
+  --github-dark-panel: rgba(22, 27, 34, 0.86);
+  --github-dark-panel-soft: rgba(22, 27, 34, 0.64);
+  --github-dark-card: rgba(22, 27, 34, 0.78);
+  --github-dark-card-hover: rgba(33, 38, 45, 0.82);
+  --github-dark-border: rgba(48, 54, 61, 0.9);
+  --github-dark-border-soft: rgba(48, 54, 61, 0.62);
+  --github-dark-text: #f0f6fc;
+  --github-dark-muted: #8b949e;
+  --github-dark-subtle: #6e7681;
+  --github-dark-blue: #58a6ff;
+  --github-dark-blue-strong: #388bfd;
+  --github-dark-danger: #ff7b72;
+  color: var(--github-dark-text);
+  background: #0d1117 !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos,
+:root[data-theme='dark'] .app-shell.app-shell-macos > .ant-layout,
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-content {
+  background: var(--github-dark-canvas) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-sider {
+  border-right: 1px solid var(--github-dark-border-soft) !important;
+  background: rgba(13, 17, 23, 0.92) !important;
+  box-shadow: inset -1px 0 0 rgba(240, 246, 252, 0.03) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-sider::before {
+  display: none !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .brand-row {
+  border-bottom-color: var(--github-dark-border-soft) !important;
+  background: #0d1117 !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .project-selector-wrap {
+  border-color: var(--github-dark-border) !important;
+  background: rgba(22, 27, 34, 0.78) !important;
+  box-shadow: inset 0 1px 0 rgba(240, 246, 252, 0.05) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .brand-row .brand {
+  border-color: transparent !important;
+  background: transparent !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .compact-header.app-header {
+  border-bottom-color: var(--github-dark-border-soft) !important;
+  background: rgba(13, 17, 23, 0.82) !important;
+  box-shadow: inset 0 -1px 0 rgba(48, 54, 61, 0.72) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .project-selector-label,
+:root[data-theme='dark'] .app-shell.app-shell-macos .project-separator,
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-header-actions .ant-btn-circle {
+  color: var(--github-dark-muted) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .project-select .ant-select-selector,
+:root[data-theme='dark'] .app-shell.app-shell-macos .project-select .ant-select-selection-item {
+  color: var(--github-dark-text) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-sider .ant-menu,
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-sider .ant-menu-root {
+  background: transparent !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-sider .ant-menu-item {
+  color: var(--github-dark-muted) !important;
+  background: transparent !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-sider .ant-menu-item:hover {
+  color: var(--github-dark-blue) !important;
+  background: rgba(33, 38, 45, 0.68) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-sider .ant-menu-item-selected {
+  color: var(--github-dark-blue) !important;
+  background: rgba(56, 139, 253, 0.16) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-sider .ant-menu-item-selected .anticon,
+:root[data-theme='dark'] .app-shell.app-shell-macos .app-sider .ant-menu-item-selected .ant-menu-title-content {
+  color: var(--github-dark-blue) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .project-overview-page,
+  .sprint-overview-page,
+  .testing-page,
+  .api-automation-page,
+  .api-collection-detail-page,
+  .functional-test-page,
+  .functional-suite-detail-page,
+  .ai-testing-page,
+  .ai-testing-overview-page,
+  .ai-skill-library-page,
+  .base-services-page
+) {
+  color: var(--github-dark-text) !important;
+  background: transparent !important;
+}
+
+/* Keep the API editor's outer gutters on the workspace surface instead of exposing the near-black app canvas. */
+:root[data-theme='dark'] .app-shell.app-shell-macos .api-collection-detail-page {
+  background: var(--app-bg) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .workbench-project-toolbar,
+  .testing-toolbar,
+  .base-services-toolbar,
+  .ai-testing-overview-toolbar,
+  .workbench-panel,
+  .base-services-panel,
+  .ai-testing-task-panel,
+  .ai-skill-library-panel,
+  .ai-testing-overview-panel,
+  .api-panel-header,
+  .panel-header,
+  .table-footer
+) {
+  border-color: var(--github-dark-border-soft) !important;
+  background: var(--github-dark-panel) !important;
+  box-shadow: inset 0 1px 0 rgba(240, 246, 252, 0.04) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .table-body-scroll,
+  .api-automation-content,
+  .base-services-card-scroll,
+  .ai-testing-card-scroll,
+  .functional-suite-scroll,
+  .sprint-card-scroll
+) {
+  background: transparent !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .workbench-board-switcher,
+  .testing-tab-switcher,
+  .base-services-tab-switcher,
+  .ai-testing-tab-switcher,
+  .ai-testing-overview-tab-switcher,
+  .ant-segmented
+) {
+  border: 1px solid var(--github-dark-border) !important;
+  background: rgba(22, 27, 34, 0.72) !important;
+  box-shadow: inset 0 1px 0 rgba(240, 246, 252, 0.04) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .testing-tab,
+  .base-services-tab,
+  .ai-testing-tab,
+  .ai-testing-overview-tab,
+  .ant-segmented-item
+) {
+  color: var(--github-dark-muted) !important;
+  background: transparent !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .testing-tab:hover,
+  .base-services-tab:hover,
+  .ai-testing-tab:hover,
+  .ai-testing-overview-tab:hover,
+  .ant-segmented-item:hover
+) {
+  color: var(--github-dark-blue) !important;
+  background: rgba(33, 38, 45, 0.74) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .testing-tab.active,
+  .base-services-tab.active,
+  .ai-testing-tab.active,
+  .ai-testing-overview-tab.active,
+  .ant-segmented-item-selected
+) {
+  color: var(--github-dark-text) !important;
+  background: rgba(33, 38, 45, 0.92) !important;
+  box-shadow: inset 0 1px 0 rgba(240, 246, 252, 0.07) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-segmented-thumb {
+  background: rgba(33, 38, 45, 0.92) !important;
+  box-shadow: inset 0 1px 0 rgba(240, 246, 252, 0.07) !important;
+}
+
+/* The project board switcher has one visual container: the Segmented control itself. */
+:root[data-theme='dark'] .app-shell.app-shell-macos .project-overview-page .workbench-board-switcher {
+  padding: 0;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .project-overview-page .workbench-board-switcher .ant-segmented {
+  border: 1px solid var(--github-dark-border) !important;
+  background: rgba(22, 27, 34, 0.72) !important;
+  box-shadow: inset 0 1px 0 rgba(240, 246, 252, 0.04) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .project-overview-page .workbench-board-switcher :is(
+  .ant-segmented-thumb,
+  .ant-segmented-item-selected
+) {
+  box-shadow: none !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .ant-card,
+  .api-collection-card,
+  .functional-suite-card,
+  .ui-test-suite-card,
+  .sprint-card,
+  .base-services-connection-card,
+  .base-services-empty-card,
+  .base-services-contract-card,
+  .ai-task-card,
+  .ai-skill-card,
+  .ai-testing-coming-card,
+  .ai-task-detail-card,
+  .ai-task-detail-summary-card,
+  .ai-task-detail-note-card,
+  .ai-task-detail-fold-card,
+  .functional-case-editor-hero,
+  .functional-case-meta-panel,
+  .functional-case-section-card,
+  .functional-suite-context-chip,
+  .functional-case-selection-bar
+) {
+  border-color: var(--github-dark-border) !important;
+  background: var(--github-dark-card) !important;
+  color: var(--github-dark-text) !important;
+  box-shadow: inset 0 1px 0 rgba(240, 246, 252, 0.04) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .ant-card-hoverable:hover,
+  .api-collection-card:hover,
+  .functional-suite-card:hover,
+  .ui-test-suite-card:hover,
+  .sprint-card:hover,
+  .base-services-connection-card:hover,
+  .ai-task-card:hover,
+  .ai-skill-card:hover
+) {
+  border-color: rgba(88, 166, 255, 0.28) !important;
+  background: var(--github-dark-card-hover) !important;
+  box-shadow: 0 14px 30px rgba(1, 4, 9, 0.28) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(.ant-card-head, .ant-card-body) {
+  color: var(--github-dark-text) !important;
+  background: transparent !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  .ant-typography,
+  .sprint-card-title,
+  .api-collection-card-top .ant-typography,
+  .functional-suite-card-title,
+  .base-services-connection-title,
+  .ai-task-card-title,
+  .ai-skill-card-title .ant-typography,
+  .api-collection-inline-value,
+  .sprint-card-value
+) {
+  color: var(--github-dark-text) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .ant-typography-secondary,
+  .sprint-card-label,
+  .api-collection-description,
+  .functional-suite-card-description,
+  .base-services-connection-url,
+  .project-description-text,
+  .project-time-text,
+  .table-footer .ant-typography,
+  .ai-task-card-description,
+  .ai-skill-card-meta,
+  .ai-task-card-label,
+  .functional-case-editor-description,
+  .functional-case-nav-item-path
+) {
+  color: var(--github-dark-muted) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .sprint-card-meta,
+  .functional-case-nav-item,
+  .api-detail-meta-row,
+  .base-services-connection-card .sprint-card-meta,
+  .ai-task-card .sprint-card-meta,
+  .ai-skill-card-url
+) {
+  border-color: var(--github-dark-border-soft) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .ant-input,
+  .ant-input-affix-wrapper,
+  .ant-input-number,
+  .ant-select-selector,
+  .ant-picker,
+  .api-filter-input
+) {
+  border-color: var(--github-dark-border) !important;
+  background: rgba(13, 17, 23, 0.72) !important;
+  color: var(--github-dark-text) !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .ant-select-selection-item,
+  .ant-select-selection-placeholder,
+  .ant-input-number-input,
+  .ant-picker-input > input
+) {
+  color: var(--github-dark-text) !important;
+}
+
+/* UI case editor headings use lighter semantic surfaces than regular form fields. */
+:root[data-theme='dark'] .app-shell.app-shell-macos .ui-suite-case-editor-panel .ui-test-case-name-item .ant-input {
+  border-color: var(--github-dark-border) !important;
+  background: rgba(22, 27, 34, 0.72) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .ui-suite-case-editor-panel .ui-test-case-name-item .ant-input:is(:hover, :focus) {
+  border-color: rgba(88, 166, 255, 0.48) !important;
+  background: rgba(33, 38, 45, 0.82) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .ui-suite-case-editor-panel .ui-test-case-step-title-item :is(
+  .ant-input-affix-wrapper,
+  .ui-test-case-step-title-input.ant-input
+) {
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .ui-suite-case-editor-panel .ui-test-case-step-title-item .ant-input-affix-wrapper:is(:hover, :focus-within) {
+  border-color: var(--github-dark-border-soft) !important;
+  background: rgba(33, 38, 45, 0.72) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(.ant-tag, .base-services-panel-status-tag) {
+  border-color: rgba(88, 166, 255, 0.24) !important;
+  background: rgba(56, 139, 253, 0.12) !important;
+  color: var(--github-dark-blue) !important;
+}
+
+/* Preserve Ant Design semantic tag colors after the generic dark tag treatment above. */
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-tag.ant-tag-default {
+  border-color: rgba(148, 163, 184, 0.24) !important;
+  background: rgba(148, 163, 184, 0.14) !important;
+  color: #b3c0d1 !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-tag.ant-tag-gold,
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-tag.ant-tag-warning {
+  border-color: rgba(217, 164, 65, 0.32) !important;
+  background: rgba(217, 164, 65, 0.18) !important;
+  color: #e5b250 !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-tag.ant-tag-cyan {
+  border-color: rgba(20, 184, 166, 0.28) !important;
+  background: rgba(20, 184, 166, 0.16) !important;
+  color: #6dd5c8 !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-tag.ant-tag-purple {
+  border-color: rgba(139, 92, 246, 0.3) !important;
+  background: rgba(139, 92, 246, 0.18) !important;
+  color: #b69af7 !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-tag.ant-tag-green,
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-tag.ant-tag-processing,
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-tag.ant-tag-success {
+  border-color: rgba(63, 185, 116, 0.3) !important;
+  background: rgba(63, 185, 116, 0.18) !important;
+  color: #5bc084 !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-tag.ant-tag-error {
+  border-color: rgba(239, 92, 92, 0.28) !important;
+  background: rgba(239, 92, 92, 0.16) !important;
+  color: #ef7a7a !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-tag.ant-tag-red {
+  border-color: rgba(244, 63, 94, 0.3) !important;
+  background: rgba(244, 63, 94, 0.18) !important;
+  color: #f27f89 !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-tag.ant-tag-volcano {
+  border-color: rgba(249, 115, 22, 0.3) !important;
+  background: rgba(249, 115, 22, 0.18) !important;
+  color: #f29b70 !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-tag.ant-tag-orange {
+  border-color: rgba(245, 139, 47, 0.3) !important;
+  background: rgba(245, 139, 47, 0.18) !important;
+  color: #f0a45d !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-tag.ant-tag-lime {
+  border-color: rgba(132, 204, 22, 0.3) !important;
+  background: rgba(132, 204, 22, 0.18) !important;
+  color: #a8d868 !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-tag.ant-tag-blue {
+  border-color: rgba(74, 144, 226, 0.3) !important;
+  background: rgba(74, 144, 226, 0.18) !important;
+  color: #78aef2 !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-tag.ant-tag-geekblue {
+  border-color: rgba(99, 102, 241, 0.3) !important;
+  background: rgba(99, 102, 241, 0.18) !important;
+  color: #9aaeff !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-tag.ant-tag-magenta {
+  border-color: rgba(236, 72, 153, 0.3) !important;
+  background: rgba(236, 72, 153, 0.18) !important;
+  color: #f08cbc !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .ant-pagination-item,
+  .ant-pagination-prev,
+  .ant-pagination-next,
+  .ant-pagination-options .ant-select-selector
+) {
+  border-color: var(--github-dark-border) !important;
+  background: rgba(22, 27, 34, 0.72) !important;
+  color: var(--github-dark-muted) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-pagination-item-active {
+  border-color: rgba(88, 166, 255, 0.42) !important;
+  background: rgba(56, 139, 253, 0.16) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-pagination-item-active a,
+:root[data-theme='dark'] .app-shell.app-shell-macos .ant-pagination .anticon {
+  color: var(--github-dark-blue) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .ant-empty,
+  .ant-empty-description,
+  .ant-statistic-title,
+  .ant-descriptions-item-label,
+  .ant-form-item-extra
+) {
+  color: var(--github-dark-muted) !important;
+}
+
+:root[data-theme='dark'] :is(
+  .ant-dropdown-menu,
+  .ant-popover-inner,
+  .ant-select-dropdown,
+  .ant-picker-dropdown .ant-picker-panel-container
+) {
+  border: 1px solid rgba(48, 54, 61, 0.9) !important;
+  background: rgba(22, 27, 34, 0.96) !important;
+  color: #f0f6fc !important;
+  box-shadow: 0 16px 36px rgba(1, 4, 9, 0.42) !important;
+}
+
+:root[data-theme='dark'] :is(.ant-dropdown-menu-item, .ant-select-item, .ant-picker-cell-inner) {
+  color: #f0f6fc !important;
+}
+
+:root[data-theme='dark'] :is(.ant-dropdown-menu-item:hover, .ant-select-item-option-active, .ant-select-item-option-selected) {
+  background: rgba(56, 139, 253, 0.16) !important;
+  color: #58a6ff !important;
+}
+
+/* Detail-page custom surfaces that are not always Ant Card/Panel components. */
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .page-frame,
+  .api-collection-detail-frame,
+  .api-collection-detail-layout,
+  .functional-suite-detail-layout,
+  .api-case-sidebar,
+  .functional-case-sidebar,
+  .api-case-editor-panel,
+  .functional-case-editor-panel,
+  .api-case-editor-shell,
+  .api-case-editor-main,
+  .api-case-editor-main-scroll,
+  .api-case-workspace,
+  .api-detail-hover-panel,
+  .api-collection-detail-panel,
+  .functional-suite-detail-panel,
+  .api-detail-hover-bar,
+  .api-detail-hover-body,
+  .detail-block,
+  .api-case-summary-card,
+  .api-rule-card,
+  .api-case-run-result-subsection,
+  .api-case-run-result-list,
+  .api-case-import-modal,
+  .api-case-import-upload,
+  .api-case-import-editor,
+  .api-env-var-picker,
+  .api-env-var-picker-modal-body,
+  .json-editor-toolbar,
+  .json-editor-codemirror .cm-editor,
+  .json-editor-codemirror .cm-gutters,
+  .ui-suite-case-empty-list,
+  .ui-test-case-empty-editor,
+  .ui-template-picker,
+  .ai-task-detail-layout,
+  .ai-task-detail-content-scroll,
+  .ai-task-run-history-list,
+  .ai-task-run-history-record,
+  .ai-task-run-history-placeholder,
+  .ai-task-run-result-modal-content,
+  .ai-task-stage-review-popover,
+  .ai-task-kind-list,
+  .ai-task-kind-option,
+  .requirement-analysis-drawer,
+  .requirement-analysis-section,
+  .requirement-analysis-code-block,
+  .requirement-document-modal,
+  .requirement-document-modal-toolbar,
+  .requirement-document-modal-stage,
+  .requirement-document-modal-content,
+  .requirement-document-understanding,
+  .requirement-document-docx-host,
+  .base-services-detail-layout,
+  .base-services-detail-descriptions
+) {
+  border-color: var(--github-dark-border-soft) !important;
+  background: var(--github-dark-panel-soft) !important;
+  color: var(--github-dark-text) !important;
+  box-shadow: inset 0 1px 0 rgba(240, 246, 252, 0.035) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .api-case-sidebar-scroll,
+  .api-case-nav-list,
+  .functional-case-nav-list,
+  .functional-case-editor-body,
+  .functional-case-editor-grid,
+  .api-case-editor-body,
+  .api-case-run-history-scroll,
+  .ai-task-run-history-scroll,
+  .ai-testing-empty-shell,
+  .base-services-connection-shell,
+  .api-case-import-hint,
+  .api-env-var-picker-note
+) {
+  background: transparent !important;
+  color: var(--github-dark-muted) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .api-case-nav-item,
+  .functional-case-nav-item,
+  .api-env-var-picker-item,
+  .ui-template-picker-item,
+  .ai-task-kind-option,
+  .ai-task-run-history-record,
+  .api-case-run-result-row,
+  .functional-case-section-item
+) {
+  border-color: var(--github-dark-border-soft) !important;
+  background: rgba(22, 27, 34, 0.58) !important;
+  color: var(--github-dark-text) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .api-case-nav-item:hover,
+  .functional-case-nav-item:hover,
+  .api-env-var-picker-item:hover,
+  .ui-template-picker-item:hover,
+  .ai-task-kind-option:hover
+) {
+  border-color: rgba(88, 166, 255, 0.28) !important;
+  background: rgba(33, 38, 45, 0.82) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .api-case-nav-item.selected,
+  .functional-case-nav-item.selected,
+  .api-env-var-picker-item.selected,
+  .requirement-analysis-run-row-selected > td
+) {
+  border-color: rgba(88, 166, 255, 0.36) !important;
+  background: rgba(56, 139, 253, 0.16) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .api-detail-hover-title,
+  .api-case-sidebar-title-copy,
+  .api-case-nav-item-name,
+  .functional-case-nav-item-name,
+  .api-rule-card-title,
+  .api-summary-item strong,
+  .api-env-var-picker-item-key,
+  .ui-template-picker-title,
+  .ui-template-picker-item-label,
+  .ai-task-kind-title,
+  .ai-task-run-history-record-name,
+  .ai-task-detail-inline-value,
+  .requirement-analysis-detail-title
+) {
+  color: var(--github-dark-text) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  .api-detail-hover-preview,
+  .api-detail-description,
+  .api-case-sidebar-count,
+  .api-case-nav-item-path,
+  .functional-case-nav-item-path,
+  .api-rule-card-desc,
+  .api-summary-item span,
+  .api-env-var-picker-item-desc,
+  .api-env-var-picker-item-example,
+  .ui-template-picker-subtitle,
+  .ui-template-picker-item-desc,
+  .ui-template-picker-item-example,
+  .ai-task-kind-description,
+  .ai-task-run-history-record-meta,
+  .ai-task-run-history-auto-refresh,
+  .ai-task-detail-inline-label
+) {
+  color: var(--github-dark-muted) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(
+  pre,
+  code,
+  .api-case-run-result-pre,
+  .ai-task-code-block,
+  .requirement-analysis-code-block,
+  .ui-template-picker-item-token
+) {
+  border-color: var(--github-dark-border) !important;
+  background: rgba(13, 17, 23, 0.78) !important;
+  color: #d1d9e0 !important;
+}
+
+:root[data-theme='dark'] :is(.ant-modal, .ant-drawer) :is(
+  .ant-upload,
+  .ant-upload-drag,
+  .ant-table,
+  .ant-table-container,
+  .ant-table-thead > tr > th,
+  .ant-table-tbody > tr > td,
+  .ant-descriptions-view,
+  .ant-descriptions-item-label,
+  .ant-descriptions-item-content
+) {
+  border-color: rgba(48, 54, 61, 0.86) !important;
+  background: rgba(22, 27, 34, 0.72) !important;
+  color: #f0f6fc !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(.ant-alert, .base-services-integration-alert, .base-services-detail-alert) {
+  border-color: rgba(88, 166, 255, 0.22) !important;
+  background: rgba(56, 139, 253, 0.1) !important;
+  color: var(--github-dark-text) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .sprint-overview-page :is(
+  .sprint-overview-summary-metric,
+  .sprint-dashboard-health-band,
+  .sprint-dashboard-panel,
+  .sprint-dashboard-trend-card
+) {
+  border-color: var(--github-dark-border) !important;
+  background: var(--github-dark-card) !important;
+  color: var(--github-dark-text) !important;
+  box-shadow: inset 0 1px 0 rgba(240, 246, 252, 0.04) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .sprint-overview-page :is(
+  .sprint-dashboard-health-title h4.ant-typography,
+  .sprint-dashboard-health-progress-head .ant-typography,
+  .sprint-dashboard-health-progress-head strong,
+  .sprint-dashboard-health-legend strong,
+  .sprint-dashboard-health-defects strong,
+  .sprint-dashboard-card-head h4.ant-typography,
+  .sprint-dashboard-test-name,
+  .sprint-dashboard-test-name strong,
+  .sprint-dashboard-test-total,
+  .sprint-dashboard-progress-meta strong,
+  .sprint-dashboard-severity-row strong,
+  .sprint-overview-card-value,
+  .sprint-overview-card-subtitle,
+  .sprint-overview-donut-center,
+  .sprint-overview-chart-metrics strong,
+  .sprint-overview-summary-value
+) {
+  color: var(--github-dark-text) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .sprint-overview-page :is(
+  .sprint-dashboard-health-caption,
+  .sprint-dashboard-health-legend,
+  .sprint-dashboard-health-defects span,
+  .sprint-dashboard-test-row-head,
+  .sprint-dashboard-progress-meta,
+  .sprint-dashboard-severity-row,
+  .sprint-overview-card-label,
+  .sprint-overview-chart-metrics span,
+  .sprint-overview-summary-label
+) {
+  color: var(--github-dark-muted) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .sprint-overview-page .sprint-dashboard-health-icon,
+:root[data-theme='dark'] .app-shell.app-shell-macos .sprint-overview-page .sprint-dashboard-test-icon,
+:root[data-theme='dark'] .app-shell.app-shell-macos .sprint-overview-page .sprint-overview-summary-icon {
+  color: var(--github-dark-blue) !important;
+  background: rgba(56, 139, 253, 0.16) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .sprint-overview-page :is(
+  .sprint-dashboard-health-progress,
+  .sprint-dashboard-severity-list,
+  .sprint-dashboard-trend-pane + .sprint-dashboard-trend-pane
+) {
+  border-color: var(--github-dark-border-soft) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .sprint-overview-page .sprint-dashboard-test-table,
+:root[data-theme='dark'] .app-shell.app-shell-macos .sprint-overview-page .sprint-dashboard-test-row {
+  border-color: var(--github-dark-border-soft) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .sprint-overview-page .sprint-dashboard-test-row-head {
+  background: rgba(13, 17, 23, 0.38) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .sprint-overview-page :is(
+  .sprint-dashboard-health-track,
+  .sprint-dashboard-progress-track,
+  .sprint-dashboard-severity-track
+) {
+  background: rgba(139, 148, 158, 0.22) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .sprint-overview-page :is(
+  .sprint-overview-chart-host .recharts-cartesian-grid line,
+  .sprint-overview-chart-host .recharts-cartesian-axis-line,
+  .sprint-overview-chart-host .recharts-cartesian-axis-tick-line
+) {
+  stroke: rgba(139, 148, 158, 0.24) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .sprint-overview-page :is(
+  .sprint-overview-chart-host .recharts-cartesian-axis-tick text,
+  .sprint-overview-chart-host .recharts-legend-item-text
+) {
+  fill: var(--github-dark-muted) !important;
+  color: var(--github-dark-muted) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .sprint-overview-page :is(
+  .recharts-default-tooltip,
+  .recharts-tooltip-wrapper .recharts-default-tooltip
+) {
+  border-color: var(--github-dark-border) !important;
+  background: rgba(22, 27, 34, 0.96) !important;
+  color: var(--github-dark-text) !important;
+  box-shadow: 0 12px 28px rgba(1, 4, 9, 0.36) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .sprint-overview-page :is(
+  .recharts-tooltip-label,
+  .recharts-tooltip-item
+) {
+  color: var(--github-dark-text) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos :is(.ant-divider, .ant-card-head, .ant-tabs-nav)::before {
+  border-color: var(--github-dark-border-soft) !important;
+}
+
+/* Dynamic-value picker is rendered through a portal, so it needs its own dark surface scope. */
+:root[data-theme='dark'] .api-env-var-picker-modal {
+  --github-dark-border: rgba(48, 54, 61, 0.9);
+  --github-dark-border-soft: rgba(48, 54, 61, 0.62);
+  --github-dark-text: #f0f6fc;
+  --github-dark-muted: #8b949e;
+  --github-dark-blue: #58a6ff;
+}
+
+:root[data-theme='dark'] .api-env-var-picker-modal :is(.ant-modal-container, .ant-modal-content) {
+  border-color: rgba(139, 148, 158, 0.18) !important;
+  background: rgba(22, 27, 34, 0.98) !important;
+  color: var(--github-dark-text) !important;
+  box-shadow: 0 28px 72px rgba(1, 4, 9, 0.58) !important;
+}
+
+:root[data-theme='dark'] .api-env-var-picker-modal :is(.ant-modal-header, .api-env-var-picker-footer) {
+  border-color: rgba(139, 148, 158, 0.14) !important;
+  background: transparent !important;
+}
+
+:root[data-theme='dark'] .api-env-var-picker-modal :is(
+  .api-env-var-picker-heading-title,
+  .api-env-var-picker-preview-title,
+  .api-env-var-picker-preview-meta dd,
+  .api-env-var-picker-item-key
+) {
+  color: var(--github-dark-text) !important;
+}
+
+:root[data-theme='dark'] .api-env-var-picker-modal :is(
+  .api-env-var-picker-heading-subtitle,
+  .api-env-var-picker-item-desc,
+  .api-env-var-picker-item-type,
+  .api-env-var-picker-preview-meta dt,
+  .api-env-var-picker-preview-description
+) {
+  color: var(--github-dark-muted) !important;
+}
+
+:root[data-theme='dark'] .api-env-var-picker-modal .api-env-var-picker-sources {
+  border-color: rgba(139, 148, 158, 0.14) !important;
+  background: rgba(13, 17, 23, 0.34) !important;
+}
+
+:root[data-theme='dark'] .api-env-var-picker-modal :is(.api-env-var-picker-browser, .api-env-var-picker-item) {
+  border-color: rgba(139, 148, 158, 0.12) !important;
+}
+
+:root[data-theme='dark'] .api-env-var-picker-modal .api-env-var-picker-source {
+  color: var(--github-dark-muted) !important;
+  background: transparent !important;
+}
+
+:root[data-theme='dark'] .api-env-var-picker-modal .api-env-var-picker-source:hover {
+  color: var(--github-dark-text) !important;
+  background: rgba(56, 139, 253, 0.08) !important;
+}
+
+:root[data-theme='dark'] .api-env-var-picker-modal .api-env-var-picker-source.active {
+  color: var(--github-dark-blue) !important;
+  background: rgba(56, 139, 253, 0.16) !important;
+}
+
+:root[data-theme='dark'] .api-env-var-picker-modal .api-env-var-picker-source-count {
+  color: var(--github-dark-muted) !important;
+  background: rgba(139, 148, 158, 0.14) !important;
+}
+
+:root[data-theme='dark'] .api-env-var-picker-modal .api-env-var-picker-item {
+  background: transparent !important;
+}
+
+:root[data-theme='dark'] .api-env-var-picker-modal .api-env-var-picker-item:hover {
+  background: rgba(56, 139, 253, 0.08) !important;
+}
+
+:root[data-theme='dark'] .api-env-var-picker-modal .api-env-var-picker-item.active {
+  border-color: rgba(88, 166, 255, 0.34) !important;
+  background: rgba(56, 139, 253, 0.16) !important;
+  box-shadow: inset 0 0 0 1px rgba(88, 166, 255, 0.22) !important;
+}
+
+:root[data-theme='dark'] .api-env-var-picker-modal .api-env-var-picker-preview-token {
+  border-color: rgba(139, 148, 158, 0.16) !important;
+  background: rgba(13, 17, 23, 0.46) !important;
+  color: var(--github-dark-blue) !important;
+}

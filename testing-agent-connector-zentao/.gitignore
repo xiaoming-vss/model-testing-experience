@@ -1,0 +1,14 @@
+.idea/
+.pytest_cache/
+.ruff_cache/
+.uv-cache/
+.venv/
+__pycache__/
+config/zentao.toml
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+dist/
+build/
+*.py[cod]
