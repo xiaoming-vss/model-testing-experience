@@ -3,6 +3,7 @@ import { usePersonalConnectionChoice } from '@/features/base-services/components
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { FunctionCaseContentEditor } from '../components/FunctionCaseContentEditor'
+import { priorityColor } from '../utils/casePriority'
 import { ArrowLeftOutlined, FlagOutlined, ProfileOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons'
 import { Alert, AutoComplete, Button, Checkbox, Empty, Form, Input, InputNumber, Popconfirm, Segmented, Select, Tag, Tooltip, Typography, Upload } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -66,16 +67,6 @@ function formatFunctionalCaseTypeLabel(caseType?: string) {
 
 function isJsonFileName(fileName: string) {
   return /\.json$/i.test(fileName.trim())
-}
-
-function priorityColor(priority?: string) {
-  const colorMap: Record<string, string> = {
-    P0: 'red',
-    P1: 'orange',
-    P2: 'blue',
-    P3: 'default',
-  }
-  return priority ? colorMap[priority] ?? 'default' : 'default'
 }
 
 function sortFunctionCases(cases: FunctionTestCase[]) {

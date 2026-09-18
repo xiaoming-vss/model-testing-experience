@@ -8,7 +8,11 @@ from testing_agent.models.function_test_suite import FunctionTestSuite
 from testing_agent.repositories.function_test_suite import FunctionTestSuiteRepository
 from testing_agent.schemas.function_test_suite import FunctionSuiteRequest, FunctionSuiteResponse
 from testing_agent.services.common import apply_patch, dump, list_payload
-from testing_agent.services.project_access import ProjectAction, require_project_access
+from testing_agent.services.project_access import (
+    ProjectAction,
+    require_project_access,
+    require_project_id,
+)
 
 
 class FunctionTestSuiteService:
@@ -54,6 +58,22 @@ class FunctionTestSuiteService:
     async def list(self, user_id: str, requirement_id: str) -> dict[str, Any]:
         await self.ensure_requirement_access(user_id, requirement_id, action="read")
         rows = await self.repository.list_by_requirement(requirement_id)
+        return list_payload([dump(FunctionSuiteResponse, row) for row in rows])
+
+    async def list_project(
+        self,
+        user_id: str,
+        project_id: str,
+        *,
+        sprint_id: str = "",
+        requirement_id: str = "",
+    ) -> dict[str, Any]:
+        await require_project_id(self.repository.session, user_id, project_id, action="read")
+        rows = await self.repository.list_by_project(
+            project_id,
+            sprint_id=sprint_id.strip(),
+            requirement_id=requirement_id.strip(),
+        )
         return list_payload([dump(FunctionSuiteResponse, row) for row in rows])
 
     async def get(self, user_id: str, suite_id: str) -> dict:

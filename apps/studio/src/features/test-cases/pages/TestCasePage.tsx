@@ -12,7 +12,7 @@ import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
 import { useSprintRequirementScope } from '@/features/projects/hooks/useSprintRequirementScope'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { useTestCasePageStore } from '@/features/test-cases/store/testCasePage.store'
-import { api, listItems, type FunctionTestSuite, type FunctionTestSuitesZentaoImportResult, type Requirement } from '@/services/api'
+import { api, listItems, type FunctionTestSuite, type FunctionTestSuitesZentaoImportResult } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import {
   formatTime,
@@ -156,42 +156,13 @@ export function TestCasePage({ scope }: { scope?: TestCasePageScope }) {
   }, [allRequirements, requirementFilterOptions, selectedSprintId])
 
   const suitesQuery = useQuery({
-    queryKey: [
-      'functionTestSuites',
-      activeProjectId,
-      selectedSprintId,
-      selectedRequirementId,
-      allRequirements.map(normalizeRequirementId).join(','),
-    ],
-    queryFn: async () => {
-      if (selectedRequirementId) {
-        const suites = await api.getFunctionTestSuites(selectedRequirementId)
-        return suites.map((suite) => ({
-          ...suite,
-          requirementId: suite.requirementId ?? suite.requirement_id ?? selectedRequirementId,
-        }))
-      }
-
-      const targetRequirements: Requirement[] = selectedSprintId
-        ? allRequirements.filter((item) => (item.sprintId ?? item.sprint_id) === selectedSprintId)
-        : allRequirements
-
-      if (targetRequirements.length === 0) return []
-
-      const suiteGroups = await Promise.all(
-        targetRequirements.map(async (requirement) => {
-          const requirementId = normalizeRequirementId(requirement)
-          const suites = await api.getFunctionTestSuites(requirementId)
-          return suites.map((suite) => ({
-            ...suite,
-            requirementId: suite.requirementId ?? suite.requirement_id ?? requirementId,
-          }))
-        }),
-      )
-
-      return suiteGroups.flat()
-    },
-    enabled: Boolean(activeProjectId) && !sprintsQuery.isLoading && !allRequirementsQuery.isLoading,
+    queryKey: ['functionTestSuites', activeProjectId, selectedSprintId, selectedRequirementId],
+    queryFn: () =>
+      api.getProjectFunctionTestSuites(activeProjectId!, {
+        sprintId: selectedSprintId ?? '',
+        requirementId: selectedRequirementId ?? '',
+      }),
+    enabled: Boolean(activeProjectId) && !sprintsQuery.isLoading,
   })
   const suites = useMemo(() => suitesQuery.data ?? [], [suitesQuery.data])
   const orderedSuites = useMemo(

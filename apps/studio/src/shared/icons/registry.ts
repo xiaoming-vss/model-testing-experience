@@ -9,6 +9,7 @@ import tasks from './assets/tasks.svg?url'
 import ui from './assets/ui.svg?url'
 import api from './assets/api.svg?url'
 import functional from './assets/functional.svg?url'
+import caseLibrary from './assets/caseLibrary.svg?url'
 import requirement from './assets/requirement.svg?url'
 import sprint from './assets/sprint.svg?url'
 import llm from './assets/llm-chat.svg?url'
@@ -27,6 +28,7 @@ export const iconRegistry = {
   ui: { src: ui, label: 'UI测试' },
   api: { src: api, label: 'API测试' },
   functional: { src: functional, label: '功能测试' },
+  caseLibrary: { src: caseLibrary, label: '用例库' },
   requirement: { src: requirement, label: '需求' },
   sprint: { src: sprint, label: '迭代' },
   llm: { src: llm, label: 'LLM 模型' },

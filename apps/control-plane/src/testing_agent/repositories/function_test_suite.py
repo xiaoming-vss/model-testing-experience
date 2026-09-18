@@ -60,6 +60,27 @@ class FunctionTestSuiteRepository(ResourceRepository):
             .order_by(FunctionTestSuite.created_at.desc())
         )
 
+    async def list_by_project(
+        self,
+        project_id: str,
+        *,
+        sprint_id: str = "",
+        requirement_id: str = "",
+    ) -> list[FunctionTestSuite]:
+        statement = (
+            select(FunctionTestSuite)
+            .join(Requirement, Requirement.requirement_id == FunctionTestSuite.requirement_id)
+            .join(Sprint, Sprint.sprint_id == Requirement.sprint_id)
+            .where(Sprint.project_id == project_id)
+        )
+        if sprint_id:
+            statement = statement.where(Requirement.sprint_id == sprint_id)
+        if requirement_id:
+            statement = statement.where(FunctionTestSuite.requirement_id == requirement_id)
+        return await self._with_case_counts(
+            statement.order_by(FunctionTestSuite.created_at.desc(), FunctionTestSuite.id.desc())
+        )
+
     def add(self, suite: FunctionTestSuite) -> None:
         self.session.add(suite)
 

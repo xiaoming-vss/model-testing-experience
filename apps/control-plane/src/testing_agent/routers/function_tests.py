@@ -11,6 +11,7 @@ from testing_agent.handlers.function_test_case import (
     import_function_cases_to_zentao,
     import_function_suites_to_zentao,
     list_function_cases,
+    list_project_function_cases,
     update_function_case,
 )
 from testing_agent.handlers.function_test_suite import (
@@ -18,11 +19,13 @@ from testing_agent.handlers.function_test_suite import (
     delete_function_suite,
     get_function_suite,
     list_function_suites,
+    list_project_function_suites,
     update_function_suite,
 )
 from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
 from testing_agent.schemas.function_test_case import (
     FunctionCaseImportResponse,
+    FunctionCaseLibraryItem,
     FunctionCaseResponse,
     FunctionCasesBatchDeleteResponse,
     FunctionCaseZentaoImportResponse,
@@ -90,3 +93,12 @@ router.post(
     "/function-test-suites/{suite_id}/cases/batch-delete",
     response_model=ApiResponse[FunctionCasesBatchDeleteResponse],
 )(batch_delete_function_cases)
+
+router.get(
+    "/projects/{project_id}/function-test-suites",
+    response_model=ApiResponse[ListResponse[FunctionSuiteResponse]],
+)(list_project_function_suites)
+router.get(
+    "/projects/{project_id}/function-test-cases",
+    response_model=ApiResponse[ListResponse[FunctionCaseLibraryItem]],
+)(list_project_function_cases)

@@ -10,7 +10,12 @@ def dump(schema: type[BaseModel], obj: Any) -> dict[str, Any]:
 
 
 def list_payload(items: list[Any]) -> dict[str, Any]:
-    return {"total": len(items), "items": items}
+    return paged_payload(items, len(items))
+
+
+def paged_payload(items: list[Any], total: int) -> dict[str, Any]:
+    """分页列表信封：total 是满足条件的总条数，而不是本页条数。"""
+    return {"total": total, "items": items}
 
 
 def apply_patch(obj: Any, body: dict[str, Any], allowed: set[str]) -> None:

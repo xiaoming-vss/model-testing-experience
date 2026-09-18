@@ -45,6 +45,16 @@ class FunctionCaseResponse(FunctionCaseRequest):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True, alias_generator=to_camel)
 
 
+class FunctionCaseLibraryItem(FunctionCaseResponse):
+    """用例库条目：用例内容加上它所属的测试集 / 需求 / 迭代，供项目范围检索使用。"""
+
+    suite_name: str = Field(default="")
+    requirement_id: str = Field(default="")
+    requirement_name: str = Field(default="")
+    sprint_id: str = Field(default="")
+    sprint_name: str = Field(default="")
+
+
 class FunctionCaseImportResponse(BaseModel):
     imported: int
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)

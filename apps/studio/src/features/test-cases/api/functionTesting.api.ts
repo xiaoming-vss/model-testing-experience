@@ -2,6 +2,8 @@ import { request, type ListResponse } from '@/shared/api/request'
 import type {
   CreateFunctionTestCasePayload,
   CreateFunctionTestSuitePayload,
+  FunctionCaseLibraryFilters,
+  FunctionCaseLibraryItem,
   FunctionTestCase,
   FunctionTestCaseImportResult,
   FunctionTestCaseZentaoImportResult,
@@ -13,9 +15,32 @@ import type {
   UpdateFunctionTestSuitePayload,
 } from '../types'
 
+function buildQuery(params: Record<string, string | number | undefined>) {
+  const search = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === '') return
+    search.set(key, String(value))
+  })
+  const query = search.toString()
+  return query ? `?${query}` : ''
+}
+
 export const functionTestingApi = {
   getFunctionTestSuites: (requirementId: string) =>
     request<ListResponse<FunctionTestSuite>>(`/v1/requirements/${requirementId}/function-test-suites`),
+  // 项目范围：一次取回该项目下（可按迭代/需求筛选）的全部测试集，替代按需求逐个请求。
+  getProjectFunctionTestSuites: (
+    projectId: string,
+    filters: { sprintId?: string; requirementId?: string } = {},
+  ) =>
+    request<ListResponse<FunctionTestSuite>>(
+      `/v1/projects/${projectId}/function-test-suites${buildQuery({ ...filters })}`,
+    ),
+  // 项目范围：用例库检索，服务端筛选并分页。
+  getProjectFunctionTestCases: (projectId: string, filters: FunctionCaseLibraryFilters = {}) =>
+    request<ListResponse<FunctionCaseLibraryItem>>(
+      `/v1/projects/${projectId}/function-test-cases${buildQuery({ ...filters })}`,
+    ),
   createFunctionTestSuite: (requirementId: string, body: CreateFunctionTestSuitePayload) =>
     request<FunctionTestSuite>(`/v1/requirements/${requirementId}/function-test-suites`, {
       method: 'POST',

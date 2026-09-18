@@ -30,7 +30,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks() })
 it('删除功能测试集后重新请求当前列表并更新行和总数', async () => {
   const suite = { suiteId: 'suite-1', name: '待删除测试集', requirementId: 'req-1' }
   let deleted = false
-  const getSuites = vi.spyOn(api, 'getFunctionTestSuites').mockImplementation(async () => {
+  const getSuites = vi.spyOn(api, 'getProjectFunctionTestSuites').mockImplementation(async () => {
     const items = deleted ? [] : [suite]
     return Object.assign([...items], { items, total: items.length })
   })

@@ -17,11 +17,13 @@ from testing_agent.core.errors import (
 )
 from testing_agent.core.sid import new_id
 from testing_agent.domain.function_case_content import CaseContent, set_legacy_content
+from testing_agent.domain.function_case_query import FunctionCaseQuery
 from testing_agent.models.function_test_case import FunctionTestCase
 from testing_agent.models.function_test_suite import FunctionTestSuite
 from testing_agent.models.resource_binding import ResourceBinding
 from testing_agent.repositories.function_test_case import FunctionTestCaseRepository
 from testing_agent.schemas.function_test_case import (
+    FunctionCaseLibraryItem,
     FunctionCaseRequest,
     FunctionCaseResponse,
     ImportFunctionCasesToZentaoRequest,
@@ -32,8 +34,12 @@ from testing_agent.services.api_collection import (
     parse_import_payload,
     read_import_payload,
 )
-from testing_agent.services.common import apply_patch, dump, list_payload
-from testing_agent.services.project_access import ProjectAction, require_project_access
+from testing_agent.services.common import apply_patch, dump, list_payload, paged_payload
+from testing_agent.services.project_access import (
+    ProjectAction,
+    require_project_access,
+    require_project_id,
+)
 from testing_agent.services.zentao_resource import parse_zentao_remote_id, truncate_error
 
 
@@ -498,6 +504,12 @@ class FunctionTestCaseService:
         await self.get_accessible_suite(user_id, suite_id, action="read")
         rows = await self.repository.list_by_suite(suite_id)
         return list_payload([dump(FunctionCaseResponse, row) for row in rows])
+
+    async def list_project_cases(self, user_id: str, query: FunctionCaseQuery) -> dict[str, Any]:
+        """项目范围内的用例检索：跨迭代 / 需求 / 测试集筛选并分页。"""
+        await require_project_id(self.repository.session, user_id, query.project_id, action="read")
+        cases, total = await self.repository.list_by_project(query)
+        return paged_payload([dump(FunctionCaseLibraryItem, case) for case in cases], total)
 
     async def get(self, user_id: str, case_id: str) -> dict:
         return dump(

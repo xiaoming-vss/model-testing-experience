@@ -8,6 +8,7 @@ const tabOptions: Array<{
   icon: ReactNode
 }> = [
   { key: 'functional', label: '功能测试', icon: <AppIcon name="functional" /> },
+  { key: 'library', label: '用例库', icon: <AppIcon name="caseLibrary" /> },
   { key: 'api', label: 'API测试', icon: <AppIcon name="api" /> },
   { key: 'ui', label: 'UI测试', icon: <AppIcon name="ui" /> },
 ]

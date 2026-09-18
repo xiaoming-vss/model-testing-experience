@@ -152,6 +152,8 @@ export type {
 export type {
   CreateFunctionTestCasePayload,
   CreateFunctionTestSuitePayload,
+  FunctionCaseLibraryFilters,
+  FunctionCaseLibraryItem,
   FunctionTestCase,
   FunctionTestCaseImportResult,
   FunctionTestCaseZentaoImportItem,

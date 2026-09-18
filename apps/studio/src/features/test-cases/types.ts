@@ -121,3 +121,24 @@ export type CreateFunctionTestCasePayload = {
 }
 
 export type UpdateFunctionTestCasePayload = Partial<CreateFunctionTestCasePayload>
+
+// 用例库条目：用例内容加上它所属的测试集 / 需求 / 迭代。
+export type FunctionCaseLibraryItem = FunctionTestCase & {
+  suiteName?: string
+  requirementId?: string
+  requirementName?: string
+  sprintId?: string
+  sprintName?: string
+}
+
+export type FunctionCaseLibraryFilters = {
+  sprintId?: string
+  requirementId?: string
+  suiteId?: string
+  module?: string
+  priority?: string
+  caseType?: string
+  keyword?: string
+  page?: number
+  pageSize?: number
+}

@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import Body, Depends, File, UploadFile
+from fastapi import Body, Depends, File, Query, UploadFile
 
 from testing_agent.api.deps import get_current_user_id, get_function_test_case_service
 from testing_agent.core.errors import success_payload
+from testing_agent.domain.function_case_query import FunctionCaseQuery
 from testing_agent.schemas.function_test_case import (
     FunctionCaseRequest,
     FunctionCasesBatchDeleteRequest,
@@ -61,6 +62,39 @@ async def list_function_cases(
     service: FunctionTestCaseService = Depends(get_function_test_case_service),
 ):
     return success_payload(await service.list(user_id, suite_id))
+
+
+async def list_project_function_cases(
+    project_id: str,
+    sprint_id: str = Query(default="", alias="sprintId"),
+    requirement_id: str = Query(default="", alias="requirementId"),
+    suite_id: str = Query(default="", alias="suiteId"),
+    module: str = Query(default=""),
+    priority: str = Query(default=""),
+    case_type: str = Query(default="", alias="caseType"),
+    keyword: str = Query(default=""),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=200, alias="pageSize"),
+    user_id: str = Depends(get_current_user_id),
+    service: FunctionTestCaseService = Depends(get_function_test_case_service),
+):
+    return success_payload(
+        await service.list_project_cases(
+            user_id,
+            FunctionCaseQuery.for_page(
+                project_id,
+                page=page,
+                page_size=page_size,
+                sprint_id=sprint_id,
+                requirement_id=requirement_id,
+                suite_id=suite_id,
+                module=module,
+                priority=priority,
+                case_type=case_type,
+                keyword=keyword,
+            ),
+        )
+    )
 
 
 async def get_function_case(

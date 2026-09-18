@@ -1132,3 +1132,40 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* 用例库：只读用例预览抽屉 */
+.case-library-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.case-library-preview-title {
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.case-library-preview-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--tp-border-soft, #eef0f6);
+}
+
+.case-library-preview-list {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--tp-text-secondary, #414755);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.case-library-preview-expected {
+  color: var(--tp-text-muted, #727786);
+}
+
+.case-library-preview-note {
+  padding-top: 12px;
+  border-top: 1px solid var(--tp-border-soft, #eef0f6);
+}
