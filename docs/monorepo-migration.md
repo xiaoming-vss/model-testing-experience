@@ -1,7 +1,9 @@
 # 单仓库迁移说明
 
 来源：`/home/xiaoming/GitCloneData-bak` 下五个项目的当前工作目录。
-目标：`/home/xiaoming/testing-agent`。
+首次整合位置：`/home/xiaoming/testing-agent`。
+
+当前仓库位置：`/home/xiaoming/GitCloneData/testing-agent`（2026-09-18 按用户指定目录整体移动）。
 
 以当前磁盘文件为准，保留未提交修改和未被忽略的新增源码，已删除文件不恢复。旧 `.git` 不复制，也不合并提交历史；原备份目录不修改。依赖缓存、虚拟环境、构建产物、被忽略的本机配置、运行数据以及个人 Agent/IDE 工具目录不迁移。复制清单记录在 `migration-files.json`。
 
