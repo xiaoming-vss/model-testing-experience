@@ -4,13 +4,32 @@
 
 | Compose/脚本名称 | 项目目录 | 作用 |
 | --- | --- | --- |
-| studio | testpilot-studio | React 前端 |
-| control-plane | testing-agent-control-plane | FastAPI 控制面 |
-| ai-worker | testing-agent-ai-worker | AI 测试生成 |
-| api-ui-worker | testing-agent-api-ui-worker | API / Playwright 测试执行 |
-| zentao | testing-agent-connector-zentao | 禅道适配 |
+| studio | `apps/studio` | React 前端 |
+| control-plane | `apps/control-plane` | FastAPI 控制面 |
+| ai-worker | `apps/ai-worker` | AI 测试生成 |
+| api-ui-worker | `apps/api-ui-worker` | API / Playwright 测试执行 |
+| zentao | `apps/connector-zentao` | 禅道适配 |
 | mysql | — | MySQL 8.4 |
-| migrate | testing-agent-control-plane | 一次性数据库迁移 |
+| migrate | `apps/control-plane` | 一次性数据库迁移 |
+
+## 目录结构
+
+```text
+testing-agent/
+├── apps/
+│   ├── studio/
+│   ├── control-plane/
+│   ├── ai-worker/
+│   ├── api-ui-worker/
+│   └── connector-zentao/
+├── config/          # 统一配置与示例
+├── scripts/         # 配置生成与启动入口
+├── tests/           # 仓库级配置、部署测试
+├── docs/
+└── compose.yaml
+```
+
+各应用的源码、依赖文件、锁文件、Dockerfile 和业务测试保留在各自目录内。目录名缩短后，Python 包名、npm 包名及原启动命令保持兼容。下文管理命令均在仓库根目录执行；子项目 README 中的命令在对应 `apps/<项目>` 目录执行。
 
 ## 统一配置
 

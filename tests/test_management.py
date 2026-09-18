@@ -27,7 +27,7 @@ class ManagementTests(unittest.TestCase):
         for name, project in manage.PROJECTS.items():
             src = ROOT / project
             dst = self.root / project
-            dst.mkdir()
+            dst.mkdir(parents=True)
             if (src / "config").exists():
                 shutil.copytree(
                     src / "config",

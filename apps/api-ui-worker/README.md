@@ -86,7 +86,8 @@ snapshot_file = ""
 poll 模式：
 
 ```powershell
-cd D:\GoProjects\testing-agent-api-ui-worker
+# 从仓库根目录进入当前项目
+cd apps/api-ui-worker
 uv run python -m test_worker
 ```
 

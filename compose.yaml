@@ -21,7 +21,7 @@ services:
 
   migrate:
     image: testing-agent/control-plane:local
-    build: ./testing-agent-control-plane
+    build: ./apps/control-plane
     restart: "no"
     command: [alembic, upgrade, head]
     volumes:
@@ -32,7 +32,7 @@ services:
 
   control-plane:
     image: testing-agent/control-plane:local
-    build: ./testing-agent-control-plane
+    build: ./apps/control-plane
     restart: unless-stopped
     ports:
       - "${BIND_HOST}:${CONTROL_PLANE_PORT}:9000"
@@ -47,7 +47,7 @@ services:
 
   zentao:
     image: testing-agent/zentao:local
-    build: ./testing-agent-connector-zentao
+    build: ./apps/connector-zentao
     restart: unless-stopped
     ports:
       - "${BIND_HOST}:${ZENTAO_PORT}:8010"
@@ -56,7 +56,7 @@ services:
 
   ai-worker:
     image: testing-agent/ai-worker:local
-    build: ./testing-agent-ai-worker
+    build: ./apps/ai-worker
     restart: unless-stopped
     volumes:
       - ./.runtime/docker/ai-worker.toml:/app/config/worker.toml:ro
@@ -68,7 +68,7 @@ services:
 
   api-ui-worker:
     image: testing-agent/api-ui-worker:local
-    build: ./testing-agent-api-ui-worker
+    build: ./apps/api-ui-worker
     restart: unless-stopped
     ports:
       - "${BIND_HOST}:${ARTIFACTS_PORT}:9010"
@@ -82,7 +82,7 @@ services:
 
   studio:
     image: testing-agent/studio:local
-    build: ./testpilot-studio
+    build: ./apps/studio
     restart: unless-stopped
     environment:
       API_UPSTREAM: http://control-plane:9000

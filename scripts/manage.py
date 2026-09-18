@@ -18,11 +18,11 @@ from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parents[1]
 PROJECTS = {
-    "control-plane": "testing-agent-control-plane",
-    "ai-worker": "testing-agent-ai-worker",
-    "api-ui-worker": "testing-agent-api-ui-worker",
-    "zentao": "testing-agent-connector-zentao",
-    "studio": "testpilot-studio",
+    "control-plane": "apps/control-plane",
+    "ai-worker": "apps/ai-worker",
+    "api-ui-worker": "apps/api-ui-worker",
+    "zentao": "apps/connector-zentao",
+    "studio": "apps/studio",
 }
 
 

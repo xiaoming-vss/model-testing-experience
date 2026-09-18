@@ -79,7 +79,7 @@ Run the two-step nanobot chain demo:
 uv run testing-agent-ai-chain-demo --openapi-json-path "D:\tmp\openapi.json"
 ```
 
-Create local configuration with `python3 ../scripts/manage.py configure --mode local` from this project directory (or copy `config/worker.example.toml` to `config/worker.toml` for standalone use), then run the worker:
+Create local configuration with `python3 ../../scripts/manage.py configure --mode local` from this project directory (or copy `config/worker.example.toml` to `config/worker.toml` for standalone use), then run the worker:
 
 ```powershell
 uv run testing-agent-ai-worker
