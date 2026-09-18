@@ -1,13 +1,9 @@
-## Agent skills
+# control-plane 开发指引
 
-### Issue tracker
+本目录遵循根目录 [AGENTS.md](../../AGENTS.md)。文档统一维护于 [docs/control-plane](../../docs/control-plane/README.md)。
 
-本仓库使用本地 markdown 文件跟踪问题（`.scratch/`）。详见 `docs/agents/issue-tracker.md`。
+- 业务上下文：[CONTEXT.md](../../docs/control-plane/CONTEXT.md)。
+- 架构决策：[ADR](../../docs/control-plane/adr/)。
+- 公共规范：[领域文档](../../docs/agents/domain.md)、[问题跟踪](../../docs/agents/issue-tracker.md)、[分诊标签](../../docs/agents/triage-labels.md)。
 
-### Triage labels
-
-本仓库使用默认的五种分流标签。详见 `docs/agents/triage-labels.md`。
-
-### Domain docs
-
-本仓库采用单上下文领域文档布局。详见 `docs/agents/domain.md`。
+问题跟踪路径 `.scratch/` 相对单仓库根目录；应用代码与测试路径相对本目录。修改业务代码前先阅读对应上下文和相关 ADR。

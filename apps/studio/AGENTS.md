@@ -1,13 +1,9 @@
-## Agent skills
+# studio 开发指引
 
-### Issue tracker
+本目录遵循根目录 [AGENTS.md](../../AGENTS.md)。文档统一维护于 [docs/studio](../../docs/studio/README.md)。
 
-本仓库的需求和问题以本地 Markdown 文件跟踪（`.scratch/<feature-slug>/`）。详见 `docs/agents/issue-tracker.md`。
+- 业务上下文：[CONTEXT.md](../../docs/studio/CONTEXT.md)。
+- 架构决策：[ADR](../../docs/studio/adr/)。
+- 公共规范：[领域文档](../../docs/agents/domain.md)、[问题跟踪](../../docs/agents/issue-tracker.md)、[分诊标签](../../docs/agents/triage-labels.md)。
 
-### Triage labels
-
-本仓库使用默认的五类 triage 角色字符串（记录为 issue 文件中的 `Status:` 行）。详见 `docs/agents/triage-labels.md`。
-
-### Domain docs
-
-本仓库采用 single-context 领域文档布局。详见 `docs/agents/domain.md`。
+问题跟踪路径 `.scratch/` 相对单仓库根目录；应用代码与测试路径相对本目录。修改业务代码前先阅读对应上下文和相关 ADR。
