@@ -1,117 +1,93 @@
-# mtx-control-plane
+# 控制面（control-plane）
 
-> 文档统一维护于此；以下项目命令在仓库根目录的 `apps/control-plane/` 中执行。整套平台的配置与部署见 [统一部署指南](../deployment.md)。
+平台唯一的后端服务。组织测试资产、AI 生成任务、人工审核与导入、执行调度、权限、外部集成凭据与报告，并向浏览器提供 `/v1/*`、向 Worker 提供 `/internal/*`。
 
-Model Testing Experience（MTX）的 Python 控制面。
+这是 Go 控制面的 Python 重写版本，保留原 `/v1` 与 `/internal/*` 契约。领域术语见 [CONTEXT](CONTEXT.md)。
 
-## Scope
+## 运行时与依赖
 
-This project rewrites the Go backend control plane only. Worker executors stay outside this repository. The backend keeps the existing `/v1` and `/internal/*-worker` contracts so existing frontends and workers can keep talking to it.
+- Python 3.12（`.python-version`），包管理使用 uv（`uv.lock`）
+- FastAPI + uvicorn、SQLAlchemy 2 async + Alembic、MySQL（`asyncmy`）、Pydantic v2
+- 认证与授权：PyJWT、bcrypt、PyCasbin；报告输出使用 reportlab
+- 开发依赖在 `[project.optional-dependencies] dev`，需要 `--extra dev` 才会装入
 
-## Stack
+## 源码结构
 
-- Python 3.12
-- uv
-- FastAPI
-- SQLAlchemy 2.x async ORM
-- Alembic migrations
-- Pydantic v2
-- MySQL via asyncmy
+`apps/control-plane/src/testing_agent/`：
 
-## Local configuration
+| 路径 | 作用 |
+| --- | --- |
+| `main.py` | 启动入口，调用 uvicorn 加载 `app.py` 的工厂函数 |
+| `app.py` | 应用装配、异常处理、OpenAPI 契约改写 |
+| `routers/` | 27 个路由模块，全部由 `app.py` 挂载 |
+| `handlers/` | 薄 HTTP 处理层，被 router 调用 |
+| `services/`、`services/ai_execution/` | 业务服务与 AI 任务编排 |
+| `repositories/` | 数据访问 |
+| `models/`、`schemas/` | ORM 模型与请求/响应模型 |
+| `core/` | `config.py`、`security.py`、`enums.py`、`errors.py`、`sid.py` |
+| `db/`、`domain/` | 会话与基础层、领域值对象 |
 
-Create a local config from the example:
+调用层次为 router → handler → service → repository → model。注意 `api/` 目录下只有依赖注入与鉴权校验（`deps.py`），业务路由不在此处。
 
-```powershell
-Copy-Item config/local.example.toml config/local.toml
+## 配置
+
+启动时按 `--config/-c` 参数、`APP_CONF` 环境变量、`config/local.toml` 的顺序确定配置文件路径。本地独立启动由 `scripts/manage.py` 生成 `config/local.toml` 并注入 `APP_CONF`；容器内为 `/app/config/local.toml`。
+
+顶层配置段：
+
+```toml
+env = "local"                     # local 时开启 uvicorn reload
+[http]                            # host、port
+[security.jwt]                    # key、expire_hours
+[security.integration]            # key，用于集成凭据加解密
+[security.worker]                 # key，Worker 调用内部接口的令牌
+[data.db.user]                    # driver、dsn
+[storage]                         # uploads_dir
+[integrations.zentao_service]     # base_url
+[code_overview]                   # cache_ttl_seconds
 ```
 
-The example config points at:
+## 命令
 
-```text
-127.0.0.1:3306/testing-agent-python
-user: root
-password: password
-```
-
-## Commands
-
-```powershell
-uv sync --extra dev
-uv run alembic upgrade head
-uv run mtx-control-plane --config config/local.toml
-uv run pytest
-```
-
-## Storage
-
-Project skill files are stored under `storage/skills/`. The directory is kept in
-the repository with `.gitkeep`; uploaded/generated skill archives should live
-there at runtime.
-
-## Database initialization
-
-Deploy to an **empty MySQL database** using `uv run alembic upgrade head`.
-The only initial revision is `20260915_0001`; it contains the complete current
-baseline schema; later revisions add subsequent features. Fresh databases need no historical
-backfill. See [ADR-0006](adr/0006-fresh-database-baseline.md).
-
-Only fresh database initialization is supported. Retired development databases
-and historical connection conversion are not supported.
-
-Database credentials come from the config selected by `APP_CONF` (default:
-`config/local.toml`). Keep that file local. Future schema changes must add a
-migration rather than modifying the frozen initial revision.
-
-## Pre-push checks
+在 `apps/control-plane/` 下执行：
 
 ```sh
-uv lock --check
-uv run ruff check .
-uv run ruff format --check .
-uv run mypy src
-uv run pytest -q
-git diff --check
+uv sync --locked --extra dev                      # 安装依赖（含开发依赖）
+uv run mtx-control-plane                          # 启动
+uv run --extra dev pytest                         # 测试
+uv run --extra dev ruff check .                   # Lint
+uv run --extra dev mypy                           # 类型检查
+uv run --extra dev alembic upgrade head           # 数据库迁移
 ```
 
-For real MySQL initialization, rollback/re-initialization and uniqueness checks,
-set `CONTROL_PLANE_TEST_DATABASE_URL` to an **empty disposable database** whose
-name ends in `_test`, then run:
+也可在仓库根目录用 `python3 scripts/manage.py run control-plane` 和 `python3 scripts/manage.py migrate`，由统一配置生成 `config/local.toml`。
 
-```sh
-uv run pytest -q tests/test_mysql_initialization.py
-```
+`sql/` 存放一次性的数据订正脚本，需人工对着目标库执行，默认干跑、执行前自动备份受影响行。已有的脚本见下表。
 
-These tests create and delete business tables in that database. The optional
-MySQL queue concurrency test in `tests/test_worker_queue_storage.py` uses the
-same explicit test URL and initializes its own disposable schema.
+| 脚本 | 用途 |
+| --- | --- |
+| `backfill_function_case_ids.sql` | 给历史功能用例候选结果补 `case_id`（审核页编号与导入沿用的编号） |
 
-The MySQL test account also needs read access to `performance_schema` to verify
-that concurrent group deletion actually waits for the binding transaction.
+## 对外接口
 
-## 文档目录
+默认监听 9000（Dockerfile `EXPOSE 9000`）。注意代码内兜底常量是 8000，与示例配置和镜像不一致。
 
-- [测试智能体控制平面](CONTEXT.md)
-- [GitLab 连接使用个人访问令牌](adr/0001-use-personal-gitlab-connections.md)
-- [项目共享 GitLab 绑定模型](adr/0002-project-shared-gitlab-bindings.md)
-- [数据库结构加固](adr/0003-schema-hardening.md)
-- [命名对齐与代码工程化收敛](adr/0004-naming-alignment-and-code-convergence.md)
-- [迭代状态由计划时间实时推导](adr/0005-derive-sprint-status-from-schedule.md)
-- [仅支持新建数据库初始化](adr/0006-fresh-database-baseline.md)
-- [项目成员与个人授权边界](adr/0007-project-membership-authorization.md)
-- [共享服务配置与个人授权分离](adr/0008-shared-services-personal-authorization.md)
-- [业务资源逐级硬删除](adr/0009-child-first-hard-deletion.md)
-- [功能测试用例批量删除](api/function-case-batch-delete.md)
-- [项目协作与个人授权接口](api/project-membership.md)
-- [项目共享服务与个人授权](api/shared-services.md)
-- [代码绑定与风险分析 — 需求总览](specs/code-binding-and-risk-analysis-overview.md)
-- [模块需求:mtx-control-plane(控制面)](specs/code-binding-and-risk-analysis.md)
-- [新增 UI 测试用例生成任务并解耦候选结果审核与导入](specs/ui-case-generate-and-import-workflow.md)
-- [04 工单补充：以当前源码包作为 UI 用例生成来源](specs/ui-case-source-archive-addendum.md)
-- [AI 生成运行存储与验证](verification/ai-generation-storage.md)
-- [API 运行归属与验证](verification/api-run-scope.md)
-- [功能用例正文与验证](verification/function-case-content.md)
-- [硬删除落地验证（2026-09-17）](verification/hard-deletion-rollout.md)
-- [项目成员与个人授权验收](verification/project-membership.md)
-- [UI 运行归属与验证](verification/ui-run-scope.md)
-- [Worker 队列存储与验证](verification/worker-queue-storage.md)
+- `GET /v1/health`：健康检查
+- `/v1/*` 业务接口：24 个路由模块挂在 `/v1` 前缀下，覆盖登录注册、项目与成员、迭代、需求、功能/API/UI 测试资产与运行、各类 AI 任务、禅道与 GitLab 与 LLM 集成、共享服务、资源绑定与项目技能
+- `/internal/ai-worker/*`、`/internal/ui-worker/*`、`/internal/api-worker/*`：3 个 Worker 面路由模块
+- `GET /swagger/index.html` 返回 `{"url": "/docs"}`，兼容原 Go 契约
+
+## 鉴权
+
+- 浏览器请求使用 `Authorization: Bearer <JWT>`，HS256，载荷键为 `userId`
+- Worker 请求使用 `X-Worker-Token` 头，值等于 `security.worker.key`
+
+## 外部调用
+
+- 禅道：经连接服务转发，地址取 `integrations.zentao_service.base_url`；凭据由操作人透传
+- GitLab：直连 `/api/v4/*`，使用操作人的个人访问令牌
+- LLM：按任务向 AI Worker 下发 `/internal/ai-worker/tasks/{id}/llm-credentials`
+
+## 测试
+
+`uv run --extra dev pytest`，当前收集 737 项（702 通过、4 失败、31 跳过）。4 项失败集中在 `tests/test_project_membership_api.py::test_function_stage_reexecution_uses_current_actor` 的参数化用例：测试直接生成功能用例，而当前业务规则要求先完成需求分析并导入增强文本，因而返回 HTTP 400。这是测试未跟上业务规则，尚未修复。

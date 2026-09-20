@@ -49,5 +49,3 @@ python3 scripts/manage.py compose up -d --build
 - [统一配置、部署与本地开发](docs/deployment.md)
 - [MTX 命名与旧部署兼容](docs/naming.md)
 - [领域上下文导航](CONTEXT-MAP.md)
-- [单仓库迁移说明](docs/monorepo-migration.md)
-- [验证结果与已知问题](docs/verification.md)

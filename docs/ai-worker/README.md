@@ -1,296 +1,62 @@
-# MTX AI Worker
+# AI Worker（ai-worker）
 
-> 文档统一维护于此；以下项目命令在仓库根目录的 `apps/ai-worker/` 中执行。整套平台的配置与部署见 [统一部署指南](../deployment.md)。
+接收平台派发的 AI 测试任务，调用 LLM 生成测试产物并回传。领取需求分析、功能/API/UI 用例生成、代码风险分析、测试报告生成六类任务。
 
-`mtx-ai-worker` is a polling-based Python worker that generates API,
-functional, and UI test cases, requirement analysis results, and test reports
-for the testing agent platform.
+领域术语与任务类型见 [CONTEXT](CONTEXT.md)。任务执行遵循两条设计约定：技能包由部署侧预置，worker 不下载技能；轮询无锁并行，收到 SIGTERM 立即退出。
 
-## Runtime choices
+## 运行时与依赖
 
-- Package/environment manager: `uv`
-- Python version: `3.13`
-- Service shape: polling worker
-- External API: none
+- Python 3.13（`.python-version`），包管理使用 uv（`uv.lock`），构建后端 hatchling
+- 依赖极简：`nanobot-ai==0.3.5`（LLM Agent SDK）、`httpx`、`pydantic`、`pyyaml`
+- 不监听任何端口，Compose 中无 `ports`
 
-## Current structure
+## 源码结构
 
-```text
-src/testing_agent_ai_worker/app/
-src/testing_agent_ai_worker/tasks/
-src/testing_agent_ai_worker/worker/
-src/testing_agent_ai_worker/platform/
-src/testing_agent_ai_worker/nanobot_runtime/
-tests/unit/tasks/
-```
+`apps/ai-worker/src/testing_agent_ai_worker/`：
 
-Task-specific business behavior lives under
-`src/testing_agent_ai_worker/tasks/<task_type>/`. The worker layer only handles
-polling, lifecycle, and dispatch. The platform layer only adapts HTTP protocol
-payloads. Shared nanobot config, path, and prompt helpers live under
-`nanobot_runtime`.
+| 路径 | 作用 |
+| --- | --- |
+| `main.py`、`__main__.py` | 入口：加载配置、初始化日志、进入 `run_worker` |
+| `app/bootstrap.py` | 构建 poller 与 runner，提供 `run_worker` 与 `run_poll_once` |
+| `worker/` | `loop.py`、`poller.py`、`runner.py`、`dispatcher.py`、`executor.py`、`lifecycle.py` |
+| `tasks/` | 六类任务各自的实现，另有 `result_summary.py` |
+| `platform/` | 与控制面通信：`http_client.py`、`task_source.py`、`result_sink.py`、`schemas.py`、`errors.py` |
+| `config/`、`logging/` | 配置加载与日志设置 |
+| `nanobot/`、`nanobot_runtime/` | 运行时装配与提示词 |
 
-## Local commands
+`nanobot/` 与 `nanobot_runtime/` 两个目录职责有重叠（都含 `config_builder.py` 与 `paths.py`），是待收敛的历史结构。
 
-Create or refresh the environment with `uv`, then run tests from the local
-virtual environment:
+## 配置
 
-Nanobot is pinned in `pyproject.toml` and `uv.lock` to the PyPI stable release
-`nanobot-ai==0.3.5`. Install it with `uv sync --locked`.
-This release includes [PR #5056](https://github.com/HKUDS/nanobot/pull/5056),
-which preserves the complete response after output-length recovery.
-Restart the worker after upgrading so it loads the updated SDK.
-For the 0.3.5 migration, stop old workers and back up runtime data first;
-Task configuration files are created directly under `runtime_root` and removed
-individually when each task finishes. Nanobot stores durable sessions separately
-under `runtime_root/sessions/<workspace-id>/`, including for tasks without platform
-credentials. Do not clear this directory as temporary data.
-At startup, the worker moves the legacy `runtime_root/temp-configs/sessions/`
-directory into place. If both session roots exist, startup fails without changing
-either; back up and reconcile them first. Nanobot itself migrates old workspace
-sessions when it opens a workspace.
-Configure `nanobot.stream_idle_timeout_seconds` (default: 300) to set
-`NANOBOT_STREAM_IDLE_TIMEOUT_S`. This is time without stream data, not a total
-generation deadline. The former `nanobot.llm_timeout_seconds` setting is removed.
-`provider_request_timeout_seconds` remains the HTTP client default; streaming
-calls use the stream inactivity timeout instead.
-See the [upstream upgrade notes](https://github.com/HKUDS/nanobot/releases/tag/v0.3.5).
+读取 `config/worker.toml`（容器内 `/app/config/worker.toml`）。**没有**类似 `APP_CONF` 的路径覆盖机制，只能通过环境变量覆盖三个字段：
 
-```powershell
-$env:PYTHONPATH = "src"
-.\.venv\Scripts\python.exe -m unittest discover -s tests -v
-```
+| 环境变量 | 覆盖的配置项 |
+| --- | --- |
+| `TESTING_AGENT_PLATFORM_BASE_URL` | `platform.base_url` |
+| `TESTING_AGENT_WORKER_TOKEN` | `platform.worker_token` |
+| `TESTING_AGENT_NANOBOT_RUNTIME_ROOT` | `nanobot.runtime_root` |
 
-Code checks (rules and formatter settings are defined in `pyproject.toml`):
+其余配置只能改文件，顶层段为 `[worker]`（`worker_id`、`poll_interval_seconds`、`heartbeat_interval_seconds`、`max_concurrent_tasks`、`run_once`）、`[platform]`（`base_url`、`worker_token` 及各任务回调路径）、`[nanobot]`（`runtime_root`、超时）、`[logging]`。启动时还会写入 `NANOBOT_STREAM_IDLE_TIMEOUT_S` 与 `NANOBOT_OPENAI_COMPAT_TIMEOUT_S`。
+
+## 命令
+
+在 `apps/ai-worker/` 下执行：
 
 ```sh
-uv run ruff check src tests
-uv run ruff format --check src tests
+uv sync --locked                                  # 安装依赖
+uv run mtx-ai-worker                              # 启动
+uv run python -m unittest discover -s tests       # 测试（196 项）
+uv run ruff check .                               # Lint
 ```
 
-Run the minimal nanobot SDK demo:
+测试使用 `unittest` 编写，因此运行方式不是 pytest；开发依赖组只声明了 ruff。
 
-```powershell
-$env:PYTHONPATH = "src"
-.\.venv\Scripts\python.exe -m testing_agent_ai_worker.cli.nanobot_demo
-```
+## 与控制面的交互
 
-Run the two-step nanobot chain demo:
+反向轮询 `platform.base_url`，请求头固定 `X-Worker-Token`（旧名 `X-Worker-Key` 已不使用），路径由配置给出，默认为：
 
-```powershell
-uv run mtx-ai-chain-demo --openapi-json-path "D:\tmp\openapi.json"
-```
+`/internal/ai-worker/tasks/claim`、`/snapshot`、`/started`、`/heartbeat`、`/progress`、`/completed`、`/llm-credentials`
 
-Create local configuration with `python3 ../../scripts/manage.py configure --mode local` from this project directory (or copy `config/worker.example.toml` to `config/worker.toml` for standalone use), then run the worker:
+## 技能预置
 
-```powershell
-uv run mtx-ai-worker
-```
-
-Before connecting to a platform, provide runtime values through environment
-variables. The checked-in example intentionally contains no credential and uses
-the portable `runtime/` directory for nanobot data:
-
-```powershell
-$env:TESTING_AGENT_PLATFORM_BASE_URL = "https://platform.example.com"
-$env:TESTING_AGENT_WORKER_TOKEN = "<worker-token>"
-$env:TESTING_AGENT_NANOBOT_RUNTIME_ROOT = "D:\\nanobot-runtime"
-```
-
-Never commit provider API keys or worker tokens.
-
-## Docker
-
-Build the production image from the repository root:
-
-```powershell
-docker build --tag mtx/ai-worker:local .
-```
-
-Run the worker with platform configuration supplied at runtime. The platform
-URL must be reachable from inside the container; on Docker Desktop, use
-`host.docker.internal` instead of `127.0.0.1` for a service running on the host:
-
-```powershell
-docker run --detach `
-  --name mtx-ai-worker `
-  --restart unless-stopped `
-  --env TESTING_AGENT_PLATFORM_BASE_URL=http://host.docker.internal:9000 `
-  --env TESTING_AGENT_WORKER_TOKEN=<worker-token> `
-  --volume testing-agent-runtime:/data/runtime `
-  --volume testing-agent-logs:/app/logs `
-  mtx/ai-worker:local
-```
-
-The standalone volume names `testing-agent-runtime` and `testing-agent-logs` are retained for compatibility with existing installations. They do not change when the image is renamed.
-
-The image runs as the non-root user `worker` (`uid=10001`) and stores mutable
-nanobot data under `/data/runtime`. Logs are written to `/app/logs` as well as
-the container console according to `config/worker.toml`.
-
-The worker defaults to long-running polling. Set `[worker].run_once = true` in
-`config/worker.toml` when you want a single polling cycle for local debugging.
-
-The platform lifecycle callbacks are wired in for claimed tasks:
-
-- `started`
-- background `heartbeat`
-- optional `progress`
-- final `completed`
-
-The current worker already wires `api_case_generate` into a real two-step
-nanobot chain:
-
-- `openapi-test-config-extractor`
-- `api-cases-yaml-generator`
-
-For `api_case_generate` tasks, the worker now:
-
-- sends `started`
-- reports extractor output through `progress.configJson`
-- sends `completed` with `configJson` and final `resultYaml`
-
-Before executing a claimed task, the worker now syncs the task project's
-platform skill packages into the nanobot workspace:
-
-- calls `/internal/ai-worker/projects/{projectId}/skills`
-- downloads each package through its `downloadUrl`
-- extracts the archive into `runtime_root/workspaces/project-{projectId}/skills`
-- skips re-download when the local package manifest still matches platform
-  `hash`, `size`, and `version`
-
-The worker also supports `functional_case_generate` for `source_type=text` and
-`source_type=word` through a three-step nanobot chain. In both cases it uses
-`sourceContent` as the text input and does not download a source file:
-
-- `analyze-functional-requirements`
-- `generate-solution-test-points`
-- `generate-solution-test-cases`
-
-For `functional_case_generate` text tasks, the worker now:
-
-- sends `started`
-- reports `requirement_analysis` progress with intermediate `configJson`
-- reports `case_names` progress with intermediate `configJson`
-- splits the final detailed-case generation by `caseNames.categories[].model`
-- reports `detailed_cases` progress as batches finish and merged `cases` accumulate
-- sends `completed` with final detailed test case JSON in `resultYaml`
-
-When `checkpointEnabled=true`, the worker also supports staged resume for
-functional text tasks:
-
-- `requirement_analysis` -> analyzes `sourceContent` and writes `waiting_review`
-  progress with `configJson.requirementAnalysis`
-- `case_names` -> resumes from `configJson.requirementAnalysis`
-- `detailed_cases` -> resumes from `configJson.caseNames`, reports batch
-  progress, and only then sends `completed`
-
-The worker now also recognizes `requirement_analysis` for
-`documentType=text` and `documentType=word` through a three-step nanobot chain.
-`richtext` is not supported:
-
-- `extract-docx-enhanced-text`
-- `prd-requirement-writing-skill`
-- `prd-feature-understanding-skill`
-
-For `requirement_analysis` tasks, the worker:
-
-- sends `started`
-- downloads `documentDownloadUrl` into the task workspace with the worker token,
-  then passes the saved local file path to `extract-docx-enhanced-text`
-- reports `analyzing` progress after the first skill step
-- sends `completed` with the third skill output in `resultYaml`
-
-Other task types, functional tasks with unsupported `source_type`, or
-requirement-analysis tasks with unsupported `documentType`, still return explicit
-failures after being claimed.
-
-The worker also supports `ui_case_generate`: it downloads the ZIP source archive
-from `sourceArchiveDownloadUrl`, safely extracts it, runs `generate-ui-test-case`,
-and requires a non-empty YAML list as the result.
-
-For `test_report_generate`, the worker passes `dailyMetrics` to
-`advanced-test-report-generator` and returns the generated report text.
-
-If you want to call the demo directly from Python, pass the values as function
-arguments:
-
-```python
-import asyncio
-
-from testing_agent_ai_worker.cli.nanobot_demo import run_cli_demo
-
-
-asyncio.run(
-    run_cli_demo(
-        message="What time is it in Tokyo?",
-        session_key="demo:nanobot",
-        config_path=r"C:\Users\you\.nanobot\config.json",
-        workspace=r"D:\path\to\workspace",
-    )
-)
-```
-
-If you want to call the two-step chain demo directly from Python:
-
-```python
-import asyncio
-
-from testing_agent_ai_worker.cli.nanobot_chain_demo import run_chain_demo
-
-
-asyncio.run(
-    run_chain_demo(
-        openapi_json_path=r"D:\tmp\openapi.json",
-        session_key="demo:nanobot-chain",
-        extra_instruction="只生成登录与用户信息相关接口的测试配置",
-    )
-)
-```
-
-The chain demo uses skill names directly in the nanobot prompt:
-
-- `openapi-test-config-extractor`
-- `api-cases-yaml-generator`
-
-It does not read local `SKILL.md` files.
-
-## code_risk_analysis development verification (skill stub)
-
-The platform-side `code-risk-analysis` skill package is not ready yet, so the worker supports two modes:
-
-- **Unit tests**: the executor injects a fake skill runner (see `tests/unit/tasks/code_risk_analysis/test_executor.py`).
-- **Local stub (end-to-end)**: place a stub skill under the task workspace `skills` dir:
-
-```text
-<runtime_root>/workspaces/project-<projectId>/skills/code-risk-analysis/SKILL.md
-```
-
-The stub's only job is to return the four-section YAML report (`changeOverview` / `risks` / `affectedCases` / `coverageGaps`) for the given input (requirement understanding record + per-repo diff blocks + existing test cases). A minimal `SKILL.md` can just state that the agent must output exactly that YAML shape with per-repository `baselineCommit`/`headCommit`. The worker knows only the skill name and never depends on its content. Before running, the worker syncs the project skill space; if the `code-risk-analysis` directory is still missing it fails with "项目未配置 code-risk-analysis 技能包" instead of running blind.
-
-Manual end-to-end steps:
-
-1. Optionally set `[code_risk_analysis].gitlab_timeout_seconds` (default 120) in `config/worker.toml` to tune the GitLab compare timeout.
-2. Create the stub directory above with a minimal `SKILL.md` before starting the worker.
-3. Create a `code_risk_analysis` task on the platform (the requirement must have finished requirement analysis so a requirement understanding record exists).
-4. Start the worker with `run_once = true`; the logs should show `fetching_diff` then `analyzing` progress and a final `completed` callback.
-5. Success path: `resultYaml` has the four sections with per-repository baseline/head SHA. Failure paths: `errorMessage` and `remediation` are readable (missing understanding record, unavailable credentials, missing skill package, repo diff failure).
-
-Once the real skill package is uploaded to the project skill space, the existing hash/size/version sync replaces the stub automatically — no worker code change.
-
-## Next steps
-
-- add integration tests against a real platform environment
-- add local failure persistence and retry auditing
-- add runtime metrics and task-level observability
-
-## 文档目录
-
-- [AI 测试任务 Worker](CONTEXT.md)
-- [Nanobot Testing Worker PRD](PRD.md)
-- [代码风险分析的需求输入是需求理解记录,而非原始需求文档](adr/0001-risk-analysis-input-requirement-understanding.md)
-- [技能包由部署侧预置,worker 移除技能同步](adr/0002-deployment-side-skill-provisioning.md)
-- [无锁并行轮询,SIGTERM 立即退出](adr/0003-lock-free-parallel-polling.md)
-- [功能测试输出校验与自动修复：模拟执行记录](verification/functional-output-validation.md)
-- [Nanobot 0.3.5 配置字段对比](verification/nanobot-035-config-comparison.md)
-- [第一阶段：需求分析模拟执行记录](verification/requirement-analysis-validation-simulation.md)
+按项目在 `nanobot.runtime_root` 下预置技能目录，容器内为 `/data/runtime/workspaces/project-<项目ID>/skills/`，每个技能目录包含 `SKILL.md`。本地运行时对应 `apps/ai-worker/runtime/workspaces/`。缺少技能时相关任务无法执行，部署见 [部署指南](../deployment.md)。

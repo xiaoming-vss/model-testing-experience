@@ -1,122 +1,54 @@
 # 架构说明
 
-## 定位
+## 目标
 
-本项目是在禅道 API 之上加一层纯后端服务适配层，目标是：
+禅道原始接口的字段、认证方式和错误形态都与控制面的期望不同。本服务把它们收敛成一套稳定的内部契约，让控制面只面对一种数据形态；禅道版本差异和地址差异都收敛在这一层。
 
-- 屏蔽禅道原始接口细节
-- 对外提供统一、稳定的 HTTP API
-- 收口错误码、日志和响应格式
-- 对外提供项目、执行、需求、缺陷、测试单、测试用例查询，以及测试用例批量创建和同名更新接口
-
-## 当前结构
+## 分层
 
 ```text
-HTTP Request
-  -> app/api/v1/*
-  -> app/services/zentao/*
-  -> app/clients/zentao/*
-  -> Zentao API
-  -> services 做字段归一
-  -> schemas 输出统一响应
+app/api/v1/zentao/*     路由与请求校验
+        ↓
+app/services/zentao/*   业务服务
+        ↓
+app/clients/zentao/*    禅道 HTTP 客户端
+        ↓
+        禅道实例
 ```
 
-## 目录职责
+- **路由层**：定义端点、校验查询参数、把请求级凭据交给下层。不含业务判断。
+- **服务层**：组织调用、把禅道响应映射为对外模型、决定跨模块行为（例如用例批量创建时的同名更新）。
+- **客户端层**：只负责与禅道通信，处理地址规范化、认证头、超时与 SSL 设置，并把上游失败转成统一的内部异常。
 
-### `app/api`
+`app/schemas/` 同时承载对外响应模型（`response.py`、`health.py`）和禅道请求/响应模型（`zentao/`），两者不混用。
 
-职责：
+## 请求级凭据
 
-- 定义路由
-- 接收参数
-- 输出统一响应
-- 注册全局异常处理和中间件
+这是本服务最重要的设计约束：**服务本身不保存也不校验任何身份**。
 
-约束：
+- 调用方每次请求通过 `Authorization: Bearer <token>` 传入禅道令牌，通过 `base_url` 查询参数传入禅道实例地址。
+- 请求体校验使用 `extra="forbid"`，多传字段会直接失败，避免调用方误以为某个参数生效了。
+- 列表端点另有 `page`（默认 1，最小 1）与 `page_size`（默认 100，范围 1–1000）。
+- 服务不校验调用方身份（没有 Worker 令牌或集成密钥），凭据完全由调用方透传，可访问范围等同于该令牌在禅道中的权限。
 
-- 不直接写禅道请求
-- 不直接堆业务逻辑
+因此控制面侧的权限边界由它自己保证：按项目绑定与操作人个人授权决定使用哪个令牌，本服务只做转发。`app/clients/zentao/token_manager.py` 只读取和分发令牌，不做缓存或续期。
 
-### `app/schemas`
+## 地址规范化
 
-职责：
+`app/core/zentao_toml.py` 把调用方传入的 `base_url` 规范化为出站基地址：
 
-- 定义请求/响应模型
-- 定义统一 `Response` / `ErrorResponse`
+- 基础路径不含 `/api.php` 时，追加 `/api.php/v2`
+- 已以 `/api.php` 结尾时，追加 `/v2`
+- 已包含 `/api.php/v2` 时原样使用
 
-说明：
+出站认证使用 `token: <token>` 请求头，而不是 `Authorization`。这是禅道侧的约定，也是本层最容易出错的地方。
 
-- `schemas/zentao/imports.py` 放阶段一导入 DTO 与字段标准化 helper
-- `schemas/response.py` 只放通用响应协议
+出站 HTTP 客户端设置 `trust_env=False`（不读取代理环境变量）、`follow_redirects=True`，TLS 校验取 `ca_file`（若配置）否则取 `verify_ssl`。
 
-### `app/services/zentao`
+## 出站端点
 
-职责：
+`/projects`、`/projects/{id}`、`/projects/{id}/executions`、`/executions/{id}`、`/executions/{id}/stories`、`/executions/{id}/bugs`、`/executions/{id}/testtasks`、`/testtasks/{id}`、`/testcases`、`/executions/{id}/testcases`、`/testcases/{id}`。
 
-- 把禅道原始动作组织成对外服务能力
-- 做必要的数据归一
-- 承接资源级业务封装
+## 错误契约
 
-例如：
-
-- 项目列表查询
-- 项目详情查询
-- 执行列表与详情查询
-- 测试单列表与详情查询
-
-### `app/clients/zentao`
-
-职责：
-
-- 只负责和禅道通信
-- 封装请求路径、参数传递和错误转换
-- 通过 `token_manager.py` 统一读取调用方传入的 token
-
-说明：
-
-- `project_client.py`：项目接口
-- `execution_client.py`：执行接口
-- `testtask_client.py`：测试单接口
-- `bug_client.py`：缺陷接口
-- `testcase_client.py`：测试用例查询、创建与更新接口
-- `base.py`：共享 HTTP 和统一鉴权请求入口
-- `token_manager.py`：管理当前请求上下文里的 token 读取
-
-### `app/core`
-
-职责：
-
-- `app/config.py`（位于 `app/`）：读取 `config/zentao.toml`
-- `exceptions.py`：统一错误码和 `AppError`
-- `logging.py`：日志配置
-- `http_client.py`：公共 `httpx` 封装
-- `zentao_toml.py`：禅道配置解析
-
-## 架构风格判断
-
-当前更适合定义为：
-
-- 分层架构 `Layered Architecture`
-- 按资源模块拆分
-- 带共享基础设施的轻量服务化结构
-
-它不是严格 MVC，也不是完整 DDD。
-
-原因：
-
-- 没有 View 层，不符合 MVC
-- 还没有聚合根、仓储、领域对象边界，不是完整 DDD
-- 当前核心诉求是稳定封装禅道并对外提供服务，这种结构更轻、更直接
-
-## 为什么保留 Token Manager
-
-现在的 token 不再由本项目获取，而是由外部认证服务提供。
-
-所以当前方案是：
-
-- 调用方在每次业务请求里传 `Authorization: Bearer <token>`
-- `token_manager.py` 只负责统一读取和分发这个 token
-- 各资源 client 继续通过共享鉴权请求基类复用 token 传递逻辑
-- token 刷新职责留在外部认证服务，不再由本项目承担
-
-这样可以保持客户端代码结构稳定，同时把认证边界划分得更清楚。
+统一的响应封装与错误码让调用方能按码分支，而不依赖错误文案。编号规则与当前已使用的错误码见 [错误码规范](error-codes.md)。上游返回内容不合法时归为禅道集成错误，而不是系统错误，便于区分「禅道变了」与「本服务坏了」。

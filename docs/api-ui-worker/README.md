@@ -1,179 +1,69 @@
-# mtx-api-ui-worker
+# API/UI Worker（api-ui-worker）
 
-> 文档统一维护于此；以下项目命令在仓库根目录的 `apps/api-ui-worker/` 中执行。整套平台的配置与部署见 [统一部署指南](../deployment.md)。
+在单进程内执行 API 与 UI 两类自动化任务：领取控制面派发的任务，用 Playwright 或 HTTP 执行用例，回传结果并把截图等工件通过只读 HTTP 服务暴露给浏览器。
 
-`mtx-api-ui-worker` 是 `Model Testing Experience（MTX）` 的独立 API/UI 测试执行器项目。它在一个 worker 进程内支持：
+## 运行时与依赖
 
-- UI Playwright 用例和测试集任务
-- API HTTP 单用例和集合任务
-- poll 模式轮询 Go 控制面领取任务
-- once 模式基于本地 snapshot 调试 UI 或 API
+- Python 3.12（`.python-version`），包管理使用 uv（`uv.lock`，另有 `requirements.txt`）
+- 依赖：`playwright`、`httpx`
+- 镜像基于 `mcr.microsoft.com/playwright/python:v1.60.0-noble`，Dockerfile 会断言 Playwright 版本恰为 1.60.0，升级 Playwright 需同步改镜像标签
+- 开发依赖在 `[project.optional-dependencies] dev`，需要 `--extra dev` 才会装入
+- Compose 中为该服务设置 `shm_size: 1gb`，浏览器需要足够的共享内存
 
-## 项目结构
+## 源码结构
 
-```text
-mtx-api-ui-worker/
-├── config.toml
-├── config.example.toml
-├── pyproject.toml
-├── README.md
-├── src/
-│   └── test_worker/
-│       ├── __main__.py
-│       ├── api/             # API HTTP runner、规则和模板运行时
-│       ├── contracts/       # worker 内部数据类型
-│       ├── control_plane/   # Go 控制面客户端
-│       ├── core/            # 配置和日志
-│       ├── poller/          # poll 模式任务调度
-│       └── ui/              # Playwright UI runner
-└── tests/
-```
+`apps/api-ui-worker/src/test_worker/`：
 
-## 安装
+| 路径 | 作用 |
+| --- | --- |
+| `__main__.py` | 入口与主循环，含 `poll` 与 `once` 两种模式 |
+| `ui/` | UI 执行：`case_runner.py`、`suite_runner.py`、`step_executor.py`、`step_normalizer.py`、`locator.py`、`browser_options.py`、`templates.py` |
+| `api/` | API 执行：`case_runner.py`、`collection_runner.py`、`http_client.py`、`rule_runtime.py`、`template_runtime.py` |
+| `control_plane/client.py` | 控制面客户端 |
+| `poller/task_poller.py` | 任务轮询 |
+| `contracts/types.py` | 任务与结果类型 |
+| `core/` | `config.py`、`artifact_server.py`、`logger.py` |
 
-```powershell
-uv sync
-uv run playwright install chromium
-```
-
-开发依赖：
-
-```powershell
-uv sync --extra dev
-```
+`src/` 下残留 `mtx_api_ui_worker.egg-info/` 与 `testing_agent_api_ui_worker.egg-info/` 两个历史打包目录。
 
 ## 配置
 
-默认读取当前工作目录或项目根目录下的 `config.toml`。Worker 不读取 `.env` 或环境变量，所有本地启动配置都放在 TOML 中。
-
-常用配置：
+读取应用根目录的 `config.toml`（容器内挂载为 `/app/config.toml`）。**没有环境变量覆盖机制**，并有测试固化该行为。
 
 ```toml
-mode = "poll"
+mode = "poll"                 # poll 或 once
 
-[control_plane]
-base_url = "http://127.0.0.1:8000"
-worker_token = "replace-with-worker-token"
-
-[worker]
-id = ""
-poll_interval_ms = 3000
-request_timeout_ms = 15000
-heartbeat_interval_ms = 10000
-
-[ui]
-artifacts_dir = "./artifacts"
-artifacts_bind_host = "127.0.0.1"
-artifacts_port = 9010
-artifacts_base_url = "http://127.0.0.1:9010"
-headless = true
-slow_mo_ms = 0
-trace_enabled = true
-screenshot_on_failure = true
-
-[once]
-snapshot_file = ""
+[control_plane]               # base_url、worker_token
+[worker]                      # id、poll_interval_ms、request_timeout_ms、heartbeat_interval_ms
+[ui]                          # artifacts_dir、artifacts_bind_host、artifacts_port、
+                              # artifacts_base_url、headless、slow_mo_ms、
+                              # trace_enabled、screenshot_on_failure
+[once]                        # snapshot_file，once 模式读取本地快照调试用
 ```
 
-`worker_token` 要和 Go 后端配置里的 `security.worker.key` 一致。
+未配置 `worker.id` 时自动生成 `api-ui-worker-<hostname>-<pid>`。`once` 模式使用本地快照文件，便于不依赖控制面调试单个任务。
 
-配置 `artifacts_base_url` 后，poll 模式会启动仅允许读取 PNG 截图的服务，并在上报结果时把
-本地 `screenshotPath` 转换为可直接访问的 URL。该临时服务不鉴权且不允许目录浏览。
-如果前端不在 worker 本机，请把 `127.0.0.1` 替换成前端可以访问的 worker IP 或域名；
-同时按需将 `artifacts_bind_host` 改为 `0.0.0.0` 并通过防火墙限制访问来源。多个 worker
-必须分别配置可访问的地址或端口。
+## 命令
 
-## 启动
+在 `apps/api-ui-worker/` 下执行：
 
-poll 模式：
-
-```powershell
-# 从仓库根目录进入当前项目
-cd apps/api-ui-worker
-uv run python -m test_worker
+```sh
+uv sync --locked --extra dev                      # 安装依赖
+uv run playwright install chromium                # 安装浏览器（Linux 首次可加 --with-deps）
+uv run mtx-api-ui-worker                          # 启动
+uv run --extra dev pytest                         # 测试（34 项）
+uv run --extra dev ruff check .                   # Lint
 ```
 
-once 模式：把 `config.toml` 改成：
+## 对外接口
 
-```toml
-mode = "once"
+默认监听 9010，提供只读工件服务：仅响应 `.png` 文件，禁止目录列表，带 `Access-Control-Allow-Origin: *`。仅在配置了 `artifacts_base_url` 时启动。该地址会被写入截图 URL 供浏览器访问，因此必须是浏览器可达的地址，而不只是容器内地址。
 
-[once]
-snapshot_file = "./snapshot.json"
-```
+## 与平台的交互
 
-然后启动：
+反向轮询控制面，请求头固定 `X-Worker-Token`：
 
-```powershell
-uv run python -m test_worker
-```
+- UI 任务：`/internal/ui-worker/tasks/claim` 与 `/{task_id}/snapshot`
+- API 任务：`/internal/api-worker/tasks/claim` 与 `/{task_id}/snapshot`、`/started`、`/heartbeat`、`/completed`，集合任务另有 `/collection-items/{item_id}/started` 与 `/completed`
 
-`snapshot.json` 可以是 `/internal/ui-worker/*/snapshot` 或 `/internal/api-worker/*/snapshot` 返回内容，也可以直接是其中的 `caseRun`、`suiteRun` 或 `collectionRun`。
-
-安装后也可以使用脚本入口：
-
-```powershell
-uv run mtx-api-ui-worker
-```
-
-## Docker 运行
-
-镜像固定使用与 `uv.lock` 一致的 Playwright `1.60.0`，并已包含 Chromium 及其
-Linux 系统依赖。构建镜像：
-
-```powershell
-docker build -t mtx/api-ui-worker:local .
-```
-
-复制一份容器专用配置，不要把实际令牌写进镜像：
-
-```powershell
-Copy-Item config.example.toml config.docker.toml
-```
-
-至少需要调整以下配置：
-
-```toml
-[control_plane]
-# 必须是容器内可访问的地址，不能使用指向容器自身的 127.0.0.1。
-base_url = "http://host.docker.internal:8011"
-worker_token = "replace-with-worker-token"
-
-[ui]
-artifacts_dir = "/app/artifacts"
-artifacts_bind_host = "0.0.0.0"
-artifacts_port = 9010
-# 改成浏览器或 MTX 前端能够访问的 worker 地址。
-artifacts_base_url = "http://127.0.0.1:9010"
-headless = true
-```
-
-启动 poll worker：
-
-```powershell
-docker run --rm --init --ipc=host `
-  --name mtx-api-ui-worker `
-  -p 9010:9010 `
-  -v "${PWD}/config.docker.toml:/app/config.toml:ro" `
-  -v "${PWD}/artifacts:/app/artifacts" `
-  mtx/api-ui-worker:local
-```
-
-Worker 会把容器的 SIGTERM/SIGINT 转换为异步取消，以便停止心跳、清理浏览器和截图
-服务，并为已领取的任务上报关闭错误。`--init` 用于回收孤儿浏览器子进程，
-`--ipc=host` 可避免 Chromium 因共享内存不足而崩溃。Linux 上若控制面运行在宿主机，需要额外添加
-`--add-host=host.docker.internal:host-gateway`。容器默认按 Playwright 官方的可信
-端到端测试模式以 root 运行；如果任务会访问不可信站点，应使用非 root 用户及
-Playwright 官方 seccomp 配置进一步隔离。
-
-## 验证
-
-```powershell
-uv run python -m compileall src/test_worker
-uv run python -m unittest tests.test_config -v
-uv run pytest
-```
-
-## 文档目录
-
-本项目当前的开发、配置与执行说明均在本页。
+该服务没有健康检查端点，Dockerfile 中也没有 `HEALTHCHECK`，Compose 因此不对它设置健康检查条件。

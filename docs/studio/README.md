@@ -1,109 +1,60 @@
-# MTX Studio
+# 前端（studio）
 
-> 文档统一维护于此；以下项目命令在仓库根目录的 `apps/studio/` 中执行。整套平台的配置与部署见 [统一部署指南](../deployment.md)。
+React 单页应用，提供项目、迭代、需求、功能/API/UI 测试资产、AI 任务与执行报告的完整工作台。领域术语见 [CONTEXT](CONTEXT.md)。
 
-MTX Studio 是一个面向测试协作的前端工作台，用于围绕项目、迭代和需求管理测试资产与测试活动。
+## 运行时与依赖
 
-## 功能范围
+- Node 22.23.1（`.nvmrc`），包管理使用 npm（`package-lock.json`），包名 `@mtx/studio`
+- React 19、TypeScript 6、Vite 8、React Router 7、Ant Design 6
+- 数据与状态：TanStack Query 5、Zustand 5
+- 其他：CodeMirror（JSON/YAML 编辑）、recharts（图表）、docx-preview、html-to-image
+- 测试：Vitest 4 + jsdom + Testing Library
 
-- 项目、迭代、需求管理
-- 功能测试集与测试用例维护
-- API 自动化测试集、环境、用例、断言和运行报告
-- UI 自动化测试集、步骤编排和运行配置
-- AI 测试任务与 Skill 库入口
-- 禅道连接管理与项目/迭代/需求绑定
-- 登录态保护、项目切换、明暗主题切换
+## 源码结构
 
-## 技术栈
+`apps/studio/src/`：
 
-- React 19
-- TypeScript
-- Vite 8
-- Ant Design 6
-- React Router 7
-- TanStack React Query 5
-- Zustand 5
+| 路径 | 作用 |
+| --- | --- |
+| `main.tsx` | 唯一作用为 `import '@/app/main'` |
+| `app/main.tsx` | 真正的应用装配入口 |
+| `app/router/routes.tsx` | 顶层路由 |
+| `app/layouts/AppShell.tsx` | 登录后的整体框架，业务页面在内部二次分发 |
+| `app/providers/` | Query 与主题 Provider |
+| `app/styles/` | 主题与设计断言测试 |
+| `features/` | 按业务划分：`auth`、`projects`、`requirements`、`test-cases`、`testing`、`ai-testing`、`api-automation`、`ui-automation`、`base-services`、`profile` |
+| `services/api.ts` | 各 feature API 的聚合出口 |
+| `shared/` | `api/request.ts` 请求封装、通用组件、图标、主题 store |
+| `test/`、`utils/` | 测试辅助与工具函数 |
 
-## 本地开发
+HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/main.tsx`。顶层路由只有三条：`/login`、`/register`，其余全部交给 `ProtectedRoute` 包裹的 `AppShell`。
 
-```bash
-npm install
-npm run dev
+## 配置
+
+无 TOML 配置，`scripts/manage.py` 不为前端生成 TOML。涉及两层变量：
+
+- 构建期（Vite）：`VITE_API_PROXY_TARGET` 指定开发服务器代理目标，本地模式由 `manage.py configure --mode local` 写入 `.env.local`；`VITE_API_BASE_URL` 指定后端基地址，默认空（同源）。
+- 运行期（容器）：`API_UPSTREAM` 由 nginx 模板用于 `proxy_pass`，Compose 中设为 `http://control-plane:9000`。
+
+## 命令
+
+在 `apps/studio/` 下执行：
+
+```sh
+npm ci                # 安装依赖
+npm run dev           # 开发服务器，默认 127.0.0.1:5173
+npm run type-check    # tsc -b --pretty false
+npm run lint          # eslint .
+npm run test          # vitest run
+npm run build         # tsc -b && vite build
+npm run verify        # type-check + lint + build
 ```
 
-## 常用命令
+`npm run test` 全量运行 289 项（279 通过、10 失败）。10 项失败集中在 `FunctionalCaseGenerateTaskDetailPage.test.tsx`、`RequirementAnalysisTaskDetailPage.test.tsx` 与 `UiCaseGenerateTaskDetailPage.test.tsx`，表现为 30s 超时或时序敏感的元素查找失败；抽查同名用例在未改动的 `HEAD` 上同样失败，属既有的负载相关抖动，与本轮改动无关。
 
-```bash
-npm run type-check
-npm run lint
-npm run build
-npm run verify
-```
+## 与后端的交互
 
-## Docker 运行
-
-构建生产镜像：
-
-```bash
-docker build -t mtx/studio:local .
-```
-
-启动容器，并将 API 请求代理到宿主机的 `8080` 端口：
-
-```bash
-docker run --rm -p 8081:80 \
-  -e API_UPSTREAM=http://host.docker.internal:8080 \
-  mtx/studio:local
-```
-
-浏览器访问 `http://localhost:8081`。在 Docker Compose 或同一容器网络中，`API_UPSTREAM` 可改为后端服务名，例如 `http://api:8080`。
-
-默认使用同源代理，前端构建产物不会固化后端地址。如果浏览器必须直接访问独立 API 域名，可在构建时传入：
-
-```bash
-docker build \
-  --build-arg VITE_API_BASE_URL=https://api.example.com \
-  -t mtx/studio:local .
-```
-
-说明：
-
-- `npm run build` 会先执行 TypeScript 构建，再执行 Vite 构建。
-- `npm run verify` 会依次执行 type-check、lint 和 build。
-
-## 文档
-
-- [功能文档](functional-specification.md)
-- [系统设计](system-design.md)
-
-## 本地文件约定
-
-以下内容属于本地工具、运行产物或个人工作区，不应提交到仓库：
-
-- `.agents/`
-- `.codex/`
-- `.trellis/`
-- `.scratch/`
-- `.trae/`
-- `.zcode/`
-- `skills-lock.json`
-- `output/`
-- `dist/`
-- `node_modules/`
-- `.env`
-
-## 文档目录
-
-- [MTX](CONTEXT.md)
-- [风险分析报告条目级字段契约由 MTX Studio 规范定义,worker 按此实装](adr/0001-risk-analysis-report-contract.md)
-- [统一操作按钮](components/action-button.md)
-- [项目彩色图标库](components/icons.md)
-- [Design QA — Three Testing Lists](design-qa.md)
-- [UI 用例 AI 生成与源码包上传——前端适配确认稿](frontend-ui-ai-generation-source-archive-confirmation.md)
-- [已审核 UI 候选用例导入正式套件：前端适配确认稿](frontend-ui-case-import-confirmation.md)
-- [MTX Studio 功能文档](functional-specification.md)
-- [项目协作与个人授权前端接入](integration/project-membership.md)
-- [模块需求:MTX Studio(前端工作台)](specs/code-binding-risk-analysis.md)
-- [已审核 UI 候选用例导入现有 UI 测试套件](specs/ui-approved-candidate-import.md)
-- [ui-case-ai-generation-source-archive](specs/ui-case-ai-generation-source-archive.md)
-- [MTX Studio 设计文档](system-design.md)
+- 开发服务器代理 `/v1` 与 `/__document_preview_proxy`（后者重写去掉前缀）到 `VITE_API_PROXY_TARGET`
+- 容器内由 nginx 监听 80 端口并代理同样的两个前缀，`proxy_read_timeout` 与 `proxy_send_timeout` 为 120s，`client_max_body_size` 为 105m
+- 容器健康检查访问 `location = /healthz`
+- 用户态认证使用 `Authorization` 头携带 JWT；浏览器存储键为 `testpilot_access_token` 与 `testpilot_theme_mode`，为兼容改名前的已登录用户而保留
