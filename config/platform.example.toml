@@ -4,7 +4,7 @@
 public_host = "127.0.0.1"
 # Docker 发布端口的监听地址；需要远程访问时改为 0.0.0.0。
 bind_host = "127.0.0.1"
-# 本地开发时连接后端、禅道服务及数据库的主机。
+# 本地开发时后端、禅道服务的主机；内置 MySQL 的本地访问也使用此地址。
 local_host = "127.0.0.1"
 studio_port = 8081
 control_plane_port = 19000
@@ -16,6 +16,12 @@ jwt_key = "GENERATE"
 integration_key = "GENERATE"
 
 [database]
+# 已有 MySQL：填写完整 URL。非空时优先使用，下面的内置数据库字段不再需要。
+# 示例：mysql+asyncmy://用户名:密码@127.0.0.1:3306/数据库名?charset=utf8mb4
+# 留空则维持内置 MySQL 模式。密码中的 @、#、/、% 等字符需要 URL 编码。
+url = ""
+
+# 仅内置 MySQL 模式使用：
 name = "testing_agent"
 user = "testing_agent"
 password = "GENERATE"

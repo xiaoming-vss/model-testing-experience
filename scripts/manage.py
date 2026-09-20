@@ -14,7 +14,7 @@ import subprocess
 import sys
 import tempfile
 import tomllib
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 PROJECTS = {
@@ -104,36 +104,61 @@ def init(root=ROOT):
     print("Created config/platform.toml with fresh local credentials.")
 
 
+def external_database_url(data):
+    """Return a validated async MySQL URL without logging its credentials."""
+    raw = data["database"].get("url", "")
+    if not isinstance(raw, str):
+        raise ValueError("database.url must be a string")
+    raw = raw.strip()
+    if not raw:
+        return ""
+    error = "database.url must be mysql+asyncmy://user:password@host:port/database (URL-encode special characters)"
+    try:
+        parsed = urlsplit(raw)
+        valid = (
+            parsed.scheme in ("mysql", "mysql+asyncmy")
+            and parsed.hostname
+            and parsed.username
+            and parsed.path not in ("", "/")
+            and not parsed.fragment
+            and not any(char.isspace() for char in raw)
+            and (parsed.port is None or 1 <= parsed.port <= 65535)
+        )
+    except ValueError:
+        raise ValueError(error) from None
+    if not valid:
+        raise ValueError(error)
+    if parsed.scheme == "mysql":
+        return "mysql+asyncmy://" + raw.split("://", 1)[1]
+    return raw
+
+
 def validate(data):
     shared, db = data["shared"], data["database"]
+    external = bool(external_database_url(data))
     for key in ("worker_token", "jwt_key", "integration_key"):
         if not shared[key] or shared[key] == "GENERATE":
             raise ValueError(f"Set shared.{key}, or run init first")
-    for key in ("password", "root_password"):
-        if not db[key] or db[key] == "GENERATE":
-            raise ValueError(f"Set database.{key}, or run init first")
-    for key in ("name", "user"):
-        if not re.fullmatch(r"[A-Za-z0-9_]+", db[key]):
-            raise ValueError(
-                f"database.{key} must contain letters, digits or underscores"
-            )
-    if db["user"] == "root":
-        raise ValueError("database.user must be a non-root application user")
+    if not external:
+        for key in ("password", "root_password"):
+            if not db.get(key) or db[key] == "GENERATE":
+                raise ValueError(f"Set database.{key}, or run init first")
+        for key in ("name", "user"):
+            if not re.fullmatch(r"[A-Za-z0-9_]+", db.get(key, "")):
+                raise ValueError(
+                    f"database.{key} must contain letters, digits or underscores"
+                )
+        if db["user"] == "root":
+            raise ValueError("database.user must be a non-root application user")
     for key in ("public_host", "local_host", "bind_host"):
         if not re.fullmatch(r"[A-Za-z0-9_.-]+", shared[key]):
             raise ValueError(
                 f"shared.{key} must be an IPv4 address or hostname without a port"
             )
-    ports = [
-        shared[k]
-        for k in (
-            "studio_port",
-            "control_plane_port",
-            "zentao_port",
-            "artifacts_port",
-            "mysql_port",
-        )
-    ]
+    port_keys = ["studio_port", "control_plane_port", "zentao_port", "artifacts_port"]
+    if not external:
+        port_keys.append("mysql_port")
+    ports = [shared[k] for k in port_keys]
     if any(type(p) is not int or not 1 <= p <= 65535 for p in ports) or len(
         set(ports)
     ) != len(ports):
@@ -151,9 +176,11 @@ def configurations(data, mode, root=ROOT):
         else f"http://{host}:{s['control_plane_port']}"
     )
     z_url = "http://zentao:8010" if docker else f"http://{host}:{s['zentao_port']}"
-    db_host = "mysql" if docker else host
-    db_port = 3306 if docker else s["mysql_port"]
-    dsn = f"mysql+asyncmy://{quote(db['user'], safe='')}:{quote(db['password'], safe='')}@{db_host}:{db_port}/{db['name']}?charset=utf8mb4"
+    dsn = external_database_url(data)
+    if not dsn:
+        db_host = "mysql" if docker else host
+        db_port = 3306 if docker else s["mysql_port"]
+        dsn = f"mysql+asyncmy://{quote(db['user'], safe='')}:{quote(db['password'], safe='')}@{db_host}:{db_port}/{db['name']}?charset=utf8mb4"
     specs = {
         "control-plane": ("config/local.example.toml", "control_plane"),
         "ai-worker": ("config/worker.example.toml", "ai_worker"),
@@ -256,15 +283,30 @@ def configure(mode, root=ROOT):
                 "control_plane_port",
                 "zentao_port",
                 "artifacts_port",
-                "mysql_port",
             )
         }
-        env.update(
-            MYSQL_DATABASE=db["name"],
-            MYSQL_USER=db["user"],
-            MYSQL_PASSWORD=db["password"],
-            MYSQL_ROOT_PASSWORD=db["root_password"],
-        )
+        env["MYSQL_PORT"] = s.get("mysql_port", 13306)
+        if external_database_url(data):
+            # Compose interpolates the base file before !reset removes mysql.
+            # These placeholders are never used by a running service.
+            env.update(
+                {
+                    key: "unused-external-database"
+                    for key in (
+                        "MYSQL_DATABASE",
+                        "MYSQL_USER",
+                        "MYSQL_PASSWORD",
+                        "MYSQL_ROOT_PASSWORD",
+                    )
+                }
+            )
+        else:
+            env.update(
+                MYSQL_DATABASE=db["name"],
+                MYSQL_USER=db["user"],
+                MYSQL_PASSWORD=db["password"],
+                MYSQL_ROOT_PASSWORD=db["root_password"],
+            )
         write(runtime / "compose.env", env_text(env))
     else:
         write(
@@ -279,7 +321,7 @@ def configure(mode, root=ROOT):
 
 
 def compose_command(root=ROOT):
-    return [
+    command = [
         "docker",
         "compose",
         "--project-directory",
@@ -289,6 +331,9 @@ def compose_command(root=ROOT):
         "-f",
         str(root / "compose.yaml"),
     ]
+    if external_database_url(read(root / "config/platform.toml")):
+        command.extend(["-f", str(root / "deploy/compose.external-db.yaml")])
+    return command
 
 
 def main():

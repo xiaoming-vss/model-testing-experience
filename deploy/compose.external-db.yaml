@@ -1,0 +1,16 @@
+# Selected automatically when database.url is set.
+# External databases are never initialized by a plain `compose up`.
+services:
+  mysql: !reset null
+  migrate:
+    profiles: [migration]
+    depends_on: !reset {}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  control-plane:
+    depends_on:
+      migrate: !reset null
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+volumes:
+  mysql-data: !reset null

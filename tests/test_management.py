@@ -174,6 +174,67 @@ class ManagementTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             manage.configurations(self.data, "docker", self.root)
 
+    def test_external_url_works_without_bundled_database_settings(self):
+        url = "mysql://app:p%40ss%23word@[::1]:3306/existing?charset=utf8mb4"
+        self.data["database"] = {"url": url}
+        del self.data["shared"]["mysql_port"]
+        manage.write(self.root / "config/platform.toml", manage.toml_text(self.data))
+        for mode in ("local", "docker"):
+            manage.configure(mode, self.root)
+            config = manage.configurations(self.data, mode, self.root)
+            self.assertEqual(
+                config["control-plane"]["data"]["db"]["user"]["dsn"],
+                url.replace("mysql://", "mysql+asyncmy://", 1),
+            )
+        self.assertNotIn("p%40ss", (self.root / ".runtime/compose.env").read_text())
+
+    def test_invalid_database_urls_do_not_expose_credentials(self):
+        for url in (
+            "postgresql://app:secret@localhost/db",
+            "mysql://app:secret@localhost",
+            "mysql://app:secret@localhost:99999/db",
+            "mysql://app:secret@/db",
+            "mysql://app:secret@localhost/db#fragment",
+            "mysql://app:secret@local host/db",
+        ):
+            with self.subTest(url=url):
+                self.data["database"]["url"] = url
+                with self.assertRaises(ValueError) as result:
+                    manage.configurations(self.data, "local", self.root)
+                self.assertNotIn("secret", str(result.exception))
+
+    @unittest.skipUnless(shutil.which("docker"), "Docker Compose is required")
+    def test_external_compose_skips_mysql_and_automatic_migration(self):
+        self.data["database"]["url"] = "mysql+asyncmy://app:secret@db.example.com/db"
+        manage.write(self.root / "config/platform.toml", manage.toml_text(self.data))
+        manage.configure("docker", self.root)
+        command = manage.compose_command(self.root)
+
+        def render(options=()):
+            return json.loads(
+                subprocess.check_output(
+                    command + list(options) + ["config", "--format", "json"], text=True
+                )
+            )
+
+        normal = render()
+        self.assertNotIn("mysql", normal["services"])
+        self.assertNotIn("migrate", normal["services"])
+        self.assertNotIn("mysql-data", normal["volumes"])
+        self.assertEqual(
+            set(normal["services"]["control-plane"]["depends_on"]), {"zentao"}
+        )
+        migration = render(["--profile", "migration"])
+        self.assertIn("migrate", migration["services"])
+        self.assertFalse(migration["services"]["migrate"].get("depends_on"))
+        self.data["database"]["url"] = ""
+        manage.write(self.root / "config/platform.toml", manage.toml_text(self.data))
+        manage.configure("docker", self.root)
+        command = manage.compose_command(self.root)
+        bundled = render()
+        self.assertIn("mysql", bundled["services"])
+        self.assertIn("migrate", bundled["services"]["control-plane"]["depends_on"])
+
 
 if __name__ == "__main__":
     unittest.main()
