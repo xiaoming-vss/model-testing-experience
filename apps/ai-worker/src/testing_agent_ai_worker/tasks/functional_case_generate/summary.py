@@ -17,12 +17,14 @@ def build_progress(
     requirement_analysis_json: str,
     case_names_json: str,
     detailed_cases_json: str,
+    relations_json: str = "",
 ) -> TaskProgress:
     """构造功能任务的阶段性 progress 快照。"""
 
     config_json = build_config_json(
         requirement_analysis_json=requirement_analysis_json,
         case_names_json=case_names_json,
+        relations_json=relations_json,
     )
     return TaskProgress(
         task_id=task.task_id,
@@ -47,6 +49,7 @@ def build_config_json(
     *,
     requirement_analysis_json: str,
     case_names_json: str,
+    relations_json: str = "",
 ) -> str:
     """统一构造功能任务的 `configJson` 结构。"""
 
@@ -54,6 +57,7 @@ def build_config_json(
         {
             "requirementAnalysis": parse_optional_json(requirement_analysis_json),
             "caseNames": parse_optional_json(case_names_json),
+            "caseRelations": parse_optional_json(relations_json),
         },
         ensure_ascii=False,
         indent=2,
@@ -67,6 +71,7 @@ def build_result_summary_json(
     config_json: str,
     detailed_cases_json: str,
     error_message: str | None,
+    relations_json: str = "",
 ) -> str:
     """构造平台展示用摘要 JSON。"""
 
@@ -81,8 +86,40 @@ def build_result_summary_json(
             "caseCount": count_cases(detailed_cases_json),
             "configJsonLength": len(config_json),
             "resultLength": len(detailed_cases_json),
+            **relation_summary_stats(relations_json),
         },
     )
+
+
+def relation_summary_stats(relations_json: str) -> dict[str, int]:
+    """从 2.0 关系产物中提取展示统计，非 JSON 或空产物不产生统计。"""
+
+    parsed = parse_optional_json(relations_json)
+    if not isinstance(parsed, dict):
+        return {}
+    main_paths = parsed.get("main_paths")
+    edges = parsed.get("edges")
+    if not isinstance(main_paths, list) and not isinstance(edges, list):
+        return {}
+    stats: dict[str, int] = {}
+    if isinstance(main_paths, list):
+        stats["mainPathCount"] = len(main_paths)
+    if isinstance(edges, list):
+        stats["edgeCount"] = len(edges)
+    referenced: set[str] = set()
+    if isinstance(main_paths, list):
+        for path in main_paths:
+            if isinstance(path, dict) and isinstance(path.get("case_ids"), list):
+                referenced.update(cid for cid in path["case_ids"] if isinstance(cid, str))
+    if isinstance(edges, list):
+        for edge in edges:
+            if isinstance(edge, dict):
+                referenced.update(
+                    edge[key] for key in ("from_case_id", "to_case_id") if isinstance(edge.get(key), str)
+                )
+    if referenced:
+        stats["linkedCaseCount"] = len(referenced)
+    return stats
 
 
 def parse_optional_json(raw_json_text: str):

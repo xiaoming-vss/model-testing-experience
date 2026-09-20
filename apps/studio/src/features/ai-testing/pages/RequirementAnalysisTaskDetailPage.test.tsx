@@ -1,6 +1,6 @@
 import { seedOwnerProject } from '@/test/projectAccess'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, it, vi } from 'vitest'
@@ -44,25 +44,48 @@ function setup(stage: RequirementAnalysisTaskRun['currentStage'], status = 'erro
   return submit
 }
 
+// 运行记录操作列内联「审核/错误信息」，重试等状态变更收在行内「更多」下拉里。
+async function findRunRow() {
+  const idCell = await screen.findByText('run')
+  const row = idCell.closest('tr')
+  if (!row) throw new Error('未找到运行记录行')
+  return row
+}
+
+async function findRunInlineAction(name: string) {
+  const row = await findRunRow()
+  // antd 会在两个汉字间插入空格。
+  return within(row).findByRole('button', { name: new RegExp(`^${name.split('').join('\\s*')}$`) })
+}
+
+async function openRunActionsMenu(user: ReturnType<typeof userEvent.setup>) {
+  const row = await findRunRow()
+  await user.click(await within(row).findByRole('button', { name: '更多操作' }))
+}
+
 it.each(['extracting_text', 'writing_requirement', 'feature_understanding'] as const)('重试 %s 并刷新为等待执行', async stage => {
   const submit = setup(stage)
   const user = userEvent.setup()
-  await user.click(await screen.findByRole('button', { name: '重试阶段' }))
+  await openRunActionsMenu(user)
+  await user.click(await screen.findByRole('menuitem', { name: '重试阶段' }))
   await waitFor(() => expect(submit).toHaveBeenCalledExactlyOnceWith({ stage, llmConnectionId: 'mine' }))
-  await waitFor(() => expect(screen.queryByRole('button', { name: '重试阶段' })).toBeNull())
+  await waitFor(() => expect(screen.queryByRole('menuitem', { name: '重试阶段' })).toBeNull())
 })
 
 it('提交失败后保留重试入口', async () => {
   const submit = setup('extracting_text', 'error', true)
-  await userEvent.setup().click(await screen.findByRole('button', { name: '重试阶段' }))
+  const user = userEvent.setup()
+  await openRunActionsMenu(user)
+  await user.click(await screen.findByRole('menuitem', { name: '重试阶段' }))
   await waitFor(() => expect(submit).toHaveBeenCalledTimes(1))
-  await waitFor(() => expect(screen.getByRole('button', { name: '重试阶段' }).hasAttribute('disabled')).toBe(false))
+  await openRunActionsMenu(user)
+  await waitFor(() => expect(screen.getByRole('menuitem', { name: '重试阶段' })).not.toHaveAttribute('aria-disabled', 'true'))
 })
 
 it.each(['success', 'running', 'waiting_review'])('%s 不显示重试', async status => {
   setup('extracting_text', status)
   await screen.findByText('run')
-  expect(screen.queryByRole('button', { name: '重试阶段' })).toBeNull()
+  expect(screen.queryByRole('menuitem', { name: '重试阶段' })).toBeNull()
 })
 
 
@@ -71,13 +94,15 @@ it('等待提交期间禁用重试，重复点击只发送一次', async () => {
   let resolve!: (value: Response) => void
   submit.mockImplementationOnce(() => new Promise<Response>(done => { resolve = done }))
   const user = userEvent.setup()
-  const button = await screen.findByRole('button', { name: '重试阶段' })
-  await user.click(button)
-  await waitFor(() => expect(button.hasAttribute('disabled')).toBe(true))
-  await user.click(button)
+  await openRunActionsMenu(user)
+  await user.click(await screen.findByRole('menuitem', { name: '重试阶段' }))
+  await waitFor(() => expect(submit).toHaveBeenCalledTimes(1))
+  await openRunActionsMenu(user)
+  await waitFor(() => expect(screen.getByRole('menuitem', { name: '重试阶段' })).toHaveAttribute('aria-disabled', 'true'))
+  await user.click(screen.getByRole('menuitem', { name: '重试阶段' }))
   expect(submit).toHaveBeenCalledTimes(1)
   resolve(response(null, 500))
-  await waitFor(() => expect(button.hasAttribute('disabled')).toBe(false))
+  await waitFor(() => expect(screen.getByRole('menuitem', { name: '重试阶段' })).not.toHaveAttribute('aria-disabled', 'true'))
 })
 
 
@@ -87,7 +112,7 @@ it.each([
   ['feature_understanding', ['增强文本', '需求流程稿', '需求理解记录']],
 ] as const)('失败在 %s 时只显示已执行到的阶段入口', async (stage, visible) => {
   setup(stage)
-  await screen.findByRole('button', { name: '重试阶段' })
+  await screen.findByText('run')
   for (const label of ['增强文本', '需求流程稿', '需求理解记录']) {
     expect(Boolean(screen.queryByRole('button', { name: label }))).toBe((visible as readonly string[]).includes(label))
   }
@@ -113,12 +138,13 @@ it.each([
     configJson: { firstStepOutput: '第一阶段内容', secondStepOutput: '第二阶段内容' },
   })
   await screen.findByText('run')
-  const review = screen.getByRole('button', { name: `${label}（审核）` })
+  const user = userEvent.setup()
+  const reviewAction = await findRunInlineAction('审核')
   for (const section of ['增强文本', '需求流程稿', '需求理解记录']) {
-    expect(Boolean(screen.queryByRole('button', { name: section }))).toBe((previous as readonly string[]).includes(section))
+    const reached = section === label || (previous as readonly string[]).includes(section)
+    expect(Boolean(screen.queryByRole('button', { name: section }))).toBe(reached)
   }
-  expect(screen.queryByRole('button', { name: '审核' })).toBeNull()
-  await userEvent.setup().click(review)
+  await user.click(reviewAction)
   expect(await screen.findByRole('dialog', { name: '审核' })).toBeInTheDocument()
   expect(screen.getByText(stage === 'extracting_text'
     ? '阶段产物 增强文本 firstStepOutput' : '阶段产物 需求流程稿 secondStepOutput')).toBeInTheDocument()
@@ -149,7 +175,7 @@ it('继续优化在同一审核窗口展开，取消后保留内容和优化草�
     configJson: { secondStepOutput: '当前需求流程稿' },
   })
   const user = userEvent.setup()
-  await user.click(await screen.findByRole('button', { name: '需求流程稿（审核）' }))
+  await user.click(await findRunInlineAction('审核'))
   const originalEditor = document.querySelector('.cm-content')
   await user.click(screen.getByRole('button', { name: '继续优化' }))
   expect(screen.getAllByRole('dialog')).toHaveLength(1)
@@ -183,7 +209,7 @@ it('右侧提交使用所选模型并携带左侧未保存的需求修改', asyn
     return previousFetch(input, init)
   })
   const user = userEvent.setup()
-  await user.click(await screen.findByRole('button', { name: '需求流程稿（审核）' }))
+  await user.click(await findRunInlineAction('审核'))
   const editor = document.querySelector('.cm-content') as HTMLElement
   await user.click(editor)
   await user.keyboard('{Control>}a{/Control}')

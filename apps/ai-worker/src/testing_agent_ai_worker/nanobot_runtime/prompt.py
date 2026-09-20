@@ -19,6 +19,13 @@ FUNCTIONAL_DETAILED_CASES_JSON_ONLY_INSTRUCTION = (
     "第一个字符必须是 {，最后一个字符必须是 }；"
     "不得在对象前后输出空行、解释、标题、注释、Markdown 代码块或第二个 JSON 对象。"
 )
+FUNCTIONAL_RELATION_JSON_ONLY_INSTRUCTION = (
+    "请直接返回符合 analyze-test-case-relations skill 要求的用例关系 JSON（关系输出协议 2.0）。"
+    "顶层只包含 schema_version、main_paths、edges；"
+    "输出必须是且只能是一个可由 JSON.parse 直接解析的合法 JSON 对象："
+    "第一个字符必须是 {，最后一个字符必须是 }；"
+    "不得在对象前后输出空行、解释、澄清提问、标题、注释、Markdown 代码块或第二个 JSON 对象。"
+)
 API_EXTRACTOR_JSON_ONLY_INSTRUCTION = (
     "请直接返回符合 openapi-test-config-extractor skill 要求的接口配置 JSON，"
     "不要返回测试用例、meta/config/testCases 结构，"

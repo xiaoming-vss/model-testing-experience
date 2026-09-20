@@ -10,9 +10,11 @@ from typing import Any
 from testing_agent_ai_worker.nanobot_runtime.prompt import (
     FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION,
     FUNCTIONAL_CASE_NAMES_JSON_ONLY_INSTRUCTION,
+    FUNCTIONAL_RELATION_JSON_ONLY_INSTRUCTION,
     append_stage_instruction,
     build_skill_message,
 )
+from testing_agent_ai_worker.tasks.functional_case_generate.case_ids import assign_case_ids
 from testing_agent_ai_worker.tasks.functional_case_generate.detailed_batches import (
     _build_functional_detailed_case_body,
     _build_functional_detailed_case_instruction,
@@ -63,6 +65,34 @@ def _build_functional_case_names_instruction(extra_instruction: str) -> str:
     return append_stage_instruction(extra_instruction, FUNCTIONAL_CASE_NAMES_JSON_ONLY_INSTRUCTION)
 
 
+def _build_functional_relation_instruction(extra_instruction: str) -> str:
+    """构造 analyze-test-case-relations 阶段输出约束。"""
+
+    return append_stage_instruction(extra_instruction, FUNCTIONAL_RELATION_JSON_ONLY_INSTRUCTION)
+
+
+def _build_functional_relation_body(
+    *,
+    source_text: str,
+    requirement_analysis_json: str,
+    cases_json: str,
+    prior_relations_json: str = "",
+) -> str:
+    """图谱分析接收原始需求、最新需求分析与完整用例；已有关系仅在迭代重跑时提供。"""
+
+    parts = [
+        "【原始需求】",
+        source_text.strip(),
+        "【需求分析结果 JSON】",
+        requirement_analysis_json.strip(),
+        "【完整测试用例 JSON】",
+        cases_json.strip(),
+    ]
+    if prior_relations_json.strip():
+        parts.extend(["【已有关系 JSON】", prior_relations_json.strip()])
+    return "\n\n".join(parts)
+
+
 def _build_functional_instruction_for_skill(skill_name: str, extra_instruction: str) -> str:
     """按功能链路 skill 名称追加对应输出约束。"""
 
@@ -70,6 +100,8 @@ def _build_functional_instruction_for_skill(skill_name: str, extra_instruction: 
         return _build_functional_analysis_instruction(extra_instruction)
     if skill_name == "generate-solution-test-points":
         return _build_functional_case_names_instruction(extra_instruction)
+    if skill_name == "analyze-test-case-relations":
+        return _build_functional_relation_instruction(extra_instruction)
     return extra_instruction
 
 
@@ -81,6 +113,7 @@ async def run_skill_step(
     config_path: str | None = None,
     workspace: str | None = None,
     extra_instruction: str = "",
+    expected_case_ids: list[str] | None = None,
     from_config: Callable[..., Any] | None = None,
 ) -> str:
     """执行单步 skill。"""
@@ -96,6 +129,7 @@ async def run_skill_step(
         stage = {
             "analyze-functional-requirements": "requirement_analysis",
             "generate-solution-test-points": "case_names",
+            "analyze-test-case-relations": "relation_analysis",
         }.get(skill_name)
         if stage is None:
             return (await bot.run(message, session_key=session_key)).content
@@ -103,6 +137,7 @@ async def run_skill_step(
             stage=stage,
             inputs=message,
             generate=lambda prompt: bot.run(prompt, session_key=session_key),
+            expected_case_ids=expected_case_ids,
         )
 
 
@@ -202,5 +237,7 @@ async def run_functional_chain(
     return FunctionalChainRunResult(
         requirement_analysis_output=analysis_result,
         case_names_output=case_names_result,
-        detailed_cases_output=json.dumps({"cases": merged_cases}, ensure_ascii=False),
+        detailed_cases_output=json.dumps(
+            {"cases": assign_case_ids(merged_cases)}, ensure_ascii=False
+        ),
     )

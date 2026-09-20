@@ -539,8 +539,6 @@
   .ui-template-picker,
   .ai-task-detail-layout,
   .ai-task-detail-content-scroll,
-  .ai-task-run-history-list,
-  .ai-task-run-history-record,
   .ai-task-run-history-placeholder,
   .ai-task-run-result-modal-content,
   .ai-task-stage-review-popover,
@@ -629,7 +627,6 @@
   .ui-template-picker-title,
   .ui-template-picker-item-label,
   .ai-task-kind-title,
-  .ai-task-run-history-record-name,
   .ai-task-detail-inline-value,
   .requirement-analysis-detail-title
 ) {
@@ -650,7 +647,6 @@
   .ui-template-picker-item-desc,
   .ui-template-picker-item-example,
   .ai-task-kind-description,
-  .ai-task-run-history-record-meta,
   .ai-task-run-history-auto-refresh,
   .ai-task-detail-inline-label
 ) {

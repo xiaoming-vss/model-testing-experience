@@ -1,0 +1,227 @@
+/* 用例图谱画布：整块铺满父容器，控件以浮层形式覆盖在画布上。 */
+.ai-relations-graph {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--ant-color-bg-container);
+}
+
+.ai-relations-graph .react-flow {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-relations-hint {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  z-index: 5;
+  padding: 5px 12px;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 999px;
+  background: var(--ant-color-bg-container);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  color: var(--ant-color-text-secondary);
+  font-size: 11.5px;
+  pointer-events: none;
+}
+
+.ai-relations-zoom {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 3px 5px;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 999px;
+  background: var(--ant-color-bg-container);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.ai-relations-zoom .ai-relations-zoom-value {
+  min-width: 42px;
+  color: var(--ant-color-text-secondary);
+  font-size: 12px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 小地图：与其它浮动控件统一观感，尺寸由组件的 style props 控制 */
+.ai-relations-graph .react-flow__minimap {
+  margin: 0;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.ai-relations-node {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 236px;
+  height: 96px;
+  padding: 10px 12px;
+  overflow: hidden;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 10px;
+  background: var(--ant-color-bg-container);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  color: var(--ant-color-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.react-flow__node:hover .ai-relations-node {
+  border-color: var(--ant-color-primary);
+}
+
+.react-flow__node.selected .ai-relations-node {
+  border-color: var(--ant-color-primary);
+  box-shadow: 0 0 0 2px var(--ant-color-primary-border, var(--ant-color-primary));
+}
+
+.ai-relations-node.main {
+  border-left: 3px solid var(--ant-color-primary);
+}
+
+.ai-relations-node.dimmed {
+  opacity: 0.12;
+}
+
+.ai-relations-node .node-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 11px;
+}
+
+.ai-relations-node .node-no {
+  color: var(--ant-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-relations-node .node-kind {
+  flex-shrink: 0;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--ant-color-fill-tertiary);
+  color: var(--ant-color-text-secondary);
+  line-height: 18px;
+}
+
+.ai-relations-node.main .node-kind {
+  background: var(--ant-color-primary-bg);
+  color: var(--ant-color-primary);
+}
+
+.ai-relations-node .node-module {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ant-color-text-tertiary);
+}
+
+.ai-relations-node .node-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+/* 选中用例详情：浮在画布右侧，图形会自动避让这块宽度 */
+.ai-relations-panel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 6;
+  width: 296px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  overflow-y: auto;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 12px;
+  background: var(--ant-color-bg-container);
+  box-shadow: 0 6px 22px rgba(15, 23, 42, 0.12);
+}
+
+.ai-relations-panel .panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--ant-color-text-secondary);
+  font-size: 12px;
+}
+
+.ai-relations-panel .panel-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.ai-relations-panel .panel-title {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.ai-relations-panel .panel-uuid {
+  margin: 0;
+  color: var(--ant-color-text-tertiary);
+  font-size: 11px;
+  font-family: var(--ant-font-family-code, monospace);
+  word-break: break-all;
+}
+
+.ai-relations-panel .panel-meta {
+  margin: 0;
+  color: var(--ant-color-text-secondary);
+  font-size: 12px;
+}
+
+.ai-relations-panel .panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.ai-relations-panel .panel-section > strong {
+  font-size: 12px;
+}
+
+.ai-relations-panel .panel-empty {
+  margin: 0;
+  color: var(--ant-color-text-tertiary);
+  font-size: 12px;
+}
+
+.ai-relations-panel .panel-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--ant-color-text);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ai-relations-panel .panel-list li {
+  word-break: break-all;
+}

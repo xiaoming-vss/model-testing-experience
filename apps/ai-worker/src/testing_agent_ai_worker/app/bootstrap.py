@@ -31,6 +31,7 @@ from testing_agent_ai_worker.tasks.requirement_analysis.executor import (
 from testing_agent_ai_worker.tasks.requirement_analysis.source_downloader import (
     PlatformRequirementSourceDownloader,
 )
+from testing_agent_ai_worker.tasks.test_order_graph.executor import TestOrderGraphExecutor
 from testing_agent_ai_worker.tasks.test_report_generate.executor import TestReportNanobotExecutor
 from testing_agent_ai_worker.tasks.ui_case_generate.executor import UiCaseNanobotExecutor
 from testing_agent_ai_worker.tasks.ui_case_generate.source_archive import (
@@ -108,6 +109,7 @@ def build_task_runner(
                 client=resolved_client,
                 timeout_seconds=settings.code_risk_analysis.gitlab_timeout_seconds,
             ),
+            test_order_graph_executor=TestOrderGraphExecutor(),
         ),
         result_service=ResultService(result_sink),
         lifecycle=WorkerLifecycle(

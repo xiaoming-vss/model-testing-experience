@@ -12,6 +12,7 @@ from testing_agent_ai_worker.nanobot_runtime.prompt import (
     build_skill_message,
 )
 
+from .case_ids import assign_case_ids
 from .validation import generate_validated, normalize_json
 
 
@@ -119,7 +120,7 @@ async def run_functional_detailed_case_batches(
     merged_cases: list[Any] = []
     batches = _build_model_batches(case_names_json)
     current_cases = []
-    if revision_instruction:
+    if current_cases_json.strip() and revision_instruction:
         current_cases = _extract_cases(current_cases_json, "当前候选结果")
         # Edited candidates may contain modules absent from the original test points.
         known_modules = {batch["model_name"] for batch in batches}
@@ -183,4 +184,4 @@ async def run_functional_detailed_case_batches(
                     len(batches),
                 )
 
-    return json.dumps({"cases": merged_cases}, ensure_ascii=False)
+    return json.dumps({"cases": assign_case_ids(merged_cases, current_cases)}, ensure_ascii=False)

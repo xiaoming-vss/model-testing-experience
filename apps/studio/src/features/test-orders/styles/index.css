@@ -1,0 +1,454 @@
+/* 测试单：列表进度与执行条目快照 */
+.test-order-progress {
+  font-variant-numeric: tabular-nums;
+}
+
+.test-order-entry-snapshot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 16px;
+}
+
+.test-order-entry-snapshot-list {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  color: var(--tp-text-secondary, #414755);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+@media (max-width: 900px) {
+  .test-order-entry-snapshot {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* 执行工作台：三栏（条目列表 / 判定 / 结果与证据） */
+.test-order-workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.workbench-page .test-order-orderbar {
+  flex: 0 0 auto;
+  height: 56px;
+  min-height: 56px;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+}
+
+.test-order-orderbar-name {
+  font-size: 15px;
+}
+
+.test-order-workspace-cols {
+  flex: 1 1 auto;
+  /* 面板自身是 height:100%，若所在栅格行没有确定高度就会塌成 0，这里兜一个可用高度。 */
+  min-height: min(680px, calc(100vh - 300px));
+  display: grid;
+  grid-template-columns: 288px minmax(0, 1fr) 356px;
+  gap: 14px;
+}
+
+.test-order-panel {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.test-order-editor-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--tp-border-soft, #eef0f6);
+}
+
+.test-order-case-title {
+  font-size: 15px;
+}
+
+.test-order-editor-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.test-order-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.test-order-preconditions {
+  color: var(--tp-text-secondary, #414755);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.test-order-step-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(84, 104, 132, 0.12);
+  color: var(--tp-text-secondary, #414755);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.test-order-step-action {
+  flex: 1;
+  font-size: 13px;
+}
+
+.test-order-step-expect {
+  margin-top: 6px;
+  color: var(--tp-text-muted, #727786);
+  font-size: 12.5px;
+}
+
+.test-order-judge {
+  display: flex;
+  gap: 6px;
+}
+
+.test-order-judge-btn {
+  height: 28px;
+  padding: 0 11px;
+  border: 1px solid var(--button-border, #dce3ec);
+  border-radius: 8px;
+  background: var(--button-bg, #fff);
+  color: var(--button-text, #526176);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.test-order-judge-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.test-order-judge-btn.on-ok {
+  border-color: var(--success-bd, #b7eb8f);
+  background: var(--success-bg, #f6ffed);
+  color: var(--success-tx, #389e0d);
+  font-weight: 600;
+}
+
+.test-order-judge-btn.on-bad {
+  border-color: var(--error-bd, #ffccc7);
+  background: var(--error-bg, #fff2f0);
+  color: var(--error-tx, #cf1322);
+  font-weight: 600;
+}
+
+.test-order-judge-btn.on-block {
+  border-color: var(--warning-bd, #ffe58f);
+  background: var(--warning-bg, #fffbe6);
+  color: var(--warning-tx, #d48806);
+  font-weight: 600;
+}
+
+.test-order-judge-btn.on-skip {
+  border-color: var(--neutral-bd, #d9d9d9);
+  background: var(--neutral-bg, #fafafa);
+  color: var(--neutral-tx, #595959);
+  font-weight: 600;
+}
+
+.test-order-side {
+  min-height: 0;
+  overflow: auto;
+}
+
+/* 第一条区块（用例结论）在侧栏顶部，不需要上边框 */
+.test-order-side .test-order-side-section:first-child {
+  border-top: none;
+}
+
+.test-order-side-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--tp-border-soft, #eef0f6);
+}
+
+.test-order-side-section:last-child {
+  border-bottom: none;
+}
+
+.test-order-kv {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+}
+
+.test-order-kv span:first-child {
+  color: var(--tp-text-muted, #727786);
+}
+
+.test-order-nav-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.test-order-nav-item.active {
+  border-color: var(--primary, #1677ff);
+}
+
+.test-order-nav-index {
+  width: 18px;
+  flex: 0 0 18px;
+  color: var(--tp-text-muted, #727786);
+  font-size: 11.5px;
+}
+
+.test-order-nav-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.test-order-nav-title {
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.test-order-nav-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+@media (max-width: 1180px) {
+  .test-order-workspace-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* A 版工作台：紧凑条目行（状态圆点 + 两行标题 + hover 才出现的移除） */
+.test-order-sidebar-toolbar {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.test-order-status-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.test-order-filter-chip {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--button-border, #dce3ec);
+  border-radius: 999px;
+  background: var(--button-bg, #fff);
+  color: var(--button-text, #526176);
+  font-family: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.test-order-filter-chip.active {
+  border-color: var(--primary, #1677ff);
+  background: var(--primary-soft, #e6f4ff);
+  color: var(--primary, #1677ff);
+  font-weight: 600;
+}
+
+.test-order-sidebar-foot {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--divider);
+}
+
+.test-order-sidebar-foot > * {
+  flex: 1;
+  justify-content: center;
+}
+
+.test-order-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 8px 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.test-order-nav-row:hover {
+  background: rgba(91, 122, 196, 0.055);
+}
+
+.test-order-nav-row.active {
+  border-color: var(--primary, #1677ff);
+  background: var(--primary-soft, #e6f4ff);
+}
+
+.test-order-nav-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+}
+
+.test-order-nav-item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+}
+
+.test-order-nav-index {
+  width: 15px;
+  flex: 0 0 15px;
+  color: var(--tp-text-muted, #727786);
+  font-size: 11.5px;
+  line-height: 18px;
+  text-align: right;
+}
+
+.test-order-nav-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.test-order-nav-title {
+  font-size: 12.5px;
+  line-height: 1.4;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.test-order-nav-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--tp-text-muted, #727786);
+}
+
+.test-order-nav-meta .ant-tag {
+  margin-inline-end: 0;
+}
+
+.test-order-nav-remove {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #c2c8d4;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.test-order-nav-row:hover .test-order-nav-remove {
+  opacity: 1;
+}
+
+.test-order-nav-remove:hover {
+  background: var(--error-bg, #fff2f0);
+  color: var(--error-tx, #cf1322);
+}
+
+/* 中间内容限宽，长步骤不再横跨整屏 */
+.test-order-content {
+  max-width: 780px;
+}
+
+/* 加入用例弹窗：筛选行与用例详情预览 */
+.test-order-add-cases-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.add-cases-title-link {
+  max-width: 100%;
+}
+
+.add-cases-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 640px;
+}
+
+.add-cases-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.add-cases-detail-meta .ant-tag {
+  margin-inline-end: 0;
+}
+
+/* 右栏：分段收紧，快捷键提示钉在底部 */
+.test-order-side {
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.test-order-side-section {
+  padding: 12px 14px;
+}
+
+.test-order-side-foot {
+  margin-top: auto;
+  padding: 10px 14px;
+  border-top: 1px solid var(--tp-border-soft, #eef0f6);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+@media (max-width: 1180px) {
+  .test-order-workspace-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

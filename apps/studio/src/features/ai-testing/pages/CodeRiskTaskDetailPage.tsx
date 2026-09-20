@@ -8,8 +8,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import '@/features/ai-testing/styles/index.css'
 import { CodeRiskReportView } from '@/features/ai-testing/components/CodeRiskReportView'
+import { RunPipelineStatus } from '@/features/ai-testing/components/RunPipelineStatus'
+import { RunHistoryTable } from '@/features/ai-testing/components/RunHistoryTable'
 import { LlmConnectionSelectModal } from '@/features/ai-testing/components/LlmConnectionSelectModal'
-import { getApiCaseGenerateTaskRunStatusMeta, isApiCaseGenerateTaskRunInProgress, renderApiCaseGenerateTaskRunStatusTag } from '@/features/ai-testing/utils/taskStatus'
+import { getApiCaseGenerateTaskRunStatusMeta, isApiCaseGenerateTaskRunInProgress } from '@/features/ai-testing/utils/taskStatus'
 import { api, listItems, type CodeRiskTaskRun } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { formatTime, getErrorMessage, pickCreatedAt, pickUpdatedAt } from '@/utils/format'
@@ -70,6 +72,8 @@ export function CodeRiskTaskDetailPage() {
     refetchInterval: (query) => (query.state.data && isApiCaseGenerateTaskRunInProgress(query.state.data.status) ? 5000 : false),
   })
   const selectedRun = selectedRunQuery.data
+  const resolveRunRecord = (record: CodeRiskTaskRun) =>
+    record.runId === selectedRunId && selectedRun ? selectedRun : record
   const runStatusMeta = getApiCaseGenerateTaskRunStatusMeta(selectedRun?.status)
   const selectedRunFailed = isRunFailed(selectedRun?.status)
 
@@ -190,38 +194,29 @@ export function CodeRiskTaskDetailPage() {
                   <Empty description="暂无运行记录，点击「发起运行」开始分析" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                 ) : null}
                 {runRecords.length > 0 ? (
-                  <div className="ai-task-run-history-list single-list">
-                    {runRecords.map((record, index) => {
-                      const active = record.runId === selectedRunId
+                  <RunHistoryTable<CodeRiskTaskRun>
+                    rows={runRecords}
+                    getRunId={(record) => record.runId}
+                    selectedRunId={selectedRunId}
+                    resolveRow={resolveRunRecord}
+                    onSelect={(runId) => setSelectedRunRecordId(runId ?? null)}
+                    renderPrimary={(row, index) => (
+                      <span className="ai-task-run-table-id">
+                        <span className="ai-task-run-table-index">#{index + 1}</span>
+                        <span className="ai-task-run-table-time">{formatTime(pickCreatedAt(row) || row.createdAt)}</span>
+                      </span>
+                    )}
+                    renderStatus={(row) => {
+                      const data = resolveRunRecord(row)
                       return (
-                        <div
-                          key={record.runId ?? index}
-                          role="button"
-                          tabIndex={0}
-                          className={`ai-task-run-history-record-row${active ? ' active' : ''}`}
-                          onClick={() => setSelectedRunRecordId(record.runId ?? null)}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter') setSelectedRunRecordId(record.runId ?? null)
-                          }}
-                        >
-                          <div className="ai-task-run-history-record-main">
-                            <div className="ai-task-run-history-record-identity">
-                              <span className="ai-task-run-history-record-index">#{index + 1}</span>
-                              <span className="ai-task-run-history-record-name" title={record.runId || '未命名记录'}>
-                                {formatTime(pickCreatedAt(record) || record.createdAt)}
-                              </span>
-                            </div>
-                            <div className="ai-task-run-history-record-meta">
-                              <span className="ai-task-run-history-record-status">
-                                {active && selectedRun ? renderApiCaseGenerateTaskRunStatusTag(selectedRun.status) : renderApiCaseGenerateTaskRunStatusTag(record.status)}
-                              </span>
-                              {record.currentStage ? <span className="ai-task-run-history-record-stage">{record.currentStage}</span> : null}
-                            </div>
-                          </div>
-                        </div>
+                        <RunPipelineStatus
+                          run={data}
+                          stages={['generate']}
+                          stageTag={data.currentStage ? <Tag color="default">{data.currentStage}</Tag> : null}
+                        />
                       )
-                    })}
-                  </div>
+                    }}
+                  />
                 ) : null}
               </div>
             </Card>

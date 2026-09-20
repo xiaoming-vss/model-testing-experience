@@ -64,6 +64,19 @@ def legacy_fields(content):
     }
 
 
+def numbered_lines(values):
+    return [f"{index}. {value}" for index, value in enumerate(values, 1)]
+
+
+def generation_fields(content):
+    """Split canonical content into the numbered arrays of the AI generation contract."""
+    return {
+        "precondition": numbered_lines(content.get("preconditions", [])),
+        "test_steps": numbered_lines([s["action"] for s in content.get("steps", [])]),
+        "expected_results": numbered_lines([s["expected"] for s in content.get("steps", [])]),
+    }
+
+
 def set_legacy_content(case, preconditions, steps, expected_results):
     case.content_json = from_legacy(preconditions, steps, expected_results)
     # Support existing import adapters that expose plain records rather than ORM properties.

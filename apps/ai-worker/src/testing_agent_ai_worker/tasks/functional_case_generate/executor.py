@@ -141,9 +141,14 @@ class FunctionalCaseNanobotExecutor(TaskExecutor):
         with task_config_path(nanobot_config=self.nanobot_config, task=task) as config_path:
             self._log_execution_context(task, config_path=config_path, workspace=workspace)
             # checkpoint 模式优先从平台下发的 currentStage/configJson 恢复。
-            if task.checkpoint_enabled or (
-                task.current_stage == "detailed_cases"
-                and json.loads(task.config_json or "{}").get("revisionInstruction")
+            # relation_analysis 由“生成图谱”按钮派发，总是走单阶段 checkpoint 路径。
+            if (
+                task.checkpoint_enabled
+                or task.current_stage == "relation_analysis"
+                or (
+                    task.current_stage == "detailed_cases"
+                    and json.loads(task.config_json or "{}").get("revisionInstruction")
+                )
             ):
                 return execute_checkpoint_task(
                     task=task,

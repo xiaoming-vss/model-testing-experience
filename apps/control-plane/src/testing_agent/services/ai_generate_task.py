@@ -16,6 +16,7 @@ import yaml
 from fastapi.encoders import jsonable_encoder
 
 from testing_agent.domain.function_case_content import set_legacy_content
+from testing_agent.domain.function_case_identity import pinned_case_id
 from testing_agent.services.personal_authorization import require_personal_connection
 from testing_agent.services.project_access import ProjectAction, require_project_access
 
@@ -72,6 +73,8 @@ def task_type_for(kind: str) -> str:
         return "requirement_analysis"
     if kind == "test_report":
         return "test_report_generate"
+    if kind == "test_order_graph":
+        return "test_order_graph"
     if kind == "code_risk_analysis":
         return "code_risk_analysis"
     return "api_case_generate"
@@ -83,6 +86,8 @@ FUNCTION_CASE_NEXT_STAGE = {
     "requirement_analysis": "case_names",
     "case_names": "detailed_cases",
 }
+FUNCTION_CASE_RELATION_STAGE = "relation_analysis"
+FUNCTION_CASE_RELATION_DISPATCH_STATUSES = {"pending", "claimed", "running"}
 REQUIREMENT_ANALYSIS_INITIAL_STAGE = "extracting_text"
 REQUIREMENT_ANALYSIS_FINAL_STAGE = "feature_understanding"
 REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES = {REQUIREMENT_ANALYSIS_FINAL_STAGE, "completed"}
@@ -300,9 +305,10 @@ async def build_generate_run_snapshot(
     uses_requirement_document = False
     if kind in {"function", "requirement_analysis"}:
         requirement = await repository.get_requirement(task.requirement_id)
-        if kind == "function" and not str(
-            getattr(requirement, "document_content", "") or ""
-        ).strip():
+        if (
+            kind == "function"
+            and not str(getattr(requirement, "document_content", "") or "").strip()
+        ):
             raise AppError(400, "请先完成需求分析并导入增强文本，再生成功能用例", 400)
         if requirement is not None:
             uses_requirement_document = True
@@ -430,15 +436,18 @@ def normalize_generated_function_case(item: dict[str, Any], index: int) -> dict[
     title = str(first_present(item, "case_title", "title", "name") or "").strip()
     priority = str(first_present(item, "priority") or "")
     case_type = str(first_present(item, "case_type", "caseType") or "")
+    case_id = str(first_present(item, "case_id", "caseId") or "").strip()
     if (
         not title
         or len(title) > 255
         or len(module) > 120
         or len(priority) > 20
         or len(case_type) > 50
+        or len(case_id) > 64
     ):
         raise ErrBadRequest
     return {
+        "case_id": case_id,
         "module": module,
         "title": title,
         "preconditions": import_lines(first_present(item, "precondition", "preconditions")),
@@ -1545,7 +1554,7 @@ class AiGenerateTaskService:
 
             self.repository.add(
                 FunctionTestCase(
-                    case_id=new_id(),
+                    case_id=await pinned_case_id(self.repository, item["case_id"]),
                     suite_id=suite.suite_id,
                     module=suite.name,
                     title=item["title"],
@@ -2029,6 +2038,71 @@ class AiGenerateTaskService:
             )
         )
         run._operation = "retry"
+        await self.repository.commit()
+        await self.repository.refresh(run)
+        return dump_run(run)
+
+    async def generate_relation_analysis(
+        self, run_id: str, body: dict[str, Any] | None, user_id: str
+    ) -> dict:
+        """审核通过后按用户触发派发图谱分析；重复点击基于最新用例重新生成。"""
+
+        await self.owned_run(user_id, run_id, "function", action="execute")
+        run = await self.repository.get_run_for_update(run_id)
+        if run is None:
+            raise ErrNotFound
+        # The locked reload may return a new instance without the transient actor.
+        run._actor = user_id
+        if (
+            run.current_stage == FUNCTION_CASE_RELATION_STAGE
+            and run.status in FUNCTION_CASE_RELATION_DISPATCH_STATUSES
+        ):
+            raise dynamic_error(ErrBadRequest, "图谱正在生成中，请等待完成后再试")
+        if run.review_status != ReviewStatus.APPROVED.value:
+            raise dynamic_error(ErrBadRequest, "候选结果审核通过后才能生成图谱")
+        if not (
+            run.status == RunStatus.SUCCESS.value
+            or (
+                run.status in {"failed", "error"}
+                and run.current_stage == FUNCTION_CASE_RELATION_STAGE
+            )
+        ):
+            raise ErrBadRequest
+        latest_task = await self.repository.get_latest_worker_task_by_run_id(run_id)
+        if latest_task is None or latest_task.status in FUNCTION_CASE_RELATION_DISPATCH_STATUSES:
+            raise ErrBadRequest
+        cases = generated_function_cases(run)
+        if not cases:
+            raise ErrBadRequest
+        case_ids = [str(first_present(case, "case_id", "caseId") or "").strip() for case in cases]
+        if any(not case_id for case_id in case_ids):
+            raise dynamic_error(
+                ErrBadRequest, "用例缺少平台签发的 case_id，请重新生成用例后再生成图谱"
+            )
+        if len(case_ids) != len(set(case_ids)):
+            raise dynamic_error(ErrBadRequest, "用例 case_id 重复，请重新生成用例后再生成图谱")
+        config = dict(normalize_config_json(run.config_json))
+        config.pop(REVISION_INSTRUCTION_FIELD, None)
+        # 上一次关系产物随 config 进入派发快照，skill 据此沿用既有流程/节点/连线 ID。
+        config["resultYaml"] = json.dumps({"cases": cases}, ensure_ascii=False)
+        run.config_json = config
+        run.status = RunStatus.PENDING.value
+        run.current_stage = FUNCTION_CASE_RELATION_STAGE
+        run.stage_status = StageStatus.PENDING.value
+        run.error_message = ""
+        self.repository.add(
+            WorkerTask(
+                domain="ai",
+                task_id=new_id(),
+                task_type=task_type_for("function"),
+                run_id=run.run_id,
+                generate_task_id=run.task_id,
+                llm_connection_id=await self.stage_connection(
+                    run, body or {}, user_id, latest_task.llm_connection_id
+                ),
+                status=RunStatus.PENDING.value,
+            )
+        )
         await self.repository.commit()
         await self.repository.refresh(run)
         return dump_run(run)

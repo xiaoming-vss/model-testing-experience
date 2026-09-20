@@ -12,6 +12,8 @@ from testing_agent.models.requirement import Requirement
 from testing_agent.models.resource_binding import ResourceBinding
 from testing_agent.models.sprint import Sprint
 from testing_agent.models.sprint_daily_metrics import SprintDailyMetrics
+from testing_agent.models.test_order import TestOrder
+from testing_agent.models.test_order_entry import TestOrderEntry
 from testing_agent.models.ui_test_case import UiTestCase
 from testing_agent.models.ui_test_suite import UiTestSuite
 from testing_agent.models.ui_test_suite_run import UiTestSuiteRun
@@ -71,6 +73,18 @@ class SprintDailyMetricsRepository(BaseRepository):
                         Requirement.sprint_id == sprint_id,
                     )
                     .order_by(ApiCase.id.asc())
+                )
+            ).all()
+        )
+
+    async def list_function_entry_statuses_by_sprint(self, sprint_id: str) -> list[str]:
+        """功能用例的执行状态来自测试单条目（本地记录），不再走禅道。"""
+        return list(
+            (
+                await self.session.scalars(
+                    select(TestOrderEntry.status)
+                    .join(TestOrder, TestOrder.order_id == TestOrderEntry.order_id)
+                    .where(TestOrder.sprint_id == sprint_id)
                 )
             ).all()
         )

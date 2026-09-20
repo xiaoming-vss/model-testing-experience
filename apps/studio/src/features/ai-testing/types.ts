@@ -61,6 +61,7 @@ export type FunctionalCaseGenerateTaskStage =
   | 'requirement_analysis'
   | 'case_names'
   | 'detailed_cases'
+  | 'relation_analysis'
   | 'completed'
   | string
 

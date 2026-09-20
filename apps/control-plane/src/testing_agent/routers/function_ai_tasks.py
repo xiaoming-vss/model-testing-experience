@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from testing_agent.handlers.function_case_generate_task import (
     create_function_case_generate_task,
     delete_function_case_generate_task,
+    generate_function_case_relation_analysis,
     get_function_case_generate_task,
     get_function_case_generate_task_run,
     import_function_case_generate_task_run,
@@ -89,3 +90,8 @@ router.post(
     "/function-case-generate-task-runs/{run_id}/stage-revise",
     response_model=ApiResponse[AiGenerateTaskRunResponse],
 )(revise_function_case_stage)
+
+router.post(
+    "/function-case-generate-task-runs/{run_id}/relation-analysis",
+    response_model=ApiResponse[AiGenerateTaskRunResponse],
+)(generate_function_case_relation_analysis)

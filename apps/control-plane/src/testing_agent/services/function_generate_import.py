@@ -17,6 +17,7 @@ from testing_agent.domain.function_case_content import (
     legacy_fields,
     set_legacy_content,
 )
+from testing_agent.domain.function_case_identity import pinned_case_id
 from testing_agent.models.function_test_case import FunctionTestCase
 from testing_agent.models.function_test_suite import FunctionTestSuite
 from testing_agent.services.ai_generate_task import (
@@ -175,7 +176,7 @@ async def import_function_run(
             max_order += 1
             max_order_by_suite[suite.suite_id] = max_order
             new_case = FunctionTestCase(
-                case_id=new_id(),
+                case_id=await pinned_case_id(service.repository, item["case_id"]),
                 suite_id=suite.suite_id,
                 order_no=max_order,
             )
@@ -203,12 +204,12 @@ async def import_function_run(
         if isinstance(exc, IntegrityError) and (
             "uk_function_suite_requirement_name" in str(exc.orig)
             or "UNIQUE constraint failed: function_test_suites.requirement_id, "
-            "function_test_suites.name" in str(exc.orig)
+            "function_test_suites.name"
+            in str(exc.orig)
         ):
             raise dynamic_error(
                 ErrFunctionTestSuiteNameAlreadyUse,
-                "该需求下的功能测试集名称已被占用，"
-                "请检查生成结果的模块名称或刷新后重试",
+                "该需求下的功能测试集名称已被占用，请检查生成结果的模块名称或刷新后重试",
             ) from exc
         raise
 

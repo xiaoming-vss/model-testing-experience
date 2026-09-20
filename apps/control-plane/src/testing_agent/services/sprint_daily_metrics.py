@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any
 
+from testing_agent.core.enums import TestOrderEntryStatus
 from testing_agent.core.errors import (
     ErrNotFound,
     ErrResourceBindingInvalid,
@@ -205,9 +206,7 @@ class SprintDailyMetricsService:
     async def apply_snapshot_metrics(
         self, user_id: str, sprint: Sprint, metric: SprintDailyMetrics, *, connection_id: str = ""
     ) -> None:
-        function_metrics = await self.load_function_metrics_from_execution(
-            user_id, sprint.sprint_id, connection_id=connection_id
-        )
+        function_metrics = await self.load_function_metrics_from_local_runs(sprint.sprint_id)
         api_metrics = await self.load_api_metrics_from_local_runs(sprint.sprint_id)
         ui_metrics = await self.load_ui_metrics_from_local_runs(sprint.sprint_id)
         bug_metrics = await self.load_bug_metrics_from_execution(
@@ -239,45 +238,19 @@ class SprintDailyMetricsService:
         metric.bug_normal = bug_metrics.normal
         metric.bug_suggestion = bug_metrics.suggestion
 
-    async def load_function_metrics_from_execution(
-        self, user_id: str, sprint_id: str, *, connection_id: str = ""
-    ) -> TestMetrics:
-        access = await self.resolve_execution_binding_access(
-            user_id, sprint_id, connection_id=connection_id
-        )
-        if access is None:
-            return TestMetrics()
-        connection, remote_execution_id = access
+    async def load_function_metrics_from_local_runs(self, sprint_id: str) -> TestMetrics:
+        """功能用例指标来自测试单条目的本地执行记录；阻塞与失败都算「未通过」。"""
+        statuses = await self.repository.list_function_entry_statuses_by_sprint(sprint_id)
         metrics = TestMetrics()
-        page = 1
-        page_size = 100
-        while True:
-            if self.zentao_resource_client is None:
-                raise ErrZentaoRemoteResourceUnavailable
-            result = await self.call_zentao(
-                self.zentao_resource_client.list_execution_cases,
-                connection,
-                remote_execution_id,
-                page,
-                page_size,
-            )
-            items = list_items(result)
-            for item in items:
-                if bool(item_value(item, "deleted", default=False)):
-                    continue
-                metrics.total += 1
-                match normalize_status(item_value(item, "last_run_result", "lastRunResult")):
-                    case "":
-                        pass
-                    case "pass":
-                        metrics.executed += 1
-                        metrics.success += 1
-                    case _:
-                        metrics.executed += 1
-                        metrics.failed += 1
-            if is_last_page(result, page, page_size, len(items)):
-                break
-            page += 1
+        for status in statuses:
+            metrics.total += 1
+            if status == TestOrderEntryStatus.PENDING.value:
+                continue
+            metrics.executed += 1
+            if status == TestOrderEntryStatus.PASSED.value:
+                metrics.success += 1
+            else:
+                metrics.failed += 1
         metrics.pending = metrics.total - metrics.executed
         return metrics
 

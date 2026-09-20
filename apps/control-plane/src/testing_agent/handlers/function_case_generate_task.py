@@ -180,3 +180,13 @@ async def revise_function_case_stage(
             run_id, body.model_dump(by_alias=True, exclude_none=True), user_id
         )
     )
+
+
+async def generate_function_case_relation_analysis(
+    run_id: str,
+    body: AiGenerateTaskRunRequest | None = None,
+    user_id: str = Depends(get_current_user_id),
+    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+):
+    payload = body.model_dump(by_alias=True, exclude_none=True) if body else None
+    return success_payload(await service.generate_relation_analysis(run_id, payload, user_id))

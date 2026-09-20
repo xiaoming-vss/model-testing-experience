@@ -17,6 +17,8 @@ from testing_agent.core.errors import AppError, ErrNotFound
 
 logger = logging.getLogger(__name__)
 _FILE_QUEUE = "hard_delete_files"
+# 非需求域 AI 任务只是派生产物的容器，随所属项目/迭代/测试单一起清理，不作为删除阻塞。
+AUXILIARY_TASK_TYPES = ("test_report_generate", "test_order_graph")
 
 
 @event.listens_for(Session, "after_commit")
@@ -53,7 +55,10 @@ async def _blockers(session, obj):
             (m.SharedService, m.SharedService.project_id == obj.project_id, "项目共享服务"),
         ]
     elif isinstance(obj, m.Sprint):
-        checks.append((m.Requirement, m.Requirement.sprint_id == obj.sprint_id, "需求"))
+        checks += [
+            (m.Requirement, m.Requirement.sprint_id == obj.sprint_id, "需求"),
+            (m.TestOrder, m.TestOrder.sprint_id == obj.sprint_id, "测试单"),
+        ]
     elif isinstance(obj, m.Requirement):
         checks += [
             (model, model.requirement_id == obj.requirement_id, label)
@@ -81,7 +86,7 @@ async def _blockers(session, obj):
                 (
                     m.AiGenerateTask,
                     (getattr(m.AiGenerateTask, key) == value)
-                    & (m.AiGenerateTask.task_type != "test_report_generate"),
+                    & (~m.AiGenerateTask.task_type.in_(AUXILIARY_TASK_TYPES)),
                     "AI 任务",
                 )
             )
@@ -199,6 +204,21 @@ async def delete_resource(session, obj):
         await _erase(session, m.UiTestCaseRun, m.UiTestCaseRun.case_id == obj.case_id)
     elif isinstance(obj, m.UiTestSuite):
         await _ui_suite_runs(session, m.UiTestSuiteRun.suite_id == obj.suite_id)
+    elif isinstance(obj, m.TestOrder):
+        await _erase(session, m.TestOrderEntry, m.TestOrderEntry.order_id == obj.order_id)
+        graph_tasks = list(
+            await session.scalars(
+                select(m.AiGenerateTask).where(
+                    m.AiGenerateTask.order_id == obj.order_id,
+                    m.AiGenerateTask.task_type == "test_order_graph",
+                )
+            )
+        )
+        for graph_task in graph_tasks:
+            await delete_resource(session, graph_task)
+    elif isinstance(obj, m.FunctionTestCase):
+        # 引用了该用例的执行条目随用例一起删除（条目只按业务键引用用例，没有外键）。
+        await _erase(session, m.TestOrderEntry, m.TestOrderEntry.case_id == obj.case_id)
     elif isinstance(obj, m.AiGenerateTask):
         ids = list(
             await session.scalars(
@@ -261,17 +281,17 @@ async def delete_resource(session, obj):
     if isinstance(obj, (m.Project, m.Sprint)):
         key = "project_id" if isinstance(obj, m.Project) else "sprint_id"
         value = getattr(obj, key)
-        # Test report tasks are internal run containers with no independent CRUD UI.
-        reports = list(
+        # Auxiliary AI tasks are internal run containers with no independent CRUD UI.
+        auxiliaries = list(
             await session.scalars(
                 select(m.AiGenerateTask).where(
                     getattr(m.AiGenerateTask, key) == value,
-                    m.AiGenerateTask.task_type == "test_report_generate",
+                    m.AiGenerateTask.task_type.in_(AUXILIARY_TASK_TYPES),
                 )
             )
         )
-        for report in reports:
-            await delete_resource(session, report)
+        for auxiliary in auxiliaries:
+            await delete_resource(session, auxiliary)
         if isinstance(obj, m.Sprint):
             await _erase(session, m.SprintDailyMetrics, m.SprintDailyMetrics.sprint_id == value)
         else:

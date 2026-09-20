@@ -25,6 +25,8 @@ from testing_agent.models.resource_binding import ResourceBinding
 from testing_agent.models.shared_service import ServiceAuthorization, SharedService
 from testing_agent.models.sprint import Sprint
 from testing_agent.models.sprint_daily_metrics import SprintDailyMetrics
+from testing_agent.models.test_order import TestOrder
+from testing_agent.models.test_order_entry import TestOrderEntry
 from testing_agent.models.ui_test_case import UiTestCase
 from testing_agent.models.ui_test_case_run import UiTestCaseRun
 from testing_agent.models.ui_test_suite import UiTestSuite
@@ -61,6 +63,8 @@ __all__ = [
     "ResourceBinding",
     "Sprint",
     "SprintDailyMetrics",
+    "TestOrder",
+    "TestOrderEntry",
     "UiTestCase",
     "UiTestCaseRun",
     "UiTestSuite",

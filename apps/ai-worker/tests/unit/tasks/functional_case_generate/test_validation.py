@@ -65,6 +65,13 @@ class ContractsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_output("detailed_cases", json.dumps({"cases": [case(), case()]}))
 
+    def test_model_supplied_case_id_is_dropped(self):
+        output = validate_output(
+            "detailed_cases",
+            json.dumps({"cases": [{**case(), "case_id": "C001"}]}),
+        )
+        self.assertNotIn("case_id", json.loads(output)["cases"][0])
+
     def test_ids_and_references(self):
         data = analysis()
         q = {

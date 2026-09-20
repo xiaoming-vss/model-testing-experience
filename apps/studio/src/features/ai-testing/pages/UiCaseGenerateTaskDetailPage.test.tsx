@@ -1,6 +1,6 @@
 import { seedOwnerProject } from '@/test/projectAccess'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -99,16 +99,39 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+// 运行记录操作列内联候选结果入口（查看/审核），导入等状态变更收在行内「更多」下拉里。
+async function findRunRow(runId = 'ui-run-1') {
+  const idCell = await screen.findByText(runId)
+  const row = idCell.closest('tr')
+  if (!row) throw new Error(`未找到运行记录行：${runId}`)
+  return row
+}
+
+async function findRunInlineAction(name: string, runId = 'ui-run-1') {
+  return within(await findRunRow(runId)).findByRole('button', { name })
+}
+
+async function openRunActionsMenu(user: ReturnType<typeof userEvent.setup>, runId = 'ui-run-1') {
+  const row = await findRunRow(runId)
+  await user.click(await within(row).findByRole('button', { name: '更多操作' }))
+}
+
+function queryVisibleMenuItems(name: string) {
+  return screen
+    .queryAllByRole('menuitem', { name })
+    .filter((el) => !el.closest('.ant-dropdown')?.className.includes('leave'))
+}
+
 describe('UI 用例生成任务详情', () => {
   it('运行记录不显示中间配置入口', async () => {
     installFetchHandler()
     renderPage()
 
-    expect(await screen.findByRole('button', { name: '结果 YAML' })).toHaveClass('ai-task-run-result-popover-btn')
+    expect(await screen.findByRole('button', { name: '审核候选结果' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '中间配置' })).not.toBeInTheDocument()
   })
 
-  it('只读候选结果入口沿用 API 用例的主按钮样式', async () => {
+  it('候选结果入口沿用 API 用例的主按钮样式', async () => {
     const importedRun = { ...run, reviewStatus: 'approved', importStatus: 'imported' }
     installFetchHandler((url) => {
       if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-1/runs') {
@@ -118,7 +141,8 @@ describe('UI 用例生成任务详情', () => {
     })
     renderPage()
 
-    expect(await screen.findByRole('button', { name: '查看候选结果' })).toHaveClass('ant-btn-primary')
+    const entry = await findRunInlineAction('查看候选结果')
+    expect(entry).toHaveClass('ant-btn-primary')
   })
 
   it('返回生成任务时回到生成任务列表', async () => {
@@ -141,7 +165,7 @@ describe('UI 用例生成任务详情', () => {
     })
     renderPage()
 
-    expect(await screen.findByText('running')).toBeInTheDocument()
+    expect(await screen.findByText('执行中')).toBeInTheDocument()
     expect(screen.queryByText('待审核')).not.toBeInTheDocument()
     expect(screen.queryByText('待导入')).not.toBeInTheDocument()
   })
@@ -158,16 +182,18 @@ describe('UI 用例生成任务详情', () => {
       }
       if (url.pathname === '/v1/ui-case-generate-task-runs/ui-run-1') return jsonResponse(approvedPendingRun)
     })
+    const user = userEvent.setup()
     renderPage()
 
-    expect(await screen.findByRole('button', { name: '导入正式 UI 套件' })).toBeInTheDocument()
+    await openRunActionsMenu(user)
+    expect(await screen.findByRole('menuitem', { name: '导入正式 UI 套件' })).toBeInTheDocument()
   })
 
   it.each([
-    ['非成功', { status: 'failed', reviewStatus: 'approved', importStatus: 'pending' }],
-    ['未批准', { status: 'success', reviewStatus: 'pending', importStatus: 'pending' }],
-    ['已导入', { status: 'success', reviewStatus: 'approved', importStatus: 'imported' }],
-  ])('%s 运行不提供导入入口', async (_label, state) => {
+    ['非成功', { status: 'failed', reviewStatus: 'approved', importStatus: 'pending' }, '失败'],
+    ['未批准', { status: 'success', reviewStatus: 'pending', importStatus: 'pending' }, '待审核'],
+    ['已导入', { status: 'success', reviewStatus: 'approved', importStatus: 'imported' }, '已导入'],
+  ])('%s 运行不提供导入入口', async (_label, state, statusLabel) => {
     const ineligibleRun = { ...run, ...state }
     installFetchHandler((url) => {
       if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-1/runs') {
@@ -179,8 +205,8 @@ describe('UI 用例生成任务详情', () => {
     })
     renderPage()
 
-    expect((await screen.findAllByText(state.status)).length).toBeGreaterThan(0)
-    expect(screen.queryByRole('button', { name: '导入正式 UI 套件' })).not.toBeInTheDocument()
+    expect((await screen.findAllByText(statusLabel)).length).toBeGreaterThan(0)
+    expect(queryVisibleMenuItems('导入正式 UI 套件')).toHaveLength(0)
   })
 
   it.each([
@@ -198,8 +224,8 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    const entryButton = await screen.findByRole('button', { name: '导入正式 UI 套件' })
-    await user.click(entryButton)
+    await openRunActionsMenu(user)
+    await user.click(await screen.findByRole('menuitem', { name: '导入正式 UI 套件' }))
     if (status === 200) await user.click(await screen.findByLabelText('目标 UI 套件'))
 
     expect(await screen.findByText(expectedText)).toBeInTheDocument()
@@ -222,8 +248,8 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    const entryButton = await screen.findByRole('button', { name: '导入正式 UI 套件' })
-    await user.click(entryButton)
+    await openRunActionsMenu(user)
+    await user.click(await screen.findByRole('menuitem', { name: '导入正式 UI 套件' }))
     const suiteSelect = await screen.findByLabelText('目标 UI 套件')
     await user.click(suiteSelect)
     await user.click(await screen.findByText('登录回归套件'))
@@ -232,7 +258,6 @@ describe('UI 用例生成任务详情', () => {
     await user.click(importButton)
 
     await waitFor(() => expect(importButton).toBeDisabled())
-    expect(entryButton).toBeDisabled()
     expect(cancelButton).toBeDisabled()
     expect(suiteSelect).toBeDisabled()
 
@@ -284,7 +309,8 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     const queryClient = renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '导入正式 UI 套件' }))
+    await openRunActionsMenu(user)
+    await user.click(await screen.findByRole('menuitem', { name: '导入正式 UI 套件' }))
     const suiteSearch = await screen.findByLabelText('目标 UI 套件')
     await user.click(suiteSearch)
     await user.type(suiteSearch, '登录')
@@ -294,14 +320,15 @@ describe('UI 用例生成任务详情', () => {
 
     await waitFor(() => expect(importBody).toEqual({ suiteId: 'suite-1', confirmOverwrite: false }))
     expect((await screen.findAllByText('已导入')).length).toBeGreaterThan(0)
-    expect(screen.queryByRole('button', { name: '导入正式 UI 套件' })).not.toBeInTheDocument()
+    expect(queryVisibleMenuItems('导入正式 UI 套件')).toHaveLength(0)
     const cachedRuns = queryClient.getQueryData<{ items: typeof run[]; total: number }>([
       'uiCaseGenerateTaskRuns',
       'ui-task-1',
     ])
     expect(cachedRuns?.items).not.toBe(cachedRuns)
     expect(cachedRuns?.items[0]).toMatchObject({ runId: 'ui-run-1', importStatus: 'imported' })
-    await user.click(screen.getByRole('button', { name: '查看正式套件' }))
+    await openRunActionsMenu(user)
+    await user.click(screen.getByRole('menuitem', { name: '查看正式套件' }))
     expect(await screen.findByText('正式 UI 套件详情')).toBeInTheDocument()
   })
 
@@ -359,7 +386,8 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '导入正式 UI 套件' }))
+    await openRunActionsMenu(user)
+    await user.click(await screen.findByRole('menuitem', { name: '导入正式 UI 套件' }))
     await user.click(await screen.findByLabelText('目标 UI 套件'))
     await user.click(await screen.findByText('登录回归套件'))
     await user.click(screen.getByRole('button', { name: '开始导入' }))
@@ -383,9 +411,10 @@ describe('UI 用例生成任务详情', () => {
 
     await user.click(screen.getByRole('button', { name: '取消覆盖' }))
     expect(importRequests).toBe(1)
-    expect(screen.getAllByText('已批准').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('待导入').length).toBeGreaterThan(0)
 
-    await user.click(screen.getByRole('button', { name: '导入正式 UI 套件' }))
+    await openRunActionsMenu(user)
+    await user.click(screen.getByRole('menuitem', { name: '导入正式 UI 套件' }))
     expect((await screen.findAllByText('登录回归套件')).length).toBeGreaterThan(0)
   })
 
@@ -428,7 +457,8 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '导入正式 UI 套件' }))
+    await openRunActionsMenu(user)
+    await user.click(await screen.findByRole('menuitem', { name: '导入正式 UI 套件' }))
     await user.click(await screen.findByLabelText('目标 UI 套件'))
     await user.click(await screen.findByText('登录回归套件'))
     await user.click(screen.getByRole('button', { name: '开始导入' }))
@@ -473,7 +503,8 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '导入正式 UI 套件' }))
+    await openRunActionsMenu(user)
+    await user.click(await screen.findByRole('menuitem', { name: '导入正式 UI 套件' }))
     await user.click(await screen.findByLabelText('目标 UI 套件'))
     await user.click(await screen.findByText('登录回归套件'))
     await user.click(screen.getByRole('button', { name: '开始导入' }))
@@ -508,7 +539,8 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '导入正式 UI 套件' }))
+    await openRunActionsMenu(user)
+    await user.click(await screen.findByRole('menuitem', { name: '导入正式 UI 套件' }))
     await user.click(await screen.findByLabelText('目标 UI 套件'))
     await user.click(await screen.findByText('登录回归套件'))
     await user.click(screen.getByRole('button', { name: '开始导入' }))
@@ -543,15 +575,17 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '导入正式 UI 套件' }))
+    await openRunActionsMenu(user)
+    await user.click(await screen.findByRole('menuitem', { name: '导入正式 UI 套件' }))
     await user.click(await screen.findByLabelText('目标 UI 套件'))
     await user.click(await screen.findByText('登录回归套件'))
     await user.click(screen.getByRole('button', { name: '开始导入' }))
 
     expect(await screen.findByText('该运行已由其他操作完成导入')).toBeInTheDocument()
     expect((await screen.findAllByText('已导入')).length).toBeGreaterThan(0)
-    expect(screen.queryByRole('button', { name: '导入正式 UI 套件' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '查看正式套件' })).toBeInTheDocument()
+    expect(queryVisibleMenuItems('导入正式 UI 套件')).toHaveLength(0)
+    await openRunActionsMenu(user)
+    expect(screen.getByRole('menuitem', { name: '查看正式套件' })).toBeInTheDocument()
   })
 
   it('冲突预览期间页面重新聚焦可收敛到其他操作完成的导入状态', async () => {
@@ -587,7 +621,8 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '导入正式 UI 套件' }))
+    await openRunActionsMenu(user)
+    await user.click(await screen.findByRole('menuitem', { name: '导入正式 UI 套件' }))
     await user.click(await screen.findByLabelText('目标 UI 套件'))
     await user.click(await screen.findByText('登录回归套件'))
     await user.click(screen.getByRole('button', { name: '开始导入' }))
@@ -597,7 +632,7 @@ describe('UI 用例生成任务详情', () => {
 
     expect(await screen.findByText('该运行已由其他操作完成导入')).toBeInTheDocument()
     expect((await screen.findAllByText('已导入')).length).toBeGreaterThan(0)
-    expect(screen.queryByRole('button', { name: '导入正式 UI 套件' })).not.toBeInTheDocument()
+    expect(queryVisibleMenuItems('导入正式 UI 套件')).toHaveLength(0)
   })
 
   it('展示源码包、运行状态和结构化候选步骤，不访问内部 Worker 接口', async () => {
@@ -610,11 +645,11 @@ describe('UI 用例生成任务详情', () => {
     await user.click(screen.getByRole('button', { name: /^源码包/ }))
     expect(screen.getByText('2 KiB')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /^运行记录/ }))
-    await user.click(await screen.findByRole('button', { name: '审核候选结果' }))
+    await user.click(await findRunInlineAction('审核候选结果'))
     await user.click(await screen.findByRole('button', { name: '登录成功，展开' }))
     expect(screen.getByText('登录成功')).toBeInTheDocument()
     expect(screen.getByText('打开登录页')).toBeInTheDocument()
-    expect(screen.getAllByText('success').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('待审核').length).toBeGreaterThan(0)
     expect(fetchSpy.mock.calls.every(([input]) => !String(input).includes('/internal/ai-worker/'))).toBe(true)
   })
 
@@ -714,8 +749,8 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    for (const status of ['pending', 'claimed', 'running', 'success', 'failed']) {
-      expect((await screen.findAllByText(status)).length).toBeGreaterThan(0)
+    for (const label of ['执行中', '待审核', '失败']) {
+      expect((await screen.findAllByText(label)).length).toBeGreaterThan(0)
     }
     await user.click(screen.getByRole('button', { name: /^源码包/ }))
     expect(screen.getByRole('button', { name: /替换源码包/ })).toBeDisabled()
@@ -738,9 +773,7 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    const reviewEntry = await screen.findByRole('button', { name: '审核候选结果' })
-    expect(reviewEntry).toHaveClass('ant-btn-primary')
-    await user.click(reviewEntry)
+    await user.click(await findRunInlineAction('审核候选结果'))
     await user.click(await screen.findByRole('tab', { name: '编辑 YAML' }))
     const editor = await screen.findByRole('textbox', { name: '候选结果 YAML' })
     await user.click(editor)
@@ -751,9 +784,10 @@ describe('UI 用例生成任务详情', () => {
     await waitFor(() => expect(patchBody).toEqual({ resultYaml: savedYaml }))
     await user.click(screen.getByRole('button', { name: '批准候选' }))
     await waitFor(() => expect(reviewBody).toEqual({ action: 'approve' }))
-    expect(await screen.findByText('已批准')).toBeInTheDocument()
+    expect(await screen.findByText('待导入')).toBeInTheDocument()
     expect(screen.getAllByText('待导入').length).toBeGreaterThan(0)
-    expect(screen.getAllByRole('button', { name: '导入正式 UI 套件' }).length).toBeGreaterThan(0)
+    await openRunActionsMenu(user)
+    expect(screen.getAllByRole('menuitem', { name: '导入正式 UI 套件' }).length).toBeGreaterThan(0)
     expect(screen.getByRole('textbox', { name: '候选结果 YAML' })).toHaveAttribute('aria-readonly', 'true')
   })
 
@@ -778,7 +812,7 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '审核候选结果' }))
+    await user.click(await findRunInlineAction('审核候选结果'))
 
     expect(await screen.findByText('用例 1')).toBeInTheDocument()
     expect(screen.getByText('步骤 1')).toBeInTheDocument()
@@ -796,7 +830,7 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '审核候选结果' }))
+    await user.click(await findRunInlineAction('审核候选结果'))
     await user.click(await screen.findByRole('tab', { name: '编辑 YAML' }))
 
     expect(await screen.findByRole('textbox', { name: '候选结果 YAML' })).toBeInTheDocument()
@@ -815,7 +849,7 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '审核候选结果' }))
+    await user.click(await findRunInlineAction('审核候选结果'))
     const dialog = await screen.findByRole('dialog')
     fireEvent.click(dialog)
 
@@ -833,7 +867,7 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '审核候选结果' }))
+    await user.click(await findRunInlineAction('审核候选结果'))
     await user.click(await screen.findByRole('tab', { name: '编辑 YAML' }))
     const editor = await screen.findByRole('textbox', { name: '候选结果 YAML' })
     await user.click(editor)
@@ -851,7 +885,7 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '审核候选结果' }))
+    await user.click(await findRunInlineAction('审核候选结果'))
     await user.click(await screen.findByRole('tab', { name: '编辑 YAML' }))
     const editor = await screen.findByRole('textbox', { name: '候选结果 YAML' })
     await user.click(editor)
@@ -863,7 +897,7 @@ describe('UI 用例生成任务详情', () => {
     expect(screen.getByRole('textbox', { name: '候选结果 YAML' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '放弃修改' }))
-    await user.click(screen.getByRole('button', { name: '审核候选结果' }))
+    await user.click(await findRunInlineAction('审核候选结果'))
     const reopenedEditor = await screen.findByRole('textbox', { name: '候选结果 YAML' })
     await waitFor(() => expect(reopenedEditor).toHaveTextContent('登录成功'))
     expect(reopenedEditor).not.toHaveTextContent('尚未保存的登录用例')
@@ -878,13 +912,13 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '审核候选结果' }))
+    await user.click(await findRunInlineAction('审核候选结果'))
     await user.click(await screen.findByRole('tab', { name: '编辑 YAML' }))
     await user.click(screen.getByRole('button', { name: '拒绝候选' }))
 
     expect(await screen.findByText('已拒绝')).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: '候选结果 YAML' })).toHaveAttribute('aria-readonly', 'true')
-    expect(screen.queryByRole('button', { name: '导入正式 UI 套件' })).not.toBeInTheDocument()
+    expect(queryVisibleMenuItems('导入正式 UI 套件')).toHaveLength(0)
   })
 
   it('空白候选结果不能审核', async () => {
@@ -895,7 +929,7 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '审核候选结果' }))
+    await user.click(await findRunInlineAction('审核候选结果'))
     expect(await screen.findByRole('button', { name: '批准候选' })).toBeDisabled()
     expect(screen.getByRole('button', { name: '拒绝候选' })).toBeDisabled()
   })

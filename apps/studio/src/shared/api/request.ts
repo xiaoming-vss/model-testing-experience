@@ -22,6 +22,17 @@ export type RequestConfig = {
   normalizeListResponse?: boolean
 }
 
+/** 把筛选条件拼成查询串，跳过 undefined 与空字符串。 */
+export function buildQuery(params: Record<string, string | number | undefined>) {
+  const search = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === '') return
+    search.set(key, String(value))
+  })
+  const query = search.toString()
+  return query ? `?${query}` : ''
+}
+
 export function listItems<T>(response: ListResponse<T> | { items: T[] } | T[] | undefined | null): T[] {
   if (!response) return []
   if (Array.isArray(response)) return (response as { items?: T[] }).items ?? response

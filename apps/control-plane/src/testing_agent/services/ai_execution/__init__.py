@@ -33,8 +33,12 @@ FIELDS = {
     "case_names": "caseNames",
     "extracting_text": "firstStepOutput",
     "writing_requirement": "secondStepOutput",
+    "relation_analysis": "caseRelations",
 }
 TERMINAL = {"success", "failed", "error", "canceled"}
+# 派生产物不需要人工审核：功能链路的图谱阶段，以及整体就是派生产物的测试单图谱任务。
+NO_REVIEW_STAGES = {"relation_analysis"}
+NO_REVIEW_KINDS = {"test_order_graph"}
 
 
 def ident():
@@ -74,10 +78,24 @@ def output_format(value):
 
 def layout(kind):
     if kind == "functional_case_generate":
-        return ["requirement_analysis", "case_names", "detailed_cases"]
+        return [
+            "requirement_analysis",
+            "case_names",
+            "detailed_cases",
+            "relation_analysis",
+        ]
     if kind == "requirement_analysis":
         return ["extracting_text", "writing_requirement", "feature_understanding"]
     return ["generate"]
+
+
+def final_stage(stages):
+    """detailed_cases 携带 resultYaml 与运行级审核；relation_analysis 只是派生产物。"""
+
+    for stage in stages:
+        if stage.stage == "detailed_cases":
+            return stage
+    return stages[-1]
 
 
 def graph(session, run):
@@ -138,21 +156,32 @@ def ensure_stages(session, run, kind):
     stages, attempts = graph(session, run)
     if stages:
         return stages, attempts
-    for i, name in enumerate(layout(kind)):
+    names = layout(kind)
+    for i, name in enumerate(names):
+        if name in NO_REVIEW_STAGES or kind in NO_REVIEW_KINDS:
+            review_status = "not_required"
+        elif run.checkpoint_enabled or name == final_review_stage(kind, names):
+            review_status = "pending"
+        else:
+            review_status = "not_required"
         stage = Stage(
             id=ident(),
             run_id=run.run_id,
             stage=name,
             stage_order=i,
             execution_status="pending",
-            review_status="pending"
-            if run.checkpoint_enabled or i == len(layout(kind)) - 1
-            else "not_required",
+            review_status=review_status,
         )
         session.add(stage)
         stages.append(stage)
     session.flush()
     return stages, attempts
+
+
+def final_review_stage(kind, names):
+    """非 checkpoint 运行只有最终产物阶段承接运行级审核。"""
+
+    return "detailed_cases" if kind == "functional_case_generate" else names[-1]
 
 
 def publish(attempt, stage, value):
@@ -171,7 +200,8 @@ def sync_run(session, run):
     )
     stages, attempts = ensure_stages(session, run, kind)
     by_name = {s.stage: s for s in stages}
-    final = stages[-1]
+    stage_by_id = {s.id: s for s in stages}
+    final = final_stage(stages)
     current = by_name.get(
         run.current_stage, final if run.current_stage == "completed" else stages[0]
     )
@@ -196,6 +226,21 @@ def sync_run(session, run):
             ),
             None,
         )
+        if match is None:
+            # A follow-up stage's worker (relation analysis) may finish while the run
+            # pointer already moved on; the worker's own attempt decides the stage.
+            existing = next(
+                (
+                    a
+                    for a in attempts.values()
+                    if a.worker_task_id == worker.task_id
+                    and stage_by_id[a.stage_id].stage_order > current.stage_order
+                ),
+                None,
+            )
+            if existing is not None:
+                current = stage_by_id[existing.stage_id]
+                match = existing
         if match is None:
             if not getattr(run, "_worker_event", None):
                 run.result_summary_json = {}
@@ -404,9 +449,10 @@ def project(session, run):
 def _project(run, stages, attempts, imported):
     if not stages:
         raise ErrNotFound
+    final = final_stage(stages)
     current = next(
         (stage for stage in stages if stage.stage == run.current_stage),
-        stages[-1] if run.current_stage == "completed" else stages[0],
+        final if run.current_stage == "completed" else stages[0],
     )
     latest = max(
         (a for a in attempts.values() if a.stage_id == current.id),
@@ -429,11 +475,11 @@ def _project(run, stages, attempts, imported):
             if artifact.output_format == "json":
                 value = json.loads(value)
             config[FIELDS[stage.stage]] = value
-        elif stage is stages[-1]:
+        elif stage is final:
             run.result_yaml = value or ""
     current = next(
         (stage for stage in stages if stage.stage == run.current_stage),
-        stages[-1] if run.current_stage == "completed" else stages[0],
+        final if run.current_stage == "completed" else stages[0],
     )
     latest = max(
         (a for a in attempts.values() if a.stage_id == current.id),
@@ -459,7 +505,6 @@ def _project(run, stages, attempts, imported):
         )
         run.stage_status = stage_status
     run.config_json = config
-    final = stages[-1]
     if final.review_status != "not_required":
         for field, value in (
             ("review_status", final.review_status),

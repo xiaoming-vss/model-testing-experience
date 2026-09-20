@@ -28,14 +28,16 @@ def approved_run() -> SimpleNamespace:
         error_message="",
         config_json={},
         result_yaml="""cases:
-  - module: Login
+  - case_id: candidate-login
+    module: Login
     title: " login works "
     preconditions: New account exists
     steps: Enter new credentials
     expectedResults: New home page opens
     priority: P0
     caseType: regression
-  - module: Checkout
+  - case_id: candidate-submit
+    module: Checkout
     title: Submit order
     preconditions: Cart has an item
     steps: Click submit
@@ -134,6 +136,9 @@ class FunctionImportRepository:
     async def list_function_cases(self, suite_id: str):
         return [case for case in self.cases.values() if case.suite_id == suite_id]
 
+    async def get_case(self, case_id: str):
+        return self.cases.get(case_id)
+
     async def max_function_case_order_by_suite(self, suite_id: str) -> int:
         return max(
             (case.order_no for case in self.cases.values() if case.suite_id == suite_id),
@@ -223,6 +228,9 @@ def test_function_import_previews_conflicts_then_overwrites_across_all_suites():
     ]
     assert repository.cases["case-existing"].title == "login works"
     assert repository.cases["case-existing"].preconditions == "New account exists"
+    # 覆盖写入的用例保持原 ID；新用例沿用候选编号。
+    assert repository.cases["case-existing"].case_id == "case-existing"
+    assert repository.cases["candidate-submit"].title == "Submit order"
     assert any(case.title == "Submit order" for case in repository.cases.values())
     assert repository.commits == 1
 

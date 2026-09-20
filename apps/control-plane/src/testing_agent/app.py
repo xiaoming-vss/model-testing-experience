@@ -38,6 +38,7 @@ from testing_agent.routers.shared_services import router as shared_services_rout
 from testing_agent.routers.sprint_code_overview import router as sprint_code_overview_router
 from testing_agent.routers.sprint_metrics import router as sprint_metrics_router
 from testing_agent.routers.sprints import router as sprints_router
+from testing_agent.routers.test_orders import router as test_orders_router
 from testing_agent.routers.test_report_ai_tasks import router as test_report_ai_tasks_router
 from testing_agent.routers.ui_ai_tasks import router as ui_ai_tasks_router
 from testing_agent.routers.ui_runs import router as ui_runs_router
@@ -131,6 +132,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(sprints_router, tags=["Sprints"])
     v1.include_router(requirements_router, tags=["Requirements"])
     v1.include_router(function_tests_router, tags=["Function Tests"])
+    v1.include_router(test_orders_router, tags=["Test Orders"])
     v1.include_router(api_tests_router, tags=["API Tests"])
     v1.include_router(api_case_router, tags=["API Tests"])
     v1.include_router(ui_tests_router, tags=["UI Tests"])

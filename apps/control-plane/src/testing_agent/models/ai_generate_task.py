@@ -17,6 +17,7 @@ class AiGenerateTask(Base):
         Index("ix_ai_generate_tasks_project_id", "project_id"),
         Index("ix_ai_generate_tasks_sprint_id", "sprint_id"),
         Index("ix_ai_generate_tasks_requirement_id", "requirement_id"),
+        Index("ix_ai_generate_tasks_order_id", "order_id"),
         Index("ix_ai_generate_tasks_creator_user_id", "creator_user_id"),
     )
     id: Mapped[IdPk]
@@ -34,6 +35,8 @@ class AiGenerateTask(Base):
     )
     sprint_id: Mapped[str] = mapped_column(String(64), nullable=False)
     requirement_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    # 非需求域任务（测试报告、测试图谱）以其他业务实体为锚点，测试图谱锚在测试单上。
+    order_id: Mapped[str] = mapped_column(String(64), nullable=False, default="")
     creator_user_id: Mapped[str] = mapped_column(String(64), nullable=False)
     source_type: Mapped[str] = mapped_column(String(30), nullable=False)
     source_content: Mapped[str] = mapped_column(LONGTEXT, nullable=False)

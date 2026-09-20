@@ -1,0 +1,7 @@
+
+/* 功能用例指标改由平台测试单产生后，没有测试单的迭代显示空态 */
+.sprint-dashboard-test-empty {
+  grid-column: 2 / -1;
+  color: var(--tp-text-muted, #727786);
+  font-size: 12.5px;
+}

@@ -1,3 +1,5 @@
+from uuid import UUID
+
 import pytest
 from pydantic import ValidationError
 from sqlalchemy import select
@@ -80,6 +82,28 @@ async def test_structured_create_edit_and_legacy_update(db):
     assert not {"preconditions", "steps", "expected_results"} & set(
         FunctionTestCase.__table__.columns.keys()
     )
+
+
+@pytest.mark.asyncio
+async def test_manual_case_creation_stores_a_platform_generated_identifier(db):
+    prepare(db)
+    service = FunctionTestCaseService(FunctionTestCaseRepository(AsyncSessionAdapter(db)))
+    created = [
+        await service.create("u1", "function-suite", FunctionCaseRequest(title=title))
+        for title in ("人工用例甲", "人工用例乙")
+    ]
+
+    identifiers = [case["caseId"] for case in created]
+    for identifier in identifiers:
+        assert UUID(identifier).version == 4
+    assert len(set(identifiers)) == 2
+
+    db.expunge_all()
+    stored = {case.title: case.case_id for case in db.scalars(select(FunctionTestCase))}
+    assert stored == {"人工用例甲": identifiers[0], "人工用例乙": identifiers[1]}
+
+    edited = await service.update("u1", identifiers[0], {"title": "人工用例甲（改）"})
+    assert edited["caseId"] == identifiers[0]
 
 
 @pytest.mark.asyncio

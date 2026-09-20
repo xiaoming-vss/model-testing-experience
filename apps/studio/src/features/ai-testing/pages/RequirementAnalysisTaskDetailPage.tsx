@@ -1,7 +1,10 @@
 import { RevisionDivider, RevisionSidePanel } from '../components/RevisionSidePanel'
+import { RunArtifacts, RunPipelineStatus } from '../components/RunPipelineStatus'
+import { RunHistoryTable, RunRowActions, type RunMenuAction } from '../components/RunHistoryTable'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { usePersonalLlmChoice } from '../hooks/usePersonalLlmChoice'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
+import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { Alert, Button, Card, Empty, Form, Modal, Popconfirm, Spin, Tag } from 'antd'
@@ -142,6 +145,7 @@ export function RequirementAnalysisTaskDetailPage() {
   })
 
   const task = taskQuery.data
+  const { can } = useProjectAccess(task?.projectId ?? '')
   const personalLlm = usePersonalLlmChoice(task?.projectId)
 
   const boundRequirementQuery = useQuery({
@@ -223,6 +227,8 @@ export function RequirementAnalysisTaskDetailPage() {
     refetchInterval: activeSection === 'runHistory' && selectedRunId ? 5000 : false,
   })
   const selectedRun = selectedRunQuery.data
+  const resolveRunRecord = (record: RequirementAnalysisTaskRun) =>
+    record.runId === selectedRunId && selectedRun ? selectedRun : record
   const selectedRunRecord = useMemo(
     () => runRecords.find((record) => record.runId === selectedRunId),
     [runRecords, selectedRunId],
@@ -806,108 +812,110 @@ export function RequirementAnalysisTaskDetailPage() {
                           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="运行记录加载中..." />
                         </div>
                       ) : runRecords.length > 0 ? (
-                        <div className="ai-task-run-history-list single-list">
-                          {runRecords.map((record, index) => {
-                            const active = record.runId === selectedRunId
-                            const recordStatus = active && selectedRun ? selectedRun.status : record.status
-                            const recordFailed = ['failed', 'error'].includes(String(recordStatus ?? '').toLowerCase())
-                            const recordErrorMessage = active && selectedRun ? selectedRun.errorMessage : record.errorMessage
-                            const recordHasErrorMessage = Boolean(recordErrorMessage?.trim())
-                            const recordStage = active && selectedRun ? selectedRun.currentStage : record.currentStage
-                            const currentRecord = active && selectedRun ? selectedRun : record
-                            const canRetry = recordFailed && record.runId &&
-                              ['extracting_text', 'writing_requirement', 'feature_understanding'].includes(recordStage ?? '') &&
-                              ['failed', 'retrying'].includes(currentRecord.stageStatus ?? '') &&
-                              currentRecord.reviewStatus !== 'approved' && currentRecord.importStatus !== 'imported'
-                            const recordStageMeta = getRequirementAnalysisStageMeta(
-                              recordStage,
+                        <RunHistoryTable<RequirementAnalysisTaskRun>
+                          rows={runRecords}
+                          getRunId={(record) => record.runId}
+                          selectedRunId={selectedRunId}
+                          resolveRow={resolveRunRecord}
+                          onSelect={(runId) => setSelectedRunRecordId(runId ?? null)}
+                          renderStatus={(row) => {
+                            const data = resolveRunRecord(row)
+                            const recordStageMeta = getRequirementAnalysisStageMeta(data.currentStage)
+                            return (
+                              <RunPipelineStatus
+                                run={data}
+                                stages={['generate', 'review']}
+                                stageTag={data.currentStage && data.currentStage !== 'completed'
+                                  ? <Tag color={recordStageMeta.color}>{recordStageMeta.label}</Tag>
+                                  : null}
+                              />
                             )
-                            const showRecordStage = recordStage && recordStage !== 'completed'
+                          }}
+                          renderArtifacts={(row) => {
+                            const data = resolveRunRecord(row)
+                            const recordStatus = String(data.status ?? '').toLowerCase()
                             const reachedStageIndex = [
                               'extracting_text', 'writing_requirement', 'feature_understanding', 'completed',
-                            ].indexOf(recordStage ?? '')
-                            const visibleSections = runResultSectionDefinitions.filter((section, index) => {
-                              if (section.key === 'errorMessage') return recordFailed && recordHasErrorMessage
-                              return String(recordStatus ?? '').toLowerCase() === 'success' || index <= reachedStageIndex
-                            })
-
+                            ].indexOf(data.currentStage ?? '')
                             return (
-                              <div
-                                key={record.runId ?? `${index}`}
-                                className={`ai-task-run-history-record-row${active ? ' active' : ''}`}
-                                onClick={() => setSelectedRunRecordId(record.runId ?? null)}
-                                role="button"
-                                tabIndex={0}
-                                onKeyDown={(event) => {
-                                  if (event.key === 'Enter' || event.key === ' ') {
-                                    event.preventDefault()
-                                    setSelectedRunRecordId(record.runId ?? null)
-                                  }
+                              <RunArtifacts
+                                artifacts={runResultSectionDefinitions
+                                  .filter((section) => section.key !== 'errorMessage')
+                                  .map((section, index) => ({
+                                    key: section.key,
+                                    label: section.label,
+                                    available: recordStatus === 'success' || index <= reachedStageIndex,
+                                  }))}
+                                onOpen={(key) => {
+                                  const section = runResultSectionDefinitions.find((item) => item.key === key)
+                                  if (!section) return
+                                  setSelectedRunRecordId(row.runId ?? null)
+                                  setRunResultModal({ key: section.key, label: section.label, mode: 'view' })
                                 }}
-                              >
-                                <div className="ai-task-run-history-record-main">
-                                  <div className="ai-task-run-history-record-identity">
-                                    <span className="ai-task-run-history-record-index">#{index + 1}</span>
-                                    <span className="ai-task-run-history-record-name" title={record.runId || '未命名记录'}>
-                                      {record.runId || '未命名记录'}
-                                    </span>
-                                  </div>
-                                  <div className="ai-task-run-history-record-meta">
-                                    <span className="ai-task-run-history-record-status">
-                                      {renderApiCaseGenerateTaskRunStatusTag(recordStatus)}
-                                    </span>
-                                    {showRecordStage ? (
-                                      <span className="ai-task-run-history-record-stage">
-                                        <Tag color={recordStageMeta.color}>{recordStageMeta.label}</Tag>
-                                      </span>
-                                    ) : null}
-                                  </div>
-                                </div>
-                                <div className="ai-task-run-history-record-actions">
-                                  {canRetry ? (
-                                    <ProjectActionButton action="execute"
-                                      size="small"
-                                      loading={retryStageMutation.isPending && retryStageMutation.variables?.runId === record.runId}
-                                      disabled={stageActionPending}
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        if (stageActionPending || !record.runId || !recordStage) return
-                                        retryStageMutation.mutate({ runId: record.runId, stage: recordStage })
-                                      }}
-                                    >
-                                      重试阶段
-                                    </ProjectActionButton>
-                                  ) : null}
-                                  {visibleSections.map((section) => {
-                                    const reviewField = getRequirementAnalysisStageField(recordStage)
-                                    const showStageReview = section.key === reviewField?.key &&
-                                      currentRecord.checkpointEnabled && recordStatus === 'waiting_review' &&
-                                      currentRecord.stageStatus === 'waiting_review' && Boolean(reviewField)
-                                    const sectionKey = section.key
-                                    const sectionMode = showStageReview ? 'review' : 'view'
-                                    const isOpen = active && runResultModal?.key === sectionKey && runResultModal.mode === sectionMode
-                                    const sectionLabel = showStageReview ? `${section.label}（审核）` : section.label
-
-                                    return (
-                                      <button
-                                        key={section.key}
-                                        type="button"
-                                        className={`ai-task-run-result-popover-btn${isOpen ? ' active' : ''}${showStageReview ? ' review' : ''}`}
+                              />
+                            )
+                          }}
+                          renderActions={(row) => {
+                            const data = resolveRunRecord(row)
+                            const recordStatus = String(data.status ?? '').toLowerCase()
+                            const recordFailed = ['failed', 'error'].includes(recordStatus)
+                            const recordHasErrorMessage = Boolean(data.errorMessage?.trim())
+                            const reviewField = getRequirementAnalysisStageField(data.currentStage)
+                            const showStageReview = Boolean(
+                              reviewField && data.checkpointEnabled && recordStatus === 'waiting_review' && data.stageStatus === 'waiting_review',
+                            )
+                            const canRetry = recordFailed && row.runId &&
+                              ['extracting_text', 'writing_requirement', 'feature_understanding'].includes(data.currentStage ?? '') &&
+                              ['failed', 'retrying'].includes(data.stageStatus ?? '') &&
+                              data.reviewStatus !== 'approved' && data.importStatus !== 'imported'
+                            const menuItems: RunMenuAction[] = [
+                              ...(canRetry && can('execute')
+                                ? [{ key: 'retryStage', label: '重试阶段', disabled: stageActionPending }]
+                                : []),
+                            ]
+                            return (
+                              <RunRowActions
+                                inline={
+                                  <>
+                                    {/* 审核是本行最需要用户处理的动作，直接放在操作列，「更多」只留状态变更类操作。 */}
+                                    {showStageReview && reviewField ? (
+                                      <Button
+                                        size="small"
+                                        type="primary"
                                         onClick={(event) => {
                                           event.stopPropagation()
-                                          setSelectedRunRecordId(record.runId ?? null)
-                                          setRunResultModal({ key: sectionKey, label: sectionLabel, mode: sectionMode })
+                                          setSelectedRunRecordId(row.runId ?? null)
+                                          setRunResultModal({ key: reviewField.key, label: `${reviewField.label}（审核）`, mode: 'review' })
                                         }}
                                       >
-                                        {sectionLabel}
+                                        审核
+                                      </Button>
+                                    ) : null}
+                                    {recordFailed && recordHasErrorMessage ? (
+                                      <button
+                                        type="button"
+                                        className="ai-task-run-result-popover-btn"
+                                        onClick={(event) => {
+                                          event.stopPropagation()
+                                          setSelectedRunRecordId(row.runId ?? null)
+                                          setRunResultModal({ key: 'errorMessage', label: '错误信息', mode: 'view' })
+                                        }}
+                                      >
+                                        错误信息
                                       </button>
-                                    )
-                                  })}
-                                </div>
-                              </div>
+                                    ) : null}
+                                  </>
+                                }
+                                menuItems={menuItems}
+                                onMenuAction={(key) => {
+                                  if (key === 'retryStage' && row.runId && data.currentStage) {
+                                    retryStageMutation.mutate({ runId: row.runId, stage: data.currentStage })
+                                  }
+                                }}
+                              />
                             )
-                          })}
-                        </div>
+                          }}
+                        />
                       ) : (
                         <div className="ai-task-run-history-placeholder">
                           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无运行记录" />

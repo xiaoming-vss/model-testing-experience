@@ -73,9 +73,7 @@ async def require_project_access(
 async def require_project_id(
     session: AsyncSession, user_id: str, project_id: str, action: ProjectAction = "read"
 ) -> Project:
-    project = await session.scalar(
-        select(Project).where(Project.project_id == project_id)
-    )
+    project = await session.scalar(select(Project).where(Project.project_id == project_id))
     if project is None:
         raise ErrNotFound
     await require_project_access(session, user_id, project, action)

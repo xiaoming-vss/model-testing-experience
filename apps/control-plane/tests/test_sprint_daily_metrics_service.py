@@ -15,6 +15,8 @@ class FakeSprintDailyMetricsRepository:
         self.metric = None
         self.added = None
         self.committed = False
+        # 功能用例的执行状态来自本地测试单条目（不再走禅道），由用例按需设置。
+        self.function_entry_statuses: list[str] = []
         self.sprint = SimpleNamespace(
             sprint_id="s1",
             project_id="p1",
@@ -90,6 +92,9 @@ class FakeSprintDailyMetricsRepository:
     async def refresh(self, metric):
         return None
 
+    async def list_function_entry_statuses_by_sprint(self, sprint_id):
+        return list(self.function_entry_statuses)
+
 
 class FakeIntegrationConnectionService:
     async def resolve_personal_connection(
@@ -152,6 +157,8 @@ class FakeZentaoResourceClient:
 @pytest.mark.asyncio
 async def test_sprint_daily_metrics_upsert_builds_snapshot_from_sources():
     repository = FakeSprintDailyMetricsRepository()
+    # 功能用例指标来自本地测试单条目：下面三条状态推导出 3/2/1 与 1 通过 1 未通过。
+    repository.function_entry_statuses = ["passed", "failed", "pending"]
     service = SprintDailyMetricsService(
         repository,
         FakeIntegrationConnectionService(),

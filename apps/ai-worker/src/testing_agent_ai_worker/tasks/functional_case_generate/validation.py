@@ -47,14 +47,26 @@ def _constant(value):
     raise ValueError(f"non-standard JSON value: {value}")
 
 
-def validate_output(stage: str, raw: str, previous_cases=()):
+def validate_output(stage: str, raw: str, previous_cases=(), expected_case_ids=None):
     parsed = json.loads(normalize_json(raw), object_pairs_hook=_pairs, parse_constant=_constant)
     model = CONTRACTS[stage].model_validate(parsed)
     if stage == "detailed_cases" and previous_cases:
         DetailedCasesOutput.model_validate(
             {"cases": [*previous_cases, *model.model_dump()["cases"]]}
         )
-    return model.model_dump_json()
+    if stage == "relation_analysis" and expected_case_ids is not None:
+        referenced = {
+            *(case_id for path in model.main_paths for case_id in path.case_ids),
+            *(edge.from_case_id for edge in model.edges),
+            *(edge.to_case_id for edge in model.edges),
+        }
+        unknown = referenced - set(expected_case_ids)
+        if unknown:
+            raise ValueError(
+                "所有引用的 case_id 必须逐字存在于输入用例集合，未知 ID："
+                + ", ".join(sorted(unknown))
+            )
+    return model.model_dump_json(by_alias=True)
 
 
 def issues_for(exc):
@@ -74,9 +86,11 @@ def issues_for(exc):
     return [{"path": "$", "code": "invalid_json", "expected": str(exc), "actual": ""}]
 
 
-async def generate_validated(*, stage, inputs, generate, previous_cases=(), module="", batch=0):
+async def generate_validated(
+    *, stage, inputs, generate, previous_cases=(), module="", batch=0, expected_case_ids=None
+):
     """Return canonical JSON, or raise without publishing any invalid artifact."""
-    schema = json.dumps(CONTRACTS[stage].model_json_schema(), ensure_ascii=False)
+    schema = json.dumps(CONTRACTS[stage].model_json_schema(by_alias=True), ensure_ascii=False)
     original = inputs + "\n\n【输出 JSON Schema】\n" + schema
     prompt = original
     ctx = context.get()
@@ -115,7 +129,9 @@ async def generate_validated(*, stage, inputs, generate, previous_cases=(), modu
             ]
         else:
             try:
-                normalized = validate_output(stage, raw, previous_cases)
+                normalized = validate_output(
+                    stage, raw, previous_cases, expected_case_ids=expected_case_ids
+                )
             except (ValueError, TypeError) as exc:
                 errors = issues_for(exc)
         if ctx:

@@ -24,9 +24,7 @@ class SharedServiceService:
 
     async def project(self, user_id, project_id, action="read"):
         project = await self.session.scalar(
-            select(Project)
-            .where(Project.project_id == project_id)
-            .with_for_update()
+            select(Project).where(Project.project_id == project_id).with_for_update()
         )
         if project is None:
             raise ErrNotFound

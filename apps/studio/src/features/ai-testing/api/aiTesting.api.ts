@@ -163,6 +163,11 @@ export const aiTestingApi = {
     method: 'POST',
     body: JSON.stringify(body),
   }),
+  generateFunctionalCaseRelationAnalysis: (runId: string) =>
+    request<FunctionalCaseGenerateTaskRun>(`/v1/function-case-generate-task-runs/${runId}/relation-analysis`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    }),
   retryFunctionalCaseGenerateTaskRunStage: (
     runId: string,
     body: RetryFunctionalCaseGenerateTaskRunStagePayload,

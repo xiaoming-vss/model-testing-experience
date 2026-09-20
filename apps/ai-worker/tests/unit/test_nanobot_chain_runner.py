@@ -2,6 +2,7 @@ import json
 import sys
 import unittest
 from pathlib import Path
+from uuid import UUID
 
 from tests.unit.tasks.functional_case_generate.fixtures import analysis, case
 
@@ -114,8 +115,10 @@ class NanobotChainRunnerTests(unittest.IsolatedAsyncioTestCase):
             [
                 json.dumps(analysis(), ensure_ascii=False, separators=(",", ":")),
                 case_names_json,
-                json.dumps({"cases": [case("验证登录成功")]}),
-                json.dumps({"cases": [case("验证项目新增成功", "项目管理")]}),
+                json.dumps({"cases": [{**case("验证登录成功"), "case_id": "MODEL-99"}]}),
+                json.dumps(
+                    {"cases": [{**case("验证项目新增成功", "项目管理"), "case_id": "MODEL-99"}]}
+                ),
             ]
         )
         stage_outputs: list[str] = []
@@ -143,10 +146,19 @@ class NanobotChainRunnerTests(unittest.IsolatedAsyncioTestCase):
             json.dumps(analysis(), ensure_ascii=False, separators=(",", ":")),
         )
         self.assertEqual(json.loads(result.case_names_output), json.loads(case_names_json))
+        generated_cases = json.loads(result.detailed_cases_output)["cases"]
         self.assertEqual(
-            json.loads(result.detailed_cases_output),
-            {"cases": [case("验证登录成功"), case("验证项目新增成功", "项目管理")]},
+            [
+                {key: value for key, value in item.items() if key != "case_id"}
+                for item in generated_cases
+            ],
+            [case("验证登录成功"), case("验证项目新增成功", "项目管理")],
         )
+        identifiers = [item["case_id"] for item in generated_cases]
+        self.assertEqual(len(set(identifiers)), len(identifiers))
+        for identifier in identifiers:
+            self.assertEqual(UUID(identifier).version, 4)
+        self.assertTrue(all(identifier != "MODEL-99" for identifier in identifiers))
         self.assertEqual(
             [json.loads(value) for value in stage_outputs],
             [analysis(), json.loads(case_names_json)],

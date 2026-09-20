@@ -32,6 +32,10 @@ def longtext_sqlite(type_, compiler, **kw):
     return "TEXT"
 
 
+def stage_by_name(stages, name):
+    return next(s for s in stages if s.stage == name)
+
+
 @pytest.fixture
 def db():
     engine = create_engine("sqlite://")
@@ -145,7 +149,12 @@ def event(db, run, worker, *, status, stage, config=None, output=None):
 def test_stages_and_queue_commit_together(db):
     run, worker = create_run(db)
     stages, attempts = graph(db, run)
-    assert [s.stage for s in stages] == ["requirement_analysis", "case_names", "detailed_cases"]
+    assert [s.stage for s in stages] == [
+        "requirement_analysis",
+        "case_names",
+        "detailed_cases",
+        "relation_analysis",
+    ]
     active = attempts[stages[0].active_attempt_id]
     assert active.worker_task_id == worker.task_id and active.operation == "generate"
     assert active.input_snapshot_json["source"] == {"sourceContent": "sample"}
@@ -228,12 +237,14 @@ def test_noncheckpoint_full_chain_and_atomic_final_output(db):
     )
     event(db, run, worker, status="running", stage="detailed_cases")
     stages, attempts = graph(db, run)
-    assert stages[-1].current_artifact_attempt_id is None
+    assert stage_by_name(stages, "detailed_cases").current_artifact_attempt_id is None
     event(db, run, worker, status="success", stage="completed", output='{"cases":[]}')
     stages, attempts = graph(db, run)
-    assert all(s.current_artifact_attempt_id for s in stages)
+    # relation_analysis 是按钮触发的派生产物，全链完成时不产生任何 attempt。
+    published = [s for s in stages if s.stage != "relation_analysis"]
+    assert all(s.current_artifact_attempt_id for s in published)
     assert all(s.active_attempt_id is None for s in stages)
-    assert all(s.execution_status == "success" for s in stages)
+    assert all(s.execution_status == "success" for s in published)
     assert all(a.status == "success" for a in attempts.values())
     assert len(attempts) == 3
 
@@ -280,7 +291,9 @@ def test_stage_review_and_import_are_separate(db):
     imports = list(db.scalars(select(Import)))
     assert len(imports) == 1
     assert imports[0].imported_by == "importer"
-    assert imports[0].artifact_attempt_id == graph(db, run)[0][-1].current_artifact_attempt_id
+    assert imports[0].artifact_attempt_id == stage_by_name(
+        graph(db, run)[0], "detailed_cases"
+    ).current_artifact_attempt_id
 
 
 def test_roll_back_queue_and_attempt(db):
@@ -440,7 +453,7 @@ def test_final_revision_publishes_only_after_complete(db, checkpoint):
     )
     assert run.result_yaml == '{"cases":["new"]}'
     assert "revisionInstruction" not in run.config_json
-    final = graph(db, run)[0][-1]
+    final = stage_by_name(graph(db, run)[0], "detailed_cases")
     assert final.review_status == "pending"
     assert graph(db, run)[1][final.current_artifact_attempt_id].worker_task_id == revised.task_id
 

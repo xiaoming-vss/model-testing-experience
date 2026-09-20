@@ -11,10 +11,12 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { LlmConnectionSelectModal } from '../components/LlmConnectionSelectModal'
 import { UiImportConflictModal } from '../components/UiImportConflictModal'
 import { ImportMigrationWarning } from '../components/ImportMigrationWarning'
+import { RunHistoryTable, RunRowActions, type RunMenuAction } from '../components/RunHistoryTable'
+import { RunPipelineStatus } from '../components/RunPipelineStatus'
 import { validateUiSourceArchive } from '../utils/uiSourceArchive'
 import type { UiCaseGenerateTaskRun, UiCaseGenerateTaskRunImportConflict } from '../types'
 import { parseUiCaseCandidate } from '../utils/uiCaseCandidate'
-import { isGenerateTaskRunImportable, renderGenerateTaskImportStatusTag, renderGenerateTaskReviewStatusTag } from '../utils/taskStatus'
+import { isGenerateTaskRunImportable } from '../utils/taskStatus'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
 import { api, ApiError, listItems, type ListResponse } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
@@ -30,16 +32,6 @@ function formatBytes(value?: number) {
   return `${Number((value / 1024 / 1024).toFixed(1))} MiB`
 }
 
-function statusTag(status?: string) {
-  const colors: Record<string, string> = {
-    pending: 'gold',
-    claimed: 'green',
-    running: 'green',
-    success: 'success',
-    failed: 'error',
-  }
-  return <Tag color={colors[status ?? ''] ?? 'default'}>{status ?? '-'}</Tag>
-}
 
 function archiveErrorMessage(error: unknown) {
   const messageText = getErrorMessage(error)
@@ -226,6 +218,8 @@ export function UiCaseGenerateTaskDetailPage() {
   }, [selectedRun?.resultYaml, selectedRun?.runId])
 
   const hasActiveRun = runs.some((run) => activeRunStatuses.has(run.status ?? ''))
+  const resolveRunRecord = (record: UiCaseGenerateTaskRun) =>
+    record.runId === selectedRunId && selectedRun ? selectedRun : record
   const { can } = useProjectAccess(taskQuery.data?.projectId ?? '')
   const candidateEditable = selectedRun?.status === 'success' && selectedRun.reviewStatus === 'pending'
   const canEditCandidate = can('write') && candidateEditable
@@ -518,67 +512,69 @@ export function UiCaseGenerateTaskDetailPage() {
                   </div>
                   <div className="ai-task-detail-main-body">
                     {runsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(runsQuery.error)} /> : null}
-                    {runsQuery.isLoading ? <Spin /> : runs.length ? <div className="ai-task-run-history-list single-list">{runs.map((record, index) => {
-                const active = record.runId === selectedRunId
-                const displayedRun = active && selectedRun ? selectedRun : record
-                const recordSucceeded = displayedRun.status === 'success'
-                const displayedImportedSuiteId = displayedRun.importedTargets.find((target) => target.targetType === 'ui_suite')?.targetId
-                return <div key={record.runId} className={`ai-task-run-history-record-row${active ? ' active' : ''}`} role="button" tabIndex={0} onClick={() => selectRun(record.runId)} onKeyDown={(event) => { if (event.key === 'Enter') selectRun(record.runId) }}>
-                  <div className="ai-task-run-history-record-main"><div className="ai-task-run-history-record-identity"><span className="ai-task-run-history-record-index">#{index + 1}</span><span className="ai-task-run-history-record-name">{record.runId}</span></div><div className="ai-task-run-history-record-meta"><span className="ai-task-run-history-record-status">{statusTag(displayedRun.status)}</span>{recordSucceeded ? <span className="ai-task-run-history-review-status">{renderGenerateTaskReviewStatusTag(displayedRun.reviewStatus)}</span> : null}{recordSucceeded ? <span className="ai-task-run-history-review-status">{renderGenerateTaskImportStatusTag(displayedRun.importStatus)}</span> : null}</div></div>
-                  <div className="ai-task-run-history-record-actions">
-                    <button
-                      type="button"
-                      className="ai-task-run-result-popover-btn"
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        selectRun(record.runId)
-                        setCandidateModalOpen(true)
-                      }}
-                    >
-                      结果 YAML
-                    </button>
-                    {active && selectedRun ? (
+                    {runsQuery.isLoading ? (
+                      <Spin />
+                    ) : runs.length ? (
                       <>
-                        <ProjectActionButton action="read" readOnlyLabel="查看候选结果"
-                          size="small"
-                          type="primary"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            setCandidateModalOpen(true)
+                        <RunHistoryTable<UiCaseGenerateTaskRun>
+                          rows={runs}
+                          getRunId={(record) => record.runId}
+                          selectedRunId={selectedRunId}
+                          resolveRow={resolveRunRecord}
+                          onSelect={(runId) => selectRun(runId)}
+                          renderStatus={(row) => <RunPipelineStatus run={resolveRunRecord(row)} />}
+                          getReviewedAt={(row) => resolveRunRecord(row).reviewedAt}
+                          getReviewComment={(row) => resolveRunRecord(row).reviewComment}
+                          getImportedAt={(row) => resolveRunRecord(row).importedAt}
+                          renderActions={(row) => {
+                            const data = resolveRunRecord(row)
+                            const importedSuiteId = (data.importedTargets ?? []).find((target) => target.targetType === 'ui_suite')?.targetId
+                            const label = canEditCandidate && data.runId === selectedRunId ? '审核候选结果' : '查看候选结果'
+                            const menuItems: RunMenuAction[] = [
+                              ...(can('execute') && isGenerateTaskRunImportable(data)
+                                ? [{ key: 'importSuite', label: '导入正式 UI 套件', disabled: importMutation.isPending }]
+                                : []),
+                              ...(data.importStatus === 'imported' && importedSuiteId
+                                ? [{ key: 'openSuite', label: '查看正式套件' }]
+                                : []),
+                            ]
+                            return (
+                              <RunRowActions
+                                inline={
+                                  /* 候选结果入口（含审核）直接放在操作列，「更多」只留导入等状态变更操作。 */
+                                  can('read') ? (
+                                    <Button
+                                      size="small"
+                                      type="primary"
+                                      onClick={(event) => {
+                                        event.stopPropagation()
+                                        selectRun(row.runId)
+                                        setCandidateModalOpen(true)
+                                      }}
+                                    >
+                                      {label}
+                                    </Button>
+                                  ) : null
+                                }
+                                menuItems={menuItems}
+                                onMenuAction={(key) => {
+                                  if (key === 'importSuite') {
+                                    selectRun(row.runId)
+                                    openImportModal()
+                                    return
+                                  }
+                                  if (key === 'openSuite' && importedSuiteId) {
+                                    navigate(`/ui-automation/suites/${importedSuiteId}`)
+                                  }
+                                }}
+                              />
+                            )
                           }}
-                        >
-                          {canEditCandidate ? '审核候选结果' : '查看候选结果'}
-                        </ProjectActionButton>
-                        {isGenerateTaskRunImportable(selectedRun) ? (
-                          <ProjectActionButton action="execute"
-                            size="small"
-                            type="primary"
-                            aria-label="导入正式 UI 套件"
-                            disabled={importMutation.isPending}
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              openImportModal()
-                            }}
-                          >
-                            导入 UI 用例集
-                          </ProjectActionButton>
-                        ) : null}
-                        {displayedRun.importStatus === 'imported' && displayedImportedSuiteId ? (
-                          <Button
-                            size="small"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              navigate(`/ui-automation/suites/${displayedImportedSuiteId}`)
-                            }}
-                          >
-                            查看正式套件
-                          </Button>
-                        ) : null}
+                        />
                       </>
-                    ) : null}
-                  </div>
-                </div>
-                    })}</div> : <div className="ai-task-run-history-placeholder"><Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="当前还没有运行记录" /></div>}
+                    ) : (
+                      <div className="ai-task-run-history-placeholder"><Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="当前还没有运行记录" /></div>
+                    )}
                   </div>
                 </>
               )}

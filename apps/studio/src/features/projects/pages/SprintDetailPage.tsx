@@ -308,11 +308,19 @@ function TestExecutionOverviewCard({ metrics }: { metrics: NormalizedDailyMetric
               <TestTypeIcon type={row.key} />
               <strong>{row.title}</strong>
             </span>
-            <strong className="sprint-dashboard-test-total">{row.stats.total}</strong>
-            <MiniProgress value={row.stats.executed} total={row.stats.total} color="#52c41a" />
-            <MiniProgress value={row.stats.unexecuted} total={row.stats.total} color="#faad14" />
-            <MiniProgress value={row.stats.success} total={row.stats.total} color="#13c2c2" />
-            <MiniProgress value={row.stats.failed} total={row.stats.total} color="#ff4d4f" />
+            {row.key === 'functional' && row.stats.total === 0 ? (
+              <Tooltip title="功能用例的执行结果由平台测试单产生，本迭代还没有测试单">
+                <span className="sprint-dashboard-test-empty">本迭代暂无平台执行记录</span>
+              </Tooltip>
+            ) : (
+              <>
+                <strong className="sprint-dashboard-test-total">{row.stats.total}</strong>
+                <MiniProgress value={row.stats.executed} total={row.stats.total} color="#52c41a" />
+                <MiniProgress value={row.stats.unexecuted} total={row.stats.total} color="#faad14" />
+                <MiniProgress value={row.stats.success} total={row.stats.total} color="#13c2c2" />
+                <MiniProgress value={row.stats.failed} total={row.stats.total} color="#ff4d4f" />
+              </>
+            )}
           </div>
         ))}
       </div>

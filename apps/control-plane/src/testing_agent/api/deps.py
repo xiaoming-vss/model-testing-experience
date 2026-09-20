@@ -28,6 +28,8 @@ from testing_agent.repositories.requirement import RequirementRepository
 from testing_agent.repositories.resource_binding import ResourceBindingRepository
 from testing_agent.repositories.sprint import SprintRepository
 from testing_agent.repositories.sprint_daily_metrics import SprintDailyMetricsRepository
+from testing_agent.repositories.test_order import TestOrderRepository
+from testing_agent.repositories.test_order_entry import TestOrderEntryRepository
 from testing_agent.repositories.ui_test_case import UiTestCaseRepository
 from testing_agent.repositories.ui_test_case_run import UiTestCaseRunRepository
 from testing_agent.repositories.ui_test_suite import UiTestSuiteRepository
@@ -57,6 +59,9 @@ from testing_agent.services.sprint_code_overview import (
     SprintCodeOverviewService,
 )
 from testing_agent.services.sprint_daily_metrics import SprintDailyMetricsService
+from testing_agent.services.test_order import TestOrderService
+from testing_agent.services.test_order_entry import TestOrderEntryService
+from testing_agent.services.test_order_graph import TestOrderGraphService
 from testing_agent.services.ui_test_case import UiTestCaseService
 from testing_agent.services.ui_test_case_run import UiTestCaseRunService
 from testing_agent.services.ui_test_suite import UiTestSuiteService
@@ -306,4 +311,32 @@ def get_worker_task_service(
     return WorkerTaskService(
         WorkerTaskRepository(session),
         credential_cipher=IntegrationCredentialCipher(settings.integration_key),
+    )
+
+
+def build_test_order_service(session: AsyncSession) -> TestOrderService:
+    return TestOrderService(TestOrderRepository(session), TestOrderEntryRepository(session))
+
+
+def get_test_order_service(
+    session: AsyncSession = Depends(get_session),
+) -> TestOrderService:
+    return build_test_order_service(session)
+
+
+def get_test_order_entry_service(
+    session: AsyncSession = Depends(get_session),
+) -> TestOrderEntryService:
+    return TestOrderEntryService(
+        TestOrderEntryRepository(session),
+        build_test_order_service(session),
+    )
+
+
+def get_test_order_graph_service(
+    session: AsyncSession = Depends(get_session),
+) -> TestOrderGraphService:
+    return TestOrderGraphService(
+        AiGenerateTaskRepository(session),
+        build_test_order_service(session),
     )

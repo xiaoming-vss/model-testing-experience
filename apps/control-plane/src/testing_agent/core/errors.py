@@ -107,6 +107,18 @@ ErrRemoteResourceAlreadyBound = AppError(3503, "该远端资源已被绑定", HT
 ErrResourceBindingInvalid = AppError(3504, "资源绑定关系不合法", HTTPStatus.BAD_REQUEST)
 ErrZentaoRemoteResourceUnavailable = AppError(3505, "禅道远端资源不可用", HTTPStatus.BAD_REQUEST)
 ErrGroupBindingInUse = AppError(3506, "仍有需求代码绑定引用该群组", HTTPStatus.CONFLICT)
+ErrTestOrderNotFound = AppError(3601, "测试单不存在", HTTPStatus.NOT_FOUND)
+ErrTestOrderNameAlreadyUse = AppError(3602, "该迭代下已存在同名测试单", HTTPStatus.CONFLICT)
+ErrTestOrderEntryNotFound = AppError(3603, "执行条目不存在", HTTPStatus.NOT_FOUND)
+ErrTestOrderCaseMismatch = AppError(3604, "用例与测试单不属于同一项目", HTTPStatus.BAD_REQUEST)
+ErrTestOrderEntryDuplicate = AppError(3605, "该用例已在测试单中", HTTPStatus.CONFLICT)
+ErrTestOrderSourceMismatch = AppError(
+    3606, "来源测试单与目标测试单不属于同一项目", HTTPStatus.BAD_REQUEST
+)
+ErrTestOrderAssigneeInvalid = AppError(3607, "执行人不是该项目成员", HTTPStatus.BAD_REQUEST)
+ErrTestOrderEntryAssigneeLocked = AppError(
+    3608, "该执行条目已分配给其他执行人", HTTPStatus.FORBIDDEN
+)
 
 
 def app_error_payload(error: AppError, data: Any | None = None) -> dict[str, Any]:

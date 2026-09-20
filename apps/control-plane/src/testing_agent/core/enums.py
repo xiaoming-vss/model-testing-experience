@@ -81,5 +81,35 @@ class StageStatus(StrEnum):
         return {item.value for item in cls}
 
 
+class TestOrderStatus(StrEnum):
+    """测试单状态：由条目状态推导，不是人工关闭事件。"""
+
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+
+
+class TestOrderEntryStatus(StrEnum):
+    """执行条目状态：一次执行的结论。"""
+
+    PENDING = "pending"
+    PASSED = "passed"
+    FAILED = "failed"
+    BLOCKED = "blocked"
+    SKIPPED = "skipped"
+
+    @classmethod
+    def values(cls) -> set[str]:
+        return {item.value for item in cls}
+
+
 # 成功语义兼容集合:历史/Go 侧可能传 passed/completed,统一视为成功。
 SUCCESS_STATUSES = {RunStatus.SUCCESS.value, "passed", "completed"}
+
+# 执行条目的终态:到达其中之一即视为本条已执行完。
+TEST_ORDER_ENTRY_TERMINAL_STATUSES = {
+    TestOrderEntryStatus.PASSED.value,
+    TestOrderEntryStatus.FAILED.value,
+    TestOrderEntryStatus.BLOCKED.value,
+    TestOrderEntryStatus.SKIPPED.value,
+}

@@ -1189,11 +1189,7 @@
   flex-direction: column;
 }
 
-.ai-task-detail-main-body > .ai-task-run-history-list {
-  flex: 1 1 auto;
-}
-
-.ai-task-run-metrics {
+.ai-task-detail-main-body > .ai-task-run-metrics {
   flex: 0 0 auto;
   display: flex;
   gap: 8px;
@@ -1266,152 +1262,11 @@
   scrollbar-width: thin;
 }
 
-.ai-task-run-history-list.single-list {
-  gap: 10px;
-}
-
-.ai-task-run-history-record-row {
-  width: 100%;
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  text-align: left;
-  color: var(--ai-text);
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(148, 163, 184, 0.1);
-  border-radius: 12px;
-  cursor: pointer;
-  transition:
-    border-color 0.18s ease,
-    background-color 0.18s ease,
-    box-shadow 0.18s ease;
-}
-
-.ai-task-run-history-record-row:hover {
-  border-color: rgba(124, 195, 163, 0.28);
-  background: rgba(124, 195, 163, 0.08);
-}
-
-.ai-task-run-history-record-row.active {
-  border-color: rgba(124, 195, 163, 0.34);
-  background: rgba(124, 195, 163, 0.12);
-  box-shadow: 0 0 0 1px rgba(124, 195, 163, 0.14);
-}
-
-.ai-task-run-history-record-row:focus-visible {
-  outline: 0;
-  box-shadow:
-    0 0 0 1px rgba(124, 195, 163, 0.16),
-    0 0 0 3px rgba(124, 195, 163, 0.12);
-}
-
-.ai-task-run-history-record-main {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 18px;
-  min-width: 0;
-  flex: 1 1 0;
-  flex-wrap: wrap;
-}
-
-.ai-task-run-history-record-identity {
-  width: 300px;
-  min-width: 300px;
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  flex: 0 0 300px;
-}
-
-.ai-task-run-history-record-status .ant-tag {
-  margin-inline-end: 0;
-}
-
-.app-shell.app-shell-macos .ai-testing-page .ai-task-run-history-record-status .ant-tag.ant-tag-green {
-  border-color: rgba(61, 122, 87, 0.2) !important;
-  background: #edf7ef !important;
-  color: #3d7a57 !important;
-}
-
-.ai-task-run-history-record-index {
-  width: 24px;
-  flex: 0 0 24px;
-  color: var(--ai-text-muted);
-  font-size: 12px;
-  line-height: 18px;
-  font-weight: 600;
-  text-align: right;
-}
-
-.ai-task-run-history-record-name {
-  display: block;
-  width: 252px;
-  flex: 0 0 252px;
-  color: var(--ai-text);
-  font-size: 13px;
-  line-height: 20px;
-  font-weight: 700;
-  min-width: 0;
-  max-width: 252px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-}
-
-.ai-task-run-history-record-meta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px 16px;
-  flex: 0 1 auto;
-  min-width: 0;
-  flex-wrap: wrap;
-}
-
-.ai-task-run-history-record-status {
-  display: inline-flex;
-  align-items: center;
-}
-
 .ai-task-run-history-record-field {
   color: var(--ai-text-secondary);
   font-size: 12px;
   line-height: 18px;
   white-space: nowrap;
-}
-
-.ai-task-run-history-record-actions {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  flex: 0 0 auto;
-  flex-wrap: wrap;
-}
-
-.ai-task-run-history-review-inline {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px 8px;
-  flex-wrap: wrap;
-  padding-left: 8px;
-  margin-left: 2px;
-  border-left: 1px solid rgba(148, 163, 184, 0.12);
-}
-
-.ai-task-run-history-review-label {
-  color: var(--ai-text-muted);
-  font-size: 12px;
-  line-height: 18px;
-  white-space: nowrap;
-}
-
-.ai-task-run-history-review-status .ant-tag {
-  margin-inline-end: 0;
 }
 
 .ai-task-run-review-note-btn {
@@ -1478,10 +1333,6 @@
 
 .ai-task-stage-review-title .ant-tag,
 .ai-task-stage-review-run-id .ant-tag,
-.ai-task-run-history-record-stage .ant-tag {
-  margin-inline-end: 0;
-}
-
 .ai-task-stage-review-run-id {
   width: 260px;
   color: var(--ai-text-secondary);
@@ -4538,52 +4389,6 @@
   padding: 4px 2px 0;
 }
 
-@media (max-width: 1200px) {
-  .ai-task-run-history-record-row {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .ai-task-run-history-record-main {
-    width: 100%;
-    align-items: flex-start;
-    gap: 10px;
-  }
-
-  .ai-task-run-history-record-identity,
-  .ai-task-run-history-record-meta {
-    width: 100%;
-  }
-
-  .ai-task-run-history-record-identity {
-    min-width: 0;
-    flex: 0 1 100%;
-  }
-
-  .ai-task-run-history-record-name {
-    width: auto;
-    max-width: min(100%, 252px);
-    flex: 0 1 252px;
-  }
-
-  .ai-task-run-history-record-meta {
-    justify-content: flex-start;
-    gap: 10px 18px;
-  }
-
-  .ai-task-run-history-record-actions {
-    width: 100%;
-    margin-left: 0;
-    justify-content: flex-start;
-  }
-
-  .ai-task-run-history-review-inline {
-    padding-left: 0;
-    margin-left: 0;
-    border-left: 0;
-  }
-}
-
 @media (max-width: 900px) {
   .ai-task-review-modal-content {
     grid-template-columns: minmax(0, 1fr);
@@ -6504,4 +6309,220 @@
 .functional-candidate-edit-pane .cm-scroller {
   min-height: 0;
   overflow: auto;
+}
+
+/* 运行记录：表格 + 生成→审核→导入 状态流水线 */
+.ai-task-run-table .ant-table {
+  background: transparent;
+}
+
+.ai-task-run-table .ant-table-thead > tr > th {
+  background: var(--ai-panel-soft);
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.ai-task-run-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid var(--ai-border);
+  padding-top: 10px;
+  padding-bottom: 10px;
+  vertical-align: middle;
+}
+
+.ai-task-run-table .ant-table-tbody > tr {
+  cursor: pointer;
+}
+
+.ai-task-run-table .ant-table-tbody > tr:hover > td {
+  background: var(--ai-panel-hover);
+}
+
+.ai-task-run-table .ant-table-tbody > tr.ai-task-run-table-row-active > td {
+  background: var(--ai-accent-soft);
+}
+
+.ai-task-run-table .ant-table-tbody > tr.ai-task-run-table-row-active > td:first-child {
+  box-shadow: inset 3px 0 0 var(--ai-accent);
+}
+
+.ai-task-run-table-id {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ai-task-run-table-index {
+  color: var(--ai-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.ai-task-run-table-id-text {
+  color: var(--ai-text);
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.ai-task-run-table-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.ai-task-run-table-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ai-task-run-table-more {
+  color: var(--ai-text-secondary);
+}
+
+.ai-task-run-table-migration {
+  display: inline-flex;
+  align-items: center;
+  color: #d46b08;
+  cursor: help;
+  font-size: 13px;
+}
+
+.ai-task-run-stage-filter {
+  min-width: 96px;
+}
+
+.ai-task-run-pipeline {
+  --run-pipeline-done: #95de64;
+  --run-pipeline-fail: #ff7875;
+  --run-pipeline-idle: rgba(148, 163, 184, 0.38);
+  --run-pipeline-current: #69b1ff;
+  --run-pipeline-link: #91caff;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+:root[data-theme='dark'] .ai-testing-page .ai-task-run-pipeline {
+  --run-pipeline-done: #95de64;
+  --run-pipeline-fail: #e56e6e;
+  --run-pipeline-idle: rgba(148, 163, 184, 0.3);
+  --run-pipeline-current: #69b1ff;
+  --run-pipeline-link: #69b1ff;
+}
+
+.ai-task-run-pipeline-track {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ai-task-run-pipeline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--run-pipeline-idle);
+  flex: 0 0 auto;
+}
+
+.ai-task-run-pipeline-dot.is-done {
+  background: var(--run-pipeline-done);
+}
+
+.ai-task-run-pipeline-dot.is-fail {
+  background: var(--run-pipeline-fail);
+}
+
+.ai-task-run-pipeline-dot.is-current {
+  width: 7px;
+  height: 7px;
+  background: var(--ai-card);
+  border: 2px solid var(--run-pipeline-current);
+}
+
+.ai-task-run-pipeline-link {
+  width: 20px;
+  height: 2px;
+  margin: 0 4px;
+  background: var(--run-pipeline-idle);
+  opacity: 0.6;
+}
+
+.ai-task-run-pipeline-link.is-done {
+  background: var(--run-pipeline-link);
+  opacity: 0.75;
+}
+
+/* 阶段标签较长时在列内换行，避免溢出到相邻的「产物」列造成挤压。 */
+.ai-task-run-pipeline-meta {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 22px;
+}
+
+.ai-task-run-pipeline-label.ant-tag {
+  margin-inline-end: 0;
+}
+
+.ai-task-run-pipeline-repair {
+  color: #d46b08;
+  font-size: 12px;
+  line-height: 18px;
+  cursor: help;
+  white-space: nowrap;
+}
+
+:root[data-theme='dark'] .ai-testing-page .ai-task-run-pipeline-repair,
+:root[data-theme='dark'] .ai-testing-page .ai-task-run-table-migration {
+  color: #ffc069;
+}
+
+.ai-task-run-artifacts {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ai-task-run-artifact {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 9px;
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 18px;
+  background: var(--ai-panel-soft);
+  color: var(--ai-text-secondary);
+  border: 1px solid transparent;
+}
+
+button.ai-task-run-artifact {
+  cursor: pointer;
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+}
+
+button.ai-task-run-artifact:hover {
+  color: var(--ai-hover-text);
+  background: var(--ai-accent-soft);
+}
+
+.ai-task-run-artifact.off {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--ai-border-strong);
+  color: var(--ai-text-muted);
 }

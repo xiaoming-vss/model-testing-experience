@@ -5,7 +5,7 @@ import { usePersonalLlmChoice } from '../hooks/usePersonalLlmChoice'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ArrowLeftOutlined, CheckCircleFilled, DownOutlined, FileTextOutlined, LeftOutlined, PictureOutlined, PlayCircleOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons'
-import { Alert, Button, Card, Checkbox, Empty, Form, Input, Modal, Popconfirm, Popover, Spin, Tabs, Tag } from 'antd'
+import { Alert, Button, Card, Checkbox, Empty, Form, Input, Modal, Popconfirm, Select, Spin, Tabs, Tag } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toBlob } from 'html-to-image'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -14,7 +14,9 @@ import { FunctionalCaseGenerateTaskDrawer, type FunctionalCaseGenerateTaskFormVa
 import { RevisionDivider, RevisionSidePanel } from '../components/RevisionSidePanel'
 import { buildRevisionTemplate, getRevisionQuestions } from '../utils/functionalRevision'
 import { FunctionalImportConflictModal } from '../components/FunctionalImportConflictModal'
-import { ImportMigrationWarning } from '../components/ImportMigrationWarning'
+import { RunArtifacts, RunPipelineStatus } from '../components/RunPipelineStatus'
+import { RunHistoryTable, RunMigrationWarningIcon, RunRowActions } from '../components/RunHistoryTable'
+import { getRunPipelineModel, type RunPipelineFilterKey } from '../utils/runPipeline'
 import { LlmConnectionSelectModal } from '../components/LlmConnectionSelectModal'
 import type { FunctionalCaseGenerateTaskRun, FunctionalCaseGenerateTaskRunImportConflict } from '../types'
 import { getApiCaseGenerateTaskRunStatusMeta, isRunnableApiCaseGenerateTaskRun } from '../utils/taskStatus'
@@ -34,6 +36,7 @@ const runResultSectionDefinitions = [
   { key: 'enhancedText', label: '增强文本' },
   { key: 'requirementAnalysis', label: '需求分析' },
   { key: 'caseNames', label: '测试点' },
+  { key: 'caseRelations', label: '图谱分析' },
   { key: 'errorMessage', label: '错误信息' },
 ] as const
 
@@ -60,22 +63,12 @@ type GeneratedCaseImportStats = {
   moduleNames: string[]
 }
 
-const reviewStatusMetaMap: Record<string, { label: string; color: string }> = {
-  pending: { label: '待审核', color: 'gold' },
-  approved: { label: '审核通过', color: 'success' },
-  rejected: { label: '已拒绝', color: 'default' },
-}
-
-const importStatusMetaMap: Record<string, { label: string; color: string }> = {
-  pending: { label: '待导入', color: 'purple' },
-  imported: { label: '已导入', color: 'success' },
-}
-
 const functionalStageMetaMap: Record<string, { label: string; color: string }> = {
   enhanced_text: { label: '增强文档输出', color: 'cyan' },
   requirement_analysis: { label: '测试需求/风险/测试点输出', color: 'blue' },
   case_names: { label: '测试用例名称/测试点输出', color: 'geekblue' },
   detailed_cases: { label: '详细测试用例输出', color: 'purple' },
+  relation_analysis: { label: '图谱分析', color: 'volcano' },
   completed: { label: '已完成', color: 'success' },
 }
 
@@ -115,7 +108,7 @@ function getOutputRepairProgress(summary: unknown): string | null {
   const parsed = parseJsonLikeContent(summary)
   const progress = parsed && typeof parsed === 'object' ? parsed.outputValidation : undefined
   if (!progress || progress.status !== 'repairing' || !Number.isInteger(progress.repairAttempt) || progress.repairAttempt < 1) return null
-  const stage = { requirement_analysis: '需求分析', case_names: '测试点', detailed_cases: '详细用例' }[progress.stage as 'requirement_analysis' | 'case_names' | 'detailed_cases']
+  const stage = { requirement_analysis: '需求分析', case_names: '测试点', detailed_cases: '详细用例', relation_analysis: '图谱分析' }[progress.stage as 'requirement_analysis' | 'case_names' | 'detailed_cases' | 'relation_analysis']
   if (!stage) return null
   return `${stage}${typeof progress.module === 'string' && progress.module ? ` / ${progress.module}` : ''}：输出校验未通过，正在进行第 ${progress.repairAttempt}/2 次自动修复`
 }
@@ -280,9 +273,17 @@ type GeneratedCaseModuleGroup = {
 
 const MODULE_FIELD_CANDIDATES = ['case_module', 'module', 'module_name', 'moduleName', 'group', 'category']
 const NAME_FIELD_CANDIDATES = ['Case Title', 'case_title', 'case_name', 'name', 'title', 'caseName', 'test_point', 'testPoint', 'scenario', 'description']
-const TAG_FIELD_CANDIDATES = ['priority', 'case_type', 'caseType', 'type', 'level', 'severity']
+const TAG_FIELD_CANDIDATES = ['case_id', 'caseId', 'priority', 'case_type', 'caseType', 'type', 'level', 'severity']
+const CASE_ID_FIELDS = ['case_id', 'caseId']
+
+// 平台分配的编号是 UUID，卡片上只展示前缀，完整值保留在 title 上。
+function formatCaseIdTag(value: string) {
+  return value.length > 8 ? `${value.slice(0, 8)}…` : value
+}
 
 const FIELD_LABEL_MAP: Record<string, string> = {
+  case_id: '用例编号',
+  caseId: '用例编号',
   case_name: '用例名称',
   case_title: '用例名称',
   'Case Title': '用例名称',
@@ -850,7 +851,14 @@ function GeneratedCasesReviewView({ content }: { content: string }) {
                 <article key={`${activeGroup.moduleName}-${caseIndex}`} className="ai-generated-cases-review-card">
                   <header>
                     <span className="ai-generated-cases-review-index">{String(caseStartIndex + caseIndex + 1).padStart(2, '0')}</span>
-                    {testCase.tagFields.map((tag) => <Tag key={tag.key} color="orange">{tag.value}</Tag>)}
+                    {testCase.tagFields.map((tag) => {
+                      const isCaseId = CASE_ID_FIELDS.includes(tag.key)
+                      return (
+                        <Tag key={tag.key} color="orange" title={isCaseId ? tag.value : undefined}>
+                          {isCaseId ? formatCaseIdTag(tag.value) : tag.value}
+                        </Tag>
+                      )
+                    })}
                     <strong>{testCase.displayName}</strong>
                   </header>
                   <div className="ai-generated-cases-review-fields">
@@ -1582,11 +1590,6 @@ function getRunOperationErrorMessage(error: unknown) {
   return getErrorMessage(error)
 }
 
-function renderRunStatusTag(status?: string) {
-  const meta = getApiCaseGenerateTaskRunStatusMeta(status)
-  return <Tag color={meta.color}>{meta.label}</Tag>
-}
-
 function normalizeReviewStatus(status?: string) {
   return status ?? 'unknown'
 }
@@ -1600,24 +1603,28 @@ function getStageConfigField(stage?: string) {
   return stage ? stageConfigFieldMap[stage] : undefined
 }
 
-function renderReviewStatusTag(status?: string) {
-  const normalizedStatus = normalizeReviewStatus(status)
-  const meta = reviewStatusMetaMap[normalizedStatus] ?? {
-    label: normalizedStatus,
-    color: 'default',
-  }
+const runStageFilterOptions: Array<{ label: string; value: 'all' | RunPipelineFilterKey }> = [
+  { label: '全部状态', value: 'all' },
+  { label: '待审核', value: 'review_pending' },
+  { label: '待导入', value: 'import_pending' },
+  { label: '已导入', value: 'imported' },
+  { label: '已拒绝', value: 'rejected' },
+  { label: '失败', value: 'failed' },
+  { label: '已取消', value: 'canceled' },
+  { label: '执行中', value: 'running' },
+]
 
-  return <Tag color={meta.color}>{meta.label}</Tag>
-}
+const runArtifactDefinitions = [
+  { key: 'requirementAnalysis', label: '需求分析' },
+  { key: 'caseNames', label: '测试点' },
+  { key: 'caseRelations', label: '图谱分析' },
+] as const
 
-function renderImportStatusTag(status?: string) {
-  const normalizedStatus = status ?? 'unknown'
-  const meta = importStatusMetaMap[normalizedStatus] ?? {
-    label: normalizedStatus,
-    color: 'default',
-  }
-
-  return <Tag color={meta.color}>{meta.label}</Tag>
+function getRunRecordArtifacts(configJson: unknown) {
+  return runArtifactDefinitions.map((definition) => ({
+    ...definition,
+    available: Boolean(getConfigStageFieldContent(configJson, definition.key)),
+  }))
 }
 
 export function FunctionalCaseGenerateTaskDetailPage() {
@@ -1629,6 +1636,7 @@ export function FunctionalCaseGenerateTaskDetailPage() {
   const [llmSelectOpen, setLlmSelectOpen] = useState(false)
   const [expandedSection, setExpandedSection] = useState<'instruction' | 'document' | 'runHistory' | null>('runHistory')
   const [selectedRunRecordId, setSelectedRunRecordId] = useState<string | null>(null)
+  const [runStageFilter, setRunStageFilter] = useState<'all' | RunPipelineFilterKey>('all')
   const [runResultModal, setRunResultModal] = useState<RunResultModalState>(null)
   const [resultModalRunId, setResultModalRunId] = useState<string | null>(null)
   const [reviewSubmitAction, setReviewSubmitAction] = useState<'approve' | 'reject' | null>(null)
@@ -1721,6 +1729,13 @@ export function FunctionalCaseGenerateTaskDetailPage() {
     [runsQuery.data],
   )
   const latestRunRecord = runRecords[0]
+  const filteredRunRecords = useMemo(
+    () =>
+      runStageFilter === 'all'
+        ? runRecords
+        : runRecords.filter((record) => getRunPipelineModel(record).filterKey === runStageFilter),
+    [runRecords, runStageFilter],
+  )
   const selectedRunId = selectedRunRecordId ?? runRecords[0]?.runId ?? ''
   const selectedRunQuery = useQuery({
     queryKey: ['functionalCaseGenerateTaskRun', selectedRunId],
@@ -1746,7 +1761,8 @@ export function FunctionalCaseGenerateTaskDetailPage() {
               const rawValue =
                 section.key === 'enhancedText' ||
                 section.key === 'requirementAnalysis' ||
-                section.key === 'caseNames'
+                section.key === 'caseNames' ||
+                section.key === 'caseRelations'
                   ? getConfigStageFieldContent(selectedRun.configJson, section.key)
                   : selectedRun[section.key as keyof FunctionalCaseGenerateTaskRun]
               return { ...section, value: formatStructuredContent(rawValue) }
@@ -1884,6 +1900,21 @@ export function FunctionalCaseGenerateTaskDetailPage() {
     onError: (error, payload) => {
       message.error(getRunOperationErrorMessage(error))
       queryClient.invalidateQueries({ queryKey: ['functionalCaseGenerateTaskRun', payload.runId] })
+      queryClient.invalidateQueries({ queryKey: ['functionalCaseGenerateTaskRuns', taskId] })
+    },
+  })
+
+  const generateRelationMutation = useMutation({
+    mutationFn: (payload: { runId: string }) =>
+      api.generateFunctionalCaseRelationAnalysis(payload.runId),
+    onSuccess: (updatedRun) => {
+      message.success('图谱生成任务已提交，完成后可在运行记录查看')
+      setSelectedRunRecordId(updatedRun.runId ?? null)
+      queryClient.invalidateQueries({ queryKey: ['functionalCaseGenerateTaskRun', updatedRun.runId] })
+      queryClient.invalidateQueries({ queryKey: ['functionalCaseGenerateTaskRuns', taskId] })
+    },
+    onError: (error) => {
+      message.error(getRunOperationErrorMessage(error))
       queryClient.invalidateQueries({ queryKey: ['functionalCaseGenerateTaskRuns', taskId] })
     },
   })
@@ -2340,6 +2371,20 @@ export function FunctionalCaseGenerateTaskDetailPage() {
     importRunMutation.mutate({ runId: importConflict.runId, confirmOverwrite: true })
   }
 
+  function resolveRunRecord(record: FunctionalCaseGenerateTaskRun): FunctionalCaseGenerateTaskRun {
+    return record.runId && record.runId === selectedRunId && selectedRun ? selectedRun : record
+  }
+
+  function openRunRecordSection(runId: string | undefined, key: RunResultSectionKey, label: string) {
+    setSelectedRunRecordId(runId ?? null)
+    // 图谱分析改为独立页面展示：鱼骨图需要完整视口宽度，且 URL 可直接访问。
+    if (key === 'caseRelations' && runId && taskId) {
+      navigate(`/ai-testing/function-tasks/${taskId}/runs/${runId}/graph`)
+      return
+    }
+    setRunResultModal({ key, label })
+  }
+
   return (<ProjectAccessScope resourceError={taskQuery.error} projectId={task?.projectId ?? ''}>{personalLlm.dialog}{(
     <div className="workbench-page ai-testing-page">
       <div className="workbench-tabs">
@@ -2446,6 +2491,14 @@ export function FunctionalCaseGenerateTaskDetailPage() {
                       <span className="ai-task-detail-main-head-title">运行记录</span>
                       <div className="ai-task-detail-main-head-extra">
                         <div className="ai-task-run-history-toolbar">
+                          <Select
+                            size="small"
+                            className="ai-task-run-stage-filter"
+                            aria-label="按状态筛选运行记录"
+                            value={runStageFilter}
+                            options={runStageFilterOptions}
+                            onChange={(value) => setRunStageFilter(value)}
+                          />
                           <span className="ai-task-run-history-auto-refresh">每 5 秒自动刷新</span>
                           <ActionButton size="small" operation="refresh" loading={runHistoryRefreshing} onClick={handleRefreshRuns}>刷新</ActionButton>
                         </div>
@@ -2457,162 +2510,135 @@ export function FunctionalCaseGenerateTaskDetailPage() {
                         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="运行记录加载中..." />
                       </div>
                     ) : runRecords.length > 0 ? (
-                      <div className="ai-task-run-history-list single-list">
-                        {runRecords.map((record, index) => {
-                          const active = record.runId === selectedRunId
-                          const recordData = active && selectedRun ? selectedRun : record
-                          const reviewStatus = normalizeReviewStatus(recordData.reviewStatus)
-                          const importStatus = recordData.importStatus
-                          const recordStatus = String(recordData.status ?? '')
-                          const repairProgress = recordStatus === 'running'
-                            ? getOutputRepairProgress(recordData.resultSummaryJson)
-                            : null
-                          const recordSucceeded = recordStatus.toLowerCase() === 'success'
-                          const recordFailed = ['failed', 'error'].includes(recordStatus.toLowerCase())
-                          const recordResultYaml = recordData.resultYaml
-                          const recordHasResultYaml = Boolean(formatStructuredContent(recordResultYaml))
-                          const recordErrorMessage = recordData.errorMessage
-                          const recordHasErrorMessage = Boolean(recordErrorMessage?.trim())
-                          const canReviewRecord = reviewStatus === 'pending' && recordStatus === 'success'
-                          const canImportRecord = reviewStatus === 'approved' && importStatus === 'pending' && recordStatus === 'success'
-                          const visibleSections = runResultSectionDefinitions.filter(
-                            (section) => {
-                              if (section.key === 'enhancedText') {
-                                return active && section.key === selectedStageField?.key && checkpointStageWaitingReview
-                              }
-                              if (section.key === 'errorMessage') return recordFailed && recordHasErrorMessage
-                              return true
-                            },
-                          )
-
-                          return (
-                            <div
-                              key={record.runId ?? `${index}`}
-                              className={`ai-task-run-history-record-row${active ? ' active' : ''}`}
-                              onClick={() => setSelectedRunRecordId(record.runId ?? null)}
-                              role="button"
-                              tabIndex={0}
-                              onKeyDown={(event) => {
-                                if (event.key === 'Enter' || event.key === ' ') {
-                                  event.preventDefault()
-                                  setSelectedRunRecordId(record.runId ?? null)
-                                }
-                              }}
-                            >
-                              <div className="ai-task-run-history-record-main">
-                                <div className="ai-task-run-history-record-identity">
-                                  <span className="ai-task-run-history-record-index">#{index + 1}</span>
-                                  <span className="ai-task-run-history-record-name" title={record.runId || '未命名记录'}>
-                                    {record.runId || '未命名记录'}
-                                  </span>
-                                </div>
-                                <div className="ai-task-run-history-record-meta">
-                                  <span className="ai-task-run-history-record-status">{renderRunStatusTag(active && selectedRun ? selectedRun.status : record.status)}</span>
-                                  {active && selectedRun?.checkpointEnabled && selectedRun.currentStage && selectedRun.currentStage !== 'completed' ? (
-                                    <span className="ai-task-run-history-record-stage">
-                                      <Tag color={selectedStageMeta.color}>{selectedStageMeta.label}</Tag>
-                                    </span>
-                                  ) : null}
-                                  {recordSucceeded ? (
-                                    <span className="ai-task-run-history-review-status">{renderReviewStatusTag(recordData.reviewStatus)}</span>
-                                  ) : null}
-                                  {recordSucceeded && reviewStatus === 'approved' ? (
-                                    <span className="ai-task-run-history-review-status">{renderImportStatusTag(importStatus)}</span>
-                                  ) : null}
-                                </div>
-                              </div>
-                              {repairProgress ? <span role="status" className="ai-task-run-history-record-field">{repairProgress}</span> : null}
-                              <div className="ai-task-run-history-record-actions">
-                                {visibleSections.map((section) => {
-                                  const showStageReviewInConfig = active && section.key === selectedStageField?.key && checkpointStageWaitingReview
-                                  const isOpen = active && runResultModal?.key === section.key
-                                  const sectionLabel = showStageReviewInConfig ? '审核' : section.label
-
-                                  return (
-                                    <button
-                                      key={section.key}
-                                      type="button"
-                                      className={`ai-task-run-result-popover-btn${isOpen ? ' active' : ''}${showStageReviewInConfig ? ' review' : ''}`}
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        setSelectedRunRecordId(record.runId ?? null)
-                                        setRunResultModal({ key: section.key, label: sectionLabel })
-                                      }}
-                                    >
-                                      {sectionLabel}
-                                    </button>
-                                  )
-                                })}
-                                <div className="ai-task-run-history-review-inline">
-                                  <ImportMigrationWarning importMigrationComplete={recordData.importMigrationComplete} />
-                                  {active && canRetryStage ? (
-                                    <ProjectActionButton action="execute"
-                                      size="small"
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        handleRetryStage()
-                                      }}
-                                      loading={retryStageMutation.isPending}
-                                    >
-                                      重试阶段
-                                    </ProjectActionButton>
-                                  ) : null}
-                                  {recordData.reviewedAt ? (
-                                    <span className="ai-task-run-history-record-field">审核时间：{formatTime(recordData.reviewedAt)}</span>
-                                  ) : null}
-                                  {recordData.reviewComment ? (
-                                    <Popover trigger="click" placement="bottomRight" content={<div className="ai-task-run-review-comment">{recordData.reviewComment}</div>}>
-                                      <button type="button" className="ai-task-run-review-note-btn" onClick={(event) => event.stopPropagation()}>
-                                        审核备注
+                      <>
+                        <RunHistoryTable<FunctionalCaseGenerateTaskRun>
+                          rows={filteredRunRecords}
+                          getRunId={(record) => record.runId}
+                          selectedRunId={selectedRunId}
+                          resolveRow={resolveRunRecord}
+                          onSelect={(runId) => setSelectedRunRecordId(runId ?? null)}
+                          renderStatus={(row) => {
+                            const data = resolveRunRecord(row)
+                            const repairProgress = String(data.status ?? '') === 'running' ? getOutputRepairProgress(data.resultSummaryJson) : null
+                            const stageTag = row.runId === selectedRunId && data.checkpointEnabled && data.currentStage && data.currentStage !== 'completed'
+                              ? <Tag color={selectedStageMeta.color}>{selectedStageMeta.label}</Tag>
+                              : null
+                            return <RunPipelineStatus run={data} repairProgress={repairProgress} stageTag={stageTag} />
+                          }}
+                          renderArtifacts={(row) => {
+                            const artifacts = getRunRecordArtifacts(resolveRunRecord(row).configJson)
+                            return (
+                              <RunArtifacts
+                                artifacts={artifacts}
+                                onOpen={(key) => {
+                                  const label = artifacts.find((artifact) => artifact.key === key)?.label ?? key
+                                  openRunRecordSection(row.runId, key as RunResultSectionKey, label)
+                                }}
+                              />
+                            )
+                          }}
+                          getReviewedAt={(row) => resolveRunRecord(row).reviewedAt}
+                          getReviewComment={(row) => resolveRunRecord(row).reviewComment}
+                          getImportedAt={(row) => resolveRunRecord(row).importedAt}
+                          renderActions={(row, active) => {
+                            const data = resolveRunRecord(row)
+                            const recordStatus = String(data.status ?? '')
+                            const recordSucceeded = recordStatus.toLowerCase() === 'success'
+                            const recordFailed = ['failed', 'error'].includes(recordStatus.toLowerCase())
+                            const reviewStatus = normalizeReviewStatus(data.reviewStatus)
+                            const canReviewRecord = reviewStatus === 'pending' && recordStatus === 'success'
+                            const canImportRecord = reviewStatus === 'approved' && data.importStatus === 'pending' && recordStatus === 'success'
+                            const recordHasResultYaml = Boolean(formatStructuredContent(data.resultYaml))
+                            const recordHasErrorMessage = Boolean(data.errorMessage?.trim())
+                            const hasGraph = Boolean(getConfigStageFieldContent(data.configJson, 'caseRelations'))
+                            const relationActionAllowed = reviewStatus === 'approved' && (recordSucceeded || recordFailed)
+                            const stageReviewEntry = active && checkpointStageWaitingReview && selectedStageField
+                            return (
+                              <RunRowActions
+                                inline={
+                                  <>
+                                    {/* 审核是本行最需要用户处理的动作，直接放在操作列，「更多」只留状态变更类操作。 */}
+                                    {stageReviewEntry ? (
+                                      <Button
+                                        size="small"
+                                        type="primary"
+                                        onClick={(event) => {
+                                          event.stopPropagation()
+                                          openRunRecordSection(row.runId, selectedStageField!.key as RunResultSectionKey, '审核')
+                                        }}
+                                      >
+                                        审核
+                                      </Button>
+                                    ) : null}
+                                    {canReviewRecord && can('read') ? (
+                                      <Button
+                                        size="small"
+                                        onClick={(event) => {
+                                          event.stopPropagation()
+                                          openResultModal(row.runId)
+                                        }}
+                                      >
+                                        {can('review') ? '审核候选结果' : '查看候选结果'}
+                                      </Button>
+                                    ) : null}
+                                    {!canReviewRecord && recordSucceeded && recordHasResultYaml ? (
+                                      <Button
+                                        size="small"
+                                        onClick={(event) => {
+                                          event.stopPropagation()
+                                          openResultModal(row.runId)
+                                        }}
+                                      >
+                                        查看结果
+                                      </Button>
+                                    ) : null}
+                                    {recordFailed && recordHasErrorMessage ? (
+                                      <button
+                                        type="button"
+                                        className="ai-task-run-result-popover-btn"
+                                        onClick={(event) => {
+                                          event.stopPropagation()
+                                          openRunRecordSection(row.runId, 'errorMessage', '错误信息')
+                                        }}
+                                      >
+                                        错误信息
                                       </button>
-                                    </Popover>
-                                  ) : null}
-                                  {recordData.importedAt ? (
-                                    <span className="ai-task-run-history-record-field">导入时间：{formatTime(recordData.importedAt)}</span>
-                                  ) : null}
-                                  {canReviewRecord ? (
-                                    <ProjectActionButton action="read" readOnlyLabel="查看候选结果"
-                                      size="small"
-                                      type="primary"
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        openResultModal(record.runId)
-                                      }}
-                                    >
-                                      审核候选结果
-                                    </ProjectActionButton>
-                                  ) : null}
-                                  {!canReviewRecord && recordSucceeded && recordHasResultYaml ? (
-                                    <Button
-                                      size="small"
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        openResultModal(record.runId)
-                                      }}
-                                    >
-                                      查看结果
-                                    </Button>
-                                  ) : null}
-                                  {canImportRecord ? (
-                                    <ProjectActionButton action="execute"
-                                      size="small"
-                                      type="primary"
-                                      aria-label="导入正式用例"
-                                      loading={importRunMutation.isPending && active}
-                                      disabled={importRunMutation.isPending}
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        handleImportRun(record.runId)
-                                      }}
-                                    >
-                                      导入正式用例
-                                    </ProjectActionButton>
-                                  ) : null}
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })}
+                                    ) : null}
+                                    {!data.importMigrationComplete ? <RunMigrationWarningIcon /> : null}
+                                  </>
+                                }
+                                menuItems={[
+                                  ...(active && canRetryStage && can('execute')
+                                    ? [{ key: 'retryStage', label: '重试阶段', disabled: retryStageMutation.isPending }]
+                                    : []),
+                                  ...(canImportRecord && can('execute')
+                                    ? [{ key: 'importCases', label: '导入正式用例', disabled: importRunMutation.isPending }]
+                                    : []),
+                                  ...(relationActionAllowed && can('execute')
+                                    ? [{
+                                        key: 'generateRelations',
+                                        label: hasGraph ? '重新生成图谱' : '生成图谱',
+                                        disabled: generateRelationMutation.isPending && active,
+                                      }]
+                                    : []),
+                                ]}
+                                onMenuAction={(key) => {
+                                  if (key === 'retryStage') {
+                                    handleRetryStage()
+                                    return
+                                  }
+                                  if (key === 'importCases') {
+                                    handleImportRun(row.runId)
+                                    return
+                                  }
+                                  if (key === 'generateRelations' && row.runId) {
+                                    generateRelationMutation.mutate({ runId: row.runId })
+                                  }
+                                }}
+                              />
+                            )
+                          }}
+                        />
                         {selectedRunQuery.isLoading && !selectedRun ? (
                           <div className="ai-task-run-history-placeholder compact">
                             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="运行详情加载中..." />
@@ -2621,7 +2647,7 @@ export function FunctionalCaseGenerateTaskDetailPage() {
                         {selectedRun && selectedRunResultSections.length === 0 && !checkpointStageVisible ? (
                           <div className="ai-task-run-history-hint compact">当前选中记录暂无可展示结果</div>
                         ) : null}
-                      </div>
+                      </>
                     ) : (
                       <div className="ai-task-run-history-placeholder">
                         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="当前还没有运行记录" />

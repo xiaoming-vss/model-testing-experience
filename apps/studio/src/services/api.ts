@@ -3,6 +3,7 @@ import { aiTestingApi } from '@/features/ai-testing/api/aiTesting.api'
 import { apiAutomationApi } from '@/features/api-automation/api/apiAutomation.api'
 import { baseServicesApi } from '@/features/base-services/api/baseServices.api'
 import { functionTestingApi } from '@/features/test-cases/api/functionTesting.api'
+import { testOrdersApi } from '@/features/test-orders/api/testOrders.api'
 import { projectsApi } from '@/features/projects/api/projects.api'
 import { requirementsApi } from '@/features/requirements/api/requirements.api'
 import { uiAutomationApi } from '@/features/ui-automation/api/uiAutomation.api'
@@ -184,6 +185,15 @@ export type {
   UpdateUiTestCasePayload,
   UpdateUiTestSuitePayload,
 } from '@/features/ui-automation/types'
+export type {
+  AddTestOrderCasesResult,
+  CreateTestOrderPayload,
+  TestOrder,
+  TestOrderEntry,
+  TestOrderEntryStatus,
+  UpdateTestOrderEntryPayload,
+  UpdateTestOrderPayload,
+} from '@/features/test-orders/types'
 
 export type { ApiEnvelope, ListResponse } from '@/shared/api/request'
 export { ApiError, listItems, listTotal } from '@/shared/api/request'
@@ -196,5 +206,6 @@ export const api = {
   ...requirementsApi,
   ...apiAutomationApi,
   ...functionTestingApi,
+  ...testOrdersApi,
   ...uiAutomationApi,
 }

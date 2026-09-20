@@ -139,6 +139,15 @@ class AiGenerateTaskRepository(ResourceRepository):
             )
         )
 
+    async def get_task_by_order_type(self, order_id: str, task_type: str) -> AiGenerateTask | None:
+        """测试单域任务按测试单定位；同迭代可以有多张测试单，(project, sprint) 定位不到。"""
+        return await self.session.scalar(
+            select(AiGenerateTask).where(
+                AiGenerateTask.order_id == order_id,
+                AiGenerateTask.task_type == task_type,
+            )
+        )
+
     async def list_runs_by_project_sprint_task_type(
         self, project_id: str, sprint_id: str, task_type: str
     ) -> list[AiGenerateTaskRun]:

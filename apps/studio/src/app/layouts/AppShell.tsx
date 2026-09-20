@@ -18,12 +18,13 @@ import { AiSkillLibraryPage } from '@/features/ai-testing/pages/AiSkillLibraryPa
 import { AiTestingOverviewPage } from '@/features/ai-testing/pages/AiTestingOverviewPage'
 import { ApiCaseGenerateTaskDetailPage } from '@/features/ai-testing/pages/ApiCaseGenerateTaskDetailPage'
 import { FunctionalCaseGenerateTaskDetailPage } from '@/features/ai-testing/pages/FunctionalCaseGenerateTaskDetailPage'
+import { FunctionalCaseRelationsPage } from '@/features/ai-testing/pages/FunctionalCaseRelationsPage'
 import { UiCaseGenerateTaskDetailPage } from '@/features/ai-testing/pages/UiCaseGenerateTaskDetailPage'
 import { RequirementAnalysisTaskDetailPage } from '@/features/ai-testing/pages/RequirementAnalysisTaskDetailPage'
 import { CodeRiskTaskDetailPage } from '@/features/ai-testing/pages/CodeRiskTaskDetailPage'
 import { BaseServicesPage } from '@/features/base-services/pages/BaseServicesPage'
 import { TestingPage } from '@/features/testing/pages/TestingPage'
-import { FunctionTestSuiteDetailPage } from '@/features/test-cases/pages/FunctionTestSuiteDetailPage'
+import { TestOrderWorkspacePage } from '@/features/test-orders/pages/TestOrderWorkspacePage'
 import { UiTestSuiteCasePage } from '@/features/ui-automation/pages/UiTestSuiteCasePage'
 import { MtxLogo } from '@/shared/components/MtxLogo/MtxLogo'
 import { useThemeStore } from '@/shared/store/theme.store'
@@ -47,6 +48,7 @@ export function AppShell() {
     if (location.pathname.startsWith('/base-services')) return '/base-services'
     if (location.pathname.startsWith('/ai-testing')) return '/ai-testing'
     if (location.pathname.startsWith('/test-cases')) return '/testing'
+    if (location.pathname.startsWith('/test-orders')) return '/testing'
     if (location.pathname.startsWith('/testing')) return '/testing'
     if (location.pathname.startsWith('/api-automation')) return '/testing'
     if (location.pathname.startsWith('/ui-automation')) return '/testing'
@@ -176,13 +178,14 @@ export function AppShell() {
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/:projectId/sprints/:sprintId" element={<SprintDetailPage />} />
             <Route path="/testing" element={<TestingPage />} />
-            <Route path="/test-cases" element={<Navigate to="/testing?tab=functional" replace />} />
-            <Route path="/test-cases/suites/:suiteId" element={<FunctionTestSuiteDetailPage />} />
+            <Route path="/test-cases" element={<Navigate to="/testing?tab=library" replace />} />
+            <Route path="/test-orders/:orderId" element={<TestOrderWorkspacePage />} />
             <Route path="/ai-testing" element={<AiTestingOverviewPage />} />
             <Route path="/ai-testing/skills" element={<AiSkillLibraryPage />} />
             <Route path="/ai-testing/tasks" element={<UnifiedAiTestingPage />} />
             <Route path="/ai-testing/tasks/:taskId" element={<ApiCaseGenerateTaskDetailPage />} />
             <Route path="/ai-testing/function-tasks/:taskId" element={<FunctionalCaseGenerateTaskDetailPage />} />
+            <Route path="/ai-testing/function-tasks/:taskId/runs/:runId/graph" element={<FunctionalCaseRelationsPage />} />
             <Route path="/ai-testing/ui-tasks/:taskId" element={<UiCaseGenerateTaskDetailPage />} />
             <Route path="/ai-testing/requirement-analysis-tasks/:taskId" element={<RequirementAnalysisTaskDetailPage />} />
             <Route path="/ai-testing/code-risk-tasks/:taskId" element={<CodeRiskTaskDetailPage />} />

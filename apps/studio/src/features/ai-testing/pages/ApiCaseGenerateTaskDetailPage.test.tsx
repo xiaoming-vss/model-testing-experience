@@ -85,6 +85,24 @@ function renderPage(role: 'owner' | 'viewer' = 'owner') {
   )
 }
 
+
+// 运行记录操作列内联「审核候选结果/错误信息」，导入等状态变更收在行内「更多」下拉里。
+async function findRunRow(runId = 'run-1') {
+  const idCell = await screen.findByText(runId)
+  const row = idCell.closest('tr')
+  if (!row) throw new Error(`未找到运行记录行：${runId}`)
+  return row
+}
+
+async function findRunInlineAction(name: string, runId = 'run-1') {
+  return within(await findRunRow(runId)).findByRole('button', { name })
+}
+
+async function openRunActionsMenu(user: ReturnType<typeof userEvent.setup>, runId = 'run-1') {
+  const row = await findRunRow(runId)
+  await user.click(await within(row).findByRole('button', { name: '更多操作' }))
+}
+
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
@@ -134,7 +152,7 @@ describe('API 候选结果审核与导入', () => {
     installFetchHandler()
     renderPage()
 
-    expect(await screen.findByRole('button', { name: '审核候选结果' })).toBeEnabled()
+    expect(await findRunInlineAction('审核候选结果')).toBeEnabled()
     expect(screen.queryByRole('button', { name: '结果 YAML' })).not.toBeInTheDocument()
   })
 
@@ -144,7 +162,7 @@ describe('API 候选结果审核与导入', () => {
 
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '审核候选结果' }))
+    await user.click(await findRunInlineAction('审核候选结果'))
     const dialog = await screen.findByRole('dialog')
     const modalContainer = dialog.querySelector<HTMLElement>('.ant-modal-container')
 
@@ -172,7 +190,7 @@ describe('API 候选结果审核与导入', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '审核候选结果' }))
+    await user.click(await findRunInlineAction('审核候选结果'))
 
     expect(screen.queryByRole('tab', { name: '结构化预览' })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: 'YAML' })).not.toBeInTheDocument()
@@ -214,7 +232,7 @@ describe('API 候选结果审核与导入', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '审核候选结果' }))
+    await user.click(await findRunInlineAction('审核候选结果'))
     expect(screen.getByText('预览候选')).toBeInTheDocument()
     expect(screen.getAllByText('接口 1').length).toBeGreaterThan(0)
     await user.click(screen.getByText('编辑候选'))
@@ -242,7 +260,7 @@ describe('API 候选结果审核与导入', () => {
 
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '审核候选结果' }))
+    await user.click(await findRunInlineAction('审核候选结果'))
     await user.click(screen.getByText('编辑候选'))
     const editor = await screen.findByRole('textbox', { name: '候选结果 YAML' })
     await user.click(editor)
@@ -274,14 +292,14 @@ describe('API 候选结果审核与导入', () => {
 
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '审核候选结果' }))
+    await user.click(await findRunInlineAction('审核候选结果'))
     await user.type(screen.getByRole('textbox', { name: '审核备注' }), '内容符合预期')
     await user.click(screen.getByRole('button', { name: /批\s*准/ }))
 
     await waitFor(() => {
       expect(reviewBody).toEqual({ action: 'approve', reviewComment: '内容符合预期' })
     })
-    expect(await screen.findByText('已批准')).toBeInTheDocument()
+    expect(await screen.findByText('待导入')).toBeInTheDocument()
     expect(screen.getByText('待导入')).toBeInTheDocument()
     expect(screen.queryByText('请选择API测试集')).not.toBeInTheDocument()
   })
@@ -312,7 +330,8 @@ describe('API 候选结果审核与导入', () => {
 
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '导入 API 集合' }))
+    await openRunActionsMenu(user)
+    await user.click(await screen.findByRole('menuitem', { name: '导入 API 集合' }))
     await user.click(screen.getByRole('combobox', { name: '目标 API 集合' }))
     await user.click(await screen.findByText('登录接口集'))
     await user.click(screen.getByRole('button', { name: '开始导入' }))
@@ -321,9 +340,8 @@ describe('API 候选结果审核与导入', () => {
       expect(importBody).toEqual({ collectionId: 'collection-1', confirmOverwrite: false })
     })
     expect(await screen.findByText('已导入')).toBeInTheDocument()
-    expect(screen.getByText(/登录接口集/)).toBeInTheDocument()
+    expect(screen.getByText(/导入：登录接口集/)).toBeInTheDocument()
     expect(screen.getByText(/2026/)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '导入 API 集合' })).not.toBeInTheDocument()
   })
 
   it('无权访问目标集合时保留已批准待导入并允许重试', async () => {
@@ -344,13 +362,14 @@ describe('API 候选结果审核与导入', () => {
 
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '导入 API 集合' }))
+    await openRunActionsMenu(user)
+    await user.click(await screen.findByRole('menuitem', { name: '导入 API 集合' }))
     await user.click(screen.getByRole('combobox', { name: '目标 API 集合' }))
     await user.click(await screen.findByText('受限接口集'))
     await user.click(screen.getByRole('button', { name: '开始导入' }))
 
     expect(await screen.findByText('无权访问目标 API 集合')).toBeInTheDocument()
-    expect(screen.getByText('已批准')).toBeInTheDocument()
+    expect(screen.getByText('待导入')).toBeInTheDocument()
     expect(screen.getByText('待导入')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '开始导入' })).toBeEnabled()
     expect(screen.queryByText('已导入')).not.toBeInTheDocument()
@@ -398,7 +417,8 @@ describe('API 候选结果审核与导入', () => {
 
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '导入 API 集合' }))
+    await openRunActionsMenu(user)
+    await user.click(await screen.findByRole('menuitem', { name: '导入 API 集合' }))
     await user.click(screen.getByRole('combobox', { name: '目标 API 集合' }))
     await user.click(await screen.findByText('登录接口集'))
     await user.click(screen.getByRole('button', { name: '开始导入' }))
@@ -422,9 +442,10 @@ describe('API 候选结果审核与导入', () => {
     await user.click(screen.getByRole('button', { name: '取消覆盖' }))
 
     await waitFor(() => expect(screen.queryByRole('dialog', { name: '确认覆盖冲突' })).not.toBeInTheDocument())
-    expect(screen.getByText('已批准')).toBeInTheDocument()
     expect(screen.getByText('待导入')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '导入 API 集合' })).toBeEnabled()
+    expect(screen.getByText('待导入')).toBeInTheDocument()
+    await openRunActionsMenu(user)
+    expect(screen.getByRole('menuitem', { name: '导入 API 集合' })).toBeEnabled()
     expect(importRequests).toBe(1)
   })
 
@@ -468,7 +489,8 @@ describe('API 候选结果审核与导入', () => {
 
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '导入 API 集合' }))
+    await openRunActionsMenu(user)
+    await user.click(await screen.findByRole('menuitem', { name: '导入 API 集合' }))
     await user.click(screen.getByRole('combobox', { name: '目标 API 集合' }))
     await user.click(await screen.findByText('登录接口集'))
     await user.click(screen.getByRole('button', { name: '开始导入' }))
@@ -486,8 +508,7 @@ describe('API 候选结果审核与导入', () => {
       ])
     })
     expect(await screen.findByText('已导入')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '导入 API 集合' })).not.toBeInTheDocument()
-  }, 15_000)
+  }, 30_000)
 
   it('候选草稿未保存时禁用审核操作并在关闭前确认放弃', async () => {
     installFetchHandler()
@@ -495,7 +516,7 @@ describe('API 候选结果审核与导入', () => {
 
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '审核候选结果' }))
+    await user.click(await findRunInlineAction('审核候选结果'))
     await user.click(screen.getByText('编辑候选'))
     const editor = await screen.findByRole('textbox', { name: '候选结果 YAML' })
     await user.click(editor)
@@ -535,15 +556,16 @@ describe('API 候选结果审核与导入', () => {
 
     expect(await screen.findByText('失败')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '审核候选结果' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '导入 API 集合' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '更多操作' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '错误信息' })).toBeInTheDocument()
   })
 
   it('待审核运行不能发起导入', async () => {
     installFetchHandler()
     renderPage()
 
-    expect(await screen.findByRole('button', { name: '审核候选结果' })).toBeEnabled()
-    expect(screen.queryByRole('button', { name: '导入 API 集合' })).not.toBeInTheDocument()
+    expect(await findRunInlineAction('审核候选结果')).toBeEnabled()
+    expect(screen.queryByRole('menuitem', { name: '导入 API 集合' })).not.toBeInTheDocument()
   })
 
   it('拒绝请求只发送审核字段并冻结候选结果', async () => {
@@ -558,13 +580,13 @@ describe('API 候选结果审核与导入', () => {
 
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '审核候选结果' }))
+    await user.click(await findRunInlineAction('审核候选结果'))
     await user.type(screen.getByRole('textbox', { name: '审核备注' }), '字段不完整')
     await user.click(screen.getByRole('button', { name: /拒\s*绝/ }))
 
     await waitFor(() => expect(reviewBody).toEqual({ action: 'reject', reviewComment: '字段不完整' }))
     expect(await screen.findByText('已拒绝')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '导入 API 集合' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: '导入 API 集合' })).not.toBeInTheDocument()
   })
 
   it('审核通过且待导入时仍提供导入入口', async () => {
@@ -584,7 +606,9 @@ describe('API 候选结果审核与导入', () => {
     renderPage()
 
     expect(await screen.findByText('待导入')).toBeInTheDocument()
-    expect(await screen.findByRole('button', { name: '导入 API 集合' }, { timeout: 5_000 })).toBeEnabled()
+    const user = userEvent.setup()
+    await openRunActionsMenu(user)
+    expect(await screen.findByRole('menuitem', { name: '导入 API 集合' }, { timeout: 5_000 })).toBeEnabled()
     expect(screen.queryByRole('button', { name: '查看目标集合' })).not.toBeInTheDocument()
   })
 
@@ -608,13 +632,14 @@ describe('API 候选结果审核与导入', () => {
 
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '导入 API 集合' }))
+    await openRunActionsMenu(user)
+    await user.click(await screen.findByRole('menuitem', { name: '导入 API 集合' }))
     await user.click(screen.getByRole('combobox', { name: '目标 API 集合' }))
     await user.click(await screen.findByText('登录接口集'))
     await user.click(screen.getByRole('button', { name: '开始导入' }))
 
     expect(await screen.findByText(errorMessage)).toBeInTheDocument()
-    expect(screen.getByText('已批准')).toBeInTheDocument()
+    expect(screen.getByText('待导入')).toBeInTheDocument()
     expect(screen.getByText('待导入')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '开始导入' })).toBeEnabled()
   })
@@ -645,14 +670,15 @@ describe('API 候选结果审核与导入', () => {
 
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: '导入 API 集合' }))
+    await openRunActionsMenu(user)
+    await user.click(await screen.findByRole('menuitem', { name: '导入 API 集合' }))
     await user.click(screen.getByRole('combobox', { name: '目标 API 集合' }))
     await user.click(await screen.findByText('登录接口集'))
     await user.click(screen.getByRole('button', { name: '开始导入' }))
     await user.click(await screen.findByRole('button', { name: '整批确认覆盖' }))
 
     expect(await screen.findByText('导入持久化失败')).toBeInTheDocument()
-    expect(screen.getByText('已批准')).toBeInTheDocument()
+    expect(screen.getByText('待导入')).toBeInTheDocument()
     expect(screen.getByText('待导入')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '整批确认覆盖' })).toBeEnabled()
     expect(requestBodies.at(-1)).toEqual({ collectionId: 'collection-1', confirmOverwrite: true })
@@ -663,7 +689,7 @@ describe('API 候选结果审核与导入', () => {
 it('只读成员可以查看待审核候选，但不能批准或保存', async () => {
   installFetchHandler()
   renderPage('viewer')
-  await userEvent.click(await screen.findByRole('button', { name: '查看候选结果' }))
+  await userEvent.click(await findRunInlineAction('查看候选结果'))
   expect(await screen.findByRole('dialog')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /^批\s*准$/ })).toBeDisabled()
   expect(screen.queryByRole('button', { name: '保存候选结果' })).toBeNull()

@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ApiAutomationPage } from '@/features/api-automation/pages/ApiAutomationPage'
 import { CaseLibraryPage } from '@/features/test-cases/pages/CaseLibraryPage'
-import { TestCasePage } from '@/features/test-cases/pages/TestCasePage'
+import { TestOrderPage } from '@/features/test-orders/pages/TestOrderPage'
 import { TestingTabSwitcher } from '@/features/testing/components/TestingTabSwitcher'
 import { resolveTestingTab, type TestingTab } from '@/features/testing/components/testingTab'
 import { UiAutomationPage } from '@/features/ui-automation/pages/UiAutomationPage'
@@ -28,10 +28,8 @@ export function TestingPage() {
       <div className="testing-tab-panel">
         {activeTab === 'api' ? <ApiAutomationPage /> : null}
         {activeTab === 'ui' ? <UiAutomationPage /> : null}
-        {activeTab === 'functional' ? <TestCasePage /> : null}
-        {activeTab === 'library' ? (
-          <CaseLibraryPage onLeaveToFunctional={() => handleTabChange('functional')} />
-        ) : null}
+        {activeTab === 'library' ? <CaseLibraryPage /> : null}
+        {activeTab === 'orders' ? <TestOrderPage /> : null}
       </div>
     </div>
   )

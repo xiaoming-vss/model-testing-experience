@@ -4,27 +4,22 @@ import { ProjectActionModal } from '@/features/projects/components/ProjectAction
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ArrowLeftOutlined, CopyOutlined, DownOutlined, RightOutlined } from '@ant-design/icons'
-import { Alert, Button, Card, Empty, Form, Input, Modal, Popconfirm, Popover, Select, Spin, Tabs, Tag, Tooltip } from 'antd'
+import { Alert, Button, Card, Empty, Form, Input, Modal, Popconfirm, Select, Spin, Tabs, Tag, Tooltip } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { parse } from 'yaml'
 import { ApiCaseGenerateTaskDrawer, type ApiCaseGenerateTaskFormValues } from '../components/ApiCaseGenerateTaskDrawer'
 import { ApiImportConflictModal } from '../components/ApiImportConflictModal'
-import { ImportMigrationWarning } from '../components/ImportMigrationWarning'
+import { RunHistoryTable, RunMigrationWarningIcon, RunRowActions, type RunMenuAction } from '../components/RunHistoryTable'
+import { RunArtifacts, RunPipelineStatus } from '../components/RunPipelineStatus'
 import { LlmConnectionSelectModal } from '../components/LlmConnectionSelectModal'
 import type {
   ApiCaseGenerateTaskRunImportConflict,
   ImportApiCaseGenerateTaskRunPayload,
   ReviewApiCaseGenerateTaskRunPayload,
 } from '../types'
-import {
-  isRunnableApiCaseGenerateTaskRun,
-  normalizeGenerateTaskReviewStatus,
-  renderApiCaseGenerateTaskRunStatusTag,
-  renderGenerateTaskImportStatusTag,
-  renderGenerateTaskReviewStatusTag,
-} from '../utils/taskStatus'
+import { isRunnableApiCaseGenerateTaskRun, normalizeGenerateTaskReviewStatus } from '../utils/taskStatus'
 import '@/features/ai-testing/styles/index.css'
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser'
 import { useAuthStore } from '@/features/auth/store/auth.store'
@@ -759,17 +754,8 @@ export function ApiCaseGenerateTaskDetailPage() {
   const candidateRequirementName = task?.requirementId
     ? requirementNameMap.get(task.requirementId) ?? task.requirementId
     : '-'
-  const selectedRunImportStatus = selectedRun?.importStatus
-  const canImportSelectedRun = Boolean(selectedRun)
-    && selectedRun?.status === 'success'
-    && selectedRunReviewStatus === 'approved'
-    && selectedRunImportStatus === 'pending'
-  const selectedRunApiTargetId = selectedRun?.importedTargets.find(
-    (target) => target.targetType === 'api_collection',
-  )?.targetId ?? ''
-  const selectedRunApiTargetName = selectedRunApiTargetId
-    ? (apiCollectionNameMap.get(selectedRunApiTargetId) ?? selectedRunApiTargetId)
-    : ''
+  const resolveRunRecord = (record: (typeof runRecords)[number]) =>
+    record.runId === selectedRunId && selectedRun ? selectedRun : record
   const runHistoryRefreshing = runsQuery.isFetching || selectedRunQuery.isFetching
 
   function handleRunTask() {
@@ -1013,137 +999,105 @@ export function ApiCaseGenerateTaskDetailPage() {
                       <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="运行记录加载中..." />
                     </div>
                   ) : runRecords.length > 0 ? (
-                    <div className="ai-task-run-history-list single-list">
-                      {runRecords.map((record, index) => {
-                        const active = record.runId === selectedRunId
-                        const effectiveRun = active && selectedRun ? selectedRun : record
-                        const runSucceeded = String(effectiveRun.status ?? '').toLowerCase() === 'success'
-                    const runAwaitingReview = runSucceeded && normalizeGenerateTaskReviewStatus(effectiveRun.reviewStatus) === 'pending'
-                        const visibleSections = runResultSectionDefinitions.filter(
-                          (section) =>
-                            !(section.key === 'errorMessage' && runSucceeded)
-                            && !(section.key === 'resultYaml' && runAwaitingReview),
-                        )
-
-                        return (
-                          <div
-                            key={record.runId ?? `${index}`}
-                            className={`ai-task-run-history-record-row${active ? ' active' : ''}`}
-                            onClick={() => setSelectedRunRecordId(record.runId ?? null)}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(event) => {
-                              if (event.key === 'Enter' || event.key === ' ') {
-                                event.preventDefault()
-                                setSelectedRunRecordId(record.runId ?? null)
-                              }
-                            }}
-                          >
-                            <div className="ai-task-run-history-record-main">
-                              <div className="ai-task-run-history-record-identity">
-                                <span className="ai-task-run-history-record-index">#{index + 1}</span>
-                                <span className="ai-task-run-history-record-name" title={record.runId || '未命名记录'}>
-                                  {record.runId || '未命名记录'}
-                                </span>
-                              </div>
-                              <div className="ai-task-run-history-record-meta">
-                                <span className="ai-task-run-history-record-status">{renderApiCaseGenerateTaskRunStatusTag(record.status)}</span>
-                                {runSucceeded ? (
-                                  <>
-                                    <span className="ai-task-run-history-review-status">
-                            {renderGenerateTaskReviewStatusTag(effectiveRun.reviewStatus)}
-                                    </span>
-                                    <span className="ai-task-run-history-review-status">
-                            {renderGenerateTaskImportStatusTag(effectiveRun.importStatus)}
-                                    </span>
-                                  </>
-                                ) : null}
-                              </div>
-                            </div>
-                            <div className="ai-task-run-history-record-actions">
-                              {visibleSections.map((section) => {
-                                const isOpen = active && runResultModal?.key === section.key
-
-                                return (
-                                  <button
-                                    key={section.key}
-                                    type="button"
-                                    className={`ai-task-run-result-popover-btn${isOpen ? ' active' : ''}`}
-                                    onClick={(event) => {
-                                      event.stopPropagation()
-                                      setSelectedRunRecordId(record.runId ?? null)
-                                      setRunResultModal({ key: section.key, label: section.label })
-                                    }}
-                                  >
-                                    {section.label}
-                                  </button>
-                                )
-                              })}
-                              {active && selectedRun ? (
-                                <div className="ai-task-run-history-review-inline">
-                                  <ImportMigrationWarning importMigrationComplete={selectedRun.importMigrationComplete} />
-                                  {selectedRunImportStatus === 'imported' && selectedRunApiTargetName ? (
-                                    <span className="ai-task-run-history-record-field">导入：{selectedRunApiTargetName}</span>
-                                  ) : null}
-                                  {selectedRun.importedAt ? (
-                                    <span className="ai-task-run-history-record-field">导入时间：{formatTime(selectedRun.importedAt)}</span>
-                                  ) : null}
-                                  {selectedRun.reviewComment ? (
-                                    <Popover
-                                      trigger="click"
-                                      placement="bottomRight"
-                                      content={<div className="ai-task-run-review-comment">{selectedRun.reviewComment}</div>}
-                                    >
-                                      <button
-                                        type="button"
-                                        className="ai-task-run-review-note-btn"
-                                        onClick={(event) => event.stopPropagation()}
-                                      >
-                                        审核备注
-                                      </button>
-                                    </Popover>
-                                  ) : null}
-                                  {selectedRunReviewStatus === 'pending' && selectedRun.status === 'success' ? (
-                                    <ProjectActionButton action="read" readOnlyLabel="查看候选结果"
-                                      size="small"
-                                      type="primary"
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        openReviewModal(record.runId)
-                                      }}
-                                    >
-                                      审核候选结果
-                                    </ProjectActionButton>
-                                  ) : null}
-                                  {canImportSelectedRun ? (
-                                    <ProjectActionButton action="execute"
-                                      size="small"
-                                      type="primary"
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        setImportModalRunId(record.runId ?? null)
-                                      }}
-                                    >
-                                      导入 API 集合
-                                    </ProjectActionButton>
-                                  ) : null}
-                                  {selectedRunImportStatus === 'imported' && selectedRunApiTargetId ? (
+                    <>
+                      <RunHistoryTable
+                        rows={runRecords}
+                        getRunId={(record) => record.runId}
+                        selectedRunId={selectedRunId}
+                        resolveRow={resolveRunRecord}
+                        onSelect={(runId) => setSelectedRunRecordId(runId ?? null)}
+                        renderStatus={(row) => <RunPipelineStatus run={resolveRunRecord(row)} />}
+                        renderArtifacts={(row) => {
+                          const data = resolveRunRecord(row)
+                          const runSucceeded = String(data.status ?? '').toLowerCase() === 'success'
+                          const runAwaitingReview = runSucceeded && normalizeGenerateTaskReviewStatus(data.reviewStatus) === 'pending'
+                          return (
+                            <RunArtifacts
+                              artifacts={[
+                                { key: 'configJson', label: '中间配置', available: true },
+                                { key: 'resultYaml', label: '结果 YAML', available: !runAwaitingReview },
+                              ]}
+                              onOpen={(key) => {
+                                const section = runResultSectionDefinitions.find((item) => item.key === key)
+                                if (!section) return
+                                setSelectedRunRecordId(row.runId ?? null)
+                                setRunResultModal({ key: section.key, label: section.label })
+                              }}
+                            />
+                          )
+                        }}
+                        getReviewedAt={(row) => resolveRunRecord(row).reviewedAt}
+                        getReviewComment={(row) => resolveRunRecord(row).reviewComment}
+                        getImportedAt={(row) => resolveRunRecord(row).importedAt}
+                        renderActions={(row) => {
+                          const data = resolveRunRecord(row)
+                          const runSucceeded = String(data.status ?? '').toLowerCase() === 'success'
+                          const recordFailed = ['failed', 'error'].includes(String(data.status ?? '').toLowerCase())
+                          const reviewStatus = normalizeGenerateTaskReviewStatus(data.reviewStatus)
+                          const importedTargetId = (data.importedTargets ?? []).find(
+                            (target) => target.targetType === 'api_collection',
+                          )?.targetId ?? ''
+                          const importedTargetName = importedTargetId
+                            ? (apiCollectionNameMap.get(importedTargetId) ?? importedTargetId)
+                            : ''
+                          const menuItems: RunMenuAction[] = [
+                            ...(can('execute') && data.status === 'success' && reviewStatus === 'approved' && data.importStatus === 'pending'
+                              ? [{ key: 'importCollection', label: '导入 API 集合', disabled: importRunMutation.isPending }]
+                              : []),
+                            ...(data.importStatus === 'imported' && importedTargetId
+                              ? [{ key: 'openCollection', label: '查看目标集合' }]
+                              : []),
+                          ]
+                          return (
+                            <RunRowActions
+                              inline={
+                                <>
+                                  {/* 审核是本行最需要用户处理的动作，直接放在操作列，「更多」只留状态变更类操作。 */}
+                                  {runSucceeded && reviewStatus === 'pending' && can('read') ? (
                                     <Button
                                       size="small"
+                                      type="primary"
                                       onClick={(event) => {
                                         event.stopPropagation()
-                                        navigate(`/api-automation/collections/${selectedRunApiTargetId}`)
+                                        openReviewModal(row.runId)
                                       }}
                                     >
-                                      查看目标集合
+                                      {can('review') ? '审核候选结果' : '查看候选结果'}
                                     </Button>
                                   ) : null}
-                                </div>
-                              ) : null}
-                            </div>
-                          </div>
-                        )
-                      })}
+                                  {recordFailed && data.errorMessage?.trim() ? (
+                                    <button
+                                      type="button"
+                                      className="ai-task-run-result-popover-btn"
+                                      onClick={(event) => {
+                                        event.stopPropagation()
+                                        setSelectedRunRecordId(row.runId ?? null)
+                                        setRunResultModal({ key: 'errorMessage', label: '错误信息' })
+                                      }}
+                                    >
+                                      错误信息
+                                    </button>
+                                  ) : null}
+                                  {data.importStatus === 'imported' && importedTargetName ? (
+                                    <span className="ai-task-run-history-record-field">导入：{importedTargetName}</span>
+                                  ) : null}
+                                  {!data.importMigrationComplete ? <RunMigrationWarningIcon /> : null}
+                                </>
+                              }
+                              menuItems={menuItems}
+                              onMenuAction={(key) => {
+                                if (key === 'importCollection') {
+                                  setImportModalRunId(row.runId ?? null)
+                                  return
+                                }
+                                if (key === 'openCollection' && importedTargetId) {
+                                  navigate(`/api-automation/collections/${importedTargetId}`)
+                                }
+                              }}
+                            />
+                          )
+                        }}
+                      />
                       {selectedRunQuery.isLoading && !selectedRun ? (
                         <div className="ai-task-run-history-placeholder compact">
                           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="运行详情加载中..." />
@@ -1154,7 +1108,7 @@ export function ApiCaseGenerateTaskDetailPage() {
                           当前选中记录暂无可展示结果
                         </div>
                       ) : null}
-                    </div>
+                    </>
                   ) : (
                     <div className="ai-task-run-history-placeholder">
                       <Empty

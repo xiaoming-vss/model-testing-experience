@@ -90,9 +90,7 @@ class AuthService:
         session = self.users.session
         await session.scalar(select(User).where(User.user_id == user_id).with_for_update())
         owned = await session.scalar(
-            select(Project.project_id)
-            .where(Project.user_id == user_id)
-            .with_for_update()
+            select(Project.project_id).where(Project.user_id == user_id).with_for_update()
         )
         if owned is not None:
             raise AppError(2007, "请先转移或删除所有拥有的项目", 409)
