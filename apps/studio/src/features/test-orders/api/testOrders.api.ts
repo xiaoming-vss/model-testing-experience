@@ -2,8 +2,12 @@ import { buildQuery, request, type ListResponse } from '@/shared/api/request'
 import type {
   AddTestOrderCasesResult,
   CreateTestOrderPayload,
+  DispatchTestOrderGraphPayload,
   TestOrder,
   TestOrderEntry,
+  TestOrderGraph,
+  TestOrderGraphInput,
+  TestOrderGraphRun,
   UpdateTestOrderEntryPayload,
   UpdateTestOrderPayload,
 } from '../types'
@@ -52,4 +56,13 @@ export const testOrdersApi = {
       method: 'POST',
       body: JSON.stringify({ entryIds, assigneeUserId }),
     }),
+  getTestOrderGraphInput: (orderId: string) =>
+    request<TestOrderGraphInput>(`/v1/test-orders/${orderId}/graph-input`),
+  dispatchTestOrderGraph: (orderId: string, body: DispatchTestOrderGraphPayload) =>
+    request<TestOrderGraphRun>(`/v1/test-orders/${orderId}/graph-analysis`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  getTestOrderGraph: (orderId: string) =>
+    request<TestOrderGraph>(`/v1/test-orders/${orderId}/graph-analysis`),
 }

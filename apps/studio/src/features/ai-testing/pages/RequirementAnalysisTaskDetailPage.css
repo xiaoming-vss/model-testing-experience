@@ -18,3 +18,46 @@
     padding: 20px 16px;
   }
 }
+
+/* 只读文本直接占满弹窗正文，避免套用审核工作区的固定高度。 */
+.requirement-analysis-text-modal .ant-modal-body {
+  display: flex;
+  flex: 1;
+  height: auto;
+  min-height: 0;
+  padding: 8px 0 0;
+  overflow: hidden;
+}
+
+.requirement-analysis-text-modal .ant-modal-body > .revision-workspace {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+
+.requirement-analysis-text-modal .revision-source {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+}
+
+.requirement-analysis-text-modal .ai-task-run-result-modal-content {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+}
+
+.requirement-analysis-text-modal .ai-task-run-result-modal-content > .ai-task-code-block {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  margin: 0;
+  padding: 8px 12px 12px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: auto;
+}

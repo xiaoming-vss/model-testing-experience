@@ -50,14 +50,6 @@ async def get_function_suite(
     return success_payload(await service.get(user_id, suite_id))
 
 
-async def get_function_suite_requirement_case_view(
-    suite_id: str,
-    user_id: str = Depends(get_current_user_id),
-    service: FunctionTestSuiteService = Depends(get_function_test_suite_service),
-):
-    return success_payload(await service.requirement_case_view(user_id, suite_id))
-
-
 async def update_function_suite(
     suite_id: str,
     body: FunctionSuiteUpdateRequest,

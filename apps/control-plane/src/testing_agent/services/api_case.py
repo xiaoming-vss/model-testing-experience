@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from pydantic import BaseModel
@@ -23,6 +22,7 @@ from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.api_case import ApiCaseRepository
 from testing_agent.schemas.api_case import ApiCaseRequest, ApiCaseResponse
 from testing_agent.schemas.api_run import ApiCaseRunResponse, RunApiCaseRequest
+from testing_agent.services.api_import_payload import normalize_json_value as normalize_json_value
 from testing_agent.services.api_request_render import render_api_case_request
 from testing_agent.services.api_run_scope import apply_run_scope, authorize_run
 from testing_agent.services.common import list_payload
@@ -35,15 +35,6 @@ def dump(schema: type[BaseModel], obj: Any) -> dict[str, Any]:
     return schema.model_validate(obj).model_dump(by_alias=True, mode="json")
 
 
-def normalize_json_value(value: Any) -> Any:
-    if value == "":
-        return None
-    if isinstance(value, str):
-        try:
-            return json.loads(value)
-        except json.JSONDecodeError:
-            return value
-    return value
 
 
 def api_case_model_data(body: ApiCaseRequest) -> dict[str, Any]:

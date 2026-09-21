@@ -91,6 +91,14 @@ async def get_function_case_generate_task_run(
     return success_payload(dump_run(await service.owned_run(user_id, run_id, "function")))
 
 
+async def delete_function_case_generate_task_run(
+    run_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+):
+    return success_payload(await service.delete_run("function", run_id, user_id))
+
+
 async def save_function_case_stage_output(
     run_id: str,
     body: AiGenerateTaskRunRequest,

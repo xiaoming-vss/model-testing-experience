@@ -1,4 +1,4 @@
-import { Background, BackgroundVariant, BaseEdge, Handle, MarkerType, MiniMap, Position, ReactFlow, ReactFlowProvider, applyNodeChanges, getStraightPath, useReactFlow, useStore, type Edge, type EdgeProps, type Node, type NodeChange, type NodeProps } from '@xyflow/react'
+import { Background, BackgroundVariant, BaseEdge, Handle, MarkerType, MiniMap, Position, ReactFlow, ReactFlowProvider, applyNodeChanges, useReactFlow, useStore, type Edge, type EdgeProps, type Node, type NodeChange, type NodeProps } from '@xyflow/react'
 import { ExpandOutlined, MinusOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Empty, Tag } from 'antd'
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode, type Ref } from 'react'
@@ -13,6 +13,7 @@ import {
   type RelationsLaidOutNode,
   type RelationsOrientation,
 } from '../utils/caseRelationsGraph'
+import { routeRelationsEdge } from '../utils/relationsEdgePath'
 import { useThemeStore } from '@/shared/store/theme.store'
 import '@xyflow/react/dist/style.css'
 import './FunctionalCaseRelationsGraph.css'
@@ -72,16 +73,9 @@ function CaseFlowNode({ data }: NodeProps<CaseFlowNode>) {
 
 const NODE_TYPES = { case: CaseFlowNode }
 
-// 鱼骨肋线是任意方向的直线，起点终点都取卡片中心，终点收拢到卡片边缘露出箭头。
-function FishboneEdge({ id, sourceX, sourceY, targetX, targetY, markerEnd, style }: EdgeProps) {
-  const dx = targetX - sourceX
-  const dy = targetY - sourceY
-  const trim = Math.abs(dx) < 1 && Math.abs(dy) < 1
-    ? 0
-    : Math.min(RELATIONS_NODE_WIDTH / 2 / Math.abs(dx || 1e-6), RELATIONS_NODE_HEIGHT / 2 / Math.abs(dy || 1e-6))
-  const ratio = Math.min(trim, 1)
-  const [path] = getStraightPath({ sourceX, sourceY, targetX: targetX - dx * ratio, targetY: targetY - dy * ratio })
-  return <BaseEdge id={id} path={path} markerEnd={markerEnd} style={style} />
+// 路径根据当前卡片位置计算，拖动其他卡片也会重新避让。
+function FishboneEdge({ id, data, markerEnd, style }: EdgeProps) {
+  return <BaseEdge id={id} path={typeof data?.path === 'string' ? data.path : ''} markerEnd={markerEnd} style={style} />
 }
 
 const EDGE_TYPES = { fishbone: FishboneEdge }
@@ -260,6 +254,22 @@ function RelationsGraphInner({
     }))
   }, [model, activeEdgeIds])
 
+  const routedEdges = useMemo(() => {
+    const cards = nodes.map((node) => ({
+      id: node.id, ...node.position,
+      width: node.measured?.width ?? RELATIONS_NODE_WIDTH,
+      height: node.measured?.height ?? RELATIONS_NODE_HEIGHT,
+    }))
+    const byId = new Map(cards.map((card) => [card.id, card]))
+    const mainPairs = new Set(model?.paths.flatMap((path) => path.caseIds.slice(1).map((id, i) => JSON.stringify([path.caseIds[i], id]))))
+    return edges.map((edge) => {
+      const source = byId.get(edge.source)
+      const target = byId.get(edge.target)
+      const path = source && target ? routeRelationsEdge(source, target, cards, mainPairs.has(JSON.stringify([edge.source, edge.target]))) : ''
+      return { ...edge, data: { path } }
+    })
+  }, [nodes, edges, model])
+
   // 内容/方向切换后重新铺满（等节点完成首帧布局再计算包围盒）。
   useEffect(() => {
     if (!layout) return
@@ -304,7 +314,7 @@ function RelationsGraphInner({
     <div className="ai-relations-graph" ref={wrapperRef}>
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={routedEdges}
         nodeTypes={NODE_TYPES}
         edgeTypes={EDGE_TYPES}
         onNodesChange={onNodesChange}

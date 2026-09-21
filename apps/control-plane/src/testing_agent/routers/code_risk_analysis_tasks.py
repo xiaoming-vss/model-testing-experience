@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from testing_agent.handlers.code_risk_analysis_task import (
     create_code_risk_analysis_task,
+    delete_code_risk_analysis_run,
     delete_code_risk_analysis_task,
     get_code_risk_analysis_run,
     get_code_risk_analysis_task,
@@ -43,6 +44,11 @@ router.get(
     "/code-risk-analysis-runs/{run_id}",
     response_model=ApiResponse[CodeRiskAnalysisRunResponse],
 )(get_code_risk_analysis_run)
+
+router.delete(
+    "/code-risk-analysis-runs/{run_id}",
+    response_model=ApiResponse[EmptyData],
+)(delete_code_risk_analysis_run)
 
 router.delete("/code-risk-analysis-tasks/{task_id}", response_model=ApiResponse[EmptyData])(
     delete_code_risk_analysis_task

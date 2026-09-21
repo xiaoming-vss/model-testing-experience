@@ -77,6 +77,14 @@ async def get_code_risk_analysis_run(
     return success_payload(dump_code_risk_analysis_run(run))
 
 
+async def delete_code_risk_analysis_run(
+    run_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+):
+    return success_payload(await service.delete_run("code_risk_analysis", run_id, user_id))
+
+
 async def delete_code_risk_analysis_task(
     task_id: str,
     user_id: str = Depends(get_current_user_id),

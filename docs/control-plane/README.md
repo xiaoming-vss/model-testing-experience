@@ -29,6 +29,20 @@
 
 调用层次为 router → handler → service → repository → model。注意 `api/` 目录下只有依赖注入与鉴权校验（`deps.py`），业务路由不在此处。
 
+生成任务保留 `services/ai_generate_task.py` 作为调用入口，内部实现按职责划分：
+
+| 模块 | 职责 |
+| --- | --- |
+| `ai_task_contracts.py`、`ai_task_output.py` | 阶段常量、产物解析、快照与响应序列化 |
+| `ai_source_archive.py` | 源码归档校验、替换与失败清理 |
+| `ai_stage_workflow.py` | 阶段保存、审核、修订、重试和图谱派发 |
+| `ai_report.py` | 测试报告任务、运行与 PDF 导出 |
+| `api_generate_import.py` | API 候选冲突预览、确认覆盖及事务 |
+| `api_import_payload.py`、`api_import_entities.py` | 文件/候选导入共用的校验、转换和实体构造；不提交事务 |
+| `ai_task_access.py` | 各工作流依赖的最小授权接口，不依赖入口服务实现 |
+
+功能与 UI 正式资产导入继续由 `function_generate_import.py`、`ui_generate_import.py` 处理。审核只改变审核状态，正式资产由独立导入入口创建；不再保留旧的审核即导入路径。通用需求访问链集中在 `project_access.require_requirement_access`，每次调用仍显式传递操作人及权限动作。
+
 ## 配置
 
 启动时按 `--config/-c` 参数、`APP_CONF` 环境变量、`config/local.toml` 的顺序确定配置文件路径。本地独立启动由 `scripts/manage.py` 生成 `config/local.toml` 并注入 `APP_CONF`；容器内为 `/app/config/local.toml`。
@@ -90,4 +104,4 @@ uv run --extra dev alembic upgrade head           # 数据库迁移
 
 ## 测试
 
-`uv run --extra dev pytest`，当前收集 737 项（702 通过、4 失败、31 跳过）。4 项失败集中在 `tests/test_project_membership_api.py::test_function_stage_reexecution_uses_current_actor` 的参数化用例：测试直接生成功能用例，而当前业务规则要求先完成需求分析并导入增强文本，因而返回 HTTP 400。这是测试未跟上业务规则，尚未修复。
+在 `apps/control-plane/` 执行 `uv run --extra dev python -m pytest`，当前收集 742 项（711 通过、31 跳过、0 失败）。使用 `python -m pytest` 将项目根目录加入模块搜索路径，以支持测试夹具的模块间复用。`test_function_stage_reexecution_uses_current_actor` 已补齐关联需求与导入后的增强文本，继续验证 owner/member 的阶段重试、修订使用当前操作人的个人授权。

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy.exc import IntegrityError
 
@@ -20,12 +20,14 @@ from testing_agent.domain.function_case_content import (
 from testing_agent.domain.function_case_identity import pinned_case_id
 from testing_agent.models.function_test_case import FunctionTestCase
 from testing_agent.models.function_test_suite import FunctionTestSuite
-from testing_agent.services.ai_generate_task import (
-    AiGenerateTaskService,
+from testing_agent.services.ai_task_output import (
     dump_run,
     generated_function_cases,
     validate_function_candidate_cases,
 )
+
+if TYPE_CHECKING:
+    from testing_agent.services.ai_task_access import CandidateImportContext
 
 
 def normalized_case_name(name: Any) -> str:
@@ -72,7 +74,7 @@ def apply_generated_case(case: FunctionTestCase, item: dict[str, Any]) -> None:
 
 
 async def import_function_run(
-    service: AiGenerateTaskService,
+    service: CandidateImportContext,
     run_id: str,
     confirm_overwrite: bool,
     user_id: str,

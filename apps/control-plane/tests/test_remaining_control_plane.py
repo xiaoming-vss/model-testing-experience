@@ -277,17 +277,12 @@ class FakeIntegrationRepositoryForConnectionAuth:
                 if row.user_id == user_id
                 and row.provider == provider
                 and row.connection_id == connection_id
-
             ),
             None,
         )
 
     async def list(self, user_id, provider, project_id=""):
-        return [
-            row
-            for row in self.rows
-            if row.user_id == user_id and row.provider == provider
-        ]
+        return [row for row in self.rows if row.user_id == user_id and row.provider == provider]
 
     def add(self, connection):
         self.rows.append(connection)
@@ -392,10 +387,7 @@ async def test_integration_connections_are_scoped_by_project(monkeypatch):
         return [
             row
             for row in repository.rows
-            if row.user_id == user_id
-            and row.provider == provider
-            and row.project_id == project_id
-
+            if row.user_id == user_id and row.provider == provider and row.project_id == project_id
         ]
 
     repository.get_project = get_project
@@ -668,6 +660,7 @@ async def test_api_collection_import_creates_go_extract_and_assert_rules(monkeyp
 
     ids = iter(["case-1", "extract-1", "assert-1"])
     monkeypatch.setattr(api_collection, "new_id", lambda: next(ids))
+    monkeypatch.setattr("testing_agent.services.api_import_entities.new_id", lambda: next(ids))
     repository = FakeApiCollectionRepository()
     service = api_collection.ApiCollectionService(repository)
     payload = {
@@ -746,6 +739,7 @@ async def test_api_collection_import_accepts_go_generated_yaml_sample(monkeypatc
 
     ids = iter([f"id-{index}" for index in range(1, 40)])
     monkeypatch.setattr(api_collection, "new_id", lambda: next(ids))
+    monkeypatch.setattr("testing_agent.services.api_import_entities.new_id", lambda: next(ids))
     service = api_collection.ApiCollectionService(FakeApiCollectionRepository())
     payload = """
 cases:
@@ -967,74 +961,43 @@ def test_ai_review_extracts_api_cases_from_result_yaml():
     assert cases == [{"name": "generated", "method": "GET", "url": "/ping"}]
 
 
-@pytest.mark.asyncio
-async def test_ai_review_imports_go_api_collection_rules_from_result_yaml(monkeypatch):
-    class FakeRepository:
-        session = AuthorizationDatabase()
+def test_ai_confirmed_import_preserves_go_api_collection_rules():
+    from test_api_review_confirmed_import import ImportRepository, make_run, review_client
 
-        def __init__(self):
-            self.rows = []
-
-        async def get_collection(self, collection_id):
-            assert collection_id == "collection-1"
-            return SimpleNamespace(requirement_id="requirement-1")
-
-        async def get_requirement(self, requirement_id):
-            assert requirement_id == "requirement-1"
-            return SimpleNamespace(sprint_id="sprint-1")
-
-        async def get_sprint(self, sprint_id):
-            assert sprint_id == "sprint-1"
-            return SimpleNamespace(project_id="project-1")
-
-        async def get_project(self, project_id):
-            assert project_id == "project-1"
-            return SimpleNamespace(user_id="user-1", project_id="project-1")
-
-        async def exists_case_by_collection_and_name(self, collection_id, name):
-            return False
-
-        def add(self, row):
-            self.rows.append(row)
-
-    ids = iter(["case-1", "extract-1", "assert-1"])
-    monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
-    repository = FakeRepository()
-    service = ai_tasks.AiGenerateTaskService(repository)
-    run = SimpleNamespace(
-        result_yaml=(
-            "cases:\n"
-            "  - name: generated\n"
-            "    method: GET\n"
-            "    urlTemplate: /ping\n"
-            "    extractRules:\n"
-            "      - name: token\n"
-            "        source: body_jsonpath\n"
-            "        sourceExpr: $.token\n"
-            "        varKey: token\n"
-            "    assertRules:\n"
-            "      - name: ok\n"
-            "        assertSource: status_code\n"
-            "        comparator: eq\n"
-            "        expectedValue: '200'\n"
-        )
+    run = make_run()
+    run.review_status = "approved"
+    run.result_yaml = """cases:
+  - name: generated
+    method: GET
+    urlTemplate: /ping
+    extractRules:
+      - name: token
+        source: body_jsonpath
+        sourceExpr: $.token
+        varKey: token
+    assertRules:
+      - name: ok
+        assertSource: status_code
+        comparator: eq
+        expectedValue: '200'
+"""
+    repository = ImportRepository(run)
+    response = review_client(repository).post(
+        "/v1/api-case-generate-task-runs/run-1/import",
+        json={"collectionId": "collection-1"},
     )
 
-    await service.import_generated_api_cases("user-1", run, "collection-1")
-
-    api_case = next(row for row in repository.rows if isinstance(row, ApiCase))
-    extract_rule = next(row for row in repository.rows if isinstance(row, ApiExtractRule))
-    assert_rule = next(row for row in repository.rows if isinstance(row, ApiAssertRule))
-    assert api_case.case_id == "case-1"
-    assert extract_rule.extract_rule_id == "extract-1"
-    assert extract_rule.case_id == "case-1"
-    assert extract_rule.source == "body_jsonpath"
-    assert extract_rule.source_expr == "$.token"
-    assert extract_rule.var_key == "token"
-    assert assert_rule.assert_rule_id == "assert-1"
-    assert assert_rule.case_id == "case-1"
-    assert assert_rule.assert_source == "status_code"
-    assert assert_rule.comparator == "eq"
+    assert response.status_code == 200
+    api_case = next(row for row in repository.cases if row.name == "generated")
+    extract = next(row for row in repository.extract_rules if row.case_id == api_case.case_id)
+    assertion = next(row for row in repository.assert_rules if row.case_id == api_case.case_id)
+    assert extract.source == "body_jsonpath"
+    assert extract.source_expr == "$.token"
+    assert extract.var_key == "token"
+    assert assertion.assert_source == "status_code"
+    assert assertion.comparator == "eq"
+    assert assertion.expected_value == "200"
+    assert run.import_status == "imported"
 
 
 @pytest.mark.asyncio

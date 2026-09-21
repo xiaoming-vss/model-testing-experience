@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from testing_agent.handlers.api_case_generate_task import (
     create_api_case_generate_task,
     delete_api_case_generate_task,
+    delete_api_case_generate_task_run,
     get_api_case_generate_task,
     get_api_case_generate_task_run,
     import_api_case_generate_task_run,
@@ -56,6 +57,10 @@ router.get(
     "/api-case-generate-task-runs/{run_id}",
     response_model=ApiResponse[AiGenerateTaskRunResponse],
 )(get_api_case_generate_task_run)
+router.delete(
+    "/api-case-generate-task-runs/{run_id}",
+    response_model=ApiResponse[EmptyData],
+)(delete_api_case_generate_task_run)
 router.post(
     "/api-case-generate-task-runs/{run_id}/review",
     response_model=ApiResponse[AiGenerateTaskRunResponse],

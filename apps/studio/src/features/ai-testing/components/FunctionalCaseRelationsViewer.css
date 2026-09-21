@@ -9,11 +9,12 @@
   background: var(--ant-color-bg-layout);
 }
 
-/* 方案 A：返回 / 标题 / 统计 / 页签 / 方向 / 工具 / 图例压成一行，画布吃满剩余高度 */
+/* 工具栏在窄窗口内换行，画布占据剩余高度。 */
 .ai-relations-page-bar {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   padding: 9px 16px;
   background: var(--ant-color-bg-container);
@@ -101,6 +102,47 @@
 
 .ai-relations-page-json {
   height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ai-relations-page-json .json-editor-wrap,
+.ai-relations-page-json .json-editor-shell,
+.ai-relations-page-json .json-editor-codemirror,
+.ai-relations-page-json .cm-editor {
+  height: 100%;
+  min-height: 0;
+}
+
+.ai-relations-page-json .json-editor-shell {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.ai-relations-page-json .json-editor-codemirror .cm-scroller {
+  min-height: 0;
   overflow: auto;
-  padding: 12px 16px;
+}
+
+.ai-relations-json-actions .json-editor-toolbar {
+  padding: 0;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+}
+
+
+.ai-relations-modal .ai-relations-page {
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: var(--ant-border-radius-lg, 8px);
+}
+
+.ai-relations-modal .ai-relations-page-heading {
+  flex: 1 1 260px;
+}
+
+.ai-relations-modal .ai-relations-page-legend {
+  flex-wrap: wrap;
 }

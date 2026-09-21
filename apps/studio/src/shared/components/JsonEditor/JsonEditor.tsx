@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { CopyOutlined, DownloadOutlined } from '@ant-design/icons'
 import CodeMirror from '@uiw/react-codemirror'
 import { indentWithTab } from '@codemirror/commands'
@@ -48,6 +49,8 @@ type JsonEditorProps = {
   onChange?: (value: string) => void
   minHeight?: number
   toolbar?: ReactNode
+  /** 将编辑器操作并入宿主工具栏，默认仍显示在编辑器内部。 */
+  toolbarContainer?: HTMLElement | null
   readOnly?: boolean
   foldable?: boolean
   ariaLabel?: string
@@ -60,6 +63,7 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
   onChange,
   minHeight = 260,
   toolbar,
+  toolbarContainer,
   readOnly = false,
   foldable = false,
   ariaLabel,
@@ -131,33 +135,35 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
     }
   }
 
+  const editorToolbar = toolbar ? (
+    <div className="json-editor-toolbar">{toolbar}</div>
+  ) : (
+    <div className="json-editor-toolbar">
+      <div className="json-editor-toolbar-actions">
+        <Button
+          className="json-editor-toolbar-btn"
+          icon={<CopyOutlined />}
+          onClick={handleCopy}
+          disabled={!value?.trim()}
+        >
+          复制
+        </Button>
+        <Button
+          className="json-editor-toolbar-btn"
+          icon={<DownloadOutlined />}
+          onClick={handleDownload}
+          disabled={!value?.trim()}
+        >
+          下载
+        </Button>
+      </div>
+    </div>
+  )
+
   return (
     <div className={`json-editor-wrap${foldable ? ' foldable' : ''}${readOnly ? ' readonly' : ''}`}>
       <div className={`json-editor-shell${jsonState.valid ? '' : ' invalid'}`}>
-        {toolbar ? (
-          <div className="json-editor-toolbar">{toolbar}</div>
-        ) : (
-          <div className="json-editor-toolbar">
-            <div className="json-editor-toolbar-actions">
-              <Button
-                className="json-editor-toolbar-btn"
-                icon={<CopyOutlined />}
-                onClick={handleCopy}
-                disabled={!value?.trim()}
-              >
-                复制
-              </Button>
-              <Button
-                className="json-editor-toolbar-btn"
-                icon={<DownloadOutlined />}
-                onClick={handleDownload}
-                disabled={!value?.trim()}
-              >
-                下载
-              </Button>
-            </div>
-          </div>
-        )}
+        {toolbarContainer ? createPortal(editorToolbar, toolbarContainer) : editorToolbar}
         <CodeMirror
           value={value ?? ''}
           minHeight={`${minHeight}px`}

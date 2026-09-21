@@ -1,5 +1,7 @@
 """Child-first deletion through authenticated HTTP endpoints."""
 
+import asyncio
+
 import pytest
 from test_project_membership_api import account, project, requirement
 from test_project_membership_api import api as api
@@ -40,6 +42,56 @@ def test_http_child_first_delete_and_recreate(api, suite_path, suite_key, case_p
     recreated = api.post(create_url, headers=owner, json={"name": "suite"})
     assert recreated.status_code == 200, recreated.text
     assert recreated.json()["data"][suite_key] != sid
+
+
+def test_ai_run_delete_needs_write_and_refuses_running(api):
+    _, owner = account(api, "owner")
+    _, viewer = account(api, "viewer")
+    pid = project(api, owner)
+    rid = requirement(api, owner, pid)
+    tid = api.post(
+        f"/v1/projects/{pid}/api-case-generate-tasks",
+        headers=owner,
+        json={"name": "task", "requirementId": rid},
+    ).json()["data"]["taskId"]
+    response = api.post(
+        f"/v1/projects/{pid}/members", headers=owner, json={"name": "viewer", "role": "viewer"}
+    )
+    assert response.status_code == 200, response.text
+
+    async def seed_runs():
+        from testing_agent import models as m
+
+        async with api.app.state.test_sessions() as session:
+            for status in ("running", "success"):
+                run_id = f"run-{status}"
+                session.add(
+                    m.AiGenerateTaskRun(
+                        run_id=run_id, task_id=tid, trigger_user_id="owner", status=status
+                    )
+                )
+                # 运行记录的投影要求至少有一个阶段行，否则读接口按不存在处理。
+                session.add(
+                    m.AiGenerateRunStage(
+                        id=f"stage-{status}", run_id=run_id, stage="generate", stage_order=0
+                    )
+                )
+            await session.commit()
+
+    asyncio.run(seed_runs())
+    running_url = "/v1/api-case-generate-task-runs/run-running"
+    assert api.delete(running_url, headers=viewer).status_code == 403
+    assert api.delete(running_url, headers=owner).status_code == 409
+
+    done_url = "/v1/api-case-generate-task-runs/run-success"
+    assert api.delete(done_url, headers=owner).status_code == 200
+    assert api.get(done_url, headers=owner).status_code == 404
+    assert api.delete(done_url, headers=owner).status_code == 404
+
+    assert api.get(running_url, headers=owner).status_code == 200
+    assert api.get(f"/v1/api-case-generate-tasks/{tid}", headers=owner).status_code == 200
+    remaining = api.get(f"/v1/api-case-generate-tasks/{tid}/runs", headers=owner)
+    assert remaining.json()["data"]["total"] == 1
 
 
 def test_code_risk_task_can_be_deleted_before_requirement(api):

@@ -9,7 +9,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import '@/features/ai-testing/styles/index.css'
 import { CodeRiskReportView } from '@/features/ai-testing/components/CodeRiskReportView'
 import { RunPipelineStatus } from '@/features/ai-testing/components/RunPipelineStatus'
-import { RunHistoryTable } from '@/features/ai-testing/components/RunHistoryTable'
+import { RunHistoryTable, RunRowActions, type RunMenuAction } from '@/features/ai-testing/components/RunHistoryTable'
+import { confirmDeleteRun, isRunDeletable } from '@/features/ai-testing/utils/runDeletion'
+import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { LlmConnectionSelectModal } from '@/features/ai-testing/components/LlmConnectionSelectModal'
 import { getApiCaseGenerateTaskRunStatusMeta, isApiCaseGenerateTaskRunInProgress } from '@/features/ai-testing/utils/taskStatus'
 import { api, listItems, type CodeRiskTaskRun } from '@/services/api'
@@ -42,6 +44,7 @@ export function CodeRiskTaskDetailPage() {
     enabled: Boolean(taskId),
   })
   const task = taskQuery.data
+  const { can } = useProjectAccess(task?.projectId ?? '')
   const taskRequirementQuery = useQuery({
     queryKey: ['requirement', task?.requirementId],
     queryFn: () => api.getRequirement(task!.requirementId!),
@@ -90,6 +93,17 @@ export function CodeRiskTaskDetailPage() {
       setLlmSelectOpen(false)
       queryClient.invalidateQueries({ queryKey: ['codeRiskTaskRuns', taskId] })
       if (run.runId) setSelectedRunRecordId(run.runId)
+    },
+    onError: (error) => message.error(getErrorMessage(error)),
+  })
+
+  const deleteRunMutation = useMutation({
+    mutationFn: (runId: string) => api.deleteCodeRiskRun(runId),
+    onSuccess: (_data, runId) => {
+      message.success('运行记录已删除')
+      if (selectedRunRecordId === runId) setSelectedRunRecordId(null)
+      queryClient.removeQueries({ queryKey: ['codeRiskRun', runId], exact: true })
+      queryClient.invalidateQueries({ queryKey: ['codeRiskTaskRuns', taskId] })
     },
     onError: (error) => message.error(getErrorMessage(error)),
   })
@@ -213,6 +227,28 @@ export function CodeRiskTaskDetailPage() {
                           run={data}
                           stages={['generate']}
                           stageTag={data.currentStage ? <Tag color="default">{data.currentStage}</Tag> : null}
+                        />
+                      )
+                    }}
+                    renderActions={(row) => {
+                      const data = resolveRunRecord(row)
+                      const menuItems: RunMenuAction[] = can('write')
+                        ? [{
+                            key: 'deleteRun',
+                            label: '删除运行记录',
+                            danger: true,
+                            disabled: !isRunDeletable(data.status) || deleteRunMutation.isPending,
+                          }]
+                        : []
+                      return (
+                        <RunRowActions
+                          menuItems={menuItems}
+                          onMenuAction={(key) => {
+                            if (key === 'deleteRun' && row.runId) {
+                              const runId = row.runId
+                              confirmDeleteRun(() => deleteRunMutation.mutate(runId))
+                            }
+                          }}
                         />
                       )
                     }}

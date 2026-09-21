@@ -4,12 +4,14 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, it, vi } from 'vitest'
-import { ThemeProvider } from '@/app/providers/ThemeProvider'
+import { TestThemeProvider as ThemeProvider } from '@/test/TestThemeProvider'
 import type { RequirementAnalysisTaskRun } from '../types'
 import { RequirementAnalysisTaskDetailPage } from './RequirementAnalysisTaskDetailPage'
 
 const clients: QueryClient[] = []
-afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.restoreAllMocks() })
+afterEach(() => {
+  cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.restoreAllMocks()
+})
 function response(data: unknown, status = 200) {
   return new Response(JSON.stringify({ code: status === 200 ? 0 : status, message: status === 200 ? 'ok' : '提交失败', data }), {
     status, headers: { 'Content-Type': 'application/json' },
@@ -56,6 +58,14 @@ async function findRunInlineAction(name: string) {
   const row = await findRunRow()
   // antd 会在两个汉字间插入空格。
   return within(row).findByRole('button', { name: new RegExp(`^${name.split('').join('\\s*')}$`) })
+}
+
+/** Modal.confirm 是命令式弹窗，上一个用例的实例可能还在离场动画里，这里只取当前这一个。 */
+async function findDeleteConfirm() {
+  const dialogs = await screen.findAllByRole('dialog')
+  const dialog = dialogs.find((node) => node.textContent?.includes('确认删除该运行记录？') && !node.className.includes('zoom-leave'))
+  if (!dialog) throw new Error('未找到删除运行记录的确认框')
+  return dialog
 }
 
 async function openRunActionsMenu(user: ReturnType<typeof userEvent.setup>) {
@@ -176,23 +186,24 @@ it('继续优化在同一审核窗口展开，取消后保留内容和优化草�
   })
   const user = userEvent.setup()
   await user.click(await findRunInlineAction('审核'))
+  const dialog = within(screen.getByRole('dialog'))
   const originalEditor = document.querySelector('.cm-content')
-  await user.click(screen.getByRole('button', { name: '继续优化' }))
+  await user.click(dialog.getByRole('button', { name: '继续优化' }))
   expect(screen.getAllByRole('dialog')).toHaveLength(1)
-  expect(screen.queryByRole('button', { name: '保存修改' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: '审核通过并继续' })).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '提交优化' }).closest('.ant-modal-footer')).not.toBeNull()
-  expect(screen.getByRole('button', { name: '取消优化' }).closest('.ant-modal-footer')).not.toBeNull()
-  expect(screen.queryByRole('button', { name: '继续优化' })).not.toBeInTheDocument()
+  expect(dialog.queryByRole('button', { name: '保存修改' })).not.toBeInTheDocument()
+  expect(dialog.queryByRole('button', { name: '审核通过并继续' })).not.toBeInTheDocument()
+  expect(dialog.getByRole('button', { name: '提交优化' }).closest('.ant-modal-footer')).not.toBeNull()
+  expect(dialog.getByRole('button', { name: '取消优化' }).closest('.ant-modal-footer')).not.toBeNull()
+  expect(dialog.queryByRole('button', { name: '继续优化' })).not.toBeInTheDocument()
   expect(document.querySelector('.cm-content')).toBe(originalEditor)
   expect(originalEditor).toHaveTextContent('当前需求流程稿')
-  await user.type(screen.getByRole('textbox', { name: '优化指令' }), '补充异常分支')
-  await user.click(screen.getByRole('button', { name: '取消优化' }))
+  await user.type(dialog.getByLabelText('优化指令'), '补充异常分支')
+  await user.click(dialog.getByRole('button', { name: '取消优化' }))
   expect(document.querySelector('.cm-content')).toBe(originalEditor)
-  expect(screen.getByRole('button', { name: '保存修改' })).toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: '继续优化' }))
-  expect(screen.getByRole('textbox', { name: '优化指令' })).toHaveValue('补充异常分支')
-  expect(screen.getByRole('combobox', { name: '本次使用的模型' })).toBeInTheDocument()
+  expect(dialog.getByRole('button', { name: '保存修改' })).toBeInTheDocument()
+  await user.click(dialog.getByRole('button', { name: '继续优化' }))
+  expect(dialog.getByLabelText('优化指令')).toHaveValue('补充异常分支')
+  expect(dialog.getByLabelText('本次使用的模型')).toBeInTheDocument()
 })
 
 it('右侧提交使用所选模型并携带左侧未保存的需求修改', async () => {
@@ -210,12 +221,47 @@ it('右侧提交使用所选模型并携带左侧未保存的需求修改', asyn
   })
   const user = userEvent.setup()
   await user.click(await findRunInlineAction('审核'))
+  const dialog = within(screen.getByRole('dialog'))
   const editor = document.querySelector('.cm-content') as HTMLElement
   await user.click(editor)
   await user.keyboard('{Control>}a{/Control}')
   await user.paste('尚未保存的新流程')
-  await user.click(screen.getByRole('button', { name: '继续优化' }))
-  await user.type(screen.getByRole('textbox', { name: '优化指令' }), '补充异常处理')
-  await user.click(screen.getByRole('button', { name: '提交优化' }))
+  await user.click(dialog.getByRole('button', { name: '继续优化' }))
+  await user.type(dialog.getByLabelText('优化指令'), '补充异常处理')
+  await user.click(dialog.getByRole('button', { name: '提交优化' }))
   await waitFor(() => expect(body).toMatchObject({ llmConnectionId: 'mine', revisionInstruction: '补充异常处理', configJson: { secondStepOutput: '尚未保存的新流程' } }))
+})
+
+
+it('删除运行记录需确认，且只删除该次运行', async () => {
+  const deleted: string[] = []
+  setup('completed', 'success')
+  const user = userEvent.setup()
+  vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {
+    const path = new URL(String(input), 'http://localhost').pathname
+    if (init?.method === 'DELETE') {
+      deleted.push(path)
+      return response({})
+    }
+    if (path.includes('/integrations/llm/connections')) return response({ items: [], total: 0 })
+    if (path === '/v1/requirement-analysis-tasks/task') return response({ taskId: 'task', projectId: 'project-1', name: '需求分析', sourceType: 'text' })
+    if (path.endsWith('/runs')) return response({ items: [{ runId: 'run', taskId: 'task', status: 'success', currentStage: 'completed', reviewStatus: 'pending' }], total: 1 })
+    if (path === '/v1/requirement-analysis-runs/run') return response({ runId: 'run', taskId: 'task', status: 'success', currentStage: 'completed', reviewStatus: 'pending' })
+    return response({ items: [], total: 0 })
+  })
+  await screen.findByText('run')
+
+  await openRunActionsMenu(user)
+  await user.click(await screen.findByRole('menuitem', { name: '删除运行记录' }))
+  const confirm = await findDeleteConfirm()
+  expect(deleted).toEqual([])
+  await user.click(within(confirm).getByRole('button', { name: /^删\s*除$/ }))
+  await waitFor(() => expect(deleted).toEqual(['/v1/requirement-analysis-runs/run']))
+})
+
+it('运行中的记录没有可用的删除入口', async () => {
+  setup('extracting_text', 'running', false, { stageStatus: 'running' })
+  const user = userEvent.setup()
+  await openRunActionsMenu(user)
+  expect(await screen.findByRole('menuitem', { name: '删除运行记录' })).toHaveAttribute('aria-disabled', 'true')
 })

@@ -64,8 +64,15 @@ def legacy_fields(content):
     }
 
 
+NUMBERING = re.compile(r"^\s*\d+[.、．)）]\s")
+
+
 def numbered_lines(values):
-    return [f"{index}. {value}" for index, value in enumerate(values, 1)]
+    """按序号重排；文本已自带序号时保持原样，避免叠加成「1. 1. …」。"""
+    return [
+        value if NUMBERING.match(value) else f"{index}. {value}"
+        for index, value in enumerate(values, 1)
+    ]
 
 
 def generation_fields(content):

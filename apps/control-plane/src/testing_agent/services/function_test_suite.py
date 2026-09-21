@@ -4,33 +4,15 @@ from typing import Any
 
 from testing_agent.core.errors import ErrNotFound
 from testing_agent.core.sid import new_id
-from testing_agent.domain.function_case_content import generation_fields
-from testing_agent.models.function_test_case import FunctionTestCase
 from testing_agent.models.function_test_suite import FunctionTestSuite
 from testing_agent.repositories.function_test_suite import FunctionTestSuiteRepository
-from testing_agent.schemas.function_test_suite import (
-    FunctionSuiteCaseViewResponse,
-    FunctionSuiteRequest,
-    FunctionSuiteResponse,
-)
-from testing_agent.services.ai_generate_task import requirement_source_content
+from testing_agent.schemas.function_test_suite import FunctionSuiteRequest, FunctionSuiteResponse
 from testing_agent.services.common import apply_patch, dump, list_payload
 from testing_agent.services.project_access import (
     ProjectAction,
-    require_project_access,
     require_project_id,
+    require_requirement_access,
 )
-
-
-def case_view_item(case: FunctionTestCase) -> dict[str, Any]:
-    return {
-        "case_id": case.case_id,
-        "case_module": case.module,
-        "case_title": case.title,
-        "case_type": case.case_type,
-        "priority": case.priority,
-        **generation_fields(case.content_json or {}),
-    }
 
 
 class FunctionTestSuiteService:
@@ -40,16 +22,7 @@ class FunctionTestSuiteService:
     async def ensure_requirement_access(
         self, user_id: str, requirement_id: str, *, action: ProjectAction = "read"
     ) -> None:
-        requirement = await self.repository.get_requirement(requirement_id)
-        if requirement is None:
-            raise ErrNotFound
-        sprint = await self.repository.get_sprint(requirement.sprint_id)
-        if sprint is None:
-            raise ErrNotFound
-        project = await self.repository.get_project(sprint.project_id)
-        if project is None:
-            raise ErrNotFound
-        await require_project_access(self.repository.session, user_id, project, action)
+        await require_requirement_access(self.repository, user_id, requirement_id, action=action)
 
     async def get_accessible_entity(
         self, user_id: str, suite_id: str, *, action: ProjectAction = "read"
@@ -98,37 +71,6 @@ class FunctionTestSuiteService:
         return dump(
             FunctionSuiteResponse,
             await self.get_accessible_entity(user_id, suite_id, action="read"),
-        )
-
-    async def requirement_case_view(self, user_id: str, suite_id: str) -> dict:
-        """测试集的需求-用例视图：用例还原为生成契约，需求与映射只含测试集所属迭代。"""
-        suite = await self.get_accessible_entity(user_id, suite_id, action="read")
-        cases = await self.repository.list_cases(suite.suite_id)
-        requirements: list[dict[str, Any]] = []
-        links: list[dict[str, Any]] = []
-        if cases:
-            requirement = await self.repository.get_requirement(suite.requirement_id)
-            if requirement is not None:
-                requirements.append(
-                    {
-                        "requirement_id": requirement.requirement_id,
-                        "requirement_title": requirement.name,
-                        "requirement_content": requirement_source_content(requirement),
-                    }
-                )
-            links.append(
-                {
-                    "requirement_id": suite.requirement_id,
-                    "case_ids": [case.case_id for case in cases],
-                }
-            )
-        return dump(
-            FunctionSuiteCaseViewResponse,
-            {
-                "requirements": requirements,
-                "cases": [case_view_item(case) for case in cases],
-                "case_requirement_links": links,
-            },
         )
 
     async def update(self, user_id: str, suite_id: str, body: dict[str, Any]) -> dict:

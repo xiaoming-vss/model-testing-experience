@@ -1,3 +1,4 @@
+import { saveBlob } from '@/shared/utils/download'
 import {
   CheckCircleFilled,
   ColumnWidthOutlined,
@@ -31,17 +32,6 @@ import '@/features/testing/styles/index.css'
 
 function isWordDocument(documentType?: Requirement['documentType']) {
   return documentType === 'word' || documentType === 'docx'
-}
-
-function saveBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  URL.revokeObjectURL(url)
 }
 
 async function fetchBlobWithAuth(url: string, token?: string | null) {

@@ -90,6 +90,8 @@ export const aiTestingApi = {
     request<ListResponse<ApiCaseGenerateTaskRun>>(`/v1/api-case-generate-tasks/${taskId}/runs`),
   getApiCaseGenerateTaskRun: (runId: string) =>
     request<ApiCaseGenerateTaskRun>(`/v1/api-case-generate-task-runs/${runId}`),
+  deleteApiCaseGenerateTaskRun: (runId: string) =>
+    request<Record<string, never>>(`/v1/api-case-generate-task-runs/${runId}`, { method: 'DELETE' }),
   updateApiCaseGenerateTaskRunResult: (runId: string, body: UpdateApiCaseGenerateTaskRunResultPayload) =>
     request<ApiCaseGenerateTaskRun>(`/v1/api-case-generate-task-runs/${runId}/result`, {
       method: 'PATCH',
@@ -132,6 +134,10 @@ export const aiTestingApi = {
     request<ListResponse<FunctionalCaseGenerateTaskRun>>(`/v1/function-case-generate-tasks/${taskId}/runs`),
   getFunctionalCaseGenerateTaskRun: (runId: string) =>
     request<FunctionalCaseGenerateTaskRun>(`/v1/function-case-generate-task-runs/${runId}`),
+  deleteFunctionalCaseGenerateTaskRun: (runId: string) =>
+    request<Record<string, never>>(`/v1/function-case-generate-task-runs/${runId}`, {
+      method: 'DELETE',
+    }),
   updateFunctionalCaseGenerateTaskRunResult: (
     runId: string,
     body: UpdateFunctionalCaseGenerateTaskRunResultPayload,
@@ -223,6 +229,8 @@ export const aiTestingApi = {
     request<ListResponse<UiCaseGenerateTaskRun>>(`/v1/ui-case-generate-tasks/${taskId}/runs`),
   getUiCaseGenerateTaskRun: (runId: string) =>
     request<UiCaseGenerateTaskRun>(`/v1/ui-case-generate-task-runs/${runId}`),
+  deleteUiCaseGenerateTaskRun: (runId: string) =>
+    request<Record<string, never>>(`/v1/ui-case-generate-task-runs/${runId}`, { method: 'DELETE' }),
   updateUiCaseGenerateTaskRunResult: (runId: string, body: UpdateUiCaseGenerateTaskRunResultPayload) =>
     request<UiCaseGenerateTaskRun>(`/v1/ui-case-generate-task-runs/${runId}/result`, {
       method: 'PATCH',
@@ -265,6 +273,8 @@ export const aiTestingApi = {
     request<ListResponse<RequirementAnalysisTaskRun>>(`/v1/requirement-analysis-tasks/${taskId}/runs`),
   getRequirementAnalysisRun: (runId: string) =>
     request<RequirementAnalysisTaskRun>(`/v1/requirement-analysis-runs/${runId}`),
+  deleteRequirementAnalysisRun: (runId: string) =>
+    request<Record<string, never>>(`/v1/requirement-analysis-runs/${runId}`, { method: 'DELETE' }),
   updateRequirementAnalysisRunStageOutput: (
     runId: string,
     body: UpdateRequirementAnalysisTaskRunStageOutputPayload,
@@ -314,4 +324,6 @@ export const aiTestingApi = {
   getCodeRiskTaskRuns: (taskId: string) =>
     request<ListResponse<CodeRiskTaskRun>>(`/v1/code-risk-analysis-tasks/${taskId}/runs`),
   getCodeRiskRun: (runId: string) => request<CodeRiskTaskRun>(`/v1/code-risk-analysis-runs/${runId}`),
+  deleteCodeRiskRun: (runId: string) =>
+    request<Record<string, never>>(`/v1/code-risk-analysis-runs/${runId}`, { method: 'DELETE' }),
 }

@@ -1008,3 +1008,11 @@
   display: flex;
   justify-content: flex-end;
 }
+
+/* UI 测试集外层容器与 API 详情、测试单工作台统一。 */
+.ui-suite-case-layout .ui-suite-case-sidebar,
+.ui-suite-case-layout .ui-suite-case-detail-panel,
+.ui-suite-case-layout .ui-suite-case-editor-panel {
+  border-radius: 18px;
+  overflow: hidden;
+}

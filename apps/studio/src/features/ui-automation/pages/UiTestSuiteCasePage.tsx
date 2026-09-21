@@ -1,41 +1,57 @@
-import { ActionButton } from '@/shared/components/ActionButton'
-import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
-import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
+import { Text, Title } from '@/features/ui-automation/utils/detailView'
+import { UiCaseImportModal } from '@/features/ui-automation/components/UiCaseImportModal'
+import { UiStepEditor } from '@/features/ui-automation/components/UiStepEditor'
+import { UiSuiteRunHistory } from '@/features/ui-automation/components/UiSuiteRunHistory'
+import { UiSuiteRunReport } from '@/features/ui-automation/components/UiSuiteRunReport'
+import { EDITOR_SPLITTER_HEIGHT, MIN_EDITOR_RESULT_HEIGHT, MIN_EDITOR_TOP_HEIGHT, UI_TEMPLATE_FIELD_LABELS, isYamlFileName, type CaseImportMode, type UiTemplateFieldKey } from '@/features/ui-automation/utils/detailView'
+import { renderUiRunStepResultList } from '@/features/ui-automation/utils/renderUiRunSteps'
+
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
-import { ArrowLeftOutlined, CodeOutlined, DownOutlined, EditOutlined, UnorderedListOutlined, UploadOutlined } from '@ant-design/icons'
-import { Alert, Button, Card, Empty, Form, Image, Input, Modal, Popconfirm, Popover, Segmented, Select, Switch, Tag, Tooltip, Typography, Upload } from 'antd'
-import type { InputRef } from 'antd'
+import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
+import {
+  api,
+  listItems,
+  type UiTestCase,
+  type UiTestCaseRun,
+  type UiTestSuiteRunReport,
+  type UiTestSuiteRunSummary
+} from '@/services/api'
+import { ActionButton } from '@/shared/components/ActionButton'
+import { uiBuiltinTemplateFunctions } from '@/shared/constants/templateFunctions'
+import { message } from '@/shared/utils/feedback'
+import {
+  getErrorMessage,
+  normalizeUiTestCaseId
+} from '@/utils/format'
+import { buildUiTestCaseUpdatePayload } from '@/utils/updatePayload'
+import { ArrowLeftOutlined, CodeOutlined, UnorderedListOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { InputRef } from 'antd'
+import { Alert, Button, Card, Empty, Form, Input, Popconfirm, Popover, Segmented, Switch, Tag, Tooltip } from 'antd'
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
 import { UiTestPanelSplitter } from '../components/UiTestPanelSplitter'
-import { getNextEditorTopHeight } from '../utils/uiTestPanelResize'
 import {
-  getUiStepFieldMeta,
-  isValidUiStepComparator,
-  isValidUiStepKeyword,
-  isValidUiStepLocatorType,
-  requiresUiStepLocator,
-  uiSuiteRunReportViewOptions,
-  uiTestComparatorOptions,
-  uiTestKeywordOptions,
-  uiTestLocatorTypeOptions,
   uiTestRunViewOptions,
-  usesUiStepComparator,
-  usesUiStepOperation,
   type UiSuiteRunReportView,
-  type UiTestRunView,
+  type UiTestRunView
 } from '../config/stepConfig'
 import { formatUiScreenshotPolicy } from '../constants/defaultRunConfig'
 import {
-  buildUiTestCaseFormValues,
-  createDefaultUiTestCaseFormValues,
+  buildUiSuiteDebugRunPayload,
+  buildUiSuiteRunPayload,
+  getExecutionStatusMeta,
+  getUiTestCaseRunId,
+  getUiTestSuiteRunId,
+  isUiRunPollingStatus
+} from '../utils/runHelpers'
+import {
   DRAFT_CASE_ID,
   EMPTY_UI_TEST_CASES,
+  buildUiTestCaseFormValues,
+  createDefaultUiTestCaseFormValues,
   formatOptionalMs,
-  formatOptionalValue,
   formatViewportText,
   getUiTestCaseStepCount,
   moveArrayItem,
@@ -45,51 +61,9 @@ import {
   serializeUiTestCaseValues,
   sortUiTestCases,
   type UiTestCaseFormValues,
-  type UiTestStepFormValue,
+  type UiTestStepFormValue
 } from '../utils/uiTestCaseEditor'
-import {
-  api,
-  listItems,
-  type UiTestCase,
-  type UiTestCaseRun,
-  type UiTestCaseRunStepResult,
-  type UiTestSuiteRunReport,
-  type UiTestSuiteRunSummary,
-} from '@/services/api'
-import {
-  formatTime,
-  getErrorMessage,
-  normalizeUiTestCaseId,
-} from '@/utils/format'
-import { uiBuiltinTemplateFunctions } from '@/shared/constants/templateFunctions'
-import { buildUiTestCaseUpdatePayload } from '@/utils/updatePayload'
-import { message } from '@/shared/utils/feedback'
-import {
-  buildUiSuiteDebugRunPayload,
-  buildUiSuiteRunPayload,
-  getExecutionStatusMeta,
-  getUiTestCaseRunId,
-  getUiTestSuiteRunId,
-  getUiTestSuiteRunItemKey,
-  isUiRunPollingStatus,
-} from '../utils/runHelpers'
-
-const { Text, Title } = Typography
-type UiTemplateFieldKey = 'locatorValue' | 'operationValue'
-type CaseImportMode = 'upload' | 'editor'
-
-const MIN_EDITOR_TOP_HEIGHT = 220
-const MIN_EDITOR_RESULT_HEIGHT = 48
-const EDITOR_SPLITTER_HEIGHT = 18
-
-const UI_TEMPLATE_FIELD_LABELS: Record<UiTemplateFieldKey, string> = {
-  locatorValue: '定位值',
-  operationValue: '操作值',
-}
-
-function isYamlFileName(fileName: string) {
-  return /\.(yaml|yml)$/i.test(fileName.trim())
-}
+import { getNextEditorTopHeight } from '../utils/uiTestPanelResize'
 
 export function UiTestSuiteCasePage() {
   const navigate = useNavigate()
@@ -539,11 +513,11 @@ export function UiTestSuiteCasePage() {
     () =>
       draftCaseValues
         ? {
-            caseId: DRAFT_CASE_ID,
-            name: draftCaseValues.name?.trim() || '未保存用例',
-            enabled: draftCaseValues.enabled,
-            stepsJson: serializeSteps(draftCaseValues.steps),
-          }
+          caseId: DRAFT_CASE_ID,
+          name: draftCaseValues.name?.trim() || '未保存用例',
+          enabled: draftCaseValues.enabled,
+          stepsJson: serializeSteps(draftCaseValues.steps),
+        }
         : null,
     [draftCaseValues],
   )
@@ -927,70 +901,6 @@ export function UiTestSuiteCasePage() {
     [suiteRunReport?.items],
   )
 
-  function renderUiRunStepResult(stepResult: UiTestCaseRunStepResult, index: number) {
-    const stepStatus = getExecutionStatusMeta(stepResult.status)
-
-    return (
-      <div key={`${stepResult.orderNo ?? index}-${stepResult.stepName ?? index}`} className={`api-case-run-result-row${stepResult.success === false ? ' failed' : ''}`}>
-        <div className="api-case-run-result-row-title">
-          <strong>{stepResult.stepName?.trim() || `步骤 ${stepResult.orderNo ?? index + 1}`}</strong>
-          <Tag color={stepStatus.color}>{stepStatus.label}</Tag>
-          {typeof stepResult.success === 'boolean' ? (
-            <Tag color={stepResult.success ? 'success' : 'error'}>{stepResult.success ? '通过' : '失败'}</Tag>
-          ) : null}
-        </div>
-        <div className="api-case-run-result-row-meta">
-          <span className="api-case-run-result-meta-item">
-            <strong>顺序</strong>
-            <span>{formatOptionalValue(stepResult.orderNo)}</span>
-          </span>
-          <span className="api-case-run-result-meta-item">
-            <strong>关键字</strong>
-            <span>{formatOptionalValue(stepResult.keyword)}</span>
-          </span>
-          <span className="api-case-run-result-meta-item">
-            <strong>开始</strong>
-            <span>{formatTime(stepResult.startedAt)}</span>
-          </span>
-          <span className="api-case-run-result-meta-item">
-            <strong>结束</strong>
-            <span>{formatTime(stepResult.finishedAt)}</span>
-          </span>
-          <span className="api-case-run-result-meta-item">
-            <strong>耗时</strong>
-            <span>{formatOptionalValue(stepResult.durationMs ? `${stepResult.durationMs} ms` : stepResult.durationMs)}</span>
-          </span>
-          <span className="api-case-run-result-meta-item">
-            <strong>实际值</strong>
-            <span>{formatOptionalValue(stepResult.actualValue)}</span>
-          </span>
-        </div>
-        {stepResult.screenshotPath ? (
-          <div className="ui-test-run-step-screenshot">
-            <strong>截图</strong>
-            <Image
-              src={stepResult.screenshotPath}
-              alt={`${stepResult.stepName?.trim() || `步骤 ${stepResult.orderNo ?? index + 1}`}截图`}
-              preview
-            />
-          </div>
-        ) : null}
-      </div>
-    )
-  }
-
-  function renderUiRunStepResultList(stepResults: UiTestCaseRunStepResult[], emptyDescription: string) {
-    const orderedStepResults = [...stepResults].sort(
-      (left, right) => (left.orderNo ?? Number.MAX_SAFE_INTEGER) - (right.orderNo ?? Number.MAX_SAFE_INTEGER),
-    )
-
-    if (orderedStepResults.length === 0) {
-      return <Empty description={emptyDescription} image={Empty.PRESENTED_IMAGE_SIMPLE} />
-    }
-
-    return <div className="api-case-run-result-list">{orderedStepResults.map(renderUiRunStepResult)}</div>
-  }
-
   function renderUiRunContent() {
     if (!currentRun) {
       return <Empty description="运行详情加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
@@ -1227,460 +1137,120 @@ export function UiTestSuiteCasePage() {
                   <div className="api-case-editor-main" style={selectedRunId ? { flex: `0 0 ${editorTopHeight}px` } : undefined}>
                     <div className="api-case-editor-main-scroll">
                       {!selectedCaseId ? (
-                      <div className="ui-test-case-empty-editor">
-                        <Empty description="请选择一个 UI测试用例，或先新建一个用例">
-                          <ProjectActionButton action="write" type="primary" className="action-btn-create" operation="create" onClick={openCreateCase}>
-                            新建用例
-                          </ProjectActionButton>
-                        </Empty>
-                      </div>
-                      ) : !showEditorForm && selectedCaseDetailQuery.isLoading ? (
-                      <div className="ui-test-case-empty-editor">
-                        <Empty description="UI测试用例详情加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                      </div>
-                      ) : showEditorForm ? (
-                      <Form<UiTestCaseFormValues>
-                        form={caseForm}
-                        layout="vertical"
-                        requiredMark={false}
-                        className="ui-test-case-form"
-                        onValuesChange={(_changedValues, allValues) => {
-                          if (isCreatingCase) {
-                            setDraftCaseValues(allValues as UiTestCaseFormValues)
-                          }
-                        }}
-                        onFinish={(values) => {
-                          const completeValues = {
-                            ...getCompleteCaseFormValues(),
-                            ...values,
-                            steps: values.steps ?? getCompleteCaseFormValues().steps,
-                          } satisfies UiTestCaseFormValues
-
-                          if (isCreatingCase) {
-                            createCaseMutation.mutate(completeValues)
-                            return
-                          }
-
-                          if (!editingCase || normalizeUiTestCaseId(editingCase) !== activeCaseId) {
-                            message.warning('用例详情加载中，请稍后再试')
-                            return
-                          }
-
-                          const payload = buildUiTestCaseUpdatePayload(editingCase, {
-                            name: completeValues.name,
-                            enabled: completeValues.enabled,
-                            orderNo: editingCase.orderNo,
-                            stepsJson: serializeSteps(completeValues.steps),
-                          })
-
-                          if (Object.keys(payload).length === 0) {
-                            message.info('当前没有需要保存的修改')
-                            return
-                          }
-
-                          updateCaseMutation.mutate(completeValues)
-                        }}
-                      >
-                        <div className="ui-test-case-editor-fixed-head">
-                          <div className="ui-test-case-toolbar">
-                            <div className="ui-test-case-name-block">
-                              <div className="ui-test-case-inline-label">用例名称</div>
-                              <Form.Item name="name" className="ui-test-case-name-item" rules={[{ required: true, message: '请输入 UI测试用例名称' }]}>
-                                <Input maxLength={120} placeholder="例如：登录成功验证" />
-                              </Form.Item>
-                            </div>
-                            <div className="ui-test-case-toolbar-meta">
-                              <ProjectActionButton action="execute"
-                                className="action-btn-read"
-                                operation="run"
-                                onClick={handleDebugRun}
-                                loading={debugRunMutation.isPending}
-                                disabled={!activeCaseId || isCreatingCase}
-                              >
-                                调试运行
-                              </ProjectActionButton>
-                              <ProjectActionButton action="write"
-                                type="primary"
-                                className="action-btn-save"
-                                operation="save"
-                                loading={createCaseMutation.isPending || updateCaseMutation.isPending}
-                                onClick={() => caseForm.submit()}
-                              >
-                                保存
-                              </ProjectActionButton>
-                            </div>
-                          </div>
-                          <div className="ui-test-case-secondary-meta" aria-live="polite">
-                            <div className="ui-test-case-enabled-meta">
-                              <Form.Item name="enabled" valuePropName="checked">
-                                <Switch size="small" aria-label="启用当前用例" />
-                              </Form.Item>
-                              <span>{watchedEnabled ? '当前用例已启用' : '当前用例已停用'}</span>
-                            </div>
-                            <span className="ui-test-case-meta-separator" aria-hidden="true">·</span>
-                            <span className="ui-test-case-step-count-meta">
-                              <UnorderedListOutlined aria-hidden="true" />
-                              包含 {watchedSteps.length} 个步骤
-                            </span>
-                          </div>
+                        <div className="ui-test-case-empty-editor">
+                          <Empty description="请选择一个 UI测试用例，或先新建一个用例">
+                            <ProjectActionButton action="write" type="primary" className="action-btn-create" operation="create" onClick={openCreateCase}>
+                              新建用例
+                            </ProjectActionButton>
+                          </Empty>
                         </div>
+                      ) : !showEditorForm && selectedCaseDetailQuery.isLoading ? (
+                        <div className="ui-test-case-empty-editor">
+                          <Empty description="UI测试用例详情加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                        </div>
+                      ) : showEditorForm ? (
+                        <Form<UiTestCaseFormValues>
+                          form={caseForm}
+                          layout="vertical"
+                          requiredMark={false}
+                          className="ui-test-case-form"
+                          onValuesChange={(_changedValues, allValues) => {
+                            if (isCreatingCase) {
+                              setDraftCaseValues(allValues as UiTestCaseFormValues)
+                            }
+                          }}
+                          onFinish={(values) => {
+                            const completeValues = {
+                              ...getCompleteCaseFormValues(),
+                              ...values,
+                              steps: values.steps ?? getCompleteCaseFormValues().steps,
+                            } satisfies UiTestCaseFormValues
 
-                        <div className="ui-test-case-step-section">
-                          <div className="ui-test-case-step-scroll">
-                            <div className="ui-test-case-step-toolbar">
-                              <div>
-                                <div className="ui-test-case-step-title">步骤编辑器</div>
+                            if (isCreatingCase) {
+                              createCaseMutation.mutate(completeValues)
+                              return
+                            }
+
+                            if (!editingCase || normalizeUiTestCaseId(editingCase) !== activeCaseId) {
+                              message.warning('用例详情加载中，请稍后再试')
+                              return
+                            }
+
+                            const payload = buildUiTestCaseUpdatePayload(editingCase, {
+                              name: completeValues.name,
+                              enabled: completeValues.enabled,
+                              orderNo: editingCase.orderNo,
+                              stepsJson: serializeSteps(completeValues.steps),
+                            })
+
+                            if (Object.keys(payload).length === 0) {
+                              message.info('当前没有需要保存的修改')
+                              return
+                            }
+
+                            updateCaseMutation.mutate(completeValues)
+                          }}
+                        >
+                          <div className="ui-test-case-editor-fixed-head">
+                            <div className="ui-test-case-toolbar">
+                              <div className="ui-test-case-name-block">
+                                <div className="ui-test-case-inline-label">用例名称</div>
+                                <Form.Item name="name" className="ui-test-case-name-item" rules={[{ required: true, message: '请输入 UI测试用例名称' }]}>
+                                  <Input maxLength={120} placeholder="例如：登录成功验证" />
+                                </Form.Item>
+                              </div>
+                              <div className="ui-test-case-toolbar-meta">
+                                <ProjectActionButton action="execute"
+                                  className="action-btn-read"
+                                  operation="run"
+                                  onClick={handleDebugRun}
+                                  loading={debugRunMutation.isPending}
+                                  disabled={!activeCaseId || isCreatingCase}
+                                >
+                                  调试运行
+                                </ProjectActionButton>
+                                <ProjectActionButton action="write"
+                                  type="primary"
+                                  className="action-btn-save"
+                                  operation="save"
+                                  loading={createCaseMutation.isPending || updateCaseMutation.isPending}
+                                  onClick={() => caseForm.submit()}
+                                >
+                                  保存
+                                </ProjectActionButton>
                               </div>
                             </div>
-
-                            <Form.List name="steps">
-                              {(fields, { add, remove, move }) => (
-                                <>
-                                  {fields.length === 0 ? (
-                                    <div className="ui-test-case-step-empty">
-                                      <Empty description="当前还没有步骤">
-                                        <ProjectActionButton action="write" type="dashed" operation="create" onClick={() => addStep(add, fields.length)}>
-                                          添加步骤
-                                        </ProjectActionButton>
-                                      </Empty>
-                                    </div>
-                                  ) : (
-                                    <div className="ui-test-case-step-list">
-                                      {fields.map((field, index) => {
-                                      const { key: fieldKey, ...fieldProps } = field
-                                      const step = watchedSteps[index]
-                                      const stepKeyword = step?.keyword?.trim()
-                                      const stepMeta = getUiStepFieldMeta(stepKeyword)
-                                      const stepRequiresLocator = requiresUiStepLocator(stepKeyword)
-                                      const stepUsesComparator = usesUiStepComparator(stepKeyword)
-                                      const stepUsesOperation = usesUiStepOperation(stepKeyword)
-                                      const showLocatorFields = stepRequiresLocator || Boolean(step?.locatorType?.trim() || step?.locatorValue?.trim())
-                                      const showOperationField = stepUsesOperation || Boolean(step?.operationValue?.trim())
-                                      const showLocatorTypeField = stepRequiresLocator || Boolean(step?.locatorType?.trim())
-                                      const pairLocatorAndOperation = showLocatorFields && showOperationField
-                                      const operationFieldLabel = stepMeta.operationLabel ? `操作值（${stepMeta.operationLabel}）` : '操作值'
-                                      const locatorFieldHint = stepMeta.locatorHint || (stepRequiresLocator ? '当前关键字通常需要定位器。' : '')
-                                      const operationFieldHint = stepMeta.operationHint || ''
-                                      const locatorValueFieldClass = pairLocatorAndOperation ? 'ui-test-case-step-field-half' : 'ui-test-case-step-field-wide'
-                                      const operationValueFieldClass = pairLocatorAndOperation
-                                        ? 'ui-test-case-step-field-half'
-                                        : stepUsesComparator
-                                          ? 'ui-test-case-step-field-half'
-                                          : 'ui-test-case-step-field-wide'
-                                      const expanded = expandedStepIndexes.includes(index)
-                                      const stepSummary = [
-                                        stepKeyword || '未设置关键字',
-                                        stepRequiresLocator ? step?.locatorType?.trim() || '待设定位' : step?.locatorType?.trim() || '无需定位',
-                                        stepUsesComparator ? step?.comparator?.trim() || '待设比较' : '',
-                                        step?.enabled === false ? '已禁用' : '已启用',
-                                      ]
-                                        .filter(Boolean)
-                                        .join(' · ')
-
-                                      return (
-                                        <div
-                                          key={fieldKey}
-                                          className={`ui-test-case-step-card${expanded ? ' expanded' : ''}${draggingStepIndex === index ? ' dragging' : ''}`}
-                                          onDragOver={(event) => {
-                                            event.preventDefault()
-                                          }}
-                                          onDrop={(event) => {
-                                            event.preventDefault()
-                                            handleStepDrop(move, index)
-                                          }}
-                                        >
-                                          <div
-                                            className="ui-test-case-step-card-top"
-                                            draggable={can('write')}
-                                            onDragStart={(event) => handleStepDragStart(event, index)}
-                                            onDragEnd={() => setDraggingStepIndex(null)}
-                                            onClick={() => toggleStepPanel(index)}
-                                            >
-                                              <div className="ui-test-case-step-card-main">
-                                                <div className="ui-test-case-step-card-leading">
-                                                  <button
-                                                    type="button"
-                                                    className={`ui-test-case-step-toggle${expanded ? ' expanded' : ''}`}
-                                                    aria-label={expanded ? '折叠步骤' : '展开步骤'}
-                                                    aria-expanded={expanded}
-                                                    onClick={(event) => {
-                                                      event.stopPropagation()
-                                                      toggleStepPanel(index)
-                                                    }}
-                                                  >
-                                                    <DownOutlined />
-                                                  </button>
-                                                  <span className="ui-test-case-step-order">#{index + 1}</span>
-                                                </div>
-                                                <div
-                                                  className="ui-test-case-step-card-title"
-                                                  onClick={(event) => event.stopPropagation()}
-                                                  onMouseDown={(event) => event.stopPropagation()}
-                                                >
-                                                  <div className="ui-test-case-step-title-head">
-                                                    <Form.Item
-                                                      {...fieldProps}
-                                                      name={[field.name, 'stepName']}
-                                                      className="ui-test-case-step-title-item"
-                                                      rules={[{ required: true, whitespace: true, message: '请输入步骤名称' }]}
-                                                    >
-                                                      <Input
-                                                        placeholder="点击输入步骤名称"
-                                                        maxLength={120}
-                                                        className="ui-test-case-step-title-input"
-                                                        suffix={<EditOutlined className="ui-test-case-step-title-edit-icon" />}
-                                                      />
-                                                    </Form.Item>
-                                                  </div>
-                                                  <span>{stepSummary}</span>
-                                                </div>
-                                              </div>
-                                              <div className="ui-test-case-step-actions" onClick={(event) => event.stopPropagation()}>
-                                                <Tooltip title="删除步骤">
-                                                  <ProjectActionButton action="write"
-                                                    type="text"
-                                                    size="small"
-                                                    className="ui-test-case-step-delete-action action-btn-delete"
-                                                    operation="delete" iconOnly
-                                                    onClick={() => removeStep(remove, index)}
-                                                  />
-                                                </Tooltip>
-                                              </div>
-                                            </div>
-
-                                          <div className="ui-test-case-step-body" hidden={!expanded} aria-hidden={!expanded}>
-                                              <div className="ui-test-case-step-grid ui-test-case-step-core-grid">
-                                                <Form.Item
-                                                  {...fieldProps}
-                                                  name={[field.name, 'keyword']}
-                                                  label="关键字"
-                                                  rules={[
-                                                    { required: true, message: '请选择步骤关键字' },
-                                                    {
-                                                      validator(_, value: string | undefined) {
-                                                        if (!value || isValidUiStepKeyword(value)) return Promise.resolve()
-                                                        return Promise.reject(new Error('当前关键字不受支持，请重新选择'))
-                                                      },
-                                                    },
-                                                  ]}
-                                                >
-                                                  <Select
-                                                    showSearch
-                                                    placeholder="请选择关键字"
-                                                    options={uiTestKeywordOptions}
-                                                    optionFilterProp="label"
-                                                  />
-                                                </Form.Item>
-                                                <Form.Item
-                                                  {...fieldProps}
-                                                  name={[field.name, 'locatorType']}
-                                                  label="定位方式"
-                                                  hidden={!showLocatorTypeField}
-                                                  dependencies={[['steps', field.name, 'keyword']]}
-                                                  rules={[
-                                                    ({ getFieldValue }) => ({
-                                                      validator(_, value: string | undefined) {
-                                                        const keyword = getFieldValue(['steps', field.name, 'keyword'])
-                                                        if (!requiresUiStepLocator(keyword)) {
-                                                          return Promise.resolve()
-                                                        }
-                                                        if (!value?.trim()) {
-                                                          return Promise.reject(new Error('当前关键字需要选择定位方式'))
-                                                        }
-                                                        if (!isValidUiStepLocatorType(value)) {
-                                                          return Promise.reject(new Error('当前定位方式不受支持，请重新选择'))
-                                                        }
-                                                        return Promise.resolve()
-                                                      },
-                                                    }),
-                                                  ]}
-                                                >
-                                                  <Select
-                                                    showSearch
-                                                    placeholder={stepRequiresLocator ? '请选择定位方式' : '按需选择定位方式'}
-                                                    options={uiTestLocatorTypeOptions}
-                                                    optionFilterProp="label"
-                                                    allowClear={!stepRequiresLocator}
-                                                  />
-                                                </Form.Item>
-                                              </div>
-
-                                              <div className="ui-test-case-step-detail-grid">
-                                                <div
-                                                  className="ui-test-case-step-field-note ui-test-case-step-field-wide"
-                                                  hidden={!showLocatorTypeField || !locatorFieldHint}
-                                                >
-                                                  {locatorFieldHint}
-                                                </div>
-
-                                                <Form.Item
-                                                  {...fieldProps}
-                                                  name={[field.name, 'locatorValue']}
-                                                  label={renderTemplatePickerLabel(field.name, 'locatorValue', '定位值')}
-                                                  hidden={!showLocatorFields}
-                                                  className={`ui-test-case-step-field ${locatorValueFieldClass}`}
-                                                  dependencies={[['steps', field.name, 'keyword']]}
-                                                  rules={[
-                                                    ({ getFieldValue }) => ({
-                                                      validator(_, value: string | undefined) {
-                                                        const keyword = getFieldValue(['steps', field.name, 'keyword'])
-                                                        if (!requiresUiStepLocator(keyword) || value?.trim()) {
-                                                          return Promise.resolve()
-                                                        }
-                                                        return Promise.reject(new Error('当前关键字需要填写定位值'))
-                                                      },
-                                                    }),
-                                                  ]}
-                                                >
-                                                  <Input
-                                                    ref={bindTemplateInputRef(field.name, 'locatorValue')}
-                                                    placeholder={stepRequiresLocator ? '例如：#username' : '按需填写'}
-                                                    maxLength={400}
-                                                  />
-                                                </Form.Item>
-
-                                                <Form.Item
-                                                  {...fieldProps}
-                                                  name={[field.name, 'operationValue']}
-                                                  label={renderTemplatePickerLabel(field.name, 'operationValue', operationFieldLabel)}
-                                                  hidden={!showOperationField}
-                                                  className={`ui-test-case-step-field ${operationValueFieldClass}`}
-                                                  dependencies={[['steps', field.name, 'keyword']]}
-                                                  rules={[
-                                                    ({ getFieldValue }) => ({
-                                                      validator(_, value: string | undefined) {
-                                                        const keyword = getFieldValue(['steps', field.name, 'keyword'])
-                                                        const trimmedValue = value?.trim()
-
-                                                        if (keyword === 'open') {
-                                                          if (!trimmedValue) {
-                                                            return Promise.reject(new Error('open 步骤请填写完整 URL'))
-                                                          }
-                                                          if (/^https?:\/\//i.test(trimmedValue)) {
-                                                            return Promise.resolve()
-                                                          }
-                                                          return Promise.reject(new Error('open 步骤请填写完整 URL'))
-                                                        }
-
-                                                        const requiredValueLabels: Record<string, string> = {
-                                                          input: '输入值',
-                                                          press: '按键或组合键',
-                                                          wait_text: '等待文本',
-                                                          assert_text: '期望文本',
-                                                          assert_url: '期望 URL',
-                                                        }
-                                                        if (keyword && requiredValueLabels[keyword] && !trimmedValue) {
-                                                          return Promise.reject(new Error(`${keyword} 步骤请填写${requiredValueLabels[keyword]}`))
-                                                        }
-
-                                                        if (keyword === 'sleep' || keyword === 'assert_visible') {
-                                                          if (!trimmedValue) {
-                                                            return Promise.reject(new Error(`${keyword} 步骤请填写毫秒数`))
-                                                          }
-                                                          if (/^\d+$/.test(trimmedValue)) {
-                                                            return Promise.resolve()
-                                                          }
-                                                          return Promise.reject(new Error(`${keyword} 步骤请填写非负整数毫秒数`))
-                                                        }
-
-                                                        if (!trimmedValue) {
-                                                          return Promise.resolve()
-                                                        }
-
-                                                        return Promise.resolve()
-                                                      },
-                                                    }),
-                                                  ]}
-                                                >
-                                                  <Input
-                                                    ref={bindTemplateInputRef(field.name, 'operationValue')}
-                                                    placeholder={stepMeta.operationPlaceholder || '例如：tester'}
-                                                    maxLength={400}
-                                                  />
-                                                </Form.Item>
-
-                                                <div
-                                                  className="ui-test-case-step-field-note ui-test-case-step-field-wide"
-                                                  hidden={!showOperationField || !operationFieldHint}
-                                                >
-                                                  {operationFieldHint}
-                                                </div>
-
-                                                <Form.Item
-                                                  {...fieldProps}
-                                                  name={[field.name, 'comparator']}
-                                                  label="比较器"
-                                                  hidden={!stepUsesComparator}
-                                                  className="ui-test-case-step-field ui-test-case-step-field-third"
-                                                  dependencies={[['steps', field.name, 'keyword']]}
-                                                  rules={[
-                                                    ({ getFieldValue }) => ({
-                                                      validator(_, value: string | undefined) {
-                                                        const keyword = getFieldValue(['steps', field.name, 'keyword'])
-                                                        if (!usesUiStepComparator(keyword)) {
-                                                          return Promise.resolve()
-                                                        }
-                                                        if (!value?.trim()) {
-                                                          return Promise.reject(new Error('当前断言步骤需要选择比较器'))
-                                                        }
-                                                        if (!isValidUiStepComparator(value)) {
-                                                          return Promise.reject(new Error('当前比较器不受支持，请重新选择'))
-                                                        }
-                                                        return Promise.resolve()
-                                                      },
-                                                    }),
-                                                  ]}
-                                                >
-                                                  <Select placeholder="请选择比较器" options={uiTestComparatorOptions} />
-                                                </Form.Item>
-                                              </div>
-
-                                              <div className="ui-test-case-step-footer">
-                                                <div className="ui-test-case-step-footer-grid">
-                                                  <div className="ui-test-case-step-status-row">
-                                                  <Form.Item
-                                                    {...fieldProps}
-                                                    name={[field.name, 'enabled']}
-                                                    label="启用"
-                                                    valuePropName="checked"
-                                                    className="ui-test-case-step-inline-switch-item"
-                                                  >
-                                                    <Switch />
-                                                  </Form.Item>
-                                                  <Form.Item
-                                                    {...fieldProps}
-                                                    name={[field.name, 'continueOnFailure']}
-                                                    label="失败后继续"
-                                                    valuePropName="checked"
-                                                    className="ui-test-case-step-inline-switch-item"
-                                                  >
-                                                    <Switch />
-                                                  </Form.Item>
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            </div>
-                                        </div>
-                                      )
-                                      })}
-                                    </div>
-                                  )}
-
-                                  <div className="ui-test-case-step-add-row">
-                                    <ProjectActionButton action="write" type="dashed" operation="create" onClick={() => addStep(add, fields.length)}>
-                                      添加步骤
-                                    </ProjectActionButton>
-                                  </div>
-                                </>
-                              )}
-                            </Form.List>
+                            <div className="ui-test-case-secondary-meta" aria-live="polite">
+                              <div className="ui-test-case-enabled-meta">
+                                <Form.Item name="enabled" valuePropName="checked">
+                                  <Switch size="small" aria-label="启用当前用例" />
+                                </Form.Item>
+                                <span>{watchedEnabled ? '当前用例已启用' : '当前用例已停用'}</span>
+                              </div>
+                              <span className="ui-test-case-meta-separator" aria-hidden="true">·</span>
+                              <span className="ui-test-case-step-count-meta">
+                                <UnorderedListOutlined aria-hidden="true" />
+                                包含 {watchedSteps.length} 个步骤
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      </Form>
+
+                          <div className="ui-test-case-step-section">
+                            <div className="ui-test-case-step-scroll">
+                              <div className="ui-test-case-step-toolbar">
+                                <div>
+                                  <div className="ui-test-case-step-title">步骤编辑器</div>
+                                </div>
+                              </div>
+
+                              <UiStepEditor addStep={addStep} watchedSteps={watchedSteps} expandedStepIndexes={expandedStepIndexes} draggingStepIndex={draggingStepIndex} handleStepDrop={handleStepDrop} can={can} handleStepDragStart={handleStepDragStart} setDraggingStepIndex={setDraggingStepIndex} toggleStepPanel={toggleStepPanel} removeStep={removeStep} renderTemplatePickerLabel={renderTemplatePickerLabel} bindTemplateInputRef={bindTemplateInputRef} />
+                            </div>
+                          </div>
+                        </Form>
                       ) : (
-                      <div className="ui-test-case-empty-editor">
-                        <Empty description="未找到对应的 UI测试用例" />
-                      </div>
+                        <div className="ui-test-case-empty-editor">
+                          <Empty description="未找到对应的 UI测试用例" />
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1734,270 +1304,11 @@ export function UiTestSuiteCasePage() {
           </div>
         </div>
 
-        <ProjectActionModal action="execute"
-          mask={{ closable: false }}
-          open={caseImportModalOpen}
-          title="用例导入"
-          width={860}
-          okText="开始导入"
-          onCancel={closeCaseImportModal}
-          confirmLoading={importUiCasesMutation.isPending}
-          okButtonProps={{ className: 'action-btn-save' }}
-          onOk={handleImportUiCases}
-          rootClassName="api-case-import-modal-root"
-          className="api-case-import-modal-shell"
-          destroyOnHidden
-        >
-          <div className="api-case-import-modal">
-            <Segmented
-              className="api-case-import-mode"
-              value={caseImportMode}
-              options={[
-                { label: '上传 YAML', value: 'upload' },
-                { label: '直接输入', value: 'editor' },
-              ]}
-              onChange={(value) => setCaseImportMode(value as CaseImportMode)}
-            />
-            {caseImportMode === 'upload' ? (
-              <div className="api-case-import-upload">
-                <Upload.Dragger
-                  accept=".yaml,.yml"
-                  maxCount={1}
-                  beforeUpload={(file) => {
-                    if (!isYamlFileName(file.name)) {
-                      message.error('仅支持 .yaml 或 .yml 文件')
-                      return Upload.LIST_IGNORE
-                    }
-                    setImportYamlFile(file)
-                    return false
-                  }}
-                  onRemove={() => {
-                    setImportYamlFile(null)
-                    return true
-                  }}
-                >
-                  <p className="ant-upload-drag-icon">
-                    <UploadOutlined />
-                  </p>
-                  <p className="ant-upload-text">点击或拖拽 YAML 文件到这里</p>
-                  <p className="ant-upload-hint">仅支持 .yaml / .yml，导入时会自动绑定到当前 UI 测试集。</p>
-                </Upload.Dragger>
-                <div className="api-case-import-hint">后端会直接解析 YAML，前端不做字段预解析。</div>
-              </div>
-            ) : (
-              <div className="api-case-import-editor">
-                <div className="api-case-import-hint">直接粘贴 YAML 内容，提交时前端会将文本包装成 `.yaml` 文件上传。</div>
-                <TextCodeEditor value={importYamlText} onChange={setImportYamlText} language="yaml" minHeight={280} />
-              </div>
-            )}
-          </div>
-        </ProjectActionModal>
+        <UiCaseImportModal caseImportModalOpen={caseImportModalOpen} closeCaseImportModal={closeCaseImportModal} importUiCasesMutation={importUiCasesMutation} handleImportUiCases={handleImportUiCases} caseImportMode={caseImportMode} setCaseImportMode={setCaseImportMode} setImportYamlFile={setImportYamlFile} importYamlText={importYamlText} setImportYamlText={setImportYamlText} />
 
-        <Modal
-          mask={{ closable: false }}
-          open={suiteRunHistoryOpen}
-          title="测试集运行记录"
-          width={920}
-          footer={null}
-          onCancel={() => setSuiteRunHistoryOpen(false)}
-          destroyOnHidden={false}
-          className="api-collection-run-history-modal"
-        >
-          <div className="api-collection-run-history-layout">
-            {suiteRunHistoryQuery.error ? (
-              <Alert showIcon type="error" title={getErrorMessage(suiteRunHistoryQuery.error)} />
-            ) : suiteRunHistoryQuery.isLoading ? (
-              <Empty description="运行记录加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-            ) : suiteRunHistory.length === 0 ? (
-              <Empty description="暂无运行记录" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-            ) : (
-              <div className="api-collection-run-history-list">
-                {suiteRunHistory.map((item, index) => {
-                  const statusMeta = getExecutionStatusMeta(item.status)
-                  const isLoading = loadingSuiteRunHistoryId === item.suiteRunId
+        <UiSuiteRunHistory suiteRunHistoryOpen={suiteRunHistoryOpen} setSuiteRunHistoryOpen={setSuiteRunHistoryOpen} suiteRunHistoryQuery={suiteRunHistoryQuery} suiteRunHistory={suiteRunHistory} loadingSuiteRunHistoryId={loadingSuiteRunHistoryId} handleOpenSuiteRunHistoryItem={handleOpenSuiteRunHistoryItem} />
 
-                  return (
-                    <button
-                      key={item.suiteRunId ?? `ui-suite-run-${index}`}
-                      type="button"
-                      className="api-collection-run-history-item"
-                      onClick={() => handleOpenSuiteRunHistoryItem(item)}
-                      disabled={Boolean(loadingSuiteRunHistoryId)}
-                    >
-                      <div className="api-collection-run-history-item-main">
-                        <div className="api-collection-run-history-item-title">
-                          <strong>{formatTime(item.startedAt || item.createdAt || item.updatedAt)}</strong>
-                          <Tag color={statusMeta.color}>{statusMeta.label}</Tag>
-                        </div>
-                        <div className="api-collection-run-history-item-meta">
-                          <span>总数：{item.totalCount ?? 0}</span>
-                          <span>成功：{item.successCount ?? 0}</span>
-                          <span>失败：{item.failedCount ?? 0}</span>
-                          <span>异常：{item.errorCount ?? 0}</span>
-                          <span>跳过：{item.skippedCount ?? 0}</span>
-                          <span>耗时：{item.durationMs ?? 0} ms</span>
-                          <span>结束：{formatTime(item.finishedAt)}</span>
-                        </div>
-                        {item.errorMessage ? <div className="api-collection-run-history-item-error">{item.errorMessage}</div> : null}
-                      </div>
-                      <div className="api-collection-run-history-item-side">
-                        <span className="api-collection-run-history-item-id">{item.suiteRunId ?? '-'}</span>
-                        <span className="api-collection-run-history-item-link">{isLoading ? '加载中...' : '查看报告'}</span>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </Modal>
-
-        <Modal
-          mask={{ closable: false }}
-          open={suiteRunReportOpen}
-          title="测试集运行报告"
-          width={1180}
-          footer={null}
-          onCancel={closeSuiteRunReport}
-          destroyOnHidden={false}
-          rootClassName="api-collection-run-report-modal-root"
-          className="api-collection-run-report-modal"
-        >
-          {suiteRunReportQuery.error && !suiteRunReport ? (
-            <Alert showIcon type="error" title={getErrorMessage(suiteRunReportQuery.error)} />
-          ) : suiteRunReportQuery.isLoading && !suiteRunReport ? (
-            <Empty description="测试集报告加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-          ) : suiteRunReport ? (
-            <div className="api-collection-run-report-layout">
-              <div className="api-collection-run-report-static">
-                <div className="api-collection-run-report-head">
-                  <div className="api-collection-run-report-head-main">
-                    <div className="api-collection-run-report-title">
-                      <Text strong>运行结果</Text>
-                      <Tag color={getExecutionStatusMeta(suiteRunReport.status).color}>{getExecutionStatusMeta(suiteRunReport.status).label}</Tag>
-                    </div>
-                    <div className="api-collection-run-report-meta">
-                      <span>开始：{formatTime(suiteRunReport.startedAt)}</span>
-                      <span>结束：{formatTime(suiteRunReport.finishedAt)}</span>
-                      <span>总耗时：{suiteRunReport.durationMs ?? 0} ms</span>
-                      <span>当前 URL：{suiteRunReport.currentUrl || '-'}</span>
-                      <span>Trace：{suiteRunReport.tracePath || '-'}</span>
-                    </div>
-                  </div>
-                  <div className="api-collection-run-report-head-actions">
-                    <Button onClick={handleRefreshSuiteRunReport} loading={refreshingSuiteRunReport} disabled={!selectedSuiteRunId}>
-                      刷新报告
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="api-collection-run-report-summary-grid">
-                  <div className="api-collection-run-report-summary-item">
-                    <span>总数</span>
-                    <strong>{suiteRunReport.totalCount ?? 0}</strong>
-                  </div>
-                  <div className="api-collection-run-report-summary-item success">
-                    <span>成功</span>
-                    <strong>{suiteRunReport.successCount ?? 0}</strong>
-                  </div>
-                  <div className="api-collection-run-report-summary-item failed">
-                    <span>失败</span>
-                    <strong>{suiteRunReport.failedCount ?? 0}</strong>
-                  </div>
-                  <div className="api-collection-run-report-summary-item error">
-                    <span>异常</span>
-                    <strong>{suiteRunReport.errorCount ?? 0}</strong>
-                  </div>
-                  <div className="api-collection-run-report-summary-item skipped">
-                    <span>跳过</span>
-                    <strong>{suiteRunReport.skippedCount ?? 0}</strong>
-                  </div>
-                  <div className="api-collection-run-report-summary-item">
-                    <span>报告 ID</span>
-                    <strong>{suiteRunReport.suiteRunId ?? '-'}</strong>
-                  </div>
-                </div>
-
-                {suiteRunReport.errorMessage ? (
-                  <Alert showIcon type="error" title={suiteRunReport.errorMessage} className="api-case-run-result-alert" />
-                ) : null}
-
-                <Segmented
-                  className="api-case-run-result-segmented"
-                  options={uiSuiteRunReportViewOptions}
-                  value={suiteRunReportView}
-                  onChange={(value) => setSuiteRunReportView(value as UiSuiteRunReportView)}
-                />
-              </div>
-
-              <div className="api-collection-run-report-scroll">
-                <div className="api-collection-run-report-content">
-                  {suiteRunReportView === 'snapshot' ? (
-                    suiteRunReport.snapshot ? (
-                      <pre className="api-case-run-result-pre compact">{prettyPrintValue(suiteRunReport.snapshot)}</pre>
-                    ) : (
-                      <Empty description="暂无运行快照" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                    )
-                  ) : orderedSuiteRunItems.length === 0 ? (
-                    <Empty
-                      description={selectedSuiteRunSummary?.status && isUiRunPollingStatus(selectedSuiteRunSummary.status) ? '运行中，报告生成中...' : '暂无测试集运行明细'}
-                      image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    />
-                  ) : (
-                    <div className="api-collection-run-report-list">
-                      {orderedSuiteRunItems.map((item, index) => {
-                        const itemKey = getUiTestSuiteRunItemKey(item, index)
-                        const expanded = expandedSuiteRunItemIds.includes(itemKey)
-                        const statusMeta = getExecutionStatusMeta(item.status)
-
-                        return (
-                          <div key={itemKey} className={`api-collection-run-report-item${expanded ? ' expanded' : ''}`}>
-                            <button type="button" className="api-collection-run-report-item-head" onClick={() => toggleSuiteRunItem(itemKey)}>
-                              <div className="api-collection-run-report-item-title">
-                                <span className="api-collection-run-report-item-order">#{item.orderNo ?? index + 1}</span>
-                                <strong>{item.caseName || `用例 ${index + 1}`}</strong>
-                                <Tag color={statusMeta.color}>{statusMeta.label}</Tag>
-                                {item.continueOnFailure ? <Tag color="processing">失败后继续</Tag> : null}
-                              </div>
-                              <div className="api-collection-run-report-item-meta">
-                                <span>耗时：{item.durationMs ?? 0} ms</span>
-                                <span>开始：{formatTime(item.startedAt)}</span>
-                                <span>结束：{formatTime(item.finishedAt)}</span>
-                                <DownOutlined className={`api-collection-run-report-item-arrow${expanded ? ' expanded' : ''}`} />
-                              </div>
-                            </button>
-
-                            {expanded ? (
-                              <div className="api-collection-run-report-item-body">
-                                <div className="api-collection-run-report-item-inline-meta">
-                                  <span>用例名称：{item.caseName || '-'}</span>
-                                  <span>itemId：{item.itemId || '-'}</span>
-                                  <span>当前 URL：{item.currentUrl || '-'}</span>
-                                  <span>步骤数：{item.stepResults?.length ?? 0}</span>
-                                  <span>失败后继续：{item.continueOnFailure ? '是' : '否'}</span>
-                                </div>
-                                {item.errorMessage ? <Alert showIcon type="error" title={item.errorMessage} className="api-case-run-result-alert" /> : null}
-                                <div className="api-case-run-result-block">
-                                  {renderUiRunStepResultList(item.stepResults ?? [], '该用例暂无步骤结果')}
-                                  {item.snapshot ? <pre className="api-case-run-result-pre compact">{prettyPrintValue(item.snapshot)}</pre> : null}
-                                </div>
-                              </div>
-                            ) : null}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <Empty
-              description={selectedSuiteRunSummary?.status && isUiRunPollingStatus(selectedSuiteRunSummary.status) ? '运行中，报告生成中...' : '暂无测试集报告'}
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-            />
-          )}
-        </Modal>
+        <UiSuiteRunReport suiteRunReportOpen={suiteRunReportOpen} closeSuiteRunReport={closeSuiteRunReport} suiteRunReportQuery={suiteRunReportQuery} suiteRunReport={suiteRunReport} handleRefreshSuiteRunReport={handleRefreshSuiteRunReport} refreshingSuiteRunReport={refreshingSuiteRunReport} selectedSuiteRunId={selectedSuiteRunId} suiteRunReportView={suiteRunReportView} setSuiteRunReportView={setSuiteRunReportView} orderedSuiteRunItems={orderedSuiteRunItems} selectedSuiteRunSummary={selectedSuiteRunSummary} expandedSuiteRunItemIds={expandedSuiteRunItemIds} toggleSuiteRunItem={toggleSuiteRunItem} />
       </div>
     </div>
   )}</ProjectAccessScope>)

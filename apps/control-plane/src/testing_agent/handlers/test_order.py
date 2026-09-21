@@ -143,3 +143,11 @@ async def get_test_order_graph(
     service: TestOrderGraphService = Depends(get_test_order_graph_service),
 ):
     return success_payload(await service.get(user_id, order_id))
+
+
+async def get_test_order_graph_input(
+    order_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: TestOrderGraphService = Depends(get_test_order_graph_service),
+):
+    return success_payload(await service.graph_input(user_id, order_id))

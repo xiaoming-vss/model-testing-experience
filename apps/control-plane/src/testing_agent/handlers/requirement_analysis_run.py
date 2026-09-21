@@ -102,6 +102,14 @@ async def get_requirement_analysis_run(
     )
 
 
+async def delete_requirement_analysis_run(
+    run_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+):
+    return success_payload(await service.delete_run("requirement_analysis", run_id, user_id))
+
+
 async def save_requirement_analysis_stage_output(
     run_id: str,
     body: RequirementAnalysisRunRequest,

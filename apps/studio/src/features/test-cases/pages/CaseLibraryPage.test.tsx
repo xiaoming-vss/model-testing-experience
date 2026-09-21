@@ -146,7 +146,7 @@ async function selectSuite(container: HTMLElement) {
   const sidebar = container.querySelector('.api-case-sidebar') as HTMLElement
   await within(sidebar).findByText('业务价值验证场景')
   await userEvent.setup().click(within(sidebar).getByText('业务价值验证场景'))
-  await waitFor(() => expect(screen.getByText('12 条用例')).toBeInTheDocument())
+  await waitFor(() => expect(within(sidebar).getByText('业务价值验证场景').closest('button')).toHaveAttribute('aria-current', 'true'))
 }
 
 it('左栏平铺展示测试集，默认落在「全部用例」', async () => {
@@ -242,8 +242,8 @@ it('测试集的新建 / 编辑 / 删除都收在左栏底部', async () => {
   await waitFor(() => expect(iconButton('删除测试集', foot)).not.toBeDisabled())
   expect(iconButton('编辑测试集', foot)).not.toBeDisabled()
 
-  // 右栏头部不再重复这三个动作
-  const head = container.querySelector('.case-library-main-head') as HTMLElement
+  // 顶部工具栏不重复测试集管理动作
+  const head = container.querySelector('.api-panel-header') as HTMLElement
   expect(within(head).queryByText('新建测试集')).toBeNull()
   expect(head.querySelector('[aria-label="编辑测试集"]')).toBeNull()
   expect(head.querySelector('[aria-label="删除测试集"]')).toBeNull()

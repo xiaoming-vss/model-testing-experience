@@ -235,6 +235,29 @@ describe('layoutRelationsFishbone', () => {
     })
   })
 
+  it.each(['horizontal', 'vertical'] as const)('兄弟节点围绕父节点错落展开，共享引用和环不重复放置：%s', (orientation) => {
+    const pairs = [['root', 'parent'], ['parent', 'left'], ['parent', 'above'], ['left', 'shared'], ['above', 'shared'], ['shared', 'parent']]
+    const data = parseCaseRelationsContent(JSON.stringify({
+      main_paths: [{ case_ids: ['root', 'end'] }],
+      edges: pairs.map(([from, to], i) => ({ edge_id: `e${i}`, from_case_id: from, to_case_id: to, relation_type: 'branch', order: i })),
+    }))!
+    const model = buildRelationsGraphModel(data, new Map())
+    const layout = layoutRelationsFishbone(model, orientation)
+    expect(layout.nodes.size).toBe(6)
+    expect(model.edges).toHaveLength(pairs.length)
+    const parent = layout.nodes.get('parent')!, left = layout.nodes.get('left')!, above = layout.nodes.get('above')!
+    const u = (node: typeof parent) => orientation === 'horizontal' ? node.centerX : node.centerY
+    const v = (node: typeof parent) => orientation === 'horizontal' ? node.centerY : node.centerX
+    expect(u(left)).toBeLessThan(u(above))
+    expect(u(above)).toBeLessThan(u(parent))
+    expect(v(left)).toBeLessThan(v(parent))
+    expect(v(above)).toBeLessThan(v(left))
+    const nodes = [...layout.nodes.values()]
+    nodes.forEach((a, i) => nodes.slice(i + 1).forEach((b) => {
+      expect(Math.abs(a.centerX - b.centerX) >= RELATIONS_NODE_WIDTH || Math.abs(a.centerY - b.centerY) >= RELATIONS_NODE_HEIGHT).toBe(true)
+    }))
+  })
+
   it('多条主骨各占一条 lane，互不重叠', () => {
     const data = parseCaseRelationsContent(JSON.stringify({
       main_paths: [

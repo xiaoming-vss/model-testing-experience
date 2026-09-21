@@ -188,9 +188,13 @@ export type {
 export type {
   AddTestOrderCasesResult,
   CreateTestOrderPayload,
+  DispatchTestOrderGraphPayload,
   TestOrder,
   TestOrderEntry,
   TestOrderEntryStatus,
+  TestOrderGraph,
+  TestOrderGraphInput,
+  TestOrderGraphRun,
   UpdateTestOrderEntryPayload,
   UpdateTestOrderPayload,
 } from '@/features/test-orders/types'

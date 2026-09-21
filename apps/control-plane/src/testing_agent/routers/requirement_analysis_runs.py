@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from testing_agent.handlers.requirement_analysis_run import (
     create_requirement_analysis_task,
+    delete_requirement_analysis_run,
     delete_requirement_analysis_task,
     get_requirement_analysis_run,
     get_requirement_analysis_task,
@@ -58,6 +59,10 @@ router.get(
     "/requirement-analysis-runs/{run_id}",
     response_model=ApiResponse[AiGenerateTaskRunResponse],
 )(get_requirement_analysis_run)
+router.delete(
+    "/requirement-analysis-runs/{run_id}",
+    response_model=ApiResponse[EmptyData],
+)(delete_requirement_analysis_run)
 router.patch(
     "/requirement-analysis-runs/{run_id}/stage-output",
     response_model=ApiResponse[AiGenerateTaskRunResponse],

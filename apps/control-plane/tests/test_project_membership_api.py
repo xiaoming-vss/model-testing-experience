@@ -775,12 +775,20 @@ def test_function_stage_reexecution_uses_current_actor(api, operation, creator_r
         )
         assert response.status_code == 200, response.text
         credentials[role] = response.json()["data"]["connectionId"]
+    # Stage reexecution requires the same imported analysis as the initial run.
+    rid = requirement(api, owner, pid)
+    response = api.patch(
+        f"/v1/requirements/{rid}",
+        headers=owner,
+        json={"documentContent": "已确认的需求分析：登录成功后进入首页。"},
+    )
+    assert response.status_code == 200, response.text
     actors = {"owner": owner, "member": member}
     operator_role = "member" if creator_role == "owner" else "owner"
     response = api.post(
         f"/v1/projects/{pid}/function-case-generate-tasks",
         headers=actors[creator_role],
-        json={"name": "cases", "sourceType": "text", "sourceContent": "requirement"},
+        json={"name": "cases", "requirementId": rid},
     )
     assert response.status_code == 200, response.text
     tid = response.json()["data"]["taskId"]

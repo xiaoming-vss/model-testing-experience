@@ -8,10 +8,13 @@ from datetime import datetime
 
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
+from testing_agent_ai_worker.tasks.requirement_analysis.output import (
+    build_config_json,
+    build_result_summary_json,
+)
 from testing_agent_ai_worker.tasks.requirement_analysis.source_downloader import (
     RequirementSourceDownloader,
 )
-from testing_agent_ai_worker.tasks.result_summary import build_task_result_summary
 
 REQUIREMENT_ANALYSIS_INITIAL_STAGE = "extracting_text"
 REQUIREMENT_ANALYSIS_CHECKPOINT_STAGES = {
@@ -155,7 +158,7 @@ def execute_checkpoint_task(
                 extra_instruction=task.payload.extra_instruction,
             )
         )
-        config_json = _build_config_json(
+        config_json = build_config_json(
             first_step_output=first_step_output,
             second_step_output=second_step_output,
         )
@@ -166,7 +169,7 @@ def execute_checkpoint_task(
             status=TaskStatus.SUCCESS,
             intermediate_json_text=config_json,
             output_yaml=final_output,
-            result_summary_json=_build_result_summary_json(
+            result_summary_json=build_result_summary_json(
                 task=task,
                 status=TaskStatus.SUCCESS,
                 config_json=config_json,
@@ -251,7 +254,7 @@ def _build_progress(
     first_step_output: str,
     second_step_output: str | None = None,
 ) -> TaskProgress:
-    config_json = _build_config_json(
+    config_json = build_config_json(
         first_step_output=first_step_output,
         second_step_output=second_step_output,
     )
@@ -262,45 +265,11 @@ def _build_progress(
         stage_status=stage_status,
         intermediate_json_text=config_json,
         output_yaml="",
-        result_summary_json=_build_result_summary_json(
+        result_summary_json=build_result_summary_json(
             task=task,
             status=stage_status,
             config_json=config_json,
             output_yaml="",
             error_message=None,
         ),
-    )
-
-
-def _build_config_json(
-    *,
-    first_step_output: str,
-    second_step_output: str | None = None,
-) -> str:
-    config = {
-        "firstStepOutput": first_step_output,
-    }
-    if second_step_output is not None:
-        config["secondStepOutput"] = second_step_output
-    return json.dumps(config, ensure_ascii=False, indent=2)
-
-
-def _build_result_summary_json(
-    *,
-    task: Task,
-    status: TaskStatus | str,
-    config_json: str,
-    output_yaml: str,
-    error_message: str | None,
-) -> str:
-    return build_task_result_summary(
-        task=task,
-        status=status,
-        error_message=error_message,
-        details={
-            "sourceType": task.payload.source_type,
-            "documentType": task.payload.document_type,
-            "configJsonLength": len(config_json),
-            "resultLength": len(output_yaml),
-        },
     )

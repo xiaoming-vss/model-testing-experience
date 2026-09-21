@@ -1,6 +1,8 @@
+import { formatStructuredContent } from '@/shared/utils/value'
 import { RevisionDivider, RevisionSidePanel } from '../components/RevisionSidePanel'
 import { RunArtifacts, RunPipelineStatus } from '../components/RunPipelineStatus'
 import { RunHistoryTable, RunRowActions, type RunMenuAction } from '../components/RunHistoryTable'
+import { confirmDeleteRun, isRunDeletable } from '../utils/runDeletion'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { usePersonalLlmChoice } from '../hooks/usePersonalLlmChoice'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
@@ -70,22 +72,6 @@ const requirementAnalysisStageFieldMap: Record<string, { key: 'firstStepOutput' 
 function getRunSortTime(run: RequirementAnalysisTaskRun) {
   const time = new Date(run.createdAt || run.startedAt || run.updatedAt || '').getTime()
   return Number.isNaN(time) ? 0 : time
-}
-
-function formatStructuredContent(value?: unknown) {
-  if (value === undefined || value === null || value === '') return ''
-  if (typeof value === 'string') {
-    try {
-      return JSON.stringify(JSON.parse(value), null, 2)
-    } catch {
-      return value
-    }
-  }
-  try {
-    return JSON.stringify(value, null, 2)
-  } catch {
-    return String(value)
-  }
 }
 
 function parseConfigJsonRecord(configJson?: unknown): Record<string, unknown> {
@@ -547,6 +533,17 @@ export function RequirementAnalysisTaskDetailPage() {
     },
   })
 
+  const deleteRunMutation = useMutation({
+    mutationFn: (runId: string) => api.deleteRequirementAnalysisRun(runId),
+    onSuccess: (_data, runId) => {
+      message.success('运行记录已删除')
+      if (selectedRunRecordId === runId) setSelectedRunRecordId(null)
+      queryClient.removeQueries({ queryKey: ['requirementAnalysisRun', runId], exact: true })
+      queryClient.invalidateQueries({ queryKey: ['requirementAnalysisTaskRuns', taskId] })
+    },
+    onError: (error) => message.error(getErrorMessage(error)),
+  })
+
   function handleRunTask() {
     if (runsQuery.isLoading) {
       message.warning('运行记录加载中，请稍后再试')
@@ -872,6 +869,14 @@ export function RequirementAnalysisTaskDetailPage() {
                               ...(canRetry && can('execute')
                                 ? [{ key: 'retryStage', label: '重试阶段', disabled: stageActionPending }]
                                 : []),
+                              ...(row.runId && can('write')
+                                ? [{
+                                    key: 'deleteRun',
+                                    label: '删除运行记录',
+                                    danger: true,
+                                    disabled: !isRunDeletable(recordStatus) || deleteRunMutation.isPending,
+                                  }]
+                                : []),
                             ]
                             return (
                               <RunRowActions
@@ -910,6 +915,10 @@ export function RequirementAnalysisTaskDetailPage() {
                                 onMenuAction={(key) => {
                                   if (key === 'retryStage' && row.runId && data.currentStage) {
                                     retryStageMutation.mutate({ runId: row.runId, stage: data.currentStage })
+                                  }
+                                  if (key === 'deleteRun' && row.runId) {
+                                    const runId = row.runId
+                                    confirmDeleteRun(() => deleteRunMutation.mutate(runId))
                                   }
                                 }}
                               />
@@ -1056,7 +1065,7 @@ export function RequirementAnalysisTaskDetailPage() {
             : null
         }
         width={reviseModalOpen ? "calc(100vw - 56px)" : "min(1180px, calc(100vw - 56px))"}
-        className={`ai-task-run-result-modal api-task-run-result-modal${editableRunResultModal ? ' review' : ''}`}
+        className={`ai-task-run-result-modal api-task-run-result-modal${editableRunResultModal ? ' review' : ' requirement-analysis-text-modal'}`}
         centered
         destroyOnHidden
       >
@@ -1096,8 +1105,6 @@ export function RequirementAnalysisTaskDetailPage() {
         </div>
         </div>{reviseModalOpen && <><RevisionDivider /><RevisionSidePanel footerContainer={revisionFooter} projectId={task?.projectId} value={revisionInstruction} onChange={setRevisionInstruction} loading={reviseStageMutation.isPending} onCancel={() => setReviseModalOpen(false)} onSubmit={handleReviseStage} /></>}</div>
       </Modal>
-
-
 
     </div>
   )}</ProjectAccessScope>)

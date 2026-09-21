@@ -339,4 +339,5 @@ def get_test_order_graph_service(
     return TestOrderGraphService(
         AiGenerateTaskRepository(session),
         build_test_order_service(session),
+        TestOrderEntryRepository(session),
     )

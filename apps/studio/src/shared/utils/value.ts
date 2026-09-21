@@ -31,3 +31,19 @@ export function formatOptionalValue(value: unknown) {
   if (value === undefined || value === null || value === '') return '-'
   return String(value)
 }
+
+export function formatStructuredContent(value?: unknown) {
+  if (value === undefined || value === null || value === '') return ''
+  if (typeof value === 'string') {
+    try {
+      return JSON.stringify(JSON.parse(value), null, 2)
+    } catch {
+      return value
+    }
+  }
+  try {
+    return JSON.stringify(value, null, 2)
+  } catch {
+    return String(value)
+  }
+}

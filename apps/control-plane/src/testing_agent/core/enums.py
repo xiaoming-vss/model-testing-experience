@@ -106,6 +106,14 @@ class TestOrderEntryStatus(StrEnum):
 # 成功语义兼容集合:历史/Go 侧可能传 passed/completed,统一视为成功。
 SUCCESS_STATUSES = {RunStatus.SUCCESS.value, "passed", "completed"}
 
+# 仍在推进中的运行记录:worker 可能还会写回结果,不允许删除。
+RUN_ACTIVE_STATUSES = {
+    RunStatus.PENDING.value,
+    RunStatus.QUEUED.value,
+    RunStatus.CLAIMED.value,
+    RunStatus.RUNNING.value,
+}
+
 # 执行条目的终态:到达其中之一即视为本条已执行完。
 TEST_ORDER_ENTRY_TERMINAL_STATUSES = {
     TestOrderEntryStatus.PASSED.value,

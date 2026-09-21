@@ -120,6 +120,27 @@ def test_dispatch_records_graph_task_run_and_worker_task(api):
     assert workers[0].domain == "ai"
 
 
+def test_worker_snapshot_carries_graph_task_id(api):
+    owner, pid, _, order_id = order_fixture(api)
+    connection_id = make_llm(api, owner, pid)
+    run_id = dispatch(api, owner, order_id, connection_id).json()["data"]["runId"]
+
+    async def load():
+        from testing_agent.services.worker import build_snapshot
+
+        async with api.app.state.test_sessions() as session:
+            worker = await session.scalar(select(WorkerTask).where(WorkerTask.run_id == run_id))
+            task = await session.scalar(
+                select(AiGenerateTask).where(AiGenerateTask.task_type == "test_order_graph")
+            )
+            return await build_snapshot(session, "ai", worker), task.task_id
+
+    payload, task_id = asyncio.run(load())
+    # worker 端 run.taskId 必填：缺了它的快照整轮都领取不到任务。
+    assert payload["run"]["taskId"] == task_id
+    assert payload["run"]["runId"] == run_id
+
+
 def test_redispatch_reuses_task_and_blocks_while_running(api):
     owner, pid, _, order_id = order_fixture(api)
     connection_id = make_llm(api, owner, pid)

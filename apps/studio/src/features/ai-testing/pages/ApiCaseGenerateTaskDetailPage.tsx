@@ -1,3 +1,4 @@
+import { formatStructuredContent } from '@/shared/utils/value'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
@@ -12,6 +13,7 @@ import { parse } from 'yaml'
 import { ApiCaseGenerateTaskDrawer, type ApiCaseGenerateTaskFormValues } from '../components/ApiCaseGenerateTaskDrawer'
 import { ApiImportConflictModal } from '../components/ApiImportConflictModal'
 import { RunHistoryTable, RunMigrationWarningIcon, RunRowActions, type RunMenuAction } from '../components/RunHistoryTable'
+import { confirmDeleteRun, isRunDeletable } from '../utils/runDeletion'
 import { RunArtifacts, RunPipelineStatus } from '../components/RunPipelineStatus'
 import { LlmConnectionSelectModal } from '../components/LlmConnectionSelectModal'
 import type {
@@ -73,22 +75,6 @@ type ApiConfigDiagramData = {
   totalExtractRules: number
   totalAssertRules: number
   authHeaderCount: number
-}
-
-function formatStructuredContent(value?: unknown) {
-  if (value === undefined || value === null || value === '') return ''
-  if (typeof value === 'string') {
-    try {
-      return JSON.stringify(JSON.parse(value), null, 2)
-    } catch {
-      return value
-    }
-  }
-  try {
-    return JSON.stringify(value, null, 2)
-  } catch {
-    return String(value)
-  }
 }
 
 function toRecord(value: unknown): Record<string, unknown> | null {
@@ -642,6 +628,17 @@ export function ApiCaseGenerateTaskDetailPage() {
     },
   })
 
+  const deleteRunMutation = useMutation({
+    mutationFn: (runId: string) => api.deleteApiCaseGenerateTaskRun(runId),
+    onSuccess: (_data, runId) => {
+      message.success('运行记录已删除')
+      if (selectedRunRecordId === runId) setSelectedRunRecordId(null)
+      queryClient.removeQueries({ queryKey: ['apiCaseGenerateTaskRun', runId], exact: true })
+      queryClient.invalidateQueries({ queryKey: ['apiCaseGenerateTaskRuns', taskId] })
+    },
+    onError: (error) => message.error(getErrorMessage(error)),
+  })
+
   const reviewRunMutation = useMutation({
     mutationFn: (payload: {
       runId: string
@@ -1047,6 +1044,14 @@ export function ApiCaseGenerateTaskDetailPage() {
                             ...(data.importStatus === 'imported' && importedTargetId
                               ? [{ key: 'openCollection', label: '查看目标集合' }]
                               : []),
+                            ...(row.runId && can('write')
+                              ? [{
+                                  key: 'deleteRun',
+                                  label: '删除运行记录',
+                                  danger: true,
+                                  disabled: !isRunDeletable(data.status) || deleteRunMutation.isPending,
+                                }]
+                              : []),
                           ]
                           return (
                             <RunRowActions
@@ -1062,7 +1067,7 @@ export function ApiCaseGenerateTaskDetailPage() {
                                         openReviewModal(row.runId)
                                       }}
                                     >
-                                      {can('review') ? '审核候选结果' : '查看候选结果'}
+                                      {can('review') ? '审核结果' : '查看候选结果'}
                                     </Button>
                                   ) : null}
                                   {recordFailed && data.errorMessage?.trim() ? (
@@ -1092,6 +1097,11 @@ export function ApiCaseGenerateTaskDetailPage() {
                                 }
                                 if (key === 'openCollection' && importedTargetId) {
                                   navigate(`/api-automation/collections/${importedTargetId}`)
+                                  return
+                                }
+                                if (key === 'deleteRun' && row.runId) {
+                                  const runId = row.runId
+                                  confirmDeleteRun(() => deleteRunMutation.mutate(runId))
                                 }
                               }}
                             />
@@ -1149,7 +1159,7 @@ export function ApiCaseGenerateTaskDetailPage() {
       <Modal
         mask={{ closable: false }}
         className="ai-task-import-result-modal"
-        title={canReviewSelectedRun ? '审核候选结果' : 'API 用例候选结果'}
+        title={canReviewSelectedRun ? '审核结果' : 'API 用例候选结果'}
         open={Boolean(reviewModalRunId)}
         onCancel={requestCloseReviewModal}
         footer={

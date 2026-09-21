@@ -82,6 +82,7 @@ ErrApiCaseGenerateTaskNotFound = AppError(3101, "API用例生成任务不存在"
 ErrAiGenerateTaskRunNotFound = AppError(3102, "API用例生成任务运行记录不存在", HTTPStatus.NOT_FOUND)
 ErrAiWorkerTaskNotFound = AppError(3103, "AI Worker任务不存在", HTTPStatus.NOT_FOUND)
 ErrAiGenerateTaskRunReviewed = AppError(3104, "该运行记录已审核", HTTPStatus.BAD_REQUEST)
+ErrAiGenerateTaskRunRunning = AppError(3106, "运行中的记录不允许删除", HTTPStatus.CONFLICT)
 ErrFunctionCaseGenerateTaskNotFound = AppError(3105, "功能测试AI任务不存在", HTTPStatus.NOT_FOUND)
 ErrFunctionCaseGenerateTaskRunNotFound = AppError(
     3110, "功能测试AI任务运行记录不存在", HTTPStatus.NOT_FOUND

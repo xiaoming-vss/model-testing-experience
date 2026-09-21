@@ -86,159 +86,111 @@ async def test_function_case_stage_output_persists_config_json():
     }
 
 
-@pytest.mark.asyncio
-async def test_function_case_review_import_matches_go_cases_payload():
-    existing_suite = SimpleNamespace(suite_id="suite-login", name="登录")
-    existing_case = SimpleNamespace(
-        case_id="case-login",
-        suite_id="suite-login",
-        module="登录",
-        title="成功登录",
-        preconditions="old",
-        steps="old",
-        expected_results="old",
-        priority="P3",
-        case_type="功能",
-        order_no=1,
+def test_function_case_confirmed_import_matches_go_cases_payload():
+    from test_function_confirmed_import import FunctionImportRepository, import_client
+
+    repository = FunctionImportRepository()
+    suite = repository.suites["suite-login"]
+    suite.name = "登录"
+    existing = repository.cases["case-existing"]
+    existing.module = "登录"
+    existing.title = "成功登录"
+    repository.run.result_yaml = """{
+  "cases": [
+    {
+      "case_id": "C001",
+      "case_module": "登录",
+      "case_title": "成功登录",
+      "precondition": [
+        "已创建账号"
+      ],
+      "test_steps": [
+        "打开登录页",
+        "输入账号"
+      ],
+      "expected_results": [
+        "进入首页"
+      ],
+      "priority": "P1",
+      "case_type": "功能"
+    },
+    {
+      "case_id": "C002",
+      "case_module": "支付",
+      "case_title": "支付成功",
+      "precondition": [
+        "已登录"
+      ],
+      "test_steps": [
+        "提交订单"
+      ],
+      "expected_results": [
+        "支付成功"
+      ],
+      "priority": "P2",
+      "case_type": "集成"
+    }
+  ]
+}"""
+
+    response = import_client(repository).post(
+        "/v1/function-case-generate-task-runs/run-1/import",
+        json={"confirmOverwrite": True},
     )
 
-    class FakeRepository:
-        session = AuthorizationDatabase()
+    assert response.status_code == 200
+    assert existing.case_id == "case-existing"
+    assert existing.preconditions == "已创建账号"
+    assert existing.steps == "打开登录页\n输入账号"
+    assert existing.expected_results == "进入首页"
+    assert existing.priority == "P1"
+    assert existing.case_type == "功能"
+    created = repository.cases["C002"]
+    assert created.suite_id == repository.suites_by_name["支付"].suite_id
+    assert created.title == "支付成功"
+    assert created.preconditions == "已登录"
+    assert created.steps == "提交订单"
+    assert created.expected_results == "支付成功"
+    assert created.priority == "P2"
+    assert created.case_type == "集成"
+    assert created.order_no == 1
+    assert repository.run.import_status == "imported"
 
-        def __init__(self):
-            self.added = []
-            self.suites = {"登录": existing_suite}
-            self.cases = {("suite-login", "成功登录"): existing_case}
-            self.by_id = {existing_case.case_id: existing_case}
 
-        async def get_case(self, case_id):
-            return self.by_id.get(case_id)
+def test_function_case_import_replaces_an_identifier_already_in_use():
+    from test_function_confirmed_import import FunctionImportRepository, import_client
 
-        async def get_requirement(self, requirement_id):
-            assert requirement_id == "requirement-1"
-            return SimpleNamespace(requirement_id="requirement-1", sprint_id="sprint-1")
+    repository = FunctionImportRepository()
+    taken = repository.cases.pop("case-existing")
+    taken.case_id = "C002"
+    repository.cases["C002"] = taken
+    repository.run.result_yaml = """{
+  "cases": [
+    {
+      "case_id": "C002",
+      "case_module": "支付",
+      "case_title": "支付成功",
+      "precondition": [
+        "已登录"
+      ],
+      "test_steps": [
+        "提交订单"
+      ],
+      "expected_results": [
+        "支付成功"
+      ],
+      "priority": "P2",
+      "case_type": "集成"
+    }
+  ]
+}"""
 
-        async def get_sprint(self, sprint_id):
-            assert sprint_id == "sprint-1"
-            return SimpleNamespace(sprint_id="sprint-1", project_id="project-1")
-
-        async def get_project(self, project_id):
-            assert project_id == "project-1"
-            return SimpleNamespace(project_id="project-1", user_id="user-1")
-
-        async def get_function_suite_by_requirement_and_name(self, requirement_id, name):
-            assert requirement_id == "requirement-1"
-            return self.suites.get(name)
-
-        async def get_function_case_by_suite_and_title(self, suite_id, title):
-            return self.cases.get((suite_id, title))
-
-        async def max_function_case_order_by_suite(self, suite_id):
-            return 1 if suite_id == "suite-login" else 0
-
-        def add(self, row):
-            self.added.append(row)
-            if hasattr(row, "suite_id") and hasattr(row, "name"):
-                self.suites[row.name] = row
-            if getattr(row, "case_id", None):
-                self.by_id[row.case_id] = row
-
-    run = SimpleNamespace(
-        requirement_id="requirement-1",
-        result_yaml=(
-            '{"cases":['
-            '{"case_id":"C001","case_module":"登录","case_title":"成功登录",'
-            '"precondition":["已创建账号"],'
-            '"test_steps":["打开登录页","输入账号"],"expected_results":["进入首页"],'
-            '"priority":"P1","case_type":"功能"},'
-            '{"case_id":"C002","case_module":"支付","case_title":"支付成功",'
-            '"precondition":["已登录"],'
-            '"test_steps":["提交订单"],"expected_results":["支付成功"],'
-            '"priority":"P2","case_type":"集成"}'
-            "]}"
-        ),
+    response = import_client(repository).post(
+        "/v1/function-case-generate-task-runs/run-1/import", json={}
     )
-    repository = FakeRepository()
-    service = ai_tasks.AiGenerateTaskService(repository)
 
-    suite_ids = await service.import_generated_function_cases("user-1", run)
-
-    assert suite_ids == ["suite-login", repository.suites["支付"].suite_id]
-    assert existing_case.module == "登录"
-    assert existing_case.preconditions == "已创建账号"
-    assert existing_case.steps == "打开登录页\n输入账号"
-    assert existing_case.expected_results == "进入首页"
-    assert existing_case.priority == "P1"
-    assert existing_case.case_type == "功能"
-
-    created_suites = [
-        row for row in repository.added if hasattr(row, "suite_id") and hasattr(row, "name")
-    ]
-    created_cases = [row for row in repository.added if hasattr(row, "case_id")]
-    assert [suite.name for suite in created_suites] == ["支付"]
-    assert len(created_cases) == 1
-    assert created_cases[0].suite_id == repository.suites["支付"].suite_id
-    assert created_cases[0].module == "支付"
-    assert created_cases[0].title == "支付成功"
-    assert created_cases[0].preconditions == "已登录"
-    assert created_cases[0].steps == "提交订单"
-    assert created_cases[0].expected_results == "支付成功"
-    assert created_cases[0].priority == "P2"
-    assert created_cases[0].case_type == "集成"
-    assert created_cases[0].order_no == 1
-    # 候选编号在首次入库时固定成用例 ID，已入库的用例保持原 ID 不变。
-    assert created_cases[0].case_id == "C002"
-    assert existing_case.case_id == "case-login"
-
-
-@pytest.mark.asyncio
-async def test_function_case_import_replaces_an_identifier_already_in_use():
-    taken = SimpleNamespace(case_id="C002", suite_id="suite-other", title="历史用例")
-
-    class FakeRepository:
-        session = AuthorizationDatabase()
-
-        def __init__(self):
-            self.added = []
-            self.by_id = {taken.case_id: taken}
-
-        async def get_case(self, case_id):
-            return self.by_id.get(case_id)
-
-        async def get_requirement(self, requirement_id):
-            return SimpleNamespace(requirement_id="requirement-1", sprint_id="sprint-1")
-
-        async def get_sprint(self, sprint_id):
-            return SimpleNamespace(sprint_id="sprint-1", project_id="project-1")
-
-        async def get_project(self, project_id):
-            return SimpleNamespace(project_id="project-1", user_id="user-1")
-
-        async def get_function_suite_by_requirement_and_name(self, requirement_id, name):
-            return None
-
-        async def get_function_case_by_suite_and_title(self, suite_id, title):
-            return None
-
-        async def max_function_case_order_by_suite(self, suite_id):
-            return 0
-
-        def add(self, row):
-            self.added.append(row)
-
-    run = SimpleNamespace(
-        requirement_id="requirement-1",
-        result_yaml=(
-            '{"cases":[{"case_id":"C002","case_module":"支付","case_title":"支付成功",'
-            '"precondition":["已登录"],"test_steps":["提交订单"],'
-            '"expected_results":["支付成功"],"priority":"P2","case_type":"集成"}]}'
-        ),
-    )
-    repository = FakeRepository()
-
-    await ai_tasks.AiGenerateTaskService(repository).import_generated_function_cases("user-1", run)
-
-    created = [row for row in repository.added if hasattr(row, "case_id")]
+    assert response.status_code == 200
+    created = [case for case in repository.cases.values() if case is not taken]
     assert len(created) == 1
     assert created[0].case_id != "C002"
     assert UUID(created[0].case_id).version == 4

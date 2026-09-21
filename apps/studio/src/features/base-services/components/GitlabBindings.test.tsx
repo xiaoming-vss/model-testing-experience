@@ -40,8 +40,11 @@ it('管理权限撤销后禁用已绑定仓库的分支与基线修改', async (
   expect(selectors).toHaveLength(2)
   expect(selectors[0]).toBeEnabled()
   await act(async () => { client.setQueryData(['projectAccess', 'project-1'], { projectId: 'project-1', permissions: ['read', 'write'] }) })
-  expect(selectors[0]).toBeDisabled()
-  expect(selectors[1]).toBeDisabled()
+  // Query cache notifications reach the component asynchronously.
+  await waitFor(() => {
+    expect(selectors[0]).toBeDisabled()
+    expect(selectors[1]).toBeDisabled()
+  })
   expect(update).not.toHaveBeenCalled()
 })
 

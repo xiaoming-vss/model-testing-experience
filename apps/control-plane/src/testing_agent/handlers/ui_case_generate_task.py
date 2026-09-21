@@ -107,6 +107,14 @@ async def get_ui_case_generate_task_run(
     return success_payload(dump_run(await service.owned_run(user_id, run_id, "ui")))
 
 
+async def delete_ui_case_generate_task_run(
+    run_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+):
+    return success_payload(await service.delete_run("ui", run_id, user_id))
+
+
 async def update_ui_case_generate_task_run_result(
     run_id: str,
     body: AiGenerateTaskResultRequest,

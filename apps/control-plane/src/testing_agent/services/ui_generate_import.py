@@ -7,10 +7,10 @@ from testing_agent.core.enums import ImportStatus
 from testing_agent.core.errors import ErrBadRequest, ErrNotFound
 from testing_agent.core.sid import new_id
 from testing_agent.models.ui_test_case import UiTestCase
-from testing_agent.services.ai_generate_task import dump_run, validate_ui_candidate_cases
+from testing_agent.services.ai_task_output import dump_run, validate_ui_candidate_cases
 
 if TYPE_CHECKING:
-    from testing_agent.services.ai_generate_task import AiGenerateTaskService
+    from testing_agent.services.ai_task_access import CandidateImportContext
 
 
 def normalized_case_name(name: Any) -> str:
@@ -43,7 +43,7 @@ def apply_generated_case(case: UiTestCase, item: dict[str, Any]) -> None:
 
 
 async def import_ui_run(
-    service: AiGenerateTaskService,
+    service: CandidateImportContext,
     run_id: str,
     suite_id: str,
     confirm_overwrite: bool,

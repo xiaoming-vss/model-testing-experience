@@ -86,7 +86,7 @@ function renderPage(role: 'owner' | 'viewer' = 'owner') {
 }
 
 
-// 运行记录操作列内联「审核候选结果/错误信息」，导入等状态变更收在行内「更多」下拉里。
+// 运行记录操作列内联「审核结果/错误信息」，导入等状态变更收在行内「更多」下拉里。
 async function findRunRow(runId = 'run-1') {
   const idCell = await screen.findByText(runId)
   const row = idCell.closest('tr')
@@ -101,6 +101,14 @@ async function findRunInlineAction(name: string, runId = 'run-1') {
 async function openRunActionsMenu(user: ReturnType<typeof userEvent.setup>, runId = 'run-1') {
   const row = await findRunRow(runId)
   await user.click(await within(row).findByRole('button', { name: '更多操作' }))
+}
+
+/** Modal.confirm 是命令式弹窗，上一个用例的实例可能还在离场动画里，这里只取当前这一个。 */
+async function findDeleteConfirm() {
+  const dialogs = await screen.findAllByRole('dialog')
+  const dialog = dialogs.find((node) => node.textContent?.includes('确认删除该运行记录？') && !node.className.includes('zoom-leave'))
+  if (!dialog) throw new Error('未找到删除运行记录的确认框')
+  return dialog
 }
 
 afterEach(() => {
@@ -152,7 +160,7 @@ describe('API 候选结果审核与导入', () => {
     installFetchHandler()
     renderPage()
 
-    expect(await findRunInlineAction('审核候选结果')).toBeEnabled()
+    expect(await findRunInlineAction('审核结果')).toBeEnabled()
     expect(screen.queryByRole('button', { name: '结果 YAML' })).not.toBeInTheDocument()
   })
 
@@ -162,7 +170,7 @@ describe('API 候选结果审核与导入', () => {
 
     renderPage()
 
-    await user.click(await findRunInlineAction('审核候选结果'))
+    await user.click(await findRunInlineAction('审核结果'))
     const dialog = await screen.findByRole('dialog')
     const modalContainer = dialog.querySelector<HTMLElement>('.ant-modal-container')
 
@@ -190,7 +198,7 @@ describe('API 候选结果审核与导入', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await findRunInlineAction('审核候选结果'))
+    await user.click(await findRunInlineAction('审核结果'))
 
     expect(screen.queryByRole('tab', { name: '结构化预览' })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: 'YAML' })).not.toBeInTheDocument()
@@ -232,7 +240,7 @@ describe('API 候选结果审核与导入', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await findRunInlineAction('审核候选结果'))
+    await user.click(await findRunInlineAction('审核结果'))
     expect(screen.getByText('预览候选')).toBeInTheDocument()
     expect(screen.getAllByText('接口 1').length).toBeGreaterThan(0)
     await user.click(screen.getByText('编辑候选'))
@@ -260,7 +268,7 @@ describe('API 候选结果审核与导入', () => {
 
     renderPage()
 
-    await user.click(await findRunInlineAction('审核候选结果'))
+    await user.click(await findRunInlineAction('审核结果'))
     await user.click(screen.getByText('编辑候选'))
     const editor = await screen.findByRole('textbox', { name: '候选结果 YAML' })
     await user.click(editor)
@@ -292,7 +300,7 @@ describe('API 候选结果审核与导入', () => {
 
     renderPage()
 
-    await user.click(await findRunInlineAction('审核候选结果'))
+    await user.click(await findRunInlineAction('审核结果'))
     await user.type(screen.getByRole('textbox', { name: '审核备注' }), '内容符合预期')
     await user.click(screen.getByRole('button', { name: /批\s*准/ }))
 
@@ -516,7 +524,7 @@ describe('API 候选结果审核与导入', () => {
 
     renderPage()
 
-    await user.click(await findRunInlineAction('审核候选结果'))
+    await user.click(await findRunInlineAction('审核结果'))
     await user.click(screen.getByText('编辑候选'))
     const editor = await screen.findByRole('textbox', { name: '候选结果 YAML' })
     await user.click(editor)
@@ -540,7 +548,7 @@ describe('API 候选结果审核与导入', () => {
 
     renderPage()
 
-    expect(screen.queryByRole('button', { name: '审核候选结果' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '审核结果' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '查看候选结果' })).not.toBeInTheDocument()
     expect(await screen.findByRole('button', { name: '结果 YAML' })).toBeInTheDocument()
   })
@@ -555,16 +563,20 @@ describe('API 候选结果审核与导入', () => {
     renderPage()
 
     expect(await screen.findByText('失败')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '审核候选结果' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '更多操作' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '审核结果' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '错误信息' })).toBeInTheDocument()
+    // 失败记录没有可追加的状态变更，操作列只剩删除运行记录。
+    const user = userEvent.setup()
+    await openRunActionsMenu(user)
+    expect(await screen.findByRole('menuitem', { name: '删除运行记录' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: '导入 API 集合' })).not.toBeInTheDocument()
   })
 
   it('待审核运行不能发起导入', async () => {
     installFetchHandler()
     renderPage()
 
-    expect(await findRunInlineAction('审核候选结果')).toBeEnabled()
+    expect(await findRunInlineAction('审核结果')).toBeEnabled()
     expect(screen.queryByRole('menuitem', { name: '导入 API 集合' })).not.toBeInTheDocument()
   })
 
@@ -580,7 +592,7 @@ describe('API 候选结果审核与导入', () => {
 
     renderPage()
 
-    await user.click(await findRunInlineAction('审核候选结果'))
+    await user.click(await findRunInlineAction('审核结果'))
     await user.type(screen.getByRole('textbox', { name: '审核备注' }), '字段不完整')
     await user.click(screen.getByRole('button', { name: /拒\s*绝/ }))
 
@@ -693,4 +705,66 @@ it('只读成员可以查看待审核候选，但不能批准或保存', async (
   expect(await screen.findByRole('dialog')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /^批\s*准$/ })).toBeDisabled()
   expect(screen.queryByRole('button', { name: '保存候选结果' })).toBeNull()
+})
+
+describe('运行记录删除', () => {
+  it('确认后才删除该次运行', async () => {
+    const deleted: string[] = []
+    installFetchHandler((url, init) => {
+      if (init?.method === 'DELETE') {
+        deleted.push(url.pathname)
+        return jsonResponse({})
+      }
+      return undefined
+    })
+    renderPage()
+    const user = userEvent.setup()
+
+    await openRunActionsMenu(user)
+    await user.click(await screen.findByRole('menuitem', { name: '删除运行记录' }))
+    const confirm = await findDeleteConfirm()
+    expect(deleted).toEqual([])
+    await user.click(within(confirm).getByRole('button', { name: /^删\s*除$/ }))
+    await waitFor(() => expect(deleted).toEqual(['/v1/api-case-generate-task-runs/run-1']))
+  })
+
+  it('取消确认框不发出删除请求', async () => {
+    const deleted: string[] = []
+    installFetchHandler((url, init) => {
+      if (init?.method === 'DELETE') {
+        deleted.push(url.pathname)
+        return jsonResponse({})
+      }
+      return undefined
+    })
+    renderPage()
+    const user = userEvent.setup()
+
+    await openRunActionsMenu(user)
+    await user.click(await screen.findByRole('menuitem', { name: '删除运行记录' }))
+    const confirm = await findDeleteConfirm()
+    await user.click(within(confirm).getByRole('button', { name: /^取\s*消$/ }))
+    expect(deleted).toEqual([])
+  })
+
+  it('运行中的记录没有可用的删除入口', async () => {
+    const runningRun = { ...run, status: 'running' }
+    installFetchHandler((url, init) => {
+      if (url.pathname === '/v1/api-case-generate-tasks/task-1/runs') return jsonResponse({ items: [runningRun], total: 1 })
+      if (url.pathname === '/v1/api-case-generate-task-runs/run-1' && !init?.method) return jsonResponse(runningRun)
+      return undefined
+    })
+    renderPage()
+    const user = userEvent.setup()
+
+    await openRunActionsMenu(user)
+    expect(await screen.findByRole('menuitem', { name: '删除运行记录' })).toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('只读成员没有删除运行记录的入口', async () => {
+    installFetchHandler()
+    renderPage('viewer')
+    await findRunRow()
+    expect(screen.queryByRole('button', { name: '更多操作' })).toBeNull()
+  })
 })

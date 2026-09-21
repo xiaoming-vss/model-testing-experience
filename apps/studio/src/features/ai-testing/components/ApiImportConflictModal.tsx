@@ -1,3 +1,4 @@
+import { CaseComparison } from './CaseComparison'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { Alert, Collapse } from 'antd'
 import type { ApiCaseGenerateTaskRunImportCase, ApiCaseGenerateTaskRunImportConflict } from '../types'
@@ -41,23 +42,6 @@ function formatValue(value: unknown) {
   }
 }
 
-function CaseComparison({ conflict }: { conflict: ApiCaseGenerateTaskRunImportConflict }) {
-  return (
-    <div className="api-import-conflict-comparison">
-      <div className="api-import-conflict-heading">字段</div>
-      <div className="api-import-conflict-heading">当前正式用例</div>
-      <div className="api-import-conflict-heading">已批准候选用例</div>
-      {comparedFields.map(({ key, label }) => (
-        <div className="api-import-conflict-row" key={key}>
-          <div className="api-import-conflict-label">{label}</div>
-          <pre className="api-import-conflict-value">{formatValue(conflict.existingCase[key])}</pre>
-          <pre className="api-import-conflict-value">{formatValue(conflict.generatedCase[key])}</pre>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 export function ApiImportConflictModal({
   open,
   conflicts,
@@ -91,7 +75,7 @@ export function ApiImportConflictModal({
           items={conflicts.map((conflict, index) => ({
             key: String(index),
             label: conflict.generatedCase.name || conflict.existingCase.name || conflict.normalizedName,
-            children: <CaseComparison conflict={conflict} />,
+            children: <CaseComparison fields={comparedFields} existing={conflict.existingCase} generated={conflict.generatedCase} formatValue={formatValue} />,
           }))}
         />
       </div>

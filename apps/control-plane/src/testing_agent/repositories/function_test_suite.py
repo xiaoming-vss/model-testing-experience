@@ -51,19 +51,6 @@ class FunctionTestSuiteRepository(ResourceRepository):
         )
         return rows[0] if rows else None
 
-    async def list_cases(self, suite_id: str) -> list[FunctionTestCase]:
-        return list(
-            (
-                await self.session.scalars(
-                    select(FunctionTestCase)
-                    .where(
-                        FunctionTestCase.suite_id == suite_id,
-                    )
-                    .order_by(FunctionTestCase.order_no, FunctionTestCase.id)
-                )
-            ).all()
-        )
-
     async def list_by_requirement(self, requirement_id: str) -> list[FunctionTestSuite]:
         return await self._with_case_counts(
             select(FunctionTestSuite)

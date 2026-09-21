@@ -12,6 +12,7 @@ from testing_agent.handlers.test_order import (
     dispatch_test_order_graph,
     get_test_order,
     get_test_order_graph,
+    get_test_order_graph_input,
     list_project_test_orders,
     list_test_order_entries,
     update_test_order,
@@ -23,6 +24,7 @@ from testing_agent.schemas.test_order import (
     TestOrderAddCasesResponse,
     TestOrderEntriesBatchMarkResponse,
     TestOrderEntryResponse,
+    TestOrderGraphInputResponse,
     TestOrderGraphResponse,
     TestOrderResponse,
 )
@@ -81,3 +83,7 @@ router.get(
     "/test-orders/{order_id}/graph-analysis",
     response_model=ApiResponse[TestOrderGraphResponse],
 )(get_test_order_graph)
+router.get(
+    "/test-orders/{order_id}/graph-input",
+    response_model=ApiResponse[TestOrderGraphInputResponse],
+)(get_test_order_graph_input)

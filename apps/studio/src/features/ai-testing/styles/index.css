@@ -6526,3 +6526,94 @@ button.ai-task-run-artifact:hover {
   border-color: var(--ai-border-strong);
   color: var(--ai-text-muted);
 }
+
+/* 功能用例阶段审核：正文占满备注上方空间，编辑器不再嵌套卡片。 */
+.functional-stage-review-modal :is(.ant-modal-container, .ant-modal-content) {
+  height: calc(100dvh - 72px);
+  max-height: calc(100dvh - 72px);
+}
+
+.functional-stage-review-modal.review .ant-modal-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.functional-stage-review-modal.ai-task-run-result-modal .ant-modal-body > .revision-workspace {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+
+.functional-stage-review-modal .revision-source,
+.functional-stage-review-modal .revision-source > .ai-task-run-result-modal-content.review,
+.functional-stage-review-modal .ai-task-stage-review-popover {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+}
+
+.functional-stage-review-modal .ai-task-stage-review-popover > .ant-tabs {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.functional-stage-review-modal .ai-task-stage-review-popover > :is(.ai-task-run-result-popover-header, .ai-task-stage-review-note) {
+  flex-shrink: 0;
+}
+
+.functional-stage-review-modal .ant-tabs > .ant-tabs-content-holder {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+}
+
+.functional-stage-review-modal .ant-tabs-content,
+.functional-stage-review-modal .ant-tabs-tabpane-active {
+  height: 100%;
+  min-height: 0;
+}
+
+.functional-stage-review-modal .ai-task-run-result-modal-content.review :is(.json-editor-wrap, .json-editor-shell, .json-editor-codemirror, .cm-editor) {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none;
+}
+
+.functional-stage-review-modal .ai-task-stage-review-popover > .json-editor-wrap {
+  flex: 1;
+  height: auto !important;
+}
+
+.functional-stage-review-modal .json-editor-shell {
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.functional-stage-review-modal .cm-editor {
+  border-radius: 0;
+}
+
+.functional-stage-review-modal .cm-scroller {
+  overflow: auto;
+}
+
+.functional-stage-review-modal .ai-requirement-analysis-review-diagram,
+.functional-stage-review-modal .ai-task-run-result-modal-content.review .ai-case-name-tree.expanded {
+  height: 100%;
+  min-height: 0;
+}
+
+.functional-stage-review-modal .revision-workspace.is-revising > .revision-source {
+  flex: 0 0 auto;
+}

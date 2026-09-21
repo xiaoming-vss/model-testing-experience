@@ -22,7 +22,6 @@ from testing_agent.models.ai_generate_task import (
     AiGenerateTaskRun,
 )
 from testing_agent.models.worker_task import WorkerTask
-from testing_agent.services import ai_generate_task as ai_tasks
 from testing_agent.services.ai_generate_task import AiGenerateTaskService
 from testing_agent.services.worker_task import WorkerTaskService
 
@@ -266,17 +265,26 @@ def test_archive_rejects_format_and_capacity_limits(tmp_path, monkeypatch):
     corrupt_member_zip = upload_archive(client, task_id, "source.zip", corrupt_member)
 
     compressed = zip_bytes([("a.txt", b"a")])
-    monkeypatch.setattr(ai_tasks, "MAX_SOURCE_ARCHIVE_BYTES", len(compressed) - 1)
+    monkeypatch.setattr(
+        "testing_agent.services.ai_source_archive.MAX_SOURCE_ARCHIVE_BYTES", len(compressed) - 1
+    )
     too_large = upload_archive(client, task_id, "source.zip", compressed)
-    monkeypatch.setattr(ai_tasks, "MAX_SOURCE_ARCHIVE_BYTES", 100 * 1024 * 1024)
+    monkeypatch.setattr(
+        "testing_agent.services.ai_source_archive.MAX_SOURCE_ARCHIVE_BYTES", 100 * 1024 * 1024
+    )
 
-    monkeypatch.setattr(ai_tasks, "MAX_SOURCE_ARCHIVE_UNCOMPRESSED_BYTES", 1)
+    monkeypatch.setattr(
+        "testing_agent.services.ai_source_archive.MAX_SOURCE_ARCHIVE_UNCOMPRESSED_BYTES", 1
+    )
     expanded_too_large = upload_archive(
         client, task_id, "source.zip", zip_bytes([("a.txt", b"ab")])
     )
-    monkeypatch.setattr(ai_tasks, "MAX_SOURCE_ARCHIVE_UNCOMPRESSED_BYTES", 1024 * 1024 * 1024)
+    monkeypatch.setattr(
+        "testing_agent.services.ai_source_archive.MAX_SOURCE_ARCHIVE_UNCOMPRESSED_BYTES",
+        1024 * 1024 * 1024,
+    )
 
-    monkeypatch.setattr(ai_tasks, "MAX_SOURCE_ARCHIVE_FILES", 1)
+    monkeypatch.setattr("testing_agent.services.ai_source_archive.MAX_SOURCE_ARCHIVE_FILES", 1)
     too_many_files = upload_archive(
         client,
         task_id,

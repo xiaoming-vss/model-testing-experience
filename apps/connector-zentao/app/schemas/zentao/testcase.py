@@ -8,6 +8,7 @@ from app.schemas.zentao.imports import (
     normalize_datetime,
     normalize_optional_int,
     normalize_optional_str,
+    normalize_priority,
     normalize_required_int,
     normalize_required_str,
 )
@@ -142,14 +143,6 @@ def extract_case_id(item: dict[str, Any]) -> int | None:
     return normalize_optional_int(first_value(item, "case", "caseID", "case_id", "id"))
 
 
-def normalize_priority(value: Any) -> str | None:
-    priority = normalize_optional_str(value)
-    if priority is None:
-        return None
-    upper_priority = priority.upper()
-    if upper_priority.startswith("P"):
-        return upper_priority
-    return f"P{priority}"
 
 
 def normalize_case_steps(value: Any) -> tuple[str | None, str | None]:

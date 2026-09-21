@@ -2,6 +2,7 @@
 
 图谱输入（需求 + 用例 + 需求用例关联）由调用方组装，平台原样转发，不做字段改名——
 `cases[]` 的字段名与 worker 侧 skill 的输入契约一致，因此不需要转换层。
+测试单内的用例与需求也可以直接由平台组装：见 `TestOrderGraphService.graph_input`。
 """
 
 from __future__ import annotations
@@ -11,11 +12,19 @@ from typing import Any
 from testing_agent.core.enums import RunStatus, StageStatus
 from testing_agent.core.errors import ErrBadRequest, dynamic_error
 from testing_agent.core.sid import new_id
+from testing_agent.domain.function_case_content import generation_fields
 from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
 from testing_agent.models.test_order import TestOrder
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-from testing_agent.services.ai_generate_task import dump_run, task_type_for
+from testing_agent.repositories.test_order_entry import TestOrderEntryRepository
+from testing_agent.schemas.test_order import TestOrderGraphInputResponse
+from testing_agent.services.ai_generate_task import (
+    dump_run,
+    requirement_source_content,
+    task_type_for,
+)
+from testing_agent.services.common import dump
 from testing_agent.services.personal_authorization import require_personal_connection
 from testing_agent.services.test_order import TestOrderService
 
@@ -52,11 +61,20 @@ def graph_input_counts(graph_input: dict[str, Any]) -> dict[str, int]:
 
 
 def build_graph_run_snapshot(
-    order: TestOrder, run_id: str, counts: dict[str, int], connection_id: str
+    order: TestOrder,
+    run_id: str,
+    task_id: str,
+    counts: dict[str, int],
+    connection_id: str,
 ) -> dict[str, Any]:
-    """派发快照只记归属与输入规模；图谱输入本体在 configJson.graphInput。"""
+    """派发快照只记归属与输入规模；图谱输入本体在 configJson.graphInput。
+
+    `taskId` 是 worker 端快照协议的必填项（与生成类快照同一口径），缺了 worker 解析
+    快照就会失败。
+    """
 
     return {
+        "taskId": task_id,
         "taskType": TEST_ORDER_GRAPH_TASK_TYPE,
         "runId": run_id,
         "projectId": order.project_id,
@@ -92,9 +110,61 @@ class TestOrderGraphService:
         self,
         repository: AiGenerateTaskRepository,
         test_order_service: TestOrderService,
+        entries: TestOrderEntryRepository,
     ) -> None:
         self.repository = repository
         self.orders = test_order_service
+        self.entries = entries
+
+    async def graph_input(self, user_id: str, order_id: str) -> dict[str, Any]:
+        """组装该测试单的图谱输入：全部用例、本迭代的需求、需求到用例的关联。
+
+        用例身份（模块 / 标题 / 类型 / 优先级）取用例当前值，正文取条目加入时的快照，
+        与执行条目响应同一口径。需求不在测试单所属迭代的用例不算绑定需求，统一归入
+        `requirement_id` 为 null 的分组；`requirements` 只含本迭代的需求。
+        """
+
+        order = await self.orders.get_accessible_entity(user_id, order_id, action="read")
+        rows = await self.entries.list_order_cases_with_scope(order.order_id)
+        cases: list[dict[str, Any]] = []
+        requirements: list[dict[str, Any]] = []
+        links: list[dict[str, Any]] = []
+        by_group: dict[str | None, dict[str, Any]] = {}
+        for entry, case, _suite, requirement in rows:
+            cases.append(
+                {
+                    "case_id": case.case_id,
+                    "case_module": case.module,
+                    "case_title": case.title,
+                    "case_type": case.case_type,
+                    "priority": case.priority,
+                    **generation_fields(entry.snapshot_json or {}),
+                }
+            )
+            in_iteration = requirement.sprint_id == order.sprint_id
+            group_id = requirement.requirement_id if in_iteration else None
+            link = by_group.get(group_id)
+            if link is None:
+                if in_iteration:
+                    requirements.append(
+                        {
+                            "requirement_id": requirement.requirement_id,
+                            "requirement_title": requirement.name,
+                            "requirement_content": requirement_source_content(requirement),
+                        }
+                    )
+                link = {"requirement_id": group_id, "case_ids": []}
+                by_group[group_id] = link
+                links.append(link)
+            link["case_ids"].append(case.case_id)
+        return dump(
+            TestOrderGraphInputResponse,
+            {
+                "requirements": requirements,
+                "cases": cases,
+                "case_requirement_links": links,
+            },
+        )
 
     async def dispatch(self, user_id: str, order_id: str, body: dict[str, Any]) -> dict[str, Any]:
         """派发一次图谱分析；一次生成完成前重复点击返回 400。"""
@@ -126,7 +196,9 @@ class TestOrderGraphService:
             checkpoint_enabled=False,
             current_stage=TEST_ORDER_GRAPH_STAGE,
             stage_status=StageStatus.PENDING.value,
-            snapshot_json=build_graph_run_snapshot(order, run_id, counts, connection_id),
+            snapshot_json=build_graph_run_snapshot(
+                order, run_id, task.task_id, counts, connection_id
+            ),
             config_json={"graphInput": graph_input},
             result_summary_json={},
         )

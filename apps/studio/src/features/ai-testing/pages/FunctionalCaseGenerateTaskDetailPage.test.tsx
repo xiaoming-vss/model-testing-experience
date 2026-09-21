@@ -4,7 +4,7 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ThemeProvider } from '@/app/providers/ThemeProvider'
+import { TestThemeProvider as ThemeProvider } from '@/test/TestThemeProvider'
 import { useThemeStore } from '@/shared/store/theme.store'
 import analysisFixture from '../__fixtures__/functional-requirement-analysis.json'
 import type { FunctionalCaseGenerateTaskRun } from '../types'
@@ -117,7 +117,7 @@ afterEach(() => {
   useThemeStore.setState({ mode: 'light' })
 })
 
-// 行内的「查看结果/审核/审核候选结果」直接点按钮；「更多」下拉只放状态变更类操作。
+// 行内的「查看结果/审核/审核结果」直接点按钮；「更多」下拉只放状态变更类操作。
 async function findRunRow(runId: string) {
   const idCell = await screen.findByText(runId.slice(0, 8))
   const row = idCell.closest('tr')
@@ -133,6 +133,14 @@ async function clickRunInlineAction(user: ReturnType<typeof userEvent.setup>, ru
 
 function buttonNamePattern(name: string) {
   return new RegExp(`^${name.split('').join('\\s*')}$`)
+}
+
+/** Modal.confirm 是命令式弹窗，上一个用例的实例可能还在离场动画里，这里只取当前这一个。 */
+async function findDeleteConfirm() {
+  const dialogs = await screen.findAllByRole('dialog')
+  const dialog = dialogs.find((node) => node.textContent?.includes('确认删除该运行记录？') && !node.className.includes('zoom-leave'))
+  if (!dialog) throw new Error('未找到删除运行记录的确认框')
+  return dialog
 }
 
 async function openRunActionsMenu(user: ReturnType<typeof userEvent.setup>, runId: string) {
@@ -188,17 +196,18 @@ describe('功能候选结果审核与正式资产导入', () => {
     ] }) }))
     const user = userEvent.setup()
     renderPage()
-    await clickRunInlineAction(user, 'run-1', '审核候选结果')
-    await user.click(screen.getByRole('button', { name: '异常 1' }))
+    await clickRunInlineAction(user, 'run-1', '审核结果')
+    const filters = within(screen.getByLabelText('用例类型筛选'))
+    await user.click(filters.getByRole('button', { name: '异常 1' }))
     expect(screen.queryByText('正常流程')).not.toBeInTheDocument()
     expect(screen.getByText('异常流程')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '登录 1' })).toBeInTheDocument()
     expect(screen.getByText('第 1–1 条，共 1 条')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '全部 2' }))
+    await user.click(filters.getByRole('button', { name: '全部 2' }))
     expect(screen.getByText('正常流程')).toBeInTheDocument()
-    await user.type(screen.getByRole('textbox', { name: '搜索模块或场景' }), '正常')
+    await user.type(screen.getByLabelText('搜索模块或场景'), '正常')
     expect(screen.queryByText('异常流程')).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '异常 1' }))
+    await user.click(filters.getByRole('button', { name: '异常 1' }))
     expect(screen.queryByText('正常流程')).not.toBeInTheDocument()
     expect(screen.getByText('没有匹配的用例分组')).toBeInTheDocument()
   })
@@ -210,11 +219,12 @@ describe('功能候选结果审核与正式资产导入', () => {
     ] }) }))
     const user = userEvent.setup()
     renderPage()
-    await clickRunInlineAction(user, 'run-1', '审核候选结果')
-    expect(screen.getByRole('button', { name: '性能测试 1' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '可访问性测试 1' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^功能 / })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '性能测试 1' }))
+    await clickRunInlineAction(user, 'run-1', '审核结果')
+    const filters = within(screen.getByLabelText('用例类型筛选'))
+    expect(filters.getByRole('button', { name: '性能测试 1' })).toBeInTheDocument()
+    expect(filters.getByRole('button', { name: '可访问性测试 1' })).toBeInTheDocument()
+    expect(filters.queryByRole('button', { name: /^功能 / })).not.toBeInTheDocument()
+    await user.click(filters.getByRole('button', { name: '性能测试 1' }))
     expect(screen.queryByText('键盘操作')).not.toBeInTheDocument()
     expect(screen.getByText('异常输入下的响应时间')).toBeInTheDocument()
   })
@@ -227,7 +237,7 @@ describe('功能候选结果审核与正式资产导入', () => {
     ] }) }))
     const user = userEvent.setup()
     renderPage()
-    await clickRunInlineAction(user, 'run-1', '审核候选结果')
+    await clickRunInlineAction(user, 'run-1', '审核结果')
     const cards = screen.getAllByRole('article')
     expect(within(cards[0]).getByText('9f1c2e4a…')).toHaveAttribute('title', caseId)
     expect(within(cards[1]).queryByText('9f1c2e4a…')).not.toBeInTheDocument()
@@ -273,7 +283,7 @@ describe('功能候选结果审核与正式资产导入', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await clickRunInlineAction(user, 'run-1', '审核候选结果')
+    await clickRunInlineAction(user, 'run-1', '审核结果')
     const dialog = await screen.findByRole('dialog')
 
     const modalContent = dialog.querySelector<HTMLElement>('.ant-modal-container')
@@ -296,7 +306,7 @@ describe('功能候选结果审核与正式资产导入', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await clickRunInlineAction(user, 'run-1', '审核候选结果')
+    await clickRunInlineAction(user, 'run-1', '审核结果')
 
     const moduleItem = await screen.findByRole('button', { name: /登录\s*1/ })
     expect(moduleItem).toHaveAttribute('aria-current', 'true')
@@ -468,7 +478,7 @@ describe('功能候选结果审核与正式资产导入', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await clickRunInlineAction(user, 'run-1', '审核候选结果')
+    await clickRunInlineAction(user, 'run-1', '审核结果')
     await user.click(screen.getByRole('tab', { name: '编辑候选' }))
     const editor = await screen.findByRole('textbox', { name: '功能候选结果 JSON' })
     await user.click(editor)
@@ -501,7 +511,7 @@ describe('功能候选结果审核与正式资产导入', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await clickRunInlineAction(user, 'run-1', '审核候选结果')
+    await clickRunInlineAction(user, 'run-1', '审核结果')
     await user.click(screen.getByRole('button', { name: /拒\s*绝/ }))
 
     expect(await screen.findByText('拒绝候选结果时请填写审核备注')).toBeInTheDocument()
@@ -684,7 +694,7 @@ describe('功能测试继续优化', () => {
     installFetchHandler(() => currentRun)
     const user = userEvent.setup()
     renderPage()
-    await clickRunInlineAction(user, 'run-1', stage === 'case_names' ? '审核' : '审核候选结果')
+    await clickRunInlineAction(user, 'run-1', stage === 'case_names' ? '审核' : '审核结果')
     await user.click(screen.getByRole('button', { name: '继续优化' }))
     expect(screen.getByRole('textbox', { name: '优化指令' })).toHaveValue('')
     expect(screen.queryByRole('button', { name: /Q01.*上游需求分析问题/ })).not.toBeInTheDocument()
@@ -734,7 +744,7 @@ describe('功能测试继续优化', () => {
     })
     const user = userEvent.setup()
     renderPage()
-    await clickRunInlineAction(user, 'run-1', '审核候选结果')
+    await clickRunInlineAction(user, 'run-1', '审核结果')
     await user.click(screen.getByRole('tab', { name: '编辑候选' }))
     const editor = await screen.findByRole('textbox', { name: '功能候选结果 JSON' })
     await user.click(editor)
@@ -835,7 +845,7 @@ it.each(['requirement_analysis', 'case_names', 'detailed_cases'])('从 %s 打开
   }))
   const user = userEvent.setup()
   renderPage()
-  await clickRunInlineAction(user, 'run-1', final ? '审核候选结果' : '审核')
+  await clickRunInlineAction(user, 'run-1', final ? '审核结果' : '审核')
   const reviseButton = screen.getByRole('button', { name: '继续优化' })
   const parentWrap = reviseButton.closest('.ant-modal-wrap')!
   await user.click(reviseButton)
@@ -879,7 +889,14 @@ it('优化侧栏预填当前编辑中的待确认项，并保留补充内容', a
   expect(input.value).not.toContain('旧问题')
   await user.click(screen.getByRole('button', { name: '提交优化' }))
   expect(body).toBeUndefined()
-  expect(screen.getByText('待确认项（2）')).toBeInTheDocument()
+  // Inspect the current visualization, whose heading renders title and count separately.
+  await user.click(screen.getByRole('tab', { name: '可视化' }))
+  const questions = screen.getByRole('button', { name: /^待确认项\s*2$/ })
+  await user.click(questions)
+  const questionSection = questions.closest('section')!
+  await waitFor(() => expect(within(questionSection).getByText('离线如何提示？')).toBeVisible())
+  expect(within(questionSection).getByText('解绑入口在哪里？')).toBeVisible()
+  expect(within(questionSection).queryByText('旧问题')).not.toBeInTheDocument()
   await user.clear(input)
   await user.type(input, '补充：解绑入口在设备管理页。离线提示仍待确认。')
   await user.click(screen.getByRole('button', { name: '取消优化' }))
@@ -1048,18 +1065,31 @@ describe('图谱分析', () => {
       await screen.findByRole('menuitem', { name: '重新生成图谱' }, { timeout: 5000 }),
     ).toBeEnabled()
     await user.click(screen.getByRole('button', { name: '图谱分析' }))
-    // 图谱分析跳转到独立页面，鱼骨可视化在整页画布上展示。
+    // 图谱在当前任务的弹框中打开，任务页面继续保留。
+    const graphDialog = await screen.findByRole('dialog')
+    expect(within(graphDialog).getByText('用例图谱', { exact: true })).toBeInTheDocument()
+    expect(document.querySelector('.ai-testing-page')).not.toBeNull()
     await waitFor(() => {
       expect(document.querySelector('.ai-relations-node')).not.toBeNull()
     })
     expect(document.body.textContent).toContain('1 条业务主线')
+    expect(within(graphDialog).queryByRole('button', { name: '返回任务' })).not.toBeInTheDocument()
 
     // 单行工具条用 Segmented 切换可视化 / json（隐藏的 radio input 不可点击，点可见分段项）
     const relationsBar = document.querySelector('.ai-relations-page-bar') as HTMLElement
     await user.click(within(relationsBar).getByText('json'))
+    expect(await within(relationsBar).findByRole('button', { name: /复制/ })).toBeInTheDocument()
+    expect(within(relationsBar).getByRole('button', { name: /下载/ })).toBeInTheDocument()
+    expect(within(relationsBar).queryByText('主线 / 后续')).not.toBeInTheDocument()
     await waitFor(() => {
       expect(document.querySelector('.json-editor-codemirror')).not.toBeNull()
     })
+    await user.click(within(graphDialog).getByRole('button', { name: /close/i }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(await screen.findByRole('button', { name: '图谱分析' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '图谱分析' }))
+    const reopened = await screen.findByRole('dialog')
+    await waitFor(() => expect(reopened.querySelector('.ai-relations-node')).not.toBeNull())
   })
 
   it('未审核通过的运行不出现生成图谱入口', async () => {
@@ -1067,9 +1097,44 @@ describe('图谱分析', () => {
     renderPage()
 
     const row = await findRunRow('run-1')
-    // 待审核记录的「审核候选结果」已在行内，「更多」里只剩状态变更类操作，因此没有可展开的菜单。
-    await within(row).findByRole('button', { name: buttonNamePattern('审核候选结果') })
-    expect(within(row).queryByRole('button', { name: '更多操作' })).not.toBeInTheDocument()
+    // 待审核记录的「审核结果」已在行内，「更多」里只剩删除与状态变更类操作。
+    await within(row).findByRole('button', { name: buttonNamePattern('审核结果') })
+    const user = userEvent.setup()
+    await user.click(await within(row).findByRole('button', { name: '更多操作' }))
+    expect(await screen.findByRole('menuitem', { name: '删除运行记录' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: '生成图谱' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '图谱分析' })).not.toBeInTheDocument()
+  })
+})
+
+
+describe('运行记录删除', () => {
+  it('确认后才删除该次运行', async () => {
+    const deleted: string[] = []
+    installFetchHandler(() => pendingRun, (url, init) => {
+      if (init?.method === 'DELETE') {
+        deleted.push(url.pathname)
+        return jsonResponse({})
+      }
+      return undefined
+    })
+    renderPage()
+    const user = userEvent.setup()
+
+    await openRunActionsMenu(user, 'run-1')
+    await user.click(await screen.findByRole('menuitem', { name: '删除运行记录' }))
+    const confirm = await findDeleteConfirm()
+    expect(deleted).toEqual([])
+    await user.click(within(confirm).getByRole('button', { name: /^删\s*除$/ }))
+    await waitFor(() => expect(deleted).toEqual(['/v1/function-case-generate-task-runs/run-1']))
+  })
+
+  it('运行中的记录没有可用的删除入口', async () => {
+    installFetchHandler(() => ({ ...pendingRun, status: 'running' }))
+    renderPage()
+    const user = userEvent.setup()
+
+    await openRunActionsMenu(user, 'run-1')
+    expect(await screen.findByRole('menuitem', { name: '删除运行记录' })).toHaveAttribute('aria-disabled', 'true')
   })
 })

@@ -1,3 +1,4 @@
+import { footerRange } from '@/shared/utils/pagination'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { AppstoreOutlined } from '@ant-design/icons'
 import { Alert, Empty, Form, Pagination, Popconfirm, Space, Table, Tooltip, Typography } from 'antd'
@@ -21,20 +22,12 @@ function formatSuiteViewport(suite: UiTestSuite) {
 }
 
 function formatSuiteRunConfig(suite: UiTestSuite) {
-  return `${suite.headless === undefined ? '未设置模式' : suite.headless ? '无头' : '可视'} / ${formatSuiteViewport(suite)} / ${
-    suite.defaultStepTimeoutMs ? `${suite.defaultStepTimeoutMs}ms` : '未设置超时'
+  return `${suite.headless === undefined ? '未设置模式' : suite.headless ? '无头' : '可视'} / ${formatSuiteViewport(suite)} / ${suite.defaultStepTimeoutMs ? `${suite.defaultStepTimeoutMs}ms` : '未设置超时'
   } / ${formatUiScreenshotPolicy(suite.screenshotPolicy)}`
 }
 
 export type UiTestSuiteSectionRef = {
   openCreateDrawer: () => void
-}
-
-function footerRange(total: number, currentPage: number, currentPageSize: number) {
-  if (total === 0) return '显示第 0 条 - 第 0 条，共 0 条'
-  const start = (currentPage - 1) * currentPageSize + 1
-  const end = Math.min(currentPage * currentPageSize, total)
-  return `显示第 ${start} 条 - 第 ${end} 条，共 ${total} 条`
 }
 
 function isUiSuiteRunPollingStatus(status?: string) {

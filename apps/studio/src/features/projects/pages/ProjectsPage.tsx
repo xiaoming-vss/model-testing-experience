@@ -1,3 +1,4 @@
+import { footerRange } from '@/shared/utils/pagination'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { AppIcon } from '@/shared/icons'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
@@ -89,13 +90,6 @@ type ZentaoBindingTargetState = {
   parentSprintId?: string
   depth: BindingDepth
   title: string
-}
-
-function footerRange(total: number, page: number, pageSize: number) {
-  if (total === 0) return '显示第 0 条 - 第 0 条，共 0 条'
-  const start = (page - 1) * pageSize + 1
-  const end = Math.min(page * pageSize, total)
-  return `显示第 ${start} 条 - 第 ${end} 条，共 ${total} 条`
 }
 
 function toPickerValue(value?: string) {

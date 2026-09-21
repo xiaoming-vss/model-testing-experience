@@ -348,17 +348,6 @@ class IntegrationConnectionService:
         await self.repository.commit()
         return {}
 
-    async def list_remote(
-        self,
-        provider: str,
-        connection_id: str,
-        user_id: str,
-        project_id: str = "",
-        **extra: str,
-    ) -> dict:
-        await self.get_owned(user_id, provider, connection_id, project_id)
-        return {"connectionId": connection_id, **extra, "items": []}
-
     async def list_zentao_projects(
         self,
         connection_id: str,

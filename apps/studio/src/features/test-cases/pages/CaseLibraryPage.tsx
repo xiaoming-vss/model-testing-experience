@@ -1,3 +1,4 @@
+import { footerRange } from '@/shared/utils/pagination'
 import { AppstoreOutlined, PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons'
 import {
   Alert,
@@ -95,13 +96,6 @@ type ZentaoImportTarget = {
 type FunctionCaseEditorTarget =
   | { mode: 'edit'; item: FunctionCaseLibraryItem }
   | { mode: 'create'; suiteId: string; suiteName: string; nextOrderNo: number }
-
-function footerRange(total: number, currentPage: number, currentPageSize: number) {
-  if (total === 0) return '显示第 0 条 - 第 0 条，共 0 条'
-  const start = (currentPage - 1) * currentPageSize + 1
-  const end = Math.min(currentPage * currentPageSize, total)
-  return `显示第 ${start} 条 - 第 ${end} 条，共 ${total} 条`
-}
 
 function suiteRequirementId(suite: FunctionTestSuite) {
   return suite.requirementId ?? suite.requirement_id ?? ''
@@ -652,17 +646,6 @@ export function CaseLibraryPage() {
     return items
   }, [deleteCaseMutation, suiteId])
 
-  const selectedSuiteRequirementId = selectedSuite ? suiteRequirementId(selectedSuite) : ''
-  const suiteScopeText = selectedSuite
-    ? [
-        sprintNameMap.get(requirementSprintMap.get(selectedSuiteRequirementId) ?? '') ??
-          requirementSprintMap.get(selectedSuiteRequirementId),
-        requirementNameMap.get(selectedSuiteRequirementId),
-      ]
-        .filter(Boolean)
-        .join(' / ')
-    : ''
-
   // 新建用例、用例导入与测试集操作都按测试集执行，未选中测试集时整组不显示。
   const canCreateCase = Boolean(selectedSuite?.suiteId)
   const zentaoImportCaseCount = zentaoImportTarget
@@ -736,6 +719,36 @@ export function CaseLibraryPage() {
               </div>
             </div>
             <Space size={8}>
+                  {selectedSuite ? (
+                    <Space size={8} className="case-library-main-actions">
+                      <ProjectActionButton
+                        action="write"
+                        type="primary"
+                        className="action-btn-create"
+                        operation="create"
+                        onClick={openCreateCase}
+                      >
+                        新建用例
+                      </ProjectActionButton>
+                      <ProjectActionButton
+                        action="execute"
+                        className="action-btn-update"
+                        operation="upload"
+                        onClick={() => setCaseImportOpen(true)}
+                      >
+                        用例导入
+                      </ProjectActionButton>
+                      <ProjectActionButton
+                        action="execute"
+                        className="action-btn-update"
+                        operation="upload"
+                        disabled={suiteCaseCount(selectedSuite) === 0}
+                        onClick={() => openZentaoImport(selectedCaseIds)}
+                      >
+                        导入禅道
+                      </ProjectActionButton>
+                    </Space>
+                  ) : null}
               <Popconfirm
                 title={`确认删除选中的 ${selectedCaseIds.length} 条用例？`}
                 description="删除后不可恢复。"
@@ -788,13 +801,6 @@ export function CaseLibraryPage() {
           ) : (
             <div className="case-library-layout">
               <aside className="api-case-sidebar">
-                {/* panel-header 提供 flex 行，否则标题与数量会挤成「测试集4」 */}
-                <div className="panel-header api-case-sidebar-header">
-                  <Text strong>测试集</Text>
-                  <Text type="secondary" className="api-case-sidebar-count">
-                    共 {suites.length} 个
-                  </Text>
-                </div>
                 <div className="api-case-sidebar-toolbar">
                   <Input
                     allowClear
@@ -808,8 +814,7 @@ export function CaseLibraryPage() {
                   <div className="api-case-nav-list">
                     <button
                       type="button"
-                      className={`api-case-nav-item case-library-nav-item${
-                        suiteId ? '' : ' active'
+                      className={`api-case-nav-item case-library-nav-item${suiteId ? '' : ' active'
                       }`}
                       aria-current={!suiteId}
                       onClick={() => {
@@ -836,8 +841,7 @@ export function CaseLibraryPage() {
                           <button
                             key={id ?? suite.name}
                             type="button"
-                            className={`api-case-nav-item case-library-nav-item${
-                              active ? ' active' : ''
+                            className={`api-case-nav-item case-library-nav-item${active ? ' active' : ''
                             }`}
                             aria-current={active}
                             onClick={() => {
@@ -909,46 +913,6 @@ export function CaseLibraryPage() {
               </aside>
 
               <div className="case-library-main">
-                <div className="case-library-main-head">
-                  <Text strong className="case-library-main-title">
-                    {selectedSuite ? selectedSuite.name : '全部用例'}
-                  </Text>
-                  {selectedSuite ? <Tag>{suiteScopeText || '-'}</Tag> : null}
-                  <Text type="secondary">
-                    {selectedSuite ? `${suiteCaseCount(selectedSuite)} 条用例` : `${total} 条用例`}
-                  </Text>
-                  {selectedSuite ? (
-                    <Space size={8} className="case-library-main-actions">
-                      <ProjectActionButton
-                        action="write"
-                        type="primary"
-                        className="action-btn-create"
-                        operation="create"
-                        onClick={openCreateCase}
-                      >
-                        新建用例
-                      </ProjectActionButton>
-                      <ProjectActionButton
-                        action="execute"
-                        className="action-btn-update"
-                        operation="upload"
-                        onClick={() => setCaseImportOpen(true)}
-                      >
-                        用例导入
-                      </ProjectActionButton>
-                      <ProjectActionButton
-                        action="execute"
-                        className="action-btn-update"
-                        operation="upload"
-                        disabled={suiteCaseCount(selectedSuite) === 0}
-                        onClick={() => openZentaoImport(selectedCaseIds)}
-                      >
-                        导入禅道
-                      </ProjectActionButton>
-                    </Space>
-                  ) : null}
-                </div>
-
                 <div className="table-body-scroll sprint-card-scroll">
                   {casesQuery.isLoading ? (
                     <div className="sprint-card-loading">

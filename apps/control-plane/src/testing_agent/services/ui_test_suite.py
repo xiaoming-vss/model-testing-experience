@@ -8,7 +8,10 @@ from testing_agent.models.ui_test_suite import UiTestSuite
 from testing_agent.repositories.ui_test_suite import UiTestSuiteRepository
 from testing_agent.schemas.ui_test_suite import UiSuiteRequest, UiSuiteResponse
 from testing_agent.services.common import apply_patch, dump, list_payload
-from testing_agent.services.project_access import ProjectAction, require_project_access
+from testing_agent.services.project_access import (
+    ProjectAction,
+    require_requirement_access,
+)
 
 
 class UiTestSuiteService:
@@ -18,16 +21,7 @@ class UiTestSuiteService:
     async def ensure_requirement_access(
         self, user_id: str, requirement_id: str, *, action: ProjectAction = "read"
     ) -> None:
-        requirement = await self.repository.get_requirement(requirement_id)
-        if requirement is None:
-            raise ErrNotFound
-        sprint = await self.repository.get_sprint(requirement.sprint_id)
-        if sprint is None:
-            raise ErrNotFound
-        project = await self.repository.get_project(sprint.project_id)
-        if project is None:
-            raise ErrNotFound
-        await require_project_access(self.repository.session, user_id, project, action)
+        await require_requirement_access(self.repository, user_id, requirement_id, action=action)
 
     async def get_accessible_entity(
         self, user_id: str, suite_id: str, *, action: ProjectAction = "read"

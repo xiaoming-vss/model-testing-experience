@@ -109,7 +109,9 @@ def build_task_runner(
                 client=resolved_client,
                 timeout_seconds=settings.code_risk_analysis.gitlab_timeout_seconds,
             ),
-            test_order_graph_executor=TestOrderGraphExecutor(),
+            test_order_graph_executor=TestOrderGraphExecutor(
+                nanobot_config=settings.nanobot,
+            ),
         ),
         result_service=ResultService(result_sink),
         lifecycle=WorkerLifecycle(

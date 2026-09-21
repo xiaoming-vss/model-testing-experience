@@ -1,3 +1,4 @@
+import { saveBlob } from '@/shared/utils/download'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
@@ -19,17 +20,6 @@ function getSkillSpaceId(skill: AiSkillLibraryItem) {
 
 function isSkillArchiveFile(fileName: string) {
   return /\.(zip|tar)$/i.test(fileName.trim())
-}
-
-function saveBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  URL.revokeObjectURL(url)
 }
 
 function footerRange(total: number) {

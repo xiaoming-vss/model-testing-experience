@@ -322,21 +322,10 @@ export function buildRelationsGraphModel(data: CaseRelationsData, caseMetaById: 
   }
 }
 
-// 鱼骨布局：主骨从左到右，每个主骨锚点的分支沿多条固定斜率的直肋呈扇形向外辐射
-//（4 个斜率轮转，左右交替、上下交替），链条沿自己的肋线直线延伸，不再逐层爬台阶。
-// 每个锚点的扇形区域在横向上互不重叠，主骨间距按两侧扇宽自适应撑开。
-// u 沿主骨方向（节点左/上边缘），v 垂直主骨方向；纵向为同一抽象布局的转置，
-// v 轴步长按该方向上的节点尺寸取值（横向避让节点高 96，纵向避让节点宽 236）。
+// 主骨保持对齐，分支按真实父子关系在局部展开；兄弟节点分别向侧方和外侧错落排布。
+// u 沿主骨，v 垂直主骨；纵向展示复用同一布局并按卡片尺寸调整间距。
 export function layoutRelationsFishbone(model: RelationsGraphModel, orientation: RelationsOrientation): RelationsLayout {
   const horizontal = orientation === 'horizontal'
-  // 经典鱼骨肋线：上侧分支向左斜、下侧向右斜。走廊宽度封顶 3 步（260/520/780）：
-  // 链加深时在走廊内折返（1x→2x→3x→2x→1x），超过 5 层转直线延伸。
-  // 同链相邻节点横向错开 ≥260（≥ 节点宽），隔层节点纵向错开 ≥2dy（横向 112 / 纵向 240）。
-  // 同侧多条肋的 band 间距（384/720）与步距不成整数比，任意深度组合不会贴合。
-  const rayDx = 260
-  const rayDy = horizontal ? 56 : 120
-  const bandStep = horizontal ? 320 : 720
-  const sideBase = horizontal ? 0 : 240
   const nodeUSize = horizontal ? RELATIONS_NODE_WIDTH : RELATIONS_NODE_HEIGHT
   const nodeVSize = horizontal ? RELATIONS_NODE_HEIGHT : RELATIONS_NODE_WIDTH
   // 主骨相邻有序对沿主轴；其余全部出边（branch 与分支内部 next）都沿分支肋线递归延伸。
@@ -354,6 +343,8 @@ export function layoutRelationsFishbone(model: RelationsGraphModel, orientation:
     continueEdgesFrom.set(edge.fromCaseId, list)
   })
 
+  // 跨分支引用、环和共享主线节点只放置一次；关联边仍全部保留。
+  const claimed = new Set(model.paths.flatMap((path) => path.caseIds))
   const placed = new Map<string, { u: number; v: number }>()
   let laneCursor = 0
   let maxU = 0
@@ -368,30 +359,38 @@ export function layoutRelationsFishbone(model: RelationsGraphModel, orientation:
       const fan = fans[spineIndex]
       fan.set(anchorId, { du: 0, dv: 0 })
 
-      // 走廊折返：步序 1x/2x/3x/2x/1x，第 6 步起沿直线延伸（du = step·x）。
-      // 步序按肋内已放置节点数递增（而非图深度），同一节点的多个孩子各占一步，不会重叠。
-      const duFor = (step: number) => {
-        if (step >= 6) return step * rayDx
-        const steps = [1, 2, 3, 2, 1]
-        return steps[step - 1] * rayDx
+      const branchStep = nodeUSize + 72
+      const outwardStep = nodeVSize + 64
+      const gap = 32
+      const childrenOf = (id: string) => (continueEdgesFrom.get(id) ?? [])
+        .slice().sort((a, b) => a.order - b.order)
+        .filter((edge) => !claimed.has(edge.toCaseId))
+
+      const placeBranch = (caseId: string, du: number, dv: number, side: number) => {
+        if (claimed.has(caseId)) return
+        claimed.add(caseId)
+        // 保留父子相对方向，遇到同组卡片时只向主骨外侧移动，留出弧线路径。
+        while ([...fan.values()].some((p) => Math.abs(p.du - du) < nodeUSize + gap && Math.abs(p.dv - dv) < nodeVSize + gap)) {
+          dv += side * (nodeVSize + gap)
+        }
+        fan.set(caseId, { du, dv })
+        const children = childrenOf(caseId)
+        children.forEach((edge, index) => {
+          // 单链向外舒展；兄弟节点交替落在父节点侧上方、正上方（下侧镜像）。
+          const lateral = children.length === 1 ? branchStep * 0.3 : index % 2 === 0 ? branchStep : branchStep * 0.22
+          const outward = children.length === 1 ? outwardStep : index % 2 === 0 ? nodeVSize * 0.6 : outwardStep * 1.35
+          placeBranch(edge.toCaseId, du + side * lateral, dv + side * (outward + Math.floor(index / 2) * outwardStep), side)
+        })
       }
 
-      const placeRay = (caseId: string, dy: number, sideSign: number, v0: number, stepRef: { step: number }) => {
-        if (fan.has(caseId) || placed.has(caseId)) return
-        stepRef.step += 1
-        fan.set(caseId, { du: sideSign * duFor(stepRef.step), dv: sideSign * (sideBase + v0 + dy * stepRef.step) })
-        const continueEdges = (continueEdgesFrom.get(caseId) ?? []).slice().sort((a, b) => a.order - b.order)
-        continueEdges.forEach((edge) => placeRay(edge.toCaseId, dy, sideSign, v0, stepRef))
-      }
-
-      const continueEdges = (continueEdgesFrom.get(anchorId) ?? []).slice().sort((a, b) => a.order - b.order)
-      const rayCountBySide = new Map<number, number>()
-      continueEdges.forEach((edge, branchIndex) => {
-        // 分支按顺序交替挂到上下两侧；上侧肋向左斜、下侧向右斜。
-        const sideSign = branchIndex % 2 === 0 ? -1 : 1
-        const k = rayCountBySide.get(sideSign) ?? 0
-        rayCountBySide.set(sideSign, k + 1)
-        placeRay(edge.toCaseId, rayDy, sideSign, k * bandStep, { step: 0 })
+      const nextBand = new Map([[-1, nodeVSize * 0.6], [1, nodeVSize * 0.6]])
+      childrenOf(anchorId).forEach((edge, branchIndex) => {
+        if (claimed.has(edge.toCaseId)) return
+        const side = branchIndex % 2 === 0 ? -1 : 1
+        placeBranch(edge.toCaseId, side * branchStep, side * nextBand.get(side)!, side)
+        // 下一组从整个子树外侧起排，避免长子树挤进相邻兄弟分组。
+        const extent = Math.max(...[...fan.values()].filter((p) => p.dv * side > 0).map((p) => Math.abs(p.dv)))
+        nextBand.set(side, extent + nodeVSize + 64)
       })
 
       let minDu = 0
@@ -428,13 +427,17 @@ export function layoutRelationsFishbone(model: RelationsGraphModel, orientation:
       })
     })
 
-    let laneSpan = nodeVSize
+    // 上下分支数量常常不对称，按实际边界收紧画布，避免为短的一侧留出大片空白。
+    let minV = -nodeVSize / 2
+    let maxV = nodeVSize / 2
     lanePositions.forEach((position) => {
-      laneSpan = Math.max(laneSpan, Math.abs(position.v) * 2 + nodeVSize)
+      minV = Math.min(minV, position.v - nodeVSize / 2)
+      maxV = Math.max(maxV, position.v + nodeVSize / 2)
     })
-    const laneCenter = laneCursor + laneSpan / 2
+    const laneSpan = maxV - minV
+    const laneCenter = laneCursor - minV + CANVAS_PAD
     lanePositions.forEach((position, caseId) => {
-      placed.set(caseId, { u: position.u, v: laneCenter + position.v })
+      if (!placed.has(caseId)) placed.set(caseId, { u: position.u, v: laneCenter + position.v })
     })
     laneCursor += laneSpan + LANE_GAP
   })

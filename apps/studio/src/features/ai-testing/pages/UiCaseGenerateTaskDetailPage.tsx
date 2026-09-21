@@ -12,6 +12,7 @@ import { LlmConnectionSelectModal } from '../components/LlmConnectionSelectModal
 import { UiImportConflictModal } from '../components/UiImportConflictModal'
 import { ImportMigrationWarning } from '../components/ImportMigrationWarning'
 import { RunHistoryTable, RunRowActions, type RunMenuAction } from '../components/RunHistoryTable'
+import { confirmDeleteRun, isRunDeletable } from '../utils/runDeletion'
 import { RunPipelineStatus } from '../components/RunPipelineStatus'
 import { validateUiSourceArchive } from '../utils/uiSourceArchive'
 import type { UiCaseGenerateTaskRun, UiCaseGenerateTaskRunImportConflict } from '../types'
@@ -337,6 +338,21 @@ export function UiCaseGenerateTaskDetailPage() {
         navigate('/ai-testing?tab=tasks')
       },
   })
+  const deleteRunMutation = useMutation({
+    mutationFn: (runId: string) => api.deleteUiCaseGenerateTaskRun(runId),
+    onSuccess: (_data, runId) => {
+      message.success('运行记录已删除')
+      if (selectedRunId === runId) {
+        // 被删的运行记录同时是候选编辑器的来源，未保存的改动随之作废。
+        setSelectedRunId(undefined)
+        setDraftYaml('')
+        setSavedYaml('')
+      }
+      queryClient.removeQueries({ queryKey: ['uiCaseGenerateTaskRun', runId], exact: true })
+      queryClient.invalidateQueries({ queryKey: ['uiCaseGenerateTaskRuns', taskId] })
+    },
+    onError: (error) => message.error(getErrorMessage(error)),
+  })
   const saveMutation = useMutation({
     mutationFn: () => api.updateUiCaseGenerateTaskRunResult(selectedRunId!, { resultYaml: draftYaml }),
     onSuccess: (updatedRun) => {
@@ -529,13 +545,21 @@ export function UiCaseGenerateTaskDetailPage() {
                           renderActions={(row) => {
                             const data = resolveRunRecord(row)
                             const importedSuiteId = (data.importedTargets ?? []).find((target) => target.targetType === 'ui_suite')?.targetId
-                            const label = canEditCandidate && data.runId === selectedRunId ? '审核候选结果' : '查看候选结果'
+                            const label = canEditCandidate && data.runId === selectedRunId ? '审核结果' : '查看候选结果'
                             const menuItems: RunMenuAction[] = [
                               ...(can('execute') && isGenerateTaskRunImportable(data)
                                 ? [{ key: 'importSuite', label: '导入正式 UI 套件', disabled: importMutation.isPending }]
                                 : []),
                               ...(data.importStatus === 'imported' && importedSuiteId
                                 ? [{ key: 'openSuite', label: '查看正式套件' }]
+                                : []),
+                              ...(row.runId && can('write')
+                                ? [{
+                                    key: 'deleteRun',
+                                    label: '删除运行记录',
+                                    danger: true,
+                                    disabled: !isRunDeletable(data.status) || deleteRunMutation.isPending,
+                                  }]
                                 : []),
                             ]
                             return (
@@ -565,6 +589,11 @@ export function UiCaseGenerateTaskDetailPage() {
                                   }
                                   if (key === 'openSuite' && importedSuiteId) {
                                     navigate(`/ui-automation/suites/${importedSuiteId}`)
+                                    return
+                                  }
+                                  if (key === 'deleteRun' && row.runId) {
+                                    const runId = row.runId
+                                    confirmDeleteRun(() => deleteRunMutation.mutate(runId))
                                   }
                                 }}
                               />
@@ -586,7 +615,7 @@ export function UiCaseGenerateTaskDetailPage() {
       <Modal
         mask={{ closable: false }}
         className="ai-task-import-result-modal ui-task-candidate-result-modal"
-        title={canEditCandidate ? '审核候选结果' : 'UI 用例候选结果'}
+        title={canEditCandidate ? '审核结果' : 'UI 用例候选结果'}
         open={candidateModalOpen}
         onCancel={closeCandidateModal}
         footer={[

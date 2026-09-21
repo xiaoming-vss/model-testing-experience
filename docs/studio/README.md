@@ -1,6 +1,6 @@
 # 前端（studio）
 
-React 单页应用，提供项目、迭代、需求、功能/API/UI 测试资产、AI 任务与执行报告的完整工作台。领域术语见 [CONTEXT](CONTEXT.md)。
+React 单页应用，提供项目、迭代、需求、功能/API/UI 测试资产、AI 任务与执行报告的完整工作台。领域术语见 [CONTEXT](CONTEXT.md)，界面设计规范见 [DESIGN](DESIGN.md)。
 
 ## 运行时与依赖
 
@@ -29,6 +29,13 @@ React 单页应用，提供项目、迭代、需求、功能/API/UI 测试资产
 
 HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/main.tsx`。顶层路由只有三条：`/login`、`/register`，其余全部交给 `ProtectedRoute` 包裹的 `AppShell`。
 
+任务和执行详情的代码按职责维护：
+
+- 功能用例生成页面负责运行选择与操作编排；`ai-testing/utils/functionalOutput.ts` 负责产物解析，`caseNameTree.ts` 负责树编辑与布局计算，三个结果展示组件分别负责需求分析、候选用例和测试点树。
+- API 集合页面的查询、用例编辑、规则编辑和运行轮询分别在 `api-automation/hooks/useApiCollectionData.ts`、`useApiCaseEditing.ts`、`useApiRuleEditing.ts`、`useApiExecution.ts`。组件目录维护用例编辑器、规则弹窗、导入弹窗及运行历史/报告；查询键和缓存失效由对应 hook 管理。
+- UI 套件页面保留草稿与执行编排，步骤编辑器、导入弹窗、运行历史和报告位于 `ui-automation/components/`；单用例和套件报告共用步骤结果渲染。
+- `shared/utils/` 集中下载、分页文案与值格式化。任务产物使用 `formatStructuredContent` 保留 JSON 字符串表示；一般展示使用 `prettyPrintValue`，两者空值和字符串行为不同。
+
 ## 配置
 
 无 TOML 配置，`scripts/manage.py` 不为前端生成 TOML。涉及两层变量：
@@ -50,7 +57,7 @@ npm run build         # tsc -b && vite build
 npm run verify        # type-check + lint + build
 ```
 
-`npm run test` 全量运行 289 项（279 通过、10 失败）。10 项失败集中在 `FunctionalCaseGenerateTaskDetailPage.test.tsx`、`RequirementAnalysisTaskDetailPage.test.tsx` 与 `UiCaseGenerateTaskDetailPage.test.tsx`，表现为 30s 超时或时序敏感的元素查找失败；抽查同名用例在未改动的 `HEAD` 上同样失败，属既有的负载相关抖动，与本轮改动无关。
+2026-09-20 整改与失败修复验证：类型检查、Lint 与构建通过；前端全量收集 305 项，301 项在该轮通过，剩余 4 项随后完成修复并复跑通过（UI 弹窗关闭/重开 1 项、需求分析整文件 19 项、GitLab 权限绑定整文件 5 项）。默认按文件串行执行，保留 30s 单项超时；重型页面使用关闭动画的测试主题，以避免 jsdom 动画和 CSS 计算造成的时序问题。完整过程及限制见 [整改验证记录](refactor-validation-2026-09-20.md)。
 
 ## 与后端的交互
 

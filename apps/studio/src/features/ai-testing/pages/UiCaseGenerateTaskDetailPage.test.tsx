@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ThemeProvider } from '@/app/providers/ThemeProvider'
+import { TestThemeProvider as ThemeProvider } from '@/test/TestThemeProvider'
 import { UiCaseGenerateTaskDetailPage } from './UiCaseGenerateTaskDetailPage'
 
 const task = {
@@ -111,6 +111,14 @@ async function findRunInlineAction(name: string, runId = 'ui-run-1') {
   return within(await findRunRow(runId)).findByRole('button', { name })
 }
 
+/** Modal.confirm 是命令式弹窗，上一个用例的实例可能还在离场动画里，这里只取当前这一个。 */
+async function findDeleteConfirm() {
+  const dialogs = await screen.findAllByRole('dialog')
+  const dialog = dialogs.find((node) => node.textContent?.includes('确认删除该运行记录？') && !node.className.includes('zoom-leave'))
+  if (!dialog) throw new Error('未找到删除运行记录的确认框')
+  return dialog
+}
+
 async function openRunActionsMenu(user: ReturnType<typeof userEvent.setup>, runId = 'ui-run-1') {
   const row = await findRunRow(runId)
   await user.click(await within(row).findByRole('button', { name: '更多操作' }))
@@ -127,7 +135,7 @@ describe('UI 用例生成任务详情', () => {
     installFetchHandler()
     renderPage()
 
-    expect(await screen.findByRole('button', { name: '审核候选结果' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: '审核结果' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '中间配置' })).not.toBeInTheDocument()
   })
 
@@ -645,7 +653,7 @@ describe('UI 用例生成任务详情', () => {
     await user.click(screen.getByRole('button', { name: /^源码包/ }))
     expect(screen.getByText('2 KiB')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /^运行记录/ }))
-    await user.click(await findRunInlineAction('审核候选结果'))
+    await user.click(await findRunInlineAction('审核结果'))
     await user.click(await screen.findByRole('button', { name: '登录成功，展开' }))
     expect(screen.getByText('登录成功')).toBeInTheDocument()
     expect(screen.getByText('打开登录页')).toBeInTheDocument()
@@ -773,7 +781,7 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await findRunInlineAction('审核候选结果'))
+    await user.click(await findRunInlineAction('审核结果'))
     await user.click(await screen.findByRole('tab', { name: '编辑 YAML' }))
     const editor = await screen.findByRole('textbox', { name: '候选结果 YAML' })
     await user.click(editor)
@@ -812,7 +820,7 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await findRunInlineAction('审核候选结果'))
+    await user.click(await findRunInlineAction('审核结果'))
 
     expect(await screen.findByText('用例 1')).toBeInTheDocument()
     expect(screen.getByText('步骤 1')).toBeInTheDocument()
@@ -830,7 +838,7 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await findRunInlineAction('审核候选结果'))
+    await user.click(await findRunInlineAction('审核结果'))
     await user.click(await screen.findByRole('tab', { name: '编辑 YAML' }))
 
     expect(await screen.findByRole('textbox', { name: '候选结果 YAML' })).toBeInTheDocument()
@@ -849,7 +857,7 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await findRunInlineAction('审核候选结果'))
+    await user.click(await findRunInlineAction('审核结果'))
     const dialog = await screen.findByRole('dialog')
     fireEvent.click(dialog)
 
@@ -867,7 +875,7 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await findRunInlineAction('审核候选结果'))
+    await user.click(await findRunInlineAction('审核结果'))
     await user.click(await screen.findByRole('tab', { name: '编辑 YAML' }))
     const editor = await screen.findByRole('textbox', { name: '候选结果 YAML' })
     await user.click(editor)
@@ -885,7 +893,7 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await findRunInlineAction('审核候选结果'))
+    await user.click(await findRunInlineAction('审核结果'))
     await user.click(await screen.findByRole('tab', { name: '编辑 YAML' }))
     const editor = await screen.findByRole('textbox', { name: '候选结果 YAML' })
     await user.click(editor)
@@ -897,7 +905,10 @@ describe('UI 用例生成任务详情', () => {
     expect(screen.getByRole('textbox', { name: '候选结果 YAML' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '放弃修改' }))
-    await user.click(await findRunInlineAction('审核候选结果'))
+    await waitFor(() => expect(editor).not.toBeInTheDocument())
+    await user.click(await findRunInlineAction('审核结果'))
+    // destroyOnHidden recreates the tabs on the default preview when reopened.
+    await user.click(await screen.findByRole('tab', { name: '编辑 YAML' }))
     const reopenedEditor = await screen.findByRole('textbox', { name: '候选结果 YAML' })
     await waitFor(() => expect(reopenedEditor).toHaveTextContent('登录成功'))
     expect(reopenedEditor).not.toHaveTextContent('尚未保存的登录用例')
@@ -912,7 +923,7 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await findRunInlineAction('审核候选结果'))
+    await user.click(await findRunInlineAction('审核结果'))
     await user.click(await screen.findByRole('tab', { name: '编辑 YAML' }))
     await user.click(screen.getByRole('button', { name: '拒绝候选' }))
 
@@ -929,7 +940,7 @@ describe('UI 用例生成任务详情', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await findRunInlineAction('审核候选结果'))
+    await user.click(await findRunInlineAction('审核结果'))
     expect(await screen.findByRole('button', { name: '批准候选' })).toBeDisabled()
     expect(screen.getByRole('button', { name: '拒绝候选' })).toBeDisabled()
   })
@@ -1015,5 +1026,42 @@ describe('UI 用例生成任务详情', () => {
     expect(await screen.findByText('无权查看该运行')).toBeInTheDocument()
     expect(screen.queryByText('登录成功')).not.toBeInTheDocument()
     expect(screen.getByText(/候选内容已隐藏/)).toBeInTheDocument()
+  })
+})
+
+
+describe('运行记录删除', () => {
+  it('确认后才删除该次运行', async () => {
+    const deleted: string[] = []
+    installFetchHandler((url, init) => {
+      if (init?.method === 'DELETE') {
+        deleted.push(url.pathname)
+        return jsonResponse({})
+      }
+      return undefined
+    })
+    renderPage()
+    const user = userEvent.setup()
+
+    await openRunActionsMenu(user)
+    await user.click(await screen.findByRole('menuitem', { name: '删除运行记录' }))
+    const confirm = await findDeleteConfirm()
+    expect(deleted).toEqual([])
+    await user.click(within(confirm).getByRole('button', { name: /^删\s*除$/ }))
+    await waitFor(() => expect(deleted).toEqual(['/v1/ui-case-generate-task-runs/ui-run-1']))
+  })
+
+  it('运行中的记录没有可用的删除入口', async () => {
+    installFetchHandler((url, init) => {
+      const runningRun = { ...run, status: 'running' }
+      if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-1/runs') return jsonResponse({ items: [runningRun], total: 1 })
+      if (url.pathname === '/v1/ui-case-generate-task-runs/ui-run-1' && !init?.method) return jsonResponse(runningRun)
+      return undefined
+    })
+    renderPage()
+    const user = userEvent.setup()
+
+    await openRunActionsMenu(user)
+    expect(await screen.findByRole('menuitem', { name: '删除运行记录' })).toHaveAttribute('aria-disabled', 'true')
   })
 })

@@ -112,6 +112,33 @@ class TestOrderEntryRepository(ResourceRepository):
             ).all()
         )
 
+    async def list_order_cases_with_scope(
+        self, order_id: str
+    ) -> list[tuple[TestOrderEntry, FunctionTestCase, FunctionTestSuite, Requirement]]:
+        """取测试单里的功能用例，连同所属测试集与需求；用于组装图谱输入。
+
+        不按迭代过滤：需求不在测试单所属迭代的用例由调用方归入无需求分组。
+        """
+        return list(
+            (
+                await self.session.execute(
+                    select(TestOrderEntry, FunctionTestCase, FunctionTestSuite, Requirement)
+                    .join(FunctionTestCase, FunctionTestCase.case_id == TestOrderEntry.case_id)
+                    .join(
+                        FunctionTestSuite, FunctionTestSuite.suite_id == FunctionTestCase.suite_id
+                    )
+                    .join(
+                        Requirement, Requirement.requirement_id == FunctionTestSuite.requirement_id
+                    )
+                    .where(
+                        TestOrderEntry.order_id == order_id,
+                        TestOrderEntry.case_type == FUNCTION_CASE_TYPE,
+                    )
+                    .order_by(TestOrderEntry.order_no, TestOrderEntry.id)
+                )
+            ).all()
+        )
+
     def add(self, entry: TestOrderEntry) -> None:
         self.session.add(entry)
 

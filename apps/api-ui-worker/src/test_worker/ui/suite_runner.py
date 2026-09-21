@@ -10,8 +10,16 @@ from pathlib import Path
 
 from playwright.async_api import async_playwright
 
-from ..core import logger
+from ..contracts.types import (
+    UiStepDefinition,
+    UiSuiteItemRunResult,
+    UiSuiteRunItemSnapshot,
+    UiSuiteRunResult,
+    UiTestSuiteRunSnapshot,
+    WorkerConfig,
+)
 from ..control_plane.client import ControlPlaneClient
+from ..core import logger
 from .browser_options import (
     context_options_from_suite,
     default_step_timeout_from_suite,
@@ -20,15 +28,7 @@ from .browser_options import (
 )
 from .step_executor import StepExecutionContext, StepExecutor, now_iso
 from .step_normalizer import normalize_case_steps
-from ..contracts.types import (
-    UiStepDefinition,
-    UiStepRunResult,
-    UiSuiteItemRunResult,
-    UiSuiteRunItemSnapshot,
-    UiSuiteRunResult,
-    UiTestSuiteRunSnapshot,
-    WorkerConfig,
-)
+from .step_results import build_failed_step_result
 
 
 def _normalize_steps(item: UiSuiteRunItemSnapshot) -> list[UiStepDefinition]:
@@ -344,7 +344,7 @@ class UiSuiteRunner:
                     step_results.append(result)
                 except Exception as e:
                     message = str(e)
-                    failed_result = self._build_failed_step_result(
+                    failed_result = build_failed_step_result(
                         step, fallback_order, step_started_at_iso, step_started_at, message
                     )
 
@@ -396,46 +396,6 @@ class UiSuiteRunner:
             error_message=error_message or None,
         )
 
-    def _build_failed_step_result(
-        self,
-        step: UiStepDefinition,
-        fallback_order: int,
-        started_at_iso: str,
-        started_at: float,
-        error_message: str,
-    ) -> "UiStepRunResult":
-        """
-        构建失败的步骤结果
-
-        Args:
-            step: 步骤定义
-            fallback_order: 备用序号
-            started_at_iso: 开始时间 ISO 格式
-            started_at: 开始时间戳
-            error_message: 错误消息
-
-        Returns:
-            步骤运行结果
-        """
-        from ..contracts.types import UiStepRunResult
-
-        step_name = step.step_name
-        if not step_name or not step_name.strip():
-            step_name = f"Step {fallback_order}"
-        else:
-            step_name = step_name.strip()
-
-        return UiStepRunResult(
-            order_no=step.order_no or fallback_order,
-            step_name=step_name,
-            keyword=step.keyword.lower(),
-            status="failed",
-            success=False,
-            started_at=started_at_iso,
-            finished_at=now_iso(),
-            duration_ms=int((datetime.now().timestamp() - started_at) * 1000),
-            error_message=error_message,
-        )
 
     async def _report_suite_item_started(self, task_id: str, item_id: str, payload: dict) -> None:
         """上报测试集项开始"""

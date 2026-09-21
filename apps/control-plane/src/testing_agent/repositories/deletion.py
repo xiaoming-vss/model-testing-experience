@@ -152,6 +152,27 @@ async def _ui_suite_runs(session, condition):
         await _erase(session, m.UiTestSuiteRun, m.UiTestSuiteRun.suite_run_id.in_(ids))
 
 
+async def _ai_run_children(session, run_ids):
+    """Erase what a set of AI runs owns; the run rows themselves are deleted by the caller."""
+    if not run_ids:
+        return
+    stages = select(m.AiGenerateRunStage.id).where(m.AiGenerateRunStage.run_id.in_(run_ids))
+    await _workers(session, "ai", run_ids)
+    # Imports reference attempts, so remove them before stage/attempt cleanup.
+    await _erase(session, m.AiGenerateRunImport, m.AiGenerateRunImport.run_id.in_(run_ids))
+    await _erase(session, m.AiGenerateStageAttempt, m.AiGenerateStageAttempt.stage_id.in_(stages))
+    await _erase(session, m.AiGenerateRunStage, m.AiGenerateRunStage.run_id.in_(run_ids))
+
+
+async def _ai_runs(session, condition):
+    ids = list(
+        await session.scalars(select(m.AiGenerateTaskRun.run_id).where(condition).with_for_update())
+    )
+    await _ai_run_children(session, ids)
+    if ids:
+        await _erase(session, m.AiGenerateTaskRun, m.AiGenerateTaskRun.run_id.in_(ids))
+
+
 async def delete_resource(session, obj):
     """Delete an authorized entity and its owned records, without committing."""
     model = type(obj)
@@ -219,24 +240,10 @@ async def delete_resource(session, obj):
     elif isinstance(obj, m.FunctionTestCase):
         # 引用了该用例的执行条目随用例一起删除（条目只按业务键引用用例，没有外键）。
         await _erase(session, m.TestOrderEntry, m.TestOrderEntry.case_id == obj.case_id)
+    elif isinstance(obj, m.AiGenerateTaskRun):
+        await _ai_run_children(session, [obj.run_id])
     elif isinstance(obj, m.AiGenerateTask):
-        ids = list(
-            await session.scalars(
-                select(m.AiGenerateTaskRun.run_id)
-                .where(m.AiGenerateTaskRun.task_id == obj.task_id)
-                .with_for_update()
-            )
-        )
-        if ids:
-            stages = select(m.AiGenerateRunStage.id).where(m.AiGenerateRunStage.run_id.in_(ids))
-            await _workers(session, "ai", ids)
-            # Imports reference attempts, so remove them before stage/attempt cleanup.
-            await _erase(session, m.AiGenerateRunImport, m.AiGenerateRunImport.run_id.in_(ids))
-            await _erase(
-                session, m.AiGenerateStageAttempt, m.AiGenerateStageAttempt.stage_id.in_(stages)
-            )
-            await _erase(session, m.AiGenerateRunStage, m.AiGenerateRunStage.run_id.in_(ids))
-            await _erase(session, m.AiGenerateTaskRun, m.AiGenerateTaskRun.run_id.in_(ids))
+        await _ai_runs(session, m.AiGenerateTaskRun.task_id == obj.task_id)
         archives = list(
             await session.scalars(
                 select(m.AiGenerateTaskSourceArchive).where(

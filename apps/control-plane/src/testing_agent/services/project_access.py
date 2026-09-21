@@ -78,3 +78,18 @@ async def require_project_id(
         raise ErrNotFound
     await require_project_access(session, user_id, project, action)
     return project
+
+
+async def require_requirement_access(
+    repository, user_id: str, requirement_id: str, *, action: ProjectAction = "read"
+) -> None:
+    requirement = await repository.get_requirement(requirement_id)
+    if requirement is None:
+        raise ErrNotFound
+    sprint = await repository.get_sprint(requirement.sprint_id)
+    if sprint is None:
+        raise ErrNotFound
+    project = await repository.get_project(sprint.project_id)
+    if project is None:
+        raise ErrNotFound
+    await require_project_access(repository.session, user_id, project, action)

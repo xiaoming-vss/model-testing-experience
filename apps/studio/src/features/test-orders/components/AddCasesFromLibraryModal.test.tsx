@@ -160,3 +160,63 @@ it('已在测试单里的用例勾选框置灰', async () => {
   })
   client.clear()
 })
+
+/** 分页的每页条数下拉：按文案片段找选项，避免依赖 antd 的完整文案格式。 */
+async function pickPageSize(user: ReturnType<typeof userEvent.setup>, size: string) {
+  await user.click(document.querySelector('.ant-pagination-options .ant-select') as HTMLElement)
+  await waitFor(() => {
+    const option = [...document.querySelectorAll('.ant-select-item-option')].find((node) =>
+      node.textContent?.startsWith(size),
+    )
+    if (!option) throw new Error(`下拉里还没有每页 ${size} 的选项`)
+    // 全站没有引 antd 的 zh_CN，断言这个分页确实用了中文本地化，别退回「20 / page」。
+    expect(option.textContent).toContain('条/页')
+  })
+  const option = [...document.querySelectorAll('.ant-select-item-option')].find((node) =>
+    node.textContent?.startsWith(size),
+  ) as HTMLElement
+  await user.click(option)
+}
+
+it('可以切换每页条数并按新的条数重新查询', async () => {
+  const getCases = mockLibraryApis()
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const user = userEvent.setup()
+  renderModal(client)
+
+  await screen.findByText(libraryCase.title)
+  await waitFor(() =>
+    expect(getCases).toHaveBeenLastCalledWith('project-1', expect.objectContaining({ pageSize: 20 })),
+  )
+
+  await pickPageSize(user, '50')
+  await waitFor(() =>
+    expect(getCases).toHaveBeenLastCalledWith(
+      'project-1',
+      expect.objectContaining({ page: 1, pageSize: 50 }),
+    ),
+  )
+  client.clear()
+})
+
+it('加入成功后弹窗不关闭，保留筛选并清空选择', async () => {
+  mockLibraryApis()
+  const add = vi
+    .spyOn(api, 'addTestOrderCases')
+    .mockImplementation(async () => ({ addedCount: 1, skippedCount: 0 }))
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const user = userEvent.setup()
+  renderModal(client)
+
+  await screen.findByText(libraryCase.title)
+  await user.click(
+    document.querySelector('[aria-label="选择用例：验证其他租户用户不可查看转换任务与转换结果"]') as HTMLInputElement,
+  )
+  await user.click(screen.getByRole('button', { name: /^加\s*入$/ }))
+  await waitFor(() => expect(add).toHaveBeenCalledWith('order-1', ['case-9']))
+
+  // 弹窗留着继续挑用例，选择被清空后「加入」回到不可点。
+  expect(screen.getByText('加入用例')).toBeInTheDocument()
+  await waitFor(() => expect(screen.getByRole('button', { name: /^加\s*入$/ })).toBeDisabled())
+  client.clear()
+})

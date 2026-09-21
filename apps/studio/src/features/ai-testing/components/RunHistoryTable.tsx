@@ -4,7 +4,7 @@ import type { MenuProps, TableProps } from 'antd'
 import type { ReactNode } from 'react'
 import { formatTime } from '@/utils/format'
 
-export type RunMenuAction = { key: string; label: string; disabled?: boolean }
+export type RunMenuAction = { key: string; label: string; disabled?: boolean; danger?: boolean }
 
 type RunHistoryTableProps<T> = {
   rows: T[]

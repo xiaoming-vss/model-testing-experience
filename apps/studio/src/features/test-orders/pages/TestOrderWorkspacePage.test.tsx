@@ -86,12 +86,19 @@ it('判定整条用例即时保存并显示已保存', async () => {
   seedAccess(client, 'owner')
   renderWorkspace(client)
 
-  expect(await screen.findByText('预期：账号锁定')).toBeInTheDocument()
+  expect(await screen.findByText('账号锁定')).toBeInTheDocument()
   expect(screen.getByText('已注册手机号')).toBeInTheDocument()
   // 步骤只是只读说明，没有逐步判定按钮
   expect(screen.queryByRole('button', { name: /步骤 \d 判定/ })).toBeNull()
 
   const user = userEvent.setup()
+  expect(screen.getByRole('button', { name: '未执行 1' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /批量标记通过/ })).not.toBeInTheDocument()
+  await user.click(screen.getByRole('checkbox', { name: '选择第 1 条执行条目' }))
+  expect(screen.getByText('已选 1 条')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /批量标记通过/ })).toBeEnabled()
+  await user.click(screen.getByRole('checkbox', { name: '选择第 1 条执行条目' }))
+  expect(screen.queryByRole('button', { name: /批量标记通过/ })).not.toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: '判定该用例为通过' }))
 
   await waitFor(() => expect(update).toHaveBeenCalledTimes(1))
@@ -130,7 +137,7 @@ it('项目所有者不受分配限制', async () => {
   seedAccess(client, 'owner')
   renderWorkspace(client)
 
-  await screen.findByText('预期：账号锁定')
+  await screen.findByText('账号锁定')
   expect(screen.getByRole('button', { name: '判定该用例为通过' })).toBeEnabled()
   client.clear()
 })
@@ -194,5 +201,76 @@ it('可以在工作台里从用例库挑用例加入测试单', async () => {
 
   await waitFor(() => expect(add).toHaveBeenCalledTimes(1))
   expect(add.mock.calls[0]).toEqual(['order-1', ['case-9']])
+  client.clear()
+})
+
+
+it('可以在工作台打开用例图谱并派发', async () => {
+  useAuthStore.setState({ user: { userId: 'user-1', nickname: '张三' } as User })
+  vi.spyOn(api, 'getTestOrder').mockImplementation(async () => order)
+  vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async () => listResponse([entry]))
+  vi.spyOn(api, 'getTestOrderGraph').mockImplementation(async () => ({
+    orderId: 'order-1',
+    run: null,
+  }))
+  vi.spyOn(api, 'getTestOrderGraphInput').mockImplementation(async () => ({
+    requirements: [],
+    cases: [],
+    case_requirement_links: [],
+  }))
+  vi.spyOn(api, 'getLlmConnections').mockImplementation(async () =>
+    listResponse([
+      {
+        connectionId: 'conn-1',
+        provider: 'llm',
+        name: 'llm',
+        baseUrl: 'https://llm.example/v1',
+        authType: 'api_key',
+        account: 'me',
+        status: 'active',
+        hasAccessToken: true,
+      },
+    ]),
+  )
+  const dispatch = vi
+    .spyOn(api, 'dispatchTestOrderGraph')
+    .mockImplementation(async () => ({ runId: 'run-1', status: 'pending' }))
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedAccess(client, 'owner')
+  renderWorkspace(client)
+
+  const user = userEvent.setup()
+  await screen.findByText('V2.3 回归测试单')
+  await user.click(screen.getByRole('button', { name: '用例图谱' }))
+
+  // 弹框打开后才有生成入口；只有一个活跃连接时连接选择器静默选中。
+  await user.click(await screen.findByRole('button', { name: '生成图谱' }))
+
+  await waitFor(() => expect(dispatch).toHaveBeenCalledTimes(1))
+  expect(dispatch.mock.calls[0][0]).toBe('order-1')
+  expect(dispatch.mock.calls[0][1]).toMatchObject({ connectionId: 'conn-1' })
+  client.clear()
+})
+
+it('底部条目导航切换详情，步骤与预期保持对应', async () => {
+  useAuthStore.setState({ user: { userId: 'user-1' } as User })
+  vi.spyOn(api, 'getTestOrder').mockImplementation(async () => order)
+  vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async () => listResponse([
+    entry,
+    { ...entry, entryId: 'entry-2', orderNo: 2, caseTitle: '第二条用例', snapshot: { preconditions: [], steps: [{ action: '第二条操作', expected: '第二条预期' }] } },
+  ]))
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedAccess(client, 'owner')
+  renderWorkspace(client)
+  const user = userEvent.setup()
+  await screen.findByText('账号锁定')
+  expect(screen.getByRole('button', { name: '上一条' })).toBeDisabled()
+  expect(screen.getAllByRole('checkbox', { name: '判定后自动前进' })).toHaveLength(1)
+  await user.click(screen.getByRole('button', { name: '下一条' }))
+  expect(await screen.findByText('第二条操作')).toBeInTheDocument()
+  expect(screen.getByText('第二条预期')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '下一条' })).toBeDisabled()
+  await user.click(screen.getByRole('button', { name: '上一条' }))
+  expect(await screen.findByText('账号锁定')).toBeInTheDocument()
   client.clear()
 })

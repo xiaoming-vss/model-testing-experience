@@ -1,3 +1,4 @@
+import { footerRange } from '@/shared/utils/pagination'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { SearchOutlined } from '@ant-design/icons'
@@ -214,13 +215,6 @@ export function ApiEnvironmentDrawer({
       }
     },
   })
-
-  function footerRange(total: number, currentPage: number, currentPageSize: number) {
-    if (total === 0) return '显示第 0 条 - 第 0 条，共 0 条'
-    const start = (currentPage - 1) * currentPageSize + 1
-    const end = Math.min(currentPage * currentPageSize, total)
-    return `显示第 ${start} 条 - 第 ${end} 条，共 ${total} 条`
-  }
 
   const variableColumns: TableProps<ApiEnvironmentVar>['columns'] = [
     {

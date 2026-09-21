@@ -30,33 +30,3 @@ class FunctionSuiteResponse(BaseModel):
     created_at: datetime | str | None = Field(default="")
     updated_at: datetime | str | None = Field(default="")
     model_config = ConfigDict(from_attributes=True, populate_by_name=True, alias_generator=to_camel)
-
-
-class FunctionSuiteRequirementItem(BaseModel):
-    requirement_id: str
-    requirement_title: str
-    requirement_content: str
-
-
-class FunctionSuiteCaseViewItem(BaseModel):
-    case_id: str
-    case_module: str
-    case_title: str
-    case_type: str
-    priority: str
-    precondition: list[str]
-    test_steps: list[str]
-    expected_results: list[str]
-
-
-class FunctionSuiteCaseRequirementLink(BaseModel):
-    requirement_id: str
-    case_ids: list[str]
-
-
-class FunctionSuiteCaseViewResponse(BaseModel):
-    """测试集需求-用例视图：字段名保持生成侧契约的 snake_case，勿加 camel 别名。"""
-
-    requirements: list[FunctionSuiteRequirementItem]
-    cases: list[FunctionSuiteCaseViewItem]
-    case_requirement_links: list[FunctionSuiteCaseRequirementLink]

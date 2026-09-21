@@ -144,3 +144,38 @@ class TestOrderGraphResponse(BaseModel):
     order_id: str = Field()
     run: AiGenerateTaskRunResponse | None = Field(default=None)
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class TestOrderGraphInputRequirement(BaseModel):
+    requirement_id: str
+    requirement_title: str
+    requirement_content: str
+
+
+class TestOrderGraphInputCase(BaseModel):
+    case_id: str
+    case_module: str
+    case_title: str
+    case_type: str
+    priority: str
+    precondition: list[str]
+    test_steps: list[str]
+    expected_results: list[str]
+
+
+class TestOrderGraphInputLink(BaseModel):
+    """需求到用例的关联；`requirement_id` 为 null 表示这组用例没有绑定本迭代的需求。"""
+
+    requirement_id: str | None
+    case_ids: list[str]
+
+
+class TestOrderGraphInputResponse(BaseModel):
+    """测试单的图谱输入，可直接作为派发请求的 graphInput。
+
+    字段名与 worker 侧 skill 的输入契约一致，保持 snake_case，勿加 camel 别名。
+    """
+
+    requirements: list[TestOrderGraphInputRequirement]
+    cases: list[TestOrderGraphInputCase]
+    case_requirement_links: list[TestOrderGraphInputLink]

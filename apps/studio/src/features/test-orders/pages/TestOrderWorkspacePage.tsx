@@ -19,13 +19,13 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { AddCasesFromLibraryModal } from '../components/AddCasesFromLibraryModal'
+import { TestOrderGraphViewer } from '../components/TestOrderGraphViewer'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { priorityColor } from '@/features/test-cases/utils/casePriority'
 import { api, listItems } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { formatTime, getErrorMessage } from '@/utils/format'
 import {
-  getTestOrderEntryDotColor,
   getTestOrderEntryStatusMeta,
   getTestOrderStatusMeta,
 } from '../utils/testOrderStatus'
@@ -65,6 +65,7 @@ export function TestOrderWorkspacePage() {
   const [assignOpen, setAssignOpen] = useState(false)
   const [assignee, setAssignee] = useState('')
   const [addCasesOpen, setAddCasesOpen] = useState(false)
+  const [graphOpen, setGraphOpen] = useState(false)
 
   const orderQuery = useQuery({
     queryKey: ['testOrder', orderId],
@@ -96,15 +97,17 @@ export function TestOrderWorkspacePage() {
 
   const entriesReloaded = entriesQuery.dataUpdatedAt
 
-  const visibleEntries = useMemo(() => {
+  const matchingEntries = useMemo(() => {
     const text = keyword.trim().toLowerCase()
     return entries.filter((entry) => {
       if (onlyMine && entry.assigneeUserId !== currentUserId) return false
-      if (statusFilter !== 'all' && (entry.status ?? '') !== statusFilter) return false
       if (!text) return true
       return `${entry.caseTitle ?? ''} ${entry.caseModule ?? ''}`.toLowerCase().includes(text)
     })
-  }, [currentUserId, entries, keyword, onlyMine, statusFilter])
+  }, [currentUserId, entries, keyword, onlyMine])
+  const visibleEntries = useMemo(() => matchingEntries.filter((entry) =>
+    statusFilter === 'all' || entry.status === statusFilter,
+  ), [matchingEntries, statusFilter])
 
   const mineCount = entries.filter((entry) => entry.assigneeUserId === currentUserId).length
   const unassignedCount = entries.filter((entry) => !entry.assigneeUserId).length
@@ -201,7 +204,7 @@ export function TestOrderWorkspacePage() {
     if (next) setSelectedEntryId(next.entryId ?? null)
   }
 
-  // 判定后自动前进到下一条未执行（可在头部关闭）。
+  // 判定后自动前进到下一条未执行（可在底部判定栏关闭）。
   const advanceAfterJudge = autoAdvance && selected?.status !== 'pending'
   useEffect(() => {
     if (!advanceAfterJudge) return
@@ -240,6 +243,7 @@ export function TestOrderWorkspacePage() {
     return () => window.removeEventListener('keydown', onKeyDown)
   })
 
+  const selectedVisibleIndex = visibleEntries.findIndex((entry) => entry.entryId === selected?.entryId)
   const isSaving = saveMutation.isPending
   const saveStateText = isSaving ? '保存中…' : savedAt ? `已保存 ${savedAt}` : ''
   const entryStatusMeta = getTestOrderEntryStatusMeta(selected?.status)
@@ -267,6 +271,16 @@ export function TestOrderWorkspacePage() {
             </Text>
             <span className="spacer" />
             <ProjectActionButton
+              action="execute"
+              projectId={order?.projectId}
+              className="action-btn-graph"
+              operation="create"
+              disabled={!order?.orderId}
+              onClick={() => setGraphOpen(true)}
+            >
+              用例图谱
+            </ProjectActionButton>
+            <ProjectActionButton
               action="write"
               projectId={order?.projectId}
               type="primary"
@@ -277,12 +291,7 @@ export function TestOrderWorkspacePage() {
             >
               加入用例
             </ProjectActionButton>
-            <Checkbox checked={autoAdvance} onChange={(event) => setAutoAdvance(event.target.checked)}>
-              判定后自动前进
-            </Checkbox>
-            {saveStateText ? (
-              <Text type={saveMutation.isError ? 'danger' : 'secondary'}>{saveStateText}</Text>
-            ) : null}
+
           </section>
 
           {orderQuery.error ? (
@@ -314,20 +323,21 @@ export function TestOrderWorkspacePage() {
                       className={`test-order-filter-chip${
                         statusFilter === option.value ? ' active' : ''
                       }`}
+                      aria-pressed={statusFilter === option.value}
                       onClick={() => setStatusFilter(option.value)}
                     >
-                      {option.label}
+                      {option.label} {matchingEntries.filter((entry) => option.value === 'all' || entry.status === option.value).length}
                     </button>
                   ))}
                 </div>
-                <Space size={12} wrap>
+                <div className="test-order-owner-filter">
                   <Checkbox checked={onlyMine} onChange={(event) => setOnlyMine(event.target.checked)}>
                     只看我负责的
                   </Checkbox>
                   <Text type="secondary">
                     我负责 {mineCount} · 未分配 {unassignedCount}
                   </Text>
-                </Space>
+                </div>
               </div>
               <div className="api-case-sidebar-scroll">
                 {entriesQuery.isLoading ? (
@@ -345,6 +355,7 @@ export function TestOrderWorkspacePage() {
                           className={`test-order-nav-row${active ? ' active' : ''}`}
                         >
                           <Checkbox
+                            aria-label={`选择第 ${entry.orderNo ?? ''} 条执行条目`}
                             checked={checkedEntryIds.includes(entry.entryId ?? '')}
                             onChange={(event) =>
                               setCheckedEntryIds((prev) =>
@@ -353,10 +364,6 @@ export function TestOrderWorkspacePage() {
                                   : prev.filter((id) => id !== entry.entryId),
                               )
                             }
-                          />
-                          <span
-                            className="test-order-nav-dot"
-                            style={{ background: getTestOrderEntryDotColor(entry.status) }}
                           />
                           <button
                             type="button"
@@ -396,7 +403,8 @@ export function TestOrderWorkspacePage() {
                   </div>
                 )}
               </div>
-              <div className="test-order-sidebar-foot">
+              {checkedEntryIds.length > 0 ? <div className="test-order-sidebar-foot">
+                <Text type="secondary" className="test-order-selection-count">已选 {checkedEntryIds.length} 条</Text>
       <Popconfirm
         title={`确认将选中的 ${checkedEntryIds.length} 条标记为通过？`}
         okText="确认标记"
@@ -423,7 +431,7 @@ export function TestOrderWorkspacePage() {
       >
         分配执行人{checkedEntryIds.length > 0 ? `（${checkedEntryIds.length}）` : ''}
       </ProjectActionButton>
-              </div>
+              </div> : null}
             </section>
 
             <section className="workbench-panel test-order-panel">
@@ -458,99 +466,7 @@ export function TestOrderWorkspacePage() {
                       <Text type="secondary">该条已分配给其他执行人</Text>
                     ) : null}
                   </div>
-                  <div className="test-order-editor-body">
-                    <div className="test-order-content">
-                    <div className="test-order-block">
-                      <Text type="secondary">前置条件</Text>
-                      <div className="test-order-preconditions">
-                        {(selected.snapshot?.preconditions ?? []).length === 0
-                          ? '暂无前置条件'
-                          : (selected.snapshot?.preconditions ?? []).map((item, index) => (
-                              <div key={index}>{item}</div>
-                            ))}
-                      </div>
-                    </div>
-
-                    {(selected.snapshot?.steps ?? []).map((step, index) => (
-                      <div key={index} className="api-case-run-result-row test-order-step">
-                        <div className="api-case-run-result-row-title">
-                          <span className="test-order-step-no">{index + 1}</span>
-                          <span className="test-order-step-action">{step.action}</span>
-                        </div>
-                        <div className="test-order-step-expect">预期：{step.expected}</div>
-                      </div>
-                    ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </section>
-
-            <section className="workbench-panel test-order-side">
-              {!selected ? null : (
-                <>
-                  <div className="test-order-side-section">
-                    <Text type="secondary">用例结论</Text>
-                    <span className="test-order-judge">
-                      {VERDICT_OPTIONS.map((option) => (
-                        <Tooltip
-                          key={option.value}
-                          title={canJudge ? undefined : '当前不可判定：条目已分配给其他执行人'}
-                        >
-                          <button
-                            type="button"
-                            className={`test-order-judge-btn${
-                              selected.status === option.value ? ` ${option.className}` : ''
-                            }`}
-                            disabled={!canJudge}
-                            aria-label={`判定该用例为${option.label}`}
-                            onClick={() => save({ status: option.value })}
-                          >
-                            {option.label}
-                          </button>
-                        </Tooltip>
-                      ))}
-                    </span>
-                  </div>
-                  {selected.status === 'failed' || selected.status === 'blocked' ? (
-                    <div className="test-order-side-section">
-                      <Text type="secondary">
-                        {selected.status === 'failed' ? '失败原因' : '阻塞原因'}
-                      </Text>
-                      <Input.TextArea
-                        rows={3}
-                        value={drafts.reason ?? ''}
-                        disabled={!canJudge}
-                        placeholder="填写原因"
-                        onChange={(event) =>
-                          setDrafts((prev) => ({ ...prev, reason: event.target.value }))
-                        }
-                        onBlur={() =>
-                          save(
-                            selected.status === 'failed'
-                              ? { failureReason: drafts.reason ?? '' }
-                              : { blockReason: drafts.reason ?? '' },
-                          )
-                        }
-                      />
-                      {selected.status === 'failed' ? (
-                        <>
-                          <Text type="secondary">关联缺陷号</Text>
-                          <Input
-                            value={drafts.zentaoBugId ?? ''}
-                            disabled={!canJudge}
-                            placeholder="禅道缺陷号（可选）"
-                            onChange={(event) =>
-                              setDrafts((prev) => ({ ...prev, zentaoBugId: event.target.value }))
-                            }
-                            onBlur={() => save({ zentaoBugId: drafts.zentaoBugId ?? '' })}
-                          />
-                        </>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  <div className="test-order-side-section">
-                    <Text type="secondary">执行信息</Text>
+                  <div className="test-order-execution-meta">
                     <div className="test-order-kv">
                       <span>分配执行人</span>
                       <span>{personName(selected.assigneeUserId) || '未分配'}</span>
@@ -564,11 +480,110 @@ export function TestOrderWorkspacePage() {
                       <span>{formatTime(selected.executedAt) || '-'}</span>
                     </div>
                   </div>
-                  <div className="test-order-side-foot">
-                    <Text type="secondary">
-                      1 通过 · 2 失败 · 3 阻塞 · 4 跳过 · ↑↓ 切换条目
-                    </Text>
+                  <div className="test-order-editor-body">
+                    <div className="test-order-content">
+                      <div className="test-order-block">
+                        <Text type="secondary">前置条件</Text>
+                        <div className="test-order-preconditions">
+                          {(selected.snapshot?.preconditions ?? []).length === 0
+                            ? '暂无前置条件'
+                            : (selected.snapshot?.preconditions ?? []).map((item, index) => (
+                                <div key={index}>{item}</div>
+                              ))}
+                        </div>
+                      </div>
+
+                      <table className="test-order-steps-table">
+                        <caption>测试步骤</caption>
+                        <thead><tr><th scope="col">步骤</th><th scope="col">操作说明</th><th scope="col">预期结果</th></tr></thead>
+                        <tbody>
+                          {(selected.snapshot?.steps ?? []).length === 0 ? (
+                            <tr><td colSpan={3}>暂无测试步骤</td></tr>
+                          ) : (selected.snapshot?.steps ?? []).map((step, index) => (
+                            <tr key={index}>
+                              <td><span className="test-order-step-no">{index + 1}</span></td>
+                              <td>{step.action || '—'}</td>
+                              <td>{step.expected || '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    {selected.status === 'failed' || selected.status === 'blocked' ? (
+                      <div className="test-order-result-details">
+                        <Text type="secondary">
+                          {selected.status === 'failed' ? '失败原因' : '阻塞原因'}
+                        </Text>
+                        <Input.TextArea
+                          rows={3}
+                          value={drafts.reason ?? ''}
+                          disabled={!canJudge}
+                          placeholder="填写原因"
+                          onChange={(event) =>
+                            setDrafts((prev) => ({ ...prev, reason: event.target.value }))
+                          }
+                          onBlur={() =>
+                            save(
+                              selected.status === 'failed'
+                                ? { failureReason: drafts.reason ?? '' }
+                                : { blockReason: drafts.reason ?? '' },
+                            )
+                          }
+                        />
+                        {selected.status === 'failed' ? (
+                          <>
+                            <Text type="secondary">关联缺陷号</Text>
+                            <Input
+                              value={drafts.zentaoBugId ?? ''}
+                              disabled={!canJudge}
+                              placeholder="禅道缺陷号（可选）"
+                              onChange={(event) =>
+                                setDrafts((prev) => ({ ...prev, zentaoBugId: event.target.value }))
+                              }
+                              onBlur={() => save({ zentaoBugId: drafts.zentaoBugId ?? '' })}
+                            />
+                          </>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    </div>
                   </div>
+                  <footer className="test-order-execution-footer" aria-label="用例执行操作">
+                    <div className="test-order-entry-navigation">
+                      <Button size="small" disabled={selectedVisibleIndex <= 0} onClick={() => moveSelection(-1)}>上一条</Button>
+                      <Text type="secondary">{selectedVisibleIndex >= 0 ? `第 ${selectedVisibleIndex + 1} / ${visibleEntries.length} 条` : '当前条目不在筛选结果中'}</Text>
+                      <Button size="small" disabled={selectedVisibleIndex < 0 || selectedVisibleIndex >= visibleEntries.length - 1} onClick={() => moveSelection(1)}>下一条</Button>
+                    </div>
+                    <Checkbox checked={autoAdvance} onChange={(event) => setAutoAdvance(event.target.checked)}>
+                      判定后自动前进
+                    </Checkbox>
+                    {saveStateText ? (
+                      <Text type={saveMutation.isError ? 'danger' : 'secondary'}>{saveStateText}</Text>
+                    ) : null}
+
+                    <div className="test-order-verdict-actions">
+                      <span className="test-order-judge">
+                        {VERDICT_OPTIONS.map((option) => (
+                          <Tooltip
+                            key={option.value}
+                            title={canJudge ? undefined : '当前不可判定：条目已分配给其他执行人'}
+                          >
+                            <button
+                              type="button"
+                              className={`test-order-judge-btn${
+                                selected.status === option.value ? ` ${option.className}` : ''
+                              }`}
+                              disabled={!canJudge}
+                              aria-label={`判定该用例为${option.label}`}
+                              onClick={() => save({ status: option.value })}
+                            >
+                              {option.label}
+                            </button>
+                          </Tooltip>
+                        ))}
+                      </span>
+                      <Text type="secondary" className="test-order-shortcuts">1 通过 · 2 失败 · 3 阻塞 · 4 跳过 · ↑↓ 切换</Text>
+                    </div>
+                  </footer>
                 </>
               )}
             </section>
@@ -611,6 +626,14 @@ export function TestOrderWorkspacePage() {
         sprintId={order?.sprintId}
         existingCaseIds={entries.map((entry) => entry.caseId ?? '').filter(Boolean)}
         onClose={() => setAddCasesOpen(false)}
+      />
+
+      <TestOrderGraphViewer
+        open={graphOpen}
+        orderId={order?.orderId ?? orderId ?? ''}
+        projectId={order?.projectId}
+        canExecute={can('execute')}
+        onClose={() => setGraphOpen(false)}
       />
     </div>
   )

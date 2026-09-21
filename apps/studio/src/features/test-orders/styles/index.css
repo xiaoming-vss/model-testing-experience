@@ -23,7 +23,7 @@
   }
 }
 
-/* 执行工作台：三栏（条目列表 / 判定 / 结果与证据） */
+/* 执行工作台：左侧条目、右侧详情与固定底部判定栏。 */
 .test-order-workspace {
   flex: 1;
   min-height: 0;
@@ -51,7 +51,7 @@
   /* 面板自身是 height:100%，若所在栅格行没有确定高度就会塌成 0，这里兜一个可用高度。 */
   min-height: min(680px, calc(100vh - 300px));
   display: grid;
-  grid-template-columns: 288px minmax(0, 1fr) 356px;
+  grid-template-columns: clamp(288px, 25vw, 380px) minmax(0, 1fr);
   gap: 14px;
 }
 
@@ -240,7 +240,7 @@
   font-size: 11px;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 800px) {
   .test-order-workspace-cols {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -392,9 +392,11 @@
   color: var(--error-tx, #cf1322);
 }
 
-/* 中间内容限宽，长步骤不再横跨整屏 */
 .test-order-content {
-  max-width: 780px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 /* 加入用例弹窗：筛选行与用例详情预览 */
@@ -447,8 +449,410 @@
   line-height: 1.6;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 800px) {
   .test-order-workspace-cols {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* 沿用项目的面板、文字和状态色，只调整执行工作区的信息布局。 */
+.test-order-editor-head {
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  border-bottom: 0;
+}
+
+.test-order-case-title {
+  overflow-wrap: anywhere;
+}
+
+.test-order-execution-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  padding: 0 18px 14px;
+  border-bottom: 1px solid var(--tp-border-soft, #eef0f6);
+}
+
+.test-order-execution-meta .test-order-kv {
+  gap: 8px;
+}
+
+.test-order-steps-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.test-order-steps-table caption {
+  caption-side: top;
+  text-align: left;
+  color: var(--tp-text-secondary, #414755);
+  padding-bottom: 8px;
+}
+
+.test-order-steps-table th,
+.test-order-steps-table td {
+  padding: 12px 14px;
+  border: 1px solid var(--tp-border-soft, #eef0f6);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.test-order-steps-table th {
+  background: var(--ant-color-fill-quaternary);
+  font-weight: 500;
+  color: var(--tp-text-secondary, #414755);
+}
+
+.test-order-steps-table th:first-child {
+  width: 64px;
+}
+
+.test-order-steps-table td:last-child {
+  color: var(--tp-text-secondary, #414755);
+}
+
+.test-order-result-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--tp-border-soft, #eef0f6);
+}
+
+.test-order-execution-footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--tp-border-soft, #eef0f6);
+}
+
+.test-order-entry-navigation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.test-order-verdict-actions {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.test-order-shortcuts {
+  font-size: 11px;
+}
+
+.test-order-workspace .test-order-execution-footer .test-order-judge-btn {
+  height: 36px;
+  min-width: 80px;
+  padding: 0 16px;
+  font-size: 13px;
+}
+
+.test-order-workspace .test-order-execution-footer .test-order-judge {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.test-order-workspace .test-order-content {
+  max-width: none;
+  gap: 24px;
+}
+
+.test-order-workspace .test-order-execution-footer {
+  min-height: 72px;
+  background: var(--ant-color-bg-container);
+}
+
+.test-order-workspace .test-order-steps-table caption {
+  caption-side: top;
+  padding-top: 0;
+  font-weight: 500;
+}
+
+.test-order-judge-btn:focus-visible {
+  outline: 2px solid var(--primary, #1677ff);
+  outline-offset: 2px;
+}
+
+.workbench-page .test-order-orderbar {
+  height: auto;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 800px) {
+  .test-order-workspace-cols > .api-case-sidebar {
+    max-height: 300px;
+  }
+
+  .test-order-editor-body {
+    min-height: 280px;
+  }
+
+  .test-order-steps-table th,
+  .test-order-steps-table td {
+    padding: 8px;
+  }
+}
+
+/* 执行详情按阅读层级展开，使用平台主题色兼容明暗主题。 */
+.test-order-workspace .test-order-editor-head {
+  padding: 20px 24px 10px;
+}
+
+.test-order-workspace .test-order-case-title {
+  font-size: 18px;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+.test-order-workspace .test-order-execution-meta {
+  padding: 0 24px 18px;
+}
+
+.test-order-workspace .test-order-editor-body {
+  padding: 24px;
+}
+
+.test-order-workspace .test-order-content > .test-order-block {
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: var(--ant-border-radius-lg, 8px);
+  background: var(--ant-color-fill-quaternary, rgba(84, 104, 132, 0.04));
+}
+
+.test-order-workspace .test-order-block > .ant-typography,
+.test-order-workspace .test-order-steps-table caption {
+  color: var(--ant-color-text, var(--tp-text-secondary, #414755));
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+.test-order-workspace .test-order-block > .ant-typography::before,
+.test-order-workspace .test-order-steps-table caption::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 14px;
+  margin-right: 8px;
+  vertical-align: -2px;
+  border-radius: 2px;
+  background: var(--primary, #1677ff);
+}
+
+.test-order-workspace .test-order-preconditions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.test-order-workspace .test-order-preconditions > div {
+  position: relative;
+  padding-left: 14px;
+}
+
+.test-order-workspace .test-order-preconditions > div::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--ant-color-text-tertiary, #8c96a5);
+}
+
+.test-order-workspace .test-order-steps-table {
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.test-order-workspace .test-order-steps-table caption {
+  padding-bottom: 14px;
+}
+
+.test-order-workspace .test-order-steps-table th,
+.test-order-workspace .test-order-steps-table td {
+  border-left: 0;
+  border-right: 0;
+  padding: 18px 20px;
+}
+
+.test-order-workspace .test-order-steps-table th {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.test-order-workspace .test-order-steps-table tbody tr {
+  height: 80px;
+}
+
+.test-order-workspace .test-order-steps-table td:last-child {
+  background: var(--ant-color-fill-quaternary, rgba(84, 104, 132, 0.04));
+}
+
+.test-order-workspace .test-order-step-no {
+  width: 26px;
+  height: 26px;
+  background: var(--primary-soft, #e6f4ff);
+  color: var(--primary, #1677ff);
+  font-size: 12px;
+}
+
+@media (max-width: 800px) {
+  .test-order-workspace .test-order-editor-head {
+    padding: 16px 16px 10px;
+  }
+
+  .test-order-workspace .test-order-execution-meta {
+    padding: 0 16px 16px;
+  }
+
+  .test-order-workspace .test-order-editor-body {
+    padding: 16px;
+  }
+
+  .test-order-workspace .test-order-steps-table th,
+  .test-order-workspace .test-order-steps-table td {
+    padding: 12px 10px;
+  }
+}
+
+/* 执行导航：突出标题，状态只保留标签，选中态与阅读区主色一致。 */
+.test-order-workspace .test-order-sidebar-toolbar {
+  align-items: stretch;
+  gap: 12px;
+}
+
+.test-order-workspace .test-order-status-filters {
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+.test-order-owner-filter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.test-order-owner-filter > .ant-typography {
+  font-size: 12px;
+}
+
+/* 工作台侧栏是执行条目的主列表，行做得紧凑些：一行标题最多两行，其余间距按可读性下限收。 */
+.test-order-workspace .api-case-nav-list {
+  gap: 4px;
+}
+
+.test-order-workspace .test-order-nav-row {
+  position: relative;
+  align-items: flex-start;
+  min-height: 0;
+  padding: 6px 8px 6px 10px;
+  gap: 8px;
+}
+
+.test-order-workspace .test-order-nav-row.active {
+  border-color: transparent;
+  background: var(--primary-soft, #e6f4ff);
+}
+
+.test-order-workspace .test-order-nav-row.active::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 0;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--primary, #1677ff);
+}
+
+/* 勾选框与移除按钮跟标题首行对齐，多行标题时不会浮在垂直中间。 */
+.test-order-workspace .test-order-nav-row > .ant-checkbox-wrapper,
+.test-order-workspace .test-order-nav-remove {
+  margin-top: 1px;
+}
+
+.test-order-workspace .test-order-nav-title {
+  font-size: 12.5px;
+  line-height: 1.4;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.test-order-workspace .test-order-nav-index {
+  font-size: 11.5px;
+  line-height: 17.5px;
+}
+
+.test-order-workspace .test-order-nav-body {
+  gap: 4px;
+}
+
+.test-order-workspace .test-order-nav-meta {
+  font-size: 11.5px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.test-order-workspace .test-order-nav-meta > span:last-child {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.test-order-workspace .test-order-nav-meta .ant-tag {
+  padding-inline: 5px;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.test-order-workspace .test-order-sidebar-foot {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.test-order-selection-count {
+  grid-column: 1 / -1;
+}
+
+.test-order-nav-row:focus-within .test-order-nav-remove {
+  opacity: 1;
+}
+
+/* 与 API 详情工作台的外层面板保持一致，标题栏也沿圆角裁切。 */
+.test-order-workspace > .test-order-orderbar,
+.test-order-workspace-cols > .workbench-panel {
+  border-radius: 18px;
+  overflow: hidden;
+}
+/* 用例图谱弹框：工具条与画布沿用 ai-relations 那套布局，这里只补状态区与占位的差异。 */
+.test-order-graph-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 运行中的占位：图标与提示上下排列（ai-relations-page-loading 默认是横排）。 */
+.test-order-graph-loading {
+  flex-direction: column;
+  gap: 10px;
 }

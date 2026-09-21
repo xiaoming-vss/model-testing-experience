@@ -18,7 +18,6 @@ from testing_agent.handlers.function_test_suite import (
     create_function_suite,
     delete_function_suite,
     get_function_suite,
-    get_function_suite_requirement_case_view,
     list_function_suites,
     list_project_function_suites,
     update_function_suite,
@@ -32,10 +31,7 @@ from testing_agent.schemas.function_test_case import (
     FunctionCaseZentaoImportResponse,
     FunctionSuitesZentaoImportResponse,
 )
-from testing_agent.schemas.function_test_suite import (
-    FunctionSuiteCaseViewResponse,
-    FunctionSuiteResponse,
-)
+from testing_agent.schemas.function_test_suite import FunctionSuiteResponse
 
 router = APIRouter()
 
@@ -80,10 +76,6 @@ router.get(
     "/function-test-suites/{suite_id}/cases",
     response_model=ApiResponse[ListResponse[FunctionCaseResponse]],
 )(list_function_cases)
-router.get(
-    "/function-test-suites/{suite_id}/requirement-case-view",
-    response_model=ApiResponse[FunctionSuiteCaseViewResponse],
-)(get_function_suite_requirement_case_view)
 router.get(
     "/function-test-cases/{case_id}",
     response_model=ApiResponse[FunctionCaseResponse],

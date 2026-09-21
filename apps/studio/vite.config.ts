@@ -33,6 +33,8 @@ export default defineConfig(({ mode }) => {
       setupFiles: './src/test/setup.ts',
       css: true,
       testTimeout: 30_000,
+      // 页面测试是重型 jsdom 渲染，并发过高会互相抢 CPU 造成超时抖动；限制 worker 数。
+      maxWorkers: 4,
     },
   }
 })

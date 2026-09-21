@@ -1,3 +1,4 @@
+import { footerRange } from '@/shared/utils/pagination'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { AppIcon } from '@/shared/icons'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
@@ -138,13 +139,6 @@ function getUnifiedTaskKey(item: UnifiedAiTask) {
 function getUnifiedTaskTime(item: UnifiedAiTask) {
   const time = new Date(item.task.updatedAt || item.task.createdAt || '').getTime()
   return Number.isNaN(time) ? 0 : time
-}
-
-function footerRange(total: number, page: number, pageSize: number) {
-  if (total === 0) return '显示第 0 条 - 第 0 条，共 0 条'
-  const start = (page - 1) * pageSize + 1
-  const end = Math.min(page * pageSize, total)
-  return `显示第 ${start} 条 - 第 ${end} 条，共 ${total} 条`
 }
 
 function getRunSortTime(run: ApiCaseGenerateTaskRun | FunctionalCaseGenerateTaskRun | UiCaseGenerateTaskRun | RequirementAnalysisTaskRun) {

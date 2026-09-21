@@ -1,3 +1,4 @@
+import { saveBlob } from '@/shared/utils/download'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { usePersonalConnectionChoice } from '@/features/base-services/components/usePersonalConnectionChoice'
@@ -484,7 +485,6 @@ function TrendBarChart({ data }: { data: NormalizedDailyMetrics[] }) {
   )
 }
 
-
 type TestReportGenerateFormValues = {
   connectionId: string
   instruction?: string
@@ -516,15 +516,6 @@ function getRunId(run?: TestReportGenerateRun) {
 
 function getRunReportMarkdown(run?: TestReportGenerateRun) {
   return run?.resultYaml ?? run?.result_yaml ?? ''
-}
-
-function saveBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  link.click()
-  URL.revokeObjectURL(url)
 }
 
 function renderInlineMarkdown(text: string) {

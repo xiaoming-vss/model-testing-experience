@@ -30,7 +30,9 @@ import {
 
 const { Text } = Typography
 
-const PAGE_SIZE = 20
+const DEFAULT_PAGE_SIZE = 20
+/** 每页条数的可选项，上限对齐后端 pageSize 的 le=200。 */
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 
 /** 下拉里的「全部」选项值，与真实 ID 区分开。 */
 const ALL = 'all'
@@ -68,6 +70,8 @@ export function AddCasesFromLibraryModal({
   const [keywordInput, setKeywordInput] = useState('')
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(1)
+  // 每页条数是查看偏好，关掉弹窗再打开仍沿用上次的选择。
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [selectedCaseIds, setSelectedCaseIds] = useState<string[]>([])
   const [detailItem, setDetailItem] = useState<FunctionCaseLibraryItem | null>(null)
 
@@ -126,6 +130,7 @@ export function AddCasesFromLibraryModal({
       suiteFilter,
       keyword,
       page,
+      pageSize,
     ],
     queryFn: () =>
       api.getProjectFunctionTestCases(projectId!, {
@@ -134,7 +139,7 @@ export function AddCasesFromLibraryModal({
         suiteId: suiteFilter === ALL ? '' : suiteFilter,
         keyword,
         page,
-        pageSize: PAGE_SIZE,
+        pageSize,
       }),
     enabled: open && Boolean(projectId),
   })
@@ -154,7 +159,8 @@ export function AddCasesFromLibraryModal({
       queryClient.invalidateQueries({ queryKey: ['testOrderEntries', orderId] })
       queryClient.invalidateQueries({ queryKey: ['testOrders'] })
       onAdded?.()
-      onClose()
+      // 保持弹窗与当前筛选、页码，连续挑用例时不必重新筛一遍；加入过的用例会随执行条目刷新变为不可再选。
+      setSelectedCaseIds([])
     },
     onError: (error) => message.error(getErrorMessage(error)),
   })
@@ -351,11 +357,22 @@ export function AddCasesFromLibraryModal({
           }}
           pagination={{
             current: page,
-            pageSize: PAGE_SIZE,
+            pageSize,
             total,
             size: 'small',
-            showSizeChanger: false,
-            onChange: (nextPage) => setPage(nextPage),
+            showSizeChanger: true,
+            pageSizeOptions: PAGE_SIZE_OPTIONS,
+            // 全站没有引 antd 的 zh_CN，这里单独把每页条数的文案本地化。
+            locale: { items_per_page: '条/页' },
+            onChange: (nextPage, nextPageSize) => {
+              // 改每页条数时回到第一页，否则页码可能落到新范围之外。
+              if (nextPageSize !== pageSize) {
+                setPageSize(nextPageSize)
+                setPage(1)
+                return
+              }
+              setPage(nextPage)
+            },
           }}
         />
       </Space>
