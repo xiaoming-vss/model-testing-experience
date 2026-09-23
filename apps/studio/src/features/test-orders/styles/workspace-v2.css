@@ -1,0 +1,571 @@
+/*
+ * 测试单执行工作台（测试单列表点名称进来的页面）。
+ *
+ * 三栏：执行用例清单 / 用例详情 / 执行判定与缺陷。token 与色盘来自
+ * shared/styles/surface-tokens.css，页面根节点带 `tp-surface`、板面带 `tp-board`（见 STRUCTURE.md §三）。
+ * 颜色只引用 token：这个文件是新增的，不在 S8 的存量豁免里。
+ *
+ * 与设计稿的差异：设计稿把每个步骤都画了「通过 / 失败 / 阻塞」判定按钮，
+ * 但条目结论是整条一个（TestOrderEntry.status），没有逐步结果模型，
+ * 所以步骤保持只读表格——`TestOrderWorkspacePage.test.tsx` 也断言了不应出现逐步判定按钮。
+ */
+
+/* ===== 板面 ===== */
+
+.test-order-workspace-page .test-order-workspace {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ===== 顶栏 ===== */
+
+.test-order-workspace-page .test-order-orderbar {
+  /* .workbench-panel 全局是 flex-direction: column 且 height: 100%，顶栏要显式改回一行并收掉满高。 */
+  flex: 0 0 auto;
+  flex-direction: row;
+  height: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 10px 16px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: 12px;
+  background: var(--srf-card);
+}
+
+.test-order-workspace-page .test-order-orderbar-id {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.test-order-workspace-page .test-order-orderbar-name {
+  color: var(--srf-text);
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 700;
+}
+
+.test-order-workspace-page .test-order-orderbar-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--srf-tone-border, var(--srf-card-border));
+  border-radius: 4px;
+  background: var(--srf-tone-bg, var(--srf-chip));
+  color: var(--srf-tone-text, var(--srf-chip-text));
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.test-order-workspace-page .test-order-orderbar-progress {
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== 三栏 ===== */
+
+.test-order-workspace-page .test-order-workspace-cols {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) minmax(280px, 340px);
+  gap: 12px;
+  align-items: stretch;
+  flex: 1 1 auto;
+  /* 三块面板自身要靠拉伸撑满，栅格行必须有确定高度；栅格高度塌了面板就跟着塌成 0。 */
+  min-height: min(680px, calc(100vh - 300px));
+}
+
+/* ===== 左栏：执行用例清单 ===== */
+
+.test-order-workspace-page .test-order-side-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--srf-card-border);
+  border-radius: 12px;
+  background: var(--srf-card);
+  overflow: hidden;
+}
+
+.test-order-workspace-page .test-order-side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--srf-divider);
+}
+
+.test-order-workspace-page .test-order-side-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--srf-text);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+}
+
+.test-order-workspace-page .test-order-side-count {
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.test-order-workspace-page .test-order-side-refresh.ant-btn {
+  color: var(--srf-text-muted);
+}
+
+.test-order-workspace-page .test-order-side-refresh.ant-btn:hover {
+  color: var(--srf-accent);
+}
+
+/* 执行进度：设计稿放在清单顶部。 */
+.test-order-workspace-page .test-order-side-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--srf-divider);
+}
+
+.test-order-workspace-page .test-order-side-progress-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--srf-text-secondary);
+  font-size: 11px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.test-order-workspace-page .test-order-side-progress-track {
+  display: block;
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--srf-track);
+}
+
+.test-order-workspace-page .test-order-side-progress-fill {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: inherit;
+  background: var(--srf-accent);
+}
+
+.test-order-workspace-page .test-order-side-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--srf-divider);
+}
+
+.test-order-workspace-page .test-order-status-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.test-order-workspace-page .test-order-owner-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--srf-text-muted);
+  font-size: 11px;
+}
+
+.test-order-workspace-page .test-order-side-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+}
+
+.test-order-workspace-page .test-order-nav-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--srf-radius-control);
+}
+
+.test-order-workspace-page .test-order-nav-row:hover {
+  background: var(--srf-hover);
+}
+
+.test-order-workspace-page .test-order-nav-row.active {
+  border-color: var(--srf-accent-border);
+  background: var(--srf-accent-soft);
+}
+
+.test-order-workspace-page .test-order-nav-item {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  /* 卡片里是三段：编号行 / 标题 / 元信息，必须纵向排。 */
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 6px 2px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.test-order-workspace-page .test-order-nav-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.test-order-workspace-page .test-order-nav-prio,
+.test-order-workspace-page .test-order-nav-status {
+  padding: 1px 6px;
+  border: 1px solid var(--srf-tone-border, transparent);
+  border-radius: 4px;
+  background: var(--srf-tone-bg, var(--srf-chip));
+  color: var(--srf-tone-text, var(--srf-chip-text));
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.test-order-workspace-page .test-order-nav-prio {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 600;
+}
+
+.test-order-workspace-page .test-order-nav-index {
+  flex: 0 0 auto;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--srf-chip);
+  color: var(--srf-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.test-order-workspace-page .test-order-nav-row.active .test-order-nav-index {
+  background: var(--srf-count-badge);
+  color: var(--srf-accent-strong);
+}
+
+.test-order-workspace-page .test-order-nav-title {
+  color: var(--srf-text);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.test-order-workspace-page .test-order-nav-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  color: var(--srf-text-muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.test-order-workspace-page .test-order-nav-remove {
+  flex: 0 0 auto;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--srf-text-muted);
+  font: inherit;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.test-order-workspace-page .test-order-nav-remove:hover {
+  color: var(--srf-danger);
+}
+
+.test-order-workspace-page .test-order-sidebar-foot {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--srf-divider);
+  background: var(--srf-hover);
+}
+
+.test-order-workspace-page .test-order-selection-count {
+  color: var(--srf-text-secondary);
+  font-size: 11px;
+}
+
+/* ===== 中栏：用例详情 ===== */
+
+.test-order-workspace-page .test-order-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  border: 1px solid var(--srf-card-border);
+  border-radius: 12px;
+  background: var(--srf-card);
+  overflow: hidden;
+}
+
+.test-order-workspace-page .test-order-editor-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--srf-divider);
+}
+
+/* 用例序号：该测试单内的条目序号。 */
+.test-order-workspace-page .test-order-case-no {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border: 1px solid var(--srf-accent-border);
+  border-radius: 6px;
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent-strong);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.test-order-workspace-page .test-order-case-title {
+  min-width: 0;
+  color: var(--srf-text);
+  font-size: 15px;
+  line-height: 24px;
+  font-weight: 700;
+}
+
+.test-order-workspace-page .test-order-execution-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--srf-divider);
+}
+
+.test-order-workspace-page .test-order-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: 999px;
+  background: var(--srf-hover);
+  color: var(--srf-text-secondary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.test-order-workspace-page .test-order-meta-pill strong {
+  color: var(--srf-text);
+  font-weight: 600;
+}
+
+.test-order-workspace-page .test-order-editor-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 16px 16px;
+}
+
+/* 中栏的区块：白底卡片 + 一条竖条的区块头。 */
+.test-order-workspace-page .test-order-section {
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+  overflow: hidden;
+}
+
+.test-order-workspace-page .test-order-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--srf-tone-border, var(--srf-divider));
+  background: var(--srf-tone-bg, var(--srf-hover));
+}
+
+.test-order-workspace-page .test-order-section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--srf-text);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+}
+
+.test-order-workspace-page .test-order-section-title .anticon {
+  color: var(--srf-tone-text, var(--srf-accent));
+  font-size: 14px;
+}
+
+.test-order-workspace-page .test-order-section-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--srf-chip);
+  color: var(--srf-tone-text, var(--srf-text-muted));
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.test-order-workspace-page .test-order-section-body {
+  padding: 12px 14px 14px;
+}
+
+/* 前置条件：01 / 02 编号行。 */
+.test-order-workspace-page .test-order-precondition-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.test-order-workspace-page .test-order-precondition-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--srf-text);
+  font-size: 13px;
+  line-height: 22px;
+}
+
+.test-order-workspace-page .test-order-precondition-no {
+  flex: 0 0 auto;
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 22px;
+}
+
+.test-order-workspace-page .test-order-precondition-empty {
+  color: var(--srf-text-muted);
+  font-size: 12px;
+}
+
+/* 步骤表：只读，编号 + 操作说明 + 预期结果。 */
+.test-order-workspace-page .test-order-steps-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.test-order-workspace-page .test-order-steps-table caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.test-order-workspace-page .test-order-steps-table th {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--srf-card-border);
+  color: var(--srf-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.test-order-workspace-page .test-order-steps-table td {
+  padding: 10px;
+  border-bottom: 1px solid var(--srf-divider);
+  color: var(--srf-text);
+  line-height: 22px;
+  vertical-align: top;
+}
+
+.test-order-workspace-page .test-order-steps-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.test-order-workspace-page .test-order-step-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--srf-chip);
+  color: var(--srf-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.test-order-workspace-page .test-order-steps-empty {
+  color: var(--srf-text-muted);
+  font-size: 12px;
+}
+
+/* ===== 窄屏 ===== */
+
+@media (max-width: 1280px) {
+  .test-order-workspace-page .test-order-workspace-cols {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  }
+
+  .test-order-workspace-page .test-order-side-panel {
+    grid-column: 1 / -1;
+    max-height: 460px;
+  }
+}
+
+@media (max-width: 900px) {
+  .test-order-workspace-page .test-order-workspace-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .test-order-workspace-page .test-order-side-panel {
+    max-height: none;
+  }
+
+  .test-order-workspace-page .test-order-sidebar-foot {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

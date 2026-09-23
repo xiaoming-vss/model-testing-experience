@@ -1,0 +1,339 @@
+/*
+ * 列表页共用的表面 token 与色盘。
+ *
+ * 用例库与测试单是同一套视觉语言（白色卡片 + 描边 + 胶囊 + 色块），取值必须完全一致，
+ * 所以 token 定义在这里，两个页面各自把自己需要的规则写在页面级样式里。
+ * 页面根节点加上 `tp-surface` 类即可拿到这些变量；只挂在 `.case-library-page` 或
+ * `.test-orders-page` 上的话，变量解析不到。
+ *
+ * token 前缀用 `--srf-`（surface）：`--tp-` 已被 workbench.css 的基础 token 占用。
+ */
+
+.tp-surface {
+  --srf-card: #ffffff;
+  --srf-card-border: #e2e8f0;
+  --srf-divider: #f1f5f9;
+  --srf-text: #0f172a;
+  --srf-text-secondary: #64748b;
+  --srf-text-muted: #94a3b8;
+  --srf-accent: #2563eb;
+  --srf-accent-strong: #1d4ed8;
+  --srf-accent-soft: #eff6ff;
+  --srf-accent-border: #bfdbfe;
+  --srf-hover: #f8fafc;
+  --srf-chip: #f1f5f9;
+  --srf-chip-text: #475569;
+  /* 选中计数徽标的底色，比 accent-soft 再实一点。 */
+  --srf-count-badge: #dbeafe;
+  /* 分段进度条的底槽与待执行段。 */
+  --srf-track: #e9eef5;
+  --srf-track-pending: #cbd5e1;
+  /* 用例结论 / 执行结果的语义色，与 utils/testOrderStatus.ts 的状态圆点同源。 */
+  --srf-result-passed: #52c41a;
+  --srf-result-failed: #ff4d4f;
+  --srf-result-blocked: #faad14;
+  --srf-result-skipped: #bfbfbf;
+  /* 行内删除动作的悬停色。 */
+  --srf-danger: #e5484d;
+  /* 测试集导航里的文件夹图标。 */
+  --srf-folder: #f59e0b;
+  /* 主色实底上的文字（例如步骤序号徽标的选中态）。 */
+  --srf-on-accent: #ffffff;
+  /*
+   * 终端面：API / UI 详情页的控制台与回放舞台。设计稿把这块画成深色反色面，
+   * 且**两套主题下都是深色**（终端没有浅色形态），所以深浅两个分支的取值相同，
+   * 在深色分支里再声明一次是为了满足「每个 token 深浅成套」的约定，不是笔误。
+   */
+  --srf-terminal-bg: #0f172a;
+  --srf-terminal-surface: #111827;
+  --srf-terminal-bar: rgba(15, 23, 42, 0.92);
+  --srf-terminal-text: #cbd5e1;
+  --srf-terminal-title: #e2e8f0;
+  --srf-terminal-muted: #64748b;
+  --srf-terminal-chip: rgba(255, 255, 255, 0.92);
+  --srf-terminal-accent: #4edea3;
+  --srf-terminal-info: #93c5fd;
+  --srf-terminal-danger: #f87171;
+  --srf-terminal-danger-text: #fca5a5;
+  --srf-radius-card: 12px;
+  --srf-radius-control: 8px;
+}
+
+:root[data-theme='dark'] .tp-surface {
+  --srf-card: #161b22;
+  --srf-card-border: rgba(48, 54, 61, 0.9);
+  --srf-divider: rgba(48, 54, 61, 0.6);
+  --srf-text: #f0f6fc;
+  --srf-text-secondary: #8b949e;
+  --srf-text-muted: #6e7681;
+  --srf-accent: #58a6ff;
+  --srf-accent-strong: #79c0ff;
+  --srf-accent-soft: rgba(56, 139, 253, 0.15);
+  --srf-accent-border: rgba(56, 139, 253, 0.32);
+  --srf-hover: rgba(33, 38, 45, 0.82);
+  --srf-chip: #21262d;
+  --srf-chip-text: #8b949e;
+  --srf-count-badge: rgba(56, 139, 253, 0.2);
+  --srf-track: #21262d;
+  --srf-track-pending: #30363d;
+  --srf-result-passed: #3fb950;
+  --srf-result-failed: #f85149;
+  --srf-result-blocked: #d29922;
+  --srf-result-skipped: #6e7681;
+  --srf-danger: #ff7b72;
+  --srf-folder: #d29922;
+  --srf-on-accent: #ffffff;
+  /* 终端面在深色主题下取值不变，理由见浅色分支的注释。 */
+  --srf-terminal-bg: #0f172a;
+  --srf-terminal-surface: #111827;
+  --srf-terminal-bar: rgba(15, 23, 42, 0.92);
+  --srf-terminal-text: #cbd5e1;
+  --srf-terminal-title: #e2e8f0;
+  --srf-terminal-muted: #64748b;
+  --srf-terminal-chip: rgba(255, 255, 255, 0.92);
+  --srf-terminal-accent: #4edea3;
+  --srf-terminal-info: #93c5fd;
+  --srf-terminal-danger: #f87171;
+  --srf-terminal-danger-text: #fca5a5;
+}
+
+/*
+ * 九色盘：用例类型（功能/安全/异常…）与测试单状态（未开始/执行中/已完成）共用。
+ * 深色值取 GitHub 深色语义色，底色统一是 15% 透明度的同色。
+ */
+.tp-surface .tone-blue {
+  --srf-tone-text: #1d4ed8;
+  --srf-tone-bg: #eff6ff;
+  --srf-tone-border: #bfdbfe;
+}
+
+.tp-surface .tone-indigo {
+  --srf-tone-text: #4338ca;
+  --srf-tone-bg: #eef2ff;
+  --srf-tone-border: #c7d2fe;
+}
+
+.tp-surface .tone-purple {
+  --srf-tone-text: #7e22ce;
+  --srf-tone-bg: #faf5ff;
+  --srf-tone-border: #e9d5ff;
+}
+
+.tp-surface .tone-teal {
+  --srf-tone-text: #0f766e;
+  --srf-tone-bg: #f0fdfa;
+  --srf-tone-border: #99f6e4;
+}
+
+.tp-surface .tone-green {
+  --srf-tone-text: #15803d;
+  --srf-tone-bg: #f0fdf4;
+  --srf-tone-border: #bbf7d0;
+}
+
+.tp-surface .tone-amber {
+  --srf-tone-text: #b45309;
+  --srf-tone-bg: #fffbeb;
+  --srf-tone-border: #fde68a;
+}
+
+.tp-surface .tone-orange {
+  --srf-tone-text: #c2410c;
+  --srf-tone-bg: #fff7ed;
+  --srf-tone-border: #fed7aa;
+}
+
+.tp-surface .tone-red {
+  --srf-tone-text: #b91c1c;
+  --srf-tone-bg: #fef2f2;
+  --srf-tone-border: #fecaca;
+}
+
+.tp-surface .tone-slate {
+  --srf-tone-text: #475569;
+  --srf-tone-bg: #f8fafc;
+  --srf-tone-border: #e2e8f0;
+}
+
+:root[data-theme='dark'] .tp-surface .tone-blue {
+  --srf-tone-text: #79c0ff;
+  --srf-tone-bg: rgba(56, 139, 253, 0.15);
+  --srf-tone-border: rgba(56, 139, 253, 0.32);
+}
+
+:root[data-theme='dark'] .tp-surface .tone-indigo {
+  --srf-tone-text: #a5b4fc;
+  --srf-tone-bg: rgba(99, 102, 241, 0.15);
+  --srf-tone-border: rgba(99, 102, 241, 0.32);
+}
+
+:root[data-theme='dark'] .tp-surface .tone-purple {
+  --srf-tone-text: #d2a8ff;
+  --srf-tone-bg: rgba(163, 113, 247, 0.15);
+  --srf-tone-border: rgba(163, 113, 247, 0.32);
+}
+
+:root[data-theme='dark'] .tp-surface .tone-teal {
+  --srf-tone-text: #56d4dd;
+  --srf-tone-bg: rgba(45, 164, 176, 0.15);
+  --srf-tone-border: rgba(45, 164, 176, 0.32);
+}
+
+:root[data-theme='dark'] .tp-surface .tone-green {
+  --srf-tone-text: #7ee787;
+  --srf-tone-bg: rgba(46, 160, 67, 0.15);
+  --srf-tone-border: rgba(46, 160, 67, 0.32);
+}
+
+:root[data-theme='dark'] .tp-surface .tone-amber {
+  --srf-tone-text: #d29922;
+  --srf-tone-bg: rgba(187, 128, 9, 0.15);
+  --srf-tone-border: rgba(187, 128, 9, 0.32);
+}
+
+:root[data-theme='dark'] .tp-surface .tone-orange {
+  --srf-tone-text: #ffa657;
+  --srf-tone-bg: rgba(219, 109, 40, 0.15);
+  --srf-tone-border: rgba(219, 109, 40, 0.32);
+}
+
+:root[data-theme='dark'] .tp-surface .tone-red {
+  --srf-tone-text: #ff7b72;
+  --srf-tone-bg: rgba(248, 81, 73, 0.15);
+  --srf-tone-border: rgba(248, 81, 73, 0.32);
+}
+
+:root[data-theme='dark'] .tp-surface .tone-slate {
+  --srf-tone-text: #8b949e;
+  --srf-tone-bg: #21262d;
+  --srf-tone-border: #30363d;
+}
+
+/*
+ * 共用小组件：快速过滤条与里面的胶囊，两个列表页完全一致。
+ * 只提供布局与外观，边框之类的差异（例如用例库的过滤条要一条分隔线）留在页面级样式里补。
+ */
+.tp-surface .tp-quickbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tp-surface .tp-quick-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tp-surface .tp-quick-label {
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+}
+
+.tp-surface .tp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--srf-chip-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.tp-surface .tp-chip:hover {
+  background: var(--srf-chip);
+}
+
+.tp-surface .tp-chip.active {
+  border-color: var(--srf-accent-border);
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent);
+  font-weight: 600;
+}
+
+.tp-surface .tp-chip-count {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.tp-surface .tp-selection {
+  color: var(--srf-text-muted);
+  font-size: 12px;
+}
+
+.tp-surface .tp-selection strong {
+  color: var(--srf-text-secondary);
+  font-weight: 600;
+}
+
+/** 色调胶囊：用例类型标签与测试单状态胶囊共用同一套底色 / 描边 / 文字色。 */
+.tp-surface .tp-tone-tag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 2px 8px;
+  border: 1px solid var(--srf-tone-border, var(--srf-card-border));
+  border-radius: 999px;
+  background: var(--srf-tone-bg, var(--srf-chip));
+  color: var(--srf-tone-text, var(--srf-chip-text));
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 列表页的板面：本身不要表面，让下面的卡片浮在画布上。
+   .api-automation-content 已经给了页面内距（12px 24px 20px），面板不再补一层。
+   testing/styles/index.css 里 .app-shell-macos .testing-page .api-automation-content > .workbench-panel
+   用 !important 给了它玻璃渐变表面，所以这里要带 .app-shell-macos .testing-page 前缀把权重压过去。 */
+.tp-surface .tp-board,
+.testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+/* 深色下 app/styles/workbench.css 的玻璃板面规则是
+   `:root[data-theme='dark'] .app-shell.app-shell-macos :is(<页面类…>) :is(<面板类…>)`，
+   两个 `:is()` 各算 1 分，合起来与上面这条同权重（都是 0,6,0）——同权重就靠样式表顺序决胜，
+   顺序一变深色下的玻璃底、内高光与 28px 阴影就会重新盖回来（深色下表现为内容区多出一层容器）。
+   多带一个 `:root[data-theme='dark']` 把深色这一支抬到 0,7,0，顺序依赖就没有了。 */
+.app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board,
+:root[data-theme='dark'] .app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* 筛选标签（「迭代」「需求」…）在旧外壳里是一枚蓝底小胶囊，深色下还会变成绿底（detail.css 的深色规则），
+   设计稿里它是裸的弱化文字。这里统一收掉；不直接改那两条旧规则，是因为它们同时作用于
+   测试单的「加入用例」弹窗，那个弹窗不在 tp-surface 里，不该跟着变。 */
+.app-shell-macos .testing-page .tp-surface .api-automation-content .api-filter-field-label,
+:root[data-theme='dark'] .tp-surface .api-filter-field-label {
+  border: 0;
+  background: transparent;
+}
+
+/* 设计稿里筛选行是一条裸工具栏，不是面板表面；同样要压掉 macOS 玻璃底色。 */

@@ -1,10 +1,14 @@
-import { Text, Title } from '@/features/ui-automation/utils/detailView'
+import { Text } from '@/features/ui-automation/utils/detailView'
 import { UiCaseImportModal } from '@/features/ui-automation/components/UiCaseImportModal'
+import { UiCaseControlRibbon } from '@/features/ui-automation/components/UiCaseControlRibbon'
+import { UiCaseMetaBar } from '@/features/ui-automation/components/UiCaseMetaBar'
+import { UiCaseOrderPopover } from '@/features/ui-automation/components/UiCaseOrderPopover'
+import { UiRunInspector } from '@/features/ui-automation/components/UiRunInspector'
 import { UiStepEditor } from '@/features/ui-automation/components/UiStepEditor'
+import { UiSuiteDetailToolbar } from '@/features/ui-automation/components/UiSuiteDetailToolbar'
 import { UiSuiteRunHistory } from '@/features/ui-automation/components/UiSuiteRunHistory'
 import { UiSuiteRunReport } from '@/features/ui-automation/components/UiSuiteRunReport'
-import { EDITOR_SPLITTER_HEIGHT, MIN_EDITOR_RESULT_HEIGHT, MIN_EDITOR_TOP_HEIGHT, UI_TEMPLATE_FIELD_LABELS, isYamlFileName, type CaseImportMode, type UiTemplateFieldKey } from '@/features/ui-automation/utils/detailView'
-import { renderUiRunStepResultList } from '@/features/ui-automation/utils/renderUiRunSteps'
+import { UI_TEMPLATE_FIELD_LABELS, isYamlFileName, type CaseImportMode, type UiTemplateFieldKey } from '@/features/ui-automation/utils/detailView'
 
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
@@ -17,7 +21,6 @@ import {
   type UiTestSuiteRunReport,
   type UiTestSuiteRunSummary
 } from '@/services/api'
-import { ActionButton } from '@/shared/components/ActionButton'
 import { uiBuiltinTemplateFunctions } from '@/shared/constants/templateFunctions'
 import { message } from '@/shared/utils/feedback'
 import {
@@ -25,23 +28,18 @@ import {
   normalizeUiTestCaseId
 } from '@/utils/format'
 import { buildUiTestCaseUpdatePayload } from '@/utils/updatePayload'
-import { ArrowLeftOutlined, CodeOutlined, UnorderedListOutlined } from '@ant-design/icons'
+import { CodeOutlined, UnorderedListOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InputRef } from 'antd'
-import { Alert, Button, Card, Empty, Form, Input, Popconfirm, Popover, Segmented, Switch, Tag, Tooltip } from 'antd'
+import { Alert, Button, Empty, Form, Popover } from 'antd'
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { UiTestPanelSplitter } from '../components/UiTestPanelSplitter'
-import {
-  uiTestRunViewOptions,
-  type UiSuiteRunReportView,
-  type UiTestRunView
-} from '../config/stepConfig'
+import type { UiSuiteRunReportView } from '../config/stepConfig'
 import { formatUiScreenshotPolicy } from '../constants/defaultRunConfig'
+import { formatUiCaseSerial, formatUiRunRelativeTime, getUiSuiteReadiness } from '../utils/detailRunView'
 import {
   buildUiSuiteDebugRunPayload,
   buildUiSuiteRunPayload,
-  getExecutionStatusMeta,
   getUiTestCaseRunId,
   getUiTestSuiteRunId,
   isUiRunPollingStatus
@@ -51,19 +49,19 @@ import {
   EMPTY_UI_TEST_CASES,
   buildUiTestCaseFormValues,
   createDefaultUiTestCaseFormValues,
-  formatOptionalMs,
   formatViewportText,
-  getUiTestCaseStepCount,
   moveArrayItem,
   moveExpandedStepIndex,
-  prettyPrintValue,
   serializeSteps,
   serializeUiTestCaseValues,
   sortUiTestCases,
   type UiTestCaseFormValues,
   type UiTestStepFormValue
 } from '../utils/uiTestCaseEditor'
-import { getNextEditorTopHeight } from '../utils/uiTestPanelResize'
+import '@/shared/styles/surface-tokens.css'
+import '@/features/ui-automation/styles/detail-workbench-v2.css'
+import '@/features/ui-automation/styles/detail-pipeline-v2.css'
+import '@/features/ui-automation/styles/detail-inspector-v2.css'
 
 export function UiTestSuiteCasePage() {
   const navigate = useNavigate()
@@ -71,7 +69,6 @@ export function UiTestSuiteCasePage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { suiteId = '' } = useParams<{ suiteId: string }>()
   const [selectedCaseId, setSelectedCaseId] = useState('')
-  const [caseSearch, setCaseSearch] = useState('')
   const [draftCaseValues, setDraftCaseValues] = useState<UiTestCaseFormValues | null>(null)
   const [editingCase, setEditingCase] = useState<UiTestCase | null>(null)
   const [caseOrderIds, setCaseOrderIds] = useState<string[]>([])
@@ -79,7 +76,6 @@ export function UiTestSuiteCasePage() {
   const [expandedStepIndexes, setExpandedStepIndexes] = useState<number[]>([])
   const [draggingStepIndex, setDraggingStepIndex] = useState<number | null>(null)
   const [selectedRunId, setSelectedRunId] = useState('')
-  const [uiRunView, setUiRunView] = useState<UiTestRunView>('steps')
   const [suiteRunHistoryOpen, setSuiteRunHistoryOpen] = useState(false)
   const [suiteRunReportOpen, setSuiteRunReportOpen] = useState(false)
   const [selectedSuiteRunId, setSelectedSuiteRunId] = useState('')
@@ -93,11 +89,9 @@ export function UiTestSuiteCasePage() {
   const [importYamlFile, setImportYamlFile] = useState<File | null>(null)
   const [importYamlText, setImportYamlText] = useState('')
   const [templatePickerOpenKey, setTemplatePickerOpenKey] = useState<string | null>(null)
-  const [editorTopHeight, setEditorTopHeight] = useState(520)
   const [caseForm] = Form.useForm<UiTestCaseFormValues>()
   const caseOrderRollbackRef = useRef<string[]>([])
   const templateInputRefs = useRef<Record<string, InputRef | null>>({})
-  const editorLayoutRef = useRef<HTMLDivElement | null>(null)
 
   const suiteQuery = useQuery({
     queryKey: ['uiTestSuite', suiteId],
@@ -146,14 +140,15 @@ export function UiTestSuiteCasePage() {
       return isUiRunPollingStatus(data?.status) || (!data && Boolean(selectedRunId)) ? 2000 : false
     },
   })
+  // 顶栏的「上次运行」与运行记录条数都要用这份历史，所以它不再等抽屉打开才启用。
   const suiteRunHistoryQuery = useQuery({
     queryKey: ['uiTestSuiteRuns', suiteId],
     queryFn: () => api.getUiTestSuiteRuns(suiteId),
-    enabled: suiteRunHistoryOpen && Boolean(suiteId),
+    enabled: Boolean(suiteId),
     refetchOnWindowFocus: false,
     refetchInterval: (query) => {
       const data = query.state.data as UiTestSuiteRunSummary[] | undefined
-      return suiteRunHistoryOpen && (data ?? []).some((item) => isUiRunPollingStatus(item.status)) ? 3000 : false
+      return (data ?? []).some((item) => isUiRunPollingStatus(item.status)) ? 3000 : false
     },
   })
   const activeSuiteRunQuery = useQuery({
@@ -240,6 +235,19 @@ export function UiTestSuiteCasePage() {
 
     moveStep(move, draggingStepIndex, targetIndex)
     setDraggingStepIndex(null)
+  }
+
+  /** 批量启用/禁用：一次写回所有步骤的 enabled，未保存的改动仍由「保存」统一提交。 */
+  function handleToggleAllSteps() {
+    const steps = caseForm.getFieldValue('steps') as UiTestStepFormValue[] | undefined
+    if (!steps?.length) return
+
+    const nextEnabled = !steps.every((step) => step?.enabled !== false)
+    caseForm.setFieldsValue({ steps: steps.map((step) => ({ ...step, enabled: nextEnabled })) })
+    if (isCreatingCase) {
+      setDraftCaseValues((current) => (current ? { ...current, steps: steps.map((step) => ({ ...step, enabled: nextEnabled })) } : current))
+    }
+    message.success(nextEnabled ? '已启用全部步骤，保存后生效' : '已禁用全部步骤，保存后生效')
   }
 
   function getTemplateRefKey(stepIndex: number, fieldKey: UiTemplateFieldKey) {
@@ -416,7 +424,6 @@ export function UiTestSuiteCasePage() {
 
       queryClient.setQueryData(['uiTestCaseRun', runId], runRecord)
       setSelectedRunId(runId)
-      setUiRunView('steps')
       message.success(isUiRunPollingStatus(runRecord.status) ? '已开始调试运行' : '调试运行记录已创建')
     },
   })
@@ -496,19 +503,6 @@ export function UiTestSuiteCasePage() {
     },
   })
 
-  const filteredCases = useMemo(() => {
-    const keyword = caseSearch.trim().toLowerCase()
-    if (!keyword) return uiTestCases
-
-    return uiTestCases.filter((item) =>
-      [item.name, item.stepsJson]
-        .filter(Boolean)
-        .some((field) => String(field).toLowerCase().includes(keyword)),
-    )
-  }, [caseSearch, uiTestCases])
-
-  const orderedByRuleCases = useMemo(() => sortUiTestCases(filteredCases), [filteredCases])
-
   const draftCase = useMemo<UiTestCase | null>(
     () =>
       draftCaseValues
@@ -523,40 +517,79 @@ export function UiTestSuiteCasePage() {
   )
 
   const orderedCases = useMemo(() => {
-    if (caseOrderIds.length === 0) return orderedByRuleCases
+    const byRule = sortUiTestCases(uiTestCases)
+    if (caseOrderIds.length === 0) return byRule
 
-    const caseMap = new Map(orderedByRuleCases.map((item) => [normalizeUiTestCaseId(item), item]))
+    const caseMap = new Map(byRule.map((item) => [normalizeUiTestCaseId(item), item]))
     const ordered = caseOrderIds.map((caseId) => caseMap.get(caseId)).filter(Boolean) as UiTestCase[]
-    const missing = orderedByRuleCases.filter((item) => !caseOrderIds.includes(normalizeUiTestCaseId(item)))
+    const missing = byRule.filter((item) => !caseOrderIds.includes(normalizeUiTestCaseId(item)))
     return [...ordered, ...missing]
-  }, [caseOrderIds, orderedByRuleCases])
+  }, [caseOrderIds, uiTestCases])
 
-  const sidebarCases = useMemo(() => (draftCase ? [...orderedCases, draftCase] : orderedCases), [draftCase, orderedCases])
-  const canReorder = can('write') && caseSearch.trim().length === 0
+  const caseList = useMemo(() => (draftCase ? [...orderedCases, draftCase] : orderedCases), [draftCase, orderedCases])
+  const canReorder = can('write')
 
-  const suiteMeta = useMemo(
-    () => [
-      { label: '测试集', value: suiteQuery.data?.name || '-' },
-      { label: '需求', value: requirementQuery.data?.name || requirementId || '-' },
-      { label: '迭代', value: sprintQuery.data?.name || sprintId || '-' },
-      { label: '运行模式', value: suiteQuery.data?.headless === undefined ? '-' : suiteQuery.data.headless ? '无头模式' : '可视模式' },
-      { label: '慢放延迟', value: formatOptionalMs(suiteQuery.data?.slowMoMs) },
-      { label: '视口', value: formatViewportText(suiteQuery.data?.viewportWidth, suiteQuery.data?.viewportHeight) },
-      { label: '步骤超时', value: formatOptionalMs(suiteQuery.data?.defaultStepTimeoutMs) },
-      { label: '截图策略', value: formatUiScreenshotPolicy(suiteQuery.data?.screenshotPolicy) },
-    ],
-    [requirementId, requirementQuery.data?.name, sprintId, sprintQuery.data?.name, suiteQuery.data],
+  const suiteRunHistory = useMemo(
+    () =>
+      [...listItems(suiteRunHistoryQuery.data)].sort((left, right) => {
+        const leftTime = new Date(left.startedAt || left.createdAt || left.updatedAt || '').getTime()
+        const rightTime = new Date(right.startedAt || right.createdAt || right.updatedAt || '').getTime()
+        return (Number.isNaN(rightTime) ? 0 : rightTime) - (Number.isNaN(leftTime) ? 0 : leftTime)
+      }),
+    [suiteRunHistoryQuery.data],
   )
+  const latestSuiteRun = useMemo(
+    () =>
+      (activeSuiteRunQuery.data?.suiteRunId === selectedSuiteRunId ? activeSuiteRunQuery.data : undefined) ??
+      suiteRunHistory[0] ??
+      null,
+    [activeSuiteRunQuery.data, selectedSuiteRunId, suiteRunHistory],
+  )
+  const readiness = useMemo(() => getUiSuiteReadiness(latestSuiteRun), [latestSuiteRun])
+
+  const suiteRunReport = suiteRunReportQuery.data ?? null
+  const selectedSuiteRunSummary = useMemo(
+    () => suiteRunHistory.find((item) => item.suiteRunId === selectedSuiteRunId) ?? null,
+    [selectedSuiteRunId, suiteRunHistory],
+  )
+  const orderedSuiteRunItems = useMemo(
+    () =>
+      [...(suiteRunReport?.items ?? [])].sort(
+        (left, right) =>
+          (left.orderNo ?? Number.MAX_SAFE_INTEGER) - (right.orderNo ?? Number.MAX_SAFE_INTEGER) ||
+          (left.caseName ?? '').localeCompare(right.caseName ?? ''),
+      ),
+    [suiteRunReport?.items],
+  )
+
+  const currentRun = uiTestCaseRunQuery.data ?? null
+  // 步骤卡片上的 PASS / FAIL 徽标取自最近一次调试运行，按顺序号对齐当前用例的步骤。
+  const currentRunStepResults = useMemo(
+    () => [...(currentRun?.stepResults ?? [])],
+    [currentRun?.stepResults],
+  )
+  const caseSerial = formatUiCaseSerial(editingCase?.orderNo ?? (isCreatingCase ? undefined : orderedCases.findIndex((item) => normalizeUiTestCaseId(item) === activeCaseId) + 1))
+  const runEnvText = useMemo(() => {
+    const suite = suiteQuery.data
+    const viewport = formatViewportText(suite?.viewportWidth, suite?.viewportHeight)
+    return [
+      suite?.headless === undefined ? '' : suite.headless ? '无头模式' : '可视模式',
+      viewport === '-' ? '' : viewport,
+      suite?.slowMoMs ? `慢放 ${suite.slowMoMs}ms` : '',
+      suite?.defaultStepTimeoutMs ? `步骤超时 ${suite.defaultStepTimeoutMs}ms` : '',
+    ]
+      .filter(Boolean)
+      .join(' · ') || '默认运行配置'
+  }, [suiteQuery.data])
+  const screenshotText = formatUiScreenshotPolicy(suiteQuery.data?.screenshotPolicy)
 
   useEffect(() => {
     setSelectedCaseId('')
-    setCaseSearch('')
     setDraftCaseValues(null)
     setEditingCase(null)
     setExpandedStepIndexes([])
     setDraggingStepIndex(null)
     setSelectedRunId('')
-    setUiRunView('steps')
     setSuiteRunHistoryOpen(false)
     setSuiteRunReportOpen(false)
     setSelectedSuiteRunId('')
@@ -586,20 +619,19 @@ export function UiTestSuiteCasePage() {
     setExpandedStepIndexes([])
     setDraggingStepIndex(null)
     setSelectedRunId('')
-    setUiRunView('steps')
   }, [selectedCaseId])
 
   useEffect(() => {
-    const currentRun = activeSuiteRunQuery.data
-    if (!currentRun?.suiteRunId) return
+    const currentSuiteRun = activeSuiteRunQuery.data
+    if (!currentSuiteRun?.suiteRunId) return
 
     queryClient.setQueryData<UiTestSuiteRunSummary[]>(['uiTestSuiteRuns', suiteId], (current) => {
       const currentItems = current ?? []
-      return [currentRun, ...currentItems.filter((item) => item.suiteRunId !== currentRun.suiteRunId)]
+      return [currentSuiteRun, ...currentItems.filter((item) => item.suiteRunId !== currentSuiteRun.suiteRunId)]
     })
 
-    if (!isUiRunPollingStatus(currentRun.status)) {
-      setActivePollingSuiteRunId((current) => (current === currentRun.suiteRunId ? '' : current))
+    if (!isUiRunPollingStatus(currentSuiteRun.status)) {
+      setActivePollingSuiteRunId((current) => (current === currentSuiteRun.suiteRunId ? '' : current))
     }
   }, [activeSuiteRunQuery.data, queryClient, suiteId])
 
@@ -635,31 +667,6 @@ export function UiTestSuiteCasePage() {
   }, [activeCaseId, caseForm, selectedCaseDetailQuery.data])
 
   useEffect(() => {
-    if (!selectedRunId) return
-
-    function syncEditorTopHeight() {
-      const containerHeight = editorLayoutRef.current?.getBoundingClientRect().height ?? 0
-      if (containerHeight === 0) return
-
-      setEditorTopHeight((current) => getNextEditorTopHeight({
-        currentHeight: current,
-        deltaY: 0,
-        containerHeight,
-        minTopHeight: MIN_EDITOR_TOP_HEIGHT,
-        minResultHeight: MIN_EDITOR_RESULT_HEIGHT,
-        splitterHeight: EDITOR_SPLITTER_HEIGHT,
-      }))
-    }
-
-    syncEditorTopHeight()
-    window.addEventListener('resize', syncEditorTopHeight)
-
-    return () => {
-      window.removeEventListener('resize', syncEditorTopHeight)
-    }
-  }, [selectedRunId])
-
-  useEffect(() => {
     if (reorderCasesMutation.isPending) return
 
     const nextIds = sortUiTestCases(uiTestCases)
@@ -680,7 +687,7 @@ export function UiTestSuiteCasePage() {
   }, [reorderCasesMutation.isPending, uiTestCases])
 
   useEffect(() => {
-    if (sidebarCases.length === 0) {
+    if (caseList.length === 0) {
       if (selectedCaseId) {
         setSelectedCaseId('')
         setEditingCase(null)
@@ -688,11 +695,11 @@ export function UiTestSuiteCasePage() {
       return
     }
 
-    const exists = sidebarCases.some((item) => normalizeUiTestCaseId(item) === selectedCaseId)
+    const exists = caseList.some((item) => normalizeUiTestCaseId(item) === selectedCaseId)
     if (!selectedCaseId || !exists) {
-      setSelectedCaseId(normalizeUiTestCaseId(sidebarCases[0]))
+      setSelectedCaseId(normalizeUiTestCaseId(caseList[0]))
     }
-  }, [selectedCaseId, sidebarCases])
+  }, [caseList, selectedCaseId])
 
   function openCreateCase() {
     const nextDraft = draftCaseValues ?? createDefaultUiTestCaseFormValues()
@@ -710,20 +717,6 @@ export function UiTestSuiteCasePage() {
     }
 
     debugRunMutation.mutate()
-  }
-
-  function handleEditorPanelResize(deltaY: number) {
-    const containerHeight = editorLayoutRef.current?.getBoundingClientRect().height ?? 0
-    if (containerHeight === 0) return
-
-    setEditorTopHeight((current) => getNextEditorTopHeight({
-      currentHeight: current,
-      deltaY,
-      containerHeight,
-      minTopHeight: MIN_EDITOR_TOP_HEIGHT,
-      minResultHeight: MIN_EDITOR_RESULT_HEIGHT,
-      splitterHeight: EDITOR_SPLITTER_HEIGHT,
-    }))
   }
 
   function handleRunSuite() {
@@ -813,6 +806,18 @@ export function UiTestSuiteCasePage() {
     reorderCasesMutation.mutate(nextOrderIds)
   }
 
+  function handleSelectCase(caseId: string) {
+    setSelectedCaseId(caseId)
+  }
+
+  function handleStepCase(delta: number) {
+    const currentIndex = caseList.findIndex((item) => normalizeUiTestCaseId(item) === selectedCaseId)
+    const nextCase = caseList[currentIndex + delta]
+    if (!nextCase) return
+
+    handleSelectCase(normalizeUiTestCaseId(nextCase))
+  }
+
   async function handleRefreshUiRunDetail() {
     if (!selectedRunId) return
     await uiTestCaseRunQuery.refetch()
@@ -865,451 +870,211 @@ export function UiTestSuiteCasePage() {
 
   const showEditorForm = isCreatingCase || (Boolean(activeCaseId) && Boolean(editingCase) && normalizeUiTestCaseId(editingCase!) === activeCaseId)
   const hasUnsavedCaseChanges = !isCreatingCase && caseForm.isFieldsTouched()
-  const currentRun = uiTestCaseRunQuery.data ?? null
-  const currentRunStatusMeta = getExecutionStatusMeta(currentRun?.status)
-  const currentRunStepResults = useMemo(
-    () =>
-      [...(currentRun?.stepResults ?? [])].sort(
-        (left, right) => (left.orderNo ?? Number.MAX_SAFE_INTEGER) - (right.orderNo ?? Number.MAX_SAFE_INTEGER),
-      ),
-    [currentRun?.stepResults],
-  )
-  const suiteRunHistory = useMemo(
-    () =>
-      [...listItems(suiteRunHistoryQuery.data)].sort((left, right) => {
-        const leftTime = new Date(left.startedAt || left.createdAt || left.updatedAt || '').getTime()
-        const rightTime = new Date(right.startedAt || right.createdAt || right.updatedAt || '').getTime()
-        return (Number.isNaN(rightTime) ? 0 : rightTime) - (Number.isNaN(leftTime) ? 0 : leftTime)
-      }),
-    [suiteRunHistoryQuery.data],
-  )
-  const suiteRunReport = suiteRunReportQuery.data ?? null
-  const selectedSuiteRunSummary = useMemo(
-    () =>
-      (selectedSuiteRunId && activeSuiteRunQuery.data?.suiteRunId === selectedSuiteRunId ? activeSuiteRunQuery.data : undefined) ??
-      suiteRunHistory.find((item) => item.suiteRunId === selectedSuiteRunId) ??
-      null,
-    [activeSuiteRunQuery.data, selectedSuiteRunId, suiteRunHistory],
-  )
-  const orderedSuiteRunItems = useMemo(
-    () =>
-      [...(suiteRunReport?.items ?? [])].sort(
-        (left, right) =>
-          (left.orderNo ?? Number.MAX_SAFE_INTEGER) - (right.orderNo ?? Number.MAX_SAFE_INTEGER) ||
-          (left.caseName ?? '').localeCompare(right.caseName ?? ''),
-      ),
-    [suiteRunReport?.items],
-  )
-
-  function renderUiRunContent() {
-    if (!currentRun) {
-      return <Empty description="运行详情加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-    }
-
-    if (uiRunView === 'snapshot') {
-      const snapshotSections = [
-        { label: '浏览器信息', value: currentRun.snapshot?.browser },
-        { label: '运行配置', value: currentRun.snapshot?.options },
-      ].filter((item) => item.value !== undefined && item.value !== null)
-
-      if (snapshotSections.length === 0) {
-        return <Empty description="暂无运行快照" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-      }
-
-      return (
-        <div className="api-case-run-result-list">
-          {snapshotSections.map((section) => (
-            <div key={section.label} className="api-case-run-result-row">
-              <div className="api-case-run-result-row-title">
-                <strong>{section.label}</strong>
-              </div>
-              <pre className="api-case-run-result-pre compact">{prettyPrintValue(section.value)}</pre>
-            </div>
-          ))}
-        </div>
-      )
-    }
-
-    if (currentRunStepResults.length === 0) {
-      return (
-        <Empty
-          description={isUiRunPollingStatus(currentRun.status) ? '步骤结果生成中...' : '暂无步骤结果'}
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-        />
-      )
-    }
-
-    return renderUiRunStepResultList(currentRunStepResults, isUiRunPollingStatus(currentRun.status) ? '步骤结果生成中...' : '暂无步骤结果')
-  }
+  const allStepsEnabled = watchedSteps.length > 0 && watchedSteps.every((step) => step?.enabled !== false)
+  const lastRunText = formatUiRunRelativeTime(latestSuiteRun?.startedAt || latestSuiteRun?.createdAt || latestSuiteRun?.updatedAt)
 
   return (<ProjectAccessScope projectId={sprintQuery.data?.projectId ?? sprintQuery.data?.project_id ?? ''}>{(
-    <div className="workbench-page api-automation-page">
+    <div className="workbench-page api-automation-page functional-test-page ui-test-page ui-suite-detail-page tp-surface">
       <div className="api-automation-content">
-        <div className="page-frame api-collection-detail-frame">
-          <div className="api-collection-detail-layout ui-suite-case-layout">
-            {suiteQuery.error ? <Alert showIcon type="error" title={getErrorMessage(suiteQuery.error)} /> : null}
-            {casesQuery.error ? <Alert showIcon type="error" title={getErrorMessage(casesQuery.error)} /> : null}
-            {selectedCaseDetailQuery.error ? <Alert showIcon type="error" title={getErrorMessage(selectedCaseDetailQuery.error)} /> : null}
-            {requirementQuery.error ? <Alert showIcon type="error" title={getErrorMessage(requirementQuery.error)} /> : null}
-            {sprintQuery.error ? <Alert showIcon type="error" title={getErrorMessage(sprintQuery.error)} /> : null}
+        <section className="workbench-panel workbench-board-panel tp-board ui-suite-detail-board">
+          {suiteQuery.error ? <Alert showIcon type="error" title={getErrorMessage(suiteQuery.error)} /> : null}
+          {casesQuery.error ? <Alert showIcon type="error" title={getErrorMessage(casesQuery.error)} /> : null}
+          {selectedCaseDetailQuery.error ? <Alert showIcon type="error" title={getErrorMessage(selectedCaseDetailQuery.error)} /> : null}
+          {requirementQuery.error ? <Alert showIcon type="error" title={getErrorMessage(requirementQuery.error)} /> : null}
+          {sprintQuery.error ? <Alert showIcon type="error" title={getErrorMessage(sprintQuery.error)} /> : null}
+          {uiTestCaseRunQuery.error && !currentRun ? <Alert showIcon type="error" title={getErrorMessage(uiTestCaseRunQuery.error)} /> : null}
+          {currentRun?.errorMessage ? <Alert showIcon type="error" title={currentRun.errorMessage} /> : null}
 
-            <aside className="workbench-panel api-case-sidebar ui-suite-case-sidebar">
-              <div className="panel-header api-case-sidebar-header">
-                <div className="api-case-sidebar-title">
-                  <Button
-                    type="text"
-                    icon={<ArrowLeftOutlined />}
-                    className="api-case-back-button"
-                    onClick={() => navigate('/ui-automation')}
-                    aria-label="返回 UI测试集列表"
-                  />
-                  <div className="api-case-sidebar-title-copy">
-                    <Title level={5}>UI测试用例</Title>
-                    <Text type="secondary" className="api-case-sidebar-count">
-                      {sidebarCases.length} 个用例
-                    </Text>
-                  </div>
-                </div>
-                <div className="api-case-sidebar-meta">
-                  <Tooltip title="新建用例">
-                    <ProjectActionButton action="write"
-                      type="text"
-                      className="action-btn-create"
-                      operation="create" iconOnly
-                      aria-label="新建 UI测试用例"
-                      onClick={openCreateCase}
-                      disabled={!suiteId}
-                    />
-                  </Tooltip>
-                </div>
-              </div>
+          <UiSuiteDetailToolbar
+            suiteName={suiteQuery.data?.name || '-'}
+            requirementName={requirementQuery.data?.name ?? requirementId ?? '-'}
+            sprintName={sprintQuery.data?.name ?? sprintId ?? '-'}
+            readiness={readiness}
+            lastRunText={lastRunText}
+            runHistoryCount={suiteRunHistory.length}
+            runningSuite={runSuiteMutation.isPending}
+            debugging={debugRunMutation.isPending}
+            saving={createCaseMutation.isPending || updateCaseMutation.isPending}
+            canRun={Boolean(suiteId) && uiTestCases.length > 0}
+            canDebug={Boolean(activeCaseId) && !isCreatingCase}
+            canSave={showEditorForm}
+            onBack={() => navigate('/ui-automation')}
+            onOpenRunHistory={() => setSuiteRunHistoryOpen(true)}
+            onDebugRun={handleDebugRun}
+            onRunSuite={handleRunSuite}
+            onSave={() => caseForm.submit()}
+          />
 
-              <div className="api-case-sidebar-toolbar">
-                <Input.Search
-                  placeholder="搜索用例名称 / 步骤"
-                  allowClear
-                  value={caseSearch}
-                  onChange={(event) => setCaseSearch(event.target.value)}
-                />
-                <ProjectActionButton action="execute" className="api-case-import-trigger" operation="upload" onClick={openCaseImportModal} disabled={!suiteId}>
-                  用例导入
-                </ProjectActionButton>
-              </div>
+          <UiCaseControlRibbon
+            cases={caseList}
+            selectedCaseId={selectedCaseId}
+            caseCount={caseList.length}
+            runEnvText={runEnvText}
+            screenshotText={screenshotText}
+            createDisabled={!suiteId}
+            onCreateCase={openCreateCase}
+            onSelectCase={handleSelectCase}
+            onPrevCase={() => handleStepCase(-1)}
+            onNextCase={() => handleStepCase(1)}
+            orderPopoverContent={
+              <UiCaseOrderPopover
+                cases={caseList}
+                selectedCaseId={selectedCaseId}
+                canReorder={canReorder}
+                draggingCaseId={draggingCaseId}
+                deletingCaseId={deleteCaseMutation.isPending ? activeCaseId : ''}
+                onSelect={handleSelectCase}
+                onDragStart={handleCaseDragStart}
+                onDragEnd={() => setDraggingCaseId(null)}
+                onDrop={handleCaseDrop}
+                onDelete={(caseId) => deleteCaseMutation.mutate(caseId)}
+                onDiscardDraft={handleDiscardDraft}
+              />
+            }
+          />
 
-              <div className="api-case-sidebar-scroll">
-                {casesQuery.isLoading ? (
-                  <div className="sprint-card-loading">
-                    <Empty description="UI测试用例加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                  </div>
-                ) : sidebarCases.length === 0 ? (
-                  <div className="ui-suite-case-empty-list">
+          <div className="ui-wb-cols">
+            <div className="ui-wb-main ui-suite-case-editor-panel">
+              {caseList.length === 0 ? (
+                <div className="ui-wb-pipeline">
+                  <div className="ui-test-case-empty-editor">
                     <Empty description="当前测试集还没有 UI测试用例">
                       <ProjectActionButton action="write" type="primary" className="action-btn-create" operation="create" onClick={openCreateCase}>
                         新建用例
                       </ProjectActionButton>
                     </Empty>
                   </div>
-                ) : (
-                  <div className="api-case-nav-list">
-                    {sidebarCases.map((item) => {
-                      const caseId = normalizeUiTestCaseId(item)
-                      const selected = caseId === selectedCaseId
-                      const stepCount = getUiTestCaseStepCount(item)
-
-                      return (
-                        <div
-                          key={caseId}
-                          className={`api-case-nav-item${selected ? ' selected' : ''}${draggingCaseId === caseId ? ' dragging' : ''}${canReorder ? ' can-drag' : ''}`}
-                          role="button"
-                          tabIndex={0}
-                          draggable={canReorder && caseId !== DRAFT_CASE_ID}
-                          onDragStart={(event) => handleCaseDragStart(event, caseId)}
-                          onDragOver={(event) => {
-                            if (!canReorder || caseId === DRAFT_CASE_ID) return
-                            event.preventDefault()
-                          }}
-                          onDrop={(event) => {
-                            event.preventDefault()
-                            handleCaseDrop(caseId)
-                          }}
-                          onDragEnd={() => {
-                            setDraggingCaseId(null)
-                          }}
-                          onClick={() => setSelectedCaseId(caseId)}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter' || event.key === ' ') {
-                              event.preventDefault()
-                              setSelectedCaseId(caseId)
-                            }
-                          }}
-                        >
-                          <div className="api-case-nav-item-main">
-                            <div className="api-case-nav-item-tags">
-                              <Tag color={item.enabled === false ? 'default' : 'success'}>
-                                {item.enabled === false ? '停用' : '启用'}
-                              </Tag>
-                              {caseId === DRAFT_CASE_ID ? <Tag color="gold">草稿</Tag> : null}
-                            </div>
-                            <span className="api-case-nav-item-name">{item.name}</span>
-                            <span className="api-case-nav-item-path">{stepCount} 步</span>
-                          </div>
-                          <div
-                            className="api-case-nav-item-actions"
-                            onClick={(event) => event.stopPropagation()}
-                            onMouseDown={(event) => event.stopPropagation()}
-                          >
-                            <Popconfirm
-                              title={caseId === DRAFT_CASE_ID ? '确认丢弃这个未保存用例？' : '确认删除该 UI测试用例？'}
-                              onConfirm={() => {
-                                if (caseId === DRAFT_CASE_ID) {
-                                  handleDiscardDraft()
-                                  return
-                                }
-                                deleteCaseMutation.mutate(caseId)
-                              }}
-                            >
-                              <Tooltip title="删除">
-                                <ProjectActionButton action="write"
-                                  danger
-                                  type="text"
-                                  size="small"
-                                  className="api-case-nav-delete action-btn-delete"
-                                  operation="delete" iconOnly
-                                  loading={deleteCaseMutation.isPending && !isCreatingCase && selectedCaseId === caseId}
-                                  aria-label="删除 UI测试用例"
-                                />
-                              </Tooltip>
-                            </Popconfirm>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            </aside>
-
-            <div className="api-case-workspace">
-              {suiteQuery.data ? (
-                <div className="api-detail-hover-panel api-collection-detail-panel ui-suite-case-detail-panel">
-                  <div className="api-detail-hover-bar">
-                    <div className="api-detail-hover-bar-main">
-                      <span className="api-detail-hover-title">UI测试集详情</span>
-                      <span className="api-detail-hover-preview">
-                        {suiteQuery.data.name} / {requirementQuery.data?.name ?? requirementId ?? '-'} / {sprintQuery.data?.name ?? sprintId ?? '-'}
-                      </span>
-                    </div>
-                    <div className="api-detail-hover-bar-actions">
-                      <Button className="action-btn-read" onClick={() => setSuiteRunHistoryOpen(true)}>
-                        运行记录
-                      </Button>
-                      <ProjectActionButton action="execute"
-                        type="primary"
-                        operation="run"
-                        loading={runSuiteMutation.isPending}
-                        onClick={handleRunSuite}
-                        disabled={uiTestCases.length === 0}
-                      >
-                        运行测试集
-                      </ProjectActionButton>
-                    </div>
-                  </div>
-                  <div className="api-detail-hover-body">
-                    <p className="api-detail-description">
-                      {suiteQuery.data.description || '在这里管理当前 UI测试集下的测试用例，步骤会直接保存在用例的 stepsJson 中。'}
-                    </p>
-                    <Card className="detail-block api-case-summary-card">
-                      <div className="api-case-summary-grid compact ui-suite-case-summary-grid">
-                        {suiteMeta.map((item) => (
-                          <div key={item.label} className="api-summary-item ui-suite-case-summary-item">
-                            <Text type="secondary">{item.label}</Text>
-                            <strong>{item.value}</strong>
-                          </div>
-                        ))}
-                      </div>
-                    </Card>
+                </div>
+              ) : !showEditorForm && selectedCaseDetailQuery.isLoading ? (
+                <div className="ui-wb-pipeline">
+                  <div className="ui-test-case-empty-editor">
+                    <Empty description="UI测试用例详情加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
                   </div>
                 </div>
-              ) : null}
+              ) : showEditorForm ? (
+                <Form<UiTestCaseFormValues>
+                  form={caseForm}
+                  layout="vertical"
+                  requiredMark={false}
+                  className="ui-test-case-form"
+                  onValuesChange={(_changedValues, allValues) => {
+                    if (isCreatingCase) {
+                      setDraftCaseValues(allValues as UiTestCaseFormValues)
+                    }
+                  }}
+                  onFinish={(values) => {
+                    const completeValues = {
+                      ...getCompleteCaseFormValues(),
+                      ...values,
+                      steps: values.steps ?? getCompleteCaseFormValues().steps,
+                    } satisfies UiTestCaseFormValues
 
-              <section className="workbench-panel api-case-editor-panel ui-suite-case-editor-panel">
-                <div className="api-case-editor-shell" ref={editorLayoutRef}>
-                  <div className="api-case-editor-main" style={selectedRunId ? { flex: `0 0 ${editorTopHeight}px` } : undefined}>
-                    <div className="api-case-editor-main-scroll">
-                      {!selectedCaseId ? (
-                        <div className="ui-test-case-empty-editor">
-                          <Empty description="请选择一个 UI测试用例，或先新建一个用例">
-                            <ProjectActionButton action="write" type="primary" className="action-btn-create" operation="create" onClick={openCreateCase}>
-                              新建用例
-                            </ProjectActionButton>
-                          </Empty>
-                        </div>
-                      ) : !showEditorForm && selectedCaseDetailQuery.isLoading ? (
-                        <div className="ui-test-case-empty-editor">
-                          <Empty description="UI测试用例详情加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                        </div>
-                      ) : showEditorForm ? (
-                        <Form<UiTestCaseFormValues>
-                          form={caseForm}
-                          layout="vertical"
-                          requiredMark={false}
-                          className="ui-test-case-form"
-                          onValuesChange={(_changedValues, allValues) => {
-                            if (isCreatingCase) {
-                              setDraftCaseValues(allValues as UiTestCaseFormValues)
-                            }
-                          }}
-                          onFinish={(values) => {
-                            const completeValues = {
-                              ...getCompleteCaseFormValues(),
-                              ...values,
-                              steps: values.steps ?? getCompleteCaseFormValues().steps,
-                            } satisfies UiTestCaseFormValues
+                    if (isCreatingCase) {
+                      createCaseMutation.mutate(completeValues)
+                      return
+                    }
 
-                            if (isCreatingCase) {
-                              createCaseMutation.mutate(completeValues)
-                              return
-                            }
+                    if (!editingCase || normalizeUiTestCaseId(editingCase) !== activeCaseId) {
+                      message.warning('用例详情加载中，请稍后再试')
+                      return
+                    }
 
-                            if (!editingCase || normalizeUiTestCaseId(editingCase) !== activeCaseId) {
-                              message.warning('用例详情加载中，请稍后再试')
-                              return
-                            }
+                    const payload = buildUiTestCaseUpdatePayload(editingCase, {
+                      name: completeValues.name,
+                      enabled: completeValues.enabled,
+                      orderNo: editingCase.orderNo,
+                      stepsJson: serializeSteps(completeValues.steps),
+                    })
 
-                            const payload = buildUiTestCaseUpdatePayload(editingCase, {
-                              name: completeValues.name,
-                              enabled: completeValues.enabled,
-                              orderNo: editingCase.orderNo,
-                              stepsJson: serializeSteps(completeValues.steps),
-                            })
+                    if (Object.keys(payload).length === 0) {
+                      message.info('当前没有需要保存的修改')
+                      return
+                    }
 
-                            if (Object.keys(payload).length === 0) {
-                              message.info('当前没有需要保存的修改')
-                              return
-                            }
+                    updateCaseMutation.mutate(completeValues)
+                  }}
+                >
+                  <UiCaseMetaBar
+                    serial={caseSerial}
+                    isCreatingCase={isCreatingCase}
+                    stepCount={watchedSteps.length}
+                    watchedEnabled={watchedEnabled}
+                    debugging={debugRunMutation.isPending}
+                    saving={createCaseMutation.isPending || updateCaseMutation.isPending}
+                    deleting={deleteCaseMutation.isPending}
+                    importDisabled={!suiteId}
+                    deleteDisabled={!selectedCaseId}
+                    onDebugRun={handleDebugRun}
+                    onSave={() => caseForm.submit()}
+                    onImport={openCaseImportModal}
+                    onDelete={() => (isCreatingCase ? handleDiscardDraft() : deleteCaseMutation.mutate(activeCaseId))}
+                  />
 
-                            updateCaseMutation.mutate(completeValues)
-                          }}
-                        >
-                          <div className="ui-test-case-editor-fixed-head">
-                            <div className="ui-test-case-toolbar">
-                              <div className="ui-test-case-name-block">
-                                <div className="ui-test-case-inline-label">用例名称</div>
-                                <Form.Item name="name" className="ui-test-case-name-item" rules={[{ required: true, message: '请输入 UI测试用例名称' }]}>
-                                  <Input maxLength={120} placeholder="例如：登录成功验证" />
-                                </Form.Item>
-                              </div>
-                              <div className="ui-test-case-toolbar-meta">
-                                <ProjectActionButton action="execute"
-                                  className="action-btn-read"
-                                  operation="run"
-                                  onClick={handleDebugRun}
-                                  loading={debugRunMutation.isPending}
-                                  disabled={!activeCaseId || isCreatingCase}
-                                >
-                                  调试运行
-                                </ProjectActionButton>
-                                <ProjectActionButton action="write"
-                                  type="primary"
-                                  className="action-btn-save"
-                                  operation="save"
-                                  loading={createCaseMutation.isPending || updateCaseMutation.isPending}
-                                  onClick={() => caseForm.submit()}
-                                >
-                                  保存
-                                </ProjectActionButton>
-                              </div>
-                            </div>
-                            <div className="ui-test-case-secondary-meta" aria-live="polite">
-                              <div className="ui-test-case-enabled-meta">
-                                <Form.Item name="enabled" valuePropName="checked">
-                                  <Switch size="small" aria-label="启用当前用例" />
-                                </Form.Item>
-                                <span>{watchedEnabled ? '当前用例已启用' : '当前用例已停用'}</span>
-                              </div>
-                              <span className="ui-test-case-meta-separator" aria-hidden="true">·</span>
-                              <span className="ui-test-case-step-count-meta">
-                                <UnorderedListOutlined aria-hidden="true" />
-                                包含 {watchedSteps.length} 个步骤
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="ui-test-case-step-section">
-                            <div className="ui-test-case-step-scroll">
-                              <div className="ui-test-case-step-toolbar">
-                                <div>
-                                  <div className="ui-test-case-step-title">步骤编辑器</div>
-                                </div>
-                              </div>
-
-                              <UiStepEditor addStep={addStep} watchedSteps={watchedSteps} expandedStepIndexes={expandedStepIndexes} draggingStepIndex={draggingStepIndex} handleStepDrop={handleStepDrop} can={can} handleStepDragStart={handleStepDragStart} setDraggingStepIndex={setDraggingStepIndex} toggleStepPanel={toggleStepPanel} removeStep={removeStep} renderTemplatePickerLabel={renderTemplatePickerLabel} bindTemplateInputRef={bindTemplateInputRef} />
-                            </div>
-                          </div>
-                        </Form>
-                      ) : (
-                        <div className="ui-test-case-empty-editor">
-                          <Empty description="未找到对应的 UI测试用例" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  {selectedRunId ? (
-                    <>
-                      <UiTestPanelSplitter onResize={handleEditorPanelResize} />
-                      <div className="api-case-editor-result-pane">
-                        <div className="api-case-editor-result-scroll">
-                          <Card size="small" className="api-case-run-result-card">
-                            <div className="api-case-run-result-head">
-                              <div className="api-case-run-result-title">
-                                <Text strong>调试结果</Text>
-                                {currentRun ? <Tag color={currentRunStatusMeta.color}>{currentRunStatusMeta.label}</Tag> : null}
-                                {currentRun && typeof currentRun.success === 'boolean' ? (
-                                  <Tag color={currentRun.success ? 'success' : 'error'}>{currentRun.success ? '成功' : '失败'}</Tag>
-                                ) : null}
-                              </div>
-                              <div className="api-case-run-result-meta">
-                                <span>运行 ID：{selectedRunId || '-'}</span>
-                                <span>耗时：{currentRun?.durationMs ?? 0} ms</span>
-                                <span>当前 URL：{currentRun?.currentUrl || '-'}</span>
-                                <span>Trace：{currentRun?.tracePath || '-'}</span>
-                              </div>
-                            </div>
-                            {uiTestCaseRunQuery.error && !currentRun ? (
-                              <Alert showIcon type="error" title={getErrorMessage(uiTestCaseRunQuery.error)} className="api-case-run-result-alert" />
-                            ) : null}
-                            {currentRun?.errorMessage ? (
-                              <Alert showIcon type="error" title={currentRun.errorMessage} className="api-case-run-result-alert" />
-                            ) : null}
-                            <Segmented
-                              className="api-case-run-result-segmented"
-                              options={uiTestRunViewOptions}
-                              value={uiRunView}
-                              onChange={(value) => setUiRunView(value as UiTestRunView)}
-                            />
-                            <div className="api-case-run-result-block">{renderUiRunContent()}</div>
-                            <div className="ui-test-run-inline-actions">
-                              <ActionButton operation="refresh" onClick={handleRefreshUiRunDetail} loading={uiTestCaseRunQuery.isFetching}>
-                                刷新
-                              </ActionButton>
-                            </div>
-                          </Card>
-                        </div>
+                  <div className="ui-wb-pipeline">
+                    <div className="ui-wb-pipeline-head">
+                      <div className="ui-wb-pipeline-title">
+                        步骤编辑器
+                        <span className="ui-wb-pipeline-chip">Step Pipeline</span>
                       </div>
-                    </>
-                  ) : null}
+                      <div className="ui-wb-pipeline-actions">
+                        <ProjectActionButton
+                          action="write"
+                          type="text"
+                          size="small"
+                          className="ui-wb-pipeline-action"
+                          operation="create"
+                          icon={<UnorderedListOutlined />}
+                          disabled={watchedSteps.length === 0}
+                          onClick={handleToggleAllSteps}
+                        >
+                          {allStepsEnabled ? '全部禁用' : '全部启用'}
+                        </ProjectActionButton>
+                      </div>
+                    </div>
+                    <UiStepEditor
+                      addStep={addStep}
+                      watchedSteps={watchedSteps}
+                      expandedStepIndexes={expandedStepIndexes}
+                      draggingStepIndex={draggingStepIndex}
+                      handleStepDrop={handleStepDrop}
+                      can={can}
+                      handleStepDragStart={handleStepDragStart}
+                      setDraggingStepIndex={setDraggingStepIndex}
+                      toggleStepPanel={toggleStepPanel}
+                      removeStep={removeStep}
+                      renderTemplatePickerLabel={renderTemplatePickerLabel}
+                      bindTemplateInputRef={bindTemplateInputRef}
+                      stepResults={currentRunStepResults}
+                    />
+                  </div>
+                </Form>
+              ) : (
+                <div className="ui-wb-pipeline">
+                  <div className="ui-test-case-empty-editor">
+                    <Empty description="未找到对应的 UI测试用例" />
+                  </div>
                 </div>
-              </section>
+              )}
             </div>
+
+            <UiRunInspector
+              run={currentRun}
+              viewportText={formatViewportText(suiteQuery.data?.viewportWidth, suiteQuery.data?.viewportHeight)}
+              screenshotText={screenshotText}
+              refreshing={uiTestCaseRunQuery.isFetching}
+              onRefreshRun={handleRefreshUiRunDetail}
+            />
           </div>
-        </div>
 
-        <UiCaseImportModal caseImportModalOpen={caseImportModalOpen} closeCaseImportModal={closeCaseImportModal} importUiCasesMutation={importUiCasesMutation} handleImportUiCases={handleImportUiCases} caseImportMode={caseImportMode} setCaseImportMode={setCaseImportMode} setImportYamlFile={setImportYamlFile} importYamlText={importYamlText} setImportYamlText={setImportYamlText} />
-
-        <UiSuiteRunHistory suiteRunHistoryOpen={suiteRunHistoryOpen} setSuiteRunHistoryOpen={setSuiteRunHistoryOpen} suiteRunHistoryQuery={suiteRunHistoryQuery} suiteRunHistory={suiteRunHistory} loadingSuiteRunHistoryId={loadingSuiteRunHistoryId} handleOpenSuiteRunHistoryItem={handleOpenSuiteRunHistoryItem} />
-
-        <UiSuiteRunReport suiteRunReportOpen={suiteRunReportOpen} closeSuiteRunReport={closeSuiteRunReport} suiteRunReportQuery={suiteRunReportQuery} suiteRunReport={suiteRunReport} handleRefreshSuiteRunReport={handleRefreshSuiteRunReport} refreshingSuiteRunReport={refreshingSuiteRunReport} selectedSuiteRunId={selectedSuiteRunId} suiteRunReportView={suiteRunReportView} setSuiteRunReportView={setSuiteRunReportView} orderedSuiteRunItems={orderedSuiteRunItems} selectedSuiteRunSummary={selectedSuiteRunSummary} expandedSuiteRunItemIds={expandedSuiteRunItemIds} toggleSuiteRunItem={toggleSuiteRunItem} />
+          {suiteQuery.data?.description ? <Text className="ui-wb-board-note">{suiteQuery.data.description}</Text> : null}
+        </section>
       </div>
+
+      <UiCaseImportModal caseImportModalOpen={caseImportModalOpen} closeCaseImportModal={closeCaseImportModal} importUiCasesMutation={importUiCasesMutation} handleImportUiCases={handleImportUiCases} caseImportMode={caseImportMode} setCaseImportMode={setCaseImportMode} setImportYamlFile={setImportYamlFile} importYamlText={importYamlText} setImportYamlText={setImportYamlText} />
+
+      <UiSuiteRunHistory suiteRunHistoryOpen={suiteRunHistoryOpen} setSuiteRunHistoryOpen={setSuiteRunHistoryOpen} suiteRunHistoryQuery={suiteRunHistoryQuery} suiteRunHistory={suiteRunHistory} loadingSuiteRunHistoryId={loadingSuiteRunHistoryId} handleOpenSuiteRunHistoryItem={handleOpenSuiteRunHistoryItem} />
+
+      <UiSuiteRunReport suiteRunReportOpen={suiteRunReportOpen} closeSuiteRunReport={closeSuiteRunReport} suiteRunReportQuery={suiteRunReportQuery} suiteRunReport={suiteRunReport} handleRefreshSuiteRunReport={handleRefreshSuiteRunReport} refreshingSuiteRunReport={refreshingSuiteRunReport} selectedSuiteRunId={selectedSuiteRunId} suiteRunReportView={suiteRunReportView} setSuiteRunReportView={setSuiteRunReportView} orderedSuiteRunItems={orderedSuiteRunItems} selectedSuiteRunSummary={selectedSuiteRunSummary} expandedSuiteRunItemIds={expandedSuiteRunItemIds} toggleSuiteRunItem={toggleSuiteRunItem} />
     </div>
   )}</ProjectAccessScope>)
 }

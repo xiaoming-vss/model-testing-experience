@@ -1,25 +1,21 @@
 import {
   assertComparatorLabelMap,
   assertSourceLabelMap,
-  bodyTypeOptions,
   extractSourceLabelMap,
-  methodOptions
+  methodOptions,
+  methodTone
 } from '@/features/api-automation/config/collectionConfig'
+import type { ApiCaseEditorProps } from '@/features/api-automation/components/apiCaseEditorProps'
+import { ApiCaseBodyPanel } from '@/features/api-automation/components/ApiCaseBodyPanel'
+import { ApiCaseHeadersPanel } from '@/features/api-automation/components/ApiCaseHeadersPanel'
 import {
   buildApiCaseUpdatePayload,
   formatOptionalValue,
   getCaseId,
   type ApiCaseFormValues
 } from '@/features/api-automation/utils/apiCaseEditor'
-import { Text, validateJsonText } from '@/features/api-automation/utils/detailView'
+import { Text } from '@/features/api-automation/utils/detailView'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
-import {
-  type ApiAssertRule,
-  type ApiCase,
-  type ApiCaseRunResult,
-  type ApiExtractRule
-} from '@/services/api'
-import { JsonEditor, type JsonEditorRef } from '@/shared/components/JsonEditor/JsonEditor'
 import { message } from '@/shared/utils/feedback'
 import {
   normalizeAssertRuleId,
@@ -27,85 +23,46 @@ import {
   normalizeExtractRuleId
 } from '@/utils/format'
 import { CodeOutlined, DownOutlined, InfoCircleOutlined, PlusOutlined, SendOutlined } from '@ant-design/icons'
-import type { InputRef } from 'antd'
-import { Button, Card, Dropdown, Empty, Form, Input, InputNumber, Popconfirm, Popover, Segmented, Select, Space, Switch, Tabs, Tag, Tooltip } from 'antd'
+import { Button, Card, Checkbox, Dropdown, Empty, Form, Input, InputNumber, Popconfirm, Popover, Select, Space, Switch, Tabs, Tag, Tooltip } from 'antd'
+import { useState } from 'react'
 
-import type { ApiEnvironment } from '@/features/api-automation/types'
-import type { ProjectAction } from '@/features/projects/types'
-import type { ListResponse } from '@/shared/api/request'
-import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query'
-import type { FormInstance } from 'antd'
-import type { JSX } from 'react'
-
-type EnvironmentProps = {
-  environmentPopoverOpen: boolean
-  setEnvironmentPopoverOpen: React.Dispatch<React.SetStateAction<boolean>>
-  environments: ApiEnvironment[]
-  resolvedEnvironmentId: string | undefined
-  handleSelectEnvironment: (nextEnvironmentId: string) => void
-  switchDefaultEnvironmentMutation: UseMutationResult<string, Error, string, { previousEnvironmentId: string | undefined }>
-  projectId: string | undefined
-  selectedEnvironment: ApiEnvironment
-  environmentsQuery: UseQueryResult<ListResponse<ApiEnvironment>, Error>
+/** 顶部一行只读元信息与页签计数都要看当前表单值，草稿态下这些值还没落库。 */
+function countFilledRows(rows?: Array<{ key?: string; value?: string }>) {
+  return (rows ?? []).filter((row) => (row?.key ?? '').trim() || (row?.value ?? '').trim()).length
 }
 
-type TemplatesProps = {
-  setEnvVarInputRef: (fieldKey: string, ref: InputRef | null) => void
-  renderEnvVarPicker: ({ pickerKey, onInsert, trigger, }: { pickerKey: string; onInsert: (templateText: string) => void; trigger: React.ReactNode; placement?: "bottomRight" | "bottomLeft" | undefined }) => JSX.Element
-  insertTemplateText: (fieldPath: (string | number)[], fieldKey: string, templateText: string) => void
-  bodyJsonEditorRef: React.RefObject<JsonEditorRef | null>
-  insertTemplateTextIntoJson: (templateText: string) => void
-  handleFormatBodyJson: () => void
+/** 请求头页签的工具条提示：设计稿把「已启用 / 总数」标在页签行右侧。 */
+function countEnabledRows(rows?: Array<{ enabled?: boolean; key?: string; value?: string }>) {
+  return (rows ?? []).filter((row) => row.enabled !== false && ((row.key ?? '').trim() || (row.value ?? '').trim())).length
 }
 
-type RulesProps = {
-  postOperationCount: number
-  can: (action: ProjectAction) => boolean
-  openCreateAssertRule: () => void
-  openCreateExtractRule: () => void
-  assertRulesQuery: UseQueryResult<ListResponse<ApiAssertRule>, Error>
-  extractRulesQuery: UseQueryResult<ListResponse<ApiExtractRule>, Error>
-  assertRules: ApiAssertRule[]
-  toggleAssertRuleMutation: UseMutationResult<ApiAssertRule, Error, { assertRuleId: string; enabled: boolean }, unknown>
-  openEditAssertRule: (rule: ApiAssertRule) => void
-  deleteAssertRuleMutation: UseMutationResult<Record<string, never>, Error, string, unknown>
-  extractRules: ApiExtractRule[]
-  toggleExtractRuleMutation: UseMutationResult<ApiExtractRule, Error, { extractRuleId: string; enabled: boolean }, unknown>
-  openEditExtractRule: (rule: ApiExtractRule) => void
-  deleteExtractRuleMutation: UseMutationResult<Record<string, never>, Error, string, unknown>
-}
-
-type Props = {
-  caseForm: FormInstance<ApiCaseFormValues>
-  isCreatingCase: boolean
-  setDraftCaseValues: React.Dispatch<React.SetStateAction<ApiCaseFormValues | null>>
-  getCompleteCaseFormValues: () => ApiCaseFormValues
-  createCaseMutation: UseMutationResult<ApiCase, Error, ApiCaseFormValues, unknown>
-  editingCase: ApiCase | null
-  activeCaseId: string
-  updateCaseMutation: UseMutationResult<ApiCase, Error, ApiCaseFormValues, unknown>
-  pathInputRef: React.RefObject<InputRef | null>
-  runApiCaseMutation: UseMutationResult<ApiCaseRunResult, Error, { caseId: string; environmentId: string }, unknown>
-  isApiCaseRunInProgress: boolean
-  isSelectedCaseReady: boolean
-  handleSendRequest: () => Promise<void>
-  watchedBodyType: "form" | "json" | "raw" | "none" | undefined
-  environment: EnvironmentProps
-  templates: TemplatesProps
-  rules: RulesProps
-}
-
-export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, getCompleteCaseFormValues, createCaseMutation, editingCase, activeCaseId, updateCaseMutation, pathInputRef, runApiCaseMutation, isApiCaseRunInProgress, isSelectedCaseReady, handleSendRequest, watchedBodyType, environment, templates, rules }: Props) {
+export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, getCompleteCaseFormValues, createCaseMutation, editingCase, activeCaseId, updateCaseMutation, pathInputRef, runApiCaseMutation, isApiCaseRunInProgress, isSelectedCaseReady, handleSendRequest, watchedBodyType, environment, templates, rules }: ApiCaseEditorProps) {
   const { environmentPopoverOpen, setEnvironmentPopoverOpen, environments, resolvedEnvironmentId, handleSelectEnvironment, switchDefaultEnvironmentMutation, projectId, selectedEnvironment, environmentsQuery } = environment
-  const { setEnvVarInputRef, renderEnvVarPicker, insertTemplateText, bodyJsonEditorRef, insertTemplateTextIntoJson, handleFormatBodyJson } = templates
+  const { setEnvVarInputRef, renderEnvVarPicker, insertTemplateText } = templates
   const { postOperationCount, can, openCreateAssertRule, openCreateExtractRule, assertRulesQuery, extractRulesQuery, assertRules, toggleAssertRuleMutation, openEditAssertRule, deleteAssertRuleMutation, extractRules, toggleExtractRuleMutation, openEditExtractRule, deleteExtractRuleMutation } = rules
+
+  const [activeTabKey, setActiveTabKey] = useState('query')
+  const watchedMethod = Form.useWatch('method', caseForm)
+  const watchedEnabled = Form.useWatch('enabled', caseForm)
+  const watchedTimeoutMs = Form.useWatch('timeoutMs', caseForm)
+  const watchedQuery = Form.useWatch('query', caseForm)
+  const watchedHeaders = Form.useWatch('headers', caseForm)
+  const queryCount = countFilledRows(watchedQuery)
+  const headerCount = countFilledRows(watchedHeaders)
+  const enabledHeaderCount = countEnabledRows(watchedHeaders)
+
+  /* `useWatch` 对没挂载的 Form.Item 返回 undefined：请求体与设置两个页签只有被打开时才挂载，
+     所以首屏的请求体类型 / 超时 / 启用状态要回落到已加载的用例记录上。 */
+  const bodyType = watchedBodyType ?? editingCase?.bodyType ?? editingCase?.body_type ?? 'none'
+  const caseTimeoutMs = watchedTimeoutMs ?? editingCase?.timeoutMs ?? editingCase?.timeout_ms
+  const caseEnabled = watchedEnabled ?? editingCase?.enabled ?? true
 
   return (
     <Form<ApiCaseFormValues>
       form={caseForm}
       layout="vertical"
       requiredMark={false}
-      className="api-case-editor-form"
+      className="api-wb-form"
       onValuesChange={(_changedValues, allValues) => {
         if (isCreatingCase) {
           setDraftCaseValues(allValues as ApiCaseFormValues)
@@ -138,24 +95,35 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
         updateCaseMutation.mutate(completeValues)
       }}
     >
-      <div className="api-case-editor-sticky-head">
-        <Form.Item name="name" label="用例名称" rules={[{ required: true, message: '请输入用例名称' }]}>
-          <Input maxLength={120} />
-        </Form.Item>
-
-        <div className="api-case-request-shell">
-          <div className="api-case-request-caption">
-            <span>请求地址</span>
-            <span className="api-case-request-env-hint">当前环境</span>
-            <Tooltip title="路径不是 http:// 或 https:// 开头时，会自动拼接当前环境 Base URL。">
-              <InfoCircleOutlined className="api-case-request-info" />
-            </Tooltip>
+      <div className="api-wb-editor-head">
+        <div className="api-wb-case-head">
+          <div className="api-wb-case-name">
+            <Form.Item name="name" label="用例名称" className="api-wb-case-name-item" rules={[{ required: true, message: '请输入用例名称' }]}>
+              <Input maxLength={120} placeholder="请输入用例名称" />
+            </Form.Item>
           </div>
-          <div className="api-case-request-bar">
-            <Form.Item name="method" className="api-case-method-item" rules={[{ required: true, message: '请选择请求方式' }]}>
+          <div className="api-wb-case-meta">
+            <span className="api-wb-case-meta-item">
+              请求方式 <strong>{watchedMethod ?? editingCase?.method ?? '-'}</strong>
+            </span>
+            <span className="api-wb-case-meta-item">
+              超时 <strong>{caseTimeoutMs ? `${caseTimeoutMs} ms` : '默认'}</strong>
+            </span>
+            <span className="api-wb-case-meta-item">
+              后置操作 <strong>{postOperationCount}</strong>
+            </span>
+            <span className={`api-wb-case-state tone-${caseEnabled ? 'green' : 'slate'}`}>
+              {caseEnabled ? '启用中' : '已禁用'}
+            </span>
+          </div>
+        </div>
+
+        <div className={`api-wb-request tone-${methodTone(watchedMethod ?? editingCase?.method ?? 'GET')}`}>
+          <div className="api-wb-request-bar">
+            <Form.Item name="method" className="api-wb-method" rules={[{ required: true, message: '请选择请求方式' }]}>
               <Select options={methodOptions} classNames={{ popup: { root: 'api-method-dropdown' } }} />
             </Form.Item>
-            <div className="api-case-url-group">
+            <div className="api-wb-url-group">
               <Popover
                 trigger="click"
                 placement="bottomLeft"
@@ -205,25 +173,29 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
               >
                 <button
                   type="button"
-                  className={`api-case-base-url-trigger${environmentPopoverOpen ? ' open' : ''}`}
+                  className={`api-wb-base-url${environmentPopoverOpen ? ' open' : ''}`}
                   disabled={!projectId || environments.length === 0}
                   title={selectedEnvironment?.baseUrl || '未选择环境'}
                 >
-                  <span className="api-case-base-url-text">
+                  <span className="api-wb-base-url-dot" aria-hidden="true" />
+                  <span className="api-wb-base-url-text">
                     {selectedEnvironment?.baseUrl || (environmentsQuery.isLoading ? '加载环境中...' : '未选择环境')}
                   </span>
-                  <DownOutlined className="api-case-base-url-arrow" />
+                  <DownOutlined className="api-wb-base-url-arrow" />
                 </button>
               </Popover>
-              <span className="api-case-url-divider" aria-hidden="true" />
-              <Form.Item name="path" className="api-case-path-item" rules={[{ required: true, message: '请输入接口路径' }]}>
+              <span className="api-wb-url-divider" aria-hidden="true" />
+              <Form.Item name="path" className="api-wb-path" rules={[{ required: true, message: '请输入接口路径' }]}>
                 <Input ref={pathInputRef} placeholder="/v1/example" maxLength={1024} />
               </Form.Item>
+              <Tooltip title="路径不是 http:// 或 https:// 开头时，会自动拼接当前环境 Base URL。">
+                <InfoCircleOutlined className="api-wb-url-info" />
+              </Tooltip>
             </div>
-            <div className="api-case-request-actions">
+            <div className="api-wb-request-actions">
               <Button
                 type="primary"
-                className="api-case-send-button"
+                className="api-wb-send"
                 loading={runApiCaseMutation.isPending || isApiCaseRunInProgress}
                 disabled={!isSelectedCaseReady || isApiCaseRunInProgress}
                 onClick={handleSendRequest}
@@ -232,7 +204,7 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
                 发送
               </Button>
               <ProjectActionButton operation="save" action="write"
-                className="api-case-save-button"
+                className="api-wb-save"
                 loading={createCaseMutation.isPending || updateCaseMutation.isPending}
                 disabled={!isSelectedCaseReady}
                 onClick={() => caseForm.submit()}
@@ -245,31 +217,45 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
       </div>
 
       <Tabs
-        className="api-case-editor-tabs"
+        className="api-wb-tabs"
+        activeKey={activeTabKey}
+        onChange={setActiveTabKey}
+        tabBarExtraContent={activeTabKey === 'headers' ? (
+          <span className="api-wb-tabs-extra">
+            已启用请求头: <strong>{enabledHeaderCount}</strong> / {headerCount}
+          </span>
+        ) : activeTabKey === 'body' ? (
+          <span className="api-wb-tabs-extra">
+            Content-Type:{' '}
+            <span className="api-wb-tabs-extra-code">
+              {bodyType === 'json' ? 'application/json' : bodyType === 'form' ? 'application/x-www-form-urlencoded' : '—'}
+            </span>
+          </span>
+        ) : undefined}
         items={[
           {
             key: 'query',
-            label: '参数',
+            label: <TabLabel label="参数" count={queryCount} />,
             children: (
               <>
                 <Form.List name="query">
                   {(fields, { remove }) => (
-                    <div className="api-kv-block">
-                      <div className="api-kv-toolbar">
+                    <div className="api-wb-kv-block">
+                      <div className="api-wb-kv-toolbar">
                         <Text strong>Query 参数</Text>
                       </div>
                       {fields.map((field) => {
                         const { key: fieldKey, ...fieldProps } = field
 
                         return (
-                          <div key={fieldKey} className="api-kv-row">
-                            <Form.Item {...fieldProps} name={[field.name, 'enabled']} valuePropName="checked" className="api-kv-check-item">
-                              <Switch size="small" />
+                          <div key={fieldKey} className="api-wb-kv-row">
+                            <Form.Item {...fieldProps} name={[field.name, 'enabled']} valuePropName="checked" className="api-wb-kv-check">
+                              <Checkbox aria-label="启用该参数" />
                             </Form.Item>
-                            <Form.Item {...fieldProps} name={[field.name, 'key']} className="api-kv-item">
+                            <Form.Item {...fieldProps} name={[field.name, 'key']} className="api-wb-kv-item">
                               <Input placeholder="参数名" />
                             </Form.Item>
-                            <div className="api-kv-item api-kv-value-item">
+                            <div className="api-wb-kv-item api-wb-kv-value">
                               <Space.Compact style={{ width: '100%' }}>
                                 <Form.Item {...fieldProps} name={[field.name, 'value']} noStyle>
                                   <Input
@@ -306,132 +292,13 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
           },
           {
             key: 'headers',
-            label: '请求头',
-            children: (
-              <Form.List name="headers">
-                {(fields, { remove }) => (
-                  <div className="api-kv-block">
-                    <div className="api-kv-toolbar">
-                      <Text strong>请求头</Text>
-                    </div>
-                    {fields.map((field) => {
-                      const { key: fieldKey, ...fieldProps } = field
-
-                      return (
-                        <div key={fieldKey} className="api-kv-row">
-                          <Form.Item {...fieldProps} name={[field.name, 'enabled']} valuePropName="checked" className="api-kv-check-item">
-                            <Switch size="small" />
-                          </Form.Item>
-                          <Form.Item {...fieldProps} name={[field.name, 'key']} className="api-kv-item">
-                            <Input placeholder="Header 名称" />
-                          </Form.Item>
-                          <div className="api-kv-item api-kv-value-item">
-                            <Space.Compact style={{ width: '100%' }}>
-                              <Form.Item {...fieldProps} name={[field.name, 'value']} noStyle>
-                                <Input
-                                  ref={(node) => setEnvVarInputRef(`headers:${field.key}:value`, node)}
-                                  placeholder="Header 值"
-                                />
-                              </Form.Item>
-                              {renderEnvVarPicker({
-                                pickerKey: `headers:${field.key}:value`,
-                                onInsert: (templateText) => insertTemplateText(['headers', field.name, 'value'], `headers:${field.key}:value`, templateText),
-                                trigger: <Button type="text" size="small" className="api-env-var-picker-trigger" icon={<CodeOutlined />} />,
-                              })}
-                            </Space.Compact>
-                          </div>
-                          <Tooltip title="删除请求头">
-                            <ProjectActionButton action="write"
-                              danger
-                              type="text"
-                              shape="circle"
-                              className="action-btn-delete"
-                              operation="delete" iconOnly
-                              aria-label="删除请求头"
-                              onClick={() => remove(field.name)}
-                            />
-                          </Tooltip>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </Form.List>
-            ),
+            label: <TabLabel label="请求头" count={headerCount} />,
+            children: <ApiCaseHeadersPanel headers={watchedHeaders ?? []} templates={templates} />,
           },
           {
             key: 'body',
-            label: '请求体',
-            children: (
-              <>
-                <Form.Item name="bodyType" hidden>
-                  <Input />
-                </Form.Item>
-                <div className="api-body-type-block">
-                  <Segmented
-                    className="api-body-type-segmented"
-                    options={bodyTypeOptions}
-                    value={watchedBodyType ?? 'none'}
-                    onChange={(value) => caseForm.setFieldValue('bodyType', value)}
-                  />
-                </div>
-                {watchedBodyType === 'json' ? (
-                  <Form.Item
-                    name="bodyJson"
-                    className="api-body-editor-form-item"
-                    validateTrigger={['onChange', 'onBlur']}
-                    rules={[
-                      {
-                        validator: async (_, value) => validateJsonText(value),
-                      },
-                    ]}
-                  >
-                    <JsonEditor
-                      ref={bodyJsonEditorRef}
-                      minHeight={260}
-                      toolbar={
-                        <div className="json-editor-toolbar-row">
-                          <div className="json-editor-toolbar-actions">
-                            {renderEnvVarPicker({
-                              pickerKey: 'bodyJson',
-                              placement: 'bottomLeft',
-                              onInsert: insertTemplateTextIntoJson,
-                              trigger: (
-                                <Button className="json-editor-toolbar-btn" icon={<CodeOutlined />}>
-                                  动态值
-                                  <DownOutlined />
-                                </Button>
-                              ),
-                            })}
-                          </div>
-                          <div className="json-editor-toolbar-side">
-                            <span className="json-editor-toolbar-type">application/json</span>
-                            <Button type="text" className="json-editor-toolbar-link" onClick={handleFormatBodyJson}>
-                              格式化
-                            </Button>
-                          </div>
-                        </div>
-                      }
-                    />
-                  </Form.Item>
-                ) : null}
-                {watchedBodyType === 'raw' ? (
-                  <Form.Item name="bodyText" label="Body 内容">
-                    <Input.TextArea rows={8} placeholder="原始请求体内容" />
-                  </Form.Item>
-                ) : null}
-                {watchedBodyType === 'form' ? (
-                  <Card size="small" className="api-body-placeholder-card">
-                    <Text type="secondary">`form` 类型的键值表单下一步再补，这一版先保留类型切换。</Text>
-                  </Card>
-                ) : null}
-                {watchedBodyType === 'none' ? (
-                  <Card size="small" className="api-body-placeholder-card">
-                    <Text type="secondary">当前选择 `none`，无需填写请求体。</Text>
-                  </Card>
-                ) : null}
-              </>
-            ),
+            label: <TabLabel label="请求体" dot={bodyType !== 'none'} />,
+            children: <ApiCaseBodyPanel bodyType={bodyType} templates={templates} />,
           },
           {
             key: 'settings',
@@ -455,7 +322,7 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
           },
           {
             key: 'post-operations',
-            label: `后置操作 (${postOperationCount})`,
+            label: <TabLabel label="后置操作" count={postOperationCount} />,
             children: activeCaseId ? (
               <div className="api-post-ops-section">
                 <div className="api-post-ops-head">
@@ -612,5 +479,16 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
         ]}
       />
     </Form>
+  )
+}
+
+/** 页签标题：计数徽标与「有请求体」圆点，都是设计稿画在页签上的状态。 */
+function TabLabel({ label, count = 0, dot = false }: { label: string; count?: number; dot?: boolean }) {
+  return (
+    <span className="api-wb-tab-label">
+      {label}
+      {count > 0 ? <span className="api-wb-tab-count">{count}</span> : null}
+      {dot ? <span className="api-wb-tab-dot" aria-hidden="true" /> : null}
+    </span>
   )
 }

@@ -1,17 +1,17 @@
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
-import { Alert, Empty, Select, Typography } from 'antd'
-import { Space } from 'antd'
+import { Alert, Empty } from 'antd'
 
-import { useMemo, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useProjectRequirements } from '@/features/projects/hooks/useProjectRequirements'
 import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
 import { useSprintRequirementScope } from '@/features/projects/hooks/useSprintRequirementScope'
+import { UiSuiteListBanner } from '@/features/ui-automation/components/UiSuiteListBanner'
+import { UiSuiteListToolbar } from '@/features/ui-automation/components/UiSuiteListToolbar'
 import { UiTestSuiteSection, type UiTestSuiteSectionRef } from '@/features/ui-automation/components/UiTestSuiteSection'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import type { Requirement } from '@/services/api'
 import { getErrorMessage, normalizeRequirementId, normalizeSprintId } from '@/utils/format'
-
-const { Text } = Typography
+import '@/shared/styles/surface-tokens.css'
+import '@/features/ui-automation/styles/list-v2.css'
 
 type UiAutomationPageScope = {
   projectId?: string
@@ -25,6 +25,9 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
   const workbenchActiveProjectId = useWorkbenchStore((state) => state.activeProjectId)
   const activeProjectId = scope?.projectId ?? workbenchActiveProjectId
   const uiTestSuiteSectionRef = useRef<UiTestSuiteSectionRef | null>(null)
+  const [keyword, setKeyword] = useState('')
+  // 刷新按钮的加载态由持有查询的 UiTestSuiteSection 回传，页面只负责显示。
+  const [refreshing, setRefreshing] = useState(false)
   const isRequirementLocked = Boolean(scope?.requirementId)
   const { activeSprintId: globalSprintId, selectSprint: selectGlobalSprint } = useActiveSprint()
   const {
@@ -75,58 +78,36 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
       : allRequirements
     return targetRequirements.map(normalizeRequirementId)
   }, [allRequirements, selectedRequirementId, selectedSprintId])
+  const canCreateSuite = Boolean(activeProjectId) && sprints.length > 0
   return (
-    <div className="workbench-page api-automation-page functional-test-page ui-test-page">
+    <div className="workbench-page api-automation-page functional-test-page ui-test-page tp-surface">
       <div className="api-automation-content">
-        <section className="workbench-panel workbench-board-panel">
-          <div className="panel-header api-panel-header">
-            <div className="requirement-panel-head">
-              <Text strong>UI测试集</Text>
-              {!isRequirementLocked ? (
-                <div className="api-filter-group">
-                  <div className="api-filter-field">
-                    <span className="api-filter-field-label">迭代</span>
-                    <Select
-                      className="api-filter-select business-filter-select"
-                      value={currentSprintSelection === null ? 'all' : selectedSprintId ?? 'all'}
-                      options={sprintFilterOptions}
-                      loading={sprintsQuery.isLoading}
-                      placeholder="请选择迭代"
-                      onChange={(value: string) => {
-                        selectSprint(value === 'all' ? null : value)
-                        if (value === 'all') {
-                          selectRequirement(null)
-                        }
-                      }}
-                    />
-                  </div>
-                  <div className="api-filter-field">
-                    <span className="api-filter-field-label">需求</span>
-                    <Select
-                      className="api-filter-select business-filter-select"
-                      value={currentRequirementSelection === null ? 'all' : selectedRequirementId ?? 'all'}
-                      options={displayRequirementFilterOptions}
-                      loading={requirementsQuery.isLoading || allRequirementsQuery.isLoading}
-                      placeholder="请选择需求"
-                      disabled={!selectedSprintId && allRequirements.length === 0}
-                      onChange={(value: string) => selectRequirement(value === 'all' ? null : value)}
-                    />
-                  </div>
-                </div>
-              ) : null}
-            </div>
-            <Space size={8}>
-              <ProjectActionButton action="write"
-                type="primary"
-                className="action-btn-create"
-                operation="create"
-                disabled={!activeProjectId || sprints.length === 0}
-                onClick={() => uiTestSuiteSectionRef.current?.openCreateDrawer()}
-              >
-                新建测试集
-              </ProjectActionButton>
-            </Space>
-          </div>
+        <section className="workbench-panel workbench-board-panel tp-board">
+          <UiSuiteListBanner />
+
+          <UiSuiteListToolbar
+            showScopeFilters={!isRequirementLocked}
+            sprintValue={currentSprintSelection === null ? 'all' : selectedSprintId ?? 'all'}
+            sprintOptions={sprintFilterOptions}
+            sprintLoading={sprintsQuery.isLoading}
+            onSprintChange={(value: string) => {
+              selectSprint(value === 'all' ? null : value)
+              if (value === 'all') {
+                selectRequirement(null)
+              }
+            }}
+            requirementValue={currentRequirementSelection === null ? 'all' : selectedRequirementId ?? 'all'}
+            requirementOptions={displayRequirementFilterOptions}
+            requirementLoading={requirementsQuery.isLoading || allRequirementsQuery.isLoading}
+            requirementDisabled={!selectedSprintId && allRequirements.length === 0}
+            onRequirementChange={(value: string) => selectRequirement(value === 'all' ? null : value)}
+            keyword={keyword}
+            onKeywordChange={setKeyword}
+            createDisabled={!canCreateSuite}
+            onCreate={() => uiTestSuiteSectionRef.current?.openCreateDrawer()}
+            refreshing={refreshing}
+            onRefresh={() => uiTestSuiteSectionRef.current?.refresh()}
+          />
 
           {sprintsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(sprintsQuery.error)} /> : null}
           {!isRequirementLocked ? <>{requirementsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(requirementsQuery.error)} /> : null}</> : null}
@@ -160,7 +141,9 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
                 return scope?.requirementName || (requirementId ? requirementNameMap.get(requirementId) ?? requirementId : '-')
               }}
               onCreateSprintChange={selectSprint}
-              showInlineCreateButton={false}
+              keyword={keyword}
+              onClearKeyword={() => setKeyword('')}
+              onRefreshingChange={setRefreshing}
             />
           )}
         </section>

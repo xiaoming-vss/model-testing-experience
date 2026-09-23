@@ -19,10 +19,6 @@
   margin-bottom: 0;
 }
 
-.page-actions {
-  flex: 0 0 auto;
-}
-
 .detail-block,
 .capability-card,
 .profile-card {
@@ -507,14 +503,6 @@
   height: 100%;
 }
 
-.sprint-overview-card-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 10px;
-}
-
 .sprint-overview-card-label {
   color: #7b8395;
   font-size: 13px;
@@ -878,14 +866,6 @@
   text-align: right;
 }
 
-.sprint-overview-bar-summary {
-  width: 100%;
-  height: auto;
-  min-height: 108px;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
 .sprint-overview-donut-layout {
   display: grid;
   grid-template-columns: 140px minmax(0, 1fr);
@@ -947,72 +927,10 @@
   line-height: 24px;
 }
 
-.sprint-overview-severity-chart {
-  width: 100%;
-  height: auto;
-  min-height: 112px;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.sprint-overview-bar-summary .recharts-default-tooltip,
-.sprint-overview-donut-layout .recharts-default-tooltip,
-.sprint-overview-severity-chart .recharts-default-tooltip {
+.sprint-overview-donut-layout .recharts-default-tooltip {
   border: 1px solid var(--tp-border-soft) !important;
   border-radius: 10px;
   box-shadow: 0 10px 24px rgba(24, 27, 35, 0.08);
-}
-
-.sprint-overview-pill-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.sprint-overview-pill-grid-quad {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.sprint-overview-pill {
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid var(--tp-border-soft);
-  background: rgba(244, 246, 250, 0.88);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: #5a6170;
-  font-size: 13px;
-  line-height: 20px;
-}
-
-.sprint-overview-pill strong {
-  color: #181b23;
-  font-size: 16px;
-  line-height: 24px;
-}
-
-.sprint-overview-pill-success {
-  background: rgba(82, 196, 26, 0.08);
-  border-color: rgba(82, 196, 26, 0.14);
-}
-
-.sprint-overview-pill-warning {
-  background: rgba(250, 173, 20, 0.1);
-  border-color: rgba(250, 173, 20, 0.16);
-}
-
-.sprint-overview-pill-danger {
-  background: rgba(255, 77, 79, 0.08);
-  border-color: rgba(255, 77, 79, 0.14);
-}
-
-.sprint-overview-trend-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
 }
 
 .sprint-overview-trend-grid {
@@ -1120,10 +1038,6 @@
     flex-wrap: wrap;
   }
 
-  .sprint-overview-pill-grid-quad {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .sprint-overview-layout {
     display: flex;
     flex-direction: column;
@@ -1189,10 +1103,6 @@
     flex-direction: column;
   }
 
-  .page-actions {
-    width: 100%;
-  }
-
   .sprint-card-grid {
     grid-template-columns: 1fr;
   }
@@ -1241,9 +1151,7 @@
     grid-template-columns: 1fr;
   }
 
-  .sprint-overview-hero-summary,
-  .sprint-overview-pill-grid,
-  .sprint-overview-pill-grid-quad {
+  .sprint-overview-hero-summary {
     grid-template-columns: 1fr;
   }
 

@@ -1,13 +1,15 @@
 import { footerRange } from '@/shared/utils/pagination'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { AppstoreOutlined } from '@ant-design/icons'
-import { Alert, Empty, Form, Pagination, Popconfirm, Space, Table, Tooltip, Typography } from 'antd'
+import { Alert, Button, Empty, Form, Pagination, Space, Table, Tooltip, Typography } from 'antd'
 import type { TableProps } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { UiSuiteNameCell, UiSuiteRowActions, UiSuiteScopeCell } from './UiSuiteListCells'
+import { UiSuiteRunConfigCell } from './UiSuiteRunConfigCell'
 import { UiTestSuiteDrawer, type UiTestSuiteFormValues } from './UiTestSuiteDrawer'
-import { DEFAULT_UI_TEST_SUITE_RUN_CONFIG, formatUiScreenshotPolicy } from '../constants/defaultRunConfig'
+import { DEFAULT_UI_TEST_SUITE_RUN_CONFIG } from '../constants/defaultRunConfig'
 import { buildUiSuiteRunPayload } from '../utils/runHelpers'
 import { api, type UiTestSuite, type UiTestSuiteRunSummary } from '@/services/api'
 import { formatTime, getErrorMessage, normalizeUiTestSuiteId, pickCreatedAt, pickUpdatedAt } from '@/utils/format'
@@ -16,18 +18,9 @@ import { buildUiTestSuiteUpdatePayload } from '@/utils/updatePayload'
 
 const { Text } = Typography
 
-function formatSuiteViewport(suite: UiTestSuite) {
-  if (!suite.viewportWidth || !suite.viewportHeight) return '-'
-  return `${suite.viewportWidth} x ${suite.viewportHeight}`
-}
-
-function formatSuiteRunConfig(suite: UiTestSuite) {
-  return `${suite.headless === undefined ? '未设置模式' : suite.headless ? '无头' : '可视'} / ${formatSuiteViewport(suite)} / ${suite.defaultStepTimeoutMs ? `${suite.defaultStepTimeoutMs}ms` : '未设置超时'
-  } / ${formatUiScreenshotPolicy(suite.screenshotPolicy)}`
-}
-
 export type UiTestSuiteSectionRef = {
   openCreateDrawer: () => void
+  refresh: () => void
 }
 
 function isUiSuiteRunPollingStatus(status?: string) {
@@ -51,7 +44,11 @@ export const UiTestSuiteSection = forwardRef<
     sprintNameResolver?: (suite: UiTestSuite) => string
     requirementNameResolver?: (suite: UiTestSuite) => string
     onCreateSprintChange?: (value?: string) => void
-    showInlineCreateButton?: boolean
+    /** 工具栏里的搜索词，前端过滤名称与描述；空态里的「清空搜索」回调也在这里。 */
+    keyword?: string
+    onClearKeyword?: () => void
+    /** 把查询的加载态回传给工具栏的刷新按钮。 */
+    onRefreshingChange?: (refreshing: boolean) => void
   }
 >(function UiTestSuiteSection(
   {
@@ -65,7 +62,9 @@ export const UiTestSuiteSection = forwardRef<
     sprintNameResolver,
     requirementNameResolver,
     onCreateSprintChange,
-    showInlineCreateButton = true,
+    keyword = '',
+    onClearKeyword,
+    onRefreshingChange,
   },
   ref,
 ) {
@@ -119,15 +118,26 @@ export const UiTestSuiteSection = forwardRef<
     [suites],
   )
 
+  // 测试集数量不多（一个项目一个迭代下的全部），搜索与分页都在前端做，和另外三个列表页一致。
+  const filteredSuites = useMemo(() => {
+    const text = keyword.trim().toLowerCase()
+    if (!text) return orderedSuites
+    return orderedSuites.filter((suite) => `${suite.name} ${suite.description ?? ''}`.toLowerCase().includes(text))
+  }, [orderedSuites, keyword])
+
   const pagedSuites = useMemo(
-    () => orderedSuites.slice((page - 1) * pageSize, page * pageSize),
-    [orderedSuites, page, pageSize],
+    () => filteredSuites.slice((page - 1) * pageSize, page * pageSize),
+    [filteredSuites, page, pageSize],
   )
 
   useEffect(() => {
-    const maxPage = Math.max(1, Math.ceil(orderedSuites.length / pageSize))
+    setPage(1)
+  }, [keyword])
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filteredSuites.length / pageSize))
     if (page > maxPage) setPage(maxPage)
-  }, [orderedSuites.length, page, pageSize])
+  }, [filteredSuites.length, page, pageSize])
 
   const saveSuiteMutation = useMutation({
     mutationFn: (values: UiTestSuiteFormValues) => {
@@ -226,13 +236,11 @@ export const UiTestSuiteSection = forwardRef<
 
   function getSuiteRowContext(suite: UiTestSuite) {
     const suiteId = normalizeUiTestSuiteId(suite)
-    const resolvedSuiteSprintName = sprintNameResolver?.(suite) ?? resolvedSprintName
-    const resolvedSuiteRequirementName = requirementNameResolver?.(suite) ?? resolvedRequirementName
     const suiteDescription = suite.description || '暂无测试集描述'
-    const suiteScopeText = `${resolvedSuiteSprintName} / ${resolvedSuiteRequirementName}`
-    const suiteRunConfig = formatSuiteRunConfig(suite)
+    const suiteSprintName = sprintNameResolver?.(suite) ?? resolvedSprintName
+    const suiteRequirementName = requirementNameResolver?.(suite) ?? resolvedRequirementName
 
-    return { suiteDescription, suiteId, suiteRunConfig, suiteScopeText }
+    return { suiteDescription, suiteId, suiteSprintName, suiteRequirementName }
   }
 
   const columns: TableProps<UiTestSuite>['columns'] = [
@@ -240,56 +248,44 @@ export const UiTestSuiteSection = forwardRef<
       title: '测试集名称',
       dataIndex: 'name',
       key: 'name',
-      width: '30%',
-      render: (name: UiTestSuite['name']) => (
-        <Space size={0} className="functional-suite-list-name">
-          <Tooltip title={name}>
-            <Text ellipsis>{name}</Text>
-          </Tooltip>
-        </Space>
-      ),
+      width: '26%',
+      render: (name: UiTestSuite['name']) => <UiSuiteNameCell name={name} />,
     },
     {
       title: '所属迭代/需求',
       key: 'scope',
-      ellipsis: true,
+      width: 200,
       render: (_, suite) => {
-        const { suiteScopeText } = getSuiteRowContext(suite)
-        return (
-          <Tooltip title={suiteScopeText}>
-            <Text className="functional-suite-list-scope" ellipsis>
-              {suiteScopeText}
-            </Text>
-          </Tooltip>
-        )
+        const { suiteRequirementName, suiteSprintName } = getSuiteRowContext(suite)
+        return <UiSuiteScopeCell sprintName={suiteSprintName} requirementName={suiteRequirementName} />
       },
     },
     {
       title: '创建时间',
       key: 'createdAt',
-      width: 180,
-      render: (_, suite) => <Text type="secondary">{formatTime(pickCreatedAt(suite))}</Text>,
+      width: 168,
+      render: (_, suite) => (
+        <Text className="ui-suite-list-time-cell" type="secondary">
+          {formatTime(pickCreatedAt(suite))}
+        </Text>
+      ),
     },
     {
       title: '最近更新',
       key: 'updatedAt',
-      width: 180,
-      render: (_, suite) => <Text type="secondary">{formatTime(pickUpdatedAt(suite))}</Text>,
+      width: 168,
+      render: (_, suite) => (
+        <Text className="ui-suite-list-time-cell" type="secondary">
+          {formatTime(pickUpdatedAt(suite))}
+        </Text>
+      ),
     },
     {
       title: '运行配置',
       key: 'runConfig',
-      ellipsis: true,
-      render: (_, suite) => {
-        const { suiteRunConfig } = getSuiteRowContext(suite)
-        return (
-          <Tooltip title={suiteRunConfig}>
-            <Text className="functional-suite-list-meta" type="secondary" ellipsis>
-              {suiteRunConfig}
-            </Text>
-          </Tooltip>
-        )
-      },
+      // 320 是三个徽标（可视 / 视口 / 超时 + 截图策略）能排成一行所需的宽度，再窄「每个步骤后截图」会换行。
+      width: 320,
+      render: (_, suite) => <UiSuiteRunConfigCell suite={suite} />,
     },
     {
       title: '描述',
@@ -299,7 +295,11 @@ export const UiTestSuiteSection = forwardRef<
         const { suiteDescription } = getSuiteRowContext(suite)
         return (
           <Tooltip title={suiteDescription}>
-            <Text className="functional-suite-list-description" type="secondary" ellipsis>
+            <Text
+              className={`ui-suite-list-desc-cell${suite.description ? '' : ' is-empty'}`}
+              type="secondary"
+              ellipsis
+            >
               {suiteDescription}
             </Text>
           </Tooltip>
@@ -314,119 +314,94 @@ export const UiTestSuiteSection = forwardRef<
       render: (_, suite) => {
         const { suiteId } = getSuiteRowContext(suite)
         return (
-          <Space
-            size={8}
-            className="functional-suite-list-actions"
-            onClick={(event) => event.stopPropagation()}
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <Tooltip title="运行测试集">
-              <ProjectActionButton action="execute"
-                type="text"
-                shape="circle"
-                className="action-btn-read"
-                operation="run" iconOnly
-                aria-label="运行 UI测试集"
-                loading={runSuiteMutation.isPending && runSuiteMutation.variables === suite}
-                onClick={() => runSuiteMutation.mutate(suite)}
-              />
-            </Tooltip>
-            <Tooltip title="编辑测试集">
-              <ProjectActionButton action="write"
-                type="text"
-                shape="circle"
-                className="action-btn-update"
-                operation="edit" iconOnly
-                aria-label="编辑 UI测试集"
-                onClick={() => openEditDrawer(suite)}
-              />
-            </Tooltip>
-            <Popconfirm title="确认删除该 UI测试集？" onConfirm={() => deleteSuiteMutation.mutate(suiteId)}>
-              <Tooltip title="删除测试集">
-                <ProjectActionButton action="write"
-                  danger
-                  type="text"
-                  shape="circle"
-                  className="action-btn-delete"
-                  operation="delete" iconOnly
-                  aria-label="删除 UI测试集"
-                  loading={deleteSuiteMutation.isPending && deleteSuiteMutation.variables === suiteId}
-                />
-              </Tooltip>
-            </Popconfirm>
-          </Space>
+          <UiSuiteRowActions
+            running={runSuiteMutation.isPending && runSuiteMutation.variables === suite}
+            deleting={deleteSuiteMutation.isPending && deleteSuiteMutation.variables === suiteId}
+            onRun={() => runSuiteMutation.mutate(suite)}
+            onEdit={() => openEditDrawer(suite)}
+            onDelete={() => deleteSuiteMutation.mutate(suiteId)}
+          />
         )
       },
     },
   ]
 
+  // 只把「用户点了刷新」这一种情况报给工具栏，首屏加载不点亮刷新按钮的转圈。
+  const refresh = useCallback(() => {
+    onRefreshingChange?.(true)
+    suitesQuery.refetch().finally(() => onRefreshingChange?.(false))
+  }, [onRefreshingChange, suitesQuery])
+
   useImperativeHandle(
     ref,
     () => ({
       openCreateDrawer,
+      refresh,
     }),
-    [openCreateDrawer],
+    [openCreateDrawer, refresh],
   )
   return (
     <div className="ui-test-suite-section">
-      {showInlineCreateButton ? (
-        <div className="ui-test-suite-toolbar">
-          <ProjectActionButton action="write" type="primary" className="action-btn-create" operation="create" onClick={openCreateDrawer}>
-            新建测试集
-          </ProjectActionButton>
-        </div>
-      ) : null}
-
       {suitesQuery.error ? <Alert showIcon type="error" title={getErrorMessage(suitesQuery.error)} /> : null}
 
-      <div className="table-body-scroll sprint-card-scroll ui-test-suite-scroll">
-        {suitesQuery.isLoading ? (
-          <div className="sprint-card-loading">
-            <Empty description="UI测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-          </div>
-        ) : orderedSuites.length === 0 ? (
-          <div className="sprint-card-loading">
-            <Empty
-              image={<AppstoreOutlined />}
-              description={
-                <Space orientation="vertical" size={4}>
-                  <Text strong>当前需求下还没有 UI测试集</Text>
-                  <Text type="secondary">支持创建测试集，并进入详情管理用例、步骤与正式运行报告。</Text>
-                </Space>
-              }
-            >
-              <ProjectActionButton action="write" type="primary" className="action-btn-create" operation="create" onClick={openCreateDrawer}>
-                新建测试集
-              </ProjectActionButton>
-            </Empty>
-          </div>
-        ) : (
-          <Table<UiTestSuite>
-            className="functional-suite-list-table ui-suite-list-table"
-            columns={columns}
-            dataSource={pagedSuites}
-            rowKey={(suite) => getSuiteRowContext(suite).suiteId || suite.name}
-            pagination={false}
-            onRow={(suite) => ({
-              onClick: () => openSuiteCasePage(getSuiteRowContext(suite).suiteId),
-            })}
-          />
-        )}
-      </div>
+      <div className="ui-suite-list-table-card">
+        <div className="table-body-scroll sprint-card-scroll ui-suite-list-table-scroll">
+          {suitesQuery.isLoading ? (
+            <div className="sprint-card-loading">
+              <Empty description="UI测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            </div>
+          ) : filteredSuites.length === 0 ? (
+            <div className="sprint-card-loading">
+              <Empty
+                image={<AppstoreOutlined />}
+                description={
+                  <Space orientation="vertical" size={4}>
+                    <Text strong>{keyword.trim() ? '没有符合搜索条件的 UI测试集' : '当前需求下还没有 UI测试集'}</Text>
+                    <Text type="secondary">
+                      {keyword.trim()
+                        ? '换个关键词，或者清空搜索看全部测试集。'
+                        : '支持创建测试集，并进入详情管理用例、步骤与正式运行报告。'}
+                    </Text>
+                  </Space>
+                }
+              >
+                {keyword.trim() ? (
+                  <Button onClick={onClearKeyword}>清空搜索</Button>
+                ) : (
+                  <ProjectActionButton action="write" type="primary" className="action-btn-create" operation="create" onClick={openCreateDrawer}>
+                    新建测试集
+                  </ProjectActionButton>
+                )}
+              </Empty>
+            </div>
+          ) : (
+            <Table<UiTestSuite>
+              className="functional-suite-list-table ui-suite-list-table"
+              columns={columns}
+              dataSource={pagedSuites}
+              rowKey={(suite) => getSuiteRowContext(suite).suiteId || suite.name}
+              pagination={false}
+              onRow={(suite) => ({
+                onClick: () => openSuiteCasePage(getSuiteRowContext(suite).suiteId),
+              })}
+            />
+          )}
+        </div>
 
-      <div className="table-footer">
-        <Text type="secondary">{footerRange(orderedSuites.length, page, pageSize)}</Text>
-        <Pagination
-          current={page}
-          pageSize={pageSize}
-          total={orderedSuites.length}
-          showSizeChanger
-          pageSizeOptions={['10', '20', '30', '50']}
-          onChange={(nextPage, nextPageSize) => {
-            setPage(nextPage)
-            setPageSize(nextPageSize)
-          }}
-        />
+        <div className="table-footer ui-suite-list-footer">
+          <Text type="secondary">{footerRange(filteredSuites.length, page, pageSize)}</Text>
+          <Pagination
+            current={page}
+            pageSize={pageSize}
+            total={filteredSuites.length}
+            showSizeChanger
+            pageSizeOptions={['10', '20', '30', '50']}
+            onChange={(nextPage, nextPageSize) => {
+              setPage(nextPage)
+              setPageSize(nextPageSize)
+            }}
+          />
+        </div>
       </div>
 
       <UiTestSuiteDrawer

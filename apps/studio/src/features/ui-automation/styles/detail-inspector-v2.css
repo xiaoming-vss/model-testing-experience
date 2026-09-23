@@ -1,0 +1,531 @@
+/*
+ * UI测试集详情页右栏：执行回放 + 关键帧快照 + 执行控制台。
+ *
+ * 三张卡片共用一套头部（标题 + 等宽胶囊）与同一套 token；颜色只引用 `--srf-*` / `.tone-*`，
+ * 深色由 token 切换，本文件没有 `:root[data-theme='dark']` 分支。
+ * 与控制台配色对应：日志区是深色反色面（设计稿的终端块），深色主题下仍然可读。
+ */
+
+.ui-suite-detail-page .ui-wb-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+}
+
+.ui-suite-detail-page .ui-wb-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ui-suite-detail-page .ui-wb-card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--srf-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ui-suite-detail-page .ui-wb-card-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--srf-result-passed);
+}
+
+.ui-suite-detail-page .ui-wb-card-chip {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--srf-chip);
+  color: var(--srf-chip-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.ui-suite-detail-page .ui-wb-card-head-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--srf-text-muted);
+  font-size: 11px;
+}
+
+/* ===== 执行回放：浏览器外壳 + 截图舞台 + 步骤滑轨 ===== */
+
+.ui-suite-detail-page .ui-wb-replay-stage {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 150px;
+  overflow: hidden;
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-terminal-bg);
+}
+
+.ui-suite-detail-page .ui-wb-replay-chrome {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--srf-terminal-bar);
+  color: var(--srf-terminal-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+}
+
+.ui-suite-detail-page .ui-wb-replay-chrome-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ui-suite-detail-page .ui-wb-replay-chrome-dots > span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--srf-track-pending);
+}
+
+.ui-suite-detail-page .ui-wb-replay-chrome-dots > span:nth-child(1) {
+  background: var(--srf-result-failed);
+}
+
+.ui-suite-detail-page .ui-wb-replay-chrome-dots > span:nth-child(3) {
+  background: var(--srf-result-passed);
+}
+
+.ui-suite-detail-page .ui-wb-replay-chrome-url {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-suite-detail-page .ui-wb-replay-chrome-state {
+  flex: 0 0 auto;
+  color: var(--srf-terminal-accent);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.ui-suite-detail-page .ui-wb-replay-chrome-state.is-done {
+  color: var(--srf-terminal-info);
+}
+
+/* 舞台画布：按 16:9 定高（设计稿的主视觉），只有屏幕又矮又宽时才靠 40vh 的上限收一收。 */
+.ui-suite-detail-page .ui-wb-replay > .ui-wb-card-head,
+.ui-suite-detail-page .ui-wb-replay-track,
+.ui-suite-detail-page .ui-wb-strip > .ui-wb-card-head,
+.ui-suite-detail-page .ui-wb-strip-list {
+  flex: 0 0 auto;
+}
+
+.ui-suite-detail-page .ui-wb-replay-canvas {
+  position: relative;
+  flex: 0 1 auto;
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  max-height: min(40vh, 480px);
+  overflow: hidden;
+  background: var(--srf-terminal-surface);
+}
+
+.ui-suite-detail-page .ui-wb-replay-shot {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.ui-suite-detail-page .ui-wb-replay-shot img {
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.ui-suite-detail-page .ui-wb-replay-placeholder {
+  padding: 12px;
+  text-align: center;
+}
+
+.ui-suite-detail-page .ui-wb-replay-placeholder .ant-empty-description {
+  color: var(--srf-terminal-muted);
+}
+
+.ui-suite-detail-page .ui-wb-replay-overlay {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 20px);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--srf-terminal-chip);
+  color: var(--srf-terminal-bg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+}
+
+.ui-suite-detail-page .ui-wb-replay-overlay-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-suite-detail-page .ui-wb-replay-overlay-dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--srf-tone-text, var(--srf-result-skipped));
+}
+
+.ui-suite-detail-page .ui-wb-replay-track {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ui-suite-detail-page .ui-wb-replay-track-bar {
+  position: relative;
+  height: 6px;
+  margin: 6px 4px 2px;
+  border-radius: 999px;
+  background: var(--srf-track);
+}
+
+.ui-suite-detail-page .ui-wb-replay-track-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: var(--srf-accent);
+}
+
+.ui-suite-detail-page .ui-wb-replay-pin {
+  position: absolute;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--srf-card);
+  border-radius: 999px;
+  background: var(--srf-tone-text, var(--srf-track-pending));
+  cursor: pointer;
+}
+
+.ui-suite-detail-page .ui-wb-replay-pin.active {
+  width: 12px;
+  height: 12px;
+  background: var(--srf-accent);
+}
+
+.ui-suite-detail-page .ui-wb-replay-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ui-suite-detail-page .ui-wb-replay-controls-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--srf-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+}
+
+.ui-suite-detail-page .ui-wb-replay-nav.ant-btn {
+  color: var(--srf-text-secondary);
+}
+
+.ui-suite-detail-page .ui-wb-replay-nav.ant-btn:hover {
+  color: var(--srf-accent);
+  background: var(--srf-hover);
+}
+
+.ui-suite-detail-page .ui-wb-replay-hint {
+  color: var(--srf-text-muted);
+  font-size: 11px;
+}
+
+/* ===== 关键帧快照 ===== */
+
+/* 单行横向滚动：截图多时这一条不能长高，否则会把下面的执行控制台顶出视口。
+   一屏正好放 4 张（与设计稿一致），多出来的横向滚动查看。 */
+.ui-suite-detail-page .ui-wb-strip-list {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.ui-suite-detail-page .ui-wb-strip-item {
+  display: flex;
+  flex: 0 0 calc(25% - 6px);
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ui-suite-detail-page .ui-wb-strip-thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-hover);
+}
+
+.ui-suite-detail-page .ui-wb-strip-item.active .ui-wb-strip-thumb {
+  border-color: var(--srf-accent);
+  box-shadow: 0 0 0 1px var(--srf-accent);
+}
+
+.ui-suite-detail-page .ui-wb-strip-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.ui-suite-detail-page .ui-wb-strip-order {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--srf-tone-bg, var(--srf-chip));
+  color: var(--srf-tone-text, var(--srf-chip-text));
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+}
+
+.ui-suite-detail-page .ui-wb-strip-name {
+  overflow: hidden;
+  color: var(--srf-text-secondary);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-suite-detail-page .ui-wb-strip-item.active .ui-wb-strip-name {
+  color: var(--srf-accent);
+  font-weight: 600;
+}
+
+.ui-suite-detail-page .ui-wb-strip-empty {
+  padding: 8px;
+}
+
+/* ===== 执行控制台 ===== */
+
+.ui-suite-detail-page .ui-wb-console-status {
+  padding: 1px 6px;
+  border: 1px solid var(--srf-tone-border, var(--srf-card-border));
+  border-radius: 999px;
+  background: var(--srf-tone-bg, var(--srf-chip));
+  color: var(--srf-tone-text, var(--srf-chip-text));
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.ui-suite-detail-page .ui-wb-console-meta {
+  overflow: hidden;
+  max-width: 220px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-suite-detail-page .ui-wb-console-action.ant-btn {
+  color: var(--srf-text-secondary);
+}
+
+.ui-suite-detail-page .ui-wb-console-action.ant-btn:hover {
+  color: var(--srf-accent);
+}
+
+/* 日志是控制台卡片的弹性区：卡片被压时只压这里（内部滚动），
+   下面的指标区是 flex: 0 0 auto，永远不会被压或挤到看不见。 */
+.ui-suite-detail-page .ui-wb-console-log {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 60px;
+  max-height: none;
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-terminal-bg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.ui-suite-detail-page .ui-wb-console-empty .ant-empty-description {
+  color: var(--srf-terminal-muted);
+}
+
+.ui-suite-detail-page .ui-wb-console-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--srf-terminal-text);
+}
+
+.ui-suite-detail-page .ui-wb-console-line.is-error {
+  color: var(--srf-terminal-danger-text);
+}
+
+.ui-suite-detail-page .ui-wb-console-level {
+  flex: 0 0 auto;
+  font-weight: 700;
+  color: var(--srf-terminal-accent);
+}
+
+.ui-suite-detail-page .ui-wb-console-line.is-wait .ui-wb-console-level {
+  color: var(--srf-terminal-info);
+}
+
+.ui-suite-detail-page .ui-wb-console-line.is-assert .ui-wb-console-level {
+  color: var(--srf-terminal-accent);
+}
+
+.ui-suite-detail-page .ui-wb-console-line.is-error .ui-wb-console-level {
+  color: var(--srf-terminal-danger);
+}
+
+.ui-suite-detail-page .ui-wb-console-line.is-done .ui-wb-console-level {
+  color: var(--srf-terminal-info);
+}
+
+.ui-suite-detail-page .ui-wb-console-time {
+  flex: 0 0 auto;
+  color: var(--srf-terminal-muted);
+}
+
+.ui-suite-detail-page .ui-wb-console-command {
+  flex: 0 0 auto;
+  color: var(--srf-terminal-title);
+}
+
+.ui-suite-detail-page .ui-wb-console-result {
+  min-width: 0;
+  color: inherit;
+  word-break: break-word;
+}
+
+.ui-suite-detail-page .ui-wb-console-metrics {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--srf-divider);
+}
+
+.ui-suite-detail-page .ui-wb-metric {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 52px;
+  padding: 8px 10px;
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-hover);
+}
+
+.ui-suite-detail-page .ui-wb-metric-label {
+  color: var(--srf-text-muted);
+  font-size: 11px;
+}
+
+.ui-suite-detail-page .ui-wb-metric-value {
+  color: var(--srf-text);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 22px;
+}
+
+.ui-suite-detail-page .ui-wb-metric-value.tone-green,
+.ui-suite-detail-page .ui-wb-metric-value.tone-red {
+  color: var(--srf-tone-text);
+}
+
+.ui-suite-detail-page .ui-wb-console-snapshot-toggle.ant-btn {
+  padding: 0;
+  color: var(--srf-text-secondary);
+}
+
+.ui-suite-detail-page .ui-wb-console-snapshot-toggle.ant-btn:hover {
+  color: var(--srf-accent);
+}
+
+.ui-suite-detail-page .ui-wb-console-snapshot-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.ui-suite-detail-page .ui-wb-console-snapshot-label {
+  color: var(--srf-text-muted);
+  font-size: 11px;
+}
+
+.ui-suite-detail-page .ui-wb-console-snapshot-pre {
+  max-height: 180px;
+  margin: 4px 0 0;
+  overflow: auto;
+  padding: 8px;
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-hover);
+  color: var(--srf-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.ui-suite-detail-page .ui-wb-console-snapshot-trace {
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  word-break: break-all;
+}
+
+/* ===== 窄屏 ===== */
+
+@media (max-width: 720px) {
+  .ui-suite-detail-page .ui-wb-strip-item {
+    flex-basis: calc(50% - 4px);
+  }
+}

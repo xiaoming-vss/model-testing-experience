@@ -24,8 +24,20 @@ export const methodOptions: SelectProps['options'] = [
 export const bodyTypeOptions: Array<{ label: string; value: NonNullable<ApiCase['bodyType']> }> = [
   { label: 'none', value: 'none' },
   { label: 'JSON', value: 'json' },
-  { label: 'Form', value: 'form' },
-  { label: 'Text', value: 'raw' },
+  // `form` 由 worker 作为表单体发出，落到请求上就是 x-www-form-urlencoded。
+  { label: 'x-www-form-urlencoded', value: 'form' },
+  { label: 'raw', value: 'raw' },
+]
+
+/**
+ * 请求头面板的「快捷注入」预设：接口调试里最常手写的几个头。
+ * `Authorization` 与 `X-Request-ID` 只注入键名，值留给使用者按当前环境填写。
+ */
+export const headerQuickInjectPresets: Array<{ label: string; key: string; value: string }> = [
+  { label: 'Authorization', key: 'Authorization', value: '' },
+  { label: 'Accept: application/json', key: 'Accept', value: 'application/json' },
+  { label: 'X-Request-ID', key: 'X-Request-ID', value: '' },
+  { label: 'User-Agent', key: 'User-Agent', value: '' },
 ]
 
 export const runResultViewOptions: Array<{ label: string; value: RunResultView }> = [
@@ -94,19 +106,23 @@ export const extractSourceLabelMap: Record<ApiExtractRuleSource, string> = {
   status_code: '状态码',
 }
 
-export function methodTagColor(method: ApiCase['method']) {
+/*
+ * 请求方式 → 色盘色调。用例列表的方法徽标与请求地址条的方法选择器都用它；
+ * 色调名对应 shared/styles/surface-tokens.css 的 `.tone-*`，页面根节点带 `tp-surface` 才有值。
+ */
+export function methodTone(method: ApiCase['method']): 'green' | 'blue' | 'amber' | 'purple' | 'red' {
   switch (method) {
     case 'GET':
       return 'green'
     case 'POST':
       return 'blue'
     case 'PUT':
-      return 'gold'
-    case 'DELETE':
-      return 'red'
+      return 'amber'
     case 'PATCH':
       return 'purple'
+    case 'DELETE':
+      return 'red'
     default:
-      return 'default'
+      return 'blue'
   }
 }

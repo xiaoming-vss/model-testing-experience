@@ -3,6 +3,7 @@
 本目录遵循根目录 [AGENTS.md](../../AGENTS.md)。文档统一维护于 [docs/studio](../../docs/studio/README.md)。
 
 - 业务上下文：[CONTEXT.md](../../docs/studio/CONTEXT.md)。
+- 结构与代码规范：[STRUCTURE.md](../../docs/studio/STRUCTURE.md)（分层与依赖方向、feature 边界、样式归属、目录契约、代码体积）。
 - 架构决策：[ADR](../../docs/studio/adr/)。
 - 公共规范：[领域文档](../../docs/agents/domain.md)、[问题跟踪](../../docs/agents/issue-tracker.md)、[分诊标签](../../docs/agents/triage-labels.md)。
 

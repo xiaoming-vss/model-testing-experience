@@ -1,6 +1,5 @@
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import {
-  getUiStepFieldMeta,
   isValidUiStepComparator,
   isValidUiStepKeyword,
   isValidUiStepLocatorType,
@@ -8,18 +7,22 @@ import {
   uiTestComparatorOptions,
   uiTestKeywordOptions,
   uiTestLocatorTypeOptions,
-  usesUiStepComparator,
-  usesUiStepOperation
+  usesUiStepComparator
 } from '@/features/ui-automation/config/stepConfig'
+import { buildUiStepRowView } from '@/features/ui-automation/utils/stepRowView'
 import { type UiTemplateFieldKey } from '@/features/ui-automation/utils/detailView'
+import { indexUiRunStepResultsByOrder } from '@/features/ui-automation/utils/detailRunView'
 import {
   type UiTestStepFormValue
 } from '@/features/ui-automation/utils/uiTestCaseEditor'
-import { DownOutlined, EditOutlined } from '@ant-design/icons'
+import type { UiTestCaseRunStepResult } from '@/services/api'
+import { DownOutlined, EditOutlined, HolderOutlined } from '@ant-design/icons'
 import type { InputRef } from 'antd'
 import { Empty, Form, Input, Select, Switch, Tooltip } from 'antd'
 
 import type { ProjectAction } from '@/features/projects/types'
+
+import { UiStepResultBadge } from './UiStepResultBadge'
 import type { JSX } from 'react'
 
 type Props = {
@@ -35,9 +38,13 @@ type Props = {
   removeStep: (remove: (index: number | number[]) => void, index: number) => void
   renderTemplatePickerLabel: (stepIndex: number, fieldKey: UiTemplateFieldKey, label: string) => JSX.Element
   bindTemplateInputRef: (stepIndex: number, fieldKey: UiTemplateFieldKey) => (instance: InputRef | null) => void
+  /** 最近一次调试运行的步骤结果，按 orderNo 对齐到步骤行上显示 PASS / FAIL 徽标。 */
+  stepResults?: UiTestCaseRunStepResult[]
 }
 
-export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, draggingStepIndex, handleStepDrop, can, handleStepDragStart, setDraggingStepIndex, toggleStepPanel, removeStep, renderTemplatePickerLabel, bindTemplateInputRef }: Props) {
+export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, draggingStepIndex, handleStepDrop, can, handleStepDragStart, setDraggingStepIndex, toggleStepPanel, removeStep, renderTemplatePickerLabel, bindTemplateInputRef, stepResults = [] }: Props) {
+  const stepResultByOrder = indexUiRunStepResultsByOrder(stepResults)
+
   return (
     <Form.List name="steps">
       {(fields, { add, remove, move }) => (
@@ -55,33 +62,22 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
               {fields.map((field, index) => {
                 const { key: fieldKey, ...fieldProps } = field
                 const step = watchedSteps[index]
-                const stepKeyword = step?.keyword?.trim()
-                const stepMeta = getUiStepFieldMeta(stepKeyword)
-                const stepRequiresLocator = requiresUiStepLocator(stepKeyword)
-                const stepUsesComparator = usesUiStepComparator(stepKeyword)
-                const stepUsesOperation = usesUiStepOperation(stepKeyword)
-                const showLocatorFields = stepRequiresLocator || Boolean(step?.locatorType?.trim() || step?.locatorValue?.trim())
-                const showOperationField = stepUsesOperation || Boolean(step?.operationValue?.trim())
-                const showLocatorTypeField = stepRequiresLocator || Boolean(step?.locatorType?.trim())
-                const pairLocatorAndOperation = showLocatorFields && showOperationField
-                const operationFieldLabel = stepMeta.operationLabel ? `操作值（${stepMeta.operationLabel}）` : '操作值'
-                const locatorFieldHint = stepMeta.locatorHint || (stepRequiresLocator ? '当前关键字通常需要定位器。' : '')
-                const operationFieldHint = stepMeta.operationHint || ''
-                const locatorValueFieldClass = pairLocatorAndOperation ? 'ui-test-case-step-field-half' : 'ui-test-case-step-field-wide'
-                const operationValueFieldClass = pairLocatorAndOperation
-                  ? 'ui-test-case-step-field-half'
-                  : stepUsesComparator
-                    ? 'ui-test-case-step-field-half'
-                    : 'ui-test-case-step-field-wide'
+                const {
+                  requiresLocator: stepRequiresLocator,
+                  usesComparator: stepUsesComparator,
+                  showLocatorFields,
+                  showOperationField,
+                  showLocatorTypeField,
+                  operationFieldLabel,
+                  operationFieldPlaceholder,
+                  locatorFieldHint,
+                  operationFieldHint,
+                  locatorValueFieldClass,
+                  operationValueFieldClass,
+                  summary: stepSummary,
+                } = buildUiStepRowView(step)
                 const expanded = expandedStepIndexes.includes(index)
-                const stepSummary = [
-                  stepKeyword || '未设置关键字',
-                  stepRequiresLocator ? step?.locatorType?.trim() || '待设定位' : step?.locatorType?.trim() || '无需定位',
-                  stepUsesComparator ? step?.comparator?.trim() || '待设比较' : '',
-                  step?.enabled === false ? '已禁用' : '已启用',
-                ]
-                  .filter(Boolean)
-                  .join(' · ')
+                const stepResult = stepResultByOrder.get(index + 1)
 
                 return (
                   <div
@@ -104,6 +100,10 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                     >
                       <div className="ui-test-case-step-card-main">
                         <div className="ui-test-case-step-card-leading">
+                          {/* 设计稿在行首画了拖拽手柄；整行本来就可拖（见上面的 draggable），这里只是把可拖这件事画出来。 */}
+                          <span className="ui-wb-step-grip" aria-hidden="true">
+                            <HolderOutlined />
+                          </span>
                           <button
                             type="button"
                             className={`ui-test-case-step-toggle${expanded ? ' expanded' : ''}`}
@@ -138,7 +138,14 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                               />
                             </Form.Item>
                           </div>
-                          <span>{stepSummary}</span>
+                          <div className="ui-wb-step-summary">
+                            <span className="ui-wb-step-summary-text">{stepSummary}</span>
+                            {stepResult ? (
+                              <UiStepResultBadge stepResult={stepResult} />
+                            ) : step?.keyword?.trim() ? null : (
+                              <span className="ui-wb-step-status is-draft">草稿</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="ui-test-case-step-actions" onClick={(event) => event.stopPropagation()}>
@@ -300,7 +307,7 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                         >
                           <Input
                             ref={bindTemplateInputRef(field.name, 'operationValue')}
-                            placeholder={stepMeta.operationPlaceholder || '例如：tester'}
+                            placeholder={operationFieldPlaceholder}
                             maxLength={400}
                           />
                         </Form.Item>

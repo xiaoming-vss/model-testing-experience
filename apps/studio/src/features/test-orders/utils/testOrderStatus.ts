@@ -59,3 +59,28 @@ const ENTRY_STATUS_DOT: Record<string, string> = {
 export function getTestOrderEntryDotColor(status?: string) {
   return ENTRY_STATUS_DOT[status ?? ''] ?? ENTRY_STATUS_DOT.pending
 }
+
+/** 测试单状态的色调：未开始灰 / 执行中蓝 / 已完成绿。 */
+const ORDER_STATUS_TONES: Record<string, string> = {
+  pending: 'slate',
+  in_progress: 'blue',
+  completed: 'green',
+}
+
+/** 执行条目结论的色调，与进度条分段（--srf-result-*）同一组语义。 */
+const ENTRY_STATUS_TONES: Record<string, string> = {
+  pending: 'slate',
+  passed: 'green',
+  failed: 'red',
+  blocked: 'amber',
+  skipped: 'slate',
+}
+
+/** 共享色盘里的色调名，供列表页与执行工作台给胶囊 / 按钮上色。 */
+export function getTestOrderStatusTone(status?: string) {
+  return ORDER_STATUS_TONES[status ?? ''] ?? 'slate'
+}
+
+export function getTestOrderEntryStatusTone(status?: string) {
+  return ENTRY_STATUS_TONES[status ?? ''] ?? 'slate'
+}

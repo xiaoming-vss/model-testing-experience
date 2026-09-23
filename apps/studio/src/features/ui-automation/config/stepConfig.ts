@@ -114,13 +114,7 @@ const uiStepFieldMetaMap: Record<string, UiStepFieldMeta> = {
   },
 }
 
-export type UiTestRunView = 'steps' | 'snapshot'
 export type UiSuiteRunReportView = 'items' | 'snapshot'
-
-export const uiTestRunViewOptions: Array<{ label: string; value: UiTestRunView }> = [
-  { label: '步骤结果', value: 'steps' },
-  { label: '运行快照', value: 'snapshot' },
-]
 
 export const uiSuiteRunReportViewOptions: Array<{ label: string; value: UiSuiteRunReportView }> = [
   { label: '用例明细', value: 'items' },

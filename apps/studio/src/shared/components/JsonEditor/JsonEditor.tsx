@@ -19,7 +19,7 @@ import {
 
 function tryFormatJson(value?: string) {
   if (!value?.trim()) {
-    return { valid: true as const, formatted: '', errorMessage: '' }
+    return { valid: true as const, formatted: '', compressed: '', errorMessage: '' }
   }
 
   try {
@@ -27,12 +27,14 @@ function tryFormatJson(value?: string) {
     return {
       valid: true as const,
       formatted: JSON.stringify(parsed, null, 2),
+      compressed: JSON.stringify(parsed),
       errorMessage: '',
     }
   } catch (error) {
     return {
       valid: false as const,
       formatted: value,
+      compressed: value,
       errorMessage: error instanceof Error ? error.message : 'JSON 格式不正确',
     }
   }
@@ -42,12 +44,20 @@ export type JsonEditorRef = {
   focus: () => void
   insertText: (text: string) => void
   formatDocument: () => void
+  compressDocument: () => void
+}
+
+/** 光标位置按 1 基计数，与宿主状态栏「行 4, 列 18」的显示口径一致。 */
+export type JsonEditorCursor = {
+  line: number
+  column: number
 }
 
 type JsonEditorProps = {
   value?: string
   onChange?: (value: string) => void
   minHeight?: number
+  /** 自定义工具条；传 `null` 表示外壳不自带工具条，动作条由宿主画在编辑器之外。 */
   toolbar?: ReactNode
   /** 将编辑器操作并入宿主工具栏，默认仍显示在编辑器内部。 */
   toolbarContainer?: HTMLElement | null
@@ -56,6 +66,8 @@ type JsonEditorProps = {
   ariaLabel?: string
   /** 下载按钮保存的文件名 */
   downloadFileName?: string
+  /** 光标位置变化时回调，宿主用它渲染编辑器底部状态栏。 */
+  onCursorChange?: (cursor: JsonEditorCursor) => void
 }
 
 export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
@@ -68,12 +80,27 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
   foldable = false,
   ariaLabel,
   downloadFileName = 'content.json',
+  onCursorChange,
 }, ref) => {
   const jsonState = useMemo(() => tryFormatJson(value), [value])
   const themeMode = useThemeStore((state) => state.mode)
   const editorViewRef = useRef<EditorView | null>(null)
   const editorTheme = themeMode === 'dark' ? codeEditorDarkTheme : codeEditorLightTheme
   const editorHighlightStyle = themeMode === 'dark' ? jsonEditorDarkHighlightStyle : jsonEditorLightHighlightStyle
+  const onCursorChangeRef = useRef(onCursorChange)
+  onCursorChangeRef.current = onCursorChange
+
+  /* 光标位置只回传行号与列号：宿主状态栏要显示「行 4, 列 18」，行内偏移量对它没有意义。 */
+  const cursorListener = useMemo(
+    () =>
+      EditorView.updateListener.of((update) => {
+        if (!update.selectionSet && !update.docChanged) return
+        const head = update.state.selection.main.head
+        const line = update.state.doc.lineAt(head)
+        onCursorChangeRef.current?.({ line: line.number, column: head - line.from + 1 })
+      }),
+    [],
+  )
 
   async function handleCopy() {
     try {
@@ -125,7 +152,15 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
       }
       editorViewRef.current?.focus()
     },
-  }), [jsonState.formatted, jsonState.valid, onChange, readOnly, value])
+    compressDocument() {
+      if (readOnly) return
+      if (!jsonState.valid || !value?.trim()) return
+      if (jsonState.compressed !== value) {
+        onChange?.(jsonState.compressed)
+      }
+      editorViewRef.current?.focus()
+    },
+  }), [jsonState.formatted, jsonState.compressed, jsonState.valid, onChange, readOnly, value])
 
   function handleBlur() {
     if (readOnly) return
@@ -135,9 +170,8 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
     }
   }
 
-  const editorToolbar = toolbar ? (
-    <div className="json-editor-toolbar">{toolbar}</div>
-  ) : (
+  /* `toolbar` 传 null 表示编辑器外壳不自带工具条——宿主把动作条画在编辑器之外（如请求体面板）。 */
+  const editorToolbar = toolbar === undefined ? (
     <div className="json-editor-toolbar">
       <div className="json-editor-toolbar-actions">
         <Button
@@ -158,12 +192,14 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
         </Button>
       </div>
     </div>
+  ) : toolbar === null ? null : (
+    <div className="json-editor-toolbar">{toolbar}</div>
   )
 
   return (
     <div className={`json-editor-wrap${foldable ? ' foldable' : ''}${readOnly ? ' readonly' : ''}`}>
       <div className={`json-editor-shell${jsonState.valid ? '' : ' invalid'}`}>
-        {toolbarContainer ? createPortal(editorToolbar, toolbarContainer) : editorToolbar}
+        {toolbarContainer && editorToolbar ? createPortal(editorToolbar, toolbarContainer) : editorToolbar}
         <CodeMirror
           value={value ?? ''}
           minHeight={`${minHeight}px`}
@@ -178,6 +214,7 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
             json(),
             linter(jsonParseLinter()),
             keymap.of([indentWithTab]),
+            cursorListener,
             ...(ariaLabel ? [EditorView.contentAttributes.of({ 'aria-label': ariaLabel })] : []),
             EditorView.lineWrapping,
             editorTheme,

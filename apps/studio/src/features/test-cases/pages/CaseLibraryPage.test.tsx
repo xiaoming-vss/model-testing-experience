@@ -319,7 +319,7 @@ it('点用例直接进编辑：没有抽屉、没有只读态、没有编辑按�
   const user = userEvent.setup()
   await user.clear(caseTitleInput())
   await user.type(caseTitleInput(), '服务器部署判定改')
-  await user.click(button('保存'))
+  await user.click(button('保存变更'))
   await waitFor(() =>
     expect(update).toHaveBeenCalledWith(
       'case-1',
@@ -358,7 +358,7 @@ it('选中测试集后新建用例，新建时挂在该测试集下', async () =
   expect(caseTitleInput().value).toBe('')
 
   await user.type(caseTitleInput(), '新增的部署判定用例')
-  await user.click(button('保存'))
+  await user.click(button('保存变更'))
 
   await waitFor(() =>
     expect(create).toHaveBeenCalledWith(
@@ -409,5 +409,72 @@ it.each([false, true])('批量删除只提交勾选项，失败保留选择（�
     expect(checkbox('选择用例：用例乙')).not.toBeChecked()
     expect(button('批量删除')).toBeDisabled()
   }
+  client.clear()
+})
+
+it('列表行带上用例编号、优先级色块与用例类型色块', async () => {
+  vi.spyOn(api, 'getProjectFunctionTestSuites').mockImplementation(async () => listResponse([suite]))
+  vi.spyOn(api, 'getProjectFunctionTestCases').mockImplementation(async () => listResponse([loginCase]))
+  const client = buildClient()
+  renderPage(client)
+
+  await screen.findByText('服务器部署判定【本地连接】')
+  // 快速过滤条里也有 P0，所以这几条断言限定在表格里
+  const table = within(document.querySelector('.case-library-table-scroll') as HTMLElement)
+  // 编号是 UUID，只露前 8 位，完整值留在 title 里
+  expect(table.getByText('case-1')).toHaveAttribute('title', 'case-1')
+  expect(table.getByText('P0')).toHaveClass('tone-red')
+  // 用例类型按关键词归色调，认不出来的走兜底色
+  expect(table.getByText('安装部署')).toHaveClass('tone-indigo')
+  client.clear()
+})
+
+it('快速过滤条按优先级筛选，再点一次取消', async () => {
+  vi.spyOn(api, 'getProjectFunctionTestSuites').mockImplementation(async () => listResponse([suite]))
+  const cases = vi
+    .spyOn(api, 'getProjectFunctionTestCases')
+    .mockImplementation(async () => listResponse([loginCase]))
+  const client = buildClient()
+  renderPage(client)
+  await screen.findByText('服务器部署判定【本地连接】')
+
+  const user = userEvent.setup()
+  await user.click(button('P1'))
+  await waitFor(() => expect(cases.mock.calls.at(-1)?.[1]).toMatchObject({ priority: 'P1' }))
+
+  // 同一档再点一次就是取消，不是重复筛选
+  await user.click(button('P1'))
+  await waitFor(() => expect(cases.mock.calls.at(-1)?.[1]).toMatchObject({ priority: '' }))
+  client.clear()
+})
+
+it('用例类型按精确值筛选，选择后请求带上 caseType', async () => {
+  vi.spyOn(api, 'getProjectFunctionTestSuites').mockImplementation(async () => listResponse([suite]))
+  const cases = vi
+    .spyOn(api, 'getProjectFunctionTestCases')
+    .mockImplementation(async () => listResponse([loginCase]))
+  const client = buildClient()
+  renderPage(client)
+  await screen.findByText('服务器部署判定【本地连接】')
+
+  const user = userEvent.setup()
+  await user.click(screen.getByText('全部类型'))
+  await user.click(await screen.findByTitle('安全测试'))
+
+  await waitFor(() => expect(cases.mock.calls.at(-1)?.[1]).toMatchObject({ caseType: '安全测试' }))
+  client.clear()
+})
+
+it('搜索框支持 Ctrl / ⌘ + K 聚焦', async () => {
+  vi.spyOn(api, 'getProjectFunctionTestSuites').mockImplementation(async () => listResponse([suite]))
+  vi.spyOn(api, 'getProjectFunctionTestCases').mockImplementation(async () => listResponse([loginCase]))
+  const client = buildClient()
+  renderPage(client)
+  await screen.findByText('服务器部署判定【本地连接】')
+
+  const input = screen.getByPlaceholderText('搜索用例名称 / 模块')
+  expect(input).not.toHaveFocus()
+  await userEvent.setup().keyboard('{Control>}k{/Control}')
+  expect(input).toHaveFocus()
   client.clear()
 })

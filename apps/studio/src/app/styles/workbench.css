@@ -2754,7 +2754,7 @@ body,
   .ai-testing-page,
   .ai-testing-overview-page,
   .base-services-page
-) :is(.ant-card, .sprint-card, .api-collection-card, .base-services-connection-card, .ai-task-card, .functional-suite-card, .ui-test-suite-card) {
+) :is(.ant-card, .sprint-card, .api-collection-card, .base-services-connection-card, .ai-task-card, .functional-suite-card) {
   border-color: var(--mac-dark-border) !important;
   background: var(--mac-dark-card) !important;
   -webkit-backdrop-filter: saturate(180%) blur(22px);

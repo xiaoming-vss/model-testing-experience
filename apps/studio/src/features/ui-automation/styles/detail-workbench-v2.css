@@ -1,0 +1,500 @@
+/*
+ * UI测试集详情页（UI 测试列表点测试集名称进来的页面）按设计稿重做的表面层：板面、顶栏、控制条、用例顺序弹层。
+ *
+ * 结构：顶栏（返回 / 标题 + 测试集 / 需求 / 迭代 / 就绪结论 / 上次运行 / 四个动作）
+ * + 控制条（选用例 + 工作区视图 + 运行环境）+ 两栏（左步骤编排、右执行回放与控制台）。
+ * 设计稿的副标题栏里还有「当前项目 / 当前迭代 / 测试阶段」三段面包屑，那是工作台外壳顶栏的内容，
+ * 页面里不再重复。
+ *
+ * token 与色盘来自 shared/styles/surface-tokens.css：页面根节点带 `tp-surface`、板面带 `tp-board`，
+ * 颜色只引用 `--srf-*` / `.tone-*`，深色由 token 切换，本文件没有 `:root[data-theme='dark']` 分支
+ * （唯一例外见文末的 `hidden` 兜底）。用例信息条与步骤编辑器在 detail-pipeline-v2.css，
+ * 右栏三张卡片在 detail-inspector-v2.css。
+ */
+
+/* ===== 板面与两栏 ===== */
+
+/*
+ * 板面必须是裸画布：`app/styles/workbench.css` 给 `.app-shell.app-shell-macos .workbench-panel`
+ * 铺了玻璃底 + 内高光 + 10px/24px 投影（(0,3,0) + !important），shared/styles/surface-tokens.css 里
+ * `.tp-board` 那条覆盖（(0,2,0)）压不住它——列表页靠的是带 `.testing-page` 前缀的 (0,6,0) 规则，
+ * 而详情页这条路由不在 `.testing-page` 里（实测 `.testing-page` 为 null），所以这里必须自己写一条：
+ * 带上 `.ui-suite-detail-page` 把权重抬到 (0,6,0)，深色分支再补 `:root[data-theme='dark']` 抬到 (0,7,0)。
+ * 去掉这层的判据：浅色下板面无底色 / 无投影，深色下同样如此（否则内容区会凭空多出一个容器）。
+ */
+.app-shell.app-shell-macos .ui-suite-detail-page .api-automation-content > .workbench-panel.ui-suite-detail-board,
+:root[data-theme='dark'] .app-shell.app-shell-macos .ui-suite-detail-page .api-automation-content > .workbench-panel.ui-suite-detail-board {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* 折叠状态由 `hidden` 属性表达（步骤卡片展开/收起就是这一条），而 `.ui-test-case-step-body` 在
+   index.css 里是 flex 容器——作者样式压得过 UA 的 `[hidden]`，这里补一条 !important 兜住。
+   antd 的 reset 也带同效规则，这条是让折叠不依赖三方 reset。 */
+.ui-suite-detail-page [hidden] {
+  display: none !important;
+}
+
+/* 工作区高度：取板上剩余高度（板面本身是有高度的滚动容器），所以整页不再随内容变长。
+   多出来的高度由左栏步骤列表与右栏控制台日志各自内部滚动消化，底部指标区固定可见。
+   矮屏下保留下限，回落到「整页滚动」的旧行为，避免面板被压到不可用。 */
+.ui-suite-detail-page .ui-wb-cols {
+  flex: 1 1 auto;
+  min-height: min(520px, calc(100vh - 320px));
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: 12px;
+  /* 两栏整体齐高：行高取两栏内容较高者，另一栏拉伸到同一高度，底边因此对齐。
+     高度由左栏的步骤编辑器卡片吃掉（见 detail-pipeline-v2.css），右栏保持自然高度。 */
+  align-items: stretch;
+}
+
+.ui-suite-detail-page .ui-wb-main {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ui-suite-detail-page .ui-wb-inspector {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* 空间不够时右栏自己滚（而不是把卡片压扁），指标区始终能滚到。 */
+  overflow-y: auto;
+}
+
+.ui-suite-detail-page .ui-wb-inspector-slot {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/*
+ * 三个槽的弹性分配（右栏要在一屏内放下三张卡片）：
+ * 1. 回放：空间不足时主要压它（shrink 权重 4）——舞台本来就是自适应区域；空间富余时它先长到上限。
+ * 2. 关键帧：定高（单行横滚），不参与伸缩。
+ * 3. 执行控制台：只吸收剩余空间（shrink 权重 1），卡片内部的日志是弹性区，
+ *    底部的指标区是 flex: 0 0 auto，任何情况下都不会被压或看不见。
+ * 三个卡片各自有 min-height，压到极限时右栏整体滚动，而不是把卡片压扁。
+ */
+/*
+ * 右栏三张卡片的高度分配：
+ * 1. 回放：舞台是 16:9（设计稿的主视觉），空间富余时不长，不够时先收它（收到下限为止）。
+ * 2. 关键帧：单行定高，不参与伸缩。
+ * 3. 执行控制台：吃掉剩余高度；空间不够时先压它的日志（日志本来就是滚动区）。
+ *    卡片下限写在槽上——槽才是右栏的 flex 项，写在卡片上会被槽压过去、内容外溢——所以
+ *    底部的指标区在任何高度下都留在卡片里，既不会被压扁，也不会被挤出卡片。
+ * 4. 三张卡片都到下限后仍放不下（矮屏）时，右栏整体滚动，卡片保持完整。
+ */
+.ui-suite-detail-page .ui-wb-inspector > .ui-wb-inspector-slot:nth-child(2) {
+  flex: 0 0 auto;
+}
+
+/* 中等屏幕（不够放下全部、但也不至于要滚动）时，先让舞台收一点，
+   别把控制台整块挤出视野；落到卡片下限后右栏才整体滚动。 */
+.ui-suite-detail-page .ui-wb-inspector > .ui-wb-inspector-slot:nth-child(1) {
+  flex: 0 1 auto;
+  min-height: 256px;
+}
+
+.ui-suite-detail-page .ui-wb-inspector > .ui-wb-inspector-slot:nth-child(3) {
+  flex: 1 1 auto;
+  /* 卡片下限：内距 + 头 + 日志 60 + 指标区 + 快照开关 */
+  min-height: 226px;
+}
+
+.ui-suite-detail-page .ui-wb-inspector-slot > .ui-wb-card {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* ===== 顶栏 ===== */
+
+.ui-suite-detail-page .ui-wb-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+}
+
+.ui-suite-detail-page .ui-wb-toolbar-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ui-suite-detail-page .ui-wb-toolbar-back.ant-btn {
+  color: var(--srf-text-secondary);
+}
+
+.ui-suite-detail-page .ui-wb-toolbar-back.ant-btn:hover {
+  color: var(--srf-accent);
+  background: var(--srf-hover);
+}
+
+.ui-suite-detail-page .ui-wb-toolbar-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 22px;
+  color: var(--srf-text);
+}
+
+.ui-suite-detail-page .ui-wb-toolbar-suite {
+  max-width: 280px;
+  overflow: hidden;
+  color: var(--srf-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-suite-detail-page .ui-wb-toolbar-path {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 420px;
+  overflow: hidden;
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-suite-detail-page .ui-wb-toolbar-sep {
+  color: var(--srf-card-border);
+}
+
+/* 就绪结论是状态胶囊（与列表页徽标同一套九色盘），不是按钮。 */
+.ui-suite-detail-page .ui-wb-readiness {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--srf-tone-border, var(--srf-card-border));
+  border-radius: 999px;
+  background: var(--srf-tone-bg, var(--srf-chip));
+  color: var(--srf-tone-text, var(--srf-chip-text));
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.ui-suite-detail-page .ui-wb-readiness-dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.ui-suite-detail-page .ui-wb-toolbar-last-run {
+  color: var(--srf-text-muted);
+  font-size: 12px;
+}
+
+.ui-suite-detail-page .ui-wb-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 测试集描述：设计稿没有这一块，但它是测试集自身的说明，保留为板面末尾一行弱化文字。 */
+.ui-suite-detail-page .ui-wb-board-note.ant-typography {
+  margin: 0;
+  color: var(--srf-text-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ui-suite-detail-page .ui-wb-toolbar-debug.ant-btn {
+  color: var(--srf-text-secondary);
+}
+
+.ui-suite-detail-page .ui-wb-toolbar-debug.ant-btn:hover {
+  color: var(--srf-accent);
+  border-color: var(--srf-accent-border);
+}
+
+.ui-suite-detail-page .ui-wb-toolbar-save.ant-btn {
+  border-color: var(--srf-accent-border);
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent-strong);
+}
+
+/* ===== 控制条 ===== */
+
+.ui-suite-detail-page .ui-wb-ribbon {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+}
+
+/* 这一组的子项（下拉 / 计数 / 前后切换 / 顺序 / 新建）加起来接近 560px。flex-basis 也取 560px，
+   空间不够时让右边那组换行到第二行，而不是让左组的子项溢出、画到右边那组上面——
+   那种遮挡在 jsdom 的布局盲区里看不见，只能靠这条不变量守住。 */
+.ui-suite-detail-page .ui-wb-ribbon-case {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 560px;
+}
+
+.ui-suite-detail-page .ui-wb-ribbon-case > * {
+  flex-shrink: 0;
+}
+
+.ui-suite-detail-page .ui-wb-ribbon-case > .ui-wb-ribbon-case-select {
+  flex-shrink: 1;
+}
+
+.ui-suite-detail-page .ui-wb-ribbon-case-icon {
+  color: var(--srf-folder);
+  font-size: 16px;
+}
+
+.ui-suite-detail-page .ui-wb-ribbon-case-label {
+  flex: 0 0 auto;
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+}
+
+.ui-suite-detail-page .ui-wb-ribbon-case-select {
+  min-width: 120px;
+  flex: 1 1 auto;
+  max-width: 460px;
+}
+
+.ui-suite-detail-page .ui-wb-ribbon-case-select .ant-select-selector {
+  border-color: var(--srf-card-border) !important;
+  background: var(--srf-hover) !important;
+}
+
+.ui-suite-detail-page .ui-wb-ribbon-count {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--srf-count-badge);
+  color: var(--srf-accent-strong);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.ui-suite-detail-page .ui-wb-ribbon-step.ant-btn,
+.ui-suite-detail-page .ui-wb-ribbon-order.ant-btn {
+  color: var(--srf-text-secondary);
+}
+
+.ui-suite-detail-page .ui-wb-ribbon-step.ant-btn:hover,
+.ui-suite-detail-page .ui-wb-ribbon-order.ant-btn:hover {
+  color: var(--srf-accent);
+  background: var(--srf-hover);
+}
+
+.ui-suite-detail-page .ui-wb-ribbon-workspace {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ui-suite-detail-page .ui-wb-ribbon-env {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 320px;
+  padding: 3px 8px;
+  border-radius: var(--srf-radius-control);
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===== 用例顺序弹层 ===== */
+
+.ui-wb-order-overlay .ui-wb-order-panel {
+  width: 360px;
+}
+
+.ui-wb-order-overlay .ui-wb-order-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--srf-divider);
+}
+
+.ui-wb-order-overlay .ui-wb-order-title {
+  color: var(--srf-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ui-wb-order-overlay .ui-wb-order-hint {
+  color: var(--srf-text-muted);
+  font-size: 11px;
+}
+
+.ui-wb-order-overlay .ui-wb-order-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 360px;
+  overflow: auto;
+  padding-top: 8px;
+}
+
+.ui-wb-order-overlay .ui-wb-order-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--srf-radius-control);
+  cursor: pointer;
+}
+
+.ui-wb-order-overlay .ui-wb-order-item.can-drag {
+  cursor: grab;
+}
+
+.ui-wb-order-overlay .ui-wb-order-item:hover {
+  border-color: var(--srf-card-border);
+  background: var(--srf-hover);
+}
+
+.ui-wb-order-overlay .ui-wb-order-item.selected,
+.ui-wb-order-overlay .ui-wb-order-item.selected:hover {
+  border-color: var(--srf-accent-border);
+  background: var(--srf-accent-soft);
+}
+
+.ui-wb-order-overlay .ui-wb-order-item.dragging {
+  opacity: 0.5;
+}
+
+.ui-wb-order-overlay .ui-wb-order-grip {
+  flex: 0 0 auto;
+  color: var(--srf-text-muted);
+  font-size: 12px;
+}
+
+.ui-wb-order-overlay .ui-wb-order-serial {
+  flex: 0 0 auto;
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+}
+
+.ui-wb-order-overlay .ui-wb-order-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--srf-text);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-wb-order-overlay .ui-wb-order-meta {
+  flex: 0 0 auto;
+  color: var(--srf-text-muted);
+  font-size: 11px;
+}
+
+.ui-wb-order-overlay .ui-wb-order-actions {
+  flex: 0 0 auto;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+
+.ui-wb-order-overlay .ui-wb-order-item:hover .ui-wb-order-actions,
+.ui-wb-order-overlay .ui-wb-order-item.selected .ui-wb-order-actions,
+.ui-wb-order-overlay .ui-wb-order-item:focus-within .ui-wb-order-actions {
+  opacity: 1;
+}
+
+.ui-wb-order-overlay .ui-wb-order-delete.ant-btn {
+  color: var(--srf-text-muted);
+}
+
+.ui-wb-order-overlay .ui-wb-order-delete.ant-btn:hover {
+  color: var(--srf-danger);
+}
+
+.ui-wb-order-overlay .ui-wb-order-empty {
+  padding: 12px;
+}
+
+/* ===== 窄屏 ===== */
+
+/* 断点与 API 详情页一致（1180px）：再窄就把 7:5 双栏改成上下堆叠。 */
+@media (max-width: 1180px) {
+  .ui-suite-detail-page .ui-wb-cols {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .ui-suite-detail-page .ui-wb-toolbar-path {
+    max-width: 260px;
+  }
+
+  .ui-suite-detail-page .ui-wb-ribbon-case {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 720px) {
+  .ui-wb-order-overlay .ui-wb-order-panel {
+    width: min(360px, calc(100vw - 64px));
+  }
+}
+
+.ui-suite-detail-page .ui-wb-ribbon-create.ant-btn {
+  color: var(--srf-accent);
+}
+
+.ui-suite-detail-page .ui-wb-ribbon-create.ant-btn:hover {
+  color: var(--srf-accent-strong);
+  background: var(--srf-accent-soft);
+}

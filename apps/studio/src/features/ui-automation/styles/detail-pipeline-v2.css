@@ -1,0 +1,357 @@
+/*
+ * UI测试集详情页左栏：用例信息条 + 步骤编辑器（Step Pipeline）。
+ *
+ * 步骤编辑器的字段、校验与折叠逻辑仍在 components/UiStepEditor.tsx，本文件只把既有
+ * `.ui-test-case-step-*` 规则的皮肤换成设计稿的取值（柔和底色的步骤卡片、方形序号徽标、
+ * 与运行结果挂钩的 PASS / FAIL 徽标）。旧规则留在 features/ui-automation/styles/index.css：
+ * 它们同时被 UiTestCaseEditor 之外的地方引用，这里只做页面内的覆盖。
+ *
+ * 颜色只引用 `--srf-*` / `.tone-*`；`.ui-test-case-step-title-*` 的深色修正仍由
+ * app/styles/dark-polish.css 按 `.ui-suite-case-editor-panel` 前缀提供，所以那个类名必须留在左栏根节点上。
+ */
+
+.ui-suite-detail-page .ui-suite-case-editor-panel {
+  min-width: 0;
+}
+
+/* 用例表单是左栏的排布容器（旧布局里它是编辑器面板内部那个带 16/24px 内距、overflow:hidden 的滚动区，
+   那条规则已删）：拉伸填满左栏，卡片间距 12px，页面内的边距全部交给外层板面，
+   这样左右两栏的卡片边缘才对得齐。 */
+.ui-suite-detail-page .ui-wb-main > .ui-test-case-form {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.ui-suite-detail-page .ui-wb-main > .ui-test-case-form > .ui-wb-case-meta {
+  flex: 0 0 auto;
+}
+
+/* 步骤编辑器卡片吃掉左栏多出来的高度，两栏最后一张卡片的底边因此对齐。 */
+.ui-suite-detail-page .ui-wb-main > .ui-test-case-form > .ui-wb-pipeline,
+.ui-suite-detail-page .ui-wb-main > .ui-wb-pipeline {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* 步骤列表是左栏的滚动区：步骤多的时候在这里滚，卡片与页面都不再变长；
+   「添加步骤」固定留在卡片底部。 */
+.ui-suite-detail-page .ui-wb-pipeline > .ui-test-case-step-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+  scrollbar-width: thin;
+}
+
+/* 空态在长高的卡片里居中，而不是贴顶。 */
+.ui-suite-detail-page .ui-wb-pipeline > .ui-test-case-empty-editor {
+  flex: 1 1 auto;
+}
+
+/* ===== 用例信息条 ===== */
+
+.ui-suite-detail-page .ui-wb-case-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+}
+
+.ui-suite-detail-page .ui-wb-case-meta-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ui-suite-detail-page .ui-wb-case-serial {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--srf-chip);
+  color: var(--srf-accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.ui-suite-detail-page .ui-wb-case-name-item {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.ui-suite-detail-page .ui-wb-case-name-item .ant-form-item-control-input {
+  min-height: auto;
+}
+
+.ui-suite-detail-page .ui-wb-case-name-item .ant-input {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+  border-color: transparent;
+  background: var(--srf-hover);
+  color: var(--srf-text);
+}
+
+.ui-suite-detail-page .ui-wb-case-name-item .ant-input:is(:hover, :focus) {
+  border-color: var(--srf-accent-border);
+  background: var(--srf-card);
+}
+
+.ui-suite-detail-page .ui-wb-case-name-icon {
+  color: var(--srf-text-muted);
+  font-size: 12px;
+}
+
+.ui-suite-detail-page .ui-wb-case-meta-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ui-suite-detail-page .ui-wb-case-meta-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+}
+
+.ui-suite-detail-page .ui-wb-case-meta-flags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ui-suite-detail-page .ui-wb-case-enabled-item {
+  margin-bottom: 0;
+}
+
+.ui-suite-detail-page .ui-wb-case-enabled-item .ant-form-item-control-input {
+  min-height: auto;
+}
+
+.ui-suite-detail-page .ui-wb-case-meta-sep {
+  color: var(--srf-card-border);
+}
+
+.ui-suite-detail-page .ui-wb-case-step-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ui-suite-detail-page .ui-wb-case-meta-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ui-suite-detail-page .ui-wb-case-link.ant-btn {
+  color: var(--srf-text-secondary);
+}
+
+.ui-suite-detail-page .ui-wb-case-link.ant-btn:hover {
+  color: var(--srf-accent);
+  background: var(--srf-hover);
+}
+
+.ui-suite-detail-page .ui-wb-case-delete.ant-btn:hover {
+  color: var(--srf-danger);
+  background: var(--srf-hover);
+}
+
+/* ===== 步骤编辑器 ===== */
+
+.ui-suite-detail-page .ui-wb-pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+}
+
+.ui-suite-detail-page .ui-wb-pipeline-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ui-suite-detail-page .ui-wb-pipeline-title {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--srf-text);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.ui-suite-detail-page .ui-wb-pipeline-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--srf-hover);
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+.ui-suite-detail-page .ui-wb-pipeline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.ui-suite-detail-page .ui-wb-pipeline-action.ant-btn {
+  color: var(--srf-text-secondary);
+}
+
+.ui-suite-detail-page .ui-wb-pipeline-action.ant-btn:hover {
+  color: var(--srf-accent);
+  background: var(--srf-hover);
+}
+
+/* 步骤卡片：设计稿是柔和底色的圆角块，展开后再嵌一张白卡。 */
+.ui-suite-detail-page .ui-test-case-step-card {
+  border-color: var(--srf-card-border);
+  background: var(--srf-hover);
+}
+
+.ui-suite-detail-page .ui-test-case-step-card.expanded {
+  border-color: var(--srf-accent-border);
+  box-shadow: none;
+}
+
+.ui-suite-detail-page .ui-test-case-step-card-top {
+  align-items: center;
+  padding: 10px 12px;
+}
+
+.ui-suite-detail-page .ui-test-case-step-card-main {
+  align-items: center;
+  gap: 10px;
+}
+
+.ui-suite-detail-page .ui-test-case-step-card-leading {
+  gap: 8px;
+  padding-top: 0;
+}
+
+/* 序号是方形徽标（设计稿 #1 / #2 …），与列表页的胶囊形状不同。 */
+.ui-suite-detail-page .ui-test-case-step-order {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 6px;
+  background: var(--srf-count-badge);
+  color: var(--srf-accent-strong);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ui-suite-detail-page .ui-test-case-step-card.expanded .ui-test-case-step-order {
+  background: var(--srf-accent);
+  color: var(--srf-on-accent);
+}
+
+.ui-suite-detail-page .ui-test-case-step-title-input.ant-input {
+  min-height: 28px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.ui-suite-detail-page .ui-test-case-step-title-input.ant-input:hover,
+.ui-suite-detail-page .ui-test-case-step-title-input.ant-input:focus {
+  background: var(--srf-card);
+  border-color: var(--srf-card-border);
+}
+
+.ui-suite-detail-page .ui-test-case-step-body {
+  background: var(--srf-card);
+  border-top: 1px solid var(--srf-divider);
+}
+
+.ui-suite-detail-page .ui-test-case-step-empty {
+  border-color: var(--srf-card-border);
+  background: var(--srf-hover);
+}
+
+/* 步骤行上的运行结论徽标：只有拿到该步骤的运行结果时才渲染。 */
+.ui-suite-detail-page .ui-wb-step-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.ui-suite-detail-page .ui-wb-step-status {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border: 1px solid var(--srf-tone-border, var(--srf-card-border));
+  border-radius: 4px;
+  background: var(--srf-tone-bg, var(--srf-chip));
+  color: var(--srf-tone-text, var(--srf-chip-text));
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+.ui-suite-detail-page .ui-wb-step-status.is-draft {
+  border-color: var(--srf-card-border);
+  background: var(--srf-chip);
+  color: var(--srf-text-muted);
+}
+
+.ui-suite-detail-page .ui-test-case-step-add-row .ant-btn {
+  height: 40px;
+  border-radius: var(--srf-radius-control);
+}
+
+/* `.ui-test-case-step-card-title span` 会把步骤行里所有 span 刷成 12px，摘要文字要跟着自己的容器。 */
+.ui-suite-detail-page .ui-wb-step-summary-text {
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+/* 步骤行首的拖拽手柄：整行可拖，这里只是一个视觉提示。 */
+.ui-suite-detail-page .ui-wb-step-grip {
+  display: inline-flex;
+  align-items: center;
+  color: var(--srf-text-muted);
+  font-size: 14px;
+  cursor: grab;
+}
+
+.ui-suite-detail-page .ui-test-case-step-card-top:active .ui-wb-step-grip {
+  cursor: grabbing;
+}

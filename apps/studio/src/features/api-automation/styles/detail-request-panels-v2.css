@@ -1,0 +1,494 @@
+/*
+ * API 测试集详情页右栏「请求头 / 请求体」两个页签的面板皮肤。
+ *
+ * 与 `detail-workbench-v2.css` / `detail-inspector-v2.css` 同属一次设计稿改造，按页签职责单独一个文件，
+ * 由 `ApiCollectionDetailPage` 引入，选择器前缀统一是 `.api-collection-workbench-page`，与上面两个文件不重叠。
+ *
+ * 颜色只取 `--srf-*` / `--srf-tone-*`：两个页签的所有取值都来自 `surface-tokens.css` 的色盘，
+ * 深色主题由 token 的深色分支一并覆盖，所以本文件没有 `:root[data-theme='dark']` 的独立色值。
+ * 唯一的例外是文件末尾覆盖全局按钮皮肤的规则——那一段必须带 `.app-shell.app-shell-macos`
+ * 前缀与 `!important`，理由见 `docs/studio/STRUCTURE.md` 的 S14。
+ */
+
+/* ===== 页签行右侧的补充信息 ===== */
+
+.api-collection-workbench-page .api-wb-tabs-extra {
+  color: var(--srf-text-muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.api-collection-workbench-page .api-wb-tabs-extra strong {
+  color: var(--srf-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.api-collection-workbench-page .api-wb-tabs-extra-code {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--srf-chip);
+  color: var(--srf-chip-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ===== 两个面板共用的外框 =====
+ * 页签内容区左右各有 16px 内边距（由 `.api-wb-tabs` 提供），面板要贴到卡片边缘，
+ * 所以用负边距出血；工具条与状态条因此也能像设计稿那样横贯整行。
+ */
+
+.api-collection-workbench-page .api-wb-hdr-panel,
+.api-collection-workbench-page .api-wb-body-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0 -16px;
+}
+
+/* ===== 请求头：快捷注入与批量工具 ===== */
+
+.api-collection-workbench-page .api-wb-hdr-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--srf-card-border);
+  background: var(--srf-hover);
+}
+
+.api-collection-workbench-page .api-wb-hdr-toolbar-main,
+.api-collection-workbench-page .api-wb-hdr-toolbar-side {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.api-collection-workbench-page .api-wb-hdr-toolbar-label {
+  margin-right: 4px;
+  color: var(--srf-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+.api-collection-workbench-page .api-wb-hdr-preset {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: 4px;
+  background: var(--srf-card);
+  color: var(--srf-chip-text);
+  font-size: 11px;
+  line-height: 16px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.api-collection-workbench-page .api-wb-hdr-preset-plus {
+  margin-right: 4px;
+  color: var(--srf-accent);
+  font-weight: 700;
+}
+
+.api-collection-workbench-page .api-wb-hdr-preset:hover {
+  border-color: var(--srf-accent-border);
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent-strong);
+}
+
+.api-collection-workbench-page .api-wb-hdr-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--srf-text-secondary);
+  font-size: 11px;
+  line-height: 16px;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.api-collection-workbench-page .api-wb-hdr-tool .anticon {
+  color: var(--srf-text-muted);
+}
+
+.api-collection-workbench-page .api-wb-hdr-tool:hover:not(:disabled) {
+  background: var(--srf-card);
+  color: var(--srf-accent-strong);
+}
+
+.api-collection-workbench-page .api-wb-hdr-tool:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.api-collection-workbench-page .api-wb-hdr-tool.is-danger:hover:not(:disabled) {
+  color: var(--srf-danger);
+}
+
+.api-collection-workbench-page .api-wb-hdr-tool-divider {
+  width: 1px;
+  height: 12px;
+  background: var(--srf-card-border);
+}
+
+/* ===== 请求头：键值表 ===== */
+
+.api-collection-workbench-page .api-wb-hdr-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.api-collection-workbench-page .api-wb-hdr-col-check {
+  width: 40px;
+}
+
+.api-collection-workbench-page .api-wb-hdr-col-key {
+  width: 26%;
+}
+
+.api-collection-workbench-page .api-wb-hdr-col-actions {
+  width: 84px;
+}
+
+.api-collection-workbench-page .api-wb-hdr-table thead th {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--srf-card-border);
+  background: var(--srf-hover);
+  color: var(--srf-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.api-collection-workbench-page .api-wb-hdr-table tbody td {
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--srf-divider);
+  vertical-align: middle;
+}
+
+.api-collection-workbench-page .api-wb-hdr-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.api-collection-workbench-page .api-wb-hdr-row:hover,
+.api-collection-workbench-page .api-wb-hdr-row.is-draft {
+  background: var(--srf-hover);
+}
+
+.api-collection-workbench-page .api-wb-hdr-cell-check {
+  text-align: center;
+}
+
+.api-collection-workbench-page .api-wb-hdr-cell-actions {
+  text-align: right;
+}
+
+.api-collection-workbench-page .api-wb-hdr-value-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.api-collection-workbench-page .api-wb-hdr-value-cell .api-env-var-picker-trigger-wrap {
+  flex: 0 0 auto;
+}
+
+.api-collection-workbench-page .api-wb-hdr-input.ant-input {
+  padding: 4px 8px;
+  border-color: transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--srf-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  box-shadow: none;
+}
+
+.api-collection-workbench-page .api-wb-hdr-input.is-key.ant-input {
+  font-weight: 500;
+}
+
+.api-collection-workbench-page .api-wb-hdr-input.ant-input:hover {
+  background: var(--srf-chip);
+}
+
+.api-collection-workbench-page .api-wb-hdr-input.ant-input:focus {
+  border-color: var(--srf-accent);
+  background: var(--srf-card);
+  box-shadow: 0 0 0 3px var(--srf-accent-soft);
+}
+
+.api-collection-workbench-page .api-wb-hdr-input.is-draft.ant-input {
+  border-style: dashed;
+  border-color: var(--srf-card-border);
+  background: var(--srf-card);
+}
+
+.api-collection-workbench-page .api-wb-hdr-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  opacity: 0.4;
+  transition: opacity 0.15s ease;
+}
+
+.api-collection-workbench-page .api-wb-hdr-row:hover .api-wb-hdr-row-actions,
+.api-collection-workbench-page .api-wb-hdr-row-actions:focus-within {
+  opacity: 1;
+}
+
+.api-collection-workbench-page .api-wb-hdr-draft-hint {
+  margin-right: 8px;
+  color: var(--srf-text-muted);
+  font-size: 11px;
+}
+
+.api-collection-workbench-page .api-wb-hdr-raw-tip {
+  margin: 0 0 8px;
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+}
+
+/* ===== 请求体：类型胶囊条与动作条 ===== */
+
+.api-collection-workbench-page .api-wb-body-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 16px;
+  border-bottom: 1px solid var(--srf-card-border);
+  background: var(--srf-hover);
+}
+
+.api-collection-workbench-page .api-wb-body-types,
+.api-collection-workbench-page .api-wb-body-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.api-collection-workbench-page .api-wb-body-type {
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+  line-height: 16px;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.api-collection-workbench-page .api-wb-body-type:hover {
+  color: var(--srf-text);
+}
+
+.api-collection-workbench-page .api-wb-body-type.active {
+  background: var(--srf-card);
+  color: var(--srf-accent);
+  font-weight: 600;
+}
+
+.api-collection-workbench-page .api-wb-body-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--srf-chip);
+  color: var(--srf-text);
+  font-size: 12px;
+  line-height: 16px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.api-collection-workbench-page .api-wb-body-action .anticon {
+  color: var(--srf-text-muted);
+}
+
+.api-collection-workbench-page .api-wb-body-action:hover:not(:disabled) {
+  background: var(--srf-accent-soft);
+}
+
+.api-collection-workbench-page .api-wb-body-action.is-accent {
+  background: transparent;
+  color: var(--srf-accent);
+}
+
+.api-collection-workbench-page .api-wb-body-action.is-accent .anticon {
+  color: var(--srf-accent);
+}
+
+.api-collection-workbench-page .api-wb-body-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.api-collection-workbench-page .api-wb-body-action-divider {
+  width: 1px;
+  height: 12px;
+  background: var(--srf-card-border);
+}
+
+.api-collection-workbench-page .api-wb-body-validity {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--srf-tone-border);
+  border-radius: 4px;
+  background: var(--srf-tone-bg);
+  color: var(--srf-tone-text);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+/* ===== 请求体：编辑器外壳对齐设计稿 ===== */
+
+.api-collection-workbench-page .api-wb-body-panel .api-body-editor-form-item {
+  margin: 0;
+}
+
+.api-collection-workbench-page .api-wb-body-panel .json-editor-shell {
+  border: 0;
+  border-radius: 0;
+  background: var(--srf-card);
+}
+
+.api-collection-workbench-page .api-wb-body-panel .json-editor-shell:focus-within {
+  border: 0;
+  box-shadow: none;
+}
+
+.api-collection-workbench-page .api-wb-body-panel .json-editor-codemirror .cm-editor,
+.api-collection-workbench-page .api-wb-body-panel .json-editor-codemirror .cm-scroller,
+.api-collection-workbench-page .api-wb-body-panel .json-editor-codemirror .cm-gutters {
+  background: var(--srf-card);
+}
+
+.api-collection-workbench-page .api-wb-body-panel .json-editor-codemirror .cm-gutters {
+  border-right: 1px solid var(--srf-divider);
+  color: var(--srf-text-muted);
+}
+
+.api-collection-workbench-page .api-wb-body-panel .json-editor-codemirror .cm-editor {
+  font-size: 12px;
+  line-height: 24px;
+}
+
+.api-collection-workbench-page .api-wb-body-panel .json-editor-codemirror .cm-gutterElement {
+  padding-inline: 8px;
+}
+
+/* ===== 请求体：底部状态条 ===== */
+
+.api-collection-workbench-page .api-wb-body-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 16px;
+  border-top: 1px solid var(--srf-divider);
+  background: var(--srf-hover);
+  color: var(--srf-text-secondary);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.api-collection-workbench-page .api-wb-body-status-main,
+.api-collection-workbench-page .api-wb-body-status-side {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.api-collection-workbench-page .api-wb-body-status .tone-green,
+.api-collection-workbench-page .api-wb-body-status .tone-red {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--srf-tone-text);
+  font-weight: 500;
+}
+
+.api-collection-workbench-page .api-wb-body-status .is-muted,
+.api-collection-workbench-page .api-wb-body-status-side .is-muted {
+  color: var(--srf-text-muted);
+}
+
+.api-collection-workbench-page .api-wb-body-status-main > span:not(.is-muted),
+.api-collection-workbench-page .api-wb-body-status-side > span:not(.is-muted) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ===== 表格行内的图标按钮与输入框回到「行内编辑」外观 =====
+ * 全局皮肤会给这些页面里的 `.ant-btn` 加描边玻璃底、给 `.ant-input` 铺底色（深色下同一条规则带 `!important`），
+ * 表格行里需要的是无底色的小图标与无边框的行内输入框。覆盖规则按 S14 的写法带 `.app-shell.app-shell-macos`
+ * 前缀与 `!important`；深色那几条再加 `:root[data-theme='dark']` 抬一级权重，否则与深色皮肤同分只靠 import 顺序决胜。
+ * 删除钮沿用全站的 `.action-btn-delete`，只把常态颜色压回弱化色，悬停仍由下面这条给出红色。
+ */
+
+.app-shell.app-shell-macos .api-collection-workbench-page .api-wb-hdr-row-actions .ant-btn,
+.app-shell.app-shell-macos .api-collection-workbench-page .api-wb-hdr-row-actions .ant-btn:not(:disabled):hover {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--srf-text-muted) !important;
+}
+
+.app-shell.app-shell-macos .api-collection-workbench-page .api-wb-hdr-row-actions .ant-btn:not(:disabled):hover {
+  color: var(--srf-accent-strong) !important;
+}
+
+.app-shell.app-shell-macos .api-collection-workbench-page .api-wb-hdr-row-actions :is(.action-btn-delete, .ant-btn-dangerous):not(:disabled):hover {
+  color: var(--srf-danger) !important;
+}
+
+.app-shell.app-shell-macos .api-collection-workbench-page .api-wb-hdr-value-cell .api-env-var-picker-trigger.ant-btn {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--srf-text-muted) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .api-collection-workbench-page .api-wb-hdr-input.ant-input {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--srf-text) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .api-collection-workbench-page .api-wb-hdr-input.ant-input:hover {
+  background: var(--srf-chip) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .api-collection-workbench-page .api-wb-hdr-input.ant-input:focus {
+  border-color: var(--srf-accent) !important;
+  background: var(--srf-card) !important;
+  box-shadow: 0 0 0 3px var(--srf-accent-soft) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .api-collection-workbench-page .api-wb-hdr-input.is-draft.ant-input {
+  border-style: dashed !important;
+  border-color: var(--srf-card-border) !important;
+  background: var(--srf-card) !important;
+}

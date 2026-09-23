@@ -1,18 +1,19 @@
 import { ApiAssertRuleEditor } from '@/features/api-automation/components/ApiAssertRuleEditor'
 import { ApiCaseEditor } from '@/features/api-automation/components/ApiCaseEditor'
+import { ApiCaseExplorer } from '@/features/api-automation/components/ApiCaseExplorer'
 import { ApiCaseImportModal } from '@/features/api-automation/components/ApiCaseImportModal'
+import { ApiCaseRunConsole } from '@/features/api-automation/components/ApiCaseRunConsole'
 import { ApiCollectionRunHistory } from '@/features/api-automation/components/ApiCollectionRunHistory'
 import { ApiCollectionRunReportModal } from '@/features/api-automation/components/ApiCollectionRunReport'
+import { ApiCollectionToolbar } from '@/features/api-automation/components/ApiCollectionToolbar'
 import { ApiExtractRuleEditor } from '@/features/api-automation/components/ApiExtractRuleEditor'
-import { Text, isApiRunPollingStatus, isYamlFileName, type CaseImportMode } from '@/features/api-automation/utils/detailView'
-import { renderRunResultContent } from '@/features/api-automation/utils/renderApiRunResult'
+import { isApiRunPollingStatus, isYamlFileName, type CaseImportMode } from '@/features/api-automation/utils/detailView'
 import { useApiCaseEditing } from '../hooks/useApiCaseEditing'
 import { useApiCollectionData } from '../hooks/useApiCollectionData'
 import { useApiExecution } from '../hooks/useApiExecution'
 import { useApiRuleEditing } from '../hooks/useApiRuleEditing'
 
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
-import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import {
   api,
@@ -28,12 +29,16 @@ import {
   normalizeEnvironmentId,
   pickUpdatedAt
 } from '@/utils/format'
-import { ArrowLeftOutlined, CheckOutlined, CodeSandboxOutlined, FunctionOutlined, SearchOutlined, SendOutlined } from '@ant-design/icons'
+import { CheckOutlined, CodeSandboxOutlined, FunctionOutlined, SearchOutlined } from '@ant-design/icons'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { InputRef } from 'antd'
-import { Alert, Button, Card, Empty, Form, Input, Modal, Popconfirm, Segmented, Tag } from 'antd'
+import { Alert, Button, Form, Input, Modal } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode, type PointerEvent as ReactPointerEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import '@/shared/styles/surface-tokens.css'
+import '@/features/api-automation/styles/detail-workbench-v2.css'
+import '@/features/api-automation/styles/detail-inspector-v2.css'
+import '@/features/api-automation/styles/detail-request-panels-v2.css'
 import {
   DRAFT_CASE_ID,
   ENV_VAR_TOKEN_PREFIX,
@@ -41,8 +46,6 @@ import {
   MIN_EDITOR_RESULT_HEIGHT,
   MIN_EDITOR_TOP_HEIGHT,
   builtinTemplateFunctions,
-  methodTagColor,
-  runResultViewOptions,
   type EnvVarPickerMode,
   type RunResultView
 } from '../config/collectionConfig'
@@ -51,13 +54,12 @@ import {
   buildApiCaseUpdatePayload,
   buildCaseFormValues,
   createDefaultCaseFormValues,
-  getCaseDisplayPath,
   getCaseId,
   moveArrayItem,
   sortCasesByOrderNo,
   type ApiCaseFormValues
 } from '../utils/apiCaseEditor'
-import { buildCollectionRunReportHtml, getExecutionStatusMeta, sanitizeFileName } from '../utils/collectionRunReport'
+import { buildCollectionRunReportHtml, sanitizeFileName } from '../utils/collectionRunReport'
 
 export function ApiCollectionDetailPage() {
   const navigate = useNavigate()
@@ -94,7 +96,6 @@ export function ApiCollectionDetailPage() {
 
   const watchedBodyType = Form.useWatch('bodyType', caseForm)
   const watchedQuery = Form.useWatch('query', caseForm)
-  const watchedHeaders = Form.useWatch('headers', caseForm)
 
   const isCreatingCase = selectedCaseId === DRAFT_CASE_ID
 
@@ -353,10 +354,12 @@ export function ApiCollectionDetailPage() {
     setCollectionRunItemViews((current) => (current[itemKey] === view ? current : { ...current, [itemKey]: view }))
   }
 
-  const ensureTrailingRow = useCallback((field: 'query' | 'headers', items?: Array<{ enabled?: boolean; key?: string; value?: string }>) => {
+  /* Query 参数页签靠末尾空行新增，所以编辑中始终保证 query 列表末尾有一行空行。
+     请求头页签有自己的虚线新增行，不再需要这一行。 */
+  const ensureQueryTrailingRow = useCallback((items?: Array<{ enabled?: boolean; key?: string; value?: string }>) => {
     const rows = items ?? []
     if (rows.length === 0) {
-      caseForm.setFieldValue(field, [{ enabled: false, key: '', value: '' }])
+      caseForm.setFieldValue('query', [{ enabled: false, key: '', value: '' }])
       return
     }
 
@@ -370,21 +373,17 @@ export function ApiCollectionDetailPage() {
 
     const lastRow = nextRows[nextRows.length - 1]
     if ((lastRow?.key ?? '').trim() || (lastRow?.value ?? '').trim()) {
-      caseForm.setFieldValue(field, [...nextRows, { enabled: false, key: '', value: '' }])
+      caseForm.setFieldValue('query', [...nextRows, { enabled: false, key: '', value: '' }])
       return
     }
 
     const changed = JSON.stringify(rows) !== JSON.stringify(nextRows)
-    if (changed) caseForm.setFieldValue(field, nextRows)
+    if (changed) caseForm.setFieldValue('query', nextRows)
   }, [caseForm])
 
   useEffect(() => {
-    ensureTrailingRow('query', watchedQuery)
-  }, [ensureTrailingRow, watchedQuery])
-
-  useEffect(() => {
-    ensureTrailingRow('headers', watchedHeaders)
-  }, [ensureTrailingRow, watchedHeaders])
+    ensureQueryTrailingRow(watchedQuery)
+  }, [ensureQueryTrailingRow, watchedQuery])
 
   useEffect(() => {
     setRunResult(null)
@@ -530,6 +529,10 @@ export function ApiCollectionDetailPage() {
 
   function handleFormatBodyJson() {
     bodyJsonEditorRef.current?.formatDocument()
+  }
+
+  function handleCompressBodyJson() {
+    bodyJsonEditorRef.current?.compressDocument()
   }
 
   function renderEnvVarPicker({
@@ -788,13 +791,8 @@ export function ApiCollectionDetailPage() {
     (selectedCollectionRunId && activeCollectionRunQuery.data?.collectionRunId === selectedCollectionRunId ? activeCollectionRunQuery.data : undefined) ??
     collectionRunHistory.find((item) => item.collectionRunId === selectedCollectionRunId)
 
-  const extractResults = runResult?.extractResults ?? []
-  const assertResults = runResult?.assertResults ?? []
   const runResultStatus = runResult?.status ?? (runResult ? (runResult.success ? 'success' : 'failed') : undefined)
-  const runResultStatusMeta = getExecutionStatusMeta(runResultStatus)
   const isApiCaseRunInProgress = isApiRunPollingStatus(runResultStatus)
-  const failedExtractCount = extractResults.filter((item) => !item.success).length
-  const failedAssertCount = assertResults.filter((item) => !item.success).length
   const postOperationCount = assertRules.length + extractRules.length
   const orderedCollectionRunItems = useMemo(
     () =>
@@ -899,6 +897,18 @@ export function ApiCollectionDetailPage() {
     }
   }, [resetCaseForm, selectedCaseId, sidebarCases])
 
+  function handleDiscardDraft() {
+    setDraftCaseValues(null)
+    const fallbackCase = filteredCases[0] ?? null
+    if (fallbackCase) {
+      setSelectedCaseId(getCaseId(fallbackCase))
+      return
+    }
+    setSelectedCaseId('')
+    setEditingCase(null)
+    resetCaseForm()
+  }
+
   function handleCaseDragStart(event: DragEvent<HTMLDivElement>, caseId: string) {
     if (!canReorder || caseId === DRAFT_CASE_ID) return
     setDraggingCaseId(caseId)
@@ -924,262 +934,84 @@ export function ApiCollectionDetailPage() {
   }
 
   return (<ProjectAccessScope projectId={projectId ?? ''}>{(
-    <div className="workbench-page api-collection-detail-page">
+    <div className="workbench-page api-collection-detail-page api-collection-workbench-page tp-surface">
       <div className="api-automation-content">
-        <div className="page-frame api-collection-detail-frame">
-          <div className="api-collection-detail-layout">
-            {collectionQuery.error ? <Alert showIcon type="error" title={getErrorMessage(collectionQuery.error)} /> : null}
-            {casesQuery.error ? <Alert showIcon type="error" title={getErrorMessage(casesQuery.error)} /> : null}
-            {selectedCaseDetailQuery.error ? <Alert showIcon type="error" title={getErrorMessage(selectedCaseDetailQuery.error)} /> : null}
-            {requirementQuery.error ? <Alert showIcon type="error" title={getErrorMessage(requirementQuery.error)} /> : null}
-            {sprintQuery.error ? <Alert showIcon type="error" title={getErrorMessage(sprintQuery.error)} /> : null}
-            {assertRulesQuery.error ? <Alert showIcon type="error" title={getErrorMessage(assertRulesQuery.error)} /> : null}
-            {extractRulesQuery.error ? <Alert showIcon type="error" title={getErrorMessage(extractRulesQuery.error)} /> : null}
+        <div className="page-frame api-collection-workbench tp-board">
+          {collectionQuery.error ? <Alert showIcon type="error" title={getErrorMessage(collectionQuery.error)} /> : null}
+          {casesQuery.error ? <Alert showIcon type="error" title={getErrorMessage(casesQuery.error)} /> : null}
+          {selectedCaseDetailQuery.error ? <Alert showIcon type="error" title={getErrorMessage(selectedCaseDetailQuery.error)} /> : null}
+          {requirementQuery.error ? <Alert showIcon type="error" title={getErrorMessage(requirementQuery.error)} /> : null}
+          {sprintQuery.error ? <Alert showIcon type="error" title={getErrorMessage(sprintQuery.error)} /> : null}
+          {assertRulesQuery.error ? <Alert showIcon type="error" title={getErrorMessage(assertRulesQuery.error)} /> : null}
+          {extractRulesQuery.error ? <Alert showIcon type="error" title={getErrorMessage(extractRulesQuery.error)} /> : null}
 
-            <aside className="workbench-panel api-case-sidebar">
-              <div className="panel-header api-case-sidebar-header">
-                <div className="api-case-sidebar-title">
-                  <Button
-                    type="text"
-                    icon={<ArrowLeftOutlined />}
-                    className="api-case-back-button"
-                    onClick={() => navigate('/api-automation')}
-                    aria-label="返回 Collection 列表"
-                  />
+          <ApiCollectionToolbar
+            collectionName={collectionQuery.data?.name ?? '-'}
+            requirementName={requirementQuery.data?.name ?? requirementId ?? '-'}
+            sprintName={sprintQuery.data?.name ?? sprintId ?? '-'}
+            updatedAt={collectionQuery.data ? formatTime(pickUpdatedAt(collectionQuery.data)) : '-'}
+            environmentBaseUrl={selectedEnvironment?.baseUrl ?? ''}
+            runHistoryCount={collectionRunHistory.length}
+            runningCollection={runApiCollectionMutation.isPending}
+            runDisabled={!resolvedEnvironmentId || cases.length === 0}
+            onBack={() => navigate('/api-automation')}
+            onOpenRunHistory={() => setCollectionRunHistoryOpen(true)}
+            onRunCollection={handleRunCollection}
+          />
+
+          <div className="api-wb-cols">
+            <ApiCaseExplorer
+              cases={sidebarCases}
+              selectedCaseId={selectedCaseId}
+              loading={casesQuery.isLoading}
+              totalCaseCount={cases.length}
+              search={caseSearch}
+              canReorder={canReorder}
+              draggingCaseId={draggingCaseId}
+              onSearchChange={setCaseSearch}
+              onSelectCase={setSelectedCaseId}
+              onCreateCase={openCreateDrawer}
+              onImportCases={openCaseImportModal}
+              onDeleteCase={(caseId) => deleteCaseMutation.mutate(caseId)}
+              onDiscardDraft={handleDiscardDraft}
+              onDragStart={handleCaseDragStart}
+              onDrop={handleCaseDrop}
+              onDragEnd={() => setDraggingCaseId(null)}
+            />
+
+            <section className="api-wb-editor-panel">
+              <div className="api-wb-editor-shell" ref={editorLayoutRef}>
+                <div className="api-wb-editor-main" style={runResult ? { flexBasis: `${editorTopHeight}px` } : undefined}>
+                  <div className="api-wb-editor-main-scroll">
+                    <ApiCaseEditor caseForm={caseForm} isCreatingCase={isCreatingCase} setDraftCaseValues={setDraftCaseValues} getCompleteCaseFormValues={getCompleteCaseFormValues} createCaseMutation={createCaseMutation} editingCase={editingCase} activeCaseId={activeCaseId} updateCaseMutation={updateCaseMutation} pathInputRef={pathInputRef} runApiCaseMutation={runApiCaseMutation} isApiCaseRunInProgress={isApiCaseRunInProgress} isSelectedCaseReady={isSelectedCaseReady} handleSendRequest={handleSendRequest} watchedBodyType={watchedBodyType} environment={{ environmentPopoverOpen, setEnvironmentPopoverOpen, environments, resolvedEnvironmentId, handleSelectEnvironment, switchDefaultEnvironmentMutation, projectId, selectedEnvironment, environmentsQuery }} templates={{ setEnvVarInputRef, renderEnvVarPicker, insertTemplateText, bodyJsonEditorRef, insertTemplateTextIntoJson, handleFormatBodyJson, handleCompressBodyJson }} rules={{ postOperationCount, can, openCreateAssertRule, openCreateExtractRule, assertRulesQuery, extractRulesQuery, assertRules, toggleAssertRuleMutation, openEditAssertRule, deleteAssertRuleMutation, extractRules, toggleExtractRuleMutation, openEditExtractRule, deleteExtractRuleMutation }} />
+                  </div>
                 </div>
-                <div className="api-case-sidebar-meta">
-                  <Text type="secondary" className="api-case-sidebar-count">
-                    {sidebarCases.length} 个用例
-                  </Text>
-                  <ProjectActionButton action="write"
-                    type="primary"
-                    className="action-btn-create"
-                    shape="circle"
-                    operation="create" iconOnly
-                    onClick={openCreateDrawer}
-                    aria-label="新建用例"
-                  />
-                </div>
-              </div>
-
-              <div className="api-case-sidebar-toolbar">
-                <Input
-                  allowClear
-                  value={caseSearch}
-                  prefix={<SearchOutlined />}
-                  placeholder="搜索用例名称 / 路径"
-                  onChange={(event) => setCaseSearch(event.target.value)}
-                />
-                <ProjectActionButton action="execute" className="api-case-import-trigger" operation="upload" onClick={openCaseImportModal}>
-                  用例导入
-                </ProjectActionButton>
-              </div>
-
-              <div className="api-case-sidebar-scroll">
-                {casesQuery.isLoading ? (
-                  <div className="sprint-card-loading">
-                    <Empty description="用例加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                  </div>
-                ) : sidebarCases.length === 0 ? (
-                  <div className="sprint-card-loading">
-                    <Empty description={cases.length === 0 ? '当前还没有用例' : '没有匹配到用例'}>
-                      <ProjectActionButton action="write" type="primary" className="action-btn-create" operation="create" onClick={openCreateDrawer}>
-                        新建用例
-                      </ProjectActionButton>
-                    </Empty>
-                  </div>
-                ) : (
-                  <div className="api-case-nav-list">
-                    {sidebarCases.map((item) => {
-                      const caseId = getCaseId(item)
-                      const selected = caseId === selectedCaseId
-
-                      return (
-                        <div
-                          key={caseId}
-                          className={`api-case-nav-item${selected ? ' selected' : ''}${draggingCaseId === caseId ? ' dragging' : ''}${canReorder ? ' can-drag' : ''}`}
-                          role="button"
-                          tabIndex={0}
-                          draggable={canReorder && caseId !== DRAFT_CASE_ID}
-                          onDragStart={(event) => handleCaseDragStart(event, caseId)}
-                          onDragOver={(event) => {
-                            if (!canReorder || caseId === DRAFT_CASE_ID) return
-                            event.preventDefault()
-                          }}
-                          onDrop={(event) => {
-                            event.preventDefault()
-                            handleCaseDrop(caseId)
-                          }}
-                          onDragEnd={() => {
-                            setDraggingCaseId(null)
-                          }}
-                          onClick={() => {
-                            setSelectedCaseId(caseId)
-                          }}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter' || event.key === ' ') {
-                              event.preventDefault()
-                              setSelectedCaseId(caseId)
-                            }
-                          }}
-                        >
-                          <div className="api-case-nav-item-main">
-                            <div className="api-case-nav-item-tags">
-                              <Tag className="api-case-table-method" color={methodTagColor(item.method)}>
-                                {item.method}
-                              </Tag>
-                              {caseId === DRAFT_CASE_ID ? <Tag color="gold">草稿</Tag> : null}
-                            </div>
-                            <span className="api-case-nav-item-name">{item.name}</span>
-                            <span className="api-case-nav-item-path">{getCaseDisplayPath(item.urlTemplate)}</span>
-                          </div>
-                          <div className="api-case-nav-item-actions">
-                            <Popconfirm
-                              title={caseId === DRAFT_CASE_ID ? '确认丢弃这个未保存用例？' : '确认删除该用例？'}
-                              onConfirm={() => {
-                                if (caseId === DRAFT_CASE_ID) {
-                                  setDraftCaseValues(null)
-                                  const fallbackCase = filteredCases[0] ?? null
-                                  if (fallbackCase) {
-                                    setSelectedCaseId(getCaseId(fallbackCase))
-                                  } else {
-                                    setSelectedCaseId('')
-                                    setEditingCase(null)
-                                    resetCaseForm()
-                                  }
-                                  return
-                                }
-                                deleteCaseMutation.mutate(caseId)
-                              }}
-                            >
-                              <ProjectActionButton action="write"
-                                danger
-                                type="text"
-                                size="small"
-                                operation="delete" iconOnly
-                                className="api-case-nav-delete"
-                                onClick={(event) => event.stopPropagation()}
-                                onMouseDown={(event) => event.stopPropagation()}
-                              />
-                            </Popconfirm>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            </aside>
-
-            <div className="api-case-workspace">
-              {collectionQuery.data ? (
-                <div className="api-detail-hover-panel api-collection-detail-panel">
-                  <div className="api-detail-hover-bar">
-                    <div className="api-detail-hover-bar-main">
-                      <span className="api-detail-hover-title">Collection 详情</span>
-                      <span className="api-detail-hover-preview">
-                        {collectionQuery.data.name} / {requirementQuery.data?.name ?? requirementId ?? '-'} / {sprintQuery.data?.name ?? sprintId ?? '-'}
-                      </span>
+                {runResult ? (
+                  <>
+                    <div
+                      className={`api-wb-splitter${isResizingEditor ? ' resizing' : ''}`}
+                      role="separator"
+                      aria-orientation="horizontal"
+                      aria-label="调整请求编辑区与运行结果的高度"
+                      onPointerDown={handleEditorSplitterPointerDown}
+                    >
+                      <span className="api-wb-splitter-line" />
+                      <span className="api-wb-splitter-grip">⋯</span>
                     </div>
-                    <div className="api-detail-hover-bar-actions">
-                      <Button className="action-btn-read" onClick={() => setCollectionRunHistoryOpen(true)}>运行记录</Button>
-                      <Button
-                        type="primary"
-                        loading={runApiCollectionMutation.isPending}
-                        onClick={handleRunCollection}
-                        icon={<SendOutlined />}
-                        disabled={!resolvedEnvironmentId || cases.length === 0}
-                      >
-                        运行测试
-                      </Button>
+                    <div className="api-wb-console-pane">
+                      <div className="api-wb-console-scroll">
+                        <ApiCaseRunConsole
+                          result={runResult}
+                          environmentName={selectedEnvironment?.name ?? runResult.environmentId ?? '-'}
+                          view={runResultView}
+                          onViewChange={(value) => setRunResultView(value)}
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="api-detail-hover-body">
-                    <p className="api-detail-description">
-                      {collectionQuery.data.description || '查看当前 Collection 的真实详情与用例列表。'}
-                    </p>
-                    <Card className="detail-block api-case-summary-card">
-                      <div className="api-case-summary-grid compact">
-                        <div className="api-summary-item">
-                          <Text type="secondary">Collection</Text>
-                          <strong>{collectionQuery.data.name}</strong>
-                        </div>
-                        <div className="api-summary-item">
-                          <Text type="secondary">需求</Text>
-                          <strong>{requirementQuery.data?.name ?? requirementId ?? '-'}</strong>
-                        </div>
-                        <div className="api-summary-item">
-                          <Text type="secondary">迭代</Text>
-                          <strong>{sprintQuery.data?.name ?? sprintId ?? '-'}</strong>
-                        </div>
-                        <div className="api-summary-item">
-                          <Text type="secondary">更新</Text>
-                          <strong>{formatTime(pickUpdatedAt(collectionQuery.data))}</strong>
-                        </div>
-                      </div>
-                    </Card>
-                  </div>
-                </div>
-              ) : null}
-
-              <section className="workbench-panel api-case-editor-panel">
-                <div className="api-case-editor-shell" ref={editorLayoutRef}>
-                  <div className="api-case-editor-main" style={runResult ? { flexBasis: `${editorTopHeight}px` } : undefined}>
-                    <div className="api-case-editor-main-scroll">
-                      <ApiCaseEditor caseForm={caseForm} isCreatingCase={isCreatingCase} setDraftCaseValues={setDraftCaseValues} getCompleteCaseFormValues={getCompleteCaseFormValues} createCaseMutation={createCaseMutation} editingCase={editingCase} activeCaseId={activeCaseId} updateCaseMutation={updateCaseMutation} pathInputRef={pathInputRef} runApiCaseMutation={runApiCaseMutation} isApiCaseRunInProgress={isApiCaseRunInProgress} isSelectedCaseReady={isSelectedCaseReady} handleSendRequest={handleSendRequest} watchedBodyType={watchedBodyType} environment={{ environmentPopoverOpen, setEnvironmentPopoverOpen, environments, resolvedEnvironmentId, handleSelectEnvironment, switchDefaultEnvironmentMutation, projectId, selectedEnvironment, environmentsQuery }} templates={{ setEnvVarInputRef, renderEnvVarPicker, insertTemplateText, bodyJsonEditorRef, insertTemplateTextIntoJson, handleFormatBodyJson }} rules={{ postOperationCount, can, openCreateAssertRule, openCreateExtractRule, assertRulesQuery, extractRulesQuery, assertRules, toggleAssertRuleMutation, openEditAssertRule, deleteAssertRuleMutation, extractRules, toggleExtractRuleMutation, openEditExtractRule, deleteExtractRuleMutation }} />
-                    </div>
-                  </div>
-                  {runResult ? (
-                    <>
-                      <div
-                        className={`api-case-editor-splitter${isResizingEditor ? ' resizing' : ''}`}
-                        role="separator"
-                        aria-orientation="horizontal"
-                        onPointerDown={handleEditorSplitterPointerDown}
-                      >
-                        <span className="api-case-editor-splitter-line" />
-                        <span className="api-case-editor-splitter-grip">⋯</span>
-                      </div>
-                      <div className="api-case-editor-result-pane">
-                        <div className="api-case-editor-result-scroll">
-                          <Card size="small" className="api-case-run-result-card">
-                            <div className="api-case-run-result-head">
-                              <div className="api-case-run-result-title">
-                                <Text strong>请求结果</Text>
-                                <Tag color={runResultStatusMeta.color}>{runResultStatusMeta.label}</Tag>
-                              </div>
-                              <div className="api-case-run-result-meta">
-                                <span>环境：{selectedEnvironment?.name ?? runResult.environmentId ?? '-'}</span>
-                                <span>耗时：{runResult.durationMs ?? 0} ms</span>
-                                <span>状态码：{runResult.response?.statusCode ?? '-'}</span>
-                                <span>提取失败：{failedExtractCount}</span>
-                                <span>断言失败：{failedAssertCount}</span>
-                              </div>
-                            </div>
-                            {runResult.errorMessage ? <Alert showIcon type="error" title={runResult.errorMessage} className="api-case-run-result-alert" /> : null}
-                            <Segmented
-                              className="api-case-run-result-segmented"
-                              options={runResultViewOptions}
-                              value={runResultView}
-                              onChange={(value) => setRunResultView(value as typeof runResultView)}
-                            />
-                            <div className="api-case-run-result-block">
-                              {renderRunResultContent({
-                                view: runResultView,
-                                request: runResult.request,
-                                response: runResult.response,
-                                extractResults,
-                                assertResults,
-                              })}
-                            </div>
-                          </Card>
-                        </div>
-                      </div>
-                    </>
-                  ) : null}
-                </div>
-              </section>
-            </div>
+                  </>
+                ) : null}
+              </div>
+            </section>
           </div>
         </div>
       </div>

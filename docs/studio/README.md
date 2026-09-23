@@ -1,6 +1,6 @@
 # 前端（studio）
 
-React 单页应用，提供项目、迭代、需求、功能/API/UI 测试资产、AI 任务与执行报告的完整工作台。领域术语见 [CONTEXT](CONTEXT.md)，界面设计规范见 [DESIGN](DESIGN.md)。
+React 单页应用，提供项目、迭代、需求、功能/API/UI 测试资产、AI 任务与执行报告的完整工作台。领域术语见 [CONTEXT](CONTEXT.md)，结构与代码规范见 [STRUCTURE](STRUCTURE.md)。
 
 ## 运行时与依赖
 
@@ -57,7 +57,11 @@ npm run build         # tsc -b && vite build
 npm run verify        # type-check + lint + build
 ```
 
-2026-09-20 整改与失败修复验证：类型检查、Lint 与构建通过；前端全量收集 305 项，301 项在该轮通过，剩余 4 项随后完成修复并复跑通过（UI 弹窗关闭/重开 1 项、需求分析整文件 19 项、GitLab 权限绑定整文件 5 项）。默认按文件串行执行，保留 30s 单项超时；重型页面使用关闭动画的测试主题，以避免 jsdom 动画和 CSS 计算造成的时序问题。完整过程及限制见 [整改验证记录](refactor-validation-2026-09-20.md)。
+测试配置见 `vite.config.ts`：jsdom 环境，单项超时 30s，`maxWorkers: 4`（最多 4 个测试文件并行）。重型页面测试使用 `src/test/TestThemeProvider.tsx`——保留真实主题与组件，只关闭 jsdom 不执行的 CSS 动画，避免弹窗卡在进入动画的透明状态；并发过高会因 CPU 争用出现超时抖动，排查时用 `--maxWorkers=1` 串行复跑，以区分「超时」与「行为失败」。全量 64 个文件 411 项，耗时约 2 分钟。历史整改与验证过程见 git 提交 `72164d2`。
+
+**列表页表面层的观感不在自动化覆盖内**（jsdom 不做布局）。UI 测试页重做时用一次性 Playwright 脚本对着 `npm run dev` 核对过浅色与深色两套：脚本用 `context.route('**/v1/**')` stub 掉 `/v1/user`、`/v1/projects`、`/v1/projects/:id/sprints`、`/v1/sprints/:id/requirements`、`/v1/requirements/:id/ui-test-suites`，然后在 `1680×1000` 下截整页。脚本没有落库——要复查时照这个思路现写即可；判据是「信息条 / 工具栏 / 表格三张卡片、徽标不换行、深色下底色与描边成对」。
+
+同一套脚本还能抓「深色下多出来的容器」：把每个元素的 `backgroundColor` / `boxShadow` / `borderWidth` 采成一张表，浅深两跑做差，**浅色下完全无面、深色下却有面的元素就是漏的**——外壳的玻璃规则与 `*-v2.css` 的透明覆盖常常同权重，只在深色下现形（判据与三处已知坑见 [STRUCTURE.md](STRUCTURE.md) 的「列表页表面层」）。
 
 ## 与后端的交互
 

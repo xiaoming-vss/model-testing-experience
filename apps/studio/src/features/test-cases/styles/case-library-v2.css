@@ -1,0 +1,379 @@
+/*
+ * 用例库页面（按设计稿重做的表面层）。
+ *
+ * 三条约束：
+ * 1. 只做外观，不改业务结构；类名沿用页面已有的钩子（.api-case-sidebar、.case-library-sidebar-foot 等），
+ *    测试按这些钩子取节点。
+ * 2. 不动被 listSurfaceConsistency.test.ts 锁定的列表指纹——表头高、四角 8px 圆角、行高、内距一律不碰，
+ *    所以这里没有针对 .functional-suite-list-table 的 th / td 盒尺寸规则。
+ * 3. 深浅两套。深色下 dark-polish.css 用 !important 接管了外壳表面（.workbench-panel、.api-panel-header、
+ *    .api-case-sidebar、.table-footer 等），新元素（色块、胶囊、编号）它不认识，所以那部分两种主题各写一份；
+ *    被它接管的容器不硬顶，沿用它的深色表面，只补圆角与间距。
+ *
+ * token（`--srf-*`）与九色盘（`.tone-*`）在 shared/styles/surface-tokens.css，与测试单页共用；
+ * 页面根节点的 `tp-surface` 类负责挂上它们，缺了这里所有 var() 都会解析成空值。
+ */
+
+/* ===== 外壳：工具栏与卡片 ===== */
+
+.case-library-page .case-library-toolbar {
+  min-height: 48px;
+  padding: 0;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* 同一条玻璃规则：workbench.css 深色下那条与这里的旧写法同权重（0,5,0 对 0,6,0 里靠 import 顺序决胜），
+   所以选择器要写到和 api-test / ui-suite 一样的长度——带上 `.api-automation-content > .workbench-panel`
+   把权重抬到 0,8,0，深色下才不会多出一条玻璃工具条。 */
+.app-shell.app-shell-macos .testing-page .case-library-page .api-automation-content > .workbench-panel .panel-header.api-panel-header.case-library-toolbar {
+  min-height: 48px;
+  padding: 0;
+  border: 0 !important;
+  border-bottom: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.case-library-page .case-library-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.case-library-page .case-library-filters .api-filter-field-label {
+  margin-right: 6px;
+  color: var(--srf-text-muted);
+  font-weight: 500;
+}
+
+.case-library-page .case-library-search-field {
+  min-width: 256px;
+}
+
+.case-library-page .case-library-search-input.ant-input-affix-wrapper {
+  border-radius: var(--srf-radius-control);
+}
+
+.case-library-page .case-library-search-hint {
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+}
+
+.case-library-page .case-library-toolbar-actions {
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.case-library-page .case-library-refresh.ant-btn {
+  color: var(--srf-text-secondary);
+}
+
+.case-library-page .case-library-refresh.ant-btn:hover {
+  color: var(--srf-accent);
+}
+
+/* ===== 两栏布局 ===== */
+
+.case-library-page .case-library-layout {
+  grid-template-columns: 256px minmax(0, 1fr);
+  gap: 16px;
+  overflow: hidden;
+}
+
+.case-library-page .case-library-tree,
+.case-library-page .case-library-main {
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+  overflow: hidden;
+}
+
+.case-library-page .case-library-tree {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.case-library-page .case-library-main {
+  border-left: 1px solid var(--srf-card-border);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+:root[data-theme='dark'] .case-library-page .case-library-tree,
+:root[data-theme='dark'] .case-library-page .case-library-main {
+  box-shadow: none;
+}
+
+/* ===== 左栏：测试集导航 ===== */
+
+.case-library-page .case-library-tree-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 12px;
+  border-bottom: 1px solid var(--srf-divider);
+}
+
+.case-library-page .case-library-tree-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--srf-text);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+.case-library-page .case-library-tree-title .anticon {
+  color: var(--srf-text-secondary);
+  font-size: 16px;
+}
+
+.case-library-page .case-library-tree-search {
+  display: block;
+  flex: 0 0 auto;
+  padding: 8px;
+  border-bottom: 1px solid var(--srf-divider);
+}
+
+.case-library-page .case-library-tree-search .ant-input-affix-wrapper {
+  border-radius: 6px !important;
+  background: var(--srf-hover);
+  font-size: 11px;
+}
+
+.case-library-page .case-library-tree-scroll {
+  padding: 8px;
+}
+
+.case-library-page .case-library-nav-list {
+  gap: 2px;
+}
+
+.case-library-page .case-library-nav-item {
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--srf-radius-control);
+  background: transparent;
+  gap: 8px;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.case-library-page .case-library-nav-item:hover {
+  transform: none;
+  border-color: transparent;
+  background: var(--srf-hover);
+  box-shadow: none;
+}
+
+.case-library-page .case-library-nav-item.active,
+.case-library-page .case-library-nav-item.selected {
+  border-color: transparent;
+  background: var(--srf-accent-soft);
+  box-shadow: none;
+}
+
+.case-library-page .case-library-nav-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.case-library-page .case-library-tree-icon {
+  flex: 0 0 auto;
+  font-size: 16px;
+  color: var(--srf-folder);
+}
+
+.case-library-page .case-library-nav-item.active .case-library-tree-icon {
+  color: var(--srf-accent);
+}
+
+.case-library-page .case-library-nav-name {
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.case-library-page .case-library-nav-item:hover .case-library-nav-name {
+  color: var(--srf-text);
+}
+
+.case-library-page .case-library-nav-item.active .case-library-nav-name {
+  color: var(--srf-accent-strong);
+  font-weight: 600;
+}
+
+.case-library-page .case-library-nav-count {
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 14px;
+}
+
+.case-library-page .case-library-nav-item.active .case-library-nav-count {
+  background: var(--srf-count-badge);
+  color: var(--srf-accent-strong);
+}
+
+.case-library-page .case-library-sidebar-foot {
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--srf-divider);
+  background: var(--srf-hover);
+}
+
+.case-library-page .case-library-sidebar-foot .case-library-foot-create.ant-btn {
+  padding-inline: 0;
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+}
+
+.case-library-page .case-library-sidebar-foot .case-library-foot-create.ant-btn:hover {
+  color: var(--srf-accent);
+}
+
+/* 深色下 dark-polish.css 用 !important 接管了 .api-case-sidebar 与 .api-case-nav-item 的表面
+   （基础态与 hover 都在它的 :is() 列表里），这里用同样的 !important 加更高的选择器权重，
+   把「卡片表面 + 选中态高亮」这两个设计稿要点要回来。 */
+:root[data-theme='dark'] .app-shell.app-shell-macos .case-library-page .case-library-tree,
+:root[data-theme='dark'] .app-shell.app-shell-macos .case-library-page .case-library-main {
+  border-color: var(--srf-card-border) !important;
+  background: var(--srf-card) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .case-library-page .case-library-nav-item {
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .case-library-page .case-library-nav-item:hover {
+  border-color: transparent !important;
+  background: var(--srf-hover) !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .case-library-page .case-library-nav-item.active {
+  border-color: transparent !important;
+  background: var(--srf-accent-soft) !important;
+}
+
+/* ===== 右栏：快速过滤条 ===== */
+
+/* 布局与胶囊本身在 shared/styles/surface-tokens.css（测试单页也用），这里只补自己那条分隔线。 */
+.case-library-page .case-library-quickbar {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--srf-divider);
+}
+
+.case-library-page .case-library-chip-priority {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ===== 表格内部 ===== */
+
+/* 外壳给了面板内表格容器 16px 18px 的内距，设计稿里表格是贴着卡片边缘的，这里收掉。 */
+.case-library-page .case-library-table-scroll {
+  padding: 0;
+}
+
+.app-shell-macos .testing-page .case-library-page .api-automation-content > .workbench-panel .case-library-table-scroll {
+  padding: 0 !important;
+}
+
+.case-library-page .case-library-title-cell {
+  min-width: 0;
+  width: 100%;
+}
+
+/* 用例编号是 UUID，按运行历史的做法只露前 8 位，完整值放在 title 里。 */
+.case-library-page .case-library-id-chip {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--srf-chip);
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+/* 深色下 testing/styles 把名称列（td:nth-child(2)）里的 span 一律刷成浅色，
+   编号色块要保住自己的弱化色，不然和标题一样亮。
+   注意 .case-library-page 与 .functional-test-page 是同一个元素上的两个类，这里必须连写。 */
+:root[data-theme='dark'] .case-library-page.functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(2) .case-library-id-chip {
+  color: var(--srf-text-muted) !important;
+}
+
+.case-library-page .case-library-muted-cell {
+  color: var(--srf-text-secondary);
+}
+
+.case-library-page .case-library-time-cell {
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+}
+
+.case-library-page .case-library-row-actions .ant-btn {
+  color: var(--srf-text-muted);
+}
+
+.case-library-page .case-library-row-actions .action-btn-delete.ant-btn:hover {
+  color: var(--srf-danger);
+}
+
+.case-library-page .case-library-footer {
+  gap: 12px;
+  padding: 0 16px;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .case-library-page .case-library-footer .ant-typography {
+  color: var(--srf-text-secondary);
+}
+
+/* ===== 优先级色块 ===== */
+
+/* 颜色取自共享九色盘（P0→red / P1→amber / P2→blue / P3→slate），这里只管盒子。
+   所以页面上优先级色块要同时带 tone-* 类（见 CaseLibraryPage.tsx）。 */
+.case-library-page .case-library-priority {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border: 1px solid var(--srf-tone-border, transparent);
+  border-radius: 4px;
+  background: var(--srf-tone-bg, var(--srf-chip));
+  color: var(--srf-tone-text, var(--srf-chip-text));
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+/* ===== 窄屏 ===== */
+
+@media (max-width: 1180px) {
+  .case-library-page .case-library-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .case-library-page .case-library-search-field {
+    min-width: 0;
+    width: 100%;
+  }
+}

@@ -1,0 +1,361 @@
+/*
+ * API 测试集详情页（测试集列表点名称进来的页面）按设计稿重做的表面层：板面、顶栏、左栏用例列表。
+ *
+ * 结构：顶栏（返回 / 测试集名 / 环境 / 运行记录 / 运行测试集）+ 两栏（用例列表卡片、请求编辑与运行结果卡片）。
+ * token 与色盘来自 shared/styles/surface-tokens.css，页面根节点带 `tp-surface`、板面带 `tp-board`（见 STRUCTURE.md §三）。
+ * 颜色只引用 `--srf-*` / `.tone-*`，深色由 token 切换；这里只有压过深色玻璃外壳那一处显式写 `:root[data-theme='dark']`。
+ *
+ * 编辑区与控制台的规则在 detail-inspector-v2.css（按职责拆文件，两处选择器互不重叠）。
+ */
+
+/* ===== 板面与两栏 ===== */
+
+.api-collection-workbench-page .api-collection-workbench {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* `page-frame` 在深色外壳里被铺了玻璃底 + 内高光（dark-polish.css 的 `:is(... .page-frame ...)` 是
+   (0,5,0) + !important），设计稿里这一层是裸画布。多带 `:root[data-theme='dark']` 抬到 (0,8,0)。
+   浅色下外壳没有给 `page-frame` 铺表面，但同样写一份，避免浅色分支靠外壳不铺面这个巧合。 */
+.api-collection-workbench-page .api-collection-workbench.tp-board {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .testing-page .api-collection-workbench-page .api-collection-workbench.tp-board {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.api-collection-workbench-page .api-wb-cols {
+  flex: 1 1 auto;
+  min-height: min(620px, calc(100vh - 300px));
+  display: grid;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+/* ===== 顶栏 ===== */
+
+.api-collection-workbench-page .api-wb-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+}
+
+.api-collection-workbench-page .api-wb-toolbar-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.api-collection-workbench-page .api-wb-toolbar-back.ant-btn {
+  color: var(--srf-text-secondary);
+}
+
+.api-collection-workbench-page .api-wb-toolbar-back.ant-btn:hover {
+  color: var(--srf-accent);
+  background: var(--srf-hover);
+}
+
+.api-collection-workbench-page .api-wb-toolbar-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 22px;
+  color: var(--srf-text);
+}
+
+.api-collection-workbench-page .api-wb-toolbar-label {
+  color: var(--srf-text-secondary);
+  font-weight: 600;
+}
+
+.api-collection-workbench-page .api-wb-toolbar-name {
+  color: var(--srf-text);
+}
+
+.api-collection-workbench-page .api-wb-toolbar-path {
+  color: var(--srf-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.api-collection-workbench-page .api-wb-toolbar-env {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 320px;
+  padding: 2px 8px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-chip);
+  color: var(--srf-chip-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.api-collection-workbench-page .api-wb-toolbar-env-dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--srf-result-passed);
+}
+
+.api-collection-workbench-page .api-wb-toolbar-env.empty .api-wb-toolbar-env-dot {
+  background: var(--srf-result-skipped);
+}
+
+.api-collection-workbench-page .api-wb-toolbar-updated {
+  color: var(--srf-text-muted);
+  font-size: 12px;
+}
+
+.api-collection-workbench-page .api-wb-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ===== 左栏：用例列表 ===== */
+
+.api-collection-workbench-page .api-wb-explorer {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+  overflow: hidden;
+}
+
+.api-collection-workbench-page .api-wb-explorer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--srf-divider);
+}
+
+.api-collection-workbench-page .api-wb-explorer-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--srf-text);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+}
+
+.api-collection-workbench-page .api-wb-explorer-count {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--srf-count-badge);
+  color: var(--srf-accent-strong);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.api-collection-workbench-page .api-wb-explorer-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.api-collection-workbench-page .api-wb-explorer-action.ant-btn {
+  color: var(--srf-text-secondary);
+}
+
+.api-collection-workbench-page .api-wb-explorer-action.ant-btn:hover {
+  color: var(--srf-accent);
+  background: var(--srf-hover);
+}
+
+.api-collection-workbench-page .api-wb-explorer-search {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--srf-divider);
+}
+
+.api-collection-workbench-page .api-wb-explorer-search .ant-input-affix-wrapper {
+  background: var(--srf-hover);
+  border-color: var(--srf-card-border);
+}
+
+.api-collection-workbench-page .api-wb-explorer-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+}
+
+.api-collection-workbench-page .api-wb-explorer-placeholder {
+  padding: 24px 8px;
+}
+
+.api-collection-workbench-page .api-wb-case-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.api-collection-workbench-page .api-wb-case-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--srf-radius-control);
+  cursor: pointer;
+}
+
+.api-collection-workbench-page .api-wb-case-item.can-drag {
+  cursor: grab;
+}
+
+.api-collection-workbench-page .api-wb-case-item:hover {
+  border-color: var(--srf-card-border);
+  background: var(--srf-hover);
+}
+
+.api-collection-workbench-page .api-wb-case-item.selected,
+.api-collection-workbench-page .api-wb-case-item.selected:hover {
+  border-color: var(--srf-accent-border);
+  background: var(--srf-accent-soft);
+}
+
+/* 选中态左侧的竖条，设计稿用它区分当前用例。 */
+.api-collection-workbench-page .api-wb-case-item.selected::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 50%;
+  width: 3px;
+  height: 22px;
+  transform: translateY(-50%);
+  border-radius: 0 999px 999px 0;
+  background: var(--srf-accent);
+}
+
+.api-collection-workbench-page .api-wb-case-item.dragging {
+  opacity: 0.5;
+}
+
+.api-collection-workbench-page .api-wb-case-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* 方法徽标与用例名同一行，路径在下一行——设计稿是两行一条。 */
+.api-collection-workbench-page .api-wb-case-item-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.api-collection-workbench-page .api-wb-case-item-head .api-wb-case-method {
+  flex: 0 0 auto;
+}
+
+.api-collection-workbench-page .api-wb-case-method {
+  padding: 0 5px;
+  border: 1px solid var(--srf-tone-border);
+  border-radius: 4px;
+  background: var(--srf-tone-bg);
+  color: var(--srf-tone-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+.api-collection-workbench-page .api-wb-case-draft {
+  padding: 0 6px;
+  border: 1px solid var(--srf-tone-border, var(--srf-card-border));
+  border-radius: 999px;
+  background: var(--srf-tone-bg, var(--srf-chip));
+  color: var(--srf-tone-text, var(--srf-chip-text));
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.api-collection-workbench-page .api-wb-case-item-name {
+  color: var(--srf-text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.api-collection-workbench-page .api-wb-case-item-path {
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.api-collection-workbench-page .api-wb-case-item-actions {
+  flex: 0 0 auto;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+
+.api-collection-workbench-page .api-wb-case-item:hover .api-wb-case-item-actions,
+.api-collection-workbench-page .api-wb-case-item.selected .api-wb-case-item-actions,
+.api-collection-workbench-page .api-wb-case-item:focus-within .api-wb-case-item-actions {
+  opacity: 1;
+}
+
+/* ===== 窄屏 ===== */
+
+@media (max-width: 1180px) {
+  .api-collection-workbench-page .api-wb-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .api-collection-workbench-page .api-wb-explorer {
+    max-height: 460px;
+  }
+}

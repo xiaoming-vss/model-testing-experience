@@ -1,0 +1,334 @@
+/*
+ * 编辑用例弹窗（用例库点开用例的那套表单）。
+ *
+ * 只作用于 `.case-library-case-modal`：弹窗被 antd 传到 body 下，不在 `.app-shell` 里，
+ * 所以 `dark-polish.css` / `workbench.css` 那些带 `.app-shell` 前缀的规则碰不到它，
+ * 主题由 antd 的 ConfigProvider + 本文件的 `:root[data-theme='dark']` 对照负责。
+ *
+ * token 与九色盘来自 shared/styles/surface-tokens.css；弹窗根节点带 `tp-surface` 才能取到（见 CaseLibraryPage）。
+ * 颜色一律走 token：这个文件是新增的，不在 STRUCTURE.md S8 的存量豁免里。
+ */
+
+/* ===== 弹窗头部 ===== */
+
+.case-library-case-modal .case-editor-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding-right: 24px;
+}
+
+.case-library-case-modal .case-editor-head-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--srf-accent-border);
+  border-radius: 8px;
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent);
+  font-size: 14px;
+}
+
+.case-library-case-modal .case-editor-head-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.case-library-case-modal .case-editor-head-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.case-library-case-modal .case-editor-head-name {
+  color: var(--srf-text);
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 700;
+}
+
+/* TC-xxxx 是「该测试集内的用例序号」，完整来源见页面里的 orderNo。 */
+.case-library-case-modal .case-editor-head-badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--srf-chip);
+  color: var(--srf-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.case-library-case-modal .case-editor-head-uid {
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.case-library-case-modal .case-editor-head-subtitle {
+  margin: 0;
+  color: var(--srf-text-secondary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+/* ===== 表单骨架 ===== */
+
+.case-library-case-modal .case-editor-form {
+  padding: 0;
+  background: transparent;
+}
+
+.case-library-case-modal .case-editor-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.case-library-case-modal .case-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+/* ===== 区块卡片 ===== */
+
+.case-library-case-modal .case-editor-section {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+  overflow: hidden;
+}
+
+.case-library-case-modal .case-editor-section-body {
+  padding: 14px 16px 16px;
+}
+
+/* 区块头：左侧图标 + 标题（带一条色调竖条），右侧提示文案或计数徽标。 */
+.case-library-case-modal .case-editor-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+.case-library-case-modal .case-editor-section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--srf-text);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+}
+
+.case-library-case-modal .case-editor-section-title::before {
+  content: '';
+  width: 3px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--srf-tone-text, var(--srf-accent));
+}
+
+.case-library-case-modal .case-editor-section-title .anticon {
+  color: var(--srf-tone-text, var(--srf-accent));
+  font-size: 14px;
+}
+
+.case-library-case-modal .case-editor-section-hint {
+  color: var(--srf-text-muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+/* 操作步骤 / 预期结果用的是整条着色头带，不是白色头。 */
+.case-library-case-modal .case-editor-section-tinted > .case-editor-section-head {
+  border-bottom: 1px solid var(--srf-tone-border, var(--srf-card-border));
+  background: var(--srf-tone-bg, var(--srf-chip));
+}
+
+.case-library-case-modal .case-editor-count-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--srf-chip);
+  color: var(--srf-tone-text, var(--srf-text-secondary));
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+/* ===== 用例名称 ===== */
+
+.case-library-case-modal .case-editor-name-label {
+  color: var(--srf-text);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+}
+
+.case-library-case-modal .case-editor-name-meta-sep {
+  margin: 0 6px;
+  color: var(--srf-card-border);
+}
+
+.case-library-case-modal .case-editor-name-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.case-library-case-modal .case-editor-required {
+  color: var(--srf-danger);
+  font-style: normal;
+}
+
+.case-library-case-modal .case-editor-name-meta {
+  color: var(--srf-text-muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.case-library-case-modal .case-editor-title-input.ant-input {
+  min-height: 40px;
+  border: 1px solid var(--srf-card-border) !important;
+  border-radius: var(--srf-radius-control) !important;
+  background: var(--srf-card) !important;
+  color: var(--srf-text) !important;
+  font-size: 13px;
+  box-shadow: none;
+}
+
+.case-library-case-modal .case-editor-title-input.ant-input:focus,
+.case-library-case-modal .case-editor-title-input.ant-input-focused {
+  border-color: var(--srf-accent) !important;
+  box-shadow: 0 0 0 3px var(--srf-accent-soft) !important;
+}
+
+/* 用例名称区块里的表单项自己控制间距，不要再叠一层 margin。 */
+.case-library-case-modal .case-editor-name-section .ant-form-item {
+  margin-bottom: 0;
+}
+
+/* ===== 优先级 / 用例类型 ===== */
+
+.case-library-case-modal .case-editor-section .ant-form-item {
+  margin-bottom: 0;
+}
+
+.case-library-case-modal .case-editor-section .ant-select,
+.case-library-case-modal .case-editor-section .ant-select-selector {
+  width: 100%;
+}
+
+.case-library-case-modal .case-editor-section .ant-select-selector {
+  min-height: 36px;
+  border: 1px solid var(--srf-card-border) !important;
+  border-radius: var(--srf-radius-control) !important;
+  background: var(--srf-card) !important;
+  color: var(--srf-text) !important;
+  box-shadow: none !important;
+}
+
+.case-library-case-modal .case-editor-section .ant-select-focused .ant-select-selector {
+  border-color: var(--srf-accent) !important;
+  box-shadow: 0 0 0 3px var(--srf-accent-soft) !important;
+}
+
+.case-library-case-modal .case-editor-section .ant-select-selection-item,
+.case-library-case-modal .case-editor-section .ant-select-selection-placeholder {
+  color: var(--srf-text) !important;
+  font-size: 12px;
+  line-height: 34px;
+}
+
+.case-library-case-modal .case-editor-section .ant-select-selection-placeholder {
+  color: var(--srf-text-muted) !important;
+}
+
+/* ===== 前置条件 / 步骤 / 预期结果的文本域 ===== */
+
+.case-library-case-modal .case-editor-section textarea.ant-input {
+  border: 1px solid var(--srf-card-border) !important;
+  border-radius: var(--srf-radius-control) !important;
+  background: var(--srf-card) !important;
+  color: var(--srf-text) !important;
+  font-size: 13px;
+  line-height: 22px;
+  padding: 10px 12px;
+  box-shadow: none !important;
+  resize: none;
+}
+
+/* 操作步骤 / 预期结果的文本域在着色头带下面，不再单独描边。 */
+.case-library-case-modal .case-editor-section-tinted textarea.ant-input {
+  border: 0 !important;
+}
+
+.case-library-case-modal .case-editor-section textarea.ant-input:focus {
+  border-color: var(--srf-accent) !important;
+  box-shadow: 0 0 0 3px var(--srf-accent-soft) !important;
+}
+
+.case-library-case-modal .case-editor-section textarea.ant-input::placeholder {
+  color: var(--srf-text-muted) !important;
+}
+
+/* 两列步骤输入框等高。 */
+.case-library-case-modal .case-editor-steps-grid {
+  align-items: stretch;
+}
+
+.case-library-case-modal .case-editor-steps-grid > .case-editor-section {
+  min-width: 0;
+}
+
+/* 两列文本域随较高的那一列一起长高。 */
+.case-library-case-modal .case-editor-steps-grid .case-editor-section-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.case-library-case-modal .case-editor-steps-grid textarea.ant-input {
+  flex: 1 1 auto;
+}
+
+/* ===== 底部动作 ===== */
+
+.case-library-case-modal .case-editor-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.case-library-case-modal .case-editor-footer-main {
+  align-items: center;
+}
+
+/* ===== 窄屏 ===== */
+
+@media (max-width: 900px) {
+  .case-library-case-modal .case-editor-grid,
+  .case-library-case-modal .case-editor-steps-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

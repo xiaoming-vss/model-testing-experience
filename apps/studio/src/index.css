@@ -70,8 +70,7 @@ a {
 .api-detail-description,
 .functional-case-editor-description,
 .functional-case-brief,
-.ui-template-picker-item-desc,
-.ui-test-case-step-subtitle {
+.ui-template-picker-item-desc {
   color: var(--description-text) !important;
   font-family: var(--description-font);
   font-size: 13px;
@@ -121,23 +120,6 @@ textarea[id$='_summary']::placeholder {
   margin-inline-end: 0;
 }
 
-.requirement-document-summary-row {
-  align-items: flex-start;
-}
-
-.requirement-document-summary {
-  display: -webkit-box;
-  overflow: hidden;
-  color: var(--description-text);
-  font-family: var(--description-font);
-  font-size: 12px;
-  line-height: 1.7;
-  text-align: right;
-  word-break: break-word;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
 .requirement-document-link {
   display: inline-flex;
   justify-content: flex-end;
@@ -148,11 +130,4 @@ textarea[id$='_summary']::placeholder {
 
 .requirement-document-link:hover {
   text-decoration: underline;
-}
-
-.requirement-document-link-plain {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  font: inherit;
 }

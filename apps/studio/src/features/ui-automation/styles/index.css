@@ -7,19 +7,6 @@
   overflow: hidden;
 }
 
-.ui-test-suite-scroll {
-  flex: 1 1 auto;
-  min-height: 0;
-  padding: 16px;
-  background: transparent;
-}
-
-.ui-test-suite-toolbar {
-  padding: 0 0 16px;
-  display: flex;
-  justify-content: flex-end;
-}
-
 .ui-test-suite-drawer .ant-drawer-body {
   padding: 18px 20px 20px;
 }
@@ -95,78 +82,6 @@
   margin-top: 6px;
 }
 
-.ui-test-suite-grid {
-  width: 100%;
-  align-content: start;
-}
-
-.ui-test-suite-card {
-  min-width: 0;
-  height: 100%;
-  min-height: 236px;
-}
-
-.ui-test-suite-card .ant-card-body {
-  min-height: 0;
-  gap: 10px;
-}
-
-.ui-test-suite-card .api-collection-card-top {
-  min-height: 22px;
-}
-
-.ui-test-suite-card .api-collection-card-top .ant-typography {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ui-test-suite-card .api-collection-description {
-  min-height: 44px;
-  line-height: 18px;
-}
-
-.ui-test-suite-card .sprint-card-meta {
-  min-height: 30px;
-  gap: 10px;
-  padding-bottom: 6px;
-}
-
-.ui-test-suite-card .api-collection-inline-value {
-  min-width: 0;
-  font-size: 12px;
-  line-height: 18px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ui-test-suite-card .sprint-card-actions {
-  min-height: 28px;
-  padding-top: 0;
-}
-
-.ui-test-suite-card .sprint-card-actions .ant-btn {
-  width: 28px;
-  min-width: 28px;
-  height: 28px;
-}
-
-.ui-test-suite-card .sprint-card-meta:last-of-type {
-  min-height: 46px;
-  align-items: flex-start;
-}
-
-.ui-test-suite-card .sprint-card-meta:last-of-type .api-collection-inline-value {
-  white-space: normal;
-  text-align: right;
-  line-height: 20px;
-  overflow: visible;
-  text-overflow: clip;
-  overflow-wrap: anywhere;
-}
 
 .api-case-summary-card .ant-card-body {
   padding: 12px 16px;
@@ -295,26 +210,8 @@
   text-shadow: 0 0 1px rgba(124, 195, 163, 0.14);
 }
 
-.ui-suite-case-summary-grid {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 18px 34px;
-}
 
-.ui-suite-case-summary-item {
-  flex: 0 1 auto;
-  min-width: 110px;
-}
 
-.ui-suite-case-summary-item strong {
-  white-space: nowrap;
-}
-
-.api-empty-state-card {
-  border: 0;
-  box-shadow: none;
-}
 
 .api-collection-detail-frame {
   flex: 1 1 auto;
@@ -387,12 +284,6 @@
   padding: 10px 12px 12px;
 }
 
-.ui-suite-case-empty-list {
-  min-height: 100%;
-  display: grid;
-  place-items: center;
-  padding: 12px 8px 20px;
-}
 
 .ui-test-case-empty-editor {
   min-height: 360px;
@@ -401,133 +292,27 @@
   padding: 0 24px 24px;
 }
 
-.ui-test-case-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  height: 100%;
-  min-height: 0;
-  padding: 16px 24px 0;
-  overflow: hidden;
-}
 
-.ui-test-case-editor-fixed-head {
-  flex: 0 0 auto;
-  padding: 0 0 16px;
-  border-bottom: 1px solid var(--tp-border-soft);
-  margin-bottom: 16px;
-}
 
-.ui-test-case-toolbar {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  padding-top: 2px;
-}
 
-.ui-test-case-name-block {
-  min-width: 0;
-  flex: 1 1 auto;
-}
+
 
 .ui-test-case-name-item {
   margin-bottom: 0;
 }
 
-.ui-test-case-inline-label {
-  color: var(--tp-text-secondary);
-  font-size: 12px;
-  line-height: 18px;
-  font-weight: 600;
-  margin-bottom: 6px;
-}
 
-.ui-test-case-toolbar-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
-}
 
-.ui-test-case-secondary-meta {
-  min-height: 22px;
-  margin-top: 10px;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  color: var(--tp-text-secondary);
-  font-size: 12px;
-  line-height: 18px;
-}
 
-.ui-test-case-enabled-meta,
-.ui-test-case-step-count-meta {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
 
-.ui-test-case-enabled-meta .ant-form-item {
-  margin-bottom: 0;
-  line-height: 1;
-}
 
-.ui-test-case-meta-separator {
-  color: var(--tp-text-muted);
-}
 
-.ui-test-case-step-count-meta .anticon {
-  color: var(--tp-text-muted);
-  font-size: 12px;
-}
 
-.ui-test-case-step-section {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  margin-top: 0;
-  overflow: hidden;
-}
 
-.ui-test-case-step-scroll {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 0 0 24px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
 
-.ui-test-case-step-scroll::-webkit-scrollbar {
-  display: none;
-}
 
-.ui-test-case-step-toolbar {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
 
-.ui-test-case-step-title {
-  color: var(--tp-text);
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 22px;
-}
 
-.ui-test-case-step-subtitle {
-  color: var(--tp-text-secondary);
-  font-size: 12px;
-  line-height: 18px;
-  margin-top: 2px;
-}
 
 .ui-test-case-step-empty {
   border: 1px dashed var(--tp-border-soft);
@@ -937,15 +722,6 @@
   display: contents;
 }
 
-.ui-test-case-step-timeout-item {
-  margin-bottom: 0;
-  width: 100%;
-}
-
-.ui-test-case-step-timeout-item .ant-input-number {
-  width: 100%;
-}
-
 .ui-test-case-step-inline-switch-item {
   margin-bottom: 0;
   display: flex;
@@ -1003,16 +779,4 @@
   border-radius: 8px;
 }
 
-.ui-test-run-inline-actions {
-  margin-top: 12px;
-  display: flex;
-  justify-content: flex-end;
-}
 
-/* UI 测试集外层容器与 API 详情、测试单工作台统一。 */
-.ui-suite-case-layout .ui-suite-case-sidebar,
-.ui-suite-case-layout .ui-suite-case-detail-panel,
-.ui-suite-case-layout .ui-suite-case-editor-panel {
-  border-radius: 18px;
-  overflow: hidden;
-}

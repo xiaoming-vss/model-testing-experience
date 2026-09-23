@@ -1,0 +1,579 @@
+/*
+ * API 测试集详情页右栏：请求编辑区与运行结果控制台。
+ *
+ * 与 detail-workbench-v2.css 配套，都由 ApiCollectionDetailPage 引入；选择器互不重叠。
+ * 方法徽标、状态胶囊等颜色同样只引用 `--srf-*` / `.tone-*`。
+ *
+ * 与设计稿的差异：设计稿在结果控制台右上角画了「格式化 / 复制」两个动作，代码里没有对应实现，未做。
+ */
+
+/* ===== 右栏：请求编辑与运行结果 ===== */
+
+.api-collection-workbench-page .api-wb-editor-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+  overflow: hidden;
+}
+
+.api-collection-workbench-page .api-wb-editor-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.api-collection-workbench-page .api-wb-editor-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.api-collection-workbench-page .api-wb-editor-main-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.api-collection-workbench-page .api-wb-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.api-collection-workbench-page .api-wb-form .ant-form-item {
+  margin-bottom: 0;
+}
+
+/* 用例名称行：标签在左、只读元信息在右。 */
+.api-collection-workbench-page .api-wb-editor-head {
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--srf-divider);
+}
+
+.api-collection-workbench-page .api-wb-case-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 16px;
+}
+
+.api-collection-workbench-page .api-wb-case-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 320px;
+}
+
+/* 名称行的标签与输入框同排：设计稿里标签是左侧一枚弱化小字。
+   antd 垂直布局默认把 label 与 control 叠成两行，这里把行改成横排。 */
+.api-collection-workbench-page .api-wb-case-name-item {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.api-collection-workbench-page .api-wb-case-name-item .ant-form-item-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.api-collection-workbench-page .api-wb-case-name-item .ant-form-item-label {
+  flex: 0 0 auto;
+  padding: 0;
+}
+
+.api-collection-workbench-page .api-wb-case-name-item .ant-form-item-label > label {
+  color: var(--srf-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* 校验失败时错误文案不能跟着横排挤在右边。 */
+.api-collection-workbench-page .api-wb-case-name-item .ant-form-item-row {
+  flex-wrap: wrap;
+}
+
+.api-collection-workbench-page .api-wb-case-name-item .ant-form-item-control {
+  flex: 1 1 200px;
+  min-width: 0;
+  max-width: 420px;
+}
+
+.api-collection-workbench-page .api-wb-case-name-item .ant-input {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.api-collection-workbench-page .api-wb-case-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  color: var(--srf-text-muted);
+  font-size: 11px;
+}
+
+.api-collection-workbench-page .api-wb-case-meta-item strong {
+  color: var(--srf-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 600;
+}
+
+.api-collection-workbench-page .api-wb-case-state {
+  padding: 1px 8px;
+  border: 1px solid var(--srf-tone-border);
+  border-radius: 999px;
+  background: var(--srf-tone-bg);
+  color: var(--srf-tone-text);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+/* 请求地址条：方式（按请求方式着色）+ Base URL + 路径 + 发送 / 保存。 */
+.api-collection-workbench-page .api-wb-request {
+  padding: 10px 16px;
+  border-top: 1px solid var(--srf-divider);
+  background: var(--srf-hover);
+}
+
+.api-collection-workbench-page .api-wb-request-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.api-collection-workbench-page .api-wb-method {
+  flex: 0 0 auto;
+  width: 110px;
+}
+
+.api-collection-workbench-page .api-wb-method .ant-select-selector {
+  border-color: var(--srf-tone-border) !important;
+  background: var(--srf-tone-bg) !important;
+}
+
+.api-collection-workbench-page .api-wb-method .ant-select-selection-item {
+  color: var(--srf-tone-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.api-collection-workbench-page .api-wb-method .ant-select-arrow {
+  color: var(--srf-tone-text);
+}
+
+.api-collection-workbench-page .api-wb-url-group {
+  flex: 1 1 420px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-card);
+  overflow: hidden;
+}
+
+.api-collection-workbench-page .api-wb-url-group:focus-within {
+  border-color: var(--srf-accent);
+  box-shadow: 0 0 0 3px var(--srf-accent-soft);
+}
+
+.api-collection-workbench-page .api-wb-base-url {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 240px;
+  padding: 0 10px;
+  height: 32px;
+  border: 0;
+  border-right: 1px solid var(--srf-card-border);
+  background: var(--srf-hover);
+  color: var(--srf-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.api-collection-workbench-page .api-wb-base-url:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.api-collection-workbench-page .api-wb-base-url-dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--srf-result-passed);
+}
+
+.api-collection-workbench-page .api-wb-base-url-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.api-collection-workbench-page .api-wb-base-url-arrow {
+  flex: 0 0 auto;
+  color: var(--srf-text-muted);
+  font-size: 10px;
+}
+
+.api-collection-workbench-page .api-wb-url-divider {
+  display: none;
+}
+
+.api-collection-workbench-page .api-wb-path {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 4px;
+}
+
+.api-collection-workbench-page .api-wb-path .ant-input {
+  border: 0;
+  box-shadow: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+}
+
+.api-collection-workbench-page .api-wb-path .ant-input:focus {
+  box-shadow: none;
+}
+
+.api-collection-workbench-page .api-wb-url-info {
+  flex: 0 0 auto;
+  padding: 0 10px;
+  color: var(--srf-text-muted);
+  cursor: help;
+}
+
+.api-collection-workbench-page .api-wb-request-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ===== 请求配置页签 ===== */
+
+.api-collection-workbench-page .api-wb-tabs {
+  padding: 0 16px;
+}
+
+.api-collection-workbench-page .api-wb-tabs > .ant-tabs-nav {
+  margin: 0;
+}
+
+.api-collection-workbench-page .api-wb-tabs > .ant-tabs-nav .ant-tabs-tab {
+  padding: 10px 0;
+  font-size: 12px;
+}
+
+.api-collection-workbench-page .api-wb-tabs > .ant-tabs-nav .ant-tabs-tab + .ant-tabs-tab {
+  margin-left: 20px;
+}
+
+.api-collection-workbench-page .api-wb-tabs .ant-tabs-ink-bar {
+  background: var(--srf-accent);
+}
+
+.api-collection-workbench-page .api-wb-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--srf-accent);
+  font-weight: 600;
+}
+
+.api-collection-workbench-page .api-wb-tab-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.api-collection-workbench-page .api-wb-tab-count {
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--srf-chip);
+  color: var(--srf-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.api-collection-workbench-page .api-wb-tabs .ant-tabs-tab.ant-tabs-tab-active .api-wb-tab-count {
+  background: var(--srf-count-badge);
+  color: var(--srf-accent-strong);
+}
+
+.api-collection-workbench-page .api-wb-tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--srf-result-passed);
+}
+
+/* ===== 键值行（Query 参数 / 请求头） ===== */
+
+.api-collection-workbench-page .api-wb-kv-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.api-collection-workbench-page .api-wb-kv-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--srf-text);
+  font-size: 12px;
+}
+
+.api-collection-workbench-page .api-wb-kv-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 8px;
+}
+
+.api-collection-workbench-page .api-wb-kv-check {
+  display: flex;
+  justify-content: center;
+}
+
+.api-collection-workbench-page .api-wb-kv-item .ant-input {
+  background: var(--srf-hover);
+  border-color: var(--srf-card-border);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+}
+
+.api-collection-workbench-page .api-wb-kv-item .ant-input:focus,
+.api-collection-workbench-page .api-wb-kv-item .ant-input-affix-wrapper-focused {
+  background: var(--srf-card);
+}
+
+/* ===== 运行结果控制台 ===== */
+
+.api-collection-workbench-page .api-wb-splitter {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 12px;
+  padding: 0 16px;
+  border-top: 1px solid var(--srf-divider);
+  border-bottom: 1px solid var(--srf-divider);
+  background: var(--srf-card);
+  cursor: row-resize;
+}
+
+.api-collection-workbench-page .api-wb-splitter-line {
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--srf-card-border);
+}
+
+.api-collection-workbench-page .api-wb-splitter-grip {
+  color: var(--srf-text-muted);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.api-collection-workbench-page .api-wb-splitter:hover .api-wb-splitter-line,
+.api-collection-workbench-page .api-wb-splitter.resizing .api-wb-splitter-line {
+  background: var(--srf-accent);
+}
+
+.api-collection-workbench-page .api-wb-console-pane {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.api-collection-workbench-page .api-wb-console-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  /* 控制台整体不滚：状态横幅、页签条与底部断言条各占一行，只有内容区滚动。 */
+  overflow: hidden;
+}
+
+.api-collection-workbench-page .api-wb-console {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--srf-hover);
+}
+
+.api-collection-workbench-page .api-wb-console-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--srf-divider);
+  background: var(--srf-card);
+}
+
+.api-collection-workbench-page .api-wb-console-banner-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.api-collection-workbench-page .api-wb-console-title {
+  color: var(--srf-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.api-collection-workbench-page .api-wb-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 8px;
+  border: 1px solid var(--srf-tone-border);
+  border-radius: 999px;
+  background: var(--srf-tone-bg);
+  color: var(--srf-tone-text);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.api-collection-workbench-page .api-wb-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.api-collection-workbench-page .api-wb-console-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  color: var(--srf-text-muted);
+  font-size: 11px;
+}
+
+.api-collection-workbench-page .api-wb-console-meta strong {
+  color: var(--srf-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 600;
+}
+
+.api-collection-workbench-page .api-wb-assert-summary {
+  padding: 1px 8px;
+  border: 1px solid var(--srf-tone-border);
+  border-radius: 999px;
+  background: var(--srf-tone-bg);
+  color: var(--srf-tone-text);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.api-collection-workbench-page .api-wb-console-alert {
+  margin: 10px 16px 0;
+}
+
+.api-collection-workbench-page .api-wb-console-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--srf-divider);
+  background: var(--srf-card);
+}
+
+.api-collection-workbench-page .api-wb-console-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--srf-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.api-collection-workbench-page .api-wb-console-tab:hover {
+  color: var(--srf-text);
+}
+
+.api-collection-workbench-page .api-wb-console-tab.active {
+  border-bottom-color: var(--srf-accent);
+  color: var(--srf-accent);
+  font-weight: 600;
+}
+
+.api-collection-workbench-page .api-wb-console-tab-count {
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--srf-chip);
+  color: var(--srf-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.api-collection-workbench-page .api-wb-console-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 16px;
+}
+
+.api-collection-workbench-page .api-wb-console-body > .api-case-run-result-pre,
+.api-collection-workbench-page .api-wb-console-body > .ant-empty,
+.api-collection-workbench-page .api-wb-console-body > .api-case-run-result-subsection {
+  margin: 0;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-card);
+}
+
+.api-collection-workbench-page .api-wb-console-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--srf-divider);
+  background: var(--srf-card);
+}
+
+.api-collection-workbench-page .api-wb-console-foot-item {
+  color: var(--srf-result-passed);
+  font-size: 11px;
+}
+
+.api-collection-workbench-page .api-wb-console-foot-item.failed {
+  color: var(--srf-result-failed);
+}
+
+.api-collection-workbench-page .api-wb-console-foot-empty {
+  color: var(--srf-text-muted);
+  font-size: 11px;
+}

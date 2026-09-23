@@ -1,0 +1,176 @@
+/*
+ * 测试单执行工作台的右栏：执行判定、缺陷关联与条目导航。
+ *
+ * 与左中栏分开一个文件，只是因为合起来超过 STRUCTURE.md C1 的 600 行上限；两者同属一个页面，
+ * 一起被 TestOrderWorkspacePage 引入。token 见 shared/styles/surface-tokens.css。
+ */
+
+/* ===== 右栏：执行判定与缺陷 ===== */
+
+.test-order-workspace-page .test-order-verdict-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  min-width: 0;
+  border: 1px solid var(--srf-card-border);
+  border-radius: 12px;
+  background: var(--srf-card);
+  overflow: auto;
+  padding: 12px;
+}
+
+.test-order-workspace-page .test-order-verdict-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--srf-text);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+}
+
+.test-order-workspace-page .test-order-verdict-hint {
+  color: var(--srf-text-muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+
+/* 四个判定按钮：两列表格，各自带色调。 */
+.test-order-workspace-page .test-order-verdict-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.test-order-workspace-page .test-order-judge-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--srf-tone-border, var(--srf-card-border));
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-tone-bg, var(--srf-card));
+  color: var(--srf-tone-text, var(--srf-text-secondary));
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.test-order-workspace-page .test-order-judge-btn:hover:not(:disabled) {
+  border-color: var(--srf-tone-text, var(--srf-accent));
+}
+
+/* 当前结论：整块实色，和其余三块拉开。 */
+.test-order-workspace-page .test-order-judge-btn.active {
+  border-color: var(--srf-tone-text, var(--srf-accent));
+  box-shadow: inset 0 0 0 1px var(--srf-tone-text, var(--srf-accent));
+}
+
+.test-order-workspace-page .test-order-judge-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.test-order-workspace-page .test-order-judge-key {
+  flex: 0 0 auto;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--srf-card);
+  color: var(--srf-tone-text, var(--srf-text-muted));
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.test-order-workspace-page .test-order-defect-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.test-order-workspace-page .test-order-defect-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--srf-text);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+}
+
+.test-order-workspace-page .test-order-defect-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-hover);
+}
+
+.test-order-workspace-page .test-order-defect-id {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--srf-chip);
+  color: var(--srf-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.test-order-workspace-page .test-order-defect-untie.ant-btn {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding-inline: 4px;
+  color: var(--srf-accent);
+  font-size: 11px;
+}
+
+.test-order-workspace-page .test-order-defect-hint {
+  color: var(--srf-text-muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+/* 条目导航与保存状态贴底。 */
+.test-order-workspace-page .test-order-execution-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--srf-divider);
+}
+
+.test-order-workspace-page .test-order-entry-navigation {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--srf-text-secondary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.test-order-workspace-page .test-order-autoadvance {
+  width: 100%;
+  color: var(--srf-text-secondary);
+  font-size: 11px;
+}
+
+.test-order-workspace-page .test-order-save-state {
+  color: var(--srf-text-muted);
+  font-size: 11px;
+}

@@ -1,4 +1,10 @@
-import { ArrowLeftOutlined, SearchOutlined } from '@ant-design/icons'
+import {
+  ArrowLeftOutlined,
+  OrderedListOutlined,
+  ProfileOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from '@ant-design/icons'
 import {
   Alert,
   Button,
@@ -9,7 +15,6 @@ import {
   Popconfirm,
   Select,
   Space,
-  Tag,
   Tooltip,
   Typography,
 } from 'antd'
@@ -21,24 +26,35 @@ import { ProjectActionButton } from '@/features/projects/components/ProjectActio
 import { AddCasesFromLibraryModal } from '../components/AddCasesFromLibraryModal'
 import { TestOrderGraphViewer } from '../components/TestOrderGraphViewer'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
-import { priorityColor } from '@/features/test-cases/utils/casePriority'
+import { priorityTone } from '@/shared/utils/priorityTone'
 import { api, listItems } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { formatTime, getErrorMessage } from '@/utils/format'
 import {
   getTestOrderEntryStatusMeta,
+  getTestOrderEntryStatusTone,
   getTestOrderStatusMeta,
+  getTestOrderStatusTone,
 } from '../utils/testOrderStatus'
+import '@/shared/styles/surface-tokens.css'
 import '@/features/test-orders/styles/index.css'
+import '@/features/test-orders/styles/workspace-v2.css'
+import '@/features/test-orders/styles/workspace-verdict-v2.css'
 
 const { Text } = Typography
 
 // 执行针对整条用例：一次判定给出这条用例的结论。
-const VERDICT_OPTIONS: Array<{ value: string; label: string; className: string }> = [
-  { value: 'passed', label: '通过', className: 'on-ok' },
-  { value: 'failed', label: '失败', className: 'on-bad' },
-  { value: 'blocked', label: '阻塞', className: 'on-block' },
-  { value: 'skipped', label: '跳过', className: 'on-skip' },
+const VERDICT_OPTIONS: Array<{
+  value: string
+  label: string
+  /** 快捷键，同时也是按钮右上角的角标。 */
+  key: string
+  tone: string
+}> = [
+  { value: 'passed', label: '通过', key: '1', tone: 'green' },
+  { value: 'failed', label: '失败', key: '2', tone: 'red' },
+  { value: 'blocked', label: '阻塞', key: '3', tone: 'amber' },
+  { value: 'skipped', label: '跳过', key: '4', tone: 'slate' },
 ]
 
 const STATUS_FILTERS: Array<{ value: string; label: string }> = [
@@ -110,7 +126,6 @@ export function TestOrderWorkspacePage() {
   ), [matchingEntries, statusFilter])
 
   const mineCount = entries.filter((entry) => entry.assigneeUserId === currentUserId).length
-  const unassignedCount = entries.filter((entry) => !entry.assigneeUserId).length
 
   const selected = useMemo(
     () => entries.find((entry) => entry.entryId === selectedEntryId) ?? visibleEntries[0],
@@ -228,13 +243,7 @@ export function TestOrderWorkspacePage() {
         moveSelection(-1)
         return
       }
-      const byKey: Record<string, string> = {
-        '1': 'passed',
-        '2': 'failed',
-        '3': 'blocked',
-        '4': 'skipped',
-      }
-      const status = byKey[event.key]
+      const status = VERDICT_OPTIONS.find((option) => option.key === event.key)?.value
       if (!status || !canJudge) return
       event.preventDefault()
       save({ status })
@@ -243,6 +252,11 @@ export function TestOrderWorkspacePage() {
     return () => window.removeEventListener('keydown', onKeyDown)
   })
 
+  const preconditionCount = (selected?.snapshot?.preconditions ?? []).length
+  const stepCount = (selected?.snapshot?.steps ?? []).length
+  const orderTotal = order?.entriesTotal ?? 0
+  const orderExecuted = order?.entriesExecuted ?? 0
+  const orderProgressPercent = orderTotal > 0 ? Math.round((orderExecuted / orderTotal) * 100) : 0
   const selectedVisibleIndex = visibleEntries.findIndex((entry) => entry.entryId === selected?.entryId)
   const isSaving = saveMutation.isPending
   const saveStateText = isSaving ? '保存中…' : savedAt ? `已保存 ${savedAt}` : ''
@@ -250,9 +264,9 @@ export function TestOrderWorkspacePage() {
   const orderStatusMeta = order ? getTestOrderStatusMeta(order.status) : null
 
   return (
-    <div className="workbench-page api-automation-page functional-suite-detail-page">
+    <div className="workbench-page api-automation-page functional-suite-detail-page test-order-workspace-page tp-surface">
       <div className="api-automation-content">
-        <div className="page-frame test-order-workspace">
+        <div className="page-frame test-order-workspace tp-board">
           <section className="workbench-panel test-order-orderbar">
             <Button
               type="text"
@@ -261,14 +275,24 @@ export function TestOrderWorkspacePage() {
               icon={<ArrowLeftOutlined />}
               onClick={() => navigate('/testing?tab=orders')}
             />
-            <Text strong className="test-order-orderbar-name">
-              {order?.name ?? '测试单'}
-            </Text>
-            {order?.testedVersion ? <Tag>被测版本 {order.testedVersion}</Tag> : null}
-            {orderStatusMeta ? <Tag color={orderStatusMeta.color}>{orderStatusMeta.label}</Tag> : null}
-            <Text type="secondary">
+            <span className="test-order-orderbar-id">
+              <Text strong className="test-order-orderbar-name">
+                {order?.name ?? '测试单'}
+              </Text>
+              {order?.testedVersion ? (
+                <span className="test-order-orderbar-chip">被测版本 {order.testedVersion}</span>
+              ) : null}
+              {orderStatusMeta ? (
+                <span
+                  className={`test-order-orderbar-chip tone-${getTestOrderStatusTone(order?.status)}`}
+                >
+                  {orderStatusMeta.label}
+                </span>
+              ) : null}
+            </span>
+            <span className="test-order-orderbar-progress">
               已执行 {order?.entriesExecuted ?? 0}/{order?.entriesTotal ?? 0}
-            </Text>
+            </span>
             <span className="spacer" />
             <ProjectActionButton
               action="execute"
@@ -302,16 +326,45 @@ export function TestOrderWorkspacePage() {
           ) : null}
 
           <div className="test-order-workspace-cols">
-            <section className="workbench-panel api-case-sidebar">
-              <div className="panel-header api-case-sidebar-header">
-                <Text strong>执行条目</Text>
-                <Text type="secondary">{entries.length}</Text>
+            <section className="workbench-panel test-order-side-panel">
+              <div className="test-order-side-head">
+                <span className="test-order-side-title">
+                  执行用例清单
+                  <span className="test-order-side-count">{entries.length}</span>
+                </span>
+                <Tooltip title="刷新执行条目">
+                  <Button
+                    type="text"
+                    size="small"
+                    className="test-order-side-refresh"
+                    aria-label="刷新执行条目"
+                    icon={<ReloadOutlined />}
+                    loading={entriesQuery.isFetching}
+                    onClick={() => entriesQuery.refetch()}
+                  />
+                </Tooltip>
               </div>
-              <div className="api-case-sidebar-toolbar test-order-sidebar-toolbar">
+
+              <div className="test-order-side-progress">
+                <div className="test-order-side-progress-row">
+                  <span>执行进度</span>
+                  <span>
+                    {orderProgressPercent}%（{order?.entriesExecuted ?? 0}/{order?.entriesTotal ?? 0}）
+                  </span>
+                </div>
+                <span className="test-order-side-progress-track">
+                  <span
+                    className="test-order-side-progress-fill"
+                    style={{ width: `${orderProgressPercent}%` }}
+                  />
+                </span>
+              </div>
+
+              <div className="test-order-side-toolbar">
                 <Input
                   allowClear
                   prefix={<SearchOutlined />}
-                  placeholder="搜索用例名称 / 模块"
+                  placeholder="搜索用例 ID 或关键字"
                   value={keyword}
                   onChange={(event) => setKeyword(event.target.value)}
                 />
@@ -320,13 +373,14 @@ export function TestOrderWorkspacePage() {
                     <button
                       key={option.value}
                       type="button"
-                      className={`test-order-filter-chip${
-                        statusFilter === option.value ? ' active' : ''
-                      }`}
+                      className={`tp-chip${statusFilter === option.value ? ' active' : ''}`}
                       aria-pressed={statusFilter === option.value}
                       onClick={() => setStatusFilter(option.value)}
                     >
-                      {option.label} {matchingEntries.filter((entry) => option.value === 'all' || entry.status === option.value).length}
+                      {option.label}{' '}
+                      <span className="tp-chip-count">
+                        {matchingEntries.filter((entry) => option.value === 'all' || entry.status === option.value).length}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -334,12 +388,13 @@ export function TestOrderWorkspacePage() {
                   <Checkbox checked={onlyMine} onChange={(event) => setOnlyMine(event.target.checked)}>
                     只看我负责的
                   </Checkbox>
-                  <Text type="secondary">
-                    我负责 {mineCount} · 未分配 {unassignedCount}
-                  </Text>
+                  <span>
+                    {mineCount}/{entries.length} 指派给我
+                  </span>
                 </div>
               </div>
-              <div className="api-case-sidebar-scroll">
+
+              <div className="test-order-side-scroll">
                 {entriesQuery.isLoading ? (
                   <Empty description="执行条目加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
                 ) : visibleEntries.length === 0 ? (
@@ -349,6 +404,7 @@ export function TestOrderWorkspacePage() {
                     {visibleEntries.map((entry) => {
                       const meta = getTestOrderEntryStatusMeta(entry.status)
                       const active = entry.entryId === selected?.entryId
+                      const entryStepCount = (entry.snapshot?.steps ?? []).length
                       return (
                         <div
                           key={entry.entryId ?? entry.orderNo}
@@ -371,15 +427,30 @@ export function TestOrderWorkspacePage() {
                             aria-current={active}
                             onClick={() => setSelectedEntryId(entry.entryId ?? null)}
                           >
-                            <span className="test-order-nav-index">{entry.orderNo ?? '-'}</span>
-                            <span className="test-order-nav-body">
-                              <span className="test-order-nav-title">
-                                {entry.caseTitle || entry.caseId}
+                            <span className="test-order-nav-head">
+                              <span className="test-order-nav-index">
+                                TC-{String(entry.orderNo ?? 0).padStart(4, '0')}
                               </span>
-                              <span className="test-order-nav-meta">
-                                <Tag color={meta.color}>{meta.label}</Tag>
-                                <span>{personName(entry.assigneeUserId) || '未分配'}</span>
+                              {entry.casePriority ? (
+                                <span
+                                  className={`test-order-nav-prio tone-${priorityTone(entry.casePriority)}`}
+                                >
+                                  {entry.casePriority}
+                                </span>
+                              ) : null}
+                              <span
+                                className={`test-order-nav-status tone-${getTestOrderEntryStatusTone(entry.status)}`}
+                              >
+                                {meta.label}
                               </span>
+                            </span>
+                            <span className="test-order-nav-title">
+                              {entry.caseTitle || entry.caseId}
+                            </span>
+                            <span className="test-order-nav-meta">
+                              {entry.caseModule ? <span>{entry.caseModule}</span> : null}
+                              <span>{entryStepCount} 步</span>
+                              <span>{personName(entry.assigneeUserId) || '未分配'}</span>
                             </span>
                           </button>
                           <Popconfirm
@@ -454,62 +525,137 @@ export function TestOrderWorkspacePage() {
               ) : (
                 <>
                   <div className="test-order-editor-head">
+                    <span className="test-order-case-no">
+                      TC-{String(selected.orderNo ?? 0).padStart(4, '0')}
+                    </span>
                     <Text strong className="test-order-case-title">
                       {selected.caseTitle || selected.caseId}
                     </Text>
-                    <Tag color={entryStatusMeta.color}>{entryStatusMeta.label}</Tag>
-                    {selected.casePriority ? (
-                      <Tag color={priorityColor(selected.casePriority)}>{selected.casePriority}</Tag>
-                    ) : null}
                     <span className="spacer" />
                     {lockedByAssignee ? (
                       <Text type="secondary">该条已分配给其他执行人</Text>
                     ) : null}
                   </div>
                   <div className="test-order-execution-meta">
-                    <div className="test-order-kv">
-                      <span>分配执行人</span>
-                      <span>{personName(selected.assigneeUserId) || '未分配'}</span>
-                    </div>
-                    <div className="test-order-kv">
-                      <span>实际执行人</span>
-                      <span>{personName(selected.executorUserId) || '-'}</span>
-                    </div>
-                    <div className="test-order-kv">
-                      <span>执行时间</span>
-                      <span>{formatTime(selected.executedAt) || '-'}</span>
-                    </div>
+                    <span
+                      className={`test-order-meta-pill tone-${getTestOrderEntryStatusTone(selected.status)}`}
+                    >
+                      状态 <strong>{entryStatusMeta.label}</strong>
+                    </span>
+                    {selected.casePriority ? (
+                      <span className={`test-order-meta-pill tone-${priorityTone(selected.casePriority)}`}>
+                        优先级 <strong>{selected.casePriority}</strong>
+                      </span>
+                    ) : null}
+                    <span className="test-order-meta-pill">
+                      分配给 <strong>{personName(selected.assigneeUserId) || '未分配'}</strong>
+                    </span>
+                    {selected.caseModule ? (
+                      <span className="test-order-meta-pill">
+                        所属模块 <strong>{selected.caseModule}</strong>
+                      </span>
+                    ) : null}
+                    <span className="test-order-meta-pill">
+                      实际执行 <strong>{personName(selected.executorUserId) || '-'}</strong>
+                    </span>
+                    <span className="test-order-meta-pill">
+                      执行时间 <strong>{formatTime(selected.executedAt) || '-'}</strong>
+                    </span>
                   </div>
                   <div className="test-order-editor-body">
-                    <div className="test-order-content">
-                      <div className="test-order-block">
-                        <Text type="secondary">前置条件</Text>
-                        <div className="test-order-preconditions">
-                          {(selected.snapshot?.preconditions ?? []).length === 0
-                            ? '暂无前置条件'
-                            : (selected.snapshot?.preconditions ?? []).map((item, index) => (
-                                <div key={index}>{item}</div>
-                              ))}
-                        </div>
+                    <section className="test-order-section tone-blue">
+                      <div className="test-order-section-head">
+                        <span className="test-order-section-title">
+                          <ProfileOutlined />
+                          前置条件
+                        </span>
+                        <span className="test-order-section-badge">
+                          {preconditionCount} 项环境与数据依赖
+                        </span>
                       </div>
+                      <div className="test-order-section-body">
+                        {preconditionCount === 0 ? (
+                          <span className="test-order-precondition-empty">暂无前置条件</span>
+                        ) : (
+                          <ol className="test-order-precondition-list">
+                            {(selected.snapshot?.preconditions ?? []).map((item, index) => (
+                              <li key={index} className="test-order-precondition-item">
+                                <span className="test-order-precondition-no">
+                                  {String(index + 1).padStart(2, '0')}
+                                </span>
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ol>
+                        )}
+                      </div>
+                    </section>
 
-                      <table className="test-order-steps-table">
-                        <caption>测试步骤</caption>
-                        <thead><tr><th scope="col">步骤</th><th scope="col">操作说明</th><th scope="col">预期结果</th></tr></thead>
-                        <tbody>
-                          {(selected.snapshot?.steps ?? []).length === 0 ? (
-                            <tr><td colSpan={3}>暂无测试步骤</td></tr>
-                          ) : (selected.snapshot?.steps ?? []).map((step, index) => (
-                            <tr key={index}>
-                              <td><span className="test-order-step-no">{index + 1}</span></td>
-                              <td>{step.action || '—'}</td>
-                              <td>{step.expected || '—'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <section className="test-order-section tone-teal">
+                      <div className="test-order-section-head">
+                        <span className="test-order-section-title">
+                          <OrderedListOutlined />
+                          测试执行步骤与预期结果
+                        </span>
+                        <span className="test-order-section-badge">{stepCount} 步</span>
+                      </div>
+                      <div className="test-order-section-body">
+                        <table className="test-order-steps-table">
+                          <caption>测试执行步骤与预期结果</caption>
+                          <thead><tr><th scope="col">步骤</th><th scope="col">操作说明</th><th scope="col">预期结果</th></tr></thead>
+                          <tbody>
+                            {stepCount === 0 ? (
+                              <tr><td colSpan={3} className="test-order-steps-empty">暂无测试步骤</td></tr>
+                            ) : (selected.snapshot?.steps ?? []).map((step, index) => (
+                              <tr key={index}>
+                                <td><span className="test-order-step-index">{String(index + 1).padStart(2, '0')}</span></td>
+                                <td>{step.action || '—'}</td>
+                                <td>{step.expected || '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </div>
+                </>
+              )}
+            </section>
+
+            <aside className="workbench-panel test-order-verdict-panel">
+              {selected ? (
+                <>
+                  <div className="test-order-verdict-title">
+                    执行判定结果
+                    <span className="test-order-verdict-hint">快捷键 1/2/3/4</span>
+                  </div>
+                  <div className="test-order-verdict-grid">
+                    {VERDICT_OPTIONS.map((option) => (
+                      <Tooltip
+                        key={option.value}
+                        title={canJudge ? undefined : '当前不可判定：条目已分配给其他执行人'}
+                      >
+                        <button
+                          type="button"
+                          className={`test-order-judge-btn tone-${option.tone}${
+                            selected.status === option.value ? ' active' : ''
+                          }`}
+                          disabled={!canJudge}
+                          aria-label={`判定该用例为${option.label}`}
+                          onClick={() => save({ status: option.value })}
+                        >
+                          <span>{option.label}</span>
+                          <span className="test-order-judge-key">{option.key}</span>
+                        </button>
+                      </Tooltip>
+                    ))}
+                  </div>
+
+                  {/* 缺陷信息：只存了一个禅道缺陷号，没有缺陷详情接口，所以不做设计稿里那张 BUG 卡片。 */}
+                  <div className="test-order-defect-section">
+                    <div className="test-order-defect-head">关联缺陷与 BUG 追踪</div>
                     {selected.status === 'failed' || selected.status === 'blocked' ? (
-                      <div className="test-order-result-details">
+                      <>
                         <Text type="secondary">
                           {selected.status === 'failed' ? '失败原因' : '阻塞原因'}
                         </Text>
@@ -529,64 +675,60 @@ export function TestOrderWorkspacePage() {
                             )
                           }
                         />
-                        {selected.status === 'failed' ? (
-                          <>
-                            <Text type="secondary">关联缺陷号</Text>
-                            <Input
-                              value={drafts.zentaoBugId ?? ''}
-                              disabled={!canJudge}
-                              placeholder="禅道缺陷号（可选）"
-                              onChange={(event) =>
-                                setDrafts((prev) => ({ ...prev, zentaoBugId: event.target.value }))
-                              }
-                              onBlur={() => save({ zentaoBugId: drafts.zentaoBugId ?? '' })}
-                            />
-                          </>
-                        ) : null}
+                      </>
+                    ) : null}
+                    {selected.zentaoBugId ? (
+                      <div className="test-order-defect-card">
+                        <span className="test-order-defect-id">禅道缺陷 #{selected.zentaoBugId}</span>
+                        <Button
+                          type="text"
+                          className="test-order-defect-untie"
+                          disabled={!canJudge}
+                          onClick={() => save({ zentaoBugId: '' })}
+                        >
+                          解绑
+                        </Button>
                       </div>
                     ) : null}
-                    </div>
+                    <Input
+                      value={drafts.zentaoBugId ?? ''}
+                      disabled={!canJudge}
+                      placeholder="禅道缺陷号（可选）"
+                      onChange={(event) =>
+                        setDrafts((prev) => ({ ...prev, zentaoBugId: event.target.value }))
+                      }
+                      onBlur={() => save({ zentaoBugId: drafts.zentaoBugId ?? '' })}
+                    />
+                    <span className="test-order-defect-hint">
+                      目前只能关联禅道缺陷号，Jira / 内部缺陷平台还没接入。
+                    </span>
                   </div>
+
                   <footer className="test-order-execution-footer" aria-label="用例执行操作">
                     <div className="test-order-entry-navigation">
                       <Button size="small" disabled={selectedVisibleIndex <= 0} onClick={() => moveSelection(-1)}>上一条</Button>
                       <Text type="secondary">{selectedVisibleIndex >= 0 ? `第 ${selectedVisibleIndex + 1} / ${visibleEntries.length} 条` : '当前条目不在筛选结果中'}</Text>
                       <Button size="small" disabled={selectedVisibleIndex < 0 || selectedVisibleIndex >= visibleEntries.length - 1} onClick={() => moveSelection(1)}>下一条</Button>
                     </div>
-                    <Checkbox checked={autoAdvance} onChange={(event) => setAutoAdvance(event.target.checked)}>
+                    <Checkbox
+                      className="test-order-autoadvance"
+                      checked={autoAdvance}
+                      onChange={(event) => setAutoAdvance(event.target.checked)}
+                    >
                       判定后自动前进
                     </Checkbox>
                     {saveStateText ? (
-                      <Text type={saveMutation.isError ? 'danger' : 'secondary'}>{saveStateText}</Text>
+                      <Text
+                        className="test-order-save-state"
+                        type={saveMutation.isError ? 'danger' : 'secondary'}
+                      >
+                        {saveStateText}
+                      </Text>
                     ) : null}
-
-                    <div className="test-order-verdict-actions">
-                      <span className="test-order-judge">
-                        {VERDICT_OPTIONS.map((option) => (
-                          <Tooltip
-                            key={option.value}
-                            title={canJudge ? undefined : '当前不可判定：条目已分配给其他执行人'}
-                          >
-                            <button
-                              type="button"
-                              className={`test-order-judge-btn${
-                                selected.status === option.value ? ` ${option.className}` : ''
-                              }`}
-                              disabled={!canJudge}
-                              aria-label={`判定该用例为${option.label}`}
-                              onClick={() => save({ status: option.value })}
-                            >
-                              {option.label}
-                            </button>
-                          </Tooltip>
-                        ))}
-                      </span>
-                      <Text type="secondary" className="test-order-shortcuts">1 通过 · 2 失败 · 3 阻塞 · 4 跳过 · ↑↓ 切换</Text>
-                    </div>
                   </footer>
                 </>
-              )}
-            </section>
+              ) : null}
+            </aside>
           </div>
         </div>
       </div>

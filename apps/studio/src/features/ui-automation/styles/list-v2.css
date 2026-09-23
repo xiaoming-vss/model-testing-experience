@@ -1,0 +1,387 @@
+/*
+ * UI 测试页（测试集列表，按设计稿重做的表面层）。
+ *
+ * 三段结构照设计稿来：引擎信息条 / 筛选工具栏卡片 / 表格卡片，间距由共用层的 `.tp-board` 给（12px）。
+ * token（`--srf-*`）、九色盘（`.tone-*`）、板面（`.tp-board`）都在 shared/styles/surface-tokens.css，
+ * 页面根节点必须带 `tp-surface`，缺了这里所有 var() 都会解析成空值。
+ *
+ * 两条约束：
+ * 1. 不动 `listSurfaceConsistency.test.ts` 锁定的列表指纹（表头高、四角圆角、行高、内距），
+ *    所以这里没有针对 `.functional-suite-list-table` 的 th / td 盒尺寸规则——设计稿的 32px 表头 /
+ *    36–40px 行高与既有约定冲突，按 STRUCTURE.md 的「冲突时以既有约定为准」保留 48 / 52px。
+ * 2. `testing/styles/index.css` 与 `app/styles/dark-polish.css` 都用 `!important` 抢过
+ *    `.api-panel-header`、`.table-footer`、`.table-body-scroll` 这几个容器，覆盖必须写成
+ *    `.app-shell.app-shell-macos .testing-page .ui-test-page ...` 再加 `!important`，否则静默失效。
+ */
+
+/* ===== 引擎信息条 ===== */
+
+.ui-test-page .ui-suite-list-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+:root[data-theme='dark'] .ui-test-page .ui-suite-list-banner {
+  box-shadow: none;
+}
+
+.ui-test-page .ui-suite-list-banner-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ui-test-page .ui-suite-list-banner-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent);
+  font-size: 20px;
+}
+
+.ui-test-page .ui-suite-list-banner-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ui-test-page .ui-suite-list-banner-title {
+  margin: 0;
+  color: var(--srf-text);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 22px;
+}
+
+.ui-test-page .ui-suite-list-banner-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--srf-tone-border, var(--srf-card-border));
+  border-radius: 4px;
+  background: var(--srf-tone-bg, var(--srf-chip));
+  color: var(--srf-tone-text, var(--srf-chip-text));
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+/* 设计稿的徽标里是个绿点；用 currentColor，深浅两套主题跟着徽标文字色走。 */
+.ui-test-page .ui-suite-list-banner-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.ui-test-page .ui-suite-list-banner-subtitle {
+  margin: 2px 0 0;
+  color: var(--srf-text-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ui-test-page .ui-suite-list-banner-specs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.ui-test-page .ui-suite-list-banner-spec {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 24px;
+  border-left: 1px solid var(--srf-divider);
+}
+
+.ui-test-page .ui-suite-list-banner-spec:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.ui-test-page .ui-suite-list-banner-spec .anticon {
+  color: var(--srf-text-muted);
+  font-size: 16px;
+}
+
+.ui-test-page .ui-suite-list-banner-spec-label {
+  display: block;
+  color: var(--srf-text-muted);
+  font-size: 10px;
+  line-height: 14px;
+}
+
+.ui-test-page .ui-suite-list-banner-spec-value {
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.ui-test-page .ui-suite-list-banner-spec-value.is-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* ===== 筛选工具栏卡片 ===== */
+
+.ui-test-page .ui-suite-list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+/* testing/styles 与 dark-polish 都用 !important 给 .api-panel-header 铺过玻璃表面，卡片外观要压回去。 */
+.app-shell.app-shell-macos .testing-page .ui-test-page .panel-header.api-panel-header.ui-suite-list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 0;
+  padding: 12px;
+  border: 1px solid var(--srf-card-border) !important;
+  border-radius: var(--srf-radius-card) !important;
+  background: var(--srf-card) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.ui-test-page .ui-suite-list-toolbar-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ui-test-page .ui-suite-list-toolbar-filters .api-filter-field-label {
+  margin-right: 6px;
+  color: var(--srf-text-muted);
+  font-weight: 500;
+}
+
+.ui-test-page .ui-suite-list-search-field {
+  min-width: 256px;
+}
+
+.ui-test-page .ui-suite-list-search-input.ant-input-affix-wrapper {
+  border-radius: var(--srf-radius-control);
+}
+
+.ui-test-page .ui-suite-list-search-hint {
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+}
+
+.ui-test-page .ui-suite-list-toolbar-actions {
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.ui-test-page .ui-suite-list-refresh.ant-btn {
+  color: var(--srf-text-secondary);
+}
+
+.ui-test-page .ui-suite-list-refresh.ant-btn:hover {
+  color: var(--srf-accent);
+}
+
+/* ===== 表格卡片 ===== */
+
+.ui-test-page .ui-suite-list-table-card {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+:root[data-theme='dark'] .ui-test-page .ui-suite-list-table-card {
+  box-shadow: none;
+}
+
+/* 外壳给了面板内表格容器 16px 18px 的内距，设计稿里表格贴着卡片边缘，这里收掉。 */
+.ui-test-page .ui-suite-list-table-scroll {
+  padding: 0;
+}
+
+.app-shell-macos .testing-page .ui-test-page .api-automation-content > .workbench-panel .ui-suite-list-table-scroll {
+  padding: 0 !important;
+}
+
+.ui-test-page .ui-suite-list-footer {
+  gap: 12px;
+  padding: 0 16px;
+  border-top: 1px solid var(--srf-divider);
+  background: var(--srf-hover);
+}
+
+/* 同上，testing/styles 给面板内的 .table-footer 铺过玻璃底，选择器比它更长才能压住。 */
+.app-shell-macos .testing-page .ui-test-page .api-automation-content > .workbench-panel .ui-suite-list-footer {
+  padding: 0 16px;
+  border-top: 1px solid var(--srf-divider) !important;
+  background: var(--srf-hover) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .ui-test-page .ui-suite-list-footer .ant-typography {
+  color: var(--srf-text-secondary);
+}
+
+/* ===== 表格内部 ===== */
+
+/* 名称前的图标只是标识这是 UI 测试集，不参与列表名称的排版契约（见 testing/styles/index.css）。 */
+.ui-test-page .ui-suite-list-name-cell {
+  min-width: 0;
+  width: 100%;
+}
+
+.ui-test-page .ui-suite-list-name-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--srf-accent-border);
+  border-radius: 6px;
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent);
+  font-size: 12px;
+}
+
+.ui-test-page .ui-suite-list-scope-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ui-test-page .ui-suite-list-scope-chip {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--srf-chip);
+  color: var(--srf-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.ui-test-page .ui-suite-list-scope-sep {
+  color: var(--srf-card-border);
+}
+
+/* 深色下 testing/styles 把名称列（td:nth-child(2)）里的 span 一律刷成浅色，
+   迭代色块要保住自己的弱化色，不然和名称一样亮。注意 .ui-test-page 与 .functional-test-page
+   是同一个元素上的两个类，这里必须连写。 */
+:root[data-theme='dark'] .ui-test-page.functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(2) .ui-suite-list-scope-chip {
+  color: var(--srf-text-secondary) !important;
+}
+
+.ui-test-page .ui-suite-list-time-cell {
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+}
+
+.ui-test-page .ui-suite-list-desc-cell {
+  color: var(--srf-text-secondary);
+}
+
+.ui-test-page .ui-suite-list-desc-cell.is-empty {
+  color: var(--srf-text-muted);
+  font-style: italic;
+}
+
+.ui-test-page .ui-suite-list-row-actions .ant-btn {
+  color: var(--srf-text-muted);
+}
+
+.ui-test-page .ui-suite-list-row-actions .action-btn-read.ant-btn:hover {
+  color: var(--srf-tone-text, var(--srf-accent));
+}
+
+.ui-test-page .ui-suite-list-row-actions .action-btn-delete.ant-btn:hover {
+  color: var(--srf-danger);
+}
+
+/* ===== 运行配置徽标 ===== */
+
+/* 四角与描边的取值与设计稿一致：配置徽标是方形色块，胶囊形状只留给状态。
+   颜色不写死，靠元素上的 tone-* 类提供 --srf-tone-*（见 UiSuiteRunConfigCell.tsx）。 */
+.ui-test-page .ui-suite-list-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--srf-tone-border, var(--srf-card-border));
+  border-radius: 4px;
+  background: var(--srf-tone-bg, var(--srf-chip));
+  color: var(--srf-tone-text, var(--srf-chip-text));
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.ui-test-page .ui-suite-list-badge.is-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.ui-test-page .ui-suite-list-badge .anticon {
+  font-size: 12px;
+}
+
+.ui-test-page .ui-suite-list-config-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ===== 窄屏 ===== */
+
+@media (max-width: 1180px) {
+  .ui-test-page .ui-suite-list-banner-spec {
+    padding-left: 16px;
+  }
+}
+
+@media (max-width: 900px) {
+  .ui-test-page .ui-suite-list-search-field {
+    min-width: 0;
+    width: 100%;
+  }
+}

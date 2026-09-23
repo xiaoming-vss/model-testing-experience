@@ -10,74 +10,6 @@
   min-height: 0;
 }
 
-.functional-case-editor-form {
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
-  padding: 18px 24px 24px;
-  background:
-    radial-gradient(circle at 20px 20px, rgba(79, 159, 114, 0.08), transparent 26px),
-    linear-gradient(180deg, rgba(248, 250, 252, 0.94), rgba(255, 255, 255, 0.98));
-}
-
-.functional-case-editor-hero {
-  padding: 18px;
-  border: 1px solid rgba(31, 41, 55, 0.07);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
-}
-
-.functional-case-title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.functional-case-inline-label {
-  color: #4f9f72;
-  font-size: 12px;
-  line-height: 18px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-}
-
-.functional-case-name-item {
-  margin-bottom: 8px;
-}
-
-.functional-case-title-input.ant-input {
-  min-height: 42px;
-  padding: 8px 0;
-  border: 0;
-  border-radius: 0;
-  border-bottom: 1px solid rgba(31, 41, 55, 0.1);
-  background: transparent;
-  font-size: 18px;
-  line-height: 26px;
-  font-weight: 700;
-  box-shadow: none;
-}
-
-.functional-case-title-input.ant-input:focus,
-.functional-case-title-input.ant-input-focused {
-  border-bottom-color: rgba(79, 159, 114, 0.55);
-  box-shadow: none;
-}
-
-.functional-case-title-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  color: var(--tp-text-secondary, #6b7280);
-  font-size: 12px;
-}
-
-.functional-case-title-meta .ant-typography {
-  margin: 0;
-}
-
 .functional-case-zentao-import-modal {
   display: flex;
   flex-direction: column;
@@ -110,155 +42,12 @@
   gap: 6px;
 }
 
-.functional-case-editor-body {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  gap: 16px;
-  padding-top: 18px;
-}
-
-.functional-case-editor-grid {
-  gap: 14px 16px;
-}
-
-.functional-case-meta-panel {
-  padding: 14px 16px 0;
-  border: 1px solid rgba(31, 41, 55, 0.06);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.functional-case-section-card {
-  padding: 14px 16px 16px;
-  border: 1px solid rgba(31, 41, 55, 0.07);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.86);
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.04);
-}
-
-.functional-case-section-card .ant-form-item-label > label,
-.functional-case-meta-panel .ant-form-item-label > label {
-  color: var(--tp-text, #111827);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.functional-case-editor-split-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.functional-case-form-grid .ant-input,
-.functional-case-form-grid .ant-input-number,
-.functional-case-form-grid .ant-select-selector {
-  min-height: 36px;
-  border-color: rgba(31, 41, 55, 0.1);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.82);
-}
-
-.functional-case-form-grid .ant-input:focus,
-.functional-case-form-grid .ant-input-focused {
-  border-color: rgba(79, 159, 114, 0.45);
-  box-shadow: 0 0 0 3px rgba(79, 159, 114, 0.1);
-}
-
 .functional-case-brief {
   color: var(--tp-text-secondary, #5b6477);
 }
 
-.functional-case-brief-stack {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  color: var(--tp-text-secondary, #5b6477);
-}
-
-.functional-case-brief-stack span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.functional-case-form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 16px;
-}
-
-:root[data-theme='dark'] .functional-case-brief,
-:root[data-theme='dark'] .functional-case-brief-stack {
+:root[data-theme='dark'] .functional-case-brief {
   color: var(--tp-text-secondary);
-}
-
-:root[data-theme='dark'] .functional-case-editor-form {
-  background:
-    radial-gradient(circle at 20px 20px, rgba(110, 231, 183, 0.08), transparent 28px),
-    linear-gradient(180deg, rgba(20, 25, 37, 0.96), rgba(15, 19, 29, 0.98));
-}
-
-:root[data-theme='dark'] .functional-case-editor-hero,
-:root[data-theme='dark'] .functional-case-meta-panel,
-:root[data-theme='dark'] .functional-case-section-card {
-  border-color: rgba(148, 163, 184, 0.14);
-  background: rgba(30, 36, 52, 0.9);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
-}
-
-:root[data-theme='dark'] .functional-case-title-input.ant-input {
-  color: var(--tp-text);
-  border-bottom-color: rgba(148, 163, 184, 0.18);
-  background: transparent;
-}
-
-:root[data-theme='dark'] .functional-case-title-input.ant-input::placeholder,
-:root[data-theme='dark'] .functional-case-form-grid .ant-input::placeholder {
-  color: rgba(148, 163, 184, 0.62);
-}
-
-:root[data-theme='dark'] .functional-case-section-card .ant-form-item-label > label,
-:root[data-theme='dark'] .functional-case-meta-panel .ant-form-item-label > label,
-:root[data-theme='dark'] .functional-case-title-meta .ant-typography {
-  color: var(--tp-text);
-}
-
-:root[data-theme='dark'] .functional-case-form-grid .ant-input,
-:root[data-theme='dark'] .functional-case-form-grid .ant-input-number,
-:root[data-theme='dark'] .functional-case-form-grid .ant-select-selector {
-  color: var(--tp-text);
-  border-color: rgba(148, 163, 184, 0.16);
-  background: rgba(15, 19, 29, 0.82);
-}
-
-:root[data-theme='dark'] .functional-case-form-grid textarea.ant-input {
-  color: var(--tp-text);
-  background: rgba(15, 19, 29, 0.82);
-}
-
-:root[data-theme='dark'] .functional-case-form-grid .ant-select-selection-item,
-:root[data-theme='dark'] .functional-case-form-grid .ant-select-selection-placeholder,
-:root[data-theme='dark'] .functional-case-form-grid .ant-input-number-input {
-  color: var(--tp-text);
-}
-
-:root[data-theme='dark'] .functional-case-form-grid .ant-select-arrow,
-:root[data-theme='dark'] .functional-case-form-grid .ant-select-clear {
-  color: var(--tp-text-secondary);
-  background: transparent;
-}
-
-@media (max-width: 900px) {
-
-  .functional-case-editor-split-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .functional-case-form-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* macOS compact functional suite cards */
@@ -385,92 +174,6 @@
     grid-template-columns: 1fr;
   }
 }
-/* 用例库用例弹窗：点开用例直接就是这套表单 */
-.case-library-case-modal .functional-case-editor-hero,
-.case-library-case-modal .functional-case-meta-panel,
-.case-library-case-modal .functional-case-section-card {
-  border-color: rgba(15, 23, 42, 0.065) !important;
-  background: rgba(255, 255, 255, 0.68) !important;
-  backdrop-filter: saturate(180%) blur(22px);
-  -webkit-backdrop-filter: saturate(180%) blur(22px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86), 0 10px 24px rgba(15, 23, 42, 0.04) !important;
-}
-
-/* 弹窗 body 自带内边距，表单不再重复留白。 */
-.case-library-case-modal .functional-case-editor-form {
-  padding: 0;
-  background: transparent !important;
-}
-
-.case-library-case-modal .functional-case-editor-body {
-  gap: 16px;
-  padding-top: 16px;
-}
-
-.case-library-case-modal .functional-case-editor-hero {
-  padding: 18px 20px;
-  border-radius: 18px;
-}
-
-.case-library-case-modal .functional-case-title-input.ant-input {
-  min-height: 40px;
-  border-bottom-color: rgba(15, 23, 42, 0.08) !important;
-  background: transparent !important;
-  color: #172033;
-}
-
-.case-library-case-modal .functional-case-title-input.ant-input:focus,
-.case-library-case-modal .functional-case-title-input.ant-input-focused {
-  border-bottom-color: rgba(10, 132, 255, 0.34) !important;
-}
-
-.case-library-case-modal .functional-case-inline-label {
-  color: rgba(23, 32, 51, 0.72);
-  letter-spacing: 0;
-}
-
-.case-library-case-modal .functional-case-title-meta {
-  color: rgba(23, 32, 51, 0.56) !important;
-}
-
-.case-library-case-modal .functional-case-section-card .ant-form-item-label > label,
-.case-library-case-modal .functional-case-meta-panel .ant-form-item-label > label {
-  color: #172033 !important;
-}
-
-.case-library-case-modal .functional-case-meta-panel,
-.case-library-case-modal .functional-case-section-card {
-  border-radius: 16px;
-}
-
-.case-library-case-modal .functional-case-meta-panel {
-  padding: 14px 16px 0;
-}
-
-.case-library-case-modal .functional-case-section-card {
-  padding: 14px 16px 16px;
-}
-
-.case-library-case-modal .functional-case-form-grid .ant-input,
-.case-library-case-modal .functional-case-form-grid .ant-input-number,
-.case-library-case-modal .functional-case-form-grid .ant-select-selector {
-  border-color: rgba(15, 23, 42, 0.09) !important;
-  border-radius: 12px !important;
-  background: rgba(255, 255, 255, 0.72) !important;
-  box-shadow: none !important;
-}
-
-.case-library-case-modal .functional-case-form-grid .ant-input:focus,
-.case-library-case-modal .functional-case-form-grid .ant-input-focused {
-  border-color: rgba(10, 132, 255, 0.34) !important;
-  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.08) !important;
-}
-
-/* Functional suite cards: align layout with AI requirement-analysis task cards. */
-.functional-suite-card-top {
-  align-items: flex-start;
-  gap: 10px;
-}
 
 .functional-suite-card-title {
   display: -webkit-box;
@@ -479,10 +182,6 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-height: 20px;
-}
-
-.functional-suite-card-tags {
-  flex: 0 0 auto;
 }
 
 .app-shell-macos .functional-test-page .functional-suite-scroll {
@@ -530,23 +229,11 @@
   font-weight: 720 !important;
 }
 
-.app-shell-macos .functional-test-page .functional-suite-card-tags .ant-tag {
-  margin-inline-end: 0;
-  border-color: rgba(10,132,255,0.11) !important;
-  background: rgba(10,132,255,0.07) !important;
-  color: rgba(10,96,190,0.82) !important;
-  font-weight: 650;
-}
-
 .app-shell-macos .functional-test-page .functional-suite-card-description.ant-typography {
   min-height: 36px !important;
   margin: 0 !important;
   color: rgba(23,32,51,0.46) !important;
   line-height: 18px !important;
-}
-
-.app-shell-macos .functional-test-page .functional-suite-card-actions {
-  margin-top: auto !important;
 }
 
 @media (max-width: 1100px) {
@@ -558,160 +245,6 @@
 @media (max-width: 680px) {
   .app-shell-macos .functional-test-page .functional-suite-grid {
     grid-template-columns: 1fr !important;
-  }
-}
-
-/* Dark macOS polish: functional suite case editor hero. */
-:root[data-theme='dark'] .case-library-case-modal .functional-case-editor-hero,
-:root[data-theme='dark'] .case-library-case-modal .functional-case-meta-panel,
-:root[data-theme='dark'] .case-library-case-modal .functional-case-section-card {
-  border-color: rgba(48, 54, 61, 0.9) !important;
-  background: rgba(22, 27, 34, 0.78) !important;
-  color: #f0f6fc !important;
-  box-shadow: inset 0 1px 0 rgba(240, 246, 252, 0.04) !important;
-}
-
-:root[data-theme='dark'] .case-library-case-modal .functional-case-editor-form,
-:root[data-theme='dark'] .case-library-case-modal .functional-case-editor-body,
-:root[data-theme='dark'] .case-library-case-modal .functional-case-editor-grid {
-  background: transparent !important;
-}
-
-:root[data-theme='dark'] .case-library-case-modal .functional-case-title-input.ant-input,
-:root[data-theme='dark'] .case-library-case-modal .functional-case-form-grid .ant-input,
-:root[data-theme='dark'] .case-library-case-modal .functional-case-form-grid .ant-input-number,
-:root[data-theme='dark'] .case-library-case-modal .functional-case-form-grid .ant-select-selector {
-  border-color: rgba(48, 54, 61, 0.9) !important;
-  background: rgba(13, 17, 23, 0.72) !important;
-  color: #f0f6fc !important;
-  box-shadow: none !important;
-}
-
-:root[data-theme='dark'] .case-library-case-modal .functional-case-title-input.ant-input {
-  background: rgba(13, 17, 23, 0.88) !important;
-}
-
-:root[data-theme='dark'] .case-library-case-modal .functional-case-inline-label,
-:root[data-theme='dark'] .case-library-case-modal .functional-case-section-card .ant-form-item-label > label,
-:root[data-theme='dark'] .case-library-case-modal .functional-case-meta-panel .ant-form-item-label > label {
-  color: #f0f6fc !important;
-}
-
-:root[data-theme='dark'] .case-library-case-modal .functional-case-title-meta {
-  color: #8b949e !important;
-}
-
-/* Both step fields stretch to the taller auto-sized textarea. */
-.functional-case-step-inputs {
-  align-items: stretch;
-}
-
-.functional-case-step-inputs > div {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.functional-case-step-inputs > div > textarea.ant-input {
-  flex-grow: 1;
-}
-
-/* Functional case editor: paired editing panels (design C). */
-.case-library-case-modal .functional-case-meta-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.functional-case-meta-label .anticon {
-  color: #1687ff;
-}
-
-.case-library-case-modal .functional-case-editor-body .functional-case-meta-panel {
-  padding: 0;
-  border: 0;
-  background: transparent !important;
-  box-shadow: none !important;
-  backdrop-filter: none;
-}
-
-.case-library-case-modal .functional-case-meta-panel > .ant-form-item {
-  margin-bottom: 0;
-  padding: 14px;
-  border: 1px solid var(--tp-border, #e8edf4);
-  border-radius: 14px;
-  background: var(--tp-surface, #fff);
-}
-
-.functional-case-comparison-card {
-  overflow: hidden;
-  padding: 0 12px 12px;
-  border: 1px solid var(--tp-border, #e8edf4);
-  border-radius: 14px;
-  background: var(--tp-surface, #fff);
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.025);
-}
-
-.functional-case-field-heading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 -12px 12px;
-  padding: 13px 16px;
-  background: rgba(22, 135, 255, 0.055);
-  color: var(--tp-text, #172033);
-  font-size: 13px;
-  font-weight: 650;
-  line-height: 22px;
-}
-
-.functional-case-field-heading .anticon {
-  color: #1687ff;
-  font-size: 17px;
-}
-
-.functional-case-comparison-expected .functional-case-field-heading {
-  background: rgba(16, 185, 129, 0.07);
-}
-
-.functional-case-comparison-expected .anticon {
-  color: #0ca789;
-}
-
-.case-library-case-modal .functional-case-section-card.functional-case-preconditions {
-  overflow: hidden;
-  padding: 0 12px 12px;
-}
-
-.functional-case-preconditions .ant-form-item {
-  margin-bottom: 0;
-}
-
-.functional-case-preconditions textarea.ant-input,
-.functional-case-comparison-card textarea.ant-input {
-  padding: 10px 12px;
-  border-radius: 10px;
-  line-height: 1.8;
-}
-
-:root[data-theme='dark'] .functional-case-comparison-card,
-:root[data-theme='dark'] .case-library-case-modal .functional-case-meta-panel > .ant-form-item {
-  background: #161b22;
-  border-color: rgba(148, 163, 184, 0.16);
-}
-
-:root[data-theme='dark'] .functional-case-field-heading {
-  color: #f0f6fc;
-  background: rgba(22, 135, 255, 0.12);
-}
-
-:root[data-theme='dark'] .functional-case-comparison-expected .functional-case-field-heading {
-  background: rgba(16, 185, 129, 0.12);
-}
-
-@media (max-width: 900px) {
-  .functional-case-step-inputs {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -728,36 +261,6 @@
   flex-direction: column;
   min-height: 0;
   border-left: 1px solid var(--divider);
-}
-
-.case-library-main-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  row-gap: 8px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--divider);
-}
-
-/* 头部条目多（标题 / 范围 / 计数 / 一批操作），窄屏时整体换行，别把文案挤成一字一行。 */
-.case-library-main-head > * {
-  flex: 0 0 auto;
-}
-
-/* 动作组贴右，标题与范围留在左边。 */
-.case-library-main-head > .case-library-main-actions {
-  margin-left: auto;
-}
-
-.case-library-main-title {
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-.case-library-main-head .ant-typography,
-.case-library-main-head .ant-tag {
-  white-space: nowrap;
 }
 
 .case-library-nav-item {

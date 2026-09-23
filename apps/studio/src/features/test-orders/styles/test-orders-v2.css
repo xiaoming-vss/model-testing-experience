@@ -1,0 +1,287 @@
+/*
+ * 测试单页面（按设计稿重做的表面层）。
+ *
+ * token（`--srf-*`）、色盘（`.tone-*`）、板面（`.tp-board`）与快速过滤条都来自
+ * shared/styles/surface-tokens.css；这里只写这一页自己的东西：工具栏卡片、进度条、状态胶囊。
+ *
+ * 与用例库的差异（两份设计稿本身就不一致，取已经实现的用例库那套为准）：
+ * 设计稿把过滤条画成一张白色卡片，这里照做；用例库那边是裸工具栏。快速过滤条上的胶囊
+ * 设计稿这里是实心蓝方块，这里沿用共享的浅蓝胶囊，两页保持一致。
+ */
+
+/* 进度条分段的颜色取自共享的结果语义色（surface-tokens.css 的 --srf-result-*），
+   和条目状态圆点（utils/testOrderStatus.ts）同一组语义。 */
+
+/* ===== 工具栏（设计稿里是一张卡片） ===== */
+
+.test-orders-page .test-orders-toolbar {
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: 10px;
+  background: var(--srf-card);
+  box-shadow: none;
+}
+
+/* testing/styles 与 dark-polish 都用 !important 给 .api-panel-header 设过玻璃表面，
+   所以要用更长的前缀把这一层的卡片外观定住。 */
+.app-shell-macos .testing-page .test-orders-page .api-panel-header.test-orders-toolbar {
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--srf-card-border) !important;
+  border-bottom: 1px solid var(--srf-card-border) !important;
+  border-radius: 10px !important;
+  background: var(--srf-card) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.test-orders-page .test-orders-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.test-orders-page .test-orders-filters .api-filter-field-label {
+  margin-right: 6px;
+  color: var(--srf-text-muted);
+  font-weight: 500;
+}
+
+.test-orders-page .test-orders-search-field {
+  min-width: 288px;
+}
+
+.test-orders-page .test-orders-search-hint {
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+}
+
+.test-orders-page .test-orders-toolbar-actions {
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.test-orders-page .test-orders-refresh.ant-btn {
+  color: var(--srf-text-secondary);
+}
+
+.test-orders-page .test-orders-refresh.ant-btn:hover {
+  color: var(--srf-accent);
+}
+
+/* ===== 快速过滤条 ===== */
+
+.test-orders-page .test-orders-quickbar {
+  flex: 0 0 auto;
+  padding: 0 2px;
+}
+
+/* ===== 表格卡片 ===== */
+
+.test-orders-page .test-orders-table-card {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+}
+
+:root[data-theme='dark'] .test-orders-page .test-orders-table-card {
+  box-shadow: none;
+}
+
+/* 外壳给了面板内表格容器 16px 18px 的内距，设计稿里表格贴着卡片边缘，这里收掉。 */
+.test-orders-page .test-orders-table-scroll {
+  padding: 0;
+}
+
+.app-shell-macos .testing-page .test-orders-page .api-automation-content > .workbench-panel .test-orders-table-scroll {
+  padding: 0 !important;
+}
+
+.test-orders-page .test-orders-footer {
+  gap: 12px;
+  padding: 0 16px;
+  border-top: 1px solid var(--srf-divider);
+  background: var(--srf-hover);
+}
+
+/* testing/styles 用 !important 给面板内的 .table-footer 铺过玻璃底，选择器比上面更长才能压住。 */
+.app-shell-macos .testing-page .test-orders-page .api-automation-content > .workbench-panel .test-orders-footer {
+  padding: 0 16px;
+  border-top: 1px solid var(--srf-divider) !important;
+  background: var(--srf-hover) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+:root[data-theme='dark'] .app-shell.app-shell-macos .test-orders-page .test-orders-footer .ant-typography {
+  color: var(--srf-text-secondary);
+}
+
+/* ===== 表格内部 ===== */
+
+.test-orders-page .test-order-muted-cell {
+  color: var(--srf-text-secondary);
+}
+
+.test-orders-page .test-order-version-cell,
+.test-orders-page .test-order-time-cell {
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+}
+
+.test-orders-page .test-order-row-actions .ant-btn {
+  color: var(--srf-text-muted);
+}
+
+.test-orders-page .test-order-row-actions .action-btn-delete.ant-btn:hover {
+  color: var(--srf-danger);
+}
+
+/* ===== 进度与指标 ===== */
+
+.test-orders-page .test-order-progress-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.test-orders-page .test-order-progress-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.test-orders-page .test-order-progress-executed {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--srf-text-secondary);
+  font-size: 11px;
+  line-height: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.test-orders-page .test-order-progress-executed strong {
+  color: var(--srf-text);
+  font-weight: 600;
+}
+
+.test-orders-page .test-order-progress-metric {
+  color: var(--srf-tone-text);
+}
+
+.test-orders-page .test-order-progress-metric::before {
+  content: ' · ';
+  color: var(--srf-text-muted);
+}
+
+.test-orders-page .test-order-progress-percent {
+  flex: 0 0 auto;
+  color: var(--srf-tone-text);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.test-orders-page .test-order-progress-track {
+  display: flex;
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--srf-track);
+}
+
+.test-orders-page .test-order-progress-segment {
+  height: 100%;
+}
+
+.test-orders-page .segment-passed {
+  background: var(--srf-result-passed);
+}
+
+.test-orders-page .segment-failed {
+  background: var(--srf-result-failed);
+}
+
+.test-orders-page .segment-blocked {
+  background: var(--srf-result-blocked);
+}
+
+.test-orders-page .segment-skipped {
+  background: var(--srf-result-skipped);
+}
+
+.test-orders-page .segment-pending {
+  background: var(--srf-track-pending);
+}
+
+/* ===== 状态胶囊 ===== */
+
+.test-orders-page .test-order-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--srf-tone-border, var(--srf-card-border));
+  border-radius: 999px;
+  background: var(--srf-tone-bg, var(--srf-chip));
+  color: var(--srf-tone-text, var(--srf-chip-text));
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.test-orders-page .test-order-status-dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+/* 执行中的圆点做个呼吸效果，和设计稿一致；关掉动效偏好时不闪。 */
+.test-orders-page .tone-blue .test-order-status-dot {
+  animation: test-order-status-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes test-order-status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .test-orders-page .tone-blue .test-order-status-dot {
+    animation: none;
+  }
+}
+
+/* ===== 窄屏 ===== */
+
+@media (max-width: 900px) {
+  .test-orders-page .test-orders-search-field {
+    min-width: 0;
+    width: 100%;
+  }
+}
