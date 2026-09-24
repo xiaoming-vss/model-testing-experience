@@ -1,31 +1,38 @@
+import '@/shared/styles/list-table.css'
+import '@/shared/styles/surface-tokens.css'
 import { footerRange } from '@/shared/utils/pagination'
 import { ActionButton } from '@/shared/components/ActionButton'
-import { AppIcon } from '@/shared/icons'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { usePersonalConnectionChoice } from '@/features/base-services/components/usePersonalConnectionChoice'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
-import { CheckOutlined, DeleteOutlined, EditOutlined, EyeOutlined, MoreOutlined } from '@ant-design/icons'
+import {
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FileTextOutlined,
+  MoreOutlined,
+  SearchOutlined,
+} from '@ant-design/icons'
 import {
   Alert,
   Button,
   Dropdown,
   Empty,
   Form,
+  Input,
   Modal,
   Pagination,
-  Segmented,
+  Popconfirm,
   Select,
   Space,
   Table,
-  Tag,
   Tooltip,
   Typography,
 } from 'antd'
-import type { TableProps } from 'antd'
+import type { InputRef, TableProps } from 'antd'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useState } from 'react'
-import type { ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ApiCaseGenerateTaskDrawer, type ApiCaseGenerateTaskFormValues } from '../components/ApiCaseGenerateTaskDrawer'
 import { FunctionalCaseGenerateTaskDrawer, type FunctionalCaseGenerateTaskFormValues } from '../components/FunctionalCaseGenerateTaskDrawer'
 import { UiCaseGenerateTaskDrawer, type UiCaseGenerateTaskFormValues } from '../components/UiCaseGenerateTaskDrawer'
@@ -33,9 +40,10 @@ import { LlmConnectionSelectModal } from '../components/LlmConnectionSelectModal
 import { RequirementAnalysisTaskDrawer, type RequirementAnalysisTaskFormValues } from '../components/RequirementAnalysisTaskDrawer'
 import { RequirementAnalysisRunModal, type RequirementAnalysisRunFormValues } from '../components/RequirementAnalysisRunModal'
 import { CodeRiskTaskDrawer, type CodeRiskTaskFormValues } from '../components/CodeRiskTaskDrawer'
-import type { ApiCaseGenerateTask, ApiCaseGenerateTaskRun, CodeRiskTask, CodeRiskTaskRun, CreateCodeRiskTaskPayload, FunctionalCaseGenerateTask, FunctionalCaseGenerateTaskRun, RequirementAnalysisTask, RequirementAnalysisTaskRun, UiCaseGenerateTask, UiCaseGenerateTaskRun } from '../types'
-import { getApiCaseGenerateTaskRunStatusMeta, isRunnableApiCaseGenerateTaskRun } from '../utils/taskStatus'
+import type { ApiCaseGenerateTask, ApiCaseGenerateTaskRun, ApiCaseGenerateTaskRunStatus, CodeRiskTask, CodeRiskTaskRun, CreateCodeRiskTaskPayload, FunctionalCaseGenerateTask, FunctionalCaseGenerateTaskRun, RequirementAnalysisTask, RequirementAnalysisTaskRun, UiCaseGenerateTask, UiCaseGenerateTaskRun } from '../types'
+import { getApiCaseGenerateTaskRunStatusMeta, isApiCaseGenerateTaskRunInProgress, isRunnableApiCaseGenerateTaskRun } from '../utils/taskStatus'
 import '@/features/ai-testing/styles/index.css'
+import '@/features/ai-testing/styles/task-list-v2.css'
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
 import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
 import { hasRequirementEnhancedText } from '@/features/requirements/utils/requirementDocument'
@@ -69,44 +77,7 @@ type UnifiedAiTask =
       task: CodeRiskTask
     }
 
-const createKindOptions: Array<{
-  key: AiTaskKind
-  title: string
-  description: string
-  icon: ReactNode
-  disabled?: boolean
-}> = [
-  {
-    key: 'analysis',
-    title: '需求分析',
-    description: '分析需求中的场景、歧义和风险点。',
-    icon: <AppIcon name="analysis" />,
-  },
-  {
-    key: 'functional',
-    title: '功能测试',
-    description: '根据需求文档生成结构化功能测试用例。',
-    icon: <AppIcon name="functional" />,
-  },
-  {
-    key: 'api',
-    title: 'API测试',
-    description: '根据 OpenAPI / Swagger 生成 API 用例。',
-    icon: <AppIcon name="api" />,
-  },
-  {
-    key: 'ui',
-    title: 'UI测试',
-    description: '上传 ZIP 源码包生成可编辑、可审核的 UI 候选用例。',
-    icon: <AppIcon name="ui" />,
-  },
-  {
-    key: 'codeRisk',
-    title: '代码风险分析',
-    description: '分析需求绑定代码的变更风险，输出受影响用例与覆盖缺口。',
-    icon: <AppIcon name="codeRisk" />,
-  },
-]
+const taskKinds: AiTaskKind[] = ['analysis', 'functional', 'api', 'ui', 'codeRisk']
 
 function getTaskId(task: ApiCaseGenerateTask) {
   return task.taskId ?? ''
@@ -136,6 +107,14 @@ function getUnifiedTaskKey(item: UnifiedAiTask) {
   return `codeRisk:${getCodeRiskTaskId(item.task)}`
 }
 
+function getUnifiedTaskId(item: UnifiedAiTask) {
+  if (item.kind === 'api') return getTaskId(item.task)
+  if (item.kind === 'functional') return getFunctionalTaskId(item.task)
+  if (item.kind === 'ui') return getUiTaskId(item.task)
+  if (item.kind === 'analysis') return getRequirementAnalysisTaskId(item.task)
+  return getCodeRiskTaskId(item.task)
+}
+
 function getUnifiedTaskTime(item: UnifiedAiTask) {
   const time = new Date(item.task.updatedAt || item.task.createdAt || '').getTime()
   return Number.isNaN(time) ? 0 : time
@@ -160,21 +139,52 @@ function sourceTypeLabel(item: UnifiedAiTask) {
   return '需求分析'
 }
 
-function renderLatestRunStatus(status?: ApiCaseGenerateTaskRun['status']) {
-  if (!status) {
-    return (
-      <Tag className="ai-task-status-tag ai-task-status-idle">
-        <span className="ai-task-status-indicator" />
-        未运行
-      </Tag>
-    )
-  }
+/**
+ * 状态筛选档位。设计稿给的是「全部 / 进行中 / 成功 / 待审核」，这里多一档「失败」——
+ * 本项目的运行态里有 failed / error，如果只留四档，失败任务只能靠「全部」找，
+ * 而失败恰是测试运维最需要一眼捞出来的那一类。
+ */
+type AiTaskStatusFilter = 'all' | 'in_progress' | 'success' | 'waiting_review' | 'failed'
+
+const AI_TASK_STATUS_FILTERS: Array<{ key: AiTaskStatusFilter; label: string; dot?: string }> = [
+  { key: 'all', label: '全部' },
+  { key: 'in_progress', label: '进行中', dot: 'tone-status-running' },
+  { key: 'success', label: '成功', dot: 'tone-status-success' },
+  { key: 'waiting_review', label: '待审核', dot: 'tone-status-warning' },
+  { key: 'failed', label: '失败', dot: 'tone-status-danger' },
+]
+
+/** 运行态 → 共享九色盘的色调名（surface-tokens.css 的 `.tone-*`）。 */
+const runStatusTones: Record<string, string> = {
+  draft: 'tone-slate',
+  pending: 'tone-amber',
+  claimed: 'tone-blue',
+  running: 'tone-blue',
+  waiting_review: 'tone-amber',
+  success: 'tone-green',
+  failed: 'tone-red',
+  error: 'tone-red',
+  canceled: 'tone-slate',
+}
+
+/** 一条任务落到哪个筛选档；未跑过（含已取消 / 草稿）不属于任何语义档，只在「全部」里出现。 */
+function statusFilterBucket(status?: ApiCaseGenerateTaskRunStatus): AiTaskStatusFilter | null {
+  if (status === 'success') return 'success'
+  if (status === 'failed' || status === 'error') return 'failed'
+  if (status === 'waiting_review') return 'waiting_review'
+  if (isApiCaseGenerateTaskRunInProgress(status)) return 'in_progress'
+  return null
+}
+
+function renderLatestRunStatus(status?: ApiCaseGenerateTaskRunStatus) {
   const meta = getApiCaseGenerateTaskRunStatusMeta(status)
+  const label = status ? meta.label : '未运行'
+
   return (
-    <Tag className={`ai-task-status-tag ai-task-status-${meta.value}`}>
-      <span className="ai-task-status-indicator" />
-      {meta.label}
-    </Tag>
+    <span className={`tp-tone-tag ai-task-status-pill ${runStatusTones[status ?? ''] ?? 'tone-slate'}`}>
+      <span className="ai-task-status-indicator" aria-hidden="true" />
+      {label}
+    </span>
   )
 }
 
@@ -191,8 +201,6 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
   const [functionalDrawerOpen, setFunctionalDrawerOpen] = useState(false)
   const [editingFunctionalTask, setEditingFunctionalTask] = useState<FunctionalCaseGenerateTask | null>(null)
   const [functionalDrawerSprintId, setFunctionalDrawerSprintId] = useState<string | undefined>(undefined)
-  const [createKindModalOpen, setCreateKindModalOpen] = useState(false)
-  const [selectedCreateKind, setSelectedCreateKind] = useState<AiTaskKind>('api')
   const [llmSelectTaskId, setLlmSelectTaskId] = useState<string | null>(null)
   const [functionalLlmSelectTaskId, setFunctionalLlmSelectTaskId] = useState<string | null>(null)
   const [uiLlmSelectTaskId, setUiLlmSelectTaskId] = useState<string | null>(null)
@@ -208,7 +216,14 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
   const [codeRiskDrawerSprintId, setCodeRiskDrawerSprintId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
-  const [activeKind, setActiveKind] = useState<AiTaskKind>('analysis')
+  const [searchParams] = useSearchParams()
+  const requestedKind = searchParams.get('kind')
+  const activeKind: AiTaskKind = taskKinds.find((kind) => kind === requestedKind) ?? 'analysis'
+  const [keywordInput, setKeywordInput] = useState('')
+  const [keyword, setKeyword] = useState('')
+  const [statusFilter, setStatusFilter] = useState<AiTaskStatusFilter>('all')
+  const [selectedTaskKeys, setSelectedTaskKeys] = useState<string[]>([])
+  const keywordInputRef = useRef<InputRef>(null)
   const [form] = Form.useForm<ApiCaseGenerateTaskFormValues>()
   const [functionalForm] = Form.useForm<FunctionalCaseGenerateTaskFormValues>()
   const [uiForm] = Form.useForm<UiCaseGenerateTaskFormValues>()
@@ -344,53 +359,51 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
       uiTasksQuery.data,
     ],
   )
-  const filteredTasks = useMemo(
+  /* 分类胶囊这一层只按任务类型收敛；关键词与状态都是它下面的进一步收敛，
+     所以运行记录也按「本类型的全部任务」去取，状态档位的计数才是整套数据而不是当前页。 */
+  const kindTasks = useMemo(
     () => unifiedTasks.filter((item) => item.kind === activeKind),
     [activeKind, unifiedTasks],
   )
-  const pagedTasks = useMemo(
-    () => filteredTasks.slice((page - 1) * pageSize, page * pageSize),
-    [filteredTasks, page, pageSize],
+  const keywordTasks = useMemo(() => {
+    const text = keyword.trim().toLowerCase()
+    if (!text) return kindTasks
+    return kindTasks.filter((item) => {
+      const { requirementId, sprintId, name } = item.task
+      const fields = [
+        name,
+        sprintId ? sprintNameMap.get(sprintId) : undefined,
+        requirementId ? requirementNameMap.get(requirementId) : undefined,
+        sourceTypeLabel(item),
+      ]
+      return fields.some((field) => (field ?? '').toLowerCase().includes(text))
+    })
+  }, [keyword, kindTasks, requirementNameMap, sprintNameMap])
+  const keywordApiTasks = useMemo(
+    () => keywordTasks.filter((item): item is Extract<UnifiedAiTask, { kind: 'api' }> => item.kind === 'api').map((item) => item.task),
+    [keywordTasks],
   )
-  const kindSegmentOptions = useMemo(
+  const keywordFunctionalTasks = useMemo(
     () =>
-      createKindOptions.map((option) => ({
-        value: option.key,
-        label: (
-          <span className="ai-task-kind-segment-label">
-            {option.icon}
-            {option.title}
-            <span className="ai-task-tab-count">{unifiedTasks.filter((item) => item.kind === option.key).length}</span>
-          </span>
-        ),
-      })),
-    [unifiedTasks],
-  )
-  const pagedApiTasks = useMemo(
-    () => pagedTasks.filter((item): item is Extract<UnifiedAiTask, { kind: 'api' }> => item.kind === 'api').map((item) => item.task),
-    [pagedTasks],
-  )
-  const pagedFunctionalTasks = useMemo(
-    () =>
-      pagedTasks
+      keywordTasks
         .filter((item): item is Extract<UnifiedAiTask, { kind: 'functional' }> => item.kind === 'functional')
         .map((item) => item.task),
-    [pagedTasks],
+    [keywordTasks],
   )
-  const pagedUiTasks = useMemo(
-    () => pagedTasks.filter((item): item is Extract<UnifiedAiTask, { kind: 'ui' }> => item.kind === 'ui').map((item) => item.task),
-    [pagedTasks],
+  const keywordUiTasks = useMemo(
+    () => keywordTasks.filter((item): item is Extract<UnifiedAiTask, { kind: 'ui' }> => item.kind === 'ui').map((item) => item.task),
+    [keywordTasks],
   )
-  const pagedAnalysisTasks = useMemo(
-    () => pagedTasks.filter((item): item is Extract<UnifiedAiTask, { kind: 'analysis' }> => item.kind === 'analysis').map((item) => item.task),
-    [pagedTasks],
+  const keywordAnalysisTasks = useMemo(
+    () => keywordTasks.filter((item): item is Extract<UnifiedAiTask, { kind: 'analysis' }> => item.kind === 'analysis').map((item) => item.task),
+    [keywordTasks],
   )
-  const pagedCodeRiskTasks = useMemo(
-    () => pagedTasks.filter((item): item is Extract<UnifiedAiTask, { kind: 'codeRisk' }> => item.kind === 'codeRisk').map((item) => item.task),
-    [pagedTasks],
+  const keywordCodeRiskTasks = useMemo(
+    () => keywordTasks.filter((item): item is Extract<UnifiedAiTask, { kind: 'codeRisk' }> => item.kind === 'codeRisk').map((item) => item.task),
+    [keywordTasks],
   )
   const apiTaskRunQueries = useQueries({
-    queries: pagedApiTasks.map((task) => {
+    queries: keywordApiTasks.map((task) => {
       const taskId = getTaskId(task)
       return {
         queryKey: ['apiCaseGenerateTaskRuns', taskId],
@@ -400,7 +413,7 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
     }),
   })
   const functionalTaskRunQueries = useQueries({
-    queries: pagedFunctionalTasks.map((task) => {
+    queries: keywordFunctionalTasks.map((task) => {
       const taskId = getFunctionalTaskId(task)
       return {
         queryKey: ['functionalCaseGenerateTaskRuns', taskId],
@@ -410,7 +423,7 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
     }),
   })
   const uiTaskRunQueries = useQueries({
-    queries: pagedUiTasks.map((task) => {
+    queries: keywordUiTasks.map((task) => {
       const taskId = getUiTaskId(task)
       return {
         queryKey: ['uiCaseGenerateTaskRuns', taskId],
@@ -420,7 +433,7 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
     }),
   })
   const analysisTaskRunQueries = useQueries({
-    queries: pagedAnalysisTasks.map((task) => {
+    queries: keywordAnalysisTasks.map((task) => {
       const taskId = getRequirementAnalysisTaskId(task)
       return {
         queryKey: ['requirementAnalysisTaskRuns', taskId],
@@ -430,7 +443,7 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
     }),
   })
   const codeRiskTaskRunQueries = useQueries({
-    queries: pagedCodeRiskTasks.map((task) => {
+    queries: keywordCodeRiskTasks.map((task) => {
       const taskId = getCodeRiskTaskId(task)
       return {
         queryKey: ['codeRiskTaskRuns', taskId],
@@ -440,7 +453,7 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
     }),
   })
   const latestApiRunMap = useMemo(() => {
-    const entries = pagedApiTasks.map((task, index) => [
+    const entries = keywordApiTasks.map((task, index) => [
       getTaskId(task),
       {
         isLoading: apiTaskRunQueries[index]?.isLoading ?? false,
@@ -448,9 +461,9 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
       },
     ] as const)
     return new Map(entries)
-  }, [apiTaskRunQueries, pagedApiTasks])
+  }, [apiTaskRunQueries, keywordApiTasks])
   const latestFunctionalRunMap = useMemo(() => {
-    const entries = pagedFunctionalTasks.map((task, index) => [
+    const entries = keywordFunctionalTasks.map((task, index) => [
       getFunctionalTaskId(task),
       {
         isLoading: functionalTaskRunQueries[index]?.isLoading ?? false,
@@ -458,9 +471,9 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
       },
     ] as const)
     return new Map(entries)
-  }, [functionalTaskRunQueries, pagedFunctionalTasks])
+  }, [functionalTaskRunQueries, keywordFunctionalTasks])
   const latestUiRunMap = useMemo(() => {
-    const entries = pagedUiTasks.map((task, index) => [
+    const entries = keywordUiTasks.map((task, index) => [
       getUiTaskId(task),
       {
         isLoading: uiTaskRunQueries[index]?.isLoading ?? false,
@@ -468,9 +481,9 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
       },
     ] as const)
     return new Map(entries)
-  }, [pagedUiTasks, uiTaskRunQueries])
+  }, [keywordUiTasks, uiTaskRunQueries])
   const latestAnalysisRunMap = useMemo(() => {
-    const entries = pagedAnalysisTasks.map((task, index) => [
+    const entries = keywordAnalysisTasks.map((task, index) => [
       getRequirementAnalysisTaskId(task),
       {
         isLoading: analysisTaskRunQueries[index]?.isLoading ?? false,
@@ -478,9 +491,9 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
       },
     ] as const)
     return new Map(entries)
-  }, [analysisTaskRunQueries, pagedAnalysisTasks])
+  }, [analysisTaskRunQueries, keywordAnalysisTasks])
   const latestCodeRiskRunMap = useMemo(() => {
-    const entries = pagedCodeRiskTasks.map((task, index) => [
+    const entries = keywordCodeRiskTasks.map((task, index) => [
       getCodeRiskTaskId(task),
       {
         isLoading: codeRiskTaskRunQueries[index]?.isLoading ?? false,
@@ -488,10 +501,47 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
       },
     ] as const)
     return new Map(entries)
-  }, [codeRiskTaskRunQueries, pagedCodeRiskTasks])
-  const selectedCreateKindOption = useMemo(
-    () => createKindOptions.find((option) => option.key === selectedCreateKind),
-    [selectedCreateKind],
+  }, [codeRiskTaskRunQueries, keywordCodeRiskTasks])
+
+
+  /** 一条任务的最新运行状态，供状态档位计数与过滤共用。 */
+  const latestRunStatusOf = useCallback(
+    (item: UnifiedAiTask) => {
+      if (item.kind === 'api') return latestApiRunMap.get(getTaskId(item.task))?.latestRun?.status
+      if (item.kind === 'functional') return latestFunctionalRunMap.get(getFunctionalTaskId(item.task))?.latestRun?.status
+      if (item.kind === 'ui') return latestUiRunMap.get(getUiTaskId(item.task))?.latestRun?.status
+      if (item.kind === 'analysis') return latestAnalysisRunMap.get(getRequirementAnalysisTaskId(item.task))?.latestRun?.status
+      return latestCodeRiskRunMap.get(getCodeRiskTaskId(item.task))?.latestRun?.status
+    },
+    [latestApiRunMap, latestAnalysisRunMap, latestCodeRiskRunMap, latestFunctionalRunMap, latestUiRunMap],
+  )
+
+  /** 状态档位的计数与下面的过滤都基于同一份「本类型 + 关键词」集合。 */
+  const statusFilterCounts = useMemo(() => {
+    const counts = new Map<AiTaskStatusFilter, number>([['all', keywordTasks.length]])
+    keywordTasks.forEach((item) => {
+      const bucket = statusFilterBucket(latestRunStatusOf(item))
+      if (bucket) counts.set(bucket, (counts.get(bucket) ?? 0) + 1)
+    })
+    return counts
+  }, [keywordTasks, latestRunStatusOf])
+
+  const filteredTasks = useMemo(
+    () =>
+      statusFilter === 'all'
+        ? keywordTasks
+        : keywordTasks.filter((item) => statusFilterBucket(latestRunStatusOf(item)) === statusFilter),
+    [keywordTasks, latestRunStatusOf, statusFilter],
+  )
+  const pagedTasks = useMemo(
+    () => filteredTasks.slice((page - 1) * pageSize, page * pageSize),
+    [filteredTasks, page, pageSize],
+  )
+  const hasListFilters = Boolean(keyword) || statusFilter !== 'all'
+  const deletableSelection = activeKind !== 'codeRisk'
+  const selectedTasks = useMemo(
+    () => keywordTasks.filter((item) => selectedTaskKeys.includes(getUnifiedTaskKey(item))),
+    [keywordTasks, selectedTaskKeys],
   )
 
   const activeTaskSource = {
@@ -519,6 +569,31 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
     setPage(1)
   }, [activeProjectId])
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setKeyword(keywordInput.trim())
+      setPage(1)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [keywordInput])
+
+  // 搜索框标了 ⌘K，那就得真的能按：Mac 用 ⌘，其他平台用 Ctrl。
+  useEffect(() => {
+    function handleShortcut(event: KeyboardEvent) {
+      if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return
+      event.preventDefault()
+      keywordInputRef.current?.focus()
+    }
+
+    window.addEventListener('keydown', handleShortcut)
+    return () => window.removeEventListener('keydown', handleShortcut)
+  }, [])
+
+  // 切类型、改筛选都会让勾选的行落出当前集合，勾选跟着清空，避免删掉看不见的任务。
+  useEffect(() => {
+    setSelectedTaskKeys([])
+  }, [activeKind, activeProjectId, keyword, statusFilter])
+
   const createTaskMutation = useMutation({
     mutationFn: (values: ApiCaseGenerateTaskFormValues) => api.createApiCaseGenerateTask(activeProjectId!, values),
     onSuccess: () => {
@@ -526,6 +601,28 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
       closeDrawer()
       queryClient.invalidateQueries({ queryKey: ['apiCaseGenerateTasks', activeProjectId] })
     },
+  })
+
+  /** 批量删除：列表同一时间只显示一个类型，所以勾选的行类型一致，按类型分派删除接口。 */
+  const batchDeleteTasksMutation = useMutation({
+    mutationFn: async (items: UnifiedAiTask[]) => {
+      await Promise.all(
+        items.map((item) => {
+          const taskId = getUnifiedTaskId(item)
+          if (item.kind === 'api') return api.deleteApiCaseGenerateTask(taskId)
+          if (item.kind === 'functional') return api.deleteFunctionalCaseGenerateTask(taskId)
+          if (item.kind === 'ui') return api.deleteUiCaseGenerateTask(taskId)
+          return api.deleteRequirementAnalysisTask(taskId)
+        }),
+      )
+      return items.length
+    },
+    onSuccess: (count) => {
+      message.success(`已删除 ${count} 个任务`)
+      setSelectedTaskKeys([])
+      refreshActiveTaskList()
+    },
+    onError: (error) => message.error(getErrorMessage(error)),
   })
 
   const updateTaskMutation = useMutation({
@@ -814,42 +911,15 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
     codeRiskForm.resetFields()
   }
 
-  function openCreateKindModal() {
-    setSelectedCreateKind('api')
-    setCreateKindModalOpen(true)
-  }
-
-  function handleCreateKindSelect(kind: AiTaskKind) {
-    const option = createKindOptions.find((item) => item.key === kind)
-    if (option?.disabled) return
-    setSelectedCreateKind(kind)
-  }
-
-  function handleCreateKindConfirm() {
-    if (!selectedCreateKindOption || selectedCreateKindOption.disabled) return
-
-    if (selectedCreateKind === 'api') {
-      setCreateKindModalOpen(false)
-      openCreateDrawer()
-      return
-    }
-    if (selectedCreateKind === 'functional') {
-      setCreateKindModalOpen(false)
-      openCreateFunctionalDrawer()
-      return
-    }
-    if (selectedCreateKind === 'analysis') {
-      setCreateKindModalOpen(false)
-      openCreateAnalysisDrawer()
-      return
-    }
-    if (selectedCreateKind === 'codeRisk') {
-      setCreateKindModalOpen(false)
-      openCodeRiskDrawer()
-      return
-    }
-    setCreateKindModalOpen(false)
-    openCreateUiDrawer()
+  function openCreateTask() {
+    const openDrawer = {
+      api: openCreateDrawer,
+      functional: openCreateFunctionalDrawer,
+      analysis: openCreateAnalysisDrawer,
+      codeRisk: openCodeRiskDrawer,
+      ui: openCreateUiDrawer,
+    }[activeKind]
+    openDrawer()
   }
 
   const runCodeRiskTaskMutation = useMutation({
@@ -958,130 +1028,161 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
     setAnalysisRunTask(task)
   }
 
+  /**
+   * 列表各列（名称、状态、迭代 / 需求、来源文档、操作）要用的派生数据。
+   * 只有「任务 ID、详情路径、可运行性」随类型不同，其余一段算完再展开。
+   */
   function getUnifiedTaskContext(item: UnifiedAiTask) {
+    const task = item.task
+    const requirement = task.requirementId ? requirementMap.get(task.requirementId) : undefined
+    const common = {
+      requirement,
+      requirementName: requirementNameMap.get(task.requirementId ?? '') ?? task.requirementId ?? '-',
+      source: sourceTypeLabel(item),
+      sprintName: sprintNameMap.get(task.sprintId ?? '') ?? task.sprintId ?? '-',
+    }
+
     if (item.kind === 'api') {
-      const task = item.task
-      const taskId = getTaskId(task)
+      const taskId = getTaskId(item.task)
       const runState = latestApiRunMap.get(taskId)
       const latestRun = runState?.latestRun
-      const runnableTask = !runState?.isLoading && isRunnableApiCaseGenerateTaskRun(latestRun?.status)
-      const detailPath = `/ai-testing/tasks/${taskId}`
-      const sprintName = sprintNameMap.get(task.sprintId ?? '') ?? task.sprintId ?? '-'
-      const requirementName = requirementNameMap.get(task.requirementId ?? '') ?? task.requirementId ?? '-'
-
-      return { detailPath, latestRun, requirementName, runState, runnableTask, source: sourceTypeLabel(item), sprintName, taskId }
+      return {
+        ...common,
+        detailPath: `/ai-testing/tasks/${taskId}`,
+        latestRun,
+        runState,
+        runnableTask: !runState?.isLoading && isRunnableApiCaseGenerateTaskRun(latestRun?.status),
+        taskId,
+      }
     }
 
     if (item.kind === 'ui') {
-      const task = item.task
-      const taskId = getUiTaskId(task)
+      const taskId = getUiTaskId(item.task)
       const runState = latestUiRunMap.get(taskId)
       const latestRun = runState?.latestRun
-      const runnableTask = Boolean(task.sourceArchive) && !runState?.isLoading && isRunnableApiCaseGenerateTaskRun(latestRun?.status)
-      const detailPath = `/ai-testing/ui-tasks/${taskId}`
-      const sprintName = sprintNameMap.get(task.sprintId ?? '') ?? task.sprintId ?? '-'
-      const requirementName = requirementNameMap.get(task.requirementId ?? '') ?? task.requirementId ?? '-'
-      return { detailPath, latestRun, requirementName, runState, runnableTask, source: sourceTypeLabel(item), sprintName, taskId }
+      return {
+        ...common,
+        detailPath: `/ai-testing/ui-tasks/${taskId}`,
+        latestRun,
+        runState,
+        runnableTask: Boolean(item.task.sourceArchive) && !runState?.isLoading && isRunnableApiCaseGenerateTaskRun(latestRun?.status),
+        taskId,
+      }
     }
 
     if (item.kind === 'analysis') {
-      const task = item.task
-      const taskId = getRequirementAnalysisTaskId(task)
+      const taskId = getRequirementAnalysisTaskId(item.task)
       const runState = latestAnalysisRunMap.get(taskId)
       const latestRun = runState?.latestRun
-      const runnableTask = !runState?.isLoading && isRunnableApiCaseGenerateTaskRun(latestRun?.status)
-      const sprintName = sprintNameMap.get(task.sprintId ?? '') ?? task.sprintId ?? '-'
-      const requirementName = requirementNameMap.get(task.requirementId ?? '') ?? task.requirementId ?? '-'
       return {
+        ...common,
         detailPath: `/ai-testing/requirement-analysis-tasks/${taskId}`,
         latestRun,
-        requirementName,
         runState,
-        runnableTask,
-        source: sourceTypeLabel(item),
-        sprintName,
+        runnableTask: !runState?.isLoading && isRunnableApiCaseGenerateTaskRun(latestRun?.status),
         taskId,
       }
     }
 
     if (item.kind === 'codeRisk') {
-      const task = item.task
-      const taskId = getCodeRiskTaskId(task)
+      const taskId = getCodeRiskTaskId(item.task)
       const runState = latestCodeRiskRunMap.get(taskId)
       const latestRun = runState?.latestRun
-      const runnableTask = !runState?.isLoading && isRunnableApiCaseGenerateTaskRun(latestRun?.status)
-      const detailPath = `/ai-testing/code-risk-tasks/${taskId}`
-      const sprintName = sprintNameMap.get(task.sprintId ?? '') ?? task.sprintId ?? '-'
-      const requirementName = requirementNameMap.get(task.requirementId ?? '') ?? task.requirementId ?? '-'
-
-      return { detailPath, latestRun, requirementName, runState, runnableTask, source: sourceTypeLabel(item), sprintName, taskId }
+      return {
+        ...common,
+        detailPath: `/ai-testing/code-risk-tasks/${taskId}`,
+        latestRun,
+        runState,
+        runnableTask: !runState?.isLoading && isRunnableApiCaseGenerateTaskRun(latestRun?.status),
+        taskId,
+      }
     }
 
-    const task = item.task
-    const taskId = getFunctionalTaskId(task)
+    const taskId = getFunctionalTaskId(item.task)
     const runState = latestFunctionalRunMap.get(taskId)
     const latestRun = runState?.latestRun
-    const runnableTask = !runState?.isLoading && isRunnableApiCaseGenerateTaskRun(latestRun?.status)
-    const detailPath = `/ai-testing/function-tasks/${taskId}`
-    const sprintName = sprintNameMap.get(task.sprintId ?? '') ?? task.sprintId ?? '-'
-    const requirementName = requirementNameMap.get(task.requirementId ?? '') ?? task.requirementId ?? '-'
-
-    return { detailPath, latestRun, requirementName, runState, runnableTask, source: sourceTypeLabel(item), sprintName, taskId }
+    return {
+      ...common,
+      detailPath: `/ai-testing/function-tasks/${taskId}`,
+      latestRun,
+      runState,
+      runnableTask: !runState?.isLoading && isRunnableApiCaseGenerateTaskRun(latestRun?.status),
+      taskId,
+    }
   }
 
   const columns: TableProps<UnifiedAiTask>['columns'] = [
     {
-      title: '任务名称',
+      title: '任务名称与属性',
       key: 'name',
-      width: '25%',
-      render: (_, item) => (
-        <div className="ai-task-list-name">
-          <Tooltip title={item.task.name || '未命名任务'}>
-            <Text ellipsis>{item.task.name || '未命名任务'}</Text>
-          </Tooltip>
-        </div>
-      ),
+      width: '28%',
+      render: (_, item) => {
+        const { source } = getUnifiedTaskContext(item)
+        return (
+          <div className="ai-task-list-name">
+            <Tooltip title={item.task.name || '未命名任务'}>
+              <Text ellipsis>{item.task.name || '未命名任务'}</Text>
+            </Tooltip>
+            <span className="ai-task-source-chip">{source}</span>
+          </div>
+        )
+      },
     },
     {
-      title: '状态',
+      title: '生成状态',
       key: 'status',
-      width: 104,
+      width: 112,
       render: (_, item) => (
         <div className="ai-task-list-tags">{renderLatestRunStatus(getUnifiedTaskContext(item).latestRun?.status)}</div>
       ),
     },
     {
-      title: '所属迭代/需求',
+      title: '所属迭代 / 需求',
       key: 'scope',
       ellipsis: true,
       render: (_, item) => {
         const { requirementName, sprintName } = getUnifiedTaskContext(item)
         return (
           <Tooltip title={`${sprintName} / ${requirementName}`}>
-            <Text className="ai-task-list-scope" ellipsis>
-              {sprintName} / {requirementName}
-            </Text>
+            <span className="ai-task-list-scope">
+              <span className="ai-task-sprint-chip">{sprintName}</span>
+              <Text ellipsis>{requirementName}</Text>
+            </span>
           </Tooltip>
         )
       },
     },
     {
-      title: '来源',
-      key: 'source',
-      width: 140,
-      render: (_, item) => <Text type="secondary">{getUnifiedTaskContext(item).source}</Text>,
+      title: '来源文档',
+      key: 'sourceDocument',
+      width: 190,
+      ellipsis: true,
+      render: (_, item) => {
+        const { requirement, requirementName } = getUnifiedTaskContext(item)
+        const documentName = requirement?.documentFilename || requirementName
+        return (
+          <Tooltip title={documentName}>
+            <span className="ai-task-source-document">
+              <FileTextOutlined />
+              <Text ellipsis>{documentName}</Text>
+            </span>
+          </Tooltip>
+        )
+      },
     },
     {
       title: '创建时间',
       key: 'createdAt',
-      width: 160,
-      render: (_, item) => <Text type="secondary">{formatTime(pickCreatedAt(item.task))}</Text>,
+      width: 165,
+      render: (_, item) => <Text className="ai-task-time-cell">{formatTime(pickCreatedAt(item.task))}</Text>,
     },
     {
-      title: '更新时间',
+      title: '最近更新',
       key: 'updatedAt',
-      width: 180,
-      render: (_, item) => <Text type="secondary">{formatTime(pickUpdatedAt(item.task) || pickCreatedAt(item.task))}</Text>,
+      width: 165,
+      render: (_, item) => (
+        <Text className="ai-task-time-cell">{formatTime(pickUpdatedAt(item.task) || pickCreatedAt(item.task))}</Text>
+      ),
     },
     {
       title: '操作',
@@ -1167,7 +1268,7 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
           >
             <Tooltip title={runState?.isLoading ? '运行记录加载中' : undefined}>
               <span>
-                <ProjectActionButton operation="run" action="execute"
+                <ProjectActionButton operation="run" iconOnly type="text" action="execute"
                   size="small"
                   autoInsertSpace={false}
                   className="ai-task-run-button"
@@ -1231,30 +1332,10 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
   const content = (
     <>
       <div className="workbench-tabs">
-        <section className="workbench-panel workbench-board-panel ai-testing-task-panel">
+        {/* 工具栏卡片：左侧迭代与搜索，右侧刷新与新建任务 */}
+        <section className="workbench-panel ai-testing-task-toolbar">
           <div className="panel-header ai-task-panel-header">
-            <div className="workbench-board-switcher">
-              <Segmented
-                value={activeKind}
-                options={kindSegmentOptions}
-                onChange={(value) => {
-                  setActiveKind(value as AiTaskKind)
-                  setPage(1)
-                }}
-              />
-            </div>
-            <Space wrap size={8} className="ai-task-panel-tools">
-              <ActionButton
-                type="text"
-                className="ai-task-refresh-button"
-                operation="refresh"
-                loading={activeTaskListFetching}
-                disabled={!activeProjectId}
-                aria-label="刷新当前任务列表"
-                onClick={() => void refreshActiveTaskList()}
-              >
-                刷新
-              </ActionButton>
+            <Space wrap size={10} className="ai-task-panel-filters">
               <div className="ai-task-sprint-filter">
                 <span className="ai-task-sprint-filter-label">迭代</span>
                 <Select
@@ -1269,18 +1350,48 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
                   }}
                 />
               </div>
+              <div className="ai-task-search-field">
+                <Input
+                  ref={keywordInputRef}
+                  className="ai-task-search-input"
+                  allowClear
+                  prefix={<SearchOutlined />}
+                  suffix={<span className="ai-task-search-hint">⌘K</span>}
+                  placeholder="搜索任务名称 / 所属需求"
+                  value={keywordInput}
+                  onChange={(event) => setKeywordInput(event.target.value)}
+                />
+              </div>
+            </Space>
+            <Space wrap size={10} className="ai-task-panel-tools">
+              <Tooltip title="刷新当前任务列表">
+                <ActionButton
+                  type="text"
+                  className="ai-task-refresh-button"
+                  operation="refresh"
+                  loading={activeTaskListFetching}
+                  disabled={!activeProjectId}
+                  aria-label="刷新当前任务列表"
+                  onClick={() => void refreshActiveTaskList()}
+                >
+                  刷新
+                </ActionButton>
+              </Tooltip>
               <ProjectActionButton action="write"
                 type="primary"
                 className="action-btn-create"
                 operation="create"
                 disabled={!activeProjectId}
-                onClick={openCreateKindModal}
+                onClick={openCreateTask}
               >
                 新建任务
               </ProjectActionButton>
             </Space>
           </div>
+        </section>
 
+        {/* 表格卡片：状态筛选条 + 表格 + 页脚 */}
+        <section className="workbench-panel workbench-board-panel ai-testing-task-panel">
           {projectsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(projectsQuery.error)} style={{ margin: '12px 18px 0' }} /> : null}
           {tasksQuery.error ? <Alert showIcon type="error" title={getErrorMessage(tasksQuery.error)} style={{ margin: '12px 18px 0' }} /> : null}
           {functionalTasksQuery.error ? (
@@ -1290,7 +1401,56 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
           {analysisTasksQuery.error ? <Alert showIcon type="error" title={getErrorMessage(analysisTasksQuery.error)} style={{ margin: '12px 18px 0' }} /> : null}
           {codeRiskTasksQuery.error ? <Alert showIcon type="error" title={getErrorMessage(codeRiskTasksQuery.error)} style={{ margin: '12px 18px 0' }} /> : null}
 
-          <div className="table-body-scroll ai-testing-card-scroll">
+          <div className="ai-task-status-strip tp-quickbar">
+            <div className="ai-task-status-strip-filters">
+              <span className="ai-task-status-strip-label">状态筛选:</span>
+              {AI_TASK_STATUS_FILTERS.map((filter) => (
+                <button
+                  key={filter.key}
+                  type="button"
+                  aria-pressed={statusFilter === filter.key}
+                  className={`ai-task-status-chip${statusFilter === filter.key ? ' active' : ''}`}
+                  onClick={() => {
+                    setStatusFilter(filter.key)
+                    setPage(1)
+                  }}
+                >
+                  {filter.dot ? <span className={`ai-task-status-chip-dot ${filter.dot}`} aria-hidden="true" /> : null}
+                  {filter.label} ({statusFilterCounts.get(filter.key) ?? 0})
+                </button>
+              ))}
+            </div>
+            <div className="ai-task-strip-actions">
+              <span className="tp-selection">
+                已勾选 <strong>{selectedTaskKeys.length}</strong> 项
+              </span>
+              {/* 代码风险分析任务没有删除接口，这个类型下不出现批量删除。 */}
+              {deletableSelection ? (
+                <Popconfirm
+                  title={`确认删除选中的 ${selectedTasks.length} 个任务？`}
+                  description="删除后无法恢复，请谨慎操作。"
+                  okText="确认删除"
+                  okButtonProps={{ danger: true }}
+                  disabled={selectedTasks.length === 0}
+                  onConfirm={() => batchDeleteTasksMutation.mutate(selectedTasks)}
+                >
+                  <ProjectActionButton
+                    action="write"
+                    size="small"
+                    danger
+                    className="action-btn-delete"
+                    operation="delete"
+                    disabled={selectedTasks.length === 0}
+                    loading={batchDeleteTasksMutation.isPending}
+                  >
+                    批量删除{selectedTasks.length > 0 ? `（${selectedTasks.length}）` : ''}
+                  </ProjectActionButton>
+                </Popconfirm>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="table-body-scroll ai-testing-card-scroll ai-task-table-scroll">
             {!activeProjectId ? (
               <div className="sprint-card-loading ai-testing-empty-shell">
                 <Empty description="请先选择项目" />
@@ -1301,27 +1461,53 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
               </div>
             ) : filteredTasks.length === 0 ? (
               <div className="ai-testing-empty-shell">
-                <Empty description="当前类型下暂无任务">
-                  <ActionButton type="primary" operation="create" onClick={openCreateKindModal}>
-                    创建第一条任务
-                  </ActionButton>
+                <Empty description={hasListFilters ? '没有符合筛选条件的任务' : '当前类型下暂无任务'}>
+                  {hasListFilters ? (
+                    <ActionButton
+                      operation="refresh"
+                      onClick={() => {
+                        setKeywordInput('')
+                        setKeyword('')
+                        setStatusFilter('all')
+                        setPage(1)
+                      }}
+                    >
+                      清空筛选条件
+                    </ActionButton>
+                  ) : (
+                    <ActionButton type="primary" operation="create" onClick={openCreateTask}>
+                      创建第一条任务
+                    </ActionButton>
+                  )}
                 </Empty>
               </div>
             ) : (
               <Table<UnifiedAiTask>
-                className="ai-task-list-table"
+                className="ai-task-list-table tp-list-table"
                 columns={columns}
                 dataSource={pagedTasks}
                 rowKey={getUnifiedTaskKey}
+                rowSelection={{
+                  preserveSelectedRowKeys: true,
+                  selectedRowKeys: selectedTaskKeys,
+                  onChange: (keys) => setSelectedTaskKeys(keys.map(String)),
+                  getCheckboxProps: (item) => ({
+                    disabled: false,
+                    'aria-label': `选择任务：${item.task.name || '未命名任务'}`,
+                  }),
+                }}
                 pagination={false}
                 onRow={(item) => ({
-                  onClick: () => navigate(getUnifiedTaskContext(item).detailPath),
+                  onClick: (event) => {
+                    if ((event.target as HTMLElement).closest('.ant-table-selection-column')) return
+                    navigate(getUnifiedTaskContext(item).detailPath)
+                  },
                 })}
               />
             )}
           </div>
 
-          <div className="table-footer">
+          <div className="table-footer ai-task-list-footer">
             <Text type="secondary">{footerRange(filteredTasks.length, page, pageSize)}</Text>
             <Pagination
               current={page}
@@ -1337,58 +1523,6 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
           </div>
         </section>
       </div>
-
-      <Modal
-        mask={{ closable: false }}
-        open={createKindModalOpen}
-        title={
-          <div className="ai-task-kind-modal-title">
-            <span>选择模板</span>
-            <Text type="secondary">选择一个生成入口后继续创建任务</Text>
-          </div>
-        }
-        className="ai-task-kind-modal"
-        width={760}
-        footer={
-          <Space size={10}>
-            <Button onClick={() => setCreateKindModalOpen(false)}>取消</Button>
-            <Button type="primary" disabled={!selectedCreateKindOption || selectedCreateKindOption.disabled} onClick={handleCreateKindConfirm}>
-              确认
-            </Button>
-          </Space>
-        }
-        onCancel={() => setCreateKindModalOpen(false)}
-        destroyOnHidden
-      >
-        <div className="ai-task-kind-list">
-          {createKindOptions.map((option) => {
-            const selected = option.key === selectedCreateKind
-
-            return (
-              <button
-                key={option.key}
-                type="button"
-                aria-pressed={selected}
-                className={`ai-task-kind-row${selected ? ' selected' : ''}`}
-                disabled={option.disabled}
-                onClick={() => handleCreateKindSelect(option.key)}
-              >
-                <span className="ai-task-kind-icon">{option.icon}</span>
-                <span className="ai-task-kind-copy">
-                  <span className="ai-task-kind-title">{option.title}</span>
-                  <span className="ai-task-kind-description">{option.description}</span>
-                </span>
-                {option.disabled ? <span className="ai-task-kind-badge">暂未开放</span> : null}
-                {!option.disabled && selected ? (
-                  <span className="ai-task-kind-check" aria-hidden="true">
-                    <CheckOutlined />
-                  </span>
-                ) : null}
-              </button>
-            )
-          })}
-        </div>
-      </Modal>
 
       <ApiCaseGenerateTaskDrawer
         title={editingTask ? '编辑 API 用例生成任务' : '新建 API 用例生成任务'}
@@ -1541,5 +1675,5 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
 
   if (embedded) return content
 
-  return <div className="workbench-page ai-testing-page">{content}</div>
+  return <div className="workbench-page ai-testing-page tp-list-surface ai-testing-task-page tp-surface">{content}</div>
 }

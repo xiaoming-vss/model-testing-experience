@@ -26,48 +26,27 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { SprintCodeOverviewSection } from '@/features/projects/components/SprintCodeOverviewSection'
 import { useSprintBoundaryRefresh } from '@/features/projects/hooks/useSprintBoundaryRefresh'
 import { api, listItems, type SprintDailyMetricsSnapshot, type SprintDailyMetricsTestStats, type TestReportGenerateRun } from '@/services/api'
-import { useThemeStore } from '@/shared/store/theme.store'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage, statusTag } from '@/utils/format'
 
 const { Text, Title } = Typography
 const { RangePicker } = DatePicker
 
-const sprintChartThemes = {
-  light: {
-    grid: '#edf1f7',
-    axis: '#7b8395',
-    tooltipBackground: '#ffffff',
-    tooltipBorder: '#e5e7eb',
-    tooltipText: '#262626',
-    total: '#1677ff',
-    positive: '#52c41a',
-    pending: '#faad14',
-    success: '#13c2c2',
-    negative: '#ff4d4f',
-    empty: '#e8edf5',
-  },
-  dark: {
-    grid: 'rgba(139, 148, 158, 0.22)',
-    axis: '#8b949e',
-    tooltipBackground: '#161b22',
-    tooltipBorder: '#30363d',
-    tooltipText: '#f0f6fc',
-    total: '#58a6ff',
-    positive: '#7ee787',
-    pending: '#e3b341',
-    success: '#39c5cf',
-    negative: '#ff7b72',
-    empty: '#30363d',
-  },
+const sprintChartTheme = {
+  grid: '#edf1f7',
+  axis: '#7b8395',
+  tooltipBackground: '#ffffff',
+  tooltipBorder: '#e5e7eb',
+  tooltipText: '#262626',
+  total: '#1677ff',
+  positive: '#52c41a',
+  pending: '#faad14',
+  success: '#13c2c2',
+  negative: '#ff4d4f',
+  empty: '#e8edf5',
 } as const
 
-type SprintChartTheme = (typeof sprintChartThemes)[keyof typeof sprintChartThemes]
-
-function useSprintChartTheme() {
-  const mode = useThemeStore((state) => state.mode)
-  return sprintChartThemes[mode]
-}
+type SprintChartTheme = typeof sprintChartTheme
 
 function SprintChartTooltip({ chartTheme }: { chartTheme: SprintChartTheme }) {
   return (
@@ -357,7 +336,7 @@ function SeverityLine({
 }
 
 function BugRiskOverviewCard({ bug }: { bug: NormalizedDailyMetrics['bug'] }) {
-  const chartTheme = useSprintChartTheme()
+  const chartTheme = sprintChartTheme
   const chartData = [
     { name: '已解决', value: bug.resolved, color: chartTheme.positive },
     { name: '已关闭', value: bug.closed, color: chartTheme.total },
@@ -426,7 +405,7 @@ function BugRiskOverviewCard({ bug }: { bug: NormalizedDailyMetrics['bug'] }) {
 type NormalizedDailyMetrics = ReturnType<typeof normalizeDailyMetrics>
 
 function TrendLineChart({ data }: { data: NormalizedDailyMetrics[] }) {
-  const chartTheme = useSprintChartTheme()
+  const chartTheme = sprintChartTheme
   const chartData = data.map((item) => ({
     date: dayjs(item.snapshotDate).isValid() ? dayjs(item.snapshotDate).format('MM-DD') : item.snapshotDate,
     total: item.totalCases,
@@ -457,7 +436,7 @@ function TrendLineChart({ data }: { data: NormalizedDailyMetrics[] }) {
 }
 
 function TrendBarChart({ data }: { data: NormalizedDailyMetrics[] }) {
-  const chartTheme = useSprintChartTheme()
+  const chartTheme = sprintChartTheme
   const chartData = data.map((item) => ({
     date: dayjs(item.snapshotDate).isValid() ? dayjs(item.snapshotDate).format('MM-DD') : item.snapshotDate,
     total: item.bug.total,

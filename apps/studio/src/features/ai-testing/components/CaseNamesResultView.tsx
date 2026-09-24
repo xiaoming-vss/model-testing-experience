@@ -1,11 +1,11 @@
 import '@/features/ai-testing/styles/functional-import-confirm.css'
 import '@/features/ai-testing/styles/index.css'
+import '@/features/ai-testing/styles/case-name-tree.css'
 import type { CaseNameTreeNode } from '@/features/ai-testing/utils/caseNameTree'
 import { CASE_NAME_TREE_CONNECTOR_WIDTH, CASE_NAME_TREE_NODE_HEIGHT, buildCaseNameTree, countCaseNameTree, deleteCaseNameTreeNode, getModelHeight, getModelTargetYs, getPointTargetYs, getTestModelHeight, getTestModelTargetYs, getTreeHeight, renameCaseNameTreeNode, serializeCaseNameTree, updateCategoryCaseNamesContent } from '@/features/ai-testing/utils/caseNameTree'
 import { isJsonText } from '@/features/ai-testing/utils/functionalOutput'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
-import { useThemeStore } from '@/shared/store/theme.store'
 import { message } from '@/shared/utils/feedback'
 import { PictureOutlined } from '@ant-design/icons'
 import { Input, Popconfirm, Tabs, Tag } from 'antd'
@@ -18,12 +18,6 @@ const CURVE_STROKE_META = {
   green: { color: 'rgba(124, 195, 163, 0.68)', width: 2 },
   blue: { color: 'rgba(70, 166, 210, 0.58)', width: 2 },
   slate: { color: 'rgba(100, 116, 139, 0.46)', width: 1.8 },
-} as const
-
-const CURVE_STROKE_META_DARK = {
-  green: { color: 'rgba(124, 195, 163, 0.72)', width: 2 },
-  blue: { color: 'rgba(96, 165, 250, 0.68)', width: 2 },
-  slate: { color: 'rgba(148, 163, 184, 0.58)', width: 1.8 },
 } as const
 
 function CaseNameTreeCurves({ height, targetYs, layoutKey, tone = 'green' }: { height: number; targetYs: number[]; layoutKey: string; tone?: 'green' | 'blue' | 'slate' }) {
@@ -64,9 +58,8 @@ function CaseNameTreeCurves({ height, targetYs, layoutKey, tone = 'green' }: { h
   const safeHeight = Math.max(layout?.height ?? height, CASE_NAME_TREE_NODE_HEIGHT)
   const sourceY = safeHeight / 2
   const width = CASE_NAME_TREE_CONNECTOR_WIDTH
-  const themeMode = useThemeStore((state) => state.mode)
   // 描边同时写成 presentation attributes，保证 html-to-image 导出图片时曲线样式不丢失
-  const stroke = (themeMode === 'dark' ? CURVE_STROKE_META_DARK : CURVE_STROKE_META)[tone]
+  const stroke = CURVE_STROKE_META[tone]
 
   return (
     <svg
@@ -201,7 +194,6 @@ export function CaseNameTreeView({
 }) {
   const tree = buildCaseNameTree(content, rootTitle)
   const counts = countCaseNameTree(tree)
-  const themeMode = useThemeStore((state) => state.mode)
   const canvasRef = useRef<HTMLDivElement | null>(null)
   const [exportingImage, setExportingImage] = useState(false)
 
@@ -211,18 +203,11 @@ export function CaseNameTreeView({
     setExportingImage(true)
     try {
       // 页面上的树卡片带有边框、圆角和渐变背景，导出时在克隆节点上补齐，保证图片与页面显示一致
-      const cardVisualStyle =
-        themeMode === 'dark'
-          ? {
-            background: 'radial-gradient(circle at 24px 24px, rgba(124, 195, 163, 0.08), transparent 28px), #1b202b',
-            border: '1px solid rgba(148, 163, 184, 0.18)',
-            borderRadius: '14px',
-          }
-          : {
-            background: 'radial-gradient(circle at 24px 24px, rgba(124, 195, 163, 0.08), transparent 26px), #ffffff',
-            border: '1px solid rgba(148, 163, 184, 0.14)',
-            borderRadius: '14px',
-          }
+      const cardVisualStyle = {
+        background: 'radial-gradient(circle at 24px 24px, rgba(124, 195, 163, 0.08), transparent 26px), #ffffff',
+        border: '1px solid rgba(148, 163, 184, 0.14)',
+        borderRadius: '14px',
+      }
       const blob = await toBlob(canvas, {
         pixelRatio: 2,
         skipFonts: true,

@@ -7,12 +7,10 @@ import '../styles/auth.css'
 
 afterEach(() => {
   cleanup()
-  delete document.documentElement.dataset.theme
 })
 
 describe('登录页', () => {
-  it('在暗色模式使用深色卡片和高对比度文字，并显示 2026 版权年份', () => {
-    document.documentElement.dataset.theme = 'dark'
+  it('使用高对比度标题文字，并显示 2026 版权年份', () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     })
@@ -29,8 +27,7 @@ describe('登录页', () => {
     const title = screen.getByRole('heading', { name: '欢迎回来' })
 
     expect(shell).toBeInTheDocument()
-    expect(getComputedStyle(shell!).backgroundImage).not.toContain('rgba(255, 255, 255')
-    expect(getComputedStyle(title).color).toBe('rgb(240, 246, 252)')
+    expect(getComputedStyle(title).color).toBe('rgb(24, 32, 45)')
     expect(screen.getByText('© 2026 MTX. 版权所有')).toBeInTheDocument()
   })
 })

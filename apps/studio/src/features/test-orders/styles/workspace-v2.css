@@ -122,14 +122,6 @@
   font-weight: 500;
 }
 
-.test-order-workspace-page .test-order-side-refresh.ant-btn {
-  color: var(--srf-text-muted);
-}
-
-.test-order-workspace-page .test-order-side-refresh.ant-btn:hover {
-  color: var(--srf-accent);
-}
-
 /* 执行进度：设计稿放在清单顶部。 */
 .test-order-workspace-page .test-order-side-progress {
   display: flex;

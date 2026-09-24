@@ -1,3 +1,5 @@
+import '@/shared/styles/list-table.css'
+import '@/shared/styles/surface-tokens.css'
 import { footerRange } from '@/shared/utils/pagination'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { AppstoreOutlined } from '@ant-design/icons'
@@ -376,7 +378,7 @@ export const UiTestSuiteSection = forwardRef<
             </div>
           ) : (
             <Table<UiTestSuite>
-              className="functional-suite-list-table ui-suite-list-table"
+              className="functional-suite-list-table tp-list-table ui-suite-list-table"
               columns={columns}
               dataSource={pagedSuites}
               rowKey={(suite) => getSuiteRowContext(suite).suiteId || suite.name}

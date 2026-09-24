@@ -86,3 +86,19 @@ export function isGenerateTaskRunImportable(run?: {
     && run.reviewStatus === 'approved'
     && run.importStatus === 'pending'
 }
+
+/**
+ * 运行记录的档位统计。传入按时间倒序排列的记录，第一条即最新。
+ * 抽在这里而不是详情页壳组件里：壳文件只应导出组件，否则破坏 react-refresh。
+ */
+/** 运行记录的档位统计（已按时间倒序排列的记录，第一条即最新）。 */
+export function summarizeRunStatuses(records: Array<{ status?: string }>) {
+  const countOf = (statuses: string[]) =>
+    records.filter((record) => statuses.includes(String(record.status ?? '').toLowerCase())).length
+  return {
+    latestStatus: records[0]?.status,
+    waiting: countOf(['waiting_review']),
+    success: countOf(['success']),
+    failed: countOf(['failed', 'error']),
+  }
+}

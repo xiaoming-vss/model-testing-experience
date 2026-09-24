@@ -265,3 +265,80 @@ it('运行中的记录没有可用的删除入口', async () => {
   await openRunActionsMenu(user)
   expect(await screen.findByRole('menuitem', { name: '删除运行记录' })).toHaveAttribute('aria-disabled', 'true')
 })
+
+/** 顶栏与左侧导航的字段来自任务本身，与运行记录无关，这里单独起一份最小 mock。 */
+function setupTaskOnly(overrides: Record<string, unknown> = {}) {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const path = new URL(String(input), 'http://localhost').pathname
+    if (path === '/v1/requirement-analysis-tasks/task') {
+      return response({ taskId: 'task', projectId: 'project-1', name: '需求分析', sourceType: 'docx', instruction: '原指令', ...overrides })
+    }
+    if (path.endsWith('/runs')) return response({ items: [], total: 0 })
+    return response({ items: [], total: 0 })
+  })
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+  seedOwnerProject(client)
+  clients.push(client)
+  render(<ThemeProvider><QueryClientProvider client={client}>
+    <MemoryRouter initialEntries={['/requirements/task']}><Routes>
+      <Route path="/requirements/:taskId" element={<RequirementAnalysisTaskDetailPage />} />
+    </Routes></MemoryRouter>
+  </QueryClientProvider></ThemeProvider>)
+}
+
+it('补充指令直接在详情页内联编辑并保存', async () => {
+  let patchBody: unknown
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const path = new URL(String(input), 'http://localhost').pathname
+    if (path === '/v1/requirement-analysis-tasks/task' && init?.method === 'PATCH') {
+      patchBody = JSON.parse(String(init.body))
+      return response({ taskId: 'task', projectId: 'project-1', name: '需求分析', sourceType: 'docx', instruction: '重点分析异常场景' })
+    }
+    if (path === '/v1/requirement-analysis-tasks/task') {
+      return response({ taskId: 'task', projectId: 'project-1', name: '需求分析', sourceType: 'docx', instruction: '原指令' })
+    }
+    if (path.endsWith('/runs')) return response({ items: [], total: 0 })
+    return response({ items: [], total: 0 })
+  })
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+  seedOwnerProject(client)
+  clients.push(client)
+  render(<ThemeProvider><QueryClientProvider client={client}>
+    <MemoryRouter initialEntries={['/requirements/task']}><Routes>
+      <Route path="/requirements/:taskId" element={<RequirementAnalysisTaskDetailPage />} />
+    </Routes></MemoryRouter>
+  </QueryClientProvider></ThemeProvider>)
+
+  const user = userEvent.setup()
+  // 导航条目的可访问名是「标题 + 摘要」，所以用正则匹配。
+  await user.click(await screen.findByRole('button', { name: /补充指令/ }))
+
+  const editor = await screen.findByPlaceholderText('例如：重点分析异常场景和歧义点')
+  expect(editor).toHaveValue('原指令')
+
+  // 没改动前不允许提交，避免把原值当成一次修改写回去。
+  const save = screen.getByRole('button', { name: '保存指令' })
+  expect(save).toBeDisabled()
+
+  await user.clear(editor)
+  await user.type(editor, '重点分析异常场景')
+  await waitFor(() => expect(screen.getByRole('button', { name: '保存指令' })).toBeEnabled())
+  await user.click(screen.getByRole('button', { name: '保存指令' }))
+
+  await waitFor(() => expect(patchBody).toMatchObject({ name: '需求分析', instruction: '重点分析异常场景' }))
+})
+
+it('顶栏按设计稿展示任务名与迭代，左侧导航带运行条数徽标', async () => {
+  setupTaskOnly({ sprintId: 'sprint-1', requirementId: 'requirement-1' })
+  await screen.findByText('需求分析')
+
+  const toolbar = document.querySelector('.ai-task-detail-toolbar')
+  expect(toolbar).not.toBeNull()
+  expect(within(toolbar as HTMLElement).getByText('任务名称')).toBeInTheDocument()
+  expect(within(toolbar as HTMLElement).getByText('迭代')).toBeInTheDocument()
+  expect(within(toolbar as HTMLElement).getByText('来源类型')).toBeInTheDocument()
+  expect(within(toolbar as HTMLElement).getByText('docx')).toBeInTheDocument()
+
+  const runsNav = screen.getByRole('button', { name: /运行记录/ })
+  expect(within(runsNav).getByText('0')).toBeInTheDocument()
+})

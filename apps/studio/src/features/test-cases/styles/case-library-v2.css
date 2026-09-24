@@ -6,9 +6,9 @@
  *    测试按这些钩子取节点。
  * 2. 不动被 listSurfaceConsistency.test.ts 锁定的列表指纹——表头高、四角 8px 圆角、行高、内距一律不碰，
  *    所以这里没有针对 .functional-suite-list-table 的 th / td 盒尺寸规则。
- * 3. 深浅两套。深色下 dark-polish.css 用 !important 接管了外壳表面（.workbench-panel、.api-panel-header、
- *    .api-case-sidebar、.table-footer 等），新元素（色块、胶囊、编号）它不认识，所以那部分两种主题各写一份；
- *    被它接管的容器不硬顶，沿用它的深色表面，只补圆角与间距。
+ * 3. 外壳表面（.workbench-panel、.api-panel-header、.api-case-sidebar、.table-footer 等）由
+ *    testing/styles/index.css 用 !important 接管，这里不硬顶它的表面，只补圆角与间距；
+ *    要压过它时按下面的注释把前缀与权重写足。
  *
  * token（`--srf-*`）与九色盘（`.tone-*`）在 shared/styles/surface-tokens.css，与测试单页共用；
  * 页面根节点的 `tp-surface` 类负责挂上它们，缺了这里所有 var() 都会解析成空值。
@@ -16,28 +16,7 @@
 
 /* ===== 外壳：工具栏与卡片 ===== */
 
-.case-library-page .case-library-toolbar {
-  min-height: 48px;
-  padding: 0;
-  border: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-/* 同一条玻璃规则：workbench.css 深色下那条与这里的旧写法同权重（0,5,0 对 0,6,0 里靠 import 顺序决胜），
-   所以选择器要写到和 api-test / ui-suite 一样的长度——带上 `.api-automation-content > .workbench-panel`
-   把权重抬到 0,8,0，深色下才不会多出一条玻璃工具条。 */
-.app-shell.app-shell-macos .testing-page .case-library-page .api-automation-content > .workbench-panel .panel-header.api-panel-header.case-library-toolbar {
-  min-height: 48px;
-  padding: 0;
-  border: 0 !important;
-  border-bottom: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-
+/* 筛选栏外观与尺寸由共享 tp-list-toolbar 统一。 */
 .case-library-page .case-library-filters {
   display: flex;
   flex-wrap: wrap;
@@ -70,14 +49,6 @@
   flex: 0 0 auto;
 }
 
-.case-library-page .case-library-refresh.ant-btn {
-  color: var(--srf-text-secondary);
-}
-
-.case-library-page .case-library-refresh.ant-btn:hover {
-  color: var(--srf-accent);
-}
-
 /* ===== 两栏布局 ===== */
 
 .case-library-page .case-library-layout {
@@ -101,11 +72,6 @@
 .case-library-page .case-library-main {
   border-left: 1px solid var(--srf-card-border);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-}
-
-:root[data-theme='dark'] .case-library-page .case-library-tree,
-:root[data-theme='dark'] .case-library-page .case-library-main {
-  box-shadow: none;
 }
 
 /* ===== 左栏：测试集导航 ===== */
@@ -237,36 +203,7 @@
 
 .case-library-page .case-library-sidebar-foot .case-library-foot-create.ant-btn {
   padding-inline: 0;
-  color: var(--srf-text-secondary);
   font-size: 12px;
-}
-
-.case-library-page .case-library-sidebar-foot .case-library-foot-create.ant-btn:hover {
-  color: var(--srf-accent);
-}
-
-/* 深色下 dark-polish.css 用 !important 接管了 .api-case-sidebar 与 .api-case-nav-item 的表面
-   （基础态与 hover 都在它的 :is() 列表里），这里用同样的 !important 加更高的选择器权重，
-   把「卡片表面 + 选中态高亮」这两个设计稿要点要回来。 */
-:root[data-theme='dark'] .app-shell.app-shell-macos .case-library-page .case-library-tree,
-:root[data-theme='dark'] .app-shell.app-shell-macos .case-library-page .case-library-main {
-  border-color: var(--srf-card-border) !important;
-  background: var(--srf-card) !important;
-}
-
-:root[data-theme='dark'] .app-shell.app-shell-macos .case-library-page .case-library-nav-item {
-  border-color: transparent !important;
-  background: transparent !important;
-}
-
-:root[data-theme='dark'] .app-shell.app-shell-macos .case-library-page .case-library-nav-item:hover {
-  border-color: transparent !important;
-  background: var(--srf-hover) !important;
-}
-
-:root[data-theme='dark'] .app-shell.app-shell-macos .case-library-page .case-library-nav-item.active {
-  border-color: transparent !important;
-  background: var(--srf-accent-soft) !important;
 }
 
 /* ===== 右栏：快速过滤条 ===== */
@@ -310,13 +247,6 @@
   line-height: 16px;
 }
 
-/* 深色下 testing/styles 把名称列（td:nth-child(2)）里的 span 一律刷成浅色，
-   编号色块要保住自己的弱化色，不然和标题一样亮。
-   注意 .case-library-page 与 .functional-test-page 是同一个元素上的两个类，这里必须连写。 */
-:root[data-theme='dark'] .case-library-page.functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(2) .case-library-id-chip {
-  color: var(--srf-text-muted) !important;
-}
-
 .case-library-page .case-library-muted-cell {
   color: var(--srf-text-secondary);
 }
@@ -327,21 +257,9 @@
   font-size: 11px;
 }
 
-.case-library-page .case-library-row-actions .ant-btn {
-  color: var(--srf-text-muted);
-}
-
-.case-library-page .case-library-row-actions .action-btn-delete.ant-btn:hover {
-  color: var(--srf-danger);
-}
-
 .case-library-page .case-library-footer {
   gap: 12px;
   padding: 0 16px;
-}
-
-:root[data-theme='dark'] .app-shell.app-shell-macos .case-library-page .case-library-footer .ant-typography {
-  color: var(--srf-text-secondary);
 }
 
 /* ===== 优先级色块 ===== */

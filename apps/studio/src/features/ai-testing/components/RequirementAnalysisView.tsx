@@ -1,5 +1,7 @@
 import '@/features/ai-testing/styles/functional-import-confirm.css'
 import '@/features/ai-testing/styles/index.css'
+import '@/features/ai-testing/styles/requirement-analysis.css'
+import '@/features/ai-testing/styles/run-result.css'
 import type { RequirementAnalysisSection } from '@/features/ai-testing/utils/functionalOutput'
 import { formatRoleConcerns, formatTextList, isJsonText, parseRequirementAnalysisContent, toDisplayText, toRecord, toRecordArray } from '@/features/ai-testing/utils/functionalOutput'
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'

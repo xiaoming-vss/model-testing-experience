@@ -1,0 +1,325 @@
+/* 候选用例展示：分组筛选、用例卡片与分页。 */
+.ai-generated-cases-review {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 286px minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--ai-border);
+  border-radius: 12px;
+  background: var(--ai-surface);
+}
+
+.ai-generated-cases-review-sidebar {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--ai-fold-body);
+  border-right: 1px solid var(--ai-border);
+}
+
+.ai-generated-cases-review-sidebar-head {
+  padding: 16px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  border-bottom: 1px solid var(--ai-border);
+}
+
+.ai-generated-cases-review-sidebar-head > strong {
+  color: var(--ai-text);
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.ai-generated-cases-review-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.ai-generated-cases-review-filters button {
+  min-width: 0;
+  max-width: 100%;
+  padding: 5px 4px;
+  color: var(--ai-text-secondary);
+  background: transparent;
+  border: 1px solid var(--ai-border);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.ai-generated-cases-review-filters button span {
+  color: var(--ai-text-muted);
+}
+
+.ai-generated-cases-review-filters button.active {
+  color: var(--ai-active-text);
+  background: var(--ai-accent-soft);
+  border-color: var(--ai-card-hover-border);
+  font-weight: 700;
+}
+
+.ai-generated-cases-review-filters button.active span {
+  color: inherit;
+}
+
+.ai-generated-cases-review-groups {
+  min-height: 0;
+  padding: 10px 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: auto;
+}
+
+.ai-generated-cases-review-groups > button {
+  width: 100%;
+  padding: 9px 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--ai-text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ai-generated-cases-review-groups > button:hover {
+  color: var(--ai-text);
+  background: var(--ai-panel-hover);
+}
+
+.ai-generated-cases-review-groups > button.active {
+  color: var(--ai-active-text);
+  background: var(--ai-accent-soft);
+  border-color: var(--ai-card-hover-border);
+  font-weight: 700;
+}
+
+.ai-generated-cases-review-group-name {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-generated-cases-review-group-name .anticon {
+  flex: 0 0 auto;
+  font-size: 9px;
+}
+
+.ai-generated-cases-review-count {
+  min-width: 22px;
+  padding: 1px 6px;
+  color: var(--ai-text-muted);
+  background: var(--ai-panel-soft);
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.ai-generated-cases-review-groups > button.active .ai-generated-cases-review-count {
+  color: var(--ai-active-text);
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.ai-generated-cases-review-detail {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-generated-cases-review-detail-head {
+  flex: 0 0 auto;
+  min-height: 64px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--ai-border);
+}
+
+.ai-generated-cases-review-detail-head > div:first-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ai-generated-cases-review-detail-head strong {
+  overflow: hidden;
+  color: var(--ai-text);
+  font-size: 14px;
+  line-height: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-generated-cases-review-detail-head span {
+  color: var(--ai-text-muted);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.ai-generated-cases-review-pager {
+  flex: 0 0 auto;
+  display: inline-flex;
+  gap: 8px;
+}
+
+.ai-generated-cases-review-card-list {
+  min-height: 0;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.ai-generated-cases-review-card {
+  flex: 0 0 auto;
+  padding: 12px;
+  background: var(--ai-card);
+  border: 1px solid var(--ai-card-border);
+  border-radius: 11px;
+  box-shadow: var(--ai-card-shadow);
+}
+
+.ai-generated-cases-review-card > header {
+  margin-bottom: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-generated-cases-review-card > header > strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ai-text);
+  font-size: 13px;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-generated-cases-review-card > header .ant-tag {
+  flex: 0 0 auto;
+  margin-inline-end: 0;
+}
+
+.ai-generated-cases-review-index {
+  width: 32px;
+  height: 28px;
+  flex: 0 0 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ai-blue);
+  background: var(--ai-accent-soft);
+  border-radius: 7px;
+  font-size: 13px;
+  line-height: 28px;
+  font-weight: 800;
+}
+
+.ai-generated-cases-review-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.ai-generated-cases-review-fields > section {
+  min-width: 0;
+  padding: 10px 12px;
+  color: var(--ai-text-secondary);
+  background: var(--ai-panel-soft);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 9px;
+}
+
+.ai-generated-cases-review-fields > section.expected {
+  background: rgba(41, 190, 163, 0.08);
+  border-color: rgba(41, 190, 163, 0.14);
+}
+
+.ai-generated-cases-review-field-title {
+  margin-bottom: 7px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ai-text);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ai-generated-cases-review-field-title .anticon {
+  color: var(--ai-blue);
+}
+
+.ai-generated-cases-review-fields > section.expected .ai-generated-cases-review-field-title .anticon {
+  color: #2fba9f;
+}
+
+.ai-generated-cases-review-fields :is(p, ol) {
+  margin: 0;
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ai-generated-cases-review-fields ol {
+  padding-left: 20px;
+}
+
+.ai-generated-cases-review-fields li + li {
+  margin-top: 3px;
+}
+
+@media (max-width: 1080px) {
+  .ai-generated-cases-review {
+    grid-template-columns: 230px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+
+  .ai-generated-cases-review {
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+  }
+
+  .ai-generated-cases-review-sidebar {
+    flex: 0 0 auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--ai-border);
+  }
+
+  .ai-generated-cases-review-groups {
+    max-height: 180px;
+  }
+
+  .ai-generated-cases-review-detail {
+    min-height: 420px;
+  }
+}

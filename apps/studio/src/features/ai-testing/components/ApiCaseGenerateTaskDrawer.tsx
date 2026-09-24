@@ -1,3 +1,5 @@
+import '@/features/ai-testing/styles/index.css'
+import '@/features/ai-testing/styles/task-form.css'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { UploadOutlined } from '@ant-design/icons'
 import { Alert, Drawer, Form, Input, Segmented, Select, Upload } from 'antd'

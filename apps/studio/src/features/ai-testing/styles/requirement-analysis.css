@@ -1,0 +1,290 @@
+/* 需求分析展示：章节、规则、流程与场景卡片。 */
+.ai-requirement-analysis-tabs.review {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-requirement-analysis-tabs.review > .ant-tabs-nav {
+  margin-bottom: 8px;
+}
+
+.ai-requirement-analysis-tabs.review > .ant-tabs-content-holder {
+  min-height: clamp(560px, 64vh, 720px);
+  max-height: clamp(560px, 64vh, 720px);
+  overflow: hidden;
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ai-requirement-analysis-tabs.review > .ant-tabs-content-holder > .ant-tabs-content,
+.ai-requirement-analysis-tabs.review > .ant-tabs-content-holder > .ant-tabs-content > .ant-tabs-tabpane {
+  height: 100%;
+  min-height: 0;
+}
+
+.ai-requirement-analysis-tabs.review > .ant-tabs-content-holder > .ant-tabs-content {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ai-requirement-analysis-tabs.review > .ant-tabs-content-holder > .ant-tabs-content > .ant-tabs-tabpane {
+  overflow: hidden;
+}
+
+.ai-requirement-analysis-tabs.review .ai-requirement-analysis-view {
+  padding-right: 4px;
+}
+
+.ai-requirement-analysis-review-diagram {
+  height: clamp(560px, 64vh, 720px);
+  min-height: clamp(560px, 64vh, 720px);
+  overflow: auto;
+  min-width: 0;
+  padding-right: 4px;
+}
+
+.ai-requirement-analysis-tabs {
+  margin-top: 2px;
+}
+
+.ai-requirement-analysis-tabs > .ant-tabs-nav {
+  margin-bottom: 10px;
+}
+
+.ai-requirement-analysis-tabs > .ant-tabs-nav::before {
+  border-bottom-color: rgba(148, 163, 184, 0.1);
+}
+
+.ai-requirement-analysis-tabs > .ant-tabs-nav .ant-tabs-tab {
+  padding: 3px 0;
+}
+
+.ai-requirement-analysis-tabs > .ant-tabs-nav .ant-tabs-tab-btn {
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+}
+
+.ai-requirement-analysis-tabs > .ant-tabs-nav .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--ai-active-text) !important;
+}
+
+.ai-requirement-analysis-view {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 4px 0 6px;
+}
+
+.ai-requirement-analysis-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ai-requirement-analysis-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  color: inherit;
+  background: transparent;
+  gap: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s ease;
+}
+
+.ai-requirement-analysis-section-head:hover {
+  background: rgba(124, 195, 163, 0.08);
+}
+
+.ai-requirement-analysis-section-head:focus-visible {
+  outline: 2px solid rgba(124, 195, 163, 0.55);
+  outline-offset: 2px;
+}
+
+.ai-requirement-analysis-section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ai-text);
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 700;
+}
+
+.ai-requirement-analysis-section-head .ant-tag,
+.ai-requirement-analysis-scene-head .ant-tag {
+  margin-inline-end: 0;
+}
+
+.ai-requirement-analysis-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.ai-requirement-analysis-grid.two-col {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ai-requirement-analysis-card,
+.ai-requirement-analysis-row-card,
+.ai-requirement-analysis-flow-card,
+.ai-requirement-analysis-scene-group {
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 255, 0.98)),
+    #fff;
+  box-shadow:
+    0 10px 26px rgba(36, 49, 78, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.74);
+}
+
+.ai-requirement-analysis-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.ai-requirement-analysis-card.risk {
+  border-color: rgba(249, 115, 22, 0.2);
+}
+
+.ai-requirement-analysis-card.nested {
+  background:
+    linear-gradient(180deg, rgba(246, 250, 255, 0.98), rgba(242, 247, 253, 0.98)),
+    #f8fbff;
+}
+
+.ai-requirement-analysis-card-title {
+  color: var(--ai-text);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 700;
+}
+
+.ai-requirement-analysis-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ai-requirement-analysis-field span {
+  color: var(--ai-text-muted);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+}
+
+.ai-requirement-analysis-field p,
+.ai-requirement-analysis-row-body p,
+.ai-requirement-analysis-flow-body p {
+  margin: 0;
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ai-requirement-analysis-field.accent {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(124, 195, 163, 0.08);
+}
+
+.ai-requirement-analysis-field.accent.danger {
+  background: rgba(249, 115, 22, 0.08);
+}
+
+.ai-requirement-analysis-list,
+.ai-requirement-analysis-flow-list,
+.ai-requirement-analysis-scene-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ai-requirement-analysis-row-card,
+.ai-requirement-analysis-flow-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+}
+
+.ai-requirement-analysis-row-index,
+.ai-requirement-analysis-flow-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: var(--ai-active-text);
+  background: rgba(124, 195, 163, 0.12);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+}
+
+.ai-requirement-analysis-flow-step {
+  background: rgba(96, 165, 250, 0.12);
+}
+
+.ai-requirement-analysis-row-body,
+.ai-requirement-analysis-flow-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ai-requirement-analysis-scene-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 16px;
+}
+
+.ai-requirement-analysis-scene-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+@media (max-height: 820px) {
+
+  .ai-requirement-analysis-tabs.review > .ant-tabs-content-holder {
+    min-height: clamp(420px, 54vh, 560px);
+    max-height: clamp(420px, 54vh, 560px);
+  }
+
+  .ai-requirement-analysis-review-diagram {
+    height: clamp(420px, 54vh, 560px);
+    min-height: clamp(420px, 54vh, 560px);
+  }
+}
+
+@media (max-width: 960px) {
+
+  .ai-requirement-analysis-grid.two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-requirement-analysis-row-card,
+.ai-requirement-analysis-flow-card {
+    grid-template-columns: 1fr;
+  }
+}

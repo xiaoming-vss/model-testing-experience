@@ -1,3 +1,5 @@
+import '@/features/ai-testing/styles/index.css'
+import '@/features/ai-testing/styles/task-form.css'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { LinkOutlined } from '@ant-design/icons'
 import { Alert, Button, Empty, Modal, Radio, Space, Spin, Switch, Tag, Typography, theme } from 'antd'

@@ -1,0 +1,1245 @@
+/* 任务详情、运行记录与代码风险报告的基础布局。保留响应式条件，后续表面规则继续覆盖外观。 */
+.ai-task-detail-card .ant-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ai-task-detail-fold-trigger {
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  color: var(--ai-text);
+  background: transparent;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ai-task-detail-fold-trigger:hover {
+  color: var(--ai-active-text);
+}
+
+.ai-task-detail-fold-trigger .anticon {
+  font-size: 12px;
+}
+
+.ai-task-code-block {
+  margin: 0;
+  padding: 14px 16px;
+  min-height: 100%;
+  color: var(--ai-code-text);
+  background: var(--ai-code-surface);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 8px;
+  font-family: "Consolas", "Cascadia Mono", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ai-task-detail-layout {
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-task-detail-card.ant-card {
+  background: var(--ai-card);
+  border: 1px solid var(--ai-border);
+  border-radius: 18px;
+}
+
+.ai-task-detail-card .ant-card-head {
+  border-bottom-color: var(--ai-border);
+}
+
+.ai-task-detail-card .ant-card-head-title {
+  color: var(--ai-text);
+}
+
+.ai-task-detail-inline-actions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.ai-task-run-history-toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ai-task-run-history-auto-refresh {
+  color: var(--ai-text-muted);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.ai-task-detail-card .ant-card-body {
+  padding: 18px;
+}
+
+.ai-task-detail-fold-card.collapsed .ant-card-body {
+  display: none;
+}
+
+.ai-task-detail-fold-card.expanded .ant-card-body {
+  padding-top: 14px;
+}
+
+.ai-task-detail-fold-card.ant-card {
+  flex: 0 0 auto;
+}
+
+.ai-task-detail-fold-card-history.expanded.ant-card {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-task-detail-fold-card-history.expanded.ant-card > .ant-card-head {
+  flex: 0 0 auto;
+}
+
+.ai-task-detail-fold-card-history.expanded.ant-card > .ant-card-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.ai-task-detail-content-scroll {
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(124, 195, 163, 0.42) rgba(255, 255, 255, 0.04);
+}
+
+.ai-task-detail-fold-card-instruction .ai-task-detail-content-scroll {
+  height: 120px;
+}
+
+.ai-task-detail-fold-card-history .ai-task-detail-content-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+}
+
+.ai-task-detail-content-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.ai-task-detail-content-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+}
+
+.ai-task-detail-content-scroll::-webkit-scrollbar-thumb {
+  background: rgba(124, 195, 163, 0.3);
+  border-radius: 999px;
+}
+
+.ai-task-detail-content-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 195, 163, 0.46);
+}
+
+.ai-task-run-history-placeholder {
+  min-height: 100%;
+  padding: 18px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--ai-text-secondary);
+}
+
+.ai-task-run-history-placeholder .ant-empty {
+  margin-block: 0;
+}
+
+.ai-task-run-history-placeholder .ant-empty-description {
+  color: var(--ai-text);
+}
+
+.ai-task-run-history-hint {
+  max-width: 520px;
+  color: var(--ai-text-secondary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.ai-task-run-history-placeholder.compact {
+  min-height: 180px;
+}
+
+/* ===== 需求分析任务详情: 窄侧栏导航 + 右侧大区 ===== */
+.ai-task-detail-split {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+
+.ai-task-detail-nav-panel {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ai-task-detail-nav-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.ai-task-detail-nav-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.ai-task-detail-nav-label {
+  text-transform: uppercase;
+}
+
+.ai-task-detail-nav-item {
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.ai-task-detail-nav-item:hover {
+  border-color: var(--ai-card-hover-border);
+}
+
+.ai-task-detail-nav-item.active {
+  border-color: var(--ai-card-hover-border);
+}
+
+.ai-task-detail-nav-item-sub {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ai-task-detail-main-panel {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ai-task-detail-main-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+
+.ai-task-detail-main-head-extra {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ai-task-run-history-field {
+  font-size: 12px;
+  color: var(--ai-text-secondary);
+  white-space: nowrap;
+}
+
+.ai-task-detail-main-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-task-detail-main-body > .ai-task-run-metrics {
+  flex: 0 0 auto;
+  display: flex;
+}
+
+.ai-task-run-metric {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-task-run-metric-k {
+  white-space: nowrap;
+}
+
+.ai-task-run-metric-v {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ai-task-run-metric-v .ant-tag {
+  margin-inline-end: 0;
+  font-size: 13px;
+}
+
+.ai-task-run-history-record-field {
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.ai-task-run-review-note-btn {
+  padding: 0;
+  border: 0;
+  color: var(--ai-blue);
+  background: transparent;
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.ai-task-run-review-note-btn:hover {
+  color: #b8d9ff;
+}
+
+.ai-task-run-review-comment {
+  max-width: 320px;
+  color: var(--ai-text);
+  font-size: 13px;
+  line-height: 20px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ai-task-run-result-modal-content .ai-task-code-block {
+  min-height: calc(100vh - 280px);
+}
+
+.api-task-run-result-modal-content .ai-task-code-block {
+  min-height: 100%;
+}
+
+.ai-task-run-history-hint.compact {
+  padding: 4px 2px 0;
+}
+
+@media (max-width: 680px) {
+
+  .ai-task-detail-inline-actions {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+
+  .ai-task-run-history-record-field {
+    white-space: normal;
+  }
+}
+
+.ai-task-detail-content-scroll .requirement-document-inline {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 12px;
+  background: var(--ai-fold-body);
+}
+
+.ai-task-detail-content-scroll .requirement-document-inline .requirement-document-modal-toolbar {
+  flex: 0 0 auto;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.ai-task-detail-content-scroll .requirement-document-inline .requirement-document-modal-title {
+  font-size: 15px;
+  line-height: 22px;
+}
+
+.ai-task-detail-content-scroll .requirement-document-inline .requirement-document-modal-stage {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+}
+
+.ai-task-detail-content-scroll .requirement-document-inline .requirement-document-text-article {
+  padding: 18px 20px 24px;
+}
+
+.ai-task-detail-content-scroll .requirement-document-inline .requirement-document-preview-shell,
+.ai-task-detail-content-scroll .requirement-document-inline .requirement-document-docx-host {
+  min-height: 0;
+  height: 100%;
+}
+
+/* ===== 代码风险分析 ===== */
+.ai-task-detail-report-loading {
+  padding: 24px;
+  text-align: center;
+}
+
+.ai-task-detail-report-failure {
+  margin-bottom: 12px;
+}
+
+.ai-task-detail-result-yaml {
+  max-height: 420px;
+  overflow: auto;
+}
+
+.code-risk-report {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.code-risk-report-block {
+  width: 100%;
+}
+
+.code-risk-report-header .ant-descriptions-item-label {
+  width: 96px;
+}
+
+.code-risk-report-repositories {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.code-risk-report-sha {
+  max-width: 260px;
+}
+
+.code-risk-report-overview-summary {
+  margin-bottom: 10px;
+}
+
+.code-risk-report-overview-metric {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.code-risk-report-overview-value {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.code-risk-report-overview-label {
+  color: #8b9bb4;
+  font-size: 12px;
+}
+
+.code-risk-report-risks,
+.code-risk-report-cases,
+.code-risk-report-gaps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.code-risk-report-risk,
+.code-risk-report-case,
+.code-risk-report-gap {
+  padding: 8px 10px;
+  border: 1px solid rgba(140, 150, 160, 0.24);
+  border-radius: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.code-risk-report-risk-location,
+.code-risk-report-case-title {
+  font-weight: 500;
+}
+
+.code-risk-report-risk-reason,
+.code-risk-report-case-impact {
+  flex-basis: 100%;
+  padding-left: 2px;
+}
+
+.code-risk-report-gap {
+  flex-direction: column;
+  gap: 2px;
+}
+
+.code-risk-report-gap-title {
+  margin: 0 0 2px !important;
+  font-size: 14px !important;
+}
+
+.code-risk-report-gap-suggestion {
+  margin: 0;
+}
+
+/* 运行记录：表格 + 生成→审核→导入 状态流水线 */
+.ai-task-run-table .ant-table {
+  background: transparent;
+}
+
+.ai-task-run-table .ant-table-thead > tr > th {
+  background: var(--ai-panel-soft);
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.ai-task-run-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid var(--ai-border);
+  padding-top: 10px;
+  padding-bottom: 10px;
+  vertical-align: middle;
+}
+
+.ai-task-run-table .ant-table-tbody > tr {
+  cursor: pointer;
+}
+
+.ai-task-run-table .ant-table-tbody > tr:hover > td {
+  background: var(--ai-panel-hover);
+}
+
+.ai-task-run-table .ant-table-tbody > tr.ai-task-run-table-row-active > td {
+  background: var(--ai-accent-soft);
+}
+
+.ai-task-run-table .ant-table-tbody > tr.ai-task-run-table-row-active > td:first-child {
+  box-shadow: inset 3px 0 0 var(--ai-accent);
+}
+
+.ai-task-run-table-id {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ai-task-run-table-index {
+  color: var(--ai-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.ai-task-run-table-id-text {
+  color: var(--ai-text);
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.ai-task-run-table-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.ai-task-run-table-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ai-task-run-table-more {
+  color: var(--ai-text-secondary);
+}
+
+.ai-task-run-table-migration {
+  display: inline-flex;
+  align-items: center;
+  color: #d46b08;
+  cursor: help;
+  font-size: 13px;
+}
+
+.ai-task-run-stage-filter {
+  min-width: 96px;
+}
+
+.ai-task-run-pipeline {
+  --run-pipeline-done: #95de64;
+  --run-pipeline-fail: #ff7875;
+  --run-pipeline-idle: rgba(148, 163, 184, 0.38);
+  --run-pipeline-current: #69b1ff;
+  --run-pipeline-link: #91caff;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.ai-task-run-pipeline-track {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ai-task-run-pipeline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--run-pipeline-idle);
+  flex: 0 0 auto;
+}
+
+.ai-task-run-pipeline-dot.is-done {
+  background: var(--run-pipeline-done);
+}
+
+.ai-task-run-pipeline-dot.is-fail {
+  background: var(--run-pipeline-fail);
+}
+
+.ai-task-run-pipeline-dot.is-current {
+  width: 7px;
+  height: 7px;
+  background: var(--ai-card);
+  border: 2px solid var(--run-pipeline-current);
+}
+
+.ai-task-run-pipeline-link {
+  width: 20px;
+  height: 2px;
+  margin: 0 4px;
+  background: var(--run-pipeline-idle);
+  opacity: 0.6;
+}
+
+.ai-task-run-pipeline-link.is-done {
+  background: var(--run-pipeline-link);
+  opacity: 0.75;
+}
+
+/* 阶段标签较长时在列内换行，避免溢出到相邻的「产物」列造成挤压。 */
+.ai-task-run-pipeline-meta {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 22px;
+}
+
+.ai-task-run-pipeline-label.ant-tag {
+  margin-inline-end: 0;
+}
+
+.ai-task-run-pipeline-repair {
+  color: #d46b08;
+  font-size: 12px;
+  line-height: 18px;
+  cursor: help;
+  white-space: nowrap;
+}
+
+.ai-task-run-artifacts {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ai-task-run-artifact {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 9px;
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 18px;
+  background: var(--ai-panel-soft);
+  color: var(--ai-text-secondary);
+  border: 1px solid transparent;
+}
+
+button.ai-task-run-artifact {
+  cursor: pointer;
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+}
+
+button.ai-task-run-artifact:hover {
+  color: var(--ai-hover-text);
+  background: var(--ai-accent-soft);
+}
+
+.ai-task-run-artifact.off {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--ai-border-strong);
+  color: var(--ai-text-muted);
+}
+
+/*
+ * 五个任务详情页（API / 功能 / UI / 代码风险 / 需求分析）共用的表面层，按设计稿重做。
+ *
+ * 与 task-list-v2.css 同一套约定：
+ *
+ * 1. **`ai-task-detail-*` / `ai-task-run-*` 这组类名就是这五个页面的共用骨架**
+ *    （各页根节点都带 `ai-task-detail-page` 标记类）。所以这里直接挂在共享钩子上，
+ *    反过来——只给单页写样式才是错的：那会让同一套骨架在不同页长得不一样。
+ *    页面之间真正的差异在内容（字段、导航条目、正文），不在这些类名上。
+ * 2. token（`--srf-*`）来自 shared/styles/surface-tokens.css，页面根节点带 `tp-surface` 才有值。
+ * 3. 上面的基础布局规则基本上都是单类选择器（`.ai-task-detail-nav-panel` 之类），
+ *    没有 !important 军备竞赛，所以选择器写到「根标记类 + 目标类」就够，
+ *    不需要 task-list-v2.css 里那种七级类名。
+ * 4. 按钮颜色归 app/styles/buttons.css 的 `@layer app-buttons` 全局色板，这里只调盒尺寸。
+ */
+
+/* ===== 画布：与任务列表页一致，收掉磨砂玻璃与蓝紫辉光 ===== */
+
+.ai-testing-page.ai-task-detail-page {
+  background: #f8fafc;
+}
+
+.ai-testing-page.ai-task-detail-page::before {
+  display: none;
+}
+
+.ai-task-detail-page .ai-task-detail-layout {
+  gap: 12px;
+}
+
+/* ===== 顶部工具条（设计稿把原来的摘要卡片摊成一条通栏）===== */
+
+.ai-task-detail-page .ai-task-detail-toolbar {
+  flex: 0 0 auto;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  border: 1px solid var(--srf-card-border, #e2e8f0);
+  border-radius: var(--srf-radius-card, 12px);
+  background: var(--srf-card, #fff);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.ai-task-detail-page .ai-task-detail-toolbar-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.ai-task-detail-page .ai-task-detail-toolbar-divider {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 16px;
+  background: var(--srf-card-border, #e2e8f0);
+}
+
+.ai-task-detail-page .ai-task-detail-toolbar-field {
+  flex: 0 0 auto;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 任务名称最长，它是这条里唯一允许被压缩的字段。 */
+.ai-task-detail-page .ai-task-detail-toolbar-field.is-name {
+  flex: 1 1 auto;
+}
+
+.ai-task-detail-page .ai-task-detail-toolbar-label {
+  flex: 0 0 auto;
+  color: var(--srf-text-muted, #94a3b8);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ai-task-detail-page .ai-task-detail-toolbar-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--srf-text, #0f172a);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-task-detail-page .ai-task-detail-toolbar-value {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--srf-text, #0f172a);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 迭代 / 来源类型两枚小色块，等宽字。 */
+.ai-task-detail-page .ai-task-detail-chip {
+  flex: 0 0 auto;
+  padding: 1px 8px;
+  border: 1px solid var(--srf-accent-border, #bfdbfe);
+  border-radius: 999px;
+  background: var(--srf-accent-soft, #eff6ff);
+  color: var(--srf-accent, #2563eb);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.ai-task-detail-page .ai-task-detail-chip.is-muted {
+  border-color: var(--srf-card-border, #e2e8f0);
+  background: var(--srf-chip, #f1f5f9);
+  color: var(--srf-chip-text, #475569);
+  text-transform: uppercase;
+}
+
+.ai-task-detail-page .ai-task-detail-meta-sep {
+  flex: 0 0 auto;
+  color: var(--srf-text-muted, #94a3b8);
+}
+
+.ai-task-detail-page .ai-task-detail-time {
+  flex: 0 0 auto;
+  color: var(--srf-text-secondary, #64748b);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.ai-task-detail-page .ai-task-detail-inline-actions {
+  flex: 0 0 auto;
+  margin-left: 0;
+  gap: 8px;
+}
+
+/* ===== 两栏：左导航 + 右内容 ===== */
+
+.ai-task-detail-page .ai-task-detail-split {
+  gap: 12px;
+}
+
+.ai-task-detail-page .ai-task-detail-nav-panel,
+.ai-task-detail-page .ai-task-detail-main-panel {
+  border: 1px solid var(--srf-card-border, #e2e8f0);
+  border-radius: var(--srf-radius-card, 12px);
+  background: var(--srf-card, #fff);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.ai-task-detail-page .ai-task-detail-nav-panel {
+  width: 270px;
+  flex: 0 0 270px;
+}
+
+.ai-task-detail-page .ai-task-detail-nav-head,
+.ai-task-detail-page .ai-task-detail-main-head {
+  min-height: 44px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--srf-divider, #f1f5f9);
+  background: transparent;
+  gap: 8px;
+}
+
+.ai-task-detail-page .ai-task-detail-nav-head-title,
+.ai-task-detail-page .ai-task-detail-main-head-title {
+  color: var(--srf-text, #0f172a);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ai-task-detail-page .ai-task-detail-nav-head-sub {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--srf-chip, #f1f5f9);
+  color: var(--srf-text-muted, #94a3b8);
+  font-size: 11px;
+}
+
+/* 运行记录标题旁的「Pipeline Executions」副标。 */
+.ai-task-detail-page .ai-task-detail-main-head-sub {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--srf-chip, #f1f5f9);
+  color: var(--srf-text-secondary, #64748b);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.ai-task-detail-page .ai-task-detail-nav-body {
+  padding: 10px;
+}
+
+.ai-task-detail-page .ai-task-detail-nav-label {
+  margin: 6px 4px 6px;
+  color: var(--srf-text-muted, #94a3b8);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.ai-task-detail-page .ai-task-detail-nav-label + .ai-task-detail-nav-item {
+  margin-top: 0;
+}
+
+/* 导航条目：标题与图标一行，摘要在下一行；选中态用左侧主色条而不是整块描边。 */
+.ai-task-detail-page .ai-task-detail-nav-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--srf-radius-control, 8px);
+  background: var(--srf-hover, #f8fafc);
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.ai-task-detail-page .ai-task-detail-nav-item:hover {
+  border: 0;
+  background: var(--srf-chip, #f1f5f9);
+}
+
+.ai-task-detail-page .ai-task-detail-nav-item.active {
+  border: 0;
+  background: var(--srf-accent-soft, #eff6ff);
+  box-shadow: none;
+}
+
+.ai-task-detail-page .ai-task-detail-nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--srf-accent, #2563eb);
+}
+
+.ai-task-detail-page .ai-task-detail-nav-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ai-task-detail-page .ai-task-detail-nav-item-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--srf-text, #0f172a);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.ai-task-detail-page .ai-task-detail-nav-item.active .ai-task-detail-nav-item-title {
+  color: var(--srf-accent-strong, #1d4ed8);
+}
+
+.ai-task-detail-page .ai-task-detail-nav-item-icon {
+  flex: 0 0 auto;
+  color: var(--srf-text-muted, #94a3b8);
+  font-size: 14px;
+}
+
+.ai-task-detail-page .ai-task-detail-nav-item.active .ai-task-detail-nav-item-icon {
+  color: var(--srf-accent, #2563eb);
+}
+
+/* 运行条数徽标：选中态实底主色。 */
+.ai-task-detail-page .ai-task-detail-nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--srf-chip, #f1f5f9);
+  color: var(--srf-text-secondary, #64748b);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+.ai-task-detail-page .ai-task-detail-nav-item.active .ai-task-detail-nav-badge {
+  background: var(--srf-accent, #2563eb);
+  color: var(--srf-on-accent, #fff);
+}
+
+.ai-task-detail-page .ai-task-detail-nav-item-sub {
+  margin-top: 0;
+  color: var(--srf-text-secondary, #64748b);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.ai-task-detail-page .ai-task-detail-nav-tip {
+  margin: 8px 4px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--srf-divider, #f1f5f9);
+  border-radius: var(--srf-radius-control, 8px);
+  background: var(--srf-hover, #f8fafc);
+  color: var(--srf-text-muted, #94a3b8);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.ai-task-detail-page .ai-task-detail-main-body {
+  padding: 12px 14px 14px;
+}
+
+/* ===== 运行记录视图 ===== */
+
+.ai-task-detail-page .ai-task-run-history-toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-task-detail-page .ai-task-run-history-auto-refresh {
+  color: var(--srf-text-muted, #94a3b8);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+}
+
+.ai-task-detail-page .ai-task-detail-main-body > .ai-task-run-metrics {
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+/* KPI：只有「最近状态」带主色左条与淡底，三个计数卡保持白底、只给数字上色。 */
+.ai-task-detail-page .ai-task-run-metric {
+  position: relative;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--srf-card-border, #e2e8f0);
+  border-radius: var(--srf-radius-control, 8px);
+  background: var(--srf-card, #fff);
+  box-shadow: none;
+}
+
+.ai-task-detail-page .ai-task-run-metric.accent {
+  border-color: var(--srf-accent-border, #bfdbfe);
+  background: var(--srf-accent-soft, #eff6ff);
+}
+
+.ai-task-detail-page .ai-task-run-metric.accent::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 3px 0 0 3px;
+  background: var(--srf-accent, #2563eb);
+}
+
+.ai-task-detail-page .ai-task-run-metric.warn {
+  border-color: var(--srf-card-border, #e2e8f0);
+  background: var(--srf-card, #fff);
+}
+
+.ai-task-detail-page .ai-task-run-metric-k {
+  color: var(--srf-text-secondary, #64748b);
+  font-size: 12px;
+}
+
+.ai-task-detail-page .ai-task-run-metric-v {
+  color: var(--srf-text, #0f172a);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 26px;
+}
+
+.ai-task-detail-page .ai-task-run-metric-v small {
+  color: var(--srf-text-secondary, #64748b);
+  font-size: 12px;
+  font-weight: 400;
+  margin-left: 2px;
+}
+
+/* 语义色只落在数字上，卡片本身保持中性——否则一行四张卡各自染色，找不到重点。 */
+.ai-task-detail-page .ai-task-run-metric.success .ai-task-run-metric-v {
+  color: #15803d;
+}
+
+.ai-task-detail-page .ai-task-run-metric.warn .ai-task-run-metric-v {
+  color: #b91c1c;
+}
+
+/* 选中运行：整行蓝底改为主色左条 + 极浅底，和 hover 区分开又不喧宾夺主。 */
+.ai-task-detail-page .ai-task-run-table .ant-table-tbody > tr.ai-task-run-table-row-active > td {
+  background: var(--srf-accent-soft, #eff6ff);
+}
+
+.ai-task-detail-page .ai-task-run-table .ant-table-tbody > tr.ai-task-run-table-row-active > td:first-child {
+  box-shadow: inset 3px 0 0 var(--srf-accent, #2563eb);
+}
+
+.ai-task-detail-page .ai-task-run-table .ant-table-tbody > tr > td {
+  border-bottom-color: var(--srf-divider, #f1f5f9);
+}
+
+.ai-task-detail-page .ai-task-run-table .ant-table-thead > tr > th {
+  color: var(--srf-text-secondary, #64748b);
+  background: var(--srf-hover, #f8fafc);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+
+/* ===== 补充指令视图（设计稿给的是可直接编辑 + 保存）===== */
+
+.ai-task-detail-page .ai-task-detail-instruction-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ai-task-detail-page .ai-task-detail-instruction-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ai-task-detail-page .ai-task-detail-instruction-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ai-task-detail-page .ai-task-detail-instruction-title {
+  color: var(--srf-text, #0f172a);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ai-task-detail-page .ai-task-detail-instruction-desc {
+  color: var(--srf-text-secondary, #64748b);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ai-task-detail-page .ai-task-detail-instruction-editor.ant-input {
+  border-radius: var(--srf-radius-control, 8px);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+/* ===== 窄屏 ===== */
+
+@media (max-width: 1180px) {
+  .ai-task-detail-page .ai-task-detail-toolbar-main {
+    flex-wrap: wrap;
+  }
+
+  .ai-task-detail-page .ai-task-detail-split {
+    flex-direction: column;
+  }
+
+  .ai-task-detail-page .ai-task-detail-nav-panel {
+    width: auto;
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .ai-task-detail-page .ai-task-detail-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ai-task-detail-page .ai-task-detail-toolbar-main {
+    flex-wrap: wrap;
+  }
+}
+
+/* ===== 代码风险详情页的折叠卡 ===== */
+
+/* 这一页的正文不是「输入 / 输出」两栏，而是运行指令 / 运行历史 / 分析报告三张折叠卡，
+   所以没有导航面板那套结构。但它是同一个详情页家族，画布与卡片取值不该另起一套，
+   否则同一个入口进来的六个页面里会有一页是旧磨砂观感。这里只收表面，不动它的折叠行为。 */
+/* workbench.css 有一条
+   `.app-shell.app-shell-macos .ant-card { background: var(--mac-glass-card) !important }` 的全局玻璃规则，
+   无边界的 antd Card 一律被它盖住。两边同权重（各 3 个类）且都带 !important 时靠文档顺序决胜，
+   而这份样式表在开发环境下会被注入到 workbench.css 之前，顺序靠不住——所以选择器写到 5 个类，
+   把权重抬上去，不依赖加载顺序。 */
+:is(.app-shell.app-shell-macos) .ai-testing-page.ai-task-detail-page .ai-task-detail-fold-group,
+:is(.app-shell.app-shell-macos) .ai-testing-page.ai-task-detail-page .ai-task-detail-card.ant-card {
+  border: 1px solid var(--srf-card-border, #e2e8f0) !important;
+  border-radius: var(--srf-radius-card, 12px);
+  background: var(--srf-card, #fff) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* 组内的卡不再各画一圈边框，避免套两层。 */
+.app-shell.app-shell-macos .ai-testing-page.ai-task-detail-page .ai-task-detail-fold-group .ai-task-detail-fold-card.ant-card {
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* 折叠卡之间、以及卡头与正文之间的分隔线跟着 token 走（代码风险页没有 fold-group 包裹层）。 */
+.app-shell.app-shell-macos .ai-testing-page.ai-task-detail-page .ai-task-detail-card.ant-card + .ai-task-detail-card.ant-card,
+.app-shell.app-shell-macos .ai-testing-page.ai-task-detail-page .ai-task-detail-card.ant-card > .ant-card-head {
+  border-color: var(--srf-divider, #f1f5f9) !important;
+  border-bottom-color: var(--srf-divider, #f1f5f9) !important;
+}
+
+.app-shell.app-shell-macos .ai-testing-page.ai-task-detail-page .ai-task-detail-fold-trigger {
+  color: var(--srf-text, #0f172a);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ai-task-detail-page .ai-task-detail-content-scroll {
+  scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
+}

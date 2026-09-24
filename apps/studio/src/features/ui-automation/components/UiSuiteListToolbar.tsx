@@ -61,7 +61,7 @@ export function UiSuiteListToolbar({
   }, [])
 
   return (
-    <div className="panel-header api-panel-header ui-suite-list-toolbar">
+    <div className="panel-header api-panel-header ui-suite-list-toolbar tp-list-toolbar">
       <div className="ui-suite-list-toolbar-filters">
         {showScopeFilters ? (
           <div className="api-filter-group">

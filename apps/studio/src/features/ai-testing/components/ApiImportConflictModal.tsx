@@ -1,3 +1,5 @@
+import '@/features/ai-testing/styles/index.css'
+import '@/features/ai-testing/styles/task-review.css'
 import { CaseComparison } from './CaseComparison'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { Alert, Collapse } from 'antd'

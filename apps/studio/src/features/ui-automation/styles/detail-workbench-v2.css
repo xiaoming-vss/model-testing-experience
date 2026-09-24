@@ -1,3 +1,5 @@
+
+
 /*
  * UI测试集详情页（UI 测试列表点测试集名称进来的页面）按设计稿重做的表面层：板面、顶栏、控制条、用例顺序弹层。
  *
@@ -7,8 +9,7 @@
  * 页面里不再重复。
  *
  * token 与色盘来自 shared/styles/surface-tokens.css：页面根节点带 `tp-surface`、板面带 `tp-board`，
- * 颜色只引用 `--srf-*` / `.tone-*`，深色由 token 切换，本文件没有 `:root[data-theme='dark']` 分支
- * （唯一例外见文末的 `hidden` 兜底）。用例信息条与步骤编辑器在 detail-pipeline-v2.css，
+ * 颜色只引用 `--srf-*` / `.tone-*`。用例信息条与步骤编辑器在 detail-pipeline-v2.css，
  * 右栏三张卡片在 detail-inspector-v2.css。
  */
 
@@ -19,11 +20,10 @@
  * 铺了玻璃底 + 内高光 + 10px/24px 投影（(0,3,0) + !important），shared/styles/surface-tokens.css 里
  * `.tp-board` 那条覆盖（(0,2,0)）压不住它——列表页靠的是带 `.testing-page` 前缀的 (0,6,0) 规则，
  * 而详情页这条路由不在 `.testing-page` 里（实测 `.testing-page` 为 null），所以这里必须自己写一条：
- * 带上 `.ui-suite-detail-page` 把权重抬到 (0,6,0)，深色分支再补 `:root[data-theme='dark']` 抬到 (0,7,0)。
- * 去掉这层的判据：浅色下板面无底色 / 无投影，深色下同样如此（否则内容区会凭空多出一个容器）。
+ * 带上 `.ui-suite-detail-page` 把权重抬到 (0,6,0)。
+ * 去掉这层的判据：板面应无底色 / 无投影（否则内容区会凭空多出一个容器）。
  */
-.app-shell.app-shell-macos .ui-suite-detail-page .api-automation-content > .workbench-panel.ui-suite-detail-board,
-:root[data-theme='dark'] .app-shell.app-shell-macos .ui-suite-detail-page .api-automation-content > .workbench-panel.ui-suite-detail-board {
+.app-shell.app-shell-macos .ui-suite-detail-page .api-automation-content > .workbench-panel.ui-suite-detail-board {
   border: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
@@ -139,15 +139,6 @@
   min-width: 0;
 }
 
-.ui-suite-detail-page .ui-wb-toolbar-back.ant-btn {
-  color: var(--srf-text-secondary);
-}
-
-.ui-suite-detail-page .ui-wb-toolbar-back.ant-btn:hover {
-  color: var(--srf-accent);
-  background: var(--srf-hover);
-}
-
 .ui-suite-detail-page .ui-wb-toolbar-title {
   display: flex;
   flex-wrap: wrap;
@@ -231,21 +222,6 @@
   line-height: 18px;
 }
 
-.ui-suite-detail-page .ui-wb-toolbar-debug.ant-btn {
-  color: var(--srf-text-secondary);
-}
-
-.ui-suite-detail-page .ui-wb-toolbar-debug.ant-btn:hover {
-  color: var(--srf-accent);
-  border-color: var(--srf-accent-border);
-}
-
-.ui-suite-detail-page .ui-wb-toolbar-save.ant-btn {
-  border-color: var(--srf-accent-border);
-  background: var(--srf-accent-soft);
-  color: var(--srf-accent-strong);
-}
-
 /* ===== 控制条 ===== */
 
 .ui-suite-detail-page .ui-wb-ribbon {
@@ -312,17 +288,6 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 18px;
-}
-
-.ui-suite-detail-page .ui-wb-ribbon-step.ant-btn,
-.ui-suite-detail-page .ui-wb-ribbon-order.ant-btn {
-  color: var(--srf-text-secondary);
-}
-
-.ui-suite-detail-page .ui-wb-ribbon-step.ant-btn:hover,
-.ui-suite-detail-page .ui-wb-ribbon-order.ant-btn:hover {
-  color: var(--srf-accent);
-  background: var(--srf-hover);
 }
 
 .ui-suite-detail-page .ui-wb-ribbon-workspace {
@@ -454,14 +419,6 @@
   opacity: 1;
 }
 
-.ui-wb-order-overlay .ui-wb-order-delete.ant-btn {
-  color: var(--srf-text-muted);
-}
-
-.ui-wb-order-overlay .ui-wb-order-delete.ant-btn:hover {
-  color: var(--srf-danger);
-}
-
 .ui-wb-order-overlay .ui-wb-order-empty {
   padding: 12px;
 }
@@ -488,13 +445,4 @@
   .ui-wb-order-overlay .ui-wb-order-panel {
     width: min(360px, calc(100vw - 64px));
   }
-}
-
-.ui-suite-detail-page .ui-wb-ribbon-create.ant-btn {
-  color: var(--srf-accent);
-}
-
-.ui-suite-detail-page .ui-wb-ribbon-create.ant-btn:hover {
-  color: var(--srf-accent-strong);
-  background: var(--srf-accent-soft);
 }

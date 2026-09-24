@@ -9,7 +9,7 @@
  * 1. 不动 `listSurfaceConsistency.test.ts` 锁定的列表指纹（表头高、四角圆角、行高、内距），
  *    所以这里没有针对 `.functional-suite-list-table` 的 th / td 盒尺寸规则——设计稿的 32px 表头 /
  *    36–40px 行高与既有约定冲突，按 STRUCTURE.md 的「冲突时以既有约定为准」保留 48 / 52px。
- * 2. `testing/styles/index.css` 与 `app/styles/dark-polish.css` 都用 `!important` 抢过
+ * 2. `testing/styles/index.css` 用 `!important` 抢过
  *    `.api-panel-header`、`.table-footer`、`.table-body-scroll` 这几个容器，覆盖必须写成
  *    `.app-shell.app-shell-macos .testing-page .ui-test-page ...` 再加 `!important`，否则静默失效。
  */
@@ -27,10 +27,6 @@
   border-radius: var(--srf-radius-card);
   background: var(--srf-card);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-}
-
-:root[data-theme='dark'] .ui-test-page .ui-suite-list-banner {
-  box-shadow: none;
 }
 
 .ui-test-page .ui-suite-list-banner-main {
@@ -154,7 +150,7 @@
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
-/* testing/styles 与 dark-polish 都用 !important 给 .api-panel-header 铺过玻璃表面，卡片外观要压回去。 */
+/* testing/styles 用 !important 给 .api-panel-header 铺过玻璃表面，卡片外观要压回去。 */
 .app-shell.app-shell-macos .testing-page .ui-test-page .panel-header.api-panel-header.ui-suite-list-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -204,14 +200,6 @@
   flex: 0 0 auto;
 }
 
-.ui-test-page .ui-suite-list-refresh.ant-btn {
-  color: var(--srf-text-secondary);
-}
-
-.ui-test-page .ui-suite-list-refresh.ant-btn:hover {
-  color: var(--srf-accent);
-}
-
 /* ===== 表格卡片 ===== */
 
 .ui-test-page .ui-suite-list-table-card {
@@ -224,10 +212,6 @@
   background: var(--srf-card);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   overflow: hidden;
-}
-
-:root[data-theme='dark'] .ui-test-page .ui-suite-list-table-card {
-  box-shadow: none;
 }
 
 /* 外壳给了面板内表格容器 16px 18px 的内距，设计稿里表格贴着卡片边缘，这里收掉。 */
@@ -253,10 +237,6 @@
   background: var(--srf-hover) !important;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
-}
-
-:root[data-theme='dark'] .app-shell.app-shell-macos .ui-test-page .ui-suite-list-footer .ant-typography {
-  color: var(--srf-text-secondary);
 }
 
 /* ===== 表格内部 ===== */
@@ -303,13 +283,6 @@
   color: var(--srf-card-border);
 }
 
-/* 深色下 testing/styles 把名称列（td:nth-child(2)）里的 span 一律刷成浅色，
-   迭代色块要保住自己的弱化色，不然和名称一样亮。注意 .ui-test-page 与 .functional-test-page
-   是同一个元素上的两个类，这里必须连写。 */
-:root[data-theme='dark'] .ui-test-page.functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(2) .ui-suite-list-scope-chip {
-  color: var(--srf-text-secondary) !important;
-}
-
 .ui-test-page .ui-suite-list-time-cell {
   color: var(--srf-text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -323,18 +296,6 @@
 .ui-test-page .ui-suite-list-desc-cell.is-empty {
   color: var(--srf-text-muted);
   font-style: italic;
-}
-
-.ui-test-page .ui-suite-list-row-actions .ant-btn {
-  color: var(--srf-text-muted);
-}
-
-.ui-test-page .ui-suite-list-row-actions .action-btn-read.ant-btn:hover {
-  color: var(--srf-tone-text, var(--srf-accent));
-}
-
-.ui-test-page .ui-suite-list-row-actions .action-btn-delete.ant-btn:hover {
-  color: var(--srf-danger);
 }
 
 /* ===== 运行配置徽标 ===== */

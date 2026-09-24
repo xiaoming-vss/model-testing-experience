@@ -4,19 +4,12 @@
  * 与 `detail-workbench-v2.css` / `detail-inspector-v2.css` 同属一次设计稿改造，按页签职责单独一个文件，
  * 由 `ApiCollectionDetailPage` 引入，选择器前缀统一是 `.api-collection-workbench-page`，与上面两个文件不重叠。
  *
- * 颜色只取 `--srf-*` / `--srf-tone-*`：两个页签的所有取值都来自 `surface-tokens.css` 的色盘，
- * 深色主题由 token 的深色分支一并覆盖，所以本文件没有 `:root[data-theme='dark']` 的独立色值。
- * 唯一的例外是文件末尾覆盖全局按钮皮肤的规则——那一段必须带 `.app-shell.app-shell-macos`
+ * 颜色只取 `--srf-*` / `--srf-tone-*`：两个页签的所有取值都来自 `surface-tokens.css` 的色盘。
+ * 覆盖全局按钮皮肤的规则在文件末尾——那一段必须带 `.app-shell.app-shell-macos`
  * 前缀与 `!important`，理由见 `docs/studio/STRUCTURE.md` 的 S14。
  */
 
 /* ===== 页签行右侧的补充信息 ===== */
-
-.api-collection-workbench-page .api-wb-tabs-extra {
-  color: var(--srf-text-muted);
-  font-size: 11px;
-  line-height: 16px;
-}
 
 .api-collection-workbench-page .api-wb-tabs-extra strong {
   color: var(--srf-text);
@@ -438,57 +431,4 @@
 .api-collection-workbench-page .api-wb-body-status-main > span:not(.is-muted),
 .api-collection-workbench-page .api-wb-body-status-side > span:not(.is-muted) {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
-
-/* ===== 表格行内的图标按钮与输入框回到「行内编辑」外观 =====
- * 全局皮肤会给这些页面里的 `.ant-btn` 加描边玻璃底、给 `.ant-input` 铺底色（深色下同一条规则带 `!important`），
- * 表格行里需要的是无底色的小图标与无边框的行内输入框。覆盖规则按 S14 的写法带 `.app-shell.app-shell-macos`
- * 前缀与 `!important`；深色那几条再加 `:root[data-theme='dark']` 抬一级权重，否则与深色皮肤同分只靠 import 顺序决胜。
- * 删除钮沿用全站的 `.action-btn-delete`，只把常态颜色压回弱化色，悬停仍由下面这条给出红色。
- */
-
-.app-shell.app-shell-macos .api-collection-workbench-page .api-wb-hdr-row-actions .ant-btn,
-.app-shell.app-shell-macos .api-collection-workbench-page .api-wb-hdr-row-actions .ant-btn:not(:disabled):hover {
-  border-color: transparent !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  color: var(--srf-text-muted) !important;
-}
-
-.app-shell.app-shell-macos .api-collection-workbench-page .api-wb-hdr-row-actions .ant-btn:not(:disabled):hover {
-  color: var(--srf-accent-strong) !important;
-}
-
-.app-shell.app-shell-macos .api-collection-workbench-page .api-wb-hdr-row-actions :is(.action-btn-delete, .ant-btn-dangerous):not(:disabled):hover {
-  color: var(--srf-danger) !important;
-}
-
-.app-shell.app-shell-macos .api-collection-workbench-page .api-wb-hdr-value-cell .api-env-var-picker-trigger.ant-btn {
-  border-color: transparent !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  color: var(--srf-text-muted) !important;
-}
-
-:root[data-theme='dark'] .app-shell.app-shell-macos .api-collection-workbench-page .api-wb-hdr-input.ant-input {
-  border-color: transparent !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  color: var(--srf-text) !important;
-}
-
-:root[data-theme='dark'] .app-shell.app-shell-macos .api-collection-workbench-page .api-wb-hdr-input.ant-input:hover {
-  background: var(--srf-chip) !important;
-}
-
-:root[data-theme='dark'] .app-shell.app-shell-macos .api-collection-workbench-page .api-wb-hdr-input.ant-input:focus {
-  border-color: var(--srf-accent) !important;
-  background: var(--srf-card) !important;
-  box-shadow: 0 0 0 3px var(--srf-accent-soft) !important;
-}
-
-:root[data-theme='dark'] .app-shell.app-shell-macos .api-collection-workbench-page .api-wb-hdr-input.is-draft.ant-input {
-  border-style: dashed !important;
-  border-color: var(--srf-card-border) !important;
-  background: var(--srf-card) !important;
 }

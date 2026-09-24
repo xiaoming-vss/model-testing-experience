@@ -8,10 +8,10 @@ export type ActionButtonProps = Omit<ButtonProps, 'icon'> & {
 }
 
 export const ActionButton = forwardRef<ComponentRef<typeof Button>, ActionButtonProps>(
-  function ActionButton({ operation, iconOnly = false, children, title, danger, ...props }, ref) {
+  function ActionButton({ operation, iconOnly = false, children, title, danger, className, ...props }, ref) {
     const { Icon, label } = actionRegistry[operation]
     const accessibleLabel = props['aria-label'] ?? title ?? (typeof children === 'string' ? children : label)
-    const button = <Button {...props} ref={ref} icon={<Icon aria-hidden="true" />} danger={danger ?? operation === 'delete'}
+    const button = <Button {...props} ref={ref} className={`app-action app-action-${operation}${iconOnly ? ' app-action-icon' : ''}${className ? ` ${className}` : ''}`} icon={<Icon aria-hidden="true" />} danger={danger ?? operation === 'delete'}
       title={iconOnly ? undefined : title} aria-label={iconOnly || typeof children === 'string' || children == null ? accessibleLabel : props['aria-label']}>
       {iconOnly ? null : children ?? label}
     </Button>

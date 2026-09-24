@@ -1,20 +1,19 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import darkPolishCss from './dark-polish.css?raw'
 import workbenchCss from './workbench.css?raw'
-import aiTestingCss from '@/features/ai-testing/styles/index.css?raw'
+import aiTestingSharedCss from '@/features/ai-testing/styles/index.css?raw'
+import aiTestingListCss from '@/features/ai-testing/styles/task-list-v2.css?raw'
 import testingCss from '@/features/testing/styles/index.css?raw'
+import surfaceTokens from '@/shared/styles/surface-tokens.css?raw'
+import listTableCss from '@/shared/styles/list-table.css?raw'
 
-function computedListSurface(css: string, pageClass: string, tableClass: string, theme: 'light' | 'dark') {
-  if (theme === 'dark') {
-    document.documentElement.dataset.theme = 'dark'
-  } else {
-    delete document.documentElement.dataset.theme
-  }
-  document.head.innerHTML = `<style>${css}</style>`
+const aiTestingCss = `${aiTestingSharedCss}\n${aiTestingListCss}`
+
+function computedListSurface(css: string, pageClass: string, tableClass: string) {
+  document.head.innerHTML = `<style>${surfaceTokens}\n${listTableCss}\n${css}</style>`
   document.body.innerHTML = `
     <div class="app-shell app-shell-macos">
-      <main class="${pageClass}">
-        <div class="${tableClass}">
+      <main class="${pageClass} tp-list-surface">
+        <div class="${tableClass} tp-list-table">
           <table class="ant-table">
             <thead class="ant-table-thead"><tr><th id="header" class="ant-table-cell">名称</th></tr></thead>
             <tbody class="ant-table-tbody"><tr><td id="cell" class="ant-table-cell">内容</td></tr></tbody>
@@ -46,28 +45,38 @@ function computedListSurface(css: string, pageClass: string, tableClass: string,
 }
 
 afterEach(() => {
-  delete document.documentElement.dataset.theme
   document.head.innerHTML = ''
   document.body.innerHTML = ''
 })
 
 describe('列表表面样式统一', () => {
-  it.each(['light', 'dark'] as const)('功能测试基准表头在%s主题下保留四角圆弧', (theme) => {
-    const functional = computedListSurface(testingCss, 'functional-test-page', 'functional-suite-list-table', theme)
+  it('功能测试基准列表保留统一行高、内距与表头圆角', () => {
+    const functional = computedListSurface(testingCss, 'functional-test-page', 'functional-suite-list-table')
 
     expect(functional.headerRadii).toEqual(['8px', '8px', '8px', '8px'])
+    expect(functional).toMatchObject({
+      headerHeight: '42px',
+      headerPadding: '0px 16px',
+      cellHeight: '48px',
+      cellPadding: '8px 16px',
+    })
+    // jsdom 不解析背景中的 var()；在此锁定公共色值，最终级联另由浏览器验证。
+    const tokens = getComputedStyle(document.documentElement)
+    expect(tokens.getPropertyValue('--srf-list-header-bg').trim()).toBe('#f7f9fc')
+    expect(tokens.getPropertyValue('--srf-list-row-bg').trim()).toBe('#ffffff')
+    expect(tokens.getPropertyValue('--srf-list-row-hover').trim()).toBe('#f5f8ff')
   })
 
-  it.each(['light', 'dark'] as const)('需求列表与功能测试列表使用相同的%s主题表头和行样式', (theme) => {
-    const functional = computedListSurface(testingCss, 'functional-test-page', 'functional-suite-list-table', theme)
-    const requirements = computedListSurface(`${workbenchCss}\n${darkPolishCss}`, 'project-overview-page', 'project-requirement-list-table', theme)
+  it('需求列表与功能测试列表使用相同的表头和行样式', () => {
+    const functional = computedListSurface(testingCss, 'functional-test-page', 'functional-suite-list-table')
+    const requirements = computedListSurface(workbenchCss, 'project-overview-page', 'project-requirement-list-table')
 
     expect(requirements).toEqual(functional)
   })
 
-  it.each(['light', 'dark'] as const)('测试设计任务列表与功能测试列表使用相同的%s主题表头和行样式', (theme) => {
-    const functional = computedListSurface(testingCss, 'functional-test-page', 'functional-suite-list-table', theme)
-    const tasks = computedListSurface(aiTestingCss, 'ai-testing-page', 'ai-task-list-table', theme)
+  it('测试设计任务列表与功能测试列表使用相同的表头和行样式', () => {
+    const functional = computedListSurface(testingCss, 'functional-test-page', 'functional-suite-list-table')
+    const tasks = computedListSurface(aiTestingCss, 'ai-testing-page', 'ai-task-list-table')
 
     expect(tasks).toEqual(functional)
   })

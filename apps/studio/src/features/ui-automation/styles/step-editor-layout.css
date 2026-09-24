@@ -1,0 +1,28 @@
+/* UI 步骤编辑器的面板滚动与窄屏布局，由编辑器自行引入。 */
+.ui-suite-case-editor-panel .api-case-editor-main-scroll {
+  overflow: hidden;
+}
+
+@media (max-width: 1180px) {
+  .ui-test-case-step-core-grid,
+  .ui-test-case-step-detail-grid,
+  .ui-test-case-step-footer-grid {
+    grid-template-columns: 1fr;
+  }
+  .ui-test-case-step-field-half,
+  .ui-test-case-step-field-third,
+  .ui-test-case-step-field-wide {
+    grid-column: span 1;
+  }
+  .ui-test-case-step-card-top,
+  .ui-test-case-step-title-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .ui-test-case-step-actions {
+    padding-top: 0;
+  }
+  .ui-test-case-step-inline-switch-item .ant-form-item-row {
+    justify-content: space-between;
+  }
+}

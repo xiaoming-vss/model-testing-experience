@@ -1,3 +1,6 @@
+import './ProjectsPage.css'
+import '@/shared/styles/list-table.css'
+import '@/shared/styles/surface-tokens.css'
 import { footerRange } from '@/shared/utils/pagination'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { AppIcon } from '@/shared/icons'
@@ -17,7 +20,6 @@ import {
   Input,
   Pagination,
   Popconfirm,
-  Segmented,
   Select,
   Space,
   Table,
@@ -29,7 +31,7 @@ import type { TableProps } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { type BindingDepth, ZentaoBindingModal, ZentaoBindingSummary } from '@/features/base-services/components/ZentaoBindingPanel'
 import { GitlabBindingModal, GitlabBindingSummary } from '@/features/base-services/components/GitlabBindingPanel'
 import { RequirementCodeBindingModal } from '@/features/base-services/components/RequirementCodeBindingModal'
@@ -114,7 +116,8 @@ export function ProjectsPage() {
   const [requirementDrawerOpen, setRequirementDrawerOpen] = useState(false)
   const [editingRequirement, setEditingRequirement] = useState<RequirementPoolItem | null>(null)
   const [requirementDocumentLoading, setRequirementDocumentLoading] = useState(false)
-  const [activeBoard, setActiveBoard] = useState<'sprints' | 'requirements'>('sprints')
+  const [searchParams] = useSearchParams()
+  const activeBoard = searchParams.get('board') === 'requirements' ? 'requirements' : 'sprints'
   const [zentaoBindingTarget, setZentaoBindingTarget] = useState<ZentaoBindingTargetState | null>(null)
   const [gitlabBindingOpen, setGitlabBindingOpen] = useState(false)
   const [codeBindingRequirement, setCodeBindingRequirement] = useState<RequirementPoolItem | null>(null)
@@ -392,7 +395,8 @@ export function ProjectsPage() {
       width: '28%',
       ellipsis: true,
       render: (name: RequirementPoolItem['name'], requirement) => (
-        <Space size={0} className="project-requirement-list-name">
+        <Space size={8} className="project-requirement-list-name">
+          <span className="requirement-name-icon"><AppIcon name="requirement" size={14} /></span>
           <Tooltip title={name}>
             <Text
               ellipsis
@@ -544,7 +548,7 @@ export function ProjectsPage() {
   ]
 
   return (
-    <div className="workbench-page project-overview-page">
+    <div className={`workbench-page project-overview-page tp-list-surface${activeBoard === 'requirements' ? ' requirements-page tp-surface' : ''}`}>
       {projectsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(projectsQuery.error)} /> : null}
 
       {!projectsQuery.isLoading && projects.length === 0 ? (
@@ -557,11 +561,11 @@ export function ProjectsPage() {
         </div>
       ) : (
         <>
-          <section className="workbench-project-toolbar">
-            <div>
+          {activeBoard === 'sprints' && <section className="workbench-project-toolbar">
+            <div className="project-overview-summary">
               <Space align="center" size={10}><Title level={4} style={{ margin: 0 }}>{activeProject?.name || '项目概览'}</Title>{accessProject?.role ? <Tag>{roleLabels[accessProject.role]}</Tag> : null}</Space>
-              <div className="zentao-binding-toolbar-line">
-                <Text type="secondary" className="project-description-text">
+              <div className="project-overview-description">
+                <Text type="secondary" className="project-description-text" title={activeProject?.description || '暂无描述'}>
                   项目描述：{activeProject?.description || '暂无描述'}
                 </Text>
               </div>
@@ -570,20 +574,41 @@ export function ProjectsPage() {
               <Button className="action-btn-read" icon={<UserOutlined />} disabled={!activeProjectId} onClick={() => setMembersOpen(true)}>项目成员</Button>
               <ProjectActionButton action="manage" className="action-btn-update" icon={<SettingOutlined />} disabled={!activeProject} onClick={() => activeProjectId && setSettingsProjectId(activeProjectId)}>项目设置</ProjectActionButton>
             </Space>
-          </section>
+          </section>}
 
           <div className="workbench-tabs">
-            <div className="workbench-board-switcher">
-              <Segmented
-                value={activeBoard}
-                onChange={(value) => setActiveBoard(value as 'sprints' | 'requirements')}
-                options={[
-                  { label: '迭代', value: 'sprints', icon: <AppIcon name="sprint" /> },
-                  { label: '需求', value: 'requirements', icon: <AppIcon name="requirement" /> },
-                ]}
-              />
-            </div>
-
+            {activeBoard === 'requirements' && (
+              <div className="panel-header requirements-toolbar">
+                <div className="requirement-panel-head">
+                  <div className="requirement-filter-bar">
+                    <span className="requirement-filter-label">迭代</span>
+                    <div className="requirement-filter-control">
+                      <Select
+                        className="requirements-sprint-select"
+                        loading={sprintsQuery.isLoading}
+                        value={selectedRequirementSprintId}
+                        placeholder="筛选迭代"
+                        allowClear
+                        options={sprintOptions}
+                        onChange={(value) => {
+                          selectGlobalSprint(value)
+                        }}
+                        disabled={sprints.length === 0}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <ProjectActionButton action="write"
+                  type="primary"
+                  className="action-btn-create"
+                  operation="create"
+                  disabled={!activeProjectId || sprints.length === 0}
+                  onClick={() => openRequirementDrawer()}
+                >
+                  新建需求
+                </ProjectActionButton>
+              </div>
+            )}
             <section className="workbench-panel workbench-board-panel">
               {activeBoard === 'sprints' ? (
                 <>
@@ -719,38 +744,6 @@ export function ProjectsPage() {
                 </>
               ) : (
                 <>
-                  <div className="panel-header">
-                    <div className="requirement-panel-head">
-                      <Text strong>需求列表</Text>
-                      <div className="requirement-filter-bar">
-                        <span className="requirement-filter-label">迭代范围</span>
-                        <div className="requirement-filter-control">
-                          <Select
-                            className="requirement-filter-select"
-                            loading={sprintsQuery.isLoading}
-                            value={selectedRequirementSprintId}
-                            placeholder="筛选迭代"
-                            allowClear
-                            options={sprintOptions}
-                            onChange={(value) => {
-                              selectGlobalSprint(value)
-                            }}
-                            variant="borderless"
-                            disabled={sprints.length === 0}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <ProjectActionButton action="write"
-                      type="primary"
-                      className="action-btn-create"
-                      operation="create"
-                      disabled={!activeProjectId || sprints.length === 0}
-                      onClick={() => openRequirementDrawer()}
-                    >
-                      新建需求
-                    </ProjectActionButton>
-                  </div>
                   {requirementsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(requirementsQuery.error)} /> : null}
                   <div className="table-body-scroll sprint-card-scroll">
                     {sprintsQuery.isLoading || requirementsQuery.isLoading ? (
@@ -766,7 +759,7 @@ export function ProjectsPage() {
                     ) : null}
                     {!sprintsQuery.isLoading && !requirementsQuery.isLoading && visibleRequirements.length > 0 ? (
                       <Table<RequirementPoolItem>
-                        className="project-requirement-list-table"
+                        className="project-requirement-list-table tp-list-table"
                         columns={requirementColumns}
                         dataSource={visibleRequirements}
                         rowKey={(requirement) => normalizeRequirementId(requirement)}

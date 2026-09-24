@@ -5,7 +5,7 @@
 .api-automation-content {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 12px 24px 20px;
+  padding: 12px var(--app-page-gutter) 20px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -39,160 +39,6 @@
     border-color 0.2s ease,
     color 0.2s ease,
     box-shadow 0.2s ease;
-}
-
-.ant-btn.action-btn-create:not(:disabled):not(.ant-btn-primary) {
-  color: var(--tp-action-create);
-  border-color: rgba(63, 164, 111, 0.32);
-  background: var(--tp-action-create-soft);
-}
-
-.ant-btn.action-btn-create.ant-btn-primary:not(:disabled) {
-  color: #fff;
-  border-color: var(--tp-action-create);
-  background: var(--tp-action-create);
-  box-shadow: 0 10px 24px rgba(63, 164, 111, 0.22);
-}
-
-.ant-btn.action-btn-create:hover:not(:disabled),
-.ant-btn.action-btn-create:focus-visible:not(:disabled) {
-  color: #fff;
-  border-color: var(--tp-action-create-strong);
-  background: var(--tp-action-create-strong);
-}
-
-.ant-btn.action-btn-read:not(:disabled) {
-  color: var(--tp-action-read);
-  border-color: rgba(74, 143, 247, 0.3);
-  background: var(--tp-action-read-soft);
-}
-
-.ant-btn.action-btn-read:hover:not(:disabled),
-.ant-btn.action-btn-read:focus-visible:not(:disabled) {
-  color: #fff;
-  border-color: var(--tp-action-read-strong);
-  background: var(--tp-action-read-strong);
-}
-
-.ant-btn.action-btn-update:not(:disabled) {
-  color: var(--tp-action-update);
-  border-color: rgba(227, 166, 60, 0.32);
-  background: var(--tp-action-update-soft);
-}
-
-.ant-btn.action-btn-update:hover:not(:disabled),
-.ant-btn.action-btn-update:focus-visible:not(:disabled) {
-  color: #fff;
-  border-color: var(--tp-action-update-strong);
-  background: var(--tp-action-update-strong);
-}
-
-.ant-btn.action-btn-delete:not(:disabled) {
-  color: var(--tp-action-delete);
-  border-color: rgba(227, 93, 106, 0.32);
-  background: var(--tp-action-delete-soft);
-}
-
-.ant-btn.action-btn-delete:hover:not(:disabled),
-.ant-btn.action-btn-delete:focus-visible:not(:disabled) {
-  color: #fff;
-  border-color: var(--tp-action-delete-strong);
-  background: var(--tp-action-delete-strong);
-}
-
-.ant-btn.action-btn-save:not(:disabled):not(.ant-btn-primary) {
-  color: var(--tp-action-save);
-  border-color: rgba(62, 168, 164, 0.32);
-  background: var(--tp-action-save-soft);
-}
-
-.ant-btn.action-btn-save.ant-btn-primary:not(:disabled) {
-  color: #fff;
-  border-color: var(--tp-action-save);
-  background: var(--tp-action-save);
-  box-shadow: 0 10px 24px rgba(62, 168, 164, 0.22);
-}
-
-.ant-btn.action-btn-save:hover:not(:disabled),
-.ant-btn.action-btn-save:focus-visible:not(:disabled) {
-  color: #fff;
-  border-color: var(--tp-action-save-strong);
-  background: var(--tp-action-save-strong);
-}
-
-.ant-btn-text.action-btn-create,
-.ant-btn-link.action-btn-create,
-.ant-btn-text.action-btn-read,
-.ant-btn-link.action-btn-read,
-.ant-btn-text.action-btn-update,
-.ant-btn-link.action-btn-update,
-.ant-btn-text.action-btn-delete,
-.ant-btn-link.action-btn-delete,
-.ant-btn-text.action-btn-save,
-.ant-btn-link.action-btn-save {
-  border-color: transparent !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.ant-btn-text.action-btn-create:not(:disabled),
-.ant-btn-link.action-btn-create:not(:disabled) {
-  color: var(--tp-action-create) !important;
-}
-
-.ant-btn-text.action-btn-read:not(:disabled),
-.ant-btn-link.action-btn-read:not(:disabled) {
-  color: var(--tp-action-read) !important;
-}
-
-.ant-btn-text.action-btn-update:not(:disabled),
-.ant-btn-link.action-btn-update:not(:disabled) {
-  color: var(--tp-action-update) !important;
-}
-
-.ant-btn-text.action-btn-delete:not(:disabled),
-.ant-btn-link.action-btn-delete:not(:disabled) {
-  color: var(--tp-action-delete) !important;
-}
-
-.ant-btn-text.action-btn-save:not(:disabled),
-.ant-btn-link.action-btn-save:not(:disabled) {
-  color: var(--tp-action-save) !important;
-}
-
-.ant-btn-text.action-btn-create:hover:not(:disabled),
-.ant-btn-text.action-btn-create:focus-visible:not(:disabled),
-.ant-btn-link.action-btn-create:hover:not(:disabled),
-.ant-btn-link.action-btn-create:focus-visible:not(:disabled) {
-  color: var(--tp-action-create-strong) !important;
-}
-
-.ant-btn-text.action-btn-read:hover:not(:disabled),
-.ant-btn-text.action-btn-read:focus-visible:not(:disabled),
-.ant-btn-link.action-btn-read:hover:not(:disabled),
-.ant-btn-link.action-btn-read:focus-visible:not(:disabled) {
-  color: var(--tp-action-read-strong) !important;
-}
-
-.ant-btn-text.action-btn-update:hover:not(:disabled),
-.ant-btn-text.action-btn-update:focus-visible:not(:disabled),
-.ant-btn-link.action-btn-update:hover:not(:disabled),
-.ant-btn-link.action-btn-update:focus-visible:not(:disabled) {
-  color: var(--tp-action-update-strong) !important;
-}
-
-.ant-btn-text.action-btn-delete:hover:not(:disabled),
-.ant-btn-text.action-btn-delete:focus-visible:not(:disabled),
-.ant-btn-link.action-btn-delete:hover:not(:disabled),
-.ant-btn-link.action-btn-delete:focus-visible:not(:disabled) {
-  color: var(--tp-action-delete-strong) !important;
-}
-
-.ant-btn-text.action-btn-save:hover:not(:disabled),
-.ant-btn-text.action-btn-save:focus-visible:not(:disabled),
-.ant-btn-link.action-btn-save:hover:not(:disabled),
-.ant-btn-link.action-btn-save:focus-visible:not(:disabled) {
-  color: var(--tp-action-save-strong) !important;
 }
 
 .api-filter-input {
@@ -334,10 +180,6 @@
   height: 32px;
 }
 
-:root[data-theme='dark'] .api-collection-description {
-  color: rgba(203, 213, 225, 0.64);
-}
-
 @media (max-width: 1200px) {
   .api-inline-environment {
     width: 100%;
@@ -352,4 +194,3 @@
     gap: 10px;
   }
 }
-

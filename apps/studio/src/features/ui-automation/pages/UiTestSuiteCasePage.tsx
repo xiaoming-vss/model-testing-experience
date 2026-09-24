@@ -874,7 +874,7 @@ export function UiTestSuiteCasePage() {
   const lastRunText = formatUiRunRelativeTime(latestSuiteRun?.startedAt || latestSuiteRun?.createdAt || latestSuiteRun?.updatedAt)
 
   return (<ProjectAccessScope projectId={sprintQuery.data?.projectId ?? sprintQuery.data?.project_id ?? ''}>{(
-    <div className="workbench-page api-automation-page functional-test-page ui-test-page ui-suite-detail-page tp-surface">
+    <div className="workbench-page api-automation-page functional-test-page tp-list-surface ui-test-page ui-suite-detail-page tp-surface">
       <div className="api-automation-content">
         <section className="workbench-panel workbench-board-panel tp-board ui-suite-detail-board">
           {suiteQuery.error ? <Alert showIcon type="error" title={getErrorMessage(suiteQuery.error)} /> : null}

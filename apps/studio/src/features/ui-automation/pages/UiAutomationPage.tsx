@@ -4,7 +4,6 @@ import { useMemo, useRef, useState } from 'react'
 import { useProjectRequirements } from '@/features/projects/hooks/useProjectRequirements'
 import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
 import { useSprintRequirementScope } from '@/features/projects/hooks/useSprintRequirementScope'
-import { UiSuiteListBanner } from '@/features/ui-automation/components/UiSuiteListBanner'
 import { UiSuiteListToolbar } from '@/features/ui-automation/components/UiSuiteListToolbar'
 import { UiTestSuiteSection, type UiTestSuiteSectionRef } from '@/features/ui-automation/components/UiTestSuiteSection'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
@@ -80,10 +79,9 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
   }, [allRequirements, selectedRequirementId, selectedSprintId])
   const canCreateSuite = Boolean(activeProjectId) && sprints.length > 0
   return (
-    <div className="workbench-page api-automation-page functional-test-page ui-test-page tp-surface">
+    <div className="workbench-page api-automation-page functional-test-page tp-list-surface ui-test-page tp-surface">
       <div className="api-automation-content">
         <section className="workbench-panel workbench-board-panel tp-board">
-          <UiSuiteListBanner />
 
           <UiSuiteListToolbar
             showScopeFilters={!isRequirementLocked}

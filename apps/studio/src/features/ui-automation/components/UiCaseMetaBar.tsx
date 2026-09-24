@@ -1,10 +1,9 @@
+import { ActionButton } from '@/shared/components/ActionButton'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import {
   OrderedListOutlined,
   CloudUploadOutlined,
-  DeleteOutlined,
   EditOutlined,
-  PlayCircleOutlined,
   SaveOutlined
 } from '@ant-design/icons'
 import { Button, Form, Input, Popconfirm, Switch, Tooltip } from 'antd'
@@ -71,7 +70,6 @@ export function UiCaseMetaBar({
               action="execute"
               className="ui-wb-case-debug action-btn-read"
               operation="run"
-              icon={<PlayCircleOutlined />}
               loading={debugging}
               disabled={isCreatingCase}
               onClick={onDebugRun}
@@ -114,17 +112,17 @@ export function UiCaseMetaBar({
             title={isCreatingCase ? '确认丢弃这个未保存用例？' : '确认删除该 UI测试用例？'}
             onConfirm={onDelete}
           >
-            <Button
+            <ActionButton
               type="text"
               size="small"
               danger
               className="ui-wb-case-link ui-wb-case-delete action-btn-delete"
-              icon={<DeleteOutlined />}
+              operation="delete"
               loading={deleting}
               disabled={deleteDisabled}
             >
               删除用例
-            </Button>
+            </ActionButton>
           </Popconfirm>
         </div>
       </div>

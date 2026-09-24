@@ -9,6 +9,13 @@
  * token 前缀用 `--srf-`（surface）：`--tp-` 已被 workbench.css 的基础 token 占用。
  */
 
+:root {
+  --srf-list-header-text: #7b8494;
+  --srf-list-header-bg: #f7f9fc;
+  --srf-list-row-bg: #ffffff;
+  --srf-list-row-hover: #f5f8ff;
+}
+
 .tp-surface {
   --srf-card: #ffffff;
   --srf-card-border: #e2e8f0;
@@ -41,8 +48,7 @@
   --srf-on-accent: #ffffff;
   /*
    * 终端面：API / UI 详情页的控制台与回放舞台。设计稿把这块画成深色反色面，
-   * 且**两套主题下都是深色**（终端没有浅色形态），所以深浅两个分支的取值相同，
-   * 在深色分支里再声明一次是为了满足「每个 token 深浅成套」的约定，不是笔误。
+   * 终端没有浅色形态，所以这组取值在整个浅色界面里也是深色——它们是设计取值，不是主题分支。
    */
   --srf-terminal-bg: #0f172a;
   --srf-terminal-surface: #111827;
@@ -59,47 +65,9 @@
   --srf-radius-control: 8px;
 }
 
-:root[data-theme='dark'] .tp-surface {
-  --srf-card: #161b22;
-  --srf-card-border: rgba(48, 54, 61, 0.9);
-  --srf-divider: rgba(48, 54, 61, 0.6);
-  --srf-text: #f0f6fc;
-  --srf-text-secondary: #8b949e;
-  --srf-text-muted: #6e7681;
-  --srf-accent: #58a6ff;
-  --srf-accent-strong: #79c0ff;
-  --srf-accent-soft: rgba(56, 139, 253, 0.15);
-  --srf-accent-border: rgba(56, 139, 253, 0.32);
-  --srf-hover: rgba(33, 38, 45, 0.82);
-  --srf-chip: #21262d;
-  --srf-chip-text: #8b949e;
-  --srf-count-badge: rgba(56, 139, 253, 0.2);
-  --srf-track: #21262d;
-  --srf-track-pending: #30363d;
-  --srf-result-passed: #3fb950;
-  --srf-result-failed: #f85149;
-  --srf-result-blocked: #d29922;
-  --srf-result-skipped: #6e7681;
-  --srf-danger: #ff7b72;
-  --srf-folder: #d29922;
-  --srf-on-accent: #ffffff;
-  /* 终端面在深色主题下取值不变，理由见浅色分支的注释。 */
-  --srf-terminal-bg: #0f172a;
-  --srf-terminal-surface: #111827;
-  --srf-terminal-bar: rgba(15, 23, 42, 0.92);
-  --srf-terminal-text: #cbd5e1;
-  --srf-terminal-title: #e2e8f0;
-  --srf-terminal-muted: #64748b;
-  --srf-terminal-chip: rgba(255, 255, 255, 0.92);
-  --srf-terminal-accent: #4edea3;
-  --srf-terminal-info: #93c5fd;
-  --srf-terminal-danger: #f87171;
-  --srf-terminal-danger-text: #fca5a5;
-}
-
 /*
  * 九色盘：用例类型（功能/安全/异常…）与测试单状态（未开始/执行中/已完成）共用。
- * 深色值取 GitHub 深色语义色，底色统一是 15% 透明度的同色。
+ * 文字取深色语义色，底色是对应的极浅同色。
  */
 .tp-surface .tone-blue {
   --srf-tone-text: #1d4ed8;
@@ -153,60 +121,6 @@
   --srf-tone-text: #475569;
   --srf-tone-bg: #f8fafc;
   --srf-tone-border: #e2e8f0;
-}
-
-:root[data-theme='dark'] .tp-surface .tone-blue {
-  --srf-tone-text: #79c0ff;
-  --srf-tone-bg: rgba(56, 139, 253, 0.15);
-  --srf-tone-border: rgba(56, 139, 253, 0.32);
-}
-
-:root[data-theme='dark'] .tp-surface .tone-indigo {
-  --srf-tone-text: #a5b4fc;
-  --srf-tone-bg: rgba(99, 102, 241, 0.15);
-  --srf-tone-border: rgba(99, 102, 241, 0.32);
-}
-
-:root[data-theme='dark'] .tp-surface .tone-purple {
-  --srf-tone-text: #d2a8ff;
-  --srf-tone-bg: rgba(163, 113, 247, 0.15);
-  --srf-tone-border: rgba(163, 113, 247, 0.32);
-}
-
-:root[data-theme='dark'] .tp-surface .tone-teal {
-  --srf-tone-text: #56d4dd;
-  --srf-tone-bg: rgba(45, 164, 176, 0.15);
-  --srf-tone-border: rgba(45, 164, 176, 0.32);
-}
-
-:root[data-theme='dark'] .tp-surface .tone-green {
-  --srf-tone-text: #7ee787;
-  --srf-tone-bg: rgba(46, 160, 67, 0.15);
-  --srf-tone-border: rgba(46, 160, 67, 0.32);
-}
-
-:root[data-theme='dark'] .tp-surface .tone-amber {
-  --srf-tone-text: #d29922;
-  --srf-tone-bg: rgba(187, 128, 9, 0.15);
-  --srf-tone-border: rgba(187, 128, 9, 0.32);
-}
-
-:root[data-theme='dark'] .tp-surface .tone-orange {
-  --srf-tone-text: #ffa657;
-  --srf-tone-bg: rgba(219, 109, 40, 0.15);
-  --srf-tone-border: rgba(219, 109, 40, 0.32);
-}
-
-:root[data-theme='dark'] .tp-surface .tone-red {
-  --srf-tone-text: #ff7b72;
-  --srf-tone-bg: rgba(248, 81, 73, 0.15);
-  --srf-tone-border: rgba(248, 81, 73, 0.32);
-}
-
-:root[data-theme='dark'] .tp-surface .tone-slate {
-  --srf-tone-text: #8b949e;
-  --srf-tone-bg: #21262d;
-  --srf-tone-border: #30363d;
 }
 
 /*
@@ -296,7 +210,7 @@
 }
 
 /* 列表页的板面：本身不要表面，让下面的卡片浮在画布上。
-   .api-automation-content 已经给了页面内距（12px 24px 20px），面板不再补一层。
+   .api-automation-content 已经给了页面内距，面板不再补一层。
    testing/styles/index.css 里 .app-shell-macos .testing-page .api-automation-content > .workbench-panel
    用 !important 给了它玻璃渐变表面，所以这里要带 .app-shell-macos .testing-page 前缀把权重压过去。 */
 .tp-surface .tp-board,
@@ -312,13 +226,11 @@
   overflow: visible;
 }
 
-/* 深色下 app/styles/workbench.css 的玻璃板面规则是
-   `:root[data-theme='dark'] .app-shell.app-shell-macos :is(<页面类…>) :is(<面板类…>)`，
-   两个 `:is()` 各算 1 分，合起来与上面这条同权重（都是 0,6,0）——同权重就靠样式表顺序决胜，
-   顺序一变深色下的玻璃底、内高光与 28px 阴影就会重新盖回来（深色下表现为内容区多出一层容器）。
-   多带一个 `:root[data-theme='dark']` 把深色这一支抬到 0,7,0，顺序依赖就没有了。 */
-.app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board,
-:root[data-theme='dark'] .app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board {
+/* app/styles/workbench.css 的玻璃板面规则写成
+   `:is(<页面类…>) :is(<面板类…>)`（两个 `:is()` 各算 1 分，合计 0,6,0），与上面 `.tp-board` 那条同权重——
+   同权重就靠样式表顺序决胜，顺序一变玻璃底、内高光与 28px 阴影就会重新盖回来（表现为内容区多出一层容器）。
+   这里多带 `.app-shell-macos .testing-page` 前缀抬到 (0,7,0)，顺序依赖就没有了。 */
+.app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board {
   border: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
@@ -327,13 +239,29 @@
   backdrop-filter: none !important;
 }
 
-/* 筛选标签（「迭代」「需求」…）在旧外壳里是一枚蓝底小胶囊，深色下还会变成绿底（detail.css 的深色规则），
-   设计稿里它是裸的弱化文字。这里统一收掉；不直接改那两条旧规则，是因为它们同时作用于
-   测试单的「加入用例」弹窗，那个弹窗不在 tp-surface 里，不该跟着变。 */
-.app-shell-macos .testing-page .tp-surface .api-automation-content .api-filter-field-label,
-:root[data-theme='dark'] .tp-surface .api-filter-field-label {
+/* 筛选标签（「迭代」「需求」…）在旧外壳里是一枚蓝底小胶囊，设计稿里它是裸的弱化文字。
+   这里统一收掉；不直接改那条旧规则，是因为它同时作用于测试单的「加入用例」弹窗，
+   那个弹窗不在 tp-surface 里，不该跟着变。 */
+.app-shell-macos .testing-page .tp-surface .api-automation-content .api-filter-field-label {
   border: 0;
   background: transparent;
 }
 
 /* 设计稿里筛选行是一条裸工具栏，不是面板表面；同样要压掉 macOS 玻璃底色。 */
+
+/* Four testing lists share the same filter-card geometry, including wrapped rows. */
+.app-shell.app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel .panel-header.api-panel-header.tp-list-toolbar {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 56px;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 10px 16px !important;
+  gap: 8px;
+  border: 1px solid var(--srf-card-border) !important;
+  border-radius: var(--srf-radius-card) !important;
+  background: var(--srf-card) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}

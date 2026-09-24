@@ -1,0 +1,380 @@
+/* 运行结果弹窗与 Popover：预览、审核模式及编辑器高度适配。 */
+.ai-task-run-result-popover-btn {
+  padding: 8px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 10px;
+  color: var(--ai-text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.ai-task-run-result-popover-btn:hover {
+  color: var(--ai-text);
+  border-color: rgba(124, 195, 163, 0.22);
+  background: rgba(124, 195, 163, 0.08);
+}
+
+.ai-task-run-result-popover-btn.active {
+  color: var(--ai-active-text);
+  border-color: rgba(124, 195, 163, 0.3);
+  background: rgba(124, 195, 163, 0.14);
+  box-shadow: 0 0 0 1px rgba(124, 195, 163, 0.1);
+}
+
+.ai-task-run-result-popover-btn.review {
+  color: #a16207;
+  border-color: rgba(245, 158, 11, 0.36);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.ai-task-run-result-popover-btn.review.active,
+.ai-task-run-result-popover-btn.review:hover {
+  color: #92400e;
+  border-color: rgba(245, 158, 11, 0.48);
+  background: rgba(245, 158, 11, 0.16);
+}
+
+.ai-task-run-result-popover-header {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ai-text);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 700;
+}
+
+.ai-task-run-result-popover-header.compact {
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ai-task-run-result-popover-header .ant-btn {
+  flex: 0 0 auto;
+}
+
+.ai-task-run-result-modal :is(.ant-modal-container, .ant-modal-content) {
+  max-height: calc(100vh - 72px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--ai-popover-surface, #fff);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow: 0 30px 80px rgba(7, 10, 16, 0.32);
+}
+
+.ai-task-run-result-modal .ant-modal-body {
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 16px;
+}
+
+.ai-task-run-result-modal.review .ant-modal-body {
+  flex: 0 1 auto;
+  overflow: hidden;
+  padding-top: 8px;
+  padding-bottom: 10px;
+}
+
+.ai-task-run-result-modal.review :is(.ant-modal-container, .ant-modal-content) {
+  max-height: calc(100vh - 72px);
+}
+
+.ai-task-run-result-modal.review .ant-modal-footer {
+  margin-top: 8px;
+  padding-top: 10px;
+}
+
+.ai-task-run-result-modal-content {
+  height: calc(100vh - 224px);
+  min-height: 600px;
+  max-height: calc(100vh - 224px);
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(124, 195, 163, 0.42) rgba(255, 255, 255, 0.04);
+}
+
+.ai-task-run-result-modal-content.review {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+}
+
+.api-task-run-result-modal :is(.ant-modal-container, .ant-modal-content) {
+  height: calc(100vh - 72px);
+  max-height: calc(100vh - 72px);
+}
+
+.ant-modal-wrap.api-task-run-result-modal-wrap {
+  overflow: hidden !important;
+}
+
+.api-task-run-result-modal .ant-modal-body {
+  height: calc(100vh - 160px);
+  padding-top: 8px;
+  padding-bottom: 14px;
+  overflow: hidden;
+}
+
+.api-task-run-result-modal-content {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.api-task-run-result-modal-content .api-config-result-panel :is(
+  .json-editor-wrap,
+  .json-editor-shell,
+  .json-editor-codemirror,
+  .cm-editor
+) {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+.api-task-run-result-modal-content .api-config-result-panel .cm-scroller {
+  overflow: auto !important;
+}
+
+.ai-task-run-result-modal-content .json-editor-wrap,
+.ai-task-run-result-modal-content .json-editor-shell,
+.ai-task-run-result-modal-content .json-editor-codemirror {
+  min-height: calc(100vh - 290px) !important;
+}
+
+.ai-task-run-result-modal-content.review .json-editor-wrap,
+.ai-task-run-result-modal-content.review .json-editor-shell,
+.ai-task-run-result-modal-content.review .json-editor-codemirror,
+.ai-task-run-result-modal-content.review .cm-editor {
+  height: clamp(560px, 64vh, 720px) !important;
+  min-height: clamp(560px, 64vh, 720px) !important;
+}
+
+.ai-task-run-result-modal-content.review .cm-scroller {
+  overflow: auto;
+}
+
+.ai-task-run-result-modal-content.review .ai-case-name-tree.expanded {
+  height: clamp(560px, 64vh, 720px);
+  min-height: clamp(560px, 64vh, 720px);
+}
+
+.ai-task-run-result-modal-content .ai-case-name-tree.expanded {
+  min-height: calc(100vh - 320px);
+}
+
+.ai-task-run-result-modal-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.ai-task-run-result-modal-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+}
+
+.ai-task-run-result-modal-content::-webkit-scrollbar-thumb {
+  background: rgba(124, 195, 163, 0.3);
+  border-radius: 999px;
+}
+
+.ai-task-run-result-modal-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 195, 163, 0.46);
+}
+
+@media (max-height: 820px) {
+  .ai-task-run-result-modal-content {
+    min-height: 0;
+  }
+
+  .ai-task-run-result-modal-content.review .json-editor-wrap,
+.ai-task-run-result-modal-content.review .json-editor-shell,
+.ai-task-run-result-modal-content.review .json-editor-codemirror,
+.ai-task-run-result-modal-content.review .cm-editor {
+    height: clamp(420px, 54vh, 560px) !important;
+    min-height: clamp(420px, 54vh, 560px) !important;
+  }
+
+  .ai-task-run-result-modal-content.review .ai-case-name-tree.expanded {
+    height: clamp(420px, 54vh, 560px);
+    min-height: clamp(420px, 54vh, 560px);
+  }
+}
+
+/* Keep editable run results attached to the modal footer instead of capping the editor at a viewport fraction. */
+
+.api-task-run-result-modal.review .ant-modal-body {
+  display: flex;
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+}
+
+.api-task-run-result-modal.review .ai-task-run-result-modal-content.review,
+.api-task-run-result-modal.review .ai-task-stage-review-popover {
+  flex: 1 1 auto;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+}
+
+.api-task-run-result-modal.review .ai-task-run-result-modal-content.review {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.api-task-run-result-modal.review .ai-task-stage-review-popover {
+  overflow: hidden;
+}
+
+.api-task-run-result-modal.review .ai-task-stage-review-popover > .json-editor-wrap {
+  flex: 1 1 auto;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.api-task-run-result-modal.review .ai-task-stage-review-popover :is(
+  .json-editor-shell,
+  .json-editor-codemirror,
+  .cm-editor
+) {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+.api-task-run-result-modal.review .ai-task-stage-review-popover .cm-scroller {
+  height: 100%;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+.ai-task-run-result-popover .ant-popover-inner {
+  padding: 12px;
+  background: var(--ai-popover-surface);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  box-shadow: 0 24px 48px rgba(7, 10, 16, 0.34);
+}
+
+.ai-task-run-result-popover .ant-popover-arrow::before,
+.ai-task-run-result-popover .ant-popover-arrow::after {
+  background: var(--ai-popover-arrow) !important;
+}
+
+.ai-task-run-result-popover-loading,
+.ai-task-run-result-popover-empty {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ai-text-secondary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+/* 功能用例阶段审核：正文占满备注上方空间，编辑器不再嵌套卡片。 */
+
+.functional-stage-review-modal :is(.ant-modal-container, .ant-modal-content) {
+  height: calc(100dvh - 72px);
+  max-height: calc(100dvh - 72px);
+}
+
+.functional-stage-review-modal.review .ant-modal-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.functional-stage-review-modal.ai-task-run-result-modal .ant-modal-body > .revision-workspace {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+
+.functional-stage-review-modal .revision-source,
+.functional-stage-review-modal .revision-source > .ai-task-run-result-modal-content.review,
+.functional-stage-review-modal .ai-task-stage-review-popover {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+}
+
+.functional-stage-review-modal .ai-task-stage-review-popover > .ant-tabs {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.functional-stage-review-modal .ai-task-stage-review-popover > :is(.ai-task-run-result-popover-header, .ai-task-stage-review-note) {
+  flex-shrink: 0;
+}
+
+.functional-stage-review-modal .ant-tabs > .ant-tabs-content-holder {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+}
+
+.functional-stage-review-modal .ant-tabs-content,
+.functional-stage-review-modal .ant-tabs-tabpane-active {
+  height: 100%;
+  min-height: 0;
+}
+
+.functional-stage-review-modal .ai-task-run-result-modal-content.review :is(.json-editor-wrap, .json-editor-shell, .json-editor-codemirror, .cm-editor) {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none;
+}
+
+.functional-stage-review-modal .ai-task-stage-review-popover > .json-editor-wrap {
+  flex: 1;
+  height: auto !important;
+}
+
+.functional-stage-review-modal .json-editor-shell {
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.functional-stage-review-modal .cm-editor {
+  border-radius: 0;
+}
+
+.functional-stage-review-modal .cm-scroller {
+  overflow: auto;
+}
+
+.functional-stage-review-modal .ai-requirement-analysis-review-diagram,
+.functional-stage-review-modal .ai-task-run-result-modal-content.review .ai-case-name-tree.expanded {
+  height: 100%;
+  min-height: 0;
+}
+
+.functional-stage-review-modal .revision-workspace.is-revising > .revision-source {
+  flex: 0 0 auto;
+}

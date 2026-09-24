@@ -173,9 +173,11 @@ describe('UI 用例生成任务详情', () => {
     })
     renderPage()
 
-    expect(await screen.findByText('执行中')).toBeInTheDocument()
-    expect(screen.queryByText('待审核')).not.toBeInTheDocument()
-    expect(screen.queryByText('待导入')).not.toBeInTheDocument()
+    // KPI 卡片上也有「待审核」这类档位名，状态断言收进运行行内看。
+    const row = await findRunRow()
+    expect(within(row).getByText('执行中')).toBeInTheDocument()
+    expect(within(row).queryByText('待审核')).not.toBeInTheDocument()
+    expect(within(row).queryByText('待导入')).not.toBeInTheDocument()
   })
 
   it('审核通过且待导入时提供 UI 正式资产导入入口', async () => {

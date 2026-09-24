@@ -7,7 +7,7 @@ function declarationsOf(css: string, selector: string) {
   return css.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`))?.[1]
 }
 
-describe('API 用例请求地址条暗色样式', () => {
+describe('API 用例请求地址条样式', () => {
   it('地址条只用表面 token，不继承亮色主题的白色内阴影', () => {
     const declarations = declarationsOf(inspectorCss, '.api-collection-workbench-page .api-wb-url-group')
 
@@ -16,7 +16,7 @@ describe('API 用例请求地址条暗色样式', () => {
     expect(declarations).toContain('background: var(--srf-card)')
   })
 
-  it('聚焦环用色盘 token，深色下随之换成深色描边', () => {
+  it('聚焦环用色盘 token', () => {
     const declarations = declarationsOf(inspectorCss, '.api-collection-workbench-page .api-wb-url-group:focus-within')
 
     expect(declarations).toContain('var(--srf-accent-soft)')

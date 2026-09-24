@@ -1,0 +1,282 @@
+/* API 配置结果：请求链、变量和规则可视化。 */
+.api-config-result-tabs {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.api-config-result-tablist {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 28px;
+  min-height: 38px;
+  border-bottom: 1px solid var(--ai-border);
+}
+
+.api-config-result-tablist button {
+  position: relative;
+  padding: 0 0 10px;
+  border: 0;
+  color: var(--ai-muted);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.api-config-result-tablist button.is-active {
+  color: var(--ai-active-text);
+}
+
+.api-config-result-tablist button.is-active::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--ai-active-text);
+  content: '';
+}
+
+.api-config-result-panel {
+  min-height: 0;
+  flex-grow: 1;
+  flex-shrink: 1;
+  flex-basis: 0;
+  padding-top: 10px;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.api-config-visual-view {
+  min-height: 0;
+  color: var(--ai-text);
+}
+
+.api-config-visual-stats {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 0 12px;
+  background: var(--ai-popover-surface);
+}
+
+.api-config-visual-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-bottom: 4px;
+}
+
+.api-config-visual-step {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.api-config-visual-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.9)),
+    var(--ai-card);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.api-config-visual-card-head {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.16s ease;
+}
+
+.api-config-visual-card-head:hover {
+  background: rgba(22, 119, 255, 0.05);
+}
+
+.api-config-visual-card-head:focus-visible {
+  outline: 2px solid rgba(22, 119, 255, 0.52);
+  outline-offset: -2px;
+}
+
+.api-config-visual-card-body {
+  padding: 0 16px 14px;
+}
+
+.api-config-visual-method-line {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.api-config-visual-method-line strong {
+  min-width: 0;
+  color: var(--ai-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.api-config-visual-order,
+.api-config-visual-muted {
+  flex: none;
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.api-config-visual-path {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(22, 119, 255, 0.06);
+  color: var(--ai-text);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 12px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.api-config-visual-variable-row {
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.api-config-visual-variable-row .ant-tag,
+.api-config-visual-method-line .ant-tag,
+.api-config-visual-rule-title .ant-tag {
+  margin-inline-end: 0;
+}
+
+.api-config-visual-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.api-config-visual-field {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.api-config-visual-field span,
+.api-config-visual-rule-title span {
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+.api-config-visual-field pre {
+  max-height: 132px;
+  margin: 6px 0 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ai-text);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.api-config-visual-rules {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.api-config-visual-rule-group {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.72);
+}
+
+.api-config-visual-rule-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.api-config-visual-rule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.api-config-visual-rule {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-left: 8px;
+  border-left: 2px solid rgba(22, 119, 255, 0.26);
+}
+
+.api-config-visual-rule strong {
+  color: var(--ai-text);
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.api-config-visual-rule span,
+.api-config-visual-empty {
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.api-config-visual-empty {
+  margin-top: 8px;
+}
+
+.api-config-visual-connector {
+  width: 2px;
+  height: 22px;
+  margin: 0 0 0 28px;
+  background: linear-gradient(180deg, rgba(22, 119, 255, 0.46), rgba(124, 195, 163, 0.56));
+}
+
+.api-config-visual-collapse-icon {
+  width: 14px;
+  flex: 0 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ai-text-secondary);
+  font-size: 11px;
+}

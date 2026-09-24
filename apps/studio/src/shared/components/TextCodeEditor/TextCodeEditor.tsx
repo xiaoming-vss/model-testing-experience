@@ -4,15 +4,10 @@ import { json } from '@codemirror/lang-json'
 import { yaml } from '@codemirror/lang-yaml'
 import { syntaxHighlighting } from '@codemirror/language'
 import { EditorView, keymap } from '@codemirror/view'
-import { useMemo } from 'react'
-import { useThemeStore } from '@/shared/store/theme.store'
 import {
-  codeEditorDarkTheme,
-  codeEditorLightTheme,
-  jsonEditorDarkHighlightStyle,
-  jsonEditorLightHighlightStyle,
-  yamlEditorDarkHighlightStyle,
-  yamlEditorLightHighlightStyle,
+  codeEditorTheme,
+  jsonEditorHighlightStyle,
+  yamlEditorHighlightStyle,
 } from '../codeEditorTheme'
 
 type TextCodeLanguage = 'plain' | 'json' | 'yaml' | 'auto'
@@ -44,14 +39,7 @@ export function TextCodeEditor({
   language = 'plain',
   foldable,
 }: TextCodeEditorProps) {
-  const themeMode = useThemeStore((state) => state.mode)
   const resolvedLanguage = resolveLanguage(language, value)
-  const editorTheme = useMemo(
-    () => (themeMode === 'dark' ? codeEditorDarkTheme : codeEditorLightTheme),
-    [themeMode],
-  )
-  const jsonHighlightStyle = themeMode === 'dark' ? jsonEditorDarkHighlightStyle : jsonEditorLightHighlightStyle
-  const yamlHighlightStyle = themeMode === 'dark' ? yamlEditorDarkHighlightStyle : yamlEditorLightHighlightStyle
   const showFoldGutter = foldable ?? resolvedLanguage !== 'plain'
 
   return (
@@ -67,11 +55,11 @@ export function TextCodeEditor({
             highlightActiveLineGutter: false,
           }}
           extensions={[
-            ...(resolvedLanguage === 'json' ? [json(), syntaxHighlighting(jsonHighlightStyle)] : []),
-            ...(resolvedLanguage === 'yaml' ? [yaml(), syntaxHighlighting(yamlHighlightStyle)] : []),
+            ...(resolvedLanguage === 'json' ? [json(), syntaxHighlighting(jsonEditorHighlightStyle)] : []),
+            ...(resolvedLanguage === 'yaml' ? [yaml(), syntaxHighlighting(yamlEditorHighlightStyle)] : []),
             keymap.of([indentWithTab]),
             EditorView.lineWrapping,
-            editorTheme,
+            codeEditorTheme,
             EditorView.contentAttributes.of({
               ...(ariaLabel ? { 'aria-label': ariaLabel } : {}),
               'aria-readonly': String(readOnly),

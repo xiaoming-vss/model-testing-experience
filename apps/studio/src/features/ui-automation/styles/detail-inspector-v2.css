@@ -1,20 +1,11 @@
+
+
 /*
  * UI测试集详情页右栏：执行回放 + 关键帧快照 + 执行控制台。
  *
- * 三张卡片共用一套头部（标题 + 等宽胶囊）与同一套 token；颜色只引用 `--srf-*` / `.tone-*`，
- * 深色由 token 切换，本文件没有 `:root[data-theme='dark']` 分支。
- * 与控制台配色对应：日志区是深色反色面（设计稿的终端块），深色主题下仍然可读。
+ * 三张卡片共用一套头部（标题 + 等宽胶囊）与同一套 token；颜色只引用 `--srf-*` / `.tone-*`。
+ * 与控制台配色对应：日志区是深色反色面（设计稿的终端块），在浅色主题下也保持深色才可读。
  */
-
-.ui-suite-detail-page .ui-wb-card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-card);
-  background: var(--srf-card);
-}
 
 .ui-suite-detail-page .ui-wb-card-head {
   display: flex;
@@ -252,15 +243,6 @@
   font-size: 11px;
 }
 
-.ui-suite-detail-page .ui-wb-replay-nav.ant-btn {
-  color: var(--srf-text-secondary);
-}
-
-.ui-suite-detail-page .ui-wb-replay-nav.ant-btn:hover {
-  color: var(--srf-accent);
-  background: var(--srf-hover);
-}
-
 .ui-suite-detail-page .ui-wb-replay-hint {
   color: var(--srf-text-muted);
   font-size: 11px;
@@ -363,14 +345,6 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.ui-suite-detail-page .ui-wb-console-action.ant-btn {
-  color: var(--srf-text-secondary);
-}
-
-.ui-suite-detail-page .ui-wb-console-action.ant-btn:hover {
-  color: var(--srf-accent);
 }
 
 /* 日志是控制台卡片的弹性区：卡片被压时只压这里（内部滚动），
@@ -483,11 +457,6 @@
 
 .ui-suite-detail-page .ui-wb-console-snapshot-toggle.ant-btn {
   padding: 0;
-  color: var(--srf-text-secondary);
-}
-
-.ui-suite-detail-page .ui-wb-console-snapshot-toggle.ant-btn:hover {
-  color: var(--srf-accent);
 }
 
 .ui-suite-detail-page .ui-wb-console-snapshot-body {

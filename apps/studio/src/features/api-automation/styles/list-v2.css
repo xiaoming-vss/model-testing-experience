@@ -22,10 +22,9 @@
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
-/* testing/styles 与 dark-polish 都用 !important 给 .api-panel-header 设过玻璃表面与内距，
-   所以卡片外观要用更长的前缀 + !important 定住。 */
-/* 深色下 dark-polish 的 :is(..., .api-panel-header, ...) 也是 !important + 同等权重，
-   这里再加一个 .app-shell 把权重抬到它之上，卡片底色才和表格卡片一致。 */
+/* testing/styles 用 !important 给 .api-panel-header 设过玻璃表面与内距，
+   所以卡片外观要用更长的前缀 + !important 定住：这里再加一个 .app-shell 把权重抬到它之上，
+   卡片底色才和表格卡片一致。 */
 .app-shell.app-shell-macos .testing-page .api-test-page .api-panel-header.api-test-header {
   display: flex;
   flex-direction: column;
@@ -47,7 +46,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px;
+  padding: 0;
 }
 
 .api-test-page .api-test-header-main .api-panel-head-main {
@@ -188,10 +187,6 @@
   overflow: hidden;
 }
 
-:root[data-theme='dark'] .api-test-page .api-test-table-card {
-  box-shadow: none;
-}
-
 /* 外壳给了面板内表格容器 16px 18px 的内距，设计稿里表格贴着卡片边缘，这里收掉。 */
 .api-test-page .api-test-table-scroll {
   padding: 0;
@@ -215,10 +210,6 @@
   background: var(--srf-hover) !important;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
-}
-
-:root[data-theme='dark'] .app-shell.app-shell-macos .api-test-page .api-test-footer .ant-typography {
-  color: var(--srf-text-secondary);
 }
 
 /* ===== 表格内部 ===== */

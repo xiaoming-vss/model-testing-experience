@@ -1,8 +1,8 @@
+import { ActionButton } from '@/shared/components/ActionButton'
 import {
   ArrowLeftOutlined,
   BugOutlined,
   HistoryOutlined,
-  PlayCircleOutlined,
   SaveOutlined
 } from '@ant-design/icons'
 import { Button, Tooltip } from 'antd'
@@ -103,16 +103,16 @@ export function UiSuiteDetailToolbar({
         >
           调试运行
         </Button>
-        <Button
+        <ActionButton
           type="primary"
           className="ui-wb-toolbar-run"
-          icon={<PlayCircleOutlined />}
+          operation="run"
           loading={runningSuite}
           disabled={!canRun}
           onClick={onRunSuite}
         >
           运行测试集
-        </Button>
+        </ActionButton>
         <Button className="ui-wb-toolbar-save" icon={<SaveOutlined />} loading={saving} disabled={!canSave} onClick={onSave}>
           保存
         </Button>

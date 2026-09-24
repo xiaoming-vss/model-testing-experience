@@ -1,3 +1,5 @@
+import '@/shared/styles/list-table.css'
+import { AppIcon } from '@/shared/icons'
 import { AppstoreOutlined, CaretRightOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import {
   Alert,
@@ -35,13 +37,6 @@ import '@/features/test-orders/styles/test-orders-v2.css'
 
 const { Text } = Typography
 
-/** 快速过滤条上的状态档位，顺序按测试单生命周期排。 */
-const STATUS_QUICK_FILTERS = [
-  { key: 'pending', label: '未开始' },
-  { key: 'in_progress', label: '执行中' },
-  { key: 'completed', label: '已完成' },
-] as const
-
 /** 进度条与指标文字用的色调，与条目结论一一对应。 */
 const METRIC_TONES: Record<TestOrderProgressKey, string> = {
   passed: 'green',
@@ -57,7 +52,6 @@ export function TestOrderPage() {
   const { activeSprintId, sprints, sprintsQuery, selectSprint, sprintSelectorOptions } =
     useActiveSprint()
 
-  const [status, setStatus] = useState<string | null>(null)
   const [keyword, setKeyword] = useState('')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingOrder, setEditingOrder] = useState<TestOrder | null>(null)
@@ -83,22 +77,11 @@ export function TestOrderPage() {
   const visibleOrders = useMemo(() => {
     const text = keyword.trim().toLowerCase()
     return orders.filter((order) => {
-      if (status && (order.status ?? '') !== status) return false
       if (!text) return true
       const haystack = `${order.name} ${order.testedVersion ?? ''}`.toLowerCase()
       return haystack.includes(text)
     })
-  }, [keyword, orders, status])
-
-  // 快速过滤条上的计数是「这个状态下有多少张测试单」，不随已选状态和关键字变化。
-  const statusCounts = useMemo(() => {
-    const counts: Record<string, number> = { pending: 0, in_progress: 0, completed: 0 }
-    orders.forEach((order) => {
-      const key = order.status ?? ''
-      if (key in counts) counts[key] += 1
-    })
-    return counts
-  }, [orders])
+  }, [keyword, orders])
 
   // 搜索框右侧标了 ⌘K，那就得真的能按：Mac 用 ⌘，其他平台用 Ctrl。
   useEffect(() => {
@@ -127,7 +110,8 @@ export function TestOrderPage() {
       key: 'name',
       width: '24%',
       render: (_, order) => (
-        <Space size={0} className="functional-suite-list-name">
+        <Space size={8} className="functional-suite-list-name test-order-name-cell">
+          <span className="test-order-name-icon" aria-hidden="true"><AppIcon name="tasks" size={14} /></span>
           <Tooltip title={order.name}>
             <Text ellipsis>{order.name}</Text>
           </Tooltip>
@@ -299,13 +283,13 @@ export function TestOrderPage() {
     setDrawerOpen(true)
   }
 
-  const hasLocalFilters = Boolean(status || keyword.trim())
+  const hasLocalFilters = Boolean(keyword.trim())
 
   return (
-    <div className="workbench-page api-automation-page functional-test-page test-orders-page tp-surface">
+    <div className="workbench-page api-automation-page functional-test-page tp-list-surface test-orders-page tp-surface">
       <div className="api-automation-content">
         <section className="workbench-panel workbench-board-panel tp-board">
-          <div className="panel-header api-panel-header test-orders-toolbar">
+          <div className="panel-header api-panel-header test-orders-toolbar tp-list-toolbar">
             <div className="api-filter-group test-orders-filters">
               <div className="api-filter-field">
                 <span className="api-filter-field-label">迭代</span>
@@ -377,37 +361,6 @@ export function TestOrderPage() {
             </div>
           ) : (
             <>
-              <div className="tp-quickbar test-orders-quickbar">
-                <div className="tp-quick-filters">
-                  <span className="tp-quick-label">快速过滤:</span>
-                  <button
-                    type="button"
-                    className={`tp-chip${status ? '' : ' active'}`}
-                    aria-pressed={!status}
-                    onClick={() => setStatus(null)}
-                  >
-                    全部
-                    <span className="tp-chip-count">{orders.length}</span>
-                  </button>
-                  {STATUS_QUICK_FILTERS.map((option) => (
-                    <button
-                      key={option.key}
-                      type="button"
-                      className={`tp-chip${status === option.key ? ' active' : ''}`}
-                      aria-pressed={status === option.key}
-                      onClick={() => setStatus(status === option.key ? null : option.key)}
-                    >
-                      {option.label}
-                      <span className="tp-chip-count">{statusCounts[option.key]}</span>
-                    </button>
-                  ))}
-                </div>
-                {/* 测试单没有批量删除接口，所以这里不做勾选，也就不摆「已选 N 项」这个空计数。 */}
-                <div className="tp-selection">
-                  共 <strong>{visibleOrders.length}</strong> 条测试单
-                </div>
-              </div>
-
               <div className="test-orders-table-card">
                 <div className="table-body-scroll sprint-card-scroll functional-suite-scroll test-orders-table-scroll">
                   {ordersQuery.isLoading ? (
@@ -434,7 +387,6 @@ export function TestOrderPage() {
                         {hasLocalFilters ? (
                           <Button
                             onClick={() => {
-                              setStatus(null)
                               setKeyword('')
                             }}
                           >
@@ -456,7 +408,7 @@ export function TestOrderPage() {
                     </div>
                   ) : (
                     <Table<TestOrder>
-                      className="functional-suite-list-table"
+                      className="functional-suite-list-table tp-list-table"
                       columns={columns}
                       dataSource={visibleOrders}
                       rowKey={(order) => order.orderId ?? order.name}

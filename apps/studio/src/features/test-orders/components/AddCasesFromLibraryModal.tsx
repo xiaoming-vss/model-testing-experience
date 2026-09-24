@@ -1,3 +1,5 @@
+import '@/shared/styles/list-table.css'
+import '@/shared/styles/surface-tokens.css'
 import { SearchOutlined } from '@ant-design/icons'
 import {
   Alert,
@@ -329,7 +331,7 @@ export function AddCasesFromLibraryModal({
           <Alert showIcon type="error" title={getErrorMessage(casesQuery.error)} />
         ) : null}
         <Table<FunctionCaseLibraryItem>
-          className="functional-suite-list-table"
+          className="functional-suite-list-table tp-list-table"
           size="small"
           columns={columns}
           dataSource={cases}

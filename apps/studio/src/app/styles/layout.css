@@ -61,35 +61,6 @@
   stroke-linejoin: round;
 }
 
-:root[data-theme='dark'] .mtx-logo {
-  color: #7aa7ff;
-  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.28));
-}
-
-:root[data-theme='dark'] .mtx-logo__plate-start {
-  stop-color: #252d39;
-}
-
-:root[data-theme='dark'] .mtx-logo__plate-end {
-  stop-color: #171d27;
-}
-
-:root[data-theme='dark'] .mtx-logo__plate {
-  stroke: rgba(148, 163, 184, 0.28);
-}
-
-:root[data-theme='dark'] .mtx-logo__model {
-  stroke: #7aa7ff;
-}
-
-:root[data-theme='dark'] .mtx-logo__test {
-  stroke: #e2e8f0;
-}
-
-:root[data-theme='dark'] .mtx-logo__experience {
-  stroke: #2dd4bf;
-}
-
 .app-sider .ant-menu {
   padding: 16px 12px;
   border-inline-end: 0 !important;
@@ -144,7 +115,6 @@
 }
 
 .app-header-actions .ant-btn-circle {
-  color: #414755;
   font-size: 20px;
 }
 
@@ -197,8 +167,6 @@
 .project-actions .ant-btn-primary,
 .panel-header .ant-btn-primary {
   border-radius: 2px;
-  background: #006ef2;
-  font-weight: 600;
 }
 
 .project-actions .ant-btn:not(.ant-btn-primary) {
@@ -206,7 +174,7 @@
 }
 
 .workbench-tabs {
-  padding: 24px;
+  padding: 24px var(--app-page-gutter) 24px;
 }
 
 .workbench-tabs > .ant-tabs-nav {
@@ -296,7 +264,7 @@
 }
 
 .workbench-empty {
-  margin: 24px;
+  margin: 24px var(--app-page-gutter) 24px;
   min-height: 320px;
   display: grid;
   place-items: center;

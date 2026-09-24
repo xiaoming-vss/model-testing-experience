@@ -5,13 +5,14 @@ import type { ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
 
-type BaseServiceTab = 'llm' | 'zentao' | 'gitlab'
+type BaseServiceTab = 'llm' | 'zentao' | 'gitlab' | 'skills'
 
 const tabOptions: Array<{
   key: BaseServiceTab
   label: string
   icon: ReactNode
 }> = [
+  { key: 'skills', label: 'Skill库', icon: <AppIcon name="skills" /> },
   {
     key: 'llm',
     label: 'LLM模型',
@@ -29,14 +30,14 @@ const tabOptions: Array<{
   },
 ]
 
-export function BaseServicesPage() {
+export function BaseServicesPage({ skillLibrary }: { skillLibrary: ReactNode }) {
   const [toolbarActions, setToolbarActions] = useState<HTMLDivElement | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const { activeProjectId } = useActiveProject()
 
   const activeTab = useMemo<BaseServiceTab>(() => {
     const tab = searchParams.get('tab')
-    if (tab === 'llm' || tab === 'zentao' || tab === 'gitlab') return tab
+    if (tab === 'llm' || tab === 'zentao' || tab === 'gitlab' || tab === 'skills') return tab
     return 'llm'
   }, [searchParams])
 
@@ -72,11 +73,11 @@ export function BaseServicesPage() {
         </div>
       </section>
 
-      <section className="workbench-panel base-services-panel">
+      {activeTab === 'skills' ? skillLibrary : <section className="workbench-panel base-services-panel">
         <div className="base-services-panel-body base-services-panel-body-immersive">
           <SharedServicesPanel projectId={activeProjectId} provider={activeTab} toolbarActions={toolbarActions} />
         </div>
-      </section>
+      </section>}
     </div>
   )
 }

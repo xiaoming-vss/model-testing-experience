@@ -1,5 +1,7 @@
+import { useDeleteTaskRun, useStartTaskRun } from '@/features/ai-testing/hooks/useTaskRunActions'
 import { formatStructuredContent } from '@/shared/utils/value'
 import { RevisionDivider, RevisionSidePanel } from '../components/RevisionSidePanel'
+import { TaskDetailInstructionEditor, TaskDetailNavItem, TaskDetailNavPanel, TaskDetailToolbar } from '../components/TaskDetailShell'
 import { RunArtifacts, RunPipelineStatus } from '../components/RunPipelineStatus'
 import { RunHistoryTable, RunRowActions, type RunMenuAction } from '../components/RunHistoryTable'
 import { confirmDeleteRun, isRunDeletable } from '../utils/runDeletion'
@@ -8,8 +10,8 @@ import { usePersonalLlmChoice } from '../hooks/usePersonalLlmChoice'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
-import { ArrowLeftOutlined } from '@ant-design/icons'
-import { Alert, Button, Card, Empty, Form, Modal, Popconfirm, Spin, Tag } from 'antd'
+import { ArrowLeftOutlined, CodeOutlined, FileTextOutlined, HistoryOutlined } from '@ant-design/icons'
+import { Alert, Button, Empty, Form, Modal, Popconfirm, Spin, Tag } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -27,7 +29,11 @@ import {
   isRunnableApiCaseGenerateTaskRun,
   renderApiCaseGenerateTaskRunStatusTag,
 } from '../utils/taskStatus'
+import '@/shared/styles/surface-tokens.css'
 import '@/features/ai-testing/styles/index.css'
+import '@/features/ai-testing/styles/task-review.css'
+import '@/features/ai-testing/styles/run-result.css'
+import '@/features/ai-testing/styles/task-detail-v2.css'
 import './RequirementAnalysisTaskDetailPage.css'
 import { RequirementDocumentPreviewContent } from '@/features/requirements/components/RequirementDocumentPreviewModal'
 import type { Requirement } from '@/features/requirements/types'
@@ -122,6 +128,8 @@ export function RequirementAnalysisTaskDetailPage() {
   const [reviseModalOpen, setReviseModalOpen] = useState(false)
   const [revisionFooter, setRevisionFooter] = useState<HTMLDivElement | null>(null)
   const [revisionInstruction, setRevisionInstruction] = useState('')
+  const [instructionDraft, setInstructionDraft] = useState('')
+  const [instructionDirty, setInstructionDirty] = useState(false)
   const [form] = Form.useForm<RequirementAnalysisTaskFormValues>()
 
   const taskQuery = useQuery({
@@ -281,24 +289,15 @@ export function RequirementAnalysisTaskDetailPage() {
     String(activeSelectedRun?.status ?? '').toLowerCase() === 'success'
   const canImportRunResultModal = canImportSelectedRun && runResultModal?.key === 'resultYaml'
 
-  const detailItems = useMemo(() => {
-    if (!task) return []
-    const boundRequirementSprintName =
-      boundRequirement && 'sprintName' in boundRequirement
-        ? String(boundRequirement.sprintName ?? '')
-        : undefined
-    return [
-      { label: '任务名称', value: task.name || '-' },
-      { label: '迭代', value: sprintNameMap.get(task.sprintId ?? '') ?? boundRequirementSprintName ?? task.sprintId ?? '-' },
-      { label: '需求', value: boundRequirement?.name ?? task.requirementId ?? '-' },
-      { label: '来源类型', value: task.sourceType || '-' },
-      { label: '更新时间', value: formatTime(pickUpdatedAt(task)) },
-    ]
-  }, [boundRequirement, sprintNameMap, task])
-
+  const sprintName = task
+    ? sprintNameMap.get(task.sprintId ?? '') ?? task.sprintId ?? '-'
+    : '-'
+  const requirementName = boundRequirement?.name ?? task?.requirementId ?? '-'
   const taskSourceContent = task?.sourceContent?.trim() ?? ''
   const displaySourceContent = taskSourceContent
   const canPreviewBoundRequirement = Boolean(boundRequirement && hasRequirementDocument(boundRequirement))
+  /** 来源内容视图是否由绑定的需求文档兜底渲染；是的话由预览组件自己出标题栏，页面不再叠一条。 */
+  const showSourceDocument = !displaySourceContent && canPreviewBoundRequirement && Boolean(boundRequirement)
 
   const sourceSummary = useMemo(() => {
     if (!task) return '暂无来源内容'
@@ -348,6 +347,12 @@ export function RequirementAnalysisTaskDetailPage() {
     setSelectedRunRecordId(null)
     setRunResultModal(null)
   }, [taskId])
+
+  // 补充指令的内联编辑草稿跟着任务数据走；保存成功后任务数据更新，草稿与脏标记一起复位。
+  useEffect(() => {
+    setInstructionDraft(task?.instruction ?? '')
+    setInstructionDirty(false)
+  }, [task?.instruction, task?.taskId])
 
   useEffect(() => {
     if (runRecords.length === 0) {
@@ -403,8 +408,11 @@ export function RequirementAnalysisTaskDetailPage() {
     },
   })
 
-  const runTaskMutation = useMutation({
-    mutationFn: (values: RequirementAnalysisRunFormValues) =>
+  const runTaskMutation = useStartTaskRun({
+    kind: 'analysis',
+    taskId,
+    projectId: task?.projectId,
+    startRun: (values: RequirementAnalysisRunFormValues) =>
       api.runRequirementAnalysisTask(taskId, {
         connectionId: values.connectionId,
         instruction: normalizeInstruction(values.instruction),
@@ -412,14 +420,10 @@ export function RequirementAnalysisTaskDetailPage() {
         checkpointEnabled: Boolean(values.checkpointEnabled),
         configJson: '{}',
       }),
-    onSuccess: (run) => {
-      message.success('需求分析任务已加入执行队列')
+    onStarted: (run) => {
       setRunModalOpen(false)
       setActiveSection('runHistory')
       setSelectedRunRecordId(run.runId ?? null)
-      queryClient.invalidateQueries({ queryKey: ['requirementAnalysisTask', taskId] })
-      queryClient.invalidateQueries({ queryKey: ['requirementAnalysisTaskRuns', taskId] })
-      queryClient.invalidateQueries({ queryKey: ['requirementAnalysisTasks', task?.projectId ?? run.projectId] })
     },
   })
 
@@ -533,16 +537,24 @@ export function RequirementAnalysisTaskDetailPage() {
     },
   })
 
-  const deleteRunMutation = useMutation({
-    mutationFn: (runId: string) => api.deleteRequirementAnalysisRun(runId),
-    onSuccess: (_data, runId) => {
-      message.success('运行记录已删除')
-      if (selectedRunRecordId === runId) setSelectedRunRecordId(null)
-      queryClient.removeQueries({ queryKey: ['requirementAnalysisRun', runId], exact: true })
-      queryClient.invalidateQueries({ queryKey: ['requirementAnalysisTaskRuns', taskId] })
+  const deleteRunMutation = useDeleteTaskRun({
+    kind: 'analysis',
+    taskId,
+    selectedRunId: selectedRunRecordId,
+    onSelectedRunDeleted: () => {
+      setSelectedRunRecordId(null)
     },
-    onError: (error) => message.error(getErrorMessage(error)),
   })
+
+  function handleSaveInstruction() {
+    if (!task) return
+    updateTaskMutation.mutate({
+      name: task.name,
+      sprintId: task.sprintId,
+      requirementId: task.requirementId ?? '',
+      instruction: instructionDraft,
+    })
+  }
 
   function handleRunTask() {
     if (runsQuery.isLoading) {
@@ -681,7 +693,7 @@ export function RequirementAnalysisTaskDetailPage() {
   }
 
   return (<ProjectAccessScope resourceError={taskQuery.error} projectId={task?.projectId ?? ''}>{personalLlm.dialog}{(
-    <div className="workbench-page ai-testing-page">
+    <div className="workbench-page ai-testing-page tp-list-surface ai-task-detail-page tp-surface">
       <div className="workbench-tabs">
         {taskQuery.error ? <Alert showIcon type="error" title={getErrorMessage(taskQuery.error)} /> : null}
         {runsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(runsQuery.error)} /> : null}
@@ -690,18 +702,21 @@ export function RequirementAnalysisTaskDetailPage() {
           <Spin />
         ) : task ? (
           <div className="ai-task-detail-layout">
-            <Card className="ai-task-detail-summary-card">
-              <div className="ai-task-detail-inline-meta">
+            <TaskDetailToolbar
+              back={(
                 <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/ai-testing?tab=analysis')}>
                   返回需求分析
                 </Button>
-                {detailItems.map((item) => (
-                  <div key={item.label} className="ai-task-detail-inline-item">
-                    <span className="ai-task-detail-inline-label">{item.label}</span>
-                    <span className="ai-task-detail-inline-value">{item.value}</span>
-                  </div>
-                ))}
-                <div className="ai-task-detail-inline-actions">
+              )}
+              fields={[
+                { label: '任务名称', value: task.name || '未命名任务', kind: 'name', separator: 'line' },
+                { label: '迭代', value: sprintName, kind: 'chip-accent' },
+                { label: '需求', value: requirementName },
+                { label: '来源类型', value: task.sourceType || 'text', kind: 'chip-muted' },
+                { label: '更新时间', value: formatTime(pickUpdatedAt(task)), kind: 'time', separator: 'dot' },
+              ]}
+              actions={(
+                <>
                   <ProjectActionButton action="execute"
                     className="action-btn-run"
                     operation="run"
@@ -719,54 +734,44 @@ export function RequirementAnalysisTaskDetailPage() {
                       删除
                     </ProjectActionButton>
                   </Popconfirm>
-                </div>
-              </div>
-            </Card>
+                </>
+              )}
+            />
 
             <div className="ai-task-detail-split">
-              <aside className="ai-task-detail-nav-panel">
-                <div className="ai-task-detail-nav-head">
-                  <span className="ai-task-detail-nav-head-title">任务信息</span>
-                  <span className="ai-task-detail-nav-head-sub">导航</span>
-                </div>
-                <div className="ai-task-detail-nav-body">
-                  <div className="ai-task-detail-nav-label">输入</div>
-                  <button
-                    type="button"
-                    className={`ai-task-detail-nav-item${activeSection === 'sourceContent' ? ' active' : ''}`}
-                    onClick={() => setActiveSection('sourceContent')}
-                  >
-                    <span className="ai-task-detail-nav-item-title">来源内容</span>
-                    <span className="ai-task-detail-nav-item-sub">{sourceSummary}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`ai-task-detail-nav-item${activeSection === 'instruction' ? ' active' : ''}`}
-                    onClick={() => setActiveSection('instruction')}
-                  >
-                    <span className="ai-task-detail-nav-item-title">补充指令</span>
-                    <span className="ai-task-detail-nav-item-sub">{instructionSummary}</span>
-                  </button>
-                  <div className="ai-task-detail-nav-label">输出</div>
-                  <button
-                    type="button"
-                    className={`ai-task-detail-nav-item${activeSection === 'runHistory' ? ' active' : ''}`}
-                    onClick={() => setActiveSection('runHistory')}
-                  >
-                    <span className="ai-task-detail-nav-item-title">运行记录</span>
-                    <span className="ai-task-detail-nav-item-sub">{runHistorySummary}</span>
-                  </button>
-                  <div className="ai-task-detail-nav-tip">
-                    点击左侧条目在右侧查看内容，运行时记录自动刷新。
-                  </div>
-                </div>
-              </aside>
+              <TaskDetailNavPanel tip="点击左侧条目在右侧查看内容，运行时记录自动刷新。">
+                <div className="ai-task-detail-nav-label">输入</div>
+                <TaskDetailNavItem
+                  title="来源内容"
+                  sub={sourceSummary}
+                  icon={<FileTextOutlined />}
+                  active={activeSection === 'sourceContent'}
+                  onClick={() => setActiveSection('sourceContent')}
+                />
+                <TaskDetailNavItem
+                  title="补充指令"
+                  sub={instructionSummary}
+                  icon={<CodeOutlined />}
+                  active={activeSection === 'instruction'}
+                  onClick={() => setActiveSection('instruction')}
+                />
+                <div className="ai-task-detail-nav-label">输出</div>
+                <TaskDetailNavItem
+                  title="运行记录"
+                  sub={runHistorySummary}
+                  icon={<HistoryOutlined />}
+                  active={activeSection === 'runHistory'}
+                  badge={runRecords.length}
+                  onClick={() => setActiveSection('runHistory')}
+                />
+              </TaskDetailNavPanel>
 
               <section className="ai-task-detail-main-panel">
                 {activeSection === 'runHistory' ? (
                   <>
                     <div className="ai-task-detail-main-head">
                       <span className="ai-task-detail-main-head-title">运行记录</span>
+                      <span className="ai-task-detail-main-head-sub">Pipeline Executions</span>
                       <div className="ai-task-detail-main-head-extra">
                         <div className="ai-task-run-history-toolbar">
                           <span className="ai-task-run-history-auto-refresh">每 5 秒自动刷新</span>
@@ -794,7 +799,7 @@ export function RequirementAnalysisTaskDetailPage() {
                             <span className="ai-task-run-metric-k">待审核</span>
                             <span className="ai-task-run-metric-v">{runStats.waitingCount}<small> 条</small></span>
                           </div>
-                          <div className="ai-task-run-metric">
+                          <div className="ai-task-run-metric success">
                             <span className="ai-task-run-metric-k">成功</span>
                             <span className="ai-task-run-metric-v">{runStats.successCount}<small> 条</small></span>
                           </div>
@@ -934,14 +939,16 @@ export function RequirementAnalysisTaskDetailPage() {
                   </>
                 ) : activeSection === 'sourceContent' ? (
                   <>
-                    <div className="ai-task-detail-main-head">
-                      <span className="ai-task-detail-main-head-title">来源内容</span>
-                      <div className="ai-task-detail-main-head-extra">
-                        <div className="ai-task-run-history-toolbar">
-                          <span className="ai-task-run-history-field">{sourceSummary}</span>
+                    {showSourceDocument ? null : (
+                      <div className="ai-task-detail-main-head">
+                        <span className="ai-task-detail-main-head-title">来源内容</span>
+                        <div className="ai-task-detail-main-head-extra">
+                          <div className="ai-task-run-history-toolbar">
+                            <span className="ai-task-run-history-field">{sourceSummary}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
                     <div className="ai-task-detail-main-body">
                       {boundRequirementQuery.isLoading && !displaySourceContent ? (
                         <div className="ai-task-run-history-placeholder compact">
@@ -973,7 +980,16 @@ export function RequirementAnalysisTaskDetailPage() {
                       <span className="ai-task-detail-main-head-title">补充指令</span>
                     </div>
                     <div className="ai-task-detail-main-body">
-                      <pre className="ai-task-code-block">{task.instruction || '-'}</pre>
+                      <TaskDetailInstructionEditor
+                        value={instructionDraft}
+                        dirty={instructionDirty}
+                        saving={updateTaskMutation.isPending}
+                        onChange={(value) => {
+                          setInstructionDraft(value)
+                          setInstructionDirty(true)
+                        }}
+                        onSave={handleSaveInstruction}
+                      />
                     </div>
                   </>
                 )}

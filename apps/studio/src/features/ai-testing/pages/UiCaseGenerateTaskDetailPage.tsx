@@ -1,9 +1,15 @@
+import { useDeleteTaskRun, useStartTaskRun } from '@/features/ai-testing/hooks/useTaskRunActions'
+import '@/shared/styles/surface-tokens.css'
+import '@/features/ai-testing/styles/index.css'
+import '@/features/ai-testing/styles/task-review.css'
+import '@/features/ai-testing/styles/candidate-review.css'
+import '@/features/ai-testing/styles/task-detail-v2.css'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
-import { ArrowLeftOutlined, DownOutlined, EditOutlined, RightOutlined, UploadOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, CodeOutlined, DownOutlined, EditOutlined, FileZipOutlined, HistoryOutlined, RightOutlined, UploadOutlined } from '@ant-design/icons'
 import { Alert, Button, Card, Descriptions, Empty, Input, Modal, Popconfirm, Select, Space, Spin, Table, Tabs, Tag, Tooltip, Typography } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -12,12 +18,13 @@ import { LlmConnectionSelectModal } from '../components/LlmConnectionSelectModal
 import { UiImportConflictModal } from '../components/UiImportConflictModal'
 import { ImportMigrationWarning } from '../components/ImportMigrationWarning'
 import { RunHistoryTable, RunRowActions, type RunMenuAction } from '../components/RunHistoryTable'
+import { TaskDetailInstructionEditor, TaskDetailNavItem, TaskDetailNavPanel, TaskDetailRunMetrics, TaskDetailToolbar } from '../components/TaskDetailShell'
 import { confirmDeleteRun, isRunDeletable } from '../utils/runDeletion'
 import { RunPipelineStatus } from '../components/RunPipelineStatus'
 import { validateUiSourceArchive } from '../utils/uiSourceArchive'
 import type { UiCaseGenerateTaskRun, UiCaseGenerateTaskRunImportConflict } from '../types'
 import { parseUiCaseCandidate } from '../utils/uiCaseCandidate'
-import { isGenerateTaskRunImportable } from '../utils/taskStatus'
+import { isGenerateTaskRunImportable, renderApiCaseGenerateTaskRunStatusTag, summarizeRunStatuses } from '../utils/taskStatus'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
 import { api, ApiError, listItems, type ListResponse } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
@@ -146,6 +153,8 @@ export function UiCaseGenerateTaskDetailPage() {
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [editName, setEditName] = useState('')
   const [editInstruction, setEditInstruction] = useState('')
+  const [instructionDraft, setInstructionDraft] = useState('')
+  const [instructionDirty, setInstructionDirty] = useState(false)
   const [editSprintId, setEditSprintId] = useState<string>()
   const [editRequirementId, setEditRequirementId] = useState<string>()
   const [importModalOpen, setImportModalOpen] = useState(false)
@@ -322,13 +331,35 @@ export function UiCaseGenerateTaskDetailPage() {
       message.success('任务已更新')
     },
   })
-  const runMutation = useMutation({
-    mutationFn: (connectionId: string) => api.runUiCaseGenerateTask(taskId, { connectionId }),
-    onSuccess: (createdRun) => {
+  // 内联指令保存单独一条：编辑弹窗那条读的是弹窗自己的 state，不能复用。
+  const taskInstruction = taskQuery.data?.instruction
+  useEffect(() => {
+    setInstructionDraft(taskInstruction ?? '')
+    setInstructionDirty(false)
+  }, [taskInstruction])
+
+  const saveInstructionMutation = useMutation({
+    mutationFn: (instruction: string) => api.updateUiCaseGenerateTask(taskId, {
+      name: taskQuery.data!.name,
+      sprintId: taskQuery.data!.sprintId!,
+      requirementId: taskQuery.data!.requirementId!,
+      instruction,
+    }),
+    onSuccess: (updatedTask) => {
+      queryClient.setQueryData(['uiCaseGenerateTask', taskId], updatedTask)
+      queryClient.invalidateQueries({ queryKey: ['uiCaseGenerateTasks', updatedTask.projectId] })
+      message.success('生成指令已保存')
+    },
+    onError: (error) => message.error(getErrorMessage(error)),
+  })
+
+  const runMutation = useStartTaskRun({
+    kind: 'ui',
+    taskId,
+    startRun: (connectionId: string) => api.runUiCaseGenerateTask(taskId, { connectionId }),
+    onStarted: (createdRun) => {
       setLlmModalOpen(false)
       setSelectedRunId(createdRun.runId)
-      queryClient.invalidateQueries({ queryKey: ['uiCaseGenerateTaskRuns', taskId] })
-      message.success('任务已加入执行队列')
     },
   })
   const deleteTaskMutation = useMutation({
@@ -338,20 +369,15 @@ export function UiCaseGenerateTaskDetailPage() {
         navigate('/ai-testing?tab=tasks')
       },
   })
-  const deleteRunMutation = useMutation({
-    mutationFn: (runId: string) => api.deleteUiCaseGenerateTaskRun(runId),
-    onSuccess: (_data, runId) => {
-      message.success('运行记录已删除')
-      if (selectedRunId === runId) {
-        // 被删的运行记录同时是候选编辑器的来源，未保存的改动随之作废。
-        setSelectedRunId(undefined)
-        setDraftYaml('')
-        setSavedYaml('')
-      }
-      queryClient.removeQueries({ queryKey: ['uiCaseGenerateTaskRun', runId], exact: true })
-      queryClient.invalidateQueries({ queryKey: ['uiCaseGenerateTaskRuns', taskId] })
+  const deleteRunMutation = useDeleteTaskRun({
+    kind: 'ui',
+    taskId,
+    selectedRunId: selectedRunId,
+    onSelectedRunDeleted: () => {
+      setSelectedRunId(undefined)
+      setDraftYaml('')
+      setSavedYaml('')
     },
-    onError: (error) => message.error(getErrorMessage(error)),
   })
   const saveMutation = useMutation({
     mutationFn: () => api.updateUiCaseGenerateTaskRunResult(selectedRunId!, { resultYaml: draftYaml }),
@@ -448,7 +474,7 @@ export function UiCaseGenerateTaskDetailPage() {
   const archiveValidationError = validateUiSourceArchive(archiveFile)
   const replacementBlocked = hasActiveRun
   return (<ProjectAccessScope resourceError={taskQuery.error} projectId={task?.projectId ?? ''}>{(
-    <div className="workbench-page ai-testing-page">
+    <div className="workbench-page ai-testing-page tp-list-surface ai-task-detail-page tp-surface">
       <div className="workbench-tabs">
         {runMutation.error ? <Alert showIcon type="error" title={getErrorMessage(runMutation.error)} /> : null}
         {selectedRunQuery.error ? (
@@ -460,45 +486,54 @@ export function UiCaseGenerateTaskDetailPage() {
           />
         ) : null}
         <div className="ai-task-detail-layout ui-case-task-detail-layout">
-          <Card className="ai-task-detail-summary-card">
-            <div className="ai-task-detail-inline-meta">
+          <TaskDetailToolbar
+            back={(
               <Button aria-label="返回生成任务" icon={<ArrowLeftOutlined aria-hidden />} onClick={navigateBack}>返回生成任务</Button>
-              {[
-                ['任务名称', task.name], ['迭代', task.sprintId || '-'], ['需求', 'UI 用例生成'],
-                ['来源类型', '源码包'], ['创建人', task.creatorUserId || '-'], ['更新时间', formatTime(task.updatedAt)],
-              ].map(([label, value]) => <div key={label} className="ai-task-detail-inline-item"><span className="ai-task-detail-inline-label">{label}</span><span className="ai-task-detail-inline-value">{value}</span></div>)}
-              <div className="ai-task-detail-inline-actions">
+            )}
+            fields={[
+              { label: '任务名称', value: task.name || '未命名任务', kind: 'name', separator: 'line' },
+              { label: '迭代', value: task.sprintId || '-', kind: 'chip-accent' },
+              { label: '需求', value: 'UI 用例生成' },
+              { label: '来源类型', value: '源码包', kind: 'chip-muted' },
+              { label: '创建人', value: task.creatorUserId || '-' },
+              { label: '更新时间', value: formatTime(task.updatedAt), kind: 'time', separator: 'dot' },
+            ]}
+            actions={(
+              <>
                 <Tooltip title={!task.sourceArchive ? '请先上传源码 ZIP' : hasActiveRun ? '任务执行中，暂时不能重复运行' : '运行任务'}><span><ProjectActionButton action="execute" aria-label="运行任务" className="action-btn-run" operation="run" disabled={!task.sourceArchive || hasActiveRun} onClick={() => setLlmModalOpen(true)}>运行</ProjectActionButton></span></Tooltip>
                 <ProjectActionButton action="write" aria-label="编辑任务" className="action-btn-update" operation="edit" onClick={() => { setEditName(task.name); setEditInstruction(task.instruction); setEditSprintId(task.sprintId); setEditRequirementId(task.requirementId); setEditModalOpen(true) }}>编辑</ProjectActionButton>
                 <Popconfirm title="确认删除该任务？" onConfirm={() => deleteTaskMutation.mutate()}><ProjectActionButton operation="delete" action="write" danger className="action-btn-delete" loading={deleteTaskMutation.isPending}>删除</ProjectActionButton></Popconfirm>
-              </div>
-            </div>
-          </Card>
+              </>
+            )}
+          />
 
           <div className="ai-task-detail-split">
-            <aside className="ai-task-detail-nav-panel">
-              <div className="ai-task-detail-nav-head">
-                <span className="ai-task-detail-nav-head-title">任务信息</span>
-                <span className="ai-task-detail-nav-head-sub">导航</span>
-              </div>
-              <div className="ai-task-detail-nav-body">
-                <div className="ai-task-detail-nav-label">输入</div>
-                <button type="button" className={`ai-task-detail-nav-item${expandedSection === 'sourceArchive' ? ' active' : ''}`} onClick={() => setExpandedSection('sourceArchive')}>
-                  <span className="ai-task-detail-nav-item-title">源码包</span>
-                  <span className="ai-task-detail-nav-item-sub">{task.sourceArchive?.filename || '尚未上传源码包'}</span>
-                </button>
-                <button type="button" className={`ai-task-detail-nav-item${expandedSection === 'instruction' ? ' active' : ''}`} onClick={() => setExpandedSection('instruction')}>
-                  <span className="ai-task-detail-nav-item-title">生成指令</span>
-                  <span className="ai-task-detail-nav-item-sub">{task.instruction?.trim() || '暂无补充指令'}</span>
-                </button>
-                <div className="ai-task-detail-nav-label">输出</div>
-                <button type="button" className={`ai-task-detail-nav-item${expandedSection === 'runHistory' ? ' active' : ''}`} onClick={() => setExpandedSection('runHistory')}>
-                  <span className="ai-task-detail-nav-item-title">运行记录</span>
-                  <span className="ai-task-detail-nav-item-sub">共 {runs.length} 条运行记录</span>
-                </button>
-                <div className="ai-task-detail-nav-tip">点击左侧条目在右侧查看内容，运行时记录自动刷新。</div>
-              </div>
-            </aside>
+            <TaskDetailNavPanel tip="点击左侧条目在右侧查看内容，运行时记录自动刷新。">
+              <div className="ai-task-detail-nav-label">输入</div>
+              <TaskDetailNavItem
+                title="源码包"
+                sub={task.sourceArchive?.filename || '尚未上传源码包'}
+                icon={<FileZipOutlined />}
+                active={expandedSection === 'sourceArchive'}
+                onClick={() => setExpandedSection('sourceArchive')}
+              />
+              <TaskDetailNavItem
+                title="生成指令"
+                sub={task.instruction?.trim() || '暂无补充指令'}
+                icon={<CodeOutlined />}
+                active={expandedSection === 'instruction'}
+                onClick={() => setExpandedSection('instruction')}
+              />
+              <div className="ai-task-detail-nav-label">输出</div>
+              <TaskDetailNavItem
+                title="运行记录"
+                sub={`共 ${runs.length} 条运行记录`}
+                icon={<HistoryOutlined />}
+                active={expandedSection === 'runHistory'}
+                badge={runs.length}
+                onClick={() => setExpandedSection('runHistory')}
+              />
+            </TaskDetailNavPanel>
 
             <section className="ai-task-detail-main-panel">
               {expandedSection === 'sourceArchive' ? (
@@ -518,7 +553,18 @@ export function UiCaseGenerateTaskDetailPage() {
               ) : expandedSection === 'instruction' ? (
                 <>
                   <div className="ai-task-detail-main-head"><span className="ai-task-detail-main-head-title">生成指令</span></div>
-                  <div className="ai-task-detail-main-body"><pre className="ai-task-code-block">{task.instruction || '-'}</pre></div>
+                  <div className="ai-task-detail-main-body">
+                    <TaskDetailInstructionEditor
+                      value={instructionDraft}
+                      dirty={instructionDirty}
+                      saving={saveInstructionMutation.isPending}
+                      onChange={(value) => {
+                        setInstructionDraft(value)
+                        setInstructionDirty(true)
+                      }}
+                      onSave={() => saveInstructionMutation.mutate(instructionDraft)}
+                    />
+                  </div>
                 </>
               ) : (
                 <>
@@ -532,6 +578,10 @@ export function UiCaseGenerateTaskDetailPage() {
                       <Spin />
                     ) : runs.length ? (
                       <>
+                        <TaskDetailRunMetrics
+                          {...summarizeRunStatuses(runs)}
+                          latestStatus={renderApiCaseGenerateTaskRunStatusTag(runs[0]?.status)}
+                        />
                         <RunHistoryTable<UiCaseGenerateTaskRun>
                           rows={runs}
                           getRunId={(record) => record.runId}

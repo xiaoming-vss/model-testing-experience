@@ -6,8 +6,8 @@
  * 与运行结果挂钩的 PASS / FAIL 徽标）。旧规则留在 features/ui-automation/styles/index.css：
  * 它们同时被 UiTestCaseEditor 之外的地方引用，这里只做页面内的覆盖。
  *
- * 颜色只引用 `--srf-*` / `.tone-*`；`.ui-test-case-step-title-*` 的深色修正仍由
- * app/styles/dark-polish.css 按 `.ui-suite-case-editor-panel` 前缀提供，所以那个类名必须留在左栏根节点上。
+ * 颜色只引用 `--srf-*` / `.tone-*`。左栏根节点上的 `.ui-suite-case-editor-panel` 必须留着，
+ * 它是本文件下面这些选择器的作用点。
  */
 
 .ui-suite-detail-page .ui-suite-case-editor-panel {
@@ -158,20 +158,6 @@
   gap: 4px;
 }
 
-.ui-suite-detail-page .ui-wb-case-link.ant-btn {
-  color: var(--srf-text-secondary);
-}
-
-.ui-suite-detail-page .ui-wb-case-link.ant-btn:hover {
-  color: var(--srf-accent);
-  background: var(--srf-hover);
-}
-
-.ui-suite-detail-page .ui-wb-case-delete.ant-btn:hover {
-  color: var(--srf-danger);
-  background: var(--srf-hover);
-}
-
 /* ===== 步骤编辑器 ===== */
 
 .ui-suite-detail-page .ui-wb-pipeline {
@@ -218,15 +204,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-}
-
-.ui-suite-detail-page .ui-wb-pipeline-action.ant-btn {
-  color: var(--srf-text-secondary);
-}
-
-.ui-suite-detail-page .ui-wb-pipeline-action.ant-btn:hover {
-  color: var(--srf-accent);
-  background: var(--srf-hover);
 }
 
 /* 步骤卡片：设计稿是柔和底色的圆角块，展开后再嵌一张白卡。 */

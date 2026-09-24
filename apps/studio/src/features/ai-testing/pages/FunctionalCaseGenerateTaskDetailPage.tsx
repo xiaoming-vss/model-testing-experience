@@ -1,3 +1,4 @@
+import { useDeleteTaskRun, useStartTaskRun } from '@/features/ai-testing/hooks/useTaskRunActions'
 import { FunctionalCaseRelationsViewer } from '../components/FunctionalCaseRelationsViewer'
 import type { CaseNamesViewMode } from '@/features/ai-testing/components/CaseNamesResultView'
 import { CaseNameTreeView, CaseNamesResultView } from '@/features/ai-testing/components/CaseNamesResultView'
@@ -13,17 +14,25 @@ import { confirmDeleteRun, isRunDeletable } from '@/features/ai-testing/utils/ru
 import { RunArtifacts, RunPipelineStatus } from '@/features/ai-testing/components/RunPipelineStatus'
 import { usePersonalLlmChoice } from '@/features/ai-testing/hooks/usePersonalLlmChoice'
 import '@/features/ai-testing/styles/functional-import-confirm.css'
+import '@/shared/styles/surface-tokens.css'
 import '@/features/ai-testing/styles/index.css'
+import '@/features/ai-testing/styles/task-review.css'
+import '@/features/ai-testing/styles/candidate-review.css'
+import '@/features/ai-testing/styles/requirement-analysis.css'
+import '@/features/ai-testing/styles/case-name-tree.css'
+import '@/features/ai-testing/styles/run-result.css'
+import '@/features/ai-testing/styles/task-detail-v2.css'
 import type { FunctionalCaseGenerateTaskRun, FunctionalCaseGenerateTaskRunImportConflict } from '@/features/ai-testing/types'
 import { getConfigStageFieldContent, getGeneratedCaseImportStats, getOutputRepairProgress, isJsonText } from '@/features/ai-testing/utils/functionalOutput'
 import { buildRevisionTemplate, getRevisionQuestions } from '@/features/ai-testing/utils/functionalRevision'
 import { getRunPipelineModel, type RunPipelineFilterKey } from '@/features/ai-testing/utils/runPipeline'
-import { getApiCaseGenerateTaskRunStatusMeta, isRunnableApiCaseGenerateTaskRun } from '@/features/ai-testing/utils/taskStatus'
+import { getApiCaseGenerateTaskRunStatusMeta, isRunnableApiCaseGenerateTaskRun, renderApiCaseGenerateTaskRunStatusTag, summarizeRunStatuses } from '@/features/ai-testing/utils/taskStatus'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { RequirementDocumentPreviewContent } from '@/features/requirements/components/RequirementDocumentPreviewModal'
+import { TaskDetailInstructionEditor, TaskDetailNavItem, TaskDetailNavPanel, TaskDetailRunMetrics, TaskDetailToolbar } from '../components/TaskDetailShell'
 import { hasRequirementDocument, hasRequirementEnhancedText } from '@/features/requirements/utils/requirementDocument'
 import { api, listItems } from '@/services/api'
 import { ApiError } from '@/shared/api/request'
@@ -33,9 +42,9 @@ import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEdito
 import { message } from '@/shared/utils/feedback'
 import { formatStructuredContent } from '@/shared/utils/value'
 import { formatTime, getErrorMessage, normalizeRequirementId, normalizeSprintId, pickUpdatedAt } from '@/utils/format'
-import { ArrowLeftOutlined, FileTextOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, CodeOutlined, FileTextOutlined, HistoryOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, Button, Card, Checkbox, Empty, Form, Input, Modal, Popconfirm, Select, Spin, Tabs, Tag } from 'antd'
+import { Alert, Button, Checkbox, Empty, Form, Input, Modal, Popconfirm, Select, Spin, Tabs, Tag } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -121,6 +130,8 @@ export function FunctionalCaseGenerateTaskDetailPage() {
   const [drawerSprintId, setDrawerSprintId] = useState<string | undefined>(undefined)
   const [llmSelectOpen, setLlmSelectOpen] = useState(false)
   const [expandedSection, setExpandedSection] = useState<'instruction' | 'document' | 'runHistory' | null>('runHistory')
+  const [instructionDraft, setInstructionDraft] = useState('')
+  const [instructionDirty, setInstructionDirty] = useState(false)
   const [selectedRunRecordId, setSelectedRunRecordId] = useState<string | null>(null)
   const [runStageFilter, setRunStageFilter] = useState<'all' | RunPipelineFilterKey>('all')
   const [runResultModal, setRunResultModal] = useState<RunResultModalState>(null)
@@ -301,6 +312,21 @@ export function FunctionalCaseGenerateTaskDetailPage() {
     }
   }, [runResultModal?.key, selectedStageField?.key])
 
+  useEffect(() => {
+    setInstructionDraft(task?.instruction ?? '')
+    setInstructionDirty(false)
+  }, [task?.instruction, task?.taskId])
+
+  function handleSaveInstruction() {
+    if (!task) return
+    updateTaskMutation.mutate({
+      name: task.name,
+      sprintId: task.sprintId ?? '',
+      requirementId: task.requirementId ?? '',
+      instruction: instructionDraft,
+    })
+  }
+
   const updateTaskMutation = useMutation({
     mutationFn: (values: FunctionalCaseGenerateTaskFormValues) => api.updateFunctionalCaseGenerateTask(taskId, values),
     onSuccess: (updatedTask) => {
@@ -311,18 +337,17 @@ export function FunctionalCaseGenerateTaskDetailPage() {
     },
   })
 
-  const runTaskMutation = useMutation({
-    mutationFn: ({ connectionId, checkpointEnabled }: { connectionId: string; checkpointEnabled?: boolean }) =>
+  const runTaskMutation = useStartTaskRun({
+    kind: 'functional',
+    taskId,
+    projectId: task?.projectId,
+    startRun: ({ connectionId, checkpointEnabled }: { connectionId: string; checkpointEnabled?: boolean }) =>
       api.runFunctionalCaseGenerateTask(taskId, { connectionId, checkpointEnabled }),
-    onSuccess: (run) => {
-      message.success('任务已加入执行队列')
+    onStarted: (run) => {
       setLlmSelectOpen(false)
       setCheckpointEnabled(false)
       setExpandedSection('runHistory')
       setSelectedRunRecordId(run.runId ?? null)
-      queryClient.invalidateQueries({ queryKey: ['functionalCaseGenerateTask', taskId] })
-      queryClient.invalidateQueries({ queryKey: ['functionalCaseGenerateTaskRuns', taskId] })
-      queryClient.invalidateQueries({ queryKey: ['functionalCaseGenerateTasks', task?.projectId ?? run.projectId] })
     },
   })
 
@@ -517,37 +542,16 @@ export function FunctionalCaseGenerateTaskDetailPage() {
     },
   })
 
-  const deleteRunMutation = useMutation({
-    mutationFn: (runId: string) => api.deleteFunctionalCaseGenerateTaskRun(runId),
-    onSuccess: (_data, runId) => {
-      message.success('运行记录已删除')
-      if (selectedRunRecordId === runId) setSelectedRunRecordId(null)
-      queryClient.removeQueries({ queryKey: ['functionalCaseGenerateTaskRun', runId], exact: true })
-      queryClient.invalidateQueries({ queryKey: ['functionalCaseGenerateTaskRuns', taskId] })
+  const deleteRunMutation = useDeleteTaskRun({
+    kind: 'functional',
+    taskId,
+    selectedRunId: selectedRunRecordId,
+    onSelectedRunDeleted: () => {
+      setSelectedRunRecordId(null)
     },
-    onError: (error) => message.error(getErrorMessage(error)),
   })
 
   const runnableTask = isRunnableApiCaseGenerateTaskRun(latestRunRecord?.status)
-  const detailItems = useMemo(
-    () =>
-      task
-        ? [
-          { label: '任务名称', value: task.name || '-' },
-          { label: '迭代', value: sprintNameMap.get(task.sprintId ?? '') ?? task.sprintId ?? '-' },
-          {
-            label: '需求',
-            value:
-              taskRequirementQuery.data?.name ??
-              requirementNameMap.get(task.requirementId ?? '') ??
-              task.requirementId ??
-              '-',
-          },
-          { label: '更新时间', value: formatTime(pickUpdatedAt(task)) },
-        ]
-        : [],
-    [requirementNameMap, sprintNameMap, task, taskRequirementQuery.data?.name],
-  )
   const selectedRunResultSectionMap = useMemo(
     () => new Map(selectedRunResultSections.map((section) => [section.key, section.value])),
     [selectedRunResultSections],
@@ -888,7 +892,7 @@ export function FunctionalCaseGenerateTaskDetailPage() {
   }
 
   return (<ProjectAccessScope resourceError={taskQuery.error} projectId={task?.projectId ?? ''}>{personalLlm.dialog}{(
-    <div className="workbench-page ai-testing-page">
+    <div className="workbench-page ai-testing-page tp-list-surface ai-task-detail-page tp-surface">
       <div className="workbench-tabs">
         {taskQuery.error ? <Alert showIcon type="error" title={getErrorMessage(taskQuery.error)} /> : null}
         {runsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(runsQuery.error)} /> : null}
@@ -897,18 +901,21 @@ export function FunctionalCaseGenerateTaskDetailPage() {
           <Spin />
         ) : task ? (
           <div className="ai-task-detail-layout">
-            <Card className="ai-task-detail-summary-card">
-              <div className="ai-task-detail-inline-meta">
+            <TaskDetailToolbar
+              back={(
                 <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/ai-testing?tab=tasks')}>
                   返回生成任务
                 </Button>
-                {detailItems.map((item) => (
-                  <div key={item.label} className="ai-task-detail-inline-item">
-                    <span className="ai-task-detail-inline-label">{item.label}</span>
-                    <span className="ai-task-detail-inline-value">{item.value}</span>
-                  </div>
-                ))}
-                <div className="ai-task-detail-inline-actions">
+              )}
+              fields={[
+                { label: '任务名称', value: task.name || '未命名任务', kind: 'name', separator: 'line' },
+                { label: '迭代', value: task.sprintId ? sprintNameMap.get(task.sprintId) ?? task.sprintId : '-', kind: 'chip-accent' },
+                { label: '需求', value: taskRequirementQuery.data?.name ?? (task.requirementId ? requirementNameMap.get(task.requirementId) ?? task.requirementId : '-') },
+                { label: '来源类型', value: '需求分析', kind: 'chip-muted' },
+                { label: '更新时间', value: formatTime(pickUpdatedAt(task)), kind: 'time', separator: 'dot' },
+              ]}
+              actions={(
+                <>
                   <ProjectActionButton action="execute"
                     className="action-btn-run"
                     operation="run"
@@ -926,33 +933,37 @@ export function FunctionalCaseGenerateTaskDetailPage() {
                       删除
                     </ProjectActionButton>
                   </Popconfirm>
-                </div>
-              </div>
-            </Card>
+                </>
+              )}
+            />
 
             <div className="ai-task-detail-split">
-              <aside className="ai-task-detail-nav-panel">
-                <div className="ai-task-detail-nav-head">
-                  <span className="ai-task-detail-nav-head-title">任务信息</span>
-                  <span className="ai-task-detail-nav-head-sub">导航</span>
-                </div>
-                <div className="ai-task-detail-nav-body">
-                  <div className="ai-task-detail-nav-label">输入</div>
-                  <button type="button" className={`ai-task-detail-nav-item${expandedSection === 'document' ? ' active' : ''}`} onClick={() => setExpandedSection('document')}>
-                    <span className="ai-task-detail-nav-item-title">需求文档</span>
-                    <span className="ai-task-detail-nav-item-sub">{taskRequirementQuery.data?.name || '查看关联需求内容'}</span>
-                  </button>
-                  <button type="button" className={`ai-task-detail-nav-item${expandedSection === 'instruction' ? ' active' : ''}`} onClick={() => setExpandedSection('instruction')}>
-                    <span className="ai-task-detail-nav-item-title">生成指令</span>
-                    <span className="ai-task-detail-nav-item-sub">{task.instruction?.trim() || '暂无补充指令'}</span>
-                  </button>
-                  <div className="ai-task-detail-nav-label">输出</div>
-                  <button type="button" className={`ai-task-detail-nav-item${expandedSection === 'runHistory' ? ' active' : ''}`} onClick={() => setExpandedSection('runHistory')}>
-                    <span className="ai-task-detail-nav-item-title">运行记录</span>
-                    <span className="ai-task-detail-nav-item-sub">共 {runRecords.length} 条运行记录</span>
-                  </button>
-                </div>
-              </aside>
+              <TaskDetailNavPanel tip="点击左侧条目在右侧查看内容，运行时记录自动刷新。">
+                <div className="ai-task-detail-nav-label">输入</div>
+                <TaskDetailNavItem
+                  title="需求文档"
+                  sub={taskRequirementQuery.data?.name || '查看关联需求内容'}
+                  icon={<FileTextOutlined />}
+                  active={expandedSection === 'document'}
+                  onClick={() => setExpandedSection('document')}
+                />
+                <TaskDetailNavItem
+                  title="生成指令"
+                  sub={task.instruction?.trim() || '暂无补充指令'}
+                  icon={<CodeOutlined />}
+                  active={expandedSection === 'instruction'}
+                  onClick={() => setExpandedSection('instruction')}
+                />
+                <div className="ai-task-detail-nav-label">输出</div>
+                <TaskDetailNavItem
+                  title="运行记录"
+                  sub={`共 ${runRecords.length} 条运行记录`}
+                  icon={<HistoryOutlined />}
+                  active={expandedSection === 'runHistory'}
+                  badge={runRecords.length}
+                  onClick={() => setExpandedSection('runHistory')}
+                />
+              </TaskDetailNavPanel>
 
               <section className="ai-task-detail-main-panel">
                 {expandedSection === 'document' ? (
@@ -984,7 +995,16 @@ export function FunctionalCaseGenerateTaskDetailPage() {
                       <span className="ai-task-detail-main-head-title">生成指令</span>
                     </div>
                     <div className="ai-task-detail-main-body">
-                      <pre className="ai-task-code-block">{task.instruction || '-'}</pre>
+                      <TaskDetailInstructionEditor
+                        value={instructionDraft}
+                        dirty={instructionDirty}
+                        saving={updateTaskMutation.isPending}
+                        onChange={(value) => {
+                          setInstructionDraft(value)
+                          setInstructionDirty(true)
+                        }}
+                        onSave={handleSaveInstruction}
+                      />
                     </div>
                   </>
                 ) : (
@@ -1013,6 +1033,10 @@ export function FunctionalCaseGenerateTaskDetailPage() {
                         </div>
                       ) : runRecords.length > 0 ? (
                         <>
+                          <TaskDetailRunMetrics
+                            {...summarizeRunStatuses(filteredRunRecords)}
+                            latestStatus={renderApiCaseGenerateTaskRunStatusTag(filteredRunRecords[0]?.status)}
+                          />
                           <RunHistoryTable<FunctionalCaseGenerateTaskRun>
                             rows={filteredRunRecords}
                             getRunId={(record) => record.runId}

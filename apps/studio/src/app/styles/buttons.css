@@ -26,30 +26,6 @@
     --button-focus: #8bb2e5;
   }
 
-  :root[data-theme='dark'] {
-    --button-text: #c4cfdf;
-    --button-bg: #252d3b;
-    --button-border: #3a4659;
-    --button-hover-bg: #303b4c;
-    --button-hover-border: #566982;
-    --button-active-bg: #39485d;
-    --button-primary-text: #abcdf7;
-    --button-primary-bg: #25364d;
-    --button-primary-border: #3a5576;
-    --button-primary-hover-bg: #2e4461;
-    --button-primary-hover-border: #577aa6;
-    --button-primary-active-bg: #385477;
-    --button-danger-text: #f0a8b0;
-    --button-danger-bg: #3d2933;
-    --button-danger-border: #66424d;
-    --button-danger-hover-bg: #50323e;
-    --button-danger-active-bg: #61404c;
-    --button-disabled-text: #788498;
-    --button-disabled-bg: #232a36;
-    --button-disabled-border: #333d4d;
-    --button-focus: #729cce;
-  }
-
   .ant-btn {
     --button-current-text: var(--button-text);
     --button-current-bg: var(--button-bg);
@@ -132,5 +108,34 @@
   :is(.ant-btn-text, .ant-btn-link):is(:disabled, .ant-btn-disabled) {
     background: transparent !important;
     border-color: transparent !important;
+  }
+  /* Shared row/card actions override legacy per-page dimensions. */
+  .ant-btn.app-action-icon,
+  .ant-table .ant-btn.ant-btn-icon-only:is(.ant-btn-text, .ant-btn-link),
+  .sprint-card-actions .ant-btn.ant-btn-icon-only,
+  .service-card-actions .ant-btn.ant-btn-icon-only {
+    width: 28px !important;
+    min-width: 28px !important;
+    height: 28px !important;
+    padding: 0 !important;
+    border-radius: 6px !important;
+    font-size: 14px !important;
+  }
+
+  .ant-btn.app-action-icon > .ant-btn-icon,
+  .ant-table .ant-btn.ant-btn-icon-only > .ant-btn-icon {
+    font-size: 14px !important;
+  }
+
+  .ant-table .ant-btn.app-action-run {
+    height: 28px !important;
+    font-size: 12px !important;
+    gap: 4px !important;
+  }
+
+  .ant-btn.app-action-delete {
+    --button-current-text: var(--button-danger-text);
+    --button-current-hover: var(--button-danger-hover-bg);
+    --button-current-active: var(--button-danger-active-bg);
   }
 }

@@ -3,38 +3,12 @@
  *
  * 结构：顶栏（返回 / 测试集名 / 环境 / 运行记录 / 运行测试集）+ 两栏（用例列表卡片、请求编辑与运行结果卡片）。
  * token 与色盘来自 shared/styles/surface-tokens.css，页面根节点带 `tp-surface`、板面带 `tp-board`（见 STRUCTURE.md §三）。
- * 颜色只引用 `--srf-*` / `.tone-*`，深色由 token 切换；这里只有压过深色玻璃外壳那一处显式写 `:root[data-theme='dark']`。
+ * 颜色只引用 `--srf-*` / `.tone-*`，不写裸色值与主题分支。
  *
  * 编辑区与控制台的规则在 detail-inspector-v2.css（按职责拆文件，两处选择器互不重叠）。
  */
 
 /* ===== 板面与两栏 ===== */
-
-.api-collection-workbench-page .api-collection-workbench {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* `page-frame` 在深色外壳里被铺了玻璃底 + 内高光（dark-polish.css 的 `:is(... .page-frame ...)` 是
-   (0,5,0) + !important），设计稿里这一层是裸画布。多带 `:root[data-theme='dark']` 抬到 (0,8,0)。
-   浅色下外壳没有给 `page-frame` 铺表面，但同样写一份，避免浅色分支靠外壳不铺面这个巧合。 */
-.api-collection-workbench-page .api-collection-workbench.tp-board {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-:root[data-theme='dark'] .app-shell.app-shell-macos .testing-page .api-collection-workbench-page .api-collection-workbench.tp-board {
-  border: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
 
 .api-collection-workbench-page .api-wb-cols {
   flex: 1 1 auto;
@@ -66,15 +40,6 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
-}
-
-.api-collection-workbench-page .api-wb-toolbar-back.ant-btn {
-  color: var(--srf-text-secondary);
-}
-
-.api-collection-workbench-page .api-wb-toolbar-back.ant-btn:hover {
-  color: var(--srf-accent);
-  background: var(--srf-hover);
 }
 
 .api-collection-workbench-page .api-wb-toolbar-title {
@@ -193,15 +158,6 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-}
-
-.api-collection-workbench-page .api-wb-explorer-action.ant-btn {
-  color: var(--srf-text-secondary);
-}
-
-.api-collection-workbench-page .api-wb-explorer-action.ant-btn:hover {
-  color: var(--srf-accent);
-  background: var(--srf-hover);
 }
 
 .api-collection-workbench-page .api-wb-explorer-search {

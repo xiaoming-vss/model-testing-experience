@@ -130,16 +130,8 @@ it('列出测试集，并在头部卡片里展示当前环境信息', async () =
   expect(timeCells[0]).toHaveTextContent(formatTime(collection.createdAt))
   expect(timeCells[1]).toHaveTextContent(formatTime(collection.updatedAt))
 
-  // 环境信息条：Base URL / 环境变量数 / 更新时间都取当前环境
-  expect(screen.getByText('http://127.0.0.1:9000')).toBeInTheDocument()
-  // 环境变量数要等环境选中后再取变量列表
-  await waitFor(() =>
-    expect(screen.getByText('环境变量数:').parentElement).toHaveTextContent('2'),
-  )
-  expect(screen.getByText(formatTime(environment.updatedAt))).toBeInTheDocument()
-
   expect(environments.mock.calls[0][0]).toBe('project-1')
-  expect(vars.mock.calls[0][0]).toBe('environment-1')
+  expect(vars).not.toHaveBeenCalled()
   client.clear()
 })
 

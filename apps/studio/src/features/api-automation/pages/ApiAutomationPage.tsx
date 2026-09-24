@@ -1,6 +1,7 @@
+import '@/shared/styles/list-table.css'
 import { footerRange } from '@/shared/utils/pagination'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
-import { ApiOutlined, ReloadOutlined, SearchOutlined, SettingOutlined } from '@ant-design/icons'
+import { ApiOutlined, SearchOutlined, SettingOutlined } from '@ant-design/icons'
 import {
   Alert,
   Button,
@@ -178,11 +179,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
     environments[0]
   const resolvedEnvironmentId = selectedEnvironment ? normalizeEnvironmentId(selectedEnvironment) : undefined
 
-  const environmentVarsQuery = useQuery({
-    queryKey: ['apiEnvironmentVars', resolvedEnvironmentId],
-    queryFn: () => api.getApiEnvironmentVars(resolvedEnvironmentId!),
-    enabled: Boolean(resolvedEnvironmentId),
-  })
+
 
   const drawerSprintOptions = useMemo(
     () => sprints.map((sprint) => ({ label: sprint.name, value: normalizeSprintId(sprint) })),
@@ -454,11 +451,11 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
   ]
 
   return (
-    <div className="workbench-page api-automation-page functional-test-page api-test-page tp-surface">
+    <div className="workbench-page api-automation-page functional-test-page tp-list-surface api-test-page tp-surface">
       <div className="api-automation-content">
         <section className="workbench-panel workbench-board-panel tp-board">
           {/* 设计稿里筛选行与环境信息条在同一张卡片里，中间一条分隔线。 */}
-          <div className="panel-header api-panel-header api-test-header">
+          <div className="panel-header api-panel-header api-test-header tp-list-toolbar">
             <div className="api-test-header-main">
               <div className="requirement-panel-head api-panel-head-main">
                 <Text strong className="api-test-title">
@@ -554,35 +551,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
               </Space>
             </div>
 
-            <div className="api-test-env-strip">
-              <div className="api-test-env-facts">
-                <span className="api-test-env-fact">
-                  <span className="api-test-env-label">Base URL:</span>
-                  <code className="api-test-env-code">{selectedEnvironment?.baseUrl || '-'}</code>
-                </span>
-                <span className="api-test-env-sep">|</span>
-                <span className="api-test-env-fact">
-                  <span className="api-test-env-label">环境变量数:</span>
-                  <strong>{environmentVarsQuery.data?.length ?? 0}</strong>
-                </span>
-                <span className="api-test-env-sep">|</span>
-                <span className="api-test-env-fact">
-                  <span className="api-test-env-label">更新时间:</span>
-                  {formatTime(pickUpdatedAt(selectedEnvironment))}
-                </span>
-              </div>
-              <button
-                type="button"
-                className="api-test-env-refresh"
-                onClick={() => {
-                  environmentsQuery.refetch()
-                  environmentVarsQuery.refetch()
-                }}
-              >
-                <ReloadOutlined />
-                刷新环境配置
-              </button>
-            </div>
+
           </div>
 
           {sprintsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(sprintsQuery.error)} /> : null}
@@ -591,27 +560,6 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
           {collectionsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(collectionsQuery.error)} /> : null}
           {environmentsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(environmentsQuery.error)} /> : null}
 
-          {/* 设计稿上另外两个胶囊（自动化冒烟 / 核心链路）要有「测试集分类」字段，模型里没有，先只留全部。 */}
-          <div className="tp-quickbar api-test-quickbar">
-            <div className="tp-quick-filters">
-              <span className="tp-quick-label">快速过滤:</span>
-              <button
-                type="button"
-                className={`tp-chip${keyword ? '' : ' active'}`}
-                aria-pressed={!keyword}
-                onClick={() => {
-                  setKeyword('')
-                  setPage(1)
-                }}
-              >
-                全部
-                <span className="tp-chip-count">{filteredCollections.length}</span>
-              </button>
-            </div>
-            <div className="tp-selection">
-              共 <strong>{filteredCollections.length}</strong> 条测试集
-            </div>
-          </div>
 
           <div className="api-test-table-card">
             <div className="table-body-scroll sprint-card-scroll api-test-table-scroll">
@@ -653,7 +601,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
                 </div>
               ) : (
                 <Table<ApiCollection>
-                  className="functional-suite-list-table api-suite-list-table"
+                  className="functional-suite-list-table tp-list-table api-suite-list-table"
                   columns={columns}
                   dataSource={pagedCollections}
                   rowKey={(collection) => getCollectionRowContext(collection).collectionId || collection.name}

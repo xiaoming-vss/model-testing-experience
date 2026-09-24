@@ -1,0 +1,1208 @@
+/* 任务列表与模块导航的基础布局。保留响应式条件，后续表面规则继续覆盖外观。 */
+:root:not([data-theme='dark']) .ai-testing-page .ai-task-list-table .ai-task-list-name .ant-typography,
+:root:not([data-theme='dark']) .app-shell.app-shell-macos .ai-testing-page .ai-task-list-table .ai-task-list-name .ant-typography {
+  color: #3f6fc6 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  cursor: pointer;
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+:root:not([data-theme='dark']) .ai-testing-page .ai-task-list-table .ant-table-tbody > tr:hover .ai-task-list-name .ant-typography {
+  color: #2859b3 !important;
+  text-decoration: underline;
+}
+:root:not([data-theme='dark']) .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell,
+:root:not([data-theme='dark']) .app-shell.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell {
+  border: 0 !important;
+  border-bottom: 1px solid #e8ecf2 !important;
+  border-radius: 0 !important;
+  font-size: 12px;
+  font-weight: 500;
+}
+:root:not([data-theme='dark']) .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell:first-child {
+  border-start-start-radius: 8px !important;
+  border-end-start-radius: 8px !important;
+  border-top-left-radius: 8px !important;
+  border-bottom-left-radius: 8px !important;
+}
+:root:not([data-theme='dark']) .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell:last-child {
+  border-start-end-radius: 8px !important;
+  border-end-end-radius: 8px !important;
+  border-top-right-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+}
+:root:not([data-theme='dark']) .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell::before {
+  display: none !important;
+}
+.ai-testing-overview-page {
+  display: flex;
+  flex-direction: column;
+}
+.ai-testing-overview-toolbar {
+  margin-bottom: 0;
+}
+.ai-testing-overview-switcher-row {
+  display: flex;
+  align-items: center;
+}
+.ai-testing-overview-tab-switcher {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+.ai-testing-overview-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.18s ease;
+}
+.ai-testing-overview-tab::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  border-radius: 999px;
+  background: transparent;
+  transition: background-color 0.18s ease;
+}
+.ai-testing-overview-tab.active::after {
+  background: var(--ai-accent);
+}
+.ai-testing-overview-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+.ai-task-kind-modal .ant-modal-content {
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 22px 54px rgba(15, 23, 42, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.84);
+}
+.ai-task-kind-modal .ant-modal-header {
+  margin-bottom: 0;
+  padding: 28px 34px 0;
+  border-bottom: 0;
+  background: transparent;
+}
+.ai-task-kind-modal .ant-modal-title {
+  color: var(--ai-text);
+}
+.ai-task-kind-modal-title {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ai-task-kind-modal-title > span:first-child {
+  color: var(--ai-text);
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 750;
+}
+.ai-task-kind-modal-title .ant-typography {
+  color: rgba(23, 32, 51, 0.52) !important;
+  font-size: 13px;
+  line-height: 20px;
+}
+.ai-task-kind-modal .ant-modal-body {
+  padding: 24px 34px 28px;
+}
+.ai-task-kind-modal .ant-modal-footer {
+  margin-top: 0;
+  padding: 0 34px 30px;
+  border-top: 0;
+  background: transparent;
+}
+.ai-task-kind-modal .ant-modal-footer .ant-space {
+  width: 100%;
+  justify-content: flex-end;
+}
+.ai-task-kind-list {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ai-task-kind-row {
+  position: relative;
+  min-width: 0;
+  min-height: 92px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 26px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--ai-text);
+  text-align: left;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    0 8px 18px rgba(15, 23, 42, 0.035);
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+.ai-task-kind-row.selected {
+  border-color: rgba(10, 132, 255, 0.52);
+  background:
+    linear-gradient(180deg, rgba(240, 247, 255, 0.96), rgba(247, 251, 255, 0.92)),
+    rgba(255, 255, 255, 0.94);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 8px 20px rgba(10, 132, 255, 0.08);
+}
+.ai-task-kind-row:hover:not(:disabled) {
+  border-color: rgba(10, 132, 255, 0.34);
+  background: rgba(255, 255, 255, 0.96);
+  transform: translateY(-1px);
+}
+.ai-task-kind-row:disabled {
+  color: rgba(23, 32, 51, 0.34);
+  border-color: rgba(15, 23, 42, 0.045);
+  background: rgba(248, 250, 252, 0.58);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.ai-task-kind-icon {
+  flex: 0 0 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  color: #0a66d9;
+  border-radius: 12px;
+  background: rgba(10, 132, 255, 0.08);
+  font-size: 28px;
+  line-height: 1;
+}
+.ai-task-kind-row:not(.selected):not(:disabled) .ai-task-kind-icon {
+  color: rgba(23, 32, 51, 0.78);
+  background: rgba(15, 23, 42, 0.045);
+}
+.ai-task-kind-row:disabled .ai-task-kind-icon {
+  color: rgba(23, 32, 51, 0.3);
+  background: rgba(15, 23, 42, 0.04);
+}
+.ai-task-kind-copy {
+  min-width: 0;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 7px;
+}
+.ai-task-kind-title {
+  color: var(--ai-text);
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 24px;
+}
+.ai-task-kind-description {
+  color: var(--ai-text-secondary);
+  font-size: 13px;
+  line-height: 20px;
+}
+.ai-task-kind-row:disabled .ai-task-kind-title,
+.ai-task-kind-row:disabled .ai-task-kind-description {
+  color: rgba(23, 32, 51, 0.34);
+}
+.ai-task-kind-check {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ai-task-kind-check {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  color: #fff;
+  background: #1677ff;
+  box-shadow: 0 8px 16px rgba(22, 119, 255, 0.22);
+  font-size: 14px;
+}
+.ai-task-kind-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 7px;
+  color: rgba(23, 32, 51, 0.44);
+  background: rgba(15, 23, 42, 0.055);
+  font-size: 12px;
+  line-height: 18px;
+}
+@media (max-width: 680px) {
+  .ai-testing-overview-tab-switcher {
+    gap: 18px;
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .ai-task-kind-modal .ant-modal-body {
+    padding: 20px 18px 22px;
+  }
+
+  .ai-task-kind-modal .ant-modal-header {
+    padding: 22px 18px 0;
+  }
+
+  .ai-task-kind-modal .ant-modal-footer {
+    padding: 0 18px 22px;
+  }
+
+  .ai-task-kind-list {
+    gap: 12px;
+  }
+
+  .ai-task-kind-row {
+    min-height: 86px;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .ai-task-kind-icon {
+    flex-basis: 46px;
+    width: 46px;
+    height: 46px;
+    font-size: 24px;
+  }
+
+  .ai-task-kind-title {
+    font-size: 15px;
+    line-height: 22px;
+  }
+
+  .ai-task-kind-description {
+    font-size: 12px;
+    line-height: 18px;
+  }
+}
+.ai-testing-overview-tab-switcher {
+  gap: 8px;
+  padding: 4px;
+  border: 1px solid rgba(100, 116, 139, 0.1);
+  border-radius: 12px;
+}
+.ai-testing-overview-tab {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 9px;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 650;
+}
+.ai-testing-overview-tab:hover {
+  color: var(--ai-hover-text);
+}
+.ai-testing-overview-tab::after {
+  display: none;
+}
+.ai-testing-overview-tab-switcher {
+  border-color: rgba(15, 23, 42, 0.06);
+  background: rgba(248, 250, 252, 0.68);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+.ai-testing-overview-tab {
+  color: rgba(23, 32, 51, 0.52);
+}
+.ai-testing-overview-tab:hover {
+  background: rgba(255, 255, 255, 0.72);
+}
+.ai-testing-overview-tab.active {
+  color: #172033;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    0 6px 14px rgba(31, 41, 55, 0.075);
+}
+.app-shell-macos .ai-testing-overview-tab-switcher {
+  border-color: rgba(15, 23, 42, 0.055) !important;
+  background: rgba(248, 250, 252, 0.68) !important;
+}
+.app-shell-macos .ai-testing-overview-tab.active {
+  background: rgba(255, 255, 255, 0.94) !important;
+}
+.app-shell-macos .ai-testing-page.ai-testing-overview-page .ai-testing-overview-toolbar,
+.app-shell-macos .ai-testing-page .workbench-project-toolbar.ai-testing-overview-toolbar {
+  min-height: 58px !important;
+  padding: 14px 18px !important;
+  border: 1px solid rgba(15, 23, 42, 0.06) !important;
+  background: rgba(255, 255, 255, 0.68) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 10px 24px rgba(31, 41, 55, 0.045) !important;
+}
+.app-shell-macos .ai-testing-page .ai-testing-overview-switcher-row {
+  display: flex;
+  align-items: center;
+}
+.app-shell-macos .ai-testing-page .ai-testing-overview-tab-switcher {
+  gap: 8px !important;
+  padding: 4px !important;
+  border: 1px solid rgba(15, 23, 42, 0.055) !important;
+  border-radius: 12px !important;
+  background: rgba(248, 250, 252, 0.68) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76) !important;
+}
+.app-shell-macos .ai-testing-page .ai-testing-overview-tab {
+  min-height: 34px !important;
+  padding: 0 14px !important;
+  border-radius: 9px !important;
+  color: rgba(23, 32, 51, 0.44) !important;
+  line-height: 22px !important;
+}
+.app-shell-macos .ai-testing-page .ai-testing-overview-tab:hover {
+  color: #0a84ff !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+}
+.app-shell-macos .ai-testing-page .ai-testing-overview-tab.active {
+  color: #172033 !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 6px 14px rgba(31, 41, 55, 0.06) !important;
+}
+.app-shell-macos .ai-testing-page .ai-testing-overview-tab::after {
+  display: none !important;
+}
+.app-shell-macos .ai-testing-page.ai-testing-overview-page .ai-testing-overview-toolbar,
+.app-shell-macos .ai-testing-page .workbench-project-toolbar.ai-testing-overview-toolbar {
+  border-radius: 14px !important;
+}
+.app-shell-macos .ai-testing-overview-page .workbench-project-toolbar.base-services-toolbar.ai-testing-overview-toolbar {
+  position: relative;
+  z-index: 1;
+  min-height: 58px !important;
+  margin: 16px var(--app-page-gutter) 0 !important;
+  padding: 14px 18px !important;
+  border: 1px solid rgba(255, 255, 255, 0.62) !important;
+  border-radius: 14px !important;
+  background: rgba(255, 255, 255, 0.68) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 10px 24px rgba(31, 41, 55, 0.045) !important;
+}
+.app-shell-macos .ai-testing-overview-page .ai-testing-overview-tab-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px !important;
+  padding: 4px !important;
+  border: 1px solid rgba(15, 23, 42, 0.055) !important;
+  border-radius: 12px !important;
+  background: rgba(248, 250, 252, 0.68) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76) !important;
+}
+.app-shell-macos .ai-testing-overview-page .ai-testing-overview-tab {
+  min-height: 34px !important;
+  padding: 0 14px !important;
+  border-radius: 9px !important;
+  color: rgba(23, 32, 51, 0.44) !important;
+  font-size: 13px !important;
+  line-height: 22px !important;
+}
+.app-shell-macos .ai-testing-overview-page .ai-testing-overview-tab:hover {
+  color: #0a84ff !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+}
+.app-shell-macos .ai-testing-overview-page .ai-testing-overview-tab.active {
+  color: #172033 !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 6px 14px rgba(31, 41, 55, 0.06) !important;
+}
+.app-shell-macos .ai-testing-overview-page .ai-testing-overview-tab::after {
+  display: none !important;
+}
+.app-shell-macos .ai-testing-overview-page .ai-testing-task-panel.workbench-panel {
+  position: relative;
+  z-index: 1;
+  margin: 0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.7) !important;
+  border-radius: 18px !important;
+  background: rgba(255, 255, 255, 0.68) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 10px 24px rgba(31, 41, 55, 0.045) !important;
+}
+.ai-testing-page .ai-task-list-table.ant-table-wrapper {
+  width: 100%;
+}
+.ai-testing-page .ai-task-list-table .ant-table {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+.ai-testing-page .ai-task-list-table .ant-table-container {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.ai-testing-page .ai-task-list-table .ant-table {
+  color: var(--ai-text);
+  background: transparent;
+}
+.ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell {
+  border-top: 1px solid rgba(255, 255, 255, 0.72) !important;
+  border-bottom: 1px solid rgba(84, 104, 132, 0.12) !important;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell:first-child {
+  border-left: 1px solid rgba(255, 255, 255, 0.64) !important;
+  border-start-start-radius: 12px !important;
+  border-end-start-radius: 12px !important;
+}
+.ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell:last-child {
+  border-right: 1px solid rgba(255, 255, 255, 0.64) !important;
+  border-start-end-radius: 12px !important;
+  border-end-end-radius: 12px !important;
+}
+.ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell::before {
+  background: rgba(84, 104, 132, 0.045) !important;
+}
+.ai-testing-page .ai-task-list-table .ant-table-tbody > tr {
+  cursor: pointer;
+}
+.ai-testing-page .ai-task-list-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid rgba(80, 96, 128, 0.065);
+  color: rgba(79, 93, 115, 0.76) !important;
+  font-size: 12px;
+  font-weight: 400;
+}
+.ai-task-list-name {
+  width: 100%;
+  min-width: 0;
+}
+.ai-task-list-name .ant-space-item:last-child {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.ai-task-list-name .ant-typography {
+  max-width: 100%;
+}
+.ai-task-list-tags {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.ai-task-list-tags .ant-tag {
+  margin-inline-end: 0;
+  border-color: rgba(126, 148, 224, 0.14) !important;
+  background: rgba(126, 148, 224, 0.075) !important;
+  color: rgba(72, 86, 150, 0.78) !important;
+}
+.ai-task-list-tags .ant-tag.ant-tag-green {
+  border-color: rgba(61, 122, 87, 0.2) !important;
+  background: #edf7ef !important;
+  color: #3d7a57 !important;
+}
+.ai-task-list-scope.ant-typography {
+  max-width: 100%;
+  line-height: 20px;
+}
+.ai-testing-page .ai-task-list-table .ant-table-tbody td:nth-child(3),
+.ai-testing-page .ai-task-list-table .ant-table-tbody td:nth-child(3) .ant-typography,
+.ai-testing-page .ai-task-list-table .ant-table-tbody td:nth-child(3) span:not(.ant-tag) {
+  color: rgba(79, 93, 115, 0.78) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+  text-shadow: none !important;
+  -webkit-text-stroke: 0 !important;
+}
+.ai-testing-page .ai-task-list-table .ant-table-tbody .ant-typography-secondary {
+  color: rgba(122, 134, 152, 0.58) !important;
+  font-weight: 400 !important;
+}
+.ai-testing-page .ai-task-list-table .ant-table-tbody td:nth-child(4),
+.ai-testing-page .ai-task-list-table .ant-table-tbody td:nth-child(5),
+.ai-testing-page .ai-task-list-table .ant-table-tbody td:nth-child(6),
+.ai-testing-page .ai-task-list-table .ant-table-tbody td:nth-child(4) .ant-typography,
+.ai-testing-page .ai-task-list-table .ant-table-tbody td:nth-child(5) .ant-typography,
+.ai-testing-page .ai-task-list-table .ant-table-tbody td:nth-child(6) .ant-typography {
+  color: rgba(122, 134, 152, 0.58) !important;
+  font-weight: 400 !important;
+}
+.ai-task-list-actions .ant-btn {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+}
+.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-container {
+  border: 0 !important;
+  background: transparent !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell {
+  border-top-color: rgba(255, 255, 255, 0.78) !important;
+  border-bottom-color: rgba(84, 104, 132, 0.1) !important;
+}
+.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table {
+  background: transparent !important;
+}
+.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell {
+  border: 0 !important;
+  border-bottom: 1px solid #e8ecf2 !important;
+  border-radius: 0 !important;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+}
+.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell:first-child {
+  border-start-start-radius: 8px !important;
+  border-end-start-radius: 8px !important;
+  border-top-left-radius: 8px !important;
+  border-bottom-left-radius: 8px !important;
+}
+.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell:last-child {
+  border-start-end-radius: 8px !important;
+  border-end-end-radius: 8px !important;
+  border-top-right-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+}
+.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell::before {
+  display: none !important;
+}
+.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #edf0f5 !important;
+  color: #667085 !important;
+  font-size: 12px;
+  line-height: 18px;
+  transition: background-color 0.16s ease;
+}
+.ai-task-list-name .ant-typography {
+  color: #172033 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 22px;
+}
+.ai-task-list-tags .ant-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  margin: 0;
+  padding: 0 8px;
+  border: 0 !important;
+  border-radius: 6px;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 22px;
+}
+.ai-task-list-scope.ant-typography,
+.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-tbody .ant-typography-secondary {
+  color: #7b8494 !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+}
+.ai-task-list-actions {
+  width: 100%;
+  justify-content: flex-end;
+}
+.ai-task-list-actions .ant-btn.ai-task-run-button {
+  width: 52px;
+  min-width: 52px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid #8bb3ff;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 26px;
+}
+.ai-task-list-actions .ant-btn.ai-task-more-button {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+}
+.ai-task-more-dropdown .ant-dropdown-menu {
+  min-width: 118px;
+  padding: 6px;
+  border: 1px solid rgba(23, 32, 51, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 12px 30px rgba(23, 32, 51, 0.14);
+}
+.ai-task-more-dropdown .ant-dropdown-menu-item {
+  min-height: 34px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+/*
+ * 测试设计（/ai-testing）任务列表与模块导航的表面层，按设计稿重做。
+ *
+ * 与 case-library-v2.css 同一套做法，四条约束：
+ *
+ * 1. 只做外观，不动业务结构；类名沿用页面已有的钩子（.ai-testing-task-panel、
+ *    .ai-task-list-name、.ai-task-list-table 等），测试按这些钩子取节点。
+ * 2. token（`--srf-*`）与九色盘（`.tone-*`）来自 shared/styles/surface-tokens.css，
+ *    页面根节点带 `tp-surface` 才有值；缺了这里所有 var() 都解析成空。
+ *    取值刻意与用例库 / 测试单对齐（卡片 12px、控件 8px 圆角），不照抄设计稿的
+ *    4px —— 三个列表页是同一套视觉语言，单独一页跟稿走会立刻显出分歧。
+ * 3. **不动被 listSurfaceConsistency.test.ts 锁定的列表指纹**：表头高 42px、
+ *    四角 8px 圆角、行高 48px、单元格内距，本文件一律不碰。那套指纹是
+ *    AI 任务 / 功能测试 / API / UI 四页共用的，要改得四页一起改、并同步改断言。
+ *    本文件只接管理列内容、工具栏与状态筛选条的盒子。
+ * 4. 本文件基础布局里的部分取值带 !important，选择器统一写到七级类名
+ *    （`.app-shell.app-shell-macos .ai-testing-page.ai-testing-overview-page …`），
+ *    比那边的最高权重多一级，胜负不依赖样式表顺序。
+ */
+
+/* ===== 画布：设计稿是平铺冷灰底 + 白色卡片 ===== */
+
+/* ai-testing 的公共页面表面仍保留磨砂玻璃与蓝紫辉光，
+   设计稿要求结构化的平底 + 白卡 + 1px 描边。这层辉光与渐变只出现在
+   模块导航和任务列表所在的这两个根类上，任务详情页不受影响。 */
+.app-shell.app-shell-macos .ai-testing-page.ai-testing-overview-page,
+.app-shell.app-shell-macos .ai-testing-page.ai-testing-task-page {
+  background: #f8fafc !important;
+}
+
+.app-shell.app-shell-macos .ai-testing-page.ai-testing-overview-page::before,
+.app-shell.app-shell-macos .ai-testing-page.ai-testing-task-page::before {
+  display: none !important;
+}
+
+/* ===== 模块导航卡片（任务 / Skill库）===== */
+
+.app-shell.app-shell-macos .ai-testing-page.ai-testing-overview-page .workbench-project-toolbar.base-services-toolbar.ai-testing-overview-toolbar {
+  min-height: 44px !important;
+  padding: 0 16px !important;
+  border: 1px solid var(--srf-card-border, #e2e8f0) !important;
+  border-radius: var(--srf-radius-card, 12px) !important;
+  background: var(--srf-card, #fff) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.app-shell.app-shell-macos .ai-testing-page.ai-testing-overview-page .ai-testing-overview-switcher-row {
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+}
+
+.app-shell.app-shell-macos .ai-testing-page.ai-testing-overview-page .ai-testing-overview-tab-switcher {
+  gap: 4px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.app-shell.app-shell-macos .ai-testing-page.ai-testing-overview-page .ai-testing-overview-tab {
+  min-height: 30px !important;
+  padding: 0 12px !important;
+  border-radius: var(--srf-radius-control, 8px) !important;
+  color: var(--srf-text-secondary, #64748b) !important;
+  background: transparent !important;
+  font-size: 12px !important;
+  font-weight: 500;
+  line-height: 20px !important;
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell-macos .ai-testing-page.ai-testing-overview-page .ai-testing-overview-tab:hover {
+  color: var(--srf-text, #0f172a) !important;
+  background: var(--srf-hover, #f8fafc) !important;
+}
+
+.app-shell.app-shell-macos .ai-testing-page.ai-testing-overview-page .ai-testing-overview-tab.active {
+  color: var(--srf-accent, #2563eb) !important;
+  background: var(--srf-accent-soft, #eff6ff) !important;
+  font-weight: 600;
+  box-shadow: none !important;
+}
+
+/* 计数徽标：选中态实底主色，未选中是中性灰块（设计稿的 12 / 34 两枚）。 */
+.ai-testing-page .ai-testing-overview-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--srf-chip, #f1f5f9);
+  color: var(--srf-text-secondary, #64748b);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.app-shell.app-shell-macos .ai-testing-page .ai-testing-overview-tab.active .ai-testing-overview-tab-count {
+  background: var(--srf-accent, #2563eb);
+  color: var(--srf-on-accent, #fff);
+  font-weight: 700;
+}
+
+/* 右侧模型状态：一条弱化元信息，不许抢走左侧导航的注意力。 */
+.ai-testing-page .ai-testing-overview-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--srf-text-muted, #94a3b8);
+  font-size: 12px;
+}
+
+.ai-testing-page .ai-testing-overview-model-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--srf-result-skipped, #bfbfbf);
+}
+
+.ai-testing-page .ai-testing-overview-model-dot.active {
+  background: #10b981;
+}
+
+.ai-testing-page .ai-testing-overview-meta-label {
+  color: var(--srf-text-muted, #94a3b8);
+}
+
+.ai-testing-page .ai-testing-overview-model-name {
+  overflow: hidden;
+  color: var(--srf-text, #0f172a);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===== 工具栏卡片（分类胶囊 + 搜索 + 刷新 + 迭代 + 新建任务）===== */
+
+/* 这一块原来是面板内的 .panel-header，设计稿把它拆成独立一张卡片，
+   与下面的表格卡片之间空一格，所以它得从 .workbench-panel 的高度约束里退出来。 */
+.app-shell.app-shell-macos .ai-testing-page .workbench-tabs > .ai-testing-task-toolbar.workbench-panel {
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 0;
+  padding: 12px 16px;
+  border: 1px solid var(--srf-card-border, #e2e8f0) !important;
+  border-radius: var(--srf-radius-card, 12px) !important;
+  background: var(--srf-card, #fff) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* 工具栏内部是「胶囊靠左、控件靠右」的一条，窄屏整组换行。 */
+.ai-testing-page .ai-testing-task-toolbar .ai-task-panel-header {
+  min-height: 0;
+  padding: 0;
+  border-bottom: 0;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.ai-testing-page .ai-task-kind-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 分类胶囊沿用共享的 .tp-chip，只补自己那点差别：图标与计数。 */
+.ai-testing-page .ai-task-kind-tab .ai-task-kind-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+}
+
+/* 图标是导航用的彩色徽标资产，整块彩色摆在胶囊里偏吵；未选中时去色压暗，选中再放回本色。 */
+.ai-testing-page .ai-task-kind-tab .ai-task-kind-tab-icon img {
+  display: block;
+  filter: grayscale(1);
+  opacity: 0.72;
+}
+
+.ai-testing-page .ai-task-kind-tab.active .ai-task-kind-tab-icon img {
+  filter: none;
+  opacity: 1;
+}
+
+.ai-testing-page .ai-testing-task-toolbar .ai-task-panel-tools {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.ai-testing-page .ai-task-sprint-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-testing-page .ai-task-sprint-filter-label {
+  color: var(--srf-text-muted, #94a3b8);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.ai-testing-page .ai-task-search-field {
+  min-width: 240px;
+}
+
+.ai-testing-page .ai-task-search-input.ant-input-affix-wrapper {
+  border-radius: var(--srf-radius-control, 8px);
+}
+
+.ai-testing-page .ai-task-search-hint {
+  color: var(--srf-text-muted, #94a3b8);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+}
+
+/* 工具栏里的刷新按钮也只调盒尺寸，颜色同样归 app/styles/buttons.css 的 @layer app-buttons。 */
+.app-shell.app-shell-macos .ai-testing-page .ai-testing-task-toolbar.workbench-panel .ai-task-panel-tools .ai-task-refresh-button.ant-btn {
+  padding-inline: 8px;
+  font-size: 12px;
+}
+
+/* ===== 表格卡片 ===== */
+
+.app-shell.app-shell-macos .ai-testing-page .ai-testing-task-panel.workbench-panel {
+  border: 1px solid var(--srf-card-border, #e2e8f0) !important;
+  border-radius: var(--srf-radius-card, 12px) !important;
+  background: var(--srf-card, #fff) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* 外壳给表格容器留了 16px 18px 内距，设计稿里表格贴着卡片边缘。 */
+.app-shell.app-shell-macos .ai-testing-page .ai-testing-card-scroll.ai-task-table-scroll {
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+/* ===== 状态筛选条 ===== */
+
+/* 它是表格卡片内部的第一条，不是独立卡片（设计稿的浅灰底 + 下描边）。 */
+.app-shell.app-shell-macos .ai-testing-page .ai-task-status-strip {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  min-height: 37px;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--srf-divider, #f1f5f9);
+  background: var(--srf-hover, #f8fafc);
+}
+
+.ai-testing-page .ai-task-strip-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.app-shell.app-shell-macos .ai-testing-page .ai-task-strip-actions .ant-btn {
+  height: 24px;
+  min-height: 24px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.ai-testing-page .ai-task-status-strip-label {
+  margin-right: 6px;
+  color: var(--srf-text-secondary, #64748b);
+  font-size: 12px;
+}
+
+.ai-testing-page .ai-task-status-strip-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+}
+
+.ai-testing-page .ai-task-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--srf-radius-control, 8px);
+  background: transparent;
+  color: var(--srf-text-secondary, #64748b);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.ai-testing-page .ai-task-status-chip:hover {
+  color: var(--srf-text, #0f172a);
+  background: var(--srf-chip, #f1f5f9);
+}
+
+.ai-testing-page .ai-task-status-chip.active {
+  border-color: var(--srf-card-border, #e2e8f0);
+  background: var(--srf-card, #fff);
+  color: var(--srf-text, #0f172a);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+/* 状态点：与 utils/taskStatus.tsx 的状态语义同源，只做静态指示。 */
+.ai-testing-page .ai-task-status-chip-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+
+.ai-testing-page .ai-task-status-chip-dot.tone-status-running {
+  background: #2563eb;
+}
+
+.ai-testing-page .ai-task-status-chip-dot.tone-status-success {
+  background: #10b981;
+}
+
+.ai-testing-page .ai-task-status-chip-dot.tone-status-warning {
+  background: #f59e0b;
+}
+
+.ai-testing-page .ai-task-status-chip-dot.tone-status-danger {
+  background: #ef4444;
+}
+
+/* ===== 表格内部：列内容 ===== */
+
+/* index.css 用 `td:nth-child(3..6)` 给旧列序统一刷弱化文字色。加了勾选列以后
+   列序整体后移一位，那些位置规则会落到别的列上，这里先按 td 统一接管，
+   再让各列按自己的类名把颜色拿回去。 */
+.app-shell.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-tbody > tr > td {
+  color: var(--srf-text-secondary, #64748b) !important;
+  font-family: inherit !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  letter-spacing: normal !important;
+  text-shadow: none !important;
+  -webkit-text-stroke: 0 !important;
+}
+.app-shell.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-tbody > tr > td span:not(.tp-tone-tag) {
+  color: var(--srf-text-secondary, #64748b) !important;
+  font-family: inherit !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  letter-spacing: normal !important;
+  text-shadow: none !important;
+  -webkit-text-stroke: 0 !important;
+}
+
+.app-shell.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-tbody > tr > td .ant-typography,
+.app-shell.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-tbody > tr > td .ant-typography-secondary {
+  color: inherit !important;
+  font-weight: 400 !important;
+}
+
+/* 名称单元格：名称 + 来源属性标签。 */
+.ai-testing-page .ai-task-list-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* 名称本身受 listNameConsistency.test.ts 锁定（字号 / 字重 / 行高 / 光标），
+   这里只补布局与省略行为，那四项一律不碰。 */
+.ai-testing-page .ai-task-list-name .ant-typography {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 来源属性标签（OpenAPI导入 / ZIP 源码包 / 需求文档…），等宽字，弱化底色。 */
+.ai-testing-page .ai-task-source-chip {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--srf-chip, #f1f5f9);
+  color: var(--srf-chip-text, #475569);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+/* 生成状态：胶囊 + 状态点，取自共享九色盘。
+   index.css:5185 还留着按列序写的 `td:nth-child(3) span:not(.ant-tag) { color: … !important }`，
+   加了勾选列之后它落的正是状态列，所以这里要带 !important 把文字色还给色调。 */
+.app-shell.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-tbody > tr > td .ai-task-list-tags .tp-tone-tag.ai-task-status-pill {
+  color: var(--srf-tone-text, var(--srf-chip-text)) !important;
+}
+
+.ai-testing-page .ai-task-list-tags .tp-tone-tag.ai-task-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.ai-testing-page .ai-task-status-pill .ai-task-status-indicator {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  margin: 0;
+  border-radius: 50%;
+  /* 取色调变量而不是 currentColor：单元格那条统一弱化文字色的规则也命中标记点，
+     继承来的 color 会被覆盖掉。 */
+  background: var(--srf-tone-text, currentColor);
+}
+
+/* 所属迭代 / 需求：迭代是等宽小色块，需求名跟随列色。 */
+.ai-testing-page .ai-task-list-scope {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.app-shell.app-shell-macos .ai-testing-page .ai-testing-task-panel.workbench-panel .ai-task-list-table .ai-task-sprint-chip {
+  color: var(--srf-accent, #2563eb) !important;
+}
+
+.ai-testing-page .ai-task-sprint-chip {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border: 1px solid var(--srf-accent-border, #bfdbfe);
+  border-radius: 4px;
+  background: var(--srf-accent-soft, #eff6ff);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.app-shell.app-shell-macos .ai-testing-page .ai-testing-task-panel .ai-task-list-table .ant-table-tbody > tr > td .ai-task-list-scope .ant-typography {
+  color: var(--srf-text-secondary, #64748b) !important;
+}
+
+/* 来源文档：文档图标 + 需求名。 */
+.ai-testing-page .ai-task-source-document {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--srf-text-secondary, #64748b);
+}
+
+.app-shell.app-shell-macos .ai-testing-page .ai-testing-task-panel .ai-task-source-document,
+.app-shell.app-shell-macos .ai-testing-page .ai-testing-task-panel .ai-task-source-document .anticon {
+  color: var(--srf-text-muted, #94a3b8) !important;
+}
+
+/* 时间列：等宽字，扫描时列宽不跳。 */
+.app-shell.app-shell-macos .ai-testing-page .ai-testing-task-panel.workbench-panel .ai-task-list-table .ant-table-tbody > tr > td .ai-task-time-cell {
+  color: var(--srf-text-muted, #94a3b8) !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 11px !important;
+}
+
+/* ===== 表格内部：操作列 ===== */
+
+/* 运行 / 更多 / 刷新三个按钮的颜色不在这里改。
+   app/styles/buttons.css 用 `@layer app-buttons` 定了一套全局按钮色板（文字 #526176、
+   白底、#dce3ec 描边，悬停 #f3f6fa），文件开头写明「这一层里的 !important 压过松散的页面覆盖，
+   所以 feature 的 import 顺序带不回渐变和彩色阴影」。层叠层里 important 声明的优先级高于未分层的，
+   不论权重高低——这里再写十级选择器也改不动，那正是那一层的用意。
+   所以按钮只保留盒尺寸：宽高、内距、字号，颜色一律交给全局色板。 */
+.app-shell.app-shell-macos .ai-testing-page .ai-testing-task-panel.workbench-panel .ai-task-list-actions .ant-btn.ai-task-run-button {
+  min-width: 52px;
+  height: 26px;
+  padding: 0 10px;
+  font-size: 11px;
+  line-height: 24px;
+}
+
+.app-shell.app-shell-macos .ai-testing-page .ai-testing-task-panel.workbench-panel .ai-task-list-actions .ant-btn.ai-task-more-button {
+  width: 26px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0;
+}
+
+/* 勾选行：淡主色底，和 hover 的浅蓝区分开。 */
+.app-shell.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-tbody > tr.ant-table-row-selected > td {
+  --srf-list-row-bg: var(--srf-accent-soft, #eff6ff);
+  --srf-list-row-hover: var(--srf-list-row-bg);
+}
+
+/* ===== 页脚 ===== */
+
+.app-shell.app-shell-macos .ai-testing-page .ai-testing-task-panel .ai-task-list-footer {
+  gap: 12px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--srf-divider, #f1f5f9) !important;
+  background: var(--srf-card, #fff) !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.app-shell.app-shell-macos .ai-testing-page .ai-task-list-footer .ant-typography {
+  color: var(--srf-text-muted, #94a3b8) !important;
+  font-size: 12px;
+}
+
+/* ===== 窄屏 ===== */
+
+@media (max-width: 1180px) {
+  .ai-testing-page .ai-testing-task-toolbar .ai-task-panel-tools {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .ai-testing-page .ai-task-search-field {
+    min-width: 0;
+    flex: 1 1 200px;
+  }
+}

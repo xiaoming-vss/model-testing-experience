@@ -174,7 +174,6 @@ describe('API 候选结果审核与导入', () => {
     const dialog = await screen.findByRole('dialog')
     const modalContainer = dialog.querySelector<HTMLElement>('.ant-modal-container')
 
-    expect(document.documentElement).not.toHaveAttribute('data-theme', 'dark')
     expect(modalContainer).not.toBeNull()
     expect(getComputedStyle(modalContainer!).backgroundColor).toBe('rgb(255, 255, 255)')
   })
@@ -223,9 +222,11 @@ describe('API 候选结果审核与导入', () => {
 
     renderPage()
 
-    expect(await screen.findByText('执行中')).toBeInTheDocument()
-    expect(screen.queryByText('待审核')).not.toBeInTheDocument()
-    expect(screen.queryByText('待导入')).not.toBeInTheDocument()
+    // KPI 卡片上也有「待审核」这类档位名，所以状态断言收进运行行内看。
+    const row = await findRunRow()
+    expect(within(row).getByText('执行中')).toBeInTheDocument()
+    expect(within(row).queryByText('待审核')).not.toBeInTheDocument()
+    expect(within(row).queryByText('待导入')).not.toBeInTheDocument()
   })
 
   it('成功运行的待审核候选可以编辑并保存完整 YAML', async () => {
@@ -562,7 +563,7 @@ describe('API 候选结果审核与导入', () => {
 
     renderPage()
 
-    expect(await screen.findByText('失败')).toBeInTheDocument()
+    expect(within(await findRunRow()).getByText('失败')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '审核结果' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '错误信息' })).toBeInTheDocument()
     // 失败记录没有可追加的状态变更，操作列只剩删除运行记录。

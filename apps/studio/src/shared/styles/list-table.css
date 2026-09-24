@@ -1,0 +1,36 @@
+/* 列表表面唯一实现。页面声明 tp-list-surface，表格声明 tp-list-table。
+   保留名称、状态、列内容的 feature 样式，只统一表头、行高和背景。 */
+.tp-list-surface .tp-list-table .ant-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.tp-list-surface .tp-list-table .ant-table-thead {
+  overflow: hidden;
+  border-radius: 8px;
+  clip-path: inset(0 round 8px);
+}
+
+:root .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell,
+:root .app-shell.app-shell-macos .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell {
+  height: 42px;
+  padding: 0 16px;
+  color: var(--srf-list-header-text) !important;
+  background: var(--srf-list-header-bg) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+:root .tp-list-surface .tp-list-table .ant-table-tbody > tr > td,
+:root .app-shell.app-shell-macos .tp-list-surface .tp-list-table .ant-table-tbody > tr > td {
+  height: 48px;
+  padding: 8px 16px;
+  background: var(--srf-list-row-bg) !important;
+  box-shadow: none;
+}
+
+:root .tp-list-surface .tp-list-table .ant-table-tbody > tr:hover > td,
+:root .app-shell.app-shell-macos .tp-list-surface .tp-list-table .ant-table-tbody > tr:hover > td {
+  background: var(--srf-list-row-hover) !important;
+}

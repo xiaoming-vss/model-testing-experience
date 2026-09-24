@@ -1096,7 +1096,7 @@
   }
 
   .workbench-tabs {
-    padding: 16px;
+    padding: 16px var(--app-page-gutter) 16px;
   }
 
   .page-head {

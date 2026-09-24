@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ThemeProvider } from '@/app/providers/ThemeProvider'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
+import { AppSidebar } from '@/app/layouts/AppSidebar'
 import { UnifiedAiTestingPage } from './UnifiedAiTestingPage'
 
 function jsonResponse(data: unknown, status = 200) {
@@ -47,7 +48,9 @@ function renderPage() {
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={['/ai-testing/tasks']}>
+          <AppSidebar />
           <Routes>
+            <Route path="/ai-testing" element={<UnifiedAiTestingPage />} />
             <Route path="/ai-testing/tasks" element={<UnifiedAiTestingPage />} />
             <Route path="/ai-testing/ui-tasks/:taskId" element={<UiDetailProbe />} />
           </Routes>
@@ -95,7 +98,7 @@ describe('统一任务列表中的 UI 用例生成', () => {
       expect(apiTaskRequests).toBe(1)
       expect(functionalTaskRequests).toBe(1)
     })
-    await user.click(screen.getByText('API测试'))
+    await user.click(screen.getByRole('link', { name: 'API测试', current: false }))
     const refreshButton = screen.getByRole('button', { name: '刷新当前任务列表' })
     await waitFor(() => expect(refreshButton).not.toHaveClass('ant-btn-loading'))
     await user.click(refreshButton)
@@ -132,7 +135,7 @@ describe('统一任务列表中的 UI 用例生成', () => {
 
     await user.click(await screen.findByText('功能测试'))
 
-    expect(await screen.findByRole('columnheader', { name: '更新时间' })).toBeInTheDocument()
+    expect(await screen.findByRole('columnheader', { name: '最近更新' })).toBeInTheDocument()
     expect(screen.queryByRole('columnheader', { name: '最近运行' })).not.toBeInTheDocument()
     expect(await screen.findByText('2026/8/5 14:47:06')).toBeInTheDocument()
   })
@@ -182,19 +185,78 @@ describe('统一任务列表中的 UI 用例生成', () => {
 
     renderPage()
 
-    // 默认选中第一个需求分析标签，再切换到 API测试。
-    expect(await screen.findByRole('radio', { name: /需求分析/ })).toBeChecked()
-    await user.click(screen.getByText('API测试'))
-    expect(await screen.findByRole('radio', { name: /API测试1/ })).toBeChecked()
+    // 默认选中第一个「需求分析」侧栏入口，再切换到 API测试。
+    expect(await screen.findByRole('link', { name: '需求分析' })).toHaveAttribute('aria-current', 'page')
+    await user.click(screen.getByRole('link', { name: 'API测试', current: false }))
+    expect(await screen.findByRole('link', { name: 'API测试', current: 'page' })).toBeInTheDocument()
     expect(await screen.findByText('API 登录接口')).toBeInTheDocument()
     expect(screen.queryByText('EGO本地Server')).not.toBeInTheDocument()
 
-    // 应用 Segmented 点击选中后,列表切换到对应类型
+    // 点侧栏入口切换类型，列表跟着换
     await user.click(screen.getByText('功能测试'))
 
-    expect(await screen.findByRole('radio', { name: /功能测试1/ })).toBeChecked()
+    expect(await screen.findByRole('link', { name: '功能测试' })).toHaveAttribute('aria-current', 'page')
     expect(await screen.findByText('EGO本地Server')).toBeInTheDocument()
     expect(screen.queryByText('API 登录接口')).not.toBeInTheDocument()
+  })
+
+  it('状态筛选按最新运行状态过滤，并给出各档计数', async () => {
+    installFetchHandler((url) => {
+      if (url.pathname === '/v1/projects/project-1/api-case-generate-tasks') {
+        return jsonResponse({
+          items: [
+            { taskId: 'api-success', name: '成功的任务', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'openapi', sourceContent: '{}', instruction: '' },
+            { taskId: 'api-review', name: '待审核的任务', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'openapi', sourceContent: '{}', instruction: '' },
+          ],
+          total: 2,
+        })
+      }
+      if (url.pathname === '/v1/api-case-generate-tasks/api-success/runs') {
+        return jsonResponse({ items: [{ runId: 'run-1', taskId: 'api-success', status: 'success', createdAt: '2026-08-01T03:00:00.000Z' }], total: 1 })
+      }
+      if (url.pathname === '/v1/api-case-generate-tasks/api-review/runs') {
+        return jsonResponse({ items: [{ runId: 'run-2', taskId: 'api-review', status: 'waiting_review', createdAt: '2026-08-01T03:00:00.000Z' }], total: 1 })
+      }
+    })
+    const user = userEvent.setup()
+
+    renderPage()
+
+    await user.click(await screen.findByRole('link', { name: 'API测试' }))
+
+    // 计数来自「本类型全部任务的运行记录」，不是当前页
+    expect(await screen.findByRole('button', { name: /全部 \(2\)/ })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /成功 \(1\)/ })).toBeInTheDocument()
+    const reviewChip = await screen.findByRole('button', { name: /待审核 \(1\)/ })
+    expect(screen.getByRole('button', { name: /进行中 \(0\)/ })).toBeInTheDocument()
+
+    await user.click(reviewChip)
+
+    expect(screen.getByText('待审核的任务')).toBeInTheDocument()
+    expect(screen.queryByText('成功的任务')).not.toBeInTheDocument()
+  })
+
+  it('关键词搜索按任务名称与所属需求过滤', async () => {
+    installFetchHandler((url) => {
+      if (url.pathname === '/v1/projects/project-1/api-case-generate-tasks') {
+        return jsonResponse({
+          items: [
+            { taskId: 'api-task-1', name: '登录接口用例', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'openapi', sourceContent: '{}', instruction: '' },
+            { taskId: 'api-task-2', name: '订单接口用例', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'openapi', sourceContent: '{}', instruction: '' },
+          ],
+          total: 2,
+        })
+      }
+    })
+    const user = userEvent.setup()
+
+    renderPage()
+
+    await user.click(await screen.findByRole('link', { name: 'API测试' }))
+    await user.type(await screen.findByPlaceholderText('搜索任务名称 / 所属需求'), '订单')
+
+    expect(await screen.findByText('订单接口用例')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('登录接口用例')).not.toBeInTheDocument())
   })
 
   it('创建 UI 任务后上传所选 ZIP 并进入详情', async () => {
@@ -232,9 +294,9 @@ describe('统一任务列表中的 UI 用例生成', () => {
 
     renderPage()
 
+    await user.click(screen.getByRole('link', { name: 'UI测试' }))
     await user.click(await screen.findByRole('button', { name: /新建任务/ }))
-    await user.click(screen.getByRole('button', { name: /UI测试/ }))
-    await user.click(screen.getByRole('button', { name: /确\s*认/ }))
+    expect(screen.queryByText('选择模板')).not.toBeInTheDocument()
 
     await user.type(await screen.findByLabelText('任务名称'), '登录模块 UI 用例生成')
     await user.click(screen.getByLabelText('所属需求'))
@@ -264,9 +326,9 @@ describe('统一任务列表中的 UI 用例生成', () => {
     const user = userEvent.setup()
     renderPage()
 
+    await user.click(screen.getByRole('link', { name: 'UI测试' }))
     await user.click(await screen.findByRole('button', { name: /新建任务/ }))
-    await user.click(screen.getByRole('button', { name: /UI测试/ }))
-    await user.click(screen.getByRole('button', { name: /确\s*认/ }))
+    expect(screen.queryByText('选择模板')).not.toBeInTheDocument()
     await user.type(await screen.findByLabelText('任务名称'), '缺少来源的任务')
     await user.click(screen.getByRole('button', { name: '创建并上传' }))
 
@@ -292,9 +354,9 @@ describe('统一任务列表中的 UI 用例生成', () => {
     const user = userEvent.setup()
     renderPage()
 
+    await user.click(screen.getByRole('link', { name: 'UI测试' }))
     await user.click(await screen.findByRole('button', { name: /新建任务/ }))
-    await user.click(screen.getByRole('button', { name: /UI测试/ }))
-    await user.click(screen.getByRole('button', { name: /确\s*认/ }))
+    expect(screen.queryByText('选择模板')).not.toBeInTheDocument()
     await user.type(await screen.findByLabelText('任务名称'), '待重试任务')
     await user.click(screen.getByLabelText('所属需求'))
     await user.click(await screen.findByText('登录需求'))
@@ -347,7 +409,7 @@ it.each([
   })
   const user = userEvent.setup()
   renderPage()
-  await user.click(await screen.findByText(tab))
+  await user.click(await screen.findByRole('link', { name: tab }))
   const runButton = await screen.findByRole('button', { name: '运行任务' })
   await waitFor(() => expect(runButton).toBeEnabled())
   await user.click(runButton)
@@ -382,4 +444,19 @@ it.each(['', '   \n'])('功能测试列表有原文但无增强文本时禁止�
   expect(await screen.findByText('请先完成需求分析并导入增强文本，再生成功能用例')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '确认运行' })).not.toBeInTheDocument()
   expect(runRequested).toBe(false)
+})
+
+it.each([
+  ['需求分析', '新建需求分析任务'],
+  ['功能测试', '新建功能用例生成任务'],
+  ['API测试', '新建 API 用例生成任务'],
+  ['代码风险分析', '新建代码风险分析任务'],
+])('从 %s 直接打开对应的新建表单', async (label, title) => {
+  installFetchHandler()
+  const user = userEvent.setup()
+  renderPage()
+  await user.click(screen.getByRole('link', { name: label }))
+  await user.click(screen.getByRole('button', { name: /新建任务/ }))
+  expect(await screen.findByText(title)).toBeInTheDocument()
+  expect(screen.queryByText('选择模板')).not.toBeInTheDocument()
 })

@@ -1,3 +1,5 @@
+import '@/features/ai-testing/styles/index.css'
+import '@/features/ai-testing/styles/task-review.css'
 export function CaseComparison<T extends object>({ fields, existing, generated, formatValue }: {
   fields: Array<{ key: keyof T; label: string }>
   existing: T

@@ -1,0 +1,311 @@
+/* 功能与 UI 候选结果审核弹窗及编辑区。 */
+.functional-candidate-review-modal .ant-modal-header {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--ai-border);
+}
+
+.functional-candidate-review-modal .ant-modal-body {
+  padding: 0 24px;
+  overflow: hidden;
+}
+
+.functional-candidate-review-modal .ant-modal-footer {
+  margin-top: 0;
+  padding: 12px 24px 16px;
+  border-top: 1px solid var(--ai-border);
+}
+
+.functional-candidate-review-title {
+  padding-right: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.functional-candidate-review-title > div:first-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.functional-candidate-review-title > div:first-child > strong {
+  color: var(--ai-text);
+  font-size: 18px;
+  line-height: 26px;
+}
+
+.functional-candidate-review-title > div:first-child > span {
+  max-width: 760px;
+  overflow: hidden;
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.functional-candidate-review-title-stats {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.functional-candidate-review-title-stats > span {
+  padding: 7px 11px;
+  color: var(--ai-text-secondary);
+  background: var(--ai-panel-soft);
+  border: 1px solid var(--ai-border);
+  border-radius: 9px;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.functional-candidate-review-title-stats strong {
+  color: var(--ai-blue);
+}
+
+.functional-candidate-review-modal .ai-task-import-result-form {
+  height: calc(100vh - 244px);
+  min-height: 0;
+  max-height: calc(100vh - 244px);
+}
+
+.functional-candidate-review-tabs,
+.functional-candidate-review-tabs > .ant-tabs-content-holder,
+.functional-candidate-review-tabs > .ant-tabs-content-holder > .ant-tabs-content,
+.functional-candidate-review-tabs > .ant-tabs-content-holder > .ant-tabs-content > .ant-tabs-tabpane {
+  min-height: 0;
+}
+
+.functional-candidate-review-tabs {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.functional-candidate-review-tabs > .ant-tabs-nav {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+
+.functional-candidate-review-tabs > .ant-tabs-content-holder {
+  flex: 1 1 auto;
+}
+
+.functional-candidate-review-tabs > .ant-tabs-content-holder > .ant-tabs-content,
+.functional-candidate-review-tabs > .ant-tabs-content-holder > .ant-tabs-content > .ant-tabs-tabpane,
+.functional-candidate-review-tabs .ai-task-import-result-preview-content,
+.functional-candidate-review-tabs .ai-task-review-modal-section,
+.functional-candidate-review-tabs .ai-task-review-modal-preview {
+  height: 100%;
+}
+
+.functional-candidate-review-tabs .ai-task-import-result-preview-content {
+  margin-bottom: 0;
+}
+
+.functional-candidate-review-tabs .ai-task-review-modal-preview {
+  max-height: none;
+  padding: 12px 0 16px;
+  overflow: hidden;
+}
+
+.functional-candidate-review-footer {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  text-align: left;
+}
+
+.functional-candidate-review-footer > label {
+  min-width: 320px;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.functional-candidate-review-footer > label > span {
+  flex: 0 0 auto;
+  color: var(--ai-text);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+}
+
+.functional-candidate-review-footer > label em {
+  display: block;
+  color: var(--ai-text-muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+}
+
+.functional-candidate-review-footer .ant-input-textarea {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.functional-candidate-review-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.functional-candidate-review-actions > span {
+  margin-right: 4px;
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.functional-candidate-review-actions > span strong {
+  color: var(--ai-blue);
+}
+
+@media (max-width: 1080px) {
+
+  .functional-candidate-review-footer {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .functional-candidate-review-actions {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 760px) {
+  .functional-candidate-review-title-stats,
+.functional-candidate-review-actions > span {
+    display: none;
+  }
+
+  .functional-candidate-review-footer > label {
+    min-width: 0;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.ui-task-candidate-result-modal .ai-task-import-result-form > .ant-tabs {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.ui-task-candidate-result-modal .ai-task-import-result-form > .ant-tabs .ant-tabs-content-holder,
+.ui-task-candidate-result-modal .ai-task-import-result-form > .ant-tabs .ant-tabs-content,
+.ui-task-candidate-result-modal .ai-task-import-result-form > .ant-tabs .ant-tabs-tabpane {
+  height: 100%;
+  min-height: 0;
+}
+
+.ui-task-candidate-yaml-pane {
+  height: 100%;
+  min-height: 0;
+  margin-bottom: 0;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  overflow: hidden;
+}
+
+.ui-task-candidate-yaml-pane :is(
+  .json-editor-wrap,
+  .json-editor-shell,
+  .json-editor-codemirror,
+  .cm-editor
+) {
+  height: 100%;
+  min-height: 0;
+}
+
+.ui-task-candidate-yaml-pane .cm-scroller {
+  overflow: auto;
+}
+
+.ui-task-candidate-preview {
+  padding: 2px;
+}
+
+.ui-task-candidate-case-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ui-task-candidate-case-trigger .anticon {
+  flex: 0 0 auto;
+  color: var(--ai-text-muted);
+  font-size: 11px;
+}
+
+.ui-task-candidate-case-trigger span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-task-candidate-case-card > .ant-card-head .ant-card-head-title {
+  min-width: 0;
+}
+
+.ui-task-candidate-review-note {
+  flex: 0 0 auto;
+  margin-top: 8px;
+}
+
+.ui-task-candidate-review-note label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--ai-text);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+/* Keep long candidate JSON inside the available tab height. */
+
+.functional-candidate-edit-pane {
+  height: 100%;
+  min-height: 0;
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+  padding-bottom: 12px;
+}
+
+.functional-candidate-edit-pane > .json-editor-wrap,
+.functional-candidate-edit-pane .json-editor-shell,
+.functional-candidate-edit-pane .json-editor-codemirror,
+.functional-candidate-edit-pane .cm-editor {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.functional-candidate-edit-pane .json-editor-toolbar,
+.functional-candidate-edit-pane > .ant-alert,
+.functional-candidate-edit-pane > .ant-btn {
+  flex: 0 0 auto;
+}
+
+.functional-candidate-edit-pane .cm-scroller {
+  min-height: 0;
+  overflow: auto;
+}

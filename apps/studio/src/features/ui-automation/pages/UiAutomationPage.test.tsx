@@ -95,20 +95,12 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-it('列出测试集，头部信息条与行内徽标展示默认运行配置', async () => {
+it('列出测试集，行内徽标展示运行配置', async () => {
   vi.spyOn(api, 'getUiTestSuites').mockImplementation(async () => listResponse([suite]))
   const client = buildClient()
   renderPage(client)
 
   await screen.findByText('xiaoming')
-
-  // 信息条：标题、副标题与三项遥测（视口 / 超时取自默认运行配置）
-  const banner = within(document.querySelector('.ui-suite-list-banner') as HTMLElement)
-  expect(banner.getByText('UI自动化测试集')).toBeInTheDocument()
-  expect(banner.getByText('跨浏览器 Playwright / Chromium 无头及可视化回放执行引擎')).toBeInTheDocument()
-  expect(banner.getByText('默认可视模式')).toBeInTheDocument()
-  expect(banner.getByText('1440 × 900')).toBeInTheDocument()
-  expect(banner.getByText('5000ms')).toBeInTheDocument()
 
   // 所属迭代 / 需求：迭代是等宽色块，需求是普通文字
   expect(screen.getByText('V1.0.0 迭代')).toBeInTheDocument()

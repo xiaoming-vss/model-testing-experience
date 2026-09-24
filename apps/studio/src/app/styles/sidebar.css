@@ -1,0 +1,101 @@
+.app-shell.app-shell-macos .app-sidebar {
+  width: 208px !important;
+  min-width: 208px !important;
+  max-width: 208px !important;
+  flex: 0 0 208px !important;
+}
+
+.app-shell.app-shell-macos .app-sidebar.is-collapsed {
+  width: 76px !important;
+  min-width: 76px !important;
+  max-width: 76px !important;
+  flex: 0 0 76px !important;
+}
+
+.sidebar-content {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-brand {
+  height: 56px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  color: var(--mac-glass-text);
+  font-size: 18px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--mac-glass-border-soft);
+}
+
+.sidebar-navigation {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 10px;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  margin-bottom: 4px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--mac-glass-muted);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sidebar-link:hover,
+.sidebar-link.is-active {
+  color: var(--mac-glass-blue);
+  background: var(--srf-list-row-hover);
+}
+
+.sidebar-link.is-active,
+.sidebar-link.is-current-group {
+  color: var(--mac-glass-blue);
+  font-weight: 600;
+}
+
+.sidebar-link > svg { flex-shrink: 0; }
+.sidebar-chevron { margin-left: auto; transform: rotate(-90deg); }
+.sidebar-chevron.is-open { transform: rotate(0); }
+.sidebar-children .sidebar-link { padding-left: 32px; }
+
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  flex-shrink: 0;
+  border: 0;
+  border-top: 1px solid var(--mac-glass-border-soft);
+  background: transparent;
+  color: var(--mac-glass-muted);
+  cursor: pointer;
+}
+
+.sidebar-toggle:hover { color: var(--mac-glass-blue); }
+.sidebar-link:focus-visible,
+.sidebar-toggle:focus-visible,
+.sidebar-brand:focus-visible { outline: 2px solid var(--mac-glass-blue); outline-offset: -2px; }
+.is-collapsed .sidebar-brand { padding: 0; justify-content: center; }
+.is-collapsed .sidebar-brand > span,
+.is-collapsed .sidebar-chevron { display: none; }
+.is-collapsed .sidebar-link { flex-direction: column; gap: 5px; padding: 10px 0; font-size: 11px; }
+
+.sidebar-count { margin-left: auto; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--mac-glass-muted); }

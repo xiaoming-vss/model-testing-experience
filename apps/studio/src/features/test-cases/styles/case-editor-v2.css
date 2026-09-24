@@ -2,22 +2,13 @@
  * 编辑用例弹窗（用例库点开用例的那套表单）。
  *
  * 只作用于 `.case-library-case-modal`：弹窗被 antd 传到 body 下，不在 `.app-shell` 里，
- * 所以 `dark-polish.css` / `workbench.css` 那些带 `.app-shell` 前缀的规则碰不到它，
- * 主题由 antd 的 ConfigProvider + 本文件的 `:root[data-theme='dark']` 对照负责。
+ * 所以 `workbench.css` 那些带 `.app-shell` 前缀的规则碰不到它。
  *
  * token 与九色盘来自 shared/styles/surface-tokens.css；弹窗根节点带 `tp-surface` 才能取到（见 CaseLibraryPage）。
  * 颜色一律走 token：这个文件是新增的，不在 STRUCTURE.md S8 的存量豁免里。
  */
 
 /* ===== 弹窗头部 ===== */
-
-.case-library-case-modal .case-editor-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  min-width: 0;
-  padding-right: 24px;
-}
 
 .case-library-case-modal .case-editor-head-icon {
   display: inline-flex;

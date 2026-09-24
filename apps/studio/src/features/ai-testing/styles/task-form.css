@@ -1,0 +1,128 @@
+/* 创建任务抽屉：基础字段、来源输入、上传和模型连接选择。 */
+.ai-task-generate-drawer .ant-drawer-body {
+  padding-top: 14px;
+}
+
+.ai-task-drawer-form .ant-form-item {
+  margin-bottom: 14px;
+}
+
+.ai-task-drawer-form .ant-form-item-label {
+  padding-bottom: 5px;
+}
+
+.ai-task-drawer-form .ant-form-item-label > label {
+  min-height: 20px;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.ai-task-drawer-basic-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.ai-task-drawer-basic-grid .ant-form-item {
+  margin-bottom: 0;
+}
+
+.ai-task-drawer-basic-grid .ant-input,
+.ai-task-drawer-basic-grid .ant-select-single:not(.ant-select-customize-input) .ant-select-selector {
+  min-height: 32px;
+}
+
+.ai-task-source-content-field {
+  min-height: 0;
+}
+
+.ai-task-source-mode {
+  margin-bottom: 8px;
+}
+
+.ai-task-source-content-field .json-editor-wrap,
+.ai-task-source-content-field .json-editor-shell,
+.ai-task-source-content-field .json-editor-codemirror {
+  min-height: 0;
+  height: 300px;
+}
+
+.ai-task-source-content-field .cm-editor {
+  height: 300px;
+}
+
+.ai-task-source-content-field .cm-scroller {
+  overflow: auto;
+  scrollbar-color: rgba(148, 163, 184, 0.42) rgba(15, 20, 32, 0.92);
+  scrollbar-width: thin;
+}
+
+.ai-task-source-content-field .cm-scroller::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.ai-task-source-content-field .cm-scroller::-webkit-scrollbar-track {
+  background: rgba(15, 20, 32, 0.92);
+}
+
+.ai-task-source-content-field .cm-scroller::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.38);
+  border: 2px solid rgba(15, 20, 32, 0.92);
+  border-radius: 999px;
+}
+
+.ai-task-source-content-field .cm-scroller::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.56);
+}
+
+.ai-task-source-upload-box {
+  min-height: 150px;
+  overflow: visible;
+}
+
+.ai-task-source-upload-box .ant-upload-wrapper,
+.ai-task-source-upload-box .ant-upload-drag {
+  min-height: 150px;
+}
+
+.ai-task-source-upload-box .ant-upload-drag-container {
+  padding: 14px 20px;
+}
+
+.ai-task-source-upload-box .ant-upload-drag-icon {
+  margin-bottom: 8px;
+}
+
+.ai-task-source-upload-box .ant-upload-drag-icon .anticon {
+  font-size: 30px;
+}
+
+.ai-task-source-upload-box .ant-upload-text {
+  margin-bottom: 4px;
+}
+
+.ai-task-source-upload-box .ant-upload-hint {
+  margin-bottom: 0;
+}
+
+.ai-task-source-upload-box .ant-upload-list {
+  margin-top: 10px;
+}
+
+.ai-task-instruction-textarea.ant-input {
+  height: 128px;
+  max-height: 128px;
+  resize: none;
+  overflow: auto;
+}
+
+.llm-connection-select-modal :is(.ant-modal-container, .ant-modal-content) {
+  overflow: hidden;
+}
+
+.llm-connection-select-modal .ant-modal-header,
+.llm-connection-select-modal .ant-modal-footer {
+  background: transparent !important;
+}

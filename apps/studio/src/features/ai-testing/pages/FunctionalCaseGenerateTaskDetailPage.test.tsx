@@ -5,7 +5,6 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { TestThemeProvider as ThemeProvider } from '@/test/TestThemeProvider'
-import { useThemeStore } from '@/shared/store/theme.store'
 import analysisFixture from '../__fixtures__/functional-requirement-analysis.json'
 import type { FunctionalCaseGenerateTaskRun } from '../types'
 import { FunctionalCaseGenerateTaskDetailPage } from './FunctionalCaseGenerateTaskDetailPage'
@@ -114,7 +113,6 @@ function renderPage() {
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
-  useThemeStore.setState({ mode: 'light' })
 })
 
 // 行内的「查看结果/审核/审核结果」直接点按钮；「更多」下拉只放状态变更类操作。
@@ -242,63 +240,6 @@ describe('功能候选结果审核与正式资产导入', () => {
     expect(within(cards[0]).getByText('9f1c2e4a…')).toHaveAttribute('title', caseId)
     expect(within(cards[1]).queryByText('9f1c2e4a…')).not.toBeInTheDocument()
     expect(within(cards[1]).getByText('异常流程')).toBeInTheDocument()
-  })
-
-  it('暗色主题下树图节点使用高对比度配色', async () => {
-    useThemeStore.setState({ mode: 'dark' })
-    const currentRun: FunctionalCaseGenerateTaskRun = {
-      ...pendingRun,
-      configJson: JSON.stringify({
-        caseNames: {
-          categories: [
-            {
-              model: 'EGO 首次接入流程',
-              data: [
-                {
-                  test_model: '功能场景测试',
-                  test_points: ['验证手机 App 完成配网'],
-                },
-              ],
-            },
-          ],
-        },
-      }),
-    }
-    installFetchHandler(() => currentRun)
-    const user = userEvent.setup()
-    renderPage()
-
-    await user.click(await screen.findByRole('button', { name: '测试点' }))
-    await user.click(screen.getByRole('tab', { name: '可视化' }))
-
-    const pointNode = await screen.findByTitle('验证手机 App 完成配网')
-    expect(document.documentElement).toHaveAttribute('data-theme', 'dark')
-    expect(getComputedStyle(pointNode).backgroundColor).toBe('rgba(37, 43, 56, 0.96)')
-    expect(getComputedStyle(pointNode).color).toBe('rgb(230, 237, 247)')
-  })
-
-  it('暗色主题下候选审核弹窗使用统一表面和暗色滚动条', async () => {
-    useThemeStore.setState({ mode: 'dark' })
-    installFetchHandler(() => pendingRun)
-    const user = userEvent.setup()
-    renderPage()
-
-    await clickRunInlineAction(user, 'run-1', '审核结果')
-    const dialog = await screen.findByRole('dialog')
-
-    const modalContent = dialog.querySelector<HTMLElement>('.ant-modal-container')
-    const modalHeader = dialog.querySelector<HTMLElement>('.ant-modal-header')
-    const modalBody = dialog.querySelector<HTMLElement>('.ant-modal-body')
-    const modalFooter = dialog.querySelector<HTMLElement>('.ant-modal-footer')
-
-    expect(modalContent).not.toBeNull()
-    expect(modalHeader).not.toBeNull()
-    expect(modalBody).not.toBeNull()
-    expect(modalFooter).not.toBeNull()
-    expect(getComputedStyle(modalContent!).backgroundColor).toBe('rgba(22, 27, 38, 0.98)')
-    expect(getComputedStyle(modalHeader!).backgroundColor).toBe('rgba(0, 0, 0, 0)')
-    expect(getComputedStyle(modalFooter!).backgroundColor).toBe('rgba(0, 0, 0, 0)')
-    expect(getComputedStyle(modalBody!).scrollbarColor).toBe('rgba(148, 163, 184, 0.42)')
   })
 
   it('预览候选使用分组导航和结构化卡片，编辑候选直接展示 JSON', async () => {

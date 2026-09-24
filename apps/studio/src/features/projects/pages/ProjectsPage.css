@@ -1,0 +1,49 @@
+/* Requirements use the same separate filter card and table surface as testing. */
+.app-shell.app-shell-macos .project-overview-page.requirements-page .requirements-toolbar {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  min-height: 56px;
+  padding: 10px 16px;
+  gap: 8px;
+  border: 1px solid var(--srf-card-border) !important;
+  border-radius: 12px !important;
+  background: var(--srf-card) !important;
+  box-shadow: none !important;
+  flex-wrap: wrap;
+}
+
+.app-shell.app-shell-macos .project-overview-page.requirements-page .requirement-filter-bar {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  gap: 12px;
+}
+
+.app-shell.app-shell-macos .project-overview-page.requirements-page .requirements-sprint-select {
+  width: 180px;
+}
+
+.app-shell.app-shell-macos .project-overview-page.requirements-page .workbench-board-panel {
+  flex: 1 1 auto;
+  height: auto;
+  border-radius: 12px !important;
+  background: var(--srf-card) !important;
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell-macos .project-overview-page.requirements-page .sprint-card-scroll {
+  padding: 0;
+}
+
+.requirement-name-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: 1px solid var(--srf-accent-border);
+  border-radius: 6px;
+  background: var(--srf-accent-soft);
+}

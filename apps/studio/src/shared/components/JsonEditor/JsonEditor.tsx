@@ -8,14 +8,8 @@ import { linter } from '@codemirror/lint'
 import { EditorView, keymap } from '@codemirror/view'
 import { Button } from 'antd'
 import { forwardRef, useImperativeHandle, useMemo, useRef, type ReactNode } from 'react'
-import { useThemeStore } from '@/shared/store/theme.store'
 import { message } from '@/shared/utils/feedback'
-import {
-  codeEditorDarkTheme,
-  codeEditorLightTheme,
-  jsonEditorDarkHighlightStyle,
-  jsonEditorLightHighlightStyle,
-} from '../codeEditorTheme'
+import { codeEditorTheme, jsonEditorHighlightStyle } from '../codeEditorTheme'
 
 function tryFormatJson(value?: string) {
   if (!value?.trim()) {
@@ -83,10 +77,7 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
   onCursorChange,
 }, ref) => {
   const jsonState = useMemo(() => tryFormatJson(value), [value])
-  const themeMode = useThemeStore((state) => state.mode)
   const editorViewRef = useRef<EditorView | null>(null)
-  const editorTheme = themeMode === 'dark' ? codeEditorDarkTheme : codeEditorLightTheme
-  const editorHighlightStyle = themeMode === 'dark' ? jsonEditorDarkHighlightStyle : jsonEditorLightHighlightStyle
   const onCursorChangeRef = useRef(onCursorChange)
   onCursorChangeRef.current = onCursorChange
 
@@ -217,8 +208,8 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
             cursorListener,
             ...(ariaLabel ? [EditorView.contentAttributes.of({ 'aria-label': ariaLabel })] : []),
             EditorView.lineWrapping,
-            editorTheme,
-            syntaxHighlighting(editorHighlightStyle),
+            codeEditorTheme,
+            syntaxHighlighting(jsonEditorHighlightStyle),
           ]}
           className="json-editor-codemirror"
           onCreateEditor={(view) => {

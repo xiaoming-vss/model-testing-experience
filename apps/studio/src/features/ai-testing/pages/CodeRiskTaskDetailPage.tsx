@@ -1,24 +1,25 @@
+import { useDeleteTaskRun, useStartTaskRun } from '@/features/ai-testing/hooks/useTaskRunActions'
 import { usePersonalConnectionChoice } from '@/features/base-services/components/usePersonalConnectionChoice'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ArrowLeftOutlined, DownOutlined, RightOutlined } from '@ant-design/icons'
-import { Alert, Button, Card, Empty, Space, Spin, Tag, Typography } from 'antd'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Alert, Button, Card, Empty, Spin, Tag } from 'antd'
+import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import '@/shared/styles/surface-tokens.css'
 import '@/features/ai-testing/styles/index.css'
+import '@/features/ai-testing/styles/task-detail-v2.css'
 import { CodeRiskReportView } from '@/features/ai-testing/components/CodeRiskReportView'
 import { RunPipelineStatus } from '@/features/ai-testing/components/RunPipelineStatus'
 import { RunHistoryTable, RunRowActions, type RunMenuAction } from '@/features/ai-testing/components/RunHistoryTable'
+import { TaskDetailToolbar } from '@/features/ai-testing/components/TaskDetailShell'
 import { confirmDeleteRun, isRunDeletable } from '@/features/ai-testing/utils/runDeletion'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { LlmConnectionSelectModal } from '@/features/ai-testing/components/LlmConnectionSelectModal'
 import { getApiCaseGenerateTaskRunStatusMeta, isApiCaseGenerateTaskRunInProgress } from '@/features/ai-testing/utils/taskStatus'
 import { api, listItems, type CodeRiskTaskRun } from '@/services/api'
-import { message } from '@/shared/utils/feedback'
 import { formatTime, getErrorMessage, pickCreatedAt, pickUpdatedAt } from '@/utils/format'
-
-const { Title } = Typography
 
 function getRunSortTime(run: CodeRiskTaskRun) {
   const time = new Date(run.createdAt || run.startedAt || run.updatedAt || '').getTime()
@@ -32,7 +33,6 @@ function isRunFailed(status?: string) {
 export function CodeRiskTaskDetailPage() {
   const { taskId = '' } = useParams()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const personalGitlab = usePersonalConnectionChoice('gitlab')
   const [llmSelectOpen, setLlmSelectOpen] = useState(false)
   const [expandedSection, setExpandedSection] = useState<'instruction' | 'runHistory' | 'report'>('runHistory')
@@ -86,33 +86,31 @@ export function CodeRiskTaskDetailPage() {
     if (latest) setSelectedRunRecordId(latest)
   }, [runRecords, selectedRunRecordId])
 
-  const runTaskMutation = useMutation({
-    mutationFn: async (connectionId: string) => api.runCodeRiskTask(taskId, { llmConnectionId: connectionId, triggerType: 'manual', gitlabConnectionIds: await personalGitlab.forRequirement(task!.projectId!, task!.requirementId!) }),
-    onSuccess: (run) => {
-      message.success('任务已加入执行队列')
+  const runTaskMutation = useStartTaskRun({
+    kind: 'codeRisk',
+    taskId,
+    projectId: task?.projectId,
+    startRun: async (connectionId: string) => api.runCodeRiskTask(taskId, { llmConnectionId: connectionId, triggerType: 'manual', gitlabConnectionIds: await personalGitlab.forRequirement(task!.projectId!, task!.requirementId!) }),
+    onStarted: (run) => {
       setLlmSelectOpen(false)
-      queryClient.invalidateQueries({ queryKey: ['codeRiskTaskRuns', taskId] })
       if (run.runId) setSelectedRunRecordId(run.runId)
     },
-    onError: (error) => message.error(getErrorMessage(error)),
   })
 
-  const deleteRunMutation = useMutation({
-    mutationFn: (runId: string) => api.deleteCodeRiskRun(runId),
-    onSuccess: (_data, runId) => {
-      message.success('运行记录已删除')
-      if (selectedRunRecordId === runId) setSelectedRunRecordId(null)
-      queryClient.removeQueries({ queryKey: ['codeRiskRun', runId], exact: true })
-      queryClient.invalidateQueries({ queryKey: ['codeRiskTaskRuns', taskId] })
+  const deleteRunMutation = useDeleteTaskRun({
+    kind: 'codeRisk',
+    taskId,
+    selectedRunId: selectedRunRecordId,
+    onSelectedRunDeleted: () => {
+      setSelectedRunRecordId(null)
     },
-    onError: (error) => message.error(getErrorMessage(error)),
   })
 
   const menuItemClass = (section: 'instruction' | 'runHistory' | 'report') =>
     `ai-task-detail-fold-trigger${expandedSection === section ? ' expanded' : ''}`
 
   return (<ProjectAccessScope resourceError={taskQuery.error} projectId={task?.projectId ?? ''}>{(
-    <div className="workbench-page ai-testing-page">
+    <div className="workbench-page ai-testing-page tp-list-surface ai-task-detail-page tp-surface">
       {taskQuery.error ? <Alert showIcon type="error" title={getErrorMessage(taskQuery.error)} /> : null}
       {taskQuery.isLoading ? (
         <div className="sprint-card-loading">
@@ -123,58 +121,32 @@ export function CodeRiskTaskDetailPage() {
       {task ? (
         <>
           <div className="ai-task-detail-layout">
-            <Card className="ai-task-detail-summary-card" size="small">
-              <div className="ai-task-detail-inline-meta">
-                <span className="ai-task-detail-inline-item">
-                  <span className="ai-task-detail-inline-label">返回</span>
-                  <span className="ai-task-detail-inline-value">
-                    <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/ai-testing/tasks')}>
-                      返回任务列表
-                    </Button>
-                  </span>
-                </span>
-                <span className="ai-task-detail-inline-item">
-                  <span className="ai-task-detail-inline-label">任务</span>
-                  <span className="ai-task-detail-inline-value">
-                    <Space size={8}>
-                      <Title level={4} className="ai-task-detail-summary-title" style={{ margin: 0 }}>
-                        {task.name || '未命名任务'}
-                      </Title>
-                      <Tag color="geekblue">代码风险分析</Tag>
-                      <Tag color={runStatusMeta.color}>{runStatusMeta.label}</Tag>
-                    </Space>
-                  </span>
-                </span>
-                <span className="ai-task-detail-inline-item">
-                  <span className="ai-task-detail-inline-label">所属需求</span>
-                  <span className="ai-task-detail-inline-value">
-                    {taskRequirementQuery.data?.name ?? task.requirementId ?? '-'}
-                  </span>
-                </span>
-                <span className="ai-task-detail-inline-item">
-                  <span className="ai-task-detail-inline-label">所属迭代</span>
-                  <span className="ai-task-detail-inline-value">{taskSprintQuery.data?.name ?? task.sprintId ?? '-'}</span>
-                </span>
-                <span className="ai-task-detail-inline-item">
-                  <span className="ai-task-detail-inline-label">创建时间</span>
-                  <span className="ai-task-detail-inline-value">{formatTime(pickCreatedAt(task) || task.createdAt)}</span>
-                </span>
-                <span className="ai-task-detail-inline-item">
-                  <span className="ai-task-detail-inline-label">更新时间</span>
-                  <span className="ai-task-detail-inline-value">{formatTime(pickUpdatedAt(task) || task.updatedAt)}</span>
-                </span>
-                <span className="ai-task-detail-inline-actions">
-                  <ProjectActionButton action="execute"
-                    type="primary"
-                    className="action-btn-create"
-                    onClick={() => setLlmSelectOpen(true)}
-                    disabled={runRecords.length > 0 && isApiCaseGenerateTaskRunInProgress(runRecords[0].status)}
-                  >
-                    发起运行
-                  </ProjectActionButton>
-                </span>
-              </div>
-            </Card>
+            <TaskDetailToolbar
+              back={(
+                <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/ai-testing/tasks')}>
+                  返回任务列表
+                </Button>
+              )}
+              fields={[
+                { label: '任务名称', value: task.name || '未命名任务', kind: 'name', separator: 'line' },
+                { label: '类型', value: '代码风险分析', kind: 'chip-muted' },
+                { label: '最新运行', value: <Tag color={runStatusMeta.color}>{runStatusMeta.label}</Tag> },
+                { label: '所属需求', value: taskRequirementQuery.data?.name ?? task.requirementId ?? '-' },
+                { label: '所属迭代', value: taskSprintQuery.data?.name ?? task.sprintId ?? '-', kind: 'chip-accent' },
+                { label: '创建时间', value: formatTime(pickCreatedAt(task) || task.createdAt), kind: 'time' },
+                { label: '更新时间', value: formatTime(pickUpdatedAt(task) || task.updatedAt), kind: 'time', separator: 'dot' },
+              ]}
+              actions={(
+                <ProjectActionButton action="execute"
+                  type="primary"
+                  className="action-btn-create"
+                  onClick={() => setLlmSelectOpen(true)}
+                  disabled={runRecords.length > 0 && isApiCaseGenerateTaskRunInProgress(runRecords[0].status)}
+                >
+                  发起运行
+                </ProjectActionButton>
+              )}
+            />
 
             <Card
               className={`ai-task-detail-card ai-task-detail-fold-card ai-task-detail-fold-card-instruction${expandedSection === 'instruction' ? ' expanded' : ' collapsed'}`}

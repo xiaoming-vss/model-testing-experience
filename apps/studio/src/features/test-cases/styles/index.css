@@ -46,20 +46,10 @@
   color: var(--tp-text-secondary, #5b6477);
 }
 
-:root[data-theme='dark'] .functional-case-brief {
-  color: var(--tp-text-secondary);
-}
-
 /* macOS compact functional suite cards */
-.app-shell-macos .functional-test-page .functional-suite-scroll {
-  padding: 14px 16px 16px;
-}
 
 .app-shell-macos .functional-test-page .functional-suite-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  grid-auto-rows: auto;
-  align-items: start;
   gap: 16px;
 }
 
@@ -82,9 +72,6 @@
 .app-shell-macos .functional-test-page .functional-suite-card .ant-card-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  height: auto !important;
-  min-height: 0 !important;
 }
 
 .app-shell-macos .functional-test-page .functional-suite-card .api-collection-card-top {
@@ -139,12 +126,6 @@
   width: 26px;
   min-width: 26px;
   height: 26px;
-  color: rgba(23, 32, 51, 0.52);
-}
-
-.app-shell-macos .functional-test-page .functional-suite-card .sprint-card-actions .ant-btn:hover {
-  background: rgba(10, 132, 255, 0.08) !important;
-  color: rgba(10, 75, 160, 0.78) !important;
 }
 
 @media (max-width: 1800px) {
@@ -307,4 +288,3 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
-

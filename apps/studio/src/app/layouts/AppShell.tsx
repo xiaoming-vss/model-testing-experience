@@ -1,9 +1,6 @@
-import { AppIcon } from '@/shared/icons'
 import { ActionButton } from '@/shared/components/ActionButton'
-import { DownOutlined, LogoutOutlined, MoonOutlined, SettingOutlined, SunOutlined, UserOutlined } from '@ant-design/icons'
-import { Button, Dropdown, Layout, Menu, Select, Tooltip } from 'antd'
-import type { MenuProps } from 'antd'
-import { useMemo } from 'react'
+import { DownOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons'
+import { Button, Dropdown, Layout, Select, Tooltip } from 'antd'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { ApiCollectionDetailPage } from '@/features/api-automation/pages/ApiCollectionDetailPage'
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser'
@@ -26,43 +23,24 @@ import { BaseServicesPage } from '@/features/base-services/pages/BaseServicesPag
 import { TestingPage } from '@/features/testing/pages/TestingPage'
 import { TestOrderWorkspacePage } from '@/features/test-orders/pages/TestOrderWorkspacePage'
 import { UiTestSuiteCasePage } from '@/features/ui-automation/pages/UiTestSuiteCasePage'
-import { MtxLogo } from '@/shared/components/MtxLogo/MtxLogo'
-import { useThemeStore } from '@/shared/store/theme.store'
+import { AppSidebar } from './AppSidebar'
+import { useAiTestingTaskCounts } from '@/features/ai-testing/hooks/useAiTestingTaskCounts'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { normalizeProjectId } from '@/utils/format'
 
-const { Header, Sider, Content } = Layout
+const { Header, Content } = Layout
 
 export function AppShell() {
   const location = useLocation()
   const navigate = useNavigate()
   const logout = useAuthStore((state) => state.logout)
-  const themeMode = useThemeStore((state) => state.mode)
-  const toggleThemeMode = useThemeStore((state) => state.toggleMode)
   const { token } = useCurrentUser()
   const { activeProjectId, projects, projectsQuery, setActiveProjectId } = useActiveProject()
   const { activeSprintId, sprintsQuery, selectSprint, sprintSelectorOptions } = useActiveSprint()
+  const { kindCounts } = useAiTestingTaskCounts(activeProjectId)
   const showWorkbenchHeader = !location.pathname.startsWith('/profile')
 
-  const selectedKey = useMemo(() => {
-    if (location.pathname.startsWith('/base-services')) return '/base-services'
-    if (location.pathname.startsWith('/ai-testing')) return '/ai-testing'
-    if (location.pathname.startsWith('/test-cases')) return '/testing'
-    if (location.pathname.startsWith('/test-orders')) return '/testing'
-    if (location.pathname.startsWith('/testing')) return '/testing'
-    if (location.pathname.startsWith('/api-automation')) return '/testing'
-    if (location.pathname.startsWith('/ui-automation')) return '/testing'
-    return '/projects'
-  }, [location.pathname])
-
   const shellClassName = `app-shell app-shell-macos${location.pathname.startsWith('/base-services') ? ' app-shell-base-services' : ''}`
-
-  const items: MenuProps['items'] = [
-    { key: '/projects', icon: <AppIcon name="projects" size={20} />, label: '项目总览' },
-    { key: '/testing', icon: <AppIcon name="testing" size={20} />, label: '测试' },
-    { key: '/ai-testing', icon: <AppIcon name="testDesign" size={20} />, label: '测试设计' },
-    { key: '/base-services', icon: <AppIcon name="services" size={20} />, label: '基础服务' },
-  ]
 
   if (!token) {
     return <Navigate to="/login" replace state={{ from: location }} />
@@ -70,27 +48,7 @@ export function AppShell() {
 
   return (
     <Layout className={shellClassName}>
-      <Sider
-        width={76}
-        collapsedWidth={76}
-        trigger={null}
-        theme="light"
-        className="app-sider"
-      >
-        <div className="brand-row">
-          <button className="brand" type="button" onClick={() => navigate('/projects')}>
-            <MtxLogo size={36} className="brand-logo" />
-            <span className="brand-text">MTX</span>
-          </button>
-        </div>
-        <Menu
-          mode="inline"
-          inlineCollapsed={false}
-          selectedKeys={[selectedKey]}
-          items={items}
-          onClick={({ key }) => navigate(String(key))}
-        />
-      </Sider>
+      <AppSidebar designCounts={kindCounts} />
       <Layout>
         <Header className="app-header compact-header">
           <div className="app-header-main">
@@ -136,14 +94,6 @@ export function AppShell() {
           </div>
           <div className="app-header-actions">
             {showWorkbenchHeader ? <ActionButton type="primary" className="app-header-create-project action-btn-create" operation="create" onClick={() => { useWorkbenchStore.getState().openProjectModal(); navigate('/projects') }}>新建项目</ActionButton> : null}
-            <Tooltip title={themeMode === 'dark' ? '切换浅色模式' : '切换黑夜模式'}>
-              <Button
-                type="text"
-                shape="circle"
-                icon={themeMode === 'dark' ? <SunOutlined /> : <MoonOutlined />}
-                onClick={toggleThemeMode}
-              />
-            </Tooltip>
             <Dropdown
               menu={{
                 items: [
@@ -181,7 +131,7 @@ export function AppShell() {
             <Route path="/test-cases" element={<Navigate to="/testing?tab=library" replace />} />
             <Route path="/test-orders/:orderId" element={<TestOrderWorkspacePage />} />
             <Route path="/ai-testing" element={<AiTestingOverviewPage />} />
-            <Route path="/ai-testing/skills" element={<AiSkillLibraryPage />} />
+            <Route path="/ai-testing/skills" element={<Navigate to="/base-services?tab=skills" replace />} />
             <Route path="/ai-testing/tasks" element={<UnifiedAiTestingPage />} />
             <Route path="/ai-testing/tasks/:taskId" element={<ApiCaseGenerateTaskDetailPage />} />
             <Route path="/ai-testing/function-tasks/:taskId" element={<FunctionalCaseGenerateTaskDetailPage />} />
@@ -189,7 +139,7 @@ export function AppShell() {
             <Route path="/ai-testing/ui-tasks/:taskId" element={<UiCaseGenerateTaskDetailPage />} />
             <Route path="/ai-testing/requirement-analysis-tasks/:taskId" element={<RequirementAnalysisTaskDetailPage />} />
             <Route path="/ai-testing/code-risk-tasks/:taskId" element={<CodeRiskTaskDetailPage />} />
-            <Route path="/base-services" element={<BaseServicesPage />} />
+            <Route path="/base-services" element={<BaseServicesPage skillLibrary={<div className="ai-testing-page tp-list-surface ai-skill-library-page tp-surface"><AiSkillLibraryPage embedded /></div>} />} />
             <Route path="/api-automation" element={<Navigate to="/testing?tab=api" replace />} />
             <Route path="/api-automation/collections/:collectionId" element={<ApiCollectionDetailPage />} />
             <Route path="/ui-automation" element={<Navigate to="/testing?tab=ui" replace />} />

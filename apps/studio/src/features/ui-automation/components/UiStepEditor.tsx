@@ -1,3 +1,5 @@
+import '@/features/ui-automation/styles/index.css'
+import '@/features/ui-automation/styles/step-editor-layout.css'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import {
   isValidUiStepComparator,

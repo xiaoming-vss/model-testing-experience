@@ -1,3 +1,4 @@
+import '@/shared/styles/list-table.css'
 import { footerRange } from '@/shared/utils/pagination'
 import {
   AppstoreOutlined,
@@ -661,7 +662,7 @@ export function CaseLibraryPage() {
       {
         title: '操作',
         key: 'actions',
-        width: 90,
+        width: 110,
         align: 'right',
         render: (_, item) => (
           <Space
@@ -754,11 +755,11 @@ export function CaseLibraryPage() {
     : 0
 
   return (
-    <div className="workbench-page api-automation-page functional-test-page case-library-page tp-surface">
+    <div className="workbench-page api-automation-page functional-test-page tp-list-surface case-library-page tp-surface">
       {personalZentao.dialog}
       <div className="api-automation-content">
         <section className="workbench-panel workbench-board-panel tp-board">
-          <div className="panel-header api-panel-header case-library-toolbar">
+          <div className="panel-header api-panel-header case-library-toolbar tp-list-toolbar">
             <div className="api-filter-group case-library-filters">
               <div className="api-filter-field">
                 <span className="api-filter-field-label">迭代</span>
@@ -1120,7 +1121,7 @@ export function CaseLibraryPage() {
                     </div>
                   ) : (
                     <Table<FunctionCaseLibraryItem>
-                      className="functional-suite-list-table"
+                      className="functional-suite-list-table tp-list-table"
                       columns={columns}
                       dataSource={cases}
                       rowKey={(item) => normalizeFunctionTestCaseId(item) ?? item.title}

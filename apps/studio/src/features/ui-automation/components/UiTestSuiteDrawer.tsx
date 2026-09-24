@@ -1,3 +1,5 @@
+import '@/features/ui-automation/styles/index.css'
+import '@/features/ui-automation/styles/suite-drawer-layout.css'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { Alert, Drawer, Form, Input, InputNumber, Select } from 'antd'
 import type { FormInstance } from 'antd'

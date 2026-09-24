@@ -23,7 +23,7 @@
   box-shadow: none;
 }
 
-/* testing/styles 与 dark-polish 都用 !important 给 .api-panel-header 设过玻璃表面，
+/* testing/styles 用 !important 给 .api-panel-header 设过玻璃表面，
    所以要用更长的前缀把这一层的卡片外观定住。 */
 .app-shell-macos .testing-page .test-orders-page .api-panel-header.test-orders-toolbar {
   min-height: 48px;
@@ -65,14 +65,6 @@
   flex: 0 0 auto;
 }
 
-.test-orders-page .test-orders-refresh.ant-btn {
-  color: var(--srf-text-secondary);
-}
-
-.test-orders-page .test-orders-refresh.ant-btn:hover {
-  color: var(--srf-accent);
-}
-
 /* ===== 快速过滤条 ===== */
 
 .test-orders-page .test-orders-quickbar {
@@ -92,10 +84,6 @@
   background: var(--srf-card);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   overflow: hidden;
-}
-
-:root[data-theme='dark'] .test-orders-page .test-orders-table-card {
-  box-shadow: none;
 }
 
 /* 外壳给了面板内表格容器 16px 18px 的内距，设计稿里表格贴着卡片边缘，这里收掉。 */
@@ -123,10 +111,6 @@
   backdrop-filter: none !important;
 }
 
-:root[data-theme='dark'] .app-shell.app-shell-macos .test-orders-page .test-orders-footer .ant-typography {
-  color: var(--srf-text-secondary);
-}
-
 /* ===== 表格内部 ===== */
 
 .test-orders-page .test-order-muted-cell {
@@ -138,14 +122,6 @@
   color: var(--srf-text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 11px;
-}
-
-.test-orders-page .test-order-row-actions .ant-btn {
-  color: var(--srf-text-muted);
-}
-
-.test-orders-page .test-order-row-actions .action-btn-delete.ant-btn:hover {
-  color: var(--srf-danger);
 }
 
 /* ===== 进度与指标 ===== */
@@ -284,4 +260,21 @@
     min-width: 0;
     width: 100%;
   }
+}
+
+.test-orders-page .test-order-name-cell {
+  min-width: 0;
+  width: 100%;
+}
+
+.test-orders-page .test-order-name-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--srf-accent-border);
+  border-radius: 6px;
+  background: var(--srf-accent-soft);
 }

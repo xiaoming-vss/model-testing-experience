@@ -14,7 +14,6 @@ import {
   type RelationsOrientation,
 } from '../utils/caseRelationsGraph'
 import { routeRelationsEdge } from '../utils/relationsEdgePath'
-import { useThemeStore } from '@/shared/store/theme.store'
 import '@xyflow/react/dist/style.css'
 import './FunctionalCaseRelationsGraph.css'
 
@@ -121,7 +120,6 @@ function RelationsGraphInner({
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [nodes, setNodes] = useState<CaseFlowNode[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
-  const themeMode = useThemeStore((state) => state.mode)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const selectedIdRef = useRef<string | null>(null)
   const flow = useReactFlow()
@@ -324,14 +322,14 @@ function RelationsGraphInner({
         deleteKeyCode={null}
         minZoom={0.2}
         maxZoom={2.5}
-        colorMode={themeMode}
+        colorMode="light"
         proOptions={{ hideAttribution: true }}
       >
         <Background
           variant={BackgroundVariant.Dots}
           gap={22}
           size={1.4}
-          color={themeMode === 'dark' ? 'rgba(148, 163, 184, 0.3)' : 'rgba(100, 116, 139, 0.35)'}
+          color="rgba(100, 116, 139, 0.35)"
         />
         <MiniMap
           pannable
@@ -345,13 +343,13 @@ function RelationsGraphInner({
             bottom: 14,
             margin: 0,
           }}
-          bgColor={themeMode === 'dark' ? '#161b26' : '#ffffff'}
-          maskColor={themeMode === 'dark' ? 'rgba(2, 6, 23, 0.55)' : 'rgba(15, 23, 42, 0.08)'}
+          bgColor="#ffffff"
+          maskColor="rgba(15, 23, 42, 0.08)"
           nodeColor={(node) => {
             const meta = (node as CaseFlowNode).data.meta
-            if (meta.onMainPath) return themeMode === 'dark' ? '#60a5fa' : '#3b82f6'
-            if (meta.isolated) return themeMode === 'dark' ? '#64748b' : '#94a3b8'
-            return themeMode === 'dark' ? '#475569' : '#cbd5e1'
+            if (meta.onMainPath) return '#3b82f6'
+            if (meta.isolated) return '#94a3b8'
+            return '#cbd5e1'
           }}
         />
       </ReactFlow>

@@ -1,0 +1,15 @@
+/* 测试集抽屉的响应式字段网格。 */
+@media (max-width: 900px) {
+
+  .ui-test-suite-drawer-grid,
+  .ui-test-suite-drawer-config-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .ui-test-suite-drawer-grid,
+  .ui-test-suite-drawer-config-grid {
+    grid-template-columns: 1fr;
+  }
+}
