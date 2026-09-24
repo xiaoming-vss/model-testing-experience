@@ -1,0 +1,234 @@
+/* Adapted from Primer Dark: https://primer.style/product/getting-started/react/theme-reference/ */
+:root[data-theme="dark"] {
+  --gh-bg: #0d1117;
+  --gh-inset: #010409;
+  --gh-surface: #161b22;
+  --gh-raised: #1c2128;
+  --gh-subtle: #21262d;
+  --gh-border: #30363d;
+  --gh-fg: #e6edf3;
+  --gh-muted: #8b949e;
+  --gh-disabled: #6e7681;
+  --gh-on-emphasis: #ffffff;
+  --gh-blue: #58a6ff;
+  --gh-blue-hover: #79c0ff;
+  --gh-green: #3fb950;
+  --gh-yellow: #d29922;
+  --gh-orange: #ffa657;
+  --gh-red: #f85149;
+  --gh-purple: #bc8cff;
+  --gh-cyan: #76e3ea;
+  --gh-blue-soft: rgba(56, 139, 253, 0.15);
+  --gh-green-soft: rgba(46, 160, 67, 0.15);
+  --gh-yellow-soft: rgba(187, 128, 9, 0.15);
+  --gh-orange-soft: rgba(219, 109, 40, 0.15);
+  --gh-red-soft: rgba(248, 81, 73, 0.15);
+  --gh-purple-soft: rgba(163, 113, 247, 0.15);
+  --gh-cyan-soft: rgba(57, 197, 207, 0.15);
+  --gh-blue-border: rgba(56, 139, 253, 0.4);
+  --gh-green-border: rgba(46, 160, 67, 0.4);
+  --gh-yellow-border: rgba(187, 128, 9, 0.4);
+  --gh-orange-border: rgba(219, 109, 40, 0.4);
+  --gh-red-border: rgba(248, 81, 73, 0.4);
+  --gh-purple-border: rgba(163, 113, 247, 0.4);
+  --gh-cyan-border: rgba(57, 197, 207, 0.4);
+  --gh-shadow: rgba(1, 4, 9, 0.4);
+  --gh-selection: rgba(56, 139, 253, 0.4);
+  --gh-string: #a5d6ff;
+  --gh-constant: #79c0ff;
+  --gh-primary-bg: #238636;
+  --gh-primary-hover: #2ea043;
+  --gh-primary-active: #196c2e;
+  --app-bg: var(--gh-bg);
+  --app-text: var(--gh-fg);
+  --app-link: var(--gh-blue);
+  --description-text: var(--gh-muted);
+  --description-text-muted: var(--gh-muted);
+  --description-bg: var(--gh-surface);
+  --description-border: var(--gh-border);
+  --srf-list-header-text: var(--gh-muted);
+  --srf-list-header-bg: var(--gh-surface);
+  --srf-list-row-bg: var(--gh-bg);
+  --srf-list-row-hover: var(--gh-subtle);
+  --legacy-tp-border: var(--gh-border);
+  --legacy-tp-border-soft: var(--gh-border);
+  --legacy-tp-text: var(--gh-fg);
+  --legacy-tp-text-secondary: var(--gh-muted);
+  --legacy-tp-text-muted: var(--gh-muted);
+  --legacy-mac-glass-page: var(--gh-bg);
+  --legacy-mac-glass-sidebar: var(--gh-surface);
+  --legacy-mac-glass-header: var(--gh-surface);
+  --legacy-mac-glass-panel: var(--gh-surface);
+  --legacy-mac-glass-panel-strong: var(--gh-surface);
+  --legacy-mac-glass-border: var(--gh-border);
+  --legacy-mac-glass-border-soft: var(--gh-border);
+  --legacy-mac-glass-text: var(--gh-fg);
+  --legacy-mac-glass-muted: var(--gh-muted);
+  --legacy-mac-glass-blue: var(--gh-blue);
+  --legacy-mac-glass-card: var(--gh-surface);
+  --legacy-mac-glass-subtle: var(--gh-muted);
+  --legacy-mac-glass-green: var(--gh-green);
+  --legacy-project-overview-border: var(--gh-border);
+  --legacy-project-overview-panel: var(--gh-surface);
+  --legacy-project-overview-panel-soft: var(--gh-surface);
+  --legacy-project-overview-card: var(--gh-surface);
+  --legacy-project-overview-card-hover: var(--gh-surface);
+  --legacy-project-overview-text: var(--gh-fg);
+  --legacy-project-overview-secondary: var(--gh-muted);
+  --legacy-project-overview-muted: var(--gh-muted);
+  --legacy-project-overview-blue: var(--gh-blue);
+  --legacy-mac-action-blue-border: var(--gh-border);
+  --editor-text: var(--gh-fg);
+  --editor-bg: var(--gh-bg);
+  --editor-caret: var(--gh-fg);
+  --editor-selection: var(--gh-selection);
+  --editor-active-line: var(--gh-surface);
+  --editor-gutter-text: var(--gh-muted);
+  --editor-gutter-border: var(--gh-border);
+  --editor-syntax-key: var(--gh-blue-hover);
+  --editor-syntax-string: var(--gh-string);
+  --editor-syntax-number: var(--gh-constant);
+  --editor-syntax-boolean: var(--gh-constant);
+  --editor-syntax-null: var(--gh-orange);
+  --editor-syntax-json-punctuation: var(--gh-fg);
+  --editor-syntax-meta: var(--gh-muted);
+  --editor-syntax-yaml-punctuation: var(--gh-fg);
+  --chart-grid: var(--gh-border);
+  --chart-axis: var(--gh-muted);
+  --chart-tooltip-bg: var(--gh-raised);
+  --chart-tooltip-border: var(--gh-border);
+  --chart-tooltip-text: var(--gh-fg);
+  --chart-total: var(--gh-blue);
+  --chart-positive: var(--gh-green);
+  --chart-pending: var(--gh-yellow);
+  --chart-success: var(--gh-cyan);
+  --chart-negative: var(--gh-red);
+  --chart-empty: var(--gh-subtle);
+  --chart-severity-normal: var(--gh-muted);
+  --chart-severity-hint: var(--gh-disabled);
+  --graph-edge-next: var(--gh-blue);
+  --graph-edge-next-dim: var(--gh-blue-border);
+  --graph-edge-branch: var(--gh-muted);
+  --graph-edge-branch-dim: var(--gh-border);
+  --graph-grid: var(--gh-border);
+  --graph-minimap-bg: var(--gh-surface);
+  --graph-minimap-mask: var(--gh-shadow);
+  --graph-minimap-main: var(--gh-blue);
+  --graph-minimap-isolated: var(--gh-muted);
+  --graph-minimap-branch: var(--gh-border);
+  --button-text: var(--gh-fg);
+  --button-bg: var(--gh-subtle);
+  --button-border: var(--gh-border);
+  --button-hover-bg: var(--gh-raised);
+  --button-hover-border: var(--gh-muted);
+  --button-active-bg: var(--gh-surface);
+  --button-primary-text: var(--gh-on-emphasis);
+  --button-link-text: var(--gh-blue);
+  --button-primary-bg: var(--gh-primary-bg);
+  --button-primary-border: var(--gh-green-border);
+  --button-primary-hover-bg: var(--gh-primary-hover);
+  --button-primary-hover-border: var(--gh-green);
+  --button-primary-active-bg: var(--gh-primary-active);
+  --button-danger-text: var(--gh-red);
+  --button-danger-bg: var(--gh-red-soft);
+  --button-danger-border: var(--gh-red-border);
+  --button-danger-hover-bg: var(--gh-red-soft);
+  --button-danger-active-bg: var(--gh-red-soft);
+  --button-disabled-text: var(--gh-disabled);
+  --button-disabled-bg: var(--gh-surface);
+  --button-disabled-border: var(--gh-border);
+  --button-focus: var(--gh-blue);
+  --graph-export-background: var(--gh-bg);
+  --graph-export-border: 1px solid var(--gh-border);
+}
+
+:root[data-theme="dark"] .tp-surface {
+  --srf-card: var(--gh-surface);
+  --srf-card-border: var(--gh-border);
+  --srf-divider: var(--gh-border);
+  --srf-text: var(--gh-fg);
+  --srf-text-secondary: var(--gh-muted);
+  --srf-text-muted: var(--gh-muted);
+  --srf-accent: var(--gh-blue);
+  --srf-accent-strong: var(--gh-blue-hover);
+  --srf-accent-soft: var(--gh-blue-soft);
+  --srf-accent-border: var(--gh-blue-border);
+  --srf-hover: var(--gh-subtle);
+  --srf-chip: var(--gh-subtle);
+  --srf-chip-text: var(--gh-muted);
+  --srf-count-badge: var(--gh-blue-soft);
+  --srf-track: var(--gh-subtle);
+  --srf-track-pending: var(--gh-border);
+  --srf-result-passed: var(--gh-green);
+  --srf-result-failed: var(--gh-red);
+  --srf-result-blocked: var(--gh-yellow);
+  --srf-result-skipped: var(--gh-muted);
+  --srf-danger: var(--gh-red);
+  --srf-folder: var(--gh-yellow);
+  --srf-on-accent: var(--gh-on-emphasis);
+  --srf-terminal-bg: var(--gh-inset);
+  --srf-terminal-surface: var(--gh-bg);
+  --srf-terminal-bar: var(--gh-surface);
+  --srf-terminal-text: var(--gh-fg);
+  --srf-terminal-title: var(--gh-fg);
+  --srf-terminal-muted: var(--gh-muted);
+  --srf-terminal-chip: var(--gh-subtle);
+  --srf-terminal-accent: var(--gh-green);
+  --srf-terminal-info: var(--gh-blue-hover);
+  --srf-terminal-danger: var(--gh-red);
+  --srf-terminal-danger-text: var(--gh-red);
+}
+
+:root[data-theme="dark"] .tp-surface .tone-blue {
+  --srf-tone-text: var(--gh-blue);
+  --srf-tone-bg: var(--gh-blue-soft);
+  --srf-tone-border: var(--gh-blue-border);
+}
+
+:root[data-theme="dark"] .tp-surface .tone-indigo {
+  --srf-tone-text: var(--gh-purple);
+  --srf-tone-bg: var(--gh-purple-soft);
+  --srf-tone-border: var(--gh-purple-border);
+}
+
+:root[data-theme="dark"] .tp-surface .tone-purple {
+  --srf-tone-text: var(--gh-purple);
+  --srf-tone-bg: var(--gh-purple-soft);
+  --srf-tone-border: var(--gh-purple-border);
+}
+
+:root[data-theme="dark"] .tp-surface .tone-teal {
+  --srf-tone-text: var(--gh-cyan);
+  --srf-tone-bg: var(--gh-cyan-soft);
+  --srf-tone-border: var(--gh-cyan-border);
+}
+
+:root[data-theme="dark"] .tp-surface .tone-green {
+  --srf-tone-text: var(--gh-green);
+  --srf-tone-bg: var(--gh-green-soft);
+  --srf-tone-border: var(--gh-green-border);
+}
+
+:root[data-theme="dark"] .tp-surface .tone-amber {
+  --srf-tone-text: var(--gh-yellow);
+  --srf-tone-bg: var(--gh-yellow-soft);
+  --srf-tone-border: var(--gh-yellow-border);
+}
+
+:root[data-theme="dark"] .tp-surface .tone-orange {
+  --srf-tone-text: var(--gh-orange);
+  --srf-tone-bg: var(--gh-orange-soft);
+  --srf-tone-border: var(--gh-orange-border);
+}
+
+:root[data-theme="dark"] .tp-surface .tone-red {
+  --srf-tone-text: var(--gh-red);
+  --srf-tone-bg: var(--gh-red-soft);
+  --srf-tone-border: var(--gh-red-border);
+}
+
+:root[data-theme="dark"] .tp-surface .tone-slate {
+  --srf-tone-text: var(--gh-muted);
+  --srf-tone-bg: var(--gh-subtle);
+  --srf-tone-border: var(--gh-border);
+}

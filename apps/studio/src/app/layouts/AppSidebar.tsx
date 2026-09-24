@@ -1,3 +1,4 @@
+import { useThemeStore } from '@/shared/theme/theme.store'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { DownOutlined, MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
@@ -23,6 +24,7 @@ const designLinks: Array<{ key: string; label: string; icon: AppIconName; path: 
 ]
 
 export function AppSidebar({ designCounts = {} }: { designCounts?: Record<string, number> }) {
+  const resolvedTheme = useThemeStore((state) => state.resolvedTheme)
   const { pathname, search } = useLocation()
   const [collapsed, setCollapsed] = useState(false)
   const [closedAt, setClosedAt] = useState<string | null>(null)
@@ -53,7 +55,7 @@ export function AppSidebar({ designCounts = {} }: { designCounts?: Record<string
 
   return (
     <Layout.Sider width={208} collapsedWidth={76} collapsed={collapsed} trigger={null}
-      theme="light" className={`app-sider app-sidebar${collapsed ? ' is-collapsed' : ''}`}>
+      theme={resolvedTheme} className={`app-sider app-sidebar${collapsed ? ' is-collapsed' : ''}`}>
       <div className="sidebar-content">
         <Link className="sidebar-brand" to="/projects" aria-label="MTX 项目总览">
           <MtxLogo size={36} /><span>MTX</span>

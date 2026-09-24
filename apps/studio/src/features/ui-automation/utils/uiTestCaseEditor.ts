@@ -169,7 +169,3 @@ export function formatViewportText(width?: number, height?: number) {
   if (!width || !height) return '-'
   return `${width} x ${height}`
 }
-
-export function formatOptionalMs(value?: number | null) {
-  return typeof value === 'number' && Number.isFinite(value) ? `${value} ms` : '-'
-}

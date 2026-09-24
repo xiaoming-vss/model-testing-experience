@@ -4,8 +4,8 @@
 
 .base-services-toolbar {
   background:
-    radial-gradient(circle at top left, rgba(22, 119, 255, 0.08), transparent 30%),
-    radial-gradient(circle at top right, rgba(131, 213, 200, 0.1), transparent 24%),
+    radial-gradient(circle at top left, var(--app-editor-focus-ring), transparent 30%),
+    radial-gradient(circle at top right, var(--app-service-toolbar-glow), transparent 24%),
     var(--base-panel);
   border: 1px solid var(--base-border);
   box-shadow: var(--base-toolbar-shadow);
@@ -68,8 +68,8 @@
   border-color: var(--base-border);
   border-radius: 18px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    0 20px 40px rgba(42, 55, 92, 0.08);
+    inset 0 1px 0 var(--app-glass-highlight-45),
+    0 20px 40px var(--app-task-panel-shadow);
 }
 
 .base-services-panel-body {
@@ -121,8 +121,8 @@
   padding-inline: 12px;
   line-height: 28px;
   border-radius: 999px;
-  border-color: rgba(132, 185, 255, 0.24);
-  background: rgba(132, 185, 255, 0.1);
+  border-color: var(--app-service-tab-border);
+  background: var(--app-service-tab-bg);
 }
 
 .base-services-empty-layout {
@@ -135,13 +135,13 @@
 
 .base-services-integration-alert.ant-alert {
   border-radius: 14px;
-  border-color: rgba(132, 185, 255, 0.18);
-  background: rgba(132, 185, 255, 0.08);
+  border-color: var(--app-service-tag-border);
+  background: var(--app-service-tag-bg);
 }
 
 .base-services-contract-card,
 .base-services-empty-card {
-  border: 1px solid rgba(148, 163, 184, 0.12);
+  border: 1px solid var(--app-picker-option-disabled);
   border-radius: 16px;
   background: var(--base-card);
   box-shadow: var(--base-card-shadow);
@@ -182,8 +182,8 @@
 .base-services-contract-tags .ant-tag {
   margin-inline-end: 0;
   color: var(--base-blue);
-  border-color: rgba(132, 185, 255, 0.18);
-  background: rgba(132, 185, 255, 0.08);
+  border-color: var(--app-service-tag-border);
+  background: var(--app-service-tag-bg);
   border-radius: 999px;
   padding-inline: 10px;
   line-height: 24px;
@@ -197,7 +197,7 @@
   justify-content: center;
   padding: 24px;
   background:
-    radial-gradient(circle at top right, rgba(132, 185, 255, 0.18), transparent 28%),
+    radial-gradient(circle at top right, var(--app-service-tab-selected-bg), transparent 28%),
     var(--base-card);
 }
 
@@ -359,11 +359,11 @@
   border: 1px solid var(--tp-border-soft);
   border-radius: 16px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 251, 255, 0.98)),
-    #fff;
+    linear-gradient(180deg, var(--app-glass-surface-98), var(--app-testing-card-gradient-end)),
+    var(--app-surface);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.72),
-    0 20px 48px rgba(42, 55, 92, 0.12);
+    inset 0 1px 0 var(--app-glass-highlight-72),
+    0 20px 48px var(--app-service-card-shadow);
 }
 
 .zentao-binding-modal .ant-modal-header {
@@ -415,7 +415,7 @@
   flex-wrap: wrap;
   gap: 8px;
   padding: 0 2px;
-  color: var(--tp-text-secondary, #5b6477);
+  color: var(--tp-text-secondary, var(--app-control-text));
   font-size: 12px;
   line-height: 22px;
 }
@@ -494,7 +494,7 @@
 }
 
 .zentao-binding-summary-key {
-  color: #8a91a3;
+  color: var(--app-service-text-label);
 }
 
 .zentao-binding-summary-name {
@@ -511,7 +511,7 @@
 }
 
 .zentao-binding-summary-separator {
-  color: rgba(114, 119, 134, 0.7);
+  color: var(--app-service-text-placeholder);
 }
 
 .zentao-binding-summary-status {
@@ -524,21 +524,21 @@
 }
 
 .zentao-binding-summary-status.is-active {
-  color: #1677ff;
-  border-color: rgba(22, 119, 255, 0.18);
-  background: rgba(22, 119, 255, 0.08);
+  color: var(--app-accent);
+  border-color: var(--app-testing-active-border);
+  background: var(--app-editor-focus-ring);
 }
 
 .zentao-binding-summary-status.is-disabled {
-  color: #8c8f99;
-  border-color: rgba(140, 143, 153, 0.18);
-  background: rgba(140, 143, 153, 0.08);
+  color: var(--app-service-status-disabled-text);
+  border-color: var(--app-service-status-disabled-border);
+  background: var(--app-service-status-disabled-bg);
 }
 
 .zentao-binding-summary-status.is-neutral {
-  color: #d46b08;
-  border-color: rgba(212, 107, 8, 0.18);
-  background: rgba(212, 107, 8, 0.08);
+  color: var(--app-result-warning-text);
+  border-color: var(--app-service-status-warning-border);
+  background: var(--app-service-status-warning-bg);
 }
 
 .sprint-card-binding-line {
@@ -617,24 +617,24 @@
 
 /* macOS-style frosted white refinement */
 .base-services-page {
-  --base-border: rgba(100, 116, 139, 0.14);
-  --base-panel: rgba(255, 255, 255, 0.58);
-  --base-panel-soft: rgba(255, 255, 255, 0.42);
-  --base-accent: #3478f6;
-  --base-text: #182033;
-  --base-text-secondary: rgba(24, 32, 51, 0.62);
-  --base-text-muted: rgba(24, 32, 51, 0.46);
-  --base-blue: #3478f6;
-  --base-hover-text: #1f64e0;
-  --base-toolbar-shadow: 0 18px 50px rgba(31, 41, 55, 0.07);
-  --base-surface: rgba(255, 255, 255, 0.62);
-  --base-card: rgba(255, 255, 255, 0.54);
+  --base-border: var(--app-service-panel-border);
+  --base-panel: var(--app-glass-surface-58);
+  --base-panel-soft: var(--app-glass-surface-42);
+  --base-accent: var(--app-glass-accent);
+  --base-text: var(--app-service-text);
+  --base-text-secondary: var(--app-service-text-secondary);
+  --base-text-muted: var(--app-service-text-muted);
+  --base-blue: var(--app-glass-accent);
+  --base-hover-text: var(--app-task-glass-link-hover);
+  --base-toolbar-shadow: 0 18px 50px var(--app-glass-shadow-toolbar);
+  --base-surface: var(--app-glass-surface-62);
+  --base-card: var(--app-glass-surface-54);
   --base-card-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 18px 42px rgba(31, 41, 55, 0.08);
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 18px 42px var(--app-service-glass-card-shadow);
   background:
-    linear-gradient(135deg, rgba(238, 244, 255, 0.74), rgba(255, 255, 255, 0.88) 38%, rgba(241, 247, 255, 0.7)),
-    #f7f9fc;
+    linear-gradient(135deg, var(--app-service-tab-gradient-start), var(--app-glass-surface-88) 38%, var(--app-service-tab-gradient-end)),
+    var(--app-section-bg);
 }
 
 .base-services-toolbar,
@@ -649,20 +649,20 @@
 .base-services-toolbar.workbench-project-toolbar {
   position: relative;
   z-index: 1;
-  border-color: rgba(255, 255, 255, 0.62);
+  border-color: var(--app-glass-border-62);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.48);
+  background: var(--app-glass-surface-48);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 16px 36px rgba(31, 41, 55, 0.06);
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 16px 36px var(--app-glass-shadow-raised);
 }
 
 .base-services-tab-switcher {
   gap: 8px;
   padding: 4px;
-  border: 1px solid rgba(100, 116, 139, 0.1);
+  border: 1px solid var(--app-task-panel-divider);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.42);
+  background: var(--app-glass-surface-42);
 }
 
 .base-services-tab {
@@ -676,7 +676,7 @@
 }
 
 .base-services-tab:hover {
-  background: rgba(255, 255, 255, 0.52);
+  background: var(--app-glass-surface-52);
   color: var(--base-hover-text);
 }
 
@@ -686,29 +686,29 @@
 
 .base-services-tab.active {
   color: var(--base-text);
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--app-glass-surface-82);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 8px 18px rgba(31, 41, 55, 0.08);
+    inset 0 1px 0 var(--app-glass-highlight-90),
+    0 8px 18px var(--app-service-glass-card-shadow);
 }
 
 .base-services-panel.workbench-panel {
   position: relative;
   z-index: 1;
   margin-top: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--app-glass-border-70);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.58);
+  background: var(--app-glass-surface-58);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.84),
-    0 22px 54px rgba(31, 41, 55, 0.08);
+    inset 0 1px 0 var(--app-glass-highlight-84),
+    0 22px 54px var(--app-service-glass-card-shadow);
 }
 
 .base-services-page .panel-header.api-panel-header {
   min-height: 58px;
   padding: 0 18px;
-  border-bottom: 1px solid rgba(100, 116, 139, 0.1);
-  background: rgba(255, 255, 255, 0.36);
+  border-bottom: 1px solid var(--app-task-panel-divider);
+  background: var(--app-glass-surface-36);
   -webkit-backdrop-filter: saturate(180%) blur(18px);
   backdrop-filter: saturate(180%) blur(18px);
 }
@@ -743,21 +743,21 @@
 .base-services-connection-card.ant-card {
   height: auto;
   min-height: 172px;
-  border: 1px solid rgba(255, 255, 255, 0.68);
+  border: 1px solid var(--app-glass-border-68);
   border-radius: 14px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.48)),
-    rgba(255, 255, 255, 0.5);
+    linear-gradient(180deg, var(--app-glass-surface-70), var(--app-glass-surface-48)),
+    var(--app-glass-surface-50);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 16px 38px rgba(31, 41, 55, 0.07);
+    inset 0 1px 0 var(--app-glass-highlight-90),
+    0 16px 38px var(--app-glass-shadow-toolbar);
 }
 
 .base-services-connection-card.ant-card:hover {
-  border-color: rgba(52, 120, 246, 0.24);
+  border-color: var(--app-service-card-border-hover);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.92),
-    0 22px 48px rgba(31, 41, 55, 0.11);
+    inset 0 1px 0 var(--app-glass-highlight-92),
+    0 22px 48px var(--app-service-card-shadow-hover);
   transform: translateY(-2px);
 }
 
@@ -795,28 +795,28 @@
 .base-services-page .table-footer {
   min-height: 48px;
   padding: 0 18px;
-  border-top: 1px solid rgba(100, 116, 139, 0.1);
-  background: rgba(255, 255, 255, 0.36);
+  border-top: 1px solid var(--app-task-panel-divider);
+  background: var(--app-glass-surface-36);
   -webkit-backdrop-filter: saturate(180%) blur(18px);
   backdrop-filter: saturate(180%) blur(18px);
 }
 
 /* Base services scoped unified macOS white glass palette */
 .app-shell-base-services .base-services-page {
-  --base-border: rgba(15, 23, 42, 0.065);
-  --base-panel: rgba(255, 255, 255, 0.68);
-  --base-panel-soft: rgba(255, 255, 255, 0.56);
-  --base-accent: #0a84ff;
-  --base-text: #172033;
-  --base-text-secondary: rgba(23, 32, 51, 0.58);
-  --base-text-muted: rgba(23, 32, 51, 0.44);
-  --base-blue: #0a84ff;
-  --base-hover-text: #006edb;
-  --base-surface: rgba(255, 255, 255, 0.68);
-  --base-card: rgba(255, 255, 255, 0.72);
+  --base-border: var(--app-glass-divider);
+  --base-panel: var(--app-glass-surface-68);
+  --base-panel-soft: var(--app-glass-surface-56);
+  --base-accent: var(--app-glass-link);
+  --base-text: var(--app-glass-text);
+  --base-text-secondary: var(--app-glass-text-description);
+  --base-text-muted: var(--app-glass-text-caption);
+  --base-blue: var(--app-glass-link);
+  --base-hover-text: var(--app-glass-link-hover);
+  --base-surface: var(--app-glass-surface-68);
+  --base-card: var(--app-glass-surface-72);
   --base-card-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 10px 24px rgba(31, 41, 55, 0.045);
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 10px 24px var(--app-glass-shadow-card);
   background: transparent !important;
 }
 
@@ -825,23 +825,23 @@
 .app-shell-base-services .base-services-connection-card.ant-card,
 .app-shell-base-services .base-services-empty-card,
 .app-shell-base-services .base-services-contract-card {
-  border-color: rgba(15, 23, 42, 0.06) !important;
+  border-color: var(--app-glass-request-shadow-selected) !important;
   background: var(--base-panel) !important;
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 10px 24px rgba(31, 41, 55, 0.045) !important;
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 10px 24px var(--app-glass-shadow-card) !important;
 }
 
 .app-shell-base-services .base-services-toolbar.workbench-project-toolbar {
-  background: rgba(255, 255, 255, 0.68) !important;
+  background: var(--app-glass-surface-68) !important;
 }
 
 .app-shell-base-services .base-services-tab-switcher {
-  border-color: rgba(15, 23, 42, 0.055) !important;
-  background: rgba(248, 250, 252, 0.68) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76) !important;
+  border-color: var(--app-glass-request-shadow) !important;
+  background: var(--app-glass-table-bg) !important;
+  box-shadow: inset 0 1px 0 var(--app-glass-highlight-76) !important;
 }
 
 .app-shell-base-services .base-services-tab {
@@ -850,58 +850,58 @@
 
 .app-shell-base-services .base-services-tab:hover {
   color: var(--base-blue) !important;
-  background: rgba(255, 255, 255, 0.72) !important;
+  background: var(--app-glass-surface-72) !important;
 }
 
 .app-shell-base-services .base-services-tab.active {
   color: var(--base-text) !important;
-  background: rgba(255, 255, 255, 0.94) !important;
+  background: var(--app-glass-surface-94) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.92),
-    0 6px 14px rgba(31, 41, 55, 0.06) !important;
+    inset 0 1px 0 var(--app-glass-highlight-92),
+    0 6px 14px var(--app-glass-shadow-raised) !important;
 }
 
 .app-shell-base-services .base-services-panel.workbench-panel {
-  background: rgba(255, 255, 255, 0.68) !important;
+  background: var(--app-glass-surface-68) !important;
 }
 
 .app-shell-base-services .base-services-page .panel-header.api-panel-header,
 .app-shell-base-services .base-services-page .table-footer {
-  border-color: rgba(15, 23, 42, 0.055) !important;
-  background: rgba(255, 255, 255, 0.5) !important;
+  border-color: var(--app-glass-request-shadow) !important;
+  background: var(--app-glass-surface-50) !important;
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   backdrop-filter: saturate(180%) blur(20px);
 }
 
 .app-shell-base-services .base-services-connection-card.ant-card {
-  background: rgba(255, 255, 255, 0.72) !important;
+  background: var(--app-glass-surface-72) !important;
 }
 
 .app-shell-base-services .base-services-connection-card.ant-card:hover {
-  border-color: rgba(10, 132, 255, 0.18) !important;
-  background: rgba(255, 255, 255, 0.82) !important;
+  border-color: var(--app-glass-action-border) !important;
+  background: var(--app-glass-surface-82) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 14px 30px rgba(31, 41, 55, 0.065) !important;
+    inset 0 1px 0 var(--app-glass-highlight-90),
+    0 14px 30px var(--app-glass-shadow-floating) !important;
 }
 
 .app-shell-base-services .base-services-connection-card .sprint-card-meta {
-  border-bottom-color: rgba(15, 23, 42, 0.055) !important;
+  border-bottom-color: var(--app-glass-request-shadow) !important;
 }
 
 /* Global macOS palette alignment */
 .app-shell-macos .base-services-page {
-  --base-border: rgba(15, 23, 42, 0.065);
-  --base-panel: rgba(255, 255, 255, 0.68);
-  --base-panel-soft: rgba(255, 255, 255, 0.56);
-  --base-accent: #0a84ff;
-  --base-text: #172033;
-  --base-text-secondary: rgba(23, 32, 51, 0.58);
-  --base-text-muted: rgba(23, 32, 51, 0.44);
-  --base-blue: #0a84ff;
-  --base-hover-text: #006edb;
-  --base-surface: rgba(255, 255, 255, 0.68);
-  --base-card: rgba(255, 255, 255, 0.72);
+  --base-border: var(--app-glass-divider);
+  --base-panel: var(--app-glass-surface-68);
+  --base-panel-soft: var(--app-glass-surface-56);
+  --base-accent: var(--app-glass-link);
+  --base-text: var(--app-glass-text);
+  --base-text-secondary: var(--app-glass-text-description);
+  --base-text-muted: var(--app-glass-text-caption);
+  --base-blue: var(--app-glass-link);
+  --base-hover-text: var(--app-glass-link-hover);
+  --base-surface: var(--app-glass-surface-68);
+  --base-card: var(--app-glass-surface-72);
 }
 
 /* Unified first-level workspace spacing. */
@@ -920,7 +920,7 @@
 .app-shell-base-services .base-services-page .action-btn-save.ant-btn-primary,
 .app-shell-macos .base-services-page .action-btn-create.ant-btn-primary,
 .app-shell-macos .base-services-page .action-btn-save.ant-btn-primary {
-  border: 1px solid rgba(10, 132, 255, 0.18) !important;
+  border: 1px solid var(--app-glass-action-border) !important;
   border-radius: 10px !important;
 }
 
@@ -948,15 +948,15 @@
   font-size: 12px;
   padding: 2px 8px;
   border-radius: 10px;
-  background: rgba(140, 150, 160, 0.14);
+  background: var(--app-step-drag-handle-bg);
 }
 .gitlab-binding-summary-status.is-active {
-  background: rgba(22, 119, 255, 0.12);
-  color: #1677ff;
+  background: var(--app-accent-emphasis);
+  color: var(--app-accent);
 }
 .gitlab-binding-summary-status.is-disabled {
-  background: rgba(140, 150, 160, 0.2);
-  color: #8b9bb4;
+  background: var(--app-step-drag-handle-hover);
+  color: var(--app-result-empty);
 }
 .gitlab-binding-form-row {
   display: flex;
@@ -990,7 +990,7 @@
   justify-content: space-between;
   gap: 10px;
   padding: 8px 10px;
-  border: 1px solid rgba(140, 150, 160, 0.24);
+  border: 1px solid var(--app-document-rule);
   border-radius: 8px;
 }
 .gitlab-binding-current-main {
@@ -1023,7 +1023,7 @@
   min-height: 60px;
   max-height: 340px;
   overflow: auto;
-  border: 1px solid rgba(140, 150, 160, 0.24);
+  border: 1px solid var(--app-document-rule);
   border-radius: 8px;
   padding: 8px;
 }
@@ -1046,11 +1046,11 @@
   font: inherit;
 }
 .gitlab-binding-group-option:hover {
-  background: rgba(22, 119, 255, 0.06);
+  background: var(--app-request-card-shadow-hover);
 }
 .gitlab-binding-group-option.selected {
-  border-color: rgba(22, 119, 255, 0.5);
-  background: rgba(22, 119, 255, 0.08);
+  border-color: var(--app-step-drop-border);
+  background: var(--app-editor-focus-ring);
 }
 .gitlab-binding-group-option.bound {
   opacity: 0.55;
@@ -1073,7 +1073,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #8b9bb4;
+  color: var(--app-result-empty);
   font-size: 12px;
 }
 .gitlab-binding-group-more {
@@ -1111,7 +1111,7 @@
   justify-content: space-between;
   gap: 10px;
   padding: 8px 10px;
-  border: 1px solid rgba(140, 150, 160, 0.24);
+  border: 1px solid var(--app-document-rule);
   border-radius: 8px;
 }
 .requirement-code-binding-row-main {
@@ -1137,7 +1137,7 @@
 .requirement-code-binding-add {
   margin-top: 14px;
   padding-top: 4px;
-  border-top: 1px dashed rgba(140, 150, 160, 0.32);
+  border-top: 1px dashed var(--app-step-divider);
 }
 .requirement-code-binding-add-title {
   margin: 10px 0 8px !important;
@@ -1166,7 +1166,7 @@
 .requirement-code-binding-analysis {
   margin-top: 14px;
   padding-top: 12px;
-  border-top: 1px dashed rgba(140, 150, 160, 0.32);
+  border-top: 1px dashed var(--app-step-divider);
 }
 
 /* Project settings use stacked details instead of compact toolbar badges. */

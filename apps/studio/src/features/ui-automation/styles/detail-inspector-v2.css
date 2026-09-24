@@ -7,6 +7,19 @@
  * 与控制台配色对应：日志区是深色反色面（设计稿的终端块），在浅色主题下也保持深色才可读。
  */
 
+.ui-suite-detail-page .ui-wb-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+  overflow: hidden;
+}
+
 .ui-suite-detail-page .ui-wb-card-head {
   display: flex;
   flex-wrap: wrap;

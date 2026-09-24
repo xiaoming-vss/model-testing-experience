@@ -25,7 +25,6 @@
 }
 
 .case-library-page .case-library-filters .api-filter-field-label {
-  margin-right: 6px;
   color: var(--srf-text-muted);
   font-weight: 500;
 }
@@ -66,12 +65,12 @@
 }
 
 .case-library-page .case-library-tree {
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 1px 2px var(--srf-shadow-color);
 }
 
 .case-library-page .case-library-main {
   border-left: 1px solid var(--srf-card-border);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 1px 2px var(--srf-shadow-color);
 }
 
 /* ===== 左栏：测试集导航 ===== */

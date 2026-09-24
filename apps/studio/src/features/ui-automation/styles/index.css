@@ -89,7 +89,7 @@
 .api-detail-hover-panel {
   border: 1px solid var(--tp-border-soft);
   border-radius: 12px;
-  background: #fff;
+  background: var(--app-surface);
   transition:
     box-shadow 0.28s ease,
     border-color 0.28s ease;
@@ -97,7 +97,7 @@
 
 .api-detail-hover-panel:hover {
   border-color: var(--tp-border);
-  box-shadow: 0 8px 24px rgba(24, 27, 35, 0.06);
+  box-shadow: 0 8px 24px var(--app-card-shadow-medium);
 }
 
 .api-detail-hover-bar {
@@ -107,7 +107,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  background: #fbfcff;
+  background: var(--app-surface-raised);
 }
 
 .api-detail-hover-bar-main {
@@ -126,7 +126,7 @@
 }
 
 .api-detail-hover-title {
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 14px;
   line-height: 22px;
   font-weight: 600;
@@ -134,7 +134,7 @@
 
 .api-detail-hover-preview {
   min-width: 0;
-  color: #727786;
+  color: var(--app-shell-text-muted);
   font-size: 13px;
   line-height: 20px;
   white-space: nowrap;
@@ -154,7 +154,7 @@
 
 .api-detail-description {
   margin: 0 0 12px;
-  color: #727786;
+  color: var(--app-shell-text-muted);
   font-size: 14px;
   line-height: 22px;
 }
@@ -184,7 +184,7 @@
 
 .api-summary-item strong {
   display: block;
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 15px;
   line-height: 22px;
   font-weight: 700;
@@ -192,7 +192,7 @@
 }
 
 .api-detail-hover-body .api-summary-item > .ant-typography {
-  color: #cfe3ff !important;
+  color: var(--app-accent-border) !important;
   font-size: 12px;
   font-weight: 600;
   line-height: 18px;
@@ -201,12 +201,12 @@
 }
 
 .api-detail-hover-body .api-summary-item > strong {
-  color: #f7fbff !important;
+  color: var(--app-terminal-text-bright) !important;
   font-size: 15px;
   font-weight: 700;
   line-height: 22px;
   opacity: 1;
-  text-shadow: 0 0 1px rgba(124, 195, 163, 0.14);
+  text-shadow: 0 0 1px var(--app-terminal-text-glow);
 }
 
 .api-collection-detail-frame {
@@ -294,7 +294,7 @@
 .ui-test-case-step-empty {
   border: 1px dashed var(--tp-border-soft);
   border-radius: 12px;
-  background: rgba(248, 251, 255, 0.7);
+  background: var(--app-review-surface);
   padding: 18px;
 }
 
@@ -307,7 +307,7 @@
 .ui-test-case-step-card {
   border: 1px solid var(--tp-border-soft);
   border-radius: 12px;
-  background: #fff;
+  background: var(--app-surface);
   padding: 0;
   transition:
     border-color 0.2s ease,
@@ -316,8 +316,8 @@
 }
 
 .ui-test-case-step-card.expanded {
-  border-color: rgba(22, 119, 255, 0.24);
-  box-shadow: 0 8px 18px rgba(24, 27, 35, 0.04);
+  border-color: var(--app-review-border-hover);
+  box-shadow: 0 8px 18px var(--app-card-shadow-soft);
 }
 
 .ui-test-case-step-card.dragging {
@@ -373,7 +373,7 @@
   justify-content: center;
   padding: 0;
   color: var(--tp-text-secondary);
-  background: rgba(15, 23, 42, 0.03);
+  background: var(--app-review-code-bg);
   border: 1px solid var(--tp-border-soft);
   border-radius: 8px;
   cursor: pointer;
@@ -391,8 +391,8 @@
 
 .ui-test-case-step-toggle:hover {
   color: var(--tp-accent);
-  border-color: rgba(22, 119, 255, 0.24);
-  background: rgba(22, 119, 255, 0.06);
+  border-color: var(--app-review-border-hover);
+  background: var(--app-request-card-shadow-hover);
 }
 
 .ui-test-case-step-card-title {
@@ -599,7 +599,7 @@
 
 .ui-template-picker {
   width: min(520px, calc(100vw - 48px));
-  background: var(--tp-bg-elevated, #fff);
+  background: var(--tp-bg-elevated, var(--app-surface));
 }
 
 .ui-template-picker-head {
@@ -644,7 +644,7 @@
 }
 
 .ui-template-picker-item:hover {
-  background: var(--tp-bg-soft, rgba(15, 23, 42, 0.04));
+  background: var(--tp-bg-soft, var(--app-option-icon-bg-disabled));
 }
 
 .ui-template-picker-item-head {

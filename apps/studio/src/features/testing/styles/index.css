@@ -1,11 +1,11 @@
 .testing-page {
   --testing-panel:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(245, 248, 255, 0.96) 100%);
-  --testing-border: rgba(148, 163, 184, 0.18);
-  --testing-text: #172033;
-  --testing-text-muted: #6c7892;
-  --testing-hover-text: #2d5bff;
-  --testing-accent: #1677ff;
+    linear-gradient(180deg, var(--app-glass-surface-96) 0%, var(--app-task-panel-gradient-end) 100%);
+  --testing-border: var(--app-frame-divider);
+  --testing-text: var(--app-glass-text);
+  --testing-text-muted: var(--app-testing-text-muted);
+  --testing-hover-text: var(--app-task-link-hover);
+  --testing-accent: var(--app-accent);
 }
 
 .testing-tab-panel {
@@ -43,22 +43,22 @@
   max-height: none;
   overflow: hidden;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 252, 255, 0.98)),
-    #fff;
+    linear-gradient(180deg, var(--app-glass-surface-98), var(--app-testing-panel-gradient-end)),
+    var(--app-surface);
   border: 1px solid var(--testing-border);
   border-radius: 12px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.72),
-    0 14px 30px rgba(42, 55, 92, 0.07);
+    inset 0 1px 0 var(--app-glass-highlight-72),
+    0 14px 30px var(--app-testing-panel-shadow);
 }
 
 .testing-page .api-automation-content > .workbench-panel .table-body-scroll {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(251, 253, 255, 0.96) 100%),
-    #fff;
+    linear-gradient(180deg, var(--app-glass-surface-96) 0%, var(--app-testing-body-gradient-end) 100%),
+    var(--app-surface);
 }
 
-.testing-page .api-panel-header {
+.testing-page .api-panel-header:not(:where(.tp-list-toolbar)) {
   gap: 12px;
   min-height: 48px;
   padding: 8px 16px;
@@ -207,14 +207,14 @@
   flex-direction: column;
   overflow: hidden;
   padding: 0 !important;
-  border: 1px solid rgba(143, 156, 179, 0.18);
+  border: 1px solid var(--app-testing-panel-border);
   border-radius: 22px;
   background:
-    radial-gradient(circle at top left, rgba(22, 119, 255, 0.08), transparent 24%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 250, 255, 0.98) 100%);
+    radial-gradient(circle at top left, var(--app-editor-focus-ring), transparent 24%),
+    linear-gradient(180deg, var(--app-glass-surface-98) 0%, var(--app-testing-sidebar-gradient-end) 100%);
   box-shadow:
-    0 28px 80px rgba(31, 42, 68, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.74);
+    0 28px 80px var(--app-testing-overlay-shadow),
+    inset 0 1px 0 var(--app-glass-highlight-74);
 }
 
 .requirement-document-dialog .ant-modal-close {
@@ -280,7 +280,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(22, 119, 255, 0.18);
+  border: 1px solid var(--app-testing-active-border);
   line-height: 18px;
   letter-spacing: 0.02em;
 }
@@ -301,7 +301,7 @@
   gap: 8px;
   flex: 0 0 auto;
   align-self: center;
-  border: 1px solid rgba(22, 119, 255, 0.16);
+  border: 1px solid var(--app-testing-hover-border);
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
@@ -341,8 +341,8 @@
   border: 1px solid var(--testing-border);
   border-radius: 18px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(249, 251, 255, 0.98) 100%),
-    #fff;
+    linear-gradient(180deg, var(--app-glass-surface-98) 0%, var(--app-testing-card-gradient-end) 100%),
+    var(--app-surface);
   color: var(--description-text);
   font-family: var(--description-font);
   font-size: 14px;
@@ -351,8 +351,8 @@
   word-break: break-word;
   overflow-wrap: anywhere;
   box-shadow:
-    0 18px 42px rgba(36, 49, 78, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.74);
+    0 18px 42px var(--app-testing-card-shadow),
+    inset 0 1px 0 var(--app-glass-highlight-74);
 }
 
 .requirement-document-text-host {
@@ -490,7 +490,7 @@
 }
 
 .requirement-analysis-run-row-selected > td {
-  background: rgba(22, 119, 255, 0.08) !important;
+  background: var(--app-editor-focus-ring) !important;
 }
 
 .requirement-analysis-drawer .ant-table-row {
@@ -512,7 +512,7 @@
   overflow: auto;
   border: 1px solid var(--testing-border);
   border-radius: 8px;
-  background: rgba(248, 250, 252, 0.88);
+  background: var(--app-testing-card-muted-bg);
   color: var(--testing-text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
   font-size: 12px;
@@ -600,26 +600,26 @@
 
 /* Global macOS palette alignment */
 .app-shell-macos .testing-page {
-  --testing-panel: rgba(255, 255, 255, 0.68);
-  --testing-border: rgba(15, 23, 42, 0.065);
-  --testing-text: #172033;
-  --testing-text-muted: rgba(23, 32, 51, 0.52);
-  --testing-hover-text: #0a84ff;
-  --testing-accent: #0a84ff;
+  --testing-panel: var(--app-glass-surface-68);
+  --testing-border: var(--app-glass-divider);
+  --testing-text: var(--app-glass-text);
+  --testing-text-muted: var(--app-glass-text-hint);
+  --testing-hover-text: var(--app-glass-link);
+  --testing-accent: var(--app-glass-link);
 }
 
 /* API testing page aligned to base-services macOS glass style */
 .app-shell-macos .testing-page .testing-tab-panel > .api-automation-page {
-  --api-test-border: rgba(15, 23, 42, 0.065);
-  --api-test-border-soft: rgba(15, 23, 42, 0.055);
-  --api-test-panel: rgba(255, 255, 255, 0.68);
-  --api-test-panel-soft: rgba(255, 255, 255, 0.5);
-  --api-test-card: rgba(255, 255, 255, 0.72);
-  --api-test-card-hover: rgba(255, 255, 255, 0.82);
-  --api-test-text: #172033;
-  --api-test-secondary: rgba(23, 32, 51, 0.58);
-  --api-test-muted: rgba(23, 32, 51, 0.44);
-  --api-test-blue: #0a84ff;
+  --api-test-border: var(--app-glass-divider);
+  --api-test-border-soft: var(--app-glass-request-shadow);
+  --api-test-panel: var(--app-glass-surface-68);
+  --api-test-panel-soft: var(--app-glass-surface-50);
+  --api-test-card: var(--app-glass-surface-72);
+  --api-test-card-hover: var(--app-glass-surface-82);
+  --api-test-text: var(--app-glass-text);
+  --api-test-secondary: var(--app-glass-text-description);
+  --api-test-muted: var(--app-glass-text-caption);
+  --api-test-blue: var(--app-glass-link);
   background: transparent !important;
 }
 
@@ -629,11 +629,11 @@
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 10px 24px rgba(31, 41, 55, 0.045) !important;
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 10px 24px var(--app-glass-shadow-card) !important;
 }
 
-.app-shell-macos .testing-page .api-panel-header {
+.app-shell-macos .testing-page .api-panel-header:not(:where(.tp-list-toolbar)) {
   min-height: 58px;
   padding: 8px 18px;
   border-bottom: 1px solid var(--api-test-border-soft) !important;
@@ -648,19 +648,19 @@
 }
 
 .app-shell-macos .testing-page .api-filter-field-label {
-  border: 1px solid rgba(10, 132, 255, 0.1);
-  background: rgba(10, 132, 255, 0.075);
-  color: rgba(10, 96, 190, 0.86);
+  border: 1px solid var(--app-glass-accent-soft);
+  background: var(--app-glass-selected);
+  color: var(--app-glass-tag-text);
 }
 
 .app-shell-macos .testing-page .api-filter-select .ant-select-selector,
 .app-shell-macos .testing-page .api-environment-selector .ant-select-selector,
 .app-shell-macos .testing-page .api-filter-input,
 .app-shell-macos .testing-page .api-panel-header .ant-btn:not(.ant-btn-primary) {
-  border-color: rgba(15, 23, 42, 0.07) !important;
+  border-color: var(--app-glass-border-strong) !important;
   border-radius: 10px !important;
-  background: rgba(255, 255, 255, 0.62) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78) !important;
+  background: var(--app-glass-surface-62) !important;
+  box-shadow: inset 0 1px 0 var(--app-glass-highlight-78) !important;
 }
 
 .app-shell-macos .testing-page .api-environment-label,
@@ -680,22 +680,22 @@
 .app-shell-macos .testing-page .api-automation-content > .workbench-panel .api-collection-card.ant-card {
   height: auto;
   min-height: 172px;
-  border: 1px solid rgba(255, 255, 255, 0.68) !important;
+  border: 1px solid var(--app-glass-border-68) !important;
   border-radius: 14px !important;
   background: var(--api-test-card) !important;
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 10px 24px rgba(31, 41, 55, 0.045) !important;
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 10px 24px var(--app-glass-shadow-card) !important;
 }
 
 .app-shell-macos .testing-page .api-automation-content > .workbench-panel .api-collection-card.ant-card:hover {
-  border-color: rgba(10, 132, 255, 0.18) !important;
+  border-color: var(--app-glass-action-border) !important;
   background: var(--api-test-card-hover) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 14px 30px rgba(31, 41, 55, 0.065) !important;
+    inset 0 1px 0 var(--app-glass-highlight-90),
+    0 14px 30px var(--app-glass-shadow-floating) !important;
   transform: translateY(-2px);
 }
 
@@ -722,7 +722,7 @@
 }
 
 .app-shell-macos .testing-page .api-panel-header .action-btn-create.ant-btn-primary {
-  border: 1px solid rgba(10, 132, 255, 0.26) !important;
+  border: 1px solid var(--app-glass-action-border-hover) !important;
   border-radius: 10px !important;
 }
 
@@ -739,12 +739,12 @@
 /* API testing stricter base-services visual parity */
 
 .app-shell-macos .testing-page .api-automation-content > .workbench-panel {
-  background: rgba(255, 255, 255, 0.68) !important;
+  background: var(--app-glass-surface-68) !important;
 }
 
-.app-shell-macos .testing-page .api-panel-header {
+.app-shell-macos .testing-page .api-panel-header:not(:where(.tp-list-toolbar)) {
   gap: 14px;
-  background: rgba(255, 255, 255, 0.5) !important;
+  background: var(--app-glass-surface-50) !important;
 }
 
 .app-shell-macos .testing-page .api-panel-head-main {
@@ -768,18 +768,18 @@
   margin: 0 !important;
   padding: 28px 24px;
   transform: translateX(-50%);
-  border: 1px solid rgba(255, 255, 255, 0.68);
+  border: 1px solid var(--app-glass-border-68);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--app-glass-surface-72);
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 10px 24px rgba(31, 41, 55, 0.045);
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 10px 24px var(--app-glass-shadow-card);
 }
 
 .app-shell-macos .testing-page .api-automation-content > .workbench-panel .ant-empty-description {
-  color: rgba(23, 32, 51, 0.44) !important;
+  color: var(--app-glass-text-caption) !important;
 }
 
 .app-shell-macos .testing-page .api-automation-content > .workbench-panel .ant-pagination .ant-pagination-item,
@@ -787,14 +787,14 @@
 .app-shell-macos .testing-page .api-automation-content > .workbench-panel .ant-pagination .ant-pagination-next,
 .app-shell-macos .testing-page .api-automation-content > .workbench-panel .ant-pagination .ant-select-selector {
   border-radius: 10px !important;
-  border-color: rgba(15, 23, 42, 0.07) !important;
-  background: rgba(255, 255, 255, 0.62) !important;
+  border-color: var(--app-glass-border-strong) !important;
+  background: var(--app-glass-surface-62) !important;
 }
 
 .app-shell-macos .testing-page .api-automation-content > .workbench-panel .ant-pagination .ant-pagination-item-active {
-  border-color: rgba(10, 132, 255, 0.36) !important;
-  background: rgba(255, 255, 255, 0.94) !important;
-  box-shadow: 0 6px 14px rgba(31, 41, 55, 0.05) !important;
+  border-color: var(--app-glass-action-border-active) !important;
+  background: var(--app-glass-surface-94) !important;
+  box-shadow: 0 6px 14px var(--app-glass-shadow-control) !important;
 }
 
 /* Functional test suites: override shared testing grid for readable macOS cards */
@@ -944,7 +944,7 @@
 }
 
 .functional-test-page .functional-suite-list-table .ant-table {
-  color: var(--testing-text, #172033);
+  color: var(--testing-text, var(--app-glass-text));
   background: transparent;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -966,7 +966,7 @@
 }
 
 .functional-test-page .functional-suite-list-table .ant-table-thead > tr > th.ant-table-cell::before {
-  background: rgba(84, 104, 132, 0.045) !important;
+  background: var(--app-glass-table-hover) !important;
 }
 
 .functional-test-page .functional-suite-list-table .ant-table-tbody > tr {
@@ -1041,27 +1041,27 @@
 }
 
 .app-shell-macos .functional-test-page .functional-suite-list-table .ant-table-thead > tr > th.ant-table-cell {
-  border-top-color: rgba(255, 255, 255, 0.78) !important;
-  border-bottom-color: rgba(84, 104, 132, 0.1) !important;
+  border-top-color: var(--app-glass-border-78) !important;
+  border-bottom-color: var(--app-glass-table-border-hover) !important;
 }
 
 .functional-test-page .functional-suite-list-table .functional-suite-list-description.ant-typography, .app-shell.app-shell-macos .functional-test-page .functional-suite-list-table .functional-suite-list-description.ant-typography {
-  color: #98a2b3 !important;
+  color: var(--app-testing-placeholder) !important;
   font-size: 12px !important;
   font-weight: 400 !important;
   text-shadow: none !important;
   -webkit-text-stroke: 0 !important;
 }
 
-:root:not([data-theme='dark']) .functional-test-page .functional-suite-list-table .functional-suite-list-name .ant-typography,
-:root:not([data-theme='dark']) .app-shell.app-shell-macos .functional-test-page .functional-suite-list-table .functional-suite-list-name .ant-typography {
-  color: #3f6fc6 !important;
+:root:root .functional-test-page .functional-suite-list-table .functional-suite-list-name .ant-typography,
+:root:root .app-shell.app-shell-macos .functional-test-page .functional-suite-list-table .functional-suite-list-name .ant-typography {
+  color: var(--app-list-name) !important;
   cursor: pointer;
   text-decoration: none;
   text-underline-offset: 3px;
 }
-:root:not([data-theme='dark']) .functional-suite-list-table .ant-table-tbody > tr:hover .functional-suite-list-name .ant-typography {
-  color: #2859b3 !important;
+:root:root .functional-suite-list-table .ant-table-tbody > tr:hover .functional-suite-list-name .ant-typography {
+  color: var(--app-list-name-hover) !important;
   text-decoration: underline;
 }
 
@@ -1072,7 +1072,7 @@
   padding: 0 !important;
   border: 0;
   border-radius: 12px;
-  background: #fff;
+  background: var(--app-surface);
   box-shadow: none;
 }
 
@@ -1086,8 +1086,8 @@
 }
 
 .requirement-document-dialog .ant-modal-close:hover {
-  border-color: #dce3ee;
-  background: #f7f9fc;
+  border-color: var(--app-testing-control-border);
+  background: var(--app-section-bg);
   transform: none;
 }
 
@@ -1095,8 +1095,8 @@
   min-height: 72px;
   align-items: center;
   padding: 12px 64px 12px 16px;
-  border-bottom: 1px solid #edf0f5;
-  background: #fff;
+  border-bottom: 1px solid var(--app-list-row-border);
+  background: var(--app-surface);
   backdrop-filter: none;
 }
 
@@ -1112,7 +1112,7 @@
 
 .requirement-document-modal-title-icon {
   display: inline-flex;
-  color: #4d72e8;
+  color: var(--app-testing-control-accent);
   font-size: 21px;
 }
 
@@ -1130,10 +1130,10 @@
 .requirement-document-type-chip {
   height: 24px;
   padding: 0 10px;
-  border-color: #d9e4ff;
+  border-color: var(--app-testing-control-hover-border);
   border-radius: 6px;
-  background: #f1f5ff;
-  color: #4d72e8;
+  background: var(--app-testing-control-hover-bg);
+  color: var(--app-testing-control-accent);
   font-size: 12px;
   font-weight: 600;
 }
@@ -1141,22 +1141,22 @@
 .requirement-document-file-name {
   flex: 0 1 auto;
   max-width: min(52vw, 760px);
-  color: #697386;
+  color: var(--app-list-header-text);
 }
 
 .requirement-document-download-link {
   height: 34px;
   padding: 0 13px;
-  border-color: #b9c9f7;
+  border-color: var(--app-testing-control-selected-border);
   border-radius: 7px;
-  background: #fff;
-  color: #4d72e8;
+  background: var(--app-surface);
+  color: var(--app-testing-control-accent);
   box-shadow: none;
 }
 
 .requirement-document-download-link:hover {
-  border-color: #7896ed;
-  background: #f6f8ff;
+  border-color: var(--app-testing-control-focus-border);
+  background: var(--app-testing-control-selected-bg);
   transform: none;
 }
 
@@ -1168,7 +1168,7 @@
   height: calc(100vh - 176px);
   padding: 0;
   overflow: hidden;
-  background: #f4f6f9;
+  background: var(--app-testing-control-disabled-bg);
 }
 
 .requirement-document-workspace.is-compare {
@@ -1182,8 +1182,8 @@
   min-height: 0;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid #e3e8f0;
-  background: #fff;
+  border: 1px solid var(--app-testing-control-disabled-border);
+  background: var(--app-surface);
 }
 
 .requirement-document-pane:fullscreen {
@@ -1209,7 +1209,7 @@
   position: relative;
   z-index: 1;
   width: 1px;
-  background: #dce3ee;
+  background: var(--app-testing-control-border);
   cursor: col-resize;
   outline: none;
 }
@@ -1224,17 +1224,17 @@
   height: 42px;
   align-items: center;
   justify-content: center;
-  border: 1px solid #dce3ee;
+  border: 1px solid var(--app-testing-control-border);
   border-radius: 12px;
-  background: #fff;
-  color: #8a94a4;
-  box-shadow: 0 2px 8px rgba(23, 32, 51, 0.08);
+  background: var(--app-surface);
+  color: var(--app-testing-control-disabled-text);
+  box-shadow: 0 2px 8px var(--app-task-overlay-border);
   transform: translate(-50%, -50%);
 }
 
 .requirement-document-pane-divider:focus-visible > .anticon {
-  border-color: #7896ed;
-  box-shadow: 0 0 0 3px rgba(77, 114, 232, 0.16);
+  border-color: var(--app-testing-control-focus-border);
+  box-shadow: 0 0 0 3px var(--app-testing-control-focus-ring);
 }
 
 .requirement-document-pane-header {
@@ -1244,8 +1244,8 @@
   justify-content: space-between;
   gap: 12px;
   padding: 0 12px 0 16px;
-  border-bottom: 1px solid #edf0f5;
-  background: #fff;
+  border-bottom: 1px solid var(--app-list-row-border);
+  background: var(--app-surface);
 }
 
 .requirement-document-pane-title {
@@ -1253,13 +1253,13 @@
   min-width: 0;
   align-items: center;
   gap: 8px;
-  color: #172033;
+  color: var(--app-glass-text);
   font-size: 14px;
   font-weight: 650;
 }
 
 .requirement-document-pane-title > .anticon {
-  color: #657087;
+  color: var(--app-testing-control-text);
 }
 
 .requirement-document-pane-meta,
@@ -1270,15 +1270,15 @@
   min-height: 22px;
   padding: 0 8px;
   border-radius: 5px;
-  background: #f3f5f8;
-  color: #7b8494;
+  background: var(--app-testing-neutral-tag-bg);
+  color: var(--app-list-label);
   font-size: 11px;
   font-weight: 500;
 }
 
 .requirement-document-analysis-status {
-  background: #edf8f2;
-  color: #3b8f65;
+  background: var(--app-testing-success-tag-bg);
+  color: var(--app-testing-success-tag-text);
 }
 
 .requirement-document-pane-body {
@@ -1287,7 +1287,7 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: #fff;
+  background: var(--app-surface);
 }
 
 .requirement-document-modal-stage {
@@ -1307,13 +1307,13 @@
 .requirement-document-docx-host {
   border: 0;
   border-radius: 0;
-  background: #fff;
+  background: var(--app-surface);
   box-shadow: none;
 }
 
 .requirement-document-modal-stage.docx-mode .requirement-document-docx-host,
 .requirement-document-modal-stage.text-mode .requirement-document-text-host {
-  background: #fff;
+  background: var(--app-surface);
 }
 
 .requirement-document-docx-host .requirement-docx {
@@ -1322,7 +1322,7 @@
   margin: 0 !important;
   padding: 24px;
   border: 0;
-  background: #fff !important;
+  background: var(--app-surface) !important;
   box-shadow: none;
 }
 
@@ -1337,7 +1337,7 @@
   margin: 0;
   padding: 24px;
   border: 0;
-  background: #fff;
+  background: var(--app-surface);
   box-shadow: none;
 }
 
@@ -1348,7 +1348,7 @@
   overflow: auto;
   border: 0;
   border-radius: 0;
-  background: #fff;
+  background: var(--app-surface);
 }
 
 .requirement-document-understanding-content {
@@ -1361,7 +1361,7 @@
   padding: 24px;
   overflow: visible;
   border: 0;
-  background: #fff;
+  background: var(--app-surface);
   color: var(--description-text);
   font-family: var(--description-font);
   font-size: 14px;
@@ -1374,7 +1374,7 @@
 
 .requirement-document-understanding-content h1 {
   margin: 0 0 28px;
-  color: #263247;
+  color: var(--app-testing-editor-text);
   font-size: 22px;
   line-height: 1.4;
   font-weight: 700;
@@ -1383,8 +1383,8 @@
 .requirement-document-understanding-content h2 {
   margin: 28px 0 12px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #edf0f5;
-  color: #354158;
+  border-bottom: 1px solid var(--app-list-row-border);
+  color: var(--app-testing-editor-label);
   font-size: 16px;
   line-height: 1.5;
   font-weight: 650;
@@ -1392,7 +1392,7 @@
 
 .requirement-document-understanding-content h3 {
   margin: 18px 0 6px;
-  color: #45516a;
+  color: var(--app-testing-editor-description);
   font-size: 14px;
   line-height: 1.6;
   font-weight: 650;
@@ -1420,7 +1420,7 @@
   width: 100%;
   height: 100%;
   min-height: 280px;
-  background: #fff;
+  background: var(--app-surface);
 }
 
 @media (max-width: 980px) {
@@ -1481,7 +1481,7 @@
 .functional-test-page .functional-suite-list-table .ant-table-thead > tr > th.ant-table-cell,
 .app-shell-macos .functional-test-page .functional-suite-list-table .ant-table-thead > tr > th.ant-table-cell {
   border-top: 0 !important;
-  border-bottom: 1px solid #e8ecf2 !important;
+  border-bottom: 1px solid var(--app-list-header-border) !important;
 }
 
 .functional-test-page .functional-suite-list-table .ant-table-thead > tr > th.ant-table-cell:first-child {
@@ -1506,12 +1506,12 @@
 
 .functional-test-page .functional-suite-list-table .ant-table-tbody > tr > td,
 .app-shell-macos .functional-test-page .functional-suite-list-table .ant-table-tbody > tr > td {
-  color: #697386 !important;
-  border-bottom: 1px solid #edf0f5;
+  color: var(--app-list-header-text) !important;
+  border-bottom: 1px solid var(--app-list-row-border);
 }
 
 .functional-suite-list-name .ant-typography {
-  color: #172033 !important;
+  color: var(--app-glass-text) !important;
   font-size: 13px !important;
   font-weight: 500 !important;
   line-height: 20px !important;
@@ -1521,11 +1521,11 @@
 .functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(2),
 .functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(2) .ant-typography,
 .functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(2) span {
-  color: #697386 !important;
+  color: var(--app-list-header-text) !important;
 }
 
 .functional-test-page .functional-suite-list-table .ant-table-tbody .ant-typography-secondary {
-  color: #8a94a4 !important;
+  color: var(--app-testing-control-disabled-text) !important;
 }
 
 .functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(3),
@@ -1534,7 +1534,7 @@
 .functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(4) .ant-typography,
 .functional-test-page .functional-suite-list-table .ant-table-tbody .functional-suite-list-time.ant-typography,
 .functional-suite-list-description.ant-typography {
-  color: #7b8494 !important;
+  color: var(--app-list-label) !important;
 }
 
 /* Keep every test-suite name aligned with the task-list clickable-name treatment. */

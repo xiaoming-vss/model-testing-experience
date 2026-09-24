@@ -139,32 +139,18 @@
 }
 
 .app-shell-macos .ai-skill-card.ant-card {
-  border-color: rgba(15, 23, 42, 0.065) !important;
-  background: rgba(255, 255, 255, 0.68) !important;
-}
-
-/* AI testing header strict base-services parity */
-
-.app-shell-macos .ai-testing-page.ai-skill-library-page .ai-testing-overview-toolbar {
-  min-height: 58px !important;
-  padding: 14px 18px !important;
-  border: 1px solid rgba(15, 23, 42, 0.06) !important;
-  background: rgba(255, 255, 255, 0.68) !important;
-  -webkit-backdrop-filter: saturate(180%) blur(24px);
-  backdrop-filter: saturate(180%) blur(24px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 10px 24px rgba(31, 41, 55, 0.045) !important;
+  border-color: var(--app-glass-divider) !important;
+  background: var(--app-glass-surface-68) !important;
 }
 
 .app-shell-macos .ai-testing-page.ai-skill-library-page .ai-skill-library-panel {
-  border: 1px solid rgba(15, 23, 42, 0.065) !important;
-  background: rgba(255, 255, 255, 0.68) !important;
+  border: 1px solid var(--app-glass-divider) !important;
+  background: var(--app-glass-surface-68) !important;
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 10px 24px rgba(31, 41, 55, 0.045) !important;
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 10px 24px var(--app-glass-shadow-card) !important;
 }
 
 .app-shell-macos .ai-testing-page .ai-skill-library-empty {
@@ -177,29 +163,23 @@
 .app-shell-macos .ai-testing-page .ai-skill-library-empty .ant-empty {
   width: min(360px, calc(100% - 48px));
   padding: 28px 24px;
-  border: 1px solid rgba(255, 255, 255, 0.68);
+  border: 1px solid var(--app-glass-border-68);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--app-glass-surface-72);
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 10px 24px rgba(31, 41, 55, 0.045);
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 10px 24px var(--app-glass-shadow-card);
 }
 
 .app-shell-macos .ai-testing-page .ai-skill-library-empty .ant-empty-description {
-  color: rgba(23, 32, 51, 0.44) !important;
+  color: var(--app-glass-text-caption) !important;
 }
 
 .app-shell-macos .ai-testing-page .ai-skill-library-empty .ant-btn-primary {
-  border: 1px solid rgba(10, 132, 255, 0.26) !important;
+  border: 1px solid var(--app-glass-action-border-hover) !important;
   border-radius: 10px !important;
-}
-
-/* AI testing radius parity with base-services */
-
-.app-shell-macos .ai-testing-page.ai-skill-library-page .ai-testing-overview-toolbar {
-  border-radius: 14px !important;
 }
 
 .app-shell-macos .ai-testing-page.ai-skill-library-page .ai-skill-library-panel {
@@ -212,14 +192,14 @@
   position: relative;
   z-index: 1;
   margin: 12px var(--app-page-gutter) 16px !important;
-  border: 1px solid rgba(255, 255, 255, 0.7) !important;
+  border: 1px solid var(--app-glass-border-70) !important;
   border-radius: 18px !important;
-  background: rgba(255, 255, 255, 0.68) !important;
+  background: var(--app-glass-surface-68) !important;
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 10px 24px rgba(31, 41, 55, 0.045) !important;
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 10px 24px var(--app-glass-shadow-card) !important;
 }
 
 .app-shell-macos .ai-testing-page .ai-skill-library-grid {
@@ -228,15 +208,15 @@
 }
 
 .app-shell-macos .ai-testing-page .ai-skill-card.ant-card {
-  border: 1px solid rgba(15, 23, 42, 0.052) !important;
+  border: 1px solid var(--app-skill-card-border) !important;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.54)),
-    rgba(255, 255, 255, 0.58) !important;
+    linear-gradient(180deg, var(--app-glass-surface-78), var(--app-glass-surface-54)),
+    var(--app-glass-surface-58) !important;
   -webkit-backdrop-filter: saturate(180%) blur(26px);
   backdrop-filter: saturate(180%) blur(26px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 8px 22px rgba(31, 41, 55, 0.042) !important;
+    inset 0 1px 0 var(--app-glass-highlight-90),
+    0 8px 22px var(--app-skill-card-shadow) !important;
   transition:
     border-color 0.18s ease,
     background-color 0.18s ease,
@@ -245,13 +225,13 @@
 }
 
 .app-shell-macos .ai-testing-page .ai-skill-card.ant-card:hover {
-  border-color: rgba(10, 132, 255, 0.16) !important;
+  border-color: var(--app-skill-card-border-hover) !important;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(255, 255, 255, 0.64)),
-    rgba(255, 255, 255, 0.72) !important;
+    linear-gradient(180deg, var(--app-glass-surface-86), var(--app-glass-surface-64)),
+    var(--app-glass-surface-72) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.94),
-    0 12px 28px rgba(31, 41, 55, 0.065) !important;
+    inset 0 1px 0 var(--app-glass-highlight-94),
+    0 12px 28px var(--app-glass-shadow-floating) !important;
   transform: translateY(-1px);
 }
 
@@ -267,9 +247,9 @@
 }
 
 .app-shell-macos .ai-testing-page .ai-skill-card .ant-tag {
-  border-color: rgba(10, 132, 255, 0.11) !important;
-  background: rgba(10, 132, 255, 0.07) !important;
-  color: rgba(10, 96, 190, 0.82) !important;
+  border-color: var(--app-skill-tag-border) !important;
+  background: var(--app-skill-tag-bg) !important;
+  color: var(--app-skill-tag-text) !important;
   font-weight: 650;
 }
 

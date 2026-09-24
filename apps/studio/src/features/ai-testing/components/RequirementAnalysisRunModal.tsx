@@ -126,7 +126,7 @@ export function RequirementAnalysisRunModal({
                     value={conn.connectionId}
                     style={{
                       padding: '12px 16px',
-                      border: '1px solid var(--tp-border-soft, rgba(148, 163, 184, 0.18))',
+                      border: '1px solid var(--tp-border-soft, var(--app-frame-divider))',
                       borderRadius: 8,
                       margin: 0,
                       width: '100%',

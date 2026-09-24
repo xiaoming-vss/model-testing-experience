@@ -51,6 +51,7 @@ export function BaseServicesPage({ skillLibrary }: { skillLibrary: ReactNode }) 
     <div className="workbench-page base-services-page">
       <section className="workbench-project-toolbar base-services-toolbar">
         <div className="base-services-switcher-row">
+              <h1 className="tp-list-title">基础服务</h1>
           <div className="base-services-tab-switcher" role="tablist" aria-label="基础服务模块切换">
             {tabOptions.map((option) => {
               const active = option.key === activeTab

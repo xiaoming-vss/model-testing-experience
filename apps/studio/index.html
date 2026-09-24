@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Keep the preference key and normalization aligned with theme.store.ts.
+      (function () {
+        var preference = 'system';
+        try { preference = localStorage.getItem('mtx-theme-preference') || 'system'; } catch (_) {}
+        var dark = preference === 'dark' || (preference !== 'light' && preference !== 'dark' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+      })();
+    </script>
     <title>Model Testing Experience · MTX</title>
   </head>
   <body>

@@ -7,7 +7,7 @@
 
 /* ===== 右栏：执行判定与缺陷 ===== */
 
-.test-order-workspace-page .test-order-verdict-panel {
+:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-verdict-panel {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -20,7 +20,7 @@
   padding: 12px;
 }
 
-.test-order-workspace-page .test-order-verdict-title {
+:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-verdict-title {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -31,20 +31,20 @@
   font-weight: 700;
 }
 
-.test-order-workspace-page .test-order-verdict-hint {
+:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-verdict-hint {
   color: var(--srf-text-muted);
   font-size: 10px;
   font-weight: 400;
 }
 
 /* 四个判定按钮：两列表格，各自带色调。 */
-.test-order-workspace-page .test-order-verdict-grid {
+:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-verdict-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.test-order-workspace-page .test-order-judge-btn {
+:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-judge-btn {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -64,22 +64,22 @@
     box-shadow 0.16s ease;
 }
 
-.test-order-workspace-page .test-order-judge-btn:hover:not(:disabled) {
+:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-judge-btn:hover:not(:disabled) {
   border-color: var(--srf-tone-text, var(--srf-accent));
 }
 
 /* 当前结论：整块实色，和其余三块拉开。 */
-.test-order-workspace-page .test-order-judge-btn.active {
+:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-judge-btn.active {
   border-color: var(--srf-tone-text, var(--srf-accent));
   box-shadow: inset 0 0 0 1px var(--srf-tone-text, var(--srf-accent));
 }
 
-.test-order-workspace-page .test-order-judge-btn:disabled {
+:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-judge-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.test-order-workspace-page .test-order-judge-key {
+:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-judge-key {
   flex: 0 0 auto;
   min-width: 18px;
   padding: 0 5px;
@@ -92,13 +92,13 @@
   text-align: center;
 }
 
-.test-order-workspace-page .test-order-defect-section {
+:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-defect-section {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.test-order-workspace-page .test-order-defect-head {
+:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-defect-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -109,7 +109,7 @@
   font-weight: 700;
 }
 
-.test-order-workspace-page .test-order-defect-card {
+:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-defect-card {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -119,7 +119,7 @@
   background: var(--srf-hover);
 }
 
-.test-order-workspace-page .test-order-defect-id {
+:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-defect-id {
   flex: 0 0 auto;
   padding: 2px 6px;
   border-radius: 4px;
@@ -130,21 +130,21 @@
   line-height: 16px;
 }
 
-.test-order-workspace-page .test-order-defect-untie.ant-btn {
+:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-defect-untie.ant-btn {
   flex: 0 0 auto;
   margin-left: auto;
   padding-inline: 4px;
   font-size: 11px;
 }
 
-.test-order-workspace-page .test-order-defect-hint {
+:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-defect-hint {
   color: var(--srf-text-muted);
   font-size: 11px;
   line-height: 16px;
 }
 
 /* 条目导航与保存状态贴底。 */
-.test-order-workspace-page .test-order-execution-footer {
+:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-execution-footer {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -154,7 +154,7 @@
   border-top: 1px solid var(--srf-divider);
 }
 
-.test-order-workspace-page .test-order-entry-navigation {
+:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-entry-navigation {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -163,13 +163,13 @@
   font-variant-numeric: tabular-nums;
 }
 
-.test-order-workspace-page .test-order-autoadvance {
+:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-autoadvance {
   width: 100%;
   color: var(--srf-text-secondary);
   font-size: 11px;
 }
 
-.test-order-workspace-page .test-order-save-state {
+:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-save-state {
   color: var(--srf-text-muted);
   font-size: 11px;
 }

@@ -1,43 +1,10 @@
-/*
- * API 测试页（测试集列表，按设计稿重做的表面层）。
- *
- * token（`--srf-*`）、色盘（`.tone-*`）、板面（`.tp-board`）与快速过滤条都来自
- * shared/styles/surface-tokens.css；这里只写这一页自己的东西：头部卡片（筛选行 + 环境信息条）、
- * 表格卡片、名称图标、等宽时间。
- *
- * 这一页的头部和另外两页不同：设计稿把筛选行与环境信息条画在同一张卡片里，中间一条分隔线。
- */
+/* API 测试列表：共享 tp-list-toolbar 管理筛选卡片，页面负责内部排布与表格内容。 */
 
 /* ===== 头部卡片 ===== */
 
 .api-test-page .api-test-header {
-  display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0;
-  padding: 0;
-  border: 1px solid var(--srf-card-border);
-  border-radius: 12px;
-  background: var(--srf-card);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-}
-
-/* testing/styles 用 !important 给 .api-panel-header 设过玻璃表面与内距，
-   所以卡片外观要用更长的前缀 + !important 定住：这里再加一个 .app-shell 把权重抬到它之上，
-   卡片底色才和表格卡片一致。 */
-.app-shell.app-shell-macos .testing-page .api-test-page .api-panel-header.api-test-header {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0;
-  min-height: 0;
-  padding: 0;
-  border: 1px solid var(--srf-card-border) !important;
-  border-radius: 12px !important;
-  background: var(--srf-card) !important;
-  box-shadow: none !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
 }
 
 .api-test-page .api-test-header-main {
@@ -45,7 +12,7 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   padding: 0;
 }
 
@@ -53,7 +20,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -71,7 +38,6 @@
 }
 
 .api-test-page .api-test-header .api-filter-field-label {
-  margin-right: 6px;
   color: var(--srf-text-muted);
   font-weight: 500;
 }
@@ -92,87 +58,6 @@
   font-size: 10px;
 }
 
-/* ===== 环境信息条 ===== */
-
-.api-test-page .api-test-env-strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px;
-  border-top: 1px solid var(--srf-divider);
-}
-
-.api-test-page .api-test-env-facts {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  color: var(--srf-text-secondary);
-  font-size: 11px;
-  line-height: 16px;
-}
-
-.api-test-page .api-test-env-fact {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-}
-
-.api-test-page .api-test-env-label {
-  color: var(--srf-text-muted);
-}
-
-.api-test-page .api-test-env-fact strong {
-  color: var(--srf-text);
-  font-weight: 600;
-}
-
-.api-test-page .api-test-env-code {
-  padding: 1px 6px;
-  border: 1px solid var(--srf-card-border);
-  border-radius: 4px;
-  background: var(--srf-chip);
-  color: var(--srf-text);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11px;
-  overflow-wrap: anywhere;
-}
-
-.api-test-page .api-test-env-sep {
-  color: var(--srf-card-border);
-}
-
-.api-test-page .api-test-env-refresh {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  flex: 0 0 auto;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--srf-text-muted);
-  font: inherit;
-  font-size: 11px;
-  line-height: 16px;
-  cursor: pointer;
-  transition: color 0.16s ease;
-}
-
-.api-test-page .api-test-env-refresh:hover {
-  color: var(--srf-accent);
-}
-
-/* ===== 快速过滤条 ===== */
-
-.api-test-page .api-test-quickbar {
-  flex: 0 0 auto;
-  padding: 0 2px;
-}
-
 /* ===== 表格卡片 ===== */
 
 .api-test-page .api-test-table-card {
@@ -183,7 +68,7 @@
   border: 1px solid var(--srf-card-border);
   border-radius: 12px;
   background: var(--srf-card);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 1px 2px var(--srf-shadow-color);
   overflow: hidden;
 }
 
@@ -197,7 +82,7 @@
 }
 
 .api-test-page .api-test-footer {
-  gap: 12px;
+  gap: 8px;
   padding: 0 16px;
   border-top: 1px solid var(--srf-divider);
   background: var(--srf-hover);

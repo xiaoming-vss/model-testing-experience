@@ -761,6 +761,7 @@ export function CaseLibraryPage() {
         <section className="workbench-panel workbench-board-panel tp-board">
           <div className="panel-header api-panel-header case-library-toolbar tp-list-toolbar">
             <div className="api-filter-group case-library-filters">
+              <h1 className="tp-list-title">用例库</h1>
               <div className="api-filter-field">
                 <span className="api-filter-field-label">迭代</span>
                 <Select

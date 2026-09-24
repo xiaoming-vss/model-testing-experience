@@ -1,0 +1,9 @@
+.test-order-graph-modal .ai-relations-page-bar {
+  padding: 8px 52px 8px 12px;
+  gap: 8px;
+}
+
+.test-order-graph-modal .ant-modal-close {
+  top: 6px;
+  inset-inline-end: 8px;
+}

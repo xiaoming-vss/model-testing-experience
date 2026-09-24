@@ -1,41 +1,4 @@
-/*
- * 测试单页面（按设计稿重做的表面层）。
- *
- * token（`--srf-*`）、色盘（`.tone-*`）、板面（`.tp-board`）与快速过滤条都来自
- * shared/styles/surface-tokens.css；这里只写这一页自己的东西：工具栏卡片、进度条、状态胶囊。
- *
- * 与用例库的差异（两份设计稿本身就不一致，取已经实现的用例库那套为准）：
- * 设计稿把过滤条画成一张白色卡片，这里照做；用例库那边是裸工具栏。快速过滤条上的胶囊
- * 设计稿这里是实心蓝方块，这里沿用共享的浅蓝胶囊，两页保持一致。
- */
-
-/* 进度条分段的颜色取自共享的结果语义色（surface-tokens.css 的 --srf-result-*），
-   和条目状态圆点（utils/testOrderStatus.ts）同一组语义。 */
-
-/* ===== 工具栏（设计稿里是一张卡片） ===== */
-
-.test-orders-page .test-orders-toolbar {
-  min-height: 48px;
-  padding: 10px 12px;
-  border: 1px solid var(--srf-card-border);
-  border-radius: 10px;
-  background: var(--srf-card);
-  box-shadow: none;
-}
-
-/* testing/styles 用 !important 给 .api-panel-header 设过玻璃表面，
-   所以要用更长的前缀把这一层的卡片外观定住。 */
-.app-shell-macos .testing-page .test-orders-page .api-panel-header.test-orders-toolbar {
-  min-height: 48px;
-  padding: 10px 12px;
-  border: 1px solid var(--srf-card-border) !important;
-  border-bottom: 1px solid var(--srf-card-border) !important;
-  border-radius: 10px !important;
-  background: var(--srf-card) !important;
-  box-shadow: none !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
+/* 测试单列表：工具栏表面与尺寸复用 tp-list-toolbar，进度条颜色引用 --srf-result-*。 */
 
 .test-orders-page .test-orders-filters {
   display: flex;
@@ -45,7 +8,6 @@
 }
 
 .test-orders-page .test-orders-filters .api-filter-field-label {
-  margin-right: 6px;
   color: var(--srf-text-muted);
   font-weight: 500;
 }
@@ -65,13 +27,6 @@
   flex: 0 0 auto;
 }
 
-/* ===== 快速过滤条 ===== */
-
-.test-orders-page .test-orders-quickbar {
-  flex: 0 0 auto;
-  padding: 0 2px;
-}
-
 /* ===== 表格卡片 ===== */
 
 .test-orders-page .test-orders-table-card {
@@ -82,7 +37,7 @@
   border: 1px solid var(--srf-card-border);
   border-radius: var(--srf-radius-card);
   background: var(--srf-card);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 1px 2px var(--srf-shadow-color);
   overflow: hidden;
 }
 

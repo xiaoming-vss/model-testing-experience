@@ -1,11 +1,11 @@
 .profile-settings {
-  --profile-surface: rgba(255, 255, 255, 0.94);
-  --profile-border: #e7edf5;
-  --profile-muted: #8793a6;
-  --profile-tint: #f3f7fd;
+  --profile-surface: var(--app-glass-surface-94);
+  --profile-border: var(--app-profile-border);
+  --profile-muted: var(--app-profile-text-muted);
+  --profile-tint: var(--app-profile-tint);
   min-height: calc(100dvh - 64px);
   padding: 48px var(--app-page-gutter) 64px;
-  background: radial-gradient(ellipse at 20% 10%, #edf4ff, transparent 55%), #f5f8fc;
+  background: radial-gradient(ellipse at 20% 10%, var(--app-profile-accent-bg), transparent 55%), var(--app-profile-surface);
 }
 
 .profile-settings-container { max-width: 1200px; margin: 0 auto; }
@@ -18,14 +18,14 @@
   border: 1px solid var(--profile-border);
   border-radius: 20px;
   background: var(--profile-surface);
-  box-shadow: 0 10px 30px rgba(34, 66, 112, 0.045);
+  box-shadow: 0 10px 30px var(--app-profile-card-shadow);
 }
 .profile-settings-identity {
   padding: 48px 28px 32px;
   text-align: center;
   background: linear-gradient(150deg, var(--profile-tint), var(--profile-surface) 70%);
 }
-.profile-settings .profile-settings-avatar { background: linear-gradient(135deg, #218cff, #0877ff); color: white; margin-bottom: 24px; }
+.profile-settings .profile-settings-avatar { background: linear-gradient(135deg, var(--app-profile-avatar-gradient-start), var(--app-profile-avatar-gradient-end)); color: var(--app-on-accent); margin-bottom: 24px; }
 .profile-settings-identity h3.ant-typography { margin: 0 0 10px; font-size: 26px; overflow-wrap: anywhere; }
 .profile-settings-identity > .ant-typography-secondary { display: block; overflow-wrap: anywhere; font-size: 15px; }
 .profile-settings-identity-footer { display: flex; align-items: center; gap: 10px; margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--profile-border); color: var(--profile-muted); text-align: left; }
@@ -40,9 +40,9 @@
 .profile-settings-actions { display: flex; justify-content: flex-end; gap: 12px; padding: 20px 32px; background: var(--profile-tint); }
 .profile-settings .ant-btn { height: 40px; padding-inline: 22px; border-radius: 10px; }
 .profile-settings-error { margin: 20px 32px 0; }
-.profile-settings-danger { grid-column: 2; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px 28px; border: 1px solid #ffd9de; border-radius: 18px; background: #fff7f8; }
+.profile-settings-danger { grid-column: 2; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px 28px; border: 1px solid var(--app-profile-danger-border); border-radius: 18px; background: var(--app-profile-danger-bg); }
 .profile-settings-danger > div { min-width: 0; }
-.profile-settings-danger h5.ant-typography { color: #b8394a; margin: 0 0 8px; font-size: 16px; }
+.profile-settings-danger h5.ant-typography { color: var(--app-profile-danger-text); margin: 0 0 8px; font-size: 16px; }
 .profile-settings-danger .ant-typography-secondary { margin: 0; font-size: 13px; line-height: 1.8; }
 .profile-settings-danger > .ant-btn { flex-shrink: 0; }
 .profile-settings-danger .ant-alert { margin-top: 12px; }

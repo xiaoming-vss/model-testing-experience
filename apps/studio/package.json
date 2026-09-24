@@ -8,10 +8,11 @@
     "build": "tsc -b && vite build",
     "type-check": "tsc -b --pretty false",
     "lint": "eslint .",
+    "check:theme": "node scripts/check-theme-colors.mjs",
     "lint:fix": "eslint . --fix",
     "format": "npm run lint:fix",
     "test": "vitest run",
-    "verify": "npm run type-check && npm run lint && npm run build",
+    "verify": "npm run type-check && npm run lint && npm run check:theme && npm run build",
     "preview": "vite preview"
   },
   "dependencies": {

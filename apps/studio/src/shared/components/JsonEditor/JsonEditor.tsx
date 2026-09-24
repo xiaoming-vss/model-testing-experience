@@ -1,3 +1,5 @@
+import { useThemeStore } from '@/shared/theme/theme.store'
+import { saveBlob } from '@/shared/utils/download'
 import { createPortal } from 'react-dom'
 import { CopyOutlined, DownloadOutlined } from '@ant-design/icons'
 import CodeMirror from '@uiw/react-codemirror'
@@ -9,7 +11,7 @@ import { EditorView, keymap } from '@codemirror/view'
 import { Button } from 'antd'
 import { forwardRef, useImperativeHandle, useMemo, useRef, type ReactNode } from 'react'
 import { message } from '@/shared/utils/feedback'
-import { codeEditorTheme, jsonEditorHighlightStyle } from '../codeEditorTheme'
+import { codeEditorTheme, darkCodeEditorTheme, jsonEditorHighlightStyle } from '../codeEditorTheme'
 
 function tryFormatJson(value?: string) {
   if (!value?.trim()) {
@@ -76,6 +78,7 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
   downloadFileName = 'content.json',
   onCursorChange,
 }, ref) => {
+  const resolvedTheme = useThemeStore((state) => state.resolvedTheme)
   const jsonState = useMemo(() => tryFormatJson(value), [value])
   const editorViewRef = useRef<EditorView | null>(null)
   const onCursorChangeRef = useRef(onCursorChange)
@@ -104,14 +107,7 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
 
   function handleDownload() {
     const blob = new Blob([value ?? ''], { type: 'application/json;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = downloadFileName
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    saveBlob(blob, downloadFileName)
     message.success('已下载内容')
   }
 
@@ -208,7 +204,7 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
             cursorListener,
             ...(ariaLabel ? [EditorView.contentAttributes.of({ 'aria-label': ariaLabel })] : []),
             EditorView.lineWrapping,
-            codeEditorTheme,
+            resolvedTheme === 'dark' ? darkCodeEditorTheme : codeEditorTheme,
             syntaxHighlighting(jsonEditorHighlightStyle),
           ]}
           className="json-editor-codemirror"

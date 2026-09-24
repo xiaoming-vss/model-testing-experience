@@ -1,5 +1,6 @@
+import { saveBlob } from '@/shared/utils/download'
 import { useDeleteTaskRun, useStartTaskRun } from '@/features/ai-testing/hooks/useTaskRunActions'
-import { formatStructuredContent } from '@/shared/utils/value'
+import { formatStructuredContent, toRecord, toRecordArray } from '@/shared/utils/value'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
@@ -82,16 +83,6 @@ type ApiConfigDiagramData = {
   totalExtractRules: number
   totalAssertRules: number
   authHeaderCount: number
-}
-
-function toRecord(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
-  return value as Record<string, unknown>
-}
-
-function toRecordArray(value: unknown): Array<Record<string, unknown>> {
-  if (!Array.isArray(value)) return []
-  return value.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
 }
 
 function toDisplayText(value: unknown) {
@@ -853,14 +844,7 @@ export function ApiCaseGenerateTaskDetailPage() {
     const safeTitle = title.replace(/[\\/:*?"<>|]/g, '_')
     const extension = title.toLowerCase().includes('yaml') ? 'yaml' : 'txt'
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${safeTitle}.${extension}`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    saveBlob(blob, `${safeTitle}.${extension}`)
     message.success('已下载内容')
   }
 

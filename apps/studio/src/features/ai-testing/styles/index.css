@@ -1,45 +1,45 @@
 /* 公共变量、页面表面、共用面板与编辑器适配。专属样式由页面或组件显式引入。 */
 :is(.ai-testing-page, .ai-task-import-result-modal, .ai-task-run-result-modal) {
-  --ai-border: rgba(148, 163, 184, 0.18);
-  --ai-border-strong: rgba(148, 163, 184, 0.24);
+  --ai-border: var(--app-frame-divider);
+  --ai-border-strong: var(--app-frame-border-strong);
   --ai-panel:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(245, 248, 255, 0.96) 100%);
-  --ai-panel-soft: rgba(22, 119, 255, 0.04);
-  --ai-panel-hover: rgba(22, 119, 255, 0.06);
-  --ai-accent: #1677ff;
-  --ai-accent-soft: rgba(22, 119, 255, 0.12);
-  --ai-blue: #1677ff;
-  --ai-text: #172033;
-  --ai-text-secondary: #667085;
-  --ai-text-muted: #7a8699;
-  --ai-hover-text: #2d5bff;
-  --ai-active-text: #1456d9;
+    linear-gradient(180deg, var(--app-glass-surface-96) 0%, var(--app-task-panel-gradient-end) 100%);
+  --ai-panel-soft: var(--app-task-panel-tint);
+  --ai-panel-hover: var(--app-document-quote-bg);
+  --ai-accent: var(--app-accent);
+  --ai-accent-soft: var(--app-accent-emphasis);
+  --ai-blue: var(--app-accent);
+  --ai-text: var(--app-glass-text);
+  --ai-text-secondary: var(--app-menu-text);
+  --ai-text-muted: var(--app-task-text-muted);
+  --ai-hover-text: var(--app-task-link-hover);
+  --ai-active-text: var(--app-task-link-active);
   --ai-toolbar-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.72),
-    0 14px 32px rgba(42, 55, 92, 0.08);
+    inset 0 1px 0 var(--app-glass-highlight-72),
+    0 14px 32px var(--app-task-panel-shadow);
   --ai-surface:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 255, 0.96)),
-    rgba(255, 255, 255, 0.96);
+    linear-gradient(180deg, var(--app-glass-surface-96), var(--app-task-surface-gradient-end)),
+    var(--app-glass-surface-96);
   --ai-card:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 249, 255, 0.98)),
-    rgba(255, 255, 255, 0.98);
-  --ai-card-border: rgba(148, 163, 184, 0.16);
-  --ai-card-hover-border: rgba(22, 119, 255, 0.26);
+    linear-gradient(180deg, var(--app-glass-surface-98), var(--app-task-card-gradient-end)),
+    var(--app-glass-surface-98);
+  --ai-card-border: var(--app-frame-card-border);
+  --ai-card-hover-border: var(--app-frame-card-border-hover);
   --ai-card-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.78),
-    0 12px 28px rgba(42, 55, 92, 0.08);
+    inset 0 1px 0 var(--app-glass-highlight-78),
+    0 12px 28px var(--app-task-panel-shadow);
   --ai-code-surface:
-    linear-gradient(180deg, rgba(248, 251, 255, 0.98), rgba(241, 246, 255, 0.98)),
-    rgba(248, 251, 255, 0.98);
-  --ai-code-text: #1f2a44;
-  --ai-fold-card: rgba(255, 255, 255, 0.62);
-  --ai-fold-card-expanded: rgba(247, 250, 255, 0.88);
-  --ai-fold-head: rgba(255, 255, 255, 0.78);
-  --ai-fold-body: rgba(248, 251, 255, 0.92);
+    linear-gradient(180deg, var(--app-card-gradient-start), var(--app-task-code-gradient-end)),
+    var(--app-card-gradient-start);
+  --ai-code-text: var(--app-task-code-text);
+  --ai-fold-card: var(--app-glass-surface-62);
+  --ai-fold-card-expanded: var(--app-task-fold-expanded);
+  --ai-fold-head: var(--app-glass-surface-78);
+  --ai-fold-body: var(--app-task-fold-body);
   --ai-popover-surface:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 249, 255, 0.98)),
-    rgba(255, 255, 255, 0.98);
-  --ai-popover-arrow: rgba(255, 255, 255, 0.98);
+    linear-gradient(180deg, var(--app-glass-surface-98), var(--app-task-card-gradient-end)),
+    var(--app-glass-surface-98);
+  --ai-popover-arrow: var(--app-glass-surface-98);
 }
 .ai-testing-task-panel {
   overflow: hidden;
@@ -47,8 +47,8 @@
   border-color: var(--ai-border);
   border-radius: 18px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    0 20px 40px rgba(42, 55, 92, 0.08);
+    inset 0 1px 0 var(--app-glass-highlight-45),
+    0 20px 40px var(--app-task-panel-shadow);
 }
 
 .ai-task-panel-header {
@@ -129,8 +129,8 @@
 
 .ai-testing-page {
   --ai-toolbar-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 18px 48px rgba(31, 41, 55, 0.07);
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 18px 48px var(--app-glass-shadow-toolbar);
 }
 
 .ai-testing-page::before {
@@ -140,8 +140,8 @@
   height: 260px;
   pointer-events: none;
   background:
-    radial-gradient(circle at 18% 36%, rgba(118, 153, 255, 0.2), transparent 34%),
-    radial-gradient(circle at 74% 10%, rgba(147, 215, 255, 0.2), transparent 32%);
+    radial-gradient(circle at 18% 36%, var(--app-task-glow-primary), transparent 34%),
+    radial-gradient(circle at 74% 10%, var(--app-task-glow-secondary), transparent 32%);
   filter: blur(30px);
   opacity: 0.95;
 }
@@ -168,7 +168,7 @@
 .ai-testing-page .panel-header.api-panel-header {
   min-height: 58px;
   padding: 0 18px;
-  border-bottom: 1px solid rgba(100, 116, 139, 0.1);
+  border-bottom: 1px solid var(--app-task-panel-divider);
   -webkit-backdrop-filter: saturate(180%) blur(18px);
   backdrop-filter: saturate(180%) blur(18px);
 }
@@ -188,7 +188,7 @@
 .ai-testing-page .table-footer {
   min-height: 48px;
   padding: 0 18px;
-  border-top: 1px solid rgba(100, 116, 139, 0.1);
+  border-top: 1px solid var(--app-task-panel-divider);
   -webkit-backdrop-filter: saturate(180%) blur(18px);
   backdrop-filter: saturate(180%) blur(18px);
 }
@@ -204,30 +204,30 @@
 /* macOS simple white pass: reduce visible gradients, keep subtle glass layering */
 
 .ai-testing-page {
-  --ai-border: rgba(15, 23, 42, 0.08);
-  --ai-border-strong: rgba(15, 23, 42, 0.12);
-  --ai-panel: rgba(255, 255, 255, 0.62);
-  --ai-panel-soft: rgba(255, 255, 255, 0.48);
-  --ai-panel-hover: rgba(255, 255, 255, 0.78);
-  --ai-accent: #3478f6;
-  --ai-accent-soft: rgba(52, 120, 246, 0.1);
-  --ai-blue: #3478f6;
-  --ai-text: #172033;
-  --ai-text-secondary: rgba(23, 32, 51, 0.58);
-  --ai-text-muted: rgba(23, 32, 51, 0.44);
-  --ai-hover-text: #1f64e0;
-  --ai-active-text: #172033;
-  --ai-surface: rgba(255, 255, 255, 0.7);
-  --ai-card: rgba(255, 255, 255, 0.66);
-  --ai-card-border: rgba(15, 23, 42, 0.07);
-  --ai-card-hover-border: rgba(52, 120, 246, 0.2);
+  --ai-border: var(--app-glass-border-emphasis);
+  --ai-border-strong: var(--app-glass-border-emphasis-strong);
+  --ai-panel: var(--app-glass-surface-62);
+  --ai-panel-soft: var(--app-glass-surface-48);
+  --ai-panel-hover: var(--app-glass-surface-78);
+  --ai-accent: var(--app-glass-accent);
+  --ai-accent-soft: var(--app-glass-accent-tint);
+  --ai-blue: var(--app-glass-accent);
+  --ai-text: var(--app-glass-text);
+  --ai-text-secondary: var(--app-glass-text-description);
+  --ai-text-muted: var(--app-glass-text-caption);
+  --ai-hover-text: var(--app-task-glass-link-hover);
+  --ai-active-text: var(--app-glass-text);
+  --ai-surface: var(--app-glass-surface-70);
+  --ai-card: var(--app-glass-surface-66);
+  --ai-card-border: var(--app-glass-border-strong);
+  --ai-card-hover-border: var(--app-glass-card-border-hover);
   --ai-card-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 12px 28px rgba(31, 41, 55, 0.055);
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 12px 28px var(--app-glass-shadow-workspace);
   background:
-    radial-gradient(circle at 18% 4%, rgba(52, 120, 246, 0.07), transparent 26%),
-    radial-gradient(circle at 78% 0%, rgba(125, 211, 252, 0.055), transparent 24%),
-    #f5f7fa;
+    radial-gradient(circle at 18% 4%, var(--app-task-page-glow-primary), transparent 26%),
+    radial-gradient(circle at 78% 0%, var(--app-task-page-glow-secondary), transparent 24%),
+    var(--app-glass-page);
 }
 
 .ai-testing-page::before {
@@ -235,58 +235,58 @@
 }
 
 .ai-testing-page .workbench-project-toolbar {
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid var(--app-glass-border-78);
+  background: var(--app-glass-surface-62);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.88),
-    0 12px 32px rgba(31, 41, 55, 0.055);
+    inset 0 1px 0 var(--app-glass-highlight-88),
+    0 12px 32px var(--app-glass-shadow-workspace);
 }
 
 .ai-testing-task-panel.workbench-panel {
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--app-glass-border-78);
+  background: var(--app-glass-surface-70);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.88),
-    0 18px 42px rgba(31, 41, 55, 0.06);
+    inset 0 1px 0 var(--app-glass-highlight-88),
+    0 18px 42px var(--app-glass-shadow-raised);
 }
 
 .ai-task-panel-header,
 .ai-testing-page .panel-header.api-panel-header {
-  border-bottom-color: rgba(15, 23, 42, 0.07);
-  background: rgba(255, 255, 255, 0.54);
+  border-bottom-color: var(--app-glass-border-strong);
+  background: var(--app-glass-surface-54);
 }
 
 .ai-testing-page .table-footer {
-  border-top-color: rgba(15, 23, 42, 0.07);
-  background: rgba(255, 255, 255, 0.54);
+  border-top-color: var(--app-glass-border-strong);
+  background: var(--app-glass-surface-54);
 }
 
 /* Global macOS palette alignment */
 
 .app-shell-macos .ai-testing-page {
-  --ai-border: rgba(15, 23, 42, 0.065);
-  --ai-border-strong: rgba(15, 23, 42, 0.12);
-  --ai-panel: rgba(255, 255, 255, 0.68);
-  --ai-panel-soft: rgba(255, 255, 255, 0.56);
-  --ai-panel-hover: rgba(255, 255, 255, 0.82);
-  --ai-accent: #0a84ff;
-  --ai-accent-soft: rgba(10, 132, 255, 0.1);
-  --ai-blue: #0a84ff;
-  --ai-text: #172033;
-  --ai-text-secondary: rgba(23, 32, 51, 0.58);
-  --ai-text-muted: rgba(23, 32, 51, 0.44);
-  --ai-hover-text: #006edb;
-  --ai-active-text: #172033;
-  --ai-surface: rgba(255, 255, 255, 0.68);
-  --ai-card: rgba(255, 255, 255, 0.72);
-  --ai-card-border: rgba(15, 23, 42, 0.065);
-  --ai-card-hover-border: rgba(10, 132, 255, 0.18);
+  --ai-border: var(--app-glass-divider);
+  --ai-border-strong: var(--app-glass-border-emphasis-strong);
+  --ai-panel: var(--app-glass-surface-68);
+  --ai-panel-soft: var(--app-glass-surface-56);
+  --ai-panel-hover: var(--app-glass-surface-82);
+  --ai-accent: var(--app-glass-link);
+  --ai-accent-soft: var(--app-glass-accent-soft);
+  --ai-blue: var(--app-glass-link);
+  --ai-text: var(--app-glass-text);
+  --ai-text-secondary: var(--app-glass-text-description);
+  --ai-text-muted: var(--app-glass-text-caption);
+  --ai-hover-text: var(--app-glass-link-hover);
+  --ai-active-text: var(--app-glass-text);
+  --ai-surface: var(--app-glass-surface-68);
+  --ai-card: var(--app-glass-surface-72);
+  --ai-card-border: var(--app-glass-divider);
+  --ai-card-hover-border: var(--app-glass-action-border);
 }
 
 .app-shell-macos .ai-testing-page .workbench-project-toolbar,
 .app-shell-macos .ai-testing-task-panel.workbench-panel {
-  border-color: rgba(15, 23, 42, 0.065) !important;
-  background: rgba(255, 255, 255, 0.68) !important;
+  border-color: var(--app-glass-divider) !important;
+  background: var(--app-glass-surface-68) !important;
 }
 
 /* 任务列表与 Skill 库共用的面板容器。 */
@@ -333,7 +333,7 @@
 /* AI testing card content: macOS simple frosted white refinement */
 
 .app-shell-macos .ai-testing-page .ai-testing-card-scroll {
-  background: rgba(255, 255, 255, 0.18) !important;
+  background: var(--app-glass-surface-18) !important;
 }
 
 /* Unified first-level workspace spacing, matched to Base Services. */

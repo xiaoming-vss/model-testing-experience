@@ -1,3 +1,4 @@
+import { ConfigProvider } from 'antd'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
@@ -51,9 +52,9 @@ function listResponse<T>(items: T[]) {
 function renderWorkspace(client: QueryClient) {
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
+      <ConfigProvider theme={{ token: { motion: false } }}><MemoryRouter>
         <TestOrderWorkspacePage />
-      </MemoryRouter>
+      </MemoryRouter></ConfigProvider>
     </QueryClientProvider>,
   )
 }
@@ -272,5 +273,26 @@ it('底部条目导航切换详情，步骤与预期保持对应', async () => {
   expect(screen.getByRole('button', { name: '下一条' })).toBeDisabled()
   await user.click(screen.getByRole('button', { name: '上一条' }))
   expect(await screen.findByText('账号锁定')).toBeInTheDocument()
+  client.clear()
+})
+
+it('图谱打开时数字和方向键不操作底层执行条目', async () => {
+  useAuthStore.setState({ user: { userId: 'user-1' } as User })
+  vi.spyOn(api, 'getTestOrder').mockResolvedValue(order)
+  vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(listResponse([entry]))
+  vi.spyOn(api, 'getTestOrderGraph').mockResolvedValue({ orderId: 'order-1', run: null })
+  const update = vi.spyOn(api, 'updateTestOrderEntry').mockResolvedValue(entry)
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedAccess(client, 'owner')
+  renderWorkspace(client)
+  const user = userEvent.setup()
+  await screen.findByText('V2.3 回归测试单')
+  await user.click(screen.getByRole('button', { name: '用例图谱' }))
+  await screen.findByText('这张测试单还没有生成过图谱')
+  await user.keyboard('1234{ArrowDown}{ArrowUp}')
+  expect(update).not.toHaveBeenCalled()
+  await user.click(screen.getByRole('button', { name: 'Close' }))
+  expect(screen.getByRole('button', { name: '用例图谱' })).toBeVisible()
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: '用例图谱' })).not.toBeInTheDocument())
   client.clear()
 })

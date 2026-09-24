@@ -458,9 +458,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
           <div className="panel-header api-panel-header api-test-header tp-list-toolbar">
             <div className="api-test-header-main">
               <div className="requirement-panel-head api-panel-head-main">
-                <Text strong className="api-test-title">
-                  API测试集
-                </Text>
+                <h1 className="tp-list-title">API测试</h1>
                 {!isRequirementLocked ? (
                   <div className="api-filter-group">
                     <div className="api-filter-field">

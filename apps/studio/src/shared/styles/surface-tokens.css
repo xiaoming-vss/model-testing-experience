@@ -10,6 +10,7 @@
  */
 
 :root {
+  --srf-shadow-color: var(--app-surface-shadow);
   --srf-list-header-text: #7b8494;
   --srf-list-header-bg: #f7f9fc;
   --srf-list-row-bg: #ffffff;
@@ -247,21 +248,68 @@
   background: transparent;
 }
 
-/* 设计稿里筛选行是一条裸工具栏，不是面板表面；同样要压掉 macOS 玻璃底色。 */
-
-/* Four testing lists share the same filter-card geometry, including wrapped rows. */
-.app-shell.app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel .panel-header.api-panel-header.tp-list-toolbar {
+/* 四个测试列表的筛选卡片唯一实现。旧 panel-header 规则显式排除 tp-list-toolbar，
+   页面只补内部排布，不再通过高权重或 !important 重写这里的尺寸与表面。 */
+.tp-surface .tp-list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   box-sizing: border-box;
   width: 100%;
   min-height: 56px;
   flex: 0 0 auto;
   margin: 0;
-  padding: 10px 16px !important;
+  padding: 10px 16px;
   gap: 8px;
-  border: 1px solid var(--srf-card-border) !important;
-  border-radius: var(--srf-radius-card) !important;
-  background: var(--srf-card) !important;
-  box-shadow: none !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* 全站列表筛选控件共用尺寸；页面不得重复定义同类控件的几何规则。 */
+.tp-surface .tp-list-toolbar :is(.api-filter-field, .ai-task-sprint-filter) {
+  gap: 8px;
+}
+
+.tp-surface .tp-list-toolbar :is(.api-filter-field-label, .ai-task-sprint-filter-label) {
+  margin: 0;
+  padding: 0;
+  line-height: 18px;
+}
+
+.tp-surface .tp-list-toolbar :is(.business-filter-select, .ai-task-sprint-filter-select) {
+  width: 180px;
+}
+
+.tp-surface .tp-list-toolbar :is(.test-orders-search-field, .ai-task-search-field, .api-test-search-field, .ui-suite-list-search-field, .case-library-search-field) {
+  width: 288px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tp-surface .tp-list-toolbar :is(.api-filter-input, .ai-task-search-input) {
+  width: 100%;
+}
+
+.tp-surface .tp-list-toolbar :is(.api-filter-group, .api-panel-head-main, .ui-suite-list-toolbar-filters, .ai-task-panel-tools) {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tp-surface .tp-list-toolbar {
+  flex-wrap: wrap;
+}
+
+/* 列表标题始终位于工具栏起始位置，同类页面共用排版。 */
+.tp-list-title {
+  flex: 0 0 auto;
+  margin: 0;
+  color: var(--app-shell-text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 24px;
+  white-space: nowrap;
 }

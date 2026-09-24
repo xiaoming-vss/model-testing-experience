@@ -1,9 +1,25 @@
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { TextCodeEditor } from './TextCodeEditor'
+import editorTokens from '@/shared/styles/editor-tokens.css?raw'
+
+let paletteStyle: HTMLStyleElement
+beforeEach(() => {
+  paletteStyle = document.createElement('style')
+  paletteStyle.textContent = editorTokens
+  document.head.append(paletteStyle)
+})
+
+// jsdom does not resolve var() to a color. Verify both the emitted syntax role
+// and its light value; actual resolution is checked in the browser.
+function expectSyntaxColor(element: HTMLElement, role: string, lightValue: string) {
+  expect(element).toHaveStyle({ color: `var(--editor-syntax-${role})` })
+  expect(getComputedStyle(document.documentElement).getPropertyValue(`--editor-syntax-${role}`).trim()).toBe(lightValue)
+}
 
 afterEach(() => {
   cleanup()
+  paletteStyle.remove()
 })
 
 describe('TextCodeEditor', () => {
@@ -18,10 +34,10 @@ describe('TextCodeEditor', () => {
 
     expect(screen.getByRole('textbox', { name: '候选结果 YAML' })).toBeInTheDocument()
     await waitFor(() => {
-      expect(screen.getByText('name')).toHaveStyle({ color: '#d97706' })
-      expect(screen.getByText('登录成功')).toHaveStyle({ color: '#16a34a' })
-      expect(screen.getByText('true')).toHaveStyle({ color: '#16a34a' })
-      expect(screen.getAllByText(':')[0]).toHaveStyle({ color: '#475569' })
+      expectSyntaxColor(screen.getByText('name'), 'key', '#d97706')
+      expectSyntaxColor(screen.getByText('登录成功'), 'string', '#16a34a')
+      expectSyntaxColor(screen.getByText('true'), 'string', '#16a34a')
+      expectSyntaxColor(screen.getAllByText(':')[0], 'yaml-punctuation', '#475569')
     })
   })
 
@@ -37,10 +53,10 @@ describe('TextCodeEditor', () => {
     const editor = screen.getByRole('textbox', { name: '候选结果 JSON' })
     expect(editor.closest('.json-editor-wrap')?.querySelector('.cm-foldGutter')).toBeInTheDocument()
     await waitFor(() => {
-      expect(within(editor).getByText('"name"')).toHaveStyle({ color: '#d97706' })
-      expect(within(editor).getByText('"登录成功"')).toHaveStyle({ color: '#16a34a' })
-      expect(within(editor).getByText('true')).toHaveStyle({ color: '#56b6c2' })
-      expect(within(editor).getByText('1')).toHaveStyle({ color: '#d19a66' })
+      expectSyntaxColor(within(editor).getByText('"name"'), 'key', '#d97706')
+      expectSyntaxColor(within(editor).getByText('"登录成功"'), 'string', '#16a34a')
+      expectSyntaxColor(within(editor).getByText('true'), 'boolean', '#56b6c2')
+      expectSyntaxColor(within(editor).getByText('1'), 'number', '#d19a66')
     })
   })
 })

@@ -12,21 +12,21 @@
 }
 
 :root {
-  --tp-action-create: #3fa46f;
-  --tp-action-create-strong: #2f8a5a;
-  --tp-action-create-soft: rgba(63, 164, 111, 0.12);
-  --tp-action-read: #4a8ff7;
-  --tp-action-read-strong: #2f6fe0;
-  --tp-action-read-soft: rgba(74, 143, 247, 0.12);
-  --tp-action-update: #e3a63c;
-  --tp-action-update-strong: #c78c2b;
-  --tp-action-update-soft: rgba(227, 166, 60, 0.14);
-  --tp-action-delete: #e35d6a;
-  --tp-action-delete-strong: #cb4150;
-  --tp-action-delete-soft: rgba(227, 93, 106, 0.12);
-  --tp-action-save: #3ea8a4;
-  --tp-action-save-strong: #2f8f8b;
-  --tp-action-save-soft: rgba(62, 168, 164, 0.14);
+  --tp-action-create: var(--app-action-create);
+  --tp-action-create-strong: var(--app-action-create-strong);
+  --tp-action-create-soft: var(--app-action-create-soft);
+  --tp-action-read: var(--app-action-read);
+  --tp-action-read-strong: var(--app-action-read-strong);
+  --tp-action-read-soft: var(--app-action-read-soft);
+  --tp-action-update: var(--app-action-update);
+  --tp-action-update-strong: var(--app-action-update-strong);
+  --tp-action-update-soft: var(--app-action-update-soft);
+  --tp-action-delete: var(--app-action-delete);
+  --tp-action-delete-strong: var(--app-action-delete-strong);
+  --tp-action-delete-soft: var(--app-action-delete-soft);
+  --tp-action-save: var(--app-action-save);
+  --tp-action-save-strong: var(--app-action-save-strong);
+  --tp-action-save-soft: var(--app-action-save-soft);
 }
 
 .ant-btn.action-btn-create,
@@ -53,7 +53,7 @@
   width: 180px;
 }
 
-.api-panel-header {
+.api-panel-header:not(:where(.tp-list-toolbar)) {
   gap: 16px;
 }
 
@@ -77,7 +77,7 @@
 }
 
 .api-environment-label {
-  color: #727786;
+  color: var(--app-shell-text-muted);
   font-size: 13px;
   line-height: 20px;
   white-space: nowrap;
@@ -92,7 +92,7 @@
 }
 
 .api-environment-summary-item {
-  color: #475569;
+  color: var(--app-surface-chip-text);
   font-size: 13px;
   line-height: 20px;
 }
@@ -115,8 +115,8 @@
   flex: 0 0 auto;
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(37, 99, 235, 0.08);
-  color: #4f5f85;
+  background: var(--app-environment-option-selected);
+  color: var(--app-request-summary-text);
   font-size: 12px;
   line-height: 18px;
   font-weight: 600;
@@ -145,7 +145,7 @@
 
 .api-collection-description {
   margin-bottom: 0 !important;
-  color: #7e8799;
+  color: var(--app-request-overview-text-muted);
   font-size: 12px;
   line-height: 18px;
   font-weight: 400;

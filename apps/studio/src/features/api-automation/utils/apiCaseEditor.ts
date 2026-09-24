@@ -9,7 +9,7 @@ import type {
 } from '@/services/api'
 import { moveArrayItem } from '@/shared/utils/array'
 import { formatOptionalValue, parseMaybeJsonValue } from '@/shared/utils/value'
-import { normalizeAssertRuleId, normalizeExtractRuleId, pickCreatedAt } from '@/utils/format'
+import { pickCreatedAt } from '@/utils/format'
 
 export const EMPTY_API_CASES: ApiCase[] = []
 export const EMPTY_API_ENVIRONMENTS: ApiEnvironment[] = []
@@ -284,12 +284,4 @@ export function sortRulesByOrderNo<T extends { orderNo?: number; createdAt?: str
     const rightCreatedTime = right.createdAt ?? right.created_at ?? ''
     return new Date(leftCreatedTime).getTime() - new Date(rightCreatedTime).getTime()
   })
-}
-
-export function getAssertRuleId(rule: ApiAssertRule) {
-  return normalizeAssertRuleId(rule)
-}
-
-export function getExtractRuleId(rule: ApiExtractRule) {
-  return normalizeExtractRuleId(rule)
 }

@@ -1,3 +1,4 @@
+import { toRecord } from '@/shared/utils/value'
 import { Alert, Button, Empty, Modal, Segmented, Select, Spin, Tag, Typography } from 'antd'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -16,23 +17,20 @@ import {
   getApiCaseGenerateTaskRunStatusMeta,
   isApiCaseGenerateTaskRunInProgress,
 } from '@/features/ai-testing/utils/taskStatus'
-import { api } from '@/services/api'
+import { api, listItems } from '@/services/api'
+import { TestOrderGraphExecutionPanel } from './TestOrderGraphExecutionPanel'
+import { getTestOrderEntryStatusMeta } from '../utils/testOrderStatus'
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
 import { message } from '@/shared/utils/feedback'
 import { formatStructuredContent } from '@/shared/utils/value'
 import { getErrorMessage } from '@/utils/format'
 import '@/features/ai-testing/components/FunctionalCaseRelationsViewer.css'
+import '../styles/graph-viewer.css'
 
 const { Text } = Typography
 
 // 图谱任务要跑多轮 skill 调用，运行中按固定间隔刷新。
 const GRAPH_POLL_INTERVAL = 5000
-
-function toRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null
-}
 
 /**
  * 图谱只存 case_id，节点名称要来用例本身；派发时回显在 configJson 里的 `graphInput.cases` 就是它。
@@ -58,6 +56,8 @@ type TestOrderGraphViewerProps = {
   projectId?: string
   /** 派发需要 execute 权限；查看只要 read。 */
   canExecute: boolean
+  currentUserId?: string
+  isProjectOwner?: boolean
   onClose: () => void
 }
 
@@ -67,6 +67,8 @@ export function TestOrderGraphViewer({
   orderId,
   projectId,
   canExecute,
+  currentUserId,
+  isProjectOwner = false,
   onClose,
 }: TestOrderGraphViewerProps) {
   const personalLlm = usePersonalLlmChoice(projectId)
@@ -85,6 +87,22 @@ export function TestOrderGraphViewer({
         ? GRAPH_POLL_INTERVAL
         : false,
   })
+  const entriesQuery = useQuery({
+    queryKey: ['testOrderEntries', orderId],
+    queryFn: () => api.getTestOrderEntries(orderId),
+    enabled: open && Boolean(orderId),
+  })
+  const entriesByCase = useMemo(() => new Map(listItems(entriesQuery.data).map((entry) => [entry.caseId, entry])), [entriesQuery.data])
+  const caseBadges = useMemo(() => Object.fromEntries(listItems(entriesQuery.data)
+    .filter((entry) => entry.caseId)
+    .map((entry) => [entry.caseId!, getTestOrderEntryStatusMeta(entry.status)])), [entriesQuery.data])
+  const renderExecutionPanel = (caseId: string) => {
+    if (entriesQuery.isPending) return <Spin tip="加载执行条目…" />
+    if (entriesQuery.isError) return <Alert type="error" title="执行条目加载失败" action={<Button onClick={() => void entriesQuery.refetch()}>重试</Button>} />
+    const entry = entriesByCase.get(caseId)
+    if (!entry?.entryId) return <Alert type="info" title="此用例已不在当前测试单中，无法执行，请刷新或重新生成图谱" />
+    return <TestOrderGraphExecutionPanel key={`${orderId}:${entry.entryId}`} orderId={orderId} entry={entry} canExecute={canExecute} currentUserId={currentUserId} isProjectOwner={isProjectOwner} />
+  }
   const run = graphQuery.data?.run ?? null
   const inProgress = isApiCaseGenerateTaskRunInProgress(run?.status)
   const statusMeta = getApiCaseGenerateTaskRunStatusMeta(run?.status)
@@ -158,6 +176,9 @@ export function TestOrderGraphViewer({
         casesContent={casesContent}
         orientation={orientation}
         onSelectionChange={handleSelectionChange}
+        renderCaseDetails={renderExecutionPanel}
+        caseBadges={caseBadges}
+        panelWidth={420}
       />
     )
   } else {
@@ -179,24 +200,23 @@ export function TestOrderGraphViewer({
   return (
     <>
       <Modal
-        className="ai-relations-modal"
+        className="test-order-graph-modal"
         title="用例图谱"
         open={open}
         onCancel={onClose}
         footer={null}
-        width="80vw"
+        width="92vw"
+        centered
         destroyOnHidden
         styles={{
-          body: {
-            height: '72vh',
-            minHeight: 0,
-            padding: 0,
-            overflow: 'hidden',
-          },
+          container: { padding: 0, overflow: 'hidden' },
+          header: { display: 'none' },
+          body: { height: '86dvh', minHeight: 0, padding: 0, overflow: 'hidden' },
         }}
       >
         <div className="ai-relations-page">
           <div className="ai-relations-page-bar">
+            <Text strong>用例图谱</Text>
             <div className="test-order-graph-status">
               {run ? <Tag color={statusMeta.color}>{statusMeta.label}</Tag> : null}
               {inProgress ? <Text type="secondary">每 5 秒自动刷新</Text> : null}

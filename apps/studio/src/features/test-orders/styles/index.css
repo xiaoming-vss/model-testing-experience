@@ -6,7 +6,7 @@
 }
 
 .test-order-preconditions {
-  color: var(--tp-text-secondary, #414755);
+  color: var(--tp-text-secondary, var(--app-shell-text-secondary));
   font-size: 13px;
   line-height: 1.7;
 }
@@ -18,8 +18,8 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: rgba(84, 104, 132, 0.12);
-  color: var(--tp-text-secondary, #414755);
+  background: var(--app-glass-table-divider);
+  color: var(--tp-text-secondary, var(--app-shell-text-secondary));
   font-size: 11px;
   font-weight: 600;
 }
@@ -31,7 +31,7 @@
 
 .test-order-step-expect {
   margin-top: 6px;
-  color: var(--tp-text-muted, #727786);
+  color: var(--tp-text-muted, var(--app-shell-text-muted));
   font-size: 12.5px;
 }
 

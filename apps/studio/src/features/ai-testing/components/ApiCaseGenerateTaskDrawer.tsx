@@ -137,7 +137,7 @@ export function ApiCaseGenerateTaskDrawer({
                   <p className="ant-upload-text">点击或拖拽 JSON / YAML 文件到这里</p>
                   <p className="ant-upload-hint">前端会读取文件内容并写入 sourceContent，提交时仍按文本发送给后端。</p>
                 </Upload.Dragger>
-                <div style={{ marginTop: 8, color: 'var(--ai-text-secondary, #97a3ba)', fontSize: 12 }}>
+                <div style={{ marginTop: 8, color: 'var(--ai-text-secondary, var(--app-task-help-text))', fontSize: 12 }}>
                   {uploadedFileName ? `当前文件：${uploadedFileName}` : '尚未选择文件'}
                 </div>
               </div>

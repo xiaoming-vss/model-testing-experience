@@ -1,0 +1,31 @@
+/* Light sources for scoped workbench aliases; geometry stays in its owning CSS. */
+:root {
+  --legacy-tp-border: #e5e7ef;
+  --legacy-tp-border-soft: #eef0f6;
+  --legacy-tp-text: #181b23;
+  --legacy-tp-text-secondary: #414755;
+  --legacy-tp-text-muted: #727786;
+  --legacy-mac-glass-page: #f5f7fa;
+  --legacy-mac-glass-sidebar: rgba(246, 248, 251, 0.78);
+  --legacy-mac-glass-header: rgba(246, 248, 251, 0.78);
+  --legacy-mac-glass-panel: rgba(255, 255, 255, 0.68);
+  --legacy-mac-glass-panel-strong: rgba(255, 255, 255, 0.82);
+  --legacy-mac-glass-border: rgba(15, 23, 42, 0.065);
+  --legacy-mac-glass-border-soft: rgba(15, 23, 42, 0.045);
+  --legacy-mac-glass-text: #172033;
+  --legacy-mac-glass-muted: rgba(23, 32, 51, 0.52);
+  --legacy-mac-glass-blue: #0a84ff;
+  --legacy-mac-glass-card: rgba(255, 255, 255, 0.72);
+  --legacy-mac-glass-subtle: rgba(23, 32, 51, 0.38);
+  --legacy-mac-glass-green: #3f995b;
+  --legacy-project-overview-border: rgba(15, 23, 42, 0.065);
+  --legacy-project-overview-panel: rgba(255, 255, 255, 0.68);
+  --legacy-project-overview-panel-soft: rgba(255, 255, 255, 0.5);
+  --legacy-project-overview-card: rgba(255, 255, 255, 0.72);
+  --legacy-project-overview-card-hover: rgba(255, 255, 255, 0.82);
+  --legacy-project-overview-text: #172033;
+  --legacy-project-overview-secondary: rgba(23, 32, 51, 0.58);
+  --legacy-project-overview-muted: rgba(23, 32, 51, 0.44);
+  --legacy-project-overview-blue: #0a84ff;
+  --legacy-mac-action-blue-border: rgba(10, 132, 255, 0.18);
+}

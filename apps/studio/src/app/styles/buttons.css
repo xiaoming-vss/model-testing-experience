@@ -10,6 +10,7 @@
     --button-hover-border: #bdcadb;
     --button-active-bg: #e9eef5;
     --button-primary-text: #24578f;
+    --button-link-text: #24578f;
     --button-primary-bg: #e3edf9;
     --button-primary-border: #b5cbe5;
     --button-primary-hover-bg: #e1edfc;
@@ -75,7 +76,7 @@
   }
 
   .ant-btn-link:not(.ant-btn-dangerous):not(.action-btn-delete) {
-    --button-current-text: var(--button-primary-text);
+    --button-current-text: var(--button-link-text);
   }
 
   .ant-btn-link {

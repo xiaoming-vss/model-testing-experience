@@ -1,0 +1,18 @@
+/* CodeMirror surfaces and syntax roles. Light values only. */
+:root {
+  --editor-text: #1f2937;
+  --editor-bg: #ffffff;
+  --editor-caret: #111827;
+  --editor-selection: rgba(96, 165, 250, 0.24);
+  --editor-active-line: rgba(15, 23, 42, 0.02);
+  --editor-gutter-text: #94a3b8;
+  --editor-gutter-border: #eef2f7;
+  --editor-syntax-key: #d97706;
+  --editor-syntax-string: #16a34a;
+  --editor-syntax-number: #d19a66;
+  --editor-syntax-boolean: #56b6c2;
+  --editor-syntax-null: #c678dd;
+  --editor-syntax-json-punctuation: #334155;
+  --editor-syntax-meta: #64748b;
+  --editor-syntax-yaml-punctuation: #475569;
+}

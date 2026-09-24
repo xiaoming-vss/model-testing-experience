@@ -1,12 +1,12 @@
 .app-shell {
   min-height: 100vh;
-  background: #faf9ff;
-  color: #181b23;
+  background: var(--app-shell-bg);
+  color: var(--app-shell-text);
 }
 
 .app-sider {
-  background: #f2f3ff !important;
-  border-right: 1px solid #c1c6d7;
+  background: var(--app-shell-sidebar) !important;
+  border-right: 1px solid var(--app-shell-border);
 }
 
 .brand {
@@ -17,9 +17,9 @@
   gap: 10px;
   padding: 0 24px;
   border: 0;
-  border-bottom: 1px solid #c1c6d7;
+  border-bottom: 1px solid var(--app-shell-border);
   background: transparent;
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 18px;
   font-weight: 700;
   cursor: pointer;
@@ -31,31 +31,31 @@
 
 .mtx-logo {
   display: block;
-  color: #2970ff;
-  filter: drop-shadow(0 9px 18px rgba(41, 112, 255, 0.16));
+  color: var(--app-logo-primary);
+  filter: drop-shadow(0 9px 18px var(--app-logo-shadow));
 }
 
 .mtx-logo__plate {
-  stroke: rgba(15, 23, 42, 0.11);
+  stroke: var(--app-logo-border);
   stroke-width: 1.2;
 }
 
 .mtx-logo__model {
-  stroke: #2970ff;
+  stroke: var(--app-logo-primary);
   stroke-width: 4.4;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .mtx-logo__test {
-  stroke: #1e293b;
+  stroke: var(--app-logo-model-text);
   stroke-width: 4.1;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .mtx-logo__experience {
-  stroke: #12b8a6;
+  stroke: var(--app-logo-secondary);
   stroke-width: 4.4;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -76,12 +76,12 @@
 }
 
 .app-sider .ant-menu-item-selected {
-  background: #1677ff !important;
-  color: #fff !important;
+  background: var(--app-accent) !important;
+  color: var(--app-on-accent) !important;
 }
 
 .app-sider .ant-menu-item-selected .anticon {
-  color: #fff !important;
+  color: var(--app-on-accent) !important;
 }
 
 .app-header {
@@ -90,8 +90,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fff;
-  border-bottom: 1px solid #c1c6d7;
+  background: var(--app-surface);
+  border-bottom: 1px solid var(--app-shell-border);
 }
 
 .app-header-left {
@@ -101,7 +101,7 @@
 .app-header h2.ant-typography {
   margin: 0;
   min-width: 190px;
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 24px;
   line-height: 32px;
   font-weight: 700;
@@ -111,7 +111,7 @@
   width: 260px;
   height: 32px;
   border-radius: 2px;
-  background: #faf9ff;
+  background: var(--app-shell-bg);
 }
 
 .app-header-actions .ant-btn-circle {
@@ -120,7 +120,7 @@
 
 .app-content {
   padding: 0;
-  background: #faf9ff;
+  background: var(--app-shell-bg);
 }
 
 .workbench-page {
@@ -134,8 +134,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  background: #faf9ff;
-  border-bottom: 1px solid #d8d9e5;
+  background: var(--app-shell-bg);
+  border-bottom: 1px solid var(--app-shell-divider);
 }
 
 .project-selector-wrap {
@@ -143,7 +143,7 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 14px;
 }
 
@@ -152,7 +152,7 @@
 }
 
 .project-separator {
-  color: #727786;
+  color: var(--app-shell-text-muted);
 }
 
 .project-select {
@@ -161,7 +161,7 @@
 
 .project-select .ant-select-selector {
   padding-inline: 0 !important;
-  color: #414755;
+  color: var(--app-shell-text-secondary);
 }
 
 .project-actions .ant-btn-primary,
@@ -179,7 +179,7 @@
 
 .workbench-tabs > .ant-tabs-nav {
   margin: 0 0 24px;
-  border-bottom: 1px solid #c1c6d7;
+  border-bottom: 1px solid var(--app-shell-border);
 }
 
 .workbench-tabs .ant-tabs-tab {
@@ -189,30 +189,30 @@
 }
 
 .workbench-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
-  color: #0057c2 !important;
+  color: var(--app-accent-hover) !important;
 }
 
 .workbench-tabs .ant-tabs-ink-bar {
-  background: #0057c2;
+  background: var(--app-accent-hover);
 }
 
 .workbench-panel {
-  background: #fff;
-  border: 1px solid #c1c6d7;
+  background: var(--app-surface);
+  border: 1px solid var(--app-shell-border);
   border-radius: 2px;
 }
 
-.panel-header {
+.panel-header:not(:where(.tp-list-toolbar)) {
   min-height: 64px;
   padding: 16px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #c1c6d7;
+  border-bottom: 1px solid var(--app-shell-border);
 }
 
 .panel-header .ant-typography {
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 18px;
 }
 
@@ -221,19 +221,19 @@
 }
 
 .workbench-panel .ant-table-thead > tr > th {
-  background: #fff;
-  color: #181b23;
+  background: var(--app-surface);
+  color: var(--app-shell-text);
   font-size: 15px;
   font-weight: 700;
-  border-bottom: 1px solid #c1c6d7;
+  border-bottom: 1px solid var(--app-shell-border);
 }
 
 .workbench-panel .ant-table-tbody > tr > td {
   padding-top: 18px;
   padding-bottom: 18px;
-  color: #414755;
+  color: var(--app-shell-text-secondary);
   font-size: 15px;
-  border-bottom: 1px solid #d8d9e5;
+  border-bottom: 1px solid var(--app-shell-divider);
 }
 
 .sprint-icon {
@@ -241,11 +241,11 @@
 }
 
 .sprint-icon.running {
-  color: #1677ff;
+  color: var(--app-accent);
 }
 
 .sprint-icon.done {
-  color: #727786;
+  color: var(--app-shell-text-muted);
 }
 
 .workbench-panel .ant-pagination {
@@ -259,7 +259,7 @@
 }
 
 .placeholder-icon {
-  color: #1677ff;
+  color: var(--app-accent);
   font-size: 42px;
 }
 
@@ -268,6 +268,6 @@
   min-height: 320px;
   display: grid;
   place-items: center;
-  background: #fff;
-  border: 1px solid #c1c6d7;
+  background: var(--app-surface);
+  border: 1px solid var(--app-shell-border);
 }

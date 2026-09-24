@@ -17,7 +17,7 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  gap: 12px;
+  gap: 8px;
 }
 
 .app-shell.app-shell-macos .project-overview-page.requirements-page .requirements-sprint-select {

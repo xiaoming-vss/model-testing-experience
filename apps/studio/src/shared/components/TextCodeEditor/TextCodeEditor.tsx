@@ -1,3 +1,4 @@
+import { useThemeStore } from '@/shared/theme/theme.store'
 import CodeMirror from '@uiw/react-codemirror'
 import { indentWithTab } from '@codemirror/commands'
 import { json } from '@codemirror/lang-json'
@@ -6,6 +7,7 @@ import { syntaxHighlighting } from '@codemirror/language'
 import { EditorView, keymap } from '@codemirror/view'
 import {
   codeEditorTheme,
+  darkCodeEditorTheme,
   jsonEditorHighlightStyle,
   yamlEditorHighlightStyle,
 } from '../codeEditorTheme'
@@ -39,6 +41,7 @@ export function TextCodeEditor({
   language = 'plain',
   foldable,
 }: TextCodeEditorProps) {
+  const resolvedTheme = useThemeStore((state) => state.resolvedTheme)
   const resolvedLanguage = resolveLanguage(language, value)
   const showFoldGutter = foldable ?? resolvedLanguage !== 'plain'
 
@@ -59,7 +62,7 @@ export function TextCodeEditor({
             ...(resolvedLanguage === 'yaml' ? [yaml(), syntaxHighlighting(yamlEditorHighlightStyle)] : []),
             keymap.of([indentWithTab]),
             EditorView.lineWrapping,
-            codeEditorTheme,
+            resolvedTheme === 'dark' ? darkCodeEditorTheme : codeEditorTheme,
             EditorView.contentAttributes.of({
               ...(ariaLabel ? { 'aria-label': ariaLabel } : {}),
               'aria-readonly': String(readOnly),

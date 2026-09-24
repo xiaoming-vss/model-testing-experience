@@ -5,10 +5,10 @@
   overflow: hidden;
   position: relative;
   padding: 48px 24px;
-  color: #18202d;
+  color: var(--app-auth-text);
   background:
-    linear-gradient(180deg, rgba(249, 251, 254, 0.98), rgba(239, 244, 250, 0.96)),
-    #f5f8fc;
+    linear-gradient(180deg, var(--app-auth-gradient-start), var(--app-auth-gradient-end)),
+    var(--app-profile-surface);
 }
 
 .auth-page::before {
@@ -17,11 +17,11 @@
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.48), rgba(255, 255, 255, 0) 44%),
+    linear-gradient(180deg, var(--app-glass-surface-48), var(--app-auth-glow-end) 44%),
     repeating-linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.18) 0,
-      rgba(255, 255, 255, 0.18) 1px,
+      var(--app-glass-surface-18) 0,
+      var(--app-glass-surface-18) 1px,
       transparent 1px,
       transparent 92px
     );
@@ -43,14 +43,14 @@
   display: grid;
   grid-template-columns: 408px minmax(0, 1fr);
   overflow: hidden;
-  border: 1px solid rgba(15, 23, 42, 0.13);
+  border: 1px solid var(--app-auth-panel-border);
   border-radius: 22px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.91), rgba(255, 255, 255, 0.74)),
-    rgba(255, 255, 255, 0.78);
+    linear-gradient(180deg, var(--app-glass-surface-91), var(--app-glass-surface-74)),
+    var(--app-glass-surface-78);
   -webkit-backdrop-filter: saturate(180%) blur(30px);
   backdrop-filter: saturate(180%) blur(30px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.91);
+  box-shadow: inset 0 1px 0 var(--app-glass-highlight-91);
 }
 
 .auth-brand-panel {
@@ -58,10 +58,10 @@
   padding: 112px 56px 58px;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid rgba(15, 23, 42, 0.095);
+  border-right: 1px solid var(--app-auth-panel-divider);
   background:
-    linear-gradient(90deg, rgba(246, 249, 253, 0.58), rgba(255, 255, 255, 0.36)),
-    rgba(255, 255, 255, 0.24);
+    linear-gradient(90deg, var(--app-auth-aside-bg), var(--app-glass-surface-36)),
+    var(--app-glass-surface-24);
 }
 
 .auth-brand-copy {
@@ -70,7 +70,7 @@
 
 .auth-brand-name {
   display: block;
-  color: #18202d;
+  color: var(--app-auth-text);
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 46px;
   font-weight: 750;
@@ -81,7 +81,7 @@
 .auth-brand-subtitle {
   display: block;
   margin-top: 4px;
-  color: rgba(24, 32, 45, 0.54);
+  color: var(--app-auth-text-secondary);
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 13px;
   line-height: 20px;
@@ -89,7 +89,7 @@
 
 .auth-brand-copy p {
   margin: 30px 0 0;
-  color: rgba(24, 32, 45, 0.54);
+  color: var(--app-auth-text-secondary);
   font-size: 15px;
   line-height: 24px;
 }
@@ -106,8 +106,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.07);
-  color: rgba(24, 32, 45, 0.42);
+  border-bottom: 1px solid var(--app-glass-border-strong);
+  color: var(--app-auth-text-muted);
   font-size: 12px;
 }
 
@@ -116,15 +116,15 @@
   height: 8px;
   flex: 0 0 auto;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.6);
+  background: var(--app-auth-dot-neutral);
 }
 
 .auth-dot-blue {
-  background: rgba(41, 112, 255, 0.66);
+  background: var(--app-auth-dot-primary);
 }
 
 .auth-dot-teal {
-  background: rgba(18, 184, 166, 0.62);
+  background: var(--app-auth-dot-secondary);
 }
 
 .auth-form-panel {
@@ -141,7 +141,7 @@
 
 .auth-title h1 {
   margin: 0;
-  color: #18202d;
+  color: var(--app-auth-text);
   font-size: 24px;
   font-weight: 700;
   line-height: 34px;
@@ -149,7 +149,7 @@
 }
 
 .auth-title .ant-typography {
-  color: rgba(24, 32, 45, 0.54);
+  color: var(--app-auth-text-secondary);
   font-size: 14px;
   line-height: 22px;
 }
@@ -168,7 +168,7 @@
 
 .auth-form .ant-form-item-label > label {
   width: 100%;
-  color: rgba(24, 32, 45, 0.9);
+  color: var(--app-auth-control-text);
   font-size: 13px;
   font-weight: 650;
 }
@@ -191,10 +191,10 @@
 .auth-form .ant-input-affix-wrapper,
 .auth-form .ant-input {
   min-height: 46px;
-  border-color: rgba(15, 23, 42, 0.1);
+  border-color: var(--app-glass-detail-border-strong);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.82);
-  color: #18202d;
+  background: var(--app-glass-surface-82);
+  color: var(--app-auth-text);
   box-shadow: none;
 }
 
@@ -204,37 +204,37 @@
 
 .auth-form .ant-input-affix-wrapper:hover,
 .auth-form .ant-input:hover {
-  border-color: rgba(10, 132, 255, 0.22);
-  background: rgba(255, 255, 255, 0.9);
+  border-color: var(--app-auth-control-border);
+  background: var(--app-glass-surface-90);
 }
 
 .auth-form .ant-input-affix-wrapper-focused,
 .auth-form .ant-input:focus {
-  border-color: rgba(10, 132, 255, 0.38) !important;
-  background: rgba(255, 255, 255, 0.94) !important;
-  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.08) !important;
+  border-color: var(--app-auth-control-border-focus) !important;
+  background: var(--app-glass-surface-94) !important;
+  box-shadow: 0 0 0 3px var(--app-glass-accent-ring) !important;
 }
 
 .auth-form .ant-input::placeholder,
 .auth-form .ant-input-password input::placeholder {
-  color: rgba(24, 32, 45, 0.32);
+  color: var(--app-auth-control-placeholder);
 }
 
 .auth-form .ant-form-item-has-error .ant-input,
 .auth-form .ant-form-item-has-error .ant-input-affix-wrapper {
-  border-color: rgba(255, 59, 48, 0.34) !important;
-  background: rgba(255, 255, 255, 0.86) !important;
-  box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.07) !important;
+  border-color: var(--app-auth-control-error-border) !important;
+  background: var(--app-glass-surface-86) !important;
+  box-shadow: 0 0 0 3px var(--app-auth-control-error-ring) !important;
 }
 
 .auth-form .ant-form-item-explain-error {
-  color: rgba(220, 38, 38, 0.82);
+  color: var(--app-auth-control-error-text);
   font-size: 12px;
 }
 
 .auth-form .ant-input-prefix,
 .auth-form .ant-input-suffix {
-  color: rgba(24, 32, 45, 0.38);
+  color: var(--app-auth-caption);
 }
 
 .auth-remember {
@@ -243,7 +243,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: rgba(24, 32, 45, 0.54);
+  color: var(--app-auth-text-secondary);
   font-size: 12px;
   cursor: pointer;
   user-select: none;
@@ -253,12 +253,12 @@
   width: 16px;
   height: 16px;
   margin: 0;
-  accent-color: #0a84ff;
+  accent-color: var(--app-glass-link);
 }
 
 .auth-submit.ant-btn {
   height: 46px;
-  border: 1px solid rgba(10, 132, 255, 0.28);
+  border: 1px solid var(--app-glass-request-border-selected);
   border-radius: 12px;
 }
 
@@ -269,16 +269,16 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border-top: 1px solid rgba(15, 23, 42, 0.07);
+  border-top: 1px solid var(--app-glass-border-strong);
   font-size: 12px;
 }
 
 .auth-switch .ant-typography {
-  color: rgba(24, 32, 45, 0.42);
+  color: var(--app-auth-text-muted);
 }
 
 .auth-footer {
-  color: rgba(24, 32, 45, 0.34);
+  color: var(--app-auth-meta);
   font-size: 12px;
   line-height: 20px;
   text-align: center;
@@ -301,7 +301,7 @@
   .auth-brand-panel {
     padding: 34px 28px 28px;
     border-right: 0;
-    border-bottom: 1px solid rgba(15, 23, 42, 0.085);
+    border-bottom: 1px solid var(--app-auth-footer-divider);
   }
 
   .auth-brand-copy {
@@ -324,4 +324,11 @@
   .auth-form-panel {
     padding: 34px 28px 30px;
   }
+}
+
+.auth-theme-select {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
 }

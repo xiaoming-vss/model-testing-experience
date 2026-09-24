@@ -18,7 +18,7 @@
 | **待强制** | 规则已定，自动检查**尚未实现**；当前只能靠评审 |
 | **存量豁免** | 规则只对**新**代码生效；既有违规记入基线不修，只许减不许增 |
 
-> **当前状态：本文所有规则的自动检查均未实现。** 仓库没有 CI，也没有 git hook，`npm run verify` 与 `npm test` 依赖人工执行。因此下面的规则目前是**约定**，不是约束——把它变成约束是本文各条「检查」列的待办。
+> **当前状态：S8 的 CSS 裸色值检查已接入 `npm run verify`，其余自动检查仍待实现。** 仓库没有 CI，也没有 git hook，`npm run verify` 与 `npm test` 依赖人工执行。CSS 配色可通过 `npm run check:theme` 单独检查；其它规则的自动化见各条「检查」列。
 
 每条规则都从实际违规反推得到，附「拦住的问题」与文件行号，便于核对。行号为 2026-09-22 审计时刻的值，会随改造漂移。
 
@@ -59,13 +59,12 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 | --- | --- | --- | --- |
 | S3 | feature 之间**只允许** import 对方的 `api/` 与 `types.ts`。`components/`、`hooks/`、`utils/`、`styles/`、`config/`、`store/` 都是内部实现，不得跨 feature 引用 | `test-orders/components/TestOrderGraphViewer.tsx:7,8,14,18,24` 引用了 ai-testing 的图谱组件、hook、两个 utils，还 import 了它的 CSS；`test-orders/types.ts:1` 借用 ai-testing 类型 | ESLint（**待强制**）；按 feature 生成规则块，各自忽略自身目录 |
 | S4 | **归属判定（一句话）：被 2 个以上 feature 使用的代码必须上提。** 无业务语义 → `shared/`；有业务语义 → 提到 `app/` 或独立领域模块 | 用例关系图谱 `ai-testing/utils/caseRelationsGraph.ts`（483 行）被 test-orders 引用却留在 ai-testing；`projects` 被 3 个 feature 依赖（api-automation 16 处、ui-automation 13 处、base-services 10 处），是事实上的平台层却从未上提 | 评审 + 定期依赖图核对（**待强制**） |
-| S5 | `shared/` 准入两条：**无业务语义** + **全站唯一实现**。「全站唯一实现」必须列成显式清单，新增条目需评审 | `shared/components/JsonEditor/JsonEditor.tsx:88-99` 重写了同目录 `shared/utils/download.ts` 已有的 `saveBlob` | 清单见本节末（**待强制**） |
+| S5 | `shared/` 准入两条：**无业务语义** + **全站唯一实现**。「全站唯一实现」必须列成显式清单，新增条目需评审 | 文件下载已统一到 `shared/utils/download.ts` 的 `saveBlob`；对象解析已统一到 `shared/utils/value.ts` 的 `toRecord` / `toRecordArray` | 清单见本节末（**待强制**） |
 
 `shared/` 的「全站唯一实现」清单（新增需评审）：
 
 - CodeMirror 封装 —— `shared/components/TextCodeEditor`、`shared/components/JsonEditor`、`shared/components/codeEditorTheme.ts`。全项目 `@uiw/react-codemirror` / `@codemirror/*` 的 import 只允许出现在这里
 - 请求封装 —— `shared/api/request.ts`
-- 主题 store 与主题解析 —— `shared/store/theme.store.ts`
 - 文件下载 —— `shared/utils/download.ts`
 - 值格式化与载荷构造 —— `shared/utils/value.ts`、`shared/utils/payload.ts`
 - 操作按钮与权限门控 —— `shared/components/ActionButton`
@@ -76,7 +75,7 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 | --- | --- | --- | --- |
 | S6 | CSS 位置唯一：`features/<f>/styles/`。**禁止**在 `components/`、`pages/` 下放 CSS；全局层只允许 `app/styles/`、`shared/styles/` | 审计时 25 个 CSS 散在 6 类位置：`src/` 根 2、`app/styles/` 6、`shared/styles/` 1、`features/*/styles/` 10、`features/*/components/` 3、`features/*/pages/` 3。其中 6 个放错位置：`ai-testing/components/` 下的 `RevisionSidePanel.css`、`FunctionalCaseRelationsViewer.css`、`FunctionalCaseRelationsGraph.css`，以及 `ai-testing/pages/RequirementAnalysisTaskDetailPage.css`、`projects/pages/SprintDetailPage.css`、`profile/pages/ProfilePage.css`；`profile`、`projects`、`requirements` 连 `styles/` 目录都没有 | 扫描脚本路径检查（**存量豁免**：上述 6 个文件） |
 | S7 | 样式归属：feature 只写自家前缀。**全局层（`app/styles/`、`shared/styles/`）不得出现 feature 内部类名** | `app/styles/workbench.css` 引用 87 个 feature 内部类名、`layout.css` 12 个；`features/api-automation/styles/detail.css` 有 30 处 `.ui-*`（API 自动化给 UI 自动化写样式） | 扫描脚本前缀统计（**存量豁免**） |
-| S8 | token 单一来源：token 定义集中在**已登记的 token 文件**里（清单见下）。feature **只能消费，不得定义全局 token** | `--tp-text` 被 `app/styles/workbench.css` 与 `features/api-automation/styles/detail.css` 两处定义；`shared/styles/page-frame.css` 消费了 8 处 token（`:64,118,272,349,547,961,979,1072`，其中 `--tp-border`×3、`--tp-border-soft`×5），而这两个 token 的定义同样散在 `workbench.css` 与 `detail.css` 两处——**shared 反向依赖 feature 定义的 token** | 扫描脚本（**存量豁免**） |
+| S8 | token 单一来源：token 定义集中在**已登记的 token 文件**里（清单见下）。feature **只能消费，不得定义全局 token** | `--tp-text` 被 `app/styles/workbench.css` 与 `features/api-automation/styles/detail.css` 两处定义；`shared/styles/page-frame.css` 消费了 8 处 token（`:64,118,272,349,547,961,979,1072`，其中 `--tp-border`×3、`--tp-border-soft`×5），而这两个 token 的定义同样散在 `workbench.css` 与 `detail.css` 两处——**shared 反向依赖 feature 定义的 token** | CSS 裸色值：`npm run check:theme`（**已实现**，接入 `verify`）；定义重名与依赖方向扫描仍待实现，存量定义保留 |
 | S9 | 样式引入必须显式自持：每个入口自行 import 自己依赖的样式。**禁止依赖「别的页面恰好 import 了」而生效** | `functional-test-page` 被 4 个 feature 使用（test-cases、api-automation、test-orders、ui-automation 的页面），但唯一定义在 `features/testing/styles/index.css`，而这 4 个页面都不 import 它——只靠被 `TestingPage` 包着渲染才拿到样式 | 评审 + import 图核对（**待强制**） |
 | S14 | 列表页表面层：用例库 / 测试单 / API 测试 / UI 测试四页共用 `shared/styles/surface-tokens.css`。页面根节点必须同时带页面类与 `tp-surface`，板面 section 带 `tp-board`；样式写在各自 `features/<f>/styles/*-v2.css`，颜色只能引用 `--srf-*` / `.tone-*` | 四页共用同一套卡片 + 胶囊 + 色盘，缺 `tp-surface` 时页面里所有 `var(--srf-*)` 解析成空值，表现为「样式莫名消失」；`testing/styles/index.css` 与 `app/styles/workbench.css` 都用 `!important` 抢过这些容器，覆盖规则必须写成 `.app-shell.app-shell-macos .testing-page .<页面类> ...` 再加 `!important`，删掉前缀或 `!important` 会静默失效。**同权重同样会失效**：`workbench.css` 的玻璃规则是 (0,6,0)，与 `.tp-board` 覆盖同分，只靠 import 顺序决胜 | 评审 + 扫描脚本（**待强制**） |
 
@@ -85,13 +84,26 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 | 文件 | 前缀 | 用途 |
 | --- | --- | --- |
 | `src/index.css` 的 `:root` 块 | `--app-*`、`--description-*` | 全局基础（背景、正文、链接、描述字体白名单） |
+| `src/shared/styles/foundation-tokens.css` | `--app-*`（与 `index.css` 不重名） | 外壳、公共页面框架、旧工作台及 AI/API 工作流语义配色，由 `index.css` 在启动时引入 |
+| `src/shared/styles/legacy-tokens.css` | `--legacy-*` | 旧工作台作用域 token 的浅色来源，局部变量保持原作用域 |
+| `src/shared/styles/github-dark-tokens.css`、`github-dark-foundation.css` | `--gh-*` 及上述语义 token | GitHub Dark 色盘与暗色赋值，只定义变量，不覆盖业务组件规则 |
+| `src/shared/styles/editor-tokens.css` | `--editor-*` | CodeMirror 的表面、选区、光标及 JSON/YAML 语法高亮，由 `index.css` 引入 |
+| `src/shared/styles/chart-tokens.css` | `--chart-*`、`--graph-*` | 图表序列、坐标轴、提示框、关系图连线/缩略图及树图导出配色，由 `index.css` 引入 |
 | `src/app/styles/workbench.css` 的 `:root` 块 | `--tp-*`、`--mac-*` | 工作台基础与 macOS 外壳 |
 | `src/app/styles/buttons.css` | `--button-*` | 按钮调色板（全站唯一按钮皮肤） |
 | `src/shared/styles/surface-tokens.css` | `--srf-*` | 列表页共用的表面与色盘 |
 
-**裸色值（`#rrggbb`）只允许出现在上表已登记的 token 文件里。** 其它任何 CSS 文件出现裸色值都应当改为引用 token。注意此规则必须带 token 文件白名单，否则会把合法的 token 定义本身判为违规（`surface-tokens.css` 有 62 处裸色值，均为定义，合规）。
+**裸色值（`#rrggbb`）只允许出现在上表已登记的 token 文件里。** 其它任何 CSS 文件出现裸色值都应当改为引用 token。注意此规则必须带 token 文件白名单，否则会把合法的 token 定义本身判为违规（例如 `surface-tokens.css` 中的颜色定义）。
 
-**暗色主题已于 2026-09-23 整体移除**（决策与理由见 [adr/0001-remove-dark-theme.md](adr/0001-remove-dark-theme.md)）：应用只有浅色一套，`data-theme` 属性、`theme.store`、切换按钮与全部 `:root[data-theme='dark']` 覆盖规则都已删除，`app/styles/dark-polish.css` 随之退役。因此**新增 CSS 不再需要提供深色对照**，也不要再写 `:root[data-theme='dark']` 分支——它现在不会匹配到任何东西，等价于死代码（S13）。颜色仍然走 token 与 `--srf-*` 色盘，这条不变：token 化的价值在于取值集中，与是否有多主题无关。
+基础层颜色整理：`layout.css`、`page-frame.css` 与 `workbench.css` 的普通声明消费 `foundation-tokens.css`；后者已有的 `--tp-*` / `--mac-*` 等定义保持原作用域。浅色取值、渐变位置、阴影几何和选择器权重保持不变。玻璃层 token 的数值后缀标识原有透明层，后续主题可以分别赋值，不应把它们当成全站透明度工具。终端背景与正文、强调色上的文字与卡片底色分开定义。新列表/详情页继续使用 `--srf-*`，不要迁回旧工作台配色。Ant Design 的算法输入和组件 token 仍集中在 `app/providers/ThemeProvider.tsx`，切换主题时需单独配置，不能把需要参与颜色运算的 seed token 直接替换为 CSS `var()`。
+
+AI 的 `index.css`、`task-list-v2.css`、`task-detail-v2.css` 与 API 的 `detail.css` 同样从基础色盘取值。现有 `--ai-*`、`--detail-glass-*`、`--run-pipeline-*` 保留局部作用域，作为全局语义颜色的组合或别名；`--srf-*` 的消费优先级不变，原有备用颜色改为嵌套的基础 token 引用，以保留未挂载 `tp-surface` 时的渲染行为。终端滚动条、流水线状态、HTTP 方法颜色独立命名；暗色通过集中 token 赋值接入。
+
+其余页面 CSS（基础服务、测试、登录、个人设置及 AI 审核等）也只消费颜色变量；局部变量继续保持原来的选择器和作用域。四个新版列表的阴影颜色通过 `--srf-shadow-color` 引用基础色盘。`scripts/check-theme-colors.mjs` 扫描所有源码 CSS 的声明，禁止在登记文件的自定义属性以外新增十六进制、颜色函数或具名颜色，包括 `var()` 的裸色备用值；忽略注释、字符串和变量名，允许 `transparent` / `currentColor`。CSS 检查不验证语义去重、变量可达性或浏览器视觉效果。
+
+TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描生产代码的字符串及模板片段，禁止未登记的十六进制和颜色函数，排除测试/测试夹具、注释和正则表达式；Ant Design 的 `gold`、`success` 等语义参数保留。固定颜色入口只有 `ThemeProvider.tsx`（组件库算法配置）、`collectionRunReport.ts`（独立 HTML 报告）和 `MtxLogo.tsx`（品牌 SVG）。编辑器、Recharts 与 React Flow 的 CSS/SVG 属性消费变量；CodeMirror 的 dark 扩展与 React Flow 的 colorMode 跟随主题 store 的 resolvedTheme，编辑器切换扩展时保留内容。树图导出在调用 `toBlob` 前从原节点读取具体的背景/边框 token 值，避免把未解析变量传给脱离页面的克隆节点。
+
+**主题支持浅色、深色和跟随系统**（[ADR 0002](adr/0002-token-based-github-dark.md) 取代 ADR 0001 的仅浅色决定）。默认跟随系统；登录页和页头提供同一切换器，偏好保存到 `mtx-theme-preference`。HTML 启动脚本在首屏绘制前设置 `data-theme` 和 `color-scheme`；store 处理系统变化及跨标签页同步。暗色参考 GitHub Primer Dark，颜色变化集中在登记的 token 文件和 Ant Design 配置。新增业务样式消费语义 token，并核对两种主题，不得恢复按 feature 类名堆叠的暗色补丁层。独立 HTML 报告与品牌图形保留自身配色。
 
 ### 列表页表面层（用例库 / 测试单 / API 测试 / UI 测试）
 
@@ -121,7 +133,7 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
   合计 **(0,6,0)**——与 `shared/styles/surface-tokens.css` 里那条 `.tp-board` 覆盖（(0,2,0)）相比权重更高，
   顺序一变板面就会重新拿到玻璃底 + 内高光 + 28px 阴影，表现为内容区凭空多出一层容器。
   修法是多带 `.app-shell-macos .testing-page` 前缀抬到 (0,7,0)，不再依赖 import 顺序。
-- 工具栏由共享 `.tp-list-toolbar` 负责白底、描边与尺寸；不能重新套用旧的透明工具栏规则。它的覆盖权重需要压过旧外壳规则。
+- 工具栏由共享 `.tp-list-toolbar` 负责白底、描边与尺寸；旧 `.panel-header` / `.api-panel-header` 的容器规则通过 `:not(:where(.tp-list-toolbar))` 排除它。页面只补排布，不再复制尺寸与表面，公共工具栏规则不再需要 `!important`。
 - 筛选标签 `.api-filter-field-label`：旧外壳给它铺了蓝底小胶囊，设计稿里是裸的弱化文字。
   在 `surface-tokens.css` 里按 `.tp-surface` 收掉，不动那条旧规则——它同时作用于测试单的「加入用例」弹窗，
   那个弹窗不在 `tp-surface` 里，不该跟着变。
@@ -129,14 +141,9 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 判据可以量化：外层板面不增加底色 / 描边 / 阴影；筛选工具栏应有白底与描边、无额外阴影。DevTools 禁用对应规则
 再回读 `getComputedStyle` 即可确认是哪一条赢的。
 
-### 三处 `:root:not([data-theme='dark'])` 是刻意保留的，不要按死代码删
+### 列表规则保留等权重前缀
 
-`app/styles/workbench.css`、`features/testing/styles/index.css`、`features/ai-testing/styles/index.css` 里
-共 24 行选择器写成 `:root:not([data-theme='dark']) …`（四个列表页共用的名称 / 表头 / 行样式指纹）。
-暗色主题退役后这个 `:not()` 恒真，看着像可以删掉的死代码，**但它同时是权重的一部分**：
-去掉前缀会让这些规则降到三位数级，被同文件里其它 `!important` 规则反超，列表指纹随即失效。
-`listSurfaceConsistency.test.ts` / `listNameConsistency.test.ts` 断言的正是这些取值，删了会直接红。
-将来若要统一清理，做法是把 `:root:not([data-theme='dark'])` 换成等权重的写法，而不是直接删前缀。
+原先的 `:root:not([data-theme='dark'])` 已改为 `:root:root`，使列表名称、表头和行样式同时适用于两种主题。两个写法的选择器权重相同；不能直接删掉前缀，否则会被其它 `!important` 规则反超。相关浅色行为由 `listSurfaceConsistency.test.ts` / `listNameConsistency.test.ts` 保护。
 
 顺带记两处**浅色下早已存在**的名称样式分歧，此前被深色规则（统一写了 `line-height: 22px`）掩盖，
 深色退役后由 `listNameConsistency.test.ts` 的注释记录、未纳入断言：AI 任务列表名称行高 22px，其余三页 20px
@@ -371,7 +378,7 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 | C2 | 页面组件只做**编排**：路由参数、数据查询、装配子组件。渲染细节、表单、弹窗、表格列定义一律下沉到 `components/` | `ai-testing` 的 5 个任务详情页合计 5,292 行，是同一套骨架的复制：轮询声明 10 处、`getRunSortTime` 定义 3 处、`resolveRunRecord` 定义 5 处、`selectedRunRecordId ?? runRecords[0]` 4 处 | 评审 + `max-lines`（**待强制**） |
 | C3 | 单函数／单组件 ≤ 150 行；一个组件只做一件事 | 与 C2 同源 | ESLint `max-lines-per-function`（**待强制**） |
 | C4 | API 模块：每 feature 一个 `api/`，≤ 300 行，超了按领域拆；组件**不得**直接调请求层 | `features/ai-testing/api/aiTesting.api.ts` 329 行混了 6 个不相关领域共 47 个方法（AI 技能库、API/功能/UI 用例生成、需求分析、代码风险） | ESLint `max-lines` + 评审（**待强制**） |
-| C5 | **写工具函数前必须先搜 `shared/utils/`**；同语义函数只允许一处实现 | `normalizeText` 两份（`shared/utils/payload.ts:1`、`api-automation/utils/apiCaseEditor.ts:127`）；`orderNo ?? Number.MAX_SAFE_INTEGER` 出现 12 处、构成 8 个排序点（`apiCaseEditor.ts:269`、`UiTestSuiteCasePage.tsx:873,898`、`useApiExecution.ts:180`、`ApiCollectionDetailPage.tsx:802`、`uiTestCaseEditor.ts:74`、`renderUiRunSteps.tsx:69` 等）；`toRecord`/`toRecordArray` 已有导出仍在 3 处重写（`TestOrderGraphViewer.tsx:31`、`ApiCaseGenerateTaskDetailPage.tsx:80,85`、`caseRelationsGraph.ts:82`） | 评审 + 定期重复扫描（**待强制**） |
+| C5 | **写工具函数前必须先搜 `shared/utils/`**；同语义函数只允许一处实现 | `normalizeText` 两份（`shared/utils/payload.ts:1`、`api-automation/utils/apiCaseEditor.ts:127`）；`orderNo ?? Number.MAX_SAFE_INTEGER` 出现 12 处、构成 8 个排序点（`apiCaseEditor.ts:269`、`UiTestSuiteCasePage.tsx:873,898`、`useApiExecution.ts:180`、`ApiCollectionDetailPage.tsx:802`、`uiTestCaseEditor.ts:74`、`renderUiRunSteps.tsx:69` 等）；`toRecord` / `toRecordArray` 的重复实现已清理，AI 结果展示、任务详情与测试单图谱直接引用 `shared/utils/value.ts` | 评审 + 定期重复扫描（**待强制**） |
 | C6 | 复制阈值：同一段逻辑出现到**第三处**必须抽取。适用于页面骨架、弹窗、Drawer、表格皮肤 | 表格的共用尺寸和底色现已收敛至 `shared/styles/list-table.css`，AI 详情页的执行和运行记录删除收敛至 `hooks/useTaskRunActions.ts`；仍待处理：3 个导入冲突弹窗（84/72/175 行，前两个约 95% 相同）；5 个任务 Drawer 共 527 行，4 个 props 契约完全一致 | 列表样式与运行操作由相应测试覆盖；其余依赖评审（**待强制**） |
 | C7 | 命名契约：导出名的前缀必须与适用范围一致。**跨 feature 使用的东西不得带某个 feature 的前缀** | `features/ai-testing/utils/taskStatus.tsx` 的 9 个导出里 5 个带 `ApiCase*` 前缀，但该模块同时被 functional、requirement、code-risk、ui 等任务页使用，还被**跨 feature** 的 `features/test-orders/components/TestOrderGraphViewer.tsx:15-18` 引用——前缀与适用范围不符 | 评审（**待强制**） |
 | C8 | 类型归属：`features/<f>/types.ts` 每 feature 一个。通用类型放 `shared/` | 同 C1 | ESLint `max-lines`（**待强制**） |

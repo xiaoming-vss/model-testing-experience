@@ -54,7 +54,7 @@
 
 .ai-task-source-content-field .cm-scroller {
   overflow: auto;
-  scrollbar-color: rgba(148, 163, 184, 0.42) rgba(15, 20, 32, 0.92);
+  scrollbar-color: var(--app-terminal-scrollbar-neutral) var(--app-terminal-scrollbar-neutral-track);
   scrollbar-width: thin;
 }
 
@@ -64,17 +64,17 @@
 }
 
 .ai-task-source-content-field .cm-scroller::-webkit-scrollbar-track {
-  background: rgba(15, 20, 32, 0.92);
+  background: var(--app-terminal-scrollbar-neutral-track);
 }
 
 .ai-task-source-content-field .cm-scroller::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.38);
-  border: 2px solid rgba(15, 20, 32, 0.92);
+  background: var(--app-pipeline-idle);
+  border: 2px solid var(--app-terminal-scrollbar-edge);
   border-radius: 999px;
 }
 
 .ai-task-source-content-field .cm-scroller::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.56);
+  background: var(--app-terminal-scrollbar-neutral-hover);
 }
 
 .ai-task-source-upload-box {

@@ -1,0 +1,55 @@
+.test-order-graph-execution {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--ant-color-text);
+}
+
+.test-order-graph-execution-meta,
+.test-order-graph-save-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.test-order-graph-execution h3,
+.test-order-graph-execution p {
+  margin: 0;
+}
+
+.test-order-graph-execution h3 {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.test-order-graph-execution label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.test-order-graph-execution ol {
+  padding-left: 22px;
+  margin: 8px 0 0;
+}
+
+.test-order-graph-execution li {
+  margin-bottom: 10px;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+
+.test-order-graph-expected,
+.test-order-graph-save-actions [role='status'] {
+  color: var(--ant-color-text-secondary);
+}
+
+.test-order-graph-execution-divider {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-top: 1px solid var(--ant-color-border-secondary);
+}

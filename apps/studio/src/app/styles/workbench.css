@@ -1,5 +1,5 @@
 .settings-page {
-  background: #faf9ff;
+  background: var(--app-shell-bg);
 }
 
 .settings-context-bar {
@@ -7,21 +7,21 @@
   padding: 18px var(--app-page-gutter) 18px;
   display: flex;
   align-items: center;
-  background: #faf9ff;
-  border-bottom: 1px solid #d8d9e5;
+  background: var(--app-shell-bg);
+  border-bottom: 1px solid var(--app-shell-divider);
 }
 
 .settings-eyebrow {
   display: block;
   margin-bottom: 4px;
-  color: #727786;
+  color: var(--app-shell-text-muted);
   font-size: 13px;
   line-height: 20px;
 }
 
 .settings-context-bar h3.ant-typography {
   margin: 0;
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 24px;
   line-height: 32px;
   font-weight: 700;
@@ -37,8 +37,8 @@
 
 .settings-summary,
 .settings-panel {
-  background: #fff;
-  border: 1px solid #c1c6d7;
+  background: var(--app-surface);
+  border: 1px solid var(--app-shell-border);
   border-radius: 2px;
 }
 
@@ -49,12 +49,12 @@
 
 .settings-avatar {
   margin-bottom: 18px;
-  background: #1677ff;
+  background: var(--app-accent);
 }
 
 .settings-summary h4.ant-typography {
   margin: 0 0 6px;
-  color: #181b23;
+  color: var(--app-shell-text);
 }
 
 .settings-summary-meta {
@@ -62,10 +62,10 @@
   padding-top: 18px;
   display: flex;
   gap: 8px;
-  color: #727786;
+  color: var(--app-shell-text-muted);
   font-size: 13px;
   line-height: 20px;
-  border-top: 1px solid #e0e2ed;
+  border-top: 1px solid var(--app-shell-divider-soft);
 }
 
 .settings-panel {
@@ -75,12 +75,12 @@
 .settings-panel-header {
   min-height: 88px;
   padding: 22px 24px;
-  border-bottom: 1px solid #d8d9e5;
+  border-bottom: 1px solid var(--app-shell-divider);
 }
 
 .settings-panel-header h4.ant-typography {
   margin: 0 0 4px;
-  color: #181b23;
+  color: var(--app-shell-text);
 }
 
 .settings-panel-header .ant-typography {
@@ -109,8 +109,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  background: #fff7f7;
-  border: 1px solid #ffccc7;
+  background: var(--app-danger-surface-soft);
+  border: 1px solid var(--app-danger-border);
   border-radius: 2px;
 }
 
@@ -138,7 +138,7 @@
 }
 
 .requirement-icon {
-  color: #1677ff;
+  color: var(--app-accent);
   font-size: 16px;
 }
 
@@ -147,16 +147,16 @@
   align-items: center;
   min-height: 24px;
   padding: 0 8px;
-  color: #0057c2;
-  background: #eef5ff;
-  border: 1px solid #cfe3ff;
+  color: var(--app-accent-hover);
+  background: var(--app-accent-surface);
+  border: 1px solid var(--app-accent-border);
   border-radius: 2px;
   font-size: 13px;
 }
 
 .compact-header {
   justify-content: flex-end;
-  background: #fff;
+  background: var(--app-surface);
 }
 
 .compact-header .app-header-actions .ant-btn-circle {
@@ -168,7 +168,7 @@
 .project-context-bar {
   min-height: 64px;
   padding: 0 32px;
-  background: #fff;
+  background: var(--app-surface);
 }
 
 .project-selector-wrap {
@@ -177,7 +177,7 @@
 }
 
 .project-selector-label {
-  color: #727786;
+  color: var(--app-shell-text-muted);
   font-size: 13px;
 }
 
@@ -187,7 +187,7 @@
 
 .project-select .ant-select-selection-item,
 .project-select .ant-select-selection-placeholder {
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 20px;
   font-weight: 700;
 }
@@ -289,19 +289,19 @@
   gap: 8px;
   min-width: 0;
   padding: 0;
-  color: #cbd6ea;
+  color: var(--app-context-text);
   font-size: 13px;
   line-height: 20px;
 }
 
 .compact-header .project-selector-label {
-  color: #7f8aa3;
+  color: var(--app-context-label);
   font-size: 12px;
   font-weight: 500;
 }
 
 .compact-header .project-separator {
-  color: #66738d;
+  color: var(--app-context-separator);
 }
 
 .project-selector-divider {
@@ -309,7 +309,7 @@
   width: 1px;
   height: 16px;
   margin: 0 2px;
-  background: rgba(15, 23, 42, 0.12);
+  background: var(--app-context-divider);
 }
 
 .compact-header .project-select {
@@ -329,14 +329,14 @@
 
 .compact-header .project-select .ant-select-selection-item,
 .compact-header .project-select .ant-select-selection-placeholder {
-  color: #f4f8ff;
+  color: var(--app-context-selected);
   font-size: 14px;
   line-height: 22px;
   font-weight: 600;
 }
 
 .compact-header .project-select .ant-select-arrow {
-  color: #9aa8c0;
+  color: var(--app-context-arrow);
   font-size: 11px;
 }
 
@@ -345,13 +345,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  background: #fff;
-  border: 1px solid #c1c6d7;
+  background: var(--app-surface);
+  border: 1px solid var(--app-shell-border);
 }
 
 .workbench-project-toolbar h4.ant-typography {
   margin: 0 0 2px;
-  color: #181b23;
+  color: var(--app-shell-text);
 }
 
 .workbench-project-toolbar .ant-typography {
@@ -369,7 +369,7 @@
   display: block;
   max-width: 680px;
   overflow: hidden;
-  color: #727786;
+  color: var(--app-shell-text-muted);
   font-size: 13px;
   line-height: 20px;
   text-overflow: ellipsis;
@@ -457,26 +457,26 @@ body,
 
 .workbench-board-switcher .ant-segmented {
   padding: 4px;
-  background: #eef3fb;
+  background: var(--app-control-surface);
   border-radius: 999px;
 }
 
 .workbench-board-switcher .ant-segmented-item {
   min-width: 88px;
   border-radius: 999px;
-  color: #5b6477;
+  color: var(--app-control-text);
   font-weight: 600;
 }
 
 .workbench-board-switcher .ant-segmented-item-selected {
-  color: #0f4fbf;
+  color: var(--app-control-link);
 }
 
 .workbench-board-panel {
   flex: 1 1 auto;
 }
 
-.panel-header {
+.panel-header:not(:where(.tp-list-toolbar)) {
   flex: 0 0 auto;
 }
 
@@ -528,11 +528,11 @@ body,
 }
 
 :root {
-  --tp-border: #e5e7ef;
-  --tp-border-soft: #eef0f6;
-  --tp-text: #181b23;
-  --tp-text-secondary: #414755;
-  --tp-text-muted: #727786;
+  --tp-border: var(--legacy-tp-border);
+  --tp-border-soft: var(--legacy-tp-border-soft);
+  --tp-text: var(--legacy-tp-text);
+  --tp-text-secondary: var(--legacy-tp-text-secondary);
+  --tp-text-muted: var(--legacy-tp-text-muted);
   --tp-card-radius: 8px;
 }
 
@@ -580,7 +580,7 @@ body,
   padding: 10px 6px 8px !important;
   box-sizing: border-box;
   border-radius: 10px;
-  color: #667085;
+  color: var(--app-menu-text);
   font-size: 12px;
   line-height: 18px;
   transition:
@@ -629,18 +629,18 @@ body,
 
 .app-sider .ant-menu-item-selected {
   background: transparent !important;
-  color: #6d5dfc !important;
+  color: var(--app-menu-accent) !important;
   font-weight: 600;
 }
 
 .app-sider .ant-menu-item-selected .anticon,
 .app-sider .ant-menu-item-selected .ant-menu-title-content {
-  color: #6d5dfc !important;
+  color: var(--app-menu-accent) !important;
 }
 
 .app-sider .ant-menu-item:hover {
-  background: rgba(109, 93, 252, 0.08) !important;
-  color: #6d5dfc;
+  background: var(--app-menu-hover) !important;
+  color: var(--app-menu-accent);
 }
 
 .compact-header {
@@ -653,7 +653,7 @@ body,
   padding: 12px 18px;
   border-color: var(--tp-border);
   border-radius: var(--tp-card-radius);
-  box-shadow: 0 1px 2px rgba(24, 27, 35, 0.03);
+  box-shadow: 0 1px 2px var(--app-shadow-subtle);
 }
 
 .workbench-project-toolbar h4.ant-typography {
@@ -678,17 +678,17 @@ body,
 .workbench-panel {
   border-color: var(--tp-border);
   border-radius: var(--tp-card-radius);
-  box-shadow: 0 1px 2px rgba(24, 27, 35, 0.03);
+  box-shadow: 0 1px 2px var(--app-shadow-subtle);
 }
 
-.panel-header {
+.panel-header:not(:where(.tp-list-toolbar)) {
   min-height: 56px;
   padding: 12px 18px;
   border-bottom-color: var(--tp-border-soft);
 }
 
 .workbench-panel .ant-table-thead > tr > th {
-  background: #fbfcff;
+  background: var(--app-surface-raised);
   border-bottom-color: var(--tp-border-soft);
 }
 
@@ -704,7 +704,7 @@ body,
   margin-top: auto;
   padding: 10px 16px;
   border-top: 1px solid var(--tp-border-soft);
-  background: #fff;
+  background: var(--app-surface);
 }
 
 .workbench-panel .ant-table-cell::before {
@@ -726,7 +726,7 @@ body,
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  background: #fff;
+  background: var(--app-surface);
 }
 
 .table-body-scroll .ant-table-wrapper,
@@ -772,11 +772,11 @@ body,
   justify-content: space-between;
   gap: 16px;
   border-top: 1px solid var(--tp-border-soft);
-  background: #fff;
+  background: var(--app-surface);
 }
 
 .table-footer .ant-typography {
-  color: #727786;
+  color: var(--app-shell-text-muted);
   font-size: 13px;
 }
 
@@ -802,7 +802,7 @@ body,
   position: relative;
   z-index: 5;
   overflow: hidden;
-  border-right: 1px solid rgba(15, 23, 42, 0.07) !important;
+  border-right: 1px solid var(--app-glass-border-strong) !important;
   -webkit-backdrop-filter: saturate(180%) blur(22px);
   backdrop-filter: saturate(180%) blur(22px);
 }
@@ -818,7 +818,7 @@ body,
   position: relative;
   z-index: 1;
   height: 64px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  border-bottom: 1px solid var(--app-glass-border);
 }
 
 .app-shell .brand-row .brand {
@@ -847,11 +847,11 @@ body,
 }
 
 .app-shell .app-sider .ant-menu-item:hover {
-  border-color: rgba(52, 120, 246, 0.1);
+  border-color: var(--app-glass-selection-border);
 }
 
 .app-shell .app-sider .ant-menu-item-selected {
-  border-color: rgba(255, 255, 255, 0.82);
+  border-color: var(--app-glass-border-82);
 }
 
 .app-shell .app-sider .ant-menu-item-selected::before {
@@ -862,7 +862,7 @@ body,
   width: 3px;
   height: 28px;
   border-radius: 999px;
-  background: #3478f6;
+  background: var(--app-glass-accent);
 }
 
 /* macOS simple white global header refinement */
@@ -872,13 +872,13 @@ body,
   z-index: 4;
   height: 56px;
   padding: 0 22px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.065);
-  background: rgba(247, 249, 252, 0.72);
+  border-bottom: 1px solid var(--app-glass-divider);
+  background: var(--app-glass-toolbar);
   -webkit-backdrop-filter: saturate(180%) blur(22px);
   backdrop-filter: saturate(180%) blur(22px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.78),
-    0 10px 28px rgba(31, 41, 55, 0.035);
+    inset 0 1px 0 var(--app-glass-highlight-78),
+    0 10px 28px var(--app-glass-shadow-panel);
 }
 
 .app-shell .app-header-main,
@@ -899,21 +899,21 @@ body,
   min-height: 34px;
   padding: 0 10px 0 12px;
   gap: 8px;
-  border: 1px solid rgba(15, 23, 42, 0.06);
+  border: 1px solid var(--app-glass-border);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.58);
-  color: rgba(23, 32, 51, 0.6);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+  background: var(--app-glass-surface-58);
+  color: var(--app-glass-text-secondary);
+  box-shadow: inset 0 1px 0 var(--app-glass-highlight-76);
 }
 
 .app-shell .project-selector-label {
-  color: rgba(23, 32, 51, 0.48);
+  color: var(--app-glass-text-muted);
   font-size: 12px;
   font-weight: 650;
 }
 
 .app-shell .project-separator {
-  color: rgba(23, 32, 51, 0.28);
+  color: var(--app-glass-text-disabled);
 }
 
 .app-shell .project-select {
@@ -926,7 +926,7 @@ body,
 }
 
 .app-shell .project-select .ant-select-selector {
-  color: #172033 !important;
+  color: var(--app-glass-text) !important;
   font-size: 13px;
   font-weight: 650;
 }
@@ -947,13 +947,13 @@ body,
 
 /* Lighter macOS sidebar selected state */
 .app-shell .app-sider {
-  border-right-color: rgba(15, 23, 42, 0.055) !important;
-  background: rgba(248, 250, 252, 0.76) !important;
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.68);
+  border-right-color: var(--app-glass-border-soft) !important;
+  background: var(--app-glass-input) !important;
+  box-shadow: inset -1px 0 0 var(--app-glass-highlight-68);
 }
 
 .app-shell .app-sider::before {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.12));
+  background: linear-gradient(180deg, var(--app-glass-surface-42), var(--app-glass-surface-12));
 }
 
 .app-shell .app-sider .ant-menu {
@@ -966,7 +966,7 @@ body,
   height: 58px;
   border: 0;
   border-radius: 12px;
-  color: rgba(23, 32, 51, 0.5) !important;
+  color: var(--app-glass-text-placeholder) !important;
   background: transparent !important;
   box-shadow: none !important;
   transform: none !important;
@@ -978,17 +978,17 @@ body,
 }
 
 .app-shell .app-sider .ant-menu-item:hover {
-  color: #0a84ff !important;
+  color: var(--app-glass-link) !important;
   border: 0;
-  background: rgba(255, 255, 255, 0.54) !important;
+  background: var(--app-glass-surface-54) !important;
   box-shadow: none !important;
   transform: none !important;
 }
 
 .app-shell .app-sider .ant-menu-item-selected {
-  color: #0a84ff !important;
+  color: var(--app-glass-link) !important;
   border: 0;
-  background: rgba(10, 132, 255, 0.08) !important;
+  background: var(--app-glass-hover) !important;
   box-shadow: none !important;
   transform: none !important;
   font-weight: 650;
@@ -1000,35 +1000,36 @@ body,
 
 .app-shell .app-sider .ant-menu-item-selected .anticon,
 .app-shell .app-sider .ant-menu-item-selected .ant-menu-title-content {
-  color: #0a84ff !important;
+  color: var(--app-glass-link) !important;
 }
 
 .app-shell .brand-row .brand {
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--app-glass-surface-62);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.82),
-    0 6px 14px rgba(31, 41, 55, 0.06);
+    inset 0 1px 0 var(--app-glass-highlight-82),
+    0 6px 14px var(--app-glass-shadow-raised);
 }
 
-/* Base services scoped macOS white glass shell */
-.app-shell.app-shell-base-services {
-  --mac-glass-page: #f5f7fa;
-  --mac-glass-sidebar: rgba(246, 248, 251, 0.78);
-  --mac-glass-header: rgba(246, 248, 251, 0.78);
-  --mac-glass-panel: rgba(255, 255, 255, 0.68);
-  --mac-glass-panel-strong: rgba(255, 255, 255, 0.82);
-  --mac-glass-border: rgba(15, 23, 42, 0.065);
-  --mac-glass-border-soft: rgba(15, 23, 42, 0.045);
-  --mac-glass-text: #172033;
-  --mac-glass-muted: rgba(23, 32, 51, 0.52);
-  --mac-glass-blue: #0a84ff;
+/* Shared scoped shell palette; both shells use the same color roles. */
+.app-shell.app-shell-base-services,
+.app-shell.app-shell-macos {
+  --mac-glass-page: var(--legacy-mac-glass-page);
+  --mac-glass-sidebar: var(--legacy-mac-glass-sidebar);
+  --mac-glass-header: var(--legacy-mac-glass-header);
+  --mac-glass-panel: var(--legacy-mac-glass-panel);
+  --mac-glass-panel-strong: var(--legacy-mac-glass-panel-strong);
+  --mac-glass-border: var(--legacy-mac-glass-border);
+  --mac-glass-border-soft: var(--legacy-mac-glass-border-soft);
+  --mac-glass-text: var(--legacy-mac-glass-text);
+  --mac-glass-muted: var(--legacy-mac-glass-muted);
+  --mac-glass-blue: var(--legacy-mac-glass-blue);
 }
 
 .app-shell.app-shell-base-services,
 .app-shell.app-shell-base-services > .ant-layout,
 .app-shell.app-shell-base-services .app-content {
   background:
-    radial-gradient(circle at 18% 0%, rgba(10, 132, 255, 0.055), transparent 26%),
+    radial-gradient(circle at 18% 0%, var(--app-glass-glow), transparent 26%),
     var(--mac-glass-page) !important;
 }
 
@@ -1037,11 +1038,11 @@ body,
   background: var(--mac-glass-sidebar) !important;
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.72) !important;
+  box-shadow: inset -1px 0 0 var(--app-glass-highlight-72) !important;
 }
 
 .app-shell.app-shell-base-services .app-sider::before {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.46), rgba(255, 255, 255, 0.1)) !important;
+  background: linear-gradient(180deg, var(--app-glass-surface-46), var(--app-glass-surface-10)) !important;
 }
 
 .app-shell.app-shell-base-services .brand-row {
@@ -1051,8 +1052,8 @@ body,
 .app-shell.app-shell-base-services .brand-row .brand {
   background: var(--mac-glass-panel) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 6px 14px rgba(31, 41, 55, 0.045) !important;
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 6px 14px var(--app-glass-shadow-card) !important;
 }
 
 .app-shell.app-shell-base-services .app-sider .ant-menu-item {
@@ -1062,12 +1063,12 @@ body,
 
 .app-shell.app-shell-base-services .app-sider .ant-menu-item:hover {
   color: var(--mac-glass-blue) !important;
-  background: rgba(255, 255, 255, 0.48) !important;
+  background: var(--app-glass-surface-48) !important;
 }
 
 .app-shell.app-shell-base-services .app-sider .ant-menu-item-selected {
   color: var(--mac-glass-blue) !important;
-  background: rgba(10, 132, 255, 0.075) !important;
+  background: var(--app-glass-selected) !important;
 }
 
 .app-shell.app-shell-base-services .app-sider .ant-menu-item-selected .anticon,
@@ -1081,14 +1082,14 @@ body,
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.78),
-    0 8px 22px rgba(31, 41, 55, 0.03) !important;
+    inset 0 1px 0 var(--app-glass-highlight-78),
+    0 8px 22px var(--app-glass-shadow-soft) !important;
 }
 
 .app-shell.app-shell-base-services .project-selector-wrap {
   border-color: var(--mac-glass-border);
   background: var(--mac-glass-panel) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78) !important;
+  box-shadow: inset 0 1px 0 var(--app-glass-highlight-78) !important;
 }
 
 .app-shell.app-shell-base-services .project-selector-label,
@@ -1101,28 +1102,18 @@ body,
   color: var(--mac-glass-text) !important;
 }
 
-/* Global macOS white glass palette */
+/* Additional roles used by the global shell. */
 .app-shell.app-shell-macos {
-  --mac-glass-page: #f5f7fa;
-  --mac-glass-sidebar: rgba(246, 248, 251, 0.78);
-  --mac-glass-header: rgba(246, 248, 251, 0.78);
-  --mac-glass-panel: rgba(255, 255, 255, 0.68);
-  --mac-glass-panel-strong: rgba(255, 255, 255, 0.82);
-  --mac-glass-card: rgba(255, 255, 255, 0.72);
-  --mac-glass-border: rgba(15, 23, 42, 0.065);
-  --mac-glass-border-soft: rgba(15, 23, 42, 0.045);
-  --mac-glass-text: #172033;
-  --mac-glass-muted: rgba(23, 32, 51, 0.52);
-  --mac-glass-subtle: rgba(23, 32, 51, 0.38);
-  --mac-glass-blue: #0a84ff;
-  --mac-glass-green: #3f995b;
+  --mac-glass-card: var(--legacy-mac-glass-card);
+  --mac-glass-subtle: var(--legacy-mac-glass-subtle);
+  --mac-glass-green: var(--legacy-mac-glass-green);
 }
 
 .app-shell.app-shell-macos,
 .app-shell.app-shell-macos > .ant-layout,
 .app-shell.app-shell-macos .app-content {
   background:
-    radial-gradient(circle at 18% 0%, rgba(10, 132, 255, 0.05), transparent 26%),
+    radial-gradient(circle at 18% 0%, var(--app-glass-page-glow), transparent 26%),
     var(--mac-glass-page) !important;
 }
 
@@ -1131,16 +1122,16 @@ body,
   background: var(--mac-glass-sidebar) !important;
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
-  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.72) !important;
+  box-shadow: inset -1px 0 0 var(--app-glass-highlight-72) !important;
 }
 
 .app-shell.app-shell-macos .app-sider::before {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.46), rgba(255, 255, 255, 0.1)) !important;
+  background: linear-gradient(180deg, var(--app-glass-surface-46), var(--app-glass-surface-10)) !important;
 }
 
 .app-shell.app-shell-macos .brand-row,
 .app-shell.app-shell-macos .compact-header,
-.app-shell.app-shell-macos .panel-header,
+.app-shell.app-shell-macos .panel-header:not(:where(.tp-list-toolbar)),
 .app-shell.app-shell-macos .table-footer {
   border-color: var(--mac-glass-border-soft) !important;
 }
@@ -1159,8 +1150,8 @@ body,
 .app-shell.app-shell-macos .brand-row .brand {
   background: var(--mac-glass-panel) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 6px 14px rgba(31, 41, 55, 0.045) !important;
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 6px 14px var(--app-glass-shadow-card) !important;
 }
 
 .app-shell.app-shell-macos .app-sider .ant-menu-item {
@@ -1170,7 +1161,7 @@ body,
 
 .app-shell.app-shell-macos .app-sider .ant-menu-item:hover {
   color: var(--mac-glass-blue) !important;
-  background: rgba(255, 255, 255, 0.48) !important;
+  background: var(--app-glass-surface-48) !important;
 }
 
 .app-shell.app-shell-macos .app-sider .ant-menu-item-selected,
@@ -1180,7 +1171,7 @@ body,
 }
 
 .app-shell.app-shell-macos .app-sider .ant-menu-item-selected {
-  background: rgba(10, 132, 255, 0.075) !important;
+  background: var(--app-glass-selected) !important;
 }
 
 .app-shell.app-shell-macos .app-header.compact-header {
@@ -1190,14 +1181,14 @@ body,
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.78),
-    0 8px 22px rgba(31, 41, 55, 0.03) !important;
+    inset 0 1px 0 var(--app-glass-highlight-78),
+    0 8px 22px var(--app-glass-shadow-soft) !important;
 }
 
 .app-shell.app-shell-macos .project-selector-wrap {
   border-color: var(--mac-glass-border) !important;
   background: var(--mac-glass-panel) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78) !important;
+  box-shadow: inset 0 1px 0 var(--app-glass-highlight-78) !important;
 }
 
 .app-shell.app-shell-macos .project-selector-label,
@@ -1218,13 +1209,13 @@ body,
   border-color: var(--mac-glass-border) !important;
   background: var(--mac-glass-panel) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.84),
-    0 10px 24px rgba(31, 41, 55, 0.045) !important;
+    inset 0 1px 0 var(--app-glass-highlight-84),
+    0 10px 24px var(--app-glass-shadow-card) !important;
 }
 
-.app-shell.app-shell-macos .panel-header,
+.app-shell.app-shell-macos .panel-header:not(:where(.tp-list-toolbar)),
 .app-shell.app-shell-macos .table-footer {
-  background: rgba(255, 255, 255, 0.5) !important;
+  background: var(--app-glass-surface-50) !important;
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   backdrop-filter: saturate(180%) blur(20px);
 }
@@ -1235,18 +1226,18 @@ body,
   border-color: var(--mac-glass-border) !important;
   background: var(--mac-glass-card) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 10px 24px rgba(31, 41, 55, 0.045) !important;
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 10px 24px var(--app-glass-shadow-card) !important;
 }
 
 .app-shell.app-shell-macos .api-collection-card:hover,
 .app-shell.app-shell-macos .sprint-card:hover,
 .app-shell.app-shell-macos .ant-card-hoverable:hover {
-  border-color: rgba(10, 132, 255, 0.18) !important;
+  border-color: var(--app-glass-action-border) !important;
   background: var(--mac-glass-panel-strong) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 14px 30px rgba(31, 41, 55, 0.065) !important;
+    inset 0 1px 0 var(--app-glass-highlight-90),
+    0 14px 30px var(--app-glass-shadow-floating) !important;
 }
 
 .app-shell.app-shell-macos .sprint-card-label,
@@ -1257,7 +1248,7 @@ body,
 
 .app-shell.app-shell-macos .action-btn-create.ant-btn-primary,
 .app-shell.app-shell-macos .panel-header .ant-btn-primary {
-  border: 1px solid rgba(10, 132, 255, 0.26) !important;
+  border: 1px solid var(--app-glass-action-border-hover) !important;
   border-radius: 10px !important;
 }
 
@@ -1269,9 +1260,9 @@ body,
 }
 
 .app-shell.app-shell-macos .ant-pagination .ant-pagination-item-active {
-  border-color: rgba(10, 132, 255, 0.36) !important;
-  background: rgba(255, 255, 255, 0.84) !important;
-  box-shadow: 0 6px 14px rgba(31, 41, 55, 0.05) !important;
+  border-color: var(--app-glass-action-border-active) !important;
+  background: var(--app-glass-surface-84) !important;
+  box-shadow: 0 6px 14px var(--app-glass-shadow-control) !important;
 }
 
 /* Project overview macOS glass alignment */
@@ -1300,12 +1291,12 @@ body,
   padding: 4px;
   border: 1px solid var(--mac-glass-border);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.56);
+  background: var(--app-glass-surface-56);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   backdrop-filter: saturate(180%) blur(20px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 8px 18px rgba(31, 41, 55, 0.04);
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 8px 18px var(--app-glass-shadow-inset);
 }
 
 .app-shell.app-shell-macos .workbench-board-switcher .ant-segmented {
@@ -1317,10 +1308,10 @@ body,
 .app-shell.app-shell-macos .workbench-board-switcher .ant-segmented-thumb,
 .app-shell.app-shell-macos .workbench-board-switcher .ant-segmented-item-selected {
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.92) !important;
+  background: var(--app-glass-surface-92) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 6px 14px rgba(31, 41, 55, 0.06) !important;
+    inset 0 1px 0 var(--app-glass-highlight-90),
+    0 6px 14px var(--app-glass-shadow-raised) !important;
 }
 
 .app-shell.app-shell-macos .workbench-board-switcher .ant-segmented-item {
@@ -1372,60 +1363,60 @@ body,
 .app-shell.app-shell-macos .zentao-binding-summary-tag,
 .app-shell.app-shell-macos .ant-tag {
   border-radius: 999px;
-  border-color: rgba(10, 132, 255, 0.12) !important;
-  background: rgba(10, 132, 255, 0.075) !important;
-  color: rgba(10, 96, 190, 0.86) !important;
+  border-color: var(--app-glass-tag-border) !important;
+  background: var(--app-glass-selected) !important;
+  color: var(--app-glass-tag-text) !important;
 }
 
 /* Semantic task-status palette. These selectors intentionally override the generic tag treatment above. */
 .app-shell.app-shell-macos .ant-tag.ant-tag-default {
-  border-color: rgba(89, 89, 89, 0.18) !important;
-  background: #fafafa !important;
-  color: #595959 !important;
+  border-color: var(--app-status-neutral-border) !important;
+  background: var(--app-status-neutral-bg) !important;
+  color: var(--app-status-neutral-text) !important;
 }
 
 .app-shell.app-shell-macos .ant-tag.ant-tag-gold,
 .app-shell.app-shell-macos .ant-tag.ant-tag-warning {
-  border-color: rgba(173, 104, 0, 0.2) !important;
-  background: #fffbe6 !important;
-  color: #ad6800 !important;
+  border-color: var(--app-status-warning-border) !important;
+  background: var(--app-status-warning-bg) !important;
+  color: var(--app-status-warning-text) !important;
 }
 
 .app-shell.app-shell-macos .ant-tag.ant-tag-cyan {
-  border-color: rgba(8, 151, 156, 0.2) !important;
-  background: #e6fffb !important;
-  color: #08979c !important;
+  border-color: var(--app-status-running-border) !important;
+  background: var(--app-status-running-bg) !important;
+  color: var(--app-status-running-text) !important;
 }
 
 .app-shell.app-shell-macos .ant-tag.ant-tag-purple {
-  border-color: rgba(109, 90, 158, 0.18) !important;
-  background: #f4f1fb !important;
-  color: #6d5a9e !important;
+  border-color: var(--app-status-review-border) !important;
+  background: var(--app-status-review-bg) !important;
+  color: var(--app-status-review-text) !important;
 }
 
 .app-shell.app-shell-macos .ant-tag.ant-tag-green,
 .app-shell.app-shell-macos .ant-tag.ant-tag-processing {
-  border-color: rgba(61, 122, 87, 0.2) !important;
-  background: #edf7ef !important;
-  color: #3d7a57 !important;
+  border-color: var(--app-status-approved-border) !important;
+  background: var(--app-status-approved-bg) !important;
+  color: var(--app-status-approved-text) !important;
 }
 
 .app-shell.app-shell-macos .ant-tag.ant-tag-success {
-  border-color: rgba(37, 111, 75, 0.2) !important;
-  background: #e5f4eb !important;
-  color: #256f4b !important;
+  border-color: var(--app-status-completed-border) !important;
+  background: var(--app-status-completed-bg) !important;
+  color: var(--app-status-completed-text) !important;
 }
 
 .app-shell.app-shell-macos .ant-tag.ant-tag-error {
-  border-color: rgba(207, 19, 34, 0.2) !important;
-  background: #fff1f0 !important;
-  color: #cf1322 !important;
+  border-color: var(--app-status-failed-border) !important;
+  background: var(--app-status-failed-bg) !important;
+  color: var(--app-status-failed-text) !important;
 }
 
 .app-shell.app-shell-macos .ant-tag.ant-tag-volcano {
-  border-color: rgba(212, 107, 8, 0.2) !important;
-  background: #fff7e6 !important;
-  color: #d46b08 !important;
+  border-color: var(--app-status-blocked-border) !important;
+  background: var(--app-status-blocked-bg) !important;
+  color: var(--app-status-blocked-text) !important;
 }
 
 .app-shell.app-shell-macos .sprint-card-actions .ant-btn,
@@ -1439,7 +1430,7 @@ body,
 .app-shell.app-shell-macos .project-actions .ant-btn-text:hover,
 .app-shell.app-shell-macos .project-actions .action-btn-read:hover {
   color: var(--mac-glass-blue) !important;
-  background: rgba(255, 255, 255, 0.68) !important;
+  background: var(--app-glass-surface-68) !important;
 }
 
 .app-shell.app-shell-macos .workbench-empty {
@@ -1451,15 +1442,15 @@ body,
 
 /* Project overview aligned to base-services macOS glass style */
 .app-shell.app-shell-macos .project-overview-page {
-  --project-overview-border: rgba(15, 23, 42, 0.065);
-  --project-overview-panel: rgba(255, 255, 255, 0.68);
-  --project-overview-panel-soft: rgba(255, 255, 255, 0.5);
-  --project-overview-card: rgba(255, 255, 255, 0.72);
-  --project-overview-card-hover: rgba(255, 255, 255, 0.82);
-  --project-overview-text: #172033;
-  --project-overview-secondary: rgba(23, 32, 51, 0.58);
-  --project-overview-muted: rgba(23, 32, 51, 0.44);
-  --project-overview-blue: #0a84ff;
+  --project-overview-border: var(--legacy-project-overview-border);
+  --project-overview-panel: var(--legacy-project-overview-panel);
+  --project-overview-panel-soft: var(--legacy-project-overview-panel-soft);
+  --project-overview-card: var(--legacy-project-overview-card);
+  --project-overview-card-hover: var(--legacy-project-overview-card-hover);
+  --project-overview-text: var(--legacy-project-overview-text);
+  --project-overview-secondary: var(--legacy-project-overview-secondary);
+  --project-overview-muted: var(--legacy-project-overview-muted);
+  --project-overview-blue: var(--legacy-project-overview-blue);
   background: transparent !important;
 }
 
@@ -1476,8 +1467,8 @@ body,
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 10px 24px rgba(31, 41, 55, 0.045) !important;
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 10px 24px var(--app-glass-shadow-card) !important;
 }
 
 .app-shell.app-shell-macos .project-overview-page .workbench-project-toolbar {
@@ -1540,10 +1531,10 @@ body,
 
 .app-shell.app-shell-macos .project-overview-page .workbench-board-switcher .ant-segmented {
   padding: 4px;
-  border: 1px solid rgba(15, 23, 42, 0.055) !important;
+  border: 1px solid var(--app-glass-border-soft) !important;
   border-radius: 14px;
-  background: rgba(248, 250, 252, 0.68) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76) !important;
+  background: var(--app-glass-table-bg) !important;
+  box-shadow: inset 0 1px 0 var(--app-glass-highlight-76) !important;
 }
 
 .app-shell.app-shell-macos .project-overview-page .workbench-board-switcher .ant-segmented-item {
@@ -1554,14 +1545,14 @@ body,
 
 .app-shell.app-shell-macos .project-overview-page .workbench-board-switcher .ant-segmented-item:hover {
   color: var(--project-overview-blue) !important;
-  background: rgba(255, 255, 255, 0.72) !important;
+  background: var(--app-glass-surface-72) !important;
 }
 
 .app-shell.app-shell-macos .project-overview-page .workbench-board-switcher .ant-segmented-thumb,
 .app-shell.app-shell-macos .project-overview-page .workbench-board-switcher .ant-segmented-item-selected {
   color: var(--project-overview-text) !important;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.94) !important;
+  background: var(--app-glass-surface-94) !important;
   box-shadow: none !important;
 }
 
@@ -1574,11 +1565,11 @@ body,
   background: var(--project-overview-panel) !important;
 }
 
-.app-shell.app-shell-macos .project-overview-page .panel-header,
+.app-shell.app-shell-macos .project-overview-page .panel-header:not(:where(.tp-list-toolbar)),
 .app-shell.app-shell-macos .project-overview-page .table-footer {
   min-height: 58px;
   padding: 0 18px;
-  border-color: rgba(15, 23, 42, 0.055) !important;
+  border-color: var(--app-glass-border-soft) !important;
   background: var(--project-overview-panel-soft) !important;
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   backdrop-filter: saturate(180%) blur(20px);
@@ -1619,22 +1610,22 @@ body,
 
 .app-shell.app-shell-macos .project-overview-page .sprint-card.ant-card {
   min-height: 172px;
-  border: 1px solid rgba(255, 255, 255, 0.68) !important;
+  border: 1px solid var(--app-glass-border-68) !important;
   border-radius: 14px !important;
   background: var(--project-overview-card) !important;
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.86),
-    0 10px 24px rgba(31, 41, 55, 0.045) !important;
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 10px 24px var(--app-glass-shadow-card) !important;
 }
 
 .app-shell.app-shell-macos .project-overview-page .sprint-card.ant-card:hover {
-  border-color: rgba(10, 132, 255, 0.18) !important;
+  border-color: var(--app-glass-action-border) !important;
   background: var(--project-overview-card-hover) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 14px 30px rgba(31, 41, 55, 0.065) !important;
+    inset 0 1px 0 var(--app-glass-highlight-90),
+    0 14px 30px var(--app-glass-shadow-floating) !important;
   transform: translateY(-2px);
 }
 
@@ -1644,7 +1635,7 @@ body,
 }
 
 .app-shell.app-shell-macos .project-overview-page .sprint-card-meta {
-  border-bottom-color: rgba(15, 23, 42, 0.055) !important;
+  border-bottom-color: var(--app-glass-border-soft) !important;
 }
 
 .app-shell.app-shell-macos .project-overview-page .sprint-card-value {
@@ -1653,7 +1644,7 @@ body,
 }
 
 .app-shell.app-shell-macos .project-overview-page .action-btn-create.ant-btn-primary {
-  border: 1px solid rgba(10, 132, 255, 0.26) !important;
+  border: 1px solid var(--app-glass-action-border-hover) !important;
   border-radius: 10px !important;
 }
 
@@ -1663,7 +1654,7 @@ body,
 }
 
 .project-overview-page .project-requirement-list-table .ant-table {
-  color: var(--project-overview-text, #172033);
+  color: var(--project-overview-text, var(--app-glass-text));
   background: transparent;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -1678,8 +1669,8 @@ body,
 }
 
 .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell {
-  border-top: 1px solid rgba(255, 255, 255, 0.72) !important;
-  border-bottom: 1px solid rgba(84, 104, 132, 0.12) !important;
+  border-top: 1px solid var(--app-glass-border-72) !important;
+  border-bottom: 1px solid var(--app-glass-table-divider) !important;
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0;
@@ -1687,24 +1678,24 @@ body,
 }
 
 .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell:first-child {
-  border-left: 1px solid rgba(255, 255, 255, 0.64) !important;
+  border-left: 1px solid var(--app-glass-border-64) !important;
   border-start-start-radius: 12px !important;
   border-end-start-radius: 12px !important;
 }
 
 .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell:last-child {
-  border-right: 1px solid rgba(255, 255, 255, 0.64) !important;
+  border-right: 1px solid var(--app-glass-border-64) !important;
   border-start-end-radius: 12px !important;
   border-end-end-radius: 12px !important;
 }
 
 .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell::before {
-  background: rgba(84, 104, 132, 0.045) !important;
+  background: var(--app-glass-table-hover) !important;
 }
 
 .project-overview-page .project-requirement-list-table .ant-table-tbody > tr > td {
-  border-bottom: 1px solid rgba(80, 96, 128, 0.065);
-  color: rgba(79, 93, 115, 0.76) !important;
+  border-bottom: 1px solid var(--app-glass-table-row-border);
+  color: var(--app-glass-table-text) !important;
   font-size: 12px;
   font-weight: 400;
 }
@@ -1721,7 +1712,7 @@ body,
 
 .project-requirement-list-name .ant-typography {
   max-width: 100%;
-  color: rgba(31, 41, 55, 0.88) !important;
+  color: var(--app-glass-table-name) !important;
   font-size: 13px !important;
   font-weight: 400 !important;
   line-height: 20px;
@@ -1732,13 +1723,13 @@ body,
   height: 5px;
   flex: 0 0 auto;
   border-radius: 999px;
-  background: rgba(126, 148, 224, 0.22);
+  background: var(--app-glass-table-selected);
 }
 
 .project-overview-page .project-requirement-list-table .ant-table-tbody .ant-typography,
 .project-overview-page .project-requirement-list-table .ant-table-tbody span,
 .project-overview-page .project-requirement-list-info.ant-typography {
-  color: rgba(72, 84, 104, 0.78) !important;
+  color: var(--app-glass-table-heading) !important;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif !important;
   font-size: 12px !important;
   font-weight: 400 !important;
@@ -1748,7 +1739,7 @@ body,
 }
 
 .project-overview-page .project-requirement-list-table .ant-table-tbody .ant-typography-secondary {
-  color: rgba(79, 93, 115, 0.7) !important;
+  color: var(--app-glass-table-muted) !important;
   font-weight: 400 !important;
 }
 
@@ -1785,7 +1776,7 @@ body,
 .project-overview-page .project-requirement-list-binding-info .zentao-binding-summary-name {
   overflow: hidden;
   max-width: 220px;
-  color: rgba(72, 84, 104, 0.78) !important;
+  color: var(--app-glass-table-heading) !important;
   font-size: 12px !important;
   font-weight: 400 !important;
   text-overflow: ellipsis;
@@ -1801,7 +1792,7 @@ body,
 }
 
 .project-overview-page .project-requirement-list-table .project-requirement-list-name .ant-typography {
-  color: rgba(31, 41, 55, 0.88) !important;
+  color: var(--app-glass-table-name) !important;
 }
 
 .project-requirement-list-actions {
@@ -1822,59 +1813,59 @@ body,
 }
 
 .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell {
-  border-top-color: rgba(255, 255, 255, 0.78) !important;
-  border-bottom-color: rgba(84, 104, 132, 0.1) !important;
+  border-top-color: var(--app-glass-border-78) !important;
+  border-bottom-color: var(--app-glass-table-border-hover) !important;
 }
 
 .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-tbody > tr > td {
-  color: rgba(79, 93, 115, 0.76) !important;
+  color: var(--app-glass-table-text) !important;
 }
 
 /* Project requirement list: align with the shared flat-list visual language. */
-:root:not([data-theme='dark']) .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell,
-:root:not([data-theme='dark']) .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell {
+:root:root .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell,
+:root:root .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell {
   border-top: 0 !important;
-  border-bottom: 1px solid #e8ecf2 !important;
+  border-bottom: 1px solid var(--app-list-header-border) !important;
   border-radius: 0 !important;
 }
-:root:not([data-theme='dark']) .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell:first-child {
+:root:root .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell:first-child {
   border-left: 0 !important;
   border-start-start-radius: 8px !important;
   border-end-start-radius: 8px !important;
   border-top-left-radius: 8px !important;
   border-bottom-left-radius: 8px !important;
 }
-:root:not([data-theme='dark']) .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell:last-child {
+:root:root .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell:last-child {
   border-right: 0 !important;
   border-start-end-radius: 8px !important;
   border-end-end-radius: 8px !important;
   border-top-right-radius: 8px !important;
   border-bottom-right-radius: 8px !important;
 }
-:root:not([data-theme='dark']) .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell::before {
+:root:root .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell::before {
   display: none;
 }
-:root:not([data-theme='dark']) .project-overview-page .project-requirement-list-table .ant-table-tbody > tr > td,
-:root:not([data-theme='dark']) .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-tbody > tr > td {
-  color: #697386 !important;
-  border-bottom: 1px solid #edf0f5 !important;
+:root:root .project-overview-page .project-requirement-list-table .ant-table-tbody > tr > td,
+:root:root .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-tbody > tr > td {
+  color: var(--app-list-header-text) !important;
+  border-bottom: 1px solid var(--app-list-row-border) !important;
 }
 
 .project-overview-page .project-requirement-list-status-dot {
   display: none;
 }
 
-:root:not([data-theme='dark']) .project-overview-page .project-requirement-list-table .project-requirement-list-name .ant-typography,
-:root:not([data-theme='dark']) .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .project-requirement-list-name .ant-typography {
-  color: #3f6fc6 !important;
+:root:root .project-overview-page .project-requirement-list-table .project-requirement-list-name .ant-typography,
+:root:root .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .project-requirement-list-name .ant-typography {
+  color: var(--app-list-name) !important;
   font-size: 13px !important;
   font-weight: 500 !important;
   cursor: pointer;
   text-decoration: none;
   text-underline-offset: 3px;
 }
-:root:not([data-theme='dark']) .project-overview-page .project-requirement-list-table .ant-table-tbody > tr:hover .project-requirement-list-name .ant-typography {
-  color: #2859b3 !important;
+:root:root .project-overview-page .project-requirement-list-table .ant-table-tbody > tr:hover .project-requirement-list-name .ant-typography {
+  color: var(--app-list-name-hover) !important;
   text-decoration: underline;
 }
 
@@ -1898,7 +1889,7 @@ body,
   .ai-testing-overview-page,
   .base-services-page
 ) {
-  --mac-action-blue-border: rgba(10, 132, 255, 0.18);
+  --mac-action-blue-border: var(--legacy-mac-action-blue-border);
 }
 
 .app-shell.app-shell-macos :is(
@@ -1974,12 +1965,12 @@ body,
 .ant-modal .action-btn-save.ant-btn-primary,
 .ant-drawer .action-btn-create.ant-btn-primary,
 .ant-modal .action-btn-create.ant-btn-primary {
-  border: 1px solid rgba(10, 132, 255, 0.18) !important;
+  border: 1px solid var(--app-glass-action-border) !important;
   border-radius: 10px !important;
 }
 
 .app-shell.app-shell-macos :is(.ai-testing-page, .ai-testing-overview-page) :is(.ai-testing-hero-action, .ai-skill-library-empty .ant-btn-primary).ant-btn-primary {
-  border: 1px solid rgba(10, 132, 255, 0.18) !important;
+  border: 1px solid var(--app-glass-action-border) !important;
   border-radius: 10px !important;
 }
 
@@ -2002,7 +1993,7 @@ body,
   .api-collection-detail-page,
   .functional-suite-detail-page
 ) .ant-empty .ant-btn-primary {
-  border: 1px solid rgba(10, 132, 255, 0.18) !important;
+  border: 1px solid var(--app-glass-action-border) !important;
   border-radius: 10px !important;
 }
 
@@ -2099,7 +2090,7 @@ body,
   .base-services-page,
   .app-header-actions
 ) .panel-header .ant-btn-primary:not(:disabled) {
-  border: 1px solid rgba(10, 132, 255, 0.26) !important;
+  border: 1px solid var(--app-glass-action-border-hover) !important;
 }
 
 /* Project requirement action buttons aligned with functional-test list actions. */
@@ -2172,7 +2163,7 @@ body,
   flex-wrap: wrap;
   gap: 4px 10px;
   min-width: 0;
-  color: #64748b;
+  color: var(--app-text-subtle);
   font-size: 12px;
   line-height: 20px;
   text-align: center;
@@ -2182,13 +2173,13 @@ body,
   flex-shrink: 0;
   padding: 1px 8px;
   border-radius: 6px;
-  color: #1677ff;
-  background: rgba(22, 119, 255, 0.09);
+  color: var(--app-accent);
+  background: var(--app-accent-selection);
   font-weight: 600;
 }
 
 .app-header-feedback a {
-  color: #1677ff;
+  color: var(--app-accent);
   font-weight: 500;
   white-space: nowrap;
   text-underline-offset: 3px;
@@ -2196,7 +2187,7 @@ body,
 
 .app-header-feedback a:hover,
 .app-header-feedback a:focus-visible {
-  color: #4096ff;
+  color: var(--app-link-hover);
   text-decoration: underline;
 }
 

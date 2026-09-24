@@ -1,3 +1,4 @@
+import { toRecord } from '@/shared/utils/value'
 // 用例图谱（relation_analysis / caseRelations）的解析与鱼骨布局。
 // 产物契约见 ai-worker contracts.RelationAnalysisOutput：main_paths + edges(next|branch)。
 
@@ -77,11 +78,6 @@ export const RELATIONS_SCALE_LIMITS = { min: 0.2, max: 2.5 }
 
 export function clampRelationsScale(scale: number) {
   return Math.min(RELATIONS_SCALE_LIMITS.max, Math.max(RELATIONS_SCALE_LIMITS.min, scale))
-}
-
-function toRecord(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
-  return value as Record<string, unknown>
 }
 
 function toStringArray(value: unknown): string[] {

@@ -92,3 +92,12 @@ describe('card-aware relation paths', () => {
     }
   })
 })
+
+// Match the reported test order, including routes across other rows. Full routing
+// runs in a worker; the interactive frame budget is tested in useRelationsEdgePaths.
+it('routes 126 cards without missing or intersecting paths', () => {
+  const cards = Array.from({ length: 126 }, (_, i) => card(String(i), (i % 14) * 300, Math.floor(i / 14) * 160))
+  const paths = cards.map((source, i) => routeRelationsEdge(source, cards[(i + 16) % cards.length], cards, false))
+  expect(paths.every(Boolean)).toBe(true)
+  for (const path of paths) expectClear(path, cards)
+}, 30000)

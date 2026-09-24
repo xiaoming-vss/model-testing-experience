@@ -135,7 +135,7 @@
 
 .ai-generated-cases-review-groups > button.active .ai-generated-cases-review-count {
   color: var(--ai-active-text);
-  background: rgba(255, 255, 255, 0.48);
+  background: var(--app-glass-surface-48);
 }
 
 .ai-generated-cases-review-detail {
@@ -251,13 +251,13 @@
   padding: 10px 12px;
   color: var(--ai-text-secondary);
   background: var(--ai-panel-soft);
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  border: 1px solid var(--app-review-divider);
   border-radius: 9px;
 }
 
 .ai-generated-cases-review-fields > section.expected {
-  background: rgba(41, 190, 163, 0.08);
-  border-color: rgba(41, 190, 163, 0.14);
+  background: var(--app-skill-running-bg);
+  border-color: var(--app-skill-running-border);
 }
 
 .ai-generated-cases-review-field-title {
@@ -275,7 +275,7 @@
 }
 
 .ai-generated-cases-review-fields > section.expected .ai-generated-cases-review-field-title .anticon {
-  color: #2fba9f;
+  color: var(--app-skill-running-text);
 }
 
 .ai-generated-cases-review-fields :is(p, ol) {

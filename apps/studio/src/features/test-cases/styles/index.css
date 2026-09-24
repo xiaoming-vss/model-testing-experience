@@ -43,7 +43,7 @@
 }
 
 .functional-case-brief {
-  color: var(--tp-text-secondary, #5b6477);
+  color: var(--tp-text-secondary, var(--app-control-text));
 }
 
 /* macOS compact functional suite cards */
@@ -56,17 +56,17 @@
 .app-shell-macos .functional-test-page .functional-suite-card {
   height: auto !important;
   min-height: 146px !important;
-  border: 1px solid rgba(15, 23, 42, 0.065) !important;
+  border: 1px solid var(--app-glass-divider) !important;
   border-radius: 14px !important;
-  background: rgba(255, 255, 255, 0.66) !important;
+  background: var(--app-glass-surface-66) !important;
   backdrop-filter: saturate(180%) blur(22px);
   -webkit-backdrop-filter: saturate(180%) blur(22px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84), 0 10px 24px rgba(15, 23, 42, 0.04) !important;
+  box-shadow: inset 0 1px 0 var(--app-glass-highlight-84), 0 10px 24px var(--app-surface-shadow) !important;
 }
 
 .app-shell-macos .functional-test-page .functional-suite-card:hover {
-  border-color: rgba(10, 132, 255, 0.18) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 14px 28px rgba(15, 23, 42, 0.065) !important;
+  border-color: var(--app-glass-action-border) !important;
+  box-shadow: inset 0 1px 0 var(--app-glass-highlight-90), 0 14px 28px var(--app-glass-divider) !important;
 }
 
 .app-shell-macos .functional-test-page .functional-suite-card .ant-card-body {
@@ -79,7 +79,7 @@
 }
 
 .app-shell-macos .functional-test-page .functional-suite-card .api-collection-card-top .ant-typography {
-  color: #172033;
+  color: var(--app-glass-text);
   font-size: 13px;
   line-height: 20px;
 }
@@ -87,7 +87,7 @@
 .app-shell-macos .functional-test-page .functional-suite-card .api-collection-description {
   min-height: 18px;
   margin: 0;
-  color: rgba(23, 32, 51, 0.5) !important;
+  color: var(--app-glass-text-placeholder) !important;
   font-size: 12px;
   line-height: 18px;
 }
@@ -95,16 +95,16 @@
 .app-shell-macos .functional-test-page .functional-suite-card .sprint-card-meta {
   min-height: 22px;
   padding-bottom: 0;
-  border-bottom-color: rgba(15, 23, 42, 0.045);
+  border-bottom-color: var(--app-glass-border-faint);
 }
 
 .app-shell-macos .functional-test-page .functional-suite-card .sprint-card-label {
-  color: rgba(23, 32, 51, 0.48);
+  color: var(--app-glass-text-muted);
   font-size: 12px;
 }
 
 .app-shell-macos .functional-test-page .functional-suite-card .api-collection-inline-value {
-  color: rgba(23, 32, 51, 0.72);
+  color: var(--app-graph-panel-text);
   font-size: 12px;
   font-weight: 600;
 }
@@ -167,7 +167,7 @@
 
 .app-shell-macos .functional-test-page .functional-suite-scroll {
   padding: 18px !important;
-  background: rgba(255, 255, 255, 0.18) !important;
+  background: var(--app-glass-surface-18) !important;
 }
 
 .app-shell-macos .functional-test-page .functional-suite-grid {
@@ -185,15 +185,15 @@
 
 .app-shell-macos .functional-test-page .functional-suite-card.ant-card {
   min-height: 178px !important;
-  border: 1px solid rgba(15, 23, 42, 0.052) !important;
-  background: linear-gradient(180deg, rgba(255,255,255,0.78), rgba(255,255,255,0.54)), rgba(255,255,255,0.58) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 22px rgba(31,41,55,0.042) !important;
+  border: 1px solid var(--app-skill-card-border) !important;
+  background: linear-gradient(180deg, var(--app-glass-surface-78), var(--app-glass-surface-54)), var(--app-glass-surface-58) !important;
+  box-shadow: inset 0 1px 0 var(--app-glass-highlight-90), 0 8px 22px var(--app-skill-card-shadow) !important;
 }
 
 .app-shell-macos .functional-test-page .functional-suite-card.ant-card:hover {
-  border-color: rgba(10, 132, 255, 0.16) !important;
-  background: linear-gradient(180deg, rgba(255,255,255,0.86), rgba(255,255,255,0.64)), rgba(255,255,255,0.72) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.94), 0 12px 28px rgba(31,41,55,0.065) !important;
+  border-color: var(--app-skill-card-border-hover) !important;
+  background: linear-gradient(180deg, var(--app-glass-surface-86), var(--app-glass-surface-64)), var(--app-glass-surface-72) !important;
+  box-shadow: inset 0 1px 0 var(--app-glass-highlight-94), 0 12px 28px var(--app-glass-shadow-floating) !important;
   transform: translateY(-1px);
 }
 
@@ -213,7 +213,7 @@
 .app-shell-macos .functional-test-page .functional-suite-card-description.ant-typography {
   min-height: 36px !important;
   margin: 0 !important;
-  color: rgba(23,32,51,0.46) !important;
+  color: var(--app-graph-panel-muted) !important;
   line-height: 18px !important;
 }
 
@@ -259,7 +259,7 @@
 .case-library-nav-count {
   flex: 0 0 auto;
   font-size: 11px;
-  color: var(--tp-text-muted, #727786);
+  color: var(--tp-text-muted, var(--app-shell-text-muted));
 }
 
 /* 测试集自身的三个动作：一行放下——「新建」带文字常驻，编辑 / 删除靠选中测试集，

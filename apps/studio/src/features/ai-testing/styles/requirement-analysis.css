@@ -55,7 +55,7 @@
 }
 
 .ai-requirement-analysis-tabs > .ant-tabs-nav::before {
-  border-bottom-color: rgba(148, 163, 184, 0.1);
+  border-bottom-color: var(--app-review-divider);
 }
 
 .ai-requirement-analysis-tabs > .ant-tabs-nav .ant-tabs-tab {
@@ -101,11 +101,11 @@
 }
 
 .ai-requirement-analysis-section-head:hover {
-  background: rgba(124, 195, 163, 0.08);
+  background: var(--app-terminal-result-bg);
 }
 
 .ai-requirement-analysis-section-head:focus-visible {
-  outline: 2px solid rgba(124, 195, 163, 0.55);
+  outline: 2px solid var(--app-terminal-focus-ring);
   outline-offset: 2px;
 }
 
@@ -137,14 +137,14 @@
 .ai-requirement-analysis-row-card,
 .ai-requirement-analysis-flow-card,
 .ai-requirement-analysis-scene-group {
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  border: 1px solid var(--app-frame-divider-soft);
   border-radius: 14px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 255, 0.98)),
-    #fff;
+    linear-gradient(180deg, var(--app-glass-surface-98), var(--app-card-gradient-start)),
+    var(--app-surface);
   box-shadow:
-    0 10px 26px rgba(36, 49, 78, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.74);
+    0 10px 26px var(--app-review-panel-shadow),
+    inset 0 1px 0 var(--app-glass-highlight-74);
 }
 
 .ai-requirement-analysis-card {
@@ -155,13 +155,13 @@
 }
 
 .ai-requirement-analysis-card.risk {
-  border-color: rgba(249, 115, 22, 0.2);
+  border-color: var(--app-request-result-warning-border);
 }
 
 .ai-requirement-analysis-card.nested {
   background:
-    linear-gradient(180deg, rgba(246, 250, 255, 0.98), rgba(242, 247, 253, 0.98)),
-    #f8fbff;
+    linear-gradient(180deg, var(--app-review-gradient-start), var(--app-review-gradient-end)),
+    var(--app-review-code-surface);
 }
 
 .ai-requirement-analysis-card-title {
@@ -198,11 +198,11 @@
 .ai-requirement-analysis-field.accent {
   padding: 10px 12px;
   border-radius: 12px;
-  background: rgba(124, 195, 163, 0.08);
+  background: var(--app-terminal-result-bg);
 }
 
 .ai-requirement-analysis-field.accent.danger {
-  background: rgba(249, 115, 22, 0.08);
+  background: var(--app-review-warning-soft);
 }
 
 .ai-requirement-analysis-list,
@@ -232,14 +232,14 @@
   padding: 0 10px;
   border-radius: 999px;
   color: var(--ai-active-text);
-  background: rgba(124, 195, 163, 0.12);
+  background: var(--app-environment-current-bg);
   font-size: 12px;
   line-height: 18px;
   font-weight: 700;
 }
 
 .ai-requirement-analysis-flow-step {
-  background: rgba(96, 165, 250, 0.12);
+  background: var(--app-review-info-soft);
 }
 
 .ai-requirement-analysis-row-body,

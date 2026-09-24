@@ -124,7 +124,7 @@ export function LlmConnectionSelectModal({
                   value={conn.connectionId}
                   style={{
                     padding: '12px 16px',
-                    border: '1px solid var(--tp-border-soft, rgba(148, 163, 184, 0.18))',
+                    border: '1px solid var(--tp-border-soft, var(--app-frame-divider))',
                     borderRadius: 8,
                     margin: 0,
                     width: '100%',
@@ -142,9 +142,9 @@ export function LlmConnectionSelectModal({
             <div
               style={{
                 padding: '12px 14px',
-                border: '1px solid var(--tp-border-soft, rgba(148, 163, 184, 0.18))',
+                border: '1px solid var(--tp-border-soft, var(--app-frame-divider))',
                 borderRadius: 10,
-                background: 'var(--tp-surface-soft, rgba(148, 163, 184, 0.06))',
+                background: 'var(--tp-surface-soft, var(--app-connection-option-bg))',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',

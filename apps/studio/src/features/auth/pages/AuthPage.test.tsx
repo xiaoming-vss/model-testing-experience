@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { AuthPage } from './AuthPage'
 import '../styles/auth.css'
+import foundationTokens from '@/shared/styles/foundation-tokens.css?raw'
 
 afterEach(() => {
   cleanup()
@@ -27,7 +28,8 @@ describe('登录页', () => {
     const title = screen.getByRole('heading', { name: '欢迎回来' })
 
     expect(shell).toBeInTheDocument()
-    expect(getComputedStyle(title).color).toBe('rgb(24, 32, 45)')
+    expect(getComputedStyle(title).color).toBe('var(--app-auth-text)')
+    expect(foundationTokens).toContain('--app-auth-text: #18202d;')
     expect(screen.getByText('© 2026 MTX. 版权所有')).toBeInTheDocument()
   })
 })

@@ -63,9 +63,15 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 
 - `shared/styles/list-table.css` 是表头和数据行尺寸、底色、悬停背景的共用实现，颜色取自 `surface-tokens.css` 的 `--srf-list-*`。页面保留业务类名并声明 `tp-list-surface`，表格保留业务类名并声明 `tp-list-table`；使用表格的入口显式引入这两个样式文件。列内容、边框及圆角的现有优先级仍由 feature 维护。
 - 按钮外观由 `app/styles/buttons.css` 的 `app-buttons` 层统一负责。页面保留尺寸、排布与边框结构，不再重复声明已经被该层覆盖的文字色、背景、阴影和字重。
+- 筛选工具栏的尺寸与表面只在 `surface-tokens.css` 的 `.tp-surface .tp-list-toolbar` 定义。旧面板样式显式排除这个类，API / UI / 测试单页面只保留内部排布；已删除旧 UI 横幅、API 环境摘要、快速过滤空栏及 AI 页内导航的失效样式。
 - UI 步骤编辑器和测试集抽屉的窄屏规则分别归 `ui-automation/styles/step-editor-layout.css`、`suite-drawer-layout.css`，由对应组件引入；不再借用 API 模块的 `detail.css`。
 
 列表规格由 `app/styles/listSurfaceConsistency.test.ts` 验证，运行操作的缓存与草稿保护由 `ai-testing/hooks/useTaskRunActions.test.tsx` 验证。涉及按钮层优先级的变更需用浏览器核对，jsdom 尚不能模拟 CSS layer 的完整级联。
+
+### 共享数据工具
+
+- `shared/utils/value.ts` 的 `toRecord` / `toRecordArray` 统一处理候选结果和图谱数据的对象边界：排除 null、数组和基本类型；数组解析保留有效对象及原顺序。
+- JSON 编辑器、API 运行结果、HTML 报告和测试点树图片下载复用 `shared/utils/download.ts` 的 `saveBlob`，各入口只负责内容、文件名及成功提示。
 
 ## 配置
 
@@ -99,4 +105,4 @@ npm run verify        # type-check + lint + build
 - 开发服务器代理 `/v1` 与 `/__document_preview_proxy`（后者重写去掉前缀）到 `VITE_API_PROXY_TARGET`
 - 容器内由 nginx 监听 80 端口并代理同样的两个前缀，`proxy_read_timeout` 与 `proxy_send_timeout` 为 120s，`client_max_body_size` 为 105m
 - 容器健康检查访问 `location = /healthz`
-- 用户态认证使用 `Authorization` 头携带 JWT；浏览器存储键为 `testpilot_access_token` 与 `testpilot_theme_mode`，为兼容改名前的已登录用户而保留
+- 用户态认证使用 `Authorization` 头携带 JWT；认证存储键 `testpilot_access_token` 为兼容改名前的已登录用户而保留；主题偏好使用 `mtx-theme-preference`（light / dark / system，默认 system）

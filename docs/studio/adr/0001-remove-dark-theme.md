@@ -1,5 +1,7 @@
 # 移除暗色主题
 
+> 2026-09-24：仅保留浅色的决定已由 [0002](0002-token-based-github-dark.md) 取代；不恢复组件覆盖式暗色补丁的约束继续有效。
+
 前端此前有两套配色：`themes` 由 `<html>` 上的 `data-theme` 属性驱动，antd 走 `darkAlgorithm`，
 CSS 侧靠 22 个文件里约 4,000 行 `:root[data-theme='dark']` 覆盖规则把浅色样式逐条改写，另有一个
 891 行的补丁层 `app/styles/dark-polish.css`。我们决定整体移除暗色主题：应用只保留浅色一套，

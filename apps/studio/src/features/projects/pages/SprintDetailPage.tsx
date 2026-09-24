@@ -33,17 +33,17 @@ const { Text, Title } = Typography
 const { RangePicker } = DatePicker
 
 const sprintChartTheme = {
-  grid: '#edf1f7',
-  axis: '#7b8395',
-  tooltipBackground: '#ffffff',
-  tooltipBorder: '#e5e7eb',
-  tooltipText: '#262626',
-  total: '#1677ff',
-  positive: '#52c41a',
-  pending: '#faad14',
-  success: '#13c2c2',
-  negative: '#ff4d4f',
-  empty: '#e8edf5',
+  grid: 'var(--chart-grid)',
+  axis: 'var(--chart-axis)',
+  tooltipBackground: 'var(--chart-tooltip-bg)',
+  tooltipBorder: 'var(--chart-tooltip-border)',
+  tooltipText: 'var(--chart-tooltip-text)',
+  total: 'var(--chart-total)',
+  positive: 'var(--chart-positive)',
+  pending: 'var(--chart-pending)',
+  success: 'var(--chart-success)',
+  negative: 'var(--chart-negative)',
+  empty: 'var(--chart-empty)',
 } as const
 
 type SprintChartTheme = typeof sprintChartTheme
@@ -194,10 +194,10 @@ function SprintHealthSummary({ metrics }: { metrics: NormalizedDailyMetrics }) {
           <span className="sprint-dashboard-health-fill sprint-dashboard-health-fill-pending" style={{ width: `${percentValue(unexecuted, metrics.totalCases)}%` }} />
         </div>
         <div className="sprint-dashboard-health-legend">
-          <span style={{ '--legend-color': '#faad14' } as CSSProperties}>未执行 <strong>{unexecuted}</strong></span>
-          <span style={{ '--legend-color': '#52c41a' } as CSSProperties}>已执行 <strong>{executed}</strong></span>
-          <span style={{ '--legend-color': '#1677ff' } as CSSProperties}>成功 <strong>{success}</strong></span>
-          <span style={{ '--legend-color': '#ff4d4f' } as CSSProperties}>失败 <strong>{failed}</strong></span>
+          <span style={{ '--legend-color': 'var(--chart-pending)' } as CSSProperties}>未执行 <strong>{unexecuted}</strong></span>
+          <span style={{ '--legend-color': 'var(--chart-positive)' } as CSSProperties}>已执行 <strong>{executed}</strong></span>
+          <span style={{ '--legend-color': 'var(--chart-total)' } as CSSProperties}>成功 <strong>{success}</strong></span>
+          <span style={{ '--legend-color': 'var(--chart-negative)' } as CSSProperties}>失败 <strong>{failed}</strong></span>
         </div>
       </div>
       <div className="sprint-dashboard-health-defects">
@@ -295,10 +295,10 @@ function TestExecutionOverviewCard({ metrics }: { metrics: NormalizedDailyMetric
             ) : (
               <>
                 <strong className="sprint-dashboard-test-total">{row.stats.total}</strong>
-                <MiniProgress value={row.stats.executed} total={row.stats.total} color="#52c41a" />
-                <MiniProgress value={row.stats.unexecuted} total={row.stats.total} color="#faad14" />
-                <MiniProgress value={row.stats.success} total={row.stats.total} color="#13c2c2" />
-                <MiniProgress value={row.stats.failed} total={row.stats.total} color="#ff4d4f" />
+                <MiniProgress value={row.stats.executed} total={row.stats.total} color="var(--chart-positive)" />
+                <MiniProgress value={row.stats.unexecuted} total={row.stats.total} color="var(--chart-pending)" />
+                <MiniProgress value={row.stats.success} total={row.stats.total} color="var(--chart-success)" />
+                <MiniProgress value={row.stats.failed} total={row.stats.total} color="var(--chart-negative)" />
               </>
             )}
           </div>
@@ -348,10 +348,10 @@ function BugRiskOverviewCard({ bug }: { bug: NormalizedDailyMetrics['bug'] }) {
     { name: '未解决', value: bug.unresolved, color: chartTheme.negative },
   ]
   const severityData = [
-    { name: '致命', value: bug.fatal, color: '#ff4d4f' },
-    { name: '严重', value: bug.severe, color: '#faad14' },
-    { name: '一般', value: bug.normal, color: '#8b9bb4' },
-    { name: '提示', value: bug.hint, color: '#91a3bd' },
+    { name: '致命', value: bug.fatal, color: 'var(--chart-negative)' },
+    { name: '严重', value: bug.severe, color: 'var(--chart-pending)' },
+    { name: '一般', value: bug.normal, color: 'var(--chart-severity-normal)' },
+    { name: '提示', value: bug.hint, color: 'var(--chart-severity-hint)' },
   ]
 
   return (

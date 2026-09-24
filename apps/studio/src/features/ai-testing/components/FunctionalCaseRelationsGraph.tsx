@@ -1,3 +1,4 @@
+import { useThemeStore } from '@/shared/theme/theme.store'
 import { Background, BackgroundVariant, BaseEdge, Handle, MarkerType, MiniMap, Position, ReactFlow, ReactFlowProvider, applyNodeChanges, useReactFlow, useStore, type Edge, type EdgeProps, type Node, type NodeChange, type NodeProps } from '@xyflow/react'
 import { ExpandOutlined, MinusOutlined, PlusOutlined } from '@ant-design/icons'
 import { Button, Empty, Tag } from 'antd'
@@ -13,14 +14,13 @@ import {
   type RelationsLaidOutNode,
   type RelationsOrientation,
 } from '../utils/caseRelationsGraph'
-import { routeRelationsEdge } from '../utils/relationsEdgePath'
+import { useRelationsEdgePaths } from '../hooks/useRelationsEdgePaths'
 import '@xyflow/react/dist/style.css'
 import './FunctionalCaseRelationsGraph.css'
 
 // 选中详情面板浮在画布右侧，全图/定位需要把这块宽度让出来，避免节点被压住。
-const PANEL_WIDTH = 296
+const DEFAULT_PANEL_WIDTH = 296
 const PANEL_GAP = 24
-const PANEL_RESERVE = PANEL_WIDTH + PANEL_GAP
 const FIT_PADDING = 48
 const MINIMAP_WIDTH = 168
 const MINIMAP_HEIGHT = 96
@@ -34,7 +34,10 @@ function padCaseNumber(number: number) {
   return String(number).padStart(2, '0')
 }
 
+type CaseBadge = { label: string; color: string }
+
 type CaseNodeData = {
+  badge?: CaseBadge
   meta: RelationsLaidOutNode
   dimmed: boolean
 }
@@ -52,7 +55,7 @@ const HANDLE_STYLE = {
 
 // 节点卡片：位置由 React Flow 的 wrapper 控制，卡片本身只负责展示。
 function CaseFlowNode({ data }: NodeProps<CaseFlowNode>) {
-  const { meta, dimmed } = data
+  const { meta, dimmed, badge } = data
   return (
     <div
       className={`ai-relations-node${meta.onMainPath ? ' main' : ''}${dimmed ? ' dimmed' : ''}`}
@@ -63,7 +66,7 @@ function CaseFlowNode({ data }: NodeProps<CaseFlowNode>) {
       <span className="node-head">
         <span className="node-no">{padCaseNumber(meta.number)}</span>
         <span className="node-kind">{meta.onMainPath ? '主线用例' : meta.isolated ? '独立用例' : '分支用例'}</span>
-        {meta.module ? <span className="node-module">{meta.module}</span> : null}
+        {badge ? <Tag color={badge.color} aria-label={`执行状态：${badge.label}`}>{badge.label}</Tag> : meta.module ? <span className="node-module">{meta.module}</span> : null}
       </span>
       <span className="node-title">{meta.title}</span>
     </div>
@@ -80,8 +83,8 @@ function FishboneEdge({ id, data, markerEnd, style }: EdgeProps) {
 const EDGE_TYPES = { fishbone: FishboneEdge }
 
 const EDGE_COLORS = {
-  next: { normal: 'rgba(96, 165, 250, 0.6)', dim: 'rgba(96, 165, 250, 0.12)' },
-  branch: { normal: 'rgba(100, 116, 139, 0.6)', dim: 'rgba(100, 116, 139, 0.15)' },
+  next: { normal: 'var(--graph-edge-next)', dim: 'var(--graph-edge-next-dim)' },
+  branch: { normal: 'var(--graph-edge-branch)', dim: 'var(--graph-edge-branch-dim)' },
 } as const
 
 function ZoomReadout() {
@@ -110,18 +113,26 @@ function RelationsGraphInner({
   orientation,
   onSelectionChange,
   handleRef,
+  renderCaseDetails,
+  caseBadges,
+  panelWidth = DEFAULT_PANEL_WIDTH,
 }: {
   content: string
   casesContent?: string
   orientation: RelationsOrientation
   onSelectionChange?: (caseId: string | null) => void
   handleRef: Ref<FunctionalCaseRelationsGraphHandle>
+  renderCaseDetails?: (caseId: string) => ReactNode
+  caseBadges?: Record<string, CaseBadge>
+  panelWidth?: number
 }) {
+  const panelReserve = panelWidth + PANEL_GAP
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [nodes, setNodes] = useState<CaseFlowNode[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const selectedIdRef = useRef<string | null>(null)
+  const resolvedTheme = useThemeStore((state) => state.resolvedTheme)
   const flow = useReactFlow()
   // useReactFlow 返回的函数标识在首帧后才稳定，统一走 ref，避免回调/effect 依赖抖动引发渲染循环。
   const flowRef = useRef(flow)
@@ -158,7 +169,7 @@ function RelationsGraphInner({
     if (!wrapper || all.length === 0) return
     const bounds = measureNodes(all)
     if (bounds.width <= 0 || bounds.height <= 0) return
-    const reserve = selectedIdRef.current ? PANEL_RESERVE : 0
+    const reserve = selectedIdRef.current ? panelReserve : 0
     const width = wrapper.clientWidth - reserve
     const height = wrapper.clientHeight
     if (width <= FIT_PADDING || height <= FIT_PADDING) return
@@ -172,7 +183,7 @@ function RelationsGraphInner({
       y: (height - bounds.height * zoom) / 2 - bounds.y * zoom,
       zoom,
     }, { duration: animate ? 180 : 0 })
-  }, [])
+  }, [panelReserve])
 
   const locateSelected = useCallback(() => {
     const caseId = selectedIdRef.current
@@ -189,8 +200,8 @@ function RelationsGraphInner({
     )
     // setCenter 居中整个画布，这里再左移半个面板宽度，让节点落在可见区域中心。
     const viewport = getViewport()
-    setViewport({ ...viewport, x: viewport.x - PANEL_RESERVE / 2 }, { duration: 200 })
-  }, [])
+    setViewport({ ...viewport, x: viewport.x - panelReserve / 2 }, { duration: 200 })
+  }, [panelReserve])
 
   useImperativeHandle(handleRef, () => ({ fitView: () => fitView(), locateSelected }), [fitView, locateSelected])
 
@@ -225,10 +236,11 @@ function RelationsGraphInner({
       selected: node.id === selectedId,
       data: {
         ...node.data,
+        badge: caseBadges?.[node.id],
         dimmed: Boolean(selectedMeta) && node.id !== selectedId && !(activeNodeIds?.has(node.id)),
       },
     })))
-  }, [selectedId, selectedMeta, activeNodeIds])
+  }, [selectedId, selectedMeta, activeNodeIds, caseBadges])
 
   useEffect(() => {
     if (!model) {
@@ -252,21 +264,12 @@ function RelationsGraphInner({
     }))
   }, [model, activeEdgeIds])
 
-  const routedEdges = useMemo(() => {
-    const cards = nodes.map((node) => ({
-      id: node.id, ...node.position,
-      width: node.measured?.width ?? RELATIONS_NODE_WIDTH,
-      height: node.measured?.height ?? RELATIONS_NODE_HEIGHT,
-    }))
-    const byId = new Map(cards.map((card) => [card.id, card]))
-    const mainPairs = new Set(model?.paths.flatMap((path) => path.caseIds.slice(1).map((id, i) => JSON.stringify([path.caseIds[i], id]))))
-    return edges.map((edge) => {
-      const source = byId.get(edge.source)
-      const target = byId.get(edge.target)
-      const path = source && target ? routeRelationsEdge(source, target, cards, mainPairs.has(JSON.stringify([edge.source, edge.target]))) : ''
-      return { ...edge, data: { path } }
-    })
-  }, [nodes, edges, model])
+  const routing = useRelationsEdgePaths(nodes, edges, model?.paths ?? [])
+  const edgePaths = routing.paths
+  const routedEdges = useMemo(
+    () => edges.map((edge) => ({ ...edge, data: { path: edgePaths.get(edge.id) ?? '' } })),
+    [edges, edgePaths],
+  )
 
   // 内容/方向切换后重新铺满（等节点完成首帧布局再计算包围盒）。
   useEffect(() => {
@@ -286,10 +289,10 @@ function RelationsGraphInner({
     const zoom = getZoom()
     const viewport = getViewport()
     const nodeRight = (node.position.x + RELATIONS_NODE_WIDTH) * zoom + viewport.x
-    const overflow = nodeRight - (wrapper.clientWidth - PANEL_RESERVE)
+    const overflow = nodeRight - (wrapper.clientWidth - panelReserve)
     if (overflow <= 0) return
     setViewport({ ...viewport, x: viewport.x - overflow - 16 }, { duration: 180 })
-  }, [selectedId])
+  }, [selectedId, panelReserve])
 
   const onNodesChange = (changes: NodeChange<CaseFlowNode>[]) => {
     setNodes((current) => applyNodeChanges(changes, current))
@@ -322,14 +325,14 @@ function RelationsGraphInner({
         deleteKeyCode={null}
         minZoom={0.2}
         maxZoom={2.5}
-        colorMode="light"
+        colorMode={resolvedTheme}
         proOptions={{ hideAttribution: true }}
       >
         <Background
           variant={BackgroundVariant.Dots}
           gap={22}
           size={1.4}
-          color="rgba(100, 116, 139, 0.35)"
+          color="var(--graph-grid)"
         />
         <MiniMap
           pannable
@@ -339,21 +342,25 @@ function RelationsGraphInner({
           style={{
             width: MINIMAP_WIDTH,
             height: MINIMAP_HEIGHT,
-            right: selectedId ? PANEL_WIDTH + PANEL_GAP + 14 : 14,
+            right: selectedId ? panelWidth + PANEL_GAP + 14 : 14,
             bottom: 14,
             margin: 0,
           }}
-          bgColor="#ffffff"
-          maskColor="rgba(15, 23, 42, 0.08)"
+          bgColor="var(--graph-minimap-bg)"
+          maskColor="var(--graph-minimap-mask)"
           nodeColor={(node) => {
             const meta = (node as CaseFlowNode).data.meta
-            if (meta.onMainPath) return '#3b82f6'
-            if (meta.isolated) return '#94a3b8'
-            return '#cbd5e1'
+            if (meta.onMainPath) return 'var(--graph-minimap-main)'
+            if (meta.isolated) return 'var(--graph-minimap-isolated)'
+            return 'var(--graph-minimap-branch)'
           }}
         />
       </ReactFlow>
-      <div className="ai-relations-hint" aria-hidden>拖拽空白平移 · 滚轮缩放 · 拖动用例调整位置 · 点击用例查看详情</div>
+      <div className="ai-relations-hint">
+        {routing.error ? <>连线避障计算失败 <Button size="small" type="link" style={{ pointerEvents: 'auto' }} onClick={routing.retry}>重试</Button></>
+          : routing.pending ? '正在调整连线，可继续拖动用例'
+            : '拖拽空白平移 · 滚轮缩放 · 拖动用例调整位置 · 松手后连线自动避让'}
+      </div>
       <div className="ai-relations-zoom">
         <Button type="text" size="small" aria-label="缩小" icon={<MinusOutlined />} onClick={() => flow.zoomOut({ duration: 120 })} />
         <ZoomReadout />
@@ -361,11 +368,12 @@ function RelationsGraphInner({
         <Button type="text" size="small" aria-label="适应画布" icon={<ExpandOutlined />} onClick={() => fitView()} />
       </div>
       {selectedMeta ? (
-        <aside className="ai-relations-panel">
+        <aside className="ai-relations-panel" style={{ width: panelWidth, maxWidth: 'calc(100% - 24px)' }}>
           <header className="panel-head">
             <span>选中用例 / {padCaseNumber(selectedMeta.number)}</span>
             <Button size="small" type="text" aria-label="关闭选中用例面板" onClick={() => setSelectedId(null)}>×</Button>
           </header>
+          {renderCaseDetails ? renderCaseDetails(selectedMeta.caseId) : <>
           <div className="panel-tags">
             <Tag color={selectedMeta.onMainPath ? 'blue' : 'default'}>{selectedMeta.onMainPath ? '主线用例' : selectedMeta.isolated ? '独立用例' : '分支用例'}</Tag>
             {selectedCaseMeta?.priority ? <Tag color="orange">P{selectedCaseMeta.priority}</Tag> : null}
@@ -378,6 +386,7 @@ function RelationsGraphInner({
           <PanelSection label="前置条件" items={selectedCaseMeta?.precondition} />
           <PanelSection label="测试步骤" items={selectedCaseMeta?.testSteps} />
           <PanelSection label="预期结果" items={selectedCaseMeta?.expectedResults} />
+          </>}
         </aside>
       ) : null}
     </div>
@@ -390,7 +399,10 @@ export const FunctionalCaseRelationsGraph = forwardRef<FunctionalCaseRelationsGr
   orientation: RelationsOrientation
   onSelectionChange?: (caseId: string | null) => void
   children?: ReactNode
-}>(function FunctionalCaseRelationsGraph({ content, casesContent, orientation, onSelectionChange }, ref) {
+  renderCaseDetails?: (caseId: string) => ReactNode
+  caseBadges?: Record<string, CaseBadge>
+  panelWidth?: number
+}>(function FunctionalCaseRelationsGraph({ content, casesContent, orientation, onSelectionChange, renderCaseDetails, caseBadges, panelWidth }, ref) {
   return (
     <ReactFlowProvider>
       <RelationsGraphInner
@@ -399,6 +411,9 @@ export const FunctionalCaseRelationsGraph = forwardRef<FunctionalCaseRelationsGr
         orientation={orientation}
         onSelectionChange={onSelectionChange}
         handleRef={ref}
+        renderCaseDetails={renderCaseDetails}
+        caseBadges={caseBadges}
+        panelWidth={panelWidth}
       />
     </ReactFlowProvider>
   )

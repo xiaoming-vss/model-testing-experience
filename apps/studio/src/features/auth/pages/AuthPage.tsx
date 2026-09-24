@@ -1,3 +1,4 @@
+import { ThemeSelect } from '@/shared/components/ThemeSelect'
 import { Alert, Button, Form, Input, Typography } from 'antd'
 import { useMutation } from '@tanstack/react-query'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -39,6 +40,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
 
   return (
     <div className="auth-page">
+      <div className="auth-theme-select"><ThemeSelect /></div>
       <main className="auth-main" aria-label={isLogin ? '登录 MTX' : '注册 MTX'}>
         <section className="auth-shell">
           <aside className="auth-brand-panel" aria-label="MTX">

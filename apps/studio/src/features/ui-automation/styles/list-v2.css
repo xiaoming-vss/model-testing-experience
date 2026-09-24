@@ -1,182 +1,20 @@
-/*
- * UI 测试页（测试集列表，按设计稿重做的表面层）。
- *
- * 三段结构照设计稿来：引擎信息条 / 筛选工具栏卡片 / 表格卡片，间距由共用层的 `.tp-board` 给（12px）。
- * token（`--srf-*`）、九色盘（`.tone-*`）、板面（`.tp-board`）都在 shared/styles/surface-tokens.css，
- * 页面根节点必须带 `tp-surface`，缺了这里所有 var() 都会解析成空值。
- *
- * 两条约束：
- * 1. 不动 `listSurfaceConsistency.test.ts` 锁定的列表指纹（表头高、四角圆角、行高、内距），
- *    所以这里没有针对 `.functional-suite-list-table` 的 th / td 盒尺寸规则——设计稿的 32px 表头 /
- *    36–40px 行高与既有约定冲突，按 STRUCTURE.md 的「冲突时以既有约定为准」保留 48 / 52px。
- * 2. `testing/styles/index.css` 用 `!important` 抢过
- *    `.api-panel-header`、`.table-footer`、`.table-body-scroll` 这几个容器，覆盖必须写成
- *    `.app-shell.app-shell-macos .testing-page .ui-test-page ...` 再加 `!important`，否则静默失效。
- */
-
-/* ===== 引擎信息条 ===== */
-
-.ui-test-page .ui-suite-list-banner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-card);
-  background: var(--srf-card);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-}
-
-.ui-test-page .ui-suite-list-banner-main {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.ui-test-page .ui-suite-list-banner-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: var(--srf-accent-soft);
-  color: var(--srf-accent);
-  font-size: 20px;
-}
-
-.ui-test-page .ui-suite-list-banner-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.ui-test-page .ui-suite-list-banner-title {
-  margin: 0;
-  color: var(--srf-text);
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 22px;
-}
-
-.ui-test-page .ui-suite-list-banner-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border: 1px solid var(--srf-tone-border, var(--srf-card-border));
-  border-radius: 4px;
-  background: var(--srf-tone-bg, var(--srf-chip));
-  color: var(--srf-tone-text, var(--srf-chip-text));
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 16px;
-}
-
-/* 设计稿的徽标里是个绿点；用 currentColor，深浅两套主题跟着徽标文字色走。 */
-.ui-test-page .ui-suite-list-banner-chip-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: currentColor;
-}
-
-.ui-test-page .ui-suite-list-banner-subtitle {
-  margin: 2px 0 0;
-  color: var(--srf-text-muted);
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.ui-test-page .ui-suite-list-banner-specs {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.ui-test-page .ui-suite-list-banner-spec {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding-left: 24px;
-  border-left: 1px solid var(--srf-divider);
-}
-
-.ui-test-page .ui-suite-list-banner-spec:first-child {
-  padding-left: 0;
-  border-left: 0;
-}
-
-.ui-test-page .ui-suite-list-banner-spec .anticon {
-  color: var(--srf-text-muted);
-  font-size: 16px;
-}
-
-.ui-test-page .ui-suite-list-banner-spec-label {
-  display: block;
-  color: var(--srf-text-muted);
-  font-size: 10px;
-  line-height: 14px;
-}
-
-.ui-test-page .ui-suite-list-banner-spec-value {
-  color: var(--srf-text-secondary);
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 18px;
-}
-
-.ui-test-page .ui-suite-list-banner-spec-value.is-mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
+/* UI 测试列表：工具栏尺寸与表面由共享 tp-list-toolbar 负责，页面只补内部排布。 */
 
 /* ===== 筛选工具栏卡片 ===== */
 
 .ui-test-page .ui-suite-list-toolbar {
-  display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-card);
-  background: var(--srf-card);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-}
-
-/* testing/styles 用 !important 给 .api-panel-header 铺过玻璃表面，卡片外观要压回去。 */
-.app-shell.app-shell-macos .testing-page .ui-test-page .panel-header.api-panel-header.ui-suite-list-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 0;
-  padding: 12px;
-  border: 1px solid var(--srf-card-border) !important;
-  border-radius: var(--srf-radius-card) !important;
-  background: var(--srf-card) !important;
-  box-shadow: none !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
 }
 
 .ui-test-page .ui-suite-list-toolbar-filters {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
 }
 
 .ui-test-page .ui-suite-list-toolbar-filters .api-filter-field-label {
-  margin-right: 6px;
   color: var(--srf-text-muted);
   font-weight: 500;
 }
@@ -210,7 +48,7 @@
   border: 1px solid var(--srf-card-border);
   border-radius: var(--srf-radius-card);
   background: var(--srf-card);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 1px 2px var(--srf-shadow-color);
   overflow: hidden;
 }
 
@@ -224,7 +62,7 @@
 }
 
 .ui-test-page .ui-suite-list-footer {
-  gap: 12px;
+  gap: 8px;
   padding: 0 16px;
   border-top: 1px solid var(--srf-divider);
   background: var(--srf-hover);
@@ -333,12 +171,6 @@
 }
 
 /* ===== 窄屏 ===== */
-
-@media (max-width: 1180px) {
-  .ui-test-page .ui-suite-list-banner-spec {
-    padding-left: 16px;
-  }
-}
 
 @media (max-width: 900px) {
   .ui-test-page .ui-suite-list-search-field {

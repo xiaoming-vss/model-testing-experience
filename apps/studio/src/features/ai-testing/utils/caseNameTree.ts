@@ -1,4 +1,5 @@
-import { toCaseNamePointList, toDisplayText, toRecord } from '@/features/ai-testing/utils/functionalOutput'
+import { toRecord } from '@/shared/utils/value'
+import { toCaseNamePointList, toDisplayText } from '@/features/ai-testing/utils/functionalOutput'
 
 export type CaseNameTreeNode = {
   id: string

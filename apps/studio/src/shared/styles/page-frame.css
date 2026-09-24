@@ -22,7 +22,7 @@
 .detail-block,
 .capability-card,
 .profile-card {
-  background: #fff;
+  background: var(--app-surface);
 }
 
 .section-head {
@@ -36,7 +36,7 @@
 .capability-card .ant-empty-image {
   height: auto;
   margin-bottom: 16px;
-  color: #1677ff;
+  color: var(--app-accent);
   font-size: 42px;
 }
 
@@ -60,9 +60,9 @@
   border: 1px solid var(--tp-border);
   border-radius: 14px;
   background:
-    linear-gradient(180deg, rgba(248, 251, 255, 0.98) 0%, rgba(255, 255, 255, 1) 45%),
-    #fff;
-  box-shadow: 0 10px 24px rgba(24, 27, 35, 0.05);
+    linear-gradient(180deg, var(--app-card-gradient-start) 0%, var(--app-card-gradient-end) 45%),
+    var(--app-surface);
+  box-shadow: 0 10px 24px var(--app-card-shadow);
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease,
@@ -71,8 +71,8 @@
 
 .sprint-card:hover {
   transform: translateY(-4px);
-  border-color: #b8d3ff;
-  box-shadow: 0 16px 36px rgba(22, 119, 255, 0.12);
+  border-color: var(--app-card-border-hover);
+  box-shadow: 0 16px 36px var(--app-card-shadow-hover);
 }
 
 .sprint-card .ant-card-body {
@@ -90,7 +90,7 @@
 }
 
 .sprint-card-title {
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 18px;
   line-height: 26px;
   font-weight: 700;
@@ -115,13 +115,13 @@
 }
 
 .sprint-card-label {
-  color: #727786;
+  color: var(--app-shell-text-muted);
   font-size: 13px;
   line-height: 20px;
 }
 
 .sprint-card-value {
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 14px;
   line-height: 22px;
   font-weight: 500;
@@ -129,7 +129,7 @@
 }
 
 .sprint-card-description {
-  color: #414755;
+  color: var(--app-shell-text-secondary);
   font-size: 14px;
   line-height: 22px;
   display: -webkit-box;
@@ -264,13 +264,13 @@
   gap: 8px;
   min-width: 0;
   padding: 2px 6px 2px 8px;
-  background: #f7f9fc;
+  background: var(--app-section-bg);
   border: 1px solid var(--tp-border-soft);
   border-radius: 999px;
 }
 
 .requirement-filter-label {
-  color: #727786;
+  color: var(--app-shell-text-muted);
   font-size: 11px;
   line-height: 16px;
   white-space: nowrap;
@@ -291,7 +291,7 @@
 
 .requirement-filter-select .ant-select-selection-item,
 .requirement-filter-select .ant-select-selection-placeholder {
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 12px;
   font-weight: 600;
   line-height: 20px !important;
@@ -345,9 +345,9 @@
   border: 1px solid var(--tp-border);
   border-radius: 18px;
   background:
-    linear-gradient(180deg, rgba(248, 251, 255, 0.98) 0%, rgba(255, 255, 255, 1) 42%),
-    #fff;
-  box-shadow: 0 10px 28px rgba(24, 27, 35, 0.05);
+    linear-gradient(180deg, var(--app-card-gradient-start) 0%, var(--app-card-gradient-end) 42%),
+    var(--app-surface);
+  box-shadow: 0 10px 28px var(--app-card-shadow);
 }
 
 .sprint-overview-card-rich .ant-card-body {
@@ -434,8 +434,8 @@
   min-height: 48px;
   padding: 8px 12px;
   border-radius: 10px;
-  background: rgba(248, 251, 255, 0.94);
-  border: 1px solid rgba(214, 224, 238, 0.92);
+  background: var(--app-info-surface);
+  border: 1px solid var(--app-info-border);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -449,8 +449,8 @@
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  color: #1677ff;
-  background: rgba(22, 119, 255, 0.08);
+  color: var(--app-accent);
+  background: var(--app-accent-soft);
 }
 
 .sprint-overview-summary-copy {
@@ -461,13 +461,13 @@
 }
 
 .sprint-overview-summary-label {
-  color: #6f7788;
+  color: var(--app-text-caption);
   font-size: 11px;
   line-height: 16px;
 }
 
 .sprint-overview-summary-value {
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 14px;
   line-height: 18px;
   font-weight: 700;
@@ -504,7 +504,7 @@
 }
 
 .sprint-overview-card-label {
-  color: #7b8395;
+  color: var(--app-text-axis);
   font-size: 13px;
   line-height: 20px;
 }
@@ -526,8 +526,8 @@
   border: none;
   border-radius: 999px;
   padding-inline: 10px;
-  color: #155bd4;
-  background: rgba(22, 119, 255, 0.1);
+  color: var(--app-badge-text);
+  background: var(--app-badge-bg);
 }
 
 .sprint-dashboard-health-band {
@@ -535,8 +535,8 @@
   border: 1px solid var(--tp-border);
   border-radius: 14px;
   padding: 20px 22px;
-  background: #fff;
-  box-shadow: 0 8px 22px rgba(24, 27, 35, 0.04);
+  background: var(--app-surface);
+  box-shadow: 0 8px 22px var(--app-card-shadow-soft);
   display: grid;
   grid-template-columns: minmax(270px, 280px) minmax(420px, 1fr) minmax(360px, 0.58fr);
   align-items: center;
@@ -574,8 +574,8 @@
   width: 60px;
   height: 60px;
   border-radius: 14px;
-  color: #1677ff;
-  background: rgba(22, 119, 255, 0.12);
+  color: var(--app-accent);
+  background: var(--app-accent-emphasis);
   font-size: 28px;
 }
 
@@ -593,8 +593,8 @@
 
 .sprint-dashboard-health-progress {
   min-width: 0;
-  border-left: 1px solid rgba(148, 163, 184, 0.18);
-  border-right: 1px solid rgba(148, 163, 184, 0.18);
+  border-left: 1px solid var(--app-frame-divider);
+  border-right: 1px solid var(--app-frame-divider);
   padding: 0 20px;
   display: flex;
   flex-direction: column;
@@ -609,7 +609,7 @@
 }
 
 .sprint-dashboard-health-progress-head strong {
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 17px;
   line-height: 24px;
 }
@@ -620,7 +620,7 @@
   height: 8px;
   overflow: hidden;
   border-radius: 999px;
-  background: #e9eef5;
+  background: var(--app-progress-track);
 }
 
 .sprint-dashboard-health-fill {
@@ -628,11 +628,11 @@
 }
 
 .sprint-dashboard-health-fill-executed {
-  background: #52c41a;
+  background: var(--app-result-success);
 }
 
 .sprint-dashboard-health-fill-pending {
-  background: #faad14;
+  background: var(--app-result-pending);
 }
 
 .sprint-dashboard-health-legend {
@@ -640,7 +640,7 @@
   align-items: center;
   gap: 18px;
   flex-wrap: wrap;
-  color: #5a6170;
+  color: var(--app-text-label);
   font-size: 12px;
   line-height: 18px;
 }
@@ -660,7 +660,7 @@
 }
 
 .sprint-dashboard-health-legend strong {
-  color: #181b23;
+  color: var(--app-shell-text);
 }
 
 .sprint-dashboard-health-defects {
@@ -675,27 +675,27 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  color: #6f7788;
+  color: var(--app-text-caption);
   font-size: 12px;
   line-height: 18px;
 }
 
 .sprint-dashboard-health-defects strong {
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 24px;
   line-height: 30px;
 }
 
 .sprint-dashboard-health-green {
-  color: #52c41a !important;
+  color: var(--app-result-success) !important;
 }
 
 .sprint-dashboard-health-blue {
-  color: #1677ff !important;
+  color: var(--app-accent) !important;
 }
 
 .sprint-dashboard-health-red {
-  color: #ff4d4f !important;
+  color: var(--app-result-failed) !important;
 }
 
 .sprint-dashboard-main-grid {
@@ -729,7 +729,7 @@
   display: grid;
   grid-template-rows: 30px repeat(3, minmax(0, 1fr));
   align-content: stretch;
-  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  border-top: 1px solid var(--app-frame-divider-soft);
 }
 
 .sprint-dashboard-test-row {
@@ -738,7 +738,7 @@
   grid-template-columns: minmax(120px, 1.2fr) 72px repeat(4, minmax(92px, 1fr));
   align-items: center;
   gap: 14px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  border-bottom: 1px solid var(--app-frame-divider-soft);
   padding: 6px 0;
 }
 
@@ -747,11 +747,11 @@
 }
 
 .sprint-dashboard-test-row-head {
-  color: #5a6170;
+  color: var(--app-text-label);
   font-size: 12px;
   line-height: 18px;
   font-weight: 700;
-  background: rgba(248, 251, 255, 0.72);
+  background: var(--app-frame-row-hover);
 }
 
 .sprint-dashboard-test-name {
@@ -759,7 +759,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #181b23;
+  color: var(--app-shell-text);
 }
 
 .sprint-dashboard-test-icon {
@@ -770,13 +770,13 @@
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  color: #1677ff;
-  background: rgba(22, 119, 255, 0.09);
+  color: var(--app-accent);
+  background: var(--app-accent-selection);
   font-size: 18px;
 }
 
 .sprint-dashboard-test-total {
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 18px;
   line-height: 24px;
 }
@@ -792,13 +792,13 @@
   display: flex;
   align-items: baseline;
   gap: 4px;
-  color: #6f7788;
+  color: var(--app-text-caption);
   font-size: 12px;
   line-height: 16px;
 }
 
 .sprint-dashboard-progress-meta strong {
-  color: #1f2937;
+  color: var(--app-text-strong);
 }
 
 .sprint-dashboard-progress-track,
@@ -808,7 +808,7 @@
   height: 6px;
   overflow: hidden;
   border-radius: 999px;
-  background: #e9eef5;
+  background: var(--app-progress-track);
 }
 
 .sprint-dashboard-progress-fill,
@@ -817,11 +817,11 @@
   height: 100%;
   min-width: 4px;
   border-radius: inherit;
-  background: var(--progress-color, #1677ff);
+  background: var(--progress-color, var(--app-accent));
 }
 
 .sprint-dashboard-severity-fill {
-  background: var(--severity-color, #1677ff);
+  background: var(--severity-color, var(--app-accent));
 }
 
 .sprint-dashboard-risk-layout {
@@ -842,7 +842,7 @@
 
 .sprint-dashboard-severity-list {
   min-width: 0;
-  border-left: 1px solid rgba(148, 163, 184, 0.18);
+  border-left: 1px solid var(--app-frame-divider);
   padding-left: 24px;
   display: flex;
   flex-direction: column;
@@ -855,13 +855,13 @@
   grid-template-columns: 46px minmax(0, 1fr) 86px;
   align-items: center;
   gap: 12px;
-  color: #5a6170;
+  color: var(--app-text-label);
   font-size: 13px;
   line-height: 20px;
 }
 
 .sprint-dashboard-severity-row strong {
-  color: #1f2937;
+  color: var(--app-text-strong);
   font-weight: 600;
   text-align: right;
 }
@@ -886,7 +886,7 @@
   position: absolute;
   inset: 50% auto auto 50%;
   transform: translate(-50%, -50%);
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 26px;
   line-height: 32px;
   font-weight: 700;
@@ -906,7 +906,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  color: #5a6170;
+  color: var(--app-text-label);
   font-size: 14px;
   line-height: 22px;
 }
@@ -922,7 +922,7 @@
 
 .sprint-overview-chart-metrics strong {
   margin-left: auto;
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 16px;
   line-height: 24px;
 }
@@ -930,7 +930,7 @@
 .sprint-overview-donut-layout .recharts-default-tooltip {
   border: 1px solid var(--tp-border-soft) !important;
   border-radius: 10px;
-  box-shadow: 0 10px 24px rgba(24, 27, 35, 0.08);
+  box-shadow: 0 10px 24px var(--app-card-shadow-floating);
 }
 
 .sprint-overview-trend-grid {
@@ -974,7 +974,7 @@
 }
 
 .sprint-dashboard-trend-pane + .sprint-dashboard-trend-pane {
-  border-left: 1px solid rgba(148, 163, 184, 0.18);
+  border-left: 1px solid var(--app-frame-divider);
   padding-left: 12px;
 }
 
@@ -989,18 +989,18 @@
 .sprint-overview-chart-host .recharts-default-tooltip {
   border: 1px solid var(--tp-border-soft) !important;
   border-radius: 10px;
-  box-shadow: 0 10px 24px rgba(24, 27, 35, 0.08);
+  box-shadow: 0 10px 24px var(--app-card-shadow-floating);
 }
 
 .sprint-overview-chart-host .recharts-legend-wrapper {
-  color: #5a6170;
+  color: var(--app-text-label);
   font-size: 12px;
 }
 
 .sprint-overview-chart-host .recharts-cartesian-axis-tick-value,
 .sprint-overview-chart-host .recharts-legend-item-text {
-  fill: #5a6170;
-  color: #5a6170;
+  fill: var(--app-text-label);
+  color: var(--app-text-label);
 }
 
 .sprint-overview-history-state {
@@ -1185,7 +1185,7 @@
 }
 
 .sprint-report-markdown {
-  color: #263241;
+  color: var(--app-document-text);
   font-size: 14px;
   line-height: 1.72;
 }
@@ -1195,7 +1195,7 @@
 .sprint-report-markdown h3,
 .sprint-report-markdown h4 {
   margin: 20px 0 10px;
-  color: #111827;
+  color: var(--app-document-heading);
   font-weight: 750;
 }
 
@@ -1232,16 +1232,16 @@
 .sprint-report-markdown blockquote {
   margin: 12px 0;
   padding: 10px 14px;
-  border-left: 3px solid #1677ff;
-  background: rgba(22, 119, 255, 0.06);
-  color: #4b5563;
+  border-left: 3px solid var(--app-accent);
+  background: var(--app-document-quote-bg);
+  color: var(--app-document-quote-text);
 }
 
 .sprint-report-markdown code {
   border-radius: 5px;
   padding: 2px 5px;
-  background: rgba(15, 23, 42, 0.08);
-  color: #b42318;
+  background: var(--app-document-code-bg);
+  color: var(--app-document-code-text);
   font-size: 12px;
 }
 
@@ -1250,20 +1250,20 @@
   overflow: auto;
   border-radius: 8px;
   padding: 12px;
-  background: #111827;
+  background: var(--app-document-code-block-bg);
 }
 
 .sprint-report-markdown pre code {
   padding: 0;
   background: transparent;
-  color: #f9fafb;
+  color: var(--app-document-code-block-text);
   white-space: pre;
 }
 
 .sprint-report-markdown-table-wrap {
   overflow: auto;
   margin: 12px 0;
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  border: 1px solid var(--app-document-table-border);
   border-radius: 8px;
 }
 
@@ -1276,14 +1276,14 @@
 .sprint-report-markdown th,
 .sprint-report-markdown td {
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  border-bottom: 1px solid var(--app-frame-divider);
   text-align: left;
   vertical-align: top;
 }
 
 .sprint-report-markdown th {
-  background: rgba(148, 163, 184, 0.08);
-  color: #1f2937;
+  background: var(--app-document-table-heading-bg);
+  color: var(--app-text-strong);
   font-weight: 700;
 }
 
@@ -1298,7 +1298,7 @@
 }
 .sprint-code-overview-item {
   padding: 10px 12px;
-  border: 1px solid rgba(140, 150, 160, 0.24);
+  border: 1px solid var(--app-document-rule);
   border-radius: 10px;
   display: flex;
   flex-direction: column;
@@ -1334,14 +1334,14 @@
   font-size: 16px;
 }
 .sprint-code-overview-metric-label {
-  color: #8b9bb4;
+  color: var(--app-result-empty);
   font-size: 12px;
 }
 .sprint-code-overview-metric.metric-additions .sprint-code-overview-metric-value {
-  color: #52c41a;
+  color: var(--app-result-success);
 }
 .sprint-code-overview-metric.metric-deletions .sprint-code-overview-metric-value {
-  color: #ff4d4f;
+  color: var(--app-result-failed);
 }
 .sprint-code-overview-item-meta {
   font-size: 12px;

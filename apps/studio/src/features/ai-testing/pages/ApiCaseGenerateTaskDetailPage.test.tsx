@@ -175,7 +175,15 @@ describe('API 候选结果审核与导入', () => {
     const modalContainer = dialog.querySelector<HTMLElement>('.ant-modal-container')
 
     expect(modalContainer).not.toBeNull()
-    expect(getComputedStyle(modalContainer!).backgroundColor).toBe('rgb(255, 255, 255)')
+    // jsdom retains CSS var() references instead of resolving inherited values.
+    const background = getComputedStyle(modalContainer!).backgroundColor
+    if (background.startsWith('var(')) {
+      expect(background).toBe('var(--ant-modal-content-bg)')
+      const scope = modalContainer!.closest('.ant-modal')
+      expect(getComputedStyle(scope!).getPropertyValue('--ant-modal-content-bg').trim()).toBe('#ffffff')
+    } else {
+      expect(background).toBe('rgb(255, 255, 255)')
+    }
   })
 
   it('结构化预览中的接口默认折叠并可通过请求类型和名称展开', async () => {

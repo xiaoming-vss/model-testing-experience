@@ -1,3 +1,4 @@
+import { ThemeSelect } from '@/shared/components/ThemeSelect'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { DownOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons'
 import { Button, Dropdown, Layout, Select, Tooltip } from 'antd'
@@ -94,6 +95,7 @@ export function AppShell() {
           </div>
           <div className="app-header-actions">
             {showWorkbenchHeader ? <ActionButton type="primary" className="app-header-create-project action-btn-create" operation="create" onClick={() => { useWorkbenchStore.getState().openProjectModal(); navigate('/projects') }}>新建项目</ActionButton> : null}
+            <ThemeSelect />
             <Dropdown
               menu={{
                 items: [

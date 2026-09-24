@@ -1,3 +1,4 @@
+import { saveBlob } from '@/shared/utils/download'
 import { ApiAssertRuleEditor } from '@/features/api-automation/components/ApiAssertRuleEditor'
 import { ApiCaseEditor } from '@/features/api-automation/components/ApiCaseEditor'
 import { ApiCaseExplorer } from '@/features/api-automation/components/ApiCaseExplorer'
@@ -323,15 +324,8 @@ export function ApiCollectionDetailPage() {
       items: orderedCollectionRunItems,
     })
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
-    const objectUrl = URL.createObjectURL(blob)
-    const link = document.createElement('a')
     const startedAtText = collectionRunReport.startedAt ? formatTime(collectionRunReport.startedAt).replaceAll(/[/: ]/g, '-') : 'report'
-    link.href = objectUrl
-    link.download = `${sanitizeFileName(collectionName)}-${sanitizeFileName(startedAtText)}.html`
-    document.body.append(link)
-    link.click()
-    link.remove()
-    URL.revokeObjectURL(objectUrl)
+    saveBlob(blob, `${sanitizeFileName(collectionName)}-${sanitizeFileName(startedAtText)}.html`)
     message.success('HTML 报告已导出')
   }
 

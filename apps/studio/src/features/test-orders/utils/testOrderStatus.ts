@@ -47,19 +47,6 @@ export function formatEntryProgress(order: {
   return parts.join(' · ')
 }
 
-const ENTRY_STATUS_DOT: Record<string, string> = {
-  pending: 'rgba(84, 104, 132, 0.22)',
-  passed: '#52c41a',
-  failed: '#ff4d4f',
-  blocked: '#faad14',
-  skipped: '#bfbfbf',
-}
-
-/** 紧凑条目行首的状态圆点颜色。 */
-export function getTestOrderEntryDotColor(status?: string) {
-  return ENTRY_STATUS_DOT[status ?? ''] ?? ENTRY_STATUS_DOT.pending
-}
-
 /** 测试单状态的色调：未开始灰 / 执行中蓝 / 已完成绿。 */
 const ORDER_STATUS_TONES: Record<string, string> = {
   pending: 'slate',

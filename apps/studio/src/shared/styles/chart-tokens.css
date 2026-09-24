@@ -1,0 +1,29 @@
+/* SVG charts and relation graphs. Keep series, edges and surfaces independent. */
+:root {
+  --chart-grid: #edf1f7;
+  --chart-axis: #7b8395;
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: #e5e7eb;
+  --chart-tooltip-text: #262626;
+  --chart-total: #1677ff;
+  --chart-positive: #52c41a;
+  --chart-pending: #faad14;
+  --chart-success: #13c2c2;
+  --chart-negative: #ff4d4f;
+  --chart-empty: #e8edf5;
+  --chart-severity-normal: #8b9bb4;
+  --chart-severity-hint: #91a3bd;
+  --graph-edge-next: rgba(96, 165, 250, 0.6);
+  --graph-edge-next-dim: rgba(96, 165, 250, 0.12);
+  --graph-edge-branch: rgba(100, 116, 139, 0.6);
+  --graph-edge-branch-dim: rgba(100, 116, 139, 0.15);
+  --graph-grid: rgba(100, 116, 139, 0.35);
+  --graph-minimap-bg: #ffffff;
+  --graph-minimap-mask: rgba(15, 23, 42, 0.08);
+  --graph-minimap-main: #3b82f6;
+  --graph-minimap-isolated: #94a3b8;
+  --graph-minimap-branch: #cbd5e1;
+  /* Export overrides are resolved before cloning the tree into an image. */
+  --graph-export-background: radial-gradient(circle at 24px 24px, rgba(124, 195, 163, 0.08), transparent 26px), #ffffff;
+  --graph-export-border: 1px solid rgba(148, 163, 184, 0.14);
+}

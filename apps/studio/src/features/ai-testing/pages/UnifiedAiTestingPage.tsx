@@ -1333,9 +1333,10 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
     <>
       <div className="workbench-tabs">
         {/* 工具栏卡片：左侧迭代与搜索，右侧刷新与新建任务 */}
-        <section className="workbench-panel ai-testing-task-toolbar">
+        <section className="ai-testing-task-toolbar tp-list-toolbar">
           <div className="panel-header ai-task-panel-header">
-            <Space wrap size={10} className="ai-task-panel-filters">
+            <Space wrap size={8} className="ai-task-panel-filters">
+              <h1 className="tp-list-title">{({ analysis: '需求分析', functional: '功能测试', api: 'API测试', ui: 'UI测试', codeRisk: '代码风险分析' })[activeKind]}</h1>
               <div className="ai-task-sprint-filter">
                 <span className="ai-task-sprint-filter-label">迭代</span>
                 <Select
@@ -1363,7 +1364,7 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
                 />
               </div>
             </Space>
-            <Space wrap size={10} className="ai-task-panel-tools">
+            <Space wrap size={8} className="ai-task-panel-tools">
               <Tooltip title="刷新当前任务列表">
                 <ActionButton
                   type="text"

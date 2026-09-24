@@ -75,11 +75,11 @@
 }
 
 .ai-relations-page-legend .legend-line.solid {
-  border-top: 2px solid rgba(59, 130, 246, 0.95);
+  border-top: 2px solid var(--app-review-arrow-active);
 }
 
 .ai-relations-page-legend .legend-line.dashed {
-  border-top: 2px dashed rgba(71, 85, 105, 0.95);
+  border-top: 2px dashed var(--app-review-arrow);
 }
 
 .ai-relations-page-body {

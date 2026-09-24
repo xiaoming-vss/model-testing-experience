@@ -10,8 +10,8 @@
   border: 1px solid var(--tp-border-soft);
   border-radius: 10px;
   background:
-    linear-gradient(180deg, rgba(248, 251, 255, 0.92) 0%, rgba(255, 255, 255, 1) 100%),
-    #fff;
+    linear-gradient(180deg, var(--app-task-fold-body) 0%, var(--app-card-gradient-end) 100%),
+    var(--app-surface);
   appearance: none;
   color: inherit;
   font: inherit;
@@ -29,13 +29,13 @@
 
 .api-case-nav-item:hover {
   transform: translateY(-1px);
-  border-color: #cddcfb;
-  box-shadow: 0 10px 22px rgba(24, 27, 35, 0.08);
+  border-color: var(--app-request-nav-border-hover);
+  box-shadow: 0 10px 22px var(--app-card-shadow-floating);
 }
 
 .api-case-nav-item.selected {
-  border-color: rgba(0, 110, 242, 0.34);
-  box-shadow: 0 0 0 1px rgba(0, 110, 242, 0.12);
+  border-color: var(--app-request-nav-border-selected);
+  box-shadow: 0 0 0 1px var(--app-request-nav-ring);
 }
 
 .api-case-nav-item.can-drag {
@@ -235,8 +235,8 @@
 .api-case-editor-splitter-grip {
   position: absolute;
   padding: 0 8px;
-  background: var(--tp-bg-elevated, #fff);
-  color: #9aa5ba;
+  background: var(--tp-bg-elevated, var(--app-surface));
+  color: var(--app-request-splitter-text);
   font-size: 18px;
   line-height: 1;
   letter-spacing: 2px;
@@ -244,12 +244,12 @@
 
 .api-case-editor-splitter:hover .api-case-editor-splitter-line,
 .api-case-editor-splitter.resizing .api-case-editor-splitter-line {
-  background: #8db7ff;
+  background: var(--app-request-splitter-active);
 }
 
 .api-case-editor-splitter:hover .api-case-editor-splitter-grip,
 .api-case-editor-splitter.resizing .api-case-editor-splitter-grip {
-  color: #5d8ff0;
+  color: var(--app-request-splitter-text-hover);
 }
 
 .api-case-preview-description {
@@ -263,7 +263,7 @@
 
 .api-case-table-description {
   margin-top: 4px;
-  color: #94a3b8;
+  color: var(--app-surface-text-muted);
   font-size: 12px;
   line-height: 18px;
 }
@@ -276,7 +276,7 @@
 
 .api-case-environment-popover {
   width: min(520px, calc(100vw - 48px));
-  background: var(--tp-bg-elevated, #fff);
+  background: var(--tp-bg-elevated, var(--app-surface));
 }
 
 .api-case-environment-popover-head {
@@ -332,12 +332,12 @@
 }
 
 .api-case-environment-option:hover {
-  background: rgba(37, 99, 235, 0.05);
+  background: var(--app-environment-option-hover);
 }
 
 .api-case-environment-option.active {
-  border-color: rgba(37, 99, 235, 0.18);
-  background: rgba(37, 99, 235, 0.08);
+  border-color: var(--app-environment-option-border-selected);
+  background: var(--app-environment-option-selected);
 }
 
 .api-case-environment-option:disabled {
@@ -379,8 +379,8 @@
   flex: 0 0 auto;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(124, 195, 163, 0.12);
-  color: #4f9b78;
+  background: var(--app-environment-current-bg);
+  color: var(--app-environment-current-text);
   font-size: 12px;
   line-height: 18px;
   font-weight: 600;
@@ -399,23 +399,23 @@
 }
 
 .api-method-get {
-  color: #16a34a;
+  color: var(--app-http-method-get);
 }
 
 .api-method-post {
-  color: #2563eb;
+  color: var(--app-http-method-post);
 }
 
 .api-method-put {
-  color: #d97706;
+  color: var(--app-http-method-put);
 }
 
 .api-method-delete {
-  color: #dc2626;
+  color: var(--app-http-method-delete);
 }
 
 .api-method-patch {
-  color: #7c3aed;
+  color: var(--app-http-method-patch);
 }
 
 .api-case-settings-grid {
@@ -448,18 +448,18 @@
 .api-case-run-result-segmented .ant-segmented-item-label {
   min-height: auto;
   padding: 4px 10px;
-  color: #5b6477;
+  color: var(--app-control-text);
   font-size: 12px;
   line-height: 18px;
 }
 
 .api-case-run-result-segmented .ant-segmented-item-selected .ant-segmented-item-label {
-  color: #1677ff;
+  color: var(--app-accent);
 }
 
 .api-case-run-result-segmented .ant-segmented-thumb {
   border-radius: 999px;
-  background: rgba(22, 119, 255, 0.14);
+  background: var(--app-request-tab-selected);
   box-shadow: none;
 }
 
@@ -476,9 +476,9 @@
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  border: 1px solid #d7ddea;
+  border: 1px solid var(--app-editor-border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--app-surface);
   overflow: hidden;
   transition:
     border-color 0.2s ease,
@@ -486,19 +486,19 @@
 }
 
 .json-editor-shell:focus-within {
-  border-color: #9bbcff;
-  box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.08);
+  border-color: var(--app-editor-border-focus);
+  box-shadow: 0 0 0 3px var(--app-editor-focus-ring);
 }
 
 .json-editor-shell.invalid {
-  border-color: #ff7875;
-  box-shadow: 0 0 0 2px rgba(255, 120, 117, 0.08);
+  border-color: var(--app-editor-error-border);
+  box-shadow: 0 0 0 2px var(--app-editor-error-ring);
 }
 
 .json-editor-toolbar {
   padding: 8px 12px;
-  border-bottom: 1px solid #e8edf5;
-  background: #fbfcfe;
+  border-bottom: 1px solid var(--app-editor-header-border);
+  background: var(--app-editor-header-bg);
 }
 
 .json-editor-toolbar-actions {
@@ -519,7 +519,7 @@
 .json-editor-codemirror .cm-editor {
   width: 100%;
   max-width: 100%;
-  background: #fff;
+  background: var(--app-surface);
   font-family: 'Consolas', 'Cascadia Mono', 'Courier New', monospace;
   font-size: 15px;
   line-height: 24px;
@@ -565,9 +565,9 @@
 
 .json-editor-codemirror .cm-gutters {
   min-width: 36px;
-  border-right: 1px solid #eef2f7;
-  background: #fff;
-  color: #94a3b8;
+  border-right: 1px solid var(--app-editor-gutter-border);
+  background: var(--app-surface);
+  color: var(--app-surface-text-muted);
   font-size: 13px;
 }
 
@@ -585,19 +585,19 @@
 }
 
 .json-editor-codemirror .cm-matchingBracket {
-  color: #0f172a !important;
-  background: rgba(59, 130, 246, 0.12);
+  color: var(--app-surface-text) !important;
+  background: var(--app-editor-selection);
   border-radius: 4px;
 }
 
 .json-editor-codemirror .cm-nonmatchingBracket {
-  color: #ff7b72 !important;
+  color: var(--app-editor-error-text) !important;
 }
 
 .json-editor-codemirror .cm-tooltip {
   border-radius: 10px;
-  border-color: #d7ddea;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+  border-color: var(--app-editor-border);
+  box-shadow: 0 12px 32px var(--app-editor-popover-shadow);
 }
 
 .api-case-settings-description {
@@ -614,10 +614,10 @@
 .api-env-var-picker-modal :is(.ant-modal-container, .ant-modal-content) {
   overflow: hidden;
   padding: 0;
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  border: 1px solid var(--app-document-table-border);
   border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 28px 72px rgba(15, 23, 42, 0.24);
+  background: var(--app-surface);
+  box-shadow: 0 28px 72px var(--app-editor-fullscreen-shadow);
 }
 
 .api-env-var-picker-modal,
@@ -628,7 +628,7 @@
 .api-env-var-picker-modal .ant-modal-header {
   margin: 0;
   padding: 22px 24px 18px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  border-bottom: 1px solid var(--app-frame-card-border);
   background: transparent;
 }
 
@@ -683,8 +683,8 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  border-right: 1px solid rgba(148, 163, 184, 0.16);
-  background: rgba(248, 250, 252, 0.72);
+  border-right: 1px solid var(--app-frame-card-border);
+  background: var(--app-picker-header-bg);
 }
 
 .api-env-var-picker-source {
@@ -714,12 +714,12 @@
 
 .api-env-var-picker-source:hover {
   color: var(--tp-text);
-  background: rgba(37, 99, 235, 0.06);
+  background: var(--app-picker-option-hover);
 }
 
 .api-env-var-picker-source.active {
-  color: #2563eb;
-  background: rgba(37, 99, 235, 0.1);
+  color: var(--app-surface-accent);
+  background: var(--app-picker-option-selected);
 }
 
 .api-env-var-picker-source-count {
@@ -731,7 +731,7 @@
   justify-content: center;
   border-radius: 999px;
   color: var(--tp-text-muted);
-  background: rgba(148, 163, 184, 0.12);
+  background: var(--app-picker-option-disabled);
   font-size: 10px;
   line-height: 20px;
 }
@@ -739,7 +739,7 @@
 .api-env-var-picker-browser {
   min-width: 0;
   padding: 12px 16px 16px;
-  border-right: 1px solid rgba(148, 163, 184, 0.16);
+  border-right: 1px solid var(--app-frame-card-border);
 }
 
 .api-env-var-picker-search {
@@ -776,7 +776,7 @@
   align-items: center;
   gap: 10px;
   border: 0;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.13);
+  border-bottom: 1px solid var(--app-picker-row-border);
   border-radius: 0;
   background: transparent;
   color: var(--tp-text);
@@ -786,22 +786,22 @@
 }
 
 .api-env-var-picker-item:hover {
-  background: rgba(37, 99, 235, 0.045);
+  background: var(--app-picker-row-hover);
 }
 
 .api-env-var-picker-item.active {
-  border-bottom-color: rgba(59, 130, 246, 0.22);
+  border-bottom-color: var(--app-picker-row-selected-border);
   border-radius: 8px;
-  background: rgba(37, 99, 235, 0.09);
-  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.25);
+  background: var(--app-picker-row-selected);
+  box-shadow: inset 0 0 0 1px var(--app-picker-row-selected-ring);
 }
 
 .api-env-var-picker-item-status {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #57c99a;
-  box-shadow: 0 0 0 3px rgba(87, 201, 154, 0.08);
+  background: var(--app-picker-status);
+  box-shadow: 0 0 0 3px var(--app-picker-status-ring);
 }
 
 .api-env-var-picker-item-main {
@@ -836,7 +836,7 @@
 }
 
 .api-env-var-picker-item-example {
-  color: var(--tp-accent, #7cc3a3);
+  color: var(--tp-accent, var(--app-picker-accent-fallback));
 }
 
 .api-env-var-picker-item-type {
@@ -847,7 +847,7 @@
 }
 
 .api-env-var-picker-item-check {
-  color: #3b82f6;
+  color: var(--app-picker-action);
   font-size: 13px;
 }
 
@@ -881,10 +881,10 @@
   align-items: center;
   word-break: break-word;
   overflow-wrap: anywhere;
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  border: 1px solid var(--app-frame-card-border);
   border-radius: 10px;
-  color: #2563eb;
-  background: rgba(248, 250, 252, 0.72);
+  color: var(--app-surface-accent);
+  background: var(--app-picker-header-bg);
   font-family: Consolas, 'SFMono-Regular', monospace;
   font-size: 16px;
   line-height: 24px;
@@ -931,7 +931,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
-  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  border-top: 1px solid var(--app-frame-card-border);
 }
 
 .api-env-var-picker-footer .ant-btn {
@@ -1043,7 +1043,7 @@
 
 .api-body-placeholder-card {
   border-radius: 10px;
-  background: #fafbff;
+  background: var(--app-request-section-bg);
 }
 
 .api-case-run-result-card {
@@ -1081,7 +1081,7 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px 16px;
-  color: #5b6477;
+  color: var(--app-control-text);
   font-size: 12px;
   line-height: 18px;
 }
@@ -1115,10 +1115,10 @@
   padding: 12px 14px;
   box-sizing: border-box;
   overflow: hidden;
-  border: 1px solid #dfe4f0;
+  border: 1px solid var(--app-request-field-border);
   border-radius: 10px;
-  background: #f8fafc;
-  color: #181b23;
+  background: var(--app-surface-hover);
+  color: var(--app-shell-text);
   font-size: 12px;
   line-height: 20px;
   white-space: pre-wrap;
@@ -1148,13 +1148,13 @@
   flex: 0 0 auto;
   min-width: 0;
   padding: 10px 12px;
-  border: 1px solid #dfe4f0;
+  border: 1px solid var(--app-request-field-border);
   border-radius: 10px;
-  background: #fafcff;
+  background: var(--app-request-field-bg);
 }
 
 .api-case-run-result-row.failed {
-  border-color: rgba(220, 38, 38, 0.2);
+  border-color: var(--app-request-error-border);
 }
 
 .api-case-run-result-row-title {
@@ -1171,7 +1171,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px 12px;
-  color: #5b6477;
+  color: var(--app-control-text);
   font-size: 12px;
   line-height: 18px;
 }
@@ -1186,7 +1186,7 @@
 
 .api-case-run-result-meta-item strong {
   flex: 0 0 auto;
-  color: #475569;
+  color: var(--app-surface-chip-text);
   font-size: 12px;
   line-height: 18px;
   font-weight: 600;
@@ -1220,9 +1220,9 @@
 .api-collection-run-history-item {
   width: 100%;
   padding: 14px 16px;
-  border: 1px solid #e5ebf5;
+  border: 1px solid var(--app-request-card-border);
   border-radius: 14px;
-  background: #fff;
+  background: var(--app-surface);
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1236,8 +1236,8 @@
 }
 
 .api-collection-run-history-item:hover {
-  border-color: #b8c9eb;
-  box-shadow: 0 8px 20px rgba(22, 119, 255, 0.06);
+  border-color: var(--app-request-card-border-hover);
+  box-shadow: 0 8px 20px var(--app-request-card-shadow-hover);
 }
 
 .api-collection-run-history-item:disabled {
@@ -1282,11 +1282,11 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px 14px;
-  color: #5b6477;
+  color: var(--app-control-text);
 }
 
 .api-collection-run-history-item-error {
-  color: #d14343;
+  color: var(--app-request-error-text);
 }
 
 .api-collection-run-history-item-side {
@@ -1295,11 +1295,11 @@
 }
 
 .api-collection-run-history-item-id {
-  color: #8891a4;
+  color: var(--app-request-text-muted);
 }
 
 .api-collection-run-history-item-link {
-  color: #1677ff;
+  color: var(--app-accent);
 }
 
 .api-collection-run-report-modal-root.ant-modal-root {
@@ -1322,9 +1322,9 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  background: #fff;
+  background: var(--app-surface);
   padding: 8px 12px 14px;
-  box-shadow: 0 10px 20px -20px rgba(15, 23, 42, 0.35);
+  box-shadow: 0 10px 20px -20px var(--app-request-sticky-shadow);
   border-radius: 12px;
 }
 
@@ -1404,7 +1404,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px 16px;
-  color: #5b6477;
+  color: var(--app-control-text);
   font-size: 12px;
   line-height: 18px;
 }
@@ -1418,9 +1418,9 @@
 .api-collection-run-report-summary-item {
   min-width: 0;
   padding: 8px 10px;
-  border: 1px solid #e5ebf5;
+  border: 1px solid var(--app-request-card-border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--app-surface);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -1431,7 +1431,7 @@
 }
 
 .api-collection-run-report-summary-item span {
-  color: #727786;
+  color: var(--app-shell-text-muted);
   font-size: 10px;
   line-height: 14px;
 }
@@ -1451,19 +1451,19 @@
 }
 
 .api-collection-run-report-summary-item.success {
-  border-color: rgba(34, 197, 94, 0.2);
+  border-color: var(--app-request-result-success-border);
 }
 
 .api-collection-run-report-summary-item.failed {
-  border-color: rgba(239, 68, 68, 0.2);
+  border-color: var(--app-request-result-failed-border);
 }
 
 .api-collection-run-report-summary-item.error {
-  border-color: rgba(249, 115, 22, 0.2);
+  border-color: var(--app-request-result-warning-border);
 }
 
 .api-collection-run-report-summary-item.skipped {
-  border-color: rgba(148, 163, 184, 0.24);
+  border-color: var(--app-frame-border-strong);
 }
 
 .api-collection-run-report-content,
@@ -1482,14 +1482,14 @@
 }
 
 .api-collection-run-report-item {
-  border: 1px solid #e5ebf5;
+  border: 1px solid var(--app-request-card-border);
   border-radius: 14px;
-  background: #fff;
+  background: var(--app-surface);
   overflow: hidden;
 }
 
 .api-collection-run-report-item.expanded {
-  border-color: #cddaf5;
+  border-color: var(--app-request-result-border-hover);
 }
 
 .api-collection-run-report-item-head {
@@ -1524,8 +1524,8 @@
   flex: 0 0 auto;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(22, 119, 255, 0.08);
-  color: #1677ff;
+  background: var(--app-accent-soft);
+  color: var(--app-accent);
   font-size: 12px;
   line-height: 18px;
 }
@@ -1537,7 +1537,7 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px 14px;
-  color: #727786;
+  color: var(--app-shell-text-muted);
   font-size: 12px;
   line-height: 18px;
 }
@@ -1551,7 +1551,7 @@
 }
 
 .api-collection-run-report-item-body {
-  border-top: 1px solid #edf2fa;
+  border-top: 1px solid var(--app-request-result-divider);
   padding: 0 16px 16px;
   display: flex;
   flex-direction: column;
@@ -1584,7 +1584,7 @@
 }
 
 .api-rule-card-desc {
-  color: #727786;
+  color: var(--app-shell-text-muted);
   font-size: 12px;
   line-height: 18px;
 }
@@ -1618,7 +1618,7 @@
 
 .api-post-ops-subtitle {
   margin-top: 4px;
-  color: #727786;
+  color: var(--app-shell-text-muted);
   font-size: 12px;
   line-height: 18px;
 }
@@ -1630,10 +1630,10 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px dashed #c9d4e5;
+  border: 1px dashed var(--app-request-upload-border);
   border-radius: 12px;
-  background: #fbfcff;
-  color: #5a6478;
+  background: var(--app-surface-raised);
+  color: var(--app-request-upload-text);
   font-size: 13px;
   line-height: 20px;
   cursor: pointer;
@@ -1644,9 +1644,9 @@
 }
 
 .api-post-ops-add-trigger:hover {
-  border-color: #9bbcff;
-  background: #f4f8ff;
-  color: #1677ff;
+  border-color: var(--app-editor-border-focus);
+  background: var(--app-request-add-hover);
+  color: var(--app-accent);
 }
 
 .api-post-ops-group-list {
@@ -1657,9 +1657,9 @@
 
 .api-post-ops-group {
   padding: 12px;
-  border: 1px solid #e5ebf5;
+  border: 1px solid var(--app-request-card-border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--app-surface);
 }
 
 .api-post-ops-group-title {
@@ -1667,7 +1667,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 13px;
   line-height: 20px;
   font-weight: 600;
@@ -1675,7 +1675,7 @@
 
 .api-post-ops-empty {
   padding: 8px 0 2px;
-  color: #8891a4;
+  color: var(--app-request-text-muted);
   font-size: 12px;
   line-height: 18px;
 }
@@ -1693,9 +1693,9 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
-  border: 1px solid #edf1f7;
+  border: 1px solid var(--app-request-preview-border);
   border-radius: 10px;
-  background: #fafcff;
+  background: var(--app-request-field-bg);
 }
 
 .api-post-ops-item-side {
@@ -1716,7 +1716,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 13px;
   line-height: 20px;
 }
@@ -1729,7 +1729,7 @@
 }
 
 .api-post-ops-item-title span:last-child {
-  color: #8891a4;
+  color: var(--app-request-text-muted);
   font-size: 12px;
 }
 
@@ -1737,7 +1737,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px 12px;
-  color: #5b6477;
+  color: var(--app-control-text);
   font-size: 12px;
   line-height: 18px;
 }
@@ -1756,12 +1756,12 @@
   min-height: 0;
   padding: 20px 24px 24px;
   overflow: hidden;
-  background: var(--tp-bg-elevated, #fafbff);
+  background: var(--tp-bg-elevated, var(--app-request-section-bg));
 }
 
 .api-environment-drawer .ant-drawer-header {
-  background: var(--tp-bg-elevated, #fff);
-  border-bottom: 1px solid var(--tp-border-soft, #e8edf5);
+  background: var(--tp-bg-elevated, var(--app-surface));
+  border-bottom: 1px solid var(--tp-border-soft, var(--app-editor-header-border));
 }
 
 .api-environment-drawer-shell {
@@ -1824,8 +1824,8 @@
   flex: 0 0 auto;
   padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(37, 99, 235, 0.08);
-  color: #4f5f85;
+  background: var(--app-environment-option-selected);
+  color: var(--app-request-summary-text);
   font-size: 12px;
   line-height: 18px;
   font-weight: 600;
@@ -1871,7 +1871,7 @@
   gap: 12px;
   border: 1px solid var(--tp-border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--app-surface);
   cursor: pointer;
   transition:
     border-color 0.2s ease,
@@ -1880,14 +1880,14 @@
 }
 
 .api-environment-item:hover {
-  border-color: #8db7ff;
-  box-shadow: 0 8px 20px rgba(22, 119, 255, 0.08);
+  border-color: var(--app-request-summary-border-hover);
+  box-shadow: 0 8px 20px var(--app-editor-focus-ring);
 }
 
 .api-environment-item.active {
-  border-color: #8db7ff;
-  box-shadow: 0 8px 20px rgba(22, 119, 255, 0.12);
-  background: rgba(141, 183, 255, 0.06);
+  border-color: var(--app-request-summary-border-hover);
+  box-shadow: 0 8px 20px var(--app-accent-emphasis);
+  background: var(--app-request-summary-hover);
 }
 
 .api-environment-item-main {
@@ -1911,7 +1911,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #181b23;
+  color: var(--app-shell-text);
   font-size: 13px;
   line-height: 20px;
 }
@@ -2093,12 +2093,12 @@
 
 /* macOS frosted white detail workspace */
 .app-shell-macos .api-collection-detail-page {
-  --detail-glass-panel: rgba(255, 255, 255, 0.68);
-  --detail-glass-card: rgba(255, 255, 255, 0.74);
-  --detail-glass-soft: rgba(255, 255, 255, 0.5);
-  --detail-glass-border: rgba(15, 23, 42, 0.065);
-  --detail-glass-border-strong: rgba(15, 23, 42, 0.1);
-  --detail-glass-shadow: 0 12px 30px rgba(15, 23, 42, 0.045);
+  --detail-glass-panel: var(--app-glass-surface-68);
+  --detail-glass-card: var(--app-glass-surface-74);
+  --detail-glass-soft: var(--app-glass-surface-50);
+  --detail-glass-border: var(--app-glass-divider);
+  --detail-glass-border-strong: var(--app-glass-detail-border-strong);
+  --detail-glass-shadow: 0 12px 30px var(--app-glass-detail-shadow);
   background: transparent !important;
 }
 
@@ -2127,7 +2127,7 @@
   background: var(--detail-glass-panel) !important;
   backdrop-filter: saturate(180%) blur(24px);
   -webkit-backdrop-filter: saturate(180%) blur(24px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86), var(--detail-glass-shadow) !important;
+  box-shadow: inset 0 1px 0 var(--app-glass-highlight-86), var(--detail-glass-shadow) !important;
 }
 
 .app-shell-macos .api-collection-detail-page .api-case-sidebar {
@@ -2135,7 +2135,7 @@
 }
 
 .app-shell-macos .api-collection-detail-page .api-case-sidebar-header, .app-shell-macos .api-collection-detail-page .api-detail-hover-bar {
-  background: rgba(255, 255, 255, 0.54) !important;
+  background: var(--app-glass-surface-54) !important;
   border-color: var(--detail-glass-border) !important;
 }
 
@@ -2150,7 +2150,7 @@
 .app-shell-macos .api-collection-detail-page .api-case-sidebar .ant-input-affix-wrapper, .app-shell-macos .api-collection-detail-page .api-case-sidebar .ant-input, .app-shell-macos .api-collection-detail-page .api-case-sidebar .ant-btn {
   border-color: var(--detail-glass-border-strong) !important;
   border-radius: 10px !important;
-  background: rgba(255, 255, 255, 0.72) !important;
+  background: var(--app-glass-surface-72) !important;
   box-shadow: none !important;
 }
 
@@ -2161,19 +2161,19 @@
 .app-shell-macos .api-collection-detail-page .api-case-nav-item {
   border-color: var(--detail-glass-border) !important;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.58) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  background: var(--app-glass-surface-58) !important;
+  box-shadow: inset 0 1px 0 var(--app-glass-highlight-78);
 }
 
 .app-shell-macos .api-collection-detail-page .api-case-nav-item:hover {
-  border-color: rgba(10, 132, 255, 0.2) !important;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.055), inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  border-color: var(--app-glass-request-border-hover) !important;
+  box-shadow: 0 8px 18px var(--app-glass-request-shadow), inset 0 1px 0 var(--app-glass-highlight-86);
 }
 
 .app-shell-macos .api-collection-detail-page .api-case-nav-item.selected {
-  border-color: rgba(10, 132, 255, 0.28) !important;
-  background: rgba(245, 249, 255, 0.86) !important;
-  box-shadow: 0 0 0 1px rgba(10, 132, 255, 0.08), 0 10px 22px rgba(15, 23, 42, 0.06);
+  border-color: var(--app-glass-request-border-selected) !important;
+  background: var(--app-glass-request-selected-bg) !important;
+  box-shadow: 0 0 0 1px var(--app-glass-accent-ring), 0 10px 22px var(--app-glass-request-shadow-selected);
 }
 
 .app-shell-macos .api-collection-detail-page .api-detail-hover-bar {
@@ -2187,34 +2187,34 @@
 }
 
 .app-shell-macos .api-collection-detail-page .api-detail-hover-title, .app-shell-macos .api-collection-detail-page .api-case-nav-item-name {
-  color: #172033 !important;
+  color: var(--app-glass-text) !important;
 }
 
 .app-shell-macos .api-collection-detail-page .api-detail-hover-preview, .app-shell-macos .api-collection-detail-page .api-case-nav-item-path {
-  color: rgba(23, 32, 51, 0.56) !important;
+  color: var(--app-glass-request-text-secondary) !important;
 }
 
 .app-shell-macos .api-collection-detail-page .json-editor-shell {
   border-color: var(--detail-glass-border) !important;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.72) !important;
+  background: var(--app-glass-surface-72) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.88),
-    0 12px 32px rgba(31, 41, 55, 0.05);
+    inset 0 1px 0 var(--app-glass-highlight-88),
+    0 12px 32px var(--app-glass-shadow-control);
   overflow: hidden;
   backdrop-filter: saturate(180%) blur(18px);
   -webkit-backdrop-filter: saturate(180%) blur(18px);
 }
 
 .app-shell-macos .api-collection-detail-page .json-editor-shell:focus-within {
-  border-color: rgba(10, 132, 255, 0.32) !important;
-  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.86) !important;
+  border-color: var(--app-glass-editor-border-focus) !important;
+  box-shadow: 0 0 0 3px var(--app-glass-accent-ring), inset 0 1px 0 var(--app-glass-highlight-86) !important;
 }
 
 .app-shell-macos .api-collection-detail-page .json-editor-toolbar,
 .app-shell-macos .api-collection-detail-page .json-editor-codemirror .cm-editor,
 .app-shell-macos .api-collection-detail-page .json-editor-codemirror .cm-gutters {
-  background: rgba(255, 255, 255, 0.62) !important;
+  background: var(--app-glass-surface-62) !important;
 }
 
 @media (max-width: 1180px) {

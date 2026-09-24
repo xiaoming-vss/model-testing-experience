@@ -1,3 +1,4 @@
+import { saveBlob } from '@/shared/utils/download'
 import '@/features/ai-testing/styles/functional-import-confirm.css'
 import '@/features/ai-testing/styles/index.css'
 import '@/features/ai-testing/styles/case-name-tree.css'
@@ -15,9 +16,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 export type CaseNamesViewMode = 'json' | 'tree'
 
 const CURVE_STROKE_META = {
-  green: { color: 'rgba(124, 195, 163, 0.68)', width: 2 },
-  blue: { color: 'rgba(70, 166, 210, 0.58)', width: 2 },
-  slate: { color: 'rgba(100, 116, 139, 0.46)', width: 1.8 },
+  green: { color: 'var(--app-graph-edge-primary)', width: 2 },
+  blue: { color: 'var(--app-graph-edge-reference)', width: 2 },
+  slate: { color: 'var(--app-graph-edge-muted)', width: 1.8 },
 } as const
 
 function CaseNameTreeCurves({ height, targetYs, layoutKey, tone = 'green' }: { height: number; targetYs: number[]; layoutKey: string; tone?: 'green' | 'blue' | 'slate' }) {
@@ -203,9 +204,10 @@ export function CaseNameTreeView({
     setExportingImage(true)
     try {
       // 页面上的树卡片带有边框、圆角和渐变背景，导出时在克隆节点上补齐，保证图片与页面显示一致
+      const canvasStyle = getComputedStyle(canvas)
       const cardVisualStyle = {
-        background: 'radial-gradient(circle at 24px 24px, rgba(124, 195, 163, 0.08), transparent 26px), #ffffff',
-        border: '1px solid rgba(148, 163, 184, 0.14)',
+        background: canvasStyle.getPropertyValue('--graph-export-background').trim(),
+        border: canvasStyle.getPropertyValue('--graph-export-border').trim(),
         borderRadius: '14px',
       }
       const blob = await toBlob(canvas, {
@@ -214,14 +216,7 @@ export function CaseNameTreeView({
         style: cardVisualStyle,
       })
       if (!blob) throw new Error('导出内容为空')
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${rootTitle}-测试点树图.png`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
+      saveBlob(blob, `${rootTitle}-测试点树图.png`)
       message.success('图片已保存')
     } catch {
       message.error('图片导出失败，请重试')

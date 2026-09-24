@@ -1,10 +1,10 @@
 /* 运行结果弹窗与 Popover：预览、审核模式及编辑器高度适配。 */
 .ai-task-run-result-popover-btn {
   padding: 8px 14px;
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  border: 1px solid var(--app-frame-divider-soft);
   border-radius: 10px;
   color: var(--ai-text-secondary);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--app-terminal-result-surface);
   font-size: 13px;
   line-height: 20px;
   font-weight: 600;
@@ -18,28 +18,28 @@
 
 .ai-task-run-result-popover-btn:hover {
   color: var(--ai-text);
-  border-color: rgba(124, 195, 163, 0.22);
-  background: rgba(124, 195, 163, 0.08);
+  border-color: var(--app-terminal-result-border);
+  background: var(--app-terminal-result-bg);
 }
 
 .ai-task-run-result-popover-btn.active {
   color: var(--ai-active-text);
-  border-color: rgba(124, 195, 163, 0.3);
-  background: rgba(124, 195, 163, 0.14);
-  box-shadow: 0 0 0 1px rgba(124, 195, 163, 0.1);
+  border-color: var(--app-terminal-result-selected-border);
+  background: var(--app-terminal-active-bg);
+  box-shadow: 0 0 0 1px var(--app-terminal-result-ring);
 }
 
 .ai-task-run-result-popover-btn.review {
-  color: #a16207;
-  border-color: rgba(245, 158, 11, 0.36);
-  background: rgba(245, 158, 11, 0.1);
+  color: var(--app-review-warning-text);
+  border-color: var(--app-review-warning-border);
+  background: var(--app-review-warning-bg);
 }
 
 .ai-task-run-result-popover-btn.review.active,
 .ai-task-run-result-popover-btn.review:hover {
-  color: #92400e;
-  border-color: rgba(245, 158, 11, 0.48);
-  background: rgba(245, 158, 11, 0.16);
+  color: var(--app-review-warning-selected-text);
+  border-color: var(--app-review-warning-selected-border);
+  background: var(--app-review-warning-selected-bg);
 }
 
 .ai-task-run-result-popover-header {
@@ -69,9 +69,9 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--ai-popover-surface, #fff);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  box-shadow: 0 30px 80px rgba(7, 10, 16, 0.32);
+  background: var(--ai-popover-surface, var(--app-surface));
+  border: 1px solid var(--app-frame-card-border);
+  box-shadow: 0 30px 80px var(--app-review-modal-shadow);
 }
 
 .ai-task-run-result-modal .ant-modal-body {
@@ -102,7 +102,7 @@
   max-height: calc(100vh - 224px);
   overflow: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(124, 195, 163, 0.42) rgba(255, 255, 255, 0.04);
+  scrollbar-color: var(--app-terminal-scrollbar) var(--app-terminal-scrollbar-track);
 }
 
 .ai-task-run-result-modal-content.review {
@@ -184,17 +184,17 @@
 }
 
 .ai-task-run-result-modal-content::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--app-terminal-scrollbar-track);
   border-radius: 999px;
 }
 
 .ai-task-run-result-modal-content::-webkit-scrollbar-thumb {
-  background: rgba(124, 195, 163, 0.3);
+  background: var(--app-terminal-scrollbar-thumb);
   border-radius: 999px;
 }
 
 .ai-task-run-result-modal-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(124, 195, 163, 0.46);
+  background: var(--app-terminal-scrollbar-hover);
 }
 
 @media (max-height: 820px) {
@@ -267,8 +267,8 @@
 .ai-task-run-result-popover .ant-popover-inner {
   padding: 12px;
   background: var(--ai-popover-surface);
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  box-shadow: 0 24px 48px rgba(7, 10, 16, 0.34);
+  border: 1px solid var(--app-frame-divider-soft);
+  box-shadow: 0 24px 48px var(--app-review-card-shadow);
 }
 
 .ai-task-run-result-popover .ant-popover-arrow::before,

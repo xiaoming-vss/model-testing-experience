@@ -1,6 +1,7 @@
 import {
   ArrowLeftOutlined,
   OrderedListOutlined,
+  ApartmentOutlined,
   ProfileOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -24,6 +25,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { AddCasesFromLibraryModal } from '../components/AddCasesFromLibraryModal'
+import { TestOrderVerdictButtons } from '../components/TestOrderVerdictButtons'
+import { useTestOrderEntrySave } from '../hooks/useTestOrderEntrySave'
+import { TEST_ORDER_VERDICTS, isTestOrderEntryLocked } from '../utils/testOrderExecution'
 import { TestOrderGraphViewer } from '../components/TestOrderGraphViewer'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { priorityTone } from '@/shared/utils/priorityTone'
@@ -42,20 +46,6 @@ import '@/features/test-orders/styles/workspace-v2.css'
 import '@/features/test-orders/styles/workspace-verdict-v2.css'
 
 const { Text } = Typography
-
-// 执行针对整条用例：一次判定给出这条用例的结论。
-const VERDICT_OPTIONS: Array<{
-  value: string
-  label: string
-  /** 快捷键，同时也是按钮右上角的角标。 */
-  key: string
-  tone: string
-}> = [
-  { value: 'passed', label: '通过', key: '1', tone: 'green' },
-  { value: 'failed', label: '失败', key: '2', tone: 'red' },
-  { value: 'blocked', label: '阻塞', key: '3', tone: 'amber' },
-  { value: 'skipped', label: '跳过', key: '4', tone: 'slate' },
-]
 
 const STATUS_FILTERS: Array<{ value: string; label: string }> = [
   { value: 'all', label: '全部' },
@@ -118,7 +108,7 @@ export function TestOrderWorkspacePage() {
     return entries.filter((entry) => {
       if (onlyMine && entry.assigneeUserId !== currentUserId) return false
       if (!text) return true
-      return `${entry.caseTitle ?? ''} ${entry.caseModule ?? ''}`.toLowerCase().includes(text)
+      return `${entry.caseId ?? ''} ${entry.caseTitle ?? ''} ${entry.caseModule ?? ''}`.toLowerCase().includes(text)
     })
   }, [currentUserId, entries, keyword, onlyMine])
   const visibleEntries = useMemo(() => matchingEntries.filter((entry) =>
@@ -150,17 +140,7 @@ export function TestOrderWorkspacePage() {
     })
   }, [selected, selected?.entryId])
 
-  const saveMutation = useMutation({
-    mutationFn: (payload: Record<string, unknown>) =>
-      api.updateTestOrderEntry(orderId!, selected!.entryId!, payload),
-    onSuccess: () => {
-      setSavedAt(new Date().toLocaleTimeString('zh-CN', { hour12: false }).slice(0, 5))
-      queryClient.invalidateQueries({ queryKey: ['testOrderEntries', orderId] })
-      queryClient.invalidateQueries({ queryKey: ['testOrder', orderId] })
-      queryClient.invalidateQueries({ queryKey: ['testOrders'] })
-    },
-    onError: (error) => message.error(getErrorMessage(error)),
-  })
+  const saveMutation = useTestOrderEntrySave(orderId ?? '')
 
   const batchMutation = useMutation({
     mutationFn: () => api.batchMarkPassedEntries(orderId!, checkedEntryIds),
@@ -204,12 +184,14 @@ export function TestOrderWorkspacePage() {
 
   function save(payload: Record<string, unknown>) {
     if (!selected?.entryId) return
-    saveMutation.mutate(payload)
+    saveMutation.mutate({ entryId: selected.entryId, payload }, {
+      onSuccess: () => setSavedAt(new Date().toLocaleTimeString('zh-CN', { hour12: false }).slice(0, 5)),
+    })
   }
 
   const isOwner = project?.role === 'owner'
   const lockedByAssignee =
-    Boolean(selected?.assigneeUserId) && selected?.assigneeUserId !== currentUserId && !isOwner
+    isTestOrderEntryLocked(selected?.assigneeUserId, currentUserId, isOwner)
   const canJudge = can('execute') && !lockedByAssignee
 
   function moveSelection(offset: number) {
@@ -220,7 +202,7 @@ export function TestOrderWorkspacePage() {
   }
 
   // 判定后自动前进到下一条未执行（可在底部判定栏关闭）。
-  const advanceAfterJudge = autoAdvance && selected?.status !== 'pending'
+  const advanceAfterJudge = !graphOpen && autoAdvance && selected?.status !== 'pending'
   useEffect(() => {
     if (!advanceAfterJudge) return
     const index = visibleEntries.findIndex((entry) => entry.entryId === selected?.entryId)
@@ -231,6 +213,7 @@ export function TestOrderWorkspacePage() {
   // 键盘：1/2/3/4 判定整条用例，上下切换条目。
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      if (graphOpen || saveMutation.isPending) return
       const target = event.target as HTMLElement | null
       if (target && ['INPUT', 'TEXTAREA'].includes(target.tagName)) return
       if (event.key === 'ArrowDown') {
@@ -243,7 +226,7 @@ export function TestOrderWorkspacePage() {
         moveSelection(-1)
         return
       }
-      const status = VERDICT_OPTIONS.find((option) => option.key === event.key)?.value
+      const status = TEST_ORDER_VERDICTS.find((option) => option.key === event.key)?.value
       if (!status || !canJudge) return
       event.preventDefault()
       save({ status })
@@ -293,29 +276,30 @@ export function TestOrderWorkspacePage() {
             <span className="test-order-orderbar-progress">
               已执行 {order?.entriesExecuted ?? 0}/{order?.entriesTotal ?? 0}
             </span>
-            <span className="spacer" />
-            <ProjectActionButton
-              action="execute"
-              projectId={order?.projectId}
-              className="action-btn-graph"
-              operation="create"
-              disabled={!order?.orderId}
-              onClick={() => setGraphOpen(true)}
-            >
-              用例图谱
-            </ProjectActionButton>
-            <ProjectActionButton
-              action="write"
-              projectId={order?.projectId}
-              type="primary"
-              className="action-btn-create"
-              operation="create"
-              disabled={!order?.orderId}
-              onClick={() => setAddCasesOpen(true)}
-            >
-              加入用例
-            </ProjectActionButton>
-
+            <div className="test-order-orderbar-actions">
+              <ProjectActionButton
+                action="execute"
+                projectId={order?.projectId}
+                className="action-btn-graph"
+                icon={<ApartmentOutlined aria-hidden="true" />}
+                aria-label="用例图谱"
+                disabled={!order?.orderId}
+                onClick={() => setGraphOpen(true)}
+              >
+                用例图谱
+              </ProjectActionButton>
+              <ProjectActionButton
+                action="write"
+                projectId={order?.projectId}
+                type="primary"
+                className="action-btn-create"
+                operation="create"
+                disabled={!order?.orderId}
+                onClick={() => setAddCasesOpen(true)}
+              >
+                加入用例
+              </ProjectActionButton>
+            </div>
           </section>
 
           {orderQuery.error ? (
@@ -428,9 +412,6 @@ export function TestOrderWorkspacePage() {
                             onClick={() => setSelectedEntryId(entry.entryId ?? null)}
                           >
                             <span className="test-order-nav-head">
-                              <span className="test-order-nav-index">
-                                TC-{String(entry.orderNo ?? 0).padStart(4, '0')}
-                              </span>
                               {entry.casePriority ? (
                                 <span
                                   className={`test-order-nav-prio tone-${priorityTone(entry.casePriority)}`}
@@ -526,7 +507,7 @@ export function TestOrderWorkspacePage() {
                 <>
                   <div className="test-order-editor-head">
                     <span className="test-order-case-no">
-                      TC-{String(selected.orderNo ?? 0).padStart(4, '0')}
+                      {selected.caseId}
                     </span>
                     <Text strong className="test-order-case-title">
                       {selected.caseTitle || selected.caseId}
@@ -629,27 +610,12 @@ export function TestOrderWorkspacePage() {
                     执行判定结果
                     <span className="test-order-verdict-hint">快捷键 1/2/3/4</span>
                   </div>
-                  <div className="test-order-verdict-grid">
-                    {VERDICT_OPTIONS.map((option) => (
-                      <Tooltip
-                        key={option.value}
-                        title={canJudge ? undefined : '当前不可判定：条目已分配给其他执行人'}
-                      >
-                        <button
-                          type="button"
-                          className={`test-order-judge-btn tone-${option.tone}${
-                            selected.status === option.value ? ' active' : ''
-                          }`}
-                          disabled={!canJudge}
-                          aria-label={`判定该用例为${option.label}`}
-                          onClick={() => save({ status: option.value })}
-                        >
-                          <span>{option.label}</span>
-                          <span className="test-order-judge-key">{option.key}</span>
-                        </button>
-                      </Tooltip>
-                    ))}
-                  </div>
+                  <TestOrderVerdictButtons
+                    status={selected.status}
+                    disabled={!canJudge || saveMutation.isPending}
+                    showShortcuts
+                    onJudge={(status) => save({ status })}
+                  />
 
                   {/* 缺陷信息：只存了一个禅道缺陷号，没有缺陷详情接口，所以不做设计稿里那张 BUG 卡片。 */}
                   <div className="test-order-defect-section">
@@ -775,6 +741,8 @@ export function TestOrderWorkspacePage() {
         orderId={order?.orderId ?? orderId ?? ''}
         projectId={order?.projectId}
         canExecute={can('execute')}
+        currentUserId={currentUserId}
+        isProjectOwner={isOwner}
         onClose={() => setGraphOpen(false)}
       />
     </div>
