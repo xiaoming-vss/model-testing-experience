@@ -1,6 +1,6 @@
 import { request, type ListResponse } from '@/shared/api/request'
 
-export type ServiceProvider = 'llm' | 'zentao' | 'gitlab'
+export type ServiceProvider = 'llm' | 'zentao' | 'gitlab' | 'mcp'
 export type SharedService = {
   serviceId: string
   projectId: string
@@ -8,6 +8,7 @@ export type SharedService = {
   name: string
   baseUrl: string
   modelId: string
+  templateId?: 'zentao' | null
   authorization: {
     status: 'unauthorized' | 'authorized' | 'invalid'
     connectionId?: string | null
@@ -15,12 +16,14 @@ export type SharedService = {
     lastAuthAt?: string | null
   }
 }
-export type ServiceConfiguration = { name: string; baseUrl: string; modelId?: string }
-export type PersonalAuthorization = { apiKey?: string; accessToken?: string; account?: string; password?: string }
+export type ServiceConfiguration = { name: string; baseUrl: string; modelId?: string; templateId?: 'zentao' }
+export type McpTemplate = { templateId: 'zentao'; name: string; type: 'streamableHttp'; authorizationHeader: 'token' }
+export type PersonalAuthorization = { token?: string; apiKey?: string; accessToken?: string; account?: string; password?: string }
 const path = (projectId: string, provider: ServiceProvider, serviceId?: string) =>
   `/v1/projects/${encodeURIComponent(projectId)}/services/${provider}${serviceId ? `/${encodeURIComponent(serviceId)}` : ''}`
 
 export const sharedServicesApi = {
+  mcpTemplates: (projectId: string) => request<ListResponse<McpTemplate>>(`${path(projectId, 'mcp')}/templates`),
   list: (projectId: string, provider: ServiceProvider) => request<ListResponse<SharedService>>(path(projectId, provider)),
   create: (projectId: string, provider: ServiceProvider, body: ServiceConfiguration) =>
     request<SharedService>(path(projectId, provider), { method: 'POST', body: JSON.stringify(body) }),

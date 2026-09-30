@@ -1,5 +1,6 @@
+import { StoredImage } from '@/shared/components/files/StoredFile'
 import { LeftOutlined, RightOutlined } from '@ant-design/icons'
-import { Button, Empty, Image, Tooltip } from 'antd'
+import { Button, Empty, Tooltip } from 'antd'
 
 import type { UiStepSnapshot } from '../utils/detailRunView'
 import type { UiTestCaseRun } from '@/services/api'
@@ -61,7 +62,7 @@ export function UiRunReplayStage({ run, snapshots, activeIndex, viewportText, sc
 
         <div className="ui-wb-replay-canvas">
           {activeSnapshot?.screenshotPath ? (
-            <Image
+            <StoredImage
               src={activeSnapshot.screenshotPath}
               alt={`${activeSnapshot.name} 的截图`}
               className="ui-wb-replay-shot"

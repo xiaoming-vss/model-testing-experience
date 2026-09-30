@@ -1,5 +1,6 @@
+import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
+import { ListPagination } from '@/shared/components/ListPagination'
 import '@/shared/styles/list-table.css'
-import { footerRange } from '@/shared/utils/pagination'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ApiOutlined, SearchOutlined, SettingOutlined } from '@ant-design/icons'
 import {
@@ -8,7 +9,6 @@ import {
   Empty,
   Form,
   Input,
-  Pagination,
   Popconfirm,
   Select,
   Space,
@@ -61,7 +61,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
   const workbenchActiveProjectId = useWorkbenchStore((state) => state.activeProjectId)
   const activeProjectId = scope?.projectId ?? workbenchActiveProjectId
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [keyword, setKeyword] = useState('')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerSprintId, setDrawerSprintId] = useState<string | undefined>(undefined)
@@ -95,6 +95,8 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
   })
   const selectedSprintId = scope?.sprintId ?? resolvedSelectedSprintId
   const selectedRequirementId = scope?.requirementId ?? resolvedSelectedRequirementId
+
+  useEffect(() => { setPage(1) }, [activeProjectId, selectedSprintId, selectedRequirementId, keyword])
 
   const { allRequirements, allRequirementsQuery, requirementNameMap, requirementSprintMap, sprintNameMap } =
     useProjectRequirements({
@@ -612,13 +614,10 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
             </div>
 
             <div className="table-footer api-test-footer">
-              <Text type="secondary">{footerRange(filteredCollections.length, page, pageSize)}</Text>
-              <Pagination
+              <ListPagination loading={collectionsQuery.isFetching || collectionsQuery.isError}
                 current={page}
                 pageSize={pageSize}
                 total={filteredCollections.length}
-                showSizeChanger
-                pageSizeOptions={['10', '20', '30', '50']}
                 onChange={(nextPage, nextPageSize) => {
                   setPage(nextPage)
                   setPageSize(nextPageSize)

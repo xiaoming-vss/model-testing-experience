@@ -5,19 +5,13 @@ import type { ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
 
-type BaseServiceTab = 'llm' | 'zentao' | 'gitlab' | 'skills'
+type BaseServiceTab = 'llm' | 'zentao' | 'gitlab' | 'skills' | 'mcp'
 
 const tabOptions: Array<{
   key: BaseServiceTab
   label: string
   icon: ReactNode
 }> = [
-  { key: 'skills', label: 'Skill库', icon: <AppIcon name="skills" /> },
-  {
-    key: 'llm',
-    label: 'LLM模型',
-    icon: <AppIcon name="llm" />,
-  },
   {
     key: 'zentao',
     label: '禅道',
@@ -28,6 +22,13 @@ const tabOptions: Array<{
     label: 'GitLab',
     icon: <AppIcon name="gitlab" />,
   },
+  {
+    key: 'llm',
+    label: 'LLM模型',
+    icon: <AppIcon name="llm" />,
+  },
+  { key: 'mcp', label: 'MCP', icon: <AppIcon name="services" /> },
+  { key: 'skills', label: 'Skill库', icon: <AppIcon name="skills" /> },
 ]
 
 export function BaseServicesPage({ skillLibrary }: { skillLibrary: ReactNode }) {
@@ -37,7 +38,7 @@ export function BaseServicesPage({ skillLibrary }: { skillLibrary: ReactNode }) 
 
   const activeTab = useMemo<BaseServiceTab>(() => {
     const tab = searchParams.get('tab')
-    if (tab === 'llm' || tab === 'zentao' || tab === 'gitlab' || tab === 'skills') return tab
+    if (tab === 'llm' || tab === 'zentao' || tab === 'gitlab' || tab === 'skills' || tab === 'mcp') return tab
     return 'llm'
   }, [searchParams])
 

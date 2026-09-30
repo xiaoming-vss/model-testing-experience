@@ -1953,9 +1953,6 @@
   min-height: 0;
 }
 
-.api-environment-vars-footer {
-  border-top-color: var(--tp-border-soft);
-}
 
 @media (max-width: 1180px) {
   .api-collection-detail-layout {
@@ -1968,12 +1965,7 @@
 }
 
 @media (max-width: 900px) {
-  .table-footer {
-    align-items: flex-start;
-    flex-direction: column;
-    min-height: 86px;
-    padding: 12px 16px;
-  }
+
 
   .api-automation-content {
     padding: 12px var(--app-page-gutter) 16px;

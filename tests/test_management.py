@@ -75,10 +75,7 @@ class ManagementTests(unittest.TestCase):
             )
             self.assertEqual(configs["ai-worker"]["platform"]["base_url"], url)
             self.assertEqual(configs["api-ui-worker"]["control_plane"]["base_url"], url)
-            self.assertEqual(
-                configs["api-ui-worker"]["ui"]["artifacts_base_url"],
-                "http://testing.example.com:9010",
-            )
+            self.assertNotIn("artifacts_base_url", configs["api-ui-worker"]["ui"])
             self.assertEqual(configs["ai-worker"]["worker"]["max_concurrent_tasks"], 7)
             for config in configs.values():
                 self.assertEqual(tomllib.loads(manage.toml_text(config)), config)

@@ -5,9 +5,9 @@ import { previewRelationsRoutes, type RelationsRouteGeometry, type RelationsRout
 type RouteNode = { id: string; position: { x: number; y: number }; measured?: { width?: number; height?: number }; dragging?: boolean }
 type RouteEdge = { id: string; source: string; target: string }
 type MainPath = { caseIds: string[] }
-type CompletedRoute = { key: string; attempt: number; paths: Map<string, string> | null }
+type CompletedRoute = { key: string; attempt: number; paths: Map<string, string> | null; blockedEdgeIds?: string[]; done?: boolean; failed?: boolean }
 
-/** Render cheap previews immediately; only settled geometry runs in a worker. */
+/** Show validated worker batches progressively; dragging uses cheap temporary previews. */
 export function useRelationsEdgePaths(nodes: RouteNode[], edges: RouteEdge[], paths: MainPath[]) {
   const [completed, setCompleted] = useState<CompletedRoute | null>(null)
   const [attempt, retry] = useReducer((value: number) => value + 1, 0)
@@ -30,18 +30,29 @@ export function useRelationsEdgePaths(nodes: RouteNode[], edges: RouteEdge[], pa
     if (!jobKey) return
     let active = true
     let worker: Worker | undefined
+    let watchdog: ReturnType<typeof setTimeout> | undefined
+    let latestPaths: Map<string, string> | null = null
+    let latestBlocked: string[] = []
     const fail = () => {
-      if (active) setCompleted({ key: jobKey, attempt, paths: null })
+      if (active) setCompleted({ key: jobKey, attempt, paths: latestPaths, blockedEdgeIds: latestBlocked, done: true, failed: true })
+      clearTimeout(watchdog)
       worker?.terminate()
     }
     try {
       worker = new Worker(new URL('../workers/relationsRouting.worker.ts', import.meta.url), { type: 'module' })
       worker.onmessage = (event: MessageEvent<RelationsRouteResult>) => {
-        if (active) setCompleted({ key: jobKey, attempt, paths: new Map(event.data.paths) })
-        worker?.terminate()
+        if (!active) return
+        latestPaths = new Map(event.data.paths)
+        latestBlocked = event.data.blockedEdgeIds ?? []
+        const done = event.data.done !== false
+        setCompleted({ key: jobKey, attempt, paths: latestPaths, blockedEdgeIds: latestBlocked, done })
+        clearTimeout(watchdog)
+        if (done) worker?.terminate()
+        else watchdog = setTimeout(fail, 15000)
       }
       worker.onerror = fail
       worker.onmessageerror = fail
+      watchdog = setTimeout(fail, 15000)
       worker.postMessage(JSON.parse(jobKey) as RelationsRouteGeometry)
     } catch {
       // Never fall back to expensive synchronous routing on the UI thread.
@@ -49,15 +60,17 @@ export function useRelationsEdgePaths(nodes: RouteNode[], edges: RouteEdge[], pa
     }
     return () => {
       active = false
+      clearTimeout(watchdog)
       worker?.terminate()
     }
   }, [jobKey, attempt])
 
   const current = completed?.key === geometryKey && completed.attempt === attempt ? completed : null
   return {
-    paths: current?.paths ?? preview,
-    error: !dragging && current !== null && current.paths === null,
-    pending: jobKey !== null && current === null,
+    paths: current?.paths ?? (dragging ? preview : new Map<string, string>()),
+    blockedEdgeIds: current?.blockedEdgeIds ?? [],
+    error: !dragging && current !== null && Boolean(current.failed),
+    pending: jobKey !== null && (!current || current.done === false),
     retry,
   }
 }

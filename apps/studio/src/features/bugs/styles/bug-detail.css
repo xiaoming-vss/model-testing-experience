@@ -1,0 +1,84 @@
+/* 缺陷详情：操作栏与双栏阅读布局，数据及操作沿用现有业务能力。 */
+.bugs-detail-page .bugs-detail-topbar { gap: 12px; }
+.bugs-detail-page .bug-detail-actions { margin-left: auto; }
+.bugs-detail-page .bug-detail-cols { grid-template-columns: minmax(0, 2.15fr) minmax(300px, 1fr); gap: 20px; margin-top: 20px; align-items: start; }
+.bugs-detail-page .bug-detail-main, .bugs-detail-page .bug-detail-side { min-width: 0; }
+.bugs-detail-page .bug-detail-panel { margin-bottom: 20px; }
+.bugs-detail-page .bug-detail-main .bug-detail-panel { padding: 20px; }
+.bugs-detail-page .bug-detail-side .bug-detail-panel { padding: 20px; }
+.bug-detail-breadcrumb { display: flex; gap: 10px; align-items: center; color: var(--srf-text-muted); font: 11px ui-monospace, monospace; overflow-wrap: anywhere; }
+.bug-detail-summary h1 { margin: 14px 0 10px; font-size: 22px; line-height: 1.5; font-weight: 600; color: var(--srf-text); overflow-wrap: anywhere; }
+.bug-detail-subtitle { color: var(--srf-text-muted); font-size: 12px; }
+.bugs-detail-page .bug-panel-title { padding-bottom: 12px; margin-bottom: 16px; border-bottom: 1px solid var(--srf-divider); font-size: 14px; }
+.bugs-detail-page .bug-panel-title::before { height: 16px; }
+.bugs-detail-page .bug-meta-list { grid-template-columns: 100px minmax(0, 1fr); row-gap: 18px; font-size: 12px; }
+.bugs-detail-page .bug-meta-list dd { text-align: right; }
+.bugs-detail-page .bug-context-list { display: block; }
+.bugs-detail-page .bug-context-list dt { padding: 12px 12px 4px; background: var(--srf-hover); border: 1px solid var(--srf-card-border); border-bottom: 0; border-radius: 6px 6px 0 0; font-size: 11px; }
+.bugs-detail-page .bug-context-list dd { padding: 0 12px 12px; margin-bottom: 12px; text-align: left; background: var(--srf-hover); border: 1px solid var(--srf-card-border); border-top: 0; border-radius: 0 0 6px 6px; }
+.bugs-detail-page .bug-context-list dd:last-child { margin-bottom: 0; }
+.bugs-detail-page .bug-attachment-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.bugs-detail-page .bug-attachment-item { min-width: 0; padding: 12px; border: 1px solid var(--srf-card-border); border-radius: 8px; gap: 8px; }
+.bug-evidence-icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 36px; height: 36px; border-radius: 6px; color: var(--srf-accent); background: var(--srf-accent-soft); }
+.bugs-detail-page .bug-attachment-item .ant-btn { min-width: 0; flex: 1; }
+.bugs-detail-page .bug-attachment-item .ant-btn > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+.bugs-detail-page .bug-attachment-size { font-size: 11px; }
+.bugs-detail-page .bug-detail-primary-action { --button-current-bg: var(--srf-accent); --button-current-border: var(--srf-accent); --button-current-text: var(--srf-on-accent); --button-current-hover: var(--srf-accent-strong); --button-current-hover-border: var(--srf-accent-strong); }
+@media (max-width: 1100px) {
+  .bugs-detail-page .bug-detail-cols { grid-template-columns: minmax(0, 1fr); }
+  .bugs-detail-page .bug-detail-side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+}
+@media (max-width: 720px) {
+  .bugs-detail-page .bug-detail-side, .bugs-detail-page .bug-attachment-list { grid-template-columns: minmax(0, 1fr); }
+  .bugs-detail-page .bug-detail-actions { margin-left: 0; }
+  .bug-detail-summary h1 { font-size: 18px; }
+}
+
+.bugs-detail-page .bug-detail-cols { width: 100%; min-width: 0; }
+.bug-sidebar-indicator { display: inline-flex; align-items: center; gap: 6px; color: var(--srf-tone-text); }
+.bug-sidebar-indicator::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.bug-sidebar-person { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.bug-person-avatar { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--srf-accent); color: var(--srf-on-accent); font-size: 11px; }
+.bugs-detail-page .bug-attachment-item .ant-btn { justify-content: flex-start; }
+/* 应用外壳禁止滚动，详情必须拥有独立且有界的滚动容器。 */
+.app-shell.app-shell-macos .bugs-detail-page { height: 100%; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.app-shell.app-shell-macos .bugs-detail-page > .api-automation-content { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; display: block; }
+.bugs-detail-page .bugs-detail-topbar { position: sticky; top: 0; z-index: 3; background: var(--srf-card); }
+.bug-detail-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--srf-divider); padding-bottom: 12px; margin-bottom: 16px; }
+.bugs-detail-page .bug-detail-section-heading .bug-panel-title { border: 0; margin: 0; padding: 0; }
+.bug-description-sections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.bug-description-section { grid-column: 1 / -1; min-width: 0; }
+.bug-description-section h3 { margin: 0 0 10px; font-size: 13px; color: var(--srf-accent); }
+.bug-description-section.is-context { padding: 14px; background: var(--srf-hover); border-radius: 6px; }
+.bug-description-section.is-actual, .bug-description-section.is-expected { grid-column: auto; padding: 16px; border-radius: 8px; border: 1px solid var(--srf-card-border); background: var(--srf-hover); }
+.bug-description-section.is-actual { border-left: 3px solid var(--srf-result-failed); }
+.bug-description-section.is-expected { border-left: 3px solid var(--srf-result-passed); }
+.bug-description-section.is-actual h3 { color: var(--srf-danger); }
+.bugs-detail-page .bug-description-section .rich-text-viewer { min-height: 0; }
+.bug-description-raw { max-height: 480px; overflow: auto; padding: 16px; background: var(--srf-hover); color: var(--srf-text-secondary); white-space: pre-wrap; overflow-wrap: anywhere; }
+.bug-evidence-layout { display: grid; gap: 16px; }
+.bug-evidence-layout.has-preview { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
+.bug-evidence-preview { min-width: 0; padding: 12px; background: var(--srf-hover); border: 1px solid var(--srf-card-border); border-radius: 8px; }
+.bug-evidence-preview img, .bug-evidence-preview video { display: block; width: 100%; max-height: 360px; object-fit: contain; margin-top: 12px; }
+.bug-evidence-caption { font-size: 12px; color: var(--srf-text-secondary); overflow-wrap: anywhere; }
+.bug-evidence-files { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.bug-evidence-files li { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--srf-card-border); border-radius: 6px; min-width: 0; }
+.bug-evidence-file-info { flex: 1; min-width: 0; font-size: 12px; }
+.bug-evidence-file-info > span, .bug-evidence-file-info > button { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.bug-evidence-file-info button { border: 0; padding: 0; background: transparent; color: var(--srf-accent); cursor: pointer; text-align: left; }
+.bug-evidence-file-info small { display: block; color: var(--srf-text-muted); margin-top: 4px; }
+@media (max-width: 720px) {
+  .bug-description-sections, .bug-evidence-layout.has-preview { grid-template-columns: minmax(0, 1fr); }
+  .bug-detail-section-heading { flex-wrap: wrap; }
+}
+.bug-description-section.is-actual { background: color-mix(in srgb, var(--srf-result-failed) 5%, var(--srf-card)); border-color: color-mix(in srgb, var(--srf-result-failed) 22%, var(--srf-card)); }
+.bug-description-section.is-expected { background: color-mix(in srgb, var(--srf-result-passed) 5%, var(--srf-card)); border-color: color-mix(in srgb, var(--srf-result-passed) 22%, var(--srf-card)); }
+
+.bug-detail-history, .bug-detail-discussion { grid-column: 1 / -1; }
+.bug-detail-history .bug-activity-head, .bug-detail-discussion .bug-activity-head { gap: 6px 8px; }
+.bug-detail-history .bug-activity-time, .bug-detail-discussion .bug-activity-time { flex-basis: 100%; margin-left: 0; font-size: 11px; }
+.bug-detail-history .bug-activity-content, .bug-detail-discussion .bug-activity-content { overflow-wrap: anywhere; }
+.bug-inline-form .bug-detail-summary .ant-form-item { margin: 14px 0; }
+.bug-inline-form .bug-meta-list .ant-form-item, .bug-inline-form .bug-context-list .ant-form-item { margin: 0; }
+.bug-inline-form .bug-detail-side .ant-select { width: 100%; text-align: left; }
+.bug-inline-form .rich-text-content .tiptap { min-height: 320px; max-height: none; }

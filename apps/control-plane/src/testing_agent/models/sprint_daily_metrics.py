@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from sqlalchemy import Date, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, Date, Integer, String, UniqueConstraint
 from sqlalchemy.dialects.mysql import JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -33,6 +33,7 @@ class SprintDailyMetrics(Base):
     ui_case_pending: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     ui_case_success: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     ui_case_failed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    bug_metrics_collected: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     bug_details_json: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON, nullable=True)
     bug_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     bug_resolved: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

@@ -20,7 +20,7 @@ export function getOutputRepairProgress(summary: unknown): string | null {
   const parsed = parseJsonLikeContent(summary)
   const progress = parsed && typeof parsed === 'object' ? parsed.outputValidation : undefined
   if (!progress || progress.status !== 'repairing' || !Number.isInteger(progress.repairAttempt) || progress.repairAttempt < 1) return null
-  const stage = { requirement_analysis: '需求分析', case_names: '测试点', detailed_cases: '详细用例', relation_analysis: '图谱分析' }[progress.stage as 'requirement_analysis' | 'case_names' | 'detailed_cases' | 'relation_analysis']
+  const stage = { requirement_analysis: '测试需求分析', case_names: '测试点', detailed_cases: '详细用例', relation_analysis: '图谱分析' }[progress.stage as 'requirement_analysis' | 'case_names' | 'detailed_cases' | 'relation_analysis']
   if (!stage) return null
   return `${stage}${typeof progress.module === 'string' && progress.module ? ` / ${progress.module}` : ''}：输出校验未通过，正在进行第 ${progress.repairAttempt}/2 次自动修复`
 }
@@ -162,6 +162,7 @@ export function formatRoleConcerns(value: unknown) {
 }
 
 export type GeneratedTestCase = {
+  raw: Record<string, unknown>
   moduleName: string
   displayName: string
   tagFields: Array<{ key: string; label: string; value: string }>
@@ -262,7 +263,7 @@ export function parseGeneratedCases(content?: string): GeneratedCaseModuleGroup[
     rawCases.forEach((item) => {
       if (!item || typeof item !== 'object') {
         const group = moduleMap.get('未分组') ?? []
-        group.push({ moduleName: '未分组', displayName: toDisplayText(item) || '未命名用例', tagFields: [], detailFields: [] })
+        group.push({ raw: {}, moduleName: '未分组', displayName: toDisplayText(item) || '未命名用例', tagFields: [], detailFields: [] })
         moduleMap.set('未分组', group)
         return
       }
@@ -286,7 +287,7 @@ export function parseGeneratedCases(content?: string): GeneratedCaseModuleGroup[
         }
       })
 
-      const testCase: GeneratedTestCase = { moduleName, displayName, tagFields, detailFields }
+      const testCase: GeneratedTestCase = { raw: record, moduleName, displayName, tagFields, detailFields }
       const group = moduleMap.get(moduleName) ?? []
       group.push(testCase)
       moduleMap.set(moduleName, group)

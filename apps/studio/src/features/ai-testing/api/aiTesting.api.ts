@@ -1,6 +1,7 @@
-import { request, requestBlob, type ListResponse } from '@/shared/api/request'
+import { skillsApi } from './skills.api'
+import { storageCapabilities, uploadStoredFile } from '@/shared/api/files'
+import { request, type ListResponse } from '@/shared/api/request'
 import type {
-  AiSkillLibraryItem,
   ApiCaseGenerateTask,
   ApiCaseGenerateTaskRun,
   CodeRiskTask,
@@ -31,7 +32,6 @@ import type {
   RunUiCaseGenerateTaskPayload,
   UpdateApiCaseGenerateTaskPayload,
   UpdateApiCaseGenerateTaskRunResultPayload,
-  UploadAiSkillPayload,
   UpdateFunctionalCaseGenerateTaskPayload,
   UpdateFunctionalCaseGenerateTaskRunResultPayload,
   UpdateFunctionalCaseGenerateTaskRunStageOutputPayload,
@@ -47,26 +47,7 @@ import type {
 import type { Requirement } from '@/features/requirements/types'
 
 export const aiTestingApi = {
-  getAiSkillLibraryItems: (projectId: string) =>
-    request<ListResponse<AiSkillLibraryItem>>(`/v1/projects/${projectId}/skills`),
-  uploadAiSkill: (projectId: string, { file, publicBaseURL }: UploadAiSkillPayload) => {
-    const formData = new FormData()
-    formData.append('file', file, file.name)
-    if (publicBaseURL?.trim()) {
-      formData.append('publicBaseURL', publicBaseURL.trim())
-    }
-
-    return request<AiSkillLibraryItem>(`/v1/projects/${projectId}/skills`, {
-      method: 'POST',
-      body: formData,
-    })
-  },
-  deleteAiSkill: (projectId: string, skillSpaceId: string) =>
-    request<Record<string, never>>(`/v1/projects/${projectId}/skills/${skillSpaceId}`, {
-      method: 'DELETE',
-    }),
-  downloadAiSkill: (projectId: string, skillSpaceId: string) =>
-    requestBlob(`/v1/projects/${projectId}/skills/${skillSpaceId}/download`),
+  ...skillsApi,
   getApiCaseGenerateTasks: (projectId: string) =>
     request<ListResponse<ApiCaseGenerateTask>>(`/v1/projects/${projectId}/api-case-generate-tasks`),
   createApiCaseGenerateTask: (projectId: string, body: CreateApiCaseGenerateTaskPayload) =>
@@ -212,12 +193,17 @@ export const aiTestingApi = {
     }),
   deleteUiCaseGenerateTask: (taskId: string) =>
     request<Record<string, never>>(`/v1/ui-case-generate-tasks/${taskId}`, { method: 'DELETE' }),
-  uploadUiCaseGenerateTaskSourceArchive: (taskId: string, file: File) => {
-    const formData = new FormData()
-    formData.append('file', file, file.name)
+  uploadUiCaseGenerateTaskSourceArchive: async (taskId: string, file: File) => {
+    const capabilities = await storageCapabilities()
+    if (!capabilities.enabled) throw new Error('S3 文件存储未启用，请联系管理员配置')
+    if (!file.name.toLowerCase().endsWith('.zip')) throw new Error('只支持 .zip 源码包')
+    if (file.size > Math.min(capabilities.maxBytes, 100 * 1024 * 1024)) throw new Error('源码包超过大小限制')
+    const task = await request<UiCaseGenerateTask>(`/v1/ui-case-generate-tasks/${taskId}`)
+    const projectId = task.projectId
+    if (!projectId) throw new Error('任务缺少所属项目，无法上传源码包')
+    const fileId = await uploadStoredFile(projectId, file, 'ui_source_archive')
     return request<UiCaseGenerateTask>(`/v1/ui-case-generate-tasks/${taskId}/source-archive`, {
-      method: 'PUT',
-      body: formData,
+      method: 'PUT', body: JSON.stringify({ fileId }),
     })
   },
   runUiCaseGenerateTask: (taskId: string, body: RunUiCaseGenerateTaskPayload) =>

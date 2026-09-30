@@ -22,7 +22,9 @@ class WorkerTaskDispatcherExecutor(TaskExecutor):
         ui_executor: TaskExecutor | None = None,
         code_risk_executor: TaskExecutor | None = None,
         test_order_graph_executor: TaskExecutor | None = None,
+        skill_preparer=None,
     ) -> None:
+        self.skill_preparer = skill_preparer
         self.api_executor = api_executor
         self.functional_executor = functional_executor
         self.requirement_executor = requirement_executor
@@ -33,6 +35,9 @@ class WorkerTaskDispatcherExecutor(TaskExecutor):
 
     def execute(self, task: Task, started_at: datetime, progress_callback) -> TaskResult:
         """执行任务分发。"""
+
+        if self.skill_preparer is not None:
+            self.skill_preparer(task)
 
         if task.task_type == "api_case_generate":
             return self.api_executor.execute(task, started_at, progress_callback)

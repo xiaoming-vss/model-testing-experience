@@ -10,6 +10,7 @@ export type Requirement = {
   documentContent?: string
   documentFilename?: string
   documentHash?: string
+  documentFileId?: string
   documentDownloadUrl?: string
   createdAt?: string
   created_at?: string
@@ -22,6 +23,7 @@ export type RequirementCreatePayload = {
   documentType: RequirementDocumentType
   documentContent?: string
   file?: File
+  onUploadProgress?: (percent: number) => void
 }
 
 export type RequirementUpdatePayload = Partial<
@@ -33,4 +35,5 @@ export type RequirementDocumentUploadPayload = {
   documentType?: RequirementDocumentType
   documentContent?: string
   file?: File
+  onUploadProgress?: (percent: number) => void
 }

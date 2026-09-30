@@ -380,9 +380,6 @@
   overflow: hidden;
 }
 
-.workbench-panel .ant-pagination {
-  margin: 0;
-}
 
 .workbench-empty {
   border-radius: 6px;
@@ -496,9 +493,6 @@ body,
   padding-bottom: 10px;
 }
 
-.workbench-panel .ant-pagination {
-  flex: 0 0 auto;
-}
 
 @media (max-width: 900px) {
   body {
@@ -700,12 +694,6 @@ body,
   height: 100%;
 }
 
-.workbench-panel .ant-pagination {
-  margin-top: auto;
-  padding: 10px 16px;
-  border-top: 1px solid var(--tp-border-soft);
-  background: var(--app-surface);
-}
 
 .workbench-panel .ant-table-cell::before {
   background-color: var(--tp-border-soft) !important;
@@ -763,35 +751,9 @@ body,
   height: auto;
 }
 
-.table-footer {
-  flex: 0 0 auto;
-  min-height: 58px;
-  padding: 0 18px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  border-top: 1px solid var(--tp-border-soft);
-  background: var(--app-surface);
-}
 
-.table-footer .ant-typography {
-  color: var(--app-shell-text-muted);
-  font-size: 13px;
-}
 
-.table-footer .ant-pagination {
-  margin: 0;
-  padding: 0;
-  border-top: 0;
-}
 
-.table-footer .ant-pagination .ant-pagination-item,
-.table-footer .ant-pagination .ant-pagination-prev,
-.table-footer .ant-pagination .ant-pagination-next,
-.table-footer .ant-pagination .ant-select-selector {
-  border-radius: 8px;
-}
 
 .workbench-panel .ant-table-placeholder .ant-table-cell {
   border-bottom: 0;
@@ -1128,11 +1090,9 @@ body,
 .app-shell.app-shell-macos .app-sider::before {
   background: linear-gradient(180deg, var(--app-glass-surface-46), var(--app-glass-surface-10)) !important;
 }
-
 .app-shell.app-shell-macos .brand-row,
 .app-shell.app-shell-macos .compact-header,
-.app-shell.app-shell-macos .panel-header:not(:where(.tp-list-toolbar)),
-.app-shell.app-shell-macos .table-footer {
+.app-shell.app-shell-macos .panel-header:not(:where(.tp-list-toolbar)) {
   border-color: var(--mac-glass-border-soft) !important;
 }
 
@@ -1212,9 +1172,7 @@ body,
     inset 0 1px 0 var(--app-glass-highlight-84),
     0 10px 24px var(--app-glass-shadow-card) !important;
 }
-
-.app-shell.app-shell-macos .panel-header:not(:where(.tp-list-toolbar)),
-.app-shell.app-shell-macos .table-footer {
+.app-shell.app-shell-macos .panel-header:not(:where(.tp-list-toolbar)) {
   background: var(--app-glass-surface-50) !important;
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   backdrop-filter: saturate(180%) blur(20px);
@@ -1239,10 +1197,8 @@ body,
     inset 0 1px 0 var(--app-glass-highlight-90),
     0 14px 30px var(--app-glass-shadow-floating) !important;
 }
-
 .app-shell.app-shell-macos .sprint-card-label,
-.app-shell.app-shell-macos .api-collection-description,
-.app-shell.app-shell-macos .table-footer .ant-typography {
+.app-shell.app-shell-macos .api-collection-description {
   color: var(--mac-glass-muted) !important;
 }
 
@@ -1252,18 +1208,7 @@ body,
   border-radius: 10px !important;
 }
 
-.app-shell.app-shell-macos .ant-pagination .ant-pagination-item,
-.app-shell.app-shell-macos .ant-pagination .ant-pagination-prev,
-.app-shell.app-shell-macos .ant-pagination .ant-pagination-next,
-.app-shell.app-shell-macos .ant-pagination .ant-select-selector {
-  border-radius: 10px !important;
-}
 
-.app-shell.app-shell-macos .ant-pagination .ant-pagination-item-active {
-  border-color: var(--app-glass-action-border-active) !important;
-  background: var(--app-glass-surface-84) !important;
-  box-shadow: 0 6px 14px var(--app-glass-shadow-control) !important;
-}
 
 /* Project overview macOS glass alignment */
 .app-shell.app-shell-macos .workbench-page {
@@ -1510,12 +1455,10 @@ body,
   color: var(--project-overview-text) !important;
   font-weight: 700;
 }
-
 .app-shell.app-shell-macos .project-overview-page .project-description-text,
 .app-shell.app-shell-macos .project-overview-page .zentao-binding-toolbar-line,
 .app-shell.app-shell-macos .project-overview-page .sprint-card-label,
-.app-shell.app-shell-macos .project-overview-page .sprint-card-description,
-.app-shell.app-shell-macos .project-overview-page .table-footer .ant-typography {
+.app-shell.app-shell-macos .project-overview-page .sprint-card-description {
   color: var(--project-overview-muted) !important;
 }
 
@@ -1564,9 +1507,7 @@ body,
   border-radius: 18px;
   background: var(--project-overview-panel) !important;
 }
-
-.app-shell.app-shell-macos .project-overview-page .panel-header:not(:where(.tp-list-toolbar)),
-.app-shell.app-shell-macos .project-overview-page .table-footer {
+.app-shell.app-shell-macos .project-overview-page .panel-header:not(:where(.tp-list-toolbar)) {
   min-height: 58px;
   padding: 0 18px;
   border-color: var(--app-glass-border-soft) !important;

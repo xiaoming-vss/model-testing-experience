@@ -29,7 +29,6 @@ class FakeIntegrationConnectionRepository:
                 and row.provider == provider
                 and row.connection_id == connection_id
                 and (not project_id or row.project_id == project_id)
-
             ),
             None,
         )
@@ -41,7 +40,6 @@ class FakeIntegrationConnectionRepository:
             if row.user_id == user_id
             and row.provider == provider
             and (not project_id or row.project_id == project_id)
-
         ]
 
     async def get_project(self, project_id):

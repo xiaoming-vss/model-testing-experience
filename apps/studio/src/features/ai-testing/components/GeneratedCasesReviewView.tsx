@@ -30,7 +30,13 @@ function isExpectedResultField(key: string) {
   return ['expected_results', 'expectedResult', 'expectedResults', 'expected_result'].includes(key)
 }
 
-export function GeneratedCasesReviewView({ content }: { content: string }) {
+type GeneratedCasesReviewViewProps = {
+  content: string
+  selectedCaseKey?: string
+  onCaseSelect?: (key: string, raw: Record<string, unknown>) => void
+}
+
+export function GeneratedCasesReviewView({ content, selectedCaseKey, onCaseSelect }: GeneratedCasesReviewViewProps) {
   const moduleGroups = useMemo(() => parseGeneratedCases(content), [content])
   const [query, setQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
@@ -87,7 +93,7 @@ export function GeneratedCasesReviewView({ content }: { content: string }) {
     : 0
 
   return (
-    <div className="ai-generated-cases-review">
+    <div className={`ai-generated-cases-review${moduleGroups.length === 1 ? ' is-single-group' : ''}`}>
       <aside className="ai-generated-cases-review-sidebar">
         <div className="ai-generated-cases-review-sidebar-head">
           <strong>用例分组</strong>
@@ -156,7 +162,11 @@ export function GeneratedCasesReviewView({ content }: { content: string }) {
             </header>
             <div className="ai-generated-cases-review-card-list">
               {activeGroup.cases.map((testCase, caseIndex) => (
-                <article key={`${activeGroup.moduleName}-${caseIndex}`} className="ai-generated-cases-review-card">
+                <article
+                  key={`${activeGroup.moduleName}-${caseIndex}`}
+                  className={`ai-generated-cases-review-card${selectedCaseKey === `${activeGroup.moduleName}:${caseIndex}` ? ' is-selected' : ''}`}
+                  onClick={() => onCaseSelect?.(`${activeGroup.moduleName}:${caseIndex}`, testCase.raw)}
+                >
                   <header>
                     <span className="ai-generated-cases-review-index">{String(caseStartIndex + caseIndex + 1).padStart(2, '0')}</span>
                     {testCase.tagFields.map((tag) => {

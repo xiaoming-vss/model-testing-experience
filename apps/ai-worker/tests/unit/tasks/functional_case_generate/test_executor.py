@@ -14,6 +14,7 @@ import testing_agent_ai_worker.tasks.functional_case_generate.executor as execut
 from testing_agent_ai_worker.config.models import NanobotConfig
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskStatus
 from testing_agent_ai_worker.models.task import LlmCredentials, Task, TaskPayload
+from testing_agent_ai_worker.nanobot_runtime.paths import resolve_task_workspace
 from testing_agent_ai_worker.nanobot_runtime.prompt import (
     FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION,
     FUNCTIONAL_CASE_NAMES_JSON_ONLY_INSTRUCTION,
@@ -188,7 +189,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         self.assertEqual(captured["session_key"], "run-functional-1")
         self.assertEqual(
             Path(str(captured["workspace"])),
-            Path("D:/tmp/nanobot-runtime/workspaces/project-project-1"),
+            resolve_task_workspace(executor.nanobot_config, task),
         )
         self.assertEqual(events, ["chain"])
         self.assertEqual(
@@ -395,7 +396,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         self.assertFalse(Path(str(captured["config_path"])).exists())
         self.assertEqual(
             Path(str(captured["workspace"])),
-            Path("D:/tmp/nanobot-runtime/workspaces/project-project-1"),
+            resolve_task_workspace(executor.nanobot_config, task),
         )
         self.assertEqual(len(progress_events), 1)
         self.assertEqual(progress_events[0].current_stage, "requirement_analysis")

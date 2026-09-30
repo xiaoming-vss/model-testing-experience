@@ -16,6 +16,7 @@ from testing_agent.handlers.ai_worker import (
     requirement_document,
     source_archive,
 )
+from testing_agent.handlers.worker_skills import skill_file, skill_manifest
 from testing_agent.schemas.workers import (
     WorkerClaimPayload,
     WorkerGitlabCredentialsResponse,
@@ -49,11 +50,15 @@ router.get(
 router.get(
     "/tasks/{task_id}/requirement-document",
     response_class=Response,
-    responses={200: {"content": {"application/octet-stream": {}}}},
+    responses={200: {"content": {"application/json": {}}}},
 )(requirement_document)
 router.get(
     "/tasks/{task_id}/source-archive",
     response_class=Response,
-    responses={200: {"content": {"application/zip": {}}}},
+    responses={200: {"content": {"application/json": {}}}},
 )(source_archive)
 router.patch("/tasks/{task_id}/progress", status_code=204)(report_progress)
+
+
+router.get("/tasks/{task_id}/skills/{name}")(skill_manifest)
+router.get("/tasks/{task_id}/skills/{name}/files/{file_id}")(skill_file)

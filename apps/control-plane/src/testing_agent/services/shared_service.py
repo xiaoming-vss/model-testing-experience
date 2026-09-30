@@ -1,6 +1,7 @@
 """Shared catalog metadata with separate, actor-owned authorization operations."""
 
 from datetime import UTC, datetime
+from urllib.parse import urlsplit
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -11,6 +12,7 @@ from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.models.project import Project
 from testing_agent.models.shared_service import ServiceAuthorization, SharedService
 from testing_agent.repositories.deletion import delete_resource
+from testing_agent.schemas.shared_service import McpTemplate
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.project_access import require_project_access
 from testing_agent.services.service_instance import normalize_instance_url
@@ -76,6 +78,7 @@ class SharedServiceService:
             "name": resource.name,
             "baseUrl": resource.base_url,
             "modelId": resource.model_id,
+            "templateId": resource.template_id,
             "authorization": authorization,
         }
 
@@ -96,18 +99,43 @@ class SharedServiceService:
             "total": len(resources),
         }
 
+    async def templates(self, user_id, project_id, provider):
+        await self.project(user_id, project_id)
+        if provider != "mcp":
+            raise ErrNotFound
+        return {"items": [McpTemplate().model_dump(by_alias=True)], "total": 1}
+
     async def create(self, user_id, project_id, provider, body):
         await self.project(user_id, project_id, "manage")
         name = body.name.strip()
         model = body.model_id.strip()
         if not name or (provider == "llm" and not model) or (provider != "llm" and model):
             raise ErrBadRequest
+        if (provider == "mcp") != (body.template_id is not None):
+            raise ErrBadRequest
+        base_url = normalize_instance_url(body.base_url)
+        if provider == "mcp":
+            # MCP endpoints are exact URLs, not instance roots. Preserve a trailing slash.
+            url = urlsplit(body.base_url.strip())
+            if url.query or url.fragment or any(c.isspace() for c in body.base_url.strip()):
+                raise ErrBadRequest
+            base_url = body.base_url.strip()
+            existing = await self.session.scalar(
+                select(SharedService.service_id).where(
+                    SharedService.project_id == project_id,
+                    SharedService.provider == provider,
+                    SharedService.template_id == body.template_id,
+                )
+            )
+            if existing:
+                raise AppError(409, "该内置 MCP 已配置，请修改名称或删除后重新配置", 409)
         resource = SharedService(
             service_id=new_id(),
             project_id=project_id,
             provider=provider,
             name=name,
-            base_url=normalize_instance_url(body.base_url),
+            base_url=base_url,
+            template_id=body.template_id,
             model_id=model,
         )
         self.session.add(resource)
@@ -143,6 +171,7 @@ class SharedServiceService:
         resource = await self.get_resource(user_id, project_id, provider, service_id)
         credentials = body.model_dump(by_alias=True, exclude_none=True)
         required = {
+            "mcp": {"token"},
             "llm": {"apiKey"},
             "gitlab": {"accessToken"},
             "zentao": {"account", "password"},

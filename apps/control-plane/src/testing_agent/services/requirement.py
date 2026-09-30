@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-import hashlib
-from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
-from testing_agent.core.errors import ErrNotFound, ErrRequirementNameAlreadyUse
+from testing_agent.core.errors import (
+    AppError,
+    ErrNotFound,
+    ErrRequirementFileMissing,
+    ErrRequirementNameAlreadyUse,
+)
 from testing_agent.core.sid import new_id
 from testing_agent.models.requirement import Requirement
 from testing_agent.repositories.requirement import RequirementRepository
@@ -24,35 +26,16 @@ def dump_requirement(requirement: Requirement) -> dict:
     return RequirementResponse.model_validate(requirement).model_dump(by_alias=True, mode="json")
 
 
-@dataclass(frozen=True, slots=True)
-class RequirementDocumentFile:
-    filename: str
-    content: bytes
-
-
-def document_hash(content: bytes) -> str:
-    return hashlib.sha256(content).hexdigest()
-
-
-def safe_document_filename(filename: str, document_type: str) -> str:
-    candidate = Path(filename).name.strip()
-    if candidate:
-        return candidate
-    if normalize_document_type(document_type) == "docx":
-        return "requirement.docx"
-    return "requirement.txt"
-
-
 class RequirementService:
     def __init__(
         self,
         requirements: RequirementRepository,
         sprints: SprintService,
-        storage_root: str | Path = "storage",
+        files=None,
     ):
         self.requirements = requirements
         self.sprints = sprints
-        self.storage_root = Path(storage_root)
+        self.files = files
 
     async def get_accessible_entity(
         self, user_id: str, requirement_id: str, *, action: ProjectAction = "read"
@@ -68,7 +51,6 @@ class RequirementService:
         user_id: str,
         sprint_id: str,
         body: CreateRequirementRequest,
-        document_file: RequirementDocumentFile | None = None,
     ) -> dict:
         await self.sprints.get_accessible_entity(user_id, sprint_id, action="write")
         existing = await self.requirements.get_active_by_sprint_and_name(sprint_id, body.name)
@@ -81,10 +63,10 @@ class RequirementService:
             document_type=body.document_type,
             document_content="",
         )
-        if document_file is not None:
-            self._store_document_file(requirement, document_file)
+        if body.document_file_id:
+            await self._attach_file(user_id, requirement, body.document_file_id)
         elif body.document_content:
-            self._store_document_content(requirement, body.document_content)
+            raise AppError(400, "请先上传需求原文件到 S3，再提交 documentFileId", 400)
         self.requirements.add(requirement)
         await self.requirements.commit()
         await self.requirements.refresh(requirement)
@@ -105,17 +87,16 @@ class RequirementService:
         user_id: str,
         requirement_id: str,
         body: UpdateRequirementRequest,
-        document_file: RequirementDocumentFile | None = None,
     ) -> dict:
         requirement = await self.get_accessible_entity(user_id, requirement_id, action="write")
         if body.name is not None:
             requirement.name = body.name
         if body.document_type is not None:
             requirement.document_type = normalize_document_type(body.document_type)
-        if body.document_content is not None:
+        if body.document_file_id:
+            await self._attach_file(user_id, requirement, body.document_file_id)
+        elif body.document_content is not None:
             requirement.document_content = body.document_content
-        if document_file is not None:
-            self._store_document_file(requirement, document_file)
         await self.requirements.commit()
         await self.requirements.refresh(requirement)
         return dump_requirement(requirement)
@@ -126,58 +107,36 @@ class RequirementService:
         await self.requirements.commit()
         return {}
 
-    async def upload_document(
-        self,
-        user_id: str,
-        requirement_id: str,
-        document_file: RequirementDocumentFile,
-        document_type: str | None = None,
-        document_content: str | None = None,
-    ) -> dict:
-        requirement = await self.get_accessible_entity(user_id, requirement_id, action="write")
-        if document_type is not None:
-            requirement.document_type = normalize_document_type(document_type)
-        self._store_document_file(requirement, document_file)
-        await self.requirements.commit()
-        await self.requirements.refresh(requirement)
-        return dump_requirement(requirement)
-
     async def get_download(self, user_id: str, requirement_id: str) -> Requirement:
         requirement = await self.get_accessible_entity(user_id, requirement_id, action="read")
-        if not requirement.document_storage_path:
-            raise ErrNotFound
+        if not getattr(requirement, "document_file_id", ""):
+            raise ErrRequirementFileMissing
         return requirement
 
-    def _store_document_content(self, requirement: Requirement, content: str) -> None:
-        filename = safe_document_filename("", requirement.document_type)
-        self._write_document(
-            requirement,
-            filename,
-            content.encode("utf-8"),
-        )
+    async def _attach_file(self, user_id: str, requirement: Requirement, file_id: str):
+        from testing_agent.core.errors import ErrBadRequest
 
-    def _store_document_file(
-        self, requirement: Requirement, document_file: RequirementDocumentFile
-    ) -> None:
-        filename = safe_document_filename(document_file.filename, requirement.document_type)
-        self._write_document(
-            requirement,
-            filename,
-            document_file.content,
+        if self.files is None:
+            raise ErrBadRequest
+        sprint = await self.sprints.get_accessible_entity(
+            user_id, requirement.sprint_id, action="write"
         )
-
-    def _write_document(
-        self,
-        requirement: Requirement,
-        filename: str,
-        content: bytes,
-    ) -> None:
-        storage_path = self.storage_root / "requirements" / requirement.requirement_id / filename
-        storage_path.parent.mkdir(parents=True, exist_ok=True)
-        storage_path.write_bytes(content)
-        requirement.document_filename = filename
-        requirement.document_hash = document_hash(content)
-        requirement.document_storage_path = str(storage_path)
+        row = await self.files.attach(
+            user_id,
+            file_id,
+            sprint.project_id,
+            "requirement",
+            requirement.requirement_id,
+            purpose="requirement",
+        )
+        expected = "docx" if row.filename.lower().endswith(".docx") else "text"
+        if requirement.document_type != expected:
+            raise ErrBadRequest
+        requirement.document_file_id = row.file_id
+        requirement.document_filename = row.filename
+        requirement.document_hash = row.sha256
+        requirement.document_storage_path = ""
+        requirement.document_content = ""
         requirement.document_download_url = (
             f"/v1/requirements/{requirement.requirement_id}/download"
         )

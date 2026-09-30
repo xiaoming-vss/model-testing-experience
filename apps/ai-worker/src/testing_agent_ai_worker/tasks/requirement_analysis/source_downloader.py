@@ -38,7 +38,7 @@ class PlatformRequirementSourceDownloader:
         if not document_download_url.strip():
             raise ValueError("requirement_analysis documentDownloadUrl 不能为空")
 
-        file_bytes = self.client.get_bytes(document_download_url)
+        file_bytes = self.client.get_signed_file_bytes(document_download_url)
         target_dir = workspace / "inputs" / _safe_path_part(task.task_id or "task")
         target_dir.mkdir(parents=True, exist_ok=True)
         target_path = target_dir / _filename_from_url(document_download_url, document_type)

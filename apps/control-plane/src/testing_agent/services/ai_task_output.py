@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import builtins
 import json
-from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -29,6 +28,7 @@ def dump_source_archive(archive: AiGenerateTaskSourceArchive | Any | None) -> di
         return None
     return {
         "archiveId": archive.archive_id,
+        "fileId": getattr(archive, "file_id", "") or "",
         "filename": archive.filename,
         "sizeBytes": archive.size_bytes,
         "sha256": archive.sha256,
@@ -88,20 +88,7 @@ def dump_run(run: AiGenerateTaskRun) -> dict[str, Any]:
 
 
 def requirement_source_content(requirement: Any) -> str:
-    document_content = str(getattr(requirement, "document_content", "") or "")
-    if document_content.strip():
-        return document_content
-    storage_path = str(getattr(requirement, "document_storage_path", "") or "")
-    if not storage_path:
-        return document_content
-
-    path = Path(storage_path)
-    document_type = normalize_document_type(
-        str(getattr(requirement, "document_type", "") or "text")
-    )
-    if document_type == "text" and path.exists() and path.is_file():
-        return path.read_text(encoding="utf-8")
-    return document_content
+    return str(getattr(requirement, "document_content", "") or "")
 
 
 def requirement_document_download_url(requirement: Any, requirement_id: str) -> str:
@@ -153,7 +140,9 @@ async def build_generate_run_snapshot(
                 else requirement_document_download_url(requirement, str(task.requirement_id or ""))
             )
             source_content = requirement_source_content(requirement)
-            if not source_content and document_type == "docx":
+            if not source_content and (
+                document_type == "docx" or getattr(requirement, "document_file_id", "")
+            ):
                 source_content = document_download_url
     elif kind == "ui":
         requirement = await repository.get_requirement(task.requirement_id)

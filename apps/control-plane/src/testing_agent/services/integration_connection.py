@@ -119,6 +119,20 @@ class IntegrationConnectionService:
             name_value = name
             base_url_value = base_url
             account_value = account
+        elif provider == "mcp":
+            token = str(body.get("token") or "")
+            if not token.strip():
+                raise ErrBadRequest
+            secret_json = {"token": self._encrypt_secret(token)}
+            extra_json = {}
+            auth_type = "mcp_header_token"
+            access_token = ""
+            status = ConnectionStatus.ACTIVE.value
+            last_auth_at = datetime.now(UTC)
+            last_auth_error = ""
+            name_value = str(body["name"])
+            base_url_value = str(body["baseUrl"])
+            account_value = ""
         elif provider == "gitlab":
             name = str(body.get("name") or "").strip()
             base_url = self._normalize_gitlab_base_url(str(body.get("baseUrl") or ""))
@@ -231,6 +245,18 @@ class IntegrationConnectionService:
                 connection.status = ConnectionStatus.ACTIVE.value
                 connection.last_auth_at = datetime.now(UTC)
                 connection.last_auth_error = ""
+            if commit:
+                await self.repository.commit()
+            else:
+                await self.repository.session.flush()
+            await self.repository.refresh(connection)
+            return dump_connection(connection)
+        if provider == "mcp":
+            if set(body) != {"token"} or not str(body["token"] or "").strip():
+                raise ErrBadRequest
+            connection.secret_json = {"token": self._encrypt_secret(str(body["token"]))}
+            connection.status = ConnectionStatus.ACTIVE.value
+            connection.last_auth_at = datetime.now(UTC)
             if commit:
                 await self.repository.commit()
             else:

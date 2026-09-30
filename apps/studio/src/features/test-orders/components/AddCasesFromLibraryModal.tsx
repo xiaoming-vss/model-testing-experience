@@ -1,3 +1,5 @@
+import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
+import { ListPagination } from '@/shared/components/ListPagination'
 import '@/shared/styles/list-table.css'
 import '@/shared/styles/surface-tokens.css'
 import { SearchOutlined } from '@ant-design/icons'
@@ -32,9 +34,6 @@ import {
 
 const { Text } = Typography
 
-const DEFAULT_PAGE_SIZE = 20
-/** 每页条数的可选项，上限对齐后端 pageSize 的 le=200。 */
-const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 
 /** 下拉里的「全部」选项值，与真实 ID 区分开。 */
 const ALL = 'all'
@@ -357,26 +356,12 @@ export function AddCasesFromLibraryModal({
               }
             },
           }}
-          pagination={{
-            current: page,
-            pageSize,
-            total,
-            size: 'small',
-            showSizeChanger: true,
-            pageSizeOptions: PAGE_SIZE_OPTIONS,
-            // 全站没有引 antd 的 zh_CN，这里单独把每页条数的文案本地化。
-            locale: { items_per_page: '条/页' },
-            onChange: (nextPage, nextPageSize) => {
-              // 改每页条数时回到第一页，否则页码可能落到新范围之外。
-              if (nextPageSize !== pageSize) {
-                setPageSize(nextPageSize)
-                setPage(1)
-                return
-              }
-              setPage(nextPage)
-            },
-          }}
+          pagination={false}
         />
+        <div className="table-footer">
+          <ListPagination loading={casesQuery.isFetching || casesQuery.isError} current={page} pageSize={pageSize} total={total}
+            onChange={(nextPage, nextSize) => { setPage(nextPage); setPageSize(nextSize) }} />
+        </div>
       </Space>
 
       <Modal

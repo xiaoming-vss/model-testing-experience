@@ -31,10 +31,16 @@ async def monitor():
 
 @asynccontextmanager
 async def lifespan(app):
+    from testing_agent.services.file_cleanup import monitor_files
+
+    files_task = asyncio.create_task(monitor_files())
     task = asyncio.create_task(monitor())
     try:
         yield
     finally:
+        files_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await files_task
         task.cancel()
         with suppress(asyncio.CancelledError):
             await task

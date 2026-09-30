@@ -1,6 +1,6 @@
 # API/UI Worker（api-ui-worker）
 
-在单进程内执行 API 与 UI 两类自动化任务：领取控制面派发的任务，用 Playwright 或 HTTP 执行用例，回传结果并把截图等工件通过只读 HTTP 服务暴露给浏览器。
+在单进程内执行 API 与 UI 两类自动化任务：领取控制面派发的任务，用 Playwright 或 HTTP 执行用例，将截图与 Trace ZIP 通过短期签名直传私有 S3，向平台回传稳定文件引用。
 
 ## 运行时与依赖
 
@@ -19,10 +19,10 @@
 | `__main__.py` | 入口与主循环，含 `poll` 与 `once` 两种模式 |
 | `ui/` | UI 执行：`case_runner.py`、`suite_runner.py`、`step_executor.py`、`step_normalizer.py`、`locator.py`、`browser_options.py`、`templates.py` |
 | `api/` | API 执行：`case_runner.py`、`collection_runner.py`、`http_client.py`、`rule_runtime.py`、`template_runtime.py` |
-| `control_plane/client.py` | 控制面客户端 |
+| `control_plane/client.py`、`control_plane/artifacts.py` | 控制面客户端及 S3 产物上传 |
 | `poller/task_poller.py` | 任务轮询 |
 | `contracts/types.py` | 任务与结果类型 |
-| `core/` | `config.py`、`artifact_server.py`、`logger.py` |
+| `core/` | `config.py`、`logger.py` |
 
 `src/` 下残留 `mtx_api_ui_worker.egg-info/` 与 `testing_agent_api_ui_worker.egg-info/` 两个历史打包目录。
 
@@ -35,8 +35,7 @@ mode = "poll"                 # poll 或 once
 
 [control_plane]               # base_url、worker_token
 [worker]                      # id、poll_interval_ms、request_timeout_ms、heartbeat_interval_ms
-[ui]                          # artifacts_dir、artifacts_bind_host、artifacts_port、
-                              # artifacts_base_url、headless、slow_mo_ms、
+[ui]                          # artifacts_dir（临时目录）、headless、slow_mo_ms、
                               # trace_enabled、screenshot_on_failure
 [once]                        # snapshot_file，once 模式读取本地快照调试用
 ```
@@ -57,13 +56,16 @@ uv run --extra dev ruff check .                   # Lint
 
 ## 对外接口
 
-默认监听 9010，提供只读工件服务：仅响应 `.png` 文件，禁止目录列表，带 `Access-Control-Allow-Origin: *`。仅在配置了 `artifacts_base_url` 时启动。该地址会被写入截图 URL 供浏览器访问，因此必须是浏览器可达的地址，而不只是容器内地址。
+Worker 不再监听文件下载端口，9010 截图服务已移除。截图和 Trace 在任务临时目录生成，通过 Worker 令牌向控制面申请签名 POST，再用独立 HTTP 客户端直传 S3；长期 S3 密钥不配置给 Worker。文件核验完成后回传 `/v1/files/{fileId}/download`，前端经过项目权限校验取得短期下载票据。
+
+上传使用线程执行，保持主循环心跳。上传失败导致结果回传失败并保留临时文件供排障，不回退本地 URL；只有平台接受最终结果后才清理本次已上传的临时文件。`once` 离线调试模式没有平台任务归属，产物只作为临时调试数据。
+
 
 ## 与平台的交互
 
 反向轮询控制面，请求头固定 `X-Worker-Token`：
 
-- UI 任务：`/internal/ui-worker/tasks/claim` 与 `/{task_id}/snapshot`
+- UI 任务：`/internal/ui-worker/tasks/claim` 与 `/{task_id}/snapshot`，文件授权与完成为 `/{task_id}/files/uploads`、`/{task_id}/files/{file_id}/complete`；控制面校验 Worker、租约、执行人和项目归属
 - API 任务：`/internal/api-worker/tasks/claim` 与 `/{task_id}/snapshot`、`/started`、`/heartbeat`、`/completed`，集合任务另有 `/collection-items/{item_id}/started` 与 `/completed`
 
 该服务没有健康检查端点，Dockerfile 中也没有 `HEALTHCHECK`，Compose 因此不对它设置健康检查条件。

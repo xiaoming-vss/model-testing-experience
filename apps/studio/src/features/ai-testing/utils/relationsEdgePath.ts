@@ -1,3 +1,5 @@
+import { sampleRoute } from './relationsRouteTraffic'
+
 export type RoutePoint = { x: number; y: number }
 export type RouteRect = RoutePoint & { id: string; width: number; height: number }
 const EPS = 0.001
@@ -31,7 +33,7 @@ export function segmentHitsCard(a: RoutePoint, b: RoutePoint, r: RouteRect): boo
 function expand(r: RouteRect, pad: number): RouteRect {
   return { ...r, x: r.x - pad, y: r.y - pad, width: r.width + 2 * pad, height: r.height + 2 * pad }
 }
-function boundary(r: RouteRect, toward: RoutePoint): RoutePoint {
+export function boundary(r: RouteRect, toward: RoutePoint): RoutePoint {
   const center = { x: r.x + r.width / 2, y: r.y + r.height / 2 }
   const dx = toward.x - center.x
   const dy = toward.y - center.y
@@ -59,28 +61,52 @@ function roundedPath(points: RoutePoint[], clearance: number): string {
   return `${path} L ${coord(points[points.length - 1])}`
 }
 
-export function routeRelationsEdge(source: RouteRect, target: RouteRect, cards: RouteRect[], straight: boolean): string {
-  // Preserve narrow passages in the existing layout before giving up on an overlapping port.
-  for (const clearance of [16, 4, 0.5]) {
-    const path = routeWithClearance(source, target, cards, straight, clearance)
-    if (path) return path
-  }
-  return ''
+type RouteOptions = {
+  sourcePort?: RoutePoint
+  targetPort?: RoutePoint
+  trafficCost?: (a: RoutePoint, b: RoutePoint) => number
+  blockedSegment?: (a: RoutePoint, b: RoutePoint) => boolean
 }
 
-function routeWithClearance(source: RouteRect, target: RouteRect, cards: RouteRect[], straight: boolean, clearance: number): string {
+export function routeRelationsEdge(source: RouteRect, target: RouteRect, cards: RouteRect[], straight: boolean, options: RouteOptions = {}): string {
+  let best = ''
+  let bestCost = Infinity
+  // Different clearances also provide separate corridors around the same obstacle.
+  for (const clearance of options.trafficCost ? [24, 40, 64, 96, 16, 4, 0.5] : [24, 4, 0.5]) {
+    const path = routeWithClearance(source, target, cards, straight, clearance, options)
+    if (!path) continue
+    const points = sampleRoute(path)
+    const cost = points.slice(1).reduce((sum, point, i) => sum + (options.trafficCost?.(points[i], point) ?? 0), 0)
+    if (cost < bestCost) { best = path; bestCost = cost }
+    if (cost === 0) break
+  }
+  return best
+}
+
+function routeWithClearance(source: RouteRect, target: RouteRect, cards: RouteRect[], straight: boolean, clearance: number, options: RouteOptions): string {
   const sourceCenter = { x: source.x + source.width / 2, y: source.y + source.height / 2 }
   const targetCenter = { x: target.x + target.width / 2, y: target.y + target.height / 2 }
   if (distance(sourceCenter, targetCenter) < EPS) return ''
-  const start = boundary(source, targetCenter), end = boundary(target, sourceCenter)
+  const start = options.sourcePort ?? boundary(source, targetCenter), end = options.targetPort ?? boundary(target, sourceCenter)
   const obstacles = cards.filter((r) => r.id !== source.id && r.id !== target.id).map((r) => expand(r, clearance))
-  const clear = (a: RoutePoint, b: RoutePoint, rects = obstacles) => !rects.some((r) => segmentHitsCard(a, b, r))
+  const clear = (a: RoutePoint, b: RoutePoint, rects = obstacles) =>
+    !rects.some((r) => segmentHitsCard(a, b, r)) && !options.blockedSegment?.(a, b)
+  const trafficCost = options.trafficCost ?? (() => 0)
   if (straight && clear(start, end, [...obstacles, source, target])) return `M ${coord(start)} L ${coord(end)}`
+  let candidate = ''
+  let candidateCost = Infinity
+  const consider = (path: string) => {
+    const points = sampleRoute(path)
+    if (points.slice(1).some((point, i) => options.blockedSegment?.(points[i], point))) return false
+    const cost = points.slice(1).reduce((sum, point, i) => sum + distance(points[i], point) + trafficCost(points[i], point), 0)
+    if (cost < candidateCost) { candidate = path; candidateCost = cost }
+    return points.slice(1).every((point, i) => trafficCost(points[i], point) === 0)
+  }
   // Try shallow curves on either side; reject any that cross cards.
   const curveObstacles = [...obstacles, source, target]
   const length = distance(start, end)
-  for (const direction of [1, -1]) {
-    const bow = Math.min(48, length * 0.18) * direction
+  for (const direction of [1, -1, 2, -2, 4, -4, 8, -8]) {
+    const bow = Math.min(80, length * 0.3) * direction
     const control = { x: (start.x + end.x) / 2 - (end.y - start.y) / (length || 1) * bow, y: (start.y + end.y) / 2 + (end.x - start.x) / (length || 1) * bow }
     const steps = Math.max(24, Math.ceil(length / 8))
     let previous = start
@@ -91,12 +117,15 @@ function routeWithClearance(source: RouteRect, target: RouteRect, cards: RouteRe
       if (!clear(previous, p, curveObstacles)) { safe = false; break }
       previous = p
     }
-    if (safe) return `M ${coord(start)} Q ${coord(control)} ${coord(end)}`
+    if (safe) {
+      const path = `M ${coord(start)} Q ${coord(control)} ${coord(end)}`
+      if (consider(path)) return path
+    }
   }
   // Shortest visibility route around padded card corners, with rounded turns.
   const rects = cards.map((r) => expand(r, clearance))
-  const outerStart = boundary(expand(source, clearance), targetCenter), outerEnd = boundary(expand(target, clearance), sourceCenter)
-  if (!clear(start, outerStart, cards) || !clear(outerEnd, end, cards)) return ''
+  const outerStart = boundary(expand(source, clearance), start), outerEnd = boundary(expand(target, clearance), end)
+  if (!clear(start, outerStart, cards) || !clear(outerEnd, end, cards)) return candidate
   // Most fishbone links can use a free horizontal/vertical corridor. Validate
   // these short detours before constructing the full corner visibility graph.
   const midX = (outerStart.x + outerEnd.x) / 2
@@ -109,7 +138,8 @@ function routeWithClearance(source: RouteRect, target: RouteRect, cards: RouteRe
   ]
   for (const route of detours) {
     if (route.slice(1).every((point, i) => clear(route[i], point, rects))) {
-      return roundedPath([start, ...route, end], clearance)
+      const path = roundedPath([start, ...route, end], clearance)
+      if (consider(path)) return path
     }
   }
   const vertices = [outerStart, outerEnd, ...rects.flatMap((r) => [
@@ -129,14 +159,17 @@ function routeWithClearance(source: RouteRect, target: RouteRect, cards: RouteRe
     visited.add(current)
     vertices.forEach((point, i) => {
       if (visited.has(i)) return
-      const cost = costs[current] + distance(vertices[current], point)
-      if (cost < costs[i] && clear(vertices[current], point, rects)) { costs[i] = cost; previous[i] = current }
+      const directCost = costs[current] + distance(vertices[current], point)
+      if (directCost >= costs[i] || !clear(vertices[current], point, rects)) return
+      const cost = directCost + trafficCost(vertices[current], point)
+      if (cost < costs[i]) { costs[i] = cost; previous[i] = current }
     })
   }
   // Fully overlapping cards can seal an endpoint; never draw through a card.
-  if (!Number.isFinite(costs[1])) return ''
+  if (!Number.isFinite(costs[1])) return candidate
   const route = [vertices[1]]
   let cursor = 1
   while (previous[cursor] >= 0) { cursor = previous[cursor]; route.unshift(vertices[cursor]) }
-  return roundedPath([start, ...route, end], clearance)
+  consider(roundedPath([start, ...route, end], clearance))
+  return candidate
 }

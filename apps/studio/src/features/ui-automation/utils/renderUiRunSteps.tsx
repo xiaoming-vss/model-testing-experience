@@ -1,3 +1,4 @@
+import { StoredImage } from '@/shared/components/files/StoredFile'
 import {
   getExecutionStatusMeta
 } from '@/features/ui-automation/utils/runHelpers'
@@ -10,7 +11,7 @@ import {
 import {
   formatTime
 } from '@/utils/format'
-import { Empty, Image, Tag } from 'antd'
+import { Empty, Tag } from 'antd'
 
 export function renderUiRunStepResult(stepResult: UiTestCaseRunStepResult, index: number) {
   const stepStatus = getExecutionStatusMeta(stepResult.status)
@@ -53,7 +54,7 @@ export function renderUiRunStepResult(stepResult: UiTestCaseRunStepResult, index
       {stepResult.screenshotPath ? (
         <div className="ui-test-run-step-screenshot">
           <strong>截图</strong>
-          <Image
+          <StoredImage
             src={stepResult.screenshotPath}
             alt={`${stepResult.stepName?.trim() || `步骤 ${stepResult.orderNo ?? index + 1}`}截图`}
             preview

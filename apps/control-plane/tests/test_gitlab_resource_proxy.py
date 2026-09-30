@@ -50,7 +50,6 @@ class FakeIntegrationConnectionRepository:
                 and row.provider == provider
                 and row.connection_id == connection_id
                 and row.project_id == project_id
-
             ),
             None,
         )

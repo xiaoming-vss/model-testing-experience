@@ -1725,7 +1725,7 @@ async def test_requirement_analysis_run_import_writes_result_to_requirement_docu
         config_json={},
         result_yaml="analysis: ok",
         result_summary_json={"summary": "fallback"},
-        review_status="pending",
+        review_status="approved",
         reviewer_user_id="",
         reviewed_at=None,
         review_comment="",

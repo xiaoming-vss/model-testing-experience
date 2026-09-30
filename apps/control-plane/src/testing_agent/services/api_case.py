@@ -35,8 +35,6 @@ def dump(schema: type[BaseModel], obj: Any) -> dict[str, Any]:
     return schema.model_validate(obj).model_dump(by_alias=True, mode="json")
 
 
-
-
 def api_case_model_data(body: ApiCaseRequest) -> dict[str, Any]:
     data = body.model_dump(by_alias=False)
     data["headers_json"] = normalize_json_value(data.get("headers_json"))

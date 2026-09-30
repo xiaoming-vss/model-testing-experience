@@ -106,3 +106,9 @@ npm run verify        # type-check + lint + build
 - 容器内由 nginx 监听 80 端口并代理同样的两个前缀，`proxy_read_timeout` 与 `proxy_send_timeout` 为 120s，`client_max_body_size` 为 105m
 - 容器健康检查访问 `location = /healthz`
 - 用户态认证使用 `Authorization` 头携带 JWT；认证存储键 `testpilot_access_token` 为兼容改名前的已登录用户而保留；主题偏好使用 `mtx-theme-preference`（light / dark / system，默认 system）
+
+- [内置 MCP 配置](builtin-mcp.md)
+
+- [文件直传与预览](file-storage.md)
+
+- [Skill 文件夹与默认技能维护](../control-plane/skills.md)

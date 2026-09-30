@@ -10,6 +10,9 @@ class SharedService(Base):
     __tablename__ = "shared_services"
     __table_args__ = (
         UniqueConstraint("project_id", "provider", "name", name="uk_shared_service_name"),
+        UniqueConstraint(
+            "project_id", "provider", "template_id", name="uk_shared_service_template"
+        ),
     )
     id: Mapped[IdPk]
     service_id: Mapped[str] = mapped_column(String(64), unique=True)
@@ -19,6 +22,7 @@ class SharedService(Base):
     provider: Mapped[str] = mapped_column(String(30))
     name: Mapped[str] = mapped_column(String(120))
     base_url: Mapped[str] = mapped_column(String(512))
+    template_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     model_id: Mapped[str] = mapped_column(String(255), default="")
     created_at: Mapped[CreatedAt]
     updated_at: Mapped[UpdatedAt]

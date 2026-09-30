@@ -1,4 +1,5 @@
 import { request, requestBlob, type ListResponse } from '@/shared/api/request'
+import { storageCapabilities, uploadStoredFile } from '@/shared/api/files'
 import type {
   Requirement,
   RequirementCreatePayload,
@@ -12,11 +13,6 @@ function normalizeRequestDocumentType(documentType?: RequirementDocumentType) {
   return documentType
 }
 
-function normalizeUploadDocumentType(documentType?: RequirementDocumentType) {
-  if (documentType === 'word' || documentType === 'docx') return 'docx'
-  return documentType
-}
-
 function buildRequirementJsonBody(body: RequirementCreatePayload | RequirementUpdatePayload) {
   const payload: Record<string, string> = {}
 
@@ -27,32 +23,23 @@ function buildRequirementJsonBody(body: RequirementCreatePayload | RequirementUp
   return JSON.stringify(payload)
 }
 
-function buildRequirementMultipartBody(body: RequirementDocumentUploadPayload) {
-  const formData = new FormData()
-
-  if (body.name !== undefined) formData.append('name', body.name)
-  if (body.documentType !== undefined) {
-    formData.append('documentType', normalizeUploadDocumentType(body.documentType) ?? '')
-  }
-  if (body.file) formData.append('file', body.file, body.file.name)
-
-  return formData
-}
-
 export const requirementsApi = {
   getRequirements: (sprintId: string) => request<ListResponse<Requirement>>(`/v1/sprints/${sprintId}/requirements`),
-  createRequirement: (sprintId: string, body: RequirementCreatePayload) => {
-    if (body.file) {
-      return request<Requirement>(`/v1/sprints/${sprintId}/requirements/upload`, {
-        method: 'POST',
-        body: buildRequirementMultipartBody(body),
+  createRequirement: async (sprintId: string, body: RequirementCreatePayload) => {
+    const capabilities = await storageCapabilities()
+    if (!capabilities.enabled) throw new Error('S3 文件存储未启用，请联系管理员配置')
+    const file = body.file ?? (body.documentContent
+      ? new File([body.documentContent], 'requirement.txt', { type: 'text/plain' }) : undefined)
+    if (file) {
+      const sprint = await request<{ projectId: string }>(`/v1/sprints/${sprintId}`)
+      if (file.size > capabilities.maxBytes) throw new Error('文件超过大小限制')
+      const documentFileId = await uploadStoredFile(sprint.projectId, file, 'requirement', body.onUploadProgress)
+      return request<Requirement>(`/v1/sprints/${sprintId}/requirements`, {
+        method: 'POST', body: JSON.stringify({ name: body.name,
+          documentType: normalizeRequestDocumentType(body.documentType), documentFileId }),
       })
     }
-
-    return request<Requirement>(`/v1/sprints/${sprintId}/requirements`, {
-      method: 'POST',
-      body: buildRequirementJsonBody(body),
-    })
+    throw new Error('请上传需求文件或填写需求内容')
   },
   getRequirement: (requirementId: string) => request<Requirement>(`/v1/requirements/${requirementId}`),
   updateRequirement: (requirementId: string, body: RequirementUpdatePayload) =>
@@ -60,13 +47,23 @@ export const requirementsApi = {
       method: 'PATCH',
       body: buildRequirementJsonBody(body),
     }),
-  replaceRequirementDocument: (requirementId: string, body: RequirementDocumentUploadPayload) =>
-    request<Requirement>(`/v1/requirements/${requirementId}/document`, {
-      method: 'PUT',
-      body: buildRequirementMultipartBody(body),
-    }),
+  replaceRequirementDocument: async (requirementId: string, body: RequirementDocumentUploadPayload) => {
+    const capabilities = await storageCapabilities()
+    if (!capabilities.enabled) throw new Error('S3 文件存储未启用，请联系管理员配置')
+    if (body.file) {
+      if (body.file.size > capabilities.maxBytes) throw new Error('文件超过大小限制')
+      const requirement = await request<Requirement>(`/v1/requirements/${requirementId}`)
+      const sprint = await request<{ projectId: string }>(`/v1/sprints/${requirement.sprintId ?? requirement.sprint_id}`)
+      const documentFileId = await uploadStoredFile(sprint.projectId, body.file, 'requirement', body.onUploadProgress)
+      return request<Requirement>(`/v1/requirements/${requirementId}`, {
+        method: 'PATCH', body: JSON.stringify({ documentFileId,
+          documentType: normalizeRequestDocumentType(body.documentType) }),
+      })
+    }
+    throw new Error('请选择需求文件')
+  },
   downloadRequirementDocument: (requirementId: string) =>
-    requestBlob(`/v1/requirements/${requirementId}/download`),
+    requestBlob(`/v1/requirements/${requirementId}/download`, { headers: { Accept: 'application/json' } }, true),
   deleteRequirement: (requirementId: string) =>
     request<Record<string, never>>(`/v1/requirements/${requirementId}`, { method: 'DELETE' }),
 }

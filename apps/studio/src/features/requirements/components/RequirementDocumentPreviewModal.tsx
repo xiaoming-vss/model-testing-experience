@@ -1,3 +1,4 @@
+import { readSignedFileResponse } from '@/shared/api/files'
 import { saveBlob } from '@/shared/utils/download'
 import {
   CheckCircleFilled,
@@ -39,6 +40,7 @@ async function fetchBlobWithAuth(url: string, token?: string | null) {
     headers: token
       ? {
           Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
         }
       : undefined,
   })
@@ -47,7 +49,7 @@ async function fetchBlobWithAuth(url: string, token?: string | null) {
     throw new Error(`文档加载失败（${response.status}）`)
   }
 
-  return response.blob()
+  return (await readSignedFileResponse(response)).blob()
 }
 
 function RequirementDocxPreview({
@@ -195,6 +197,7 @@ function RequirementTextPreview({ previewUrl }: { previewUrl: string }) {
           headers: token
             ? {
                 Authorization: `Bearer ${token}`,
+                Accept: 'application/json',
               }
             : undefined,
         })
@@ -203,7 +206,7 @@ function RequirementTextPreview({ previewUrl }: { previewUrl: string }) {
           throw new Error(`文本加载失败（${response.status}）`)
         }
 
-        const text = await response.text()
+        const text = await (await readSignedFileResponse(response)).text()
         if (disposed) return
         setContent(text)
         setLoading(false)

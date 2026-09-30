@@ -1,3 +1,4 @@
+import { RequirementPreviewPage } from '../pages/RequirementPreviewPage'
 import { ThemeSelect } from '@/shared/components/ThemeSelect'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { DownOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons'
@@ -23,6 +24,8 @@ import { CodeRiskTaskDetailPage } from '@/features/ai-testing/pages/CodeRiskTask
 import { BaseServicesPage } from '@/features/base-services/pages/BaseServicesPage'
 import { TestingPage } from '@/features/testing/pages/TestingPage'
 import { TestOrderWorkspacePage } from '@/features/test-orders/pages/TestOrderWorkspacePage'
+import { BugDetailPage } from '@/features/bugs/pages/BugDetailPage'
+import { BugSubmitPage } from '@/features/bugs/pages/BugSubmitPage'
 import { UiTestSuiteCasePage } from '@/features/ui-automation/pages/UiTestSuiteCasePage'
 import { AppSidebar } from './AppSidebar'
 import { useAiTestingTaskCounts } from '@/features/ai-testing/hooks/useAiTestingTaskCounts'
@@ -132,6 +135,9 @@ export function AppShell() {
             <Route path="/testing" element={<TestingPage />} />
             <Route path="/test-cases" element={<Navigate to="/testing?tab=library" replace />} />
             <Route path="/test-orders/:orderId" element={<TestOrderWorkspacePage />} />
+            <Route path="/requirements/:requirementId" element={<RequirementPreviewPage />} />
+            <Route path="/bugs/new" element={<BugSubmitPage />} />
+            <Route path="/bugs/:bugId" element={<BugDetailPage />} />
             <Route path="/ai-testing" element={<AiTestingOverviewPage />} />
             <Route path="/ai-testing/skills" element={<Navigate to="/base-services?tab=skills" replace />} />
             <Route path="/ai-testing/tasks" element={<UnifiedAiTestingPage />} />

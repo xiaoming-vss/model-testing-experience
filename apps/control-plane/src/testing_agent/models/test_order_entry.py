@@ -56,6 +56,8 @@ class TestOrderEntry(Base):
     case_title = ""
     case_module = ""
     case_priority = ""
+    requirement_id = ""
+    requirement_name = ""
 
     @property
     def snapshot(self) -> dict[str, Any]:

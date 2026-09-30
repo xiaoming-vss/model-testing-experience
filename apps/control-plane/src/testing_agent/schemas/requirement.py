@@ -19,6 +19,7 @@ def normalize_document_type(value: str) -> str:
 class CreateRequirementRequest(BaseModel):
     name: str
     document_type: str = Field(default="text")
+    document_file_id: str = Field(default="", max_length=64)
     document_content: str = Field(default="")
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
@@ -32,6 +33,7 @@ class CreateRequirementRequest(BaseModel):
 class UpdateRequirementRequest(BaseModel):
     name: str | None = None
     document_type: str | None = Field(default=None)
+    document_file_id: str | None = Field(default=None, max_length=64)
     document_content: str | None = Field(default=None)
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
@@ -49,6 +51,7 @@ class RequirementResponse(BaseModel):
     sprint_id: str = Field()
     name: str
     document_type: str = Field(default="text")
+    document_file_id: str = Field(default="", max_length=64)
     document_content: str = Field(default="")
     document_filename: str = Field(default="")
     document_hash: str = Field(default="")

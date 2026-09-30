@@ -39,6 +39,9 @@ export type TestOrderEntry = {
   caseTitle?: string
   caseModule?: string
   casePriority?: string
+  /** 所属需求：经「用例 → 测试集 → 需求」解析的派生字段，供提交 Bug 时带入。 */
+  requirementId?: string
+  requirementName?: string
   orderNo?: number
   status?: TestOrderEntryStatus | string
   /** 分配执行人；空串表示未分配，仅项目所有者可分配与改派。 */

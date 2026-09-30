@@ -19,6 +19,7 @@ from testing_agent.repositories.api_collection_run import ApiCollectionRunReposi
 from testing_agent.repositories.api_environment import ApiEnvironmentRepository
 from testing_agent.repositories.api_environment_var import ApiEnvironmentVarRepository
 from testing_agent.repositories.api_extract_rule import ApiExtractRuleRepository
+from testing_agent.repositories.bug import BugRepository
 from testing_agent.repositories.function_test_case import FunctionTestCaseRepository
 from testing_agent.repositories.function_test_suite import FunctionTestSuiteRepository
 from testing_agent.repositories.integration_connection import IntegrationConnectionRepository
@@ -45,6 +46,7 @@ from testing_agent.services.api_environment_var import ApiEnvironmentVarService
 from testing_agent.services.api_extract_rule import ApiExtractRuleService
 from testing_agent.services.auth import AuthService
 from testing_agent.services.baseline_resolution import BaselineResolutionService
+from testing_agent.services.bug import BugService
 from testing_agent.services.code_risk_analysis import CodeRiskAnalysisService
 from testing_agent.services.function_test_case import FunctionTestCaseService
 from testing_agent.services.function_test_suite import FunctionTestSuiteService
@@ -110,8 +112,16 @@ def build_sprint_service(session: AsyncSession) -> SprintService:
     return SprintService(SprintRepository(session), build_project_service(session))
 
 
-def get_requirement_service(session: AsyncSession = Depends(get_session)) -> RequirementService:
-    return RequirementService(RequirementRepository(session), build_sprint_service(session))
+def get_requirement_service(
+    session: AsyncSession = Depends(get_session), settings: Settings = Depends(get_settings)
+) -> RequirementService:
+    from testing_agent.services.stored_file import StoredFileService
+
+    return RequirementService(
+        RequirementRepository(session),
+        build_sprint_service(session),
+        StoredFileService(session, settings.s3),
+    )
 
 
 def get_api_case_service(session: AsyncSession = Depends(get_session)) -> ApiCaseService:
@@ -252,8 +262,11 @@ def get_sprint_code_overview_service(
 
 def get_project_skill_space_service(
     session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings),
 ) -> ProjectSkillSpaceService:
-    return ProjectSkillSpaceService(ProjectSkillSpaceRepository(session))
+    return ProjectSkillSpaceService(
+        ProjectSkillSpaceRepository(session), get_file_service(session, settings)
+    )
 
 
 def get_sprint_daily_metrics_service(
@@ -293,7 +306,7 @@ def get_ai_generate_task_service(
             ),
             zentao_resource_client,
         ),
-        settings.uploads_dir,
+        files=get_file_service(session, settings),
         code_risk_analysis_service=CodeRiskAnalysisService(
             AiGenerateTaskRepository(session),
             binding_repository,
@@ -316,6 +329,19 @@ def get_worker_task_service(
 
 def build_test_order_service(session: AsyncSession) -> TestOrderService:
     return TestOrderService(TestOrderRepository(session), TestOrderEntryRepository(session))
+
+
+def build_bug_service(session: AsyncSession, settings) -> BugService:
+    from testing_agent.services.stored_file import StoredFileService
+
+    return BugService(BugRepository(session), files=StoredFileService(session, settings.s3))
+
+
+def get_bug_service(
+    session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> BugService:
+    return build_bug_service(session, settings)
 
 
 def get_test_order_service(
@@ -341,3 +367,11 @@ def get_test_order_graph_service(
         build_test_order_service(session),
         TestOrderEntryRepository(session),
     )
+
+
+def get_file_service(
+    session: AsyncSession = Depends(get_session), settings: Settings = Depends(get_settings)
+):
+    from testing_agent.services.stored_file import StoredFileService
+
+    return StoredFileService(session, settings.s3)

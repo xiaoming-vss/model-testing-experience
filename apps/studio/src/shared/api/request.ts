@@ -128,7 +128,7 @@ function getFilenameFromContentDisposition(contentDisposition: string | null) {
   return plainMatch?.[1]
 }
 
-export async function requestBlob(path: string, options: RequestInit = {}): Promise<BlobResponse> {
+export async function requestBlob(path: string, options: RequestInit = {}, requireSignedFile = false): Promise<BlobResponse> {
   const token = useAuthStore.getState().token
   const headers = new Headers(options.headers)
 
@@ -156,6 +156,16 @@ export async function requestBlob(path: string, options: RequestInit = {}): Prom
     }
     throw new ApiError(payload.message || '请求失败', payload.code, response.status, payload.data)
   }
+
+  if (response.headers.get('Content-Type')?.includes('application/json')) {
+    const ticket = await response.json() as { url: string; filename: string }
+    // S3 requests intentionally omit platform Authorization and cookies.
+    const stored = await fetch(ticket.url, { credentials: 'omit' })
+    if (!stored.ok) throw new Error('文件下载失败，请重试')
+    return { blob: await stored.blob(), filename: ticket.filename }
+  }
+
+  if (requireSignedFile) throw new Error('未获取到 S3 下载授权，请重试')
 
   return {
     blob: await response.blob(),

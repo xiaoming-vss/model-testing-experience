@@ -39,6 +39,7 @@ export type RelationsGraphNode = {
   module: string
   number: number
   onMainPath: boolean
+  shared?: boolean
   isolated: boolean
   pathIndex: number
   spineIndex: number
@@ -55,8 +56,8 @@ export type RelationsGraphModel = {
 
 export const RELATIONS_NODE_WIDTH = 236
 export const RELATIONS_NODE_HEIGHT = 96
-const SPINE_STEP_MIN = 296
-const LANE_GAP = 56
+const SPINE_STEP_MIN = 416
+const LANE_GAP = 144
 const CANVAS_PAD = 48
 
 export type RelationsOrientation = 'horizontal' | 'vertical'
@@ -69,6 +70,8 @@ export type RelationsLaidOutNode = RelationsGraphNode & {
 }
 
 export type RelationsLayout = {
+  paths: CaseRelationsPath[]
+  edges: (CaseRelationsEdge & { originalEdgeId?: string })[]
   nodes: Map<string, RelationsLaidOutNode>
   width: number
   height: number
@@ -318,7 +321,7 @@ export function buildRelationsGraphModel(data: CaseRelationsData, caseMetaById: 
   }
 }
 
-// 主骨保持对齐，分支按真实父子关系在局部展开；兄弟节点分别向侧方和外侧错落排布。
+// 主骨保持对齐，分支在上下两侧展开，后续节点沿主轴正向延伸。
 // u 沿主骨，v 垂直主骨；纵向展示复用同一布局并按卡片尺寸调整间距。
 export function layoutRelationsFishbone(model: RelationsGraphModel, orientation: RelationsOrientation): RelationsLayout {
   const horizontal = orientation === 'horizontal'
@@ -342,86 +345,59 @@ export function layoutRelationsFishbone(model: RelationsGraphModel, orientation:
   // 跨分支引用、环和共享主线节点只放置一次；关联边仍全部保留。
   const claimed = new Set(model.paths.flatMap((path) => path.caseIds))
   const placed = new Map<string, { u: number; v: number }>()
+  const displayNodes = new Map(model.nodeById)
+  const displayPaths: CaseRelationsPath[] = []
+  const occurrences = new Map<string, number>()
+  model.paths.forEach((path) => new Set(path.caseIds).forEach((id) => occurrences.set(id, (occurrences.get(id) ?? 0) + 1)))
   let laneCursor = 0
   let maxU = 0
 
-  model.paths.forEach((path) => {
+  model.paths.forEach((path, pathIndex) => {
+    const displayIds = new Map<string, string>()
+    path.caseIds.forEach((id, spineIndex) => {
+      let displayId = id
+      if (placed.has(id)) {
+        displayId = `shared:${pathIndex}:${id}`
+        while (displayNodes.has(displayId)) displayId = `shared:${displayId}`
+      }
+      displayIds.set(id, displayId)
+      const node = model.nodeById.get(id)
+      if (node) displayNodes.set(displayId, { ...node, pathIndex, spineIndex, shared: (occurrences.get(id) ?? 0) > 1 })
+    })
+    displayPaths.push({ ...path, caseIds: path.caseIds.map((id) => displayIds.get(id)!) })
     const lanePositions = new Map<string, { u: number; v: number }>()
 
-    // 1. 先以主骨锚点为原点，相对坐标铺开每个锚点的扇形分支区域。
-    const fans = path.caseIds.map(() => new Map<string, { du: number; dv: number }>())
-    const extents = path.caseIds.map(() => ({ left: 0, right: 0 }))
-    path.caseIds.forEach((anchorId, spineIndex) => {
-      const fan = fans[spineIndex]
-      fan.set(anchorId, { du: 0, dv: 0 })
+    // 主线间距只由卡片尺寸决定；分支不能撑开主线或倒着延伸。
+    const step = Math.max(SPINE_STEP_MIN, nodeUSize + 180)
+    const branchGap = nodeVSize + 144
+    path.caseIds.forEach((caseId, index) => {
+      if (!lanePositions.has(caseId)) lanePositions.set(caseId, { u: index * step, v: 0 })
+    })
+    const childrenOf = (id: string) => (continueEdgesFrom.get(id) ?? [])
+      .slice().sort((a, b) => a.order - b.order)
+      .filter((edge) => !claimed.has(edge.toCaseId))
 
-      const branchStep = nodeUSize + 72
-      const outwardStep = nodeVSize + 64
-      const gap = 32
-      const childrenOf = (id: string) => (continueEdgesFrom.get(id) ?? [])
-        .slice().sort((a, b) => a.order - b.order)
-        .filter((edge) => !claimed.has(edge.toCaseId))
-
-      const placeBranch = (caseId: string, du: number, dv: number, side: number) => {
-        if (claimed.has(caseId)) return
-        claimed.add(caseId)
-        // 保留父子相对方向，遇到同组卡片时只向主骨外侧移动，留出弧线路径。
-        while ([...fan.values()].some((p) => Math.abs(p.du - du) < nodeUSize + gap && Math.abs(p.dv - dv) < nodeVSize + gap)) {
-          dv += side * (nodeVSize + gap)
-        }
-        fan.set(caseId, { du, dv })
-        const children = childrenOf(caseId)
-        children.forEach((edge, index) => {
-          // 单链向外舒展；兄弟节点交替落在父节点侧上方、正上方（下侧镜像）。
-          const lateral = children.length === 1 ? branchStep * 0.3 : index % 2 === 0 ? branchStep : branchStep * 0.22
-          const outward = children.length === 1 ? outwardStep : index % 2 === 0 ? nodeVSize * 0.6 : outwardStep * 1.35
-          placeBranch(edge.toCaseId, du + side * lateral, dv + side * (outward + Math.floor(index / 2) * outwardStep), side)
-        })
+    const placeBranch = (caseId: string, u: number, v: number, side: number) => {
+      if (claimed.has(caseId)) return
+      claimed.add(caseId)
+      // 相邻锚点的分支可复用空闲行；占用时向外换行，不移动主线。
+      while ([...lanePositions.values()].some((p) =>
+        Math.abs(p.u - u) < nodeUSize + 32 && Math.abs(p.v - v) < nodeVSize + 32)) {
+        v += side * branchGap
       }
-
-      const nextBand = new Map([[-1, nodeVSize * 0.6], [1, nodeVSize * 0.6]])
-      childrenOf(anchorId).forEach((edge, branchIndex) => {
-        if (claimed.has(edge.toCaseId)) return
-        const side = branchIndex % 2 === 0 ? -1 : 1
-        placeBranch(edge.toCaseId, side * branchStep, side * nextBand.get(side)!, side)
-        // 下一组从整个子树外侧起排，避免长子树挤进相邻兄弟分组。
-        const extent = Math.max(...[...fan.values()].filter((p) => p.dv * side > 0).map((p) => Math.abs(p.dv)))
-        nextBand.set(side, extent + nodeVSize + 64)
+      lanePositions.set(caseId, { u, v })
+      childrenOf(caseId).forEach((edge, index) => {
+        placeBranch(edge.toCaseId, u + step, v + side * index * branchGap, side)
       })
-
-      let minDu = 0
-      let maxDu = 0
-      fan.forEach(({ du }) => {
-        minDu = Math.min(minDu, du)
-        maxDu = Math.max(maxDu, du)
-      })
-      extents[spineIndex] = { left: Math.max(0, -minDu), right: maxDu + nodeUSize }
-    })
-
-    // 2. 按扇宽分配主骨绝对位置：相邻主骨至少 SPINE_STEP_MIN，扇形区域之间留出间隙。
-    const anchorUs: number[] = []
-    let nextFreeU = 0
-    path.caseIds.forEach((_, spineIndex) => {
-      const base = spineIndex === 0
-        ? nextFreeU
-        : Math.max(nextFreeU, anchorUs[spineIndex - 1] + SPINE_STEP_MIN)
-      const anchorU = base + extents[spineIndex].left
-      anchorUs.push(anchorU)
-      nextFreeU = anchorU + extents[spineIndex].right + 48
-    })
-
-    path.caseIds.forEach((caseId, spineIndex) => {
-      const u = anchorUs[spineIndex]
-      maxU = Math.max(maxU, u)
-      if (!lanePositions.has(caseId)) lanePositions.set(caseId, { u, v: 0 })
-      const fan = fans[spineIndex]
-      fan.forEach((position, branchCaseId) => {
-        if (branchCaseId === caseId) return
-        const absoluteU = u + position.du
-        maxU = Math.max(maxU, absoluteU)
-        lanePositions.set(branchCaseId, { u: absoluteU, v: position.dv })
+    }
+    path.caseIds.forEach((anchorId) => {
+      const anchor = lanePositions.get(anchorId)!
+      childrenOf(anchorId).forEach((edge, index) => {
+        const side = index % 2 === 0 ? -1 : 1
+        placeBranch(edge.toCaseId, anchor.u, side * (Math.floor(index / 2) + 1) * branchGap, side)
       })
     })
+    lanePositions.forEach(({ u }) => { maxU = Math.max(maxU, u) })
 
     // 上下分支数量常常不对称，按实际边界收紧画布，避免为短的一侧留出大片空白。
     let minV = -nodeVSize / 2
@@ -433,7 +409,8 @@ export function layoutRelationsFishbone(model: RelationsGraphModel, orientation:
     const laneSpan = maxV - minV
     const laneCenter = laneCursor - minV + CANVAS_PAD
     lanePositions.forEach((position, caseId) => {
-      if (!placed.has(caseId)) placed.set(caseId, { u: position.u, v: laneCenter + position.v })
+      const displayId = displayIds.get(caseId) ?? caseId
+      if (!placed.has(displayId)) placed.set(displayId, { u: position.u, v: laneCenter + position.v })
     })
     laneCursor += laneSpan + LANE_GAP
   })
@@ -456,7 +433,7 @@ export function layoutRelationsFishbone(model: RelationsGraphModel, orientation:
 
   const nodes = new Map<string, RelationsLaidOutNode>()
   placed.forEach((position, caseId) => {
-    const node = model.nodeById.get(caseId)
+    const node = displayNodes.get(caseId)
     if (!node) return
     const u = CANVAS_PAD + position.u
     const v = position.v
@@ -471,8 +448,37 @@ export function layoutRelationsFishbone(model: RelationsGraphModel, orientation:
     })
   })
 
+  // Mainline occurrences get independent visual edges; all still refer to the original relation/case.
+  const mainEndpoints = new Map<string, [string, string][]>()
+  model.paths.forEach((path, p) => path.caseIds.slice(1).forEach((id, i) => {
+    const key = JSON.stringify([path.caseIds[i], id])
+    const pairs = mainEndpoints.get(key) ?? []
+    pairs.push([displayPaths[p].caseIds[i], displayPaths[p].caseIds[i + 1]])
+    mainEndpoints.set(key, pairs)
+  }))
+  const occurrenceInLane = (caseId: string, pathIndex: number) => {
+    const index = model.paths[pathIndex]?.caseIds.indexOf(caseId) ?? -1
+    return index < 0 ? caseId : displayPaths[pathIndex].caseIds[index]
+  }
+  const edges = model.edges.flatMap((edge) => {
+    const pairs = mainEndpoints.get(JSON.stringify([edge.fromCaseId, edge.toCaseId]))
+    if (!pairs) {
+      const from = model.nodeById.get(edge.fromCaseId), to = model.nodeById.get(edge.toCaseId)
+      return [{ ...edge,
+        fromCaseId: occurrenceInLane(edge.fromCaseId, to?.pathIndex ?? from?.pathIndex ?? 0),
+        toCaseId: occurrenceInLane(edge.toCaseId, from?.pathIndex ?? to?.pathIndex ?? 0),
+      }]
+    }
+    return pairs.map(([fromCaseId, toCaseId], i) => ({
+      ...edge, fromCaseId, toCaseId, originalEdgeId: edge.edgeId,
+      edgeId: i === 0 ? edge.edgeId : `${edge.edgeId}:shared:${i}`,
+    }))
+  })
+
   return {
     nodes,
+    edges,
+    paths: displayPaths,
     width: horizontal ? rawWidth : rawHeight,
     height: horizontal ? rawHeight : rawWidth,
   }

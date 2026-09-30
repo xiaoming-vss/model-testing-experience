@@ -25,5 +25,7 @@ class AiGenerateTaskSourceArchive(Base):
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
     sha256: Mapped[str] = mapped_column(String(64), nullable=False)
-    storage_path: Mapped[str] = mapped_column(Text, nullable=False)
+    file_id: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    # Inert legacy metadata; source archives are delivered exclusively through S3.
+    storage_path: Mapped[str] = mapped_column(Text, nullable=False, default="")
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

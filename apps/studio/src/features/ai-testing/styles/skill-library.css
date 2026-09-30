@@ -1,5 +1,7 @@
 /* Skill 库：面板、卡片、空状态与响应式网格。 */
 .ai-skill-library-page {
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -283,7 +285,7 @@
 .app-shell-macos .ai-testing-overview-page .ai-skill-library-grid {
   flex: 0 0 auto !important;
   min-height: 0 !important;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 300px)) !important;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
   grid-auto-rows: auto !important;
   align-content: start !important;
   align-items: start !important;
@@ -306,7 +308,8 @@
 .app-shell-macos .ai-testing-page.ai-skill-library-page .ai-skill-card-head,
 .app-shell-macos .ai-testing-overview-page .ai-skill-card-head {
   min-height: 92px;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .app-shell-macos .ai-testing-page.ai-skill-library-page .ai-skill-card-title,
@@ -331,4 +334,16 @@
   height: auto !important;
   min-height: 0 !important;
   flex: 1 1 auto;
+}
+
+.ai-skill-card-title .ant-typography {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.ai-skill-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }

@@ -1,5 +1,6 @@
 import { useSearchParams } from 'react-router-dom'
 import { ApiAutomationPage } from '@/features/api-automation/pages/ApiAutomationPage'
+import { BugListPage } from '@/features/bugs/pages/BugListPage'
 import { CaseLibraryPage } from '@/features/test-cases/pages/CaseLibraryPage'
 import { TestOrderPage } from '@/features/test-orders/pages/TestOrderPage'
 import { resolveTestingTab } from '@/features/testing/components/testingTab'
@@ -17,6 +18,7 @@ export function TestingPage() {
         {activeTab === 'ui' ? <UiAutomationPage /> : null}
         {activeTab === 'library' ? <CaseLibraryPage /> : null}
         {activeTab === 'orders' ? <TestOrderPage /> : null}
+        {activeTab === 'bugs' ? <BugListPage /> : null}
       </div>
     </div>
   )

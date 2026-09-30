@@ -4,6 +4,7 @@ export type RunPipelineTone = 'processing' | 'success' | 'error' | 'warning' | '
 export type RunPipelineFilterKey =
   | 'running'
   | 'review_pending'
+  | 'approved'
   | 'import_pending'
   | 'imported'
   | 'rejected'
@@ -20,18 +21,19 @@ export type RunPipelineModel = {
 const inProgressRunStatuses = ['pending', 'claimed', 'running', 'waiting_review']
 
 export function getRunPipelineModel(
-  run: { status?: string; reviewStatus?: string; importStatus?: string },
+  run: { status?: string; reviewStatus?: string; review_status?: string; importStatus?: string; import_status?: string },
   options?: { stages?: RunPipelineStageKey[] },
 ): RunPipelineModel {
   const includeReview = !options?.stages || options.stages.includes('review')
   const includeImport = !options?.stages || options.stages.includes('import')
   const status = (run.status ?? '').toLowerCase()
-  const reviewStatus = run.reviewStatus ?? ''
-  const importStatus = run.importStatus ?? ''
-  const succeeded = status === 'success'
+  const reviewStatus = String(run.reviewStatus ?? run.review_status ?? '').toLowerCase()
+  const importStatus = String(run.importStatus ?? run.import_status ?? '').toLowerCase()
+  // 审核通过是终态确认；兼容旧数据仍保留 waiting_review 的情况。
+  const succeeded = status === 'success' || reviewStatus === 'approved'
   const failed = status === 'failed' || status === 'error'
   const canceled = status === 'canceled'
-  const inProgress = inProgressRunStatuses.includes(status)
+  const inProgress = inProgressRunStatuses.includes(status) && reviewStatus !== 'approved'
 
   const generateState: RunPipelineStageState = succeeded ? 'done' : failed ? 'fail' : inProgress ? 'current' : 'idle'
   const reviewState: RunPipelineStageState = !succeeded
@@ -92,6 +94,9 @@ export function getRunPipelineModel(
       : { stages, statusLabel: '待导入', statusTone: 'purple', filterKey: 'import_pending' }
   }
   if (includeReview) {
+    if (reviewStatus === 'approved') {
+      return { stages, statusLabel: '审核通过', statusTone: 'success', filterKey: 'approved' }
+    }
     return { stages, statusLabel: '待审核', statusTone: 'warning', filterKey: 'review_pending' }
   }
   return { stages, statusLabel: '成功', statusTone: 'success', filterKey: 'imported' }

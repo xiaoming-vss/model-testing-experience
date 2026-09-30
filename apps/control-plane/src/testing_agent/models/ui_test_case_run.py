@@ -29,6 +29,7 @@ class UiTestCaseRun(Base):
     trigger_user_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
     trigger_type: Mapped[str] = mapped_column(String(20), nullable=False, default="manual")
     status: Mapped[str] = mapped_column(String(20), index=True, nullable=False, default="pending")
+    trace_path: Mapped[str] = mapped_column(String(512), nullable=False, default="")
     snapshot_json: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     step_results_json: Mapped[list[Any] | None] = mapped_column(JSON, nullable=True)
     error_message: Mapped[str] = mapped_column(Text, nullable=False, default="")

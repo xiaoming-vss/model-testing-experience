@@ -792,14 +792,6 @@
   font-weight: 650;
 }
 
-.base-services-page .table-footer {
-  min-height: 48px;
-  padding: 0 18px;
-  border-top: 1px solid var(--app-task-panel-divider);
-  background: var(--app-glass-surface-36);
-  -webkit-backdrop-filter: saturate(180%) blur(18px);
-  backdrop-filter: saturate(180%) blur(18px);
-}
 
 /* Base services scoped unified macOS white glass palette */
 .app-shell-base-services .base-services-page {
@@ -864,9 +856,7 @@
 .app-shell-base-services .base-services-panel.workbench-panel {
   background: var(--app-glass-surface-68) !important;
 }
-
-.app-shell-base-services .base-services-page .panel-header.api-panel-header,
-.app-shell-base-services .base-services-page .table-footer {
+.app-shell-base-services .base-services-page .panel-header.api-panel-header {
   border-color: var(--app-glass-request-shadow) !important;
   background: var(--app-glass-surface-50) !important;
   -webkit-backdrop-filter: saturate(180%) blur(20px);

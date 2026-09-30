@@ -10,6 +10,7 @@ import '../styles/sidebar.css'
 
 const testingLinks: Array<{ key: string; label: string; icon: AppIconName }> = [
   { key: 'orders', label: '测试单', icon: 'tasks' },
+  { key: 'bugs', label: 'Bug列表', icon: 'bug' },
   { key: 'api', label: 'API测试', icon: 'api' },
   { key: 'ui', label: 'UI测试', icon: 'ui' },
   { key: 'library', label: '用例库', icon: 'caseLibrary' },
@@ -27,24 +28,31 @@ export function AppSidebar({ designCounts = {} }: { designCounts?: Record<string
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme)
   const { pathname, search } = useLocation()
   const [collapsed, setCollapsed] = useState(false)
-  const [closedAt, setClosedAt] = useState<string | null>(null)
-  const [designClosedAt, setDesignClosedAt] = useState<string | null>(null)
-  const [projectClosedAt, setProjectClosedAt] = useState<string | null>(null)
   const route = pathname + search
+  const [navigation, setNavigation] = useState<{
+    route: string
+    project?: boolean
+    testing?: boolean
+    design?: boolean
+  }>({ route })
+  // Manual toggles belong to the current visit, not to a previously visited URL.
+  if (navigation.route !== route) setNavigation({ route })
+  const expanded: typeof navigation = navigation.route === route ? navigation : { route }
   const inProjects = pathname.startsWith('/projects')
   const projectBoard = new URLSearchParams(search).get('board') === 'requirements' ? 'requirements' : 'sprints'
-  const projectOpen = !collapsed && (inProjects ? projectClosedAt !== route : projectClosedAt === `open:${route}`)
+  const projectOpen = !collapsed && (expanded.project ?? inProjects)
   const testingTab = pathname.startsWith('/test-orders') ? 'orders'
+    : pathname.startsWith('/bugs') ? 'bugs'
     : pathname.startsWith('/api-automation') ? 'api'
       : pathname.startsWith('/ui-automation') ? 'ui'
         : pathname === '/testing' || pathname.startsWith('/test-cases')
           ? resolveTestingTab(new URLSearchParams(search).get('tab')) : null
-  const testingOpen = !collapsed && (pathname.startsWith('/ai-testing') ? closedAt === `open:${route}` : closedAt !== route)
+  const testingOpen = !collapsed && (expanded.testing ?? Boolean(testingTab))
 
   const inDesign = pathname.startsWith('/ai-testing')
   const designKind = designLinks.find((item) => pathname.startsWith(item.path))?.key
     ?? designLinks.find((item) => item.key === new URLSearchParams(search).get('kind'))?.key ?? 'analysis'
-  const designOpen = !collapsed && (inDesign ? designClosedAt !== route : designClosedAt === `open:${route}`)
+  const designOpen = !collapsed && (expanded.design ?? inDesign)
 
   function navLink(to: string, label: string, icon: AppIconName, active: boolean, count?: number) {
     return <Link key={to} to={to} className={`sidebar-link${active ? ' is-active' : ''}`}
@@ -63,7 +71,7 @@ export function AppSidebar({ designCounts = {} }: { designCounts?: Record<string
         <nav className="sidebar-navigation" aria-label="主导航">
           <button type="button" className={`sidebar-link sidebar-group${inProjects ? ' is-current-group' : ''}`}
             aria-expanded={projectOpen} aria-controls="sidebar-project-links"
-            onClick={() => { setCollapsed(false); setProjectClosedAt(projectOpen ? route : `open:${route}`) }}>
+            onClick={() => { setCollapsed(false); setNavigation({ ...expanded, route, project: !projectOpen }) }}>
             <AppIcon name="projects" size={18} /><span>项目总览</span>
             <DownOutlined aria-hidden="true" className={`sidebar-chevron${projectOpen ? ' is-open' : ''}`} />
           </button>
@@ -75,9 +83,18 @@ export function AppSidebar({ designCounts = {} }: { designCounts?: Record<string
                 board === 'sprints' ? 'sprint' : 'requirement', inProjects && projectBoard === board)
             })}
           </div>
+          <button type="button" className={`sidebar-link sidebar-group${inDesign ? ' is-current-group' : ''}`}
+            aria-expanded={designOpen} aria-controls="sidebar-design-links"
+            onClick={() => { setCollapsed(false); setNavigation({ ...expanded, route, design: !designOpen }) }}>
+            <AppIcon name="testDesign" size={18} /><span>测试设计</span>
+            <DownOutlined aria-hidden="true" className={`sidebar-chevron${designOpen ? ' is-open' : ''}`} />
+          </button>
+          <div id="sidebar-design-links" className="sidebar-children" hidden={!designOpen}>
+            {designLinks.map(({ key, label, icon }) => navLink(`/ai-testing?kind=${key}`, label, icon, inDesign && designKind === key, designCounts[key]))}
+          </div>
           <button type="button" className={`sidebar-link sidebar-group${testingTab ? ' is-current-group' : ''}`}
             aria-expanded={testingOpen} aria-controls="sidebar-testing-links" title={collapsed ? '展开测试导航' : undefined}
-            onClick={() => { setCollapsed(false); setClosedAt(testingOpen ? route : `open:${route}`) }}>
+            onClick={() => { setCollapsed(false); setNavigation({ ...expanded, route, testing: !testingOpen }) }}>
             <AppIcon name="testing" size={18} /><span>测试</span>
             <DownOutlined aria-hidden="true" className={`sidebar-chevron${testingOpen ? ' is-open' : ''}`} />
           </button>
@@ -87,15 +104,6 @@ export function AppSidebar({ designCounts = {} }: { designCounts?: Record<string
               params.set('tab', key)
               return navLink(`/testing?${params}`, label, icon, testingTab === key)
             })}
-          </div>
-          <button type="button" className={`sidebar-link sidebar-group${inDesign ? ' is-current-group' : ''}`}
-            aria-expanded={designOpen} aria-controls="sidebar-design-links"
-            onClick={() => { setCollapsed(false); setDesignClosedAt(designOpen ? route : `open:${route}`) }}>
-            <AppIcon name="testDesign" size={18} /><span>测试设计</span>
-            <DownOutlined aria-hidden="true" className={`sidebar-chevron${designOpen ? ' is-open' : ''}`} />
-          </button>
-          <div id="sidebar-design-links" className="sidebar-children" hidden={!designOpen}>
-            {designLinks.map(({ key, label, icon }) => navLink(`/ai-testing?kind=${key}`, label, icon, inDesign && designKind === key, designCounts[key]))}
           </div>
           {navLink('/base-services', '基础服务', 'services', pathname.startsWith('/base-services'))}
         </nav>

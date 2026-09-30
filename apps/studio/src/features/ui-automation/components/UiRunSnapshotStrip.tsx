@@ -1,4 +1,5 @@
-import { Empty, Image } from 'antd'
+import { StoredImage } from '@/shared/components/files/StoredFile'
+import { Empty } from 'antd'
 import { useEffect, useRef } from 'react'
 
 import type { UiStepSnapshot } from '../utils/detailRunView'
@@ -60,7 +61,7 @@ export function UiRunSnapshotStrip({ snapshots, activeIndex, onSelect }: Props) 
                 onClick={() => onSelect(index)}
               >
                 <span className="ui-wb-strip-thumb">
-                  <Image src={snapshot.screenshotPath} alt={`${snapshot.name} 截图缩略图`} preview={false} />
+                  <StoredImage src={snapshot.screenshotPath} alt={`${snapshot.name} 截图缩略图`} preview={false} />
                   <span className={`ui-wb-strip-order tone-${snapshot.tone}`}>
                     #{snapshot.orderNo ?? index + 1}
                     {snapshot.elapsedText ? ` ${snapshot.elapsedText}` : ''}

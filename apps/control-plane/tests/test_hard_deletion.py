@@ -173,7 +173,7 @@ async def test_api_case_cleans_rules_runs_and_queue(db):
     assert await count(db, m.ApiCollection) == 1
 
 
-async def test_ai_task_cleans_normalized_results_and_source_after_commit(db, tmp_path):
+async def test_ai_task_cleans_records_but_preserves_legacy_source(db, tmp_path):
     task = await add(
         db,
         m.AiGenerateTask(
@@ -221,7 +221,7 @@ async def test_ai_task_cleans_normalized_results_and_source_after_commit(db, tmp
     await delete_resource(db, task)
     assert source.exists()
     await db.commit()
-    assert not source.exists()
+    assert source.exists()
     for model in (
         m.AiGenerateTask,
         m.AiGenerateTaskRun,
@@ -368,3 +368,15 @@ async def test_ui_case_deletes_aggregate_history_and_worker_without_deleting_sui
     ):
         assert await count(db, model) == 0
     assert await count(db, m.UiTestSuite) == 1
+
+
+async def test_requirement_deletion_does_not_touch_legacy_disk_file(db, tmp_path):
+    source = tmp_path / "historical.txt"
+    source.write_text("original")
+    req = await db.scalar(select(m.Requirement))
+    req.document_storage_path = str(source)
+    await db.commit()
+    await delete_resource(db, req)
+    await db.commit()
+    assert source.read_text() == "original"
+    assert await count(db, m.Requirement) == 0

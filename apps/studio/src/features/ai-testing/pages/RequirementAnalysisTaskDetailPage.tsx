@@ -124,7 +124,7 @@ export function RequirementAnalysisTaskDetailPage() {
   const [stageOutputDraft, setStageOutputDraft] = useState('')
   const [stageOutputDirty, setStageOutputDirty] = useState(false)
   const [stageOutputSourceKey, setStageOutputSourceKey] = useState('')
-  const [stageReviewAction, setStageReviewAction] = useState<'approve' | 'revise' | null>(null)
+  const [stageReviewAction, setStageReviewAction] = useState<'approve' | 'reject' | 'revise' | null>(null)
   const [reviseModalOpen, setReviseModalOpen] = useState(false)
   const [revisionFooter, setRevisionFooter] = useState<HTMLDivElement | null>(null)
   const [revisionInstruction, setRevisionInstruction] = useState('')
@@ -251,13 +251,20 @@ export function RequirementAnalysisTaskDetailPage() {
   const finalResultEditable = Boolean(
     selectedRun?.runId &&
       runResultModal?.key === 'resultYaml' &&
-      selectedRunStatus === 'success' &&
+      ['success', 'waiting_review'].includes(selectedRunStatus) &&
       (!selectedStage || selectedStage === 'feature_understanding' || selectedStage === 'completed') &&
       selectedRunReviewStatus !== 'approved',
   )
-  const editableRunResultModal = showStageReviewInRunResultModal || finalResultEditable
+  const finalResultApproved = Boolean(
+    selectedRun?.runId &&
+      runResultModal?.key === 'resultYaml' &&
+      selectedRunStatus === 'success' &&
+      (!selectedStage || selectedStage === 'feature_understanding' || selectedStage === 'completed') &&
+      selectedRunReviewStatus === 'approved',
+  )
+  const editableRunResultModal = showStageReviewInRunResultModal || finalResultEditable || finalResultApproved
   const editableRunResultStage = finalResultEditable ? 'feature_understanding' : selectedStage
-  const editableRunResultContent = finalResultEditable
+  const editableRunResultContent = finalResultEditable || finalResultApproved
     ? formatStructuredContent(selectedRun?.resultYaml)
     : selectedStageOutputContent
 
@@ -469,10 +476,16 @@ export function RequirementAnalysisTaskDetailPage() {
   const reviewStageMutation = useMutation({
     mutationFn: async (payload: {
       runId: string
-      body: { stage: string; action: 'approve'; configJson: Record<string, unknown> }
-    }) => api.reviewRequirementAnalysisRunStage(payload.runId, { ...payload.body, llmConnectionId: payload.body.action === 'approve' ? await personalLlm.choose() : undefined }),
+      body: { stage: string; action: 'approve' | 'reject'; configJson: Record<string, unknown> }
+    }) => api.reviewRequirementAnalysisRunStage(payload.runId, {
+      ...payload.body,
+      // 最终结果只是确认审核，不会继续派发下一阶段，因此不需要选择模型。
+      llmConnectionId: ['feature_understanding', 'completed'].includes(payload.body.stage) || payload.body.action === 'reject'
+        ? undefined
+        : payload.body.action === 'approve' ? await personalLlm.choose() : undefined,
+    }),
     onSuccess: (updatedRun, payload) => {
-      message.success('阶段审核已通过，继续执行')
+      message.success(payload.body.action === 'reject' ? '最终结果审核不通过' : ['feature_understanding', 'completed'].includes(payload.body.stage) ? '最终结果审核已通过' : '阶段审核已通过，继续执行')
       setStageReviewAction(null)
       setSelectedRunRecordId(updatedRun.runId ?? payload.runId)
       queryClient.setQueryData(['requirementAnalysisRun', payload.runId], updatedRun)
@@ -616,7 +629,8 @@ export function RequirementAnalysisTaskDetailPage() {
   }
 
   async function handleApproveStageReview() {
-    if (!selectedRun?.runId || !selectedStage || !selectedStageField || !checkpointStageWaitingReview) return
+    const finalReview = finalResultEditable && ['feature_understanding', 'completed'].includes(selectedStage ?? '')
+    if (!selectedRun?.runId || !selectedStage || (!checkpointStageWaitingReview && !finalReview)) return
     if (!stageOutputDraft.trim()) {
       message.warning('阶段产物不能为空')
       return
@@ -629,6 +643,7 @@ export function RequirementAnalysisTaskDetailPage() {
         runId: selectedRun.runId,
         stage: selectedStage,
         configJson,
+        ...(finalReview ? { resultYaml: stageOutputDraft } : {}),
         silent: true,
       })
       await reviewStageMutation.mutateAsync({
@@ -638,6 +653,19 @@ export function RequirementAnalysisTaskDetailPage() {
           action: 'approve',
           configJson,
         },
+      })
+    } catch {
+      setStageReviewAction(null)
+    }
+  }
+
+  async function handleRejectFinalReview() {
+    if (!selectedRun?.runId || !finalResultEditable || !['feature_understanding', 'completed'].includes(selectedStage ?? '')) return
+    setStageReviewAction('reject')
+    try {
+      await reviewStageMutation.mutateAsync({
+        runId: selectedRun.runId,
+        body: { stage: selectedStage!, action: 'reject', configJson: buildStageConfigJson() },
       })
     } catch {
       setStageReviewAction(null)
@@ -836,6 +864,7 @@ export function RequirementAnalysisTaskDetailPage() {
                           renderArtifacts={(row) => {
                             const data = resolveRunRecord(row)
                             const recordStatus = String(data.status ?? '').toLowerCase()
+                            const reviewStatus = String(data.reviewStatus ?? '').toLowerCase()
                             const reachedStageIndex = [
                               'extracting_text', 'writing_requirement', 'feature_understanding', 'completed',
                             ].indexOf(data.currentStage ?? '')
@@ -843,6 +872,7 @@ export function RequirementAnalysisTaskDetailPage() {
                               <RunArtifacts
                                 artifacts={runResultSectionDefinitions
                                   .filter((section) => section.key !== 'errorMessage')
+                                  .filter((section) => !(section.key === 'resultYaml' && reviewStatus === 'approved'))
                                   .map((section, index) => ({
                                     key: section.key,
                                     label: section.label,
@@ -865,6 +895,18 @@ export function RequirementAnalysisTaskDetailPage() {
                             const reviewField = getRequirementAnalysisStageField(data.currentStage)
                             const showStageReview = Boolean(
                               reviewField && data.checkpointEnabled && recordStatus === 'waiting_review' && data.stageStatus === 'waiting_review',
+                            )
+                            const showFinalReview = Boolean(
+                              data.checkpointEnabled &&
+                                ['success', 'waiting_review'].includes(recordStatus) &&
+                                ['feature_understanding', 'completed'].includes(data.currentStage ?? '') &&
+                                data.reviewStatus !== 'approved' &&
+                                data.importStatus !== 'imported',
+                            )
+                            const canImportRecord = Boolean(
+                              data.reviewStatus?.toLowerCase() === 'approved' &&
+                                data.importStatus !== 'imported' &&
+                                ['success', 'waiting_review'].includes(recordStatus),
                             )
                             const canRetry = recordFailed && row.runId &&
                               ['extracting_text', 'writing_requirement', 'feature_understanding'].includes(data.currentStage ?? '') &&
@@ -899,6 +941,32 @@ export function RequirementAnalysisTaskDetailPage() {
                                         }}
                                       >
                                         审核
+                                      </Button>
+                                    ) : null}
+                                    {showFinalReview ? (
+                                      <Button
+                                        size="small"
+                                        type="primary"
+                                        onClick={(event) => {
+                                          event.stopPropagation()
+                                          setSelectedRunRecordId(row.runId ?? null)
+                                          setRunResultModal({ key: 'resultYaml', label: '需求理解记录（审核）', mode: 'review' })
+                                        }}
+                                      >
+                                        审核
+                                      </Button>
+                                    ) : null}
+                                    {canImportRecord ? (
+                                      <Button
+                                        size="small"
+                                        type="primary"
+                                        onClick={(event) => {
+                                          event.stopPropagation()
+                                          setSelectedRunRecordId(row.runId ?? null)
+                                          setRunResultModal({ key: 'resultYaml', label: '需求理解记录', mode: 'view' })
+                                        }}
+                                      >
+                                        查看结果并导入
                                       </Button>
                                     ) : null}
                                     {recordFailed && recordHasErrorMessage ? (
@@ -1060,6 +1128,17 @@ export function RequirementAnalysisTaskDetailPage() {
                 >
                   保存修改
                 </ProjectActionButton>,
+                ...(finalResultEditable ? [
+                  <Button
+                    key="reject"
+                    danger
+                    onClick={handleRejectFinalReview}
+                    loading={stageActionPending && stageReviewAction === 'reject'}
+                    disabled={reviseModalOpen || (stageActionPending && stageReviewAction !== 'reject')}
+                  >
+                    审核不通过
+                  </Button>,
+                ] : []),
                 <ProjectActionButton action="execute"
                   key="revise"
                   onClick={openReviseStageModal}
@@ -1071,11 +1150,11 @@ export function RequirementAnalysisTaskDetailPage() {
                 <ProjectActionButton action="execute"
                   key="approve"
                   type="primary"
-                  onClick={finalResultEditable ? handleImportSelectedRun : handleApproveStageReview}
-                  loading={finalResultEditable ? importRunMutation.isPending : stageActionPending && stageReviewAction === 'approve'}
-                  disabled={reviseModalOpen || (finalResultEditable ? stageActionPending : stageActionPending && stageReviewAction !== 'approve')}
+                  onClick={finalResultEditable ? handleApproveStageReview : finalResultApproved ? handleImportSelectedRun : handleApproveStageReview}
+                  loading={finalResultEditable ? stageActionPending && stageReviewAction === 'approve' : finalResultApproved ? importRunMutation.isPending : stageActionPending && stageReviewAction === 'approve'}
+                  disabled={reviseModalOpen || (finalResultEditable ? stageActionPending && stageReviewAction !== 'approve' : finalResultApproved ? importRunMutation.isPending : stageActionPending && stageReviewAction !== 'approve')}
                 >
-                  {finalResultEditable ? '导入需求' : '审核通过并继续'}
+                  {finalResultEditable ? '审核通过' : finalResultApproved ? '导入需求' : '审核通过并继续'}
                 </ProjectActionButton>,
               ]
             : null

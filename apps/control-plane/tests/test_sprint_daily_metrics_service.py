@@ -292,7 +292,7 @@ async def test_sprint_daily_metrics_get_returns_detail_context():
 
 
 @pytest.mark.asyncio
-async def test_sprint_daily_metrics_without_execution_binding_uses_zero_remote_metrics():
+async def test_sprint_daily_metrics_without_execution_binding_skips_remote_metrics():
     repository = FakeSprintDailyMetricsRepository()
     repository.binding = None
     service = SprintDailyMetricsService(
@@ -304,7 +304,7 @@ async def test_sprint_daily_metrics_without_execution_binding_uses_zero_remote_m
     result = await service.upsert("s1", "2026-01-23", {}, "u1")
 
     assert result["function"]["total"] == 0
-    assert result["bug"]["total"] == 0
+    assert result["bug"] is None
     assert result["api"]["total"] == 3
     assert result["ui"]["total"] == 2
     assert result["bugs"] == []
@@ -344,3 +344,88 @@ async def test_ui_metrics_aggregate_latest_suite_run_counts():
     assert result.pending == 1
     assert result.success == 3
     assert result.failed == 2
+
+
+@pytest.mark.asyncio
+async def test_zentao_connection_failure_does_not_block_local_snapshot_and_can_recover():
+    import httpx
+
+    class UnavailableClient(FakeZentaoResourceClient):
+        async def list_execution_bugs(self, *args):
+            raise httpx.ConnectError("All connection attempts failed")
+
+    repository = FakeSprintDailyMetricsRepository()
+    repository.function_entry_statuses = ["passed", "pending"]
+    service = SprintDailyMetricsService(
+        repository, FakeIntegrationConnectionService(), UnavailableClient()
+    )
+    result = await service.upsert("s1", "2026-01-23", {}, "u1")
+    assert repository.committed
+    assert result["function"]["total"] == 2
+    assert result["api"]["total"] == 3
+    assert result["ui"]["total"] == 2
+    assert result["bug"] is None
+    assert result["bugs"] == []
+    assert (await service.get("s1", "2026-01-23", "u1"))["bug"] is None
+
+    service.zentao_resource_client = FakeZentaoResourceClient()
+    result = await service.upsert("s1", "2026-01-23", {}, "u1")
+    assert result["bug"]["total"] == 3
+    assert len(result["bugs"]) == 3
+
+    service.zentao_resource_client = UnavailableClient()
+    result = await service.upsert("s1", "2026-01-23", {}, "u1")
+    assert result["bug"] is None
+    assert result["bugs"] == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure_stage", ["authorization", "second_page"])
+async def test_incomplete_zentao_collection_is_not_counted(failure_stage):
+    from testing_agent.core.errors import ErrIntegrationConnectionAuthFailed
+
+    class Connections(FakeIntegrationConnectionService):
+        async def resolve_personal_connection(self, *args):
+            if failure_stage == "authorization":
+                raise ErrIntegrationConnectionAuthFailed
+            return await super().resolve_personal_connection(*args)
+
+    class Client(FakeZentaoResourceClient):
+        async def list_execution_bugs(self, connection, execution_id, page, page_size):
+            if page == 2:
+                raise TimeoutError("remote timeout")
+            return {"total": 101, "items": [{"status": "active", "severity": 1}] * 100}
+
+    repository = FakeSprintDailyMetricsRepository()
+    service = SprintDailyMetricsService(repository, Connections(), Client())
+    result = await service.upsert("s1", "2026-01-23", {}, "u1")
+    assert repository.committed
+    assert result["api"]["total"] == 3
+    assert result["bug"] is None
+    assert result["bugs"] == []
+
+
+@pytest.mark.asyncio
+async def test_successfully_collected_empty_bugs_remain_zero():
+    class Client(FakeZentaoResourceClient):
+        async def list_execution_bugs(self, *args):
+            return {"total": 0, "items": []}
+
+    service = SprintDailyMetricsService(
+        FakeSprintDailyMetricsRepository(), FakeIntegrationConnectionService(), Client()
+    )
+    result = await service.upsert("s1", "2026-01-23", {}, "u1")
+    assert result["bug"]["total"] == 0
+
+
+@pytest.mark.asyncio
+async def test_local_collection_failure_still_propagates():
+    repository = FakeSprintDailyMetricsRepository()
+
+    async def fail(_sprint_id):
+        raise RuntimeError("local database failure")
+
+    repository.list_function_entry_statuses_by_sprint = fail
+    with pytest.raises(RuntimeError, match="local database failure"):
+        await SprintDailyMetricsService(repository).upsert("s1", "2026-01-23", {}, "u1")
+    assert not repository.committed

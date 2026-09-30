@@ -80,9 +80,6 @@ def load_config() -> WorkerConfig:
         trace_enabled=_config_bool(toml_config, "ui", "trace_enabled", True),
         screenshot_on_failure=_config_bool(toml_config, "ui", "screenshot_on_failure", True),
         snapshot_file=_config_string(toml_config, "once", "snapshot_file"),
-        artifacts_bind_host=_config_string(toml_config, "ui", "artifacts_bind_host", "127.0.0.1"),
-        artifacts_port=_config_int(toml_config, "ui", "artifacts_port", 9010),
-        artifacts_base_url=_config_string(toml_config, "ui", "artifacts_base_url"),
     )
 
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import Depends, File, UploadFile
+from fastapi import Depends
 
 from testing_agent.api.deps import get_ai_generate_task_service, get_current_user_id
 from testing_agent.core.errors import success_payload
@@ -9,10 +9,10 @@ from testing_agent.schemas.ai_generate_task import (
     AiGenerateTaskResultRequest,
     AiGenerateTaskReviewRequest,
     AiGenerateTaskRunRequest,
+    SourceArchiveAttachRequest,
     UiGenerateTaskImportRequest,
 )
 from testing_agent.services.ai_generate_task import (
-    MAX_SOURCE_ARCHIVE_BYTES,
     AiGenerateTaskService,
     dump_run,
 )
@@ -70,15 +70,11 @@ async def delete_ui_case_generate_task(
 
 async def upload_ui_case_source_archive(
     task_id: str,
-    file: UploadFile = File(...),
+    body: SourceArchiveAttachRequest,
     user_id: str = Depends(get_current_user_id),
     service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
 ):
-    return success_payload(
-        await service.upload_source_archive(
-            task_id, file.filename or "", await file.read(MAX_SOURCE_ARCHIVE_BYTES + 1), user_id
-        )
-    )
+    return success_payload(await service.upload_source_archive(task_id, body.file_id, user_id))
 
 
 async def run_ui_case_generate_task(

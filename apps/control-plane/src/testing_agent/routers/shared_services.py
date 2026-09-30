@@ -4,6 +4,7 @@ from testing_agent.api.deps import get_current_user_id, get_integration_connecti
 from testing_agent.core.errors import success_payload
 from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
 from testing_agent.schemas.shared_service import (
+    McpTemplate,
     PersonalAuthorizationRequest,
     Provider,
     ServiceCreate,
@@ -30,6 +31,16 @@ async def list_services(
     services: SharedServiceService = Depends(service),
 ):
     return success_payload(await services.list(user_id, project_id, provider))
+
+
+@router.get("/templates", response_model=ApiResponse[ListResponse[McpTemplate]])
+async def list_templates(
+    project_id: str,
+    provider: Provider,
+    user_id: str = Depends(get_current_user_id),
+    services: SharedServiceService = Depends(service),
+):
+    return success_payload(await services.templates(user_id, project_id, provider))
 
 
 @router.post("", response_model=ApiResponse[SharedServiceResponse])

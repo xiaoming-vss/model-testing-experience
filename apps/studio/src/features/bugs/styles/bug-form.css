@@ -1,0 +1,91 @@
+/* 新建缺陷：居中编辑面板，沿用应用主题，正文滚动而操作区保持可见。 */
+.bug-form-modal .ant-modal { max-width: calc(100vw - 32px); padding-bottom: 0; }
+.bug-form-modal .ant-modal-container { padding: 0; overflow: hidden; border-radius: 14px; background: var(--srf-card); }
+.bug-form-modal .ant-modal-header { margin: 0; padding: 16px 20px; border-bottom: 1px solid var(--srf-divider); background: var(--srf-card); }
+.bug-form-heading { display: flex; align-items: flex-start; gap: 12px; padding-right: 28px; }
+.bug-form-heading-icon { display: flex; align-items: center; justify-content: center; flex: 0 0 36px; height: 36px; border-radius: 8px; background: var(--srf-accent-soft); }
+.bug-form-heading h2 { margin: 0 0 4px; font-size: 18px; line-height: 24px; color: var(--srf-text); }
+.bug-form-heading p { margin: 0; font-size: 12px; font-weight: 400; line-height: 18px; color: var(--srf-text-muted); }
+.bug-form-modal .ant-modal-body { max-height: calc(100dvh - 230px); overflow-y: auto; padding: 16px 20px; }
+.bug-form-modal .ant-form-item { margin-bottom: 12px; }
+.bug-form-modal .ant-form-item-label { padding-bottom: 6px; }
+.bug-form-row { display: grid; gap: 12px; }
+.bug-form-row-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.bug-form-row-four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.bug-form-row > * { min-width: 0; }
+.bug-form-modal .ant-input, .bug-form-modal .ant-select, .bug-form-modal .ant-segmented { width: 100%; }
+.bug-form-modal .ant-segmented { background: var(--srf-hover); }
+.bug-form-modal .ant-segmented-item-label { padding-inline: 6px; font-size: 12px; }
+.bug-form-field-hint { display: block; margin-top: 6px; color: var(--srf-text-muted); font-size: 12px; }
+.bug-form-modal .ant-modal-footer { margin: 0; padding: 12px 20px; border-top: 1px solid var(--srf-divider); background: var(--srf-hover); }
+.bug-form-modal .bug-form-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.bug-form-footer-hint { font-size: 12px; color: var(--srf-text-muted); text-align: left; }
+.bug-form-footer-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.bug-form-modal .bug-form-attachments { margin-bottom: 0; }
+.bug-form-modal .ant-upload-drag .ant-upload-btn { padding: 12px 16px; }
+.bug-form-modal .ant-upload-drag p.ant-upload-drag-icon { margin: 0; }
+.bug-form-modal .ant-upload-drag p.ant-upload-drag-icon .anticon { font-size: 24px; }
+.bug-form-modal .ant-upload-drag p.ant-upload-text { margin: 4px 0; font-size: 13px; }
+.bug-form-modal .ant-upload-drag p.ant-upload-hint { font-size: 12px; }
+@media (max-width: 760px) {
+  .bug-form-row-four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bug-form-modal .ant-modal-header, .bug-form-modal .ant-modal-body, .bug-form-modal .ant-modal-footer { padding: 16px; }
+}
+@media (max-width: 480px) {
+  .bug-form-row-two, .bug-form-row-four { grid-template-columns: minmax(0, 1fr); }
+  .bug-form-footer-hint { display: none; }
+  .bug-form-modal .bug-form-footer { justify-content: flex-end; }
+}
+.bug-form-modal .ant-input,
+.bug-form-modal .ant-select-outlined,
+.bug-form-modal .ant-segmented {
+  background: var(--srf-accent-soft);
+  border-color: var(--srf-card-border);
+  border-radius: 6px;
+}
+.bug-form-modal .ant-segmented-item-selected {
+  color: var(--srf-accent);
+  font-weight: 600;
+}
+
+/* 对齐参考稿的紧凑标题栏、实色动作与横向证据区。 */
+.bug-form-modal .ant-modal-mask { backdrop-filter: blur(3px); }
+.bug-form-title-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.bug-form-sprint-badge { padding: 2px 8px; border-radius: 4px; background: var(--srf-count-badge); color: var(--srf-accent-strong); font-size: 11px; line-height: 18px; }
+.bug-form-heading-icon { color: var(--srf-accent); font-size: 22px; }
+.bug-form-modal .ant-form-item-label > label { font-size: 13px; }
+.bug-form-modal .rich-text-toolbar { background: var(--srf-accent-soft); }
+.bug-form-modal .bug-form-priority .ant-segmented-item-selected { background: var(--srf-accent-strong); color: var(--srf-on-accent); box-shadow: none; }
+.bug-form-modal .bug-form-severity.is-severe .ant-segmented-item-selected { color: var(--srf-danger); background: var(--srf-hover); box-shadow: inset 0 0 0 1px var(--srf-danger); }
+.bug-form-modal .bug-form-submit {
+  --button-current-bg: var(--srf-accent-strong);
+  --button-current-text: var(--srf-on-accent);
+  --button-current-border: var(--srf-accent-strong);
+  --button-current-hover: var(--srf-accent);
+  --button-current-hover-border: var(--srf-accent);
+  --button-current-active: var(--srf-accent-strong);
+  min-width: 160px;
+}
+.bug-form-modal .bug-evidence-upload { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.bug-form-modal .bug-evidence-upload .ant-upload-drag { background: var(--srf-hover); border-color: var(--srf-accent-border); border-radius: 6px; }
+.bug-form-modal .bug-evidence-upload .ant-upload-drag-container { display: grid; grid-template-columns: 36px 1fr; column-gap: 12px; text-align: left; }
+.bug-form-modal .bug-evidence-upload p.ant-upload-drag-icon { grid-row: span 2; display: flex; align-items: center; justify-content: center; background: var(--srf-count-badge); border-radius: 5px; }
+.bug-form-modal .bug-evidence-upload p.ant-upload-text { margin: 0; font-weight: 600; }
+.bug-form-modal .bug-evidence-upload p.ant-upload-hint { margin: 0; font-size: 11px; }
+.bug-form-modal .bug-evidence-upload .ant-upload-list-item { margin-top: 0; padding: 10px; height: auto; border-radius: 6px; background: var(--srf-accent-soft); }
+@media (max-width: 760px) {
+  .bug-form-modal .bug-evidence-upload { grid-template-columns: minmax(0, 1fr); }
+}
+
+.bug-description-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+.bug-description-label { color: var(--srf-text); font-size: 13px; }
+.bug-description-label > span { color: var(--srf-danger); }
+.bug-description-templates { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: 11px; color: var(--srf-text-secondary); }
+.bug-description-templates button { border: 0; border-radius: 4px; padding: 3px 8px; background: var(--srf-accent-soft); color: var(--srf-accent); cursor: pointer; font: inherit; }
+.bug-description-templates button:hover { background: var(--srf-count-badge); }
+.bug-description-templates button:focus-visible { outline: 2px solid var(--srf-accent); outline-offset: 2px; }
+
+.bug-form-project { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 4px 12px; border: 1px solid var(--srf-card-border); border-radius: 6px; background: var(--srf-accent-soft); color: var(--srf-text); cursor: default; }
+.bug-form-project > span:not(.anticon) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bug-form-project-icon { color: var(--srf-accent); }
+.bug-form-project-lock { margin-left: auto; color: var(--srf-text-muted); }

@@ -1,0 +1,39 @@
+/* One footer surface for lists, card grids, drawers and selection dialogs. */
+.table-footer {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  min-height: 58px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--app-surface-border);
+  background: var(--app-surface);
+}
+
+.table-footer > .ant-typography {
+  flex-shrink: 0;
+  margin: 0;
+  color: var(--app-shell-text-muted);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.table-footer > .ant-pagination {
+  margin: 0 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
+.table-footer .ant-pagination-item,
+.table-footer .ant-pagination-prev,
+.table-footer .ant-pagination-next,
+.table-footer .ant-pagination .ant-select-selector {
+  border-radius: 8px;
+  box-shadow: none;
+}

@@ -15,7 +15,6 @@ from .core import logger
 from .api.case_runner import ApiCaseRunner
 from .api.collection_runner import ApiCollectionRunner
 from .core.config import load_config
-from .core.artifact_server import ArtifactHttpServer
 from .control_plane.client import ControlPlaneClient
 from .contracts.types import (
     UiCaseRunSnapshot,
@@ -161,25 +160,7 @@ async def _run_poll(config: WorkerConfig) -> None:
     poller = TaskPoller(config, control_plane_client, case_runner, suite_runner)
 
     # 开始轮询
-    artifact_server = None
-    try:
-        if config.artifacts_base_url:
-            artifact_server = ArtifactHttpServer(
-                config.artifacts_root_dir,
-                config.artifacts_bind_host,
-                config.artifacts_port,
-            )
-            artifact_server.start()
-            logger.info("artifact http server started", {
-                "bindHost": config.artifacts_bind_host,
-                "port": artifact_server.port,
-                "baseUrl": config.artifacts_base_url,
-                "root": config.artifacts_root_dir,
-            })
-        await poller.start()
-    finally:
-        if artifact_server:
-            artifact_server.stop()
+    await poller.start()
 
 
 async def _main() -> None:

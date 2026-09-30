@@ -64,10 +64,12 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 `shared/` 的「全站唯一实现」清单（新增需评审）：
 
 - CodeMirror 封装 —— `shared/components/TextCodeEditor`、`shared/components/JsonEditor`、`shared/components/codeEditorTheme.ts`。全项目 `@uiw/react-codemirror` / `@codemirror/*` 的 import 只允许出现在这里
+- 富文本封装 —— `shared/components/RichTextEditor`（tiptap）。全项目 `@tiptap/*` 的 import 只允许出现在这里；存储值里 `<img>` 只保留 `data-file-id`，签名下载地址由 `RichTextViewer` 渲染时现取（见 `docs/studio/adr/0003-rich-text-editor.md`）
 - 请求封装 —— `shared/api/request.ts`
 - 文件下载 —— `shared/utils/download.ts`
 - 值格式化与载荷构造 —— `shared/utils/value.ts`、`shared/utils/payload.ts`
 - 操作按钮与权限门控 —— `shared/components/ActionButton`
+- 列表分页 —— `shared/components/ListPagination`（数量文案、中文控件、条数切换与越界校正）；默认条数和可选值集中在 `shared/utils/pagination.ts`
 
 ## 三、样式归属与主题
 

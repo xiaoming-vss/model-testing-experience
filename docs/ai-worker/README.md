@@ -57,6 +57,10 @@ uv run ruff check .                               # Lint
 
 `/internal/ai-worker/tasks/claim`、`/snapshot`、`/started`、`/heartbeat`、`/progress`、`/completed`、`/llm-credentials`
 
-## 技能预置
+## 默认技能按需获取
 
-按项目在 `nanobot.runtime_root` 下预置技能目录，容器内为 `/data/runtime/workspaces/project-<项目ID>/skills/`，每个技能目录包含 `SKILL.md`。本地运行时对应 `apps/ai-worker/runtime/workspaces/`。缺少技能时相关任务无法执行，部署见 [部署指南](../deployment.md)。
+Worker 每次执行前按任务类型／阶段从控制面获取默认技能清单，直读 S3 并验证文件大小和 SHA-256。技能恢复到任务独立 workspace 中，不再手工向项目目录放置技能；本期每次重新获取当前内容，不做历史版本或跨运行缓存。项目自定义技能不自动加入任务。
+
+平台初始化与更新方式见 [Skill 库维护](../control-plane/skills.md)。缺少默认技能或下载失败时任务报错，不回退旧目录。目前初始源中不含 `code-risk-analysis`，对应任务需补齐后使用。
+
+- [S3 任务文件读取](file-storage.md)

@@ -15,6 +15,7 @@ from testing_agent_ai_worker.config.models import Settings
 from testing_agent_ai_worker.nanobot_runtime.paths import migrate_legacy_sessions
 from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
 from testing_agent_ai_worker.platform.result_sink import HttpResultSink
+from testing_agent_ai_worker.platform.skills import SkillPreparer
 from testing_agent_ai_worker.platform.task_source import HttpClaimTaskSource
 from testing_agent_ai_worker.services.result_service import ResultService
 from testing_agent_ai_worker.services.task_service import TaskService
@@ -87,6 +88,9 @@ def build_task_runner(
     )
     return WorkerRunner(
         executor=WorkerTaskDispatcherExecutor(
+            skill_preparer=SkillPreparer(
+                resolved_client, settings.nanobot, settings.worker.worker_id
+            ),
             api_executor=ApiCaseNanobotExecutor(
                 nanobot_config=settings.nanobot,
             ),

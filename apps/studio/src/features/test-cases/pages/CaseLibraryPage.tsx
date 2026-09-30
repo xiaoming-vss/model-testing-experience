@@ -1,5 +1,6 @@
+import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
+import { ListPagination } from '@/shared/components/ListPagination'
 import '@/shared/styles/list-table.css'
-import { footerRange } from '@/shared/utils/pagination'
 import {
   AppstoreOutlined,
   EditOutlined,
@@ -18,7 +19,6 @@ import {
   Input,
   InputNumber,
   Modal,
-  Pagination,
   Popconfirm,
   Segmented,
   Select,
@@ -73,7 +73,6 @@ import '@/features/test-cases/styles/case-editor-v2.css'
 
 const { Text } = Typography
 
-const PAGE_SIZE_OPTIONS = ['10', '20', '30', '50']
 
 /** 快速过滤条上的优先级档位，顺序即展示顺序（P0 在最前）。 */
 const PRIORITY_QUICK_FILTERS = ['P0', 'P1', 'P2', 'P3']
@@ -148,7 +147,7 @@ export function CaseLibraryPage() {
   const [keywordInput, setKeywordInput] = useState('')
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const keywordInputRef = useRef<InputRef>(null)
   const [selectedCaseIds, setSelectedCaseIds] = useState<string[]>([])
   const [editorTarget, setEditorTarget] = useState<FunctionCaseEditorTarget | null>(null)
@@ -1148,13 +1147,10 @@ export function CaseLibraryPage() {
                 </div>
 
                 <div className="table-footer case-library-footer">
-                  <Text type="secondary">{footerRange(total, page, pageSize)}</Text>
-                  <Pagination
+                  <ListPagination loading={casesQuery.isFetching || casesQuery.isError}
                     current={page}
                     pageSize={pageSize}
                     total={total}
-                    showSizeChanger
-                    pageSizeOptions={PAGE_SIZE_OPTIONS}
                     onChange={(nextPage, nextPageSize) => {
                       setPageSize(nextPageSize)
                       setPage(nextPageSize === pageSize ? nextPage : 1)

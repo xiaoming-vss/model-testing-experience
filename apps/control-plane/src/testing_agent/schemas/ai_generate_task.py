@@ -178,7 +178,14 @@ class UiGenerateTaskImportRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
+class SourceArchiveAttachRequest(BaseModel):
+    file_id: str = Field(min_length=1, max_length=64)
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
 class SourceArchiveResponse(BaseModel):
+    file_id: str = Field(default="")
     archive_id: str = Field()
     filename: str
     size_bytes: int = Field()

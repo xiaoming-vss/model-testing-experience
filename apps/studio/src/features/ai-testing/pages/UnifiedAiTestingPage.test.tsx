@@ -4,6 +4,11 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('@/shared/api/files', () => ({
+  storageCapabilities: vi.fn(async () => ({ enabled: true, maxBytes: 104857600 })),
+  uploadStoredFile: vi.fn(async () => 'source-file-1'),
+}))
 import { ThemeProvider } from '@/app/providers/ThemeProvider'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { AppSidebar } from '@/app/layouts/AppSidebar'
@@ -30,6 +35,7 @@ function installFetchHandler(onRequest?: (url: URL, init?: RequestInit) => Respo
     if (url.pathname === '/v1/sprints/sprint-1/requirements') {
       return jsonResponse({ items: [{ requirementId: 'requirement-1', name: '登录需求' }], total: 1 })
     }
+    if (/^\/v1\/ui-case-generate-tasks\/[^/]+$/.test(url.pathname)) return jsonResponse({ projectId: 'project-1' })
     if (url.pathname.includes('case-generate-tasks')) return jsonResponse({ items: [], total: 0 })
     return jsonResponse({ items: [], total: 0 })
   })
@@ -316,8 +322,7 @@ describe('统一任务列表中的 UI 用例生成', () => {
         instruction: '覆盖表单校验',
       },
     })
-    expect(requests[1].body).toBeInstanceOf(FormData)
-    expect((requests[1].body as FormData).get('file')).toBeInstanceOf(File)
+    expect(JSON.parse(String(requests[1].body))).toEqual({ fileId: 'source-file-1' })
     expect(await screen.findByText('UI 任务详情')).toBeInTheDocument()
   })
 

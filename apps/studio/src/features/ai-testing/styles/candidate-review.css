@@ -113,6 +113,25 @@
   overflow: hidden;
 }
 
+/* The modal and tab pane already provide the surface. Keep the result views
+   flush with that surface instead of rendering a second card around them. */
+.functional-candidate-review-tabs .ai-generated-cases-review {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.functional-candidate-edit-pane .json-editor-shell {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.functional-candidate-edit-pane .json-editor-shell:focus-within {
+  border-color: transparent;
+  box-shadow: none;
+}
+
 .functional-candidate-review-footer {
   display: flex;
   align-items: flex-end;

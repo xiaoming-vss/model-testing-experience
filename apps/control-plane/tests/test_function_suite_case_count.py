@@ -1,4 +1,3 @@
-
 import pytest
 from test_ai_execution_storage import AsyncSessionAdapter
 from test_ai_execution_storage import db as db

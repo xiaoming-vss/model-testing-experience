@@ -1,6 +1,7 @@
+import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
+import { ListPagination } from '@/shared/components/ListPagination'
 import '@/shared/styles/list-table.css'
 import '@/shared/styles/surface-tokens.css'
-import { footerRange } from '@/shared/utils/pagination'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { usePersonalConnectionChoice } from '@/features/base-services/components/usePersonalConnectionChoice'
@@ -21,7 +22,6 @@ import {
   Form,
   Input,
   Modal,
-  Pagination,
   Popconfirm,
   Select,
   Space,
@@ -215,7 +215,7 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
   const [codeRiskDrawerOpen, setCodeRiskDrawerOpen] = useState(false)
   const [codeRiskDrawerSprintId, setCodeRiskDrawerSprintId] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [searchParams] = useSearchParams()
   const requestedKind = searchParams.get('kind')
   const activeKind: AiTaskKind = taskKinds.find((kind) => kind === requestedKind) ?? 'analysis'
@@ -560,10 +560,6 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
     ])
   }
 
-  useEffect(() => {
-    const maxPage = Math.max(1, Math.ceil(filteredTasks.length / pageSize))
-    if (page > maxPage) setPage(maxPage)
-  }, [filteredTasks.length, page, pageSize])
 
   useEffect(() => {
     setPage(1)
@@ -1509,13 +1505,10 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
           </div>
 
           <div className="table-footer ai-task-list-footer">
-            <Text type="secondary">{footerRange(filteredTasks.length, page, pageSize)}</Text>
-            <Pagination
+            <ListPagination loading={activeTaskSource.query.isFetching || activeTaskSource.query.isError}
               current={page}
               pageSize={pageSize}
               total={filteredTasks.length}
-              showSizeChanger
-              pageSizeOptions={['10', '20', '30', '50']}
               onChange={(nextPage, nextPageSize) => {
                 setPage(nextPage)
                 setPageSize(nextPageSize)

@@ -96,7 +96,7 @@ class SprintDailyMetricResponse(BaseModel):
     function: TestMetricGroup
     api: TestMetricGroup
     ui: TestMetricGroup
-    bug: BugMetricGroup
+    bug: BugMetricGroup | None
     project: ProjectMetricContext = Field(default_factory=ProjectMetricContext)
     sprint: SprintMetricContext = Field(default_factory=SprintMetricContext)
     requirements: list[RequirementMetricContext] = Field(default_factory=list)

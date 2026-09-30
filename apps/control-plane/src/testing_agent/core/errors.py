@@ -43,6 +43,7 @@ ErrSprintDailyMetricsValueInvalid = AppError(2105, "统计值不合法", HTTPSta
 ErrSprintScheduleInvalid = AppError(
     2106, "迭代开始和结束时间必须包含时区，且结束时间晚于开始时间", HTTPStatus.BAD_REQUEST
 )
+ErrRequirementFileMissing = AppError(2203, "需求原文件未存储到 S3，请重新上传", HTTPStatus.CONFLICT)
 ErrRequirementNotFound = AppError(2201, "需求不存在", HTTPStatus.NOT_FOUND)
 ErrRequirementNameAlreadyUse = AppError(2202, "该需求名称已存在", HTTPStatus.CONFLICT)
 ErrApiCollectionNotFound = AppError(2301, "API集合不存在", HTTPStatus.NOT_FOUND)
@@ -120,6 +121,17 @@ ErrTestOrderAssigneeInvalid = AppError(3607, "执行人不是该项目成员", H
 ErrTestOrderEntryAssigneeLocked = AppError(
     3608, "该执行条目已分配给其他执行人", HTTPStatus.FORBIDDEN
 )
+ErrBugNotFound = AppError(3701, "Bug 不存在", HTTPStatus.NOT_FOUND)
+ErrBugTransitionInvalid = AppError(3702, "当前状态不允许该操作", HTTPStatus.BAD_REQUEST)
+ErrBugRejectReasonInvalid = AppError(3703, "请选择拒绝原因", HTTPStatus.BAD_REQUEST)
+ErrBugContentRequired = AppError(3704, "请填写说明", HTTPStatus.BAD_REQUEST)
+ErrBugAssigneeInvalid = AppError(3705, "责任人不是该项目成员", HTTPStatus.BAD_REQUEST)
+ErrBugSprintMismatch = AppError(3706, "迭代与 Bug 不属于同一项目", HTTPStatus.BAD_REQUEST)
+ErrBugRequirementMismatch = AppError(3707, "需求与 Bug 不属于同一项目", HTTPStatus.BAD_REQUEST)
+ErrBugSourceMismatch = AppError(3708, "执行记录与 Bug 不属于同一项目", HTTPStatus.BAD_REQUEST)
+ErrBugSeverityInvalid = AppError(3709, "严重程度不合法", HTTPStatus.BAD_REQUEST)
+ErrBugPriorityInvalid = AppError(3710, "优先级不合法", HTTPStatus.BAD_REQUEST)
+ErrBugFileUnavailable = AppError(3711, "附件尚未上传完成，请重新上传后再提交", HTTPStatus.CONFLICT)
 
 
 def app_error_payload(error: AppError, data: Any | None = None) -> dict[str, Any]:

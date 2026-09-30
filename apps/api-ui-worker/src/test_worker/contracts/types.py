@@ -50,9 +50,6 @@ class WorkerConfig:
     trace_enabled: bool
     screenshot_on_failure: bool
     snapshot_file: str
-    artifacts_bind_host: str = "127.0.0.1"
-    artifacts_port: int = 9010
-    artifacts_base_url: str = ""
 
 
 @dataclass

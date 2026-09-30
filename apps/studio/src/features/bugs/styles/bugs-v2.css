@@ -1,0 +1,313 @@
+/* Bug 列表与详情样式：与测试单/用例库同一套视觉语言，颜色全部走 --srf-* token。 */
+
+/* —— 工具栏 —— */
+.bugs-search-field {
+  width: 288px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+
+.bugs-table-card {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+  box-shadow: 0 1px 2px var(--srf-shadow-color);
+  overflow: hidden;
+}
+
+.bugs-table-scroll {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.bug-title-cell {
+  min-width: 0;
+}
+
+.bug-no-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--srf-chip);
+  color: var(--srf-chip-text);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.bug-title-text {
+  color: var(--srf-text);
+  min-width: 0;
+}
+
+.bug-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--srf-tone-bg, var(--srf-chip));
+  color: var(--srf-tone-text, var(--srf-chip-text));
+  white-space: nowrap;
+}
+
+.bug-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentcolor;
+}
+
+.bug-priority-chip {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--srf-tone-bg, var(--srf-chip));
+  color: var(--srf-tone-text, var(--srf-chip-text));
+}
+
+.bug-muted-cell {
+  font-size: 13px;
+}
+
+.bug-time-cell {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+
+
+/* —— 详情页 —— */
+.bugs-detail-page {
+  min-height: 100%;
+}
+
+.bugs-detail-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.bug-detail-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--srf-text);
+  min-width: 0;
+  flex: 1;
+}
+
+.bug-detail-actions {
+  white-space: nowrap;
+}
+
+.bug-detail-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+@media (max-width: 1100px) {
+  .bug-detail-cols { grid-template-columns: minmax(0, 1fr); }
+}
+
+.bug-detail-panel {
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.bug-panel-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--srf-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bug-meta-list {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  row-gap: 14px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.bug-meta-list dt {
+  color: var(--srf-text-secondary);
+}
+
+.bug-meta-list dd {
+  margin: 0;
+  color: var(--srf-text);
+  min-width: 0;
+  word-break: break-all;
+}
+
+.bug-link-text {
+  color: var(--srf-accent);
+}
+
+
+.bug-attachment-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bug-attachment-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.bug-attachment-size {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* —— 动态流 —— */
+.bug-activity-list {
+  margin: 8px 0 0;
+  padding: 0 0 0 8px;
+  list-style: none;
+}
+
+.bug-activity-item {
+  padding: 0 0 22px 22px;
+  border-top: 0;
+  position: relative;
+  border-left: 1px solid var(--srf-card-border);
+}
+
+
+.bug-activity-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.bug-activity-actor {
+  font-weight: 600;
+  color: var(--srf-text);
+}
+
+.bug-activity-action {
+  color: var(--srf-text-secondary);
+}
+
+.bug-activity-status {
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--srf-chip);
+  color: var(--srf-chip-text);
+  font-size: 12px;
+}
+
+.bug-activity-time {
+  margin-left: auto;
+  color: var(--srf-text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.bug-activity-content {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-hover);
+  color: var(--srf-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bug-activity-changes {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+}
+
+.bug-activity-empty {
+  font-size: 13px;
+}
+
+.bug-comment-composer {
+  margin-bottom: 10px;
+}
+
+/* 列表和详情沿用公共平面卡片与主题。 */
+.bugs-page .bugs-toolbar-actions { margin-left: auto; }
+.bugs-page .bugs-filters { flex: 1; }
+/* 与测试单一致，覆盖 testing 外壳的旧表格内距与玻璃分页背景。 */
+.app-shell-macos .testing-page .bugs-page .api-automation-content > .workbench-panel .bugs-table-scroll {
+  padding: 0 !important;
+}
+
+.bugs-page .bug-title-text { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:root:root .app-shell.app-shell-macos .bugs-page .functional-suite-list-name .bug-title-text {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 20px !important;
+}
+.bugs-page .bug-name-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border: 1px solid var(--srf-accent-border);
+  border-radius: 6px; background: var(--srf-accent-soft);
+}
+.bugs-page .bug-list-number, .bugs-page .bug-time-cell {
+  color: var(--srf-text-muted); font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+.bugs-page .bug-status-pill {
+  padding: 2px 8px; border: 1px solid var(--srf-tone-border, var(--srf-card-border));
+  font-size: 11px; font-weight: 500; line-height: 16px;
+}
+.bugs-filter-popover { display: flex; flex-direction: column; gap: 12px; width: 280px; }
+.bugs-filter-popover .api-filter-field { display: flex; align-items: center; gap: 8px; }
+.bugs-filter-popover .bug-filter-label { color: var(--srf-text-muted); flex: 0 0 64px; font-size: 12px; }
+.bugs-filter-popover > .bug-filter-label { flex: none; }
+.bugs-filter-popover .business-filter-select { flex: 1; min-width: 0; }
+
+.bugs-page .bug-row-actions { white-space: nowrap; }
+.bugs-detail-page .api-automation-content { min-width: 0; }
+.app-shell.app-shell-macos .bugs-detail-page .bug-detail-panel { background: var(--srf-card); border: 1px solid var(--srf-card-border); border-radius: var(--srf-radius-card); box-shadow: none; backdrop-filter: none; }
+.bugs-detail-page .bug-detail-title { font-size: 18px; line-height: 1.5; overflow-wrap: anywhere; }
+.bugs-detail-page .bug-detail-main .bug-detail-panel {
+  padding: 20px 24px;
+}
+
+.bug-panel-title::before { content: ''; width: 3px; height: 14px; border-radius: 2px; background: var(--srf-accent); }
+.bug-section-count { font-size: 12px; font-weight: 400; color: var(--srf-text-muted); }
+.bug-detail-panel .rich-text-viewer { min-height: 100px; }
+
+
+.bug-activity-item::before { content: ''; position: absolute; left: -4px; top: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--srf-accent); }
+.bug-activity-item:last-child { padding-bottom: 0; border-left-color: transparent; }
+.bug-history-diff { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.bug-activity-changes summary { cursor: pointer; color: var(--srf-accent); }
+@media (max-width: 720px) {
+  .bugs-search-field { width: 100%; }
+  .bug-detail-title { flex-basis: 60%; }
+  .bug-detail-actions { flex-basis: 100%; }
+  .bug-history-diff { grid-template-columns: minmax(0, 1fr); }
+  .bugs-detail-page .bug-detail-main .bug-detail-panel { padding: 16px; }
+}
+.bug-column-options { display: flex; flex-direction: column; gap: 10px; }
+.bugs-page .api-filter-field-label { color: var(--srf-text-secondary); background: transparent; padding: 0; }

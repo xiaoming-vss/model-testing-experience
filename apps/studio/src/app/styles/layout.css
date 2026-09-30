@@ -248,9 +248,6 @@
   color: var(--app-shell-text-muted);
 }
 
-.workbench-panel .ant-pagination {
-  padding: 12px 20px 16px;
-}
 
 .requirement-placeholder {
   min-height: 300px;

@@ -19,7 +19,7 @@ class FakeClient:
         self.content = content
         self.paths: list[str] = []
 
-    def get_bytes(self, path: str) -> bytes:
+    def get_signed_file_bytes(self, path: str) -> bytes:
         self.paths.append(path)
         return self.content
 

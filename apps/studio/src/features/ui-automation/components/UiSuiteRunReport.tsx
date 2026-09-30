@@ -1,3 +1,4 @@
+import { StoredFileDownload } from '@/shared/components/files/StoredFile'
 import {
   uiSuiteRunReportViewOptions,
   type UiSuiteRunReportView
@@ -73,7 +74,7 @@ export function UiSuiteRunReport({ suiteRunReportOpen, closeSuiteRunReport, suit
                   <span>结束：{formatTime(suiteRunReport.finishedAt)}</span>
                   <span>总耗时：{suiteRunReport.durationMs ?? 0} ms</span>
                   <span>当前 URL：{suiteRunReport.currentUrl || '-'}</span>
-                  <span>Trace：{suiteRunReport.tracePath || '-'}</span>
+                  <span>{suiteRunReport.tracePath ? <StoredFileDownload path={suiteRunReport.tracePath} label="下载 Trace" /> : "Trace：-"}</span>
                 </div>
               </div>
               <div className="api-collection-run-report-head-actions">

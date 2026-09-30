@@ -1,7 +1,8 @@
+import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
+import { ListPagination } from '@/shared/components/ListPagination'
 import './ProjectsPage.css'
 import '@/shared/styles/list-table.css'
 import '@/shared/styles/surface-tokens.css'
-import { footerRange } from '@/shared/utils/pagination'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { AppIcon } from '@/shared/icons'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
@@ -18,7 +19,6 @@ import {
   Empty,
   Form,
   Input,
-  Pagination,
   Popconfirm,
   Select,
   Space,
@@ -122,9 +122,9 @@ export function ProjectsPage() {
   const [gitlabBindingOpen, setGitlabBindingOpen] = useState(false)
   const [codeBindingRequirement, setCodeBindingRequirement] = useState<RequirementPoolItem | null>(null)
   const [sprintPagination, setSprintPagination] = useState<PaginationState>({ page: 1 })
-  const [sprintPageSize, setSprintPageSize] = useState(10)
+  const [sprintPageSize, setSprintPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [requirementView, setRequirementView] = useState<RequirementViewState>({ page: 1 })
-  const [requirementPageSize, setRequirementPageSize] = useState(10)
+  const [requirementPageSize, setRequirementPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [previewRequirement, setPreviewRequirement] = useState<RequirementPoolItem | null>(null)
   const [projectForm] = Form.useForm()
   const [sprintForm] = Form.useForm()
@@ -248,6 +248,7 @@ export function ProjectsPage() {
           updatedRequirement = await api.replaceRequirementDocument(requirementId, {
             documentType: normalizedDocumentType,
             file: values.file,
+            onUploadProgress: values.onUploadProgress,
           })
         }
 
@@ -269,6 +270,7 @@ export function ProjectsPage() {
         documentType: normalizeRequirementDocumentType(values.documentType) ?? 'text',
         documentContent: values.file ? undefined : values.documentContent,
         file: values.file,
+        onUploadProgress: values.onUploadProgress,
       })
     },
     onSuccess: () => {
@@ -729,13 +731,11 @@ export function ProjectsPage() {
                     ) : null}
                   </div>
                   <div className="table-footer">
-                    <Text type="secondary">{footerRange(sprints.length, sprintPage, sprintPageSize)}</Text>
-                    <Pagination
+                    <ListPagination
+                      loading={sprintsQuery.isFetching || sprintsQuery.isError}
                       current={sprintPage}
                       pageSize={sprintPageSize}
                       total={sprints.length}
-                      showSizeChanger
-                      pageSizeOptions={['10', '20', '50']}
                       onChange={(page, pageSize) => {
                         setSprintPagination({ projectId: activeProjectId, page })
                         setSprintPageSize(pageSize)
@@ -769,13 +769,11 @@ export function ProjectsPage() {
                     ) : null}
                   </div>
                   <div className="table-footer">
-                    <Text type="secondary">{footerRange(filteredRequirements.length, requirementPage, requirementPageSize)}</Text>
-                    <Pagination
+                    <ListPagination
+                      loading={requirementsQuery.isFetching || requirementsQuery.isError}
                       current={requirementPage}
                       pageSize={requirementPageSize}
                       total={filteredRequirements.length}
-                      showSizeChanger
-                      pageSizeOptions={['10', '20', '30', '50']}
                       onChange={(page, pageSize) => {
                         setRequirementView({
                           projectId: activeProjectId,

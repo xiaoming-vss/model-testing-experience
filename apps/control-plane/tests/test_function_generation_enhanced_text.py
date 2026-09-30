@@ -15,18 +15,22 @@ async def test_function_run_rejects_missing_enhanced_text_without_creating_tasks
 ):
     repository = SimpleNamespace(
         session=Mock(),
-        get_requirement=AsyncMock(return_value=SimpleNamespace(
-            document_content=content,
-            document_type=document_type,
-            document_download_url="/original.docx",
-        )),
+        get_requirement=AsyncMock(
+            return_value=SimpleNamespace(
+                document_content=content,
+                document_type=document_type,
+                document_download_url="/original.docx",
+            )
+        ),
         add_all=Mock(),
         commit=AsyncMock(),
     )
     service = ai_tasks.AiGenerateTaskService(repository)
-    service.owned_task = AsyncMock(return_value=SimpleNamespace(
-        requirement_id="requirement-1", project_id="project-1", source_content="original text"
-    ))
+    service.owned_task = AsyncMock(
+        return_value=SimpleNamespace(
+            requirement_id="requirement-1", project_id="project-1", source_content="original text"
+        )
+    )
     monkeypatch.setattr(ai_tasks, "require_personal_connection", AsyncMock())
     with pytest.raises(AppError, match="请先完成需求分析并导入增强文本") as error:
         await service.run("function", "task-1", {"connectionId": "mine"}, "user-1")

@@ -84,6 +84,30 @@ class WorkerTaskService:
         self.repository = repository
         self.credential_cipher = credential_cipher
 
+    async def validate_ui_artifacts(self, task_id, body):
+        import re
+
+        from testing_agent.models.stored_file import StoredFile
+
+        paths = [body.trace_path] if body.trace_path else []
+        for step in body.step_results or []:
+            if isinstance(step, dict) and step.get("screenshotPath"):
+                paths.append(step["screenshotPath"])
+        for path in paths:
+            match = re.fullmatch(r"/v1/files/([a-zA-Z0-9-]+)/download", path)
+            if not match:
+                raise ErrBadRequest
+            row = await self.repository.session.scalar(
+                select(StoredFile).where(
+                    StoredFile.file_id == match[1],
+                    StoredFile.status == "attached",
+                    StoredFile.resource_type == "ui_worker_task",
+                    StoredFile.resource_id == task_id,
+                )
+            )
+            if row is None:
+                raise ErrForbidden
+
     async def _guard_ai_event(self, task, run):
         from testing_agent.models.ai_generate_task import AiGenerateTaskRun
         from testing_agent.services.ai_execution import require_current_worker
@@ -255,6 +279,8 @@ class WorkerTaskService:
         authority = await authorize_execution(self.repository.session, task)
         ensure_worker_match(task, body.worker_id)
         ensure_task_id(task, body)
+        if domain == "ui":
+            await self.validate_ui_artifacts(task_id, body)
         status = ensure_final_status(body.status, {"success", "failed", "error", "canceled"})
         if domain == "ai":
             guarded_run = await self.repository.get_ai_run(task.run_id)
@@ -372,6 +398,7 @@ class WorkerTaskService:
         task = await find_task(self.repository.session, "ui", task_id)
         await authorize_execution(self.repository.session, task)
         ensure_worker_match(task, body.worker_id)
+        await self.validate_ui_artifacts(task_id, body)
         ensure_task_id(task, body)
         item = await self.repository.get_ui_item(item_id)
         if item is None:
@@ -463,10 +490,12 @@ class WorkerTaskService:
         if task.task_type == "ui_case_generate" and run.task_id != task.generate_task_id:
             raise ErrNotFound
         requirement = await self.repository.get_requirement(run.requirement_id)
-        if requirement is None or not (
-            requirement.document_storage_path or requirement.document_content
-        ):
+        if requirement is None:
             raise ErrNotFound
+        if not getattr(requirement, "document_file_id", ""):
+            from testing_agent.core.errors import ErrRequirementFileMissing
+
+            raise ErrRequirementFileMissing
         return requirement
 
     async def source_archive(self, task_id: str):
@@ -476,10 +505,12 @@ class WorkerTaskService:
         run = await self.repository.get_ai_run(task.run_id)
         if run is None or run.task_id != task.generate_task_id or not run.task_id:
             raise ErrNotFound
-        archive = await self.repository.get_source_archive(run.task_id)
-        if archive is None:
-            raise ErrNotFound
-        return archive
+        file_id = (run.snapshot_json or {}).get("sourceArchiveFileId")
+        if not file_id:
+            from testing_agent.core.errors import AppError
+
+            raise AppError(409, "运行未关联 S3 源码包，请重新上传源码包并发起新运行", 409)
+        return file_id
 
     async def progress(self, task_id: str, body: WorkerProgressRequest) -> dict:
         task = await find_task(self.repository.session, "ai", task_id)

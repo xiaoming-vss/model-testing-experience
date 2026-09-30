@@ -14,7 +14,7 @@ python3 scripts/manage.py init
 
 `shared` 统一定义服务地址、发布端口及认证密钥；`database.url` 指定已有数据库，留空时使用下方的内置数据库字段。`control_plane`、`ai_worker`、`api_ui_worker`、`zentao` 区块递归覆盖各项目示例配置中的同名字段。地址、令牌、监听端口和存储路径最终由管理脚本按运行模式统一设置。
 
-默认只允许本机访问。服务器部署时将 `shared.public_host` 改为浏览器能访问的服务器 IP/域名，将 `shared.bind_host` 改为 `0.0.0.0`。当前编排提供 HTTP；域名 HTTPS 可由部署环境的反向代理提供。UI 截图地址也需要浏览器能访问。
+默认只允许本机访问。服务器部署时将 `shared.public_host` 改为浏览器能访问的服务器 IP/域名，将 `shared.bind_host` 改为 `0.0.0.0`。当前编排提供 HTTP；域名 HTTPS 可由部署环境的反向代理提供。S3 Endpoint 必须能被浏览器和 Worker 访问，并为前端配置 CORS。
 
 ## Docker 整体启动
 
@@ -28,11 +28,11 @@ python3 scripts/manage.py compose ps
 python3 scripts/manage.py compose logs -f
 ```
 
-默认前端地址：http://127.0.0.1:8081 。控制面对外 19000（容器内 9000），禅道 8010，截图服务 9010，MySQL 映射到 13306。
+默认前端地址：http://127.0.0.1:8081 。控制面对外 19000（容器内 9000），禅道 8010，MySQL 映射到 13306。
 
-内置数据库模式的启动顺序：MySQL 就绪 → migrate 执行 `alembic upgrade head` → 控制面就绪 → 前端与 Worker。数据库使用独立持久卷，控制面文件、AI 会话、日志和截图也使用持久卷。第一次部署初始化空数据库，原备份目录中的数据库及运行数据不会自动导入。
+内置数据库模式的启动顺序：MySQL 就绪 → migrate 执行 `alembic upgrade head` → 控制面就绪 → 前端与 Worker。数据库使用独立持久卷，业务文件使用私有 S3；AI 会话、日志及 Worker 临时产物仍使用运行目录或卷。控制面旧 storage 卷仅保留历史文件供恢复，不参与业务文件读取。第一次部署初始化空数据库，原备份目录中的数据库及运行数据不会自动导入。
 
-AI 任务需要先配置平台中的模型服务及个人授权，并按项目预置 Skill 包。遵循 AI Worker 的 ADR-0002，在 `ai-runtime` 卷的 `/data/runtime/workspaces/project-<项目ID>/skills/` 下放置技能目录（包含 `SKILL.md`）；本地对应 AI Worker 项目下的 `runtime/workspaces/`。代码迁移不等于模型、技能和业务数据迁移。
+AI 任务需要先配置平台中的模型服务及个人授权，并通过控制面的 [默认技能同步命令](control-plane/skills.md) 将技能源文件上传到 S3。Worker 按任务／阶段拉取当前默认技能到任务独立目录，不再按项目手工预置技能。代码部署不等于默认技能源文件及业务数据迁移。
 
 停止服务并保留数据：
 

@@ -9,7 +9,6 @@ local_host = "127.0.0.1"
 studio_port = 8081
 control_plane_port = 19000
 zentao_port = 8010
-artifacts_port = 9010
 mysql_port = 13306
 worker_token = "GENERATE"
 jwt_key = "GENERATE"
@@ -47,3 +46,17 @@ screenshot_on_failure = true
 [zentao.zentao]
 timeout_seconds = 15
 verify_ssl = true
+
+# S3 私有桶；签名地址必须同时可被浏览器和 Worker 访问。
+[control_plane.storage.s3]
+enabled = false
+endpoint = ""
+region = "us-east-1"
+bucket = ""
+access_key = ""
+secret_key = ""
+prefix = "mtx"
+addressing_style = "path"
+signature_seconds = 900
+temporary_hours = 24
+max_bytes = 104857600

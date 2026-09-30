@@ -40,20 +40,19 @@ export type CaseGenerateTaskRunImportedTarget = ApiCaseGenerateTaskRunImportedTa
 
 export type AiSkillLibraryItem = {
   skillSpaceId: string
-  projectId?: string
+  projectId?: string | null
   filename: string
   isDefault?: boolean
   downloadUrl?: string
   hash?: string
   size?: number
-  version?: number
+  fileCount?: number
   createdAt?: string
   updatedAt?: string
 }
 
 export type UploadAiSkillPayload = {
-  file: File
-  publicBaseURL?: string
+  files: File[]
 }
 
 export type FunctionalCaseGenerateTaskStage =
@@ -99,6 +98,7 @@ export type ApiCaseGenerateTask = {
 }
 
 export type UiCaseSourceArchive = {
+  fileId?: string
   archiveId: string
   filename: string
   sizeBytes: number
@@ -549,7 +549,7 @@ export type RetryFunctionalCaseGenerateTaskRunStagePayload = {
 export type ReviewRequirementAnalysisTaskRunStagePayload = {
   llmConnectionId?: string
   stage: string
-  action: 'approve'
+  action: 'approve' | 'reject'
   configJson: Record<string, unknown>
 }
 

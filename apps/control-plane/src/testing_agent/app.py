@@ -22,7 +22,9 @@ from testing_agent.routers.api_runs import router as api_runs_router
 from testing_agent.routers.api_tests import router as api_tests_router
 from testing_agent.routers.api_worker import router as api_worker_router
 from testing_agent.routers.auth import router as auth_router
+from testing_agent.routers.bugs import router as bugs_router
 from testing_agent.routers.code_risk_analysis_tasks import router as code_risk_analysis_tasks_router
+from testing_agent.routers.files import router as files_router
 from testing_agent.routers.function_ai_tasks import router as function_ai_tasks_router
 from testing_agent.routers.function_tests import router as function_tests_router
 from testing_agent.routers.gitlab_integrations import router as gitlab_integrations_router
@@ -127,12 +129,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def health():
         return success_payload({"status": "ok"})
 
+    v1.include_router(files_router)
     v1.include_router(auth_router, tags=["Auth"])
     v1.include_router(projects_router, tags=["Projects"])
     v1.include_router(sprints_router, tags=["Sprints"])
     v1.include_router(requirements_router, tags=["Requirements"])
     v1.include_router(function_tests_router, tags=["Function Tests"])
     v1.include_router(test_orders_router, tags=["Test Orders"])
+    v1.include_router(bugs_router, tags=["Bugs"])
     v1.include_router(api_tests_router, tags=["API Tests"])
     v1.include_router(api_case_router, tags=["API Tests"])
     v1.include_router(ui_tests_router, tags=["UI Tests"])

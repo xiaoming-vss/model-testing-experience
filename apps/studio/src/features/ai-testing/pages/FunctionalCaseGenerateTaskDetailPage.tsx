@@ -18,6 +18,7 @@ import '@/shared/styles/surface-tokens.css'
 import '@/features/ai-testing/styles/index.css'
 import '@/features/ai-testing/styles/task-review.css'
 import '@/features/ai-testing/styles/candidate-review.css'
+import '@/features/ai-testing/styles/functional-candidate-workbench.css'
 import '@/features/ai-testing/styles/requirement-analysis.css'
 import '@/features/ai-testing/styles/case-name-tree.css'
 import '@/features/ai-testing/styles/run-result.css'
@@ -40,6 +41,7 @@ import { ActionButton } from '@/shared/components/ActionButton'
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
 import { message } from '@/shared/utils/feedback'
+import { saveBlob } from '@/shared/utils/download'
 import { formatStructuredContent } from '@/shared/utils/value'
 import { formatTime, getErrorMessage, normalizeRequirementId, normalizeSprintId, pickUpdatedAt } from '@/utils/format'
 import { ArrowLeftOutlined, CodeOutlined, FileTextOutlined, HistoryOutlined } from '@ant-design/icons'
@@ -50,7 +52,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 const runResultSectionDefinitions = [
   { key: 'enhancedText', label: '增强文本' },
-  { key: 'requirementAnalysis', label: '需求分析' },
+  { key: 'requirementAnalysis', label: '测试需求分析' },
   { key: 'caseNames', label: '测试点' },
   { key: 'caseRelations', label: '图谱分析' },
   { key: 'errorMessage', label: '错误信息' },
@@ -65,7 +67,7 @@ type RunResultModalState = {
 
 const functionalStageMetaMap: Record<string, { label: string; color: string }> = {
   enhanced_text: { label: '增强文档输出', color: 'cyan' },
-  requirement_analysis: { label: '测试需求/风险/测试点输出', color: 'blue' },
+  requirement_analysis: { label: '测试需求分析输出', color: 'blue' },
   case_names: { label: '测试用例名称/测试点输出', color: 'geekblue' },
   detailed_cases: { label: '详细测试用例输出', color: 'purple' },
   relation_analysis: { label: '图谱分析', color: 'volcano' },
@@ -74,7 +76,7 @@ const functionalStageMetaMap: Record<string, { label: string; color: string }> =
 
 const stageConfigFieldMap: Record<string, { key: string; label: string }> = {
   enhanced_text: { key: 'enhancedText', label: '增强文本 enhancedText' },
-  requirement_analysis: { key: 'requirementAnalysis', label: '需求分析 requirementAnalysis' },
+  requirement_analysis: { key: 'requirementAnalysis', label: '测试需求分析 requirementAnalysis' },
   case_names: { key: 'caseNames', label: '测试点 caseNames' },
 }
 
@@ -110,7 +112,7 @@ const runStageFilterOptions: Array<{ label: string; value: 'all' | RunPipelineFi
 ]
 
 const runArtifactDefinitions = [
-  { key: 'requirementAnalysis', label: '需求分析' },
+  { key: 'requirementAnalysis', label: '测试需求分析' },
   { key: 'caseNames', label: '测试点' },
   { key: 'caseRelations', label: '图谱分析' },
 ] as const
@@ -139,8 +141,9 @@ export function FunctionalCaseGenerateTaskDetailPage() {
   const [resultModalRunId, setResultModalRunId] = useState<string | null>(null)
   const [reviewSubmitAction, setReviewSubmitAction] = useState<'approve' | 'reject' | null>(null)
   const [reviewComment, setReviewComment] = useState('')
-  const [candidateModalView, setCandidateModalView] = useState<'preview' | 'edit'>('preview')
   const [candidateYaml, setCandidateYaml] = useState('')
+  const [selectedCaseKey, setSelectedCaseKey] = useState('')
+  const [selectedCaseYaml, setSelectedCaseYaml] = useState('')
   const [revisionTarget, setRevisionTarget] = useState<'stage' | 'final' | null>(null)
   const [revisionFooter, setRevisionFooter] = useState<HTMLDivElement | null>(null)
   const [revisionInstruction, setRevisionInstruction] = useState('')
@@ -607,6 +610,33 @@ export function FunctionalCaseGenerateTaskDetailPage() {
   const canEditCandidate = canReviewSelectedRun
   const candidateDirty = candidateYaml !== formatStructuredContent(selectedRun?.resultYaml ?? '')
 
+  function handleCaseSelect(key: string, raw: Record<string, unknown>) {
+    setSelectedCaseKey(key)
+    setSelectedCaseYaml(formatStructuredContent(JSON.stringify({ cases: [raw] })))
+  }
+
+  function handleSelectedCaseChange(value: string) {
+    setSelectedCaseYaml(value)
+    const [moduleName, indexText] = selectedCaseKey.split(':')
+    const caseIndex = Number(indexText)
+    if (!moduleName || !Number.isInteger(caseIndex)) return
+    try {
+      const parsed = JSON.parse(candidateYaml) as { cases?: Array<Record<string, unknown>> }
+      if (!Array.isArray(parsed.cases)) return
+      const matchingIndexes = parsed.cases
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => String(item.case_module ?? item.module ?? item.module_name ?? item.moduleName ?? item.group ?? '未分组') === moduleName)
+      const target = matchingIndexes[caseIndex]?.index
+      if (target === undefined) return
+      const selected = JSON.parse(value) as { cases?: Array<Record<string, unknown>> }
+      if (!selected.cases?.[0]) return
+      parsed.cases[target] = selected.cases[0]
+      setCandidateYaml(formatStructuredContent(JSON.stringify(parsed)))
+    } catch {
+      // Keep the editor draft visible while the selected JSON is temporarily invalid.
+    }
+  }
+
   useEffect(() => {
     if (!resultModalRunId) {
       setCandidateYaml('')
@@ -614,7 +644,23 @@ export function FunctionalCaseGenerateTaskDetailPage() {
       return
     }
     setReviewComment(selectedRun?.reviewComment ?? '')
-    setCandidateYaml(formatStructuredContent(selectedRun?.resultYaml ?? ''))
+    const formatted = formatStructuredContent(selectedRun?.resultYaml ?? '')
+    setCandidateYaml(formatted)
+    try {
+      const parsed = JSON.parse(formatted) as { cases?: Array<Record<string, unknown>> }
+      const first = parsed.cases?.[0]
+      if (first) {
+        const moduleName = String(first.case_module ?? first.module ?? first.module_name ?? first.moduleName ?? first.group ?? '未分组')
+        setSelectedCaseKey(`${moduleName}:0`)
+        setSelectedCaseYaml(formatStructuredContent(JSON.stringify({ cases: [first] })))
+      } else {
+        setSelectedCaseKey('')
+        setSelectedCaseYaml(formatted)
+      }
+    } catch {
+      setSelectedCaseKey('')
+      setSelectedCaseYaml(formatted)
+    }
   }, [resultModalRunId, selectedRun?.reviewComment, selectedRun?.resultYaml])
 
   useEffect(() => {
@@ -686,7 +732,7 @@ export function FunctionalCaseGenerateTaskDetailPage() {
   function openRevisionModal(target: 'stage' | 'final') {
     if (!selectedRun?.runId) return
     const stage = target === 'final' ? 'detailed_cases' : selectedStage
-    const label = stage === 'detailed_cases' ? '详细测试用例' : stage === 'case_names' ? '测试点' : '需求分析'
+    const label = stage === 'detailed_cases' ? '详细测试用例' : stage === 'case_names' ? '测试点' : '测试需求分析'
     const key = `${selectedRun.runId}:${stage}`
     // Initialize once per run/stage; closing, retrying and polling must preserve the draft.
     if (key !== revisionDraftKey) {
@@ -696,7 +742,6 @@ export function FunctionalCaseGenerateTaskDetailPage() {
       setRevisionInstruction(template)
       setRevisionDraftKey(key)
     }
-    if (target === 'final') setCandidateModalView('edit')
     setRevisionTarget(target)
   }
 
@@ -806,7 +851,6 @@ export function FunctionalCaseGenerateTaskDetailPage() {
     setSelectedRunRecordId(runId)
     setResultModalRunId(runId)
     setReviewSubmitAction(null)
-    setCandidateModalView('preview')
   }
 
   function closeResultModal() {
@@ -1431,7 +1475,7 @@ export function FunctionalCaseGenerateTaskDetailPage() {
 
         <Modal
           mask={{ closable: false }}
-          className="ai-task-import-result-modal functional-candidate-review-modal"
+          className="ai-task-import-result-modal functional-candidate-review-modal functional-candidate-workbench-modal"
           title={
             <div className="functional-candidate-review-title">
               <div>
@@ -1490,70 +1534,63 @@ export function FunctionalCaseGenerateTaskDetailPage() {
               )
               : <Button type="primary" onClick={closeResultModal}>关闭</Button>
           }
-          width={revisionTarget === 'final' ? "calc(100vw - 56px)" : "min(1620px, calc(100vw - 72px))"}
+          width="calc(100vw - 56px)"
           centered
           destroyOnHidden
         >
           <div className={`revision-workspace${revisionTarget === 'final' ? ' is-revising' : ''}`}><div className="revision-source">
             <Form layout="vertical" className="ai-task-import-result-form">
-              <Tabs
-                className="functional-candidate-review-tabs"
-                activeKey={candidateModalView}
-                onChange={(key) => setCandidateModalView(key as 'preview' | 'edit')}
-                items={[
-                  {
-                    key: 'preview',
-                    label: '可视化',
-                    children: (
-                      <div className="ai-task-review-modal-content ai-task-result-preview-modal-content ai-task-import-result-preview-content single-column">
-                        <div className="ai-task-review-modal-section">
-                          <div className="ai-task-review-modal-preview ai-task-import-result-preview">
-                            {selectedRunQuery.isLoading ? (
-                              <div className="ai-task-run-result-popover-loading">
-                                <Spin />
-                              </div>
-                            ) : selectedRun?.resultYaml ? (
-                              <GeneratedCasesReviewView content={formatStructuredContent(selectedRun.resultYaml)} />
-                            ) : (
-                              <div className="ai-task-run-result-popover-empty">当前记录暂无结果</div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ),
-                  },
-                  {
-                    key: 'edit',
-                    label: '编辑候选',
-                    children: (
-                      <div className="ai-task-review-modal-content single-column functional-candidate-edit-pane">
-                        <JsonEditor
-                          ariaLabel="功能候选结果 JSON"
-                          value={candidateYaml}
-                          onChange={setCandidateYaml}
-                          readOnly={!canEditCandidate}
-                          foldable
-                          minHeight={0}
-                          downloadFileName="功能候选结果.json"
-                        />
-                        {updateRunResultMutation.error ? (
-                          <Alert showIcon type="error" title={getErrorMessage(updateRunResultMutation.error)} />
-                        ) : null}
-                        {reviewAvailable ? (
-                          <ProjectActionButton action="write"
-                            type="primary"
-                            loading={updateRunResultMutation.isPending}
-                            disabled={!candidateDirty || reviewRunMutation.isPending || reviseStageMutation.isPending}
-                            onClick={handleSaveCandidateResult}
-                          >
-                            保存候选结果
-                          </ProjectActionButton>
-                        ) : null}
-                      </div>
-                    ),
-                  },
-                ]}
-              />
+              <div className="functional-candidate-workbench">
+                <section className="functional-candidate-visual-pane" aria-label="候选用例可视化">
+                  {selectedRunQuery.isLoading ? (
+                    <div className="ai-task-run-result-popover-loading"><Spin /></div>
+                  ) : candidateYaml ? (
+                    <GeneratedCasesReviewView content={candidateYaml} selectedCaseKey={selectedCaseKey} onCaseSelect={handleCaseSelect} />
+                  ) : (
+                    <div className="ai-task-run-result-popover-empty">当前记录暂无结果</div>
+                  )}
+                </section>
+                <section className="functional-candidate-code-pane" aria-label="候选 JSON 编辑区">
+                  <header className="functional-candidate-code-heading">
+                    <strong>候选结果.json</strong>
+                    <span>{canEditCandidate ? '编辑后实时预览' : '只读'}</span>
+                    <div className="functional-candidate-code-tools">
+                      <Button size="small" onClick={() => setCandidateYaml(formatStructuredContent(candidateYaml))}>格式化</Button>
+                      <Button size="small" onClick={() => { void navigator.clipboard?.writeText(selectedCaseYaml); message.success('已复制候选结果') }}>复制代码</Button>
+                      <Button size="small" onClick={() => saveBlob(new Blob([selectedCaseYaml], { type: 'application/json' }), '功能候选结果.json')}>下载</Button>
+                      <Button size="small" onClick={() => setSelectedCaseYaml(formatStructuredContent(selectedCaseYaml))}>重置</Button>
+                    </div>
+                  </header>
+                  <div className="functional-candidate-edit-pane">
+                    <JsonEditor
+                      ariaLabel="功能候选结果 JSON"
+                      value={selectedCaseYaml}
+                      onChange={handleSelectedCaseChange}
+                      readOnly={!canEditCandidate}
+                      foldable
+                      minHeight={0}
+                      toolbar={null}
+                      downloadFileName="功能候选结果.json"
+                    />
+                    {updateRunResultMutation.error ? (
+                      <Alert showIcon type="error" title={getErrorMessage(updateRunResultMutation.error)} />
+                    ) : null}
+                    <div className="functional-candidate-code-status">
+                      <span>{candidateDirty ? '有未保存修改' : '与已保存结果一致'}</span>
+                      {reviewAvailable ? (
+                        <ProjectActionButton action="write"
+                          type="primary"
+                          loading={updateRunResultMutation.isPending}
+                          disabled={!candidateDirty || reviewRunMutation.isPending || reviseStageMutation.isPending}
+                          onClick={handleSaveCandidateResult}
+                        >
+                          保存候选结果
+                        </ProjectActionButton>
+                      ) : null}
+                    </div>
+                  </div>
+                </section>
+              </div>
               {reviewRunMutation.error ? <Alert showIcon type="error" title={getErrorMessage(reviewRunMutation.error)} /> : null}
             </Form>
           </div>{revisionTarget === 'final' && <><RevisionDivider /><RevisionSidePanel footerContainer={revisionFooter} projectId={task?.projectId} value={revisionInstruction} onChange={setRevisionInstruction} loading={reviseStageMutation.isPending} onCancel={() => setRevisionTarget(null)} onSubmit={handleReviseStage} /></>}</div>

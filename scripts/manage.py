@@ -155,7 +155,7 @@ def validate(data):
             raise ValueError(
                 f"shared.{key} must be an IPv4 address or hostname without a port"
             )
-    port_keys = ["studio_port", "control_plane_port", "zentao_port", "artifacts_port"]
+    port_keys = ["studio_port", "control_plane_port", "zentao_port"]
     if not external:
         port_keys.append("mysql_port")
     ports = [shared[k] for k in port_keys]
@@ -205,11 +205,6 @@ def configurations(data, mode, root=ROOT):
                 "worker": {"key": s["worker_token"]},
             },
             "data": {"db": {"user": {"dsn": dsn}}},
-            "storage": {
-                "uploads_dir": "/app/storage/ai-generate-task-sources"
-                if docker
-                else "storage/ai-generate-task-sources"
-            },
             "integrations": {"zentao_service": {"base_url": z_url}},
         },
     )
@@ -227,9 +222,6 @@ def configurations(data, mode, root=ROOT):
             "control_plane": {"base_url": cp_url, "worker_token": s["worker_token"]},
             "ui": {
                 "artifacts_dir": "/app/artifacts" if docker else "artifacts",
-                "artifacts_bind_host": "0.0.0.0" if docker else s["bind_host"],
-                "artifacts_port": 9010 if docker else s["artifacts_port"],
-                "artifacts_base_url": f"http://{s['public_host']}:{s['artifacts_port']}",
             },
         },
     )
@@ -282,7 +274,6 @@ def configure(mode, root=ROOT):
                 "studio_port",
                 "control_plane_port",
                 "zentao_port",
-                "artifacts_port",
             )
         }
         env["MYSQL_PORT"] = s.get("mysql_port", 13306)

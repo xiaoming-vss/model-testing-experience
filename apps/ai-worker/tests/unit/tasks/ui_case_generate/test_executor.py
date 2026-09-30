@@ -93,7 +93,7 @@ class UiCaseExecutorTests(unittest.TestCase):
         progress: list[TaskProgress] = []
 
         class Client:
-            def get_bytes(self, url: str) -> bytes:
+            def get_signed_file_bytes(self, url: str) -> bytes:
                 self.url = url
                 return _zip_bytes({"src/Login.tsx": "export const Login = () => null"})
 
@@ -227,7 +227,7 @@ class UiCaseExecutorTests(unittest.TestCase):
 
     def test_downloader_rejects_path_traversal(self) -> None:
         class Client:
-            def get_bytes(self, url: str) -> bytes:
+            def get_signed_file_bytes(self, url: str) -> bytes:
                 return _zip_bytes({"../escape.ts": "export {}"})
 
         with tempfile.TemporaryDirectory() as temp_dir:

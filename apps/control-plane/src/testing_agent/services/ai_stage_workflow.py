@@ -111,7 +111,7 @@ class GenerationStageWorkflow:
         )
         is_final_stage = (
             run.status == RunStatus.SUCCESS.value
-            and current_stage == REQUIREMENT_ANALYSIS_FINAL_STAGE
+            and current_stage in REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES
             and run.current_stage in REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES
         )
         if not (is_review_stage or is_final_stage):
@@ -131,6 +131,35 @@ class GenerationStageWorkflow:
         self, run_id: str, body: dict[str, Any], user_id: str
     ) -> dict:
         run = await self.owned_run(user_id, run_id, "requirement_analysis", action="review")
+        current_stage = str(body.get("currentStage") or body.get("stage") or "")
+        is_final_review = (
+            current_stage in REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES
+            and run.current_stage in REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES
+            and run.status in {RunStatus.SUCCESS.value, "waiting_review"}
+            and run.review_status == ReviewStatus.PENDING.value
+        )
+        if is_final_review:
+            action = str(
+                body.get("action") or body.get("reviewStatus") or body.get("status") or "approve"
+            )
+            if action == "approved":
+                action = "approve"
+            if action == "rejected":
+                action = "reject"
+            if action not in {"approve", "reject"}:
+                raise ErrBadRequest
+            run.review_status = (
+                ReviewStatus.APPROVED.value if action == "approve" else ReviewStatus.REJECTED.value
+            )
+            if action == "approve":
+                run.status = RunStatus.SUCCESS.value
+                run.stage_status = StageStatus.COMPLETED.value
+            run.review_comment = str(body.get("reviewComment") or body.get("comment") or "")
+            run.reviewer_user_id = user_id
+            run.reviewed_at = datetime.now(UTC)
+            await self.repository.commit()
+            await self.repository.refresh(run)
+            return dump_run(run)
         if (
             not run.checkpoint_enabled
             or run.status != "waiting_review"
@@ -138,7 +167,6 @@ class GenerationStageWorkflow:
         ):
             raise ErrBadRequest
 
-        current_stage = str(body.get("currentStage") or body.get("stage") or "")
         if (
             current_stage != run.current_stage
             or current_stage not in REQUIREMENT_ANALYSIS_REVIEWABLE_STAGES
@@ -212,7 +240,7 @@ class GenerationStageWorkflow:
             and current_stage in REQUIREMENT_ANALYSIS_REVIEWABLE_STAGES
         )
         is_final_stage = (
-            run.status == RunStatus.SUCCESS.value
+            run.status in {RunStatus.SUCCESS.value, "waiting_review"}
             and current_stage == REQUIREMENT_ANALYSIS_FINAL_STAGE
             and run.current_stage in REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES
         )

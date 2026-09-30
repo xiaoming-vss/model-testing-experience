@@ -226,35 +226,21 @@ class ImportRepository(ReviewRepository):
     async def exists_case_by_collection_and_name(self, collection_id: str, name: str):
         normalized = name.strip().casefold()
         return any(
-            case.collection_id == collection_id
-
-            and case.name.strip().casefold() == normalized
+            case.collection_id == collection_id and case.name.strip().casefold() == normalized
             for case in self.cases
         )
 
     async def list_api_cases(self, collection_id: str):
-        return [
-            case
-            for case in self.cases
-            if case.collection_id == collection_id
-        ]
+        return [case for case in self.cases if case.collection_id == collection_id]
 
     async def list_cases(self, collection_id: str):
         return await self.list_api_cases(collection_id)
 
     async def list_api_extract_rules(self, case_id: str):
-        return [
-            rule
-            for rule in self.extract_rules
-            if rule.case_id == case_id
-        ]
+        return [rule for rule in self.extract_rules if rule.case_id == case_id]
 
     async def list_api_assert_rules(self, case_id: str):
-        return [
-            rule
-            for rule in self.assert_rules
-            if rule.case_id == case_id
-        ]
+        return [rule for rule in self.assert_rules if rule.case_id == case_id]
 
     def add(self, row):
         self.pending.append(row)

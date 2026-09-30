@@ -76,9 +76,7 @@ class UiImportRepository:
         self.project = SimpleNamespace(project_id="project-1", user_id="user-1")
         self.sprint = SimpleNamespace(sprint_id="sprint-1", project_id="project-1")
         self.requirement = SimpleNamespace(requirement_id="requirement-1", sprint_id="sprint-1")
-        self.suite = SimpleNamespace(
-            suite_id="suite-1", requirement_id="requirement-1"
-        )
+        self.suite = SimpleNamespace(suite_id="suite-1", requirement_id="requirement-1")
         now = datetime.now(UTC)
         existing = UiTestCase(
             case_id="case-existing",

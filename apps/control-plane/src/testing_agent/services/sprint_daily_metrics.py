@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import builtins
+import logging
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any
 
+import httpx
+
 from testing_agent.core.enums import TestOrderEntryStatus
 from testing_agent.core.errors import (
+    AppError,
     ErrNotFound,
     ErrResourceBindingInvalid,
     ErrSprintDailyMetricsDateInvalid,
@@ -21,6 +25,8 @@ from testing_agent.repositories.sprint_daily_metrics import SprintDailyMetricsRe
 from testing_agent.services.common import list_payload
 from testing_agent.services.project_access import ProjectAction, require_project_access
 from testing_agent.services.zentao_resource import parse_zentao_remote_id, truncate_error
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -79,7 +85,9 @@ def dump_metric(metric: SprintDailyMetrics) -> dict[str, Any]:
             "serious": metric.bug_serious,
             "normal": metric.bug_normal,
             "suggestion": metric.bug_suggestion,
-        },
+        }
+        if metric.bug_metrics_collected is not False
+        else None,
         "createdAt": metric.created_at,
         "updatedAt": metric.updated_at,
     }
@@ -158,13 +166,6 @@ class SprintDailyMetricsService:
                 (_body or {}).get("connectionId") or (_body or {}).get("connection_id") or ""
             ),
         )
-        metric.bug_details_json = await self.load_bug_details_from_execution(
-            user_id,
-            sprint.sprint_id,
-            connection_id=str(
-                (_body or {}).get("connectionId") or (_body or {}).get("connection_id") or ""
-            ),
-        )
         await self.repository.commit()
         await self.repository.refresh(metric)
         return await self.dump_metric_detail(user_id, metric, sprint)
@@ -177,7 +178,7 @@ class SprintDailyMetricsService:
     ) -> dict[str, Any]:
         project = await self.repository.get_project(metric.project_id or sprint.project_id)
         requirements = await self.repository.list_requirements_by_sprint(sprint.sprint_id)
-        bugs = metric.bug_details_json or []
+        bugs = (metric.bug_details_json or []) if metric.bug_metrics_collected is not False else []
         result = dump_metric(metric)
         result.update(
             {
@@ -209,9 +210,21 @@ class SprintDailyMetricsService:
         function_metrics = await self.load_function_metrics_from_local_runs(sprint.sprint_id)
         api_metrics = await self.load_api_metrics_from_local_runs(sprint.sprint_id)
         ui_metrics = await self.load_ui_metrics_from_local_runs(sprint.sprint_id)
-        bug_metrics = await self.load_bug_metrics_from_execution(
-            user_id, sprint.sprint_id, connection_id=connection_id
-        )
+        # Only the optional external collection may degrade; local/DB failures still propagate.
+        try:
+            bug_snapshot = await self.load_bug_snapshot_from_execution(
+                user_id, sprint.sprint_id, connection_id=connection_id
+            )
+        except (AppError, httpx.RequestError) as exc:
+            logger.warning(
+                "Skipping Zentao metrics for sprint %s (%s)",
+                sprint.sprint_id,
+                type(exc).__name__,
+            )
+            bug_snapshot = None
+        metric.bug_metrics_collected = bug_snapshot is not None
+        bug_metrics, bug_details = bug_snapshot or (BugMetrics(), [])
+        metric.bug_details_json = bug_details
 
         metric.project_id = sprint.project_id
         metric.function_case_total = function_metrics.total
@@ -275,16 +288,17 @@ class SprintDailyMetricsService:
         metrics.pending = max(metrics.total - metrics.executed, 0)
         return metrics
 
-    async def load_bug_metrics_from_execution(
+    async def load_bug_snapshot_from_execution(
         self, user_id: str, sprint_id: str, *, connection_id: str = ""
-    ) -> BugMetrics:
+    ) -> tuple[BugMetrics, builtins.list[dict[str, str]]] | None:
         access = await self.resolve_execution_binding_access(
             user_id, sprint_id, connection_id=connection_id
         )
         if access is None:
-            return BugMetrics()
+            return None
         connection, remote_execution_id = access
         metrics = BugMetrics()
+        bugs: builtins.list[dict[str, str]] = []
         page = 1
         page_size = 100
         while True:
@@ -299,6 +313,7 @@ class SprintDailyMetricsService:
             )
             items = list_items(result)
             for item in items:
+                bugs.append(dump_bug_detail(item))
                 metrics.total += 1
                 status = normalize_status(item_value(item, "status"))
                 if is_closed_bug_status(status):
@@ -319,38 +334,7 @@ class SprintDailyMetricsService:
             if is_last_page(result, page, page_size, len(items)):
                 break
             page += 1
-        return metrics
-
-    async def load_bug_details_from_execution(
-        self, user_id: str, sprint_id: str, *, connection_id: str = ""
-    ) -> builtins.list[dict[str, str]]:
-        if self.integration_connection_service is None or self.zentao_resource_client is None:
-            return []
-        access = await self.resolve_execution_binding_access(
-            user_id, sprint_id, connection_id=connection_id
-        )
-        if access is None:
-            return []
-        connection, remote_execution_id = access
-        bugs: builtins.list[dict[str, str]] = []
-        page = 1
-        page_size = 100
-        while True:
-            if self.zentao_resource_client is None:
-                raise ErrZentaoRemoteResourceUnavailable
-            result = await self.call_zentao(
-                self.zentao_resource_client.list_execution_bugs,
-                connection,
-                remote_execution_id,
-                page,
-                page_size,
-            )
-            items = list_items(result)
-            bugs.extend(dump_bug_detail(item) for item in items)
-            if is_last_page(result, page, page_size, len(items)):
-                break
-            page += 1
-        return bugs
+        return metrics, bugs
 
     async def resolve_execution_binding_access(
         self, user_id: str, sprint_id: str, *, connection_id: str = ""

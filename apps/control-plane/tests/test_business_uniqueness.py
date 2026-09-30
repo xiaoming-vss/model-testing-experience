@@ -1,6 +1,5 @@
 """Business keys remain reserved until their records are physically deleted."""
 
-
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError

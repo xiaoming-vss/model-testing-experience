@@ -185,13 +185,6 @@
   border-radius: 10px;
 }
 
-.ai-testing-page .table-footer {
-  min-height: 48px;
-  padding: 0 18px;
-  border-top: 1px solid var(--app-task-panel-divider);
-  -webkit-backdrop-filter: saturate(180%) blur(18px);
-  backdrop-filter: saturate(180%) blur(18px);
-}
 
 @media (max-width: 680px) {
 
@@ -256,10 +249,6 @@
   background: var(--app-glass-surface-54);
 }
 
-.ai-testing-page .table-footer {
-  border-top-color: var(--app-glass-border-strong);
-  background: var(--app-glass-surface-54);
-}
 
 /* Global macOS palette alignment */
 

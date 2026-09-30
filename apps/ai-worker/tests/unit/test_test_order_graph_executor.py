@@ -11,6 +11,7 @@ from pathlib import Path
 from testing_agent_ai_worker.config.models import NanobotConfig
 from testing_agent_ai_worker.models.execution import TaskStatus
 from testing_agent_ai_worker.models.task import Task, TaskPayload
+from testing_agent_ai_worker.nanobot_runtime.paths import resolve_task_workspace
 from testing_agent_ai_worker.tasks.test_order_graph.executor import (
     TEST_ORDER_GRAPH_SKILL_NAME,
     TestOrderGraphExecutor,
@@ -99,7 +100,7 @@ class TestOrderGraphExecutorTest(unittest.TestCase):
         self._temp = tempfile.TemporaryDirectory()
         self.addCleanup(self._temp.cleanup)
         self.runtime_root = Path(self._temp.name)
-        self.workspace = self.runtime_root / "workspaces" / "project-project-1"
+        self.workspace = resolve_task_workspace(NanobotConfig(runtime_root=str(self.runtime_root)), self._task({}))
 
     def _task(self, payload: dict, *, run_id: str = "run-1") -> Task:
         return Task(

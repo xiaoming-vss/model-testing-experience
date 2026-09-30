@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
@@ -155,7 +154,7 @@ class AiGenerateTaskService:
         self,
         repository: AiGenerateTaskRepository,
         sprint_daily_metrics_service: SprintDailyMetricsService | None = None,
-        source_archive_storage_root: str | Path | None = None,
+        files=None,
         code_risk_analysis_service: CodeRiskAnalysisService | None = None,
     ):
         self.repository = repository
@@ -169,9 +168,7 @@ class AiGenerateTaskService:
             )
         else:
             self.source_archive_repository = repository
-        self.source_archive_storage_root = Path(
-            source_archive_storage_root or "storage/ai-generate-task-sources"
-        )
+        self.files = files
         if sprint_daily_metrics_service is None and hasattr(repository, "session"):
             sprint_daily_metrics_service = SprintDailyMetricsService(
                 SprintDailyMetricsRepository(repository.session)
@@ -336,15 +333,15 @@ class AiGenerateTaskService:
         return dump_task(task, archive)
 
     async def upload_source_archive(
-        self, task_id: str, filename: str, content: bytes, user_id: str
+        self, task_id: str, file_id: str, user_id: str
     ) -> dict[str, Any]:
         workflow = SourceArchiveManager(
             source_archive_repository=self.source_archive_repository,
-            source_archive_storage_root=self.source_archive_storage_root,
+            files=self.files,
             owned_task=self.owned_task,
             id_factory=new_id,
         )
-        return await workflow.upload_source_archive(task_id, filename, content, user_id)
+        return await workflow.upload_source_archive(task_id, file_id, user_id)
 
     async def update(self, kind: str, task_id: str, body: dict[str, Any], user_id: str) -> dict:
         task = await self.owned_task(user_id, task_id, kind, action="write")
@@ -450,10 +447,16 @@ class AiGenerateTaskService:
     async def run(self, kind: str, task_id: str, body: dict[str, Any] | None, user_id: str) -> dict:
         task = await self.owned_task(user_id, task_id, kind, action="execute")
         body = body or {}
-        if kind == "ui" and (
-            await self.source_archive_repository.get_source_archive(task.task_id) is None
-        ):
-            raise ErrBadRequest
+        source_archive_file_id = ""
+        if kind == "ui":
+            archive = await self.source_archive_repository.get_source_archive(task.task_id)
+            if archive is None:
+                raise ErrBadRequest
+            source_archive_file_id = getattr(archive, "file_id", "") or ""
+            if not source_archive_file_id:
+                from testing_agent.core.errors import AppError
+
+                raise AppError(409, "源码包未存储到 S3，请重新上传", 409)
         llm_connection_id = str(body.get("connectionId") or body.get("llmConnectionId") or "")
         if not llm_connection_id:
             raise ErrBadRequest
@@ -500,6 +503,8 @@ class AiGenerateTaskService:
                 None if run_instruction is None else str(run_instruction),
                 worker_task_id=worker_task_id,
             )
+        if kind == "ui":
+            snapshot["sourceArchiveFileId"] = source_archive_file_id
         checkpoint_enabled = (
             True if kind == "requirement_analysis" else bool(body.get("checkpointEnabled", False))
         )
@@ -606,7 +611,10 @@ class AiGenerateTaskService:
 
     async def import_requirement_analysis_run(self, run_id: str, user_id: str) -> dict:
         run = await self.owned_run(user_id, run_id, "requirement_analysis", action="execute")
-        if run.status != RunStatus.SUCCESS.value:
+        if (
+            run.status != RunStatus.SUCCESS.value
+            or run.review_status != ReviewStatus.APPROVED.value
+        ):
             raise ErrBadRequest
         requirement = await self.repository.get_requirement(run.requirement_id)
         if requirement is None:

@@ -1,9 +1,10 @@
+import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
+import { ListPagination } from '@/shared/components/ListPagination'
 import '@/shared/styles/list-table.css'
 import '@/shared/styles/surface-tokens.css'
-import { footerRange } from '@/shared/utils/pagination'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { AppstoreOutlined } from '@ant-design/icons'
-import { Alert, Button, Empty, Form, Pagination, Space, Table, Tooltip, Typography } from 'antd'
+import { Alert, Button, Empty, Form, Space, Table, Tooltip, Typography } from 'antd'
 import type { TableProps } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
@@ -73,7 +74,7 @@ export const UiTestSuiteSection = forwardRef<
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingSuite, setEditingSuite] = useState<UiTestSuite | null>(null)
   const [form] = Form.useForm<UiTestSuiteFormValues>()
@@ -132,14 +133,11 @@ export const UiTestSuiteSection = forwardRef<
     [filteredSuites, page, pageSize],
   )
 
+  const requirementScopeKey = requirementIds?.join(",") ?? ""
   useEffect(() => {
     setPage(1)
-  }, [keyword])
+  }, [keyword, requirementId, requirementScopeKey, selectedSprintId])
 
-  useEffect(() => {
-    const maxPage = Math.max(1, Math.ceil(filteredSuites.length / pageSize))
-    if (page > maxPage) setPage(maxPage)
-  }, [filteredSuites.length, page, pageSize])
 
   const saveSuiteMutation = useMutation({
     mutationFn: (values: UiTestSuiteFormValues) => {
@@ -391,13 +389,10 @@ export const UiTestSuiteSection = forwardRef<
         </div>
 
         <div className="table-footer ui-suite-list-footer">
-          <Text type="secondary">{footerRange(filteredSuites.length, page, pageSize)}</Text>
-          <Pagination
+          <ListPagination loading={suitesQuery.isFetching || suitesQuery.isError}
             current={page}
             pageSize={pageSize}
             total={filteredSuites.length}
-            showSizeChanger
-            pageSizeOptions={['10', '20', '30', '50']}
             onChange={(nextPage, nextPageSize) => {
               setPage(nextPage)
               setPageSize(nextPageSize)

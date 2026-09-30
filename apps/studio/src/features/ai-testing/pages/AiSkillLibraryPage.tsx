@@ -2,10 +2,10 @@ import { saveBlob } from '@/shared/utils/download'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
-import { UploadOutlined } from '@ant-design/icons'
-import { Alert, Card, Empty, Pagination, Popconfirm, Space, Tag, Tooltip, Typography, Upload } from 'antd'
+import { Alert, Card, Empty, Popconfirm, Space, Tag, Tooltip, Typography } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { skillFolder } from '../api/skills.api'
 import '@/features/ai-testing/styles/index.css'
 import '@/features/ai-testing/styles/skill-library.css'
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
@@ -19,10 +19,6 @@ function getSkillSpaceId(skill: AiSkillLibraryItem) {
   return skill.skillSpaceId
 }
 
-function isSkillArchiveFile(fileName: string) {
-  return /\.(zip|tar)$/i.test(fileName.trim())
-}
-
 function footerRange(total: number) {
   if (total === 0) return '显示第 0 条 - 第 0 条，共 0 条'
   return `显示第 1 条 - 第 ${total} 条，共 ${total} 条`
@@ -32,7 +28,7 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
   const queryClient = useQueryClient()
   const { activeProjectId, projectsQuery } = useActiveProject()
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
-  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadFiles, setUploadFiles] = useState<File[]>([])
   const skillsQuery = useQuery({
     queryKey: ['aiSkillLibrary', activeProjectId],
     queryFn: () => api.getAiSkillLibraryItems(activeProjectId!),
@@ -43,7 +39,7 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
   const uploadSkillMutation = useMutation({
     mutationFn: (payload: UploadAiSkillPayload) => api.uploadAiSkill(activeProjectId!, payload),
     onSuccess: () => {
-      message.success('Skill 包已上传')
+      message.success('Skill 已上传')
       closeUploadModal()
       queryClient.invalidateQueries({ queryKey: ['aiSkillLibrary', activeProjectId] })
     },
@@ -52,7 +48,7 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
   const deleteSkillMutation = useMutation({
     mutationFn: (skillSpaceId: string) => api.deleteAiSkill(activeProjectId!, skillSpaceId),
     onSuccess: () => {
-      message.success('Skill 包已删除')
+      message.success('Skill 已删除')
       queryClient.invalidateQueries({ queryKey: ['aiSkillLibrary', activeProjectId] })
     },
   })
@@ -60,34 +56,34 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
   const downloadSkillMutation = useMutation({
     mutationFn: (skill: AiSkillLibraryItem) => api.downloadAiSkill(activeProjectId!, getSkillSpaceId(skill)),
     onSuccess: (response, skill) => {
-      saveBlob(response.blob, response.filename || skill.filename || 'skill-package')
+      saveBlob(response.blob, response.filename || `${skill.filename || 'skill'}.zip`)
     },
   })
 
   function openUploadModal() {
-    setUploadFile(null)
+    setUploadFiles([])
     setUploadModalOpen(true)
   }
 
   function closeUploadModal() {
     setUploadModalOpen(false)
-    setUploadFile(null)
+    setUploadFiles([])
   }
 
   function handleUpload() {
-    if (!uploadFile) {
-      message.warning('请先选择 Skill 压缩包')
+    if (!uploadFiles.length) {
+      message.warning('请先选择 Skill 文件夹')
       return
     }
 
     uploadSkillMutation.mutate({
-      file: uploadFile,
+      files: uploadFiles,
     })
   }
 
   function handleDeleteSkill(skill: AiSkillLibraryItem) {
     if (skill.isDefault) {
-      message.warning('默认 Skill 不允许删除')
+      message.warning('系统默认 Skill 不允许删除')
       return
     }
 
@@ -99,7 +95,7 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
       <div className="workbench-tabs ai-skill-library-tabs">
         <section className="workbench-panel workbench-board-panel ai-testing-task-panel ai-skill-library-panel">
           <div className="panel-header ai-task-panel-header ai-skill-library-panel-head">
-            <Text strong>Skill 包列表</Text>
+            <Text strong>Skill 列表</Text>
             <Space wrap size={8}>
               <ActionButton operation="refresh" onClick={() => skillsQuery.refetch()} disabled={!activeProjectId}>
                 刷新
@@ -127,10 +123,10 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
               </div>
             ) : skills.length === 0 ? (
               <div className="ai-testing-empty-shell ai-skill-library-empty">
-                <Empty description="当前项目下暂无 Skill 包">
-                  <ActionButton type="primary" operation="create" onClick={openUploadModal}>
+                <Empty description="当前项目下暂无 Skill">
+                  <ProjectActionButton action="manage" type="primary" operation="create" onClick={openUploadModal}>
                     上传第一个 Skill
-                  </ActionButton>
+                  </ProjectActionButton>
                 </Empty>
               </div>
             ) : (
@@ -142,42 +138,44 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
                     <Card key={skillSpaceId} className="ai-skill-card" hoverable>
                       <div className="ai-skill-card-head">
                         <div className="ai-skill-card-title">
-                          <Text strong ellipsis={{ tooltip: skill.filename }}>
-                            {skill.filename || '未命名 Skill 包'}
+                          <Text strong>
+                            {skill.filename || '未命名技能'}
                           </Text>
-                          {isDefaultSkill ? <Tag color="blue">默认</Tag> : null}
                         </div>
-                        <Space size={6}>
-                          <Tooltip title="下载">
-                            <ActionButton
-                              type="text"
-                              shape="circle"
-                              operation="download" iconOnly
-                              aria-label="下载 Skill 包"
-                              loading={downloadSkillMutation.isPending && downloadSkillMutation.variables === skill}
-                              onClick={() => downloadSkillMutation.mutate(skill)}
-                            />
-                          </Tooltip>
-                          <Popconfirm
-                            title="确认删除该 Skill 包？"
-                            disabled={isDefaultSkill}
-                            onConfirm={() => handleDeleteSkill(skill)}
-                          >
-                            <Tooltip title={isDefaultSkill ? '默认 Skill 不允许删除' : '删除'}>
-                              <span>
-                                <ProjectActionButton action="manage"
-                                  danger
-                                  type="text"
-                                  shape="circle"
-                                  operation="delete" iconOnly
-                                  aria-label={isDefaultSkill ? '默认 Skill 不允许删除' : '删除 Skill 包'}
-                                  disabled={isDefaultSkill}
-                                  loading={deleteSkillMutation.isPending && deleteSkillMutation.variables === skillSpaceId}
-                                />
-                              </span>
+                        <div className="ai-skill-card-footer">
+                          <Tag color={isDefaultSkill ? 'blue' : 'default'}>{isDefaultSkill ? '系统默认' : '项目自定义'}</Tag>
+                          <Space size={6}>
+                            <Tooltip title="下载">
+                              <ActionButton
+                                type="text"
+                                shape="circle"
+                                operation="download" iconOnly
+                                aria-label="下载 Skill"
+                                loading={downloadSkillMutation.isPending && downloadSkillMutation.variables === skill}
+                                onClick={() => downloadSkillMutation.mutate(skill)}
+                              />
                             </Tooltip>
-                          </Popconfirm>
-                        </Space>
+                            <Popconfirm
+                              title="确认删除该 Skill？"
+                              disabled={isDefaultSkill}
+                              onConfirm={() => handleDeleteSkill(skill)}
+                            >
+                              <Tooltip title={isDefaultSkill ? '系统默认 Skill 不允许删除' : '删除'}>
+                                <span>
+                                  <ProjectActionButton action="manage"
+                                    danger
+                                    type="text"
+                                    shape="circle"
+                                    operation="delete" iconOnly
+                                    aria-label={isDefaultSkill ? '系统默认 Skill 不允许删除' : '删除 Skill'}
+                                    disabled={isDefaultSkill}
+                                    loading={deleteSkillMutation.isPending && deleteSkillMutation.variables === skillSpaceId}
+                                  />
+                                </span>
+                              </Tooltip>
+                            </Popconfirm>
+                          </Space>
+                        </div>
                       </div>
                     </Card>
                   )
@@ -188,7 +186,7 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
 
           <div className="table-footer ai-skill-library-footer">
             <Text type="secondary">{footerRange(skills.length)}</Text>
-            <Pagination current={1} pageSize={18} total={skills.length} showSizeChanger pageSizeOptions={['18']} disabled />
+
           </div>
         </section>
       </div>
@@ -196,7 +194,7 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
       <ProjectActionModal action="manage"
         mask={{ closable: false }}
         open={uploadModalOpen}
-        title="上传 Skill 包"
+        title="上传 Skill 文件夹"
         okText="上传"
         onCancel={closeUploadModal}
         onOk={handleUpload}
@@ -204,28 +202,26 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
         okButtonProps={{ className: 'action-btn-save' }}
         destroyOnHidden
       >
-        <Upload.Dragger
-          accept=".zip,.tar"
-          maxCount={1}
-          beforeUpload={(file) => {
-            if (!isSkillArchiveFile(file.name)) {
-              message.error('仅支持 .zip / .tar 文件')
-              return Upload.LIST_IGNORE
+        <input
+          aria-label="选择 Skill 文件夹"
+          type="file"
+          {...{ webkitdirectory: '', directory: '' }}
+          multiple
+          disabled={uploadSkillMutation.isPending}
+          onChange={(event) => {
+            const files = Array.from(event.target.files || [])
+            try {
+              skillFolder(files)
+              setUploadFiles(files)
+            } catch (error) {
+              setUploadFiles([])
+              message.error(getErrorMessage(error))
             }
-            setUploadFile(file)
-            return false
           }}
-          onRemove={() => {
-            setUploadFile(null)
-            return true
-          }}
-        >
-          <p className="ant-upload-drag-icon">
-            <UploadOutlined />
-          </p>
-          <p className="ant-upload-text">点击或拖拽 Skill 压缩包到这里</p>
-          <p className="ant-upload-hint">同项目下同名文件会由后端覆盖并自动递增版本号。</p>
-        </Upload.Dragger>
+        />
+        <p>{uploadFiles.length ? `已选择 ${uploadFiles.length} 个文件` : '请选择根目录包含 SKILL.md 的技能文件夹'}</p>
+        <Text type="secondary">同名自定义技能整体覆盖，不保留旧文件；系统默认技能不可覆盖。</Text>
+
       </ProjectActionModal>
     </>
   )

@@ -1,6 +1,6 @@
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { UploadOutlined } from '@ant-design/icons'
-import { Alert, Drawer, Form, Input, Select, Upload } from 'antd'
+import { Alert, Drawer, Form, Input, Progress, Select, Upload } from 'antd'
 import type { FormInstance, UploadFile } from 'antd'
 import { useEffect, useState } from 'react'
 import { getRequirementDocumentDisplayName } from '@/features/requirements/utils/requirementDocument'
@@ -64,6 +64,7 @@ export function RequirementDrawer({
   onFinish: (values: RequirementFormValues) => void
 }) {
   const documentType = Form.useWatch('documentType', form) ?? 'text'
+  const [uploadProgress, setUploadProgress] = useState<number | undefined>()
   const [selectedFile, setSelectedFile] = useState<File | undefined>(undefined)
   const [fileList, setFileList] = useState<UploadFile[]>([])
 
@@ -110,14 +111,17 @@ export function RequirementDrawer({
         </ProjectActionButton>
       }
     >
+      {loading && uploadProgress !== undefined ? <Progress percent={uploadProgress} status="active" /> : null}
       {error ? <Alert showIcon type="error" title={getErrorMessage(error)} /> : null}
       <Form<RequirementFormValues>
         form={form}
         layout="vertical"
         onFinish={(values) => {
+          setUploadProgress(undefined)
           if (!isWordDocument(values.documentType)) {
             onFinish({
               ...values,
+              onUploadProgress: setUploadProgress,
               documentContent: values.documentContent?.trim() ?? '',
               file: undefined,
             })
@@ -126,6 +130,7 @@ export function RequirementDrawer({
 
           onFinish({
             ...values,
+            onUploadProgress: setUploadProgress,
             documentContent: undefined,
             file: selectedFile,
           })

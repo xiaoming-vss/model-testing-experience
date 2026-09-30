@@ -50,6 +50,9 @@ class TestOrderEntryResponse(BaseModel):
     case_title: str = Field(default="")
     case_module: str = Field(default="")
     case_priority: str = Field(default="")
+    # 所属需求：经「用例 → 测试集 → 需求」解析的派生字段，供提交 Bug 时带入。
+    requirement_id: str = Field(default="")
+    requirement_name: str = Field(default="")
     order_no: int = Field(default=0)
     status: str = Field(default="")
     assignee_user_id: str = Field(default="")

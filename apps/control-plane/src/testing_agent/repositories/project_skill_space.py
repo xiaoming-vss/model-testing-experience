@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from testing_agent.models.project import Project
 from testing_agent.models.project_skill_space import ProjectSkillSpace
@@ -11,8 +11,6 @@ class ProjectSkillSpaceRepository(ResourceRepository):
     model = ProjectSkillSpace
     id_column = "skill_space_id"
 
-    writes_files = True
-
     async def get_project(self, project_id: str) -> Project | None:
         return await self.session.scalar(select(Project).where(Project.project_id == project_id))
 
@@ -22,7 +20,10 @@ class ProjectSkillSpaceRepository(ResourceRepository):
                 await self.session.scalars(
                     select(ProjectSkillSpace)
                     .where(
-                        ProjectSkillSpace.project_id == project_id,
+                        or_(
+                            ProjectSkillSpace.project_id == project_id,
+                            ProjectSkillSpace.is_default.is_(True),
+                        ),
                     )
                     .order_by(ProjectSkillSpace.created_at.desc())
                 )
@@ -32,7 +33,10 @@ class ProjectSkillSpaceRepository(ResourceRepository):
     async def get(self, project_id: str, skill_space_id: str) -> ProjectSkillSpace | None:
         return await self.session.scalar(
             select(ProjectSkillSpace).where(
-                ProjectSkillSpace.project_id == project_id,
+                or_(
+                    ProjectSkillSpace.project_id == project_id,
+                    ProjectSkillSpace.is_default.is_(True),
+                ),
                 ProjectSkillSpace.skill_space_id == skill_space_id,
             )
         )

@@ -13,6 +13,7 @@ if str(SRC_DIR) not in sys.path:
 from testing_agent_ai_worker.config.models import NanobotConfig
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskStatus
 from testing_agent_ai_worker.models.task import LlmCredentials, Task, TaskPayload
+from testing_agent_ai_worker.nanobot_runtime.paths import resolve_task_workspace
 from testing_agent_ai_worker.tasks.api_case_generate.chain import ChainRunResult
 from testing_agent_ai_worker.tasks.api_case_generate.executor import ApiCaseNanobotExecutor
 
@@ -79,7 +80,7 @@ class ApiCaseExecutorTests(unittest.TestCase):
         self.assertEqual(captured["session_key"], "run-1")
         self.assertEqual(
             Path(str(captured["workspace"])),
-            Path("D:/tmp/nanobot-runtime/workspaces/project-project-1"),
+            resolve_task_workspace(executor.nanobot_config, task),
         )
         self.assertEqual(events, ["chain"])
         self.assertEqual(

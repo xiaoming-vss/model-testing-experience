@@ -49,10 +49,10 @@ function listResponse<T>(items: T[]) {
   return Object.assign([...items], { items, total: items.length })
 }
 
-function renderWorkspace(client: QueryClient) {
+function renderWorkspace(client: QueryClient, initialEntry = '/') {
   return render(
     <QueryClientProvider client={client}>
-      <ConfigProvider theme={{ token: { motion: false } }}><MemoryRouter>
+      <ConfigProvider theme={{ token: { motion: false } }}><MemoryRouter initialEntries={[initialEntry]}>
         <TestOrderWorkspacePage />
       </MemoryRouter></ConfigProvider>
     </QueryClientProvider>,
@@ -294,5 +294,23 @@ it('图谱打开时数字和方向键不操作底层执行条目', async () => {
   await user.click(screen.getByRole('button', { name: 'Close' }))
   expect(screen.getByRole('button', { name: '用例图谱' })).toBeVisible()
   await waitFor(() => expect(screen.queryByRole('dialog', { name: '用例图谱' })).not.toBeInTheDocument())
+  client.clear()
+})
+
+
+it('从 Bug 详情跳转时选中指定执行条目', async () => {
+  useAuthStore.setState({ user: { userId: 'user-1', name: '小明' } })
+  vi.spyOn(api, 'getTestOrder').mockResolvedValue(order)
+  vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(listResponse([
+    entry, { ...entry, entryId: 'entry-2', caseTitle: '第二条用例', orderNo: 2,
+      snapshot: { ...entry.snapshot, preconditions: ['指定来源的执行前置条件'] } },
+  ]))
+  vi.spyOn(api, 'getProjectMembers').mockResolvedValue(listResponse([]))
+  vi.spyOn(api, 'getProjectBugs').mockResolvedValue(listResponse([]))
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedAccess(client, 'owner')
+  renderWorkspace(client, '/test-orders/order-1?entryId=entry-2')
+  expect(await screen.findByText('指定来源的执行前置条件')).toBeInTheDocument()
+  expect(screen.queryByText('已注册手机号')).not.toBeInTheDocument()
   client.clear()
 })

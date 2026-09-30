@@ -108,6 +108,7 @@ def test_requirement_document_fields_match_go_contract():
         "documentType": "text",
         "documentContent": "content",
         "documentFilename": "requirement.txt",
+        "documentFileId": "",
         "documentHash": "hash",
         "documentDownloadUrl": "/v1/requirements/r1/download",
         "createdAt": "2026-01-01T00:00:00Z",
@@ -179,7 +180,7 @@ def test_ui_run_response_uses_snapshot_and_step_results_fields():
     assert "snapshotJson" not in payload
     assert "stepResultsJson" not in payload
     assert "currentUrl" not in payload
-    assert "tracePath" not in payload
+    assert payload["tracePath"] == ""
 
 
 def test_ui_suite_screenshot_policy_uses_go_field():
@@ -363,6 +364,7 @@ def test_integration_binding_and_metric_dump_match_go_contract():
         ui_case_pending=13,
         ui_case_success=14,
         ui_case_failed=15,
+        bug_metrics_collected=True,
         bug_total=16,
         bug_resolved=17,
         bug_closed=18,

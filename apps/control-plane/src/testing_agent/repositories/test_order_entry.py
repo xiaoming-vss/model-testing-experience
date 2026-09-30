@@ -62,6 +62,30 @@ class TestOrderEntryRepository(ResourceRepository):
                 entry.case_title = case.title
                 entry.case_module = case.module
                 entry.case_priority = case.priority
+            # 所属需求经「用例 → 测试集 → 需求」解析，供执行区提交 Bug 时自动带入。
+            scopes = (
+                await self.session.execute(
+                    select(
+                        FunctionTestCase.case_id,
+                        Requirement.requirement_id,
+                        Requirement.name,
+                    )
+                    .join(
+                        FunctionTestSuite,
+                        FunctionTestSuite.suite_id == FunctionTestCase.suite_id,
+                    )
+                    .join(
+                        Requirement, Requirement.requirement_id == FunctionTestSuite.requirement_id
+                    )
+                    .where(FunctionTestCase.case_id.in_(case_ids))
+                )
+            ).all()
+            by_case = {row[0]: (row[1], row[2]) for row in scopes}
+            for entry in entries:
+                scope = by_case.get(entry.case_id)
+                if scope is not None:
+                    entry.requirement_id = scope[0]
+                    entry.requirement_name = scope[1]
         return entries
 
     async def list_by_ids(self, order_id: str, entry_ids: list[str]) -> list[TestOrderEntry]:

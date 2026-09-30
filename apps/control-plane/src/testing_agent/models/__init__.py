@@ -14,6 +14,8 @@ from testing_agent.models.api_collection_run import ApiCollectionRun, ApiCollect
 from testing_agent.models.api_environment import ApiEnvironment
 from testing_agent.models.api_environment_var import ApiEnvironmentVar
 from testing_agent.models.api_extract_rule import ApiExtractRule
+from testing_agent.models.bug import Bug
+from testing_agent.models.bug_activity import BugActivity
 from testing_agent.models.function_test_case import FunctionTestCase
 from testing_agent.models.function_test_suite import FunctionTestSuite
 from testing_agent.models.integration_connection import IntegrationConnection
@@ -25,6 +27,7 @@ from testing_agent.models.resource_binding import ResourceBinding
 from testing_agent.models.shared_service import ServiceAuthorization, SharedService
 from testing_agent.models.sprint import Sprint
 from testing_agent.models.sprint_daily_metrics import SprintDailyMetrics
+from testing_agent.models.stored_file import StoredFile
 from testing_agent.models.test_order import TestOrder
 from testing_agent.models.test_order_entry import TestOrderEntry
 from testing_agent.models.ui_test_case import UiTestCase
@@ -35,6 +38,7 @@ from testing_agent.models.user import User
 from testing_agent.models.worker_task import WorkerTask
 
 __all__ = [
+    "StoredFile",
     "ServiceAuthorization",
     "SharedService",
     "AiGenerateRunImport",
@@ -53,6 +57,8 @@ __all__ = [
     "ApiEnvironmentVar",
     "ApiExtractRule",
     "Base",
+    "Bug",
+    "BugActivity",
     "FunctionTestCase",
     "FunctionTestSuite",
     "IntegrationConnection",

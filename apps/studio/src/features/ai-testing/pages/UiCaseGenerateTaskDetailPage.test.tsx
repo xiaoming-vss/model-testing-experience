@@ -4,6 +4,11 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('@/shared/api/files', () => ({
+  storageCapabilities: vi.fn(async () => ({ enabled: true, maxBytes: 104857600 })),
+  uploadStoredFile: vi.fn(async () => 'source-file-1'),
+}))
 import { TestThemeProvider as ThemeProvider } from '@/test/TestThemeProvider'
 import { UiCaseGenerateTaskDetailPage } from './UiCaseGenerateTaskDetailPage'
 
@@ -947,7 +952,7 @@ describe('UI 用例生成任务详情', () => {
     expect(screen.getByRole('button', { name: '拒绝候选' })).toBeDisabled()
   })
 
-  it('替换源码包要求确认，并使用 multipart file 字段更新当前包', async () => {
+  it('替换源码包要求确认，并使用 S3 文件 ID 更新当前包', async () => {
     let uploadBody: BodyInit | null | undefined
     installFetchHandler((url, init) => {
       if (url.pathname.endsWith('/source-archive') && init?.method === 'PUT') {
@@ -965,8 +970,7 @@ describe('UI 用例生成任务详情', () => {
     expect(screen.getAllByText(/next.zip/).length).toBeGreaterThan(0)
     await user.click(screen.getByRole('button', { name: /确认替换/ }))
 
-    await waitFor(() => expect(uploadBody).toBeInstanceOf(FormData))
-    expect((uploadBody as FormData).get('file')).toBeInstanceOf(File)
+    await waitFor(() => expect(uploadBody).toBe(JSON.stringify({ fileId: 'source-file-1' })))
     expect((await screen.findAllByText('next.zip')).length).toBeGreaterThan(0)
   })
 

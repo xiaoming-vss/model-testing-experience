@@ -158,7 +158,7 @@ export function RequirementAnalysisDiagramView({ content }: { content: string })
     [parsed.businessRules, parsed.scenarioFactors, parsed.scenarioBreakdown, parsed.openQuestions]
       .some((value) => toRecordArray(value).length > 0)
   if (!hasStructuredContent && !coreFunctions.length && !targetSections.length && !legacyTargets.length && !risks.length && !flows.length && !scenes.length) {
-    return <Empty description="暂无可展示的需求分析内容，请在 json 页签查看原始数据" />
+    return <Empty description="暂无可展示的测试需求分析内容，请在 json 页签查看原始数据" />
   }
 
   return (
@@ -297,7 +297,7 @@ export function RequirementAnalysisView({ content }: { content: string }) {
           children: isDiagramAvailable ? (
             <RequirementAnalysisDiagramView content={content} />
           ) : (
-            <div className="ai-task-run-result-popover-empty">当前内容无法解析为结构化需求分析</div>
+            <div className="ai-task-run-result-popover-empty">当前内容无法解析为结构化测试需求分析</div>
           ),
         },
         {

@@ -1,0 +1,326 @@
+/* Candidate results share one modal surface, with visual and JSON panes. */
+.functional-candidate-workbench-modal .ant-modal-body {
+  padding: 0;
+}
+
+.functional-candidate-workbench-modal .functional-candidate-review-title > div:first-child {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.functional-candidate-workbench-modal .functional-candidate-review-title > div:first-child > span {
+  padding: 3px 8px;
+  color: var(--ai-blue);
+  background: var(--ai-accent-soft);
+  border-radius: 4px;
+}
+
+.functional-candidate-workbench {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 58fr) minmax(0, 42fr);
+  overflow: hidden;
+}
+
+.functional-candidate-visual-pane,
+.functional-candidate-code-pane {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.functional-candidate-code-pane {
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--ai-border);
+  background: var(--app-surface);
+}
+
+.functional-candidate-code-heading,
+.functional-candidate-code-status {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 12px;
+  color: var(--ai-text-secondary);
+}
+
+.functional-candidate-code-heading {
+  border-bottom: 1px solid var(--ai-border);
+}
+
+.functional-candidate-code-tools {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.functional-candidate-code-heading strong {
+  color: var(--ai-text);
+  font-family: monospace;
+}
+
+.functional-candidate-code-heading span {
+  color: var(--app-skill-running-text);
+}
+
+.functional-candidate-code-status {
+  border-top: 1px solid var(--ai-border);
+  background: var(--ai-panel-soft);
+}
+
+.functional-candidate-code-pane .functional-candidate-edit-pane {
+  flex: 1 1 0;
+  height: auto;
+  gap: 0;
+  padding: 0;
+}
+
+.functional-candidate-workbench .ai-generated-cases-review {
+  display: flex;
+  flex-direction: column;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-sidebar {
+  flex: 0 0 auto;
+  border: 0;
+  border-bottom: 1px solid var(--ai-border);
+  background: var(--app-surface);
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-sidebar-head {
+  padding: 10px 16px;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-bottom: 1px solid var(--ai-border);
+  background: var(--ai-panel-soft);
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-sidebar-head > strong {
+  display: none;
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-groups {
+  flex-direction: row;
+  padding: 0 16px 12px;
+  gap: 8px;
+  max-height: none;
+}
+
+/* A single module does not need a second navigation row. Keep the semantic
+   module controls in the DOM for keyboard and test consumers, but collapse
+   the redundant row in the common single-module review. */
+.functional-candidate-workbench .ai-generated-cases-review.is-single-group .ai-generated-cases-review-groups {
+  height: 0;
+  min-height: 0;
+  padding: 0 16px;
+  overflow: hidden;
+}
+
+.functional-candidate-workbench .ai-generated-cases-review.is-single-group .ai-generated-cases-review-detail-head {
+  min-height: 0;
+  height: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-groups > button {
+  width: auto;
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--ai-panel-soft);
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-group-name .anticon {
+  display: none;
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-groups > button.active {
+  color: var(--app-surface);
+  background: var(--ai-blue);
+  border-color: var(--ai-blue);
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-detail {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-detail-head {
+  order: 1;
+  min-height: 44px;
+  border: 0;
+  border-top: 1px solid var(--ai-border);
+  background: var(--app-surface);
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-detail-head > div:first-child {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-card-list {
+  flex: 1 1 0;
+  padding: 14px 16px 18px;
+  gap: 14px;
+  background: var(--ai-panel-soft);
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-card {
+  padding: 14px 16px 16px;
+  background: var(--app-surface);
+  box-shadow: none;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-card.is-selected {
+  border: 2px solid var(--ai-blue);
+  box-shadow: 0 0 0 3px var(--ai-accent-soft);
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-card > header {
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--ai-border);
+  flex-wrap: wrap;
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-card > header > strong {
+  flex: 1 0 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-fields {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  padding: 12px 0;
+  background: var(--ai-panel-soft);
+  border: 1px solid var(--ai-border);
+  border-radius: 8px;
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-card > header > strong {
+  color: var(--ai-text);
+  font-size: 14px;
+  line-height: 21px;
+  font-weight: 700;
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-index {
+  width: 32px;
+  height: 26px;
+  flex-basis: 32px;
+  color: var(--ai-text-secondary);
+  background: var(--ai-panel-soft);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-card.is-selected .ai-generated-cases-review-index {
+  color: var(--app-surface);
+  background: var(--ai-blue);
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-card .ant-tag {
+  border-radius: 5px;
+  font-size: 11px;
+  line-height: 20px;
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-sidebar-head .ant-input-affix-wrapper {
+  width: 360px;
+  flex: 0 0 360px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--app-surface);
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-filters {
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  gap: 7px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-filters button {
+  flex: 0 0 auto;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: var(--app-surface);
+  white-space: nowrap;
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-filters button.active {
+  color: var(--app-surface);
+  background: var(--ai-blue);
+  border-color: var(--ai-blue);
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-fields > section {
+  padding: 0 12px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-fields > section + section {
+  border-left: 1px solid var(--ai-border);
+}
+
+@media (max-width: 1080px) {
+  .functional-candidate-workbench,
+  .is-revising .functional-candidate-workbench {
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+  }
+
+  .functional-candidate-visual-pane,
+  .functional-candidate-code-pane {
+    flex: 0 0 480px;
+  }
+
+  .functional-candidate-code-pane {
+    border-left: 0;
+    border-top: 1px solid var(--ai-border);
+  }
+}
+
+@media (max-width: 600px) {
+  .functional-candidate-workbench .ai-generated-cases-review-fields {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .functional-candidate-workbench .ai-generated-cases-review-fields > section + section {
+    border-left: 0;
+    border-top: 1px solid var(--ai-border);
+    padding-top: 12px;
+  }
+}

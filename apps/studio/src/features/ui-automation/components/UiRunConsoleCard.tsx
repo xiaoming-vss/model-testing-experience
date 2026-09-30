@@ -1,3 +1,4 @@
+import { StoredFileDownload } from '@/shared/components/files/StoredFile'
 import type { UiTestCaseRun } from '@/services/api'
 import { CopyOutlined, DownOutlined, FilterOutlined, UpOutlined } from '@ant-design/icons'
 import { Button, Dropdown, Empty, Tooltip } from 'antd'
@@ -146,7 +147,7 @@ export function UiRunConsoleCard({ run, refreshing, onRefresh }: Props) {
                   <pre className="ui-wb-console-snapshot-pre">{prettyPrintValue(section.value)}</pre>
                 </div>
               ))}
-              {run?.tracePath ? <div className="ui-wb-console-snapshot-trace">Trace：{run.tracePath}</div> : null}
+              {run?.tracePath ? <div className="ui-wb-console-snapshot-trace"><StoredFileDownload path={run.tracePath} label="下载 Trace" /></div> : null}
             </div>
           ) : null}
         </div>

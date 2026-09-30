@@ -102,6 +102,20 @@ uv run --extra dev alembic upgrade head           # 数据库迁移
 - GitLab：直连 `/api/v4/*`，使用操作人的个人访问令牌
 - LLM：按任务向 AI Worker 下发 `/internal/ai-worker/tasks/{id}/llm-credentials`
 
+## 迭代统计的缺陷采集降级
+
+更新每日快照时，功能/API/UI 指标始终从平台本地记录统计。禅道未绑定、个人授权不可用或远程采集失败时，仍保存本地统计，返回 `bug: null` 和空缺陷明细；成功采集但没有缺陷时返回总数为 0 的 `bug` 对象。缺陷指标与明细复用同一次分页采集，任何一页失败都不保留部分结果。同日重新采集失败会将本次缺陷标为未采集，不冒用上次成功值；后续成功更新可恢复统计。
+
+Studio 对未采集的缺陷数量、解决率显示 `—`，缺陷画像显示“未采集”，趋势保留缺口；测试报告快照也使用该空值口径。多份可用个人授权仍需用户选择，没有授权时不会阻塞本地统计更新。项目访问与写入权限、本地查询或保存失败仍按原有规则报错。
+
+迁移 `20260924_0015` 增加持久化采集标记，已有历史快照保留原来的统计口径。验证覆盖 `test_sprint_daily_metrics_service.py`、`test_initial_schema_migration.py` 及 Studio 的 `SprintDetailPage.test.tsx`。
+
 ## 测试
 
 在 `apps/control-plane/` 执行 `uv run --extra dev python -m pytest`，当前收集 742 项（711 通过、31 跳过、0 失败）。使用 `python -m pytest` 将项目根目录加入模块搜索路径，以支持测试夹具的模块间复用。`test_function_stage_reexecution_uses_current_actor` 已补齐关联需求与导入后的增强文本，继续验证 owner/member 的阶段重试、修订使用当前操作人的个人授权。
+
+- [内置 MCP 配置](builtin-mcp.md)
+
+- [统一 S3 文件存储与迁移](file-storage.md)
+
+- [Skill 文件夹与默认技能维护](../control-plane/skills.md)

@@ -242,7 +242,7 @@ describe('功能候选结果审核与正式资产导入', () => {
     expect(within(cards[1]).getByText('异常流程')).toBeInTheDocument()
   })
 
-  it('预览候选使用分组导航和结构化卡片，编辑候选直接展示 JSON', async () => {
+  it('候选结果同时展示分组卡片和 JSON 编辑区', async () => {
     installFetchHandler(() => pendingRun)
     const user = userEvent.setup()
     renderPage()
@@ -259,7 +259,6 @@ describe('功能候选结果审核与正式资产导入', () => {
     expect(screen.queryByRole('tab', { name: 'json' })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: '卡片' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: '编辑候选' }))
 
     expect(await screen.findByRole('textbox', { name: '功能候选结果 JSON' })).toBeInTheDocument()
   })
@@ -303,7 +302,7 @@ describe('功能候选结果审核与正式资产导入', () => {
     }))
     const user = userEvent.setup()
     renderPage()
-    await user.click(await screen.findByRole('button', { name: '需求分析' }))
+    await user.click(await screen.findByRole('button', { name: '测试需求分析' }))
     await user.click(screen.getByRole('tab', { name: '可视化' }))
     await user.click(screen.getByRole('button', { name: /场景拆解/ }))
     expect(screen.getByText('暂不可生成测试点')).toBeInTheDocument()
@@ -420,11 +419,11 @@ describe('功能候选结果审核与正式资产导入', () => {
     renderPage()
 
     await clickRunInlineAction(user, 'run-1', '审核结果')
-    await user.click(screen.getByRole('tab', { name: '编辑候选' }))
     const editor = await screen.findByRole('textbox', { name: '功能候选结果 JSON' })
     await user.click(editor)
     await user.keyboard('{Control>}a{/Control}')
     await user.paste(changedYaml)
+    expect(within(screen.getByRole('region', { name: '候选用例可视化' })).getByText('账号密码登录并进入首页')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '保存候选结果' }))
     await waitFor(() => expect(patchBody).toEqual({ resultYaml: changedYaml }))
 
@@ -439,7 +438,6 @@ describe('功能候选结果审核与正式资产导入', () => {
     expect(await screen.findByRole('menuitem', { name: '导入正式用例' })).toBeEnabled()
 
     await user.click(screen.getByRole('button', { name: '查看结果' }))
-    await user.click(screen.getByRole('tab', { name: '编辑候选' }))
     expect(await screen.findByRole('textbox', { name: '功能候选结果 JSON' })).toHaveAttribute('aria-readonly', 'true')
     expect(screen.queryByRole('button', { name: '保存候选结果' })).not.toBeInTheDocument()
   }, 90_000)
@@ -686,7 +684,6 @@ describe('功能测试继续优化', () => {
     const user = userEvent.setup()
     renderPage()
     await clickRunInlineAction(user, 'run-1', '审核结果')
-    await user.click(screen.getByRole('tab', { name: '编辑候选' }))
     const editor = await screen.findByRole('textbox', { name: '功能候选结果 JSON' })
     await user.click(editor)
     await user.keyboard('{Control>}a{/Control}')

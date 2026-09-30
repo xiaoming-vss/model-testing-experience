@@ -130,7 +130,7 @@ class TaskPoller:
                 raise ValueError(f"未知任务类型: {task.task_type}")
 
             # 上报任务完成
-            self._control_plane_client.report_task_completed(task.task_id, result)
+            await asyncio.to_thread(self._control_plane_client.report_task_completed, task.task_id, result)
             logger.info("task completed", {
                 "taskId": task.task_id,
                 "status": result.status,
@@ -219,7 +219,7 @@ class TaskPoller:
                     error_message=error_message,
                     step_results=[],
                 )
-            self._control_plane_client.report_task_completed(task.task_id, result)
+            await asyncio.to_thread(self._control_plane_client.report_task_completed, task.task_id, result)
         except Exception as e:
             logger.error("report task error failed", {
                 "taskId": task.task_id,

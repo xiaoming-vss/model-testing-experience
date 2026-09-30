@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -54,4 +55,6 @@ def migrate_legacy_sessions(nanobot_config: NanobotConfig) -> None:
 def resolve_task_workspace(nanobot_config: NanobotConfig, task: Task) -> Path:
     runtime_paths = resolve_runtime_paths(nanobot_config)
     workspace_key = task.project_id.strip() or f"task-{task.task_id}"
-    return runtime_paths.workspaces_dir / f"project-{workspace_key}"
+    project_key = hashlib.sha256(workspace_key.encode()).hexdigest()[:24]
+    task_key = hashlib.sha256(task.task_id.encode()).hexdigest()[:24]
+    return runtime_paths.workspaces_dir / f"project-{project_key}" / f"task-{task_key}"

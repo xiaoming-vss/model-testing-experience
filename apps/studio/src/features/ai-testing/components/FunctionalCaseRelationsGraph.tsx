@@ -65,7 +65,7 @@ function CaseFlowNode({ data }: NodeProps<CaseFlowNode>) {
       <Handle type="target" position={Position.Top} style={HANDLE_STYLE} isConnectable={false} />
       <span className="node-head">
         <span className="node-no">{padCaseNumber(meta.number)}</span>
-        <span className="node-kind">{meta.onMainPath ? '主线用例' : meta.isolated ? '独立用例' : '分支用例'}</span>
+        <span className="node-kind">{meta.onMainPath ? (meta.shared ? '主线用例 · 共享' : '主线用例') : meta.isolated ? '独立用例' : '分支用例'}</span>
         {badge ? <Tag color={badge.color} aria-label={`执行状态：${badge.label}`}>{badge.label}</Tag> : meta.module ? <span className="node-module">{meta.module}</span> : null}
       </span>
       <span className="node-title">{meta.title}</span>
@@ -162,7 +162,7 @@ function RelationsGraphInner({
   )
 
   // 自适应铺满：扣除选中面板占用的宽度后居中，保证整图可见且不被面板压住。
-  const fitView = useCallback((animate = true) => {
+  const fitView = useCallback((animate = true, readable = false) => {
     const wrapper = wrapperRef.current
     const { getNodes, getNodesBounds: measureNodes, setViewport } = flowRef.current
     const all = getNodes()
@@ -178,6 +178,15 @@ function RelationsGraphInner({
       (height - FIT_PADDING) / bounds.height,
       1,
     ))
+    if (readable && zoom < 0.65) {
+      const first = all.find((node) => (node.data as CaseNodeData).meta.onMainPath) ?? all[0]
+      setViewport({
+        x: FIT_PADDING - first.position.x * 0.8,
+        y: height / 2 - (first.position.y + RELATIONS_NODE_HEIGHT / 2) * 0.8,
+        zoom: 0.8,
+      }, { duration: 0 })
+      return
+    }
     setViewport({
       x: (width - bounds.width * zoom) / 2 - bounds.x * zoom,
       y: (height - bounds.height * zoom) / 2 - bounds.y * zoom,
@@ -213,8 +222,8 @@ function RelationsGraphInner({
       setEdges([])
       return
     }
-    setNodes([...layout.nodes.values()].map((meta) => ({
-      id: meta.caseId,
+    setNodes([...layout.nodes].map(([id, meta]) => ({
+      id,
       type: 'case' as const,
       position: { x: meta.x, y: meta.y },
       initialWidth: RELATIONS_NODE_WIDTH,
@@ -226,8 +235,8 @@ function RelationsGraphInner({
 
   useEffect(() => {
     selectedIdRef.current = selectedId
-    selectionCallbackRef.current?.(selectedId)
-  }, [selectedId])
+    selectionCallbackRef.current?.(selectedId ? layout?.nodes.get(selectedId)?.caseId ?? null : null)
+  }, [selectedId, layout])
 
   // 选中高亮：只更新 data/selected 标记，不重置用户拖拽后的位置。
   useEffect(() => {
@@ -236,19 +245,19 @@ function RelationsGraphInner({
       selected: node.id === selectedId,
       data: {
         ...node.data,
-        badge: caseBadges?.[node.id],
-        dimmed: Boolean(selectedMeta) && node.id !== selectedId && !(activeNodeIds?.has(node.id)),
+        badge: caseBadges?.[node.data.meta.caseId],
+        dimmed: Boolean(selectedMeta) && node.id !== selectedId && !(activeNodeIds?.has(node.data.meta.caseId)),
       },
     })))
   }, [selectedId, selectedMeta, activeNodeIds, caseBadges])
 
   useEffect(() => {
-    if (!model) {
+    if (!model || !layout) {
       setEdges([])
       return
     }
-    setEdges(model.edges.map((edge) => {
-      const color = EDGE_COLORS[edge.relationType][!activeEdgeIds || activeEdgeIds.has(edge.edgeId) ? 'normal' : 'dim']
+    setEdges(layout.edges.map((edge) => {
+      const color = EDGE_COLORS[edge.relationType][!activeEdgeIds || activeEdgeIds.has(edge.originalEdgeId ?? edge.edgeId) ? 'normal' : 'dim']
       return {
         id: edge.edgeId,
         source: edge.fromCaseId,
@@ -262,19 +271,19 @@ function RelationsGraphInner({
         },
       }
     }))
-  }, [model, activeEdgeIds])
+  }, [model, layout, activeEdgeIds])
 
-  const routing = useRelationsEdgePaths(nodes, edges, model?.paths ?? [])
+  const routing = useRelationsEdgePaths(nodes, edges, layout?.paths ?? [])
   const edgePaths = routing.paths
   const routedEdges = useMemo(
     () => edges.map((edge) => ({ ...edge, data: { path: edgePaths.get(edge.id) ?? '' } })),
     [edges, edgePaths],
   )
 
-  // 内容/方向切换后重新铺满（等节点完成首帧布局再计算包围盒）。
+  // 大图从主线起点以可读比例打开；完整概览由“查看全图”主动触发。
   useEffect(() => {
     if (!layout) return
-    const timer = window.setTimeout(() => fitView(false), 50)
+    const timer = window.setTimeout(() => fitView(false, true), 50)
     return () => window.clearTimeout(timer)
   }, [layout, fitView])
 
@@ -309,7 +318,7 @@ function RelationsGraphInner({
     )
   }
 
-  const selectedCaseMeta = selectedId ? caseMetaById.get(selectedId) ?? null : null
+  const selectedCaseMeta = selectedMeta ? caseMetaById.get(selectedMeta.caseId) ?? null : null
 
   return (
     <div className="ai-relations-graph" ref={wrapperRef}>
@@ -357,8 +366,9 @@ function RelationsGraphInner({
         />
       </ReactFlow>
       <div className="ai-relations-hint">
-        {routing.error ? <>连线避障计算失败 <Button size="small" type="link" style={{ pointerEvents: 'auto' }} onClick={routing.retry}>重试</Button></>
-          : routing.pending ? '正在调整连线，可继续拖动用例'
+        {routing.error ? <>部分连线尚未完成，已显示的连线会保留 <Button size="small" type="link" style={{ pointerEvents: 'auto' }} onClick={routing.retry}>重试</Button></>
+          : routing.blockedEdgeIds.length ? `${routing.blockedEdgeIds.length} 条关联暂无不穿越主线的路径，请调整节点位置；这些关联尚未绘制`
+          : routing.pending ? `正在调整连线（已显示 ${[...edgePaths.values()].filter(Boolean).length}/${layout.edges.length}），可继续拖动用例`
             : '拖拽空白平移 · 滚轮缩放 · 拖动用例调整位置 · 松手后连线自动避让'}
       </div>
       <div className="ai-relations-zoom">

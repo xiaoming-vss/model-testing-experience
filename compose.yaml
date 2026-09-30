@@ -38,7 +38,7 @@ services:
       - "${BIND_HOST}:${CONTROL_PLANE_PORT}:9000"
     volumes:
       - ./.runtime/docker/control-plane.toml:/app/config/local.toml:ro
-      - control-plane-storage:/app/storage
+      - control-plane-storage:/app/storage:ro # Historical recovery only; business files use S3.
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -70,8 +70,6 @@ services:
     image: mtx/api-ui-worker:local
     build: ./apps/api-ui-worker
     restart: unless-stopped
-    ports:
-      - "${BIND_HOST}:${ARTIFACTS_PORT}:9010"
     volumes:
       - ./.runtime/docker/api-ui-worker.toml:/app/config.toml:ro
       - worker-artifacts:/app/artifacts

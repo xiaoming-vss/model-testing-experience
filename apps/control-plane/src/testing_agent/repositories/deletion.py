@@ -1,43 +1,18 @@
 """Hard deletion: explicit business children block; owned implementation data is removed.
 
-The caller authorizes access and commits the transaction. Files are removed only
-following a successful commit; a rollback never removes a file.
+The caller authorizes access and commits the transaction. S3 objects are retained
+by the unified file lifecycle; resource deletion never touches historical local paths.
 """
 
 from __future__ import annotations
 
-import logging
-from pathlib import Path
-
-from sqlalchemy import delete, event, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy import delete, or_, select
 
 from testing_agent import models as m
 from testing_agent.core.errors import AppError, ErrNotFound
 
-logger = logging.getLogger(__name__)
-_FILE_QUEUE = "hard_delete_files"
 # 非需求域 AI 任务只是派生产物的容器，随所属项目/迭代/测试单一起清理，不作为删除阻塞。
 AUXILIARY_TASK_TYPES = ("test_report_generate", "test_order_graph")
-
-
-@event.listens_for(Session, "after_commit")
-def _remove_files(session):
-    for filename in session.info.pop(_FILE_QUEUE, set()):
-        try:
-            Path(filename).unlink(missing_ok=True)
-        except OSError:
-            logger.exception("Unable to remove deleted resource file: %s", filename)
-
-
-@event.listens_for(Session, "after_rollback")
-def _keep_files(session):
-    session.info.pop(_FILE_QUEUE, None)
-
-
-def _file(session, filename):
-    if filename:
-        session.info.setdefault(_FILE_QUEUE, set()).add(filename)
 
 
 async def _erase(session, model, *conditions):
@@ -244,15 +219,6 @@ async def delete_resource(session, obj):
         await _ai_run_children(session, [obj.run_id])
     elif isinstance(obj, m.AiGenerateTask):
         await _ai_runs(session, m.AiGenerateTaskRun.task_id == obj.task_id)
-        archives = list(
-            await session.scalars(
-                select(m.AiGenerateTaskSourceArchive).where(
-                    m.AiGenerateTaskSourceArchive.task_id == obj.task_id
-                )
-            )
-        )
-        for archive in archives:
-            _file(session, archive.storage_path)
         await _erase(
             session,
             m.AiGenerateTaskSourceArchive,
@@ -280,10 +246,6 @@ async def delete_resource(session, obj):
         await _erase(
             session, m.ServiceAuthorization, m.ServiceAuthorization.service_id == obj.service_id
         )
-    elif isinstance(obj, m.Requirement):
-        _file(session, obj.document_storage_path)
-    elif isinstance(obj, m.ProjectSkillSpace):
-        _file(session, obj.storage_path)
 
     if isinstance(obj, (m.Project, m.Sprint)):
         key = "project_id" if isinstance(obj, m.Project) else "sprint_id"

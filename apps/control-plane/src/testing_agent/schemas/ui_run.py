@@ -23,6 +23,7 @@ class RunUiSuiteRequest(DebugRunUiCaseRequest):
 
 
 class UiCaseRunResponse(BaseModel):
+    trace_path: str = ""
     run_id: str = Field()
     case_id: str = Field()
     suite_id: str = Field()
@@ -53,6 +54,7 @@ class UiCaseRunResponse(BaseModel):
 
 
 class UiSuiteRunResponse(BaseModel):
+    trace_path: str = ""
     suite_run_id: str = Field()
     suite_id: str = Field()
     requirement_id: str = Field()

@@ -132,6 +132,7 @@ function normalizeDailyMetrics(snapshot?: SprintDailyMetricsSnapshot) {
       failed: uiStats.failed,
     },
     bug: {
+      collected: Boolean(snapshot) && snapshot?.bug !== null,
       total: numberValue(snapshot?.bugTotal, snapshot?.bug_total, bugStats?.total),
       resolved: numberValue(snapshot?.bugResolved, snapshot?.bug_resolved, bugStats?.resolved),
       closed: numberValue(snapshot?.bugClosed, snapshot?.bug_closed, bugStats?.closed),
@@ -180,7 +181,7 @@ function SprintHealthSummary({ metrics }: { metrics: NormalizedDailyMetrics }) {
             <Tag color="processing">进行中</Tag>
           </div>
           <Text type="secondary" className="sprint-dashboard-health-caption">
-            {metrics.totalCases} 个用例，{metrics.bug.total} 个缺陷
+            {metrics.totalCases} 个用例，{metrics.bug.collected ? `${metrics.bug.total} 个缺陷` : '缺陷未采集'}
           </Text>
         </div>
       </div>
@@ -203,23 +204,23 @@ function SprintHealthSummary({ metrics }: { metrics: NormalizedDailyMetrics }) {
       <div className="sprint-dashboard-health-defects">
         <span>
           缺陷
-          <strong>{metrics.bug.total}</strong>
+          <strong>{metrics.bug.collected ? metrics.bug.total : '—'}</strong>
         </span>
         <span>
           已解决
-          <strong className="sprint-dashboard-health-green">{metrics.bug.resolved}</strong>
+          <strong className="sprint-dashboard-health-green">{metrics.bug.collected ? metrics.bug.resolved : '—'}</strong>
         </span>
         <span>
           已关闭
-          <strong className="sprint-dashboard-health-blue">{metrics.bug.closed}</strong>
+          <strong className="sprint-dashboard-health-blue">{metrics.bug.collected ? metrics.bug.closed : '—'}</strong>
         </span>
         <span>
           未解决
-          <strong className="sprint-dashboard-health-red">{metrics.bug.unresolved}</strong>
+          <strong className="sprint-dashboard-health-red">{metrics.bug.collected ? metrics.bug.unresolved : '—'}</strong>
         </span>
         <span>
           解决率
-          <strong className="sprint-dashboard-health-green">{percentValue(metrics.bug.resolved, metrics.bug.total)}%</strong>
+          <strong className="sprint-dashboard-health-green">{metrics.bug.collected ? `${percentValue(metrics.bug.resolved, metrics.bug.total)}%` : '—'}</strong>
         </span>
       </div>
     </div>
@@ -336,6 +337,12 @@ function SeverityLine({
 }
 
 function BugRiskOverviewCard({ bug }: { bug: NormalizedDailyMetrics['bug'] }) {
+  if (!bug.collected) return (
+    <Card className="sprint-overview-card sprint-overview-card-rich sprint-dashboard-panel">
+      <div className="sprint-dashboard-card-head"><Title level={4}>缺陷风险画像</Title></div>
+      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="缺陷数据未采集，暂不统计" />
+    </Card>
+  )
   const chartTheme = sprintChartTheme
   const chartData = [
     { name: '已解决', value: bug.resolved, color: chartTheme.positive },
@@ -439,10 +446,10 @@ function TrendBarChart({ data }: { data: NormalizedDailyMetrics[] }) {
   const chartTheme = sprintChartTheme
   const chartData = data.map((item) => ({
     date: dayjs(item.snapshotDate).isValid() ? dayjs(item.snapshotDate).format('MM-DD') : item.snapshotDate,
-    total: item.bug.total,
-    resolved: item.bug.resolved,
-    closed: item.bug.closed,
-    unresolved: item.bug.unresolved,
+    total: item.bug.collected ? item.bug.total : null,
+    resolved: item.bug.collected ? item.bug.resolved : null,
+    closed: item.bug.collected ? item.bug.closed : null,
+    unresolved: item.bug.collected ? item.bug.unresolved : null,
   }))
 
   return (
@@ -862,8 +869,8 @@ export function SprintDetailPage() {
   const generateMetricsMutation = useMutation({
     mutationFn: async () => {
       const binding = listItems(await api.getSprintBindings(sprintId)).find(b => b.provider === 'zentao' && b.status === 'active')
-      const connectionId = binding ? await personalZentao.choose(projectId, binding.instanceUrl) : undefined
-      return api.generateSprintDailyMetrics(sprintId, todayDate, connectionId)
+      const connectionId = binding ? await personalZentao.choose(projectId, binding.instanceUrl, true) : undefined
+      return api.generateSprintDailyMetrics(sprintId, todayDate, connectionId || undefined)
     },
     onSuccess: () => {
       message.success('已生成最新统计快照')
@@ -976,7 +983,7 @@ export function SprintDetailPage() {
   }
 
   return (<ProjectAccessScope projectId={projectId} resourceError={projectScopeError}>{personalZentao.dialog}{(
-    <div className="workbench-page sprint-overview-page">
+    <div className="workbench-page sprint-overview-page tp-surface">
       {sprintQuery.isLoading ? (
         <div className="workbench-tabs">
           <section className="workbench-panel sprint-overview-panel sprint-overview-panel-unified sprint-overview-state-panel">
@@ -985,11 +992,11 @@ export function SprintDetailPage() {
         </div>
       ) : sprintQuery.data ? (
         <>
-          <section className="workbench-project-toolbar sprint-overview-toolbar">
+          <section className="tp-list-toolbar">
             <div className="sprint-overview-toolbar-summary-row">
               <div className="sprint-overview-toolbar-main">
                 <div className="sprint-overview-hero-title-row">
-                  <Space size={10} wrap>
+                  <Space size={8} wrap>
                     <Tooltip title="返回项目总览">
                       <Button
                         type="text"
@@ -1000,18 +1007,18 @@ export function SprintDetailPage() {
                         onClick={() => navigate('/projects')}
                       />
                     </Tooltip>
-                    <Title level={3} className="sprint-overview-hero-title">
+                    <h1 className="tp-list-title">
                       {sprintName}
-                    </Title>
+                    </h1>
                     <div className="sprint-overview-hero-status">{statusTag(sprintQuery.data.status)}</div>
                   </Space>
                 </div>
               </div>
               <div className="sprint-overview-hero-summary">
                 <SummaryMetric label="总用例数" value={latestMetrics.totalCases} />
-                <SummaryMetric label="Bug 总数" value={latestMetrics.bug.total} />
+                <SummaryMetric label="Bug 总数" value={latestMetrics.bug.collected ? latestMetrics.bug.total : '—'} />
                 <ProjectActionButton action="execute"
-                  className="action-btn-read sprint-overview-refresh-button"
+                  className="action-btn-read"
                   operation="refresh"
                   loading={generateMetricsMutation.isPending}
                   onClick={() => generateMetricsMutation.mutate()}
@@ -1101,7 +1108,7 @@ export function SprintDetailPage() {
                             <div>
                               <Text className="sprint-overview-card-label">Bug 解决趋势</Text>
                               <Title level={4} className="sprint-overview-card-subtitle">
-                                {historyMetrics[historyMetrics.length - 1]?.bug.total ?? 0}
+                                {historyMetrics[historyMetrics.length - 1]?.bug.collected ? historyMetrics[historyMetrics.length - 1]?.bug.total : '—'}
                               </Title>
                             </div>
                             <Tag className="sprint-overview-accent-tag">Bugs</Tag>

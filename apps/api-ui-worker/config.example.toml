@@ -12,11 +12,7 @@ heartbeat_interval_ms = 10000
 
 [ui]
 artifacts_dir = "./artifacts"
-# 临时方案：worker 直接以只读 HTTP 服务暴露截图目录。
-artifacts_bind_host = "127.0.0.1"
-artifacts_port = 9010
-# 前端必须能够访问该地址；部署到其他机器时替换为 worker 的 IP 或域名。
-artifacts_base_url = "http://127.0.0.1:9010"
+# 仅用于生成截图和 Trace 的临时目录；平台接受 S3 文件引用后清理已上传文件。
 headless = true
 slow_mo_ms = 0
 trace_enabled = true

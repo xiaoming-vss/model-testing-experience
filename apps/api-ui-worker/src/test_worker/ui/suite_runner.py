@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from datetime import datetime
 from pathlib import Path
 
@@ -416,7 +418,7 @@ class UiSuiteRunner:
         """上报测试集项完成"""
         if not self._control_plane_client:
             return
-        self._control_plane_client.report_suite_item_completed(task_id, item_id, payload)
+        await asyncio.to_thread(self._control_plane_client.report_suite_item_completed, task_id, item_id, payload)
 
 
 

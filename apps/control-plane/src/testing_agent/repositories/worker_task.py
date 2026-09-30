@@ -98,7 +98,8 @@ class WorkerTaskRepository(BaseRepository):
                 await self.session.scalars(
                     select(ProjectSkillSpace)
                     .where(
-                        ProjectSkillSpace.project_id == project_id,
+                        (ProjectSkillSpace.project_id == project_id)
+                        | ProjectSkillSpace.is_default.is_(True),
                     )
                     .order_by(
                         ProjectSkillSpace.is_default.desc(),

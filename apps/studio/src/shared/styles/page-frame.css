@@ -340,7 +340,6 @@
   overflow: hidden;
 }
 
-.sprint-overview-toolbar,
 .sprint-overview-card-rich {
   border: 1px solid var(--tp-border);
   border-radius: 18px;
@@ -358,25 +357,13 @@
   flex-direction: column;
 }
 
-.sprint-overview-toolbar {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
-  gap: 10px;
-  min-height: auto;
-  padding: 14px 18px;
-  transition:
-    box-shadow 0.22s ease,
-    border-color 0.22s ease;
-}
-
 .sprint-overview-toolbar-summary-row {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .sprint-overview-toolbar-main {
@@ -402,10 +389,6 @@
   justify-content: flex-start;
 }
 
-.sprint-overview-hero-title {
-  margin: 0 !important;
-}
-
 .sprint-overview-hero-status {
   display: inline-flex;
   align-items: center;
@@ -414,25 +397,16 @@
 .sprint-overview-hero-summary {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-left: auto;
   flex-wrap: wrap;
   justify-content: flex-end;
 }
 
-.sprint-overview-refresh-button {
-  flex: 0 0 auto;
-  width: auto;
-  min-width: 92px;
-  height: 36px;
-  padding-inline: 12px;
-  white-space: nowrap;
-}
-
 .sprint-overview-summary-metric {
-  min-width: 90px;
-  min-height: 48px;
-  padding: 8px 12px;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 8px;
   border-radius: 10px;
   background: var(--app-info-surface);
   border: 1px solid var(--app-info-border);
@@ -456,14 +430,15 @@
 .sprint-overview-summary-copy {
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
 }
 
 .sprint-overview-summary-label {
   color: var(--app-text-caption);
-  font-size: 11px;
-  line-height: 16px;
+  font-size: 12px;
+  line-height: 18px;
 }
 
 .sprint-overview-summary-value {
@@ -1033,9 +1008,7 @@
   }
 
   .sprint-overview-hero-summary {
-    width: 100%;
-    flex: none;
-    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 
   .sprint-overview-layout {
@@ -1152,7 +1125,8 @@
   }
 
   .sprint-overview-hero-summary {
-    grid-template-columns: 1fr;
+    width: 100%;
+    margin-left: 0;
   }
 
   .sprint-overview-donut-layout {
@@ -1162,10 +1136,6 @@
 
   .sprint-overview-chart-metrics {
     width: 100%;
-  }
-
-  .sprint-overview-toolbar {
-    padding: 16px;
   }
 }
 .sprint-report-drawer-empty {

@@ -1,4 +1,5 @@
-import { footerRange } from '@/shared/utils/pagination'
+import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
+import { ListPagination } from '@/shared/components/ListPagination'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { SearchOutlined } from '@ant-design/icons'
@@ -11,7 +12,6 @@ import {
   Form,
   Input,
   Popconfirm,
-  Pagination,
   Space,
   Switch,
   Table,
@@ -63,7 +63,7 @@ export function ApiEnvironmentDrawer({
   const [editingEnvironmentVar, setEditingEnvironmentVar] = useState<ApiEnvironmentVar | null>(null)
   const [environmentVarSearch, setEnvironmentVarSearch] = useState('')
   const [environmentVarPage, setEnvironmentVarPage] = useState(1)
-  const [environmentVarPageSize, setEnvironmentVarPageSize] = useState(8)
+  const [environmentVarPageSize, setEnvironmentVarPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [environmentForm] = Form.useForm<EnvironmentFormValues>()
   const [environmentVarForm] = Form.useForm<EnvironmentVarFormValues>()
 
@@ -105,12 +105,6 @@ export function ApiEnvironmentDrawer({
     setEnvironmentVarSearch('')
   }, [selectedEnvironmentKey])
 
-  useEffect(() => {
-    const totalPages = Math.max(1, Math.ceil(filteredEnvironmentVars.length / environmentVarPageSize))
-    if (environmentVarPage > totalPages) {
-      setEnvironmentVarPage(totalPages)
-    }
-  }, [environmentVarPage, environmentVarPageSize, filteredEnvironmentVars.length])
 
   useEffect(() => {
     if (!open) return
@@ -465,12 +459,10 @@ export function ApiEnvironmentDrawer({
                       />
                     </div>
                     <div className="table-footer api-environment-vars-footer">
-                      <Text type="secondary">{footerRange(filteredEnvironmentVars.length, environmentVarPage, environmentVarPageSize)}</Text>
-                      <Pagination
+                      <ListPagination loading={environmentVarsQuery.isFetching || environmentVarsQuery.isError}
                         current={environmentVarPage}
                         pageSize={environmentVarPageSize}
                         total={filteredEnvironmentVars.length}
-                        showSizeChanger
                         onChange={(page, pageSize) => {
                           setEnvironmentVarPage(page)
                           setEnvironmentVarPageSize(pageSize)

@@ -861,21 +861,7 @@
   --srf-list-row-hover: var(--srf-list-row-bg);
 }
 
-/* ===== 页脚 ===== */
 
-.app-shell.app-shell-macos .ai-testing-page .ai-testing-task-panel .ai-task-list-footer {
-  gap: 12px;
-  padding: 10px 16px;
-  border-top: 1px solid var(--srf-divider, var(--app-surface-divider)) !important;
-  background: var(--srf-card, var(--app-surface)) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-
-.app-shell.app-shell-macos .ai-testing-page .ai-task-list-footer .ant-typography {
-  color: var(--srf-text-muted, var(--app-surface-text-muted)) !important;
-  font-size: 12px;
-}
 
 /* ===== 窄屏 ===== */
 

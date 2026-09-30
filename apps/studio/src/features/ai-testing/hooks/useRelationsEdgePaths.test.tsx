@@ -80,6 +80,7 @@ it('invalidates routes on size, orientation, membership, endpoint and removal ch
   rerender({ nodes: vertical.map((node) => ({ ...node, measured: { width: 240, height: 100 } })), edges: initialEdges, mainPaths: paths })
   expect(ControlledWorker.instances).toHaveLength(3)
   rerender({ nodes: initialNodes, edges: initialEdges, mainPaths: [] })
+  expect(ControlledWorker.instances).toHaveLength(4)
   latestWorker().finish()
   expect(result.current.paths.get('ab')).toContain('Q')
   rerender({ nodes: initialNodes, edges: [{ ...initialEdges[0], target: 'c' }], mainPaths: [] })
@@ -111,12 +112,12 @@ it('cancels obsolete jobs and ignores responses after a new drag or unmount', ()
   fresh.finish()
 })
 
-it.each(['onerror', 'onmessageerror'] as const)('keeps previews responsive and allows retry after %s', (failure) => {
+it.each(['onerror', 'onmessageerror'] as const)('does not display unverified paths and allows retry after %s', (failure) => {
   const route = vi.spyOn(routing, 'routeRelationsEdge')
   const { result } = renderHook(() => useRelationsEdgePaths(initialNodes, initialEdges, paths))
   act(() => latestWorker()[failure]?.())
   expect(result.current.error).toBe(true)
-  expect(result.current.paths.get('ab')).toBeTruthy()
+  expect(result.current.paths.size).toBe(0)
   expect(route.mock.calls.length).toBe(0)
   act(() => result.current.retry())
   expect(result.current.pending).toBe(true)
@@ -166,4 +167,41 @@ it('keeps 60 drag updates under the frame budget without full routing or worker 
   rerender({ nodes })
   expect(ControlledWorker.instances).toHaveLength(2)
   expect(route.mock.calls.length).toBe(0)
+})
+
+it('waits for validated geometry and reports blocked relations instead of crossing a mainline', () => {
+  const { result } = renderHook(() => useRelationsEdgePaths(initialNodes, initialEdges, paths))
+  expect(result.current.paths.size).toBe(0)
+  expect(result.current.pending).toBe(true)
+  act(() => latestWorker().onmessage?.({ data: { paths: [['ab', '']], blockedEdgeIds: ['ab'] } } as MessageEvent<RelationsRouteResult>))
+  expect(result.current.blockedEdgeIds).toEqual(['ab'])
+  expect(result.current.pending).toBe(false)
+  expect(result.current.paths.get('ab')).toBe('')
+})
+
+it('shows validated partial routes while the worker continues and preserves them on failure', () => {
+  const { result } = renderHook(() => useRelationsEdgePaths(initialNodes, initialEdges, paths))
+  const worker = latestWorker()
+  act(() => worker.onmessage?.({ data: { paths: [['ab', 'M 236,48 L 900,48']], done: false } } as MessageEvent<RelationsRouteResult>))
+  expect(result.current.paths.get('ab')).toBe('M 236,48 L 900,48')
+  expect(result.current.pending).toBe(true)
+  expect(worker.terminate).not.toHaveBeenCalled()
+  act(() => worker.onerror?.())
+  expect(result.current.error).toBe(true)
+  expect(result.current.paths.get('ab')).toBe('M 236,48 L 900,48')
+})
+
+it('times out a stalled worker without erasing validated partial routes', () => {
+  vi.useFakeTimers()
+  try {
+    const { result, unmount } = renderHook(() => useRelationsEdgePaths(initialNodes, initialEdges, paths))
+    const worker = latestWorker()
+    act(() => worker.onmessage?.({ data: { paths: [['ab', 'M 236,48 L 900,48']], done: false } } as MessageEvent<RelationsRouteResult>))
+    act(() => vi.advanceTimersByTime(15000))
+    expect(result.current.error).toBe(true)
+    expect(result.current.pending).toBe(false)
+    expect(result.current.paths.get('ab')).toBeTruthy()
+    expect(worker.terminate).toHaveBeenCalled()
+    unmount()
+  } finally { vi.useRealTimers() }
 })

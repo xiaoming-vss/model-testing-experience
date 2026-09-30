@@ -16,9 +16,13 @@ _Avoid_: UI 用例 JSON、测试步骤列表
 功能用例产物中的 `case_id`，由平台在生成校验通过后分配，UUID，跨所有用例集唯一，代表用例身份。修订时按「同模块 + 标题」→「同模块 + 内容」→「同模块 + 相对顺序」依次认回旧用例：编辑不改编号，只有用例被删除时其编号才随之消失，且永不复用。技能或模型输出的同名值一律丢弃。
 _Avoid_: 模型生成的编号、集合内顺序编号
 
-**技能预置**：
-部署侧按项目把技能包（`SKILL.md`）放进该项目的 workspace `skills/` 目录，作为任务执行的前置条件；worker 不下载、不更新技能。
-_Avoid_: 技能同步（worker 侧下载机制，已移除）
+**系统默认技能**：
+平台统一维护、所有项目自动可用的任务执行能力。项目成员不可修改，更新直接覆盖，不保留历史版本。
+_Avoid_: 项目预置包、手工技能包
+
+**技能按需获取**：
+任务执行前获取当前阶段所需默认技能的过程。项目自定义技能本期不自动参与任务执行。
+_Avoid_: 技能预置
 
 **代码绑定**：
 需求与（仓库 + 分支）的关联，可绑多个；代码风险分析按绑定计算代码差异。区别于「项目群组绑定」。
@@ -42,4 +46,4 @@ _Avoid_: 受影响测试、被影响用例
 
 `requirement_analysis`、`functional_case_generate`、`api_case_generate`、`ui_case_generate`、`code_risk_analysis`、`test_report_generate`、`test_order_graph`
 
-`test_order_graph` 的图谱输入由控制端组装（需求、用例、需求用例关联）经 `configJson.graphInput` 传入，`cases[]` 字段名与 `analyze-test-case-relations` 的输入契约一致，因此不需要转换层。当前执行体返回 mock 空图谱，真实图谱分析逻辑待定稿后替换 `tasks/test_order_graph/executor.py` 的 `run_graph_analysis`。
+`test_order_graph` 的图谱输入由控制端组装（需求、用例、需求用例关联）经 `configJson.graphInput` 传入，`cases[]` 字段名与 `analyze-test-case-relations` 的输入契约一致，因此不需要转换层。执行时使用 `update-test-case-graph` 按批次累积图谱。

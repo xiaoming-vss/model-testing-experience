@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter
+from fastapi.responses import Response
 
 from testing_agent.handlers.project_skill_space import (
     create_project_skill,
@@ -27,5 +28,8 @@ router.delete(
 )(delete_project_skill)
 router.get(
     "/projects/{project_id}/skills/{skill_space_id}/download",
-    response_model=ApiResponse[ProjectSkillSpaceResponse],
+    response_class=Response,
+    responses={
+        200: {"content": {"application/zip": {"schema": {"type": "string", "format": "binary"}}}}
+    },
 )(download_project_skill)

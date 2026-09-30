@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import io
 import posixpath
 import stat
@@ -8,7 +7,7 @@ import zipfile
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath, PureWindowsPath
-from typing import Any
+from typing import Any, BinaryIO
 
 from testing_agent.core.errors import (
     ErrBadRequest,
@@ -50,13 +49,16 @@ def _canonical_archive_path(name: str) -> str:
     return canonical.casefold()
 
 
-def validate_source_archive(filename: str, content: bytes) -> None:
+def validate_source_archive(filename: str, content: bytes | BinaryIO) -> None:
     if Path(filename).suffix.casefold() != ".zip":
         raise ErrBadRequest
-    if len(content) > MAX_SOURCE_ARCHIVE_BYTES:
+    stream = io.BytesIO(content) if isinstance(content, (bytes, bytearray)) else content
+    size = stream.seek(0, 2)
+    stream.seek(0)
+    if size > MAX_SOURCE_ARCHIVE_BYTES:
         raise ErrBadRequest
     try:
-        with zipfile.ZipFile(io.BytesIO(content)) as archive:
+        with zipfile.ZipFile(stream) as archive:
             paths: set[str] = set()
             file_count = 0
             total_size = 0
@@ -89,65 +91,46 @@ class SourceArchiveManager:
         self,
         *,
         source_archive_repository: AiGenerateTaskSourceArchiveRepository,
-        source_archive_storage_root: Path,
+        files,
         owned_task: OwnedTask,
         id_factory: Callable[[], str] = new_id,
     ):
         self.source_archive_repository = source_archive_repository
-        self.source_archive_storage_root = source_archive_storage_root
+        self.files = files
         self.owned_task = owned_task
         self.new_id = id_factory
 
     async def upload_source_archive(
-        self, task_id: str, filename: str, content: bytes, user_id: str
+        self, task_id: str, file_id: str, user_id: str
     ) -> dict[str, Any]:
         task = await self.owned_task(user_id, task_id, "ui", action="write")
-        safe_filename = Path(filename).name
-        validate_source_archive(safe_filename, content)
-
-        archive_id = self.new_id()
-        uploaded_at = datetime.now(UTC)
-        task_storage_root = self.source_archive_storage_root / task.task_id
-        target_path = task_storage_root / f"{archive_id}.zip"
-        temporary_path = task_storage_root / f".{archive_id}.tmp"
-        task_storage_root.mkdir(parents=True, exist_ok=True)
-        temporary_path.write_bytes(content)
-        temporary_path.replace(target_path)
-
+        if self.files is None:
+            raise ErrBadRequest
         source_repository = self.source_archive_repository
-        archive = await source_repository.get_source_archive_for_update(task.task_id)
-        old_path = Path(archive.storage_path) if archive is not None else None
-        if archive is None:
-            archive = AiGenerateTaskSourceArchive(
-                archive_id=archive_id,
-                task_id=task.task_id,
-                filename=safe_filename,
-                size_bytes=len(content),
-                sha256=hashlib.sha256(content).hexdigest(),
-                storage_path=str(target_path),
-                uploaded_at=uploaded_at,
-            )
-            source_repository.add(archive)
-        else:
-            archive.archive_id = archive_id
-            archive.filename = safe_filename
-            archive.size_bytes = len(content)
-            archive.sha256 = hashlib.sha256(content).hexdigest()
-            archive.storage_path = str(target_path)
-            archive.uploaded_at = uploaded_at
-
         try:
+            row = await self.files.attach(
+                user_id,
+                file_id,
+                task.project_id,
+                "ui_source_archive",
+                task.task_id,
+                purpose="ui_source_archive",
+            )
+            archive = await source_repository.get_source_archive_for_update(task.task_id)
+            if archive is not None and archive.file_id == row.file_id:
+                return dump_task(task, archive)
+            if archive is None:
+                archive = AiGenerateTaskSourceArchive(task_id=task.task_id)
+                source_repository.add(archive)
+            archive.archive_id = self.new_id()
+            archive.file_id = row.file_id
+            archive.filename = row.filename
+            archive.size_bytes = row.size
+            archive.sha256 = row.sha256
+            archive.storage_path = ""
+            archive.uploaded_at = datetime.now(UTC)
             await source_repository.commit()
         except Exception:
-            target_path.unlink(missing_ok=True)
-            if hasattr(source_repository, "rollback"):
-                await source_repository.rollback()
+            await source_repository.rollback()
             raise
-
-        if old_path is not None and old_path != target_path:
-            try:
-                if old_path.resolve().is_relative_to(self.source_archive_storage_root.resolve()):
-                    old_path.unlink(missing_ok=True)
-            except OSError:
-                pass
         return dump_task(task, archive)

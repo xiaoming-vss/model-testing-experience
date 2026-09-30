@@ -61,21 +61,7 @@
   padding: 0 !important;
 }
 
-.ui-test-page .ui-suite-list-footer {
-  gap: 8px;
-  padding: 0 16px;
-  border-top: 1px solid var(--srf-divider);
-  background: var(--srf-hover);
-}
 
-/* 同上，testing/styles 给面板内的 .table-footer 铺过玻璃底，选择器比它更长才能压住。 */
-.app-shell-macos .testing-page .ui-test-page .api-automation-content > .workbench-panel .ui-suite-list-footer {
-  padding: 0 16px;
-  border-top: 1px solid var(--srf-divider) !important;
-  background: var(--srf-hover) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
 
 /* ===== 表格内部 ===== */
 

@@ -92,7 +92,7 @@ export type SprintDailyMetricsSnapshot = {
   function_testing?: SprintDailyMetricsTestStats
   api?: SprintDailyMetricsTestStats
   ui?: SprintDailyMetricsTestStats
-  bug?: SprintDailyMetricsBugStats
+  bug?: SprintDailyMetricsBugStats | null
   bugs?: SprintDailyMetricsBugStats
   functionTotal?: number
   function_total?: number

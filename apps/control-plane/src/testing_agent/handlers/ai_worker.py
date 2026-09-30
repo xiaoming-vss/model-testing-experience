@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from pathlib import Path
+from fastapi import Depends
+from fastapi.responses import JSONResponse, Response
 
-from fastapi import Depends, Response
-from fastapi.responses import FileResponse
-
-from testing_agent.api.deps import get_worker_task_service
+from testing_agent.api.deps import get_file_service, get_worker_task_service
 from testing_agent.schemas.workers import (
     WorkerClaimRequest,
     WorkerProgressRequest,
@@ -82,37 +80,23 @@ async def gitlab_credentials(
 async def requirement_document(
     task_id: str,
     service: WorkerTaskService = Depends(get_worker_task_service),
+    files=Depends(get_file_service),
 ):
     requirement = await service.requirement_document(task_id)
-    path = Path(requirement.document_storage_path)
-    if path.exists() and path.is_file():
-        return FileResponse(
-            path,
-            filename=requirement.document_filename or "requirement",
-            media_type="application/octet-stream",
-        )
-    content = getattr(requirement, "content", None)
-    return Response(
-        content=content if content is not None else requirement.document_content.encode("utf-8"),
-        media_type="application/octet-stream",
-        headers={
-            "Content-Disposition": (
-                f'attachment; filename="{requirement.document_filename or "requirement"}"'
-            )
-        },
-    )
+    row = await files.get(requirement.document_file_id)
+    ticket = await files.ticket(row)
+    return JSONResponse(ticket, headers={"Cache-Control": "no-store"})
 
 
 async def source_archive(
     task_id: str,
     service: WorkerTaskService = Depends(get_worker_task_service),
+    files=Depends(get_file_service),
 ):
-    archive = await service.source_archive(task_id)
-    return FileResponse(
-        archive.storage_path,
-        filename=archive.filename,
-        media_type="application/zip",
-    )
+    file_id = await service.source_archive(task_id)
+    row = await files.get(file_id)
+    ticket = await files.ticket(row)
+    return JSONResponse(ticket, headers={"Cache-Control": "no-store"})
 
 
 async def report_progress(

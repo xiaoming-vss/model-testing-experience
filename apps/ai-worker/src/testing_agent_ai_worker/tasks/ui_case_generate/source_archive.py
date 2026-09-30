@@ -32,7 +32,7 @@ class PlatformSourceArchiveDownloader:
             raise ValueError("ui_case_generate 缺少 sourceArchiveDownloadUrl")
 
         try:
-            archive_bytes = self.client.get_bytes(source_archive_download_url)
+            archive_bytes = self.client.get_signed_file_bytes(source_archive_download_url)
         except Exception as error:
             raise ValueError("sourceArchiveDownloadUrl 下载失败") from error
         source_dir = workspace / "inputs" / _safe_path_part(task.task_id or "task") / "source"

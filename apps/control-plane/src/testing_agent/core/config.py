@@ -7,6 +7,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from testing_agent.core.object_storage import ObjectStorageSettings
+
 
 @dataclass(frozen=True, slots=True)
 class Settings:
@@ -18,7 +20,8 @@ class Settings:
     integration_key: str
     worker_key: str
     database_url: str
-    uploads_dir: str
+    uploads_dir: str  # Deprecated configuration compatibility; no business file IO.
+    s3: ObjectStorageSettings = ObjectStorageSettings()
     zentao_service_base_url: str = "http://127.0.0.1:8010"
     code_overview_cache_ttl_seconds: int = 300
 
@@ -26,6 +29,7 @@ class Settings:
     def from_mapping(cls, data: dict[str, Any]) -> Settings:
         security = data.get("security", {})
         return cls(
+            s3=ObjectStorageSettings(**data.get("storage", {}).get("s3", {})),
             env=data.get("env", "local"),
             http_host=data.get("http", {}).get("host", "127.0.0.1"),
             http_port=int(data.get("http", {}).get("port", 8000)),
@@ -34,9 +38,7 @@ class Settings:
             integration_key=security.get("integration", {}).get("key", "change-me"),
             worker_key=security.get("worker", {}).get("key", ""),
             database_url=data.get("data", {}).get("db", {}).get("user", {}).get("dsn", ""),
-            uploads_dir=data.get("storage", {}).get(
-                "uploads_dir", "storage/ai-generate-task-sources"
-            ),
+            uploads_dir=data.get("storage", {}).get("uploads_dir", ""),
             zentao_service_base_url=data.get("integrations", {})
             .get("zentao_service", {})
             .get("base_url", "http://127.0.0.1:8010"),

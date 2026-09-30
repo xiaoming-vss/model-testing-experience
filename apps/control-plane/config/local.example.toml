@@ -19,7 +19,6 @@ driver = "mysql"
 dsn = "mysql+asyncmy://root:password@127.0.0.1:3306/testing-agent-python?charset=utf8mb4"
 
 [storage]
-uploads_dir = "storage/ai-generate-task-sources"
 
 [integrations.zentao_service]
 base_url = "http://127.0.0.1:8010"
@@ -27,3 +26,17 @@ base_url = "http://127.0.0.1:8010"
 [code_overview]
 # 迭代代码概览缓存窗口(秒),默认 300(5 分钟)
 cache_ttl_seconds = 300
+
+# S3 私有桶；签名地址必须同时可被浏览器和 Worker 访问。
+[storage.s3]
+enabled = false
+endpoint = ""
+region = "us-east-1"
+bucket = ""
+access_key = ""
+secret_key = ""
+prefix = "mtx"
+addressing_style = "path"
+signature_seconds = 900
+temporary_hours = 24
+max_bytes = 104857600

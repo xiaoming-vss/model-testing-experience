@@ -6,6 +6,8 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
+from testing_agent.schemas.project_skill_space import ProjectSkillSpaceResponse
+
 
 def parse_json_object(value: Any) -> dict[str, Any] | None:
     if value is None or isinstance(value, dict):
@@ -97,17 +99,8 @@ class WorkerItemAckResponse(WorkerTaskAckResponse):
     item_id: str = Field()
 
 
-class WorkerProjectSkillResponse(BaseModel):
-    skill_space_id: str = Field()
-    project_id: str = Field()
-    version: int
-    hash: str
-    download_url: str = Field()
-    filename: str
-    size: int
-    is_default: bool = Field()
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+class WorkerProjectSkillResponse(ProjectSkillSpaceResponse):
+    pass
 
 
 class WorkerProjectSkillsResponse(BaseModel):
@@ -166,6 +159,7 @@ class WorkerProgressRequest(BaseModel):
 
 
 class WorkerTaskEventRequest(BaseModel):
+    trace_path: str | None = None
     worker_id: str = Field()
     task_id: str | None = Field(default=None)
     run_id: str | None = Field(default=None)

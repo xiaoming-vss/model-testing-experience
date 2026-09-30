@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-from fastapi import Depends, File, Form, UploadFile
-from fastapi.responses import FileResponse, Response
+from fastapi import Depends
+from fastapi.responses import Response
 
 from testing_agent.api.deps import get_current_user_id, get_project_skill_space_service
 from testing_agent.core.errors import success_payload
+from testing_agent.core.object_storage import download_disposition
+from testing_agent.schemas.project_skill_space import ProjectSkillUploadRequest
 from testing_agent.services.common import list_payload
-from testing_agent.services.project_skill_space import ProjectSkillSpaceService, dump_skill
+from testing_agent.services.project_skill_space import ProjectSkillSpaceService
 
 
 async def list_project_skills(
@@ -24,20 +24,11 @@ async def list_project_skills(
 
 async def create_project_skill(
     project_id: str,
-    file: UploadFile = File(...),
-    public_base_url: str = Form(default="", alias="publicBaseURL"),
+    body: ProjectSkillUploadRequest,
     user_id: str = Depends(get_current_user_id),
     service: ProjectSkillSpaceService = Depends(get_project_skill_space_service),
 ):
-    return success_payload(
-        await service.upload(
-            project_id,
-            file.filename or "skills.zip",
-            await file.read(),
-            public_base_url,
-            user_id,
-        )
-    )
+    return success_payload(await service.upload(project_id, body, user_id))
 
 
 async def delete_project_skill(
@@ -52,17 +43,15 @@ async def delete_project_skill(
 async def download_project_skill(
     project_id: str,
     skill_space_id: str,
+    user_id: str = Depends(get_current_user_id),
     service: ProjectSkillSpaceService = Depends(get_project_skill_space_service),
 ):
-    skill = await service.get_download_public(project_id, skill_space_id)
-    path = Path(skill.storage_path)
-    if skill.storage_path and path.exists() and path.is_file():
-        return FileResponse(path, filename=skill.filename)
-    content = getattr(skill, "content", None)
-    if content is not None:
-        return Response(
-            content=content,
-            media_type="application/octet-stream",
-            headers={"Content-Disposition": f'attachment; filename="{skill.filename}"'},
-        )
-    return success_payload(dump_skill(skill))
+    filename, content = await service.download_zip(project_id, skill_space_id, user_id)
+    return Response(
+        content,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": download_disposition(filename),
+            "Cache-Control": "no-store",
+        },
+    )

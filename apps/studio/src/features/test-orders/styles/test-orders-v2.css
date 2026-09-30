@@ -50,21 +50,7 @@
   padding: 0 !important;
 }
 
-.test-orders-page .test-orders-footer {
-  gap: 12px;
-  padding: 0 16px;
-  border-top: 1px solid var(--srf-divider);
-  background: var(--srf-hover);
-}
 
-/* testing/styles 用 !important 给面板内的 .table-footer 铺过玻璃底，选择器比上面更长才能压住。 */
-.app-shell-macos .testing-page .test-orders-page .api-automation-content > .workbench-panel .test-orders-footer {
-  padding: 0 16px;
-  border-top: 1px solid var(--srf-divider) !important;
-  background: var(--srf-hover) !important;
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
 
 /* ===== 表格内部 ===== */
 

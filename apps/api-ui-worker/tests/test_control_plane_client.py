@@ -97,11 +97,10 @@ def test_parse_ui_suite_run_snapshot_defaults_screenshot_policy() -> None:
     assert snapshot.suite.screenshot_policy == "on_failure"
 
 
-def test_serialize_result_converts_screenshot_path_to_worker_url(tmp_path) -> None:
+def test_serialization_keeps_local_path_until_artifact_publication(tmp_path) -> None:
     config = replace(
         _config(),
         artifacts_root_dir=str(tmp_path),
-        artifacts_base_url="http://worker-a:9010",
     )
     client = ControlPlaneClient(config)
 
@@ -111,9 +110,7 @@ def test_serialize_result_converts_screenshot_path_to_worker_url(tmp_path) -> No
         }],
     })
 
-    assert result["stepResults"][0]["screenshotPath"] == (
-        "http://worker-a:9010/run%201/step%201.png"
-    )
+    assert result["stepResults"][0]["screenshotPath"] == str(tmp_path / "run 1" / "step 1.png")
 
 
 def test_ui_case_snapshot_parses_suite_browser_settings() -> None:

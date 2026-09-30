@@ -12,6 +12,7 @@ from testing_agent.handlers.ui_worker import (
     mark_started,
     mark_suite_item_started,
 )
+from testing_agent.handlers.worker_files import complete_artifact, initiate_artifact
 from testing_agent.schemas.workers import WorkerClaimPayload, WorkerSnapshotResponse
 
 router = APIRouter(prefix="/ui-worker", dependencies=[Depends(verify_worker_token)])
@@ -31,3 +32,7 @@ router.post("/tasks/{task_id}/suite-items/{item_id}/started", status_code=204)(
 router.post("/tasks/{task_id}/suite-items/{item_id}/completed", status_code=204)(
     complete_suite_item
 )
+
+
+router.post("/tasks/{task_id}/files/uploads")(initiate_artifact)
+router.post("/tasks/{task_id}/files/{file_id}/complete")(complete_artifact)

@@ -21,7 +21,7 @@ import {
 } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { AddCasesFromLibraryModal } from '../components/AddCasesFromLibraryModal'
@@ -57,10 +57,11 @@ const STATUS_FILTERS: Array<{ value: string; label: string }> = [
 export function TestOrderWorkspacePage() {
   const { orderId } = useParams<{ orderId: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const queryClient = useQueryClient()
   const currentUserId = useAuthStore((state) => state.user?.userId)
 
-  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null)
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(() => searchParams.get('entryId'))
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [onlyMine, setOnlyMine] = useState(false)
@@ -79,6 +80,18 @@ export function TestOrderWorkspacePage() {
     enabled: Boolean(orderId),
   })
   const order = orderQuery.data
+
+  // 当前执行条目已关联的平台 Bug（从本条提交的），随选择刷新。
+  const linkedBugsQuery = useQuery({
+    queryKey: ['bugs', order?.projectId, 'forEntry', selectedEntryId],
+    queryFn: () =>
+      api.getProjectBugs(order!.projectId!, {
+        sourceEntryId: selectedEntryId!,
+        page: 1,
+        pageSize: 20,
+      }),
+    enabled: Boolean(order?.projectId && selectedEntryId),
+  })
   const { project, can } = useProjectAccess(order?.projectId)
 
   const entriesQuery = useQuery({
@@ -619,7 +632,54 @@ export function TestOrderWorkspacePage() {
 
                   {/* 缺陷信息：只存了一个禅道缺陷号，没有缺陷详情接口，所以不做设计稿里那张 BUG 卡片。 */}
                   <div className="test-order-defect-section">
-                    <div className="test-order-defect-head">关联缺陷与 BUG 追踪</div>
+                    <div className="test-order-defect-head">
+                      关联缺陷与 BUG 追踪
+                      <ProjectActionButton
+                        action="write"
+                        size="small"
+                        className="action-btn-create"
+                        operation="create"
+                        aria-label="提交 Bug"
+                        onClick={() => {
+                          const reason =
+                            selected.status === 'failed'
+                              ? drafts.reason ?? selected.failureReason ?? ''
+                              : selected.status === 'blocked'
+                                ? drafts.reason ?? selected.blockReason ?? ''
+                                : ''
+                          const params = new URLSearchParams({
+                            projectId: order?.projectId ?? '',
+                            orderId: order?.orderId ?? '',
+                            entryId: selected.entryId ?? '',
+                            caseId: selected.caseId ?? '',
+                            requirementId: selected.requirementId ?? '',
+                            sprintId: order?.sprintId ?? '',
+                            title: `${selected.caseTitle ?? '执行失败'} 执行失败`,
+                            description: reason ? `<p>${reason}</p>` : '',
+                          })
+                          navigate(`/bugs/new?${params.toString()}`)
+                        }}
+                      >
+                        提交 Bug
+                      </ProjectActionButton>
+                    </div>
+                    {linkedBugsQuery.data && listItems(linkedBugsQuery.data).length > 0 ? (
+                      <div className="test-order-linked-bugs">
+                        {listItems(linkedBugsQuery.data).map((bug) => (
+                          <a
+                            key={bug.bugId}
+                            className="test-order-linked-bug-chip"
+                            href={`/bugs/${bug.bugId}`}
+                            onClick={(event) => {
+                              event.preventDefault()
+                              navigate(`/bugs/${bug.bugId}`)
+                            }}
+                          >
+                            BUG-{bug.bugNo} {bug.title}
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
                     {selected.status === 'failed' || selected.status === 'blocked' ? (
                       <>
                         <Text type="secondary">

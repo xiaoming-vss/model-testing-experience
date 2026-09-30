@@ -7,9 +7,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import time
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
@@ -59,17 +61,50 @@ class PlatformHttpClient:
                 return None
             return response.json()
 
-    def get_bytes(self, path: str) -> bytes:
-        """发送 GET 请求并返回原始二进制内容。"""
+    def _validate_file_url(self, path: str) -> None:
+        parsed, base = urlparse(path), urlparse(self.base_url)
+        if parsed.netloc and (parsed.scheme, parsed.netloc) != (base.scheme, base.netloc):
+            raise ValueError("File authorization URL must belong to the platform")
 
-        with httpx.Client(
-            base_url=self.base_url,
-            timeout=self.timeout_seconds,
-            headers=self._headers(),
-        ) as client:
-            response = client.get(path)
-            response.raise_for_status()
-            return response.content
+    def get_signed_file_bytes(self, path: str) -> bytes:
+        """Negotiate a fresh file ticket; never forward platform credentials to S3."""
+        self._validate_file_url(path)
+        for attempt in range(3):
+            try:
+                with httpx.Client(
+                    base_url=self.base_url, timeout=self.timeout_seconds, headers=self._headers()
+                ) as client:
+                    response = client.get(path, headers={"Accept": "application/json"})
+                    response.raise_for_status()
+                    if "application/json" not in response.headers.get("content-type", ""):
+                        raise ValueError("Expected S3 download ticket from platform")
+                    ticket = response.json()
+                url = ticket["url"]
+                if urlparse(url).scheme not in {"http", "https"}:
+                    raise ValueError("Invalid object storage URL")
+                with httpx.Client(timeout=self.timeout_seconds) as storage:
+                    with storage.stream("GET", url) as result:
+                        if result.status_code in {403, 408, 429, 500, 502, 503, 504}:
+                            if attempt < 2:
+                                time.sleep(attempt + 1)
+                                continue
+                        if result.status_code != 200:
+                            raise ValueError(f"Object download failed ({result.status_code})")
+                        chunks, count, digest = [], 0, hashlib.sha256()
+                        for chunk in result.iter_bytes():
+                            count += len(chunk)
+                            if count > ticket["size"]:
+                                raise ValueError("Object size mismatch")
+                            digest.update(chunk)
+                            chunks.append(chunk)
+                if count != ticket["size"] or digest.hexdigest() != ticket["sha256"]:
+                    raise ValueError("Object checksum mismatch")
+                return b"".join(chunks)
+            except httpx.TransportError:
+                if attempt == 2:
+                    raise ValueError("File download transport failure") from None
+                time.sleep(attempt + 1)
+        raise ValueError("File download retry limit exceeded")
 
     def patch(self, path: str, json_body: dict[str, Any]) -> dict[str, Any] | None:
         """发送 JSON PATCH 请求并返回解析后的 JSON。"""

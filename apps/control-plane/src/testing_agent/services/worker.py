@@ -103,16 +103,9 @@ def llm_credentials_payload(
 
 
 def project_skill_worker_payload(skill: ProjectSkillSpace) -> dict[str, Any]:
-    return {
-        "skillSpaceId": skill.skill_space_id,
-        "projectId": skill.project_id,
-        "version": skill.version,
-        "hash": skill.hash,
-        "downloadUrl": skill.download_url,
-        "filename": skill.filename,
-        "size": skill.size_bytes,
-        "isDefault": skill.is_default,
-    }
+    from testing_agent.services.project_skill_space import dump_skill
+
+    return dump_skill(skill)
 
 
 def json_text(value: Any) -> str:
@@ -603,6 +596,7 @@ async def complete_domain_run(
             select(UiTestSuiteRun).where(UiTestSuiteRun.suite_run_id == task.run_id)
         )
         if run:
+            run.trace_path = body.trace_path or ""
             run.status = status
             run.error_message = body.error_message or ""
             run.finished_at = parse_event_time(body.finished_at) or datetime.now(UTC)
@@ -611,6 +605,7 @@ async def complete_domain_run(
     elif domain == "ui":
         run = await session.scalar(select(UiTestCaseRun).where(UiTestCaseRun.run_id == task.run_id))
         if run:
+            run.trace_path = body.trace_path or ""
             run.status = status
             run.step_results_json = body.step_results or run.step_results_json
             run.error_message = body.error_message or ""

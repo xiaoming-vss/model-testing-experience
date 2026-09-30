@@ -11,7 +11,7 @@ from typing import Any
 import httpx
 
 from ..core import logger
-from ..core.artifact_server import build_artifact_url
+from .artifacts import ArtifactUploader
 from ..contracts.types import (
     UiCaseRunResult,
     UiSuiteItemRunResult,
@@ -36,6 +36,7 @@ class ControlPlaneClient:
             config: 工作配置
         """
         self._config = config
+        self._artifacts = ArtifactUploader(config, self._request)
         self._client = httpx.Client(
             base_url=config.control_plane_base_url.rstrip("/"),
             headers={
@@ -206,7 +207,7 @@ class ControlPlaneClient:
         """
         body = {
             "workerId": self._config.worker_id,
-            **self._serialize_suite_item_result(payload),
+            **self._artifacts.publish(task_id, self._serialize_suite_item_result(payload)),
         }
         self._request("POST", f"/internal/ui-worker/tasks/{task_id}/suite-items/{item_id}/completed", body)
 
@@ -220,9 +221,10 @@ class ControlPlaneClient:
         """
         body = {
             "workerId": self._config.worker_id,
-            **self._serialize_task_result(payload),
+            **self._artifacts.publish(task_id, self._serialize_task_result(payload)),
         }
         self._request("POST", f"/internal/ui-worker/tasks/{task_id}/completed", body)
+        self._artifacts.cleanup(task_id)
 
     def log_planned_contract(self) -> None:
         """记录 API 契约"""
@@ -490,13 +492,6 @@ class ControlPlaneClient:
         """将下划线命名转换为驼峰命名"""
         result: dict[str, Any] = {}
         for key, value in data.items():
-            if key == "screenshot_path" and isinstance(value, str):
-                value = build_artifact_url(
-                    value,
-                    self._config.artifacts_root_dir,
-                    self._config.artifacts_base_url,
-                )
-
             # 转换 key
             parts = key.split("_")
             camel_key = parts[0] + "".join(p.capitalize() for p in parts[1:])

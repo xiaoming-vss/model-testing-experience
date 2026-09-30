@@ -35,6 +35,98 @@ class SprintStatus(StrEnum):
     COMPLETED = "completed"
 
 
+class BugStatus(StrEnum):
+    """Bug 状态机：待确定 → 处理中 → 待回归 → 已关闭，另有已拒绝与重新打开。"""
+
+    PENDING = "pending"
+    PROCESSING = "processing"
+    PENDING_REGRESSION = "pending_regression"
+    CLOSED = "closed"
+    REJECTED = "rejected"
+    REOPENED = "reopened"
+
+    @classmethod
+    def values(cls) -> set[str]:
+        return {item.value for item in cls}
+
+
+# 快捷筛选「未关闭」的口径：不含已关闭与已拒绝（已拒绝是带原因的终态）。
+BUG_UNCLOSED_STATUSES = frozenset(
+    {
+        BugStatus.PENDING.value,
+        BugStatus.PROCESSING.value,
+        BugStatus.PENDING_REGRESSION.value,
+        BugStatus.REOPENED.value,
+    }
+)
+
+
+class BugSeverity(StrEnum):
+    """Bug 严重程度。"""
+
+    FATAL = "fatal"
+    SERIOUS = "serious"
+    NORMAL = "normal"
+    MINOR = "minor"
+
+    @classmethod
+    def values(cls) -> set[str]:
+        return {item.value for item in cls}
+
+
+class BugPriority(StrEnum):
+    """Bug 处理优先级。"""
+
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+    @classmethod
+    def values(cls) -> set[str]:
+        return {item.value for item in cls}
+
+
+class BugRejectReason(StrEnum):
+    """拒绝原因：必须三选一，允许补充说明。"""
+
+    BY_DESIGN = "by_design"
+    NOT_REPRODUCIBLE = "not_reproducible"
+    DEFERRED = "deferred"
+
+    @classmethod
+    def values(cls) -> set[str]:
+        return {item.value for item in cls}
+
+
+class BugAction(StrEnum):
+    """Bug 状态流转动作；合法的 (当前状态, 动作) 组合由服务层流转表定义。"""
+
+    CONFIRM = "confirm"
+    REJECT = "reject"
+    SUBMIT_FIX = "submit_fix"
+    REGRESSION_PASS = "regression_pass"
+    REGRESSION_FAIL = "regression_fail"
+    REOPEN = "reopen"
+
+    @classmethod
+    def values(cls) -> set[str]:
+        return {item.value for item in cls}
+
+
+class BugActivityKind(StrEnum):
+    """Bug 动态类型：处理记录取 status_change，评论与动态取其余类型。"""
+
+    STATUS_CHANGE = "status_change"
+    TRANSFER = "transfer"
+    COMMENT = "comment"
+    EDIT = "edit"
+    ATTACHMENT = "attachment"
+
+    @classmethod
+    def values(cls) -> set[str]:
+        return {item.value for item in cls}
+
+
 class ConnectionStatus(StrEnum):
     """集成连接状态。"""
 

@@ -18,8 +18,10 @@ class Requirement(Base):
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     document_type: Mapped[str] = mapped_column(String(20), nullable=False, default="text")
     document_content: Mapped[str] = mapped_column(LONGTEXT, nullable=False, default="")
+    document_file_id: Mapped[str] = mapped_column(String(64), nullable=False, default="")
     document_filename: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     document_hash: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    # Inert historical metadata; never read for file delivery.
     document_storage_path: Mapped[str] = mapped_column(String(512), nullable=False, default="")
     document_download_url: Mapped[str] = mapped_column(String(512), nullable=False, default="")
     created_at: Mapped[CreatedAt]

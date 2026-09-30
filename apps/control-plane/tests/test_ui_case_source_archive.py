@@ -2,8 +2,9 @@ import hashlib
 import io
 import stat
 import zipfile
-from pathlib import Path
+from datetime import UTC, datetime
 from types import SimpleNamespace
+from uuid import uuid4
 
 import pytest
 from authorization_database import AuthorizationDatabase
@@ -12,6 +13,7 @@ from fastapi.testclient import TestClient
 from testing_agent.api.deps import (
     get_ai_generate_task_service,
     get_current_user_id,
+    get_file_service,
     get_settings,
     get_worker_task_service,
 )
@@ -123,14 +125,42 @@ class UiTaskRepository:
     async def commit(self):
         return None
 
+    async def rollback(self):
+        return None
+
     async def refresh(self, _row):
         return None
+
+
+class FakeFiles:
+    def __init__(self):
+        self.rows = {}
+
+    async def get(self, file_id):
+        from testing_agent.core.errors import ErrNotFound
+
+        if file_id not in self.rows:
+            raise ErrNotFound
+        return self.rows[file_id]
+
+    async def attach(self, user, file_id, project, resource, resource_id, *, purpose):
+        return await self.get(file_id)
+
+    async def ticket(self, row):
+        return {
+            "url": "https://s3.test/" + row.file_id,
+            "filename": row.filename,
+            "size": row.size,
+            "sha256": row.sha256,
+        }
 
 
 def ui_task_client(repository, storage_root=None):
     app = create_app()
     app.dependency_overrides[get_current_user_id] = lambda: "user-1"
-    service = AiGenerateTaskService(repository, source_archive_storage_root=storage_root)
+    files = FakeFiles()
+    service = AiGenerateTaskService(repository, files=files)
+    app.state.test_files = files
     app.dependency_overrides[get_ai_generate_task_service] = lambda: service
     return TestClient(app, raise_server_exceptions=False), service
 
@@ -182,7 +212,7 @@ def zip_bytes(entries):
     return buffer.getvalue()
 
 
-def test_valid_archive_is_saved_verbatim_and_invalid_replacement_is_atomic(tmp_path):
+def test_verified_s3_archive_is_attached_and_missing_replacement_preserves_current(tmp_path):
     repository = UiTaskRepository()
     client, _ = ui_task_client(repository, tmp_path)
     created = client.post(
@@ -192,10 +222,7 @@ def test_valid_archive_is_saved_verbatim_and_invalid_replacement_is_atomic(tmp_p
     task_id = created.json()["data"]["taskId"]
     source = zip_bytes([("src/main.py", b"print('ok')\n")])
 
-    uploaded = client.put(
-        f"/v1/ui-case-generate-tasks/{task_id}/source-archive",
-        files={"file": ("source.zip", source, "application/zip")},
-    )
+    uploaded = upload_archive(client, task_id, "source.zip", source)
 
     assert uploaded.status_code == 200
     metadata = uploaded.json()["data"]["sourceArchive"]
@@ -204,9 +231,10 @@ def test_valid_archive_is_saved_verbatim_and_invalid_replacement_is_atomic(tmp_p
     assert metadata["sizeBytes"] == len(source)
     assert metadata["sha256"] == hashlib.sha256(source).hexdigest()
     assert metadata["uploadedAt"]
-    assert set(metadata) == {"archiveId", "filename", "sizeBytes", "sha256", "uploadedAt"}
+    assert set(metadata) == {"archiveId", "fileId", "filename", "sizeBytes", "sha256", "uploadedAt"}
     assert uploaded.json()["data"]["sourceContent"] == ""
-    assert Path(repository.archive.storage_path).read_bytes() == source
+    assert repository.archive.file_id == metadata["fileId"]
+    assert repository.archive.storage_path == ""
     updated = client.patch(
         f"/v1/ui-case-generate-tasks/{task_id}",
         json={"sourceType": "manual", "sourceContent": "hidden", "instruction": "updated"},
@@ -217,14 +245,15 @@ def test_valid_archive_is_saved_verbatim_and_invalid_replacement_is_atomic(tmp_p
 
     rejected = client.put(
         f"/v1/ui-case-generate-tasks/{task_id}/source-archive",
-        files={"file": ("replacement.zip", zip_bytes([("../escape.py", b"x")]), "application/zip")},
+        json={"fileId": "missing"},
     )
     detail = client.get(f"/v1/ui-case-generate-tasks/{task_id}")
 
-    assert rejected.status_code == 400
+    assert rejected.status_code == 404
     assert detail.status_code == 200
     assert detail.json()["data"]["sourceArchive"] == metadata
-    assert Path(repository.archive.storage_path).read_bytes() == source
+    assert repository.archive.file_id == metadata["fileId"]
+    assert repository.archive.storage_path == ""
 
 
 def zip_with_symlink():
@@ -247,68 +276,23 @@ def create_ui_task(client):
 
 
 def upload_archive(client, task_id, filename, content):
+    file_id = str(uuid4())
+    client.app.state.test_files.rows[file_id] = SimpleNamespace(
+        file_id=file_id,
+        filename=filename,
+        size=len(content),
+        sha256=hashlib.sha256(content).hexdigest(),
+        completed_at=datetime.now(UTC),
+    )
     return client.put(
-        f"/v1/ui-case-generate-tasks/{task_id}/source-archive",
-        files={"file": (filename, content, "application/zip")},
+        f"/v1/ui-case-generate-tasks/{task_id}/source-archive", json={"fileId": file_id}
     )
-
-
-def test_archive_rejects_format_and_capacity_limits(tmp_path, monkeypatch):
-    repository = UiTaskRepository()
-    client, _ = ui_task_client(repository, tmp_path)
-    task_id = create_ui_task(client)
-
-    not_zip = upload_archive(client, task_id, "source.tar", b"not a zip")
-    corrupt_zip = upload_archive(client, task_id, "source.zip", b"not a zip")
-    corrupt_member = bytearray(zip_bytes([("bad.txt", b"healthy")]))
-    corrupt_member[corrupt_member.index(b"healthy")] ^= 1
-    corrupt_member_zip = upload_archive(client, task_id, "source.zip", corrupt_member)
-
-    compressed = zip_bytes([("a.txt", b"a")])
-    monkeypatch.setattr(
-        "testing_agent.services.ai_source_archive.MAX_SOURCE_ARCHIVE_BYTES", len(compressed) - 1
-    )
-    too_large = upload_archive(client, task_id, "source.zip", compressed)
-    monkeypatch.setattr(
-        "testing_agent.services.ai_source_archive.MAX_SOURCE_ARCHIVE_BYTES", 100 * 1024 * 1024
-    )
-
-    monkeypatch.setattr(
-        "testing_agent.services.ai_source_archive.MAX_SOURCE_ARCHIVE_UNCOMPRESSED_BYTES", 1
-    )
-    expanded_too_large = upload_archive(
-        client, task_id, "source.zip", zip_bytes([("a.txt", b"ab")])
-    )
-    monkeypatch.setattr(
-        "testing_agent.services.ai_source_archive.MAX_SOURCE_ARCHIVE_UNCOMPRESSED_BYTES",
-        1024 * 1024 * 1024,
-    )
-
-    monkeypatch.setattr("testing_agent.services.ai_source_archive.MAX_SOURCE_ARCHIVE_FILES", 1)
-    too_many_files = upload_archive(
-        client,
-        task_id,
-        "source.zip",
-        zip_bytes([("a.txt", b""), ("b.txt", b"")]),
-    )
-
-    assert [
-        response.status_code
-        for response in (
-            not_zip,
-            corrupt_zip,
-            corrupt_member_zip,
-            too_large,
-            expanded_too_large,
-            too_many_files,
-        )
-    ] == [400, 400, 400, 400, 400, 400]
-    assert repository.archive is None
 
 
 @pytest.mark.parametrize(
     "source",
     [
+        b"invalid",
         zip_bytes([("/absolute.py", b"x")]),
         zip_bytes([("C:/absolute.py", b"x")]),
         zip_bytes([("../escape.py", b"x")]),
@@ -316,18 +300,32 @@ def test_archive_rejects_format_and_capacity_limits(tmp_path, monkeypatch):
         zip_with_symlink(),
     ],
 )
-def test_archive_rejects_unsafe_and_duplicate_entries(tmp_path, source):
-    repository = UiTaskRepository()
-    client, _ = ui_task_client(repository, tmp_path)
-    task_id = create_ui_task(client)
+def test_archive_validation_rejects_malformed_and_unsafe_content(source):
+    from testing_agent.core.errors import AppError
+    from testing_agent.services.ai_source_archive import validate_source_archive
 
-    response = upload_archive(client, task_id, "source.zip", source)
-
-    assert response.status_code == 400
-    assert repository.archive is None
+    with pytest.raises(AppError):
+        validate_source_archive("source.zip", source)
 
 
-def test_ui_run_requires_archive_and_snapshot_uses_worker_current_source_urls(tmp_path):
+@pytest.mark.parametrize(
+    "limit,value,source",
+    [
+        ("MAX_SOURCE_ARCHIVE_BYTES", 1, zip_bytes([("a", b"a")])),
+        ("MAX_SOURCE_ARCHIVE_UNCOMPRESSED_BYTES", 1, zip_bytes([("a", b"ab")])),
+        ("MAX_SOURCE_ARCHIVE_FILES", 1, zip_bytes([("a", b""), ("b", b"")])),
+    ],
+)
+def test_archive_validation_preserves_capacity_limits(monkeypatch, limit, value, source):
+    from testing_agent.core.errors import AppError
+    from testing_agent.services import ai_source_archive as module
+
+    monkeypatch.setattr(module, limit, value)
+    with pytest.raises(AppError):
+        module.validate_source_archive("source.zip", source)
+
+
+def test_ui_run_requires_archive_and_snapshot_pins_file_id(tmp_path):
     repository = UiTaskRepository()
     client, _ = ui_task_client(repository, tmp_path)
     task_id = create_ui_task(client)
@@ -349,6 +347,7 @@ def test_ui_run_requires_archive_and_snapshot_uses_worker_current_source_urls(tm
     assert started.status_code == 200
     worker_task = next(row for row in repository.added if isinstance(row, WorkerTask))
     snapshot = started.json()["data"]["snapshotJson"]
+    assert snapshot["sourceArchiveFileId"] == repository.archive.file_id
     assert snapshot["sourceType"] == "source_archive"
     assert snapshot["sourceContent"] == ""
     assert snapshot["sourceArchiveDownloadUrl"] == (
@@ -415,9 +414,7 @@ class WorkerAssetRepository:
         return None
 
 
-def test_worker_downloads_latest_archive_and_current_optional_requirement_document(
-    tmp_path, monkeypatch
-):
+def test_worker_downloads_pinned_s3_archive_and_rejects_local_requirement(tmp_path, monkeypatch):
     from unittest.mock import AsyncMock
 
     from testing_agent.services import worker_task as worker_module
@@ -438,6 +435,7 @@ def test_worker_downloads_latest_archive_and_current_optional_requirement_docume
     run = repository.runs[started.json()["data"]["runId"]]
     worker_task = next(row for row in repository.added if isinstance(row, WorkerTask))
 
+    first_file_id = repository.archive.file_id
     assert upload_archive(user_client, task_id, "v2.zip", second).status_code == 200
     document_path = tmp_path / "current-requirement.txt"
     document_path.write_bytes(b"current requirement")
@@ -448,6 +446,7 @@ def test_worker_downloads_latest_archive_and_current_optional_requirement_docume
     worker_repository = WorkerAssetRepository(worker_task, run, repository, repository.requirement)
     app = create_app(settings)
     app.dependency_overrides[get_settings] = lambda: settings
+    app.dependency_overrides[get_file_service] = lambda: user_client.app.state.test_files
     app.dependency_overrides[get_worker_task_service] = lambda: WorkerTaskService(worker_repository)
     worker_client = TestClient(app, raise_server_exceptions=False)
     headers = {"X-Worker-Token": "worker-token"}
@@ -470,10 +469,11 @@ def test_worker_downloads_latest_archive_and_current_optional_requirement_docume
     assert unauthorized_archive.status_code == 401
     assert unauthorized_document.status_code == 401
     assert archive_response.status_code == 200
-    assert archive_response.content == second
-    assert "v2.zip" in archive_response.headers["content-disposition"]
-    assert document_response.status_code == 200
-    assert document_response.content == b"current requirement"
+    assert archive_response.json()["url"] == "https://s3.test/" + first_file_id
+    assert archive_response.json()["sha256"] == hashlib.sha256(first).hexdigest()
+    assert archive_response.headers["cache-control"] == "no-store"
+    assert document_response.status_code == 409
+    assert "重新上传" in document_response.json()["message"]
 
     repository.requirement.document_storage_path = ""
     repository.requirement.document_content = "inline current requirement"
@@ -482,8 +482,7 @@ def test_worker_downloads_latest_archive_and_current_optional_requirement_docume
         headers=headers,
     )
 
-    assert inline_document_response.status_code == 200
-    assert inline_document_response.content == b"inline current requirement"
+    assert inline_document_response.status_code == 409
 
     run.task_id = "different-generate-task"
     wrong_archive = worker_client.get(
@@ -597,3 +596,31 @@ def test_ui_generation_user_routes_reject_cross_user_access(tmp_path):
     ]
 
     assert [response.status_code for response in responses] == [403] * len(responses)
+
+
+def test_local_source_archive_requires_reupload(tmp_path):
+    repository = UiTaskRepository()
+    client, _ = ui_task_client(repository)
+    task_id = create_ui_task(client)
+    repository.archive = SimpleNamespace(
+        task_id=task_id, file_id="", storage_path=str(tmp_path / "old.zip")
+    )
+    response = client.post(
+        f"/v1/ui-case-generate-tasks/{task_id}/run", json={"connectionId": "llm-1"}
+    )
+    assert response.status_code == 409
+    assert "重新上传" in response.json()["message"]
+    response = client.put(
+        f"/v1/ui-case-generate-tasks/{task_id}/source-archive", files={"file": ("old.zip", b"ZIP")}
+    )
+    assert response.status_code == 400
+
+
+def test_archive_validation_rejects_corrupt_member_crc():
+    from testing_agent.core.errors import AppError
+    from testing_agent.services.ai_source_archive import validate_source_archive
+
+    content = bytearray(zip_bytes([("src/index.ts", b"healthy")]))
+    content[content.index(b"healthy")] ^= 1
+    with pytest.raises(AppError):
+        validate_source_archive("source.zip", bytes(content))

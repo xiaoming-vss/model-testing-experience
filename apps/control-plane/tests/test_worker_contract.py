@@ -250,17 +250,28 @@ def test_internal_ai_worker_completed_accepts_go_string_payload_fields():
 
 
 def test_internal_ai_worker_requirement_document_download_uses_worker_token():
+    from testing_agent.api.deps import get_file_service
+
+    class Files:
+        async def get(self, file_id):
+            assert file_id == "file-1"
+            return object()
+
+        async def ticket(self, row):
+            return {"url": "https://s3.test/file", "size": 10, "sha256": "hash"}
+
     class FakeWorkerService:
         async def requirement_document(self, task_id):
             assert task_id == "worker-task-1"
             return SimpleNamespace(
                 document_storage_path="",
                 document_filename="requirement.docx",
-                content=b"docx-bytes",
+                document_file_id="file-1",
             )
 
     app = create_app(worker_settings())
     app.dependency_overrides[get_worker_task_service] = lambda: FakeWorkerService()
+    app.dependency_overrides[get_file_service] = lambda: Files()
     app.dependency_overrides[get_settings] = worker_settings
     client = TestClient(app)
 
@@ -272,8 +283,8 @@ def test_internal_ai_worker_requirement_document_download_uses_worker_token():
 
     assert unauthorized.status_code == 401
     assert response.status_code == 200
-    assert response.content == b"docx-bytes"
-    assert response.headers["content-type"] == "application/octet-stream"
+    assert response.json()["url"] == "https://s3.test/file"
+    assert response.headers["cache-control"] == "no-store"
 
 
 @pytest.mark.asyncio
@@ -287,9 +298,7 @@ async def test_functional_case_worker_can_download_requirement_document(monkeypa
 
         async def get_requirement(self, requirement_id):
             assert requirement_id == "requirement-1"
-            return SimpleNamespace(
-                document_storage_path="storage/requirements/requirement-1/requirement.docx"
-            )
+            return SimpleNamespace(document_file_id="file-1")
 
     async def fake_find_task(session, domain, task_id):
         assert domain == "ai"
@@ -304,7 +313,7 @@ async def test_functional_case_worker_can_download_requirement_document(monkeypa
 
     requirement = await WorkerTaskService(FakeRepository()).requirement_document("worker-task-1")
 
-    assert requirement.document_storage_path.endswith("requirement.docx")
+    assert requirement.document_file_id == "file-1"
 
 
 @pytest.mark.asyncio

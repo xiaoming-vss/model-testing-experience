@@ -12,6 +12,7 @@ if str(SRC_DIR) not in sys.path:
 from testing_agent_ai_worker.config.models import NanobotConfig
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task, TaskPayload
+from testing_agent_ai_worker.nanobot_runtime.paths import resolve_task_workspace
 from testing_agent_ai_worker.tasks.requirement_analysis.chain import (
     RequirementAnalysisChainRunResult,
 )
@@ -153,7 +154,7 @@ class RequirementAnalysisExecutorTests(unittest.TestCase):
         self.assertEqual(source_downloader.calls[0]["task"], task)
         self.assertEqual(
             source_downloader.calls[0]["workspace"],
-            Path("D:/tmp/nanobot-runtime/workspaces/project-project-1"),
+            resolve_task_workspace(executor.nanobot_config, task),
         )
 
     def test_execute_uses_document_download_url_not_source_content_for_download(self) -> None:

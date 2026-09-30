@@ -17,9 +17,16 @@ export function usePersonalConnectionChoice(provider: 'gitlab' | 'zentao') {
     setSelected(undefined)
   }
   useEffect(() => () => { pending.current?.reject(new Error('页面已关闭')); pending.current = null }, [])
-  async function choose(projectId: string, instanceUrl?: string) {
-    const rows = listItems(await (provider === 'gitlab' ? api.getGitlabConnections(projectId) : api.getZentaoConnections(projectId)))
-      .filter(c => c.status === 'active' && (!instanceUrl || normalizeInstanceUrl(c.baseUrl) === normalizeInstanceUrl(instanceUrl)))
+  async function choose(projectId: string, instanceUrl?: string, allowUnavailable = false) {
+    let rows: Choice[]
+    try {
+      rows = listItems(await (provider === 'gitlab' ? api.getGitlabConnections(projectId) : api.getZentaoConnections(projectId)))
+        .filter(c => c.status === 'active' && (!instanceUrl || normalizeInstanceUrl(c.baseUrl) === normalizeInstanceUrl(instanceUrl)))
+    } catch (error) {
+      if (allowUnavailable) return ''
+      throw error
+    }
+    if (allowUnavailable && rows.length === 0) return ''
     if (rows.length === 1) return rows[0].connectionId
     pending.current?.reject(new Error('已取消上一次操作'))
     setInstance(instanceUrl ?? '')
