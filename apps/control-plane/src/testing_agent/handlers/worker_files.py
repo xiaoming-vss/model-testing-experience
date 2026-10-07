@@ -68,7 +68,7 @@ async def complete_artifact(
         actor.actor,
         "ui_artifact",
     ):
-        raise ErrForbidden
+        raise ErrForbidden()
     await files.complete(actor.actor, file_id)
     await files.attach(
         actor.actor, file_id, actor.project_id, "ui_worker_task", task_id, purpose="ui_artifact"

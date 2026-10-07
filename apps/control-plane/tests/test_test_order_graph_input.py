@@ -21,10 +21,15 @@ def make_requirement_with_content(api, headers, sprint_id, name, content):
     response = api.post(
         f"/v1/sprints/{sprint_id}/requirements",
         headers=headers,
-        json={"name": name, "documentContent": content},
+        json={"name": name},
     )
     assert response.status_code == 200, response.text
-    return response.json()["data"]["requirementId"]
+    requirement_id = response.json()["data"]["requirementId"]
+    edited = api.patch(
+        f"/v1/requirements/{requirement_id}", headers=headers, json={"documentContent": content}
+    )
+    assert edited.status_code == 200, edited.text
+    return requirement_id
 
 
 def graph_input(api, headers, order_id):

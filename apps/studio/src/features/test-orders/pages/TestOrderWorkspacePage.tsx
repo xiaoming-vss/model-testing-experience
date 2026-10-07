@@ -1,8 +1,7 @@
 import {
   ArrowLeftOutlined,
-  OrderedListOutlined,
   ApartmentOutlined,
-  ProfileOutlined,
+  QuestionCircleOutlined,
   ReloadOutlined,
   SearchOutlined,
 } from '@ant-design/icons'
@@ -20,20 +19,21 @@ import {
   Typography,
 } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { AddCasesFromLibraryModal } from '../components/AddCasesFromLibraryModal'
+import { TestOrderCaseContent } from '../components/TestOrderCaseContent'
+import { TestOrderCaseSummary } from '../components/TestOrderCaseSummary'
 import { TestOrderVerdictButtons } from '../components/TestOrderVerdictButtons'
 import { useTestOrderEntrySave } from '../hooks/useTestOrderEntrySave'
 import { TEST_ORDER_VERDICTS, isTestOrderEntryLocked } from '../utils/testOrderExecution'
-import { TestOrderGraphViewer } from '../components/TestOrderGraphViewer'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { priorityTone } from '@/shared/utils/priorityTone'
 import { api, listItems } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
-import { formatTime, getErrorMessage } from '@/utils/format'
+import { getErrorMessage } from '@/utils/format'
 import {
   getTestOrderEntryStatusMeta,
   getTestOrderEntryStatusTone,
@@ -61,23 +61,24 @@ export function TestOrderWorkspacePage() {
   const queryClient = useQueryClient()
   const currentUserId = useAuthStore((state) => state.user?.userId)
 
+  const entryListRef = useRef<HTMLDivElement>(null)
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(() => searchParams.get('entryId'))
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [onlyMine, setOnlyMine] = useState(false)
-  const [autoAdvance, setAutoAdvance] = useState(true)
+  const [autoAdvance, setAutoAdvance] = useState(false)
   const [checkedEntryIds, setCheckedEntryIds] = useState<string[]>([])
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [savedAt, setSavedAt] = useState<string>('')
   const [assignOpen, setAssignOpen] = useState(false)
   const [assignee, setAssignee] = useState('')
   const [addCasesOpen, setAddCasesOpen] = useState(false)
-  const [graphOpen, setGraphOpen] = useState(false)
 
   const orderQuery = useQuery({
     queryKey: ['testOrder', orderId],
     queryFn: () => api.getTestOrder(orderId!),
     enabled: Boolean(orderId),
+    refetchOnWindowFocus: true,
   })
   const order = orderQuery.data
 
@@ -98,6 +99,7 @@ export function TestOrderWorkspacePage() {
     queryKey: ['testOrderEntries', orderId],
     queryFn: () => api.getTestOrderEntries(orderId!),
     enabled: Boolean(orderId),
+    refetchOnWindowFocus: true,
   })
 
   const membersQuery = useQuery({
@@ -149,7 +151,6 @@ export function TestOrderWorkspacePage() {
     if (!selected) return
     setDrafts({
       reason: (selected.status === 'blocked' ? selected.blockReason : selected.failureReason) ?? '',
-      zentaoBugId: selected.zentaoBugId ?? '',
     })
   }, [selected, selected?.entryId])
 
@@ -214,8 +215,17 @@ export function TestOrderWorkspacePage() {
     if (next) setSelectedEntryId(next.entryId ?? null)
   }
 
-  // 判定后自动前进到下一条未执行（可在底部判定栏关闭）。
-  const advanceAfterJudge = !graphOpen && autoAdvance && selected?.status !== 'pending'
+  // 在清单内使用键盘切换时，焦点跟随选中项，避免旧条目残留焦点框和移除按钮。
+  useEffect(() => {
+    const list = entryListRef.current
+    const focused = document.activeElement
+    if (focused?.matches('.test-order-nav-item') && list?.contains(focused)) {
+      list.querySelector<HTMLButtonElement>('.test-order-nav-item[aria-current="true"]')?.focus()
+    }
+  }, [selectedEntryId])
+
+  // 自动前进默认关闭，开启后判定会前进到下一条未执行。
+  const advanceAfterJudge = autoAdvance && selected?.status !== 'pending'
   useEffect(() => {
     if (!advanceAfterJudge) return
     const index = visibleEntries.findIndex((entry) => entry.entryId === selected?.entryId)
@@ -226,7 +236,7 @@ export function TestOrderWorkspacePage() {
   // 键盘：1/2/3/4 判定整条用例，上下切换条目。
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (graphOpen || saveMutation.isPending) return
+      if (saveMutation.isPending) return
       const target = event.target as HTMLElement | null
       if (target && ['INPUT', 'TEXTAREA'].includes(target.tagName)) return
       if (event.key === 'ArrowDown') {
@@ -248,22 +258,19 @@ export function TestOrderWorkspacePage() {
     return () => window.removeEventListener('keydown', onKeyDown)
   })
 
-  const preconditionCount = (selected?.snapshot?.preconditions ?? []).length
-  const stepCount = (selected?.snapshot?.steps ?? []).length
   const orderTotal = order?.entriesTotal ?? 0
   const orderExecuted = order?.entriesExecuted ?? 0
   const orderProgressPercent = orderTotal > 0 ? Math.round((orderExecuted / orderTotal) * 100) : 0
   const selectedVisibleIndex = visibleEntries.findIndex((entry) => entry.entryId === selected?.entryId)
   const isSaving = saveMutation.isPending
   const saveStateText = isSaving ? '保存中…' : savedAt ? `已保存 ${savedAt}` : ''
-  const entryStatusMeta = getTestOrderEntryStatusMeta(selected?.status)
   const orderStatusMeta = order ? getTestOrderStatusMeta(order.status) : null
 
   return (
     <div className="workbench-page api-automation-page functional-suite-detail-page test-order-workspace-page tp-surface">
       <div className="api-automation-content">
         <div className="page-frame test-order-workspace tp-board">
-          <section className="workbench-panel test-order-orderbar">
+          <section className="workbench-panel test-order-orderbar tp-list-toolbar">
             <Button
               type="text"
               className="api-case-back-button"
@@ -276,11 +283,11 @@ export function TestOrderWorkspacePage() {
                 {order?.name ?? '测试单'}
               </Text>
               {order?.testedVersion ? (
-                <span className="test-order-orderbar-chip">被测版本 {order.testedVersion}</span>
+                <span className="test-order-orderbar-chip tp-tone-tag">被测版本 {order.testedVersion}</span>
               ) : null}
               {orderStatusMeta ? (
                 <span
-                  className={`test-order-orderbar-chip tone-${getTestOrderStatusTone(order?.status)}`}
+                  className={`test-order-orderbar-chip tp-tone-tag tone-${getTestOrderStatusTone(order?.status)}`}
                 >
                   {orderStatusMeta.label}
                 </span>
@@ -297,7 +304,7 @@ export function TestOrderWorkspacePage() {
                 icon={<ApartmentOutlined aria-hidden="true" />}
                 aria-label="用例图谱"
                 disabled={!order?.orderId}
-                onClick={() => setGraphOpen(true)}
+                onClick={() => window.open(`/test-orders/${encodeURIComponent(order?.orderId ?? orderId ?? '')}/graph`, '_blank', 'noopener,noreferrer')}
               >
                 用例图谱
               </ProjectActionButton>
@@ -397,7 +404,7 @@ export function TestOrderWorkspacePage() {
                 ) : visibleEntries.length === 0 ? (
                   <Empty description="没有符合筛选条件的条目" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                 ) : (
-                  <div className="api-case-nav-list">
+                  <div className="api-case-nav-list" ref={entryListRef}>
                     {visibleEntries.map((entry) => {
                       const meta = getTestOrderEntryStatusMeta(entry.status)
                       const active = entry.entryId === selected?.entryId
@@ -427,20 +434,22 @@ export function TestOrderWorkspacePage() {
                             <span className="test-order-nav-head">
                               {entry.casePriority ? (
                                 <span
-                                  className={`test-order-nav-prio tone-${priorityTone(entry.casePriority)}`}
+                                  className={`test-order-nav-prio tp-tone-tag tone-${priorityTone(entry.casePriority)}`}
                                 >
                                   {entry.casePriority}
                                 </span>
                               ) : null}
                               <span
-                                className={`test-order-nav-status tone-${getTestOrderEntryStatusTone(entry.status)}`}
+                                className={`test-order-nav-status tp-tone-tag tone-${getTestOrderEntryStatusTone(entry.status)}`}
                               >
                                 {meta.label}
                               </span>
                             </span>
-                            <span className="test-order-nav-title">
-                              {entry.caseTitle || entry.caseId}
-                            </span>
+                            <Tooltip title={entry.caseTitle || entry.caseId}>
+                              <span className="test-order-nav-title">
+                                {entry.caseTitle || entry.caseId}
+                              </span>
+                            </Tooltip>
                             <span className="test-order-nav-meta">
                               {entry.caseModule ? <span>{entry.caseModule}</span> : null}
                               <span>{entryStepCount} 步</span>
@@ -499,7 +508,7 @@ export function TestOrderWorkspacePage() {
               </div> : null}
             </section>
 
-            <section className="workbench-panel test-order-panel">
+            <section className="test-order-panel">
               {!selected ? (
                 <div className="sprint-card-loading">
                   <Empty description="请先加入执行条目">
@@ -518,243 +527,130 @@ export function TestOrderWorkspacePage() {
                 </div>
               ) : (
                 <>
-                  <div className="test-order-editor-head">
-                    <span className="test-order-case-no">
-                      {selected.caseId}
-                    </span>
-                    <Text strong className="test-order-case-title">
-                      {selected.caseTitle || selected.caseId}
-                    </Text>
-                    <span className="spacer" />
-                    {lockedByAssignee ? (
-                      <Text type="secondary">该条已分配给其他执行人</Text>
-                    ) : null}
-                  </div>
-                  <div className="test-order-execution-meta">
-                    <span
-                      className={`test-order-meta-pill tone-${getTestOrderEntryStatusTone(selected.status)}`}
-                    >
-                      状态 <strong>{entryStatusMeta.label}</strong>
-                    </span>
-                    {selected.casePriority ? (
-                      <span className={`test-order-meta-pill tone-${priorityTone(selected.casePriority)}`}>
-                        优先级 <strong>{selected.casePriority}</strong>
-                      </span>
-                    ) : null}
-                    <span className="test-order-meta-pill">
-                      分配给 <strong>{personName(selected.assigneeUserId) || '未分配'}</strong>
-                    </span>
-                    {selected.caseModule ? (
-                      <span className="test-order-meta-pill">
-                        所属模块 <strong>{selected.caseModule}</strong>
-                      </span>
-                    ) : null}
-                    <span className="test-order-meta-pill">
-                      实际执行 <strong>{personName(selected.executorUserId) || '-'}</strong>
-                    </span>
-                    <span className="test-order-meta-pill">
-                      执行时间 <strong>{formatTime(selected.executedAt) || '-'}</strong>
-                    </span>
-                  </div>
                   <div className="test-order-editor-body">
-                    <section className="test-order-section tone-blue">
-                      <div className="test-order-section-head">
-                        <span className="test-order-section-title">
-                          <ProfileOutlined />
-                          前置条件
-                        </span>
-                        <span className="test-order-section-badge">
-                          {preconditionCount} 项环境与数据依赖
-                        </span>
-                      </div>
-                      <div className="test-order-section-body">
-                        {preconditionCount === 0 ? (
-                          <span className="test-order-precondition-empty">暂无前置条件</span>
-                        ) : (
-                          <ol className="test-order-precondition-list">
-                            {(selected.snapshot?.preconditions ?? []).map((item, index) => (
-                              <li key={index} className="test-order-precondition-item">
-                                <span className="test-order-precondition-no">
-                                  {String(index + 1).padStart(2, '0')}
-                                </span>
-                                <span>{item}</span>
-                              </li>
-                            ))}
-                          </ol>
-                        )}
-                      </div>
-                    </section>
-
-                    <section className="test-order-section tone-teal">
-                      <div className="test-order-section-head">
-                        <span className="test-order-section-title">
-                          <OrderedListOutlined />
-                          测试执行步骤与预期结果
-                        </span>
-                        <span className="test-order-section-badge">{stepCount} 步</span>
-                      </div>
-                      <div className="test-order-section-body">
-                        <table className="test-order-steps-table">
-                          <caption>测试执行步骤与预期结果</caption>
-                          <thead><tr><th scope="col">步骤</th><th scope="col">操作说明</th><th scope="col">预期结果</th></tr></thead>
-                          <tbody>
-                            {stepCount === 0 ? (
-                              <tr><td colSpan={3} className="test-order-steps-empty">暂无测试步骤</td></tr>
-                            ) : (selected.snapshot?.steps ?? []).map((step, index) => (
-                              <tr key={index}>
-                                <td><span className="test-order-step-index">{String(index + 1).padStart(2, '0')}</span></td>
-                                <td>{step.action || '—'}</td>
-                                <td>{step.expected || '—'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </section>
+                    <TestOrderCaseSummary
+                      entry={selected}
+                      assigneeName={personName(selected.assigneeUserId)}
+                      executorName={personName(selected.executorUserId)}
+                      lockedByAssignee={lockedByAssignee}
+                    />
+                    <TestOrderCaseContent snapshot={selected.snapshot} />
                   </div>
+                  <section className="test-order-execution-bar" aria-label="执行判定与缺陷关联">
+                    <div className="test-order-execution-actions">
+                      <span className="test-order-verdict-title">执行判定结果</span>
+                      <TestOrderVerdictButtons
+                        status={selected.status}
+                        disabled={!canJudge || saveMutation.isPending}
+                        showShortcuts
+                        reverseOrder
+                        onJudge={(status) => save({ status })}
+                      />
+                      {selected.status === 'failed' ? (
+                        <div className="test-order-defect-controls">
+                          <ProjectActionButton
+                            action="write"
+                            size="small"
+                            className="action-btn-create"
+                            operation="create"
+                            aria-label="提交 Bug"
+                            onClick={() => {
+                              const reason = drafts.reason ?? selected.failureReason ?? ''
+                              const params = new URLSearchParams({
+                                projectId: order?.projectId ?? '',
+                                orderId: order?.orderId ?? '',
+                                entryId: selected.entryId ?? '',
+                                caseId: selected.caseId ?? '',
+                                requirementId: selected.requirementId ?? '',
+                                sprintId: order?.sprintId ?? '',
+                                title: `${selected.caseTitle ?? '执行失败'} 执行失败`,
+                                description: reason ? `<p>${reason}</p>` : '',
+                              })
+                              navigate(`/bugs/new?${params.toString()}`)
+                            }}
+                          >
+                            提交 Bug
+                          </ProjectActionButton>
+                        </div>
+                      ) : null}
+                    </div>
+                    {selected.status === 'failed' || selected.status === 'blocked' || listItems(linkedBugsQuery.data).length > 0 ? (
+                      <div className="test-order-defect-section">
+                        {linkedBugsQuery.data && listItems(linkedBugsQuery.data).length > 0 ? (
+                          <div className="test-order-linked-bugs">
+                            {listItems(linkedBugsQuery.data).map((bug) => (
+                              <a
+                                key={bug.bugId}
+                                className="test-order-linked-bug-chip"
+                                href={`/bugs/${bug.bugId}`}
+                                onClick={(event) => {
+                                  event.preventDefault()
+                                  navigate(`/bugs/${bug.bugId}`)
+                                }}
+                              >
+                                BUG-{bug.bugNo} {bug.title}
+                              </a>
+                            ))}
+                          </div>
+                        ) : null}
+                        {selected.status === 'failed' || selected.status === 'blocked' ? (
+                          <>
+                            <Text type="secondary">
+                              {selected.status === 'failed' ? '失败原因' : '阻塞原因'}
+                            </Text>
+                            <Input.TextArea
+                              aria-label={selected.status === 'failed' ? '失败原因' : '阻塞原因'}
+                              autoSize={{ minRows: 2, maxRows: 3 }}
+                              value={drafts.reason ?? ''}
+                              disabled={!canJudge}
+                              placeholder="填写原因"
+                              onChange={(event) =>
+                                setDrafts((prev) => ({ ...prev, reason: event.target.value }))
+                              }
+                              onBlur={() =>
+                                save(
+                                  selected.status === 'failed'
+                                    ? { failureReason: drafts.reason ?? '' }
+                                    : { blockReason: drafts.reason ?? '' },
+                                )
+                              }
+                            />
+                          </>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    <footer className="test-order-execution-footer" aria-label="用例执行操作">
+                      <Tooltip
+                        title={`快捷键：${TEST_ORDER_VERDICTS.map(({ key, label }) => `${key} ${label}`).join(' · ')}；↑ 上一条，↓ 下一条`}
+                        trigger={['hover', 'focus']}
+                      >
+                        <Button type="text" size="small" shape="circle"
+                          className="test-order-shortcut-help" aria-label="快捷键说明"
+                          icon={<QuestionCircleOutlined />} />
+                      </Tooltip>
+                      <Checkbox
+                        className="test-order-autoadvance"
+                        checked={autoAdvance}
+                        onChange={(event) => setAutoAdvance(event.target.checked)}
+                      >
+                        判定后自动前进
+                      </Checkbox>
+                      {saveStateText ? (
+                        <Text
+                          className="test-order-save-state"
+                          type={saveMutation.isError ? 'danger' : 'secondary'}
+                        >
+                          {saveStateText}
+                        </Text>
+                      ) : null}
+                    </footer>
+                    <Text className="test-order-entry-position" type="secondary">
+                      {selectedVisibleIndex >= 0 ? `第 ${selectedVisibleIndex + 1} / ${visibleEntries.length} 条` : '当前条目不在筛选结果中'}
+                    </Text>
+                  </section>
                 </>
               )}
             </section>
-
-            <aside className="workbench-panel test-order-verdict-panel">
-              {selected ? (
-                <>
-                  <div className="test-order-verdict-title">
-                    执行判定结果
-                    <span className="test-order-verdict-hint">快捷键 1/2/3/4</span>
-                  </div>
-                  <TestOrderVerdictButtons
-                    status={selected.status}
-                    disabled={!canJudge || saveMutation.isPending}
-                    showShortcuts
-                    onJudge={(status) => save({ status })}
-                  />
-
-                  {/* 缺陷信息：只存了一个禅道缺陷号，没有缺陷详情接口，所以不做设计稿里那张 BUG 卡片。 */}
-                  <div className="test-order-defect-section">
-                    <div className="test-order-defect-head">
-                      关联缺陷与 BUG 追踪
-                      <ProjectActionButton
-                        action="write"
-                        size="small"
-                        className="action-btn-create"
-                        operation="create"
-                        aria-label="提交 Bug"
-                        onClick={() => {
-                          const reason =
-                            selected.status === 'failed'
-                              ? drafts.reason ?? selected.failureReason ?? ''
-                              : selected.status === 'blocked'
-                                ? drafts.reason ?? selected.blockReason ?? ''
-                                : ''
-                          const params = new URLSearchParams({
-                            projectId: order?.projectId ?? '',
-                            orderId: order?.orderId ?? '',
-                            entryId: selected.entryId ?? '',
-                            caseId: selected.caseId ?? '',
-                            requirementId: selected.requirementId ?? '',
-                            sprintId: order?.sprintId ?? '',
-                            title: `${selected.caseTitle ?? '执行失败'} 执行失败`,
-                            description: reason ? `<p>${reason}</p>` : '',
-                          })
-                          navigate(`/bugs/new?${params.toString()}`)
-                        }}
-                      >
-                        提交 Bug
-                      </ProjectActionButton>
-                    </div>
-                    {linkedBugsQuery.data && listItems(linkedBugsQuery.data).length > 0 ? (
-                      <div className="test-order-linked-bugs">
-                        {listItems(linkedBugsQuery.data).map((bug) => (
-                          <a
-                            key={bug.bugId}
-                            className="test-order-linked-bug-chip"
-                            href={`/bugs/${bug.bugId}`}
-                            onClick={(event) => {
-                              event.preventDefault()
-                              navigate(`/bugs/${bug.bugId}`)
-                            }}
-                          >
-                            BUG-{bug.bugNo} {bug.title}
-                          </a>
-                        ))}
-                      </div>
-                    ) : null}
-                    {selected.status === 'failed' || selected.status === 'blocked' ? (
-                      <>
-                        <Text type="secondary">
-                          {selected.status === 'failed' ? '失败原因' : '阻塞原因'}
-                        </Text>
-                        <Input.TextArea
-                          rows={3}
-                          value={drafts.reason ?? ''}
-                          disabled={!canJudge}
-                          placeholder="填写原因"
-                          onChange={(event) =>
-                            setDrafts((prev) => ({ ...prev, reason: event.target.value }))
-                          }
-                          onBlur={() =>
-                            save(
-                              selected.status === 'failed'
-                                ? { failureReason: drafts.reason ?? '' }
-                                : { blockReason: drafts.reason ?? '' },
-                            )
-                          }
-                        />
-                      </>
-                    ) : null}
-                    {selected.zentaoBugId ? (
-                      <div className="test-order-defect-card">
-                        <span className="test-order-defect-id">禅道缺陷 #{selected.zentaoBugId}</span>
-                        <Button
-                          type="text"
-                          className="test-order-defect-untie"
-                          disabled={!canJudge}
-                          onClick={() => save({ zentaoBugId: '' })}
-                        >
-                          解绑
-                        </Button>
-                      </div>
-                    ) : null}
-                    <Input
-                      value={drafts.zentaoBugId ?? ''}
-                      disabled={!canJudge}
-                      placeholder="禅道缺陷号（可选）"
-                      onChange={(event) =>
-                        setDrafts((prev) => ({ ...prev, zentaoBugId: event.target.value }))
-                      }
-                      onBlur={() => save({ zentaoBugId: drafts.zentaoBugId ?? '' })}
-                    />
-                    <span className="test-order-defect-hint">
-                      目前只能关联禅道缺陷号，Jira / 内部缺陷平台还没接入。
-                    </span>
-                  </div>
-
-                  <footer className="test-order-execution-footer" aria-label="用例执行操作">
-                    <div className="test-order-entry-navigation">
-                      <Button size="small" disabled={selectedVisibleIndex <= 0} onClick={() => moveSelection(-1)}>上一条</Button>
-                      <Text type="secondary">{selectedVisibleIndex >= 0 ? `第 ${selectedVisibleIndex + 1} / ${visibleEntries.length} 条` : '当前条目不在筛选结果中'}</Text>
-                      <Button size="small" disabled={selectedVisibleIndex < 0 || selectedVisibleIndex >= visibleEntries.length - 1} onClick={() => moveSelection(1)}>下一条</Button>
-                    </div>
-                    <Checkbox
-                      className="test-order-autoadvance"
-                      checked={autoAdvance}
-                      onChange={(event) => setAutoAdvance(event.target.checked)}
-                    >
-                      判定后自动前进
-                    </Checkbox>
-                    {saveStateText ? (
-                      <Text
-                        className="test-order-save-state"
-                        type={saveMutation.isError ? 'danger' : 'secondary'}
-                      >
-                        {saveStateText}
-                      </Text>
-                    ) : null}
-                  </footer>
-                </>
-              ) : null}
-            </aside>
           </div>
         </div>
       </div>
@@ -796,15 +692,6 @@ export function TestOrderWorkspacePage() {
         onClose={() => setAddCasesOpen(false)}
       />
 
-      <TestOrderGraphViewer
-        open={graphOpen}
-        orderId={order?.orderId ?? orderId ?? ''}
-        projectId={order?.projectId}
-        canExecute={can('execute')}
-        currentUserId={currentUserId}
-        isProjectOwner={isOwner}
-        onClose={() => setGraphOpen(false)}
-      />
     </div>
   )
 }

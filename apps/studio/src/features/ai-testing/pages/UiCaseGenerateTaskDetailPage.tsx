@@ -1,3 +1,6 @@
+import { listTotal } from '@/shared/api/request'
+import { getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
+import { useTaskRunHistorySync } from '@/features/ai-testing/hooks/useTaskRunHistorySync'
 import { useDeleteTaskRun, useStartTaskRun } from '@/features/ai-testing/hooks/useTaskRunActions'
 import '@/shared/styles/surface-tokens.css'
 import '@/features/ai-testing/styles/index.css'
@@ -28,6 +31,7 @@ import { isGenerateTaskRunImportable, renderApiCaseGenerateTaskRunStatusTag, sum
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
 import { api, ApiError, listItems, type ListResponse } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
+import { goBackOrFallback } from '@/shared/utils/backNavigation'
 import { formatTime, getErrorMessage, normalizeRequirementId, normalizeSprintId } from '@/utils/format'
 
 const { Text } = Typography
@@ -138,6 +142,9 @@ type DetailLocationState = { pendingSourceArchive?: File; pendingSourceArchiveEr
 
 export function UiCaseGenerateTaskDetailPage() {
   const { taskId = '' } = useParams()
+  const [runPage, setRunPage] = useState(1)
+  const [runPageSize, setRunPageSize] = useState(20)
+  useEffect(() => { setRunPage(1) }, [taskId])
   const navigate = useNavigate()
   const location = useLocation()
   const queryClient = useQueryClient()
@@ -176,12 +183,29 @@ export function UiCaseGenerateTaskDetailPage() {
     retry: false,
   })
   const runsQuery = useQuery({
-    queryKey: ['uiCaseGenerateTaskRuns', taskId],
-    queryFn: () => api.getUiCaseGenerateTaskRuns(taskId),
+    queryKey: ['uiCaseGenerateTaskRuns', taskId, runPage, runPageSize],
+    queryFn: () => api.getUiCaseGenerateTaskRuns(taskId, { page: runPage, pageSize: runPageSize }),
     enabled: Boolean(taskId) && !taskQuery.error,
-    refetchInterval: (query) => listItems(query.state.data).some((run) => activeRunStatuses.has(run.status ?? '')) ? 2000 : false,
+    refetchInterval: expandedSection === 'runHistory' ? RUN_HISTORY_POLL_INTERVAL : false,
     retry: false,
   })
+  const runTotal = listTotal(runsQuery.data)
+  useEffect(() => {
+    if (runsQuery.data && !runsQuery.isFetching && !runsQuery.error) {
+      const lastPage = Math.max(1, Math.ceil(runTotal / runPageSize))
+      if (runPage > lastPage) setRunPage(lastPage)
+    }
+  }, [runPage, runPageSize, runTotal, runsQuery.data, runsQuery.isFetching, runsQuery.error])
+  const runPagination = {
+    current: runPage, pageSize: runPageSize, total: runTotal,
+    loading: runsQuery.isFetching || Boolean(runsQuery.error),
+    onChange: (page: number, size: number) => { setRunPage(size === runPageSize ? page : 1); setRunPageSize(size) },
+  }
+  const refetchRunHistory = runsQuery.refetch
+  useEffect(() => {
+    if (expandedSection === 'runHistory') void refetchRunHistory({ cancelRefetch: false })
+  }, [expandedSection, refetchRunHistory])
+
   const runs = useMemo(
     () => [...listItems(runsQuery.data)].sort((left, right) => new Date(right.createdAt ?? '').getTime() - new Date(left.createdAt ?? '').getTime()),
     [runsQuery.data],
@@ -195,8 +219,12 @@ export function UiCaseGenerateTaskDetailPage() {
     queryKey: ['uiCaseGenerateTaskRun', selectedRunId],
     queryFn: () => api.getUiCaseGenerateTaskRun(selectedRunId!),
     enabled: Boolean(selectedRunId),
-    refetchInterval: (query) => activeRunStatuses.has((query.state.data as UiCaseGenerateTaskRun | undefined)?.status ?? '') ? 2000 : false,
+    refetchInterval: (query) => expandedSection === 'runHistory' ? getRunPollingInterval(query.state.data?.status) : false,
     retry: false,
+  })
+  useTaskRunHistorySync({
+    historyKey: 'uiCaseGenerateTaskRuns', detailKey: 'uiCaseGenerateTaskRun', taskId, selectedRunId,
+    history: runsQuery.data, detail: selectedRunQuery.data,
   })
   const selectedRun = selectedRunQuery.error
     ? undefined
@@ -227,7 +255,9 @@ export function UiCaseGenerateTaskDetailPage() {
     setReviewComment('')
   }, [selectedRun?.resultYaml, selectedRun?.runId])
 
-  const hasActiveRun = runs.some((run) => activeRunStatuses.has(run.status ?? ''))
+  const hasActiveRun = runsQuery.data?.statusCounts
+    ? Object.entries(runsQuery.data.statusCounts).some(([status, count]) => count > 0 && activeRunStatuses.has(status))
+    : runs.some((run) => activeRunStatuses.has(run.status ?? ''))
   const resolveRunRecord = (record: UiCaseGenerateTaskRun) =>
     record.runId === selectedRunId && selectedRun ? selectedRun : record
   const { can } = useProjectAccess(taskQuery.data?.projectId ?? '')
@@ -250,14 +280,15 @@ export function UiCaseGenerateTaskDetailPage() {
 
   const applyImportedRun = useCallback((updatedRun: UiCaseGenerateTaskRun) => {
     queryClient.setQueryData(['uiCaseGenerateTaskRun', updatedRun.runId], updatedRun)
-    queryClient.setQueryData<ListResponse<UiCaseGenerateTaskRun>>(['uiCaseGenerateTaskRuns', taskId], (current) => {
+    queryClient.setQueriesData<ListResponse<UiCaseGenerateTaskRun> & { latestRun?: UiCaseGenerateTaskRun; statusCounts?: Record<string, number> }>({ queryKey: ['uiCaseGenerateTaskRuns', taskId] }, (current) => {
       if (!current) return current
       const items = listItems(current).map((item) => (
         item.runId === updatedRun.runId ? updatedRun : item
       )) as ListResponse<UiCaseGenerateTaskRun>
       items.items = items.slice()
       items.total = current.total
-      return items
+      return Object.assign(items, { statusCounts: current.statusCounts,
+        latestRun: current.latestRun?.runId === updatedRun.runId ? updatedRun : current.latestRun })
     })
   }, [queryClient, taskId])
 
@@ -269,7 +300,7 @@ export function UiCaseGenerateTaskDetailPage() {
 
     function navigateBack() {
       if (!hasUnsavedChanges) {
-        navigate('/ai-testing?tab=tasks')
+        goBackOrFallback(navigate, '/ai-testing?tab=tasks')
         return
       }
     Modal.confirm({
@@ -278,7 +309,7 @@ export function UiCaseGenerateTaskDetailPage() {
       content: '离开页面后，本次未保存的 YAML 修改将丢失。',
       okText: '放弃并离开',
       okButtonProps: { danger: true },
-        onOk: () => navigate('/ai-testing?tab=tasks'),
+        onOk: () => goBackOrFallback(navigate, '/ai-testing?tab=tasks'),
     })
   }
 
@@ -527,10 +558,10 @@ export function UiCaseGenerateTaskDetailPage() {
               <div className="ai-task-detail-nav-label">输出</div>
               <TaskDetailNavItem
                 title="运行记录"
-                sub={`共 ${runs.length} 条运行记录`}
+                sub={`共 ${runTotal} 条运行记录`}
                 icon={<HistoryOutlined />}
                 active={expandedSection === 'runHistory'}
-                badge={runs.length}
+                badge={runTotal}
                 onClick={() => setExpandedSection('runHistory')}
               />
             </TaskDetailNavPanel>
@@ -570,7 +601,7 @@ export function UiCaseGenerateTaskDetailPage() {
                 <>
                   <div className="ai-task-detail-main-head">
                     <span className="ai-task-detail-main-head-title">运行记录</span>
-                    <div className="ai-task-detail-main-head-extra"><div className="ai-task-run-history-toolbar"><span className="ai-task-run-history-auto-refresh">每 5 秒自动刷新</span><ActionButton size="small" operation="refresh" onClick={() => { runsQuery.refetch(); selectedRunQuery.refetch() }}>刷新</ActionButton></div></div>
+                    <div className="ai-task-detail-main-head-extra"><div className="ai-task-run-history-toolbar"><span className="ai-task-run-history-auto-refresh">历史每 30 秒刷新</span><ActionButton size="small" operation="refresh" onClick={() => { runsQuery.refetch(); selectedRunQuery.refetch() }}>刷新</ActionButton></div></div>
                   </div>
                   <div className="ai-task-detail-main-body">
                     {runsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(runsQuery.error)} /> : null}
@@ -579,10 +610,11 @@ export function UiCaseGenerateTaskDetailPage() {
                     ) : runs.length ? (
                       <>
                         <TaskDetailRunMetrics
-                          {...summarizeRunStatuses(runs)}
-                          latestStatus={renderApiCaseGenerateTaskRunStatusTag(runs[0]?.status)}
+                          {...summarizeRunStatuses(runs, runsQuery.data?.statusCounts)}
+                          latestStatus={renderApiCaseGenerateTaskRunStatusTag(runsQuery.data?.latestRun?.status ?? runs[0]?.status)}
                         />
                         <RunHistoryTable<UiCaseGenerateTaskRun>
+                        pagination={runPagination}
                           rows={runs}
                           getRunId={(record) => record.runId}
                           selectedRunId={selectedRunId}

@@ -1,21 +1,30 @@
 """Shared nanobot prompt helpers."""
 
+STRUCTURED_REQUIREMENT_INPUT_INSTRUCTION = (
+    "上游若为 requirement_understanding JSON，请读取模块、操作、交互、规则和问题的业务内容，"
+    "保留来源与确认状态；示例不作为产品事实，未答复问题继续有效。"
+    "需求理解与五字段分析是不同产物，不把字段名或转义符当业务名称。"
+)
+
 JSON_ONLY_INSTRUCTION = "请直接返回 JSON 内容，不要返回 Markdown 代码块、解释文字或其他说明。"
-FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION = (
+FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION = STRUCTURED_REQUIREMENT_INPUT_INSTRUCTION + (
     "请直接返回符合 analyze-functional-requirements skill 要求的测试点分析 JSON，"
     "不要返回详细测试用例、cases/testCases、meta/config 包装结构，"
     "输出必须是且只能是一个可由 JSON.parse 直接解析的合法 JSON 对象："
     "第一个字符必须是 {，最后一个字符必须是 }；"
     "不得在对象前后输出空行、解释、标题、注释、Markdown 代码块或第二个 JSON 对象。"
 )
-FUNCTIONAL_CASE_NAMES_JSON_ONLY_INSTRUCTION = (
+FUNCTIONAL_CASE_NAMES_JSON_ONLY_INSTRUCTION = STRUCTURED_REQUIREMENT_INPUT_INSTRUCTION + (
     "请直接返回符合 generate-solution-test-points skill 要求的测试用例名称 JSON，"
     "不要返回详细测试步骤、cases/testCases、meta/config 包装结构，"
     "不要返回 Markdown 代码块、解释文字或其他说明。"
 )
-FUNCTIONAL_DETAILED_CASES_JSON_ONLY_INSTRUCTION = (
-    "请直接返回包含 cases 数组的详细测试用例 JSON。"
-    "输出必须是且只能是一个可由 JSON.parse 直接解析的合法 JSON 对象："
+FUNCTIONAL_DETAILED_CASES_JSON_ONLY_INSTRUCTION = STRUCTURED_REQUIREMENT_INPUT_INSTRUCTION + (
+    "关键依据不足时，先返回以 CLARIFICATION_REQUIRED: 开头的简短澄清问题，"
+    "注明受影响测试点和阻塞的操作或判定，不虚构控件、选项、路径或预期，"
+    "不以 cases:[] 隐藏受阻测试点；该响应用于失败提示，不是正式阶段产物。"
+    "依据齐备时，请直接返回包含 cases 数组的详细测试用例 JSON。"
+    "正式输出必须是且只能是一个可由 JSON.parse 直接解析的合法 JSON 对象："
     "第一个字符必须是 {，最后一个字符必须是 }；"
     "不得在对象前后输出空行、解释、标题、注释、Markdown 代码块或第二个 JSON 对象。"
 )
@@ -26,7 +35,7 @@ FUNCTIONAL_RELATION_JSON_ONLY_INSTRUCTION = (
     "第一个字符必须是 {，最后一个字符必须是 }；"
     "不得在对象前后输出空行、解释、澄清提问、标题、注释、Markdown 代码块或第二个 JSON 对象。"
 )
-TEST_ORDER_GRAPH_JSON_ONLY_INSTRUCTION = (
+TEST_ORDER_GRAPH_JSON_ONLY_INSTRUCTION = STRUCTURED_REQUIREMENT_INPUT_INSTRUCTION + (
     "请直接返回符合 update-test-case-graph skill 要求的完整累计图谱 JSON（关系输出协议 2.0）。"
     "顶层只包含 schema_version、main_paths、edges；"
     "输出必须是且只能是一个可由 JSON.parse 直接解析的合法 JSON 对象："

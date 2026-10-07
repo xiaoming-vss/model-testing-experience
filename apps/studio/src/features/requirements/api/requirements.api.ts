@@ -1,7 +1,8 @@
-import { request, requestBlob, type ListResponse } from '@/shared/api/request'
+import { buildQuery, request, requestBlob, type ListResponse } from '@/shared/api/request'
 import { storageCapabilities, uploadStoredFile } from '@/shared/api/files'
 import type {
   Requirement,
+  RequirementListItem,
   RequirementCreatePayload,
   RequirementDocumentType,
   RequirementDocumentUploadPayload,
@@ -24,6 +25,8 @@ function buildRequirementJsonBody(body: RequirementCreatePayload | RequirementUp
 }
 
 export const requirementsApi = {
+  getProjectRequirements: (projectId: string, params: { page: number; pageSize: number; sprintId?: string }) =>
+    request<ListResponse<RequirementListItem>>(`/v1/projects/${projectId}/requirements${buildQuery(params)}`),
   getRequirements: (sprintId: string) => request<ListResponse<Requirement>>(`/v1/sprints/${sprintId}/requirements`),
   createRequirement: async (sprintId: string, body: RequirementCreatePayload) => {
     const capabilities = await storageCapabilities()

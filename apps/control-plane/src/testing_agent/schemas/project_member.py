@@ -6,18 +6,18 @@ from pydantic.alias_generators import to_camel
 
 class AddProjectMemberRequest(BaseModel):
     name: str
-    role: Literal["member", "viewer"]
+    role: Literal["member", "viewer", "developer"]
 
 
 class ProjectMemberResponse(BaseModel):
     user_id: str
     name: str
-    role: Literal["owner", "member", "viewer"]
+    role: Literal["owner", "member", "viewer", "developer"]
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
 class ChangeProjectMemberRequest(BaseModel):
-    role: Literal["member", "viewer"]
+    role: Literal["member", "viewer", "developer"]
 
 
 class TransferProjectRequest(BaseModel):

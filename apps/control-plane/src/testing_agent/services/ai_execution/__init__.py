@@ -32,7 +32,6 @@ FIELDS = {
     "requirement_analysis": "requirementAnalysis",
     "case_names": "caseNames",
     "extracting_text": "firstStepOutput",
-    "writing_requirement": "secondStepOutput",
     "relation_analysis": "caseRelations",
 }
 TERMINAL = {"success", "failed", "error", "canceled"}
@@ -85,7 +84,7 @@ def layout(kind):
             "relation_analysis",
         ]
     if kind == "requirement_analysis":
-        return ["extracting_text", "writing_requirement", "feature_understanding"]
+        return ["extracting_text", "feature_understanding"]
     return ["generate"]
 
 
@@ -352,6 +351,12 @@ def sync_run(session, run):
             current.execution_status = (
                 "running" if run.status in {"running", "claimed"} else "pending"
             )
+    if getattr(run, "_reset_requirement_review", False) and kind == "requirement_analysis":
+        final.review_status = "pending"
+        final.reviewer_user_id = None
+        final.reviewed_at = None
+        final.review_comment = None
+        run._reset_requirement_review = False
     if run.status == "waiting_review":
         current.review_status = "pending"
     if run.review_status in {"approved", "rejected"}:
@@ -448,7 +453,7 @@ def project(session, run):
 
 def _project(run, stages, attempts, imported):
     if not stages:
-        raise ErrNotFound
+        raise ErrNotFound()
     final = final_stage(stages)
     current = next(
         (stage for stage in stages if stage.stage == run.current_stage),
@@ -527,6 +532,16 @@ def _project(run, stages, attempts, imported):
         )
         elapsed = end - start
         run.duration_ms = max(0, int(elapsed.total_seconds() * 1000))
+
+    def aware(value):
+        return value.replace(tzinfo=UTC) if value and value.tzinfo is None else value
+
+    timestamps = [aware(run.created_at), *[aware(s.updated_at) for s in stages]]
+    if latest:
+        timestamps.append(aware(latest.created_at))
+    if imported:
+        timestamps.append(aware(imported.imported_at or imported.created_at))
+    run._history_updated_at = max((t for t in timestamps if t), default=None)
     run._execution_state = state(run)
     return run
 
@@ -539,11 +554,11 @@ def require_current_worker(session, run, task):
         .order_by(WorkerTask.created_at.desc(), WorkerTask.id.desc())
     )
     if latest != task.task_id or task.status in TERMINAL:
-        raise ErrBadRequest
+        raise ErrBadRequest()
     stages, attempts = graph(session, run)
     active = [attempts[s.active_attempt_id] for s in stages if s.active_attempt_id in attempts]
     if active and not any(a.worker_task_id == task.task_id for a in active):
-        raise ErrBadRequest
+        raise ErrBadRequest()
 
 
 def worker_input(session, run, task):
@@ -592,7 +607,7 @@ def project_many(session, runs):
         )
     }
     imports = {i.run_id: i for i in session.scalars(select(Import).where(Import.run_id.in_(ids)))}
-    grouped = {run_id: [] for run_id in ids}
+    grouped: dict[str, list[Stage]] = {run_id: [] for run_id in ids}
     for stage in stages:
         grouped[stage.run_id].append(stage)
     return [_project(run, grouped[run.run_id], attempts, imports.get(run.run_id)) for run in runs]
@@ -600,6 +615,6 @@ def project_many(session, runs):
 
 def apply_scope(run, scope):
     if scope is None:
-        raise ErrNotFound
+        raise ErrNotFound()
     run.project_id, run.sprint_id, run.requirement_id = scope
     run.trigger_type = "manual"  # retained only as a legacy wire default

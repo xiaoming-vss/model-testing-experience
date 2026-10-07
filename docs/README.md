@@ -16,7 +16,7 @@
 | [ai-worker](ai-worker/README.md) | AI 任务执行、技能预置与轮询协议 | [apps/ai-worker](../apps/ai-worker/) |
 | [studio](studio/README.md) | 前端开发、配置与构建 | [apps/studio](../apps/studio/) |
 | [api-ui-worker](api-ui-worker/README.md) | API/UI 执行、S3 产物上传与 Worker 配置 | [apps/api-ui-worker](../apps/api-ui-worker/) |
-| [connector-zentao](connector-zentao/README.md) | 禅道适配：架构、请求契约与错误码 | [apps/connector-zentao](../apps/connector-zentao/) |
+| [integration-worker](integration-worker/README.md) | 独立集成执行、步骤许可、租约与证据恢复 | [apps/integration-worker](../apps/integration-worker/) |
 
 ## 公共开发规范
 

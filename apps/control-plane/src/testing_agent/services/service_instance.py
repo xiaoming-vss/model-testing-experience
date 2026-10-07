@@ -10,10 +10,10 @@ def normalize_instance_url(value: str) -> str:
     try:
         url = urlsplit(value.strip())
         if url.scheme not in ("http", "https") or not url.hostname or url.username or url.password:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         port = url.port
     except ValueError as exc:
-        raise ErrBadRequest from exc
+        raise ErrBadRequest() from exc
     host = url.hostname.lower()
     if ":" in host:
         host = f"[{host}]"

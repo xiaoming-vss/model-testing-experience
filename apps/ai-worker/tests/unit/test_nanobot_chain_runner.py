@@ -201,55 +201,6 @@ class NanobotChainRunnerTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIn("只保留核心业务场景", factory.bot.calls[3]["message"])
 
-    async def test_run_requirement_analysis_chain_uses_three_skill_names_without_api_constraints(
-        self,
-    ) -> None:
-        run_requirement_analysis_chain = getattr(
-            runner_module, "run_requirement_analysis_chain", None
-        )
-        self.assertIsNotNone(run_requirement_analysis_chain)
-        if run_requirement_analysis_chain is None:
-            return
-
-        factory = _FakeFactory(
-            ["normalized requirement", "first analysis", "analysis:\n  summary: done"]
-        )
-        stage_outputs: list[str] = []
-
-        result = await run_requirement_analysis_chain(
-            source_text="需求正文内容",
-            session_key="demo:requirement-analysis",
-            config_path="D:/tmp/config.json",
-            workspace="D:/tmp/workspace",
-            first_skill_name="requirement-step-zero",
-            second_skill_name="requirement-step-one",
-            third_skill_name="requirement-step-two",
-            extra_instruction="重点分析异常场景和歧义点",
-            on_first_step_result=stage_outputs.append,
-            on_second_step_result=stage_outputs.append,
-            from_config=factory,
-        )
-
-        self.assertEqual(result.first_step_output, "normalized requirement")
-        self.assertEqual(result.second_step_output, "first analysis")
-        self.assertEqual(result.final_output, "analysis:\n  summary: done")
-        self.assertEqual(stage_outputs, ["normalized requirement", "first analysis"])
-        self.assertEqual(
-            [call["session_key"] for call in factory.bot.calls],
-            ["demo:requirement-analysis", "demo:requirement-analysis", "demo:requirement-analysis"],
-        )
-        self.assertIn("请先加载本地 skill：requirement-step-zero", factory.bot.calls[0]["message"])
-        self.assertIn("需求正文内容", factory.bot.calls[0]["message"])
-        self.assertIn("重点分析异常场景和歧义点", factory.bot.calls[0]["message"])
-        self.assertIn("请先加载本地 skill：requirement-step-one", factory.bot.calls[1]["message"])
-        self.assertIn("normalized requirement", factory.bot.calls[1]["message"])
-        self.assertIn("重点分析异常场景和歧义点", factory.bot.calls[1]["message"])
-        self.assertIn("请先加载本地 skill：requirement-step-two", factory.bot.calls[2]["message"])
-        self.assertIn("first analysis", factory.bot.calls[2]["message"])
-        self.assertIn("重点分析异常场景和歧义点", factory.bot.calls[2]["message"])
-        self.assertNotIn("符合 openapi-test-config-extractor", factory.bot.calls[0]["message"])
-        self.assertNotIn("符合 api-cases-yaml-generator", factory.bot.calls[2]["message"])
-
 
 if __name__ == "__main__":
     unittest.main()

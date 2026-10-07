@@ -1,0 +1,566 @@
+{
+  "schema_version": "2.0",
+  "main_paths": [
+    {
+      "path_id": "P01",
+      "case_ids": [
+        "399638fc-099c-404a-944e-82aa4cc763cb",
+        "f9edf608-ae65-4e92-8780-e65940a73d3f",
+        "5c64e328-3d35-4185-a659-6c4f05a2de42",
+        "3bcc82ca-33ec-48f3-9d76-cf032086812e",
+        "b0811e35-0634-4176-ac3c-2497557de5a0"
+      ]
+    },
+    {
+      "path_id": "P02",
+      "case_ids": [
+        "cfb16a17-a6a8-4726-9add-843f470e24c2",
+        "68f17fb5-c7f3-415d-a3b6-de156f260f2a"
+      ]
+    },
+    {
+      "path_id": "P03",
+      "case_ids": [
+        "8f205757-08be-464f-9bd4-c34443ec7262",
+        "dac24940-b01c-4f12-83b8-4ccdd4b26570",
+        "2c832b2c-8b06-4534-8d3a-ed4d8ab23e9e",
+        "69886d31-f648-45a9-bf10-4cab472fb20f",
+        "0190d0fc-b4c0-4e91-95c9-597d1e472846"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "edge_id": "E01",
+      "from_case_id": "399638fc-099c-404a-944e-82aa4cc763cb",
+      "to_case_id": "f9edf608-ae65-4e92-8780-e65940a73d3f",
+      "relation_type": "next",
+      "order": 1
+    },
+    {
+      "edge_id": "E02",
+      "from_case_id": "399638fc-099c-404a-944e-82aa4cc763cb",
+      "to_case_id": "9ef160d9-8450-4e3f-be1b-d2e131d94782",
+      "relation_type": "branch",
+      "order": 2
+    },
+    {
+      "edge_id": "E03",
+      "from_case_id": "f9edf608-ae65-4e92-8780-e65940a73d3f",
+      "to_case_id": "5c64e328-3d35-4185-a659-6c4f05a2de42",
+      "relation_type": "next",
+      "order": 1
+    },
+    {
+      "edge_id": "E04",
+      "from_case_id": "f9edf608-ae65-4e92-8780-e65940a73d3f",
+      "to_case_id": "b1fc7b69-6991-444d-bd05-0a1bd7ff9b7e",
+      "relation_type": "branch",
+      "order": 2
+    },
+    {
+      "edge_id": "E05",
+      "from_case_id": "f9edf608-ae65-4e92-8780-e65940a73d3f",
+      "to_case_id": "0a540675-0136-4810-afff-4858493003cb",
+      "relation_type": "branch",
+      "order": 3
+    },
+    {
+      "edge_id": "E06",
+      "from_case_id": "f9edf608-ae65-4e92-8780-e65940a73d3f",
+      "to_case_id": "f9894053-739b-4421-b31b-3a50768ef9fe",
+      "relation_type": "branch",
+      "order": 4
+    },
+    {
+      "edge_id": "E07",
+      "from_case_id": "f9edf608-ae65-4e92-8780-e65940a73d3f",
+      "to_case_id": "c9915ebe-1950-4b41-8d54-47d462bb07f2",
+      "relation_type": "branch",
+      "order": 5
+    },
+    {
+      "edge_id": "E08",
+      "from_case_id": "f9edf608-ae65-4e92-8780-e65940a73d3f",
+      "to_case_id": "fa9ab53f-015e-45b6-8431-8e41b4ed1485",
+      "relation_type": "branch",
+      "order": 6
+    },
+    {
+      "edge_id": "E09",
+      "from_case_id": "f9edf608-ae65-4e92-8780-e65940a73d3f",
+      "to_case_id": "03b3968e-09a5-420c-85a0-4418359a298e",
+      "relation_type": "branch",
+      "order": 7
+    },
+    {
+      "edge_id": "E10",
+      "from_case_id": "5c64e328-3d35-4185-a659-6c4f05a2de42",
+      "to_case_id": "3bcc82ca-33ec-48f3-9d76-cf032086812e",
+      "relation_type": "next",
+      "order": 1
+    },
+    {
+      "edge_id": "E11",
+      "from_case_id": "5c64e328-3d35-4185-a659-6c4f05a2de42",
+      "to_case_id": "b302164e-70f7-42ea-9402-f1095dada25e",
+      "relation_type": "branch",
+      "order": 2
+    },
+    {
+      "edge_id": "E12",
+      "from_case_id": "5c64e328-3d35-4185-a659-6c4f05a2de42",
+      "to_case_id": "46765b55-1cac-4452-ba74-e93a546a4fca",
+      "relation_type": "branch",
+      "order": 3
+    },
+    {
+      "edge_id": "E13",
+      "from_case_id": "5c64e328-3d35-4185-a659-6c4f05a2de42",
+      "to_case_id": "b29fd7e4-c888-4e27-ba3f-65b5ac962173",
+      "relation_type": "branch",
+      "order": 4
+    },
+    {
+      "edge_id": "E14",
+      "from_case_id": "5c64e328-3d35-4185-a659-6c4f05a2de42",
+      "to_case_id": "8ccd02a9-5417-44c3-9dca-47d033d46d67",
+      "relation_type": "branch",
+      "order": 5
+    },
+    {
+      "edge_id": "E15",
+      "from_case_id": "5c64e328-3d35-4185-a659-6c4f05a2de42",
+      "to_case_id": "070166ef-bb65-484d-b0f7-47f52459aa6d",
+      "relation_type": "branch",
+      "order": 6
+    },
+    {
+      "edge_id": "E16",
+      "from_case_id": "b302164e-70f7-42ea-9402-f1095dada25e",
+      "to_case_id": "f568c340-1903-4598-b729-4c463433927c",
+      "relation_type": "branch",
+      "order": 1
+    },
+    {
+      "edge_id": "E17",
+      "from_case_id": "46765b55-1cac-4452-ba74-e93a546a4fca",
+      "to_case_id": "5ab0c3f5-9b3c-4b3e-94c9-156990603de4",
+      "relation_type": "branch",
+      "order": 1
+    },
+    {
+      "edge_id": "E18",
+      "from_case_id": "b29fd7e4-c888-4e27-ba3f-65b5ac962173",
+      "to_case_id": "8a5ea8c0-f896-42b8-8fed-da0d4bf97e7b",
+      "relation_type": "branch",
+      "order": 1
+    },
+    {
+      "edge_id": "E19",
+      "from_case_id": "b29fd7e4-c888-4e27-ba3f-65b5ac962173",
+      "to_case_id": "12b7a051-43e8-4390-b537-2a7e04eb5345",
+      "relation_type": "branch",
+      "order": 2
+    },
+    {
+      "edge_id": "E20",
+      "from_case_id": "b29fd7e4-c888-4e27-ba3f-65b5ac962173",
+      "to_case_id": "6d44efda-feb8-44fe-8e75-3c458e7088bd",
+      "relation_type": "branch",
+      "order": 3
+    },
+    {
+      "edge_id": "E21",
+      "from_case_id": "6d44efda-feb8-44fe-8e75-3c458e7088bd",
+      "to_case_id": "bbdcdee1-7b18-46ff-971b-41d14bad8afe",
+      "relation_type": "branch",
+      "order": 1
+    },
+    {
+      "edge_id": "E22",
+      "from_case_id": "8ccd02a9-5417-44c3-9dca-47d033d46d67",
+      "to_case_id": "cddc08be-b20b-4d5c-8725-76caac664f6d",
+      "relation_type": "next",
+      "order": 1
+    },
+    {
+      "edge_id": "E23",
+      "from_case_id": "8ccd02a9-5417-44c3-9dca-47d033d46d67",
+      "to_case_id": "d5c1917a-4245-4fed-81e7-7805fd42054e",
+      "relation_type": "branch",
+      "order": 2
+    },
+    {
+      "edge_id": "E24",
+      "from_case_id": "cddc08be-b20b-4d5c-8725-76caac664f6d",
+      "to_case_id": "c9678a1a-cba5-44b1-8af8-615b75e47e6d",
+      "relation_type": "branch",
+      "order": 1
+    },
+    {
+      "edge_id": "E25",
+      "from_case_id": "cddc08be-b20b-4d5c-8725-76caac664f6d",
+      "to_case_id": "64f99363-569c-4047-bd05-b5b2f71a2495",
+      "relation_type": "branch",
+      "order": 2
+    },
+    {
+      "edge_id": "E26",
+      "from_case_id": "3bcc82ca-33ec-48f3-9d76-cf032086812e",
+      "to_case_id": "b0811e35-0634-4176-ac3c-2497557de5a0",
+      "relation_type": "next",
+      "order": 1
+    },
+    {
+      "edge_id": "E27",
+      "from_case_id": "3bcc82ca-33ec-48f3-9d76-cf032086812e",
+      "to_case_id": "a228dbbb-3bf9-42c8-aa2c-0bbf6f96d716",
+      "relation_type": "branch",
+      "order": 2
+    },
+    {
+      "edge_id": "E28",
+      "from_case_id": "3bcc82ca-33ec-48f3-9d76-cf032086812e",
+      "to_case_id": "8986e608-9bfd-46ad-beca-0cb48633c7e1",
+      "relation_type": "branch",
+      "order": 3
+    },
+    {
+      "edge_id": "E29",
+      "from_case_id": "3bcc82ca-33ec-48f3-9d76-cf032086812e",
+      "to_case_id": "375edcdd-3ce8-486c-9e18-c0d971f4ca87",
+      "relation_type": "branch",
+      "order": 4
+    },
+    {
+      "edge_id": "E30",
+      "from_case_id": "3bcc82ca-33ec-48f3-9d76-cf032086812e",
+      "to_case_id": "ff5a4c48-4e36-4c6f-b4f0-0ba0fb81b042",
+      "relation_type": "branch",
+      "order": 5
+    },
+    {
+      "edge_id": "E31",
+      "from_case_id": "3bcc82ca-33ec-48f3-9d76-cf032086812e",
+      "to_case_id": "43c8d665-6290-4df8-b204-af1415e523a8",
+      "relation_type": "branch",
+      "order": 6
+    },
+    {
+      "edge_id": "E32",
+      "from_case_id": "cfb16a17-a6a8-4726-9add-843f470e24c2",
+      "to_case_id": "68f17fb5-c7f3-415d-a3b6-de156f260f2a",
+      "relation_type": "next",
+      "order": 1
+    },
+    {
+      "edge_id": "E33",
+      "from_case_id": "cfb16a17-a6a8-4726-9add-843f470e24c2",
+      "to_case_id": "86594d68-6f2f-4322-aeac-83174e6793b7",
+      "relation_type": "branch",
+      "order": 2
+    },
+    {
+      "edge_id": "E34",
+      "from_case_id": "cfb16a17-a6a8-4726-9add-843f470e24c2",
+      "to_case_id": "9e8b8db5-9454-4ca1-b4f5-d04301873c5e",
+      "relation_type": "branch",
+      "order": 3
+    },
+    {
+      "edge_id": "E35",
+      "from_case_id": "cfb16a17-a6a8-4726-9add-843f470e24c2",
+      "to_case_id": "2d7d0b86-45d2-4def-acb1-04106c35a88a",
+      "relation_type": "branch",
+      "order": 4
+    },
+    {
+      "edge_id": "E36",
+      "from_case_id": "cfb16a17-a6a8-4726-9add-843f470e24c2",
+      "to_case_id": "39abce99-f6b3-4d4f-933d-12bd205b2db8",
+      "relation_type": "branch",
+      "order": 5
+    },
+    {
+      "edge_id": "E37",
+      "from_case_id": "5c64e328-3d35-4185-a659-6c4f05a2de42",
+      "to_case_id": "a0eccdeb-ba61-4a53-a02b-8646696600b0",
+      "relation_type": "branch",
+      "order": 7
+    },
+    {
+      "edge_id": "E38",
+      "from_case_id": "a0eccdeb-ba61-4a53-a02b-8646696600b0",
+      "to_case_id": "69e7462f-aca0-4936-8af3-fb5e4f34b9ee",
+      "relation_type": "branch",
+      "order": 1
+    },
+    {
+      "edge_id": "E39",
+      "from_case_id": "a0eccdeb-ba61-4a53-a02b-8646696600b0",
+      "to_case_id": "387226bd-5818-4130-ae8c-4a3b69dede01",
+      "relation_type": "branch",
+      "order": 2
+    },
+    {
+      "edge_id": "E40",
+      "from_case_id": "a0eccdeb-ba61-4a53-a02b-8646696600b0",
+      "to_case_id": "eb640a23-ccc9-4f35-b9d6-5d34e7d13789",
+      "relation_type": "branch",
+      "order": 3
+    },
+    {
+      "edge_id": "E41",
+      "from_case_id": "a0eccdeb-ba61-4a53-a02b-8646696600b0",
+      "to_case_id": "ee8bd672-e2be-4658-a336-d75b94ae42ec",
+      "relation_type": "branch",
+      "order": 4
+    },
+    {
+      "edge_id": "E42",
+      "from_case_id": "a0eccdeb-ba61-4a53-a02b-8646696600b0",
+      "to_case_id": "7077cae5-d8a5-4bf5-a508-786f173c4654",
+      "relation_type": "branch",
+      "order": 5
+    },
+    {
+      "edge_id": "E43",
+      "from_case_id": "a0eccdeb-ba61-4a53-a02b-8646696600b0",
+      "to_case_id": "1c3f4b2d-ad11-4f1e-aa6d-ae7b77f4394e",
+      "relation_type": "branch",
+      "order": 6
+    },
+    {
+      "edge_id": "E44",
+      "from_case_id": "5c64e328-3d35-4185-a659-6c4f05a2de42",
+      "to_case_id": "ef694fa3-2e18-49cb-8354-4a657a3d9852",
+      "relation_type": "branch",
+      "order": 8
+    },
+    {
+      "edge_id": "E45",
+      "from_case_id": "5c64e328-3d35-4185-a659-6c4f05a2de42",
+      "to_case_id": "80385b68-1463-4dbe-9d3e-ffacd0adda6b",
+      "relation_type": "branch",
+      "order": 9
+    },
+    {
+      "edge_id": "E46",
+      "from_case_id": "46765b55-1cac-4452-ba74-e93a546a4fca",
+      "to_case_id": "21945690-bed0-472b-b7c5-8d68e8b9c0c7",
+      "relation_type": "branch",
+      "order": 2
+    },
+    {
+      "edge_id": "E47",
+      "from_case_id": "46765b55-1cac-4452-ba74-e93a546a4fca",
+      "to_case_id": "2c92a554-6200-4b08-9b25-523145f16989",
+      "relation_type": "branch",
+      "order": 3
+    },
+    {
+      "edge_id": "E48",
+      "from_case_id": "46765b55-1cac-4452-ba74-e93a546a4fca",
+      "to_case_id": "b2a70305-3245-4cd8-a9d0-f75673dac3f0",
+      "relation_type": "branch",
+      "order": 4
+    },
+    {
+      "edge_id": "E49",
+      "from_case_id": "9ef160d9-8450-4e3f-be1b-d2e131d94782",
+      "to_case_id": "5eec46e8-b23a-4834-9e83-bddbca1c87d6",
+      "relation_type": "next",
+      "order": 1
+    },
+    {
+      "edge_id": "E50",
+      "from_case_id": "f9edf608-ae65-4e92-8780-e65940a73d3f",
+      "to_case_id": "7ae558d5-5ee1-4fc1-aa52-660882794b02",
+      "relation_type": "branch",
+      "order": 8
+    },
+    {
+      "edge_id": "E51",
+      "from_case_id": "3bcc82ca-33ec-48f3-9d76-cf032086812e",
+      "to_case_id": "35b6e6a3-2738-45a2-a2e7-9dc9f1c03450",
+      "relation_type": "branch",
+      "order": 7
+    },
+    {
+      "edge_id": "E52",
+      "from_case_id": "fd6bac92-f61e-4f0e-846f-1542b3c236c8",
+      "to_case_id": "c8233645-15d6-4487-8b54-0380a035b862",
+      "relation_type": "branch",
+      "order": 1
+    },
+    {
+      "edge_id": "E53",
+      "from_case_id": "fd6bac92-f61e-4f0e-846f-1542b3c236c8",
+      "to_case_id": "740d19bc-2f67-46f8-8c53-bf0ad35aac69",
+      "relation_type": "branch",
+      "order": 2
+    },
+    {
+      "edge_id": "E54",
+      "from_case_id": "fd6bac92-f61e-4f0e-846f-1542b3c236c8",
+      "to_case_id": "e42e6593-5939-40e7-8efd-82053a340223",
+      "relation_type": "branch",
+      "order": 3
+    },
+    {
+      "edge_id": "E55",
+      "from_case_id": "fd6bac92-f61e-4f0e-846f-1542b3c236c8",
+      "to_case_id": "399638fc-099c-404a-944e-82aa4cc763cb",
+      "relation_type": "next",
+      "order": 4
+    },
+    {
+      "edge_id": "E56",
+      "from_case_id": "fd6bac92-f61e-4f0e-846f-1542b3c236c8",
+      "to_case_id": "8a9defd2-0e4c-44c2-8e1a-6108122b0986",
+      "relation_type": "next",
+      "order": 5
+    },
+    {
+      "edge_id": "E57",
+      "from_case_id": "8a9defd2-0e4c-44c2-8e1a-6108122b0986",
+      "to_case_id": "b0811e35-0634-4176-ac3c-2497557de5a0",
+      "relation_type": "next",
+      "order": 1
+    },
+    {
+      "edge_id": "E58",
+      "from_case_id": "b0811e35-0634-4176-ac3c-2497557de5a0",
+      "to_case_id": "3d6f31fa-d3fa-4642-947f-c65c60b4e37f",
+      "relation_type": "branch",
+      "order": 1
+    },
+    {
+      "edge_id": "E59",
+      "from_case_id": "b0811e35-0634-4176-ac3c-2497557de5a0",
+      "to_case_id": "600201bb-b24b-4f4e-8d22-a35a48dc33ce",
+      "relation_type": "branch",
+      "order": 2
+    },
+    {
+      "edge_id": "E60",
+      "from_case_id": "8f205757-08be-464f-9bd4-c34443ec7262",
+      "to_case_id": "dac24940-b01c-4f12-83b8-4ccdd4b26570",
+      "relation_type": "next",
+      "order": 1
+    },
+    {
+      "edge_id": "E61",
+      "from_case_id": "8f205757-08be-464f-9bd4-c34443ec7262",
+      "to_case_id": "e9d5fdc6-c159-4577-a9f6-a991af789c9f",
+      "relation_type": "branch",
+      "order": 2
+    },
+    {
+      "edge_id": "E62",
+      "from_case_id": "8f205757-08be-464f-9bd4-c34443ec7262",
+      "to_case_id": "4846a77e-98bd-44b7-8131-46af4c75567b",
+      "relation_type": "branch",
+      "order": 3
+    },
+    {
+      "edge_id": "E63",
+      "from_case_id": "8f205757-08be-464f-9bd4-c34443ec7262",
+      "to_case_id": "c733210b-3519-40d9-9021-8f2ba6286e5e",
+      "relation_type": "branch",
+      "order": 4
+    },
+    {
+      "edge_id": "E64",
+      "from_case_id": "8f205757-08be-464f-9bd4-c34443ec7262",
+      "to_case_id": "778ba8b4-21a1-402d-b32e-cb8776ce4ebc",
+      "relation_type": "branch",
+      "order": 5
+    },
+    {
+      "edge_id": "E65",
+      "from_case_id": "dac24940-b01c-4f12-83b8-4ccdd4b26570",
+      "to_case_id": "2c832b2c-8b06-4534-8d3a-ed4d8ab23e9e",
+      "relation_type": "next",
+      "order": 1
+    },
+    {
+      "edge_id": "E66",
+      "from_case_id": "dac24940-b01c-4f12-83b8-4ccdd4b26570",
+      "to_case_id": "90003781-2fd5-4cb2-b8aa-db1ceb42ec4f",
+      "relation_type": "branch",
+      "order": 2
+    },
+    {
+      "edge_id": "E67",
+      "from_case_id": "dac24940-b01c-4f12-83b8-4ccdd4b26570",
+      "to_case_id": "22edacd8-43fb-408d-9e3d-fdee070e8d85",
+      "relation_type": "branch",
+      "order": 3
+    },
+    {
+      "edge_id": "E68",
+      "from_case_id": "2c832b2c-8b06-4534-8d3a-ed4d8ab23e9e",
+      "to_case_id": "69886d31-f648-45a9-bf10-4cab472fb20f",
+      "relation_type": "next",
+      "order": 1
+    },
+    {
+      "edge_id": "E69",
+      "from_case_id": "2c832b2c-8b06-4534-8d3a-ed4d8ab23e9e",
+      "to_case_id": "b9b9029f-bb4a-434a-ac68-d33ba9377ff7",
+      "relation_type": "branch",
+      "order": 2
+    },
+    {
+      "edge_id": "E70",
+      "from_case_id": "2c832b2c-8b06-4534-8d3a-ed4d8ab23e9e",
+      "to_case_id": "df701924-0d98-48b5-a1a2-6f58ba8900e9",
+      "relation_type": "branch",
+      "order": 3
+    },
+    {
+      "edge_id": "E71",
+      "from_case_id": "2c832b2c-8b06-4534-8d3a-ed4d8ab23e9e",
+      "to_case_id": "8df4b1c7-00c4-4dda-b6da-0e9e47c01b7a",
+      "relation_type": "branch",
+      "order": 4
+    },
+    {
+      "edge_id": "E72",
+      "from_case_id": "69886d31-f648-45a9-bf10-4cab472fb20f",
+      "to_case_id": "0190d0fc-b4c0-4e91-95c9-597d1e472846",
+      "relation_type": "next",
+      "order": 1
+    },
+    {
+      "edge_id": "E73",
+      "from_case_id": "0190d0fc-b4c0-4e91-95c9-597d1e472846",
+      "to_case_id": "6019628e-d3c7-48a8-9e94-9aa7883d1250",
+      "relation_type": "branch",
+      "order": 1
+    },
+    {
+      "edge_id": "E74",
+      "from_case_id": "0190d0fc-b4c0-4e91-95c9-597d1e472846",
+      "to_case_id": "37bca627-c18a-46ed-8192-6fc725234fca",
+      "relation_type": "branch",
+      "order": 2
+    },
+    {
+      "edge_id": "E75",
+      "from_case_id": "fd6bac92-f61e-4f0e-846f-1542b3c236c8",
+      "to_case_id": "c405d042-7389-4958-93bf-39771e91f630",
+      "relation_type": "branch",
+      "order": 6
+    },
+    {
+      "edge_id": "E76",
+      "from_case_id": "fd6bac92-f61e-4f0e-846f-1542b3c236c8",
+      "to_case_id": "1efea670-7828-49d2-b159-82aa1184f408",
+      "relation_type": "branch",
+      "order": 7
+    }
+  ]
+}

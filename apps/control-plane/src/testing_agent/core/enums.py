@@ -36,29 +36,34 @@ class SprintStatus(StrEnum):
 
 
 class BugStatus(StrEnum):
-    """Bug 状态机：待确定 → 处理中 → 待回归 → 已关闭，另有已拒绝与重新打开。"""
+    """禅道主状态；确认情况和解决方案独立保存。"""
 
-    PENDING = "pending"
-    PROCESSING = "processing"
-    PENDING_REGRESSION = "pending_regression"
+    ACTIVE = "active"
+    RESOLVED = "resolved"
     CLOSED = "closed"
-    REJECTED = "rejected"
-    REOPENED = "reopened"
 
     @classmethod
     def values(cls) -> set[str]:
         return {item.value for item in cls}
 
 
-# 快捷筛选「未关闭」的口径：不含已关闭与已拒绝（已拒绝是带原因的终态）。
-BUG_UNCLOSED_STATUSES = frozenset(
-    {
-        BugStatus.PENDING.value,
-        BugStatus.PROCESSING.value,
-        BugStatus.PENDING_REGRESSION.value,
-        BugStatus.REOPENED.value,
-    }
-)
+# 已解决（包括延期处理）仍未关闭。
+BUG_UNCLOSED_STATUSES = frozenset({BugStatus.ACTIVE.value, BugStatus.RESOLVED.value})
+
+
+class BugResolution(StrEnum):
+    BY_DESIGN = "bydesign"
+    DUPLICATE = "duplicate"
+    EXTERNAL = "external"
+    FIXED = "fixed"
+    NOT_REPRODUCIBLE = "notrepro"
+    POSTPONED = "postponed"
+    WILL_NOT_FIX = "willnotfix"
+    TO_STORY = "tostory"
+
+    @classmethod
+    def values(cls) -> set[str]:
+        return {item.value for item in cls}
 
 
 class BugSeverity(StrEnum):
@@ -102,6 +107,10 @@ class BugAction(StrEnum):
     """Bug 状态流转动作；合法的 (当前状态, 动作) 组合由服务层流转表定义。"""
 
     CONFIRM = "confirm"
+    RESOLVE = "resolve"
+    CLOSE = "close"
+    ACTIVATE = "activate"
+    # 旧客户端动作兼容；新页面使用以上四种动作。
     REJECT = "reject"
     SUBMIT_FIX = "submit_fix"
     REGRESSION_PASS = "regression_pass"

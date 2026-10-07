@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button, Image, Typography, message, type ImageProps } from 'antd'
-import { request } from '@/shared/api/request'
+import { downloadStoredFile } from '@/shared/api/files'
 
 function storedFileId(path: string) {
   return /^\/v1\/files\/([a-zA-Z0-9-]+)\/download$/.exec(path)?.[1]
@@ -9,10 +9,7 @@ function storedFileId(path: string) {
 async function readFile(path: string) {
   const id = storedFileId(path)
   if (!id) throw new Error('历史文件未存入 S3，请重新执行任务')
-  const ticket = await request<{ url: string; filename: string }>(`/v1/files/${id}/download`)
-  const response = await fetch(ticket.url, { credentials: 'omit' })
-  if (!response.ok) throw new Error('文件下载失败，请重试')
-  return { blob: await response.blob(), filename: ticket.filename }
+  return downloadStoredFile(id)
 }
 
 export function StoredImage({ src = '', ...props }: ImageProps) {
@@ -42,7 +39,7 @@ export function StoredFileDownload({ path, label = '下载文件' }: { path: str
       const file = await readFile(path)
       const url = URL.createObjectURL(file.blob)
       const anchor = document.createElement('a')
-      anchor.href = url; anchor.download = file.filename; anchor.click()
+      anchor.href = url; anchor.download = file.filename || 'download'; anchor.click()
       setTimeout(() => URL.revokeObjectURL(url), 1000)
     } catch (error) { message.error(error instanceof Error ? error.message : '下载失败') }
     finally { setBusy(false) }

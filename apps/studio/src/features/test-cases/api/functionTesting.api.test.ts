@@ -1,27 +1,15 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { request } from '@/shared/api/request'
+import { afterEach, expect, it, vi } from 'vitest'
 import { functionTestingApi } from './functionTesting.api'
 
-vi.mock('@/shared/api/request', () => ({ request: vi.fn() }))
+afterEach(() => vi.unstubAllGlobals())
 
-const requestMock = vi.mocked(request)
-
-describe('function testing API', () => {
-  beforeEach(() => requestMock.mockReset())
-
-  it('imports selected suites with one requirement-scoped request', () => {
-    const body = {
-      productId: 1,
-      moduleId: 0,
-      suiteIds: ['suite-1', 'suite-2'],
-    }
-
-    functionTestingApi.importFunctionTestSuitesToZentao('req-1', body)
-
-    expect(requestMock).toHaveBeenCalledOnce()
-    expect(requestMock).toHaveBeenCalledWith('/v1/requirements/req-1/zentao/testcases/import', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }, { normalizeListResponse: false })
-  })
+it('preserves partial push status and counts instead of normalizing the response to a list', async () => {
+  const data = { status: 'partial_failure', suiteId: 'suite', importedCaseCount: 1,
+    items: [{ caseId: 'case', remoteCaseId: 0, status: 'uncertain', errorMessage: '请核对' }] }
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: 0, data }), {
+    status: 200, headers: { 'Content-Type': 'application/json' },
+  })))
+  const result = await functionTestingApi.importFunctionTestCasesToZentao('suite', { productId: 9 })
+  expect(result).toEqual(data)
+  expect(Array.isArray(result)).toBe(false)
 })

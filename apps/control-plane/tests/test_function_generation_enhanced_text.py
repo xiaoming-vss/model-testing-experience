@@ -15,6 +15,9 @@ async def test_function_run_rejects_missing_enhanced_text_without_creating_tasks
 ):
     repository = SimpleNamespace(
         session=Mock(),
+        get_project=AsyncMock(
+            return_value=SimpleNamespace(project_id="project-1", user_id="user-1")
+        ),
         get_requirement=AsyncMock(
             return_value=SimpleNamespace(
                 document_content=content,

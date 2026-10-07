@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import Depends
+from fastapi import Depends, Query
 
 from testing_agent.api.deps import get_ai_generate_task_service, get_current_user_id
 from testing_agent.core.errors import success_payload
@@ -89,10 +89,14 @@ async def run_ui_case_generate_task(
 
 async def list_ui_case_generate_task_runs(
     task_id: str,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, alias="pageSize", ge=1, le=100),
     user_id: str = Depends(get_current_user_id),
     service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
 ):
-    return success_payload(await service.list_runs("ui", task_id, user_id))
+    return success_payload(
+        await service.list_run_summaries("ui", task_id, user_id, page, page_size)
+    )
 
 
 async def get_ui_case_generate_task_run(

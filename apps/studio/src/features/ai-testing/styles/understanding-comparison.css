@@ -1,0 +1,25 @@
+@import './material-comparison.css';
+.requirement-understanding-nav { flex: 1; min-width: 0; }
+.requirement-understanding-nav .ant-tabs-nav { margin: 0; }
+.requirement-understanding-nav .ant-tabs-content-holder { display: none; }
+.requirement-understanding-content { padding: 14px; }
+.requirement-understanding-content > h3 { margin: 0 0 10px; font-size: 15px; }
+.requirement-understanding-content .ant-descriptions-item-content { overflow-wrap: anywhere; }
+.requirement-understanding-content .ant-collapse-header-text { overflow-wrap: anywhere; }
+.requirement-understanding-evidence { padding: 12px; margin: 12px 0; border-left: 2px solid var(--app-accent); background: var(--ant-color-primary-bg); font-size: 12px; line-height: 1.8; }
+.requirement-understanding-evidence p { margin: 5px 0; color: var(--app-text-secondary); }
+.requirement-understanding-evidence blockquote { margin: 6px 0 0; white-space: pre-wrap; }
+.requirement-understanding-content .ant-descriptions { width: 100%; }
+
+.requirement-material-filter > .requirement-understanding-module-picker { flex: 1; min-width: 0; width: auto; }
+
+.requirement-ui-selectors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.requirement-ui-selectors label { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.requirement-ui-selectors label > span { font-size: 12px; color: var(--app-text-secondary); }
+.requirement-ui-selectors .ant-select { width: 100%; }
+.requirement-ui-section { padding: 0 0 18px; margin: 0 0 18px; border-bottom: 1px solid var(--app-surface-border); }
+.requirement-ui-section > h3 { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; margin: 0 0 14px; font-size: 15px; }
+.requirement-ui-section > h3 span { font-size: 12px; font-weight: 400; color: var(--app-text-secondary); }
+@container requirement-material (max-width: 840px) { .requirement-ui-selectors { grid-template-columns: minmax(0, 1fr); } }
+
+.requirement-operation-actions { display: flex; justify-content: flex-end; margin-bottom: 8px; }

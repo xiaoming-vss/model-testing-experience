@@ -75,7 +75,22 @@ class PlatformHttpClient:
                     base_url=self.base_url, timeout=self.timeout_seconds, headers=self._headers()
                 ) as client:
                     response = client.get(path, headers={"Accept": "application/json"})
-                    response.raise_for_status()
+                    if response.is_error:
+                        message = ""
+                        try:
+                            payload = response.json()
+                            if isinstance(payload, dict) and isinstance(
+                                payload.get("message"), str
+                            ):
+                                message = payload["message"].strip()[:1000]
+                        except ValueError:
+                            pass
+                        detail = f"获取文件下载授权失败（HTTP {response.status_code}）"
+                        if message:
+                            detail += f"：{message}"
+                        raise httpx.HTTPStatusError(
+                            detail, request=response.request, response=response
+                        )
                     if "application/json" not in response.headers.get("content-type", ""):
                         raise ValueError("Expected S3 download ticket from platform")
                     ticket = response.json()

@@ -36,6 +36,7 @@ import type { InputRef } from 'antd'
 import { Alert, Button, Form, Input, Modal } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode, type PointerEvent as ReactPointerEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { goBackOrFallback } from '@/shared/utils/backNavigation'
 import '@/shared/styles/surface-tokens.css'
 import '@/features/api-automation/styles/detail-workbench-v2.css'
 import '@/features/api-automation/styles/detail-inspector-v2.css'
@@ -780,10 +781,12 @@ export function ApiCollectionDetailPage() {
       }),
     [collectionRunHistoryQuery.data],
   )
-  const collectionRunReport = collectionRunReportQuery.data ?? null
   const selectedCollectionRunSummary =
     (selectedCollectionRunId && activeCollectionRunQuery.data?.collectionRunId === selectedCollectionRunId ? activeCollectionRunQuery.data : undefined) ??
     collectionRunHistory.find((item) => item.collectionRunId === selectedCollectionRunId)
+  const collectionRunReport = collectionRunReportQuery.data
+    ? { ...collectionRunReportQuery.data, ...(isApiRunPollingStatus(collectionRunReportQuery.data.status) ? selectedCollectionRunSummary : undefined) }
+    : null
 
   const runResultStatus = runResult?.status ?? (runResult ? (runResult.success ? 'success' : 'failed') : undefined)
   const isApiCaseRunInProgress = isApiRunPollingStatus(runResultStatus)
@@ -948,7 +951,7 @@ export function ApiCollectionDetailPage() {
             runHistoryCount={collectionRunHistory.length}
             runningCollection={runApiCollectionMutation.isPending}
             runDisabled={!resolvedEnvironmentId || cases.length === 0}
-            onBack={() => navigate('/api-automation')}
+            onBack={() => goBackOrFallback(navigate, '/testing?tab=api')}
             onOpenRunHistory={() => setCollectionRunHistoryOpen(true)}
             onRunCollection={handleRunCollection}
           />

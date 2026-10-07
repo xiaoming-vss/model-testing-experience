@@ -62,6 +62,7 @@ function roundedPath(points: RoutePoint[], clearance: number): string {
 }
 
 type RouteOptions = {
+  orthogonal?: boolean
   sourcePort?: RoutePoint
   targetPort?: RoutePoint
   trafficCost?: (a: RoutePoint, b: RoutePoint) => number
@@ -105,7 +106,7 @@ function routeWithClearance(source: RouteRect, target: RouteRect, cards: RouteRe
   // Try shallow curves on either side; reject any that cross cards.
   const curveObstacles = [...obstacles, source, target]
   const length = distance(start, end)
-  for (const direction of [1, -1, 2, -2, 4, -4, 8, -8]) {
+  for (const direction of options.orthogonal ? [] : [1, -1, 2, -2, 4, -4, 8, -8]) {
     const bow = Math.min(80, length * 0.3) * direction
     const control = { x: (start.x + end.x) / 2 - (end.y - start.y) / (length || 1) * bow, y: (start.y + end.y) / 2 + (end.x - start.x) / (length || 1) * bow }
     const steps = Math.max(24, Math.ceil(length / 8))

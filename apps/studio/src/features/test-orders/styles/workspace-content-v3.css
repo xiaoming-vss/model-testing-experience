@@ -1,0 +1,233 @@
+/* Confirmed comparison layout inside the single detail surface. */
+.test-order-workspace-page .test-order-case-content {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 24px;
+  color: var(--srf-text);
+  font-size: 14px;
+  line-height: 24px;
+}
+
+.test-order-workspace-page .test-order-section {
+  min-width: 0;
+}
+
+.test-order-workspace-page .test-order-content-conditions {
+  padding: 16px 20px;
+  border: 1px solid var(--srf-card-border);
+  border-left: 3px solid var(--srf-accent-border);
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-hover);
+}
+
+.test-order-workspace-page .test-order-content-conditions-head,
+.test-order-workspace-page .test-order-content-steps-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-bottom: 12px;
+}
+
+.test-order-workspace-page .test-order-content-conditions-head h2,
+.test-order-workspace-page .test-order-content-steps-head h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--srf-text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.test-order-workspace-page .test-order-content-conditions-head .anticon {
+  color: var(--srf-text-secondary);
+}
+
+.test-order-workspace-page .test-order-content-conditions-head > span,
+.test-order-workspace-page .test-order-content-steps-head > span {
+  color: var(--srf-text-secondary);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.test-order-workspace-page .test-order-content-preconditions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.test-order-workspace-page .test-order-content-preconditions li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--srf-card);
+  font-size: 13px;
+  line-height: 22px;
+}
+
+.test-order-workspace-page .test-order-content-preconditions p {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.test-order-workspace-page .test-order-content-condition-no,
+.test-order-workspace-page .test-order-content-step-no {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--srf-chip);
+  color: var(--srf-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.test-order-workspace-page .test-order-content-steps {
+  margin-top: 24px;
+}
+
+.test-order-workspace-page .test-order-content-steps-head {
+  margin-bottom: 16px;
+}
+
+.test-order-workspace-page .test-order-content-steps-head h2 {
+  gap: 10px;
+  font-size: 15px;
+}
+
+.test-order-workspace-page .test-order-content-steps-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent);
+}
+
+.test-order-workspace-page .test-order-content-table {
+  width: 100%;
+  border: 1px solid var(--srf-card-border);
+  border-radius: 10px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  overflow: hidden;
+}
+
+.test-order-workspace-page .test-order-content-table caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.test-order-workspace-page .test-order-content-table th {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--srf-card-border);
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent-strong);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.test-order-workspace-page .test-order-content-table th:first-child {
+  width: 64px;
+  text-align: center;
+  background: var(--srf-hover);
+  color: var(--srf-text-secondary);
+}
+
+.test-order-workspace-page .test-order-content-table td {
+  padding: 22px 18px;
+  border-bottom: 1px solid var(--srf-divider);
+  background: var(--srf-card);
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.test-order-workspace-page .test-order-content-table td:nth-child(2) {
+  font-weight: 500;
+}
+
+.test-order-workspace-page .test-order-content-table td:last-child {
+  position: relative;
+  padding-left: 44px;
+}
+
+.test-order-workspace-page .test-order-content-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.test-order-workspace-page .test-order-content-step-no {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent);
+  font-size: 15px;
+}
+
+.test-order-workspace-page .test-order-content-expected-icon {
+  position: absolute;
+  left: 18px;
+  top: 24px;
+  color: var(--srf-accent-strong);
+  font-size: 13px;
+}
+
+.test-order-workspace-page .test-order-content-empty {
+  margin: 0;
+  color: var(--srf-text-muted);
+  font-size: 12px;
+}
+
+.test-order-workspace-page .test-order-content-table td.test-order-content-empty {
+  padding: 22px 18px;
+  background: var(--srf-card);
+}
+
+@media (max-width: 900px) {
+  .test-order-workspace-page .test-order-case-content {
+    padding: 16px;
+  }
+  .test-order-workspace-page .test-order-content-conditions {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .test-order-workspace-page .test-order-content-table th,
+  .test-order-workspace-page .test-order-content-table td {
+    padding: 12px 8px;
+  }
+  .test-order-workspace-page .test-order-content-table th:first-child {
+    width: 48px;
+  }
+  .test-order-workspace-page .test-order-content-table td:last-child {
+    padding-left: 28px;
+  }
+  .test-order-workspace-page .test-order-content-expected-icon {
+    top: 14px;
+    left: 8px;
+  }
+}

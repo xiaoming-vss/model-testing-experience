@@ -2,7 +2,7 @@ import { FilterOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icon
 import { Button, Checkbox, Input, Popover, Select, Space, Tooltip } from 'antd'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { listItems } from '@/services/api'
-import { BUG_STATUS_LABELS, BUG_SEVERITY_LABELS } from '../utils/bugMeta'
+import { BUG_STATUS_LABELS, BUG_SEVERITY_LABELS, BUG_RESOLUTION_LABELS } from '../utils/bugMeta'
 import type { useBugList } from '../hooks/useBugList'
 type Model = ReturnType<typeof useBugList>
 export function BugListToolbar({ model }: { model: Model }) {
@@ -28,7 +28,7 @@ export function BugListToolbar({ model }: { model: Model }) {
                   className="api-filter-input bugs-search-input"
                   allowClear
                   prefix={<SearchOutlined />}
-                  placeholder="搜索 Bug 编号 / 标题"
+                  placeholder="搜索 Bug ID / 标题"
                   value={keyword}
                   onChange={(event) => setKeyword(event.target.value)}
                 />
@@ -38,12 +38,12 @@ export function BugListToolbar({ model }: { model: Model }) {
             <Space size={8} className="bugs-toolbar-actions">
               <Popover trigger="click" placement="bottomRight" title="筛选与显示" content={<BugListFilters model={model} />}>
                 <Button type="text" icon={<FilterOutlined />} aria-label="筛选与显示">
-                  筛选{(model.status || model.severity || model.assigneeUserId) ? ' · 已启用' : ''}
+                  筛选{(model.status || model.confirmed !== undefined || model.resolution || model.severity || model.assigneeUserId) ? ' · 已启用' : ''}
                 </Button>
               </Popover>
               <Tooltip title="刷新 Bug 列表">
                 <ProjectActionButton
-                  action="read"
+                  action="bug_read"
                   type="text"
                   shape="circle"
                   className="action-btn-read bugs-refresh"
@@ -70,7 +70,7 @@ export function BugListToolbar({ model }: { model: Model }) {
   )
 }
 function BugListFilters({ model }: { model: Model }) {
-  const { status, setStatus, severity, setSeverity,
+  const { status, setStatus, confirmed, setConfirmed, resolution, setResolution, severity, setSeverity,
     assigneeUserId, setAssigneeUserId, membersQuery, optionalColumns, setOptionalColumns } = model
   return (
               <div className="bugs-filter-popover">
@@ -84,6 +84,18 @@ function BugListFilters({ model }: { model: Model }) {
                   placeholder="全部状态"
                   onChange={(value) => setStatus(value ?? '')}
                 />
+              </div>
+              <div className="api-filter-field">
+                <span className="bug-filter-label">确认情况</span>
+                <Select allowClear aria-label="确认情况" value={confirmed === undefined ? undefined : Number(confirmed)}
+                  options={[{ value: 0, label: '未确认' }, { value: 1, label: '已确认' }]} placeholder="全部"
+                  onChange={(value) => setConfirmed(value === undefined ? undefined : value === 1)} />
+              </div>
+              <div className="api-filter-field">
+                <span className="bug-filter-label">解决方案</span>
+                <Select allowClear aria-label="解决方案筛选" value={resolution || undefined}
+                  options={Object.entries(BUG_RESOLUTION_LABELS).map(([value, label]) => ({ value, label }))}
+                  placeholder="全部" onChange={(value) => setResolution(value ?? '')} />
               </div>
               <div className="api-filter-field">
                 <span className="bug-filter-label">严重程度</span>

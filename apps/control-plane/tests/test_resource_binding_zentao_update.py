@@ -4,13 +4,16 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-from test_resource_binding_providers import FakeRepository, RecordingConnectionService
+from test_resource_binding_providers import (
+    FakeMcpAccess,
+    FakeRepository,
+    RecordingConnectionService,
+)
 
 from testing_agent.core.errors import ErrResourceBindingInvalid
 from testing_agent.models.resource_binding import ResourceBinding
 from testing_agent.services.resource_binding import ResourceBindingService
 from testing_agent.services.service_instance import instance_key
-from testing_agent.services.zentao_resource import ZentaoResourceClient
 
 
 @pytest.mark.asyncio
@@ -62,15 +65,16 @@ async def test_update_validates_parent_and_remote_membership(resource_type, scen
     connections.resolve_personal_connection = AsyncMock(
         return_value=SimpleNamespace(connection_id="conn-1")
     )
-    client = ZentaoResourceClient()
-    client._list = AsyncMock(return_value={"items": [{"id": 201}], "total": 1})
-    client._list_without_paging = AsyncMock(return_value={"items": [{"id": 201}], "total": 1})
+    client = SimpleNamespace(
+        list_project_executions=AsyncMock(return_value={"items": [{"id": 201}], "total": 1}),
+        list_execution_stories=AsyncMock(return_value={"items": [{"id": 201}], "total": 1}),
+    )
     if scenario == "later_page":
-        client._list.side_effect = [
+        client.list_project_executions.side_effect = [
             {"items": [{"id": value} for value in range(1, 101)], "total": 101},
             {"items": [{"id": 201}], "total": 101},
         ]
-        client._list_without_paging.return_value = {
+        client.list_execution_stories.return_value = {
             "items": [{"id": value} for value in range(1, 202)],
             "total": 201,
         }
@@ -79,9 +83,9 @@ async def test_update_validates_parent_and_remote_membership(resource_type, scen
             "items": [{"id": 201, "deleted": True}] if scenario == "deleted_resource" else [],
             "total": 0,
         }
-        client._list.return_value = response
-        client._list_without_paging.return_value = response
-    service = ResourceBindingService(repository, connections, client)
+        client.list_project_executions.return_value = response
+        client.list_execution_stories.return_value = response
+    service = ResourceBindingService(repository, connections, client, zentao_access=FakeMcpAccess())
     if scenario not in {"empty_parent", "valid_parent", "later_page"}:
         with pytest.raises(type(ErrResourceBindingInvalid)) as error:
             await service.update(
@@ -90,8 +94,8 @@ async def test_update_validates_parent_and_remote_membership(resource_type, scen
         assert error.value.code == ErrResourceBindingInvalid.code
         repository.commit.assert_not_awaited()
         if scenario not in {"unavailable_resource", "deleted_resource"}:
-            client._list.assert_not_awaited()
-            client._list_without_paging.assert_not_awaited()
+            client.list_project_executions.assert_not_awaited()
+            client.list_execution_stories.assert_not_awaited()
         return
 
     result = await service.update(
@@ -100,11 +104,15 @@ async def test_update_validates_parent_and_remote_membership(resource_type, scen
 
     assert result["remoteParentId"] == "1"
     assert result["remoteResourceId"] == "201"
-    fetch = client._list if resource_type == "sprint" else client._list_without_paging
-    assert fetch.await_count == (2 if scenario == "later_page" and resource_type == "sprint" else 1)
-    expected_path = (
-        "api/v1/zentao/projects/1/executions"
+    fetch = (
+        client.list_project_executions
         if resource_type == "sprint"
-        else "api/v1/zentao/executions/1/stories"
+        else client.list_execution_stories
     )
-    assert fetch.call_args.args[1] == expected_path
+    assert fetch.await_count == (2 if scenario == "later_page" and resource_type == "sprint" else 1)
+    assert fetch.call_args.args[1] == "1"
+    assert fetch.call_args.kwargs == (
+        {"page": 2 if scenario == "later_page" else 1, "page_size": 100}
+        if resource_type == "sprint"
+        else {}
+    )

@@ -1,6 +1,6 @@
 import { Typography } from 'antd'
 import type { BugActivity } from '../types'
-import { BUG_ACTIVITY_ACTION_LABELS, BUG_REJECT_REASON_LABELS, BUG_SEVERITY_LABELS, BUG_PRIORITY_LABELS, getBugStatusLabel } from '../utils/bugMeta'
+import { BUG_ACTIVITY_ACTION_LABELS, BUG_REJECT_REASON_LABELS, BUG_SEVERITY_LABELS, BUG_PRIORITY_LABELS, getBugStatusLabel, getBugStateLabel, BUG_RESOLUTION_LABELS } from '../utils/bugMeta'
 import { RichTextViewer } from '@/shared/components/RichTextEditor'
 import { pickCreatedAt, formatTime } from '@/utils/format'
 
@@ -61,11 +61,12 @@ export function BugActivityFeed({
             <span className="bug-activity-actor">{resolveUserName(activity.actorUserId)}</span>
             <span className="bug-activity-action">{activitySummary(activity, resolveUserName)}</span>
             {activity.kind === 'status_change' && activity.toStatus ? (
-              <span className="bug-activity-status">{activity.fromStatus ? `${getBugStatusLabel(activity.fromStatus)} → ` : ''}{getBugStatusLabel(activity.toStatus)}</span>
+              <span className="bug-activity-status">{activity.fromStatus ? `${activity.detail.fromConfirmed === undefined ? getBugStatusLabel(activity.fromStatus) : getBugStateLabel({ status: activity.fromStatus, confirmed: activity.detail.fromConfirmed, resolution: activity.detail.fromResolution })} → ` : ''}{activity.detail.toConfirmed === undefined ? getBugStatusLabel(activity.toStatus) : getBugStateLabel({ status: activity.toStatus, confirmed: activity.detail.toConfirmed, resolution: activity.detail.toResolution })}</span>
             ) : null}
             <span className="bug-activity-time">{formatTime(pickCreatedAt(activity))}</span>
           </div>
           {activity.detail.rejectReason && <p className="bug-activity-content">拒绝原因：{BUG_REJECT_REASON_LABELS[activity.detail.rejectReason] ?? activity.detail.rejectReasonLabel}</p>}
+          {activity.detail.toResolution && <p className="bug-activity-content">解决方案：{BUG_RESOLUTION_LABELS[activity.detail.toResolution] ?? activity.detail.toResolution}{activity.detail.resolvedBuild ? `；解决版本：${activity.detail.resolvedBuild}` : ''}{activity.detail.duplicateBug ? `；重复 Bug ID：${activity.detail.duplicateBug}` : ''}</p>}
           {activity.content ? (
             <p className="bug-activity-content">{activity.content}</p>
           ) : null}

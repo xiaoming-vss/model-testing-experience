@@ -35,13 +35,35 @@ class ManagementTests(unittest.TestCase):
                     src / "config",
                     dst / "config",
                     ignore=shutil.ignore_patterns(
-                        "local.toml", "worker.toml", "zentao.toml"
+                        "local.toml", "worker.toml"
                     ),
                 )
             if (src / "config.example.toml").exists():
                 shutil.copy2(src / "config.example.toml", dst / "config.example.toml")
         manage.init(self.root)
         self.data = manage.read(self.root / "config/platform.toml")
+
+    def test_mysql_slow_log_is_generated_and_configurable(self):
+        manage.configure("docker", self.root)
+        env = (self.root / ".runtime/compose.env").read_text()
+        self.assertIn("MYSQL_SLOW_QUERY_LOG='1'", env)
+        self.assertIn("MYSQL_LONG_QUERY_TIME='0.5'", env)
+        self.data["database"].update(slow_query_log=False, long_query_time=1.25)
+        manage.write(self.root / "config/platform.toml", manage.toml_text(self.data))
+        manage.configure("docker", self.root)
+        env = (self.root / ".runtime/compose.env").read_text()
+        self.assertIn("MYSQL_SLOW_QUERY_LOG='0'", env)
+        self.assertIn("MYSQL_LONG_QUERY_TIME='1.25'", env)
+
+    def test_mysql_slow_log_rejects_invalid_values(self):
+        for value in (0, -1, float("nan"), float("inf"), "0.5", True):
+            self.data["database"]["long_query_time"] = value
+            with self.assertRaisesRegex(ValueError, "long_query_time"):
+                manage.validate(self.data)
+        self.data["database"]["long_query_time"] = 0.5
+        self.data["database"]["slow_query_log"] = "yes"
+        with self.assertRaisesRegex(ValueError, "slow_query_log"):
+            manage.validate(self.data)
 
     def test_init_preserves_credentials(self):
         before = (self.root / "config/platform.toml").read_bytes()
@@ -52,6 +74,68 @@ class ManagementTests(unittest.TestCase):
             for k in ("worker_token", "jwt_key", "integration_key")
         ]
         self.assertEqual(len(set(keys)), 3)
+
+    def test_integration_config_upgrade_preserves_custom_values_permissions_and_secrets(self):
+        path = self.root / "config/platform.toml"
+        old = manage.read(path)
+        old["shared"].pop("integration_worker_token")
+        old["shared"].pop("integration_runtime_generation")
+        old["control_plane"]["integration_execution"] = {"project_ids": ["pilot"], "lease_seconds": 75}
+        old["custom"] = {"keep": "value"}
+        manage.write(path, manage.toml_text(old), permissions=0o640)
+        manage.upgrade_config(self.root)
+        upgraded = manage.read(path)
+        self.assertEqual(path.stat().st_mode & 0o777, 0o640)
+        for key, value in old["shared"].items():
+            self.assertEqual(upgraded["shared"][key], value)
+        self.assertEqual(upgraded["custom"], old["custom"])
+        self.assertNotEqual(upgraded["shared"]["integration_worker_token"], old["shared"]["worker_token"])
+        execution = upgraded["control_plane"]["integration_execution"]
+        self.assertEqual(execution["project_ids"], ["pilot"])
+        self.assertEqual(execution["lease_seconds"], 75)
+        self.assertFalse(execution["enabled"])
+        before = path.read_bytes()
+        manage.upgrade_config(self.root)
+        self.assertEqual(path.read_bytes(), before)
+
+    def test_integration_worker_credentials_are_generated_separately(self):
+        for mode in ("local", "docker"):
+            configs = manage.configurations(self.data, mode, self.root)
+            cp = configs["control-plane"]
+            worker = configs["integration-worker"]
+            self.assertNotEqual(cp["security"]["integration_worker"]["key"], cp["security"]["worker"]["key"])
+            self.assertEqual(worker["control_plane"]["worker_token"],
+                             cp["security"]["integration_worker"]["key"])
+            self.assertEqual(set(worker), {"control_plane", "worker"})
+            self.assertEqual(set(worker["control_plane"]),
+                             {"base_url", "worker_token", "timeout_seconds", "retry_attempts"})
+            self.assertEqual(worker["control_plane"]["base_url"],
+                             configs["api-ui-worker"]["control_plane"]["base_url"])
+            runtime = "/app/runtime" if mode == "docker" else "runtime"
+            self.assertEqual(worker["worker"]["evidence_file"], runtime + "/evidence.json")
+            self.assertEqual(cp["integration_execution"]["runtime_generation"],
+                             self.data["shared"]["integration_runtime_generation"])
+            self.assertFalse(cp["integration_execution"]["enabled"])
+        self.data["shared"]["integration_worker_token"] = self.data["shared"]["worker_token"]
+        with self.assertRaisesRegex(ValueError, "must differ"):
+            manage.validate(self.data)
+
+    @unittest.skipUnless(shutil.which("docker"), "Docker Compose is required")
+    def test_integration_worker_has_no_listener_or_shared_outbox(self):
+        manage.configure("docker", self.root)
+        rendered = json.loads(subprocess.check_output(
+            manage.compose_command(self.root) + ["config", "--format", "json"], text=True,
+        ))
+        worker = rendered["services"]["integration-worker"]
+        self.assertFalse(worker.get("ports"))
+        self.assertFalse(worker.get("expose"))
+        self.assertFalse(worker.get("container_name"))
+        self.assertEqual(worker["stop_grace_period"], "3m35s")
+        self.assertEqual(set(worker["depends_on"]), {"control-plane"})
+        self.assertEqual(worker["depends_on"]["control-plane"]["condition"], "service_healthy")
+        runtime = next(item for item in worker["volumes"] if item["target"] == "/app/runtime")
+        self.assertEqual(runtime["type"], "volume")
+        self.assertNotIn("source", runtime)
 
     def test_routes_credentials_and_overrides(self):
         self.data["shared"]["control_plane_port"] = 19000
@@ -219,7 +303,7 @@ class ManagementTests(unittest.TestCase):
         self.assertNotIn("migrate", normal["services"])
         self.assertNotIn("mysql-data", normal["volumes"])
         self.assertEqual(
-            set(normal["services"]["control-plane"]["depends_on"]), {"zentao"}
+            set(normal["services"]["control-plane"].get("depends_on", {})), set()
         )
         migration = render(["--profile", "migration"])
         self.assertIn("migrate", migration["services"])

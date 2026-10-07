@@ -30,6 +30,6 @@ async def skill_file(
 ):
     skill = await authorized_skill(task_id, name, worker_id, service)
     if not any(entry["fileId"] == file_id for entry in skill.manifest):
-        raise ErrNotFound
+        raise ErrNotFound()
     row = await files.get(file_id)
     return JSONResponse(await files.ticket(row), headers={"Cache-Control": "no-store"})

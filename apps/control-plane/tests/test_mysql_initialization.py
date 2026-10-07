@@ -78,14 +78,25 @@ def seed_row(connection, table, overrides=None):
         table.primary_key.columns.keys(), result.inserted_primary_key, strict=True
     ):
         values[key] = value
-    return values
+    # Return persisted defaults too; uniqueness may involve columns omitted above.
+    return dict(
+        connection.execute(
+            sa.select(table).where(
+                sa.and_(*(column == values[column.name] for column in table.primary_key.columns))
+            )
+        )
+        .mappings()
+        .one()
+    )
 
 
 UNIQUE_TABLES = [
     table.name
     for table in Base.metadata.tables.values()
     if any(
-        isinstance(c, sa.UniqueConstraint) and str(c.name).startswith("uk_")
+        isinstance(c, sa.UniqueConstraint)
+        and str(c.name).startswith("uk_")
+        and all(not column.nullable for column in c.columns)
         for c in table.constraints
     )
 ]
@@ -97,7 +108,9 @@ def test_mysql_business_uniqueness_requires_hard_delete(mysql, name):
     constraint = next(
         c
         for c in table.constraints
-        if isinstance(c, sa.UniqueConstraint) and str(c.name).startswith("uk_")
+        if isinstance(c, sa.UniqueConstraint)
+        and str(c.name).startswith("uk_")
+        and all(not column.nullable for column in c.columns)
     )
     with mysql.connect() as connection:
         first = seed_row(connection, table)

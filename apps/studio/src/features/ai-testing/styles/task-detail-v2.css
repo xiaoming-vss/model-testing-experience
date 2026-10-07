@@ -118,8 +118,6 @@
 
 .ai-task-detail-content-scroll {
   overflow: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--app-terminal-scrollbar) var(--app-terminal-scrollbar-track);
 }
 
 .ai-task-detail-fold-card-instruction .ai-task-detail-content-scroll {
@@ -130,25 +128,6 @@
   flex: 1 1 auto;
   min-height: 0;
   height: auto;
-}
-
-.ai-task-detail-content-scroll::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.ai-task-detail-content-scroll::-webkit-scrollbar-track {
-  background: var(--app-terminal-scrollbar-track);
-  border-radius: 999px;
-}
-
-.ai-task-detail-content-scroll::-webkit-scrollbar-thumb {
-  background: var(--app-terminal-scrollbar-thumb);
-  border-radius: 999px;
-}
-
-.ai-task-detail-content-scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--app-terminal-scrollbar-hover);
 }
 
 .ai-task-run-history-placeholder {
@@ -205,7 +184,6 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  scrollbar-width: thin;
 }
 
 .ai-task-detail-nav-label {
@@ -268,7 +246,6 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  scrollbar-width: thin;
   display: flex;
   flex-direction: column;
 }
@@ -1238,8 +1215,4 @@ button.ai-task-run-artifact:hover {
   color: var(--srf-text, var(--app-surface-text));
   font-size: 14px;
   font-weight: 600;
-}
-
-.ai-task-detail-page .ai-task-detail-content-scroll {
-  scrollbar-color: var(--app-scrollbar-thumb) transparent;
 }

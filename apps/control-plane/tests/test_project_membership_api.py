@@ -1,6 +1,9 @@
 """Project collaboration at the real HTTP boundary (real auth, policies and database)."""
 
 import asyncio
+import json
+from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -117,7 +120,7 @@ def test_membership_is_project_scoped_and_invalid_additions_do_not_change_roles(
     )
     data = api.get(f"/v1/projects/{pid}", headers=viewer).json()["data"]
     assert data["role"] == "viewer"
-    assert data["permissions"] == ["read"]
+    assert data["permissions"] == ["read", "project_read", "bug_read"]
     assert api.get(f"/v1/projects/{other}", headers=viewer).status_code == 403
     assert (
         api.post(
@@ -202,6 +205,23 @@ def requirement(api, headers, pid):
     response = api.post(f"/v1/sprints/{sid}/requirements", headers=headers, json={"name": "req"})
     assert response.status_code == 200, response.text
     return response.json()["data"]["requirementId"]
+
+
+def seed_requirement_source(api, requirement_id):
+    """Authorization tests need an original file reference; they do not download it."""
+    from sqlalchemy import select
+
+    from testing_agent.models.requirement import Requirement
+
+    async def provide_source_reference():
+        async with api.app.state.test_sessions() as session:
+            document = await session.scalar(
+                select(Requirement).where(Requirement.requirement_id == requirement_id)
+            )
+            document.document_file_id = "source-file-for-authorization-test"
+            await session.commit()
+
+    asyncio.run(provide_source_reference())
 
 
 @pytest.mark.parametrize(
@@ -461,21 +481,24 @@ def test_gitlab_overview_does_not_reuse_another_members_authorization(
 
 
 def test_zentao_bindings_keep_instance_identity_without_sharing_credentials(api, monkeypatch):
-    from testing_agent.services.zentao_auth import ZentaoAuthProvider, ZentaoAuthResult
-    from testing_agent.services.zentao_resource import ZentaoProjectResource, ZentaoResourceClient
-
-    async def auth(self, base_url, account, password):
-        return ZentaoAuthResult(access_token=account + "-token")
+    from testing_agent.services.zentao_mcp import ZentaoMcpResources
 
     async def remote_project(self, connection, remote_resource_id):
-        return ZentaoProjectResource(id=1, name="remote")
+        return SimpleNamespace(id=1, name="remote", deleted=False)
 
     async def executions(self, connection, remote_project_id, **kwargs):
         return {"items": [{"id": 2, "name": "execution"}], "total": 1}
 
-    monkeypatch.setattr(ZentaoAuthProvider, "authenticate", auth)
-    monkeypatch.setattr(ZentaoResourceClient, "get_project", remote_project)
-    monkeypatch.setattr(ZentaoResourceClient, "list_project_executions", executions)
+    async def identity(endpoint, token, **kwargs):
+        return {
+            "instanceUrl": "https://zentao.example",
+            "apiBaseUrl": "https://zentao.example/api.php/v2",
+        }
+
+    monkeypatch.setattr("testing_agent.services.shared_service.discover_instance", identity)
+    monkeypatch.setattr("testing_agent.services.zentao_mcp.discover_instance", identity)
+    monkeypatch.setattr(ZentaoMcpResources, "get_project", remote_project)
+    monkeypatch.setattr(ZentaoMcpResources, "list_project_executions", executions)
     _, owner = account(api, "owner")
     _, member = account(api, "member")
     pid = project(api, owner)
@@ -485,18 +508,26 @@ def test_zentao_bindings_keep_instance_identity_without_sharing_credentials(api,
         f"/v1/projects/{pid}/members", headers=owner, json={"name": "member", "role": "member"}
     )
     created = api.post(
-        f"/v1/projects/{pid}/integrations/zentao/connections",
+        f"/v1/projects/{pid}/services/mcp",
         headers=owner,
         json={
             "name": "zentao",
-            "baseUrl": "https://zentao.example",
-            "account": "owner",
-            "password": "secret",
+            "baseUrl": "http://mcp.test/mcp",
+            "templateId": "zentao",
+            "zentaoInstanceUrl": "https://zentao.example",
         },
     )
     assert created.status_code == 200, created.text
-    cid = created.json()["data"]["connectionId"]
-    body = {"provider": "zentao", "connectionId": cid, "remoteResourceId": "1"}
+    service_id = created.json()["data"]["serviceId"]
+    assert (
+        api.put(
+            f"/v1/projects/{pid}/services/mcp/{service_id}/authorization",
+            headers=owner,
+            json={"token": "owner-token"},
+        ).status_code
+        == 200
+    )
+    body = {"provider": "zentao", "remoteResourceId": "1"}
     assert api.post(f"/v1/projects/{pid}/bindings", headers=owner, json=body).status_code == 200
     body["remoteResourceId"] = "invalid"
     invalid = api.post(f"/v1/sprints/{sid}/bindings", headers=owner, json=body)
@@ -516,6 +547,7 @@ def test_shared_ai_task_requires_actor_llm_and_creator_loses_access_on_removal(a
     user, member = account(api, "member")
     pid = project(api, owner)
     rid = requirement(api, owner, pid)
+    seed_requirement_source(api, rid)
     api.post(
         f"/v1/projects/{pid}/members", headers=owner, json={"name": "member", "role": "member"}
     )
@@ -562,6 +594,7 @@ def test_worker_credentials_check_current_membership_and_connection_status(api):
     user, member = account(api, "member")
     pid = project(api, owner)
     rid = requirement(api, owner, pid)
+    seed_requirement_source(api, rid)
     api.post(
         f"/v1/projects/{pid}/members", headers=owner, json={"name": "member", "role": "member"}
     )
@@ -612,6 +645,20 @@ def test_stage_approval_records_new_actor_and_uses_their_llm(api):
     member_user, member = account(api, "member")
     pid = project(api, owner)
     rid = requirement(api, owner, pid)
+
+    async def provide_source_reference():
+        from sqlalchemy import select
+
+        from testing_agent.models.requirement import Requirement
+
+        async with api.app.state.test_sessions() as session:
+            document = await session.scalar(
+                select(Requirement).where(Requirement.requirement_id == rid)
+            )
+            document.document_file_id = "source-file-for-review-test"
+            await session.commit()
+
+    asyncio.run(provide_source_reference())
     api.post(
         f"/v1/projects/{pid}/members", headers=owner, json={"name": "member", "role": "member"}
     )
@@ -640,6 +687,13 @@ def test_stage_approval_records_new_actor_and_uses_their_llm(api):
     )
     assert response.status_code == 200, response.text
     rid_run = response.json()["data"]["runId"]
+    assert response.json()["data"]["workflowVersion"] == 2
+    extraction = json.loads(
+        (
+            Path(__file__).parent
+            / "fixtures/requirement_artifacts/document-extraction.example.json"
+        ).read_text()
+    )
     wid = api.post("/internal/ai-worker/tasks/claim", json={"workerId": "worker"}).json()["taskId"]
     response = api.patch(
         f"/internal/ai-worker/tasks/{wid}/progress",
@@ -647,7 +701,7 @@ def test_stage_approval_records_new_actor_and_uses_their_llm(api):
             "workerId": "worker",
             "currentStage": "extracting_text",
             "stageStatus": "waiting_review",
-            "configJson": {"firstStepOutput": "extracted requirement"},
+            "configJson": {"firstStepOutput": extraction},
         },
     )
     assert response.status_code == 204, response.text
@@ -656,6 +710,7 @@ def test_stage_approval_records_new_actor_and_uses_their_llm(api):
     assert api.post(url, headers=member, json=body).status_code == 404
     response = api.post(url, headers=member, json={**body, "llmConnectionId": connections[1]})
     assert response.status_code == 200, response.text
+    assert response.json()["data"]["currentStage"] == "feature_understanding"
     response = api.post("/internal/ai-worker/tasks/claim", json={"workerId": "worker"})
     assert response.status_code == 200, response.text
     next_wid = response.json()["taskId"]

@@ -1,0 +1,24 @@
+.ai-relations-hierarchy { display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100%; background: var(--ant-color-bg-container); }
+.ai-hierarchy-toolbar { position: absolute; top: 12px; right: 12px; z-index: 5; }
+.ai-hierarchy-body { display: flex; flex: 1; min-height: 0; min-width: 0; }
+.ai-relations-graph.ai-hierarchy-canvas { flex: 1; min-height: 0; min-width: 0; height: auto; }
+.ai-hierarchy-node.ai-relations-node { box-sizing: border-box; height: 144px; gap: 6px; }
+.ai-hierarchy-node.ai-relations-node.main { border-left: 1px solid var(--ant-color-border-secondary); border-top: 3px solid var(--ant-color-primary); }
+.ai-hierarchy-node.ai-relations-node .node-title { flex: 1; font-size: 13px; line-height: 18px; max-height: 54px; }
+.ai-hierarchy-node-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 24px; flex: 0 0 auto; }
+.ai-hierarchy-node-footer .ant-tag { margin: 0; font-size: 11px; }
+.ai-hierarchy-node-footer .ant-btn { padding: 0 4px; font-size: 12px; }
+.ai-hierarchy-node-id { font-size: 11px; color: var(--ant-color-text-secondary); }
+.ai-hierarchy-routing { max-width: calc(100% - 28px); border-radius: 6px; pointer-events: auto; white-space: normal; }
+.ai-hierarchy-details.ai-relations-panel { position: static; flex: 0 1 auto; max-width: 45%; margin: 0; border: 0; border-left: 1px solid var(--ant-color-border-secondary); border-radius: 0; box-shadow: none; min-height: 0; }
+.ai-hierarchy-associations { display: flex; flex-direction: column; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--ant-color-border-secondary); }
+.ai-hierarchy-association-title { color: var(--ant-color-text-secondary); font-size: 12px; }
+.ai-hierarchy-associations .ant-btn { display: flex; justify-content: space-between; gap: 8px; width: 100%; padding: 2px 0; }
+.ai-hierarchy-associations .ant-btn > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-hierarchy-associations .ant-btn > span:last-child { flex-shrink: 0; color: var(--ant-color-text-secondary); font-size: 11px; }
+.ai-hierarchy-footer { display: flex; flex: 0 0 auto; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--ant-color-border-secondary); color: var(--ant-color-text-secondary); font-size: 12px; }
+@media (max-width: 768px) {
+  .ai-hierarchy-body { flex-direction: column; }
+  .ai-hierarchy-details.ai-relations-panel { width: 100% !important; max-width: 100%; max-height: 45%; border-left: 0; border-top: 1px solid var(--ant-color-border-secondary); }
+  .ai-hierarchy-canvas .react-flow__minimap { display: none; }
+}

@@ -1,3 +1,7 @@
+import type { ListResponse } from '@/shared/api/request'
+
+export type RunHistoryResponse<T> = ListResponse<T> & { statusCounts?: Record<string, number>; reviewPendingCount?: number; latestRun?: T }
+
 export type ApiCaseGenerateTaskSourceType = 'openapi' | 'swagger'
 export type UiCaseGenerateTaskSourceType = 'source_archive'
 export type FunctionalCaseGenerateTaskSourceType = 'text' | 'docx'
@@ -22,6 +26,8 @@ export type ImportedTarget = {
 }
 
 export type GenerateTaskRunImportLifecycle = {
+  availableArtifacts?: string[]
+  hasResult?: boolean
   reviewStatus: GenerateTaskRunReviewStatus
   importStatus: GenerateTaskRunImportStatus
   importedTargets: ImportedTarget[]
@@ -66,9 +72,7 @@ export type FunctionalCaseGenerateTaskStage =
 
 export type RequirementAnalysisTaskStage =
   | 'extracting_text'
-  | 'writing_requirement'
   | 'feature_understanding'
-  | 'completed'
   | string
 
 export type FunctionalCaseGenerateTaskStageStatus =
@@ -365,6 +369,7 @@ export type FunctionalCaseGenerateTaskRunSnapshot = {
 }
 
 export type RequirementAnalysisTaskRunSnapshot = {
+  workflowVersion?: number
   instruction?: string
   name?: string
   projectId?: string
@@ -408,6 +413,7 @@ export type FunctionalCaseGenerateTaskRun = GenerateTaskRunImportLifecycle & {
 
 export type RequirementAnalysisTaskRun = {
   importStatus?: GenerateTaskRunImportLifecycle['importStatus']
+  workflowVersion?: number
   runId?: string
   taskId?: string
   projectId?: string
@@ -431,8 +437,7 @@ export type RequirementAnalysisTaskRun = {
   stageStatus?: FunctionalCaseGenerateTaskStageStatus
   snapshotJson?: RequirementAnalysisTaskRunSnapshot
   configJson?: unknown
-  firstStepOutput?: string
-  secondStepOutput?: string
+  firstStepOutput?: string | Record<string, unknown>
   resultYaml?: string
   resultSummaryJson?: unknown
 }
@@ -619,6 +624,8 @@ export type CodeRiskReport = {
 }
 
 export type CodeRiskTaskRun = {
+  availableArtifacts?: string[]
+  hasResult?: boolean
   runId?: string
   taskId?: string
   projectId?: string

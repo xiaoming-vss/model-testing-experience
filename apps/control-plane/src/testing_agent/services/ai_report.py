@@ -69,10 +69,10 @@ class TestReportWorkflow:
         await self.ensure_project_access(user_id, project_id, action="execute")
         sprint_id = str(body.get("sprintId") or body.get("sprint_id") or "")
         if not sprint_id:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         sprint = await self.repository.get_sprint(sprint_id)
         if sprint is None or sprint.project_id != project_id:
-            raise ErrNotFound
+            raise ErrNotFound()
         existing = await self.repository.get_active_task_by_project_sprint_type(
             project_id, sprint_id, task_type_for("test_report")
         )
@@ -99,7 +99,7 @@ class TestReportWorkflow:
         llm_connection_id = str(body.get("connectionId") or body.get("llmConnectionId") or "")
         snapshot_date = str(body.get("snapshotDate") or body.get("snapshot_date") or "")
         if not llm_connection_id or not snapshot_date:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         task = await self.test_report_task_for_run(project_id, body, user_id)
         await require_personal_connection(
             self.repository.session, user_id, "llm", llm_connection_id, task.project_id
@@ -107,7 +107,7 @@ class TestReportWorkflow:
         run_id = self.new_id()
         worker_task_id = self.new_id()
         if self.sprint_daily_metrics_service is None:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         daily_metrics = await self.sprint_daily_metrics_service.get(
             task.sprint_id, snapshot_date, user_id
         )
@@ -159,7 +159,7 @@ class TestReportWorkflow:
         await self.ensure_project_access(user_id, project_id, action="read")
         sprint = await self.repository.get_sprint(sprint_id)
         if sprint is None or sprint.project_id != project_id:
-            raise ErrNotFound
+            raise ErrNotFound()
         rows = await self.repository.list_runs_by_project_sprint_task_type(
             project_id, sprint_id, task_type_for("test_report")
         )
@@ -169,7 +169,7 @@ class TestReportWorkflow:
         run = await self.owned_run(user_id, run_id, "test_report", action="read")
         markdown = str(run.result_yaml or "").strip()
         if not markdown:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         snapshot = run.snapshot_json if isinstance(run.snapshot_json, dict) else {}
         title = str(snapshot.get("name") or "测试报告")
         filename = f"test-report-{run.run_id}.pdf"

@@ -116,6 +116,9 @@ class FakeIntegrationConnectionService:
 
 
 class FakeZentaoResourceClient:
+    async def validate_target(self, *args):
+        pass
+
     def __init__(self):
         self.calls = []
 
@@ -231,3 +234,15 @@ async def test_function_case_list_returns_total_and_items():
     assert [item["caseId"] for item in result["items"]] == ["case-1", "case-2"]
     assert result["items"][0]["suiteId"] == "suite-1"
     assert result["items"][0]["expectedResults"] == "1. 进入首页\n2. 显示欢迎语"
+
+
+@pytest.fixture(autouse=True)
+def mcp_access(monkeypatch):
+    class Access:
+        def __init__(self, connections):
+            self.connections = connections
+
+        async def resolve(self, user_id, project_id, expected_instance):
+            return await self.connections.resolve_zentao_access(user_id, "conn-1", project_id)
+
+    monkeypatch.setattr("testing_agent.services.function_test_case.ZentaoMcpAccess", Access)

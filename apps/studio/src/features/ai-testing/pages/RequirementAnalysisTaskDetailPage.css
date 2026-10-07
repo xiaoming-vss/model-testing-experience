@@ -19,7 +19,7 @@
   }
 }
 
-/* 只读文本直接占满弹窗正文，避免套用审核工作区的固定高度。 */
+/* 只读正文使用剩余高度，滚动留给业务内容、代码编辑器或错误文本。 */
 .requirement-analysis-text-modal .ant-modal-body {
   display: flex;
   flex: 1;
@@ -60,4 +60,28 @@
   background: transparent;
   box-shadow: none;
   overflow: auto;
+}
+
+.requirement-analysis-result-modal .requirement-analysis-artifact-tabs {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.requirement-analysis-result-modal .requirement-analysis-artifact-scroll {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* 只读 JSON 同样收缩到 Tabs 的内容高度，覆盖通用弹窗的编辑器最小高度。 */
+.requirement-analysis-result-modal .requirement-analysis-artifact-tabs :is(.json-editor-wrap, .json-editor-shell, .json-editor-codemirror, .cm-editor) {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none;
+}
+
+.requirement-analysis-artifact-scroll.is-material-comparison {
+  overflow: hidden;
 }

@@ -11,12 +11,41 @@ from testing_agent.models.requirement import Requirement
 from testing_agent.models.sprint import Sprint
 from testing_agent.models.test_order import TestOrder
 from testing_agent.models.test_order_entry import TestOrderEntry
+from testing_agent.models.user import User
 from testing_agent.repositories.base import ResourceRepository
 
 
 class BugRepository(ResourceRepository):
     model = Bug
     id_column = "bug_id"
+
+    async def bug_options(self, project_id: str) -> dict:
+        """Only labels needed for Bug filtering, attribution and reassignment."""
+        members = (
+            await self.session.execute(
+                select(User.user_id, User.nickname)
+                .where(
+                    User.user_id.in_(
+                        select(ProjectMember.user_id).where(ProjectMember.project_id == project_id)
+                    )
+                    | User.user_id.in_(
+                        select(Project.user_id).where(Project.project_id == project_id)
+                    )
+                )
+                .order_by(User.nickname)
+            )
+        ).all()
+        sprints = (
+            await self.session.execute(
+                select(Sprint.sprint_id, Sprint.name)
+                .where(Sprint.project_id == project_id)
+                .order_by(Sprint.created_at.desc())
+            )
+        ).all()
+        return {
+            "members": [{"userId": user_id, "name": name} for user_id, name in members],
+            "sprints": [{"sprintId": sprint_id, "name": name} for sprint_id, name in sprints],
+        }
 
     async def get_bug(self, bug_id: str) -> Bug | None:
         return await self.session.scalar(select(Bug).where(Bug.bug_id == bug_id))
@@ -82,6 +111,8 @@ class BugRepository(ResourceRepository):
         project_id: str,
         *,
         statuses: list[str],
+        confirmed: bool | None,
+        resolution: str,
         severity: str,
         assignee_user_id: str,
         sprint_id: str,
@@ -94,6 +125,10 @@ class BugRepository(ResourceRepository):
         conditions = [Bug.project_id == project_id]
         if statuses:
             conditions.append(Bug.status.in_(statuses))
+        if confirmed is not None:
+            conditions.append(Bug.confirmed == confirmed)
+        if resolution:
+            conditions.append(Bug.resolution == resolution)
         if severity:
             conditions.append(Bug.severity == severity)
         if assignee_user_id:
@@ -109,7 +144,7 @@ class BugRepository(ResourceRepository):
         if keyword:
             keyword = keyword.strip()
             if keyword.isdigit():
-                conditions.append(Bug.title.like(f"%{keyword}%") | (Bug.bug_no == int(keyword)))
+                conditions.append(Bug.title.like(f"%{keyword}%") | (Bug.id == int(keyword)))
             else:
                 conditions.append(Bug.title.like(f"%{keyword}%"))
         total = int(await self.session.scalar(select(func.count(Bug.id)).where(*conditions)) or 0)

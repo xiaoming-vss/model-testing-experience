@@ -89,11 +89,13 @@ class ImportFunctionSuitesToZentaoRequest(BaseModel):
 class FunctionCaseZentaoImportItemResponse(BaseModel):
     case_id: str = Field()
     remote_case_id: int = Field()
+    error_message: str | None = None
     status: str
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
 class FunctionCaseZentaoImportResponse(BaseModel):
+    status: str = "success"
     suite_id: str = Field()
     product_id: int = Field()
     remote_project_id: int = Field()
@@ -104,6 +106,7 @@ class FunctionCaseZentaoImportResponse(BaseModel):
 
 
 class FunctionSuiteZentaoImportItemResponse(BaseModel):
+    items: list[FunctionCaseZentaoImportItemResponse] = Field(default_factory=list)
     suite_id: str = Field()
     status: Literal["success", "failed"]
     imported_case_count: int = Field()

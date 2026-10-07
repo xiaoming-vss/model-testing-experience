@@ -107,6 +107,23 @@ async def test_database_prevents_bypassing_child_guard(db):
     assert await count(db, m.FunctionTestSuite) == 1
 
 
+async def test_pending_business_child_blocks_parent_deletion(db):
+    suite = await add(
+        db, m.FunctionTestSuite(suite_id="pending-suite", requirement_id="r", name="pending")
+    )
+    await db.commit()
+    case = m.FunctionTestCase(case_id="pending-case", suite_id=suite.suite_id, title="pending")
+    db.add(case)
+
+    with pytest.raises(AppError) as blocked:
+        await delete_resource(db, suite)
+
+    assert blocked.value.http_code == 409
+    assert blocked.value.data["blockers"][0]["count"] == 1
+    assert await count(db, m.FunctionTestCase) == 1
+    assert await count(db, m.FunctionTestSuite) == 1
+
+
 async def test_api_case_cleans_rules_runs_and_queue(db):
     await add(db, m.ApiCollection(collection_id="col", requirement_id="r", name="api"))
     case = await add(

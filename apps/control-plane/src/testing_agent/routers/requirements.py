@@ -8,13 +8,19 @@ from testing_agent.handlers.requirement import (
     delete_requirement,
     download_requirement_document,
     get_requirement,
+    list_project_requirements,
     list_requirements,
     update_requirement,
 )
 from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
-from testing_agent.schemas.requirement import RequirementResponse
+from testing_agent.schemas.requirement import RequirementListItemResponse, RequirementResponse
 
 router = APIRouter()
+
+router.get(
+    "/projects/{project_id}/requirements",
+    response_model=ApiResponse[ListResponse[RequirementListItemResponse]],
+)(list_project_requirements)
 
 router.post(
     "/sprints/{sprint_id}/requirements",

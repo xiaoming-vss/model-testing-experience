@@ -40,3 +40,15 @@ uv run python -m testing_agent.cli.skills /home/xiaoming/下载/skills/default-s
 
 
 2026-09-27 路径迁移已在本地完成：13 个 Skill、67 个文件（含项目自定义 `testing-case`），新对象路径、文件大小和 SHA-256 逐项校验通过。旧 ID 对象进入签名有效期后的清理流程。
+
+## 两阶段需求分析技能更新（2026-10-06）
+
+按用户要求，从 `/home/xiaoming/下载/skills/default-skill-003` 更新五个系统默认技能：`extract-docx-enhanced-text`、`prd-feature-understanding-skill`、`analyze-functional-requirements`、`generate-solution-test-points`、`generate-solution-test-cases`。使用既有 `sync_builtin_skills` 发布服务，保留其它默认技能与项目自定义技能。共 33 个文件，已逐文件下载真实 S3 内容并比对源文件、清单、大小及 SHA-256，全部一致。
+
+推送与重启前确认 AI 队列无 pending/running 任务。AI Worker 已重启加载新两阶段执行代码并恢复正常轮询；没有调用真实模型，待用户发起新需求分析运行验收。随后用户确认旧流程全部删除：旧中间阶段已从默认库移除，两个现用技能删除五份 legacy 参考文件后重新同步（共 11 个文件）并逐项校验；22 条旧运行及其关联记录已删除。原 AI Worker 已停止领取并等待当前新运行完成；新 AI Worker 已加载清理后的代码并正常轮询。
+
+## 问题闭环更新（2026-10-07）
+
+两个需求分析默认技能更新为：明确答复先写入对应事实或需求理解正文，更新来源及确认状态，再删除已解决问题与相关引用；部分回答只保留剩余缺口，全部解决时 questions=[]。不输出 resolved 问题，不另建问答历史。平台和 Worker 的新输出契约同步收窄；已有已回答产物允许作为 AI 继续优化的输入。
+
+已从 default-skill-003 的两个源目录通过既有发布服务覆盖默认库，共11个文件，真实 S3 下载内容、大小及 SHA-256 逐项一致。AI 队列为空时已重启本地 AI Worker，新进程正常轮询。未替用户提交真实需求审核或调用模型修订业务产物。

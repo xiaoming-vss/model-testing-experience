@@ -23,9 +23,19 @@ async def create_bug(
     return success_payload(await service.create(user_id, project_id, body))
 
 
+async def get_bug_options(
+    project_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: BugService = Depends(get_bug_service),
+):
+    return success_payload(await service.options(user_id, project_id))
+
+
 async def list_project_bugs(
     project_id: str,
     status: str = Query(default=""),
+    confirmed: bool | None = Query(default=None),
+    resolution: str = Query(default=""),
     severity: str = Query(default=""),
     assignee_user_id: str = Query(default="", alias="assigneeUserId"),
     sprint_id: str = Query(default="", alias="sprintId"),
@@ -42,6 +52,8 @@ async def list_project_bugs(
             user_id,
             project_id,
             statuses=[item.strip() for item in status.split(",") if item.strip()],
+            confirmed=confirmed,
+            resolution=resolution,
             severity=severity,
             assignee_user_id=assignee_user_id,
             sprint_id=sprint_id,

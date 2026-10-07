@@ -101,8 +101,6 @@
   min-height: 600px;
   max-height: calc(100vh - 224px);
   overflow: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--app-terminal-scrollbar) var(--app-terminal-scrollbar-track);
 }
 
 .ai-task-run-result-modal-content.review {
@@ -176,25 +174,6 @@
 
 .ai-task-run-result-modal-content .ai-case-name-tree.expanded {
   min-height: calc(100vh - 320px);
-}
-
-.ai-task-run-result-modal-content::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.ai-task-run-result-modal-content::-webkit-scrollbar-track {
-  background: var(--app-terminal-scrollbar-track);
-  border-radius: 999px;
-}
-
-.ai-task-run-result-modal-content::-webkit-scrollbar-thumb {
-  background: var(--app-terminal-scrollbar-thumb);
-  border-radius: 999px;
-}
-
-.ai-task-run-result-modal-content::-webkit-scrollbar-thumb:hover {
-  background: var(--app-terminal-scrollbar-hover);
 }
 
 @media (max-height: 820px) {

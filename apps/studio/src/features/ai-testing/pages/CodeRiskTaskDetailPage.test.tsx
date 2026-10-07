@@ -124,3 +124,38 @@ describe('代码风险任务运行记录删除', () => {
     expect(screen.queryByRole('button', { name: '更多操作' })).toBeNull()
   })
 })
+
+
+it('服务端翻页保留全局运行状态，选中旧摘要后才获取报告详情', async () => {
+  const historyPages: number[] = []
+  const details: string[] = []
+  const newest = { ...run, runId: 'newest', status: 'running' }
+  const older = { ...run, runId: 'older', resultYaml: undefined }
+  installFetchHandler(() => run, (url) => {
+    if (url.pathname.endsWith('/runs')) {
+      const page = Number(url.searchParams.get('page'))
+      historyPages.push(page)
+      expect(url.searchParams.get('pageSize')).toBe('20')
+      return jsonResponse({ items: [page === 1 ? { ...newest, resultYaml: undefined } : older], total: 21,
+        latestRun: { ...newest, resultYaml: undefined }, statusCounts: { running: 1, success: 20 } })
+    }
+    if (url.pathname.startsWith('/v1/code-risk-analysis-runs/')) {
+      const id = url.pathname.split('/').at(-1)!
+      details.push(id)
+      return jsonResponse({ ...(id === 'newest' ? newest : older), resultYaml: '只在详情返回的报告内容' })
+    }
+  })
+  renderPage()
+  const user = userEvent.setup()
+  await screen.findByText('#1')
+  expect(screen.getByRole('button', { name: '发起运行' })).toBeDisabled()
+  await user.click(screen.getByTitle('2'))
+  const rowIndex = await screen.findByText('#21')
+  expect(historyPages).toContain(2)
+  expect(screen.getByRole('button', { name: '发起运行' })).toBeDisabled()
+  expect(details).not.toContain('older')
+  await user.click(rowIndex)
+  await waitFor(() => expect(details).toContain('older'))
+  await user.click(screen.getByRole('button', { name: /分析报告/ }))
+  expect(await screen.findByText('只在详情返回的报告内容')).toBeInTheDocument()
+})

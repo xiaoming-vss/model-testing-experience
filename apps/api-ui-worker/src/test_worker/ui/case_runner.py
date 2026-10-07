@@ -13,6 +13,7 @@ from playwright.async_api import async_playwright
 from ..contracts.types import (
     UiCaseRunResult,
     UiCaseRunSnapshot,
+    UiCaseRunStatus,
     UiStepDefinition,
     WorkerConfig,
 )
@@ -90,8 +91,7 @@ class UiCaseRunner:
 
         # 规范化步骤
         steps = [
-            step for step in _normalize_steps(snapshot)
-            if step.enabled is not False
+            step for step in _normalize_steps(snapshot) if step.enabled is not False
         ]
         steps.sort(key=lambda s: s.order_no or 0)
 
@@ -99,19 +99,21 @@ class UiCaseRunner:
         async with async_playwright() as p:
             launch_options = launch_options_from_suite(snapshot.suite)
             context_options = context_options_from_suite(snapshot.suite)
-            logger.info("ui browser launch options", {
-                "taskId": snapshot.task_id,
-                "runId": snapshot.run_id,
-                "suite": snapshot.suite.__dict__ if snapshot.suite else None,
-                "launchOptions": launch_options,
-                "contextOptions": context_options,
-            })
+            logger.info(
+                "ui browser launch options",
+                {
+                    "taskId": snapshot.task_id,
+                    "runId": snapshot.run_id,
+                    "headless": launch_options.get("headless"),
+                    "ignoreHTTPSErrors": context_options.get("ignore_https_errors"),
+                },
+            )
             browser = await p.chromium.launch(**launch_options)
 
             trace_path = ""
             step_results = []
             error_message = ""
-            status = "success"
+            status: UiCaseRunStatus = "success"
             success = True
             current_url = ""
             context = None
@@ -143,19 +145,30 @@ class UiCaseRunner:
                     step_started_at = datetime.now().timestamp()
 
                     try:
-                        result = await self._step_executor.execute(step, fallback_order, execution_context)
+                        result = await self._step_executor.execute(
+                            step, fallback_order, execution_context
+                        )
                         if screenshot_policy == "after_each_step":
-                            screenshot_path = await self._step_executor.capture_step_screenshot(
-                                page, artifact_dir, fallback_order
+                            screenshot_path = (
+                                await self._step_executor.capture_step_screenshot(
+                                    page, artifact_dir, fallback_order
+                                )
                             )
                             result = result.__class__(
-                                **{**result.__dict__, "screenshot_path": screenshot_path}
+                                **{
+                                    **result.__dict__,
+                                    "screenshot_path": screenshot_path,
+                                }
                             )
                         step_results.append(result)
                     except Exception as e:
                         message = str(e)
                         failed_result = build_failed_step_result(
-                            step, fallback_order, step_started_at_iso, step_started_at, message
+                            step,
+                            fallback_order,
+                            step_started_at_iso,
+                            step_started_at,
+                            message,
                         )
 
                         # 捕获失败截图
@@ -165,14 +178,20 @@ class UiCaseRunner:
                                     page, artifact_dir, fallback_order
                                 )
                                 failed_result = failed_result.__class__(
-                                    **{**failed_result.__dict__, "screenshot_path": screenshot_path}
+                                    **{
+                                        **failed_result.__dict__,
+                                        "screenshot_path": screenshot_path,
+                                    }
                                 )
                             except Exception as capture_error:
-                                logger.warn("capture failure screenshot error", {
-                                    "taskId": snapshot.task_id,
-                                    "stepOrderNo": fallback_order,
-                                    "error": str(capture_error),
-                                })
+                                logger.warn(
+                                    "capture failure screenshot error",
+                                    {
+                                        "taskId": snapshot.task_id,
+                                        "stepOrderNo": fallback_order,
+                                        "error": str(capture_error),
+                                    },
+                                )
 
                         step_results.append(failed_result)
                         success = False
@@ -203,20 +222,26 @@ class UiCaseRunner:
                         trace_path = str(Path(artifact_dir) / "trace.zip")
                         await context.tracing.stop(path=trace_path)
                     except Exception as trace_error:
-                        logger.warn("stop trace error", {
-                            "taskId": snapshot.task_id,
-                            "error": str(trace_error),
-                        })
+                        logger.warn(
+                            "stop trace error",
+                            {
+                                "taskId": snapshot.task_id,
+                                "error": str(trace_error),
+                            },
+                        )
 
                 # 关闭上下文
                 if context:
                     try:
                         await context.close()
                     except Exception as context_error:
-                        logger.warn("close browser context error", {
-                            "taskId": snapshot.task_id,
-                            "error": str(context_error),
-                        })
+                        logger.warn(
+                            "close browser context error",
+                            {
+                                "taskId": snapshot.task_id,
+                                "error": str(context_error),
+                            },
+                        )
 
                 # 关闭浏览器
                 await browser.close()

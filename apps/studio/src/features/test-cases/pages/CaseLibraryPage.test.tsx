@@ -478,3 +478,24 @@ it('搜索框支持 Ctrl / ⌘ + K 聚焦', async () => {
   expect(input).toHaveFocus()
   client.clear()
 })
+
+it('用例推送使用项目 MCP，部分失败保留详情并阻止未知结果重试', async () => {
+  vi.spyOn(api, 'getProjectFunctionTestSuites').mockResolvedValue(listResponse([suite]))
+  vi.spyOn(api, 'getProjectFunctionTestCases').mockResolvedValue(listResponse([loginCase]))
+  const oldConnections = vi.spyOn(api, 'getZentaoConnections')
+  const push = vi.spyOn(api, 'importFunctionTestCasesToZentao').mockResolvedValue({
+    status: 'partial_failure', importedCaseCount: 1,
+    items: [{ caseId: 'case-1', status: 'uncertain', errorMessage: '请先在禅道核对，勿直接重试' }],
+  })
+  const client = buildClient()
+  const { container } = renderPage(client)
+  await selectSuite(container)
+  await userEvent.click(button('导入禅道'))
+  await userEvent.click(button('开始导入'))
+  await waitFor(() => expect(push).toHaveBeenCalledWith('suite-1', { productId: 1, moduleId: 0, caseIds: undefined }))
+  expect(await screen.findByText('推送未全部完成')).toBeInTheDocument()
+  expect(screen.getByText(/请先在禅道核对/)).toBeInTheDocument()
+  expect(button('开始导入')).toBeDisabled()
+  expect(oldConnections).not.toHaveBeenCalled()
+  client.clear()
+})

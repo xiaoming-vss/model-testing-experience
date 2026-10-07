@@ -12,7 +12,6 @@ from testing_agent_ai_worker.nanobot_runtime.paths import resolve_task_workspace
 
 REQUIREMENT_SKILLS = {
     "extracting_text": "extract-docx-enhanced-text",
-    "writing_requirement": "prd-requirement-writing-skill",
     "feature_understanding": "prd-feature-understanding-skill",
 }
 FUNCTIONAL_SKILLS = {
@@ -36,6 +35,15 @@ def required_skills(task):
         "functional_case_generate": FUNCTIONAL_SKILLS,
     }.get(task.task_type)
     if stages is not None:
+        if task.task_type == "requirement_analysis":
+            if task.payload.metadata.get("workflowVersion", 2) != 2:
+                raise ValueError("不支持的需求分析工作流版本")
+            if not task.checkpoint_enabled:
+                raise ValueError("需求分析必须启用材料人工审核")
+            name = stages.get(task.current_stage or "extracting_text")
+            if name is None:
+                raise ValueError("不支持的需求分析阶段")
+            return [name]
         if task.checkpoint_enabled:
             name = stages.get(task.current_stage)
             return [name] if name else []

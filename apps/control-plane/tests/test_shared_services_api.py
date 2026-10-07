@@ -104,3 +104,43 @@ def test_shared_visibility_and_separate_personal_authorization(api, provider, cr
     assert api.delete(f"{path}/{sid}", headers=owner).status_code == 200
     assert api.get(path, headers=member).json()["data"]["items"] == []
     assert api.get(selector, headers=member).json()["data"]["items"] == []
+
+
+def test_mcp_authorization_rechecks_endpoint_after_remote_discovery(api, monkeypatch):
+    from sqlalchemy import select
+
+    from testing_agent.models.shared_service import SharedService
+
+    _, owner = account(api, "endpoint-owner")
+    pid = project(api, owner)
+    base = f"/v1/projects/{pid}/services/mcp"
+    created = api.post(
+        base,
+        headers=owner,
+        json={"name": "zentao", "baseUrl": "https://mcp.example/mcp", "templateId": "zentao"},
+    )
+    assert created.status_code == 200, created.text
+    service_id = created.json()["data"]["serviceId"]
+
+    async def changed_endpoint(endpoint, token):
+        assert endpoint == "https://mcp.example/mcp"
+        async with api.app.state.test_sessions() as session:
+            row = await session.scalar(
+                select(SharedService).where(SharedService.service_id == service_id)
+            )
+            row.base_url = "https://other-mcp.example/mcp"
+            await session.commit()
+        return {
+            "instanceUrl": "https://zentao.example",
+            "apiBaseUrl": "https://zentao.example/api.php/v2",
+        }
+
+    monkeypatch.setattr("testing_agent.services.shared_service.discover_instance", changed_endpoint)
+    authorized = api.put(
+        f"{base}/{service_id}/authorization", headers=owner, json={"token": "fixture"}
+    )
+    assert authorized.status_code == 409, authorized.text
+    assert "服务地址已变更" in authorized.json()["message"]
+    listed = api.get(base, headers=owner)
+    assert listed.status_code == 200
+    assert listed.json()["data"]["items"][0]["authorization"]["status"] == "unauthorized"

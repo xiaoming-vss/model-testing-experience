@@ -2,11 +2,13 @@ import { Button, Dropdown, Empty, Popover, Table, Tooltip, Typography } from 'an
 import { MoreOutlined, WarningOutlined } from '@ant-design/icons'
 import type { MenuProps, TableProps } from 'antd'
 import type { ReactNode } from 'react'
+import { ListPagination } from '@/shared/components/ListPagination'
 import { formatTime } from '@/utils/format'
 
 export type RunMenuAction = { key: string; label: string; disabled?: boolean; danger?: boolean }
 
 type RunHistoryTableProps<T> = {
+  pagination?: { current: number; pageSize: number; total: number; loading: boolean; onChange: (page: number, pageSize: number) => void }
   rows: T[]
   getRunId: (row: T) => string | undefined
   selectedRunId: string | undefined
@@ -39,6 +41,7 @@ type RunColumn<T> = NonNullable<TableProps<T>['columns']>[number]
 
 export function RunHistoryTable<T>({
   rows,
+  pagination,
   getRunId,
   selectedRunId,
   resolveRow,
@@ -57,7 +60,7 @@ export function RunHistoryTable<T>({
       title: '运行',
       key: 'runId',
       minWidth: columnMinWidths.runId,
-      render: (_, row, index) => renderPrimary?.(row, index) ?? <RunIdCell index={index} runId={getRunId(row)} />,
+      render: (_, row, index) => renderPrimary?.(row, index) ?? <RunIdCell index={index + (pagination ? (pagination.current - 1) * pagination.pageSize : 0)} runId={getRunId(row)} />,
     },
     {
       title: '状态',
@@ -117,6 +120,7 @@ export function RunHistoryTable<T>({
   }))
 
   return (
+    <>
     <Table<T>
       className="ai-task-run-table"
       size="small"
@@ -130,6 +134,8 @@ export function RunHistoryTable<T>({
       onRow={(row) => ({ onClick: () => onSelect(getRunId(row)) })}
       locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无运行记录" /> }}
     />
+    {pagination ? <div className="table-footer"><ListPagination {...pagination} /></div> : null}
+    </>
   )
 }
 
@@ -149,19 +155,19 @@ export function RunIdCell({ index, runId }: { index: number; runId?: string }) {
   )
 }
 
-/** 操作列容器：内联按钮 + 「更多」下拉（下拉里的操作多为状态变更，需权限与防重复提交）。 */
+/** 操作列容器；少量操作直接展示，需要折叠时再提供菜单。 */
 export function RunRowActions({
   inline,
   children,
-  menuItems,
+  menuItems = [],
   onMenuAction,
 }: {
   inline?: ReactNode
   children?: ReactNode
-  menuItems: RunMenuAction[]
-  onMenuAction: (key: string) => void
+  menuItems?: RunMenuAction[]
+  onMenuAction?: (key: string) => void
 }) {
-  const menu: MenuProps = { items: menuItems, onClick: ({ key }) => onMenuAction(key) }
+  const menu: MenuProps = { items: menuItems, onClick: ({ key }) => onMenuAction?.(key) }
   return (
     <div className="ai-task-run-table-actions">
       {inline}

@@ -8,7 +8,6 @@
 | 控制面 Python 发行包与启动命令 | `mtx-control-plane` |
 | AI Worker Python 发行包与启动命令 | `mtx-ai-worker` |
 | API/UI Worker Python 发行包与启动命令 | `mtx-api-ui-worker` |
-| 禅道 Python 发行包 | `mtx-connector-zentao`（启动仍使用 `uv run python main.py`） |
 | Compose 项目 | `mtx` |
 | Docker 镜像 | `mtx/studio:local`、`mtx/control-plane:local`、`mtx/ai-worker:local`、`mtx/api-ui-worker:local`、`mtx/zentao:local` |
 | AI 示例命令 | `mtx-ai-demo`、`mtx-ai-chain-demo` |

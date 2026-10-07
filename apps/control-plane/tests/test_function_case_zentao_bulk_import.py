@@ -115,6 +115,9 @@ class RecordingConnectionService:
 
 
 class RecordingZentaoClient:
+    async def validate_target(self, *args):
+        pass
+
     def __init__(self, *, failed_titles: set[str] | None = None):
         self.failed_titles = failed_titles or set()
         self.calls = []
@@ -154,8 +157,20 @@ async def test_bulk_import_imports_selected_suites_and_resolves_connection_once(
         "failedSuiteCount": 0,
         "importedCaseCount": 2,
         "items": [
-            {"suiteId": "suite-1", "status": "success", "importedCaseCount": 1},
-            {"suiteId": "suite-2", "status": "success", "importedCaseCount": 1},
+            {
+                "suiteId": "suite-1",
+                "status": "success",
+                "importedCaseCount": 1,
+                "errorMessage": None,
+                "items": [{"caseId": "case-1", "remoteCaseId": 101, "status": "success"}],
+            },
+            {
+                "suiteId": "suite-2",
+                "status": "success",
+                "importedCaseCount": 1,
+                "errorMessage": None,
+                "items": [{"caseId": "case-2", "remoteCaseId": 102, "status": "success"}],
+            },
         ],
     }
     assert connections.calls == [("user-1", "conn-1", "project-1")]
@@ -295,7 +310,7 @@ def test_bulk_import_response_uses_camel_case_and_omits_success_errors():
     )
 
     assert response.model_dump(by_alias=True, exclude_none=True)["items"] == [
-        {"suiteId": "suite-1", "status": "success", "importedCaseCount": 2}
+        {"suiteId": "suite-1", "status": "success", "importedCaseCount": 2, "items": []}
     ]
 
 
@@ -303,3 +318,33 @@ def test_bulk_import_route_is_public():
     paths = create_app().openapi()["paths"]
 
     assert "post" in paths["/v1/requirements/{requirementId}/zentao/testcases/import"]
+
+
+@pytest.fixture(autouse=True)
+def mcp_access(monkeypatch):
+    class Access:
+        def __init__(self, connections):
+            self.connections = connections
+
+        async def resolve(self, user_id, project_id, expected_instance):
+            return await self.connections.resolve_zentao_access(user_id, "conn-1", project_id)
+
+    monkeypatch.setattr("testing_agent.services.function_test_case.ZentaoMcpAccess", Access)
+
+
+@pytest.mark.asyncio
+async def test_unknown_write_stops_later_suites():
+    class UncertainClient(RecordingZentaoClient):
+        async def create_test_cases(self, connection, body):
+            self.calls.append((connection, body))
+            return {"items": [{"id": 0, "status": "uncertain", "errorMessage": "请核对"}]}
+
+    client = UncertainClient()
+    service, _, _ = build_service(client=client)
+    result = await service.import_requirement_to_zentao(
+        "user-1", "req-1", {"productId": 9, "suiteIds": ["suite-1", "suite-2"]}
+    )
+    assert len(client.calls) == 1
+    assert result["importedCaseCount"] == 0
+    assert result["items"][0]["items"][0]["status"] == "uncertain"
+    assert "未推送" in result["items"][1]["errorMessage"]

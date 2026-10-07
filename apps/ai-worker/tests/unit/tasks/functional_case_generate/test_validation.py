@@ -102,6 +102,27 @@ class ContractsTests(unittest.TestCase):
 
 
 class RepairTests(unittest.IsolatedAsyncioTestCase):
+    async def test_missing_business_facts_fail_without_format_repair(self):
+        calls, events = [], []
+
+        async def generate(prompt):
+            calls.append(prompt)
+            return "CLARIFICATION_REQUIRED: 缺少转换结果字段及失败提示，无法判定转换数据操作的预期结果。"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            token = context.set(ValidationContext(Path(tmp), events.append))
+            try:
+                with self.assertRaisesRegex(OutputValidationError, "转换结果字段及失败提示"):
+                    await generate_validated(
+                        stage="detailed_cases", inputs="input", generate=generate, module="数据转换"
+                    )
+            finally:
+                context.reset(token)
+            self.assertEqual(len(calls), 1)
+            self.assertEqual(events[-1]["repairAttempt"], 0)
+            diagnostic = json.loads(next(Path(tmp).rglob("attempt-*.json")).read_text())
+            self.assertEqual(diagnostic["errors"][0]["code"], "clarification_required")
+
     async def test_repairs_each_stage_and_records_full_diagnostics(self):
         for stage, valid in [
             ("requirement_analysis", analysis()),

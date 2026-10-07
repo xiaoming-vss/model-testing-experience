@@ -1,8 +1,7 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { Button, Alert } from 'antd'
 import { DownloadOutlined, FileOutlined } from '@ant-design/icons'
-import { api } from '@/services/api'
+import { useStoredFileUrls } from '@/shared/components/files/useStoredFileUrls'
 import type { BugAttachment } from '../types'
 
 export function BugEvidencePanel({ attachments, descriptionHtml = '', download }: {
@@ -14,17 +13,16 @@ export function BugEvidencePanel({ attachments, descriptionHtml = '', download }
   const media = files.filter((item) => /^(image\/(png|jpeg|gif|webp)|video\/(mp4|webm))$/.test(item.contentType))
   const [selectedId, setSelectedId] = useState<string>()
   const selected = media.find((item) => item.fileId === selectedId)
-  const preview = useQuery({ queryKey: ['bugAttachmentPreview', selected?.fileId],
-    queryFn: () => api.downloadAttachment(selected!.fileId), enabled: Boolean(selected), staleTime: 0 })
+  const preview = useStoredFileUrls(selected ? [selected.fileId] : [])
   return <section className="bug-detail-panel">
     <h2 className="bug-panel-title">附件与多媒体凭据 <span className="bug-section-count">{files.length} 个附件</span></h2>
     {!files.length ? <span className="bug-detail-subtitle">暂无附件</span> : <div className={`bug-evidence-layout${selected ? ' has-preview' : ''}`}>
       {selected && <div className="bug-evidence-preview">
         <div className="bug-evidence-caption">{selected.filename}<Button type="text" size="small" onClick={() => setSelectedId(undefined)}>收起预览</Button></div>
-        {preview.isError ? <Alert type="error" title="预览加载失败" action={<Button onClick={() => preview.refetch()}>重试</Button>} />
-          : preview.data ? selected.contentType.startsWith('video/')
-            ? <video key={selected.fileId} src={preview.data.url} controls preload="metadata" aria-label={selected.filename} />
-            : <img src={preview.data.url} alt={selected.filename} />
+        {preview.errors[selected.fileId] ? <Alert type="error" title="预览加载失败" action={<Button onClick={preview.reload}>重试</Button>} />
+          : preview.sources[selected.fileId] ? selected.contentType.startsWith('video/')
+            ? <video key={selected.fileId} src={preview.sources[selected.fileId]} controls preload="metadata" aria-label={selected.filename} />
+            : <img src={preview.sources[selected.fileId]} alt={selected.filename} />
           : <span>正在加载预览…</span>}
       </div>}
       <ul className="bug-evidence-files">{files.map((item) => <li key={item.fileId}>

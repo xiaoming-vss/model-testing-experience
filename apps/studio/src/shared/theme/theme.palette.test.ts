@@ -6,10 +6,69 @@ import legacy from '../styles/legacy-tokens.css?raw'
 import darkFoundation from '../styles/github-dark-foundation.css?raw'
 import dark from '../styles/github-dark-tokens.css?raw'
 import buttons from '../../app/styles/buttons.css?raw'
+import light from '../styles/indigo-amber-light-tokens.css?raw'
+import surfaces from '../styles/surface-tokens.css?raw'
 
 function declarations(css: string) {
   return new Map([...css.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map((match) => [match[1], match[2].trim()]))
 }
+
+describe('light workbench surfaces', () => {
+  // Resolve the actual global and content-surface token blocks; sidebar aliases
+  // are a separate local scope and must not replace content roles in this map.
+  const global = light.match(/:root:not\(\[data-theme='dark'\]\)\s*\{([^}]+)\}/)?.[1] ?? ''
+  const content = light.match(/:root:not\(\[data-theme='dark'\]\) \.tp-surface\s*\{([^}]+)\}/)?.[1] ?? ''
+  const values = declarations(foundation + legacy + surfaces + buttons + editor + global + content)
+  function resolve(name: string, seen: string[] = []): string {
+    expect(seen, `cycle at ${name}`).not.toContain(name)
+    expect(values.has(name), `missing ${name}`).toBe(true)
+    return values.get(name)!.replace(/var\((--[\w-]+)\)/g, (_, ref: string) => resolve(ref, [...seen, name]))
+  }
+  it('keeps legacy glass panels, populated rows and modern cards in the same muted palette', () => {
+    const panel = resolve('--app-surface')
+    for (const role of [
+      '--srf-card', '--srf-list-row-bg', '--legacy-mac-glass-panel', '--legacy-mac-glass-card',
+      '--app-glass-surface-50', '--app-glass-surface-54', '--app-glass-surface-62',
+      '--app-glass-surface-66', '--app-glass-surface-68', '--app-glass-surface-70',
+      '--app-glass-surface-72', '--app-glass-surface-78', '--app-glass-surface-82',
+      '--app-glass-surface-86', '--app-glass-surface-96', '--app-glass-surface-98',
+      '--app-glass-table-bg', '--app-glass-toolbar', '--legacy-project-overview-panel',
+    ]) expect(resolve(role), role).toBe(panel)
+    expect(resolve('--srf-hover')).toBe(resolve('--srf-list-header-bg'))
+  })
+  it('does not apply any light palette rule to dark root, sidebar or content nodes', () => {
+    const previousTheme = document.documentElement.dataset.theme
+    const fixture = document.createElement('div')
+    fixture.innerHTML = '<aside class="app-sidebar"></aside><main class="tp-surface"><span class="tone-blue"></span></main>'
+    document.body.append(fixture)
+    document.documentElement.dataset.theme = 'dark'
+    try {
+      const nodes = [document.documentElement, ...fixture.querySelectorAll('*')]
+      const css = light.replace(/\/\*[\s\S]*?\*\//g, '')
+      for (const block of css.matchAll(/([^{}]+)\{[^}]+\}/g)) {
+        for (const node of nodes) expect(node.matches(block[1].trim()), block[1]).toBe(false)
+      }
+    } finally {
+      fixture.remove()
+      if (previousTheme === undefined) delete document.documentElement.dataset.theme
+      else document.documentElement.dataset.theme = previousTheme
+    }
+  })
+  it('keeps normal and disabled controls in the same surface palette as their containers', () => {
+    for (const role of ['--button-bg', '--app-control-surface', '--app-glass-input', '--app-request-field-bg', '--editor-bg']) {
+      expect(resolve(role), role).toBe(resolve('--app-surface'))
+    }
+    expect(resolve('--button-disabled-bg')).toBe(resolve('--srf-list-header-bg'))
+    expect(resolve('--button-hover-bg')).toBe(resolve('--srf-list-header-bg'))
+    expect(resolve('--srf-chip')).toBe(resolve('--srf-list-header-bg'))
+  })
+  it('removes white glass highlights and aligns glass edges with the neutral border palette', () => {
+    for (const name of declarations(foundation).keys()) {
+      if (/^--app-glass-highlight-\d+$/.test(name)) expect(resolve(name), name).toBe('transparent')
+      if (/^--app-glass-border-\d+$/.test(name)) expect(resolve(name), name).toBe(resolve('--app-surface-border'))
+    }
+  })
+})
 
 describe('dark palette contract', () => {
   const colors = declarations(dark + darkFoundation)
@@ -20,8 +79,10 @@ describe('dark palette contract', () => {
   }
   it('provides a dark value for every foundation, editor, chart and legacy role except brand artwork', () => {
     const brand = new Set(['--app-logo-primary', '--app-logo-shadow', '--app-logo-border', '--app-logo-model-text', '--app-logo-secondary'])
+    // Geometry is shared by both themes and does not need a dark color mapping.
+    const geometry = new Set(['--app-scrollbar-size', '--app-scrollbar-radius'])
     for (const name of declarations(foundation + editor + charts + legacy).keys()) {
-      if (!brand.has(name)) expect(colors.has(name), name).toBe(true)
+      if (!brand.has(name) && !geometry.has(name)) expect(colors.has(name), name).toBe(true)
     }
   })
 

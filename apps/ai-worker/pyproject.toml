@@ -9,6 +9,7 @@ dependencies = [
     "httpx",
     "pydantic",
     "pyyaml",
+    "jsonschema>=4.23,<5",
 ]
 
 [project.scripts]

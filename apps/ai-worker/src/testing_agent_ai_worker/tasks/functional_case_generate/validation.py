@@ -14,6 +14,8 @@ from pydantic import ValidationError
 
 from .contracts import CONTRACTS, DetailedCasesOutput
 
+CLARIFICATION_PREFIX = "CLARIFICATION_REQUIRED:"
+
 
 @dataclass
 class ValidationContext:
@@ -127,6 +129,19 @@ async def generate_validated(
                     "actual": str(reason),
                 }
             ]
+        elif (
+            stage == "detailed_cases"
+            and isinstance(raw, str)
+            and raw.strip().startswith(CLARIFICATION_PREFIX)
+        ):
+            errors = [
+                {
+                    "path": "$",
+                    "code": "clarification_required",
+                    "expected": raw.strip()[len(CLARIFICATION_PREFIX) :].strip(),
+                    "actual": "",
+                }
+            ]
         else:
             try:
                 normalized = validate_output(
@@ -156,6 +171,13 @@ async def generate_validated(
                 )
         if normalized is not None:
             return normalized
+        if errors[0]["code"] == "clarification_required":
+            raise OutputValidationError(
+                "完整用例生成需要补充信息"
+                + (f"（{module}）" if module else "")
+                + "：\n"
+                + (errors[0]["expected"] or "请补充影响执行或判定的业务依据")
+            )
         if attempt == 2 or errors[0]["code"] == "output_truncated":
             raise OutputValidationError(
                 f"{stage}{('/' + module) if module else ''} 输出校验失败（共 {attempt + 1} 次调用）："

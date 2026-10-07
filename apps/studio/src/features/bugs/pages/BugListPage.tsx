@@ -22,7 +22,7 @@ export function BugListPage() {
           <BugListToolbar model={model} />
 
           {bugsQuery.error ? (
-            <Alert showIcon type="error" title={getErrorMessage(bugsQuery.error)} action={<ProjectActionButton action="read" onClick={() => bugsQuery.refetch()}>重试</ProjectActionButton>} />
+            <Alert showIcon type="error" title={getErrorMessage(bugsQuery.error)} action={<ProjectActionButton action="bug_read" onClick={() => bugsQuery.refetch()}>重试</ProjectActionButton>} />
           ) : null}
 
           {!activeProjectId ? (

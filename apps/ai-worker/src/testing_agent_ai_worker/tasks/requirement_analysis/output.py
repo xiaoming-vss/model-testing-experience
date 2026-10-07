@@ -9,16 +9,12 @@ from testing_agent_ai_worker.tasks.result_summary import build_task_result_summa
 
 def build_config_json(
     *,
-    first_step_output: str,
-    second_step_output: str | None = None,
+    first_step_output: str | dict,
 ) -> str:
     config = {
         "firstStepOutput": first_step_output,
     }
-    if second_step_output is not None:
-        config["secondStepOutput"] = second_step_output
     return json.dumps(config, ensure_ascii=False, indent=2)
-
 
 
 def build_result_summary_json(
@@ -40,4 +36,3 @@ def build_result_summary_json(
             "resultLength": len(output_yaml),
         },
     )
-

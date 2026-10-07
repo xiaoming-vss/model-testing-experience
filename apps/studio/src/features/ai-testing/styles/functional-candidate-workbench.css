@@ -3,18 +3,82 @@
   padding: 0;
 }
 
-.functional-candidate-workbench-modal .functional-candidate-review-title > div:first-child {
-  flex-direction: row;
+.functional-candidate-workbench-modal .functional-candidate-review-title-main {
+  min-width: 0;
+  display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
 }
 
-.functional-candidate-workbench-modal .functional-candidate-review-title > div:first-child > span {
-  padding: 3px 8px;
+.functional-candidate-workbench-modal .functional-candidate-review-title-main > strong {
+  color: var(--ai-text);
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: -0.01em;
+}
+
+.functional-candidate-review-title-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--ai-border);
+}
+
+.functional-candidate-review-title-requirement {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ai-text-secondary);
+}
+
+.functional-candidate-review-title-requirement-chip {
+  max-width: 420px;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
   color: var(--ai-blue);
   background: var(--ai-accent-soft);
+  border: 1px solid var(--srf-accent-border, var(--ai-card-hover-border));
+  border-radius: 6px;
+  font-weight: 500;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.functional-candidate-review-title-requirement-chip .anticon {
+  flex: 0 0 auto;
+  font-size: 10px;
+}
+
+.functional-candidate-review-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  color: var(--ai-text-secondary);
+  background: var(--ai-panel-soft);
+  border: 1px solid var(--ai-border);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.functional-candidate-review-stat strong {
+  min-width: 18px;
+  padding: 0 6px;
+  color: var(--ai-text);
+  background: var(--app-surface);
   border-radius: 4px;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 1px 2px var(--app-surface-shadow);
 }
 
 .functional-candidate-workbench {
@@ -39,42 +103,97 @@
   background: var(--app-surface);
 }
 
-.functional-candidate-code-heading,
-.functional-candidate-code-status {
+.functional-candidate-code-heading {
   flex: 0 0 auto;
+  min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 10px 16px;
-  font-size: 12px;
-  color: var(--ai-text-secondary);
+  padding: 4px 12px 4px 16px;
+  border-bottom: 1px solid var(--ai-border);
+  background: var(--app-surface);
 }
 
-.functional-candidate-code-heading {
-  border-bottom: 1px solid var(--ai-border);
+.functional-candidate-code-heading-main {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.functional-candidate-code-icon {
+  flex: 0 0 auto;
+  color: var(--srf-tone-text, var(--ai-blue));
+  font-size: 14px;
+}
+
+.functional-candidate-code-heading-main strong {
+  color: var(--ai-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.functional-candidate-code-dirty {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 8px;
+  color: var(--ai-text-secondary);
+  background: var(--ai-panel-soft);
+  border: 1px solid var(--ai-border);
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.functional-candidate-code-dirty.is-dirty {
+  color: var(--srf-tone-text, var(--ai-text-secondary));
+  background: var(--srf-tone-bg, var(--ai-panel-soft));
+  border-color: var(--srf-tone-border, var(--ai-border));
+}
+
+.functional-candidate-code-dirty-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentcolor;
+}
+
+.functional-candidate-code-dirty.is-dirty .functional-candidate-code-dirty-dot {
+  animation: functional-candidate-dirty-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes functional-candidate-dirty-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
 }
 
 .functional-candidate-code-tools {
   margin-left: auto;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
-.functional-candidate-code-heading strong {
+.functional-candidate-code-tools .ant-btn {
+  height: 24px;
+  padding: 0 8px;
+  color: var(--ai-text-secondary);
+  background: transparent;
+  border-color: transparent;
+  border-radius: 6px;
+  font-size: 11px;
+  box-shadow: none;
+}
+
+.functional-candidate-code-tools .ant-btn:hover {
   color: var(--ai-text);
-  font-family: monospace;
-}
-
-.functional-candidate-code-heading span {
-  color: var(--app-skill-running-text);
-}
-
-.functional-candidate-code-status {
-  border-top: 1px solid var(--ai-border);
-  background: var(--ai-panel-soft);
+  background: var(--ai-panel-hover);
+  border-color: var(--ai-border);
 }
 
 .functional-candidate-code-pane .functional-candidate-edit-pane {
@@ -102,57 +221,42 @@
 
 .functional-candidate-workbench .ai-generated-cases-review-sidebar-head {
   padding: 10px 16px;
-  flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   border: 0;
-  border-bottom: 1px solid var(--ai-border);
   background: var(--ai-panel-soft);
 }
 
-.functional-candidate-workbench .ai-generated-cases-review-sidebar-head > strong {
-  display: none;
-}
-
+/* 模块较多时换行展示，不做横向裁切。 */
 .functional-candidate-workbench .ai-generated-cases-review-groups {
-  flex-direction: row;
-  padding: 0 16px 12px;
   gap: 8px;
-  max-height: none;
+  flex-wrap: wrap;
 }
 
-/* A single module does not need a second navigation row. Keep the semantic
-   module controls in the DOM for keyboard and test consumers, but collapse
-   the redundant row in the common single-module review. */
+/* A single module does not need module navigation. Keep the semantic module
+   controls in the DOM for keyboard and test consumers, but collapse them to
+   zero size (not display:none, which would drop them from the a11y tree). */
+.functional-candidate-workbench .ai-generated-cases-review.is-single-group .ai-generated-cases-review-sidebar-head {
+  gap: 0;
+}
+
 .functional-candidate-workbench .ai-generated-cases-review.is-single-group .ai-generated-cases-review-groups {
   height: 0;
   min-height: 0;
-  padding: 0 16px;
+  flex: 0 0 0;
+  min-width: 0;
   overflow: hidden;
-}
-
-.functional-candidate-workbench .ai-generated-cases-review.is-single-group .ai-generated-cases-review-detail-head {
-  min-height: 0;
-  height: 0;
-  padding: 0;
-  overflow: hidden;
-  border: 0;
 }
 
 .functional-candidate-workbench .ai-generated-cases-review-groups > button {
-  width: auto;
-  flex: 0 0 auto;
   padding: 4px 10px;
   border-radius: 6px;
-  background: var(--ai-panel-soft);
-}
-
-.functional-candidate-workbench .ai-generated-cases-review-group-name .anticon {
-  display: none;
+  background: var(--app-surface);
 }
 
 .functional-candidate-workbench .ai-generated-cases-review-groups > button.active {
-  color: var(--app-surface);
+  color: var(--srf-on-accent, var(--app-surface));
   background: var(--ai-blue);
   border-color: var(--ai-blue);
 }
@@ -160,25 +264,10 @@
 .functional-candidate-workbench .ai-generated-cases-review-detail {
   flex: 1 1 0;
   min-height: 0;
-}
-
-.functional-candidate-workbench .ai-generated-cases-review-detail-head {
-  order: 1;
-  min-height: 44px;
-  border: 0;
-  border-top: 1px solid var(--ai-border);
-  background: var(--app-surface);
-}
-
-.functional-candidate-workbench .ai-generated-cases-review-detail-head > div:first-child {
-  flex-direction: row;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+  overflow-y: auto;
 }
 
 .functional-candidate-workbench .ai-generated-cases-review-card-list {
-  flex: 1 1 0;
   padding: 14px 16px 18px;
   gap: 14px;
   background: var(--ai-panel-soft);
@@ -194,7 +283,14 @@
 
 .functional-candidate-workbench .ai-generated-cases-review-card.is-selected {
   border: 2px solid var(--ai-blue);
-  box-shadow: 0 0 0 3px var(--ai-accent-soft);
+  box-shadow: 0 0 0 4px var(--ai-accent-soft);
+}
+
+.functional-candidate-workbench .ai-generated-cases-review-card.is-selected > header > strong::before {
+  content: '●';
+  margin-right: 6px;
+  color: var(--ai-blue);
+  font-size: 12px;
 }
 
 .functional-candidate-workbench .ai-generated-cases-review-card > header {
@@ -237,7 +333,7 @@
 }
 
 .functional-candidate-workbench .ai-generated-cases-review-card.is-selected .ai-generated-cases-review-index {
-  color: var(--app-surface);
+  color: var(--srf-on-accent, var(--app-surface));
   background: var(--ai-blue);
 }
 
@@ -248,38 +344,11 @@
 }
 
 .functional-candidate-workbench .ai-generated-cases-review-sidebar-head .ant-input-affix-wrapper {
-  width: 360px;
-  flex: 0 0 360px;
-  height: 36px;
+  width: 320px;
+  flex: 0 0 320px;
+  height: 32px;
   border-radius: 8px;
   background: var(--app-surface);
-}
-
-.functional-candidate-workbench .ai-generated-cases-review-filters {
-  flex: 1 1 auto;
-  flex-wrap: nowrap;
-  gap: 7px;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.functional-candidate-workbench .ai-generated-cases-review-filters::-webkit-scrollbar {
-  display: none;
-}
-
-.functional-candidate-workbench .ai-generated-cases-review-filters button {
-  flex: 0 0 auto;
-  padding: 5px 11px;
-  border-radius: 999px;
-  background: var(--app-surface);
-  white-space: nowrap;
-}
-
-.functional-candidate-workbench .ai-generated-cases-review-filters button.active {
-  color: var(--app-surface);
-  background: var(--ai-blue);
-  border-color: var(--ai-blue);
 }
 
 .functional-candidate-workbench .ai-generated-cases-review-fields > section {

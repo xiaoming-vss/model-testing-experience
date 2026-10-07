@@ -14,7 +14,6 @@ from types import SimpleNamespace
 import pytest
 from authorization_database import AuthorizationDatabase
 from fastapi.testclient import TestClient
-from pydantic import ValidationError
 
 from testing_agent.api.deps import get_current_user_id, get_resource_binding_service
 from testing_agent.app import create_app
@@ -305,7 +304,15 @@ async def test_update_missing_binding_not_found():
 async def test_zentao_project_binding_can_be_reverified_by_owner():
     repository = FakeRepository()
     repository.rows.append(_binding(provider="zentao", remote_resource_id="1"))
-    result = await _service(repository).update(
+
+    class Access:
+        async def resolve(self, user_id, project_id, expected_instance=""):
+            assert (user_id, project_id) == ("user-1", "project-1")
+            return SimpleNamespace(connection_id="conn-2", base_url="https://gitlab.example.com")
+
+    service = _service(repository)
+    service.zentao_access = Access()
+    result = await service.update(
         "project", "project-1", "binding-1", {"connectionId": "conn-2"}, "user-1"
     )
     assert result["lastVerifiedAt"] is not None
@@ -369,9 +376,8 @@ async def test_zentao_binding_create_still_requires_owner():
     assert repository.rows == []
 
 
-def test_update_request_schema_requires_connection_id():
-    with pytest.raises(ValidationError):
-        UpdateResourceBindingRequest(**{})
+def test_update_request_schema_can_resolve_personal_connection_automatically():
+    assert UpdateResourceBindingRequest().connection_id == ""
 
 
 def test_patch_project_binding_route_reverifies_without_transferring_connection():

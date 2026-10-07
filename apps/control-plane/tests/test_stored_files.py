@@ -12,11 +12,16 @@ from sqlalchemy.ext.compiler import compiles
 from testing_agent.core.errors import AppError
 from testing_agent.core.object_storage import ObjectStorage, ObjectStorageSettings
 from testing_agent.models import Base
+from testing_agent.models.bug import Bug
 from testing_agent.models.project import Project
 from testing_agent.models.project_member import ProjectMember
+from testing_agent.models.requirement import Requirement
+from testing_agent.models.sprint import Sprint
 from testing_agent.models.stored_file import StoredFile
 from testing_agent.models.user import User
+from testing_agent.repositories.bug import BugRepository
 from testing_agent.schemas.stored_file import FileUploadRequest
+from testing_agent.services.bug import BugService
 from testing_agent.services.stored_file import StoredFileService, utcnow
 
 
@@ -51,6 +56,15 @@ async def files():
                 [
                     ProjectMember(project_id="p", user_id="viewer", role="viewer"),
                     ProjectMember(project_id="p", user_id="member", role="member"),
+                    Sprint(
+                        sprint_id="s",
+                        project_id="p",
+                        name="s",
+                        start_time=utcnow(),
+                        end_time=utcnow() + timedelta(days=1),
+                    ),
+                    Requirement(requirement_id="r", sprint_id="s", name="existing"),
+                    Bug(bug_id="bug-1", project_id="p", bug_no=2, title="bug", found_sprint_id="s"),
                 ]
             )
             await session.commit()
@@ -108,6 +122,46 @@ async def test_permissions_and_invalid_association(files):
         await files.attach("owner", row.file_id, "q", "requirement", "r", purpose="requirement")
     with pytest.raises(AppError):
         await files.attach("member", row.file_id, "p", "requirement", "r", purpose="requirement")
+
+
+@pytest.mark.asyncio
+async def test_developer_downloads_only_attached_bug_files(files):
+    files.session.add(User(user_id="developer", nickname="developer"))
+    await files.session.flush()
+    files.session.add(ProjectMember(project_id="p", user_id="developer", role="developer"))
+    await files.session.commit()
+    bug_file, _ = await upload(files, purpose="attachment")
+    await files.complete("owner", bug_file.file_id)
+    with pytest.raises(AppError) as denied:
+        await files.download("developer", bug_file.file_id)
+    assert denied.value.http_code == 403
+    await files.attach("owner", bug_file.file_id, "p", "bug", "bug-1", purpose="attachment")
+    await files.session.commit()
+    assert (await files.download("developer", bug_file.file_id))["filename"] == "a.txt"
+    requirement_file, _ = await upload(files)
+    await files.complete("owner", requirement_file.file_id)
+    await files.attach(
+        "owner", requirement_file.file_id, "p", "requirement", "r", purpose="requirement"
+    )
+    await files.session.commit()
+    with pytest.raises(AppError) as denied:
+        await files.download("developer", requirement_file.file_id)
+    assert denied.value.http_code == 403
+    body = FileUploadRequest(project_id="p", filename="a.txt", size=1, sha256="a" * 64)
+    with pytest.raises(AppError) as denied:
+        await files.initiate("developer", body)
+    assert denied.value.http_code == 403
+    await files.session.delete(
+        await files.session.scalar(
+            select(ProjectMember).where(
+                ProjectMember.project_id == "p", ProjectMember.user_id == "developer"
+            )
+        )
+    )
+    await files.session.commit()
+    with pytest.raises(AppError) as denied:
+        await files.download("developer", bug_file.file_id)
+    assert denied.value.http_code == 403
 
 
 @pytest.mark.asyncio
@@ -375,8 +429,22 @@ async def test_worker_artifact_gateway_binds_only_authorized_execution(files, mo
     from types import SimpleNamespace
 
     from testing_agent.handlers import worker_files
+    from testing_agent.models.ui_test_case import UiTestCase
+    from testing_agent.models.ui_test_case_run import UiTestCaseRun
+    from testing_agent.models.ui_test_suite import UiTestSuite
+    from testing_agent.models.worker_task import WorkerTask
     from testing_agent.schemas.workers import WorkerTaskEventRequest
     from testing_agent.services.worker_task import WorkerTaskService
+
+    files.session.add_all(
+        [
+            UiTestSuite(suite_id="suite", requirement_id="r", name="suite"),
+            UiTestCase(case_id="case", suite_id="suite", name="case", steps_json=[]),
+            UiTestCaseRun(run_id="run", case_id="case", suite_id="suite", trigger_user_id="owner"),
+            WorkerTask(domain="ui", task_id="task", task_type="case_debug", run_id="run"),
+        ]
+    )
+    await files.session.commit()
 
     async def authority(*args):
         return SimpleNamespace(actor="owner", project_id="p")
@@ -482,3 +550,55 @@ async def test_legacy_object_key_remains_downloadable(files):
         files.storage.client.get_object(Bucket=row.bucket, Key=legacy_key)["Body"].read()
         == b"hello"
     )
+
+
+@pytest.mark.asyncio
+async def test_removed_bug_image_remains_readable_from_history_after_cleanup(files):
+    content = b"\x89PNG\r\n\x1a\nimage"
+    row, _ = await upload(files, content, "evidence.png", "attachment")
+    await files.complete("owner", row.file_id)
+    original = f'<p>原始问题</p><img data-file-id="{row.file_id}">'
+    files.session.add(
+        Bug(
+            bug_id="bug",
+            project_id="p",
+            bug_no=1,
+            title="bug",
+            found_sprint_id="s",
+            description_html=original,
+        )
+    )
+    await files.attach("owner", row.file_id, "p", "bug", "bug", purpose="attachment")
+    await files.session.commit()
+    bugs = BugService(BugRepository(files.session), files)
+    await bugs.update("member", "bug", {"description_html": "<p>已修复</p>"})
+    result = await bugs.update("member", "bug", {"removed_attachment_file_ids": [row.file_id]})
+    assert result["attachments"] == []
+    # The full old HTML is retained and its stable file ID must still resolve.
+    history = await bugs.repository.list_activities("bug")
+    assert history[0].detail_json["changes"][0]["from"] == original
+    assert (await files.download("viewer", row.file_id))["sha256"] == row.sha256
+    row.expires_at = utcnow() - timedelta(days=1)
+    await files.session.commit()
+    await files.cleanup()
+    assert (await files.download("viewer", row.file_id))["sha256"] == row.sha256
+    assert (
+        files.storage.client.get_object(Bucket=row.bucket, Key=row.object_key)["Body"].read()
+        == content
+    )
+    # Another authorized editor can restore the archived image without re-uploading it.
+    restored = await bugs.update("member", "bug", {"description_html": original})
+    assert [item["fileId"] for item in restored["attachments"]] == [row.file_id]
+
+
+@pytest.mark.asyncio
+async def test_cleanup_protects_legacy_deleting_bug_evidence(files):
+    row, _ = await upload(files, purpose="attachment")
+    await files.complete("owner", row.file_id)
+    files.session.add(Bug(bug_id="bug", project_id="p", bug_no=1, title="bug", found_sprint_id="s"))
+    await files.attach("owner", row.file_id, "p", "bug", "bug", purpose="attachment")
+    row.status = "deleting"
+    row.expires_at = utcnow() - timedelta(days=1)
+    await files.session.commit()
+    await files.cleanup()
+    assert (await files.download("viewer", row.file_id))["filename"] == "a.txt"

@@ -36,22 +36,38 @@ class AiGenerateTaskRepository(ResourceRepository):
     id_column = "task_id"
 
     async def get_project(self, project_id: str) -> Project | None:
+        return await self.session.scalar(select(Project).where(Project.project_id == project_id))
+
+    async def get_project_for_update(self, project_id: str) -> Project | None:
         return await self.session.scalar(
-            select(Project).where(Project.project_id == project_id).with_for_update()
+            select(Project)
+            .where(Project.project_id == project_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
         )
 
     async def get_sprint(self, sprint_id: str) -> Sprint | None:
+        return await self.session.scalar(select(Sprint).where(Sprint.sprint_id == sprint_id))
+
+    async def get_sprint_for_update(self, sprint_id: str) -> Sprint | None:
         return await self.session.scalar(
-            select(Sprint).where(Sprint.sprint_id == sprint_id).with_for_update()
+            select(Sprint)
+            .where(Sprint.sprint_id == sprint_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
         )
 
     async def get_requirement(self, requirement_id: str) -> Requirement | None:
         return await self.session.scalar(
+            select(Requirement).where(Requirement.requirement_id == requirement_id)
+        )
+
+    async def get_requirement_for_update(self, requirement_id: str) -> Requirement | None:
+        return await self.session.scalar(
             select(Requirement)
-            .where(
-                Requirement.requirement_id == requirement_id,
-            )
+            .where(Requirement.requirement_id == requirement_id)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
 
     async def get_collection(self, collection_id: str) -> ApiCollection | None:
@@ -114,6 +130,45 @@ class AiGenerateTaskRepository(ResourceRepository):
             )
         )
 
+    async def get_task_for_update(self, task_id: str) -> AiGenerateTask | None:
+        return await self.session.scalar(
+            select(AiGenerateTask)
+            .where(AiGenerateTask.task_id == task_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+
+    async def task_scope_resources(self, tasks):
+        """Load scope references in two queries instead of querying each list item."""
+        requirement_ids = {task.requirement_id for task in tasks if task.requirement_id}
+        requirements = (
+            {
+                row.requirement_id: row
+                for row in await self.session.execute(
+                    select(Requirement.requirement_id, Requirement.sprint_id).where(
+                        Requirement.requirement_id.in_(requirement_ids)
+                    )
+                )
+            }
+            if requirement_ids
+            else {}
+        )
+        sprint_ids = {task.sprint_id for task in tasks if task.sprint_id}
+        sprint_ids.update(row.sprint_id for row in requirements.values())
+        sprints = (
+            {
+                row.sprint_id: row
+                for row in await self.session.execute(
+                    select(Sprint.sprint_id, Sprint.project_id).where(
+                        Sprint.sprint_id.in_(sprint_ids)
+                    )
+                )
+            }
+            if sprint_ids
+            else {}
+        )
+        return requirements, sprints
+
     async def list_tasks(self, project_id: str, task_type: str) -> list[AiGenerateTask]:
         return list(
             (
@@ -123,7 +178,7 @@ class AiGenerateTaskRepository(ResourceRepository):
                         AiGenerateTask.project_id == project_id,
                         AiGenerateTask.task_type == task_type,
                     )
-                    .order_by(AiGenerateTask.created_at.desc())
+                    .order_by(AiGenerateTask.created_at.desc(), AiGenerateTask.id.desc())
                 )
             ).all()
         )
@@ -169,9 +224,17 @@ class AiGenerateTaskRepository(ResourceRepository):
 
         return await self.session.run_sync(lambda session: project_many(session, rows))
 
+    async def get_run_reference(self, run_id: str):
+        # A scalar projection must not alter ORM loader state of the locked run.
+        return (
+            await self.session.execute(
+                select(AiGenerateTaskRun.task_id).where(AiGenerateTaskRun.run_id == run_id)
+            )
+        ).first()
+
     async def get_run(self, run_id: str) -> AiGenerateTaskRun | None:
         row = await self.session.scalar(
-            select(AiGenerateTaskRun).where(AiGenerateTaskRun.run_id == run_id).with_for_update()
+            select(AiGenerateTaskRun).where(AiGenerateTaskRun.run_id == run_id)
         )
         return await self._project_run(row)
 
@@ -203,6 +266,7 @@ class AiGenerateTaskRepository(ResourceRepository):
             select(WorkerTask)
             .where(WorkerTask.domain == "ai", WorkerTask.run_id == run_id)
             .order_by(WorkerTask.created_at.desc(), WorkerTask.id.desc())
+            .limit(1)
         )
 
         from testing_agent.services.worker_context import hydrate
@@ -316,6 +380,59 @@ class AiGenerateTaskRepository(ResourceRepository):
                 )
             ).all()
         )
+
+    async def list_requirement_case_pairs(self, requirement_id: str, kind: str):
+        models: dict[
+            str,
+            tuple[
+                type[FunctionTestCase] | type[ApiCase] | type[UiTestCase],
+                type[FunctionTestSuite] | type[ApiCollection] | type[UiTestSuite],
+                str,
+            ],
+        ] = {
+            "function": (FunctionTestCase, FunctionTestSuite, "suite_id"),
+            "api": (ApiCase, ApiCollection, "collection_id"),
+            "ui": (UiTestCase, UiTestSuite, "suite_id"),
+        }
+        case, parent, parent_key = models[kind]
+        rows = await self.session.execute(
+            select(case, parent)
+            .join(parent, getattr(parent, parent_key) == getattr(case, parent_key))
+            .where(parent.requirement_id == requirement_id)
+            .order_by(parent.created_at, parent.id, case.order_no, case.id)
+        )
+        return list(rows.all())
+
+    async def list_api_assert_rules_for_cases(self, case_ids: list[str]):
+        if not case_ids:
+            return []
+        return list(
+            (
+                await self.session.scalars(
+                    select(ApiAssertRule)
+                    .where(ApiAssertRule.case_id.in_(case_ids))
+                    .order_by(ApiAssertRule.order_no, ApiAssertRule.id)
+                )
+            ).all()
+        )
+
+    async def latest_case_run_summaries(self, case_ids: list[str], kind: str):
+        from testing_agent.repositories.latest import latest_per_resource
+
+        if not case_ids:
+            return {}
+        model = ApiCaseRun if kind == "api" else UiTestCaseRun
+        rows = await self.session.execute(
+            latest_per_resource(
+                select(model.case_id, model.status, model.finished_at).where(
+                    model.case_id.in_(case_ids)
+                ),
+                model.case_id,
+                model.created_at,
+                model.id,
+            )
+        )
+        return {row.case_id: row for row in rows.all()}
 
     async def get_latest_api_case_run(self, case_id: str) -> ApiCaseRun | None:
         """该用例最近一次 run(创建时间最新在前,同刻取 id 较大者,结果确定)。"""

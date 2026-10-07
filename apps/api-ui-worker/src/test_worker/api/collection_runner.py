@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 from typing import Any
 
@@ -12,7 +13,9 @@ from .template_runtime import dump_runtime_vars, load_runtime_vars
 class ApiCollectionRunner:
     """Runs API collection snapshots sequentially."""
 
-    def __init__(self, control_plane_client: Any, case_runner: ApiCaseRunner | None = None) -> None:
+    def __init__(
+        self, control_plane_client: Any, case_runner: ApiCaseRunner | None = None
+    ) -> None:
         self._control_plane_client = control_plane_client
         self._case_runner = case_runner or ApiCaseRunner()
 
@@ -33,25 +36,47 @@ class ApiCollectionRunner:
             if not item.get("enabled", True):
                 result = _skipped_item_result(case_run, "用例未启用", runtime_vars)
                 status_counts["skipped"] += 1
-                self._control_plane_client.report_api_collection_item_completed(snapshot["taskId"], item_id, result)
+                await asyncio.to_thread(
+                    self._control_plane_client.report_api_collection_item_completed,
+                    snapshot["taskId"],
+                    item_id,
+                    result,
+                )
                 continue
 
             if halted:
-                result = _skipped_item_result(case_run, "前置用例失败且未开启 continueOnFailure", runtime_vars)
+                result = _skipped_item_result(
+                    case_run, "前置用例失败且未开启 continueOnFailure", runtime_vars
+                )
                 status_counts["skipped"] += 1
-                self._control_plane_client.report_api_collection_item_completed(snapshot["taskId"], item_id, result)
+                await asyncio.to_thread(
+                    self._control_plane_client.report_api_collection_item_completed,
+                    snapshot["taskId"],
+                    item_id,
+                    result,
+                )
                 continue
 
             item_started_at = now_iso()
-            self._control_plane_client.report_api_collection_item_started(snapshot["taskId"], item_id, {
-                "runId": case_run.get("runId", ""),
-                "caseId": case_run.get("caseId", ""),
-                "startedAt": item_started_at,
-            })
+            await asyncio.to_thread(
+                self._control_plane_client.report_api_collection_item_started,
+                snapshot["taskId"],
+                item_id,
+                {
+                    "runId": case_run.get("runId", ""),
+                    "caseId": case_run.get("caseId", ""),
+                    "startedAt": item_started_at,
+                },
+            )
             result = await self._case_runner.run(case_run, runtime_vars)
             result["startedAt"] = item_started_at
             runtime_vars.update(load_runtime_vars(result.get("runtimeVarsJson")))
-            self._control_plane_client.report_api_collection_item_completed(snapshot["taskId"], item_id, result)
+            await asyncio.to_thread(
+                self._control_plane_client.report_api_collection_item_completed,
+                snapshot["taskId"],
+                item_id,
+                result,
+            )
 
             item_status = result.get("status", "error")
             status_counts[item_status] = status_counts.get(item_status, 0) + 1
@@ -80,7 +105,9 @@ class ApiCollectionRunner:
         }
 
 
-def _skipped_item_result(case_run: dict[str, Any], reason: str, runtime_vars: dict[str, str]) -> dict[str, Any]:
+def _skipped_item_result(
+    case_run: dict[str, Any], reason: str, runtime_vars: dict[str, str]
+) -> dict[str, Any]:
     timestamp = now_iso()
     return {
         "runId": case_run.get("runId", ""),

@@ -12,7 +12,7 @@ import type { ProjectRole } from '../types'
 const clients: QueryClient[] = []
 afterEach(() => { cleanup(); clients.splice(0).forEach(c => c.clear()); vi.restoreAllMocks() })
 function response(data: unknown, status = 200) { return new Response(JSON.stringify({ code: status === 200 ? 0 : status, message: status === 200 ? 'ok' : '用户名不存在', data }), { status }) }
-const permissions = { owner: ['read', 'write', 'execute', 'review', 'manage'], member: ['read', 'write', 'execute', 'review'], viewer: ['read'] }
+const permissions = { owner: ['read', 'write', 'execute', 'review', 'manage'], member: ['read', 'write', 'execute', 'review'], viewer: ['read'], developer: ['project_read', 'bug_read', 'bug_handle'] }
 function harness(element: React.ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   clients.push(client)
@@ -26,7 +26,7 @@ it.each(['owner', 'member', 'viewer'] as const)('%s 按服务器能力控制操�
   await waitFor(() => expect(screen.getByText('管理绑定').closest('button')?.disabled).toBe(role !== 'owner'))
   expect(screen.getByText('其他项目保存').closest('button')).toBeDisabled()
 })
-it('所有者直接添加已注册用户，并在转移后失去管理入口', async () => {
+it('所有者可添加开发成员，并在转移后失去管理入口', async () => {
   let role: ProjectRole = 'owner'
   const members = [{ userId: 'owner', name: '自己', role: 'owner' }, { userId: 'u2', name: '同事', role: 'member' }]
   const requests: { path: string; method?: string; body: unknown }[] = []
@@ -42,9 +42,11 @@ it('所有者直接添加已注册用户，并在转移后失去管理入口', a
   })
   harness(<ProjectMembersModal projectId="p" onClose={() => {}} />)
   await screen.findByText('同事')
+  await userEvent.click(screen.getByRole('combobox', { name: '新成员角色' }))
+  await userEvent.click(await screen.findByText('开发（仅 Bug）', { selector: '.ant-select-item-option-content' }))
   fireEvent.change(screen.getByRole('textbox', { name: '成员用户名' }), { target: { value: '新同事' } })
   await userEvent.click(screen.getByRole('button', { name: '添加成员' }))
-  await waitFor(() => expect(requests).toContainEqual({ path: '/v1/projects/p/members', method: 'POST', body: { name: '新同事', role: 'member' } }))
+  await waitFor(() => expect(requests).toContainEqual({ path: '/v1/projects/p/members', method: 'POST', body: { name: '新同事', role: 'developer' } }))
   await userEvent.click(screen.getByRole('button', { name: '转移所有权' }))
   await userEvent.click(await screen.findByRole('button', { name: /OK|确\s*定/ }))
   await waitFor(() => expect(screen.getByRole('button', { name: '添加成员' })).toBeDisabled())

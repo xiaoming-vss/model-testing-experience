@@ -1,3 +1,4 @@
+import { downloadStoredFile } from '@/shared/api/files'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -7,6 +8,8 @@ import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
 import { invalidateBug } from '../utils/invalidateBug'
 import type { Bug, BugAction } from '../types'
+import { hasProjectPermission } from '@/features/projects/hooks/useProjectAccess'
+import { useBugScope } from './useBugScope'
 
 export function useBugDetail() {
   const { bugId = '' } = useParams()
@@ -40,11 +43,22 @@ export function useBugDetail() {
     [activities],
   )
 
-  const membersQuery = useQuery({
+  const projectQuery = useQuery({
+    queryKey: ['projectAccess', bug?.projectId],
+    queryFn: () => api.getProject(bug!.projectId), enabled: Boolean(bug?.projectId),
+    refetchInterval: 30_000,
+  })
+  const bugOnly = projectQuery.data?.role === 'developer'
+  const canRead = hasProjectPermission(projectQuery.data, 'read')
+  const canHandle = hasProjectPermission(projectQuery.data, 'bug_handle')
+  const canWrite = hasProjectPermission(projectQuery.data, 'write')
+  const bugScope = useBugScope(bug?.projectId, bugOnly)
+  const projectMembersQuery = useQuery({
     queryKey: ['projectMembers', bug?.projectId],
     queryFn: () => api.getProjectMembers(bug!.projectId),
-    enabled: Boolean(bug?.projectId),
+    enabled: Boolean(bug?.projectId) && canRead,
   })
+  const membersQuery = bugOnly ? { ...bugScope.optionsQuery, data: bugScope.members } : projectMembersQuery
   const memberNameMap = useMemo(() => {
     const map = new Map<string, string>()
     listItems(membersQuery.data).forEach((member) => map.set(member.userId, member.name))
@@ -55,21 +69,16 @@ export function useBugDetail() {
   const sprintNameMap = useQuery({
     queryKey: ['sprints', bug?.projectId],
     queryFn: () => api.getSprints(bug!.projectId),
-    enabled: Boolean(bug?.projectId),
+    enabled: Boolean(bug?.projectId) && canRead,
   })
   const sprintNames = useMemo(() => {
     const map = new Map<string, string>()
-    listItems(sprintNameMap.data).forEach((sprint) => {
+    const sprints = bugOnly ? bugScope.sprints : listItems(sprintNameMap.data)
+    sprints.forEach((sprint) => {
       if (sprint.sprintId) map.set(sprint.sprintId, sprint.name)
     })
     return map
-  }, [sprintNameMap.data])
-
-  const projectQuery = useQuery({
-    queryKey: ['projectAccess', bug?.projectId],
-    queryFn: () => api.getProject(bug!.projectId), enabled: Boolean(bug?.projectId),
-  })
-  const canWrite = projectQuery.data?.permissions?.includes('write') ?? false
+  }, [sprintNameMap.data, bugOnly, bugScope.sprints])
 
   const commentMutation = useMutation({
     mutationFn: () => api.commentBug(bugId, comment.trim()),
@@ -83,16 +92,14 @@ export function useBugDetail() {
 
   async function downloadAttachment(fileId: string, filename: string) {
     try {
-      const ticket = await api.downloadAttachment(fileId)
-      const response = await fetch(ticket.url, { credentials: 'omit' })
-      if (!response.ok) throw new Error('附件下载失败，请重试')
-      saveBlob(await response.blob(), filename)
+      const { blob } = await downloadStoredFile(fileId)
+      saveBlob(blob, filename)
     } catch (error) {
       message.error(getErrorMessage(error))
     }
   }
 
   return { navigate, bugQuery, bug, activitiesQuery, statusChanges, dynamics, resolveUserName,
-    sprintNames, projectQuery, canWrite, comment, setComment, commentMutation, downloadAttachment,
+    sprintNames, projectQuery, canRead, canWrite, canHandle, comment, setComment, commentMutation, downloadAttachment,
     transitionAction, setTransitionAction, transferOpen, setTransferOpen, editOpen, setEditOpen }
 }

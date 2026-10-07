@@ -26,6 +26,7 @@ class AiRunView:
     _actor: str | None = None
     _operation: str | None = None
     _stage_review: tuple[str, str, str] | None = None
+    _reset_requirement_review: bool = False
     _worker_event: str | None = None
     _execution_state: dict[str, Any] | None = None
 

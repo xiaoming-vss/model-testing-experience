@@ -1,7 +1,6 @@
 import { saveBlob } from '@/shared/utils/download'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
-import { usePersonalConnectionChoice } from '@/features/base-services/components/usePersonalConnectionChoice'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { AppstoreOutlined, ArrowLeftOutlined, CodeOutlined, DesktopOutlined, FileTextOutlined } from '@ant-design/icons'
 import { Alert, Button, Card, DatePicker, Drawer, Empty, Form, Input, Modal, Select, Space, Spin, Tooltip, Tag, Typography } from 'antd'
@@ -9,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import type { FormInstance } from 'antd'
 import { useNavigate, useParams } from 'react-router-dom'
+import { goBackOrFallback } from '@/shared/utils/backNavigation'
 import {
   CartesianGrid,
   Cell,
@@ -826,7 +826,6 @@ export function SprintDetailPage() {
   const { projectId: routeProjectId = '', sprintId = '' } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const personalZentao = usePersonalConnectionChoice('zentao')
   const [reportDrawerOpen, setReportDrawerOpen] = useState(false)
   const [reportModalRunId, setReportModalRunId] = useState('')
   const [historyDateRange, setHistoryDateRange] = useState<[Dayjs, Dayjs]>(() => [dayjs().subtract(6, 'day'), dayjs()])
@@ -868,9 +867,7 @@ export function SprintDetailPage() {
 
   const generateMetricsMutation = useMutation({
     mutationFn: async () => {
-      const binding = listItems(await api.getSprintBindings(sprintId)).find(b => b.provider === 'zentao' && b.status === 'active')
-      const connectionId = binding ? await personalZentao.choose(projectId, binding.instanceUrl, true) : undefined
-      return api.generateSprintDailyMetrics(sprintId, todayDate, connectionId || undefined)
+      return api.generateSprintDailyMetrics(sprintId, todayDate)
     },
     onSuccess: () => {
       message.success('已生成最新统计快照')
@@ -982,7 +979,7 @@ export function SprintDetailPage() {
     downloadReportPdfMutation.mutate(run)
   }
 
-  return (<ProjectAccessScope projectId={projectId} resourceError={projectScopeError}>{personalZentao.dialog}{(
+  return (<ProjectAccessScope projectId={projectId} resourceError={projectScopeError}>{(
     <div className="workbench-page sprint-overview-page tp-surface">
       {sprintQuery.isLoading ? (
         <div className="workbench-tabs">
@@ -1004,7 +1001,7 @@ export function SprintDetailPage() {
                         className="action-btn-read"
                         icon={<ArrowLeftOutlined />}
                         aria-label="返回项目总览"
-                        onClick={() => navigate('/projects')}
+                        onClick={() => goBackOrFallback(navigate, '/projects')}
                       />
                     </Tooltip>
                     <h1 className="tp-list-title">

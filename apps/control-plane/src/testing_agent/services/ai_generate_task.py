@@ -178,25 +178,34 @@ class AiGenerateTaskService:
     async def ensure_project_access(
         self, user_id: str, project_id: str, *, action: ProjectAction = "read"
     ) -> None:
-        project = await self.repository.get_project(project_id)
+        getter = self.repository.get_project
+        if action != "read":
+            getter = getattr(self.repository, "get_project_for_update", getter)
+        project = await getter(project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await require_project_access(self.repository.session, user_id, project, action)
 
     async def ensure_sprint_access(
         self, user_id: str, sprint_id: str, *, action: ProjectAction = "read"
     ) -> None:
-        sprint = await self.repository.get_sprint(sprint_id)
+        getter = self.repository.get_sprint
+        if action != "read":
+            getter = getattr(self.repository, "get_sprint_for_update", getter)
+        sprint = await getter(sprint_id)
         if sprint is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await self.ensure_project_access(user_id, sprint.project_id, action=action)
 
     async def ensure_requirement_access(
         self, user_id: str, requirement_id: str, *, action: ProjectAction = "read"
     ) -> None:
-        requirement = await self.repository.get_requirement(requirement_id)
+        getter = self.repository.get_requirement
+        if action != "read":
+            getter = getattr(self.repository, "get_requirement_for_update", getter)
+        requirement = await getter(requirement_id)
         if requirement is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await self.ensure_sprint_access(user_id, requirement.sprint_id, action=action)
 
     async def ensure_collection_access(
@@ -204,29 +213,71 @@ class AiGenerateTaskService:
     ) -> None:
         collection = await self.repository.get_collection(collection_id)
         if collection is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await self.ensure_requirement_access(user_id, collection.requirement_id, action=action)
+
+    async def validate_task_scope(self, task, resources=None) -> None:
+        """Reject legacy or new references outside the task's project and sprint."""
+        scope_loader = getattr(self.repository, "task_scope_resources", None)
+        if resources is None and scope_loader is not None:
+            resources = await scope_loader([task])
+        sprint_id = getattr(task, "sprint_id", "") or ""
+        requirement_id = getattr(task, "requirement_id", "") or ""
+        if sprint_id:
+            sprint = (
+                resources[1].get(sprint_id)
+                if resources is not None
+                else await self.repository.get_sprint(sprint_id)
+            )
+            if sprint is None or sprint.project_id != task.project_id:
+                raise ErrNotFound()
+        if requirement_id:
+            requirement = (
+                resources[0].get(requirement_id)
+                if resources is not None
+                else await self.repository.get_requirement(requirement_id)
+            )
+            if requirement is None:
+                raise ErrNotFound()
+            sprint = (
+                resources[1].get(requirement.sprint_id)
+                if resources is not None
+                else await self.repository.get_sprint(requirement.sprint_id)
+            )
+            if sprint is None or sprint.project_id != task.project_id:
+                raise ErrNotFound()
+            if sprint_id and requirement.sprint_id != sprint_id:
+                raise ErrBadRequest()
 
     async def owned_task(
         self, user_id: str, task_id: str, kind: str | None = None, *, action: ProjectAction = "read"
     ) -> AiGenerateTask:
         task = await self.repository.get_task(task_id)
         if task is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         if kind and task.task_type != task_type_for(kind):
-            raise ErrNotFound
+            raise ErrNotFound()
         await self.ensure_project_access(user_id, task.project_id, action=action)
+        await self.validate_task_scope(task)
         return task
 
     async def owned_run(
         self, user_id: str, run_id: str, kind: str | None = None, *, action: ProjectAction = "read"
     ) -> AiGenerateTaskRun:
-        run = await self.repository.get_run(run_id)
+        getter = self.repository.get_run
+        if action != "read":
+            getter = getattr(self.repository, "get_run_reference", getter)
+        run = await getter(run_id)
         if run is None:
-            raise ErrNotFound
+            raise ErrNotFound()
+        # Parent before child: the same order as task deletion/import creation.
         task = await self.owned_task(user_id, run.task_id, kind, action=action)
+        if action != "read" and hasattr(self.repository, "get_run_for_update"):
+            run = await self.repository.get_run_for_update(run_id)
+            if run is None or run.task_id != task.task_id:
+                raise ErrNotFound()
         if task.project_id != run.project_id:
-            raise ErrForbidden
+            raise ErrForbidden()
         run._actor = user_id
         return run
 
@@ -237,29 +288,34 @@ class AiGenerateTaskService:
         requirement = None
         if kind in {"ui", "requirement_analysis", "code_risk_analysis"}:
             if not requirement_id:
-                raise ErrBadRequest
+                raise ErrBadRequest()
             requirement = await self.repository.get_requirement(requirement_id)
             if requirement is None:
-                raise ErrNotFound
+                raise ErrNotFound()
             sprint = await self.repository.get_sprint(requirement.sprint_id)
             if sprint is None or sprint.project_id != project_id:
-                raise ErrNotFound
+                raise ErrNotFound()
             sprint_id = requirement.sprint_id
         if kind == "test_report":
             if not sprint_id:
-                raise ErrBadRequest
+                raise ErrBadRequest()
             sprint = await self.repository.get_sprint(sprint_id)
             if sprint is None or sprint.project_id != project_id:
-                raise ErrNotFound
+                raise ErrNotFound()
             existing = await self.repository.get_active_task_by_project_sprint_type(
                 project_id, sprint_id, task_type_for(kind)
             )
             if existing is not None:
-                raise ErrBadRequest
+                raise ErrBadRequest()
         if sprint_id:
             await self.ensure_sprint_access(user_id, sprint_id, action="write")
         if requirement_id:
             await self.ensure_requirement_access(user_id, requirement_id, action="write")
+        await self.validate_task_scope(
+            SimpleNamespace(
+                project_id=project_id, sprint_id=sprint_id, requirement_id=requirement_id
+            )
+        )
         task = AiGenerateTask(
             task_id=new_id(),
             task_type=task_type_for(kind),
@@ -313,8 +369,11 @@ class AiGenerateTaskService:
     async def list(self, kind: str, project_id: str, user_id: str) -> dict[str, Any]:
         await self.ensure_project_access(user_id, project_id, action="read")
         rows = await self.repository.list_tasks(project_id, task_type_for(kind))
+        scope_loader = getattr(self.repository, "task_scope_resources", None)
+        scopes = await scope_loader(rows) if scope_loader is not None else None
         payloads = []
         for row in rows:
+            await self.validate_task_scope(row, scopes)
             archive = (
                 await self.source_archive_repository.get_source_archive(row.task_id)
                 if kind == "ui"
@@ -350,13 +409,13 @@ class AiGenerateTaskService:
             if requirement_key in body:
                 requirement_id = str(body.get(requirement_key) or "")
                 if not requirement_id:
-                    raise ErrBadRequest
+                    raise ErrBadRequest()
                 requirement = await self.repository.get_requirement(requirement_id)
                 if requirement is None:
-                    raise ErrNotFound
+                    raise ErrNotFound()
                 sprint = await self.repository.get_sprint(requirement.sprint_id)
                 if sprint is None or sprint.project_id != task.project_id:
-                    raise ErrNotFound
+                    raise ErrNotFound()
                 await self.ensure_requirement_access(user_id, requirement_id, action="write")
                 task.requirement_id = requirement_id
                 task.sprint_id = requirement.sprint_id
@@ -393,7 +452,7 @@ class AiGenerateTaskService:
     async def delete_run(self, kind: str, run_id: str, user_id: str) -> dict:
         run = await self.owned_run(user_id, run_id, kind, action="write")
         if run.status in RUN_ACTIVE_STATUSES:
-            raise ErrAiGenerateTaskRunRunning
+            raise ErrAiGenerateTaskRunRunning()
         await self.repository.hard_delete(run)
         await self.repository.commit()
         return {}
@@ -445,13 +504,31 @@ class AiGenerateTaskService:
         return await workflow.export_test_report_pdf(run_id, user_id)
 
     async def run(self, kind: str, task_id: str, body: dict[str, Any] | None, user_id: str) -> dict:
-        task = await self.owned_task(user_id, task_id, kind, action="execute")
+        task = await self.owned_task(user_id, task_id, kind, action="read")
+        # Remote snapshot preparation must not hold project/run locks.
+        project = await self.repository.get_project(task.project_id)
+        if project is None:
+            raise ErrNotFound()
+        await require_project_access(
+            self.repository.session,
+            user_id,
+            project,
+            "execute",
+        )
         body = body or {}
+        if kind == "requirement_analysis":
+            requirement = await self.repository.get_requirement(task.requirement_id)
+            if requirement is None:
+                raise ErrNotFound()
+            if not str(getattr(requirement, "document_file_id", "") or "").strip():
+                from testing_agent.core.errors import ErrRequirementFileMissing
+
+                raise ErrRequirementFileMissing()
         source_archive_file_id = ""
         if kind == "ui":
             archive = await self.source_archive_repository.get_source_archive(task.task_id)
             if archive is None:
-                raise ErrBadRequest
+                raise ErrBadRequest()
             source_archive_file_id = getattr(archive, "file_id", "") or ""
             if not source_archive_file_id:
                 from testing_agent.core.errors import AppError
@@ -459,7 +536,7 @@ class AiGenerateTaskService:
                 raise AppError(409, "源码包未存储到 S3，请重新上传", 409)
         llm_connection_id = str(body.get("connectionId") or body.get("llmConnectionId") or "")
         if not llm_connection_id:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         await require_personal_connection(
             self.repository.session, user_id, "llm", llm_connection_id, task.project_id
         )
@@ -469,9 +546,9 @@ class AiGenerateTaskService:
         if kind == "test_report":
             snapshot_date = str(body.get("snapshotDate") or body.get("snapshot_date") or "")
             if not snapshot_date:
-                raise ErrBadRequest
+                raise ErrBadRequest()
             if self.sprint_daily_metrics_service is None:
-                raise ErrBadRequest
+                raise ErrBadRequest()
             daily_metrics = await self.sprint_daily_metrics_service.get(
                 task.sprint_id, snapshot_date, user_id
             )
@@ -485,7 +562,8 @@ class AiGenerateTaskService:
             )
         elif kind == "code_risk_analysis":
             if self.code_risk_analysis_service is None:
-                raise ErrBadRequest
+                raise ErrBadRequest()
+            await self.repository.commit()
             snapshot = await self.code_risk_analysis_service.build_snapshot(
                 task,
                 run_id,
@@ -505,6 +583,13 @@ class AiGenerateTaskService:
             )
         if kind == "ui":
             snapshot["sourceArchiveFileId"] = source_archive_file_id
+        if kind == "requirement_analysis":
+            snapshot["workflowVersion"] = 2
+            snapshot["sourceContent"] = snapshot.get("documentDownloadUrl", "")
+        # End the preparation snapshot before rechecking permissions. Under
+        # REPEATABLE READ, a normal membership/connection read would otherwise
+        # keep seeing credentials or roles revoked during a remote request.
+        await self.repository.commit()
         checkpoint_enabled = (
             True if kind == "requirement_analysis" else bool(body.get("checkpointEnabled", False))
         )
@@ -540,6 +625,27 @@ class AiGenerateTaskService:
             llm_connection_id=llm_connection_id,
             status=RunStatus.PENDING.value,
         )
+        # Lock and revalidate immediately before inserting the child records.
+        await self.ensure_project_access(user_id, task.project_id, action="execute")
+        if task.sprint_id:
+            await self.ensure_sprint_access(user_id, task.sprint_id, action="execute")
+        if task.requirement_id:
+            await self.ensure_requirement_access(user_id, task.requirement_id, action="execute")
+        current_task = await getattr(
+            self.repository, "get_task_for_update", self.repository.get_task
+        )(task.task_id)
+        if current_task is None:
+            raise ErrNotFound()
+        if (current_task.project_id, current_task.sprint_id, current_task.requirement_id) != (
+            run.project_id,
+            run.sprint_id,
+            run.requirement_id,
+        ):
+            raise ErrBadRequest()
+        await require_personal_connection(
+            self.repository.session, user_id, "llm", llm_connection_id, task.project_id
+        )
+        await self.validate_task_scope(current_task)
         self.repository.add_all([run, worker_task])
         await self.repository.commit()
         await self.repository.refresh(run)
@@ -549,10 +655,10 @@ class AiGenerateTaskService:
         self, kind: str, run_id: str, result_yaml: str, user_id: str
     ) -> dict[str, Any]:
         if kind not in {"api", "function", "ui"}:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         run = await self.owned_run(user_id, run_id, kind, action="write")
         if run.status != RunStatus.SUCCESS.value or run.review_status != ReviewStatus.PENDING.value:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         if kind == "api":
             payload = parse_import_payload(result_yaml)
             await validate_api_collection_import_payload(
@@ -561,7 +667,7 @@ class AiGenerateTaskService:
         elif kind == "function":
             cases = generated_function_cases(SimpleNamespace(result_yaml=result_yaml))
             if not cases:
-                raise ErrBadRequest
+                raise ErrBadRequest()
             validate_function_candidate_cases(cases)
         else:
             validate_ui_candidate_cases(result_yaml)
@@ -596,6 +702,46 @@ class AiGenerateTaskService:
 
         return await import_ui_run(self, run_id, suite_id, confirm_overwrite, user_id)
 
+    async def list_run_summaries(
+        self,
+        kind: str,
+        task_id: str,
+        user_id: str,
+        page: int = 1,
+        page_size: int = 20,
+        pipeline_filter: str = "all",
+    ) -> dict[str, Any]:
+        from testing_agent.repositories.ai_run_history import history_page
+
+        await self.owned_task(user_id, task_id, kind, action="read")
+        return await history_page(
+            self.repository.session,
+            [AiGenerateTaskRun.task_id == task_id],
+            page,
+            page_size,
+            pipeline_filter,
+        )
+
+    async def list_test_report_run_summaries(
+        self, project_id: str, sprint_id: str, user_id: str, page: int = 1, page_size: int = 20
+    ):
+        from testing_agent.repositories.ai_run_history import history_page
+
+        await self.ensure_project_access(user_id, project_id, action="read")
+        sprint = await self.repository.get_sprint(sprint_id)
+        if sprint is None or sprint.project_id != project_id:
+            raise ErrNotFound()
+        return await history_page(
+            self.repository.session,
+            [
+                AiGenerateTask.project_id == project_id,
+                AiGenerateTask.sprint_id == sprint_id,
+                AiGenerateTask.task_type == task_type_for("test_report"),
+            ],
+            page,
+            page_size,
+        )
+
     async def list_runs(self, kind: str, task_id: str, user_id: str) -> dict[str, Any]:
         await self.owned_task(user_id, task_id, kind, action="read")
         rows = await self.repository.list_runs(task_id)
@@ -615,10 +761,10 @@ class AiGenerateTaskService:
             run.status != RunStatus.SUCCESS.value
             or run.review_status != ReviewStatus.APPROVED.value
         ):
-            raise ErrBadRequest
+            raise ErrBadRequest()
         requirement = await self.repository.get_requirement(run.requirement_id)
         if requirement is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await self.ensure_requirement_access(user_id, requirement.requirement_id, action="execute")
         requirement.document_content = requirement_analysis_import_content(run)
         await self.repository.commit()
@@ -628,9 +774,9 @@ class AiGenerateTaskService:
     async def review(self, kind: str, run_id: str, body: dict[str, Any], user_id: str) -> dict:
         run = await self.owned_run(user_id, run_id, kind, action="review")
         if not is_ai_run_reviewable(run.status):
-            raise ErrBadRequest
+            raise ErrBadRequest()
         if run.review_status != ReviewStatus.PENDING.value:
-            raise ErrAiGenerateTaskRunReviewed
+            raise ErrAiGenerateTaskRunReviewed()
         action = str(
             body.get("action") or body.get("reviewStatus") or body.get("status") or "approve"
         )
@@ -641,7 +787,7 @@ class AiGenerateTaskService:
         if kind in {"api", "function", "ui"}:
             if action == "approve":
                 if run.status != RunStatus.SUCCESS.value:
-                    raise ErrBadRequest
+                    raise ErrBadRequest()
                 if kind == "api":
                     await validate_api_collection_import_payload(
                         self.repository, "", generated_payload(run)
@@ -649,7 +795,7 @@ class AiGenerateTaskService:
                 elif kind == "function":
                     cases = generated_function_cases(run)
                     if not cases:
-                        raise ErrBadRequest
+                        raise ErrBadRequest()
                     validate_function_candidate_cases(cases)
                 else:
                     validate_ui_candidate_cases(run.result_yaml)
@@ -657,14 +803,14 @@ class AiGenerateTaskService:
             elif action == "reject":
                 run.review_status = ReviewStatus.REJECTED.value
             else:
-                raise ErrBadRequest
+                raise ErrBadRequest()
             run.review_comment = str(body.get("reviewComment") or body.get("comment") or "")
             run.reviewer_user_id = user_id
             run.reviewed_at = datetime.now(UTC)
             await self.repository.commit()
             await self.repository.refresh(run)
             return dump_run(run)
-        raise ErrBadRequest
+        raise ErrBadRequest()
 
     async def save_stage_output(self, run_id: str, body: dict[str, Any], user_id: str) -> dict:
         workflow = GenerationStageWorkflow(

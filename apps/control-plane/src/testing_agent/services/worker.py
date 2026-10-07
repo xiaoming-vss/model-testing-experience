@@ -150,7 +150,7 @@ async def save_extracted_environment_vars(
         if env_var:
             if env_var.is_secret:
                 if env_var.secret_user_id != actor:
-                    raise ErrForbidden
+                    raise ErrForbidden()
                 secrets.append(value)
             env_var.value = value
         else:
@@ -228,7 +228,7 @@ async def find_task(session: AsyncSession, domain: str, task_id: str) -> WorkerT
         .with_for_update()
     )
     if task is None:
-        raise ErrNotFound
+        raise ErrNotFound()
     from testing_agent.services.worker_context import hydrate
 
     return await session.run_sync(lambda sync: hydrate(sync, task))

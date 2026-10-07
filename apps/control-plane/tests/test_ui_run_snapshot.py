@@ -73,6 +73,7 @@ class FakeUiRunRepository:
 
     async def refresh(self, row):
         row.error_message = ""
+        row.trace_path = ""
         row.duration_ms = 0
         row.started_at = None
         row.finished_at = None

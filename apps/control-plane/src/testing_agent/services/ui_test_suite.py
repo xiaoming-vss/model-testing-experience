@@ -28,7 +28,7 @@ class UiTestSuiteService:
     ) -> UiTestSuite:
         suite = await self.repository.get_suite(suite_id)
         if suite is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await self.ensure_requirement_access(user_id, suite.requirement_id, action=action)
         return suite
 

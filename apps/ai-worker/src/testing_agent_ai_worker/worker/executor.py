@@ -23,13 +23,9 @@ from testing_agent_ai_worker.tasks.functional_case_generate.executor import (
     EMPTY_CASES_JSON,
     FunctionalCaseNanobotExecutor,
 )
-from testing_agent_ai_worker.tasks.requirement_analysis.chain import (
-    RequirementAnalysisChainRunResult,
-)
 from testing_agent_ai_worker.tasks.requirement_analysis.executor import (
     REQUIREMENT_ANALYSIS_FIRST_SKILL_NAME,
     REQUIREMENT_ANALYSIS_SECOND_SKILL_NAME,
-    REQUIREMENT_ANALYSIS_THIRD_SKILL_NAME,
     RequirementAnalysisNanobotExecutor,
 )
 from testing_agent_ai_worker.worker.dispatcher import WorkerTaskDispatcherExecutor
@@ -44,8 +40,6 @@ __all__ = [
     "PlaceholderTaskExecutor",
     "REQUIREMENT_ANALYSIS_FIRST_SKILL_NAME",
     "REQUIREMENT_ANALYSIS_SECOND_SKILL_NAME",
-    "REQUIREMENT_ANALYSIS_THIRD_SKILL_NAME",
-    "RequirementAnalysisChainRunResult",
     "RequirementAnalysisNanobotExecutor",
     "WorkerTaskDispatcherExecutor",
     "run_functional_chain",

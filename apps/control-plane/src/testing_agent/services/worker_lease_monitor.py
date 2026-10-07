@@ -15,6 +15,11 @@ async def sweep_once(session_factory=AsyncSessionLocal):
     for domain in ("ai", "api", "ui"):
         async with session_factory() as session:
             await WorkerTaskService(WorkerTaskRepository(session)).expire_leases(domain)
+    from testing_agent.services.integration_lifecycle import lifecycle
+
+    async with session_factory() as session:
+        await lifecycle(session).expire()
+        await session.commit()
 
 
 async def monitor():

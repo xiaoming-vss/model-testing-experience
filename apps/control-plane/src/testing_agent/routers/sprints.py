@@ -10,7 +10,7 @@ from testing_agent.handlers.sprint import (
     update_sprint,
 )
 from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
-from testing_agent.schemas.sprint import SprintResponse
+from testing_agent.schemas.sprint import SprintListItemResponse, SprintResponse
 
 router = APIRouter()
 
@@ -19,7 +19,7 @@ router.post("/projects/{project_id}/sprints", response_model=ApiResponse[SprintR
 )
 router.get(
     "/projects/{project_id}/sprints",
-    response_model=ApiResponse[ListResponse[SprintResponse]],
+    response_model=ApiResponse[ListResponse[SprintListItemResponse]],
 )(list_sprints)
 router.get("/sprints/{sprint_id}", response_model=ApiResponse[SprintResponse])(get_sprint)
 router.patch("/sprints/{sprint_id}", response_model=ApiResponse[SprintResponse])(update_sprint)

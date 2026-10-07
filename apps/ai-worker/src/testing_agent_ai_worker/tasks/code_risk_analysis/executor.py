@@ -227,7 +227,13 @@ class CodeRiskAnalysisNanobotExecutor(TaskExecutor):
     def _build_input_text(task: Task, repo_diffs: list[Any]) -> str:
         parts: list[str] = ["# 需求理解记录"]
         if task.requirement_input is not None:
-            parts.append(task.requirement_input.document_content)
+            from testing_agent_ai_worker.nanobot_runtime.prompt import (
+                STRUCTURED_REQUIREMENT_INPUT_INSTRUCTION,
+            )
+            from testing_agent_ai_worker.requirement_artifacts import requirement_content
+
+            parts.append(STRUCTURED_REQUIREMENT_INPUT_INSTRUCTION)
+            parts.append(requirement_content(task.requirement_input.document_content))
 
         for repo_diff in repo_diffs:
             parts.append(f"# 仓库 {repo_diff.repository_id}(分支 {repo_diff.branch})")

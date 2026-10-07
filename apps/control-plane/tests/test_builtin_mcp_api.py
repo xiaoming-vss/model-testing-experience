@@ -12,7 +12,37 @@ from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.models.shared_service import ServiceAuthorization
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 
-api = api_fixture
+
+@pytest.fixture
+def api(tmp_path, monkeypatch):
+    import json
+
+    import httpx
+
+    from testing_agent.services.mcp_client import McpClient
+
+    def handle(request):
+        body = json.loads(request.content)
+        if body["method"] == "notifications/initialized":
+            return httpx.Response(202)
+        result = (
+            {"protocolVersion": "2025-03-26", "capabilities": {"tools": {}}}
+            if body["method"] == "initialize"
+            else {
+                "structuredContent": {
+                    "schemaVersion": 1,
+                    "instanceUrl": "https://zentao.test",
+                    "apiBaseUrl": "https://zentao.test/api.php/v2",
+                }
+            }
+        )
+        return httpx.Response(200, json={"jsonrpc": "2.0", "id": body["id"], "result": result})
+
+    monkeypatch.setattr(
+        "testing_agent.services.zentao_mcp_instance.McpClient",
+        lambda url, token: McpClient(url, token, transport=httpx.MockTransport(handle)),
+    )
+    yield from api_fixture.__wrapped__(tmp_path, monkeypatch)
 
 
 def setup_service(api):
@@ -30,8 +60,8 @@ def setup_service(api):
     )
     path = f"/v1/projects/{pid}/services/mcp"
     config = {
-        "name": "禅道 MCP",
-        "baseUrl": "http://127.0.0.1:9090/zentao/mcp/",
+        "name": "ZenTao-MCP",
+        "baseUrl": "http://127.0.0.1:9090/zentao/mcp",
         "templateId": "zentao",
     }
     return owner, member, outsider, path, config
@@ -44,7 +74,7 @@ def test_builtin_catalog_and_personal_credential_lifecycle(api):
     assert templates.json()["data"]["items"] == [
         {
             "templateId": "zentao",
-            "name": "禅道 MCP",
+            "name": "ZenTao-MCP",
             "type": "streamableHttp",
             "authorizationHeader": "token",
         }
@@ -59,12 +89,15 @@ def test_builtin_catalog_and_personal_credential_lifecycle(api):
     assert resource["templateId"] == "zentao"
     sid = resource["serviceId"]
     endpoint = f"{path}/{sid}/authorization"
-    assert api.post(path, headers=owner, json={**config, "name": "duplicate"}).status_code == 409
+    # MCP names are unique; projects can now configure multiple named MCP services.
+    assert api.post(path, headers=owner, json=config).status_code == 409
     assert (
         api.patch(
-            f"{path}/{sid}", headers=owner, json={"baseUrl": "http://other.test/mcp"}
+            f"{path}/{sid}",
+            headers=member,
+            json={"name": "ZenTao-MCP", "baseUrl": "http://other.test/mcp"},
         ).status_code
-        == 400
+        == 403
     )
     assert api.patch(f"{path}/{sid}", headers=member, json={"name": "other"}).status_code == 403
     renamed = api.patch(f"{path}/{sid}", headers=owner, json={"name": "项目禅道"})
@@ -174,3 +207,12 @@ def test_mcp_is_project_scoped_and_separate_from_existing_zentao_connections(api
             ).json()["data"]["items"]
             == []
         )
+
+
+def test_mcp_preserves_project_endpoint_path_and_trailing_slash(api):
+    owner, _, _, path, config = setup_service(api)
+    result = api.post(
+        path, headers=owner, json={**config, "baseUrl": "https://other.test/nested/mcp/"}
+    )
+    assert result.status_code == 200
+    assert result.json()["data"]["baseUrl"] == "https://other.test/nested/mcp/"

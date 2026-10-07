@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+from datetime import UTC, datetime
+
 from sqlalchemy import delete, select
 
 from testing_agent.core.errors import (
@@ -10,11 +13,18 @@ from testing_agent.core.errors import (
     ErrNotFound,
     ErrUnauthorized,
 )
-from testing_agent.core.security import create_access_token, hash_password, verify_password
+from testing_agent.core.security import (
+    access_token_hash,
+    create_access_token,
+    hash_password,
+    parse_access_token_claims,
+    verify_password,
+)
 from testing_agent.core.sid import new_id
 from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.models.project import Project
 from testing_agent.models.project_member import ProjectMember
+from testing_agent.models.revoked_access_token import RevokedAccessToken
 from testing_agent.models.user import User
 from testing_agent.repositories.user import UserRepository
 from testing_agent.schemas.auth import (
@@ -34,15 +44,15 @@ class AuthService:
     async def register(self, body: RegisterRequest) -> dict:
         exists = await self.users.get_by_name(body.name)
         if exists is not None:
-            raise ErrNameAlreadyUse
+            raise ErrNameAlreadyUse()
         if body.email:
             email_user = await self.users.get_by_email(body.email)
             if email_user is not None:
-                raise ErrEmailAlreadyUse
+                raise ErrEmailAlreadyUse()
         user = User(
             user_id=new_id(),
             nickname=body.name,
-            password=hash_password(body.password),
+            password=await asyncio.to_thread(hash_password, body.password),
             email=body.email or None,
         )
         self.users.add(user)
@@ -52,32 +62,56 @@ class AuthService:
 
     async def login(self, body: LoginRequest) -> dict:
         user = await self.users.get_by_name(body.name)
-        if user is None or not verify_password(body.password, user.password):
-            raise ErrUnauthorized
+        if user is None or not await asyncio.to_thread(
+            verify_password, body.password, user.password
+        ):
+            raise ErrUnauthorized()
         data = LoginResponse(access_token=create_access_token(user.user_id))
         return data.model_dump(by_alias=True)
 
     async def get_profile(self, user_id: str) -> dict:
         user = await self.users.get_by_user_id(user_id)
         if user is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         return self._user_data(user)
+
+    async def logout(self, user_id: str, token: str) -> dict:
+        claims = parse_access_token_claims(token)
+        if claims.user_id != user_id:
+            raise ErrUnauthorized()
+        session = self.users.session
+        # Serialize revocations for this user, including simultaneous logout requests.
+        user = await session.scalar(select(User).where(User.user_id == user_id).with_for_update())
+        if user is None:
+            raise ErrUnauthorized()
+        await session.execute(
+            delete(RevokedAccessToken).where(RevokedAccessToken.expires_at <= datetime.now(UTC))
+        )
+        token_hash = access_token_hash(token)
+        if await session.get(RevokedAccessToken, token_hash) is None:
+            session.add(
+                RevokedAccessToken(
+                    token_hash=token_hash, user_id=user_id, expires_at=claims.expires_at
+                )
+            )
+        await session.commit()
+        return {}
 
     async def update_profile(self, user_id: str, body: UpdateProfileRequest) -> dict:
         user = await self.users.get_by_user_id(user_id)
         if user is None:
-            raise ErrForbidden
+            raise ErrForbidden()
         if body.name is not None and body.name != user.nickname:
             exists = await self.users.get_by_name(body.name)
             if exists is not None:
-                raise ErrNameAlreadyUse
+                raise ErrNameAlreadyUse()
             user.nickname = body.name
         if body.email is not None:
             new_email = body.email or None
             if new_email != user.email:
                 email_user = await self.users.get_by_email(new_email) if new_email else None
                 if email_user is not None and email_user.user_id != user.user_id:
-                    raise ErrEmailAlreadyUse
+                    raise ErrEmailAlreadyUse()
                 user.email = new_email
         await self.users.commit()
         await self.users.refresh(user)
@@ -86,7 +120,7 @@ class AuthService:
     async def delete_user(self, user_id: str) -> dict:
         user = await self.users.get_by_user_id(user_id)
         if user is None:
-            raise ErrForbidden
+            raise ErrForbidden()
         session = self.users.session
         await session.scalar(select(User).where(User.user_id == user_id).with_for_update())
         owned = await session.scalar(

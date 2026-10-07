@@ -79,21 +79,18 @@ async def import_function_run(
     confirm_overwrite: bool,
     user_id: str,
 ) -> dict[str, Any]:
-    owned_run = await service.owned_run(user_id, run_id, "function")
-    run = await service.repository.get_run_for_update(run_id)
-    if run is None or run.run_id != owned_run.run_id:
-        raise ErrBadRequest
+    run = await service.owned_run(user_id, run_id, "function", action="execute")
     if (
         run.status != "success"
         or run.review_status != "approved"
         or run.import_status == ImportStatus.IMPORTED.value
     ):
-        raise ErrBadRequest
-    await service.ensure_requirement_access(user_id, run.requirement_id)
+        raise ErrBadRequest()
+    await service.ensure_requirement_access(user_id, run.requirement_id, action="write")
 
     raw_cases = generated_function_cases(run)
     if not raw_cases:
-        raise ErrBadRequest
+        raise ErrBadRequest()
     generated_cases = validate_function_candidate_cases(raw_cases)
 
     suites_by_module: dict[str, FunctionTestSuite | None] = {}
@@ -118,7 +115,7 @@ async def import_function_run(
             for existing_case in existing_cases:
                 existing_name = normalized_case_name(existing_case.title)
                 if existing_name in existing_by_name:
-                    raise ErrBadRequest
+                    raise ErrBadRequest()
                 existing_by_name[existing_name] = existing_case
             existing_by_module[module] = existing_by_name
 
@@ -164,7 +161,7 @@ async def import_function_run(
             module = item["module"]
             suite = suites_by_module[module]
             if suite is None:
-                raise ErrBadRequest
+                raise ErrBadRequest()
             existing = existing_by_module[module].get(normalized_case_name(item["title"]))
             if existing is not None:
                 apply_generated_case(existing, item)

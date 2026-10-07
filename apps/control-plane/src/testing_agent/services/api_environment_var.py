@@ -24,10 +24,10 @@ class ApiEnvironmentVarService:
     ) -> ApiEnvironment:
         environment = await self.repository.get_environment(environment_id)
         if environment is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         project = await self.repository.get_project(environment.project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await require_project_access(self.repository.session, user_id, project, action)
         return environment
 
@@ -36,7 +36,7 @@ class ApiEnvironmentVarService:
     ) -> ApiEnvironmentVar:
         var = await self.repository.get_var(env_var_id)
         if var is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await self.get_accessible_environment(user_id, var.environment_id, action=action)
         return var
 
@@ -71,9 +71,9 @@ class ApiEnvironmentVarService:
         body = dict(body)
         if var.is_secret:
             if var.secret_user_id != user_id:
-                raise ErrForbidden
+                raise ErrForbidden()
             if body.get("isSecret", body.get("is_secret")) is False:
-                raise ErrBadRequest
+                raise ErrBadRequest()
             if body.get("value") == "********":
                 body.pop("value")
         elif body.get("isSecret", body.get("is_secret")):
@@ -86,7 +86,7 @@ class ApiEnvironmentVarService:
     async def delete(self, user_id: str, env_var_id: str) -> dict:
         var = await self.get_accessible_entity(user_id, env_var_id, action="write")
         if var.is_secret and var.secret_user_id != user_id:
-            raise ErrForbidden
+            raise ErrForbidden()
         await self.repository.delete(var)
         await self.repository.commit()
         return {}

@@ -49,7 +49,7 @@ async def execution_authority(session, task) -> ExecutionAuthority:
             )
         )
         if run is None or attempt is None or not attempt.requested_by:
-            raise ErrForbidden
+            raise ErrForbidden()
         from testing_agent.services.ai_execution import project
 
         run = await session.run_sync(lambda sync: project(sync, run))
@@ -76,7 +76,7 @@ async def execution_authority(session, task) -> ExecutionAuthority:
         container, field = UiTestSuite, "suite_id"
     run = await session.scalar(select(model).where(getattr(model, key) == task.run_id))
     if run is None:
-        raise ErrForbidden
+        raise ErrForbidden()
     project_id = await session.scalar(
         select(Sprint.project_id)
         .select_from(container)
@@ -87,7 +87,7 @@ async def execution_authority(session, task) -> ExecutionAuthority:
         )
     )
     if not project_id:
-        raise ErrForbidden
+        raise ErrForbidden()
     return ExecutionAuthority(run.trigger_user_id, project_id, run, [])
 
 
@@ -117,12 +117,12 @@ async def authorize_execution(session, task, *, pending=False) -> ExecutionAutho
         if pending
         else {RunStatus.CLAIMED.value, RunStatus.RUNNING.value}
     ):
-        raise ErrForbidden
+        raise ErrForbidden()
     authority = None
     try:
         authority = await execution_authority(session, task)
         if not await session.scalar(select(User.user_id).where(User.user_id == authority.actor)):
-            raise ErrForbidden
+            raise ErrForbidden()
         await require_project_id(session, authority.actor, authority.project_id)
         for provider, connection_id in authority.connection_ids:
             connection = await require_personal_connection(
@@ -137,7 +137,7 @@ async def authorize_execution(session, task, *, pending=False) -> ExecutionAutho
                     and binding.get("instanceUrl") != normalize_instance_url(connection.base_url)
                     for binding in bindings
                 ):
-                    raise ErrForbidden
+                    raise ErrForbidden()
         if task.domain == "api":
             await authorized_environment_vars(
                 session, authority.actor, authority.run.environment_id
@@ -145,7 +145,7 @@ async def authorize_execution(session, task, *, pending=False) -> ExecutionAutho
     except AppError:
         await fail_authorization(session, task, authority)
         await session.commit()
-        raise ErrForbidden from None
+        raise ErrForbidden() from None
     return authority
 
 
@@ -153,6 +153,12 @@ async def revoke_executions(
     session, *, actor: str = "", project_id: str = "", connection_id: str = ""
 ):
     """Record revocation in the same transaction; rejoining cannot revive queued work."""
+    from testing_agent.services.integration_lifecycle import revoke_integrations
+
+    if actor or project_id or connection_id:
+        await revoke_integrations(
+            session, actor=actor, project_id=project_id, connection_id=connection_id
+        )
     from testing_agent.models.worker_task import WorkerTask
 
     tasks = list(

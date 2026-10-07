@@ -61,6 +61,11 @@ class RecordingConnectionService:
         )
 
 
+class FakeMcpAccess:
+    async def resolve(self, user_id, project_id, expected_instance=""):
+        return SimpleNamespace(connection_id="conn-1", base_url="https://example.test")
+
+
 class FakeRepository:
     session = AuthorizationDatabase()
 
@@ -83,13 +88,18 @@ class FakeRepository:
     async def get_active_by_local_resource(self, resource_type, resource_id):
         from testing_agent.services.service_instance import instance_key
 
+        if resource_type == "requirement" or (
+            resource_type == "sprint" and resource_id == "local-1"
+        ):
+            return None
         return SimpleNamespace(
             provider="zentao",
             remote_resource_id="1",
+            instance_url="https://example.test",
             instance_key=instance_key("https://example.test"),
         )
 
-    async def exists_active_by_remote_resource(self, *args):
+    async def exists_active_by_remote_resource(self, *args, **kwargs):
         return False
 
     async def get_active_project_group_binding(
@@ -160,7 +170,10 @@ async def test_gitlab_project_binding_dispatches_without_touching_zentao_path():
 async def test_gitlab_sprint_binding_raises_placeholder():
     repository = FakeRepository()
     service = ResourceBindingService(
-        repository, RecordingConnectionService(), RecordingZentaoClient()
+        repository,
+        RecordingConnectionService(),
+        RecordingZentaoClient(),
+        zentao_access=FakeMcpAccess(),
     )
 
     with pytest.raises(type(ErrBadRequest)) as exc_info:
@@ -179,7 +192,10 @@ async def test_gitlab_sprint_binding_raises_placeholder():
 async def test_service_rejects_unknown_provider():
     repository = FakeRepository()
     service = ResourceBindingService(
-        repository, RecordingConnectionService(), RecordingZentaoClient()
+        repository,
+        RecordingConnectionService(),
+        RecordingZentaoClient(),
+        zentao_access=FakeMcpAccess(),
     )
 
     with pytest.raises(type(ErrBadRequest)) as exc_info:
@@ -192,12 +208,15 @@ async def test_service_rejects_unknown_provider():
 async def test_sprint_zentao_binding_keeps_zentao_remote_type_default():
     repository = FakeRepository()
     service = ResourceBindingService(
-        repository, RecordingConnectionService(), RecordingZentaoClient()
+        repository,
+        RecordingConnectionService(),
+        RecordingZentaoClient(),
+        zentao_access=FakeMcpAccess(),
     )
 
     result = await service.create(
         "sprint",
-        "sprint-1",
+        "local-1",
         _request(provider="zentao", remoteResourceId="201"),
         "user-1",
     )
@@ -210,21 +229,20 @@ async def test_sprint_zentao_binding_keeps_zentao_remote_type_default():
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("available", [True, False])
-async def test_requirement_binding_uses_unpaged_story_client(monkeypatch, available):
+async def test_requirement_binding_uses_complete_story_list(available):
     from unittest.mock import AsyncMock
 
     from testing_agent.core.errors import ErrResourceBindingInvalid
-    from testing_agent.services.zentao_resource import ZentaoResourceClient
 
     repository = FakeRepository()
-    client = ZentaoResourceClient()
-    # Keep the real public method signature; replace only the network boundary.
     stories = [{"id": value} for value in range(1, 151)]
     if available:
         stories.append({"id": 201})
     fetch = AsyncMock(return_value={"items": stories, "total": len(stories)})
-    monkeypatch.setattr(client, "_list_without_paging", fetch)
-    service = ResourceBindingService(repository, RecordingConnectionService(), client)
+    client = SimpleNamespace(list_execution_stories=fetch)
+    service = ResourceBindingService(
+        repository, RecordingConnectionService(), client, zentao_access=FakeMcpAccess()
+    )
     if available:
         result = await service.create(
             "requirement", "req-1", _request(remoteResourceId="201"), "user-1"
@@ -237,4 +255,5 @@ async def test_requirement_binding_uses_unpaged_story_client(monkeypatch, availa
         assert error.value.code == ErrResourceBindingInvalid.code
         assert repository.rows == []
     fetch.assert_awaited_once()
-    assert fetch.call_args.args[1] == "api/v1/zentao/executions/1/stories"
+    assert fetch.call_args.args[1] == "1"
+    assert fetch.call_args.kwargs == {}

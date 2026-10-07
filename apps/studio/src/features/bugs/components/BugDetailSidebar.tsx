@@ -3,10 +3,11 @@ import { Typography } from 'antd'
 import { Link } from 'react-router-dom'
 import { pickCreatedAt, formatTime, pickUpdatedAt } from '@/utils/format'
 import type { Bug } from '../types'
-import { BUG_PRIORITY_LABELS, BUG_SEVERITY_LABELS, getBugPriorityTone } from '../utils/bugMeta'
+import { BUG_PRIORITY_LABELS, BUG_SEVERITY_LABELS, getBugPriorityTone, BUG_RESOLUTION_LABELS } from '../utils/bugMeta'
 const { Text } = Typography
 
-export function BugDetailSidebar({ bug, projectName, sprintNames, resolveUserName, children, editors }: {
+export function BugDetailSidebar({ bug, projectName, sprintNames, resolveUserName, children, editors, canReadContext = true }: {
+  canReadContext?: boolean
   editors?: { severity: ReactNode; priority: ReactNode; plannedFixSprint: ReactNode; requirement: ReactNode }
   children?: ReactNode
   bug: Bug; projectName?: string; sprintNames: Map<string, string>; resolveUserName: (id: string) => string
@@ -22,6 +23,11 @@ export function BugDetailSidebar({ bug, projectName, sprintNames, resolveUserNam
                 <dd>{editors?.severity ?? <span className={`bug-sidebar-indicator ${bug.severity === 'critical' || bug.severity === 'serious' ? 'tone-red' : 'tone-amber'}`}>{BUG_SEVERITY_LABELS[bug.severity] ?? bug.severity}</span>}</dd>
                 <dt>优先级</dt>
                 <dd>{editors?.priority ?? <span className={`bug-sidebar-indicator tone-${getBugPriorityTone(bug.priority)}`}>{BUG_PRIORITY_LABELS[bug.priority] ?? bug.priority}</span>}</dd>
+                <dt>确认情况</dt>
+                <dd>{bug.confirmed ? '已确认' : '未确认'}</dd>
+                {bug.resolution && <><dt>解决方案</dt><dd>{BUG_RESOLUTION_LABELS[bug.resolution] ?? bug.resolution}</dd></>}
+                {bug.resolution === 'fixed' && <><dt>解决版本</dt><dd>{bug.resolvedBuild || '历史记录未提供'}</dd></>}
+                {bug.resolution === 'duplicate' && <><dt>重复 Bug ID</dt><dd>{bug.duplicateBug}</dd></>}
                 <dt>创建人</dt>
                 <dd>{resolveUserName(bug.reporterUserId)}</dd>
                 <dt>责任人</dt>
@@ -44,34 +50,34 @@ export function BugDetailSidebar({ bug, projectName, sprintNames, resolveUserNam
               <dl className="bug-meta-list bug-context-list">
                 <dt>所属需求</dt>
                 <dd>
-                  {editors?.requirement ?? (bug.requirementId ? (
+                  {editors?.requirement ?? (bug.requirementId && canReadContext ? (
                     <Link className="bug-link-text" to={`/requirements/${bug.requirementId}`}>{bug.requirementName || bug.requirementId}</Link>
                   ) : (
-                    <Text type="secondary">未关联需求</Text>
+                    <Text type="secondary">{bug.requirementName || (bug.requirementId ? '已关联需求' : '未关联需求')}</Text>
                   ))}
                 </dd>
                 <dt>关联测试单</dt>
                 <dd>
-                  {bug.sourceOrderId ? (
+                  {bug.sourceOrderId && canReadContext ? (
                     <Link className="bug-link-text" to={`/test-orders/${bug.sourceOrderId}`}>
                       {bug.sourceOrderName || bug.sourceOrderId}
                     </Link>
                   ) : (
-                    <Text type="secondary">未关联测试单</Text>
+                    <Text type="secondary">{bug.sourceOrderName || (bug.sourceOrderId ? '已关联测试单' : '未关联测试单')}</Text>
                   )}
                 </dd>
                 <dt>关联用例</dt>
-                <dd>{bug.sourceOrderId && bug.sourceEntryId ? (
+                <dd>{bug.sourceOrderId && bug.sourceEntryId && canReadContext ? (
                   <Link to={`/test-orders/${bug.sourceOrderId}?entryId=${bug.sourceEntryId}`}>
                     {bug.sourceCaseTitle || '查看用例'}
                   </Link>
                 ) : <Text type="secondary">{bug.sourceCaseTitle || '未关联用例'}</Text>}</dd>
                 <dt>执行记录</dt>
                 <dd>
-                  {bug.sourceEntryId ? (
+                  {bug.sourceEntryId && canReadContext ? (
                     <Link to={`/test-orders/${bug.sourceOrderId}?entryId=${bug.sourceEntryId}`}>查看执行记录</Link>
                   ) : (
-                    <Text type="secondary">未关联执行记录</Text>
+                    <Text type="secondary">{bug.sourceEntryId ? '已关联执行记录' : '未关联执行记录'}</Text>
                   )}
                 </dd>
               </dl>

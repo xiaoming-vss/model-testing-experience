@@ -103,7 +103,7 @@ class ApiCollectionService:
     ) -> ApiCollection:
         collection = await self.repository.get_collection(collection_id)
         if collection is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await self.ensure_requirement_access(user_id, collection.requirement_id, action=action)
         return collection
 
@@ -149,7 +149,7 @@ class ApiCollectionService:
         if file is not None:
             filename = str(getattr(file, "filename", "") or "")
             if not filename:
-                raise ErrApiCollectionImportFileRequired
+                raise ErrApiCollectionImportFileRequired()
             if not filename.lower().endswith((".yaml", ".yml")):
                 raise import_error("仅支持导入 .yaml 或 .yml 文件")
         parsed = await read_import_payload(payload, file)

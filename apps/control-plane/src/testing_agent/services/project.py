@@ -43,7 +43,7 @@ class ProjectService:
     ) -> Project:
         project = await self.projects.get_active_by_id(project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await require_project_access(self.projects.session, user_id, project, action)
         return project
 
@@ -52,10 +52,10 @@ class ProjectService:
             select(User).where(User.user_id == user_id).with_for_update()
         )
         if user is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         exists = await self.projects.get_active_by_user_and_name(user_id, body.name)
         if exists is not None:
-            raise ErrProjectNameAlreadyUse
+            raise ErrProjectNameAlreadyUse()
         project = Project(
             project_id=new_id(),
             user_id=user_id,
@@ -79,8 +79,8 @@ class ProjectService:
     async def get(self, user_id: str, project_id: str) -> dict:
         project = await self.projects.get_active_by_id(project_id)
         if project is None:
-            raise ErrNotFound
-        role = await require_project_access(self.projects.session, user_id, project)
+            raise ErrNotFound()
+        role = await require_project_access(self.projects.session, user_id, project, "project_read")
         return dump_project(project, role)
 
     async def update(self, user_id: str, project_id: str, body: UpdateProjectRequest) -> dict:
@@ -88,7 +88,7 @@ class ProjectService:
         if body.name is not None and body.name != project.name:
             exists = await self.projects.get_active_by_user_and_name(user_id, body.name)
             if exists is not None:
-                raise ErrProjectNameAlreadyUse
+                raise ErrProjectNameAlreadyUse()
             project.name = body.name
         if body.description is not None:
             project.description = body.description
@@ -112,7 +112,7 @@ class ProjectService:
         )
         project = await self._locked_project(user_id, project_id)
         if target is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         existing = await project_role(session, target.user_id, project)
         if existing:
             raise AppError(2006, "用户已是项目成员", 409)
@@ -127,7 +127,7 @@ class ProjectService:
     async def list_members(self, user_id: str, project_id: str) -> dict:
         project = await self.projects.get_active_by_id(project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         session = self.projects.session
         await require_project_access(session, user_id, project)
         owner = await session.scalar(select(User).where(User.user_id == project.user_id))
@@ -156,8 +156,10 @@ class ProjectService:
             .execution_options(populate_existing=True)
         )
         if project is None:
-            raise ErrNotFound
-        await require_project_access(session, user_id, project, "manage" if manage else "read")
+            raise ErrNotFound()
+        await require_project_access(
+            session, user_id, project, "manage" if manage else "project_read"
+        )
         return project
 
     async def change_member(self, user_id: str, project_id: str, target_id: str, role: str) -> dict:
@@ -170,7 +172,13 @@ class ProjectService:
             )
         )
         if member is None:
-            raise ErrNotFound
+            raise ErrNotFound()
+        if "read" in allowed_actions(member.role) and "read" not in allowed_actions(role):
+            await revoke_executions(self.projects.session, actor=target_id, project_id=project_id)
+        elif "write" in allowed_actions(member.role) and "write" not in allowed_actions(role):
+            from testing_agent.services.integration_lifecycle import revoke_integrations
+
+            await revoke_integrations(self.projects.session, actor=target_id, project_id=project_id)
         member.role = role
         await self.projects.commit()
         return {}
@@ -185,7 +193,7 @@ class ProjectService:
             )
         )
         if member is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await revoke_executions(self.projects.session, actor=target_id, project_id=project_id)
         await self.projects.session.delete(member)
         await self.projects.commit()
@@ -211,10 +219,10 @@ class ProjectService:
             )
         )
         if target is None or member is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         # The legacy owner/name uniqueness also applies to transferred projects.
         if await self.projects.get_active_by_user_and_name(target_id, project.name) is not None:
-            raise ErrProjectNameAlreadyUse
+            raise ErrProjectNameAlreadyUse()
         await session.delete(member)
         await session.flush()
         session.add(ProjectMember(project_id=project_id, user_id=user_id, role="member"))
@@ -223,5 +231,5 @@ class ProjectService:
             await session.commit()
         except IntegrityError as exc:
             await session.rollback()
-            raise ErrProjectNameAlreadyUse from exc
+            raise ErrProjectNameAlreadyUse() from exc
         return dump_project(project, "member")

@@ -64,16 +64,3 @@
 .add-cases-detail-meta .ant-tag {
   margin-inline-end: 0;
 }
-
-/* 用例图谱弹框：工具条与画布沿用 ai-relations 那套布局，这里只补状态区与占位的差异。 */
-.test-order-graph-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* 运行中的占位：图标与提示上下排列（ai-relations-page-loading 默认是横排）。 */
-.test-order-graph-loading {
-  flex-direction: column;
-  gap: 10px;
-}

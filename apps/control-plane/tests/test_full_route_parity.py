@@ -77,23 +77,6 @@ def test_missing_go_routes_are_exposed():
         ("PATCH", "/v1/integrations/zentao/connections/{connection_id}"),
         ("DELETE", "/v1/integrations/zentao/connections/{connection_id}"),
         ("POST", "/v1/integrations/zentao/connections/{connection_id}/reauth"),
-        ("GET", "/v1/integrations/zentao/connections/{connection_id}/projects"),
-        (
-            "GET",
-            "/v1/integrations/zentao/connections/{connection_id}/projects/{remote_project_id}/executions",
-        ),
-        (
-            "GET",
-            "/v1/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/testtasks",
-        ),
-        (
-            "GET",
-            "/v1/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/stories",
-        ),
-        (
-            "GET",
-            "/v1/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/cases",
-        ),
         ("GET", "/v1/integrations/llm/connections"),
         ("POST", "/v1/integrations/llm/connections"),
         ("GET", "/v1/integrations/llm/connections/{connection_id}"),
@@ -116,26 +99,6 @@ def test_missing_go_routes_are_exposed():
         (
             "POST",
             "/v1/projects/{project_id}/integrations/zentao/connections/{connection_id}/reauth",
-        ),
-        (
-            "GET",
-            "/v1/projects/{project_id}/integrations/zentao/connections/{connection_id}/projects",
-        ),
-        (
-            "GET",
-            "/v1/projects/{project_id}/integrations/zentao/connections/{connection_id}/projects/{remote_project_id}/executions",
-        ),
-        (
-            "GET",
-            "/v1/projects/{project_id}/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/testtasks",
-        ),
-        (
-            "GET",
-            "/v1/projects/{project_id}/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/stories",
-        ),
-        (
-            "GET",
-            "/v1/projects/{project_id}/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/cases",
         ),
         ("GET", "/v1/projects/{project_id}/integrations/llm/connections"),
         ("POST", "/v1/projects/{project_id}/integrations/llm/connections"),
@@ -205,6 +168,21 @@ def test_missing_go_routes_are_exposed():
         ("GET", "/v1/test-report-generate-runs/{run_id}/pdf"),
     }
 
+    # External resource discovery now uses project-scoped, actor-owned MCP access.
+    expected.add(("GET", "/v1/projects/{project_id}/zentao/mcp/{kind}"))
+    retired_discovery = {
+        "/v1/integrations/zentao/connections/{connection_id}/projects/{remote_project_id}/executions",
+        "/v1/projects/{project_id}/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/testtasks",
+        "/v1/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/stories",
+        "/v1/projects/{project_id}/integrations/zentao/connections/{connection_id}/projects/{remote_project_id}/executions",
+        "/v1/projects/{project_id}/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/stories",
+        "/v1/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/cases",
+        "/v1/projects/{project_id}/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/cases",
+        "/v1/projects/{project_id}/integrations/zentao/connections/{connection_id}/projects",
+        "/v1/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/testtasks",
+        "/v1/integrations/zentao/connections/{connection_id}/projects",
+    }
+    assert not {("GET", go_path(path)) for path in retired_discovery} & routes
     expected = {(method, go_path(path)) for method, path in expected}
 
     assert expected <= routes

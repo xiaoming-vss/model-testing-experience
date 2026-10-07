@@ -14,14 +14,29 @@ key = "replace-with-local-integration-key"
 [security.worker]
 key = "replace-with-local-worker-key"
 
+[security.integration_worker]
+key = ""
+
+[integration_execution]
+enabled = false
+project_ids = []
+all_projects = false
+accept_submissions = true
+claim_enabled = true
+lease_seconds = 60
+runtime_generation = ""
+succeeded_retention_days = 30
+failed_retention_days = 90
+maintenance_batch_size = 100
+restore_review_max_age_seconds = 3600
+worker_presence_ttl_seconds = 120
+
 [data.db.user]
 driver = "mysql"
 dsn = "mysql+asyncmy://root:password@127.0.0.1:3306/testing-agent-python?charset=utf8mb4"
 
 [storage]
 
-[integrations.zentao_service]
-base_url = "http://127.0.0.1:8010"
 
 [code_overview]
 # 迭代代码概览缓存窗口(秒),默认 300(5 分钟)

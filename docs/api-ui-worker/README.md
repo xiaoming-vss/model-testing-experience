@@ -1,5 +1,7 @@
 # API/UI Worker（api-ui-worker）
 
+开发与审查先阅读[通用后端规则](../agents/backend-development.md)和[API/UI Worker 开发规则](development-rules.md)，按变更类型验证调度、协议、浏览器与文件产物。
+
 在单进程内执行 API 与 UI 两类自动化任务：领取控制面派发的任务，用 Playwright 或 HTTP 执行用例，将截图与 Trace ZIP 通过短期签名直传私有 S3，向平台回传稳定文件引用。
 
 ## 运行时与依赖
@@ -50,7 +52,7 @@ mode = "poll"                 # poll 或 once
 uv sync --locked --extra dev                      # 安装依赖
 uv run playwright install chromium                # 安装浏览器（Linux 首次可加 --with-deps）
 uv run mtx-api-ui-worker                          # 启动
-uv run --extra dev pytest                         # 测试（34 项）
+uv run --extra dev pytest                         # 测试
 uv run --extra dev ruff check .                   # Lint
 ```
 
@@ -62,6 +64,10 @@ Worker 不再监听文件下载端口，9010 截图服务已移除。截图和 T
 
 
 ## 与平台的交互
+
+每个 Worker 同时只领取并执行一个任务。UI 和 API 队列交替优先检查；优先队列为空时立即检查另一队列，因此持续 UI 积压不会阻止 API 任务领取。多个 Worker 可分别领取任务以增加执行容量。
+
+领取、快照、心跳、完成回传及集合/套件条目回传均在线程中执行同步控制面请求，避免阻塞异步浏览器与 HTTP 执行。日志仅记录任务标识、状态与必要的运行选项；不输出完整快照、步骤输入、运行变量或浏览器上下文配置中的凭据。
 
 反向轮询控制面，请求头固定 `X-Worker-Token`：
 

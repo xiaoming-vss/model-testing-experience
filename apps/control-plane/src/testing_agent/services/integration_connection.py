@@ -72,7 +72,7 @@ class IntegrationConnectionService:
     ) -> IntegrationConnection:
         connection = await self.repository.get(user_id, provider, connection_id, project_id)
         if connection is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         return connection
 
     async def resolve_zentao_access(
@@ -87,7 +87,7 @@ class IntegrationConnectionService:
             return
         project = await self.repository.get_project(project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await require_project_access(self.repository.session, user_id, project)
 
     async def create(
@@ -107,7 +107,7 @@ class IntegrationConnectionService:
             account = str(body.get("account") or "").strip()
             password = str(body.get("password") or "")
             if not name or not base_url or not account or not password.strip():
-                raise ErrBadRequest
+                raise ErrBadRequest()
             auth_result = await self._authenticate_zentao(base_url, account, password)
             secret_json = {"password": self._encrypt_secret(body.get("password", ""))}
             extra_json: dict[str, Any] = {}
@@ -122,7 +122,7 @@ class IntegrationConnectionService:
         elif provider == "mcp":
             token = str(body.get("token") or "")
             if not token.strip():
-                raise ErrBadRequest
+                raise ErrBadRequest()
             secret_json = {"token": self._encrypt_secret(token)}
             extra_json = {}
             auth_type = "mcp_header_token"
@@ -138,7 +138,7 @@ class IntegrationConnectionService:
             base_url = self._normalize_gitlab_base_url(str(body.get("baseUrl") or ""))
             access_token_value = str(body.get("accessToken") or "").strip()
             if not name or not access_token_value:
-                raise ErrBadRequest
+                raise ErrBadRequest()
             await self._validate_gitlab(base_url, access_token_value)
             secret_json = {}
             extra_json = {}
@@ -152,7 +152,7 @@ class IntegrationConnectionService:
             account_value = ""
         else:
             if not str(body.get("apiKey") or "").strip():
-                raise ErrBadRequest
+                raise ErrBadRequest()
             secret_json = {"apiKey": self._encrypt_secret(body.get("apiKey", ""))}
             extra_json = {"modelId": body.get("modelId", "")}
             auth_type = "api_key"
@@ -220,11 +220,11 @@ class IntegrationConnectionService:
             )
         )
         if linked and any(key in body for key in ("name", "baseUrl", "modelId")):
-            raise ErrBadRequest
+            raise ErrBadRequest()
         if provider == "gitlab":
             name = str(body.get("name", connection.name)).strip()
             if not name:
-                raise ErrBadRequest
+                raise ErrBadRequest()
             base_url = self._normalize_gitlab_base_url(
                 str(body.get("baseUrl", connection.base_url))
             )
@@ -232,7 +232,7 @@ class IntegrationConnectionService:
             if "accessToken" in body:
                 access_token = str(body["accessToken"] or "").strip()
                 if not access_token:
-                    raise ErrBadRequest
+                    raise ErrBadRequest()
             else:
                 access_token = self._decrypt_gitlab_token(connection.access_token)
             if credentials_changed:
@@ -253,7 +253,7 @@ class IntegrationConnectionService:
             return dump_connection(connection)
         if provider == "mcp":
             if set(body) != {"token"} or not str(body["token"] or "").strip():
-                raise ErrBadRequest
+                raise ErrBadRequest()
             connection.secret_json = {"token": self._encrypt_secret(str(body["token"]))}
             connection.status = ConnectionStatus.ACTIVE.value
             connection.last_auth_at = datetime.now(UTC)
@@ -264,7 +264,7 @@ class IntegrationConnectionService:
             await self.repository.refresh(connection)
             return dump_connection(connection)
         if "apiKey" in body and not str(body["apiKey"] or "").strip():
-            raise ErrBadRequest
+            raise ErrBadRequest()
         old_base_url = connection.base_url
         old_account = connection.account
         old_password = self._zentao_password(connection) if provider == "zentao" else ""
@@ -351,7 +351,7 @@ class IntegrationConnectionService:
         if body and "accessToken" in body:
             access_token = str(body["accessToken"] or "").strip()
             if not access_token:
-                raise ErrBadRequest
+                raise ErrBadRequest()
         else:
             access_token = self._decrypt_gitlab_token(connection.access_token)
         await self._validate_gitlab(connection.base_url, access_token)
@@ -385,7 +385,7 @@ class IntegrationConnectionService:
     ) -> dict:
         connection = await self.get_active_personal(user_id, "zentao", connection_id, project_id)
         if self.zentao_resource_client is None:
-            raise ErrZentaoRemoteResourceUnavailable
+            raise ErrZentaoRemoteResourceUnavailable()
         result = await self._call_zentao(
             self.zentao_resource_client.list_projects,
             connection,
@@ -539,7 +539,7 @@ class IntegrationConnectionService:
     ) -> dict:
         connection = await self.get_active_personal(user_id, "zentao", connection_id, project_id)
         if self.zentao_resource_client is None:
-            raise ErrZentaoRemoteResourceUnavailable
+            raise ErrZentaoRemoteResourceUnavailable()
         result = await self._call_zentao(
             self.zentao_resource_client.list_project_executions,
             connection,
@@ -583,7 +583,7 @@ class IntegrationConnectionService:
     ) -> dict:
         connection = await self.get_active_personal(user_id, "zentao", connection_id, project_id)
         if self.zentao_resource_client is None:
-            raise ErrZentaoRemoteResourceUnavailable
+            raise ErrZentaoRemoteResourceUnavailable()
         result = await self._call_zentao(
             self.zentao_resource_client.list_execution_testtasks,
             connection,
@@ -626,7 +626,7 @@ class IntegrationConnectionService:
     ) -> dict:
         connection = await self.get_active_personal(user_id, "zentao", connection_id, project_id)
         if self.zentao_resource_client is None:
-            raise ErrZentaoRemoteResourceUnavailable
+            raise ErrZentaoRemoteResourceUnavailable()
         result = await self._call_zentao(
             self.zentao_resource_client.list_execution_stories,
             connection,
@@ -668,7 +668,7 @@ class IntegrationConnectionService:
     ) -> dict:
         connection = await self.get_active_personal(user_id, "zentao", connection_id, project_id)
         if self.zentao_resource_client is None:
-            raise ErrZentaoRemoteResourceUnavailable
+            raise ErrZentaoRemoteResourceUnavailable()
         result = await self._call_zentao(
             self.zentao_resource_client.list_execution_cases,
             connection,
@@ -704,7 +704,7 @@ class IntegrationConnectionService:
 
     async def _call_zentao(self, method: Any, *args: Any) -> dict[str, Any]:
         if self.zentao_resource_client is None:
-            raise ErrZentaoRemoteResourceUnavailable
+            raise ErrZentaoRemoteResourceUnavailable()
         if args and isinstance(args[0], IntegrationConnection):
             await self._ensure_zentao_token(args[0])
         try:
@@ -773,7 +773,7 @@ class IntegrationConnectionService:
         try:
             return normalize_gitlab_base_url(base_url)
         except ValueError as exc:
-            raise ErrBadRequest from exc
+            raise ErrBadRequest() from exc
 
     def _zentao_password(self, connection: IntegrationConnection) -> str:
         secret = connection.secret_json or {}
@@ -781,7 +781,7 @@ class IntegrationConnectionService:
         if password.strip():
             password = self._decrypt_secret(password)
         if not password.strip():
-            raise ErrBadRequest
+            raise ErrBadRequest()
         return password
 
     def _apply_zentao_auth_success(
@@ -805,7 +805,7 @@ class IntegrationConnectionService:
         await self.ensure_project_access(user_id, project_id)
         connection = await self.get_owned(user_id, provider, connection_id, project_id)
         if connection.status != ConnectionStatus.ACTIVE.value:
-            raise ErrIntegrationConnectionAuthFailed
+            raise ErrIntegrationConnectionAuthFailed()
         return connection
 
     async def resolve_personal_connection(
@@ -823,7 +823,7 @@ class IntegrationConnectionService:
                 user_id, provider, connection_id, project_id
             )
             if normalize_instance_url(connection.base_url) != instance:
-                raise ErrResourceBindingInvalid
+                raise ErrResourceBindingInvalid()
             return connection
         candidates = await self.repository.list(user_id, provider)
         matching = [

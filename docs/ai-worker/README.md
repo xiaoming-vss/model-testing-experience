@@ -1,5 +1,7 @@
 # AI Worker（ai-worker）
 
+开发与审查先阅读[通用后端规则](../agents/backend-development.md)和[AI Worker 开发规则](development-rules.md)，保留本项目的运行模型、产物契约和验证入口。
+
 接收平台派发的 AI 测试任务，调用 LLM 生成测试产物并回传。领取需求分析、功能/API/UI 用例生成、代码风险分析、测试报告生成六类任务。
 
 领域术语与任务类型见 [CONTEXT](CONTEXT.md)。任务执行遵循两条设计约定：技能包由部署侧预置，worker 不下载技能；轮询无锁并行，收到 SIGTERM 立即退出。
@@ -64,3 +66,4 @@ Worker 每次执行前按任务类型／阶段从控制面获取默认技能清�
 平台初始化与更新方式见 [Skill 库维护](../control-plane/skills.md)。缺少默认技能或下载失败时任务报错，不回退旧目录。目前初始源中不含 `code-risk-analysis`，对应任务需补齐后使用。
 
 - [S3 任务文件读取](file-storage.md)
+- [需求分析两阶段与 JSON 产物设计](requirement-analysis-two-stage-design.md)（实施前设计）

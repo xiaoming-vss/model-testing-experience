@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/features/auth/store/auth.store'
+import { fetchSignedFile, fileAuthorization, retryFileTransfer } from './fileTransfer'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
@@ -59,7 +60,8 @@ function normalizeResponseData<T>(data: T): T {
     // its `items` field, but never point the field back at the array itself.
     // A self-reference makes React Query's structural-sharing comparison recurse
     // forever whenever a list is refetched after a successful mutation.
-    items.items = items.slice()
+    Object.assign(items, source)
+    items.items = source.items.slice()
     items.total = typeof source.total === 'number' ? source.total : source.items.length
     return items as T
   }
@@ -136,33 +138,40 @@ export async function requestBlob(path: string, options: RequestInit = {}, requi
     headers.set('Authorization', `Bearer ${token}`)
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers,
-  })
+  async function authorizedResponse() {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      headers,
+    })
 
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => ({
-      code: response.status,
-      message: response.statusText,
-      data: {},
-    }))) as ApiEnvelope<unknown>
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({
+        code: response.status,
+        message: response.statusText,
+        data: {},
+      }))) as ApiEnvelope<unknown>
 
-    if (payload.code === 1001 || response.status === 401) {
-      useAuthStore.getState().logout()
+      if (payload.code === 1001 || response.status === 401) {
+        useAuthStore.getState().logout()
+      }
+      if (response.status === 403 && !/^\/v1\/projects\/[^/]+$/.test(path)) {
+        window.dispatchEvent(new Event('project-permission-denied'))
+      }
+      throw new ApiError(payload.message || '请求失败', payload.code, response.status, payload.data)
     }
-    if (response.status === 403 && !/^\/v1\/projects\/[^/]+$/.test(path)) {
-      window.dispatchEvent(new Event('project-permission-denied'))
-    }
-    throw new ApiError(payload.message || '请求失败', payload.code, response.status, payload.data)
+    return response
   }
+  const response = await retryFileTransfer(() => fileAuthorization(authorizedResponse))
 
   if (response.headers.get('Content-Type')?.includes('application/json')) {
     const ticket = await response.json() as { url: string; filename: string }
     // S3 requests intentionally omit platform Authorization and cookies.
-    const stored = await fetch(ticket.url, { credentials: 'omit' })
-    if (!stored.ok) throw new Error('文件下载失败，请重试')
-    return { blob: await stored.blob(), filename: ticket.filename }
+    const stored = await fetchSignedFile(async () => {
+      const fresh = await authorizedResponse()
+      if (!fresh.headers.get('Content-Type')?.includes('application/json')) throw new Error('未获取到 S3 下载授权')
+      return fresh.json()
+    }, ticket)
+    return { blob: await stored.response.blob(), filename: stored.ticket.filename }
   }
 
   if (requireSignedFile) throw new Error('未获取到 S3 下载授权，请重试')

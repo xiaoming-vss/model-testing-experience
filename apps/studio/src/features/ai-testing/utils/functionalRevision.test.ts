@@ -15,6 +15,14 @@ describe('优化问题模板', () => {
     expect(getRevisionQuestions({ openQuestions: [null, { question: ' ' }, { question: ' 哪个入口？ ' }] })).toEqual([{ id: 'Q03', question: '哪个入口？' }])
     expect(getRevisionQuestions('invalid')).toEqual([])
   })
+  it('两阶段需求产物保留问题编号并排除历史已解决项', () => {
+    expect(getRevisionQuestions(JSON.stringify({ questions: [
+      { id: 'Q07', question: ' 结果如何展示？ ', status: 'open' },
+      { id: 'Q08', question: '已确认的入口？', status: 'resolved' },
+    ] }))).toEqual([{ id: 'Q07', question: '结果如何展示？' }])
+    expect(buildRevisionTemplate([{ id: 'Q07', question: '结果如何展示？' }], '材料提取结果', '答复')).toContain('答复：[请填写已确认的信息]')
+    expect(getRevisionQuestions({ questions: [], openQuestions: questions })).toEqual([])
+  })
   it('预填全部问题和答案占位符，不推测答案', () => {
     const template = buildRevisionTemplate(getRevisionQuestions({ openQuestions: questions }), '测试点')
     expect(template).toContain('优化当前测试点')

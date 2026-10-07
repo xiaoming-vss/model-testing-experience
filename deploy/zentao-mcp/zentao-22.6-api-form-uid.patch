@@ -1,0 +1,12 @@
+--- framework/api/router.class.php
++++ framework/api/router.class.php
+@@ -1445,7 +1445,8 @@
+         $this->normalizeBatchPostData();
+ 
+         /* Avoid empty post body. */
+-        $_POST['uid'] = '1';
++        /* REST requests must not reuse another object's editor image album. */
++        $_POST['uid'] = 'api-' . bin2hex(random_bytes(16));
+ 
+         /*
+          * API 没有真实密码，只有 user/my 等密码相关逻辑需要 verifyPassword。

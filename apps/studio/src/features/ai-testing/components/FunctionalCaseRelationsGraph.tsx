@@ -15,6 +15,7 @@ import {
   type RelationsOrientation,
 } from '../utils/caseRelationsGraph'
 import { useRelationsEdgePaths } from '../hooks/useRelationsEdgePaths'
+import { HierarchicalCaseRelationsGraph } from './HierarchicalCaseRelationsGraph'
 import '@xyflow/react/dist/style.css'
 import './FunctionalCaseRelationsGraph.css'
 
@@ -412,10 +413,12 @@ export const FunctionalCaseRelationsGraph = forwardRef<FunctionalCaseRelationsGr
   renderCaseDetails?: (caseId: string) => ReactNode
   caseBadges?: Record<string, CaseBadge>
   panelWidth?: number
-}>(function FunctionalCaseRelationsGraph({ content, casesContent, orientation, onSelectionChange, renderCaseDetails, caseBadges, panelWidth }, ref) {
+  presentation?: 'fishbone' | 'hierarchy'
+}>(function FunctionalCaseRelationsGraph({ content, casesContent, orientation, onSelectionChange, renderCaseDetails, caseBadges, panelWidth, presentation = 'fishbone' }, ref) {
   return (
     <ReactFlowProvider>
-      <RelationsGraphInner
+      {presentation === 'hierarchy' ? <HierarchicalCaseRelationsGraph content={content} casesContent={casesContent} onSelectionChange={onSelectionChange} handleRef={ref}
+        renderCaseDetails={renderCaseDetails} caseBadges={caseBadges} panelWidth={panelWidth} /> : <RelationsGraphInner
         content={content}
         casesContent={casesContent}
         orientation={orientation}
@@ -424,7 +427,7 @@ export const FunctionalCaseRelationsGraph = forwardRef<FunctionalCaseRelationsGr
         renderCaseDetails={renderCaseDetails}
         caseBadges={caseBadges}
         panelWidth={panelWidth}
-      />
+      />}
     </ReactFlowProvider>
   )
 })

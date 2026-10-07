@@ -197,9 +197,11 @@ def run_worker(
             logger=resolved_logger,
             max_iterations=max_iterations,
         )
+    except KeyboardInterrupt:
+        resolved_logger.info("Worker 收到停止信号，停止领取新任务并等待在途任务完成")
+        return 0
     finally:
-        # 循环正常退出(run_once / 测试轮数上限)时排空在途任务;
-        # SIGTERM 直接终止进程,不会走到这里(ADR 0003)。
+        # 正常退出及第一次 Ctrl+C 都排空在途任务；SIGTERM 直接终止进程。
         task_pool.shutdown(wait=True)
 
 

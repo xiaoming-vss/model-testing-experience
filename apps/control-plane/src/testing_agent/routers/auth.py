@@ -6,6 +6,7 @@ from testing_agent.handlers.auth import (
     delete_user,
     get_profile,
     login,
+    logout,
     register,
     update_profile,
 )
@@ -16,6 +17,7 @@ router = APIRouter()
 
 router.post("/register", response_model=ApiResponse[UserResponse])(register)
 router.post("/login", response_model=ApiResponse[LoginResponse])(login)
+router.post("/logout", response_model=ApiResponse[EmptyData])(logout)
 router.get("/user", response_model=ApiResponse[UserResponse])(get_profile)
 router.put("/user", response_model=ApiResponse[UserResponse])(update_profile)
 router.delete("/user", response_model=ApiResponse[EmptyData])(delete_user)

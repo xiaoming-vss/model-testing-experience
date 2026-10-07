@@ -4,13 +4,16 @@
 public_host = "127.0.0.1"
 # Docker 发布端口的监听地址；需要远程访问时改为 0.0.0.0。
 bind_host = "127.0.0.1"
-# 本地开发时后端、禅道服务的主机；内置 MySQL 的本地访问也使用此地址。
+# 本地开发时后端的主机；内置 MySQL 的本地访问也使用此地址。
 local_host = "127.0.0.1"
 studio_port = 8081
 control_plane_port = 19000
-zentao_port = 8010
 mysql_port = 13306
 worker_token = "GENERATE"
+# 独立集成 Worker 专属认证；不得与 AI/API/UI Worker 令牌相同。
+integration_worker_token = "GENERATE"
+# 多个控制面实例共享该代次；隔离恢复时生成新值并更换集成 Worker 令牌。
+integration_runtime_generation = "GENERATE"
 jwt_key = "GENERATE"
 integration_key = "GENERATE"
 
@@ -19,6 +22,11 @@ integration_key = "GENERATE"
 # 示例：mysql+asyncmy://用户名:密码@127.0.0.1:3306/数据库名?charset=utf8mb4
 # 留空则维持内置 MySQL 模式。密码中的 @、#、/、% 等字符需要 URL 编码。
 url = ""
+
+# 内置 MySQL 慢查询观测；日志写入 mysql-data 卷中的 slow-queries.log。
+# 外部 MySQL 由数据库管理员配置同等选项。
+slow_query_log = true
+long_query_time = 0.5
 
 # 仅内置 MySQL 模式使用：
 name = "testing_agent"
@@ -29,6 +37,20 @@ root_password = "GENERATE"
 # 以下配置覆盖各项目的示例配置；地址、令牌和存储路径由 shared 统一生成。
 [control_plane.code_overview]
 cache_ttl_seconds = 300
+
+[control_plane.integration_execution]
+# 默认关闭；完成真实链路和项目验收后，按项目灰度启用。
+enabled = false
+project_ids = []
+all_projects = false
+accept_submissions = true
+claim_enabled = true
+lease_seconds = 60
+succeeded_retention_days = 30
+failed_retention_days = 90
+maintenance_batch_size = 100
+restore_review_max_age_seconds = 3600
+worker_presence_ttl_seconds = 120
 
 [ai_worker.worker]
 max_concurrent_tasks = 2
@@ -43,9 +65,10 @@ headless = true
 trace_enabled = true
 screenshot_on_failure = true
 
-[zentao.zentao]
-timeout_seconds = 15
-verify_ssl = true
+[integration_worker.worker]
+poll_interval_seconds = 2
+heartbeat_interval_seconds = 10
+shutdown_grace_seconds = 210
 
 # S3 私有桶；签名地址必须同时可被浏览器和 Worker 访问。
 [control_plane.storage.s3]

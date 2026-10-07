@@ -6,6 +6,8 @@
  * --srf-* owns the newer list/detail surfaces; migrate consumers by role, not by hex.
  */
 :root {
+  --app-scrollbar-size: 8px;
+  --app-scrollbar-radius: 4px;
   --app-shell-bg: #faf9ff;
   --app-shell-divider: #d8d9e5;
   --app-shell-text-muted: #727786;

@@ -20,7 +20,7 @@ class ApiEnvironmentService:
     ) -> None:
         project = await self.repository.get_project(project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await require_project_access(self.repository.session, user_id, project, action)
 
     async def get_accessible_entity(
@@ -28,7 +28,7 @@ class ApiEnvironmentService:
     ) -> ApiEnvironment:
         environment = await self.repository.get_environment(environment_id)
         if environment is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await self.ensure_project_access(user_id, environment.project_id, action=action)
         return environment
 

@@ -12,6 +12,7 @@ class ResourceBindingRequest(BaseModel):
     provider: Literal["zentao", "gitlab"]
     # Choose a personal connection; instanceUrl can select an unambiguous personal connection.
     connection_id: str = Field(default="")
+    mcp_service_id: str = Field(default="", max_length=64)
     remote_resource_type: str = Field(default="")
     remote_resource_id: str = Field()
     remote_parent_id: str = Field(default="")
@@ -23,9 +24,11 @@ class ResourceBindingRequest(BaseModel):
 
 class UpdateResourceBindingRequest(BaseModel):
     remote_resource_id: str | None = None
+    confirm_instance_switch: bool = False
     """所有者使用本人同实例连接重新验证关联，不共享或转移凭据。"""
 
-    connection_id: str = Field()
+    connection_id: str = Field(default="")
+    mcp_service_id: str = Field(default="", max_length=64)
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
@@ -35,8 +38,19 @@ class UpdateRequirementBindingRequest(BaseModel):
     """需求级 GitLab 仓库绑定更新:分支与基线分支(可选,未传字段保持不变)。"""
 
     connection_id: str = ""
+    mcp_service_id: str = Field(default="", max_length=64)
     branch: str | None = Field(default=None)
     baseline_branch: str | None = Field(default=None)
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class ZentaoBindingSummaryResponse(BaseModel):
+    binding_id: str
+    provider: Literal["zentao"]
+    remote_resource_id: str
+    remote_name_snapshot: str
+    status: Literal["active"]
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
@@ -46,6 +60,7 @@ class ResourceBindingResponse(BaseModel):
     binding_id: str = Field()
     provider: str
     connection_id: str = Field()
+    mcp_service_id: str = ""
     local_resource_type: str = Field()
     local_resource_id: str = Field()
     remote_resource_type: str = Field()

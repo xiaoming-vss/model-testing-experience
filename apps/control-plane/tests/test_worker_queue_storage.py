@@ -1,6 +1,8 @@
 """Queue dispatch, lease and compatibility tests using real SQLAlchemy transactions."""
 
+import json
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 from sqlalchemy import Boolean, Integer, select
@@ -298,10 +300,24 @@ async def test_revision_service_preserves_model_without_queue_object_reference(
     db, kind, stage, field, method
 ):
     from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
+    from testing_agent.models.requirement import Requirement
+    from testing_agent.models.sprint import Sprint
     from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
     from testing_agent.services.ai_execution import persist
     from testing_agent.services.ai_generate_task import AiGenerateTaskService
 
+    db.add(
+        Sprint(
+            sprint_id="s",
+            project_id="p",
+            name="fixture",
+            start_time=datetime(2026, 1, 1, tzinfo=UTC),
+            end_time=datetime(2026, 2, 1, tzinfo=UTC),
+        )
+    )
+    db.flush()
+    db.add(Requirement(requirement_id="r", sprint_id="s", name="fixture"))
+    db.flush()
     db.add(
         AiGenerateTask(
             task_id="task",
@@ -338,12 +354,23 @@ async def test_revision_service_preserves_model_without_queue_object_reference(
     db.add_all([run, first])
     persist(db)
     db.commit()
-    event(db, run, first, status="waiting_review", stage=stage, config={field: "original"})
+    original, draft = "original", "draft"
+    if kind == "requirement_analysis":
+        artifact = json.loads(
+            (
+                Path(__file__).parent
+                / "fixtures/requirement_artifacts/document-extraction.example.json"
+            ).read_text()
+        )
+        original = json.dumps(artifact)
+        artifact["documentTitle"] = "Revised requirement"
+        draft = json.dumps(artifact)
+    event(db, run, first, status="waiting_review", stage=stage, config={field: original})
     db.expunge_all()
     repo = AiGenerateTaskRepository(AsyncSessionAdapter(db))
     await getattr(AiGenerateTaskService(repo), method)(
         "run",
-        {"stage": stage, "revisionInstruction": "improve", "configJson": {field: "draft"}},
+        {"stage": stage, "revisionInstruction": "improve", "configJson": {field: draft}},
         "u",
     )
     db.expunge_all()

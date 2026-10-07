@@ -1,7 +1,7 @@
+import { downloadStoredFile } from '@/shared/api/files'
 import { InboxOutlined } from '@ant-design/icons'
 import { Upload } from 'antd'
 import type { BugAttachment } from '../types'
-import { api } from '@/services/api'
 import { saveBlob } from '@/shared/utils/download'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
@@ -35,10 +35,8 @@ export function BugAttachmentUploader({
         showDownloadIcon: (file) => existing.some((item) => item.fileId === file.uid) }}
       onDownload={async (file) => {
         try {
-          const ticket = await api.downloadAttachment(file.uid)
-          const response = await fetch(ticket.url, { credentials: 'omit' })
-          if (!response.ok) throw new Error('附件下载失败，请重试')
-          saveBlob(await response.blob(), file.name)
+          const { blob } = await downloadStoredFile(file.uid)
+          saveBlob(blob, file.name)
         } catch (error) { message.error(getErrorMessage(error)) }
       }}
       beforeUpload={(file, fileList) => {

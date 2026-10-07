@@ -39,24 +39,24 @@ def _canonical_archive_path(name: str) -> str:
         or windows_path.is_absolute()
         or bool(windows_path.drive)
     ):
-        raise ErrBadRequest
+        raise ErrBadRequest()
     parts = PurePosixPath(normalized).parts
     if any(part == ".." for part in parts):
-        raise ErrBadRequest
+        raise ErrBadRequest()
     canonical = posixpath.normpath(normalized).rstrip("/")
     if canonical in {"", "."}:
-        raise ErrBadRequest
+        raise ErrBadRequest()
     return canonical.casefold()
 
 
 def validate_source_archive(filename: str, content: bytes | BinaryIO) -> None:
     if Path(filename).suffix.casefold() != ".zip":
-        raise ErrBadRequest
+        raise ErrBadRequest()
     stream = io.BytesIO(content) if isinstance(content, (bytes, bytearray)) else content
     size = stream.seek(0, 2)
     stream.seek(0)
     if size > MAX_SOURCE_ARCHIVE_BYTES:
-        raise ErrBadRequest
+        raise ErrBadRequest()
     try:
         with zipfile.ZipFile(stream) as archive:
             paths: set[str] = set()
@@ -65,11 +65,11 @@ def validate_source_archive(filename: str, content: bytes | BinaryIO) -> None:
             for item in archive.infolist():
                 canonical_path = _canonical_archive_path(item.filename)
                 if canonical_path in paths:
-                    raise ErrBadRequest
+                    raise ErrBadRequest()
                 paths.add(canonical_path)
                 unix_mode = item.external_attr >> 16
                 if stat.S_ISLNK(unix_mode):
-                    raise ErrBadRequest
+                    raise ErrBadRequest()
                 if item.is_dir():
                     continue
                 file_count += 1
@@ -78,12 +78,12 @@ def validate_source_archive(filename: str, content: bytes | BinaryIO) -> None:
                     file_count > MAX_SOURCE_ARCHIVE_FILES
                     or total_size > MAX_SOURCE_ARCHIVE_UNCOMPRESSED_BYTES
                 ):
-                    raise ErrBadRequest
+                    raise ErrBadRequest()
                 with archive.open(item) as member:
                     while member.read(1024 * 1024):
                         pass
     except (zipfile.BadZipFile, zipfile.LargeZipFile, OSError, RuntimeError) as exc:
-        raise ErrBadRequest from exc
+        raise ErrBadRequest() from exc
 
 
 class SourceArchiveManager:
@@ -105,7 +105,7 @@ class SourceArchiveManager:
     ) -> dict[str, Any]:
         task = await self.owned_task(user_id, task_id, "ui", action="write")
         if self.files is None:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         source_repository = self.source_archive_repository
         try:
             row = await self.files.attach(

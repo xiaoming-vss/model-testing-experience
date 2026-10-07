@@ -45,6 +45,12 @@ class TaskQueryRepository:
             return SimpleNamespace(project_id=project_id, user_id="user-1")
         return None
 
+    async def get_sprint(self, sprint_id):
+        return SimpleNamespace(sprint_id=sprint_id, project_id=self.task.project_id)
+
+    async def get_requirement(self, requirement_id):
+        return SimpleNamespace(requirement_id=requirement_id, sprint_id=self.task.sprint_id)
+
     async def get_task(self, task_id):
         return self.task if task_id == self.task.task_id else None
 

@@ -17,7 +17,7 @@ async def authorized_skill(task_id, name, worker_id, service):
         or lease is None
         or lease.replace(tzinfo=UTC) <= datetime.now(UTC)
     ):
-        raise ErrForbidden
+        raise ErrForbidden()
     skill = await service.repository.session.scalar(
         select(ProjectSkillSpace).where(
             ProjectSkillSpace.is_default.is_(True), ProjectSkillSpace.filename == name

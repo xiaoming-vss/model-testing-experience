@@ -9,7 +9,7 @@ import { listItems } from '@/shared/api/request'
 import { getErrorMessage } from '@/utils/format'
 import type { ProjectMember } from '../types'
 
-const roles = [{ value: 'member', label: '普通成员' }, { value: 'viewer', label: '只读成员' }]
+const roles = [{ value: 'member', label: '普通成员' }, { value: 'viewer', label: '只读成员' }, { value: 'developer', label: '开发（仅 Bug）' }]
 
 export function ProjectMembersModal({ projectId, onClose }: { projectId: string; onClose: () => void }) {
   const { project, can } = useProjectAccess(projectId)

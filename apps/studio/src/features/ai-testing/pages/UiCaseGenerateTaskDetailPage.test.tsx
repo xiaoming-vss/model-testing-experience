@@ -338,7 +338,7 @@ describe('UI 用例生成任务详情', () => {
     expect(queryVisibleMenuItems('导入正式 UI 套件')).toHaveLength(0)
     const cachedRuns = queryClient.getQueryData<{ items: typeof run[]; total: number }>([
       'uiCaseGenerateTaskRuns',
-      'ui-task-1',
+      'ui-task-1', 1, 20,
     ])
     expect(cachedRuns?.items).not.toBe(cachedRuns)
     expect(cachedRuns?.items[0]).toMatchObject({ runId: 'ui-run-1', importStatus: 'imported' })

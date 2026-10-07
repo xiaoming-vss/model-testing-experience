@@ -96,16 +96,16 @@ class ApiCaseService:
     ) -> ApiCollection:
         collection = await self.repository.get_collection(collection_id)
         if collection is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         requirement = await self.repository.get_requirement(collection.requirement_id)
         if requirement is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         sprint = await self.repository.get_sprint(requirement.sprint_id)
         if sprint is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         project = await self.repository.get_project(sprint.project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await require_project_access(self.repository.session, user_id, project, action)
         return collection
 
@@ -114,19 +114,19 @@ class ApiCaseService:
     ) -> ApiCaseContext:
         api_case = await self.repository.get_case(case_id)
         if api_case is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         collection = await self.repository.get_collection(api_case.collection_id)
         if collection is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         requirement = await self.repository.get_requirement(collection.requirement_id)
         if requirement is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         sprint = await self.repository.get_sprint(requirement.sprint_id)
         if sprint is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         project = await self.repository.get_project(sprint.project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await require_project_access(self.repository.session, user_id, project, action)
         return ApiCaseContext(api_case, collection, requirement, sprint, project)
 
@@ -134,7 +134,7 @@ class ApiCaseService:
         await self.get_accessible_collection(user_id, collection_id, action="write")
         exists = await self.repository.get_case_by_collection_and_name(collection_id, body.name)
         if exists is not None:
-            raise ErrApiCaseNameAlreadyUse
+            raise ErrApiCaseNameAlreadyUse()
         api_case = ApiCase(
             case_id=new_id(),
             collection_id=collection_id,
@@ -162,7 +162,7 @@ class ApiCaseService:
                 context.api_case.collection_id, name, case_id
             )
             if exists is not None:
-                raise ErrApiCaseNameAlreadyUse
+                raise ErrApiCaseNameAlreadyUse()
         apply_api_case_patch(context.api_case, body)
         await self.repository.commit()
         await self.repository.refresh(context.api_case)
@@ -178,9 +178,9 @@ class ApiCaseService:
         context = await self.get_accessible_context(user_id, case_id, action="execute")
         environment = await self.repository.get_environment(body.environment_id)
         if environment is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         if environment.project_id != context.project.project_id:
-            raise ErrApiCaseRunEnvironmentMismatch
+            raise ErrApiCaseRunEnvironmentMismatch()
         env_vars = await authorized_environment_vars(
             self.repository.session, user_id, environment.environment_id
         )
@@ -220,6 +220,6 @@ class ApiCaseService:
     async def get_run(self, user_id: str, run_id: str) -> dict:
         run = await self.repository.get_run(run_id)
         if run is None:
-            raise ErrApiCaseRunNotFound
+            raise ErrApiCaseRunNotFound()
         await authorize_run(self.repository, user_id, run)
         return dump(ApiCaseRunResponse, run)

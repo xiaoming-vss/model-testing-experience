@@ -19,6 +19,7 @@ from testing_agent.handlers.requirement_analysis_run import (
     update_requirement_analysis_task,
 )
 from testing_agent.schemas.ai_generate_task import (
+    AiGenerateRunHistoryResponse,
     AiGenerateTaskResponse,
     AiGenerateTaskRunResponse,
 )
@@ -53,7 +54,7 @@ router.post(
 )(run_requirement_analysis_task)
 router.get(
     "/requirement-analysis-tasks/{task_id}/runs",
-    response_model=ApiResponse[ListResponse[AiGenerateTaskRunResponse]],
+    response_model=ApiResponse[AiGenerateRunHistoryResponse],
 )(list_requirement_analysis_task_runs)
 router.get(
     "/requirement-analysis-runs/{run_id}",

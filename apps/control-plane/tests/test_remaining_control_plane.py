@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -7,6 +9,7 @@ from fastapi.testclient import TestClient
 from testing_agent.api.deps import get_ai_generate_task_service, get_current_user_id
 from testing_agent.app import create_app
 from testing_agent.core.errors import (
+    AppError,
     ErrApiCollectionImportInvalid,
     ErrBadRequest,
     ErrRemoteResourceAlreadyBound,
@@ -34,6 +37,24 @@ from testing_agent.services.integration_connection import IntegrationConnectionS
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.resource_binding import ResourceBindingService
 from testing_agent.services.zentao_auth import ZentaoAuthProvider
+
+
+class TaskScopeFixture(AuthorizedRepositoryFixture):
+    async def get_sprint(self, sprint_id):
+        assert sprint_id == "sprint-1"
+        return SimpleNamespace(sprint_id=sprint_id, project_id="project-1")
+
+    async def get_requirement(self, requirement_id):
+        assert requirement_id == "requirement-1"
+        return SimpleNamespace(requirement_id=requirement_id, sprint_id="sprint-1")
+
+
+class FakeZentaoAccess:
+    async def resolve(self, user_id, project_id, expected_instance=""):
+        assert (user_id, project_id) == ("user-1", "project-1")
+        return await FakeIntegrationConnectionService().get_active_personal(
+            user_id, "zentao", "conn-1", project_id
+        )
 
 
 class FakeUpload:
@@ -73,6 +94,8 @@ class FakeResourceBindingRepository:
         connection_id,
         remote_resource_type,
         remote_resource_id,
+        *,
+        instance="",
     ):
         assert provider == "zentao"
         assert connection_id == "conn-1"
@@ -324,6 +347,17 @@ class FakeZentaoAuthHttpClient:
         )
 
 
+def requirement_artifact(name):
+    path = Path(__file__).parent / "fixtures/requirement_artifacts" / (name + ".example.json")
+    return json.loads(path.read_text())
+
+
+def requirement_understanding(title="需求理解记录"):
+    value = requirement_artifact("requirement-understanding")
+    value["title"] = title
+    return json.dumps(value, ensure_ascii=False)
+
+
 @pytest.mark.asyncio
 async def test_zentao_auth_provider_disables_ssl_verification(monkeypatch):
     monkeypatch.setattr(
@@ -436,6 +470,7 @@ async def test_project_zentao_binding_uses_go_request_and_updates_project_summar
         repository,
         FakeIntegrationConnectionService(),
         zentao_client,
+        zentao_access=FakeZentaoAccess(),
     )
 
     result = await service.create(
@@ -470,6 +505,7 @@ async def test_project_zentao_binding_rejects_existing_active_local_binding():
         repository,
         FakeIntegrationConnectionService(),
         FakeZentaoResourceClient(),
+        zentao_access=FakeZentaoAccess(),
     )
 
     with pytest.raises(type(ErrResourceBindingAlreadyExists)) as exc_info:
@@ -495,6 +531,7 @@ async def test_project_zentao_binding_rejects_existing_active_remote_binding():
         repository,
         FakeIntegrationConnectionService(),
         FakeZentaoResourceClient(),
+        zentao_access=FakeZentaoAccess(),
     )
 
     with pytest.raises(type(ErrRemoteResourceAlreadyBound)) as exc_info:
@@ -519,6 +556,7 @@ async def test_project_zentao_binding_rejects_deleted_remote_project():
         repository,
         FakeIntegrationConnectionService(),
         FakeZentaoResourceClient(deleted=True),
+        zentao_access=FakeZentaoAccess(),
     )
 
     with pytest.raises(type(ErrZentaoRemoteResourceUnavailable)) as exc_info:
@@ -1142,7 +1180,7 @@ async def test_api_generate_run_snapshot_uses_task_source():
 
 @pytest.mark.asyncio
 async def test_ai_generate_run_uses_go_connection_id_for_worker_task(monkeypatch):
-    class FakeRepository(AuthorizedRepositoryFixture):
+    class FakeRepository(TaskScopeFixture):
         def __init__(self):
             self.rows = []
 
@@ -1183,7 +1221,7 @@ async def test_ai_generate_run_uses_go_connection_id_for_worker_task(monkeypatch
 
 @pytest.mark.asyncio
 async def test_function_checkpoint_run_starts_at_requirement_analysis(monkeypatch):
-    class FakeRepository:
+    class FakeRepository(TaskScopeFixture):
         session = AuthorizationDatabase()
 
         def __init__(self):
@@ -1215,6 +1253,8 @@ async def test_function_checkpoint_run_starts_at_requirement_analysis(monkeypatc
         async def get_requirement(self, requirement_id):
             assert requirement_id == "requirement-1"
             return SimpleNamespace(
+                requirement_id="requirement-1",
+                sprint_id="sprint-1",
                 document_type="text",
                 document_content="requirement source",
                 document_storage_path="",
@@ -1248,7 +1288,7 @@ async def test_function_checkpoint_run_starts_at_requirement_analysis(monkeypatc
 
 @pytest.mark.asyncio
 async def test_ai_generate_run_requires_go_connection_id():
-    class FakeRepository(AuthorizedRepositoryFixture):
+    class FakeRepository(TaskScopeFixture):
         async def get_task(self, task_id):
             return SimpleNamespace(
                 task_id="task-1",
@@ -1490,8 +1530,11 @@ async def test_requirement_analysis_run_snapshot_uses_requirement_document():
 
 
 @pytest.mark.asyncio
-async def test_requirement_analysis_run_enqueues_requirement_analysis_worker_task(monkeypatch):
-    class FakeRepository(AuthorizedRepositoryFixture):
+@pytest.mark.parametrize("document_file_id", ["file-1", ""])
+async def test_requirement_analysis_run_enqueues_requirement_analysis_worker_task(
+    monkeypatch, document_file_id
+):
+    class FakeRepository(TaskScopeFixture):
         def __init__(self):
             self.rows = []
 
@@ -1513,8 +1556,11 @@ async def test_requirement_analysis_run_enqueues_requirement_analysis_worker_tas
         async def get_requirement(self, requirement_id):
             assert requirement_id == "requirement-1"
             return SimpleNamespace(
+                requirement_id="requirement-1",
+                sprint_id="sprint-1",
                 document_type="text",
                 document_content="saved requirement text",
+                document_file_id=document_file_id,
                 document_download_url="/v1/requirements/requirement-1/download",
             )
 
@@ -1532,6 +1578,14 @@ async def test_requirement_analysis_run_enqueues_requirement_analysis_worker_tas
     repository = FakeRepository()
     service = ai_tasks.AiGenerateTaskService(repository)
 
+    if not document_file_id:
+        with pytest.raises(AppError, match="需求原文件未存储到 S3，请重新上传"):
+            await service.run(
+                "requirement_analysis", "task-1", {"connectionId": "conn-1"}, "user-1"
+            )
+        assert repository.rows == []
+        return
+
     await service.run("requirement_analysis", "task-1", {"connectionId": "conn-1"}, "user-1")
 
     worker_task = next(row for row in repository.rows if hasattr(row, "llm_connection_id"))
@@ -1542,7 +1596,8 @@ async def test_requirement_analysis_run_enqueues_requirement_analysis_worker_tas
     assert run.snapshot_json["documentDownloadUrl"] == (
         "/internal/ai-worker/tasks/worker-task-1/requirement-document"
     )
-    assert run.snapshot_json["sourceContent"] == "saved requirement text"
+    assert run.snapshot_json["workflowVersion"] == 2
+    assert run.snapshot_json["sourceContent"] == run.snapshot_json["documentDownloadUrl"]
 
 
 @pytest.mark.asyncio
@@ -1608,7 +1663,7 @@ async def test_requirement_analysis_task_create_persists_task_without_running(mo
 
 @pytest.mark.asyncio
 async def test_requirement_analysis_run_requires_connection_id():
-    class FakeRepository:
+    class FakeRepository(TaskScopeFixture):
         session = AuthorizationDatabase()
 
         async def get_task(self, task_id):
@@ -1652,13 +1707,13 @@ async def test_requirement_analysis_list_runs_uses_task_scope():
         trigger_user_id="user-1",
         trigger_type="manual",
         status="success",
-        checkpoint_enabled=False,
-        current_stage="completed",
+        checkpoint_enabled=True,
+        current_stage="feature_understanding",
         stage_status="completed",
-        snapshot_json={},
+        snapshot_json={"workflowVersion": 2},
         error_message="",
-        config_json={},
-        result_yaml="analysis: ok",
+        config_json={"firstStepOutput": requirement_artifact("document-extraction")},
+        result_yaml=requirement_understanding("已确认记录"),
         result_summary_json={},
         review_status="pending",
         reviewer_user_id="",
@@ -1717,13 +1772,13 @@ async def test_requirement_analysis_run_import_writes_result_to_requirement_docu
         trigger_user_id="user-1",
         trigger_type="manual",
         status="success",
-        checkpoint_enabled=False,
-        current_stage="completed",
+        checkpoint_enabled=True,
+        current_stage="feature_understanding",
         stage_status="completed",
-        snapshot_json={},
+        snapshot_json={"workflowVersion": 2},
         error_message="",
-        config_json={},
-        result_yaml="analysis: ok",
+        config_json={"firstStepOutput": requirement_artifact("document-extraction")},
+        result_yaml=requirement_understanding("已确认记录"),
         result_summary_json={"summary": "fallback"},
         review_status="approved",
         reviewer_user_id="",
@@ -1776,8 +1831,12 @@ async def test_requirement_analysis_run_import_writes_result_to_requirement_docu
 
     payload = await service.import_requirement_analysis_run("run-1", "user-1")
 
-    assert requirement.document_content == "analysis: ok"
-    assert payload["documentContent"] == "analysis: ok"
+    assert json.loads(requirement.document_content) == json.loads(
+        requirement_understanding("已确认记录")
+    )
+    assert json.loads(payload["documentContent"]) == json.loads(
+        requirement_understanding("已确认记录")
+    )
     assert repository.committed is True
     assert repository.refreshed is requirement
 
@@ -1792,7 +1851,7 @@ def test_requirement_analysis_run_import_endpoint_delegates_to_service():
                 "sprintId": "sprint-1",
                 "name": "Login requirement",
                 "documentType": "text",
-                "documentContent": "analysis: ok",
+                "documentContent": requirement_understanding("已确认记录"),
                 "documentFilename": "requirement.txt",
                 "documentHash": "hash",
                 "documentDownloadUrl": "/v1/requirements/requirement-1/download",
@@ -1810,7 +1869,7 @@ def test_requirement_analysis_run_import_endpoint_delegates_to_service():
     assert response.status_code == 200
     payload = response.json()
     assert payload["code"] == 0
-    assert payload["data"]["documentContent"] == "analysis: ok"
+    assert payload["data"]["documentContent"] == requirement_understanding("已确认记录")
 
 
 @pytest.mark.asyncio
@@ -1849,6 +1908,7 @@ async def test_requirement_analysis_checkpoint_run_starts_extracting_text(monkey
                 sprint_id="sprint-1",
                 document_type="text",
                 document_content="raw requirement",
+                document_file_id="file-1",
                 document_storage_path="",
                 document_download_url="",
             )
@@ -1923,6 +1983,7 @@ async def test_requirement_analysis_run_defaults_to_checkpoint(monkeypatch):
                 sprint_id="sprint-1",
                 document_type="text",
                 document_content="raw requirement",
+                document_file_id="file-1",
                 document_storage_path="",
                 document_download_url="",
             )
@@ -1992,6 +2053,7 @@ async def test_requirement_analysis_run_ignores_false_checkpoint_flag(monkeypatc
                 sprint_id="sprint-1",
                 document_type="text",
                 document_content="raw requirement",
+                document_file_id="file-1",
                 document_storage_path="",
                 document_download_url="",
             )
@@ -2026,7 +2088,7 @@ async def test_requirement_analysis_run_ignores_false_checkpoint_flag(monkeypatc
 
 
 @pytest.mark.asyncio
-async def test_requirement_analysis_review_extracting_text_enqueues_writing_requirement(
+async def test_requirement_analysis_review_extracting_text_enqueues_feature_understanding(
     monkeypatch,
 ):
     run = SimpleNamespace(
@@ -2041,9 +2103,9 @@ async def test_requirement_analysis_review_extracting_text_enqueues_writing_requ
         checkpoint_enabled=True,
         current_stage="extracting_text",
         stage_status="waiting_review",
-        snapshot_json={},
+        snapshot_json={"workflowVersion": 2},
         error_message="",
-        config_json={"firstStepOutput": "raw text"},
+        config_json={"firstStepOutput": requirement_artifact("document-extraction")},
         result_yaml="",
         result_summary_json={},
         review_status="pending",
@@ -2098,15 +2160,17 @@ async def test_requirement_analysis_review_extracting_text_enqueues_writing_requ
         {
             "stage": "extracting_text",
             "action": "approve",
-            "configJson": '{"firstStepOutput":"reviewed text"}',
+            "configJson": json.dumps(
+                {"firstStepOutput": requirement_artifact("document-extraction")}
+            ),
         },
         "user-1",
     )
 
     assert payload["status"] == "pending"
-    assert payload["currentStage"] == "writing_requirement"
+    assert payload["currentStage"] == "feature_understanding"
     assert payload["stageStatus"] == "pending"
-    assert payload["configJson"] == {"firstStepOutput": "reviewed text"}
+    assert payload["configJson"] == {"firstStepOutput": requirement_artifact("document-extraction")}
     assert len(repository.added) == 1
     worker_task = repository.added[0]
     assert worker_task.task_type == "requirement_analysis"
@@ -2130,9 +2194,9 @@ async def test_requirement_analysis_revise_extracting_text_enqueues_same_stage_w
         checkpoint_enabled=True,
         current_stage="extracting_text",
         stage_status="waiting_review",
-        snapshot_json={},
+        snapshot_json={"workflowVersion": 2},
         error_message="",
-        config_json={"firstStepOutput": "raw text"},
+        config_json={"firstStepOutput": requirement_artifact("document-extraction")},
         result_yaml="",
         result_summary_json={},
         review_status="pending",
@@ -2187,7 +2251,9 @@ async def test_requirement_analysis_revise_extracting_text_enqueues_same_stage_w
         {
             "stage": "extracting_text",
             "revisionInstruction": "补充图片流程和异常场景",
-            "configJson": '{"firstStepOutput":"reviewed text"}',
+            "configJson": json.dumps(
+                {"firstStepOutput": requirement_artifact("document-extraction")}
+            ),
         },
         "user-1",
     )
@@ -2196,7 +2262,7 @@ async def test_requirement_analysis_revise_extracting_text_enqueues_same_stage_w
     assert payload["currentStage"] == "extracting_text"
     assert payload["stageStatus"] == "pending"
     assert payload["configJson"] == {
-        "firstStepOutput": "reviewed text",
+        "firstStepOutput": requirement_artifact("document-extraction"),
         "revisionInstruction": "补充图片流程和异常场景",
     }
     assert len(repository.added) == 1
@@ -2224,13 +2290,12 @@ async def test_requirement_analysis_save_final_output_before_import():
         checkpoint_enabled=True,
         current_stage="feature_understanding",
         stage_status="completed",
-        snapshot_json={},
+        snapshot_json={"workflowVersion": 2},
         error_message="",
         config_json={
-            "firstStepOutput": "reviewed text",
-            "secondStepOutput": "reviewed flow",
+            "firstStepOutput": requirement_artifact("document-extraction"),
         },
-        result_yaml="old final",
+        result_yaml=requirement_understanding("old final"),
         result_summary_json={},
         review_status="pending",
         reviewer_user_id="",
@@ -2271,10 +2336,9 @@ async def test_requirement_analysis_save_final_output_before_import():
         "run-1",
         {
             "stage": "feature_understanding",
-            "resultYaml": "edited final",
+            "resultYaml": requirement_understanding("edited final"),
             "configJson": {
-                "firstStepOutput": "reviewed text",
-                "secondStepOutput": "reviewed flow",
+                "firstStepOutput": requirement_artifact("document-extraction"),
             },
         },
         "user-1",
@@ -2283,10 +2347,9 @@ async def test_requirement_analysis_save_final_output_before_import():
     assert payload["status"] == "success"
     assert payload["currentStage"] == "feature_understanding"
     assert payload["stageStatus"] == "completed"
-    assert payload["resultYaml"] == "edited final"
+    assert payload["resultYaml"] == requirement_understanding("edited final")
     assert payload["configJson"] == {
-        "firstStepOutput": "reviewed text",
-        "secondStepOutput": "reviewed flow",
+        "firstStepOutput": requirement_artifact("document-extraction"),
     }
 
 
@@ -2306,13 +2369,12 @@ async def test_requirement_analysis_revise_final_output_enqueues_feature_underst
         checkpoint_enabled=True,
         current_stage="feature_understanding",
         stage_status="completed",
-        snapshot_json={},
+        snapshot_json={"workflowVersion": 2},
         error_message="",
         config_json={
-            "firstStepOutput": "reviewed text",
-            "secondStepOutput": "reviewed flow",
+            "firstStepOutput": requirement_artifact("document-extraction"),
         },
-        result_yaml="current final",
+        result_yaml=requirement_understanding("current final"),
         result_summary_json={},
         review_status="pending",
         reviewer_user_id="",
@@ -2366,10 +2428,9 @@ async def test_requirement_analysis_revise_final_output_enqueues_feature_underst
         {
             "stage": "feature_understanding",
             "revisionInstruction": "补充验收口径",
-            "resultYaml": "edited final",
+            "resultYaml": requirement_understanding("edited final"),
             "configJson": {
-                "firstStepOutput": "reviewed text",
-                "secondStepOutput": "reviewed flow",
+                "firstStepOutput": requirement_artifact("document-extraction"),
             },
         },
         "user-1",
@@ -2379,9 +2440,8 @@ async def test_requirement_analysis_revise_final_output_enqueues_feature_underst
     assert payload["currentStage"] == "feature_understanding"
     assert payload["stageStatus"] == "pending"
     assert payload["configJson"] == {
-        "firstStepOutput": "reviewed text",
-        "secondStepOutput": "reviewed flow",
-        "resultYaml": "edited final",
+        "firstStepOutput": requirement_artifact("document-extraction"),
+        "resultYaml": requirement_understanding("edited final"),
         "revisionInstruction": "补充验收口径",
     }
     assert len(repository.added) == 1
@@ -2390,271 +2450,6 @@ async def test_requirement_analysis_revise_final_output_enqueues_feature_underst
     assert worker_task.task_type == "requirement_analysis"
     assert worker_task.run_id == "run-1"
     assert worker_task.llm_connection_id == "connection-1"
-
-
-@pytest.mark.asyncio
-async def test_requirement_analysis_save_final_output_allows_completed_stage_without_checkpoint():
-    run = SimpleNamespace(
-        run_id="run-1",
-        task_id="task-1",
-        requirement_id="requirement-1",
-        sprint_id="sprint-1",
-        project_id="project-1",
-        trigger_user_id="user-1",
-        trigger_type="manual",
-        status="success",
-        checkpoint_enabled=False,
-        current_stage="completed",
-        stage_status="completed",
-        snapshot_json={},
-        error_message="",
-        config_json={},
-        result_yaml="old final",
-        result_summary_json={},
-        review_status="pending",
-        reviewer_user_id="",
-        reviewed_at=None,
-        review_comment="",
-        duration_ms=0,
-    )
-
-    class FakeRepository:
-        session = AuthorizationDatabase()
-
-        async def get_run(self, run_id):
-            assert run_id == "run-1"
-            return run
-
-        async def get_task(self, task_id):
-            assert task_id == "task-1"
-            return SimpleNamespace(
-                task_id="task-1",
-                task_type="requirement_analysis",
-                project_id="project-1",
-                creator_user_id="user-1",
-            )
-
-        async def get_project(self, project_id):
-            assert project_id == "project-1"
-            return SimpleNamespace(project_id="project-1", user_id="user-1")
-
-        async def commit(self):
-            return None
-
-        async def refresh(self, row):
-            return None
-
-    service = ai_tasks.AiGenerateTaskService(FakeRepository())
-
-    payload = await service.save_requirement_analysis_stage_output(
-        "run-1",
-        {
-            "stage": "feature_understanding",
-            "resultYaml": "edited final",
-            "configJson": {
-                "firstStepOutput": "reviewed text",
-                "secondStepOutput": "reviewed flow",
-            },
-        },
-        "user-1",
-    )
-
-    assert payload["status"] == "success"
-    assert payload["currentStage"] == "completed"
-    assert payload["resultYaml"] == "edited final"
-    assert payload["configJson"] == {
-        "firstStepOutput": "reviewed text",
-        "secondStepOutput": "reviewed flow",
-    }
-
-
-@pytest.mark.asyncio
-async def test_requirement_analysis_revise_final_output_allows_completed_stage_without_checkpoint(
-    monkeypatch,
-):
-    run = SimpleNamespace(
-        run_id="run-1",
-        task_id="task-1",
-        requirement_id="requirement-1",
-        sprint_id="sprint-1",
-        project_id="project-1",
-        trigger_user_id="user-1",
-        trigger_type="manual",
-        status="success",
-        checkpoint_enabled=False,
-        current_stage="completed",
-        stage_status="completed",
-        snapshot_json={},
-        error_message="",
-        config_json={},
-        result_yaml="current final",
-        result_summary_json={},
-        review_status="pending",
-        reviewer_user_id="",
-        reviewed_at=None,
-        review_comment="",
-        duration_ms=0,
-    )
-
-    class FakeRepository:
-        session = AuthorizationDatabase()
-
-        def __init__(self):
-            self.added = []
-
-        async def get_run(self, run_id):
-            assert run_id == "run-1"
-            return run
-
-        async def get_task(self, task_id):
-            assert task_id == "task-1"
-            return SimpleNamespace(
-                task_id="task-1",
-                task_type="requirement_analysis",
-                project_id="project-1",
-                creator_user_id="user-1",
-            )
-
-        async def get_project(self, project_id):
-            assert project_id == "project-1"
-            return SimpleNamespace(project_id="project-1", user_id="user-1")
-
-        async def get_latest_worker_task_by_run_id(self, run_id):
-            assert run_id == "run-1"
-            return SimpleNamespace(llm_connection_id="connection-1")
-
-        def add(self, row):
-            self.added.append(row)
-
-        async def commit(self):
-            return None
-
-        async def refresh(self, row):
-            return None
-
-    monkeypatch.setattr(ai_tasks, "new_id", lambda: "worker-task-final-revise")
-    repository = FakeRepository()
-    service = ai_tasks.AiGenerateTaskService(repository)
-
-    payload = await service.revise_requirement_analysis_stage(
-        "run-1",
-        {
-            "stage": "feature_understanding",
-            "revisionInstruction": "补充风险点",
-            "resultYaml": "edited final",
-            "configJson": {
-                "firstStepOutput": "reviewed text",
-                "secondStepOutput": "reviewed flow",
-            },
-        },
-        "user-1",
-    )
-
-    assert payload["status"] == "pending"
-    assert payload["currentStage"] == "feature_understanding"
-    assert payload["stageStatus"] == "pending"
-    assert payload["configJson"] == {
-        "firstStepOutput": "reviewed text",
-        "secondStepOutput": "reviewed flow",
-        "resultYaml": "edited final",
-        "revisionInstruction": "补充风险点",
-    }
-    assert len(repository.added) == 1
-    assert repository.added[0].task_type == "requirement_analysis"
-
-
-@pytest.mark.asyncio
-async def test_requirement_analysis_review_writing_requirement_enqueues_feature_understanding(
-    monkeypatch,
-):
-    run = SimpleNamespace(
-        run_id="run-1",
-        task_id="task-1",
-        requirement_id="requirement-1",
-        sprint_id="sprint-1",
-        project_id="project-1",
-        trigger_user_id="user-1",
-        trigger_type="manual",
-        status="waiting_review",
-        checkpoint_enabled=True,
-        current_stage="writing_requirement",
-        stage_status="waiting_review",
-        snapshot_json={},
-        error_message="",
-        config_json={
-            "firstStepOutput": "reviewed text",
-            "secondStepOutput": "draft flow",
-        },
-        result_yaml="",
-        result_summary_json={},
-        review_status="pending",
-        reviewer_user_id="",
-        reviewed_at=None,
-        review_comment="",
-        duration_ms=0,
-    )
-
-    class FakeRepository:
-        session = AuthorizationDatabase()
-
-        def __init__(self):
-            self.added = []
-
-        async def get_run(self, run_id):
-            assert run_id == "run-1"
-            return run
-
-        async def get_task(self, task_id):
-            assert task_id == "task-1"
-            return SimpleNamespace(
-                task_id="task-1",
-                task_type="requirement_analysis",
-                project_id="project-1",
-                creator_user_id="user-1",
-            )
-
-        async def get_project(self, project_id):
-            assert project_id == "project-1"
-            return SimpleNamespace(project_id="project-1", user_id="user-1")
-
-        async def get_latest_worker_task_by_run_id(self, run_id):
-            assert run_id == "run-1"
-            return SimpleNamespace(llm_connection_id="connection-1")
-
-        def add(self, row):
-            self.added.append(row)
-
-        async def commit(self):
-            return None
-
-        async def refresh(self, row):
-            return None
-
-    monkeypatch.setattr(ai_tasks, "new_id", lambda: "worker-task-next")
-    repository = FakeRepository()
-    service = ai_tasks.AiGenerateTaskService(repository)
-
-    payload = await service.review_requirement_analysis_stage(
-        "run-1",
-        {
-            "stage": "writing_requirement",
-            "action": "approve",
-            "configJson": (
-                '{"firstStepOutput":"reviewed text","secondStepOutput":"reviewed flow"}'
-            ),
-        },
-        "user-1",
-    )
-
-    assert payload["status"] == "pending"
-    assert payload["currentStage"] == "feature_understanding"
-    assert payload["stageStatus"] == "pending"
-    assert payload["configJson"] == {
-        "firstStepOutput": "reviewed text",
-        "secondStepOutput": "reviewed flow",
-    }
-    assert len(repository.added) == 1
-    assert repository.added[0].task_type == "requirement_analysis"
 
 
 @pytest.mark.asyncio

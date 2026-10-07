@@ -13,17 +13,6 @@ const statusMetaMap: Record<string, { label: string; color: string }> = {
   canceled: { label: '已取消', color: 'default' },
 }
 
-const reviewStatusMetaMap: Record<string, { label: string; color: string }> = {
-  pending: { label: '待审核', color: 'gold' },
-  approved: { label: '已批准', color: 'success' },
-  rejected: { label: '已拒绝', color: 'default' },
-}
-
-const importStatusMetaMap: Record<string, { label: string; color: string }> = {
-  pending: { label: '待导入', color: 'purple' },
-  imported: { label: '已导入', color: 'success' },
-}
-
 export function normalizeApiCaseGenerateTaskRunStatus(status?: ApiCaseGenerateTaskRunStatus) {
   return status ?? 'unknown'
 }
@@ -59,24 +48,6 @@ export function normalizeGenerateTaskReviewStatus(status?: string) {
   return status ?? 'unknown'
 }
 
-export function renderGenerateTaskReviewStatusTag(status?: string) {
-  const normalizedStatus = normalizeGenerateTaskReviewStatus(status)
-  const meta = reviewStatusMetaMap[normalizedStatus] ?? {
-    label: normalizedStatus,
-    color: 'default',
-  }
-  return <Tag color={meta.color}>{meta.label}</Tag>
-}
-
-export function renderGenerateTaskImportStatusTag(status?: string) {
-  const normalizedStatus = status ?? 'unknown'
-  const meta = importStatusMetaMap[normalizedStatus] ?? {
-    label: normalizedStatus,
-    color: 'default',
-  }
-  return <Tag color={meta.color}>{meta.label}</Tag>
-}
-
 export function isGenerateTaskRunImportable(run?: {
   status?: string
   reviewStatus?: string
@@ -91,10 +62,9 @@ export function isGenerateTaskRunImportable(run?: {
  * 运行记录的档位统计。传入按时间倒序排列的记录，第一条即最新。
  * 抽在这里而不是详情页壳组件里：壳文件只应导出组件，否则破坏 react-refresh。
  */
-/** 运行记录的档位统计（已按时间倒序排列的记录，第一条即最新）。 */
-export function summarizeRunStatuses(records: Array<{ status?: string }>) {
+export function summarizeRunStatuses(records: Array<{ status?: string }>, counts?: Record<string, number>) {
   const countOf = (statuses: string[]) =>
-    records.filter((record) => statuses.includes(String(record.status ?? '').toLowerCase())).length
+    counts ? statuses.reduce((total, status) => total + (counts[status] ?? 0), 0) : records.filter((record) => statuses.includes(String(record.status ?? '').toLowerCase())).length
   return {
     latestStatus: records[0]?.status,
     waiting: countOf(['waiting_review']),

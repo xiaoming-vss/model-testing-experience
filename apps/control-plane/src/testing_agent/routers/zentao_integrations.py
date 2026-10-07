@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter
 
 from testing_agent.handlers.integration_connection import (
@@ -9,29 +11,24 @@ from testing_agent.handlers.integration_connection import (
     get_project_zentao_connection,
     get_zentao_connection,
     list_project_zentao_connections,
-    list_project_zentao_execution_cases,
-    list_project_zentao_execution_stories,
-    list_project_zentao_execution_testtasks,
-    list_project_zentao_project_executions,
-    list_project_zentao_projects,
     list_zentao_connections,
-    list_zentao_execution_cases,
-    list_zentao_execution_stories,
-    list_zentao_execution_testtasks,
-    list_zentao_project_executions,
-    list_zentao_projects,
     reauth_project_zentao_connection,
     reauth_zentao_connection,
     update_project_zentao_connection,
     update_zentao_connection,
 )
+from testing_agent.handlers.zentao_mcp import list_zentao_mcp_resources
 from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
 from testing_agent.schemas.integrations import (
     IntegrationConnectionResponse,
-    RemoteResourceListResponse,
 )
 
 router = APIRouter()
+
+router.get(
+    "/projects/{project_id}/zentao/mcp/{kind}",
+    response_model=ApiResponse[ListResponse[Any]],
+)(list_zentao_mcp_resources)
 
 router.post(
     "/projects/{project_id}/integrations/zentao/connections",
@@ -57,26 +54,6 @@ router.delete(
     "/projects/{project_id}/integrations/zentao/connections/{connection_id}",
     response_model=ApiResponse[EmptyData],
 )(delete_project_zentao_connection)
-router.get(
-    "/projects/{project_id}/integrations/zentao/connections/{connection_id}/projects",
-    response_model=ApiResponse[RemoteResourceListResponse],
-)(list_project_zentao_projects)
-router.get(
-    "/projects/{project_id}/integrations/zentao/connections/{connection_id}/projects/{remote_project_id}/executions",
-    response_model=ApiResponse[RemoteResourceListResponse],
-)(list_project_zentao_project_executions)
-router.get(
-    "/projects/{project_id}/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/testtasks",
-    response_model=ApiResponse[RemoteResourceListResponse],
-)(list_project_zentao_execution_testtasks)
-router.get(
-    "/projects/{project_id}/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/stories",
-    response_model=ApiResponse[RemoteResourceListResponse],
-)(list_project_zentao_execution_stories)
-router.get(
-    "/projects/{project_id}/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/cases",
-    response_model=ApiResponse[RemoteResourceListResponse],
-)(list_project_zentao_execution_cases)
 
 router.get(
     "/integrations/zentao/connections",
@@ -98,23 +75,3 @@ router.delete(
     "/integrations/zentao/connections/{connection_id}",
     response_model=ApiResponse[EmptyData],
 )(delete_zentao_connection)
-router.get(
-    "/integrations/zentao/connections/{connection_id}/projects",
-    response_model=ApiResponse[RemoteResourceListResponse],
-)(list_zentao_projects)
-router.get(
-    "/integrations/zentao/connections/{connection_id}/projects/{remote_project_id}/executions",
-    response_model=ApiResponse[RemoteResourceListResponse],
-)(list_zentao_project_executions)
-router.get(
-    "/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/testtasks",
-    response_model=ApiResponse[RemoteResourceListResponse],
-)(list_zentao_execution_testtasks)
-router.get(
-    "/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/stories",
-    response_model=ApiResponse[RemoteResourceListResponse],
-)(list_zentao_execution_stories)
-router.get(
-    "/integrations/zentao/connections/{connection_id}/executions/{remote_execution_id}/cases",
-    response_model=ApiResponse[RemoteResourceListResponse],
-)(list_zentao_execution_cases)

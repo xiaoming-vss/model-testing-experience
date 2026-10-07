@@ -1,6 +1,6 @@
 import { Pagination, Typography } from 'antd'
 import zhCN from 'antd/es/locale/zh_CN'
-import { useEffect } from 'react'
+import { useEffect, useId } from 'react'
 import { footerRange, PAGE_SIZE_OPTIONS } from '@/shared/utils/pagination'
 import '@/shared/styles/pagination.css'
 
@@ -14,6 +14,7 @@ interface ListPaginationProps {
 
 /** Shared list footer contents. The owning page supplies its table-footer container. */
 export function ListPagination({ current, pageSize, total, loading = false, onChange }: ListPaginationProps) {
+  const pageSizeControlId = useId()
   const validPage = Math.max(1, Math.min(current, Math.ceil(total / pageSize) || 1))
 
   useEffect(() => {
@@ -27,7 +28,7 @@ export function ListPagination({ current, pageSize, total, loading = false, onCh
       pageSize={pageSize}
       total={total}
       size="middle"
-      showSizeChanger
+      showSizeChanger={{ id: pageSizeControlId, 'aria-label': '每页条数' }}
       showQuickJumper={false}
       hideOnSinglePage={false}
       pageSizeOptions={PAGE_SIZE_OPTIONS}

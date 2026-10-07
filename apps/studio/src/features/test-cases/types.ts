@@ -60,6 +60,7 @@ export type ImportFunctionTestCasesToZentaoPayload = {
 }
 
 export type FunctionTestCaseZentaoImportItem = {
+  errorMessage?: string
   caseId?: string
   case_id?: string
   remoteCaseId?: number
@@ -68,6 +69,7 @@ export type FunctionTestCaseZentaoImportItem = {
 }
 
 export type FunctionTestCaseZentaoImportResult = {
+  status?: string
   suiteId?: string
   suite_id?: string
   productId?: number

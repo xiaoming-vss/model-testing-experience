@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -635,6 +637,12 @@ async def test_ai_worker_progress_waiting_review_marks_checkpoint_run_waiting(mo
 
 @pytest.mark.asyncio
 async def test_ai_worker_claim_includes_requirement_analysis_checkpoint_config():
+    extraction = json.loads(
+        (
+            Path(__file__).parent
+            / "fixtures/requirement_artifacts/document-extraction.example.json"
+        ).read_text()
+    )
     task = SimpleNamespace(
         task_id="worker-task-1",
         task_type="requirement_analysis",
@@ -652,10 +660,10 @@ async def test_ai_worker_claim_includes_requirement_analysis_checkpoint_config()
         sprint_id="sprint-1",
         requirement_id="requirement-1",
         checkpoint_enabled=True,
-        current_stage="writing_requirement",
+        current_stage="feature_understanding",
         stage_status="pending",
         status="pending",
-        config_json={"firstStepOutput": "reviewed text"},
+        config_json={"firstStepOutput": extraction},
     )
 
     class FakeRepository(FakeWorkerRepository):
@@ -673,14 +681,20 @@ async def test_ai_worker_claim_includes_requirement_analysis_checkpoint_config()
 
     assert payload["taskType"] == "requirement_analysis"
     assert payload["checkpointEnabled"] is True
-    assert payload["currentStage"] == "writing_requirement"
-    assert payload["configJson"] == '{"firstStepOutput":"reviewed text"}'
+    assert payload["currentStage"] == "feature_understanding"
+    assert json.loads(payload["configJson"]) == {"firstStepOutput": extraction}
 
 
 @pytest.mark.asyncio
 async def test_ai_worker_progress_requirement_analysis_extracting_text_waits_for_review(
     monkeypatch,
 ):
+    extraction = json.loads(
+        (
+            Path(__file__).parent
+            / "fixtures/requirement_artifacts/document-extraction.example.json"
+        ).read_text()
+    )
     task = SimpleNamespace(
         task_id="worker-task-1",
         task_type="requirement_analysis",
@@ -725,14 +739,14 @@ async def test_ai_worker_progress_requirement_analysis_extracting_text_waits_for
             runId="run-1",
             currentStage="extracting_text",
             stageStatus="waiting_review",
-            configJson='{"firstStepOutput":"enhanced text"}',
+            configJson=json.dumps({"firstStepOutput": extraction}),
         ),
     )
 
     assert task.status == "success"
     assert run.status == "waiting_review"
     assert run.stage_status == "waiting_review"
-    assert run.config_json == {"firstStepOutput": "enhanced text"}
+    assert run.config_json == {"firstStepOutput": extraction}
 
 
 def test_ai_worker_completion_accepts_output_yaml_alias_for_requirement_analysis():

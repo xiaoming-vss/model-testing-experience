@@ -1,0 +1,14 @@
+[control_plane]
+base_url = "http://127.0.0.1:19000"
+worker_token = ""
+timeout_seconds = 15
+retry_attempts = 3
+
+[worker]
+poll_interval_seconds = 2
+heartbeat_interval_seconds = 10
+lease_margin_seconds = 2
+shutdown_grace_seconds = 210
+health_file = "runtime/health.json"
+evidence_file = "runtime/evidence.json"
+health_max_age_seconds = 90

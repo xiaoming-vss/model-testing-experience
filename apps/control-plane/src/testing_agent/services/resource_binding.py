@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import select
@@ -26,6 +26,8 @@ from testing_agent.services.common import list_payload
 from testing_agent.services.integration_connection import IntegrationConnectionService, item_value
 from testing_agent.services.project_access import ProjectAction, require_project_access
 from testing_agent.services.service_instance import instance_key, normalize_instance_url
+from testing_agent.services.zentao_mcp import ZentaoMcpAccess
+from testing_agent.services.zentao_mcp_selection import binding_service_id, inherited_mcp_service_id
 from testing_agent.services.zentao_resource import parse_zentao_remote_id, truncate_error
 
 
@@ -35,6 +37,7 @@ def dump_binding(binding: ResourceBinding) -> dict[str, Any]:
         "instanceUrl": binding.instance_url,
         "provider": binding.provider,
         "connectionId": binding.connection_id,
+        "mcpServiceId": binding_service_id(binding),
         "localResourceType": binding.local_resource_type,
         "localResourceId": binding.local_resource_id,
         "remoteResourceType": binding.remote_resource_type,
@@ -71,10 +74,13 @@ class ResourceBindingService:
         repository: ResourceBindingRepository,
         integration_connection_service: IntegrationConnectionService | None = None,
         zentao_resource_client: Any | None = None,
+        *,
+        zentao_access: Any | None = None,
     ):
         self.repository = repository
         self.integration_connection_service = integration_connection_service
         self.zentao_resource_client = zentao_resource_client
+        self.zentao_access = zentao_access
 
     async def ensure_local_access(
         self,
@@ -85,27 +91,38 @@ class ResourceBindingService:
         action: ProjectAction = "manage",
     ) -> str:
         if resource_type == "project":
-            project = await self.repository.get_project(resource_id)
+            project_getter = self.repository.get_project
+            if action != "read":
+                project_getter = getattr(self.repository, "get_project_for_update", project_getter)
+            project = await project_getter(resource_id)
             if project is None:
-                raise ErrNotFound
+                raise ErrNotFound()
             await require_project_access(self.repository.session, user_id, project, action)
             return resource_id
         if resource_type == "sprint":
-            sprint = await self.repository.get_sprint(resource_id)
+            sprint_getter = self.repository.get_sprint
+            if action != "read":
+                sprint_getter = getattr(self.repository, "get_sprint_for_update", sprint_getter)
+            sprint = await sprint_getter(resource_id)
             if sprint is None:
-                raise ErrNotFound
+                raise ErrNotFound()
             await self.ensure_local_access(user_id, "project", sprint.project_id, action=action)
             return sprint.project_id
         if resource_type == "requirement":
-            requirement = await self.repository.get_requirement(resource_id)
+            requirement_getter = self.repository.get_requirement
+            if action != "read":
+                requirement_getter = getattr(
+                    self.repository, "get_requirement_for_update", requirement_getter
+                )
+            requirement = await requirement_getter(resource_id)
             if requirement is None:
-                raise ErrNotFound
+                raise ErrNotFound()
             sprint = await self.repository.get_sprint(requirement.sprint_id)
             if sprint is None:
-                raise ErrNotFound
+                raise ErrNotFound()
             await self.ensure_local_access(user_id, "project", sprint.project_id, action=action)
             return sprint.project_id
-        raise ErrNotFound
+        raise ErrNotFound()
 
     async def create(
         self, resource_type: str, resource_id: str, body: dict[str, Any], user_id: str
@@ -118,6 +135,14 @@ class ResourceBindingService:
             return await self._create_zentao_binding(resource_type, resource_id, body, user_id)
         return await self._create_gitlab_binding(resource_type, resource_id, body, user_id)
 
+    async def _resolve_zentao(self, user_id, project_id, expected_instance="", mcp_service_id=""):
+        access = self.zentao_access or ZentaoMcpAccess(self.integration_connection_service)
+        if mcp_service_id:
+            return await access.resolve(
+                user_id, project_id, expected_instance, mcp_service_id=mcp_service_id
+            )
+        return await access.resolve(user_id, project_id, expected_instance)
+
     async def _create_zentao_binding(
         self, resource_type: str, resource_id: str, body: dict[str, Any], user_id: str
     ) -> dict:
@@ -127,32 +152,42 @@ class ResourceBindingService:
         project_id = await self.ensure_local_access(user_id, resource_type, resource_id)
         service = self.integration_connection_service
         if service is None or self.zentao_resource_client is None:
-            raise ErrIntegrationConnectionNotFound
-        connection_id = str(body.get("connectionId") or "")
-        connection = await service.get_active_personal(user_id, "zentao", connection_id, project_id)
-        connection = await service.resolve_zentao_access(user_id, connection_id, project_id)
+            raise ErrIntegrationConnectionNotFound()
+        if await self.repository.get_active_by_local_resource(resource_type, resource_id):
+            raise ErrResourceBindingAlreadyExists()
         if resource_type == "sprint":
             parent = await self.repository.get_active_by_local_resource("project", project_id)
         else:
             requirement = await self.repository.get_requirement(resource_id)
             if requirement is None:
-                raise ErrNotFound
+                raise ErrNotFound()
             parent = await self.repository.get_active_by_local_resource(
                 "sprint", requirement.sprint_id
             )
-        if (
-            parent is None
-            or parent.provider != "zentao"
-            or parent.instance_key != instance_key(connection.base_url)
-        ):
-            raise ErrResourceBindingInvalid
+        if parent is None or parent.provider != "zentao":
+            raise ErrResourceBindingInvalid()
+        connection = await self._resolve_zentao(
+            user_id,
+            project_id,
+            parent.instance_url,
+            await inherited_mcp_service_id(
+                self.repository.session, project_id, str(body.get("mcpServiceId") or "")
+            ),
+        )
+        connection_id = connection.connection_id
+        if binding_service_id(parent) and getattr(
+            connection, "service_id", ""
+        ) != binding_service_id(parent):
+            raise AppError(400, "下级绑定须使用上级绑定的禅道 MCP", 400)
+        if parent.instance_key != instance_key(connection.base_url):
+            raise ErrResourceBindingInvalid()
         try:
             remote_id = str(parse_zentao_remote_id(str(body.get("remoteResourceId") or "")))
         except ValueError as exc:
             raise dynamic_error(ErrResourceBindingInvalid, str(exc)) from exc
         requested_parent = str(body.get("remoteParentId") or "")
         if requested_parent and requested_parent != parent.remote_resource_id:
-            raise ErrResourceBindingInvalid
+            raise ErrResourceBindingInvalid()
         found = False
         page = 1
         while True:
@@ -171,6 +206,7 @@ class ResourceBindingService:
                 and not item_value(item, "deleted", default=False)
                 for item in items
             ):
+                matched = next(item for item in items if str(item_value(item, "id")) == remote_id)
                 found = True
                 break
             if (
@@ -181,7 +217,7 @@ class ResourceBindingService:
                 break
             page += 1
         if not found:
-            raise ErrResourceBindingInvalid
+            raise ErrResourceBindingInvalid()
         body = {**body, "remoteResourceId": remote_id, "remoteParentId": parent.remote_resource_id}
         binding = ResourceBinding(
             binding_id=new_id(),
@@ -192,21 +228,22 @@ class ResourceBindingService:
             instance_key=instance_key(connection.base_url),
             local_resource_type=resource_type,
             local_resource_id=resource_id,
-            remote_resource_type=str(
-                body.get("remoteResourceType")
-                or body.get("remote_resource_type")
-                or ZENTAO_REMOTE_TYPE_DEFAULTS.get(resource_type, resource_type)
-            ),
+            remote_resource_type=ZENTAO_REMOTE_TYPE_DEFAULTS[resource_type],
             remote_resource_id=str(
                 body.get("remoteResourceId") or body.get("remote_resource_id") or ""
             ),
             remote_parent_id=str(body.get("remoteParentId") or body.get("remote_parent_id") or ""),
-            remote_name_snapshot=str(
-                body.get("remoteNameSnapshot") or body.get("remote_name_snapshot") or ""
-            ),
+            remote_name_snapshot=str(item_value(matched, "name", "title")),
             status=BindingStatus.ACTIVE.value,
             bound_at=datetime.now(UTC),
-            extra_json=body.get("extraJson") or body.get("extra_json") or {},
+            extra_json={
+                **(body.get("extraJson") or body.get("extra_json") or {}),
+                **(
+                    {"mcpServiceId": connection.service_id}
+                    if getattr(connection, "service_id", "")
+                    else {}
+                ),
+            },
         )
         self.repository.add(binding)
         await self._commit_binding()
@@ -230,15 +267,15 @@ class ResourceBindingService:
     ) -> dict:
         project = await self.repository.get_project(project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
 
         await require_project_access(self.repository.session, user_id, project, "manage")
         connection_id = str(body.get("connectionId") or body.get("connection_id") or "").strip()
         group_id = str(body.get("remoteResourceId") or body.get("remote_resource_id") or "").strip()
         if not connection_id or not group_id:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         if self.integration_connection_service is None:
-            raise ErrIntegrationConnectionNotFound
+            raise ErrIntegrationConnectionNotFound()
         connection = await self.integration_connection_service.get_active_personal(
             user_id, "gitlab", connection_id, project_id
         )
@@ -248,7 +285,7 @@ class ResourceBindingService:
         if await self.repository.exists_active_project_group_binding(
             "gitlab", project_id, group_id, instance=instance_key(connection.base_url)
         ):
-            raise ErrRemoteResourceAlreadyBound
+            raise ErrRemoteResourceAlreadyBound()
 
         binding = ResourceBinding(
             binding_id=new_id(),
@@ -277,10 +314,10 @@ class ResourceBindingService:
     async def _requirement_project_id(self, requirement_id: str) -> str:
         requirement = await self.repository.get_requirement(requirement_id)
         if requirement is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         sprint = await self.repository.get_sprint(requirement.sprint_id)
         if sprint is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         return sprint.project_id
 
     async def _ensure_repository_in_group(
@@ -293,7 +330,7 @@ class ResourceBindingService:
     ) -> tuple[str, ResourceBinding]:
         service = self.integration_connection_service
         if service is None:
-            raise ErrIntegrationConnectionNotFound
+            raise ErrIntegrationConnectionNotFound()
         connection_id = str(body.get("connectionId") or "")
         url = str(body.get("instanceUrl") or "")
         if connection_id:
@@ -309,7 +346,7 @@ class ResourceBindingService:
             instance=instance_key(url) if url else None,
         )
         if group is None:
-            raise ErrResourceBindingInvalid
+            raise ErrResourceBindingInvalid()
         connection = await service.resolve_personal_connection(
             user_id, "gitlab", project_id, group.instance_url, connection_id
         )
@@ -327,7 +364,7 @@ class ResourceBindingService:
             if "uq_binding_resource" in str(
                 exc.orig
             ) or "UNIQUE constraint failed: resource_bindings." in str(exc.orig):
-                raise ErrRemoteResourceAlreadyBound from exc
+                raise ErrRemoteResourceAlreadyBound() from exc
             raise
 
     async def _create_gitlab_requirement_binding(
@@ -343,7 +380,7 @@ class ResourceBindingService:
         ).strip()
         group_id = str(body.get("remoteParentId") or body.get("remote_parent_id") or "").strip()
         if not repository_id or not group_id:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         extra = body.get("extraJson") or body.get("extra_json") or {}
         branch = str(extra.get("branch") or "").strip()
         if not branch:
@@ -358,7 +395,7 @@ class ResourceBindingService:
         if await self.repository.exists_active_requirement_repo_binding(
             requirement_id, repository_id, instance=group.instance_key
         ):
-            raise ErrRemoteResourceAlreadyBound
+            raise ErrRemoteResourceAlreadyBound()
 
         binding = ResourceBinding(
             binding_id=new_id(),
@@ -395,7 +432,7 @@ class ResourceBindingService:
     ) -> dict:
         project = await self.repository.get_project(project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await require_project_access(self.repository.session, user_id, project, "manage")
 
         provider = "zentao"
@@ -403,28 +440,26 @@ class ResourceBindingService:
         remote_resource_id = str(
             body.get("remoteResourceId") or body.get("remote_resource_id") or ""
         ).strip()
-        if not connection_id or not remote_resource_id:
-            raise ErrBadRequest
+        if not remote_resource_id:
+            raise ErrBadRequest()
         try:
             parse_zentao_remote_id(remote_resource_id)
         except ValueError as exc:
             raise dynamic_error(ErrResourceBindingInvalid, str(exc)) from exc
 
+        if self.integration_connection_service is None:
+            raise ErrIntegrationConnectionNotFound()
+        connection = await self._resolve_zentao(
+            user_id, project_id, mcp_service_id=str(body.get("mcpServiceId") or "")
+        )
+        connection_id = connection.connection_id
+
         existing_local = await self.repository.get_active_by_local_resource("project", project_id)
         if existing_local is not None:
-            raise ErrResourceBindingAlreadyExists
-
-        if self.integration_connection_service is None:
-            raise ErrIntegrationConnectionNotFound
-        await self.integration_connection_service.get_active_personal(
-            user_id, "zentao", connection_id, project_id
-        )
-        connection = await self.integration_connection_service.resolve_zentao_access(
-            user_id, connection_id, project_id
-        )
+            raise ErrResourceBindingAlreadyExists()
 
         if self.zentao_resource_client is None:
-            raise ErrZentaoRemoteResourceUnavailable
+            raise ErrZentaoRemoteResourceUnavailable()
         try:
             remote_project = await self.zentao_resource_client.get_project(
                 connection,
@@ -444,9 +479,10 @@ class ResourceBindingService:
             connection_id,
             "project",
             remote_project_id,
+            instance=instance_key(connection.base_url),
         )
         if remote_exists:
-            raise ErrRemoteResourceAlreadyBound
+            raise ErrRemoteResourceAlreadyBound()
 
         now = datetime.now(UTC)
         binding = ResourceBinding(
@@ -465,7 +501,9 @@ class ResourceBindingService:
             status=BindingStatus.ACTIVE.value,
             bound_at=now,
             last_verified_at=now,
-            extra_json={},
+            extra_json={"mcpServiceId": connection.service_id}
+            if getattr(connection, "service_id", "")
+            else {},
         )
         self.repository.add(binding)
         await self._commit_binding()
@@ -485,7 +523,7 @@ class ResourceBindingService:
     async def _list_project_bindings(self, project_id: str, user_id: str) -> dict[str, Any]:
         project = await self.repository.get_project(project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         rows = await self.repository.list_project_bindings(user_id, project_id)
         return list_payload([dump_binding(row) for row in rows])
 
@@ -494,7 +532,7 @@ class ResourceBindingService:
         # 与项目绑定列表同口径，禅道行也按项目共享。
         requirement = await self.repository.get_requirement(requirement_id)
         if requirement is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         rows = await self.repository.list_requirement_bindings(user_id, requirement_id)
         return list_payload([dump_binding(row) for row in rows])
 
@@ -509,7 +547,7 @@ class ResourceBindingService:
         await self.ensure_local_access(user_id, resource_type, resource_id)
         binding = await self.repository.get(resource_type, resource_id, binding_id)
         if binding is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         if binding.provider == "zentao":
             return await self._update_zentao_binding(binding, body, user_id)
         if binding.provider != "gitlab":
@@ -525,18 +563,35 @@ class ResourceBindingService:
             user_id, binding.local_resource_type, binding.local_resource_id
         )
         if self.integration_connection_service is None or self.zentao_resource_client is None:
-            raise ErrIntegrationConnectionNotFound
-        connection = await self.integration_connection_service.resolve_personal_connection(
-            user_id, "zentao", project_id, binding.instance_url, str(body.get("connectionId") or "")
+            raise ErrIntegrationConnectionNotFound()
+        chosen_id = str(body.get("mcpServiceId") or binding_service_id(binding))
+        if binding.local_resource_type != "project":
+            chosen_id = await inherited_mcp_service_id(
+                self.repository.session, project_id, str(body.get("mcpServiceId") or "")
+            )
+        expected = (
+            ""
+            if binding.local_resource_type == "project" and body.get("mcpServiceId")
+            else binding.instance_url
         )
-        connection = await self.integration_connection_service.resolve_zentao_access(
-            user_id, connection.connection_id, project_id
-        )
+        connection = await self._resolve_zentao(user_id, project_id, expected, chosen_id)
         remote_id = str(body.get("remoteResourceId") or binding.remote_resource_id)
         try:
-            parse_zentao_remote_id(remote_id)
+            remote_id = str(parse_zentao_remote_id(remote_id))
         except ValueError as exc:
-            raise ErrResourceBindingInvalid from exc
+            raise ErrResourceBindingInvalid() from exc
+        if binding.instance_key != instance_key(connection.base_url):
+            if binding.local_resource_type != "project" or not body.get("confirmInstanceSwitch"):
+                raise AppError(400, "更换禅道实例时请勾选确认清除旧关联后重新绑定", 400)
+            remote = await self.zentao_resource_client.get_project(connection, remote_id)
+            if item_value(remote, "deleted", default=False):
+                raise ErrResourceBindingInvalid()
+            from testing_agent.services.zentao_mcp_reset import clear_project_associations
+
+            await clear_project_associations(
+                self.repository.session, project_id, user_id, connection.base_url
+            )
+            return await self._create_zentao_project_binding(project_id, body, user_id)
         if remote_id != binding.remote_resource_id:
             child_type = {"project": "execution", "sprint": "story"}.get(
                 binding.local_resource_type
@@ -552,18 +607,29 @@ class ResourceBindingService:
                 )
                 .limit(1)
             ):
-                raise ErrResourceBindingInvalid
+                raise ErrResourceBindingInvalid()
         if binding.local_resource_type == "project":
+            if (
+                remote_id != binding.remote_resource_id
+                and await self.repository.exists_active_by_remote_resource(
+                    "zentao",
+                    connection.connection_id,
+                    "project",
+                    remote_id,
+                    instance=instance_key(connection.base_url),
+                )
+            ):
+                raise ErrRemoteResourceAlreadyBound()
             remote = await self.zentao_resource_client.get_project(connection, remote_id)
             if item_value(remote, "deleted", default=False):
-                raise ErrResourceBindingInvalid
+                raise ErrResourceBindingInvalid()
         else:
             if binding.local_resource_type == "sprint":
                 parent = await self.repository.get_active_by_local_resource("project", project_id)
             else:
                 requirement = await self.repository.get_requirement(binding.local_resource_id)
                 if requirement is None:
-                    raise ErrNotFound
+                    raise ErrNotFound()
                 parent = await self.repository.get_active_by_local_resource(
                     "sprint", requirement.sprint_id
                 )
@@ -572,13 +638,17 @@ class ResourceBindingService:
                 or parent.provider != "zentao"
                 or parent.instance_key != binding.instance_key
             ):
-                raise ErrResourceBindingInvalid
+                raise ErrResourceBindingInvalid()
+            if binding_service_id(parent) and getattr(
+                connection, "service_id", ""
+            ) != binding_service_id(parent):
+                raise AppError(400, "下级绑定须使用上级绑定的禅道 MCP", 400)
             try:
                 parent_id = str(parse_zentao_remote_id(parent.remote_resource_id))
             except ValueError as exc:
-                raise ErrResourceBindingInvalid from exc
+                raise ErrResourceBindingInvalid() from exc
             if binding.remote_parent_id and binding.remote_parent_id != parent_id:
-                raise ErrResourceBindingInvalid
+                raise ErrResourceBindingInvalid()
             page = 1
             while True:
                 if binding.local_resource_type == "sprint":
@@ -595,20 +665,83 @@ class ResourceBindingService:
                     and not item_value(item, "deleted", default=False)
                     for item in items
                 ):
+                    remote = next(
+                        item for item in items if str(item_value(item, "id")) == remote_id
+                    )
                     break
                 if (
                     binding.local_resource_type != "sprint"
                     or not items
                     or page * 100 >= int(result.get("total") or len(items))
                 ):
-                    raise ErrResourceBindingInvalid
+                    raise ErrResourceBindingInvalid()
                 page += 1
             binding.remote_parent_id = parent_id
+        if binding.remote_resource_id != remote_id:
+            from testing_agent.services.integration_lifecycle import change_target
+
+            await change_target(self.repository.session, project_id=project_id)
+        if (
+            binding.local_resource_type == "project"
+            and getattr(connection, "service_id", "")
+            and binding_service_id(binding) != connection.service_id
+        ):
+            await self._inherit_project_mcp(project_id, connection)
         binding.remote_resource_id = remote_id
+        binding.remote_name_snapshot = str(item_value(remote, "name", "title"))
+        if getattr(connection, "service_id", ""):
+            binding.extra_json = {
+                **(binding.extra_json or {}),
+                "mcpServiceId": connection.service_id,
+            }
         binding.last_verified_at = datetime.now(UTC)
         await self._commit_binding()
         await self.repository.refresh(binding)
         return dump_binding(binding)
+
+    async def _inherit_project_mcp(self, project_id, connection):
+        # Same-instance transport changes preserve remote IDs and use the new service.
+        from testing_agent.models.bug import Bug
+        from testing_agent.models.bug_zentao_push import BugZentaoPush
+        from testing_agent.services.integration_lifecycle import change_target
+        from testing_agent.services.zentao_mcp_identity import project_binding_scope
+
+        await change_target(self.repository.session, project_id=project_id)
+
+        rows = await self.repository.session.scalars(
+            select(ResourceBinding).where(project_binding_scope(project_id))
+        )
+        for child_binding in rows:
+            child_binding.extra_json = {
+                **(child_binding.extra_json or {}),
+                "mcpServiceId": connection.service_id,
+            }
+        pushes = list(
+            await self.repository.session.scalars(
+                select(BugZentaoPush).where(
+                    BugZentaoPush.bug_id.in_(select(Bug.bug_id).where(Bug.project_id == project_id))
+                )
+            )
+        )
+        if any(push.status in {"preparing", "creating", "unknown"} for push in pushes):
+            raise AppError(409, "存在进行中或结果待确认的禅道推送，请处理后更换 MCP", 409)
+        from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
+
+        active_attachment = await self.repository.session.scalar(
+            select(BugZentaoAttachment.id)
+            .join(Bug, Bug.bug_id == BugZentaoAttachment.bug_id)
+            .where(
+                Bug.project_id == project_id,
+                BugZentaoAttachment.status.in_(["pending", "uploading"]),
+                BugZentaoAttachment.updated_at >= datetime.now(UTC) - timedelta(minutes=6),
+            )
+            .limit(1)
+        )
+        if active_attachment is not None:
+            raise AppError(409, "附件正在同步，请完成后更换 MCP", 409)
+        for push in pushes:
+            if instance_key(push.instance_url) == instance_key(connection.base_url):
+                push.service_id = connection.service_id
 
     async def _verify_gitlab_group_binding(
         self,
@@ -619,15 +752,15 @@ class ResourceBindingService:
     ) -> dict:
         connection_id = str(body.get("connectionId") or body.get("connection_id") or "").strip()
         if not connection_id:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         if self.integration_connection_service is None:
-            raise ErrIntegrationConnectionNotFound
+            raise ErrIntegrationConnectionNotFound()
         # Reverify the same resource using the current owner's personal authorization.
         connection = await self.integration_connection_service.get_active_personal(
             user_id, "gitlab", connection_id, project_id
         )
         if instance_key(connection.base_url) != binding.instance_key:
-            raise ErrResourceBindingInvalid
+            raise ErrResourceBindingInvalid()
         await self.integration_connection_service.resolve_gitlab_group_id(
             connection_id, project_id, binding.remote_resource_id, user_id=user_id
         )
@@ -676,7 +809,7 @@ class ResourceBindingService:
         await self.ensure_local_access(user_id, resource_type, resource_id)
         binding = await self.repository.get(resource_type, resource_id, binding_id)
         if binding is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         if binding.provider == "gitlab":
             if binding.remote_resource_type == "group":
                 # Serialize group deletion with requirement binding creation.
@@ -688,7 +821,7 @@ class ResourceBindingService:
                     instance=binding.instance_key,
                 )
                 if locked is None or locked.binding_id != binding.binding_id:
-                    raise ErrNotFound
+                    raise ErrNotFound()
                 binding = locked
                 # 删除保护(ADR-0007):需求绑定经由所属群组的项目绑定约束资源范围,
                 # 若仍有激活需求绑定引用该群组下仓库,阻止删除并返回受影响清单。

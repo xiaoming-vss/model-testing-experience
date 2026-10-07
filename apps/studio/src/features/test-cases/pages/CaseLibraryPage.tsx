@@ -36,7 +36,6 @@ import { useProjectRequirements } from '@/features/projects/hooks/useProjectRequ
 import { useSprintRequirementScope } from '@/features/projects/hooks/useSprintRequirementScope'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
-import { usePersonalConnectionChoice } from '@/features/base-services/components/usePersonalConnectionChoice'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { FunctionCaseEditor } from '@/features/test-cases/components/FunctionCaseEditor'
 import {
@@ -138,7 +137,6 @@ export function CaseLibraryPage() {
   const queryClient = useQueryClient()
   const activeProjectId = useWorkbenchStore((state) => state.activeProjectId)
   const { activeSprintId: globalSprintId, selectSprint: selectGlobalSprint } = useActiveSprint()
-  const personalZentao = usePersonalConnectionChoice('zentao')
 
   const [suiteId, setSuiteId] = useState<string | null>(null)
   const [priority, setPriority] = useState<string | null>(null)
@@ -161,6 +159,7 @@ export function CaseLibraryPage() {
   const [importJsonFile, setImportJsonFile] = useState<File | null>(null)
   const [importJsonText, setImportJsonText] = useState('')
   const [zentaoImportTarget, setZentaoImportTarget] = useState<ZentaoImportTarget | null>(null)
+  const [zentaoPushFeedback, setZentaoPushFeedback] = useState<{ text: string; uncertain: boolean } | null>(null)
   const [zentaoImportForm] = Form.useForm<ZentaoImportFormValues>()
 
   const {
@@ -417,30 +416,25 @@ export function CaseLibraryPage() {
   const importZentaoTestCasesMutation = useMutation({
     mutationFn: async (values: ZentaoImportFormValues) => {
       const target = zentaoImportTarget!
-      const connectionId = await personalZentao.forZentaoRequirement(
-        activeProjectId ?? '',
-        target.requirementId ?? '',
-      )
       return api.importFunctionTestCasesToZentao(target.suiteId, {
         ...values,
-        connectionId,
         caseIds: target.caseIds.length > 0 ? target.caseIds : undefined,
       })
     },
     onSuccess: (result) => {
       const importedCount =
         result.importedCaseCount ?? result.imported_case_count ?? result.items?.length ?? 0
-      message.success(`已导入禅道：${importedCount} 条用例`)
+      if (result.status && result.status !== 'success') {
+        const detail = result.items?.filter(item => item.status !== 'success').map(item => `${item.caseId}: ${item.errorMessage || item.status}`).join('；')
+        setZentaoPushFeedback({ text: `已推送 ${importedCount} 条；${detail}`, uncertain: Boolean(result.items?.some(item => item.status === 'uncertain')) })
+        return
+      }
+      message.success(`已推送禅道：${importedCount} 条用例`)
       setZentaoImportTarget(null)
       zentaoImportForm.resetFields()
     },
     onError: (error) => {
-      const errorText = `${getErrorMessage(error)}`.toLowerCase()
-      message.error(
-        /绑定|禅道|zentao|binding/.test(errorText) || (error instanceof ApiError && error.code === 3303)
-          ? '导入失败：请先完成项目和迭代的禅道绑定'
-          : getFunctionCaseErrorMessage(error),
-      )
+      message.error(getFunctionCaseErrorMessage(error))
     },
   })
 
@@ -522,6 +516,7 @@ export function CaseLibraryPage() {
   }
 
   function openZentaoImport(caseIds: string[]) {
+    setZentaoPushFeedback(null)
     if (!selectedSuite?.suiteId) return
     zentaoImportForm.setFieldsValue({ productId: 1, moduleId: 0 })
     setZentaoImportTarget({
@@ -755,7 +750,6 @@ export function CaseLibraryPage() {
 
   return (
     <div className="workbench-page api-automation-page functional-test-page tp-list-surface case-library-page tp-surface">
-      {personalZentao.dialog}
       <div className="api-automation-content">
         <section className="workbench-panel workbench-board-panel tp-board">
           <div className="panel-header api-panel-header case-library-toolbar tp-list-toolbar">
@@ -1388,19 +1382,20 @@ export function CaseLibraryPage() {
           setZentaoImportTarget(null)
         }}
         confirmLoading={importZentaoTestCasesMutation.isPending}
-        okButtonProps={{ className: 'action-btn-save' }}
+        okButtonProps={{ className: 'action-btn-save', disabled: zentaoPushFeedback?.uncertain }}
         onOk={() => zentaoImportForm.submit()}
         destroyOnHidden
       >
         <div className="functional-case-zentao-import-modal">
+          {zentaoPushFeedback && <Alert showIcon type="warning" title="推送未全部完成" description={zentaoPushFeedback.text} />}
           <Alert
             showIcon
             type="info"
             title={`本次将导入 ${zentaoImportCaseCount} 条用例`}
             description={
               zentaoImportTarget && zentaoImportTarget.caseIds.length > 0
-                ? '只会导入本次选中的用例。如果导入失败并提示资源绑定相关错误，请先完成项目和迭代的禅道绑定。'
-                : '默认导入该测试集全部用例。如果导入失败并提示资源绑定相关错误，请先完成项目和迭代的禅道绑定。'
+                ? '只会导入本次选中的用例。使用项目 MCP 和本人 Token，须先绑定项目、迭代和需求。执行内同名用例会更新，否则创建。'
+                : '默认导入该测试集全部用例。使用项目 MCP 和本人 Token，须先绑定项目、迭代和需求。执行内同名用例会更新，否则创建。'
             }
           />
           <Form<ZentaoImportFormValues>

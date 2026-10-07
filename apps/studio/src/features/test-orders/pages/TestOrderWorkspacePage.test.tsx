@@ -206,54 +206,25 @@ it('可以在工作台里从用例库挑用例加入测试单', async () => {
 })
 
 
-it('可以在工作台打开用例图谱并派发', async () => {
-  useAuthStore.setState({ user: { userId: 'user-1', nickname: '张三' } as User })
-  vi.spyOn(api, 'getTestOrder').mockImplementation(async () => order)
-  vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async () => listResponse([entry]))
-  vi.spyOn(api, 'getTestOrderGraph').mockImplementation(async () => ({
-    orderId: 'order-1',
-    run: null,
-  }))
-  vi.spyOn(api, 'getTestOrderGraphInput').mockImplementation(async () => ({
-    requirements: [],
-    cases: [],
-    case_requirement_links: [],
-  }))
-  vi.spyOn(api, 'getLlmConnections').mockImplementation(async () =>
-    listResponse([
-      {
-        connectionId: 'conn-1',
-        provider: 'llm',
-        name: 'llm',
-        baseUrl: 'https://llm.example/v1',
-        authType: 'api_key',
-        account: 'me',
-        status: 'active',
-        hasAccessToken: true,
-      },
-    ]),
-  )
-  const dispatch = vi
-    .spyOn(api, 'dispatchTestOrderGraph')
-    .mockImplementation(async () => ({ runId: 'run-1', status: 'pending' }))
+it('原用例图谱入口在新标签页打开独立页面并保留工作台', async () => {
+  useAuthStore.setState({ user: { userId: 'user-1' } as User })
+  vi.spyOn(api, 'getTestOrder').mockResolvedValue(order)
+  vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(listResponse([entry]))
+  const graph = vi.spyOn(api, 'getTestOrderGraph')
+  const open = vi.spyOn(window, 'open').mockReturnValue(null)
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   seedAccess(client, 'owner')
   renderWorkspace(client)
-
-  const user = userEvent.setup()
-  await screen.findByText('V2.3 回归测试单')
-  await user.click(screen.getByRole('button', { name: '用例图谱' }))
-
-  // 弹框打开后才有生成入口；只有一个活跃连接时连接选择器静默选中。
-  await user.click(await screen.findByRole('button', { name: '生成图谱' }))
-
-  await waitFor(() => expect(dispatch).toHaveBeenCalledTimes(1))
-  expect(dispatch.mock.calls[0][0]).toBe('order-1')
-  expect(dispatch.mock.calls[0][1]).toMatchObject({ connectionId: 'conn-1' })
+  await screen.findByText('账号锁定')
+  await userEvent.setup().click(screen.getByRole('button', { name: '用例图谱' }))
+  expect(open).toHaveBeenCalledWith('/test-orders/order-1/graph', '_blank', 'noopener,noreferrer')
+  expect(screen.getByText('账号锁定')).toBeVisible()
+  expect(screen.queryByRole('dialog', { name: '用例图谱' })).not.toBeInTheDocument()
+  expect(graph).not.toHaveBeenCalled()
   client.clear()
 })
 
-it('底部条目导航切换详情，步骤与预期保持对应', async () => {
+it('快捷键说明按需显示，键盘切换详情时步骤与预期保持对应', async () => {
   useAuthStore.setState({ user: { userId: 'user-1' } as User })
   vi.spyOn(api, 'getTestOrder').mockImplementation(async () => order)
   vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async () => listResponse([
@@ -265,35 +236,45 @@ it('底部条目导航切换详情，步骤与预期保持对应', async () => {
   renderWorkspace(client)
   const user = userEvent.setup()
   await screen.findByText('账号锁定')
-  expect(screen.getByRole('button', { name: '上一条' })).toBeDisabled()
+  expect(screen.queryByRole('button', { name: '上一条' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '下一条' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  const help = screen.getByRole('button', { name: '快捷键说明' })
+  await user.hover(help)
+  expect(await screen.findByRole('tooltip')).toHaveTextContent('1 通过 · 2 失败 · 3 阻塞 · 4 跳过；↑ 上一条，↓ 下一条')
+  await user.unhover(help)
   expect(screen.getAllByRole('checkbox', { name: '判定后自动前进' })).toHaveLength(1)
-  await user.click(screen.getByRole('button', { name: '下一条' }))
+  expect(screen.getByRole('checkbox', { name: '判定后自动前进' })).not.toBeChecked()
+  const firstItem = screen.getByRole('button', { name: /验证码错误 5 次锁定账号/ })
+  const secondItem = screen.getByRole('button', { name: /第二条用例/ })
+  await user.click(firstItem)
+  await user.keyboard('{ArrowDown}')
+  expect(secondItem).toHaveFocus()
   expect(await screen.findByText('第二条操作')).toBeInTheDocument()
   expect(screen.getByText('第二条预期')).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '下一条' })).toBeDisabled()
-  await user.click(screen.getByRole('button', { name: '上一条' }))
+  expect(screen.getByText('第 2 / 2 条')).toBeInTheDocument()
+  await user.keyboard('{ArrowDown}')
+  expect(screen.getByText('第二条操作')).toBeInTheDocument()
+  await user.keyboard('{ArrowUp}')
+  expect(firstItem).toHaveFocus()
   expect(await screen.findByText('账号锁定')).toBeInTheDocument()
   client.clear()
 })
 
-it('图谱打开时数字和方向键不操作底层执行条目', async () => {
+it('打开图谱后原工作台仍可使用执行快捷键', async () => {
   useAuthStore.setState({ user: { userId: 'user-1' } as User })
   vi.spyOn(api, 'getTestOrder').mockResolvedValue(order)
   vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(listResponse([entry]))
-  vi.spyOn(api, 'getTestOrderGraph').mockResolvedValue({ orderId: 'order-1', run: null })
-  const update = vi.spyOn(api, 'updateTestOrderEntry').mockResolvedValue(entry)
+  vi.spyOn(window, 'open').mockReturnValue(null)
+  const update = vi.spyOn(api, 'updateTestOrderEntry').mockResolvedValue({ ...entry, status: 'passed' })
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   seedAccess(client, 'owner')
   renderWorkspace(client)
   const user = userEvent.setup()
-  await screen.findByText('V2.3 回归测试单')
+  await screen.findByText('账号锁定')
   await user.click(screen.getByRole('button', { name: '用例图谱' }))
-  await screen.findByText('这张测试单还没有生成过图谱')
-  await user.keyboard('1234{ArrowDown}{ArrowUp}')
-  expect(update).not.toHaveBeenCalled()
-  await user.click(screen.getByRole('button', { name: 'Close' }))
-  expect(screen.getByRole('button', { name: '用例图谱' })).toBeVisible()
-  await waitFor(() => expect(screen.queryByRole('dialog', { name: '用例图谱' })).not.toBeInTheDocument())
+  await user.keyboard('1')
+  await waitFor(() => expect(update).toHaveBeenCalledWith('order-1', 'entry-1', { status: 'passed' }))
   client.clear()
 })
 

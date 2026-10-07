@@ -117,3 +117,12 @@
 .is-collapsed .sidebar-link { flex-direction: column; gap: 5px; padding: 10px 0; font-size: 11px; }
 
 .sidebar-count { margin-left: auto; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--mac-glass-muted); }
+
+:root:not([data-theme='dark']) .app-sidebar .sidebar-link.is-active {
+  color: var(--button-primary-text);
+  background: var(--button-primary-bg);
+}
+
+:root:not([data-theme='dark']) .app-sidebar .sidebar-link.is-active .sidebar-count {
+  color: inherit;
+}

@@ -22,7 +22,7 @@ class ApiAssertRuleService:
     ) -> ApiAssertRule:
         rule = await self.repository.get_rule(assert_rule_id)
         if rule is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await self.api_cases.get_accessible_context(user_id, rule.case_id, action=action)
         return rule
 

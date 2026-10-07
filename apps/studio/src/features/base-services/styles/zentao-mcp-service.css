@@ -1,0 +1,30 @@
+.base-services-mcp-card .base-services-mcp-title {
+  display: flex;
+  align-items: center;
+  flex: 1 1 0;
+  gap: 10px;
+}
+
+.base-services-mcp-title > :first-child {
+  flex: 0 0 auto;
+}
+
+.base-services-mcp-title > .ant-typography {
+  display: block;
+  flex: 1;
+}
+
+.base-services-mcp-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  height: 22px;
+}
+
+.base-services-mcp-instance {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

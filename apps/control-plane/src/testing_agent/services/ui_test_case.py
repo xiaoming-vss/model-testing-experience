@@ -234,16 +234,16 @@ class UiTestCaseService:
     ) -> UiTestSuite:
         suite = await self.repository.get_suite(suite_id)
         if suite is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         requirement = await self.repository.get_requirement(suite.requirement_id)
         if requirement is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         sprint = await self.repository.get_sprint(requirement.sprint_id)
         if sprint is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         project = await self.repository.get_project(sprint.project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await require_project_access(self.repository.session, user_id, project, action)
         return suite
 
@@ -252,7 +252,7 @@ class UiTestCaseService:
     ) -> UiTestCase:
         case = await self.repository.get_case(case_id)
         if case is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await self.get_accessible_suite(user_id, case.suite_id, action=action)
         return case
 

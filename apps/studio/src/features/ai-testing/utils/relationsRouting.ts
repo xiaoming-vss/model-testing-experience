@@ -1,11 +1,17 @@
-import { boundary, previewRelationsEdge, routeRelationsEdge, type RoutePoint, type RouteRect } from './relationsEdgePath'
-import { RelationsRouteTraffic } from './relationsRouteTraffic'
+import { boundary, previewRelationsEdge, routeRelationsEdge, segmentHitsCard, type RoutePoint, type RouteRect } from './relationsEdgePath'
+import { RelationsRouteTraffic, sampleRoute } from './relationsRouteTraffic'
 
 export type RelationsRouteGeometry = {
   cards: RouteRect[]
-  links: { id: string; source: string; target: string; straight: boolean }[]
+  links: { id: string; source: string; target: string; straight: boolean; preferredPath?: string; orthogonal?: boolean }[]
 }
 export type RelationsRouteResult = { paths: [string, string][]; blockedEdgeIds?: string[]; done?: boolean }
+
+export function validPreferredRelationPath(path: string, cards: RouteRect[], blockedSegment?: (a: RoutePoint, b: RoutePoint) => boolean) {
+  const points = sampleRoute(path)
+  return points.length > 1 && points.every((point) => Number.isFinite(point.x) && Number.isFinite(point.y))
+    && points.slice(1).every((point, i) => !cards.some((card) => segmentHitsCard(points[i], point, card)) && !blockedSegment?.(points[i], point))
+}
 
 /** Allocate both incoming and outgoing ports together; mainline ports stay centered. */
 function connectionPorts({ cards, links }: RelationsRouteGeometry) {
@@ -66,10 +72,12 @@ export function computeRelationsRoutes(geometry: RelationsRouteGeometry, onProgr
   let lastProgress = performance.now()
   ordered.forEach((edge, index) => {
     const source = byId.get(edge.source), target = byId.get(edge.target)
-    const path = source && target ? routeRelationsEdge(source, target, cards, edge.straight, {
+    const blockedSegment = (a: RoutePoint, b: RoutePoint) => mainTraffic.cost(a, b) > 0
+    const preferred = edge.preferredPath && validPreferredRelationPath(edge.preferredPath, cards, blockedSegment) ? edge.preferredPath : null
+    const path = preferred ?? (source && target ? routeRelationsEdge(source, target, cards, edge.straight, {
       sourcePort: ports.get(`${edge.id}:source`), targetPort: ports.get(`${edge.id}:target`), trafficCost: traffic.cost,
-      blockedSegment: (a, b) => mainTraffic.cost(a, b) > 0,
-    }) : ''
+      blockedSegment, orthogonal: edge.orthogonal,
+    }) : '')
     result.set(edge.id, path)
     if (!path) blockedEdgeIds.push(edge.id)
     traffic.add(path)

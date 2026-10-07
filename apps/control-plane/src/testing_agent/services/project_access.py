@@ -17,8 +17,19 @@ from testing_agent.core.errors import ErrForbidden, ErrNotFound
 from testing_agent.models.project import Project
 from testing_agent.models.project_member import ProjectMember
 
-ProjectAction = Literal["read", "write", "execute", "review", "manage"]
-ACTIONS: tuple[ProjectAction, ...] = ("read", "write", "execute", "review", "manage")
+ProjectAction = Literal[
+    "read", "write", "execute", "review", "manage", "project_read", "bug_read", "bug_handle"
+]
+ACTIONS: tuple[ProjectAction, ...] = (
+    "read",
+    "write",
+    "execute",
+    "review",
+    "manage",
+    "project_read",
+    "bug_read",
+    "bug_handle",
+)
 
 
 @lru_cache(maxsize=1)
@@ -38,6 +49,11 @@ m = g(r.role, p.role) && r.action == p.action
 """)
     enforcer = casbin.Enforcer(model)
     enforcer.add_policy("viewer", "read")
+    for role in ("viewer", "developer"):
+        enforcer.add_policy(role, "project_read")
+        enforcer.add_policy(role, "bug_read")
+    enforcer.add_policy("developer", "bug_handle")
+    enforcer.add_policy("member", "bug_handle")
     for action in ("write", "execute", "review"):
         enforcer.add_policy("member", action)
     enforcer.add_policy("owner", "manage")
@@ -66,7 +82,7 @@ async def require_project_access(
 ) -> str:
     role = await project_role(session, user_id, project)
     if not _policy().enforce(role, action):
-        raise ErrForbidden
+        raise ErrForbidden()
     return role
 
 
@@ -75,7 +91,7 @@ async def require_project_id(
 ) -> Project:
     project = await session.scalar(select(Project).where(Project.project_id == project_id))
     if project is None:
-        raise ErrNotFound
+        raise ErrNotFound()
     await require_project_access(session, user_id, project, action)
     return project
 
@@ -85,11 +101,11 @@ async def require_requirement_access(
 ) -> None:
     requirement = await repository.get_requirement(requirement_id)
     if requirement is None:
-        raise ErrNotFound
+        raise ErrNotFound()
     sprint = await repository.get_sprint(requirement.sprint_id)
     if sprint is None:
-        raise ErrNotFound
+        raise ErrNotFound()
     project = await repository.get_project(sprint.project_id)
     if project is None:
-        raise ErrNotFound
+        raise ErrNotFound()
     await require_project_access(repository.session, user_id, project, action)

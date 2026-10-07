@@ -1,7 +1,8 @@
 import { skillsApi } from './skills.api'
 import { storageCapabilities, uploadStoredFile } from '@/shared/api/files'
-import { request, type ListResponse } from '@/shared/api/request'
+import { buildQuery, request, type ListResponse } from '@/shared/api/request'
 import type {
+  RunHistoryResponse,
   ApiCaseGenerateTask,
   ApiCaseGenerateTaskRun,
   CodeRiskTask,
@@ -67,8 +68,8 @@ export const aiTestingApi = {
       method: 'POST',
       body: JSON.stringify({ connectionId }),
     }),
-  getApiCaseGenerateTaskRuns: (taskId: string) =>
-    request<ListResponse<ApiCaseGenerateTaskRun>>(`/v1/api-case-generate-tasks/${taskId}/runs`),
+  getApiCaseGenerateTaskRuns: (taskId: string, params: { page?: number; pageSize?: number; pipelineFilter?: string } = {}) =>
+    request<RunHistoryResponse<ApiCaseGenerateTaskRun>>(`/v1/api-case-generate-tasks/${taskId}/runs${buildQuery(params)}`),
   getApiCaseGenerateTaskRun: (runId: string) =>
     request<ApiCaseGenerateTaskRun>(`/v1/api-case-generate-task-runs/${runId}`),
   deleteApiCaseGenerateTaskRun: (runId: string) =>
@@ -111,8 +112,8 @@ export const aiTestingApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  getFunctionalCaseGenerateTaskRuns: (taskId: string) =>
-    request<ListResponse<FunctionalCaseGenerateTaskRun>>(`/v1/function-case-generate-tasks/${taskId}/runs`),
+  getFunctionalCaseGenerateTaskRuns: (taskId: string, params: { page?: number; pageSize?: number; pipelineFilter?: string } = {}) =>
+    request<RunHistoryResponse<FunctionalCaseGenerateTaskRun>>(`/v1/function-case-generate-tasks/${taskId}/runs${buildQuery(params)}`),
   getFunctionalCaseGenerateTaskRun: (runId: string) =>
     request<FunctionalCaseGenerateTaskRun>(`/v1/function-case-generate-task-runs/${runId}`),
   deleteFunctionalCaseGenerateTaskRun: (runId: string) =>
@@ -211,8 +212,8 @@ export const aiTestingApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  getUiCaseGenerateTaskRuns: (taskId: string) =>
-    request<ListResponse<UiCaseGenerateTaskRun>>(`/v1/ui-case-generate-tasks/${taskId}/runs`),
+  getUiCaseGenerateTaskRuns: (taskId: string, params: { page?: number; pageSize?: number; pipelineFilter?: string } = {}) =>
+    request<RunHistoryResponse<UiCaseGenerateTaskRun>>(`/v1/ui-case-generate-tasks/${taskId}/runs${buildQuery(params)}`),
   getUiCaseGenerateTaskRun: (runId: string) =>
     request<UiCaseGenerateTaskRun>(`/v1/ui-case-generate-task-runs/${runId}`),
   deleteUiCaseGenerateTaskRun: (runId: string) =>
@@ -255,8 +256,8 @@ export const aiTestingApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  getRequirementAnalysisTaskRuns: (taskId: string) =>
-    request<ListResponse<RequirementAnalysisTaskRun>>(`/v1/requirement-analysis-tasks/${taskId}/runs`),
+  getRequirementAnalysisTaskRuns: (taskId: string, params: { page?: number; pageSize?: number; pipelineFilter?: string } = {}) =>
+    request<RunHistoryResponse<RequirementAnalysisTaskRun>>(`/v1/requirement-analysis-tasks/${taskId}/runs${buildQuery(params)}`),
   getRequirementAnalysisRun: (runId: string) =>
     request<RequirementAnalysisTaskRun>(`/v1/requirement-analysis-runs/${runId}`),
   deleteRequirementAnalysisRun: (runId: string) =>
@@ -307,8 +308,8 @@ export const aiTestingApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  getCodeRiskTaskRuns: (taskId: string) =>
-    request<ListResponse<CodeRiskTaskRun>>(`/v1/code-risk-analysis-tasks/${taskId}/runs`),
+  getCodeRiskTaskRuns: (taskId: string, params: { page?: number; pageSize?: number; pipelineFilter?: string } = {}) =>
+    request<RunHistoryResponse<CodeRiskTaskRun>>(`/v1/code-risk-analysis-tasks/${taskId}/runs${buildQuery(params)}`),
   getCodeRiskRun: (runId: string) => request<CodeRiskTaskRun>(`/v1/code-risk-analysis-runs/${runId}`),
   deleteCodeRiskRun: (runId: string) =>
     request<Record<string, never>>(`/v1/code-risk-analysis-runs/${runId}`, { method: 'DELETE' }),

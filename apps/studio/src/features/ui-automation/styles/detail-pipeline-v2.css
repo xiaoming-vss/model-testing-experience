@@ -44,7 +44,6 @@
   min-height: 0;
   overflow-y: auto;
   padding-right: 2px;
-  scrollbar-width: thin;
 }
 
 /* 空态在长高的卡片里居中，而不是贴顶。 */

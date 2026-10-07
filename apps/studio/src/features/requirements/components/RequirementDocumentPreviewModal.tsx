@@ -1,3 +1,5 @@
+import { RequirementArtifactView } from '@/domain/requirements/RequirementArtifactView'
+import { parseRequirementArtifact } from '@/domain/requirements/requirementArtifact'
 import { readSignedFileResponse } from '@/shared/api/files'
 import { saveBlob } from '@/shared/utils/download'
 import {
@@ -36,7 +38,7 @@ function isWordDocument(documentType?: Requirement['documentType']) {
 }
 
 async function fetchBlobWithAuth(url: string, token?: string | null) {
-  const response = await fetch(url, {
+  const authorize = () => fetch(url, {
     headers: token
       ? {
           Authorization: `Bearer ${token}`,
@@ -44,12 +46,13 @@ async function fetchBlobWithAuth(url: string, token?: string | null) {
         }
       : undefined,
   })
+  const response = await authorize()
 
   if (!response.ok) {
     throw new Error(`文档加载失败（${response.status}）`)
   }
 
-  return (await readSignedFileResponse(response)).blob()
+  return (await readSignedFileResponse(response, authorize)).blob()
 }
 
 function RequirementDocxPreview({
@@ -193,7 +196,7 @@ function RequirementTextPreview({ previewUrl }: { previewUrl: string }) {
       setError(null)
 
       try {
-        const response = await fetch(previewUrl, {
+        const authorize = () => fetch(previewUrl, {
           headers: token
             ? {
                 Authorization: `Bearer ${token}`,
@@ -201,12 +204,13 @@ function RequirementTextPreview({ previewUrl }: { previewUrl: string }) {
               }
             : undefined,
         })
+        const response = await authorize()
 
         if (!response.ok) {
           throw new Error(`文本加载失败（${response.status}）`)
         }
 
-        const text = await (await readSignedFileResponse(response)).text()
+        const text = await (await readSignedFileResponse(response, authorize)).text()
         if (disposed) return
         setContent(text)
         setLoading(false)
@@ -245,6 +249,15 @@ function RequirementTextPreview({ previewUrl }: { previewUrl: string }) {
 }
 
 function RequirementUnderstandingArticle({ content }: { content: string }) {
+  let structured = false
+  let parseError = ''
+  try {
+    structured = !!parseRequirementArtifact(content)
+  } catch (error) {
+    parseError = error instanceof Error ? error.message : '结构化需求无法读取'
+  }
+  if (parseError) return <Alert type="error" title={parseError} />
+  if (structured) return <RequirementArtifactView content={content} />
   const lines = content.split(/\r?\n/)
   const firstContentIndex = lines.findIndex((line) => line.trim())
 

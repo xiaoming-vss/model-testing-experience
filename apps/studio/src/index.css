@@ -5,6 +5,8 @@
 @import './shared/styles/legacy-tokens.css';
 @import './shared/styles/github-dark-tokens.css';
 @import './shared/styles/github-dark-foundation.css';
+@import './shared/styles/indigo-amber-light-tokens.css';
+@import './shared/styles/scrollbars.css';
 
 :root {
   font-family:

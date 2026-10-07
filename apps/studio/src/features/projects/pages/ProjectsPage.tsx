@@ -32,7 +32,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { type BindingDepth, ZentaoBindingModal, ZentaoBindingSummary } from '@/features/base-services/components/ZentaoBindingPanel'
+import { type BindingDepth, ZentaoBindingBadge, ZentaoBindingModal, ZentaoBindingSummary } from '@/features/base-services/components/ZentaoBindingPanel'
 import { GitlabBindingModal, GitlabBindingSummary } from '@/features/base-services/components/GitlabBindingPanel'
 import { RequirementCodeBindingModal } from '@/features/base-services/components/RequirementCodeBindingModal'
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
@@ -48,7 +48,7 @@ import {
 } from '@/features/requirements/utils/requirementDocument'
 import { SprintDrawer } from '@/features/projects/components/SprintDrawer'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
-import { api, listItems, type Project, type Requirement, type Sprint } from '@/services/api'
+import { api, listItems, listTotal, type Project, type Requirement, type Sprint } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import {
   formatTime,
@@ -82,6 +82,7 @@ type PaginationState = {
 
 type RequirementViewState = {
   projectId?: string
+  sprintId?: string
   page: number
 }
 
@@ -137,11 +138,11 @@ export function ProjectsPage() {
     [activeProjectId, projects],
   )
   const sprintPage = sprintPagination.projectId === activeProjectId ? sprintPagination.page : 1
-  const requirementPage = requirementView.projectId === activeProjectId ? requirementView.page : 1
   const selectedRequirementSprintId = activeSprintId
+  const requirementPage = requirementView.projectId === activeProjectId && requirementView.sprintId === selectedRequirementSprintId ? requirementView.page : 1
 
   useEffect(() => {
-    setRequirementView({ projectId: activeProjectId, page: 1 })
+    setRequirementView({ projectId: activeProjectId, sprintId: selectedRequirementSprintId, page: 1 })
   }, [activeProjectId, selectedRequirementSprintId])
 
   useEffect(() => {
@@ -158,36 +159,22 @@ export function ProjectsPage() {
   const sprints = listItems(sprintsQuery.data)
   useSprintBoundaryRefresh({ sprints, enabled: Boolean(activeProjectId), refresh: sprintsQuery.refetch })
   const sprintOptions = sprints.map((sprint) => ({ label: sprint.name, value: normalizeSprintId(sprint) }))
-  const sprintIds = sprintOptions.map((option) => option.value).join(',')
 
   const requirementsQuery = useQuery({
-    queryKey: ['requirementsPool', activeProjectId, sprintIds],
-    queryFn: async () => {
-      if (sprints.length === 0) return []
-      const requirementGroups = await Promise.all(
-        sprints.map(async (sprint) => {
-          const sprintId = normalizeSprintId(sprint)
-          const requirements = await api.getRequirements(sprintId)
-          return requirements.map((requirement) => ({
-            ...requirement,
-            sprintName: sprint.name,
-            sprintIdForCreate: sprintId,
-          }))
-        }),
-      )
-      return requirementGroups.flat()
-    },
-    enabled: Boolean(activeProjectId) && !sprintsQuery.isLoading,
+    queryKey: ['requirementsPool', activeProjectId, selectedRequirementSprintId, requirementPage, requirementPageSize],
+    queryFn: () => api.getProjectRequirements(activeProjectId!, {
+      page: requirementPage,
+      pageSize: requirementPageSize,
+      sprintId: selectedRequirementSprintId,
+    }),
+    enabled: activeBoard === 'requirements' && Boolean(activeProjectId) && sprintsQuery.isSuccess,
   })
-  const requirements = listItems(requirementsQuery.data)
-  const filteredRequirements = !selectedRequirementSprintId
-    ? requirements
-    : requirements.filter((requirement) => requirement.sprintIdForCreate === selectedRequirementSprintId)
+  const requirements: RequirementPoolItem[] = listItems(requirementsQuery.data).map(requirement => ({
+    ...requirement,
+    sprintIdForCreate: requirement.sprintId ?? requirement.sprint_id ?? '',
+  }))
   const visibleSprints = sprints.slice((sprintPage - 1) * sprintPageSize, sprintPage * sprintPageSize)
-  const visibleRequirements = filteredRequirements.slice(
-    (requirementPage - 1) * requirementPageSize,
-    requirementPage * requirementPageSize,
-  )
+  const visibleRequirements = requirements
 
   const saveProjectMutation = useMutation({
     mutationFn: (values: Pick<Project, 'name' | 'description'>) =>
@@ -445,7 +432,7 @@ export function ProjectsPage() {
       ellipsis: true,
       render: (_, requirement) => (
         <div className="project-requirement-list-binding-info">
-          <ZentaoBindingSummary targetType="requirement" resourceId={normalizeRequirementId(requirement)} />
+          <ZentaoBindingBadge targetType="requirement" binding={requirement.zentaoBinding} />
         </div>
       ),
     },
@@ -659,7 +646,7 @@ export function ProjectsPage() {
                               <span className="sprint-card-value project-time-text">{formatTime(pickEndTime(sprint))}</span>
                             </div>
                             <div className="sprint-card-binding-line">
-                              <ZentaoBindingSummary targetType="sprint" resourceId={normalizeSprintId(sprint)} />
+                              <ZentaoBindingBadge targetType="sprint" binding={sprint.zentaoBinding} />
                             </div>
                             <div className="sprint-card-description project-description-text" title={sprint.description || '暂无迭代描述'}>
                               {sprint.description || '暂无迭代描述'}
@@ -773,10 +760,11 @@ export function ProjectsPage() {
                       loading={requirementsQuery.isFetching || requirementsQuery.isError}
                       current={requirementPage}
                       pageSize={requirementPageSize}
-                      total={filteredRequirements.length}
+                      total={listTotal(requirementsQuery.data)}
                       onChange={(page, pageSize) => {
                         setRequirementView({
                           projectId: activeProjectId,
+                          sprintId: selectedRequirementSprintId,
                           page,
                         })
                         setRequirementPageSize(pageSize)

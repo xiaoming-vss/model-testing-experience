@@ -1,6 +1,6 @@
-"""Bug 生命周期：创建自增编号、六状态流转表、独立转派、处理记录与动态。
+"""Bug 生命周期：创建自增编号、禅道三主状态与独立确认/解决方案、独立转派、处理记录与动态。
 
-权限采用最小约定：读操作要求项目 read，创建/编辑/流转/转派/评论要求 write。
+查看要求 bug_read；评论/转派/流转要求 bug_handle；创建/编辑仍要求 write。
 责任人可选范围为项目成员（含所有者），与测试单执行人一致。
 """
 
@@ -15,6 +15,7 @@ from testing_agent.core.enums import (
     BugActivityKind,
     BugPriority,
     BugRejectReason,
+    BugResolution,
     BugSeverity,
     BugStatus,
 )
@@ -53,19 +54,27 @@ from testing_agent.services.project_access import ProjectAction, require_project
 
 FUNCTION_CASE_TYPE = "function"
 
-# 流转表：需求文档 4.2 的完整状态与操作组合；表外组合一律拒绝。
-TRANSITIONS: dict[tuple[str, str], str] = {
-    (BugStatus.PENDING.value, BugAction.CONFIRM.value): BugStatus.PROCESSING.value,
-    (BugStatus.PENDING.value, BugAction.REJECT.value): BugStatus.REJECTED.value,
-    (BugStatus.PROCESSING.value, BugAction.SUBMIT_FIX.value): BugStatus.PENDING_REGRESSION.value,
-    (BugStatus.PROCESSING.value, BugAction.REJECT.value): BugStatus.REJECTED.value,
-    (BugStatus.PENDING_REGRESSION.value, BugAction.REGRESSION_PASS.value): BugStatus.CLOSED.value,
-    (BugStatus.PENDING_REGRESSION.value, BugAction.REGRESSION_FAIL.value): BugStatus.REOPENED.value,
-    (BugStatus.CLOSED.value, BugAction.REOPEN.value): BugStatus.REOPENED.value,
-    (BugStatus.REJECTED.value, BugAction.REOPEN.value): BugStatus.REOPENED.value,
-    (BugStatus.REOPENED.value, BugAction.CONFIRM.value): BugStatus.PROCESSING.value,
-    (BugStatus.REOPENED.value, BugAction.REJECT.value): BugStatus.REJECTED.value,
+# canonical actions are shared with ZenTao; older client actions remain accepted.
+TRANSITIONS = {
+    ("active", "confirm"): "active",
+    ("active", "resolve"): "resolved",
+    ("resolved", "close"): "closed",
+    ("resolved", "activate"): "active",
+    ("closed", "activate"): "active",
 }
+LEGACY_ACTIONS = {
+    "submit_fix": "resolve",
+    "reject": "resolve",
+    "regression_pass": "close",
+    "regression_fail": "activate",
+    "reopen": "activate",
+}
+LEGACY_RESOLUTIONS = {
+    "by_design": "bydesign",
+    "not_reproducible": "notrepro",
+    "deferred": "postponed",
+}
+
 
 REJECT_REASON_LABELS = {
     BugRejectReason.BY_DESIGN.value: "设计如此",
@@ -86,12 +95,16 @@ class BugService:
         self.repository = repository
         self.files = files
 
+    async def options(self, user_id: str, project_id: str) -> dict:
+        await require_project_id(self.repository.session, user_id, project_id, "bug_read")
+        return await self.repository.bug_options(project_id)
+
     async def get_accessible_entity(
-        self, user_id: str, bug_id: str, *, action: ProjectAction = "read"
+        self, user_id: str, bug_id: str, *, action: ProjectAction = "bug_read"
     ) -> Bug:
         bug = await self.repository.get_bug(bug_id)
         if bug is None:
-            raise ErrBugNotFound
+            raise ErrBugNotFound()
         await require_project_id(self.repository.session, user_id, bug.project_id, action)
         return bug
 
@@ -108,14 +121,14 @@ class BugService:
     def _validate_severity(value: str) -> str:
         value = value.strip()
         if value not in BugSeverity.values():
-            raise ErrBugSeverityInvalid
+            raise ErrBugSeverityInvalid()
         return value
 
     @staticmethod
     def _validate_priority(value: str) -> str:
         value = value.strip()
         if value not in BugPriority.values():
-            raise ErrBugPriorityInvalid
+            raise ErrBugPriorityInvalid()
         return value
 
     async def _resolve_optional_sprint(self, project_id: str, sprint_id: str) -> str:
@@ -124,7 +137,7 @@ class BugService:
             return ""
         sprint = await self.repository.get_sprint(sprint_id)
         if sprint is None or sprint.project_id != project_id:
-            raise ErrBugSprintMismatch
+            raise ErrBugSprintMismatch()
         return sprint_id
 
     async def _resolve_optional_requirement(self, project_id: str, requirement_id: str) -> str:
@@ -133,10 +146,10 @@ class BugService:
             return ""
         requirement = await self.repository.get_requirement(requirement_id)
         if requirement is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         sprint = await self.repository.get_sprint(requirement.sprint_id)
         if sprint is None or sprint.project_id != project_id:
-            raise ErrBugRequirementMismatch
+            raise ErrBugRequirementMismatch()
         return requirement_id
 
     async def _resolve_source(self, project_id: str, body: Any) -> dict[str, str]:
@@ -148,10 +161,10 @@ class BugService:
         if entry_id:
             entry = await self.repository.get_entry(entry_id)
             if entry is None:
-                raise ErrNotFound
+                raise ErrNotFound()
             order = await self.repository.get_order(entry.order_id)
             if order is None or order.project_id != project_id:
-                raise ErrBugSourceMismatch
+                raise ErrBugSourceMismatch()
             case_title = ""
             if entry.case_id and entry.case_type == FUNCTION_CASE_TYPE:
                 case_title = await self.repository.get_case_title(entry.case_id)
@@ -164,7 +177,7 @@ class BugService:
             }
         order = await self.repository.get_order(order_id)
         if order is None or order.project_id != project_id:
-            raise ErrBugSourceMismatch
+            raise ErrBugSourceMismatch()
         return {"source_order_id": order.order_id, "source_order_name": order.name}
 
     async def _attach_files(
@@ -173,7 +186,7 @@ class BugService:
         if not file_ids:
             return []
         if self.files is None:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         added: list[dict[str, str]] = []
         for file_id in file_ids:
             row = await self.files.attach(
@@ -192,11 +205,11 @@ class BugService:
         assignee = body.assignee_user_id.strip()
         # 创建时必须指定责任人；流转时不要求再次填写。
         if not assignee or not await self._is_assignable_member(project_id, assignee):
-            raise ErrBugAssigneeInvalid
+            raise ErrBugAssigneeInvalid()
         found_sprint_id = body.found_sprint_id.strip()
         found = await self.repository.get_sprint(found_sprint_id)
         if found is None or found.project_id != project_id:
-            raise ErrBugSprintMismatch
+            raise ErrBugSprintMismatch()
         planned_fix_sprint_id = await self._resolve_optional_sprint(
             project_id, body.planned_fix_sprint_id
         )
@@ -212,7 +225,7 @@ class BugService:
             project_id=project_id,
             title=body.title,
             description_html=description_html,
-            status=BugStatus.PENDING.value,
+            status=BugStatus.ACTIVE.value,
             severity=severity,
             priority=priority,
             reporter_user_id=user_id,
@@ -229,7 +242,7 @@ class BugService:
             actor_user_id=user_id,
             action="create",
             from_status="",
-            to_status=BugStatus.PENDING.value,
+            to_status=BugStatus.ACTIVE.value,
         )
         for _ in range(3):
             bug.bug_no = await self.repository.next_bug_no(project_id)
@@ -254,6 +267,8 @@ class BugService:
         project_id: str,
         *,
         statuses: list[str],
+        confirmed: bool | None,
+        resolution: str,
         severity: str,
         assignee_user_id: str,
         sprint_id: str,
@@ -263,10 +278,17 @@ class BugService:
         page: int,
         page_size: int,
     ) -> dict[str, Any]:
-        await require_project_id(self.repository.session, user_id, project_id, "read")
+        await require_project_id(self.repository.session, user_id, project_id, "bug_read")
+        resolution = resolution.strip()
+        if set(statuses) - BugStatus.values() or (
+            resolution and resolution not in BugResolution.values()
+        ):
+            raise AppError(400, "Bug 状态或解决方案筛选不合法", 400)
         rows, total = await self.repository.list_by_query(
             project_id,
             statuses=statuses,
+            confirmed=confirmed,
+            resolution=resolution.strip(),
             severity=severity.strip(),
             assignee_user_id=assignee_user_id.strip(),
             sprint_id=sprint_id.strip(),
@@ -280,7 +302,7 @@ class BugService:
 
     async def get(self, user_id: str, bug_id: str) -> dict:
         return await self._dump_detail(
-            await self.get_accessible_entity(user_id, bug_id, action="read")
+            await self.get_accessible_entity(user_id, bug_id, action="bug_read")
         )
 
     async def _dump_detail(self, bug: Bug) -> dict:
@@ -296,28 +318,73 @@ class BugService:
         return data
 
     async def transition(self, user_id: str, bug_id: str, body: BugTransitionRequest) -> dict:
-        bug = await self.get_accessible_entity(user_id, bug_id, action="write")
+        bug = await self.get_accessible_entity(user_id, bug_id, action="bug_handle")
+        # Lock and refresh after checking permissions, so decisions use current state.
+        await self.repository.session.refresh(bug, with_for_update=True)
         action = body.action.strip()
         if action not in BugAction.values():
-            raise ErrBadRequest
-        target = TRANSITIONS.get((bug.status, action))
-        if target is None:
-            raise ErrBugTransitionInvalid
+            raise ErrBadRequest()
+        canonical_action = LEGACY_ACTIONS.get(action, action)
+        target = TRANSITIONS.get((bug.status, canonical_action))
+        if target is None or (canonical_action == "confirm" and bug.confirmed):
+            raise ErrBugTransitionInvalid()
+        if action == "submit_fix" and not bug.confirmed:
+            raise ErrBugTransitionInvalid()
+        if action in {"regression_pass", "regression_fail"} and bug.resolution != "fixed":
+            raise ErrBugTransitionInvalid()
         content = body.content.strip()
-        detail: dict[str, str] = {}
-        if action == BugAction.REJECT.value:
+        detail: dict[str, Any] = {
+            "fromConfirmed": bug.confirmed,
+            "toConfirmed": bug.confirmed,
+            "fromResolution": bug.resolution,
+            "toResolution": bug.resolution,
+        }
+        resolution = body.resolution.strip()
+        resolved_build = body.resolved_build.strip()
+        duplicate_bug = body.duplicate_bug
+        if action == "reject":
             reason = body.reject_reason.strip()
             if reason not in BugRejectReason.values():
-                raise ErrBugRejectReasonInvalid
-            detail = {
-                "rejectReason": reason,
-                "rejectReasonLabel": REJECT_REASON_LABELS[reason],
-            }
-        elif action != BugAction.CONFIRM.value and not content:
-            # 提交修复、回归结果、回归失败说明、重新打开原因均为必填。
-            raise ErrBugContentRequired
+                raise ErrBugRejectReasonInvalid()
+            resolution = LEGACY_RESOLUTIONS[reason]
+            detail.update(rejectReason=reason, rejectReasonLabel=REJECT_REASON_LABELS[reason])
+        elif canonical_action != "confirm" and not content:
+            raise ErrBugContentRequired()
+        if canonical_action == "resolve":
+            if action == "submit_fix":
+                resolution = "fixed"
+            if resolution not in BugResolution.values():
+                raise AppError(400, "请选择有效的解决方案", 400)
+            if resolution != "fixed" and resolved_build:
+                raise AppError(400, "仅已修复可以填写解决版本", 400)
+            if resolution == "fixed" and not resolved_build:
+                raise AppError(400, "已修复必须填写解决版本", 400)
+            if resolution == "duplicate":
+                from sqlalchemy import select
+
+                duplicate = await self.repository.session.scalar(
+                    select(Bug).where(Bug.id == duplicate_bug, Bug.project_id == bug.project_id)
+                )
+                if duplicate is None or duplicate.bug_id == bug.bug_id:
+                    raise AppError(400, "重复 Bug 必须是当前项目的另一条 Bug", 400)
+            elif duplicate_bug:
+                raise AppError(400, "仅重复 Bug 解决方案可填写重复 Bug ID", 400)
+            bug.resolution = resolution
+            bug.resolved_build = resolved_build if resolution == "fixed" else ""
+            bug.duplicate_bug = duplicate_bug if resolution == "duplicate" else 0
+            detail.update(resolvedBuild=bug.resolved_build, duplicateBug=bug.duplicate_bug)
+        elif resolution or resolved_build or duplicate_bug:
+            raise AppError(400, "只有解决操作可以设置解决方案、版本和重复 Bug", 400)
+        if canonical_action == "confirm":
+            bug.confirmed = True
+        elif canonical_action == "activate":
+            bug.resolution = ""
+            bug.resolved_build = ""
+            bug.duplicate_bug = 0
+            bug.activated_count += 1
         from_status = bug.status
         bug.status = target
+        detail.update(toConfirmed=bug.confirmed, toResolution=bug.resolution)
         self._record(
             bug,
             kind=BugActivityKind.STATUS_CHANGE.value,
@@ -332,10 +399,10 @@ class BugService:
         return await self._dump_detail(bug)
 
     async def transfer(self, user_id: str, bug_id: str, body: Any) -> dict:
-        bug = await self.get_accessible_entity(user_id, bug_id, action="write")
+        bug = await self.get_accessible_entity(user_id, bug_id, action="bug_handle")
         assignee = body.assignee_user_id.strip()
         if not assignee or not await self._is_assignable_member(bug.project_id, assignee):
-            raise ErrBugAssigneeInvalid
+            raise ErrBugAssigneeInvalid()
         if assignee != bug.assignee_user_id:
             previous = bug.assignee_user_id
             bug.assignee_user_id = assignee
@@ -405,7 +472,7 @@ class BugService:
         inline_ids = set(extract_file_ids(bug.description_html))
         for file_id in dict.fromkeys(body.get("removed_attachment_file_ids") or []):
             if self.files is None:
-                raise ErrBadRequest
+                raise ErrBadRequest()
             row = await self.files.get(file_id, lock=True)
             if (row.project_id, row.resource_type, row.resource_id, row.status) != (
                 bug.project_id,
@@ -416,7 +483,9 @@ class BugService:
                 raise AppError(400, "附件不属于当前 Bug", 400)
             if file_id in inline_ids:
                 raise AppError(400, "请先从问题描述中移除该图片", 400)
-            row.status = "deleting"
+            # Removing current evidence must not invalidate previous descriptions
+            # or activity records. Keep the Bug association for authorization.
+            row.status = "archived"
             removed.append({"fileId": row.file_id, "filename": row.filename})
         file_ids = list(body.get("attachment_file_ids") or [])
         if description_changed:
@@ -442,7 +511,7 @@ class BugService:
         return await self._dump_detail(bug)
 
     async def add_comment(self, user_id: str, bug_id: str, content: str) -> dict:
-        bug = await self.get_accessible_entity(user_id, bug_id, action="write")
+        bug = await self.get_accessible_entity(user_id, bug_id, action="bug_handle")
         self._record(
             bug,
             kind=BugActivityKind.COMMENT.value,
@@ -454,6 +523,6 @@ class BugService:
         return {}
 
     async def list_activities(self, user_id: str, bug_id: str) -> dict[str, Any]:
-        bug = await self.get_accessible_entity(user_id, bug_id, action="read")
+        bug = await self.get_accessible_entity(user_id, bug_id, action="bug_read")
         rows = await self.repository.list_activities(bug.bug_id)
         return list_payload([dump(BugActivityResponse, row) for row in rows])

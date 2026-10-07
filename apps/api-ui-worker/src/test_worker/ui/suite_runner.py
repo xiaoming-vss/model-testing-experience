@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import asyncio
-
 from datetime import datetime
 from pathlib import Path
 
@@ -15,8 +14,10 @@ from playwright.async_api import async_playwright
 from ..contracts.types import (
     UiStepDefinition,
     UiSuiteItemRunResult,
+    UiSuiteItemRunStatus,
     UiSuiteRunItemSnapshot,
     UiSuiteRunResult,
+    UiSuiteRunStatus,
     UiTestSuiteRunSnapshot,
     WorkerConfig,
 )
@@ -63,7 +64,9 @@ def _build_artifact_dir(config: WorkerConfig, snapshot: UiTestSuiteRunSnapshot) 
     return str(Path(config.artifacts_root_dir) / snapshot.run_id)
 
 
-def _build_case_artifact_dir(root_artifact_dir: str, item: UiSuiteRunItemSnapshot) -> str:
+def _build_case_artifact_dir(
+    root_artifact_dir: str, item: UiSuiteRunItemSnapshot
+) -> str:
     """
     构建用例产物目录
 
@@ -109,7 +112,11 @@ def _build_skipped_item_result(
 class UiSuiteRunner:
     """测试集运行器类"""
 
-    def __init__(self, config: WorkerConfig, control_plane_client: ControlPlaneClient | None = None) -> None:
+    def __init__(
+        self,
+        config: WorkerConfig,
+        control_plane_client: ControlPlaneClient | None = None,
+    ) -> None:
         """
         初始化测试集运行器
 
@@ -145,13 +152,15 @@ class UiSuiteRunner:
         async with async_playwright() as p:
             launch_options = launch_options_from_suite(snapshot.suite)
             context_options = context_options_from_suite(snapshot.suite)
-            logger.info("ui browser launch options", {
-                "taskId": snapshot.task_id,
-                "runId": snapshot.run_id,
-                "suite": snapshot.suite.__dict__ if snapshot.suite else None,
-                "launchOptions": launch_options,
-                "contextOptions": context_options,
-            })
+            logger.info(
+                "ui browser launch options",
+                {
+                    "taskId": snapshot.task_id,
+                    "runId": snapshot.run_id,
+                    "headless": launch_options.get("headless"),
+                    "ignoreHTTPSErrors": context_options.get("ignore_https_errors"),
+                },
+            )
             browser = await p.chromium.launch(**launch_options)
 
             trace_path = ""
@@ -188,7 +197,9 @@ class UiSuiteRunner:
                         await self._report_suite_item_completed(
                             snapshot.task_id,
                             item.item_id,
-                            _build_skipped_item_result(item, snapshot.run_id, "用例未启用"),
+                            _build_skipped_item_result(
+                                item, snapshot.run_id, "用例未启用"
+                            ),
                         )
                         continue
 
@@ -197,21 +208,33 @@ class UiSuiteRunner:
                         await self._report_suite_item_completed(
                             snapshot.task_id,
                             item.item_id,
-                            _build_skipped_item_result(item, snapshot.run_id, "前置用例失败且未开启 continueOnFailure"),
+                            _build_skipped_item_result(
+                                item,
+                                snapshot.run_id,
+                                "前置用例失败且未开启 continueOnFailure",
+                            ),
                         )
                         continue
 
                     # 上报用例开始
                     case_started_at = now_iso()
-                    await self._report_suite_item_started(snapshot.task_id, item.item_id, {
-                        "runId": snapshot.run_id,
-                        "caseId": item.case.case_id,
-                        "startedAt": case_started_at,
-                    })
+                    await self._report_suite_item_started(
+                        snapshot.task_id,
+                        item.item_id,
+                        {
+                            "runId": snapshot.run_id,
+                            "caseId": item.case.case_id,
+                            "startedAt": case_started_at,
+                        },
+                    )
 
                     # 执行用例
-                    result = await self._run_suite_item(snapshot, item, execution_context, case_started_at)
-                    await self._report_suite_item_completed(snapshot.task_id, item.item_id, result)
+                    result = await self._run_suite_item(
+                        snapshot, item, execution_context, case_started_at
+                    )
+                    await self._report_suite_item_completed(
+                        snapshot.task_id, item.item_id, result
+                    )
 
                     # 更新状态
                     if result.status == "failed":
@@ -241,25 +264,32 @@ class UiSuiteRunner:
                         trace_path = str(Path(artifact_dir) / "trace.zip")
                         await context.tracing.stop(path=trace_path)
                     except Exception as trace_error:
-                        logger.warn("stop suite trace error", {
-                            "taskId": snapshot.task_id,
-                            "error": str(trace_error),
-                        })
+                        logger.warn(
+                            "stop suite trace error",
+                            {
+                                "taskId": snapshot.task_id,
+                                "error": str(trace_error),
+                            },
+                        )
 
                 # 关闭上下文
                 if context:
                     try:
                         await context.close()
                     except Exception as context_error:
-                        logger.warn("close suite browser context error", {
-                            "taskId": snapshot.task_id,
-                            "error": str(context_error),
-                        })
+                        logger.warn(
+                            "close suite browser context error",
+                            {
+                                "taskId": snapshot.task_id,
+                                "error": str(context_error),
+                            },
+                        )
 
                 # 关闭浏览器
                 await browser.close()
 
         # 计算最终状态
+        status: UiSuiteRunStatus
         if has_error:
             status = "error"
         elif has_failed:
@@ -303,14 +333,13 @@ class UiSuiteRunner:
         case_started_at = datetime.now().timestamp()
 
         # 创建用例产物目录
-        case_artifact_dir = _build_case_artifact_dir(execution_context.artifact_dir, item)
+        case_artifact_dir = _build_case_artifact_dir(
+            execution_context.artifact_dir, item
+        )
         Path(case_artifact_dir).mkdir(parents=True, exist_ok=True)
 
         # 规范化步骤
-        steps = [
-            step for step in _normalize_steps(item)
-            if step.enabled is not False
-        ]
+        steps = [step for step in _normalize_steps(item) if step.enabled is not False]
         steps.sort(key=lambda s: s.order_no or 0)
 
         # 创建用例执行上下文
@@ -323,7 +352,7 @@ class UiSuiteRunner:
 
         step_results = []
         error_message = ""
-        status = "success"
+        status: UiSuiteItemRunStatus = "success"
         success = True
         current_url = ""
 
@@ -335,10 +364,16 @@ class UiSuiteRunner:
                 step_started_at = datetime.now().timestamp()
 
                 try:
-                    result = await self._step_executor.execute(step, fallback_order, case_execution_context)
+                    result = await self._step_executor.execute(
+                        step, fallback_order, case_execution_context
+                    )
                     if screenshot_policy == "after_each_step":
-                        screenshot_path = await self._step_executor.capture_step_screenshot(
-                            execution_context.page, case_artifact_dir, fallback_order
+                        screenshot_path = (
+                            await self._step_executor.capture_step_screenshot(
+                                execution_context.page,
+                                case_artifact_dir,
+                                fallback_order,
+                            )
                         )
                         result = result.__class__(
                             **{**result.__dict__, "screenshot_path": screenshot_path}
@@ -347,26 +382,38 @@ class UiSuiteRunner:
                 except Exception as e:
                     message = str(e)
                     failed_result = build_failed_step_result(
-                        step, fallback_order, step_started_at_iso, step_started_at, message
+                        step,
+                        fallback_order,
+                        step_started_at_iso,
+                        step_started_at,
+                        message,
                     )
 
                     # 捕获失败截图
                     if screenshot_policy in ("on_failure", "after_each_step"):
                         try:
                             page = execution_context.page
-                            screenshot_path = await self._step_executor.capture_failure_screenshot(
-                                page, case_artifact_dir, fallback_order
+                            screenshot_path = (
+                                await self._step_executor.capture_failure_screenshot(
+                                    page, case_artifact_dir, fallback_order
+                                )
                             )
                             failed_result = failed_result.__class__(
-                                **{**failed_result.__dict__, "screenshot_path": screenshot_path}
+                                **{
+                                    **failed_result.__dict__,
+                                    "screenshot_path": screenshot_path,
+                                }
                             )
                         except Exception as capture_error:
-                            logger.warn("capture suite failure screenshot error", {
-                                "taskId": snapshot.task_id,
-                                "itemId": item.item_id,
-                                "stepOrderNo": fallback_order,
-                                "error": str(capture_error),
-                            })
+                            logger.warn(
+                                "capture suite failure screenshot error",
+                                {
+                                    "taskId": snapshot.task_id,
+                                    "itemId": item.item_id,
+                                    "stepOrderNo": fallback_order,
+                                    "error": str(capture_error),
+                                },
+                            )
 
                     step_results.append(failed_result)
                     success = False
@@ -398,13 +445,16 @@ class UiSuiteRunner:
             error_message=error_message or None,
         )
 
-
-    async def _report_suite_item_started(self, task_id: str, item_id: str, payload: dict) -> None:
+    async def _report_suite_item_started(
+        self, task_id: str, item_id: str, payload: dict
+    ) -> None:
         """上报测试集项开始"""
         if not self._control_plane_client:
             return
         from ..contracts.types import UiSuiteItemStartedPayload
-        self._control_plane_client.report_suite_item_started(
+
+        await asyncio.to_thread(
+            self._control_plane_client.report_suite_item_started,
             task_id,
             item_id,
             UiSuiteItemStartedPayload(
@@ -414,14 +464,15 @@ class UiSuiteRunner:
             ),
         )
 
-    async def _report_suite_item_completed(self, task_id: str, item_id: str, payload: UiSuiteItemRunResult) -> None:
+    async def _report_suite_item_completed(
+        self, task_id: str, item_id: str, payload: UiSuiteItemRunResult
+    ) -> None:
         """上报测试集项完成"""
         if not self._control_plane_client:
             return
-        await asyncio.to_thread(self._control_plane_client.report_suite_item_completed, task_id, item_id, payload)
-
-
-
-
-
-
+        await asyncio.to_thread(
+            self._control_plane_client.report_suite_item_completed,
+            task_id,
+            item_id,
+            payload,
+        )

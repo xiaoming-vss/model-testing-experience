@@ -1,6 +1,8 @@
 # 前端（studio）
 
-React 单页应用，提供项目、迭代、需求、功能/API/UI 测试资产、AI 任务与执行报告的完整工作台。领域术语见 [CONTEXT](CONTEXT.md)，结构与代码规范见 [STRUCTURE](STRUCTURE.md)，界面布局与交互规范见 [UI-GUIDELINES](UI-GUIDELINES.md)。
+React 单页应用，提供项目、迭代、需求、功能/API/UI 测试资产、AI 任务与执行报告的完整工作台。整体设计说明见 [DESIGN](DESIGN.md)，领域术语见 [CONTEXT](CONTEXT.md)，结构与代码规范见 [STRUCTURE](STRUCTURE.md)，界面布局与交互规范见 [UI-GUIDELINES](UI-GUIDELINES.md)。
+
+禅道同步的异步提交、轮询与恢复交互见 [集成任务交互](zentao-sync-jobs.md)。需求分析第一阶段的来源与事实核对见 [材料对照视图](requirement-material-comparison.md)，第二阶段的模块、流程和规则核对见 [需求理解对照视图](requirement-understanding-comparison.md)。
 
 ## 运行时与依赖
 
@@ -23,6 +25,7 @@ React 单页应用，提供项目、迭代、需求、功能/API/UI 测试资产
 | `app/providers/` | Query 与主题 Provider |
 | `app/styles/` | 主题与设计断言测试 |
 | `features/` | 按业务划分：`auth`、`projects`、`requirements`、`test-cases`、`testing`、`ai-testing`、`api-automation`、`ui-automation`、`base-services`、`profile` |
+| `domain/runs/` | API/UI/AI 共用的运行轮询策略与最终报告刷新；仅依赖 shared 和通用库 |
 | `services/api.ts` | 各 feature API 的聚合出口 |
 | `shared/` | `api/request.ts` 请求封装、通用组件、图标、主题 store |
 | `test/`、`utils/` | 测试辅助与工具函数 |
@@ -33,6 +36,7 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 
 - 功能用例生成页面负责运行选择与操作编排；`ai-testing/utils/functionalOutput.ts` 负责产物解析，`caseNameTree.ts` 负责树编辑与布局计算，三个结果展示组件分别负责需求分析、候选用例和测试点树。
 - 五类 AI 任务详情页的执行后缓存刷新、运行记录删除收敛在 `ai-testing/hooks/useTaskRunActions.ts`。各页保留不同的执行参数、授权查询、审核业务和草稿清理；删除失败不清空草稿，删除非当前记录不切换选中项。UI 与代码风险任务仍只刷新运行列表，其余三类任务同步刷新详情与项目任务列表。
+- 运行详情按状态刷新，历史与报告减少重复请求，详见 [运行页面刷新策略](run-polling.md)。AI 详情与历史的缓存同步由 `ai-testing/hooks/useTaskRunHistorySync.ts` 维护。
 - AI 测试样式按页面和组件职责维护，文件与引用约定见下表。
 - API 集合页面的查询、用例编辑、规则编辑和运行轮询分别在 `api-automation/hooks/useApiCollectionData.ts`、`useApiCaseEditing.ts`、`useApiRuleEditing.ts`、`useApiExecution.ts`。组件目录维护用例编辑器、规则弹窗、导入弹窗及运行历史/报告；查询键和缓存失效由对应 hook 管理。
 - UI 套件页面保留草稿与执行编排，步骤编辑器、导入弹窗、运行历史和报告位于 `ui-automation/components/`；单用例和套件报告共用步骤结果渲染。
@@ -102,12 +106,15 @@ npm run verify        # type-check + lint + build
 
 ## 与后端的交互
 
+迭代入口只读取迭代列表；需求入口通过项目级需求列表按当前迭代筛选、后端分页，选择“全部迭代”时省略 `sprintId`。列表的禅道绑定摘要直接使用响应中的 `zentaoBinding`，不按卡片或表格行逐条请求 `/bindings`。单条绑定在打开管理弹窗时查询；创建、重新绑定或解绑后使对应项目的迭代列表或需求分页缓存失效。
+
 - 开发服务器代理 `/v1` 与 `/__document_preview_proxy`（后者重写去掉前缀）到 `VITE_API_PROXY_TARGET`
 - 容器内由 nginx 监听 80 端口并代理同样的两个前缀，`proxy_read_timeout` 与 `proxy_send_timeout` 为 120s，`client_max_body_size` 为 105m
 - 容器健康检查访问 `location = /healthz`
 - 用户态认证使用 `Authorization` 头携带 JWT；认证存储键 `testpilot_access_token` 为兼容改名前的已登录用户而保留；主题偏好使用 `mtx-theme-preference`（light / dark / system，默认 system）
 
 - [内置 MCP 配置](builtin-mcp.md)
+- [Bug 手动推送到禅道](../control-plane/bug-zentao-push.md)
 
 - [文件直传与预览](file-storage.md)
 

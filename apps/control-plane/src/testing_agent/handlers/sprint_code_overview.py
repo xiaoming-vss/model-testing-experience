@@ -22,5 +22,5 @@ async def get_sprint_code_overview(
         ):
             raise ValueError
     except (ValueError, TypeError) as exc:
-        raise ErrBadRequest from exc
+        raise ErrBadRequest() from exc
     return success_payload(await service.get_overview(user_id, sprint_id, choices))

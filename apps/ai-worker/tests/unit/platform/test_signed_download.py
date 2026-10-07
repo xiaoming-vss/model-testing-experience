@@ -8,6 +8,27 @@ from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
 
 
 class SignedDownloadTests(unittest.TestCase):
+    def test_platform_conflict_preserves_business_reason_without_request_url(self):
+        calls = []
+
+        def handler(request):
+            calls.append(request)
+            return httpx.Response(
+                409, json={"code": 2203, "message": "需求原文件未存储到 S3，请重新上传", "data": {}}
+            )
+
+        with self.assertRaises(httpx.HTTPStatusError) as captured:
+            self.run_client(handler)
+        self.assertIn("需求原文件未存储到 S3，请重新上传", str(captured.exception))
+        self.assertNotIn("https://platform.test", str(captured.exception))
+        self.assertEqual(len(calls), 1)
+
+    def test_non_json_authorization_error_has_safe_status_message(self):
+        with self.assertRaises(httpx.HTTPStatusError) as captured:
+            self.run_client(lambda _: httpx.Response(503, content=b"upstream unavailable"))
+        self.assertIn("HTTP 503", str(captured.exception))
+        self.assertNotIn("https://platform.test", str(captured.exception))
+
     def run_client(self, handler):
         original = httpx.Client
         with (
@@ -91,4 +112,3 @@ class SignedDownloadTests(unittest.TestCase):
             PlatformHttpClient("https://platform.test", "secret").get_signed_file_bytes(
                 "https://foreign.test/key"
             )
-

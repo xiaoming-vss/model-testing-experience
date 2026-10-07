@@ -1,6 +1,6 @@
 # Model Testing Experience（MTX）
 
-Model Testing Experience（简称 MTX）是面向测试协作的平台，包含前端、控制面、AI Worker、API/UI Worker 和禅道连接服务。各项目保留自己的依赖、锁文件、Dockerfile、测试和独立启动入口。
+Model Testing Experience（简称 MTX）是面向测试协作的平台，包含前端、控制面、AI Worker、API/UI Worker 和独立集成 Worker，禅道集成通过外部 MCP 服务完成。各项目保留自己的依赖、锁文件、Dockerfile、测试和独立启动入口。
 
 | Compose/脚本名称 | 项目目录 | 作用 |
 | --- | --- | --- |
@@ -8,7 +8,7 @@ Model Testing Experience（简称 MTX）是面向测试协作的平台，包含�
 | control-plane | `apps/control-plane` | FastAPI 控制面 |
 | ai-worker | `apps/ai-worker` | AI 测试生成 |
 | api-ui-worker | `apps/api-ui-worker` | API / Playwright 测试执行 |
-| zentao | `apps/connector-zentao` | 禅道适配 |
+| integration-worker | `apps/integration-worker` | 禅道 Bug、附件、正文图片和字段同步执行 |
 | mysql | — | MySQL 8.4 |
 | migrate | `apps/control-plane` | 一次性数据库迁移 |
 
@@ -21,8 +21,8 @@ model-testing-experience/
 │   ├── control-plane/
 │   ├── ai-worker/
 │   ├── api-ui-worker/
-│   └── connector-zentao/
-├── deploy/         # 可选部署覆盖配置
+│   └── integration-worker/
+├── deploy/         # 可选部署覆盖配置与 MCP 手动部署模板
 ├── config/          # 统一配置与示例
 ├── scripts/         # 配置生成与启动入口
 ├── tests/           # 仓库级配置、部署测试
@@ -49,3 +49,5 @@ python3 scripts/manage.py compose up -d --build
 - [统一配置、部署与本地开发](docs/deployment.md)
 - [MTX 命名与旧部署兼容](docs/naming.md)
 - [领域上下文导航](CONTEXT-MAP.md)
+
+- [ZenTao-MCP 手动部署模板与指南](docs/control-plane/zentao-mcp-deployment.md)

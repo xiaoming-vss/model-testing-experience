@@ -44,34 +44,33 @@ AI_WAITING_REVIEW_STAGES = {
     "requirement_analysis",
     "case_names",
     "extracting_text",
-    "writing_requirement",
 }
 
 
 def ensure_worker_match(task, worker_id: str | None) -> None:
     if not worker_id or not worker_id.strip():
-        raise ErrBadRequest
+        raise ErrBadRequest()
     if not task.worker_id or task.worker_id != worker_id:
-        raise ErrForbidden
+        raise ErrForbidden()
     if task.status not in {"claimed", "running"}:
-        raise ErrBadRequest
+        raise ErrBadRequest()
     lease = getattr(task, "lease_expires_at", None)
     if lease is not None:
         if lease.tzinfo is None:
             lease = lease.replace(tzinfo=UTC)
         if lease <= datetime.now(UTC):
-            raise ErrBadRequest
+            raise ErrBadRequest()
 
 
 def ensure_task_id(task, body: WorkerTaskEventRequest) -> None:
     if body.task_id and body.task_id != task.task_id:
-        raise ErrBadRequest
+        raise ErrBadRequest()
 
 
 def ensure_final_status(status: str | None, allowed: set[str]) -> str:
     value = final_run_status(status)
     if value not in allowed:
-        raise ErrBadRequest
+        raise ErrBadRequest()
     return value
 
 
@@ -96,7 +95,7 @@ class WorkerTaskService:
         for path in paths:
             match = re.fullmatch(r"/v1/files/([a-zA-Z0-9-]+)/download", path)
             if not match:
-                raise ErrBadRequest
+                raise ErrBadRequest()
             row = await self.repository.session.scalar(
                 select(StoredFile).where(
                     StoredFile.file_id == match[1],
@@ -106,7 +105,7 @@ class WorkerTaskService:
                 )
             )
             if row is None:
-                raise ErrForbidden
+                raise ErrForbidden()
 
     async def _guard_ai_event(self, task, run):
         from testing_agent.models.ai_generate_task import AiGenerateTaskRun
@@ -143,7 +142,7 @@ class WorkerTaskService:
 
     async def claim(self, domain: str, body: WorkerClaimRequest) -> dict | None:
         if not body.worker_id or not body.worker_id.strip():
-            raise ErrBadRequest
+            raise ErrBadRequest()
         if isinstance(self.repository, WorkerTaskRepository):
             await self.expire_leases(domain)
         task = await self.repository.claim_pending(domain)
@@ -160,13 +159,13 @@ class WorkerTaskService:
             else:
                 run = await self.repository.get_api_run(task.run_id)
             if run is None:
-                raise ErrNotFound
+                raise ErrNotFound()
             run.status = RunStatus.QUEUED.value
         if domain == "ai":
             task.lease_expires_at = datetime.now(UTC) + timedelta(seconds=AI_LEASE_SECONDS)
             ai_run = await self.repository.get_ai_run(task.run_id)
             if ai_run is None:
-                raise ErrNotFound
+                raise ErrNotFound()
             ai_run.status = RunStatus.CLAIMED.value
             if ai_run.checkpoint_enabled:
                 ai_run.stage_status = StageStatus.RUNNING.value
@@ -208,11 +207,11 @@ class WorkerTaskService:
         ensure_task_id(task, body)
         started_at = parse_event_time(body.started_at)
         if body.started_at and started_at is None:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         if domain == "ai":
             guarded_run = await self.repository.get_ai_run(task.run_id)
             if guarded_run is None:
-                raise ErrNotFound
+                raise ErrNotFound()
             await self._guard_ai_event(task, guarded_run)
         await apply_event_to_task(task, body, "running")
         if started_at is not None:
@@ -231,7 +230,7 @@ class WorkerTaskService:
         if domain == "ai":
             ai_run = await self.repository.get_ai_run(task.run_id)
             if ai_run is None:
-                raise ErrNotFound
+                raise ErrNotFound()
             ai_run.status = RunStatus.RUNNING.value
             ai_run.started_at = (
                 ai_run.started_at or parse_event_time(body.started_at) or datetime.now(UTC)
@@ -262,11 +261,11 @@ class WorkerTaskService:
         if domain == "ai":
             ai_run = await self.repository.get_ai_run(task.run_id)
             if ai_run is None:
-                raise ErrNotFound
+                raise ErrNotFound()
             await self._guard_ai_event(task, ai_run)
         heartbeat_at = parse_event_time(body.heartbeat_at)
         if body.heartbeat_at and heartbeat_at is None:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         await apply_event_to_task(task, body, task.status)
         if heartbeat_at is not None:
             task.heartbeat_at = datetime.now(UTC)
@@ -285,8 +284,18 @@ class WorkerTaskService:
         if domain == "ai":
             guarded_run = await self.repository.get_ai_run(task.run_id)
             if guarded_run is None:
-                raise ErrNotFound
+                raise ErrNotFound()
             await self._guard_ai_event(task, guarded_run)
+            if task.task_type == "requirement_analysis" and status == "success":
+                from testing_agent.services.requirement_analysis_contracts import (
+                    validate_run_output,
+                )
+
+                if guarded_run.current_stage != "feature_understanding":
+                    raise ErrBadRequest()
+                validate_run_output(
+                    guarded_run, config=body.config_json, result=body.result_yaml, final=True
+                )
         await apply_event_to_task(task, body, status)
         await complete_domain_run(self.repository.session, domain, task, body)
         if domain == "api":
@@ -304,12 +313,12 @@ class WorkerTaskService:
         ensure_worker_match(task, body.worker_id)
         ensure_task_id(task, body)
         if task.task_type != "api_collection_run":
-            raise ErrBadRequest
+            raise ErrBadRequest()
         item = await self.repository.get_api_item(item_id)
         if item is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         if getattr(item, "collection_run_id", task.run_id) != task.run_id:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         item.status = RunStatus.RUNNING.value
         item.started_at = parse_event_time(body.started_at) or datetime.now(UTC)
         await self.repository.commit()
@@ -323,16 +332,16 @@ class WorkerTaskService:
         ensure_worker_match(task, body.worker_id)
         ensure_task_id(task, body)
         if task.task_type != "api_collection_run":
-            raise ErrBadRequest
+            raise ErrBadRequest()
         status = ensure_final_status(body.status, {"success", "failed", "error", "skipped"})
         item = await self.repository.get_api_item(item_id)
         if item is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         if getattr(item, "collection_run_id", task.run_id) != task.run_id:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         collection_run = await self.repository.get_api_collection_run(item.collection_run_id)
         if collection_run is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         item.status = status
         started_at = parse_event_time(body.started_at)
         finished_at = parse_event_time(body.finished_at) or datetime.now(UTC)
@@ -384,9 +393,9 @@ class WorkerTaskService:
         ensure_task_id(task, body)
         item = await self.repository.get_ui_item(item_id)
         if item is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         if item.suite_run_id != task.run_id:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         item.status = RunStatus.RUNNING.value
         item.started_at = parse_event_time(body.started_at) or datetime.now(UTC)
         await self.repository.commit()
@@ -402,9 +411,9 @@ class WorkerTaskService:
         ensure_task_id(task, body)
         item = await self.repository.get_ui_item(item_id)
         if item is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         if item.suite_run_id != task.run_id:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         item.status = final_run_status(body.status)
         item.snapshot_json = body.snapshot_json or item.snapshot_json
         item.step_results_json = body.step_results or item.step_results_json
@@ -427,7 +436,7 @@ class WorkerTaskService:
         if hasattr(self.repository, "get_worker_task"):
             task = await self.repository.get_worker_task("ai", task_id)
             if task is None:
-                raise ErrNotFound
+                raise ErrNotFound()
             await authorize_execution(self.repository.session, task)
             return task
         return await find_task(self.repository.session, "ai", task_id)
@@ -448,7 +457,7 @@ class WorkerTaskService:
 
             await fail_authorization(self.repository.session, task, authority)
             await self.repository.commit()
-            raise ErrForbidden
+            raise ErrForbidden()
         return payload
 
     async def gitlab_credentials(self, task_id: str) -> dict:
@@ -460,10 +469,10 @@ class WorkerTaskService:
         task = await find_task(self.repository.session, "ai", task_id)
         await authorize_execution(self.repository.session, task)
         if task.task_type != "code_risk_analysis":
-            raise ErrNotFound
+            raise ErrNotFound()
         run = await self.repository.get_ai_run(task.run_id)
         if run is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         snapshot = run.snapshot_json or {}
         bindings = snapshot.get("bindings") or []
         return await gitlab_credentials_payload(
@@ -483,28 +492,38 @@ class WorkerTaskService:
             "ui_case_generate",
             "code_risk_analysis",
         }:
-            raise ErrNotFound
+            raise ErrNotFound()
         run = await self.repository.get_ai_run(task.run_id)
         if run is None or not run.requirement_id:
-            raise ErrNotFound
+            raise ErrNotFound()
         if task.task_type == "ui_case_generate" and run.task_id != task.generate_task_id:
-            raise ErrNotFound
+            raise ErrNotFound()
         requirement = await self.repository.get_requirement(run.requirement_id)
         if requirement is None:
-            raise ErrNotFound
+            raise ErrNotFound()
+        snapshot = getattr(run, "snapshot_json", None) or {}
+        if task.task_type == "requirement_analysis" and snapshot.get("workflowVersion") == 2:
+            original_file = snapshot.get("documentFileId")
+            original_hash = snapshot.get("documentHash")
+            if (original_file and original_file != requirement.document_file_id) or (
+                original_hash and original_hash != requirement.document_hash
+            ):
+                from testing_agent.core.errors import AppError
+
+                raise AppError(409, "原始需求文件已变更，请发起新运行；历史产物仍保留", 409)
         if not getattr(requirement, "document_file_id", ""):
             from testing_agent.core.errors import ErrRequirementFileMissing
 
-            raise ErrRequirementFileMissing
+            raise ErrRequirementFileMissing()
         return requirement
 
     async def source_archive(self, task_id: str):
         task = await self._ai_worker_task(task_id)
         if task.task_type != "ui_case_generate":
-            raise ErrNotFound
+            raise ErrNotFound()
         run = await self.repository.get_ai_run(task.run_id)
         if run is None or run.task_id != task.generate_task_id or not run.task_id:
-            raise ErrNotFound
+            raise ErrNotFound()
         file_id = (run.snapshot_json or {}).get("sourceArchiveFileId")
         if not file_id:
             from testing_agent.core.errors import AppError
@@ -517,27 +536,33 @@ class WorkerTaskService:
         await authorize_execution(self.repository.session, task)
         ensure_worker_match(task, body.worker_id)
         if body.task_id and body.task_id != task.task_id:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         run = await self.repository.get_ai_run(task.run_id)
         if run:
             await self._guard_ai_event(task, run)
             if body.run_id and body.run_id != run.run_id:
-                raise ErrBadRequest
+                raise ErrBadRequest()
+            if task.task_type == "requirement_analysis" and body.stage_status == "waiting_review":
+                from testing_agent.services.requirement_analysis_contracts import (
+                    validate_run_output,
+                )
+
+                validate_run_output(run, config=body.config_json)
             now = datetime.now(UTC)
             next_task_status = RunStatus.RUNNING.value
             next_run_status = RunStatus.RUNNING.value
             next_stage_status = run.stage_status
             if run.checkpoint_enabled and body.stage_status == StageStatus.WAITING_REVIEW.value:
                 if not body.current_stage or body.current_stage != run.current_stage:
-                    raise ErrBadRequest
+                    raise ErrBadRequest()
                 if run.current_stage not in AI_WAITING_REVIEW_STAGES:
-                    raise ErrBadRequest
+                    raise ErrBadRequest()
                 next_task_status = RunStatus.SUCCESS.value
                 next_run_status = "waiting_review"
                 next_stage_status = StageStatus.WAITING_REVIEW.value
             elif run.checkpoint_enabled and body.stage_status:
                 if not body.current_stage or body.current_stage != run.current_stage:
-                    raise ErrBadRequest
+                    raise ErrBadRequest()
                 next_stage_status = body.stage_status
 
             task.status = next_task_status

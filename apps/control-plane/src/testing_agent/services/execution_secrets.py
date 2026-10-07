@@ -47,7 +47,7 @@ def private_payload(run):
             IntegrationCredentialCipher(get_settings().integration_key).decrypt(encrypted)
         )
     except (ValueError, TypeError) as exc:
-        raise ErrForbidden from exc
+        raise ErrForbidden() from exc
 
 
 def protect_run(run, secrets):

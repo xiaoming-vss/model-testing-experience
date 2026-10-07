@@ -12,19 +12,11 @@ import {
 } from '@ant-design/icons'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Tooltip } from 'antd'
-import { request } from '@/shared/api/request'
-import { uploadStoredFile } from '@/shared/api/files'
+import { downloadStoredFile, uploadStoredFile } from '@/shared/api/files'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
 import { stripImageSources } from './utils'
 import './rich-text-editor.css'
-
-type UploadTicket = { url: string }
-
-async function fetchImageUrl(fileId: string): Promise<string> {
-  const ticket = await request<UploadTicket>(`/v1/files/${fileId}/download`)
-  return ticket.url
-}
 
 /**
  * 平台统一富文本编辑器：受限工具栏 + 粘贴/选择图片上传到统一文件管线。
@@ -49,6 +41,14 @@ export function RichTextEditor({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const editorRef = useRef<Editor | null>(null)
   const projectIdRef = useRef(projectId)
+  const previewUrls = useRef<string[]>([])
+  useEffect(() => () => { previewUrls.current.forEach((url) => URL.revokeObjectURL(url)) }, [])
+  async function fetchImageUrl(fileId: string): Promise<string> {
+    const { blob } = await downloadStoredFile(fileId)
+    const url = URL.createObjectURL(blob)
+    previewUrls.current.push(url)
+    return url
+  }
   useEffect(() => {
     projectIdRef.current = projectId
   }, [projectId])
@@ -90,8 +90,9 @@ export function RichTextEditor({
     setUploading(true)
     try {
       const fileId = await uploadStoredFile(activeProjectId, file, 'attachment')
-      // 预览用签名地址只有短时效，编辑器仅在本次会话使用它。
+      // 下载完成后使用临时 Blob 地址；保存时剥离 src。
       const src = await fetchImageUrl(fileId)
+      if (editor.isDestroyed) { URL.revokeObjectURL(src); return }
       editor
         .chain()
         .focus()
@@ -138,7 +139,7 @@ export function RichTextEditor({
     })
     ids.forEach((fileId) => {
       void fetchImageUrl(fileId).then((src) => {
-        if (cancelled || editor.isDestroyed) return
+        if (cancelled || editor.isDestroyed) { URL.revokeObjectURL(src); return }
         const transaction = editor.state.tr
         editor.state.doc.descendants((node, position) => {
           if (node.type.name === 'image' && node.attrs.dataFileId === fileId && !node.attrs.src) {

@@ -14,20 +14,14 @@ from testing_agent_ai_worker.tasks.functional_case_generate.chain import (
 from testing_agent_ai_worker.tasks.functional_case_generate.detailed_batches import (
     run_functional_detailed_case_batches,
 )
-from testing_agent_ai_worker.tasks.requirement_analysis.chain import (
-    RequirementAnalysisChainRunResult,
-    run_requirement_analysis_chain,
-)
 
 __all__ = [
     "ChainRunResult",
     "FunctionalChainRunResult",
-    "RequirementAnalysisChainRunResult",
     "run_chain",
     "run_demo",
     "run_functional_chain",
     "run_functional_detailed_case_batches",
-    "run_requirement_analysis_chain",
     "run_skill_step",
 ]
 

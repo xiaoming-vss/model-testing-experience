@@ -9,7 +9,6 @@ from typing import Any
 from testing_agent.core.enums import ImportStatus, ReviewStatus, RunStatus, StageStatus
 from testing_agent.core.errors import (
     ErrBadRequest,
-    ErrNotFound,
     dynamic_error,
 )
 from testing_agent.core.sid import new_id
@@ -41,6 +40,12 @@ from testing_agent.services.ai_task_output import (
     validate_function_candidate_cases,
 )
 from testing_agent.services.personal_authorization import require_personal_connection
+from testing_agent.services.requirement_analysis_contracts import (
+    ensure_requirement_run_mutable,
+    merge_stage_config,
+    normalize_requirement_config,
+    validate_run_output,
+)
 
 
 class GenerationStageWorkflow:
@@ -101,6 +106,7 @@ class GenerationStageWorkflow:
         self, run_id: str, body: dict[str, Any], user_id: str
     ) -> dict:
         run = await self.owned_run(user_id, run_id, "requirement_analysis", action="review")
+        ensure_requirement_run_mutable(run.review_status)
         current_stage = str(body.get("currentStage") or body.get("stage") or run.current_stage)
         is_review_stage = (
             run.checkpoint_enabled
@@ -115,13 +121,24 @@ class GenerationStageWorkflow:
             and run.current_stage in REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES
         )
         if not (is_review_stage or is_final_stage):
-            raise ErrBadRequest
+            raise ErrBadRequest()
+        raw_config = body.get("configJson", run.config_json)
+        config = normalize_requirement_config(raw_config)
+        result = str(body.get("resultYaml", run.result_yaml) or "")
+        if is_review_stage and (current_stage != "extracting_text" or "resultYaml" in body):
+            raise ErrBadRequest()
+        config = merge_stage_config(run, config, current_stage)
+        validate_run_output(run, config=config, result=result, final=is_final_stage)
+        if is_final_stage and result != (run.result_yaml or ""):
+            run._reset_requirement_review = True
+            run.review_status = ReviewStatus.PENDING.value
+            run.reviewer_user_id = ""
+            run.reviewed_at = None
         if is_review_stage:
             run.stage_status = StageStatus.WAITING_REVIEW.value
-        if "configJson" in body:
-            run.config_json = normalize_config_json(body.get("configJson"))
+        run.config_json = config
         if "resultYaml" in body:
-            run.result_yaml = str(body.get("resultYaml") or "")
+            run.result_yaml = result
         run.result_summary_json = body.get("resultSummaryJson") or run.result_summary_json
         await self.repository.commit()
         await self.repository.refresh(run)
@@ -131,6 +148,7 @@ class GenerationStageWorkflow:
         self, run_id: str, body: dict[str, Any], user_id: str
     ) -> dict:
         run = await self.owned_run(user_id, run_id, "requirement_analysis", action="review")
+        ensure_requirement_run_mutable(run.review_status)
         current_stage = str(body.get("currentStage") or body.get("stage") or "")
         is_final_review = (
             current_stage in REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES
@@ -147,13 +165,15 @@ class GenerationStageWorkflow:
             if action == "rejected":
                 action = "reject"
             if action not in {"approve", "reject"}:
-                raise ErrBadRequest
+                raise ErrBadRequest()
+            if action == "approve":
+                validate_run_output(run, final=True)
             run.review_status = (
                 ReviewStatus.APPROVED.value if action == "approve" else ReviewStatus.REJECTED.value
             )
-            if action == "approve":
-                run.status = RunStatus.SUCCESS.value
-                run.stage_status = StageStatus.COMPLETED.value
+            # Generation is complete for either review outcome; rejection is terminal.
+            run.status = RunStatus.SUCCESS.value
+            run.stage_status = StageStatus.COMPLETED.value
             run.review_comment = str(body.get("reviewComment") or body.get("comment") or "")
             run.reviewer_user_id = user_id
             run.reviewed_at = datetime.now(UTC)
@@ -165,13 +185,13 @@ class GenerationStageWorkflow:
             or run.status != "waiting_review"
             or run.stage_status not in REQUIREMENT_ANALYSIS_REVIEW_READY_STATUSES
         ):
-            raise ErrBadRequest
+            raise ErrBadRequest()
 
         if (
             current_stage != run.current_stage
             or current_stage not in REQUIREMENT_ANALYSIS_REVIEWABLE_STAGES
         ):
-            raise ErrBadRequest
+            raise ErrBadRequest()
 
         action = str(
             body.get("action")
@@ -192,9 +212,11 @@ class GenerationStageWorkflow:
             latest_task = await self.repository.get_latest_worker_task_by_run_id(run.run_id)
             next_stage = next_requirement_analysis_stage(run.current_stage)
             if latest_task is None or next_stage is None:
-                raise ErrBadRequest
+                raise ErrBadRequest()
             if "configJson" in body:
-                run.config_json = normalize_config_json(body.get("configJson"))
+                edits = normalize_requirement_config(body["configJson"])
+                run.config_json = merge_stage_config(run, edits, current_stage)
+            validate_run_output(run)
             run.status = RunStatus.PENDING.value
             run.current_stage = next_stage
             run.stage_status = StageStatus.PENDING.value
@@ -216,7 +238,7 @@ class GenerationStageWorkflow:
             run.status = RunStatus.CANCELED.value
             run.stage_status = StageStatus.FAILED.value
         else:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         run._stage_review = (
             current_stage,
             "approved" if action == "approve" else "rejected",
@@ -230,6 +252,7 @@ class GenerationStageWorkflow:
         self, run_id: str, body: dict[str, Any], user_id: str
     ) -> dict:
         run = await self.owned_run(user_id, run_id, "requirement_analysis", action="execute")
+        ensure_requirement_run_mutable(run.review_status)
 
         current_stage = str(body.get("currentStage") or body.get("stage") or "")
         is_review_stage = (
@@ -245,27 +268,40 @@ class GenerationStageWorkflow:
             and run.current_stage in REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES
         )
         if not is_review_stage and not is_final_stage:
-            raise ErrBadRequest
+            raise ErrBadRequest()
 
         revision_instruction = str(
             body.get(REVISION_INSTRUCTION_FIELD) or body.get("revision_instruction") or ""
         ).strip()
         if not revision_instruction:
-            raise ErrBadRequest
+            raise ErrBadRequest()
 
         latest_task = await self.repository.get_latest_worker_task_by_run_id(run.run_id)
         if latest_task is None:
-            raise ErrBadRequest
+            raise ErrBadRequest()
 
         if "configJson" in body:
-            run.config_json = normalize_config_json(body.get("configJson"))
+            edits = normalize_requirement_config(body["configJson"])
+            run.config_json = merge_stage_config(
+                run, edits, current_stage, allow_resolved_questions=True
+            )
         elif not isinstance(run.config_json, dict):
             run.config_json = normalize_config_json(run.config_json)
         if is_final_stage:
             result_yaml = str(body.get("resultYaml") or run.result_yaml or "").strip()
             if not result_yaml:
-                raise ErrBadRequest
+                raise ErrBadRequest()
             run.config_json["resultYaml"] = str(body.get("resultYaml") or run.result_yaml or "")
+        validate_run_output(
+            run,
+            result=run.config_json.get("resultYaml"),
+            final=is_final_stage,
+            allow_resolved_questions=True,
+        )
+        run._reset_requirement_review = True
+        run.review_status = ReviewStatus.PENDING.value
+        run.reviewer_user_id = ""
+        run.reviewed_at = None
         run.config_json[REVISION_INSTRUCTION_FIELD] = revision_instruction
         run.status = RunStatus.PENDING.value
         if is_final_stage:
@@ -293,13 +329,7 @@ class GenerationStageWorkflow:
     async def revise_function_case_stage(
         self, run_id: str, body: dict[str, Any], user_id: str
     ) -> dict:
-        await self.owned_run(user_id, run_id, "function", action="execute")
-        # Refresh under the row lock to observe any concurrent submission.
-        run = await self.repository.get_run_for_update(run_id)
-        if run is None:
-            raise ErrNotFound
-        # The locked reload may return a new instance without the transient actor.
-        run._actor = user_id
+        run = await self.owned_run(user_id, run_id, "function", action="execute")
         stage = str(body.get("stage") or body.get("currentStage") or "")
         is_checkpoint = (
             run.checkpoint_enabled
@@ -318,10 +348,10 @@ class GenerationStageWorkflow:
             or run.review_status != ReviewStatus.PENDING.value
             or run.import_status == ImportStatus.IMPORTED.value
         ):
-            raise ErrBadRequest
+            raise ErrBadRequest()
         instruction = str(body.get("revisionInstruction") or "").strip()
         if not instruction:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         config = dict(normalize_config_json(run.config_json))
         field = {"requirement_analysis": "requirementAnalysis", "case_names": "caseNames"}.get(
             stage
@@ -330,26 +360,26 @@ class GenerationStageWorkflow:
             edits = normalize_function_stage_config(stage, body["configJson"])
             # Confirmed upstream inputs cannot be edited by a revision request.
             if field not in edits:
-                raise ErrBadRequest
+                raise ErrBadRequest()
             config[field] = edits[field]
         if field:
             current_output = config.get(field)
             if not current_output or (
                 isinstance(current_output, str) and not current_output.strip()
             ):
-                raise ErrBadRequest
+                raise ErrBadRequest()
         else:
             current_output = str(body.get("resultYaml", run.result_yaml) or "")
             if not current_output.strip():
-                raise ErrBadRequest
+                raise ErrBadRequest()
             cases = generated_function_cases(SimpleNamespace(result_yaml=current_output))
             if not cases:
-                raise ErrBadRequest
+                raise ErrBadRequest()
             validate_function_candidate_cases(cases)
             config["resultYaml"] = json.dumps({"cases": cases}, ensure_ascii=False)
         latest_task = await self.repository.get_latest_worker_task_by_run_id(run_id)
         if latest_task is None:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         config[REVISION_INSTRUCTION_FIELD] = instruction
         run.config_json = config
         if is_final:
@@ -383,14 +413,14 @@ class GenerationStageWorkflow:
             or run.status != "waiting_review"
             or run.stage_status not in FUNCTION_CASE_REVIEW_READY_STATUSES
         ):
-            raise ErrBadRequest
+            raise ErrBadRequest()
 
         current_stage = str(body.get("currentStage") or body.get("stage") or "")
         if (
             current_stage != run.current_stage
             or current_stage not in FUNCTION_CASE_REVIEWABLE_STAGES
         ):
-            raise ErrBadRequest
+            raise ErrBadRequest()
 
         action = str(
             body.get("action")
@@ -408,7 +438,7 @@ class GenerationStageWorkflow:
             latest_task = await self.repository.get_latest_worker_task_by_run_id(run.run_id)
             next_stage = next_function_case_stage(run.current_stage)
             if latest_task is None or next_stage is None:
-                raise ErrBadRequest
+                raise ErrBadRequest()
             run.status = RunStatus.PENDING.value
             run.current_stage = next_stage
             run.stage_status = StageStatus.PENDING.value
@@ -430,7 +460,7 @@ class GenerationStageWorkflow:
             run.status = RunStatus.CANCELED.value
             run.stage_status = StageStatus.FAILED.value
         else:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         run._stage_review = (
             current_stage,
             "approved" if action == "approve" else "rejected",
@@ -448,12 +478,7 @@ class GenerationStageWorkflow:
         *,
         kind: str = "function",
     ) -> dict:
-        await self.owned_run(user_id, run_id, kind, action="execute")
-        run = await self.repository.get_run_for_update(run_id)
-        if run is None:
-            raise ErrNotFound
-        # The locked reload may return a new instance without the transient actor.
-        run._actor = user_id
+        run = await self.owned_run(user_id, run_id, kind, action="execute")
         allowed_stages = (
             {*REQUIREMENT_ANALYSIS_REVIEWABLE_STAGES, REQUIREMENT_ANALYSIS_FINAL_STAGE}
             if kind == "requirement_analysis"
@@ -470,10 +495,10 @@ class GenerationStageWorkflow:
             or run.review_status != ReviewStatus.PENDING.value
             or run.import_status == ImportStatus.IMPORTED.value
         ):
-            raise ErrBadRequest
+            raise ErrBadRequest()
         latest_task = await self.repository.get_latest_worker_task_by_run_id(run_id)
         if latest_task is None or latest_task.status in {"pending", "claimed", "running"}:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         # Retain upstream outputs and any failed revision's instruction for this attempt.
         run.status = RunStatus.PENDING.value
         run.stage_status = StageStatus.PENDING.value
@@ -501,12 +526,7 @@ class GenerationStageWorkflow:
     ) -> dict:
         """审核通过后按用户触发派发图谱分析；重复点击基于最新用例重新生成。"""
 
-        await self.owned_run(user_id, run_id, "function", action="execute")
-        run = await self.repository.get_run_for_update(run_id)
-        if run is None:
-            raise ErrNotFound
-        # The locked reload may return a new instance without the transient actor.
-        run._actor = user_id
+        run = await self.owned_run(user_id, run_id, "function", action="execute")
         if (
             run.current_stage == FUNCTION_CASE_RELATION_STAGE
             and run.status in FUNCTION_CASE_RELATION_DISPATCH_STATUSES
@@ -521,13 +541,13 @@ class GenerationStageWorkflow:
                 and run.current_stage == FUNCTION_CASE_RELATION_STAGE
             )
         ):
-            raise ErrBadRequest
+            raise ErrBadRequest()
         latest_task = await self.repository.get_latest_worker_task_by_run_id(run_id)
         if latest_task is None or latest_task.status in FUNCTION_CASE_RELATION_DISPATCH_STATUSES:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         cases = generated_function_cases(run)
         if not cases:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         case_ids = [str(first_present(case, "case_id", "caseId") or "").strip() for case in cases]
         if any(not case_id for case_id in case_ids):
             raise dynamic_error(

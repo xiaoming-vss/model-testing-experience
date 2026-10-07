@@ -47,7 +47,6 @@
   flex-basis: 0;
   padding-top: 10px;
   overflow: auto;
-  scrollbar-width: thin;
 }
 
 .api-config-visual-view {

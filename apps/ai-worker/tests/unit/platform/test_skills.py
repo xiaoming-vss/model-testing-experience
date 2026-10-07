@@ -11,9 +11,11 @@ from testing_agent_ai_worker.platform.skills import SkillPreparer, required_skil
 
 class SkillTests(unittest.TestCase):
     def task(self, **kwargs):
-        return Task(task_id="task", project_id="project", payload=TaskPayload(openapi_content=""), **kwargs)
+        return Task(
+            task_id="task", project_id="project", payload=TaskPayload(openapi_content=""), **kwargs
+        )
 
-    def test_maps_all_thirteen_skills_and_checkpoint_only_fetches_needed_one(self):
+    def test_maps_active_skills_and_checkpoint_only_fetches_needed_one(self):
         names = set()
         for kind in [
             "requirement_analysis",
@@ -24,7 +26,15 @@ class SkillTests(unittest.TestCase):
             "test_report_generate",
             "test_order_graph",
         ]:
-            names.update(required_skills(self.task(task_type=kind)))
+            if kind == "requirement_analysis":
+                for stage in ["extracting_text", "feature_understanding"]:
+                    names.update(
+                        required_skills(
+                            self.task(task_type=kind, checkpoint_enabled=True, current_stage=stage)
+                        )
+                    )
+            else:
+                names.update(required_skills(self.task(task_type=kind)))
         task = self.task(
             task_type="functional_case_generate",
             checkpoint_enabled=True,
@@ -32,7 +42,7 @@ class SkillTests(unittest.TestCase):
         )
         self.assertEqual(required_skills(task), ["analyze-test-case-relations"])
         names.update(required_skills(task))
-        self.assertEqual(len(names), 13)
+        self.assertEqual(len(names), 12)
 
     def test_fresh_download_replaces_removed_files_and_preserves_other_task(self):
         with tempfile.TemporaryDirectory() as temp:

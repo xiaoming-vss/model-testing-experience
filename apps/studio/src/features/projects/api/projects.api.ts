@@ -14,9 +14,9 @@ import type {
 
 export const projectsApi = {
   getProjectMembers: (projectId: string) => request<ListResponse<ProjectMember>>(`/v1/projects/${projectId}/members`),
-  addProjectMember: (projectId: string, body: { name: string; role: 'member' | 'viewer' }) =>
+  addProjectMember: (projectId: string, body: { name: string; role: 'member' | 'viewer' | 'developer' }) =>
     request<ProjectMember>(`/v1/projects/${projectId}/members`, { method: 'POST', body: JSON.stringify(body) }),
-  updateProjectMember: (projectId: string, userId: string, role: 'member' | 'viewer') =>
+  updateProjectMember: (projectId: string, userId: string, role: 'member' | 'viewer' | 'developer') =>
     request<ProjectMember>(`/v1/projects/${projectId}/members/${userId}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
   removeProjectMember: (projectId: string, userId: string) =>
     request(`/v1/projects/${projectId}/members/${userId}`, { method: 'DELETE' }),

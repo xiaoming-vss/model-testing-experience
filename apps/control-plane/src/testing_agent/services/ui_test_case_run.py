@@ -96,16 +96,16 @@ class UiTestCaseRunService:
     ) -> UiSuiteRunContext:
         suite = await self.repository.get_suite(suite_id)
         if suite is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         requirement = await self.repository.get_requirement(suite.requirement_id)
         if requirement is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         sprint = await self.repository.get_sprint(requirement.sprint_id)
         if sprint is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         project = await self.repository.get_project(sprint.project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await require_project_access(self.repository.session, user_id, project, action)
         return UiSuiteRunContext(suite, requirement, sprint, project)
 
@@ -114,7 +114,7 @@ class UiTestCaseRunService:
     ) -> UiCaseRunContext:
         case = await self.repository.get_case(case_id)
         if case is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         suite_context = await self.get_accessible_suite(user_id, case.suite_id, action=action)
         return UiCaseRunContext(
             case,
@@ -159,7 +159,7 @@ class UiTestCaseRunService:
     async def get_case_run(self, user_id: str, run_id: str) -> dict:
         run = await self.repository.get_case_run(run_id)
         if run is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         context = await self.get_accessible_suite(user_id, run.suite_id, action="read")
         apply_run_scope(run, context)
         return dump_case_run(run)
@@ -227,7 +227,7 @@ class UiTestCaseRunService:
     async def get_suite_run(self, user_id: str, suite_run_id: str) -> dict:
         run = await self.repository.get_suite_run(suite_run_id)
         if run is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         context = await self.get_accessible_suite(user_id, run.suite_id, action="read")
         apply_run_scope(run, context)
         return dump_suite_run(run)
@@ -235,7 +235,7 @@ class UiTestCaseRunService:
     async def suite_report(self, user_id: str, suite_run_id: str) -> dict:
         run = await self.repository.get_suite_run(suite_run_id)
         if run is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         context = await self.get_accessible_suite(user_id, run.suite_id, action="read")
         apply_run_scope(run, context)
         items = await self.repository.list_suite_items(suite_run_id)

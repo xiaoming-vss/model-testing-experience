@@ -28,12 +28,12 @@ async def resolve_repo_gitlab_access(
     connection_id: str = "",
 ) -> RepoGitlabAccess:
     if not binding.instance_url or not binding.remote_parent_id:
-        raise ErrResourceBindingInvalid
+        raise ErrResourceBindingInvalid()
     group = await binding_repository.get_active_project_group_binding(
         "gitlab", project_id, binding.remote_parent_id, instance=binding.instance_key
     )
     if group is None:
-        raise ErrResourceBindingInvalid
+        raise ErrResourceBindingInvalid()
     connection = await integration_connection_service.resolve_personal_connection(
         user_id, "gitlab", project_id, binding.instance_url, connection_id
     )

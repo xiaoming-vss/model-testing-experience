@@ -187,46 +187,6 @@ describe('功能候选结果审核与正式资产导入', () => {
     await waitFor(() => expect(importedRun).toBe('/v1/function-case-generate-task-runs/run-2/import'))
   })
 
-  it('类型筛选只展示匹配用例，并更新分组数量和结果范围', async () => {
-    installFetchHandler(() => ({ ...pendingRun, resultYaml: JSON.stringify({ cases: [
-      { case_module: '登录', 'Case Title': '正常流程', case_type: '功能' },
-      { case_module: '登录', 'Case Title': '异常流程', case_type: '异常' },
-    ] }) }))
-    const user = userEvent.setup()
-    renderPage()
-    await clickRunInlineAction(user, 'run-1', '审核结果')
-    const filters = within(screen.getByLabelText('用例类型筛选'))
-    await user.click(filters.getByRole('button', { name: '异常 1' }))
-    expect(screen.queryByText('正常流程')).not.toBeInTheDocument()
-    expect(screen.getByText('异常流程')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '登录 1' })).toBeInTheDocument()
-    expect(screen.getByText('第 1–1 条，共 1 条')).toBeInTheDocument()
-    await user.click(filters.getByRole('button', { name: '全部 2' }))
-    expect(screen.getByText('正常流程')).toBeInTheDocument()
-    await user.type(screen.getByLabelText('搜索模块或场景'), '正常')
-    expect(screen.queryByText('异常流程')).not.toBeInTheDocument()
-    await user.click(filters.getByRole('button', { name: '异常 1' }))
-    expect(screen.queryByText('正常流程')).not.toBeInTheDocument()
-    expect(screen.getByText('没有匹配的用例分组')).toBeInTheDocument()
-  })
-
-  it('类型按钮根据实际用例类型生成，不根据标题推测分类', async () => {
-    installFetchHandler(() => ({ ...pendingRun, resultYaml: JSON.stringify({ cases: [
-      { case_module: '登录', 'Case Title': '异常输入下的响应时间', case_type: '性能测试' },
-      { case_module: '登录', 'Case Title': '键盘操作', case_type: '可访问性测试' },
-    ] }) }))
-    const user = userEvent.setup()
-    renderPage()
-    await clickRunInlineAction(user, 'run-1', '审核结果')
-    const filters = within(screen.getByLabelText('用例类型筛选'))
-    expect(filters.getByRole('button', { name: '性能测试 1' })).toBeInTheDocument()
-    expect(filters.getByRole('button', { name: '可访问性测试 1' })).toBeInTheDocument()
-    expect(filters.queryByRole('button', { name: /^功能 / })).not.toBeInTheDocument()
-    await user.click(filters.getByRole('button', { name: '性能测试 1' }))
-    expect(screen.queryByText('键盘操作')).not.toBeInTheDocument()
-    expect(screen.getByText('异常输入下的响应时间')).toBeInTheDocument()
-  })
-
   it('用例编号标签展示 UUID 前缀并保留完整值，缺失时不产生空标签', async () => {
     const caseId = '9f1c2e4a-5b6d-4c7e-8f90-1a2b3c4d5e6f'
     installFetchHandler(() => ({ ...pendingRun, resultYaml: JSON.stringify({ cases: [
@@ -250,7 +210,11 @@ describe('功能候选结果审核与正式资产导入', () => {
     await clickRunInlineAction(user, 'run-1', '审核结果')
 
     const moduleItem = await screen.findByRole('button', { name: /登录\s*1/ })
+    expect(moduleItem).not.toHaveAttribute('aria-current')
+    await user.click(moduleItem)
     expect(moduleItem).toHaveAttribute('aria-current', 'true')
+    await user.click(moduleItem)
+    expect(moduleItem).not.toHaveAttribute('aria-current')
     expect(screen.getByRole('textbox', { name: '搜索模块或场景' })).toBeInTheDocument()
     expect(await screen.findByText('账号密码登录成功')).toBeInTheDocument()
     expect(screen.getByText('前置条件')).toBeInTheDocument()
@@ -261,6 +225,30 @@ describe('功能候选结果审核与正式资产导入', () => {
 
 
     expect(await screen.findByRole('textbox', { name: '功能候选结果 JSON' })).toBeInTheDocument()
+  })
+
+  it('再次点击已选中卡片取消选中，编辑区回到完整候选内容', async () => {
+    installFetchHandler(() => ({ ...pendingRun, resultYaml: JSON.stringify({ cases: [
+      { case_module: '登录', 'Case Title': '账号密码登录成功' },
+      { case_module: '登录', 'Case Title': '账号密码登录失败提示' },
+    ] }) }))
+    const user = userEvent.setup()
+    renderPage()
+
+    await clickRunInlineAction(user, 'run-1', '审核结果')
+
+    const editor = await screen.findByRole('textbox', { name: '功能候选结果 JSON' })
+    await waitFor(() => expect(editor).toHaveTextContent('账号密码登录成功'))
+    expect(editor).toHaveTextContent('账号密码登录失败提示')
+
+    const firstCard = within(screen.getByRole('region', { name: '候选用例可视化' })).getAllByRole('article')[0]
+    await user.click(firstCard)
+    expect(editor).toHaveTextContent('账号密码登录成功')
+    expect(editor).not.toHaveTextContent('账号密码登录失败提示')
+
+    await user.click(firstCard)
+    expect(editor).toHaveTextContent('账号密码登录成功')
+    expect(editor).toHaveTextContent('账号密码登录失败提示')
   })
 
   it.each([false, true])('展示新版需求分析结构（直接返回：%s）', async (direct) => {
@@ -424,7 +412,7 @@ describe('功能候选结果审核与正式资产导入', () => {
     await user.keyboard('{Control>}a{/Control}')
     await user.paste(changedYaml)
     expect(within(screen.getByRole('region', { name: '候选用例可视化' })).getByText('账号密码登录并进入首页')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '保存候选结果' }))
+    await user.click(screen.getByRole('button', { name: '保存当前修改' }))
     await waitFor(() => expect(patchBody).toEqual({ resultYaml: changedYaml }))
 
     await user.type(screen.getByLabelText('审核备注'), '内容正确')
@@ -439,7 +427,7 @@ describe('功能候选结果审核与正式资产导入', () => {
 
     await user.click(screen.getByRole('button', { name: '查看结果' }))
     expect(await screen.findByRole('textbox', { name: '功能候选结果 JSON' })).toHaveAttribute('aria-readonly', 'true')
-    expect(screen.queryByRole('button', { name: '保存候选结果' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '保存当前修改' })).not.toBeInTheDocument()
   }, 90_000)
 
   it('拒绝候选结果时要求填写审核备注', async () => {

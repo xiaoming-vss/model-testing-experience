@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import Depends
+from fastapi import Depends, Query
 
 from testing_agent.api.deps import get_ai_generate_task_service, get_current_user_id
 from testing_agent.core.errors import success_payload
@@ -62,10 +62,14 @@ async def run_code_risk_analysis_task(
 
 async def list_code_risk_analysis_task_runs(
     task_id: str,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, alias="pageSize", ge=1, le=100),
     user_id: str = Depends(get_current_user_id),
     service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
 ):
-    return success_payload(await service.list_runs("code_risk_analysis", task_id, user_id))
+    return success_payload(
+        await service.list_run_summaries("code_risk_analysis", task_id, user_id, page, page_size)
+    )
 
 
 async def get_code_risk_analysis_run(

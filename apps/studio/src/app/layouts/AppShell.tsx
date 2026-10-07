@@ -2,11 +2,11 @@ import { RequirementPreviewPage } from '../pages/RequirementPreviewPage'
 import { ThemeSelect } from '@/shared/components/ThemeSelect'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { DownOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons'
-import { Button, Dropdown, Layout, Select, Tooltip } from 'antd'
+import { Button, Dropdown, Layout, Select, Spin, Tooltip } from 'antd'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { ApiCollectionDetailPage } from '@/features/api-automation/pages/ApiCollectionDetailPage'
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser'
-import { useAuthStore } from '@/features/auth/store/auth.store'
+import { useLogout } from '@/features/auth/hooks/useLogout'
 import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 import { ProjectsPage } from '@/features/projects/pages/ProjectsPage'
 import { SprintDetailPage } from '@/features/projects/pages/SprintDetailPage'
@@ -31,17 +31,24 @@ import { AppSidebar } from './AppSidebar'
 import { useAiTestingTaskCounts } from '@/features/ai-testing/hooks/useAiTestingTaskCounts'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { normalizeProjectId } from '@/utils/format'
+import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
+import { useBugScope } from '@/features/bugs/hooks/useBugScope'
+import { ProjectRouteGuard } from '../router/guards/ProjectRouteGuard'
 
 const { Header, Content } = Layout
 
 export function AppShell() {
   const location = useLocation()
   const navigate = useNavigate()
-  const logout = useAuthStore((state) => state.logout)
+  const logout = useLogout()
   const { token } = useCurrentUser()
   const { activeProjectId, projects, projectsQuery, setActiveProjectId } = useActiveProject()
-  const { activeSprintId, sprintsQuery, selectSprint, sprintSelectorOptions } = useActiveSprint()
-  const { kindCounts } = useAiTestingTaskCounts(activeProjectId)
+  const access = useProjectAccess(activeProjectId)
+  const bugOnly = access.project?.role === 'developer'
+  const sprintScope = useActiveSprint(access.can('read'))
+  const bugScope = useBugScope(activeProjectId, bugOnly)
+  const { activeSprintId, sprintsQuery, selectSprint, sprintSelectorOptions } = bugOnly ? bugScope : sprintScope
+  const { kindCounts } = useAiTestingTaskCounts(activeProjectId, access.can('read'))
   const showWorkbenchHeader = !location.pathname.startsWith('/profile')
 
   const shellClassName = `app-shell app-shell-macos${location.pathname.startsWith('/base-services') ? ' app-shell-base-services' : ''}`
@@ -52,7 +59,7 @@ export function AppShell() {
 
   return (
     <Layout className={shellClassName}>
-      <AppSidebar designCounts={kindCounts} />
+      <AppSidebar designCounts={kindCounts} bugOnly={bugOnly} />
       <Layout>
         <Header className="app-header compact-header">
           <div className="app-header-main">
@@ -97,7 +104,7 @@ export function AppShell() {
             <span>需求、想法和问题，请联系 <a href="mailto:limingjiang.x@gmail.com">limingjiang.x@gmail.com</a></span>
           </div>
           <div className="app-header-actions">
-            {showWorkbenchHeader ? <ActionButton type="primary" className="app-header-create-project action-btn-create" operation="create" onClick={() => { useWorkbenchStore.getState().openProjectModal(); navigate('/projects') }}>新建项目</ActionButton> : null}
+            {showWorkbenchHeader && !bugOnly ? <ActionButton type="primary" className="app-header-create-project action-btn-create" operation="create" onClick={() => { useWorkbenchStore.getState().openProjectModal(); navigate('/projects') }}>新建项目</ActionButton> : null}
             <ThemeSelect />
             <Dropdown
               menu={{
@@ -114,8 +121,11 @@ export function AppShell() {
                 onClick: ({ key }) => {
                   if (key === 'profile') navigate('/profile')
                   if (key === 'logout') {
-                    logout()
-                    navigate('/login', { replace: true })
+                    if (!logout.isPending) {
+                      logout.mutate(undefined, {
+                        onSuccess: () => navigate('/login', { replace: true }),
+                      })
+                    }
                   }
                 },
               }}
@@ -128,6 +138,7 @@ export function AppShell() {
           </div>
         </Header>
         <Content className="app-content">
+          {projectsQuery.isPending || (projects.length > 0 && !activeProjectId) ? <Spin aria-label="项目加载中" /> : <ProjectRouteGuard>
           <Routes>
             <Route path="/" element={<Navigate to="/projects" replace />} />
             <Route path="/projects" element={<ProjectsPage />} />
@@ -154,9 +165,9 @@ export function AppShell() {
             <Route path="/ui-automation/suites/:suiteId" element={<UiTestSuiteCasePage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Routes>
+          </ProjectRouteGuard>}
         </Content>
       </Layout>
     </Layout>
   )
 }
-

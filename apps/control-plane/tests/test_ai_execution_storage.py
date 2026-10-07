@@ -1,6 +1,7 @@
 """Real database transactions for normalized generation storage (no model calls)."""
 
 import json
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import create_engine, select, text
@@ -80,6 +81,21 @@ def db():
 
 
 def create_run(db, checkpoint=True):
+    from testing_agent.models.requirement import Requirement
+    from testing_agent.models.sprint import Sprint
+
+    db.add(
+        Sprint(
+            sprint_id="s",
+            project_id="p",
+            name="fixture",
+            start_time=datetime(2026, 1, 1, tzinfo=UTC),
+            end_time=datetime(2026, 2, 1, tzinfo=UTC),
+        )
+    )
+    db.flush()
+    db.add(Requirement(requirement_id="r", sprint_id="s", name="fixture"))
+    db.flush()
     task = AiGenerateTask(
         task_id="task",
         task_type="functional_case_generate",

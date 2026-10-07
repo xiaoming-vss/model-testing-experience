@@ -1,19 +1,24 @@
 import '@/features/ai-testing/styles/functional-import-confirm.css'
 import '@/features/ai-testing/styles/index.css'
 import '@/features/ai-testing/styles/generated-cases-review.css'
-import type { GeneratedTestCase } from '@/features/ai-testing/utils/functionalOutput'
 import { CASE_ID_FIELDS, formatCaseIdTag, isJsonText, parseGeneratedCases, toDisplayText } from '@/features/ai-testing/utils/functionalOutput'
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
-import { CheckCircleFilled, FileTextOutlined, LeftOutlined, PlayCircleOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons'
-import { Button, Empty, Input, Tag } from 'antd'
+import { CheckCircleFilled, FileTextOutlined, PlayCircleOutlined, SearchOutlined, SnippetsOutlined } from '@ant-design/icons'
+import { Empty, Input, Tag } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 
-function getGeneratedCaseReviewCategory(testCase: GeneratedTestCase): string {
-  for (const key of ['case_type', 'caseType', 'type']) {
-    const value = testCase.tagFields.find((field) => field.key === key)?.value.trim()
-    if (value) return value
-  }
-  return '未分类'
+function getGeneratedCaseTagKind(key: string): 'id' | 'type' | 'priority' | 'default' {
+  if (CASE_ID_FIELDS.includes(key)) return 'id'
+  if (['case_type', 'caseType', 'type'].includes(key)) return 'type'
+  if (key === 'priority') return 'priority'
+  return 'default'
+}
+
+function getPriorityTagColor(value: string): string | undefined {
+  const normalized = value.trim().toUpperCase()
+  if (['P0', 'P1', '0', '1', '高', 'HIGH', 'CRITICAL'].includes(normalized)) return 'red'
+  if (['P2', '2', '中', 'MEDIUM'].includes(normalized)) return 'blue'
+  return undefined
 }
 
 function getGeneratedCaseFieldLines(value: string): string[] {
@@ -24,6 +29,14 @@ function getGeneratedCaseFieldLines(value: string): string[] {
     // 普通文本按换行展示，避免在预览中暴露 JSON 字符串形式。
   }
   return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+}
+
+function isPreconditionField(key: string) {
+  return ['precondition', 'preconditions', 'preCondition'].includes(key)
+}
+
+function isStepField(key: string) {
+  return ['steps', 'test_steps', 'testSteps', 'operation'].includes(key)
 }
 
 function isExpectedResultField(key: string) {
@@ -39,42 +52,22 @@ type GeneratedCasesReviewViewProps = {
 export function GeneratedCasesReviewView({ content, selectedCaseKey, onCaseSelect }: GeneratedCasesReviewViewProps) {
   const moduleGroups = useMemo(() => parseGeneratedCases(content), [content])
   const [query, setQuery] = useState('')
-  const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [selectedModule, setSelectedModule] = useState('')
-  const totalCases = useMemo(() => moduleGroups.reduce((sum, group) => sum + group.cases.length, 0), [moduleGroups])
-  const categoryCounts = useMemo(() => {
-    const counts = new Map<string, number>()
-    moduleGroups.forEach((group) => group.cases.forEach((testCase) => {
-      const category = getGeneratedCaseReviewCategory(testCase)
-      counts.set(category, (counts.get(category) ?? 0) + 1)
-    }))
-    return counts
-  }, [moduleGroups])
-  const currentFilter = activeFilter !== null && categoryCounts.has(activeFilter) ? activeFilter : null
-  const filters = [
-    { key: null, label: '全部', count: totalCases },
-    ...Array.from(categoryCounts, ([key, count]) => ({ key, label: key, count })),
-  ]
   const visibleGroups = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
     return moduleGroups.map((group) => ({
       ...group,
       cases: group.cases.filter((testCase) => {
-        const matchesFilter = currentFilter === null || getGeneratedCaseReviewCategory(testCase) === currentFilter
         const matchesQuery = !normalizedQuery || group.moduleName.toLowerCase().includes(normalizedQuery) || testCase.displayName.toLowerCase().includes(normalizedQuery)
-        return matchesFilter && matchesQuery
+        return matchesQuery
       }),
     })).filter((group) => group.cases.length > 0)
-  }, [currentFilter, moduleGroups, query])
-  const visibleCaseCount = visibleGroups.reduce((sum, group) => sum + group.cases.length, 0)
+  }, [moduleGroups, query])
 
   useEffect(() => {
-    if (visibleGroups.length === 0) {
+    // 未选中模块时展示全部用例；仅当所选模块被搜索过滤掉时才回退到全量。
+    if (selectedModule && !visibleGroups.some((group) => group.moduleName === selectedModule)) {
       setSelectedModule('')
-      return
-    }
-    if (!visibleGroups.some((group) => group.moduleName === selectedModule)) {
-      setSelectedModule(visibleGroups[0].moduleName)
     }
   }, [selectedModule, visibleGroups])
 
@@ -86,17 +79,20 @@ export function GeneratedCasesReviewView({ content, selectedCaseKey, onCaseSelec
     )
   }
 
-  const activeGroup = visibleGroups.find((group) => group.moduleName === selectedModule) ?? visibleGroups[0]
-  const activeGroupIndex = activeGroup ? visibleGroups.indexOf(activeGroup) : -1
-  const caseStartIndex = activeGroup
-    ? visibleGroups.slice(0, activeGroupIndex).reduce((sum, group) => sum + group.cases.length, 0)
-    : 0
+  const activeGroups = selectedModule
+    ? visibleGroups.filter((group) => group.moduleName === selectedModule)
+    : visibleGroups
+  const groupStartIndexes = new Map<string, number>()
+  let runningCaseCount = 0
+  for (const group of visibleGroups) {
+    groupStartIndexes.set(group.moduleName, runningCaseCount)
+    runningCaseCount += group.cases.length
+  }
 
   return (
     <div className={`ai-generated-cases-review${moduleGroups.length === 1 ? ' is-single-group' : ''}`}>
       <aside className="ai-generated-cases-review-sidebar">
         <div className="ai-generated-cases-review-sidebar-head">
-          <strong>用例分组</strong>
           <Input
             allowClear
             prefix={<SearchOutlined aria-hidden />}
@@ -105,102 +101,75 @@ export function GeneratedCasesReviewView({ content, selectedCaseKey, onCaseSelec
             placeholder="搜索模块或场景"
             aria-label="搜索模块或场景"
           />
-          <div className="ai-generated-cases-review-filters" aria-label="用例类型筛选">
-            {filters.map((filter) => {
-              return (
+          {visibleGroups.length > 0 ? (
+            <div className="ai-generated-cases-review-groups" aria-label="用例分组">
+              {visibleGroups.map((group) => (
                 <button
-                  key={filter.key === null ? 'all' : `type:${filter.key}`}
+                  key={group.moduleName}
                   type="button"
-                  className={currentFilter === filter.key ? 'active' : ''}
-                  aria-pressed={currentFilter === filter.key}
-                  onClick={() => setActiveFilter(filter.key)}
+                  className={group.moduleName === selectedModule ? 'active' : ''}
+                  aria-current={group.moduleName === selectedModule ? 'true' : undefined}
+                  onClick={() => setSelectedModule(group.moduleName === selectedModule ? '' : group.moduleName)}
                 >
-                  {filter.label} <span>{filter.count}</span>
+                  <span className="ai-generated-cases-review-group-name">{group.moduleName}</span>
+                  <span className="ai-generated-cases-review-count">{group.cases.length}</span>
                 </button>
-              )
-            })}
-          </div>
-        </div>
-        <div className="ai-generated-cases-review-groups">
-          {visibleGroups.length > 0 ? visibleGroups.map((group) => (
-            <button
-              key={group.moduleName}
-              type="button"
-              className={group.moduleName === activeGroup?.moduleName ? 'active' : ''}
-              aria-current={group.moduleName === activeGroup?.moduleName ? 'true' : undefined}
-              onClick={() => setSelectedModule(group.moduleName)}
-            >
-              <span className="ai-generated-cases-review-group-name"><RightOutlined aria-hidden />{group.moduleName}</span>
-              <span className="ai-generated-cases-review-count">{group.cases.length}</span>
-            </button>
-          )) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="没有匹配的用例分组" />}
+              ))}
+            </div>
+          ) : null}
         </div>
       </aside>
 
       <section className="ai-generated-cases-review-detail">
-        {activeGroup ? (
-          <>
-            <header className="ai-generated-cases-review-detail-head">
-              <div>
-                <strong>{activeGroup.moduleName}</strong>
-                <span>第 {caseStartIndex + 1}–{caseStartIndex + activeGroup.cases.length} 条，共 {visibleCaseCount} 条</span>
-              </div>
-              <div className="ai-generated-cases-review-pager">
-                <Button
-                  aria-label="上一个用例分组"
-                  icon={<LeftOutlined />}
-                  disabled={activeGroupIndex <= 0}
-                  onClick={() => setSelectedModule(visibleGroups[activeGroupIndex - 1].moduleName)}
-                />
-                <Button
-                  aria-label="下一个用例分组"
-                  icon={<RightOutlined />}
-                  disabled={activeGroupIndex >= visibleGroups.length - 1}
-                  onClick={() => setSelectedModule(visibleGroups[activeGroupIndex + 1].moduleName)}
-                />
-              </div>
-            </header>
-            <div className="ai-generated-cases-review-card-list">
-              {activeGroup.cases.map((testCase, caseIndex) => (
-                <article
-                  key={`${activeGroup.moduleName}-${caseIndex}`}
-                  className={`ai-generated-cases-review-card${selectedCaseKey === `${activeGroup.moduleName}:${caseIndex}` ? ' is-selected' : ''}`}
-                  onClick={() => onCaseSelect?.(`${activeGroup.moduleName}:${caseIndex}`, testCase.raw)}
-                >
-                  <header>
-                    <span className="ai-generated-cases-review-index">{String(caseStartIndex + caseIndex + 1).padStart(2, '0')}</span>
-                    {testCase.tagFields.map((tag) => {
-                      const isCaseId = CASE_ID_FIELDS.includes(tag.key)
-                      return (
-                        <Tag key={tag.key} color="orange" title={isCaseId ? tag.value : undefined}>
-                          {isCaseId ? formatCaseIdTag(tag.value) : tag.value}
-                        </Tag>
-                      )
-                    })}
-                    <strong>{testCase.displayName}</strong>
-                  </header>
-                  <div className="ai-generated-cases-review-fields">
-                    {testCase.detailFields.map((field) => {
-                      const expected = isExpectedResultField(field.key)
-                      const lines = getGeneratedCaseFieldLines(field.value)
-                      return (
-                        <section key={field.key} className={expected ? 'expected' : ''}>
-                          <div className="ai-generated-cases-review-field-title">
-                            {expected ? <CheckCircleFilled aria-hidden /> : field.label === '测试步骤' ? <PlayCircleOutlined aria-hidden /> : <FileTextOutlined aria-hidden />}
-                            <strong>{field.label}</strong>
-                          </div>
-                          {lines.length > 1 ? (
-                            <ol>{lines.map((line, lineIndex) => <li key={`${field.key}-${lineIndex}`}>{line}</li>)}</ol>
-                          ) : <p>{lines[0] || '-'}</p>}
-                        </section>
-                      )
-                    })}
-                  </div>
-                </article>
-              ))}
-            </div>
-          </>
-        ) : <Empty description="请选择用例分组" />}
+        {activeGroups.length > 0 ? activeGroups.map((group) => (
+          <div key={group.moduleName} className="ai-generated-cases-review-card-list">
+            {group.cases.map((testCase, caseIndex) => (
+              <article
+                key={`${group.moduleName}-${caseIndex}`}
+                className={`ai-generated-cases-review-card${selectedCaseKey === `${group.moduleName}:${caseIndex}` ? ' is-selected' : ''}`}
+                onClick={() => onCaseSelect?.(`${group.moduleName}:${caseIndex}`, testCase.raw)}
+              >
+                <header>
+                  <span className="ai-generated-cases-review-index">{String((groupStartIndexes.get(group.moduleName) ?? 0) + caseIndex + 1).padStart(2, '0')}</span>
+                  {testCase.tagFields.map((tag) => {
+                    const kind = getGeneratedCaseTagKind(tag.key)
+                    const isCaseId = kind === 'id'
+                    const color = kind === 'type' ? 'gold' : kind === 'priority' ? getPriorityTagColor(tag.value) : undefined
+                    return (
+                      <Tag
+                        key={tag.key}
+                        color={color}
+                        className={`ai-generated-cases-review-tag is-${kind}`}
+                        title={isCaseId ? tag.value : undefined}
+                      >
+                        {isCaseId ? formatCaseIdTag(tag.value) : tag.value}
+                      </Tag>
+                    )
+                  })}
+                  <strong>{testCase.displayName}</strong>
+                </header>
+                <div className="ai-generated-cases-review-fields">
+                  {testCase.detailFields.map((field) => {
+                    const expected = isExpectedResultField(field.key)
+                    const sectionClass = expected ? 'expected tone-green' : isStepField(field.key) ? 'steps tone-indigo' : isPreconditionField(field.key) ? 'precondition' : ''
+                    const lines = getGeneratedCaseFieldLines(field.value)
+                    return (
+                      <section key={field.key} className={sectionClass}>
+                        <div className="ai-generated-cases-review-field-title">
+                          {expected ? <CheckCircleFilled aria-hidden /> : isStepField(field.key) ? <PlayCircleOutlined aria-hidden /> : isPreconditionField(field.key) ? <SnippetsOutlined aria-hidden /> : <FileTextOutlined aria-hidden />}
+                          <strong>{field.label}</strong>
+                        </div>
+                        {lines.length > 1 ? (
+                          <ol>{lines.map((line, lineIndex) => <li key={`${field.key}-${lineIndex}`}>{line}</li>)}</ol>
+                        ) : <p>{lines[0] || '-'}</p>}
+                      </section>
+                    )
+                  })}
+                </div>
+              </article>
+            ))}
+          </div>
+        )) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="没有匹配的用例分组" />}
       </section>
     </div>
   )

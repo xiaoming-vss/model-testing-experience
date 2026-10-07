@@ -220,7 +220,14 @@ class ImportedTarget(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class AiGenerateTaskRunResponse(BaseModel):
+class AiGenerateRunSummary(BaseModel):
+    workflow_version: Literal[2] = Field(default=2)
+    available_artifacts: list[str] = Field(default_factory=list)
+    has_result: bool = False
+    created_at: datetime | str | None = None
+    started_at: datetime | str | None = None
+    finished_at: datetime | str | None = None
+    updated_at: datetime | str | None = None
     run_id: str = Field()
     task_id: str = Field()
     requirement_id: str = Field()
@@ -232,12 +239,8 @@ class AiGenerateTaskRunResponse(BaseModel):
     checkpoint_enabled: bool = Field()
     current_stage: str = Field()
     stage_status: str = Field()
-    snapshot_json: Any = Field(default_factory=dict)
     error_message: str = Field()
     remediation: str = ""
-    config_json: Any = Field(default_factory=dict)
-    result_yaml: str = Field()
-    result_summary_json: Any = Field(default_factory=dict)
     review_status: str = Field()
     import_status: Literal["pending", "imported"] = Field()
     imported_targets: list[ImportedTarget] = Field(default_factory=list)
@@ -249,6 +252,22 @@ class AiGenerateTaskRunResponse(BaseModel):
     duration_ms: int = Field()
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class AiGenerateRunHistoryResponse(BaseModel):
+    items: list[AiGenerateRunSummary]
+    total: int
+    status_counts: dict[str, int] = Field(default_factory=dict)
+    review_pending_count: int = 0
+    latest_run: AiGenerateRunSummary | None = None
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class AiGenerateTaskRunResponse(AiGenerateRunSummary):
+    snapshot_json: Any = Field(default_factory=dict)
+    config_json: Any = Field(default_factory=dict)
+    result_yaml: str = Field()
+    result_summary_json: Any = Field(default_factory=dict)
 
 
 class CodeRiskAnalysisReportResponse(BaseModel):

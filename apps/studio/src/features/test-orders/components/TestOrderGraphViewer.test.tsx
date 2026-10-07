@@ -84,11 +84,9 @@ function renderViewer(
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <TestOrderGraphViewer
-          open
           orderId="order-1"
           projectId="project-1"
           canExecute
-          onClose={() => {}}
           {...props}
         />
       </MemoryRouter>
@@ -171,6 +169,52 @@ it('切到 json 页签展示 resultYaml', async () => {
 
   const json = await screen.findByTestId('graph-json')
   expect(JSON.parse(json.textContent ?? '')).toEqual(GRAPH_JSON)
+  client.clear()
+})
+
+it('默认展开所有主线及多级分支，仍可通过节点逐级展开和收起', async () => {
+  const nested = {
+    ...RUN_WITH_GRAPH,
+    resultYaml: JSON.stringify({ schema_version: '2.0', main_paths: [{ path_id: 'P01', case_ids: ['case-1', 'case-2'] }, { path_id: 'P02', case_ids: ['other-main'] }], edges: [
+      ...GRAPH_JSON.edges,
+      { edge_id: 'E02', from_case_id: 'case-1', to_case_id: 'branch-1', relation_type: 'branch', order: 2 },
+      { edge_id: 'E03', from_case_id: 'branch-1', to_case_id: 'branch-2', relation_type: 'branch', order: 1 },
+      { edge_id: 'E04', from_case_id: 'branch-2', to_case_id: 'branch-3', relation_type: 'branch', order: 1 },
+    ] }),
+    configJson: { graphInput: { cases: [
+      ...RUN_WITH_GRAPH.configJson.graphInput.cases,
+      { case_id: 'branch-1', case_title: '一级真实分支' }, { case_id: 'branch-2', case_title: '二级真实分支' },
+      { case_id: 'branch-3', case_title: '三级真实分支' }, { case_id: 'other-main', case_title: '另一条主线' },
+    ] } },
+  }
+  vi.spyOn(api, 'getTestOrderGraph').mockResolvedValue({ orderId: 'order-1', run: nested })
+  const client = makeClient()
+  renderViewer(client)
+  await screen.findByText('另一条主线')
+  expect(screen.getByText('验证转换')).toBeInTheDocument()
+  expect(screen.queryByRole('navigation', { name: '业务主线切换' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('combobox', { name: '选择要展开的分支' })).not.toBeInTheDocument()
+  expect(screen.getByText('一级真实分支')).toBeInTheDocument()
+  expect(screen.getByText('二级真实分支')).toBeInTheDocument()
+  expect(screen.getByText('三级真实分支')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '折叠全部' }))
+  expect(screen.queryByText('一级真实分支')).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '展开用例 1 的 1 个关联' }))
+  expect(await screen.findByText('一级真实分支')).toBeInTheDocument()
+  expect(screen.queryByText('二级真实分支')).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '展开用例 3 的 1 个关联' }))
+  expect(await screen.findByText('二级真实分支')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '展开用例 4 的 1 个关联' }))
+  expect(await screen.findByText('三级真实分支')).toBeInTheDocument()
+  expect(screen.getByText('另一条主线')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '收起用例 4 的 1 个关联' }))
+  expect(screen.queryByText('三级真实分支')).not.toBeInTheDocument()
+  expect(screen.getByText('二级真实分支')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '展开全部' }))
+  expect(await screen.findByText('三级真实分支')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '折叠全部' }))
+  expect(screen.queryByText('一级真实分支')).not.toBeInTheDocument()
+  expect(screen.getByText('另一条主线')).toBeInTheDocument()
   client.clear()
 })
 

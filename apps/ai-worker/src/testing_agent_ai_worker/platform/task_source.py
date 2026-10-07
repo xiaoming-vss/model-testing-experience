@@ -244,6 +244,9 @@ class HttpClaimTaskSource:
                 extra_instruction=snapshot_task.instruction,
                 daily_metrics=daily_metrics,
                 metadata={
+                    "workflowVersion": snapshot_task.workflow_version,
+                    "documentFilename": (raw_snapshot.get("run") or {}).get("documentFilename", ""),
+                    "documentFileId": (raw_snapshot.get("run") or {}).get("documentFileId", ""),
                     "name": snapshot_task.name,
                     "runId": claimed_task.run_id or snapshot_task.run_id,
                     "generateTaskId": claimed_task.generate_task_id

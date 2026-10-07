@@ -74,10 +74,16 @@ async def _blockers(session, obj):
                 )
             )
     blockers = []
-    for model, condition, label in checks:
-        ids = list(await session.scalars(select(model.id).where(condition).with_for_update()))
+    for child_model, condition, label in checks:
+        ids = list(
+            await session.scalars(
+                select(child_model.__table__.c.id).where(condition).with_for_update()
+            )
+        )
         if ids:
-            blockers.append({"resource": model.__tablename__, "name": label, "count": len(ids)})
+            blockers.append(
+                {"resource": child_model.__tablename__, "name": label, "count": len(ids)}
+            )
     if blockers:
         detail = "、".join(f"{item['count']} 个{item['name']}" for item in blockers)
         raise AppError(409, f"请先删除子资源：{detail}", 409, {"blockers": blockers})
@@ -150,10 +156,27 @@ async def _ai_runs(session, condition):
 
 async def delete_resource(session, obj):
     """Delete an authorized entity and its owned records, without committing."""
+    if isinstance(obj, (m.Bug, m.Project, m.SharedService)):
+        from testing_agent.services.integration_lifecycle import (
+            guard_integrations,
+            revoke_integrations,
+        )
+
+        project_id = obj.project_id
+        await session.scalar(
+            select(m.Project).where(m.Project.project_id == project_id).with_for_update()
+        )
+        filters = {"project_id": project_id}
+        if isinstance(obj, m.Bug):
+            filters["bug_id"] = obj.bug_id
+        elif isinstance(obj, m.SharedService):
+            filters["service_id"] = obj.service_id
+        await guard_integrations(session, **filters)
+        await revoke_integrations(session, **filters)
     model = type(obj)
     locked = await session.scalar(select(model).where(model.id == obj.id).with_for_update())
     if locked is None:
-        raise ErrNotFound
+        raise ErrNotFound()
     await _blockers(session, obj)
 
     if isinstance(obj, m.ApiCase):

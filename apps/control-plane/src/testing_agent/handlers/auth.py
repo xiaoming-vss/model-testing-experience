@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import Depends
 
-from testing_agent.api.deps import get_auth_service, get_current_user_id
+from testing_agent.api.deps import get_access_token, get_auth_service, get_current_user_id
 from testing_agent.core.errors import success_payload
 from testing_agent.schemas.auth import LoginRequest, RegisterRequest, UpdateProfileRequest
 from testing_agent.services.auth import AuthService
@@ -14,6 +14,14 @@ async def register(body: RegisterRequest, service: AuthService = Depends(get_aut
 
 async def login(body: LoginRequest, service: AuthService = Depends(get_auth_service)):
     return success_payload(await service.login(body))
+
+
+async def logout(
+    user_id: str = Depends(get_current_user_id),
+    token: str = Depends(get_access_token),
+    service: AuthService = Depends(get_auth_service),
+):
+    return success_payload(await service.logout(user_id, token))
 
 
 async def get_profile(

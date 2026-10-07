@@ -3,10 +3,17 @@ import { projectsApi } from '../api/projects.api'
 import { useWorkbenchStore } from '../store/workbench.store'
 import type { Project, ProjectAction } from '../types'
 
-export const roleLabels = { owner: '所有者', member: '普通成员', viewer: '只读成员' }
+export const roleLabels = { owner: '所有者', member: '普通成员', viewer: '只读成员', developer: '开发' }
 
 export function hasProjectPermission(project: Project | undefined, action: ProjectAction) {
-  return Boolean(project?.permissions?.includes(action))
+  if (project?.permissions?.includes(action)) return true
+  // Older servers expose project-wide read/write capabilities for existing roles.
+  if (project?.role !== 'developer') {
+    const equivalent = action === 'bug_handle' ? 'write'
+      : action === 'bug_read' || action === 'project_read' ? 'read' : action
+    return Boolean(project?.permissions?.includes(equivalent))
+  }
+  return false
 }
 
 export function useProjectAccess(projectId?: string) {

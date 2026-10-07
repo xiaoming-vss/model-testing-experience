@@ -1,32 +1,21 @@
 from __future__ import annotations
 
 import builtins
-import logging
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any
 
-import httpx
-
 from testing_agent.core.enums import TestOrderEntryStatus
 from testing_agent.core.errors import (
-    AppError,
     ErrNotFound,
-    ErrResourceBindingInvalid,
     ErrSprintDailyMetricsDateInvalid,
     ErrSprintDailyMetricsNotFound,
-    ErrZentaoRemoteResourceUnavailable,
-    dynamic_error,
 )
-from testing_agent.models.resource_binding import ResourceBinding
 from testing_agent.models.sprint import Sprint
 from testing_agent.models.sprint_daily_metrics import SprintDailyMetrics
 from testing_agent.repositories.sprint_daily_metrics import SprintDailyMetricsRepository
 from testing_agent.services.common import list_payload
 from testing_agent.services.project_access import ProjectAction, require_project_access
-from testing_agent.services.zentao_resource import parse_zentao_remote_id, truncate_error
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -109,10 +98,10 @@ class SprintDailyMetricsService:
     ) -> Sprint:
         sprint = await self.repository.get_sprint(sprint_id)
         if sprint is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         project = await self.repository.get_project(sprint.project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await require_project_access(self.repository.session, user_id, project, action)
         return sprint
 
@@ -136,7 +125,7 @@ class SprintDailyMetricsService:
         sprint = await self.get_accessible_sprint(user_id, sprint_id, action="read")
         metric = await self.repository.get(sprint_id, snapshot_date)
         if metric is None:
-            raise ErrSprintDailyMetricsNotFound
+            raise ErrSprintDailyMetricsNotFound()
         return await self.dump_metric_detail(user_id, metric, sprint)
 
     async def upsert(
@@ -210,21 +199,9 @@ class SprintDailyMetricsService:
         function_metrics = await self.load_function_metrics_from_local_runs(sprint.sprint_id)
         api_metrics = await self.load_api_metrics_from_local_runs(sprint.sprint_id)
         ui_metrics = await self.load_ui_metrics_from_local_runs(sprint.sprint_id)
-        # Only the optional external collection may degrade; local/DB failures still propagate.
-        try:
-            bug_snapshot = await self.load_bug_snapshot_from_execution(
-                user_id, sprint.sprint_id, connection_id=connection_id
-            )
-        except (AppError, httpx.RequestError) as exc:
-            logger.warning(
-                "Skipping Zentao metrics for sprint %s (%s)",
-                sprint.sprint_id,
-                type(exc).__name__,
-            )
-            bug_snapshot = None
-        metric.bug_metrics_collected = bug_snapshot is not None
-        bug_metrics, bug_details = bug_snapshot or (BugMetrics(), [])
-        metric.bug_details_json = bug_details
+        metric.bug_metrics_collected = False
+        bug_metrics = BugMetrics()
+        metric.bug_details_json = []
 
         metric.project_id = sprint.project_id
         metric.function_case_total = function_metrics.total
@@ -288,114 +265,6 @@ class SprintDailyMetricsService:
         metrics.pending = max(metrics.total - metrics.executed, 0)
         return metrics
 
-    async def load_bug_snapshot_from_execution(
-        self, user_id: str, sprint_id: str, *, connection_id: str = ""
-    ) -> tuple[BugMetrics, builtins.list[dict[str, str]]] | None:
-        access = await self.resolve_execution_binding_access(
-            user_id, sprint_id, connection_id=connection_id
-        )
-        if access is None:
-            return None
-        connection, remote_execution_id = access
-        metrics = BugMetrics()
-        bugs: builtins.list[dict[str, str]] = []
-        page = 1
-        page_size = 100
-        while True:
-            if self.zentao_resource_client is None:
-                raise ErrZentaoRemoteResourceUnavailable
-            result = await self.call_zentao(
-                self.zentao_resource_client.list_execution_bugs,
-                connection,
-                remote_execution_id,
-                page,
-                page_size,
-            )
-            items = list_items(result)
-            for item in items:
-                bugs.append(dump_bug_detail(item))
-                metrics.total += 1
-                status = normalize_status(item_value(item, "status"))
-                if is_closed_bug_status(status):
-                    metrics.closed += 1
-                if is_resolved_bug_status(status):
-                    metrics.resolved += 1
-                else:
-                    metrics.unresolved += 1
-                match int_or_zero(item_value(item, "severity")):
-                    case 1:
-                        metrics.fatal += 1
-                    case 2:
-                        metrics.serious += 1
-                    case 3:
-                        metrics.normal += 1
-                    case 4:
-                        metrics.suggestion += 1
-            if is_last_page(result, page, page_size, len(items)):
-                break
-            page += 1
-        return metrics, bugs
-
-    async def resolve_execution_binding_access(
-        self, user_id: str, sprint_id: str, *, connection_id: str = ""
-    ) -> tuple[Any, str] | None:
-        binding = await self.repository.get_active_binding("sprint", sprint_id)
-        if binding is None:
-            return None
-        validate_zentao_execution_binding(binding)
-        try:
-            remote_execution_id = str(parse_zentao_remote_id(binding.remote_resource_id))
-        except ValueError as exc:
-            raise dynamic_error(ErrResourceBindingInvalid, str(exc)) from exc
-        if self.integration_connection_service is None or self.zentao_resource_client is None:
-            raise ErrZentaoRemoteResourceUnavailable
-        sprint = await self.repository.get_sprint(sprint_id)
-        if sprint is None:
-            raise ErrNotFound
-        selected = await self.integration_connection_service.resolve_personal_connection(
-            user_id, "zentao", sprint.project_id, binding.instance_url, connection_id
-        )
-        connection = await self.integration_connection_service.resolve_zentao_access(
-            user_id, selected.connection_id, sprint.project_id
-        )
-        return connection, remote_execution_id
-
-    async def call_zentao(self, method: Any, *args: Any) -> dict[str, Any]:
-        try:
-            return await method(*args)
-        except Exception as exc:
-            raise dynamic_error(
-                ErrZentaoRemoteResourceUnavailable,
-                truncate_error(str(exc)),
-            ) from exc
-
-
-def dump_bug_detail(item: Any) -> dict[str, str]:
-    return {
-        "title": string_item_value(item, "title", "name"),
-        "module": string_item_value(item, "module", "moduleName", "module_name"),
-        "severity": normalize_bug_severity(item_value(item, "severity")),
-        "status": string_item_value(item, "status"),
-        "owner": string_item_value(
-            item,
-            "owner",
-            "assignedTo",
-            "assigned_to",
-            "openedBy",
-            "opened_by",
-        ),
-        "description": string_item_value(item, "description", "desc", "steps"),
-    }
-
-
-def normalize_bug_severity(value: Any) -> str:
-    text = str(value or "").strip()
-    return {"1": "致命", "2": "严重", "3": "一般", "4": "建议"}.get(text, text)
-
-
-def string_item_value(item: Any, *names: str) -> str:
-    return str(item_value(item, *names, default="") or "")
-
 
 def build_run_metrics(case_ids: builtins.list[str], statuses: dict[str, str]) -> TestMetrics:
     metrics = TestMetrics(total=len(case_ids))
@@ -424,48 +293,13 @@ def validate_sprint_daily_metrics_date(value: str) -> None:
     try:
         parsed = datetime.strptime(value, "%Y-%m-%d")
     except ValueError as exc:
-        raise ErrSprintDailyMetricsDateInvalid from exc
+        raise ErrSprintDailyMetricsDateInvalid() from exc
     if parsed.strftime("%Y-%m-%d") != value:
-        raise ErrSprintDailyMetricsDateInvalid
-
-
-def validate_zentao_execution_binding(binding: ResourceBinding) -> None:
-    if binding.provider != "zentao" or binding.remote_resource_type not in {"execution", "sprint"}:
-        raise dynamic_error(ErrResourceBindingInvalid, "资源绑定不是有效的禅道执行绑定")
+        raise ErrSprintDailyMetricsDateInvalid()
 
 
 def normalize_status(value: Any) -> str:
     return str(value or "").strip().lower()
-
-
-def is_resolved_bug_status(status: Any) -> bool:
-    return normalize_status(status) in {"resolved", "closed"}
-
-
-def is_closed_bug_status(status: Any) -> bool:
-    return normalize_status(status) == "closed"
-
-
-def item_value(item: Any, *names: str, default: Any = "") -> Any:
-    if isinstance(item, dict):
-        for name in names:
-            if name in item:
-                return item[name]
-        return default
-    for name in names:
-        if hasattr(item, name):
-            return getattr(item, name)
-    return default
-
-
-def list_items(result: dict[str, Any]) -> builtins.list[Any]:
-    items = result.get("items", [])
-    return items if isinstance(items, list) else []
-
-
-def is_last_page(result: dict[str, Any], page: int, page_size: int, item_count: int) -> bool:
-    total = int_or_zero(result.get("total"))
-    return item_count < page_size or (total > 0 and page * page_size >= total)
 
 
 def int_or_zero(value: Any) -> int:

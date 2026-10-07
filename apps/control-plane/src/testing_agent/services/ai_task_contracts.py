@@ -47,18 +47,18 @@ REQUIREMENT_ANALYSIS_INITIAL_STAGE = "extracting_text"
 REQUIREMENT_ANALYSIS_FINAL_STAGE = "feature_understanding"
 
 
+# completed is the common terminal marker, not a third requirement-analysis stage.
 REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES = {REQUIREMENT_ANALYSIS_FINAL_STAGE, "completed"}
 
 
-REQUIREMENT_ANALYSIS_REVIEWABLE_STAGES = {"extracting_text", "writing_requirement"}
+REQUIREMENT_ANALYSIS_REVIEWABLE_STAGES = {"extracting_text"}
 
 
 REQUIREMENT_ANALYSIS_REVIEW_READY_STATUSES = {"waiting_review", "saved"}
 
 
 REQUIREMENT_ANALYSIS_NEXT_STAGE = {
-    "extracting_text": "writing_requirement",
-    "writing_requirement": "feature_understanding",
+    "extracting_text": "feature_understanding",
 }
 
 

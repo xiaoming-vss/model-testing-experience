@@ -19,13 +19,10 @@ def repository(stage="extracting_text"):
     return repo
 
 
-@pytest.mark.parametrize(
-    "stage", ["extracting_text", "writing_requirement", "feature_understanding"]
-)
-@pytest.mark.parametrize("checkpoint", [True, False])
-def test_retry_http_preserves_stage_connection_and_artifacts(stage, checkpoint):
+@pytest.mark.parametrize("stage", ["extracting_text", "feature_understanding"])
+def test_retry_http_preserves_stage_connection_and_artifacts(stage):
     repo = repository(stage)
-    repo.run.checkpoint_enabled = checkpoint
+    repo.run.checkpoint_enabled = True
     config = dict(repo.run.config_json)
     output = repo.run.result_yaml
     response = review_client(repo).post(
@@ -51,6 +48,7 @@ def test_retry_http_preserves_stage_connection_and_artifacts(stage, checkpoint):
         {"status": "success"},
         {"status": "waiting_review"},
         {"review_status": "approved"},
+        {"review_status": "rejected"},
         {"import_status": "imported"},
         {"current_stage": "completed"},
     ],
@@ -95,3 +93,38 @@ async def test_duplicate_retry_queues_only_once():
     )
     assert sum(isinstance(result, dict) for result in results) == 1
     assert len(repo.queued) == 1
+
+
+@pytest.mark.parametrize(
+    "method,suffix,body",
+    [
+        ("PATCH", "stage-output", {"stage": "feature_understanding", "resultYaml": "changed"}),
+        ("POST", "stage-review", {"stage": "feature_understanding", "action": "approve"}),
+        ("POST", "stage-review", {"stage": "feature_understanding", "action": "reject"}),
+        (
+            "POST",
+            "stage-revise",
+            {"stage": "feature_understanding", "revisionInstruction": "change"},
+        ),
+        ("POST", "stage-retry", {"stage": "feature_understanding"}),
+        ("POST", "import-to-requirement", {}),
+    ],
+)
+def test_rejected_requirement_http_mutations_are_blocked(method, suffix, body):
+    from copy import deepcopy
+
+    repo = repository("completed")
+    repo.run.status = "success"
+    repo.run.stage_status = "completed"
+    repo.run.review_status = "rejected"
+    before = {
+        key: deepcopy(getattr(repo.run, key))
+        for key in ["status", "review_status", "config_json", "result_yaml"]
+    }
+    response = review_client(repo).request(
+        method, f"/v1/requirement-analysis-runs/run-1/{suffix}", json=body
+    )
+    assert response.status_code == 400
+    assert {key: getattr(repo.run, key) for key in before} == before
+    assert repo.commits == 0
+    assert not repo.queued

@@ -1,3 +1,6 @@
+import { listTotal } from '@/shared/api/request'
+import { getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
+import { useTaskRunHistorySync } from '@/features/ai-testing/hooks/useTaskRunHistorySync'
 import { useDeleteTaskRun, useStartTaskRun } from '@/features/ai-testing/hooks/useTaskRunActions'
 import { FunctionalCaseRelationsViewer } from '../components/FunctionalCaseRelationsViewer'
 import type { CaseNamesViewMode } from '@/features/ai-testing/components/CaseNamesResultView'
@@ -42,9 +45,10 @@ import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
 import { message } from '@/shared/utils/feedback'
 import { saveBlob } from '@/shared/utils/download'
+import { goBackOrFallback } from '@/shared/utils/backNavigation'
 import { formatStructuredContent } from '@/shared/utils/value'
 import { formatTime, getErrorMessage, normalizeRequirementId, normalizeSprintId, pickUpdatedAt } from '@/utils/format'
-import { ArrowLeftOutlined, CodeOutlined, FileTextOutlined, HistoryOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, CodeOutlined, CopyOutlined, DownloadOutlined, FileTextOutlined, FormatPainterOutlined, HistoryOutlined, JavaScriptOutlined, LinkOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, Checkbox, Empty, Form, Input, Modal, Popconfirm, Select, Spin, Tabs, Tag } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
@@ -117,15 +121,18 @@ const runArtifactDefinitions = [
   { key: 'caseRelations', label: '图谱分析' },
 ] as const
 
-function getRunRecordArtifacts(configJson: unknown) {
+function getRunRecordArtifacts(configJson: unknown, availableArtifacts?: string[]) {
   return runArtifactDefinitions.map((definition) => ({
     ...definition,
-    available: Boolean(getConfigStageFieldContent(configJson, definition.key)),
+    available: availableArtifacts?.includes(definition.key) ?? Boolean(getConfigStageFieldContent(configJson, definition.key)),
   }))
 }
 
 export function FunctionalCaseGenerateTaskDetailPage() {
   const { taskId = '' } = useParams()
+  const [runPage, setRunPage] = useState(1)
+  const [runPageSize, setRunPageSize] = useState(20)
+  useEffect(() => { setRunPage(1) }, [taskId])
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -180,11 +187,28 @@ export function FunctionalCaseGenerateTaskDetailPage() {
     enabled: Boolean(task?.requirementId),
   })
   const runsQuery = useQuery({
-    queryKey: ['functionalCaseGenerateTaskRuns', taskId],
-    queryFn: () => api.getFunctionalCaseGenerateTaskRuns(taskId),
+    queryKey: ['functionalCaseGenerateTaskRuns', taskId, runPage, runPageSize, runStageFilter],
+    queryFn: () => api.getFunctionalCaseGenerateTaskRuns(taskId, { page: runPage, pageSize: runPageSize, pipelineFilter: runStageFilter }),
     enabled: Boolean(taskId),
-    refetchInterval: expandedSection === 'runHistory' ? 5000 : false,
+    refetchInterval: expandedSection === 'runHistory' ? RUN_HISTORY_POLL_INTERVAL : false,
   })
+  const runTotal = listTotal(runsQuery.data)
+  useEffect(() => {
+    if (runsQuery.data && !runsQuery.isFetching && !runsQuery.error) {
+      const lastPage = Math.max(1, Math.ceil(runTotal / runPageSize))
+      if (runPage > lastPage) setRunPage(lastPage)
+    }
+  }, [runPage, runPageSize, runTotal, runsQuery.data, runsQuery.isFetching, runsQuery.error])
+  const runPagination = {
+    current: runPage, pageSize: runPageSize, total: runTotal,
+    loading: runsQuery.isFetching || Boolean(runsQuery.error),
+    onChange: (page: number, size: number) => { setRunPage(size === runPageSize ? page : 1); setRunPageSize(size) },
+  }
+  const refetchRunHistory = runsQuery.refetch
+  useEffect(() => {
+    if (expandedSection === 'runHistory') void refetchRunHistory({ cancelRefetch: false })
+  }, [expandedSection, refetchRunHistory])
+
   const sprintsQuery = useQuery({
     queryKey: ['sprints', 'functionalAiTestingDetail', task?.projectId],
     queryFn: async () => {
@@ -229,7 +253,7 @@ export function FunctionalCaseGenerateTaskDetailPage() {
       }),
     [runsQuery.data],
   )
-  const latestRunRecord = runRecords[0]
+  const latestRunRecord = runsQuery.data?.latestRun ?? runRecords[0]
   const filteredRunRecords = useMemo(
     () =>
       runStageFilter === 'all'
@@ -242,7 +266,11 @@ export function FunctionalCaseGenerateTaskDetailPage() {
     queryKey: ['functionalCaseGenerateTaskRun', selectedRunId],
     queryFn: () => api.getFunctionalCaseGenerateTaskRun(selectedRunId),
     enabled: Boolean(selectedRunId),
-    refetchInterval: expandedSection === 'runHistory' && selectedRunId ? 5000 : false,
+    refetchInterval: (query) => expandedSection === 'runHistory' ? getRunPollingInterval(query.state.data?.status) : false,
+  })
+  useTaskRunHistorySync({
+    historyKey: 'functionalCaseGenerateTaskRuns', detailKey: 'functionalCaseGenerateTaskRun', taskId, selectedRunId,
+    history: runsQuery.data, detail: selectedRunQuery.data,
   })
   const selectedRun = selectedRunQuery.data
   const importDetailsReady = Boolean(importConfirmRunId && selectedRun?.runId === importConfirmRunId && selectedRunQuery.isSuccess)
@@ -289,6 +317,7 @@ export function FunctionalCaseGenerateTaskDetailPage() {
   }, [taskId])
 
   useEffect(() => {
+    if (!runsQuery.data || runsQuery.isFetching) return
     if (runRecords.length === 0) {
       setSelectedRunRecordId(null)
       return
@@ -296,7 +325,7 @@ export function FunctionalCaseGenerateTaskDetailPage() {
     setSelectedRunRecordId((current) =>
       current && runRecords.some((record) => record.runId === current) ? current : (runRecords[0].runId ?? null),
     )
-  }, [runRecords])
+  }, [runRecords, runsQuery.data, runsQuery.isFetching])
 
   useEffect(() => {
     setRunResultModal(null)
@@ -347,6 +376,7 @@ export function FunctionalCaseGenerateTaskDetailPage() {
     startRun: ({ connectionId, checkpointEnabled }: { connectionId: string; checkpointEnabled?: boolean }) =>
       api.runFunctionalCaseGenerateTask(taskId, { connectionId, checkpointEnabled }),
     onStarted: (run) => {
+      setRunPage(1)
       setLlmSelectOpen(false)
       setCheckpointEnabled(false)
       setExpandedSection('runHistory')
@@ -611,12 +641,23 @@ export function FunctionalCaseGenerateTaskDetailPage() {
   const candidateDirty = candidateYaml !== formatStructuredContent(selectedRun?.resultYaml ?? '')
 
   function handleCaseSelect(key: string, raw: Record<string, unknown>) {
+    // 再次点击已选中的卡片取消选中，右侧编辑区回到完整候选内容。
+    if (key === selectedCaseKey) {
+      setSelectedCaseKey('')
+      setSelectedCaseYaml(candidateYaml)
+      return
+    }
     setSelectedCaseKey(key)
     setSelectedCaseYaml(formatStructuredContent(JSON.stringify({ cases: [raw] })))
   }
 
   function handleSelectedCaseChange(value: string) {
     setSelectedCaseYaml(value)
+    // 未选中卡片时编辑器直接对应完整候选内容。
+    if (!selectedCaseKey) {
+      setCandidateYaml(value)
+      return
+    }
     const [moduleName, indexText] = selectedCaseKey.split(':')
     const caseIndex = Number(indexText)
     if (!moduleName || !Number.isInteger(caseIndex)) return
@@ -646,21 +687,9 @@ export function FunctionalCaseGenerateTaskDetailPage() {
     setReviewComment(selectedRun?.reviewComment ?? '')
     const formatted = formatStructuredContent(selectedRun?.resultYaml ?? '')
     setCandidateYaml(formatted)
-    try {
-      const parsed = JSON.parse(formatted) as { cases?: Array<Record<string, unknown>> }
-      const first = parsed.cases?.[0]
-      if (first) {
-        const moduleName = String(first.case_module ?? first.module ?? first.module_name ?? first.moduleName ?? first.group ?? '未分组')
-        setSelectedCaseKey(`${moduleName}:0`)
-        setSelectedCaseYaml(formatStructuredContent(JSON.stringify({ cases: [first] })))
-      } else {
-        setSelectedCaseKey('')
-        setSelectedCaseYaml(formatted)
-      }
-    } catch {
-      setSelectedCaseKey('')
-      setSelectedCaseYaml(formatted)
-    }
+    // 打开审核时默认不选中任何用例，编辑区展示完整候选内容。
+    setSelectedCaseKey('')
+    setSelectedCaseYaml(formatted)
   }, [resultModalRunId, selectedRun?.reviewComment, selectedRun?.resultYaml])
 
   useEffect(() => {
@@ -947,7 +976,7 @@ export function FunctionalCaseGenerateTaskDetailPage() {
           <div className="ai-task-detail-layout">
             <TaskDetailToolbar
               back={(
-                <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/ai-testing?tab=tasks')}>
+                <Button icon={<ArrowLeftOutlined />} onClick={() => goBackOrFallback(navigate, '/ai-testing?tab=tasks')}>
                   返回生成任务
                 </Button>
               )}
@@ -1001,10 +1030,10 @@ export function FunctionalCaseGenerateTaskDetailPage() {
                 <div className="ai-task-detail-nav-label">输出</div>
                 <TaskDetailNavItem
                   title="运行记录"
-                  sub={`共 ${runRecords.length} 条运行记录`}
+                  sub={`共 ${runTotal} 条运行记录`}
                   icon={<HistoryOutlined />}
                   active={expandedSection === 'runHistory'}
-                  badge={runRecords.length}
+                  badge={runTotal}
                   onClick={() => setExpandedSection('runHistory')}
                 />
               </TaskDetailNavPanel>
@@ -1063,9 +1092,9 @@ export function FunctionalCaseGenerateTaskDetailPage() {
                             aria-label="按状态筛选运行记录"
                             value={runStageFilter}
                             options={runStageFilterOptions}
-                            onChange={(value) => setRunStageFilter(value)}
+                            onChange={(value) => { setRunStageFilter(value); setRunPage(1) }}
                           />
-                          <span className="ai-task-run-history-auto-refresh">每 5 秒自动刷新</span>
+                          <span className="ai-task-run-history-auto-refresh">历史每 30 秒刷新</span>
                           <ActionButton size="small" operation="refresh" loading={runHistoryRefreshing} onClick={handleRefreshRuns}>刷新</ActionButton>
                         </div>
                       </div>
@@ -1078,10 +1107,11 @@ export function FunctionalCaseGenerateTaskDetailPage() {
                       ) : runRecords.length > 0 ? (
                         <>
                           <TaskDetailRunMetrics
-                            {...summarizeRunStatuses(filteredRunRecords)}
+                            {...summarizeRunStatuses(filteredRunRecords, runsQuery.data?.statusCounts)}
                             latestStatus={renderApiCaseGenerateTaskRunStatusTag(filteredRunRecords[0]?.status)}
                           />
                           <RunHistoryTable<FunctionalCaseGenerateTaskRun>
+                        pagination={runPagination}
                             rows={filteredRunRecords}
                             getRunId={(record) => record.runId}
                             selectedRunId={selectedRunId}
@@ -1096,7 +1126,7 @@ export function FunctionalCaseGenerateTaskDetailPage() {
                               return <RunPipelineStatus run={data} repairProgress={repairProgress} stageTag={stageTag} />
                             }}
                             renderArtifacts={(row) => {
-                              const artifacts = getRunRecordArtifacts(resolveRunRecord(row).configJson)
+                              const artifacts = getRunRecordArtifacts(resolveRunRecord(row).configJson, resolveRunRecord(row).availableArtifacts)
                               return (
                                 <RunArtifacts
                                   artifacts={artifacts}
@@ -1118,9 +1148,9 @@ export function FunctionalCaseGenerateTaskDetailPage() {
                               const reviewStatus = normalizeReviewStatus(data.reviewStatus)
                               const canReviewRecord = reviewStatus === 'pending' && recordStatus === 'success'
                               const canImportRecord = reviewStatus === 'approved' && data.importStatus === 'pending' && recordStatus === 'success'
-                              const recordHasResultYaml = Boolean(formatStructuredContent(data.resultYaml))
+                              const recordHasResultYaml = data.hasResult ?? Boolean(formatStructuredContent(data.resultYaml))
                               const recordHasErrorMessage = Boolean(data.errorMessage?.trim())
-                              const hasGraph = Boolean(getConfigStageFieldContent(data.configJson, 'caseRelations'))
+                              const hasGraph = data.availableArtifacts?.includes('caseRelations') ?? Boolean(getConfigStageFieldContent(data.configJson, 'caseRelations'))
                               const relationActionAllowed = reviewStatus === 'approved' && (recordSucceeded || recordFailed)
                               const stageReviewEntry = active && checkpointStageWaitingReview && selectedStageField
                               return (
@@ -1475,16 +1505,23 @@ export function FunctionalCaseGenerateTaskDetailPage() {
 
         <Modal
           mask={{ closable: false }}
-          className="ai-task-import-result-modal functional-candidate-review-modal functional-candidate-workbench-modal"
+          className="ai-task-import-result-modal functional-candidate-review-modal functional-candidate-workbench-modal tp-surface"
           title={
             <div className="functional-candidate-review-title">
-              <div>
+              <div className="functional-candidate-review-title-main">
                 <strong>{canReviewSelectedRun ? '审核结果' : '功能测试用例候选结果'}</strong>
-                <span title={importTargetRequirementName}>关联需求：{importTargetRequirementName}</span>
+                <span className="functional-candidate-review-title-divider" aria-hidden />
+                <span className="functional-candidate-review-title-requirement">
+                  <span className="functional-candidate-review-title-requirement-label">关联需求:</span>
+                  <span className="functional-candidate-review-title-requirement-chip" title={importTargetRequirementName}>
+                    <LinkOutlined aria-hidden />
+                    {importTargetRequirementName}
+                  </span>
+                </span>
               </div>
               <div className="functional-candidate-review-title-stats">
-                <span>模块 <strong>{selectedRunImportStats.moduleCount}</strong></span>
-                <span>用例 <strong>{selectedRunImportStats.caseCount}</strong></span>
+                <span className="functional-candidate-review-stat">模块 <strong>{selectedRunImportStats.moduleCount}</strong></span>
+                <span className="functional-candidate-review-stat">用例 <strong>{selectedRunImportStats.caseCount}</strong></span>
               </div>
             </div>
           }
@@ -1502,12 +1539,20 @@ export function FunctionalCaseGenerateTaskDetailPage() {
                       autoSize={{ minRows: 1, maxRows: 2 }}
                       value={reviewComment}
                       onChange={(event) => setReviewComment(event.target.value)}
-                      placeholder="请输入审核意见或补充说明"
+                      placeholder="请输入审核意见、优化建议或补充说明"
                     />
                   </label>
                   <div className="functional-candidate-review-actions">
-                    <span>已选择全部 <strong>{selectedRunImportStats.caseCount}</strong> 条</span>
-                    <Button onClick={closeResultModal}>取消</Button>
+                    {canEditCandidate ? (
+                      <ProjectActionButton action="write"
+                        className="functional-candidate-review-save"
+                        loading={updateRunResultMutation.isPending}
+                        disabled={!candidateDirty || reviewRunMutation.isPending || reviseStageMutation.isPending}
+                        onClick={handleSaveCandidateResult}
+                      >
+                        保存当前修改
+                      </ProjectActionButton>
+                    ) : null}
                     {reviewAvailable && selectedRun?.importStatus !== 'imported' ? (
                       <ProjectActionButton action="execute" disabled={updateRunResultMutation.isPending || reviewRunMutation.isPending || reviseStageMutation.isPending}
                         onClick={() => openRevisionModal('final')}>继续优化</ProjectActionButton>
@@ -1527,7 +1572,7 @@ export function FunctionalCaseGenerateTaskDetailPage() {
                       disabled={reviseStageMutation.isPending || updateRunResultMutation.isPending || (reviewRunMutation.isPending && reviewSubmitAction !== 'approve')}
                       onClick={handleApproveReview}
                     >
-                      批准 {selectedRunImportStats.caseCount} 条
+                      批准
                     </ProjectActionButton>
                   </div>
                 </div>
@@ -1552,13 +1597,22 @@ export function FunctionalCaseGenerateTaskDetailPage() {
                 </section>
                 <section className="functional-candidate-code-pane" aria-label="候选 JSON 编辑区">
                   <header className="functional-candidate-code-heading">
-                    <strong>候选结果.json</strong>
-                    <span>{canEditCandidate ? '编辑后实时预览' : '只读'}</span>
+                    <div className="functional-candidate-code-heading-main">
+                      <JavaScriptOutlined aria-hidden className="functional-candidate-code-icon tone-amber" />
+                      <strong>候选结果.json</strong>
+                      {canEditCandidate ? (
+                        <span className={`functional-candidate-code-dirty${candidateDirty ? ' is-dirty tone-amber' : ''}`} role="status">
+                          <span className="functional-candidate-code-dirty-dot" aria-hidden />
+                          {candidateDirty ? '存在未保存修改' : '与已保存结果一致'}
+                        </span>
+                      ) : (
+                        <span className="functional-candidate-code-dirty">只读</span>
+                      )}
+                    </div>
                     <div className="functional-candidate-code-tools">
-                      <Button size="small" onClick={() => setCandidateYaml(formatStructuredContent(candidateYaml))}>格式化</Button>
-                      <Button size="small" onClick={() => { void navigator.clipboard?.writeText(selectedCaseYaml); message.success('已复制候选结果') }}>复制代码</Button>
-                      <Button size="small" onClick={() => saveBlob(new Blob([selectedCaseYaml], { type: 'application/json' }), '功能候选结果.json')}>下载</Button>
-                      <Button size="small" onClick={() => setSelectedCaseYaml(formatStructuredContent(selectedCaseYaml))}>重置</Button>
+                      <Button size="small" icon={<FormatPainterOutlined aria-hidden />} onClick={() => setCandidateYaml(formatStructuredContent(candidateYaml))}>格式化</Button>
+                      <Button size="small" icon={<CopyOutlined aria-hidden />} onClick={() => { void navigator.clipboard?.writeText(selectedCaseYaml); message.success('已复制候选结果') }}>复制</Button>
+                      <Button size="small" icon={<DownloadOutlined aria-hidden />} onClick={() => saveBlob(new Blob([selectedCaseYaml], { type: 'application/json' }), '功能候选结果.json')}>下载</Button>
                     </div>
                   </header>
                   <div className="functional-candidate-edit-pane">
@@ -1575,19 +1629,6 @@ export function FunctionalCaseGenerateTaskDetailPage() {
                     {updateRunResultMutation.error ? (
                       <Alert showIcon type="error" title={getErrorMessage(updateRunResultMutation.error)} />
                     ) : null}
-                    <div className="functional-candidate-code-status">
-                      <span>{candidateDirty ? '有未保存修改' : '与已保存结果一致'}</span>
-                      {reviewAvailable ? (
-                        <ProjectActionButton action="write"
-                          type="primary"
-                          loading={updateRunResultMutation.isPending}
-                          disabled={!candidateDirty || reviewRunMutation.isPending || reviseStageMutation.isPending}
-                          onClick={handleSaveCandidateResult}
-                        >
-                          保存候选结果
-                        </ProjectActionButton>
-                      ) : null}
-                    </div>
                   </div>
                 </section>
               </div>

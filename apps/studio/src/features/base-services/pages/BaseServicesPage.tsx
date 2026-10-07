@@ -5,18 +5,13 @@ import type { ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
 
-type BaseServiceTab = 'llm' | 'zentao' | 'gitlab' | 'skills' | 'mcp'
+type BaseServiceTab = 'llm' | 'gitlab' | 'skills' | 'mcp'
 
 const tabOptions: Array<{
   key: BaseServiceTab
   label: string
   icon: ReactNode
 }> = [
-  {
-    key: 'zentao',
-    label: '禅道',
-    icon: <AppIcon name="zentao" />,
-  },
   {
     key: 'gitlab',
     label: 'GitLab',
@@ -38,7 +33,8 @@ export function BaseServicesPage({ skillLibrary }: { skillLibrary: ReactNode }) 
 
   const activeTab = useMemo<BaseServiceTab>(() => {
     const tab = searchParams.get('tab')
-    if (tab === 'llm' || tab === 'zentao' || tab === 'gitlab' || tab === 'skills' || tab === 'mcp') return tab
+    if (tab === 'zentao') return 'mcp'
+    if (tab === 'llm' || tab === 'gitlab' || tab === 'skills' || tab === 'mcp') return tab
     return 'llm'
   }, [searchParams])
 

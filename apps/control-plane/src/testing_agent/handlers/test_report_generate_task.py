@@ -27,10 +27,16 @@ async def run_test_report_generate_run(
 async def list_test_report_generate_runs(
     project_id: str,
     sprint_id: str = Query(alias="sprintId"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, alias="pageSize", ge=1, le=100),
     user_id: str = Depends(get_current_user_id),
     service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
 ):
-    return success_payload(await service.list_test_report_runs(project_id, sprint_id, user_id))
+    return success_payload(
+        await service.list_test_report_run_summaries(
+            project_id, sprint_id, user_id, page, page_size
+        )
+    )
 
 
 async def get_test_report_generate_run(

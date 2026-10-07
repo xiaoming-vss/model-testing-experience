@@ -1,4 +1,4 @@
-"""Bug 管理：创建编号、六状态流转、拒绝原因、转派、编辑历史、筛选分页与执行来源。"""
+"""Bug 管理：创建编号、禅道状态、确认和解决方案、转派、编辑历史、筛选分页与执行来源。"""
 
 from test_function_case_library import make_case, make_requirement, make_sprint, make_suite
 from test_project_membership_api import account, project
@@ -32,6 +32,8 @@ def get_bug(api, headers, bug_id):
 
 
 def transition(api, headers, bug_id, action, **fields):
+    if action == "submit_fix":
+        fields.setdefault("resolvedBuild", "trunk")
     return api.post(
         f"/v1/bugs/{bug_id}/transition", headers=headers, json={"action": action, **fields}
     )
@@ -52,7 +54,8 @@ def test_create_assigns_project_scoped_bug_number_and_records_creation(api):
     second = create_bug(api, owner, pid, sprint_id, reporter=owner_user, title="第二个缺陷")
     assert first["bugNo"] == 1
     assert second["bugNo"] == 2
-    assert first["status"] == "pending"
+    assert first["status"] == "active"
+    assert not first["confirmed"] and first["resolution"] == ""
     assert first["reporterUserId"] == owner_user["userId"]
     assert first["severity"] == "serious" and first["priority"] == "high"
     assert first["foundSprintId"] == sprint_id
@@ -62,7 +65,7 @@ def test_create_assigns_project_scoped_bug_number_and_records_creation(api):
     records = activities_of(api, owner, first["bugId"])
     assert [item["kind"] for item in records["items"]] == ["status_change"]
     assert records["items"][0]["action"] == "create"
-    assert records["items"][0]["toStatus"] == "pending"
+    assert records["items"][0]["toStatus"] == "active"
 
 
 def test_create_validates_required_fields_and_project_scope(api):
@@ -131,22 +134,22 @@ def test_full_state_machine_follows_the_transition_table(api):
     assert transition(api, owner, bug_id, "submit_fix").json()["code"] == 3702
     assert transition(api, owner, bug_id, "regression_pass").json()["code"] == 3702
 
-    assert transition(api, owner, bug_id, "confirm").json()["data"]["status"] == "processing"
+    assert transition(api, owner, bug_id, "confirm").json()["data"]["status"] == "active"
     # 提交修复必须带修复说明
     assert transition(api, owner, bug_id, "submit_fix").json()["code"] == 3704
     fixed = transition(api, owner, bug_id, "submit_fix", content="调整了阈值判断")
-    assert fixed.json()["data"]["status"] == "pending_regression"
+    assert fixed.json()["data"]["status"] == "resolved"
     # 回归失败 → 重新打开（必填失败说明）
     assert transition(api, owner, bug_id, "regression_fail").json()["code"] == 3704
     failed = transition(api, owner, bug_id, "regression_fail", content="复现步骤仍然失败")
-    assert failed.json()["data"]["status"] == "reopened"
-    assert transition(api, owner, bug_id, "confirm").json()["data"]["status"] == "processing"
+    assert failed.json()["data"]["status"] == "active"
+    assert transition(api, owner, bug_id, "confirm").json()["code"] == 3702
     assert transition(api, owner, bug_id, "submit_fix", content="第二轮修复").status_code == 200
     closed = transition(api, owner, bug_id, "regression_pass", content="回归通过")
     assert closed.json()["data"]["status"] == "closed"
     # 已关闭后仍可重新打开再次处理
     reopened = transition(api, owner, bug_id, "reopen", content="生产环境再次出现")
-    assert reopened.json()["data"]["status"] == "reopened"
+    assert reopened.json()["data"]["status"] == "active"
 
     records = activities_of(api, owner, bug_id)
     status_flow = [
@@ -155,13 +158,12 @@ def test_full_state_machine_follows_the_transition_table(api):
         if item["kind"] == "status_change" and item["action"] != "create"
     ]
     assert status_flow == [
-        ("pending", "confirm", "processing"),
-        ("processing", "submit_fix", "pending_regression"),
-        ("pending_regression", "regression_fail", "reopened"),
-        ("reopened", "confirm", "processing"),
-        ("processing", "submit_fix", "pending_regression"),
-        ("pending_regression", "regression_pass", "closed"),
-        ("closed", "reopen", "reopened"),
+        ("active", "confirm", "active"),
+        ("active", "submit_fix", "resolved"),
+        ("resolved", "regression_fail", "active"),
+        ("active", "submit_fix", "resolved"),
+        ("resolved", "regression_pass", "closed"),
+        ("closed", "reopen", "active"),
     ]
     # 多轮修复说明全部保留
     contents = [item["content"] for item in records["items"] if item["action"] == "submit_fix"]
@@ -179,7 +181,7 @@ def test_reject_requires_reason_and_rejected_can_reopen(api):
     rejected = transition(
         api, owner, bug_id, "reject", rejectReason="by_design", content="与产品确认过"
     )
-    assert rejected.json()["data"]["status"] == "rejected"
+    assert rejected.json()["data"]["status"] == "resolved"
 
     records = activities_of(api, owner, bug_id)["items"]
     reject_record = [item for item in records if item["action"] == "reject"][0]
@@ -188,10 +190,10 @@ def test_reject_requires_reason_and_rejected_can_reopen(api):
     assert reject_record["content"] == "与产品确认过"
 
     reopened = transition(api, owner, bug_id, "reopen", content="设计变更需要重新处理")
-    assert reopened.json()["data"]["status"] == "reopened"
+    assert reopened.json()["data"]["status"] == "active"
     assert (
         transition(api, owner, bug_id, "reject", rejectReason="deferred").json()["data"]["status"]
-        == "rejected"
+        == "resolved"
     )
 
 
@@ -207,7 +209,7 @@ def test_transfer_changes_assignee_without_touching_status(api):
     )
     sprint_id = make_sprint(api, owner, pid)
     bug = create_bug(api, owner, pid, sprint_id, assigneeUserId=owner_user["userId"])
-    assert bug["status"] == "pending"
+    assert bug["status"] == "active"
 
     assert (
         api.post(
@@ -225,7 +227,7 @@ def test_transfer_changes_assignee_without_touching_status(api):
     assert transferred.status_code == 200, transferred.text
     data = transferred.json()["data"]
     assert data["assigneeUserId"] == member_user["userId"]
-    assert data["status"] == "pending"
+    assert data["status"] == "active"
 
     transfer_records = [
         item
@@ -258,7 +260,7 @@ def test_edit_records_field_history_without_status_change(api):
     )
     assert updated.status_code == 200, updated.text
     data = updated.json()["data"]
-    assert data["status"] == "pending"
+    assert data["status"] == "active"
     assert data["title"] == "新标题"
     assert data["severity"] == "fatal"
     assert data["plannedFixSprintId"] == planned_sprint
@@ -295,6 +297,9 @@ def test_list_filters_statuses_severity_assignee_and_keyword(api):
     sprint_a = make_sprint(api, owner, pid, "迭代A")
     sprint_b = make_sprint(api, owner, pid, "迭代B")
 
+    other_pid = project(api, owner, "其他项目")
+    create_bug(api, owner, other_pid, make_sprint(api, owner, other_pid), reporter=owner_user)
+
     mine = create_bug(
         api, owner, pid, sprint_a, title="我的缺陷", assigneeUserId=owner_user["userId"]
     )
@@ -327,7 +332,7 @@ def test_list_filters_statuses_severity_assignee_and_keyword(api):
     # 迭代筛选：默认按发现迭代
     assert list_bugs(f"?sprintId={sprint_a}")["total"] == 2
     # 多状态筛选
-    data = list_bugs("?status=pending_regression")
+    data = list_bugs("?status=resolved&resolution=fixed")
     assert [item["bugId"] for item in data["items"]] == [to_regress["bugId"]]
     # 严重程度筛选
     assert list_bugs("?severity=fatal")["total"] == 1
@@ -335,8 +340,13 @@ def test_list_filters_statuses_severity_assignee_and_keyword(api):
     assert list_bugs(f"?assigneeUserId={member_user['userId']}")["total"] == 4
     # 关键词命中标题
     assert list_bugs("?keyword=致命")["total"] == 1
-    # 关键词是纯数字时同时命中编号
-    assert list_bugs(f"?keyword={mine['bugNo']}")["items"][0]["bugId"] == mine["bugId"]
+    # 跨项目自增主键与项目内编号不同；数字搜索必须命中列表展示的主键。
+    assert mine["id"] != mine["bugNo"]
+    data = list_bugs(f"?keyword={mine['id']}")
+    assert data["total"] == 1
+    assert data["items"][0]["id"] == mine["id"]
+    assert data["items"][0]["bugId"] == mine["bugId"]
+    assert get_bug(api, owner, mine["bugId"])["id"] == mine["id"]
     # 分页
     paged = list_bugs("?page=2&pageSize=2")
     assert paged["total"] == 5

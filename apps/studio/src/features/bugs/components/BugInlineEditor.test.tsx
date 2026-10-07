@@ -10,8 +10,8 @@ import { BugInlineEditor } from './BugInlineEditor'
 vi.mock('@/shared/components/RichTextEditor', () => ({ RichTextEditor: ({ value, onChange }: { value: string; onChange: (value: string) => void }) => <textarea aria-label="问题描述" value={value} onChange={(event) => onChange(event.target.value)} /> }))
 vi.mock('@/shared/utils/feedback', () => ({ message: { success: vi.fn(), error: vi.fn() } }))
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
-const bug = { bugId: 'b', bugNo: 1, projectId: 'project-1', title: '原有标题', descriptionHtml: '<p>原有描述</p>',
-  severity: 'normal', priority: 'medium', status: 'pending', foundSprintId: 's', plannedFixSprintId: 's', reporterUserId: 'u', assigneeUserId: 'u', attachments: [] } as unknown as Bug
+const bug = { id: 1, bugId: 'b', bugNo: 1, projectId: 'project-1', title: '原有标题', descriptionHtml: '<p>原有描述</p>',
+  severity: 'normal', priority: 'medium', status: 'active', confirmed: false, resolution: '', foundSprintId: 's', plannedFixSprintId: 's', reporterUserId: 'u', assigneeUserId: 'u', attachments: [] } as unknown as Bug
 function setup(value = bug) {
   vi.spyOn(api, 'getProjects').mockResolvedValue([] as never)
   vi.spyOn(api, 'getProjectMembers').mockResolvedValue([] as never)

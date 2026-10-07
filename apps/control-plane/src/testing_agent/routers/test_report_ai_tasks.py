@@ -9,8 +9,11 @@ from testing_agent.handlers.test_report_generate_task import (
     list_test_report_generate_runs,
     run_test_report_generate_run,
 )
-from testing_agent.schemas.ai_generate_task import AiGenerateTaskRunResponse
-from testing_agent.schemas.common import ApiResponse, ListResponse
+from testing_agent.schemas.ai_generate_task import (
+    AiGenerateRunHistoryResponse,
+    AiGenerateTaskRunResponse,
+)
+from testing_agent.schemas.common import ApiResponse
 
 router = APIRouter()
 
@@ -20,7 +23,7 @@ router.post(
 )(run_test_report_generate_run)
 router.get(
     "/projects/{project_id}/test-report-generate-runs",
-    response_model=ApiResponse[ListResponse[AiGenerateTaskRunResponse]],
+    response_model=ApiResponse[AiGenerateRunHistoryResponse],
 )(list_test_report_generate_runs)
 router.get(
     "/test-report-generate-runs/{run_id}",

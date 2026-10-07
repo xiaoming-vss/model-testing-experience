@@ -14,6 +14,23 @@ key = "replace-with-strong-integration-key"
 [security.worker]
 key = "replace-with-strong-worker-key"
 
+[security.integration_worker]
+key = ""
+
+[integration_execution]
+enabled = false
+project_ids = []
+all_projects = false
+accept_submissions = true
+claim_enabled = true
+lease_seconds = 60
+runtime_generation = ""
+succeeded_retention_days = 30
+failed_retention_days = 90
+maintenance_batch_size = 100
+restore_review_max_age_seconds = 3600
+worker_presence_ttl_seconds = 120
+
 [data.db.user]
 driver = "mysql"
 dsn = "mysql+asyncmy://testing_agent:replace-with-db-password@mysql:3306/testing_agent?charset=utf8mb4"
@@ -21,8 +38,6 @@ dsn = "mysql+asyncmy://testing_agent:replace-with-db-password@mysql:3306/testing
 [storage]
 uploads_dir = "/app/storage/ai-generate-task-sources"
 
-[integrations.zentao_service]
-base_url = "http://zentao-service:8010"
 
 [code_overview]
 # 迭代代码概览缓存窗口(秒),默认 300(5 分钟)

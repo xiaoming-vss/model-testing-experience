@@ -52,17 +52,17 @@ async def import_ui_run(
     owned_run = await service.owned_run(user_id, run_id, "ui", action="execute")
     run = await service.repository.get_run_for_update(run_id)
     if run is None or run.run_id != owned_run.run_id:
-        raise ErrBadRequest
+        raise ErrBadRequest()
     if (
         run.status != "success"
         or run.review_status != "approved"
         or run.import_status == ImportStatus.IMPORTED.value
     ):
-        raise ErrBadRequest
+        raise ErrBadRequest()
 
     suite = await service.repository.get_ui_suite(suite_id)
     if suite is None:
-        raise ErrNotFound
+        raise ErrNotFound()
     await service.ensure_requirement_access(user_id, suite.requirement_id, action="execute")
 
     generated_cases = validate_ui_candidate_cases(run.result_yaml)
@@ -70,7 +70,7 @@ async def import_ui_run(
     for item in generated_cases:
         normalized_name = normalized_case_name(item["name"])
         if normalized_name in generated_names:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         generated_names.add(normalized_name)
 
     existing_cases = await service.repository.list_ui_cases(suite_id)
@@ -78,7 +78,7 @@ async def import_ui_run(
     for case in existing_cases:
         normalized_name = normalized_case_name(case.name)
         if normalized_name in existing_by_name:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         existing_by_name[normalized_name] = case
 
     conflicts = []

@@ -455,6 +455,49 @@ class WorkerMainTests(unittest.TestCase):
         self.assertFalse(worker_thread.is_alive())
         self.assertEqual([0], results)
 
+    def test_keyboard_interrupt_drains_claimed_task_and_returns_success(self) -> None:
+        release = threading.Event()
+        interrupted = threading.Event()
+        runner = _GatedTaskRunner(release)
+        results, errors = [], []
+
+        def interrupt_sleep(_seconds):
+            interrupted.set()
+            raise KeyboardInterrupt()
+
+        def worker_target():
+            try:
+                results.append(
+                    run_worker(
+                        settings=Settings(
+                            worker=WorkerConfig(poll_interval_seconds=5),
+                            platform=PlatformConfig(base_url="https://platform.example.com"),
+                            nanobot=NanobotConfig(runtime_root="D:/tmp/nanobot-runtime"),
+                        ),
+                        poller=_SequenceThenIdlePoller([self._make_simple_task("task-drain")]),
+                        task_runner=runner,
+                        sleep=interrupt_sleep,
+                        printer=lambda _: None,
+                    )
+                )
+            except BaseException as exc:
+                errors.append(exc)
+
+        thread = threading.Thread(target=worker_target, daemon=True)
+        thread.start()
+        try:
+            self.assertTrue(interrupted.wait(2))
+            self.assertTrue(runner.wait_for_started(1))
+            self.assertTrue(thread.is_alive())
+            self.assertEqual(runner.finished, [])
+        finally:
+            release.set()
+            thread.join(timeout=5)
+        self.assertFalse(thread.is_alive())
+        self.assertEqual(errors, [])
+        self.assertEqual(results, [0])
+        self.assertEqual([task.task_id for task in runner.finished], ["task-drain"])
+
     def test_run_once_claims_a_batch_of_tasks_then_drains(self) -> None:
         release_tasks = threading.Event()
         task_runner = _GatedTaskRunner(release_tasks)

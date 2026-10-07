@@ -1,5 +1,7 @@
-export type ProjectRole = 'owner' | 'member' | 'viewer'
-export type ProjectAction = 'read' | 'write' | 'execute' | 'review' | 'manage'
+import type { ZentaoBinding } from '@/features/base-services/types'
+
+export type ProjectRole = 'owner' | 'member' | 'viewer' | 'developer'
+export type ProjectAction = 'read' | 'write' | 'execute' | 'review' | 'manage' | 'project_read' | 'bug_read' | 'bug_handle'
 export type ProjectMember = { userId: string; name: string; role: ProjectRole }
 
 export type Project = {
@@ -18,6 +20,7 @@ export type Project = {
 }
 
 export type Sprint = {
+  zentaoBinding?: ZentaoBinding | null
   sprintId?: string
   sprint_id?: string
   projectId?: string

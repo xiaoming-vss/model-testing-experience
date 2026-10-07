@@ -257,15 +257,13 @@ export function buildRelationsGraphModel(data: CaseRelationsData, caseMetaById: 
     })
   }
 
-  // 未连通组件：边的端点都不在已发现集合里时，从该端点独立扩出一组节点，不与主图谱强行连线。
+  // 上游与未连通组件也必须保留每条边的两个端点，不能只补源节点而漏掉末端。
   data.edges.forEach((edge) => {
-    const seedCaseId = !visited.has(edge.fromCaseId)
-      ? edge.fromCaseId
-      : !visited.has(edge.toCaseId) ? edge.toCaseId : null
-    if (!seedCaseId) return
-    visited.add(seedCaseId)
-    ensureNode(seedCaseId)
-    branchQueue.push(seedCaseId)
+    for (const caseId of [edge.fromCaseId, edge.toCaseId]) {
+      if (visited.has(caseId)) continue
+      visited.add(caseId)
+      ensureNode(caseId)
+    }
   })
 
   // 独立用例：没有任何关联边、也不在主骨上的用例，单独展示。

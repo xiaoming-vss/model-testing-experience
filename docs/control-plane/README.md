@@ -1,8 +1,12 @@
 # 控制面（control-plane）
 
-平台唯一的后端服务。组织测试资产、AI 生成任务、人工审核与导入、执行调度、权限、外部集成凭据与报告，并向浏览器提供 `/v1/*`、向 Worker 提供 `/internal/*`。
+平台的浏览器后端与业务状态管理服务。组织测试资产、AI 生成任务、人工审核与导入、执行调度、权限、外部集成凭据与报告，并向浏览器提供 `/v1/*`、向 Worker 提供 `/internal/*`。
 
 这是 Go 控制面的 Python 重写版本，保留原 `/v1` 与 `/internal/*` 契约。领域术语见 [CONTEXT](CONTEXT.md)。
+
+[通用后端规则](../agents/backend-development.md)适用于四个后端项目；[控制面开发规则](development-rules.md)补充本项目的 Web、权限、数据库和事务验证入口。新增开发和相关修改同时按两份规则执行。
+
+独立集成 Worker 拆分已开始，方案见[拆分计划](integration-worker-split-plan.md)，代码交付与未完成接入见[实施记录](integration-worker-implementation.md)。控制面异步协议、独立 Worker 和 Studio 任务交互已接入并完成隔离专项验证；恢复账本、切换及真实外部验收仍在推进。默认开关关闭，未启用项目继续使用原入口。
 
 ## 运行时与依赖
 
@@ -42,6 +46,20 @@
 | `ai_task_access.py` | 各工作流依赖的最小授权接口，不依赖入口服务实现 |
 
 功能与 UI 正式资产导入继续由 `function_generate_import.py`、`ui_generate_import.py` 处理。审核只改变审核状态，正式资产由独立导入入口创建；不再保留旧的审核即导入路径。通用需求访问链集中在 `project_access.require_requirement_access`，每次调用仍显式传递操作人及权限动作。
+
+## 数据库读取与历史列表
+
+表与字段的业务说明使用 MySQL 原生 `COMMENT`，在 SQLAlchemy 模型中随结构定义维护。迁移 `20261007_0034` 补齐既有表和字段注释；库的用途、查询方法及后续维护约定见[数据库结构描述](database-schema.md)。
+
+迭代列表 `GET /v1/projects/{project_id}/sprints` 同批返回每个迭代的 `zentaoBinding` 摘要（未绑定为 `null`）。需求列表使用 `GET /v1/projects/{project_id}/requirements`，支持可选 `sprintId` 筛选及 `page` / `pageSize` 分页（默认 1 / 20，最大每页 100 条），按创建时间和数据库 ID 倒序返回 `items` 与筛选后的 `total`。每项包含 `sprintName`、文档元数据和 `zentaoBinding`，不查询或返回 `documentContent`。两类列表都在项目读取授权后批量查询本地禅道绑定，不访问外部服务；单条需求详情与绑定管理接口保留原有契约。`test_project_list_queries.py` 验证分页、权限隔离、大字段排除和固定的绑定批量查询数。
+
+AI 任务与资源绑定的普通读取不使用 `FOR UPDATE`；修改时通过明确的 `get_*_for_update` 查询锁定父资源和运行，避免与删除或导入并发。代码风险运行在准备 GitLab 快照时不持有这些写锁，落库前重新检查父资源、任务归属和执行权限。Worker 领取及写回、覆盖导入和删除仍保留原有锁保护。
+
+六类 AI 运行历史 HTTP 接口返回分页摘要：`page` 从 1 开始，`pageSize` 默认 20、最大 100，按创建时间和数据库 ID 倒序。响应包含 `items`、匹配条件的 `total`、`statusCounts` 和任务范围内的 `latestRun`。摘要保留阶段、审核、导入、错误和时间信息，使用 `availableArtifacts` / `hasResult` 表示产物是否存在，不返回 `snapshotJson`、`configJson`、`resultYaml` 或解析后的报告。完整内容仍从单次运行详情接口读取。功能用例运行支持 `pipelineFilter`，先在数据库筛选，再分页；`latestRun` 不受筛选或页码影响。
+
+`repositories/ai_run_history.py` 只查询本页及最新运行的轻量记录，不把大字段加载到 ORM；`repositories/latest.py` 通过窗口函数按创建时间、ID 筛选每个资源最近一次运行。代码风险快照批量读取功能/API/UI 用例、API 断言及最近执行摘要，每日统计只读取最新状态与计数，不传输执行日志、请求快照或全部历史。
+
+迁移 `20261004_0025` 增加 AI 任务列表、AI 运行历史、共享绑定、Bug 列表以及 API/UI 最近运行的七个联合索引，保留既有唯一约束与外键索引。空库初始化及升级、回退由 `test_initial_schema_migration.py` 验证；`test_database_read_paths.py` 覆盖权限、分页、大字段排除、相同创建时间的 ID 排序，以及 1 / 100 条用例下固定的批量查询数。
 
 ## 配置
 
@@ -93,12 +111,12 @@ uv run --extra dev alembic upgrade head           # 数据库迁移
 
 ## 鉴权
 
-- 浏览器请求使用 `Authorization: Bearer <JWT>`，HS256，载荷键为 `userId`
+- 浏览器请求使用 `Authorization: Bearer <JWT>`，HS256，载荷键为 `userId`；`POST /v1/logout` 持久化撤销当前 Token，详见 [登录与服务端注销](authentication.md)。
 - Worker 请求使用 `X-Worker-Token` 头，值等于 `security.worker.key`
 
 ## 外部调用
 
-- 禅道：经连接服务转发，地址取 `integrations.zentao_service.base_url`；凭据由操作人透传
+- 禅道：通过项目保存的 MCP 端点访问，实际实例由 MCP 提供；只使用操作人本人的 Token
 - GitLab：直连 `/api/v4/*`，使用操作人的个人访问令牌
 - LLM：按任务向 AI Worker 下发 `/internal/ai-worker/tasks/{id}/llm-credentials`
 
@@ -112,10 +130,24 @@ Studio 对未采集的缺陷数量、解决率显示 `—`，缺陷画像显示�
 
 ## 测试
 
-在 `apps/control-plane/` 执行 `uv run --extra dev python -m pytest`，当前收集 742 项（711 通过、31 跳过、0 失败）。使用 `python -m pytest` 将项目根目录加入模块搜索路径，以支持测试夹具的模块间复用。`test_function_stage_reexecution_uses_current_actor` 已补齐关联需求与导入后的增强文本，继续验证 owner/member 的阶段重试、修订使用当前操作人的个人授权。
+在 `apps/control-plane/` 执行 `uv run --extra dev python -m pytest`，当前收集 935 项；最近按全部测试模块分组回归为 895 通过、40 跳过、0 失败。使用 `python -m pytest` 将项目根目录加入模块搜索路径，以支持测试夹具的模块间复用。`test_function_stage_reexecution_uses_current_actor` 已补齐关联需求与导入后的增强文本，继续验证 owner/member 的阶段重试、修订使用当前操作人的个人授权。
 
 - [内置 MCP 配置](builtin-mcp.md)
+- [Bug 生命周期对齐禅道](adr/0005-bug-zentao-lifecycle.md)：三个主状态、独立确认及解决方案、旧数据迁移。
+- [Bug 手动推送到禅道](bug-zentao-push.md)
+- [禅道 Bug 同步到平台：需求草案](bug-zentao-reverse-sync-requirements.md)：已关联 Bug 的反向更新与禅道新建 Bug 导入。
 
 - [统一 S3 文件存储与迁移](file-storage.md)
 
 - [Skill 文件夹与默认技能维护](../control-plane/skills.md)
+
+- [用例推送到禅道 MCP](zentao-mcp-case-push.md)：推送规则、部分失败和连接器退出。
+
+## 文件存储验收与恢复
+
+- [联合备份、恢复与部署门槛](storage-operations.md)
+- [2026-10-03 S3 P1 验收记录](s3-p1-acceptance-2026-10-03.md)
+
+- [ZenTao-MCP 手动部署](zentao-mcp-deployment.md)：已发布镜像、配置示例、直接 Compose 启动、多项目端口和网络排查。
+
+需求分析的阶段审核及拒绝后的只读规则见 [需求分析审核规则](requirement-analysis-review.md)。

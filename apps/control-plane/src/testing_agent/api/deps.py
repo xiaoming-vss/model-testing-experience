@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+from secrets import compare_digest
 from typing import Annotated
 
 from fastapi import Depends, Header
@@ -8,8 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.config import Settings, get_settings
 from testing_agent.core.errors import ErrUnauthorized
-from testing_agent.core.security import parse_access_token
+from testing_agent.core.security import access_token_hash, parse_access_token
 from testing_agent.db.session import get_session
+from testing_agent.models.revoked_access_token import RevokedAccessToken
 from testing_agent.models.user import User
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.api_assert_rule import ApiAssertRuleRepository
@@ -68,19 +71,30 @@ from testing_agent.services.ui_test_case import UiTestCaseService
 from testing_agent.services.ui_test_case_run import UiTestCaseRunService
 from testing_agent.services.ui_test_suite import UiTestSuiteService
 from testing_agent.services.worker_task import WorkerTaskService
-from testing_agent.services.zentao_resource import ZentaoResourceClient
+from testing_agent.services.zentao_mcp import ZentaoMcpResources
+from testing_agent.services.zentao_mcp_cases import ZentaoMcpCases
+
+
+async def get_access_token(
+    authorization: Annotated[str | None, Header()] = None,
+) -> str:
+    if not authorization:
+        raise ErrUnauthorized()
+    return authorization.removeprefix("Bearer ").strip()
 
 
 async def get_current_user_id(
-    authorization: Annotated[str | None, Header()] = None,
+    token: str = Depends(get_access_token),
     session: AsyncSession = Depends(get_session),
 ) -> str:
-    if not authorization:
-        raise ErrUnauthorized
-    token = authorization.removeprefix("Bearer ").strip()
     user_id = parse_access_token(token)
-    if await session.scalar(select(User.user_id).where(User.user_id == user_id)) is None:
-        raise ErrUnauthorized
+    revoked = (
+        select(RevokedAccessToken.token_hash)
+        .where(RevokedAccessToken.token_hash == access_token_hash(token))
+        .exists()
+    )
+    if await session.scalar(select(User.user_id).where(User.user_id == user_id, ~revoked)) is None:
+        raise ErrUnauthorized()
     return user_id
 
 
@@ -89,7 +103,21 @@ def verify_worker_token(
     settings: Settings = Depends(get_settings),
 ) -> None:
     if not settings.worker_key or not x_worker_token or x_worker_token != settings.worker_key:
-        raise ErrUnauthorized
+        raise ErrUnauthorized()
+
+
+def verify_integration_worker_token(
+    x_worker_token: Annotated[str | None, Header()] = None,
+    settings: Settings = Depends(get_settings),
+) -> None:
+    expected = settings.integration_worker_key
+    if (
+        not expected
+        or not x_worker_token
+        or not compare_digest(x_worker_token.encode(), expected.encode())
+    ):
+        logging.getLogger(__name__).warning("Integration worker authentication rejected status=401")
+        raise ErrUnauthorized()
 
 
 def get_auth_service(session: AsyncSession = Depends(get_session)) -> AuthService:
@@ -184,12 +212,12 @@ def get_function_test_case_service(
     session: AsyncSession = Depends(get_session),
     settings: Settings = Depends(get_settings),
 ) -> FunctionTestCaseService:
-    zentao_resource_client = ZentaoResourceClient(settings.zentao_service_base_url)
+    zentao_resource_client = ZentaoMcpCases()
     return FunctionTestCaseService(
         FunctionTestCaseRepository(session),
         IntegrationConnectionService(
             IntegrationConnectionRepository(session),
-            zentao_resource_client,
+            credential_cipher=IntegrationCredentialCipher(settings.integration_key),
         ),
         zentao_resource_client,
     )
@@ -219,7 +247,6 @@ def get_integration_connection_service(
 ) -> IntegrationConnectionService:
     return IntegrationConnectionService(
         IntegrationConnectionRepository(session),
-        ZentaoResourceClient(settings.zentao_service_base_url),
         credential_cipher=IntegrationCredentialCipher(settings.integration_key),
     )
 
@@ -232,10 +259,10 @@ def get_resource_binding_service(
         ResourceBindingRepository(session),
         IntegrationConnectionService(
             IntegrationConnectionRepository(session),
-            ZentaoResourceClient(settings.zentao_service_base_url),
+            ZentaoMcpResources(),
             credential_cipher=IntegrationCredentialCipher(settings.integration_key),
         ),
-        ZentaoResourceClient(settings.zentao_service_base_url),
+        ZentaoMcpResources(),
     )
 
 
@@ -243,12 +270,10 @@ def get_sprint_code_overview_service(
     session: AsyncSession = Depends(get_session),
     settings: Settings = Depends(get_settings),
 ) -> SprintCodeOverviewService:
-    zentao_resource_client = ZentaoResourceClient(settings.zentao_service_base_url)
     credential_cipher = IntegrationCredentialCipher(settings.integration_key)
     binding_repository = ResourceBindingRepository(session)
     integration_connection_service = IntegrationConnectionService(
         IntegrationConnectionRepository(session),
-        zentao_resource_client,
         credential_cipher=credential_cipher,
     )
     return SprintCodeOverviewService(
@@ -273,39 +298,22 @@ def get_sprint_daily_metrics_service(
     session: AsyncSession = Depends(get_session),
     settings: Settings = Depends(get_settings),
 ) -> SprintDailyMetricsService:
-    zentao_resource_client = ZentaoResourceClient(settings.zentao_service_base_url)
-    return SprintDailyMetricsService(
-        SprintDailyMetricsRepository(session),
-        IntegrationConnectionService(
-            IntegrationConnectionRepository(session),
-            zentao_resource_client,
-        ),
-        zentao_resource_client,
-    )
+    return SprintDailyMetricsService(SprintDailyMetricsRepository(session))
 
 
 def get_ai_generate_task_service(
     session: AsyncSession = Depends(get_session),
     settings: Settings = Depends(get_settings),
 ) -> AiGenerateTaskService:
-    zentao_resource_client = ZentaoResourceClient(settings.zentao_service_base_url)
     credential_cipher = IntegrationCredentialCipher(settings.integration_key)
     integration_connection_service = IntegrationConnectionService(
         IntegrationConnectionRepository(session),
-        zentao_resource_client,
         credential_cipher=credential_cipher,
     )
     binding_repository = ResourceBindingRepository(session)
     return AiGenerateTaskService(
         AiGenerateTaskRepository(session),
-        SprintDailyMetricsService(
-            SprintDailyMetricsRepository(session),
-            IntegrationConnectionService(
-                IntegrationConnectionRepository(session),
-                zentao_resource_client,
-            ),
-            zentao_resource_client,
-        ),
+        SprintDailyMetricsService(SprintDailyMetricsRepository(session)),
         files=get_file_service(session, settings),
         code_risk_analysis_service=CodeRiskAnalysisService(
             AiGenerateTaskRepository(session),
@@ -342,6 +350,29 @@ def get_bug_service(
     settings: Settings = Depends(get_settings),
 ) -> BugService:
     return build_bug_service(session, settings)
+
+
+def build_integration_bug_service(session: AsyncSession, settings: Settings):
+    from testing_agent.repositories.integration_job import IntegrationJobRepository
+    from testing_agent.services.bug_zentao_push import BugZentaoPushService
+    from testing_agent.services.integration_authorization import IntegrationAuthorization
+    from testing_agent.services.integration_bug import IntegrationBugService
+
+    pushes = BugZentaoPushService(
+        build_bug_service(session, settings), get_integration_connection_service(session, settings)
+    )
+    return IntegrationBugService(
+        IntegrationJobRepository(session),
+        pushes,
+        IntegrationAuthorization(session, IntegrationCredentialCipher(settings.integration_key)),
+        settings,
+    )
+
+
+def get_integration_bug_service(
+    session: AsyncSession = Depends(get_session), settings: Settings = Depends(get_settings)
+):
+    return build_integration_bug_service(session, settings)
 
 
 def get_test_order_service(

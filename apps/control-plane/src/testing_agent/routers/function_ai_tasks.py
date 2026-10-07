@@ -22,6 +22,7 @@ from testing_agent.handlers.function_case_generate_task import (
     update_function_case_generate_task_run_result,
 )
 from testing_agent.schemas.ai_generate_task import (
+    AiGenerateRunHistoryResponse,
     AiGenerateTaskResponse,
     AiGenerateTaskRunResponse,
     FunctionGenerateTaskImportResponse,
@@ -56,7 +57,7 @@ router.post(
 )(run_function_case_generate_task)
 router.get(
     "/function-case-generate-tasks/{task_id}/runs",
-    response_model=ApiResponse[ListResponse[AiGenerateTaskRunResponse]],
+    response_model=ApiResponse[AiGenerateRunHistoryResponse],
 )(list_function_case_generate_task_runs)
 router.get(
     "/function-case-generate-task-runs/{run_id}",

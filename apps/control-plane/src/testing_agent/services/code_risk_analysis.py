@@ -185,7 +185,7 @@ class CodeRiskAnalysisService:
         """组装 code_risk_analysis 任务的 run 快照(创建时固化)。"""
         requirement = await self.task_repository.get_requirement(task.requirement_id)
         if requirement is None:
-            raise ErrNotFound
+            raise ErrNotFound()
 
         bindings = list(
             await self.binding_repository.list_active_repo_bindings_for_requirement(
@@ -309,73 +309,80 @@ class CodeRiskAnalysisService:
 
     async def _function_cases(self, requirement_id: str) -> list[dict[str, Any]]:
         cases: list[dict[str, Any]] = []
-        for suite in await self.task_repository.list_function_suites_by_requirement(requirement_id):
-            for case in await self.task_repository.list_function_cases(suite.suite_id):
-                cases.append(
-                    {
-                        "suiteId": suite.suite_id,
-                        "suiteName": suite.name,
-                        "caseId": case.case_id,
-                        "title": case.title,
-                        "module": case.module,
-                        "preconditions": case.preconditions,
-                        "steps": case.steps,
-                        "expectedResults": case.expected_results,
-                        "priority": case.priority,
-                        "caseType": case.case_type,
-                        "lastRun": None,
-                        "runNote": FUNCTION_CASE_NO_RUN_NOTE,
-                    }
-                )
+        for case, suite in await self.task_repository.list_requirement_case_pairs(
+            requirement_id, "function"
+        ):
+            cases.append(
+                {
+                    "suiteId": suite.suite_id,
+                    "suiteName": suite.name,
+                    "caseId": case.case_id,
+                    "title": case.title,
+                    "module": case.module,
+                    "preconditions": case.preconditions,
+                    "steps": case.steps,
+                    "expectedResults": case.expected_results,
+                    "priority": case.priority,
+                    "caseType": case.case_type,
+                    "lastRun": None,
+                    "runNote": FUNCTION_CASE_NO_RUN_NOTE,
+                }
+            )
         return cases
 
     async def _api_cases(self, requirement_id: str) -> list[dict[str, Any]]:
         cases: list[dict[str, Any]] = []
-        for collection in await self.task_repository.list_api_collections_by_requirement(
-            requirement_id
-        ):
-            for case in await self.task_repository.list_api_cases(collection.collection_id):
-                rules = await self.task_repository.list_api_assert_rules(case.case_id)
-                latest = await self.task_repository.get_latest_api_case_run(case.case_id)
-                cases.append(
-                    {
-                        "collectionId": collection.collection_id,
-                        "collectionName": collection.name,
-                        "caseId": case.case_id,
-                        "name": case.name,
-                        "description": case.description,
-                        "method": case.method,
-                        "urlTemplate": case.url_template,
-                        "assertRules": [
-                            {
-                                "name": rule.name,
-                                "assertSource": rule.assert_source,
-                                "targetExpr": rule.target_expr,
-                                "comparator": rule.comparator,
-                                "expectedValue": rule.expected_value,
-                            }
-                            for rule in rules
-                        ],
-                        "lastRun": dump_last_run(latest),
-                    }
-                )
+        pairs = await self.task_repository.list_requirement_case_pairs(requirement_id, "api")
+        case_ids = [case.case_id for case, _ in pairs]
+        rules_by_case: dict[str, list] = {}
+        for rule in await self.task_repository.list_api_assert_rules_for_cases(case_ids):
+            rules_by_case.setdefault(rule.case_id, []).append(rule)
+        latest_runs = await self.task_repository.latest_case_run_summaries(case_ids, "api")
+        for case, collection in pairs:
+            rules = rules_by_case.get(case.case_id, [])
+            latest = latest_runs.get(case.case_id)
+            cases.append(
+                {
+                    "collectionId": collection.collection_id,
+                    "collectionName": collection.name,
+                    "caseId": case.case_id,
+                    "name": case.name,
+                    "description": case.description,
+                    "method": case.method,
+                    "urlTemplate": case.url_template,
+                    "assertRules": [
+                        {
+                            "name": rule.name,
+                            "assertSource": rule.assert_source,
+                            "targetExpr": rule.target_expr,
+                            "comparator": rule.comparator,
+                            "expectedValue": rule.expected_value,
+                        }
+                        for rule in rules
+                    ],
+                    "lastRun": dump_last_run(latest),
+                }
+            )
         return cases
 
     async def _ui_cases(self, requirement_id: str) -> list[dict[str, Any]]:
         cases: list[dict[str, Any]] = []
-        for suite in await self.task_repository.list_ui_suites_by_requirement(requirement_id):
-            for case in await self.task_repository.list_ui_cases(suite.suite_id):
-                latest = await self.task_repository.get_latest_ui_case_run(case.case_id)
-                cases.append(
-                    {
-                        "suiteId": suite.suite_id,
-                        "suiteName": suite.name,
-                        "caseId": case.case_id,
-                        "name": case.name,
-                        "stepsJson": case.steps_json,
-                        "lastRun": dump_last_run(latest),
-                    }
-                )
+        pairs = await self.task_repository.list_requirement_case_pairs(requirement_id, "ui")
+        latest_runs = await self.task_repository.latest_case_run_summaries(
+            [case.case_id for case, _ in pairs], "ui"
+        )
+        for case, suite in pairs:
+            latest = latest_runs.get(case.case_id)
+            cases.append(
+                {
+                    "suiteId": suite.suite_id,
+                    "suiteName": suite.name,
+                    "caseId": case.case_id,
+                    "name": case.name,
+                    "stepsJson": case.steps_json,
+                    "lastRun": dump_last_run(latest),
+                }
+            )
         return cases
 
 
@@ -412,7 +419,7 @@ async def gitlab_credentials_payload(
                 )
             )
             if connection is None:
-                raise ErrIntegrationConnectionNotFound
+                raise ErrIntegrationConnectionNotFound()
             if cipher is None:
                 raise dynamic_error(ErrIntegrationConnectionAuthFailed, "GitLab 凭据解密密钥未配置")
             try:

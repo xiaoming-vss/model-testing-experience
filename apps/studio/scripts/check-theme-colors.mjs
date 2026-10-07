@@ -16,6 +16,7 @@ const tokenFiles = new Set([
   'shared/styles/legacy-tokens.css',
   'shared/styles/github-dark-tokens.css',
   'shared/styles/github-dark-foundation.css',
+  'shared/styles/indigo-amber-light-tokens.css',
 ])
 
 // These values intentionally live outside CSS: Ant Design runs color algorithms;

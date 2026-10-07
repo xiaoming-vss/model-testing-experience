@@ -58,7 +58,7 @@ export const functionTestingApi = {
     request<FunctionTestCaseZentaoImportResult>(`/v1/function-test-suites/${suiteId}/zentao/testcases/import`, {
       method: 'POST',
       body: JSON.stringify(body),
-    }),
+    }, { normalizeListResponse: false }),
   importFunctionTestSuitesToZentao: (requirementId: string, body: ImportFunctionTestSuitesToZentaoPayload) =>
     request<FunctionTestSuitesZentaoImportResult>(`/v1/requirements/${requirementId}/zentao/testcases/import`, {
       method: 'POST',

@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from pydantic.alias_generators import to_camel
 
 from testing_agent.core.enums import SprintStatus
+from testing_agent.schemas.resource_binding import ZentaoBindingSummaryResponse
 
 
 class CreateSprintRequest(BaseModel):
@@ -65,6 +66,10 @@ class SprintResponse(BaseModel):
     updated_at: datetime | str | None = Field(default="")
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True, alias_generator=to_camel)
+
+
+class SprintListItemResponse(SprintResponse):
+    zentao_binding: ZentaoBindingSummaryResponse | None = None
 
 
 def require_aware_datetime(value: datetime) -> datetime:

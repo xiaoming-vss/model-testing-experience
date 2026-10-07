@@ -1,22 +1,19 @@
-import type { BugAction } from '../types'
+import type { Bug, BugAction } from '../types'
 
 /** 与后端 core/enums.py 的取值逐字对应。 */
 export const BUG_STATUS_LABELS: Record<string, string> = {
-  pending: '待确定',
-  processing: '处理中',
-  pending_regression: '待回归',
-  closed: '已关闭',
-  rejected: '已拒绝',
-  reopened: '重新打开',
+  active: '激活', resolved: '已解决', closed: '已关闭',
 }
-
+const LEGACY_STATUS_LABELS: Record<string, string> = {
+  pending: '待确定', processing: '处理中', pending_regression: '待回归',
+  rejected: '已拒绝', reopened: '重新打开',
+}
+export const BUG_RESOLUTION_LABELS: Record<string, string> = {
+  fixed: '已修复', bydesign: '设计如此', duplicate: '重复 Bug', external: '外部原因',
+  notrepro: '无法复现', postponed: '延期处理', willnotfix: '不予解决', tostory: '转为需求',
+}
 export const BUG_STATUS_TONES: Record<string, string> = {
-  pending: 'amber',
-  processing: 'blue',
-  pending_regression: 'teal',
-  closed: 'green',
-  rejected: 'slate',
-  reopened: 'red',
+  active: 'blue', resolved: 'teal', closed: 'green',
 }
 
 export const BUG_SEVERITY_LABELS: Record<string, string> = {
@@ -38,20 +35,18 @@ export const BUG_PRIORITY_TONES: Record<string, string> = {
   low: 'slate',
 }
 
-/** 流转按钮文案，与文档 5.2 的状态操作按钮一致。 */
 export const BUG_ACTION_LABELS: Record<BugAction, string> = {
-  confirm: '确定',
-  reject: '拒绝',
-  submit_fix: '提交修复',
-  regression_pass: '回归通过',
-  regression_fail: '回归失败',
-  reopen: '重新打开',
+  confirm: '确认', resolve: '解决', close: '关闭', activate: '激活',
 }
 
 /** 动态流里的动作说明文案。 */
 export const BUG_ACTIVITY_ACTION_LABELS: Record<string, string> = {
+  zentao_push: '推送到禅道',
   create: '提交了 Bug',
-  confirm: '确定处理',
+  confirm: '确认 Bug',
+  resolve: '解决 Bug',
+  close: '关闭 Bug',
+  activate: '重新激活',
   reject: '拒绝',
   submit_fix: '提交修复',
   regression_pass: '回归通过',
@@ -63,22 +58,18 @@ export const BUG_ACTIVITY_ACTION_LABELS: Record<string, string> = {
   comment: '评论',
 }
 
-/** 各状态允许的流转操作，与后端 TRANSITIONS 表一致。 */
-export const BUG_STATUS_ACTIONS: Record<string, BugAction[]> = {
-  pending: ['confirm', 'reject'],
-  processing: ['submit_fix', 'reject'],
-  pending_regression: ['regression_pass', 'regression_fail'],
-  closed: ['reopen'],
-  rejected: ['reopen'],
-  reopened: ['confirm', 'reject'],
+/** 确认是独立标志，不能仅按主状态决定可用操作。 */
+export function getBugActions(bug: Pick<Bug, 'status' | 'confirmed'>): BugAction[] {
+  if (bug.status === 'active') return bug.confirmed ? ['resolve'] : ['confirm', 'resolve']
+  if (bug.status === 'resolved') return ['close', 'activate']
+  if (bug.status === 'closed') return ['activate']
+  return []
 }
 
-/** 每个动作的说明填写要求：label + 是否必填。 */
 export const BUG_ACTION_CONTENT: Partial<Record<BugAction, { label: string; required: boolean }>> = {
-  submit_fix: { label: '修复说明', required: true },
-  regression_pass: { label: '回归结果', required: true },
-  regression_fail: { label: '失败说明', required: true },
-  reopen: { label: '重开原因', required: true },
+  resolve: { label: '处理说明', required: true },
+  close: { label: '验证与关闭说明', required: true },
+  activate: { label: '重新激活原因', required: true },
 }
 
 export const BUG_REJECT_REASON_LABELS: Record<string, string> = {
@@ -88,19 +79,11 @@ export const BUG_REJECT_REASON_LABELS: Record<string, string> = {
 }
 
 export function getBugStatusLabel(status: string): string {
-  return BUG_STATUS_LABELS[status] ?? status
+  return BUG_STATUS_LABELS[status] ?? LEGACY_STATUS_LABELS[status] ?? status
 }
 
 export function getBugStatusTone(status: string): string {
   return BUG_STATUS_TONES[status] ?? 'slate'
-}
-
-export function getBugSeverityLabel(severity: string): string {
-  return BUG_SEVERITY_LABELS[severity] ?? severity
-}
-
-export function getBugPriorityLabel(priority: string): string {
-  return BUG_PRIORITY_LABELS[priority] ?? priority
 }
 
 export function getBugPriorityTone(priority: string): string {
@@ -111,6 +94,12 @@ export function formatBugNo(bugNo: number): string {
   return `BUG-${bugNo}`
 }
 
-export function getBugActionLabel(action: BugAction, status: string): string {
-  return action === 'confirm' && status === 'reopened' ? '确定处理' : BUG_ACTION_LABELS[action]
+export function getBugActionLabel(action: BugAction): string {
+  return BUG_ACTION_LABELS[action]
+}
+
+export function getBugStateLabel(bug: Pick<Bug, 'status' | 'confirmed' | 'resolution'>): string {
+  const state = getBugStatusLabel(bug.status)
+  if (bug.status === 'active') return `${state} · ${bug.confirmed ? '已确认' : '未确认'}`
+  return bug.resolution ? `${state} · ${BUG_RESOLUTION_LABELS[bug.resolution] ?? bug.resolution}` : state
 }

@@ -57,7 +57,7 @@ class ProjectSkillSpaceService:
     async def ensure_project_access(self, user_id, project_id, *, action="read"):
         project = await self.repository.get_project(project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await require_project_access(self.repository.session, user_id, project, action)
 
     async def list(self, project_id, user_id):
@@ -94,7 +94,7 @@ class ProjectSkillSpaceService:
             )
             self.repository.add(skill)
         elif skill.is_default:
-            raise ErrForbidden
+            raise ErrForbidden()
         manifest = []
         old_paths = {entry["fileId"]: entry["path"] for entry in skill.manifest}
         for entry in body.files:
@@ -128,7 +128,7 @@ class ProjectSkillSpaceService:
         )
         skill = await self.repository.get(project_id, skill_space_id)
         if skill is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         if skill.is_default:
             raise AppError(403, "系统默认 Skill 不允许删除", 403)
         await replace_manifest(
@@ -142,7 +142,7 @@ class ProjectSkillSpaceService:
         await self.ensure_project_access(user_id, project_id)
         skill = await self.repository.get(project_id, skill_space_id)
         if skill is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         output = io.BytesIO()
         with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
             for entry in skill.manifest:

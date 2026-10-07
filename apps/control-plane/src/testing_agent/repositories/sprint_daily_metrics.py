@@ -18,6 +18,7 @@ from testing_agent.models.ui_test_case import UiTestCase
 from testing_agent.models.ui_test_suite import UiTestSuite
 from testing_agent.models.ui_test_suite_run import UiTestSuiteRun
 from testing_agent.repositories.base import BaseRepository
+from testing_agent.repositories.latest import latest_per_resource
 
 
 class SprintDailyMetricsRepository(BaseRepository):
@@ -77,7 +78,7 @@ class SprintDailyMetricsRepository(BaseRepository):
             ).all()
         )
 
-    async def list_function_entry_statuses_by_sprint(self, sprint_id: str) -> list[str]:
+    async def list_function_entry_statuses_by_sprint(self, sprint_id: str) -> builtins.list[str]:
         """功能用例的执行状态来自测试单条目（本地记录），不再走禅道。"""
         return list(
             (
@@ -90,29 +91,20 @@ class SprintDailyMetricsRepository(BaseRepository):
         )
 
     async def list_latest_api_run_statuses(self, sprint_id: str) -> dict[str, str]:
-        runs = list(
-            (
-                await self.session.scalars(
-                    select(ApiCaseRun)
-                    .join(ApiCollection, ApiCollection.collection_id == ApiCaseRun.collection_id)
-                    .join(Requirement, Requirement.requirement_id == ApiCollection.requirement_id)
-                    .join(ApiCase, ApiCase.case_id == ApiCaseRun.case_id)
-                    .where(
-                        Requirement.sprint_id == sprint_id,
-                        ApiCase.collection_id == ApiCollection.collection_id,
-                    )
-                    .order_by(
-                        ApiCaseRun.case_id.asc(),
-                        ApiCaseRun.created_at.desc(),
-                        ApiCaseRun.id.desc(),
-                    )
-                )
-            ).all()
+        statement = (
+            select(ApiCaseRun.case_id, ApiCaseRun.status)
+            .join(ApiCollection, ApiCollection.collection_id == ApiCaseRun.collection_id)
+            .join(Requirement, Requirement.requirement_id == ApiCollection.requirement_id)
+            .join(ApiCase, ApiCase.case_id == ApiCaseRun.case_id)
+            .where(
+                Requirement.sprint_id == sprint_id,
+                ApiCase.collection_id == ApiCollection.collection_id,
+            )
         )
-        statuses: dict[str, str] = {}
-        for run in runs:
-            statuses.setdefault(run.case_id, run.status)
-        return statuses
+        rows = await self.session.execute(
+            latest_per_resource(statement, ApiCaseRun.case_id, ApiCaseRun.created_at, ApiCaseRun.id)
+        )
+        return {case_id: status for case_id, status in rows}
 
     async def list_ui_case_ids_by_sprint(self, sprint_id: str) -> builtins.list[str]:
         return list(
@@ -129,28 +121,26 @@ class SprintDailyMetricsRepository(BaseRepository):
             ).all()
         )
 
-    async def list_latest_ui_suite_runs(self, sprint_id: str) -> builtins.list[UiTestSuiteRun]:
-        runs = list(
-            (
-                await self.session.scalars(
-                    select(UiTestSuiteRun)
-                    .join(UiTestSuite, UiTestSuite.suite_id == UiTestSuiteRun.suite_id)
-                    .join(Requirement, Requirement.requirement_id == UiTestSuite.requirement_id)
-                    .where(
-                        Requirement.sprint_id == sprint_id,
-                    )
-                    .order_by(
-                        UiTestSuiteRun.suite_id.asc(),
-                        UiTestSuiteRun.created_at.desc(),
-                        UiTestSuiteRun.id.desc(),
-                    )
-                )
-            ).all()
+    async def list_latest_ui_suite_runs(self, sprint_id: str) -> builtins.list:
+        statement = (
+            select(
+                UiTestSuiteRun.suite_id,
+                UiTestSuiteRun.total_count,
+                UiTestSuiteRun.success_count,
+                UiTestSuiteRun.failed_count,
+                UiTestSuiteRun.error_count,
+                UiTestSuiteRun.skipped_count,
+            )
+            .join(UiTestSuite, UiTestSuite.suite_id == UiTestSuiteRun.suite_id)
+            .join(Requirement, Requirement.requirement_id == UiTestSuite.requirement_id)
+            .where(Requirement.sprint_id == sprint_id)
         )
-        latest_runs: dict[str, UiTestSuiteRun] = {}
-        for run in runs:
-            latest_runs.setdefault(run.suite_id, run)
-        return list(latest_runs.values())
+        rows = await self.session.execute(
+            latest_per_resource(
+                statement, UiTestSuiteRun.suite_id, UiTestSuiteRun.created_at, UiTestSuiteRun.id
+            )
+        )
+        return list(rows.all())
 
     async def get_active_binding(
         self,

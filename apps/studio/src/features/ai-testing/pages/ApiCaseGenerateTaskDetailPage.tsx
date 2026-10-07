@@ -1,3 +1,6 @@
+import { listTotal } from '@/shared/api/request'
+import { getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
+import { useTaskRunHistorySync } from '@/features/ai-testing/hooks/useTaskRunHistorySync'
 import { saveBlob } from '@/shared/utils/download'
 import { useDeleteTaskRun, useStartTaskRun } from '@/features/ai-testing/hooks/useTaskRunActions'
 import { formatStructuredContent, toRecord, toRecordArray } from '@/shared/utils/value'
@@ -35,6 +38,7 @@ import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { api, listItems } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
+import { goBackOrFallback } from '@/shared/utils/backNavigation'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
 import { formatTime, getErrorMessage, normalizeRequirementId, normalizeSprintId, normalizeUserName, pickUpdatedAt } from '@/utils/format'
 
@@ -445,6 +449,9 @@ function ApiCandidateResultView({ content }: { content: string }) {
 
 export function ApiCaseGenerateTaskDetailPage() {
   const { taskId = '' } = useParams()
+  const [runPage, setRunPage] = useState(1)
+  const [runPageSize, setRunPageSize] = useState(20)
+  useEffect(() => { setRunPage(1) }, [taskId])
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -477,11 +484,28 @@ export function ApiCaseGenerateTaskDetailPage() {
   const task = taskQuery.data
   const { can } = useProjectAccess(task?.projectId ?? '')
   const runsQuery = useQuery({
-    queryKey: ['apiCaseGenerateTaskRuns', taskId],
-    queryFn: () => api.getApiCaseGenerateTaskRuns(taskId),
+    queryKey: ['apiCaseGenerateTaskRuns', taskId, runPage, runPageSize],
+    queryFn: () => api.getApiCaseGenerateTaskRuns(taskId, { page: runPage, pageSize: runPageSize }),
     enabled: Boolean(taskId),
-    refetchInterval: expandedSection === 'runHistory' ? 5000 : false,
+    refetchInterval: expandedSection === 'runHistory' ? RUN_HISTORY_POLL_INTERVAL : false,
   })
+  const runTotal = listTotal(runsQuery.data)
+  useEffect(() => {
+    if (runsQuery.data && !runsQuery.isFetching && !runsQuery.error) {
+      const lastPage = Math.max(1, Math.ceil(runTotal / runPageSize))
+      if (runPage > lastPage) setRunPage(lastPage)
+    }
+  }, [runPage, runPageSize, runTotal, runsQuery.data, runsQuery.isFetching, runsQuery.error])
+  const runPagination = {
+    current: runPage, pageSize: runPageSize, total: runTotal,
+    loading: runsQuery.isFetching || Boolean(runsQuery.error),
+    onChange: (page: number, size: number) => { setRunPage(size === runPageSize ? page : 1); setRunPageSize(size) },
+  }
+  const refetchRunHistory = runsQuery.refetch
+  useEffect(() => {
+    if (expandedSection === 'runHistory') void refetchRunHistory({ cancelRefetch: false })
+  }, [expandedSection, refetchRunHistory])
+
   const sprintsQuery = useQuery({
     queryKey: ['sprints', 'aiTestingDetail', task?.projectId],
     queryFn: async () => {
@@ -535,14 +559,18 @@ export function ApiCaseGenerateTaskDetailPage() {
       }),
     [runsQuery.data],
   )
-  const latestRunRecord = runRecords[0]
+  const latestRunRecord = runsQuery.data?.latestRun ?? runRecords[0]
 
   const selectedRunId = selectedRunRecordId ?? runRecords[0]?.runId ?? ''
   const selectedRunQuery = useQuery({
     queryKey: ['apiCaseGenerateTaskRun', selectedRunId],
     queryFn: () => api.getApiCaseGenerateTaskRun(selectedRunId),
     enabled: Boolean(selectedRunId),
-    refetchInterval: expandedSection === 'runHistory' && selectedRunId ? 5000 : false,
+    refetchInterval: (query) => expandedSection === 'runHistory' ? getRunPollingInterval(query.state.data?.status) : false,
+  })
+  useTaskRunHistorySync({
+    historyKey: 'apiCaseGenerateTaskRuns', detailKey: 'apiCaseGenerateTaskRun', taskId, selectedRunId,
+    history: runsQuery.data, detail: selectedRunQuery.data,
   })
   const selectedRun = selectedRunQuery.data
   const selectedRunResultSections = useMemo(
@@ -627,6 +655,7 @@ export function ApiCaseGenerateTaskDetailPage() {
     projectId: task?.projectId,
     startRun: (connectionId: string) => api.runApiCaseGenerateTask(taskId, connectionId),
     onStarted: (run) => {
+      setRunPage(1)
       setLlmSelectOpen(false)
       setExpandedSection('runHistory')
       setSelectedRunRecordId(run.runId ?? null)
@@ -716,6 +745,7 @@ export function ApiCaseGenerateTaskDetailPage() {
   const runnableTask = isRunnableApiCaseGenerateTaskRun(latestRunRecord?.status)
 
   useEffect(() => {
+    if (!runsQuery.data || runsQuery.isFetching) return
     if (runRecords.length === 0) {
       setSelectedRunRecordId(null)
       return
@@ -723,7 +753,7 @@ export function ApiCaseGenerateTaskDetailPage() {
     setSelectedRunRecordId((current) =>
       current && runRecords.some((record) => record.runId === current) ? current : (runRecords[0].runId ?? null),
     )
-  }, [runRecords])
+  }, [runRecords, runsQuery.data, runsQuery.isFetching])
 
   useEffect(() => {
     setRunResultModal(null)
@@ -894,7 +924,7 @@ export function ApiCaseGenerateTaskDetailPage() {
         <div className="ai-task-detail-layout">
           <TaskDetailToolbar
             back={(
-              <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/ai-testing?tab=tasks')}>
+              <Button icon={<ArrowLeftOutlined />} onClick={() => goBackOrFallback(navigate, '/ai-testing?tab=tasks')}>
                 返回生成任务
               </Button>
             )}
@@ -953,10 +983,10 @@ export function ApiCaseGenerateTaskDetailPage() {
               <div className="ai-task-detail-nav-label">输出</div>
               <TaskDetailNavItem
                 title="运行记录"
-                sub={`共 ${runRecords.length} 条运行记录`}
+                sub={`共 ${runTotal} 条运行记录`}
                 icon={<HistoryOutlined />}
                 active={expandedSection === 'runHistory'}
-                badge={runRecords.length}
+                badge={runTotal}
                 onClick={() => setExpandedSection('runHistory')}
               />
             </TaskDetailNavPanel>
@@ -995,7 +1025,7 @@ export function ApiCaseGenerateTaskDetailPage() {
                     <span className="ai-task-detail-main-head-title">运行记录</span>
                     <div className="ai-task-detail-main-head-extra">
                       <div className="ai-task-run-history-toolbar">
-                        <span className="ai-task-run-history-auto-refresh">每 5 秒自动刷新</span>
+                        <span className="ai-task-run-history-auto-refresh">历史每 30 秒刷新</span>
                         <ActionButton size="small" operation="refresh" loading={runHistoryRefreshing} onClick={handleRefreshRuns}>刷新</ActionButton>
                       </div>
                     </div>
@@ -1008,10 +1038,11 @@ export function ApiCaseGenerateTaskDetailPage() {
                   ) : runRecords.length > 0 ? (
                     <>
                       <TaskDetailRunMetrics
-                        {...summarizeRunStatuses(runRecords)}
-                        latestStatus={renderApiCaseGenerateTaskRunStatusTag(runRecords[0].status)}
+                        {...summarizeRunStatuses(runRecords, runsQuery.data?.statusCounts)}
+                        latestStatus={renderApiCaseGenerateTaskRunStatusTag(runsQuery.data?.latestRun?.status ?? runRecords[0].status)}
                       />
                       <RunHistoryTable
+                        pagination={runPagination}
                         rows={runRecords}
                         getRunId={(record) => record.runId}
                         selectedRunId={selectedRunId}

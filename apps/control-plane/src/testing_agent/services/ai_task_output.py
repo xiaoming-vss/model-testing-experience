@@ -58,6 +58,21 @@ def dump_task(
 
 def dump_run(run: AiGenerateTaskRun) -> dict[str, Any]:
     return {
+        "createdAt": getattr(run, "created_at", None),
+        "startedAt": getattr(run, "started_at", None),
+        "finishedAt": getattr(run, "finished_at", None),
+        "updatedAt": getattr(run, "_history_updated_at", None),
+        "hasResult": bool(run.result_yaml),
+        "availableArtifacts": [
+            key
+            for key in (
+                "requirementAnalysis",
+                "caseNames",
+                "caseRelations",
+                "firstStepOutput",
+            )
+            if isinstance(run.config_json, dict) and run.config_json.get(key)
+        ],
         "runId": run.run_id,
         "taskId": run.task_id,
         "requirementId": run.requirement_id,
@@ -66,6 +81,7 @@ def dump_run(run: AiGenerateTaskRun) -> dict[str, Any]:
         "triggerUserId": run.trigger_user_id,
         "triggerType": run.trigger_type,
         "status": run.status,
+        "workflowVersion": (getattr(run, "snapshot_json", None) or {}).get("workflowVersion", 2),
         "checkpointEnabled": run.checkpoint_enabled,
         "currentStage": run.current_stage,
         "stageStatus": run.stage_status,
@@ -88,7 +104,12 @@ def dump_run(run: AiGenerateTaskRun) -> dict[str, Any]:
 
 
 def requirement_source_content(requirement: Any) -> str:
-    return str(getattr(requirement, "document_content", "") or "")
+    from testing_agent.domain.requirement_artifacts import requirement_content
+
+    try:
+        return requirement_content(getattr(requirement, "document_content", "") or "")
+    except ValueError as exc:
+        raise AppError(400, str(exc), 400) from exc
 
 
 def requirement_document_download_url(requirement: Any, requirement_id: str) -> str:
@@ -139,9 +160,13 @@ async def build_generate_run_snapshot(
                 if worker_task_id
                 else requirement_document_download_url(requirement, str(task.requirement_id or ""))
             )
-            source_content = requirement_source_content(requirement)
+            source_content = (
+                str(getattr(requirement, "document_content", "") or "")
+                if kind == "requirement_analysis"
+                else requirement_source_content(requirement)
+            )
             if not source_content and (
-                document_type == "docx" or getattr(requirement, "document_file_id", "")
+                document_type == "docx" or bool(getattr(requirement, "document_file_id", ""))
             ):
                 source_content = document_download_url
     elif kind == "ui":
@@ -150,7 +175,7 @@ async def build_generate_run_snapshot(
             # Requirement analysis imports its enhanced text into document_content.
             # UI generation consumes only that text; it must not fall back to the
             # original requirement document or expose a document download URL.
-            source_content = str(getattr(requirement, "document_content", "") or "")
+            source_content = requirement_source_content(requirement)
     snapshot = {
         "taskId": task.task_id,
         "runId": run_id,
@@ -165,6 +190,9 @@ async def build_generate_run_snapshot(
     if uses_requirement_document:
         snapshot["documentType"] = document_type
         snapshot["documentDownloadUrl"] = document_download_url
+        snapshot["documentFilename"] = str(getattr(requirement, "document_filename", "") or "")
+        snapshot["documentFileId"] = str(getattr(requirement, "document_file_id", "") or "")
+        snapshot["documentHash"] = str(getattr(requirement, "document_hash", "") or "")
     else:
         snapshot["sourceType"] = task.source_type
     if kind == "ui" and worker_task_id:
@@ -175,11 +203,11 @@ async def build_generate_run_snapshot(
 def generated_payload(run: AiGenerateTaskRun | Any) -> dict[str, Any]:
     raw = run.result_yaml or ""
     if not raw.strip():
-        raise ErrBadRequest
+        raise ErrBadRequest()
     try:
         data = yaml.safe_load(raw)
     except yaml.YAMLError as exc:
-        raise ErrBadRequest from exc
+        raise ErrBadRequest() from exc
     return parse_import_payload(data)
 
 
@@ -268,7 +296,7 @@ def normalize_generated_function_case(item: dict[str, Any], index: int) -> dict[
         or len(case_type) > 50
         or len(case_id) > 64
     ):
-        raise ErrBadRequest
+        raise ErrBadRequest()
     return {
         "case_id": case_id,
         "module": module,
@@ -293,7 +321,7 @@ def validate_function_candidate_cases(
         case = normalize_generated_function_case(item, index)
         key = (case["module"].casefold(), case["title"].casefold())
         if key in names:
-            raise ErrBadRequest
+            raise ErrBadRequest()
         names.add(key)
         normalized_cases.append(case)
     return normalized_cases
@@ -314,10 +342,10 @@ def normalize_config_json(value: Any) -> dict[str, Any]:
         try:
             parsed = json.loads(value)
         except json.JSONDecodeError as exc:
-            raise ErrBadRequest from exc
+            raise ErrBadRequest() from exc
         if isinstance(parsed, dict):
             return parsed
-    raise ErrBadRequest
+    raise ErrBadRequest()
 
 
 def normalize_function_stage_config(stage: str, value: Any) -> dict[str, Any]:
@@ -333,17 +361,9 @@ def normalize_function_stage_config(stage: str, value: Any) -> dict[str, Any]:
 
 
 def requirement_analysis_import_content(run: AiGenerateTaskRun | Any) -> str:
-    result_yaml = str(run.result_yaml or "").strip()
-    if result_yaml:
-        return result_yaml
-    summary = run.result_summary_json
-    if isinstance(summary, str):
-        summary_text = summary.strip()
-        if summary_text:
-            return summary_text
-    elif summary:
-        return json.dumps(summary, ensure_ascii=False, separators=(",", ":"))
-    raise ErrBadRequest
+    from testing_agent.services.requirement_analysis_contracts import imported_content
+
+    return imported_content(run)
 
 
 def validate_ui_candidate_cases(result_yaml: str) -> builtins.list[dict[str, Any]]:
@@ -351,9 +371,9 @@ def validate_ui_candidate_cases(result_yaml: str) -> builtins.list[dict[str, Any
     try:
         cases = ui_import_cases(payload)
     except AppError as exc:
-        raise ErrBadRequest from exc
+        raise ErrBadRequest() from exc
     if not cases:
-        raise ErrBadRequest
+        raise ErrBadRequest()
     for case in cases:
         if (
             not isinstance(case, dict)
@@ -364,12 +384,12 @@ def validate_ui_candidate_cases(result_yaml: str) -> builtins.list[dict[str, Any
             or isinstance(case.get("orderNo"), bool)
             or not isinstance(case.get("stepsJson"), list)
         ):
-            raise ErrBadRequest
+            raise ErrBadRequest()
         for step in case["stepsJson"]:
             if (
                 not isinstance(step, dict)
                 or not isinstance(step.get("keyword"), str)
                 or not step["keyword"].strip()
             ):
-                raise ErrBadRequest
+                raise ErrBadRequest()
     return cases

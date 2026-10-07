@@ -9,6 +9,7 @@ from testing_agent.core.sid import new_id
 from testing_agent.models.sprint import Sprint
 from testing_agent.repositories.sprint import SprintRepository
 from testing_agent.schemas.sprint import CreateSprintRequest, SprintResponse, UpdateSprintRequest
+from testing_agent.services.binding_summary import load_zentao_binding_summaries
 from testing_agent.services.common import list_payload
 from testing_agent.services.project import ProjectService
 from testing_agent.services.project_access import ProjectAction
@@ -51,7 +52,7 @@ def dump_sprint(sprint: Sprint, *, now: datetime | None = None) -> dict:
 
 def validate_schedule(start_time: datetime, end_time: datetime) -> None:
     if as_utc(end_time) <= as_utc(start_time):
-        raise ErrSprintScheduleInvalid
+        raise ErrSprintScheduleInvalid()
 
 
 class SprintService:
@@ -64,7 +65,7 @@ class SprintService:
     ) -> Sprint:
         sprint = await self.sprints.get_active_by_id(sprint_id)
         if sprint is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await self.projects.get_accessible_entity(user_id, sprint.project_id, action=action)
         return sprint
 
@@ -72,7 +73,7 @@ class SprintService:
         await self.projects.get_accessible_entity(user_id, project_id, action="write")
         exists = await self.sprints.get_active_by_project_and_name(project_id, body.name)
         if exists is not None:
-            raise ErrSprintNameAlreadyUse
+            raise ErrSprintNameAlreadyUse()
         sprint = Sprint(
             sprint_id=new_id(),
             project_id=project_id,
@@ -89,7 +90,12 @@ class SprintService:
     async def list(self, user_id: str, project_id: str) -> dict[str, Any]:
         await self.projects.get_accessible_entity(user_id, project_id, action="read")
         rows = await self.sprints.list_active_by_project(project_id)
-        return list_payload([dump_sprint(row) for row in rows])
+        bindings = await load_zentao_binding_summaries(
+            self.sprints.session, "sprint", [row.sprint_id for row in rows]
+        )
+        return list_payload(
+            [{**dump_sprint(row), "zentaoBinding": bindings.get(row.sprint_id)} for row in rows]
+        )
 
     async def get(self, user_id: str, sprint_id: str) -> dict:
         return dump_sprint(await self.get_accessible_entity(user_id, sprint_id, action="read"))

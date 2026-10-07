@@ -1,0 +1,10 @@
+# Generate config/bug-options-openapi.json with enable-bug-options.py first.
+services:
+  zentao-mcp:
+    volumes:
+      - type: bind
+        source: ./config/bug-options-openapi.json
+        target: /config/zentao-openapi.json
+        read_only: true
+        bind:
+          create_host_path: false

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins
 from datetime import UTC, datetime
 from typing import Any
 
@@ -49,10 +50,10 @@ class TestOrderEntryService:
         cases: dict[str, Any] = {}
         for case, _suite, _requirement, sprint in rows:
             if sprint.project_id != order.project_id:
-                raise ErrTestOrderCaseMismatch
+                raise ErrTestOrderCaseMismatch()
             cases[case.case_id] = case
         if any(case_id not in cases for case_id in case_ids):
-            raise ErrFunctionTestCaseNotFound
+            raise ErrFunctionTestCaseNotFound()
 
         existing = await self.repository.list_existing_case_ids(order_id)
         order_no = await self.repository.next_order_no(order_id)
@@ -83,7 +84,7 @@ class TestOrderEntryService:
                 await self.repository.commit()
             except IntegrityError as exc:
                 await self.repository.rollback()
-                raise ErrTestOrderEntryDuplicate from exc
+                raise ErrTestOrderEntryDuplicate() from exc
         return {"addedCount": len(created), "skippedCount": skipped}
 
     async def update(
@@ -92,12 +93,12 @@ class TestOrderEntryService:
         """即时保存一条执行结果；已分配的条目只有该执行人（或项目所有者）能改。"""
         entry = await self.repository.get_entry(entry_id)
         if entry is None or entry.order_id != order_id:
-            raise ErrTestOrderEntryNotFound
+            raise ErrTestOrderEntryNotFound()
         _order, role = await self.orders.get_accessible_entity_with_role(
             user_id, order_id, action="execute"
         )
         if entry.assignee_user_id and entry.assignee_user_id != user_id and role != "owner":
-            raise ErrTestOrderEntryAssigneeLocked
+            raise ErrTestOrderEntryAssigneeLocked()
 
         for field in ("actual_results", "failure_reason", "block_reason", "zentao_bug_id"):
             value = body.get(field)
@@ -108,7 +109,7 @@ class TestOrderEntryService:
         if status is not None:
             status = str(status).strip()
             if status not in TestOrderEntryStatus.values():
-                raise ErrBadRequest
+                raise ErrBadRequest()
             entry.status = status
 
         if entry.status in TEST_ORDER_ENTRY_TERMINAL_STATUSES:
@@ -124,10 +125,10 @@ class TestOrderEntryService:
         )
         entries = await self.repository.list_by_ids(order_id, entry_ids)
         if len(entries) != len(entry_ids):
-            raise ErrTestOrderEntryNotFound
+            raise ErrTestOrderEntryNotFound()
         for entry in entries:
             if entry.assignee_user_id and entry.assignee_user_id != user_id and role != "owner":
-                raise ErrTestOrderEntryAssigneeLocked
+                raise ErrTestOrderEntryAssigneeLocked()
         marked = 0
         for entry in entries:
             if entry.status != TestOrderEntryStatus.PENDING.value:
@@ -148,17 +149,17 @@ class TestOrderEntryService:
         self,
         user_id: str,
         order_id: str,
-        entry_ids: list[str],
+        entry_ids: builtins.list[str],
         assignee_user_id: str,
     ) -> dict[str, Any]:
         """分配执行人：仅项目所有者，空串表示取消分配。"""
         order = await self.ensure_order_access(user_id, order_id, action="manage")
         assignee = assignee_user_id.strip()
         if assignee and not await self.orders.is_assignable_member(order.project_id, assignee):
-            raise ErrTestOrderAssigneeInvalid
+            raise ErrTestOrderAssigneeInvalid()
         entries = await self.repository.list_by_ids(order_id, entry_ids)
         if len(entries) != len(entry_ids):
-            raise ErrTestOrderEntryNotFound
+            raise ErrTestOrderEntryNotFound()
         for entry in entries:
             entry.assignee_user_id = assignee
         await self.repository.commit()
@@ -167,7 +168,7 @@ class TestOrderEntryService:
     async def delete(self, user_id: str, order_id: str, entry_id: str) -> dict:
         entry = await self.repository.get_entry(entry_id)
         if entry is None or entry.order_id != order_id:
-            raise ErrTestOrderEntryNotFound
+            raise ErrTestOrderEntryNotFound()
         await self.ensure_order_access(user_id, order_id, action="write")
         await self.repository.hard_delete(entry)
         await self.repository.commit()

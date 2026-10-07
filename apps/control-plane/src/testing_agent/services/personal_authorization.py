@@ -15,9 +15,9 @@ async def require_personal_connection(
         user_id, provider, connection_id, project_id
     )
     if connection is None:
-        raise ErrNotFound
+        raise ErrNotFound()
     if connection.status != ConnectionStatus.ACTIVE.value:
-        raise ErrIntegrationConnectionAuthFailed
+        raise ErrIntegrationConnectionAuthFailed()
     if provider == "llm" and not (connection.secret_json or {}).get("apiKey"):
-        raise ErrIntegrationConnectionAuthFailed
+        raise ErrIntegrationConnectionAuthFailed()
     return connection

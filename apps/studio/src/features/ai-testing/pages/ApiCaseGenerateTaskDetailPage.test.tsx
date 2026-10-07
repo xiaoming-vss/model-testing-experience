@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ThemeProvider } from '@/app/providers/ThemeProvider'
+import light from '@/shared/styles/indigo-amber-light-tokens.css?raw'
 import { ApiCaseGenerateTaskDetailPage } from './ApiCaseGenerateTaskDetailPage'
 
 const task = {
@@ -175,14 +176,17 @@ describe('API 候选结果审核与导入', () => {
     const modalContainer = dialog.querySelector<HTMLElement>('.ant-modal-container')
 
     expect(modalContainer).not.toBeNull()
+    const surface = light.match(/--app-surface:\s*([^;]+);/)![1].trim()
     // jsdom retains CSS var() references instead of resolving inherited values.
     const background = getComputedStyle(modalContainer!).backgroundColor
     if (background.startsWith('var(')) {
       expect(background).toBe('var(--ant-modal-content-bg)')
       const scope = modalContainer!.closest('.ant-modal')
-      expect(getComputedStyle(scope!).getPropertyValue('--ant-modal-content-bg').trim()).toBe('#ffffff')
+      expect(getComputedStyle(scope!).getPropertyValue('--ant-modal-content-bg').trim()).toBe(surface)
     } else {
-      expect(background).toBe('rgb(255, 255, 255)')
+      const resolvedSurface = document.createElement('span')
+      resolvedSurface.style.backgroundColor = surface
+      expect(background).toBe(resolvedSurface.style.backgroundColor)
     }
   })
 

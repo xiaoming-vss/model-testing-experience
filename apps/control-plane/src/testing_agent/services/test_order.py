@@ -28,7 +28,7 @@ def _name_conflict_error(exc: IntegrityError) -> AppError | None:
     if "uk_test_order_sprint_name" in detail or (
         "UNIQUE constraint failed: test_orders.sprint_id, test_orders.name" in detail
     ):
-        return ErrTestOrderNameAlreadyUse
+        return ErrTestOrderNameAlreadyUse()
     return None
 
 
@@ -46,10 +46,10 @@ class TestOrderService:
     ) -> Sprint:
         sprint = await self.repository.get_sprint(sprint_id)
         if sprint is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         project = await self.repository.get_project(sprint.project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await require_project_access(self.repository.session, user_id, project, action)
         return sprint
 
@@ -58,7 +58,7 @@ class TestOrderService:
     ) -> TestOrder:
         order = await self.repository.get_order(order_id)
         if order is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await self.ensure_sprint_access(user_id, order.sprint_id, action=action)
         return order
 
@@ -68,10 +68,10 @@ class TestOrderService:
         """与 get_accessible_entity 相同，但把调用者在项目中的角色一并返回（判定要区分所有者）。"""
         order = await self.repository.get_order(order_id)
         if order is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         project = await self.repository.get_project(order.project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         role = await require_project_access(self.repository.session, user_id, project, action)
         return order, role
 
@@ -91,9 +91,9 @@ class TestOrderService:
         if source_order_id:
             source_order = await self.repository.get_order(source_order_id)
             if source_order is None:
-                raise ErrNotFound
+                raise ErrNotFound()
             if source_order.project_id != sprint.project_id:
-                raise ErrTestOrderSourceMismatch
+                raise ErrTestOrderSourceMismatch()
         order = TestOrder(
             order_id=new_id(),
             project_id=sprint.project_id,
@@ -140,7 +140,7 @@ class TestOrderService:
     ) -> dict[str, Any]:
         project = await self.repository.get_project(project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await require_project_access(self.repository.session, user_id, project, action="read")
         orders = await self.repository.list_by_project(project_id, sprint_id=sprint_id.strip())
         return list_payload([dump(TestOrderResponse, order) for order in orders])

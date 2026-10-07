@@ -13,10 +13,10 @@ def apply_run_scope(run, context):
 async def authorize_run(repository, user_id, run):
     scope = await repository.get_run_scope(run)
     if not scope:
-        raise ErrNotFound
+        raise ErrNotFound()
     project = await repository.get_project(scope["project_id"])
     if project is None:
-        raise ErrNotFound
+        raise ErrNotFound()
     await require_project_access(repository.session, user_id, project)
     for field in ("requirement_id", "sprint_id", "project_id"):
         setattr(run, field, scope[field])

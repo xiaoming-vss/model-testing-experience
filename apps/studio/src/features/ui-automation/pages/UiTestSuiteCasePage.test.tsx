@@ -63,7 +63,7 @@ function mockDetailApis() {
   vi.spyOn(api, 'getUiTestCase').mockImplementation(async (caseId: string) => cases.find((item) => item.caseId === caseId) ?? cases[0])
   vi.spyOn(api, 'getRequirement').mockResolvedValue({ requirementId: 'requirement-1', sprintId: 'sprint-1', name: '安装部署' })
   vi.spyOn(api, 'getSprint').mockResolvedValue({ sprintId: 'sprint-1', projectId: 'project-1', name: 'v1.0.0', status: 'running' })
-  vi.spyOn(api, 'getUiTestSuiteRuns').mockResolvedValue(list([{ suiteRunId: 'suite-run-1', suiteId: 'suite-1', status: 'success', startedAt: '2026-09-23T02:40:00', totalCount: 2, successCount: 2 }]))
+  vi.spyOn(api, 'getUiTestSuiteRuns').mockResolvedValue(list([{ suiteRunId: 'suite-run-1', suiteId: 'suite-1', status: 'success', startedAt: new Date().toISOString(), totalCount: 2, successCount: 2 }]))
   vi.spyOn(api, 'getUiTestCaseRun').mockResolvedValue(caseRun)
 }
 
@@ -105,7 +105,7 @@ it('顶栏给出测试集、需求、迭代、就绪结论与上次运行，运�
   await waitFor(() => expect(title).toHaveTextContent('安装部署'))
   // 就绪结论与「上次运行」都取自最近一次测试集运行
   expect(toolbar.getByText('就绪 (Ready)')).toBeInTheDocument()
-  expect(toolbar.getByText(/上次运行/)).toBeInTheDocument()
+  expect(await toolbar.findByText(/上次运行/)).toBeInTheDocument()
   expect(toolbar.getByRole('button', { name: /运行记录/ })).toHaveTextContent('运行记录 (1)')
 
   await userEvent.setup().click(toolbar.getByRole('button', { name: /运行测试集/ }))
@@ -118,6 +118,44 @@ it('顶栏给出测试集、需求、迭代、就绪结论与上次运行，运�
       defaultStepTimeoutMs: 5000,
     }),
   )
+  client.clear()
+})
+
+it('运行摘要结束后自动补取最终报告，报告明细正常显示', async () => {
+  let status = 'running'
+  const summary = () => ({ suiteRunId: 'suite-run-2', suiteId: 'suite-1', status, totalCount: 1, successCount: status === 'success' ? 1 : 0 })
+  vi.spyOn(api, 'runUiTestSuite').mockImplementation(async () => summary())
+  vi.spyOn(api, 'getUiTestSuiteRun').mockImplementation(async () => summary())
+  const report = vi.spyOn(api, 'getUiTestSuiteRunReport').mockImplementation(async () => ({
+    ...summary(),
+    items: status === 'success' ? [{ caseId: 'case-1', caseName: '最终完成用例', status: 'success' }] : [],
+  }))
+  const { client } = renderPage()
+  await screen.findByText('UI测试集详情')
+  await userEvent.setup().click(screen.getByRole('button', { name: '运行测试集' }))
+  await waitFor(() => expect(report).toHaveBeenCalledTimes(1))
+  status = 'success'
+  client.setQueryData(['uiTestSuiteRun', 'suite-run-2'], summary())
+  await screen.findByText('最终完成用例')
+  expect(report).toHaveBeenCalledTimes(2)
+  client.clear()
+})
+
+it('关闭运行中的报告后摘要继续更新，结束时顶栏就绪且不下载关闭的报告', async () => {
+  const running = { suiteRunId: 'suite-run-2', suiteId: 'suite-1', status: 'running', createdAt: new Date().toISOString() }
+  vi.spyOn(api, 'runUiTestSuite').mockResolvedValue(running)
+  vi.spyOn(api, 'getUiTestSuiteRun').mockResolvedValue(running)
+  const report = vi.spyOn(api, 'getUiTestSuiteRunReport').mockResolvedValue({ ...running, items: [] })
+  const { container, client } = renderPage()
+  await screen.findByText('UI测试集详情')
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: '运行测试集' }))
+  await waitFor(() => expect(report).toHaveBeenCalledTimes(1))
+  await user.click(screen.getByRole('button', { name: 'Close' }))
+  client.setQueryData(['uiTestSuiteRun', 'suite-run-2'], { ...running, status: 'success', totalCount: 1, successCount: 1 })
+  const toolbar = within(container.querySelector('.ui-wb-toolbar') as HTMLElement)
+  await toolbar.findByText('就绪 (Ready)')
+  expect(report).toHaveBeenCalledTimes(1)
   client.clear()
 })
 

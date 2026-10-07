@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import mimetypes
 from datetime import UTC, datetime, timedelta
 
@@ -13,11 +14,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from testing_agent.core.errors import AppError, ErrForbidden, ErrNotFound
 from testing_agent.core.object_storage import ObjectStorage, ObjectStorageSettings
 from testing_agent.core.sid import new_id
+from testing_agent.models.bug import Bug
 from testing_agent.models.project import Project
 from testing_agent.models.project_skill_space import ProjectSkillSpace
 from testing_agent.models.stored_file import StoredFile
 from testing_agent.schemas.stored_file import FileUploadRequest
-from testing_agent.services.project_access import require_project_id
+from testing_agent.services.project_access import ProjectAction, require_project_id
+from testing_agent.services.stored_file_access import require_file_resource
 
 ALLOWED_EXTENSIONS = {
     "txt",
@@ -45,6 +48,8 @@ PURPOSE_FOLDERS = {
     "ui_artifact": "ui-artifacts",
 }
 
+logger = logging.getLogger(__name__)
+
 
 def utcnow():
     return datetime.now(UTC).replace(tzinfo=None)
@@ -70,7 +75,7 @@ class StoredFileService:
             query = query.with_for_update()
         row = await self.session.scalar(query.execution_options(populate_existing=True))
         if row is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         if row.bucket != self.settings.bucket:
             raise AppError(503, "文件存储配置与记录不一致", 503)
         return row
@@ -80,7 +85,9 @@ class StoredFileService:
     ):
         await require_project_id(self.session, user_id, body.project_id, "write")
         ext = body.filename.rsplit(".", 1)[-1].lower()
-        allowed = {"txt", "md", "docx"} if body.purpose == "requirement" else ALLOWED_EXTENSIONS
+        allowed: set[str] | None = (
+            {"txt", "md", "docx"} if body.purpose == "requirement" else ALLOWED_EXTENSIONS
+        )
         maximum = self.settings.max_bytes
         if body.purpose == "ui_source_archive":
             from testing_agent.services.ai_source_archive import MAX_SOURCE_ARCHIVE_BYTES
@@ -144,8 +151,8 @@ class StoredFileService:
         row = await self.get(file_id, lock=True)
         await require_project_id(self.session, user_id, row.project_id, "write")
         if row.uploaded_by != user_id:
-            raise ErrForbidden
-        if row.status in {"ready", "attached"}:
+            raise ErrForbidden()
+        if row.status in {"ready", "attached", "archived"}:
             return {"fileId": file_id, "status": row.status}
         if row.status != "pending" or row.expires_at <= utcnow():
             raise AppError(409, "上传已过期，请重新上传", 409)
@@ -189,25 +196,29 @@ class StoredFileService:
     ):
         row = await self.get(file_id, lock=True)
         await require_project_id(self.session, user_id, project_id, "write")
-        if row.project_id != project_id or row.uploaded_by != user_id:
-            raise ErrForbidden
+        if row.project_id != project_id:
+            raise ErrForbidden()
         if row.purpose != purpose:
             raise AppError(409, "文件用途不匹配", 409)
-        if row.status == "attached" and (row.resource_type, row.resource_id) == (
+        if row.status in {"attached", "archived"} and (row.resource_type, row.resource_id) == (
             resource_type,
             resource_id,
         ):
+            row.status = "attached"
             return row
+        if row.uploaded_by != user_id:
+            raise ErrForbidden()
         if row.status != "ready" or row.purpose != purpose or row.expires_at <= utcnow():
             raise AppError(409, "文件未完成上传或不可关联", 409)
         row.status, row.resource_type, row.resource_id = "attached", resource_type, resource_id
         return row
 
     async def ticket(self, row: StoredFile):
-        if row.status not in {"ready", "attached"}:
-            raise ErrNotFound
+        if row.status not in {"ready", "attached", "archived"}:
+            raise ErrNotFound()
         if row.status == "ready" and row.expires_at <= utcnow():
-            raise ErrNotFound
+            raise ErrNotFound()
+        await require_file_resource(self.session, row)
         url = await asyncio.to_thread(self.storage.download_ticket, row.object_key, row.filename)
         return {
             "url": url,
@@ -219,11 +230,17 @@ class StoredFileService:
 
     async def accessible(self, user_id: str, file_id: str):
         row = await self.get(file_id)
-        await require_project_id(self.session, user_id, row.project_id)
-        if row.status != "attached" and row.uploaded_by != user_id:
-            raise ErrForbidden
+        action: ProjectAction = (
+            "bug_read"
+            if row.status in {"attached", "archived"} and row.resource_type == "bug"
+            else "read"
+        )
+        await require_project_id(self.session, user_id, row.project_id, action)
+        if row.status not in {"attached", "archived"} and row.uploaded_by != user_id:
+            raise ErrForbidden()
         if row.status == "deleting":
-            raise ErrNotFound
+            raise ErrNotFound()
+        await require_file_resource(self.session, row)
         return row
 
     async def list_by_resource(
@@ -263,6 +280,15 @@ class StoredFileService:
     async def download(self, user_id: str, file_id: str):
         return await self.ticket(await self.accessible(user_id, file_id))
 
+    async def _cleanup_row(self, file_id: str):
+        # Other cleaners may already have claimed or removed this row.
+        return await self.session.scalar(
+            select(StoredFile)
+            .where(StoredFile.file_id == file_id, StoredFile.bucket == self.settings.bucket)
+            .with_for_update(skip_locked=True)
+            .execution_options(populate_existing=True)
+        )
+
     async def cleanup(self):
         # Claim expired rows while holding the same lock used by complete/attach.
         rows = list(
@@ -279,13 +305,25 @@ class StoredFileService:
             ).all()
         )
         for row in rows:
-            row.status = "deleting"
+            # Old Bug updates marked evidence deleting. Preserve these records
+            # conservatively while the owning Bug exists, including its history.
+            if row.resource_type == "bug" and await self.session.scalar(
+                select(Bug.bug_id).where(
+                    Bug.bug_id == row.resource_id, Bug.project_id == row.project_id
+                )
+            ):
+                row.status = "archived"
+            else:
+                row.status = "deleting"
         await self.session.commit()
         deleted, failed = 0, 0
-        identifiers = [row.file_id for row in rows]
+        identifiers = [row.file_id for row in rows if row.status == "deleting"]
         for file_id in identifiers:
             try:
-                row = await self.get(file_id)
+                row = await self._cleanup_row(file_id)
+                if row is None or row.status != "deleting":
+                    await self.session.rollback()
+                    continue
                 # Readable skill paths are reused. Serialize with publication and
                 # never let an old file record delete a currently attached object.
                 if row.purpose == "project_skill":
@@ -307,7 +345,7 @@ class StoredFileService:
                         StoredFile.bucket == row.bucket,
                         StoredFile.object_key == row.object_key,
                         StoredFile.file_id != row.file_id,
-                        StoredFile.status.in_(["attached", "ready", "pending"]),
+                        StoredFile.status.in_(["attached", "archived", "ready", "pending"]),
                     )
                     .with_for_update()
                     .limit(1)
@@ -319,9 +357,14 @@ class StoredFileService:
                 await self.session.delete(row)
                 await self.session.commit()
                 deleted += 1
-            except Exception:
+            except Exception as exc:
                 await self.session.rollback()
                 failed += 1
+                logger.warning(
+                    "File cleanup failed file_id=%s operation=delete error=%s; will retry",
+                    file_id,
+                    type(exc).__name__,
+                )
         # Staging uploads can be replayed until expiry; only remove after the full temporary window.
         attached = list(
             (
@@ -329,7 +372,7 @@ class StoredFileService:
                     select(StoredFile)
                     .where(
                         StoredFile.expires_at < utcnow(),
-                        StoredFile.status == "attached",
+                        StoredFile.status.in_(["attached", "archived"]),
                         StoredFile.staging_key != "",
                     )
                     .limit(100)
@@ -339,12 +382,20 @@ class StoredFileService:
         identifiers = [row.file_id for row in attached]
         for file_id in identifiers:
             try:
-                row = await self.get(file_id)
+                row = await self._cleanup_row(file_id)
+                if row is None:
+                    await self.session.rollback()
+                    continue
                 if row.staging_key:
                     await asyncio.to_thread(self.storage.delete, row.staging_key)
                 row.staging_key = ""
                 await self.session.commit()
-            except Exception:
+            except Exception as exc:
                 await self.session.rollback()
                 failed += 1
+                logger.warning(
+                    "File cleanup failed file_id=%s operation=delete_staging error=%s; will retry",
+                    file_id,
+                    type(exc).__name__,
+                )
         return {"deleted": deleted, "failed": failed}

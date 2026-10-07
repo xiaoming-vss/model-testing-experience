@@ -6,6 +6,15 @@ import { AppSidebar } from './AppSidebar'
 afterEach(cleanup)
 
 describe('AppSidebar', () => {
+  it('limits developer navigation to Bugs and restores navigation after switching roles', () => {
+    const view = render(<MemoryRouter initialEntries={['/testing?tab=bugs']}><AppSidebar bugOnly /></MemoryRouter>)
+    expect(screen.getByRole('link', { name: 'Bug列表' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.queryByRole('button', { name: '项目总览' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: '基础服务' })).not.toBeInTheDocument()
+    view.rerender(<MemoryRouter initialEntries={['/testing?tab=bugs']}><AppSidebar /></MemoryRouter>)
+    expect(screen.getByRole('button', { name: '项目总览' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '基础服务' })).toBeInTheDocument()
+  })
   it('opens project navigation and preserves the selected board in the URL', () => {
     render(<MemoryRouter initialEntries={['/projects?board=requirements']}><AppSidebar /></MemoryRouter>)
     expect(screen.getByRole('link', { name: '需求' })).toHaveAttribute('aria-current', 'page')

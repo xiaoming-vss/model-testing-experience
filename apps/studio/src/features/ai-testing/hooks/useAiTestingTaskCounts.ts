@@ -9,9 +9,9 @@ import { api, listItems } from '@/services/api'
  * 所以这里不另建缓存，也不额外引入状态——计数天然跟着列表走。
  * 迭代范围与列表页保持一致：都按当前迭代过滤，否则徽标会显示比列表更多的条目。
  */
-export function useAiTestingTaskCounts(activeProjectId: string | undefined) {
-  const { activeSprintId } = useActiveSprint()
-  const enabled = Boolean(activeProjectId)
+export function useAiTestingTaskCounts(activeProjectId: string | undefined, canRead = true) {
+  const { activeSprintId } = useActiveSprint(canRead)
+  const enabled = Boolean(activeProjectId) && canRead
   const inActiveSprint = (sprintId?: string) => !activeSprintId || sprintId === activeSprintId
 
   const apiTasks = useQuery({

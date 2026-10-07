@@ -5,6 +5,8 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
+from testing_agent.schemas.resource_binding import ZentaoBindingSummaryResponse
+
 DOCUMENT_TYPES = {"text", "docx"}
 DOCUMENT_TYPE_ALIASES = {"txt": "text", "word": "docx"}
 
@@ -46,13 +48,12 @@ class UpdateRequirementRequest(BaseModel):
         return normalize_document_type(value)
 
 
-class RequirementResponse(BaseModel):
+class RequirementMetadataResponse(BaseModel):
     requirement_id: str = Field()
     sprint_id: str = Field()
     name: str
     document_type: str = Field(default="text")
     document_file_id: str = Field(default="", max_length=64)
-    document_content: str = Field(default="")
     document_filename: str = Field(default="")
     document_hash: str = Field(default="")
     document_download_url: str = Field(default="")
@@ -65,3 +66,12 @@ class RequirementResponse(BaseModel):
     @classmethod
     def validate_document_type(cls, value: str) -> str:
         return normalize_document_type(value)
+
+
+class RequirementResponse(RequirementMetadataResponse):
+    document_content: str = Field(default="")
+
+
+class RequirementListItemResponse(RequirementMetadataResponse):
+    sprint_name: str
+    zentao_binding: ZentaoBindingSummaryResponse | None = None

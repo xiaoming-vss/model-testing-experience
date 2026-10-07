@@ -10,7 +10,9 @@ import { BugInlineEditor } from '../components/BugInlineEditor'
 import { BugTransferModal } from '../components/BugTransferModal'
 import { BugTransitionModal } from '../components/BugTransitionModal'
 import { BugDetailSidebar } from '../components/BugDetailSidebar'
+import { goBackOrFallback } from '@/shared/utils/backNavigation'
 import { BugDetailHeader } from '../components/BugDetailHeader'
+import { BugZentaoPushPanel } from '../components/BugZentaoPushPanel'
 import { useBugDetail } from '../hooks/useBugDetail'
 import '@/shared/styles/surface-tokens.css'
 import '../styles/bugs-v2.css'
@@ -18,7 +20,7 @@ import '../styles/bug-detail.css'
 
 export function BugDetailPage() {
   const { navigate, bugQuery, bug, activitiesQuery, statusChanges, dynamics, resolveUserName,
-    sprintNames, projectQuery, canWrite, comment, setComment, commentMutation, downloadAttachment,
+    sprintNames, projectQuery, canRead, canWrite, canHandle, comment, setComment, commentMutation, downloadAttachment,
     transitionAction, setTransitionAction, transferOpen, setTransferOpen, editOpen, setEditOpen } = useBugDetail()
 
   if (bugQuery.isLoading) {
@@ -39,7 +41,7 @@ export function BugDetailPage() {
             type="error"
             title={bugQuery.error ? getErrorMessage(bugQuery.error) : 'Bug 不存在或已被删除'}
           />
-          <Button className="bug-back-button" icon={<ArrowLeftOutlined />} onClick={() => navigate('/testing?tab=bugs')}>
+          <Button className="bug-back-button" icon={<ArrowLeftOutlined />} onClick={() => goBackOrFallback(navigate, '/testing?tab=bugs')}>
             返回 Bug 列表
           </Button>
         </div>
@@ -66,8 +68,8 @@ export function BugDetailPage() {
                   placeholder="写下评论，回车发送"
                   value={comment}
                   onChange={(event) => setComment(event.target.value)}
-                  disabled={!canWrite}
-                  onPressEnter={(event) => { event.preventDefault(); if (canWrite && !commentMutation.isPending && comment.trim()) commentMutation.mutate() }}
+                  disabled={!canHandle}
+                  onPressEnter={(event) => { event.preventDefault(); if (canHandle && !commentMutation.isPending && comment.trim()) commentMutation.mutate() }}
                   suffix={
                     <Button
                       type="text"
@@ -75,7 +77,7 @@ export function BugDetailPage() {
                       aria-label="发送评论"
                       icon={<SendOutlined />}
                       loading={commentMutation.isPending}
-                      disabled={!canWrite || !comment.trim()}
+                      disabled={!canHandle || !comment.trim()}
                       onClick={() => comment.trim() && commentMutation.mutate()}
                     />
                   }
@@ -84,9 +86,9 @@ export function BugDetailPage() {
               <BugActivityFeed items={dynamics} resolveUserName={resolveUserName} emptyText="还没有评论与动态" />
             </section>
   </>
-  if (editOpen) return <div className="workbench-page bugs-detail-page tp-surface"><div className="api-automation-content">
+  if (editOpen && canWrite) return <div className="workbench-page bugs-detail-page tp-surface"><div className="api-automation-content">
     <BugInlineEditor key={bug.bugId} bug={bug} projectName={projectQuery.data?.name} sprintNames={sprintNames}
-      resolveUserName={resolveUserName} onClose={() => setEditOpen(false)} onBack={() => navigate('/testing?tab=bugs')}>
+      resolveUserName={resolveUserName} onClose={() => setEditOpen(false)} onBack={() => goBackOrFallback(navigate, '/testing?tab=bugs')}>
       {activityPanels}
     </BugInlineEditor>
   </div></div>
@@ -95,7 +97,7 @@ export function BugDetailPage() {
   return (
     <div className="workbench-page bugs-detail-page tp-surface">
       <div className="api-automation-content">
-        <BugDetailHeader bug={bug} onBack={() => navigate('/testing?tab=bugs')}
+        <BugDetailHeader bug={bug} onBack={() => goBackOrFallback(navigate, '/testing?tab=bugs')}
           onTransition={setTransitionAction} onEdit={() => setEditOpen(true)} onTransfer={() => setTransferOpen(true)} />
 
         <div className="bug-detail-cols">
@@ -106,12 +108,13 @@ export function BugDetailPage() {
               <div className="bug-detail-subtitle">{resolveUserName(bug.reporterUserId)} 提交于 {formatTime(pickCreatedAt(bug))}</div>
             </section>
             <BugDescriptionView html={bug.descriptionHtml} />
-            <BugEvidencePanel key={bug.bugId} descriptionHtml={bug.descriptionHtml} attachments={bug.attachments ?? []} download={downloadAttachment} />
+            {canRead && <BugZentaoPushPanel key={`zentao:${bug.bugId}`} bugId={bug.bugId} canWrite={canWrite} />}
+            <BugEvidencePanel key={`evidence:${bug.bugId}`} descriptionHtml={bug.descriptionHtml} attachments={bug.attachments ?? []} download={downloadAttachment} />
 
           </div>
 
           <BugDetailSidebar bug={bug} projectName={projectQuery.data?.name}
-            sprintNames={sprintNames} resolveUserName={resolveUserName}>
+            sprintNames={sprintNames} resolveUserName={resolveUserName} canReadContext={canRead}>
             {activityPanels}
           </BugDetailSidebar>
         </div>

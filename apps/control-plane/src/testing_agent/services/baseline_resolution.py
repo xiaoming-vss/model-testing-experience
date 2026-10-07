@@ -112,10 +112,10 @@ class BaselineResolutionService:
         checker = branch_exists if branch_exists is not None else self.branch_exists
         requirement = await self.binding_repository.get_requirement(requirement_id)
         if requirement is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         current_sprint = await self.binding_repository.get_sprint(requirement.sprint_id)
         if current_sprint is None:
-            raise ErrNotFound
+            raise ErrNotFound()
 
         bindings = await self.binding_repository.list_active_repo_bindings_for_requirement(
             requirement_id
@@ -137,7 +137,7 @@ class BaselineResolutionService:
         """
         sprint = await self.binding_repository.get_sprint(sprint_id)
         if sprint is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         bindings = list(
             await self.binding_repository.list_active_repo_bindings_for_sprint(sprint_id)
         )

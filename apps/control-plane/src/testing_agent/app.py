@@ -28,6 +28,7 @@ from testing_agent.routers.files import router as files_router
 from testing_agent.routers.function_ai_tasks import router as function_ai_tasks_router
 from testing_agent.routers.function_tests import router as function_tests_router
 from testing_agent.routers.gitlab_integrations import router as gitlab_integrations_router
+from testing_agent.routers.integration_worker import router as integration_worker_router
 from testing_agent.routers.llm_integrations import router as llm_integrations_router
 from testing_agent.routers.project_skills import router as project_skills_router
 from testing_agent.routers.projects import router as projects_router
@@ -162,6 +163,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     internal.include_router(ui_worker_router, tags=["Internal UI Worker"])
     internal.include_router(api_worker_router, tags=["Internal API Worker"])
     internal.include_router(ai_worker_router, tags=["Internal AI Worker"])
+    internal.include_router(integration_worker_router, tags=["Internal Integration Worker"])
     app.include_router(internal)
 
     _install_go_contract_openapi(app)

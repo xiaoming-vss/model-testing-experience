@@ -47,11 +47,11 @@ export function hasRequirementEnhancedText(requirement?: Pick<Requirement, 'docu
 }
 
 export function hasRequirementDocument(
-  document?: Pick<Requirement, 'documentType' | 'documentDownloadUrl' | 'documentFilename'>,
+  document?: Pick<Requirement, 'documentType' | 'documentFileId' | 'documentDownloadUrl' | 'documentFilename'>,
 ) {
   return Boolean(
     document?.documentType &&
-      (document.documentDownloadUrl?.trim() || document.documentFilename?.trim()),
+      document.documentFileId?.trim(),
   )
 }
 

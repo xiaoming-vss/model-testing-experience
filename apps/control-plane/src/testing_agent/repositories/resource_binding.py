@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import NamedTuple
 
-from sqlalchemy import select
+from sqlalchemy import RowMapping, select
 
 from testing_agent.core.errors import ErrResourceBindingInvalid
 from testing_agent.models.project import Project
@@ -31,23 +31,63 @@ class ResourceBindingRepository(ResourceRepository):
     model = ResourceBinding
     id_column = "binding_id"
 
+    async def list_zentao_summaries(
+        self, resource_type: str, resource_ids: Sequence[str]
+    ) -> Sequence[RowMapping]:
+        if not resource_ids:
+            return []
+        result = await self.session.execute(
+            select(
+                ResourceBinding.local_resource_id,
+                ResourceBinding.binding_id,
+                ResourceBinding.provider,
+                ResourceBinding.remote_resource_id,
+                ResourceBinding.remote_name_snapshot,
+                ResourceBinding.status,
+            )
+            .where(
+                ResourceBinding.local_resource_type == resource_type,
+                ResourceBinding.local_resource_id.in_(resource_ids),
+                ResourceBinding.provider == "zentao",
+                ResourceBinding.status == "active",
+            )
+            .order_by(ResourceBinding.created_at.desc(), ResourceBinding.id.desc())
+        )
+        return result.mappings().all()
+
     async def get_project(self, project_id: str) -> Project | None:
+        return await self.session.scalar(select(Project).where(Project.project_id == project_id))
+
+    async def get_project_for_update(self, project_id: str) -> Project | None:
         return await self.session.scalar(
-            select(Project).where(Project.project_id == project_id).with_for_update()
+            select(Project)
+            .where(Project.project_id == project_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
         )
 
     async def get_sprint(self, sprint_id: str) -> Sprint | None:
+        return await self.session.scalar(select(Sprint).where(Sprint.sprint_id == sprint_id))
+
+    async def get_sprint_for_update(self, sprint_id: str) -> Sprint | None:
         return await self.session.scalar(
-            select(Sprint).where(Sprint.sprint_id == sprint_id).with_for_update()
+            select(Sprint)
+            .where(Sprint.sprint_id == sprint_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
         )
 
     async def get_requirement(self, requirement_id: str) -> Requirement | None:
         return await self.session.scalar(
+            select(Requirement).where(Requirement.requirement_id == requirement_id)
+        )
+
+    async def get_requirement_for_update(self, requirement_id: str) -> Requirement | None:
+        return await self.session.scalar(
             select(Requirement)
-            .where(
-                Requirement.requirement_id == requirement_id,
-            )
+            .where(Requirement.requirement_id == requirement_id)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
 
     async def get_active_by_local_resource(
@@ -73,12 +113,18 @@ class ResourceBindingRepository(ResourceRepository):
         connection_id: str,
         remote_resource_type: str,
         remote_resource_id: str,
+        *,
+        instance: str | None = None,
     ) -> bool:
         row = await self.session.scalar(
             select(ResourceBinding.binding_id)
             .where(
                 ResourceBinding.provider == provider,
-                ResourceBinding.connection_id == connection_id,
+                (
+                    ResourceBinding.instance_key == instance
+                    if instance is not None
+                    else ResourceBinding.connection_id == connection_id
+                ),
                 ResourceBinding.remote_resource_type == remote_resource_type,
                 ResourceBinding.remote_resource_id == remote_resource_id,
                 ResourceBinding.status == "active",
@@ -155,7 +201,7 @@ class ResourceBindingRepository(ResourceRepository):
             statement = statement.with_for_update().execution_options(populate_existing=True)
         rows = list((await self.session.scalars(statement)).all())
         if len(rows) > 1:
-            raise ErrResourceBindingInvalid
+            raise ErrResourceBindingInvalid()
         return rows[0] if rows else None
 
     async def list_project_bindings(

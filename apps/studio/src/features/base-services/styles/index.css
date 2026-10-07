@@ -557,6 +557,11 @@
   width: 220px;
 }
 
+.zentao-binding-mcp-select {
+  flex: 1;
+  min-width: 0;
+}
+
 @media (max-width: 900px) {
   .base-services-panel-header {
     flex-direction: column;

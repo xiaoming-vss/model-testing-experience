@@ -24,12 +24,13 @@ vi.mock('@/features/projects/hooks/useActiveSprint', () => ({
 }))
 
 const bug = {
+  id: 37,
   bugId: 'bug-1',
   bugNo: 1,
   projectId: 'project-1',
   title: '登录页崩溃',
   descriptionHtml: '<p>现象</p>',
-  status: 'pending',
+  status: 'active', confirmed: false, resolution: '',
   severity: 'serious',
   priority: 'high',
   reporterUserId: 'user-1',
@@ -87,7 +88,12 @@ it('列出 Bug 并按服务端筛选与分页取数', async () => {
   renderPage(client)
 
   await screen.findByText('登录页崩溃')
-  expect(screen.getByText('BUG-1')).toBeInTheDocument()
+  expect(screen.getByRole('columnheader', { name: 'ID' })).toBeInTheDocument()
+  expect(screen.getByText('37')).toBeInTheDocument()
+  expect(screen.queryByText('BUG-1')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '确认' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: '解决' })).toBeEnabled()
+  expect(screen.queryByRole('button', { name: /查看|处理|更多/ })).not.toBeInTheDocument()
   expect(getProjectBugs.mock.calls[0][0]).toBe('project-1')
   expect(getProjectBugs.mock.calls[0][1]).toMatchObject({ page: 1, pageSize: 20, sprintId: 'sprint-1' })
   expect(getProjectMembers).toHaveBeenCalled()
@@ -136,13 +142,12 @@ it('可以访问第二页并显示服务端总数', async () => {
 
 it('从列表按当前状态打开处理表单', async () => {
   vi.spyOn(api, 'getProjectMembers').mockResolvedValue(listResponse([]))
-  vi.spyOn(api, 'getProjectBugs').mockResolvedValue(listResponse([{ ...bug, status: 'reopened' }]))
+  vi.spyOn(api, 'getProjectBugs').mockResolvedValue(listResponse([{ ...bug, status: 'active', confirmed: false }]))
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   seedOwnerProject(client)
   renderPage(client)
-  await userEvent.click(await screen.findByRole('button', { name: '处理' }))
-  expect(await screen.findByText('确定处理')).toBeInTheDocument()
-  await userEvent.click(screen.getByText('拒绝'))
-  expect(await screen.findByText('拒绝原因')).toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: '确认' })).toBeEnabled()
+  await userEvent.click(screen.getByRole('button', { name: '解决' }))
+  expect(await screen.findByText('解决方案')).toBeInTheDocument()
   client.clear()
 })

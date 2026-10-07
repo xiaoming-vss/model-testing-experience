@@ -163,7 +163,7 @@ class ApiCandidateImporter:
             or run.review_status != ReviewStatus.APPROVED.value
             or run.import_status == ImportStatus.IMPORTED.value
         ):
-            raise ErrBadRequest
+            raise ErrBadRequest()
         await self.ensure_collection_access(user_id, collection_id, action="execute")
         raw_cases = await validate_api_collection_import_payload(
             self.repository,
@@ -177,7 +177,7 @@ class ApiCandidateImporter:
         for case in existing_cases:
             normalized_name = self._normalized_api_case_name(case.name)
             if normalized_name in existing_by_name:
-                raise ErrBadRequest
+                raise ErrBadRequest()
             existing_by_name[normalized_name] = case
         conflicts: builtins.list[dict[str, Any]] = []
         for item in generated_cases:

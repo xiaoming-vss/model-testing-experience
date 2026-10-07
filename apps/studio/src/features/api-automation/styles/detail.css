@@ -199,21 +199,6 @@
   overflow: auto;
 }
 
-.api-case-editor-main-scroll,
-.api-case-editor-result-scroll,
-.api-case-run-result-block,
-.api-environment-section-scrollable {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.api-case-editor-main-scroll::-webkit-scrollbar,
-.api-case-editor-result-scroll::-webkit-scrollbar,
-.api-case-run-result-block::-webkit-scrollbar,
-.api-environment-section-scrollable::-webkit-scrollbar {
-  display: none;
-}
-
 .api-case-editor-splitter {
   position: relative;
   flex: 0 0 18px;
@@ -758,12 +743,6 @@
   overflow: auto;
   border: 0;
   background: transparent;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.api-env-var-picker-list::-webkit-scrollbar {
-  display: none;
 }
 
 .api-env-var-picker-item {
@@ -1209,12 +1188,6 @@
 .api-collection-run-history-list {
   max-height: min(60vh, 720px);
   overflow: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.api-collection-run-history-list::-webkit-scrollbar {
-  display: none;
 }
 
 .api-collection-run-history-item {
@@ -1335,14 +1308,8 @@
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
   padding-right: 2px;
   display: block;
-}
-
-.api-collection-run-report-scroll::-webkit-scrollbar {
-  display: none;
 }
 
 .api-collection-run-report-modal-root.ant-modal-root .ant-modal-wrap {

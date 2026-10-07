@@ -1,8 +1,9 @@
+import { getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
+import { useRunReportRefresh } from '@/domain/runs/useRunReportRefresh'
 import {
   type CollectionReportView,
   type RunResultView
 } from '@/features/api-automation/config/collectionConfig'
-import type { ApiCollectionRunReport } from '@/features/api-automation/types'
 import {
   getCollectionRunItemKey
 } from '@/features/api-automation/utils/apiCaseEditor'
@@ -60,7 +61,7 @@ export function useApiExecution({ collectionId }: Options) {
     refetchOnWindowFocus: false,
     refetchInterval: (query) => {
       const data = query.state.data as ApiCaseRunResult | undefined
-      return !data || isApiRunPollingStatus(data.status) ? 1500 : false
+      return getRunPollingInterval(data?.status)
     },
   })
 
@@ -69,11 +70,13 @@ export function useApiExecution({ collectionId }: Options) {
     queryFn: () => api.getApiCollectionRuns(collectionId),
     enabled: Boolean(collectionId),
     refetchOnWindowFocus: false,
-    refetchInterval: (query) => {
-      const data = (query.state.data as ApiCollectionRunSummary[] | undefined) ?? []
-      return data.some((item) => isApiRunPollingStatus(item.status)) ? 3000 : false
-    },
+    refetchInterval: collectionRunHistoryOpen ? RUN_HISTORY_POLL_INTERVAL : false,
   })
+
+  const refetchHistory = collectionRunHistoryQuery.refetch
+  useEffect(() => {
+    if (collectionRunHistoryOpen) void refetchHistory({ cancelRefetch: false })
+  }, [collectionRunHistoryOpen, refetchHistory])
 
   const activeCollectionRunQuery = useQuery({
     queryKey: ['apiCollectionRun', activePollingCollectionRunId],
@@ -82,7 +85,7 @@ export function useApiExecution({ collectionId }: Options) {
     refetchOnWindowFocus: false,
     refetchInterval: (query) => {
       const data = query.state.data as ApiCollectionRunSummary | undefined
-      return !data || isApiRunPollingStatus(data.status) ? 3000 : false
+      return getRunPollingInterval(data?.status)
     },
   })
 
@@ -91,10 +94,15 @@ export function useApiExecution({ collectionId }: Options) {
     queryFn: () => api.getApiCollectionRunReport(selectedCollectionRunId),
     enabled: collectionRunReportOpen && Boolean(selectedCollectionRunId),
     refetchOnWindowFocus: false,
-    refetchInterval: (query) => {
-      const data = query.state.data as ApiCollectionRunReport | undefined
-      return collectionRunReportOpen && (!data || isApiRunPollingStatus(data.status)) && Boolean(selectedCollectionRunId) ? 3000 : false
-    },
+    refetchInterval: false,
+  })
+
+  const selectedRunSummary = activeCollectionRunQuery.data?.collectionRunId === selectedCollectionRunId
+    ? activeCollectionRunQuery.data
+    : collectionRunHistoryQuery.data?.find((run) => run.collectionRunId === selectedCollectionRunId)
+  useRunReportRefresh({
+    queryKey: 'apiCollectionRunReport', runId: selectedCollectionRunId, open: collectionRunReportOpen,
+    status: selectedRunSummary?.status, reportStatus: collectionRunReportQuery.data?.status,
   })
 
   useEffect(() => {

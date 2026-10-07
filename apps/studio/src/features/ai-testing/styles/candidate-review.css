@@ -23,50 +23,6 @@
   gap: 20px;
 }
 
-.functional-candidate-review-title > div:first-child {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.functional-candidate-review-title > div:first-child > strong {
-  color: var(--ai-text);
-  font-size: 18px;
-  line-height: 26px;
-}
-
-.functional-candidate-review-title > div:first-child > span {
-  max-width: 760px;
-  overflow: hidden;
-  color: var(--ai-text-secondary);
-  font-size: 12px;
-  line-height: 18px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.functional-candidate-review-title-stats {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.functional-candidate-review-title-stats > span {
-  padding: 7px 11px;
-  color: var(--ai-text-secondary);
-  background: var(--ai-panel-soft);
-  border: 1px solid var(--ai-border);
-  border-radius: 9px;
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.functional-candidate-review-title-stats strong {
-  color: var(--ai-blue);
-}
-
 .functional-candidate-review-modal .ai-task-import-result-form {
   height: calc(100vh - 244px);
   min-height: 0;
@@ -175,15 +131,18 @@
   gap: 8px;
 }
 
-.functional-candidate-review-actions > span {
-  margin-right: 4px;
-  color: var(--ai-text-secondary);
-  font-size: 12px;
-  white-space: nowrap;
+/* 「保存当前修改」是设计稿里的品牌浅底快捷按钮，区别于主决策按钮。 */
+.functional-candidate-review-actions .functional-candidate-review-save.ant-btn {
+  color: var(--ai-blue);
+  background: var(--ai-accent-soft);
+  border-color: var(--srf-accent-border, var(--ai-card-hover-border));
+  box-shadow: none;
 }
 
-.functional-candidate-review-actions > span strong {
-  color: var(--ai-blue);
+.functional-candidate-review-actions .functional-candidate-review-save.ant-btn:not(:disabled):hover {
+  color: var(--ai-hover-text);
+  background: var(--ai-panel-hover);
+  border-color: var(--ai-blue);
 }
 
 @media (max-width: 1080px) {
@@ -200,11 +159,6 @@
 }
 
 @media (max-width: 760px) {
-  .functional-candidate-review-title-stats,
-.functional-candidate-review-actions > span {
-    display: none;
-  }
-
   .functional-candidate-review-footer > label {
     min-width: 0;
     align-items: flex-start;

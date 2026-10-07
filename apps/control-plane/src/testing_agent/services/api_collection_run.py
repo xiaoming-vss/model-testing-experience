@@ -70,23 +70,23 @@ class ApiCollectionRunService:
     ) -> ApiCollectionRunContext:
         collection = await self.repository.get_collection(collection_id)
         if collection is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         requirement = await self.repository.get_requirement(collection.requirement_id)
         if requirement is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         sprint = await self.repository.get_sprint(requirement.sprint_id)
         if sprint is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         project = await self.repository.get_project(sprint.project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await require_project_access(self.repository.session, user_id, project, action)
         return ApiCollectionRunContext(collection, requirement, sprint, project)
 
     async def ensure_owned_run(self, user_id: str, collection_run_id: str) -> ApiCollectionRun:
         run = await self.repository.get_run(collection_run_id)
         if run is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await authorize_run(self.repository, user_id, run)
         return run
 
@@ -94,9 +94,9 @@ class ApiCollectionRunService:
         context = await self.get_accessible_context(user_id, collection_id, action="execute")
         environment = await self.repository.get_environment(body.environment_id)
         if environment is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         if environment.project_id != context.project.project_id:
-            raise ErrApiCaseRunEnvironmentMismatch
+            raise ErrApiCaseRunEnvironmentMismatch()
         cases = await self.repository.list_cases(collection_id)
         env_vars = await authorized_environment_vars(
             self.repository.session, user_id, environment.environment_id

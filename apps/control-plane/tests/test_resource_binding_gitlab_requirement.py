@@ -523,6 +523,7 @@ async def test_delete_group_binding_blocked_when_referenced_by_requirement_bindi
                 "instanceUrl": "https://gitlab.example.com",
                 "provider": "gitlab",
                 "connectionId": "",
+                "mcpServiceId": "",
                 "localResourceType": "requirement",
                 "localResourceId": "req-1",
                 "remoteResourceType": "repository",

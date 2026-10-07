@@ -13,12 +13,13 @@ import { UI_TEMPLATE_FIELD_LABELS, isYamlFileName, type CaseImportMode, type UiT
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
+import { getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
+import { useRunReportRefresh } from '@/domain/runs/useRunReportRefresh'
 import {
   api,
   listItems,
   type UiTestCase,
   type UiTestCaseRun,
-  type UiTestSuiteRunReport,
   type UiTestSuiteRunSummary
 } from '@/services/api'
 import { uiBuiltinTemplateFunctions } from '@/shared/constants/templateFunctions'
@@ -34,6 +35,7 @@ import type { InputRef } from 'antd'
 import { Alert, Button, Empty, Form, Popover } from 'antd'
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { goBackOrFallback } from '@/shared/utils/backNavigation'
 import type { UiSuiteRunReportView } from '../config/stepConfig'
 import { formatUiScreenshotPolicy } from '../constants/defaultRunConfig'
 import { formatUiCaseSerial, formatUiRunRelativeTime, getUiSuiteReadiness } from '../utils/detailRunView'
@@ -137,7 +139,7 @@ export function UiTestSuiteCasePage() {
     refetchOnWindowFocus: false,
     refetchInterval: (query) => {
       const data = query.state.data as UiTestCaseRun | undefined
-      return isUiRunPollingStatus(data?.status) || (!data && Boolean(selectedRunId)) ? 2000 : false
+      return getRunPollingInterval(data?.status)
     },
   })
   // 顶栏的「上次运行」与运行记录条数都要用这份历史，所以它不再等抽屉打开才启用。
@@ -146,11 +148,12 @@ export function UiTestSuiteCasePage() {
     queryFn: () => api.getUiTestSuiteRuns(suiteId),
     enabled: Boolean(suiteId),
     refetchOnWindowFocus: false,
-    refetchInterval: (query) => {
-      const data = query.state.data as UiTestSuiteRunSummary[] | undefined
-      return (data ?? []).some((item) => isUiRunPollingStatus(item.status)) ? 3000 : false
-    },
+    refetchInterval: suiteRunHistoryOpen ? RUN_HISTORY_POLL_INTERVAL : false,
   })
+  const refetchSuiteHistory = suiteRunHistoryQuery.refetch
+  useEffect(() => {
+    if (suiteRunHistoryOpen) void refetchSuiteHistory({ cancelRefetch: false })
+  }, [refetchSuiteHistory, suiteRunHistoryOpen])
   const activeSuiteRunQuery = useQuery({
     queryKey: ['uiTestSuiteRun', activePollingSuiteRunId],
     queryFn: () => api.getUiTestSuiteRun(activePollingSuiteRunId),
@@ -158,7 +161,7 @@ export function UiTestSuiteCasePage() {
     refetchOnWindowFocus: false,
     refetchInterval: (query) => {
       const data = query.state.data as UiTestSuiteRunSummary | undefined
-      return isUiRunPollingStatus(data?.status) || (!data && Boolean(activePollingSuiteRunId)) ? 3000 : false
+      return getRunPollingInterval(data?.status)
     },
   })
   const suiteRunReportQuery = useQuery({
@@ -166,10 +169,15 @@ export function UiTestSuiteCasePage() {
     queryFn: () => api.getUiTestSuiteRunReport(selectedSuiteRunId),
     enabled: suiteRunReportOpen && Boolean(selectedSuiteRunId),
     refetchOnWindowFocus: false,
-    refetchInterval: (query) => {
-      const data = query.state.data as UiTestSuiteRunReport | undefined
-      return suiteRunReportOpen && (isUiRunPollingStatus(data?.status) || (!data && Boolean(selectedSuiteRunId))) ? 3000 : false
-    },
+    refetchInterval: false,
+  })
+
+  const polledSuiteRunSummary = activeSuiteRunQuery.data?.suiteRunId === selectedSuiteRunId
+    ? activeSuiteRunQuery.data
+    : suiteRunHistoryQuery.data?.find((run) => run.suiteRunId === selectedSuiteRunId)
+  useRunReportRefresh({
+    queryKey: 'uiTestSuiteRunReport', runId: selectedSuiteRunId, open: suiteRunReportOpen,
+    status: polledSuiteRunSummary?.status, reportStatus: suiteRunReportQuery.data?.status,
   })
 
   const isCreatingCase = selectedCaseId === DRAFT_CASE_ID
@@ -547,11 +555,13 @@ export function UiTestSuiteCasePage() {
   )
   const readiness = useMemo(() => getUiSuiteReadiness(latestSuiteRun), [latestSuiteRun])
 
-  const suiteRunReport = suiteRunReportQuery.data ?? null
   const selectedSuiteRunSummary = useMemo(
-    () => suiteRunHistory.find((item) => item.suiteRunId === selectedSuiteRunId) ?? null,
-    [selectedSuiteRunId, suiteRunHistory],
+    () => polledSuiteRunSummary ?? null,
+    [polledSuiteRunSummary],
   )
+  const suiteRunReport = suiteRunReportQuery.data
+    ? { ...suiteRunReportQuery.data, ...(isUiRunPollingStatus(suiteRunReportQuery.data.status) ? selectedSuiteRunSummary : undefined) }
+    : null
   const orderedSuiteRunItems = useMemo(
     () =>
       [...(suiteRunReport?.items ?? [])].sort(
@@ -744,7 +754,6 @@ export function UiTestSuiteCasePage() {
   }
 
   function closeSuiteRunReport() {
-    setActivePollingSuiteRunId((current) => (current === selectedSuiteRunId ? '' : current))
     setSuiteRunReportOpen(false)
     setSelectedSuiteRunId('')
     setLoadingSuiteRunHistoryId('')
@@ -898,7 +907,7 @@ export function UiTestSuiteCasePage() {
             canRun={Boolean(suiteId) && uiTestCases.length > 0}
             canDebug={Boolean(activeCaseId) && !isCreatingCase}
             canSave={showEditorForm}
-            onBack={() => navigate('/ui-automation')}
+            onBack={() => goBackOrFallback(navigate, '/testing?tab=ui')}
             onOpenRunHistory={() => setSuiteRunHistoryOpen(true)}
             onDebugRun={handleDebugRun}
             onRunSuite={handleRunSuite}

@@ -89,6 +89,7 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 | `src/shared/styles/foundation-tokens.css` | `--app-*`（与 `index.css` 不重名） | 外壳、公共页面框架、旧工作台及 AI/API 工作流语义配色，由 `index.css` 在启动时引入 |
 | `src/shared/styles/legacy-tokens.css` | `--legacy-*` | 旧工作台作用域 token 的浅色来源，局部变量保持原作用域 |
 | `src/shared/styles/github-dark-tokens.css`、`github-dark-foundation.css` | `--gh-*` 及上述语义 token | GitHub Dark 色盘与暗色赋值，只定义变量，不覆盖业务组件规则 |
+| `src/shared/styles/indigo-amber-light-tokens.css` | 上述语义 token 及侧栏局部别名 | 浅色 C 按用户反馈减淡：浅靛蓝导航、淡琥珀主操作、浅灰蓝内容面；所有赋值以 `:root:not([data-theme='dark'])` 限定，只覆盖既有颜色角色 |
 | `src/shared/styles/editor-tokens.css` | `--editor-*` | CodeMirror 的表面、选区、光标及 JSON/YAML 语法高亮，由 `index.css` 引入 |
 | `src/shared/styles/chart-tokens.css` | `--chart-*`、`--graph-*` | 图表序列、坐标轴、提示框、关系图连线/缩略图及树图导出配色，由 `index.css` 引入 |
 | `src/app/styles/workbench.css` 的 `:root` 块 | `--tp-*`、`--mac-*` | 工作台基础与 macOS 外壳 |
@@ -96,6 +97,8 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 | `src/shared/styles/surface-tokens.css` | `--srf-*` | 列表页共用的表面与色盘 |
 
 **裸色值（`#rrggbb`）只允许出现在上表已登记的 token 文件里。** 其它任何 CSS 文件出现裸色值都应当改为引用 token。注意此规则必须带 token 文件白名单，否则会把合法的 token 定义本身判为违规（例如 `surface-tokens.css` 中的颜色定义）。
+
+全站原生滚动条样式仅在 `shared/styles/scrollbars.css` 定义，从 `index.css` 加载；尺寸 token 位于 `foundation-tokens.css`，颜色沿用已有主题 token。feature 保留自身滚动容器布局，不再定义滚动条皮肤或隐藏规则。`scrollbarConsistency.test.ts` 检查该归属。
 
 基础层颜色整理：`layout.css`、`page-frame.css` 与 `workbench.css` 的普通声明消费 `foundation-tokens.css`；后者已有的 `--tp-*` / `--mac-*` 等定义保持原作用域。浅色取值、渐变位置、阴影几何和选择器权重保持不变。玻璃层 token 的数值后缀标识原有透明层，后续主题可以分别赋值，不应把它们当成全站透明度工具。终端背景与正文、强调色上的文字与卡片底色分开定义。新列表/详情页继续使用 `--srf-*`，不要迁回旧工作台配色。Ant Design 的算法输入和组件 token 仍集中在 `app/providers/ThemeProvider.tsx`，切换主题时需单独配置，不能把需要参与颜色运算的 seed token 直接替换为 CSS `var()`。
 
@@ -105,13 +108,14 @@ AI 的 `index.css`、`task-list-v2.css`、`task-detail-v2.css` 与 API 的 `deta
 
 TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描生产代码的字符串及模板片段，禁止未登记的十六进制和颜色函数，排除测试/测试夹具、注释和正则表达式；Ant Design 的 `gold`、`success` 等语义参数保留。固定颜色入口只有 `ThemeProvider.tsx`（组件库算法配置）、`collectionRunReport.ts`（独立 HTML 报告）和 `MtxLogo.tsx`（品牌 SVG）。编辑器、Recharts 与 React Flow 的 CSS/SVG 属性消费变量；CodeMirror 的 dark 扩展与 React Flow 的 colorMode 跟随主题 store 的 resolvedTheme，编辑器切换扩展时保留内容。树图导出在调用 `toBlob` 前从原节点读取具体的背景/边框 token 值，避免把未解析变量传给脱离页面的克隆节点。
 
+浅色控件与内容面使用同一灰蓝色盘，不能继续使用组件库近白背景或按钮层的旧白底。`ThemeProvider.palette.test.tsx` 对真实 provider 的基础、容器与弹出背景做 CSS 色盘对齐检查，同时锁定既有深色值；`theme.palette.test.ts` 验证普通／禁用按钮、输入角色、来源标签和结构表面的关系。浏览器须另外检查选择框与复选框的伪元素、禁用控件、下拉及聚焦状态，变量测试不能替代实际组件级联验证。
+
 **主题支持浅色、深色和跟随系统**（[ADR 0002](adr/0002-token-based-github-dark.md) 取代 ADR 0001 的仅浅色决定）。默认跟随系统；登录页和页头提供同一切换器，偏好保存到 `mtx-theme-preference`。HTML 启动脚本在首屏绘制前设置 `data-theme` 和 `color-scheme`；store 处理系统变化及跨标签页同步。暗色参考 GitHub Primer Dark，颜色变化集中在登记的 token 文件和 Ant Design 配置。新增业务样式消费语义 token，并核对两种主题，不得恢复按 feature 类名堆叠的暗色补丁层。独立 HTML 报告与品牌图形保留自身配色。
 
 ### 列表页表面层（用例库 / 测试单 / API 测试 / UI 测试）
 
 这四页按各自的外部设计稿（Stitch 导出的静态 HTML，配套一份含色板 / 字阶 / 组件规格的 `DESIGN.md`）重做了表面层，
-视觉语言是同一套：白色卡片 + 描边 + 胶囊筛选条 + 代码体编号 / 时间 + 色调色块。设计稿的取值与本仓库既有约定一致
-（卡片 `#ffffff`、描边 `#e2e8f0`、主色 `#2563eb`、编号与时间用等宽、4px 网格），没有引入新的取值体系。
+视觉语言是同一套：主题卡片 + 描边 + 胶囊筛选条 + 代码体编号 / 时间 + 色调色块。布局保留等宽编号、时间和 4px 网格；浅色配色以用户最新反馈后的 C 版为准（工具栏、内容面板、数据行和分页 `#e8edf6`，表头与状态栏 `#e3e9f3`，描边 `#dce0ef`、链接及选中强调 `#4e59b8`、主操作 `#f6e6bf`），由浅色 token 文件覆盖既有角色。旧玻璃表面变量与项目卡片变量也接入公共面板色，避免透明白色叠层重新抬高亮度；`theme.palette.test.ts` 验证这些角色的解析值一致，并验证浅色规则不匹配深色节点。深色仍沿用 GitHub Dark。
 
 | 页面 | 页面样式文件 |
 | --- | --- |
@@ -338,9 +342,10 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 
 ### 测试单执行工作台（`workspace-v2.css` / `workspace-verdict-v2.css`）
 
-测试单列表点名称进来的页面重做成三栏：执行用例清单 / 用例详情 / 执行判定与缺陷。样式文件按职责拆两个
-（合起来会超过 C1 的 600 行上限），都由 `TestOrderWorkspacePage` 引入，选择器互不重叠、全部挂在 `.test-order-workspace-page` 下。
+测试单列表点名称进来的页面参考两栏布局：执行清单 / 单一详情卡片，视觉沿用平台公共边距、工具栏、圆角卡片和胶囊标签。用例摘要、前置条件与步骤在详情区一起滚动，执行判定、缺陷关联与条目位置常驻详情底部，操作条不覆盖步骤。用例 ID 通过公共按钮提供复制入口，摘要由 `components/TestOrderCaseSummary.tsx` 渲染。顶栏直接使用 `tp-list-toolbar`，状态及筛选标签复用 `tp-tone-tag`／`tp-chip`。尺寸及换行规则见 UI-GUIDELINES.md。样式按职责拆为三份：`workspace-v2.css` 负责外层、清单与摘要，`workspace-content-v3.css` 负责前置条件与步骤表，`workspace-verdict-v2.css` 负责底栏及图谱共用判定控件。内容由 `components/TestOrderCaseContent.tsx` 渲染并自行引入内容样式；页面显式引入其余两份。选择器互不重叠，工作台样式全部挂在 `.test-order-workspace-page` 下。
 `features/test-orders/styles/index.css` 只保留加入用例弹窗与图谱弹框的规则（858 → 79 行），旧的工作台规则已删除。
+
+右侧 `.test-order-panel` 承担 A 版单一详情卡片的表面与布局，不能挂 `workbench-panel`：全局 macOS 工作台规则会以 `!important` 附加半透明背景与阴影，导致边缘出现高光竖边。摘要、内容和底部操作共用这一表面；内容区按确认的分色对照样式渲染，前置条件为浅中性色带并纵向排列，步骤与预期保持逐行对应。详情卡片的阴影、模糊与内部区块圆角由浏览器检查；页面测试覆盖执行与条目切换行为。
 
 **两个 `.workbench-panel` 的坑**（顶栏踩过，值得记）：
 
@@ -354,13 +359,13 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 | 设计稿元素 | 原因 |
 | --- | --- |
 | 每个步骤的「通过 / 失败 / 阻塞」判定按钮 | 条目结论是整条一个（`TestOrderEntry.status`），没有逐步结果模型；`TestOrderWorkspacePage.test.tsx` 也断言了不应出现逐步判定按钮 |
-| BUG 卡片（优先级 / 处理中 / 指派给 / 解绑） | 只存了 `zentaoBugId`，没有缺陷详情接口；做成了「禅道缺陷 #ID + 解绑」 |
+| BUG 卡片（优先级 / 处理中 / 指派给 / 解绑） | 工作台显示关联的平台 Bug 链接，完整详情在 Bug 页面查看；仅失败条目显示提交 Bug，工作台不显示或编辑禅道缺陷号 |
 | 底部「提交当前用例记录」 | 判定是即时保存的（保存状态就在同一栏底部显示），再加提交按钮会误导 |
 | 耗时预估 | 条目没有这个字段 |
 
 `TestOrderWorkspacePage.test.tsx` 依赖的钩子必须保留：判定按钮的 `aria-label="判定该用例为通过"` 及其禁用态、状态筛选胶囊的
 无障碍名形如 `未执行 1`（标签与计数之间要有空格）、勾选框 `选择第 N 条执行条目` / `移除第 N 条执行条目` / `判定后自动前进`、
-`上一条` / `下一条` 按钮、以及「加入用例」按钮**恰好两个**（顶栏与空态各一个）。
+`快捷键说明` 图标按钮（默认隐藏说明，悬停或聚焦后展示）、键盘 ↑／↓ 切换条目，以及「加入用例」按钮**恰好两个**（顶栏与空态各一个）。底部不显示 `上一条` / `下一条` 按钮。
 
 `priorityTone`（优先级 → 色盘色调）被用例库与工作台同时使用，按 S4 上提到 `shared/utils/priorityTone.ts`；`caseTone.ts` 只剩用例类型那部分。
 

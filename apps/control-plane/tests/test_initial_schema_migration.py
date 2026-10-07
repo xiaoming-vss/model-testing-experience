@@ -1,7 +1,9 @@
 """The frozen initial migration must create the current schema from an empty DB."""
 
+from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
 import sqlalchemy as sa
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
@@ -98,4 +100,59 @@ def test_empty_database_initialization_and_roundtrip():
                 )
                 == 0
             )
+    engine.dispose()
+
+
+def test_developer_migration_preserves_members_and_refuses_unsafe_downgrade():
+    engine = sa.create_engine("sqlite://")
+    with engine.connect() as connection:
+        config = migration_config(connection)
+        command.upgrade(config, "20260927_0021")
+        now = datetime.now(UTC)
+        connection.execute(
+            Base.metadata.tables["users"].insert(),
+            {
+                "user_id": "dev",
+                "nickname": "dev",
+                "password": "",
+                "created_at": now,
+                "updated_at": now,
+            },
+        )
+        connection.execute(
+            Base.metadata.tables["projects"].insert(),
+            {
+                "project_id": "p",
+                "user_id": "dev",
+                "name": "p",
+                "description": "",
+                "created_at": now,
+                "updated_at": now,
+            },
+        )
+        members = Base.metadata.tables["project_members"]
+        connection.execute(
+            members.insert(),
+            {
+                "project_id": "p",
+                "user_id": "dev",
+                "role": "member",
+                "created_at": now,
+            },
+        )
+        connection.commit()
+        command.upgrade(config, "head")
+        assert connection.scalar(sa.select(members.c.role)) == "member"
+        connection.execute(members.update().values(role="developer"))
+        connection.commit()
+        with pytest.raises(RuntimeError, match="开发成员"):
+            command.downgrade(config, "20260927_0021")
+        connection.rollback()
+        assert connection.scalar(sa.select(members.c.role)) == "developer"
+        connection.execute(members.update().values(role="viewer"))
+        connection.commit()
+        command.downgrade(config, "20260927_0021")
+        assert connection.scalar(sa.select(members.c.role)) == "viewer"
+        command.upgrade(config, "head")
+        assert_current_schema(connection)
     engine.dispose()

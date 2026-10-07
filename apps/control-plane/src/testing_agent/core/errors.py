@@ -13,6 +13,10 @@ class AppError(Exception):
     http_code: int = HTTPStatus.INTERNAL_SERVER_ERROR
     data: Any | None = None
 
+    def __call__(self) -> AppError:
+        """Create a request-local exception from a shared error definition."""
+        return AppError(self.code, self.message, self.http_code, self.data)
+
     def __str__(self) -> str:
         return self.message
 

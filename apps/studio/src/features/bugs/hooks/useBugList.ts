@@ -7,13 +7,21 @@ import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { api, listItems, listTotal } from '@/services/api'
 import type { Bug, BugAction } from '../types'
 import { bugColumns } from '../components/bugColumns'
+import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
+import { useBugScope } from './useBugScope'
 export function useBugList() {
   const navigate = useNavigate()
   const activeProjectId = useWorkbenchStore((state) => state.activeProjectId)
+  const access = useProjectAccess(activeProjectId)
+  const bugOnly = access.project?.role === 'developer'
+  const sprintScope = useActiveSprint(access.can('read'))
+  const bugScope = useBugScope(activeProjectId, bugOnly)
   const { activeSprintId, sprints, sprintsQuery, selectSprint, sprintSelectorOptions } =
-    useActiveSprint()
+    bugOnly ? bugScope : sprintScope
 
   const [status, setStatus] = useState<string>('')
+  const [confirmed, setConfirmed] = useState<boolean | undefined>()
+  const [resolution, setResolution] = useState('')
   const [severity, setSeverity] = useState<string>('')
   const [assigneeUserId, setAssigneeUserId] = useState<string>('')
   const [keyword, setKeyword] = useState<string>('')
@@ -31,11 +39,12 @@ export function useBugList() {
     return map
   }, [sprints])
 
-  const membersQuery = useQuery({
+  const projectMembersQuery = useQuery({
     queryKey: ['projectMembers', activeProjectId],
     queryFn: () => api.getProjectMembers(activeProjectId!),
-    enabled: Boolean(activeProjectId),
+    enabled: Boolean(activeProjectId) && access.can('read'),
   })
+  const membersQuery = bugOnly ? { ...bugScope.optionsQuery, data: bugScope.members } : projectMembersQuery
   const memberNameMap = useMemo(() => {
     const map = new Map<string, string>()
     listItems(membersQuery.data).forEach((member) => map.set(member.userId, member.name))
@@ -47,13 +56,15 @@ export function useBugList() {
       sprintId: activeSprintId ?? '',
       sprintFilter: 'found' as const,
       status,
+      confirmed,
+      resolution,
       severity,
       assigneeUserId,
       keyword: keyword.trim(),
       page,
       pageSize,
     }),
-    [activeSprintId, status, severity, assigneeUserId, keyword, page, pageSize],
+    [activeSprintId, status, confirmed, resolution, severity, assigneeUserId, keyword, page, pageSize],
   )
 
   const bugsQuery = useQuery({
@@ -67,17 +78,19 @@ export function useBugList() {
 
   useEffect(() => {
     setPage(1)
-  }, [status, severity, assigneeUserId, keyword, activeSprintId, activeProjectId, pageSize])
+  }, [status, confirmed, resolution, severity, assigneeUserId, keyword, activeSprintId, activeProjectId, pageSize])
 
   function resetFilters() {
     setStatus('')
+    setConfirmed(undefined)
+    setResolution('')
     setSeverity('')
     setAssigneeUserId('')
     setKeyword('')
   }
 
-  const columns = bugColumns({ memberNameMap, sprintNameMap, navigate, optionalColumns,
+  const columns = bugColumns({ memberNameMap, sprintNameMap, optionalColumns,
     onTransition: (bug, action) => setTransition({ bug, action }) })
 
-  return { optionalColumns, setOptionalColumns, navigate, activeProjectId, activeSprintId, sprints, sprintsQuery, selectSprint, sprintSelectorOptions, status, setStatus, severity, setSeverity, assigneeUserId, setAssigneeUserId, keyword, setKeyword, page, setPage, pageSize, setPageSize, createOpen, setCreateOpen, transition, setTransition, membersQuery, bugsQuery, bugs, total, resetFilters, columns }
+  return { optionalColumns, setOptionalColumns, navigate, activeProjectId, activeSprintId, sprints, sprintsQuery, selectSprint, sprintSelectorOptions, status, setStatus, confirmed, setConfirmed, resolution, setResolution, severity, setSeverity, assigneeUserId, setAssigneeUserId, keyword, setKeyword, page, setPage, pageSize, setPageSize, createOpen, setCreateOpen, transition, setTransition, membersQuery, bugsQuery, bugs, total, resetFilters, columns }
 }

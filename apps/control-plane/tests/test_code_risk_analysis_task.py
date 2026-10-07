@@ -153,48 +153,30 @@ class FakeTaskRepository:
     async def get_requirement(self, requirement_id: str):
         return self.requirement
 
-    async def list_function_suites_by_requirement(self, requirement_id: str):
-        return [suite["suite"] for suite in self.function_suites]
+    async def list_requirement_case_pairs(self, requirement_id, kind):
+        rows = {
+            "function": self.function_suites,
+            "api": self.api_collections,
+            "ui": self.ui_suites,
+        }[kind]
+        key = "collection" if kind == "api" else "suite"
+        return [(case, row[key]) for row in rows for case in row["cases"]]
 
-    async def list_function_cases(self, suite_id: str):
+    async def list_api_assert_rules_for_cases(self, case_ids):
         return [
-            suite["cases"] for suite in self.function_suites if suite["suite"].suite_id == suite_id
-        ][0]
-
-    async def list_api_collections_by_requirement(self, requirement_id: str):
-        return [row["collection"] for row in self.api_collections]
-
-    async def list_api_cases(self, collection_id: str):
-        return [
-            row["cases"]
-            for row in self.api_collections
-            if row["collection"].collection_id == collection_id
-        ][0]
-
-    async def list_api_assert_rules(self, case_id: str):
-        return self.api_rules.get(case_id, [])
-
-    async def get_latest_api_case_run(self, case_id: str):
-        for row in self.api_collections:
-            for case in row["cases"]:
-                if case.case_id == case_id:
-                    return case.latest_run
-        return None
-
-    async def list_ui_suites_by_requirement(self, requirement_id: str):
-        return [suite["suite"] for suite in self.ui_suites]
-
-    async def list_ui_cases(self, suite_id: str):
-        return [suite["cases"] for suite in self.ui_suites if suite["suite"].suite_id == suite_id][
-            0
+            SimpleNamespace(**{**vars(rule), "case_id": case_id})
+            for case_id in case_ids
+            for rule in self.api_rules.get(case_id, [])
         ]
 
-    async def get_latest_ui_case_run(self, case_id: str):
-        for suite in self.ui_suites:
-            for case in suite["cases"]:
-                if case.case_id == case_id:
-                    return case.latest_run
-        return None
+    async def latest_case_run_summaries(self, case_ids, kind):
+        rows = self.api_collections if kind == "api" else self.ui_suites
+        return {
+            case.case_id: case.latest_run
+            for row in rows
+            for case in row["cases"]
+            if case.case_id in case_ids
+        }
 
 
 class FakeBindingRepository:
@@ -667,6 +649,7 @@ async def test_worker_requirement_document_allows_code_risk_analysis():
         async def get_requirement(self, requirement_id):
             return SimpleNamespace(
                 requirement_id="req-1",
+                document_file_id="stored-requirement",
                 document_storage_path="",
                 document_content="需求正文",
                 document_filename="",
@@ -951,6 +934,12 @@ class FakeRunCreateRepository:
         assert task_id == self.task.task_id
         return self.task
 
+    async def get_sprint(self, sprint_id):
+        return SimpleNamespace(sprint_id=sprint_id, project_id=self.task.project_id)
+
+    async def get_requirement(self, requirement_id):
+        return SimpleNamespace(requirement_id=requirement_id, sprint_id=self.task.sprint_id)
+
     def add_all(self, rows):
         self.added.extend(rows)
         self.runs.extend(row for row in rows if isinstance(row, AiGenerateTaskRun))
@@ -1142,7 +1131,7 @@ def test_code_risk_analysis_task_endpoints_dispatch_to_service():
                 "updatedAt": None,
             }
 
-        async def list_runs(self, kind, task_id, user_id):
+        async def list_run_summaries(self, kind, task_id, user_id, page=1, page_size=20):
             return {
                 "items": [
                     {
@@ -1184,8 +1173,10 @@ def test_code_risk_analysis_task_endpoints_dispatch_to_service():
 
     runs = client.get("/v1/code-risk-analysis-tasks/task-1/runs")
     assert runs.status_code == 200
-    listed_report = runs.json()["data"]["items"][0]["report"]
-    assert listed_report["risks"][0]["level"] == "high"
+    listed_run = runs.json()["data"]["items"][0]
+    assert listed_run["runId"] == "run-1"
+    assert "report" not in listed_run
+    assert "resultYaml" not in listed_run
 
     run_detail = client.get("/v1/code-risk-analysis-runs/run-1")
     assert run_detail.status_code == 200

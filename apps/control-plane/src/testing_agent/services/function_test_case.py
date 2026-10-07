@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins
 from dataclasses import dataclass
 from typing import Any
 
@@ -40,6 +41,7 @@ from testing_agent.services.project_access import (
     require_project_access,
     require_project_id,
 )
+from testing_agent.services.zentao_mcp import ZentaoMcpAccess
 from testing_agent.services.zentao_resource import parse_zentao_remote_id, truncate_error
 
 
@@ -59,7 +61,10 @@ class FunctionTestCaseService:
         repository: FunctionTestCaseRepository,
         integration_connection_service: Any | None = None,
         zentao_resource_client: Any | None = None,
+        *,
+        zentao_access: Any | None = None,
     ):
+        self.zentao_access = zentao_access
         self.repository = repository
         self.integration_connection_service = integration_connection_service
         self.zentao_resource_client = zentao_resource_client
@@ -69,16 +74,16 @@ class FunctionTestCaseService:
     ) -> FunctionTestSuite:
         suite = await self.repository.get_suite(suite_id)
         if suite is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         requirement = await self.repository.get_requirement(suite.requirement_id)
         if requirement is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         sprint = await self.repository.get_sprint(requirement.sprint_id)
         if sprint is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         project = await self.repository.get_project(sprint.project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await require_project_access(self.repository.session, user_id, project, action)
         return suite
 
@@ -87,7 +92,7 @@ class FunctionTestCaseService:
     ) -> FunctionTestCase:
         case = await self.repository.get_case(case_id)
         if case is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await self.get_accessible_suite(user_id, case.suite_id, action=action)
         return case
 
@@ -151,7 +156,7 @@ class FunctionTestCaseService:
                     parse_import_payload(payload)
                 )
             except ValidationError as exc:
-                raise ErrBadRequest from exc
+                raise ErrBadRequest() from exc
 
         suite, requirement, sprint, project = await self.get_accessible_suite_context(
             user_id, suite_id, action="execute"
@@ -182,7 +187,7 @@ class FunctionTestCaseService:
             try:
                 request = ImportFunctionSuitesToZentaoRequest.model_validate(payload)
             except ValidationError as exc:
-                raise ErrBadRequest from exc
+                raise ErrBadRequest() from exc
 
         requirement, sprint, project = await self.get_accessible_requirement_context(
             user_id, requirement_id, action="execute"
@@ -201,7 +206,18 @@ class FunctionTestCaseService:
         items = []
         imported_case_count = 0
         succeeded_suite_count = 0
+        uncertain = False
         for suite in suites:
+            if uncertain:
+                items.append(
+                    {
+                        "suiteId": suite.suite_id,
+                        "status": "failed",
+                        "importedCaseCount": 0,
+                        "errorMessage": "前序测试集写入结果待核对，本测试集未推送",
+                    }
+                )
+                continue
             try:
                 cases = await self.repository.list_by_suite(suite.suite_id)
                 result = await self.import_suite_cases_to_zentao(suite.suite_id, cases, target)
@@ -216,12 +232,24 @@ class FunctionTestCaseService:
                     }
                 )
                 continue
-            succeeded_suite_count += 1
+            uncertain = any(item["status"] == "uncertain" for item in result["items"])
+            succeeded_suite_count += int(result.get("status", "success") == "success")
             imported_case_count += result["importedCaseCount"]
             items.append(
                 {
                     "suiteId": suite.suite_id,
-                    "status": "success",
+                    "status": "success"
+                    if result.get("status", "success") == "success"
+                    else "failed",
+                    "errorMessage": next(
+                        (
+                            item.get("errorMessage")
+                            for item in result["items"]
+                            if item.get("errorMessage")
+                        ),
+                        None,
+                    ),
+                    "items": result["items"],
                     "importedCaseCount": result["importedCaseCount"],
                 }
             )
@@ -230,7 +258,7 @@ class FunctionTestCaseService:
         failed_suite_count = total_suite_count - succeeded_suite_count
         if failed_suite_count == 0:
             status = "success"
-        elif succeeded_suite_count == 0:
+        elif imported_case_count == 0:
             status = "failed"
         else:
             status = "partial_failure"
@@ -282,7 +310,7 @@ class FunctionTestCaseService:
                 "项目、迭代和需求必须绑定到同一禅道实例",
             )
         if sprint_binding.remote_parent_id != project_binding.remote_resource_id:
-            raise ErrResourceBindingInvalid
+            raise ErrResourceBindingInvalid()
         if (
             requirement_binding.remote_parent_id
             and requirement_binding.remote_parent_id != sprint_binding.remote_resource_id
@@ -300,12 +328,11 @@ class FunctionTestCaseService:
             raise dynamic_error(ErrResourceBindingInvalid, str(exc)) from exc
 
         if self.integration_connection_service is None or self.zentao_resource_client is None:
-            raise ErrZentaoRemoteResourceUnavailable
-        selected = await self.integration_connection_service.resolve_personal_connection(
-            user_id, "zentao", project.project_id, project_binding.instance_url, connection_id
-        )
-        connection = await self.integration_connection_service.resolve_zentao_access(
-            user_id, selected.connection_id, project.project_id
+            raise ErrZentaoRemoteResourceUnavailable()
+        access = self.zentao_access or ZentaoMcpAccess(self.integration_connection_service)
+        connection = await access.resolve(user_id, project.project_id, project_binding.instance_url)
+        await self.zentao_resource_client.validate_target(
+            connection, remote_project_id, remote_execution_id, remote_story_id, product_id
         )
         return ZentaoFunctionCaseImportTarget(
             connection=connection,
@@ -363,7 +390,7 @@ class FunctionTestCaseService:
             )
 
         if self.zentao_resource_client is None:
-            raise ErrZentaoRemoteResourceUnavailable
+            raise ErrZentaoRemoteResourceUnavailable()
         try:
             result = await self.zentao_resource_client.create_test_cases(
                 target.connection, create_body
@@ -384,7 +411,12 @@ class FunctionTestCaseService:
                 {
                     "caseId": case.case_id,
                     "remoteCaseId": int(item_value(remote, "id", default=0)),
-                    "status": str(item_value(remote, "status", default="success") or "success"),
+                    "status": str(item_value(remote, "status", default="failed") or "failed"),
+                    **(
+                        {"errorMessage": remote["errorMessage"]}
+                        if remote.get("errorMessage")
+                        else {}
+                    ),
                 }
             )
         return {
@@ -392,7 +424,14 @@ class FunctionTestCaseService:
             "productId": target.product_id,
             "remoteProjectId": target.remote_project_id,
             "remoteExecutionId": target.remote_execution_id,
-            "importedCaseCount": len(items),
+            "importedCaseCount": sum(item["status"] == "success" for item in items),
+            "status": "success"
+            if all(item["status"] == "success" for item in items)
+            else (
+                "partial_failure"
+                if any(item["status"] == "success" for item in items)
+                else "failed"
+            ),
             "items": items,
         }
 
@@ -401,13 +440,13 @@ class FunctionTestCaseService:
     ) -> tuple[Any, Any, Any]:
         requirement = await self.repository.get_requirement(requirement_id)
         if requirement is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         sprint = await self.repository.get_sprint(requirement.sprint_id)
         if sprint is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         project = await self.repository.get_project(sprint.project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await require_project_access(self.repository.session, user_id, project, action)
         return requirement, sprint, project
 
@@ -417,13 +456,13 @@ class FunctionTestCaseService:
         suite_ids: list[str],
     ) -> list[FunctionTestSuite]:
         if not suite_ids or len(set(suite_ids)) != len(suite_ids):
-            raise ErrBadRequest
+            raise ErrBadRequest()
         rows = await self.repository.list_suites_by_ids(suite_ids)
         suites_by_id = {suite.suite_id: suite for suite in rows}
         for suite_id in suite_ids:
             suite = suites_by_id.get(suite_id)
             if suite is None:
-                raise ErrNotFound
+                raise ErrNotFound()
             if suite.requirement_id != requirement_id:
                 raise dynamic_error(
                     ErrFunctionTestCaseImportInvalid,
@@ -436,16 +475,16 @@ class FunctionTestCaseService:
     ) -> tuple[Any, Any, Any, Any]:
         suite = await self.repository.get_suite(suite_id)
         if suite is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         requirement = await self.repository.get_requirement(suite.requirement_id)
         if requirement is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         sprint = await self.repository.get_sprint(requirement.sprint_id)
         if sprint is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         project = await self.repository.get_project(sprint.project_id)
         if project is None:
-            raise ErrNotFound
+            raise ErrNotFound()
         await require_project_access(self.repository.session, user_id, project, action)
         return suite, requirement, sprint, project
 
@@ -470,7 +509,7 @@ class FunctionTestCaseService:
             seen.add(normalized)
             case = await self.repository.get_case(normalized)
             if case is None:
-                raise ErrNotFound
+                raise ErrNotFound()
             if case.suite_id != suite_id:
                 raise dynamic_error(
                     ErrFunctionTestCaseImportInvalid,
@@ -558,13 +597,13 @@ class FunctionTestCaseService:
         await self.repository.refresh(case)
         return dump(FunctionCaseResponse, case)
 
-    async def batch_delete(self, user_id: str, suite_id: str, case_ids: list[str]) -> dict:
+    async def batch_delete(self, user_id: str, suite_id: str, case_ids: builtins.list[str]) -> dict:
         await self.get_accessible_suite(user_id, suite_id, action="write")
         cases = []
         for case_id in case_ids:
             case = await self.repository.get_case(case_id)
             if case is None or case.suite_id != suite_id:
-                raise ErrNotFound
+                raise ErrNotFound()
             cases.append(case)
         try:
             for case in cases:

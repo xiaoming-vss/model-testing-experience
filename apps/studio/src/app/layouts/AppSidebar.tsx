@@ -24,7 +24,7 @@ const designLinks: Array<{ key: string; label: string; icon: AppIconName; path: 
   { key: 'codeRisk', label: '代码风险分析', icon: 'testDesign', path: '/ai-testing/code-risk-tasks/' },
 ]
 
-export function AppSidebar({ designCounts = {} }: { designCounts?: Record<string, number> }) {
+export function AppSidebar({ designCounts = {}, bugOnly = false }: { designCounts?: Record<string, number>; bugOnly?: boolean }) {
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme)
   const { pathname, search } = useLocation()
   const [collapsed, setCollapsed] = useState(false)
@@ -65,10 +65,11 @@ export function AppSidebar({ designCounts = {} }: { designCounts?: Record<string
     <Layout.Sider width={208} collapsedWidth={76} collapsed={collapsed} trigger={null}
       theme={resolvedTheme} className={`app-sider app-sidebar${collapsed ? ' is-collapsed' : ''}`}>
       <div className="sidebar-content">
-        <Link className="sidebar-brand" to="/projects" aria-label="MTX 项目总览">
+        <Link className="sidebar-brand" to={bugOnly ? '/testing?tab=bugs' : '/projects'} aria-label={bugOnly ? 'MTX Bug列表' : 'MTX 项目总览'}>
           <MtxLogo size={36} /><span>MTX</span>
         </Link>
         <nav className="sidebar-navigation" aria-label="主导航">
+          {bugOnly ? navLink('/testing?tab=bugs', 'Bug列表', 'bug', testingTab === 'bugs') : <>
           <button type="button" className={`sidebar-link sidebar-group${inProjects ? ' is-current-group' : ''}`}
             aria-expanded={projectOpen} aria-controls="sidebar-project-links"
             onClick={() => { setCollapsed(false); setNavigation({ ...expanded, route, project: !projectOpen }) }}>
@@ -106,6 +107,7 @@ export function AppSidebar({ designCounts = {} }: { designCounts?: Record<string
             })}
           </div>
           {navLink('/base-services', '基础服务', 'services', pathname.startsWith('/base-services'))}
+          </>}
         </nav>
         <button className="sidebar-toggle" type="button" aria-label={collapsed ? '展开侧边栏' : '收起侧边栏'}
           aria-expanded={!collapsed} onClick={() => setCollapsed((value) => !value)}>

@@ -19,5 +19,5 @@ async def authorized_environment_vars(
     )
     for row in rows:
         if row.is_secret and row.secret_user_id != user_id:
-            raise ErrForbidden
+            raise ErrForbidden()
     return rows

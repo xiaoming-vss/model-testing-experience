@@ -16,14 +16,25 @@ from testing_agent.models.api_environment_var import ApiEnvironmentVar
 from testing_agent.models.api_extract_rule import ApiExtractRule
 from testing_agent.models.bug import Bug
 from testing_agent.models.bug_activity import BugActivity
+from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
+from testing_agent.models.bug_zentao_push import BugZentaoPush
 from testing_agent.models.function_test_case import FunctionTestCase
 from testing_agent.models.function_test_suite import FunctionTestSuite
 from testing_agent.models.integration_connection import IntegrationConnection
+from testing_agent.models.integration_job import (
+    IntegrationClaimReceipt,
+    IntegrationJob,
+    IntegrationJobStep,
+    IntegrationRestoreReview,
+    IntegrationRuntime,
+    IntegrationWorkerPresence,
+)
 from testing_agent.models.project import Project
 from testing_agent.models.project_member import ProjectMember
 from testing_agent.models.project_skill_space import ProjectSkillSpace
 from testing_agent.models.requirement import Requirement
 from testing_agent.models.resource_binding import ResourceBinding
+from testing_agent.models.revoked_access_token import RevokedAccessToken
 from testing_agent.models.shared_service import ServiceAuthorization, SharedService
 from testing_agent.models.sprint import Sprint
 from testing_agent.models.sprint_daily_metrics import SprintDailyMetrics
@@ -59,14 +70,23 @@ __all__ = [
     "Base",
     "Bug",
     "BugActivity",
+    "BugZentaoAttachment",
+    "BugZentaoPush",
     "FunctionTestCase",
     "FunctionTestSuite",
     "IntegrationConnection",
+    "IntegrationClaimReceipt",
+    "IntegrationJob",
+    "IntegrationJobStep",
+    "IntegrationRuntime",
+    "IntegrationRestoreReview",
+    "IntegrationWorkerPresence",
     "Project",
     "ProjectMember",
     "ProjectSkillSpace",
     "Requirement",
     "ResourceBinding",
+    "RevokedAccessToken",
     "Sprint",
     "SprintDailyMetrics",
     "TestOrder",

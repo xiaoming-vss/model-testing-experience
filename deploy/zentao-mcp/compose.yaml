@@ -1,0 +1,30 @@
+# Copy this deployment directory for each project, then set a unique name and port.
+name: ${MCP_PROJECT_NAME:-mtx-zentao-project-a}
+services:
+  zentao-mcp:
+    image: crpi-dkip02fuesikq3zy.cn-hangzhou.personal.cr.aliyuncs.com/xiaoming-x/zentao-mcp:2026-10-04-attachments@sha256:9b576d52c5bcb3fdfbd1c787ac3ce40b3cbf71ecae7b031fba794a8b8d3fd7ef
+    container_name: ${MCP_PROJECT_NAME:-mtx-zentao-project-a}
+    restart: unless-stopped
+    ports:
+      - "${MCP_BIND_HOST:-127.0.0.1}:${MCP_HOST_PORT:-9091}:9090"
+    volumes:
+      # Directory mount makes editor atomic replacements visible after restart.
+      - type: bind
+        source: ./config
+        target: /config/runtime
+        read_only: true
+        bind:
+          create_host_path: false
+    command: ["-config", "/config/runtime/config.yaml"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - mcp
+networks:
+  mcp:
+    name: ${MCP_NETWORK:-${MCP_PROJECT_NAME:-mtx-zentao-project-a}}
+    external: ${MCP_EXTERNAL_NETWORK:-false}

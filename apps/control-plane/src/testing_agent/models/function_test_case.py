@@ -14,9 +14,15 @@ class FunctionTestCase(Base):
     __table_args__ = (
         UniqueConstraint("suite_id", "title", name="uk_function_case_suite_title"),
         Index("idx_function_case_suite_order", "suite_id", "order_no"),
+        {"comment": "正式功能测试用例及结构化前置条件、步骤和预期"},
     )
-    id: Mapped[IdPk]
-    case_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    id: Mapped[IdPk] = mapped_column(comment="数据库内部主键")
+    case_id: Mapped[str] = mapped_column(
+        String(64),
+        unique=True,
+        nullable=False,
+        comment="固定用例编号；创建或导入时分配，落库后不因编辑改变",
+    )
     suite_id: Mapped[str] = mapped_column(
         String(64),
         ForeignKey(
@@ -25,17 +31,27 @@ class FunctionTestCase(Base):
             ondelete="RESTRICT",
         ),
         nullable=False,
+        comment="所属功能测试集业务标识",
     )
-    module: Mapped[str] = mapped_column(String(120), nullable=False, default="")
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    priority: Mapped[str] = mapped_column(String(30), nullable=False, default="")
-    case_type: Mapped[str] = mapped_column(String(30), nullable=False, default="")
-    order_no: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    created_at: Mapped[CreatedAt]
-    updated_at: Mapped[UpdatedAt]
+    module: Mapped[str] = mapped_column(
+        String(120), nullable=False, default="", comment="功能用例所属业务模块"
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False, comment="标题")
+    priority: Mapped[str] = mapped_column(String(30), nullable=False, default="", comment="优先级")
+    case_type: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="", comment="用例类型"
+    )
+    order_no: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, comment="执行或展示顺序"
+    )
+    created_at: Mapped[CreatedAt] = mapped_column(comment="记录创建时间（UTC）")
+    updated_at: Mapped[UpdatedAt] = mapped_column(comment="记录最后更新时间（UTC）")
 
     content_json: Mapped[dict[str, Any]] = mapped_column(
-        JSON, nullable=False, default=lambda: {"preconditions": [], "steps": []}
+        JSON,
+        nullable=False,
+        default=lambda: {"preconditions": [], "steps": []},
+        comment="结构化功能用例内容，包含前置条件及步骤与对应预期",
     )
 
     def __init__(self, **kwargs):

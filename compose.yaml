@@ -2,6 +2,11 @@ name: mtx
 services:
   mysql:
     image: mysql:8.4
+    command:
+      - --slow-query-log=${MYSQL_SLOW_QUERY_LOG:-1}
+      - --long-query-time=${MYSQL_LONG_QUERY_TIME:-0.5}
+      - --slow-query-log-file=/var/lib/mysql/slow-queries.log
+      - --log-output=FILE
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE:?Run manage.py configure first}
@@ -42,17 +47,6 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
-      zentao:
-        condition: service_healthy
-
-  zentao:
-    image: mtx/zentao:local
-    build: ./apps/connector-zentao
-    restart: unless-stopped
-    ports:
-      - "${BIND_HOST}:${ZENTAO_PORT}:8010"
-    volumes:
-      - ./.runtime/docker/zentao.toml:/app/config/zentao.toml:ro
 
   ai-worker:
     image: mtx/ai-worker:local
@@ -86,6 +80,18 @@ services:
       API_UPSTREAM: http://control-plane:9000
     ports:
       - "${BIND_HOST}:${STUDIO_PORT}:80"
+    depends_on:
+      control-plane:
+        condition: service_healthy
+
+  integration-worker:
+    image: mtx/integration-worker:local
+    build: ./apps/integration-worker
+    restart: unless-stopped
+    stop_grace_period: 215s
+    volumes:
+      - ./.runtime/docker/integration-worker.toml:/app/config/local.toml:ro
+      - /app/runtime # Anonymous volume per replica; never share result outboxes between replicas.
     depends_on:
       control-plane:
         condition: service_healthy

@@ -4,6 +4,7 @@ from testing_agent.api.deps import get_current_user_id, get_integration_connecti
 from testing_agent.core.errors import success_payload
 from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
 from testing_agent.schemas.shared_service import (
+    McpInstanceReset,
     McpTemplate,
     PersonalAuthorizationRequest,
     Provider,
@@ -64,7 +65,16 @@ async def rename_service(
     services: SharedServiceService = Depends(service),
 ):
     return success_payload(
-        await services.rename(user_id, project_id, provider, service_id, body.name)
+        await services.rename(
+            user_id,
+            project_id,
+            provider,
+            service_id,
+            body.name,
+            body.zentao_instance_url,
+            body.base_url,
+            body.confirm_instance_switch,
+        )
     )
 
 
@@ -102,3 +112,17 @@ async def revoke_authorization(
     services: SharedServiceService = Depends(service),
 ):
     return success_payload(await services.revoke(user_id, project_id, provider, service_id))
+
+
+@router.post("/{service_id}/instance-reset", response_model=ApiResponse[SharedServiceResponse])
+async def reset_mcp_instance(
+    project_id: str,
+    provider: Provider,
+    service_id: str,
+    body: McpInstanceReset,
+    user_id: str = Depends(get_current_user_id),
+    services: SharedServiceService = Depends(service),
+):
+    return success_payload(
+        await services.reset_instance(user_id, project_id, provider, service_id, body.instance_url)
+    )

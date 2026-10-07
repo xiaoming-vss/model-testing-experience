@@ -5,7 +5,7 @@ import { normalizeSprintId, pickCreatedAt } from '@/utils/format'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
 
-export function useActiveSprint() {
+export function useActiveSprint(enabled = true) {
   const { activeProjectId, projectsQuery } = useActiveProject()
   const storedSprintId = useWorkbenchStore((state) => state.activeSprintId)
   const storedSprintProjectId = useWorkbenchStore((state) => state.activeSprintProjectId)
@@ -14,7 +14,7 @@ export function useActiveSprint() {
   const sprintsQuery = useQuery({
     queryKey: ['sprints', activeProjectId],
     queryFn: () => api.getSprints(activeProjectId!),
-    enabled: Boolean(activeProjectId),
+    enabled: Boolean(activeProjectId) && enabled,
   })
 
   const sprints = useMemo(() => sprintsQuery.data ?? [], [sprintsQuery.data])

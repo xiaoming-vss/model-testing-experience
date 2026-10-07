@@ -3,7 +3,7 @@ import { act, cleanup, renderHook } from '@testing-library/react'
 import { applyNodeChanges } from '@xyflow/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import * as routing from '../utils/relationsEdgePath'
-import { computeRelationsRoutes, type RelationsRouteGeometry, type RelationsRouteResult } from '../utils/relationsRouting'
+import { computeRelationsRoutes, validPreferredRelationPath, type RelationsRouteGeometry, type RelationsRouteResult } from '../utils/relationsRouting'
 import { useRelationsEdgePaths } from './useRelationsEdgePaths'
 
 class ControlledWorker {
@@ -204,4 +204,24 @@ it('times out a stalled worker without erasing validated partial routes', () => 
     expect(worker.terminate).toHaveBeenCalled()
     unmount()
   } finally { vi.useRealTimers() }
+})
+
+it('shows safe hierarchical paths immediately and removes stale paths after an obstacle moves', () => {
+  const preferred = 'M 236,72 L 900,72'
+  const sizedNodes = initialNodes.map((node) => ({ ...node, width: 236, height: 144 }))
+  const preferences = { paths: new Map([['ab', preferred]]), orthogonal: true }
+  const { result, rerender } = renderHook(({ nodes }) => useRelationsEdgePaths(nodes, initialEdges, paths, preferences), {
+    initialProps: { nodes: sizedNodes },
+  })
+  expect(result.current.paths.get('ab')).toBe(preferred)
+  expect(result.current.pending).toBe(true)
+  act(() => latestWorker().onerror?.())
+  expect(result.current.paths.get('ab')).toBe(preferred)
+  rerender({ nodes: sizedNodes.map((node) => node.id === 'c' ? { ...node, position: { x: 400, y: 0 } } : node) })
+  expect(result.current.paths.has('ab')).toBe(false)
+  latestWorker().finish()
+  expect(result.current.paths.get('ab')).toBeTruthy()
+  expect(result.current.paths.get('ab')).not.toBe(preferred)
+  const geometry = latestWorker().postMessage.mock.calls[0][0]
+  expect(validPreferredRelationPath(result.current.paths.get('ab')!, geometry.cards)).toBe(true)
 })

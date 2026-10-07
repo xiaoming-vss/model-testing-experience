@@ -1,9 +1,17 @@
-.test-order-graph-modal .ai-relations-page-bar {
-  padding: 8px 52px 8px 12px;
+.test-order-graph-viewer .ai-relations-page-bar {
+  padding: 10px 16px;
   gap: 8px;
 }
 
-.test-order-graph-modal .ant-modal-close {
-  top: 6px;
-  inset-inline-end: 8px;
+/* 独立图谱页面复用既有工具条、画布和运行状态。 */
+.test-order-graph-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 运行中的占位：图标与提示上下排列（ai-relations-page-loading 默认是横排）。 */
+.test-order-graph-loading {
+  flex-direction: column;
+  gap: 10px;
 }

@@ -1,3 +1,6 @@
+import { listTotal } from '@/shared/api/request'
+import { getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
+import { useTaskRunHistorySync } from '@/features/ai-testing/hooks/useTaskRunHistorySync'
 import { useDeleteTaskRun, useStartTaskRun } from '@/features/ai-testing/hooks/useTaskRunActions'
 import { usePersonalConnectionChoice } from '@/features/base-services/components/usePersonalConnectionChoice'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
@@ -7,6 +10,7 @@ import { Alert, Button, Card, Empty, Spin, Tag } from 'antd'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { goBackOrFallback } from '@/shared/utils/backNavigation'
 import '@/shared/styles/surface-tokens.css'
 import '@/features/ai-testing/styles/index.css'
 import '@/features/ai-testing/styles/task-detail-v2.css'
@@ -32,6 +36,9 @@ function isRunFailed(status?: string) {
 
 export function CodeRiskTaskDetailPage() {
   const { taskId = '' } = useParams()
+  const [runPage, setRunPage] = useState(1)
+  const [runPageSize, setRunPageSize] = useState(20)
+  useEffect(() => { setRunPage(1) }, [taskId])
   const navigate = useNavigate()
   const personalGitlab = usePersonalConnectionChoice('gitlab')
   const [llmSelectOpen, setLlmSelectOpen] = useState(false)
@@ -57,12 +64,28 @@ export function CodeRiskTaskDetailPage() {
   })
 
   const runsQuery = useQuery({
-    queryKey: ['codeRiskTaskRuns', taskId],
-    queryFn: () => api.getCodeRiskTaskRuns(taskId),
+    queryKey: ['codeRiskTaskRuns', taskId, runPage, runPageSize],
+    queryFn: () => api.getCodeRiskTaskRuns(taskId, { page: runPage, pageSize: runPageSize }),
     enabled: Boolean(taskId),
-    refetchInterval: (query) =>
-      query.state.data && listItems(query.state.data).some((run) => isApiCaseGenerateTaskRunInProgress(run.status)) ? 5000 : false,
+    refetchInterval: expandedSection === 'runHistory' ? RUN_HISTORY_POLL_INTERVAL : false,
   })
+  const runTotal = listTotal(runsQuery.data)
+  useEffect(() => {
+    if (runsQuery.data && !runsQuery.isFetching && !runsQuery.error) {
+      const lastPage = Math.max(1, Math.ceil(runTotal / runPageSize))
+      if (runPage > lastPage) setRunPage(lastPage)
+    }
+  }, [runPage, runPageSize, runTotal, runsQuery.data, runsQuery.isFetching, runsQuery.error])
+  const runPagination = {
+    current: runPage, pageSize: runPageSize, total: runTotal,
+    loading: runsQuery.isFetching || Boolean(runsQuery.error),
+    onChange: (page: number, size: number) => { setRunPage(size === runPageSize ? page : 1); setRunPageSize(size) },
+  }
+  const refetchRunHistory = runsQuery.refetch
+  useEffect(() => {
+    if (expandedSection === 'runHistory') void refetchRunHistory({ cancelRefetch: false })
+  }, [expandedSection, refetchRunHistory])
+
   const runRecords = useMemo(
     () => [...listItems(runsQuery.data)].sort((left, right) => getRunSortTime(right) - getRunSortTime(left)),
     [runsQuery.data],
@@ -72,12 +95,16 @@ export function CodeRiskTaskDetailPage() {
     queryKey: ['codeRiskRun', selectedRunId],
     queryFn: () => api.getCodeRiskRun(selectedRunId),
     enabled: Boolean(selectedRunId),
-    refetchInterval: (query) => (query.state.data && isApiCaseGenerateTaskRunInProgress(query.state.data.status) ? 5000 : false),
+    refetchInterval: (query) => expandedSection !== 'instruction' ? getRunPollingInterval(query.state.data?.status) : false,
+  })
+  useTaskRunHistorySync({
+    historyKey: 'codeRiskTaskRuns', detailKey: 'codeRiskRun', taskId, selectedRunId,
+    history: runsQuery.data, detail: selectedRunQuery.data,
   })
   const selectedRun = selectedRunQuery.data
   const resolveRunRecord = (record: CodeRiskTaskRun) =>
     record.runId === selectedRunId && selectedRun ? selectedRun : record
-  const runStatusMeta = getApiCaseGenerateTaskRunStatusMeta(selectedRun?.status)
+  const runStatusMeta = getApiCaseGenerateTaskRunStatusMeta(runsQuery.data?.latestRun?.status ?? runRecords[0]?.status)
   const selectedRunFailed = isRunFailed(selectedRun?.status)
 
   useEffect(() => {
@@ -92,6 +119,7 @@ export function CodeRiskTaskDetailPage() {
     projectId: task?.projectId,
     startRun: async (connectionId: string) => api.runCodeRiskTask(taskId, { llmConnectionId: connectionId, triggerType: 'manual', gitlabConnectionIds: await personalGitlab.forRequirement(task!.projectId!, task!.requirementId!) }),
     onStarted: (run) => {
+      setRunPage(1)
       setLlmSelectOpen(false)
       if (run.runId) setSelectedRunRecordId(run.runId)
     },
@@ -123,7 +151,7 @@ export function CodeRiskTaskDetailPage() {
           <div className="ai-task-detail-layout">
             <TaskDetailToolbar
               back={(
-                <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/ai-testing/tasks')}>
+                <Button icon={<ArrowLeftOutlined />} onClick={() => goBackOrFallback(navigate, '/ai-testing/tasks')}>
                   返回任务列表
                 </Button>
               )}
@@ -141,7 +169,7 @@ export function CodeRiskTaskDetailPage() {
                   type="primary"
                   className="action-btn-create"
                   onClick={() => setLlmSelectOpen(true)}
-                  disabled={runRecords.length > 0 && isApiCaseGenerateTaskRunInProgress(runRecords[0].status)}
+                  disabled={runRecords.length > 0 && isApiCaseGenerateTaskRunInProgress(runsQuery.data?.latestRun?.status ?? runRecords[0]?.status)}
                 >
                   发起运行
                 </ProjectActionButton>
@@ -172,7 +200,7 @@ export function CodeRiskTaskDetailPage() {
               size="small"
             >
               <div className="ai-task-run-history-toolbar">
-                <span className="ai-task-run-history-auto-refresh">每 5 秒自动刷新</span>
+                <span className="ai-task-run-history-auto-refresh">历史每 30 秒刷新</span>
               </div>
               <div className="ai-task-detail-content-scroll ai-task-run-history-scroll">
                 {runsQuery.isLoading ? <Empty description="运行历史加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} /> : null}
@@ -181,6 +209,7 @@ export function CodeRiskTaskDetailPage() {
                 ) : null}
                 {runRecords.length > 0 ? (
                   <RunHistoryTable<CodeRiskTaskRun>
+                        pagination={runPagination}
                     rows={runRecords}
                     getRunId={(record) => record.runId}
                     selectedRunId={selectedRunId}
@@ -188,7 +217,7 @@ export function CodeRiskTaskDetailPage() {
                     onSelect={(runId) => setSelectedRunRecordId(runId ?? null)}
                     renderPrimary={(row, index) => (
                       <span className="ai-task-run-table-id">
-                        <span className="ai-task-run-table-index">#{index + 1}</span>
+                        <span className="ai-task-run-table-index">#{(runPage - 1) * runPageSize + index + 1}</span>
                         <span className="ai-task-run-table-time">{formatTime(pickCreatedAt(row) || row.createdAt)}</span>
                       </span>
                     )}

@@ -1,11 +1,18 @@
 import { request } from '@/shared/api/request'
 import type { LoginResponse, User } from '../types'
+import { useAuthStore } from '../store/auth.store'
+
+export function getAuthenticatedUserId() {
+  const user = useAuthStore.getState().user
+  return user?.userId ?? user?.user_id ?? null
+}
 
 export const authApi = {
   register: (body: { name: string; password: string; email?: string }) =>
     request<Record<string, never>>('/v1/register', { method: 'POST', body: JSON.stringify(body) }),
   login: (body: { name: string; password: string }) =>
     request<LoginResponse>('/v1/login', { method: 'POST', body: JSON.stringify(body) }),
+  logout: () => request<Record<string, never>>('/v1/logout', { method: 'POST' }),
   getUser: () => request<User>('/v1/user'),
   updateUser: (body: Partial<Pick<User, 'name' | 'email'>>) =>
     request<Record<string, never>>('/v1/user', { method: 'PUT', body: JSON.stringify(body) }),

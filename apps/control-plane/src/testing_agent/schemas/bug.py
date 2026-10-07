@@ -61,11 +61,14 @@ class BugUpdateRequest(BaseModel):
 
 
 class BugTransitionRequest(BaseModel):
-    """状态流转：action 决定必填项（拒绝原因/修复说明/回归结果/重开原因）。"""
+    """确认、解决、关闭、激活；旧 rejectReason 仅用于兼容旧动作。"""
 
     action: str
     content: str = Field(default="")
     reject_reason: str = Field(default="")
+    resolution: str = Field(default="", max_length=20)
+    resolved_build: str = Field(default="", max_length=255)
+    duplicate_bug: int = Field(default=0, ge=0, strict=True)
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
@@ -97,13 +100,36 @@ class BugAttachmentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True, alias_generator=to_camel)
 
 
+class BugMemberOption(BaseModel):
+    user_id: str
+    name: str
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
+
+
+class BugSprintOption(BaseModel):
+    sprint_id: str
+    name: str
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
+
+
+class BugOptionsResponse(BaseModel):
+    members: list[BugMemberOption]
+    sprints: list[BugSprintOption]
+
+
 class BugResponse(BaseModel):
+    id: int
     bug_id: str = Field()
     bug_no: int = Field(default=0)
     project_id: str = Field()
     title: str
     description_html: str = Field(default="")
     status: str = Field(default="")
+    confirmed: bool = Field(default=False)
+    resolution: str = Field(default="")
+    resolved_build: str = Field(default="")
+    duplicate_bug: int = Field(default=0)
+    activated_count: int = Field(default=0)
     severity: str = Field(default="")
     priority: str = Field(default="")
     reporter_user_id: str = Field(default="")
@@ -143,6 +169,12 @@ class BugActivityDetail(BaseModel):
 
     reject_reason: str = Field(default="")
     reject_reason_label: str = Field(default="")
+    from_confirmed: bool | None = None
+    to_confirmed: bool | None = None
+    from_resolution: str = ""
+    to_resolution: str = ""
+    resolved_build: str = ""
+    duplicate_bug: int = 0
     from_user_id: str = Field(default="")
     to_user_id: str = Field(default="")
     changes: list[BugFieldChange] = Field(default_factory=list)

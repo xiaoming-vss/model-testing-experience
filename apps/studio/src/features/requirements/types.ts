@@ -1,6 +1,9 @@
+import type { ZentaoBinding } from '@/features/base-services/types'
+
 export type RequirementDocumentType = 'text' | 'word' | 'docx'
 
 export type Requirement = {
+  zentaoBinding?: ZentaoBinding | null
   requirementId?: string
   requirement_id?: string
   sprintId?: string
@@ -17,6 +20,8 @@ export type Requirement = {
   updatedAt?: string
   updated_at?: string
 }
+
+export type RequirementListItem = Requirement & { sprintName: string }
 
 export type RequirementCreatePayload = {
   name: string

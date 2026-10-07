@@ -21,7 +21,7 @@ PROJECTS = {
     "control-plane": "apps/control-plane",
     "ai-worker": "apps/ai-worker",
     "api-ui-worker": "apps/api-ui-worker",
-    "zentao": "apps/connector-zentao",
+    "integration-worker": "apps/integration-worker",
     "studio": "apps/studio",
 }
 
@@ -69,7 +69,7 @@ def read(path):
         return tomllib.load(stream)
 
 
-def write(path, content, *, container=False):
+def write(path, content, *, container=False, permissions=None):
     path.parent.mkdir(parents=True, exist_ok=True)
     # Atomic replacement prevents readers seeing a partly generated file.
     with tempfile.NamedTemporaryFile(
@@ -83,7 +83,7 @@ def write(path, content, *, container=False):
         temp = Path(stream.name)
         stream.write(content)
     try:
-        temp.chmod(0o644 if container else 0o600)
+        temp.chmod(permissions if permissions is not None else (0o644 if container else 0o600))
         temp.replace(path)
     finally:
         temp.unlink(missing_ok=True)
@@ -102,6 +102,33 @@ def init(root=ROOT):
                     section[key] = secrets.token_hex(32)
     write(path, toml_text(data))
     print("Created config/platform.toml with fresh local credentials.")
+
+
+def upgrade_config(root=ROOT):
+    """Add integration execution settings; preserve existing values and file mode."""
+    path = root / "config/platform.toml"
+    if not path.exists():
+        init(root)
+        return
+    data = read(path)
+    original = copy.deepcopy(data)
+    shared = data.setdefault("shared", {})
+    for key in ("integration_worker_token", "integration_runtime_generation"):
+        if key not in shared or shared[key] == "GENERATE":
+            value = secrets.token_hex(32)
+            while value in shared.values():
+                value = secrets.token_hex(32)
+            shared[key] = value
+    defaults = read(root / "config/platform.example.toml")["control_plane"]["integration_execution"]
+    settings = data.setdefault("control_plane", {}).setdefault("integration_execution", {})
+    for key, value in defaults.items():
+        settings.setdefault(key, copy.deepcopy(value))
+    if data == original:
+        print("Unified configuration already has integration execution settings.")
+        return
+    validate(data)
+    write(path, toml_text(data), permissions=path.stat().st_mode & 0o777)
+    print("Added missing integration execution settings; existing credentials preserved.")
 
 
 def external_database_url(data):
@@ -133,12 +160,29 @@ def external_database_url(data):
     return raw
 
 
+def mysql_observability(data):
+    database = data["database"]
+    enabled = database.get("slow_query_log", True)
+    threshold = database.get("long_query_time", 0.5)
+    if type(enabled) is not bool:
+        raise ValueError("database.slow_query_log must be a boolean")
+    if type(threshold) not in (int, float) or not 0.01 <= threshold <= 3600:
+        raise ValueError("database.long_query_time must be between 0.01 and 3600 seconds")
+    return {"MYSQL_SLOW_QUERY_LOG": int(enabled), "MYSQL_LONG_QUERY_TIME": threshold}
+
+
 def validate(data):
     shared, db = data["shared"], data["database"]
     external = bool(external_database_url(data))
+    mysql_observability(data)
     for key in ("worker_token", "jwt_key", "integration_key"):
         if not shared[key] or shared[key] == "GENERATE":
             raise ValueError(f"Set shared.{key}, or run init first")
+    for key in ("integration_worker_token", "integration_runtime_generation"):
+        if not shared.get(key) or shared[key] == "GENERATE":
+            raise ValueError(f"Set shared.{key}, or run upgrade-config for an existing deployment")
+    if shared["integration_worker_token"] == shared["worker_token"]:
+        raise ValueError("The integration Worker token must differ from shared.worker_token")
     if not external:
         for key in ("password", "root_password"):
             if not db.get(key) or db[key] == "GENERATE":
@@ -155,7 +199,7 @@ def validate(data):
             raise ValueError(
                 f"shared.{key} must be an IPv4 address or hostname without a port"
             )
-    port_keys = ["studio_port", "control_plane_port", "zentao_port"]
+    port_keys = ["studio_port", "control_plane_port"]
     if not external:
         port_keys.append("mysql_port")
     ports = [shared[k] for k in port_keys]
@@ -175,7 +219,6 @@ def configurations(data, mode, root=ROOT):
         if docker
         else f"http://{host}:{s['control_plane_port']}"
     )
-    z_url = "http://zentao:8010" if docker else f"http://{host}:{s['zentao_port']}"
     dsn = external_database_url(data)
     if not dsn:
         db_host = "mysql" if docker else host
@@ -185,7 +228,7 @@ def configurations(data, mode, root=ROOT):
         "control-plane": ("config/local.example.toml", "control_plane"),
         "ai-worker": ("config/worker.example.toml", "ai_worker"),
         "api-ui-worker": ("config.example.toml", "api_ui_worker"),
-        "zentao": ("config/zentao.example.toml", "zentao"),
+        "integration-worker": ("config/local.example.toml", "integration_worker"),
     }
     result = {
         name: merge(read(root / PROJECTS[name] / file), data.get(section, {}))
@@ -203,9 +246,10 @@ def configurations(data, mode, root=ROOT):
                 "jwt": {"key": s["jwt_key"]},
                 "integration": {"key": s["integration_key"]},
                 "worker": {"key": s["worker_token"]},
+                "integration_worker": {"key": s["integration_worker_token"]},
             },
+            "integration_execution": {"runtime_generation": s["integration_runtime_generation"]},
             "data": {"db": {"user": {"dsn": dsn}}},
-            "integrations": {"zentao_service": {"base_url": z_url}},
         },
     )
     result["ai-worker"] = merge(
@@ -225,16 +269,11 @@ def configurations(data, mode, root=ROOT):
             },
         },
     )
-    result["zentao"] = merge(
-        result["zentao"],
-        {
-            "service": {
-                "host": "0.0.0.0" if docker else host,
-                "port": 8010 if docker else s["zentao_port"],
-                "app_env": "production" if docker else "local",
-            }
-        },
-    )
+    result["integration-worker"] = merge(result["integration-worker"], {
+        "control_plane": {"base_url": cp_url, "worker_token": s["integration_worker_token"]},
+        "worker": {"health_file": "/app/runtime/health.json" if docker else "runtime/health.json",
+                   "evidence_file": "/app/runtime/evidence.json" if docker else "runtime/evidence.json"},
+    })
     return result
 
 
@@ -256,7 +295,7 @@ def configure(mode, root=ROOT):
         "control-plane": "config/local.toml",
         "ai-worker": "config/worker.toml",
         "api-ui-worker": "config.toml",
-        "zentao": "config/zentao.toml",
+        "integration-worker": "config/local.toml",
     }
     for name, config in configs.items():
         path = (
@@ -273,10 +312,10 @@ def configure(mode, root=ROOT):
                 "bind_host",
                 "studio_port",
                 "control_plane_port",
-                "zentao_port",
             )
         }
         env["MYSQL_PORT"] = s.get("mysql_port", 13306)
+        env.update(mysql_observability(data))
         if external_database_url(data):
             # Compose interpolates the base file before !reset removes mysql.
             # These placeholders are never used by a running service.
@@ -333,6 +372,7 @@ def main():
     sub.add_parser(
         "init", help="Create unified local config without replacing an existing one"
     )
+    sub.add_parser("upgrade-config", help="Add missing integration settings without rotating secrets")
     config = sub.add_parser("configure", help="Generate service configuration")
     config.add_argument("--mode", choices=["local", "docker"], default="docker")
     run = sub.add_parser(
@@ -354,6 +394,9 @@ def main():
     if args.action == "init":
         init()
         return
+    if args.action == "upgrade-config":
+        upgrade_config()
+        return
     if args.action == "configure":
         configure(args.mode)
         return
@@ -366,7 +409,7 @@ def main():
         "control-plane": ["uv", "run", "--locked", "mtx-control-plane"],
         "ai-worker": ["uv", "run", "--locked", "mtx-ai-worker"],
         "api-ui-worker": ["uv", "run", "--locked", "mtx-api-ui-worker"],
-        "zentao": ["uv", "run", "--locked", "python", "main.py"],
+        "integration-worker": ["uv", "run", "--locked", "mtx-integration-worker"],
         "studio": ["npm", "run", "dev"],
     }
     command = (
@@ -375,7 +418,7 @@ def main():
         else commands[name]
     )
     env = os.environ.copy()
-    if name == "control-plane":
+    if name in {"control-plane", "integration-worker"}:
         env["APP_CONF"] = str(ROOT / PROJECTS[name] / "config/local.toml")
     raise SystemExit(subprocess.call(command, cwd=ROOT / PROJECTS[name], env=env))
 

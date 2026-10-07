@@ -1,6 +1,7 @@
 # Local settings and generated deployment files
 /config/platform.toml
 /.runtime/
+/deploy/zentao-mcp/config/
 **/.env
 **/.env.*
 !**/.env.example
@@ -20,3 +21,5 @@
 **/.trellis/
 **/.idea/
 **/.zcode/
+# Standalone local UI previews; preserve their running development servers.
+/apps/studio/.codex-*-preview/

@@ -1,20 +1,28 @@
+import { RequirementMaterialComparison } from '../components/RequirementMaterialComparison'
+import { RequirementUnderstandingComparison } from '../components/RequirementUnderstandingComparison'
+import { listTotal } from '@/shared/api/request'
+import { getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
+import { useTaskRunHistorySync } from '@/features/ai-testing/hooks/useTaskRunHistorySync'
 import { useDeleteTaskRun, useStartTaskRun } from '@/features/ai-testing/hooks/useTaskRunActions'
 import { formatStructuredContent } from '@/shared/utils/value'
 import { RevisionDivider, RevisionSidePanel } from '../components/RevisionSidePanel'
 import { TaskDetailInstructionEditor, TaskDetailNavItem, TaskDetailNavPanel, TaskDetailToolbar } from '../components/TaskDetailShell'
 import { RunArtifacts, RunPipelineStatus } from '../components/RunPipelineStatus'
-import { RunHistoryTable, RunRowActions, type RunMenuAction } from '../components/RunHistoryTable'
+import { RunHistoryTable, RunRowActions } from '../components/RunHistoryTable'
 import { confirmDeleteRun, isRunDeletable } from '../utils/runDeletion'
+import { buildRevisionTemplate, getRevisionQuestions } from '../utils/functionalRevision'
+import { parseRequirementArtifact } from '@/domain/requirements/requirementArtifact'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { usePersonalLlmChoice } from '../hooks/usePersonalLlmChoice'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ArrowLeftOutlined, CodeOutlined, FileTextOutlined, HistoryOutlined } from '@ant-design/icons'
-import { Alert, Button, Empty, Form, Modal, Popconfirm, Spin, Tag } from 'antd'
+import { Alert, Button, Empty, Form, Modal, Popconfirm, Spin, Tag, Tabs } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { goBackOrFallback } from '@/shared/utils/backNavigation'
 import {
   RequirementAnalysisRunModal,
   type RequirementAnalysisRunFormValues,
@@ -49,8 +57,7 @@ type RequirementPoolItem = Requirement & {
 }
 
 const runResultSectionDefinitions = [
-  { key: 'firstStepOutput', label: '增强文本' },
-  { key: 'secondStepOutput', label: '需求流程稿' },
+  { key: 'firstStepOutput', label: '材料提取结果' },
   { key: 'resultYaml', label: '需求理解记录' },
   { key: 'errorMessage', label: '错误信息' },
 ] as const
@@ -61,18 +68,19 @@ type RunResultModalState = {
   key: RunResultSectionKey
   label: string
   mode: 'view' | 'review'
+  runId?: string
 } | null
 
 const requirementAnalysisStageMetaMap: Record<string, { label: string; color: string }> = {
-  extracting_text: { label: '提取需求文档', color: 'cyan' },
-  writing_requirement: { label: '编写需求理解', color: 'blue' },
-  feature_understanding: { label: '功能理解生成', color: 'purple' },
-  completed: { label: '已完成', color: 'success' },
+  extracting_text: { label: '材料提取与整理', color: 'cyan' },
+  feature_understanding: { label: '需求理解与确认', color: 'purple' },
+  completed: { label: '需求理解与确认', color: 'purple' },
 }
 
-const requirementAnalysisStageFieldMap: Record<string, { key: 'firstStepOutput' | 'secondStepOutput'; label: string }> = {
-  extracting_text: { key: 'firstStepOutput', label: '增强文本 firstStepOutput' },
-  writing_requirement: { key: 'secondStepOutput', label: '需求流程稿 secondStepOutput' },
+const requirementAnalysisFinalStages = ['feature_understanding', 'completed']
+
+const requirementAnalysisStageFieldMap: Record<string, { key: 'firstStepOutput'; label: string }> = {
+  extracting_text: { key: 'firstStepOutput', label: '材料提取结果' },
 }
 
 function getRunSortTime(run: RequirementAnalysisTaskRun) {
@@ -113,6 +121,9 @@ function normalizeInstruction(instruction?: string) {
 
 export function RequirementAnalysisTaskDetailPage() {
   const { taskId = '' } = useParams()
+  const [runPage, setRunPage] = useState(1)
+  const [runPageSize, setRunPageSize] = useState(20)
+  useEffect(() => { setRunPage(1) }, [taskId])
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -128,6 +139,8 @@ export function RequirementAnalysisTaskDetailPage() {
   const [reviseModalOpen, setReviseModalOpen] = useState(false)
   const [revisionFooter, setRevisionFooter] = useState<HTMLDivElement | null>(null)
   const [revisionInstruction, setRevisionInstruction] = useState('')
+  const [revisionTemplate, setRevisionTemplate] = useState('')
+  const [revisionDraftKey, setRevisionDraftKey] = useState('')
   const [instructionDraft, setInstructionDraft] = useState('')
   const [instructionDirty, setInstructionDirty] = useState(false)
   const [form] = Form.useForm<RequirementAnalysisTaskFormValues>()
@@ -149,11 +162,28 @@ export function RequirementAnalysisTaskDetailPage() {
   })
 
   const runsQuery = useQuery({
-    queryKey: ['requirementAnalysisTaskRuns', taskId],
-    queryFn: () => api.getRequirementAnalysisTaskRuns(taskId),
+    queryKey: ['requirementAnalysisTaskRuns', taskId, runPage, runPageSize],
+    queryFn: () => api.getRequirementAnalysisTaskRuns(taskId, { page: runPage, pageSize: runPageSize }),
     enabled: Boolean(taskId),
-    refetchInterval: activeSection === 'runHistory' ? 5000 : false,
+    refetchInterval: activeSection === 'runHistory' ? RUN_HISTORY_POLL_INTERVAL : false,
   })
+  const runTotal = listTotal(runsQuery.data)
+  useEffect(() => {
+    if (runsQuery.data && !runsQuery.isFetching && !runsQuery.error) {
+      const lastPage = Math.max(1, Math.ceil(runTotal / runPageSize))
+      if (runPage > lastPage) setRunPage(lastPage)
+    }
+  }, [runPage, runPageSize, runTotal, runsQuery.data, runsQuery.isFetching, runsQuery.error])
+  const runPagination = {
+    current: runPage, pageSize: runPageSize, total: runTotal,
+    loading: runsQuery.isFetching || Boolean(runsQuery.error),
+    onChange: (page: number, size: number) => { setRunPage(size === runPageSize ? page : 1); setRunPageSize(size) },
+  }
+  const refetchRunHistory = runsQuery.refetch
+  useEffect(() => {
+    if (activeSection === 'runHistory') void refetchRunHistory({ cancelRefetch: false })
+  }, [activeSection, refetchRunHistory])
+
 
   const sprintsQuery = useQuery({
     queryKey: ['sprints', 'requirementAnalysisTaskDetail', task?.projectId],
@@ -212,13 +242,17 @@ export function RequirementAnalysisTaskDetailPage() {
     () => [...listItems(runsQuery.data)].sort((left, right) => getRunSortTime(right) - getRunSortTime(left)),
     [runsQuery.data],
   )
-  const latestRunRecord = runRecords[0]
+  const latestRunRecord = runsQuery.data?.latestRun ?? runRecords[0]
   const selectedRunId = selectedRunRecordId ?? runRecords[0]?.runId ?? ''
   const selectedRunQuery = useQuery({
     queryKey: ['requirementAnalysisRun', selectedRunId],
     queryFn: () => api.getRequirementAnalysisRun(selectedRunId),
     enabled: Boolean(selectedRunId),
-    refetchInterval: activeSection === 'runHistory' && selectedRunId ? 5000 : false,
+    refetchInterval: (query) => activeSection === 'runHistory' ? getRunPollingInterval(query.state.data?.status) : false,
+  })
+  useTaskRunHistorySync({
+    historyKey: 'requirementAnalysisTaskRuns', detailKey: 'requirementAnalysisRun', taskId, selectedRunId,
+    history: runsQuery.data, detail: selectedRunQuery.data,
   })
   const selectedRun = selectedRunQuery.data
   const resolveRunRecord = (record: RequirementAnalysisTaskRun) =>
@@ -232,9 +266,12 @@ export function RequirementAnalysisTaskDetailPage() {
   const selectedStage = selectedRun?.currentStage
   const selectedStageField = getRequirementAnalysisStageField(selectedStage)
   const selectedStageMeta = getRequirementAnalysisStageMeta(selectedStage)
-  const selectedStageStatusMeta = getApiCaseGenerateTaskRunStatusMeta(selectedRun?.stageStatus)
+  const selectedStageStatusMeta = selectedRun?.stageStatus === 'completed'
+    ? { label: selectedRun.reviewStatus === 'approved' ? '已审核' : '待审核', color: selectedRun.reviewStatus === 'approved' ? 'success' : 'warning' }
+    : getApiCaseGenerateTaskRunStatusMeta(selectedRun?.stageStatus)
   const selectedRunStatus = String(selectedRun?.status ?? '').toLowerCase()
   const selectedRunReviewStatus = String(selectedRun?.reviewStatus ?? '').toLowerCase()
+  useEffect(() => { if (selectedRunReviewStatus === 'rejected') setReviseModalOpen(false) }, [selectedRunReviewStatus])
   const selectedStageOutputContent = selectedStageField
     ? formatStructuredContent(selectedRunConfigJson[selectedStageField.key] ?? selectedRun?.[selectedStageField.key])
     : ''
@@ -242,6 +279,8 @@ export function RequirementAnalysisTaskDetailPage() {
     selectedRun?.checkpointEnabled &&
       String(selectedRun?.status ?? '').toLowerCase() === 'waiting_review' &&
       selectedRun?.stageStatus === 'waiting_review' &&
+      selectedRunReviewStatus === 'pending' &&
+      selectedRun?.importStatus !== 'imported' &&
       selectedStageField,
   )
   const showStageReviewInRunResultModal = Boolean(
@@ -252,18 +291,19 @@ export function RequirementAnalysisTaskDetailPage() {
     selectedRun?.runId &&
       runResultModal?.key === 'resultYaml' &&
       ['success', 'waiting_review'].includes(selectedRunStatus) &&
-      (!selectedStage || selectedStage === 'feature_understanding' || selectedStage === 'completed') &&
-      selectedRunReviewStatus !== 'approved',
+      requirementAnalysisFinalStages.includes(selectedStage ?? '') &&
+      selectedRunReviewStatus === 'pending' &&
+      selectedRun?.importStatus !== 'imported',
   )
   const finalResultApproved = Boolean(
     selectedRun?.runId &&
       runResultModal?.key === 'resultYaml' &&
       selectedRunStatus === 'success' &&
-      (!selectedStage || selectedStage === 'feature_understanding' || selectedStage === 'completed') &&
+      requirementAnalysisFinalStages.includes(selectedStage ?? '') &&
       selectedRunReviewStatus === 'approved',
   )
   const editableRunResultModal = showStageReviewInRunResultModal || finalResultEditable || finalResultApproved
-  const editableRunResultStage = finalResultEditable ? 'feature_understanding' : selectedStage
+  const editableRunResultStage = finalResultEditable || finalResultApproved ? 'feature_understanding' : selectedStage
   const editableRunResultContent = finalResultEditable || finalResultApproved
     ? formatStructuredContent(selectedRun?.resultYaml)
     : selectedStageOutputContent
@@ -275,7 +315,7 @@ export function RequirementAnalysisTaskDetailPage() {
       .map((section) => {
         const directValue = selectedRun[section.key]
         const configValue =
-          section.key === 'firstStepOutput' || section.key === 'secondStepOutput'
+          section.key === 'firstStepOutput'
             ? selectedRunConfigJson[section.key]
             : undefined
         return { ...section, value: formatStructuredContent(directValue || configValue) }
@@ -293,7 +333,9 @@ export function RequirementAnalysisTaskDetailPage() {
   const canImportSelectedRun =
     Boolean(activeSelectedRun?.runId) &&
     selectedRunTaskType === 'requirement_analysis' &&
-    String(activeSelectedRun?.status ?? '').toLowerCase() === 'success'
+    String(activeSelectedRun?.status ?? '').toLowerCase() === 'success' &&
+    String(activeSelectedRun?.reviewStatus ?? '').toLowerCase() === 'approved' &&
+    activeSelectedRun?.importStatus !== 'imported'
   const canImportRunResultModal = canImportSelectedRun && runResultModal?.key === 'resultYaml'
 
   const sprintName = task
@@ -310,8 +352,9 @@ export function RequirementAnalysisTaskDetailPage() {
     if (!task) return '暂无来源内容'
     const sizeLabel = taskSourceContent ? `${taskSourceContent.length} 字符` : '0 字符'
     const sourceTypeLabel = task.sourceType || 'text'
-    return `${sourceTypeLabel} · ${sizeLabel}${canPreviewBoundRequirement ? ' · 已绑定需求文档' : ''}`
-  }, [canPreviewBoundRequirement, task, taskSourceContent])
+    const sourceState = canPreviewBoundRequirement ? ' · 已绑定需求文档' : boundRequirement ? ' · 原文件未上传，请重新上传' : ''
+    return `${sourceTypeLabel} · ${sizeLabel}${sourceState}`
+  }, [boundRequirement, canPreviewBoundRequirement, task, taskSourceContent])
 
   const instructionSummary = useMemo(() => {
     const instruction = normalizeInstruction(task?.instruction)
@@ -320,21 +363,22 @@ export function RequirementAnalysisTaskDetailPage() {
   }, [task])
 
   const runStats = useMemo(() => {
-    const successCount = runRecords.filter((record) => String(record.status ?? '').toLowerCase() === 'success').length
-    const failedCount = runRecords.filter((record) =>
-      ['failed', 'error'].includes(String(record.status ?? '').toLowerCase()),
+    const counts = runsQuery.data?.statusCounts
+    const countOf = (statuses: string[]) => counts
+      ? statuses.reduce((total, status) => total + (counts[status] ?? 0), 0)
+      : runRecords.filter((record) => statuses.includes(String(record.status ?? '').toLowerCase())).length
+    const waitingCount = runsQuery.data?.reviewPendingCount ?? runRecords.filter(record =>
+      record.reviewStatus === 'pending' && record.importStatus !== 'imported' && ['waiting_review', 'success'].includes(record.status ?? ''),
     ).length
-    const waitingCount = runRecords.filter((record) => String(record.status ?? '').toLowerCase() === 'waiting_review').length
-    return { successCount, failedCount, waitingCount }
-  }, [runRecords])
+    return { successCount: countOf(['success']), failedCount: countOf(['failed', 'error']), waitingCount }
+  }, [runRecords, runsQuery.data?.reviewPendingCount, runsQuery.data?.statusCounts])
 
   const runHistorySummary = useMemo(() => {
-    if (runRecords.length === 0) return '暂无运行记录'
-    const latest = runRecords[0]
-    const statusMeta = getApiCaseGenerateTaskRunStatusMeta(latest.status)
+    if (!runTotal) return '暂无运行记录'
+    const statusMeta = getApiCaseGenerateTaskRunStatusMeta(latestRunRecord?.status)
     const suffix = runStats.waitingCount > 0 ? ` · ${runStats.waitingCount} 条待审核` : ''
-    return `${runRecords.length} 条运行 · 最近：${statusMeta.label}${suffix}`
-  }, [runRecords, runStats.waitingCount])
+    return `${runTotal} 条运行 · 最近：${statusMeta.label}${suffix}`
+  }, [latestRunRecord?.status, runTotal, runStats.waitingCount])
 
   useEffect(() => {
     if (!task) return
@@ -362,6 +406,7 @@ export function RequirementAnalysisTaskDetailPage() {
   }, [task?.instruction, task?.taskId])
 
   useEffect(() => {
+    if (!runsQuery.data || runsQuery.isFetching) return
     if (runRecords.length === 0) {
       setSelectedRunRecordId(null)
       return
@@ -369,12 +414,15 @@ export function RequirementAnalysisTaskDetailPage() {
     setSelectedRunRecordId((current) =>
       current && runRecords.some((record) => record.runId === current) ? current : (runRecords[0].runId ?? null),
     )
-  }, [runRecords])
+  }, [runRecords, runsQuery.data, runsQuery.isFetching])
 
   useEffect(() => {
-    setRunResultModal(null)
+    // Opening a row's artifact also selects that run in the same render.
+    setRunResultModal(current => current?.runId === selectedRunId ? current : null)
     setReviseModalOpen(false)
     setRevisionInstruction('')
+    setRevisionTemplate('')
+    setRevisionDraftKey('')
   }, [selectedRunId])
 
   useEffect(() => {
@@ -428,6 +476,7 @@ export function RequirementAnalysisTaskDetailPage() {
         configJson: '{}',
       }),
     onStarted: (run) => {
+      setRunPage(1)
       setRunModalOpen(false)
       setActiveSection('runHistory')
       setSelectedRunRecordId(run.runId ?? null)
@@ -480,12 +529,12 @@ export function RequirementAnalysisTaskDetailPage() {
     }) => api.reviewRequirementAnalysisRunStage(payload.runId, {
       ...payload.body,
       // 最终结果只是确认审核，不会继续派发下一阶段，因此不需要选择模型。
-      llmConnectionId: ['feature_understanding', 'completed'].includes(payload.body.stage) || payload.body.action === 'reject'
+      llmConnectionId: requirementAnalysisFinalStages.includes(payload.body.stage) || payload.body.action === 'reject'
         ? undefined
         : payload.body.action === 'approve' ? await personalLlm.choose() : undefined,
     }),
     onSuccess: (updatedRun, payload) => {
-      message.success(payload.body.action === 'reject' ? '最终结果审核不通过' : ['feature_understanding', 'completed'].includes(payload.body.stage) ? '最终结果审核已通过' : '阶段审核已通过，继续执行')
+      message.success(payload.body.action === 'reject' ? '最终结果审核不通过' : requirementAnalysisFinalStages.includes(payload.body.stage) ? '最终结果审核已通过' : '阶段审核已通过，继续执行')
       setStageReviewAction(null)
       setSelectedRunRecordId(updatedRun.runId ?? payload.runId)
       queryClient.setQueryData(['requirementAnalysisRun', payload.runId], updatedRun)
@@ -522,6 +571,8 @@ export function RequirementAnalysisTaskDetailPage() {
       message.success('已提交 AI 修改，等待当前阶段重新执行')
       setReviseModalOpen(false)
       setRevisionInstruction('')
+      setRevisionTemplate('')
+      setRevisionDraftKey('')
       setRunResultModal(null)
       setStageOutputDirty(false)
       setStageReviewAction(null)
@@ -590,9 +641,11 @@ export function RequirementAnalysisTaskDetailPage() {
 
   function buildStageConfigJson() {
     if (!selectedStageField) return selectedRunConfigJson
+    let output: unknown = stageOutputDraft
+    try { output = JSON.parse(stageOutputDraft) } catch { /* Backend rejects malformed drafts. */ }
     return {
       ...selectedRunConfigJson,
-      [selectedStageField.key]: stageOutputDraft,
+      [selectedStageField.key]: output,
     }
   }
 
@@ -629,7 +682,7 @@ export function RequirementAnalysisTaskDetailPage() {
   }
 
   async function handleApproveStageReview() {
-    const finalReview = finalResultEditable && ['feature_understanding', 'completed'].includes(selectedStage ?? '')
+    const finalReview = finalResultEditable && requirementAnalysisFinalStages.includes(selectedStage ?? '')
     if (!selectedRun?.runId || !selectedStage || (!checkpointStageWaitingReview && !finalReview)) return
     if (!stageOutputDraft.trim()) {
       message.warning('阶段产物不能为空')
@@ -660,7 +713,7 @@ export function RequirementAnalysisTaskDetailPage() {
   }
 
   async function handleRejectFinalReview() {
-    if (!selectedRun?.runId || !finalResultEditable || !['feature_understanding', 'completed'].includes(selectedStage ?? '')) return
+    if (!selectedRun?.runId || !finalResultEditable || !requirementAnalysisFinalStages.includes(selectedStage ?? '')) return
     setStageReviewAction('reject')
     try {
       await reviewStageMutation.mutateAsync({
@@ -678,6 +731,20 @@ export function RequirementAnalysisTaskDetailPage() {
       message.warning('阶段产物不能为空')
       return
     }
+    const key = `${selectedRun.runId}:${editableRunResultStage}`
+    if (key !== revisionDraftKey) {
+      try {
+        const artifact = parseRequirementArtifact(stageOutputDraft) ?? stageOutputDraft
+        const label = editableRunResultStage === 'extracting_text' ? '材料提取结果' : '需求理解记录'
+        const template = buildRevisionTemplate(getRevisionQuestions(artifact), label, '答复')
+        setRevisionTemplate(template)
+        setRevisionInstruction(template)
+        setRevisionDraftKey(key)
+      } catch (error) {
+        message.warning(getErrorMessage(error))
+        return
+      }
+    }
     setReviseModalOpen(true)
   }
 
@@ -687,6 +754,10 @@ export function RequirementAnalysisTaskDetailPage() {
     const trimmedInstruction = revisionInstruction.trim()
     if (!trimmedInstruction) {
       message.warning('请输入 AI 修改要求')
+      return
+    }
+    if (revisionTemplate && trimmedInstruction === revisionTemplate.trim()) {
+      message.warning('请补充已确认的信息，或填写其他优化要求')
       return
     }
     if (!stageOutputDraft.trim()) {
@@ -732,7 +803,7 @@ export function RequirementAnalysisTaskDetailPage() {
           <div className="ai-task-detail-layout">
             <TaskDetailToolbar
               back={(
-                <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/ai-testing?tab=analysis')}>
+                <Button icon={<ArrowLeftOutlined />} onClick={() => goBackOrFallback(navigate, '/ai-testing?tab=analysis')}>
                   返回需求分析
                 </Button>
               )}
@@ -789,7 +860,7 @@ export function RequirementAnalysisTaskDetailPage() {
                   sub={runHistorySummary}
                   icon={<HistoryOutlined />}
                   active={activeSection === 'runHistory'}
-                  badge={runRecords.length}
+                  badge={runTotal}
                   onClick={() => setActiveSection('runHistory')}
                 />
               </TaskDetailNavPanel>
@@ -802,7 +873,7 @@ export function RequirementAnalysisTaskDetailPage() {
                       <span className="ai-task-detail-main-head-sub">Pipeline Executions</span>
                       <div className="ai-task-detail-main-head-extra">
                         <div className="ai-task-run-history-toolbar">
-                          <span className="ai-task-run-history-auto-refresh">每 5 秒自动刷新</span>
+                          <span className="ai-task-run-history-auto-refresh">历史每 30 秒刷新</span>
                           <ActionButton
                             size="small"
                             operation="refresh"
@@ -820,7 +891,7 @@ export function RequirementAnalysisTaskDetailPage() {
                           <div className="ai-task-run-metric accent">
                             <span className="ai-task-run-metric-k">最近状态</span>
                             <span className="ai-task-run-metric-v">
-                              {renderApiCaseGenerateTaskRunStatusTag(runRecords[0].status)}
+                              {renderApiCaseGenerateTaskRunStatusTag(runsQuery.data?.latestRun?.status ?? runRecords[0].status)}
                             </span>
                           </div>
                           <div className="ai-task-run-metric">
@@ -843,6 +914,7 @@ export function RequirementAnalysisTaskDetailPage() {
                         </div>
                       ) : runRecords.length > 0 ? (
                         <RunHistoryTable<RequirementAnalysisTaskRun>
+                        pagination={runPagination}
                           rows={runRecords}
                           getRunId={(record) => record.runId}
                           selectedRunId={selectedRunId}
@@ -855,7 +927,7 @@ export function RequirementAnalysisTaskDetailPage() {
                               <RunPipelineStatus
                                 run={data}
                                 stages={['generate', 'review']}
-                                stageTag={data.currentStage && data.currentStage !== 'completed'
+                                stageTag={data.currentStage
                                   ? <Tag color={recordStageMeta.color}>{recordStageMeta.label}</Tag>
                                   : null}
                               />
@@ -865,9 +937,8 @@ export function RequirementAnalysisTaskDetailPage() {
                             const data = resolveRunRecord(row)
                             const recordStatus = String(data.status ?? '').toLowerCase()
                             const reviewStatus = String(data.reviewStatus ?? '').toLowerCase()
-                            const reachedStageIndex = [
-                              'extracting_text', 'writing_requirement', 'feature_understanding', 'completed',
-                            ].indexOf(data.currentStage ?? '')
+                            const stageKeys = ['extracting_text', 'feature_understanding', 'completed']
+                            const reachedStageIndex = stageKeys.indexOf(data.currentStage ?? '')
                             return (
                               <RunArtifacts
                                 artifacts={runResultSectionDefinitions
@@ -882,7 +953,7 @@ export function RequirementAnalysisTaskDetailPage() {
                                   const section = runResultSectionDefinitions.find((item) => item.key === key)
                                   if (!section) return
                                   setSelectedRunRecordId(row.runId ?? null)
-                                  setRunResultModal({ key: section.key, label: section.label, mode: 'view' })
+                                  setRunResultModal({ runId: row.runId, key: section.key, label: section.label, mode: 'view' })
                                 }}
                               />
                             )
@@ -891,16 +962,17 @@ export function RequirementAnalysisTaskDetailPage() {
                             const data = resolveRunRecord(row)
                             const recordStatus = String(data.status ?? '').toLowerCase()
                             const recordFailed = ['failed', 'error'].includes(recordStatus)
+                            const recordReviewStatus = String(data.reviewStatus ?? '').toLowerCase()
                             const recordHasErrorMessage = Boolean(data.errorMessage?.trim())
                             const reviewField = getRequirementAnalysisStageField(data.currentStage)
                             const showStageReview = Boolean(
-                              reviewField && data.checkpointEnabled && recordStatus === 'waiting_review' && data.stageStatus === 'waiting_review',
+                              reviewField && data.checkpointEnabled && recordStatus === 'waiting_review' && data.stageStatus === 'waiting_review' && recordReviewStatus === 'pending' && data.importStatus !== 'imported',
                             )
                             const showFinalReview = Boolean(
                               data.checkpointEnabled &&
                                 ['success', 'waiting_review'].includes(recordStatus) &&
-                                ['feature_understanding', 'completed'].includes(data.currentStage ?? '') &&
-                                data.reviewStatus !== 'approved' &&
+                                requirementAnalysisFinalStages.includes(data.currentStage ?? '') &&
+                                recordReviewStatus === 'pending' &&
                                 data.importStatus !== 'imported',
                             )
                             const canImportRecord = Boolean(
@@ -909,27 +981,14 @@ export function RequirementAnalysisTaskDetailPage() {
                                 ['success', 'waiting_review'].includes(recordStatus),
                             )
                             const canRetry = recordFailed && row.runId &&
-                              ['extracting_text', 'writing_requirement', 'feature_understanding'].includes(data.currentStage ?? '') &&
+                              ['extracting_text', 'feature_understanding'].includes(data.currentStage ?? '') &&
                               ['failed', 'retrying'].includes(data.stageStatus ?? '') &&
-                              data.reviewStatus !== 'approved' && data.importStatus !== 'imported'
-                            const menuItems: RunMenuAction[] = [
-                              ...(canRetry && can('execute')
-                                ? [{ key: 'retryStage', label: '重试阶段', disabled: stageActionPending }]
-                                : []),
-                              ...(row.runId && can('write')
-                                ? [{
-                                    key: 'deleteRun',
-                                    label: '删除运行记录',
-                                    danger: true,
-                                    disabled: !isRunDeletable(recordStatus) || deleteRunMutation.isPending,
-                                  }]
-                                : []),
-                            ]
+                              recordReviewStatus === 'pending' && data.importStatus !== 'imported'
                             return (
                               <RunRowActions
                                 inline={
                                   <>
-                                    {/* 审核是本行最需要用户处理的动作，直接放在操作列，「更多」只留状态变更类操作。 */}
+                                    {/* 当前状态至多三个操作，按界面规范全部直接展示。 */}
                                     {showStageReview && reviewField ? (
                                       <Button
                                         size="small"
@@ -937,7 +996,7 @@ export function RequirementAnalysisTaskDetailPage() {
                                         onClick={(event) => {
                                           event.stopPropagation()
                                           setSelectedRunRecordId(row.runId ?? null)
-                                          setRunResultModal({ key: reviewField.key, label: `${reviewField.label}（审核）`, mode: 'review' })
+                                          setRunResultModal({ runId: row.runId, key: reviewField.key, label: `${reviewField.label}（审核）`, mode: 'review' })
                                         }}
                                       >
                                         审核
@@ -950,7 +1009,7 @@ export function RequirementAnalysisTaskDetailPage() {
                                         onClick={(event) => {
                                           event.stopPropagation()
                                           setSelectedRunRecordId(row.runId ?? null)
-                                          setRunResultModal({ key: 'resultYaml', label: '需求理解记录（审核）', mode: 'review' })
+                                          setRunResultModal({ runId: row.runId, key: 'resultYaml', label: '需求理解记录（审核）', mode: 'review' })
                                         }}
                                       >
                                         审核
@@ -963,7 +1022,7 @@ export function RequirementAnalysisTaskDetailPage() {
                                         onClick={(event) => {
                                           event.stopPropagation()
                                           setSelectedRunRecordId(row.runId ?? null)
-                                          setRunResultModal({ key: 'resultYaml', label: '需求理解记录', mode: 'view' })
+                                          setRunResultModal({ runId: row.runId, key: 'resultYaml', label: '需求理解记录', mode: 'view' })
                                         }}
                                       >
                                         查看结果并导入
@@ -976,24 +1035,44 @@ export function RequirementAnalysisTaskDetailPage() {
                                         onClick={(event) => {
                                           event.stopPropagation()
                                           setSelectedRunRecordId(row.runId ?? null)
-                                          setRunResultModal({ key: 'errorMessage', label: '错误信息', mode: 'view' })
+                                          setRunResultModal({ runId: row.runId, key: 'errorMessage', label: '错误信息', mode: 'view' })
                                         }}
                                       >
                                         错误信息
                                       </button>
                                     ) : null}
+                                    {canRetry && can('execute') ? (
+                                      <Button
+                                        size="small"
+                                        aria-label="重试阶段"
+                                        disabled={stageActionPending}
+                                        loading={retryStageMutation.isPending}
+                                        onClick={(event) => {
+                                          event.stopPropagation()
+                                          if (row.runId && data.currentStage) {
+                                            retryStageMutation.mutate({ runId: row.runId, stage: data.currentStage })
+                                          }
+                                        }}
+                                      >
+                                        重试阶段
+                                      </Button>
+                                    ) : null}
+                                    {row.runId && can('write') ? (
+                                      <ActionButton
+                                        operation="delete"
+                                        iconOnly
+                                        size="small"
+                                        aria-label="删除运行记录"
+                                        disabled={!isRunDeletable(recordStatus) || deleteRunMutation.isPending}
+                                        onClick={(event) => {
+                                          event.stopPropagation()
+                                          const runId = row.runId
+                                          if (runId) confirmDeleteRun(() => deleteRunMutation.mutate(runId))
+                                        }}
+                                      />
+                                    ) : null}
                                   </>
                                 }
-                                menuItems={menuItems}
-                                onMenuAction={(key) => {
-                                  if (key === 'retryStage' && row.runId && data.currentStage) {
-                                    retryStageMutation.mutate({ runId: row.runId, stage: data.currentStage })
-                                  }
-                                  if (key === 'deleteRun' && row.runId) {
-                                    const runId = row.runId
-                                    confirmDeleteRun(() => deleteRunMutation.mutate(runId))
-                                  }
-                                }}
                               />
                             )
                           }}
@@ -1159,8 +1238,8 @@ export function RequirementAnalysisTaskDetailPage() {
               ]
             : null
         }
-        width={reviseModalOpen ? "calc(100vw - 56px)" : "min(1180px, calc(100vw - 56px))"}
-        className={`ai-task-run-result-modal api-task-run-result-modal${editableRunResultModal ? ' review' : ' requirement-analysis-text-modal'}`}
+        width={runResultModal?.key === 'errorMessage' ? "min(1180px, calc(100vw - 56px))" : "calc(100vw - 56px)"}
+        className={`ai-task-run-result-modal api-task-run-result-modal${editableRunResultModal ? ' review' : ' requirement-analysis-text-modal'} functional-stage-review-modal requirement-analysis-result-modal`}
         centered
         destroyOnHidden
       >
@@ -1173,27 +1252,28 @@ export function RequirementAnalysisTaskDetailPage() {
           ) : editableRunResultModal ? (
             <div className="ai-task-stage-review-popover">
               <div className="ai-task-run-result-popover-header">
-                <span>{finalResultEditable ? '最终需求理解结果 resultYaml' : `阶段产物 ${selectedStageField?.label ?? '当前阶段'}`}</span>
+                <span>{runResultModal?.key === 'resultYaml' ? '最终需求理解记录' : '材料提取结果'}</span>
                 <div className="ai-task-stage-review-mini-tags">
                   <Tag color={selectedStageMeta.color}>{selectedStageMeta.label}</Tag>
                   <Tag color={selectedStageStatusMeta.color}>{selectedStageStatusMeta.label}</Tag>
                 </div>
               </div>
               <div className="ai-task-stage-review-note compact">
-                <strong>{finalResultEditable ? '最终结果/可编辑' : '待审核/可编辑'}</strong>
-                <span>{finalResultEditable ? '当前编辑的是最终需求理解结果，保存或 AI 修改后仍需点击导入需求。' : '当前编辑的是本阶段产物，保存后会写回当前阶段输出，审核通过后继续进入下一阶段。'}</span>
+                <strong>{runResultModal?.key === 'resultYaml' ? finalResultApproved ? '已审核/可编辑' : '最终结果/可编辑' : '待审核/可编辑'}</strong>
+                <span>{runResultModal?.key === 'resultYaml' ? '修改后需重新审核，审核通过后再导入需求。' : '保存后写回材料提取结果，审核通过后进入需求理解阶段。'}</span>
               </div>
-              <TextCodeEditor
-                value={stageOutputDraft}
-                onChange={(value) => {
-                  setStageOutputDraft(value)
-                  setStageOutputDirty(true)
-                }}
-                minHeight={360}
-              />
+              <Tabs className="requirement-analysis-artifact-tabs" defaultActiveKey="business" items={[
+                { key: 'business', label: '业务内容', children: <div className="requirement-analysis-artifact-scroll is-material-comparison" role="region" aria-label="业务内容" tabIndex={0}>{runResultModal?.key === 'firstStepOutput' ? <RequirementMaterialComparison content={stageOutputDraft} /> : <RequirementUnderstandingComparison content={stageOutputDraft} extractionContent={selectedRunConfigJson.firstStepOutput} />}</div> },
+                { key: 'json', label: '原始 JSON', children: <TextCodeEditor language="json" ariaLabel="阶段产物 JSON" value={stageOutputDraft} minHeight={360} onChange={value => { setStageOutputDraft(value); setStageOutputDirty(true) }} /> },
+              ]} />
             </div>
           ) : runResultModalContent ? (
-            <pre className="ai-task-code-block">{runResultModalContent}</pre>
+            runResultModal?.key !== 'errorMessage'
+              ? <Tabs className="requirement-analysis-artifact-tabs" items={[
+                { key: 'business', label: '业务内容', children: <div className="requirement-analysis-artifact-scroll is-material-comparison" role="region" aria-label="业务内容" tabIndex={0}>{runResultModal?.key === 'firstStepOutput' ? <RequirementMaterialComparison content={runResultModalContent} /> : <RequirementUnderstandingComparison content={runResultModalContent} extractionContent={selectedRunConfigJson.firstStepOutput} />}</div> },
+                { key: 'json', label: '原始 JSON', children: <TextCodeEditor language="json" ariaLabel="阶段产物 JSON" readOnly value={runResultModalContent} /> },
+              ]} />
+              : <pre className="ai-task-code-block">{runResultModalContent}</pre>
           ) : (
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无内容" />
           )}
