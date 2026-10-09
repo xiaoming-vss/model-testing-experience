@@ -215,3 +215,9 @@ MTX_TEST_ZENTAO_MCP_BUG_OPTIONS=1 \
 ### 已同步 Bug 的两项编辑（2026-10-06）
 
 已同步 Bug 在「推送到禅道」统一弹窗中修改版本和指派人，复用本节已有的接口定义补丁，无需再次升级 MCP 或迁移数据库。编辑先读取原 Bug 的真实值，PATCH 仅传变化字段，并在修改后回读确认；创建关联及附件补传状态独立保留。新的容器验收同时验证 `PUT /bugs/50` 的版本和指派字段实际传输。控制面字段编辑 18 项测试、之前的创建/候选项/附件/正文图片 72 项测试及 Studio 弹窗 14 项测试通过；类型、生产代码 lint（排除临时 `.scratch` 预览）、主题检查和构建通过。未写入真实禅道 Bug。
+
+### 反向拉取内容回传镜像升级（2026-10-09）
+
+镜像 `xiaoming-x/zentao-mcp:2026-10-09-pullfiles`（摘要 `sha256:0cb19a9e…`，以仓库实际为准）已构建并推送；`get_bug_attachment` 新增可选 `uploadUrl`——平台签发的预签名 PUT 票据，工具在权属与大小校验后把内容回传平台，供禅道 Bug 反向导入的附件与正文图片使用。无票据时行为与旧版一致。本机 Compose 已固定新摘要并重新生成 bug-options 接口补丁，MCP 与附件转发容器重建后健康，工具列表确认 `uploadUrl` 已生效。
+
+构建说明：本机无法访问 docker.io，alpine:3.21 经 daocloud 镜像源拉取；Go 构建使用 `GOPROXY=https://goproxy.cn,direct`；发布镜像相对源码 Dockerfile 补充了 `ENV GOPROXY`、`COPY docs/zentao-openapi.json /config/` 与 `ENTRYPOINT`（与历史发布镜像布局一致）。控制面已升级至包含文件管线的版本并应用迁移 `20261009_0037`。真实禅道的附件与正文图片拉取验收待用户在平台执行。
