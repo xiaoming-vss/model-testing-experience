@@ -10,7 +10,13 @@ import type {
   ZentaoBugImportResult,
   ZentaoBugPendingItem,
 } from '../types'
-import { BUG_PRIORITY_LABELS, BUG_SEVERITY_LABELS, BUG_STATUS_LABELS } from '../utils/bugMeta'
+import {
+  BUG_PRIORITY_LABELS,
+  BUG_SEVERITY_LABELS,
+  BUG_STATUS_LABELS,
+  ZENTAO_PRIORITY_LABELS,
+  ZENTAO_SEVERITY_LABELS,
+} from '../utils/bugMeta'
 
 type Props = {
   open: boolean
@@ -26,8 +32,17 @@ const RESULT_LABELS: Record<string, string> = {
   failed: '导入失败',
 }
 
-const severityText = (value: string) => BUG_SEVERITY_LABELS[value] || value || '—'
-const priorityText = (value: string) => BUG_PRIORITY_LABELS[value] || value || '—'
+// 候选列表展示禅道原始值：可映射时给出平台标签并保留编号便于核对（R23）。
+const severityText = (value: string) => {
+  if (!value) return '—'
+  const label = ZENTAO_SEVERITY_LABELS[value] ?? ''
+  return label ? `${label} (${value})` : value
+}
+const priorityText = (value: string) => {
+  if (!value) return '—'
+  const label = ZENTAO_PRIORITY_LABELS[value] ?? ''
+  return label ? `${label} (${value})` : value
+}
 
 function pendingText(items: ZentaoBugPendingItem[]) {
   return items.map((item) => item.reason).join('；')

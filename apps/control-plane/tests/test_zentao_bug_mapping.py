@@ -26,12 +26,12 @@ def test_severity_unmapped_values_stay_pending(raw):
     assert map_severity(raw) is None
 
 
-def test_priority_maps_known_and_leaves_two_for_manual_choice():
-    assert map_priority("1") == "high"
-    assert map_priority(3) == "medium"
+def test_priority_maps_all_four_levels_losslessly():
+    # 2026-10-09 四档对齐：紧急/高/中/低 ↔ 1/2/3/4，优先级不再有待映射。
+    assert map_priority("1") == "urgent"
+    assert map_priority(2) == "high"
+    assert map_priority("3") == "medium"
     assert map_priority("4.0") == "low"
-    # 优先级 2 属于有损映射：不猜默认值，交由用户指定（Q04）。
-    assert map_priority("2") is None
     assert map_priority("") is None
 
 

@@ -299,8 +299,9 @@ def test_preview_maps_bindings_and_reports_pending(api, setup):
 
     manual = by_id[51]
     assert manual["state"] == "ready"
-    assert manual["converted"]["priority"] is None
-    assert {"field": "priority", "reason": manual["pending"][1]["reason"]} in manual["pending"]
+    # 优先级 2 现已无损映射为平台「高」，不再进入待映射清单。
+    assert manual["converted"]["priority"] == "high"
+    assert [item["field"] for item in manual["pending"]] == ["assigneeUserId"]
     assert manual["converted"]["status"] == "resolved"
     assert manual["converted"]["resolvedBuild"] == "v2"
 

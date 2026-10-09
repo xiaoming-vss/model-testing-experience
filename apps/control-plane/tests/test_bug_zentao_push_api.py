@@ -268,7 +268,7 @@ def test_manual_push_uses_bindings_persists_result_and_never_recreates(api, setu
         "title": "登录失败",
         "steps": "<p>现象与复现步骤</p>",
         "severity": 2,
-        "pri": 1,
+        "pri": 2,
         "project": 10,
         "execution": 20,
         "story": 30,

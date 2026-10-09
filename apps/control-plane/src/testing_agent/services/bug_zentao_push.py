@@ -24,7 +24,8 @@ from testing_agent.services.zentao_mcp_instance import discover_instance
 from testing_agent.services.zentao_mcp_selection import binding_service_id, select_mcp_service
 
 SEVERITY = {"fatal": 1, "serious": 2, "normal": 3, "minor": 4}
-PRIORITY = {"high": 1, "medium": 3, "low": 4}
+# 平台四档与禅道 1/2/3/4 一一对应（2026-10-09 对齐，历史 1/3/4 口径作废）。
+PRIORITY = {"urgent": 1, "high": 2, "medium": 3, "low": 4}
 STALE_AFTER = timedelta(minutes=5)
 
 

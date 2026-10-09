@@ -3,7 +3,7 @@
 export type BugStatus = 'active' | 'resolved' | 'closed'
 export type BugResolution = 'fixed' | 'bydesign' | 'duplicate' | 'external' | 'notrepro' | 'postponed' | 'willnotfix' | 'tostory'
 export type BugSeverity = 'fatal' | 'serious' | 'normal' | 'minor'
-export type BugPriority = 'high' | 'medium' | 'low'
+export type BugPriority = 'urgent' | 'high' | 'medium' | 'low'
 export type BugAction = 'confirm' | 'resolve' | 'close' | 'activate'
 export type BugRejectReason = 'by_design' | 'not_reproducible' | 'deferred'
 export type BugActivityKind = 'status_change' | 'transfer' | 'comment' | 'edit' | 'attachment'

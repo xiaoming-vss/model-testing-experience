@@ -47,6 +47,10 @@ function mount() {
 it('lists candidates with linked rows unselectable', async () => {
   mount()
   expect(await screen.findByText('登录失败')).toBeInTheDocument()
+  // 禅道原始值带平台标签展示，便于核对（R23）。
+  expect(await screen.findByText('致命 (1)')).toBeInTheDocument()
+  expect(screen.getByText('中 (3)')).toBeInTheDocument()
+  expect(screen.getByText('低 (4)')).toBeInTheDocument()
   const linkedRow = screen.getByText('重复推送').closest('tr') as HTMLElement
   expect(within(linkedRow).getByRole('checkbox')).toBeDisabled()
   const freeRow = screen.getByText('登录失败').closest('tr') as HTMLElement

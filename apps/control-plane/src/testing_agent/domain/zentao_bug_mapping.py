@@ -22,7 +22,8 @@ REMOTE_SEVERITY = {
     "3": BugSeverity.NORMAL,
     "4": BugSeverity.MINOR,
 }
-REMOTE_PRIORITY = {"1": "high", "3": "medium", "4": "low"}
+# 禅道优先级四档与平台一一对应；优先级不再产生待映射（Q04，2026-10-09）。
+REMOTE_PRIORITY = {"1": "urgent", "2": "high", "3": "medium", "4": "low"}
 
 
 def map_severity(value: object) -> str | None:
@@ -35,7 +36,7 @@ def map_severity(value: object) -> str | None:
 
 
 def map_priority(value: object) -> str | None:
-    """禅道 1/3/4 映射平台优先级；2 为有损映射，返回 None 待用户指定（Q04）。"""
+    """禅道 1/2/3/4 无损映射平台优先级 紧急/高/中/低（Q04 优先级部分已关闭）。"""
     key = str(value or "").strip()
     if key.endswith(".0"):
         key = key[:-2]

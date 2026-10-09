@@ -80,8 +80,9 @@ class BugSeverity(StrEnum):
 
 
 class BugPriority(StrEnum):
-    """Bug 处理优先级。"""
+    """Bug 处理优先级；与禅道 1/2/3/4 一一对应（2026-10-09 四档对齐）。"""
 
+    URGENT = "urgent"
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"

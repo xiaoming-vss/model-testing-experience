@@ -24,15 +24,26 @@ export const BUG_SEVERITY_LABELS: Record<string, string> = {
 }
 
 export const BUG_PRIORITY_LABELS: Record<string, string> = {
+  urgent: '紧急',
   high: '高',
   medium: '中',
   low: '低',
 }
 
 export const BUG_PRIORITY_TONES: Record<string, string> = {
-  high: 'red',
-  medium: 'amber',
+  urgent: 'red',
+  high: 'amber',
+  medium: 'blue',
   low: 'slate',
+}
+
+/** 禅道原始值 1/2/3/4 的展示标签（与平台四档一一对应，2026-10-09 对齐）。 */
+export const ZENTAO_PRIORITY_LABELS: Record<string, string> = {
+  '1': '紧急', '2': '高', '3': '中', '4': '低',
+}
+
+export const ZENTAO_SEVERITY_LABELS: Record<string, string> = {
+  '1': '致命', '2': '严重', '3': '一般', '4': '轻微',
 }
 
 export const BUG_ACTION_LABELS: Record<BugAction, string> = {
