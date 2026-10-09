@@ -1,4 +1,4 @@
-import { FilterOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import { DownloadOutlined, FilterOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { Button, Checkbox, Input, Popover, Select, Space, Tooltip } from 'antd'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { listItems } from '@/services/api'
@@ -7,7 +7,7 @@ import type { useBugList } from '../hooks/useBugList'
 type Model = ReturnType<typeof useBugList>
 export function BugListToolbar({ model }: { model: Model }) {
   const { activeProjectId, activeSprintId, sprints, sprintsQuery, selectSprint, sprintSelectorOptions,
-    keyword, setKeyword, bugsQuery, setCreateOpen } = model
+    keyword, setKeyword, bugsQuery, setCreateOpen, setImportOpen } = model
   return (
           <div className="panel-header api-panel-header bugs-toolbar tp-list-toolbar">
             <div className="api-filter-group bugs-filters">
@@ -55,6 +55,15 @@ export function BugListToolbar({ model }: { model: Model }) {
                   onClick={() => bugsQuery.refetch()}
                 />
               </Tooltip>
+              <ProjectActionButton
+                action="write"
+                className="action-btn-read"
+                icon={<DownloadOutlined />}
+                disabled={!activeProjectId}
+                onClick={() => setImportOpen(true)}
+              >
+                从禅道导入
+              </ProjectActionButton>
               <ProjectActionButton
                 action="write"
                 type="primary"

@@ -14,6 +14,7 @@ from testing_agent.models.bug_activity import BugActivity
 from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
 from testing_agent.models.bug_zentao_push import BugZentaoPush
 from testing_agent.schemas.integration_job import IntegrationRemoteResult
+from testing_agent.services.service_instance import instance_key
 from testing_agent.services.bug_zentao_description import (
     canonical,
     native_image_url,
@@ -245,6 +246,7 @@ class IntegrationBugSteps:
                 self.session.add(row)
             row.operation_id, row.actor_user_id = step.operation_id, job.actor_user_id
             row.service_id, row.instance_url = job.service_id, snapshot["target"]["instanceUrl"]
+            row.instance_key = instance_key(snapshot["target"]["instanceUrl"])
             row.status, row.remote_bug_id = "creating", None
             row.target_json, row.payload_json = snapshot["target"], data["payload"]
             row.error_message = ""

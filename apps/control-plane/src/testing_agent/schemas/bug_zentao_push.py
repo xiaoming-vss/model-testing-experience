@@ -22,6 +22,7 @@ class BugZentaoPushTarget(TypedDict, total=False):
 class BugZentaoPushResponse(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     status: str = "not_pushed"
+    source: str = "push"
     ready: bool = False
     execution_mode: str = "worker"
     active_job: IntegrationJobSummary | None = None

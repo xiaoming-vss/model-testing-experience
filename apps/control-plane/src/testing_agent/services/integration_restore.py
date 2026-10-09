@@ -258,6 +258,7 @@ class IntegrationRestoreService:
                 actor_user_id=request.actor_user_id,
                 service_id=context["target"]["mcpServiceId"],
                 instance_url=context["target"]["instanceUrl"],
+                instance_key=instance_key(context["target"]["instanceUrl"]),
                 status="succeeded",
                 remote_bug_id=request.remote_bug_id,
                 target_json=context["target"],

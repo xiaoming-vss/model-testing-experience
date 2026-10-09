@@ -29,6 +29,7 @@ export function useBugList() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [createOpen, setCreateOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [transition, setTransition] = useState<{ bug: Bug; action: BugAction } | null>(null)
 
   const sprintNameMap = useMemo(() => {
@@ -92,5 +93,5 @@ export function useBugList() {
   const columns = bugColumns({ memberNameMap, sprintNameMap, optionalColumns,
     onTransition: (bug, action) => setTransition({ bug, action }) })
 
-  return { optionalColumns, setOptionalColumns, navigate, activeProjectId, activeSprintId, sprints, sprintsQuery, selectSprint, sprintSelectorOptions, status, setStatus, confirmed, setConfirmed, resolution, setResolution, severity, setSeverity, assigneeUserId, setAssigneeUserId, keyword, setKeyword, page, setPage, pageSize, setPageSize, createOpen, setCreateOpen, transition, setTransition, membersQuery, bugsQuery, bugs, total, resetFilters, columns }
+  return { optionalColumns, setOptionalColumns, navigate, activeProjectId, activeSprintId, sprints, sprintsQuery, selectSprint, sprintSelectorOptions, status, setStatus, confirmed, setConfirmed, resolution, setResolution, severity, setSeverity, assigneeUserId, setAssigneeUserId, keyword, setKeyword, page, setPage, pageSize, setPageSize, createOpen, setCreateOpen, importOpen, setImportOpen, transition, setTransition, membersQuery, bugsQuery, bugs, total, resetFilters, columns }
 }

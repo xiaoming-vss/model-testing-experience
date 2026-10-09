@@ -1,0 +1,744 @@
+"""禅道新建 Bug 手动导入：候选列表、预览与本地事务落库。
+
+远端只读（R34）：候选与详情通过项目 MCP 和操作者本人 Token 读取；本地
+Bug、禅道关联与字段组基线在同一个本地事务创建（R40）。转换统一使用
+`domain.zentao_bug_mapping`，与反向拉取共用同一口径（R20）。
+"""
+
+from datetime import UTC, datetime
+
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+
+from testing_agent.core.enums import BugActivityKind
+from testing_agent.core.errors import AppError
+from testing_agent.core.sid import new_id
+from testing_agent.domain import zentao_bug_mapping as mapping
+from testing_agent.models.bug import Bug
+from testing_agent.models.bug_activity import BugActivity
+from testing_agent.models.bug_zentao_push import BugZentaoPush
+from testing_agent.models.bug_zentao_sync_baseline import BugZentaoSyncBaseline
+from testing_agent.models.resource_binding import ResourceBinding
+from testing_agent.schemas.bug_zentao_import import (
+    ZentaoBugCandidateItem,
+    ZentaoBugImportItemRequest,
+    ZentaoBugImportPreview,
+    ZentaoBugImportResult,
+)
+from testing_agent.services.common import dump, paged_payload
+from testing_agent.services.mcp_client import McpCallError, McpClient
+from testing_agent.services.project_access import require_project_id
+from testing_agent.services.service_instance import instance_key
+from testing_agent.services.zentao_mcp import ZentaoMcpAccess, normalize_list
+
+PAGE_LIMIT = 100
+PAGE_COUNT_LIMIT = 100
+
+
+def _identity_conflict(exc: IntegrityError) -> bool:
+    detail = str(exc.orig)
+    return "uk_bug_zentao_remote_identity" in detail or (
+        "bug_zentao_pushes.instance_key" in detail and "remote_bug_id" in detail
+    )
+
+
+def _bug_no_conflict(exc: IntegrityError) -> bool:
+    detail = str(exc.orig)
+    return "uk_bugs_project_bug_no" in detail or (
+        "UNIQUE constraint failed: bugs.project_id, bugs.bug_no" in detail
+    )
+
+
+class ZentaoBugImportService:
+    def __init__(self, bugs, connections, *, client_factory=None):
+        self.bugs = bugs
+        self.repository = bugs.repository
+        self.session = bugs.repository.session
+        self.connections = connections
+        self.client_factory = client_factory or McpClient
+
+    # ------------------------------------------------------------------ access
+
+    async def _access(self, user_id: str, project_id: str):
+        """写入权限 + 项目级禅道绑定 + 本人授权与实例核对（R07/R08/R15）。"""
+        await require_project_id(self.session, user_id, project_id, "write")
+        binding = await self.session.scalar(
+            select(ResourceBinding).where(
+                ResourceBinding.provider == "zentao",
+                ResourceBinding.status == "active",
+                ResourceBinding.local_resource_type == "project",
+                ResourceBinding.local_resource_id == project_id,
+            )
+        )
+        if binding is None:
+            raise AppError(400, "当前项目尚未绑定禅道项目，请先完成资源绑定", 400)
+        access = await ZentaoMcpAccess(self.connections).resolve(
+            user_id, project_id, expected_instance=binding.instance_url
+        )
+        return access, binding
+
+    async def _fetch_detail(self, client, remote_bug_id: int) -> dict:
+        data = await client.call("get_bugs_bugID", {"bugID": remote_bug_id})
+        bug = data.get("bug", {})
+        if not isinstance(bug, dict):
+            raise McpCallError("禅道 Bug 详情格式异常")
+        return bug
+
+    async def _linked_remote_ids(self, instance_url: str, remote_ids: list[int]) -> set[int]:
+        if not remote_ids:
+            return set()
+        rows = await self.session.scalars(
+            select(BugZentaoPush.remote_bug_id).where(
+                BugZentaoPush.instance_key == instance_key(instance_url),
+                BugZentaoPush.remote_bug_id.in_(remote_ids),
+            )
+        )
+        return {int(value) for value in rows}
+
+    async def _all_remote_bugs(self, client, remote_project_id: int) -> list[dict]:
+        items: list[dict] = []
+        seen: set[str] = set()
+        for page in range(1, PAGE_COUNT_LIMIT + 1):
+            data = await client.call(
+                "get_projects_projectID_bugs",
+                {
+                    "projectID": remote_project_id,
+                    "browseType": "all",
+                    "orderBy": "id_asc",
+                    "pageID": page,
+                    "recPerPage": PAGE_LIMIT,
+                },
+            )
+            batch, total = normalize_list(data, "bugs")
+            if any(item["id"] in seen for item in batch):
+                raise McpCallError("禅道 Bug 分页重复，已停止读取")
+            seen.update(item["id"] for item in batch)
+            items.extend(batch)
+            complete = total is not None and len(items) >= total
+            if complete or (total is None and len(batch) < PAGE_LIMIT):
+                return items
+            if not batch:
+                raise McpCallError("禅道 Bug 分页数据不完整")
+        raise McpCallError("禅道 Bug 超过查询上限，请缩小筛选范围")
+
+    # -------------------------------------------------------------- candidates
+
+    async def candidates(
+        self,
+        user_id: str,
+        project_id: str,
+        *,
+        status: str = "",
+        keyword: str = "",
+        execution: int | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> dict:
+        access, binding = await self._access(user_id, project_id)
+        try:
+            async with self.client_factory(access.endpoint, access.token) as client:
+                rows = await self._all_remote_bugs(client, int(binding.remote_resource_id))
+        except McpCallError as exc:
+            raise AppError(502, str(exc), 502) from exc
+        wanted = {value.strip() for value in status.split(",") if value.strip()}
+        needle = keyword.strip().lower()
+        matched = []
+        for row in rows:
+            if wanted and str(row.get("status") or "").strip() not in wanted:
+                continue
+            if execution is not None and str(row.get("execution") or "") != str(execution):
+                continue
+            if needle and needle not in str(row.get("title") or "").lower():
+                continue
+            matched.append(row)
+        linked = await self._linked_remote_ids(access.base_url, [int(row["id"]) for row in matched])
+        start = (page - 1) * page_size
+        slice_rows = matched[start : start + page_size]
+        items = []
+        for row in slice_rows:
+            items.append(
+                dump(
+                    ZentaoBugCandidateItem,
+                    {
+                        "remote_bug_id": int(row["id"]),
+                        "title": str(row.get("title") or ""),
+                        "status": str(row.get("status") or "").strip(),
+                        "severity": str(row.get("severity") or "").strip(),
+                        "priority": str(row.get("pri") or row.get("priority") or "").strip(),
+                        "assigned_to": str(row.get("assignedTo") or "").strip(),
+                        "opened_by": str(row.get("openedBy") or "").strip(),
+                        "opened_date": str(row.get("openedDate") or "").strip(),
+                        "execution": _optional_remote_id(row.get("execution")),
+                        "story": _optional_remote_id(row.get("story")),
+                        "linked": int(row["id"]) in linked,
+                    },
+                )
+            )
+        return paged_payload(items, len(matched))
+
+    # ----------------------------------------------------------------- preview
+
+    async def preview(self, user_id: str, project_id: str, remote_bug_ids: list[int]) -> dict:
+        access, _ = await self._access(user_id, project_id)
+        results: list[dict] = []
+        try:
+            async with self.client_factory(access.endpoint, access.token) as client:
+                for remote_bug_id in dict.fromkeys(remote_bug_ids):
+                    results.append(
+                        await self._preview_one(client, access, project_id, remote_bug_id)
+                    )
+        except McpCallError as exc:
+            raise AppError(502, str(exc), 502) from exc
+        return {"items": [dump(ZentaoBugImportPreview, item) for item in results]}
+
+    async def _preview_one(self, client, access, project_id: str, remote_bug_id: int) -> dict:
+        detail = await self._fetch_detail(client, remote_bug_id)
+        try:
+            snapshot = mapping.remote_snapshot(detail)
+        except ValueError as exc:
+            return {
+                "remote_bug_id": remote_bug_id,
+                "state": "invalid",
+                "error_message": str(exc),
+            }
+        if snapshot["deleted"]:
+            return {
+                "remote_bug_id": remote_bug_id,
+                "state": "invalid",
+                "error_message": "禅道 Bug 不存在或已删除",
+            }
+        pending: list[dict[str, str]] = [
+            {"field": "assigneeUserId", "reason": "请选择平台责任人（Q05：不按账号自动映射）"}
+        ]
+        severity = mapping.map_severity(snapshot["severity"])
+        if severity is None:
+            pending.append({"field": "severity", "reason": "禅道严重程度无法映射，请人工选择"})
+        priority = mapping.map_priority(snapshot["priority"])
+        if priority is None:
+            pending.append({"field": "priority", "reason": "禅道优先级无法映射，请人工选择"})
+        status_fields = mapping.map_status(
+            snapshot["status"],
+            snapshot["confirmed"],
+            snapshot["resolution"],
+            snapshot["resolvedBuild"],
+        )
+        state = "ready"
+        if status_fields is None:
+            state = "pending"
+            pending.append({"field": "status", "reason": "禅道状态或解决方案无法映射"})
+        description = mapping.remote_description(detail.get("steps"))
+        if description["hasImages"]:
+            state = "pending_files"
+            pending.append(
+                {"field": "description", "reason": "正文包含图片，需等待文件管线反向导入后一起应用"}
+            )
+        elif not description["hasContent"]:
+            state = "pending"
+            pending.append({"field": "description", "reason": "远端描述没有有效内容"})
+        sprint = await self._sprint_for_execution(
+            project_id, access.base_url, int(snapshot["execution"])
+        )
+        if sprint is None:
+            pending.append({"field": "foundSprintId", "reason": "远端执行未绑定本地迭代，请选择"})
+        requirement = await self._requirement_for_story(
+            project_id, access.base_url, int(snapshot["story"])
+        )
+        duplicate_local = await self._duplicate_local_id(
+            project_id, access.base_url, int(snapshot["duplicateBug"])
+        )
+        if int(snapshot["duplicateBug"]) and duplicate_local is None:
+            pending.append(
+                {
+                    "field": "duplicateBug",
+                    "reason": "远端重复 Bug 无法解析为同项目平台 Bug，导入后该字段留空",
+                }
+            )
+        converted = {
+            "severity": severity,
+            "priority": priority,
+            **(status_fields or {}),
+            "duplicateBugId": duplicate_local,
+            "foundSprintId": sprint[0] if sprint else "",
+            "foundSprintName": sprint[1] if sprint else "",
+            "requirementId": requirement[0] if requirement else "",
+            "requirementName": requirement[1] if requirement else "",
+        }
+        return {
+            "remote_bug_id": remote_bug_id,
+            "state": state,
+            "title": snapshot["title"],
+            "snapshot": snapshot,
+            "converted": converted,
+            "description": {
+                "hasImages": description["hasImages"],
+                "hasContent": description["hasContent"],
+            },
+            "pending": pending,
+        }
+
+    async def _sprint_for_execution(
+        self, project_id: str, instance_url: str, execution_id: int
+    ) -> tuple[str, str] | None:
+        if not execution_id:
+            return None
+        binding = await self._binding("sprint", "execution", str(execution_id), instance_url)
+        if binding is None:
+            return None
+        sprint = await self.repository.get_sprint(binding.local_resource_id)
+        if sprint is None or sprint.project_id != project_id:
+            return None
+        return sprint.sprint_id, sprint.name
+
+    async def _requirement_for_story(
+        self, project_id: str, instance_url: str, story_id: int
+    ) -> tuple[str, str] | None:
+        if not story_id:
+            return None
+        binding = await self._binding("requirement", "story", str(story_id), instance_url)
+        if binding is None:
+            return None
+        requirement = await self.repository.get_requirement(binding.local_resource_id)
+        if requirement is None:
+            return None
+        sprint = await self.repository.get_sprint(requirement.sprint_id)
+        if sprint is None or sprint.project_id != project_id:
+            return None
+        return requirement.requirement_id, requirement.name
+
+    async def _binding(
+        self, local_type: str, remote_type: str, remote_id: str, instance_url: str
+    ) -> ResourceBinding | None:
+        row = await self.session.scalar(
+            select(ResourceBinding).where(
+                ResourceBinding.provider == "zentao",
+                ResourceBinding.status == "active",
+                ResourceBinding.local_resource_type == local_type,
+                ResourceBinding.remote_resource_type == remote_type,
+                ResourceBinding.remote_resource_id == remote_id,
+                ResourceBinding.instance_key == instance_key(instance_url),
+            )
+        )
+        return row
+
+    async def _duplicate_local_id(
+        self, project_id: str, instance_url: str, remote_bug_id: int
+    ) -> int | None:
+        return await duplicate_local_id(self.repository, project_id, instance_url, remote_bug_id)
+
+    # ------------------------------------------------------------------ import
+
+    async def import_bugs(
+        self,
+        user_id: str,
+        project_id: str,
+        request_id: str,
+        items: list[ZentaoBugImportItemRequest],
+    ) -> dict:
+        access, binding = await self._access(user_id, project_id)
+        results: list[dict] = []
+        seen: set[int] = set()
+        try:
+            async with self.client_factory(access.endpoint, access.token) as client:
+                for item in items:
+                    if item.remote_bug_id in seen:
+                        results.append(
+                            self._result(
+                                item.remote_bug_id,
+                                "failed",
+                                error_message="同一请求中存在重复的禅道 Bug",
+                            )
+                        )
+                        continue
+                    seen.add(item.remote_bug_id)
+                    results.append(
+                        await self._import_one(
+                            client, access, binding, user_id, project_id, request_id, item
+                        )
+                    )
+        except McpCallError as exc:
+            raise AppError(502, str(exc), 502) from exc
+        return {"items": [dump(ZentaoBugImportResult, item) for item in results]}
+
+    async def _import_one(
+        self,
+        client,
+        access,
+        binding,
+        user_id: str,
+        project_id: str,
+        request_id: str,
+        item: ZentaoBugImportItemRequest,
+    ) -> dict:
+        operation_id = f"{request_id}:{item.remote_bug_id}"
+        replayed = await self._replay(operation_id)
+        if replayed is not None:
+            return replayed
+        detail = await self._fetch_detail(client, item.remote_bug_id)
+        try:
+            snapshot = mapping.remote_snapshot(detail)
+        except ValueError as exc:
+            return self._result(item.remote_bug_id, "failed", error_message=str(exc))
+        if snapshot["deleted"]:
+            return self._result(
+                item.remote_bug_id, "failed", error_message="禅道 Bug 不存在或已删除"
+            )
+        if snapshot["remoteBugId"] != item.remote_bug_id:
+            return self._result(
+                item.remote_bug_id, "failed", error_message="禅道 Bug 详情编号不匹配"
+            )
+        pending: list[dict[str, str]] = []
+        severity = item.severity or mapping.map_severity(snapshot["severity"])
+        if severity is None:
+            return self._result(
+                item.remote_bug_id, "failed", error_message="严重程度未指定且禅道值无法映射"
+            )
+        priority = item.priority or mapping.map_priority(snapshot["priority"])
+        if priority is None:
+            return self._result(
+                item.remote_bug_id, "failed", error_message="优先级未指定且禅道值无法映射"
+            )
+        status_fields = mapping.map_status(
+            snapshot["status"],
+            snapshot["confirmed"],
+            snapshot["resolution"],
+            snapshot["resolvedBuild"],
+        )
+        if status_fields is None:
+            return self._result(
+                item.remote_bug_id, "failed", error_message="禅道状态或解决方案无法映射（R27）"
+            )
+        description = mapping.remote_description(detail.get("steps"))
+        if description["hasImages"]:
+            return self._result(
+                item.remote_bug_id,
+                "pending",
+                error_message="正文包含图片，需等待文件管线反向导入后一起创建（R30/R42）",
+            )
+        if not description["hasContent"]:
+            return self._result(item.remote_bug_id, "failed", error_message="远端描述没有有效内容")
+        if not await self._assignable(project_id, item.assignee_user_id):
+            return self._result(
+                item.remote_bug_id, "failed", error_message="责任人必须是当前项目可指派的成员"
+            )
+        found_sprint = await self.repository.get_sprint(item.found_sprint_id)
+        if found_sprint is None or found_sprint.project_id != project_id:
+            return self._result(
+                item.remote_bug_id, "failed", error_message="发现迭代必须属于当前项目"
+            )
+        requirement_id = ""
+        if item.requirement_id:
+            requirement = await self.repository.get_requirement(item.requirement_id)
+            sprint = (
+                None
+                if requirement is None
+                else await self.repository.get_sprint(requirement.sprint_id)
+            )
+            if requirement is None or sprint is None or sprint.project_id != project_id:
+                return self._result(
+                    item.remote_bug_id, "failed", error_message="所属需求必须属于当前项目"
+                )
+            requirement_id = requirement.requirement_id
+        duplicate_local = await self._duplicate_local_id(
+            project_id, access.base_url, int(snapshot["duplicateBug"])
+        )
+        if int(snapshot["duplicateBug"]) and duplicate_local is None:
+            pending.append(
+                {"field": "duplicateBug", "reason": "远端重复 Bug 无法解析为同项目平台 Bug，已留空"}
+            )
+        duplicate_bug = duplicate_local if status_fields["resolution"] == "duplicate" else 0
+        return await self._create_rows(
+            access,
+            binding,
+            user_id,
+            project_id,
+            operation_id,
+            item,
+            snapshot,
+            status_fields,
+            description,
+            {
+                "severity": severity,
+                "priority": priority,
+                "assignee_user_id": item.assignee_user_id,
+                "found_sprint_id": found_sprint.sprint_id,
+                "requirement_id": requirement_id,
+                "duplicate_bug": duplicate_bug,
+            },
+            pending,
+        )
+
+    async def _replay(self, operation_id: str) -> dict | None:
+        """同一请求编号的重复提交返回原结果，不重复创建（R11/R56）。"""
+        row = await self.session.scalar(
+            select(BugZentaoPush).where(BugZentaoPush.operation_id == operation_id)
+        )
+        if row is None or row.source != "import":
+            return None
+        bug = await self.repository.get_bug(row.bug_id)
+        if bug is None:
+            return None
+        return self._result(
+            int(row.remote_bug_id or 0),
+            "success",
+            bug_id=bug.bug_id,
+            bug_no=bug.bug_no,
+            title=bug.title,
+        )
+
+    async def _create_rows(
+        self,
+        access,
+        binding,
+        user_id: str,
+        project_id: str,
+        operation_id: str,
+        item: ZentaoBugImportItemRequest,
+        snapshot: dict,
+        status_fields: dict,
+        description: dict,
+        resolved: dict,
+        pending: list[dict[str, str]],
+    ) -> dict:
+        instance_url = access.base_url
+        target = {
+            "mcpServiceId": access.service_id,
+            "instanceUrl": instance_url,
+            "project": int(binding.remote_resource_id),
+        }
+        bug = Bug(
+            bug_id=new_id(),
+            bug_no=0,
+            project_id=project_id,
+            title=snapshot["title"],
+            description_html=description["sanitized"],
+            status=status_fields["status"],
+            confirmed=bool(status_fields["confirmed"]),
+            resolution=status_fields["resolution"],
+            resolved_build=str(status_fields.get("resolvedBuild") or ""),
+            duplicate_bug=resolved["duplicate_bug"],
+            activated_count=int(snapshot["activatedCount"]),
+            severity=resolved["severity"],
+            priority=resolved["priority"],
+            reporter_user_id=user_id,
+            assignee_user_id=resolved["assignee_user_id"],
+            found_sprint_id=resolved["found_sprint_id"],
+            planned_fix_sprint_id="",
+            requirement_id=resolved["requirement_id"],
+        )
+        create_activity = BugActivity(
+            activity_id=new_id(),
+            bug_id=bug.bug_id,
+            kind=BugActivityKind.STATUS_CHANGE.value,
+            actor_user_id=user_id,
+            action="create",
+            from_status="",
+            to_status=bug.status,
+        )
+        sync_activity = BugActivity(
+            activity_id=new_id(),
+            bug_id=bug.bug_id,
+            kind="sync",
+            actor_user_id=user_id,
+            action="zentao_import",
+            content=f"从禅道导入 Bug #{snapshot['remoteBugId']}",
+            detail_json={
+                "operationId": operation_id,
+                "remoteBugId": snapshot["remoteBugId"],
+                "openedBy": snapshot["openedBy"],
+                "openedDate": snapshot["openedDate"],
+            },
+        )
+        push = BugZentaoPush(
+            bug_id=bug.bug_id,
+            source="import",
+            operation_id=operation_id,
+            actor_user_id=user_id,
+            service_id=access.service_id,
+            instance_url=instance_url,
+            instance_key=instance_key(instance_url),
+            status="succeeded",
+            remote_bug_id=snapshot["remoteBugId"],
+            target_json=target,
+            payload_json={},
+            source_json={key: snapshot[key] for key in snapshot if key != "deleted"},
+        )
+        remote_profile = {
+            "title": snapshot["title"],
+            "severity": resolved["severity"],
+            "priority": resolved["priority"],
+        }
+        # duplicateBug 解析为平台主键后不可与远端编号直接比较，不进入比对基线。
+        remote_status = {
+            "status": status_fields["status"],
+            "confirmed": bool(status_fields["confirmed"]),
+            "resolution": status_fields["resolution"],
+            "resolvedBuild": str(status_fields.get("resolvedBuild") or ""),
+            "activatedCount": int(snapshot["activatedCount"]),
+        }
+        baselines = [
+            self._baseline(
+                bug.bug_id, "profile", remote_profile, remote_profile, operation_id, user_id
+            ),
+            self._baseline(
+                bug.bug_id,
+                "description",
+                {"digest": description["digest"]},
+                {"digest": description["digest"]},
+                operation_id,
+                user_id,
+            ),
+            self._baseline(
+                bug.bug_id, "status", remote_status, remote_status, operation_id, user_id
+            ),
+            self._baseline(
+                bug.bug_id,
+                "assignee",
+                {"userId": resolved["assignee_user_id"]},
+                {"account": snapshot["assignedTo"]},
+                operation_id,
+                user_id,
+            ),
+        ]
+        for _ in range(3):
+            bug.bug_no = await self.repository.next_bug_no(project_id)
+            self.repository.add(bug)
+            self.repository.add_activity(create_activity)
+            self.repository.add_activity(sync_activity)
+            self.session.add(push)
+            for baseline in baselines:
+                self.session.add(baseline)
+            try:
+                await self.repository.commit()
+            except IntegrityError as exc:
+                await self.repository.rollback()
+                if _bug_no_conflict(exc):
+                    continue
+                if _identity_conflict(exc):
+                    return await self._conflict_result(
+                        project_id, instance_url, int(snapshot["remoteBugId"]), snapshot["title"]
+                    )
+                raise
+            break
+        else:
+            return self._result(
+                snapshot["remoteBugId"], "failed", error_message="Bug 编号分配冲突，请重试"
+            )
+        return self._result(
+            snapshot["remoteBugId"],
+            "success",
+            bug_id=bug.bug_id,
+            bug_no=bug.bug_no,
+            title=bug.title,
+            pending=pending,
+        )
+
+    async def _conflict_result(
+        self, project_id: str, instance_url: str, remote_bug_id: int, title: str
+    ) -> dict:
+        """唯一约束兜底：区分本项目重复与其他项目占用（R12，不泄露去向）。"""
+        link = await self.session.scalar(
+            select(BugZentaoPush).where(
+                BugZentaoPush.instance_key == instance_key(instance_url),
+                BugZentaoPush.remote_bug_id == remote_bug_id,
+            )
+        )
+        if link is not None:
+            bug = await self.repository.get_bug(link.bug_id)
+            if bug is not None and bug.project_id == project_id:
+                return self._result(
+                    remote_bug_id,
+                    "already_linked",
+                    bug_id=bug.bug_id,
+                    bug_no=bug.bug_no,
+                    title=bug.title,
+                    error_message="该禅道 Bug 已导入过，请从现有平台 Bug 同步",
+                )
+        return self._result(
+            remote_bug_id,
+            "conflict",
+            title=title,
+            error_message="该禅道 Bug 已被其他平台项目关联，不能重复导入",
+        )
+
+    @staticmethod
+    def _baseline(
+        bug_id: str,
+        group: str,
+        local: dict,
+        remote: dict,
+        operation_id: str,
+        user_id: str,
+    ) -> BugZentaoSyncBaseline:
+        return BugZentaoSyncBaseline(
+            bug_id=bug_id,
+            field_group=group,
+            local_snapshot_json=local,
+            remote_snapshot_json=remote,
+            operation_id=operation_id,
+            applied_by=user_id,
+            applied_at=datetime.now(UTC),
+        )
+
+    @staticmethod
+    def _result(
+        remote_bug_id: int,
+        status: str,
+        *,
+        bug_id: str = "",
+        bug_no: int = 0,
+        title: str = "",
+        error_message: str = "",
+        pending: list[dict[str, str]] | None = None,
+    ) -> dict:
+        return {
+            "remote_bug_id": remote_bug_id,
+            "status": status,
+            "bug_id": bug_id,
+            "bug_no": bug_no,
+            "title": title,
+            "error_message": error_message,
+            "pending": pending or [],
+        }
+
+    async def _assignable(self, project_id: str, user_id: str) -> bool:
+        return await assignable_member(self.repository, project_id, user_id)
+
+
+async def duplicate_local_id(
+    repository, project_id: str, instance_url: str, remote_bug_id: int
+) -> int | None:
+    """远端 duplicateBug 解析为同项目平台 Bug 主键；不可解析返回 None（Q04）。"""
+    if not remote_bug_id:
+        return None
+    link = await repository.session.scalar(
+        select(BugZentaoPush).where(
+            BugZentaoPush.instance_key == instance_key(instance_url),
+            BugZentaoPush.remote_bug_id == remote_bug_id,
+        ),
+    )
+    if link is None:
+        return None
+    bug = await repository.get_bug(link.bug_id)
+    if bug is None or bug.project_id != project_id:
+        return None
+    return bug.id
+
+
+async def assignable_member(repository, project_id: str, user_id: str) -> bool:
+    """项目所有者不是 project_members 行，因此单独判断。"""
+    project = await repository.get_project(project_id)
+    if project is None:
+        return False
+    if project.user_id == user_id:
+        return True
+    return await repository.get_project_member(project_id, user_id) is not None
+
+
+def _optional_remote_id(value: object) -> int:
+    try:
+        if isinstance(value, bool) or value is None or str(value).strip() == "":
+            return 0
+        result = int(str(value).strip())
+    except ValueError:
+        return 0
+    return result if result > 0 else 0

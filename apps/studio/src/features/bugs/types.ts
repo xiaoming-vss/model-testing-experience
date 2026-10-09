@@ -172,6 +172,7 @@ export type BugZentaoJob = {
 
 export type BugZentaoPush = {
   status: 'not_pushed' | 'preparing' | 'creating' | 'succeeded' | 'failed' | 'unknown'
+  source?: 'push' | 'import' | string
   ready: boolean
   reason: string
   remoteBugId: number | null
@@ -209,3 +210,102 @@ export type BugZentaoUpdatePayload = BugZentaoPushPayload & {
   expectedOpenedBuild: string[]
   expectedAssignedTo: string
 }
+
+/** 禅道新建 Bug 导入（后端 ZentaoBugImport* 契约）。 */
+
+export type ZentaoBugCandidate = {
+  remoteBugId: number
+  title: string
+  status: string
+  severity: string
+  priority: string
+  assignedTo: string
+  openedBy: string
+  openedDate: string
+  execution: number
+  story: number
+  linked: boolean
+}
+
+export type ZentaoBugPendingItem = { field: string; reason: string }
+
+export type ZentaoBugImportPreview = {
+  remoteBugId: number
+  state: 'ready' | 'pending' | 'pending_files' | 'invalid' | string
+  title: string
+  snapshot: Record<string, unknown>
+  converted: {
+    severity?: string | null
+    priority?: string | null
+    status?: string
+    confirmed?: boolean
+    resolution?: string
+    resolvedBuild?: string
+    duplicateBugId?: number | null
+    foundSprintId?: string
+    foundSprintName?: string
+    requirementId?: string
+    requirementName?: string
+  }
+  description: { hasImages: boolean; hasContent: boolean }
+  pending: ZentaoBugPendingItem[]
+  errorMessage: string
+}
+
+export type ZentaoBugImportItemPayload = {
+  remoteBugId: number
+  assigneeUserId: string
+  foundSprintId: string
+  requirementId?: string
+  severity?: string
+  priority?: string
+}
+
+export type ZentaoBugImportResult = {
+  remoteBugId: number
+  status: 'success' | 'already_linked' | 'conflict' | 'failed' | string
+  bugId: string
+  bugNo: number
+  title: string
+  errorMessage: string
+  pending: ZentaoBugPendingItem[]
+}
+
+/** 已关联 Bug 从禅道拉取更新（后端 ZentaoRemote* / ZentaoPull* 契约）。 */
+
+export type ZentaoRemoteGroupState =
+  | 'synced'
+  | 'remote_changed'
+  | 'local_changed'
+  | 'conflict'
+  | 'confirm_baseline'
+  | 'pending_files'
+  | 'pending_map'
+  | 'manual'
+  | string
+
+export type ZentaoRemoteGroup = {
+  group: 'profile' | 'description' | 'status' | 'assignee' | string
+  state: ZentaoRemoteGroupState
+  local: Record<string, unknown>
+  remote: Record<string, unknown>
+  baseline: { local: Record<string, unknown>; remote: Record<string, unknown>; appliedAt?: string } | null
+  reason: string
+}
+
+export type ZentaoRemotePreview = {
+  remoteBugId: number
+  remoteDigest: string
+  linkedSource: 'push' | 'import' | string
+  groups: ZentaoRemoteGroup[]
+}
+
+export type ZentaoPullGroupPayload = {
+  group: string
+  action: 'apply_remote' | 'keep_local'
+  assigneeUserId?: string
+  severity?: string
+  priority?: string
+}
+
+export type ZentaoPullResult = { applied: string[]; kept: string[]; notes: string[] }

@@ -18,6 +18,7 @@ from testing_agent.models.bug import Bug
 from testing_agent.models.bug_activity import BugActivity
 from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
 from testing_agent.models.bug_zentao_push import BugZentaoPush
+from testing_agent.models.bug_zentao_sync_baseline import BugZentaoSyncBaseline
 from testing_agent.models.function_test_case import FunctionTestCase
 from testing_agent.models.function_test_suite import FunctionTestSuite
 from testing_agent.models.integration_connection import IntegrationConnection
@@ -72,6 +73,7 @@ __all__ = [
     "BugActivity",
     "BugZentaoAttachment",
     "BugZentaoPush",
+    "BugZentaoSyncBaseline",
     "FunctionTestCase",
     "FunctionTestSuite",
     "IntegrationConnection",

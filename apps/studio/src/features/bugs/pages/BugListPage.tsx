@@ -6,6 +6,7 @@ import { Alert, Empty, Table } from 'antd'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { getErrorMessage } from '@/utils/format'
 import { BugFormModal } from '../components/BugFormModal'
+import { BugZentaoImportModal } from '../components/BugZentaoImportModal'
 import { BugTransitionModal } from '../components/BugTransitionModal'
 import { BugListToolbar } from '../components/BugListToolbar'
 import { useBugList } from '../hooks/useBugList'
@@ -14,11 +15,12 @@ import type { Bug } from '../types'
 export function BugListPage() {
   const model = useBugList()
   const { navigate, activeProjectId, activeSprintId, total, bugsQuery, bugs,
-    columns, page, pageSize, setPage, setPageSize, transition, setTransition, createOpen, setCreateOpen } = model
+    columns, page, pageSize, setPage, setPageSize, transition, setTransition,
+    createOpen, setCreateOpen, importOpen, setImportOpen } = model
   return (
     <div className="workbench-page api-automation-page functional-test-page tp-list-surface bugs-page tp-surface">
       <div className="api-automation-content">
-        <section className="workbench-panel workbench-board-panel tp-board">
+        <section className="workbench-panel workbench-board-panel tp-board tp-list-panel">
           <BugListToolbar model={model} />
 
           {bugsQuery.error ? (
@@ -30,8 +32,8 @@ export function BugListPage() {
               <Empty description="请先选择项目" />
             </div>
           ) : (
-            <div className="bugs-table-card">
-              <div className="table-body-scroll bugs-table-scroll">
+            <div className="bugs-table-card tp-list-body">
+              <div className="table-body-scroll bugs-table-scroll tp-list-scroll">
                 {bugsQuery.isLoading ? (
                   <div className="sprint-card-loading">
                     <Empty description="Bug 列表加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
@@ -75,6 +77,13 @@ export function BugListPage() {
         onClose={() => setCreateOpen(false)}
         onSaved={(saved) => { setCreateOpen(false); navigate(`/bugs/${saved.bugId}`) }}
       />
+      {activeProjectId && (
+        <BugZentaoImportModal
+          open={importOpen}
+          projectId={activeProjectId}
+          onClose={() => { setImportOpen(false); void bugsQuery.refetch() }}
+        />
+      )}
     </div>
   )
 }

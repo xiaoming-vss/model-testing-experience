@@ -13,6 +13,7 @@ from testing_agent.handlers.bug import (
     transition_bug,
     update_bug,
 )
+from testing_agent.handlers.bug_zentao_pull import get_bug_zentao_remote, pull_bug_zentao
 from testing_agent.handlers.bug_zentao_push import (
     get_bug_zentao_push,
     get_bug_zentao_push_options,
@@ -21,6 +22,10 @@ from testing_agent.handlers.bug_zentao_push import (
 )
 from testing_agent.handlers.integration_bug import get_job, submit_fields, submit_sync
 from testing_agent.schemas.bug import BugActivityResponse, BugOptionsResponse, BugResponse
+from testing_agent.schemas.bug_zentao_pull import (
+    ZentaoPullResponse,
+    ZentaoRemotePreviewResponse,
+)
 from testing_agent.schemas.bug_zentao_push import (
     BugZentaoPushOptionsResponse,
     BugZentaoPushResponse,
@@ -60,6 +65,15 @@ router.post(
     "/bugs/{bug_id}/zentao-push/attachments/{file_id}/reconcile",
     response_model=ApiResponse[BugZentaoPushResponse],
 )(reconcile_bug_attachment)
+
+router.get(
+    "/bugs/{bug_id}/zentao-remote",
+    response_model=ApiResponse[ZentaoRemotePreviewResponse],
+)(get_bug_zentao_remote)
+router.post(
+    "/bugs/{bug_id}/zentao-pull",
+    response_model=ApiResponse[ZentaoPullResponse],
+)(pull_bug_zentao)
 
 router.get(
     "/projects/{project_id}/bugs/options",

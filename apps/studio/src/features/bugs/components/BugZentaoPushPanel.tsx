@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, InputNumber, Space, Typography } from 'antd'
-import { SendOutlined } from '@ant-design/icons'
+import { SendOutlined, SyncOutlined } from '@ant-design/icons'
 import { bugsApi } from '../api/bugs.api'
 import type { BugZentaoJob, BugZentaoPush } from '../types'
 import { useBugZentaoStatus } from '../hooks/useBugZentaoStatus'
 import { isZentaoJobActive, sameBuilds, zentaoJobLabel } from '../utils/zentaoJobs'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
+import { BugZentaoPullModal } from './BugZentaoPullModal'
 import { BugZentaoPushModal } from './BugZentaoPushModal'
 
 const labels: Record<BugZentaoPush['status'], string> = {
@@ -15,9 +16,10 @@ const labels: Record<BugZentaoPush['status'], string> = {
   succeeded: '已推送', failed: '推送失败', unknown: '结果待核对',
 }
 
-export function BugZentaoPushPanel({ bugId, canWrite }: { bugId: string; canWrite: boolean }) {
+export function BugZentaoPushPanel({ bugId, projectId, canWrite }: { bugId: string; projectId?: string; canWrite: boolean }) {
   const client = useQueryClient()
   const [open, setOpen] = useState(false)
+  const [pullOpen, setPullOpen] = useState(false)
   const [remoteId, setRemoteId] = useState<number | null>(null)
   const [openedBuild, setOpenedBuild] = useState<string[]>(['trunk'])
   const [assignedTo, setAssignedTo] = useState('')
@@ -90,6 +92,8 @@ export function BugZentaoPushPanel({ bugId, canWrite }: { bugId: string; canWrit
   const data = query.data
   const latestJob = data?.activeJob ?? data?.latestJob
   const jobBusy = isZentaoJobActive(latestJob)
+  // 同步成功的常驻横幅与下方状态文字重复；仅展示进行中或异常的任务结果。
+  const showJobAlert = latestJob && !(latestJob.jobStatus === 'succeeded' && latestJob.taskType === 'zentao_bug_sync')
   const attachmentIncomplete = data?.status === 'succeeded' && data.attachmentStatus && !['none', 'succeeded'].includes(data.attachmentStatus)
   const descriptionIncomplete = data?.status === 'succeeded' && data.descriptionStatus && !['none', 'succeeded'].includes(data.descriptionStatus)
   const retrySync = data?.status === 'succeeded' && (['pending', 'failed'].includes(data.attachmentStatus ?? '') || ['pending', 'failed', 'unknown'].includes(data.descriptionStatus ?? ''))
@@ -103,11 +107,11 @@ export function BugZentaoPushPanel({ bugId, canWrite }: { bugId: string; canWrit
     {query.error && <Alert showIcon type="error" title={getErrorMessage(query.error)}
       action={<Button onClick={() => query.refetch()}>重新加载</Button>} />}
     <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
-      {latestJob && <Alert showIcon
+      {showJobAlert && <Alert showIcon
         type={isZentaoJobActive(latestJob) ? 'info' : latestJob.jobStatus === 'succeeded' ? 'success' : 'warning'}
         title={zentaoJobLabel(latestJob)} />}
       <Typography.Text>{descriptionIncomplete ? 'Bug 已创建，正文图片同步未完成' : attachmentIncomplete ? 'Bug 已创建，附件同步未完成' : data ? labels[data.status] : '加载同步信息中…'}
-        {data?.remoteBugId ? ` · 禅道 Bug #${data.remoteBugId}` : ''}</Typography.Text>
+        {data?.remoteBugId ? ` · 禅道 Bug #${data.remoteBugId}` : ''}{data?.source === 'import' ? ' · 来源：禅道导入' : ''}</Typography.Text>
       {data?.reason && <Alert type="info" showIcon title={data.reason} />}
       {data?.errorMessage && <Alert type="warning" showIcon title={data.errorMessage} />}
       {data?.fieldUpdateError && <Alert type="warning" showIcon title={data.fieldUpdateError} />}
@@ -119,6 +123,13 @@ export function BugZentaoPushPanel({ bugId, canWrite }: { bugId: string; canWrit
           <Button disabled={!remoteId || busy} loading={reconcile.isPending} onClick={() => reconcile.mutate()}>核对并关联</Button>
         </Space>}
       </>}
+      {canWrite && data?.status === 'succeeded' && (
+        <Button aria-label="从禅道同步" icon={<SyncOutlined />}
+          disabled={jobBusy || fieldBusy}
+          onClick={() => setPullOpen(true)}>
+          从禅道同步
+        </Button>
+      )}
       {canWrite && data?.status !== 'unknown' && <Button
         aria-label={data?.status === 'failed' || retrySync ? '重试推送到禅道' : '推送到禅道'}
         icon={<SendOutlined />} loading={push.isPending || fieldBusy} disabled={(!existing && !data?.ready) || busy || fieldBusy}
@@ -135,5 +146,9 @@ export function BugZentaoPushPanel({ bugId, canWrite }: { bugId: string; canWrit
       retrySync={!!retrySync} openedBuild={openedBuild} assignedTo={assignedTo}
       setOpenedBuild={setOpenedBuild} setAssignedTo={setAssignedTo} setOpen={setOpen}
       onConfirm={() => push.mutate()} options={options} />
+    {data?.status === 'succeeded' && (
+      <BugZentaoPullModal open={pullOpen} bugId={bugId} projectId={projectId}
+        onClose={() => setPullOpen(false)} />
+    )}
   </section>
 }

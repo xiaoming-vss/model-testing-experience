@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, text
+from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint, text
 from sqlalchemy.dialects.mysql import JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -12,13 +12,23 @@ from testing_agent.db.base import Base, CreatedAt, IdPk, UpdatedAt
 
 class BugZentaoPush(Base):
     __tablename__ = "bug_zentao_pushes"
-    __table_args__ = {"comment": "本地 Bug 的禅道创建关联及正文同步账本"}
+    __table_args__ = (
+        # 同一禅道实例 + Bug 编号只允许一条有效平台关联；NULL 编号（未创建）不受限。
+        UniqueConstraint("instance_key", "remote_bug_id", name="uk_bug_zentao_remote_identity"),
+        {"comment": "本地 Bug 的禅道创建关联及正文同步账本"},
+    )
     id: Mapped[IdPk] = mapped_column(comment="数据库内部主键")
     bug_id: Mapped[str] = mapped_column(
         String(64),
         ForeignKey("bugs.bug_id", ondelete="CASCADE"),
         unique=True,
         comment="平台 Bug 业务标识",
+    )
+    source: Mapped[str] = mapped_column(
+        String(20),
+        default="push",
+        server_default="push",
+        comment="关联来源：push 平台推送创建 / import 禅道 Bug 导入",
     )
     operation_id: Mapped[str] = mapped_column(
         String(64), comment="远端写入操作标识，用于结果核对与避免重复写入"
@@ -28,6 +38,11 @@ class BugZentaoPush(Base):
     )
     service_id: Mapped[str] = mapped_column(String(64), comment="项目共享服务业务标识")
     instance_url: Mapped[str] = mapped_column(String(512), comment="规范化的外部实例地址")
+    instance_key: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+        comment="实例地址的规范化哈希；跨端点识别同一禅道实例并支撑远端身份唯一约束",
+    )
     status: Mapped[str] = mapped_column(
         String(20), comment="禅道创建状态：not_pushed/preparing/creating/succeeded/failed/unknown"
     )
@@ -37,6 +52,14 @@ class BugZentaoPush(Base):
     target_json: Mapped[dict[str, Any]] = mapped_column(JSON, comment="冻结的禅道创建目标 JSON")
     payload_json: Mapped[dict[str, Any]] = mapped_column(
         JSON, comment="冻结的禅道创建请求内容 JSON"
+    )
+    source_json: Mapped[dict[str, Any]] = mapped_column(
+        JSON,
+        default=dict,
+        server_default=text("('{}')"),
+        comment=(
+            "远端来源快照 JSON：导入的原始 openedBy/openedDate/等级及拉取确认时的远端值；不含凭据"
+        ),
     )
     error_message: Mapped[str] = mapped_column(
         String(512), default="", comment="执行或同步错误信息"

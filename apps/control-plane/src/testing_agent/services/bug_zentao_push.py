@@ -66,6 +66,7 @@ class BugZentaoPushService:
                 status = "unknown"
             fields = {
                 "status": status,
+                "source": row.source,
                 "mcp_service_id": row.service_id,
                 "remote_bug_id": row.remote_bug_id,
                 "target": row.target_json,
