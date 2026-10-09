@@ -123,6 +123,7 @@ def setup(api, monkeypatch):
             52: remote_bug(52, steps="<p>截图</p><img src='http://zentao/file/1.png'/>"),
             53: remote_bug(53, status="custom"),
             54: remote_bug(54, severity=""),
+            56: remote_bug(56, steps="<img src='http://zentao/file/9.png'/>"),
             55: remote_bug(55, execution=99),
         }
     )
@@ -273,7 +274,7 @@ def test_candidates_mark_linked_filter_and_paginate(api, setup):
     assert body["code"] == 0, body
     data = body["data"]
     assert data["scope"] == "execution" and data["executionId"] == 20
-    assert data["total"] == 5
+    assert data["total"] == 6
     assert all(item["remoteBugId"] != 55 for item in data["items"])
     linked = {item["remoteBugId"]: item["linked"] for item in data["items"]}
     assert linked[50] is True
@@ -300,7 +301,7 @@ def test_candidates_mark_linked_filter_and_paginate(api, setup):
         headers=owner,
         params={"sprintId": field["sprint"], "pageSize": 2, "page": 2},
     ).json()["data"]
-    assert data["total"] == 5 and len(data["items"]) == 2
+    assert data["total"] == 6 and len(data["items"]) == 2
 
 
 def test_preview_maps_bindings_and_reports_pending(api, setup):
@@ -328,7 +329,9 @@ def test_preview_maps_bindings_and_reports_pending(api, setup):
     assert manual["converted"]["status"] == "resolved"
     assert manual["converted"]["resolvedBuild"] == "v2"
 
-    assert by_id[52]["state"] == "pending_files"
+    # R41：带图且有文本的候选可导入文本，图片组标记待补（非阻塞）。
+    assert by_id[52]["state"] == "ready"
+    assert any("先导入文本" in item["reason"] for item in by_id[52]["pending"])
     assert by_id[53]["state"] == "pending"
     assert by_id[54]["state"] == "ready"
     assert by_id[54]["converted"]["severity"] is None
@@ -415,6 +418,40 @@ def test_import_creates_linked_bug_with_baselines_and_activity(api, setup):
     assert status_response["remoteBugId"] == 51
 
 
+def test_import_with_images_applies_text_and_defers_description_group(api, setup):
+    field = setup
+    owner = field["owner"]
+    response = api.post(
+        field["import"],
+        headers=owner,
+        json={
+            "requestId": "req-20261009-0005",
+            "items": [import_item(field["sprint"], 52, field["owner_id"])],
+        },
+    )
+    assert response.status_code == 200, response.text
+    result = response.json()["data"]["items"][0]
+    assert result["status"] == "success"
+    assert any("先导入文本" in item["reason"] for item in result["pending"])
+
+    detail = api.get(f"/v1/bugs/{result['bugId']}", headers=owner).json()["data"]
+    assert detail["descriptionHtml"] == "<p>截图</p>"
+
+    async def load():
+        async with api.app.state.test_sessions() as session:
+            return (
+                await session.scalars(
+                    select(BugZentaoSyncBaseline).where(
+                        BugZentaoSyncBaseline.bug_id == result["bugId"]
+                    )
+                )
+            ).all()
+
+    groups = {baseline.field_group for baseline in asyncio.run(load())}
+    # 描述组未建立基线：文件管线补齐图片前，反向拉取会如实显示待处理（R30）。
+    assert groups == {"profile", "status", "assignee"}
+
+
 def test_import_is_idempotent_and_deduplicates(api, setup):
     field = setup
     owner = field["owner"]
@@ -458,7 +495,7 @@ def test_import_rejects_invalid_selections_and_unmappable_status(api, setup):
                 import_item(field["sprint"], 50, "stranger"),
                 import_item("no-such-sprint", 51, field["owner_id"], priority="high"),
                 import_item(field["sprint"], 53, field["owner_id"]),
-                import_item(field["sprint"], 52, field["owner_id"]),
+                import_item(field["sprint"], 56, field["owner_id"]),
             ],
         },
     ).json()["data"]["items"]

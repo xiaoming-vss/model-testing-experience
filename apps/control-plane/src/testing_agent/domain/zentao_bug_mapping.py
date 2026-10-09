@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from hashlib import sha256
 from html.parser import HTMLParser
+from re import sub as _re_sub
 from typing import Any
 
 from testing_agent.core.enums import BugResolution, BugSeverity, BugStatus
@@ -118,12 +119,16 @@ def has_remote_images(raw_html: str) -> bool:
 
 
 def remote_description(raw_steps: object) -> dict[str, Any]:
-    """远端 steps 的净化结果：可直接应用的文本、内容摘要与图片标记（R30/R46）。"""
+    """远端 steps 的净化结果：完整净化文本、去图文本与内容摘要（R30/R41/R46）。"""
     raw = str(raw_steps or "")
     sanitized = sanitize_rich_text(raw)
+    # R41 文本先行：剥掉图片标签后的净化文本，供图片待补时先落正文。
+    text_only = sanitize_rich_text(_re_sub(r"<img\b[^>]*/?>|</img>", "", raw, flags=2))
     return {
         "sanitized": sanitized,
         "digest": sha256(sanitized.encode()).hexdigest(),
+        "textOnly": text_only,
+        "textOnlyDigest": sha256(text_only.encode()).hexdigest(),
         "hasImages": has_remote_images(raw),
         "hasContent": has_rich_text_content(sanitized),
     }

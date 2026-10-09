@@ -267,14 +267,24 @@ class ZentaoBugImportService:
             state = "pending"
             pending.append({"field": "status", "reason": "禅道状态或解决方案无法映射"})
         description = mapping.remote_description(detail.get("steps"))
-        if description["hasImages"]:
-            state = "pending_files"
+        if description["hasImages"] and description["hasContent"]:
+            # R41：先导入文本并标记待补，图片随文件管线反向导入后再完成描述组（R30）。
             pending.append(
-                {"field": "description", "reason": "正文包含图片，需等待文件管线反向导入后一起应用"}
+                {
+                    "field": "description",
+                    "reason": (
+                        "正文包含图片：本次先导入文本，图片待文件管线反向导入后补齐，描述组暂不建立基线"
+                    ),
+                }
             )
         elif not description["hasContent"]:
             state = "pending"
-            pending.append({"field": "description", "reason": "远端描述没有有效内容"})
+            reason = (
+                "正文仅包含图片且无有效文本，需等待文件管线反向导入"
+                if description["hasImages"]
+                else "远端描述没有有效内容"
+            )
+            pending.append({"field": "description", "reason": reason})
         sprint = await self._sprint_for_execution(
             project_id, access.base_url, int(snapshot["execution"])
         )
@@ -448,14 +458,24 @@ class ZentaoBugImportService:
                 item.remote_bug_id, "failed", error_message="禅道状态或解决方案无法映射（R27）"
             )
         description = mapping.remote_description(detail.get("steps"))
-        if description["hasImages"]:
+        if description["hasImages"] and not description["hasContent"]:
             return self._result(
                 item.remote_bug_id,
                 "pending",
-                error_message="正文包含图片，需等待文件管线反向导入后一起创建（R30/R42）",
+                error_message="正文仅包含图片且无有效文本，需等待文件管线反向导入（R30）",
             )
         if not description["hasContent"]:
             return self._result(item.remote_bug_id, "failed", error_message="远端描述没有有效内容")
+        if description["hasImages"]:
+            # R41：文本先行导入，图片组待文件管线；描述组不建立基线，避免误标为已同步（R30）。
+            pending.append(
+                {
+                    "field": "description",
+                    "reason": (
+                        "正文包含图片：已先导入文本，图片待文件管线反向导入后补齐，描述组待补建基线"
+                    ),
+                }
+            )
         if not await self._assignable(project_id, item.assignee_user_id):
             return self._result(
                 item.remote_bug_id, "failed", error_message="责任人必须是当前项目可指派的成员"
@@ -550,7 +570,10 @@ class ZentaoBugImportService:
             bug_no=0,
             project_id=project_id,
             title=snapshot["title"],
-            description_html=description["sanitized"],
+            # 带图正文先落去图文本（R41）；完整净化文本用于无图场景。
+            description_html=(
+                description["textOnly"] if description["hasImages"] else description["sanitized"]
+            ),
             status=status_fields["status"],
             confirmed=bool(status_fields["confirmed"]),
             resolution=status_fields["resolution"],
@@ -620,14 +643,6 @@ class ZentaoBugImportService:
                 bug.bug_id, "profile", remote_profile, remote_profile, operation_id, user_id
             ),
             self._baseline(
-                bug.bug_id,
-                "description",
-                {"digest": description["digest"]},
-                {"digest": description["digest"]},
-                operation_id,
-                user_id,
-            ),
-            self._baseline(
                 bug.bug_id, "status", remote_status, remote_status, operation_id, user_id
             ),
             self._baseline(
@@ -639,6 +654,18 @@ class ZentaoBugImportService:
                 user_id,
             ),
         ]
+        if not description["hasImages"]:
+            # 带图正文按 R30/R41 只导入文本：描述组不建基线，待文件管线补齐后由反向拉取确认。
+            baselines.append(
+                self._baseline(
+                    bug.bug_id,
+                    "description",
+                    {"digest": description["digest"]},
+                    {"digest": description["digest"]},
+                    operation_id,
+                    user_id,
+                )
+            )
         for _ in range(3):
             bug.bug_no = await self.repository.next_bug_no(project_id)
             self.repository.add(bug)
