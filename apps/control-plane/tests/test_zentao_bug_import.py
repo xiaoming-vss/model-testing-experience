@@ -1,6 +1,7 @@
 """禅道新建 Bug 导入：真实鉴权/数据库/HTTP，仅替换 MCP 传输（MockTransport）。"""
 
 import asyncio
+import hashlib
 import json
 
 import httpx
@@ -14,11 +15,13 @@ from test_project_membership_api import account, project
 from test_project_membership_api import api as api
 
 from testing_agent.models.bug_activity import BugActivity
+from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
 from testing_agent.models.bug_zentao_push import BugZentaoPush
 from testing_agent.models.bug_zentao_sync_baseline import BugZentaoSyncBaseline
 from testing_agent.models.resource_binding import ResourceBinding
 from testing_agent.services.mcp_client import McpClient
 from testing_agent.services.service_instance import instance_key
+from testing_agent.services.stored_file import StoredFileService
 
 
 @pytest.fixture(autouse=True)
@@ -124,23 +127,25 @@ def setup(api, monkeypatch):
             53: remote_bug(53, status="custom"),
             54: remote_bug(54, severity=""),
             56: remote_bug(56, steps="<img src='http://zentao/file/9.png'/>"),
-            55: remote_bug(55, execution=99),
+            55: remote_bug(
+                55,
+                execution=99,
+                steps='<p>数据</p><img src="http://zentao.test/file-read-101.png"/>',
+                attachments=[{"id": 101, "title": "截图.png", "size": 13}],
+            ),
+            57: remote_bug(
+                57,
+                steps='<p>日志</p><img src="http://zentao.test/file-read-102.png"/>',
+                attachments=[{"id": 102, "title": "日志.png", "size": 13}],
+            ),
         }
     )
-    transport = httpx.MockTransport(remote.handle)
-    monkeypatch.setattr(
-        "testing_agent.services.zentao_mcp_instance.McpClient",
-        lambda url, token: McpClient(url, token, transport=transport),
-    )
+    # MockTransport 在 lambda 内构造：测试包装 remote.handle 时按当时状态分发。
+    factory = lambda url, token: McpClient(url, token, transport=httpx.MockTransport(remote.handle))
+    monkeypatch.setattr("testing_agent.services.zentao_mcp_instance.McpClient", factory)
     # ZentaoMcpAccess.resolve 从 zentao_mcp 命名空间取 McpClient 传入 discover_instance。
-    monkeypatch.setattr(
-        "testing_agent.services.zentao_mcp.McpClient",
-        lambda url, token: McpClient(url, token, transport=transport),
-    )
-    monkeypatch.setattr(
-        "testing_agent.services.zentao_bug_import.McpClient",
-        lambda url, token: McpClient(url, token, transport=transport),
-    )
+    monkeypatch.setattr("testing_agent.services.zentao_mcp.McpClient", factory)
+    monkeypatch.setattr("testing_agent.services.zentao_bug_import.McpClient", factory)
     owner_user, owner = account(api, "owner")
     pid = project(api, owner)
     sprint = make_sprint(api, owner, pid)
@@ -274,7 +279,7 @@ def test_candidates_mark_linked_filter_and_paginate(api, setup):
     assert body["code"] == 0, body
     data = body["data"]
     assert data["scope"] == "execution" and data["executionId"] == 20
-    assert data["total"] == 6
+    assert data["total"] == 7
     assert all(item["remoteBugId"] != 55 for item in data["items"])
     linked = {item["remoteBugId"]: item["linked"] for item in data["items"]}
     assert linked[50] is True
@@ -301,7 +306,20 @@ def test_candidates_mark_linked_filter_and_paginate(api, setup):
         headers=owner,
         params={"sprintId": field["sprint"], "pageSize": 2, "page": 2},
     ).json()["data"]
-    assert data["total"] == 6 and len(data["items"]) == 2
+    assert data["total"] == 7 and len(data["items"]) == 2
+
+    # 迭代未绑定执行：直接提示，不做项目范围回退（用户确认 2026-10-09）。
+    from test_function_case_library import make_sprint as make_sprint_helper
+
+    unbound = make_sprint_helper(api, owner, field["pid"], name="unbound")
+    response = api.get(field["candidates"], headers=owner, params={"sprintId": unbound})
+    assert response.status_code == 400
+    assert "未绑定禅道执行" in response.json()["message"]
+
+    # 未选择迭代时保持项目范围查询。
+    data = api.get(field["candidates"], headers=owner).json()["data"]
+    assert data["scope"] == "project" and data["executionId"] is None
+    assert data["total"] == 8
 
 
 def test_preview_maps_bindings_and_reports_pending(api, setup):
@@ -450,6 +468,154 @@ def test_import_with_images_applies_text_and_defers_description_group(api, setup
     groups = {baseline.field_group for baseline in asyncio.run(load())}
     # 描述组未建立基线：文件管线补齐图片前，反向拉取会如实显示待处理（R30）。
     assert groups == {"profile", "status", "assignee"}
+
+
+PULL_CONTENT = "pull-content\n"
+PULL_HASH = hashlib.sha256(PULL_CONTENT.encode()).hexdigest()
+
+
+@pytest.fixture
+def pull_files(api, setup, monkeypatch):
+    """模拟 MCP 的 get_bug_attachment 内容回传与平台文件生命周期。"""
+    s = setup
+    state = {"initiated": [], "completed": [], "attached": [], "pull_failure": ""}
+    original = s["remote"].handle
+
+    async def handle(request):
+        body = json.loads(request.content)
+        name = body.get("params", {}).get("name")
+        if name != "get_bug_attachment":
+            return await original(request)
+        args = body["params"]["arguments"]
+        s["remote"].calls.append(("get_bug_attachment", args))
+        if state["pull_failure"] == "transfer" and args.get("uploadUrl"):
+            data = {"status": "fail", "uncertain": False, "errorCode": "content_upload_failed"}
+        else:
+            data = {
+                "status": "success",
+                "id": args["fileId"],
+                "filename": f"附件-{args['fileId']}.png",
+                "size": len(PULL_CONTENT),
+                "sha256": PULL_HASH,
+            }
+            if args.get("uploadUrl"):
+                data["uploaded"] = True
+        return httpx.Response(
+            200, json={"jsonrpc": "2.0", "id": body["id"], "result": {"structuredContent": data}}
+        )
+
+    s["remote"].handle = handle
+
+    async def initiate_pull(self, user_id, project_id, *, bug_id, filename, size, sha256):
+        state["initiated"].append(
+            {"filename": filename, "size": size, "sha256": sha256, "bugId": bug_id}
+        )
+        file_id = f"pull-{len(state['initiated'])}"
+        return {"fileId": file_id, "upload": f"http://s3.test/stage/{file_id}", "expiresIn": 300}
+
+    async def complete(self, user_id, file_id):
+        state["completed"].append(file_id)
+        return {"fileId": file_id, "status": "ready"}
+
+    async def attach(self, user_id, file_id, project_id, resource_type, resource_id, *, purpose):
+        state["attached"].append(file_id)
+        return {"fileId": file_id, "filename": "x"}
+
+    monkeypatch.setattr(StoredFileService, "initiate_pull", initiate_pull)
+    monkeypatch.setattr(StoredFileService, "complete", complete)
+    monkeypatch.setattr(StoredFileService, "attach", attach)
+    s["pull_state"] = state
+    return s
+
+
+def test_import_pulls_files_rewrites_images_and_writes_baseline(api, pull_files):
+    field = pull_files
+    owner = field["owner"]
+    response = api.post(
+        field["import"],
+        headers=owner,
+        json={
+            "requestId": "req-20261009-0006",
+            "items": [import_item(field["sprint"], 55, field["owner_id"])],
+        },
+    )
+    assert response.status_code == 200, response.text
+    result = response.json()["data"]["items"][0]
+    assert result["status"] == "success"
+    # 正文图片全部解析并回传：待处理清单里不应再有描述项。
+    assert all(item["field"] != "description" for item in result["pending"])
+
+    detail = api.get(f"/v1/bugs/{result['bugId']}", headers=owner).json()["data"]
+    assert '<img data-file-id="pull-1">' in detail["descriptionHtml"]
+    assert "file-read-101" not in detail["descriptionHtml"]
+
+    async def load():
+        async with api.app.state.test_sessions() as session:
+            baselines = (
+                await session.scalars(
+                    select(BugZentaoSyncBaseline).where(
+                        BugZentaoSyncBaseline.bug_id == result["bugId"],
+                        BugZentaoSyncBaseline.field_group == "description",
+                    )
+                )
+            ).all()
+            mappings = (
+                await session.scalars(
+                    select(BugZentaoAttachment).where(BugZentaoAttachment.bug_id == result["bugId"])
+                )
+            ).all()
+            return baselines, mappings
+
+    baselines, mappings = asyncio.run(load())
+    assert len(baselines) == 1
+    assert baselines[0].local_snapshot_json["digest"]
+    assert baselines[0].remote_snapshot_json["digest"]
+    assert [(m.direction, m.status, m.remote_file_id) for m in mappings] == [
+        ("pull", "succeeded", 101)
+    ]
+    state = field["pull_state"]
+    assert len(state["initiated"]) == 1 and state["initiated"][0]["filename"] == "附件-101.png"
+    assert state["attached"] == ["pull-1"]
+
+
+def test_import_file_transfer_failure_keeps_bug_and_marks_pending(api, pull_files):
+    field = pull_files
+    owner = field["owner"]
+    field["pull_state"]["pull_failure"] = "transfer"
+    response = api.post(
+        field["import"],
+        headers=owner,
+        json={
+            "requestId": "req-20261009-0007",
+            "items": [import_item(field["sprint"], 57, field["owner_id"])],
+        },
+    )
+    assert response.status_code == 200, response.text
+    result = response.json()["data"]["items"][0]
+    # Bug 本体照常创建；失败的文件进入待处理清单（R41/R53）。
+    assert result["status"] == "success"
+    assert any("#102" in item["reason"] for item in result["pending"])
+
+    async def load():
+        async with api.app.state.test_sessions() as session:
+            baselines = (
+                await session.scalars(
+                    select(BugZentaoSyncBaseline).where(
+                        BugZentaoSyncBaseline.bug_id == result["bugId"],
+                        BugZentaoSyncBaseline.field_group == "description",
+                    )
+                )
+            ).all()
+            mappings = (
+                await session.scalars(
+                    select(BugZentaoAttachment).where(BugZentaoAttachment.bug_id == result["bugId"])
+                )
+            ).all()
+            return baselines, mappings
+
+    baselines, mappings = asyncio.run(load())
+    assert baselines == []
+    assert [(m.direction, m.status) for m in mappings] == [("pull", "failed")]
 
 
 def test_import_is_idempotent_and_deduplicates(api, setup):

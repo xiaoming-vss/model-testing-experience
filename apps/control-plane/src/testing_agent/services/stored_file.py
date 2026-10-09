@@ -39,6 +39,9 @@ ALLOWED_EXTENSIONS = {
     "mp4",
 }
 
+# 禅道拉取在浏览器允许集之上放宽常见截图/压缩格式；svg 因脚本风险始终排除。
+PULL_EXTENSIONS = ALLOWED_EXTENSIONS | {"gif", "bmp", "webm", "7z", "gz"}
+
 # Business folders are assigned by the server, never supplied as upload paths.
 PURPOSE_FOLDERS = {
     "requirement": "requirements",
@@ -143,6 +146,61 @@ class StoredFileService:
             expires_at=utcnow() + timedelta(hours=self.settings.temporary_hours),
         )
         ticket = await asyncio.to_thread(self.storage.upload_ticket, row.staging_key, row.size)
+        self.session.add(row)
+        await self.session.commit()
+        return {"fileId": file_id, "upload": ticket, "expiresIn": self.settings.signature_seconds}
+
+    async def initiate_pull(
+        self,
+        user_id: str,
+        project_id: str,
+        *,
+        bug_id: str,
+        filename: str,
+        size: int,
+        sha256: str,
+    ):
+        """禅道反向拉取的内部上传票据：调用方是项目 MCP，而非浏览器（R44/R46）。
+
+        大小与摘要来自远端元数据核对，MCP 上传后由 complete 的 seal 再校验一次。
+        """
+        await require_project_id(self.session, user_id, project_id, "write")
+        filename = (filename or "").strip() or "attachment"
+        filename = filename.replace("\\", "_").replace("/", "_")
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+        if size <= 0 or size > self.settings.max_bytes:
+            raise AppError(400, "远端文件大小超出平台限制", 400)
+        if ext and ext not in PULL_EXTENSIONS:
+            raise AppError(400, f"远端文件类型 .{ext} 不支持导入", 400)
+        file_id = new_id()
+        prefix = "/".join(
+            part
+            for part in (
+                self.settings.prefix.strip("/"),
+                project_id,
+                PURPOSE_FOLDERS["attachment"],
+                file_id,
+            )
+            if part
+        )
+        row = StoredFile(
+            file_id=file_id,
+            project_id=project_id,
+            uploaded_by=user_id,
+            filename=filename,
+            size=size,
+            sha256=sha256,
+            content_type=mimetypes.guess_type(filename)[0] or "application/octet-stream",
+            bucket=self.settings.bucket,
+            object_key=prefix + "/" + filename,
+            staging_key=prefix + "/upload",
+            purpose="attachment",
+            status="pending",
+            resource_type="bug",
+            resource_id=bug_id,
+            expires_at=utcnow() + timedelta(hours=self.settings.temporary_hours),
+        )
+        ticket = await asyncio.to_thread(self.storage.upload_put_ticket, row.staging_key)
         self.session.add(row)
         await self.session.commit()
         return {"fileId": file_id, "upload": ticket, "expiresIn": self.settings.signature_seconds}

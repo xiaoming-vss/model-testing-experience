@@ -71,6 +71,14 @@ class ObjectStorage:
             ExpiresIn=self.settings.signature_seconds,
         )
 
+    def upload_put_ticket(self, key: str):
+        """禅道反向拉取用的预签名 PUT：调用方是项目 MCP，大小由 seal 复核兜底。"""
+        return self.client.generate_presigned_url(
+            "put_object",
+            Params={"Bucket": self.settings.bucket, "Key": key},
+            ExpiresIn=self.settings.signature_seconds,
+        )
+
     def seal(self, staging: str, key: str, size: int, sha256: str, filename: str, validator=None):
         head = self.client.head_object(Bucket=self.settings.bucket, Key=staging)
         if head["ContentLength"] != size:

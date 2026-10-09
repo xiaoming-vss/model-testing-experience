@@ -27,6 +27,12 @@ class BugZentaoAttachment(Base):
     operation_id: Mapped[str] = mapped_column(
         String(64), comment="远端写入操作标识，用于结果核对与避免重复写入"
     )
+    direction: Mapped[str] = mapped_column(
+        String(20),
+        default="push",
+        server_default="push",
+        comment="文件传输方向：push 平台推送上传到禅道 / pull 从禅道拉取导入到平台",
+    )
     actor_user_id: Mapped[str] = mapped_column(
         String(64), comment="本次操作人用户业务标识；外部调用使用其本人授权"
     )
