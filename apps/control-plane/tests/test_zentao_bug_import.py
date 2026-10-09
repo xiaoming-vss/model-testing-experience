@@ -59,6 +59,21 @@ class Remote:
         self.calls = []
         self.tokens = []
 
+    def _row(self, value):
+        return {
+            "id": value["id"],
+            "title": value["title"],
+            "status": value["status"],
+            "severity": value["severity"],
+            "pri": value["pri"],
+            "assignedTo": value["assignedTo"],
+            "openedBy": value["openedBy"],
+            "openedDate": value["openedDate"],
+            "execution": value["execution"],
+            "story": value["story"],
+            "deleted": value["deleted"],
+        }
+
     async def handle(self, request):
         body = json.loads(request.content)
         self.tokens.append(request.headers.get("token"))
@@ -83,21 +98,13 @@ class Remote:
                 "apiBaseUrl": self.instance + "/api.php/v2",
             }
         elif name == "get_projects_projectID_bugs":
+            rows = [self._row(value) for value in self.details.values()]
+            data = {"bugs": rows, "total": len(rows)}
+        elif name == "get_executions_executionID_bugs":
             rows = [
-                {
-                    "id": key,
-                    "title": value["title"],
-                    "status": value["status"],
-                    "severity": value["severity"],
-                    "pri": value["pri"],
-                    "assignedTo": value["assignedTo"],
-                    "openedBy": value["openedBy"],
-                    "openedDate": value["openedDate"],
-                    "execution": value["execution"],
-                    "story": value["story"],
-                    "deleted": value["deleted"],
-                }
-                for key, value in self.details.items()
+                self._row(value)
+                for value in self.details.values()
+                if str(value["execution"]) == str(arguments["executionID"])
             ]
             data = {"bugs": rows, "total": len(rows)}
         elif name == "get_bugs_bugID":
@@ -116,6 +123,7 @@ def setup(api, monkeypatch):
             52: remote_bug(52, steps="<p>截图</p><img src='http://zentao/file/1.png'/>"),
             53: remote_bug(53, status="custom"),
             54: remote_bug(54, severity=""),
+            55: remote_bug(55, execution=99),
         }
     )
     transport = httpx.MockTransport(remote.handle)
@@ -260,23 +268,38 @@ def test_candidates_mark_linked_filter_and_paginate(api, setup):
             return bug
 
     asyncio.run(seed_link())
-    body = api.get(field["candidates"], headers=owner).json()
+    # 默认按当前迭代绑定的执行整套查询：只含 execution=20 的候选。
+    body = api.get(field["candidates"], headers=owner, params={"sprintId": field["sprint"]}).json()
     assert body["code"] == 0, body
     data = body["data"]
+    assert data["scope"] == "execution" and data["executionId"] == 20
     assert data["total"] == 5
+    assert all(item["remoteBugId"] != 55 for item in data["items"])
     linked = {item["remoteBugId"]: item["linked"] for item in data["items"]}
     assert linked[50] is True
     assert linked[51] is False
+    assert any(call[0] == "get_executions_executionID_bugs" for call in field["remote"].calls)
+    assert not any(call[0] == "get_projects_projectID_bugs" for call in field["remote"].calls)
 
-    data = api.get(field["candidates"], headers=owner, params={"status": "resolved"}).json()["data"]
+    data = api.get(
+        field["candidates"],
+        headers=owner,
+        params={"sprintId": field["sprint"], "status": "resolved"},
+    ).json()["data"]
     assert [item["remoteBugId"] for item in data["items"]] == [51]
 
-    data = api.get(field["candidates"], headers=owner, params={"keyword": "缺陷 51"}).json()["data"]
+    data = api.get(
+        field["candidates"],
+        headers=owner,
+        params={"sprintId": field["sprint"], "keyword": "缺陷 51"},
+    ).json()["data"]
     assert [item["remoteBugId"] for item in data["items"]] == [51]
 
-    data = api.get(field["candidates"], headers=owner, params={"pageSize": 2, "page": 2}).json()[
-        "data"
-    ]
+    data = api.get(
+        field["candidates"],
+        headers=owner,
+        params={"sprintId": field["sprint"], "pageSize": 2, "page": 2},
+    ).json()["data"]
     assert data["total"] == 5 and len(data["items"]) == 2
 
 

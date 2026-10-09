@@ -81,6 +81,7 @@ export function BugListPage() {
         <BugZentaoImportModal
           open={importOpen}
           projectId={activeProjectId}
+          defaultSprintId={activeSprintId}
           onClose={() => { setImportOpen(false); void bugsQuery.refetch() }}
         />
       )}

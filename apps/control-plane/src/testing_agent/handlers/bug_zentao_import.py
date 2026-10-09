@@ -26,9 +26,9 @@ def service(
 
 async def list_zentao_bug_candidates(
     project_id: str,
+    sprint_id: str = Query(default="", alias="sprintId", max_length=64),
     status: str = Query(default="", max_length=100),
     keyword: str = Query(default="", max_length=200),
-    execution: int | None = Query(default=None, alias="executionId", gt=0),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100, alias="pageSize"),
     user_id: str = Depends(get_current_user_id),
@@ -37,9 +37,9 @@ async def list_zentao_bug_candidates(
     data = await imports.candidates(
         user_id,
         project_id,
+        sprint_id=sprint_id,
         status=status,
         keyword=keyword,
-        execution=execution,
         page=page,
         page_size=page_size,
     )

@@ -21,6 +21,8 @@ import {
 type Props = {
   open: boolean
   projectId: string
+  /** 当前迭代：候选按其绑定的执行整套查询，发现迭代默认预填。 */
+  defaultSprintId?: string | null
   onClose: () => void
 }
 
@@ -48,7 +50,7 @@ function pendingText(items: ZentaoBugPendingItem[]) {
   return items.map((item) => item.reason).join('；')
 }
 
-export function BugZentaoImportModal({ open, projectId, onClose }: Props) {
+export function BugZentaoImportModal({ open, projectId, defaultSprintId, onClose }: Props) {
   const client = useQueryClient()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -60,8 +62,15 @@ export function BugZentaoImportModal({ open, projectId, onClose }: Props) {
   const [importing, setImporting] = useState(false)
 
   const candidates = useQuery({
-    queryKey: ['zentaoBugCandidates', projectId, page, pageSize, status, keyword, open],
-    queryFn: () => bugsApi.listZentaoBugCandidates(projectId, { page, pageSize, status, keyword }),
+    queryKey: ['zentaoBugCandidates', projectId, defaultSprintId, page, pageSize, status, keyword, open],
+    queryFn: () =>
+      bugsApi.listZentaoBugCandidates(projectId, {
+        sprintId: defaultSprintId || undefined,
+        page,
+        pageSize,
+        status,
+        keyword,
+      }),
     enabled: open && !!projectId,
     staleTime: 0,
     refetchOnWindowFocus: false,
@@ -109,9 +118,12 @@ export function BugZentaoImportModal({ open, projectId, onClose }: Props) {
       },
     }))
   }
-  // 发现迭代允许使用预览解析出的绑定预填；责任人必须人工选择（Q05/Q06）。
+  // 发现迭代优先用绑定解析值，其次当前迭代；责任人必须人工选择（Q05/Q06）。
   const sprintFor = (remoteBugId: number) =>
-    choices[remoteBugId]?.foundSprintId || previewById.get(remoteBugId)?.converted.foundSprintId || ''
+    choices[remoteBugId]?.foundSprintId ||
+    previewById.get(remoteBugId)?.converted.foundSprintId ||
+    defaultSprintId ||
+    ''
   const readyToImport = selected.filter((id) => {
     const item = previewById.get(id)
     if (!item || !['ready'].includes(item.state)) return false
@@ -234,6 +246,17 @@ export function BugZentaoImportModal({ open, projectId, onClose }: Props) {
               onChange={(event) => { setKeyword(event.target.value); setPage(1) }}
             />
           </Space>
+          {candidates.data && (
+            <Alert
+              type="info"
+              showIcon
+              title={
+                candidates.data.scope === 'execution'
+                  ? `候选范围：当前迭代绑定的禅道执行 #${candidates.data.executionId}`
+                  : '候选范围：整个禅道项目（未按迭代过滤）'
+              }
+            />
+          )}
           {candidates.error && (
             <Alert showIcon type="error" title={getErrorMessage(candidates.error)}
               action={<Button onClick={() => candidates.refetch()}>重试</Button>} />
@@ -282,7 +305,7 @@ export function BugZentaoImportModal({ open, projectId, onClose }: Props) {
                           aria-label={`发现迭代-${remoteBugId}`}
                           placeholder="选择发现迭代"
                           style={{ width: 180 }}
-                          value={choice.foundSprintId || item?.converted.foundSprintId || undefined}
+                          value={sprintFor(remoteBugId) || undefined}
                           options={(options.data?.sprints ?? []).map((sprint) => ({
                             value: sprint.sprintId, label: sprint.name,
                           }))}

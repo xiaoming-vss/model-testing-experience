@@ -24,7 +24,7 @@ from testing_agent.handlers.integration_connection import (
 )
 from testing_agent.handlers.zentao_mcp import list_zentao_mcp_resources
 from testing_agent.schemas.bug_zentao_import import (
-    ZentaoBugCandidateItem,
+    ZentaoBugCandidateListResponse,
     ZentaoBugImportPreviewResponse,
     ZentaoBugImportResponse,
 )
@@ -42,7 +42,7 @@ router.get(
 
 router.get(
     "/projects/{project_id}/zentao/bug-imports/candidates",
-    response_model=ApiResponse[ListResponse[ZentaoBugCandidateItem]],
+    response_model=ApiResponse[ZentaoBugCandidateListResponse],
 )(list_zentao_bug_candidates)
 router.post(
     "/projects/{project_id}/zentao/bug-imports/preview",

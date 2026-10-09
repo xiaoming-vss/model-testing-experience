@@ -95,14 +95,14 @@ class ZentaoBugImportService:
         )
         return {int(value) for value in rows}
 
-    async def _all_remote_bugs(self, client, remote_project_id: int) -> list[dict]:
+    async def _paged_remote_bugs(self, client, tool: str, arguments: dict) -> list[dict]:
         items: list[dict] = []
         seen: set[str] = set()
         for page in range(1, PAGE_COUNT_LIMIT + 1):
             data = await client.call(
-                "get_projects_projectID_bugs",
+                tool,
                 {
-                    "projectID": remote_project_id,
+                    **arguments,
                     "browseType": "all",
                     "orderBy": "id_asc",
                     "pageID": page,
@@ -121,6 +121,27 @@ class ZentaoBugImportService:
                 raise McpCallError("禅道 Bug 分页数据不完整")
         raise McpCallError("禅道 Bug 超过查询上限，请缩小筛选范围")
 
+    async def _execution_for_sprint(
+        self, project_id: str, instance_url: str, sprint_id: str
+    ) -> int:
+        """当前迭代绑定的禅道执行编号；未绑定返回 0（回退项目范围）。"""
+        if not sprint_id:
+            return 0
+        sprint = await self.repository.get_sprint(sprint_id)
+        if sprint is None or sprint.project_id != project_id:
+            return 0
+        binding = await self.session.scalar(
+            select(ResourceBinding).where(
+                ResourceBinding.provider == "zentao",
+                ResourceBinding.status == "active",
+                ResourceBinding.local_resource_type == "sprint",
+                ResourceBinding.local_resource_id == sprint_id,
+                ResourceBinding.remote_resource_type == "execution",
+                ResourceBinding.instance_key == instance_key(instance_url),
+            )
+        )
+        return int(binding.remote_resource_id) if binding else 0
+
     # -------------------------------------------------------------- candidates
 
     async def candidates(
@@ -128,16 +149,33 @@ class ZentaoBugImportService:
         user_id: str,
         project_id: str,
         *,
+        sprint_id: str = "",
         status: str = "",
         keyword: str = "",
-        execution: int | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> dict:
+        """按当前迭代绑定的执行整套查询候选；迭代未绑定执行时直接提示（用户确认）。"""
         access, binding = await self._access(user_id, project_id)
+        execution_id = await self._execution_for_sprint(project_id, access.base_url, sprint_id)
+        if sprint_id and not execution_id:
+            raise AppError(400, "当前迭代未绑定禅道执行，请先在资源绑定中完成迭代绑定", 400)
         try:
             async with self.client_factory(access.endpoint, access.token) as client:
-                rows = await self._all_remote_bugs(client, int(binding.remote_resource_id))
+                if execution_id:
+                    rows = await self._paged_remote_bugs(
+                        client,
+                        "get_executions_executionID_bugs",
+                        {"executionID": execution_id},
+                    )
+                    scope = "execution"
+                else:
+                    rows = await self._paged_remote_bugs(
+                        client,
+                        "get_projects_projectID_bugs",
+                        {"projectID": int(binding.remote_resource_id)},
+                    )
+                    scope = "project"
         except McpCallError as exc:
             raise AppError(502, str(exc), 502) from exc
         wanted = {value.strip() for value in status.split(",") if value.strip()}
@@ -145,8 +183,6 @@ class ZentaoBugImportService:
         matched = []
         for row in rows:
             if wanted and str(row.get("status") or "").strip() not in wanted:
-                continue
-            if execution is not None and str(row.get("execution") or "") != str(execution):
                 continue
             if needle and needle not in str(row.get("title") or "").lower():
                 continue
@@ -174,7 +210,11 @@ class ZentaoBugImportService:
                     },
                 )
             )
-        return paged_payload(items, len(matched))
+        return {
+            "scope": scope,
+            "executionId": execution_id or None,
+            **paged_payload(items, len(matched)),
+        }
 
     # ----------------------------------------------------------------- preview
 

@@ -39,6 +39,14 @@ class ZentaoBugImportPreview(BaseModel):
     error_message: str = ""
 
 
+class ZentaoBugCandidateListResponse(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    scope: str  # execution 按迭代绑定执行查询 / project 整个禅道项目
+    execution_id: int | None = None
+    total: int
+    items: list[ZentaoBugCandidateItem]
+
+
 class ZentaoBugImportPreviewRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
     remote_bug_ids: list[int] = Field(min_length=1, max_length=20)

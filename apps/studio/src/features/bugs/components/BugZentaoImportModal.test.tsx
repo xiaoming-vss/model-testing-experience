@@ -26,7 +26,9 @@ function preview(overrides: Partial<ZentaoBugImportPreview> = {}): ZentaoBugImpo
 }
 
 beforeEach(() => {
-  vi.spyOn(bugsApi, 'listZentaoBugCandidates').mockResolvedValue({ total: candidates.length, items: candidates } as never)
+  vi.spyOn(bugsApi, 'listZentaoBugCandidates').mockResolvedValue({
+    scope: 'execution', executionId: 20, total: candidates.length, items: candidates,
+  } as never)
   vi.spyOn(bugsApi, 'getBugOptions').mockResolvedValue({
     members: [{ userId: 'u1', name: '开发甲' }],
     sprints: [{ sprintId: 'sprint-1', name: '迭代一' }],
@@ -34,12 +36,12 @@ beforeEach(() => {
   vi.spyOn(bugsApi, 'previewZentaoBugImport').mockResolvedValue({ items: [preview()] })
 })
 
-function mount() {
+function mount(defaultSprintId?: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   clients.push(client)
   render(
     <QueryClientProvider client={client}>
-      <BugZentaoImportModal open projectId="p1" onClose={vi.fn()} />
+      <BugZentaoImportModal open projectId="p1" defaultSprintId={defaultSprintId} onClose={vi.fn()} />
     </QueryClientProvider>,
   )
 }
@@ -78,6 +80,26 @@ it('requires assignee and sprint before importing and reports per-item results',
     items: [{ remoteBugId: 50, assigneeUserId: 'u1', foundSprintId: 'sprint-1' }],
   }))
   expect(await screen.findByText(/导入成功/)).toBeInTheDocument()
+})
+
+it('prefills the found sprint with the current iteration when binding is unresolved', async () => {
+  vi.spyOn(bugsApi, 'previewZentaoBugImport').mockResolvedValue({
+    items: [preview({ converted: { severity: 'fatal', priority: 'medium', status: 'active' } })],
+  })
+  mount('sprint-1')
+  const row = ((await screen.findByText('登录失败')) as HTMLElement).closest('tr') as HTMLElement
+  await userEvent.click(within(row).getByRole('checkbox'))
+  expect(await screen.findByText('导入确认')).toBeInTheDocument()
+  expect(screen.getByText(/候选范围：当前迭代绑定的禅道执行/)).toBeInTheDocument()
+  expect(screen.getByTitle('迭代一')).toBeInTheDocument()
+  const importSpy = vi.spyOn(bugsApi, 'importZentaoBugs')
+  await userEvent.click(screen.getByLabelText('责任人-50'))
+  await userEvent.click(await screen.findByText('开发甲'))
+  await userEvent.click(screen.getByRole('button', { name: /导入/ }))
+  await waitFor(() => expect(importSpy).toHaveBeenCalledWith('p1', {
+    requestId: expect.any(String),
+    items: [{ remoteBugId: 50, assigneeUserId: 'u1', foundSprintId: 'sprint-1' }],
+  }))
 })
 
 it('blocks items whose preview is not ready', async () => {

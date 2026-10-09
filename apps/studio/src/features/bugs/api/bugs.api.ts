@@ -12,7 +12,7 @@ import type {
   BugTransitionPayload,
   CreateBugPayload,
   UpdateBugPayload,
-  ZentaoBugCandidate,
+  ZentaoBugCandidateList,
   ZentaoBugImportItemPayload,
   ZentaoBugImportPreview,
   ZentaoBugImportResult,
@@ -49,9 +49,9 @@ export const bugsApi = {
   }),
   listZentaoBugCandidates: (
     projectId: string,
-    params: { status?: string; keyword?: string; executionId?: number; page?: number; pageSize?: number } = {},
+    params: { sprintId?: string; status?: string; keyword?: string; page?: number; pageSize?: number } = {},
   ) =>
-    request<ListResponse<ZentaoBugCandidate>>(
+    request<ZentaoBugCandidateList>(
       `/v1/projects/${projectId}/zentao/bug-imports/candidates${buildQuery(params)}`,
     ),
   previewZentaoBugImport: (projectId: string, remoteBugIds: number[]) =>

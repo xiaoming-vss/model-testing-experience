@@ -227,6 +227,13 @@ export type ZentaoBugCandidate = {
   linked: boolean
 }
 
+export type ZentaoBugCandidateList = {
+  scope: 'execution' | 'project' | string
+  executionId: number | null
+  total: number
+  items: ZentaoBugCandidate[]
+}
+
 export type ZentaoBugPendingItem = { field: string; reason: string }
 
 export type ZentaoBugImportPreview = {
