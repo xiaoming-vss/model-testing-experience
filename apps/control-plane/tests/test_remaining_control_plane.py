@@ -1257,7 +1257,6 @@ async def test_function_checkpoint_run_starts_at_requirement_analysis(monkeypatc
                 sprint_id="sprint-1",
                 document_type="text",
                 document_content="requirement source",
-                document_storage_path="",
             )
 
         def add_all(self, rows):

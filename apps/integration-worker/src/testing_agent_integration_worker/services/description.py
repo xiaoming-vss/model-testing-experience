@@ -88,21 +88,21 @@ async def description_input(gateway, view: JobInput) -> tuple[dict[str, Any], st
     if not isinstance(before, str):
         raise PreflightError("remote_unavailable", "Remote description is unavailable")
     baseline = frozen["expectedSteps"] or view.snapshot["createPayload"]["steps"]
+    # 正文漂移不再拒绝同步：按平台当前内容覆盖禅道，只记录覆盖事实供控制面提示。
+    overwrite: dict[str, bool] = {}
     if frozen["previousStatus"] != "unknown":
-        # Supplement images only; preserve the legacy guard against replacing text.
         plain_local = re.sub(r"<img\b[^>]*>", "", view.snapshot["source"]["html"], flags=re.I)
         plain_base = re.sub(r"<img\b[^>]*>", "", baseline, flags=re.I).replace("[图片未同步]", "")
         plain_local = re.sub(r"<p>\s*</p>", "", plain_local)
         plain_base = re.sub(r"<p>\s*</p>", "", plain_base)
         if canonical(plain_local) != canonical(plain_base):
-            raise PreflightError(
-                "baseline_changed",
-                "Description text changed; reconcile before supplementing images",
-            )
+            overwrite["localEdited"] = True
     if frozen["previousStatus"] != "unknown" and canonical(
         before, target["instanceUrl"]
     ) != canonical(baseline, target["instanceUrl"]):
-        raise PreflightError("baseline_changed", "Description baseline was edited externally")
+        overwrite["remoteEdited"] = True
+    if overwrite:
+        data["overwrote"] = overwrite
     data.update(
         beforeSteps=before, desiredSteps=desired, imagePaths=paths, imageExtensions=extensions
     )

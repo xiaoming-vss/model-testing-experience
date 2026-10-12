@@ -86,7 +86,7 @@ function installFetchHandler(
   })
 }
 
-function renderPage() {
+function renderPage(embedded = false) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -100,7 +100,7 @@ function renderPage() {
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={['/ai-testing/function-tasks/task-1']}>
           <Routes>
-            <Route path="/ai-testing/function-tasks/:taskId" element={<FunctionalCaseGenerateTaskDetailPage />} />
+            <Route path="/ai-testing/function-tasks/:taskId" element={<FunctionalCaseGenerateTaskDetailPage dialogRequest={embedded ? { taskId: 'task-1', runId: 'run-1', artifact: 'resultYaml', mode: 'review', onClose: vi.fn() } : undefined} />} />
             <Route path="/ai-testing/function-tasks/:taskId/runs/:runId/graph" element={<FunctionalCaseRelationsPage />} />
           </Routes>
         </MemoryRouter>
@@ -1063,4 +1063,11 @@ describe('运行记录删除', () => {
     await openRunActionsMenu(user, 'run-1')
     expect(await screen.findByRole('menuitem', { name: '删除运行记录' })).toHaveAttribute('aria-disabled', 'true')
   })
+})
+
+
+it('需求详情直接打开既有候选审核工作区', async () => {
+  installFetchHandler(() => pendingRun); renderPage(true)
+  await screen.findByRole('textbox', { name: '功能候选结果 JSON' })
+  expect(screen.queryByText('返回功能测试')).not.toBeInTheDocument()
 })

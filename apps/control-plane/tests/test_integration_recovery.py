@@ -23,7 +23,6 @@ from test_integration_bug_api import integration as integration
 from test_integration_bug_api import setup as setup
 
 from testing_agent.core.errors import AppError
-from testing_agent.domain.integration_execution import digest
 from testing_agent.models.bug_activity import BugActivity
 from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
 from testing_agent.models.bug_zentao_push import BugZentaoPush
@@ -423,13 +422,6 @@ def test_description_readback_or_bounded_repair_resolves_the_original_ledger(
         )
         changed = {**step.input_json, "desiredSteps": legacy}
         change(api, IntegrationJobStep, "input_json", changed, operation_id=original_operation)
-        change(
-            api,
-            IntegrationJobStep,
-            "input_digest",
-            digest(changed),
-            operation_id=original_operation,
-        )
         before = legacy.replace("{101.png}", "%7B101.png%7D")
     submit(api, state)
     new = claim(api, state)["job"]

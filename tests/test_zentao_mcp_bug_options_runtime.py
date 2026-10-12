@@ -40,6 +40,34 @@ class BugOptionsSchemaTests(unittest.TestCase):
         self.assertTrue(file["parameters"][0]["required"])
 
 
+    def test_project_overlay_preserves_metadata_and_is_idempotent(self):
+        operation = {"requestBody": {"content": {"application/json": {
+            "schema": {"properties": {}}}}}}
+        properties = {
+            "PMAvatar": {"type": "string", "description": "avatar"},
+            "PMUserID": {"type": "string"},
+            "invested": {"type": "integer"},
+            "name": {"type": "string"},
+        }
+        project_schema = {"properties": {"projects": {"items": {"properties": properties}}}}
+        response = {"content": {"application/json": {"schema": project_schema}}}
+        schema = {"paths": {
+            "/bugs": {"post": json.loads(json.dumps(operation))},
+            "/bugs/:bugID": {"put": json.loads(json.dumps(operation))},
+            "/executions/:executionID/builds": {"get": {}},
+            "/projects": {"get": {"responses": {"200": response}}},
+        }}
+        result = patcher.patch_schema(schema)
+        self.assertEqual(properties["PMAvatar"]["description"], "avatar")
+        self.assertEqual(properties["PMAvatar"]["anyOf"],
+                         [{"type": "string"}, {"type": "boolean"}])
+        self.assertEqual(properties["invested"]["anyOf"],
+                         [{"type": "integer"}, {"type": "number"}, {"type": "string"}])
+        self.assertEqual(properties["name"], {"type": "string"})
+        snapshot = json.dumps(result)
+        self.assertEqual(json.dumps(patcher.patch_schema(result)), snapshot)
+
+
 @unittest.skipUnless(os.environ.get("MTX_TEST_ZENTAO_MCP_BUG_OPTIONS") == "1",
                      "Set MTX_TEST_ZENTAO_MCP_BUG_OPTIONS=1 for disposable MCP acceptance")
 class BugOptionsRuntimeTests(unittest.TestCase):

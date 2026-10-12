@@ -32,7 +32,7 @@ class RequirementAnalysisExecutorTests(unittest.TestCase):
             config_json=json.dumps(updates.pop("config", {})),
             payload=TaskPayload(
                 openapi_content="",
-                document_type=updates.pop("document_type", "text"),
+                document_type=updates.pop("document_type", "word"),
                 document_download_url="/internal/ai-worker/tasks/worker/requirement-document",
                 source_content="/v1/requirements/requirement/download",
                 metadata={"workflowVersion": 2},
@@ -60,10 +60,10 @@ class RequirementAnalysisExecutorTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as root:
             executor = self.executor(root, runner, downloads)
-            task = self.task(document_type="txt")
+            task = self.task(document_type="docx")
             result = executor.execute(task, datetime.now().astimezone(), progress.append)
         self.assertIsNone(result)
-        self.assertEqual(task.payload.document_type, "text")
+        self.assertEqual(task.payload.document_type, "word")
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0]["skill_name"], "extract-docx-enhanced-text")
         self.assertEqual(downloads[0]["document_download_url"], task.payload.document_download_url)

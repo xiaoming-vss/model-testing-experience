@@ -25,12 +25,14 @@ afterEach(() => {
   document.documentElement.style.colorScheme = initialScheme
 })
 
-it('aligns Ant Design controls, checkboxes and popup containers with the light CSS surface', () => {
+it('aligns the inset base and raised containers with their respective light CSS surfaces', () => {
   useThemeStore.setState({ preference: 'light', resolvedTheme: 'light' })
   render(<ThemeProvider><PaletteProbe /></ThemeProvider>)
   const palette = JSON.parse(screen.getByTestId('palette').textContent!)
   const surface = light.match(/--app-surface:\s*([^;]+);/)![1].trim()
-  expect([palette.base, palette.container, palette.elevated]).toEqual([surface, surface, surface])
+  const control = light.match(/--app-control-surface:\s*([^;]+);/)![1].trim()
+  expect(palette.base).toBe(control)
+  expect([palette.container, palette.elevated]).toEqual([surface, surface])
 })
 
 it('keeps the existing GitHub Dark controls and popup palette', () => {

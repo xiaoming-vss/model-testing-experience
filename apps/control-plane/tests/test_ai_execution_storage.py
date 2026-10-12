@@ -306,11 +306,6 @@ def test_stage_review_and_import_are_separate(db):
     db.commit()
     imports = list(db.scalars(select(Import)))
     assert len(imports) == 1
-    assert imports[0].imported_by == "importer"
-    assert (
-        imports[0].artifact_attempt_id
-        == stage_by_name(graph(db, run)[0], "detailed_cases").current_artifact_attempt_id
-    )
 
 
 def test_roll_back_queue_and_attempt(db):

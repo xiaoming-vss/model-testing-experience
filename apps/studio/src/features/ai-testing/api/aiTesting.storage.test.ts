@@ -15,7 +15,7 @@ describe('UI source archive S3 storage', () => {
     vi.mocked(uploadStoredFile).mockResolvedValue('f')
     const file = new File(['zip'], 'source.zip')
     await aiTestingApi.uploadUiCaseGenerateTaskSourceArchive('t', file)
-    expect(uploadStoredFile).toHaveBeenCalledWith('p', file, 'ui_source_archive')
+    expect(uploadStoredFile).toHaveBeenCalledWith('p', file, 'ui_source_archive', undefined)
     expect(request).toHaveBeenLastCalledWith('/v1/ui-case-generate-tasks/t/source-archive', {
       method: 'PUT', body: JSON.stringify({ fileId: 'f' }),
     })

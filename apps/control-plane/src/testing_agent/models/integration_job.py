@@ -81,9 +81,6 @@ class IntegrationJob(Base):
     claim_key: Mapped[str | None] = mapped_column(
         String(64), nullable=True, comment="Worker 领取幂等键"
     )
-    claim_request_id: Mapped[str] = mapped_column(
-        String(64), default="", comment="当前领取请求标识"
-    )
     claim_generation: Mapped[int] = mapped_column(
         Integer, default=0, comment="任务领取代次，拒绝旧领取请求"
     )
@@ -142,7 +139,6 @@ class IntegrationJobStep(Base):
     input_json: Mapped[dict[str, Any]] = mapped_column(
         JSON, default=dict, comment="冻结的步骤执行输入 JSON"
     )
-    input_digest: Mapped[str] = mapped_column(String(64), default="", comment="步骤输入内容摘要")
     status: Mapped[str] = mapped_column(
         String(20),
         default="pending",
@@ -199,7 +195,6 @@ class IntegrationClaimReceipt(Base):
     claim_key: Mapped[str] = mapped_column(
         String(64), primary_key=True, comment="Worker 领取幂等键"
     )
-    worker_id: Mapped[str] = mapped_column(String(128), comment="领取或执行任务的 Worker 标识")
     request_id: Mapped[str] = mapped_column(String(64), comment="客户端请求幂等标识")
     request_digest: Mapped[str] = mapped_column(String(64), comment="幂等请求内容摘要")
     job_id: Mapped[str | None] = mapped_column(
@@ -287,9 +282,6 @@ class IntegrationRestoreReview(Base):
     decision: Mapped[str] = mapped_column(String(20), comment="核对决定：verified/isolated")
     state_digest: Mapped[str] = mapped_column(
         String(64), comment="核对时本地关联、目标及授权状态摘要"
-    )
-    facts_json: Mapped[dict[str, Any]] = mapped_column(
-        JSON, default=dict, comment="外部只读核对事实或保留隔离原因 JSON"
     )
     reviewed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), comment="审核或核对时间（UTC）"

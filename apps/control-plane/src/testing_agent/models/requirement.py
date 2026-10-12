@@ -39,10 +39,6 @@ class Requirement(Base):
     document_hash: Mapped[str] = mapped_column(
         String(128), nullable=False, default="", comment="需求文档内容摘要"
     )
-    # Inert historical metadata; never read for file delivery.
-    document_storage_path: Mapped[str] = mapped_column(
-        String(512), nullable=False, default="", comment="历史文档路径元数据；不用于文件交付"
-    )
     document_download_url: Mapped[str] = mapped_column(
         String(512), nullable=False, default="", comment="历史文档下载地址元数据；不用于文件交付"
     )

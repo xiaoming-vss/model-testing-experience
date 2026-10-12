@@ -26,7 +26,7 @@ async def require_file_resource(session: AsyncSession, row: StoredFile) -> None:
         return
     if not row.resource_id:
         raise ErrNotFound()
-    if row.resource_type == "requirement" and row.purpose == "requirement":
+    if row.resource_type == "requirement" and row.purpose in {"requirement", "attachment"}:
         query = (
             select(Requirement.requirement_id)
             .join(Sprint, Sprint.sprint_id == Requirement.sprint_id)

@@ -1,3 +1,4 @@
+import { useTaskRunDialog, type TaskRunDialogRequest } from '../hooks/useTaskRunDialog'
 import { listTotal } from '@/shared/api/request'
 import { getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
 import { useTaskRunHistorySync } from '@/features/ai-testing/hooks/useTaskRunHistorySync'
@@ -447,8 +448,9 @@ function ApiCandidateResultView({ content }: { content: string }) {
   return <ApiConfigDiagramView content={content} defaultCollapsed />
 }
 
-export function ApiCaseGenerateTaskDetailPage() {
-  const { taskId = '' } = useParams()
+export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?: TaskRunDialogRequest } = {}) {
+  const { taskId: routeTaskId = '' } = useParams()
+  const taskId = dialogRequest?.taskId ?? routeTaskId
   const [runPage, setRunPage] = useState(1)
   const [runPageSize, setRunPageSize] = useState(20)
   useEffect(() => { setRunPage(1) }, [taskId])
@@ -486,7 +488,7 @@ export function ApiCaseGenerateTaskDetailPage() {
   const runsQuery = useQuery({
     queryKey: ['apiCaseGenerateTaskRuns', taskId, runPage, runPageSize],
     queryFn: () => api.getApiCaseGenerateTaskRuns(taskId, { page: runPage, pageSize: runPageSize }),
-    enabled: Boolean(taskId),
+    enabled: !dialogRequest && Boolean(taskId),
     refetchInterval: expandedSection === 'runHistory' ? RUN_HISTORY_POLL_INTERVAL : false,
   })
   const runTotal = listTotal(runsQuery.data)
@@ -503,8 +505,8 @@ export function ApiCaseGenerateTaskDetailPage() {
   }
   const refetchRunHistory = runsQuery.refetch
   useEffect(() => {
-    if (expandedSection === 'runHistory') void refetchRunHistory({ cancelRefetch: false })
-  }, [expandedSection, refetchRunHistory])
+    if (!dialogRequest && expandedSection === 'runHistory') void refetchRunHistory({ cancelRefetch: false })
+  }, [expandedSection, refetchRunHistory, dialogRequest])
 
   const sprintsQuery = useQuery({
     queryKey: ['sprints', 'aiTestingDetail', task?.projectId],
@@ -561,7 +563,7 @@ export function ApiCaseGenerateTaskDetailPage() {
   )
   const latestRunRecord = runsQuery.data?.latestRun ?? runRecords[0]
 
-  const selectedRunId = selectedRunRecordId ?? runRecords[0]?.runId ?? ''
+  const selectedRunId = dialogRequest?.runId ?? selectedRunRecordId ?? runRecords[0]?.runId ?? ''
   const selectedRunQuery = useQuery({
     queryKey: ['apiCaseGenerateTaskRun', selectedRunId],
     queryFn: () => api.getApiCaseGenerateTaskRun(selectedRunId),
@@ -912,9 +914,18 @@ export function ApiCaseGenerateTaskDetailPage() {
     })
   }
 
+  useTaskRunDialog(dialogRequest, Boolean(taskQuery.data && selectedRunQuery.data), Boolean(runResultModal || reviewModalRunId || importModalRunId || importConflict), () => {
+    if (!dialogRequest) return
+    if (dialogRequest.mode === 'import') setImportModalRunId(dialogRequest.runId)
+    else if (dialogRequest.artifact === 'resultYaml') openReviewModal(dialogRequest.runId)
+    else setRunResultModal({ key: dialogRequest.artifact as RunResultSectionKey, label: dialogRequest.artifact === 'errorMessage' ? '错误信息' : '运行产物' })
+  }, taskQuery.error ?? selectedRunQuery.error)
+
   return (<ProjectAccessScope resourceError={taskQuery.error} projectId={task?.projectId ?? ''}>{(
     <div className="workbench-page ai-testing-page tp-list-surface ai-task-detail-page tp-surface">
       <div className="workbench-tabs">
+      {!dialogRequest && <>
+
       {taskQuery.error ? <Alert showIcon type="error" title={getErrorMessage(taskQuery.error)} /> : null}
       {runsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(runsQuery.error)} /> : null}
 
@@ -1184,6 +1195,7 @@ export function ApiCaseGenerateTaskDetailPage() {
       ) : (
         <Alert showIcon type="warning" title="未找到对应任务" />
       )}
+      </>}
 
       <ApiCaseGenerateTaskDrawer
         title="编辑 API 用例生成任务"

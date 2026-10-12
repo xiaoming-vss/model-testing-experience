@@ -63,7 +63,7 @@ function installFetchHandler(onRequest?: (url: URL, init?: RequestInit) => Respo
   })
 }
 
-function renderPage(role: 'owner' | 'viewer' = 'owner') {
+function renderPage(role: 'owner' | 'viewer' = 'owner', embedded = false) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -78,7 +78,7 @@ function renderPage(role: 'owner' | 'viewer' = 'owner') {
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={['/ai-testing/tasks/task-1']}>
           <Routes>
-            <Route path="/ai-testing/tasks/:taskId" element={<ApiCaseGenerateTaskDetailPage />} />
+            <Route path="/ai-testing/tasks/:taskId" element={<ApiCaseGenerateTaskDetailPage dialogRequest={embedded ? { taskId: 'task-1', runId: 'run-1', artifact: 'resultYaml', mode: 'review', onClose: vi.fn() } : undefined} />} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
@@ -780,4 +780,11 @@ describe('运行记录删除', () => {
     await findRunRow()
     expect(screen.queryByRole('button', { name: '更多操作' })).toBeNull()
   })
+})
+
+
+it('需求详情直接打开既有候选审核工作区', async () => {
+  installFetchHandler(); renderPage('owner', true)
+  await screen.findByRole('button', { name: /^批\s*准$/ })
+  expect(screen.queryByText('返回生成任务')).not.toBeInTheDocument()
 })

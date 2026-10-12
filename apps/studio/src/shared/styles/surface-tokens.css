@@ -1,3 +1,4 @@
+
 /*
  * 列表页共用的表面 token 与色盘。
  *
@@ -88,12 +89,6 @@
   --srf-tone-border: #e9d5ff;
 }
 
-.tp-surface .tone-teal {
-  --srf-tone-text: #0f766e;
-  --srf-tone-bg: #f0fdfa;
-  --srf-tone-border: #99f6e4;
-}
-
 .tp-surface .tone-green {
   --srf-tone-text: #15803d;
   --srf-tone-bg: #f0fdf4;
@@ -104,12 +99,6 @@
   --srf-tone-text: #b45309;
   --srf-tone-bg: #fffbeb;
   --srf-tone-border: #fde68a;
-}
-
-.tp-surface .tone-orange {
-  --srf-tone-text: #c2410c;
-  --srf-tone-bg: #fff7ed;
-  --srf-tone-border: #fed7aa;
 }
 
 .tp-surface .tone-red {
@@ -210,7 +199,8 @@
   white-space: nowrap;
 }
 
-/* 列表页的板面：本身不要表面，让下面的卡片浮在画布上。
+/* 存量分离布局的兼容板面；新列表／卡片页必须追加 tp-list-panel。
+   未迁移页面本身不承载表面，让内部卡片承载背景。
    .api-automation-content 已经给了页面内距，面板不再补一层。
    testing/styles/index.css 里 .app-shell-macos .testing-page .api-automation-content > .workbench-panel
    用 !important 给了它玻璃渐变表面，所以这里要带 .app-shell-macos .testing-page 前缀把权重压过去。 */
@@ -228,9 +218,13 @@
 }
 
 /* app/styles/workbench.css 的玻璃板面规则写成
-   `:is(<页面类…>) :is(<面板类…>)`（两个 `:is()` 各算 1 分，合计 0,6,0），与上面 `.tp-board` 那条同权重——
+   `:is(<页面类…>) :is(<面板类…>)`（两个 `:is()` 各算 1 分，合计 0,
+6,
+0），与上面 `.tp-board` 那条同权重——
    同权重就靠样式表顺序决胜，顺序一变玻璃底、内高光与 28px 阴影就会重新盖回来（表现为内容区多出一层容器）。
-   这里多带 `.app-shell-macos .testing-page` 前缀抬到 (0,7,0)，顺序依赖就没有了。 */
+   这里多带 `.app-shell-macos .testing-page` 前缀抬到 (0,
+7,
+0)，顺序依赖就没有了。 */
 .app-shell-macos .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board {
   border: 0 !important;
   border-radius: 0 !important;
@@ -312,4 +306,61 @@
   font-weight: 600;
   line-height: 24px;
   white-space: nowrap;
+}
+
+/* 列表／卡片页默认布局契约：祖先 tp-surface → tp-board tp-list-panel
+   → tp-list-toolbar + 可选 tp-list-body → tp-list-scroll 与其后的 table-footer。
+   Tab 在外框外，滚动区内收 16px，分页不参与滚动。
+   显式接入以兼容未迁移页面；覆盖旧工作台玻璃板面的高权重规则。
+   工具栏、内收列表、分页共用一个外框；其它 tp-board 保留原布局。 */
+:root:root .app-shell.app-shell-macos .tp-surface .tp-board.tp-list-panel,
+.tp-surface .tp-board.tp-list-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--srf-card-border) !important;
+  border-radius: var(--srf-radius-card) !important;
+  background: var(--srf-card) !important;
+  box-shadow: none !important;
+  overflow: hidden;
+  backdrop-filter: none !important;
+}
+
+.tp-surface .tp-list-panel > .tp-list-toolbar {
+  border: 0;
+  border-bottom: 1px solid var(--srf-card-border);
+  border-radius: 0;
+}
+
+.tp-surface .tp-list-panel .tp-list-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+:root:root .app-shell.app-shell-macos .tp-surface .tp-list-panel .tp-list-scroll,
+.tp-surface .tp-list-panel .tp-list-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  padding: 16px !important;
+}
+
+
+/* Refresh and primary actions stay on the right when a toolbar wraps. */
+.tp-surface .tp-refresh-actions {
+  margin-inline-start: auto !important;
+  justify-content: flex-end !important;
 }

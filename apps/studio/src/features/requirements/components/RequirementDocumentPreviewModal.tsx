@@ -1,3 +1,4 @@
+import { RichTextViewer } from '@/shared/components/RichTextEditor'
 import { RequirementArtifactView } from '@/domain/requirements/RequirementArtifactView'
 import { parseRequirementArtifact } from '@/domain/requirements/requirementArtifact'
 import { readSignedFileResponse } from '@/shared/api/files'
@@ -70,6 +71,7 @@ function RequirementDocxPreview({
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [previewAttempt, setPreviewAttempt] = useState(0)
   const downloadMutation = useMutation({
     mutationFn: async () => {
       if (requirementId) {
@@ -150,7 +152,7 @@ function RequirementDocxPreview({
         container.innerHTML = ''
       }
     }
-  }, [documentUrl, previewUrl, requirementId, token])
+  }, [documentUrl, previewUrl, requirementId, token, previewAttempt])
 
   return (
     <div className="requirement-document-preview-shell">
@@ -162,7 +164,8 @@ function RequirementDocxPreview({
       ) : null}
       {error ? (
         <div className="requirement-document-preview-state error">
-          <span>{error}</span>
+          <span role="alert">{error}</span>
+          <Button onClick={() => setPreviewAttempt(attempt => attempt + 1)}>重试预览</Button>
           <Button type="link" loading={downloadMutation.isPending} onClick={() => downloadMutation.mutate()}>
             下载文档：{documentName}
           </Button>
@@ -176,11 +179,12 @@ function RequirementDocxPreview({
   )
 }
 
-function RequirementTextPreview({ previewUrl }: { previewUrl: string }) {
+function RequirementTextPreview({ previewUrl, richText = false }: { previewUrl: string; richText?: boolean }) {
   const token = useAuthStore((state) => state.token)
   const [loading, setLoading] = useState(false)
   const [content, setContent] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [previewAttempt, setPreviewAttempt] = useState(0)
 
   useEffect(() => {
     let disposed = false
@@ -226,7 +230,7 @@ function RequirementTextPreview({ previewUrl }: { previewUrl: string }) {
     return () => {
       disposed = true
     }
-  }, [previewUrl, token])
+  }, [previewUrl, token, previewAttempt])
 
   return (
     <div className="requirement-document-text-host">
@@ -238,10 +242,12 @@ function RequirementTextPreview({ previewUrl }: { previewUrl: string }) {
       ) : null}
       {error ? (
         <div className="requirement-document-preview-state error">
-          <span>{error}</span>
+          <span role="alert">{error}</span>
+          <Button onClick={() => setPreviewAttempt(attempt => attempt + 1)}>重试预览</Button>
         </div>
       ) : null}
       {!loading && !error ? (
+        richText ? <RichTextViewer html={content} ariaLabel="需求正文" /> :
         <div className="requirement-document-text-article">{content || '暂无源文件内容'}</div>
       ) : null}
     </div>
@@ -347,7 +353,7 @@ export function RequirementDocumentPreviewContent({
     [documentFilename, documentType, requirementName],
   )
   const previewUrl = useMemo(() => resolveRequirementDocumentPreviewUrl(documentUrl), [documentUrl])
-  const documentTypeLabel = isWord ? 'Word 文档' : '文本源文件'
+  const documentTypeLabel = isWord ? 'Word 文档' : documentType === 'richtext' ? '富文本需求' : '文本源文件'
   const understandingResult = documentContent?.trim() ?? ''
   const downloadMutation = useMutation({
     mutationFn: () => api.downloadRequirementDocument(requirementId!),
@@ -395,7 +401,7 @@ export function RequirementDocumentPreviewContent({
           documentName={documentName}
         />
       ) : !isWord && documentUrl ? (
-        <RequirementTextPreview previewUrl={previewUrl} />
+        <RequirementTextPreview key={previewUrl} previewUrl={previewUrl} richText={documentType === 'richtext'} />
       ) : !isWord && understandingResult ? (
         <div className="requirement-document-text-host">
           <article className="requirement-document-text-article">{understandingResult}</article>
@@ -414,18 +420,18 @@ export function RequirementDocumentPreviewContent({
     </div>
   ) : (
     <div className="requirement-document-understanding-empty">
-      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无增强文本" />
+      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无增强文本，可在需求分析中生成需求理解记录，审核通过后导入需求，用于功能用例生成。" />
     </div>
   )
 
   return (
     <div className={`requirement-document-modal${embedded ? ' requirement-document-inline' : ''}`}>
-      <header className="requirement-document-modal-toolbar">
+      {!embedded ? <header className="requirement-document-modal-toolbar">
         <div className="requirement-document-modal-toolbar-main">
-          <div className="requirement-document-modal-title-row">
+          {!embedded ? <div className="requirement-document-modal-title-row">
             <FileWordOutlined className="requirement-document-modal-title-icon" />
             <div className="requirement-document-modal-title">需求文档</div>
-          </div>
+          </div> : null}
           <div className="requirement-document-modal-meta">
             <span className="requirement-document-type-chip">{documentTypeLabel}</span>
             <span className="requirement-document-file-name" title={documentName}>
@@ -444,7 +450,7 @@ export function RequirementDocumentPreviewContent({
             下载原文件
           </Button>
         ) : null}
-      </header>
+      </header> : null}
       {downloadMutation.error ? <Alert showIcon type="error" title={getErrorMessage(downloadMutation.error)} /> : null}
       <div
         className="requirement-document-workspace is-compare"
@@ -480,7 +486,7 @@ export function RequirementDocumentPreviewContent({
             understandingResult ? (
               <span className="requirement-document-analysis-status">
                 <CheckCircleFilled />
-                已提取
+                已有内容
               </span>
             ) : (
               <span className="requirement-document-pane-meta">暂无内容</span>

@@ -21,7 +21,7 @@ import {
   normalizeEnvironmentId
 } from '@/utils/format'
 import { DownOutlined } from '@ant-design/icons'
-import { Alert, Button, Empty, Modal, Segmented, Tag } from 'antd'
+import { Alert, Empty, Modal, Segmented, Tag } from 'antd'
 import { renderRunResultContent } from '../utils/renderApiRunResult'
 
 import type { ApiCollectionRunItem, ApiEnvironment } from '@/features/api-automation/types'
@@ -93,13 +93,11 @@ export function ApiCollectionRunReportModal({ collectionRunReportOpen, setCollec
                 <ActionButton operation="download" onClick={handleExportCollectionRunReportHtml} disabled={!collectionRunReport}>
                   导出 HTML
                 </ActionButton>
-                <Button
+                <ActionButton operation="refresh"
                   onClick={handleRefreshCollectionRunReport}
                   loading={refreshingCollectionRunReport}
                   disabled={!selectedCollectionRunId}
-                >
-                  刷新报告
-                </Button>
+                >刷新报告</ActionButton>
               </div>
             </div>
 

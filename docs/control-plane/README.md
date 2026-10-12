@@ -8,6 +8,8 @@
 
 独立集成 Worker 拆分已开始，方案见[拆分计划](integration-worker-split-plan.md)，代码交付与未完成接入见[实施记录](integration-worker-implementation.md)。控制面异步协议、独立 Worker 和 Studio 任务交互已接入并完成隔离专项验证；恢复账本、切换及真实外部验收仍在推进。默认开关关闭，未启用项目继续使用原入口。
 
+[需求维度测试设计接口](requirement-design.md)
+
 ## 运行时与依赖
 
 - Python 3.12（`.python-version`），包管理使用 uv（`uv.lock`）
@@ -151,3 +153,5 @@ Studio 对未采集的缺陷数量、解决率显示 `—`，缺陷画像显示�
 - [ZenTao-MCP 手动部署](zentao-mcp-deployment.md)：已发布镜像、配置示例、直接 Compose 启动、多项目端口和网络排查。
 
 需求分析的阶段审核及拒绝后的只读规则见 [需求分析审核规则](requirement-analysis-review.md)。
+
+需求在线图文编辑与正文文件契约见[需求富文本正文](requirement-rich-text.md)。

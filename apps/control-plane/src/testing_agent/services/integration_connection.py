@@ -156,7 +156,7 @@ class IntegrationConnectionService:
             secret_json = {"apiKey": self._encrypt_secret(body.get("apiKey", ""))}
             extra_json = {"modelId": body.get("modelId", "")}
             auth_type = "api_key"
-            access_token = self._encrypt_secret(str(body.get("apiKey") or ""))
+            access_token = ""
             status = str(body.get("status") or "active")
             last_auth_at = None
             last_auth_error = ""
@@ -279,7 +279,6 @@ class IntegrationConnectionService:
             secret = dict(connection.secret_json or {})
             secret["apiKey"] = self._encrypt_secret(str(body["apiKey"]))
             connection.secret_json = secret
-            connection.access_token = self._encrypt_secret(str(body["apiKey"]))
         if "modelId" in body:
             extra = dict(connection.extra_json or {})
             extra["modelId"] = body["modelId"]

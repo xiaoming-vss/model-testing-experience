@@ -80,7 +80,8 @@ class ZentaoMcpDeploymentTests(unittest.TestCase):
         self.assertFalse(mount["bind"]["create_host_path"])
         self.assertNotIn(str(ROOT), json.dumps(rendered))
         self.assertEqual(
-            set(path.name for path in TEMPLATE.iterdir() if path.is_file()), set(TEMPLATE_FILES)
+            set(path.name for path in TEMPLATE.iterdir() if path.is_file()),
+            set(TEMPLATE_FILES) | {".gitattributes"}
         )
 
     def test_two_copies_use_independent_projects_ports_configs_and_networks(self):

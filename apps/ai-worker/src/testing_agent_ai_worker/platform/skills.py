@@ -9,6 +9,7 @@ from urllib.parse import quote
 import httpx
 
 from testing_agent_ai_worker.nanobot_runtime.paths import resolve_task_workspace
+from testing_agent_ai_worker.tasks.requirement_analysis.document_type import extraction_skill
 
 REQUIREMENT_SKILLS = {
     "extracting_text": "extract-docx-enhanced-text",
@@ -43,6 +44,8 @@ def required_skills(task):
             name = stages.get(task.current_stage or "extracting_text")
             if name is None:
                 raise ValueError("不支持的需求分析阶段")
+            if (task.current_stage or "extracting_text") == "extracting_text":
+                name = extraction_skill(task.payload.document_type)
             return [name]
         if task.checkpoint_enabled:
             name = stages.get(task.current_stage)

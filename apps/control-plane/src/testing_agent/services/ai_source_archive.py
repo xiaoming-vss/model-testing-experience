@@ -127,7 +127,6 @@ class SourceArchiveManager:
             archive.filename = row.filename
             archive.size_bytes = row.size
             archive.sha256 = row.sha256
-            archive.storage_path = ""
             archive.uploaded_at = datetime.now(UTC)
             await source_repository.commit()
         except Exception:

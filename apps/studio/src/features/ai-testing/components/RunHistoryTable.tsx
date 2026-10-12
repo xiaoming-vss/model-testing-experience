@@ -4,10 +4,13 @@ import type { MenuProps, TableProps } from 'antd'
 import type { ReactNode } from 'react'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { formatTime } from '@/utils/format'
+import '../styles/run-history-list.css'
 
 export type RunMenuAction = { key: string; label: string; disabled?: boolean; danger?: boolean }
 
 type RunHistoryTableProps<T> = {
+  className?: string
+  appearance?: 'detail' | 'list'
   pagination?: { current: number; pageSize: number; total: number; loading: boolean; onChange: (page: number, pageSize: number) => void }
   rows: T[]
   getRunId: (row: T) => string | undefined
@@ -17,6 +20,7 @@ type RunHistoryTableProps<T> = {
   onSelect: (runId: string | undefined) => void
   renderStatus: (row: T, active: boolean) => ReactNode
   renderArtifacts?: (row: T) => ReactNode
+  getCreatedAt?: (row: T) => string | null | undefined
   getReviewedAt?: (row: T) => string | null | undefined
   getReviewComment?: (row: T) => string | undefined
   getImportedAt?: (row: T) => string | null | undefined
@@ -32,6 +36,7 @@ const columnMinWidths = {
   runId: 140,
   pipeline: 220,
   artifacts: 230,
+  createdAt: 186,
   reviewedAt: 186,
   importedAt: 140,
   actions: 210,
@@ -41,6 +46,8 @@ type RunColumn<T> = NonNullable<TableProps<T>['columns']>[number]
 
 export function RunHistoryTable<T>({
   rows,
+  className,
+  appearance = 'detail',
   pagination,
   getRunId,
   selectedRunId,
@@ -48,6 +55,7 @@ export function RunHistoryTable<T>({
   onSelect,
   renderStatus,
   renderArtifacts,
+  getCreatedAt,
   getReviewedAt,
   getReviewComment,
   getImportedAt,
@@ -62,6 +70,14 @@ export function RunHistoryTable<T>({
       minWidth: columnMinWidths.runId,
       render: (_, row, index) => renderPrimary?.(row, index) ?? <RunIdCell index={index + (pagination ? (pagination.current - 1) * pagination.pageSize : 0)} runId={getRunId(row)} />,
     },
+    ...(getCreatedAt
+      ? [{
+          title: '创建时间',
+          key: 'createdAt',
+          minWidth: columnMinWidths.createdAt,
+          render: (_: unknown, row: T) => <span className="ai-task-run-table-time">{formatTime(getCreatedAt(row) ?? undefined)}</span>,
+        }]
+      : []),
     {
       title: '状态',
       key: 'pipeline',
@@ -105,7 +121,7 @@ export function RunHistoryTable<T>({
       : []),
     ...(renderActions
       ? [{
-          title: '操作',
+          title: <span className="tp-actions-col-title" style={{ width: 92 }}>操作</span>,
           key: 'actions',
           minWidth: columnMinWidths.actions,
           align: 'right' as const,
@@ -122,7 +138,7 @@ export function RunHistoryTable<T>({
   return (
     <>
     <Table<T>
-      className="ai-task-run-table"
+      className={`${appearance === 'list' ? 'ai-task-run-list' : 'ai-task-run-table'}${className ? ` ${className}` : ''}`}
       size="small"
       columns={sizedColumns}
       dataSource={rows}
@@ -130,6 +146,7 @@ export function RunHistoryTable<T>({
       pagination={false}
       tableLayout="fixed"
       scroll={{ x: minWidthTotal }}
+      sticky={appearance === 'list'}
       rowClassName={(row) => (isActive(row) ? 'ai-task-run-table-row-active' : '')}
       onRow={(row) => ({ onClick: () => onSelect(getRunId(row)) })}
       locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无运行记录" /> }}

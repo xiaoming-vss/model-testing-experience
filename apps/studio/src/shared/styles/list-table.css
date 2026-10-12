@@ -1,5 +1,5 @@
 /* 列表表面唯一实现。页面声明 tp-list-surface，表格声明 tp-list-table。
-   保留名称、状态、列内容的 feature 样式，只统一表头、行高和背景。 */
+   保留名称、状态、列内容的 feature 样式，统一表头、行高、分隔线和基础字阶。 */
 .tp-list-surface .tp-list-table .ant-table {
   border-collapse: separate;
   border-spacing: 0;
@@ -14,7 +14,12 @@
 :root .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell,
 :root .app-shell.app-shell-macos .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell {
   height: 42px;
-  padding: 0 16px;
+  padding: 0 16px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--app-list-header-border) !important;
+  border-radius: 0 !important;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--srf-list-header-text) !important;
   background: var(--srf-list-header-bg) !important;
   box-shadow: none !important;
@@ -22,15 +27,40 @@
   backdrop-filter: none;
 }
 
-:root .tp-list-surface .tp-list-table .ant-table-tbody > tr > td,
-:root .app-shell.app-shell-macos .tp-list-surface .tp-list-table .ant-table-tbody > tr > td {
+:root .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td,
+:root .app-shell.app-shell-macos .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row) > td {
   height: 48px;
-  padding: 8px 16px;
+  padding: 8px 16px !important;
+  border-bottom: 1px solid var(--app-list-row-border) !important;
+  font-size: 12px;
   background: var(--srf-list-row-bg) !important;
   box-shadow: none;
 }
 
-:root .tp-list-surface .tp-list-table .ant-table-tbody > tr:hover > td,
-:root .app-shell.app-shell-macos .tp-list-surface .tp-list-table .ant-table-tbody > tr:hover > td {
+:root .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row):hover > td,
+:root .app-shell.app-shell-macos .tp-list-surface .tp-list-table .ant-table-tbody > tr:not(.ant-table-measure-row):hover > td {
   background: var(--srf-list-row-hover) !important;
+}
+
+:root .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell:first-child {
+  border-start-start-radius: 8px !important;
+  border-end-start-radius: 8px !important;
+  border-top-left-radius: 8px !important;
+  border-bottom-left-radius: 8px !important;
+}
+:root .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell:last-child {
+  border-start-end-radius: 8px !important;
+  border-end-end-radius: 8px !important;
+  border-top-right-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+}
+:root .tp-list-surface .tp-list-table .ant-table-thead > tr > th.ant-table-cell::before {
+  display: none !important;
+}
+
+/* 操作列列头与贴边按钮组对齐：标题 span 与按钮组同宽并内部居中，
+   使“操作”二字位于按钮组正上方（按钮组本身右贴边）。 */
+.tp-actions-col-title {
+  display: inline-block;
+  text-align: center;
 }

@@ -1,3 +1,4 @@
+import { useTaskRunDialog, type TaskRunDialogRequest } from '../hooks/useTaskRunDialog'
 import { RequirementMaterialComparison } from '../components/RequirementMaterialComparison'
 import { RequirementUnderstandingComparison } from '../components/RequirementUnderstandingComparison'
 import { listTotal } from '@/shared/api/request'
@@ -119,8 +120,9 @@ function normalizeInstruction(instruction?: string) {
   return instruction?.trim() ?? ''
 }
 
-export function RequirementAnalysisTaskDetailPage() {
-  const { taskId = '' } = useParams()
+export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogRequest?: TaskRunDialogRequest } = {}) {
+  const { taskId: routeTaskId = '' } = useParams()
+  const taskId = dialogRequest?.taskId ?? routeTaskId
   const [runPage, setRunPage] = useState(1)
   const [runPageSize, setRunPageSize] = useState(20)
   useEffect(() => { setRunPage(1) }, [taskId])
@@ -164,7 +166,7 @@ export function RequirementAnalysisTaskDetailPage() {
   const runsQuery = useQuery({
     queryKey: ['requirementAnalysisTaskRuns', taskId, runPage, runPageSize],
     queryFn: () => api.getRequirementAnalysisTaskRuns(taskId, { page: runPage, pageSize: runPageSize }),
-    enabled: Boolean(taskId),
+    enabled: !dialogRequest && Boolean(taskId),
     refetchInterval: activeSection === 'runHistory' ? RUN_HISTORY_POLL_INTERVAL : false,
   })
   const runTotal = listTotal(runsQuery.data)
@@ -181,8 +183,8 @@ export function RequirementAnalysisTaskDetailPage() {
   }
   const refetchRunHistory = runsQuery.refetch
   useEffect(() => {
-    if (activeSection === 'runHistory') void refetchRunHistory({ cancelRefetch: false })
-  }, [activeSection, refetchRunHistory])
+    if (!dialogRequest && activeSection === 'runHistory') void refetchRunHistory({ cancelRefetch: false })
+  }, [activeSection, refetchRunHistory, dialogRequest])
 
 
   const sprintsQuery = useQuery({
@@ -243,7 +245,7 @@ export function RequirementAnalysisTaskDetailPage() {
     [runsQuery.data],
   )
   const latestRunRecord = runsQuery.data?.latestRun ?? runRecords[0]
-  const selectedRunId = selectedRunRecordId ?? runRecords[0]?.runId ?? ''
+  const selectedRunId = dialogRequest?.runId ?? selectedRunRecordId ?? runRecords[0]?.runId ?? ''
   const selectedRunQuery = useQuery({
     queryKey: ['requirementAnalysisRun', selectedRunId],
     queryFn: () => api.getRequirementAnalysisRun(selectedRunId),
@@ -791,8 +793,14 @@ export function RequirementAnalysisTaskDetailPage() {
     })
   }
 
+  useTaskRunDialog(dialogRequest, Boolean(taskQuery.data && selectedRunQuery.data), Boolean(runResultModal || reviseModalOpen), () => {
+    const section = runResultSectionDefinitions.find(item => item.key === dialogRequest?.artifact)
+    if (section && dialogRequest) setRunResultModal({ runId: dialogRequest.runId, key: section.key, label: section.label, mode: dialogRequest.mode === 'view' ? 'view' : 'review' })
+  }, taskQuery.error ?? selectedRunQuery.error)
+
   return (<ProjectAccessScope resourceError={taskQuery.error} projectId={task?.projectId ?? ''}>{personalLlm.dialog}{(
     <div className="workbench-page ai-testing-page tp-list-surface ai-task-detail-page tp-surface">
+      {!dialogRequest && (
       <div className="workbench-tabs">
         {taskQuery.error ? <Alert showIcon type="error" title={getErrorMessage(taskQuery.error)} /> : null}
         {runsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(runsQuery.error)} /> : null}
@@ -1147,6 +1155,7 @@ export function RequirementAnalysisTaskDetailPage() {
           <Empty description="未找到需求分析任务" />
         )}
       </div>
+      )}
 
       <RequirementAnalysisTaskDrawer
         title="编辑需求分析任务"

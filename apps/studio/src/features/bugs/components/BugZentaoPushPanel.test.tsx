@@ -71,6 +71,19 @@ it('prevents pushing when bindings or personal authorization are unavailable', a
   expect(screen.getByRole('button', { name: '推送到禅道' })).toBeDisabled()
 })
 
+it('hides the succeeded sync banner once the push is done', async () => {
+  const job: BugZentaoJob = {
+    jobId: crypto.randomUUID(), protocolVersion: 1, taskType: 'zentao_bug_sync',
+    jobStatus: 'succeeded', result: { steps: {} },
+  }
+  vi.spyOn(bugsApi, 'getBugZentaoPush').mockResolvedValue({
+    ...ready, status: 'succeeded', ready: true, remoteBugId: 50, activeJob: null, latestJob: job,
+  })
+  mount()
+  expect(await screen.findByText('已推送 · 禅道 Bug #50')).toBeInTheDocument()
+  expect(screen.queryByText('禅道同步：已完成')).not.toBeInTheDocument()
+})
+
 it('does not expose push or reconcile actions to members without write permission', async () => {
   vi.spyOn(bugsApi, 'getBugZentaoPush').mockResolvedValue(ready)
   mount(false)

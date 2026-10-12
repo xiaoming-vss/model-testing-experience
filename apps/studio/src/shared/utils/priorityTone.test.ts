@@ -9,6 +9,13 @@ describe('优先级色调', () => {
     expect(priorityTone('P3')).toBe('slate')
   })
 
+  it('兼容历史数字优先级', () => {
+    expect(priorityTone('0')).toBe('red')
+    expect(priorityTone(1)).toBe('amber')
+    expect(priorityTone(' 2 ')).toBe('blue')
+    expect(priorityTone(3)).toBe('slate')
+  })
+
   it('缺优先级或没见过时按最弱的一档走', () => {
     expect(priorityTone(undefined)).toBe('slate')
     expect(priorityTone('')).toBe('slate')

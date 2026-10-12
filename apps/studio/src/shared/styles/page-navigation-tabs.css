@@ -1,0 +1,46 @@
+.page-navigation-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px;
+  overflow-x: auto;
+  border: 1px solid var(--app-shell-border);
+  border-radius: 12px;
+  background: var(--srf-list-header-bg);
+}
+
+.page-navigation-tabs button {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 5px 14px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--srf-text-secondary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.page-navigation-tabs button:hover {
+  color: var(--srf-text);
+  background: var(--srf-list-row-hover);
+}
+
+.page-navigation-tabs button[aria-selected='true'] {
+  color: var(--app-accent);
+  background: var(--app-accent-surface);
+  border-color: var(--app-accent-border);
+  font-weight: 600;
+}
+
+.page-navigation-tabs button:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: -3px;
+}
+
+.page-navigation-tabs button:disabled { cursor: default; opacity: .6; }

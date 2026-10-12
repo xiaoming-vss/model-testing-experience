@@ -53,14 +53,6 @@ class BugZentaoPush(Base):
     payload_json: Mapped[dict[str, Any]] = mapped_column(
         JSON, comment="冻结的禅道创建请求内容 JSON"
     )
-    source_json: Mapped[dict[str, Any]] = mapped_column(
-        JSON,
-        default=dict,
-        server_default=text("('{}')"),
-        comment=(
-            "远端来源快照 JSON：导入的原始 openedBy/openedDate/等级及拉取确认时的远端值；不含凭据"
-        ),
-    )
     error_message: Mapped[str] = mapped_column(
         String(512), default="", comment="执行或同步错误信息"
     )

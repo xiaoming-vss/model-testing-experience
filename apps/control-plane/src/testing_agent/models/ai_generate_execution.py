@@ -97,7 +97,7 @@ class AiGenerateStageAttempt(Base):
 
 class AiGenerateRunImport(Base):
     __tablename__ = "ai_generate_run_imports"
-    __table_args__ = {"comment": "AI 运行产物导入正式资产的记录及幂等依据"}
+    __table_args__ = {"comment": "AI 运行产物导入正式资产的记录"}
     id: Mapped[str] = mapped_column(String(64), primary_key=True, comment="AI 导入记录主键标识")
     run_id: Mapped[str] = mapped_column(
         ForeignKey("ai_generate_task_runs.run_id", ondelete="CASCADE"),
@@ -105,17 +105,10 @@ class AiGenerateRunImport(Base):
         unique=True,
         comment="运行业务标识",
     )
-    artifact_attempt_id: Mapped[str | None] = mapped_column(
-        ForeignKey("ai_generate_stage_attempts.id"),
-        nullable=True,
-        comment="被导入产物所属的阶段尝试标识",
-    )
-    imported_by: Mapped[str | None] = mapped_column(String(64), comment="执行导入的用户业务标识")
     imported_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="正式资产导入时间（UTC）"
     )
     imported_targets_json: Mapped[list[dict[str, Any]] | None] = mapped_column(
         JSON, comment="已导入正式资产的类型和业务标识列表 JSON"
     )
-    idempotency_key: Mapped[str] = mapped_column(String(128), unique=True, comment="导入幂等键")
     created_at: Mapped[CreatedAt] = mapped_column(comment="记录创建时间（UTC）")

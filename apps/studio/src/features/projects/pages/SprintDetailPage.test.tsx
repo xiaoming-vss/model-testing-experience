@@ -31,7 +31,10 @@ it('拒绝使用路径中其他项目的权限展示迭代', async () => {
 it.each([false, true])('缺陷未采集时仍可更新本地统计（授权接口失败：%s）', async (connectionFailure) => {
   const local = { total: 2, executed: 1, pending: 1, success: 1, failed: 0 }
   const snapshot = { snapshotDate: '2026-09-24', function: local, bug: null, bugs: [] }
-  const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+  const updatedSnapshot = { ...snapshot, bug: { total: 4, resolved: 1, closed: 1, unresolved: 2, fatal: 1, serious: 1, normal: 1, suggestion: 1 } }
+  let refreshed = false
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    if (init?.method === 'PUT') refreshed = true
     const path = String(input)
     if (connectionFailure && path.includes('/zentao/connections')) throw new TypeError('Failed to fetch')
     const data = path.endsWith('/sprints/s1')
@@ -39,8 +42,8 @@ it.each([false, true])('缺陷未采集时仍可更新本地统计（授权接�
       : path.endsWith('/projects/p1')
         ? { projectId: 'p1', name: '项目', permissions: ['read', 'manage', 'execute', 'write'] }
         : path.endsWith('/sprints/s1/bindings') ? { items: [{ provider: 'zentao', status: 'active', instanceUrl: 'http://zentao.local' }] }
-          : path.includes('/daily-metrics/') ? snapshot
-          : path.includes('/daily-metrics?') ? { items: [snapshot], total: 1 }
+          : path.includes('/daily-metrics/') ? (refreshed ? updatedSnapshot : snapshot)
+          : path.includes('/daily-metrics?') ? { items: [refreshed ? updatedSnapshot : snapshot], total: 1 }
             : path.includes('/code-overview') ? { repositories: [] }
               : { items: [], total: 0 }
     return new Response(JSON.stringify({ code: 0, message: 'ok', data }))
@@ -57,6 +60,9 @@ it.each([false, true])('缺陷未采集时仍可更新本地统计（授权接�
   await waitFor(() => expect(fetchMock.mock.calls.some(([input, init]) =>
     String(input).includes('/daily-metrics/') && init?.method === 'PUT')).toBe(true))
   await waitFor(() => expect(message.success).toHaveBeenCalled())
+  expect(await screen.findByText('2 个用例，4 个缺陷')).toBeInTheDocument()
+  expect(screen.queryByText('缺陷数据未采集，暂不统计')).not.toBeInTheDocument()
+  expect(screen.getByText('解决率').querySelector('strong')).toHaveTextContent('25%')
   expect(message.error).not.toHaveBeenCalled()
   expect(screen.queryByText(/选择本人禅道授权/)).not.toBeInTheDocument()
   client.clear()

@@ -68,12 +68,16 @@ it('requires assignee and sprint before importing and reports per-item results',
   const row = ((await screen.findByText('登录失败')) as HTMLElement).closest('tr') as HTMLElement
   await userEvent.click(within(row).getByRole('checkbox'))
   expect(await screen.findByText('导入确认')).toBeInTheDocument()
-  // 未选择责任人/迭代时导入按钮保持禁用（Q05/Q06）。
+  // 未选择责任人/迭代时导入按钮保持禁用（Q05/Q06），按钮旁提示未分配责任人。
   expect(screen.getByRole('button', { name: /导入/ })).toBeDisabled()
+  expect(await screen.findByText('未分配责任人')).toBeInTheDocument()
+  // 预览 pending 不再展示：责任人提示随选择更新，含图说明放到导入结果里（R41）。
+  expect(screen.queryByText(/请选择平台责任人/)).not.toBeInTheDocument()
   // 发现迭代由绑定解析预填；责任人必须人工选择。
   expect(screen.getByTitle('迭代一')).toBeInTheDocument()
   await userEvent.click(screen.getByLabelText('责任人-50'))
   await userEvent.click(await screen.findByText('开发甲'))
+  await waitFor(() => expect(screen.queryByText('未分配责任人')).not.toBeInTheDocument())
   await userEvent.click(screen.getByRole('button', { name: /导入/ }))
   await waitFor(() => expect(importSpy).toHaveBeenCalledWith('p1', {
     requestId: expect.any(String),

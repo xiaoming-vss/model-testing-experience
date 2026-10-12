@@ -1,8 +1,8 @@
+import { ActionButton } from '@/shared/components/ActionButton'
 import {
   ArrowLeftOutlined,
   ApartmentOutlined,
   QuestionCircleOutlined,
-  ReloadOutlined,
   SearchOutlined,
 } from '@ant-design/icons'
 import {
@@ -337,12 +337,10 @@ export function TestOrderWorkspacePage() {
                   <span className="test-order-side-count">{entries.length}</span>
                 </span>
                 <Tooltip title="刷新执行条目">
-                  <Button
-                    type="text"
-                    size="small"
+                  <ActionButton
+                    operation="refresh"
                     className="test-order-side-refresh"
                     aria-label="刷新执行条目"
-                    icon={<ReloadOutlined />}
                     loading={entriesQuery.isFetching}
                     onClick={() => entriesQuery.refetch()}
                   />
@@ -656,6 +654,8 @@ export function TestOrderWorkspacePage() {
       </div>
 
       <Modal
+        mask={{ closable: false }}
+        centered
         title="分配执行人"
         open={assignOpen}
         onCancel={() => setAssignOpen(false)}

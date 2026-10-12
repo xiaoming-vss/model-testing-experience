@@ -353,6 +353,61 @@ def test_list_filters_statuses_severity_assignee_and_keyword(api):
     assert len(paged["items"]) == 2
 
 
+def test_list_sorting_by_field_and_order(api):
+    owner_user, owner = account(api, "owner")
+    pid = project(api, owner)
+    sprint_id = make_sprint(api, owner, pid, "迭代A")
+    low = create_bug(
+        api,
+        owner,
+        pid,
+        sprint_id,
+        title="低优先",
+        reporter=owner_user,
+        priority="low",
+        severity="minor",
+    )
+    urgent = create_bug(
+        api,
+        owner,
+        pid,
+        sprint_id,
+        title="紧急",
+        reporter=owner_user,
+        priority="urgent",
+        severity="fatal",
+    )
+    high = create_bug(
+        api,
+        owner,
+        pid,
+        sprint_id,
+        title="高优",
+        reporter=owner_user,
+        priority="high",
+        severity="serious",
+    )
+
+    def order_by(query):
+        response = api.get(f"/v1/projects/{pid}/bugs{query}", headers=owner)
+        assert response.status_code == 200, response.text
+        return [item["id"] for item in response.json()["data"]["items"]]
+
+    # 默认按创建时间倒序（同秒内按 id 兜底），最新创建的在前。
+    assert order_by("") == [high["id"], urgent["id"], low["id"]]
+    # id 升序
+    assert order_by("?sortBy=id&sortOrder=asc") == [low["id"], urgent["id"], high["id"]]
+    # 严重程度按业务档位升序：致命在前，不是字母序。
+    assert order_by("?sortBy=severity&sortOrder=asc") == [urgent["id"], high["id"], low["id"]]
+    # 优先级降序：低档在前。
+    assert order_by("?sortBy=priority&sortOrder=desc") == [low["id"], high["id"], urgent["id"]]
+    # 白名单外的字段与非法方向都拒绝。
+    response = api.get(f"/v1/projects/{pid}/bugs?sortBy=title", headers=owner)
+    assert response.status_code == 400
+    response = api.get(f"/v1/projects/{pid}/bugs?sortOrder=ascending", headers=owner)
+    assert response.status_code == 400
+
+
 def test_submit_bug_from_execution_record_auto_links_and_snapshots(api):
     owner_user, owner = account(api, "owner")
     pid = project(api, owner)

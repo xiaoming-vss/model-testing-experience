@@ -266,7 +266,6 @@ def test_internal_ai_worker_requirement_document_download_uses_worker_token():
         async def requirement_document(self, task_id):
             assert task_id == "worker-task-1"
             return SimpleNamespace(
-                document_storage_path="",
                 document_filename="requirement.docx",
                 document_file_id="file-1",
             )

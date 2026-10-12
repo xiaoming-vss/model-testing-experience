@@ -92,7 +92,6 @@ def make_requirement() -> SimpleNamespace:
         name="登录改造",
         document_type="text",
         document_content="登录模块需求正文",
-        document_storage_path="",
         document_filename="",
         document_download_url="",
     )
@@ -650,7 +649,6 @@ async def test_worker_requirement_document_allows_code_risk_analysis():
             return SimpleNamespace(
                 requirement_id="req-1",
                 document_file_id="stored-requirement",
-                document_storage_path="",
                 document_content="需求正文",
                 document_filename="",
             )

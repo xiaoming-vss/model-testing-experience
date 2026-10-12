@@ -1,0 +1,12 @@
+/* 运行记录的公共列表皮肤；不继承旧任务详情表格的表面与选中竖线。 */
+.ai-task-run-list .ai-task-run-table-id { display: inline-flex; align-items: center; gap: 8px; }
+.ai-task-run-list .ai-task-run-table-index { color: var(--srf-text-muted); font-size: 12px; font-weight: 400; }
+.ai-task-run-list .ai-task-run-table-id-text { color: var(--app-list-name); font-size: 13px; font-weight: 500; }
+.ai-task-run-list .ai-task-run-list-status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.ai-task-run-list .ai-task-run-artifacts { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.ai-task-run-list .ai-task-run-artifacts .ai-task-run-artifact { height: auto; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--app-list-name); font-size: 12px; line-height: 20px; }
+.ai-task-run-list .ai-task-run-artifacts button.ai-task-run-artifact:hover { color: var(--app-list-name-hover); text-decoration: underline; }
+.ai-task-run-list .ai-task-run-artifacts .ai-task-run-artifact.off { color: var(--srf-text-muted); }
+.ai-task-run-list .ai-task-run-table-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+
+.ai-task-run-list .ai-task-run-table-time { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11px; line-height: 20px; color: var(--srf-text-muted); white-space: nowrap; }

@@ -6,23 +6,17 @@ import { BUG_STATUS_LABELS, BUG_SEVERITY_LABELS, BUG_RESOLUTION_LABELS } from '.
 import type { useBugList } from '../hooks/useBugList'
 type Model = ReturnType<typeof useBugList>
 export function BugListToolbar({ model }: { model: Model }) {
-  const { activeProjectId, activeSprintId, sprints, sprintsQuery, selectSprint, sprintSelectorOptions,
+  const { activeProjectId, sprints,
     keyword, setKeyword, bugsQuery, setCreateOpen, setImportOpen } = model
   return (
           <div className="panel-header api-panel-header bugs-toolbar tp-list-toolbar">
             <div className="api-filter-group bugs-filters">
               <h1 className="tp-list-title">Bug 列表</h1>
-              <div className="api-filter-field">
-                <span className="api-filter-field-label">迭代</span>
-                <Select
-                  className="api-filter-select business-filter-select"
-                  value={activeSprintId ?? 'all'}
-                  options={sprintSelectorOptions}
-                  loading={sprintsQuery.isLoading}
-                  placeholder="全部迭代"
-                  onChange={(value: string) => selectSprint(value === 'all' ? 'all' : value)}
-                />
-              </div>
+              <Popover trigger="click" placement="bottomLeft" title="筛选与显示" content={<BugListFilters model={model} />}>
+                <Button type="text" icon={<FilterOutlined />} aria-label="筛选与显示">
+                  筛选{(model.status || model.confirmed !== undefined || model.resolution || model.severity || model.assigneeUserId) ? ' · 已启用' : ''}
+                </Button>
+              </Popover>
               <div className="api-filter-field bugs-search-field">
                 <Input
                   className="api-filter-input bugs-search-input"
@@ -35,12 +29,7 @@ export function BugListToolbar({ model }: { model: Model }) {
               </div>
             </div>
 
-            <Space size={8} className="bugs-toolbar-actions">
-              <Popover trigger="click" placement="bottomRight" title="筛选与显示" content={<BugListFilters model={model} />}>
-                <Button type="text" icon={<FilterOutlined />} aria-label="筛选与显示">
-                  筛选{(model.status || model.confirmed !== undefined || model.resolution || model.severity || model.assigneeUserId) ? ' · 已启用' : ''}
-                </Button>
-              </Popover>
+            <Space size={8} className="bugs-toolbar-actions tp-refresh-actions">
               <Tooltip title="刷新 Bug 列表">
                 <ProjectActionButton
                   action="bug_read"
@@ -136,7 +125,7 @@ function BugListFilters({ model }: { model: Model }) {
                 <span className="bug-filter-label">附加显示列</span>
                 <Checkbox.Group
                   value={optionalColumns} onChange={setOptionalColumns} className="bug-column-options"
-                  options={[{ label: '所属需求', value: 'requirement' }, { label: '创建时间', value: 'createdAt' },
+                  options={[{ label: '所属需求', value: 'requirement' }, { label: '更新时间', value: 'updatedAt' },
                     { label: '关联测试单', value: 'order' }, { label: '关联用例', value: 'case' }]} />
                 <Button onClick={model.resetFilters}>清空筛选</Button>
               </div>

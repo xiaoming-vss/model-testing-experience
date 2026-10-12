@@ -26,24 +26,45 @@ async def history_page(session, criteria, page=1, page_size=20, pipeline_filter=
     if pipeline_filter != "all":
         review = (
             select(Stage.review_status)
-            .where(Stage.run_id == Run.run_id, Stage.stage == "detailed_cases")
+            .where(
+                Stage.run_id == Run.run_id,
+                Stage.stage
+                == case(
+                    (AiGenerateTask.task_type == "functional_case_generate", "detailed_cases"),
+                    (AiGenerateTask.task_type == "requirement_analysis", "feature_understanding"),
+                    else_="generate",
+                ),
+            )
             .scalar_subquery()
         )
         imported = select(Import.id).where(Import.run_id == Run.run_id).exists()
+        waiting_stage = (
+            select(Stage.id)
+            .where(
+                Stage.run_id == Run.run_id,
+                Stage.execution_status == "success",
+                Stage.review_status == "pending",
+            )
+            .exists()
+        )
         pipeline = case(
             (Run.status.in_(["failed", "error"]), "failed"),
             (Run.status == "canceled", "canceled"),
+            (review == "rejected", "rejected"),
+            ((Run.status == "waiting_review") & waiting_stage, "review_pending"),
             (
                 Run.status.in_(["pending", "claimed", "running", "waiting_review"])
                 & (func.coalesce(review, "pending") != "approved"),
                 "running",
             ),
-            (review == "rejected", "rejected"),
             ((review == "approved") & imported, "imported"),
             (review == "approved", "import_pending"),
             else_="review_pending",
         )
-        criteria = [*criteria, pipeline == pipeline_filter]
+        filter_condition = (
+            review == "approved" if pipeline_filter == "approved" else pipeline == pipeline_filter
+        )
+        criteria = [*criteria, filter_condition]
     counts = dict(
         (
             await session.execute(

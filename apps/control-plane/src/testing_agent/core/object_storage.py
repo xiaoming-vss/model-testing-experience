@@ -147,5 +147,26 @@ class ObjectStorage:
             ExpiresIn=self.settings.signature_seconds,
         )
 
+    def read_text(self, key: str) -> str:
+        obj = self.client.get_object(Bucket=self.settings.bucket, Key=key)
+        try:
+            text = obj["Body"].read().decode("utf-8")
+            if "\x00" in text:
+                raise AppError(400, "文本文件内容不合法", 400)
+            return text
+        except UnicodeDecodeError:
+            raise AppError(400, "正文必须使用 UTF-8 编码", 400) from None
+        finally:
+            obj["Body"].close()
+
+    def write_html(self, key: str, data: bytes, filename: str) -> None:
+        self.client.put_object(
+            Bucket=self.settings.bucket,
+            Key=key,
+            Body=data,
+            ContentType="text/html; charset=utf-8",
+            ContentDisposition=download_disposition(filename),
+        )
+
     def delete(self, key: str):
         self.client.delete_object(Bucket=self.settings.bucket, Key=key)

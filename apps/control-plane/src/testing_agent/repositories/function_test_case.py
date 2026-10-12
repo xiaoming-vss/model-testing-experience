@@ -79,7 +79,11 @@ class FunctionTestCaseRepository(ResourceRepository):
         if query.module:
             conditions.append(FunctionTestCase.module == query.module)
         if query.priority:
-            conditions.append(FunctionTestCase.priority == query.priority)
+            # 历史导入使用数字，新建用例使用 P 前缀；同一档位必须一起筛选、计数。
+            priority = query.priority.upper()
+            level = priority[1:] if priority.startswith("P") else priority
+            values = [level, f"P{level}"] if level in {"0", "1", "2", "3"} else [query.priority]
+            conditions.append(FunctionTestCase.priority.in_(values))
         if query.case_type:
             conditions.append(FunctionTestCase.case_type == query.case_type)
         if query.keyword:

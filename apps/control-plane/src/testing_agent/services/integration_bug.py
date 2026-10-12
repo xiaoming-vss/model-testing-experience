@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from testing_agent.core.errors import AppError, ErrNotFound
 from testing_agent.domain.integration_execution import StepStatus, digest
+from testing_agent.models.bug_zentao_sync_baseline import BugZentaoSyncBaseline
 from testing_agent.models.integration_job import IntegrationJob
 from testing_agent.models.project import Project
 from testing_agent.services.bug_zentao_attachment import BugZentaoAttachmentService
@@ -157,7 +158,21 @@ class IntegrationBugService:
         row = await self.pushes.row(bug_id)
         if row and row.status == "succeeded":
             fields.update(await BugZentaoAttachmentService(self.pushes).summary(bug, row))
-            fields.update(description_summary(bug, row))
+            imported_local_digest = None
+            if row.source == "import":
+                # 导入方向的图片是否补齐由拉取管线写入的描述基线判定。
+                baseline = await self.session.scalar(
+                    select(BugZentaoSyncBaseline).where(
+                        BugZentaoSyncBaseline.bug_id == bug_id,
+                        BugZentaoSyncBaseline.field_group == "description",
+                    )
+                )
+                imported_local_digest = (
+                    (baseline.local_snapshot_json or {}).get("digest") if baseline else None
+                )
+            fields.update(
+                description_summary(bug, row, imported_local_digest=imported_local_digest)
+            )
         try:
             await self.pushes.bugs.get_accessible_entity(actor, bug_id, action="write")
             _, _, target = await self.context.local_target(bug, actor, row)

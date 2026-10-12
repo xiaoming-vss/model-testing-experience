@@ -42,7 +42,7 @@ export function BugTransitionModal({ bug, action, onClose }: {
     onError: (error) => message.error(getErrorMessage(error)),
   })
 
-  return <Modal title={action ? `${BUG_ACTION_LABELS[action]} - ${bug?.title ?? ''}` : ''}
+  return <Modal mask={{ closable: false }} centered title={action ? `${BUG_ACTION_LABELS[action]} - ${bug?.title ?? ''}` : ''}
     open={Boolean(bug && action)} onCancel={() => !transitionMutation.isPending && onClose()}
     footer={<Space><Button disabled={transitionMutation.isPending} onClick={onClose}>取消</Button>
       <Button aria-label="确认" type="primary" loading={transitionMutation.isPending} onClick={() => form.submit()}>确认</Button>

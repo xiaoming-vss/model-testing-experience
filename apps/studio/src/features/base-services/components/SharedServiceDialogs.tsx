@@ -1,7 +1,8 @@
 import { ZentaoMcpDeploymentHelp } from './ZentaoMcpDeploymentHelp'
-import { Alert, Checkbox, Form, Input, Modal, Select, Typography } from 'antd'
+import { Alert, Checkbox, Drawer, Form, Input, Modal, Select, Typography } from 'antd'
 import type { FormInstance } from 'antd'
 import type { PersonalAuthorization, ServiceConfiguration, ServiceProvider, SharedService } from '../api/sharedServices.api'
+import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 
 async function validateMcpUrl(_: unknown, value: string) {
   try {
@@ -20,21 +21,20 @@ type Props = {
   configuration: FormInstance<ServiceConfiguration>
   credentials: FormInstance<PersonalAuthorization>
   saving: boolean
-  canManage: boolean
   closeEditor: () => void
   closeAuthorization: () => void
   saveConfiguration: () => Promise<void>
   saveAuthorization: () => Promise<void>
 }
 
-export function SharedServiceDialogs({ provider, providerLabel, editor, authorization, configuration, credentials, saving, canManage, closeEditor, closeAuthorization, saveConfiguration, saveAuthorization }: Props) {
+export function SharedServiceDialogs({ provider, providerLabel, editor, authorization, configuration, credentials, saving, closeEditor, closeAuthorization, saveConfiguration, saveAuthorization }: Props) {
   const endpoint = Form.useWatch('baseUrl', configuration)
   const confirmed = Form.useWatch('confirmInstanceSwitch', configuration)
   const needsConfirmation = provider === 'mcp' && editor && editor !== 'create'
     && (editor.instanceResetRequired || (endpoint !== undefined && endpoint.trim() !== editor.baseUrl))
   return <>
-    <Modal forceRender okText="保存" cancelText="取消" title={editor === 'create' ? (provider === 'mcp' ? '新增 MCP' : `新建 ${providerLabel} 服务`) : '编辑服务'} open={Boolean(editor)} onCancel={closeEditor} onOk={saveConfiguration} confirmLoading={saving} okButtonProps={{ disabled: !canManage || Boolean(needsConfirmation && !confirmed) }} style={provider === 'mcp' ? { top: 24 } : undefined} styles={provider === 'mcp' ? { body: { maxHeight: 'calc(100dvh - 160px)', overflowY: 'auto' } } : undefined}>
-      {(provider !== 'mcp' || editor === 'create') && <Alert showIcon type="info" title={provider === 'mcp' ? '填写已启动的 MCP 服务地址，创建后再配置本人的 Token。' : '服务配置对项目成员可见，创建时无需填写个人凭据。'} style={{ marginBottom: 16 }} />}
+    <Drawer forceRender mask={{ closable: false }} size={520} title={editor === 'create' ? (provider === 'mcp' ? '新增 MCP' : `新建 ${providerLabel} 服务`) : '编辑服务'} open={Boolean(editor)} onClose={closeEditor} extra={<ProjectActionButton operation="save" action="manage" type="primary" className="action-btn-save" loading={saving} disabled={Boolean(needsConfirmation && !confirmed)} onClick={saveConfiguration}>保存</ProjectActionButton>}>
+      {provider === 'mcp' && editor === 'create' && <Alert showIcon type="info" title="填写已启动的 MCP 服务地址，创建后再配置本人的 Token。" style={{ marginBottom: 16 }} />}
       {provider === 'mcp' && editor === 'create' && <ZentaoMcpDeploymentHelp />}
       <Form form={configuration} layout="vertical" preserve={false}>
         <Form.Item name="name" label="服务名称" rules={[{ required: true, whitespace: true }]}><Input maxLength={120} placeholder={provider === 'mcp' ? '例如：项目禅道 MCP' : undefined} /></Form.Item>
@@ -54,8 +54,8 @@ export function SharedServiceDialogs({ provider, providerLabel, editor, authoriz
         </>}
         {editor !== 'create' && provider !== 'mcp' && <Typography.Text type="secondary">地址和模型用于确定授权对象，需要更换时请新建服务。</Typography.Text>}
       </Form>
-    </Modal>
-    <Modal forceRender cancelText="取消" title={`我的授权 · ${authorization?.name ?? ''}`} open={Boolean(authorization)} onCancel={closeAuthorization} onOk={saveAuthorization} confirmLoading={saving} okText="保存我的授权">
+    </Drawer>
+    <Modal forceRender mask={{ closable: false }} centered cancelText="取消" title={`授权 · ${authorization?.name ?? ''}`} open={Boolean(authorization)} onCancel={closeAuthorization} onOk={saveAuthorization} confirmLoading={saving} okText="保存授权">
       {provider === 'mcp' && <Alert type="info" showIcon title="token 仅用于本人的授权，保存后自动读取实例信息；禅道访问权限在业务操作时校验。" style={{ marginBottom: 16 }} />}
       <Form form={credentials} layout="vertical" preserve={false} autoComplete="off">
         {provider === 'mcp' && <Form.Item name="token" label="我的 Token" rules={[{ required: true, whitespace: true }]}><Input.Password autoComplete="new-password" /></Form.Item>}

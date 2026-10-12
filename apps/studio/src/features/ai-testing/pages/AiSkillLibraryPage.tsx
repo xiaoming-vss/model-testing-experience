@@ -1,8 +1,7 @@
 import { saveBlob } from '@/shared/utils/download'
 import { ActionButton } from '@/shared/components/ActionButton'
-import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
-import { Alert, Card, Empty, Popconfirm, Space, Tag, Tooltip, Typography } from 'antd'
+import { Alert, Card, Drawer, Empty, Popconfirm, Space, Tag, Tooltip, Typography } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { skillFolder } from '../api/skills.api'
@@ -93,10 +92,10 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
   const content = (
     <>
       <div className="workbench-tabs ai-skill-library-tabs">
-        <section className="workbench-panel workbench-board-panel ai-testing-task-panel ai-skill-library-panel">
-          <div className="panel-header ai-task-panel-header ai-skill-library-panel-head">
+        <section className="workbench-panel workbench-board-panel ai-testing-task-panel ai-skill-library-panel tp-board tp-list-panel">
+          <div className="panel-header ai-task-panel-header ai-skill-library-panel-head tp-list-toolbar">
             <Text strong>Skill 列表</Text>
-            <Space wrap size={8}>
+            <Space wrap size={8} className="tp-refresh-actions">
               <ActionButton operation="refresh" onClick={() => skillsQuery.refetch()} disabled={!activeProjectId}>
                 刷新
               </ActionButton>
@@ -112,7 +111,7 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
           {deleteSkillMutation.error ? <Alert showIcon type="error" title={getErrorMessage(deleteSkillMutation.error)} style={{ margin: '12px 18px 0' }} /> : null}
           {downloadSkillMutation.error ? <Alert showIcon type="error" title={getErrorMessage(downloadSkillMutation.error)} style={{ margin: '12px 18px 0' }} /> : null}
 
-          <div className="table-body-scroll ai-testing-card-scroll ai-skill-library-body">
+          <div className="table-body-scroll ai-testing-card-scroll ai-skill-library-body tp-list-scroll">
             {!activeProjectId ? (
               <div className="sprint-card-loading ai-testing-empty-shell ai-skill-library-empty">
                 <Empty description="请先选择项目，再进入 Skill库" />
@@ -191,16 +190,18 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
         </section>
       </div>
 
-      <ProjectActionModal action="manage"
+      <Drawer
         mask={{ closable: false }}
+        size={480}
         open={uploadModalOpen}
+        onClose={closeUploadModal}
         title="上传 Skill 文件夹"
-        okText="上传"
-        onCancel={closeUploadModal}
-        onOk={handleUpload}
-        confirmLoading={uploadSkillMutation.isPending}
-        okButtonProps={{ className: 'action-btn-save' }}
         destroyOnHidden
+        extra={
+          <ProjectActionButton action="manage" type="primary" className="action-btn-save" loading={uploadSkillMutation.isPending} onClick={handleUpload}>
+            上传
+          </ProjectActionButton>
+        }
       >
         <input
           aria-label="选择 Skill 文件夹"
@@ -222,7 +223,7 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
         <p>{uploadFiles.length ? `已选择 ${uploadFiles.length} 个文件` : '请选择根目录包含 SKILL.md 的技能文件夹'}</p>
         <Text type="secondary">同名自定义技能整体覆盖，不保留旧文件；系统默认技能不可覆盖。</Text>
 
-      </ProjectActionModal>
+      </Drawer>
     </>
   )
 

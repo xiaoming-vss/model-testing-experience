@@ -52,3 +52,10 @@ uv run python -m testing_agent.cli.skills /home/xiaoming/下载/skills/default-s
 两个需求分析默认技能更新为：明确答复先写入对应事实或需求理解正文，更新来源及确认状态，再删除已解决问题与相关引用；部分回答只保留剩余缺口，全部解决时 questions=[]。不输出 resolved 问题，不另建问答历史。平台和 Worker 的新输出契约同步收窄；已有已回答产物允许作为 AI 继续优化的输入。
 
 已从 default-skill-003 的两个源目录通过既有发布服务覆盖默认库，共11个文件，真实 S3 下载内容、大小及 SHA-256 逐项一致。AI 队列为空时已重启本地 AI Worker，新进程正常轮询。未替用户提交真实需求审核或调用模型修订业务产物。
+
+
+## 2026-10-08 Word 与富文本提取技能
+
+从 `/home/xiaoming/下载/skills/default-skill-004` 通过既有 `sync_builtin_skills` 发布服务更新 `extract-docx-enhanced-text`、新增 `extract-richtext-enhanced-text`，其余默认及自定义技能不变。共 10 个文件，已读取真实 S3 对象逐项比对源内容、大小及 SHA-256，全部一致。Word 技能不再接收 TXT 主文档；Worker 按 Word/DOCX 与 richtext 选择第一阶段技能，后续分析逻辑及输出契约一致。详见[两阶段需求分析](../ai-worker/requirement-analysis-two-stage-design.md#2026-10-08-富文本输入接入)。
+
+同步时 AI 队列无 pending/claimed/running 任务，已重启本地 AI Worker 并确认恢复轮询；控制面自动重载后在线 OpenAPI 已注册图片下载接口。未提交真实模型分析或代替用户审核业务产物。

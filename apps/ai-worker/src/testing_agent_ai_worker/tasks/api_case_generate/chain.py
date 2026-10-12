@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from testing_agent_ai_worker.nanobot_runtime.prompt import (
@@ -12,6 +13,11 @@ from testing_agent_ai_worker.nanobot_runtime.prompt import (
     append_stage_instruction,
     build_skill_message,
 )
+from testing_agent_ai_worker.tasks.api_case_generate.contracts import (
+    validate_cases,
+    validate_extraction,
+)
+from testing_agent_ai_worker.tasks.output_repair import generate_validated
 
 
 def _default_from_config(**kwargs: Any) -> Any:
@@ -50,6 +56,7 @@ async def run_chain(
     workspace: str | None = None,
     extra_instruction: str = "",
     on_extractor_result: Callable[[str], None] | None = None,
+    on_validation_progress: Callable[[dict[str, Any], str], None] | None = None,
     from_config: Callable[..., Any] | None = None,
 ) -> ChainRunResult:
     """执行 API 用例生成的两段 skill 链。"""
@@ -57,26 +64,36 @@ async def run_chain(
     factory = from_config or _default_from_config
 
     async with factory(config_path=config_path, workspace=workspace) as bot:
-        extractor_result = await bot.run(
-            build_skill_message(
+        directory = Path(workspace) / "diagnostics" / "api-output" if workspace else None
+        extractor_output = await generate_validated(
+            stage="openapi_extract",
+            inputs=build_skill_message(
                 skill_name=extractor_skill_name,
                 body_text=openapi_text,
                 extra_instruction=_build_api_extractor_instruction(extra_instruction),
             ),
-            session_key=session_key,
+            generate=lambda prompt: bot.run(prompt, session_key=session_key),
+            validate=validate_extraction,
+            diagnostic_dir=directory,
+            report=(lambda event: on_validation_progress(event, ""))
+            if on_validation_progress
+            else None,
         )
         if on_extractor_result is not None:
-            on_extractor_result(extractor_result.content)
-        generator_result = await bot.run(
-            build_skill_message(
+            on_extractor_result(extractor_output)
+        generator_output = await generate_validated(
+            stage="api_case_generating",
+            inputs=build_skill_message(
                 skill_name=generator_skill_name,
-                body_text=extractor_result.content,
+                body_text=extractor_output,
                 extra_instruction=_build_api_generator_instruction(extra_instruction),
             ),
-            session_key=session_key,
+            generate=lambda prompt: bot.run(prompt, session_key=session_key),
+            validate=validate_cases,
+            diagnostic_dir=directory,
+            report=(lambda event: on_validation_progress(event, extractor_output))
+            if on_validation_progress
+            else None,
         )
 
-    return ChainRunResult(
-        extractor_output=extractor_result.content,
-        generator_output=generator_result.content,
-    )
+    return ChainRunResult(extractor_output=extractor_output, generator_output=generator_output)

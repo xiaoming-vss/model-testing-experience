@@ -263,6 +263,7 @@ export function AddCasesFromLibraryModal({
 
   return (
     <Modal
+      mask={{ closable: false }}
       title="加入用例"
       open={open}
       width={1100}

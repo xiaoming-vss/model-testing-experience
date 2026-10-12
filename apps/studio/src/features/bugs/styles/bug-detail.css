@@ -46,15 +46,6 @@
 .bugs-detail-page .bugs-detail-topbar { position: sticky; top: 0; z-index: 3; background: var(--srf-card); }
 .bug-detail-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--srf-divider); padding-bottom: 12px; margin-bottom: 16px; }
 .bugs-detail-page .bug-detail-section-heading .bug-panel-title { border: 0; margin: 0; padding: 0; }
-.bug-description-sections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.bug-description-section { grid-column: 1 / -1; min-width: 0; }
-.bug-description-section h3 { margin: 0 0 10px; font-size: 13px; color: var(--srf-accent); }
-.bug-description-section.is-context { padding: 14px; background: var(--srf-hover); border-radius: 6px; }
-.bug-description-section.is-actual, .bug-description-section.is-expected { grid-column: auto; padding: 16px; border-radius: 8px; border: 1px solid var(--srf-card-border); background: var(--srf-hover); }
-.bug-description-section.is-actual { border-left: 3px solid var(--srf-result-failed); }
-.bug-description-section.is-expected { border-left: 3px solid var(--srf-result-passed); }
-.bug-description-section.is-actual h3 { color: var(--srf-danger); }
-.bugs-detail-page .bug-description-section .rich-text-viewer { min-height: 0; }
 .bug-description-raw { max-height: 480px; overflow: auto; padding: 16px; background: var(--srf-hover); color: var(--srf-text-secondary); white-space: pre-wrap; overflow-wrap: anywhere; }
 .bug-evidence-layout { display: grid; gap: 16px; }
 .bug-evidence-layout.has-preview { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
@@ -68,11 +59,9 @@
 .bug-evidence-file-info button { border: 0; padding: 0; background: transparent; color: var(--srf-accent); cursor: pointer; text-align: left; }
 .bug-evidence-file-info small { display: block; color: var(--srf-text-muted); margin-top: 4px; }
 @media (max-width: 720px) {
-  .bug-description-sections, .bug-evidence-layout.has-preview { grid-template-columns: minmax(0, 1fr); }
+  .bug-evidence-layout.has-preview { grid-template-columns: minmax(0, 1fr); }
   .bug-detail-section-heading { flex-wrap: wrap; }
 }
-.bug-description-section.is-actual { background: color-mix(in srgb, var(--srf-result-failed) 5%, var(--srf-card)); border-color: color-mix(in srgb, var(--srf-result-failed) 22%, var(--srf-card)); }
-.bug-description-section.is-expected { background: color-mix(in srgb, var(--srf-result-passed) 5%, var(--srf-card)); border-color: color-mix(in srgb, var(--srf-result-passed) 22%, var(--srf-card)); }
 
 .bug-detail-history, .bug-detail-discussion { grid-column: 1 / -1; }
 .bug-detail-history .bug-activity-head, .bug-detail-discussion .bug-activity-head { gap: 6px 8px; }

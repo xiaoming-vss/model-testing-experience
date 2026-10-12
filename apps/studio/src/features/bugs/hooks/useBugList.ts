@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { api, listItems, listTotal } from '@/services/api'
-import type { Bug, BugAction } from '../types'
+import type { Bug, BugAction, BugSortField } from '../types'
 import { bugColumns } from '../components/bugColumns'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { useBugScope } from './useBugScope'
@@ -28,9 +28,12 @@ export function useBugList() {
   const [optionalColumns, setOptionalColumns] = useState<string[]>([])
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
+  // 默认按创建时间倒序，最新提交的缺陷在前。
+  const [sort, setSort] = useState<{ by: BugSortField; order: 'asc' | 'desc' }>({ by: 'created_at', order: 'desc' })
   const [createOpen, setCreateOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [transition, setTransition] = useState<{ bug: Bug; action: BugAction } | null>(null)
+  const [editBug, setEditBug] = useState<Bug | null>(null)
 
   const sprintNameMap = useMemo(() => {
     const map = new Map<string, string>()
@@ -64,8 +67,10 @@ export function useBugList() {
       keyword: keyword.trim(),
       page,
       pageSize,
+      sortBy: sort.by,
+      sortOrder: sort.order,
     }),
-    [activeSprintId, status, confirmed, resolution, severity, assigneeUserId, keyword, page, pageSize],
+    [activeSprintId, status, confirmed, resolution, severity, assigneeUserId, keyword, page, pageSize, sort],
   )
 
   const bugsQuery = useQuery({
@@ -91,7 +96,9 @@ export function useBugList() {
   }
 
   const columns = bugColumns({ memberNameMap, sprintNameMap, optionalColumns,
-    onTransition: (bug, action) => setTransition({ bug, action }) })
+    onTransition: (bug, action) => setTransition({ bug, action }),
+    onEdit: (bug) => setEditBug(bug),
+    sort })
 
-  return { optionalColumns, setOptionalColumns, navigate, activeProjectId, activeSprintId, sprints, sprintsQuery, selectSprint, sprintSelectorOptions, status, setStatus, confirmed, setConfirmed, resolution, setResolution, severity, setSeverity, assigneeUserId, setAssigneeUserId, keyword, setKeyword, page, setPage, pageSize, setPageSize, createOpen, setCreateOpen, importOpen, setImportOpen, transition, setTransition, membersQuery, bugsQuery, bugs, total, resetFilters, columns }
+  return { optionalColumns, setOptionalColumns, navigate, activeProjectId, activeSprintId, sprints, sprintsQuery, selectSprint, sprintSelectorOptions, status, setStatus, confirmed, setConfirmed, resolution, setResolution, severity, setSeverity, assigneeUserId, setAssigneeUserId, keyword, setKeyword, page, setPage, pageSize, setPageSize, sort, setSort, createOpen, setCreateOpen, importOpen, setImportOpen, transition, setTransition, editBug, setEditBug, membersQuery, bugsQuery, bugs, total, resetFilters, columns }
 }

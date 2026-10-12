@@ -169,6 +169,8 @@ export function BugZentaoPullModal({ open, bugId, projectId, onClose }: Props) {
   ]
   return (
     <Modal
+      mask={{ closable: false }}
+      centered
       title="从禅道同步"
       open={open}
       width={860}

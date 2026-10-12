@@ -21,6 +21,7 @@ class IntegrationExecutionSettings:
     runtime_generation: str = ""
     succeeded_retention_days: int = 30
     failed_retention_days: int = 90
+    claim_receipt_retention_days: int = 14
     maintenance_batch_size: int = 100
     restore_review_max_age_seconds: int = 3600
     worker_presence_ttl_seconds: int = 120
@@ -38,6 +39,7 @@ class IntegrationExecutionSettings:
         for name, maximum in (
             ("succeeded_retention_days", 3650),
             ("failed_retention_days", 3650),
+            ("claim_receipt_retention_days", 3650),
             ("maintenance_batch_size", 1000),
             ("restore_review_max_age_seconds", 86400),
         ):

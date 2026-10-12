@@ -19,7 +19,8 @@ from testing_agent_ai_worker.nanobot_runtime.paths import (
     resolve_runtime_paths,
     resolve_task_workspace,
 )
-from testing_agent_ai_worker.tasks.functional_case_generate.chain import run_skill_step
+from testing_agent_ai_worker.nanobot_runtime.skill_step import run_skill_step
+from testing_agent_ai_worker.tasks.output_repair import generate_validated, parse_yaml
 from testing_agent_ai_worker.tasks.result_summary import build_task_result_summary
 from testing_agent_ai_worker.tasks.ui_case_generate.source_archive import SourceArchiveDownloader
 from testing_agent_ai_worker.worker.runner import TaskExecutor
@@ -67,13 +68,6 @@ UI_KEYWORD_RULES = {
 }
 
 
-def _resolve_text_result(result: Any) -> str:
-    resolved = asyncio.run(result) if hasattr(result, "__await__") else result
-    if not isinstance(resolved, str):
-        raise ValueError("UI 用例技能结果必须为文本")
-    return resolved
-
-
 class UiCaseNanobotExecutor(TaskExecutor):
     """下载前端源码归档并调用 UI 用例生成技能。"""
 
@@ -107,14 +101,29 @@ class UiCaseNanobotExecutor(TaskExecutor):
                 input_text = f"{input_text}\n\n{task.payload.extra_instruction.strip()}"
             progress_callback(self._progress(task, source_root))
             with task_config_path(nanobot_config=self.nanobot_config, task=task) as config_path:
-                output_yaml = _resolve_text_result(
-                    self.skill_runner(
-                        input_text=input_text,
-                        session_key=task.nanobot_session_key,
-                        skill_name=self.skill_name,
-                        config_path=config_path,
-                        workspace=str(workspace),
-                        extra_instruction="",
+
+                def repair_progress(event: dict[str, Any]) -> None:
+                    progress = self._progress(task, source_root)
+                    progress.result_summary_json = json.dumps(
+                        {"outputValidation": event}, ensure_ascii=False
+                    )
+                    progress_callback(progress)
+
+                output_yaml = asyncio.run(
+                    generate_validated(
+                        stage="ui_case_generating",
+                        inputs=input_text,
+                        generate=lambda prompt: self.skill_runner(
+                            input_text=prompt,
+                            session_key=task.nanobot_session_key,
+                            skill_name=self.skill_name,
+                            config_path=config_path,
+                            workspace=str(workspace),
+                            extra_instruction="",
+                        ),
+                        validate=_validate_ui_cases_yaml,
+                        diagnostic_dir=workspace / "diagnostics" / "ui-output",
+                        report=repair_progress,
                     )
                 )
             case_count = _validate_ui_cases_yaml(output_yaml)
@@ -172,7 +181,7 @@ class UiCaseNanobotExecutor(TaskExecutor):
 
 
 def _validate_ui_cases_yaml(output_yaml: str) -> int:
-    parsed = yaml.safe_load(output_yaml)
+    parsed = parse_yaml(output_yaml)
     if isinstance(parsed, list) and parsed:
         cases = parsed
     else:
@@ -226,7 +235,7 @@ def _validate_ui_step(step: object, case_index: int, step_index: int) -> None:
     if rule.locator_required:
         locator_type = step.get("locatorType")
         locator_value = step.get("locatorValue")
-        if locator_type not in VALID_UI_LOCATOR_TYPES:
+        if not isinstance(locator_type, str) or locator_type not in VALID_UI_LOCATOR_TYPES:
             raise ValueError(f"{prefix} locatorType 不受支持或缺失: {locator_type}")
         if not isinstance(locator_value, str) or not locator_value.strip():
             raise ValueError(f"{prefix} locatorValue 必须是非空字符串")
@@ -242,7 +251,10 @@ def _validate_ui_step(step: object, case_index: int, step_index: int) -> None:
         raise ValueError(f"{prefix} keyword={keyword} 不应包含 operationValue")
 
     if rule.comparator_required:
-        if step.get("comparator") not in VALID_UI_COMPARATORS:
+        if (
+            not isinstance(step.get("comparator"), str)
+            or step["comparator"] not in VALID_UI_COMPARATORS
+        ):
             raise ValueError(f"{prefix} comparator 必须是 eq 或 contains")
     elif "comparator" in step:
         raise ValueError(f"{prefix} keyword={keyword} 不应包含 comparator")

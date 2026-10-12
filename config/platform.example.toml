@@ -48,6 +48,8 @@ claim_enabled = true
 lease_seconds = 60
 succeeded_retention_days = 30
 failed_retention_days = 90
+# 领取回执保留窗口（天）；窗口外回执由维护任务清理，此后重放同一领取请求按新请求处理。
+claim_receipt_retention_days = 14
 maintenance_batch_size = 100
 restore_review_max_age_seconds = 3600
 worker_presence_ttl_seconds = 120

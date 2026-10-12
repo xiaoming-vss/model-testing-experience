@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -99,7 +99,10 @@ it('开发可评论、转派和更新状态，详情不提供其他业务模块�
   await userEvent.click(screen.getByRole('button', { name: '确认转派' }))
   await waitFor(() => expect(requests.some(({ path }) => path === '/v1/bugs/b/transfer')).toBe(true))
   await userEvent.click(screen.getByRole('button', { name: /^确\s*认$/ }))
-  await userEvent.click(await screen.findByRole('button', { name: '确认' }))
+  // 转派弹窗离场动画期间仍在 DOM，取包含“确认”提交按钮的那个弹窗。
+  const dialogs = await screen.findAllByRole('dialog')
+  const transitionDialog = dialogs.find(item => within(item).queryByRole('button', { name: '确认' }))
+  await userEvent.click(within(transitionDialog!).getByRole('button', { name: '确认' }))
   await waitFor(() => expect(requests.some(({ path }) => path === '/v1/bugs/b/transition')).toBe(true))
   expect(requests.some(({ path }) => path.endsWith('/members') || path.endsWith('/sprints'))).toBe(false)
 })

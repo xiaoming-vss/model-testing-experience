@@ -10,6 +10,7 @@ from testing_agent_ai_worker.nanobot_runtime.paths import (
     resolve_runtime_paths,
     resolve_task_workspace,
 )
+from testing_agent_ai_worker.tasks.requirement_analysis.document_type import extraction_skill
 from testing_agent_ai_worker.tasks.requirement_analysis.skill import run_skill_step
 from testing_agent_ai_worker.tasks.requirement_analysis.source_downloader import (
     RequirementSourceDownloader,
@@ -19,7 +20,7 @@ from testing_agent_ai_worker.worker.runner import TaskExecutor
 
 REQUIREMENT_ANALYSIS_FIRST_SKILL_NAME = "extract-docx-enhanced-text"
 REQUIREMENT_ANALYSIS_SECOND_SKILL_NAME = "prd-feature-understanding-skill"
-SUPPORTED_REQUIREMENT_ANALYSIS_DOCUMENT_TYPES = {"text", "word"}
+SUPPORTED_REQUIREMENT_ANALYSIS_DOCUMENT_TYPES = {"text", "word", "richtext"}
 
 
 def normalize_requirement_analysis_document_type(document_type: str) -> str:
@@ -78,6 +79,10 @@ class RequirementAnalysisNanobotExecutor(TaskExecutor):
                 workspace=workspace,
                 skill_runner=self.skill_runner,
                 source_downloader=self.source_downloader,
-                first_skill_name=self.first_skill_name,
+                first_skill_name=(
+                    extraction_skill(task.payload.document_type)
+                    if (task.current_stage or "extracting_text") == "extracting_text"
+                    else self.first_skill_name
+                ),
                 second_skill_name=self.second_skill_name,
             )

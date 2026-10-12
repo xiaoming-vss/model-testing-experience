@@ -7,14 +7,14 @@ from pydantic.alias_generators import to_camel
 
 from testing_agent.schemas.resource_binding import ZentaoBindingSummaryResponse
 
-DOCUMENT_TYPES = {"text", "docx"}
+DOCUMENT_TYPES = {"text", "docx", "richtext"}
 DOCUMENT_TYPE_ALIASES = {"txt": "text", "word": "docx"}
 
 
 def normalize_document_type(value: str) -> str:
     normalized = DOCUMENT_TYPE_ALIASES.get(value, value)
     if normalized not in DOCUMENT_TYPES:
-        raise ValueError("documentType must be text or docx")
+        raise ValueError("documentType must be text, docx or richtext")
     return normalized
 
 

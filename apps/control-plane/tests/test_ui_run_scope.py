@@ -65,7 +65,6 @@ def seed(db):
         row(UiTestCase, case_id="case", suite_id="suite", steps_json=[]),
         row(
             SprintDailyMetrics,
-            metric_id="history",
             sprint_id="s1",
             project_id="p1",
             snapshot_date=date(2026, 9, 10),

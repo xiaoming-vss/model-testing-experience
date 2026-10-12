@@ -17,13 +17,25 @@
   overflow: hidden;
 }
 
-.testing-tab-panel > .workbench-page {
+.testing-tab-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.testing-tab-pane[hidden] {
+  display: none;
+}
+
+.testing-tab-pane > .workbench-page {
   flex: 1 1 auto;
   min-height: 0;
   padding: 0;
 }
 
-.testing-page .testing-tab-panel > .api-automation-page {
+.testing-page .testing-tab-pane > .api-automation-page {
   height: 100%;
   min-height: 0;
   overflow: hidden;
@@ -609,7 +621,7 @@
 }
 
 /* API testing page aligned to base-services macOS glass style */
-.app-shell-macos .testing-page .testing-tab-panel > .api-automation-page {
+.app-shell-macos .testing-page .testing-tab-pane > .api-automation-page {
   --api-test-border: var(--app-glass-divider);
   --api-test-border-soft: var(--app-glass-request-shadow);
   --api-test-panel: var(--app-glass-surface-68);
@@ -923,7 +935,7 @@
 .functional-test-page .functional-suite-list-table .ant-table {
   color: var(--testing-text, var(--app-glass-text));
   background: transparent;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif;
+  font-family: var(--app-font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
 }
@@ -967,7 +979,7 @@
 
 .functional-suite-list-name .ant-typography {
   max-width: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif !important;
+  font-family: var(--app-font-sans) !important;
   letter-spacing: 0 !important;
 }
 
@@ -980,7 +992,7 @@
 .functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(2),
 .functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(2) .ant-typography,
 .functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(2) span {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif !important;
+  font-family: var(--app-font-sans) !important;
   font-size: 12px !important;
   font-weight: 400 !important;
   letter-spacing: 0 !important;
@@ -998,7 +1010,7 @@
 .functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(4) .ant-typography,
 .functional-test-page .functional-suite-list-table .ant-table-tbody .functional-suite-list-time.ant-typography,
 .functional-suite-list-description.ant-typography {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif !important;
+  font-family: var(--app-font-sans) !important;
   font-size: 12px !important;
   font-weight: 400 !important;
   letter-spacing: 0 !important;
@@ -1318,10 +1330,21 @@
   box-shadow: none;
 }
 
+/* 富文本只读渲染组件自身不带内边距,与 Word/纯文本分支保持同一阅读边距。 */
+.requirement-document-text-host .rich-text-viewer {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100%;
+  padding: 24px;
+}
+
 .requirement-document-understanding {
+  box-sizing: border-box;
   width: 100%;
   height: 100%;
   margin: 0;
+  /* 结构化理解产物与左侧 Word/文本/富文本分支保持同一 24px 阅读边距。 */
+  padding: 24px;
   overflow: auto;
   border: 0;
   border-radius: 0;
@@ -1446,9 +1469,14 @@
 
   .requirement-document-docx-host .requirement-docx,
   .requirement-document-text-article,
+  .requirement-document-text-host .rich-text-viewer,
   .requirement-document-understanding-content {
     width: 100%;
     margin: 0;
+    padding: 20px;
+  }
+
+  .requirement-document-understanding {
     padding: 20px;
   }
 }

@@ -1,13 +1,11 @@
 import '@/shared/styles/list-table.css'
-import { AppIcon } from '@/shared/icons'
-import { AppstoreOutlined, CaretRightOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, FileTextOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import {
   Alert,
   Button,
   Empty,
   Input,
   Popconfirm,
-  Select,
   Space,
   Table,
   Tooltip,
@@ -21,7 +19,8 @@ import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { api, listItems, type TestOrder } from '@/services/api'
-import { footerRange } from '@/shared/utils/pagination'
+import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
+import { ListPagination } from '@/shared/components/ListPagination'
 import { message } from '@/shared/utils/feedback'
 import { formatTime, getErrorMessage, normalizeSprintId, pickUpdatedAt } from '@/utils/format'
 import { TestOrderDrawer } from '../components/TestOrderDrawer'
@@ -49,10 +48,12 @@ export function TestOrderPage() {
   const navigate = useNavigate()
   const activeProjectId = useWorkbenchStore((state) => state.activeProjectId)
   const queryClient = useQueryClient()
-  const { activeSprintId, sprints, sprintsQuery, selectSprint, sprintSelectorOptions } =
+  const { activeSprintId, sprints, sprintsQuery, sprintSelectorOptions } =
     useActiveSprint()
 
   const [keyword, setKeyword] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingOrder, setEditingOrder] = useState<TestOrder | null>(null)
   const keywordInputRef = useRef<InputRef>(null)
@@ -83,10 +84,16 @@ export function TestOrderPage() {
     })
   }, [keyword, orders])
 
-  // 搜索框右侧标了 ⌘K，那就得真的能按：Mac 用 ⌘，其他平台用 Ctrl。
+  const currentPage = Math.max(1, Math.min(page, Math.ceil(visibleOrders.length / pageSize) || 1))
+  const pageOrders = visibleOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  useEffect(() => { setPage(1) }, [activeProjectId, activeSprintId, keyword])
+
+  // 保留搜索框快捷键：Mac 用 ⌘K，其他平台用 Ctrl+K。
   useEffect(() => {
     function handleShortcut(event: KeyboardEvent) {
       if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return
+      // 标签页常驻挂载后，隐藏面板里的搜索框不能抢占快捷键。
+      if (keywordInputRef.current?.nativeElement?.closest('[hidden]')) return
       event.preventDefault()
       keywordInputRef.current?.focus()
     }
@@ -108,10 +115,10 @@ export function TestOrderPage() {
     {
       title: '测试单名称',
       key: 'name',
-      width: '24%',
+      width: 145,
       render: (_, order) => (
         <Space size={8} className="functional-suite-list-name test-order-name-cell">
-          <span className="test-order-name-icon" aria-hidden="true"><AppIcon name="tasks" size={14} /></span>
+          <span className="test-order-name-icon" aria-hidden="true"><FileTextOutlined /></span>
           <Tooltip title={order.name}>
             <Text ellipsis>{order.name}</Text>
           </Tooltip>
@@ -121,7 +128,7 @@ export function TestOrderPage() {
     {
       title: '所属迭代',
       key: 'sprint',
-      width: 130,
+      width: 125,
       ellipsis: true,
       render: (_, order) => (
         <Text type="secondary" className="test-order-muted-cell">
@@ -132,7 +139,7 @@ export function TestOrderPage() {
     {
       title: '被测版本',
       key: 'testedVersion',
-      width: 130,
+      width: 125,
       ellipsis: true,
       render: (_, order) => (
         <Text className="test-order-version-cell" type="secondary">
@@ -143,7 +150,7 @@ export function TestOrderPage() {
     {
       title: '进度与指标',
       key: 'progress',
-      width: 300,
+      width: 460,
       render: (_, order) => {
         const progress = buildTestOrderProgress(order)
         return (
@@ -189,8 +196,7 @@ export function TestOrderPage() {
     {
       title: '状态',
       key: 'status',
-      width: 110,
-      align: 'center',
+      width: 150,
       render: (_, order) => {
         const meta = getTestOrderStatusMeta(order.status)
         return (
@@ -204,7 +210,7 @@ export function TestOrderPage() {
     {
       title: '最近更新',
       key: 'updatedAt',
-      width: 170,
+      width: 250,
       render: (_, order) => (
         <Text className="functional-suite-list-time test-order-time-cell" type="secondary">
           {formatTime(pickUpdatedAt(order))}
@@ -212,9 +218,9 @@ export function TestOrderPage() {
       ),
     },
     {
-      title: '操作',
+      title: <span className="tp-actions-col-title" style={{ width: 64 }}>操作</span>,
       key: 'actions',
-      width: 130,
+      width: 102,
       align: 'right',
       render: (_, order) => (
         <Space
@@ -223,20 +229,6 @@ export function TestOrderPage() {
           onClick={(event) => event.stopPropagation()}
           onMouseDown={(event) => event.stopPropagation()}
         >
-          <Tooltip title="进入执行工作台">
-            <ProjectActionButton
-              action="read"
-              type="text"
-              shape="circle"
-              className="action-btn-read"
-              operation="run"
-              icon={<CaretRightOutlined />}
-              iconOnly
-              aria-label="进入执行工作台"
-              disabled={!order.orderId}
-              onClick={() => order.orderId && navigate(`/test-orders/${order.orderId}`)}
-            />
-          </Tooltip>
           <Tooltip title="编辑测试单">
             <ProjectActionButton
               action="write"
@@ -288,28 +280,17 @@ export function TestOrderPage() {
   return (
     <div className="workbench-page api-automation-page functional-test-page tp-list-surface test-orders-page tp-surface">
       <div className="api-automation-content">
-        <section className="workbench-panel workbench-board-panel tp-board">
+        <section className="workbench-panel workbench-board-panel tp-board tp-list-panel">
           <div className="panel-header api-panel-header test-orders-toolbar tp-list-toolbar">
             <div className="api-filter-group test-orders-filters">
               <h1 className="tp-list-title">测试单</h1>
-              <div className="api-filter-field">
-                <span className="api-filter-field-label">迭代</span>
-                <Select
-                  className="api-filter-select business-filter-select"
-                  value={activeSprintId ?? 'all'}
-                  options={sprintSelectorOptions}
-                  loading={sprintsQuery.isLoading}
-                  placeholder="请选择迭代"
-                  onChange={(value: string) => selectSprint(value === 'all' ? 'all' : value)}
-                />
-              </div>
               <div className="api-filter-field test-orders-search-field">
                 <Input
                   ref={keywordInputRef}
                   className="api-filter-input test-orders-search-input"
                   allowClear
                   prefix={<SearchOutlined />}
-                  suffix={<span className="test-orders-search-hint">⌘K</span>}
+                  suffix={<button type="button" className="test-orders-search-submit" onClick={() => { setPage(1); keywordInputRef.current?.focus() }}>搜索</button>}
                   placeholder="搜索测试单名称 / 被测版本"
                   value={keyword}
                   onChange={(event) => setKeyword(event.target.value)}
@@ -317,7 +298,7 @@ export function TestOrderPage() {
               </div>
             </div>
 
-            <Space size={8} className="test-orders-toolbar-actions">
+            <Space size={8} className="test-orders-toolbar-actions tp-refresh-actions">
               <Tooltip title="刷新测试单列表">
                 <ProjectActionButton
                   action="read"
@@ -335,8 +316,8 @@ export function TestOrderPage() {
               <ProjectActionButton
                 action="write"
                 type="primary"
-                className="action-btn-create"
                 operation="create"
+                iconOnly
                 disabled={!activeProjectId || sprints.length === 0}
                 onClick={openCreateDrawer}
               >
@@ -362,8 +343,8 @@ export function TestOrderPage() {
             </div>
           ) : (
             <>
-              <div className="test-orders-table-card">
-                <div className="table-body-scroll sprint-card-scroll functional-suite-scroll test-orders-table-scroll">
+              <div className="test-orders-table-card tp-list-body">
+                <div className="table-body-scroll sprint-card-scroll functional-suite-scroll test-orders-table-scroll tp-list-scroll">
                   {ordersQuery.isLoading ? (
                     <div className="sprint-card-loading">
                       <Empty description="测试单加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
@@ -411,9 +392,10 @@ export function TestOrderPage() {
                     <Table<TestOrder>
                       className="functional-suite-list-table tp-list-table"
                       columns={columns}
-                      dataSource={visibleOrders}
+                      dataSource={pageOrders}
                       rowKey={(order) => order.orderId ?? order.name}
                       pagination={false}
+                      scroll={{ x: 1200 }}
                       onRow={(order) => ({
                         onClick: (event) => {
                           if (
@@ -429,11 +411,9 @@ export function TestOrderPage() {
                     />
                   )}
                 </div>
-
                 <div className="table-footer test-orders-footer">
-                  <Text type="secondary">
-                    {footerRange(visibleOrders.length, 1, Math.max(visibleOrders.length, 1))}
-                  </Text>
+                  <ListPagination current={currentPage} pageSize={pageSize} total={visibleOrders.length}
+                    loading={ordersQuery.isFetching} onChange={(next, size) => { setPage(next); setPageSize(size) }} />
                 </div>
               </div>
             </>

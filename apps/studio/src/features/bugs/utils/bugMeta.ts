@@ -1,3 +1,4 @@
+import { CheckCircleOutlined, CheckOutlined, MinusCircleOutlined, RollbackOutlined } from '@ant-design/icons'
 import type { Bug, BugAction } from '../types'
 
 /** 与后端 core/enums.py 的取值逐字对应。 */
@@ -48,6 +49,14 @@ export const ZENTAO_SEVERITY_LABELS: Record<string, string> = {
 
 export const BUG_ACTION_LABELS: Record<BugAction, string> = {
   confirm: '确认', resolve: '解决', close: '关闭', activate: '激活',
+}
+
+/** 操作列图标按钮：语义为 确认=校可、解决=办结、关闭=降档收起、激活=回退重开，悬停见文字说明。 */
+export const BUG_ACTION_ICONS: Record<BugAction, typeof CheckOutlined> = {
+  confirm: CheckCircleOutlined,
+  resolve: CheckOutlined,
+  close: MinusCircleOutlined,
+  activate: RollbackOutlined,
 }
 
 /** 动态流里的动作说明文案。 */

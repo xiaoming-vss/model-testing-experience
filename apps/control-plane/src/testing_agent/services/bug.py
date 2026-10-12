@@ -277,6 +277,8 @@ class BugService:
         keyword: str,
         page: int,
         page_size: int,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
     ) -> dict[str, Any]:
         await require_project_id(self.repository.session, user_id, project_id, "bug_read")
         resolution = resolution.strip()
@@ -284,6 +286,8 @@ class BugService:
             resolution and resolution not in BugResolution.values()
         ):
             raise AppError(400, "Bug 状态或解决方案筛选不合法", 400)
+        if sort_by not in BugRepository.SORT_COLUMNS or sort_order not in {"asc", "desc"}:
+            raise AppError(400, "Bug 排序参数不合法", 400)
         rows, total = await self.repository.list_by_query(
             project_id,
             statuses=statuses,
@@ -297,6 +301,8 @@ class BugService:
             keyword=keyword,
             page=page,
             page_size=page_size,
+            sort_by=sort_by,
+            sort_order=sort_order,
         )
         return paged_payload([dump(BugResponse, bug) for bug in rows], total)
 

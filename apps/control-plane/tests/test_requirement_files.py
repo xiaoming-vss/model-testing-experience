@@ -99,7 +99,6 @@ async def test_existing_local_file_and_inline_content_are_not_download_fallbacks
     repository.requirement = SimpleNamespace(
         sprint_id="sprint",
         document_file_id="",
-        document_storage_path=str(path),
         document_content="",
     )
     service = RequirementService(repository, FakeSprintService())
@@ -119,5 +118,5 @@ def test_local_upload_routes_are_removed():
 
 def test_requirement_request_validates_document_types():
     with pytest.raises(ValidationError):
-        CreateRequirementRequest(name="r", documentType="richtext")
+        CreateRequirementRequest(name="r", documentType="unsupported")
     assert CreateRequirementRequest(name="r", documentType="word").document_type == "docx"

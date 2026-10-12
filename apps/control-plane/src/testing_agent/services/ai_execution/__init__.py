@@ -372,11 +372,8 @@ def sync_run(session, run):
                 Import(
                     id=ident(),
                     run_id=run.run_id,
-                    artifact_attempt_id=final.current_artifact_attempt_id,
-                    imported_by=getattr(run, "_actor", None),
                     imported_at=run.imported_at,
                     imported_targets_json=deepcopy(run.imported_targets),
-                    idempotency_key=f"run:{run.run_id}",
                 )
             )
     for key in ("_operation", "_stage_review", "_worker_event"):

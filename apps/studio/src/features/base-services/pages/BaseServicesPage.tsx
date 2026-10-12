@@ -1,3 +1,5 @@
+import '@/shared/styles/surface-tokens.css'
+import '../styles/index.css'
 import { SharedServicesPanel } from '../components/SharedServicesPanel'
 import { AppIcon } from '@/shared/icons'
 import { useMemo, useState } from 'react'
@@ -45,10 +47,8 @@ export function BaseServicesPage({ skillLibrary }: { skillLibrary: ReactNode }) 
   }
 
   return (
-    <div className="workbench-page base-services-page">
-      <section className="workbench-project-toolbar base-services-toolbar">
-        <div className="base-services-switcher-row">
-              <h1 className="tp-list-title">基础服务</h1>
+    <div className="workbench-page base-services-page tp-surface">
+      <div className="base-services-navigation">
           <div className="base-services-tab-switcher" role="tablist" aria-label="基础服务模块切换">
             {tabOptions.map((option) => {
               const active = option.key === activeTab
@@ -67,11 +67,13 @@ export function BaseServicesPage({ skillLibrary }: { skillLibrary: ReactNode }) 
               )
             })}
           </div>
-          <div ref={setToolbarActions} style={{ marginLeft: 'auto' }} />
-        </div>
-      </section>
+      </div>
 
-      {activeTab === 'skills' ? skillLibrary : <section className="workbench-panel base-services-panel">
+      {activeTab === 'skills' ? skillLibrary : <section className="base-services-unified-panel tp-board tp-list-panel">
+        <div className="tp-list-toolbar">
+          <h1 className="tp-list-title">{tabOptions.find(option => option.key === activeTab)?.label}</h1>
+          <div ref={setToolbarActions} />
+        </div>
         <div className="base-services-panel-body base-services-panel-body-immersive">
           <SharedServicesPanel projectId={activeProjectId} provider={activeTab} toolbarActions={toolbarActions} />
         </div>

@@ -14,9 +14,11 @@ from testing_agent.handlers.ai_worker import (
     mark_started,
     report_progress,
     requirement_document,
+    requirement_image,
     source_archive,
 )
 from testing_agent.handlers.worker_skills import skill_file, skill_manifest
+from testing_agent.schemas.stored_file import FileDownloadTicket
 from testing_agent.schemas.workers import (
     WorkerClaimPayload,
     WorkerGitlabCredentialsResponse,
@@ -62,3 +64,8 @@ router.patch("/tasks/{task_id}/progress", status_code=204)(report_progress)
 
 router.get("/tasks/{task_id}/skills/{name}")(skill_manifest)
 router.get("/tasks/{task_id}/skills/{name}/files/{file_id}")(skill_file)
+
+router.get(
+    "/tasks/{task_id}/requirement-images/{file_id}",
+    response_model=FileDownloadTicket,
+)(requirement_image)

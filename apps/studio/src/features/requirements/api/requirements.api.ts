@@ -19,6 +19,7 @@ function buildRequirementJsonBody(body: RequirementCreatePayload | RequirementUp
 
   if (body.name !== undefined) payload.name = body.name
   if (body.documentType !== undefined) payload.documentType = normalizeRequestDocumentType(body.documentType) ?? ''
+  if ('documentFileId' in body && body.documentFileId !== undefined) payload.documentFileId = body.documentFileId
   if (body.documentContent !== undefined) payload.documentContent = body.documentContent
 
   return JSON.stringify(payload)
@@ -32,7 +33,7 @@ export const requirementsApi = {
     const capabilities = await storageCapabilities()
     if (!capabilities.enabled) throw new Error('S3 文件存储未启用，请联系管理员配置')
     const file = body.file ?? (body.documentContent
-      ? new File([body.documentContent], 'requirement.txt', { type: 'text/plain' }) : undefined)
+      ? new File([body.documentContent], body.documentType === 'richtext' ? 'requirement.html' : 'requirement.txt', { type: body.documentType === 'richtext' ? 'text/html' : 'text/plain' }) : undefined)
     if (file) {
       const sprint = await request<{ projectId: string }>(`/v1/sprints/${sprintId}`)
       if (file.size > capabilities.maxBytes) throw new Error('文件超过大小限制')
@@ -53,13 +54,15 @@ export const requirementsApi = {
   replaceRequirementDocument: async (requirementId: string, body: RequirementDocumentUploadPayload) => {
     const capabilities = await storageCapabilities()
     if (!capabilities.enabled) throw new Error('S3 文件存储未启用，请联系管理员配置')
-    if (body.file) {
-      if (body.file.size > capabilities.maxBytes) throw new Error('文件超过大小限制')
+    const file = body.file ?? (body.documentType === 'richtext' && body.documentContent
+      ? new File([body.documentContent], 'requirement.html', { type: 'text/html' }) : undefined)
+    if (file) {
+      if (file.size > capabilities.maxBytes) throw new Error('文件超过大小限制')
       const requirement = await request<Requirement>(`/v1/requirements/${requirementId}`)
       const sprint = await request<{ projectId: string }>(`/v1/sprints/${requirement.sprintId ?? requirement.sprint_id}`)
-      const documentFileId = await uploadStoredFile(sprint.projectId, body.file, 'requirement', body.onUploadProgress)
+      const documentFileId = await uploadStoredFile(sprint.projectId, file, 'requirement', body.onUploadProgress)
       return request<Requirement>(`/v1/requirements/${requirementId}`, {
-        method: 'PATCH', body: JSON.stringify({ documentFileId,
+        method: 'PATCH', body: JSON.stringify({ documentFileId, name: body.name,
           documentType: normalizeRequestDocumentType(body.documentType) }),
       })
     }

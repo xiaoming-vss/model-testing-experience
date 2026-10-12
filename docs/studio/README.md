@@ -4,6 +4,8 @@ React 单页应用，提供项目、迭代、需求、功能/API/UI 测试资产
 
 禅道同步的异步提交、轮询与恢复交互见 [集成任务交互](zentao-sync-jobs.md)。需求分析第一阶段的来源与事实核对见 [材料对照视图](requirement-material-comparison.md)，第二阶段的模块、流程和规则核对见 [需求理解对照视图](requirement-understanding-comparison.md)。
 
+[需求详情测试设计工作区](requirement-design-workspace.md)
+
 ## 运行时与依赖
 
 - Node 22.23.1（`.nvmrc`），包管理使用 npm（`package-lock.json`），包名 `@mtx/studio`
@@ -119,3 +121,5 @@ npm run verify        # type-check + lint + build
 - [文件直传与预览](file-storage.md)
 
 - [Skill 文件夹与默认技能维护](../control-plane/skills.md)
+
+需求在线图文编辑见[需求富文本编辑](requirement-rich-text.md)。

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 
 from testing_agent.models.bug import Bug
 from testing_agent.models.bug_activity import BugActivity
@@ -106,6 +106,33 @@ class BugRepository(ResourceRepository):
         for bug in bugs:
             bug.requirement_name = names.get(bug.requirement_id, "")
 
+    # 枚举字段按业务档位排序（严重优先），不能按字母序；白名单外的字段回落默认排序。
+    SORT_COLUMNS = {
+        "id": Bug.id,
+        "status": case(
+            (Bug.status == "active", 0),
+            (Bug.status == "resolved", 1),
+            (Bug.status == "closed", 2),
+            else_=3,
+        ),
+        "severity": case(
+            (Bug.severity == "fatal", 0),
+            (Bug.severity == "serious", 1),
+            (Bug.severity == "normal", 2),
+            (Bug.severity == "minor", 3),
+            else_=4,
+        ),
+        "priority": case(
+            (Bug.priority == "urgent", 0),
+            (Bug.priority == "high", 1),
+            (Bug.priority == "medium", 2),
+            (Bug.priority == "low", 3),
+            else_=4,
+        ),
+        "created_at": Bug.created_at,
+        "updated_at": Bug.updated_at,
+    }
+
     async def list_by_query(
         self,
         project_id: str,
@@ -121,6 +148,8 @@ class BugRepository(ResourceRepository):
         keyword: str,
         page: int,
         page_size: int,
+        sort_by: str = "created_at",
+        sort_order: str = "desc",
     ) -> tuple[list[Bug], int]:
         conditions = [Bug.project_id == project_id]
         if statuses:
@@ -148,12 +177,14 @@ class BugRepository(ResourceRepository):
             else:
                 conditions.append(Bug.title.like(f"%{keyword}%"))
         total = int(await self.session.scalar(select(func.count(Bug.id)).where(*conditions)) or 0)
+        column = self.SORT_COLUMNS.get(sort_by, Bug.created_at)
+        direction = column.asc() if sort_order == "asc" else column.desc()
         rows = list(
             (
                 await self.session.scalars(
                     select(Bug)
                     .where(*conditions)
-                    .order_by(Bug.created_at.desc(), Bug.id.desc())
+                    .order_by(direction, Bug.id.desc())
                     .offset((page - 1) * page_size)
                     .limit(page_size)
                 )

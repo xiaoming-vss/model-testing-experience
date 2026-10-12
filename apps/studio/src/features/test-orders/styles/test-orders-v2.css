@@ -13,13 +13,8 @@
 }
 
 .test-orders-page .test-orders-search-field {
-  min-width: 288px;
-}
-
-.test-orders-page .test-orders-search-hint {
-  color: var(--srf-text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 10px;
+  min-width: 0;
+  width: 300px;
 }
 
 .test-orders-page .test-orders-toolbar-actions {
@@ -41,17 +36,6 @@
   overflow: hidden;
 }
 
-/* 外壳给了面板内表格容器 16px 18px 的内距，设计稿里表格贴着卡片边缘，这里收掉。 */
-.test-orders-page .test-orders-table-scroll {
-  padding: 0;
-}
-
-.app-shell-macos .testing-page .test-orders-page .api-automation-content > .workbench-panel .test-orders-table-scroll {
-  padding: 0 !important;
-}
-
-
-
 /* ===== 表格内部 ===== */
 
 .test-orders-page .test-order-muted-cell {
@@ -61,8 +45,8 @@
 .test-orders-page .test-order-version-cell,
 .test-orders-page .test-order-time-cell {
   color: var(--srf-text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11px;
+  font-family: var(--app-font-sans);
+  font-size: 12px;
 }
 
 /* ===== 进度与指标 ===== */
@@ -87,7 +71,7 @@
   min-width: 0;
   overflow: hidden;
   color: var(--srf-text-secondary);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 16px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -110,14 +94,14 @@
 .test-orders-page .test-order-progress-percent {
   flex: 0 0 auto;
   color: var(--srf-tone-text);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
 }
 
 .test-orders-page .test-order-progress-track {
   display: flex;
   width: 100%;
-  height: 6px;
+  height: 5px;
   overflow: hidden;
   border-radius: 999px;
   background: var(--srf-track);
@@ -158,7 +142,7 @@
   border-radius: 999px;
   background: var(--srf-tone-bg, var(--srf-chip));
   color: var(--srf-tone-text, var(--srf-chip-text));
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 16px;
   white-space: nowrap;
@@ -167,7 +151,7 @@
 .test-orders-page .test-order-status-dot {
   flex: 0 0 auto;
   width: 6px;
-  height: 6px;
+  height: 5px;
   border-radius: 999px;
   background: currentColor;
 }
@@ -213,9 +197,39 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
-  border: 1px solid var(--srf-accent-border);
-  border-radius: 6px;
-  background: var(--srf-accent-soft);
+  width: 16px;
+  height: 16px;
+  border: 1px solid color-mix(in srgb, var(--srf-result-passed) 20%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--srf-result-passed) 12%, transparent);
+  color: var(--srf-result-passed);
+  font-size: 10px;
+}
+
+.test-orders-search-submit {
+  border: 0;
+  padding: 0 2px;
+  background: transparent;
+  color: var(--app-shell-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.test-orders-search-submit:focus-visible { outline: 2px solid var(--app-accent); }
+:root:root .app-shell.app-shell-macos .test-orders-page .functional-suite-list-table .test-order-name-cell .ant-typography {
+  color: var(--srf-text) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+}
+:root:root .app-shell.app-shell-macos .test-orders-page .functional-suite-list-table .test-order-time-cell,
+:root:root .app-shell.app-shell-macos .test-orders-page .functional-suite-list-table .test-order-version-cell {
+  font-family: var(--app-font-sans) !important;
+  font-size: 12px !important;
+  color: var(--app-shell-text-secondary) !important;
+}
+.test-orders-page .test-order-progress-executed strong { color: inherit; font-weight: 400; }
+.test-orders-page .test-order-progress-percent { color: var(--app-shell-text-secondary); font-weight: 400; }
+:root:root .app-shell.app-shell-macos .test-orders-page .test-orders-search-input {
+  background: var(--app-control-surface) !important;
+  border-color: var(--button-border) !important;
 }

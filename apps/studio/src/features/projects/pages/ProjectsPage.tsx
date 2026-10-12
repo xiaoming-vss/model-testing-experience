@@ -1,6 +1,7 @@
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
-import './ProjectsPage.css'
+import '../styles/requirements-list.css'
+import { RequirementRowActions } from '../components/RequirementRowActions'
 import '@/shared/styles/list-table.css'
 import '@/shared/styles/surface-tokens.css'
 import { ActionButton } from '@/shared/components/ActionButton'
@@ -8,8 +9,8 @@ import { AppIcon } from '@/shared/icons'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ProjectMembersModal } from '../components/ProjectMembersModal'
+import { LinkOutlined } from '@ant-design/icons'
 import { roleLabels, useProjectAccess } from '../hooks/useProjectAccess'
-import { SettingOutlined, UserOutlined, BranchesOutlined, CheckCircleOutlined, FileTextOutlined, LinkOutlined, RocketOutlined } from '@ant-design/icons'
 import {
   Alert,
   Button,
@@ -19,8 +20,6 @@ import {
   Empty,
   Form,
   Input,
-  Popconfirm,
-  Select,
   Space,
   Table,
   Tag,
@@ -31,14 +30,13 @@ import type { TableProps } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { type BindingDepth, ZentaoBindingBadge, ZentaoBindingModal, ZentaoBindingSummary } from '@/features/base-services/components/ZentaoBindingPanel'
 import { GitlabBindingModal, GitlabBindingSummary } from '@/features/base-services/components/GitlabBindingPanel'
 import { RequirementCodeBindingModal } from '@/features/base-services/components/RequirementCodeBindingModal'
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
 import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
 import { useSprintBoundaryRefresh } from '@/features/projects/hooks/useSprintBoundaryRefresh'
-import { RequirementDocumentPreviewModal } from '@/features/requirements/components/RequirementDocumentPreviewModal'
 import { RequirementDrawer, type RequirementFormValues } from '@/features/requirements/components/RequirementDrawer'
 import {
   getRequirementDocumentSummary,
@@ -46,20 +44,18 @@ import {
   hasRequirementDocument,
   normalizeRequirementDocumentType,
 } from '@/features/requirements/utils/requirementDocument'
+import { SprintBoard } from '../components/SprintBoard'
 import { SprintDrawer } from '@/features/projects/components/SprintDrawer'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { api, listItems, listTotal, type Project, type Requirement, type Sprint } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import {
-  formatTime,
   getErrorMessage,
   normalizeProjectId,
   normalizeRequirementId,
   normalizeSprintId,
-  pickCreatedAt,
   pickEndTime,
   pickStartTime,
-  statusTag,
 } from '@/utils/format'
 import {
   buildProjectUpdatePayload,
@@ -73,11 +69,6 @@ const { Text, Title } = Typography
 type RequirementPoolItem = Requirement & {
   sprintName: string
   sprintIdForCreate: string
-}
-
-type PaginationState = {
-  projectId?: string
-  page: number
 }
 
 type RequirementViewState = {
@@ -102,11 +93,8 @@ function toPickerValue(value?: string) {
 }
 
 export function ProjectsPage() {
-  const [membersOpen, setMembersOpen] = useState(false)
-  const [settingsProjectId, setSettingsProjectId] = useState<string | null>(null)
   const { project: accessProject, can } = useProjectAccess()
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null)
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const projectModalOpen = useWorkbenchStore((state) => state.projectModalOpen)
   const editingProject = useWorkbenchStore((state) => state.editingProject)
@@ -116,28 +104,35 @@ export function ProjectsPage() {
   const [editingSprint, setEditingSprint] = useState<Sprint | null>(null)
   const [requirementDrawerOpen, setRequirementDrawerOpen] = useState(false)
   const [editingRequirement, setEditingRequirement] = useState<RequirementPoolItem | null>(null)
+  const [requirementDocumentError, setRequirementDocumentError] = useState<string | undefined>()
   const [requirementDocumentLoading, setRequirementDocumentLoading] = useState(false)
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const activeBoard = searchParams.get('board') === 'requirements' ? 'requirements' : 'sprints'
   const [zentaoBindingTarget, setZentaoBindingTarget] = useState<ZentaoBindingTargetState | null>(null)
   const [gitlabBindingOpen, setGitlabBindingOpen] = useState(false)
   const [codeBindingRequirement, setCodeBindingRequirement] = useState<RequirementPoolItem | null>(null)
-  const [sprintPagination, setSprintPagination] = useState<PaginationState>({ page: 1 })
-  const [sprintPageSize, setSprintPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [requirementView, setRequirementView] = useState<RequirementViewState>({ page: 1 })
   const [requirementPageSize, setRequirementPageSize] = useState(DEFAULT_PAGE_SIZE)
-  const [previewRequirement, setPreviewRequirement] = useState<RequirementPoolItem | null>(null)
   const [projectForm] = Form.useForm()
   const [sprintForm] = Form.useForm()
   const [requirementForm] = Form.useForm<RequirementFormValues>()
   const requirementEditHydrationSeq = useRef(0)
   const { activeProjectId, projects, projectsQuery, setActiveProjectId } = useActiveProject()
-  const { activeSprintId, selectSprint: selectGlobalSprint } = useActiveSprint()
+  const panelMatchesProject = searchParams.get('panelProjectId') === activeProjectId
+  const membersOpen = panelMatchesProject && searchParams.get('projectPanel') === 'members' && can('read')
+  const settingsProjectId = panelMatchesProject && searchParams.get('projectPanel') === 'settings' ? activeProjectId : null
+  function closeProjectPanel() {
+    const next = new URLSearchParams(searchParams)
+    next.delete('projectPanel')
+    next.delete('panelProjectId')
+    setSearchParams(next, { replace: true })
+  }
+
+  const { activeSprintId } = useActiveSprint()
   const activeProject = useMemo(
     () => projects.find((project) => normalizeProjectId(project) === activeProjectId),
     [activeProjectId, projects],
   )
-  const sprintPage = sprintPagination.projectId === activeProjectId ? sprintPagination.page : 1
   const selectedRequirementSprintId = activeSprintId
   const requirementPage = requirementView.projectId === activeProjectId && requirementView.sprintId === selectedRequirementSprintId ? requirementView.page : 1
 
@@ -173,7 +168,6 @@ export function ProjectsPage() {
     ...requirement,
     sprintIdForCreate: requirement.sprintId ?? requirement.sprint_id ?? '',
   }))
-  const visibleSprints = sprints.slice((sprintPage - 1) * sprintPageSize, sprintPage * sprintPageSize)
   const visibleRequirements = requirements
 
   const saveProjectMutation = useMutation({
@@ -196,6 +190,9 @@ export function ProjectsPage() {
       message.success('项目已删除')
       setActiveProjectId(undefined)
       queryClient.invalidateQueries({ queryKey: ['projects'] })
+    },
+    onError: (error) => {
+      message.error(getErrorMessage(error))
     },
   })
 
@@ -231,8 +228,16 @@ export function ProjectsPage() {
         const normalizedDocumentType = normalizeRequirementDocumentType(values.documentType)
 
         let updatedRequirement: Requirement | undefined
+        if (normalizedDocumentType === 'richtext') {
+          return api.replaceRequirementDocument(requirementId, {
+            ...metadataPayload, documentType: 'richtext',
+            documentContent: values.documentContent, onUploadProgress: values.onUploadProgress,
+          })
+        }
+
         if (values.file) {
-          updatedRequirement = await api.replaceRequirementDocument(requirementId, {
+          return api.replaceRequirementDocument(requirementId, {
+            ...metadataPayload,
             documentType: normalizedDocumentType,
             file: values.file,
             onUploadProgress: values.onUploadProgress,
@@ -261,6 +266,7 @@ export function ProjectsPage() {
       })
     },
     onSuccess: () => {
+      if (editingRequirement) void queryClient.invalidateQueries({ queryKey: ['requirement', normalizeRequirementId(editingRequirement)] })
       message.success(editingRequirement ? '需求已更新' : '需求已创建')
       closeRequirementDrawer()
       queryClient.invalidateQueries({ queryKey: ['requirementsPool', activeProjectId] })
@@ -313,7 +319,7 @@ export function ProjectsPage() {
       void requirementForm.validateFields(['documentContent'])
     } catch (loadError) {
       if (requirementEditHydrationSeq.current !== sequence) return
-      message.error(`需求正文加载失败：${getErrorMessage(loadError)}`)
+      setRequirementDocumentError(`需求正文加载失败：${getErrorMessage(loadError)}`)
     } finally {
       if (requirementEditHydrationSeq.current === sequence) {
         setRequirementDocumentLoading(false)
@@ -326,6 +332,7 @@ export function ProjectsPage() {
     requirementEditHydrationSeq.current = sequence
     const normalizedDocumentType = normalizeRequirementDocumentType(requirement?.documentType) ?? 'text'
 
+    setRequirementDocumentError(undefined)
     setEditingRequirement(requirement ?? null)
     requirementForm.setFieldsValue(
       requirement
@@ -342,7 +349,7 @@ export function ProjectsPage() {
         : {
             sprintId: selectedRequirementSprintId ?? sprintOptions[0]?.value,
             name: '',
-            documentType: 'text',
+            documentType: 'richtext',
             documentContent: '',
             file: undefined,
             documentFileName: undefined,
@@ -352,7 +359,7 @@ export function ProjectsPage() {
     )
     setRequirementDrawerOpen(true)
 
-    if (requirement && normalizedDocumentType === 'text') {
+    if (requirement && (normalizedDocumentType === 'text' || normalizedDocumentType === 'richtext')) {
       void hydrateRequirementTextDocument(requirement, sequence)
     } else {
       setRequirementDocumentLoading(false)
@@ -367,177 +374,47 @@ export function ProjectsPage() {
     requirementForm.resetFields()
   }
 
-  function openSprintDetail(sprintId: string) {
-    if (!activeProjectId) return
-    navigate(`/projects/${activeProjectId}/sprints/${sprintId}`)
-  }
-
   function openZentaoBinding(target: ZentaoBindingTargetState) {
     setZentaoBindingTarget(target)
   }
 
   const requirementColumns: TableProps<RequirementPoolItem>['columns'] = [
-    {
-      title: '需求名称',
-      dataIndex: 'name',
-      key: 'name',
-      width: '28%',
-      ellipsis: true,
-      render: (name: RequirementPoolItem['name'], requirement) => (
-        <Space size={8} className="project-requirement-list-name">
-          <span className="requirement-name-icon"><AppIcon name="requirement" size={14} /></span>
-          <Tooltip title={name}>
-            <Text
-              ellipsis
-              onClick={(event) => {
-                event.stopPropagation()
-                if (hasRequirementDocument(requirement)) {
-                  setPreviewRequirement(requirement)
-                  return
-                }
-                openRequirementDrawer(requirement)
-              }}
-            >
-              {name}
-            </Text>
-          </Tooltip>
-        </Space>
-      ),
-    },
-    {
-      title: '所属迭代',
-      dataIndex: 'sprintName',
-      key: 'sprintName',
-      width: 150,
-      render: (sprintName: RequirementPoolItem['sprintName']) => (
-        <Tag className="project-requirement-list-tag" color="blue">
-          {sprintName}
-        </Tag>
-      ),
-    },
-    {
-      title: '文档类型',
-      key: 'documentType',
-      width: 130,
-      render: (_, requirement) => (
-        <Tag color={normalizeRequirementDocumentType(requirement.documentType) === 'word' ? 'purple' : requirement.documentType === 'text' ? 'blue' : 'cyan'}>
-          {getRequirementDocumentTypeLabel(requirement.documentType)}
-        </Tag>
-      ),
-    },
-    {
-      title: '绑定信息',
-      key: 'bindingInfo',
-      width: '24%',
-      ellipsis: true,
-      render: (_, requirement) => (
-        <div className="project-requirement-list-binding-info">
-          <ZentaoBindingBadge targetType="requirement" binding={requirement.zentaoBinding} />
+    { title: '需求名称', key: 'name', width: '36%', render: (_, requirement) => (
+      <div className="project-requirement-list-name requirements-list-name">
+        <span className="requirements-list-icon"><AppIcon name="requirement" size={14} /></span>
+        <Tooltip title={requirement.name}><Link to={`/requirements/${normalizeRequirementId(requirement)}`}><Text>{requirement.name}</Text></Link></Tooltip>
+      </div>
+    ) },
+    { title: '所属迭代', dataIndex: 'sprintName', key: 'sprint', width: '13%', render: name => <div className="requirements-list-wrap">{name || '—'}</div> },
+    { title: '需求文档', key: 'document', width: '23%', render: (_, requirement) => hasRequirementDocument(requirement) ? (
+        <div className="requirements-list-file" title={getRequirementDocumentSummary(requirement)}>
+          <span className="requirements-list-file-type">{getRequirementDocumentTypeLabel(requirement.documentType)}</span>
+          <span className="requirements-list-filename">{getRequirementDocumentSummary(requirement)}</span>
         </div>
-      ),
-    },
-    {
-      title: '文档摘要',
-      key: 'documentSummary',
-      width: 150,
-      render: (_, requirement) =>
-        hasRequirementDocument(requirement) ? (
-          <Button
-            type="link"
-            className="project-requirement-document-link"
-            title={getRequirementDocumentSummary(requirement)}
-            onClick={(event) => {
-              event.stopPropagation()
-              setPreviewRequirement(requirement)
-            }}
-          >
-            查看文档
-          </Button>
-        ) : (
-          <Tooltip title={getRequirementDocumentSummary(requirement)}>
-            <Text type="secondary" ellipsis>
-              {getRequirementDocumentSummary(requirement)}
-            </Text>
-          </Tooltip>
-        ),
-    },
-    {
-      title: '创建时间',
-      key: 'createdAt',
-      width: 180,
-      render: (_, requirement) => <Text type="secondary">{formatTime(pickCreatedAt(requirement))}</Text>,
-    },
-    {
-      title: '操作',
-      key: 'actions',
-      width: 190,
-      align: 'right',
-      render: (_, requirement) => (
-        <Space
-          size={6}
-          className="project-requirement-list-actions"
-          onClick={(event) => event.stopPropagation()}
-          onMouseDown={(event) => event.stopPropagation()}
-        >
-          <Tooltip title="编辑需求">
-            <ProjectActionButton action="write"
-              type="text"
-              shape="circle"
-              className="action-btn-update"
-              operation="edit" iconOnly
-              aria-label="编辑需求"
-              onClick={() => openRequirementDrawer(requirement)}
-            />
-          </Tooltip>
-          <Tooltip title="禅道绑定">
-            <ProjectActionButton action="manage"
-              type="text"
-              shape="circle"
-              className="action-btn-read"
-              icon={<LinkOutlined />}
-              aria-label="绑定禅道需求 Story"
-              onClick={() =>
-                openZentaoBinding({
-                  targetType: 'requirement',
-                  resourceId: normalizeRequirementId(requirement),
-                  parentProjectId: activeProjectId,
-                  parentSprintId: requirement.sprintIdForCreate,
-                  depth: 'story',
-                  title: `绑定禅道需求 Story · ${requirement.name}`,
-                })
-              }
-            />
-          </Tooltip>
-          <Tooltip title="代码绑定">
-            <ProjectActionButton action="manage"
-              type="text"
-              shape="circle"
-              className="action-btn-read"
-              icon={<BranchesOutlined />}
-              aria-label="代码绑定"
-              onClick={() => setCodeBindingRequirement(requirement)}
-            />
-          </Tooltip>
-          <Popconfirm title="确认删除该需求？" onConfirm={() => deleteRequirementMutation.mutate(normalizeRequirementId(requirement))}>
-            <Tooltip title="删除需求">
-              <ProjectActionButton action="write"
-                danger
-                type="text"
-                shape="circle"
-                className="action-btn-delete"
-                operation="delete" iconOnly
-                aria-label="删除需求"
-                loading={deleteRequirementMutation.isPending && deleteRequirementMutation.variables === normalizeRequirementId(requirement)}
-              />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      ),
-    },
+    ) : <Text type="secondary">未提供文档</Text> },
+    { title: '禅道绑定', key: 'binding', width: '15%', render: (_, requirement) => {
+      const binding = requirement.zentaoBinding
+      if (!binding) return <Text type="secondary">未绑定</Text>
+      const name = binding.remoteNameSnapshot || binding.remote_name_snapshot || binding.remoteResourceId || binding.remote_resource_id || '已绑定'
+      return <Tooltip title={<ZentaoBindingBadge targetType="requirement" binding={binding} />}>
+        <div className="requirements-list-wrap" tabIndex={0}>{name}{binding.status && binding.status !== 'active' ? <Text type="secondary">（绑定状态待确认）</Text> : null}</div>
+      </Tooltip>
+    } },
+    { title: <span className="tp-actions-col-title" style={{ width: 64 }}>操作</span>, key: 'actions', width: 150, align: 'right', render: (_, requirement) => (
+      <RequirementRowActions name={requirement.name} canWrite={can('write')} canManage={can('manage')}
+        deleting={deleteRequirementMutation.isPending && deleteRequirementMutation.variables === normalizeRequirementId(requirement)}
+        onEdit={() => openRequirementDrawer(requirement)}
+        onBind={() => openZentaoBinding({ targetType: 'requirement', resourceId: normalizeRequirementId(requirement),
+          parentProjectId: activeProjectId, parentSprintId: requirement.sprintIdForCreate,
+          depth: 'story', title: `绑定禅道需求 Story · ${requirement.name}` })}
+        onCodeBind={() => setCodeBindingRequirement(requirement)}
+        onDelete={() => deleteRequirementMutation.mutateAsync(normalizeRequirementId(requirement))} />
+    ) },
   ]
+  const refreshRequirements = () => { void sprintsQuery.refetch(); void requirementsQuery.refetch() }
 
   return (
-    <div className={`workbench-page project-overview-page tp-list-surface${activeBoard === 'requirements' ? ' requirements-page tp-surface' : ''}`}>
+    <div className={`workbench-page project-overview-page tp-list-surface tp-surface${activeBoard === 'requirements' ? ' requirements-page' : ''}`}>
       {projectsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(projectsQuery.error)} /> : null}
 
       {!projectsQuery.isLoading && projects.length === 0 ? (
@@ -550,7 +427,9 @@ export function ProjectsPage() {
         </div>
       ) : (
         <>
-          {activeBoard === 'sprints' && <section className="workbench-project-toolbar">
+          <div className="workbench-tabs">
+            <section className={activeBoard === 'sprints' ? 'sprint-board-shell tp-surface tp-board tp-list-panel' : 'requirements-list-panel tp-board tp-list-panel'}>
+          {activeBoard === 'sprints' && <section className="sprint-board-toolbar tp-list-toolbar">
             <div className="project-overview-summary">
               <Space align="center" size={10}><Title level={4} style={{ margin: 0 }}>{activeProject?.name || '项目概览'}</Title>{accessProject?.role ? <Tag>{roleLabels[accessProject.role]}</Tag> : null}</Space>
               <div className="project-overview-description">
@@ -559,195 +438,50 @@ export function ProjectsPage() {
                 </Text>
               </div>
             </div>
-            <Space size={8} className="project-actions">
-              <Button className="action-btn-read" icon={<UserOutlined />} disabled={!activeProjectId} onClick={() => setMembersOpen(true)}>项目成员</Button>
-              <ProjectActionButton action="manage" className="action-btn-update" icon={<SettingOutlined />} disabled={!activeProject} onClick={() => activeProjectId && setSettingsProjectId(activeProjectId)}>项目设置</ProjectActionButton>
-            </Space>
+            <div className="sprint-board-tools tp-refresh-actions">
+              <ActionButton operation="refresh" loading={sprintsQuery.isFetching} onClick={() => { void sprintsQuery.refetch() }}>刷新</ActionButton>
+              <ProjectActionButton action="write" operation="create" type="primary" disabled={!activeProjectId} onClick={() => openSprintDrawer()}>新建迭代</ProjectActionButton>
+            </div>
           </section>}
 
-          <div className="workbench-tabs">
-            {activeBoard === 'requirements' && (
-              <div className="panel-header requirements-toolbar">
-                <div className="requirement-panel-head">
-                  <div className="requirement-filter-bar">
-              <h1 className="tp-list-title">需求</h1>
-                    <span className="requirement-filter-label">迭代</span>
-                    <div className="requirement-filter-control">
-                      <Select
-                        className="requirements-sprint-select"
-                        loading={sprintsQuery.isLoading}
-                        value={selectedRequirementSprintId}
-                        placeholder="筛选迭代"
-                        allowClear
-                        options={sprintOptions}
-                        onChange={(value) => {
-                          selectGlobalSprint(value)
-                        }}
-                        disabled={sprints.length === 0}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <ProjectActionButton action="write"
-                  type="primary"
-                  className="action-btn-create"
-                  operation="create"
-                  disabled={!activeProjectId || sprints.length === 0}
-                  onClick={() => openRequirementDrawer()}
-                >
-                  新建需求
-                </ProjectActionButton>
-              </div>
-            )}
-            <section className="workbench-panel workbench-board-panel">
               {activeBoard === 'sprints' ? (
-                <>
-                  <div className="panel-header">
-                    <Text strong>迭代列表</Text>
-                    <ProjectActionButton action="write" type="primary" className="action-btn-create" operation="create" disabled={!activeProjectId} onClick={() => openSprintDrawer()}>
-                      新建迭代
-                    </ProjectActionButton>
-                  </div>
-                  {sprintsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(sprintsQuery.error)} /> : null}
-                  <div className="table-body-scroll sprint-card-scroll">
-                    {sprintsQuery.isLoading ? <div className="sprint-card-loading"><Empty description="迭代加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} /></div> : null}
-                    {!sprintsQuery.isLoading && visibleSprints.length === 0 ? <Empty description="暂无迭代" /> : null}
-                    {!sprintsQuery.isLoading && visibleSprints.length > 0 ? (
-                        <div className="sprint-card-grid sprint-card-grid-workbench">
-                        {visibleSprints.map((sprint) => (
-                          <Card
-                            key={normalizeSprintId(sprint)}
-                            hoverable
-                            className="sprint-card"
-                            styles={{ body: { padding: 20 } }}
-                            onClick={() => openSprintDetail(normalizeSprintId(sprint))}
-                          >
-                            <div className="sprint-card-head">
-                              <div className="sprint-card-title-wrap">
-                                <Space size={10}>
-                                  {sprint.status === 'completed' ? (
-                                    <CheckCircleOutlined className="sprint-icon done" />
-                                  ) : (
-                                    <RocketOutlined className="sprint-icon running" />
-                                  )}
-                                  <div className="sprint-card-title" title={sprint.name}>
-                                    {sprint.name}
-                                  </div>
-                                </Space>
-                              </div>
-                              <div className="sprint-card-status">{statusTag(sprint.status)}</div>
-                            </div>
-                            <div className="sprint-card-meta">
-                              <span className="sprint-card-label">开始时间</span>
-                              <span className="sprint-card-value project-time-text">{formatTime(pickStartTime(sprint))}</span>
-                            </div>
-                            <div className="sprint-card-meta">
-                              <span className="sprint-card-label">结束时间</span>
-                              <span className="sprint-card-value project-time-text">{formatTime(pickEndTime(sprint))}</span>
-                            </div>
-                            <div className="sprint-card-binding-line">
-                              <ZentaoBindingBadge targetType="sprint" binding={sprint.zentaoBinding} />
-                            </div>
-                            <div className="sprint-card-description project-description-text" title={sprint.description || '暂无迭代描述'}>
-                              {sprint.description || '暂无迭代描述'}
-                            </div>
-                            <div className="sprint-card-actions">
-                                <Tooltip title="编辑迭代">
-                                  <ProjectActionButton action="write"
-                                    type="text"
-                                    shape="circle"
-                                    className="action-btn-update"
-                                    operation="edit" iconOnly
-                                    aria-label="编辑迭代"
-                                    onClick={(event) => {
-                                      event.stopPropagation()
-                                      openSprintDrawer(sprint)
-                                    }}
-                                  />
-                                </Tooltip>
-                                <Tooltip title="禅道绑定">
-                                  <ProjectActionButton action="manage"
-                                    type="text"
-                                    shape="circle"
-                                    className="action-btn-read"
-                                    icon={<LinkOutlined />}
-                                    aria-label="绑定禅道执行"
-                                    onClick={(event) => {
-                                      event.stopPropagation()
-                                      openZentaoBinding({
-                                        targetType: 'sprint',
-                                        resourceId: normalizeSprintId(sprint),
-                                        parentProjectId: activeProjectId,
-                                        depth: 'execution',
-                                        title: `绑定禅道执行 · ${sprint.name}`,
-                                      })
-                                    }}
-                                  />
-                                </Tooltip>
-                                <Popconfirm title="确认删除该迭代？" onConfirm={() => deleteSprintMutation.mutate(normalizeSprintId(sprint))}>
-                                  <Tooltip title="删除迭代">
-                                    <ProjectActionButton action="write"
-                                      danger
-                                      type="text"
-                                      shape="circle"
-                                      className="action-btn-delete"
-                                      operation="delete" iconOnly
-                                      aria-label="删除迭代"
-                                      loading={deleteSprintMutation.isPending}
-                                      onClick={(event) => event.stopPropagation()}
-                                    />
-                                  </Tooltip>
-                                </Popconfirm>
-                                <Tooltip title="查看迭代详情">
-                                  <Button
-                                    type="text"
-                                    shape="circle"
-                                    className="action-btn-read"
-                                    icon={<FileTextOutlined />}
-                                    aria-label="查看迭代详情"
-                                    onClick={(event) => {
-                                      event.stopPropagation()
-                                      openSprintDetail(normalizeSprintId(sprint))
-                                    }}
-                                  />
-                                </Tooltip>
-                            </div>
-                          </Card>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="table-footer">
-                    <ListPagination
-                      loading={sprintsQuery.isFetching || sprintsQuery.isError}
-                      current={sprintPage}
-                      pageSize={sprintPageSize}
-                      total={sprints.length}
-                      onChange={(page, pageSize) => {
-                        setSprintPagination({ projectId: activeProjectId, page })
-                        setSprintPageSize(pageSize)
-                      }}
-                    />
-                  </div>
-                </>
+                <SprintBoard key={activeProjectId} projectId={activeProjectId} sprints={sprints}
+                  loading={sprintsQuery.isLoading} refreshing={sprintsQuery.isFetching} error={sprintsQuery.error}
+                  deletingId={deleteSprintMutation.isPending ? deleteSprintMutation.variables : undefined}
+                  onRefresh={() => { void sprintsQuery.refetch() }}
+                  renderBinding={sprint => sprint.zentaoBinding ? <ZentaoBindingBadge targetType="sprint" binding={sprint.zentaoBinding} /> : <span>禅道 · 未绑定</span>}
+                  onEdit={openSprintDrawer} onDelete={id => deleteSprintMutation.mutate(id)}
+                  onBind={sprint => openZentaoBinding({ targetType: 'sprint', resourceId: normalizeSprintId(sprint),
+                    parentProjectId: activeProjectId, depth: 'execution', title: `绑定禅道执行 · ${sprint.name}` })} />
               ) : (
                 <>
-                  {requirementsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(requirementsQuery.error)} /> : null}
-                  <div className="table-body-scroll sprint-card-scroll">
+                  <div className="tp-list-toolbar requirements-list-header">
+                    <div className="requirements-list-heading"><h1 className="tp-list-title">需求</h1>
+                    </div>
+                    <div className="requirements-list-tools tp-refresh-actions">
+                      <ActionButton operation="refresh" loading={requirementsQuery.isFetching || sprintsQuery.isFetching} onClick={refreshRequirements}>刷新</ActionButton>
+                      <ProjectActionButton action="write" type="primary" operation="create" disabled={!activeProjectId || !sprints.length} onClick={() => openRequirementDrawer()}>新建需求</ProjectActionButton>
+                    </div>
+                  </div>
+                  {sprintsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(sprintsQuery.error)} action={<Button onClick={refreshRequirements}>重试读取</Button>} /> : null}
+                  {requirementsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(requirementsQuery.error)} action={<Button onClick={refreshRequirements}>重试读取</Button>} /> : null}
+                  <div className="requirements-list-scroll tp-list-scroll">
                     {sprintsQuery.isLoading || requirementsQuery.isLoading ? (
                       <div className="sprint-card-loading">
                         <Empty description="需求加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
                       </div>
                     ) : null}
-                    {!sprintsQuery.isLoading && !requirementsQuery.isLoading && sprints.length === 0 ? (
+                    {!sprintsQuery.isLoading && !sprintsQuery.error && sprints.length === 0 ? (
                       <Empty description="请先创建迭代，再添加需求" />
                     ) : null}
-                    {!sprintsQuery.isLoading && !requirementsQuery.isLoading && sprints.length > 0 && visibleRequirements.length === 0 ? (
+                    {!sprintsQuery.isLoading && !requirementsQuery.isLoading && !requirementsQuery.error && sprints.length > 0 && visibleRequirements.length === 0 ? (
                       <Empty description="暂无需求" />
                     ) : null}
                     {!sprintsQuery.isLoading && !requirementsQuery.isLoading && visibleRequirements.length > 0 ? (
                       <Table<RequirementPoolItem>
-                        className="project-requirement-list-table tp-list-table"
+                        className="project-requirement-list-table requirements-list-table tp-list-table"
+                        size="small"
+                        tableLayout="fixed" scroll={{ x: 1000 }}
                         columns={requirementColumns}
                         dataSource={visibleRequirements}
                         rowKey={(requirement) => normalizeRequirementId(requirement)}
@@ -778,13 +512,13 @@ export function ProjectsPage() {
         </>
       )}
 
-      <Drawer title="项目设置" className="project-settings-drawer" size={480} open={Boolean(settingsProjectId && settingsProjectId === activeProjectId && activeProject && can('manage'))} onClose={() => setSettingsProjectId(null)}>
+      <Drawer title="项目设置" className="project-settings-drawer" size={480} open={Boolean(settingsProjectId && settingsProjectId === activeProjectId && activeProject && can('manage'))} onClose={() => closeProjectPanel()}>
         {activeProject && settingsProjectId === activeProjectId && can('manage') ? <>
           <Title level={5}>基本信息</Title>
           <Card size="small">
             <div className="project-settings-row">
               <div className="project-settings-copy"><Text type="secondary">项目名称</Text><div><Text strong>{activeProject.name}</Text></div></div>
-              <ProjectActionButton action="manage" operation="edit" onClick={() => { setSettingsProjectId(null); openProjectModal(activeProject) }}>编辑</ProjectActionButton>
+              <ProjectActionButton action="manage" operation="edit" onClick={() => { closeProjectPanel(); openProjectModal(activeProject) }}>编辑</ProjectActionButton>
             </div>
             <div style={{ marginTop: 12 }}><Text type="secondary">{activeProject.description || '暂无描述'}</Text></div>
           </Card>
@@ -792,20 +526,20 @@ export function ProjectsPage() {
           <Card size="small">
             <div className="project-settings-row">
               <Space size={10}><AppIcon name="zentao" size={32} /><Text strong>禅道</Text></Space>
-              <ProjectActionButton action="manage" icon={<LinkOutlined />} onClick={() => { setSettingsProjectId(null); if (activeProjectId) openZentaoBinding({ targetType: 'project', resourceId: activeProjectId, depth: 'project', title: `绑定禅道项目 · ${activeProject.name}` }) }}>配置</ProjectActionButton>
+              <ProjectActionButton action="manage" icon={<LinkOutlined />} onClick={() => { closeProjectPanel(); if (activeProjectId) openZentaoBinding({ targetType: 'project', resourceId: activeProjectId, depth: 'project', title: `绑定禅道项目 · ${activeProject.name}` }) }}>配置</ProjectActionButton>
             </div>
             {activeProjectId ? <ZentaoBindingSummary targetType="project" resourceId={activeProjectId} variant="settings" /> : null}
             <Divider style={{ margin: '16px 0' }} />
             <div className="project-settings-row">
               <Space size={10}><AppIcon name="gitlab" size={32} /><Text strong>GitLab</Text></Space>
-              <ProjectActionButton action="manage" icon={<LinkOutlined />} onClick={() => { setSettingsProjectId(null); setGitlabBindingOpen(true) }}>配置</ProjectActionButton>
+              <ProjectActionButton action="manage" icon={<LinkOutlined />} onClick={() => { closeProjectPanel(); setGitlabBindingOpen(true) }}>配置</ProjectActionButton>
             </div>
             {activeProjectId ? <GitlabBindingSummary projectId={activeProjectId} variant="settings" /> : null}
           </Card>
           <Divider style={{ margin: '32px 0 20px' }} />
           <div className="project-settings-row">
             <Text type="secondary">项目操作</Text>
-            <ProjectActionButton action="manage" danger operation="delete" onClick={() => { setSettingsProjectId(null); if (activeProjectId) setDeleteProjectId(activeProjectId) }}>删除项目</ProjectActionButton>
+            <ProjectActionButton action="manage" danger operation="delete" onClick={() => { closeProjectPanel(); if (activeProjectId) setDeleteProjectId(activeProjectId) }}>删除项目</ProjectActionButton>
           </div>
         </> : null}
       </Drawer>
@@ -813,7 +547,7 @@ export function ProjectsPage() {
       <ProjectActionModal action="manage" projectId={deleteProjectId ?? undefined} title="确认删除当前项目？" open={Boolean(deleteProjectId)} okText="删除项目" cancelText="取消" okButtonProps={{ danger: true }} confirmLoading={deleteProjectMutation.isPending} onCancel={() => setDeleteProjectId(null)} onOk={() => { if (deleteProjectId) deleteProjectMutation.mutate(deleteProjectId, { onSuccess: () => setDeleteProjectId(null) }) }}>
         <Text>确认删除该项目？</Text>
       </ProjectActionModal>
-      {membersOpen && activeProjectId ? <ProjectMembersModal key={activeProjectId} projectId={activeProjectId} onClose={() => setMembersOpen(false)} /> : null}
+      {membersOpen && activeProjectId ? <ProjectMembersModal key={activeProjectId} projectId={activeProjectId} onClose={() => closeProjectPanel()} /> : null}
       <ProjectActionModal action={editingProject ? 'manage' : undefined}
         title={editingProject ? '编辑项目' : '新建项目'}
         open={projectModalOpen}
@@ -849,6 +583,14 @@ export function ProjectsPage() {
         loading={saveRequirementMutation.isPending}
         error={saveRequirementMutation.error}
         documentLoading={requirementDocumentLoading}
+        documentError={requirementDocumentError}
+        onDocumentTypeChange={() => {
+          requirementEditHydrationSeq.current += 1
+          setRequirementDocumentLoading(false)
+          setRequirementDocumentError(undefined)
+          saveRequirementMutation.reset()
+        }}
+        projectId={activeProjectId}
         mode={editingRequirement ? 'edit' : 'create'}
         sprintOptions={editingRequirement ? undefined : sprintOptions}
         onClose={closeRequirementDrawer}
@@ -892,16 +634,6 @@ export function ProjectsPage() {
         />
       ) : null}
 
-      <RequirementDocumentPreviewModal
-        open={Boolean(previewRequirement)}
-        onClose={() => setPreviewRequirement(null)}
-        requirementName={previewRequirement?.name}
-        documentType={previewRequirement?.documentType}
-        documentContent={previewRequirement?.documentContent}
-        documentFilename={previewRequirement?.documentFilename}
-        documentDownloadUrl={previewRequirement?.documentDownloadUrl}
-        requirementId={previewRequirement ? normalizeRequirementId(previewRequirement) : undefined}
-      />
     </div>
   )
 }

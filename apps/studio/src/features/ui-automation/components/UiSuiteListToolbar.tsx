@@ -6,17 +6,13 @@ import { useEffect, useRef } from 'react'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 
 /**
- * UI 测试集的筛选工具栏卡片（设计稿的 filter toolbar）：左侧迭代 / 需求 / 搜索，右侧刷新与新建。
+ * UI 测试集的筛选工具栏卡片（设计稿的 filter toolbar）：左侧需求 / 搜索，右侧刷新与新建。
  *
  * 设计稿里还有「批量删除」和「导出测试配置」两个按钮，都没有对应接口，不做（见 STRUCTURE.md 的未实现清单）。
  * 搜索是前端过滤，实际执行在 UiTestSuiteSection 里，这里只持有输入框。
  */
 export function UiSuiteListToolbar({
   showScopeFilters,
-  sprintValue,
-  sprintOptions,
-  sprintLoading,
-  onSprintChange,
   requirementValue,
   requirementOptions,
   requirementLoading,
@@ -30,10 +26,6 @@ export function UiSuiteListToolbar({
   onRefresh,
 }: {
   showScopeFilters: boolean
-  sprintValue: string
-  sprintOptions: Array<{ label: string; value: string }>
-  sprintLoading: boolean
-  onSprintChange: (value: string) => void
   requirementValue: string
   requirementOptions: Array<{ label: string; value: string }>
   requirementLoading: boolean
@@ -67,17 +59,6 @@ export function UiSuiteListToolbar({
         {showScopeFilters ? (
           <div className="api-filter-group">
             <div className="api-filter-field">
-              <span className="api-filter-field-label">迭代</span>
-              <Select
-                className="api-filter-select business-filter-select"
-                value={sprintValue}
-                options={sprintOptions}
-                loading={sprintLoading}
-                placeholder="请选择迭代"
-                onChange={onSprintChange}
-              />
-            </div>
-            <div className="api-filter-field">
               <span className="api-filter-field-label">需求</span>
               <Select
                 className="api-filter-select business-filter-select"
@@ -106,7 +87,7 @@ export function UiSuiteListToolbar({
         </div>
       </div>
 
-      <Space size={8} className="ui-suite-list-toolbar-actions">
+      <Space size={8} className="ui-suite-list-toolbar-actions tp-refresh-actions">
         <Tooltip title="刷新测试集列表">
           <ProjectActionButton
             action="read"

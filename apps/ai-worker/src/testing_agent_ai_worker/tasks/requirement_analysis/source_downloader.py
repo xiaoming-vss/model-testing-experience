@@ -13,6 +13,8 @@ from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
 
 
 class RequirementSourceDownloader(Protocol):
+    def download_images(self, *, source: Path, task: Task) -> list[dict[str, str]]: ...
+
     def download_source(
         self,
         *,
@@ -26,6 +28,7 @@ class RequirementSourceDownloader(Protocol):
 @dataclass(slots=True)
 class PlatformRequirementSourceDownloader:
     client: PlatformHttpClient
+    worker_id: str = ""
 
     def download_source(
         self,
@@ -45,6 +48,11 @@ class PlatformRequirementSourceDownloader:
         target_path.write_bytes(file_bytes)
         return target_path
 
+    def download_images(self, *, source: Path, task: Task) -> list[dict[str, str]]:
+        from testing_agent_ai_worker.tasks.requirement_analysis.richtext import download_images
+
+        return download_images(self.client, self.worker_id, source, task)
+
 
 def _filename_from_url(source_url: str, document_type: str) -> str:
     parsed = urlparse(source_url)
@@ -56,7 +64,9 @@ def _filename_from_url(source_url: str, document_type: str) -> str:
 
 def _default_suffix(document_type: str) -> str:
     normalized = document_type.strip().lower()
-    if normalized == "word":
+    if normalized == "richtext":
+        return ".html"
+    if normalized in {"word", "docx"}:
         return ".docx"
     return ".txt"
 

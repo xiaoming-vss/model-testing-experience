@@ -44,7 +44,10 @@ def upgrade():
             sa.JSON(),
             nullable=False,
             server_default=sa.text("('{}')"),
-            comment="远端来源快照 JSON：导入的原始 openedBy/openedDate/等级及拉取确认时的远端值；不含凭据",
+            comment=(
+                "远端来源快照 JSON：导入的原始 openedBy/openedDate/等级"
+                "及拉取确认时的远端值；不含凭据"
+            ),
         ),
     )
     rows = connection.execute(
@@ -75,7 +78,9 @@ def upgrade():
             "field_group",
             sa.String(20),
             nullable=False,
-            comment="字段组标识：profile 基本信息 / description 描述 / status 状态 / assignee 责任人",
+            comment=(
+                "字段组标识：profile 基本信息 / description 描述 / status 状态 / assignee 责任人"
+            ),
         ),
         sa.Column(
             "local_snapshot_json",

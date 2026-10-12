@@ -152,8 +152,6 @@ def seed_history(session, size=25):
         Import(
             id="import",
             run_id="run-00",
-            artifact_attempt_id="artifact-0",
-            idempotency_key="import-0",
             imported_at=NOW,
             imported_targets_json=[],
         )
@@ -378,3 +376,48 @@ async def test_ai_task_scope_checks_are_batched_without_loading_requirement_docu
         await service.validate_task_scope(row, scopes)
     assert len(sql) == 2
     assert all("document_content" not in query and "FOR UPDATE" not in query for query in sql)
+
+
+@pytest.mark.asyncio
+async def test_bug_snapshot_uses_project_and_found_sprint_without_pagination(db):  # noqa: F811
+    from testing_agent.models.bug import Bug
+    from testing_agent.models.project import Project
+
+    db.add(Project(project_id="other-project", user_id="u", name="other"))
+    db.flush()
+    for i in range(105):
+        db.add(
+            Bug(
+                bug_id=f"b{i}",
+                bug_no=i + 1,
+                project_id="p",
+                title=f"Bug {i}",
+                found_sprint_id="s",
+                status="active",
+                severity="normal",
+            )
+        )
+    db.add_all(
+        [
+            Bug(
+                bug_id="planned",
+                bug_no=106,
+                project_id="p",
+                title="Only planned",
+                found_sprint_id="other",
+                planned_fix_sprint_id="s",
+            ),
+            Bug(
+                bug_id="foreign",
+                bug_no=1,
+                project_id="other-project",
+                title="Foreign",
+                found_sprint_id="s",
+            ),
+        ]
+    )
+    db.flush()
+    rows = await SprintDailyMetricsRepository(AsyncAdapter(db)).list_bug_snapshots("p", "s")
+    assert len(rows) == 105
+    assert {row["bugId"] for row in rows} == {f"b{i}" for i in range(105)}
+    assert "description_html" not in rows[0]

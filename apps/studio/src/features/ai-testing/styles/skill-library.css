@@ -56,7 +56,7 @@
   width: 100%;
   min-height: 0;
   box-sizing: border-box;
-  padding: 18px;
+  padding: 0;
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   grid-auto-rows: minmax(92px, auto);
@@ -206,7 +206,7 @@
 
 .app-shell-macos .ai-testing-page .ai-skill-library-grid {
   gap: 16px;
-  padding: 18px;
+  padding: 0;
 }
 
 .app-shell-macos .ai-testing-page .ai-skill-card.ant-card {

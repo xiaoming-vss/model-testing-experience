@@ -88,7 +88,12 @@ export type BugListFilters = {
   keyword?: string
   page?: number
   pageSize?: number
+  sortBy?: BugSortField
+  sortOrder?: 'asc' | 'desc'
 }
+
+/** Bug 列表可排序字段，与后端白名单一一对应。 */
+export type BugSortField = 'id' | 'status' | 'severity' | 'priority' | 'created_at' | 'updated_at'
 
 export type CreateBugPayload = {
   title: string

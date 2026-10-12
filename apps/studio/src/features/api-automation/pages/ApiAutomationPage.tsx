@@ -76,14 +76,11 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
 
   const {
     currentRequirementSelection,
-    currentSprintSelection,
     requirementFilterOptions,
     requirementsQuery,
     resolvedSelectedRequirementId,
     resolvedSelectedSprintId,
     selectRequirement,
-    selectSprint,
-    sprintFilterOptions,
     sprints,
     sprintsQuery,
   } = useSprintRequirementScope({
@@ -262,6 +259,8 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
   useEffect(() => {
     function handleShortcut(event: KeyboardEvent) {
       if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return
+      // 标签页常驻挂载后，隐藏面板里的搜索框不能抢占快捷键。
+      if (keywordInputRef.current?.nativeElement?.closest('[hidden]')) return
       event.preventDefault()
       keywordInputRef.current?.focus()
     }
@@ -398,7 +397,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
       },
     },
     {
-      title: '操作',
+      title: <span className="tp-actions-col-title" style={{ width: 92 }}>操作</span>,
       key: 'actions',
       width: 138,
       align: 'right',
@@ -455,7 +454,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
   return (
     <div className="workbench-page api-automation-page functional-test-page tp-list-surface api-test-page tp-surface">
       <div className="api-automation-content">
-        <section className="workbench-panel workbench-board-panel tp-board">
+        <section className="workbench-panel workbench-board-panel tp-board tp-list-panel">
           {/* 设计稿里筛选行与环境信息条在同一张卡片里，中间一条分隔线。 */}
           <div className="panel-header api-panel-header api-test-header tp-list-toolbar">
             <div className="api-test-header-main">
@@ -463,23 +462,6 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
                 <h1 className="tp-list-title">API测试</h1>
                 {!isRequirementLocked ? (
                   <div className="api-filter-group">
-                    <div className="api-filter-field">
-                      <span className="api-filter-field-label">迭代</span>
-                      <Select
-                        className="api-filter-select business-filter-select"
-                        value={currentSprintSelection === null ? 'all' : selectedSprintId ?? 'all'}
-                        options={sprintFilterOptions}
-                        loading={sprintsQuery.isLoading}
-                        placeholder="筛选迭代"
-                        onChange={(value: string) => {
-                          selectSprint(value === 'all' ? null : value)
-                          if (value === 'all') {
-                            selectRequirement(null)
-                          }
-                          setPage(1)
-                        }}
-                      />
-                    </div>
                     <div className="api-filter-field">
                       <span className="api-filter-field-label">需求</span>
                       <Select
@@ -561,8 +543,8 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
           {environmentsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(environmentsQuery.error)} /> : null}
 
 
-          <div className="api-test-table-card">
-            <div className="table-body-scroll sprint-card-scroll api-test-table-scroll">
+          <div className="api-test-table-card tp-list-body">
+            <div className="table-body-scroll sprint-card-scroll api-test-table-scroll tp-list-scroll">
               {sprintsQuery.isLoading ? (
                 <div className="sprint-card-loading">
                   <Empty description="迭代加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />

@@ -28,7 +28,7 @@ export function BugZentaoPushModal({
   const existing = data?.status === 'succeeded'
   const targetName = (name?: string, id?: number) => id ? `${name || '未命名'} (#${id})` : '未确定'
   return (
-    <Modal title="推送到禅道" open={open} okText="确认推送" cancelText="取消"
+    <Modal mask={{ closable: false }} centered title="推送到禅道" open={open} okText="确认推送" cancelText="取消"
       confirmLoading={pending} onCancel={() => !busy && setOpen(false)}
       okButtonProps={{ disabled: !canConfirm }}
       onOk={() => canConfirm && onConfirm()}>

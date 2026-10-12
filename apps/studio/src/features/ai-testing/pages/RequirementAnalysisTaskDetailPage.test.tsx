@@ -22,7 +22,7 @@ function response(data: unknown, status = 200) {
     status, headers: { 'Content-Type': 'application/json' },
   })
 }
-function setup(stage: RequirementAnalysisTaskRun['currentStage'], status = 'error', fail = false, overrides: Partial<RequirementAnalysisTaskRun> = {}, otherRuns: RequirementAnalysisTaskRun[] = []) {
+function setup(stage: RequirementAnalysisTaskRun['currentStage'], status = 'error', fail = false, overrides: Partial<RequirementAnalysisTaskRun> = {}, otherRuns: RequirementAnalysisTaskRun[] = [], embedded = false) {
   let run: RequirementAnalysisTaskRun = { runId: 'run', taskId: 'task', status,
     currentStage: stage, stageStatus: 'failed', reviewStatus: 'pending', errorMessage: 'model unavailable', workflowVersion: 2, snapshotJson: { workflowVersion: 2, taskType: 'requirement_analysis' }, configJson: { firstStepOutput: extraction }, resultYaml: JSON.stringify(understanding), ...overrides }
   const submit = vi.fn(async (_body: unknown) => {
@@ -47,7 +47,7 @@ function setup(stage: RequirementAnalysisTaskRun['currentStage'], status = 'erro
   clients.push(client)
   render(<ThemeProvider><QueryClientProvider client={client}>
     <MemoryRouter initialEntries={['/requirements/task']}><Routes>
-      <Route path="/requirements/:taskId" element={<RequirementAnalysisTaskDetailPage />} />
+      <Route path="/requirements/:taskId" element={<RequirementAnalysisTaskDetailPage dialogRequest={embedded ? { taskId: 'task', runId: 'run', artifact: 'resultYaml', mode: 'review', onClose: vi.fn() } : undefined} />} />
     </Routes></MemoryRouter>
   </QueryClientProvider></ThemeProvider>)
   return submit
@@ -479,4 +479,12 @@ it('首次点击较早的已拒绝运行即可打开只读产物，不被运行�
   await waitFor(()=>expect(screen.getAllByRole('dialog').some(node=>node.querySelector('.requirement-analysis-artifact-tabs'))).toBe(true))
   await waitFor(()=>expect(screen.getByRole('region',{name:'材料与需求理解对照'})).toBeVisible())
   expect(screen.queryByRole('button',{name:'审核通过'})).toBeNull()
+})
+
+
+it('需求详情直接打开既有审核工作区，隐藏旧任务页面', async () => {
+  setup('feature_understanding', 'success', false, { stageStatus: 'completed', errorMessage: '' }, [], true)
+  await screen.findByRole('button', { name: /^审核通过$/ })
+  expect(screen.queryByText('返回需求分析')).not.toBeInTheDocument()
+  expect(screen.getByRole('region', { name: '业务内容' })).toBeInTheDocument()
 })

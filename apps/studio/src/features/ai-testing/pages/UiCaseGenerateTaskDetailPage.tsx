@@ -1,3 +1,4 @@
+import { useTaskRunDialog, type TaskRunDialogRequest } from '../hooks/useTaskRunDialog'
 import { listTotal } from '@/shared/api/request'
 import { getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
 import { useTaskRunHistorySync } from '@/features/ai-testing/hooks/useTaskRunHistorySync'
@@ -140,8 +141,9 @@ function CandidatePreview({ yaml }: { yaml: string }) {
 
 type DetailLocationState = { pendingSourceArchive?: File; pendingSourceArchiveError?: string } | null
 
-export function UiCaseGenerateTaskDetailPage() {
-  const { taskId = '' } = useParams()
+export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?: TaskRunDialogRequest } = {}) {
+  const { taskId: routeTaskId = '' } = useParams()
+  const taskId = dialogRequest?.taskId ?? routeTaskId
   const [runPage, setRunPage] = useState(1)
   const [runPageSize, setRunPageSize] = useState(20)
   useEffect(() => { setRunPage(1) }, [taskId])
@@ -150,7 +152,7 @@ export function UiCaseGenerateTaskDetailPage() {
   const queryClient = useQueryClient()
   const pendingNavigationFile = (location.state as DetailLocationState)?.pendingSourceArchive
   const pendingNavigationError = (location.state as DetailLocationState)?.pendingSourceArchiveError
-  const [selectedRunId, setSelectedRunId] = useState<string>()
+  const [selectedRunId, setSelectedRunId] = useState<string | undefined>(dialogRequest?.runId)
   const [draftYaml, setDraftYaml] = useState('')
   const [savedYaml, setSavedYaml] = useState('')
   const [reviewComment, setReviewComment] = useState('')
@@ -185,7 +187,7 @@ export function UiCaseGenerateTaskDetailPage() {
   const runsQuery = useQuery({
     queryKey: ['uiCaseGenerateTaskRuns', taskId, runPage, runPageSize],
     queryFn: () => api.getUiCaseGenerateTaskRuns(taskId, { page: runPage, pageSize: runPageSize }),
-    enabled: Boolean(taskId) && !taskQuery.error,
+    enabled: !dialogRequest && Boolean(taskId) && !taskQuery.error,
     refetchInterval: expandedSection === 'runHistory' ? RUN_HISTORY_POLL_INTERVAL : false,
     retry: false,
   })
@@ -203,8 +205,8 @@ export function UiCaseGenerateTaskDetailPage() {
   }
   const refetchRunHistory = runsQuery.refetch
   useEffect(() => {
-    if (expandedSection === 'runHistory') void refetchRunHistory({ cancelRefetch: false })
-  }, [expandedSection, refetchRunHistory])
+    if (!dialogRequest && expandedSection === 'runHistory') void refetchRunHistory({ cancelRefetch: false })
+  }, [expandedSection, refetchRunHistory, dialogRequest])
 
   const runs = useMemo(
     () => [...listItems(runsQuery.data)].sort((left, right) => new Date(right.createdAt ?? '').getTime() - new Date(left.createdAt ?? '').getTime()),
@@ -458,7 +460,7 @@ export function UiCaseGenerateTaskDetailPage() {
     },
   })
 
-  async function openImportModal() {
+  async function openImportModal(): Promise<boolean> {
     importMutation.reset()
     const refreshed = await selectedRunQuery.refetch()
     const latestRun = refreshed.data
@@ -466,11 +468,13 @@ export function UiCaseGenerateTaskDetailPage() {
       applyImportedRun(latestRun)
       closeImportInteractions()
       message.info('该运行已由其他操作完成导入')
-      return
+      return false
     }
     if (isGenerateTaskRunImportable(latestRun)) {
       setImportModalOpen(true)
+      return true
     }
+    return false
   }
 
   useEffect(() => {
@@ -495,6 +499,11 @@ export function UiCaseGenerateTaskDetailPage() {
     message.warning('上次选择的 UI 套件已不可用，请重新选择')
   }, [selectedRunId, selectedSuiteId, suitesQuery.data, suitesQuery.isSuccess])
 
+  useTaskRunDialog(dialogRequest, Boolean(taskQuery.data && selectedRunQuery.data), Boolean(candidateModalOpen || importModalOpen || importConflict), () => {
+    if (dialogRequest?.mode === 'import') void openImportModal().then(opened => { if (!opened) dialogRequest.onClose() })
+    else setCandidateModalOpen(true)
+  }, taskQuery.error ?? selectedRunQuery.error)
+
   if (taskQuery.isLoading) return <div className="workbench-page"><Spin /></div>
   if (taskQuery.error) {
     return <div className="workbench-page"><Alert showIcon type="error" title={getErrorMessage(taskQuery.error)} description="无法访问该 UI 生成任务。" /></div>
@@ -506,6 +515,7 @@ export function UiCaseGenerateTaskDetailPage() {
   const replacementBlocked = hasActiveRun
   return (<ProjectAccessScope resourceError={taskQuery.error} projectId={task?.projectId ?? ''}>{(
     <div className="workbench-page ai-testing-page tp-list-surface ai-task-detail-page tp-surface">
+      {!dialogRequest && (
       <div className="workbench-tabs">
         {runMutation.error ? <Alert showIcon type="error" title={getErrorMessage(runMutation.error)} /> : null}
         {selectedRunQuery.error ? (
@@ -693,6 +703,7 @@ export function UiCaseGenerateTaskDetailPage() {
           </div>
         </div>
       </div>
+      )}
 
       <Modal
         mask={{ closable: false }}

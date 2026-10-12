@@ -17,9 +17,6 @@ class SprintDailyMetrics(Base):
         {"comment": "迭代每日指标快照；功能执行指标来自平台，缺陷指标来自禅道"},
     )
     id: Mapped[IdPk] = mapped_column(comment="数据库内部主键")
-    metric_id: Mapped[str] = mapped_column(
-        String(64), unique=True, nullable=False, comment="指标快照业务标识"
-    )
     project_id: Mapped[str] = mapped_column(
         String(64), index=True, nullable=False, comment="项目业务标识"
     )
@@ -75,34 +72,42 @@ class SprintDailyMetrics(Base):
         Integer, nullable=False, default=0, comment="UI用例失败数，按迭代快照口径统计"
     )
     bug_metrics_collected: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, comment="本快照是否已采集禅道缺陷指标"
+        Boolean, nullable=False, default=True, comment="本快照是否已成功统计缺陷；历史未采集为否"
     )
     bug_details_json: Mapped[list[dict[str, Any]] | None] = mapped_column(
-        JSON, nullable=True, comment="采集的禅道缺陷详细快照 JSON"
+        JSON,
+        nullable=True,
+        comment=(
+            "缺陷摘要快照 JSON；平台条目含 bugId/bugNo/title/status/severity/resolution，"
+            "历史格式保留"
+        ),
     )
     bug_total: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, comment="禅道缺陷总数"
+        Integer, nullable=False, default=0, comment="缺陷快照总数"
     )
     bug_resolved: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, comment="禅道缺陷已解决数"
+        Integer, nullable=False, default=0, comment="缺陷快照已解决数"
     )
     bug_closed: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, comment="禅道缺陷已关闭数"
+        Integer, nullable=False, default=0, comment="缺陷快照已关闭数"
     )
     bug_unresolved: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, comment="禅道缺陷未解决数"
+        Integer, nullable=False, default=0, comment="缺陷快照未解决数"
     )
     bug_fatal: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, comment="禅道缺陷致命数"
+        Integer, nullable=False, default=0, comment="缺陷快照致命数"
     )
     bug_serious: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, comment="禅道缺陷严重数"
+        Integer, nullable=False, default=0, comment="缺陷快照严重数"
     )
     bug_normal: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, comment="禅道缺陷一般数"
+        Integer, nullable=False, default=0, comment="缺陷快照一般数"
     )
     bug_suggestion: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, comment="禅道缺陷建议数"
+        Integer,
+        nullable=False,
+        default=0,
+        comment="缺陷快照轻微数；平台 minor 映射至历史 suggestion 字段",
     )
     created_at: Mapped[CreatedAt] = mapped_column(comment="记录创建时间（UTC）")
     updated_at: Mapped[UpdatedAt] = mapped_column(comment="记录最后更新时间（UTC）")

@@ -1,3 +1,4 @@
+
 .app-shell {
   min-height: 100vh;
   background: var(--app-shell-bg);
@@ -23,10 +24,6 @@
   font-size: 18px;
   font-weight: 700;
   cursor: pointer;
-}
-
-.brand-logo {
-  display: block;
 }
 
 .mtx-logo {
@@ -94,10 +91,6 @@
   border-bottom: 1px solid var(--app-shell-border);
 }
 
-.app-header-left {
-  flex: 1;
-}
-
 .app-header h2.ant-typography {
   margin: 0;
   min-width: 190px;
@@ -105,13 +98,6 @@
   font-size: 24px;
   line-height: 32px;
   font-weight: 700;
-}
-
-.app-search {
-  width: 260px;
-  height: 32px;
-  border-radius: 2px;
-  background: var(--app-shell-bg);
 }
 
 .app-header-actions .ant-btn-circle {
@@ -125,17 +111,6 @@
 
 .workbench-page {
   min-height: calc(100vh - 64px);
-}
-
-.project-context-bar {
-  min-height: 56px;
-  padding: 0 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  background: var(--app-shell-bg);
-  border-bottom: 1px solid var(--app-shell-divider);
 }
 
 .project-selector-wrap {
@@ -164,12 +139,7 @@
   color: var(--app-shell-text-secondary);
 }
 
-.project-actions .ant-btn-primary,
 .panel-header .ant-btn-primary {
-  border-radius: 2px;
-}
-
-.project-actions .ant-btn:not(.ant-btn-primary) {
   border-radius: 2px;
 }
 
@@ -236,30 +206,6 @@
   border-bottom: 1px solid var(--app-shell-divider);
 }
 
-.sprint-icon {
-  font-size: 16px;
-}
-
-.sprint-icon.running {
-  color: var(--app-accent);
-}
-
-.sprint-icon.done {
-  color: var(--app-shell-text-muted);
-}
-
-
-.requirement-placeholder {
-  min-height: 300px;
-  display: grid;
-  place-items: center;
-}
-
-.placeholder-icon {
-  color: var(--app-accent);
-  font-size: 42px;
-}
-
 .workbench-empty {
   margin: 24px var(--app-page-gutter) 24px;
   min-height: 320px;
@@ -267,4 +213,24 @@
   place-items: center;
   background: var(--app-surface);
   border: 1px solid var(--app-shell-border);
+}
+
+/* Requirement detail keeps its own scrolling regions at all viewport widths. */
+.app-shell.app-shell-requirement-detail {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-shell.app-shell-requirement-detail > .ant-layout {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-shell.app-shell-requirement-detail .app-content {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  overflow: hidden;
 }

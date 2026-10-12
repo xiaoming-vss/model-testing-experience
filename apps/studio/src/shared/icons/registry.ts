@@ -2,6 +2,14 @@ import testing from './assets/nav-testing.svg?url'
 import services from './assets/nav-services.svg?url'
 import testDesign from './assets/nav-testDesign.svg?url'
 import projects from './assets/nav-projects.svg?url'
+import navSprint from './assets/nav-sprint.svg?url'
+import navSprintActive from './assets/nav-sprint-active.svg?url'
+import navRequirement from './assets/nav-requirement.svg?url'
+import navRequirementActive from './assets/nav-requirement-active.svg?url'
+import navBug from './assets/nav-bug.svg?url'
+import navBugActive from './assets/nav-bug-active.svg?url'
+import testingActive from './assets/nav-testing-active.svg?url'
+import servicesActive from './assets/nav-services-active.svg?url'
 import codeRisk from './assets/codeRisk.svg?url'
 import analysis from './assets/analysis.svg?url'
 import skills from './assets/skills.svg?url'
@@ -22,6 +30,14 @@ export const iconRegistry = {
   services: { src: services, label: '基础服务' },
   testDesign: { src: testDesign, label: '测试设计' },
   projects: { src: projects, label: '项目总览' },
+  navSprint: { src: navSprint, label: '迭代' },
+  navSprintActive: { src: navSprintActive, label: '迭代' },
+  navRequirement: { src: navRequirement, label: '需求' },
+  navRequirementActive: { src: navRequirementActive, label: '需求' },
+  navBug: { src: navBug, label: 'Bug列表' },
+  navBugActive: { src: navBugActive, label: 'Bug列表' },
+  testingActive: { src: testingActive, label: '测试' },
+  servicesActive: { src: servicesActive, label: '基础服务' },
   codeRisk: { src: codeRisk, label: '代码风险分析' },
   analysis: { src: analysis, label: '需求分析' },
   skills: { src: skills, label: 'Skill库' },

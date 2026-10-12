@@ -34,7 +34,7 @@ export function ProjectMembersModal({ projectId, onClose }: { projectId: string;
       navigate('/projects')
     })
   }
-  return <Modal title={`项目成员 · ${project?.name ?? ''}`} open onCancel={onClose} width={700} footer={null}>
+  return <Modal mask={{ closable: false }} centered title={`项目成员 · ${project?.name ?? ''}`} open onCancel={onClose} width={700} footer={null}>
     {members.error || mutation.error ? <Alert type="error" showIcon title={getErrorMessage(members.error || mutation.error)} /> : null}
     <Form disabled={!can('manage')} form={form} layout="inline" initialValues={{ role: 'member' }} onFinish={(values) => mutation.mutate(() => projectsApi.addProjectMember(projectId, values))} style={{ marginBottom: 20 }}>
       <Form.Item name="name" rules={[{ required: true, whitespace: true, message: '请输入已注册的准确用户名' }]}><Input placeholder="已注册的准确用户名" aria-label="成员用户名" /></Form.Item>

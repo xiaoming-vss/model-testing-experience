@@ -80,7 +80,7 @@ function installFetchHandler(onRequest?: (url: URL, init?: RequestInit) => Respo
   })
 }
 
-function renderPage() {
+function renderPage(embedded = false, dialogMode: 'view' | 'review' | 'import' = 'review', onClose = vi.fn()) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   seedOwnerProject(queryClient)
   render(
@@ -88,7 +88,7 @@ function renderPage() {
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={['/ai-testing/ui-tasks/ui-task-1']}>
           <Routes>
-            <Route path="/ai-testing/ui-tasks/:taskId" element={<UiCaseGenerateTaskDetailPage />} />
+            <Route path="/ai-testing/ui-tasks/:taskId" element={<UiCaseGenerateTaskDetailPage dialogRequest={embedded ? { taskId: 'ui-task-1', runId: 'ui-run-1', artifact: 'resultYaml', mode: dialogMode, onClose } : undefined} />} />
             <Route path="/ai-testing" element={<div>生成任务列表</div>} />
             <Route path="/ui-automation/suites/:suiteId" element={<div>正式 UI 套件详情</div>} />
           </Routes>
@@ -1070,4 +1070,21 @@ describe('运行记录删除', () => {
     await openRunActionsMenu(user)
     expect(await screen.findByRole('menuitem', { name: '删除运行记录' })).toHaveAttribute('aria-disabled', 'true')
   })
+})
+
+
+it('需求详情直接打开既有候选审核工作区', async () => {
+  installFetchHandler(); renderPage(true)
+  await screen.findByRole('button', { name: '批准候选' })
+  expect(screen.queryByRole('button', { name: '返回生成任务' })).not.toBeInTheDocument()
+})
+
+
+it('需求详情导入时记录已被其他操作导入，关闭工作区而不锁住页签', async () => {
+  installFetchHandler((url) => url.pathname === '/v1/ui-case-generate-task-runs/ui-run-1'
+    ? jsonResponse({ ...run, reviewStatus: 'approved', importStatus: 'imported' }) : undefined)
+  const close = vi.fn()
+  renderPage(true, 'import', close)
+  await waitFor(() => expect(close).toHaveBeenCalledTimes(1))
+  expect(screen.queryByText('导入正式 UI 套件')).not.toBeInTheDocument()
 })

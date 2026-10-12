@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import Depends
+from fastapi import Depends, Query
 from fastapi.responses import JSONResponse, Response
 
 from testing_agent.api.deps import get_file_service, get_worker_task_service
@@ -106,3 +106,16 @@ async def report_progress(
 ):
     await service.progress(task_id, body)
     return Response(status_code=204)
+
+
+async def requirement_image(
+    task_id: str,
+    file_id: str,
+    worker_id: str = Query(alias="workerId"),
+    service: WorkerTaskService = Depends(get_worker_task_service),
+    files=Depends(get_file_service),
+) -> JSONResponse:
+    from testing_agent.services.requirement_image import requirement_image_ticket
+
+    ticket = await requirement_image_ticket(task_id, file_id, worker_id, service, files)
+    return JSONResponse(ticket, headers={"Cache-Control": "no-store"})

@@ -3,6 +3,7 @@ import workbenchCss from './workbench.css?raw'
 import aiTestingSharedCss from '@/features/ai-testing/styles/index.css?raw'
 import aiTestingListCss from '@/features/ai-testing/styles/task-list-v2.css?raw'
 import testingCss from '@/features/testing/styles/index.css?raw'
+import requirementListCss from '@/features/projects/styles/requirements-list.css?raw'
 
 const aiTestingCss = `${aiTestingSharedCss}\n${aiTestingListCss}`
 
@@ -66,8 +67,8 @@ describe('列表名称样式统一', () => {
 
   const requirementNameMarkup = `
     <main class="project-overview-page">
-      <div class="project-requirement-list-table">
-        <div class="project-requirement-list-name"><span id="list-name" class="ant-typography">需求名称</span></div>
+      <div class="project-requirement-list-table requirements-list-table">
+        <div class="project-requirement-list-name requirements-list-name"><a href="/requirements/example"><span id="list-name" class="ant-typography">需求名称</span></a></div>
       </div>
     </main>
   `
@@ -76,7 +77,7 @@ describe('列表名称样式统一', () => {
     ['API 测试集', testingCss, suiteNameMarkup('api-test-page')],
     ['UI 测试集', testingCss, suiteNameMarkup('ui-test-page')],
     ['功能测试集', testingCss, suiteNameMarkup('')],
-    ['需求', workbenchCss, requirementNameMarkup],
+    ['需求', `${workbenchCss}\n${requirementListCss}`, requirementNameMarkup],
   ])('%s名称与任务名称使用相同的列表样式', (_, css, markup) => {
     const taskNameStyle = computedNameStyle(aiTestingCss, taskNameMarkup)
     const targetNameStyle = computedNameStyle(css, markup)

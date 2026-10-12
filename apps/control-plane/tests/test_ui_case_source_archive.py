@@ -57,7 +57,6 @@ class UiTaskRepository:
             name="Login",
             document_type="text",
             document_content="",
-            document_storage_path="",
             document_download_url="",
         )
         self.runs = {}
@@ -234,7 +233,6 @@ def test_verified_s3_archive_is_attached_and_missing_replacement_preserves_curre
     assert set(metadata) == {"archiveId", "fileId", "filename", "sizeBytes", "sha256", "uploadedAt"}
     assert uploaded.json()["data"]["sourceContent"] == ""
     assert repository.archive.file_id == metadata["fileId"]
-    assert repository.archive.storage_path == ""
     updated = client.patch(
         f"/v1/ui-case-generate-tasks/{task_id}",
         json={"sourceType": "manual", "sourceContent": "hidden", "instruction": "updated"},
@@ -253,7 +251,6 @@ def test_verified_s3_archive_is_attached_and_missing_replacement_preserves_curre
     assert detail.status_code == 200
     assert detail.json()["data"]["sourceArchive"] == metadata
     assert repository.archive.file_id == metadata["fileId"]
-    assert repository.archive.storage_path == ""
 
 
 def zip_with_symlink():
@@ -437,9 +434,6 @@ def test_worker_downloads_pinned_s3_archive_and_rejects_local_requirement(tmp_pa
 
     first_file_id = repository.archive.file_id
     assert upload_archive(user_client, task_id, "v2.zip", second).status_code == 200
-    document_path = tmp_path / "current-requirement.txt"
-    document_path.write_bytes(b"current requirement")
-    repository.requirement.document_storage_path = str(document_path)
     repository.requirement.document_filename = "current-requirement.txt"
 
     settings = worker_settings(tmp_path)
@@ -475,7 +469,6 @@ def test_worker_downloads_pinned_s3_archive_and_rejects_local_requirement(tmp_pa
     assert document_response.status_code == 409
     assert "重新上传" in document_response.json()["message"]
 
-    repository.requirement.document_storage_path = ""
     repository.requirement.document_content = "inline current requirement"
     inline_document_response = worker_client.get(
         f"/internal/ai-worker/tasks/{worker_task.task_id}/requirement-document",
@@ -603,7 +596,7 @@ def test_local_source_archive_requires_reupload(tmp_path):
     client, _ = ui_task_client(repository)
     task_id = create_ui_task(client)
     repository.archive = SimpleNamespace(
-        task_id=task_id, file_id="", storage_path=str(tmp_path / "old.zip")
+        task_id=task_id, file_id="",
     )
     response = client.post(
         f"/v1/ui-case-generate-tasks/{task_id}/run", json={"connectionId": "llm-1"}

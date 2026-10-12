@@ -54,8 +54,13 @@ describe('light workbench surfaces', () => {
       else document.documentElement.dataset.theme = previousTheme
     }
   })
-  it('keeps normal and disabled controls in the same surface palette as their containers', () => {
-    for (const role of ['--button-bg', '--app-control-surface', '--app-glass-input', '--app-request-field-bg', '--editor-bg']) {
+  it('distinguishes inset controls from the brighter content surface', () => {
+    expect(resolve('--app-control-surface')).toBe('#e8edf6')
+    expect(resolve('--app-surface')).toBe('#edf1f9')
+    for (const role of ['--button-bg', '--app-glass-input']) {
+      expect(resolve(role), role).toBe(resolve('--app-control-surface'))
+    }
+    for (const role of ['--app-request-field-bg', '--editor-bg']) {
       expect(resolve(role), role).toBe(resolve('--app-surface'))
     }
     expect(resolve('--button-disabled-bg')).toBe(resolve('--srf-list-header-bg'))

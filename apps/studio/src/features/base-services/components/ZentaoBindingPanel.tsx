@@ -422,6 +422,8 @@ export function ZentaoBindingModal({
   return (
     <Modal
       width={760}
+      mask={{ closable: false }}
+      centered
       className="zentao-binding-modal"
       title={
         <Space size={8}>

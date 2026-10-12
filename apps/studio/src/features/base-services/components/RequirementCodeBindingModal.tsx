@@ -211,6 +211,8 @@ export function RequirementCodeBindingModal({
   return (
     <Modal
       width={720}
+      mask={{ closable: false }}
+      centered
       className="requirement-code-binding-modal"
       title={
         <Space size={8}>

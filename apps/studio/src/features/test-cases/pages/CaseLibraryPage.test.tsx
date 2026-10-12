@@ -8,6 +8,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { api } from '@/services/api'
 import { CaseLibraryPage } from './CaseLibraryPage'
 
+const testScope = vi.hoisted(() => ({ sprintId: 'sprint-1', requirementId: undefined as string | undefined }))
+
 vi.mock('@/shared/utils/feedback', () => ({ message: { success: vi.fn(), error: vi.fn() } }))
 vi.mock('@/features/projects/hooks/useActiveSprint', () => ({
   useActiveSprint: () => ({
@@ -25,8 +27,8 @@ vi.mock('@/features/projects/hooks/useSprintRequirementScope', () => ({
   useSprintRequirementScope: () => ({
     currentSprintSelection: null,
     currentRequirementSelection: null,
-    resolvedSelectedSprintId: 'sprint-1',
-    resolvedSelectedRequirementId: undefined,
+    resolvedSelectedSprintId: testScope.sprintId,
+    resolvedSelectedRequirementId: testScope.requirementId,
     sprints: [{ sprintId: 'sprint-1', name: 'V1.0.0 迭代' }],
     sprintsQuery: { isLoading: false, error: null },
     requirementsQuery: { data: [], isLoading: false, error: null },
@@ -116,6 +118,8 @@ async function openCaseRow(title: string) {
 }
 
 beforeEach(() => {
+  testScope.sprintId = 'sprint-1'
+  testScope.requirementId = undefined
   useWorkbenchStore.setState({ activeProjectId: 'project-1', activeSprintId: 'sprint-1' })
 })
 
@@ -169,7 +173,7 @@ it('左栏平铺展示测试集，默认落在「全部用例」', async () => {
 
   // 右栏：全部用例时显示「所属测试集」列，且不请求某个具体测试集
   expect(await screen.findByText('服务器部署判定【本地连接】')).toBeInTheDocument()
-  expect(screen.getByText('所属测试集')).toBeInTheDocument()
+  expect(screen.getByText('所属测试集', { selector: 'th' })).toBeInTheDocument()
   expect(cases.mock.calls.at(-1)?.[1]).toMatchObject({ sprintId: 'sprint-1', suiteId: '' })
   client.clear()
 })
@@ -332,7 +336,7 @@ it('点用例直接进编辑：没有抽屉、没有只读态、没有编辑按�
   // 关掉弹窗后回到列表
   await user.click(button('取消'))
   await waitFor(() => expect(document.querySelector('.case-library-case-modal')).toBeNull())
-  expect(screen.getByText('所属测试集')).toBeInTheDocument()
+  expect(screen.getByText('所属测试集', { selector: 'th' })).toBeInTheDocument()
   client.clear()
 })
 
@@ -442,9 +446,12 @@ it('快速过滤条按优先级筛选，再点一次取消', async () => {
   await user.click(button('P1'))
   await waitFor(() => expect(cases.mock.calls.at(-1)?.[1]).toMatchObject({ priority: 'P1' }))
 
-  // 同一档再点一次就是取消，不是重复筛选
+  // 同一档再点一次就是取消，不是重复筛选；取消后回到挂载时的筛选组合，
+  // 30s 内命中缓存不再发请求，列表直接显示未过滤数据。
+  const callsBeforeCancel = cases.mock.calls.length
   await user.click(button('P1'))
-  await waitFor(() => expect(cases.mock.calls.at(-1)?.[1]).toMatchObject({ priority: '' }))
+  expect(cases.mock.calls.length).toBe(callsBeforeCancel)
+  expect(await screen.findByText('服务器部署判定【本地连接】')).toBeInTheDocument()
   client.clear()
 })
 
@@ -497,5 +504,158 @@ it('用例推送使用项目 MCP，部分失败保留详情并阻止未知结果
   expect(screen.getByText(/请先在禅道核对/)).toBeInTheDocument()
   expect(button('开始导入')).toBeDisabled()
   expect(oldConnections).not.toHaveBeenCalled()
+  client.clear()
+})
+
+it('切换测试集清空旧选择，返回后不恢复，并支持手动清空', async () => {
+  const other = { ...suite, suiteId: 'suite-2', name: '数据集管理' }
+  vi.spyOn(api, 'getProjectFunctionTestSuites').mockResolvedValue(listResponse([suite, other]))
+  vi.spyOn(api, 'getProjectFunctionTestCases').mockResolvedValue(listResponse([loginCase]))
+  const client = buildClient()
+  const { container } = renderPage(client)
+  await selectSuite(container)
+  const user = userEvent.setup()
+  await user.click(checkbox(`选择用例：${loginCase.title}`))
+  expect(button('批量删除（1）')).toBeEnabled()
+  await user.click(within(container.querySelector('.case-library-tree') as HTMLElement).getByText('数据集管理'))
+  await waitFor(() => expect(button('批量删除')).toBeDisabled())
+  expect(checkbox(`选择用例：${loginCase.title}`)).not.toBeChecked()
+  await selectSuite(container)
+  expect(checkbox(`选择用例：${loginCase.title}`)).not.toBeChecked()
+  await user.click(checkbox(`选择用例：${loginCase.title}`))
+  await user.click(button('清空选择'))
+  expect(button('批量删除')).toBeDisabled()
+  client.clear()
+})
+
+it('空库中央提供新建测试集入口并打开原抽屉', async () => {
+  vi.spyOn(api, 'getProjectFunctionTestSuites').mockResolvedValue(listResponse([]))
+  vi.spyOn(api, 'getProjectFunctionTestCases').mockResolvedValue(listResponse([]))
+  const client = buildClient()
+  const { container } = renderPage(client)
+  expect(await screen.findByText('先创建测试集，再添加或导入用例。')).toBeInTheDocument()
+  const main = container.querySelector('.case-library-main') as HTMLElement
+  await userEvent.click(within(main).getByText('新建测试集').closest('button')!)
+  expect(await screen.findByText('新建功能测试集')).toBeInTheDocument()
+  client.clear()
+})
+
+it('清除用例筛选保留测试集和迭代范围', async () => {
+  vi.spyOn(api, 'getProjectFunctionTestSuites').mockResolvedValue(listResponse([suite]))
+  const cases = vi.spyOn(api, 'getProjectFunctionTestCases').mockImplementation(async (_id, params) =>
+    listResponse(params?.priority || params?.keyword ? [] : [loginCase]),
+  )
+  const client = buildClient()
+  const { container } = renderPage(client)
+  await selectSuite(container)
+  const user = userEvent.setup()
+  await user.click(button('P1'))
+  await user.type(screen.getByLabelText('搜索用例名称或模块'), '找不到')
+  await waitFor(() => expect(cases.mock.calls.at(-1)?.[1]).toMatchObject({ keyword: '找不到' }))
+  expect(await screen.findByText('没有符合筛选条件的用例')).toBeInTheDocument()
+  await user.click(button('清除用例筛选'))
+  // 清除后回到 30s 内请求过的组合时命中缓存、可能不再发请求；
+  // 但列表必须恢复未过滤数据，且任何补发请求都要保留测试集与迭代范围。
+  const callsBeforeClear = cases.mock.calls.length
+  const newCallsAfterClear = () => cases.mock.calls.slice(callsBeforeClear)
+  await waitFor(() => {
+    for (const [, params] of newCallsAfterClear()) {
+      expect(params).toMatchObject({
+        suiteId: 'suite-1', sprintId: 'sprint-1', priority: '', caseType: '', keyword: '', page: 1,
+      })
+    }
+    expect(screen.getByLabelText('搜索用例名称或模块')).toHaveValue('')
+    expect(screen.queryByText('没有符合筛选条件的用例')).toBeNull()
+  })
+  expect(await screen.findByText(loginCase.title)).toBeInTheDocument()
+  const sidebar = container.querySelector('.api-case-sidebar') as HTMLElement
+  expect(within(sidebar).getByText('业务价值验证场景').closest('button')).toHaveAttribute('aria-current', 'true')
+  client.clear()
+})
+
+it('加载失败不显示空库或零数量，原位重试恢复数据', async () => {
+  vi.spyOn(api, 'getProjectFunctionTestSuites').mockRejectedValueOnce(new Error('测试集网络中断'))
+    .mockResolvedValue(listResponse([suite]))
+  vi.spyOn(api, 'getProjectFunctionTestCases').mockRejectedValueOnce(new Error('用例网络中断'))
+    .mockResolvedValue(listResponse([loginCase]))
+  const client = buildClient()
+  renderPage(client)
+  expect(await screen.findByText('测试集加载失败')).toBeInTheDocument()
+  expect(await screen.findByText('用例加载失败')).toBeInTheDocument()
+  expect(screen.queryByText('当前范围暂无测试集')).toBeNull()
+  expect(screen.queryByText('当前范围暂无用例')).toBeNull()
+  expect(screen.queryByText(/共 0 条/)).toBeNull()
+  const user = userEvent.setup()
+  await user.click(button('重试测试集'))
+  await user.click(button('重试用例'))
+  expect(await screen.findByText(loginCase.title)).toBeInTheDocument()
+  await waitFor(() => expect(screen.queryByText('用例加载失败')).toBeNull())
+  client.clear()
+})
+
+it('刷新失败保留已加载用例', async () => {
+  vi.spyOn(api, 'getProjectFunctionTestSuites').mockResolvedValue(listResponse([suite]))
+  vi.spyOn(api, 'getProjectFunctionTestCases').mockResolvedValueOnce(listResponse([loginCase]))
+    .mockRejectedValue(new Error('连接中断'))
+  const client = buildClient()
+  renderPage(client)
+  await screen.findByText(loginCase.title)
+  await userEvent.click(iconButton('刷新用例列表'))
+  expect(await screen.findByText('用例加载失败')).toBeInTheDocument()
+  expect(screen.getByText(loginCase.title)).toBeInTheDocument()
+  expect(screen.queryByText('当前范围暂无用例')).toBeNull()
+  client.clear()
+})
+
+
+it.each(['sprint', 'requirement', 'project'])('切换业务范围清空选择：%s', async (scope) => {
+  vi.spyOn(api, 'getProjectFunctionTestSuites').mockResolvedValue(listResponse([suite]))
+  vi.spyOn(api, 'getProjectFunctionTestCases').mockResolvedValue(listResponse([loginCase]))
+  const client = buildClient()
+  const view = renderPage(client)
+  await selectSuite(view.container)
+  await userEvent.click(checkbox(`选择用例：${loginCase.title}`))
+  expect(button('批量删除（1）')).toBeEnabled()
+  if (scope === 'sprint') testScope.sprintId = 'sprint-2'
+  if (scope === 'requirement') testScope.requirementId = 'req-2'
+  if (scope === 'project') seedOwnerProject(client, 'project-2')
+  view.rerender(<QueryClientProvider client={client}><MemoryRouter><CaseLibraryPage /></MemoryRouter></QueryClientProvider>)
+  await waitFor(() => expect(button('批量删除')).toBeDisabled())
+  await screen.findByText(loginCase.title)
+  expect(checkbox(`选择用例：${loginCase.title}`)).not.toBeChecked()
+  client.clear()
+})
+
+it('同一测试集翻页保留选择，批量提交两页的用例', async () => {
+  vi.spyOn(api, 'getProjectFunctionTestSuites').mockResolvedValue(listResponse([suite]))
+  vi.spyOn(api, 'getProjectFunctionTestCases').mockImplementation(async (_id, params) => {
+    const item = params?.page === 2 ? { ...loginCase, caseId: 'case-2', title: '第二页用例' } : loginCase
+    return Object.assign(listResponse([item]), { total: 21 })
+  })
+  const remove = vi.spyOn(api, 'batchDeleteFunctionTestCases').mockResolvedValue({ deletedIds: ['case-1', 'case-2'], deletedCount: 2 })
+  const client = buildClient()
+  const { container } = renderPage(client)
+  await selectSuite(container)
+  const user = userEvent.setup()
+  await user.click(checkbox(`选择用例：${loginCase.title}`))
+  await user.click(container.querySelector('.ant-pagination-next button')!)
+  await screen.findByText('第二页用例')
+  await user.click(checkbox('选择用例：第二页用例'))
+  await user.click(button('批量删除（2）'))
+  await user.click(button('确认删除'))
+  await waitFor(() => expect(remove).toHaveBeenCalledWith('suite-1', ['case-1', 'case-2']))
+  client.clear()
+})
+
+it('不重复展示模块列，数字优先级与快速筛选使用一致标签', async () => {
+  vi.spyOn(api, 'getProjectFunctionTestSuites').mockResolvedValue(listResponse([suite]))
+  vi.spyOn(api, 'getProjectFunctionTestCases').mockResolvedValue(listResponse([
+    { ...loginCase, module: suite.name, priority: '2' },
+  ]))
+  const client = buildClient()
+  const { container } = renderPage(client)
+  await screen.findByText(loginCase.title)
+  expect(screen.queryByText('模块', { selector: 'th' })).toBeNull()
+  expect(container.querySelector('.case-library-priority')).toHaveTextContent('P2')
   client.clear()
 })

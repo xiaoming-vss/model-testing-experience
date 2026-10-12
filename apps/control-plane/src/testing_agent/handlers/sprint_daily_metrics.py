@@ -34,5 +34,5 @@ async def upsert_sprint_daily_metric(
     user_id: str = Depends(get_current_user_id),
     service: SprintDailyMetricsService = Depends(get_sprint_daily_metrics_service),
 ):
-    payload = body.model_dump(by_alias=False, exclude_none=True) if body is not None else None
-    return success_payload(await service.upsert(sprint_id, snapshot_date, payload, user_id))
+    connection_id = body.connection_id if body is not None else None
+    return success_payload(await service.upsert(sprint_id, snapshot_date, connection_id, user_id))

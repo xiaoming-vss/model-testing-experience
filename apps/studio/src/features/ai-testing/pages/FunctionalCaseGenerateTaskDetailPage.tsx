@@ -1,3 +1,4 @@
+import { useTaskRunDialog, type TaskRunDialogRequest } from '../hooks/useTaskRunDialog'
 import { listTotal } from '@/shared/api/request'
 import { getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
 import { useTaskRunHistorySync } from '@/features/ai-testing/hooks/useTaskRunHistorySync'
@@ -128,8 +129,9 @@ function getRunRecordArtifacts(configJson: unknown, availableArtifacts?: string[
   }))
 }
 
-export function FunctionalCaseGenerateTaskDetailPage() {
-  const { taskId = '' } = useParams()
+export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?: TaskRunDialogRequest } = {}) {
+  const { taskId: routeTaskId = '' } = useParams()
+  const taskId = dialogRequest?.taskId ?? routeTaskId
   const [runPage, setRunPage] = useState(1)
   const [runPageSize, setRunPageSize] = useState(20)
   useEffect(() => { setRunPage(1) }, [taskId])
@@ -189,7 +191,7 @@ export function FunctionalCaseGenerateTaskDetailPage() {
   const runsQuery = useQuery({
     queryKey: ['functionalCaseGenerateTaskRuns', taskId, runPage, runPageSize, runStageFilter],
     queryFn: () => api.getFunctionalCaseGenerateTaskRuns(taskId, { page: runPage, pageSize: runPageSize, pipelineFilter: runStageFilter }),
-    enabled: Boolean(taskId),
+    enabled: !dialogRequest && Boolean(taskId),
     refetchInterval: expandedSection === 'runHistory' ? RUN_HISTORY_POLL_INTERVAL : false,
   })
   const runTotal = listTotal(runsQuery.data)
@@ -206,8 +208,8 @@ export function FunctionalCaseGenerateTaskDetailPage() {
   }
   const refetchRunHistory = runsQuery.refetch
   useEffect(() => {
-    if (expandedSection === 'runHistory') void refetchRunHistory({ cancelRefetch: false })
-  }, [expandedSection, refetchRunHistory])
+    if (!dialogRequest && expandedSection === 'runHistory') void refetchRunHistory({ cancelRefetch: false })
+  }, [expandedSection, refetchRunHistory, dialogRequest])
 
   const sprintsQuery = useQuery({
     queryKey: ['sprints', 'functionalAiTestingDetail', task?.projectId],
@@ -261,7 +263,7 @@ export function FunctionalCaseGenerateTaskDetailPage() {
         : runRecords.filter((record) => getRunPipelineModel(record).filterKey === runStageFilter),
     [runRecords, runStageFilter],
   )
-  const selectedRunId = selectedRunRecordId ?? runRecords[0]?.runId ?? ''
+  const selectedRunId = dialogRequest?.runId ?? selectedRunRecordId ?? runRecords[0]?.runId ?? ''
   const selectedRunQuery = useQuery({
     queryKey: ['functionalCaseGenerateTaskRun', selectedRunId],
     queryFn: () => api.getFunctionalCaseGenerateTaskRun(selectedRunId),
@@ -964,9 +966,19 @@ export function FunctionalCaseGenerateTaskDetailPage() {
     setRunResultModal({ key, label })
   }
 
+  useTaskRunDialog(dialogRequest, Boolean(taskQuery.data && selectedRunQuery.data), Boolean(runResultModal || resultModalRunId || graphRunId || importConfirmRunId || importConflict), () => {
+    if (!dialogRequest) return
+    if (dialogRequest.mode === 'import') { handleImportRun(dialogRequest.runId); return }
+    if (dialogRequest.artifact === 'resultYaml') { openResultModal(dialogRequest.runId); return }
+    const section = runResultSectionDefinitions.find(item => item.key === dialogRequest.artifact)
+    if (section) openRunRecordSection(dialogRequest.runId, section.key, section.label)
+  }, taskQuery.error ?? selectedRunQuery.error)
+
   return (<ProjectAccessScope resourceError={taskQuery.error} projectId={task?.projectId ?? ''}>{personalLlm.dialog}{(
     <div className="workbench-page ai-testing-page tp-list-surface ai-task-detail-page tp-surface">
       <div className="workbench-tabs">
+      {!dialogRequest && <>
+
         {taskQuery.error ? <Alert showIcon type="error" title={getErrorMessage(taskQuery.error)} /> : null}
         {runsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(runsQuery.error)} /> : null}
 
@@ -1276,6 +1288,7 @@ export function FunctionalCaseGenerateTaskDetailPage() {
         ) : (
           <Alert showIcon type="warning" title="未找到对应任务" />
         )}
+      </>}
 
         <FunctionalCaseGenerateTaskDrawer
           title="编辑功能用例生成任务"

@@ -14,7 +14,6 @@ from testing_agent.models.bug_activity import BugActivity
 from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
 from testing_agent.models.bug_zentao_push import BugZentaoPush
 from testing_agent.schemas.integration_job import IntegrationRemoteResult
-from testing_agent.services.service_instance import instance_key
 from testing_agent.services.bug_zentao_description import (
     canonical,
     native_image_url,
@@ -220,11 +219,7 @@ class IntegrationBugSteps:
                 "未知正文不得重复写入，只有已证实的旧图片编码错误允许一次修复",
             )
         else:
-            baseline = frozen["expectedSteps"] or row.payload_json.get("steps", "")
-            require(
-                canonical(before, instance) == canonical(baseline, instance),
-                "禅道描述已被修改，不能覆盖",
-            )
+            # 正文漂移按平台内容覆盖禅道（ADR 0006 账本机制不变），覆盖事实由 Worker 记录。
             require(
                 (canonical(before, instance) == canonical(desired, instance))
                 == (body.decision == "noop"),
@@ -306,6 +301,7 @@ class IntegrationBugSteps:
                 "instanceUrl": snapshot["target"]["instanceUrl"],
                 "actorUserId": job.actor_user_id,
                 "repairAttempted": snapshot["description"]["previousStatus"] == "unknown",
+                "overwrote": data.get("overwrote", {}),
             }
 
     async def apply(self, job, step, evidence):

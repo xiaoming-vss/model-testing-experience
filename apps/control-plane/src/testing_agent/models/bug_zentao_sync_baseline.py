@@ -41,7 +41,6 @@ class BugZentaoSyncBaseline(Base):
     operation_id: Mapped[str] = mapped_column(
         String(64), comment="本轮确认应用的操作标识，用于结果核对与去重"
     )
-    applied_by: Mapped[str] = mapped_column(String(64), comment="确认应用的操作人用户业务标识")
     applied_at: Mapped[datetime] = mapped_column(DateTime, comment="基线确认应用时间（UTC）")
     created_at: Mapped[CreatedAt] = mapped_column(comment="记录创建时间（UTC）")
     updated_at: Mapped[UpdatedAt] = mapped_column(comment="记录最后更新时间（UTC）")

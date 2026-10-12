@@ -258,6 +258,8 @@ export function GitlabBindingModal({
   return (
     <Modal
       width={760}
+      mask={{ closable: false }}
+      centered
       className="gitlab-binding-modal"
       title={
         <Space size={8}>

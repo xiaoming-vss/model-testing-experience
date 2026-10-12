@@ -176,9 +176,24 @@ def native_image_url(file, instance, remote_bug_id):
     return urljoin(instance.rstrip("/") + "/", relative)
 
 
-def description_summary(bug: Bug, push: BugZentaoPush) -> dict[str, str]:
+def description_summary(
+    bug: Bug,
+    push: BugZentaoPush,
+    *,
+    imported_local_digest: str | None = None,
+) -> dict[str, str]:
+    """推送轨道的描述同步状态摘要。
+
+    导入来源的 Bug 另看导入基线：图片随拉取管线应用后即写基线，本地正文
+    与基线一致就是完成，不套用推送方向的待同步判断，避免导入成功仍误报
+    "尚未同步"。基线缺失说明图片确未补齐，补救动作是从禅道同步而非推送。
+    """
     state = push.description_status
     snapshot = push.description_sync_json or {}
+    imported = getattr(push, "source", "push") == "import"
+    if imported and imported_local_digest is not None:
+        if imported_local_digest == source_hash(bug.description_html):
+            return {"description_status": "succeeded"}
     if state == "none":
         state = "pending" if extract_file_ids(bug.description_html) else "none"
     elif state == "preparing":
@@ -195,12 +210,15 @@ def description_summary(bug: Bug, push: BugZentaoPush) -> dict[str, str]:
         state = "pending"
     fields = {"description_status": state}
     if state not in {"none", "succeeded"}:
-        message = {
-            "pending": "Bug 已创建，正文图片尚未同步，可再次推送补齐",
-            "syncing": "Bug 已创建，正文图片正在同步，请稍后刷新",
-            "failed": "Bug 已创建，正文图片同步失败，可再次推送",
-            "unknown": "Bug 已创建，正文图片结果待核对，再次推送仅核对描述结果",
-        }[state]
+        if imported and imported_local_digest is None and state == "pending":
+            message = "Bug 已创建，正文图片未全部从禅道补齐，可再次从禅道同步"
+        else:
+            message = {
+                "pending": "Bug 已创建，正文图片尚未同步，可再次推送补齐",
+                "syncing": "Bug 已创建，正文图片正在同步，请稍后刷新",
+                "failed": "Bug 已创建，正文图片同步失败，可再次推送",
+                "unknown": "Bug 已创建，正文图片结果待核对，再次推送仅核对描述结果",
+            }[state]
         if state in {"failed", "unknown"} and snapshot.get("errorMessage"):
             message += "；" + snapshot["errorMessage"]
         fields["error_message"] = message

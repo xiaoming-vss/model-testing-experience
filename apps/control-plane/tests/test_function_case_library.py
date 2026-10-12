@@ -231,3 +231,18 @@ def test_project_suite_list_covers_every_requirement_with_case_counts(api):
         headers=owner,
     ).json()["data"]
     assert [item["suiteId"] for item in filtered["items"]] == [suite_b]
+
+
+def test_library_priority_filter_matches_numeric_and_prefixed_values(api):
+    _, owner = account(api, "priority-compat")
+    pid = project(api, owner)
+    sprint_id = make_sprint(api, owner, pid, "迭代")
+    requirement_id = make_requirement(api, owner, sprint_id, "需求")
+    suite_id = make_suite(api, owner, requirement_id, "测试集")
+    for priority in ("1", "P1", "2", "P2"):
+        make_case(api, owner, suite_id, title=f"优先级 {priority}", priority=priority)
+    for priority in ("1", "P1"):
+        data = list_library(api, owner, pid, priority=priority, pageSize=1)
+        assert data["total"] == 2
+        assert len(data["items"]) == 1
+        assert data["items"][0]["priority"] in ("1", "P1")

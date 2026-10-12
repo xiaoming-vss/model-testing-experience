@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from test_integration_bug_api import api as api
 from test_integration_bug_api import claim, rows, submit
@@ -24,6 +24,7 @@ from testing_agent.models import Base
 from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
 from testing_agent.models.bug_zentao_push import BugZentaoPush
 from testing_agent.models.integration_job import (
+    IntegrationClaimReceipt,
     IntegrationJob,
     IntegrationJobStep,
     IntegrationRuntime,
@@ -79,7 +80,6 @@ async def old_job(session, key, *, state="succeeded", days=100, step_state=None)
         status=step_state or state,
         input_json={"payload": {"steps": "<p>old content</p>"}},
         operation_id="op-" + key,
-        input_digest=digest("old-input"),
         prepare_request_id="prepare-" + key,
         intent_worker_id="worker-1",
         intent_generation=1,
@@ -101,16 +101,20 @@ async def test_compaction_is_bounded_keeps_original_identity_and_reports_backlog
     async with history() as session:
         jobs = [await old_job(session, str(n)) for n in range(3)]
         await session.commit()
-        assert await compact(session, maintenance_batch_size=2) == {"compacted": 2, "backlog": 1}
+        assert await compact(session, maintenance_batch_size=2) == {
+            "compacted": 2,
+            "backlog": 1,
+            "prunedReceipts": 0,
+        }
         assert [job.archived_at is not None for job, _ in jobs] == [True, True, False]
         assert jobs[0][0].snapshot_json == {"clientRequest": digest("0")}
         assert jobs[0][1].input_json == {}
         assert jobs[0][1].operation_id == "op-0"
         assert jobs[0][1].receipts_json[0]["response"] == {"ok": True}
         await session.commit()
-        assert await compact(session) == {"compacted": 1, "backlog": 0}
+        assert await compact(session) == {"compacted": 1, "backlog": 0, "prunedReceipts": 0}
         await session.commit()
-        assert await compact(session) == {"compacted": 0, "backlog": 0}
+        assert await compact(session) == {"compacted": 0, "backlog": 0, "prunedReceipts": 0}
 
 
 @pytest.mark.parametrize("kind", ["push", "description", "fields", "attachment"])
@@ -151,7 +155,11 @@ async def test_current_domain_mapping_is_protected_without_starving_unreferenced
                 )
             )
         await session.commit()
-        assert await compact(session, maintenance_batch_size=1) == {"compacted": 1, "backlog": 0}
+        assert await compact(session, maintenance_batch_size=1) == {
+            "compacted": 1,
+            "backlog": 0,
+            "prunedReceipts": 0,
+        }
         assert job.archived_at is None
         assert step.input_json["payload"]["steps"] == "<p>old content</p>"
 
@@ -173,7 +181,7 @@ async def test_unresolved_and_quarantined_evidence_is_never_compacted(
         job, step = await old_job(session, "protected", state=state, step_state=step_state)
         job.recovery_required = recovery
         await session.commit()
-        assert await compact(session) == {"compacted": 0, "backlog": 0}
+        assert await compact(session) == {"compacted": 0, "backlog": 0, "prunedReceipts": 0}
         assert job.archived_at is None
         assert step.input_json
 
@@ -306,3 +314,50 @@ def test_restore_requires_rotated_credentials_generation_and_disabled_gates(chan
         settings = replace(settings, integration_execution=replace(execution, **fields[change]))
     with pytest.raises(ValueError):
         validate_restore_execution(settings, manifest)
+
+
+async def add_receipt(session, key, *, days=0, job_id=None):
+    session.add(
+        IntegrationClaimReceipt(
+            claim_key=key,
+            request_id=key,
+            request_digest=digest(key),
+            job_id=job_id,
+            response_json={"job": None},
+            created_at=NOW - timedelta(days=days),
+        )
+    )
+    await session.flush()
+
+
+async def test_claim_receipts_pruned_by_window_or_archived_job(history):
+    async with history() as session:
+        await old_job(session, "old-job")
+        await add_receipt(session, "fresh", days=0)
+        await add_receipt(session, "stale", days=20)
+        await add_receipt(session, "of-old-job", days=0, job_id="old-job")
+        await session.commit()
+        result = await compact(session)
+        assert result == {
+            "compacted": 1,
+            "backlog": 0,
+            "prunedReceipts": 2,
+        }
+        keys = set(await session.scalars(select(IntegrationClaimReceipt.claim_key)))
+        assert keys == {"fresh"}
+        # 窗口内的回执继续承担领取重放保护。
+        again = await compact(session)
+        assert again == {"compacted": 0, "backlog": 0, "prunedReceipts": 0}
+        assert set(await session.scalars(select(IntegrationClaimReceipt.claim_key))) == {"fresh"}
+
+
+async def test_claim_receipts_prune_is_bounded(history):
+    async with history() as session:
+        for index in range(3):
+            await add_receipt(session, f"stale-{index}", days=20)
+        await session.commit()
+        result = await compact(session, maintenance_batch_size=2)
+        assert result["prunedReceipts"] == 2
+        result = await compact(session, maintenance_batch_size=2)
+        assert result["prunedReceipts"] == 1
+        assert await session.scalar(select(func.count()).select_from(IntegrationClaimReceipt)) == 0

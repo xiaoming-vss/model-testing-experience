@@ -61,30 +61,9 @@ class BugDetailContext(BaseModel):
 
 
 class SprintDailyMetricRequest(BaseModel):
+    """触发快照重算的可选触发来源；指标值一律由服务端按本地数据重算。"""
+
     connection_id: str | None = None
-    function_case_total: int | None = Field(default=None)
-    function_case_executed: int | None = Field(default=None)
-    function_case_pending: int | None = Field(default=None)
-    function_case_success: int | None = Field(default=None)
-    function_case_failed: int | None = Field(default=None)
-    api_case_total: int | None = Field(default=None)
-    api_case_executed: int | None = Field(default=None)
-    api_case_pending: int | None = Field(default=None)
-    api_case_success: int | None = Field(default=None)
-    api_case_failed: int | None = Field(default=None)
-    ui_case_total: int | None = Field(default=None)
-    ui_case_executed: int | None = Field(default=None)
-    ui_case_pending: int | None = Field(default=None)
-    ui_case_success: int | None = Field(default=None)
-    ui_case_failed: int | None = Field(default=None)
-    bug_total: int | None = Field(default=None)
-    bug_resolved: int | None = Field(default=None)
-    bug_closed: int | None = Field(default=None)
-    bug_unresolved: int | None = Field(default=None)
-    bug_fatal: int | None = Field(default=None)
-    bug_serious: int | None = Field(default=None)
-    bug_normal: int | None = Field(default=None)
-    bug_suggestion: int | None = Field(default=None)
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 

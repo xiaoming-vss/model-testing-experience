@@ -122,6 +122,9 @@
   --button-hover-bg: var(--gh-raised);
   --button-hover-border: var(--gh-muted);
   --button-active-bg: var(--gh-surface);
+  /* Quiet text/icon buttons hover with a light wash so the state reads on any dark surface. */
+  --button-quiet-hover-bg: rgba(230, 237, 243, 0.08);
+  --button-quiet-active-bg: rgba(230, 237, 243, 0.14);
   --button-primary-text: var(--gh-on-emphasis);
   --button-link-text: var(--gh-blue);
   --button-primary-bg: var(--gh-primary-bg);

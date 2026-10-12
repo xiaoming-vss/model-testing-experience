@@ -84,6 +84,15 @@ function RequirementArtifactRenderer({ content, section, onSourceReference, expa
     }
   }
   collect(artifact)
+  // 流程步骤自身没有名称，把步骤 ID 翻译成其「对应操作」名，供下一节点等引用显示。
+  for (const flow of (Array.isArray(artifact.businessFlows) ? artifact.businessFlows : []).filter(record)) {
+    for (const step of (Array.isArray(flow.steps) ? flow.steps : []).filter(record)) {
+      if (typeof step.id === 'string' && step.name == null && step.title == null) {
+        const operationName = names.get(String(step.operationId ?? ''))
+        if (operationName) names.set(step.id, operationName)
+      }
+    }
+  }
   function renderSource(ref: RecordValue, index: number) {
     const label = `${sources.find(source => source.id === ref.sourceId)?.name || String(ref.sourceId)} · ${String(ref.locator)}`
     return <Tooltip key={index} title={ref.excerpt ? String(ref.excerpt) : undefined}>
@@ -95,11 +104,11 @@ function RequirementArtifactRenderer({ content, section, onSourceReference, expa
   function displayName(item: RecordValue, key: string, index: number) {
     const unwrap = (value: unknown) => record(value) && 'value' in value ? value.value : value
     const preferred = [item.name, item.title, item.question, unwrap(item.label), unwrap(item.action),
-      unwrap(item.fact), unwrap(item.value), unwrap(item.path), names.get(String(item.operationId || '')), item.text]
+      unwrap(item.fact), unwrap(item.value), unwrap(item.path), unwrap(item.condition), names.get(String(item.operationId || '')), item.text]
       .find(value => value !== null && value !== undefined && value !== '')
     return preferred !== undefined ? String(preferred).slice(0, 80) : `${labels[key] || '条目'} ${index + 1}`
   }
-  function render(value: unknown, key = ''): ReactNode {
+  function render(value: unknown, key = '', expand: boolean = expandCollections): ReactNode {
     if (value == null) return <Typography.Text type="secondary">未明确</Typography.Text>
     if (typeof value === 'boolean') return value ? '是' : '否'
     if (typeof value !== 'object') {
@@ -119,14 +128,14 @@ function RequirementArtifactRenderer({ content, section, onSourceReference, expa
       if (items.every(item => record(item) && 'confirmationStatus' in item)) {
         return <Space orientation="vertical" size={8}>{items.map((item, index) => <div key={index}>{render(item)}</div>)}</Space>
       }
-      if (expandCollections) return <Space orientation="vertical" size="middle" style={{ width: '100%' }}>{items.map((item, index) => <section key={record(item) && typeof item.id === 'string' ? item.id : index} style={{ width: '100%' }}>
+      if (expand) return <Space orientation="vertical" size="middle" style={{ width: '100%' }}>{items.map((item, index) => <section key={record(item) && typeof item.id === 'string' ? item.id : index} style={{ width: '100%' }}>
         <Typography.Text strong>{record(item) ? displayName(item, key, index) : String(index + 1)}</Typography.Text>
         {render(item)}
       </section>)}</Space>
       return <Collapse ghost items={items.map((item, index) => ({
         key: record(item) && typeof item.id === 'string' ? item.id : String(index),
         label: record(item) ? displayName(item, key, index) : `${index + 1}`,
-        children: render(item),
+        children: render(item, key),
       }))} />
     }
     const item = value as RecordValue
@@ -145,6 +154,8 @@ function RequirementArtifactRenderer({ content, section, onSourceReference, expa
     if (key === 'table') return <MaterialTable value={item} />
     return <Descriptions column={1} size="small" items={Object.entries(item)
       .filter(([field]) => !['schemaVersion', 'artifactType', 'id'].includes(field))
+      // 操作内的交互细节统一由「UI 交互」章节读取，避免同一份控件记录重复展示。
+      .filter(([field]) => !(key === 'operations' && field === 'interaction'))
       .filter(([field, child]) => field !== 'answer' || child != null)
       .filter(([field, child]) => field !== 'relatedQuestionIds' || (Array.isArray(child) && child.some(id => pendingQuestionIds.has(String(id)))))
       .filter(([field]) => {
@@ -156,11 +167,36 @@ function RequirementArtifactRenderer({ content, section, onSourceReference, expa
       })
       .map(([field, child]) => ({ key: field, label: labels[field] || field, children: render(child, field) }))} />
   }
+  const moduleItems = Array.isArray(artifact.modules) ? artifact.modules.filter(record) : []
+  /** Dedicated UI-interaction reading: one collapsed entry per operation; controls stay collapsed behind their own items. */
+  function renderUiInteractionSection(): ReactNode {
+    const entries = moduleItems.flatMap(module => (Array.isArray(module.operations) ? module.operations : []).filter(record).flatMap(operation => {
+      if (!record(operation.interaction)) return []
+      return [{ module, operation, interaction: operation.interaction }]
+    }))
+    return <section key="ui-interactions" style={{ width: '100%' }}>
+      <Typography.Title level={5}>UI 交互</Typography.Title>
+      {entries.length ? <Collapse ghost items={entries.map(({ module, operation, interaction }) => {
+        const controls = Array.isArray(interaction.controls) ? interaction.controls : []
+        const behavior = Object.fromEntries(Object.entries(interaction).filter(([field]) => !['id', 'controls'].includes(field)))
+        return {
+          key: `${String(module.id)}/${String(operation.id)}`,
+          label: `${displayName(module, 'modules', 0)} / ${displayName(operation, 'operations', 0)}`,
+          children: <>
+            {controls.length ? render(controls, 'controls') : <Typography.Text type="secondary">暂无控件记录</Typography.Text>}
+            {Object.keys(behavior).length ? render(behavior) : null}
+          </>,
+        }
+      })} /> : <Typography.Text type="secondary">暂无已记录的操作交互</Typography.Text>}
+    </section>
+  }
   if (section) return <>{render(section.value, section.field)}</>
   return <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
     <Typography.Title level={4}>{String(artifact.title || artifact.documentTitle || '需求材料')}</Typography.Title>
-    {Object.entries(artifact).filter(([key]) => !['schemaVersion', 'artifactType', 'title', 'documentTitle'].includes(key) && (key !== 'questions' || pendingQuestions.length > 0)).map(([key, value]) =>
-      <section key={key} style={{ width: '100%' }}><Typography.Title level={5}>{labels[key] || key}</Typography.Title>{render(value, key)}</section>)}
+    {Object.entries(artifact).filter(([key]) => !['schemaVersion', 'artifactType', 'title', 'documentTitle'].includes(key) && (key !== 'questions' || pendingQuestions.length > 0)).flatMap(([key, value]) => {
+      const node = <section key={key} style={{ width: '100%' }}><Typography.Title level={5}>{labels[key] || key}</Typography.Title>{render(value, key)}</section>
+      return key === 'modules' && moduleItems.length ? [node, renderUiInteractionSection()] : [node]
+    })}
   </Space>
 }
 

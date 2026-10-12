@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from testing_agent.core.errors import (
@@ -169,13 +170,28 @@ class RequirementService:
             requirement.requirement_id,
             purpose="requirement",
         )
-        expected = "docx" if row.filename.lower().endswith(".docx") else "text"
+        suffix = row.filename.rsplit(".", 1)[-1].lower()
+        expected = {"docx": "docx", "html": "richtext"}.get(suffix, "text")
         if requirement.document_type != expected:
             raise ErrBadRequest()
+        if expected == "richtext":
+            from testing_agent.domain.rich_text import extract_file_ids
+
+            content = await asyncio.to_thread(self.files.storage.read_text, row.object_key)
+            for image_id in extract_file_ids(content):
+                image = await self.files.attach(
+                    user_id,
+                    image_id,
+                    sprint.project_id,
+                    "requirement",
+                    requirement.requirement_id,
+                    purpose="attachment",
+                )
+                if image.content_type not in {"image/png", "image/jpeg"}:
+                    raise AppError(400, "需求图片仅支持 PNG 或 JPEG", 400)
         requirement.document_file_id = row.file_id
         requirement.document_filename = row.filename
         requirement.document_hash = row.sha256
-        requirement.document_storage_path = ""
         requirement.document_content = ""
         requirement.document_download_url = (
             f"/v1/requirements/{requirement.requirement_id}/download"

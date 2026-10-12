@@ -307,7 +307,7 @@ export const UiTestSuiteSection = forwardRef<
       },
     },
     {
-      title: '操作',
+      title: <span className="tp-actions-col-title" style={{ width: 92 }}>操作</span>,
       key: 'actions',
       width: 138,
       align: 'right',
@@ -344,8 +344,8 @@ export const UiTestSuiteSection = forwardRef<
     <div className="ui-test-suite-section">
       {suitesQuery.error ? <Alert showIcon type="error" title={getErrorMessage(suitesQuery.error)} /> : null}
 
-      <div className="ui-suite-list-table-card">
-        <div className="table-body-scroll sprint-card-scroll ui-suite-list-table-scroll">
+      <div className="ui-suite-list-table-card tp-list-body">
+        <div className="table-body-scroll sprint-card-scroll ui-suite-list-table-scroll tp-list-scroll">
           {suitesQuery.isLoading ? (
             <div className="sprint-card-loading">
               <Empty description="UI测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />

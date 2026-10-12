@@ -250,9 +250,16 @@ class AiGenerateTaskService:
                 raise ErrBadRequest()
 
     async def owned_task(
-        self, user_id: str, task_id: str, kind: str | None = None, *, action: ProjectAction = "read"
+        self,
+        user_id: str,
+        task_id: str,
+        kind: str | None = None,
+        *,
+        action: ProjectAction = "read",
+        current_read: bool = False,
     ) -> AiGenerateTask:
-        task = await self.repository.get_task(task_id)
+        getter = self.repository.get_task_for_update if current_read else self.repository.get_task
+        task = await getter(task_id)
         if task is None:
             raise ErrNotFound()
         if kind and task.task_type != task_type_for(kind):
@@ -281,7 +288,15 @@ class AiGenerateTaskService:
         run._actor = user_id
         return run
 
-    async def create(self, kind: str, project_id: str, body: dict[str, Any], user_id: str) -> dict:
+    async def create(
+        self,
+        kind: str,
+        project_id: str,
+        body: dict[str, Any],
+        user_id: str,
+        *,
+        task_id: str | None = None,
+    ) -> dict:
         await self.ensure_project_access(user_id, project_id, action="write")
         sprint_id = str(body.get("sprintId") or body.get("sprint_id") or "")
         requirement_id = str(body.get("requirementId") or body.get("requirement_id") or "")
@@ -317,7 +332,7 @@ class AiGenerateTaskService:
             )
         )
         task = AiGenerateTask(
-            task_id=new_id(),
+            task_id=task_id or new_id(),
             task_type=task_type_for(kind),
             name=str(
                 body.get("name")
@@ -402,8 +417,18 @@ class AiGenerateTaskService:
         )
         return await workflow.upload_source_archive(task_id, file_id, user_id)
 
-    async def update(self, kind: str, task_id: str, body: dict[str, Any], user_id: str) -> dict:
-        task = await self.owned_task(user_id, task_id, kind, action="write")
+    async def update(
+        self,
+        kind: str,
+        task_id: str,
+        body: dict[str, Any],
+        user_id: str,
+        *,
+        current_read: bool = False,
+    ) -> dict:
+        task = await self.owned_task(
+            user_id, task_id, kind, action="write", current_read=current_read
+        )
         if kind == "ui":
             requirement_key = "requirementId" if "requirementId" in body else "requirement_id"
             if requirement_key in body:
@@ -503,7 +528,15 @@ class AiGenerateTaskService:
         )
         return await workflow.export_test_report_pdf(run_id, user_id)
 
-    async def run(self, kind: str, task_id: str, body: dict[str, Any] | None, user_id: str) -> dict:
+    async def run(
+        self,
+        kind: str,
+        task_id: str,
+        body: dict[str, Any] | None,
+        user_id: str,
+        *,
+        request_id: str | None = None,
+    ) -> dict:
         task = await self.owned_task(user_id, task_id, kind, action="read")
         # Remote snapshot preparation must not hold project/run locks.
         project = await self.repository.get_project(task.project_id)
@@ -540,7 +573,13 @@ class AiGenerateTaskService:
         await require_personal_connection(
             self.repository.session, user_id, "llm", llm_connection_id, task.project_id
         )
-        run_id = new_id()
+        if request_id:
+            existing = await self.repository.get_run(request_id)
+            if existing is not None:
+                if existing.task_id != task_id or existing.trigger_user_id != user_id:
+                    raise ErrBadRequest()
+                return dump_run(existing)
+        run_id = request_id or new_id()
         worker_task_id = new_id()
         run_instruction = body.get("instruction")
         if kind == "test_report":
@@ -646,6 +685,16 @@ class AiGenerateTaskService:
             self.repository.session, user_id, "llm", llm_connection_id, task.project_id
         )
         await self.validate_task_scope(current_task)
+        if request_id:
+            # Task lock serializes same-request inserts. The unique run_id remains
+            # the database backstop. A response-loss retry returns the same run.
+            existing = await self.repository.get_run_for_update(request_id)
+            if existing is not None:
+                if existing.task_id != task_id or existing.trigger_user_id != user_id:
+                    raise ErrBadRequest()
+                return dump_run(existing)
+            if await self.repository.has_active_run(task_id):
+                raise ErrAiGenerateTaskRunRunning()
         self.repository.add_all([run, worker_task])
         await self.repository.commit()
         await self.repository.refresh(run)

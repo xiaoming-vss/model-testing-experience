@@ -180,3 +180,7 @@ UI 文件授权路由挂在 `/internal/ui-worker/tasks/{taskId}/files` 下。申
 ## 联合备份与本机验收
 
 新增 `python -m testing_agent.cli.storage_backup backup|verify|restore`，在维护窗口协调 MySQL 表与 S3 对象快照，拒绝覆盖在线源或非空恢复目标。具体步骤、保留方式与部署门槛见[运维说明](storage-operations.md)；本次实际业务与剩余门槛见[验收记录](s3-p1-acceptance-2026-10-03.md)。
+
+## 需求 HTML 正文
+
+`requirement` 用途新增 HTML，完成上传校验后清理正文并以清理后的字节更新大小与哈希，再标记 ready。需求图文正文及图片关联约定见[需求富文本正文](requirement-rich-text.md)；AI 分析适配暂缓。

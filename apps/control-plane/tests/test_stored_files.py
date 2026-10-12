@@ -369,7 +369,6 @@ async def test_source_archive_s3_binding_replacement_and_transaction_rollback(fi
         identifiers.append(row.file_id)
         result = await manager.upload_source_archive("task", row.file_id, "owner")
         assert result["sourceArchive"]["fileId"] == row.file_id
-        assert (await repo.get_source_archive("task")).storage_path == ""
     for identifier in identifiers:
         row = await files.get(identifier)
         assert row.status == "attached"

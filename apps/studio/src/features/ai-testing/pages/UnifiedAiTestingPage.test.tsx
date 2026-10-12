@@ -2,7 +2,7 @@ import { seedOwnerProject } from '@/test/projectAccess'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/shared/api/files', () => ({
@@ -41,7 +41,7 @@ function installFetchHandler(onRequest?: (url: URL, init?: RequestInit) => Respo
   })
 }
 
-function renderPage() {
+function renderPage(path = '/ai-testing/tasks') {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -53,23 +53,17 @@ function renderPage() {
   render(
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/ai-testing/tasks']}>
+        <MemoryRouter initialEntries={[path]}>
           <AppSidebar />
           <Routes>
+            <Route path="/projects" element={<div>需求列表入口</div>} />
             <Route path="/ai-testing" element={<UnifiedAiTestingPage />} />
             <Route path="/ai-testing/tasks" element={<UnifiedAiTestingPage />} />
-            <Route path="/ai-testing/ui-tasks/:taskId" element={<UiDetailProbe />} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
     </ThemeProvider>,
   )
-}
-
-function UiDetailProbe() {
-  const location = useLocation()
-  const state = location.state as { pendingSourceArchive?: File; pendingSourceArchiveError?: string } | null
-  return <div>UI 任务详情 {state?.pendingSourceArchive?.name} {state?.pendingSourceArchiveError}</div>
 }
 
 beforeEach(() => {
@@ -82,42 +76,27 @@ afterEach(() => {
   useWorkbenchStore.setState({ activeProjectId: undefined })
 })
 
-describe('统一任务列表中的 UI 用例生成', () => {
-  it('刷新按钮只刷新当前任务类型列表', async () => {
-    let apiTaskRequests = 0
-    let functionalTaskRequests = 0
+describe('代码风险分析列表', () => {
+  it('默认加载和刷新都只请求代码风险分析列表', async () => {
+    const requests: string[] = []
     installFetchHandler((url) => {
-      if (url.pathname === '/v1/projects/project-1/api-case-generate-tasks') {
-        apiTaskRequests += 1
-        return jsonResponse({ items: [], total: 0 })
-      }
-      if (url.pathname === '/v1/projects/project-1/function-case-generate-tasks') {
-        functionalTaskRequests += 1
-        return jsonResponse({ items: [], total: 0 })
-      }
+      requests.push(url.pathname)
     })
     const user = userEvent.setup()
-
     renderPage()
-
-    await waitFor(() => {
-      expect(apiTaskRequests).toBe(1)
-      expect(functionalTaskRequests).toBe(1)
-    })
-    await user.click(screen.getByRole('link', { name: 'API测试', current: false }))
+    const endpoint = '/v1/projects/project-1/code-risk-analysis-tasks'
+    await waitFor(() => expect(requests.filter(path => path === endpoint)).toHaveLength(1))
     const refreshButton = screen.getByRole('button', { name: '刷新当前任务列表' })
     await waitFor(() => expect(refreshButton).not.toHaveClass('ant-btn-loading'))
     await user.click(refreshButton)
-
-    await waitFor(() => expect(apiTaskRequests).toBe(2))
-    await waitFor(() => expect(refreshButton).not.toHaveClass('ant-btn-loading'))
-    expect(functionalTaskRequests).toBe(1)
+    await waitFor(() => expect(requests.filter(path => path === endpoint)).toHaveLength(2))
+    expect(requests.some(path => /case-generate-tasks|requirement-analysis-tasks/.test(path))).toBe(false)
   })
 
   it('任务列表展示任务更新时间而不是最近运行时间', async () => {
     const updatedAt = '2026-08-05T06:47:06.000Z'
     installFetchHandler((url) => {
-      if (url.pathname === '/v1/projects/project-1/function-case-generate-tasks') {
+      if (url.pathname === '/v1/projects/project-1/code-risk-analysis-tasks') {
         return jsonResponse({
           items: [{
             taskId: 'functional-task-1',
@@ -135,80 +114,30 @@ describe('统一任务列表中的 UI 用例生成', () => {
       }
     })
 
-    const user = userEvent.setup()
-
     renderPage()
-
-    await user.click(await screen.findByText('功能测试'))
 
     expect(await screen.findByRole('columnheader', { name: '最近更新' })).toBeInTheDocument()
     expect(screen.queryByRole('columnheader', { name: '最近运行' })).not.toBeInTheDocument()
     expect(await screen.findByText('2026/8/5 14:47:06')).toBeInTheDocument()
   })
 
-  it('按任务类型 tab 过滤任务列表并显示数量', async () => {
-    installFetchHandler((url) => {
-      if (url.pathname === '/v1/projects/project-1/api-case-generate-tasks') {
-        return jsonResponse({
-          items: [
-            {
-              taskId: 'api-task-1',
-              taskType: 'api_case_generate',
-              name: 'API 登录接口',
-              projectId: 'project-1',
-              sprintId: 'sprint-1',
-              requirementId: 'requirement-1',
-              sourceType: 'openapi',
-              sourceContent: '{}',
-              instruction: '',
-              createdAt: '2026-08-01T01:00:00.000Z',
-              updatedAt: '2026-08-01T02:00:00.000Z',
-            },
-          ],
-          total: 1,
-        })
-      }
-      if (url.pathname === '/v1/projects/project-1/function-case-generate-tasks') {
-        return jsonResponse({
-          items: [
-            {
-              taskId: 'functional-task-1',
-              taskType: 'functional_case_generate',
-              name: 'EGO本地Server',
-              projectId: 'project-1',
-              sprintId: 'sprint-1',
-              requirementId: 'requirement-1',
-              instruction: '生成功能测试',
-              createdAt: '2026-08-01T01:00:00.000Z',
-              updatedAt: '2026-08-02T06:47:06.000Z',
-            },
-          ],
-          total: 1,
-        })
+  it.each(['', 'analysis', 'functional', 'api', 'ui', 'unknown', 'codeRisk'])('类型 %s 的链接只显示代码风险分析', async kind => {
+    installFetchHandler(url => {
+      if (url.pathname === '/v1/projects/project-1/code-risk-analysis-tasks') {
+        return jsonResponse({ items: [{ taskId: 'risk-1', name: '代码分析任务', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1' }], total: 1 })
       }
     })
-    const user = userEvent.setup()
-
-    renderPage()
-
-    // 默认选中第一个「需求分析」侧栏入口，再切换到 API测试。
-    expect(await screen.findByRole('link', { name: '需求分析' })).toHaveAttribute('aria-current', 'page')
-    await user.click(screen.getByRole('link', { name: 'API测试', current: false }))
-    expect(await screen.findByRole('link', { name: 'API测试', current: 'page' })).toBeInTheDocument()
-    expect(await screen.findByText('API 登录接口')).toBeInTheDocument()
-    expect(screen.queryByText('EGO本地Server')).not.toBeInTheDocument()
-
-    // 点侧栏入口切换类型，列表跟着换
-    await user.click(screen.getByText('功能测试'))
-
-    expect(await screen.findByRole('link', { name: '功能测试' })).toHaveAttribute('aria-current', 'page')
-    expect(await screen.findByText('EGO本地Server')).toBeInTheDocument()
-    expect(screen.queryByText('API 登录接口')).not.toBeInTheDocument()
+    renderPage(`/ai-testing?kind=${kind}`)
+    expect(await screen.findByText('代码分析任务')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '代码风险分析' })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: '任务类型' })).not.toBeInTheDocument()
+    // 代码风险分析已并入需求工作区 Tab，不再有侧边栏独立入口。
+    expect(screen.queryByRole('link', { name: '代码风险分析' })).not.toBeInTheDocument()
   })
 
   it('状态筛选按最新运行状态过滤，并给出各档计数', async () => {
     installFetchHandler((url) => {
-      if (url.pathname === '/v1/projects/project-1/api-case-generate-tasks') {
+      if (url.pathname === '/v1/projects/project-1/code-risk-analysis-tasks') {
         return jsonResponse({
           items: [
             { taskId: 'api-success', name: '成功的任务', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'openapi', sourceContent: '{}', instruction: '' },
@@ -217,18 +146,16 @@ describe('统一任务列表中的 UI 用例生成', () => {
           total: 2,
         })
       }
-      if (url.pathname === '/v1/api-case-generate-tasks/api-success/runs') {
+      if (url.pathname === '/v1/code-risk-analysis-tasks/api-success/runs') {
         return jsonResponse({ items: [{ runId: 'run-1', taskId: 'api-success', status: 'success', createdAt: '2026-08-01T03:00:00.000Z' }], total: 1 })
       }
-      if (url.pathname === '/v1/api-case-generate-tasks/api-review/runs') {
+      if (url.pathname === '/v1/code-risk-analysis-tasks/api-review/runs') {
         return jsonResponse({ items: [{ runId: 'run-2', taskId: 'api-review', status: 'waiting_review', createdAt: '2026-08-01T03:00:00.000Z' }], total: 1 })
       }
     })
     const user = userEvent.setup()
 
     renderPage()
-
-    await user.click(await screen.findByRole('link', { name: 'API测试' }))
 
     // 计数来自「本类型全部任务的运行记录」，不是当前页
     expect(await screen.findByRole('button', { name: /全部 \(2\)/ })).toBeInTheDocument()
@@ -244,7 +171,7 @@ describe('统一任务列表中的 UI 用例生成', () => {
 
   it('关键词搜索按任务名称与所属需求过滤', async () => {
     installFetchHandler((url) => {
-      if (url.pathname === '/v1/projects/project-1/api-case-generate-tasks') {
+      if (url.pathname === '/v1/projects/project-1/code-risk-analysis-tasks') {
         return jsonResponse({
           items: [
             { taskId: 'api-task-1', name: '登录接口用例', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'openapi', sourceContent: '{}', instruction: '' },
@@ -258,142 +185,18 @@ describe('统一任务列表中的 UI 用例生成', () => {
 
     renderPage()
 
-    await user.click(await screen.findByRole('link', { name: 'API测试' }))
     await user.type(await screen.findByPlaceholderText('搜索任务名称 / 所属需求'), '订单')
 
     expect(await screen.findByText('订单接口用例')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('登录接口用例')).not.toBeInTheDocument())
   })
 
-  it('创建 UI 任务后上传所选 ZIP 并进入详情', async () => {
-    const requests: Array<{ path: string; method: string; body?: unknown }> = []
-    installFetchHandler((url, init) => {
-      if (url.pathname === '/v1/projects/project-1/ui-case-generate-tasks' && init?.method === 'POST') {
-        requests.push({ path: url.pathname, method: init.method, body: JSON.parse(String(init.body)) })
-        return jsonResponse({
-          taskId: 'ui-task-1',
-          taskType: 'ui_case_generate',
-          name: '登录模块 UI 用例生成',
-          projectId: 'project-1',
-          sprintId: 'sprint-1',
-          requirementId: 'requirement-1',
-          sourceType: 'source_archive',
-          sourceArchive: null,
-          instruction: '覆盖表单校验',
-        })
-      }
-      if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-1/source-archive' && init?.method === 'PUT') {
-        requests.push({ path: url.pathname, method: init.method, body: init.body })
-        return jsonResponse({
-          taskId: 'ui-task-1',
-          sourceArchive: {
-            archiveId: 'archive-1',
-            filename: 'source.zip',
-            sizeBytes: 4,
-            sha256: 'abc123',
-            uploadedAt: '2026-08-02T08:00:00.000Z',
-          },
-        })
-      }
-    })
-    const user = userEvent.setup()
-
-    renderPage()
-
-    await user.click(screen.getByRole('link', { name: 'UI测试' }))
-    await user.click(await screen.findByRole('button', { name: /新建任务/ }))
-    expect(screen.queryByText('选择模板')).not.toBeInTheDocument()
-
-    await user.type(await screen.findByLabelText('任务名称'), '登录模块 UI 用例生成')
-    await user.click(screen.getByLabelText('所属需求'))
-    await user.click(await screen.findByText('登录需求'))
-    await user.upload(screen.getByLabelText('源码 ZIP'), new File(['zip'], 'source.zip', { type: 'application/zip' }))
-    await user.type(screen.getByLabelText('生成指令'), '覆盖表单校验')
-    await user.click(screen.getByRole('button', { name: '创建并上传' }))
-
-    await waitFor(() => expect(requests).toHaveLength(2))
-    expect(requests[0]).toEqual({
-      path: '/v1/projects/project-1/ui-case-generate-tasks',
-      method: 'POST',
-      body: {
-        name: '登录模块 UI 用例生成',
-        sprintId: 'sprint-1',
-        requirementId: 'requirement-1',
-        instruction: '覆盖表单校验',
-      },
-    })
-    expect(JSON.parse(String(requests[1].body))).toEqual({ fileId: 'source-file-1' })
-    expect(await screen.findByText('UI 任务详情')).toBeInTheDocument()
-  })
-
-  it('requirementId 和 ZIP 缺失时不创建任务', async () => {
-    const fetchSpy = installFetchHandler()
-    const user = userEvent.setup()
-    renderPage()
-
-    await user.click(screen.getByRole('link', { name: 'UI测试' }))
-    await user.click(await screen.findByRole('button', { name: /新建任务/ }))
-    expect(screen.queryByText('选择模板')).not.toBeInTheDocument()
-    await user.type(await screen.findByLabelText('任务名称'), '缺少来源的任务')
-    await user.click(screen.getByRole('button', { name: '创建并上传' }))
-
-    expect(await screen.findByText('请选择所属需求')).toBeInTheDocument()
-    expect(screen.getByText('请选择源码 ZIP')).toBeInTheDocument()
-    expect(fetchSpy.mock.calls.some(([input, init]) => String(input).includes('/ui-case-generate-tasks') && init?.method === 'POST')).toBe(false)
-  })
-
-  it('任务创建成功但上传失败时保留任务并进入详情重试', async () => {
-    let deleteRequested = false
-    installFetchHandler((url, init) => {
-      if (url.pathname === '/v1/projects/project-1/ui-case-generate-tasks' && init?.method === 'POST') {
-        return jsonResponse({ ...taskForUploadFailure, taskId: 'ui-task-retry' })
-      }
-      if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-retry/source-archive' && init?.method === 'PUT') {
-        return new Response(JSON.stringify({ code: 400, message: 'ZIP 已损坏', data: {} }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        })
-      }
-      if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-retry' && init?.method === 'DELETE') deleteRequested = true
-    })
-    const user = userEvent.setup()
-    renderPage()
-
-    await user.click(screen.getByRole('link', { name: 'UI测试' }))
-    await user.click(await screen.findByRole('button', { name: /新建任务/ }))
-    expect(screen.queryByText('选择模板')).not.toBeInTheDocument()
-    await user.type(await screen.findByLabelText('任务名称'), '待重试任务')
-    await user.click(screen.getByLabelText('所属需求'))
-    await user.click(await screen.findByText('登录需求'))
-    await user.upload(screen.getByLabelText('源码 ZIP'), new File(['broken'], 'broken.zip', { type: 'application/zip' }))
-    await user.click(screen.getByRole('button', { name: '创建并上传' }))
-
-    expect(await screen.findByText(/UI 任务详情 broken.zip ZIP 已损坏/)).toBeInTheDocument()
-    expect(deleteRequested).toBe(false)
-  })
 })
 
-const taskForUploadFailure = {
-  taskType: 'ui_case_generate',
-  name: '待重试任务',
-  projectId: 'project-1',
-  sprintId: 'sprint-1',
-  requirementId: 'requirement-1',
-  sourceType: 'source_archive',
-  sourceArchive: null,
-  instruction: '',
-}
-
-it.each([
-  ['功能测试', 'function-case-generate-tasks'],
-  ['API测试', 'api-case-generate-tasks'],
-  ['UI测试', 'ui-case-generate-tasks'],
-  ['代码风险分析', 'code-risk-analysis-tasks'],
-])('%s 列表运行使用当前项目加载模型授权', async (tab, resource) => {
+it('代码风险分析列表运行使用当前项目加载模型授权', async () => {
   let connectionPath = ''
-  let runBody: unknown
-  installFetchHandler((url, init) => {
-    if (url.pathname === `/v1/projects/project-1/${resource}`) {
+  installFetchHandler((url) => {
+    if (url.pathname === '/v1/projects/project-1/code-risk-analysis-tasks') {
       return jsonResponse({ items: [{ taskId: 'task-run-1', name: '可运行任务',
         projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1',
         sourceArchive: { fileName: 'source.zip' },
@@ -407,14 +210,10 @@ it.each([
       connectionPath = url.pathname
       return jsonResponse({ items: [{ connectionId: 'mine', name: '当前项目模型', status: 'active' }], total: 1 })
     }
-    if (url.pathname === `/v1/${resource}/task-run-1/run`) {
-      runBody = JSON.parse(String(init?.body))
-      return jsonResponse({ taskId: 'task-run-1', runId: 'run-1', status: 'pending' })
-    }
+
   })
   const user = userEvent.setup()
   renderPage()
-  await user.click(await screen.findByRole('link', { name: tab }))
   const runButton = await screen.findByRole('button', { name: '运行任务' })
   await waitFor(() => expect(runButton).toBeEnabled())
   await user.click(runButton)
@@ -422,46 +221,13 @@ it.each([
   await user.click(await screen.findByRole('radio', { name: '当前项目模型' }))
   expect(connectionPath).toContain('/projects/project-1/')
   expect(screen.getByRole('button', { name: '确认运行' })).toBeEnabled()
-  if (resource !== 'code-risk-analysis-tasks') {
-    await user.click(screen.getByRole('button', { name: '确认运行' }))
-    await waitFor(() => expect(runBody).toMatchObject({ connectionId: 'mine' }))
-  }
+
 })
 
-it.each(['', '   \n'])('功能测试列表有原文但无增强文本时禁止运行（%j）', async (documentContent) => {
-  let runRequested = false
-  installFetchHandler((url) => {
-    if (url.pathname === '/v1/projects/project-1/function-case-generate-tasks') {
-      return jsonResponse({ items: [{ taskId: 'task-run-1', name: '待生成任务', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1' }], total: 1 })
-    }
-    if (url.pathname === '/v1/sprints/sprint-1/requirements' || url.pathname === '/v1/requirements/requirement-1') {
-      const requirement = { requirementId: 'requirement-1', name: '需求', documentType: 'docx', documentFilename: '原文.docx', documentContent }
-      return jsonResponse(url.pathname.endsWith('/requirements') ? { items: [requirement], total: 1 } : requirement)
-    }
-    if (url.pathname.endsWith('/run')) runRequested = true
-  })
-  const user = userEvent.setup()
-  renderPage()
-  await user.click(await screen.findByText('功能测试'))
-  const button = await screen.findByRole('button', { name: '运行任务' })
-  await waitFor(() => expect(button).toBeEnabled())
-  await user.click(button)
-  expect(await screen.findByText('请先完成需求分析并导入增强文本，再生成功能用例')).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: '确认运行' })).not.toBeInTheDocument()
-  expect(runRequested).toBe(false)
-})
-
-it.each([
-  ['需求分析', '新建需求分析任务'],
-  ['功能测试', '新建功能用例生成任务'],
-  ['API测试', '新建 API 用例生成任务'],
-  ['代码风险分析', '新建代码风险分析任务'],
-])('从 %s 直接打开对应的新建表单', async (label, title) => {
+it('代码风险分析仍保留创建入口', async () => {
   installFetchHandler()
   const user = userEvent.setup()
   renderPage()
-  await user.click(screen.getByRole('link', { name: label }))
   await user.click(screen.getByRole('button', { name: /新建任务/ }))
-  expect(await screen.findByText(title)).toBeInTheDocument()
-  expect(screen.queryByText('选择模板')).not.toBeInTheDocument()
+  expect(await screen.findByText('新建代码风险分析任务')).toBeInTheDocument()
 })

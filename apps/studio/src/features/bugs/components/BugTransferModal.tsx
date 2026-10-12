@@ -40,6 +40,8 @@ export function BugTransferModal({
 
   return (
     <Modal
+      mask={{ closable: false }}
+      centered
       title="转派"
       open={Boolean(bug)}
       onCancel={onClose}

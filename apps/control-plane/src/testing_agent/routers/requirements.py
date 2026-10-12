@@ -12,8 +12,22 @@ from testing_agent.handlers.requirement import (
     list_requirements,
     update_requirement,
 )
+
+# Requirement-scoped UI keeps legacy task/detail URLs intact.
+from testing_agent.handlers.requirement_design import (
+    configure_requirement_design,
+    get_requirement_design,
+    list_requirement_design_runs,
+    start_requirement_design,
+)
+from testing_agent.schemas.ai_generate_task import (
+    AiGenerateRunHistoryResponse,
+    AiGenerateTaskResponse,
+    AiGenerateTaskRunResponse,
+)
 from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
 from testing_agent.schemas.requirement import RequirementListItemResponse, RequirementResponse
+from testing_agent.schemas.requirement_design import RequirementDesignResponse
 
 router = APIRouter()
 
@@ -46,3 +60,21 @@ router.get(
 router.delete("/requirements/{requirement_id}", response_model=ApiResponse[EmptyData])(
     delete_requirement
 )
+
+
+router.get(
+    "/requirements/{requirement_id}/design",
+    response_model=ApiResponse[RequirementDesignResponse],
+)(get_requirement_design)
+router.get(
+    "/requirements/{requirement_id}/design/{kind}/runs",
+    response_model=ApiResponse[AiGenerateRunHistoryResponse],
+)(list_requirement_design_runs)
+router.post(
+    "/requirements/{requirement_id}/design/{kind}/configuration",
+    response_model=ApiResponse[AiGenerateTaskResponse],
+)(configure_requirement_design)
+router.post(
+    "/requirements/{requirement_id}/design/{kind}/run",
+    response_model=ApiResponse[AiGenerateTaskRunResponse],
+)(start_requirement_design)

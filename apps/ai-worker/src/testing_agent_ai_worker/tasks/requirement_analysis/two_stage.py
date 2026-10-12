@@ -1,8 +1,8 @@
 """The version-2 requirement workflow: extraction review, then understanding."""
 
-import asyncio
 import json
 from datetime import datetime
+from pathlib import Path
 
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.requirement_artifacts import validate_artifact
@@ -10,6 +10,7 @@ from testing_agent_ai_worker.tasks.requirement_analysis.output import (
     build_config_json,
     build_result_summary_json,
 )
+from testing_agent_ai_worker.tasks.requirement_analysis.validation import generate_validated
 
 JSON_INSTRUCTION = (
     "workflowVersion=2，outputProfile=json。只返回符合本阶段 schema 的完整 JSON 对象。"
@@ -41,6 +42,7 @@ def execute_two_stage(
         raise ValueError("configJson 必须是对象")
     revision = str(config.get("revisionInstruction") or "").strip()
     body = {"workflowVersion": 2, "outputProfile": "json"}
+    media = []
     if stage == "extracting_text":
         if source_downloader is None:
             raise ValueError("requirement_analysis source_downloader is required")
@@ -52,6 +54,12 @@ def execute_two_stage(
                 workspace=workspace,
             )
         )
+        body["documentType"] = task.payload.document_type
+        if task.payload.document_type == "richtext":
+            body["images"] = source_downloader.download_images(
+                source=Path(body["sourcePath"]), task=task
+            )
+            media = [entry["sourcePath"] for entry in body["images"]]
         body["sourceName"] = task.payload.metadata.get("documentFilename") or "原始需求材料"
         file_id = task.payload.metadata.get("documentFileId")
         body["sourceLocation"] = (
@@ -84,19 +92,25 @@ def execute_two_stage(
         raise ValueError(f"两阶段需求分析不支持阶段: {stage}")
     if revision:
         body["revisionInstruction"] = revision
-    output = skill_runner(
-        input_text=json.dumps(body, ensure_ascii=False),
-        session_key=task.nanobot_session_key,
-        skill_name=name,
-        config_path=config_path,
-        workspace=str(workspace),
-        extra_instruction="\n\n".join(
-            part for part in (task.payload.extra_instruction, JSON_INSTRUCTION) if part
-        ),
+    artifact = generate_validated(
+        kind=kind,
+        task=task,
+        stage=stage,
+        workspace=workspace,
+        generate=skill_runner,
+        report=progress_callback,
+        arguments={
+            **({"media": media} if media else {}),
+            "input_text": json.dumps(body, ensure_ascii=False),
+            "session_key": task.nanobot_session_key,
+            "skill_name": name,
+            "config_path": config_path,
+            "workspace": str(workspace),
+            "extra_instruction": "\n\n".join(
+                part for part in (task.payload.extra_instruction, JSON_INSTRUCTION) if part
+            ),
+        },
     )
-    if hasattr(output, "__await__"):
-        output = asyncio.run(output)
-    artifact = validate_artifact(output, kind)
     if stage == "extracting_text":
         config_json = build_config_json(first_step_output=artifact)
         progress_callback(

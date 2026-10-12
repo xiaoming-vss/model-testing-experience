@@ -14,7 +14,8 @@ const PRIORITY_TONES: Record<string, PriorityTone> = {
 }
 
 /** 认不出来的优先级按最弱的一档（P3 的灰）走。 */
-export function priorityTone(priority?: string): PriorityTone {
-  const key = priority?.trim().toUpperCase()
+export function priorityTone(priority?: string | number): PriorityTone {
+  const value = String(priority ?? '').trim().toUpperCase()
+  const key = /^[0-3]$/.test(value) ? `P${value}` : value
   return key ? PRIORITY_TONES[key] ?? 'slate' : 'slate'
 }

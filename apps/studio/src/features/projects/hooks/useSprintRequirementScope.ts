@@ -2,9 +2,11 @@ import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api, type Requirement, type Sprint } from '@/services/api'
 import { normalizeRequirementId, normalizeSprintId, pickCreatedAt } from '@/utils/format'
+import { REQUIREMENTS_STALE_TIME, SPRINTS_STALE_TIME, requirementsQueryKey, fetchSprintRequirements } from './requirementQueries'
 
 type ProjectScopedSelection = {
   projectId?: string
+  sprintId?: string
   value?: string | null
 }
 
@@ -51,6 +53,7 @@ export function useSprintRequirementScope(options: UseSprintRequirementScopeOpti
     queryKey: ['sprints', activeProjectId],
     queryFn: () => api.getSprints(activeProjectId!),
     enabled: Boolean(activeProjectId),
+    staleTime: SPRINTS_STALE_TIME,
   })
 
   const sprints = useMemo(() => sprintsQuery.data ?? [], [sprintsQuery.data])
@@ -73,15 +76,16 @@ export function useSprintRequirementScope(options: UseSprintRequirementScopeOpti
       : currentSprintSelection ?? undefined
 
   const requirementsQuery = useQuery({
-    queryKey: ['requirements', resolvedSelectedSprintId],
-    queryFn: () => api.getRequirements(resolvedSelectedSprintId!),
+    queryKey: requirementsQueryKey(resolvedSelectedSprintId),
+    queryFn: () => fetchSprintRequirements(resolvedSelectedSprintId!),
     enabled: Boolean(resolvedSelectedSprintId),
+    staleTime: REQUIREMENTS_STALE_TIME,
   })
 
   const requirements = useMemo(() => requirementsQuery.data ?? [], [requirementsQuery.data])
   const latestRequirement = useMemo(() => pickLatestItem<Requirement>(requirements, pickCreatedAt), [requirements])
   const currentRequirementSelection: ScopeSelectionValue =
-    requirementSelection.projectId === activeProjectId ? (requirementSelection.value ?? null) : UNSET_SELECTION
+    requirementSelection.projectId === activeProjectId && requirementSelection.sprintId === resolvedSelectedSprintId ? (requirementSelection.value ?? null) : UNSET_SELECTION
   const resolvedSelectedRequirementId =
     currentRequirementSelection === UNSET_SELECTION
       ? initialRequirementId !== undefined
@@ -113,6 +117,7 @@ export function useSprintRequirementScope(options: UseSprintRequirementScopeOpti
     if (sprintScope) {
       sprintScope.onChange?.(value ?? null)
       setRequirementSelection({
+        sprintId: value ?? undefined,
         projectId: activeProjectId,
         value: null,
       })
@@ -123,6 +128,7 @@ export function useSprintRequirementScope(options: UseSprintRequirementScopeOpti
       value: value ?? null,
     })
     setRequirementSelection({
+      sprintId: value ?? undefined,
       projectId: activeProjectId,
       value: null,
     })
@@ -130,6 +136,7 @@ export function useSprintRequirementScope(options: UseSprintRequirementScopeOpti
 
   function selectRequirement(value?: string | null) {
     setRequirementSelection({
+      sprintId: resolvedSelectedSprintId,
       projectId: activeProjectId,
       value: value ?? null,
     })

@@ -44,6 +44,8 @@ async def list_project_bugs(
     keyword: str = Query(default=""),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=200, alias="pageSize"),
+    sort_by: str = Query(default="created_at", alias="sortBy"),
+    sort_order: str = Query(default="desc", alias="sortOrder"),
     user_id: str = Depends(get_current_user_id),
     service: BugService = Depends(get_bug_service),
 ):
@@ -62,6 +64,8 @@ async def list_project_bugs(
             keyword=keyword,
             page=page,
             page_size=page_size,
+            sort_by=sort_by,
+            sort_order=sort_order,
         )
     )
 

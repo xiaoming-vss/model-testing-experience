@@ -51,6 +51,26 @@ def patch_schema(schema):
     if not any(p.get("name") == "fileID" and p.get("in") == "path" for p in parameters):
         parameters.append({"name": "fileID", "in": "path", "required": True,
                            "schema": {"type": "integer", "minimum": 1}})
+    # ZenTao 22.1 returns these project fields with types that differ from the
+    # schema declarations; the MCP validates tool output and rejects the whole
+    # response on mismatch. anyOf keeps newer versions accepting too.
+    # Project listing is optional in reduced schemas used by standalone deployments.
+    if "/projects" in paths:
+        project_properties = paths["/projects"]["get"]["responses"]["200"]["content"][
+            "application/json"
+        ]["schema"]["properties"]["projects"]["items"]["properties"]
+        for name, types in (
+            ("PMAvatar", ("string", "boolean")),
+            ("PMUserID", ("string", "boolean")),
+            ("invested", ("integer", "number", "string")),
+        ):
+            if name not in project_properties:
+                continue
+            declared = project_properties[name]
+            relaxed = {key: value for key, value in declared.items() if key != "type"}
+            relaxed["anyOf"] = [{"type": value} for value in types]
+            declared.clear()
+            declared.update(relaxed)
     return schema
 
 

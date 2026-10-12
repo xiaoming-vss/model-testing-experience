@@ -1,3 +1,4 @@
+import { ActionButton } from '@/shared/components/ActionButton'
 import { toRecord } from '@/shared/utils/value'
 import { Alert, Button, Empty, Segmented, Spin, Tag, Typography } from 'antd'
 import { useMutation, useQuery } from '@tanstack/react-query'
@@ -238,9 +239,7 @@ export function TestOrderGraphViewer({
               </span>
             </span>
           ) : null}
-          <Button size="small" onClick={() => void graphQuery.refetch()}>
-            刷新
-          </Button>
+          <ActionButton operation="refresh" size="small" onClick={() => void graphQuery.refetch()}>刷新</ActionButton>
           {canExecute ? (
             <Button
               type="primary"

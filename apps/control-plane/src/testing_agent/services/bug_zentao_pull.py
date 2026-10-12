@@ -193,7 +193,7 @@ class BugZentaoPullService:
             if before != after:
                 changes.append({"group": group.group, "from": before, "to": after})
         for group in body.groups:
-            await self._save_baseline(bug, snapshot, description, group, user_id, operation_id)
+            await self._save_baseline(bug, snapshot, description, group, operation_id)
         self.session.add(
             BugActivity(
                 activity_id=new_id(),
@@ -295,7 +295,6 @@ class BugZentaoPullService:
         snapshot: dict,
         description: dict,
         group: ZentaoPullGroupRequest,
-        user_id: str,
         operation_id: str,
     ) -> None:
         """应用或保留后写入本轮基线：本地=应用后的本地值，远端=本轮远端值（R32）。"""
@@ -325,14 +324,12 @@ class BugZentaoPullService:
                 local_snapshot_json={},
                 remote_snapshot_json={},
                 operation_id=operation_id,
-                applied_by=user_id,
                 applied_at=now,
             )
             self.session.add(row)
         row.local_snapshot_json = local
         row.remote_snapshot_json = remote
         row.operation_id = operation_id
-        row.applied_by = user_id
         row.applied_at = now
 
     # ----------------------------------------------------------------- helpers

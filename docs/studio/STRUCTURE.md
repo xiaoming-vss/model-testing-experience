@@ -79,7 +79,9 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 | S7 | 样式归属：feature 只写自家前缀。**全局层（`app/styles/`、`shared/styles/`）不得出现 feature 内部类名** | `app/styles/workbench.css` 引用 87 个 feature 内部类名、`layout.css` 12 个；`features/api-automation/styles/detail.css` 有 30 处 `.ui-*`（API 自动化给 UI 自动化写样式） | 扫描脚本前缀统计（**存量豁免**） |
 | S8 | token 单一来源：token 定义集中在**已登记的 token 文件**里（清单见下）。feature **只能消费，不得定义全局 token** | `--tp-text` 被 `app/styles/workbench.css` 与 `features/api-automation/styles/detail.css` 两处定义；`shared/styles/page-frame.css` 消费了 8 处 token（`:64,118,272,349,547,961,979,1072`，其中 `--tp-border`×3、`--tp-border-soft`×5），而这两个 token 的定义同样散在 `workbench.css` 与 `detail.css` 两处——**shared 反向依赖 feature 定义的 token** | CSS 裸色值：`npm run check:theme`（**已实现**，接入 `verify`）；定义重名与依赖方向扫描仍待实现，存量定义保留 |
 | S9 | 样式引入必须显式自持：每个入口自行 import 自己依赖的样式。**禁止依赖「别的页面恰好 import 了」而生效** | `functional-test-page` 被 4 个 feature 使用（test-cases、api-automation、test-orders、ui-automation 的页面），但唯一定义在 `features/testing/styles/index.css`，而这 4 个页面都不 import 它——只靠被 `TestingPage` 包着渲染才拿到样式 | 评审 + import 图核对（**待强制**） |
-| S14 | 列表页表面层：用例库 / 测试单 / API 测试 / UI 测试四页共用 `shared/styles/surface-tokens.css`。页面根节点必须同时带页面类与 `tp-surface`，板面 section 带 `tp-board`；样式写在各自 `features/<f>/styles/*-v2.css`，颜色只能引用 `--srf-*` / `.tone-*` | 四页共用同一套卡片 + 胶囊 + 色盘，缺 `tp-surface` 时页面里所有 `var(--srf-*)` 解析成空值，表现为「样式莫名消失」；`testing/styles/index.css` 与 `app/styles/workbench.css` 都用 `!important` 抢过这些容器，覆盖规则必须写成 `.app-shell.app-shell-macos .testing-page .<页面类> ...` 再加 `!important`，删掉前缀或 `!important` 会静默失效。**同权重同样会失效**：`workbench.css` 的玻璃规则是 (0,6,0)，与 `.tp-board` 覆盖同分，只靠 import 顺序决胜 | 评审 + 扫描脚本（**待强制**） |
+| S14 | 列表页表面层：用例库 / 测试单 / API 测试 / UI 测试四页共用 `shared/styles/surface-tokens.css`。页面根节点必须同时带页面类与 `tp-surface`，列表／卡片页板面 section 带 `tp-board tp-list-panel`，内容使用 `tp-list-body` / `tp-list-scroll`，Tab 位于外框外；样式写在各自 `features/<f>/styles/*-v2.css`，颜色只能引用 `--srf-*` / `.tone-*` | 四页共用同一套卡片 + 胶囊 + 色盘，缺 `tp-surface` 时页面里所有 `var(--srf-*)` 解析成空值，表现为「样式莫名消失」；`testing/styles/index.css` 与 `app/styles/workbench.css` 都用 `!important` 抢过这些容器，覆盖规则必须写成 `.app-shell.app-shell-macos .testing-page .<页面类> ...` 再加 `!important`，删掉前缀或 `!important` 会静默失效。**同权重同样会失效**：`workbench.css` 的玻璃规则是 (0,6,0)，与 `.tp-board` 覆盖同分，只靠 import 顺序决胜 | 评审 + 扫描脚本（**待强制**） |
+
+数据表行分隔由 `shared/styles/table-row-dividers.css` 全局提供，公共列表皮肤消费相同的 `--app-list-row-border`。变量值只在下列 token 文件定义，feature 不另设分隔色或移除横线；`tableRowDividers.test.ts` 检查入口、数据行覆盖及变量归属。
 
 已登记的 token 文件（新增或改名需评审）：
 
@@ -89,7 +91,7 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 | `src/shared/styles/foundation-tokens.css` | `--app-*`（与 `index.css` 不重名） | 外壳、公共页面框架、旧工作台及 AI/API 工作流语义配色，由 `index.css` 在启动时引入 |
 | `src/shared/styles/legacy-tokens.css` | `--legacy-*` | 旧工作台作用域 token 的浅色来源，局部变量保持原作用域 |
 | `src/shared/styles/github-dark-tokens.css`、`github-dark-foundation.css` | `--gh-*` 及上述语义 token | GitHub Dark 色盘与暗色赋值，只定义变量，不覆盖业务组件规则 |
-| `src/shared/styles/indigo-amber-light-tokens.css` | 上述语义 token 及侧栏局部别名 | 浅色 C 按用户反馈减淡：浅靛蓝导航、淡琥珀主操作、浅灰蓝内容面；所有赋值以 `:root:not([data-theme='dark'])` 限定，只覆盖既有颜色角色 |
+| `src/shared/styles/indigo-amber-light-tokens.css` | 上述语义 token 及侧栏局部别名 | 浅色主操作为实底墨蓝（`#263250`），交互强调钢墨蓝（`#33557e`），琥珀只保留状态语义（警告/待处理、P1、update 图标）；浅蓝灰导航、浅灰蓝内容面；所有赋值以 `:root:not([data-theme='dark'])` 限定，只覆盖既有颜色角色 |
 | `src/shared/styles/editor-tokens.css` | `--editor-*` | CodeMirror 的表面、选区、光标及 JSON/YAML 语法高亮，由 `index.css` 引入 |
 | `src/shared/styles/chart-tokens.css` | `--chart-*`、`--graph-*` | 图表序列、坐标轴、提示框、关系图连线/缩略图及树图导出配色，由 `index.css` 引入 |
 | `src/app/styles/workbench.css` 的 `:root` 块 | `--tp-*`、`--mac-*` | 工作台基础与 macOS 外壳 |

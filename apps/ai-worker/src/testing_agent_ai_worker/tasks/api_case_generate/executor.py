@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from datetime import datetime
 
 from testing_agent_ai_worker.config.models import NanobotConfig
@@ -14,6 +15,10 @@ from testing_agent_ai_worker.nanobot_runtime.paths import (
     resolve_task_workspace,
 )
 from testing_agent_ai_worker.tasks.api_case_generate.chain import ChainRunResult, run_chain
+from testing_agent_ai_worker.tasks.api_case_generate.contracts import (
+    validate_cases,
+    validate_extraction,
+)
 from testing_agent_ai_worker.tasks.result_summary import build_task_result_summary
 from testing_agent_ai_worker.worker.runner import TaskExecutor
 
@@ -64,12 +69,26 @@ class ApiCaseNanobotExecutor(TaskExecutor):
                 config_path=config_path,
                 workspace=str(workspace),
                 extra_instruction=self._build_api_instruction(task),
+                on_validation_progress=lambda event, extracted: progress_callback(
+                    TaskProgress(
+                        task_id=task.task_id,
+                        run_id=task.run_id,
+                        current_stage=event["stage"],
+                        stage_status="running",
+                        intermediate_json_text=extracted or task.config_json,
+                        result_summary_json=json.dumps(
+                            {"outputValidation": event}, ensure_ascii=False
+                        ),
+                    )
+                ),
                 on_extractor_result=lambda extractor_output: progress_callback(
                     self._build_progress(task, extractor_output)
                 ),
             )
             chain_result = _resolve_runner_result(result)
         assert isinstance(chain_result, ChainRunResult)
+        validate_extraction(chain_result.extractor_output)
+        validate_cases(chain_result.generator_output)
 
         return TaskResult(
             task_id=task.task_id,
@@ -90,6 +109,7 @@ class ApiCaseNanobotExecutor(TaskExecutor):
         )
 
     def _build_progress(self, task: Task, extractor_output: str) -> TaskProgress:
+        validate_extraction(extractor_output)
         return TaskProgress(
             task_id=task.task_id,
             run_id=task.run_id,

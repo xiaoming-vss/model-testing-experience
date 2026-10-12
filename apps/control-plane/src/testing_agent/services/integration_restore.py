@@ -220,9 +220,8 @@ class IntegrationRestoreService:
         return await self.apply(request, context["fingerprint"], facts)
 
     async def save_review(
-        self, restore_id, scope_type, scope_id, project_id, actor, decision, state, facts
+        self, restore_id, scope_type, scope_id, project_id, actor, decision, state
     ):
-        require_safe_snapshot(facts)
         row = await self.review(restore_id, scope_type, scope_id)
         if row is None:
             row = IntegrationRestoreReview(
@@ -234,13 +233,12 @@ class IntegrationRestoreService:
                 actor_user_id=actor,
                 decision=decision,
                 state_digest=state,
-                facts_json=facts,
                 reviewed_at=self.clock(),
             )
             self.session.add(row)
         else:
             row.actor_user_id, row.decision, row.state_digest = actor, decision, state
-            row.facts_json, row.reviewed_at = facts, self.clock()
+            row.reviewed_at = self.clock()
         await self.session.flush()
         return row
 
@@ -387,10 +385,6 @@ class IntegrationRestoreService:
                 previous.decision = "verified"
                 previous.state_digest = digest(values(job))
                 previous.actor_user_id, previous.reviewed_at = request.actor_user_id, self.clock()
-                previous.facts_json = {
-                    "remoteBugId": request.remote_bug_id,
-                    "oldTaskReplayed": False,
-                }
         await self.session.flush()
         current = await self.context(request.restore_id, request.bug_id, request.actor_user_id)
         review = await self.save_review(
@@ -401,23 +395,6 @@ class IntegrationRestoreService:
             request.actor_user_id,
             "verified",
             current["fingerprint"],
-            {
-                "remoteBugId": request.remote_bug_id,
-                "productId": facts["productId"],
-                "files": facts["files"],
-                "accessRevision": current["access"].access_revision,
-                "subject": {
-                    k: getattr(current["subject"], k)
-                    for k in (
-                        "project_id",
-                        "bug_id",
-                        "actor_user_id",
-                        "service_id",
-                        "connection_id",
-                    )
-                },
-                "reviewedJobs": [job.job_id for job in jobs],
-            },
         )
         if jobs:
             self.session.add(
@@ -464,7 +441,6 @@ class IntegrationRestoreService:
             None,
             "isolated",
             state,
-            {"reason": "outcome_unverifiable", "writesRemainBlocked": True},
         )
         await self.session.commit()
         return {"reviewId": row.review_id, "decision": "isolated", "writesRemainBlocked": True}

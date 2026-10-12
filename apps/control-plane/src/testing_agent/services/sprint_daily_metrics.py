@@ -132,7 +132,7 @@ class SprintDailyMetricsService:
         self,
         sprint_id: str,
         snapshot_date: str,
-        _body: dict[str, Any] | None,
+        connection_id: str | None,
         user_id: str,
     ) -> dict:
         validate_sprint_daily_metrics_date(snapshot_date)
@@ -140,7 +140,6 @@ class SprintDailyMetricsService:
         metric = await self.repository.get(sprint_id, snapshot_date)
         if metric is None:
             metric = SprintDailyMetrics(
-                metric_id=f"{sprint_id}-{snapshot_date}",
                 project_id=sprint.project_id,
                 sprint_id=sprint_id,
                 snapshot_date=snapshot_date,
@@ -151,9 +150,7 @@ class SprintDailyMetricsService:
             user_id,
             sprint,
             metric,
-            connection_id=str(
-                (_body or {}).get("connectionId") or (_body or {}).get("connection_id") or ""
-            ),
+            connection_id=connection_id or "",
         )
         await self.repository.commit()
         await self.repository.refresh(metric)
@@ -199,9 +196,19 @@ class SprintDailyMetricsService:
         function_metrics = await self.load_function_metrics_from_local_runs(sprint.sprint_id)
         api_metrics = await self.load_api_metrics_from_local_runs(sprint.sprint_id)
         ui_metrics = await self.load_ui_metrics_from_local_runs(sprint.sprint_id)
-        metric.bug_metrics_collected = False
-        bug_metrics = BugMetrics()
-        metric.bug_details_json = []
+        bugs = await self.repository.list_bug_snapshots(sprint.project_id, sprint.sprint_id)
+        bug_metrics = BugMetrics(
+            total=len(bugs),
+            resolved=sum(bug["status"] == "resolved" for bug in bugs),
+            closed=sum(bug["status"] == "closed" for bug in bugs),
+            unresolved=sum(bug["status"] == "active" for bug in bugs),
+            fatal=sum(bug["severity"] == "fatal" for bug in bugs),
+            serious=sum(bug["severity"] == "serious" for bug in bugs),
+            normal=sum(bug["severity"] == "normal" for bug in bugs),
+            suggestion=sum(bug["severity"] == "minor" for bug in bugs),
+        )
+        metric.bug_metrics_collected = True
+        metric.bug_details_json = [dict(bug) for bug in bugs]
 
         metric.project_id = sprint.project_id
         metric.function_case_total = function_metrics.total

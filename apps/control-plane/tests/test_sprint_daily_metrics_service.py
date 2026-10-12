@@ -12,6 +12,7 @@ class FakeSprintDailyMetricsRepository:
     session = AuthorizationDatabase()
 
     def __init__(self):
+        self.bugs = []
         self.metric = None
         self.added = None
         self.committed = False
@@ -35,6 +36,10 @@ class FakeSprintDailyMetricsRepository:
             SimpleNamespace(name="登录需求", document_content="登录能力说明"),
             SimpleNamespace(name="报表需求", document_content=""),
         ]
+
+    async def list_bug_snapshots(self, project_id, sprint_id):
+        assert (project_id, sprint_id) == ("p1", "s1")
+        return self.bugs
 
     async def get_sprint(self, sprint_id):
         return self.sprint if sprint_id == "s1" else None
@@ -94,7 +99,6 @@ async def test_sprint_daily_metrics_upsert_builds_snapshot_from_sources():
 
     assert repository.committed is True
     assert isinstance(repository.added, SprintDailyMetrics)
-    assert repository.added.metric_id == "s1-2026-01-23"
     assert result["function"] == {
         "total": 3,
         "executed": 2,
@@ -116,7 +120,9 @@ async def test_sprint_daily_metrics_upsert_builds_snapshot_from_sources():
         "success": 1,
         "failed": 1,
     }
-    assert result["bug"] is None
+    assert result["bug"] == dict.fromkeys(
+        ["total", "resolved", "closed", "unresolved", "fatal", "serious", "normal", "suggestion"], 0
+    )
     assert result["project"] == {
         "projectName": "智慧园区管理平台",
         "description": "项目描述",
@@ -139,7 +145,6 @@ async def test_sprint_daily_metrics_upsert_builds_snapshot_from_sources():
 async def test_sprint_daily_metrics_get_returns_detail_context():
     repository = FakeSprintDailyMetricsRepository()
     repository.metric = SprintDailyMetrics(
-        metric_id="m1",
         project_id="p1",
         sprint_id="s1",
         snapshot_date=date(2026, 1, 23),
@@ -187,10 +192,12 @@ async def test_sprint_daily_metrics_with_no_local_function_executions():
     repository = FakeSprintDailyMetricsRepository()
     service = SprintDailyMetricsService(repository)
 
-    result = await service.upsert("s1", "2026-01-23", {}, "u1")
+    result = await service.upsert("s1", "2026-01-23", None, "u1")
 
     assert result["function"]["total"] == 0
-    assert result["bug"] is None
+    assert result["bug"] == dict.fromkeys(
+        ["total", "resolved", "closed", "unresolved", "fatal", "serious", "normal", "suggestion"], 0
+    )
     assert result["api"]["total"] == 3
     assert result["ui"]["total"] == 2
     assert result["bugs"] == []
@@ -242,14 +249,16 @@ async def test_snapshot_never_uses_retired_external_connections():
     repository.function_entry_statuses = ["passed", "pending"]
     retired = RetiredExternalAccess()
     service = SprintDailyMetricsService(repository, retired, retired)
-    result = await service.upsert("s1", "2026-01-23", {"connectionId": "old-connection"}, "u1")
+    result = await service.upsert("s1", "2026-01-23", "old-connection", "u1")
     assert repository.committed
     assert result["function"]["total"] == 2
     assert result["api"]["total"] == 3
     assert result["ui"]["total"] == 2
-    assert result["bug"] is None
+    assert result["bug"] == dict.fromkeys(
+        ["total", "resolved", "closed", "unresolved", "fatal", "serious", "normal", "suggestion"], 0
+    )
     assert result["bugs"] == []
-    assert (await service.get("s1", "2026-01-23", "u1"))["bug"] is None
+    assert (await service.get("s1", "2026-01-23", "u1"))["bug"] == result["bug"]
 
 
 @pytest.mark.asyncio
@@ -261,5 +270,58 @@ async def test_local_collection_failure_still_propagates():
 
     repository.list_function_entry_statuses_by_sprint = fail
     with pytest.raises(RuntimeError, match="local database failure"):
-        await SprintDailyMetricsService(repository).upsert("s1", "2026-01-23", {}, "u1")
+        await SprintDailyMetricsService(repository).upsert("s1", "2026-01-23", None, "u1")
+    assert not repository.committed
+
+
+@pytest.mark.asyncio
+async def test_platform_bug_statistics_and_details_are_frozen_until_refresh():
+    repository = FakeSprintDailyMetricsRepository()
+    repository.bugs = [
+        dict(
+            bugId="b1", bugNo=1, title="重新激活", status="active", severity="fatal", resolution=""
+        ),
+        dict(
+            bugId="b2",
+            bugNo=2,
+            title="延期",
+            status="resolved",
+            severity="serious",
+            resolution="postponed",
+        ),
+        dict(
+            bugId="b3",
+            bugNo=3,
+            title="关闭",
+            status="closed",
+            severity="normal",
+            resolution="fixed",
+        ),
+        dict(bugId="b4", bugNo=4, title="轻微", status="active", severity="minor", resolution=""),
+    ]
+    service = SprintDailyMetricsService(repository)
+    result = await service.upsert("s1", "2026-01-23", None, "u1")
+    assert result["bug"] == dict(
+        total=4, resolved=1, closed=1, unresolved=2, fatal=1, serious=1, normal=1, suggestion=1
+    )
+    assert result["bugs"] == repository.bugs
+    repository.bugs[0]["status"] = "closed"
+    frozen = await service.get("s1", "2026-01-23", "u1")
+    assert frozen["bugs"][0]["status"] == "active"
+    assert frozen["bug"] == result["bug"]
+    refreshed = await service.upsert("s1", "2026-01-23", None, "u1")
+    assert refreshed["bug"]["closed"] == 2
+    assert refreshed["bug"]["unresolved"] == 1
+
+
+@pytest.mark.asyncio
+async def test_bug_query_failure_does_not_commit_zero_snapshot():
+    repository = FakeSprintDailyMetricsRepository()
+
+    async def fail(project_id, sprint_id):
+        raise RuntimeError("bug query failed")
+
+    repository.list_bug_snapshots = fail
+    with pytest.raises(RuntimeError, match="bug query failed"):
+        await SprintDailyMetricsService(repository).upsert("s1", "2026-01-23", None, "u1")
     assert not repository.committed

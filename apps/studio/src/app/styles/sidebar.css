@@ -1,11 +1,14 @@
+/* 侧边栏:192px 展宽标签轨,可折叠为 76px 图标轨。
+   分组(工作管理/质量管理/集成)+ 底部用户区;激活态用主题的墨蓝 accent 基因(淡墨蓝底),
+   与实底主按钮区分重量;琥珀只保留给状态语义。暗色主题不改激活基因,只走全局 token。 */
 .app-shell.app-shell-macos .app-sidebar {
-  width: 208px !important;
-  min-width: 208px !important;
-  max-width: 208px !important;
-  flex: 0 0 208px !important;
+  width: 192px !important;
+  min-width: 192px !important;
+  max-width: 192px !important;
+  flex: 0 0 192px !important;
 }
 
-.app-shell.app-shell-macos .app-sidebar.is-collapsed {
+.app-shell.app-shell-macos .app-sidebar.app-sidebar-collapsed {
   width: 76px !important;
   min-width: 76px !important;
   max-width: 76px !important;
@@ -21,36 +24,52 @@
 }
 
 .sidebar-brand {
-  height: 56px;
+  height: 48px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 20px;
+  gap: 8px;
+  padding: 0 16px;
   color: var(--mac-glass-text);
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
-  border-bottom: 1px solid var(--mac-glass-border-soft);
+  border-bottom: 0;
 }
+
+.app-sidebar-collapsed .sidebar-brand {
+  padding: 0;
+  justify-content: center;
+}
+
+.app-sidebar-collapsed .sidebar-brand-name { display: none; }
 
 .sidebar-navigation {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 10px;
+  overflow-x: hidden;
+  padding: 4px 10px 14px;
+}
+
+.sidebar-section {
+  margin: 10px 8px 4px;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: normal;
+  color: var(--mac-glass-muted);
 }
 
 .sidebar-link {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   width: 100%;
-  min-height: 40px;
-  margin-bottom: 4px;
-  padding: 8px 12px;
-  border: 0;
+  min-height: 36px;
+  margin-bottom: 2px;
+  padding: 0 10px;
+  border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
-  color: var(--mac-glass-muted);
+  color: var(--mac-glass-text);
   font: inherit;
   font-size: 13px;
   text-align: left;
@@ -58,71 +77,152 @@
   cursor: pointer;
 }
 
-.sidebar-link:hover,
-.sidebar-link.is-active {
+.sidebar-link .sidebar-link-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-link:hover { background: var(--button-quiet-hover-bg); }
+
+.sidebar-link.is-active { font-weight: 600; }
+
+.app-sidebar-collapsed .sidebar-navigation {
+  padding: 14px 9px;
+}
+
+.app-sidebar-collapsed .sidebar-section { display: none; }
+
+.app-sidebar-collapsed .sidebar-link {
+  flex-direction: column;
+  justify-content: center;
+  gap: 7px;
+  height: 60px;
+  min-height: 60px;
+  margin-bottom: 6px;
+  border-radius: 12px;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.app-sidebar-collapsed .sidebar-link .sidebar-link-label { display: none; }
+
+.app-sidebar-collapsed .sidebar-link.is-active .sidebar-link-label {
+  display: block;
+  flex: 0 0 auto;
+  max-width: 100%;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+/* 图标按 24 网格绘制，墨迹中心未必落在几何中心，按渲染误差逐个补偿 */
+.sidebar-icon-navSprint { transform: translateX(1px); }
+
+.sidebar-link:focus-visible,
+.sidebar-brand:focus-visible,
+.sidebar-collapse:focus-visible,
+.sidebar-user:focus-visible { outline: 2px solid var(--mac-glass-blue); outline-offset: -2px; }
+
+/* 底部:用户 + 折叠开关 */
+.sidebar-foot {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--mac-glass-border-soft);
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 0;
+  padding: 4px 6px;
+  border-radius: 8px;
+  color: var(--mac-glass-text);
+}
+
+.sidebar-user:hover { background: var(--button-quiet-hover-bg); }
+
+.sidebar-user-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sidebar-user-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.sidebar-collapse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--mac-glass-muted);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.sidebar-collapse:hover {
+  background: var(--button-quiet-hover-bg);
+  color: var(--mac-glass-text);
+}
+
+.app-sidebar-collapsed .sidebar-foot {
+  flex-direction: column;
+  padding: 10px 0 12px;
+}
+
+.app-sidebar-collapsed .sidebar-user { flex: none; padding: 2px; }
+
+.app-sidebar-collapsed .sidebar-user-name { display: none; }
+
+:root:not([data-theme='dark']) .app-sidebar .sidebar-link.is-active {
+  color: var(--app-accent);
+  background: var(--app-accent-surface);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+:root[data-theme='dark'] .app-sidebar .sidebar-link.is-active {
   color: var(--mac-glass-blue);
   background: var(--srf-list-row-hover);
 }
 
-.sidebar-link.is-active,
-.sidebar-link.is-current-group {
-  color: var(--mac-glass-blue);
-  font-weight: 600;
-}
-
-.sidebar-link > svg { flex-shrink: 0; }
-.sidebar-chevron {
+.sidebar-logo-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 16px;
-  width: 16px;
-  height: 16px;
-  margin-left: auto;
-  font-size: 10px;
-  color: var(--mac-glass-muted);
-  transform: rotate(-90deg);
-  transition: transform 160ms ease;
-}
-.sidebar-group:hover .sidebar-chevron {
-  color: currentColor;
-}
-@media (prefers-reduced-motion: reduce) {
-  .sidebar-chevron { transition: none; }
-}
-.sidebar-chevron.is-open { transform: rotate(0); }
-.sidebar-children .sidebar-link { padding-left: 32px; }
-
-.sidebar-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 48px;
-  flex-shrink: 0;
-  border: 0;
-  border-top: 1px solid var(--mac-glass-border-soft);
-  background: transparent;
-  color: var(--mac-glass-muted);
-  cursor: pointer;
-}
-
-.sidebar-toggle:hover { color: var(--mac-glass-blue); }
-.sidebar-link:focus-visible,
-.sidebar-toggle:focus-visible,
-.sidebar-brand:focus-visible { outline: 2px solid var(--mac-glass-blue); outline-offset: -2px; }
-.is-collapsed .sidebar-brand { padding: 0; justify-content: center; }
-.is-collapsed .sidebar-brand > span,
-.is-collapsed .sidebar-chevron { display: none; }
-.is-collapsed .sidebar-link { flex-direction: column; gap: 5px; padding: 10px 0; font-size: 11px; }
-
-.sidebar-count { margin-left: auto; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--mac-glass-muted); }
-
-:root:not([data-theme='dark']) .app-sidebar .sidebar-link.is-active {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--app-accent);
   color: var(--button-primary-text);
-  background: var(--button-primary-bg);
+  font-size: 12px;
+  font-weight: 700;
 }
-
-:root:not([data-theme='dark']) .app-sidebar .sidebar-link.is-active .sidebar-count {
-  color: inherit;
-}
+.sidebar-link > .anticon { font-size: 14px; }

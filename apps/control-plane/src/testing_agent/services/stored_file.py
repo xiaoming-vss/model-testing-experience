@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 import mimetypes
 from datetime import UTC, datetime, timedelta
@@ -89,9 +90,11 @@ class StoredFileService:
         await require_project_id(self.session, user_id, body.project_id, "write")
         ext = body.filename.rsplit(".", 1)[-1].lower()
         allowed: set[str] | None = (
-            {"txt", "md", "docx"} if body.purpose == "requirement" else ALLOWED_EXTENSIONS
+            {"txt", "md", "docx", "html"} if body.purpose == "requirement" else ALLOWED_EXTENSIONS
         )
         maximum = self.settings.max_bytes
+        if body.purpose == "requirement" and ext == "html":
+            maximum = min(maximum, 1024 * 1024)
         if body.purpose == "ui_source_archive":
             from testing_agent.services.ai_source_archive import MAX_SOURCE_ARCHIVE_BYTES
 
@@ -231,6 +234,17 @@ class StoredFileService:
                 row.filename,
                 validator=validator,
             )
+            if row.purpose == "requirement" and row.filename.lower().endswith(".html"):
+                from testing_agent.domain.rich_text import has_rich_text_content, sanitize_rich_text
+
+                raw = await asyncio.to_thread(self.storage.read_text, row.object_key)
+                clean = sanitize_rich_text(raw)
+                if not has_rich_text_content(clean):
+                    raise AppError(400, "请输入需求正文", 400)
+                data = clean.encode("utf-8")
+                await asyncio.to_thread(self.storage.write_html, row.object_key, data, row.filename)
+                row.size = len(data)
+                row.sha256 = hashlib.sha256(data).hexdigest()
         except ClientError as exc:
             if exc.response.get("Error", {}).get("Code") in {"404", "NoSuchKey", "NotFound"}:
                 raise AppError(409, "文件尚未上传完成，请重新上传", 409) from None

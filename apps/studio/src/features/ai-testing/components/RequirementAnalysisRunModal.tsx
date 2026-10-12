@@ -57,6 +57,7 @@ export function RequirementAnalysisRunModal({
   return (
     <Modal
       mask={{ closable: false }}
+      centered
       title="运行需求分析"
       open={open}
       onCancel={resetAndClose}

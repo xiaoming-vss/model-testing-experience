@@ -12,7 +12,10 @@ from testing_agent_ai_worker.platform.skills import SkillPreparer, required_skil
 class SkillTests(unittest.TestCase):
     def task(self, **kwargs):
         return Task(
-            task_id="task", project_id="project", payload=TaskPayload(openapi_content=""), **kwargs
+            task_id="task",
+            project_id="project",
+            payload=TaskPayload(openapi_content="", document_type="word"),
+            **kwargs,
         )
 
     def test_maps_active_skills_and_checkpoint_only_fetches_needed_one(self):

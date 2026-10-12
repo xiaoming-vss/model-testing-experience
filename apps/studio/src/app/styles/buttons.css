@@ -37,6 +37,9 @@
     color: var(--button-current-text) !important;
     background: var(--button-current-bg) !important;
     border-color: var(--button-current-border) !important;
+    /* Legacy glass filters tint the surface even when the button is transparent. */
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
     box-shadow: none !important;
     text-shadow: none !important;
     transform: none !important;
@@ -68,6 +71,11 @@
 
   .ant-btn:is(.ant-btn-text, .ant-btn-link, .ant-btn-background-ghost) {
     --button-current-bg: transparent;
+    /* 透明按钮的悬停/按下不能沿用不透明按钮的块色：在同一表面上那块色要么
+       与工具栏几乎同色（读成污渍），要么更浅更蓝（读成错渲染）。
+       墨色薄纱随表面合成，任何底色上都是干净的一档加深。 */
+    --button-current-hover: var(--button-quiet-hover-bg, var(--button-hover-bg));
+    --button-current-active: var(--button-quiet-active-bg, var(--button-active-bg));
   }
 
   .ant-btn:is(.ant-btn-text, .ant-btn-link) {
@@ -136,6 +144,47 @@
 
   .ant-btn.app-action-delete {
     --button-current-text: var(--button-danger-text);
+    --button-current-hover: var(--button-danger-hover-bg);
+    --button-current-active: var(--button-danger-active-bg);
+  }
+
+  /* Reference-style icon actions have transparent backgrounds and quiet ink strokes.
+     Create stays green; hover and destructive confirmation retain semantic feedback. */
+  .ant-btn.app-action-icon {
+    --action-tone: var(--app-action-read);
+  }
+
+  .ant-btn.app-action-create {
+    --action-tone: var(--app-action-create);
+  }
+
+  .ant-btn.app-action-upload {
+    --action-tone: var(--app-action-create);
+  }
+
+  .ant-btn.app-action-edit,
+  .ant-btn.app-action-update {
+    --action-tone: var(--app-action-update);
+  }
+
+  .ant-btn.app-action-save,
+  .ant-btn.app-action-bind {
+    --action-tone: var(--app-action-save);
+  }
+
+  .ant-btn.app-action.app-action-icon:not(.app-action-refresh):not(:disabled):not(.ant-btn-disabled) {
+    --button-current-text: var(--app-shell-text-secondary);
+    --button-current-bg: transparent;
+    --button-current-border: transparent;
+    --button-current-hover: color-mix(in srgb, var(--action-tone) 18%, transparent);
+    --button-current-hover-border: transparent;
+    --button-current-active: color-mix(in srgb, var(--action-tone) 26%, transparent);
+  }
+  .ant-btn.app-action.app-action-icon.app-action-create:not(:disabled):not(.ant-btn-disabled) {
+    --button-current-text: var(--app-action-create);
+  }
+  .ant-btn.app-action.app-action-icon.app-action-delete:not(:disabled):not(.ant-btn-disabled) {
+    --button-current-text: var(--app-text-caption);
     --button-current-hover: var(--button-danger-hover-bg);
     --button-current-active: var(--button-danger-active-bg);
   }

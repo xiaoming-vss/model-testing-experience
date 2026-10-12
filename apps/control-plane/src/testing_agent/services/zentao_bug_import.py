@@ -616,7 +616,6 @@ class ZentaoBugImportService:
                             "digest": mapping.remote_description(steps)["digest"]
                         },
                         operation_id=operation_id,
-                        applied_by=user_id,
                         applied_at=datetime.now(UTC),
                     )
                 )
@@ -681,8 +680,17 @@ class ZentaoBugImportService:
             file_id = upload["fileId"]
         except (AppError, McpCallError) as exc:
             message = get_pull_error(exc)
-            await self._record_pull(bug_id, "", access, remote_bug_id, remote_file_id,
-                                    operation_id, user_id, "failed", message)
+            await self._record_pull(
+                bug_id,
+                "",
+                access,
+                remote_bug_id,
+                remote_file_id,
+                operation_id,
+                user_id,
+                "failed",
+                message,
+            )
             return None, message
         try:
             transfer = await client.call(
@@ -697,11 +705,29 @@ class ZentaoBugImportService:
             )
         except (AppError, McpCallError) as exc:
             message = get_pull_error(exc)
-            await self._record_pull(bug_id, file_id, access, remote_bug_id, remote_file_id,
-                                    operation_id, user_id, "failed", message)
+            await self._record_pull(
+                bug_id,
+                file_id,
+                access,
+                remote_bug_id,
+                remote_file_id,
+                operation_id,
+                user_id,
+                "failed",
+                message,
+            )
             return None, message
-        await self._record_pull(bug_id, file_id, access, remote_bug_id, remote_file_id,
-                                operation_id, user_id, "succeeded", "")
+        await self._record_pull(
+            bug_id,
+            file_id,
+            access,
+            remote_bug_id,
+            remote_file_id,
+            operation_id,
+            user_id,
+            "succeeded",
+            "",
+        )
         return file_id, None
 
     async def _record_pull(
@@ -832,7 +858,6 @@ class ZentaoBugImportService:
             remote_bug_id=snapshot["remoteBugId"],
             target_json=target,
             payload_json={},
-            source_json={key: snapshot[key] for key in snapshot if key != "deleted"},
         )
         remote_profile = {
             "title": snapshot["title"],
@@ -848,19 +873,14 @@ class ZentaoBugImportService:
             "activatedCount": int(snapshot["activatedCount"]),
         }
         baselines = [
-            self._baseline(
-                bug.bug_id, "profile", remote_profile, remote_profile, operation_id, user_id
-            ),
-            self._baseline(
-                bug.bug_id, "status", remote_status, remote_status, operation_id, user_id
-            ),
+            self._baseline(bug.bug_id, "profile", remote_profile, remote_profile, operation_id),
+            self._baseline(bug.bug_id, "status", remote_status, remote_status, operation_id),
             self._baseline(
                 bug.bug_id,
                 "assignee",
                 {"userId": resolved["assignee_user_id"]},
                 {"account": snapshot["assignedTo"]},
                 operation_id,
-                user_id,
             ),
         ]
         if not description["hasImages"]:
@@ -872,7 +892,6 @@ class ZentaoBugImportService:
                     {"digest": description["digest"]},
                     {"digest": description["digest"]},
                     operation_id,
-                    user_id,
                 )
             )
         for _ in range(3):
@@ -943,7 +962,6 @@ class ZentaoBugImportService:
         local: dict,
         remote: dict,
         operation_id: str,
-        user_id: str,
     ) -> BugZentaoSyncBaseline:
         return BugZentaoSyncBaseline(
             bug_id=bug_id,
@@ -951,7 +969,6 @@ class ZentaoBugImportService:
             local_snapshot_json=local,
             remote_snapshot_json=remote,
             operation_id=operation_id,
-            applied_by=user_id,
             applied_at=datetime.now(UTC),
         )
 

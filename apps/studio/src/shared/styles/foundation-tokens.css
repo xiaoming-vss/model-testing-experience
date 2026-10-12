@@ -130,7 +130,7 @@
   --app-glass-table-border-hover: rgba(84, 104, 132, 0.1);
   --app-list-header-border: #e8ecf2;
   --app-list-header-text: #697386;
-  --app-list-row-border: #edf0f5;
+  --app-list-row-border: var(--app-surface-border);
   --app-list-name: #3f6fc6;
   --app-list-name-hover: #2859b3;
   --app-text-subtle: #64748b;

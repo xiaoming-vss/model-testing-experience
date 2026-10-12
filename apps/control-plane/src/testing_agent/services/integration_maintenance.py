@@ -1,13 +1,22 @@
-"""Bounded history compaction; never discard write evidence or transport tombstones."""
+"""Bounded history compaction; never discard write evidence or step result receipts.
+
+Claim-receipt ledger rows age out after ``claim_receipt_retention_days`` (or once
+their job is archived): replaying a claim request after that window is treated as
+a new request. Step-level operation ids and result receipts are kept forever.
+"""
 
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import exists, func, or_, select
+from sqlalchemy import delete, exists, func, or_, select
 
 from testing_agent.domain.integration_execution import utc
 from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
 from testing_agent.models.bug_zentao_push import BugZentaoPush
-from testing_agent.models.integration_job import IntegrationJob, IntegrationJobStep
+from testing_agent.models.integration_job import (
+    IntegrationClaimReceipt,
+    IntegrationJob,
+    IntegrationJobStep,
+)
 from testing_agent.models.project import Project
 from testing_agent.repositories.integration_job import IntegrationJobRepository
 
@@ -152,8 +161,40 @@ class IntegrationHistoryMaintenance:
                 step.input_json = {}
             job.archived_at = self.clock()
             compacted += 1
+        pruned_receipts = await self.prune_claim_receipts()
         await self.session.flush()
         backlog = await self.session.scalar(
             select(func.count()).select_from(self.candidates().subquery())
         )
-        return {"compacted": compacted, "backlog": backlog}
+        return {
+            "compacted": compacted,
+            "backlog": backlog,
+            "prunedReceipts": pruned_receipts,
+        }
+
+    async def prune_claim_receipts(self):
+        """Drop claim receipts past the retention window or pointing at archived jobs."""
+        cutoff = self.clock() - timedelta(days=self.settings.claim_receipt_retention_days)
+        archived_job = exists(
+            select(IntegrationJob.job_id).where(
+                IntegrationJob.job_id == IntegrationClaimReceipt.job_id,
+                IntegrationJob.archived_at.is_not(None),
+            )
+        )
+        identifiers = (
+            await self.session.scalars(
+                select(IntegrationClaimReceipt.claim_key)
+                .where(
+                    or_(IntegrationClaimReceipt.created_at < cutoff, archived_job),
+                )
+                .order_by(IntegrationClaimReceipt.created_at, IntegrationClaimReceipt.claim_key)
+                .limit(self.settings.maintenance_batch_size)
+            )
+        ).all()
+        if identifiers:
+            await self.session.execute(
+                delete(IntegrationClaimReceipt).where(
+                    IntegrationClaimReceipt.claim_key.in_(identifiers)
+                )
+            )
+        return len(identifiers)

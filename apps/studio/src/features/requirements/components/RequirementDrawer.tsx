@@ -1,3 +1,4 @@
+import { RichTextEditor } from '@/shared/components/RichTextEditor'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { UploadOutlined } from '@ant-design/icons'
 import { Alert, Drawer, Form, Input, Progress, Select, Upload } from 'antd'
@@ -16,7 +17,7 @@ export type RequirementFormValues = RequirementCreatePayload & {
   }
 
 const documentTypeOptions: Array<{ label: string; value: RequirementDocumentType }> = [
-  { label: '纯文本', value: 'text' },
+  { label: '富文本', value: 'richtext' },
   { label: 'Word', value: 'word' },
 ]
 
@@ -47,7 +48,10 @@ export function RequirementDrawer({
   loading,
   error,
   documentLoading = false,
+  documentError,
+  projectId,
   onClose,
+  onDocumentTypeChange,
   mode = 'create',
   sprintOptions,
   onFinish,
@@ -58,12 +62,16 @@ export function RequirementDrawer({
   loading: boolean
   error: unknown
   documentLoading?: boolean
+  documentError?: string
+  projectId?: string
   onClose: () => void
+  onDocumentTypeChange?: () => void
   mode?: 'create' | 'edit'
   sprintOptions?: Array<{ label: string; value: string }>
   onFinish: (values: RequirementFormValues) => void
 }) {
-  const documentType = Form.useWatch('documentType', form) ?? 'text'
+  const documentType = Form.useWatch('documentType', form) ?? 'richtext'
+  const [imageUploading, setImageUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<number | undefined>()
   const [selectedFile, setSelectedFile] = useState<File | undefined>(undefined)
   const [fileList, setFileList] = useState<UploadFile[]>([])
@@ -106,17 +114,19 @@ export function RequirementDrawer({
       onClose={onClose}
       size={520}
       extra={
-        <ProjectActionButton operation="save" action="write" type="primary" className="action-btn-save" loading={loading || documentLoading} disabled={documentLoading} onClick={() => form.submit()}>
+        <ProjectActionButton operation="save" action="write" type="primary" className="action-btn-save" loading={loading || documentLoading} disabled={documentLoading || imageUploading || !!documentError} onClick={() => form.submit()}>
           保存
         </ProjectActionButton>
       }
     >
       {loading && uploadProgress !== undefined ? <Progress percent={uploadProgress} status="active" /> : null}
+      {documentError ? <Alert showIcon type="error" title={documentError} /> : null}
       {error ? <Alert showIcon type="error" title={getErrorMessage(error)} /> : null}
       <Form<RequirementFormValues>
         form={form}
         layout="vertical"
         onFinish={(values) => {
+          if (loading || documentLoading || imageUploading || documentError) return
           setUploadProgress(undefined)
           if (!isWordDocument(values.documentType)) {
             onFinish({
@@ -157,14 +167,16 @@ export function RequirementDrawer({
         <Form.Item
           name="documentType"
           label="需求文档类型"
-          extra={mode === 'edit' ? '文档类型由源文件决定，编辑时不直接切换。' : undefined}
+          extra={mode === 'edit' ? '切换类型后需重新填写正文或上传文件，保存成功后替换原文档。' : undefined}
           rules={[{ required: true, message: '请选择需求文档类型' }]}
         >
           <Select
             placeholder="请选择需求文档类型"
-            options={documentTypeOptions}
-            disabled={mode === 'edit'}
+            options={documentType === 'text' ? [{ label: '纯文本', value: 'text' }, ...documentTypeOptions] : documentTypeOptions}
+            disabled={loading || imageUploading}
             onChange={(value: RequirementDocumentType) => {
+              onDocumentTypeChange?.()
+              form.setFields([{ name: 'documentContent', errors: [] }])
               form.setFieldValue('documentType', value)
               form.setFieldValue('documentContent', '')
               form.setFieldValue('documentFileName', undefined)
@@ -181,15 +193,17 @@ export function RequirementDrawer({
           extra={
             !isWordDocument(documentType)
               ? mode === 'edit'
-                ? '编辑时会读取 TXT 源文件正文，可直接修改并保存。'
-                : '请输入纯文本需求正文，后端会保存为 TXT 源文件。'
+                ? '加载已保存的正文，可直接修改并保存。'
+                : '支持标题、列表和粘贴截图，保存后可继续编辑。'
               : undefined
           }
           rules={[
             {
               validator: async (_, value) => {
                 if (!isWordDocument(documentType)) {
-                  if (value && String(value).trim()) return
+                  if (value && (documentType === 'richtext'
+                    ? new DOMParser().parseFromString(String(value), 'text/html').body.textContent?.trim() || /<img\b[^>]*data-file-id=/.test(value)
+                    : String(value).trim())) return
                   throw new Error('请输入需求正文')
                 }
 
@@ -199,7 +213,15 @@ export function RequirementDrawer({
             },
           ]}
         >
-          {!isWordDocument(documentType) ? (
+          {documentType === 'richtext' ? (
+            <RichTextEditor
+              key={open ? 'open' : 'closed'}
+              projectId={projectId}
+              disabled={documentLoading || loading || !!documentError}
+              ariaLabel="需求正文"
+              onUploadingChange={setImageUploading}
+            />
+          ) : !isWordDocument(documentType) ? (
             <Input.TextArea
               rows={10}
               maxLength={20000}

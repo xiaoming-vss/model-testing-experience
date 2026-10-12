@@ -364,7 +364,7 @@ async def build_snapshot(session: AsyncSession, domain: str, task: WorkerTask) -
             if snapshot.get("taskType") in {
                 "requirement_analysis",
                 "functional_case_generate",
-            } and document_type in {"text", "word", "docx"}:
+            } and document_type in {"text", "word", "docx", "richtext"}:
                 document_url = f"/internal/ai-worker/tasks/{task.task_id}/requirement-document"
                 snapshot["documentDownloadUrl"] = document_url
                 if document_type in {"word", "docx"} and not snapshot.get("sourceContent"):

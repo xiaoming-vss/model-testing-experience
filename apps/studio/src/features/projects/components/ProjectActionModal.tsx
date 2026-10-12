@@ -7,5 +7,5 @@ export function ProjectActionModal({ action, projectId, okButtonProps, onOk, ...
   const scope = useScopedProjectId()
   const { can } = useProjectAccess(projectId ?? scope)
   const allowed = !action || can(action)
-  return <Modal {...props} okButtonProps={{ ...okButtonProps, disabled: okButtonProps?.disabled || !allowed }} onOk={allowed ? onOk : undefined} />
+  return <Modal mask={{ closable: false }} centered {...props} okButtonProps={{ ...okButtonProps, disabled: okButtonProps?.disabled || !allowed }} onOk={allowed ? onOk : undefined} />
 }

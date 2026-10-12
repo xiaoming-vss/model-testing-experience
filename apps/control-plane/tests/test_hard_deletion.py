@@ -216,7 +216,7 @@ async def test_ai_task_cleans_records_but_preserves_legacy_source(db, tmp_path):
     await add(
         db,
         m.AiGenerateRunImport(
-            id="import", run_id="run", artifact_attempt_id="attempt", idempotency_key="once"
+            id="import", run_id="run"
         ),
     )
     await add(db, m.WorkerTask(task_id="worker", domain="ai", task_type="generate", run_id="run"))
@@ -230,7 +230,6 @@ async def test_ai_task_cleans_records_but_preserves_legacy_source(db, tmp_path):
             filename="source.zip",
             size_bytes=6,
             sha256="hash",
-            storage_path=str(source),
             uploaded_at=datetime.now(UTC),
         ),
     )
@@ -278,7 +277,7 @@ async def test_ai_run_deletes_its_own_stages_and_queue_only(db):
     await add(
         db,
         m.AiGenerateRunImport(
-            id="import", run_id="run", artifact_attempt_id="attempt", idempotency_key="once"
+            id="import", run_id="run"
         ),
     )
     await add(db, m.WorkerTask(task_id="worker", domain="ai", task_type="generate", run_id="run"))
@@ -297,16 +296,11 @@ async def test_ai_run_deletes_its_own_stages_and_queue_only(db):
     assert await count(db, m.AiGenerateTaskRun) == 1
 
 
-async def test_rollback_keeps_file_and_resource(db, tmp_path):
-    source = tmp_path / "req.txt"
-    source.write_text("requirement")
+async def test_rollback_keeps_resource(db):
     req = await db.scalar(select(m.Requirement))
-    req.document_storage_path = str(source)
-    await db.commit()
     await delete_resource(db, req)
     await db.rollback()
     await db.commit()
-    assert source.exists()
     assert await count(db, m.Requirement) == 1
 
 
@@ -385,15 +379,3 @@ async def test_ui_case_deletes_aggregate_history_and_worker_without_deleting_sui
     ):
         assert await count(db, model) == 0
     assert await count(db, m.UiTestSuite) == 1
-
-
-async def test_requirement_deletion_does_not_touch_legacy_disk_file(db, tmp_path):
-    source = tmp_path / "historical.txt"
-    source.write_text("original")
-    req = await db.scalar(select(m.Requirement))
-    req.document_storage_path = str(source)
-    await db.commit()
-    await delete_resource(db, req)
-    await db.commit()
-    assert source.read_text() == "original"
-    assert await count(db, m.Requirement) == 0

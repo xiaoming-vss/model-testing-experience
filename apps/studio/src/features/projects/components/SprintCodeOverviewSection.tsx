@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom'
+import { useWorkbenchStore } from '../store/workbench.store'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { usePersonalConnections } from '@/features/base-services/hooks/usePersonalConnections'
 import { useState } from 'react'
@@ -18,6 +20,7 @@ function formatBaseline(repository: SprintCodeOverviewRepository) {
 }
 
 export function SprintCodeOverviewSection({ sprintId, projectId }: { sprintId: string; projectId: string }) {
+  const navigate = useNavigate()
   const [selectedConnections, setSelectedConnections] = useState<Record<string, string>>({})
   const personal = usePersonalConnections(projectId, 'gitlab', selectedConnections)
   const codeOverviewQuery = useQuery({
@@ -36,6 +39,13 @@ export function SprintCodeOverviewSection({ sprintId, projectId }: { sprintId: s
             {codeOverviewQuery.data?.generatedAt ? `统计时间：${formatTime(codeOverviewQuery.data.generatedAt)}` : '本迭代内需求绑定的仓库与代码变更量'}
           </Text>
         </div>
+        <Space>
+        <ActionButton operation="run" onClick={() => {
+          const scope = useWorkbenchStore.getState()
+          if (scope.activeProjectId !== projectId) scope.setActiveProjectId(projectId)
+          useWorkbenchStore.getState().setActiveSprintId(sprintId)
+          navigate('/ai-testing?kind=codeRisk')
+        }}>代码风险分析</ActionButton>
         <ActionButton
           className="action-btn-read"
           operation="refresh"
@@ -44,6 +54,7 @@ export function SprintCodeOverviewSection({ sprintId, projectId }: { sprintId: s
         >
           手动刷新
         </ActionButton>
+        </Space>
       </div>
 
       <PersonalConnectionFields instances={repositories.map(r => r.instanceUrl ?? '')} connections={personal.connections} value={selectedConnections} onChange={setSelectedConnections} />

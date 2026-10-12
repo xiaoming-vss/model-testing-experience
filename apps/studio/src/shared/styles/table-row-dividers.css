@@ -1,0 +1,7 @@
+/* 默认规则，新增数据列表自动继承；几何规则在此维护，颜色仅在主题 token 定义。
+   feature 不重设 --app-list-row-border 或覆盖为透明／无边框。
+   全站数据表横向分隔：覆盖页面、详情及弹窗中的 Ant Design 数据行。
+   测量行、展开内容行和空态不增加横线；卡片网格仍保留卡片边界。 */
+:root:root .ant-table-wrapper .ant-table-tbody > tr.ant-table-row > td.ant-table-cell {
+  border-bottom: 1px solid var(--app-list-row-border) !important;
+}

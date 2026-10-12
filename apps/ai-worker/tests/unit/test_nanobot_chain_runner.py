@@ -1,5 +1,6 @@
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from uuid import UUID
@@ -48,26 +49,35 @@ class _FakeFactory:
 
 class NanobotChainRunnerTests(unittest.IsolatedAsyncioTestCase):
     async def test_run_chain_uses_skill_names_and_reuses_one_session_key(self) -> None:
-        factory = _FakeFactory(["step one result", "step two result"])
+        workspace = self.enterContext(tempfile.TemporaryDirectory())
+        factory = _FakeFactory(
+            [
+                '{"login":{"path":"/login","method":"POST"}}',
+                "cases:\n  - {name: login, orderNo: 1, method: POST, urlTemplate: /login}",
+            ]
+        )
 
         result = await run_chain(
             openapi_text='{"openapi":"3.0.0"}',
             session_key="demo:chain",
             config_path="D:/tmp/config.json",
-            workspace="D:/tmp/workspace",
+            workspace=workspace,
             extractor_skill_name="openapi-test-config-extractor",
             generator_skill_name="api-cases-yaml-generator",
             extra_instruction="帮我生成登录、项目增删改查的用例",
             from_config=factory,
         )
 
-        self.assertEqual(result.extractor_output, "step one result")
-        self.assertEqual(result.generator_output, "step two result")
+        self.assertEqual(result.extractor_output, '{"login":{"path":"/login","method":"POST"}}')
+        self.assertEqual(
+            result.generator_output,
+            "cases:\n  - {name: login, orderNo: 1, method: POST, urlTemplate: /login}",
+        )
         self.assertEqual(
             factory.last_kwargs,
             {
                 "config_path": "D:/tmp/config.json",
-                "workspace": "D:/tmp/workspace",
+                "workspace": workspace,
             },
         )
         self.assertEqual(
@@ -89,7 +99,9 @@ class NanobotChainRunnerTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn(
             "请先加载本地 skill：api-cases-yaml-generator", factory.bot.calls[1]["message"]
         )
-        self.assertIn("step one result", factory.bot.calls[1]["message"])
+        self.assertIn(
+            '{"login":{"path":"/login","method":"POST"}}', factory.bot.calls[1]["message"]
+        )
         self.assertIn("帮我生成登录、项目增删改查的用例", factory.bot.calls[1]["message"])
         self.assertIn(
             "符合 api-cases-yaml-generator skill 要求的 YAML 内容", factory.bot.calls[1]["message"]

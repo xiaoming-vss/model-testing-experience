@@ -159,7 +159,6 @@ class IntegrationJobService:
                             kind=step.kind,
                             dependencies_json=step.dependencies,
                             input_json=step.input,
-                            input_digest=digest(step.input),
                             status=StepStatus.PENDING,
                         )
                     )
@@ -183,7 +182,6 @@ class IntegrationJobService:
             return receipt.response_json
         receipt = IntegrationClaimReceipt(
             claim_key=key,
-            worker_id=body.worker_id,
             request_id=body.claim_request_id,
             request_digest=request_digest,
             response_json={"job": None},
@@ -230,7 +228,6 @@ class IntegrationJobService:
                     job.active_target = job.target_key
                     job.status = JobStatus.CLAIMED
                     job.worker_id = body.worker_id
-                    job.claim_request_id = body.claim_request_id
                     job.claim_key = key
                     job.claim_generation += 1
                     job.heartbeat_at = now
@@ -346,7 +343,6 @@ class IntegrationJobService:
             raise conflict("依赖步骤尚未成功")
         await self.validate_prepare(job, step, body)
         step.input_json = body.input
-        step.input_digest = digest(body.input)
         step.operation_id = uuid4().hex
         step.prepare_request_id = body.prepare_request_id
         step.intent_worker_id = body.worker_id

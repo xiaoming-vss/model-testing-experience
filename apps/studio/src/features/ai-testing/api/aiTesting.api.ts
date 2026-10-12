@@ -49,8 +49,6 @@ import type { Requirement } from '@/features/requirements/types'
 
 export const aiTestingApi = {
   ...skillsApi,
-  getApiCaseGenerateTasks: (projectId: string) =>
-    request<ListResponse<ApiCaseGenerateTask>>(`/v1/projects/${projectId}/api-case-generate-tasks`),
   createApiCaseGenerateTask: (projectId: string, body: CreateApiCaseGenerateTaskPayload) =>
     request<ApiCaseGenerateTask>(`/v1/projects/${projectId}/api-case-generate-tasks`, {
       method: 'POST',
@@ -93,8 +91,6 @@ export const aiTestingApi = {
     request<Record<string, never>>(`/v1/api-case-generate-tasks/${taskId}`, {
       method: 'DELETE',
     }),
-  getFunctionalCaseGenerateTasks: (projectId: string) =>
-    request<ListResponse<FunctionalCaseGenerateTask>>(`/v1/projects/${projectId}/function-case-generate-tasks`),
   createFunctionalCaseGenerateTask: (projectId: string, body: CreateFunctionalCaseGenerateTaskPayload) =>
     request<FunctionalCaseGenerateTask>(`/v1/projects/${projectId}/function-case-generate-tasks`, {
       method: 'POST',
@@ -151,10 +147,10 @@ export const aiTestingApi = {
     method: 'POST',
     body: JSON.stringify(body),
   }),
-  generateFunctionalCaseRelationAnalysis: (runId: string) =>
+  generateFunctionalCaseRelationAnalysis: (runId: string, connectionId?: string) =>
     request<FunctionalCaseGenerateTaskRun>(`/v1/function-case-generate-task-runs/${runId}/relation-analysis`, {
       method: 'POST',
-      body: JSON.stringify({}),
+      body: JSON.stringify(connectionId ? { connectionId } : {}),
     }),
   retryFunctionalCaseGenerateTaskRunStage: (
     runId: string,
@@ -178,8 +174,6 @@ export const aiTestingApi = {
     request<Record<string, never>>(`/v1/function-case-generate-tasks/${taskId}`, {
       method: 'DELETE',
     }),
-  getUiCaseGenerateTasks: (projectId: string) =>
-    request<ListResponse<UiCaseGenerateTask>>(`/v1/projects/${projectId}/ui-case-generate-tasks`),
   createUiCaseGenerateTask: (projectId: string, body: CreateUiCaseGenerateTaskPayload) =>
     request<UiCaseGenerateTask>(`/v1/projects/${projectId}/ui-case-generate-tasks`, {
       method: 'POST',
@@ -194,7 +188,7 @@ export const aiTestingApi = {
     }),
   deleteUiCaseGenerateTask: (taskId: string) =>
     request<Record<string, never>>(`/v1/ui-case-generate-tasks/${taskId}`, { method: 'DELETE' }),
-  uploadUiCaseGenerateTaskSourceArchive: async (taskId: string, file: File) => {
+  uploadUiCaseGenerateTaskSourceArchive: async (taskId: string, file: File, onUploadProgress?: (percent: number) => void) => {
     const capabilities = await storageCapabilities()
     if (!capabilities.enabled) throw new Error('S3 文件存储未启用，请联系管理员配置')
     if (!file.name.toLowerCase().endsWith('.zip')) throw new Error('只支持 .zip 源码包')
@@ -202,7 +196,7 @@ export const aiTestingApi = {
     const task = await request<UiCaseGenerateTask>(`/v1/ui-case-generate-tasks/${taskId}`)
     const projectId = task.projectId
     if (!projectId) throw new Error('任务缺少所属项目，无法上传源码包')
-    const fileId = await uploadStoredFile(projectId, file, 'ui_source_archive')
+    const fileId = await uploadStoredFile(projectId, file, 'ui_source_archive', onUploadProgress)
     return request<UiCaseGenerateTask>(`/v1/ui-case-generate-tasks/${taskId}/source-archive`, {
       method: 'PUT', body: JSON.stringify({ fileId }),
     })
@@ -233,8 +227,6 @@ export const aiTestingApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  getRequirementAnalysisTasks: (projectId: string) =>
-    request<ListResponse<RequirementAnalysisTask>>(`/v1/projects/${projectId}/requirement-analysis-tasks`),
   createRequirementAnalysisTask: (projectId: string, body: CreateRequirementAnalysisTaskPayload) =>
     request<RequirementAnalysisTask>(`/v1/projects/${projectId}/requirement-analysis-tasks`, {
       method: 'POST',

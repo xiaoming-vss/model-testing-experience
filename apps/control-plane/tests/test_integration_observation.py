@@ -96,7 +96,6 @@ async def test_queue_explanations_follow_authenticated_capability_ttl_generation
                 project_id="p",
                 decision="isolated",
                 state_digest=digest("state"),
-                facts_json={},
                 reviewed_at=clock(),
             )
         )

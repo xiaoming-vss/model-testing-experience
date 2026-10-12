@@ -2,7 +2,7 @@ import '@/features/ai-testing/styles/index.css'
 import '@/features/ai-testing/styles/task-form.css'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { LinkOutlined } from '@ant-design/icons'
-import { Alert, Button, Empty, Modal, Radio, Space, Spin, Switch, Tag, Typography, theme } from 'antd'
+import { Alert, Button, Empty, Input, Modal, Radio, Space, Spin, Switch, Tag, Typography, theme } from 'antd'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -20,7 +20,11 @@ export function LlmConnectionSelectModal({
   showCheckpointOption = false,
   checkpointEnabled = false,
   onCheckpointEnabledChange,
+  instruction,
+  onInstructionChange,
 }: {
+  instruction?: string
+  onInstructionChange?: (value: string) => void
   open: boolean
   onClose: () => void
   onConfirm: (connectionId: string) => void
@@ -64,6 +68,7 @@ export function LlmConnectionSelectModal({
   return (
     <Modal
       mask={{ closable: false }}
+      centered
       rootClassName="llm-connection-select-modal"
       // 模型选择可能由层级为 PopupBase + 200 的优化弹窗触发。
       zIndex={token.zIndexPopupBase + 300}
@@ -138,6 +143,11 @@ export function LlmConnectionSelectModal({
               ))}
             </div>
           </Radio.Group>
+          {onInstructionChange ? <label style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <Text strong>补充指令</Text>
+            <Input.TextArea aria-label="补充指令" value={instruction} onChange={event => onInstructionChange(event.target.value)}
+              autoSize={{ minRows: 3, maxRows: 8 }} placeholder="选填，仅用于本次运行" />
+          </label> : null}
           {showCheckpointOption ? (
             <div
               style={{
@@ -157,7 +167,7 @@ export function LlmConnectionSelectModal({
                   开启后每个生成阶段会暂停，可编辑确认后再继续。
                 </Text>
               </div>
-              <Switch checked={checkpointEnabled} onChange={onCheckpointEnabledChange} />
+              <Switch aria-label="人工审核" checked={checkpointEnabled} onChange={onCheckpointEnabledChange} />
             </div>
           ) : null}
         </div>

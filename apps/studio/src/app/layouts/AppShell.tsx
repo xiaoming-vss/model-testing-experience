@@ -1,8 +1,9 @@
-import { RequirementPreviewPage } from '../pages/RequirementPreviewPage'
+import { useState } from 'react'
+import { RequirementDetailPage } from '../pages/RequirementDetailPage'
 import { ThemeSelect } from '@/shared/components/ThemeSelect'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { DownOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons'
-import { Button, Dropdown, Layout, Select, Spin, Tooltip } from 'antd'
+import { Button, Dropdown, Layout, Menu, Select, Spin, Tooltip } from 'antd'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { ApiCollectionDetailPage } from '@/features/api-automation/pages/ApiCollectionDetailPage'
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser'
@@ -28,7 +29,6 @@ import { BugDetailPage } from '@/features/bugs/pages/BugDetailPage'
 import { BugSubmitPage } from '@/features/bugs/pages/BugSubmitPage'
 import { UiTestSuiteCasePage } from '@/features/ui-automation/pages/UiTestSuiteCasePage'
 import { AppSidebar } from './AppSidebar'
-import { useAiTestingTaskCounts } from '@/features/ai-testing/hooks/useAiTestingTaskCounts'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { normalizeProjectId } from '@/utils/format'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
@@ -38,6 +38,7 @@ import { ProjectRouteGuard } from '../router/guards/ProjectRouteGuard'
 const { Header, Content } = Layout
 
 export function AppShell() {
+  const [projectSelectorOpen, setProjectSelectorOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
   const logout = useLogout()
@@ -48,10 +49,9 @@ export function AppShell() {
   const sprintScope = useActiveSprint(access.can('read'))
   const bugScope = useBugScope(activeProjectId, bugOnly)
   const { activeSprintId, sprintsQuery, selectSprint, sprintSelectorOptions } = bugOnly ? bugScope : sprintScope
-  const { kindCounts } = useAiTestingTaskCounts(activeProjectId, access.can('read'))
   const showWorkbenchHeader = !location.pathname.startsWith('/profile')
 
-  const shellClassName = `app-shell app-shell-macos${location.pathname.startsWith('/base-services') ? ' app-shell-base-services' : ''}`
+  const shellClassName = `app-shell app-shell-macos${location.pathname.startsWith('/base-services') ? ' app-shell-base-services' : ''}${location.pathname.startsWith('/requirements/') ? ' app-shell-requirement-detail' : ''}`
 
   if (!token) {
     return <Navigate to="/login" replace state={{ from: location }} />
@@ -59,7 +59,7 @@ export function AppShell() {
 
   return (
     <Layout className={shellClassName}>
-      <AppSidebar designCounts={kindCounts} bugOnly={bugOnly} />
+      <AppSidebar bugOnly={bugOnly} />
       <Layout>
         <Header className="app-header compact-header">
           <div className="app-header-main">
@@ -70,12 +70,38 @@ export function AppShell() {
                   <span className="project-separator">/</span>
                   <Select
                     className="project-select"
+                    aria-label="当前项目"
+                    open={projectSelectorOpen}
+                    onOpenChange={setProjectSelectorOpen}
+                    popupRender={(menu) => <>
+                      {menu}
+                      {activeProjectId && access.can('read') && !bugOnly ? <Menu
+                        selectable={false}
+                        items={[
+                          { type: 'divider' },
+                          { key: 'members', icon: <UserOutlined />, label: '项目成员' },
+                          { key: 'settings', icon: <SettingOutlined />, label: '项目设置', disabled: !access.can('manage') },
+                        ]}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={({ key }) => {
+                          if (key === 'settings' && !access.can('manage')) return
+                          setProjectSelectorOpen(false)
+                          const params = new URLSearchParams(location.pathname === '/projects' ? location.search : '')
+                          params.set('projectPanel', key)
+                          params.set('panelProjectId', activeProjectId)
+                          navigate(`/projects?${params}`)
+                        }}
+                      /> : null}
+                    </>}
                     loading={projectsQuery.isLoading}
                     value={activeProjectId}
                     placeholder="请选择项目"
                     suffixIcon={<DownOutlined />}
                     options={projects.map((project) => ({ label: project.name, value: normalizeProjectId(project) }))}
-                    onChange={setActiveProjectId}
+                    onChange={id => {
+                      setActiveProjectId(id)
+                      if (location.pathname.startsWith('/requirements/')) navigate('/projects?board=requirements')
+                    }}
                     variant="borderless"
                   />
                   {activeProjectId ? (
@@ -90,7 +116,10 @@ export function AppShell() {
                         placeholder="全部迭代"
                         suffixIcon={<DownOutlined />}
                         options={sprintSelectorOptions}
-                        onChange={selectSprint}
+                        onChange={id => {
+                        selectSprint(id)
+                        if (location.pathname.startsWith('/requirements/')) navigate('/projects?board=requirements')
+                      }}
                         variant="borderless"
                       />
                     </>
@@ -146,7 +175,7 @@ export function AppShell() {
             <Route path="/testing" element={<TestingPage />} />
             <Route path="/test-cases" element={<Navigate to="/testing?tab=library" replace />} />
             <Route path="/test-orders/:orderId" element={<TestOrderWorkspacePage />} />
-            <Route path="/requirements/:requirementId" element={<RequirementPreviewPage />} />
+            <Route path="/requirements/:requirementId" element={<RequirementDetailPage />} />
             <Route path="/bugs/new" element={<BugSubmitPage />} />
             <Route path="/bugs/:bugId" element={<BugDetailPage />} />
             <Route path="/ai-testing" element={<AiTestingOverviewPage />} />

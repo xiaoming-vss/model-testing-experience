@@ -71,7 +71,7 @@
 .auth-brand-name {
   display: block;
   color: var(--app-auth-text);
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--app-font-sans);
   font-size: 46px;
   font-weight: 750;
   line-height: 54px;
@@ -82,7 +82,7 @@
   display: block;
   margin-top: 4px;
   color: var(--app-auth-text-secondary);
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--app-font-sans);
   font-size: 13px;
   line-height: 20px;
 }

@@ -1,3 +1,4 @@
+import { ActionButton } from '@/shared/components/ActionButton'
 import { StoredFileDownload } from '@/shared/components/files/StoredFile'
 import {
   uiSuiteRunReportViewOptions,
@@ -21,7 +22,7 @@ import {
   getErrorMessage
 } from '@/utils/format'
 import { DownOutlined } from '@ant-design/icons'
-import { Alert, Button, Empty, Modal, Segmented, Tag } from 'antd'
+import { Alert, Empty, Modal, Segmented, Tag } from 'antd'
 import { renderUiRunStepResultList } from '../utils/renderUiRunSteps'
 
 import type { UiTestSuiteRunItem } from '@/features/ui-automation/types'
@@ -78,9 +79,7 @@ export function UiSuiteRunReport({ suiteRunReportOpen, closeSuiteRunReport, suit
                 </div>
               </div>
               <div className="api-collection-run-report-head-actions">
-                <Button onClick={handleRefreshSuiteRunReport} loading={refreshingSuiteRunReport} disabled={!selectedSuiteRunId}>
-                  刷新报告
-                </Button>
+                <ActionButton operation="refresh" onClick={handleRefreshSuiteRunReport} loading={refreshingSuiteRunReport} disabled={!selectedSuiteRunId}>刷新报告</ActionButton>
               </div>
             </div>
 

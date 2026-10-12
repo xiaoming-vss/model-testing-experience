@@ -224,6 +224,20 @@ class AiGenerateTaskRepository(ResourceRepository):
 
         return await self.session.run_sync(lambda session: project_many(session, rows))
 
+    async def has_active_run(self, task_id: str) -> bool:
+        from testing_agent.core.enums import RUN_ACTIVE_STATUSES
+
+        return bool(
+            await self.session.scalar(
+                select(AiGenerateTaskRun.run_id)
+                .where(
+                    AiGenerateTaskRun.task_id == task_id,
+                    AiGenerateTaskRun.status.in_(RUN_ACTIVE_STATUSES),
+                )
+                .limit(1)
+            )
+        )
+
     async def get_run_reference(self, run_id: str):
         # A scalar projection must not alter ORM loader state of the locked run.
         return (

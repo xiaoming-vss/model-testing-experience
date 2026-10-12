@@ -6,6 +6,18 @@ import { ActionButton } from './ActionButton'
 
 afterEach(cleanup)
 
+it('刷新统一为透明纯图标，保留业务名称、提示和点击行为', async () => {
+  const refresh = vi.fn()
+  render(<ActionButton operation="refresh" type="primary" onClick={refresh}>刷新报告</ActionButton>)
+  const button = screen.getByRole('button', { name: '刷新报告' })
+  expect(button).toHaveClass('ant-btn-text', 'app-action-icon')
+  expect(button.textContent).toBe('')
+  await userEvent.setup().hover(button)
+  expect(await screen.findByRole('tooltip')).toHaveTextContent('刷新报告')
+  await userEvent.setup().click(button)
+  expect(refresh).toHaveBeenCalledTimes(1)
+})
+
 it('主要操作显示统一默认文字，也支持业务文案', () => {
   render(<><ActionButton operation="run" /><ActionButton operation="create">新建测试集</ActionButton></>)
   expect(screen.getByRole('button', { name: '运行' })).toBeInTheDocument()

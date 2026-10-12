@@ -1,6 +1,6 @@
 import type { ZentaoBinding } from '@/features/base-services/types'
 
-export type RequirementDocumentType = 'text' | 'word' | 'docx'
+export type RequirementDocumentType = 'text' | 'word' | 'docx' | 'richtext'
 
 export type Requirement = {
   zentaoBinding?: ZentaoBinding | null
@@ -32,7 +32,7 @@ export type RequirementCreatePayload = {
 }
 
 export type RequirementUpdatePayload = Partial<
-  Pick<Requirement, 'name' | 'documentType' | 'documentContent'>
+  Pick<Requirement, 'name' | 'documentType' | 'documentContent' | 'documentFileId'>
 >
 
 export type RequirementDocumentUploadPayload = {

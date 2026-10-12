@@ -416,7 +416,7 @@ body,
 }
 
 .workbench-page {
-  height: calc(100vh - 56px);
+  height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -444,29 +444,6 @@ body,
 .workbench-panel {
   display: flex;
   flex-direction: column;
-}
-
-.workbench-board-switcher {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-}
-
-.workbench-board-switcher .ant-segmented {
-  padding: 4px;
-  background: var(--app-control-surface);
-  border-radius: 999px;
-}
-
-.workbench-board-switcher .ant-segmented-item {
-  min-width: 88px;
-  border-radius: 999px;
-  color: var(--app-control-text);
-  font-weight: 600;
-}
-
-.workbench-board-switcher .ant-segmented-item-selected {
-  color: var(--app-control-link);
 }
 
 .workbench-board-panel {
@@ -511,14 +488,6 @@ body,
   .workbench-panel {
     overflow: visible;
   }
-
-  .workbench-board-switcher {
-    width: 100%;
-  }
-
-  .workbench-board-switcher .ant-segmented {
-    width: 100%;
-  }
 }
 
 :root {
@@ -552,12 +521,7 @@ body,
   display: none;
 }
 
-.app-sider {
-  width: 76px !important;
-  min-width: 76px !important;
-  max-width: 76px !important;
-  flex: 0 0 76px !important;
-}
+/* 侧边栏宽度由 sidebar.css 管理:192px 展开 / 76px 折叠。 */
 
 .app-sider .ant-menu {
   padding: 8px 0 12px;
@@ -871,7 +835,7 @@ body,
 .app-shell .project-selector-label {
   color: var(--app-glass-text-muted);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 400;
 }
 
 .app-shell .project-separator {
@@ -879,18 +843,20 @@ body,
 }
 
 .app-shell .project-select {
-  min-width: 158px;
+  min-width: 140px;
+  width: 140px;
 }
 
 .app-shell .sprint-select {
-  min-width: 132px;
+  min-width: 120px;
+  width: 120px;
   max-width: 200px;
 }
 
 .app-shell .project-select .ant-select-selector {
   color: var(--app-glass-text) !important;
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 400;
 }
 
 .app-shell .app-header-actions {
@@ -953,7 +919,7 @@ body,
   background: var(--app-glass-hover) !important;
   box-shadow: none !important;
   transform: none !important;
-  font-weight: 650;
+  font-weight: 400;
 }
 
 .app-shell .app-sider .ant-menu-item-selected::before {
@@ -1043,9 +1009,7 @@ body,
   background: var(--mac-glass-header) !important;
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
-  box-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-78),
-    0 8px 22px var(--app-glass-shadow-soft) !important;
+  box-shadow: none !important;
 }
 
 .app-shell.app-shell-base-services .project-selector-wrap {
@@ -1135,20 +1099,21 @@ body,
 }
 
 .app-shell.app-shell-macos .app-header.compact-header {
-  height: 56px;
+  height: 48px;
+  padding-inline: 16px;
   border-bottom-color: var(--mac-glass-border) !important;
   background: var(--mac-glass-header) !important;
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
-  box-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-78),
-    0 8px 22px var(--app-glass-shadow-soft) !important;
+  box-shadow: none !important;
 }
 
 .app-shell.app-shell-macos .project-selector-wrap {
-  border-color: var(--mac-glass-border) !important;
-  background: var(--mac-glass-panel) !important;
-  box-shadow: inset 0 1px 0 var(--app-glass-highlight-78) !important;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .app-shell.app-shell-macos .project-selector-label,
@@ -1228,45 +1193,6 @@ body,
 
 .app-shell.app-shell-macos .workbench-tabs {
   gap: 12px;
-}
-
-.app-shell.app-shell-macos .workbench-board-switcher {
-  display: inline-flex;
-  width: fit-content;
-  padding: 4px;
-  border: 1px solid var(--mac-glass-border);
-  border-radius: 14px;
-  background: var(--app-glass-surface-56);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
-  box-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-86),
-    0 8px 18px var(--app-glass-shadow-inset);
-}
-
-.app-shell.app-shell-macos .workbench-board-switcher .ant-segmented {
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-.app-shell.app-shell-macos .workbench-board-switcher .ant-segmented-thumb,
-.app-shell.app-shell-macos .workbench-board-switcher .ant-segmented-item-selected {
-  border-radius: 10px;
-  background: var(--app-glass-surface-92) !important;
-  box-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-90),
-    0 6px 14px var(--app-glass-shadow-raised) !important;
-}
-
-.app-shell.app-shell-macos .workbench-board-switcher .ant-segmented-item {
-  min-width: 76px;
-  border-radius: 10px;
-  color: var(--mac-glass-muted);
-}
-
-.app-shell.app-shell-macos .workbench-board-switcher .ant-segmented-item-selected {
-  color: var(--mac-glass-blue) !important;
 }
 
 .app-shell.app-shell-macos .workbench-board-panel {
@@ -1400,7 +1326,7 @@ body,
 }
 
 .app-shell.app-shell-macos .project-overview-page .workbench-tabs {
-  padding: 12px var(--app-page-gutter) 16px;
+  padding: var(--app-page-gutter);
   gap: 12px;
 }
 
@@ -1460,43 +1386,6 @@ body,
 .app-shell.app-shell-macos .project-overview-page .sprint-card-label,
 .app-shell.app-shell-macos .project-overview-page .sprint-card-description {
   color: var(--project-overview-muted) !important;
-}
-
-.app-shell.app-shell-macos .project-overview-page .workbench-board-switcher {
-  width: fit-content;
-  padding: 0;
-  border: 0 !important;
-  background: transparent !important;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-  box-shadow: none !important;
-}
-
-.app-shell.app-shell-macos .project-overview-page .workbench-board-switcher .ant-segmented {
-  padding: 4px;
-  border: 1px solid var(--app-glass-border-soft) !important;
-  border-radius: 14px;
-  background: var(--app-glass-table-bg) !important;
-  box-shadow: inset 0 1px 0 var(--app-glass-highlight-76) !important;
-}
-
-.app-shell.app-shell-macos .project-overview-page .workbench-board-switcher .ant-segmented-item {
-  min-width: 72px;
-  border-radius: 10px;
-  color: var(--project-overview-muted) !important;
-}
-
-.app-shell.app-shell-macos .project-overview-page .workbench-board-switcher .ant-segmented-item:hover {
-  color: var(--project-overview-blue) !important;
-  background: var(--app-glass-surface-72) !important;
-}
-
-.app-shell.app-shell-macos .project-overview-page .workbench-board-switcher .ant-segmented-thumb,
-.app-shell.app-shell-macos .project-overview-page .workbench-board-switcher .ant-segmented-item-selected {
-  color: var(--project-overview-text) !important;
-  border-radius: 10px;
-  background: var(--app-glass-surface-94) !important;
-  box-shadow: none !important;
 }
 
 .app-shell.app-shell-macos .project-overview-page .workbench-board-panel {
@@ -1581,7 +1470,7 @@ body,
 
 .app-shell.app-shell-macos .project-overview-page .sprint-card-value {
   color: var(--project-overview-text) !important;
-  font-weight: 650;
+  font-weight: 400;
 }
 
 .app-shell.app-shell-macos .project-overview-page .action-btn-create.ant-btn-primary {
@@ -1597,7 +1486,7 @@ body,
 .project-overview-page .project-requirement-list-table .ant-table {
   color: var(--project-overview-text, var(--app-glass-text));
   background: transparent;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif;
+  font-family: var(--app-font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
 }
@@ -1634,7 +1523,7 @@ body,
   background: var(--app-glass-table-hover) !important;
 }
 
-.project-overview-page .project-requirement-list-table .ant-table-tbody > tr > td {
+.project-overview-page .project-requirement-list-table .ant-table-tbody > tr.ant-table-row > td {
   border-bottom: 1px solid var(--app-glass-table-row-border);
   color: var(--app-glass-table-text) !important;
   font-size: 12px;
@@ -1671,7 +1560,7 @@ body,
 .project-overview-page .project-requirement-list-table .ant-table-tbody span,
 .project-overview-page .project-requirement-list-info.ant-typography {
   color: var(--app-glass-table-heading) !important;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif !important;
+  font-family: var(--app-font-sans) !important;
   font-size: 12px !important;
   font-weight: 400 !important;
   letter-spacing: 0 !important;
@@ -1758,7 +1647,7 @@ body,
   border-bottom-color: var(--app-glass-table-border-hover) !important;
 }
 
-.app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-tbody > tr > td {
+.app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-tbody > tr.ant-table-row > td {
   color: var(--app-glass-table-text) !important;
 }
 
@@ -1786,8 +1675,8 @@ body,
 :root:root .project-overview-page .project-requirement-list-table .ant-table-thead > tr > th.ant-table-cell::before {
   display: none;
 }
-:root:root .project-overview-page .project-requirement-list-table .ant-table-tbody > tr > td,
-:root:root .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-tbody > tr > td {
+:root:root .project-overview-page .project-requirement-list-table .ant-table-tbody > tr.ant-table-row > td,
+:root:root .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .ant-table-tbody > tr.ant-table-row > td {
   color: var(--app-list-header-text) !important;
   border-bottom: 1px solid var(--app-list-row-border) !important;
 }
@@ -2112,10 +2001,9 @@ body,
 
 .app-header-feedback-badge {
   flex-shrink: 0;
-  padding: 1px 8px;
-  border-radius: 6px;
+  padding: 0;
   color: var(--app-accent);
-  background: var(--app-accent-selection);
+  background: transparent;
   font-weight: 600;
 }
 

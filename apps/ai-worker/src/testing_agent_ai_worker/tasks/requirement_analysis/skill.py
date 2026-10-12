@@ -20,8 +20,9 @@ async def run_skill_step(
     config_path: str | None = None,
     workspace: str | None = None,
     extra_instruction: str = "",
+    media: list[str] | None = None,
     from_config: Callable[..., Any] | None = None,
-) -> str:
+) -> Any:
     """执行需求分析单步 skill。"""
 
     factory = from_config or _default_from_config
@@ -34,5 +35,7 @@ async def run_skill_step(
                 extra_instruction=extra_instruction,
             ),
             session_key=session_key,
+            **({"media": media} if media else {}),
         )
-    return result.content
+    # Preserve SDK failure/truncation metadata for output validation.
+    return result

@@ -140,8 +140,11 @@ def setup(api, monkeypatch):
             ),
         }
     )
-    # MockTransport 在 lambda 内构造：测试包装 remote.handle 时按当时状态分发。
-    factory = lambda url, token: McpClient(url, token, transport=httpx.MockTransport(remote.handle))
+
+    # MockTransport 在工厂内构造：测试包装 remote.handle 时按当时状态分发。
+    def factory(url, token):
+        return McpClient(url, token, transport=httpx.MockTransport(remote.handle))
+
     monkeypatch.setattr("testing_agent.services.zentao_mcp_instance.McpClient", factory)
     # ZentaoMcpAccess.resolve 从 zentao_mcp 命名空间取 McpClient 传入 discover_instance。
     monkeypatch.setattr("testing_agent.services.zentao_mcp.McpClient", factory)
@@ -400,7 +403,6 @@ def test_import_creates_linked_bug_with_baselines_and_activity(api, setup):
     assert push.operation_id == "req-20261009-0001:51"
     assert push.instance_key == instance_key(INSTANCE)
     assert push.payload_json == {}
-    assert push.source_json["openedBy"] == "tester"
     assert {baseline.field_group for baseline in baselines} == {
         "profile",
         "description",

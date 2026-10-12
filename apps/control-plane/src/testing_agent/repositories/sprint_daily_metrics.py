@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import builtins
+from typing import TypedDict
 
 from sqlalchemy import select
 
 from testing_agent.models.api_case import ApiCase
 from testing_agent.models.api_case_run import ApiCaseRun
 from testing_agent.models.api_collection import ApiCollection
+from testing_agent.models.bug import Bug
 from testing_agent.models.project import Project
 from testing_agent.models.requirement import Requirement
 from testing_agent.models.resource_binding import ResourceBinding
@@ -19,6 +21,15 @@ from testing_agent.models.ui_test_suite import UiTestSuite
 from testing_agent.models.ui_test_suite_run import UiTestSuiteRun
 from testing_agent.repositories.base import BaseRepository
 from testing_agent.repositories.latest import latest_per_resource
+
+
+class BugSnapshot(TypedDict):
+    bugId: str
+    bugNo: int
+    title: str
+    status: str
+    severity: str
+    resolution: str
 
 
 class SprintDailyMetricsRepository(BaseRepository):
@@ -49,6 +60,27 @@ class SprintDailyMetricsRepository(BaseRepository):
                 SprintDailyMetrics.snapshot_date == snapshot_date,
             )
         )
+
+    async def list_bug_snapshots(
+        self, project_id: str, sprint_id: str
+    ) -> builtins.list[BugSnapshot]:
+        """与平台 Bug 列表默认的发现迭代筛选一致，读取报告所需摘要。"""
+        rows = await self.session.execute(
+            select(Bug.bug_id, Bug.bug_no, Bug.title, Bug.status, Bug.severity, Bug.resolution)
+            .where(Bug.project_id == project_id, Bug.found_sprint_id == sprint_id)
+            .order_by(Bug.created_at.desc(), Bug.id.desc())
+        )
+        return [
+            BugSnapshot(
+                bugId=bug_id,
+                bugNo=bug_no,
+                title=title,
+                status=status,
+                severity=severity,
+                resolution=resolution,
+            )
+            for bug_id, bug_no, title, status, severity, resolution in rows
+        ]
 
     async def list_requirements_by_sprint(self, sprint_id: str) -> builtins.list[Requirement]:
         return list(

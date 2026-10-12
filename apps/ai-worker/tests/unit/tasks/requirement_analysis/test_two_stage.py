@@ -32,7 +32,7 @@ class TwoStageTests(unittest.TestCase):
             payload=TaskPayload(
                 openapi_content="",
                 source_content="原材料",
-                document_type="text",
+                document_type="word",
                 metadata={"workflowVersion": 2},
             ),
         )
@@ -91,13 +91,15 @@ class TwoStageTests(unittest.TestCase):
                     self.assertEqual(body["currentArtifact"], understanding)
                     self.assertEqual(body["currentArtifact"]["questions"][0]["status"], "open")
 
-    def test_bad_generation_does_not_publish_progress(self):
+    def test_bad_generation_does_not_publish_artifact(self):
         progress = []
         with self.assertRaises(ValueError):
             self.run_stage(
                 self.task("extracting_text"), lambda **kwargs: "```json\n{}\n```", progress
             )
-        self.assertEqual(progress, [])
+        self.assertEqual(len(progress), 2)
+        self.assertTrue(all(p.stage_status == "running" for p in progress))
+        self.assertTrue(all(json.loads(p.intermediate_json_text) == {} for p in progress))
 
     def test_skill_selection_uses_only_two_reviewed_stages(self):
         task = self.task("feature_understanding")

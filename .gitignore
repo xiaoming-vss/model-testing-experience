@@ -22,4 +22,6 @@
 **/.idea/
 **/.zcode/
 # Standalone local UI previews; preserve their running development servers.
-/apps/studio/.codex-*-preview/
+/apps/studio/.codex-*/
+# Generated Impeccable design-review reports.
+/.impeccable/

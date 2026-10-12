@@ -50,10 +50,10 @@ class ApiCaseExecutorTests(unittest.TestCase):
             events.append("chain")
             captured.update(kwargs)
             callback = kwargs["on_extractor_result"]
-            callback("json result")
+            callback('{"login":{"path":"/login","method":"POST"}}')
             return ChainRunResult(
-                extractor_output="json result",
-                generator_output="cases:\n  - name: login",
+                extractor_output='{"login":{"path":"/login","method":"POST"}}',
+                generator_output="cases:\n  - {name: login, orderNo: 1, method: POST, urlTemplate: /login}",
             )
 
         executor = ApiCaseNanobotExecutor(
@@ -70,11 +70,18 @@ class ApiCaseExecutorTests(unittest.TestCase):
         )
 
         self.assertEqual(result.status, TaskStatus.SUCCESS)
-        self.assertEqual(result.intermediate_json_text, "json result")
-        self.assertEqual(result.output_yaml, "cases:\n  - name: login")
+        self.assertEqual(
+            result.intermediate_json_text, '{"login":{"path":"/login","method":"POST"}}'
+        )
+        self.assertEqual(
+            result.output_yaml,
+            "cases:\n  - {name: login, orderNo: 1, method: POST, urlTemplate: /login}",
+        )
         self.assertEqual(len(progress_events), 1)
         self.assertEqual(progress_events[0].task_id, "task-1")
-        self.assertEqual(progress_events[0].intermediate_json_text, "json result")
+        self.assertEqual(
+            progress_events[0].intermediate_json_text, '{"login":{"path":"/login","method":"POST"}}'
+        )
         self.assertEqual(progress_events[0].current_stage, "openapi_extract")
         self.assertEqual(progress_events[0].stage_status, "running")
         self.assertEqual(captured["session_key"], "run-1")
@@ -148,8 +155,8 @@ class ApiCaseExecutorTests(unittest.TestCase):
                     "https://example.test/v1",
                 )
                 return ChainRunResult(
-                    extractor_output="json result",
-                    generator_output="cases:\n  - name: login",
+                    extractor_output='{"login":{"path":"/login","method":"POST"}}',
+                    generator_output="cases:\n  - {name: login, orderNo: 1, method: POST, urlTemplate: /login}",
                 )
 
             executor = ApiCaseNanobotExecutor(

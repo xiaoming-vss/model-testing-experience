@@ -1,3 +1,4 @@
+
 /*
  * 用例库页面（按设计稿重做的表面层）。
  *
@@ -246,16 +247,19 @@
   line-height: 16px;
 }
 
-.case-library-page .case-library-muted-cell {
-  color: var(--srf-text-secondary);
-}
-
 .case-library-page .case-library-time-cell {
   color: var(--srf-text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 11px;
 }
 
+/* 长类型在单元格内省略，完整文本通过原生标题保留。 */
+.case-library-page .case-library-type-tag {
+  display: inline-block;
+  box-sizing: border-box;
+  max-width: 100%;
+  vertical-align: middle;
+}
 
 /* ===== 优先级色块 ===== */
 
@@ -265,6 +269,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-width: 28px;
+  box-sizing: border-box;
   padding: 2px 6px;
   border: 1px solid var(--srf-tone-border, transparent);
   border-radius: 4px;
@@ -282,11 +288,32 @@
   .case-library-page .case-library-layout {
     grid-template-columns: minmax(0, 1fr);
   }
-}
-
-@media (max-width: 900px) {
-  .case-library-page .case-library-search-field {
+}@media (max-width: 900px){
+.case-library-page .case-library-search-field {
     min-width: 0;
     width: 100%;
   }
+
+}
+.case-library-page .case-library-selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px 8px;
+  min-width: 0;
+  white-space: normal;
+}
+
+.case-library-page .case-library-selection-scope {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 1180px){
+.case-library-page .case-library-tree .sprint-card-loading {
+    min-height: 96px;
+  }
+
 }

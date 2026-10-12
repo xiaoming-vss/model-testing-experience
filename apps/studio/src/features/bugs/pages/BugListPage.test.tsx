@@ -2,9 +2,9 @@ import { seedOwnerProject } from '@/test/projectAccess'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { api } from '@/services/api'
 import { BugListPage } from './BugListPage'
@@ -88,19 +88,34 @@ it('列出 Bug 并按服务端筛选与分页取数', async () => {
   renderPage(client)
 
   await screen.findByText('登录页崩溃')
-  expect(screen.getByRole('columnheader', { name: 'ID' })).toBeInTheDocument()
-  expect(screen.getByText('37')).toBeInTheDocument()
+  expect(screen.getByRole('columnheader', { name: 'Bug 标题' })).toBeInTheDocument()
+  expect(screen.getByText('#37')).toBeInTheDocument()
   expect(screen.queryByText('BUG-1')).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: '确认' })).toBeEnabled()
   expect(screen.getByRole('button', { name: '解决' })).toBeEnabled()
   expect(screen.queryByRole('button', { name: /查看|处理|更多/ })).not.toBeInTheDocument()
   expect(getProjectBugs.mock.calls[0][0]).toBe('project-1')
-  expect(getProjectBugs.mock.calls[0][1]).toMatchObject({ page: 1, pageSize: 20, sprintId: 'sprint-1' })
+  expect(getProjectBugs.mock.calls[0][1]).toMatchObject({ page: 1, pageSize: 20, sprintId: 'sprint-1', sortBy: 'created_at', sortOrder: 'desc' })
   expect(getProjectMembers).toHaveBeenCalled()
 
   expect(getProjectBugs.mock.calls[0][1]).toMatchObject({ sprintFilter: 'found' })
   expect(screen.queryByRole('group', { name: '快捷筛选' })).not.toBeInTheDocument()
   expect(screen.queryByRole('combobox', { name: '迭代筛选方式' })).not.toBeInTheDocument()
+  client.clear()
+})
+
+it('点击列头按服务端排序重新取数', async () => {
+  const getProjectBugs = vi.spyOn(api, 'getProjectBugs').mockImplementation(async () => listResponse([bug]))
+  vi.spyOn(api, 'getProjectMembers').mockResolvedValue(listResponse([]))
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedOwnerProject(client)
+  renderPage(client)
+  await screen.findByText('登录页崩溃')
+  // 严重程度按业务档位升序：致命在前。antd 的排序点击热区是表头内的 column-sorters 容器。
+  const header = screen.getByRole('columnheader', { name: /严重程度/ })
+  fireEvent.click(header)
+  await waitFor(() => expect(getProjectBugs).toHaveBeenLastCalledWith('project-1',
+    expect.objectContaining({ sortBy: 'severity', sortOrder: 'asc', page: 1 })))
   client.clear()
 })
 
@@ -122,6 +137,29 @@ it('行点击进入 Bug 详情页', async () => {
   await screen.findByText('登录页崩溃')
   await userEvent.click(screen.getByText('登录页崩溃'))
   expect(await screen.findByText('Bug 详情占位')).toBeInTheDocument()
+  client.clear()
+})
+
+it('点击标题链接只推入一条历史记录，返回一次即可回到列表', async () => {  vi.spyOn(api, 'getProjectMembers').mockResolvedValue(listResponse([]))
+  vi.spyOn(api, 'getProjectBugs').mockResolvedValue(listResponse([bug]))
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedOwnerProject(client)
+  window.history.replaceState(null, '', '/testing?tab=bugs')
+  render(
+    <QueryClientProvider client={client}>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/testing" element={<BugListPage />} />
+          <Route path="/bugs/:bugId" element={<div>Bug 详情占位</div>} />
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>,
+  )
+  await screen.findByText('登录页崩溃')
+  const lengthBefore = window.history.length
+  await userEvent.click(screen.getByText('登录页崩溃'))
+  expect(await screen.findByText('Bug 详情占位')).toBeInTheDocument()
+  expect(window.history.length).toBe(lengthBefore + 1)
   client.clear()
 })
 
@@ -149,5 +187,18 @@ it('从列表按当前状态打开处理表单', async () => {
   expect(await screen.findByRole('button', { name: '确认' })).toBeEnabled()
   await userEvent.click(screen.getByRole('button', { name: '解决' }))
   expect(await screen.findByText('解决方案')).toBeInTheDocument()
+  client.clear()
+})
+
+it('点击编辑打开编辑弹窗并回填标题', async () => {
+  vi.spyOn(api, 'getProjectMembers').mockResolvedValue(listResponse([]))
+  vi.spyOn(api, 'getProjectBugs').mockResolvedValue(listResponse([bug]))
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedOwnerProject(client)
+  renderPage(client)
+  expect(await screen.findByRole('button', { name: '编辑' })).toBeEnabled()
+  await userEvent.click(screen.getByRole('button', { name: '编辑' }))
+  expect(await screen.findByText('编辑 BUG-1')).toBeInTheDocument()
+  expect((screen.getByLabelText('缺陷标题') as HTMLInputElement).value).toBe('登录页崩溃')
   client.clear()
 })

@@ -120,7 +120,7 @@ function ServiceCatalog({ projectId, provider, toolbarActions }: { projectId: st
     {provider === 'mcp' && templates.isError && <Alert type="error" showIcon title={getErrorMessage(templates.error)} />}
     {query.isError && <Alert type="error" showIcon title={getErrorMessage(query.error)} />}
     <div className="base-services-connection-shell">
-      <div className="table-body-scroll sprint-card-scroll base-services-card-scroll">
+      <div className="table-body-scroll sprint-card-scroll base-services-card-scroll tp-list-scroll">
         {query.isPending || (provider === 'mcp' && templates.isPending) ? (
           <div className="sprint-card-loading"><Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={`${labels[provider]} 服务加载中...`} /></div>
         ) : services.length === 0 ? (
@@ -134,10 +134,10 @@ function ServiceCatalog({ projectId, provider, toolbarActions }: { projectId: st
               const authorizationLabel = resource.authorization.status === 'unauthorized' ? '授权' : '更新我的授权'
               const actions = <div className="sprint-card-actions base-services-connection-actions">
                   <Tooltip title={authorizationLabel}>
-                    <Button type="text" shape="circle" aria-label={authorizationLabel} icon={<SafetyCertificateOutlined />} disabled={saving} onClick={() => { credentials.resetFields(); setAuthorization(resource) }}></Button>
+                    <Button type="text" shape="circle" className="app-action app-action-icon app-action-save" aria-label={authorizationLabel} icon={<SafetyCertificateOutlined />} disabled={saving} onClick={() => { credentials.resetFields(); setAuthorization(resource) }}></Button>
                   </Tooltip>
                   {resource.authorization.status !== 'unauthorized' && <Popconfirm okText="确认" cancelText="取消" title="撤销我的授权？" description="只影响你本人，其他成员的授权保持有效。" onConfirm={() => remove(resource, true)}>
-                    <Tooltip title="撤销我的授权"><Button type="text" shape="circle" danger aria-label="撤销我的授权" icon={<StopOutlined />} disabled={saving} /></Tooltip>
+                    <Tooltip title="撤销我的授权"><Button type="text" shape="circle" danger className="app-action app-action-icon app-action-delete" aria-label="撤销我的授权" icon={<StopOutlined />} disabled={saving} /></Tooltip>
                   </Popconfirm>}
                   <ProjectActionButton action="manage" projectId={projectId} type="text" shape="circle" className="action-btn-update" title="编辑服务" aria-label={`编辑 ${resource.name}`} operation="edit" iconOnly onClick={() => openEditor(resource)} disabled={saving}></ProjectActionButton>
                   <Popconfirm okText="确认" cancelText="取消" disabled={!can('manage')} title="删除这个项目服务？" description={provider === 'mcp' ? '删除服务会同时删除所有成员的个人授权。' : '所有成员将无法继续使用此服务的授权，相关未完成任务会终止。'} onConfirm={() => remove(resource, false)}>
@@ -176,6 +176,6 @@ function ServiceCatalog({ projectId, provider, toolbarActions }: { projectId: st
         <ListPagination loading={query.isFetching || query.isError} current={page} pageSize={pageSize} total={services.length} onChange={(nextPage, nextSize) => { setPage(nextSize === pageSize ? nextPage : 1); setPageSize(nextSize) }} />
       </div>
     </div>
-    <SharedServiceDialogs provider={provider} providerLabel={labels[provider]} editor={editor} authorization={authorization} configuration={configuration} credentials={credentials} saving={saving} canManage={can('manage')} closeEditor={closeEditor} closeAuthorization={closeAuthorization} saveConfiguration={saveConfiguration} saveAuthorization={saveAuthorization} />
+    <SharedServiceDialogs provider={provider} providerLabel={labels[provider]} editor={editor} authorization={authorization} configuration={configuration} credentials={credentials} saving={saving} closeEditor={closeEditor} closeAuthorization={closeAuthorization} saveConfiguration={saveConfiguration} saveAuthorization={saveAuthorization} />
   </>
 }

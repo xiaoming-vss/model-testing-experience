@@ -40,3 +40,37 @@ describe('S3-only requirement uploads', () => {
     expect(request).toHaveBeenCalledTimes(1)
   })
 })
+
+it('creates rich text as an HTML source file', async () => {
+  vi.mocked(storageCapabilities).mockResolvedValue({ enabled: true, maxBytes: 1000 })
+  vi.mocked(request).mockResolvedValue({ projectId: 'p' })
+  vi.mocked(uploadStoredFile).mockResolvedValue('html-1')
+  await requirementsApi.createRequirement('s', { name: '图文', documentType: 'richtext', documentContent: '<h2>标题</h2>' })
+  const file = vi.mocked(uploadStoredFile).mock.calls.at(-1)![1]
+  expect(file.name).toBe('requirement.html')
+  expect(file.type).toBe('text/html')
+  expect(request).toHaveBeenLastCalledWith('/v1/sprints/s/requirements', {
+    method: 'POST', body: JSON.stringify({ name: '图文', documentType: 'richtext', documentFileId: 'html-1' }),
+  })
+})
+
+it('updates source and name together only after HTML upload completes', async () => {
+  vi.resetAllMocks()
+  vi.mocked(storageCapabilities).mockResolvedValue({ enabled: true, maxBytes: 1000 })
+  vi.mocked(request).mockResolvedValueOnce({ name: 'old', sprintId: 's' }).mockResolvedValueOnce({ projectId: 'p' })
+  vi.mocked(uploadStoredFile).mockResolvedValue('html-2')
+  await requirementsApi.replaceRequirementDocument('r', { name: 'new', documentType: 'richtext', documentContent: '<p>修改正文</p>' })
+  expect(request).toHaveBeenLastCalledWith('/v1/requirements/r', {
+    method: 'PATCH', body: JSON.stringify({ documentFileId: 'html-2', name: 'new', documentType: 'richtext' }),
+  })
+  expect(vi.mocked(request).mock.calls.at(-1)![1]?.body).not.toContain('documentContent')
+})
+
+it('preserves the existing requirement when replacement upload fails', async () => {
+  vi.resetAllMocks()
+  vi.mocked(storageCapabilities).mockResolvedValue({ enabled: true, maxBytes: 1000 })
+  vi.mocked(request).mockResolvedValueOnce({ name: 'old', sprintId: 's' }).mockResolvedValueOnce({ projectId: 'p' })
+  vi.mocked(uploadStoredFile).mockRejectedValue(new Error('S3 unavailable'))
+  await expect(requirementsApi.replaceRequirementDocument('r', { documentType: 'richtext', documentContent: '<p>new</p>' })).rejects.toThrow('S3 unavailable')
+  expect(vi.mocked(request).mock.calls.every(([, options]) => !options?.method)).toBe(true)
+})

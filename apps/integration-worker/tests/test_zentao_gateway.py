@@ -38,10 +38,7 @@ async def test_source_failure_requires_explicit_negative_write_certainty(certain
 
 
 @pytest.mark.parametrize("foreign", [False, True])
-@pytest.mark.parametrize("text_changed", [False, True])
-async def test_existing_inline_image_uses_owned_metadata_when_bug_list_filters_it(
-    foreign, text_changed
-):
+async def test_existing_inline_image_uses_owned_metadata_when_bug_list_filters_it(foreign):
     calls = []
     instance = "https://zentao.example/sub"
     previous = (
@@ -77,9 +74,7 @@ async def test_existing_inline_image_uses_owned_metadata_when_bug_list_filters_i
         mapping={"remoteBugId": 50, "productId": 40, "files": {"image": {"remoteFileId": 101}}},
         snapshot={
             "target": {**TARGET, "instanceUrl": instance},
-            "source": {
-                "html": f'<p>{"changed" if text_changed else "old"}<img data-file-id="image"></p>'
-            },
+            "source": {"html": '<p>old<img data-file-id="image"></p>'},
             "existingPayload": {"productID": 40},
             "createPayload": {"steps": ""},
             "description": {
@@ -93,14 +88,75 @@ async def test_existing_inline_image_uses_owned_metadata_when_bug_list_filters_i
     async with ZentaoGateway(
         Access(endpoint="http://mcp.test", token="actor-key"), transport=transport_for(tools)
     ) as gateway:
-        if foreign or text_changed:
+        if foreign:
             with pytest.raises(PreflightError):
                 await description_input(gateway, view)
         else:
             data, decision = await description_input(gateway, view)
             assert decision == "noop" and "fileID=101" in data["desiredSteps"]
             assert data["beforeSteps"] == previous
+            assert "overwrote" not in data
     assert calls == ["get_bugs_bugID", "get_files_fileID"]
+
+
+@pytest.mark.parametrize("local_edited", [False, True])
+@pytest.mark.parametrize("remote_edited", [False, True])
+async def test_description_drift_overwrites_and_records_the_fact(local_edited, remote_edited):
+    instance = "https://zentao.example/sub"
+    baseline = (
+        '<p>old<img src="'
+        + instance
+        + '/index.php?m=file&amp;f=read&amp;fileID=101&amp;t=png" ></p>'
+    )
+    remote_steps = "<p>external</p>" if remote_edited else baseline
+    local_text = "changed" if local_edited else "old"
+
+    def tools(name, args):
+        if name == "get_bugs_bugID":
+            return {"bug": {"id": 50, **TARGET, "product": 40, "files": [], "steps": remote_steps}}
+        if name == "get_files_fileID":
+            return {
+                "file": {"id": 101, "objectType": "bug", "objectID": 50, "extension": "png"}
+            }
+        raise AssertionError("Description preparation must remain read-only")
+
+    view = JobInput(
+        job_id="j",
+        job_status="running",
+        task_type="zentao_bug_sync",
+        protocol_version=1,
+        result={},
+        input_revision="input",
+        target_revision="target",
+        steps=[],
+        mapping={"remoteBugId": 50, "productId": 40, "files": {"image": {"remoteFileId": 101}}},
+        snapshot={
+            "target": {**TARGET, "instanceUrl": instance},
+            "source": {"html": f'<p>{local_text}<img data-file-id="image"></p>'},
+            "existingPayload": {"productID": 40},
+            "createPayload": {"steps": ""},
+            "description": {
+                "images": ["image"],
+                "previousStatus": "succeeded",
+                "expectedSteps": baseline,
+                "previous": {"desiredSteps": baseline},
+            },
+        },
+    )
+    async with ZentaoGateway(
+        Access(endpoint="http://mcp.test", token="actor-key"), transport=transport_for(tools)
+    ) as gateway:
+        data, decision = await description_input(gateway, view)
+    expected = {}
+    if local_edited:
+        expected["localEdited"] = True
+    if remote_edited:
+        expected["remoteEdited"] = True
+    if expected:
+        assert data["overwrote"] == expected
+    else:
+        assert "overwrote" not in data
+    assert decision == ("noop" if not expected else "write")
 
 
 def transport_for(tools, *, catalog=None):

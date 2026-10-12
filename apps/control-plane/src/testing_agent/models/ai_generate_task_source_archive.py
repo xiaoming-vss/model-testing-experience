@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, String, Text
+from sqlalchemy import BigInteger, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from testing_agent.db.base import Base, IdPk
@@ -33,10 +33,6 @@ class AiGenerateTaskSourceArchive(Base):
     sha256: Mapped[str] = mapped_column(String(64), nullable=False, comment="文件内容 SHA-256 摘要")
     file_id: Mapped[str] = mapped_column(
         String(64), nullable=False, default="", comment="统一文件业务标识"
-    )
-    # Inert legacy metadata; source archives are delivered exclusively through S3.
-    storage_path: Mapped[str] = mapped_column(
-        Text, nullable=False, default="", comment="历史压缩包路径元数据；文件交付使用统一文件标识"
     )
     uploaded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, comment="上传时间（UTC）"

@@ -1,0 +1,17 @@
+.requirement-detail-page { display: flex; flex-direction: column; gap: 12px; padding: var(--app-page-gutter) var(--app-page-gutter) 16px; height: 100%; min-height: 0; min-width: 0; box-sizing: border-box; overflow: hidden; color: var(--srf-text); background: transparent; }
+.requirement-detail-summary { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 360px; }
+.requirement-detail-heading { min-width: 0; }
+.requirement-detail-title-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.requirement-detail-title-row .tp-list-title { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.requirement-detail-title-row .ant-tag { flex-shrink: 0; margin: 0; }
+.requirement-detail-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.requirement-detail-header { flex: 0 0 auto; }
+.requirement-detail-main { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: hidden; }
+@media (max-width: 840px) { .requirement-detail-summary { flex-basis: 100%; } .requirement-detail-actions { margin-left: auto; } }
+
+.requirement-detail-container { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; min-width: 0; }
+
+.requirement-detail-tabs { flex: 0 0 auto; min-width: 0; }
+.requirement-detail-tabs:empty { display: none; }
+
+.requirement-detail-workspace-actions:empty, .requirement-detail-workspace-actions:has(> [hidden]) { display: none; }

@@ -31,14 +31,12 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
   const { activeSprintId: globalSprintId, selectSprint: selectGlobalSprint } = useActiveSprint()
   const {
     currentRequirementSelection,
-    currentSprintSelection,
     requirementFilterOptions,
     requirementsQuery,
     resolvedSelectedRequirementId,
     resolvedSelectedSprintId,
     selectRequirement,
     selectSprint,
-    sprintFilterOptions,
     sprints,
     sprintsQuery,
   } = useSprintRequirementScope({
@@ -81,19 +79,10 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
   return (
     <div className="workbench-page api-automation-page functional-test-page tp-list-surface ui-test-page tp-surface">
       <div className="api-automation-content">
-        <section className="workbench-panel workbench-board-panel tp-board">
+        <section className="workbench-panel workbench-board-panel tp-board tp-list-panel">
 
           <UiSuiteListToolbar
             showScopeFilters={!isRequirementLocked}
-            sprintValue={currentSprintSelection === null ? 'all' : selectedSprintId ?? 'all'}
-            sprintOptions={sprintFilterOptions}
-            sprintLoading={sprintsQuery.isLoading}
-            onSprintChange={(value: string) => {
-              selectSprint(value === 'all' ? null : value)
-              if (value === 'all') {
-                selectRequirement(null)
-              }
-            }}
             requirementValue={currentRequirementSelection === null ? 'all' : selectedRequirementId ?? 'all'}
             requirementOptions={displayRequirementFilterOptions}
             requirementLoading={requirementsQuery.isLoading || allRequirementsQuery.isLoading}

@@ -237,6 +237,8 @@ export function ApiCaseHeadersPanel({ headers, templates }: Props) {
           </div>
 
           <Modal
+            mask={{ closable: false }}
+            centered
             open={rawEditorOpen}
             title="批量编辑请求头"
             okText="应用"

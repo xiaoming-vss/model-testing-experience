@@ -99,7 +99,9 @@ def build_task_runner(
             ),
             requirement_executor=RequirementAnalysisNanobotExecutor(
                 nanobot_config=settings.nanobot,
-                source_downloader=PlatformRequirementSourceDownloader(resolved_client),
+                source_downloader=PlatformRequirementSourceDownloader(
+                    resolved_client, settings.worker.worker_id
+                ),
             ),
             test_report_executor=TestReportNanobotExecutor(
                 nanobot_config=settings.nanobot,

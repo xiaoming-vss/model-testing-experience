@@ -130,6 +130,8 @@ export function BugZentaoImportModal({ open, projectId, defaultSprintId, onClose
     return !!choices[id]?.assigneeUserId && !!sprintFor(id)
   })
   const blocked = selected.filter((id) => !readyToImport.includes(id))
+  // 未分配责任人是按钮禁用的常见原因，直接在按钮旁提示；其余原因由候选行的告警说明。
+  const unassigned = blocked.filter((id) => previewById.get(id)?.state === 'ready' && !choices[id]?.assigneeUserId)
 
   const confirmImport = async () => {
     setImporting(true)
@@ -190,6 +192,8 @@ export function BugZentaoImportModal({ open, projectId, defaultSprintId, onClose
 
   return (
     <Modal
+      mask={{ closable: false }}
+      centered
       title="从禅道导入 Bug"
       open={open}
       width={920}
@@ -203,6 +207,9 @@ export function BugZentaoImportModal({ open, projectId, defaultSprintId, onClose
             onClick={() => void confirmImport()}>
             导入 {readyToImport.length > 0 ? `（${readyToImport.length}）` : ''}
           </Button>
+          {readyToImport.length === 0 && unassigned.length > 0 && (
+            <Typography.Text type="warning">未分配责任人</Typography.Text>
+          )}
         </Space>
       )}
     >
@@ -340,21 +347,12 @@ export function BugZentaoImportModal({ open, projectId, defaultSprintId, onClose
                           title={item.errorMessage || pendingText(item.pending)}
                         />
                       )}
-                      {item && item.state === 'ready' && item.pending.length > 0 && (
-                        <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-                          {pendingText(item.pending)}
-                        </Typography.Paragraph>
-                      )}
                       {previews.error && (
                         <Alert type="error" showIcon title={getErrorMessage(previews.error)} />
                       )}
                     </div>
                   )
                 })}
-                {blocked.length > 0 && (
-                  <Alert type="info" showIcon
-                    title={`${blocked.length} 条候选尚未满足导入条件（待映射、待选择或含待同步图片），本次不会导入。`} />
-                )}
               </Space>
             </div>
           )}

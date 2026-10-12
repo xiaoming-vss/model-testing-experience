@@ -1,3 +1,4 @@
+import { ActionButton } from '@/shared/components/ActionButton'
 import { StoredFileDownload } from '@/shared/components/files/StoredFile'
 import type { UiTestCaseRun } from '@/services/api'
 import { CopyOutlined, DownOutlined, FilterOutlined, UpOutlined } from '@ant-design/icons'
@@ -98,9 +99,7 @@ export function UiRunConsoleCard({ run, refreshing, onRefresh }: Props) {
           <Tooltip title="复制控制台内容">
             <Button type="text" size="small" className="ui-wb-console-action" icon={<CopyOutlined />} disabled={logLines.length === 0} onClick={handleCopy} />
           </Tooltip>
-          <Button type="text" size="small" className="ui-wb-console-action" loading={refreshing} disabled={!run} onClick={onRefresh}>
-            刷新
-          </Button>
+          <ActionButton operation="refresh" type="text" size="small" className="ui-wb-console-action" loading={refreshing} disabled={!run} onClick={onRefresh}>刷新</ActionButton>
         </div>
       </header>
 

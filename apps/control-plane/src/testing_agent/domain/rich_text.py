@@ -32,10 +32,20 @@ ALLOWED_TAGS = frozenset(
         "pre",
         "code",
         "img",
+        "table",
+        "thead",
+        "tbody",
+        "tr",
+        "th",
+        "td",
     }
 )
 VOID_TAGS = frozenset({"br", "hr", "img"})
-ALLOWED_ATTRIBUTES: dict[str, frozenset[str]] = {"img": frozenset({"data-file-id"})}
+ALLOWED_ATTRIBUTES: dict[str, frozenset[str]] = {
+    "img": frozenset({"data-file-id"}),
+    "td": frozenset({"colspan", "rowspan"}),
+    "th": frozenset({"colspan", "rowspan"}),
+}
 # 这些标签的子内容整体丢弃，避免样式/脚本内容以转义文本形式残留。
 DROP_SUBTREES = frozenset({"script", "style", "iframe", "object", "embed", "svg", "math"})
 
@@ -64,6 +74,13 @@ class _Sanitizer(HTMLParser):
             if tag in ALLOWED_ATTRIBUTES and name in ALLOWED_ATTRIBUTES[tag]:
                 value = value or ""
                 if name == "data-file-id" and not _FILE_ID_PATTERN.match(value):
+                    continue
+                if name in {"colspan", "rowspan"} and (
+                    len(value) > 3
+                    or not value.isascii()
+                    or not value.isdigit()
+                    or not 1 <= int(value) <= 100
+                ):
                     continue
                 rendered += f' {name}="{html.escape(value, quote=True)}"'
         if tag in VOID_TAGS:

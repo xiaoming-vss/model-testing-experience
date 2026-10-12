@@ -1,0 +1,25 @@
+.ai-requirement-design { display: flex; flex-direction: column; gap: 0; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: hidden; color: var(--srf-text); }
+.ai-requirement-design-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ai-requirement-design-tools .ant-select { width: 180px; max-width: 100%; }
+.ai-requirement-design-toolbar { flex: 0 0 auto; }
+.ai-requirement-design-history { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: hidden; }
+.ai-requirement-design .ant-table-wrapper { flex: 1 1 auto; min-height: 0; margin: 0; overflow: auto; }
+.ai-requirement-design .ant-empty { padding: 32px 16px; }
+.ai-requirement-design-panel > .ant-alert { flex: 0 0 auto; margin: 0 0 8px; }
+.ai-requirement-design-history > .ant-empty { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.ai-requirement-design .tp-list-table tr.ai-task-run-table-row-active { --srf-list-row-bg: var(--srf-accent-soft); --srf-list-row-hover: var(--srf-accent-soft); }
+
+.ai-requirement-design-navigation { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 16px; flex: 0 0 auto; min-width: 0; padding: 12px 16px; }
+.ai-requirement-workspace-tabs { min-width: 0; }
+.ai-requirement-workspace-tabs [role="tab"] { display: flex; align-items: center; gap: 6px; }
+.ai-requirement-design-toolbar { margin-left: auto; }
+.ai-requirement-design-toolbar[hidden] { display: none; }
+.ai-requirement-design-history, .ai-requirement-document-panel { border: 0; border-radius: 0; background: transparent; }
+.ai-requirement-document-panel, .ai-requirement-design-panel { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: hidden; }
+.ai-requirement-document-panel[hidden], .ai-requirement-design-panel[hidden] { display: none; }
+.ai-requirement-document-panel .requirement-document-inline { height: 100%; overflow: hidden; }
+.ai-requirement-document-panel .requirement-document-workspace { height: auto; min-height: 0; margin: 16px; background: transparent; }
+
+.ai-requirement-design-history .ant-table-wrapper { padding: 16px; }
+
+.ai-requirement-design-navigation[hidden] { display: none; }

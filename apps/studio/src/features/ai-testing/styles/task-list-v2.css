@@ -1,3 +1,4 @@
+
 /* 任务列表与模块导航的基础布局。保留响应式条件，后续表面规则继续覆盖外观。 */
 :root:root .ai-testing-page .ai-task-list-table .ai-task-list-name .ant-typography,
 :root:root .app-shell.app-shell-macos .ai-testing-page .ai-task-list-table .ai-task-list-name .ant-typography {
@@ -8,10 +9,12 @@
   text-decoration: none;
   text-underline-offset: 3px;
 }
+
 :root:root .ai-testing-page .ai-task-list-table .ant-table-tbody > tr:hover .ai-task-list-name .ant-typography {
   color: var(--app-list-name-hover) !important;
   text-decoration: underline;
 }
+
 :root:root .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell,
 :root:root .app-shell.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell {
   border: 0 !important;
@@ -20,234 +23,30 @@
   font-size: 12px;
   font-weight: 500;
 }
+
 :root:root .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell:first-child {
   border-start-start-radius: 8px !important;
   border-end-start-radius: 8px !important;
   border-top-left-radius: 8px !important;
   border-bottom-left-radius: 8px !important;
 }
+
 :root:root .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell:last-child {
   border-start-end-radius: 8px !important;
   border-end-end-radius: 8px !important;
   border-top-right-radius: 8px !important;
   border-bottom-right-radius: 8px !important;
 }
+
 :root:root .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell::before {
   display: none !important;
 }
+
 .ai-testing-overview-page {
   display: flex;
   flex-direction: column;
 }
-.ai-task-kind-modal .ant-modal-content {
-  overflow: hidden;
-  border: 1px solid var(--app-glass-border-emphasis);
-  border-radius: 12px;
-  background: var(--app-glass-surface-96);
-  box-shadow:
-    0 22px 54px var(--app-glass-shadow-popover),
-    inset 0 1px 0 var(--app-glass-highlight-84);
-}
-.ai-task-kind-modal .ant-modal-header {
-  margin-bottom: 0;
-  padding: 28px 34px 0;
-  border-bottom: 0;
-  background: transparent;
-}
-.ai-task-kind-modal .ant-modal-title {
-  color: var(--ai-text);
-}
-.ai-task-kind-modal-title {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.ai-task-kind-modal-title > span:first-child {
-  color: var(--ai-text);
-  font-size: 18px;
-  line-height: 26px;
-  font-weight: 750;
-}
-.ai-task-kind-modal-title .ant-typography {
-  color: var(--app-glass-text-hint) !important;
-  font-size: 13px;
-  line-height: 20px;
-}
-.ai-task-kind-modal .ant-modal-body {
-  padding: 24px 34px 28px;
-}
-.ai-task-kind-modal .ant-modal-footer {
-  margin-top: 0;
-  padding: 0 34px 30px;
-  border-top: 0;
-  background: transparent;
-}
-.ai-task-kind-modal .ant-modal-footer .ant-space {
-  width: 100%;
-  justify-content: flex-end;
-}
-.ai-task-kind-list {
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.ai-task-kind-row {
-  position: relative;
-  min-width: 0;
-  min-height: 92px;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 16px 26px;
-  border: 1px solid var(--app-glass-border-emphasis);
-  border-radius: 8px;
-  background: var(--app-glass-surface-86);
-  color: var(--ai-text);
-  text-align: left;
-  cursor: pointer;
-  box-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-78),
-    0 8px 18px var(--app-glass-shadow-option);
-  transition:
-    background-color 0.18s ease,
-    border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    transform 0.18s ease;
-}
-.ai-task-kind-row.selected {
-  border-color: var(--app-option-border-selected);
-  background:
-    linear-gradient(180deg, var(--app-option-selected-gradient-start), var(--app-option-selected-gradient-end)),
-    var(--app-glass-surface-94);
-  box-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-86),
-    0 8px 20px var(--app-glass-accent-ring);
-}
-.ai-task-kind-row:hover:not(:disabled) {
-  border-color: var(--app-option-border-hover);
-  background: var(--app-glass-surface-96);
-  transform: translateY(-1px);
-}
-.ai-task-kind-row:disabled {
-  color: var(--app-option-text-disabled);
-  border-color: var(--app-glass-border-faint);
-  background: var(--app-option-bg-disabled);
-  cursor: not-allowed;
-  box-shadow: none;
-}
-.ai-task-kind-icon {
-  flex: 0 0 54px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 54px;
-  height: 54px;
-  color: var(--app-option-icon-selected);
-  border-radius: 12px;
-  background: var(--app-glass-hover);
-  font-size: 28px;
-  line-height: 1;
-}
-.ai-task-kind-row:not(.selected):not(:disabled) .ai-task-kind-icon {
-  color: var(--app-option-text);
-  background: var(--app-option-icon-bg);
-}
-.ai-task-kind-row:disabled .ai-task-kind-icon {
-  color: var(--app-option-icon-disabled);
-  background: var(--app-option-icon-bg-disabled);
-}
-.ai-task-kind-copy {
-  min-width: 0;
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  gap: 7px;
-}
-.ai-task-kind-title {
-  color: var(--ai-text);
-  font-size: 16px;
-  font-weight: 750;
-  line-height: 24px;
-}
-.ai-task-kind-description {
-  color: var(--ai-text-secondary);
-  font-size: 13px;
-  line-height: 20px;
-}
-.ai-task-kind-row:disabled .ai-task-kind-title,
-.ai-task-kind-row:disabled .ai-task-kind-description {
-  color: var(--app-option-text-disabled);
-}
-.ai-task-kind-check {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.ai-task-kind-check {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  color: var(--app-on-accent);
-  background: var(--app-accent);
-  box-shadow: 0 8px 16px var(--app-accent-action-shadow);
-  font-size: 14px;
-}
-.ai-task-kind-badge {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: 7px;
-  color: var(--app-glass-text-caption);
-  background: var(--app-option-icon-bg-active);
-  font-size: 12px;
-  line-height: 18px;
-}
-@media (max-width: 680px) {
 
-  .ai-task-kind-modal .ant-modal-body {
-    padding: 20px 18px 22px;
-  }
-
-  .ai-task-kind-modal .ant-modal-header {
-    padding: 22px 18px 0;
-  }
-
-  .ai-task-kind-modal .ant-modal-footer {
-    padding: 0 18px 22px;
-  }
-
-  .ai-task-kind-list {
-    gap: 12px;
-  }
-
-  .ai-task-kind-row {
-    min-height: 86px;
-    gap: 12px;
-    padding: 14px;
-  }
-
-  .ai-task-kind-icon {
-    flex-basis: 46px;
-    width: 46px;
-    height: 46px;
-    font-size: 24px;
-  }
-
-  .ai-task-kind-title {
-    font-size: 15px;
-    line-height: 22px;
-  }
-
-  .ai-task-kind-description {
-    font-size: 12px;
-    line-height: 18px;
-  }
-}
 .app-shell-macos .ai-testing-overview-page .ai-testing-task-panel.workbench-panel {
   position: relative;
   z-index: 1;
@@ -261,24 +60,29 @@
     inset 0 1px 0 var(--app-glass-highlight-86),
     0 10px 24px var(--app-glass-shadow-card) !important;
 }
+
 .ai-testing-page .ai-task-list-table.ant-table-wrapper {
   width: 100%;
 }
+
 .ai-testing-page .ai-task-list-table .ant-table {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif;
+  font-family: var(--app-font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
 }
+
 .ai-testing-page .ai-task-list-table .ant-table-container {
   overflow: visible;
   border: 0;
   border-radius: 0;
   background: transparent;
 }
+
 .ai-testing-page .ai-task-list-table .ant-table {
   color: var(--ai-text);
   background: transparent;
 }
+
 .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell {
   border-top: 1px solid var(--app-glass-border-72) !important;
   border-bottom: 1px solid var(--app-glass-table-divider) !important;
@@ -287,74 +91,89 @@
   letter-spacing: 0;
   white-space: nowrap;
 }
+
 .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell:first-child {
   border-left: 1px solid var(--app-glass-border-64) !important;
   border-start-start-radius: 12px !important;
   border-end-start-radius: 12px !important;
 }
+
 .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell:last-child {
   border-right: 1px solid var(--app-glass-border-64) !important;
   border-start-end-radius: 12px !important;
   border-end-end-radius: 12px !important;
 }
+
 .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell::before {
   background: var(--app-glass-table-hover) !important;
 }
+
 .ai-testing-page .ai-task-list-table .ant-table-tbody > tr {
   cursor: pointer;
 }
+
 .ai-testing-page .ai-task-list-table .ant-table-tbody > tr > td {
   border-bottom: 1px solid var(--app-glass-table-row-border);
   color: var(--app-glass-table-text) !important;
   font-size: 12px;
   font-weight: 400;
 }
+
 .ai-task-list-name {
   width: 100%;
   min-width: 0;
 }
+
 .ai-task-list-name .ant-space-item:last-child {
   min-width: 0;
   flex: 1 1 auto;
 }
+
 .ai-task-list-name .ant-typography {
   max-width: 100%;
 }
+
 .ai-task-list-tags {
   display: inline-flex;
   flex-wrap: nowrap;
   white-space: nowrap;
 }
+
 .ai-task-list-tags .ant-tag {
   margin-inline-end: 0;
   border-color: var(--app-task-tag-border) !important;
   background: var(--app-task-tag-bg) !important;
   color: var(--app-task-tag-text) !important;
 }
+
 .ai-task-list-tags .ant-tag.ant-tag-green {
   border-color: var(--app-status-approved-border) !important;
   background: var(--app-status-approved-bg) !important;
   color: var(--app-status-approved-text) !important;
 }
+
 .ai-task-list-scope.ant-typography {
   max-width: 100%;
   line-height: 20px;
 }
+
 .ai-testing-page .ai-task-list-table .ant-table-tbody td:nth-child(3),
 .ai-testing-page .ai-task-list-table .ant-table-tbody td:nth-child(3) .ant-typography,
 .ai-testing-page .ai-task-list-table .ant-table-tbody td:nth-child(3) span:not(.ant-tag) {
   color: var(--app-task-table-text) !important;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", sans-serif !important;
+  font-family: var(--app-font-sans) !important;
   font-size: 12px !important;
   font-weight: 400 !important;
   letter-spacing: 0 !important;
   text-shadow: none !important;
   -webkit-text-stroke: 0 !important;
 }
+
 .ai-testing-page .ai-task-list-table .ant-table-tbody .ant-typography-secondary {
   color: var(--app-task-table-placeholder) !important;
   font-weight: 400 !important;
 }
+
 .ai-testing-page .ai-task-list-table .ant-table-tbody td:nth-child(4),
 .ai-testing-page .ai-task-list-table .ant-table-tbody td:nth-child(5),
 .ai-testing-page .ai-task-list-table .ant-table-tbody td:nth-child(6),
@@ -364,24 +183,29 @@
   color: var(--app-task-table-placeholder) !important;
   font-weight: 400 !important;
 }
+
 .ai-task-list-actions .ant-btn {
   width: 30px;
   min-width: 30px;
   height: 30px;
 }
+
 .app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-container {
   border: 0 !important;
   background: transparent !important;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
+
 .app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell {
   border-top-color: var(--app-glass-border-78) !important;
   border-bottom-color: var(--app-glass-table-border-hover) !important;
 }
+
 .app-shell-macos .ai-testing-page .ai-task-list-table .ant-table {
   background: transparent !important;
 }
+
 .app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell {
   border: 0 !important;
   border-bottom: 1px solid var(--app-list-header-border) !important;
@@ -390,21 +214,25 @@
   font-weight: 500;
   line-height: 18px;
 }
+
 .app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell:first-child {
   border-start-start-radius: 8px !important;
   border-end-start-radius: 8px !important;
   border-top-left-radius: 8px !important;
   border-bottom-left-radius: 8px !important;
 }
+
 .app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell:last-child {
   border-start-end-radius: 8px !important;
   border-end-end-radius: 8px !important;
   border-top-right-radius: 8px !important;
   border-bottom-right-radius: 8px !important;
 }
+
 .app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell::before {
   display: none !important;
 }
+
 .app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-tbody > tr > td {
   border-bottom: 1px solid var(--app-list-row-border) !important;
   color: var(--app-menu-text) !important;
@@ -412,12 +240,14 @@
   line-height: 18px;
   transition: background-color 0.16s ease;
 }
+
 .ai-task-list-name .ant-typography {
   color: var(--app-glass-text) !important;
   font-size: 13px !important;
   font-weight: 500 !important;
   line-height: 22px;
 }
+
 .ai-task-list-tags .ant-tag {
   display: inline-flex;
   align-items: center;
@@ -430,16 +260,19 @@
   font-weight: 400 !important;
   line-height: 22px;
 }
+
 .ai-task-list-scope.ant-typography,
 .app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-tbody .ant-typography-secondary {
   color: var(--app-list-label) !important;
   font-size: 12px !important;
   font-weight: 400 !important;
 }
+
 .ai-task-list-actions {
   width: 100%;
   justify-content: flex-end;
 }
+
 .ai-task-list-actions .ant-btn.ai-task-run-button {
   width: 52px;
   min-width: 52px;
@@ -449,26 +282,6 @@
   border-radius: 6px;
   font-size: 12px;
   line-height: 26px;
-}
-.ai-task-list-actions .ant-btn.ai-task-more-button {
-  width: 28px;
-  min-width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-}
-.ai-task-more-dropdown .ant-dropdown-menu {
-  min-width: 118px;
-  padding: 6px;
-  border: 1px solid var(--app-task-overlay-border);
-  border-radius: 8px;
-  box-shadow: 0 12px 30px var(--app-task-overlay-shadow);
-}
-.ai-task-more-dropdown .ant-dropdown-menu-item {
-  min-height: 34px;
-  border-radius: 6px;
-  font-size: 13px;
 }
 
 /*
@@ -520,48 +333,10 @@
   backdrop-filter: none;
 }
 
-.ai-testing-page .ai-task-kind-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-/* 分类胶囊沿用共享的 .tp-chip，只补自己那点差别：图标与计数。 */
-.ai-testing-page .ai-task-kind-tab .ai-task-kind-tab-icon {
-  display: inline-flex;
-  align-items: center;
-  color: inherit;
-}
-
-/* 图标是导航用的彩色徽标资产，整块彩色摆在胶囊里偏吵；未选中时去色压暗，选中再放回本色。 */
-.ai-testing-page .ai-task-kind-tab .ai-task-kind-tab-icon img {
-  display: block;
-  filter: grayscale(1);
-  opacity: 0.72;
-}
-
-.ai-testing-page .ai-task-kind-tab.active .ai-task-kind-tab-icon img {
-  filter: none;
-  opacity: 1;
-}
-
 .ai-testing-page .ai-testing-task-toolbar .ai-task-panel-tools {
   flex: 1 1 auto;
   justify-content: flex-end;
   gap: 8px;
-}
-
-.ai-testing-page .ai-task-sprint-filter {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.ai-testing-page .ai-task-sprint-filter-label {
-  color: var(--srf-text-muted, var(--app-surface-text-muted));
-  font-size: 12px;
-  font-weight: 500;
 }
 
 .ai-testing-page .ai-task-search-field {
@@ -583,7 +358,6 @@
   padding-inline: 8px;
   font-size: 12px;
 }
-
 /* ===== 表格卡片 ===== */
 
 .app-shell.app-shell-macos .ai-testing-page .ai-testing-task-panel.workbench-panel {
@@ -611,20 +385,6 @@
   padding: 6px 16px;
   border-bottom: 1px solid var(--srf-divider, var(--app-surface-divider));
   background: var(--srf-hover, var(--app-surface-hover));
-}
-
-.ai-testing-page .ai-task-strip-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 24px;
-}
-
-.app-shell.app-shell-macos .ai-testing-page .ai-task-strip-actions .ant-btn {
-  height: 24px;
-  min-height: 24px;
-  padding: 0 8px;
-  font-size: 12px;
 }
 
 .ai-testing-page .ai-task-status-strip-label {
@@ -711,6 +471,7 @@
   text-shadow: none !important;
   -webkit-text-stroke: 0 !important;
 }
+
 .app-shell.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-tbody > tr > td span:not(.tp-tone-tag) {
   color: var(--srf-text-secondary, var(--app-text-subtle)) !important;
   font-family: inherit !important;
@@ -757,7 +518,9 @@
 }
 
 /* 生成状态：胶囊 + 状态点，取自共享九色盘。
-   index.css:5185 还留着按列序写的 `td:nth-child(3) span:not(.ant-tag) { color: … !important }`，
+   index.css:5185 还留着按列序写的 `td:nth-child(3) span:not(.ant-tag) { color: … !important }
+
+`，
    加了勾选列之后它落的正是状态列，所以这里要带 !important 把文字色还给色调。 */
 .app-shell.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-tbody > tr > td .ai-task-list-tags .tp-tone-tag.ai-task-status-pill {
   color: var(--srf-tone-text, var(--srf-chip-text)) !important;
@@ -847,21 +610,6 @@
   font-size: 11px;
   line-height: 24px;
 }
-
-.app-shell.app-shell-macos .ai-testing-page .ai-testing-task-panel.workbench-panel .ai-task-list-actions .ant-btn.ai-task-more-button {
-  width: 26px;
-  min-width: 26px;
-  height: 26px;
-  padding: 0;
-}
-
-/* 勾选行：淡主色底，和 hover 的浅蓝区分开。 */
-.app-shell.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-tbody > tr.ant-table-row-selected > td {
-  --srf-list-row-bg: var(--srf-accent-soft, var(--app-surface-accent-soft));
-  --srf-list-row-hover: var(--srf-list-row-bg);
-}
-
-
 
 /* ===== 窄屏 ===== */
 

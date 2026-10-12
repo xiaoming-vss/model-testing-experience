@@ -60,11 +60,8 @@ async def queue(mysql):
     finally:
         async with sessions() as session:
             job_ids = select(IntegrationJob.job_id).where(IntegrationJob.actor_user_id == prefix)
-            await session.execute(
-                delete(IntegrationClaimReceipt).where(
-                    IntegrationClaimReceipt.worker_id.like(prefix + "%")
-                )
-            )
+            # 回执不再携带 worker_id，库是本模块专用的可丢弃库，直接清空。
+            await session.execute(delete(IntegrationClaimReceipt))
             await session.execute(
                 delete(IntegrationJobStep).where(IntegrationJobStep.job_id.in_(job_ids))
             )
@@ -254,7 +251,7 @@ async def test_retention_query_and_compaction_on_mysql(queue):
         result = await IntegrationHistoryMaintenance(
             session, IntegrationExecutionSettings()
         ).compact()
-        assert result == {"compacted": 1, "backlog": 0}
+        assert result == {"compacted": 1, "backlog": 0, "prunedReceipts": 0}
         assert job.archived_at is not None
         assert job.snapshot_json == {}
         assert all(step.input_json == {} for step in steps)
@@ -312,7 +309,6 @@ def test_restore_review_scope_constraint_and_migration_evidence_guard(mysql):
             actor_user_id=None,
             decision="isolated",
             state_digest=digest("scope"),
-            facts_json={"writesRemainBlocked": True},
             reviewed_at=datetime.now(UTC),
         )
 

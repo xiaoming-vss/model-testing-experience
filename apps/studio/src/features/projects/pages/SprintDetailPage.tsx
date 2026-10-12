@@ -1014,14 +1014,7 @@ export function SprintDetailPage() {
               <div className="sprint-overview-hero-summary">
                 <SummaryMetric label="总用例数" value={latestMetrics.totalCases} />
                 <SummaryMetric label="Bug 总数" value={latestMetrics.bug.collected ? latestMetrics.bug.total : '—'} />
-                <ProjectActionButton action="execute"
-                  className="action-btn-read"
-                  operation="refresh"
-                  loading={generateMetricsMutation.isPending}
-                  onClick={() => generateMetricsMutation.mutate()}
-                >
-                  更新数据
-                </ProjectActionButton>
+
                 <Tooltip title={canViewLatestReport ? '查看最近一次成功报告' : '暂无可查看的成功报告'}>
                   <Button
                     icon={<FileTextOutlined />}
@@ -1033,6 +1026,14 @@ export function SprintDetailPage() {
                     查看报告
                   </Button>
                 </Tooltip>
+                <ProjectActionButton action="execute"
+                  className="action-btn-read"
+                  operation="refresh"
+                  loading={generateMetricsMutation.isPending}
+                  onClick={() => generateMetricsMutation.mutate()}
+                >
+                  更新数据
+                </ProjectActionButton>
                 <ProjectActionButton action="execute"
                   type="primary"
                   icon={<FileTextOutlined />}

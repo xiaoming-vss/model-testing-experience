@@ -4,6 +4,7 @@ import { api } from '@/services/api'
 import { normalizeSprintId, pickCreatedAt } from '@/utils/format'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
+import { SPRINTS_STALE_TIME } from './requirementQueries'
 
 export function useActiveSprint(enabled = true) {
   const { activeProjectId, projectsQuery } = useActiveProject()
@@ -15,6 +16,7 @@ export function useActiveSprint(enabled = true) {
     queryKey: ['sprints', activeProjectId],
     queryFn: () => api.getSprints(activeProjectId!),
     enabled: Boolean(activeProjectId) && enabled,
+    staleTime: SPRINTS_STALE_TIME,
   })
 
   const sprints = useMemo(() => sprintsQuery.data ?? [], [sprintsQuery.data])

@@ -1,5 +1,5 @@
-import { Button, Card, Tag, Tooltip, Typography } from 'antd'
-import { ReloadOutlined } from '@ant-design/icons'
+import { Card, Tag, Tooltip, Typography } from 'antd'
+import { ActionButton } from '@/shared/components/ActionButton'
 import type { ReactNode } from 'react'
 import { AppIcon } from '@/shared/icons'
 import { formatTime } from '@/utils/format'
@@ -26,6 +26,7 @@ export function ZentaoMcpServiceCard({ resource, checking, onRefresh, actions }:
       <Tooltip title={authorized ? '本人已配置授权，业务权限在操作时校验' : '仅使用你本人的 Token'}>
         <Tag color={authorized ? 'success' : resource.authorization.status === 'invalid' ? 'error' : 'default'}>{authorization}</Tag>
       </Tooltip>
+      {authorized && <ActionButton operation="refresh" className="base-services-mcp-refresh app-action-icon" aria-label="刷新实例信息" loading={checking} onClick={() => void onRefresh()} />}
     </div>
     <Typography.Paragraph className="api-collection-description base-services-connection-url" title={resource.baseUrl}>{resource.baseUrl}</Typography.Paragraph>
     <div className="sprint-card-meta api-collection-meta-inline">
@@ -38,7 +39,6 @@ export function ZentaoMcpServiceCard({ resource, checking, onRefresh, actions }:
         <Tooltip title={pending ? '禅道目标已变更，请在编辑服务中勾选确认后保存' : resource.instanceError || (authorized ? '业务权限在操作时校验' : '配置本人 Token 后读取实例')}>
           <span className="api-collection-inline-value">{status}</span>
         </Tooltip>
-        {authorized && <Tooltip title="刷新实例信息"><Button type="text" className="base-services-mcp-refresh app-action-icon" aria-label="刷新实例信息" icon={<ReloadOutlined />} loading={checking} onClick={() => void onRefresh()} /></Tooltip>}
       </div>
     </div>
     <div className="sprint-card-meta">

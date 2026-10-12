@@ -34,6 +34,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
 import { useProjectRequirements } from '@/features/projects/hooks/useProjectRequirements'
 import { useSprintRequirementScope } from '@/features/projects/hooks/useSprintRequirementScope'
+import { REQUIREMENTS_STALE_TIME, requirementsQueryKey, fetchSprintRequirements } from '@/features/projects/hooks/requirementQueries'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
@@ -43,6 +44,7 @@ import {
   createDefaultCaseFormValues,
   type FunctionCaseFormValues,
 } from '@/features/test-cases/utils/caseForm'
+import { formatCasePriority } from '@/features/test-cases/utils/casePriority'
 import { CASE_TYPE_PRESETS, caseTypeTone } from '@/features/test-cases/utils/caseTone'
 import { priorityTone } from '@/shared/utils/priorityTone'
 import {
@@ -75,6 +77,9 @@ const { Text } = Typography
 
 /** 快速过滤条上的优先级档位，顺序即展示顺序（P0 在最前）。 */
 const PRIORITY_QUICK_FILTERS = ['P0', 'P1', 'P2', 'P3']
+
+/** 测试集 / 用例列表 30s 内视为新鲜：切回本页时先出缓存，不再每次重挂载都重拉。 */
+const LIST_STALE_TIME = 30_000
 
 const CASE_TYPE_FILTER_OPTIONS = [
   { label: '全部类型', value: 'all' },
@@ -164,14 +169,11 @@ export function CaseLibraryPage() {
 
   const {
     currentRequirementSelection,
-    currentSprintSelection,
     requirementFilterOptions,
     requirementsQuery,
     resolvedSelectedRequirementId,
     resolvedSelectedSprintId,
     selectRequirement,
-    selectSprint,
-    sprintFilterOptions,
     sprints,
     sprintsQuery,
   } = useSprintRequirementScope({
@@ -182,7 +184,13 @@ export function CaseLibraryPage() {
     sprintScope: { value: globalSprintId, onChange: selectGlobalSprint },
   })
   const selectedSprintId = resolvedSelectedSprintId
+  useEffect(() => { setSuiteId(null); setPage(1) }, [activeProjectId, selectedSprintId])
   const selectedRequirementId = resolvedSelectedRequirementId
+
+  // 翻页保留选择，业务范围变化则清空，避免把旧测试集的 ID 提交给新范围。
+  useEffect(() => {
+    setSelectedCaseIds([])
+  }, [activeProjectId, selectedSprintId, selectedRequirementId, suiteId])
 
   const {
     allRequirements,
@@ -215,6 +223,7 @@ export function CaseLibraryPage() {
         requirementId: selectedRequirementId ?? '',
       }),
     enabled: Boolean(activeProjectId) && !sprintsQuery.isLoading,
+    staleTime: LIST_STALE_TIME,
   })
   const suites = listItems(suitesQuery.data)
 
@@ -262,10 +271,23 @@ export function CaseLibraryPage() {
         pageSize,
       }),
     enabled: Boolean(activeProjectId) && !sprintsQuery.isLoading,
+    staleTime: LIST_STALE_TIME,
   })
   const cases = listItems(casesQuery.data)
   const total = listTotal(casesQuery.data)
-  const hasCaseFilters = Boolean(priority || caseType || keyword)
+  const hasCaseFilters = Boolean(priority || caseType || keyword || keywordInput)
+  const hasSuiteData = suitesQuery.data !== undefined
+  const hasCaseData = casesQuery.data !== undefined
+  const noSuites = suitesQuery.isSuccess && suites.length === 0
+  const searchShortcut = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl+K'
+
+  function clearCaseFilters() {
+    setPriority(null)
+    setCaseType(null)
+    setKeywordInput('')
+    setKeyword('')
+    setPage(1)
+  }
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -279,6 +301,8 @@ export function CaseLibraryPage() {
   useEffect(() => {
     function handleShortcut(event: KeyboardEvent) {
       if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey)) return
+      // 标签页常驻挂载后，隐藏面板里的搜索框不能抢占快捷键。
+      if (keywordInputRef.current?.nativeElement?.closest('[hidden]')) return
       event.preventDefault()
       keywordInputRef.current?.focus()
     }
@@ -317,10 +341,11 @@ export function CaseLibraryPage() {
   )
 
   const suiteDrawerRequirementsQuery = useQuery({
-    queryKey: ['requirements', 'caseLibrarySuiteDrawer', suiteDrawerSprintId],
-    queryFn: () => api.getRequirements(suiteDrawerSprintId!),
+    queryKey: requirementsQueryKey(suiteDrawerSprintId),
+    queryFn: () => fetchSprintRequirements(suiteDrawerSprintId!),
     // 编辑态下这两个下拉是禁用的，但仍要取到选项，否则「所属需求」只会显示需求 ID。
     enabled: suiteDrawerOpen && Boolean(suiteDrawerSprintId),
+    staleTime: REQUIREMENTS_STALE_TIME,
   })
 
   const saveSuiteMutation = useMutation({
@@ -605,25 +630,14 @@ export function CaseLibraryPage() {
     }
     items.push(
       {
-        title: '模块',
-        key: 'module',
-        width: 130,
-        ellipsis: true,
-        render: (_, item) => (
-          <Text className="case-library-muted-cell" type="secondary">
-            {item.module || '-'}
-          </Text>
-        ),
-      },
-      {
         title: '优先级',
         key: 'priority',
         width: 90,
         align: 'center',
         render: (_, item) =>
-          item.priority ? (
+          item.priority !== undefined && item.priority !== null && String(item.priority).trim() !== '' ? (
             <span className={`case-library-priority tone-${priorityTone(item.priority)}`}>
-              {item.priority}
+              {formatCasePriority(item.priority)}
             </span>
           ) : (
             <Text type="secondary">-</Text>
@@ -632,11 +646,11 @@ export function CaseLibraryPage() {
       {
         title: '用例类型',
         key: 'caseType',
-        width: 120,
+        width: 156,
         ellipsis: true,
         render: (_, item) =>
           item.caseType ? (
-            <span className={`tp-tone-tag tone-${caseTypeTone(item.caseType)}`}>
+            <span title={item.caseType} className={`tp-tone-tag case-library-type-tag tone-${caseTypeTone(item.caseType)}`}>
               {item.caseType}
             </span>
           ) : (
@@ -654,7 +668,7 @@ export function CaseLibraryPage() {
         ),
       },
       {
-        title: '操作',
+        title: <span className="tp-actions-col-title" style={{ width: 64 }}>操作</span>,
         key: 'actions',
         width: 110,
         align: 'right',
@@ -756,25 +770,10 @@ export function CaseLibraryPage() {
             <div className="api-filter-group case-library-filters">
               <h1 className="tp-list-title">用例库</h1>
               <div className="api-filter-field">
-                <span className="api-filter-field-label">迭代</span>
-                <Select
-                  className="api-filter-select business-filter-select"
-                  value={currentSprintSelection === null ? 'all' : selectedSprintId ?? 'all'}
-                  options={sprintFilterOptions}
-                  loading={sprintsQuery.isLoading}
-                  placeholder="请选择迭代"
-                  onChange={(value: string) => {
-                    selectSprint(value === 'all' ? null : value)
-                    if (value === 'all') selectRequirement(null)
-                    setSuiteId(null)
-                    setPage(1)
-                  }}
-                />
-              </div>
-              <div className="api-filter-field">
                 <span className="api-filter-field-label">需求</span>
                 <Select
                   className="api-filter-select business-filter-select"
+                  aria-label="筛选需求"
                   value={
                     currentRequirementSelection === null ? 'all' : selectedRequirementId ?? 'all'
                   }
@@ -793,6 +792,7 @@ export function CaseLibraryPage() {
                 <span className="api-filter-field-label">用例类型</span>
                 <Select
                   className="api-filter-select business-filter-select"
+                  aria-label="筛选用例类型"
                   value={caseType ?? 'all'}
                   options={CASE_TYPE_FILTER_OPTIONS}
                   onChange={(value: string) => {
@@ -807,7 +807,8 @@ export function CaseLibraryPage() {
                   className="api-filter-input case-library-search-input"
                   allowClear
                   prefix={<SearchOutlined />}
-                  suffix={<span className="case-library-search-hint">⌘K</span>}
+                  suffix={<span className="case-library-search-hint" aria-hidden="true">{searchShortcut}</span>}
+                  aria-label="搜索用例名称或模块"
                   placeholder="搜索用例名称 / 模块"
                   value={keywordInput}
                   onChange={(event) => setKeywordInput(event.target.value)}
@@ -815,18 +816,10 @@ export function CaseLibraryPage() {
               </div>
             </div>
 
-            <Space size={8} className="case-library-toolbar-actions">
+            <Space size={8} className="case-library-toolbar-actions tp-refresh-actions">
               {selectedSuite ? (
                 <Space size={8} className="case-library-main-actions">
-                  <ProjectActionButton
-                    action="write"
-                    type="primary"
-                    className="action-btn-create"
-                    operation="create"
-                    onClick={openCreateCase}
-                  >
-                    新建用例
-                  </ProjectActionButton>
+
                   <ProjectActionButton
                     action="execute"
                     className="action-btn-update"
@@ -846,25 +839,9 @@ export function CaseLibraryPage() {
                   </ProjectActionButton>
                 </Space>
               ) : null}
-              <Tooltip title="刷新用例列表">
-                <ProjectActionButton
-                  action="read"
-                  type="text"
-                  shape="circle"
-                  className="action-btn-read case-library-refresh"
-                  operation="refresh"
-                  icon={<ReloadOutlined />}
-                  iconOnly
-                  aria-label="刷新用例列表"
-                  loading={casesQuery.isFetching || suitesQuery.isFetching}
-                  onClick={() => {
-                    casesQuery.refetch()
-                    suitesQuery.refetch()
-                  }}
-                />
-              </Tooltip>
+
               <Popconfirm
-                title={`确认删除选中的 ${selectedCaseIds.length} 条用例？`}
+                title={`确认删除「${selectedSuite?.name ?? '当前测试集'}」中选中的 ${selectedCaseIds.length} 条用例？`}
                 description="删除后不可恢复。"
                 okText="确认删除"
                 okButtonProps={{ danger: true }}
@@ -888,27 +865,55 @@ export function CaseLibraryPage() {
                   </ProjectActionButton>
                 </Tooltip>
               </Popconfirm>
+              <Tooltip title="刷新用例列表">
+                <ProjectActionButton
+                  action="read"
+                  type="text"
+                  shape="circle"
+                  className="action-btn-read case-library-refresh"
+                  operation="refresh"
+                  icon={<ReloadOutlined />}
+                  iconOnly
+                  aria-label="刷新用例列表"
+                  loading={casesQuery.isFetching || suitesQuery.isFetching}
+                  onClick={() => {
+                    casesQuery.refetch()
+                    suitesQuery.refetch()
+                  }}
+                />
+              </Tooltip>
+              {selectedSuite ? (
+                  <ProjectActionButton
+                    action="write"
+                    type="primary"
+                    className="action-btn-create"
+                    operation="create"
+                    onClick={openCreateCase}
+                  >
+                    新建用例
+                  </ProjectActionButton>
+              ) : null}
             </Space>
           </div>
 
           {sprintsQuery.error ? (
-            <Alert showIcon type="error" title={getErrorMessage(sprintsQuery.error)} />
+            <Alert showIcon type="error" title="迭代加载失败" description={getErrorMessage(sprintsQuery.error)}
+              action={<ProjectActionButton action="read" onClick={() => sprintsQuery.refetch()}>重试迭代</ProjectActionButton>} />
           ) : null}
-          {allRequirementsQuery.error ? (
-            <Alert showIcon type="error" title={getErrorMessage(allRequirementsQuery.error)} />
-          ) : null}
-          {suitesQuery.error ? (
-            <Alert showIcon type="error" title={getErrorMessage(suitesQuery.error)} />
-          ) : null}
-          {casesQuery.error ? (
-            <Alert showIcon type="error" title={getErrorMessage(casesQuery.error)} />
+          {requirementsQuery.error || allRequirementsQuery.error ? (
+            <Alert showIcon type="error" title="需求加载失败"
+              description={getErrorMessage(requirementsQuery.error ?? allRequirementsQuery.error)}
+              action={<ProjectActionButton action="read" onClick={() => {
+                if (requirementsQuery.error) void requirementsQuery.refetch()
+                if (allRequirementsQuery.error) void allRequirementsQuery.refetch()
+              }}>重试需求</ProjectActionButton>} />
           ) : null}
 
           {!activeProjectId ? (
             <div className="sprint-card-loading">
               <Empty description="请先选择项目" />
             </div>
-          ) : !sprintsQuery.isLoading && sprints.length === 0 ? (
+          ) : sprintsQuery.error && sprints.length === 0 ? null : !sprintsQuery.isLoading && sprints.length === 0 ? (
             <div className="sprint-card-loading">
               <Empty description="当前项目下暂无迭代" />
             </div>
@@ -925,6 +930,7 @@ export function CaseLibraryPage() {
                   <Input
                     allowClear
                     prefix={<SearchOutlined />}
+                    aria-label="搜索测试集"
                     placeholder="搜索测试集"
                     value={suiteFilter}
                     onChange={(event) => setSuiteFilter(event.target.value)}
@@ -946,15 +952,25 @@ export function CaseLibraryPage() {
                         <AppstoreOutlined className="case-library-tree-icon" />
                         <span className="case-library-nav-name">全部用例</span>
                       </span>
-                      <span className="case-library-nav-count">{allCaseCount}</span>
+                      <span className="case-library-nav-count">{hasSuiteData ? allCaseCount : '—'}</span>
                     </button>
+                    {suitesQuery.error ? (
+                      <Alert showIcon type="error" title="测试集加载失败"
+                        description={getErrorMessage(suitesQuery.error)}
+                        action={<ProjectActionButton action="read" loading={suitesQuery.isFetching}
+                          onClick={() => suitesQuery.refetch()}>重试测试集</ProjectActionButton>} />
+                    ) : null}
                     {suitesQuery.isLoading ? (
                       <div className="sprint-card-loading">
                         <Empty description="测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
                       </div>
-                    ) : visibleSuites.length === 0 ? (
+                    ) : suitesQuery.error && suites.length === 0 ? null : visibleSuites.length === 0 ? (
                       <div className="sprint-card-loading">
-                        <Empty description="没有匹配的测试集" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                        <Empty description={suiteFilter.trim() ? '没有匹配的测试集' : '当前范围暂无测试集'} image={Empty.PRESENTED_IMAGE_SIMPLE}>
+                          {suiteFilter.trim() ? (
+                            <ProjectActionButton action="read" onClick={() => setSuiteFilter('')}>清除测试集搜索</ProjectActionButton>
+                          ) : null}
+                        </Empty>
                       </div>
                     ) : (
                       visibleSuites.map((suite) => {
@@ -1057,7 +1073,6 @@ export function CaseLibraryPage() {
                       }}
                     >
                       全部
-                      <span className="tp-chip-count">{total}</span>
                     </button>
                     {PRIORITY_QUICK_FILTERS.map((level) => (
                       <button
@@ -1074,33 +1089,56 @@ export function CaseLibraryPage() {
                       </button>
                     ))}
                   </div>
-                  <div className="tp-selection">
-                    已选 <strong>{selectedCaseIds.length}</strong> 项 · 共 <strong>{total}</strong> 条用例
+                  <div className="tp-selection case-library-selection" aria-live="polite">
+                    {selectedCaseIds.length > 0 ? (
+                      <>
+                        <span className="case-library-selection-scope" title={selectedSuite?.name ?? '全部用例'}>
+                          {selectedSuite?.name ?? '全部用例'}
+                        </span>
+                        <span>已选 <strong>{selectedCaseIds.length}</strong> 项</span>
+                        <ProjectActionButton action="read" size="small" type="link" onClick={() => setSelectedCaseIds([])}>清空选择</ProjectActionButton>
+                      </>
+                    ) : null}
+                    <span>{hasCaseData ? <>共 <strong>{total}</strong> 条用例</> : casesQuery.isError ? '数量暂不可用' : '正在加载用例'}</span>
+                    {hasCaseFilters ? <ProjectActionButton action="read" size="small" type="link" onClick={clearCaseFilters}>清除用例筛选</ProjectActionButton> : null}
                   </div>
                 </div>
                 <div className="table-body-scroll sprint-card-scroll case-library-table-scroll">
+                  {casesQuery.error ? (
+                    <Alert showIcon type="error" title="用例加载失败"
+                      description={getErrorMessage(casesQuery.error)}
+                      action={<ProjectActionButton action="read" loading={casesQuery.isFetching}
+                        onClick={() => casesQuery.refetch()}>重试用例</ProjectActionButton>} />
+                  ) : null}
                   {casesQuery.isLoading ? (
                     <div className="sprint-card-loading">
                       <Empty description="用例加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
                     </div>
-                  ) : cases.length === 0 ? (
+                  ) : casesQuery.isError && cases.length === 0 ? null : cases.length === 0 ? (
                     <div className="sprint-card-loading">
                       <Empty
                         image={<AppstoreOutlined />}
                         description={
                           <Space orientation="vertical" size={4}>
                             <Text strong>
-                              {hasCaseFilters ? '没有符合筛选条件的用例' : '这里还没有功能用例'}
+                              {hasCaseFilters ? '没有符合筛选条件的用例' : noSuites ? '当前范围暂无测试集' : selectedSuite ? '这个测试集还没有用例' : '当前范围暂无用例'}
                             </Text>
                             <Text type="secondary">
                               {hasCaseFilters
-                                ? '调整或清空筛选条件后再看。'
-                                : '在左栏选中测试集后可以直接新建用例，也可以用例导入或 AI 生成后导入。'}
+                                ? '清除用例类型、优先级和名称筛选；保留当前迭代、需求和测试集范围。'
+                                : noSuites
+                                  ? '先创建测试集，再添加或导入用例。'
+                                  : selectedSuite
+                                    ? '可以直接新建用例，也可以用例导入或 AI 生成后导入。'
+                                    : '在左栏选择测试集后添加用例，或调整需求与当前迭代范围。'}
                             </Text>
                           </Space>
                         }
                       >
-                        {hasCaseFilters || !canCreateCase ? null : (
+                        {hasCaseFilters ? null : noSuites ? (
+                          <ProjectActionButton action="write" type="primary" operation="create"
+                            className="action-btn-create" onClick={openCreateSuiteDrawer}>新建测试集</ProjectActionButton>
+                        ) : !canCreateCase ? null : (
                           <ProjectActionButton
                             action="write"
                             type="primary"
@@ -1116,6 +1154,7 @@ export function CaseLibraryPage() {
                   ) : (
                     <Table<FunctionCaseLibraryItem>
                       className="functional-suite-list-table tp-list-table"
+                      scroll={{ x: 1200 }}
                       columns={columns}
                       dataSource={cases}
                       rowKey={(item) => normalizeFunctionTestCaseId(item) ?? item.title}
@@ -1141,15 +1180,17 @@ export function CaseLibraryPage() {
                 </div>
 
                 <div className="table-footer case-library-footer">
-                  <ListPagination loading={casesQuery.isFetching || casesQuery.isError}
-                    current={page}
-                    pageSize={pageSize}
-                    total={total}
-                    onChange={(nextPage, nextPageSize) => {
-                      setPageSize(nextPageSize)
-                      setPage(nextPageSize === pageSize ? nextPage : 1)
-                    }}
-                  />
+                  {!hasCaseData ? <Text type="secondary">{casesQuery.isError ? '用例数量暂不可用' : '正在加载用例…'}</Text> : (
+                    <ListPagination loading={casesQuery.isFetching || casesQuery.isError}
+                      current={page}
+                      pageSize={pageSize}
+                      total={total}
+                      onChange={(nextPage, nextPageSize) => {
+                        setPageSize(nextPageSize)
+                        setPage(nextPageSize === pageSize ? nextPage : 1)
+                      }}
+                    />
+                  )}
                 </div>
               </div>
             </div>

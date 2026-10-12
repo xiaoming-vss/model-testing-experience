@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useStoredFileUrls } from '../files/useStoredFileUrls'
 import { extractRichTextFileIds, injectImageSources } from './utils'
+import '@/shared/styles/surface-tokens.css'
 import './rich-text-editor.css'
 
 /** 富文本只读渲染：按 data-file-id 鉴权下载，使用临时 Blob 地址展示。 */
@@ -20,7 +21,7 @@ export function RichTextViewer({
 
   if (!html.trim()) {
     return (
-      <div className={`rich-text-viewer is-empty ${className}`} aria-label={ariaLabel}>
+      <div className={`tp-surface rich-text-viewer is-empty ${className}`} aria-label={ariaLabel}>
         未填写内容
       </div>
     )
@@ -31,7 +32,7 @@ export function RichTextViewer({
       <button type="button" onClick={reload}>重新加载图片</button>
     </span>}
     <div
-      className={`rich-text-viewer ${className}`}
+      className={`tp-surface rich-text-viewer ${className}`}
       aria-label={ariaLabel}
       // 内容在入库前已由服务端白名单消毒，这里只负责展示。
       dangerouslySetInnerHTML={{ __html: content }}
