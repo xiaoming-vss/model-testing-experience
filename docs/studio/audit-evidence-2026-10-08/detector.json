@@ -1,0 +1,249 @@
+[
+  {
+    "antipattern": "side-tab",
+    "name": "Side-tab accent border",
+    "description": "Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/features/ai-testing/components/FunctionalCaseRelationsGraph.css",
+    "line": 91,
+    "snippet": "border-left: 3px solid var(--ant-color-primary)",
+    "importedBy": [
+      "FunctionalCaseRelationsGraph.tsx",
+      "FunctionalCaseRelationsViewer.tsx",
+      "HierarchicalCaseRelationsGraph.tsx",
+      "useHierarchyViewport.ts"
+    ]
+  },
+  {
+    "antipattern": "side-tab",
+    "name": "Side-tab accent border",
+    "description": "Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/features/ai-testing/styles/task-detail-v2.css",
+    "line": 1046,
+    "snippet": ".ai-task-detail-page .ai-task-run-metric.accent::before — absolute 3px pseudo-element stripe (left: 0)",
+    "importedBy": [
+      "RequirementDesignWorkspace.tsx"
+    ]
+  },
+  {
+    "antipattern": "broken-image",
+    "name": "Broken or placeholder image",
+    "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/features/bugs/components/BugDescriptionView.test.tsx",
+    "line": 4,
+    "snippet": "<img data-file-id=\"f\">"
+  },
+  {
+    "antipattern": "broken-image",
+    "name": "Broken or placeholder image",
+    "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/features/bugs/components/BugDescriptionView.test.tsx",
+    "line": 10,
+    "snippet": "<img data-file-id=\"f\">"
+  },
+  {
+    "antipattern": "broken-image",
+    "name": "Broken or placeholder image",
+    "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/features/bugs/components/BugEvidencePanel.test.tsx",
+    "line": 13,
+    "snippet": "<img data-file-id=\"inline\">"
+  },
+  {
+    "antipattern": "side-tab",
+    "name": "Side-tab accent border",
+    "description": "Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/features/bugs/styles/bug-detail.css",
+    "line": 54,
+    "snippet": "border-left: 3px solid var(--srf-result-failed)",
+    "importedBy": [
+      "BugDetailPage.tsx"
+    ]
+  },
+  {
+    "antipattern": "side-tab",
+    "name": "Side-tab accent border",
+    "description": "Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/features/bugs/styles/bug-detail.css",
+    "line": 55,
+    "snippet": "border-left: 3px solid var(--srf-result-passed)",
+    "importedBy": [
+      "BugDetailPage.tsx"
+    ]
+  },
+  {
+    "antipattern": "broken-image",
+    "name": "Broken or placeholder image",
+    "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/features/requirements/components/RequirementDrawer.tsx",
+    "line": 205,
+    "snippet": "<img\\b[^>",
+    "importedBy": [
+      "RequirementDrawer.test.tsx"
+    ]
+  },
+  {
+    "antipattern": "side-tab",
+    "name": "Side-tab accent border",
+    "description": "Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/features/test-orders/styles/workspace-content-v3.css",
+    "line": 18,
+    "snippet": "border-left: 3px solid var(--srf-accent-border)",
+    "importedBy": [
+      "TestOrderCaseContent.tsx"
+    ]
+  },
+  {
+    "antipattern": "layout-transition",
+    "name": "Layout property animation",
+    "description": "Animating width, height, padding, or margin causes layout thrash and janky performance. Use transform and opacity instead, or grid-template-rows for height animations.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/features/test-orders/styles/workspace-v2.css",
+    "line": 134,
+    "snippet": "transition: width"
+  },
+  {
+    "antipattern": "broken-image",
+    "name": "Broken or placeholder image",
+    "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/shared/components/RichTextEditor/RichTextEditor.test.tsx",
+    "line": 14,
+    "snippet": "<img data-file-id=\"image-1\" alt=\"截图\">"
+  },
+  {
+    "antipattern": "broken-image",
+    "name": "Broken or placeholder image",
+    "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/shared/components/RichTextEditor/RichTextViewer.test.tsx",
+    "line": 12,
+    "snippet": "<img data-file-id=\"file-1\" alt=\"evidence\" />"
+  },
+  {
+    "antipattern": "broken-image",
+    "name": "Broken or placeholder image",
+    "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/shared/components/RichTextEditor/RichTextViewer.test.tsx",
+    "line": 24,
+    "snippet": "<img data-file-id=\"file-1\" alt=\"evidence\" />"
+  },
+  {
+    "antipattern": "side-tab",
+    "name": "Side-tab accent border",
+    "description": "Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/shared/components/RichTextEditor/rich-text-editor.css",
+    "line": 102,
+    "snippet": "border-left: 3px solid var(--srf-card-border)",
+    "importedBy": [
+      "RichTextEditor.tsx",
+      "RichTextViewer.tsx"
+    ]
+  },
+  {
+    "antipattern": "side-tab",
+    "name": "Side-tab accent border",
+    "description": "Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/shared/components/RichTextEditor/rich-text-editor.css",
+    "line": 167,
+    "snippet": "border-left: 3px solid var(--srf-card-border)",
+    "importedBy": [
+      "RichTextEditor.tsx",
+      "RichTextViewer.tsx"
+    ]
+  },
+  {
+    "antipattern": "broken-image",
+    "name": "Broken or placeholder image",
+    "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/shared/components/RichTextEditor/utils.test.ts",
+    "line": 7,
+    "snippet": "<img data-file-id=\"file-2\">"
+  },
+  {
+    "antipattern": "broken-image",
+    "name": "Broken or placeholder image",
+    "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/shared/components/RichTextEditor/utils.test.ts",
+    "line": 7,
+    "snippet": "<img data-file-id=\"file-1\">"
+  },
+  {
+    "antipattern": "broken-image",
+    "name": "Broken or placeholder image",
+    "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/shared/components/RichTextEditor/utils.test.ts",
+    "line": 15,
+    "snippet": "<img data-file-id=\"file-1\" alt=\"截图\">"
+  },
+  {
+    "antipattern": "broken-image",
+    "name": "Broken or placeholder image",
+    "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/shared/components/RichTextEditor/utils.test.ts",
+    "line": 19,
+    "snippet": "<img data-file-id=\"file-1\">"
+  },
+  {
+    "antipattern": "broken-image",
+    "name": "Broken or placeholder image",
+    "description": "<img> tags with empty src, missing src, or placeholder values ship as broken-image boxes. Use real images, generated assets, or remove the tag.",
+    "severity": "warning",
+    "category": "quality",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/shared/components/RichTextEditor/utils.ts",
+    "line": 15,
+    "snippet": "<img\\b[^>",
+    "importedBy": [
+      "RichTextEditor.tsx",
+      "RichTextViewer.tsx",
+      "utils.test.ts"
+    ]
+  },
+  {
+    "antipattern": "side-tab",
+    "name": "Side-tab accent border",
+    "description": "Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "/home/xiaoming/GitCloneData/model-testing-experience/apps/studio/src/shared/styles/page-frame.css",
+    "line": 1205,
+    "snippet": "border-left: 3px solid var(--app-accent)",
+    "importedBy": [
+      "App.css"
+    ]
+  }
+]

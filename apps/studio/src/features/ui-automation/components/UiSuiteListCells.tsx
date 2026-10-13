@@ -7,7 +7,7 @@ const { Text } = Typography
 /** 名称列：图标 + 名称。名称的字色由列表名称统一契约锁定（app/styles/listNameConsistency.test.ts），不要改。 */
 export function UiSuiteNameCell({ name }: { name: string }) {
   return (
-    <Space size={8} className="functional-suite-list-name ui-suite-list-name-cell">
+    <Space size={8} className="tp-list-name functional-suite-list-name ui-suite-list-name-cell">
       <span className="ui-suite-list-name-icon">
         <DesktopOutlined />
       </span>

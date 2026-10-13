@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import builtins
+from datetime import datetime
 from typing import TypedDict
 
 from sqlalchemy import select
@@ -36,6 +37,22 @@ class SprintDailyMetricsRepository(BaseRepository):
     async def get_sprint(self, sprint_id: str) -> Sprint | None:
         return await self.session.scalar(select(Sprint).where(Sprint.sprint_id == sprint_id))
 
+    async def lock_sprint(self, sprint_id: str) -> Sprint | None:
+        return await self.session.scalar(
+            select(Sprint).where(Sprint.sprint_id == sprint_id).with_for_update()
+        )
+
+    async def list_running_sprint_ids(self, now: datetime) -> builtins.list[str]:
+        return list(
+            (
+                await self.session.scalars(
+                    select(Sprint.sprint_id)
+                    .where(Sprint.start_time <= now, Sprint.end_time > now)
+                    .order_by(Sprint.id)
+                )
+            ).all()
+        )
+
     async def get_project(self, project_id: str) -> Project | None:
         return await self.session.scalar(select(Project).where(Project.project_id == project_id))
 
@@ -53,13 +70,16 @@ class SprintDailyMetricsRepository(BaseRepository):
         rows = await self.session.scalars(stmt.order_by(SprintDailyMetrics.snapshot_date.asc()))
         return list(rows.all())
 
-    async def get(self, sprint_id: str, snapshot_date: str) -> SprintDailyMetrics | None:
-        return await self.session.scalar(
-            select(SprintDailyMetrics).where(
-                SprintDailyMetrics.sprint_id == sprint_id,
-                SprintDailyMetrics.snapshot_date == snapshot_date,
-            )
+    async def get(
+        self, sprint_id: str, snapshot_date: str, *, for_update: bool = False
+    ) -> SprintDailyMetrics | None:
+        stmt = select(SprintDailyMetrics).where(
+            SprintDailyMetrics.sprint_id == sprint_id,
+            SprintDailyMetrics.snapshot_date == snapshot_date,
         )
+        if for_update:
+            stmt = stmt.with_for_update()
+        return await self.session.scalar(stmt)
 
     async def list_bug_snapshots(
         self, project_id: str, sprint_id: str

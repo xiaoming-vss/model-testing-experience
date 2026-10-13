@@ -62,7 +62,8 @@ export function BugListPage() {
                     dataSource={bugs}
                     rowKey={(bug) => bug.bugId}
                     pagination={false}
-                    scroll={{ x: 1440 }}
+                    tableLayout="fixed"
+                    scroll={{ x: 1560 }}
                     onChange={handleTableChange}
                     onRow={(bug) => ({
                       onClick: (event) => {

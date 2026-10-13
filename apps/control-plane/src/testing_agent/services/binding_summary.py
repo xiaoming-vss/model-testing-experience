@@ -23,3 +23,18 @@ async def load_zentao_binding_summaries(
                 by_alias=True
             )
     return summaries
+
+
+async def load_code_binding_summaries(
+    session: AsyncSession, resource_ids: Sequence[str]
+) -> dict[str, list[dict[str, str]]]:
+    rows = await ResourceBindingRepository(session).list_code_summaries(resource_ids)
+    summaries: dict[str, list[dict[str, str]]] = {}
+    for row in rows:
+        summaries.setdefault(row["local_resource_id"], []).append(
+            {
+                "repository": row["remote_name_snapshot"] or row["remote_resource_id"],
+                "branch": str((row["extra_json"] or {}).get("branch") or ""),
+            }
+        )
+    return summaries

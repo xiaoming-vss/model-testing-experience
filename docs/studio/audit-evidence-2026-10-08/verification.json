@@ -1,0 +1,88 @@
+{
+  "date": "2026-10-08",
+  "timezone": "Asia/Shanghai",
+  "baselineCommit": "96919da94f672bbc45ae2a8eb8513a20f7e8bd67",
+  "subject": "working tree including pre-existing uncommitted changes",
+  "sha256AtReportPreparation": {
+    "src/app/layouts/AppShell.tsx": "2e626c5355496c1ca3478b98d32ef8ed0e3d66bc205f4d214278a1519cd05a42",
+    "src/app/router/guards/ProjectRouteGuard.tsx": "4857c26e61f3882d2c79cf1115edb07612c20081960b0836a757ce59d82e2da6",
+    "src/shared/styles/page-frame.css": "e625c296198785d6e21590b27a3acc112285d126a3d69d82c82dc13abb896d51",
+    "src/features/test-orders/pages/TestOrderPage.tsx": "e230ffae63e08549bcebe12d1b1e0264a0e3bbcf7ba82161ef6489b509dee4ff",
+    "src/features/test-orders/pages/TestOrderWorkspacePage.tsx": "4262de7b1a4a904c7f86ee3814a85eee0a76891f49c8f1ceaff0ffc3d2ea6209",
+    "src/features/auth/pages/AuthPage.tsx": "dfca41653df99c668d2af2ba79d3857189ee99991854057a7859ade6874cccb7",
+    "src/shared/api/request.ts": "cfbd17ed30e4bbdd816217a76d34c1139c6280ffe323d6df9370d006f966f62a",
+    "src/features/requirements/components/RequirementDocumentPreviewModal.tsx": "c4160adfaa87058e62bc5ba1f2a5b7ba30af2424b719e8160c33033d1f2721ca",
+    "src/features/ai-testing/components/RunHistoryTable.tsx": "6f2e2152b6bae2aa2baea459f76716c1aff2f6d3731486ca3745b68b1c9043d8"
+  },
+  "commands": {
+    "type-check": 0,
+    "lint": 0,
+    "check:theme": 0,
+    "test": 1,
+    "build": 0
+  },
+  "tests": {
+    "files": 120,
+    "failedFiles": 4,
+    "tests": 710,
+    "failedTests": 5
+  },
+  "browserEvidence": [
+    {
+      "id": "B01",
+      "environment": "actual login page, no authentication",
+      "result": "Empty login validation renders messages and aria-invalid/describedby; password recovery only shows 暂未开放."
+    },
+    {
+      "id": "B02",
+      "environment": "production AppRoutes/AppShell with isolated fixtures and blocked fetch writes",
+      "result": "Search unmatched test order shows 清空筛选; clear restores 4 rows; empty new-order form displays 请输入测试单名称; ArrowRight from 测试单 changes URL to tab=library."
+    },
+    {
+      "id": "B03",
+      "viewport": {
+        "width": 760,
+        "height": 1000
+      },
+      "result": "UI list document scrollWidth=760, no page overflow; all navigation disappears because aside display:none; no replacement menu."
+    },
+    {
+      "id": "B04",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "result": "readonly test order fixture disables create/edit/delete; root scrollWidth=390; table scrollWidth=970/clientWidth=364/scrollLeft=0; column widths name=0,sprint=130,version=130,metrics=300,status=110,updated=170,actions=130. 760px viewport also name=0."
+    },
+    {
+      "id": "B05",
+      "environment": "RequirementDetailPage existing local fixture; no writes",
+      "result": "4 rows: pending review, error, rejected, imported. Error modal opens with fixture message and closes via Escape. Rows have no tabindex or role; no select-run button."
+    },
+    {
+      "id": "B06",
+      "viewport": {
+        "width": 760,
+        "height": 1000
+      },
+      "result": "Document separator ArrowRight changes aria-valuenow 50->52, but grid rows stay 323px 1px 323px and columns stay702px; aria-orientation remains vertical although panes stack."
+    },
+    {
+      "id": "B07",
+      "environment": "isolated rejected test-order GET",
+      "result": "Page shows 隔离示例：网络暂不可用 alongside 当前迭代下还没有测试单 and create CTA."
+    },
+    {
+      "id": "B08",
+      "environment": "isolated lists",
+      "result": "API/UI/library/Bug/base services/Skill empty states inspected; Bug filter popover and base-service tabs inspected; projects sprint/requirement and code-risk list inspected. Real server filtering/pagination/write outcome unverified."
+    }
+  ],
+  "limitations": [
+    "No provided real login credentials",
+    "No real external writes or paid tasks",
+    "Concurrent pre-existing work caused hot updates and temporary preview port replacement; affected observation discarded and final key findings rechecked using dedicated port54387",
+    "No injected detector overlay: browser evaluate is read-only",
+    "No full screen-reader/touch/200% zoom/performance instrumentation"
+  ]
+}

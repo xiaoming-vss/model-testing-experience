@@ -55,14 +55,15 @@ describe('light workbench surfaces', () => {
     }
   })
   it('distinguishes inset controls from the brighter content surface', () => {
-    expect(resolve('--app-control-surface')).toBe('#e8edf6')
-    expect(resolve('--app-surface')).toBe('#edf1f9')
-    for (const role of ['--button-bg', '--app-glass-input']) {
+    expect(resolve('--app-control-surface')).toBe('#edf2f8')
+    expect(resolve('--app-surface')).toBe('#f4f6fa')
+    for (const role of ['--app-glass-input']) {
       expect(resolve(role), role).toBe(resolve('--app-control-surface'))
     }
     for (const role of ['--app-request-field-bg', '--editor-bg']) {
       expect(resolve(role), role).toBe(resolve('--app-surface'))
     }
+    expect(resolve('--button-bg')).toBe('#eaf0f8')
     expect(resolve('--button-disabled-bg')).toBe(resolve('--srf-list-header-bg'))
     expect(resolve('--button-hover-bg')).toBe(resolve('--srf-list-header-bg'))
     expect(resolve('--srf-chip')).toBe(resolve('--srf-list-header-bg'))

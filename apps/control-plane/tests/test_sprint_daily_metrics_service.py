@@ -44,13 +44,16 @@ class FakeSprintDailyMetricsRepository:
     async def get_sprint(self, sprint_id):
         return self.sprint if sprint_id == "s1" else None
 
+    async def lock_sprint(self, sprint_id):
+        return await self.get_sprint(sprint_id)
+
     async def get_project(self, project_id):
         return self.project if project_id == "p1" else None
 
     async def list(self, sprint_id, start_date="", end_date=""):
         return []
 
-    async def get(self, sprint_id, snapshot_date):
+    async def get(self, sprint_id, snapshot_date, *, for_update=False):
         return self.metric
 
     async def list_requirements_by_sprint(self, sprint_id):

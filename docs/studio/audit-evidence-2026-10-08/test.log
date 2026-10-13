@@ -1,0 +1,708 @@
+
+> @mtx/studio@0.0.0 test
+> vitest run
+
+
+ RUN  v4.1.10 /home/xiaoming/GitCloneData/model-testing-experience/apps/studio
+
+ ❯ src/app/layouts/AppShell.developer.test.tsx (7 tests | 1 failed) 14319ms
+   × 开发直接访问 /requirements/r 时进入 Bug 列表，且不请求其他业务资源 1191ms
+ ❯ src/app/layouts/AppShell.projectMenu.test.tsx (4 tests | 2 failed) 7085ms
+   × 只读成员不能打开项目设置 1168ms
+   × 旧项目的菜单参数不会打开当前项目的设置 1230ms
+ ❯ src/app/styles/paginationConsistency.test.ts (2 tests | 1 failed) 1088ms
+     × 分页外观只由公共样式维护，页面不能重新覆盖 38ms
+ ❯ src/features/ai-testing/api/aiTesting.storage.test.ts (3 tests | 1 failed) 27ms
+     × uploads directly before associating the file ID with the task 21ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/app/layouts/AppShell.developer.test.tsx > 开发直接访问 /requirements/r 时进入 Bug 列表，且不请求其他业务资源
+TestingLibraryElementError: Unable to find an element with the text: 开发需要修复的问题. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"ant-layout ant-layout-has-sider app-shell app-shell-macos app-shell-requirement-detail css-dev-only-do-not-override-tql0nm css-var-root"[39m
+    [36m>[39m
+      [36m<aside[39m
+        [33mclass[39m=[32m"ant-layout-sider ant-layout-sider-light app-sider app-sidebar css-dev-only-do-not-override-tql0nm css-var-root"[39m
+        [33mstyle[39m=[32m"flex: 0 0 208px; max-width: 208px; min-width: 208px; width: 208px;"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"ant-layout-sider-children"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"sidebar-content"[39m
+          [36m>[39m
+            [36m<a[39m
+              [33maria-label[39m=[32m"MTX Bug列表"[39m
+              [33mclass[39m=[32m"sidebar-brand"[39m
+              [33mdata-discover[39m=[32m"true"[39m
+              [33mhref[39m=[32m"/testing?tab=bugs"[39m
+            [36m>[39m
+              [36m<svg[39m
+                [33maria-label[39m=[32m"MTX Logo"[39m
+                [33mclass[39m=[32m"mtx-logo"[39m
+                [33mfill[39m=[32m"none"[39m
+                [33mheight[39m=[32m"36"[39m
+                [33mrole[39m=[32m"img"[39m
+                [33mviewBox[39m=[32m"0 0 58 58"[39m
+                [33mwidth[39m=[32m"36"[39m
+                [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+              [36m>[39m
+                [36m<defs>[39m
+                  [36m<lineargradient[39m
+                    [33mgradientUnits[39m=[32m"userSpaceOnUse"[39m
+                    [33mid[39m=[32m"mtx-logo-plate-_r_3g_"[39m
+                    [33mx1[39m=[32m"29"[39m
+                    [33mx2[39m=[32m"29"[39m
+                    [33my1[39m=[32m"1"[39m
+                    [33my2[39m=[32m"57"[39m
+                  [36m>[39m
+                    [36m<stop[39m
+                      [33mclass[39m=[32m"mtx-logo__plate-start"[39m
+                      [33mstop-color[39m=[32m"#ffffff"[39m
+                    [36m/>[39m
+                    [36m<stop[39m
+                      [33mclass[39m=[32m"mtx-logo__plate-end"[39m
+                      [33moffset[39m=[32m"1"[39m
+                      [33mstop-color[39m=[32m"#f3f7fc"[39m
+                    [36m/>[39m
+                  [36m</lineargradient>[39m
+                [36m</defs>[39m
+                [36m<rect[39m
+                  [33mclass[39m=[32m"mtx-logo__plate"[39m
+                  [33mfill[39m=[32m"url(#mtx-logo-plate-_r_3g_)"[39m
+                  [33mheight[39m=[32m"56"[39m
+                  [33mrx[39m=[32m"14"[39m
+                  [33mwidth[39m=[32m"56"[39m
+                  [33mx[39m=[32m"1"[39m
+                  [33my[39m=[32m"1"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33mclass[39m=[32m"mtx-logo__model"[39m
+                  [33md[39m=[32m"M15 39V20L25 31L35 20"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33mclass[39m=[32m"mtx-logo__test"[39m
+                  [33md[39m=[32m"M22 20H42M32 20V41"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33mclass[39m=[32m"mtx-logo__experience"[39m
+                  [33md[39m=[32m"M39 26L47 38M47 26L39 38"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+              [36m<span>[39m
+                [0mMTX[0m
+              [36m</span>[39m
+            [36m</a>[39m
+            [36m<nav[39m
+              [33maria-label[39m=[32m"主导航"[39m
+              [33mclass[39m=[32m"sidebar-navigation"[39m
+            [36m>[39m
+              [36m<a[39m
+                [33mclass[39m=[32m"sidebar-link"[39m
+                [33mdata-discover[39m=[32m"true"[39m
+                [33mhref[39m=[32m"/testing?tab=bugs"[39m
+              [36m>[39m
+                [36m<img[39m
+                  [33malt[39m=[32m""[39m
+                  [33mheight[39m=[32m"18"[39m
+                  [33msrc[39m=[32m"data:image/svg+xml,%3csvg%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3cpath%20d='M12%202C12.504%202%2012.931%202.373%2012.992%202.86L13%203V4.05C14.683%204.318%2016%205.78%2016%207.55V8H8V7.55C8%205.78%209.317%204.318%2011%204.05V3C11%202.448%2011.448%202%2012%202Z'%20fill='url(%23paint0_linear_bug)'/%3e%3cpath%20d='M5.6%205.7C6.014%205.37%206.621%205.435%206.955%205.846C7.289%206.257%207.224%206.86%206.814%207.192C6.071%207.792%205.62%208.66%205.55%209.61C5.528%209.903%205.5%2010.2%205.5%2010.5V11H3C2.448%2011%202%2010.552%202%2010C2%209.448%202.448%209%203%209H3.562C3.72%207.652%204.386%206.427%205.4%205.557L5.6%205.7ZM18.4%205.7C19.516%206.647%2020.237%207.994%2020.42%209.5H21C21.552%209.5%2022%209.948%2022%2010.5C22%2011.052%2021.552%2011.5%2021%2011.5H18.5V10.5C18.5%2010.2%2018.472%209.903%2018.42%209.61C18.301%208.515%2017.801%207.526%2017.033%206.783L16.9%206.65C16.536%206.268%2016.548%205.666%2016.928%205.3C17.308%204.934%2017.913%204.946%2018.279%205.324L18.4%205.7Z'%20fill='url(%23paint0_linear_bug)'/%3e%3cpath%20d='M8%209.5H16V15.5C16%2017.985%2013.985%2020%2011.5%2020C9.015%2020%207%2017.985%207%2015.5V11C7%2010.448%207.448%2010%208%2010V9.5Z'%20fill='url(%23paint1_linear_bug)'%20transform='translate(0.5%200)'/%3e%3cpath%20d='M7%2012H3.5C2.948%2012%202.5%2012.448%202.5%2013C2.5%2013.552%202.948%2014%203.5%2014H7V12ZM17%2012H20.5C21.052%2012%2021.5%2012.448%2021.5%2013C21.5%2013.552%2021.052%2014%2020.5%2014H17V12ZM7%2016.5H4.5C3.948%2016.5%203.5%2016.948%203.5%2017.5C3.5%2018.052%203.948%2018.5%204.5%2018.5H7.4C7.15%2017.9%207%2017.22%207%2016.5ZM17%2016.5C17%2017.22%2016.85%2017.9%2016.6%2018.5H19.5C20.052%2018.5%2020.5%2018.052%2020.5%2017.5C20.5%2016.948%2020.052%2016.5%2019.5%2016.5H17Z'%20fill='url(%23paint1_linear_bug)'/%3e%3cdefs%3e%3clinearGradient%20id='paint0_linear_bug'%20x1='12'%20y1='2'%20x2='12'%20y2='11.5'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20stop-color='%23FFC46B'/%3e%3cstop%20offset='1'%20stop-color='%23F08C35'/%3e%3c/linearGradient%3e%3clinearGradient%20id='paint1_linear_bug'%20x1='12'%20y1='8'%20x2='12'%20y2='20'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20stop-color='%23FFAA4E'/%3e%3cstop%20offset='1'%20stop-color='%23E06B1F'/%3e%3c/linearGradient%3e%3c/defs%3e%3c/svg%3e"[39m
+                  [33mstyle[39m=[32m"display: inline-block; vertical-align: middle; object-fit: contain; flex-shrink: 0;"[39m
+                  [33mwidth[39m=[32m"18"[39m
+                [36m/>[39m
+                [36m<span>[39m
+                  [0mBug列表[0m
+                [36m</span>[39m
+              [36m</a>[39m
+            [36m</nav>[39m
+            [36m<button[39m
+              [33maria-expanded[39m=[32m"true"[39m
+              [33maria-label[39m=[32m"收起侧边栏"[39m
+ ...
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"ant-layout ant-layout-has-sider app-shell app-shell-macos app-shell-requirement-detail css-dev-only-do-not-override-tql0nm css-var-root"[39m
+    [36m>[39m
+      [36m<aside[39m
+        [33mclass[39m=[32m"ant-layout-sider ant-layout-sider-light app-sider app-sidebar css-dev-only-do-not-override-tql0nm css-var-root"[39m
+        [33mstyle[39m=[32m"flex: 0 0 208px; max-width: 208px; min-width: 208px; width: 208px;"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"ant-layout-sider-children"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"sidebar-content"[39m
+          [36m>[39m
+            [36m<a[39m
+              [33maria-label[39m=[32m"MTX Bug列表"[39m
+              [33mclass[39m=[32m"sidebar-brand"[39m
+              [33mdata-discover[39m=[32m"true"[39m
+              [33mhref[39m=[32m"/testing?tab=bugs"[39m
+            [36m>[39m
+              [36m<svg[39m
+                [33maria-label[39m=[32m"MTX Logo"[39m
+                [33mclass[39m=[32m"mtx-logo"[39m
+                [33mfill[39m=[32m"none"[39m
+                [33mheight[39m=[32m"36"[39m
+                [33mrole[39m=[32m"img"[39m
+                [33mviewBox[39m=[32m"0 0 58 58"[39m
+                [33mwidth[39m=[32m"36"[39m
+                [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+              [36m>[39m
+                [36m<defs>[39m
+                  [36m<lineargradient[39m
+                    [33mgradientUnits[39m=[32m"userSpaceOnUse"[39m
+                    [33mid[39m=[32m"mtx-logo-plate-_r_3g_"[39m
+                    [33mx1[39m=[32m"29"[39m
+                    [33mx2[39m=[32m"29"[39m
+                    [33my1[39m=[32m"1"[39m
+                    [33my2[39m=[32m"57"[39m
+                  [36m>[39m
+                    [36m<stop[39m
+                      [33mclass[39m=[32m"mtx-logo__plate-start"[39m
+                      [33mstop-color[39m=[32m"#ffffff"[39m
+                    [36m/>[39m
+                    [36m<stop[39m
+                      [33mclass[39m=[32m"mtx-logo__plate-end"[39m
+                      [33moffset[39m=[32m"1"[39m
+                      [33mstop-color[39m=[32m"#f3f7fc"[39m
+                    [36m/>[39m
+                  [36m</lineargradient>[39m
+                [36m</defs>[39m
+                [36m<rect[39m
+                  [33mclass[39m=[32m"mtx-logo__plate"[39m
+                  [33mfill[39m=[32m"url(#mtx-logo-plate-_r_3g_)"[39m
+                  [33mheight[39m=[32m"56"[39m
+                  [33mrx[39m=[32m"14"[39m
+                  [33mwidth[39m=[32m"56"[39m
+                  [33mx[39m=[32m"1"[39m
+                  [33my[39m=[32m"1"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33mclass[39m=[32m"mtx-logo__model"[39m
+                  [33md[39m=[32m"M15 39V20L25 31L35 20"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33mclass[39m=[32m"mtx-logo__test"[39m
+                  [33md[39m=[32m"M22 20H42M32 20V41"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33mclass[39m=[32m"mtx-logo__experience"[39m
+                  [33md[39m=[32m"M39 26L47 38M47 26L39 38"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+              [36m<span>[39m
+                [0mMTX[0m
+              [36m</span>[39m
+            [36m</a>[39m
+            [36m<nav[39m
+              [33maria-label[39m=[32m"主导航"[39m
+              [33mclass[39m=[32m"sidebar-navigation"[39m
+            [36m>[39m
+              [36m<a[39m
+                [33mclass[39m=[32m"sidebar-link"[39m
+                [33mdata-discover[39m=[32m"true"[39m
+                [33mhref[39m=[32m"/testing?tab=bugs"[39m
+              [36m>[39m
+                [36m<img[39m
+                  [33malt[39m=[32m""[39m
+                  [33mheight[39m=[32m"18"[39m
+                  [33msrc[39m=[32m"data:image/svg+xml,%3csvg%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3cpath%20d='M12%202C12.504%202%2012.931%202.373%2012.992%202.86L13%203V4.05C14.683%204.318%2016%205.78%2016%207.55V8H8V7.55C8%205.78%209.317%204.318%2011%204.05V3C11%202.448%2011.448%202%2012%202Z'%20fill='url(%23paint0_linear_bug)'/%3e%3cpath%20d='M5.6%205.7C6.014%205.37%206.621%205.435%206.955%205.846C7.289%206.257%207.224%206.86%206.814%207.192C6.071%207.792%205.62%208.66%205.55%209.61C5.528%209.903%205.5%2010.2%205.5%2010.5V11H3C2.448%2011%202%2010.552%202%2010C2%209.448%202.448%209%203%209H3.562C3.72%207.652%204.386%206.427%205.4%205.557L5.6%205.7ZM18.4%205.7C19.516%206.647%2020.237%207.994%2020.42%209.5H21C21.552%209.5%2022%209.948%2022%2010.5C22%2011.052%2021.552%2011.5%2021%2011.5H18.5V10.5C18.5%2010.2%2018.472%209.903%2018.42%209.61C18.301%208.515%2017.801%207.526%2017.033%206.783L16.9%206.65C16.536%206.268%2016.548%205.666%2016.928%205.3C17.308%204.934%2017.913%204.946%2018.279%205.324L18.4%205.7Z'%20fill='url(%23paint0_linear_bug)'/%3e%3cpath%20d='M8%209.5H16V15.5C16%2017.985%2013.985%2020%2011.5%2020C9.015%2020%207%2017.985%207%2015.5V11C7%2010.448%207.448%2010%208%2010V9.5Z'%20fill='url(%23paint1_linear_bug)'%20transform='translate(0.5%200)'/%3e%3cpath%20d='M7%2012H3.5C2.948%2012%202.5%2012.448%202.5%2013C2.5%2013.552%202.948%2014%203.5%2014H7V12ZM17%2012H20.5C21.052%2012%2021.5%2012.448%2021.5%2013C21.5%2013.552%2021.052%2014%2020.5%2014H17V12ZM7%2016.5H4.5C3.948%2016.5%203.5%2016.948%203.5%2017.5C3.5%2018.052%203.948%2018.5%204.5%2018.5H7.4C7.15%2017.9%207%2017.22%207%2016.5ZM17%2016.5C17%2017.22%2016.85%2017.9%2016.6%2018.5H19.5C20.052%2018.5%2020.5%2018.052%2020.5%2017.5C20.5%2016.948%2020.052%2016.5%2019.5%2016.5H17Z'%20fill='url(%23paint1_linear_bug)'/%3e%3cdefs%3e%3clinearGradient%20id='paint0_linear_bug'%20x1='12'%20y1='2'%20x2='12'%20y2='11.5'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20stop-color='%23FFC46B'/%3e%3cstop%20offset='1'%20stop-color='%23F08C35'/%3e%3c/linearGradient%3e%3clinearGradient%20id='paint1_linear_bug'%20x1='12'%20y1='8'%20x2='12'%20y2='20'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20stop-color='%23FFAA4E'/%3e%3cstop%20offset='1'%20stop-color='%23E06B1F'/%3e%3c/linearGradient%3e%3c/defs%3e%3c/svg%3e"[39m
+                  [33mstyle[39m=[32m"display: inline-block; vertical-align: middle; object-fit: contain; flex-shrink: 0;"[39m
+                  [33mwidth[39m=[32m"18"[39m
+                [36m/>[39m
+                [36m<span>[39m
+                  [0mBug列表[0m
+                [36m</span>[39m
+              [36m</a>[39m
+            [36m</nav>[39m
+            [36m<button[39m
+              [33maria-expanded[39m=[32m"true"[39m
+              [33maria-label[39m=[32m"收起侧边栏"[39m
+ ...
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/app/layouts/AppShell.developer.test.tsx:67:18
+     65|   '开发直接访问 %s 时进入 Bug 列表，且不请求其他业务资源', async (path) => {
+     66|     renderShell(path)
+     67|     await screen.findByText('开发需要修复的问题')
+       |                  ^
+     68|     expect(screen.getByRole('link', { name: 'Bug列表' })).toHaveAttribut…
+     69|     expect(screen.queryByRole('button', { name: '项目总览' })).not.toBeInT…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  src/app/layouts/AppShell.projectMenu.test.tsx > 只读成员不能打开项目设置
+TestingLibraryElementError: Unable to find an element with the text: 暂无迭代. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"css-dev-only-do-not-override-tql0nm ant-app css-var-_r_20_"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"ant-layout ant-layout-has-sider app-shell app-shell-macos css-dev-only-do-not-override-tql0nm css-var-_r_21_"[39m
+      [36m>[39m
+        [36m<aside[39m
+          [33mclass[39m=[32m"ant-layout-sider ant-layout-sider-light app-sider app-sidebar css-dev-only-do-not-override-tql0nm css-var-_r_21_"[39m
+          [33mstyle[39m=[32m"flex: 0 0 208px; max-width: 208px; min-width: 208px; width: 208px;"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-layout-sider-children"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"sidebar-content"[39m
+            [36m>[39m
+              [36m<a[39m
+                [33maria-label[39m=[32m"MTX 迭代"[39m
+                [33mclass[39m=[32m"sidebar-brand"[39m
+                [33mdata-discover[39m=[32m"true"[39m
+                [33mhref[39m=[32m"/projects"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-label[39m=[32m"MTX Logo"[39m
+                  [33mclass[39m=[32m"mtx-logo"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"36"[39m
+                  [33mrole[39m=[32m"img"[39m
+                  [33mviewBox[39m=[32m"0 0 58 58"[39m
+                  [33mwidth[39m=[32m"36"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<defs>[39m
+                    [36m<lineargradient[39m
+                      [33mgradientUnits[39m=[32m"userSpaceOnUse"[39m
+                      [33mid[39m=[32m"mtx-logo-plate-_r_22_"[39m
+                      [33mx1[39m=[32m"29"[39m
+                      [33mx2[39m=[32m"29"[39m
+                      [33my1[39m=[32m"1"[39m
+                      [33my2[39m=[32m"57"[39m
+                    [36m>[39m
+                      [36m<stop[39m
+                        [33mclass[39m=[32m"mtx-logo__plate-start"[39m
+                        [33mstop-color[39m=[32m"#ffffff"[39m
+                      [36m/>[39m
+                      [36m<stop[39m
+                        [33mclass[39m=[32m"mtx-logo__plate-end"[39m
+                        [33moffset[39m=[32m"1"[39m
+                        [33mstop-color[39m=[32m"#f3f7fc"[39m
+                      [36m/>[39m
+                    [36m</lineargradient>[39m
+                  [36m</defs>[39m
+                  [36m<rect[39m
+                    [33mclass[39m=[32m"mtx-logo__plate"[39m
+                    [33mfill[39m=[32m"url(#mtx-logo-plate-_r_22_)"[39m
+                    [33mheight[39m=[32m"56"[39m
+                    [33mrx[39m=[32m"14"[39m
+                    [33mwidth[39m=[32m"56"[39m
+                    [33mx[39m=[32m"1"[39m
+                    [33my[39m=[32m"1"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33mclass[39m=[32m"mtx-logo__model"[39m
+                    [33md[39m=[32m"M15 39V20L25 31L35 20"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33mclass[39m=[32m"mtx-logo__test"[39m
+                    [33md[39m=[32m"M22 20H42M32 20V41"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33mclass[39m=[32m"mtx-logo__experience"[39m
+                    [33md[39m=[32m"M39 26L47 38M47 26L39 38"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<span>[39m
+                  [0mMTX[0m
+                [36m</span>[39m
+              [36m</a>[39m
+              [36m<nav[39m
+                [33maria-label[39m=[32m"主导航"[39m
+                [33mclass[39m=[32m"sidebar-navigation"[39m
+              [36m>[39m
+                [36m<a[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mclass[39m=[32m"sidebar-link is-active"[39m
+                  [33mdata-discover[39m=[32m"true"[39m
+                  [33mhref[39m=[32m"/projects?board=sprints"[39m
+                [36m>[39m
+                  [36m<img[39m
+                    [33malt[39m=[32m""[39m
+                    [33mheight[39m=[32m"18"[39m
+                    [33msrc[39m=[32m"data:image/svg+xml,%3csvg%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3cpath%20d='M21%207.5V17.75C21%2019.5449%2019.5449%2021%2017.75%2021H6.25C4.45507%2021%203%2019.5449%203%2017.75V7.5L12%206.5L21%207.5Z'%20fill='url(%23paint0_linear_72095_10198)'/%3e%3cpath%20d='M21%207.5V17.75C21%2019.5449%2019.5449%2021%2017.75%2021H6.25C4.45507%2021%203%2019.5449%203%2017.75V7.5L12%206.5L21%207.5Z'%20fill='url(%23paint1_linear_72095_10198)'/%3e%3cpath%20d='M21%207.5V17.75C21%2019.5449%2019.5449%2021%2017.75%2021H6.25C4.45507%2021%203%2019.5449%203%2017.75V7.5L12%206.5L21%207.5Z'%20fill='url(%23paint2_radial_72095_10198)'%20fill-opacity='0.3'/%3e%3cpath%20d='M17.75%203C19.5449%203%2021%204.45507%2021%206.25V8H3V6.25C3%204.45507%204.45507%203%206.25%203H17.75Z'%20fill='url(%23paint3_linear_72095_10198)'/%3e%3cpath%20d='M17.5%2012C20.5376%2012%2023%2014.4624%2023%2017.5C23%2020.5376%2020.5376%2023%2017.5%2023C14.4624%2023%2012%2020.5376%2012%2017.5C12%2014.4624%2014.4624%2012%2017.5%2012Z'%20fill='url(%23paint4_linear_72095_10198)'/%3e%3cpath%20d='M20.5%2014C20.7761%2014%2021%2014.2239%2021%2014.5V16.5C21%2016.7761%2020.7761%2017%2020.5%2017H18.5C18.2239%2017%2018%2016.7761%2018%2016.5C18%2016.2239%2018.2239%2016%2018.5%2016H19.5003C19.0436%2015.392%2018.3174%2015%2017.5%2015C16.6666%2015%2015.9283%2015.4073%2015.4733%2016.036C15.3113%2016.2597%2014.9987%2016.3098%2014.775%2016.1478C14.5514%2015.9859%2014.5013%2015.6733%2014.6632%2015.4496C15.2982%2014.5724%2016.3323%2014%2017.5%2014C18.4798%2014%2019.3651%2014.4027%2020%2015.0506V14.5C20%2014.2239%2020.2239%2014%2020.5%2014ZM15%2019.9494V20.5C15%2020.7761%2014.7761%2021%2014.5%2021C14.2239%2021%2014%2020.7761%2014%2020.5V18.5C14%2018.2239%2014.2239%2018%2014.5%2018H16.5C16.7761%2018%2017%2018.2239%2017%2018.5C17%2018.7761%2016.7761%2019%2016.5%2019H15.4998C15.9564%2019.608%2016.6827%2020%2017.5%2020C18.2663%2020%2018.9518%2019.6558%2019.4112%2019.1118C19.5893%2018.9008%2019.9048%2018.8742%2020.1158%2019.0523C20.3268%2019.2305%2020.3534%2019.546%2020.1752%2019.7569C19.534%2020.5164%2018.5732%2021%2017.5%2021C16.5203%2021%2015.6349%2020.5973%2015%2019.9494Z'%20fill='url(%23paint5_linear_72095_10198)'/%3e%3cdefs%3e%3clinearGradient%20id='paint0_linear_72095_10198'%20x1='9.42857'%20y1='6.5'%20x2='14.1366'%20y2='20.9321'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20stop-color='%23B3E0FF'/%3e%3cstop%20offset='1'%20stop-color='%238CD0FF'/%3e%3c/li...
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"css-dev-only-do-not-override-tql0nm ant-app css-var-_r_20_"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"ant-layout ant-layout-has-sider app-shell app-shell-macos css-dev-only-do-not-override-tql0nm css-var-_r_21_"[39m
+      [36m>[39m
+        [36m<aside[39m
+          [33mclass[39m=[32m"ant-layout-sider ant-layout-sider-light app-sider app-sidebar css-dev-only-do-not-override-tql0nm css-var-_r_21_"[39m
+          [33mstyle[39m=[32m"flex: 0 0 208px; max-width: 208px; min-width: 208px; width: 208px;"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-layout-sider-children"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"sidebar-content"[39m
+            [36m>[39m
+              [36m<a[39m
+                [33maria-label[39m=[32m"MTX 迭代"[39m
+                [33mclass[39m=[32m"sidebar-brand"[39m
+                [33mdata-discover[39m=[32m"true"[39m
+                [33mhref[39m=[32m"/projects"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-label[39m=[32m"MTX Logo"[39m
+                  [33mclass[39m=[32m"mtx-logo"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"36"[39m
+                  [33mrole[39m=[32m"img"[39m
+                  [33mviewBox[39m=[32m"0 0 58 58"[39m
+                  [33mwidth[39m=[32m"36"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<defs>[39m
+                    [36m<lineargradient[39m
+                      [33mgradientUnits[39m=[32m"userSpaceOnUse"[39m
+                      [33mid[39m=[32m"mtx-logo-plate-_r_22_"[39m
+                      [33mx1[39m=[32m"29"[39m
+                      [33mx2[39m=[32m"29"[39m
+                      [33my1[39m=[32m"1"[39m
+                      [33my2[39m=[32m"57"[39m
+                    [36m>[39m
+                      [36m<stop[39m
+                        [33mclass[39m=[32m"mtx-logo__plate-start"[39m
+                        [33mstop-color[39m=[32m"#ffffff"[39m
+                      [36m/>[39m
+                      [36m<stop[39m
+                        [33mclass[39m=[32m"mtx-logo__plate-end"[39m
+                        [33moffset[39m=[32m"1"[39m
+                        [33mstop-color[39m=[32m"#f3f7fc"[39m
+                      [36m/>[39m
+                    [36m</lineargradient>[39m
+                  [36m</defs>[39m
+                  [36m<rect[39m
+                    [33mclass[39m=[32m"mtx-logo__plate"[39m
+                    [33mfill[39m=[32m"url(#mtx-logo-plate-_r_22_)"[39m
+                    [33mheight[39m=[32m"56"[39m
+                    [33mrx[39m=[32m"14"[39m
+                    [33mwidth[39m=[32m"56"[39m
+                    [33mx[39m=[32m"1"[39m
+                    [33my[39m=[32m"1"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33mclass[39m=[32m"mtx-logo__model"[39m
+                    [33md[39m=[32m"M15 39V20L25 31L35 20"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33mclass[39m=[32m"mtx-logo__test"[39m
+                    [33md[39m=[32m"M22 20H42M32 20V41"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33mclass[39m=[32m"mtx-logo__experience"[39m
+                    [33md[39m=[32m"M39 26L47 38M47 26L39 38"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<span>[39m
+                  [0mMTX[0m
+                [36m</span>[39m
+              [36m</a>[39m
+              [36m<nav[39m
+                [33maria-label[39m=[32m"主导航"[39m
+                [33mclass[39m=[32m"sidebar-navigation"[39m
+              [36m>[39m
+                [36m<a[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mclass[39m=[32m"sidebar-link is-active"[39m
+                  [33mdata-discover[39m=[32m"true"[39m
+                  [33mhref[39m=[32m"/projects?board=sprints"[39m
+                [36m>[39m
+                  [36m<img[39m
+                    [33malt[39m=[32m""[39m
+                    [33mheight[39m=[32m"18"[39m
+                    [33msrc[39m=[32m"data:image/svg+xml,%3csvg%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3cpath%20d='M21%207.5V17.75C21%2019.5449%2019.5449%2021%2017.75%2021H6.25C4.45507%2021%203%2019.5449%203%2017.75V7.5L12%206.5L21%207.5Z'%20fill='url(%23paint0_linear_72095_10198)'/%3e%3cpath%20d='M21%207.5V17.75C21%2019.5449%2019.5449%2021%2017.75%2021H6.25C4.45507%2021%203%2019.5449%203%2017.75V7.5L12%206.5L21%207.5Z'%20fill='url(%23paint1_linear_72095_10198)'/%3e%3cpath%20d='M21%207.5V17.75C21%2019.5449%2019.5449%2021%2017.75%2021H6.25C4.45507%2021%203%2019.5449%203%2017.75V7.5L12%206.5L21%207.5Z'%20fill='url(%23paint2_radial_72095_10198)'%20fill-opacity='0.3'/%3e%3cpath%20d='M17.75%203C19.5449%203%2021%204.45507%2021%206.25V8H3V6.25C3%204.45507%204.45507%203%206.25%203H17.75Z'%20fill='url(%23paint3_linear_72095_10198)'/%3e%3cpath%20d='M17.5%2012C20.5376%2012%2023%2014.4624%2023%2017.5C23%2020.5376%2020.5376%2023%2017.5%2023C14.4624%2023%2012%2020.5376%2012%2017.5C12%2014.4624%2014.4624%2012%2017.5%2012Z'%20fill='url(%23paint4_linear_72095_10198)'/%3e%3cpath%20d='M20.5%2014C20.7761%2014%2021%2014.2239%2021%2014.5V16.5C21%2016.7761%2020.7761%2017%2020.5%2017H18.5C18.2239%2017%2018%2016.7761%2018%2016.5C18%2016.2239%2018.2239%2016%2018.5%2016H19.5003C19.0436%2015.392%2018.3174%2015%2017.5%2015C16.6666%2015%2015.9283%2015.4073%2015.4733%2016.036C15.3113%2016.2597%2014.9987%2016.3098%2014.775%2016.1478C14.5514%2015.9859%2014.5013%2015.6733%2014.6632%2015.4496C15.2982%2014.5724%2016.3323%2014%2017.5%2014C18.4798%2014%2019.3651%2014.4027%2020%2015.0506V14.5C20%2014.2239%2020.2239%2014%2020.5%2014ZM15%2019.9494V20.5C15%2020.7761%2014.7761%2021%2014.5%2021C14.2239%2021%2014%2020.7761%2014%2020.5V18.5C14%2018.2239%2014.2239%2018%2014.5%2018H16.5C16.7761%2018%2017%2018.2239%2017%2018.5C17%2018.7761%2016.7761%2019%2016.5%2019H15.4998C15.9564%2019.608%2016.6827%2020%2017.5%2020C18.2663%2020%2018.9518%2019.6558%2019.4112%2019.1118C19.5893%2018.9008%2019.9048%2018.8742%2020.1158%2019.0523C20.3268%2019.2305%2020.3534%2019.546%2020.1752%2019.7569C19.534%2020.5164%2018.5732%2021%2017.5%2021C16.5203%2021%2015.6349%2020.5973%2015%2019.9494Z'%20fill='url(%23paint5_linear_72095_10198)'/%3e%3cdefs%3e%3clinearGradient%20id='paint0_linear_72095_10198'%20x1='9.42857'%20y1='6.5'%20x2='14.1366'%20y2='20.9321'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20stop-color='%23B3E0FF'/%3e%3cstop%20offset='1'%20stop-color='%238CD0FF'/%3e%3c/li...
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/app/layouts/AppShell.projectMenu.test.tsx:54:16
+     52|   mount('viewer', '/projects?projectPanel=settings&panelProjectId=p')
+     53|   const user = userEvent.setup()
+     54|   await screen.findByText('暂无迭代')
+       |                ^
+     55|   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+     56|   await user.click(screen.getByRole('combobox', { name: '当前项目' }))
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  src/app/layouts/AppShell.projectMenu.test.tsx > 旧项目的菜单参数不会打开当前项目的设置
+TestingLibraryElementError: Unable to find an element with the text: 暂无迭代. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"css-dev-only-do-not-override-tql0nm ant-app css-var-_r_2p_"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"ant-layout ant-layout-has-sider app-shell app-shell-macos css-dev-only-do-not-override-tql0nm css-var-_r_2q_"[39m
+      [36m>[39m
+        [36m<aside[39m
+          [33mclass[39m=[32m"ant-layout-sider ant-layout-sider-light app-sider app-sidebar css-dev-only-do-not-override-tql0nm css-var-_r_2q_"[39m
+          [33mstyle[39m=[32m"flex: 0 0 208px; max-width: 208px; min-width: 208px; width: 208px;"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-layout-sider-children"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"sidebar-content"[39m
+            [36m>[39m
+              [36m<a[39m
+                [33maria-label[39m=[32m"MTX 迭代"[39m
+                [33mclass[39m=[32m"sidebar-brand"[39m
+                [33mdata-discover[39m=[32m"true"[39m
+                [33mhref[39m=[32m"/projects"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-label[39m=[32m"MTX Logo"[39m
+                  [33mclass[39m=[32m"mtx-logo"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"36"[39m
+                  [33mrole[39m=[32m"img"[39m
+                  [33mviewBox[39m=[32m"0 0 58 58"[39m
+                  [33mwidth[39m=[32m"36"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<defs>[39m
+                    [36m<lineargradient[39m
+                      [33mgradientUnits[39m=[32m"userSpaceOnUse"[39m
+                      [33mid[39m=[32m"mtx-logo-plate-_r_2r_"[39m
+                      [33mx1[39m=[32m"29"[39m
+                      [33mx2[39m=[32m"29"[39m
+                      [33my1[39m=[32m"1"[39m
+                      [33my2[39m=[32m"57"[39m
+                    [36m>[39m
+                      [36m<stop[39m
+                        [33mclass[39m=[32m"mtx-logo__plate-start"[39m
+                        [33mstop-color[39m=[32m"#ffffff"[39m
+                      [36m/>[39m
+                      [36m<stop[39m
+                        [33mclass[39m=[32m"mtx-logo__plate-end"[39m
+                        [33moffset[39m=[32m"1"[39m
+                        [33mstop-color[39m=[32m"#f3f7fc"[39m
+                      [36m/>[39m
+                    [36m</lineargradient>[39m
+                  [36m</defs>[39m
+                  [36m<rect[39m
+                    [33mclass[39m=[32m"mtx-logo__plate"[39m
+                    [33mfill[39m=[32m"url(#mtx-logo-plate-_r_2r_)"[39m
+                    [33mheight[39m=[32m"56"[39m
+                    [33mrx[39m=[32m"14"[39m
+                    [33mwidth[39m=[32m"56"[39m
+                    [33mx[39m=[32m"1"[39m
+                    [33my[39m=[32m"1"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33mclass[39m=[32m"mtx-logo__model"[39m
+                    [33md[39m=[32m"M15 39V20L25 31L35 20"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33mclass[39m=[32m"mtx-logo__test"[39m
+                    [33md[39m=[32m"M22 20H42M32 20V41"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33mclass[39m=[32m"mtx-logo__experience"[39m
+                    [33md[39m=[32m"M39 26L47 38M47 26L39 38"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<span>[39m
+                  [0mMTX[0m
+                [36m</span>[39m
+              [36m</a>[39m
+              [36m<nav[39m
+                [33maria-label[39m=[32m"主导航"[39m
+                [33mclass[39m=[32m"sidebar-navigation"[39m
+              [36m>[39m
+                [36m<a[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mclass[39m=[32m"sidebar-link is-active"[39m
+                  [33mdata-discover[39m=[32m"true"[39m
+                  [33mhref[39m=[32m"/projects?board=sprints"[39m
+                [36m>[39m
+                  [36m<img[39m
+                    [33malt[39m=[32m""[39m
+                    [33mheight[39m=[32m"18"[39m
+                    [33msrc[39m=[32m"data:image/svg+xml,%3csvg%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3cpath%20d='M21%207.5V17.75C21%2019.5449%2019.5449%2021%2017.75%2021H6.25C4.45507%2021%203%2019.5449%203%2017.75V7.5L12%206.5L21%207.5Z'%20fill='url(%23paint0_linear_72095_10198)'/%3e%3cpath%20d='M21%207.5V17.75C21%2019.5449%2019.5449%2021%2017.75%2021H6.25C4.45507%2021%203%2019.5449%203%2017.75V7.5L12%206.5L21%207.5Z'%20fill='url(%23paint1_linear_72095_10198)'/%3e%3cpath%20d='M21%207.5V17.75C21%2019.5449%2019.5449%2021%2017.75%2021H6.25C4.45507%2021%203%2019.5449%203%2017.75V7.5L12%206.5L21%207.5Z'%20fill='url(%23paint2_radial_72095_10198)'%20fill-opacity='0.3'/%3e%3cpath%20d='M17.75%203C19.5449%203%2021%204.45507%2021%206.25V8H3V6.25C3%204.45507%204.45507%203%206.25%203H17.75Z'%20fill='url(%23paint3_linear_72095_10198)'/%3e%3cpath%20d='M17.5%2012C20.5376%2012%2023%2014.4624%2023%2017.5C23%2020.5376%2020.5376%2023%2017.5%2023C14.4624%2023%2012%2020.5376%2012%2017.5C12%2014.4624%2014.4624%2012%2017.5%2012Z'%20fill='url(%23paint4_linear_72095_10198)'/%3e%3cpath%20d='M20.5%2014C20.7761%2014%2021%2014.2239%2021%2014.5V16.5C21%2016.7761%2020.7761%2017%2020.5%2017H18.5C18.2239%2017%2018%2016.7761%2018%2016.5C18%2016.2239%2018.2239%2016%2018.5%2016H19.5003C19.0436%2015.392%2018.3174%2015%2017.5%2015C16.6666%2015%2015.9283%2015.4073%2015.4733%2016.036C15.3113%2016.2597%2014.9987%2016.3098%2014.775%2016.1478C14.5514%2015.9859%2014.5013%2015.6733%2014.6632%2015.4496C15.2982%2014.5724%2016.3323%2014%2017.5%2014C18.4798%2014%2019.3651%2014.4027%2020%2015.0506V14.5C20%2014.2239%2020.2239%2014%2020.5%2014ZM15%2019.9494V20.5C15%2020.7761%2014.7761%2021%2014.5%2021C14.2239%2021%2014%2020.7761%2014%2020.5V18.5C14%2018.2239%2014.2239%2018%2014.5%2018H16.5C16.7761%2018%2017%2018.2239%2017%2018.5C17%2018.7761%2016.7761%2019%2016.5%2019H15.4998C15.9564%2019.608%2016.6827%2020%2017.5%2020C18.2663%2020%2018.9518%2019.6558%2019.4112%2019.1118C19.5893%2018.9008%2019.9048%2018.8742%2020.1158%2019.0523C20.3268%2019.2305%2020.3534%2019.546%2020.1752%2019.7569C19.534%2020.5164%2018.5732%2021%2017.5%2021C16.5203%2021%2015.6349%2020.5973%2015%2019.9494Z'%20fill='url(%23paint5_linear_72095_10198)'/%3e%3cdefs%3e%3clinearGradient%20id='paint0_linear_72095_10198'%20x1='9.42857'%20y1='6.5'%20x2='14.1366'%20y2='20.9321'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20stop-color='%23B3E0FF'/%3e%3cstop%20offset='1'%20stop-color='%238CD0FF'/%3e%3c/li...
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"css-dev-only-do-not-override-tql0nm ant-app css-var-_r_2p_"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"ant-layout ant-layout-has-sider app-shell app-shell-macos css-dev-only-do-not-override-tql0nm css-var-_r_2q_"[39m
+      [36m>[39m
+        [36m<aside[39m
+          [33mclass[39m=[32m"ant-layout-sider ant-layout-sider-light app-sider app-sidebar css-dev-only-do-not-override-tql0nm css-var-_r_2q_"[39m
+          [33mstyle[39m=[32m"flex: 0 0 208px; max-width: 208px; min-width: 208px; width: 208px;"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-layout-sider-children"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"sidebar-content"[39m
+            [36m>[39m
+              [36m<a[39m
+                [33maria-label[39m=[32m"MTX 迭代"[39m
+                [33mclass[39m=[32m"sidebar-brand"[39m
+                [33mdata-discover[39m=[32m"true"[39m
+                [33mhref[39m=[32m"/projects"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-label[39m=[32m"MTX Logo"[39m
+                  [33mclass[39m=[32m"mtx-logo"[39m
+                  [33mfill[39m=[32m"none"[39m
+                  [33mheight[39m=[32m"36"[39m
+                  [33mrole[39m=[32m"img"[39m
+                  [33mviewBox[39m=[32m"0 0 58 58"[39m
+                  [33mwidth[39m=[32m"36"[39m
+                  [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                [36m>[39m
+                  [36m<defs>[39m
+                    [36m<lineargradient[39m
+                      [33mgradientUnits[39m=[32m"userSpaceOnUse"[39m
+                      [33mid[39m=[32m"mtx-logo-plate-_r_2r_"[39m
+                      [33mx1[39m=[32m"29"[39m
+                      [33mx2[39m=[32m"29"[39m
+                      [33my1[39m=[32m"1"[39m
+                      [33my2[39m=[32m"57"[39m
+                    [36m>[39m
+                      [36m<stop[39m
+                        [33mclass[39m=[32m"mtx-logo__plate-start"[39m
+                        [33mstop-color[39m=[32m"#ffffff"[39m
+                      [36m/>[39m
+                      [36m<stop[39m
+                        [33mclass[39m=[32m"mtx-logo__plate-end"[39m
+                        [33moffset[39m=[32m"1"[39m
+                        [33mstop-color[39m=[32m"#f3f7fc"[39m
+                      [36m/>[39m
+                    [36m</lineargradient>[39m
+                  [36m</defs>[39m
+                  [36m<rect[39m
+                    [33mclass[39m=[32m"mtx-logo__plate"[39m
+                    [33mfill[39m=[32m"url(#mtx-logo-plate-_r_2r_)"[39m
+                    [33mheight[39m=[32m"56"[39m
+                    [33mrx[39m=[32m"14"[39m
+                    [33mwidth[39m=[32m"56"[39m
+                    [33mx[39m=[32m"1"[39m
+                    [33my[39m=[32m"1"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33mclass[39m=[32m"mtx-logo__model"[39m
+                    [33md[39m=[32m"M15 39V20L25 31L35 20"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33mclass[39m=[32m"mtx-logo__test"[39m
+                    [33md[39m=[32m"M22 20H42M32 20V41"[39m
+                  [36m/>[39m
+                  [36m<path[39m
+                    [33mclass[39m=[32m"mtx-logo__experience"[39m
+                    [33md[39m=[32m"M39 26L47 38M47 26L39 38"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+                [36m<span>[39m
+                  [0mMTX[0m
+                [36m</span>[39m
+              [36m</a>[39m
+              [36m<nav[39m
+                [33maria-label[39m=[32m"主导航"[39m
+                [33mclass[39m=[32m"sidebar-navigation"[39m
+              [36m>[39m
+                [36m<a[39m
+                  [33maria-current[39m=[32m"page"[39m
+                  [33mclass[39m=[32m"sidebar-link is-active"[39m
+                  [33mdata-discover[39m=[32m"true"[39m
+                  [33mhref[39m=[32m"/projects?board=sprints"[39m
+                [36m>[39m
+                  [36m<img[39m
+                    [33malt[39m=[32m""[39m
+                    [33mheight[39m=[32m"18"[39m
+                    [33msrc[39m=[32m"data:image/svg+xml,%3csvg%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3cpath%20d='M21%207.5V17.75C21%2019.5449%2019.5449%2021%2017.75%2021H6.25C4.45507%2021%203%2019.5449%203%2017.75V7.5L12%206.5L21%207.5Z'%20fill='url(%23paint0_linear_72095_10198)'/%3e%3cpath%20d='M21%207.5V17.75C21%2019.5449%2019.5449%2021%2017.75%2021H6.25C4.45507%2021%203%2019.5449%203%2017.75V7.5L12%206.5L21%207.5Z'%20fill='url(%23paint1_linear_72095_10198)'/%3e%3cpath%20d='M21%207.5V17.75C21%2019.5449%2019.5449%2021%2017.75%2021H6.25C4.45507%2021%203%2019.5449%203%2017.75V7.5L12%206.5L21%207.5Z'%20fill='url(%23paint2_radial_72095_10198)'%20fill-opacity='0.3'/%3e%3cpath%20d='M17.75%203C19.5449%203%2021%204.45507%2021%206.25V8H3V6.25C3%204.45507%204.45507%203%206.25%203H17.75Z'%20fill='url(%23paint3_linear_72095_10198)'/%3e%3cpath%20d='M17.5%2012C20.5376%2012%2023%2014.4624%2023%2017.5C23%2020.5376%2020.5376%2023%2017.5%2023C14.4624%2023%2012%2020.5376%2012%2017.5C12%2014.4624%2014.4624%2012%2017.5%2012Z'%20fill='url(%23paint4_linear_72095_10198)'/%3e%3cpath%20d='M20.5%2014C20.7761%2014%2021%2014.2239%2021%2014.5V16.5C21%2016.7761%2020.7761%2017%2020.5%2017H18.5C18.2239%2017%2018%2016.7761%2018%2016.5C18%2016.2239%2018.2239%2016%2018.5%2016H19.5003C19.0436%2015.392%2018.3174%2015%2017.5%2015C16.6666%2015%2015.9283%2015.4073%2015.4733%2016.036C15.3113%2016.2597%2014.9987%2016.3098%2014.775%2016.1478C14.5514%2015.9859%2014.5013%2015.6733%2014.6632%2015.4496C15.2982%2014.5724%2016.3323%2014%2017.5%2014C18.4798%2014%2019.3651%2014.4027%2020%2015.0506V14.5C20%2014.2239%2020.2239%2014%2020.5%2014ZM15%2019.9494V20.5C15%2020.7761%2014.7761%2021%2014.5%2021C14.2239%2021%2014%2020.7761%2014%2020.5V18.5C14%2018.2239%2014.2239%2018%2014.5%2018H16.5C16.7761%2018%2017%2018.2239%2017%2018.5C17%2018.7761%2016.7761%2019%2016.5%2019H15.4998C15.9564%2019.608%2016.6827%2020%2017.5%2020C18.2663%2020%2018.9518%2019.6558%2019.4112%2019.1118C19.5893%2018.9008%2019.9048%2018.8742%2020.1158%2019.0523C20.3268%2019.2305%2020.3534%2019.546%2020.1752%2019.7569C19.534%2020.5164%2018.5732%2021%2017.5%2021C16.5203%2021%2015.6349%2020.5973%2015%2019.9494Z'%20fill='url(%23paint5_linear_72095_10198)'/%3e%3cdefs%3e%3clinearGradient%20id='paint0_linear_72095_10198'%20x1='9.42857'%20y1='6.5'%20x2='14.1366'%20y2='20.9321'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20stop-color='%23B3E0FF'/%3e%3cstop%20offset='1'%20stop-color='%238CD0FF'/%3e%3c/li...
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/app/layouts/AppShell.projectMenu.test.tsx:62:16
+     60| it('旧项目的菜单参数不会打开当前项目的设置', async () => {
+     61|   mount('owner', '/projects?projectPanel=settings&panelProjectId=other…
+     62|   await screen.findByText('暂无迭代')
+       |                ^
+     63|   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+     64| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  src/app/styles/paginationConsistency.test.ts > 分页视觉一致性 > 分页外观只由公共样式维护，页面不能重新覆盖
+AssertionError: expected [ …(2) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "/src/features/projects/styles/requirements-list.css",
++   "/src/features/projects/styles/sprint-board.css",
++ ]
+
+ ❯ src/app/styles/paginationConsistency.test.ts:16:23
+     14|       return [...clean.matchAll(/([^{}]+)\{[^{}]*\}/g)].some((match) =…
+     15|     }).map(([path]) => path)
+     16|     expect(overrides).toEqual([])
+       |                       ^
+     17|   })
+     18|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  src/features/ai-testing/api/aiTesting.storage.test.ts > UI source archive S3 storage > uploads directly before associating the file ID with the task
+AssertionError: expected "vi.fn()" to be called with arguments: [ 'p', File{ …(1) }, …(1) ]
+
+Received:
+
+  1st vi.fn() call:
+
+  [
+    "p",
+    File {},
+    "ui_source_archive",
++   undefined,
+  ]
+
+
+Number of calls: 1
+
+ ❯ src/features/ai-testing/api/aiTesting.storage.test.ts:18:30
+     16|     const file = new File(['zip'], 'source.zip')
+     17|     await aiTestingApi.uploadUiCaseGenerateTaskSourceArchive('t', file)
+     18|     expect(uploadStoredFile).toHaveBeenCalledWith('p', file, 'ui_sourc…
+       |                              ^
+     19|     expect(request).toHaveBeenLastCalledWith('/v1/ui-case-generate-tas…
+     20|       method: 'PUT', body: JSON.stringify({ fileId: 'f' }),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  4 failed | 116 passed (120)
+      Tests  5 failed | 705 passed (710)
+   Start at  14:21:00
+   Duration  216.07s (transform 21.17s, setup 13.81s, import 189.40s, tests 513.86s, environment 120.88s)
+

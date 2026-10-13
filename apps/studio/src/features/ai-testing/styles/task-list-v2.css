@@ -1,20 +1,5 @@
 
 /* 任务列表与模块导航的基础布局。保留响应式条件，后续表面规则继续覆盖外观。 */
-:root:root .ai-testing-page .ai-task-list-table .ai-task-list-name .ant-typography,
-:root:root .app-shell.app-shell-macos .ai-testing-page .ai-task-list-table .ai-task-list-name .ant-typography {
-  color: var(--app-list-name) !important;
-  font-size: 13px !important;
-  font-weight: 500 !important;
-  cursor: pointer;
-  text-decoration: none;
-  text-underline-offset: 3px;
-}
-
-:root:root .ai-testing-page .ai-task-list-table .ant-table-tbody > tr:hover .ai-task-list-name .ant-typography {
-  color: var(--app-list-name-hover) !important;
-  text-decoration: underline;
-}
-
 :root:root .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell,
 :root:root .app-shell.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-thead > tr > th.ant-table-cell {
   border: 0 !important;

@@ -37,15 +37,15 @@ export function bugColumns({ memberNameMap, sprintNameMap, onTransition, onEdit,
     }
   }
   const columns: NonNullable<TableProps<Bug>['columns']> = [
-    { title: 'Bug 标题', key: 'title', width: 380,
-      render: (_, bug) => <Space size={8} className="functional-suite-list-name bug-title-cell">
-        <span className="bug-name-icon"><AppIcon name="bug" size={14} /></span>
+    { title: 'Bug 标题', key: 'title',
+      render: (_, bug) => <Space size={8} className="tp-list-name functional-suite-list-name bug-title-cell">
+        <span className="bug-name-icon"><AppIcon name="navBug" size={16} /></span>
         <span className="bug-list-number">#{bug.id}</span>
         {/* Link 自己完成跳转并阻止冒泡，否则行 onRow 会再推一次相同路由，返回时要多点一次。 */}
         <Tooltip title={bug.title}><Link className="ant-typography bug-title-text" to={`/bugs/${bug.bugId}`}
           onClick={(event) => event.stopPropagation()}>{bug.title}</Link></Tooltip>
       </Space> },
-    { title: '状态', key: 'status', width: 110, align: 'center', ...sorter('status', ['ascend', 'descend']),
+    { title: '状态', key: 'status', width: 150, align: 'center', ...sorter('status', ['ascend', 'descend']),
       render: (_, bug) => <span className={`bug-status-pill tone-${getBugStatusTone(bug.status)}`}>
         <span className="bug-status-dot" />{getBugStateLabel(bug)}</span> },
     { title: '严重程度', key: 'severity', width: 110, align: 'center', ...sorter('severity', ['ascend', 'descend']),
@@ -62,7 +62,7 @@ export function bugColumns({ memberNameMap, sprintNameMap, onTransition, onEdit,
     { title: '计划修复迭代', key: 'plannedFixSprint', width: 130, ellipsis: true,
       render: (_, bug) => bug.plannedFixSprintId ? sprintNameMap.get(bug.plannedFixSprintId) ?? '未关联' : '未安排' },
     { title: '创建时间', key: 'createdAt', width: 160, ...sorter('createdAt', ['descend', 'ascend']),
-      render: (_, bug) => <Text className="bug-time-cell" type="secondary">{formatTime(pickCreatedAt(bug))}</Text> },
+      render: (_, bug) => <Text className="bug-time-cell" type="secondary" title={formatTime(pickCreatedAt(bug))}>{formatTime(pickCreatedAt(bug)).replace(/:\d{2}$/, '')}</Text> },
   ]
   const optional: NonNullable<TableProps<Bug>['columns']> = [
     { key: 'requirement', title: '所属需求', width: 180, ellipsis: true,

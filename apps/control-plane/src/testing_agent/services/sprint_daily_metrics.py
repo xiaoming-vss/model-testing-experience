@@ -137,7 +137,10 @@ class SprintDailyMetricsService:
     ) -> dict:
         validate_sprint_daily_metrics_date(snapshot_date)
         sprint = await self.get_accessible_sprint(user_id, sprint_id, action="write")
-        metric = await self.repository.get(sprint_id, snapshot_date)
+        # Serialize manual and scheduled writes, including creation of today's row.
+        if await self.repository.lock_sprint(sprint_id) is None:
+            raise ErrNotFound()
+        metric = await self.repository.get(sprint_id, snapshot_date, for_update=True)
         if metric is None:
             metric = SprintDailyMetrics(
                 project_id=sprint.project_id,
@@ -155,6 +158,27 @@ class SprintDailyMetricsService:
         await self.repository.commit()
         await self.repository.refresh(metric)
         return await self.dump_metric_detail(user_id, metric, sprint)
+
+    async def collect_scheduled(self, sprint_id: str, now: datetime, due: datetime) -> bool:
+        """Internal local-only collection; no actor credentials or remote integrations."""
+        from testing_agent.services.sprint import as_utc
+
+        sprint = await self.repository.lock_sprint(sprint_id)
+        if sprint is None or not (as_utc(sprint.start_time) <= now < as_utc(sprint.end_time)):
+            return False
+        snapshot_date = due.date().isoformat()
+        metric = await self.repository.get(sprint_id, snapshot_date, for_update=True)
+        if metric is not None and metric.updated_at and as_utc(metric.updated_at) >= due:
+            return False
+        if metric is None:
+            metric = SprintDailyMetrics(
+                project_id=sprint.project_id, sprint_id=sprint_id, snapshot_date=due.date()
+            )
+            self.repository.add(metric)
+        await self.apply_snapshot_metrics("", sprint, metric)
+        metric.updated_at = now
+        await self.repository.commit()
+        return True
 
     async def dump_metric_detail(
         self,

@@ -55,11 +55,10 @@ describe('AppSidebar', () => {
     fireEvent.click(screen.getByRole('link', { name: 'Bug列表' }))
     expect(screen.getByRole('link', { name: 'Bug列表' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: '测试' })).not.toHaveAttribute('aria-current')
-    // 折叠态激活项切换为墨蓝线条图标变体,未激活项保持原多色图标(vitest 将小 SVG 内联为 data URI)
-    expect(screen.getByRole('link', { name: 'Bug列表' }).querySelector('img'))
-      .toHaveAttribute('src', expect.stringContaining('%2333557e'))
-    expect(screen.getByRole('link', { name: '测试' }).querySelector('img'))
-      .toHaveAttribute('src', expect.stringContaining('%2363778e'))
+    for (const name of ['Bug列表', '测试']) {
+      expect(screen.getByRole('link', { name }).querySelector('svg.sidebar-icon-duotone'))
+        .toHaveAttribute('aria-hidden', 'true')
+    }
   })
 
   it.each([

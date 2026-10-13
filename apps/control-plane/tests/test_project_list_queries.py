@@ -58,6 +58,9 @@ def lists(api):  # noqa: F811
                 ("req-binding", "requirement", "r24", "zentao", "active", "301"),
                 ("disabled", "requirement", "r23", "zentao", "disabled", "302"),
                 ("gitlab", "requirement", "r22", "gitlab", "active", "303"),
+                ("gitlab2", "requirement", "r22", "gitlab", "active", "305"),
+                ("gitlab-off", "requirement", "r23", "gitlab", "unbound", "306"),
+                ("gitlab-foreign", "requirement", "foreign-r", "gitlab", "active", "307"),
                 ("foreign-binding", "requirement", "foreign-r", "zentao", "active", "304"),
             ]:
                 session.add(
@@ -68,7 +71,14 @@ def lists(api):  # noqa: F811
                         connection_id="old-connection",
                         local_resource_type=kind,
                         local_resource_id=local,
-                        remote_resource_type="execution" if kind == "sprint" else "story",
+                        remote_resource_type=(
+                            "repository"
+                            if provider == "gitlab"
+                            else "execution"
+                            if kind == "sprint"
+                            else "story"
+                        ),
+                        extra_json={"branch": "dev", "private": "must-not-leak"},
                         remote_resource_id=remote,
                         remote_name_snapshot=bid,
                         status=status,
@@ -109,8 +119,15 @@ def test_requirement_pages_batch_bindings_and_do_not_load_document_bodies(lists)
         "status": "active",
     }
     assert all(row["zentaoBinding"] is None for row in data["items"][1:])
+    assert data["items"][2]["codeBindings"] == [
+        {"repository": "gitlab", "branch": "dev"},
+        {"repository": "gitlab2", "branch": "dev"},
+    ]
+    assert all(row["codeBindings"] == [] for row in data["items"] if row["requirementId"] != "r22")
+    assert "must-not-leak" not in first.text
+    assert data["items"][0]["createdAt"]
     assert all("documentContent" not in row for row in data["items"])
-    assert len([s for s in sql if "FROM resource_bindings" in s]) == 1
+    assert len([s for s in sql if "FROM resource_bindings" in s]) == 2
     assert not any("requirements.document_content" in s for s in sql)
     second = read(f"/v1/projects/{pid}/requirements?page=2&pageSize=20").json()["data"]
     assert second["total"] == 25

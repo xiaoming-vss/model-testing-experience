@@ -1,61 +1,64 @@
 /* Soft light palette: pale blue-gray navigation, ink primary buttons and a
- * steel-ink interactive accent (#33557e). Amber stays reserved for status
+ * steel-blue interactive accent (#365b82). Amber stays reserved for status
  * semantics (warning/pending tones, P1 priority, update-action iconography).
  * The explicit light boundary also covers the pre-initialization root, and
  * never participates in GitHub Dark. Existing status, terminal and brand roles
  * remain.
  */
 :root:not([data-theme='dark']) {
-  --app-bg: #e2e8f2;
-  --app-text: #263250;
+  --app-bg: #e7edf5;
+  --app-text: #273449;
   --app-link: #33557e;
-  --app-shell-bg: #e2e8f2;
-  --app-shell-sidebar: linear-gradient(155deg, #e2e7f2, #d8e0ee);
-  --app-shell-text: #263250;
-  --app-shell-text-secondary: #455375;
-  --app-shell-text-muted: #677493;
-  --app-shell-border: #dce0ef;
-  --app-shell-divider: #dce0ef;
-  --app-shell-divider-soft: #e7eaf4;
-  --app-surface: #edf1f9;
+  --app-shell-bg: #e7edf5;
+  --app-shell-sidebar: #e4ecf6;
+  --app-shell-text: #273449;
+  --app-shell-text-secondary: #46566e;
+  --app-shell-text-muted: #59677c;
+  --app-shell-border: #d7dfe9;
+  --app-shell-divider: #d7dfe9;
+  --app-shell-divider-soft: #e5eaf1;
+  /* Neutral content surfaces balance blue-gray navigation; reserve stronger
+   * blue tints for selection and interactive accents. */
+  --app-surface: #f4f6fa;
+  --app-list-toolbar-bg: #eff3f8;
   --app-surface-raised: var(--app-surface);
-  --app-surface-text: #263250;
-  --app-surface-text-muted: #677493;
-  --app-surface-border: #dce0ef;
-  --app-surface-divider: #e7eaf4;
-  --app-surface-divider-strong: #dce0ef;
+  --app-surface-text: #273449;
+  --app-surface-text-muted: #59677c;
+  --app-surface-border: #d8e2ef;
+  --app-surface-divider: #e5eaf1;
+  --app-surface-divider-strong: #d7dfe9;
   --app-surface-hover: var(--srf-list-header-bg);
   --app-surface-chip: var(--srf-list-header-bg);
-  --app-surface-chip-text: #455375;
-  --app-accent: #33557e;
-  --app-accent-hover: #2a4666;
-  --app-accent-surface: #e8ecf4;
+  --app-surface-chip-text: #46566e;
+  --app-accent: #365b82;
+  --app-accent-hover: #294968;
+  --app-accent-surface: #d3e1f2;
   --app-accent-border: #c9d2e4;
   --app-accent-selection: rgba(51, 85, 126, 0.09);
   --app-accent-soft: rgba(51, 85, 126, 0.08);
-  --app-accent-emphasis: rgba(51, 85, 126, 0.12);
+  --app-accent-emphasis: #d3e1f2;
   --app-surface-accent: #33557e;
   --app-surface-accent-strong: #2a4666;
-  --app-surface-accent-soft: #e8ecf4;
+  --app-surface-accent-soft: #dce7f5;
   --app-surface-accent-border: #c9d2e4;
   --app-link-hover: #2a4666;
-  --app-list-name: #263250;
-  --app-list-name-hover: #2a4666;
-  --app-list-header-text: #677493;
-  --app-list-header-border: #dce0ef;
-  --app-list-row-border: var(--app-surface-border);
-  --app-list-label: #677493;
+  --app-list-name: #365b82;
+  --app-list-name-hover: #294968;
+  --app-list-header-text: #59677c;
+  --app-list-header-border: #d7dfe9;
+  --app-list-row-border: #dce5f0;
+  --app-list-label: #59677c;
   --app-badge-text: var(--app-accent);
   --app-badge-bg: rgba(51, 85, 126, 0.1);
-  --app-menu-text: #455375;
+  --app-menu-text: #46566e;
   --app-menu-accent: #33557e;
   --app-menu-hover: #d3dce7;
-  --app-control-surface: #e8edf6;
-  --app-control-text: #677493;
+  --app-control-surface: #edf2f8;
+  --app-control-text: #5d6e87;
   --app-control-link: #33557e;
-  --app-context-selected: #e8ecf4;
-  --app-request-add-hover: #e8ecf4;
-  --app-glass-page: #e2e8f2;
+  --app-context-selected: #dce7f5;
+  --app-request-add-hover: #dce7f5;
+  --app-glass-page: #e7edf5;
   /* Legacy glass layers must use the same content surface as modern cards.
    * Otherwise nested toolbars, status strips and older pages add white veils.
    * Inputs and small controls share this palette through their own roles too.
@@ -129,7 +132,7 @@
   --app-task-fold-body: var(--app-surface);
   --app-service-tab-gradient-start: var(--srf-list-header-bg);
   --app-service-tab-gradient-end: var(--app-surface);
-  --app-glass-text: #263250;
+  --app-glass-text: #273449;
   --app-glass-text-secondary: rgba(38, 50, 80, 0.7);
   --app-glass-text-muted: rgba(38, 50, 80, 0.6);
   --app-glass-accent: #33557e;
@@ -161,12 +164,12 @@
   --app-option-border-selected: rgba(51, 85, 126, 0.52);
   --app-option-border-hover: rgba(51, 85, 126, 0.34);
   --app-option-icon-selected: var(--app-accent);
-  --app-option-selected-gradient-start: #e8ecf4;
+  --app-option-selected-gradient-start: #dce7f5;
   --app-option-selected-gradient-end: var(--app-surface);
   --app-action-read: #33557e;
   --app-action-read-strong: #2a4666;
   --app-action-read-soft: rgba(51, 85, 126, 0.12);
-  --app-editor-border: #dce0ef;
+  --app-editor-border: #d7dfe9;
   --app-editor-border-focus: #93a9c6;
   --app-editor-focus-ring: rgba(51, 85, 126, 0.12);
   --app-editor-selection: rgba(51, 85, 126, 0.12);
@@ -196,7 +199,7 @@
   --app-testing-control-accent: var(--app-accent);
   --app-testing-control-selected-border: var(--app-accent-border);
   --app-testing-control-focus-border: #93a9c6;
-  --app-testing-control-selected-bg: #e8ecf4;
+  --app-testing-control-selected-bg: #dce7f5;
   --app-testing-control-focus-ring: rgba(51, 85, 126, 0.16);
   --app-review-accent-bg: rgba(51, 85, 126, 0.05);
   --app-review-focus-ring: rgba(51, 85, 126, 0.52);
@@ -205,64 +208,63 @@
   --app-auth-control-border-focus: rgba(51, 85, 126, 0.38);
   --app-profile-border: var(--app-shell-border);
   --app-profile-text-muted: var(--app-shell-text-muted);
-  --app-profile-tint: #e2e8f2;
-  --app-profile-accent-bg: #e8ecf4;
+  --app-profile-tint: #eef1f5;
+  --app-profile-accent-bg: #dce7f5;
   --app-profile-surface: var(--app-surface);
   --app-profile-avatar-gradient-start: #46658c;
   --app-profile-avatar-gradient-end: #33557e;
-  --app-text-strong: #263250;
-  --app-text-subtle: #677493;
-  --app-text-caption: #677493;
-  --app-text-label: #455375;
-  --description-text: #677493;
-  --description-text-muted: #677493;
+  --app-text-strong: #273449;
+  --app-text-subtle: #59677c;
+  --app-text-caption: #59677c;
+  --app-text-label: #46566e;
+  --description-text: #59677c;
+  --description-text-muted: #59677c;
   --description-bg: rgba(51, 85, 126, 0.045);
-  --description-border: #dce0ef;
-  --legacy-tp-border: #dce0ef;
-  --legacy-tp-border-soft: #e7eaf4;
-  --legacy-tp-text: #263250;
-  --legacy-tp-text-secondary: #455375;
-  --legacy-tp-text-muted: #677493;
-  --legacy-mac-glass-page: #e2e8f2;
+  --description-border: #d7dfe9;
+  --legacy-tp-border: #d7dfe9;
+  --legacy-tp-border-soft: #e5eaf1;
+  --legacy-tp-text: #273449;
+  --legacy-tp-text-secondary: #46566e;
+  --legacy-tp-text-muted: #59677c;
+  --legacy-mac-glass-page: #e7edf5;
   --legacy-mac-glass-sidebar: var(--app-shell-sidebar);
-  --legacy-mac-glass-header: #e8edf6;
+  --legacy-mac-glass-header: #e8eef6;
   --legacy-mac-glass-panel: var(--app-surface);
   --legacy-mac-glass-panel-strong: var(--app-surface);
   --legacy-mac-glass-card: var(--app-surface);
-  --legacy-mac-glass-border: #dce0ef;
-  --legacy-mac-glass-border-soft: #e7eaf4;
-  --legacy-mac-glass-text: #263250;
-  --legacy-mac-glass-muted: #677493;
-  --legacy-mac-glass-subtle: #677493;
+  --legacy-mac-glass-border: #d7dfe9;
+  --legacy-mac-glass-border-soft: #e5eaf1;
+  --legacy-mac-glass-text: #273449;
+  --legacy-mac-glass-muted: #59677c;
+  --legacy-mac-glass-subtle: #59677c;
   --legacy-mac-glass-blue: #33557e;
-  --legacy-project-overview-text: #263250;
+  --legacy-project-overview-text: #273449;
   --legacy-project-overview-panel: var(--app-surface);
   --legacy-project-overview-panel-soft: var(--app-surface);
   --legacy-project-overview-card: var(--app-surface);
   --legacy-project-overview-card-hover: var(--srf-list-header-bg);
-  --legacy-project-overview-secondary: #677493;
-  --legacy-project-overview-muted: #677493;
+  --legacy-project-overview-secondary: #59677c;
+  --legacy-project-overview-muted: #59677c;
   --legacy-project-overview-blue: #33557e;
-  --srf-list-header-text: #677493;
-  --srf-list-header-bg: #e3e9f3;
-  --srf-list-row-bg: var(--app-surface);
-  --srf-list-row-hover: #e8ecf4;
-  --button-text: #455375;
-  --button-bg: var(--app-control-surface);
-  --button-border: #c7d0e3;
+  --srf-list-header-text: #59677c;
+  --srf-list-header-bg: #e9eff7;
+  --srf-list-row-bg: #f4f6fa;
+  --srf-list-row-hover: #e8eff8;
+  --button-text: #46566e;
+  --button-bg: #eaf0f8;
+  --button-border: #d3e0f0;
   --button-hover-bg: var(--srf-list-header-bg);
   --button-hover-border: #b9c2e4;
-  --button-active-bg: #e8ecf4;
-  /* 透明文字/图标按钮的悬停与按下用「墨色薄纱」，随所在表面合成；
-     不透明块色（如 #e3e9f3 / #e8ecf4）在 #e8edf6 工具栏上会读成一块突兀的淡蓝底。 */
+  --button-active-bg: #dce7f5;
+  /* Quiet controls blend their hover tint with the underlying surface. */
   --button-quiet-hover-bg: rgba(69, 83, 117, 0.08);
   --button-quiet-active-bg: rgba(69, 83, 117, 0.16);
   --button-primary-text: #ffffff;
   --button-link-text: #33557e;
-  --button-primary-bg: #263250;
-  --button-primary-border: #263250;
-  --button-primary-hover-bg: #1d2740;
-  --button-primary-hover-border: #1d2740;
+  --button-primary-bg: #304f70;
+  --button-primary-border: #304f70;
+  --button-primary-hover-bg: #254360;
+  --button-primary-hover-border: #254360;
   --button-primary-active-bg: #161e33;
   --button-disabled-bg: var(--srf-list-header-bg);
   --button-disabled-border: #c7d0e3;
@@ -275,31 +277,31 @@
 
 :root:not([data-theme='dark']) .tp-surface {
   --srf-card: var(--app-surface);
-  --srf-card-border: #dce0ef;
-  --srf-divider: #e7eaf4;
-  --srf-text: #263250;
-  --srf-text-secondary: #455375;
-  --srf-text-muted: #677493;
-  --srf-accent: #33557e;
+  --srf-card-border: #d8e2ef;
+  --srf-divider: #e5eaf1;
+  --srf-text: #35455d;
+  --srf-text-secondary: #5d6e87;
+  --srf-text-muted: #65758d;
+  --srf-accent: #365b82;
   --srf-accent-strong: #2a4666;
-  --srf-accent-soft: #e8ecf4;
+  --srf-accent-soft: #dce7f5;
   --srf-accent-border: #c9d2e4;
   --srf-hover: var(--srf-list-header-bg);
   --srf-chip: var(--srf-list-header-bg);
-  --srf-chip-text: #455375;
+  --srf-chip-text: #46566e;
   --srf-count-badge: #d8e2ee;
-  --srf-track: #e7eaf4;
+  --srf-track: #e5eaf1;
   --srf-track-pending: #cbd2e7;
 }
 
 /* Navigation aliases remain local to the sidebar. */
 :root:not([data-theme='dark']) .app-sidebar {
-  --mac-glass-text: #455375;
+  --mac-glass-text: #46566e;
   --mac-glass-muted: #586889;
   --mac-glass-blue: #33557e;
   --mac-glass-border: #c7d0e3;
   --mac-glass-border-soft: #c7d0e3;
-  --srf-list-row-hover: #d3dce7;
+  --srf-list-row-hover: #e8eff8;
   --app-glass-highlight-72: transparent;
   --app-glass-surface-46: transparent;
   --app-glass-surface-10: transparent;

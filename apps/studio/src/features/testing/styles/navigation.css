@@ -1,12 +1,5 @@
 .testing-navigation {
   flex: 0 0 auto;
   min-width: 0;
-  padding: 18px 24px 0;
-}
-
-
-@media (max-width: 768px) {
-  .testing-navigation {
-    padding-inline: var(--app-page-gutter);
-  }
+  margin: 12px var(--app-page-gutter) 0;
 }

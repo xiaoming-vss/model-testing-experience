@@ -2,11 +2,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { TestThemeProvider } from '@/test/TestThemeProvider'
 import { bugsApi } from '../api/bugs.api'
 import type { ZentaoBugCandidate, ZentaoBugImportPreview, ZentaoBugImportResult } from '../types'
 import { BugZentaoImportModal } from './BugZentaoImportModal'
 
-vi.mock('@/shared/utils/feedback', () => ({ message: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() } }))
+vi.mock('@/shared/utils/feedback', () => ({ bindFeedbackMessage: vi.fn(), message: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() } }))
 const clients: QueryClient[] = []
 afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.restoreAllMocks(); vi.clearAllMocks() })
 
@@ -40,15 +41,16 @@ function mount(defaultSprintId?: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   clients.push(client)
   render(
-    <QueryClientProvider client={client}>
+    <QueryClientProvider client={client}><TestThemeProvider>
       <BugZentaoImportModal open projectId="p1" defaultSprintId={defaultSprintId} onClose={vi.fn()} />
-    </QueryClientProvider>,
+    </TestThemeProvider></QueryClientProvider>,
   )
 }
 
 it('lists candidates with linked rows unselectable', async () => {
   mount()
   expect(await screen.findByText('登录失败')).toBeInTheDocument()
+  expect(screen.getByRole('combobox', { name: '每页条数' })).toBeInTheDocument()
   // 禅道原始值带平台标签展示，便于核对（R23）。
   expect(await screen.findByText('致命 (1)')).toBeInTheDocument()
   expect(screen.getByText('中 (3)')).toBeInTheDocument()
@@ -67,7 +69,8 @@ it('requires assignee and sprint before importing and reports per-item results',
   mount()
   const row = ((await screen.findByText('登录失败')) as HTMLElement).closest('tr') as HTMLElement
   await userEvent.click(within(row).getByRole('checkbox'))
-  expect(await screen.findByText('导入确认')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: '下一步' }))
+  expect(await screen.findByText('批量设置')).toBeInTheDocument()
   // 未选择责任人/迭代时导入按钮保持禁用（Q05/Q06），按钮旁提示未分配责任人。
   expect(screen.getByRole('button', { name: /导入/ })).toBeDisabled()
   expect(await screen.findByText('未分配责任人')).toBeInTheDocument()
@@ -93,8 +96,9 @@ it('prefills the found sprint with the current iteration when binding is unresol
   mount('sprint-1')
   const row = ((await screen.findByText('登录失败')) as HTMLElement).closest('tr') as HTMLElement
   await userEvent.click(within(row).getByRole('checkbox'))
-  expect(await screen.findByText('导入确认')).toBeInTheDocument()
-  expect(screen.getByText(/候选范围：当前迭代绑定的禅道执行/)).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: '下一步' }))
+  expect(await screen.findByText('批量设置')).toBeInTheDocument()
+
   expect(screen.getByTitle('迭代一')).toBeInTheDocument()
   const importSpy = vi.spyOn(bugsApi, 'importZentaoBugs')
   await userEvent.click(screen.getByLabelText('责任人-50'))
@@ -114,7 +118,95 @@ it('blocks items whose preview is not ready', async () => {
   mount()
   const row = ((await screen.findByText('登录失败')) as HTMLElement).closest('tr') as HTMLElement
   await userEvent.click(within(row).getByRole('checkbox'))
+  await userEvent.click(screen.getByRole('button', { name: '下一步' }))
   expect(await screen.findByText(/正文包含图片/)).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /导入/ })).toBeDisabled()
   expect(importSpy).not.toHaveBeenCalled()
+})
+
+
+it('每页条数始终可选，切换后从第一页请求并保留已选候选', async () => {
+  vi.mocked(bugsApi.listZentaoBugCandidates).mockResolvedValue({
+    scope: 'execution', executionId: 20, total: 100, items: candidates,
+  })
+  mount('sprint-1')
+  const user = userEvent.setup()
+  const row = (await screen.findByText('登录失败')).closest('tr')!
+  await user.click(within(row).getByRole('checkbox'))
+  expect(screen.getByRole('button', { name: '下一步' })).toBeEnabled()
+  await user.click(screen.getByTitle('2'))
+  await waitFor(() => expect(bugsApi.listZentaoBugCandidates).toHaveBeenLastCalledWith('p1', expect.objectContaining({ page: 2, pageSize: 10 })))
+  const sizeSelect = screen.getByRole('combobox', { name: '每页条数' })
+  await waitFor(() => expect(sizeSelect).toBeEnabled())
+  await user.click(sizeSelect)
+  await user.click(await screen.findByText('50 条/页', { selector: '.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option-content' }))
+  await waitFor(() => expect(bugsApi.listZentaoBugCandidates).toHaveBeenLastCalledWith('p1', expect.objectContaining({ page: 1, pageSize: 50 })))
+  expect(screen.getByRole('button', { name: '下一步' })).toBeEnabled()
+  expect(within(screen.getByText('登录失败').closest('tr')!).getByRole('checkbox')).toBeChecked()
+})
+
+
+it('显示100条时全选也不超过20条，并允许取消后重新选择', async () => {
+  const rows = Array.from({ length: 100 }, (_, i) => ({ ...candidates[0], remoteBugId: i + 1, title: `候选 ${i + 1}` }))
+  vi.mocked(bugsApi.listZentaoBugCandidates).mockResolvedValue({ scope: 'execution', executionId: 20, total: 100, items: rows })
+  mount()
+  const user = userEvent.setup()
+  await screen.findByText('候选 1')
+  await user.click(screen.getByRole('combobox', { name: '每页条数' }))
+  await user.click(await screen.findByText('100 条/页', { selector: '.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option-content' }))
+  await waitFor(() => expect(bugsApi.listZentaoBugCandidates).toHaveBeenLastCalledWith('p1', expect.objectContaining({ pageSize: 100 })))
+  await user.click(screen.getAllByRole('checkbox')[0])
+  await waitFor(() => expect(bugsApi.previewZentaoBugImport).toHaveBeenLastCalledWith('p1', Array.from({ length: 20 }, (_, i) => i + 1)))
+  const checkbox = (title: string) => within(screen.getByText(title).closest('tr')!).getByRole('checkbox')
+  expect(checkbox('候选 21')).toBeDisabled()
+  await user.click(checkbox('候选 1'))
+  expect(checkbox('候选 21')).toBeEnabled()
+  await user.click(checkbox('候选 21'))
+  await waitFor(() => expect(bugsApi.previewZentaoBugImport).toHaveBeenLastCalledWith('p1', Array.from({ length: 20 }, (_, i) => i + 2)))
+  expect(vi.mocked(bugsApi.previewZentaoBugImport).mock.calls.every(([, ids]) => ids.length <= 20)).toBe(true)
+})
+
+it('预览请求失败仅显示一条集中错误', async () => {
+  vi.mocked(bugsApi.listZentaoBugCandidates).mockResolvedValue({ scope: 'execution', executionId: 20, total: 2, items: candidates.map(row => ({ ...row, linked: false })) })
+  vi.mocked(bugsApi.previewZentaoBugImport).mockRejectedValue(new Error('预览服务暂不可用'))
+  mount()
+  await screen.findByText('登录失败')
+  await userEvent.click(screen.getAllByRole('checkbox')[0])
+  await userEvent.click(screen.getByRole('button', { name: '下一步' }))
+  await screen.findByText('预览服务暂不可用')
+  expect(screen.getAllByText('预览服务暂不可用')).toHaveLength(1)
+  expect(screen.getByRole('button', { name: '重试预览' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /导入/ })).toBeDisabled()
+})
+
+
+it('批量设置后允许逐条修改，返回选择步骤仍保留配置', async () => {
+  vi.mocked(bugsApi.listZentaoBugCandidates).mockResolvedValue({ scope: 'execution', executionId: 20, total: 2,
+    items: candidates.map(row => ({ ...row, linked: false })) })
+  vi.mocked(bugsApi.previewZentaoBugImport).mockResolvedValue({ items: [preview(), preview({remoteBugId: 51, title: '重复推送'})] })
+  vi.mocked(bugsApi.getBugOptions).mockResolvedValue({ members: [{userId: 'u1', name: '开发甲'}, {userId: 'u2', name: '开发乙'}],
+    sprints: [{sprintId: 'sprint-1', name: '迭代一'}, {sprintId: 'sprint-2', name: '迭代二'}] })
+  const importSpy = vi.spyOn(bugsApi, 'importZentaoBugs').mockResolvedValue({items: []})
+  mount('sprint-1')
+  const user = userEvent.setup()
+  await screen.findByText('登录失败')
+  await user.click(screen.getAllByRole('checkbox')[0])
+  await user.click(screen.getByRole('button', {name: '下一步'}))
+  expect(screen.queryByLabelText('候选标题搜索')).not.toBeInTheDocument()
+  await user.click(screen.getByLabelText('批量责任人'))
+  await user.click(await screen.findByText('开发甲', {selector: '.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option-content'}))
+  await user.click(screen.getByLabelText('批量发现迭代'))
+  await user.click(await screen.findByText('迭代二', {selector: '.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option-content'}))
+  await user.click(screen.getByRole('button', {name: '应用到全部 2 条'}))
+  await waitFor(() => expect(screen.getByRole('button', {name: '导入 2 条'})).toBeEnabled())
+  await user.click(screen.getByLabelText('责任人-51'))
+  await user.click(await screen.findByText('开发乙', {selector: '.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option-content'}))
+  await user.click(screen.getByRole('button', {name: '上一步'}))
+  expect(screen.getByLabelText('候选标题搜索')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', {name: '下一步'}))
+  await user.click(screen.getByRole('button', {name: '导入 2 条'}))
+  await waitFor(() => expect(importSpy).toHaveBeenCalledWith('p1', expect.objectContaining({items: [
+    {remoteBugId: 50, assigneeUserId: 'u1', foundSprintId: 'sprint-2'},
+    {remoteBugId: 51, assigneeUserId: 'u2', foundSprintId: 'sprint-2'},
+  ]})))
 })

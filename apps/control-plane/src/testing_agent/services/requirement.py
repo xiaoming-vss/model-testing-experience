@@ -19,7 +19,10 @@ from testing_agent.schemas.requirement import (
     UpdateRequirementRequest,
     normalize_document_type,
 )
-from testing_agent.services.binding_summary import load_zentao_binding_summaries
+from testing_agent.services.binding_summary import (
+    load_code_binding_summaries,
+    load_zentao_binding_summaries,
+)
 from testing_agent.services.common import list_payload
 from testing_agent.services.project_access import ProjectAction
 from testing_agent.services.sprint import SprintService
@@ -94,9 +97,16 @@ class RequirementService:
         bindings = await load_zentao_binding_summaries(
             self.requirements.session, "requirement", [row["requirement_id"] for row in rows]
         )
+        code_bindings = await load_code_binding_summaries(
+            self.requirements.session, [row["requirement_id"] for row in rows]
+        )
         items = [
             RequirementListItemResponse.model_validate(
-                {**row, "zentao_binding": bindings.get(row["requirement_id"])}
+                {
+                    **row,
+                    "zentao_binding": bindings.get(row["requirement_id"]),
+                    "code_bindings": code_bindings.get(row["requirement_id"], []),
+                }
             ).model_dump(by_alias=True, mode="json")
             for row in rows
         ]

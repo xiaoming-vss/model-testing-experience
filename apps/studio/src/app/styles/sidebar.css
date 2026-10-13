@@ -119,8 +119,12 @@
   line-height: 16px;
 }
 
-/* 图标按 24 网格绘制，墨迹中心未必落在几何中心，按渲染误差逐个补偿 */
-.sidebar-icon-navSprint { transform: translateX(1px); }
+/* One duotone icon set for expanded and collapsed navigation. */
+.app-sidebar .sidebar-icon-duotone { width: 20px; height: 20px; flex-shrink: 0; color: var(--app-accent); }
+.app-sidebar-collapsed .sidebar-icon-duotone { width: 22px; height: 22px; }
+.app-sidebar .sidebar-icon-fill { fill: var(--app-accent-emphasis); }
+.app-sidebar .sidebar-link.is-active .sidebar-icon-duotone { color: var(--app-accent-hover); }
+.app-sidebar .sidebar-link.is-active .sidebar-icon-fill { fill: var(--app-accent-selection); }
 
 .sidebar-link:focus-visible,
 .sidebar-brand:focus-visible,

@@ -22,7 +22,7 @@ function mount(board: string, selectedSprint: string | null = 's1', documentType
     const url = new URL(path, 'http://localhost')
     const page = Number(url.searchParams.get('page') ?? 1)
     const sprintId = url.searchParams.get('sprintId') ?? url.pathname.match(/\/sprints\/(s\d)\//)?.[1] ?? 's1'
-    const requirements = Array.from({ length: page === 1 ? 8 : 1 }, (_, n) => ({ requirementId: `${sprintId}-r${page}-${n}`, sprintId, sprintName: `迭代${sprintId.slice(1)}`, name: `需求${page}-${n}`, documentType, documentFileId: n === 0 ? 'file-1' : undefined, documentFilename: n === 0 ? '需求说明.docx' : undefined, zentaoBinding: n === 0 ? binding : null }))
+    const requirements = Array.from({ length: page === 1 ? 8 : 1 }, (_, n) => ({ requirementId: `${sprintId}-r${page}-${n}`, sprintId, sprintName: `迭代${sprintId.slice(1)}`, name: `需求${page}-${n}`, createdAt: '2026-10-13T05:21:04Z', codeBindings: n === 0 ? [{ repository: 'team/service', branch: 'dev' }, { repository: 'team/web', branch: 'main' }] : [], documentType, documentFileId: n === 0 ? 'file-1' : undefined, documentFilename: n === 0 ? '需求说明.docx' : undefined, zentaoBinding: n === 0 ? binding : null }))
     const data = path === '/v1/projects' ? { items: [project], total: 1 }
       : path === '/v1/projects/p1' ? project
         : path.endsWith('/sprints') ? { items: sprints, total: 3 }
@@ -88,11 +88,13 @@ it('列表编辑缺失原文时允许切换 Word，旧下载结果不再阻塞�
   expect(update).not.toHaveBeenCalled()
 })
 
-it('需求列表使用五列和全局迭代范围，不重复显示局部迭代筛选', async () => {
+it('需求列表使用七列和全局迭代范围，不重复显示局部迭代筛选', async () => {
   mount('requirements')
   await screen.findByText('需求1-0')
-  expect(screen.getAllByRole('columnheader').map(cell => cell.textContent)).toEqual(['需求名称', '所属迭代', '需求文档', '禅道绑定', '操作'])
+  expect(screen.getAllByRole('columnheader').map(cell => cell.textContent)).toEqual(['需求名称', '所属迭代', '需求文档', '禅道绑定', '代码绑定', '创建时间', '操作'])
   expect(screen.queryByText('筛选迭代')).not.toBeInTheDocument()
+  expect(screen.getByText('team/service · dev（共 2 项）')).toBeInTheDocument()
+  expect(screen.getAllByText('2026/10/13 13:21')).toHaveLength(8)
   expect(screen.queryByText('迭代1 · 8 条需求')).not.toBeInTheDocument()
   expect(screen.getAllByText('未提供文档')).toHaveLength(7)
   expect(screen.queryByRole('button', { name: '查看文档' })).not.toBeInTheDocument()

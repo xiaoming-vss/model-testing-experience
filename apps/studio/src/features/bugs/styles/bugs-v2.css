@@ -261,19 +261,9 @@
 }
 
 .bugs-page .bug-title-text { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-:root:root .app-shell.app-shell-macos .bugs-page .functional-suite-list-name .bug-title-text {
-  font-size: 13px !important;
-  font-weight: 500 !important;
-  line-height: 20px !important;
-}
-.bugs-page .bug-name-icon {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 22px; height: 22px; border: 1px solid var(--srf-accent-border);
-  border-radius: 6px; background: var(--srf-accent-soft);
-}
 .bugs-page .bug-list-number, .bugs-page .bug-time-cell {
-  color: var(--srf-text-muted); font-size: 11px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--srf-text-muted); font-size: 12px;
+  font-family: var(--app-font-sans);
 }
 .bugs-page .bug-list-number { flex: none; white-space: nowrap; line-height: 20px; }
 .bugs-page .bug-status-pill {
@@ -312,3 +302,8 @@
 }
 .bug-column-options { display: flex; flex-direction: column; gap: 10px; }
 .bugs-page .api-filter-field-label { color: var(--srf-text-secondary); background: transparent; padding: 0; }
+
+/* List presentation pilot: scoped to the Bug page until visual approval. */
+.bugs-page .bug-muted-cell { color: var(--srf-text-secondary); }
+
+.bugs-page .bug-name-icon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex-shrink: 0; }

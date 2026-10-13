@@ -38,7 +38,7 @@ it.each([false, true])('缺陷未采集时仍可更新本地统计（授权接�
     const path = String(input)
     if (connectionFailure && path.includes('/zentao/connections')) throw new TypeError('Failed to fetch')
     const data = path.endsWith('/sprints/s1')
-      ? { sprintId: 's1', projectId: 'p1', name: '当前迭代', status: 'running' }
+      ? { sprintId: 's1', projectId: 'p1', name: '当前迭代', status: 'completed' }
       : path.endsWith('/projects/p1')
         ? { projectId: 'p1', name: '项目', permissions: ['read', 'manage', 'execute', 'write'] }
         : path.endsWith('/sprints/s1/bindings') ? { items: [{ provider: 'zentao', status: 'active', instanceUrl: 'http://zentao.local' }] }
@@ -53,6 +53,8 @@ it.each([false, true])('缺陷未采集时仍可更新本地统计（授权接�
     <Routes><Route path="/projects/:projectId/sprints/:sprintId" element={<SprintDetailPage />} /></Routes>
   </MemoryRouter></QueryClientProvider>)
   expect(await screen.findByText('2 个用例，缺陷未采集')).toBeInTheDocument()
+  expect(screen.getByText('已完成')).toBeInTheDocument()
+  expect(screen.queryByText('进行中')).not.toBeInTheDocument()
   expect(screen.getByText('缺陷数据未采集，暂不统计')).toBeInTheDocument()
   expect(screen.queryByText(/0 个缺陷/)).not.toBeInTheDocument()
   expect(screen.getByText('解决率').querySelector('strong')).toHaveTextContent('—')

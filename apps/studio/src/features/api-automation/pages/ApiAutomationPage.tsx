@@ -336,7 +336,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
       key: 'name',
       width: '30%',
       render: (name: ApiCollection['name']) => (
-        <Space size={8} className="functional-suite-list-name api-test-name-cell">
+        <Space size={8} className="tp-list-name functional-suite-list-name api-test-name-cell">
           <span className="api-test-name-icon">
             <ApiOutlined />
           </span>

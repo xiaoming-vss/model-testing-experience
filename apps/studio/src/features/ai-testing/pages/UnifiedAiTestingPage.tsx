@@ -331,7 +331,7 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
       width: '28%',
       render: (_, item) => {
         return (
-          <div className="ai-task-list-name">
+          <div className="tp-list-name ai-task-list-name">
             <Tooltip title={item.name || '未命名任务'}>
               <Text ellipsis>{item.name || '未命名任务'}</Text>
             </Tooltip>

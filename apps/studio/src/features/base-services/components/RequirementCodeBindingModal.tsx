@@ -171,6 +171,7 @@ export function RequirementCodeBindingModal({
       setSelectedBranch(undefined)
       setSelectedBaseline(undefined)
       queryClient.invalidateQueries({ queryKey: ['requirementCodeBindings', requirementId] })
+      queryClient.invalidateQueries({ queryKey: ['requirementsPool', projectId] })
     },
     onError: (error) => message.error(getErrorMessage(error)),
   })
@@ -183,6 +184,7 @@ export function RequirementCodeBindingModal({
     onSuccess: () => {
       message.success('分支已更新')
       queryClient.invalidateQueries({ queryKey: ['requirementCodeBindings', requirementId] })
+      queryClient.invalidateQueries({ queryKey: ['requirementsPool', projectId] })
     },
     onError: (error) => message.error(getErrorMessage(error)),
   })
@@ -195,6 +197,7 @@ export function RequirementCodeBindingModal({
     onSuccess: () => {
       message.success('基线分支已更新')
       queryClient.invalidateQueries({ queryKey: ['requirementCodeBindings', requirementId] })
+      queryClient.invalidateQueries({ queryKey: ['requirementsPool', projectId] })
     },
     onError: (error) => message.error(getErrorMessage(error)),
   })
@@ -204,6 +207,7 @@ export function RequirementCodeBindingModal({
     onSuccess: () => {
       message.success('代码绑定已删除')
       queryClient.invalidateQueries({ queryKey: ['requirementCodeBindings', requirementId] })
+      queryClient.invalidateQueries({ queryKey: ['requirementsPool', projectId] })
     },
     onError: (error) => message.error(getErrorMessage(error)),
   })

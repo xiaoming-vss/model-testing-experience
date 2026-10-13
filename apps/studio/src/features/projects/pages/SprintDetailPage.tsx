@@ -1,3 +1,5 @@
+import '../styles/sprint-overview.css'
+import { useLocalDate } from '../hooks/useLocalDate'
 import { saveBlob } from '@/shared/utils/download'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
@@ -27,7 +29,7 @@ import { SprintCodeOverviewSection } from '@/features/projects/components/Sprint
 import { useSprintBoundaryRefresh } from '@/features/projects/hooks/useSprintBoundaryRefresh'
 import { api, listItems, type SprintDailyMetricsSnapshot, type SprintDailyMetricsTestStats, type TestReportGenerateRun } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
-import { getErrorMessage, statusTag } from '@/utils/format'
+import { getErrorMessage } from '@/utils/format'
 
 const { Text, Title } = Typography
 const { RangePicker } = DatePicker
@@ -178,7 +180,6 @@ function SprintHealthSummary({ metrics }: { metrics: NormalizedDailyMetrics }) {
         <div className="sprint-dashboard-health-copy">
           <div className="sprint-dashboard-health-title-row">
             <Title level={4}>迭代健康摘要</Title>
-            <Tag color="processing">进行中</Tag>
           </div>
           <Text type="secondary" className="sprint-dashboard-health-caption">
             {metrics.totalCases} 个用例，{metrics.bug.collected ? `${metrics.bug.total} 个缺陷` : '缺陷未采集'}
@@ -853,7 +854,7 @@ export function SprintDetailPage() {
     const endDate = end.format('YYYY-MM-DD')
     return { startDate, endDate }
   }, [historyDateRange])
-  const todayDate = useMemo(() => dayjs().format('YYYY-MM-DD'), [])
+  const todayDate = useLocalDate()
   const currentMetricsQuery = useQuery({
     queryKey: ['sprintDailyMetricsByDate', sprintId, todayDate],
     queryFn: () => api.getSprintDailyMetricsByDate(sprintId, todayDate),
@@ -988,7 +989,7 @@ export function SprintDetailPage() {
           </section>
         </div>
       ) : sprintQuery.data ? (
-        <>
+        <section className="tp-board tp-list-panel sprint-overview-frame">
           <section className="tp-list-toolbar">
             <div className="sprint-overview-toolbar-summary-row">
               <div className="sprint-overview-toolbar-main">
@@ -1007,11 +1008,12 @@ export function SprintDetailPage() {
                     <h1 className="tp-list-title">
                       {sprintName}
                     </h1>
-                    <div className="sprint-overview-hero-status">{statusTag(sprintQuery.data.status)}</div>
+                    <div className="sprint-overview-hero-status"><Tag color={sprintQuery.data.status === 'completed' ? 'success' : sprintQuery.data.status === 'running' ? 'processing' : 'default'}>{{ planned: '未开始', running: '进行中', completed: '已完成' }[sprintQuery.data.status ?? ''] ?? sprintQuery.data.status ?? '未知状态'}</Tag></div>
                   </Space>
                 </div>
               </div>
               <div className="sprint-overview-hero-summary">
+                <Text type="secondary">统计日期：{currentMetricsQuery.data ? snapshotDate(currentMetricsQuery.data) : '今日暂无快照'}</Text>
                 <SummaryMetric label="总用例数" value={latestMetrics.totalCases} />
                 <SummaryMetric label="Bug 总数" value={latestMetrics.bug.collected ? latestMetrics.bug.total : '—'} />
 
@@ -1121,7 +1123,7 @@ export function SprintDetailPage() {
               </div>
             </section>
           </div>
-        </>
+        </section>
       ) : (
         <div className="workbench-tabs">
           {sprintQuery.error ? <Alert showIcon type="error" title={getErrorMessage(sprintQuery.error)} /> : null}

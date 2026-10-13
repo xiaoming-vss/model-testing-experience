@@ -1,0 +1,60 @@
+.sprint-overview-page { padding: var(--app-page-gutter); }
+.sprint-overview-page .sprint-overview-frame { min-height: 0; }
+.sprint-overview-page .sprint-overview-frame > .workbench-tabs { padding: 0; gap: 0; }
+:root:root .app-shell.app-shell-macos .sprint-overview-page .sprint-overview-panel-unified {
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.sprint-overview-page .sprint-overview-panel-body { padding: 16px; overflow: auto; }
+.sprint-overview-page .sprint-overview-layout { min-height: 0; grid-template-rows: auto; align-content: start; gap: 16px; }
+.sprint-overview-page .sprint-overview-card-rich,
+.sprint-overview-page .sprint-dashboard-health-band {
+  border: 1px solid var(--srf-card-border);
+  border-radius: 12px;
+  background: var(--srf-card);
+  box-shadow: none;
+}
+.sprint-overview-page .sprint-overview-card-rich .ant-card-body { padding: 16px; height: auto; }
+.sprint-overview-page .sprint-dashboard-health-band { padding: 16px; gap: 16px; grid-template-columns: minmax(200px, .7fr) minmax(280px, 1fr) minmax(300px, 1fr); }
+.sprint-overview-page .sprint-dashboard-health-title { gap: 12px; min-height: 56px; }
+.sprint-overview-page .sprint-dashboard-health-icon { width: 36px; height: 36px; font-size: 20px; border-radius: 8px; }
+.sprint-overview-page .sprint-dashboard-health-title-row h4.ant-typography,
+.sprint-overview-page .sprint-dashboard-card-head h4.ant-typography { font-size: 15px; line-height: 24px; font-weight: 600; }
+.sprint-overview-page .sprint-dashboard-health-defects strong { font-size: 20px; line-height: 28px; }
+.sprint-overview-page .sprint-dashboard-test-table { grid-template-rows: 32px repeat(3, 56px); }
+.sprint-overview-page .sprint-dashboard-test-row { border-bottom: 1px solid var(--app-list-row-border); gap: 10px; }
+.sprint-overview-page .sprint-dashboard-main-grid { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; }
+.sprint-overview-page .sprint-code-overview-card .ant-empty { margin: 20px 0; }
+.sprint-overview-page .sprint-overview-chart-host { height: 210px; min-height: 210px; }
+.sprint-overview-page .sprint-overview-toolbar-summary-row { gap: 12px; flex-wrap: wrap; }
+.sprint-overview-page .sprint-overview-hero-summary { flex-wrap: wrap; }
+.sprint-overview-page .sprint-dashboard-card-head { flex-wrap: wrap; }
+@media (max-width: 1280px) {
+  .sprint-overview-page .sprint-dashboard-main-grid { grid-template-columns: minmax(0, 1fr); }
+  .sprint-overview-page .sprint-dashboard-health-band { grid-template-columns: 1fr 1fr; }
+  .sprint-overview-page .sprint-dashboard-health-defects { grid-column: 1 / -1; }
+}
+@media (max-width: 768px) {
+  .sprint-overview-page .sprint-dashboard-health-band,
+  .sprint-overview-page .sprint-overview-trend-grid { grid-template-columns: minmax(0, 1fr); }
+  .sprint-overview-page .sprint-dashboard-panel { overflow-x: auto; }
+  .sprint-overview-page .sprint-dashboard-test-table { min-width: 640px; }
+  .sprint-overview-page .sprint-dashboard-trend-pane + .sprint-dashboard-trend-pane { border-left: 0; padding-left: 0; }
+}
+
+.sprint-overview-page .sprint-dashboard-health-progress-head strong { font-size: 14px; }
+.sprint-overview-page .sprint-dashboard-health-caption { font-size: 13px; }
+.sprint-overview-page .sprint-dashboard-risk-layout { grid-template-columns: minmax(240px, 1fr) minmax(0, 1fr); gap: 16px; }
+.sprint-overview-page .sprint-overview-donut-layout { grid-template-columns: 100px minmax(0, 1fr); gap: 10px; }
+.sprint-overview-page .sprint-overview-mini-chart { width: 100px; height: 100px; }
+.sprint-overview-page .sprint-overview-donut-center { font-size: 20px; }
+.sprint-overview-page .sprint-overview-chart-metrics span { gap: 6px; font-size: 12px; white-space: nowrap; }
+.sprint-overview-page .sprint-overview-chart-metrics strong { font-size: 12px; }
+.sprint-overview-page .sprint-dashboard-severity-list { padding-left: 16px; gap: 12px; }
+.sprint-overview-page .sprint-dashboard-severity-row { grid-template-columns: 32px minmax(0, 1fr) 62px; gap: 8px; font-size: 12px; }
+@media (max-width: 600px) {
+  .sprint-overview-page .sprint-dashboard-risk-layout { grid-template-columns: minmax(0, 1fr); }
+  .sprint-overview-page .sprint-dashboard-severity-list { border-left: 0; padding-left: 0; }
+}

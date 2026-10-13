@@ -72,6 +72,12 @@ class RequirementResponse(RequirementMetadataResponse):
     document_content: str = Field(default="")
 
 
+class RequirementCodeSummaryResponse(BaseModel):
+    repository: str
+    branch: str
+
+
 class RequirementListItemResponse(RequirementMetadataResponse):
     sprint_name: str
     zentao_binding: ZentaoBindingSummaryResponse | None = None
+    code_bindings: list[RequirementCodeSummaryResponse] = Field(default_factory=list)

@@ -19,3 +19,16 @@ it('未审核和拒绝仍显示各自状态', () => {
     expect(getRunPipelineModel({ status: 'success', reviewStatus }, { stages: ['generate', 'review'] }).statusLabel).toBe(label)
   }
 })
+
+
+it('两种待审核状态统一为琥珀色，执行中仍为蓝色', () => {
+  const stages = ['generate', 'review'] as const
+  for (const status of ['waiting_review', 'success']) {
+    const model = getRunPipelineModel({ status, reviewStatus: 'pending' }, { stages: [...stages] })
+    expect(model.statusLabel).toBe('待审核')
+    expect(model.statusTone).toBe('warning')
+  }
+  expect(getRunPipelineModel({ status: 'running' }).statusTone).toBe('processing')
+  expect(getRunPipelineModel({ status: 'error' }).statusTone).toBe('error')
+  expect(getRunPipelineModel({ status: 'success', reviewStatus: 'approved' }, { stages: [...stages] }).statusTone).toBe('success')
+})

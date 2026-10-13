@@ -117,7 +117,7 @@ export function TestOrderPage() {
       key: 'name',
       width: 145,
       render: (_, order) => (
-        <Space size={8} className="functional-suite-list-name test-order-name-cell">
+        <Space size={8} className="tp-list-name functional-suite-list-name test-order-name-cell">
           <span className="test-order-name-icon" aria-hidden="true"><FileTextOutlined /></span>
           <Tooltip title={order.name}>
             <Text ellipsis>{order.name}</Text>

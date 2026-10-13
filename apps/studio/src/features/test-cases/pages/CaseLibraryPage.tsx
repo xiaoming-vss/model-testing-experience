@@ -597,7 +597,7 @@ export function CaseLibraryPage() {
         render: (_, item) => {
           const caseId = normalizeFunctionTestCaseId(item)
           return (
-            <Space size={8} className="functional-suite-list-name case-library-title-cell">
+            <Space size={8} className="tp-list-name functional-suite-list-name case-library-title-cell">
               {/* 用例编号是 UUID，标题里放全值太长，按运行历史的既有做法只显示前 8 位。 */}
               {caseId ? (
                 <span className="case-library-id-chip" title={caseId}>

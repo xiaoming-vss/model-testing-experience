@@ -1,3 +1,4 @@
+import { requirementMetadataColumns } from '../components/requirementMetadataColumns'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import '../styles/requirements-list.css'
@@ -379,20 +380,20 @@ export function ProjectsPage() {
   }
 
   const requirementColumns: TableProps<RequirementPoolItem>['columns'] = [
-    { title: '需求名称', key: 'name', width: '36%', render: (_, requirement) => (
-      <div className="project-requirement-list-name requirements-list-name">
-        <span className="requirements-list-icon"><AppIcon name="requirement" size={14} /></span>
+    { title: '需求名称', key: 'name', render: (_, requirement) => (
+      <div className="tp-list-name project-requirement-list-name requirements-list-name">
+        <span className="requirements-list-icon"><AppIcon name="navRequirement" size={16} /></span>
         <Tooltip title={requirement.name}><Link to={`/requirements/${normalizeRequirementId(requirement)}`}><Text>{requirement.name}</Text></Link></Tooltip>
       </div>
     ) },
-    { title: '所属迭代', dataIndex: 'sprintName', key: 'sprint', width: '13%', render: name => <div className="requirements-list-wrap">{name || '—'}</div> },
-    { title: '需求文档', key: 'document', width: '23%', render: (_, requirement) => hasRequirementDocument(requirement) ? (
+    { title: '所属迭代', dataIndex: 'sprintName', key: 'sprint', width: 120, render: name => <div className="requirements-list-wrap">{name || '—'}</div> },
+    { title: '需求文档', key: 'document', width: 320, render: (_, requirement) => hasRequirementDocument(requirement) ? (
         <div className="requirements-list-file" title={getRequirementDocumentSummary(requirement)}>
           <span className="requirements-list-file-type">{getRequirementDocumentTypeLabel(requirement.documentType)}</span>
           <span className="requirements-list-filename">{getRequirementDocumentSummary(requirement)}</span>
         </div>
     ) : <Text type="secondary">未提供文档</Text> },
-    { title: '禅道绑定', key: 'binding', width: '15%', render: (_, requirement) => {
+    { title: '禅道绑定', key: 'binding', width: 280, render: (_, requirement) => {
       const binding = requirement.zentaoBinding
       if (!binding) return <Text type="secondary">未绑定</Text>
       const name = binding.remoteNameSnapshot || binding.remote_name_snapshot || binding.remoteResourceId || binding.remote_resource_id || '已绑定'
@@ -400,7 +401,8 @@ export function ProjectsPage() {
         <div className="requirements-list-wrap" tabIndex={0}>{name}{binding.status && binding.status !== 'active' ? <Text type="secondary">（绑定状态待确认）</Text> : null}</div>
       </Tooltip>
     } },
-    { title: <span className="tp-actions-col-title" style={{ width: 64 }}>操作</span>, key: 'actions', width: 150, align: 'right', render: (_, requirement) => (
+    ...requirementMetadataColumns<RequirementPoolItem>(),
+    { title: <span className="tp-actions-col-title" style={{ width: 64 }}>操作</span>, key: 'actions', width: 100, align: 'right', fixed: 'right', render: (_, requirement) => (
       <RequirementRowActions name={requirement.name} canWrite={can('write')} canManage={can('manage')}
         deleting={deleteRequirementMutation.isPending && deleteRequirementMutation.variables === normalizeRequirementId(requirement)}
         onEdit={() => openRequirementDrawer(requirement)}
@@ -481,7 +483,7 @@ export function ProjectsPage() {
                       <Table<RequirementPoolItem>
                         className="project-requirement-list-table requirements-list-table tp-list-table"
                         size="small"
-                        tableLayout="fixed" scroll={{ x: 1000 }}
+                        tableLayout="fixed" scroll={{ x: 1580 }}
                         columns={requirementColumns}
                         dataSource={visibleRequirements}
                         rowKey={(requirement) => normalizeRequirementId(requirement)}

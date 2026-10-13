@@ -1,0 +1,5 @@
+
+> @mtx/studio@0.0.0 check:theme
+> node scripts/check-theme-colors.mjs
+
+Theme color check passed (80 CSS files, 288 TS/TSX files; registered color sources only).

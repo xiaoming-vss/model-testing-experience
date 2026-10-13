@@ -1685,20 +1685,6 @@ body,
   display: none;
 }
 
-:root:root .project-overview-page .project-requirement-list-table .project-requirement-list-name .ant-typography,
-:root:root .app-shell.app-shell-macos .project-overview-page .project-requirement-list-table .project-requirement-list-name .ant-typography {
-  color: var(--app-list-name) !important;
-  font-size: 13px !important;
-  font-weight: 500 !important;
-  cursor: pointer;
-  text-decoration: none;
-  text-underline-offset: 3px;
-}
-:root:root .project-overview-page .project-requirement-list-table .ant-table-tbody > tr:hover .project-requirement-list-name .ant-typography {
-  color: var(--app-list-name-hover) !important;
-  text-decoration: underline;
-}
-
 .project-requirement-list-actions .project-requirement-primary-action.ant-btn {
   height: 28px;
   padding-inline: 12px;

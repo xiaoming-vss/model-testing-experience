@@ -257,7 +257,7 @@
   gap: 8px;
   border: 1px solid var(--srf-card-border);
   border-radius: var(--srf-radius-card);
-  background: var(--srf-card);
+  background: var(--app-list-toolbar-bg, var(--srf-card));
   box-shadow: none;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;

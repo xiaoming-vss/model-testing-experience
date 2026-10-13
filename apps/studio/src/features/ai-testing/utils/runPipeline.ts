@@ -81,7 +81,7 @@ export function getRunPipelineModel(
     return {
       stages,
       statusLabel: includeReview && status === 'waiting_review' ? '待审核' : '执行中',
-      statusTone: 'processing',
+      statusTone: includeReview && status === 'waiting_review' ? 'warning' : 'processing',
       filterKey: 'running',
     }
   }

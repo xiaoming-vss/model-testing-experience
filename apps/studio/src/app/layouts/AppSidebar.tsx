@@ -2,27 +2,11 @@ import { useThemeStore } from '@/shared/theme/theme.store'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { Link, useLocation } from 'react-router-dom'
 import { Layout } from 'antd'
-import { MenuFoldOutlined, MenuUnfoldOutlined, FlagOutlined, FileOutlined, CheckSquareOutlined, BugOutlined, DatabaseOutlined } from '@ant-design/icons'
-import { AppIcon, type AppIconName } from '@/shared/icons'
+import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons'
+import { SidebarIcon, type SidebarIconName } from './SidebarIcon'
 import { resolveTestingTab } from '@/features/testing/components/testingTab'
 import { useSidebarStore } from './sidebar.store'
 import '../styles/sidebar.css'
-
-/* 折叠态的激活项使用强调色线条图标，并由样式保留模块名称和选中底色。
-   SVG 经 <img> 引用,CSS 无法对其换色,故以独立变体资源切换;
-   强调色变体按浅色主题绘制,暗色主题沿用原有激活处理。 */
-const OUTLINE_ICONS: Partial<Record<AppIconName, typeof FlagOutlined>> = {
-  navSprint: FlagOutlined, navRequirement: FileOutlined, testing: CheckSquareOutlined,
-  navBug: BugOutlined, services: DatabaseOutlined,
-}
-
-const COLLAPSED_ACTIVE_ICONS: Partial<Record<AppIconName, AppIconName>> = {
-  navSprint: 'navSprintActive',
-  navRequirement: 'navRequirementActive',
-  testing: 'testingActive',
-  navBug: 'navBugActive',
-  services: 'servicesActive',
-}
 
 export function AppSidebar({ bugOnly = false }: { bugOnly?: boolean }) {
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme)
@@ -45,12 +29,10 @@ export function AppSidebar({ bugOnly = false }: { bugOnly?: boolean }) {
     return `/testing?${params}`
   }
 
-  function navLink(to: string, label: string, icon: AppIconName, active: boolean) {
-    const OutlineIcon = OUTLINE_ICONS[icon]
-    const activeIcon = collapsed && active && resolvedTheme !== 'dark' ? COLLAPSED_ACTIVE_ICONS[icon] : undefined
+  function navLink(to: string, label: string, icon: SidebarIconName, active: boolean) {
     return <Link key={to} to={to} className={`sidebar-link${active ? ' is-active' : ''}`}
       aria-current={active ? 'page' : undefined} title={label}>
-      {!collapsed && OutlineIcon ? <OutlineIcon className="sidebar-icon" aria-hidden="true" /> : <AppIcon name={activeIcon ?? icon} size={22} className={`sidebar-icon sidebar-icon-${icon}`} />}
+      <SidebarIcon name={icon} />
       <span className="sidebar-link-label">{label}</span>
     </Link>
   }

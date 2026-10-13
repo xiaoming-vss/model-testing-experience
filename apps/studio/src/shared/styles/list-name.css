@@ -1,0 +1,19 @@
+/* Primary names share one typography contract across workbench lists. */
+:root:root .app-shell.app-shell-macos .ant-table-wrapper .ant-table .ant-table-tbody .tp-list-name .ant-typography {
+  color: var(--app-list-name) !important;
+  font-family: Arial, "Microsoft YaHei", "Noto Sans CJK SC", sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  line-height: 24px !important;
+  cursor: pointer;
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+:root:root .app-shell.app-shell-macos .ant-table-wrapper .ant-table .ant-table-tbody .tp-list-name :is(.ant-typography:hover, .ant-typography:focus-visible, a:focus-visible .ant-typography) {
+  color: var(--app-list-name-hover) !important;
+  text-decoration: underline;
+}
+:root:root .app-shell.app-shell-macos .ant-table-wrapper .ant-table .ant-table-tbody .tp-list-name :is(a, button):focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
+}

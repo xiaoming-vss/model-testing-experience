@@ -1042,18 +1042,6 @@
   -webkit-text-stroke: 0 !important;
 }
 
-:root:root .functional-test-page .functional-suite-list-table .functional-suite-list-name .ant-typography,
-:root:root .app-shell.app-shell-macos .functional-test-page .functional-suite-list-table .functional-suite-list-name .ant-typography {
-  color: var(--app-list-name) !important;
-  cursor: pointer;
-  text-decoration: none;
-  text-underline-offset: 3px;
-}
-:root:root .functional-suite-list-table .ant-table-tbody > tr:hover .functional-suite-list-name .ant-typography {
-  color: var(--app-list-name-hover) !important;
-  text-decoration: underline;
-}
-
 /* Requirement document comparison workspace. */
 .requirement-document-dialog :is(.ant-modal-container, .ant-modal-content) {
   max-height: calc(100vh - 72px);
