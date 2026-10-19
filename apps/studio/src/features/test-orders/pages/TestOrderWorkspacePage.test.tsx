@@ -8,6 +8,8 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { api, type User } from '@/services/api'
 import { TestOrderWorkspacePage } from './TestOrderWorkspacePage'
 
+vi.mock('../components/TestOrderGraphViewer', () => ({ TestOrderGraphViewer: ({ orderId }: { orderId: string }) => <div data-testid="inline-graph">内嵌用例图谱 {orderId}</div> }))
+
 vi.mock('@/shared/utils/feedback', () => ({ message: { success: vi.fn(), error: vi.fn() } }))
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
@@ -206,7 +208,7 @@ it('可以在工作台里从用例库挑用例加入测试单', async () => {
 })
 
 
-it('原用例图谱入口在新标签页打开独立页面并保留工作台', async () => {
+it('在当前页面切换图谱并保留执行页筛选', async () => {
   useAuthStore.setState({ user: { userId: 'user-1' } as User })
   vi.spyOn(api, 'getTestOrder').mockResolvedValue(order)
   vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(listResponse([entry]))
@@ -216,8 +218,14 @@ it('原用例图谱入口在新标签页打开独立页面并保留工作台', a
   seedAccess(client, 'owner')
   renderWorkspace(client)
   await screen.findByText('账号锁定')
-  await userEvent.setup().click(screen.getByRole('button', { name: '用例图谱' }))
-  expect(open).toHaveBeenCalledWith('/test-orders/order-1/graph', '_blank', 'noopener,noreferrer')
+  const user = userEvent.setup()
+  await user.type(screen.getByPlaceholderText('搜索用例 ID 或关键字'), '锁定')
+  await user.click(screen.getByText('用例图谱', { exact: true }))
+  expect(open).not.toHaveBeenCalled()
+  expect(screen.getByTestId('inline-graph')).toHaveTextContent('order-1')
+  expect(screen.getByText('账号锁定')).not.toBeVisible()
+  await user.click(screen.getByText('用例执行', { exact: true }))
+  expect(screen.getByPlaceholderText('搜索用例 ID 或关键字')).toHaveValue('锁定')
   expect(screen.getByText('账号锁定')).toBeVisible()
   expect(screen.queryByRole('dialog', { name: '用例图谱' })).not.toBeInTheDocument()
   expect(graph).not.toHaveBeenCalled()
@@ -261,7 +269,7 @@ it('快捷键说明按需显示，键盘切换详情时步骤与预期保持对�
   client.clear()
 })
 
-it('打开图谱后原工作台仍可使用执行快捷键', async () => {
+it('图谱视图停用隐藏执行页快捷键，切回后恢复', async () => {
   useAuthStore.setState({ user: { userId: 'user-1' } as User })
   vi.spyOn(api, 'getTestOrder').mockResolvedValue(order)
   vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(listResponse([entry]))
@@ -272,7 +280,11 @@ it('打开图谱后原工作台仍可使用执行快捷键', async () => {
   renderWorkspace(client)
   const user = userEvent.setup()
   await screen.findByText('账号锁定')
-  await user.click(screen.getByRole('button', { name: '用例图谱' }))
+  await user.click(screen.getByText('用例图谱', { exact: true }))
+  await user.keyboard('1')
+  expect(update).not.toHaveBeenCalled()
+  await user.click(screen.getByText('用例执行', { exact: true }))
+  await user.click(screen.getByText('账号锁定'))
   await user.keyboard('1')
   await waitFor(() => expect(update).toHaveBeenCalledWith('order-1', 'entry-1', { status: 'passed' }))
   client.clear()

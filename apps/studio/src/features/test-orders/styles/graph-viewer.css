@@ -15,3 +15,14 @@
   flex-direction: column;
   gap: 10px;
 }
+
+/* Keep the same workspace frame before, during and after graph generation. */
+.test-order-graph-viewer.ai-relations-page {
+  box-sizing: border-box;
+  border: 1px solid var(--app-surface-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+}
+.test-order-graph-viewer > .ai-relations-page-body {
+  background: var(--app-surface);
+}

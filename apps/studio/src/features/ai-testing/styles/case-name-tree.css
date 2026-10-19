@@ -255,3 +255,5 @@
 .ai-case-name-tree-children.point-list {
   gap: 10px;
 }
+
+.ai-case-tree-passthrough { display: contents; }

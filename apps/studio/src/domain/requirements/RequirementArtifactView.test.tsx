@@ -2,9 +2,10 @@ import understandingSource from './fixtures/requirement-understanding.example.js
 import extractionSource from './fixtures/document-extraction.example.json?raw'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, expect, it } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import { TestThemeProvider } from '@/test/TestThemeProvider'
-import { RequirementArtifactView } from './RequirementArtifactView'
+import * as artifactParser from './requirementArtifact'
+import { RequirementArtifactScope, RequirementArtifactValue, RequirementArtifactView } from './RequirementArtifactView'
 import { parseRequirementArtifact } from './requirementArtifact'
 
 const understanding = JSON.parse(understandingSource)
@@ -26,7 +27,7 @@ it('按模块和操作展示交互信息，保留未知与示例状态', async (
   await user.click(uiEntry)
   expect(screen.getAllByText('待确认').length).toBeGreaterThan(0)
   await user.click(screen.getByRole('button', { name: /转换类型$/ }))
-  expect(screen.getAllByText('默认值').length).toBeGreaterThan(0)
+  expect(screen.queryByText('默认值')).toBeNull()
   expect(screen.getAllByText('示例').length).toBeGreaterThan(0)
   expect(screen.queryByText('artifactType')).toBeNull()
   expect(screen.queryByText('confirmationStatus')).toBeNull()
@@ -50,7 +51,8 @@ it('旧文本由原有阅读器处理，非法新产物不会伪装成文本', (
 it('已知选项用实际取值命名，保留部分选项完整性的含义', async () => {
   const artifact = structuredClone(understanding)
   const control = artifact.modules[0].operations[0].interaction.controls[0]
-  const exampleFact = (value: string) => ({ value, confirmationStatus: 'example', sourceReferences: [{ sourceId: 'SRC01', locator: '合成选项示例', excerpt: null }], relatedQuestionIds: [] })
+  artifact.evidence.push({ id: 'EV_OPTION', sourceId: 'SRC01', locator: '合成选项示例' })
+  const exampleFact = (value: string) => ({ value, confirmationStatus: 'example', evidenceIds: ['EV_OPTION'] })
   control.options.items = [{ id: 'OPT01', value: exampleFact('任务级'), meaning: exampleFact('仅演示结构') }]
   control.options.completeness = exampleFact('partial')
   render(<TestThemeProvider><RequirementArtifactView content={artifact} /></TestThemeProvider>)
@@ -65,9 +67,10 @@ it('后续分支以分支条件命名，下一节点翻译为对应操作名', a
   const artifact = structuredClone(understanding)
   const flow = artifact.businessFlows[0]
   flow.steps.push({ id: 'FN02', moduleId: 'M01', operationId: 'O01', nextSteps: [] })
+  artifact.evidence.push({ id: 'EV_BRANCH', sourceId: 'SRC01', locator: '合成条件定位' })
   flow.steps[0].nextSteps.push({
     stepId: 'FN02',
-    condition: { value: '设备为有直接绑定关系的设备（如遁甲）', confirmationStatus: 'confirmed', sourceReferences: [{ sourceId: 'SRC01', locator: '合成条件定位', excerpt: null }], relatedQuestionIds: [] },
+    condition: { value: '设备为有直接绑定关系的设备（如遁甲）', confirmationStatus: 'confirmed', evidenceIds: ['EV_BRANCH'] },
     expectedBehavior: null,
     observableOutcome: null,
   })
@@ -81,4 +84,18 @@ it('后续分支以分支条件命名，下一节点翻译为对应操作名', a
   expect(within(flowItem).getByText('下一节点')).toBeVisible()
   expect(within(flowItem).queryByText('FN02')).toBeNull()
   expect(within(flowItem).getAllByText('筛选任务列表').length).toBeGreaterThan(0)
+})
+
+it('shares artifact parsing across fields and refreshes the index for a new snapshot', () => {
+  const parse = vi.spyOn(artifactParser, 'parseRequirementArtifact')
+  const snapshot = structuredClone(understanding)
+  const view = (artifact: typeof snapshot) => <TestThemeProvider><RequirementArtifactScope artifact={artifact}>{Array.from({ length: 12 }, (_, i) => <RequirementArtifactValue key={i} artifact={artifact} value={artifact.modules[0].purpose} />)}</RequirementArtifactScope></TestThemeProvider>
+  try {
+    const mounted = render(view(snapshot))
+    expect(parse).toHaveBeenCalledTimes(1)
+    mounted.rerender(view(snapshot))
+    expect(parse).toHaveBeenCalledTimes(1)
+    mounted.rerender(view(structuredClone(snapshot)))
+    expect(parse).toHaveBeenCalledTimes(2)
+  } finally { parse.mockRestore() }
 })

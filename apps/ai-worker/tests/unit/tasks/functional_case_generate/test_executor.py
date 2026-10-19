@@ -225,7 +225,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         if executor_cls is None:
             return
 
-        task = self._make_task(source_type="text", document_type="richtext")
+        task = self._make_task(source_type="text", document_type="pdf")
         executor = executor_cls(
             nanobot_config=NanobotConfig(),
             chain_runner=lambda **kwargs: None,
@@ -238,7 +238,48 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         )
 
         self.assertEqual(result.status, TaskStatus.FAILED)
-        self.assertIn("richtext", result.error_message or "")
+        self.assertIn("pdf", result.error_message or "")
+
+    def test_execute_accepts_richtext_and_uses_analyzed_source_content(self) -> None:
+        for checkpoint in (False, True):
+            with self.subTest(checkpoint=checkpoint), tempfile.TemporaryDirectory() as runtime:
+                task = self._make_task(
+                    document_type="richtext",
+                    checkpoint_enabled=checkpoint,
+                    current_stage="requirement_analysis",
+                )
+                captured = {}
+                progress_events = []
+
+                def chain_runner(**kwargs):
+                    captured.update(kwargs)
+                    return FunctionalChainRunResult(
+                        requirement_analysis_output='{"Platform_core_functions": []}',
+                        case_names_output='{"categories": []}',
+                        detailed_cases_output='{"cases": []}',
+                    )
+
+                def skill_runner(**kwargs):
+                    captured.update(kwargs)
+                    return '{"Platform_core_functions": []}'
+
+                executor = executor_module.FunctionalCaseNanobotExecutor(
+                    nanobot_config=NanobotConfig(runtime_root=runtime),
+                    chain_runner=chain_runner,
+                    skill_runner=skill_runner,
+                )
+                result = executor.execute(task, datetime.now().astimezone(), progress_events.append)
+                if checkpoint:
+                    self.assertIsNone(result)
+                    self.assertEqual(progress_events[-1].stage_status, "waiting_review")
+                    self.assertEqual(captured["skill_name"], "analyze-functional-requirements")
+                    self.assertEqual(captured["input_text"], task.payload.source_content)
+                else:
+                    self.assertEqual(result.status, TaskStatus.SUCCESS, result.error_message)
+                    self.assertEqual(captured["source_text"], task.payload.source_content)
+                    self.assertEqual(
+                        json.loads(result.result_summary_json)["documentType"], "richtext"
+                    )
 
     def test_execute_accepts_word_document_type_and_uses_source_content(self) -> None:
         executor_cls = getattr(executor_module, "FunctionalCaseNanobotExecutor", None)

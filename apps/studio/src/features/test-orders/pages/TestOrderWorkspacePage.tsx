@@ -1,7 +1,7 @@
+import { TestOrderGraphViewer } from '../components/TestOrderGraphViewer'
 import { ActionButton } from '@/shared/components/ActionButton'
 import {
   ArrowLeftOutlined,
-  ApartmentOutlined,
   QuestionCircleOutlined,
   SearchOutlined,
 } from '@ant-design/icons'
@@ -14,6 +14,7 @@ import {
   Modal,
   Popconfirm,
   Select,
+  Segmented,
   Space,
   Tooltip,
   Typography,
@@ -61,6 +62,7 @@ export function TestOrderWorkspacePage() {
   const queryClient = useQueryClient()
   const currentUserId = useAuthStore((state) => state.user?.userId)
 
+  const [workspaceView, setWorkspaceView] = useState<'execution' | 'graph'>('execution')
   const entryListRef = useRef<HTMLDivElement>(null)
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(() => searchParams.get('entryId'))
   const [keyword, setKeyword] = useState('')
@@ -227,16 +229,16 @@ export function TestOrderWorkspacePage() {
   // 自动前进默认关闭，开启后判定会前进到下一条未执行。
   const advanceAfterJudge = autoAdvance && selected?.status !== 'pending'
   useEffect(() => {
-    if (!advanceAfterJudge) return
+    if (workspaceView !== 'execution' || !advanceAfterJudge) return
     const index = visibleEntries.findIndex((entry) => entry.entryId === selected?.entryId)
     const next = visibleEntries.slice(index + 1).find((entry) => entry.status === 'pending')
     if (next) setSelectedEntryId(next.entryId ?? null)
-  }, [advanceAfterJudge, selected?.entryId, visibleEntries])
+  }, [workspaceView, advanceAfterJudge, selected?.entryId, visibleEntries])
 
   // 键盘：1/2/3/4 判定整条用例，上下切换条目。
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (saveMutation.isPending) return
+      if (workspaceView !== 'execution' || saveMutation.isPending) return
       const target = event.target as HTMLElement | null
       if (target && ['INPUT', 'TEXTAREA'].includes(target.tagName)) return
       if (event.key === 'ArrowDown') {
@@ -297,17 +299,9 @@ export function TestOrderWorkspacePage() {
               已执行 {order?.entriesExecuted ?? 0}/{order?.entriesTotal ?? 0}
             </span>
             <div className="test-order-orderbar-actions">
-              <ProjectActionButton
-                action="execute"
-                projectId={order?.projectId}
-                className="action-btn-graph"
-                icon={<ApartmentOutlined aria-hidden="true" />}
-                aria-label="用例图谱"
-                disabled={!order?.orderId}
-                onClick={() => window.open(`/test-orders/${encodeURIComponent(order?.orderId ?? orderId ?? '')}/graph`, '_blank', 'noopener,noreferrer')}
-              >
-                用例图谱
-              </ProjectActionButton>
+              <Segmented aria-label="测试单视图" value={workspaceView} disabled={!order?.orderId}
+                options={[{ label: '用例执行', value: 'execution' }, { label: '用例图谱', value: 'graph' }]}
+                onChange={value => setWorkspaceView(value as 'execution' | 'graph')} />
               <ProjectActionButton
                 action="write"
                 projectId={order?.projectId}
@@ -329,7 +323,8 @@ export function TestOrderWorkspacePage() {
             <Alert showIcon type="error" title={getErrorMessage(entriesQuery.error)} />
           ) : null}
 
-          <div className="test-order-workspace-cols">
+          {workspaceView === 'graph' && orderId && <div className="test-order-inline-graph"><TestOrderGraphViewer orderId={orderId} projectId={order?.projectId} canExecute={can('execute')} currentUserId={currentUserId} isProjectOwner={isOwner} /></div>}
+          <div className="test-order-workspace-cols" style={workspaceView === 'graph' ? { display: 'none' } : undefined}>
             <section className="workbench-panel test-order-side-panel">
               <div className="test-order-side-head">
                 <span className="test-order-side-title">

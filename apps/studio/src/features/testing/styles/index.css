@@ -1531,3 +1531,9 @@
 }
 
 /* Keep every test-suite name aligned with the task-list clickable-name treatment. */
+
+/* Embedded document columns share the detail page frame. */
+.requirement-document-inline .requirement-document-workspace.is-compare > .requirement-document-pane {
+  border: 0;
+  border-radius: 0;
+}

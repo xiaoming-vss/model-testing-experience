@@ -95,3 +95,26 @@
 @container requirement-material (max-width: 840px) {
   .requirement-material-comparison { grid-template-columns: minmax(0, 1fr); grid-auto-rows: minmax(420px, 1fr); overflow: auto; gap: 16px; }
 }
+
+/* Extraction uses the modal shell directly, without nested framed cards. */
+.requirement-extraction-workspace .requirement-material-comparison { gap: 0; }
+.requirement-extraction-workspace .requirement-material-panel { border: 0; border-radius: 0; }
+.requirement-extraction-workspace .requirement-material-panel + .requirement-material-panel { border-left: 1px solid var(--app-surface-border); }
+.requirement-extraction-workspace .requirement-material-panel-foot { display: none; }
+.requirement-extraction-footer, .requirement-extraction-footer-slot {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 24px;
+  color: var(--app-text-secondary); font-size: 12px;
+}
+.requirement-extraction-footer { flex-shrink: 0; min-height: 58px; padding: 12px 24px; border-top: 1px solid var(--app-surface-border); background: var(--app-list-toolbar-bg); }
+.requirement-extraction-footer-slot { margin-right: auto; }
+.ant-modal.ai-task-run-result-modal:has(.ant-tabs-tabpane-active .requirement-extraction-workspace) .ant-modal-body { padding: 0; }
+.ant-modal.ai-task-run-result-modal:has(.ant-tabs-tabpane-active .requirement-extraction-workspace) :is(.ant-modal-container, .ant-modal-content)::after { display: none; }
+@container requirement-material (max-width: 840px) {
+  .requirement-extraction-workspace .requirement-material-panel + .requirement-material-panel { border-left: 0; border-top: 1px solid var(--app-surface-border); }
+  .requirement-extraction-footer { padding-inline: 16px; }
+}
+
+.ant-modal.ai-task-run-result-modal .ant-modal-footer:has(.requirement-extraction-footer-slot) {
+  display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px;
+}
+.ant-modal.ai-task-run-result-modal .ant-modal-footer:has(.requirement-extraction-footer-slot) > .ant-btn { margin-inline-start: 0; }

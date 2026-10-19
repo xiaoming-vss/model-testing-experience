@@ -1,55 +1,38 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "artifactType": "requirement_understanding",
   "title": "转换任务列表使用理解：合成示例",
   "sources": [
     {
       "id": "SRC01",
       "name": "转换任务列表：合成演示输入，非产品已确认事实",
-      "type": "example",
-      "location": null,
-      "version": null
+      "type": "example"
     }
   ],
   "functionalOverview": {
     "purpose": {
       "value": "查看和筛选转换任务",
       "confirmationStatus": "example",
-      "sourceReferences": [
-        {
-          "sourceId": "SRC01",
-          "locator": "示例输入约定",
-          "excerpt": null
-        }
-      ],
-      "relatedQuestionIds": []
+      "evidenceIds": [
+        "EV001"
+      ]
     },
     "scope": [
       {
         "value": "转换任务列表筛选、分页与排序",
         "confirmationStatus": "example",
-        "sourceReferences": [
-          {
-            "sourceId": "SRC01",
-            "locator": "示例输入约定",
-            "excerpt": null
-          }
-        ],
-        "relatedQuestionIds": []
+        "evidenceIds": [
+          "EV001"
+        ]
       }
     ],
     "actors": [
       {
         "value": "用户",
         "confirmationStatus": "example",
-        "sourceReferences": [
-          {
-            "sourceId": "SRC01",
-            "locator": "示例输入约定",
-            "excerpt": null
-          }
-        ],
-        "relatedQuestionIds": []
+        "evidenceIds": [
+          "EV001"
+        ]
       }
     ],
     "explicitExclusions": []
@@ -86,14 +69,9 @@
       "purpose": {
         "value": "查看和筛选转换任务",
         "confirmationStatus": "example",
-        "sourceReferences": [
-          {
-            "sourceId": "SRC01",
-            "locator": "示例输入约定",
-            "excerpt": null
-          }
-        ],
-        "relatedQuestionIds": []
+        "evidenceIds": [
+          "EV001"
+        ]
       },
       "entryPoints": [
         {
@@ -101,27 +79,17 @@
           "path": {
             "value": "数据管理 → 转换数据",
             "confirmationStatus": "example",
-            "sourceReferences": [
-              {
-                "sourceId": "SRC01",
-                "locator": "示例输入约定",
-                "excerpt": null
-              }
-            ],
-            "relatedQuestionIds": []
+            "evidenceIds": [
+              "EV001"
+            ]
           },
           "actors": [
             {
               "value": "用户",
               "confirmationStatus": "example",
-              "sourceReferences": [
-                {
-                  "sourceId": "SRC01",
-                  "locator": "示例输入约定",
-                  "excerpt": null
-                }
-              ],
-              "relatedQuestionIds": []
+              "evidenceIds": [
+                "EV001"
+              ]
             }
           ],
           "conditions": []
@@ -134,48 +102,30 @@
           "goal": {
             "value": "设置筛选条件并查看转换任务列表",
             "confirmationStatus": "example",
-            "sourceReferences": [
-              {
-                "sourceId": "SRC01",
-                "locator": "示例输入约定",
-                "excerpt": null
-              }
-            ],
-            "relatedQuestionIds": []
+            "evidenceIds": [
+              "EV001"
+            ]
           },
-          "preconditions": [],
           "steps": [
             {
               "id": "ST01",
               "actor": {
                 "value": "用户",
                 "confirmationStatus": "example",
-                "sourceReferences": [
-                  {
-                    "sourceId": "SRC01",
-                    "locator": "示例输入约定",
-                    "excerpt": null
-                  }
-                ],
-                "relatedQuestionIds": []
+                "evidenceIds": [
+                  "EV001"
+                ]
               },
               "action": {
                 "value": "进入转换数据页面并设置已明确的筛选条件",
                 "confirmationStatus": "example",
-                "sourceReferences": [
-                  {
-                    "sourceId": "SRC01",
-                    "locator": "示例输入约定",
-                    "excerpt": null
-                  }
-                ],
-                "relatedQuestionIds": []
+                "evidenceIds": [
+                  "EV001"
+                ]
               },
               "systemResponse": {
                 "value": null,
-                "confirmationStatus": "unconfirmed",
-                "sourceReferences": [],
-                "relatedQuestionIds": []
+                "confirmationStatus": "unconfirmed"
               }
             },
             {
@@ -183,38 +133,23 @@
               "actor": {
                 "value": "用户",
                 "confirmationStatus": "example",
-                "sourceReferences": [
-                  {
-                    "sourceId": "SRC01",
-                    "locator": "示例输入约定",
-                    "excerpt": null
-                  }
-                ],
-                "relatedQuestionIds": []
+                "evidenceIds": [
+                  "EV001"
+                ]
               },
               "action": {
                 "value": "执行刷新操作",
                 "confirmationStatus": "example",
-                "sourceReferences": [
-                  {
-                    "sourceId": "SRC01",
-                    "locator": "示例输入约定",
-                    "excerpt": null
-                  }
-                ],
-                "relatedQuestionIds": []
+                "evidenceIds": [
+                  "EV001"
+                ]
               },
               "systemResponse": {
                 "value": "查看任务列表的记录标识与筛选字段",
                 "confirmationStatus": "example",
-                "sourceReferences": [
-                  {
-                    "sourceId": "SRC01",
-                    "locator": "示例输入约定",
-                    "excerpt": null
-                  }
-                ],
-                "relatedQuestionIds": []
+                "evidenceIds": [
+                  "EV001"
+                ]
               }
             }
           ],
@@ -225,52 +160,33 @@
                 "label": {
                   "value": "转换类型",
                   "confirmationStatus": "example",
-                  "sourceReferences": [
-                    {
-                      "sourceId": "SRC01",
-                      "locator": "示例输入约定",
-                      "excerpt": null
-                    }
-                  ],
-                  "relatedQuestionIds": []
+                  "evidenceIds": [
+                    "EV001"
+                  ]
                 },
                 "businessMeaning": {
                   "value": null,
                   "confirmationStatus": "unconfirmed",
-                  "sourceReferences": [],
                   "relatedQuestionIds": [
                     "Q01"
                   ]
                 },
                 "type": {
                   "value": null,
-                  "confirmationStatus": "unconfirmed",
-                  "sourceReferences": [],
-                  "relatedQuestionIds": []
+                  "confirmationStatus": "unconfirmed"
                 },
                 "options": {
                   "items": [],
                   "completeness": {
                     "value": "unknown",
                     "confirmationStatus": "unconfirmed",
-                    "sourceReferences": [
-                      {
-                        "sourceId": "SRC01",
-                        "locator": "示例输入约定",
-                        "excerpt": null
-                      }
+                    "evidenceIds": [
+                      "EV001"
                     ],
                     "relatedQuestionIds": [
                       "Q01"
                     ]
                   }
-                },
-                "inputRules": [],
-                "defaultValue": {
-                  "value": null,
-                  "confirmationStatus": "unconfirmed",
-                  "sourceReferences": [],
-                  "relatedQuestionIds": []
                 }
               },
               {
@@ -278,60 +194,35 @@
                 "label": {
                   "value": "状态",
                   "confirmationStatus": "example",
-                  "sourceReferences": [
-                    {
-                      "sourceId": "SRC01",
-                      "locator": "示例输入约定",
-                      "excerpt": null
-                    }
-                  ],
-                  "relatedQuestionIds": []
+                  "evidenceIds": [
+                    "EV001"
+                  ]
                 },
                 "businessMeaning": {
                   "value": null,
-                  "confirmationStatus": "unconfirmed",
-                  "sourceReferences": [],
-                  "relatedQuestionIds": []
+                  "confirmationStatus": "unconfirmed"
                 },
                 "type": {
                   "value": null,
-                  "confirmationStatus": "unconfirmed",
-                  "sourceReferences": [],
-                  "relatedQuestionIds": []
+                  "confirmationStatus": "unconfirmed"
                 },
                 "options": {
                   "items": [],
                   "completeness": {
                     "value": "unknown",
                     "confirmationStatus": "unconfirmed",
-                    "sourceReferences": [
-                      {
-                        "sourceId": "SRC01",
-                        "locator": "示例输入约定",
-                        "excerpt": null
-                      }
-                    ],
-                    "relatedQuestionIds": []
+                    "evidenceIds": [
+                      "EV001"
+                    ]
                   }
-                },
-                "inputRules": [],
-                "defaultValue": {
-                  "value": null,
-                  "confirmationStatus": "unconfirmed",
-                  "sourceReferences": [],
-                  "relatedQuestionIds": []
                 }
               }
             ],
             "trigger": {
               "value": "设置条件并刷新",
               "confirmationStatus": "example",
-              "sourceReferences": [
-                {
-                  "sourceId": "SRC01",
-                  "locator": "示例输入约定",
-                  "excerpt": null
-                }
+              "evidenceIds": [
+                "EV001"
               ],
               "relatedQuestionIds": [
                 "Q02"
@@ -339,102 +230,58 @@
             },
             "initialState": {
               "value": null,
-              "confirmationStatus": "unconfirmed",
-              "sourceReferences": [],
-              "relatedQuestionIds": []
+              "confirmationStatus": "unconfirmed"
             },
-            "dependencies": [],
             "results": {
               "location": {
                 "value": "转换任务列表",
                 "confirmationStatus": "example",
-                "sourceReferences": [
-                  {
-                    "sourceId": "SRC01",
-                    "locator": "示例输入约定",
-                    "excerpt": null
-                  }
-                ],
-                "relatedQuestionIds": []
+                "evidenceIds": [
+                  "EV001"
+                ]
               },
               "fields": [
                 {
                   "value": "转换任务 ID",
                   "confirmationStatus": "example",
-                  "sourceReferences": [
-                    {
-                      "sourceId": "SRC01",
-                      "locator": "示例输入约定",
-                      "excerpt": null
-                    }
-                  ],
-                  "relatedQuestionIds": []
+                  "evidenceIds": [
+                    "EV001"
+                  ]
                 },
                 {
                   "value": "转换类型",
                   "confirmationStatus": "example",
-                  "sourceReferences": [
-                    {
-                      "sourceId": "SRC01",
-                      "locator": "示例输入约定",
-                      "excerpt": null
-                    }
-                  ],
-                  "relatedQuestionIds": []
+                  "evidenceIds": [
+                    "EV001"
+                  ]
                 },
                 {
                   "value": "状态",
                   "confirmationStatus": "example",
-                  "sourceReferences": [
-                    {
-                      "sourceId": "SRC01",
-                      "locator": "示例输入约定",
-                      "excerpt": null
-                    }
-                  ],
-                  "relatedQuestionIds": []
+                  "evidenceIds": [
+                    "EV001"
+                  ]
                 }
               ],
               "recordIdentity": {
                 "value": "转换任务 ID",
                 "confirmationStatus": "example",
-                "sourceReferences": [
-                  {
-                    "sourceId": "SRC01",
-                    "locator": "示例输入约定",
-                    "excerpt": null
-                  }
-                ],
-                "relatedQuestionIds": []
+                "evidenceIds": [
+                  "EV001"
+                ]
               },
               "scope": {
                 "value": null,
-                "confirmationStatus": "unconfirmed",
-                "sourceReferences": [],
-                "relatedQuestionIds": []
-              },
-              "emptyState": {
-                "value": null,
-                "confirmationStatus": "unconfirmed",
-                "sourceReferences": [],
-                "relatedQuestionIds": []
+                "confirmationStatus": "unconfirmed"
               }
             },
             "pagination": {
               "value": null,
               "confirmationStatus": "unconfirmed",
-              "sourceReferences": [],
               "relatedQuestionIds": [
                 "Q03"
               ]
-            },
-            "sorting": {
-              "value": null,
-              "confirmationStatus": "unconfirmed",
-              "sourceReferences": [],
-              "relatedQuestionIds": []
-            },
-            "validationAndFeedback": []
+            }
           },
           "ruleIds": [
             "R01"
@@ -452,14 +299,9 @@
           "note": {
             "value": "进入页面，设置筛选条件，刷新并观察结果",
             "confirmationStatus": "example",
-            "sourceReferences": [
-              {
-                "sourceId": "SRC01",
-                "locator": "示例输入约定",
-                "excerpt": null
-              }
-            ],
-            "relatedQuestionIds": []
+            "evidenceIds": [
+              "EV001"
+            ]
           }
         }
       ],
@@ -480,44 +322,28 @@
       "operationIds": [
         "O01"
       ],
-      "preconditions": [],
       "trigger": {
         "value": "执行刷新操作",
         "confirmationStatus": "example",
-        "sourceReferences": [
-          {
-            "sourceId": "SRC01",
-            "locator": "示例输入约定",
-            "excerpt": null
-          }
-        ],
-        "relatedQuestionIds": []
+        "evidenceIds": [
+          "EV001"
+        ]
       },
       "expectedBehavior": [
         {
           "value": "按设置的条件查询转换任务列表",
           "confirmationStatus": "example",
-          "sourceReferences": [
-            {
-              "sourceId": "SRC01",
-              "locator": "示例输入约定",
-              "excerpt": null
-            }
-          ],
-          "relatedQuestionIds": []
+          "evidenceIds": [
+            "EV001"
+          ]
         }
       ],
       "observableOutcome": {
         "value": "在转换任务列表核对记录标识与筛选字段",
         "confirmationStatus": "example",
-        "sourceReferences": [
-          {
-            "sourceId": "SRC01",
-            "locator": "示例输入约定",
-            "excerpt": null
-          }
-        ],
-        "relatedQuestionIds": []
+        "evidenceIds": [
+          "EV001"
+        ]
       },
       "relatedQuestionIds": [
         "Q02"
@@ -547,14 +373,9 @@
           "blocking": true
         }
       ],
-      "sourceReferences": [
-        {
-          "sourceId": "SRC01",
-          "locator": "示例输入约定",
-          "excerpt": null
-        }
-      ],
-      "answer": null
+      "evidenceIds": [
+        "EV001"
+      ]
     },
     {
       "id": "Q02",
@@ -573,14 +394,9 @@
           "blocking": true
         }
       ],
-      "sourceReferences": [
-        {
-          "sourceId": "SRC01",
-          "locator": "示例输入约定",
-          "excerpt": null
-        }
-      ],
-      "answer": null
+      "evidenceIds": [
+        "EV001"
+      ]
     },
     {
       "id": "Q03",
@@ -599,14 +415,16 @@
           "blocking": true
         }
       ],
-      "sourceReferences": [
-        {
-          "sourceId": "SRC01",
-          "locator": "示例输入约定",
-          "excerpt": null
-        }
-      ],
-      "answer": null
+      "evidenceIds": [
+        "EV001"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "EV001",
+      "sourceId": "SRC01",
+      "locator": "示例输入约定"
     }
   ]
 }

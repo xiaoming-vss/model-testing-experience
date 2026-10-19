@@ -3,6 +3,11 @@
 STRUCTURED_REQUIREMENT_INPUT_INSTRUCTION = (
     "上游若为 requirement_understanding JSON，请读取模块、操作、交互、规则和问题的业务内容，"
     "保留来源与确认状态；示例不作为产品事实，未答复问题继续有效。"
+    "需求理解仅支持精简契约 2.0；evidenceIds 必须解析到 evidence 的来源定位与摘录，"
+    "operation.ruleIds 和流程 conditionRuleIds 解析到 businessRules，多条件为同时满足。"
+    "2.0 事实对象省略 confirmationStatus 时为有证据的 confirmed；明确标记的未知、冲突、"
+    "示例和不适用不得升级为已确认。概述字符串不单独构成已确认规则；可选字段省略为未记录。"
+    "同一规则经多个入口引用只是一条规则，不重复生成测试点；不要把证据索引展开复制到输出。"
     "需求理解与五字段分析是不同产物，不把字段名或转义符当业务名称。"
 )
 

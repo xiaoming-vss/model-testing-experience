@@ -299,6 +299,12 @@ class AiGenerateTaskRepository(ResourceRepository):
             .with_for_update()
         )
 
+    async def get_case(self, case_id: str) -> FunctionTestCase | None:
+        """Look up a fixed case ID across suites before adopting a candidate ID."""
+        return await self.session.scalar(
+            select(FunctionTestCase).where(FunctionTestCase.case_id == case_id)
+        )
+
     async def get_function_case_by_suite_and_title(
         self, suite_id: str, title: str
     ) -> FunctionTestCase | None:

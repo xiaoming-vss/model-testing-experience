@@ -59,3 +59,52 @@ uv run python -m testing_agent.cli.skills /home/xiaoming/下载/skills/default-s
 从 `/home/xiaoming/下载/skills/default-skill-004` 通过既有 `sync_builtin_skills` 发布服务更新 `extract-docx-enhanced-text`、新增 `extract-richtext-enhanced-text`，其余默认及自定义技能不变。共 10 个文件，已读取真实 S3 对象逐项比对源内容、大小及 SHA-256，全部一致。Word 技能不再接收 TXT 主文档；Worker 按 Word/DOCX 与 richtext 选择第一阶段技能，后续分析逻辑及输出契约一致。详见[两阶段需求分析](../ai-worker/requirement-analysis-two-stage-design.md#2026-10-08-富文本输入接入)。
 
 同步时 AI 队列无 pending/claimed/running 任务，已重启本地 AI Worker 并确认恢复轮询；控制面自动重载后在线 OpenAPI 已注册图片下载接口。未提交真实模型分析或代替用户审核业务产物。
+
+
+## 2026-10-16 精简需求理解技能
+
+实际源为 `/home/xiaoming/下载/skills/default-skill-004`。发布前对比默认库清单，五个目标技能的原文件与该源及 default-skill-003 完全一致；本次修改当前 004 源，保留历史目录。
+
+通过既有发布服务只更新以下五个默认技能：
+
+- `prd-feature-understanding-skill`：主指令、输出结构、来源说明、Schema 和示例统一为需求理解 2.0；证据集中登记、独立规则集中定义、操作与流程按 ID 引用，省略无记录的可选字段。
+- `analyze-functional-requirements`：解析集中证据与规则引用，来源映射仍输出本阶段的字符串数组，复用规则不重复生成分析目标。
+- `generate-solution-test-points`：从同一独立规则及实际条件设计测试点，不因多个入口引用重复计数，保持 categories 输出。
+- `generate-solution-test-cases`：按证据、操作及规则引用展开已确认测试点，保持 cases 输出和缺口边界。
+- `update-test-case-graph`：解析 requirement_content 中序列化的精简需求；规则与流程用于理解，图谱节点仍只来自原始用例，保持图谱输出协议。
+
+只支持需求理解 2.0，材料提取维持独立 1.0 契约。程序中的长篇精简生成指令已删除，由技能维护业务分析方法，程序保留 Schema 校验和有界输出修正。
+
+五个技能通过 quick_validate，技能 Schema 与程序契约一致，示例通过结构及业务引用校验。38 个发布文件已读取真实 S3 对象并逐项核对内容、大小和 SHA-256；非目标技能哈希不变。发布忽略 Python 缓存文件。再次确认 AI 队列为空后，已用原启动参数平滑重启本地 AI Worker，进程存活且已恢复轮询；控制面沿用本地自动重载。平台与当前源均没有 code-risk-analysis，本次没有创建或发布该技能。
+
+未执行真实模型生成；自动校验和示例验证不代表模型对任意需求的实际输出质量已经验收。
+
+### 2026-10-17 需求理解质量整改
+
+当前本地技能源为 `/home/xiaoming/下载/skills/default-skill-005`。已通过默认技能发布服务同步 prd-feature-understanding-skill、analyze-functional-requirements、generate-solution-test-points、generate-solution-test-cases、update-test-case-graph 五项，共 39 个文件，下载内容、大小和 SHA-256 全部核对；其余默认技能未改动。
+
+需求理解新增确认承接、规则去重、阶段放行和状态聚合复核；后续分析、测试点、用例、关系图分别消费确认和冲突边界。保持现有各阶段输出协议；需求理解仅支持 2.0。技能结构及示例验证通过，模拟模型测试验证确认遗漏修正，不代表真实模型输出质量已验收。
+
+第二轮质量整改针对新产物的四类残留问题，更新同一批五项技能并重新发布、回读校验全部 39 个文件：争议事实显式标记状态并局部关联问题；状态清单差异须有明确依据才能区分适用范围；主流程区分业务推进与可选查看；重试路径在同一流程内明确恢复后继。操作通过规则引用减少重复，分页、并发与完成判定分别归属。
+
+不根据“有关联问题”机械否定整条规则，避免误伤已确认部分。现有 2.0 契约已支持局部 unconfirmed/conflicting，未增加程序语义猜测或前端字段。技能结构验证、两组针对性契约样例及 39 项需求分析回归通过；本轮未执行真实模型重新生成，语义改善仍需后续产物验收。
+
+第三轮为窄范围技能修订：仅更新 prd-feature-understanding-skill 的入口指引和质量复核，发布回读验证其 7 个文件，其余默认技能保持原摘要。新增逐断言证据边界、同一操作不同动作的推进条件、优先在同一主流程接回重试节点，以及旧问题逐项处置要求。未知选项只有影响已要求的覆盖时才形成局部问题。未修改程序、输出 Schema 或前端；技能结构与引用路径检查通过，本轮未重新发起真实模型生成。
+
+需求理解技能重整候选（尚未发布）：本地 default-skill-005 中的 prd-feature-understanding-skill 已将入口整理为事实、规则与操作、流程、复核四步，质量参考压缩为统一验收表，保留聚合状态和修订的条件分支。当前远端仍为第三轮发布版本；本地候选仅通过技能结构、引用路径和 JSON 资源检查，等待用户提供输入进行真实生成验收后再决定发布。修改前内容保存在忽略目录 .scratch/requirement-quality-remediation/before-restructure。
+
+本地重整候选已使用用户提供的完整提取输入完成一次真实 deepseek-flash 验证（独立目录，未改平台运行）。应用层第一次生成因 5 个重复控件 ID 失败，修正后结构与 10 项确认来源检查通过；业务审查仍发现争议结论被确认为事实、状态清单直接合并、可选回放进入主路径。候选未达到发布条件，远端继续保留第三轮版本。原始结果与验收记录保存在 .scratch/requirement-quality-remediation/candidate-evaluation/。
+
+需求理解候选已完成多轮真实生成与业务修订验证并发布：更新 prd-feature-understanding-skill 共 9 个文件，逐文件回读内容、大小与 SHA-256 一致，其他系统默认技能摘要保持不变。当前本地来源仍为 `/home/xiaoming/下载/skills/default-skill-005`。
+
+新增来源预检，区分用户原话和上游提取解释；记录独立要求覆盖，保留主体/范围/例外；系统处理和可选查看分开，历史与重试复用主路径；单一候选文件定稿，避免临时简版丢失要求；附带 Schema 与无后继流程质量检查脚本。内部 preflight/coverage 文件不进入最终 2.0 JSON，前端与 API 契约未变。
+
+原始输入为用户 269a0ae3 附件（未人工修订）。最终视频产物通过 Schema、引用、10 项确认来源及选定业务回归检查，保留 3 个实际待确认问题。该结论来自多轮生成与业务审阅后的修订，并非一次生成必过；中间失败结果和中断续跑记录已保留。验收产物、输入摘要与实验记录位于 `.scratch/requirement-quality-remediation/`。模型自查和结构检查不替代最终业务审核。
+
+最终发布版另完成报销/付款跨业务复核：规则和剩余问题在修订前后保持一致，保存/提交、审批/付款、60 秒失败重试、批次聚合、权限和可选查看均核对；原生校验器、确认来源及 skill 流程质量检查通过。两份最终实验的 skill 副本与当前发布源逐文件一致。完整验收边界、失败过程和结果路径见 `.scratch/requirement-quality-remediation/acceptance-report.md`。
+
+## 2026-10-17 第一阶段抽取优化发布
+
+用户确认发布后，从 `/home/xiaoming/下载/skills/default-skill-005` 同步 `extract-docx-enhanced-text` 与 `extract-richtext-enhanced-text`，各6个文件，共12个文件。发布前核对源文件与已验收实验快照完全一致，并核对远端旧清单未被其他更新覆盖；通过既有 `sync_builtin_skills` 发布后，逐项回读真实S3对象，内容、大小、SHA-256均一致，其他默认技能哈希未变化。
+
+发布及重启检查时AI任务队列为空。原AI Worker正常停止后，使用原启动参数与环境启动新Worker，加载确认来源承接及完整JSON文件交接代码，日志确认恢复5秒轮询。未改写历史任务、未代替用户发起业务审核；新第一阶段执行使用更新后的技能与Worker。验收明细保存在本次本地实验记录中。

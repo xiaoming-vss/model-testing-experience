@@ -3,6 +3,7 @@ import sharedCss from './index.css?raw'
 import reviewCss from './task-review.css?raw'
 import candidateCss from './candidate-review.css?raw'
 import resultCss from './run-result.css?raw'
+import analysisCss from './requirement-analysis.css?raw'
 
 const aiTestingCss = `${sharedCss}\n${reviewCss}\n${candidateCss}\n${resultCss}`
 
@@ -12,6 +13,49 @@ afterEach(() => {
 })
 
 describe('运行结果弹框布局', () => {
+  it('需求分析 JSON 预览约束编辑器高度并由内部滚动', () => {
+    document.head.innerHTML = `<style>${aiTestingCss}\n${analysisCss}</style>`
+    document.body.innerHTML = `
+      <div class="ai-requirement-analysis-preview-modal"><div class="ai-task-run-result-modal-content">
+        <div class="json-editor-wrap"><div class="json-editor-shell">
+          <div class="json-editor-toolbar"></div><div class="json-editor-codemirror">
+            <div class="cm-editor"><div class="cm-scroller"></div></div>
+          </div>
+        </div></div>
+      </div></div>`
+    for (const selector of ['.json-editor-wrap', '.json-editor-shell', '.json-editor-codemirror', '.cm-editor']) {
+      const style = getComputedStyle(document.querySelector(selector)!)
+      expect(style.minHeight).toBe('0px')
+      expect(style.overflow).toBe('hidden')
+      expect(style.flexGrow).toBe('1')
+    }
+    const scroller = getComputedStyle(document.querySelector('.cm-scroller')!)
+    expect(scroller.overflow).toBe('auto')
+    expect(scroller.minHeight).toBe('0px')
+    expect(getComputedStyle(document.querySelector('.json-editor-toolbar')!).flexShrink).toBe('0')
+  })
+
+  it('需求分析可视化在分析样式后加载时仍占满审核区', () => {
+    document.head.innerHTML = `<style>${aiTestingCss}\n${analysisCss}</style>`
+    document.body.innerHTML = `
+      <div class="functional-stage-review-modal">
+        <div class="ant-tabs ai-requirement-analysis-tabs review">
+          <div class="ant-tabs-content-holder">
+            <div class="ant-tabs-content"><div class="ant-tabs-tabpane ant-tabs-tabpane-active">
+              <div class="ai-requirement-analysis-review-diagram"></div>
+            </div></div>
+          </div>
+        </div>
+      </div>`
+    const holder = getComputedStyle(document.querySelector('.ant-tabs-content-holder')!)
+    expect(holder.maxHeight).toBe('none')
+    expect(holder.minHeight).toBe('0px')
+    const diagram = getComputedStyle(document.querySelector('.ai-requirement-analysis-review-diagram')!)
+    expect(diagram.height).toBe('100%')
+    expect(diagram.minHeight).toBe('0px')
+    expect(diagram.overflow).toBe('auto')
+  })
+
   it('功能阶段审核保留视口高度和可收缩编辑区，不被通用结果弹窗覆盖', () => {
     document.head.innerHTML = `<style>${aiTestingCss}</style>`
     document.body.innerHTML = `

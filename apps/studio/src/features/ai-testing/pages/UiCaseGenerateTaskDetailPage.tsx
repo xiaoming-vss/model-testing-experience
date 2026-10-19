@@ -1,3 +1,4 @@
+import { ArtifactViewTabs } from '../components/ArtifactViewTabs'
 import { useTaskRunDialog, type TaskRunDialogRequest } from '../hooks/useTaskRunDialog'
 import { listTotal } from '@/shared/api/request'
 import { getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
@@ -14,7 +15,7 @@ import { ProjectActionModal } from '@/features/projects/components/ProjectAction
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ArrowLeftOutlined, CodeOutlined, DownOutlined, EditOutlined, FileZipOutlined, HistoryOutlined, RightOutlined, UploadOutlined } from '@ant-design/icons'
-import { Alert, Button, Card, Descriptions, Empty, Input, Modal, Popconfirm, Select, Space, Spin, Table, Tabs, Tag, Tooltip, Typography } from 'antd'
+import { Alert, Button, Card, Descriptions, Empty, Input, Modal, Popconfirm, Select, Space, Spin, Table, Tag, Tooltip, Typography } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -780,7 +781,7 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
                 <Tag color="purple">步骤 {candidateStats.steps}</Tag>
               </div>
             </div>
-            <Tabs
+            <ArtifactViewTabs jsonCopyText={draftYaml} copyKey="yaml" copyLabel="复制 YAML"
               items={[
                 {
                   key: 'preview',

@@ -37,7 +37,8 @@ from testing_agent_ai_worker.worker.runner import TaskExecutor
 
 from .validation import ValidationContext, context
 
-SUPPORTED_FUNCTIONAL_SOURCE_TYPES = {"text", "word"}
+# source_content 已由控制面提供需求理解正文，document_type 保留原始材料类型。
+SUPPORTED_FUNCTIONAL_SOURCE_TYPES = {"text", "word", "richtext"}
 LOGGER = logging.getLogger("testing_agent_ai_worker")
 
 

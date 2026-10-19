@@ -1,3 +1,4 @@
+import { ArtifactModeSwitch, ArtifactViewTabs } from '../components/ArtifactViewTabs'
 import { useTaskRunDialog, type TaskRunDialogRequest } from '../hooks/useTaskRunDialog'
 import { listTotal } from '@/shared/api/request'
 import { getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
@@ -27,6 +28,7 @@ import '@/features/ai-testing/styles/requirement-analysis.css'
 import '@/features/ai-testing/styles/case-name-tree.css'
 import '@/features/ai-testing/styles/run-result.css'
 import '@/features/ai-testing/styles/task-detail-v2.css'
+import '@/features/ai-testing/styles/functional-artifact-modal.css'
 import type { FunctionalCaseGenerateTaskRun, FunctionalCaseGenerateTaskRunImportConflict } from '@/features/ai-testing/types'
 import { getConfigStageFieldContent, getGeneratedCaseImportStats, getOutputRepairProgress, isJsonText } from '@/features/ai-testing/utils/functionalOutput'
 import { buildRevisionTemplate, getRevisionQuestions } from '@/features/ai-testing/utils/functionalRevision'
@@ -49,9 +51,9 @@ import { saveBlob } from '@/shared/utils/download'
 import { goBackOrFallback } from '@/shared/utils/backNavigation'
 import { formatStructuredContent } from '@/shared/utils/value'
 import { formatTime, getErrorMessage, normalizeRequirementId, normalizeSprintId, pickUpdatedAt } from '@/utils/format'
-import { ArrowLeftOutlined, CodeOutlined, CopyOutlined, DownloadOutlined, FileTextOutlined, FormatPainterOutlined, HistoryOutlined, JavaScriptOutlined, LinkOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, CodeOutlined, DownloadOutlined, FileTextOutlined, FormatPainterOutlined, HistoryOutlined, JavaScriptOutlined, LinkOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, Button, Checkbox, Empty, Form, Input, Modal, Popconfirm, Select, Spin, Tabs, Tag } from 'antd'
+import { Alert, Button, Checkbox, Empty, Form, Input, Modal, Popconfirm, Select, Spin, Tag } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -151,8 +153,7 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
   const [reviewSubmitAction, setReviewSubmitAction] = useState<'approve' | 'reject' | null>(null)
   const [reviewComment, setReviewComment] = useState('')
   const [candidateYaml, setCandidateYaml] = useState('')
-  const [selectedCaseKey, setSelectedCaseKey] = useState('')
-  const [selectedCaseYaml, setSelectedCaseYaml] = useState('')
+  const [candidateView, setCandidateView] = useState('visual')
   const [revisionTarget, setRevisionTarget] = useState<'stage' | 'final' | null>(null)
   const [revisionFooter, setRevisionFooter] = useState<HTMLDivElement | null>(null)
   const [revisionInstruction, setRevisionInstruction] = useState('')
@@ -642,44 +643,6 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
   const canEditCandidate = canReviewSelectedRun
   const candidateDirty = candidateYaml !== formatStructuredContent(selectedRun?.resultYaml ?? '')
 
-  function handleCaseSelect(key: string, raw: Record<string, unknown>) {
-    // 再次点击已选中的卡片取消选中，右侧编辑区回到完整候选内容。
-    if (key === selectedCaseKey) {
-      setSelectedCaseKey('')
-      setSelectedCaseYaml(candidateYaml)
-      return
-    }
-    setSelectedCaseKey(key)
-    setSelectedCaseYaml(formatStructuredContent(JSON.stringify({ cases: [raw] })))
-  }
-
-  function handleSelectedCaseChange(value: string) {
-    setSelectedCaseYaml(value)
-    // 未选中卡片时编辑器直接对应完整候选内容。
-    if (!selectedCaseKey) {
-      setCandidateYaml(value)
-      return
-    }
-    const [moduleName, indexText] = selectedCaseKey.split(':')
-    const caseIndex = Number(indexText)
-    if (!moduleName || !Number.isInteger(caseIndex)) return
-    try {
-      const parsed = JSON.parse(candidateYaml) as { cases?: Array<Record<string, unknown>> }
-      if (!Array.isArray(parsed.cases)) return
-      const matchingIndexes = parsed.cases
-        .map((item, index) => ({ item, index }))
-        .filter(({ item }) => String(item.case_module ?? item.module ?? item.module_name ?? item.moduleName ?? item.group ?? '未分组') === moduleName)
-      const target = matchingIndexes[caseIndex]?.index
-      if (target === undefined) return
-      const selected = JSON.parse(value) as { cases?: Array<Record<string, unknown>> }
-      if (!selected.cases?.[0]) return
-      parsed.cases[target] = selected.cases[0]
-      setCandidateYaml(formatStructuredContent(JSON.stringify(parsed)))
-    } catch {
-      // Keep the editor draft visible while the selected JSON is temporarily invalid.
-    }
-  }
-
   useEffect(() => {
     if (!resultModalRunId) {
       setCandidateYaml('')
@@ -689,9 +652,7 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
     setReviewComment(selectedRun?.reviewComment ?? '')
     const formatted = formatStructuredContent(selectedRun?.resultYaml ?? '')
     setCandidateYaml(formatted)
-    // 打开审核时默认不选中任何用例，编辑区展示完整候选内容。
-    setSelectedCaseKey('')
-    setSelectedCaseYaml(formatted)
+    setCandidateView('visual')
   }, [resultModalRunId, selectedRun?.reviewComment, selectedRun?.resultYaml])
 
   useEffect(() => {
@@ -1308,14 +1269,13 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
         />
 
         <Modal
-          className="ai-relations-modal"
+          className="ai-relations-modal functional-artifact-modal"
           title="用例图谱"
           open={Boolean(graphRunId)}
           onCancel={() => setGraphRunId(null)}
           footer={null}
-          width="95vw"
-          style={{ top: '5dvh', paddingBottom: 0 }}
-          styles={{ body: { height: 'calc(90dvh - 88px)', minHeight: 0, overflow: 'hidden' } }}
+          width="min(2000px, calc(100vw - 56px))"
+          centered
           mask={{ closable: false }}
           destroyOnHidden
         >
@@ -1324,7 +1284,7 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
 
         <Modal
           mask={{ closable: false }}
-          className={`ai-task-run-result-modal${showStageReviewInRunResultModal ? ' review functional-stage-review-modal' : ''}${showStageReviewInRunResultModal && revisionTarget !== 'stage' ? ' stage-review-with-comment' : ''}`}
+          className={`ai-task-run-result-modal${!showStageReviewInRunResultModal && (runResultModal?.key === 'requirementAnalysis' || runResultModal?.key === 'caseNames') ? ' functional-artifact-modal' : ''}${runResultModal?.key === 'requirementAnalysis' && !showStageReviewInRunResultModal ? ' ai-requirement-analysis-preview-modal' : ''}${showStageReviewInRunResultModal ? ' review functional-stage-review-modal' : ''}${showStageReviewInRunResultModal && revisionTarget !== 'stage' ? ' stage-review-with-comment' : ''}`}
           title={showStageReviewInRunResultModal ? '审核' : runResultModal?.label ?? '运行结果'}
           open={Boolean(runResultModal)}
           onCancel={() => { if (!reviseStageMutation.isPending) { setRevisionTarget(null); setRunResultModal(null) } }}
@@ -1383,7 +1343,7 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
                 </Button>,
               ]
           }
-          width={revisionTarget === 'stage' ? "calc(100vw - 56px)" : "min(1620px, calc(100vw - 72px))"}
+          width={!showStageReviewInRunResultModal && (runResultModal?.key === 'requirementAnalysis' || runResultModal?.key === 'caseNames') ? "min(2000px, calc(100vw - 56px))" : revisionTarget === 'stage' ? "calc(100vw - 56px)" : "min(1620px, calc(100vw - 72px))"}
           centered
           destroyOnHidden
         >
@@ -1407,7 +1367,7 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
                     <span>当前编辑的是本阶段产物，保存后会写回当前阶段输出，审核通过后继续进入下一阶段。</span>
                   </div>
                   {stageOutputIsCaseNames ? (
-                    <Tabs
+                    <ArtifactViewTabs jsonCopyText={stageOutputDraft}
                       className="ai-case-names-inner-tabs expanded review"
                       size="small"
                       items={[
@@ -1445,7 +1405,7 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
                       ]}
                     />
                   ) : stageOutputIsRequirementAnalysis ? (
-                    <Tabs
+                    <ArtifactViewTabs jsonCopyText={stageOutputDraft}
                       className="ai-requirement-analysis-tabs review"
                       size="small"
                       activeKey={stageRequirementAnalysisView}
@@ -1518,7 +1478,7 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
 
         <Modal
           mask={{ closable: false }}
-          className="ai-task-import-result-modal functional-candidate-review-modal functional-candidate-workbench-modal tp-surface"
+          className="ai-task-import-result-modal functional-candidate-review-modal functional-candidate-workbench-modal functional-artifact-modal tp-surface"
           title={
             <div className="functional-candidate-review-title">
               <div className="functional-candidate-review-title-main">
@@ -1590,25 +1550,26 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
                   </div>
                 </div>
               )
-              : <Button type="primary" onClick={closeResultModal}>关闭</Button>
+              : null
           }
-          width="calc(100vw - 56px)"
+          width="min(2000px, calc(100vw - 56px))"
           centered
           destroyOnHidden
         >
           <div className={`revision-workspace${revisionTarget === 'final' ? ' is-revising' : ''}`}><div className="revision-source">
             <Form layout="vertical" className="ai-task-import-result-form">
-              <div className="functional-candidate-workbench">
-                <section className="functional-candidate-visual-pane" aria-label="候选用例可视化">
+              <ArtifactModeSwitch copyText={candidateView === 'json' ? candidateYaml : undefined} value={candidateView} onChange={setCandidateView} options={[{ label: '可视化', value: 'visual' }, { label: 'JSON', value: 'json' }]} />
+              <div className="functional-candidate-workbench is-single-view">
+                <section hidden={candidateView !== 'visual'} className="functional-candidate-visual-pane" aria-label="候选用例可视化">
                   {selectedRunQuery.isLoading ? (
                     <div className="ai-task-run-result-popover-loading"><Spin /></div>
                   ) : candidateYaml ? (
-                    <GeneratedCasesReviewView content={candidateYaml} selectedCaseKey={selectedCaseKey} onCaseSelect={handleCaseSelect} />
+                    <GeneratedCasesReviewView content={candidateYaml} pointsContent={getConfigStageFieldContent(selectedRun?.configJson, 'caseNames')} rootTitle={importTargetRequirementName || task?.name || '功能测试用例'} />
                   ) : (
                     <div className="ai-task-run-result-popover-empty">当前记录暂无结果</div>
                   )}
                 </section>
-                <section className="functional-candidate-code-pane" aria-label="候选 JSON 编辑区">
+                <section hidden={candidateView !== 'json'} className="functional-candidate-code-pane" aria-label="候选 JSON 编辑区">
                   <header className="functional-candidate-code-heading">
                     <div className="functional-candidate-code-heading-main">
                       <JavaScriptOutlined aria-hidden className="functional-candidate-code-icon tone-amber" />
@@ -1624,15 +1585,14 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
                     </div>
                     <div className="functional-candidate-code-tools">
                       <Button size="small" icon={<FormatPainterOutlined aria-hidden />} onClick={() => setCandidateYaml(formatStructuredContent(candidateYaml))}>格式化</Button>
-                      <Button size="small" icon={<CopyOutlined aria-hidden />} onClick={() => { void navigator.clipboard?.writeText(selectedCaseYaml); message.success('已复制候选结果') }}>复制</Button>
-                      <Button size="small" icon={<DownloadOutlined aria-hidden />} onClick={() => saveBlob(new Blob([selectedCaseYaml], { type: 'application/json' }), '功能候选结果.json')}>下载</Button>
+                      <Button size="small" icon={<DownloadOutlined aria-hidden />} onClick={() => saveBlob(new Blob([candidateYaml], { type: 'application/json' }), '功能候选结果.json')}>下载</Button>
                     </div>
                   </header>
                   <div className="functional-candidate-edit-pane">
                     <JsonEditor
                       ariaLabel="功能候选结果 JSON"
-                      value={selectedCaseYaml}
-                      onChange={handleSelectedCaseChange}
+                      value={candidateYaml}
+                      onChange={setCandidateYaml}
                       readOnly={!canEditCandidate}
                       foldable
                       minHeight={0}

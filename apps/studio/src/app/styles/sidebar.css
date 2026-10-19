@@ -1,4 +1,4 @@
-/* 侧边栏:192px 展宽标签轨,可折叠为 76px 图标轨。
+/* 侧边栏:192px 展宽标签轨,可折叠为 76px 图标文字轨。
    分组(工作管理/质量管理/集成)+ 底部用户区;激活态用主题的墨蓝 accent 基因(淡墨蓝底),
    与实底主按钮区分重量;琥珀只保留给状态语义。暗色主题不改激活基因,只走全局 token。 */
 .app-shell.app-shell-macos .app-sidebar {
@@ -24,7 +24,7 @@
 }
 
 .sidebar-brand {
-  height: 48px;
+  height: 64px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -97,10 +97,10 @@
 .app-sidebar-collapsed .sidebar-link {
   flex-direction: column;
   justify-content: center;
-  gap: 7px;
-  height: 60px;
-  min-height: 60px;
-  margin-bottom: 6px;
+  gap: 6px;
+  height: 58px;
+  min-height: 58px;
+  margin-bottom: 4px;
   border-radius: 12px;
   padding: 0;
   font-size: 12px;
@@ -108,20 +108,21 @@
   line-height: 1.2;
 }
 
-.app-sidebar-collapsed .sidebar-link .sidebar-link-label { display: none; }
-
-.app-sidebar-collapsed .sidebar-link.is-active .sidebar-link-label {
+.app-sidebar-collapsed .sidebar-link .sidebar-link-label {
   display: block;
   flex: 0 0 auto;
   max-width: 100%;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 400;
   line-height: 16px;
 }
 
+.app-sidebar-collapsed .sidebar-link.is-active .sidebar-link-label { font-weight: 400; }
+
 /* One duotone icon set for expanded and collapsed navigation. */
 .app-sidebar .sidebar-icon-duotone { width: 20px; height: 20px; flex-shrink: 0; color: var(--app-accent); }
-.app-sidebar-collapsed .sidebar-icon-duotone { width: 22px; height: 22px; }
+.app-sidebar.app-sidebar-collapsed .sidebar-icon-duotone { width: 18px; height: 18px; stroke-width: 1.65; color: var(--sidebar-icon-color, var(--app-accent)); }
+.app-sidebar.app-sidebar-collapsed .sidebar-icon-fill { fill: none; }
 .app-sidebar .sidebar-icon-fill { fill: var(--app-accent-emphasis); }
 .app-sidebar .sidebar-link.is-active .sidebar-icon-duotone { color: var(--app-accent-hover); }
 .app-sidebar .sidebar-link.is-active .sidebar-icon-fill { fill: var(--app-accent-selection); }
@@ -217,16 +218,8 @@
   background: var(--srf-list-row-hover);
 }
 
-.sidebar-logo-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: var(--app-accent);
-  color: var(--button-primary-text);
-  font-size: 12px;
-  font-weight: 700;
-}
+
 .sidebar-link > .anticon { font-size: 14px; }
+
+.app-sidebar.app-sidebar-collapsed .sidebar-link.is-active .sidebar-icon-duotone { color: var(--sidebar-icon-color, var(--app-accent)); }
+.app-sidebar.app-sidebar-collapsed .sidebar-link.is-active .sidebar-icon-fill { fill: none; }

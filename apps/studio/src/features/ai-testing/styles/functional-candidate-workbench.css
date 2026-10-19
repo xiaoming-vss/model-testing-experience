@@ -393,3 +393,11 @@
     padding-top: 12px;
   }
 }
+
+.functional-candidate-review-title-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-inline: 16px;
+}

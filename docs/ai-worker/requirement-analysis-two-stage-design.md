@@ -30,9 +30,9 @@
 | 文档提取 | [document-extraction.schema.json](requirement-analysis-contracts/document-extraction.schema.json) | [document-extraction.example.json](requirement-analysis-contracts/document-extraction.example.json) |
 | 需求理解 | [requirement-understanding.schema.json](requirement-analysis-contracts/requirement-understanding.schema.json) | [requirement-understanding.example.json](requirement-analysis-contracts/requirement-understanding.example.json) |
 
-两个 schema 使用 JSON Schema Draft 2020-12，均为自包含文件；固定 `schemaVersion="1.0"`，用 `artifactType` 区分产物。它们与功能用例链路的五字段结构化分析不是同一协议。
+两个 schema 使用 JSON Schema Draft 2020-12，均为自包含文件；文档提取固定 `schemaVersion="1.0"`，需求理解只接受 `schemaVersion="2.0"`，用 `artifactType` 区分产物。它们与功能用例链路的五字段结构化分析不是同一协议。
 
-每层字段固定、必填，禁止额外属性；实际数组可为空，条目不可用占位记录填充。模型输出只含一个标准 JSON 对象。未知描述用 null，未知集合用 []；空集合只代表没有已记录条目，不代表已确认不支持或无约束。
+每层字段及必填性以对应 Schema 为准，禁止额外属性；实际数组可为空，条目不可用占位记录填充。模型输出只含一个标准 JSON 对象。未知描述用 null，未知集合用 []；空集合只代表没有已记录条目，不代表已确认不支持或无约束。
 
 阶段 2 的输入协议版本与这两份产物协议分开管理。协议升级必须明确兼容关系，不能看到合法 JSON 就认定符合本协议。
 
@@ -40,7 +40,7 @@
 
 两份产物都包含独立的 sources 列表：来源名称、类型、稳定位置和版本；没有材料版本时填 null。短时效签名 URL、凭据和机器私有临时路径不进入正式来源位置。
 
-事实采用统一结构：`value`、`confirmationStatus`、`sourceReferences`、`relatedQuestionIds`。引用包含来源 ID、真实定位和可选简短摘录。这样可以分别标记控件名称、选项、默认值、触发、反馈等事实，不用一个“模块已确认”覆盖所有细节。
+材料提取事实使用 `value`、`confirmationStatus`、`sourceReferences`、`relatedQuestionIds`；需求理解事实使用 `evidenceIds` 引用集中证据表，可省略已确认状态与空的可选字段。引用包含来源 ID、真实定位和可选简短摘录。这样可以分别标记控件名称、选项、默认值、触发、反馈等事实，不用一个“模块已确认”覆盖所有细节。
 
 | confirmationStatus | 语义 |
 | --- | --- |
@@ -73,7 +73,7 @@ questions 仅保存 status=open 的剩余缺口。明确答复先合并到对应
 
 ## 6. 第二阶段结构与 UI 归属
 
-顶层固定为 schemaVersion、artifactType、title、sources、functionalOverview、businessFlows、modules、businessRules、questions。
+顶层固定为 schemaVersion、artifactType、title、sources、evidence、functionalOverview、businessFlows、modules、businessRules、questions。
 
 | 内容 | 位置与关系 |
 | --- | --- |
@@ -210,3 +210,51 @@ Schema 之外还需要语义校验：ID 唯一；parentId 无环且指向已有�
 每轮输出与校验错误保存在任务 workspace 的 `diagnostics/requirement-output/<本次执行标识>/attempt-N.json`，文件权限 0600；不保存提示词、模型连接配置和调用凭据。SDK 返回对象保留错误与停止原因，避免把服务错误或明确截断当作普通格式问题。
 
 验证：AI Worker 全部 224 项测试、控制面需求分析/阶段重试/Worker 契约 77 项回归通过，Worker Ruff 和修改范围格式检查通过；新增测试覆盖两个阶段、手动修订、同步/异步调用、图文输入保持、第二次修正成功、次数耗尽、上游无效、服务错误与截断，以及修正期间保留原配置和当前结果。未执行真实模型业务分析。
+
+## 2026-10-16 需求理解精简契约 2.0
+
+材料提取仍使用 `document_extraction` 1.0，工作流仍为两阶段。新需求理解生成与修订输出 `requirement_understanding` 2.0，完整定义见 [v2 Schema](requirement-analysis-contracts/requirement-understanding.schema.json) 与 [v2 示例](requirement-analysis-contracts/requirement-understanding.example.json)。按用户要求不适配需求理解旧版本：仅维护一份 2.0 Schema 和示例；1.0 需求理解在读取、保存、修订和导入时明确拒绝，不转换、不迁移或删除已有数据。
+
+- `sources` 仍登记材料；`evidence` 集中登记 `id/sourceId/locator` 及可选摘录。事实和问题用 `evidenceIds` 引用，重复摘录不再逐字段复制。事实缺省确认状态为 `confirmed`，此时仍强制要求有效证据，且不能仅由示例来源支撑。
+- 未确认、冲突、示例和不适用必须显式标记。`value: null` 不能缺省确认状态；冲突必须关联未解决问题。省略的可选事实表示未记录，不等于不适用，也不会产生已确认结论。
+- 功能/模块目的、操作目标、步骤叙述及衔接说明允许普通字符串；这些概括不单独构成已确认业务规则。有独立确认状态、来源或问题的叙述继续使用事实对象。其余业务事实保留值与证据语义。
+- 空的可选关联、前置条件、联动、输入约束、反馈可省略；未明确的分页、排序、默认值、空态、选项含义等可省略。结构性数组和选项完整性仍保留，避免缺失结构被解释成空业务范围。
+- `businessRules` 集中定义独立规则；操作通过 `ruleIds` 关联，不在模块目标、步骤响应和反馈中重复规则全文。流程后继可以用 `conditionRuleIds` 代替重复的 `condition`，多个规则表示同时满足；引用失效拒绝保存。单条规则应聚焦一个可独立判断的要求。
+
+需求理解技能的 SKILL.md、输出说明、来源说明、Schema 和示例统一使用 2.0，技能负责规则拆分、去重和内容组织。Worker 每次生成、修订及自动修正附加当前 Schema，负责校验与有界修正；已移除程序中重复的长篇精简生成指令。旧版输出不能成为正式产物，会进入原有有界修正流程，要求模型按当前契约重新输出；不存在 v1 自动转换或降级回退。
+
+两个 Python 应用分别打包同一份需求理解 Schema，直接校验精简对象的证据、确认状态和业务引用；已删除转换模块，不依赖旧 Schema 或展开后的旧结构。保存、审核、导入和下游快照保持精简对象。Studio 仅在阅读层解析证据，原始 JSON 编辑与导出不被展开视图覆盖。流程规则引用可以展开阅读，来源仍可定位材料。功能分析、测试点、完整用例、代码风险分析和测试单图谱共用的输入指令同步说明 v2 证据、确认状态与规则引用，禁止因多个入口引用同一规则而重复生成测试点。
+
+控制面、Studio 与 AI Worker 需一并发布当前契约，旧 Worker 的 v1 回传会被拒绝。五个实际已安装技能已从 default-skill-004 同步到默认库，38 个文件逐项核对真实 S3 内容、大小和哈希；其余技能不变。发布时 AI 队列为空，现有产物未迁移。平台尚未安装 code-risk-analysis，不能将其程序侧输入说明计为技能适配。
+
+## 当前调用的确认来源承接（2026-10-17）
+
+需求理解调用从已验证的 documentExtraction 及修订 currentArtifact 收集实际引用的 user_confirmation 来源，去重为输入 confirmationReferences（sourceId、locator）。输出必须在事实或问题中实际引用这些定位；仅登记 evidence 不算承接。缺失进入现有有界修正流程，最多三次调用，失败不发布无效结果。输出仍为 2.0，不增加展示字段或旧版适配。
+
+该检查仅保证来源可追溯，不能判断引用是否真正支撑正文、规则是否重复或流程条件是否正确；这些由需求理解 skill 的质量复核处理。自然语言新答复也由 skill 理解。其他运行中的确认不会自动合并；新运行须显式带入所需答复，避免混入无关或过时结论。
+
+本次样本核查发现，新运行 b99c898b-258d-4955-9df4-1e847df50c5d 输入只有 Q01–Q10；Q11/Q12 属于旧运行 142ca688-fa31-4bc1-a631-0bc1cd2c0afc 的修订输入。因此本次缺少两项不能归因为模型漏读当前输入。未修改历史运行或人工补写业务结论。
+
+### 校验反馈汇总与确认修复上下文
+
+JSON 解析与 Schema 为前置门槛；结构不合法时先修结构。结构通过后，需求理解收集可独立判断的引用、操作规则关联与确认承接问题，再一次性反馈给模型。共享校验器以 ArtifactReferenceError 携带已通过 Schema 的候选和错误清单；候选仅用于继续诊断，全部问题清除后才能发布。材料提取的表格、层级检查仍保持原有失败边界。
+
+confirmationReferences 增加可选 inputStatements，来自本次已验证输入中的摘录或对应事实，按同一来源定位去重。确认遗漏的修复提示附输入内容、输出中已有证据 ID、缺失类型及处理要求；不会采用模型改写的证据摘录代替原输入，不自动添加业务结论或挂引用。具体业务内容只进入模型修复上下文，最终错误摘要仍使用来源定位和校验问题。
+
+仍最多调用三次，传输失败、取消和输出截断不增加重试。当前仍返回完整 JSON，未引入局部修改协议。回放实际失败的第二次输出后，可同时检出 O71 → R01 的关联错误和 Q09 / EV55 未承接，避免遗漏问题推迟到最后一次调用才暴露。
+
+### 第一阶段修订的确认承接
+
+材料提取修订也从当前完整产物收集 confirmationReferences，并通过同一有界修正流程检查输出。确认必须出现在 extractedFacts 或 questions 的来源中；只登记 sources 或放在 contentBlocks 中不能代替业务承接。允许答复存在歧义时转为剩余问题，不强制确认结论。首次提取没有当前产物时不引入其他任务的历史答复。检查仍不判定自然语言的语义正确性。
+
+本地 Word 与富文本提取技能补充原文/事实分层核对、部分答复支持范围、枚举与聚合歧义、独立事实粒度和多来源去重。内部 extraction-review.json 记录答复支持范围、来源差异、事实分组和相关聚合边界，不作为返回契约的一部分；其存在不能替代业务语义验收。原文保留被后续确认覆盖的历史规则，事实层说明有效结论及覆盖关系。继续使用 document_extraction 1.0；无新增展示字段，无旧版适配。此节记录本地实现，不表示已同步远端技能或重启运行中的 Worker。
+
+### 第一阶段完整产物文件交接
+
+长材料在模型最终回复中再次输出完整 JSON，实测出现围栏错误后自动修正成摘要、原文块大量遗漏的问题。第一阶段现在由 Worker 为每次生成建立独立的私有输出目录，并在本次交接说明中提供完整 JSON 的绝对保存路径。模型保存 `document-extraction.json` 后返回固定回执 `{"artifactFile":"document-extraction.json"}`。Worker 读取该文件，再执行原有 JSON、Schema、引用及确认来源承接检查，通过后仍将完整 document_extraction 对象写入第一阶段检查点。文件回执不进入公共 API、页面或第二步输入。
+
+目录按调用隔离，同次格式修正使用同一产物文件；不接受模型指定的任意路径、额外回执字段、重复回执键、文件或父目录符号链接，也不复用其他调用的旧文件。文件不存在、UTF-8 或 JSON 错误进入既有最多3次的修正流程；传输失败和明确截断仍不触发额外修正。直接返回的完整业务 JSON 仍按原校验处理，此处没有增加旧业务版本转换。第二阶段仍使用原完整 JSON 响应方式。
+
+文件交接降低重抄造成的缩减风险，但不能证明模型第一次保存的文件语义正确或材料完整。原文、来源支持范围及独立条件仍需技能复核与实际验收。更新运行环境时应同时部署 Worker 与对应技能；本地文档变更不代表运行中的 Worker 已加载新实现。
+
+本地验收（2026-10-17）：AI Worker全量261项、需求分析专项53项及Ruff通过。实际视频PRD经多轮语义复核后，最终文件交接产物与检查点对象一致，全部10份确认被承接，保留3项业务问题；控制面域校验及第二步完整入参构建验证通过。另一报销富文本样本也完成文件交接与语义复核。完整JSON因独立事实与引用增加并未缩小，减少的是重复事实正文。测试不证明任意输入一次生成稳定正确；未执行新的第二步模型全流程或远端发布。

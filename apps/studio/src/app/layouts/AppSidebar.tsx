@@ -1,3 +1,4 @@
+import { MtxLogo } from '@/shared/components/MtxLogo/MtxLogo'
 import { useThemeStore } from '@/shared/theme/theme.store'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { Link, useLocation } from 'react-router-dom'
@@ -50,7 +51,7 @@ export function AppSidebar({ bugOnly = false }: { bugOnly?: boolean }) {
       className={`app-sider app-sidebar${collapsed ? ' app-sidebar-collapsed' : ''}`}>
       <div className="sidebar-content">
         <Link className="sidebar-brand" to={bugOnly ? '/testing?tab=bugs' : '/projects'} aria-label={bugOnly ? 'MTX Bug列表' : 'MTX 迭代'}>
-          <span className="sidebar-logo-mark" aria-hidden="true">M</span><span className="sidebar-brand-name">MTX</span>
+          <MtxLogo size={40} /><span className="sidebar-brand-name">MTX</span>
         </Link>
         <nav className="sidebar-navigation" aria-label="主导航">
           {bugOnly ? navLink('/testing?tab=bugs', 'Bug列表', 'navBug', testingTab === 'bugs') : <>

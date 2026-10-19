@@ -1,6 +1,7 @@
+import { resolveRequirementEvidence } from './requirementEvidence'
 import { parseRequirementArtifact, pendingRequirementQuestions, type RequirementSourceReference } from './requirementArtifact'
 import { Alert, Button, Collapse, Descriptions, Space, Table, Tag, Tooltip, Typography } from 'antd'
-import type { ReactNode } from 'react'
+import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
 
 const labels: Record<string, string> = {
   documentTitle: '材料标题', title: '标题', sources: '材料来源', contentBlocks: '材料内容',
@@ -17,7 +18,7 @@ const labels: Record<string, string> = {
   recordIdentity: '记录标识', emptyState: '空结果展示', pagination: '分页', sorting: '排序',
   validationAndFeedback: '校验与反馈', ruleIds: '关联规则', moduleIds: '关联模块',
   operationIds: '关联操作', moduleId: '所属模块', operationId: '对应操作', nextSteps: '后续分支',
-  stepId: '下一节点', condition: '分支条件', expectedBehavior: '预期处理', observableOutcome: '观察依据',
+  stepId: '下一节点', conditionRuleIds: '分支判定规则', evidence: '证据索引', condition: '分支条件', expectedBehavior: '预期处理', observableOutcome: '观察依据',
   id: '条目标识', parentId: '所属章节', kind: '内容类型', text: '正文', table: '表格', image: '图片理解',
   visibleTexts: '可见文字', meaning: '含义', parseStatus: '识别状态', category: '事实分类',
   fact: '材料事实', relatedBlockIds: '对应材料', note: '衔接说明', relatedQuestionIds: '关联问题',
@@ -43,6 +44,14 @@ function record(value: unknown): value is RecordValue {
 }
 
 
+function ReferencedRule({ name, renderDetails }: { name: string; renderDetails: () => ReactNode }) {
+  const [expanded, setExpanded] = useState(false)
+  return <details onToggle={event => setExpanded(event.currentTarget.open)}>
+    <summary aria-label={`查看规则：${name}`}>{name}</summary>
+    {expanded && renderDetails()}
+  </details>
+}
+
 function MaterialTable({ value }: { value: RecordValue }) {
   const cells = Array.isArray(value.cells) ? value.cells.filter(record) : []
   const rows = Number(value.rowCount) || Math.max(0, ...cells.map(c => Number(c.row) + Number(c.rowSpan)))
@@ -63,12 +72,10 @@ function MaterialTable({ value }: { value: RecordValue }) {
     }))} />
 }
 
-function RequirementArtifactRenderer({ content, section, onSourceReference, expandCollections = false }: { content: unknown; section?: { field: string; value: unknown }; expandCollections?: boolean; onSourceReference?: (ref: RequirementSourceReference) => void }) {
-  let artifact: RecordValue | null
-  try { artifact = parseRequirementArtifact(content) } catch (error) {
-    return <Alert type="error" showIcon title={error instanceof Error ? error.message : '无法读取结构化产物'} />
-  }
-  if (!artifact) return <Alert type="error" showIcon title="产物缺少有效的 JSON 契约，请在原始 JSON 中修正" />
+function prepareArtifact(content: unknown) {
+  const parsed = parseRequirementArtifact(content)
+  const artifact = parsed ? resolveRequirementEvidence(parsed, parsed) as RecordValue : null
+  if (!artifact) throw new Error('产物缺少有效的 JSON 契约，请在原始 JSON 中修正')
   const sources = (artifact.sources as unknown[]).filter(record)
   const pendingQuestions = pendingRequirementQuestions((artifact.questions as unknown[]).filter(record))
   const pendingQuestionIds = new Set(pendingQuestions.map(q => String(q.id)))
@@ -93,22 +100,48 @@ function RequirementArtifactRenderer({ content, section, onSourceReference, expa
       }
     }
   }
+  return { artifact, sources, pendingQuestions, pendingQuestionIds, names }
+}
+function readArtifact(content: unknown) {
+  try { return { data: prepareArtifact(content) } }
+  catch (error) { return { error: error instanceof Error ? error.message : '无法读取结构化产物' } }
+}
+const ArtifactScope = createContext<{ content: unknown; result: ReturnType<typeof readArtifact> } | null>(null)
+
+/** Share immutable artifact indexes across all fields in a reading workspace. */
+export function RequirementArtifactScope({ artifact, children }: { artifact: unknown; children: ReactNode }) {
+  const value = useMemo(() => ({ content: artifact, result: readArtifact(artifact) }), [artifact])
+  return <ArtifactScope.Provider value={value}>{children}</ArtifactScope.Provider>
+}
+
+function RequirementArtifactRenderer({ content, section, onSourceReference, expandCollections = false, compactSources = false }: { compactSources?: boolean; content: unknown; section?: { field: string; value: unknown }; expandCollections?: boolean; onSourceReference?: (ref: RequirementSourceReference) => void }) {
+  const scope = useContext(ArtifactScope)
+  const result = useMemo(() => scope && scope.content === content ? scope.result : readArtifact(content), [scope, content])
+  if (!result.data) return <Alert type="error" showIcon title={result.error} />
+  const { artifact, sources, pendingQuestions, pendingQuestionIds, names } = result.data
+  try {
+    if (section) section = { ...section, value: resolveRequirementEvidence(artifact, section.value) }
+  } catch (error) {
+    return <Alert type="error" showIcon title={error instanceof Error ? error.message : '无法读取结构化产物'} />
+  }
   function renderSource(ref: RecordValue, index: number) {
     const label = `${sources.find(source => source.id === ref.sourceId)?.name || String(ref.sourceId)} · ${String(ref.locator)}`
     return <Tooltip key={index} title={ref.excerpt ? String(ref.excerpt) : undefined}>
       {onSourceReference && typeof ref.sourceId === 'string' && typeof ref.locator === 'string'
-        ? <Button type="link" size="small" style={{ height: 'auto', padding: 0, whiteSpace: 'normal', textAlign: 'left' }} onClick={() => onSourceReference({ sourceId: String(ref.sourceId), locator: String(ref.locator), excerpt: typeof ref.excerpt === 'string' ? ref.excerpt : null })}>{label}</Button>
+        ? <Button className="requirement-fact-source" type="link" size="small" style={{ height: 'auto', padding: 0, whiteSpace: 'normal', textAlign: 'left' }} onClick={() => onSourceReference({ sourceId: String(ref.sourceId), locator: String(ref.locator), excerpt: typeof ref.excerpt === 'string' ? ref.excerpt : null })} aria-label={label} title={label}>{compactSources ? String(ref.locator) : label}</Button>
         : <Typography.Text type="secondary">{label}</Typography.Text>}
     </Tooltip>
   }
   function displayName(item: RecordValue, key: string, index: number) {
     const unwrap = (value: unknown) => record(value) && 'value' in value ? value.value : value
     const preferred = [item.name, item.title, item.question, unwrap(item.label), unwrap(item.action),
-      unwrap(item.fact), unwrap(item.value), unwrap(item.path), unwrap(item.condition), names.get(String(item.operationId || '')), item.text]
+      unwrap(item.fact), unwrap(item.value), unwrap(item.path), unwrap(item.condition),
+      Array.isArray(item.conditionRuleIds) ? item.conditionRuleIds.map(id => names.get(String(id)) ?? String(id)).join(' 且 ') : undefined, names.get(String(item.operationId || '')), item.text]
       .find(value => value !== null && value !== undefined && value !== '')
     return preferred !== undefined ? String(preferred).slice(0, 80) : `${labels[key] || '条目'} ${index + 1}`
   }
   function render(value: unknown, key = '', expand: boolean = expandCollections): ReactNode {
+    if (key === 'stepId' && value === null) return '流程结束'
     if (value == null) return <Typography.Text type="secondary">未明确</Typography.Text>
     if (typeof value === 'boolean') return value ? '是' : '否'
     if (typeof value !== 'object') {
@@ -121,10 +154,15 @@ function RequirementArtifactRenderer({ content, section, onSourceReference, expa
       if (key === 'questions') items = pendingRequirementQuestions(items.filter(record))
       if (key === 'relatedQuestionIds') items = items.filter(id => pendingQuestionIds.has(String(id)))
       if (!items.length) return <Typography.Text type="secondary">暂无已记录条目</Typography.Text>
+      if (key === 'conditionRuleIds' || key === 'ruleIds') return <Space orientation="vertical" size={8}>{items.map(id => {
+        const rule = (Array.isArray(artifact?.businessRules) ? artifact.businessRules : []).filter(record).find(rule => rule.id === id)
+        return rule ? <ReferencedRule key={String(id)} name={String(rule.name)} renderDetails={() => render(rule)} />
+          : <Typography.Text key={String(id)} type="danger">规则引用失效：{String(id)}</Typography.Text>
+      })}</Space>
       if (key === 'sourceReferences' && onSourceReference) return <Space orientation="vertical" size={4}>{items.filter(record).map(renderSource)}</Space>
       if (items.every(item => !record(item))) return items.map(item => render(item, key)).join('、')
       if (key === 'userVisibleFlow') return <Space orientation="vertical" size={8}>{items.filter(record).map((item, index) =>
-        <div key={index}><Typography.Text strong>{index + 1}. {names.get(String(item.operationId)) || String(item.operationId)}</Typography.Text><div>{render(item.note)}</div></div>)}</Space>
+        <div key={index}><Typography.Text strong>{index + 1}. {names.get(String(item.operationId)) || String(item.operationId)}</Typography.Text>{item.note !== undefined && <div>{render(item.note)}</div>}</div>)}</Space>
       if (items.every(item => record(item) && 'confirmationStatus' in item)) {
         return <Space orientation="vertical" size={8}>{items.map((item, index) => <div key={index}>{render(item)}</div>)}</Space>
       }
@@ -146,14 +184,14 @@ function RequirementArtifactRenderer({ content, section, onSourceReference, expa
       const refs = Array.isArray(item.sourceReferences) ? item.sourceReferences.filter(record) : []
       return <Space orientation="vertical" size={4}>
         <Space wrap><span>{displayValue == null ? (status === 'not_applicable' ? '不适用' : '未知') : Array.isArray(displayValue) ? displayValue.map(String).join('、') || '空值' : String(displayValue)}</span>
-          <Tag color={status === 'conflicting' ? 'error' : status === 'unconfirmed' ? 'warning' : status === 'confirmed' ? 'success' : 'default'}>{states[status] || status}</Tag></Space>
+          <Tag className={status === 'confirmed' ? 'requirement-fact-confirmed' : undefined} color={status === 'conflicting' ? 'error' : status === 'unconfirmed' ? 'warning' : status === 'confirmed' ? 'success' : 'default'}>{states[status] || status}</Tag></Space>
         {refs.map(renderSource)}
         {questionIds.length ? <Typography.Text type="warning">关联问题：{questionIds.map(q => names.get(String(q)) || String(q)).join('；')}</Typography.Text> : null}
       </Space>
     }
     if (key === 'table') return <MaterialTable value={item} />
     return <Descriptions column={1} size="small" items={Object.entries(item)
-      .filter(([field]) => !['schemaVersion', 'artifactType', 'id'].includes(field))
+      .filter(([field, child]) => child !== undefined && !['schemaVersion', 'artifactType', 'id'].includes(field))
       // 操作内的交互细节统一由「UI 交互」章节读取，避免同一份控件记录重复展示。
       .filter(([field]) => !(key === 'operations' && field === 'interaction'))
       .filter(([field, child]) => field !== 'answer' || child != null)
@@ -193,7 +231,7 @@ function RequirementArtifactRenderer({ content, section, onSourceReference, expa
   if (section) return <>{render(section.value, section.field)}</>
   return <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
     <Typography.Title level={4}>{String(artifact.title || artifact.documentTitle || '需求材料')}</Typography.Title>
-    {Object.entries(artifact).filter(([key]) => !['schemaVersion', 'artifactType', 'title', 'documentTitle'].includes(key) && (key !== 'questions' || pendingQuestions.length > 0)).flatMap(([key, value]) => {
+    {Object.entries(artifact).filter(([key]) => !['schemaVersion', 'artifactType', 'title', 'documentTitle', 'evidence'].includes(key) && (key !== 'questions' || pendingQuestions.length > 0)).flatMap(([key, value]) => {
       const node = <section key={key} style={{ width: '100%' }}><Typography.Title level={5}>{labels[key] || key}</Typography.Title>{render(value, key)}</section>
       return key === 'modules' && moduleItems.length ? [node, renderUiInteractionSection()] : [node]
     })}
@@ -205,6 +243,6 @@ export function RequirementArtifactView({ content }: { content: unknown }) {
 }
 
 /** Render a material table, fact or question with the same source/status semantics as the full artifact. */
-export function RequirementArtifactValue({ artifact, value, field = '', onSourceReference, expandCollections = false }: { artifact: unknown; value: unknown; field?: string; expandCollections?: boolean; onSourceReference?: (ref: RequirementSourceReference) => void }) {
-  return <RequirementArtifactRenderer content={artifact} section={{ field, value }} onSourceReference={onSourceReference} expandCollections={expandCollections} />
+export function RequirementArtifactValue({ artifact, value, field = '', onSourceReference, expandCollections = false, compactSources = false }: { compactSources?: boolean; artifact: unknown; value: unknown; field?: string; expandCollections?: boolean; onSourceReference?: (ref: RequirementSourceReference) => void }) {
+  return <RequirementArtifactRenderer content={artifact} section={{ field, value }} onSourceReference={onSourceReference} expandCollections={expandCollections} compactSources={compactSources} />
 }

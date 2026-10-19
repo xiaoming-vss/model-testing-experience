@@ -1,3 +1,4 @@
+import { useCaseTreeZoom } from '../hooks/useCaseTreeZoom'
 import { saveBlob } from '@/shared/utils/download'
 import '@/features/ai-testing/styles/functional-import-confirm.css'
 import '@/features/ai-testing/styles/index.css'
@@ -9,7 +10,8 @@ import { ProjectActionButton } from '@/features/projects/components/ProjectActio
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
 import { message } from '@/shared/utils/feedback'
 import { PictureOutlined } from '@ant-design/icons'
-import { Input, Popconfirm, Tabs, Tag } from 'antd'
+import { ArtifactViewTabs } from './ArtifactViewTabs'
+import { Input, Popconfirm, Tag } from 'antd'
 import { toBlob } from 'html-to-image'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
@@ -34,14 +36,16 @@ function CaseNameTreeCurves({ height, targetYs, layoutKey, tone = 'green' }: { h
 
     // 换行后的节点高度各不相同，连接线使用实际布局中的节点中心。
     const measure = () => {
+      const canvas = svg?.closest('.ai-case-name-tree-canvas')
+      const scale = canvas ? Number.parseFloat(getComputedStyle(canvas).zoom) || 1 : 1
       const bounds = targets.getBoundingClientRect()
       if (!bounds.height) return
       const measuredHeight = Math.max(bounds.height, source.getBoundingClientRect().height)
       const next = {
-        height: measuredHeight,
+        height: measuredHeight / scale,
         targetYs: Array.from(targets.children, (child) => {
           const rect = child.getBoundingClientRect()
-          return rect.top - bounds.top + rect.height / 2 + (measuredHeight - bounds.height) / 2
+          return (rect.top - bounds.top + rect.height / 2 + (measuredHeight - bounds.height) / 2) / scale
         }),
       }
       setLayout((current) => current?.height === next.height
@@ -55,6 +59,9 @@ function CaseNameTreeCurves({ height, targetYs, layoutKey, tone = 'green' }: { h
     Array.from(targets.children).forEach((child) => observer.observe(child))
     return () => observer.disconnect()
   }, [height, targetKey, layoutKey])
+
+  // Collapsed branches have no targets: stale SVG geometry must not hold their rows open.
+  if (targetYs.length === 0) return null
 
   const safeHeight = Math.max(layout?.height ?? height, CASE_NAME_TREE_NODE_HEIGHT)
   const sourceY = safeHeight / 2
@@ -98,13 +105,21 @@ function CaseNameTreeNodeView({
   editable,
   onRename,
   onDelete,
+  onSelect,
+  selected,
 }: {
   node: CaseNameTreeNode
   className: string
   editable?: boolean
   onRename?: (nodeId: string, title: string) => void
   onDelete?: (nodeId: string) => void
+  onSelect?: (nodeId: string) => void
+  selected?: boolean
 }) {
+  const nodeRef = useRef<HTMLDivElement | null>(null)
+  useLayoutEffect(() => {
+    if (selected) nodeRef.current?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+  }, [selected])
   const [editing, setEditing] = useState(false)
   const [draftTitle, setDraftTitle] = useState(node.title)
   const canEdit = Boolean(editable && node.kind !== 'root')
@@ -129,7 +144,7 @@ function CaseNameTreeNodeView({
   }
 
   return (
-    <div className={`${className}${canEdit ? ' editable' : ''}`} title={node.title}>
+    <div ref={nodeRef} role={onSelect ? 'button' : undefined} tabIndex={onSelect ? 0 : undefined} aria-pressed={onSelect ? Boolean(selected) : undefined} onClick={() => onSelect?.(node.id)} onKeyDown={(event) => { if (onSelect && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onSelect(node.id) } }} className={`${className}${selected ? ' is-selected' : ''}${canEdit ? ' editable' : ''}`} title={node.title}>
       {editing ? (
         <Input
           className="ai-case-name-tree-node-input"
@@ -186,14 +201,30 @@ export function CaseNameTreeView({
   expanded = false,
   editable = false,
   onTreeChange,
+  treeData,
+  selectedNodeId,
+  onNodeSelect,
 }: {
   content: string
   rootTitle: string
   expanded?: boolean
   editable?: boolean
   onTreeChange?: (content: string) => void
+  treeData?: CaseNameTreeNode
+  selectedNodeId?: string
+  onNodeSelect?: (id: string) => void
 }) {
-  const tree = buildCaseNameTree(content, rootTitle)
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const { zoom, viewportRef } = useCaseTreeZoom(Boolean(treeData))
+  const sourceTree = treeData ?? buildCaseNameTree(content, rootTitle)
+  const prune = (node: CaseNameTreeNode): CaseNameTreeNode => ({ ...node, children: collapsed.has(node.id) ? [] : node.children.map(prune) })
+  const tree = treeData && sourceTree ? prune(sourceTree) : sourceTree
+  const toggle = treeData ? (id: string) => setCollapsed((current) => {
+    const next = new Set(current)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    return next
+  }) : undefined
   const counts = countCaseNameTree(tree)
   const canvasRef = useRef<HTMLDivElement | null>(null)
   const [exportingImage, setExportingImage] = useState(false)
@@ -226,7 +257,7 @@ export function CaseNameTreeView({
   }
 
   if (!tree) {
-    return <JsonEditor value={content} readOnly foldable minHeight={expanded ? 560 : 260} />
+    return <JsonEditor value={content} showCopy={false} readOnly foldable minHeight={expanded ? 560 : 260} />
   }
 
   const treeHeight = getTreeHeight(tree)
@@ -238,8 +269,10 @@ export function CaseNameTreeView({
   }
 
   return (
-    <div className={`ai-case-name-tree${expanded ? ' expanded' : ''}${editable ? ' editable' : ''}`}>
-      <div className="ai-case-name-tree-stats">
+    <div className={treeData ? 'ai-case-tree-shell' : 'ai-case-tree-passthrough'}>
+
+      <div ref={viewportRef} title={treeData ? '滚轮缩放图谱，点击节点查看用例' : undefined} className={`ai-case-name-tree${expanded ? ' expanded' : ''}${editable ? ' editable' : ''}`}>
+      {treeData ? null : <div className="ai-case-name-tree-stats">
         <Tag color="green">model {counts.models}</Tag>
         <Tag color="cyan">test_model {counts.testModels}</Tag>
         <Tag color="blue">test_points {counts.testPoints}</Tag>
@@ -252,8 +285,8 @@ export function CaseNameTreeView({
         >
           保存图片
         </ProjectActionButton>
-      </div>
-      <div className="ai-case-name-tree-canvas" ref={canvasRef}>
+      </div>}
+      <div className="ai-case-name-tree-canvas" ref={canvasRef} style={treeData ? { zoom } : undefined}>
         <CaseNameTreeNodeView
           node={tree}
           className="ai-case-name-tree-root"
@@ -267,6 +300,7 @@ export function CaseNameTreeView({
             <div key={model.id} className="ai-case-name-tree-row">
               <CaseNameTreeNodeView
                 node={model}
+                onSelect={toggle}
                 className="ai-case-name-tree-node model"
                 editable={editable}
                 onRename={handleRename}
@@ -278,6 +312,7 @@ export function CaseNameTreeView({
                   <div key={testModel.id} className="ai-case-name-tree-row nested">
                     <CaseNameTreeNodeView
                       node={testModel}
+                      onSelect={toggle}
                       className="ai-case-name-tree-node test-model"
                       editable={editable}
                       onRename={handleRename}
@@ -289,6 +324,8 @@ export function CaseNameTreeView({
                         <CaseNameTreeNodeView
                           key={point.id}
                           node={point}
+                          selected={point.id === selectedNodeId}
+                          onSelect={onNodeSelect}
                           className="ai-case-name-tree-node point"
                           editable={editable}
                           onRename={handleRename}
@@ -303,6 +340,8 @@ export function CaseNameTreeView({
           ))}
         </div>
       </div>
+      </div>
+
     </div>
   )
 }
@@ -321,7 +360,7 @@ export function CaseNamesResultView({
   onViewChange?: (view: CaseNamesViewMode) => void
 }) {
   return (
-    <Tabs
+    <ArtifactViewTabs jsonCopyText={content}
       className={`ai-case-names-inner-tabs${expanded ? ' expanded' : ''}`}
       size="small"
       activeKey={activeView}
@@ -336,7 +375,7 @@ export function CaseNamesResultView({
           key: 'json',
           label: 'json',
           children: isJsonText(content) ? (
-            <JsonEditor value={content} readOnly foldable minHeight={expanded ? 520 : 240} />
+            <JsonEditor value={content} showCopy={false} readOnly foldable minHeight={expanded ? 520 : 240} />
           ) : (
             <pre className="ai-task-code-block">{content}</pre>
           ),

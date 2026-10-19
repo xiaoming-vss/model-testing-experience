@@ -1,0 +1,50 @@
+.ai-generated-case-browser {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
+  height: 100%;
+  min-height: 0;
+  color: var(--ai-text);
+}
+.ai-generated-case-map { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; padding: 12px; }
+.ai-generated-case-map > .ai-case-name-tree { flex: 1; min-height: 0; border: 0; border-radius: 0; }
+.ai-generated-case-map .ai-case-name-tree-node[role='button'] { cursor: pointer; text-align: left; }
+.ai-generated-case-map .ai-case-name-tree-node.is-selected,
+.ai-generated-case-map .ai-case-name-tree-node[role='button']:focus-visible {
+  outline: 2px solid var(--ai-blue); outline-offset: 2px; background: var(--ai-accent-soft);
+}
+.ai-generated-case-reading { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-left: 1px solid var(--ai-border, var(--app-frame-divider)); }
+.ai-generated-case-reading-scroll { flex: 1; min-height: 0; overflow: auto; padding: 20px 24px; }
+.ai-generated-case-breadcrumb { color: var(--ai-text-secondary); margin: 0 0 20px; font-size: 12px; }
+.ai-generated-case-reading header > strong { display: block; margin-top: 12px; font-size: 18px; line-height: 1.6; }
+.ai-generated-case-browser .ai-generated-case-reading .ai-generated-cases-review-fields { display: block; border: 0; background: none; padding: 0; }
+.ai-generated-case-browser .ai-generated-case-reading .ai-generated-cases-review-fields > section { border: 0; border-top: 1px solid var(--ai-border, var(--app-frame-divider)); padding: 20px 0; margin-top: 20px; }
+.ai-generated-case-browser .ai-generated-case-reading .ai-generated-cases-review-fields ol { padding-left: 22px; }
+.ai-generated-case-browser .ai-generated-case-reading .ai-generated-cases-review-fields li,
+.ai-generated-case-browser .ai-generated-case-reading .ai-generated-cases-review-fields p { font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
+.functional-candidate-workbench.is-single-view { display: flex; }
+.functional-candidate-workbench.is-single-view > section { flex: 1; }
+.functional-candidate-workbench.is-single-view > section[hidden] { display: none; }
+@media (max-width: 900px) {
+  .ai-generated-case-browser { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(220px, 1fr) minmax(220px, 1fr); }
+  .ai-generated-case-reading { border-left: 0; border-top: 1px solid var(--ai-border, var(--app-frame-divider)); }
+  .ai-generated-case-reading-scroll { padding: 16px; }
+}
+
+.ai-generated-case-browser .ai-generated-case-reading .ai-generated-cases-review-fields > section + section { border-left: 0; }
+
+.ai-generated-case-map .ai-case-name-tree-root { max-width: 160px; }
+.ai-generated-case-map .ai-case-name-tree-node.model { max-width: 180px; }
+.ai-generated-case-map .ai-case-name-tree-node.test-model { max-width: 120px; }
+.ai-generated-case-map .ai-case-name-tree-node.point { width: 280px; max-width: 280px; }
+.ai-generated-case-map .ai-case-name-tree-curves { width: 48px; flex: 0 0 48px; }
+
+/* The tree fills the space previously occupied by the toolbar. */
+.ai-case-tree-shell { display: contents; }
+.ai-generated-case-map .ai-case-tree-shell > .ai-case-name-tree {
+  flex: 1; min-height: 0; border: 0; border-radius: 0;
+  overflow-anchor: none;
+}
+
+.ai-generated-case-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; }
+.ai-generated-case-meta .ant-tag { margin: 0; padding-inline: 8px; line-height: 24px; font-size: 12px; }
+.ai-generated-case-browser .ai-generated-case-meta .ai-generated-cases-review-index { padding: 2px 10px; line-height: 24px; }

@@ -163,7 +163,6 @@ def test_unknown_module_scope_is_valid_without_placeholder_modules():
         "purpose": {
             "value": None,
             "confirmationStatus": "unconfirmed",
-            "sourceReferences": [],
             "relatedQuestionIds": ["Q01"],
         },
         "scope": [],
@@ -179,7 +178,7 @@ def test_unknown_module_scope_is_valid_without_placeholder_modules():
 def test_non_standard_numbers_and_duplicate_keys_cannot_enter_imported_json():
     value = example("requirement-understanding")
     control = value["modules"][0]["operations"][0]["interaction"]["controls"][0]
-    control["defaultValue"]["value"] = float("nan")
+    control["defaultValue"] = {"value": float("nan"), "confirmationStatus": "unconfirmed"}
     with pytest.raises(ValueError):
         validate_artifact(value, "requirement_understanding")
     with pytest.raises(ValueError):
@@ -276,6 +275,9 @@ def test_answer_can_live_in_business_content_without_question_history(name):
             {"sourceId": "CONFIRM", "locator": "本轮业务答复", "excerpt": "上游算子为 hoi_tool"}
         ],
     )
+    if name == "requirement-understanding":
+        value["evidence"].append({"id": "ANSWER", **fact.pop("sourceReferences")[0]})
+        fact["evidenceIds"] = ["ANSWER"]
     kind = name.replace("-", "_")
     assert validate_artifact(value, kind)["questions"] == []
     fact["relatedQuestionIds"] = ["Q01"]
@@ -303,6 +305,10 @@ def test_partial_answer_preserves_only_the_remaining_open_gap(name):
             "relatedQuestionIds": [],
         },
     )
+    if name == "requirement-understanding":
+        answer = value["questions"][0]["answer"]
+        value["evidence"].append({"id": "ANSWER", **answer.pop("sourceReferences")[0]})
+        answer["evidenceIds"] = ["ANSWER"]
     assert validate_artifact(value, name.replace("-", "_"))["questions"][0]["status"] == "open"
 
 
@@ -337,6 +343,9 @@ async def test_revision_accepts_historical_answers_but_save_and_approval_require
         },
     )
     if final:
+        answer = value["questions"][0]["answer"]
+        value["evidence"].append({"id": "ANSWER", **answer.pop("sourceReferences")[0]})
+        answer["evidenceIds"] = ["ANSWER"]
         candidate.result_yaml = json.dumps(value)
     else:
         candidate.config_json["firstStepOutput"] = value
@@ -469,3 +478,20 @@ async def test_final_rejection_closes_waiting_review_generation(monkeypatch):
     assert result["reviewStatus"] == "rejected"
     assert candidate.status == "success"
     assert candidate.stage_status == "completed"
+
+
+def test_compact_result_survives_review_import_and_downstream_snapshot():
+    from testing_agent.services.ai_task_output import requirement_source_content
+
+    candidate = run()
+    compact = example("requirement-understanding")
+    candidate.result_yaml = json.dumps(compact, ensure_ascii=False)
+    validate_run_output(candidate, final=True)
+    imported = requirement_analysis_import_content(candidate)
+    assert json.loads(imported) == compact
+    assert (
+        json.loads(requirement_source_content(SimpleNamespace(document_content=imported)))
+        == compact
+    )
+    assert json.loads(imported)["schemaVersion"] == "2.0"
+    assert "sourceReferences" not in imported

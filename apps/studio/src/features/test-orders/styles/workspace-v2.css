@@ -365,3 +365,6 @@
 @media (prefers-reduced-motion: reduce) {
   .test-order-workspace-page .test-order-side-progress-fill { transition: none; }
 }
+
+.test-order-inline-graph { flex: 1; min-width: 0; min-height: 0; display: flex; overflow: hidden; }
+.test-order-inline-graph > .test-order-graph-viewer { flex: 1; min-width: 0; min-height: 0; }

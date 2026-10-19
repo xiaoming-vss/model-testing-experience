@@ -1099,8 +1099,8 @@ body,
 }
 
 .app-shell.app-shell-macos .app-header.compact-header {
-  height: 48px;
-  padding-inline: 16px;
+  height: 56px;
+  padding-inline: var(--app-page-gutter);
   border-bottom-color: var(--mac-glass-border) !important;
   background: var(--mac-glass-header) !important;
   -webkit-backdrop-filter: saturate(180%) blur(24px);
@@ -1109,10 +1109,10 @@ body,
 }
 
 .app-shell.app-shell-macos .project-selector-wrap {
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent !important;
+  padding: 0 12px;
+  border: 1px solid var(--mac-glass-border);
+  border-radius: 18px;
+  background: var(--app-surface) !important;
   box-shadow: none !important;
 }
 
@@ -2016,4 +2016,48 @@ body,
 
 @media (max-width: 900px) {
   .app-header-feedback { width: 100%; }
+}
+
+/* Keep the scope controls together; wrap whole groups when space is limited. */
+@media (max-width: 900px) {
+  .app-shell.app-shell-macos .app-header.compact-header {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+  }
+
+  .app-shell .app-header.compact-header .app-header-main {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .app-shell.app-shell-macos .project-selector-wrap {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    padding: 4px 12px;
+    border-radius: 12px;
+  }
+
+  .app-shell .app-header-feedback {
+    order: 1;
+    justify-content: flex-start;
+    text-align: left;
+  }
+}
+
+@media (max-width: 540px) {
+  .app-shell .project-selector-divider {
+    width: 100%;
+    height: 0;
+    margin: 0;
+  }
+
+  .app-shell .project-select,
+  .app-shell .sprint-select {
+    flex: 1 1 80px;
+    min-width: 0;
+    max-width: none;
+  }
 }

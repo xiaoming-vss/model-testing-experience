@@ -277,6 +277,18 @@
   }
 }
 
+/* 阶段审核由弹窗分配可用高度，不沿用独立预览区的高度上限。 */
+.functional-stage-review-modal .ai-requirement-analysis-tabs.review > .ant-tabs-content-holder {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
+.functional-stage-review-modal .ai-requirement-analysis-review-diagram {
+  height: 100%;
+  min-height: 0;
+}
+
 @media (max-width: 960px) {
 
   .ai-requirement-analysis-grid.two-col {
@@ -286,5 +298,271 @@
   .ai-requirement-analysis-row-card,
 .ai-requirement-analysis-flow-card {
     grid-template-columns: 1fr;
+  }
+}
+
+.ai-requirement-analysis-category-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-requirement-analysis-category-label .ant-tag {
+  margin-inline-end: 0;
+}
+
+/* 预览限制阅读宽度，模式与分类导航固定，正文独立滚动。 */
+.ai-requirement-analysis-preview-modal.ai-task-run-result-modal {
+  max-width: min(2000px, calc(100vw - 32px));
+}
+.ai-requirement-analysis-preview-modal.ai-task-run-result-modal :is(.ant-modal-container, .ant-modal-content) {
+  height: min(94dvh, 1200px);
+  max-height: calc(100dvh - 32px);
+}
+
+.ai-requirement-analysis-preview-modal .ant-modal-body {
+  display: flex;
+  overflow: hidden;
+}
+
+.ai-requirement-analysis-preview-modal :is(.revision-workspace, .revision-source, .ai-task-run-result-modal-content, .ai-requirement-analysis-tabs, .ant-tabs-content-holder, .ant-tabs-content, .ant-tabs-tabpane-active, .ai-requirement-analysis-view) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  height: auto;
+  max-height: none;
+  overflow: hidden;
+}
+
+.ai-requirement-analysis-preview-modal .ai-requirement-analysis-category-tabs > .ant-tabs-content-holder > .ant-tabs-content > .ant-tabs-tabpane-active,
+.ai-requirement-analysis-preview-modal .ai-requirement-analysis-tabs > .ant-tabs-content-holder > .ant-tabs-content > .ant-tabs-tabpane-active:has(> .json-editor-wrap),
+.ai-requirement-analysis-preview-modal .ai-requirement-analysis-view:has(> .ai-requirement-analysis-section) {
+  overflow: auto;
+}
+
+.ai-requirement-analysis-preview-modal.ai-task-run-result-modal .ant-modal-body > .revision-workspace {
+  height: auto;
+}
+
+/* 大预览的内部密度随可用宽度调整，保留现有卡片与主题。 */
+.ai-requirement-analysis-preview-modal .ai-requirement-analysis-category-tabs > .ant-tabs-nav .ant-tabs-tab {
+  padding: 8px 0;
+}
+
+.ai-requirement-analysis-preview-modal .ai-requirement-analysis-category-tabs > .ant-tabs-nav .ant-tabs-tab-btn {
+  font-size: 13px;
+}
+
+/* 分类正文：目录与详情共享边框，因素以紧凑表格对照。 */
+.ai-analysis-browser {
+  display: grid;
+  grid-template-columns: clamp(240px, 24%, 360px) minmax(0, 1fr);
+  min-height: 420px;
+  flex: 1;
+  border: 1px solid var(--app-frame-divider-soft);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--app-surface);
+}
+
+.ai-analysis-directory {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-right: 1px solid var(--app-frame-divider-soft);
+}
+
+.ai-analysis-directory-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--app-frame-divider-soft);
+}
+
+.ai-analysis-directory-tools strong {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ai-analysis-directory-tools strong > span {
+  font-size: 12px;
+  color: var(--ai-text-muted);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.ai-analysis-directory-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+}
+
+.ai-analysis-directory-list button {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--app-list-row-border);
+  border-radius: 4px;
+  padding: 12px 8px;
+  background: transparent;
+  color: var(--ai-text-secondary);
+  text-align: left;
+  font: inherit;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.ai-analysis-directory-list button:hover {
+  background: var(--app-terminal-result-bg);
+}
+
+.ai-analysis-directory-list button[aria-current='true'] {
+  background: var(--app-accent-surface);
+  color: var(--ai-active-text);
+  font-weight: 600;
+}
+
+.ai-analysis-directory-list button:focus-visible {
+  outline: 2px solid var(--app-terminal-focus-ring);
+  outline-offset: -2px;
+}
+
+.ai-analysis-entry-code {
+  flex-shrink: 0;
+  color: var(--ai-text-muted);
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+.ai-analysis-detail {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 24px;
+}
+
+.ai-analysis-detail > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  border-bottom: 1px solid var(--app-frame-divider-soft);
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+}
+
+.ai-analysis-detail h3 {
+  margin: 0;
+  color: var(--ai-text);
+  font-size: 16px;
+  line-height: 26px;
+  overflow-wrap: anywhere;
+}
+
+.ai-analysis-detail h3 > span {
+  color: var(--ai-text-muted);
+  margin-right: 12px;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.ai-analysis-detail-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1100px;
+}
+
+.ai-analysis-detail-fields > .ai-requirement-analysis-field {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 16px;
+}
+
+.ai-analysis-detail-fields .ai-requirement-analysis-field p {
+  font-size: 13px;
+  line-height: 24px;
+  overflow-wrap: anywhere;
+}
+
+.ai-analysis-detail-fields > .ai-analysis-focus-field {
+  background: var(--app-terminal-result-bg);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.ai-analysis-focus-field p {
+  color: var(--ai-text);
+  font-weight: 600;
+}
+
+.ai-requirement-analysis-preview-modal .ai-analysis-browser {
+  min-height: 0;
+}
+
+@media (max-width: 960px) {
+  .ai-analysis-browser {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .ai-analysis-detail { padding: 16px; }
+  .ai-analysis-detail-fields > .ai-requirement-analysis-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 640px) {
+  .ai-analysis-browser {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ai-analysis-directory {
+    flex: 0 0 240px;
+    border-right: 0;
+    border-bottom: 1px solid var(--app-frame-divider-soft);
+  }
+
+  .ai-analysis-detail { flex: 1; }
+}
+
+/* JSON 预览由 CodeMirror 承担滚动，不能让编辑器随虚拟内容撑开。 */
+.ai-requirement-analysis-preview-modal .ai-task-run-result-modal-content :is(.json-editor-wrap, .json-editor-shell, .json-editor-codemirror, .cm-editor) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0%;
+  height: 100%;
+  min-height: 0 !important;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ai-requirement-analysis-preview-modal .json-editor-toolbar {
+  flex-shrink: 0;
+}
+
+.ai-requirement-analysis-preview-modal .cm-scroller {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow: auto;
+}
+
+@media (max-width: 640px), (max-height: 700px) {
+  .ai-requirement-analysis-preview-modal.ai-task-run-result-modal :is(.ant-modal-container, .ant-modal-content) {
+    height: calc(100dvh - 32px);
   }
 }

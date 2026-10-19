@@ -55,6 +55,8 @@ type JsonEditorProps = {
   minHeight?: number
   /** 自定义工具条；传 `null` 表示外壳不自带工具条，动作条由宿主画在编辑器之外。 */
   toolbar?: ReactNode
+  /** 宿主提供复制入口时，仅隐藏内置复制，保留下载。 */
+  showCopy?: boolean
   /** 将编辑器操作并入宿主工具栏，默认仍显示在编辑器内部。 */
   toolbarContainer?: HTMLElement | null
   readOnly?: boolean
@@ -71,6 +73,7 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
   onChange,
   minHeight = 260,
   toolbar,
+  showCopy = true,
   toolbarContainer,
   readOnly = false,
   foldable = false,
@@ -161,14 +164,14 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
   const editorToolbar = toolbar === undefined ? (
     <div className="json-editor-toolbar">
       <div className="json-editor-toolbar-actions">
-        <Button
+        {showCopy && <Button
           className="json-editor-toolbar-btn"
           icon={<CopyOutlined />}
           onClick={handleCopy}
           disabled={!value?.trim()}
         >
           复制
-        </Button>
+        </Button>}
         <Button
           className="json-editor-toolbar-btn"
           icon={<DownloadOutlined />}

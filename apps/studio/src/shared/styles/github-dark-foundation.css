@@ -1,6 +1,15 @@
 /* GitHub Dark adaptation of the existing semantic roles. No component overrides.
  * Brand artwork retains its own palette; all other foundation colors are covered. */
 :root[data-theme="dark"] {
+  --app-reading-bg: var(--gh-surface);
+  --app-reading-ink: var(--gh-fg);
+  --app-reading-muted: var(--gh-muted);
+  --app-reading-border: var(--gh-border);
+  --app-reading-subtle: var(--gh-raised);
+  --app-reading-accent: var(--gh-blue);
+  --app-reading-accent-hover: var(--gh-blue-hover);
+  --app-reading-selection: var(--gh-blue-soft);
+  --app-reading-on-accent: var(--gh-bg);
   --app-shell-bg: var(--gh-bg);
   --app-shell-divider: var(--gh-border);
   --app-shell-text-muted: var(--gh-muted);

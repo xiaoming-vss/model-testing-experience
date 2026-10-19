@@ -1,4 +1,5 @@
 @import './material-comparison.css';
+@import './understanding-reading.css';
 .requirement-understanding-nav { flex: 1; min-width: 0; }
 .requirement-understanding-nav .ant-tabs-nav { margin: 0; }
 .requirement-understanding-nav .ant-tabs-content-holder { display: none; }
@@ -13,7 +14,7 @@
 
 .requirement-material-filter > .requirement-understanding-module-picker { flex: 1; min-width: 0; width: auto; }
 
-.requirement-ui-selectors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.requirement-ui-selectors { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-bottom: 16px; }
 .requirement-ui-selectors label { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .requirement-ui-selectors label > span { font-size: 12px; color: var(--app-text-secondary); }
 .requirement-ui-selectors .ant-select { width: 100%; }
@@ -23,3 +24,11 @@
 @container requirement-material (max-width: 840px) { .requirement-ui-selectors { grid-template-columns: minmax(0, 1fr); } }
 
 .requirement-operation-actions { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+
+.requirement-understanding-workspace.is-reading-only .requirement-material-comparison { grid-template-columns: minmax(0, 1fr); grid-auto-rows: minmax(0, 1fr); }
+.requirement-understanding-workspace.is-reading-only .requirement-fact-source,
+.requirement-understanding-workspace.is-reading-only .requirement-fact-confirmed,
+.requirement-understanding-workspace.is-reading-only .requirement-reading-citation,
+.requirement-understanding-workspace.is-reading-only button[aria-label="查看模块说明依据"] { display: none; }
+
+.requirement-understanding-workspace .requirement-material-overview.is-title-in-header { justify-content: flex-end; }

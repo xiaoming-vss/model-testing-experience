@@ -2,7 +2,7 @@
   "type": "object",
   "properties": {
     "schemaVersion": {
-      "const": "1.0"
+      "const": "2.0"
     },
     "artifactType": {
       "const": "requirement_understanding"
@@ -22,7 +22,7 @@
       "type": "object",
       "properties": {
         "purpose": {
-          "$ref": "#/$defs/textFact"
+          "$ref": "#/$defs/narrative"
         },
         "scope": {
           "type": "array",
@@ -74,6 +74,12 @@
       "items": {
         "$ref": "#/$defs/question"
       }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
     }
   },
   "required": [
@@ -85,11 +91,12 @@
     "businessFlows",
     "modules",
     "businessRules",
-    "questions"
+    "questions",
+    "evidence"
   ],
   "additionalProperties": false,
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "需求理解产物 1.0",
+  "title": "需求理解产物 2.0（集中证据）",
   "$defs": {
     "source": {
       "type": "object",
@@ -131,35 +138,7 @@
       "required": [
         "id",
         "name",
-        "type",
-        "location",
-        "version"
-      ],
-      "additionalProperties": false
-    },
-    "sourceReference": {
-      "type": "object",
-      "properties": {
-        "sourceId": {
-          "type": "string",
-          "minLength": 1
-        },
-        "locator": {
-          "type": "string",
-          "minLength": 1
-        },
-        "excerpt": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "minLength": 1
-        }
-      },
-      "required": [
-        "sourceId",
-        "locator",
-        "excerpt"
+        "type"
       ],
       "additionalProperties": false
     },
@@ -197,15 +176,18 @@
             "conflicting",
             "example",
             "not_applicable"
-          ]
-        },
-        "sourceReferences": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/sourceReference"
-          }
+          ],
+          "default": "confirmed"
         },
         "relatedQuestionIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "evidenceIds": {
           "type": "array",
           "items": {
             "type": "string",
@@ -215,10 +197,7 @@
         }
       },
       "required": [
-        "value",
-        "confirmationStatus",
-        "sourceReferences",
-        "relatedQuestionIds"
+        "value"
       ],
       "additionalProperties": false,
       "allOf": [
@@ -237,10 +216,19 @@
           },
           "then": {
             "properties": {
-              "sourceReferences": {
+              "evidenceIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
                 "minItems": 1
               }
-            }
+            },
+            "required": [
+              "evidenceIds"
+            ]
           }
         },
         {
@@ -249,14 +237,20 @@
               "confirmationStatus": {
                 "const": "conflicting"
               }
-            }
+            },
+            "required": [
+              "confirmationStatus"
+            ]
           },
           "then": {
             "properties": {
               "relatedQuestionIds": {
                 "minItems": 1
               }
-            }
+            },
+            "required": [
+              "relatedQuestionIds"
+            ]
           }
         },
         {
@@ -265,7 +259,10 @@
               "confirmationStatus": {
                 "const": "not_applicable"
               }
-            }
+            },
+            "required": [
+              "confirmationStatus"
+            ]
           },
           "then": {
             "properties": {
@@ -292,7 +289,10 @@
                   "not_applicable"
                 ]
               }
-            }
+            },
+            "required": [
+              "confirmationStatus"
+            ]
           }
         }
       ]
@@ -417,12 +417,6 @@
           },
           "minItems": 1
         },
-        "sourceReferences": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/sourceReference"
-          }
-        },
         "answer": {
           "anyOf": [
             {
@@ -433,6 +427,14 @@
             }
           ],
           "description": "剩余问题所需的部分答复；完整答复合并到正文后移除整个问题，不保留问答历史。"
+        },
+        "evidenceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
         }
       },
       "required": [
@@ -440,9 +442,7 @@
         "question",
         "status",
         "affectedRefs",
-        "impacts",
-        "sourceReferences",
-        "answer"
+        "impacts"
       ],
       "additionalProperties": false,
       "description": "只记录尚未解决的缺口。明确答复先合并到受影响业务内容，再删除已解决问题及全部关联引用；部分解决仅保留剩余缺口。"
@@ -494,8 +494,7 @@
       },
       "required": [
         "id",
-        "value",
-        "meaning"
+        "value"
       ],
       "additionalProperties": false
     },
@@ -569,9 +568,7 @@
         "label",
         "businessMeaning",
         "type",
-        "options",
-        "inputRules",
-        "defaultValue"
+        "options"
       ],
       "additionalProperties": false
     },
@@ -601,8 +598,7 @@
         "location",
         "fields",
         "recordIdentity",
-        "scope",
-        "emptyState"
+        "scope"
       ],
       "additionalProperties": false
     },
@@ -647,11 +643,7 @@
         "controls",
         "trigger",
         "initialState",
-        "dependencies",
-        "results",
-        "pagination",
-        "sorting",
-        "validationAndFeedback"
+        "results"
       ],
       "additionalProperties": false
     },
@@ -663,13 +655,13 @@
           "minLength": 1
         },
         "actor": {
-          "$ref": "#/$defs/textFact"
+          "$ref": "#/$defs/narrative"
         },
         "action": {
-          "$ref": "#/$defs/textFact"
+          "$ref": "#/$defs/narrative"
         },
         "systemResponse": {
-          "$ref": "#/$defs/textFact"
+          "$ref": "#/$defs/narrative"
         }
       },
       "required": [
@@ -692,7 +684,7 @@
           "minLength": 1
         },
         "goal": {
-          "$ref": "#/$defs/textFact"
+          "$ref": "#/$defs/narrative"
         },
         "preconditions": {
           "type": "array",
@@ -730,11 +722,8 @@
         "id",
         "name",
         "goal",
-        "preconditions",
         "steps",
-        "interaction",
-        "ruleIds",
-        "relatedQuestionIds"
+        "interaction"
       ],
       "additionalProperties": false
     },
@@ -746,12 +735,11 @@
           "minLength": 1
         },
         "note": {
-          "$ref": "#/$defs/textFact"
+          "$ref": "#/$defs/narrative"
         }
       },
       "required": [
-        "operationId",
-        "note"
+        "operationId"
       ],
       "additionalProperties": false
     },
@@ -767,7 +755,7 @@
           "minLength": 1
         },
         "purpose": {
-          "$ref": "#/$defs/textFact"
+          "$ref": "#/$defs/narrative"
         },
         "entryPoints": {
           "type": "array",
@@ -800,10 +788,7 @@
         "id",
         "name",
         "purpose",
-        "entryPoints",
-        "operations",
-        "userVisibleFlow",
-        "relatedQuestionIds"
+        "operations"
       ],
       "additionalProperties": false
     },
@@ -819,13 +804,33 @@
         },
         "condition": {
           "$ref": "#/$defs/textFact"
+        },
+        "conditionRuleIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
         }
       },
       "required": [
-        "stepId",
-        "condition"
+        "stepId"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "condition"
+          ]
+        },
+        {
+          "required": [
+            "conditionRuleIds"
+          ]
+        }
+      ]
     },
     "flowStep": {
       "type": "object",
@@ -861,8 +866,7 @@
         "id",
         "moduleId",
         "operationId",
-        "nextSteps",
-        "relatedQuestionIds"
+        "nextSteps"
       ],
       "additionalProperties": false
     },
@@ -905,8 +909,7 @@
         "id",
         "name",
         "moduleIds",
-        "steps",
-        "relatedQuestionIds"
+        "steps"
       ],
       "additionalProperties": false
     },
@@ -970,13 +973,52 @@
         "name",
         "moduleIds",
         "operationIds",
-        "preconditions",
         "trigger",
         "expectedBehavior",
-        "observableOutcome",
-        "relatedQuestionIds"
+        "observableOutcome"
       ],
       "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "sourceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "excerpt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "sourceId",
+        "locator"
+      ],
+      "additionalProperties": false
+    },
+    "narrative": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "$ref": "#/$defs/textFact"
+        }
+      ]
     }
   }
 }

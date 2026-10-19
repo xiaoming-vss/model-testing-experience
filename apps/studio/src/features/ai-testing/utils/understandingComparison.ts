@@ -1,3 +1,4 @@
+import { resolveRequirementEvidence } from '@/domain/requirements/requirementEvidence'
 import { parseRequirementArtifact, type RequirementSourceReference } from '@/domain/requirements/requirementArtifact'
 import { readMaterialSources, type ExtractionArtifact, type MaterialBlock, type MaterialSource } from './materialComparison'
 
@@ -10,10 +11,11 @@ function named(value: unknown): NamedContent[] {
   return value as NamedContent[]
 }
 export function readUnderstandingArtifact(content: unknown): UnderstandingArtifact {
-  const parsed = parseRequirementArtifact(content)
+  const raw = parseRequirementArtifact(content)
+  const parsed = raw ? resolveRequirementEvidence(raw, raw) as Record<string, unknown> : null
   if (!parsed || parsed.artifactType !== 'requirement_understanding' || !record(parsed.functionalOverview)) throw new Error('当前内容不是完整的需求理解 JSON，请在原始 JSON 中修正')
   if (!Array.isArray(parsed.questions) || parsed.questions.some(q => !record(q) || typeof q.id !== 'string' || typeof q.question !== 'string')) throw new Error('需求理解的问题结构不完整，请在原始 JSON 中修正')
-  return { ...parsed, title: String(parsed.title || '需求理解记录'), sources: readMaterialSources(parsed.sources), functionalOverview: parsed.functionalOverview,
+  return { ...parsed, title: String(parsed.title || '需求理解记录'), sources: readMaterialSources((parsed.sources as Record<string, unknown>[]).map(source => ({ location: null, version: null, ...source }))), functionalOverview: parsed.functionalOverview,
     modules: named(parsed.modules).map(module => ({ ...module, operations: named(module.operations) })), businessFlows: named(parsed.businessFlows), businessRules: named(parsed.businessRules), questions: parsed.questions as UnderstandingArtifact['questions'] }
 }
 

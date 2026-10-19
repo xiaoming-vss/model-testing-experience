@@ -1,0 +1,120 @@
+/* Reading layout uses the shared application theme. */
+.requirement-understanding-modal .ant-modal-title { color: var(--app-text); font-size: 22px; line-height: 1.5; }
+.requirement-understanding-modal .ant-modal-footer .ant-btn { min-width: 82px; height: 32px; }
+.requirement-understanding-review-strip { display: flex; align-items: center; gap: 16px; flex-shrink: 0; margin: 0 0 7px; font-size: 13px; line-height: 1.6; }
+.requirement-understanding-review-strip > .ant-tag { margin: 0; padding: 6px 10px; font-size: 13px; line-height: 20px; }
+.requirement-understanding-review-message { display: flex; align-items: center; gap: 10px; flex: 1; padding: 6px 14px; background: var(--app-accent-surface); border-radius: 5px; color: var(--app-text-secondary); }
+.requirement-understanding-review-message .anticon { color: var(--app-accent); }
+.requirement-understanding-workspace .requirement-material-overview { padding: 4px 0 10px; gap: 8px 20px; }
+.requirement-understanding-workspace .requirement-material-overview strong { font-size: 16px; line-height: 1.5; }
+.requirement-understanding-workspace .requirement-material-overview span { font-size: 12px; }
+.requirement-understanding-workspace .requirement-material-comparison { grid-template-columns: minmax(0, .86fr) minmax(0, 1.14fr); gap: 16px; }
+.requirement-understanding-workspace .requirement-material-panel { border-radius: 6px; background: var(--app-surface); }
+.requirement-understanding-workspace .requirement-material-panel-head { padding: 0 20px; min-height: 46px; gap: 16px; }
+.requirement-understanding-workspace .requirement-understanding-nav .ant-tabs-tab { padding-block: 12px; font-size: 13px; color: var(--app-text-secondary); }
+.requirement-understanding-workspace .requirement-understanding-nav .ant-tabs-tab + .ant-tabs-tab { margin-left: 24px; }
+.requirement-understanding-workspace .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn { color: var(--app-accent); font-size: 14px; font-weight: 600; }
+.requirement-understanding-workspace .ant-tabs-ink-bar { background: var(--app-accent); }
+.requirement-source-comparison .requirement-material-panel-head + .requirement-material-panel-head,
+.requirement-understanding-workspace .requirement-material-filter { min-height: 64px; padding: 12px 20px; align-items: center; }
+.requirement-understanding-workspace .ant-select { background: var(--app-surface-raised); color: var(--app-text); border-color: var(--app-surface-border); }
+.requirement-understanding-workspace .ant-select-prefix { color: var(--app-accent); }
+.requirement-understanding-workspace .requirement-material-document { padding: 0 24px 20px; font-size: 14px; line-height: 1.8; }
+.requirement-understanding-workspace .requirement-understanding-content { padding: 20px 24px; font-size: 14px; line-height: 1.75; }
+.requirement-understanding-workspace .requirement-material-block { margin: 0 -12px; padding: 8px 12px; border: 0; font-size: 14px; line-height: 1.8; border-radius: 5px; }
+.requirement-understanding-workspace .requirement-material-block.is-linked { background: var(--app-accent-surface); }
+.requirement-understanding-workspace .requirement-material-block-location { float: right; max-width: 48%; margin: 2px 0 2px 12px; font-size: 11px; line-height: 1.6; }
+.requirement-understanding-workspace .requirement-material-block-location > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.requirement-understanding-workspace .requirement-material-block::after { content: ''; display: block; clear: both; }
+.requirement-understanding-workspace .requirement-material-block h4 { margin: 0 0 6px; font-size: 15px; line-height: 1.7; }
+.requirement-understanding-workspace .requirement-material-block p { margin: 2px 0; }
+.requirement-understanding-workspace .requirement-material-block.is-section { padding-top: 3px; padding-bottom: 0; }
+.requirement-understanding-workspace .requirement-material-panel-foot { min-height: 36px; padding: 8px 18px; font-size: 11px; background: var(--app-surface); }
+.requirement-understanding-workspace .requirement-understanding-content > h3 { font-size: 18px; margin: 0 0 16px; }
+.requirement-understanding-workspace .requirement-understanding-content .ant-descriptions-item-content { font-size: 13px; line-height: 1.8; }
+.requirement-understanding-workspace .requirement-understanding-content .ant-descriptions-item-label { color: var(--app-text-secondary); font-size: 12px; }
+.requirement-understanding-workspace .requirement-understanding-evidence { margin: 0 0 16px; border-left-width: 1px; background: var(--app-accent-surface); border-radius: 4px; }
+.requirement-reading-section { margin-bottom: 16px; }
+.requirement-reading-section:last-child { margin-bottom: 0; }
+.requirement-reading-section h3 { display: flex; align-items: center; gap: 14px; font-size: 17px; line-height: 1.6; margin: 0 0 12px; color: var(--app-text); }
+.requirement-reading-section h3 > .anticon { color: var(--app-accent); font-size: 22px; }
+.requirement-reading-section h3 > .ant-btn { margin-left: auto; font-weight: 400; }
+.requirement-reading-purpose { margin: 0 0 8px 36px; min-height: 50px; line-height: 1.8; }
+.requirement-reading-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-left: 36px; font-size: 12px; }
+.requirement-reading-citation { display: inline-block; max-width: 100%; padding: 3px 7px; border: 0; border-radius: 4px; background: var(--app-accent-surface); color: var(--app-accent); font: inherit; font-size: 11px; line-height: 1.6; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.requirement-reading-citation:hover { background: var(--app-surface-border); }
+.requirement-reading-citation:focus-visible,
+.requirement-module-card:focus-visible,
+.requirement-reading-section summary:focus-visible { outline: 2px solid var(--app-accent); outline-offset: 3px; }
+.requirement-reading-questions { color: var(--app-text-secondary); }
+.requirement-reading-questions[open] { width: 100%; }
+.requirement-reading-questions summary { cursor: pointer; }
+.requirement-reading-questions ul { margin: 8px 0; padding-left: 20px; }
+.requirement-module-navigation { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 0; margin: 0 0 10px; list-style: none; }
+.requirement-module-navigation > li { position: relative; min-width: 0; }
+.requirement-module-card { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; height: 100%; min-height: 132px; padding: 10px 8px; border: 1px solid var(--app-surface-border); border-radius: 6px; background: var(--app-surface-raised); color: var(--app-text); text-align: center; font: inherit; font-size: 12px; line-height: 1.5; cursor: pointer; overflow-wrap: anywhere; }
+.requirement-module-card:hover:not(:disabled) { border-color: var(--app-accent); background: var(--app-accent-surface); }
+.requirement-reading-step-icon { font-size: 23px; line-height: 1.4; color: var(--app-accent); }
+.requirement-module-card strong { font-size: 13px; font-weight: 600; }
+.requirement-reading-step-note { color: var(--app-text-secondary); }
+.requirement-reading-step-status { font-size: 11px; color: var(--app-text-secondary); }
+.requirement-reading-details { font-size: 12px; color: var(--app-text-secondary); }
+.requirement-reading-details summary { cursor: pointer; padding: 4px 0; }
+.requirement-reading-details[open] > .ant-descriptions { margin-top: 12px; }
+.requirement-reading-rules { list-style: none; padding: 0; margin: 0; }
+.requirement-reading-rules > li { display: flex; align-items: baseline; gap: 12px; padding: 6px 0; font-size: 13px; }
+.requirement-reading-rules > li:last-child { border-bottom: 0; }
+.requirement-reading-rule-index { flex-shrink: 0; width: 26px; line-height: 26px; border-radius: 5px; background: var(--app-accent-surface); color: var(--app-accent); text-align: center; font-weight: 600; }
+.requirement-reading-rules details { flex: 1; min-width: 0; }
+.requirement-reading-rules summary { cursor: pointer; list-style: none; }
+.requirement-reading-rules summary::-webkit-details-marker { display: none; }
+.requirement-reading-rules summary:hover { color: var(--app-accent); }
+.requirement-reading-rules details[open] > .ant-descriptions { margin-top: 12px; }
+.requirement-reading-rule-source { display: flex; flex-direction: column; gap: 4px; max-width: 150px; }
+@container requirement-material (max-width: 1100px) {
+  .requirement-understanding-workspace .requirement-material-panel-head { padding-inline: 14px; }
+  .requirement-understanding-workspace .requirement-understanding-content { padding: 18px; }
+  .requirement-module-navigation { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+}
+@container requirement-material (max-width: 840px) {
+  .requirement-understanding-workspace .requirement-material-comparison { grid-template-columns: minmax(0, 1fr); grid-auto-rows: minmax(440px, 1fr); }
+  .requirement-reading-rule-source { max-width: 110px; }
+  .requirement-reading-purpose, .requirement-reading-meta { margin-left: 0; }
+}
+
+.requirement-understanding-summary-count { margin-left: auto; white-space: nowrap; font-size: 12px; }
+.requirement-understanding-workspace .requirement-material-block-location { visibility: hidden; }
+.requirement-understanding-workspace .requirement-material-block:is(:hover, :focus-within, .is-linked) .requirement-material-block-location { visibility: visible; }
+.requirement-understanding-workspace .requirement-material-panel-foot { border-top: 0; }
+.requirement-understanding-workspace .requirement-material-panel:last-child > .requirement-material-panel-foot { display: none; }
+.requirement-reading-rules summary { font-size: 13px; line-height: 1.6; }
+@media (max-width: 1000px) {
+  .requirement-understanding-review-message { flex-wrap: wrap; }
+  .requirement-understanding-summary-count { margin-left: 0; white-space: normal; }
+}
+
+.requirement-reading-source-popover { display: flex; flex-direction: column; gap: 8px; max-width: 420px; }
+.requirement-reading-meta:empty { display: none; }
+.requirement-understanding-workspace.has-footer-summary .requirement-source-comparison > .requirement-material-panel-foot { display: none; }
+.requirement-understanding-modal .ant-modal-footer { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.requirement-understanding-modal .ant-modal-footer .ant-btn { margin-inline-start: 0; }
+.requirement-understanding-footer-count { order: -1; margin-right: auto; display: inline-flex; align-items: center; gap: 8px; color: var(--app-accent); font-size: 12px; }
+
+/* User-selected A comp owns this focused reader's desktop frame geometry. */
+@media (min-width: 1101px) and (min-height: 701px) {
+  .ant-modal.functional-artifact-modal.requirement-understanding-modal { width: min(2000px, calc(100vw - 136px)) !important; left: 36px; top: 28px; }
+  .ant-modal.functional-artifact-modal.requirement-understanding-modal :is(.ant-modal-container, .ant-modal-content) { height: min(90dvh, 1200px); }
+}
+.requirement-understanding-workspace .requirement-material-filter > .ant-select,
+.requirement-understanding-workspace .requirement-source-comparison .ant-select { min-height: 38px; }
+
+.requirement-reading-flow-popover { width: min(600px, calc(100vw - 80px)); max-height: 55dvh; overflow: auto; }
+
+.requirement-module-card[aria-pressed='true'] {
+  border-color: var(--app-accent);
+  background: var(--app-accent-surface);
+}
+
+.requirement-reading-operations { padding-top: 12px; border-top: 1px solid var(--app-surface-border); }
+.requirement-operation-module { border-bottom: 1px solid var(--app-surface-border); }
+.requirement-operation-module > summary { padding: 12px 0; cursor: pointer; font-weight: 600; }

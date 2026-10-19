@@ -119,9 +119,7 @@ class TwoStageTests(unittest.TestCase):
             lambda d: d["modules"][0]["purpose"].update(confirmationStatus="confirmed"),
             lambda d: d["businessFlows"][0]["steps"][0].update(operationId="missing"),
             lambda d: d["questions"][0]["affectedRefs"][0].update(id="missing"),
-            lambda d: d["modules"][0]["operations"][0]["interaction"]["trigger"][
-                "sourceReferences"
-            ][0].update(sourceId="missing"),
+            lambda d: d["evidence"][0].update(sourceId="missing"),
         ]:
             document = deepcopy(example("requirement-understanding"))
             mutation(document)
@@ -167,6 +165,12 @@ class TwoStageTests(unittest.TestCase):
                         "relatedQuestionIds": [],
                     },
                 )
+                if kind == "requirement_understanding":
+                    answer = current["questions"][0]["answer"]
+                    current["evidence"].append(
+                        {"id": "ANSWER", **answer.pop("sourceReferences")[0]}
+                    )
+                    answer["evidenceIds"] = ["ANSWER"]
                 updated = deepcopy(current)
                 updated["questions"] = updated["questions"][1:]
 
@@ -215,7 +219,10 @@ class TwoStageTests(unittest.TestCase):
                     else json.loads(result.output_yaml)
                 )
                 self.assertFalse(any(q["status"] == "resolved" for q in output["questions"]))
-                self.assertEqual(validate_artifact(output, kind), updated)
+                self.assertEqual(
+                    validate_artifact(output, kind),
+                    updated,
+                )
                 with self.assertRaisesRegex(ValueError, "已解决问题"):
                     self.run_stage(
                         self.task(stage, config), lambda **kwargs: json.dumps(current), []

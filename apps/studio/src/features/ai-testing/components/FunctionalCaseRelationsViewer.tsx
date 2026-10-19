@@ -1,6 +1,7 @@
+import { ArtifactModeSwitch } from './ArtifactViewTabs'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
-import { Button, Empty, Segmented, Select, Spin } from 'antd'
+import { Button, Empty, Spin } from 'antd'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   FunctionalCaseRelationsGraph,
@@ -10,7 +11,6 @@ import {
   buildRelationsGraphModel,
   parseCaseRelationsContent,
   parseDetailedCaseMeta,
-  type RelationsOrientation,
 } from '../utils/caseRelationsGraph'
 import type { FunctionalCaseGenerateTaskRun } from '../types'
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
@@ -41,7 +41,6 @@ function getCaseRelationsContent(run?: FunctionalCaseGenerateTaskRun) {
 
 export function FunctionalCaseRelationsViewer({ taskId, runId, onBack }: { taskId: string; runId: string; onBack?: () => void }) {
   const [activeTab, setActiveTab] = useState<'graph' | 'json'>('graph')
-  const [orientation, setOrientation] = useState<RelationsOrientation>('horizontal')
   const [jsonToolbar, setJsonToolbar] = useState<HTMLDivElement | null>(null)
   const [hasSelection, setHasSelection] = useState(false)
   const graphRef = useRef<FunctionalCaseRelationsGraphHandle | null>(null)
@@ -89,27 +88,16 @@ export function FunctionalCaseRelationsViewer({ taskId, runId, onBack }: { taskI
             </span>
           </div>
           <span className="ai-relations-page-spacer" />
-          <Segmented
-            size="small"
+          <ArtifactModeSwitch
             value={activeTab}
             onChange={(value) => setActiveTab(value as 'graph' | 'json')}
             options={[
               { label: '可视化', value: 'graph' },
-              { label: 'json', value: 'json' },
+              { label: 'JSON', value: 'json' },
             ]}
           />
           {activeTab === 'graph' ? (
             <>
-              <Select<RelationsOrientation>
-                size="small"
-                value={orientation}
-                onChange={setOrientation}
-                style={{ width: 116 }}
-                options={[
-                  { value: 'horizontal', label: '横向鱼骨' },
-                  { value: 'vertical', label: '纵向鱼骨' },
-                ]}
-              />
               <Button size="small" onClick={() => graphRef.current?.fitView()}>查看全图</Button>
               <Button size="small" disabled={!hasSelection} onClick={() => graphRef.current?.locateSelected()}>
                 定位选中用例
@@ -133,7 +121,8 @@ export function FunctionalCaseRelationsViewer({ taskId, runId, onBack }: { taskI
               ref={graphRef}
               content={relationsContent}
               casesContent={run?.resultYaml}
-              orientation={orientation}
+              orientation="horizontal"
+              presentation="hierarchy"
               onSelectionChange={handleSelectionChange}
             />
           ) : (

@@ -198,57 +198,43 @@ describe('功能候选结果审核与正式资产导入', () => {
     await clickRunInlineAction(user, 'run-1', '审核结果')
     const cards = screen.getAllByRole('article')
     expect(within(cards[0]).getByText('9f1c2e4a…')).toHaveAttribute('title', caseId)
-    expect(within(cards[1]).queryByText('9f1c2e4a…')).not.toBeInTheDocument()
-    expect(within(cards[1]).getByText('异常流程')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '异常流程' }))
+    expect(within(screen.getByRole('article')).queryByText('9f1c2e4a…')).not.toBeInTheDocument()
+    expect(within(screen.getByRole('article')).getByText('异常流程')).toBeInTheDocument()
   })
 
-  it('候选结果同时展示分组卡片和 JSON 编辑区', async () => {
+  it('候选结果默认显示树图与详情，JSON 通过标题切换查看', async () => {
     installFetchHandler(() => pendingRun)
     const user = userEvent.setup()
     renderPage()
-
     await clickRunInlineAction(user, 'run-1', '审核结果')
-
-    const moduleItem = await screen.findByRole('button', { name: /登录\s*1/ })
-    expect(moduleItem).not.toHaveAttribute('aria-current')
-    await user.click(moduleItem)
-    expect(moduleItem).toHaveAttribute('aria-current', 'true')
-    await user.click(moduleItem)
-    expect(moduleItem).not.toHaveAttribute('aria-current')
-    expect(screen.getByRole('textbox', { name: '搜索模块或场景' })).toBeInTheDocument()
-    expect(await screen.findByText('账号密码登录成功')).toBeInTheDocument()
+    // 树图直接占满画布，顶部不提供搜索框。
+    expect(screen.getByRole('region', { name: '用例树图' })).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: '搜索模块、场景或用例' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '账号密码登录成功' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText('前置条件')).toBeInTheDocument()
     expect(screen.getByText('测试步骤')).toBeInTheDocument()
-    expect(screen.getByText('预期结果')).toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: 'json' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: '卡片' })).not.toBeInTheDocument()
-
-
+    expect(screen.queryByRole('textbox', { name: '功能候选结果 JSON' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: 'JSON' }).closest('label')!)
     expect(await screen.findByRole('textbox', { name: '功能候选结果 JSON' })).toBeInTheDocument()
   })
 
-  it('再次点击已选中卡片取消选中，编辑区回到完整候选内容', async () => {
+  it('选择用例更新详情，切换 JSON 保留完整候选内容和树图选择', async () => {
     installFetchHandler(() => ({ ...pendingRun, resultYaml: JSON.stringify({ cases: [
       { case_module: '登录', 'Case Title': '账号密码登录成功' },
       { case_module: '登录', 'Case Title': '账号密码登录失败提示' },
     ] }) }))
     const user = userEvent.setup()
     renderPage()
-
     await clickRunInlineAction(user, 'run-1', '审核结果')
-
+    await user.click(screen.getByRole('button', { name: '账号密码登录失败提示' }))
+    expect(within(screen.getByRole('article')).getByText('账号密码登录失败提示')).toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: 'JSON' }).closest('label')!)
     const editor = await screen.findByRole('textbox', { name: '功能候选结果 JSON' })
-    await waitFor(() => expect(editor).toHaveTextContent('账号密码登录成功'))
-    expect(editor).toHaveTextContent('账号密码登录失败提示')
-
-    const firstCard = within(screen.getByRole('region', { name: '候选用例可视化' })).getAllByRole('article')[0]
-    await user.click(firstCard)
-    expect(editor).toHaveTextContent('账号密码登录成功')
-    expect(editor).not.toHaveTextContent('账号密码登录失败提示')
-
-    await user.click(firstCard)
     expect(editor).toHaveTextContent('账号密码登录成功')
     expect(editor).toHaveTextContent('账号密码登录失败提示')
+    await user.click(screen.getByRole('radio', { name: '可视化' }).closest('label')!)
+    expect(screen.getByRole('button', { name: '账号密码登录失败提示' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it.each([false, true])('展示新版需求分析结构（直接返回：%s）', async (direct) => {
@@ -264,16 +250,21 @@ describe('功能候选结果审核与正式资产导入', () => {
     const user = userEvent.setup()
     renderPage()
     await clickRunInlineAction(user, 'run-1', '审核')
-    await user.click(screen.getByRole('tab', { name: '可视化' }))
-    for (const title of ['功能概览', '业务规则', '场景因素', '场景拆解', '待确认项']) {
-      await user.click(screen.getByRole('button', { name: new RegExp(title) }))
+    await user.click(screen.getByRole('radio', { name: '可视化' }).closest('label')!)
+    const sections = [
+      ['功能概览', analysisFixture.functionalOverview.purpose],
+      ['业务规则', analysisFixture.businessRules[0].name],
+      ['场景因素', analysisFixture.scenarioFactors[0].clarificationNeeded],
+      ['场景拆解', analysisFixture.scenarioBreakdown[0].verificationObjective],
+      ['待确认项', analysisFixture.openQuestions[0].question],
+    ]
+    for (const [title, content] of sections) {
+      const tab = screen.getByRole('tab', { name: new RegExp(title) })
+      await user.click(tab)
+      expect(tab).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getAllByText(content).some((element) => element.closest('[aria-hidden="true"]') === null)).toBe(true)
+      if (title === '场景拆解') expect(within(screen.getByRole('article', { name: '场景拆解详情' })).getByText('可生成测试点')).toBeVisible()
     }
-    expect(screen.getByText(analysisFixture.functionalOverview.purpose)).toBeInTheDocument()
-    expect(screen.getByText(analysisFixture.businessRules[0].name)).toBeInTheDocument()
-    expect(screen.getByText(analysisFixture.scenarioFactors[0].clarificationNeeded)).toBeInTheDocument()
-    expect(screen.getByText(analysisFixture.scenarioBreakdown[0].verificationObjective)).toBeInTheDocument()
-    expect(screen.getByText(analysisFixture.openQuestions[0].question)).toBeInTheDocument()
-    expect(screen.getAllByText('可生成测试点')).toHaveLength(6)
     expect(screen.queryByText('[object Object]')).not.toBeInTheDocument()
   })
 
@@ -291,8 +282,10 @@ describe('功能候选结果审核与正式资产导入', () => {
     const user = userEvent.setup()
     renderPage()
     await user.click(await screen.findByRole('button', { name: '测试需求分析' }))
-    await user.click(screen.getByRole('tab', { name: '可视化' }))
-    await user.click(screen.getByRole('button', { name: /场景拆解/ }))
+    await user.click(screen.getByRole('radio', { name: 'JSON' }).closest('label')!)
+    expect(screen.getByRole('radio', { name: 'JSON' })).toBeChecked()
+    await user.click(screen.getByRole('radio', { name: '可视化' }).closest('label')!)
+    await user.click(screen.getByRole('tab', { name: /场景拆解/ }))
     expect(screen.getByText('暂不可生成测试点')).toBeInTheDocument()
     expect(screen.getByText('失败反馈未明确')).toBeInTheDocument()
     expect(screen.getByText('R01')).toBeInTheDocument()
@@ -354,7 +347,7 @@ describe('功能候选结果审核与正式资产导入', () => {
     renderPage()
 
     await clickRunInlineAction(user, 'run-1', '审核')
-    await user.click(screen.getByRole('tab', { name: '可视化' }))
+    await user.click(screen.getByRole('radio', { name: '可视化' }).closest('label')!)
 
     for (const sectionName of ['平台核心功能', '目标理解', '风险点预测', '功能流程', '场景设计']) {
       expect(screen.getByRole('button', { name: new RegExp(sectionName) })).toHaveAttribute('aria-expanded', 'false')
@@ -407,11 +400,13 @@ describe('功能候选结果审核与正式资产导入', () => {
     renderPage()
 
     await clickRunInlineAction(user, 'run-1', '审核结果')
+    await user.click(screen.getByRole('radio', { name: 'JSON' }).closest('label')!)
     const editor = await screen.findByRole('textbox', { name: '功能候选结果 JSON' })
     await user.click(editor)
     await user.keyboard('{Control>}a{/Control}')
     await user.paste(changedYaml)
-    expect(within(screen.getByRole('region', { name: '候选用例可视化' })).getByText('账号密码登录并进入首页')).toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: '可视化' }).closest('label')!)
+    expect(screen.getByRole('button', { name: '账号密码登录并进入首页' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '保存当前修改' }))
     await waitFor(() => expect(patchBody).toEqual({ resultYaml: changedYaml }))
 
@@ -426,6 +421,7 @@ describe('功能候选结果审核与正式资产导入', () => {
     expect(await screen.findByRole('menuitem', { name: '导入正式用例' })).toBeEnabled()
 
     await user.click(screen.getByRole('button', { name: '查看结果' }))
+    await user.click(screen.getByRole('radio', { name: 'JSON' }).closest('label')!)
     expect(await screen.findByRole('textbox', { name: '功能候选结果 JSON' })).toHaveAttribute('aria-readonly', 'true')
     expect(screen.queryByRole('button', { name: '保存当前修改' })).not.toBeInTheDocument()
   }, 90_000)
@@ -672,6 +668,7 @@ describe('功能测试继续优化', () => {
     const user = userEvent.setup()
     renderPage()
     await clickRunInlineAction(user, 'run-1', '审核结果')
+    await user.click(screen.getByRole('radio', { name: 'JSON' }).closest('label')!)
     const editor = await screen.findByRole('textbox', { name: '功能候选结果 JSON' })
     await user.click(editor)
     await user.keyboard('{Control>}a{/Control}')
@@ -715,7 +712,7 @@ it('阶段优化带入未保存的 JSON，并在提交期间禁止重复请求',
   const user = userEvent.setup()
   const queryClient = renderPage()
   await clickRunInlineAction(user, 'run-1', '审核')
-  await user.click(screen.getByRole('tab', { name: 'json' }))
+  await user.click(screen.getByRole('radio', { name: 'JSON' }).closest('label')!)
   const editor = document.querySelector('.cm-content') as HTMLElement
   await user.click(editor)
   await user.keyboard('{Control>}a{/Control}')
@@ -801,7 +798,7 @@ it('优化侧栏预填当前编辑中的待确认项，并保留补充内容', a
   const user = userEvent.setup()
   renderPage()
   await clickRunInlineAction(user, 'run-1', '审核')
-  await user.click(screen.getByRole('tab', { name: 'json' }))
+  await user.click(screen.getByRole('radio', { name: 'JSON' }).closest('label')!)
   const stageEditor = document.querySelector('.cm-content') as HTMLElement
   await user.click(stageEditor)
   await user.keyboard('{Control>}a{/Control}')
@@ -816,12 +813,13 @@ it('优化侧栏预填当前编辑中的待确认项，并保留补充内容', a
   await user.click(screen.getByRole('button', { name: '提交优化' }))
   expect(body).toBeUndefined()
   // Inspect the current visualization, whose heading renders title and count separately.
-  await user.click(screen.getByRole('tab', { name: '可视化' }))
-  const questions = screen.getByRole('button', { name: /^待确认项\s*2$/ })
+  await user.click(screen.getByRole('radio', { name: '可视化' }).closest('label')!)
+  const questions = screen.getByRole('tab', { name: /^待确认项\s*2$/ })
   await user.click(questions)
-  const questionSection = questions.closest('section')!
-  await waitFor(() => expect(within(questionSection).getByText('离线如何提示？')).toBeVisible())
-  expect(within(questionSection).getByText('解绑入口在哪里？')).toBeVisible()
+  const questionSection = document.getElementById(questions.getAttribute('aria-controls')!)!
+  await waitFor(() => expect(within(questionSection).getByRole('button', { name: /离线如何提示/ })).toBeVisible())
+  await user.click(within(questionSection).getByRole('button', { name: /解绑入口在哪里/ }))
+  expect(within(screen.getByRole('article', { name: '待确认项详情' })).getAllByText('解绑入口在哪里？')[0]).toBeVisible()
   expect(within(questionSection).queryByText('旧问题')).not.toBeInTheDocument()
   await user.clear(input)
   await user.type(input, '补充：解绑入口在设备管理页。离线提示仍待确认。')
@@ -876,7 +874,7 @@ it.each(['save', 'approve'])('需求分析 %s 后重新加载应显示修改内�
   const user = userEvent.setup()
   renderPage()
   await clickRunInlineAction(user, 'run-1', '审核')
-  await user.click(screen.getByRole('tab', { name: 'json' }))
+  await user.click(screen.getByRole('radio', { name: 'JSON' }).closest('label')!)
   const editor = document.querySelector('.cm-content') as HTMLElement
   await user.click(editor)
   await user.keyboard('{Control>}a{/Control}')
@@ -890,7 +888,7 @@ it.each(['save', 'approve'])('需求分析 %s 后重新加载应显示修改内�
   cleanup()
   renderPage()
   await clickRunInlineAction(user, 'run-1', '审核')
-  await user.click(screen.getByRole('tab', { name: 'json' }))
+  await user.click(screen.getByRole('radio', { name: 'JSON' }).closest('label')!)
   await waitFor(() => expect(document.querySelector('.cm-content')).toHaveTextContent('edited'))
 })
 
@@ -958,7 +956,7 @@ describe('图谱分析', () => {
     edges: [{ edge_id: 'E01', from_case_id: 'case-1', to_case_id: 'case-2', relation_type: 'next', order: 1 }],
   }
 
-  it('审核通过后在更多操作中出现生成图谱，点击派发并在完成后展示鱼骨图谱，可切换查看 JSON', async () => {
+  it('审核通过后在更多操作中出现生成图谱，点击派发并在完成后展示与测试单一致的层级图谱，可切换查看 JSON', async () => {
     let relationRequested = false
     let currentRun: FunctionalCaseGenerateTaskRun = {
       ...pendingRun,
@@ -996,14 +994,14 @@ describe('图谱分析', () => {
     expect(within(graphDialog).getByText('用例图谱', { exact: true })).toBeInTheDocument()
     expect(document.querySelector('.ai-testing-page')).not.toBeNull()
     await waitFor(() => {
-      expect(document.querySelector('.ai-relations-node')).not.toBeNull()
+      expect(document.querySelector('.ai-relations-hierarchy')).not.toBeNull()
     })
     expect(document.body.textContent).toContain('1 条业务主线')
     expect(within(graphDialog).queryByRole('button', { name: '返回任务' })).not.toBeInTheDocument()
 
-    // 单行工具条用 Segmented 切换可视化 / json（隐藏的 radio input 不可点击，点可见分段项）
+    // 标题右侧用 Segmented 切换可视化 / JSON（隐藏的 radio input 不可点击，点可见分段项）
     const relationsBar = document.querySelector('.ai-relations-page-bar') as HTMLElement
-    await user.click(within(relationsBar).getByText('json'))
+    await user.click(within(graphDialog).getByRole('radio', { name: 'JSON' }).closest('label')!)
     expect(await within(relationsBar).findByRole('button', { name: /复制/ })).toBeInTheDocument()
     expect(within(relationsBar).getByRole('button', { name: /下载/ })).toBeInTheDocument()
     expect(within(relationsBar).queryByText('主线 / 后续')).not.toBeInTheDocument()
@@ -1015,7 +1013,7 @@ describe('图谱分析', () => {
     expect(await screen.findByRole('button', { name: '图谱分析' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '图谱分析' }))
     const reopened = await screen.findByRole('dialog')
-    await waitFor(() => expect(reopened.querySelector('.ai-relations-node')).not.toBeNull())
+    await waitFor(() => expect(reopened.querySelector('.ai-relations-hierarchy')).not.toBeNull())
   })
 
   it('未审核通过的运行不出现生成图谱入口', async () => {
@@ -1068,6 +1066,6 @@ describe('运行记录删除', () => {
 
 it('需求详情直接打开既有候选审核工作区', async () => {
   installFetchHandler(() => pendingRun); renderPage(true)
-  await screen.findByRole('textbox', { name: '功能候选结果 JSON' })
+  await screen.findByRole('region', { name: '用例树图' })
   expect(screen.queryByText('返回功能测试')).not.toBeInTheDocument()
 })

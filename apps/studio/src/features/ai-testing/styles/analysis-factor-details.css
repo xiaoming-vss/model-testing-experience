@@ -1,0 +1,10 @@
+.ai-analysis-factor-count { margin-left: 10px; color: var(--ai-text-muted); font-size: 12px; font-weight: 400; }
+.ai-analysis-factor-values.is-multicolumn { column-count: 3; column-gap: 32px; }
+.ai-analysis-factor-values li { break-inside: avoid; padding-block: 4px; }
+.ai-analysis-factor-reading { margin: 0; color: var(--ai-text-muted); font-size: 12px; line-height: 20px; }
+@container (max-width: 900px) {
+  .ai-analysis-factor-values.is-multicolumn { column-count: 2; }
+}
+@container (max-width: 500px) {
+  .ai-analysis-factor-values.is-multicolumn { column-count: 1; }
+}

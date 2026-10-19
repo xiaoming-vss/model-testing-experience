@@ -789,7 +789,7 @@ describe('UI 用例生成任务详情', () => {
     renderPage()
 
     await user.click(await findRunInlineAction('审核结果'))
-    await user.click(await screen.findByRole('tab', { name: '编辑 YAML' }))
+    await user.click(await screen.findByText('编辑 YAML', { exact: true }))
     const editor = await screen.findByRole('textbox', { name: '候选结果 YAML' })
     await user.click(editor)
     await user.keyboard('{Control>}a{/Control}')
@@ -846,7 +846,7 @@ describe('UI 用例生成任务详情', () => {
     renderPage()
 
     await user.click(await findRunInlineAction('审核结果'))
-    await user.click(await screen.findByRole('tab', { name: '编辑 YAML' }))
+    await user.click(await screen.findByText('编辑 YAML', { exact: true }))
 
     expect(await screen.findByRole('textbox', { name: '候选结果 YAML' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '还原未保存改动' })).not.toBeInTheDocument()
@@ -883,7 +883,7 @@ describe('UI 用例生成任务详情', () => {
     renderPage()
 
     await user.click(await findRunInlineAction('审核结果'))
-    await user.click(await screen.findByRole('tab', { name: '编辑 YAML' }))
+    await user.click(await screen.findByText('编辑 YAML', { exact: true }))
     const editor = await screen.findByRole('textbox', { name: '候选结果 YAML' })
     await user.click(editor)
     await user.keyboard('{Control>}a{/Control}')
@@ -901,7 +901,7 @@ describe('UI 用例生成任务详情', () => {
     renderPage()
 
     await user.click(await findRunInlineAction('审核结果'))
-    await user.click(await screen.findByRole('tab', { name: '编辑 YAML' }))
+    await user.click(await screen.findByText('编辑 YAML', { exact: true }))
     const editor = await screen.findByRole('textbox', { name: '候选结果 YAML' })
     await user.click(editor)
     await user.keyboard('{Control>}a{/Control}')
@@ -915,7 +915,7 @@ describe('UI 用例生成任务详情', () => {
     await waitFor(() => expect(editor).not.toBeInTheDocument())
     await user.click(await findRunInlineAction('审核结果'))
     // destroyOnHidden recreates the tabs on the default preview when reopened.
-    await user.click(await screen.findByRole('tab', { name: '编辑 YAML' }))
+    await user.click(await screen.findByText('编辑 YAML', { exact: true }))
     const reopenedEditor = await screen.findByRole('textbox', { name: '候选结果 YAML' })
     await waitFor(() => expect(reopenedEditor).toHaveTextContent('登录成功'))
     expect(reopenedEditor).not.toHaveTextContent('尚未保存的登录用例')
@@ -931,7 +931,7 @@ describe('UI 用例生成任务详情', () => {
     renderPage()
 
     await user.click(await findRunInlineAction('审核结果'))
-    await user.click(await screen.findByRole('tab', { name: '编辑 YAML' }))
+    await user.click(await screen.findByText('编辑 YAML', { exact: true }))
     await user.click(screen.getByRole('button', { name: '拒绝候选' }))
 
     expect(await screen.findByText('已拒绝')).toBeInTheDocument()

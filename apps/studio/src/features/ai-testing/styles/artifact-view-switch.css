@@ -1,0 +1,33 @@
+.ant-modal .ant-modal-header.ai-artifact-mode-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-right: 44px; min-height: 28px; }
+.ai-artifact-mode-heading > :first-child:not(.ai-artifact-mode-slot) { flex: 1; min-width: 0; }
+.ai-artifact-mode-slot { flex-shrink: 0; font-weight: 400; }
+.ai-artifact-mode-toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; flex-shrink: 0; }
+@media (max-width: 640px) {
+  .ant-modal .ant-modal-header.ai-artifact-mode-heading { flex-wrap: wrap; gap: 8px; }
+}
+
+.ai-artifact-mode-controls { display: flex; align-items: center; gap: 8px; }
+
+/* Shared task artifact chrome; editors and graph bodies retain their own scroll layout. */
+.ant-modal:is(.functional-artifact-modal, .ai-task-run-result-modal, .ai-task-import-result-modal) :is(.ant-modal-container, .ant-modal-content) { padding: 0; }
+.ant-modal:is(.functional-artifact-modal, .ai-task-run-result-modal, .ai-task-import-result-modal) .ant-modal-header {
+  margin: 0; padding: 16px 64px 16px 24px;
+  background: var(--app-list-toolbar-bg);
+  border-bottom: 1px solid var(--app-surface-border);
+}
+.ant-modal:is(.functional-artifact-modal, .ai-task-run-result-modal, .ai-task-import-result-modal) .ant-modal-body { padding: 16px 24px; }
+.ant-modal:is(.functional-artifact-modal, .ai-task-run-result-modal, .ai-task-import-result-modal) .ant-modal-footer {
+  margin: 0; padding: 12px 24px; min-height: 58px;
+  background: var(--app-list-toolbar-bg);
+  border-top: 1px solid var(--app-surface-border);
+}
+.ant-modal:is(.functional-artifact-modal, .ai-task-run-result-modal, .ai-task-import-result-modal):not(:has(.ant-modal-footer)) :is(.ant-modal-container, .ant-modal-content)::after {
+  content: ''; display: block; flex: 0 0 58px; box-sizing: border-box;
+  background: var(--app-list-toolbar-bg);
+  border-top: 1px solid var(--app-surface-border);
+}
+@media (max-width: 640px) {
+  .ant-modal:is(.functional-artifact-modal, .ai-task-run-result-modal, .ai-task-import-result-modal) .ant-modal-header { padding-left: 16px; }
+  .ant-modal:is(.functional-artifact-modal, .ai-task-run-result-modal, .ai-task-import-result-modal) .ant-modal-body,
+  .ant-modal:is(.functional-artifact-modal, .ai-task-run-result-modal, .ai-task-import-result-modal) .ant-modal-footer { padding-inline: 16px; }
+}

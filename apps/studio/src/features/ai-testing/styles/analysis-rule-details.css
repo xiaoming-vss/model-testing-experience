@@ -1,0 +1,32 @@
+/* 业务规则：紧凑目录与分组正文。 */
+.ai-analysis-browser.ai-analysis-browser-rules { grid-template-columns: 286px minmax(0, 1fr); }
+.ai-analysis-browser-rules .ai-analysis-directory-list button { align-items: center; gap: 9px; padding: 8px 10px; min-height: 37px; margin-bottom: 2px; border-bottom: 0; border-radius: 6px; }
+.ai-analysis-browser-rules .ai-analysis-entry-title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+.ai-analysis-browser-rules .ai-analysis-directory-icon { color: var(--app-status-warning-text); flex-shrink: 0; font-size: 14px; }
+.ai-analysis-browser-rules button[aria-current='true'] .ai-analysis-directory-icon { color: var(--ai-active-text); }
+.ai-analysis-browser-rules .ai-analysis-entry-code { font-size: 11px; margin: 0; }
+.ai-analysis-browser-rules .ai-analysis-detail { container-type: inline-size; }
+.ai-analysis-browser-rules .ai-analysis-detail > header { border-bottom: 0; padding-bottom: 0; margin-bottom: 20px; align-items: flex-start; }
+.ai-analysis-browser-rules .ai-analysis-detail h3 { font-size: 19px; line-height: 28px; flex: 1; }
+.ai-analysis-browser-rules .ai-analysis-detail-fields { max-width: none; }
+.ai-analysis-rule-layout { display: flex; flex-direction: column; gap: 16px; }
+.ai-analysis-rule-panel { min-width: 0; padding: 20px; border: 1px solid var(--app-frame-divider-soft); border-radius: 10px; background: var(--app-surface); }
+.ai-analysis-rule-panel.is-emphasis { background: var(--app-terminal-result-bg); }
+.ai-analysis-rule-panel h4 { margin: 0 0 14px; font-size: 14px; line-height: 22px; color: var(--ai-text); }
+.ai-analysis-rule-panel p, .ai-analysis-rule-panel ul { margin: 0; color: var(--ai-text-secondary); font-size: 13px; line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ai-analysis-rule-panel ul { padding-left: 20px; list-style-type: disc; }
+.ai-analysis-rule-panel li { padding-left: 3px; }
+.ai-analysis-rule-panel li + li { margin-top: 6px; }
+.ai-analysis-rule-panel li::marker { color: var(--ai-active-text); }
+.ai-analysis-rule-scope { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; }
+.ai-analysis-rule-scope > div { min-width: 0; }
+.ai-analysis-rule-panel :is(.ai-analysis-rule-scope, .ai-analysis-rule-sources, .ai-analysis-rule-questions) span { display: block; color: var(--ai-text-muted); font-size: 12px; margin-bottom: 8px; }
+.ai-analysis-rule-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.ai-analysis-rule-questions { border-top: 1px solid var(--app-frame-divider-soft); margin-top: 16px; padding-top: 14px; }
+@container (max-width: 650px) {
+  .ai-analysis-rule-pair, .ai-analysis-rule-scope { grid-template-columns: 1fr; gap: 16px; }
+  .ai-analysis-rule-panel { padding: 16px; }
+}
+@media (max-width: 960px) {
+  .ai-analysis-browser.ai-analysis-browser-rules { grid-template-columns: 220px minmax(0, 1fr); }
+}

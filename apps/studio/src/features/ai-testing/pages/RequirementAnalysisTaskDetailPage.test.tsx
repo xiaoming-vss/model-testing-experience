@@ -150,8 +150,8 @@ it.each([
     expect(Boolean(screen.queryByRole('button', { name: section }))).toBe(reached)
   }
   await user.click(reviewAction)
-  expect(await screen.findByRole('dialog', { name: '审核' })).toBeInTheDocument()
-  expect(screen.getByRole('tab', { name: '业务内容' })).toHaveAttribute('aria-selected', 'true')
+  expect(await screen.findByRole('dialog', { name: stage === 'extracting_text' ? '材料提取结果' : '审核' })).toBeInTheDocument()
+  expect(screen.getByRole('radio', { name: '业务内容' }).closest('label')).toHaveClass('ant-segmented-item-selected')
   expect(screen.getByRole('button', { name: '审核通过并继续' })).toBeInTheDocument()
 })
 
@@ -161,7 +161,7 @@ it('已完成的材料提取入口只查看对应产物', async () => {
   })
   await userEvent.setup().click(await screen.findByRole('button', { name: '材料提取结果' }))
   expect(await screen.findByRole('dialog', { name: '材料提取结果' })).toBeInTheDocument()
-  expect(screen.getByText(extraction.documentTitle)).toBeInTheDocument()
+  expect(screen.getByRole('region', { name: '材料与提取结果对照' })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '审核通过并继续' })).toBeNull()
 })
 
@@ -179,7 +179,7 @@ it('继续优化在同一审核窗口展开，取消后保留内容和优化草�
   const user = userEvent.setup()
   await user.click(await findRunInlineAction('审核'))
   const dialog = within(screen.getByRole('dialog'))
-  await user.click(dialog.getByRole('tab', { name: '原始 JSON' }))
+  await user.click(dialog.getByRole('radio', { name: 'JSON' }).closest('label')!)
   const originalEditor = document.querySelector('.cm-content')
   await user.click(dialog.getByRole('button', { name: '继续优化' }))
   expect(screen.getAllByRole('dialog')).toHaveLength(1)
@@ -216,7 +216,7 @@ it('右侧提交使用所选模型并携带左侧未保存的需求修改', asyn
   const user = userEvent.setup()
   await user.click(await findRunInlineAction('审核'))
   const dialog = within(screen.getByRole('dialog'))
-  await user.click(dialog.getByRole('tab', { name: '原始 JSON' }))
+  await user.click(dialog.getByRole('radio', { name: 'JSON' }).closest('label')!)
   const editor = document.querySelector('.cm-content') as HTMLElement
   await user.click(editor)
   await user.keyboard('{Control>}a{/Control}')
@@ -412,8 +412,8 @@ it.each(['feature_understanding', 'completed'] as const)('%s 两阶段运行可�
   expect(within(row).getByRole('button', { name: '材料提取结果' })).toBeVisible()
   expect(within(row).queryByRole('button', { name: '需求流程稿' })).toBeNull()
   await userEvent.setup().click(await findRunInlineAction('审核'))
-  expect(await screen.findByRole('tab', { name: '业务内容' })).toHaveAttribute('aria-selected', 'true')
-  await userEvent.setup().click(screen.getByRole('tab', { name: '原始 JSON' }))
+  expect(await screen.findByRole('radio', { name: '业务内容' })).toBeChecked()
+  await userEvent.setup().click(screen.getByRole('radio', { name: 'JSON' }).closest('label')!)
   expect(await screen.findByLabelText('阶段产物 JSON')).toBeVisible()
   expect(screen.getByRole('button', { name: '审核通过' })).toBeVisible()
   expect(screen.getByRole('button', { name: '审核不通过' })).toBeVisible()
@@ -437,7 +437,7 @@ it.each(['feature_understanding', 'completed'] as const)('已拒绝的 %s 结果
   expect(within(dialog).queryByRole('button',{name:'导入需求'})).toBeNull()
   expect(within(dialog).queryByRole('button',{name:'保存修改'})).toBeNull()
   expect(within(dialog).queryByRole('button',{name:'继续优化'})).toBeNull()
-  await user.click(within(dialog).getByRole('tab',{name:'原始 JSON'}))
+  await user.click(within(dialog).getByRole('radio', { name: 'JSON' }).closest('label')!)
   expect(within(dialog).getByRole('textbox',{name:'阶段产物 JSON'})).toHaveAttribute('aria-readonly','true')
 })
 

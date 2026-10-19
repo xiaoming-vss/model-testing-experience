@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { pendingRequirementQuestions } from '@/domain/requirements/requirementArtifact'
 import { RequirementArtifactValue } from '@/domain/requirements/RequirementArtifactView'
 import { LinkOutlined, SearchOutlined } from '@ant-design/icons'
@@ -49,11 +50,7 @@ function ComparisonContent({ artifact }: { artifact: ExtractionArtifact }) {
   return <div className="requirement-material-comparison" role="region" aria-label="材料与提取结果对照" tabIndex={0}>
     <RequirementSourcePanel artifact={artifact} sources={artifact.sources} blocks={artifact.contentBlocks} sourceId={sourceId} onSourceChange={value => { setSourceId(value); requestLocate() }} linkedBlockIds={target.blockIds} locateVersion={locateVersion} />
     <section className="requirement-material-panel">
-      <header className="requirement-material-panel-head">
-        <Segmented aria-label="提取内容分类" value={tab} onChange={value => { setTab(String(value)); setSearch('') }} options={[{ value: 'facts', label: '提取的事实' }, ...(pendingQuestions.length ? [{ value: 'questions', label: '待确认问题' }] : [])]} />
-        <span className="requirement-material-count">{tab === 'facts' ? `${artifact.extractedFacts.length} 条事实` : `${pendingQuestions.length} 个待确认问题`}</span>
-      </header>
-      <div className="requirement-material-filter"><Input aria-label={tab === 'facts' ? '搜索事实' : '搜索问题'} placeholder={tab === 'facts' ? '搜索事实内容' : '搜索待确认问题'} prefix={<SearchOutlined />} allowClear value={search} onChange={e => setSearch(e.target.value)} />{tab === 'facts' && <Select aria-label="事实确认状态" value={status} onChange={setStatus} options={[{ value: 'all', label: '全部状态' }, ...Object.entries(statuses).map(([value, meta]) => ({ value, label: meta.label }))]} />}</div>
+      <div className="requirement-material-filter">{pendingQuestions.length > 0 && <Segmented aria-label="提取内容分类" value={tab} onChange={value => { setTab(String(value)); setSearch('') }} options={[{ value: 'facts', label: '提取的事实' }, { value: 'questions', label: '待确认问题' }]} />}<Input aria-label={tab === 'facts' ? '搜索事实' : '搜索问题'} placeholder={tab === 'facts' ? '搜索事实内容' : '搜索待确认问题'} prefix={<SearchOutlined />} allowClear value={search} onChange={e => setSearch(e.target.value)} />{tab === 'facts' && <Select aria-label="事实确认状态" value={status} onChange={setStatus} options={[{ value: 'all', label: '全部状态' }, ...Object.entries(statuses).map(([value, meta]) => ({ value, label: meta.label }))]} />}</div>
       <div className="requirement-material-extracted" ref={factPane} role="region" aria-label={tab === 'facts' ? '提取事实' : '待确认问题'} tabIndex={0}>
         {tab === 'questions' ? <Questions artifact={artifact} questions={questions} onActivate={id => locate({ kind: 'question', id })} /> : facts.length ? facts.map(f => {
           const active = selection?.kind === 'fact' && selection.id === f.id
@@ -72,17 +69,28 @@ function ComparisonContent({ artifact }: { artifact: ExtractionArtifact }) {
           </article>
         }) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无匹配的提取事实" />}
       </div>
-      <footer className="requirement-material-panel-foot"><span><LinkOutlined /> 选择事实或问题，对照对应材料</span></footer>
     </section>
   </div>
 }
 
 export function RequirementMaterialComparison({ content }: { content: unknown }) {
+  const host = useRef<HTMLDivElement>(null)
+  const [footerSlot, setFooterSlot] = useState<HTMLElement | null>(null)
+  useLayoutEffect(() => {
+    const footer = host.current?.closest('.ant-modal')?.querySelector('.ant-modal-footer')
+    if (!footer) return
+    const slot = document.createElement('span')
+    slot.className = 'requirement-extraction-footer-slot'
+    footer.prepend(slot)
+    setFooterSlot(slot)
+    return () => slot.remove()
+  }, [])
   const result = useMemo(() => { try { return { artifact: readExtractionArtifact(content) } } catch (error) { return { error: error instanceof Error ? error.message : '材料提取内容无法读取' } } }, [content])
   if (!result.artifact) return <Alert type="error" showIcon title={result.error} />
   const artifact = result.artifact
-  return <div className="requirement-material-host">
-    <div className="requirement-material-overview"><strong>{artifact.documentTitle}</strong><span>{artifact.sources.length} 个来源 · {artifact.contentBlocks.length} 个内容块 · {artifact.extractedFacts.length} 条事实 · {pendingRequirementQuestions(artifact.questions).length} 个待确认问题</span></div>
+  const footer = <><span>{artifact.sources.length} 个材料来源 · {artifact.contentBlocks.length} 个内容块</span></>
+  return <div ref={host} className="requirement-material-host requirement-extraction-workspace">
     <ComparisonContent artifact={artifact} />
+    {footerSlot ? createPortal(footer, footerSlot) : <footer className="requirement-extraction-footer">{footer}</footer>}
   </div>
 }

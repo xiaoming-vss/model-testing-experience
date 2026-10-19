@@ -15,9 +15,11 @@ export function parseRequirementArtifact(content: unknown): RecordValue | null {
     }
   }
   if (!record(parsed) || !('artifactType' in parsed)) return null
-  if (parsed.schemaVersion !== '1.0' || !['document_extraction', 'requirement_understanding'].includes(String(parsed.artifactType))) {
+  const versions: Record<string, string> = { document_extraction: '1.0', requirement_understanding: '2.0' }
+  if (!versions[String(parsed.artifactType)] || parsed.schemaVersion !== versions[String(parsed.artifactType)]) {
     throw new Error('当前产物版本或类型不受支持')
   }
+  if (parsed.schemaVersion === '2.0' && !Array.isArray(parsed.evidence)) throw new Error('需求理解缺少集中证据表')
   if (!Array.isArray(parsed.sources) || !Array.isArray(parsed.questions) ||
     (parsed.artifactType === 'requirement_understanding' && !Array.isArray(parsed.modules)) ||
     (parsed.artifactType === 'document_extraction' && !Array.isArray(parsed.contentBlocks))) {

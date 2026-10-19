@@ -69,7 +69,7 @@ it('待确认分类仅显示剩余缺口，全部解决后自动回到事实并�
   await user.click(screen.getByText('待确认问题', { exact: true }))
   const questions = screen.getByRole('region', { name: '待确认问题' })
   expect(within(questions).queryByText(artifact.questions[0].question)).toBeNull()
-  expect(screen.getByText(`${remaining} 个待确认问题`)).toBeVisible()
+  expect(questions.querySelectorAll('.ant-collapse-item')).toHaveLength(remaining)
   artifact.questions.forEach((q: { status: string }) => { q.status = 'resolved' })
   artifact.extractedFacts[0].fact.value = '上游算子为 hoi_tool'
   rerender(<TestThemeProvider><RequirementMaterialComparison content={structuredClone(artifact)} /></TestThemeProvider>)

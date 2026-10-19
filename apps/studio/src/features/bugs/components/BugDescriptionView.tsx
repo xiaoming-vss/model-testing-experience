@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { recognizeJsonDescription } from '../utils/jsonDescription'
+import { useMemo, useState } from 'react'
 import { Segmented } from 'antd'
 import { RichTextViewer } from '@/shared/components/RichTextEditor'
 
 export function BugDescriptionView({ html }: { html: string }) {
+  const displayHtml = useMemo(() => recognizeJsonDescription(html), [html])
   const [mode, setMode] = useState('render')
   return <section className="bug-detail-panel">
     <div className="bug-detail-section-heading">
@@ -10,6 +12,6 @@ export function BugDescriptionView({ html }: { html: string }) {
       <Segmented size="small" aria-label="描述显示方式" value={mode} onChange={setMode}
         options={[{ label: '渲染视图', value: 'render' }, { label: 'RAW 代码', value: 'raw' }]} />
     </div>
-    {mode === 'raw' ? <pre className="bug-description-raw">{html}</pre> : <RichTextViewer html={html} ariaLabel="问题描述" />}
+    {mode === 'raw' ? <pre className="bug-description-raw">{html}</pre> : <RichTextViewer html={displayHtml} ariaLabel="问题描述" />}
   </section>
 }

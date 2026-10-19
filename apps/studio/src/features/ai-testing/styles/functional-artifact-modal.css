@@ -1,0 +1,42 @@
+/* 需求分析与功能测试产物共用弹窗尺寸；每种正文保留自己的滚动方式。 */
+.ant-modal.functional-artifact-modal {
+  max-width: min(2000px, calc(100vw - 32px));
+}
+.ant-modal.functional-artifact-modal :is(.ant-modal-container, .ant-modal-content) {
+  display: flex;
+  flex-direction: column;
+  height: min(94dvh, 1200px);
+  max-height: calc(100dvh - 32px);
+  overflow: hidden;
+}
+.ant-modal.functional-artifact-modal .ant-modal-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow: hidden;
+}
+.functional-artifact-modal .ant-modal-header,
+.functional-artifact-modal .ant-modal-footer { flex-shrink: 0; }
+.functional-artifact-modal :is(.revision-workspace, .revision-source) {
+  flex: 1 1 0%;
+  min-height: 0;
+  height: auto;
+  overflow: hidden;
+}
+.functional-artifact-modal .ai-task-run-result-modal-content,
+.functional-artifact-modal .ai-task-import-result-form {
+  flex: 1 1 0%;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+}
+.functional-artifact-modal.ai-requirement-analysis-preview-modal .ai-task-run-result-modal-content { overflow: hidden; }
+.functional-artifact-modal.functional-candidate-workbench-modal .ai-task-import-result-form { overflow: hidden; }
+@media (max-width: 640px), (max-height: 700px) {
+  .ant-modal.functional-artifact-modal :is(.ant-modal-container, .ant-modal-content) { height: calc(100dvh - 32px); }
+}
+.functional-artifact-modal .revision-source { display: flex; flex-direction: column; }
+
+.functional-artifact-modal.requirement-analysis-result-modal .ai-task-run-result-modal-content { overflow: hidden; }

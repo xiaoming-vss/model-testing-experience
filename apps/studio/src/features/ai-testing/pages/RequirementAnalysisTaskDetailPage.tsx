@@ -1,3 +1,4 @@
+import { ArtifactViewTabs } from '../components/ArtifactViewTabs'
 import { useTaskRunDialog, type TaskRunDialogRequest } from '../hooks/useTaskRunDialog'
 import { RequirementMaterialComparison } from '../components/RequirementMaterialComparison'
 import { RequirementUnderstandingComparison } from '../components/RequirementUnderstandingComparison'
@@ -19,7 +20,7 @@ import { ProjectAccessScope } from '@/features/projects/components/ProjectAccess
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ArrowLeftOutlined, CodeOutlined, FileTextOutlined, HistoryOutlined } from '@ant-design/icons'
-import { Alert, Button, Empty, Form, Modal, Popconfirm, Spin, Tag, Tabs } from 'antd'
+import { Alert, Button, Empty, Form, Modal, Popconfirm, Spin, Tag } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -44,6 +45,7 @@ import '@/features/ai-testing/styles/task-review.css'
 import '@/features/ai-testing/styles/run-result.css'
 import '@/features/ai-testing/styles/task-detail-v2.css'
 import './RequirementAnalysisTaskDetailPage.css'
+import '@/features/ai-testing/styles/functional-artifact-modal.css'
 import { RequirementDocumentPreviewContent } from '@/features/requirements/components/RequirementDocumentPreviewModal'
 import type { Requirement } from '@/features/requirements/types'
 import { hasRequirementDocument } from '@/features/requirements/utils/requirementDocument'
@@ -267,10 +269,6 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
   const selectedRunConfigJson = useMemo(() => parseConfigJsonRecord(selectedRun?.configJson), [selectedRun?.configJson])
   const selectedStage = selectedRun?.currentStage
   const selectedStageField = getRequirementAnalysisStageField(selectedStage)
-  const selectedStageMeta = getRequirementAnalysisStageMeta(selectedStage)
-  const selectedStageStatusMeta = selectedRun?.stageStatus === 'completed'
-    ? { label: selectedRun.reviewStatus === 'approved' ? '已审核' : '待审核', color: selectedRun.reviewStatus === 'approved' ? 'success' : 'warning' }
-    : getApiCaseGenerateTaskRunStatusMeta(selectedRun?.stageStatus)
   const selectedRunStatus = String(selectedRun?.status ?? '').toLowerCase()
   const selectedRunReviewStatus = String(selectedRun?.reviewStatus ?? '').toLowerCase()
   useEffect(() => { if (selectedRunReviewStatus === 'rejected') setReviseModalOpen(false) }, [selectedRunReviewStatus])
@@ -329,6 +327,14 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
     [selectedRunResultSections],
   )
   const runResultModalContent = runResultModal ? selectedRunResultSectionMap.get(runResultModal.key) : undefined
+  const understandingModalTitle = useMemo(() => {
+    if (runResultModal?.key !== 'resultYaml') return undefined
+    try {
+      const artifact = parseRequirementArtifact(editableRunResultModal ? stageOutputDraft : runResultModalContent)
+      return typeof artifact?.title === 'string' && artifact.title.trim() ? artifact.title : undefined
+    } catch { return undefined }
+  }, [runResultModal?.key, editableRunResultModal, stageOutputDraft, runResultModalContent])
+
   const runHistoryRefreshing = runsQuery.isFetching || selectedRunQuery.isFetching
   const runnableTask = isRunnableApiCaseGenerateTaskRun(latestRunRecord?.status)
   const selectedRunTaskType = activeSelectedRun?.snapshotJson?.taskType ?? task?.taskType
@@ -1185,9 +1191,9 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
         mask={{ closable: false }}
         title={
           <div className="ai-task-run-result-expanded-title">
-            <span>{showStageReviewInRunResultModal ? '审核' : runResultModal?.label || '运行结果'}</span>
+            <span>{understandingModalTitle ?? (runResultModal?.key === 'firstStepOutput' ? '材料提取结果' : showStageReviewInRunResultModal ? '审核' : runResultModal?.label || '运行结果')}</span>
             <div className="ai-task-run-result-expanded-actions">
-              {canImportRunResultModal && !finalResultEditable ? (
+              {canImportRunResultModal && !finalResultEditable && !editableRunResultModal ? (
                 <ProjectActionButton action="execute"
                   type="primary"
                   size="small"
@@ -1247,8 +1253,8 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
               ]
             : null
         }
-        width={runResultModal?.key === 'errorMessage' ? "min(1180px, calc(100vw - 56px))" : "calc(100vw - 56px)"}
-        className={`ai-task-run-result-modal api-task-run-result-modal${editableRunResultModal ? ' review' : ' requirement-analysis-text-modal'} functional-stage-review-modal requirement-analysis-result-modal`}
+        width={runResultModal?.key === 'errorMessage' ? "min(1180px, calc(100vw - 56px))" : "min(2000px, calc(100vw - 56px))"}
+        className={`ai-task-run-result-modal api-task-run-result-modal${editableRunResultModal ? ' review' : ' requirement-analysis-text-modal'} functional-stage-review-modal requirement-analysis-result-modal${runResultModal?.key !== 'errorMessage' ? ' functional-artifact-modal' : ''}${runResultModal?.key === 'resultYaml' ? ' requirement-understanding-modal' : ''}`}
         centered
         destroyOnHidden
       >
@@ -1260,26 +1266,15 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
             </div>
           ) : editableRunResultModal ? (
             <div className="ai-task-stage-review-popover">
-              <div className="ai-task-run-result-popover-header">
-                <span>{runResultModal?.key === 'resultYaml' ? '最终需求理解记录' : '材料提取结果'}</span>
-                <div className="ai-task-stage-review-mini-tags">
-                  <Tag color={selectedStageMeta.color}>{selectedStageMeta.label}</Tag>
-                  <Tag color={selectedStageStatusMeta.color}>{selectedStageStatusMeta.label}</Tag>
-                </div>
-              </div>
-              <div className="ai-task-stage-review-note compact">
-                <strong>{runResultModal?.key === 'resultYaml' ? finalResultApproved ? '已审核/可编辑' : '最终结果/可编辑' : '待审核/可编辑'}</strong>
-                <span>{runResultModal?.key === 'resultYaml' ? '修改后需重新审核，审核通过后再导入需求。' : '保存后写回材料提取结果，审核通过后进入需求理解阶段。'}</span>
-              </div>
-              <Tabs className="requirement-analysis-artifact-tabs" defaultActiveKey="business" items={[
-                { key: 'business', label: '业务内容', children: <div className="requirement-analysis-artifact-scroll is-material-comparison" role="region" aria-label="业务内容" tabIndex={0}>{runResultModal?.key === 'firstStepOutput' ? <RequirementMaterialComparison content={stageOutputDraft} /> : <RequirementUnderstandingComparison content={stageOutputDraft} extractionContent={selectedRunConfigJson.firstStepOutput} />}</div> },
+              <ArtifactViewTabs jsonCopyText={stageOutputDraft} className="requirement-analysis-artifact-tabs" defaultActiveKey="business" items={[
+                { key: 'business', label: '业务内容', children: <div className="requirement-analysis-artifact-scroll is-material-comparison" role="region" aria-label="业务内容" tabIndex={0}>{runResultModal?.key === 'firstStepOutput' ? <RequirementMaterialComparison content={stageOutputDraft} /> : <RequirementUnderstandingComparison hideTitle approved={finalResultApproved} content={stageOutputDraft} extractionContent={selectedRunConfigJson.firstStepOutput} />}</div> },
                 { key: 'json', label: '原始 JSON', children: <TextCodeEditor language="json" ariaLabel="阶段产物 JSON" value={stageOutputDraft} minHeight={360} onChange={value => { setStageOutputDraft(value); setStageOutputDirty(true) }} /> },
               ]} />
             </div>
           ) : runResultModalContent ? (
             runResultModal?.key !== 'errorMessage'
-              ? <Tabs className="requirement-analysis-artifact-tabs" items={[
-                { key: 'business', label: '业务内容', children: <div className="requirement-analysis-artifact-scroll is-material-comparison" role="region" aria-label="业务内容" tabIndex={0}>{runResultModal?.key === 'firstStepOutput' ? <RequirementMaterialComparison content={runResultModalContent} /> : <RequirementUnderstandingComparison content={runResultModalContent} extractionContent={selectedRunConfigJson.firstStepOutput} />}</div> },
+              ? <ArtifactViewTabs jsonCopyText={runResultModalContent} className="requirement-analysis-artifact-tabs" items={[
+                { key: 'business', label: '业务内容', children: <div className="requirement-analysis-artifact-scroll is-material-comparison" role="region" aria-label="业务内容" tabIndex={0}>{runResultModal?.key === 'firstStepOutput' ? <RequirementMaterialComparison content={runResultModalContent} /> : <RequirementUnderstandingComparison hideTitle approved={finalResultApproved} content={runResultModalContent} extractionContent={selectedRunConfigJson.firstStepOutput} />}</div> },
                 { key: 'json', label: '原始 JSON', children: <TextCodeEditor language="json" ariaLabel="阶段产物 JSON" readOnly value={runResultModalContent} /> },
               ]} />
               : <pre className="ai-task-code-block">{runResultModalContent}</pre>

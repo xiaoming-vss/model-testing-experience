@@ -3,7 +3,7 @@ import { Fragment, type ReactNode } from 'react'
 import { getRunPipelineModel, type RunPipelineStageKey, type RunPipelineTone } from '../utils/runPipeline'
 
 const toneColorMap: Record<RunPipelineTone, string> = {
-  processing: 'processing',
+  processing: 'cyan',
   success: 'success',
   error: 'error',
   warning: 'warning',

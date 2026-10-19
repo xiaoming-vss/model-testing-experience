@@ -5,10 +5,16 @@ import '@/features/ai-testing/styles/requirement-analysis.css'
 import '@/features/ai-testing/styles/run-result.css'
 import type { RequirementAnalysisSection } from '@/features/ai-testing/utils/functionalOutput'
 import { formatRoleConcerns, formatTextList, isJsonText, parseRequirementAnalysisContent, toDisplayText } from '@/features/ai-testing/utils/functionalOutput'
+import { AnalysisContentBrowser } from './AnalysisContentBrowser'
+import { AnalysisFactorBrowser } from './AnalysisFactorBrowser'
+import { AnalysisScenarioDetails } from './AnalysisScenarioDetails'
+import { AnalysisRuleDetails } from './AnalysisRuleDetails'
+import { AnalysisOverview } from './AnalysisOverview'
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
 import { DownOutlined, RightOutlined } from '@ant-design/icons'
-import { Empty, Tabs, Tag } from 'antd'
+import { Empty, Tabs, Tag, type TabsProps } from 'antd'
 import { useMemo, useState, type ReactNode } from 'react'
+import { ArtifactViewTabs } from './ArtifactViewTabs'
 
 export type RequirementAnalysisViewMode = 'json' | 'diagram'
 
@@ -54,11 +60,12 @@ const analysisDetailLabels: Record<string, string> = {
   clarificationNeeded: '待澄清内容', conditions: '场景条件', derivationType: '推导类型',
   verificationObjective: '验证目标', blockingReason: '阻塞原因',
   question: '待确认问题', blockedWork: '阻塞工作', affectedScope: '影响范围',
+  path: '入口路径', action: '操作',
 }
 
 function AnalysisDetails({ item, fields }: { item: Record<string, unknown>; fields: string[] }) {
   return fields.map((field) => (
-    <div className="ai-requirement-analysis-field" key={field}>
+    <div className={`ai-requirement-analysis-field${field === 'expectedBehavior' || field === 'verificationObjective' ? ' ai-analysis-focus-field' : ''}`} key={field}>
       <span>{analysisDetailLabels[field]}</span>
       <p>{formatTextList(item[field]) || (Array.isArray(item[field]) ? '无' : '未明确')}</p>
     </div>
@@ -66,6 +73,7 @@ function AnalysisDetails({ item, fields }: { item: Record<string, unknown>; fiel
 }
 
 function StructuredAnalysisSections({ parsed }: { parsed: RequirementAnalysisSection }) {
+  const [activeCategory, setActiveCategory] = useState<string>()
   const overview = toRecord(parsed.functionalOverview)
   const sections = [
     {
@@ -85,47 +93,39 @@ function StructuredAnalysisSections({ parsed }: { parsed: RequirementAnalysisSec
       fields: ['question', 'affectedScope', 'blockedWork']
     },
   ]
-  return (
-    <>
-      {overview && (
-        <RequirementAnalysisCollapsibleSection title="功能概览" count={1} color="geekblue">
-          <article className="ai-requirement-analysis-card">
-            <AnalysisDetails item={overview} fields={['purpose', 'actors', 'applicableObjects', 'explicitExclusions']} />
-            <div className="ai-requirement-analysis-field"><span>功能入口</span></div>
-            <div className="ai-requirement-analysis-grid two-col">
-              {toRecordArray(overview.entryPoints).map((entry, index) => (
-                <article className="ai-requirement-analysis-card nested" key={index}>
-                  <div className="ai-requirement-analysis-card-title">{toDisplayText(entry.function) || `入口 ${index + 1}`}</div>
-                  <div className="ai-requirement-analysis-field"><span>入口路径</span><p>{toDisplayText(entry.path) || '未明确'}</p></div>
-                  <div className="ai-requirement-analysis-field"><span>操作</span><p>{toDisplayText(entry.action) || '未明确'}</p></div>
-                </article>
-              ))}
-            </div>
-          </article>
-        </RequirementAnalysisCollapsibleSection>
-      )}
-      {sections.map(({ title, color, items, id, fields }) => items.length > 0 && (
-        <RequirementAnalysisCollapsibleSection key={id} title={title} count={items.length} color={color}>
-          <div className="ai-requirement-analysis-grid two-col">
-            {items.map((item, index) => (
-              <article className="ai-requirement-analysis-card" key={`${toDisplayText(item[id])}-${index}`}>
-                <div className="ai-requirement-analysis-card-title">
-                  <Tag color={color}>{toDisplayText(item[id]) || `${index + 1}`}</Tag>
-                  {toDisplayText(item.name) || (id === 'scenarioId' ? `场景 ${index + 1}` : title)}
-                </div>
-                {id === 'scenarioId' && (
-                  <div><Tag color={item.readyForTestPointGeneration === true ? 'green' : 'orange'}>
-                    {item.readyForTestPointGeneration === true ? '可生成测试点' : item.readyForTestPointGeneration === false ? '暂不可生成测试点' : '生成就绪状态未明确'}
-                  </Tag></div>
-                )}
-                <AnalysisDetails item={item} fields={fields} />
-              </article>
-            ))}
-          </div>
-        </RequirementAnalysisCollapsibleSection>
-      ))}
-    </>
-  )
+  const items: TabsProps['items'] = []
+  if (overview) {
+    items.push({
+      key: 'overview',
+      label: <span className="ai-requirement-analysis-category-label">功能概览<Tag color="geekblue">1</Tag></span>,
+      children: <AnalysisOverview overview={overview} />,
+    })
+  }
+  for (const { title, color, items: entries, id, fields } of sections) {
+    if (!entries.length) continue
+    items.push({
+      key: id,
+      label: <span className="ai-requirement-analysis-category-label">{title}<Tag color={color}>{entries.length}</Tag></span>,
+      children: id === 'factorId' ? <AnalysisFactorBrowser entries={entries} /> : (
+        <AnalysisContentBrowser title={title} compact={id === 'ruleId' || id === 'scenarioId'} filterStatus={id === 'scenarioId'} entries={entries.map((item, index) => ({
+          key: `${toDisplayText(item[id])}-${index}`,
+          code: toDisplayText(item[id]) || `${index + 1}`,
+          title: toDisplayText(item.name) || (id === 'scenarioId' ? `场景 ${index + 1}` : id === 'questionId' ? toDisplayText(item.question) || title : title),
+          searchText: Object.values(item).map(formatTextList).join(' '),
+          status: item.readyForTestPointGeneration === true ? 'ready' : item.readyForTestPointGeneration === false ? 'blocked' : 'unknown',
+          badge: id === 'ruleId' ? <Tag>{formatTextList(item.confirmationStatus) || '确认状态未明确'}</Tag> : id === 'scenarioId' ? <Tag color={item.readyForTestPointGeneration === true ? 'green' : 'orange'}>
+            {item.readyForTestPointGeneration === true ? '可生成测试点' : item.readyForTestPointGeneration === false ? '暂不可生成测试点' : '生成就绪状态未明确'}
+          </Tag> : undefined,
+          content: id === 'ruleId' ? <AnalysisRuleDetails item={item} /> : id === 'scenarioId' ? <AnalysisScenarioDetails item={item} /> : <AnalysisDetails item={item} fields={fields} />,
+        }))} />
+      ),
+    })
+  }
+  return items.length ? (
+    <Tabs className="ai-requirement-analysis-tabs ai-requirement-analysis-category-tabs" size="small" items={items}
+      activeKey={items.some((item) => item.key === activeCategory) ? activeCategory : items[0].key}
+      onChange={setActiveCategory} />
+  ) : null
 }
 
 export function RequirementAnalysisDiagramView({ content }: { content: string }) {
@@ -285,7 +285,7 @@ export function RequirementAnalysisView({ content }: { content: string }) {
   const isDiagramAvailable = Boolean(parsed)
 
   return (
-    <Tabs
+    <ArtifactViewTabs jsonCopyText={content}
       className="ai-requirement-analysis-tabs"
       size="small"
       activeKey={activeView}
@@ -304,7 +304,7 @@ export function RequirementAnalysisView({ content }: { content: string }) {
           key: 'json',
           label: 'json',
           children: isJsonText(content) ? (
-            <JsonEditor value={content} readOnly foldable minHeight={640} />
+            <JsonEditor value={content} showCopy={false} readOnly foldable minHeight={640} />
           ) : (
             <pre className="ai-task-code-block">{content}</pre>
           ),

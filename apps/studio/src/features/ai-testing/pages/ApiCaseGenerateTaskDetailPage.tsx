@@ -1,3 +1,4 @@
+import { ArtifactModeSwitch, ArtifactViewTabs } from '../components/ArtifactViewTabs'
 import { useTaskRunDialog, type TaskRunDialogRequest } from '../hooks/useTaskRunDialog'
 import { listTotal } from '@/shared/api/request'
 import { getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
@@ -11,7 +12,7 @@ import { ProjectActionModal } from '@/features/projects/components/ProjectAction
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ArrowLeftOutlined, CodeOutlined, CopyOutlined, DownOutlined, FileTextOutlined, HistoryOutlined, RightOutlined } from '@ant-design/icons'
-import { Alert, Button, Empty, Form, Input, Modal, Popconfirm, Select, Spin, Tabs, Tag, Tooltip } from 'antd'
+import { Alert, Button, Empty, Form, Input, Modal, Popconfirm, Select, Spin, Tag, Tooltip } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -389,35 +390,13 @@ function ApiConfigResultView({ content }: { content: string }) {
 
   return (
     <div className="api-config-result-tabs">
-      <div className="api-config-result-tablist" role="tablist" aria-label="中间配置查看方式">
-        <button
-          id="api-config-preview-tab"
-          type="button"
-          role="tab"
-          aria-selected={activeView === 'diagram'}
-          aria-controls="api-config-result-panel"
-          className={activeView === 'diagram' ? 'is-active' : undefined}
-          onClick={() => setActiveView('diagram')}
-        >
-          预览
-        </button>
-        <button
-          id="api-config-json-tab"
-          type="button"
-          role="tab"
-          aria-selected={activeView === 'json'}
-          aria-controls="api-config-result-panel"
-          className={activeView === 'json' ? 'is-active' : undefined}
-          onClick={() => setActiveView('json')}
-        >
-          json
-        </button>
-      </div>
+      <ArtifactModeSwitch copyText={activeView === 'json' ? content : undefined} value={activeView} onChange={(value) => setActiveView(value as 'diagram' | 'json')}
+        options={[{ label: '预览', value: 'diagram' }, { label: 'JSON', value: 'json' }]} />
       <div
         id="api-config-result-panel"
         className="api-config-result-panel"
-        role="tabpanel"
-        aria-labelledby={activeView === 'diagram' ? 'api-config-preview-tab' : 'api-config-json-tab'}
+        role="region"
+        aria-label="中间配置内容"
       >
         {activeView === 'diagram' ? (
           canRenderDiagram ? (
@@ -1271,7 +1250,7 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
               </Tag>
             </div>
           </div>
-          <Tabs
+          <ArtifactViewTabs jsonCopyText={candidateYaml} copyKey="edit" copyLabel="复制 YAML"
             activeKey={candidateModalView}
             onChange={(key) => setCandidateModalView(key as 'preview' | 'edit')}
             items={[

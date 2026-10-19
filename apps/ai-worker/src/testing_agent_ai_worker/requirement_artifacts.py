@@ -10,6 +10,7 @@ import json
 import math
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 from jsonschema import Draft202012Validator
 
@@ -40,18 +41,34 @@ def _validator(kind, allow_resolved_questions=False):
     return Draft202012Validator(schema)
 
 
-def _index(items, label):
+class ArtifactReferenceError(ValueError):
+    """Schema-valid artifact with all independently checkable reference issues."""
+
+    def __init__(self, artifact: dict[str, Any], issues: list[str]) -> None:
+        self.artifact = artifact
+        self.issues = list(dict.fromkeys(issues))
+        super().__init__("\n".join(self.issues))
+
+
+def _problem(message, errors):
+    if errors is None:
+        raise ValueError(message)
+    errors.append(message)
+
+
+def _index(items, label, errors=None):
     result = {}
     for item in items:
         if item["id"] in result:
-            raise ValueError(f"{label}: ID 重复 {item['id']}")
+            _problem(f"{label}: ID 重复 {item['id']}", errors)
         result[item["id"]] = item
     return result
 
 
-def _subset(values, available, label):
-    if not set(values) <= set(available):
-        raise ValueError(f"{label}: 引用了不存在的条目")
+def _subset(values, available, label, errors=None):
+    missing = sorted(set(values) - set(available))
+    if missing:
+        _problem(f"{label}: 引用了不存在的条目 {missing}", errors)
 
 
 def _walk(value):
@@ -66,7 +83,9 @@ def _walk(value):
             yield from _walk(child)
 
 
-def validate_artifact(value, kind, *, allow_resolved_questions=False):
+def validate_artifact(
+    value: str | dict[str, Any], kind: str, *, allow_resolved_questions: bool = False
+) -> dict[str, Any]:
     """Return the unchanged parsed object; malformed new JSON never becomes legacy text."""
     if kind not in TYPES:
         raise ValueError("未知需求产物类型")
@@ -84,40 +103,66 @@ def validate_artifact(value, kind, *, allow_resolved_questions=False):
         and any(isinstance(q, dict) and q.get("status") == "resolved" for q in questions_input)
     ):
         raise ValueError("已解决问题需先将答复补入对应内容，再从 questions 删除并清理关联引用")
-    error = next(_validator(kind, allow_resolved_questions).iter_errors(value), None)
+    version = value.get("schemaVersion")
+    if not isinstance(version, str):
+        raise ValueError("需求产物 schemaVersion 必须是字符串")
+    error = next(
+        _validator(kind, allow_resolved_questions).iter_errors(value),
+        None,
+    )
     if error:
         path = ".".join(str(part) for part in error.absolute_path) or "$"
         raise ValueError(f"需求产物字段不符合契约 ({path}): {error.message}")
-    sources = _index(value["sources"], "sources")
-    questions = _index(value["questions"], "questions")
+    errors: list[str] = []
+    sources = _index(value["sources"], "sources", errors)
+    evidence = _index(value.get("evidence", []), "evidence", errors)
+    _subset([item["sourceId"] for item in evidence.values()], sources, "evidence.sourceId", errors)
+    questions = _index(value["questions"], "questions", errors)
     for item in _walk(value):
-        references = item.get("sourceReferences", [])
-        _subset([r["sourceId"] for r in references], sources, "sourceReferences")
-        _subset(item.get("relatedQuestionIds", []), questions, "relatedQuestionIds")
-        status = item.get("confirmationStatus")
+        if kind == "requirement_understanding":
+            ids = item.get("evidenceIds", [])
+            _subset(ids, evidence, "evidenceIds", errors)
+            references = [evidence[eid] for eid in ids if eid in evidence]
+        else:
+            references = item.get("sourceReferences", [])
+        _subset(
+            [r["sourceId"] for r in references],
+            sources,
+            "evidence.sourceId" if kind == "requirement_understanding" else "sourceReferences",
+            errors,
+        )
+        _subset(item.get("relatedQuestionIds", []), questions, "relatedQuestionIds", errors)
+        is_fact = "value" in item and not isinstance(item["value"], dict)
+        status = item.get("confirmationStatus", "confirmed" if is_fact else None)
         if (
             status == "confirmed"
             and references
-            and all(sources[r["sourceId"]]["type"] == "example" for r in references)
+            and all(sources.get(r["sourceId"], {}).get("type") == "example" for r in references)
         ):
-            raise ValueError("示例来源不能单独支撑已确认事实")
+            _problem("示例来源不能单独支撑已确认事实", errors)
         if status == "conflicting" and any(
-            questions[q]["status"] != "open" for q in item["relatedQuestionIds"]
+            questions[q]["status"] != "open" for q in item["relatedQuestionIds"] if q in questions
         ):
-            raise ValueError("冲突事实必须关联未解决问题")
+            _problem("冲突事实必须关联未解决问题", errors)
     if kind == "document_extraction":
-        targets = _check_extraction(value)
+        try:
+            targets = _check_extraction(value)
+        except ValueError as exc:
+            errors.append(str(exc))
+            raise ArtifactReferenceError(value, errors) from exc
     else:
-        targets = _check_understanding(value)
+        targets = _check_understanding(value, errors)
     for question in questions.values():
         if question["status"] == "resolved" and (
-            not isinstance(question["answer"], dict)
-            or question["answer"].get("confirmationStatus") != "confirmed"
+            not isinstance(question.get("answer"), dict)
+            or question["answer"].get("confirmationStatus", "confirmed") != "confirmed"
         ):
-            raise ValueError("历史已解决问题必须有带来源的明确答复")
+            _problem("历史已解决问题必须有带来源的明确答复", errors)
         for target in question["affectedRefs"]:
             if target["id"] not in targets.get(target["kind"], {}):
-                raise ValueError("questions.affectedRefs: 引用了不存在的条目")
+                _problem("questions.affectedRefs: 引用了不存在的条目", errors)
+    if errors:
+        raise ArtifactReferenceError(value, errors)
     return value
 
 
@@ -157,56 +202,76 @@ def _check_extraction(value):
     return {"block": blocks, "extracted_fact": facts}
 
 
-def _check_understanding(value):
-    modules = _index(value["modules"], "modules")
+def _check_understanding(value, errors):
+    modules = _index(value["modules"], "modules", errors=errors)
     if not modules and not any(
         q["status"] == "open" and {"kind": "requirement", "id": "requirement"} in q["affectedRefs"]
         for q in value["questions"]
     ):
-        raise ValueError("尚未识别模块时需保留整体需求范围问题，不能填占位模块")
-    operations = _index([o for m in modules.values() for o in m["operations"]], "operations")
-    controls = _index(
-        [c for o in operations.values() for c in o["interaction"]["controls"]], "controls"
+        _problem("尚未识别模块时需保留整体需求范围问题，不能填占位模块", errors)
+    operations = _index(
+        [o for m in modules.values() for o in m["operations"]], "operations", errors=errors
     )
-    entries = _index([e for m in modules.values() for e in m["entryPoints"]], "entryPoints")
-    rules = _index(value["businessRules"], "businessRules")
-    flows = _index(value["businessFlows"], "businessFlows")
+    controls = _index(
+        [c for o in operations.values() for c in o["interaction"]["controls"]],
+        "controls",
+        errors=errors,
+    )
+    entries = _index(
+        [e for m in modules.values() for e in m.get("entryPoints", [])],
+        "entryPoints",
+        errors=errors,
+    )
+    rules = _index(value["businessRules"], "businessRules", errors=errors)
+    flows = _index(value["businessFlows"], "businessFlows", errors=errors)
     owners = {o["id"]: m["id"] for m in modules.values() for o in m["operations"]}
     for module in modules.values():
         local = {o["id"] for o in module["operations"]}
-        _subset([s["operationId"] for s in module["userVisibleFlow"]], local, "userVisibleFlow")
+        _subset(
+            [s["operationId"] for s in module.get("userVisibleFlow", [])],
+            local,
+            "userVisibleFlow",
+            errors=errors,
+        )
     for operation in operations.values():
-        _index(operation["steps"], "operation.steps")
-        _subset(operation["ruleIds"], rules, "operation.ruleIds")
-        for rid in operation["ruleIds"]:
-            if operation["id"] not in rules[rid]["operationIds"]:
-                raise ValueError("操作与规则引用不一致")
+        _index(operation["steps"], "operation.steps", errors=errors)
+        _subset(operation.get("ruleIds", []), rules, "operation.ruleIds", errors=errors)
+        for rid in operation.get("ruleIds", []):
+            if rid in rules and operation["id"] not in rules[rid]["operationIds"]:
+                _problem(f"操作与规则引用不一致: {operation['id']} → {rid}.operationIds", errors)
     for control in controls.values():
-        _index(control["options"]["items"], "control.options")
+        _index(control["options"]["items"], "control.options", errors=errors)
         completeness = control["options"]["completeness"]
-        if completeness["value"] == "unknown" and completeness["confirmationStatus"] not in {
+        if completeness["value"] == "unknown" and completeness.get(
+            "confirmationStatus", "confirmed"
+        ) not in {
             "unconfirmed",
             "conflicting",
         }:
-            raise ValueError("未知选项完整性不能标记为已确认")
+            _problem("未知选项完整性不能标记为已确认", errors)
     for rule in rules.values():
-        _subset(rule["moduleIds"], modules, "rule.moduleIds")
-        _subset(rule["operationIds"], operations, "rule.operationIds")
-        if any(owners[oid] not in rule["moduleIds"] for oid in rule["operationIds"]):
-            raise ValueError("规则关联操作不属于关联模块")
+        _subset(rule["moduleIds"], modules, "rule.moduleIds", errors=errors)
+        _subset(rule["operationIds"], operations, "rule.operationIds", errors=errors)
+        if any(owners.get(oid) not in rule["moduleIds"] for oid in rule["operationIds"]):
+            _problem("规则关联操作不属于关联模块", errors)
     for flow in flows.values():
-        _subset(flow["moduleIds"], modules, "flow.moduleIds")
-        steps = _index(flow["steps"], "flow.steps")
+        _subset(flow["moduleIds"], modules, "flow.moduleIds", errors=errors)
+        steps = _index(flow["steps"], "flow.steps", errors=errors)
         for step in steps.values():
             if (
                 step["moduleId"] not in flow["moduleIds"]
                 or owners.get(step["operationId"]) != step["moduleId"]
             ):
-                raise ValueError("流程引用的模块和操作不一致")
+                _problem("流程引用的模块和操作不一致", errors)
+            for branch in step["nextSteps"]:
+                _subset(
+                    branch.get("conditionRuleIds", []), rules, "conditionRuleIds", errors=errors
+                )
             _subset(
                 [s["stepId"] for s in step["nextSteps"] if s["stepId"] is not None],
                 steps,
                 "flow.nextSteps",
+                errors=errors,
             )
     return {
         "requirement": {"requirement": value},

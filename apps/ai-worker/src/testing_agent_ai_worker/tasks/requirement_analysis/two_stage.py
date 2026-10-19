@@ -6,6 +6,9 @@ from pathlib import Path
 
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.requirement_artifacts import validate_artifact
+from testing_agent_ai_worker.tasks.requirement_analysis.confirmation_coverage import (
+    collect_confirmation_references,
+)
 from testing_agent_ai_worker.tasks.requirement_analysis.output import (
     build_config_json,
     build_result_summary_json,
@@ -13,7 +16,8 @@ from testing_agent_ai_worker.tasks.requirement_analysis.output import (
 from testing_agent_ai_worker.tasks.requirement_analysis.validation import generate_validated
 
 JSON_INSTRUCTION = (
-    "workflowVersion=2，outputProfile=json。只返回符合本阶段 schema 的完整 JSON 对象。"
+    "workflowVersion=2，outputProfile=json。正式产物必须是符合本阶段 schema 的完整 JSON 对象，"
+    "响应方式遵循本次产物交接说明。"
     "明确答复必须补入对应事实、操作、规则或交互，并更新确认状态和来源；"
     "已解决问题从 questions 删除，清理所有 relatedQuestionIds；不能只删问题而保留对应未知内容。"
     "questions 仅保留 status=open 的剩余缺口，全部解决时为 []；修订不自动关闭未答复问题。"
@@ -43,6 +47,7 @@ def execute_two_stage(
     revision = str(config.get("revisionInstruction") or "").strip()
     body = {"workflowVersion": 2, "outputProfile": "json"}
     media = []
+    confirmation_references = []
     if stage == "extracting_text":
         if source_downloader is None:
             raise ValueError("requirement_analysis source_downloader is required")
@@ -71,6 +76,9 @@ def execute_two_stage(
             body["currentArtifact"] = validate_artifact(
                 config.get("firstStepOutput"), "document_extraction", allow_resolved_questions=True
             )
+        if "currentArtifact" in body:
+            confirmation_references = collect_confirmation_references(body["currentArtifact"])
+        body["confirmationReferences"] = confirmation_references
         name, kind = first_skill_name, "document_extraction"
     elif stage == "feature_understanding":
         first = validate_artifact(
@@ -87,6 +95,10 @@ def execute_two_stage(
                 "requirement_understanding",
                 allow_resolved_questions=True,
             )
+        confirmation_references = collect_confirmation_references(
+            first, *([body["currentArtifact"]] if "currentArtifact" in body else [])
+        )
+        body["confirmationReferences"] = confirmation_references
         name, kind = second_skill_name, "requirement_understanding"
     else:
         raise ValueError(f"两阶段需求分析不支持阶段: {stage}")
@@ -99,6 +111,7 @@ def execute_two_stage(
         workspace=workspace,
         generate=skill_runner,
         report=progress_callback,
+        required_confirmations=confirmation_references,
         arguments={
             **({"media": media} if media else {}),
             "input_text": json.dumps(body, ensure_ascii=False),

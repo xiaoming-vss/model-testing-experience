@@ -104,6 +104,29 @@ class RepairTests(unittest.TestCase):
                     records = list(Path(root).rglob("attempt-*.json"))
                     self.assertEqual(len(records), 2)
 
+    def test_native_compact_output_repairs_evidence_without_expanding_storage(self):
+        with tempfile.TemporaryDirectory() as root:
+            good = example("requirement-understanding")
+            bad = deepcopy(good)
+            bad["modules"][0]["purpose"]["evidenceIds"] = ["missing"]
+            runner = Mock(side_effect=[json.dumps(bad), json.dumps(good)])
+            result = self.execute(root, "feature_understanding", runner, [])
+            self.assertEqual(json.loads(result.output_yaml), good)
+            self.assertEqual(runner.call_count, 2)
+            instruction = runner.call_args_list[0].kwargs["extra_instruction"]
+            self.assertIn('"const": "2.0"', instruction)
+            self.assertIn("conditionRuleIds", instruction)
+
+    def test_old_version_requires_model_correction_instead_of_automatic_conversion(self):
+        with tempfile.TemporaryDirectory() as root:
+            current = example("requirement-understanding")
+            old = {**current, "schemaVersion": "1.0"}
+            runner = Mock(side_effect=[json.dumps(old), json.dumps(current)])
+            result = self.execute(root, "feature_understanding", runner, [])
+            self.assertEqual(runner.call_count, 2)
+            self.assertIn("schemaVersion", runner.call_args_list[1].kwargs["extra_instruction"])
+            self.assertEqual(json.loads(result.output_yaml), current)
+
     def test_exhaustion_never_publishes_invalid_output(self):
         with tempfile.TemporaryDirectory() as root:
             runner, progress = Mock(return_value="{}"), []

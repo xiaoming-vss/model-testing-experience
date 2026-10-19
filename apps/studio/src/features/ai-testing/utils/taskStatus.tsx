@@ -5,7 +5,7 @@ const statusMetaMap: Record<string, { label: string; color: string }> = {
   draft: { label: '草稿', color: 'default' },
   pending: { label: '待执行', color: 'gold' },
   claimed: { label: '已领取', color: 'cyan' },
-  running: { label: '执行中', color: 'green' },
+  running: { label: '执行中', color: 'cyan' },
   waiting_review: { label: '待审核', color: 'gold' },
   success: { label: '成功', color: 'success' },
   failed: { label: '失败', color: 'error' },

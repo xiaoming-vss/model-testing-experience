@@ -6,6 +6,16 @@
  * --srf-* owns the newer list/detail surfaces; migrate consumers by role, not by hex.
  */
 :root {
+  /* Focused document comparison surface (approved A comp). */
+  --app-reading-bg: #ffffff;
+  --app-reading-ink: #142441;
+  --app-reading-muted: #53647e;
+  --app-reading-border: #dce7f6;
+  --app-reading-subtle: #f7faff;
+  --app-reading-accent: #1260df;
+  --app-reading-accent-hover: #0b4cbd;
+  --app-reading-selection: #eaf3ff;
+  --app-reading-on-accent: #ffffff;
   --app-scrollbar-size: 8px;
   --app-scrollbar-radius: 4px;
   --app-shell-bg: #faf9ff;
