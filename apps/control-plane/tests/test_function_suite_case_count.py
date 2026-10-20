@@ -1,7 +1,7 @@
 import pytest
 from support.ai_execution import AsyncSessionAdapter
 from support.ai_execution import db as db
-from test_function_case_content import prepare
+from support.function_case_content import prepare
 
 from testing_agent.models.function_test_case import FunctionTestCase
 from testing_agent.models.function_test_suite import FunctionTestSuite

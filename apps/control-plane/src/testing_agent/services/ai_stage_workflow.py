@@ -14,13 +14,7 @@ from testing_agent.core.errors import (
 )
 from testing_agent.core.sid import new_id
 from testing_agent.domain.ai_execution_intent import ExecutionIntent, StageReview
-from testing_agent.models.worker_task import WorkerTask
-from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-from testing_agent.services.ai_execution.writer import ExecutionWriter, SqlExecutionWriter
-from testing_agent.services.ai_task_access import (
-    OwnedRun,
-)
-from testing_agent.services.ai_task_contracts import (
+from testing_agent.domain.ai_tasks import (
     FUNCTION_CASE_RELATION_DISPATCH_STATUSES,
     FUNCTION_CASE_RELATION_STAGE,
     FUNCTION_CASE_REVIEW_READY_STATUSES,
@@ -33,6 +27,12 @@ from testing_agent.services.ai_task_contracts import (
     next_function_case_stage,
     next_requirement_analysis_stage,
     task_type_for,
+)
+from testing_agent.models.worker_task import WorkerTask
+from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+from testing_agent.services.ai_execution.writer import ExecutionWriter, SqlExecutionWriter
+from testing_agent.services.ai_task_access import (
+    OwnedRun,
 )
 from testing_agent.services.ai_task_output import (
     dump_run,

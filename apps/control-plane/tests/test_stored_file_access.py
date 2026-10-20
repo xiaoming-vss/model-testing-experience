@@ -7,8 +7,8 @@ from zipfile import ZipFile
 
 import httpx
 import pytest
-from test_stored_files import files as files
-from test_stored_files import upload
+from support.stored_files import files as files
+from support.stored_files import upload
 
 from testing_agent.api.deps import (
     get_current_user_id,

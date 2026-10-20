@@ -11,11 +11,11 @@ from testing_agent.core.errors import (
     AppError,
     ErrBadRequest,
 )
+from testing_agent.domain.ai_tasks import DEFAULT_FUNCTION_CASE_MODULE
 from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
 from testing_agent.models.ai_generate_task_source_archive import AiGenerateTaskSourceArchive
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.schemas.requirement import normalize_document_type
-from testing_agent.services.ai_task_contracts import DEFAULT_FUNCTION_CASE_MODULE
 from testing_agent.services.api_import_payload import (
     import_items,
     parse_import_payload,

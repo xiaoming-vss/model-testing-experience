@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock
 import pytest
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from test_ldap_cutover import ldap_settings
-from test_mysql_initialization import mysql  # noqa: F401
+from support.ldap_cutover import ldap_settings
+from support.mysql_initialization import mysql  # noqa: F401
 
 from testing_agent.core.errors import AppError
 from testing_agent.domain.ldap_identity import DirectoryIdentity

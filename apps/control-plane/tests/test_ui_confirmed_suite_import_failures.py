@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 import pytest
-from test_ui_confirmed_suite_import_flow import UiImportRepository, ui_import_client
+from support.ui_confirmed_suite_import_flow import UiImportRepository, ui_import_client
 
 
 def test_ui_import_without_conflicts_completes_without_confirmation():

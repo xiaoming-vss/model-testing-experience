@@ -13,6 +13,7 @@ from testing_agent.core.enums import RunStatus, StageStatus
 from testing_agent.core.errors import ErrBadRequest, dynamic_error
 from testing_agent.core.sid import new_id
 from testing_agent.domain.ai_execution_intent import ExecutionIntent
+from testing_agent.domain.ai_tasks import task_type_for
 from testing_agent.domain.function_case_content import generation_fields
 from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
 from testing_agent.models.test_order import TestOrder
@@ -21,7 +22,6 @@ from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.test_order_entry import TestOrderEntryRepository
 from testing_agent.schemas.test_order import TestOrderGraphInputResponse
 from testing_agent.services.ai_execution.writer import ExecutionWriter, SqlExecutionWriter
-from testing_agent.services.ai_task_contracts import task_type_for
 from testing_agent.services.ai_task_output import dump_run, requirement_source_content
 from testing_agent.services.common import dump
 from testing_agent.services.personal_authorization import require_personal_connection

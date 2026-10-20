@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 import sqlalchemy as sa
-from test_initial_schema_migration import migration_config
+from support.initial_schema_migration import migration_config
 
 from alembic import command
 

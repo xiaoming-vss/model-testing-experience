@@ -418,7 +418,7 @@ async def test_live_backup_restore_references_and_hashes(live, tmp_path):
 async def test_live_restored_queue_is_quarantined_after_source_confirms_remote_success(
     live, tmp_path
 ):
-    from test_integration_jobs import claim, prepare, result, submission
+    from support.integration_jobs import claim, prepare, result, submission
 
     from testing_agent.api.deps import build_integration_bug_service
     from testing_agent.models.integration_job import (

@@ -1,28 +1,20 @@
-from dataclasses import asdict, replace
+from dataclasses import replace
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from test_ldap_cutover import ldap_settings, session  # noqa: F401
+from support.ldap_cutover import ldap_settings, session  # noqa: F401
+from support.ldap_settings_admin import (
+    bootstrap as bootstrap,
+)
+from support.ldap_settings_admin import (
+    config as config,
+)
 
-from testing_agent.core.config import Settings
 from testing_agent.core.errors import AppError
 from testing_agent.repositories.auth_runtime import AuthRuntimeRepository
 from testing_agent.repositories.user import UserRepository
 from testing_agent.services.auth_mode import AuthModeService
 from testing_agent.services.ldap_settings import LdapSettingsService, effective_settings
-
-
-def bootstrap():
-    return replace(Settings.from_mapping({}), integration_key="secure-test-encryption-key-for-ldap")
-
-
-def config():
-    return {
-        **asdict(ldap_settings().ldap),
-        "directory_rules_verified": True,
-        "active_user_filter": "(testState=active)",
-        "disabled_user_filter": "(testState=disabled)",
-    }
 
 
 async def test_save_encrypts_secret_and_switches_atomically(session):  # noqa: F811

@@ -4,6 +4,55 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_source_does_not_call_foreign_private_interfaces():
+    root = PROJECT_ROOT / "src/testing_agent"
+    for path in root.rglob("*.py"):
+        tree = ast.parse(path.read_text())
+        local = {"self", "cls"} | {
+            node.name for node in ast.walk(tree) if isinstance(node, ast.ClassDef)
+        }
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and (node.module or "").startswith("testing_agent"):
+                assert all(not alias.name.startswith("_") for alias in node.names), (
+                    f"{path}: import public interfaces only"
+                )
+            if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+                continue
+            method = node.func.attr
+            if not method.startswith("_") or method.startswith("__"):
+                continue
+            receiver = ast.unparse(node.func.value)
+            # urllib's parsed URL is a named tuple; _replace is its documented public API.
+            if (
+                path.relative_to(root).as_posix() == "services/zentao_auth.py"
+                and receiver == "parsed"
+                and method == "_replace"
+            ):
+                continue
+            assert receiver in local, f"{path}:{node.lineno}: expose a public interface"
+
+
+def test_shared_test_preparation_never_imports_collected_test_modules():
+    assert not list((PROJECT_ROOT / "tests/support").rglob("test_*.py"))
+    for path in (PROJECT_ROOT / "tests").rglob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text())):
+            names = []
+            if isinstance(node, ast.ImportFrom):
+                names = [
+                    node.module or "",
+                    *(
+                        (node.module + "." if node.module else "") + alias.name
+                        for alias in node.names
+                    ),
+                ]
+            elif isinstance(node, ast.Import):
+                names = [alias.name for alias in node.names]
+            for name in names:
+                assert not (
+                    name.split(".")[0].startswith("test_") or name.startswith("tests.test_")
+                ), f"{path}: move shared preparation into tests/support"
+
+
 def test_business_deletion_is_explicit_and_storage_never_commits():
     root = PROJECT_ROOT / "src/testing_agent"
     for path in (root / "services").rglob("*.py"):
@@ -158,18 +207,54 @@ def test_execution_commands_do_not_scan_sessions_or_use_orm_command_flags():
 
 
 def test_repositories_cannot_add_service_dependencies():
-    # These pre-existing edges are tracked in B2/B4/B5 and must be removed there.
-    remaining = {
-        ("requirement_design.py", "testing_agent.services.ai_task_contracts"),
-    }
     for path in (PROJECT_ROOT / "src/testing_agent/repositories").rglob("*.py"):
         for node in ast.walk(ast.parse(path.read_text())):
-            if isinstance(node, ast.ImportFrom) and (node.module or "").startswith(
-                "testing_agent.services"
-            ):
-                assert (path.name, node.module) in remaining, (
-                    f"{path.name}: repository must not depend on {node.module}"
+            imports = []
+            if isinstance(node, ast.ImportFrom) and node.module:
+                imports = [node.module, *(node.module + "." + x.name for x in node.names)]
+            elif isinstance(node, ast.Import):
+                imports = [x.name for x in node.names]
+            for module in imports:
+                assert not module.startswith("testing_agent.services"), (
+                    f"{path.name}: repository must not depend on {module}"
                 )
+
+
+def test_source_dependency_graph_has_no_module_cycles():
+    root = PROJECT_ROOT / "src"
+    files = list((root / "testing_agent").rglob("*.py"))
+    assert files
+    graph = {}
+    for path in files:
+        module = ".".join(path.relative_to(root).with_suffix("").parts).removesuffix(".__init__")
+        package = module if path.name == "__init__.py" else module.rpartition(".")[0]
+        dependencies = set()
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.ImportFrom):
+                base = node.module or ""
+                if node.level:
+                    prefix = package.split(".")[: len(package.split(".")) - node.level + 1]
+                    base = ".".join([*prefix, *([base] if base else [])])
+                dependencies.add(base)
+                dependencies.update(base + "." + item.name for item in node.names)
+            elif isinstance(node, ast.Import):
+                dependencies.update(item.name for item in node.names)
+        graph[module] = dependencies
+    visited, active = set(), []
+
+    def visit(module):
+        assert module not in active, " -> ".join([*active, module])
+        if module in visited:
+            return
+        active.append(module)
+        for dependency in sorted(graph[module] & graph.keys()):
+            if dependency != module:
+                visit(dependency)
+        active.pop()
+        visited.add(module)
+
+    for module in sorted(graph):
+        visit(module)
 
 
 def test_context_resources_are_split_by_business_resource():

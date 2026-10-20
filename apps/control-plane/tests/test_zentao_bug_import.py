@@ -8,11 +8,11 @@ import httpx
 import pytest
 from integration_test_driver import enable
 from sqlalchemy import select
+from support.bug_api import create_bug
+from support.bug_zentao_push_api import INSTANCE
+from support.function_case_library import make_requirement, make_sprint
 from support.project_api import account, project
 from support.project_api import api as api
-from test_bug_api import create_bug
-from test_bug_zentao_push_api import INSTANCE
-from test_function_case_library import make_requirement, make_sprint
 
 from testing_agent.models.bug_activity import BugActivity
 from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
@@ -312,7 +312,7 @@ def test_candidates_mark_linked_filter_and_paginate(api, setup):
     assert data["total"] == 7 and len(data["items"]) == 2
 
     # 迭代未绑定执行：直接提示，不做项目范围回退（用户确认 2026-10-09）。
-    from test_function_case_library import make_sprint as make_sprint_helper
+    from support.function_case_library import make_sprint as make_sprint_helper
 
     unbound = make_sprint_helper(api, owner, field["pid"], name="unbound")
     response = api.get(field["candidates"], headers=owner, params={"sprintId": unbound})
@@ -726,8 +726,9 @@ def test_import_database_failure_rolls_back_all_rows_and_allows_same_request_ret
         "items": [import_item(setup["sprint"], 51, setup["owner_id"])],
     }
     monkeypatch.setattr(BugRepository, "commit", fail_import_commit)
-    with pytest.raises(IntegrityError):
-        api.post(setup["import"], headers=setup["owner"], json=body)
+    failed = api.post(setup["import"], headers=setup["owner"], json=body)
+    assert failed.status_code == 500
+    assert failed.json()["code"] == 500
     assert asyncio.run(counts()) == before
 
     monkeypatch.setattr(BugRepository, "commit", original_commit)

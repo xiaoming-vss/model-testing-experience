@@ -1002,7 +1002,7 @@ def test_ai_review_extracts_api_cases_from_result_yaml():
 
 
 def test_ai_confirmed_import_preserves_go_api_collection_rules():
-    from test_api_review_confirmed_import import ImportRepository, make_run, review_client
+    from support.api_review_confirmed_import import ImportRepository, make_run, review_client
 
     run = make_run()
     run.review_status = "approved"

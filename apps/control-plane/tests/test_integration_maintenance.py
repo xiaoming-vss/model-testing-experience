@@ -8,14 +8,14 @@ import pytest
 import pytest_asyncio
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from test_integration_bug_api import api as api
-from test_integration_bug_api import claim, rows, submit
-from test_integration_bug_api import integration as integration
-from test_integration_bug_api import setup as setup
-from test_integration_jobs import claim as claim_request
-from test_integration_jobs import harness as harness
-from test_integration_jobs import result as remote_result
-from test_integration_jobs import submission
+from support.integration_bug_api import api as api
+from support.integration_bug_api import claim, rows, submit
+from support.integration_bug_api import integration as integration
+from support.integration_bug_api import setup as setup
+from support.integration_jobs import claim as claim_request
+from support.integration_jobs import harness as harness
+from support.integration_jobs import result as remote_result
+from support.integration_jobs import submission
 
 from testing_agent.core.config import IntegrationExecutionSettings, get_settings
 from testing_agent.core.errors import AppError
@@ -202,7 +202,7 @@ async def test_compacted_result_only_returns_original_receipt_never_reapplies(ha
     async with sessions() as session:
         job = await service(session).submit(submission())
         await service(session).claim(claim_request())
-        from test_integration_jobs import prepare
+        from support.integration_jobs import prepare
 
         permit = await service(session).prepare(job.job_id, "create_bug", prepare())
         body = remote_result(permit["operationId"])

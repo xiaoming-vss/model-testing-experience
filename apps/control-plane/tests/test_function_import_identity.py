@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from support.execution_writer import MemoryExecutionWriter
-from test_function_confirmed_import import approved_run
+from support.function_confirmed_import import approved_run
 
 from testing_agent.models.function_test_case import FunctionTestCase
 from testing_agent.models.function_test_suite import FunctionTestSuite

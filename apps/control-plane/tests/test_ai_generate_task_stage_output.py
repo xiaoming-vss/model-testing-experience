@@ -90,7 +90,7 @@ async def test_function_case_stage_output_persists_config_json():
 
 
 def test_function_case_confirmed_import_matches_go_cases_payload():
-    from test_function_confirmed_import import FunctionImportRepository, import_client
+    from support.function_confirmed_import import FunctionImportRepository, import_client
 
     repository = FunctionImportRepository()
     suite = repository.suites["suite-login"]
@@ -161,7 +161,7 @@ def test_function_case_confirmed_import_matches_go_cases_payload():
 
 
 def test_function_case_import_replaces_an_identifier_already_in_use():
-    from test_function_confirmed_import import FunctionImportRepository, import_client
+    from support.function_confirmed_import import FunctionImportRepository, import_client
 
     repository = FunctionImportRepository()
     taken = repository.cases.pop("case-existing")

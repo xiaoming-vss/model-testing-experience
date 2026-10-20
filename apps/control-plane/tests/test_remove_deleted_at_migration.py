@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 import sqlalchemy as sa
-from test_initial_schema_migration import assert_current_schema, migration_config
+from support.initial_schema_migration import assert_current_schema, migration_config
 
 from alembic import command
 from testing_agent.models import Base

@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 from support.execution_writer import MemoryExecutionWriter
-from test_worker_contract import FakeWorkerRepository
+from support.worker_contract import FakeWorkerRepository
 
 from testing_agent.schemas.workers import WorkerProgressRequest, WorkerTaskEventRequest
 from testing_agent.services import worker_task as module

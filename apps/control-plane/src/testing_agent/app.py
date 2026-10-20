@@ -15,6 +15,7 @@ from testing_agent.core.errors import (
     success_payload,
     validation_error_detail,
 )
+from testing_agent.core.http_diagnostics import RequestDiagnosticsMiddleware
 from testing_agent.routers.admin_users import router as admin_users_router
 from testing_agent.routers.ai_worker import router as ai_worker_router
 from testing_agent.routers.api_ai_tasks import router as api_ai_tasks_router
@@ -97,18 +98,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     app = FastAPI(title="Model Testing Experience API", version="1.0.0", lifespan=lifespan)
     app.state.settings = settings
+    app.add_middleware(RequestDiagnosticsMiddleware)
 
     @app.exception_handler(AppError)
     async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
+        request.state.http_business_code = exc.code
         if request.url.path.startswith("/internal/") and exc == ErrUnauthorized:
             return JSONResponse(status_code=401, content={"message": ErrUnauthorized.message})
         return JSONResponse(status_code=exc.http_code, content=app_error_payload(exc, exc.data))
 
     @app.exception_handler(RequestValidationError)
-    async def handle_validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
+    async def handle_validation_error(
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
         error = AppError(
             ErrBadRequest.code, validation_error_detail(list(exc.errors())), ErrBadRequest.http_code
         )
+        request.state.http_business_code = error.code
         return JSONResponse(status_code=error.http_code, content=app_error_payload(error))
 
     @app.exception_handler(Exception)

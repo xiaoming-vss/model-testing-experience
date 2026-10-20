@@ -16,7 +16,7 @@ async def read_pages(
     # Older bundled schemas silently omit build paging arguments upstream.
     # Do not present a truncated first page as the full selection list.
     if tool == BUILD_TOOL:
-        catalog = await client._request("tools/list", {})
+        catalog = await client.list_tools()
         definition: dict[str, Any] = next(
             (t for t in catalog.get("tools", []) if t.get("name") == tool), {}
         )

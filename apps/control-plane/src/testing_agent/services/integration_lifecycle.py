@@ -13,7 +13,7 @@ from testing_agent.models.integration_job import (
 )
 from testing_agent.models.project import Project
 from testing_agent.repositories.integration_job import IntegrationJobRepository
-from testing_agent.services.integration_bug_steps import IntegrationBugSteps
+from testing_agent.services.integration_bug_state import IntegrationBugState, reject_recovery
 from testing_agent.services.integration_job import IntegrationJobService
 
 
@@ -37,7 +37,7 @@ def lifecycle(session):
         apply_result=unavailable,
         runtime_generation="lifecycle-only",
         lock_resource=lock_project,
-        on_state=IntegrationBugSteps(session).sync,
+        on_state=IntegrationBugState(session, record_recovery=reject_recovery).sync,
     )
 
 

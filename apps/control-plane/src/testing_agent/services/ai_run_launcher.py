@@ -14,6 +14,7 @@ from testing_agent.core.enums import RunStatus, StageStatus
 from testing_agent.core.errors import ErrAiGenerateTaskRunRunning, ErrBadRequest, ErrNotFound
 from testing_agent.core.sid import new_id
 from testing_agent.domain.ai_execution_intent import ExecutionIntent
+from testing_agent.domain.ai_tasks import REQUIREMENT_ANALYSIS_INITIAL_STAGE
 from testing_agent.models.ai_generate_task import AiGenerateTaskRun
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
@@ -23,7 +24,6 @@ from testing_agent.repositories.ai_generate_task_source_archive import (
 from testing_agent.services.ai_execution.writer import ExecutionWriter
 from testing_agent.services.ai_report import build_test_report_run_snapshot
 from testing_agent.services.ai_task_access import RunLaunchAccess
-from testing_agent.services.ai_task_contracts import REQUIREMENT_ANALYSIS_INITIAL_STAGE
 from testing_agent.services.ai_task_output import (
     build_generate_run_snapshot,
     dump_run,

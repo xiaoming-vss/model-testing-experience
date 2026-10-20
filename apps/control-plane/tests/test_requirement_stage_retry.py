@@ -1,7 +1,7 @@
 import pytest
 from support.execution_writer import MemoryExecutionWriter
-from test_function_candidate_review import review_client
-from test_function_stage_retry import failed_repository
+from support.function_candidate_review import review_client
+from support.function_stage_retry import failed_repository
 
 from testing_agent.core.errors import ErrBadRequest, ErrForbidden
 from testing_agent.services.ai_generate_task import AiGenerateTaskService

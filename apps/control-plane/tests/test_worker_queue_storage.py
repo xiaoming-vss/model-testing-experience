@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
-from sqlalchemy import Boolean, Integer, select
+from sqlalchemy import select
 from support.ai_execution import (
     AsyncSessionAdapter,
     create_run,
@@ -14,12 +14,18 @@ from support.ai_execution import (
     graph,
 )
 from support.ai_execution import db as db
-from test_mysql_initialization import mysql as mysql
+from support.mysql_initialization import mysql as mysql
+from support.worker_queue_storage import (
+    add_business_tables as add_business_tables,
+)
+from support.worker_queue_storage import (
+    row as row,
+)
 
 from testing_agent.core.errors import ErrBadRequest, ErrForbidden
 from testing_agent.domain.ai_execution_intent import ExecutionIntent
 from testing_agent.models.api_case_run import ApiCaseRun
-from testing_agent.models.api_collection_run import ApiCollectionRun, ApiCollectionRunItem
+from testing_agent.models.api_collection_run import ApiCollectionRun
 from testing_agent.models.ui_test_case_run import UiTestCaseRun
 from testing_agent.models.ui_test_suite_run import UiTestSuiteRun
 from testing_agent.models.worker_task import WorkerTask
@@ -27,37 +33,6 @@ from testing_agent.repositories.worker_context import read_worker_context
 from testing_agent.repositories.worker_task import WorkerTaskRepository
 from testing_agent.schemas.workers import WorkerClaimRequest, WorkerTaskEventRequest
 from testing_agent.services.worker_task import WorkerTaskService, ensure_worker_match
-
-
-def row(model, **values):
-    for col in model.__table__.columns:
-        if col.name in values or col.nullable or col.default is not None or col.primary_key:
-            continue
-        values[col.name] = (
-            False
-            if isinstance(col.type, Boolean)
-            else (0 if isinstance(col.type, Integer) else "test")
-        )
-    return model(**values)
-
-
-def add_business_tables(db):
-    from test_api_run_scope import seed
-
-    from testing_agent.models.api_case import ApiCase
-
-    seed(db)
-    db.add(row(ApiCase, case_id="case", collection_id="collection"))
-    db.flush()
-
-    for model in (
-        ApiCaseRun,
-        ApiCollectionRun,
-        ApiCollectionRunItem,
-        UiTestCaseRun,
-        UiTestSuiteRun,
-    ):
-        model.__table__.create(db.get_bind(), checkfirst=True)
 
 
 @pytest.mark.parametrize(

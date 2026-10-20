@@ -1,10 +1,4 @@
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    pass
-from testing_agent.services.api_import_payload import bool_value as bool_value
+"""Pure AI task kinds and stage transitions, independent of persistence and HTTP."""
 
 
 def task_type_for(kind: str) -> str:

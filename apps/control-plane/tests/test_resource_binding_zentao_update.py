@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-from test_resource_binding_providers import (
+from support.resource_binding_providers import (
     FakeMcpAccess,
     FakeRepository,
     RecordingConnectionService,

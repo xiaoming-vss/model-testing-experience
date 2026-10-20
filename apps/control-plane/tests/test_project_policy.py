@@ -2,8 +2,8 @@
 
 import pytest
 from sqlalchemy import delete, select, update
-from test_integration_authorization import db as db  # noqa: F401
-from test_integration_authorization import job
+from support.integration_authorization import db as db  # noqa: F401
+from support.integration_authorization import job
 
 from testing_agent.core.errors import AppError
 from testing_agent.domain.project_policy import ACTIONS

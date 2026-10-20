@@ -4,15 +4,15 @@ import json
 
 import pytest
 from sqlalchemy import select
-
-from testing_agent.models.worker_task import WorkerTask
-from testing_agent.services.ai_execution import graph, persist_run, project
-from tests.test_ai_execution_storage import (
+from support.ai_execution import (
     AsyncSessionAdapter,
     create_run,
     event,
 )
-from tests.test_ai_execution_storage import db as db
+from support.ai_execution import db as db
+
+from testing_agent.models.worker_task import WorkerTask
+from testing_agent.services.ai_execution import graph, persist_run, project
 
 
 def cases_output():

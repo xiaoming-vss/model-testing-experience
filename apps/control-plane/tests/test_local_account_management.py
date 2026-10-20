@@ -6,38 +6,15 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
+from support.local_account_management import (
+    super_admin as super_admin,
+)
 from support.project_api import account, api, project  # noqa: F401
 
-from testing_agent.core.security import hash_password
 from testing_agent.models.api_environment import ApiEnvironment
 from testing_agent.models.api_environment_var import ApiEnvironmentVar
 from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.models.user import User
-
-
-def super_admin(client, *, must_change_password: bool = False):
-    async def create():
-        async with client.app.state.test_sessions() as session:
-            session.add(
-                User(
-                    user_id="super-admin",
-                    nickname="root",
-                    email="root@example.test",
-                    password=hash_password("root-password"),
-                    is_super_admin=True,
-                    super_admin_slot=1,
-                    status="active",
-                    must_change_password=must_change_password,
-                    token_version=0,
-                )
-            )
-            await session.commit()
-
-    asyncio.run(create())
-    response = client.post("/v1/login", json={"name": "root", "password": "root-password"})
-    assert response.status_code == 200, response.text
-    data = response.json()["data"]
-    return data, {"Authorization": "Bearer " + data["accessToken"]}
 
 
 def test_registration_requires_email_and_password_policy(api):  # noqa: F811

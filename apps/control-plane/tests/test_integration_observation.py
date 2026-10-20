@@ -6,8 +6,8 @@ from datetime import timedelta
 import pytest
 import pytest_asyncio
 from sqlalchemy import select
-from test_integration_jobs import claim, identity, prepare, result, started, submission
-from test_integration_jobs import harness as harness
+from support.integration_jobs import claim, identity, prepare, result, started, submission
+from support.integration_jobs import harness as harness
 
 from testing_agent.core.config import Settings
 from testing_agent.domain.integration_execution import digest, utc

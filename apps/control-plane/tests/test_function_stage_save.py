@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 import pytest
-from test_function_candidate_review import FunctionReviewRepository, make_run, review_client
+from support.function_candidate_review import FunctionReviewRepository, make_run, review_client
 
 
 def editable_run():

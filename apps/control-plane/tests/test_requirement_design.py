@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 from support.ai_execution import db  # noqa: F401
-from test_database_read_paths import database, seed_history  # noqa: F401
+from support.database_read_paths import database, seed_history  # noqa: F401
 
 from testing_agent.core.errors import AppError
 from testing_agent.models.ai_generate_task import AiGenerateTask as Task

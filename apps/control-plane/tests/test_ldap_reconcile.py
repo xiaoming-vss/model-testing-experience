@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy.ext.asyncio import async_sessionmaker
-from test_ldap_cutover import ldap_settings, session  # noqa: F401
+from support.ldap_cutover import ldap_settings, session  # noqa: F401
 
 from testing_agent.domain.ldap_identity import DirectoryIdentity, DirectoryUnavailable
 from testing_agent.repositories.auth_runtime import AuthRuntimeRepository

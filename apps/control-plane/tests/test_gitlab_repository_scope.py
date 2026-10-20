@@ -49,7 +49,7 @@ async def test_inaccessible_repository_does_not_pass_validation():
 
 @pytest.mark.parametrize("identifier", ["7", "team/sub"])
 async def test_connection_service_returns_canonical_group_and_repository_ids(identifier):
-    from test_gitlab_resource_proxy import (
+    from support.gitlab_resource_proxy import (
         FakeCipher,
         FakeIntegrationConnectionRepository,
         connection_row,

@@ -3,8 +3,8 @@
 import hashlib
 
 import pytest
-from test_stored_files import files as files
-from test_stored_files import upload
+from support.stored_files import files as files
+from support.stored_files import upload
 
 from testing_agent.core.errors import AppError
 from testing_agent.repositories.project import ProjectRepository

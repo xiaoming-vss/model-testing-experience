@@ -1,8 +1,8 @@
 from unittest.mock import AsyncMock, patch
 
+from support.ldap_settings_admin import config
+from support.local_account_management import super_admin
 from support.project_api import account, api  # noqa: F401
-from test_ldap_settings_admin import config
-from test_local_account_management import super_admin
 
 
 def test_admin_page_config_secret_redaction_live_policy_and_ordinary_denial(api):  # noqa: F811

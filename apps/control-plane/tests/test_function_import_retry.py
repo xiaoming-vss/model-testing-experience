@@ -1,5 +1,4 @@
-import pytest
-from test_function_confirmed_import import FunctionImportRepository, import_client
+from support.function_confirmed_import import FunctionImportRepository, import_client
 
 
 class FailsFirstCommitRepository(FunctionImportRepository):
@@ -47,11 +46,13 @@ def test_failed_function_import_preserves_approval_and_can_be_retried():
     repository = FailsFirstCommitRepository()
     client = import_client(repository)
 
-    with pytest.raises(RuntimeError, match="database unavailable"):
-        client.post(
-            "/v1/function-case-generate-task-runs/run-1/import",
-            json={"confirmOverwrite": True},
-        )
+    failed = client.post(
+        "/v1/function-case-generate-task-runs/run-1/import",
+        json={"confirmOverwrite": True},
+    )
+    assert failed.status_code == 500
+    assert failed.json()["code"] == 500
+    assert "database unavailable" not in failed.text
 
     assert repository.rollbacks == 1
     assert repository.run.review_status == "approved"

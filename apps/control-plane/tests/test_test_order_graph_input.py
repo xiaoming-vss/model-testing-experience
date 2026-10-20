@@ -1,9 +1,9 @@
 """测试单图谱输入：本迭代需求的用例、需求与关联，可直接作为派发的 graphInput。"""
 
+from support.function_case_library import make_case, make_requirement, make_sprint, make_suite
+from support.order_api import make_order, seed_case
 from support.project_api import account, project
 from support.project_api import api as api
-from test_function_case_library import make_case, make_requirement, make_sprint, make_suite
-from test_test_order_api import make_order, seed_case
 
 REQUIREMENT_CONTENT = "管理员可以在系统配置-服务配置中开启或关闭「启用本地清洗」开关。"
 

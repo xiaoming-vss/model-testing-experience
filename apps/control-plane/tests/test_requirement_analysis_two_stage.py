@@ -7,9 +7,9 @@ import pytest
 from support.execution_writer import MemoryExecutionWriter
 
 from testing_agent.core.errors import AppError
+from testing_agent.domain.ai_tasks import next_requirement_analysis_stage
 from testing_agent.domain.requirement_artifacts import requirement_content, validate_artifact
 from testing_agent.services import ai_stage_workflow as workflow
-from testing_agent.services.ai_task_contracts import next_requirement_analysis_stage
 from testing_agent.services.ai_task_output import requirement_analysis_import_content
 from testing_agent.services.requirement_analysis_contracts import (
     merge_stage_config,
@@ -214,7 +214,7 @@ async def test_extraction_retry_cannot_silently_read_replaced_source(monkeypatch
         SimpleNamespace(get_ai_run=get_run, get_requirement=get_requirement),
         execution_writer=MemoryExecutionWriter(),
     )
-    monkeypatch.setattr(service, "_ai_worker_task", task)
+    monkeypatch.setattr(service, "ai_worker_task", task)
     if changed_field:
         with pytest.raises(AppError, match="原始需求文件已变更"):
             await service.requirement_document("worker-task")

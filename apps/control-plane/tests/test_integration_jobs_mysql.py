@@ -7,8 +7,8 @@ from uuid import uuid4
 import pytest_asyncio
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from test_integration_jobs import claim, submission
-from test_mysql_initialization import mysql as mysql
+from support.integration_jobs import claim, submission
+from support.mysql_initialization import mysql as mysql
 
 from testing_agent.domain.integration_execution import digest
 from testing_agent.models.integration_job import (
@@ -196,7 +196,7 @@ async def test_rollback_has_no_job_steps_or_claim_residue(queue):
 
 async def test_migration_preserves_unresolved_write_evidence(mysql):
     from sqlalchemy.orm import Session
-    from test_initial_schema_migration import migration_config
+    from support.initial_schema_migration import migration_config
 
     from alembic import command
 
@@ -261,7 +261,7 @@ async def test_retention_query_and_compaction_on_mysql(queue):
 def test_migration_keeps_durable_restore_fence(mysql):
     import pytest
     from sqlalchemy.orm import Session
-    from test_initial_schema_migration import migration_config
+    from support.initial_schema_migration import migration_config
 
     from alembic import command
     from testing_agent.models.integration_job import IntegrationRuntime
@@ -302,7 +302,7 @@ def test_restore_review_scope_constraint_and_migration_evidence_guard(mysql):
     from sqlalchemy import inspect
     from sqlalchemy.exc import IntegrityError
     from sqlalchemy.orm import Session
-    from test_initial_schema_migration import migration_config
+    from support.initial_schema_migration import migration_config
 
     from alembic import command
     from testing_agent.models.integration_job import IntegrationRestoreReview

@@ -1,53 +1,17 @@
 import asyncio
-from types import SimpleNamespace
 
 import pytest
-from authorization_database import AuthorizationDatabase
 from support.execution_writer import MemoryExecutionWriter
-from test_function_candidate_review import FunctionReviewRepository, make_run, review_client
+from support.function_candidate_review import review_client
+from support.function_stage_revise import (
+    RevisionRepository as RevisionRepository,
+)
+from support.function_stage_revise import (
+    revision_run as revision_run,
+)
 
 from testing_agent.core.errors import ErrBadRequest, ErrForbidden
 from testing_agent.services.ai_generate_task import AiGenerateTaskService
-
-
-class RevisionRepository(FunctionReviewRepository):
-    session = AuthorizationDatabase()
-
-    def __init__(self, run):
-        super().__init__(run)
-        self.queued = []
-        self.lock = asyncio.Lock()
-        self.latest = SimpleNamespace(llm_connection_id="llm-1")
-
-    async def get_run_for_update(self, run_id):
-        await self.lock.acquire()
-        return self.run
-
-    async def get_latest_ai_dispatch(self, run_id):
-        return self.latest
-
-    def add(self, task):
-        self.queued.append(task)
-
-    async def commit(self):
-        await super().commit()
-        if self.lock.locked():
-            self.lock.release()
-
-    async def get_project(self, project_id):
-        return SimpleNamespace(user_id="user-1", project_id="project-1")
-
-
-def revision_run(stage="requirement_analysis"):
-    run = make_run(status="waiting_review")
-    run.checkpoint_enabled = True
-    run.current_stage = stage
-    run.stage_status = "waiting_review"
-    run.config_json = {"requirementAnalysis": {"old": True}, "caseNames": {"categories": []}}
-    if stage == "detailed_cases":
-        run.status = "success"
-        run.result_yaml = '{"cases":[{"name":"existing", "module":"login"}]}'
-    return run
 
 
 @pytest.mark.asyncio

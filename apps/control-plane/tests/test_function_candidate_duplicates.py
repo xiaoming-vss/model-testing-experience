@@ -1,4 +1,4 @@
-from test_function_candidate_review import FunctionReviewRepository, make_run, review_client
+from support.function_candidate_review import FunctionReviewRepository, make_run, review_client
 
 
 def test_function_approval_rejects_duplicate_candidate_names_within_a_module():

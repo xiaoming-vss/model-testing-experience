@@ -7,9 +7,9 @@ from concurrent.futures import ThreadPoolExecutor
 import httpx
 import pytest
 from integration_test_driver import dispatch_fields, dispatch_sync, enable
+from support.bug_zentao_push_api import setup as setup
 from support.project_api import account
 from support.project_api import api as api
-from test_bug_zentao_push_api import setup as setup
 
 
 @pytest.fixture(autouse=True)

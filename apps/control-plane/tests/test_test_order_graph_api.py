@@ -6,10 +6,10 @@ import json
 from sqlalchemy import select
 from support.ai_execution import db as db
 from support.ai_execution import event, persist_run
+from support.function_case_library import make_sprint
+from support.order_api import make_order
 from support.project_api import account, project
 from support.project_api import api as api
-from test_function_case_library import make_sprint
-from test_test_order_api import make_order
 
 from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
 from testing_agent.models.worker_task import WorkerTask

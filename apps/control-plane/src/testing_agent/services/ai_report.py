@@ -13,12 +13,12 @@ from testing_agent.core.errors import (
 )
 from testing_agent.core.sid import new_id
 from testing_agent.domain.ai_execution_intent import ExecutionIntent
+from testing_agent.domain.ai_tasks import task_type_for
 from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.services.ai_execution.writer import ExecutionWriter, SqlExecutionWriter
 from testing_agent.services.ai_task_access import OwnedRun, RequireProjectAccess
-from testing_agent.services.ai_task_contracts import task_type_for
 from testing_agent.services.ai_task_output import dump_run, normalize_config_json
 from testing_agent.services.common import list_payload
 from testing_agent.services.personal_authorization import require_personal_connection

@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from test_mysql_initialization import mysql as mysql
+from support.mysql_initialization import mysql as mysql
 
 from testing_agent.models.project import Project
 from testing_agent.models.sprint import Sprint

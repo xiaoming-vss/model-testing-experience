@@ -2,11 +2,11 @@ import json
 
 import httpx
 import pytest
+from support.function_case_library import make_case, make_suite
 from support.project_api import account
-from test_function_case_library import make_case, make_suite
-from test_zentao_mcp_bindings_api import api as api
-from test_zentao_mcp_bindings_api import bind, bind_parents
-from test_zentao_mcp_bindings_api import setup as setup
+from support.zentao_mcp_bindings_api import api as api
+from support.zentao_mcp_bindings_api import bind, bind_parents
+from support.zentao_mcp_bindings_api import setup as setup
 
 from testing_agent.services.mcp_client import McpClient
 
@@ -170,7 +170,7 @@ def test_member_uses_own_mcp_token_and_viewer_cannot_push(api, push):
 
 
 def test_case_push_uses_project_selected_mcp_without_an_operation_selector(api, push):
-    from test_zentao_mcp_bindings_api import add_mcp
+    from support.zentao_mcp_bindings_api import add_mcp
 
     s, state, url = push
     sid = add_mcp(api, s)

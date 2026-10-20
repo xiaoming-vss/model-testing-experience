@@ -5,6 +5,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from testing_agent.domain.ai_tasks import task_type_for
 from testing_agent.models.ai_generate_task import AiGenerateTask as Task
 from testing_agent.models.ai_generate_task import AiGenerateTaskRun as Run
 from testing_agent.models.ai_generate_task_source_archive import (
@@ -14,7 +15,6 @@ from testing_agent.models.requirement import Requirement
 from testing_agent.models.sprint import Sprint
 from testing_agent.repositories.ai_run_history import history_page
 from testing_agent.schemas.requirement_design import DesignKind
-from testing_agent.services.ai_task_contracts import task_type_for
 
 KINDS: tuple[DesignKind, ...] = ("requirement_analysis", "function", "api", "ui")
 TYPE_KINDS = {task_type_for(kind): kind for kind in KINDS}

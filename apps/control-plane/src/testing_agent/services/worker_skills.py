@@ -9,7 +9,7 @@ from testing_agent.models.project_skill_space import ProjectSkillSpace
 
 
 async def authorized_skill(task_id, name, worker_id, service):
-    task = await service._ai_worker_task(task_id)
+    task = await service.ai_worker_task(task_id)
     lease = task.lease_expires_at
     if (
         task.worker_id != worker_id

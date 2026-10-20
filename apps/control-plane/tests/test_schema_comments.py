@@ -4,8 +4,8 @@ import importlib.util
 from pathlib import Path
 
 import sqlalchemy as sa
-from test_initial_schema_migration import migration_config
-from test_mysql_initialization import mysql, seed_row  # noqa: F401
+from support.initial_schema_migration import migration_config
+from support.mysql_initialization import mysql, seed_row  # noqa: F401
 
 from alembic import command
 from testing_agent.models import Base

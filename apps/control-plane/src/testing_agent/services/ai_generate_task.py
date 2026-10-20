@@ -20,6 +20,52 @@ from testing_agent.core.errors import (
 )
 from testing_agent.core.sid import new_id
 from testing_agent.domain.ai_execution_intent import ExecutionIntent
+from testing_agent.domain.ai_tasks import (
+    DEFAULT_FUNCTION_CASE_MODULE as DEFAULT_FUNCTION_CASE_MODULE,
+)
+from testing_agent.domain.ai_tasks import (
+    FUNCTION_CASE_NEXT_STAGE as FUNCTION_CASE_NEXT_STAGE,
+)
+from testing_agent.domain.ai_tasks import (
+    FUNCTION_CASE_RELATION_DISPATCH_STATUSES as FUNCTION_CASE_RELATION_DISPATCH_STATUSES,
+)
+from testing_agent.domain.ai_tasks import (
+    FUNCTION_CASE_RELATION_STAGE as FUNCTION_CASE_RELATION_STAGE,
+)
+from testing_agent.domain.ai_tasks import (
+    FUNCTION_CASE_REVIEW_READY_STATUSES as FUNCTION_CASE_REVIEW_READY_STATUSES,
+)
+from testing_agent.domain.ai_tasks import (
+    FUNCTION_CASE_REVIEWABLE_STAGES as FUNCTION_CASE_REVIEWABLE_STAGES,
+)
+from testing_agent.domain.ai_tasks import (
+    REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES as REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES,
+)
+from testing_agent.domain.ai_tasks import (
+    REQUIREMENT_ANALYSIS_FINAL_STAGE as REQUIREMENT_ANALYSIS_FINAL_STAGE,
+)
+from testing_agent.domain.ai_tasks import (
+    REQUIREMENT_ANALYSIS_INITIAL_STAGE as REQUIREMENT_ANALYSIS_INITIAL_STAGE,
+)
+from testing_agent.domain.ai_tasks import (
+    REQUIREMENT_ANALYSIS_NEXT_STAGE as REQUIREMENT_ANALYSIS_NEXT_STAGE,
+)
+from testing_agent.domain.ai_tasks import (
+    REQUIREMENT_ANALYSIS_REVIEW_READY_STATUSES as REQUIREMENT_ANALYSIS_REVIEW_READY_STATUSES,
+)
+from testing_agent.domain.ai_tasks import (
+    REQUIREMENT_ANALYSIS_REVIEWABLE_STAGES as REQUIREMENT_ANALYSIS_REVIEWABLE_STAGES,
+)
+from testing_agent.domain.ai_tasks import (
+    REVISION_INSTRUCTION_FIELD as REVISION_INSTRUCTION_FIELD,
+)
+from testing_agent.domain.ai_tasks import (
+    next_function_case_stage as next_function_case_stage,
+)
+from testing_agent.domain.ai_tasks import (
+    next_requirement_analysis_stage as next_requirement_analysis_stage,
+)
+from testing_agent.domain.ai_tasks import task_type_for as task_type_for
 from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.ai_generate_task_source_archive import (
@@ -46,52 +92,6 @@ from testing_agent.services.ai_source_archive import (
     validate_source_archive as validate_source_archive,
 )
 from testing_agent.services.ai_stage_workflow import GenerationStageWorkflow
-from testing_agent.services.ai_task_contracts import (
-    DEFAULT_FUNCTION_CASE_MODULE as DEFAULT_FUNCTION_CASE_MODULE,
-)
-from testing_agent.services.ai_task_contracts import (
-    FUNCTION_CASE_NEXT_STAGE as FUNCTION_CASE_NEXT_STAGE,
-)
-from testing_agent.services.ai_task_contracts import (
-    FUNCTION_CASE_RELATION_DISPATCH_STATUSES as FUNCTION_CASE_RELATION_DISPATCH_STATUSES,
-)
-from testing_agent.services.ai_task_contracts import (
-    FUNCTION_CASE_RELATION_STAGE as FUNCTION_CASE_RELATION_STAGE,
-)
-from testing_agent.services.ai_task_contracts import (
-    FUNCTION_CASE_REVIEW_READY_STATUSES as FUNCTION_CASE_REVIEW_READY_STATUSES,
-)
-from testing_agent.services.ai_task_contracts import (
-    FUNCTION_CASE_REVIEWABLE_STAGES as FUNCTION_CASE_REVIEWABLE_STAGES,
-)
-from testing_agent.services.ai_task_contracts import (
-    REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES as REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES,
-)
-from testing_agent.services.ai_task_contracts import (
-    REQUIREMENT_ANALYSIS_FINAL_STAGE as REQUIREMENT_ANALYSIS_FINAL_STAGE,
-)
-from testing_agent.services.ai_task_contracts import (
-    REQUIREMENT_ANALYSIS_INITIAL_STAGE as REQUIREMENT_ANALYSIS_INITIAL_STAGE,
-)
-from testing_agent.services.ai_task_contracts import (
-    REQUIREMENT_ANALYSIS_NEXT_STAGE as REQUIREMENT_ANALYSIS_NEXT_STAGE,
-)
-from testing_agent.services.ai_task_contracts import (
-    REQUIREMENT_ANALYSIS_REVIEW_READY_STATUSES as REQUIREMENT_ANALYSIS_REVIEW_READY_STATUSES,
-)
-from testing_agent.services.ai_task_contracts import (
-    REQUIREMENT_ANALYSIS_REVIEWABLE_STAGES as REQUIREMENT_ANALYSIS_REVIEWABLE_STAGES,
-)
-from testing_agent.services.ai_task_contracts import (
-    REVISION_INSTRUCTION_FIELD as REVISION_INSTRUCTION_FIELD,
-)
-from testing_agent.services.ai_task_contracts import (
-    next_function_case_stage as next_function_case_stage,
-)
-from testing_agent.services.ai_task_contracts import (
-    next_requirement_analysis_stage as next_requirement_analysis_stage,
-)
-from testing_agent.services.ai_task_contracts import task_type_for as task_type_for
 from testing_agent.services.ai_task_output import (
     build_generate_run_snapshot as build_generate_run_snapshot,
 )

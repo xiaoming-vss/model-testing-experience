@@ -8,6 +8,7 @@ from testing_agent.core.errors import ErrBadRequest, ErrForbidden, ErrNotFound
 from testing_agent.core.sid import new_id
 from testing_agent.domain.ai_execution_intent import ExecutionIntent
 from testing_agent.domain.worker_context import AiWorkerContext, ApiWorkerContext
+from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.worker_task import WorkerTaskRepository
 from testing_agent.schemas.workers import (
     WorkerClaimRequest,
@@ -322,14 +323,13 @@ class WorkerTaskService:
             "skills": [project_skill_worker_payload(row) for row in rows],
         }
 
-    async def _ai_worker_task(self, task_id: str):
-        if hasattr(self.repository, "get_worker_task"):
-            task = await self.repository.get_worker_task("ai", task_id)
-            if task is None:
-                raise ErrNotFound()
-            await authorize_execution(self.repository.session, task)
-            return task
-        return await find_task(self.repository.session, "ai", task_id)
+    async def ai_worker_task(self, task_id: str) -> WorkerTask:
+        """Load an AI task and validate its current execution authority."""
+        task = await self.repository.get_worker_task("ai", task_id)
+        if task is None:
+            raise ErrNotFound()
+        await authorize_execution(self.repository.session, task)
+        return task
 
     async def llm_credentials(self, task_id: str) -> dict:
         task = await find_task(self.repository.session, "ai", task_id)
@@ -378,7 +378,7 @@ class WorkerTaskService:
         )
 
     async def requirement_document(self, task_id: str):
-        task = await self._ai_worker_task(task_id)
+        task = await self.ai_worker_task(task_id)
         if task.task_type not in {
             "requirement_analysis",
             "functional_case_generate",
@@ -413,7 +413,7 @@ class WorkerTaskService:
         return requirement
 
     async def source_archive(self, task_id: str):
-        task = await self._ai_worker_task(task_id)
+        task = await self.ai_worker_task(task_id)
         if task.task_type != "ui_case_generate":
             raise ErrNotFound()
         run = await self.repository.get_ai_run(task.run_id)

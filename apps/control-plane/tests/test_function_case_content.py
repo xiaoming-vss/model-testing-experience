@@ -5,12 +5,12 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from support.ai_execution import AsyncSessionAdapter
 from support.ai_execution import db as db
-from test_ui_run_scope import seed
-from test_worker_queue_storage import row
+from support.function_case_content import (
+    prepare as prepare,
+)
 
 from testing_agent.domain.function_case_content import CaseContent, from_legacy
 from testing_agent.models.function_test_case import FunctionTestCase
-from testing_agent.models.function_test_suite import FunctionTestSuite
 from testing_agent.repositories.function_test_case import FunctionTestCaseRepository
 from testing_agent.schemas.function_test_case import FunctionCaseRequest
 from testing_agent.services.function_test_case import FunctionTestCaseService
@@ -41,14 +41,6 @@ def test_numbered_pairs_and_unmatched_text_conversion():
 def test_content_contract_rejects_invalid_shapes(content):
     with pytest.raises(ValidationError):
         CaseContent.model_validate(content)
-
-
-def prepare(db):
-    seed(db)
-    FunctionTestSuite.__table__.create(db.get_bind(), checkfirst=True)
-    FunctionTestCase.__table__.create(db.get_bind(), checkfirst=True)
-    db.add(row(FunctionTestSuite, suite_id="function-suite", requirement_id="req"))
-    db.commit()
 
 
 @pytest.mark.asyncio

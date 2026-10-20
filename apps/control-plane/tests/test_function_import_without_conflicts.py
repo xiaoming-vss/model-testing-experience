@@ -1,4 +1,4 @@
-from test_function_confirmed_import import FunctionImportRepository, import_client
+from support.function_confirmed_import import FunctionImportRepository, import_client
 
 
 def test_function_import_without_conflicts_creates_all_suites_in_one_request():

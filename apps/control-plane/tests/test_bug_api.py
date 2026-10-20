@@ -1,48 +1,22 @@
 """Bug 管理：创建编号、禅道状态、确认和解决方案、转派、编辑历史、筛选分页与执行来源。"""
 
+from support.bug_api import (
+    activities_of as activities_of,
+)
+from support.bug_api import (
+    create_bug as create_bug,
+)
+from support.bug_api import (
+    get_bug as get_bug,
+)
+from support.bug_api import (
+    transition as transition,
+)
+from support.function_case_library import make_case, make_requirement, make_sprint, make_suite
 from support.project_api import account, project
 from support.project_api import api as api
-from test_function_case_library import make_case, make_requirement, make_sprint, make_suite
 
 from testing_agent.domain.rich_text import extract_file_ids, sanitize_rich_text
-
-
-def create_bug(api, headers, pid, sprint_id, title="登录失败", reporter=None, **overrides):
-    body = {
-        "title": title,
-        "assigneeUserId": overrides.pop("assigneeUserId", None)
-        or (reporter["userId"] if reporter else None),
-        "severity": "serious",
-        "priority": "high",
-        "foundSprintId": sprint_id,
-        "descriptionHtml": "<p>现象与复现步骤</p>",
-        **overrides,
-    }
-    if body["assigneeUserId"] is None:
-        body.pop("assigneeUserId")
-    response = api.post(f"/v1/projects/{pid}/bugs", headers=headers, json=body)
-    assert response.status_code == 200, response.text
-    return response.json()["data"]
-
-
-def get_bug(api, headers, bug_id):
-    response = api.get(f"/v1/bugs/{bug_id}", headers=headers)
-    assert response.status_code == 200, response.text
-    return response.json()["data"]
-
-
-def transition(api, headers, bug_id, action, **fields):
-    if action == "submit_fix":
-        fields.setdefault("resolvedBuild", "trunk")
-    return api.post(
-        f"/v1/bugs/{bug_id}/transition", headers=headers, json={"action": action, **fields}
-    )
-
-
-def activities_of(api, headers, bug_id):
-    response = api.get(f"/v1/bugs/{bug_id}/activities", headers=headers)
-    assert response.status_code == 200, response.text
-    return response.json()["data"]
 
 
 def test_create_assigns_project_scoped_bug_number_and_records_creation(api):

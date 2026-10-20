@@ -4,8 +4,8 @@ import zipfile
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
-from test_stored_files import files as files
-from test_stored_files import upload
+from support.stored_files import files as files
+from support.stored_files import upload
 
 from testing_agent.app import create_app
 from testing_agent.core.errors import AppError
@@ -142,7 +142,7 @@ async def test_worker_skill_files_require_active_owner_and_default_membership(fi
         worker_id="worker", status="running", lease_expires_at=utcnow() + timedelta(minutes=2)
     )
     worker = SimpleNamespace(
-        _ai_worker_task=AsyncMock(return_value=task),
+        ai_worker_task=AsyncMock(return_value=task),
         repository=SimpleNamespace(session=files.session),
     )
     response = await skill_manifest("task", "builtin", "worker", worker)

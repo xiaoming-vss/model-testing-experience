@@ -1,6 +1,7 @@
 """Streamable HTTP client for explicit, program-controlled MCP tool calls."""
 
 import json
+from typing import Any
 
 import httpx
 
@@ -49,6 +50,10 @@ class McpClient:
 
     async def __aexit__(self, *args):
         await self.http.aclose()
+
+    async def list_tools(self) -> dict[str, Any]:
+        """Read the negotiated server's tool catalog without exposing raw RPC dispatch."""
+        return await self._request("tools/list", {})
 
     async def _request(self, method, params, *, write=False, notification=False):
         self.request_id += 1

@@ -3,7 +3,7 @@ import asyncio
 import httpx
 import pytest
 from support.execution_writer import MemoryExecutionWriter
-from test_function_confirmed_import import FunctionImportRepository
+from support.function_confirmed_import import FunctionImportRepository
 
 from testing_agent.api.deps import get_ai_generate_task_service, get_current_user_id
 from testing_agent.app import create_app

@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from test_mysql_initialization import mysql  # noqa: F401
+from support.mysql_initialization import mysql  # noqa: F401
 
 from testing_agent.models.ai_generate_task import AiGenerateTask as Task
 from testing_agent.models.ai_generate_task import AiGenerateTaskRun as Run

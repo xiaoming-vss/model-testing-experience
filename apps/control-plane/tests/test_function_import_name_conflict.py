@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from support.execution_writer import MemoryExecutionWriter
-from test_function_confirmed_import import FunctionImportRepository, approved_run, import_client
+from support.function_confirmed_import import FunctionImportRepository, approved_run, import_client
 
 from testing_agent.core.errors import AppError
 from testing_agent.models.function_test_case import FunctionTestCase
@@ -95,11 +95,12 @@ def test_mysql_import_translates_only_suite_name_conflicts(failure_at, suite_con
         assert response.status_code == 409
         assert response.json()["code"] == 3202
     else:
-        with pytest.raises(IntegrityError):
-            client.post(
-                "/v1/function-case-generate-task-runs/run-1/import",
-                json={"confirmOverwrite": True},
-            )
+        response = client.post(
+            "/v1/function-case-generate-task-runs/run-1/import",
+            json={"confirmOverwrite": True},
+        )
+        assert response.status_code == 500
+        assert response.json()["code"] == 500
     assert repository.rollbacks == 1
     assert repository.run.import_status == "pending"
     assert repository.run.imported_targets == []

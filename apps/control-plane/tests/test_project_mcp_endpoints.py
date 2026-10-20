@@ -233,7 +233,7 @@ def test_first_successful_authorization_persists_the_actual_instance(api, remote
 
 
 def test_owner_confirmed_target_switch_clears_only_this_projects_zentao_bindings(api, remote):
-    from test_function_case_library import make_requirement, make_sprint
+    from support.function_case_library import make_requirement, make_sprint
 
     from testing_agent.models.resource_binding import ResourceBinding
     from testing_agent.models.shared_service import SharedService

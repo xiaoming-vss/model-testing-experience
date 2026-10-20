@@ -2,22 +2,13 @@ import asyncio
 
 import pytest
 from support.execution_writer import MemoryExecutionWriter
-from test_function_candidate_review import review_client
-from test_function_stage_revise import RevisionRepository, revision_run
+from support.function_candidate_review import review_client
+from support.function_stage_retry import (
+    failed_repository as failed_repository,
+)
 
 from testing_agent.core.errors import ErrBadRequest, ErrForbidden
 from testing_agent.services.ai_generate_task import AiGenerateTaskService
-
-
-def failed_repository(stage="requirement_analysis", stage_status="failed"):
-    run = revision_run(stage)
-    run.status = "error"
-    run.stage_status = stage_status
-    run.error_message = "Unterminated string"
-    run.config_json["revisionInstruction"] = "keep this round's instruction"
-    repo = RevisionRepository(run)
-    repo.latest.status = "error"
-    return repo
 
 
 @pytest.mark.parametrize("checkpoint", [False, True])
