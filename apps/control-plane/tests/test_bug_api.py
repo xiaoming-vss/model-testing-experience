@@ -1,8 +1,8 @@
 """Bug 管理：创建编号、禅道状态、确认和解决方案、转派、编辑历史、筛选分页与执行来源。"""
 
+from support.project_api import account, project
+from support.project_api import api as api
 from test_function_case_library import make_case, make_requirement, make_sprint, make_suite
-from test_project_membership_api import account, project
-from test_project_membership_api import api as api
 
 from testing_agent.domain.rich_text import extract_file_ids, sanitize_rich_text
 

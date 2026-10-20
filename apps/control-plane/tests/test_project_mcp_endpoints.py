@@ -6,8 +6,8 @@ import json
 import httpx
 import pytest
 from sqlalchemy import select
-from test_project_membership_api import account, project
-from test_project_membership_api import api as api
+from support.project_api import account, project
+from support.project_api import api as api
 
 from testing_agent.models.shared_service import SharedService
 from testing_agent.services.mcp_client import McpClient

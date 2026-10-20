@@ -2,8 +2,8 @@
 
 import pytest
 from sqlalchemy import select
-from test_ai_execution_storage import AsyncSessionAdapter
-from test_ai_execution_storage import db as db
+from support.ai_execution import AsyncSessionAdapter
+from support.ai_execution import db as db
 from test_ui_run_scope import seed as seed_ui
 from test_worker_queue_storage import row
 

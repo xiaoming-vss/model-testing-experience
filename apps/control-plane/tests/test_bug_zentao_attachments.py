@@ -11,8 +11,8 @@ import httpx
 import pytest
 from integration_test_driver import dispatch_sync, enable
 from sqlalchemy import select
+from support.project_api import api as api
 from test_bug_zentao_push_api import setup as setup
-from test_project_membership_api import api as api
 
 from testing_agent.core.config import get_settings
 from testing_agent.models.bug import Bug
@@ -242,8 +242,8 @@ def test_parallel_attachment_retry_reserves_one_upload(api, attachments):
 
 
 def test_supplement_requires_current_members_own_token_and_original_instance(api, attachments):
+    from support.project_api import account
     from test_bug_zentao_push_api import INSTANCE
-    from test_project_membership_api import account
 
     s = attachments
     push(api, s)

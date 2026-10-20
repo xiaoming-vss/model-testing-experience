@@ -4,8 +4,8 @@ from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
-from test_ai_execution_storage import AsyncSessionAdapter
-from test_ai_execution_storage import db as db
+from support.ai_execution import AsyncSessionAdapter
+from support.ai_execution import db as db
 from test_worker_queue_storage import row
 
 from testing_agent.core.errors import ErrForbidden

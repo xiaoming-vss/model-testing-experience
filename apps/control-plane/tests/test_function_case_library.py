@@ -2,8 +2,8 @@
 
 from urllib.parse import urlencode
 
-from test_project_membership_api import account, project
-from test_project_membership_api import api as api
+from support.project_api import account, project
+from support.project_api import api as api
 
 SPRINT_BODY = {
     "name": "iteration",

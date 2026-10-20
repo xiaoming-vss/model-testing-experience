@@ -4,11 +4,11 @@ import asyncio
 import json
 
 from sqlalchemy import select
-from test_ai_execution_storage import db as db
-from test_ai_execution_storage import event, persist
+from support.ai_execution import db as db
+from support.ai_execution import event, persist
+from support.project_api import account, project
+from support.project_api import api as api
 from test_function_case_library import make_sprint
-from test_project_membership_api import account, project
-from test_project_membership_api import api as api
 from test_test_order_api import make_order
 
 from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun

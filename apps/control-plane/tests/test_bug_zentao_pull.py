@@ -7,10 +7,10 @@ import httpx
 import pytest
 from integration_test_driver import enable
 from sqlalchemy import select
+from support.project_api import account, project
+from support.project_api import api as api
 from test_bug_zentao_push_api import INSTANCE
 from test_function_case_library import make_sprint
-from test_project_membership_api import account, project
-from test_project_membership_api import api as api
 
 from testing_agent.models.bug import Bug
 from testing_agent.models.bug_activity import BugActivity

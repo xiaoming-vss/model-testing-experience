@@ -1,10 +1,10 @@
 """The real API preserves ZenTao's status, confirmation and resolution semantics."""
 
 import pytest
+from support.project_api import account, project
+from support.project_api import api as api
 from test_bug_api import activities_of, create_bug, get_bug, transition
 from test_function_case_library import make_sprint
-from test_project_membership_api import account, project
-from test_project_membership_api import api as api
 
 
 @pytest.fixture

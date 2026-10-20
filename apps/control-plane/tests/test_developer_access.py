@@ -1,9 +1,9 @@
 """Developer access is enforced at the HTTP boundary, independent of navigation."""
 
+from support.project_api import account, project, requirement, seed_requirement_source
+from support.project_api import api as api
 from test_bug_api import activities_of, create_bug, transition
 from test_function_case_library import make_requirement, make_sprint
-from test_project_membership_api import account, project, requirement, seed_requirement_source
-from test_project_membership_api import api as api
 
 from testing_agent.api.deps import verify_worker_token
 

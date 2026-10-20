@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy import event, select
 from sqlalchemy.dialects import mysql
-from test_ai_execution_storage import db  # noqa: F401
+from support.ai_execution import db  # noqa: F401
 
 from testing_agent.core.errors import AppError
 from testing_agent.models.ai_generate_execution import (

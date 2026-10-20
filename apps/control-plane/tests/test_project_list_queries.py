@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import event
-from test_project_membership_api import account, api, project  # noqa: F401
+from support.project_api import account, api, project  # noqa: F401
 
 from testing_agent.models.requirement import Requirement
 from testing_agent.models.resource_binding import ResourceBinding

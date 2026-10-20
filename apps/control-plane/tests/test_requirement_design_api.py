@@ -4,7 +4,7 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from test_project_membership_api import account, api, project  # noqa: F401
+from support.project_api import account, api, project  # noqa: F401
 
 from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.models.requirement import Requirement

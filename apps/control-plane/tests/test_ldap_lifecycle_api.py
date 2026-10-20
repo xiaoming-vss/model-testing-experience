@@ -2,9 +2,9 @@ import asyncio
 from dataclasses import replace
 
 from sqlalchemy import select
+from support.project_api import account, api, project  # noqa: F401
 from test_ldap_cutover import ldap_settings
 from test_local_account_management import super_admin
-from test_project_membership_api import account, api, project  # noqa: F401
 
 from testing_agent.core.config import Settings
 from testing_agent.domain.ldap_identity import DirectoryIdentity

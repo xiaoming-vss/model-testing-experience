@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
-from test_ai_execution_storage import db  # noqa: F401
+from support.ai_execution import db  # noqa: F401
 from test_database_read_paths import database, seed_history  # noqa: F401
 
 from testing_agent.core.errors import AppError
@@ -126,7 +126,7 @@ def test_workspace_requests_are_strict_and_have_no_client_owned_scope():
 
 async def test_default_configuration_reuses_existing_task(database, monkeypatch):  # noqa: F811
     sync, session, _ = database
-    from test_ai_execution_storage import AsyncSessionAdapter
+    from support.ai_execution import AsyncSessionAdapter
 
     tasks = AiGenerateTaskService(AiGenerateTaskRepository(AsyncSessionAdapter(sync)))
     service = RequirementDesignService(tasks)
@@ -191,7 +191,7 @@ async def test_workspace_start_rejects_empty_enhanced_text_and_cross_requirement
 
 async def test_run_response_loss_retry_creates_one_run_and_one_worker(database):  # noqa: F811
     sync, _, _ = database
-    from test_ai_execution_storage import AsyncSessionAdapter
+    from support.ai_execution import AsyncSessionAdapter
 
     from testing_agent.models.worker_task import WorkerTask
 
@@ -211,7 +211,7 @@ async def test_run_response_loss_retry_creates_one_run_and_one_worker(database):
 
 async def test_first_configuration_is_durable_and_reused_on_request_retry(database):  # noqa: F811
     sync, _, _ = database
-    from test_ai_execution_storage import AsyncSessionAdapter
+    from support.ai_execution import AsyncSessionAdapter
 
     service = RequirementDesignService(
         AiGenerateTaskService(AiGenerateTaskRepository(AsyncSessionAdapter(sync)))
@@ -258,7 +258,7 @@ def test_function_input_rejects_empty_or_damaged_enhanced_text(content):
 
 async def test_workspace_starts_function_run_from_existing_enhanced_text(database):  # noqa: F811
     sync, _, _ = database
-    from test_ai_execution_storage import AsyncSessionAdapter
+    from support.ai_execution import AsyncSessionAdapter
 
     requirement = sync.query(Requirement).filter_by(requirement_id="req").one()
     requirement.document_content = "# 功能理解记录\n支持用户登录及权限校验"

@@ -6,10 +6,10 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy import event, select
+from support.project_api import account
+from support.project_api import api as api
 from test_bug_zentao_push_api import change
 from test_bug_zentao_push_api import setup as setup
-from test_project_membership_api import account
-from test_project_membership_api import api as api
 
 from testing_agent.core.config import IntegrationExecutionSettings, get_settings
 from testing_agent.models.bug import Bug

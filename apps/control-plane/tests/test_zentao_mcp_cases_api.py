@@ -2,8 +2,8 @@ import json
 
 import httpx
 import pytest
+from support.project_api import account
 from test_function_case_library import make_case, make_suite
-from test_project_membership_api import account
 from test_zentao_mcp_bindings_api import api as api
 from test_zentao_mcp_bindings_api import bind, bind_parents
 from test_zentao_mcp_bindings_api import setup as setup

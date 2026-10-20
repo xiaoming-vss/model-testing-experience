@@ -9,10 +9,10 @@ import httpx
 import pytest
 from integration_test_driver import dispatch_sync, enable
 from sqlalchemy import select
+from support.project_api import account, project
+from support.project_api import api as api
 from test_bug_api import create_bug
 from test_function_case_library import make_requirement, make_sprint
-from test_project_membership_api import account, project
-from test_project_membership_api import api as api
 
 from testing_agent.models.bug_zentao_push import BugZentaoPush
 from testing_agent.models.resource_binding import ResourceBinding

@@ -2,8 +2,8 @@ from datetime import UTC, datetime, timedelta
 
 import jwt
 from fastapi.testclient import TestClient
-from test_project_membership_api import account
-from test_project_membership_api import api as api
+from support.project_api import account
+from support.project_api import api as api
 
 from testing_agent.app import create_app
 from testing_agent.core.config import get_settings

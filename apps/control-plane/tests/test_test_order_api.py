@@ -3,11 +3,11 @@
 from datetime import UTC, datetime
 
 import pytest
-from test_ai_execution_storage import AsyncSessionAdapter
-from test_ai_execution_storage import db as db
+from support.ai_execution import AsyncSessionAdapter
+from support.ai_execution import db as db
+from support.project_api import account, project
+from support.project_api import api as api
 from test_function_case_library import make_case, make_requirement, make_sprint, make_suite
-from test_project_membership_api import account, project
-from test_project_membership_api import api as api
 
 from testing_agent.core.errors import AppError
 from testing_agent.domain.test_order_status import derive_test_order_status

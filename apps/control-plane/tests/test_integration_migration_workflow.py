@@ -2,8 +2,8 @@ from dataclasses import replace
 
 import pytest
 from integration_test_driver import dispatch_sync, enable
+from support.project_api import api as api
 from test_bug_zentao_push_api import setup as setup
-from test_project_membership_api import api as api
 
 from testing_agent.core.config import get_settings
 

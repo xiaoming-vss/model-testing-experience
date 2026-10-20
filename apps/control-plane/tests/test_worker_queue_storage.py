@@ -6,14 +6,14 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import Boolean, Integer, select
-from test_ai_execution_storage import (
+from support.ai_execution import (
     AsyncSessionAdapter,
     create_run,
     enqueue,
     event,
     graph,
 )
-from test_ai_execution_storage import db as db
+from support.ai_execution import db as db
 from test_mysql_initialization import mysql as mysql
 
 from testing_agent.core.errors import ErrBadRequest, ErrForbidden

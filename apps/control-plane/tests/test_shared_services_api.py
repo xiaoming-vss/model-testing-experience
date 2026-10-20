@@ -3,8 +3,8 @@
 from types import SimpleNamespace
 
 import pytest
-from test_project_membership_api import account, project
-from test_project_membership_api import api as api_fixture
+from support.project_api import account, project
+from support.project_api import api as api_fixture
 
 api = api_fixture
 

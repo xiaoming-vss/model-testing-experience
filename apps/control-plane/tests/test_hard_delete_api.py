@@ -3,8 +3,8 @@
 import asyncio
 
 import pytest
-from test_project_membership_api import account, project, requirement
-from test_project_membership_api import api as api
+from support.project_api import account, project, requirement
+from support.project_api import api as api
 
 
 @pytest.mark.parametrize(

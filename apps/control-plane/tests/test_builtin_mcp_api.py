@@ -4,8 +4,8 @@ import asyncio
 
 import pytest
 from sqlalchemy import select
-from test_project_membership_api import account, project
-from test_project_membership_api import api as api_fixture
+from support.project_api import account, project
+from support.project_api import api as api_fixture
 
 from testing_agent.core.config import get_settings
 from testing_agent.models.integration_connection import IntegrationConnection

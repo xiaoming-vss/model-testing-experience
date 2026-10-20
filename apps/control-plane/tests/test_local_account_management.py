@@ -6,7 +6,7 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
-from test_project_membership_api import account, api, project  # noqa: F401
+from support.project_api import account, api, project  # noqa: F401
 
 from testing_agent.core.security import hash_password
 from testing_agent.models.api_environment import ApiEnvironment
