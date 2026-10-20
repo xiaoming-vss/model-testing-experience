@@ -38,21 +38,44 @@
 
 调用层次为 router → handler → service → repository → model。注意 `api/` 目录下只有依赖注入与鉴权校验（`deps.py`），业务路由不在此处。
 
-生成任务保留 `services/ai_generate_task.py` 作为调用入口，内部实现按职责划分：
+AI 生成任务按能力装配，HTTP handler 直接获取所需的查询、管理或工作流对象。
+旧的 `services/ai_generate_task.py` 与 `get_ai_generate_task_service` 已移除，不再维护总入口的
+转发方法或常量/序列化函数重导出。下表中的模块默认位于 `services/`，装配入口位于 `api/deps.py`。
 
-| 模块 | 职责 |
+| 模块与公共能力 | 职责 |
 | --- | --- |
-| `domain/ai_tasks.py`、`services/ai_task_output.py` | 纯任务规则与常量、产物解析、快照与响应序列化 |
-| `ai_run_launcher.py` | 发起运行、执行授权、快照准备与显式写入 |
-| `ai_execution/writer.py` | 根据 ExecutionIntent 同步运行、阶段、attempt 与队列；flush，不提交调用者事务 |
-| `ai_source_archive.py` | 源码归档校验、替换与失败清理 |
-| `ai_stage_workflow.py` | 阶段保存、审核、修订、重试和图谱派发 |
-| `ai_report.py` | 测试报告任务、运行与 PDF 导出 |
-| `api_generate_import.py` | API 候选冲突预览、确认覆盖及事务 |
-| `api_import_payload.py`、`api_import_entities.py` | 文件/候选导入共用的校验、转换和实体构造；不提交事务 |
-| `ai_task_access.py` | 各工作流依赖的最小授权接口，不依赖入口服务实现 |
+| `ai_task_scope.py` / GenerationAccess | 当前成员动作、任务/运行归属、父资源先于子资源的锁顺序；不提交事务 |
+| `ai_task_queries.py` / GenerationQueries | 任务列表/详情、运行详情与分页历史；代码风险详情保留 report，历史摘要不读取正文 |
+| `ai_task_commands.py` / GenerationTaskCommands | 任务创建、修改、删除与运行删除；业务命令保留各自提交点 |
+| `ai_run_launcher.py` / GenerationRunLauncher | 准备快照、重查权限、发起运行；使用显式 ExecutionWriter |
+| `ai_stage_workflow.py` / GenerationStageWorkflow | 阶段保存、审核、修订、重试和图谱派发 |
+| `ai_candidate_review.py` / GenerationCandidateReview | 整次候选运行的内容编辑与审核，不创建正式资产 |
+| `ai_report.py` / TestReportWorkflow | 报告任务、运行及 PDF 导出 |
+| `ai_source_archive.py` / SourceArchiveManager | 源码归档校验、替换和失败清理 |
+| `api_generate_import.py` / ApiCandidateImporter | API 候选冲突预览、确认覆盖及正式资产事务 |
+| `function_generate_import.py`、`ui_generate_import.py`、`requirement_generate_import.py` | 功能/UI 候选正式导入、需求增强文本采纳；各入口负责原有提交与回滚语义 |
+| `ai_task_access.py` / GenerationImportContext | 仅向正式导入提供仓储、执行写入器、运行访问与需求权限能力；不承担任务管理 |
+| `domain/ai_tasks.py`、`ai_task_output.py` | 纯任务规则与常量、产物解析及快照/响应序列化；调用方直接引用实际归属 |
+| `ai_execution/writer.py` | 协调 run、stage、attempt、queue 的显式写入；flush，不提交调用者事务 |
 
-功能与 UI 正式资产导入继续由 `function_generate_import.py`、`ui_generate_import.py` 处理。审核只改变审核状态，正式资产由独立导入入口创建；不再保留旧的审核即导入路径。通用需求访问链集中在 `project_access.require_requirement_access`，每次调用仍显式传递操作人及权限动作。
+工作流通过明确的构造参数获取依赖。`RequirementDesignService` 显式接收工作区查询仓储、
+任务仓储、归档仓储、访问检查、任务管理和运行启动能力；装配时共享同一请求会话，
+保持关闭旧授权快照、项目→迭代→需求加锁、重查当前权限和业务入口提交的顺序。
+审核与正式导入继续独立，旧 attempt、本人模型授权和响应丢失后的幂等规则不变。
+
+功能用例的本地操作与外部导出也有独立入口：
+
+| 模块 | 职责与约束 |
+| --- | --- |
+| `function_test_case.py` / FunctionTestCaseService | 本地查询、创建、编辑、删除；不装配禅道客户端 |
+| `function_case_import.py` / FunctionCaseImporter | 文件读取后的内容验证与本地导入；完整处理后一次提交，异常请求会话撤销未提交数据 |
+| `function_case_export.py` / FunctionCaseExporter | 本人授权、绑定目标核验、单测试集/需求批量导出及逐项结果汇总；不提交或回滚本地事务，不自动重试远端写入 |
+| `function_case_access.py` / FunctionCaseAccess | 共用资源归属与项目动作检查；本地读写和导出仍使用各自要求的动作 |
+| `domain/function_case_export.py` | 普通值对象到禅道载荷的纯转换；保留结构化多行步骤、旧文本、优先级与步骤/预期补齐 |
+| `import_payload.py` | 功能/API/UI 等资产导入共用的文件读取与 YAML/JSON 信封解析，不依赖 API 集合业务模块 |
+
+API 导入的专用校验与实体转换继续由 `api_import_payload.py` 和 `api_import_entities.py` 负责。
+远端导出的部分成功保留逐项结果，本地事务失败不代表撤销了远端操作。
 
 ## 模块接口与事务责任
 
@@ -74,7 +97,7 @@
 修改执行与删除时继续覆盖旧回传、未知写入、授权撤销及并发保护，不用统一重试掩盖各域差异。
 
 `tests/test_architecture_layers.py` 检查层次依赖、源码静态导入无环、跨模块私有调用、
-禁止 ORM 命令临时字段，以及测试准备不导入被收集的测试模块。
+禁止 ORM 命令临时字段、查询模块写事务、重新引入 AI 总入口，以及测试准备不导入被收集的测试模块。
 这些静态约束不能证明动态依赖和业务行为正确，仍需对应行为测试。
 
 ## HTTP 诊断
