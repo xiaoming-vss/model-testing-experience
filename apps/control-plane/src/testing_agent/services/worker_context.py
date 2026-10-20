@@ -39,6 +39,9 @@ def hydrate(session, task):
         if attempt:
             task.llm_connection_id = (attempt.input_snapshot_json or {}).get("llmConnectionId")
     else:
+        model: (
+            type[ApiCollectionRun] | type[ApiCaseRun] | type[UiTestSuiteRun] | type[UiTestCaseRun]
+        )
         if task.domain == "api":
             model, key = (
                 (ApiCollectionRun, "collection_run_id")

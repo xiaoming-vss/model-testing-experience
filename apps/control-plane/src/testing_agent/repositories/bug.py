@@ -177,8 +177,8 @@ class BugRepository(ResourceRepository):
             else:
                 conditions.append(Bug.title.like(f"%{keyword}%"))
         total = int(await self.session.scalar(select(func.count(Bug.id)).where(*conditions)) or 0)
-        column = self.SORT_COLUMNS.get(sort_by, Bug.created_at)
-        direction = column.asc() if sort_order == "asc" else column.desc()
+        sort_column = self.SORT_COLUMNS.get(sort_by, Bug.created_at)
+        direction = sort_column.asc() if sort_order == "asc" else sort_column.desc()
         rows = list(
             (
                 await self.session.scalars(

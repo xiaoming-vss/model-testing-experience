@@ -11,13 +11,13 @@ from testing_agent.core.errors import AppError
 from testing_agent.core.sid import new_id
 from testing_agent.models.project_skill_space import ProjectSkillSpace
 from testing_agent.models.stored_file import StoredFile
-from testing_agent.schemas.project_skill_space import ProjectSkillUploadRequest
+from testing_agent.schemas.project_skill_space import ProjectSkillUploadRequest, SkillFileInput
 from testing_agent.services.project_skill_space import replace_manifest
 from testing_agent.services.skill_storage import publish_skill_files
 from testing_agent.services.stored_file import utcnow
 
 
-def inspect_folder(folder: Path, maximum: int):
+def inspect_folder(folder: Path, maximum: int) -> list[tuple[str, bytes]]:
     entries = []
     for path in sorted(folder.rglob("*")):
         if path.is_symlink():
@@ -26,7 +26,7 @@ def inspect_folder(folder: Path, maximum: int):
             entries.append((path.relative_to(folder).as_posix(), path.read_bytes()))
     ProjectSkillUploadRequest(
         name=folder.name,
-        files=[{"path": name, "fileId": str(i)} for i, (name, _) in enumerate(entries)],
+        files=[SkillFileInput(path=name, file_id=str(i)) for i, (name, _) in enumerate(entries)],
     )
     if sum(len(data) for _, data in entries) > maximum:
         raise ValueError(f"技能文件夹超过大小限制: {folder.name}")

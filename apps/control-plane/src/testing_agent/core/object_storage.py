@@ -7,6 +7,7 @@ import mimetypes
 import tempfile
 import zipfile
 from dataclasses import dataclass
+from typing import Literal
 from urllib.parse import quote
 
 import boto3
@@ -27,9 +28,11 @@ class ObjectStorageSettings:
     signature_seconds: int = 900
     temporary_hours: int = 24
     max_bytes: int = 104857600
-    addressing_style: str = "path"
+    addressing_style: Literal["auto", "path", "virtual"] = "path"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
+        if self.addressing_style not in {"auto", "path", "virtual"}:
+            raise ValueError("storage.s3.addressing_style must be auto, path or virtual")
         if not 60 <= self.signature_seconds <= 3600:
             raise ValueError("storage.s3.signature_seconds must be 60..3600")
         if self.temporary_hours < 2 or not 1 <= self.max_bytes <= 1073741824:
@@ -46,7 +49,7 @@ def download_disposition(filename: str) -> str:
 
 
 class ObjectStorage:
-    def __init__(self, settings: ObjectStorageSettings):
+    def __init__(self, settings: ObjectStorageSettings) -> None:
         self.settings = settings
         self.client = boto3.client(
             "s3",

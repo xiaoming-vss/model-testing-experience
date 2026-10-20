@@ -1,8 +1,11 @@
 """Resolve API run ownership through the current collection."""
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from testing_agent.models.api_case_run import ApiCaseRun
 from testing_agent.models.api_collection import ApiCollection
+from testing_agent.models.api_collection_run import ApiCollectionRun
 from testing_agent.models.requirement import Requirement
 from testing_agent.models.sprint import Sprint
 
@@ -10,7 +13,9 @@ FIELDS = ("requirement_id", "sprint_id", "project_id")
 
 
 class ApiRunScopeRepositoryMixin:
-    async def get_run_scope(self, run):
+    session: AsyncSession
+
+    async def get_run_scope(self, run: ApiCaseRun | ApiCollectionRun) -> dict[str, str] | None:
         scope = (
             await self.session.execute(
                 select(ApiCollection.requirement_id, Requirement.sprint_id, Sprint.project_id)
