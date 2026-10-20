@@ -21,14 +21,8 @@ from testing_agent.repositories.base import ResourceRepository
 
 
 class AiGenerateTaskRepository(ResourceRepository):
-    async def commit(self) -> None:
-        from testing_agent.services.ai_execution import persist
-
-        await self.session.run_sync(persist)
-        await self.session.commit()
-
     async def _project_run(self, row):
-        from testing_agent.services.ai_execution import project
+        from testing_agent.repositories.ai_execution import project
 
         return await self.session.run_sync(lambda session: project(session, row))
 
@@ -220,7 +214,7 @@ class AiGenerateTaskRepository(ResourceRepository):
                 )
             ).all()
         )
-        from testing_agent.services.ai_execution import project_many
+        from testing_agent.repositories.ai_execution import project_many
 
         return await self.session.run_sync(lambda session: project_many(session, rows))
 
@@ -271,7 +265,7 @@ class AiGenerateTaskRepository(ResourceRepository):
                 )
             ).all()
         )
-        from testing_agent.services.ai_execution import project_many
+        from testing_agent.repositories.ai_execution import project_many
 
         return await self.session.run_sync(lambda session: project_many(session, rows))
 

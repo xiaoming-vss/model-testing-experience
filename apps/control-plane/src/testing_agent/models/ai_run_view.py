@@ -1,11 +1,11 @@
 """Legacy wire attributes, backed by normalized stage/attempt/import records.
 
 These are deliberately not mapped database columns. Repositories hydrate the
-view before returning a run and persist changes through the lifecycle module.
+view before returning a run; business commands explicitly save execution changes.
 """
 
 from copy import deepcopy
-from typing import Any
+from datetime import datetime
 
 
 def view_field(name, default):
@@ -23,13 +23,7 @@ def view_field(name, default):
 
 class AiRunView:
     __allow_unmapped__ = True
-    _actor: str | None = None
-    _operation: str | None = None
-    _stage_review: tuple[str, str, str] | None = None
-    _reset_requirement_review: bool = False
-    _worker_event: str | None = None
-    _execution_state: dict[str, Any] | None = None
-
+    history_updated_at: datetime | None = None
     project_id = view_field("project_id", "")
     sprint_id = view_field("sprint_id", "")
     requirement_id = view_field("requirement_id", "")

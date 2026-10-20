@@ -5,6 +5,7 @@ from uuid import UUID
 
 import pytest
 from authorization_database import AuthorizationDatabase
+from support.execution_writer import MemoryExecutionWriter
 
 from testing_agent.core.errors import ErrBadRequest
 from testing_agent.services import ai_generate_task as ai_tasks
@@ -65,7 +66,9 @@ async def test_function_case_stage_output_persists_config_json():
         async def refresh(self, row):
             return None
 
-    service = ai_tasks.AiGenerateTaskService(FakeRepository())
+    service = ai_tasks.AiGenerateTaskService(
+        FakeRepository(), execution_writer=MemoryExecutionWriter()
+    )
 
     payload = await service.save_stage_output(
         "run-1",

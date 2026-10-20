@@ -2,6 +2,7 @@ import asyncio
 
 import httpx
 import pytest
+from support.execution_writer import MemoryExecutionWriter
 from test_function_confirmed_import import FunctionImportRepository
 
 from testing_agent.api.deps import get_ai_generate_task_service, get_current_user_id
@@ -45,7 +46,7 @@ async def test_concurrent_confirmed_function_imports_only_succeed_once():
     app = create_app()
     app.dependency_overrides[get_current_user_id] = lambda: "user-1"
     app.dependency_overrides[get_ai_generate_task_service] = lambda: AiGenerateTaskService(
-        repository
+        repository, execution_writer=MemoryExecutionWriter()
     )
     transport = httpx.ASGITransport(app=app)
 

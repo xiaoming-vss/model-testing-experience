@@ -12,6 +12,7 @@ from testing_agent.core.errors import (
     dynamic_error,
 )
 from testing_agent.core.sid import new_id
+from testing_agent.domain.ai_execution_intent import ExecutionIntent
 from testing_agent.domain.function_case_content import (
     from_legacy,
     legacy_fields,
@@ -188,6 +189,9 @@ async def import_function_run(
         ]
         run.imported_at = datetime.now(UTC)
         run.import_migration_complete = True
+        await service.execution.save(
+            service.repository.session, run, intent=ExecutionIntent(actor_id=user_id)
+        )
         await service.repository.commit()
         await service.repository.refresh(run)
     except Exception as exc:

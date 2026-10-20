@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 from authorization_database import AuthorizationDatabase
 from fastapi.testclient import TestClient
+from support.execution_writer import MemoryExecutionWriter
 
 from testing_agent.api.deps import get_ai_generate_task_service, get_current_user_id
 from testing_agent.app import create_app
@@ -135,7 +136,9 @@ async def test_test_report_direct_run_lazily_creates_internal_task(monkeypatch):
     monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
     repository = FakeRepository()
     daily_metrics = FakeDailyMetricsService()
-    service = ai_tasks.AiGenerateTaskService(repository, daily_metrics)
+    service = ai_tasks.AiGenerateTaskService(
+        repository, daily_metrics, execution_writer=MemoryExecutionWriter()
+    )
 
     payload = await service.run_test_report(
         "project-1",
@@ -180,7 +183,9 @@ async def test_test_report_direct_run_reuses_existing_internal_task(monkeypatch)
     monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
     repository = FakeRepository()
     repository.existing_task = existing_test_report_task()
-    service = ai_tasks.AiGenerateTaskService(repository, FakeDailyMetricsService())
+    service = ai_tasks.AiGenerateTaskService(
+        repository, FakeDailyMetricsService(), execution_writer=MemoryExecutionWriter()
+    )
 
     await service.run_test_report(
         "project-1",
@@ -204,7 +209,9 @@ async def test_test_report_allows_repeated_runs_for_same_snapshot_date(monkeypat
     monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
     repository = FakeRepository()
     repository.existing_task = existing_test_report_task()
-    service = ai_tasks.AiGenerateTaskService(repository, FakeDailyMetricsService())
+    service = ai_tasks.AiGenerateTaskService(
+        repository, FakeDailyMetricsService(), execution_writer=MemoryExecutionWriter()
+    )
 
     for _ in range(2):
         await service.run_test_report(
@@ -222,7 +229,9 @@ async def test_test_report_allows_repeated_runs_for_same_snapshot_date(monkeypat
 
 @pytest.mark.asyncio
 async def test_test_report_run_requires_snapshot_date_and_connection_id():
-    service = ai_tasks.AiGenerateTaskService(FakeRepository(), FakeDailyMetricsService())
+    service = ai_tasks.AiGenerateTaskService(
+        FakeRepository(), FakeDailyMetricsService(), execution_writer=MemoryExecutionWriter()
+    )
 
     with pytest.raises(type(ErrBadRequest)):
         await service.run_test_report("project-1", {"sprintId": "sprint-1"}, "user-1")
@@ -256,7 +265,9 @@ async def test_list_test_report_runs_filters_by_project_sprint_and_task_type():
             duration_ms=12,
         )
     ]
-    service = ai_tasks.AiGenerateTaskService(repository, FakeDailyMetricsService())
+    service = ai_tasks.AiGenerateTaskService(
+        repository, FakeDailyMetricsService(), execution_writer=MemoryExecutionWriter()
+    )
 
     payload = await service.list_test_report_runs("project-1", "sprint-1", "user-1")
 
@@ -270,7 +281,9 @@ async def test_export_test_report_pdf_renders_markdown_bytes():
     repository = FakeRepository()
     repository.task = existing_test_report_task()
     repository.run = completed_test_report_run()
-    service = ai_tasks.AiGenerateTaskService(repository, FakeDailyMetricsService())
+    service = ai_tasks.AiGenerateTaskService(
+        repository, FakeDailyMetricsService(), execution_writer=MemoryExecutionWriter()
+    )
 
     content, filename = await service.export_test_report_pdf("run-1", "user-1")
 
@@ -284,7 +297,9 @@ async def test_export_test_report_pdf_requires_generated_markdown():
     repository = FakeRepository()
     repository.task = existing_test_report_task()
     repository.run = completed_test_report_run(result_yaml="")
-    service = ai_tasks.AiGenerateTaskService(repository, FakeDailyMetricsService())
+    service = ai_tasks.AiGenerateTaskService(
+        repository, FakeDailyMetricsService(), execution_writer=MemoryExecutionWriter()
+    )
 
     with pytest.raises(type(ErrBadRequest)):
         await service.export_test_report_pdf("run-1", "user-1")

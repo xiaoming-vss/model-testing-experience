@@ -4,6 +4,7 @@ from typing import Protocol
 
 from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+from testing_agent.services.ai_execution.writer import ExecutionWriter
 from testing_agent.services.project_access import ProjectAction
 
 
@@ -32,6 +33,7 @@ class RequireCollectionAccess(Protocol):
 
 
 class CandidateImportContext(Protocol):
+    execution: ExecutionWriter
     repository: AiGenerateTaskRepository
 
     async def owned_run(
@@ -41,3 +43,25 @@ class CandidateImportContext(Protocol):
     async def ensure_requirement_access(
         self, user_id: str, requirement_id: str, *, action: ProjectAction = "read"
     ) -> None: ...
+
+
+class RunLaunchAccess(Protocol):
+    """Current identity and resource-scope checks required to launch a run."""
+
+    async def owned_task(
+        self, user_id: str, task_id: str, kind: str | None = None, *, action: ProjectAction = "read"
+    ) -> AiGenerateTask: ...
+
+    async def ensure_project_access(
+        self, user_id: str, project_id: str, *, action: ProjectAction = "read"
+    ) -> None: ...
+
+    async def ensure_sprint_access(
+        self, user_id: str, sprint_id: str, *, action: ProjectAction = "read"
+    ) -> None: ...
+
+    async def ensure_requirement_access(
+        self, user_id: str, requirement_id: str, *, action: ProjectAction = "read"
+    ) -> None: ...
+
+    async def validate_task_scope(self, task: AiGenerateTask) -> None: ...

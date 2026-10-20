@@ -17,14 +17,8 @@ from testing_agent.repositories.base import BaseRepository
 
 
 class WorkerTaskRepository(BaseRepository):
-    async def commit(self) -> None:
-        from testing_agent.services.ai_execution import persist
-
-        await self.session.run_sync(persist)
-        await self.session.commit()
-
     async def _project_run(self, row):
-        from testing_agent.services.ai_execution import project
+        from testing_agent.repositories.ai_execution import project
 
         return await self.session.run_sync(lambda session: project(session, row))
 

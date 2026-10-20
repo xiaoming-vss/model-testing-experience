@@ -5,6 +5,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from support.execution_writer import MemoryExecutionWriter
 from test_function_confirmed_import import FunctionImportRepository, approved_run, import_client
 
 from testing_agent.core.errors import AppError
@@ -44,6 +45,7 @@ async def test_concurrent_suite_name_conflict_rolls_back_autoflush_and_allows_re
             repository.refresh = AsyncMock()
             service = SimpleNamespace(
                 repository=repository,
+                execution=MemoryExecutionWriter(),
                 owned_run=AsyncMock(return_value=run),
                 ensure_requirement_access=AsyncMock(),
             )

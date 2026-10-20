@@ -9,6 +9,7 @@ from uuid import uuid4
 import pytest
 from authorization_database import AuthorizationDatabase
 from fastapi.testclient import TestClient
+from support.execution_writer import MemoryExecutionWriter
 
 from testing_agent.api.deps import (
     get_ai_generate_task_service,
@@ -158,7 +159,9 @@ def ui_task_client(repository, storage_root=None):
     app = create_app()
     app.dependency_overrides[get_current_user_id] = lambda: "user-1"
     files = FakeFiles()
-    service = AiGenerateTaskService(repository, files=files)
+    service = AiGenerateTaskService(
+        repository, files=files, execution_writer=MemoryExecutionWriter()
+    )
     app.state.test_files = files
     app.dependency_overrides[get_ai_generate_task_service] = lambda: service
     return TestClient(app, raise_server_exceptions=False), service
@@ -450,7 +453,9 @@ def test_worker_downloads_pinned_s3_archive_and_rejects_local_requirement(tmp_pa
     app = create_app(settings)
     app.dependency_overrides[get_settings] = lambda: settings
     app.dependency_overrides[get_file_service] = lambda: user_client.app.state.test_files
-    app.dependency_overrides[get_worker_task_service] = lambda: WorkerTaskService(worker_repository)
+    app.dependency_overrides[get_worker_task_service] = lambda: WorkerTaskService(
+        worker_repository, execution_writer=MemoryExecutionWriter()
+    )
     worker_client = TestClient(app, raise_server_exceptions=False)
     headers = {"X-Worker-Token": "worker-token"}
     unauthorized_archive = worker_client.get(

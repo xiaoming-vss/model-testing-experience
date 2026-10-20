@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
+from support.execution_writer import MemoryExecutionWriter
 from test_worker_contract import FakeWorkerRepository
 
 from testing_agent.schemas.workers import WorkerProgressRequest, WorkerTaskEventRequest
@@ -92,7 +93,7 @@ async def test_repair_progress_preserves_outputs_and_passes_summary(monkeypatch)
         }
     }
     old = run.config_json.copy(), run.result_yaml
-    await WorkerTaskService(Repository(task)).progress(
+    await WorkerTaskService(Repository(task), execution_writer=MemoryExecutionWriter()).progress(
         "worker-task",
         WorkerProgressRequest(
             workerId="w",

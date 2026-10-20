@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
+from support.execution_writer import MemoryExecutionWriter
 
 from testing_agent.api.deps import get_worker_task_service
 from testing_agent.app import create_app
@@ -75,7 +76,9 @@ async def test_worker_claim_service_returns_go_style_task_payload(monkeypatch):
 
     monkeypatch.setattr(worker_task_service_module, "build_snapshot", fake_snapshot)
 
-    service = WorkerTaskService(FakeWorkerRepository(task))
+    service = WorkerTaskService(
+        FakeWorkerRepository(task), execution_writer=MemoryExecutionWriter()
+    )
 
     payload = await service.claim("ui", WorkerClaimRequest(workerId="worker-1"))
 
@@ -312,7 +315,9 @@ async def test_functional_case_worker_can_download_requirement_document(monkeypa
 
     monkeypatch.setattr(worker_task_service_module, "find_task", fake_find_task)
 
-    requirement = await WorkerTaskService(FakeRepository()).requirement_document("worker-task-1")
+    requirement = await WorkerTaskService(
+        FakeRepository(), execution_writer=MemoryExecutionWriter()
+    ).requirement_document("worker-task-1")
 
     assert requirement.document_file_id == "file-1"
 
@@ -354,7 +359,9 @@ async def test_ai_worker_claim_returns_go_style_generation_fields():
             assert run_id == "run-1"
             return run
 
-    service = WorkerTaskService(FakeAiWorkerRepository(task))
+    service = WorkerTaskService(
+        FakeAiWorkerRepository(task), execution_writer=MemoryExecutionWriter()
+    )
 
     payload = await service.claim("ai", WorkerClaimRequest(workerId="worker-1"))
 
@@ -407,7 +414,9 @@ async def test_ai_worker_started_updates_run_status_to_running(monkeypatch):
         return task
 
     monkeypatch.setattr(worker_task_service_module, "find_task", fake_find_task)
-    service = WorkerTaskService(FakeAiWorkerRepository(task))
+    service = WorkerTaskService(
+        FakeAiWorkerRepository(task), execution_writer=MemoryExecutionWriter()
+    )
 
     await service.started(
         "ai",
@@ -609,7 +618,7 @@ async def test_ai_worker_progress_waiting_review_marks_checkpoint_run_waiting(mo
         return task
 
     monkeypatch.setattr(worker_task_service_module, "find_task", fake_find_task)
-    service = WorkerTaskService(FakeRepository(task))
+    service = WorkerTaskService(FakeRepository(task), execution_writer=MemoryExecutionWriter())
 
     await service.progress(
         "worker-task-1",
@@ -674,7 +683,7 @@ async def test_ai_worker_claim_includes_requirement_analysis_checkpoint_config()
             assert run_id == "run-1"
             return run
 
-    service = WorkerTaskService(FakeRepository(task))
+    service = WorkerTaskService(FakeRepository(task), execution_writer=MemoryExecutionWriter())
 
     payload = await service.claim("ai", WorkerClaimRequest(workerId="worker-1"))
 
@@ -728,7 +737,7 @@ async def test_ai_worker_progress_requirement_analysis_extracting_text_waits_for
         return task
 
     monkeypatch.setattr(worker_task_service_module, "find_task", fake_find_task)
-    service = WorkerTaskService(FakeRepository(task))
+    service = WorkerTaskService(FakeRepository(task), execution_writer=MemoryExecutionWriter())
 
     await service.progress(
         "worker-task-1",
@@ -849,7 +858,7 @@ async def test_api_collection_item_complete_creates_case_run_and_binds_item(monk
         fake_save_extracted_environment_vars,
     )
     monkeypatch.setattr(worker_task_service_module, "new_id", lambda: "case-run-1", raising=False)
-    service = WorkerTaskService(repository)
+    service = WorkerTaskService(repository, execution_writer=MemoryExecutionWriter())
     body = WorkerTaskEventRequest(
         workerId="worker-1",
         runId="",
@@ -946,7 +955,9 @@ async def test_api_worker_claim_queues_owner_run_and_uses_go_lease_seconds():
             assert run_id == "run-1"
             return run
 
-    service = WorkerTaskService(FakeApiWorkerRepository(task))
+    service = WorkerTaskService(
+        FakeApiWorkerRepository(task), execution_writer=MemoryExecutionWriter()
+    )
 
     payload = await service.claim("api", WorkerClaimRequest(workerId="worker-1"))
 

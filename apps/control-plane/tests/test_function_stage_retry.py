@@ -1,6 +1,7 @@
 import asyncio
 
 import pytest
+from support.execution_writer import MemoryExecutionWriter
 from test_function_candidate_review import review_client
 from test_function_stage_revise import RevisionRepository, revision_run
 
@@ -58,7 +59,7 @@ async def test_retry_rejects_invalid_state(changes):
     for key, value in changes.items():
         setattr(repo.run, key, value)
     with pytest.raises(type(ErrBadRequest)):
-        await AiGenerateTaskService(repo).retry_stage(
+        await AiGenerateTaskService(repo, execution_writer=MemoryExecutionWriter()).retry_stage(
             "run-1", {"stage": "requirement_analysis"}, "user-1"
         )
     assert not repo.queued
@@ -73,14 +74,16 @@ async def test_retry_rejects_cross_stage_and_active_worker():
         repo = failed_repository()
         repo.latest.status = worker_status
         with pytest.raises(type(ErrBadRequest)):
-            await AiGenerateTaskService(repo).retry_stage("run-1", body, "user-1")
+            await AiGenerateTaskService(repo, execution_writer=MemoryExecutionWriter()).retry_stage(
+                "run-1", body, "user-1"
+            )
         assert not repo.queued
 
 
 @pytest.mark.asyncio
 async def test_retry_checks_ownership_and_concurrent_requests_queue_once():
     repo = failed_repository()
-    service = AiGenerateTaskService(repo)
+    service = AiGenerateTaskService(repo, execution_writer=MemoryExecutionWriter())
     with pytest.raises(type(ErrForbidden)):
         await service.retry_stage("run-1", {}, "other-user")
     results = await asyncio.gather(

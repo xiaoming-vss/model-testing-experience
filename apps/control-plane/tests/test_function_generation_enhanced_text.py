@@ -2,6 +2,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from support.execution_writer import MemoryExecutionWriter
 
 from testing_agent.core.errors import AppError
 from testing_agent.services import ai_generate_task as ai_tasks
@@ -28,13 +29,15 @@ async def test_function_run_rejects_missing_enhanced_text_without_creating_tasks
         add_all=Mock(),
         commit=AsyncMock(),
     )
-    service = ai_tasks.AiGenerateTaskService(repository)
+    service = ai_tasks.AiGenerateTaskService(repository, execution_writer=MemoryExecutionWriter())
     service.owned_task = AsyncMock(
         return_value=SimpleNamespace(
             requirement_id="requirement-1", project_id="project-1", source_content="original text"
         )
     )
-    monkeypatch.setattr(ai_tasks, "require_personal_connection", AsyncMock())
+    monkeypatch.setattr(
+        "testing_agent.services.ai_run_launcher.require_personal_connection", AsyncMock()
+    )
     with pytest.raises(AppError, match="请先完成需求分析并导入增强文本") as error:
         await service.run("function", "task-1", {"connectionId": "mine"}, "user-1")
     assert error.value.http_code == 400

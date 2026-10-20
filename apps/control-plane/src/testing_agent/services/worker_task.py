@@ -7,6 +7,7 @@ from sqlalchemy import select
 from testing_agent.core.enums import RunStatus, StageStatus
 from testing_agent.core.errors import ErrBadRequest, ErrForbidden, ErrNotFound
 from testing_agent.core.sid import new_id
+from testing_agent.domain.ai_execution_intent import ExecutionIntent
 from testing_agent.models.api_case_run import ApiCaseRun
 from testing_agent.models.ui_test_case_run import UiTestCaseRun
 from testing_agent.models.ui_test_suite_run import UiTestSuiteRun
@@ -16,6 +17,7 @@ from testing_agent.schemas.workers import (
     WorkerProgressRequest,
     WorkerTaskEventRequest,
 )
+from testing_agent.services.ai_execution.writer import ExecutionWriter, SqlExecutionWriter
 from testing_agent.services.code_risk_analysis import gitlab_credentials_payload
 from testing_agent.services.execution_secrets import private_payload, protect_run, redact
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
@@ -79,8 +81,10 @@ class WorkerTaskService:
         self,
         repository: WorkerTaskRepository,
         credential_cipher: IntegrationCredentialCipher | None = None,
+        execution_writer: ExecutionWriter | None = None,
     ):
         self.repository = repository
+        self.execution = execution_writer or SqlExecutionWriter()
         self.credential_cipher = credential_cipher
 
     async def validate_ui_artifacts(self, task_id, body):
@@ -115,7 +119,6 @@ class WorkerTaskService:
             await self.repository.session.run_sync(
                 lambda session: require_current_worker(session, run, task)
             )
-            run._worker_event = task.task_id
 
     async def expire_leases(self, domain: str):
         for task in await self.repository.expired_tasks(domain):
@@ -138,6 +141,13 @@ class WorkerTaskService:
             )
             await apply_event_to_task(task, body, "failed")
             await complete_domain_run(self.repository.session, domain, task, body)
+            if domain == "ai" and run is not None:
+                await self.execution.save(
+                    self.repository.session,
+                    run,
+                    intent=ExecutionIntent(worker_event_id=task.task_id),
+                    worker=task,
+                )
         await self.repository.commit()
 
     async def claim(self, domain: str, body: WorkerClaimRequest) -> dict | None:
@@ -169,6 +179,7 @@ class WorkerTaskService:
             ai_run.status = RunStatus.CLAIMED.value
             if ai_run.checkpoint_enabled:
                 ai_run.stage_status = StageStatus.RUNNING.value
+            await self.execution.save(self.repository.session, ai_run, worker=task)
             await self.repository.commit()
             await self.repository.refresh(task)
             payload = {
@@ -250,6 +261,14 @@ class WorkerTaskService:
                 run.status = RunStatus.RUNNING.value
                 if getattr(run, "started_at", None) is None:
                     run.started_at = started_at or datetime.now(UTC)
+        if domain == "ai":
+            assert ai_run is not None
+            await self.execution.save(
+                self.repository.session,
+                ai_run,
+                intent=ExecutionIntent(worker_event_id=task.task_id),
+                worker=task,
+            )
         await self.repository.commit()
         return {"taskId": task_id, "workerId": body.worker_id}
 
@@ -301,6 +320,14 @@ class WorkerTaskService:
         if domain == "api":
             task.error_message = redact(
                 task.error_message, private_payload(authority.run).get("secrets", [])
+            )
+        if domain == "ai":
+            assert guarded_run is not None
+            await self.execution.save(
+                self.repository.session,
+                guarded_run,
+                intent=ExecutionIntent(worker_event_id=task.task_id),
+                worker=task,
             )
         await self.repository.commit()
         return {"taskId": task_id, "workerId": body.worker_id, "status": status}
@@ -588,5 +615,12 @@ class WorkerTaskService:
             if body.error_message is not None:
                 task.error_message = body.error_message
                 run.error_message = body.error_message
+        if run is not None:
+            await self.execution.save(
+                self.repository.session,
+                run,
+                intent=ExecutionIntent(worker_event_id=task.task_id),
+                worker=task,
+            )
         await self.repository.commit()
         return {"taskId": task_id}

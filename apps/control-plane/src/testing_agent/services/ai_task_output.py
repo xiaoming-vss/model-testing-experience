@@ -61,7 +61,7 @@ def dump_run(run: AiGenerateTaskRun) -> dict[str, Any]:
         "createdAt": getattr(run, "created_at", None),
         "startedAt": getattr(run, "started_at", None),
         "finishedAt": getattr(run, "finished_at", None),
-        "updatedAt": getattr(run, "_history_updated_at", None),
+        "updatedAt": getattr(run, "history_updated_at", None),
         "hasResult": bool(run.result_yaml),
         "availableArtifacts": [
             key

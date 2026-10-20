@@ -17,6 +17,7 @@ from support.ai_execution import db as db
 from test_mysql_initialization import mysql as mysql
 
 from testing_agent.core.errors import ErrBadRequest, ErrForbidden
+from testing_agent.domain.ai_execution_intent import ExecutionIntent
 from testing_agent.models.api_case_run import ApiCaseRun
 from testing_agent.models.api_collection_run import ApiCollectionRun, ApiCollectionRunItem
 from testing_agent.models.ui_test_case_run import UiTestCaseRun
@@ -226,7 +227,7 @@ async def test_mysql_claim_skips_locked_task(mysql):
 
 
 def test_selected_model_connection_is_stored_in_attempt_and_survives_reload(db):
-    from testing_agent.services.ai_execution import persist
+    from testing_agent.services.ai_execution import persist_run
 
     run, first = create_run(db)
     event(
@@ -239,7 +240,6 @@ def test_selected_model_connection_is_stored_in_attempt_and_survives_reload(db):
     )
     run.config_json = {"requirementAnalysis": {"draft": True}, "revisionInstruction": "fix"}
     run.status = "pending"
-    run._operation = "revise"
     selected = WorkerTask(
         domain="ai",
         task_id="selected",
@@ -249,7 +249,7 @@ def test_selected_model_connection_is_stored_in_attempt_and_survives_reload(db):
         status="pending",
     )
     db.add(selected)
-    persist(db)
+    persist_run(db, run, intent=ExecutionIntent(operation="revise"), worker=selected)
     db.commit()
     db.expunge_all()
     loaded = db.scalar(select(WorkerTask).where(WorkerTask.task_id == "selected"))
@@ -303,7 +303,7 @@ async def test_revision_service_preserves_model_without_queue_object_reference(
     from testing_agent.models.requirement import Requirement
     from testing_agent.models.sprint import Sprint
     from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-    from testing_agent.services.ai_execution import persist
+    from testing_agent.services.ai_execution import persist_run
     from testing_agent.services.ai_generate_task import AiGenerateTaskService
 
     db.add(
@@ -352,7 +352,7 @@ async def test_revision_service_preserves_model_without_queue_object_reference(
         status="pending",
     )
     db.add_all([run, first])
-    persist(db)
+    persist_run(db, run, worker=first)
     db.commit()
     original, draft = "original", "draft"
     if kind == "requirement_analysis":

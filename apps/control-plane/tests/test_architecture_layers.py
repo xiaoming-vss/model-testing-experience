@@ -4,6 +4,62 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_ai_repositories_do_not_hide_execution_writes_in_commit():
+    for name in ("ai_generate_task.py", "worker_task.py"):
+        path = PROJECT_ROOT / "src/testing_agent/repositories" / name
+        tree = ast.parse(path.read_text())
+        assert not any(
+            isinstance(node, ast.AsyncFunctionDef) and node.name == "commit"
+            for node in ast.walk(tree)
+        ), f"{name}: execution commands, not repository.commit, own lifecycle writes"
+
+
+def test_execution_commands_do_not_scan_sessions_or_use_orm_command_flags():
+    root = PROJECT_ROOT / "src/testing_agent"
+    flags = {
+        "_operation",
+        "_stage_review",
+        "_worker_event",
+        "_execution_state",
+        "_actor",
+        "_reset_requirement_review",
+    }
+    paths = [
+        root / "services/ai_generate_task.py",
+        root / "services/ai_run_launcher.py",
+        root / "services/ai_stage_workflow.py",
+        root / "services/worker_task.py",
+        root / "services/worker_authorization.py",
+        *list((root / "services/ai_execution").glob("*.py")),
+    ]
+    for path in paths:
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.Attribute):
+                assert node.attr not in flags, f"{path.name}: use explicit ExecutionIntent"
+                if path.parent.name == "ai_execution":
+                    assert node.attr not in {"identity_map", "new"}, (
+                        f"{path.name}: save a declared run rather than scanning the session"
+                    )
+
+
+def test_repositories_cannot_add_service_dependencies():
+    # These pre-existing edges are tracked in B2/B4/B5 and must be removed there.
+    remaining = {
+        ("deletion.py", "testing_agent.services.integration_lifecycle"),
+        ("requirement_design.py", "testing_agent.services.ai_task_contracts"),
+        ("worker_task.py", "testing_agent.services.worker_context"),
+        ("ai_generate_task.py", "testing_agent.services.worker_context"),
+    }
+    for path in (PROJECT_ROOT / "src/testing_agent/repositories").rglob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.ImportFrom) and (node.module or "").startswith(
+                "testing_agent.services"
+            ):
+                assert (path.name, node.module) in remaining, (
+                    f"{path.name}: repository must not depend on {node.module}"
+                )
+
+
 def test_context_resources_are_split_by_business_resource():
     expected_files = (
         ("routers", "projects.py"),

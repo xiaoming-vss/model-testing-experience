@@ -18,6 +18,7 @@ from types import SimpleNamespace
 import pytest
 from authorization_database import AuthorizationDatabase
 from fastapi.testclient import TestClient
+from support.execution_writer import MemoryExecutionWriter
 
 from testing_agent.api.deps import (
     get_ai_generate_task_service,
@@ -591,7 +592,9 @@ async def test_worker_task_service_gitlab_credentials_rejects_other_task_types(m
     monkeypatch.setattr(worker_task_service_module, "find_task", fake_find_task)
 
     with pytest.raises(AppError) as excinfo:
-        await WorkerTaskService(SimpleNamespace(session=object())).gitlab_credentials("task-1")
+        await WorkerTaskService(
+            SimpleNamespace(session=object()), execution_writer=MemoryExecutionWriter()
+        ).gitlab_credentials("task-1")
     assert excinfo.value.code == 404
 
 
@@ -624,7 +627,9 @@ async def test_worker_task_service_gitlab_credentials_reads_run_snapshot(monkeyp
     monkeypatch.setattr(worker_task_service_module, "find_task", fake_find_task)
     monkeypatch.setattr(worker_task_service_module, "gitlab_credentials_payload", fake_payload)
 
-    payload = await WorkerTaskService(FakeRepository()).gitlab_credentials("worker-task-1")
+    payload = await WorkerTaskService(
+        FakeRepository(), execution_writer=MemoryExecutionWriter()
+    ).gitlab_credentials("worker-task-1")
     assert payload["taskId"] == "worker-task-1"
 
 
@@ -653,7 +658,9 @@ async def test_worker_requirement_document_allows_code_risk_analysis():
                 document_filename="",
             )
 
-    requirement = await WorkerTaskService(FakeRepository()).requirement_document("worker-task-1")
+    requirement = await WorkerTaskService(
+        FakeRepository(), execution_writer=MemoryExecutionWriter()
+    ).requirement_document("worker-task-1")
     assert requirement.document_content == "需求正文"
 
 
@@ -899,7 +906,9 @@ async def test_worker_complete_persists_report_readable_via_detail_dump(monkeypa
         status="success",
         resultYaml=RISK_REPORT_YAML,
     )
-    await WorkerTaskService(FakeRepository()).complete("ai", "worker-task-1", body)
+    await WorkerTaskService(FakeRepository(), execution_writer=MemoryExecutionWriter()).complete(
+        "ai", "worker-task-1", body
+    )
 
     assert run.result_yaml == RISK_REPORT_YAML
     payload = dump_code_risk_analysis_run(run)
@@ -978,7 +987,9 @@ def make_risk_analysis_task() -> SimpleNamespace:
 async def test_repeated_runs_create_distinct_records_without_overwrite():
     repository = FakeRunCreateRepository(make_risk_analysis_task())
     service = AiGenerateTaskService(
-        repository, code_risk_analysis_service=StubCodeRiskAnalysisService()
+        repository,
+        code_risk_analysis_service=StubCodeRiskAnalysisService(),
+        execution_writer=MemoryExecutionWriter(),
     )
     run_body = {"connectionId": "llm-1", "triggerType": "manual"}
 
@@ -1001,7 +1012,9 @@ async def test_repeated_runs_create_distinct_records_without_overwrite():
 async def test_list_runs_dumps_report_for_code_risk_analysis():
     repository = FakeRunCreateRepository(make_risk_analysis_task())
     service = AiGenerateTaskService(
-        repository, code_risk_analysis_service=StubCodeRiskAnalysisService()
+        repository,
+        code_risk_analysis_service=StubCodeRiskAnalysisService(),
+        execution_writer=MemoryExecutionWriter(),
     )
     await service.run("code_risk_analysis", "task-1", {"connectionId": "llm-1"}, "user-1")
     repository.runs[0].result_yaml = RISK_REPORT_YAML

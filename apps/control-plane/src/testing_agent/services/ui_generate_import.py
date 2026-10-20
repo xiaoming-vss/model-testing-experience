@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 from testing_agent.core.enums import ImportStatus
 from testing_agent.core.errors import ErrBadRequest, ErrNotFound
 from testing_agent.core.sid import new_id
+from testing_agent.domain.ai_execution_intent import ExecutionIntent
 from testing_agent.models.ui_test_case import UiTestCase
 from testing_agent.services.ai_task_output import dump_run, validate_ui_candidate_cases
 
@@ -119,6 +120,9 @@ async def import_ui_run(
         run.imported_targets = [{"targetType": "ui_suite", "targetId": suite_id}]
         run.imported_at = datetime.now(UTC)
         run.import_migration_complete = True
+        await service.execution.save(
+            service.repository.session, run, intent=ExecutionIntent(actor_id=user_id)
+        )
         await service.repository.commit()
         await service.repository.refresh(run)
     except Exception:

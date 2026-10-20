@@ -9,10 +9,11 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import Session
 
 from testing_agent.db.base import Base
+from testing_agent.domain.ai_execution_intent import ExecutionIntent
 from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.services.ai_execution import graph as graph
-from testing_agent.services.ai_execution import persist as persist
+from testing_agent.services.ai_execution import persist_run as persist_run
 from testing_agent.services.ai_execution import require_current_worker
 
 
@@ -116,7 +117,7 @@ def create_run(db, checkpoint=True):
     return run, worker
 
 
-def enqueue(db, run, key, operation=None, *, connection_id="llm"):
+def enqueue(db, run, key, operation=None, *, connection_id="llm", intent=None):
     task = WorkerTask(
         domain="ai",
         task_id=key,
@@ -128,16 +129,13 @@ def enqueue(db, run, key, operation=None, *, connection_id="llm"):
     )
     db.add(task)
     run.status = "pending"
-    if operation:
-        run._operation = operation
-    persist(db)
+    persist_run(db, run, intent=intent or ExecutionIntent(operation=operation), worker=task)
     db.commit()
     return task
 
 
 def event(db, run, worker, *, status, stage, config=None, output=None):
     require_current_worker(db, run, worker)
-    run._worker_event = worker.task_id
     run.current_stage = stage
     run.status = status
     run.stage_status = "waiting_review" if status == "waiting_review" else "running"
@@ -146,7 +144,7 @@ def event(db, run, worker, *, status, stage, config=None, output=None):
         run.config_json = config
     if output is not None:
         run.result_yaml = output
-    persist(db)
+    persist_run(db, run, intent=ExecutionIntent(worker_event_id=worker.task_id), worker=worker)
     db.commit()
 
 

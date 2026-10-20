@@ -1,4 +1,5 @@
 import pytest
+from support.execution_writer import MemoryExecutionWriter
 from test_function_candidate_review import review_client
 from test_function_stage_retry import failed_repository
 
@@ -25,15 +26,14 @@ def test_retry_http_preserves_stage_connection_and_artifacts(stage):
     repo.run.checkpoint_enabled = True
     config = dict(repo.run.config_json)
     output = repo.run.result_yaml
-    response = review_client(repo).post(
-        "/v1/requirement-analysis-runs/run-1/stage-retry", json={"stage": stage}
-    )
+    client = review_client(repo)
+    response = client.post("/v1/requirement-analysis-runs/run-1/stage-retry", json={"stage": stage})
     assert response.status_code == 200
     assert response.json()["data"]["currentStage"] == stage
     assert repo.run.status == "pending"
     assert repo.run.config_json == config
     assert repo.run.result_yaml == output
-    assert repo.run._operation == "retry"
+    assert client.app.state.execution_writer.writes[-1][1].operation == "retry"
     assert len(repo.queued) == 1
     assert repo.queued[0].task_type == "requirement_analysis"
     assert repo.queued[0].llm_connection_id == "llm-1"
@@ -58,7 +58,7 @@ async def test_retry_rejects_ineligible_runs(changes):
     for key, value in changes.items():
         setattr(repo.run, key, value)
     with pytest.raises(type(ErrBadRequest)):
-        await AiGenerateTaskService(repo).retry_stage(
+        await AiGenerateTaskService(repo, execution_writer=MemoryExecutionWriter()).retry_stage(
             "run-1", {"stage": "extracting_text"}, "user-1", kind="requirement_analysis"
         )
     assert not repo.queued
@@ -74,7 +74,7 @@ async def test_retry_checks_owner_cross_stage_and_claimed_worker():
         repo = repository()
         repo.latest.status = worker
         with pytest.raises(type(error)):
-            await AiGenerateTaskService(repo).retry_stage(
+            await AiGenerateTaskService(repo, execution_writer=MemoryExecutionWriter()).retry_stage(
                 "run-1", body, user, kind="requirement_analysis"
             )
         assert not repo.queued
@@ -85,7 +85,7 @@ async def test_duplicate_retry_queues_only_once():
     import asyncio
 
     repo = repository()
-    service = AiGenerateTaskService(repo)
+    service = AiGenerateTaskService(repo, execution_writer=MemoryExecutionWriter())
     results = await asyncio.gather(
         service.retry_stage("run-1", {}, "user-1", kind="requirement_analysis"),
         service.retry_stage("run-1", {}, "user-1", kind="requirement_analysis"),

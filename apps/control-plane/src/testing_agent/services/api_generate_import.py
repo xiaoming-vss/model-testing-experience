@@ -10,10 +10,12 @@ from testing_agent.core.errors import (
     ErrBadRequest,
 )
 from testing_agent.core.sid import new_id
+from testing_agent.domain.ai_execution_intent import ExecutionIntent
 from testing_agent.models.api_assert_rule import ApiAssertRule
 from testing_agent.models.api_case import ApiCase
 from testing_agent.models.api_extract_rule import ApiExtractRule
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+from testing_agent.services.ai_execution.writer import ExecutionWriter, SqlExecutionWriter
 from testing_agent.services.ai_task_access import OwnedRun, RequireCollectionAccess
 from testing_agent.services.ai_task_output import dump_run, generated_payload
 from testing_agent.services.api_import_entities import (
@@ -34,8 +36,10 @@ class ApiCandidateImporter:
         owned_run: OwnedRun,
         ensure_collection_access: RequireCollectionAccess,
         id_factory: Callable[[], str] = new_id,
+        execution_writer: ExecutionWriter | None = None,
     ):
         self.repository = repository
+        self.execution = execution_writer or SqlExecutionWriter()
         self.owned_run = owned_run
         self.ensure_collection_access = ensure_collection_access
         self.new_id = id_factory
@@ -221,6 +225,9 @@ class ApiCandidateImporter:
             run.imported_targets = [{"targetType": "api_collection", "targetId": collection_id}]
             run.imported_at = imported_at
             run.import_migration_complete = True
+            await self.execution.save(
+                self.repository.session, run, intent=ExecutionIntent(actor_id=user_id)
+            )
             await self.repository.commit()
             await self.repository.refresh(run)
         except Exception:

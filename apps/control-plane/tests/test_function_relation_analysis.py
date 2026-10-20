@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy import select
 
 from testing_agent.models.worker_task import WorkerTask
-from testing_agent.services.ai_execution import graph, persist, project
+from testing_agent.services.ai_execution import graph, persist_run, project
 from tests.test_ai_execution_storage import (
     AsyncSessionAdapter,
     create_run,
@@ -59,7 +59,7 @@ def approve(db, run):
     from datetime import UTC, datetime
 
     run.reviewed_at = datetime.now(UTC)
-    persist(db)
+    persist_run(db, run)
     db.commit()
 
 

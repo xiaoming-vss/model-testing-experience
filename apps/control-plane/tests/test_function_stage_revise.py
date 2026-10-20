@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 from authorization_database import AuthorizationDatabase
+from support.execution_writer import MemoryExecutionWriter
 from test_function_candidate_review import FunctionReviewRepository, make_run, review_client
 
 from testing_agent.core.errors import ErrBadRequest, ErrForbidden
@@ -56,7 +57,9 @@ def revision_run(stage="requirement_analysis"):
 async def test_revision_saves_edits_and_queues_current_stage(stage, field):
     run = revision_run(stage)
     repo = RevisionRepository(run)
-    result = await AiGenerateTaskService(repo).revise_function_case_stage(
+    result = await AiGenerateTaskService(
+        repo, execution_writer=MemoryExecutionWriter()
+    ).revise_function_case_stage(
         "run-1",
         {
             "stage": stage,
@@ -83,7 +86,9 @@ async def test_final_revision_accepts_unsaved_result_without_restarting_chain(ch
     run.checkpoint_enabled = checkpoint
     repo = RevisionRepository(run)
     edited = '{"cases":[{"name":"edited", "module":"login"}]}'
-    await AiGenerateTaskService(repo).revise_function_case_stage(
+    await AiGenerateTaskService(
+        repo, execution_writer=MemoryExecutionWriter()
+    ).revise_function_case_stage(
         "run-1",
         {
             "stage": "detailed_cases",
@@ -119,7 +124,9 @@ async def test_invalid_revision_never_queues(changes, body):
         setattr(run, key, value)
     repo = RevisionRepository(run)
     with pytest.raises(type(ErrBadRequest)):
-        await AiGenerateTaskService(repo).revise_function_case_stage(
+        await AiGenerateTaskService(
+            repo, execution_writer=MemoryExecutionWriter()
+        ).revise_function_case_stage(
             "run-1",
             {
                 "stage": "requirement_analysis",
@@ -137,7 +144,9 @@ async def test_concurrent_revision_queues_once():
     repo = RevisionRepository(revision_run())
 
     async def revise():
-        return await AiGenerateTaskService(repo).revise_function_case_stage(
+        return await AiGenerateTaskService(
+            repo, execution_writer=MemoryExecutionWriter()
+        ).revise_function_case_stage(
             "run-1",
             {
                 "stage": "requirement_analysis",
@@ -155,7 +164,9 @@ async def test_concurrent_revision_queues_once():
 async def test_revision_checks_ownership_before_lock():
     repo = RevisionRepository(revision_run())
     with pytest.raises(type(ErrForbidden)):
-        await AiGenerateTaskService(repo).revise_function_case_stage("run-1", {}, "other-user")
+        await AiGenerateTaskService(
+            repo, execution_writer=MemoryExecutionWriter()
+        ).revise_function_case_stage("run-1", {}, "other-user")
     assert not repo.lock.locked()
     assert not repo.queued
 
@@ -181,7 +192,9 @@ def test_revision_http_contract():
 async def test_final_revision_rejects_invalid_candidate(result):
     repo = RevisionRepository(revision_run("detailed_cases"))
     with pytest.raises(type(ErrBadRequest)):
-        await AiGenerateTaskService(repo).revise_function_case_stage(
+        await AiGenerateTaskService(
+            repo, execution_writer=MemoryExecutionWriter()
+        ).revise_function_case_stage(
             "run-1",
             {
                 "stage": "detailed_cases",
@@ -200,7 +213,9 @@ async def test_revision_without_previous_worker_does_not_save_edits():
     repo = RevisionRepository(run)
     repo.latest = None
     with pytest.raises(type(ErrBadRequest)):
-        await AiGenerateTaskService(repo).revise_function_case_stage(
+        await AiGenerateTaskService(
+            repo, execution_writer=MemoryExecutionWriter()
+        ).revise_function_case_stage(
             "run-1",
             {
                 "stage": "requirement_analysis",

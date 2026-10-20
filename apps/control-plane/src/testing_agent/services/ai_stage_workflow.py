@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any
@@ -12,8 +13,10 @@ from testing_agent.core.errors import (
     dynamic_error,
 )
 from testing_agent.core.sid import new_id
+from testing_agent.domain.ai_execution_intent import ExecutionIntent, StageReview
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+from testing_agent.services.ai_execution.writer import ExecutionWriter, SqlExecutionWriter
 from testing_agent.services.ai_task_access import (
     OwnedRun,
 )
@@ -55,8 +58,10 @@ class GenerationStageWorkflow:
         repository: AiGenerateTaskRepository,
         owned_run: OwnedRun,
         id_factory: Callable[[], str] = new_id,
+        execution_writer: ExecutionWriter | None = None,
     ):
         self.repository = repository
+        self.execution = execution_writer or SqlExecutionWriter()
         self.owned_run = owned_run
         self.new_id = id_factory
 
@@ -70,6 +75,8 @@ class GenerationStageWorkflow:
         return connection.connection_id
 
     async def save_stage_output(self, run_id: str, body: dict[str, Any], user_id: str) -> dict:
+        intent = ExecutionIntent(actor_id=user_id)
+        dispatch: WorkerTask | None = None
         run = await self.owned_run(user_id, run_id, "function", action="review")
         if (
             not run.checkpoint_enabled
@@ -98,6 +105,7 @@ class GenerationStageWorkflow:
             raise dynamic_error(ErrBadRequest, "阶段产物必须是当前阶段的非空 JSON 对象")
         run.config_json = {**normalize_config_json(run.config_json), field: edits[field]}
         run.stage_status = StageStatus.WAITING_REVIEW.value
+        await self.execution.save(self.repository.session, run, intent=intent, worker=dispatch)
         await self.repository.commit()
         await self.repository.refresh(run)
         return dump_run(run)
@@ -105,6 +113,8 @@ class GenerationStageWorkflow:
     async def save_requirement_analysis_stage_output(
         self, run_id: str, body: dict[str, Any], user_id: str
     ) -> dict:
+        intent = ExecutionIntent(actor_id=user_id)
+        dispatch: WorkerTask | None = None
         run = await self.owned_run(user_id, run_id, "requirement_analysis", action="review")
         ensure_requirement_run_mutable(run.review_status)
         current_stage = str(body.get("currentStage") or body.get("stage") or run.current_stage)
@@ -130,7 +140,7 @@ class GenerationStageWorkflow:
         config = merge_stage_config(run, config, current_stage)
         validate_run_output(run, config=config, result=result, final=is_final_stage)
         if is_final_stage and result != (run.result_yaml or ""):
-            run._reset_requirement_review = True
+            intent = replace(intent, reset_requirement_review=True)
             run.review_status = ReviewStatus.PENDING.value
             run.reviewer_user_id = ""
             run.reviewed_at = None
@@ -140,6 +150,7 @@ class GenerationStageWorkflow:
         if "resultYaml" in body:
             run.result_yaml = result
         run.result_summary_json = body.get("resultSummaryJson") or run.result_summary_json
+        await self.execution.save(self.repository.session, run, intent=intent, worker=dispatch)
         await self.repository.commit()
         await self.repository.refresh(run)
         return dump_run(run)
@@ -147,6 +158,8 @@ class GenerationStageWorkflow:
     async def review_requirement_analysis_stage(
         self, run_id: str, body: dict[str, Any], user_id: str
     ) -> dict:
+        intent = ExecutionIntent(actor_id=user_id)
+        dispatch: WorkerTask | None = None
         run = await self.owned_run(user_id, run_id, "requirement_analysis", action="review")
         ensure_requirement_run_mutable(run.review_status)
         current_stage = str(body.get("currentStage") or body.get("stage") or "")
@@ -177,6 +190,7 @@ class GenerationStageWorkflow:
             run.review_comment = str(body.get("reviewComment") or body.get("comment") or "")
             run.reviewer_user_id = user_id
             run.reviewed_at = datetime.now(UTC)
+            await self.execution.save(self.repository.session, run, intent=intent, worker=dispatch)
             await self.repository.commit()
             await self.repository.refresh(run)
             return dump_run(run)
@@ -221,29 +235,32 @@ class GenerationStageWorkflow:
             run.current_stage = next_stage
             run.stage_status = StageStatus.PENDING.value
             run.error_message = ""
-            self.repository.add(
-                WorkerTask(
-                    domain="ai",
-                    task_id=self.new_id(),
-                    task_type=task_type_for("requirement_analysis"),
-                    run_id=run.run_id,
-                    generate_task_id=run.task_id,
-                    llm_connection_id=await self.stage_connection(
-                        run, body or {}, user_id, latest_task.llm_connection_id
-                    ),
-                    status=RunStatus.PENDING.value,
-                )
+            dispatch = WorkerTask(
+                domain="ai",
+                task_id=self.new_id(),
+                task_type=task_type_for("requirement_analysis"),
+                run_id=run.run_id,
+                generate_task_id=run.task_id,
+                llm_connection_id=await self.stage_connection(
+                    run, body or {}, user_id, latest_task.llm_connection_id
+                ),
+                status=RunStatus.PENDING.value,
             )
+            self.repository.add(dispatch)
         elif action == "reject":
             run.status = RunStatus.CANCELED.value
             run.stage_status = StageStatus.FAILED.value
         else:
             raise ErrBadRequest()
-        run._stage_review = (
-            current_stage,
-            "approved" if action == "approve" else "rejected",
-            str(body.get("reviewComment") or body.get("comment") or ""),
+        intent = replace(
+            intent,
+            review=StageReview(
+                current_stage,
+                "approved" if action == "approve" else "rejected",
+                str(body.get("reviewComment") or body.get("comment") or ""),
+            ),
         )
+        await self.execution.save(self.repository.session, run, intent=intent, worker=dispatch)
         await self.repository.commit()
         await self.repository.refresh(run)
         return dump_run(run)
@@ -251,6 +268,8 @@ class GenerationStageWorkflow:
     async def revise_requirement_analysis_stage(
         self, run_id: str, body: dict[str, Any], user_id: str
     ) -> dict:
+        intent = ExecutionIntent(actor_id=user_id)
+        dispatch: WorkerTask | None = None
         run = await self.owned_run(user_id, run_id, "requirement_analysis", action="execute")
         ensure_requirement_run_mutable(run.review_status)
 
@@ -298,7 +317,7 @@ class GenerationStageWorkflow:
             final=is_final_stage,
             allow_resolved_questions=True,
         )
-        run._reset_requirement_review = True
+        intent = replace(intent, reset_requirement_review=True)
         run.review_status = ReviewStatus.PENDING.value
         run.reviewer_user_id = ""
         run.reviewed_at = None
@@ -308,20 +327,20 @@ class GenerationStageWorkflow:
             run.current_stage = REQUIREMENT_ANALYSIS_FINAL_STAGE
         run.stage_status = StageStatus.PENDING.value
         run.error_message = ""
-        self.repository.add(
-            WorkerTask(
-                domain="ai",
-                task_id=self.new_id(),
-                task_type=task_type_for("requirement_analysis"),
-                run_id=run.run_id,
-                generate_task_id=run.task_id,
-                llm_connection_id=await self.stage_connection(
-                    run, body or {}, user_id, latest_task.llm_connection_id
-                ),
-                status=RunStatus.PENDING.value,
-            )
+        dispatch = WorkerTask(
+            domain="ai",
+            task_id=self.new_id(),
+            task_type=task_type_for("requirement_analysis"),
+            run_id=run.run_id,
+            generate_task_id=run.task_id,
+            llm_connection_id=await self.stage_connection(
+                run, body or {}, user_id, latest_task.llm_connection_id
+            ),
+            status=RunStatus.PENDING.value,
         )
-        run._operation = "revise"
+        self.repository.add(dispatch)
+        intent = replace(intent, operation="revise")
+        await self.execution.save(self.repository.session, run, intent=intent, worker=dispatch)
         await self.repository.commit()
         await self.repository.refresh(run)
         return dump_run(run)
@@ -329,6 +348,8 @@ class GenerationStageWorkflow:
     async def revise_function_case_stage(
         self, run_id: str, body: dict[str, Any], user_id: str
     ) -> dict:
+        intent = ExecutionIntent(actor_id=user_id)
+        dispatch: WorkerTask | None = None
         run = await self.owned_run(user_id, run_id, "function", action="execute")
         stage = str(body.get("stage") or body.get("currentStage") or "")
         is_checkpoint = (
@@ -388,25 +409,27 @@ class GenerationStageWorkflow:
         run.current_stage = stage
         run.stage_status = StageStatus.PENDING.value
         run.error_message = ""
-        self.repository.add(
-            WorkerTask(
-                domain="ai",
-                task_id=self.new_id(),
-                task_type=task_type_for("function"),
-                run_id=run.run_id,
-                generate_task_id=run.task_id,
-                llm_connection_id=await self.stage_connection(
-                    run, body or {}, user_id, latest_task.llm_connection_id
-                ),
-                status=RunStatus.PENDING.value,
-            )
+        dispatch = WorkerTask(
+            domain="ai",
+            task_id=self.new_id(),
+            task_type=task_type_for("function"),
+            run_id=run.run_id,
+            generate_task_id=run.task_id,
+            llm_connection_id=await self.stage_connection(
+                run, body or {}, user_id, latest_task.llm_connection_id
+            ),
+            status=RunStatus.PENDING.value,
         )
-        run._operation = "revise"
+        self.repository.add(dispatch)
+        intent = replace(intent, operation="revise")
+        await self.execution.save(self.repository.session, run, intent=intent, worker=dispatch)
         await self.repository.commit()
         await self.repository.refresh(run)
         return dump_run(run)
 
     async def review_stage(self, run_id: str, body: dict[str, Any], user_id: str) -> dict:
+        intent = ExecutionIntent(actor_id=user_id)
+        dispatch: WorkerTask | None = None
         run = await self.owned_run(user_id, run_id, "function", action="review")
         if (
             not run.checkpoint_enabled
@@ -443,29 +466,32 @@ class GenerationStageWorkflow:
             run.current_stage = next_stage
             run.stage_status = StageStatus.PENDING.value
             run.error_message = ""
-            self.repository.add(
-                WorkerTask(
-                    domain="ai",
-                    task_id=self.new_id(),
-                    task_type=task_type_for("function"),
-                    run_id=run.run_id,
-                    generate_task_id=run.task_id,
-                    llm_connection_id=await self.stage_connection(
-                        run, body or {}, user_id, latest_task.llm_connection_id
-                    ),
-                    status=RunStatus.PENDING.value,
-                )
+            dispatch = WorkerTask(
+                domain="ai",
+                task_id=self.new_id(),
+                task_type=task_type_for("function"),
+                run_id=run.run_id,
+                generate_task_id=run.task_id,
+                llm_connection_id=await self.stage_connection(
+                    run, body or {}, user_id, latest_task.llm_connection_id
+                ),
+                status=RunStatus.PENDING.value,
             )
+            self.repository.add(dispatch)
         elif action == "reject":
             run.status = RunStatus.CANCELED.value
             run.stage_status = StageStatus.FAILED.value
         else:
             raise ErrBadRequest()
-        run._stage_review = (
-            current_stage,
-            "approved" if action == "approve" else "rejected",
-            str(body.get("reviewComment") or body.get("comment") or ""),
+        intent = replace(
+            intent,
+            review=StageReview(
+                current_stage,
+                "approved" if action == "approve" else "rejected",
+                str(body.get("reviewComment") or body.get("comment") or ""),
+            ),
         )
+        await self.execution.save(self.repository.session, run, intent=intent, worker=dispatch)
         await self.repository.commit()
         await self.repository.refresh(run)
         return dump_run(run)
@@ -478,6 +504,8 @@ class GenerationStageWorkflow:
         *,
         kind: str = "function",
     ) -> dict:
+        intent = ExecutionIntent(actor_id=user_id)
+        dispatch: WorkerTask | None = None
         run = await self.owned_run(user_id, run_id, kind, action="execute")
         allowed_stages = (
             {*REQUIREMENT_ANALYSIS_REVIEWABLE_STAGES, REQUIREMENT_ANALYSIS_FINAL_STAGE}
@@ -503,20 +531,20 @@ class GenerationStageWorkflow:
         run.status = RunStatus.PENDING.value
         run.stage_status = StageStatus.PENDING.value
         run.error_message = ""
-        self.repository.add(
-            WorkerTask(
-                domain="ai",
-                task_id=self.new_id(),
-                task_type=task_type_for(kind),
-                run_id=run.run_id,
-                generate_task_id=run.task_id,
-                llm_connection_id=await self.stage_connection(
-                    run, body or {}, user_id, latest_task.llm_connection_id
-                ),
-                status=RunStatus.PENDING.value,
-            )
+        dispatch = WorkerTask(
+            domain="ai",
+            task_id=self.new_id(),
+            task_type=task_type_for(kind),
+            run_id=run.run_id,
+            generate_task_id=run.task_id,
+            llm_connection_id=await self.stage_connection(
+                run, body or {}, user_id, latest_task.llm_connection_id
+            ),
+            status=RunStatus.PENDING.value,
         )
-        run._operation = "retry"
+        self.repository.add(dispatch)
+        intent = replace(intent, operation="retry")
+        await self.execution.save(self.repository.session, run, intent=intent, worker=dispatch)
         await self.repository.commit()
         await self.repository.refresh(run)
         return dump_run(run)
@@ -525,6 +553,8 @@ class GenerationStageWorkflow:
         self, run_id: str, body: dict[str, Any] | None, user_id: str
     ) -> dict:
         """审核通过后按用户触发派发图谱分析；重复点击基于最新用例重新生成。"""
+        intent = ExecutionIntent(actor_id=user_id)
+        dispatch: WorkerTask | None = None
 
         run = await self.owned_run(user_id, run_id, "function", action="execute")
         if (
@@ -564,19 +594,19 @@ class GenerationStageWorkflow:
         run.current_stage = FUNCTION_CASE_RELATION_STAGE
         run.stage_status = StageStatus.PENDING.value
         run.error_message = ""
-        self.repository.add(
-            WorkerTask(
-                domain="ai",
-                task_id=self.new_id(),
-                task_type=task_type_for("function"),
-                run_id=run.run_id,
-                generate_task_id=run.task_id,
-                llm_connection_id=await self.stage_connection(
-                    run, body or {}, user_id, latest_task.llm_connection_id
-                ),
-                status=RunStatus.PENDING.value,
-            )
+        dispatch = WorkerTask(
+            domain="ai",
+            task_id=self.new_id(),
+            task_type=task_type_for("function"),
+            run_id=run.run_id,
+            generate_task_id=run.task_id,
+            llm_connection_id=await self.stage_connection(
+                run, body or {}, user_id, latest_task.llm_connection_id
+            ),
+            status=RunStatus.PENDING.value,
         )
+        self.repository.add(dispatch)
+        await self.execution.save(self.repository.session, run, intent=intent, worker=dispatch)
         await self.repository.commit()
         await self.repository.refresh(run)
         return dump_run(run)

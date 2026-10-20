@@ -5,7 +5,7 @@ import json
 
 from sqlalchemy import select
 from support.ai_execution import db as db
-from support.ai_execution import event, persist
+from support.ai_execution import event, persist_run
 from support.project_api import account, project
 from support.project_api import api as api
 from test_function_case_library import make_sprint
@@ -252,7 +252,7 @@ def test_worker_result_lands_in_result_yaml_without_review(db):
     )
     db.add_all([task, run, worker])
     db.flush()
-    persist(db)
+    persist_run(db, run, worker=worker)
     db.commit()
 
     event(db, run, worker, status="success", stage="generate", output=json.dumps(graph_output()))

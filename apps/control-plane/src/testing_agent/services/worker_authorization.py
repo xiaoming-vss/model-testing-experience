@@ -92,7 +92,9 @@ async def execution_authority(session, task) -> ExecutionAuthority:
 
 
 async def fail_authorization(session, task, authority=None):
-    from testing_agent.services.ai_execution import persist, project
+    from testing_agent.domain.ai_execution_intent import ExecutionIntent
+    from testing_agent.services.ai_execution import project
+    from testing_agent.services.ai_execution.writer import SqlExecutionWriter
 
     now = datetime.now(UTC)
     task.status = RunStatus.FAILED.value
@@ -104,11 +106,16 @@ async def fail_authorization(session, task, authority=None):
         if task.domain == "ai":
             run = await session.run_sync(lambda sync: project(sync, run))
             run.stage_status = StageStatus.FAILED.value
-            run._worker_event = task.task_id
         run.status = RunStatus.FAILED.value
         run.error_message = task.error_message
         run.finished_at = now
-    await session.run_sync(persist)
+        if task.domain == "ai":
+            await SqlExecutionWriter().save(
+                session,
+                run,
+                intent=ExecutionIntent(actor_id=authority.actor, worker_event_id=task.task_id),
+                worker=task,
+            )
 
 
 async def authorize_execution(session, task, *, pending=False) -> ExecutionAuthority:

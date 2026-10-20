@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 from authorization_database import AuthorizationDatabase, AuthorizedRepositoryFixture
 from fastapi.testclient import TestClient
+from support.execution_writer import MemoryExecutionWriter
 
 from testing_agent.api.deps import get_ai_generate_task_service, get_current_user_id
 from testing_agent.app import create_app
@@ -1066,7 +1067,9 @@ async def test_ai_review_rejects_non_terminal_runs_like_go():
         async def commit(self):
             raise AssertionError("non-terminal runs should be rejected before commit")
 
-    service = ai_tasks.AiGenerateTaskService(FakeRepository())
+    service = ai_tasks.AiGenerateTaskService(
+        FakeRepository(), execution_writer=MemoryExecutionWriter()
+    )
 
     with pytest.raises(type(ErrBadRequest)):
         await service.review("api", "run-1", {"action": "reject"}, "user-1")
@@ -1133,7 +1136,9 @@ async def test_requirement_analysis_create_requires_requirement_id():
         async def refresh(self, row):
             raise AssertionError("task should not refresh without requirementId")
 
-    service = ai_tasks.AiGenerateTaskService(FakeRepository())
+    service = ai_tasks.AiGenerateTaskService(
+        FakeRepository(), execution_writer=MemoryExecutionWriter()
+    )
 
     with pytest.raises(type(ErrBadRequest)):
         await service.create(
@@ -1211,7 +1216,7 @@ async def test_ai_generate_run_uses_go_connection_id_for_worker_task(monkeypatch
     ids = iter(["run-1", "worker-task-1"])
     monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
     repository = FakeRepository()
-    service = ai_tasks.AiGenerateTaskService(repository)
+    service = ai_tasks.AiGenerateTaskService(repository, execution_writer=MemoryExecutionWriter())
 
     await service.run("api", "task-1", {"connectionId": "conn-1"}, "user-1")
 
@@ -1271,7 +1276,7 @@ async def test_function_checkpoint_run_starts_at_requirement_analysis(monkeypatc
     ids = iter(["run-1", "worker-task-1"])
     monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
     repository = FakeRepository()
-    service = ai_tasks.AiGenerateTaskService(repository)
+    service = ai_tasks.AiGenerateTaskService(repository, execution_writer=MemoryExecutionWriter())
 
     await service.run(
         "function",
@@ -1308,7 +1313,9 @@ async def test_ai_generate_run_requires_go_connection_id():
         async def commit(self):
             raise AssertionError("run should reject missing connectionId before committing")
 
-    service = ai_tasks.AiGenerateTaskService(FakeRepository())
+    service = ai_tasks.AiGenerateTaskService(
+        FakeRepository(), execution_writer=MemoryExecutionWriter()
+    )
 
     with pytest.raises(type(ErrBadRequest)):
         await service.run("api", "task-1", {}, "user-1")
@@ -1575,7 +1582,7 @@ async def test_requirement_analysis_run_enqueues_requirement_analysis_worker_tas
     ids = iter(["run-1", "worker-task-1"])
     monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
     repository = FakeRepository()
-    service = ai_tasks.AiGenerateTaskService(repository)
+    service = ai_tasks.AiGenerateTaskService(repository, execution_writer=MemoryExecutionWriter())
 
     if not document_file_id:
         with pytest.raises(AppError, match="需求原文件未存储到 S3，请重新上传"):
@@ -1642,7 +1649,7 @@ async def test_requirement_analysis_task_create_persists_task_without_running(mo
     ids = iter(["task-1"])
     monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
     repository = FakeRepository()
-    service = ai_tasks.AiGenerateTaskService(repository)
+    service = ai_tasks.AiGenerateTaskService(repository, execution_writer=MemoryExecutionWriter())
 
     payload = await service.create(
         "requirement_analysis",
@@ -1689,7 +1696,9 @@ async def test_requirement_analysis_run_requires_connection_id():
         async def commit(self):
             raise AssertionError("run should reject missing connectionId before committing")
 
-    service = ai_tasks.AiGenerateTaskService(FakeRepository())
+    service = ai_tasks.AiGenerateTaskService(
+        FakeRepository(), execution_writer=MemoryExecutionWriter()
+    )
 
     with pytest.raises(type(ErrBadRequest)):
         await service.run("requirement_analysis", "task-1", {}, "user-1")
@@ -1741,7 +1750,9 @@ async def test_requirement_analysis_list_runs_uses_task_scope():
             assert task_id == "task-1"
             return [run]
 
-    service = ai_tasks.AiGenerateTaskService(FakeRepository())
+    service = ai_tasks.AiGenerateTaskService(
+        FakeRepository(), execution_writer=MemoryExecutionWriter()
+    )
 
     payload = await service.list_runs("requirement_analysis", "task-1", "user-1")
 
@@ -1826,7 +1837,7 @@ async def test_requirement_analysis_run_import_writes_result_to_requirement_docu
             self.refreshed = row
 
     repository = FakeRepository()
-    service = ai_tasks.AiGenerateTaskService(repository)
+    service = ai_tasks.AiGenerateTaskService(repository, execution_writer=MemoryExecutionWriter())
 
     payload = await service.import_requirement_analysis_run("run-1", "user-1")
 
@@ -1927,7 +1938,9 @@ async def test_requirement_analysis_checkpoint_run_starts_extracting_text(monkey
 
     ids = iter(["run-1", "worker-task-1"])
     monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
-    service = ai_tasks.AiGenerateTaskService(FakeRepository())
+    service = ai_tasks.AiGenerateTaskService(
+        FakeRepository(), execution_writer=MemoryExecutionWriter()
+    )
 
     payload = await service.run(
         "requirement_analysis",
@@ -2002,7 +2015,9 @@ async def test_requirement_analysis_run_defaults_to_checkpoint(monkeypatch):
 
     ids = iter(["run-1", "worker-task-1"])
     monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
-    service = ai_tasks.AiGenerateTaskService(FakeRepository())
+    service = ai_tasks.AiGenerateTaskService(
+        FakeRepository(), execution_writer=MemoryExecutionWriter()
+    )
 
     payload = await service.run(
         "requirement_analysis",
@@ -2072,7 +2087,9 @@ async def test_requirement_analysis_run_ignores_false_checkpoint_flag(monkeypatc
 
     ids = iter(["run-1", "worker-task-1"])
     monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
-    service = ai_tasks.AiGenerateTaskService(FakeRepository())
+    service = ai_tasks.AiGenerateTaskService(
+        FakeRepository(), execution_writer=MemoryExecutionWriter()
+    )
 
     payload = await service.run(
         "requirement_analysis",
@@ -2152,7 +2169,7 @@ async def test_requirement_analysis_review_extracting_text_enqueues_feature_unde
 
     monkeypatch.setattr(ai_tasks, "new_id", lambda: "worker-task-next")
     repository = FakeRepository()
-    service = ai_tasks.AiGenerateTaskService(repository)
+    service = ai_tasks.AiGenerateTaskService(repository, execution_writer=MemoryExecutionWriter())
 
     payload = await service.review_requirement_analysis_stage(
         "run-1",
@@ -2243,7 +2260,7 @@ async def test_requirement_analysis_revise_extracting_text_enqueues_same_stage_w
 
     monkeypatch.setattr(ai_tasks, "new_id", lambda: "worker-task-revise")
     repository = FakeRepository()
-    service = ai_tasks.AiGenerateTaskService(repository)
+    service = ai_tasks.AiGenerateTaskService(repository, execution_writer=MemoryExecutionWriter())
 
     payload = await service.revise_requirement_analysis_stage(
         "run-1",
@@ -2329,7 +2346,9 @@ async def test_requirement_analysis_save_final_output_before_import():
         async def refresh(self, row):
             return None
 
-    service = ai_tasks.AiGenerateTaskService(FakeRepository())
+    service = ai_tasks.AiGenerateTaskService(
+        FakeRepository(), execution_writer=MemoryExecutionWriter()
+    )
 
     payload = await service.save_requirement_analysis_stage_output(
         "run-1",
@@ -2420,7 +2439,7 @@ async def test_requirement_analysis_revise_final_output_enqueues_feature_underst
 
     monkeypatch.setattr(ai_tasks, "new_id", lambda: "worker-task-final-revise")
     repository = FakeRepository()
-    service = ai_tasks.AiGenerateTaskService(repository)
+    service = ai_tasks.AiGenerateTaskService(repository, execution_writer=MemoryExecutionWriter())
 
     payload = await service.revise_requirement_analysis_stage(
         "run-1",
@@ -2521,7 +2540,7 @@ async def test_function_stage_review_approve_enqueues_next_stage_worker_task(mon
 
     monkeypatch.setattr(ai_tasks, "new_id", lambda: "worker-task-next")
     repository = FakeRepository()
-    service = ai_tasks.AiGenerateTaskService(repository)
+    service = ai_tasks.AiGenerateTaskService(repository, execution_writer=MemoryExecutionWriter())
 
     payload = await service.review_stage(
         "run-1",
@@ -2608,7 +2627,9 @@ async def test_function_stage_review_approve_accepts_saved_waiting_review_stage(
             return None
 
     monkeypatch.setattr(ai_tasks, "new_id", lambda: "worker-task-next")
-    service = ai_tasks.AiGenerateTaskService(FakeRepository())
+    service = ai_tasks.AiGenerateTaskService(
+        FakeRepository(), execution_writer=MemoryExecutionWriter()
+    )
 
     payload = await service.review_stage(
         "run-1",
@@ -2673,7 +2694,9 @@ async def test_save_stage_output_preserves_waiting_review_stage_status():
         async def refresh(self, row):
             return None
 
-    service = ai_tasks.AiGenerateTaskService(FakeRepository())
+    service = ai_tasks.AiGenerateTaskService(
+        FakeRepository(), execution_writer=MemoryExecutionWriter()
+    )
 
     payload = await service.save_stage_output(
         "run-1",

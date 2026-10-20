@@ -54,7 +54,7 @@
 `test_worker_queue_storage.py::test_mysql_claim_skips_locked_task`、
 `test_schema_comments.py::test_mysql_comment_upgrade_preserves_definitions_constraints_and_rows`。
 
-## B1 提交入口梳理
+## B1 提交入口梳理（迁移前）
 
 当前以下入口依赖 repository 的隐式 persist，迁移时需要逐个验证：
 
@@ -73,9 +73,32 @@
 目标是业务入口明确给出本次要应用的执行变更，取消仓储 commit 的业务副作用。
 迁移期间暂时保留旧路径时，必须列出尚未迁移入口；最终不得同时存在两条写状态路径。
 
+### 当前实现与验证
+
+已替换上述入口的隐式写入：业务命令显式传入单个 run、`ExecutionIntent` 和本次
+WorkerTask，`ExecutionWriter.save()` 只 flush，不提交调用者事务。移除了两个仓储的
+业务 commit 覆盖、session 全量扫描及 ORM 私有命令标记。
+
+- `repositories/ai_execution.py` 负责兼容读取投影；
+  `domain/ai_execution_format.py` 负责阶段布局与纯格式规则。
+- `GenerationRunLauncher.launch()` 协调快照准备、结束准备事务、当前权限重查及最终原子写入。
+  任务管理入口保留原有 HTTP 调用面；阶段操作和正式导入继续由各自模块负责。
+- 代码风险分析改为依赖共享输出模块，解除与任务管理入口的双向依赖。
+- 新增行为验证证明普通 commit 不发布产物，保存一个 run 不会发布另一个被读取的 run。
+  架构检查阻止仓储恢复业务 commit、执行模块扫描 session 或使用旧命令标记。
+- 编排测试显式注入内存写入器；真实执行存储测试保留 SQL 写入器。两个只建正式资产表、
+  使用虚拟 run 的导入约束测试也声明该替身，不在生产实现中增加测试对象分支。
+
+初轮全量回归发现 6 项测试适配失败（旧临时属性断言 2 项、缺少写入器依赖 4 项）；
+修正后相关 28 项通过。运行编排与执行存储等专项 136 项通过。
+真实 MySQL 全部 55 项通过。最新静态入口通过 Ruff、501 个文件格式检查和
+353 个源码文件类型检查。最终六组全量回归共 1,489 项：1,425 通过、64 项环境跳过、
+0 失败；另有 6 个通过的 subtest 不计入收集项。结合 55 项真实 MySQL 复验，
+本批有 1,480 项通过证据，剩余 9 项是真实存储未启用。B1 验收完成。
+
 ## 待完成
 
-- B1：上述显式事务及兼容投影重构与逐入口回归。
+- B1 已完成；后续批次继续保留上述事务与旧回传保护。
 - B2：Worker 上下文、域载荷与生命周期。
 - B3：集成凭据、查询、绑定和导入职责；列表测量。
 - B4：通用删除中的业务编排移出。

@@ -27,6 +27,7 @@ from support.ai_execution import (
 )
 
 from testing_agent.core.errors import ErrBadRequest
+from testing_agent.domain.ai_execution_intent import ExecutionIntent, StageReview
 from testing_agent.models.ai_generate_execution import (
     AiGenerateRunImport as Import,
 )
@@ -37,7 +38,7 @@ from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTask
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.services.ai_execution import (
     graph,
-    persist,
+    persist_run,
     project,
     require_current_worker,
     worker_input,
@@ -157,10 +158,15 @@ def test_stage_review_and_import_are_separate(db):
         stage="requirement_analysis",
         config={"requirementAnalysis": {"a": 1}},
     )
-    run._actor = "reviewer"
-    run._stage_review = ("requirement_analysis", "approved", "同意")
     run.current_stage = "case_names"
-    worker = enqueue(db, run, "w2")
+    worker = enqueue(
+        db,
+        run,
+        "w2",
+        intent=ExecutionIntent(
+            actor_id="reviewer", review=StageReview("requirement_analysis", "approved", "同意")
+        ),
+    )
     assert graph(db, run)[0][0].reviewer_user_id == "reviewer"
     event(
         db,
@@ -170,21 +176,26 @@ def test_stage_review_and_import_are_separate(db):
         stage="case_names",
         config={"requirementAnalysis": {"a": 1}, "caseNames": {"categories": []}},
     )
-    run._stage_review = ("case_names", "approved", "")
     run.current_stage = "detailed_cases"
-    worker = enqueue(db, run, "w3")
+    worker = enqueue(
+        db,
+        run,
+        "w3",
+        intent=ExecutionIntent(
+            actor_id="reviewer", review=StageReview("case_names", "approved", "")
+        ),
+    )
     event(db, run, worker, status="success", stage="completed", output='{"cases":[]}')
     assert db.scalar(select(Import)) is None
     run.review_status = "approved"
     run.reviewer_user_id = "reviewer"
-    persist(db)
+    persist_run(db, run)
     db.commit()
     run.import_status = "imported"
     run.imported_targets = [{"targetType": "function_suite", "targetId": "s"}]
-    run._actor = "importer"
-    persist(db)
+    persist_run(db, run, intent=ExecutionIntent(actor_id="importer"))
     db.commit()
-    persist(db)
+    persist_run(db, run)
     db.commit()
     imports = list(db.scalars(select(Import)))
     assert len(imports) == 1
@@ -199,8 +210,7 @@ def test_roll_back_queue_and_attempt(db):
         )
     )
     run.status = "pending"
-    run._operation = "retry"
-    persist(db)
+    persist_run(db, run, intent=ExecutionIntent(operation="retry"))
     db.rollback()
     assert len(list(db.scalars(select(Attempt)))) == 1
     assert len(list(db.scalars(select(WorkerTask)))) == 1
@@ -418,7 +428,7 @@ async def test_stage_save_cannot_change_frozen_result_in_database(db, review, im
     event(db, run, worker, status="success", stage="completed", output='{"cases": []}')
     run.review_status = review
     run.import_status = import_status
-    persist(db)
+    persist_run(db, run)
     db.commit()
     service = AiGenerateTaskService(AiGenerateTaskRepository(AsyncSessionAdapter(db)))
     before = await service.owned_run("u", "run", "function")

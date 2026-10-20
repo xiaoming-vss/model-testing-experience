@@ -38,7 +38,7 @@ from testing_agent.models.resource_binding import ResourceBinding
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.resource_binding import ResourceBindingRepository
 from testing_agent.schemas.requirement import normalize_document_type
-from testing_agent.services.ai_generate_task import (
+from testing_agent.services.ai_task_output import (
     dump_run,
     requirement_source_content,
     worker_requirement_document_download_url,

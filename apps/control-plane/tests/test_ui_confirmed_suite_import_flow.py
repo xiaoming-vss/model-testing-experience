@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 from authorization_database import AuthorizationDatabase
 from fastapi.testclient import TestClient
+from support.execution_writer import MemoryExecutionWriter
 
 from testing_agent.api.deps import (
     get_ai_generate_task_service,
@@ -161,7 +162,7 @@ def ui_import_client(repository):
     app = create_app()
     app.dependency_overrides[get_current_user_id] = lambda: "user-1"
     app.dependency_overrides[get_ai_generate_task_service] = lambda: AiGenerateTaskService(
-        repository
+        repository, execution_writer=MemoryExecutionWriter()
     )
     app.dependency_overrides[get_ui_test_case_service] = lambda: UiTestCaseService(repository)
     return TestClient(app, raise_server_exceptions=False)

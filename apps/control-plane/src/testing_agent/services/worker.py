@@ -355,8 +355,9 @@ async def build_snapshot(session: AsyncSession, domain: str, task: WorkerTask) -
         if isinstance(run, AiGenerateTaskRun):
             from testing_agent.services.ai_execution import worker_input
 
+            ai_run = run
             snapshot, config = await session.run_sync(
-                lambda sync_session: worker_input(sync_session, run, task)
+                lambda sync_session: worker_input(sync_session, ai_run, task)
             )
         if snapshot:
             snapshot["runId"] = run.run_id

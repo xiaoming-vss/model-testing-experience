@@ -4,13 +4,13 @@ from datetime import UTC
 
 from sqlalchemy import case, func, select
 
+from testing_agent.domain.ai_execution_format import FIELDS, final_stage
 from testing_agent.models.ai_generate_execution import AiGenerateRunImport as Import
 from testing_agent.models.ai_generate_execution import AiGenerateRunStage as Stage
 from testing_agent.models.ai_generate_execution import AiGenerateStageAttempt as Attempt
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generate_task import AiGenerateTaskRun as Run
 from testing_agent.repositories.latest import latest_per_resource
-from testing_agent.services.ai_execution import FIELDS, final_stage
 
 
 def utc(value):

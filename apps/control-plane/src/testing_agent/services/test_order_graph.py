@@ -12,6 +12,7 @@ from typing import Any
 from testing_agent.core.enums import RunStatus, StageStatus
 from testing_agent.core.errors import ErrBadRequest, dynamic_error
 from testing_agent.core.sid import new_id
+from testing_agent.domain.ai_execution_intent import ExecutionIntent
 from testing_agent.domain.function_case_content import generation_fields
 from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
 from testing_agent.models.test_order import TestOrder
@@ -19,11 +20,9 @@ from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.test_order_entry import TestOrderEntryRepository
 from testing_agent.schemas.test_order import TestOrderGraphInputResponse
-from testing_agent.services.ai_generate_task import (
-    dump_run,
-    requirement_source_content,
-    task_type_for,
-)
+from testing_agent.services.ai_execution.writer import ExecutionWriter, SqlExecutionWriter
+from testing_agent.services.ai_task_contracts import task_type_for
+from testing_agent.services.ai_task_output import dump_run, requirement_source_content
 from testing_agent.services.common import dump
 from testing_agent.services.personal_authorization import require_personal_connection
 from testing_agent.services.test_order import TestOrderService
@@ -111,8 +110,10 @@ class TestOrderGraphService:
         repository: AiGenerateTaskRepository,
         test_order_service: TestOrderService,
         entries: TestOrderEntryRepository,
+        execution_writer: ExecutionWriter | None = None,
     ) -> None:
         self.repository = repository
+        self.execution = execution_writer or SqlExecutionWriter()
         self.orders = test_order_service
         self.entries = entries
 
@@ -202,18 +203,20 @@ class TestOrderGraphService:
             config_json={"graphInput": graph_input},
             result_summary_json={},
         )
-        self.repository.add(
-            WorkerTask(
-                domain="ai",
-                task_id=new_id(),
-                task_type=TEST_ORDER_GRAPH_TASK_TYPE,
-                run_id=run_id,
-                generate_task_id=task.task_id,
-                llm_connection_id=connection_id,
-                status=RunStatus.PENDING.value,
-            )
+        dispatch = WorkerTask(
+            domain="ai",
+            task_id=new_id(),
+            task_type=TEST_ORDER_GRAPH_TASK_TYPE,
+            run_id=run_id,
+            generate_task_id=task.task_id,
+            llm_connection_id=connection_id,
+            status=RunStatus.PENDING.value,
         )
+        self.repository.add(dispatch)
         self.repository.add(run)
+        await self.execution.save(
+            self.repository.session, run, intent=ExecutionIntent(actor_id=user_id), worker=dispatch
+        )
         await self.repository.commit()
         await self.repository.refresh(run)
         return dump_run(run)

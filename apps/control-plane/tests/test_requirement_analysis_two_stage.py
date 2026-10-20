@@ -4,6 +4,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from support.execution_writer import MemoryExecutionWriter
 
 from testing_agent.core.errors import AppError
 from testing_agent.domain.requirement_artifacts import requirement_content, validate_artifact
@@ -92,7 +93,9 @@ async def test_completed_marker_remains_reviewable_without_creating_another_stag
 
     monkeypatch.setattr(workflow, "dump_run", lambda value: {"reviewStatus": value.review_status})
     service = workflow.GenerationStageWorkflow(
-        repository=SimpleNamespace(commit=nothing, refresh=nothing), owned_run=owned
+        repository=SimpleNamespace(session=None, commit=nothing, refresh=nothing),
+        owned_run=owned,
+        execution_writer=MemoryExecutionWriter(),
     )
     result = await service.review_requirement_analysis_stage(
         "run", {"stage": "feature_understanding", "action": action}, "reviewer"
@@ -129,7 +132,9 @@ async def test_extraction_approval_dispatches_understanding_only(monkeypatch):
         get_latest_worker_task_by_run_id=latest,
         add=added.append,
     )
-    service = workflow.GenerationStageWorkflow(repository=repository, owned_run=owned)
+    service = workflow.GenerationStageWorkflow(
+        repository=repository, owned_run=owned, execution_writer=MemoryExecutionWriter()
+    )
     result = await service.review_requirement_analysis_stage(
         "run", {"stage": "extracting_text", "action": "approve"}, "user"
     )
@@ -206,7 +211,8 @@ async def test_extraction_retry_cannot_silently_read_replaced_source(monkeypatch
         return document
 
     service = WorkerTaskService(
-        SimpleNamespace(get_ai_run=get_run, get_requirement=get_requirement)
+        SimpleNamespace(get_ai_run=get_run, get_requirement=get_requirement),
+        execution_writer=MemoryExecutionWriter(),
     )
     monkeypatch.setattr(service, "_ai_worker_task", task)
     if changed_field:
@@ -374,6 +380,7 @@ async def test_revision_accepts_historical_answers_but_save_and_approval_require
             get_latest_worker_task_by_run_id=latest,
         ),
         owned_run=owned,
+        execution_writer=MemoryExecutionWriter(),
     )
     with pytest.raises(AppError, match="已解决问题"):
         await service.save_requirement_analysis_stage_output("run", {"stage": stage}, "user")
@@ -430,6 +437,7 @@ async def test_rejected_requirement_run_is_read_only(monkeypatch, stage, operati
             get_latest_worker_task_by_run_id=latest,
         ),
         owned_run=owned,
+        execution_writer=MemoryExecutionWriter(),
     )
     if operation == "save":
         call = service.save_requirement_analysis_stage_output("run", {"stage": stage}, "user")
@@ -470,7 +478,9 @@ async def test_final_rejection_closes_waiting_review_generation(monkeypatch):
 
     monkeypatch.setattr(workflow, "dump_run", lambda value: {"reviewStatus": value.review_status})
     service = workflow.GenerationStageWorkflow(
-        repository=SimpleNamespace(commit=nothing, refresh=nothing), owned_run=owned
+        repository=SimpleNamespace(session=None, commit=nothing, refresh=nothing),
+        owned_run=owned,
+        execution_writer=MemoryExecutionWriter(),
     )
     result = await service.review_requirement_analysis_stage(
         "run", {"stage": "feature_understanding", "action": "reject"}, "reviewer"
