@@ -16,10 +16,7 @@ from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTask
 from testing_agent.models.ai_generate_task_source_archive import AiGenerateTaskSourceArchive
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.schemas.requirement import normalize_document_type
-from testing_agent.services.api_import_payload import (
-    import_items,
-    parse_import_payload,
-)
+from testing_agent.services.import_payload import import_items, parse_import_payload
 from testing_agent.services.ui_test_case import ui_import_cases
 
 

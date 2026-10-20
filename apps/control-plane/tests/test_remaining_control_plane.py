@@ -35,6 +35,7 @@ from testing_agent.services.api_request_render import (
     api_case_request_template,
     render_api_case_request,
 )
+from testing_agent.services.import_payload import read_import_payload
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.resource_binding import ResourceBindingService
@@ -657,7 +658,7 @@ async def test_zentao_candidate_lists_are_loaded_from_remote_client():
 
 @pytest.mark.asyncio
 async def test_read_import_payload_accepts_uploaded_yaml_file():
-    payload = await api_collection.read_import_payload(
+    payload = await read_import_payload(
         None,
         FakeUpload(b"cases:\n  - name: imported\n    method: POST\n"),
     )

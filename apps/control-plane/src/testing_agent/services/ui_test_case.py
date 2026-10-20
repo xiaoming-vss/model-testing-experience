@@ -12,8 +12,8 @@ from testing_agent.models.ui_test_case import UiTestCase
 from testing_agent.models.ui_test_suite import UiTestSuite
 from testing_agent.repositories.ui_test_case import UiTestCaseRepository
 from testing_agent.schemas.ui_test_case import UiCaseRequest, UiCaseResponse
-from testing_agent.services.api_collection import read_import_payload
 from testing_agent.services.common import apply_patch, dump, list_payload
+from testing_agent.services.import_payload import read_import_payload
 from testing_agent.services.project_access import ProjectAction, require_project_access
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 

@@ -6,6 +6,7 @@ import pytest
 from authorization_database import AuthorizationDatabase
 
 from testing_agent.core.errors import ErrResourceBindingNotFound
+from testing_agent.services.function_case_export import FunctionCaseExporter
 from testing_agent.services.function_test_case import FunctionTestCaseService
 
 
@@ -137,7 +138,7 @@ async def test_function_case_import_to_zentao_imports_all_cases():
     repository = FakeFunctionCaseRepository()
     integration_service = FakeIntegrationConnectionService()
     zentao_client = FakeZentaoResourceClient()
-    service = FunctionTestCaseService(repository, integration_service, zentao_client)
+    service = FunctionCaseExporter(repository, integration_service, zentao_client)
 
     result = await service.import_to_zentao(
         "user-1",
@@ -176,7 +177,7 @@ async def test_function_case_import_to_zentao_imports_all_cases():
 @pytest.mark.asyncio
 async def test_function_case_import_to_zentao_imports_selected_cases():
     zentao_client = FakeZentaoResourceClient()
-    service = FunctionTestCaseService(
+    service = FunctionCaseExporter(
         FakeFunctionCaseRepository(),
         FakeIntegrationConnectionService(),
         zentao_client,
@@ -196,7 +197,7 @@ async def test_function_case_import_to_zentao_imports_selected_cases():
 
 @pytest.mark.asyncio
 async def test_function_case_import_to_zentao_accepts_legacy_binding_type_labels():
-    service = FunctionTestCaseService(
+    service = FunctionCaseExporter(
         FakeFunctionCaseRepository(legacy_remote_types=True),
         FakeIntegrationConnectionService(),
         FakeZentaoResourceClient(),
@@ -211,7 +212,7 @@ async def test_function_case_import_to_zentao_accepts_legacy_binding_type_labels
 
 @pytest.mark.asyncio
 async def test_function_case_import_to_zentao_rejects_missing_requirement_binding():
-    service = FunctionTestCaseService(
+    service = FunctionCaseExporter(
         FakeFunctionCaseRepository(include_requirement_binding=False),
         FakeIntegrationConnectionService(),
         FakeZentaoResourceClient(),
@@ -245,4 +246,4 @@ def mcp_access(monkeypatch):
         async def resolve(self, user_id, project_id, expected_instance):
             return await self.connections.resolve_zentao_access(user_id, "conn-1", project_id)
 
-    monkeypatch.setattr("testing_agent.services.function_test_case.ZentaoMcpAccess", Access)
+    monkeypatch.setattr("testing_agent.services.function_case_export.ZentaoMcpAccess", Access)

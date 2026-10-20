@@ -3,8 +3,6 @@ from __future__ import annotations
 import json
 from typing import Any
 
-import yaml
-
 from testing_agent.core.errors import ErrApiCollectionImportInvalid, dynamic_error
 
 ALLOWED_IMPORT_METHODS = {"GET", "POST", "PUT", "DELETE", "PATCH"}
@@ -62,36 +60,6 @@ IMPORT_ASSERT_RULE_FIELDS = {
 
 def import_error(message: str):
     return dynamic_error(ErrApiCollectionImportInvalid, message)
-
-
-def parse_import_payload(payload: Any) -> dict[str, Any]:
-    if isinstance(payload, dict):
-        return payload
-    if isinstance(payload, str):
-        data = yaml.safe_load(payload) if payload.strip() else {}
-        if isinstance(data, dict):
-            return data
-        return {"items": data or []}
-    return {"items": payload or []}
-
-
-async def read_import_payload(payload: Any = None, file: Any = None) -> dict[str, Any]:
-    if file is not None:
-        raw = await file.read()
-        text = raw.decode("utf-8-sig")
-        return parse_import_payload(text)
-    return parse_import_payload(payload)
-
-
-def import_items(payload: Any, *keys: str) -> list[Any]:
-    data = parse_import_payload(payload)
-    for key in keys:
-        value = data.get(key)
-        if isinstance(value, list):
-            return value
-    if isinstance(data.get("items"), list):
-        return data["items"]
-    return []
 
 
 def normalize_json_value(value: Any) -> Any:

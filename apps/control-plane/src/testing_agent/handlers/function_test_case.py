@@ -4,7 +4,12 @@ from typing import Any
 
 from fastapi import Body, Depends, File, Query, UploadFile
 
-from testing_agent.api.deps import get_current_user_id, get_function_test_case_service
+from testing_agent.api.deps import (
+    get_current_user_id,
+    get_function_case_exporter,
+    get_function_case_importer,
+    get_function_test_case_service,
+)
 from testing_agent.core.errors import success_payload
 from testing_agent.domain.function_case_query import FunctionCaseQuery
 from testing_agent.schemas.function_test_case import (
@@ -14,6 +19,8 @@ from testing_agent.schemas.function_test_case import (
     ImportFunctionCasesToZentaoRequest,
     ImportFunctionSuitesToZentaoRequest,
 )
+from testing_agent.services.function_case_export import FunctionCaseExporter
+from testing_agent.services.function_case_import import FunctionCaseImporter
 from testing_agent.services.function_test_case import FunctionTestCaseService
 
 
@@ -31,7 +38,7 @@ async def import_function_cases(
     payload: Any = Body(default=None),
     file: UploadFile | None = File(default=None),
     user_id: str = Depends(get_current_user_id),
-    service: FunctionTestCaseService = Depends(get_function_test_case_service),
+    service: FunctionCaseImporter = Depends(get_function_case_importer),
 ):
     return success_payload(await service.import_cases(user_id, suite_id, payload, file))
 
@@ -40,7 +47,7 @@ async def import_function_cases_to_zentao(
     suite_id: str,
     payload: ImportFunctionCasesToZentaoRequest = Body(),
     user_id: str = Depends(get_current_user_id),
-    service: FunctionTestCaseService = Depends(get_function_test_case_service),
+    service: FunctionCaseExporter = Depends(get_function_case_exporter),
 ):
     return success_payload(await service.import_to_zentao(user_id, suite_id, payload))
 
@@ -49,7 +56,7 @@ async def import_function_suites_to_zentao(
     requirement_id: str,
     payload: ImportFunctionSuitesToZentaoRequest = Body(),
     user_id: str = Depends(get_current_user_id),
-    service: FunctionTestCaseService = Depends(get_function_test_case_service),
+    service: FunctionCaseExporter = Depends(get_function_case_exporter),
 ):
     return success_payload(
         await service.import_requirement_to_zentao(user_id, requirement_id, payload)

@@ -59,6 +59,8 @@ from testing_agent.services.auth_session import SessionService
 from testing_agent.services.baseline_resolution import BaselineResolutionService
 from testing_agent.services.bug import BugService
 from testing_agent.services.code_risk_analysis import CodeRiskAnalysisService
+from testing_agent.services.function_case_export import FunctionCaseExporter
+from testing_agent.services.function_case_import import FunctionCaseImporter
 from testing_agent.services.function_test_case import FunctionTestCaseService
 from testing_agent.services.function_test_suite import FunctionTestSuiteService
 from testing_agent.services.integration_connection import IntegrationConnectionService
@@ -267,16 +269,27 @@ def get_function_test_suite_service(
 
 def get_function_test_case_service(
     session: AsyncSession = Depends(get_session),
-    settings: Settings = Depends(get_settings),
 ) -> FunctionTestCaseService:
-    zentao_resource_client = ZentaoMcpCases()
-    return FunctionTestCaseService(
+    return FunctionTestCaseService(FunctionTestCaseRepository(session))
+
+
+def get_function_case_importer(
+    session: AsyncSession = Depends(get_session),
+) -> FunctionCaseImporter:
+    return FunctionCaseImporter(FunctionTestCaseRepository(session))
+
+
+def get_function_case_exporter(
+    session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> FunctionCaseExporter:
+    return FunctionCaseExporter(
         FunctionTestCaseRepository(session),
         IntegrationConnectionService(
             IntegrationConnectionRepository(session),
             credential_cipher=IntegrationCredentialCipher(settings.integration_key),
         ),
-        zentao_resource_client,
+        ZentaoMcpCases(),
     )
 
 

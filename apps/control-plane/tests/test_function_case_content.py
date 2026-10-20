@@ -13,6 +13,7 @@ from testing_agent.domain.function_case_content import CaseContent, from_legacy
 from testing_agent.models.function_test_case import FunctionTestCase
 from testing_agent.repositories.function_test_case import FunctionTestCaseRepository
 from testing_agent.schemas.function_test_case import FunctionCaseRequest
+from testing_agent.services.function_case_import import FunctionCaseImporter
 from testing_agent.services.function_test_case import FunctionTestCaseService
 
 
@@ -103,7 +104,7 @@ async def test_import_rejects_invalid_structured_body(db):
     from testing_agent.core.errors import AppError
 
     prepare(db)
-    service = FunctionTestCaseService(FunctionTestCaseRepository(AsyncSessionAdapter(db)))
+    service = FunctionCaseImporter(FunctionTestCaseRepository(AsyncSessionAdapter(db)))
     with pytest.raises(AppError, match="正文格式不正确"):
         await service.import_cases(
             "u1",
@@ -123,7 +124,10 @@ async def test_import_rejects_invalid_structured_body(db):
 
 @pytest.mark.asyncio
 async def test_zentao_export_preserves_multiline_step_boundaries():
-    from testing_agent.services.function_test_case import ZentaoFunctionCaseImportTarget
+    from testing_agent.services.function_case_export import (
+        FunctionCaseExporter,
+        ZentaoFunctionCaseImportTarget,
+    )
 
     sent = []
 
@@ -144,7 +148,7 @@ async def test_zentao_export_preserves_multiline_step_boundaries():
             ],
         },
     )
-    service = FunctionTestCaseService(None, zentao_resource_client=Client())
+    service = FunctionCaseExporter(None, zentao_resource_client=Client())
     target = ZentaoFunctionCaseImportTarget(None, 1, 0, 2, 3, 4)
     await service.import_suite_cases_to_zentao("suite", [case], target)
     assert sent[0]["cases"][0]["steps"] == ["输入账号\n输入密码", "提交"]

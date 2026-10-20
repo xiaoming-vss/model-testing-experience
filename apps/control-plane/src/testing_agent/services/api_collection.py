@@ -50,9 +50,6 @@ from testing_agent.services.api_import_payload import (
     import_error as import_error,
 )
 from testing_agent.services.api_import_payload import (
-    import_items as import_items,
-)
-from testing_agent.services.api_import_payload import (
     int_value as int_value,
 )
 from testing_agent.services.api_import_payload import (
@@ -63,12 +60,6 @@ from testing_agent.services.api_import_payload import (
 )
 from testing_agent.services.api_import_payload import (
     normalize_json_value as normalize_json_value,
-)
-from testing_agent.services.api_import_payload import (
-    parse_import_payload as parse_import_payload,
-)
-from testing_agent.services.api_import_payload import (
-    read_import_payload as read_import_payload,
 )
 from testing_agent.services.api_import_payload import (
     repository_case_exists as repository_case_exists,
@@ -83,6 +74,9 @@ from testing_agent.services.api_import_payload import (
     validate_import_body as validate_import_body,
 )
 from testing_agent.services.common import apply_patch, dump, list_payload
+from testing_agent.services.import_payload import (
+    read_import_payload,
+)
 from testing_agent.services.project_access import (
     ProjectAction,
     require_requirement_access,

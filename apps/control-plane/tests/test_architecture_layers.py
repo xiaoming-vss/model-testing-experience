@@ -4,6 +4,28 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_function_asset_modules_do_not_depend_on_export_or_api_collection():
+    root = PROJECT_ROOT / "src/testing_agent"
+    for name in ("function_test_case", "function_case_import", "function_case_access"):
+        path = root / "services" / f"{name}.py"
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.ImportFrom):
+                module = node.module or ""
+                assert module != "testing_agent.services.api_collection"
+                assert not module.startswith("testing_agent.services.zentao")
+                assert module != "testing_agent.services.function_case_export"
+    for node in ast.walk(ast.parse((root / "domain/function_case_export.py").read_text())):
+        if isinstance(node, ast.ImportFrom):
+            assert not (node.module or "").startswith(
+                ("testing_agent.services", "testing_agent.repositories", "testing_agent.models")
+            )
+    for node in ast.walk(ast.parse((root / "services/function_case_export.py").read_text())):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            assert node.func.attr not in {"commit", "rollback"}, (
+                "Remote export must not imply a local transaction can undo remote writes"
+            )
+
+
 def test_source_does_not_call_foreign_private_interfaces():
     root = PROJECT_ROOT / "src/testing_agent"
     for path in root.rglob("*.py"):

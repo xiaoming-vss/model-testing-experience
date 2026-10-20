@@ -12,7 +12,7 @@ from testing_agent.schemas.function_test_case import (
     FunctionSuitesZentaoImportResponse,
     ImportFunctionSuitesToZentaoRequest,
 )
-from testing_agent.services.function_test_case import FunctionTestCaseService
+from testing_agent.services.function_case_export import FunctionCaseExporter
 
 
 def make_case(case_id: str, suite_id: str, title: str) -> SimpleNamespace:
@@ -135,7 +135,7 @@ class RecordingZentaoClient:
 def build_service(repository=None, client=None):
     connections = RecordingConnectionService()
     zentao = client or RecordingZentaoClient()
-    service = FunctionTestCaseService(repository or BulkImportRepository(), connections, zentao)
+    service = FunctionCaseExporter(repository or BulkImportRepository(), connections, zentao)
     return service, connections, zentao
 
 
@@ -329,7 +329,7 @@ def mcp_access(monkeypatch):
         async def resolve(self, user_id, project_id, expected_instance):
             return await self.connections.resolve_zentao_access(user_id, "conn-1", project_id)
 
-    monkeypatch.setattr("testing_agent.services.function_test_case.ZentaoMcpAccess", Access)
+    monkeypatch.setattr("testing_agent.services.function_case_export.ZentaoMcpAccess", Access)
 
 
 @pytest.mark.asyncio

@@ -142,11 +142,9 @@ from testing_agent.services.ai_task_output import (
 )
 from testing_agent.services.api_generate_import import ApiCandidateImporter
 from testing_agent.services.api_import_payload import bool_value as bool_value
-from testing_agent.services.api_import_payload import (
-    parse_import_payload,
-    validate_api_collection_import_payload,
-)
+from testing_agent.services.api_import_payload import validate_api_collection_import_payload
 from testing_agent.services.common import list_payload
+from testing_agent.services.import_payload import parse_import_payload
 from testing_agent.services.requirement import dump_requirement
 from testing_agent.services.sprint_daily_metrics import SprintDailyMetricsService
 
