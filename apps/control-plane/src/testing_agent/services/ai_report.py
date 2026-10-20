@@ -12,9 +12,11 @@ from testing_agent.core.errors import (
     ErrNotFound,
 )
 from testing_agent.core.sid import new_id
+from testing_agent.domain.ai_execution_intent import ExecutionIntent
 from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+from testing_agent.services.ai_execution.writer import ExecutionWriter, SqlExecutionWriter
 from testing_agent.services.ai_task_access import OwnedRun, RequireProjectAccess
 from testing_agent.services.ai_task_contracts import task_type_for
 from testing_agent.services.ai_task_output import dump_run, normalize_config_json
@@ -56,12 +58,14 @@ class TestReportWorkflow:
         ensure_project_access: RequireProjectAccess,
         owned_run: OwnedRun,
         id_factory: Callable[[], str] = new_id,
+        execution_writer: ExecutionWriter | None = None,
     ):
         self.repository = repository
         self.sprint_daily_metrics_service = sprint_daily_metrics_service
         self.ensure_project_access = ensure_project_access
         self.owned_run = owned_run
         self.new_id = id_factory
+        self.execution = execution_writer or SqlExecutionWriter()
 
     async def test_report_task_for_run(
         self, project_id: str, body: dict[str, Any], user_id: str
@@ -149,6 +153,12 @@ class TestReportWorkflow:
         if getattr(task, "id", None) is None:
             rows.insert(0, task)
         self.repository.add_all(rows)
+        await self.execution.save(
+            self.repository.session,
+            run,
+            intent=ExecutionIntent(actor_id=user_id),
+            worker=worker_task,
+        )
         await self.repository.commit()
         await self.repository.refresh(run)
         return dump_run(run)

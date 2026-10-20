@@ -493,6 +493,7 @@ class AiGenerateTaskService:
             ensure_project_access=self.ensure_project_access,
             owned_run=self.owned_run,
             id_factory=new_id,
+            execution_writer=self.execution,
         )
         return await workflow.test_report_task_for_run(project_id, body, user_id)
 
@@ -505,6 +506,7 @@ class AiGenerateTaskService:
             ensure_project_access=self.ensure_project_access,
             owned_run=self.owned_run,
             id_factory=new_id,
+            execution_writer=self.execution,
         )
         return await workflow.run_test_report(project_id, body, user_id)
 
@@ -517,6 +519,7 @@ class AiGenerateTaskService:
             ensure_project_access=self.ensure_project_access,
             owned_run=self.owned_run,
             id_factory=new_id,
+            execution_writer=self.execution,
         )
         return await workflow.list_test_report_runs(project_id, sprint_id, user_id)
 
@@ -527,6 +530,7 @@ class AiGenerateTaskService:
             ensure_project_access=self.ensure_project_access,
             owned_run=self.owned_run,
             id_factory=new_id,
+            execution_writer=self.execution,
         )
         return await workflow.export_test_report_pdf(run_id, user_id)
 
