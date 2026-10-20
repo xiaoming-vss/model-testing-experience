@@ -41,6 +41,7 @@ from testing_agent.services.project_access import (
     require_project_access,
     require_project_id,
 )
+from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 from testing_agent.services.zentao_mcp import ZentaoMcpAccess
 from testing_agent.services.zentao_resource import parse_zentao_remote_id, truncate_error
 
@@ -63,7 +64,9 @@ class FunctionTestCaseService:
         zentao_resource_client: Any | None = None,
         *,
         zentao_access: Any | None = None,
-    ):
+        deletion: ResourceDeletion | None = None,
+    ) -> None:
+        self.deletion = deletion or SqlResourceDeletion()
         self.zentao_access = zentao_access
         self.repository = repository
         self.integration_connection_service = integration_connection_service
@@ -607,7 +610,7 @@ class FunctionTestCaseService:
             cases.append(case)
         try:
             for case in cases:
-                await self.repository.hard_delete(case)
+                await self.deletion.delete(self.repository.session, case)
             await self.repository.commit()
         except Exception:
             await self.repository.rollback()
@@ -616,7 +619,7 @@ class FunctionTestCaseService:
 
     async def delete(self, user_id: str, case_id: str) -> dict:
         case = await self.get_accessible_entity(user_id, case_id, action="write")
-        await self.repository.hard_delete(case)
+        await self.deletion.delete(self.repository.session, case)
         await self.repository.commit()
         return {}
 

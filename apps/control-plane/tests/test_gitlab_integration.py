@@ -4,6 +4,7 @@ import httpx
 import pytest
 from authorization_database import AuthorizationDatabase
 from fastapi.testclient import TestClient
+from support.deletion import MemoryResourceDeletion
 
 from testing_agent.api.deps import get_current_user_id, get_integration_connection_service
 from testing_agent.app import create_app
@@ -79,6 +80,7 @@ def gitlab_client(repository, auth_provider, cipher):
         repository,
         gitlab_auth_provider=auth_provider,
         credential_cipher=cipher,
+        deletion=MemoryResourceDeletion(repository),
     )
     app.dependency_overrides[get_current_user_id] = lambda: "user-1"
     app.dependency_overrides[get_integration_connection_service] = lambda: service

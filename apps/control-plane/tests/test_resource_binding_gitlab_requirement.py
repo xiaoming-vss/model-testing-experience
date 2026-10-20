@@ -15,6 +15,7 @@ from types import SimpleNamespace
 import pytest
 from authorization_database import AuthorizationDatabase
 from fastapi.testclient import TestClient
+from support.deletion import MemoryResourceDeletion
 
 from testing_agent.api.deps import get_current_user_id, get_resource_binding_service
 from testing_agent.app import create_app
@@ -226,7 +227,9 @@ class FakeRepository:
 
 
 def _service(repository: FakeRepository) -> ResourceBindingService:
-    return ResourceBindingService(repository, RecordingConnectionService())
+    return ResourceBindingService(
+        repository, RecordingConnectionService(), deletion=MemoryResourceDeletion(repository)
+    )
 
 
 @pytest.mark.asyncio
@@ -678,7 +681,9 @@ async def test_repository_alias_cannot_bypass_uniqueness():
             return "11"
 
     repository = FakeRepository()
-    service = ResourceBindingService(repository, CanonicalConnections())
+    service = ResourceBindingService(
+        repository, CanonicalConnections(), deletion=MemoryResourceDeletion(repository)
+    )
     first = await service.create(
         "requirement", "req-1", _request(remoteResourceId="team/sub/repo"), "user-1"
     )

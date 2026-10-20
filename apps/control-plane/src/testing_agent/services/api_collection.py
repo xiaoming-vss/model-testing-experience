@@ -87,10 +87,14 @@ from testing_agent.services.project_access import (
     ProjectAction,
     require_requirement_access,
 )
+from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 
 
 class ApiCollectionService:
-    def __init__(self, repository: ApiCollectionRepository):
+    def __init__(
+        self, repository: ApiCollectionRepository, *, deletion: ResourceDeletion | None = None
+    ) -> None:
+        self.deletion = deletion or SqlResourceDeletion()
         self.repository = repository
 
     async def ensure_requirement_access(
@@ -140,7 +144,7 @@ class ApiCollectionService:
 
     async def delete(self, user_id: str, collection_id: str) -> dict:
         collection = await self.get_accessible_entity(user_id, collection_id, action="write")
-        await self.repository.hard_delete(collection)
+        await self.deletion.delete(self.repository.session, collection)
         await self.repository.commit()
         return {}
 

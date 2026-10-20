@@ -15,6 +15,7 @@ from testing_agent.schemas.ui_test_case import UiCaseRequest, UiCaseResponse
 from testing_agent.services.api_collection import read_import_payload
 from testing_agent.services.common import apply_patch, dump, list_payload
 from testing_agent.services.project_access import ProjectAction, require_project_access
+from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 
 UI_IMPORT_CASE_FIELDS = {"name", "enabled", "stepsJson", "orderNo"}
 UI_IMPORT_STEP_FIELDS = {
@@ -226,7 +227,10 @@ def validate_ui_import_payload(payload: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 class UiTestCaseService:
-    def __init__(self, repository: UiTestCaseRepository):
+    def __init__(
+        self, repository: UiTestCaseRepository, *, deletion: ResourceDeletion | None = None
+    ) -> None:
+        self.deletion = deletion or SqlResourceDeletion()
         self.repository = repository
 
     async def get_accessible_suite(
@@ -305,6 +309,6 @@ class UiTestCaseService:
 
     async def delete(self, user_id: str, case_id: str) -> dict:
         case = await self.get_accessible_entity(user_id, case_id, action="write")
-        await self.repository.hard_delete(case)
+        await self.deletion.delete(self.repository.session, case)
         await self.repository.commit()
         return {}

@@ -14,6 +14,7 @@ from types import SimpleNamespace
 import pytest
 from authorization_database import AuthorizationDatabase
 from fastapi.testclient import TestClient
+from support.deletion import MemoryResourceDeletion
 
 from testing_agent.api.deps import get_current_user_id, get_resource_binding_service
 from testing_agent.app import create_app
@@ -197,6 +198,7 @@ def _service(
         repository,
         connections or RecordingConnectionService(),
         zentao_client if zentao_client is not None else RecordingZentaoClient(),
+        deletion=MemoryResourceDeletion(repository),
     )
 
 

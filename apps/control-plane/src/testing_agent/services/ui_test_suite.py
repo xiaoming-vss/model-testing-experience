@@ -12,10 +12,14 @@ from testing_agent.services.project_access import (
     ProjectAction,
     require_requirement_access,
 )
+from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 
 
 class UiTestSuiteService:
-    def __init__(self, repository: UiTestSuiteRepository):
+    def __init__(
+        self, repository: UiTestSuiteRepository, *, deletion: ResourceDeletion | None = None
+    ) -> None:
+        self.deletion = deletion or SqlResourceDeletion()
         self.repository = repository
 
     async def ensure_requirement_access(
@@ -76,6 +80,6 @@ class UiTestSuiteService:
 
     async def delete(self, user_id: str, suite_id: str) -> dict:
         suite = await self.get_accessible_entity(user_id, suite_id, action="write")
-        await self.repository.hard_delete(suite)
+        await self.deletion.delete(self.repository.session, suite)
         await self.repository.commit()
         return {}

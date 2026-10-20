@@ -8,7 +8,9 @@ from typing import Any
 from sqlalchemy import select
 
 from testing_agent.core.sid import new_id
-from testing_agent.domain.integration_execution import StepStatus
+from testing_agent.domain.integration_execution import StepStatus, require
+from testing_agent.domain.zentao_fields import FIELD_UPDATE_KEY as KEY
+from testing_agent.domain.zentao_fields import fields_equal as equal
 from testing_agent.models.bug import Bug
 from testing_agent.models.bug_activity import BugActivity
 from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
@@ -20,8 +22,6 @@ from testing_agent.services.bug_zentao_description import (
     source_hash,
     unresolved_legacy_images,
 )
-from testing_agent.services.bug_zentao_fields import KEY, equal
-from testing_agent.services.integration_bug_context import require
 from testing_agent.services.service_instance import instance_key
 
 ERRORS = {

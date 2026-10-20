@@ -20,6 +20,7 @@ from testing_agent.repositories.test_order_entry import TestOrderEntryRepository
 from testing_agent.schemas.test_order import TestOrderRequest, TestOrderResponse
 from testing_agent.services.common import apply_patch, dump, list_payload
 from testing_agent.services.project_access import ProjectAction, require_project_access
+from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 
 
 def _name_conflict_error(exc: IntegrityError) -> AppError | None:
@@ -37,7 +38,10 @@ class TestOrderService:
         self,
         repository: TestOrderRepository,
         entry_repository: TestOrderEntryRepository,
+        *,
+        deletion: ResourceDeletion | None = None,
     ) -> None:
+        self.deletion = deletion or SqlResourceDeletion()
         self.repository = repository
         self.entry_repository = entry_repository
 
@@ -166,6 +170,6 @@ class TestOrderService:
 
     async def delete(self, user_id: str, order_id: str) -> dict:
         order = await self.get_accessible_entity(user_id, order_id, action="write")
-        await self.repository.hard_delete(order)
+        await self.deletion.delete(self.repository.session, order)
         await self.repository.commit()
         return {}

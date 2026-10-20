@@ -97,7 +97,7 @@ async def test_api_run_scope_changes_permissions_and_statistics_with_requirement
         await collections.report("u1", group["collectionRunId"])
     assert (await cases.get_run("u2", single["runId"]))["runId"] == single["runId"]
     assert (await collections.get("u2", group["collectionRunId"]))["sprintId"] == "s2"
-    from testing_agent.repositories.deletion import delete_resource
+    from testing_agent.services.resource_deletion import delete_resource
 
     adapter = AsyncSessionAdapter(db)
     for case in list(db.scalars(select(ApiCase))):

@@ -16,6 +16,7 @@ from testing_agent.models.project_skill_space import ProjectSkillSpace
 from testing_agent.models.stored_file import StoredFile
 from testing_agent.services.common import list_payload
 from testing_agent.services.project_access import require_project_access
+from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 from testing_agent.services.skill_storage import publish_skill_files
 from testing_agent.services.stored_file import utcnow
 
@@ -51,7 +52,8 @@ async def replace_manifest(session, skill, manifest, signature_seconds):
 
 
 class ProjectSkillSpaceService:
-    def __init__(self, repository, files=None):
+    def __init__(self, repository, files=None, *, deletion: ResourceDeletion | None = None) -> None:
+        self.deletion = deletion or SqlResourceDeletion()
         self.repository, self.files = repository, files
 
     async def ensure_project_access(self, user_id, project_id, *, action="read"):
@@ -134,7 +136,7 @@ class ProjectSkillSpaceService:
         await replace_manifest(
             self.repository.session, skill, [], self.files.settings.signature_seconds
         )
-        await self.repository.hard_delete(skill)
+        await self.deletion.delete(self.repository.session, skill)
         await self.repository.commit()
         return {}
 

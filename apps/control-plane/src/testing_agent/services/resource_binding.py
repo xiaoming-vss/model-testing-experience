@@ -15,6 +15,7 @@ from testing_agent.services.common import list_payload
 from testing_agent.services.gitlab_bindings import GitLabBindings
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.project_access import ProjectAction, require_project_access
+from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 from testing_agent.services.zentao_bindings import ZentaoBindings
 
 SUPPORTED_PROVIDERS = ("zentao", "gitlab")
@@ -28,7 +29,9 @@ class ResourceBindingService:
         zentao_resource_client: Any | None = None,
         *,
         zentao_access: Any | None = None,
-    ):
+        deletion: ResourceDeletion | None = None,
+    ) -> None:
+        self.deletion = deletion or SqlResourceDeletion()
         self.repository = repository
         self.integration_connection_service = integration_connection_service
         self.zentao_resource_client = zentao_resource_client
@@ -164,11 +167,11 @@ class ResourceBindingService:
             binding = await self.gitlab_bindings().guard_delete(binding, resource_id)
             # Only project owners reach binding mutations.
             binding.status = BindingStatus.UNBOUND.value
-            await self.repository.hard_delete(binding)
+            await self.deletion.delete(self.repository.session, binding)
             await self.repository.commit()
             return {}
         await self.ensure_local_access(user_id, resource_type, resource_id)
         binding.status = BindingStatus.UNBOUND.value
-        await self.repository.hard_delete(binding)
+        await self.deletion.delete(self.repository.session, binding)
         await self.repository.commit()
         return {}

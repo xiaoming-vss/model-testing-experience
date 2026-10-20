@@ -6,6 +6,13 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
+from testing_agent.core.errors import AppError
+
+
+def require(condition: bool, message: str) -> None:
+    if not condition:
+        raise AppError(409, message, 409)
+
 
 class JobStatus(StrEnum):
     QUEUED = "queued"

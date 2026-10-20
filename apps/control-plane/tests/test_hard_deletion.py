@@ -12,7 +12,8 @@ from sqlalchemy.ext.compiler import compiles
 
 from testing_agent import models as m
 from testing_agent.core.errors import AppError
-from testing_agent.repositories.deletion import delete_resource
+from testing_agent.repositories.base import BaseRepository
+from testing_agent.services.resource_deletion import delete_resource
 
 
 @compiles(LONGTEXT, "sqlite")
@@ -100,7 +101,9 @@ async def test_database_prevents_bypassing_child_guard(db):
     suite = await add(db, m.FunctionTestSuite(suite_id="suite", requirement_id="r", name="suite"))
     await add(db, m.FunctionTestCase(case_id="case", suite_id="suite", title="case"))
     await db.commit()
-    await db.delete(suite)
+    # A low-level repository delete does not orchestrate business checks or
+    # remove owned children. The database constraint still protects the graph.
+    await BaseRepository(db).hard_delete(suite)
     with pytest.raises(IntegrityError):
         await db.flush()
     await db.rollback()

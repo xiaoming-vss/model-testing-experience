@@ -403,7 +403,7 @@ async def test_mysql_hard_delete_waits_for_child_and_rechecks(
 
     from testing_agent import models as models
     from testing_agent.core.errors import AppError
-    from testing_agent.repositories.deletion import delete_resource
+    from testing_agent.services.resource_deletion import delete_resource
 
     suite_model, case_model = getattr(models, suite_name), getattr(models, case_name)
     with mysql.begin() as connection:

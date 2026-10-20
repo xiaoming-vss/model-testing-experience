@@ -10,10 +10,18 @@ from testing_agent.schemas.api_extract_rule import ApiExtractRuleRequest, ApiExt
 from testing_agent.services.api_case import ApiCaseService
 from testing_agent.services.common import apply_patch, dump, list_payload
 from testing_agent.services.project_access import ProjectAction
+from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 
 
 class ApiExtractRuleService:
-    def __init__(self, repository: ApiExtractRuleRepository, api_cases: ApiCaseService):
+    def __init__(
+        self,
+        repository: ApiExtractRuleRepository,
+        api_cases: ApiCaseService,
+        *,
+        deletion: ResourceDeletion | None = None,
+    ) -> None:
+        self.deletion = deletion or SqlResourceDeletion()
         self.repository = repository
         self.api_cases = api_cases
 
@@ -66,6 +74,6 @@ class ApiExtractRuleService:
 
     async def delete(self, user_id: str, extract_rule_id: str) -> dict:
         rule = await self.get_accessible_entity(user_id, extract_rule_id, action="write")
-        await self.repository.hard_delete(rule)
+        await self.deletion.delete(self.repository.session, rule)
         await self.repository.commit()
         return {}

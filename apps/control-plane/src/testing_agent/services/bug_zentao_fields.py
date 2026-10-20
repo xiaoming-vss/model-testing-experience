@@ -6,6 +6,8 @@ from sqlalchemy import update
 
 from testing_agent.core.errors import AppError
 from testing_agent.core.sid import new_id
+from testing_agent.domain.zentao_fields import FIELD_UPDATE_KEY as KEY
+from testing_agent.domain.zentao_fields import fields_equal as equal
 from testing_agent.models.bug_activity import BugActivity
 from testing_agent.models.bug_zentao_push import BugZentaoPush
 from testing_agent.services.bug_zentao_attachment import BugZentaoAttachmentService
@@ -13,7 +15,6 @@ from testing_agent.services.bug_zentao_options import build_options, user_option
 from testing_agent.services.integration_transaction import local_transaction
 from testing_agent.services.mcp_client import McpCallError
 
-KEY = "_fieldUpdate"
 STALE_AFTER = timedelta(minutes=5)
 
 
@@ -49,13 +50,6 @@ def fields(remote):
         "openedBuild": list(dict.fromkeys(str(item) for item in builds)),
         "assignedTo": assignee,
     }
-
-
-def equal(left, right):
-    return (
-        set(left["openedBuild"]) == set(right["openedBuild"])
-        and left["assignedTo"] == right["assignedTo"]
-    )
 
 
 class BugZentaoFieldsService:

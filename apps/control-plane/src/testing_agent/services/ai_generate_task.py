@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 from testing_agent.services.project_access import ProjectAction, require_project_access
+from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 
 if TYPE_CHECKING:
     from testing_agent.services.code_risk_analysis import CodeRiskAnalysisService
@@ -158,7 +159,10 @@ class AiGenerateTaskService:
         files=None,
         code_risk_analysis_service: CodeRiskAnalysisService | None = None,
         execution_writer: ExecutionWriter | None = None,
-    ):
+        *,
+        deletion: ResourceDeletion | None = None,
+    ) -> None:
+        self.deletion = deletion or SqlResourceDeletion()
         self.repository = repository
         self.execution = execution_writer or SqlExecutionWriter()
         self.code_risk_analysis_service = code_risk_analysis_service
@@ -472,7 +476,7 @@ class AiGenerateTaskService:
 
     async def delete(self, kind: str, task_id: str, user_id: str) -> dict:
         task = await self.owned_task(user_id, task_id, kind, action="write")
-        await self.repository.hard_delete(task)
+        await self.deletion.delete(self.repository.session, task)
         await self.repository.commit()
         return {}
 
@@ -480,7 +484,7 @@ class AiGenerateTaskService:
         run = await self.owned_run(user_id, run_id, kind, action="write")
         if run.status in RUN_ACTIVE_STATUSES:
             raise ErrAiGenerateTaskRunRunning()
-        await self.repository.hard_delete(run)
+        await self.deletion.delete(self.repository.session, run)
         await self.repository.commit()
         return {}
 

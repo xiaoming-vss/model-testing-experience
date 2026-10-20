@@ -67,20 +67,20 @@ def test_readonly_cannot_delete(api):
 
 def test_failure_after_first_delete_rolls_back(api, monkeypatch):
     from testing_agent.core.errors import ErrNotFound
-    from testing_agent.repositories.function_test_case import FunctionTestCaseRepository
+    from testing_agent.services.resource_deletion import SqlResourceDeletion
 
     owner, _, _, _, url, ids = setup_cases(api)
-    original = FunctionTestCaseRepository.hard_delete
+    original = SqlResourceDeletion.delete
     count = 0
 
-    async def fail_second(self, obj):
+    async def fail_second(self, session, obj):
         nonlocal count
         count += 1
         if count == 2:
-            raise ErrNotFound
-        await original(self, obj)
+            raise ErrNotFound()
+        await original(self, session, obj)
 
-    monkeypatch.setattr(FunctionTestCaseRepository, "hard_delete", fail_second)
+    monkeypatch.setattr(SqlResourceDeletion, "delete", fail_second)
     response = api.post(url + "/batch-delete", headers=owner, json={"caseIds": ids})
     assert response.status_code == 404
     assert api.get(url, headers=owner).json()["data"]["total"] == 3

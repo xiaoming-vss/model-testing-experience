@@ -1,4 +1,4 @@
-"""Hard deletion: explicit business children block; owned implementation data is removed.
+"""Owned-record storage cleanup; business deletion policy lives in the service layer.
 
 The caller authorizes access and commits the transaction. S3 objects are retained
 by the unified file lifecycle; resource deletion never touches historical local paths.
@@ -6,87 +6,17 @@ by the unified file lifecycle; resource deletion never touches historical local 
 
 from __future__ import annotations
 
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, inspect, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent import models as m
-from testing_agent.core.errors import AppError, ErrNotFound
-
-# 非需求域 AI 任务只是派生产物的容器，随所属项目/迭代/测试单一起清理，不作为删除阻塞。
-AUXILIARY_TASK_TYPES = ("test_report_generate", "test_order_graph")
+from testing_agent.core.errors import ErrNotFound
+from testing_agent.db.base import Base
+from testing_agent.domain.resource_deletion import AUXILIARY_TASK_TYPES
 
 
 async def _erase(session, model, *conditions):
     await session.execute(delete(model).where(*conditions))
-
-
-async def _blockers(session, obj):
-    """Use locking reads so MySQL REPEATABLE READ cannot hide newly committed children."""
-    checks = []
-    if isinstance(obj, m.Project):
-        checks += [
-            (m.Sprint, m.Sprint.project_id == obj.project_id, "迭代"),
-            (m.ApiEnvironment, m.ApiEnvironment.project_id == obj.project_id, "API 环境"),
-            (m.ProjectSkillSpace, m.ProjectSkillSpace.project_id == obj.project_id, "项目技能"),
-            (m.SharedService, m.SharedService.project_id == obj.project_id, "项目共享服务"),
-        ]
-    elif isinstance(obj, m.Sprint):
-        checks += [
-            (m.Requirement, m.Requirement.sprint_id == obj.sprint_id, "需求"),
-            (m.TestOrder, m.TestOrder.sprint_id == obj.sprint_id, "测试单"),
-        ]
-    elif isinstance(obj, m.Requirement):
-        checks += [
-            (model, model.requirement_id == obj.requirement_id, label)
-            for model, label in (
-                (m.FunctionTestSuite, "功能测试集"),
-                (m.ApiCollection, "API 集合"),
-                (m.UiTestSuite, "UI 测试集"),
-            )
-        ]
-    elif isinstance(obj, m.FunctionTestSuite):
-        checks.append((m.FunctionTestCase, m.FunctionTestCase.suite_id == obj.suite_id, "测试用例"))
-    elif isinstance(obj, m.UiTestSuite):
-        checks.append((m.UiTestCase, m.UiTestCase.suite_id == obj.suite_id, "测试用例"))
-    elif isinstance(obj, m.ApiCollection):
-        checks.append((m.ApiCase, m.ApiCase.collection_id == obj.collection_id, "测试用例"))
-
-    for model, kind, key in (
-        (m.Project, "project", "project_id"),
-        (m.Sprint, "sprint", "sprint_id"),
-        (m.Requirement, "requirement", "requirement_id"),
-    ):
-        if isinstance(obj, model):
-            value = getattr(obj, key)
-            checks.append(
-                (
-                    m.AiGenerateTask,
-                    (getattr(m.AiGenerateTask, key) == value)
-                    & (~m.AiGenerateTask.task_type.in_(AUXILIARY_TASK_TYPES)),
-                    "AI 任务",
-                )
-            )
-            checks.append(
-                (
-                    m.ResourceBinding,
-                    (m.ResourceBinding.local_resource_type == kind)
-                    & (m.ResourceBinding.local_resource_id == value),
-                    "资源绑定",
-                )
-            )
-    blockers = []
-    for child_model, condition, label in checks:
-        ids = list(
-            await session.scalars(
-                select(child_model.__table__.c.id).where(condition).with_for_update()
-            )
-        )
-        if ids:
-            blockers.append(
-                {"resource": child_model.__tablename__, "name": label, "count": len(ids)}
-            )
-    if blockers:
-        detail = "、".join(f"{item['count']} 个{item['name']}" for item in blockers)
-        raise AppError(409, f"请先删除子资源：{detail}", 409, {"blockers": blockers})
 
 
 async def _workers(session, domain, run_ids):
@@ -154,31 +84,12 @@ async def _ai_runs(session, condition):
         await _erase(session, m.AiGenerateTaskRun, m.AiGenerateTaskRun.run_id.in_(ids))
 
 
-async def delete_resource(session, obj):
-    """Delete an authorized entity and its owned records, without committing."""
-    if isinstance(obj, (m.Bug, m.Project, m.SharedService)):
-        from testing_agent.services.integration_lifecycle import (
-            guard_integrations,
-            revoke_integrations,
-        )
+async def delete_owned_data(session: AsyncSession, obj: Base) -> None:
+    """Erase owned storage after the caller locks and authorizes the root resource.
 
-        project_id = obj.project_id
-        await session.scalar(
-            select(m.Project).where(m.Project.project_id == project_id).with_for_update()
-        )
-        filters = {"project_id": project_id}
-        if isinstance(obj, m.Bug):
-            filters["bug_id"] = obj.bug_id
-        elif isinstance(obj, m.SharedService):
-            filters["service_id"] = obj.service_id
-        await guard_integrations(session, **filters)
-        await revoke_integrations(session, **filters)
-    model = type(obj)
-    locked = await session.scalar(select(model).where(model.id == obj.id).with_for_update())
-    if locked is None:
-        raise ErrNotFound()
-    await _blockers(session, obj)
-
+    Recursive children are implementation data (AI containers or personal
+    connection rows), never business lifecycle dispatches.
+    """
     if isinstance(obj, m.ApiCase):
         # Aggregate snapshots/counters cannot be kept after removing one of their cases.
         containing_runs = select(m.ApiCollectionRunItem.collection_run_id).where(
@@ -234,7 +145,7 @@ async def delete_resource(session, obj):
             )
         )
         for graph_task in graph_tasks:
-            await delete_resource(session, graph_task)
+            await _delete_owned_child(session, graph_task)
     elif isinstance(obj, m.FunctionTestCase):
         # 引用了该用例的执行条目随用例一起删除（条目只按业务键引用用例，没有外键）。
         await _erase(session, m.TestOrderEntry, m.TestOrderEntry.case_id == obj.case_id)
@@ -265,7 +176,7 @@ async def delete_resource(session, obj):
             )
         )
         for connection in connections:
-            await delete_resource(session, connection)
+            await _delete_owned_child(session, connection)
         await _erase(
             session, m.ServiceAuthorization, m.ServiceAuthorization.service_id == obj.service_id
         )
@@ -283,7 +194,7 @@ async def delete_resource(session, obj):
             )
         )
         for auxiliary in auxiliaries:
-            await delete_resource(session, auxiliary)
+            await _delete_owned_child(session, auxiliary)
         if isinstance(obj, m.Sprint):
             await _erase(session, m.SprintDailyMetrics, m.SprintDailyMetrics.sprint_id == value)
         else:
@@ -296,7 +207,37 @@ async def delete_resource(session, obj):
                 )
             )
             for connection in connections:
-                await delete_resource(session, connection)
+                await _delete_owned_child(session, connection)
             await _erase(session, m.ProjectMember, m.ProjectMember.project_id == value)
     await session.delete(obj)
     await session.flush()
+
+
+async def lock_project_for_deletion(session: AsyncSession, project_id: str) -> None:
+    await session.scalar(
+        select(m.Project).where(m.Project.project_id == project_id).with_for_update()
+    )
+
+
+async def lock_resource_for_deletion(session: AsyncSession, obj: Base) -> bool:
+    model = type(obj)
+    mapper = inspect(obj).mapper
+    row = await session.scalar(
+        select(model)
+        .where(
+            *(
+                column == getattr(obj, mapper.get_property_by_column(column).key)
+                for column in mapper.primary_key
+            )
+        )
+        .with_for_update()
+    )
+    return row is not None
+
+
+async def _delete_owned_child(session: AsyncSession, obj: Base) -> None:
+    if not isinstance(obj, (m.AiGenerateTask, m.IntegrationConnection)):
+        raise ValueError("Only owned implementation records may use recursive storage deletion")
+    if not await lock_resource_for_deletion(session, obj):
+        raise ErrNotFound()
+    await delete_owned_data(session, obj)

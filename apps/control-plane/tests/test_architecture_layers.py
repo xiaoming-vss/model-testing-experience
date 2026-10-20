@@ -4,6 +4,23 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_business_deletion_is_explicit_and_storage_never_commits():
+    root = PROJECT_ROOT / "src/testing_agent"
+    for path in (root / "services").rglob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.Attribute):
+                assert node.attr != "hard_delete", (
+                    f"{path.name}: use ResourceDeletion to make lifecycle coordination explicit"
+                )
+    for node in ast.walk(ast.parse((root / "repositories/deletion.py").read_text())):
+        if isinstance(node, ast.Attribute):
+            assert node.attr not in {"commit", "rollback"}
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            assert node.func.id != "delete_resource", (
+                "Storage recursion cannot invoke business commands"
+            )
+
+
 def test_bug_import_stages_do_not_depend_on_coordinator_or_mix_remote_and_local_writes():
     root = PROJECT_ROOT / "src/testing_agent/services/bug_import"
     for path in root.glob("*.py"):
@@ -143,7 +160,6 @@ def test_execution_commands_do_not_scan_sessions_or_use_orm_command_flags():
 def test_repositories_cannot_add_service_dependencies():
     # These pre-existing edges are tracked in B2/B4/B5 and must be removed there.
     remaining = {
-        ("deletion.py", "testing_agent.services.integration_lifecycle"),
         ("requirement_design.py", "testing_agent.services.ai_task_contracts"),
     }
     for path in (PROJECT_ROOT / "src/testing_agent/repositories").rglob("*.py"):

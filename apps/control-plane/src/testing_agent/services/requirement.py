@@ -25,6 +25,7 @@ from testing_agent.services.binding_summary import (
 )
 from testing_agent.services.common import list_payload
 from testing_agent.services.project_access import ProjectAction
+from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 from testing_agent.services.sprint import SprintService
 
 
@@ -38,7 +39,10 @@ class RequirementService:
         requirements: RequirementRepository,
         sprints: SprintService,
         files=None,
-    ):
+        *,
+        deletion: ResourceDeletion | None = None,
+    ) -> None:
+        self.deletion = deletion or SqlResourceDeletion()
         self.requirements = requirements
         self.sprints = sprints
         self.files = files
@@ -154,7 +158,7 @@ class RequirementService:
 
     async def delete(self, user_id: str, requirement_id: str) -> dict:
         requirement = await self.get_accessible_entity(user_id, requirement_id, action="write")
-        await self.requirements.hard_delete(requirement)
+        await self.deletion.delete(self.requirements.session, requirement)
         await self.requirements.commit()
         return {}
 

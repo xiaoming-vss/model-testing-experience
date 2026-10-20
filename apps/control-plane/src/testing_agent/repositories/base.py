@@ -18,9 +18,8 @@ class BaseRepository:
         self.session = session
 
     async def hard_delete(self, obj: Any) -> None:
-        from testing_agent.repositories.deletion import delete_resource
-
-        await delete_resource(self.session, obj)
+        """Low-level row deletion only; business services use ResourceDeletion."""
+        await self.session.delete(obj)
 
     def add(self, obj: Any) -> None:
         self.session.add(obj)

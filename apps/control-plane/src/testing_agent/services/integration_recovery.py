@@ -151,7 +151,8 @@ async def record_verified_recovery(
             },
         }
     elif kind == "update_fields":
-        from testing_agent.services.bug_zentao_fields import KEY, equal
+        from testing_agent.domain.zentao_fields import FIELD_UPDATE_KEY as KEY
+        from testing_agent.domain.zentao_fields import fields_equal as equal
 
         if (
             row.payload_json.get(KEY, {}).get("status") != "succeeded"

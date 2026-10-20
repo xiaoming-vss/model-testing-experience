@@ -34,6 +34,7 @@ from testing_agent.schemas.admin_user import AdminUserResponse
 from testing_agent.services.auth_mode import AuthModeService
 from testing_agent.services.auth_session import invalidate_sessions
 from testing_agent.services.common import paged_payload
+from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 from testing_agent.services.worker_authorization import revoke_executions
 
 
@@ -44,7 +45,10 @@ class UserAdminService:
         projects: ProjectRepository,
         settings: Settings | None = None,
         mode: AuthModeService | None = None,
-    ):
+        *,
+        deletion: ResourceDeletion | None = None,
+    ) -> None:
+        self.deletion = deletion or SqlResourceDeletion()
         self.users = users
         self.projects = projects
         self.settings = settings or get_settings()
@@ -201,7 +205,7 @@ class UserAdminService:
                 ).all()
             )
             for connection in connections:
-                await self.users.hard_delete(connection)
+                await self.deletion.delete(self.users.session, connection)
             await session.execute(
                 delete(ApiEnvironmentVar).where(ApiEnvironmentVar.secret_user_id == target.user_id)
             )

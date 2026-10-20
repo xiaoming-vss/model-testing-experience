@@ -11,11 +11,11 @@ from testing_agent.core.sid import new_id
 from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.models.project import Project
 from testing_agent.models.shared_service import ServiceAuthorization, SharedService
-from testing_agent.repositories.deletion import delete_resource
 from testing_agent.repositories.shared_service_catalog import SharedServiceCatalogRepository
 from testing_agent.schemas.shared_service import McpTemplate
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.project_access import require_project_access
+from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 from testing_agent.services.service_instance import instance_key, normalize_instance_url
 from testing_agent.services.shared_service_catalog import SharedServiceCatalog
 from testing_agent.services.worker_authorization import revoke_executions
@@ -24,7 +24,10 @@ from testing_agent.services.zentao_mcp_instance import discover_instance
 
 
 class SharedServiceService:
-    def __init__(self, connections: IntegrationConnectionService):
+    def __init__(
+        self, connections: IntegrationConnectionService, *, deletion: ResourceDeletion | None = None
+    ) -> None:
+        self.deletion = deletion or SqlResourceDeletion()
         self.connections = connections
         self.session = connections.repository.session
 
@@ -349,7 +352,7 @@ class SharedServiceService:
         own = await self.own_connection(resource, user_id)
         if own:
             await revoke_executions(self.session, actor=user_id, connection_id=own.connection_id)
-            await delete_resource(self.session, own)
+            await self.deletion.delete(self.session, own)
         await self.session.commit()
         return await self.dump(resource, user_id)
 
@@ -369,7 +372,7 @@ class SharedServiceService:
             await revoke_executions(
                 self.session, actor=own.user_id, connection_id=own.connection_id
             )
-            await delete_resource(self.session, own)
-        await delete_resource(self.session, resource)
+            await self.deletion.delete(self.session, own)
+        await self.deletion.delete(self.session, resource)
         await self.session.commit()
         return {}

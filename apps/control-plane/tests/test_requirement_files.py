@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 from pydantic import ValidationError
+from support.deletion import MemoryResourceDeletion
 
 from testing_agent.app import create_app
 from testing_agent.schemas.requirement import CreateRequirementRequest, UpdateRequirementRequest
@@ -10,6 +11,7 @@ from testing_agent.services.requirement import RequirementService
 
 class FakeRequirementRepository:
     def __init__(self):
+        self.session = None
         self.requirement = None
         self.existing = None
         self.restored = None
@@ -57,7 +59,12 @@ class FakeFiles:
 @pytest.mark.asyncio
 async def test_s3_source_survives_enhanced_content_update_and_hard_delete():
     repository = FakeRequirementRepository()
-    service = RequirementService(repository, FakeSprintService(), files=FakeFiles())
+    service = RequirementService(
+        repository,
+        FakeSprintService(),
+        files=FakeFiles(),
+        deletion=MemoryResourceDeletion(repository),
+    )
     body = CreateRequirementRequest(name="Login", documentType="word", documentFileId="file-1")
     payload = await service.create("user-1", "sprint-1", body)
     assert payload["documentContent"] == ""

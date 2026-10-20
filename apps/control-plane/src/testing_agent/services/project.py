@@ -30,6 +30,7 @@ from testing_agent.services.project_access import (
     project_role,
     require_project_access,
 )
+from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 from testing_agent.services.worker_authorization import revoke_executions
 
 
@@ -42,7 +43,10 @@ def dump_project(project: Project, role: str = "owner", super_admin: bool = Fals
 
 
 class ProjectService:
-    def __init__(self, projects: ProjectRepository):
+    def __init__(
+        self, projects: ProjectRepository, *, deletion: ResourceDeletion | None = None
+    ) -> None:
+        self.deletion = deletion or SqlResourceDeletion()
         self.projects = projects
 
     async def get_accessible_entity(
@@ -117,7 +121,7 @@ class ProjectService:
     async def delete(self, user_id: str, project_id: str) -> dict:
         project = await self.get_accessible_entity(user_id, project_id, action="manage")
         await revoke_executions(self.projects.session, project_id=project_id)
-        await self.projects.hard_delete(project)
+        await self.deletion.delete(self.projects.session, project)
         await self.projects.commit()
         return {}
 

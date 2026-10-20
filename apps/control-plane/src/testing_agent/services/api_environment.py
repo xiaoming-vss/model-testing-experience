@@ -9,10 +9,14 @@ from testing_agent.repositories.api_environment import ApiEnvironmentRepository
 from testing_agent.schemas.api_environment import ApiEnvironmentRequest, ApiEnvironmentResponse
 from testing_agent.services.common import apply_patch, dump, list_payload
 from testing_agent.services.project_access import ProjectAction, require_project_access
+from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 
 
 class ApiEnvironmentService:
-    def __init__(self, repository: ApiEnvironmentRepository):
+    def __init__(
+        self, repository: ApiEnvironmentRepository, *, deletion: ResourceDeletion | None = None
+    ) -> None:
+        self.deletion = deletion or SqlResourceDeletion()
         self.repository = repository
 
     async def ensure_project_access(
@@ -64,6 +68,6 @@ class ApiEnvironmentService:
 
     async def delete(self, user_id: str, environment_id: str) -> dict:
         environment = await self.get_accessible_entity(user_id, environment_id, action="write")
-        await self.repository.hard_delete(environment)
+        await self.deletion.delete(self.repository.session, environment)
         await self.repository.commit()
         return {}

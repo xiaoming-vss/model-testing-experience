@@ -103,7 +103,7 @@ async def test_scope_move_updates_permissions_and_live_metrics_not_saved_daily_c
     history = await metrics.get("s1", "2026-09-10")
     assert history.ui_case_total == 7 and history.ui_case_success == 6
     from testing_agent.core.errors import ErrNotFound
-    from testing_agent.repositories.deletion import delete_resource
+    from testing_agent.services.resource_deletion import delete_resource
 
     adapter = AsyncSessionAdapter(db)
     for case in list(db.scalars(select(UiTestCase))):

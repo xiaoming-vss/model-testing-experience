@@ -24,6 +24,7 @@ from testing_agent.repositories.test_order_entry import FUNCTION_CASE_TYPE, Test
 from testing_agent.schemas.test_order import TestOrderEntryResponse
 from testing_agent.services.common import dump, list_payload
 from testing_agent.services.project_access import ProjectAction
+from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 from testing_agent.services.test_order import TestOrderService
 
 EMPTY_CASE_CONTENT: dict[str, Any] = {"preconditions": [], "steps": []}
@@ -34,7 +35,10 @@ class TestOrderEntryService:
         self,
         repository: TestOrderEntryRepository,
         test_order_service: TestOrderService,
+        *,
+        deletion: ResourceDeletion | None = None,
     ) -> None:
+        self.deletion = deletion or SqlResourceDeletion()
         self.repository = repository
         self.orders = test_order_service
 
@@ -170,6 +174,6 @@ class TestOrderEntryService:
         if entry is None or entry.order_id != order_id:
             raise ErrTestOrderEntryNotFound()
         await self.ensure_order_access(user_id, order_id, action="write")
-        await self.repository.hard_delete(entry)
+        await self.deletion.delete(self.repository.session, entry)
         await self.repository.commit()
         return {}

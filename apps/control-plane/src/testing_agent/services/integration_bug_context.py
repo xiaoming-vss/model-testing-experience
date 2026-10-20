@@ -7,8 +7,9 @@ from typing import Any
 
 from sqlalchemy import select
 
-from testing_agent.core.errors import AppError, ErrForbidden
+from testing_agent.core.errors import ErrForbidden
 from testing_agent.domain.integration_execution import digest, utc
+from testing_agent.domain.integration_execution import require as require
 from testing_agent.domain.rich_text import extract_file_ids
 from testing_agent.models.bug import Bug
 from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
@@ -24,11 +25,6 @@ from testing_agent.services.bug_zentao_fields import equal, update_status
 from testing_agent.services.bug_zentao_push import PRIORITY, SEVERITY, STALE_AFTER
 from testing_agent.services.service_instance import instance_key
 from testing_agent.services.zentao_mcp_selection import binding_service_id, select_mcp_service
-
-
-def require(condition: bool, message: str) -> None:
-    if not condition:
-        raise AppError(409, message, 409)
 
 
 def source(bug, files: list[dict[str, Any]]) -> dict[str, Any]:

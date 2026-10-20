@@ -29,6 +29,7 @@ from testing_agent.services.common import list_payload
 from testing_agent.services.environment_access import authorized_environment_vars
 from testing_agent.services.execution_secrets import protect_run
 from testing_agent.services.project_access import ProjectAction, require_project_access
+from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 
 
 def dump(schema: type[BaseModel], obj: Any) -> dict[str, Any]:
@@ -88,7 +89,10 @@ class ApiCaseContext:
 
 
 class ApiCaseService:
-    def __init__(self, repository: ApiCaseRepository):
+    def __init__(
+        self, repository: ApiCaseRepository, *, deletion: ResourceDeletion | None = None
+    ) -> None:
+        self.deletion = deletion or SqlResourceDeletion()
         self.repository = repository
 
     async def get_accessible_collection(
@@ -170,7 +174,7 @@ class ApiCaseService:
 
     async def delete(self, user_id: str, case_id: str) -> dict:
         context = await self.get_accessible_context(user_id, case_id, action="write")
-        await self.repository.hard_delete(context.api_case)
+        await self.deletion.delete(self.repository.session, context.api_case)
         await self.repository.commit()
         return {}
 

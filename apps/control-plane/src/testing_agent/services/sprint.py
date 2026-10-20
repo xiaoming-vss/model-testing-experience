@@ -13,6 +13,7 @@ from testing_agent.services.binding_summary import load_zentao_binding_summaries
 from testing_agent.services.common import list_payload
 from testing_agent.services.project import ProjectService
 from testing_agent.services.project_access import ProjectAction
+from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 
 
 def as_utc(value: datetime) -> datetime:
@@ -56,7 +57,14 @@ def validate_schedule(start_time: datetime, end_time: datetime) -> None:
 
 
 class SprintService:
-    def __init__(self, sprints: SprintRepository, projects: ProjectService):
+    def __init__(
+        self,
+        sprints: SprintRepository,
+        projects: ProjectService,
+        *,
+        deletion: ResourceDeletion | None = None,
+    ) -> None:
+        self.deletion = deletion or SqlResourceDeletion()
         self.sprints = sprints
         self.projects = projects
 
@@ -119,6 +127,6 @@ class SprintService:
 
     async def delete(self, user_id: str, sprint_id: str) -> dict:
         sprint = await self.get_accessible_entity(user_id, sprint_id, action="write")
-        await self.sprints.hard_delete(sprint)
+        await self.deletion.delete(self.sprints.session, sprint)
         await self.sprints.commit()
         return {}
