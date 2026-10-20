@@ -6,7 +6,10 @@
 
 [通用后端规则](../agents/backend-development.md)适用于四个后端项目；[控制面开发规则](development-rules.md)补充本项目的 Web、权限、数据库和事务验证入口。新增开发和相关修改同时按两份规则执行。
 
-独立集成 Worker 拆分已开始，方案见[拆分计划](integration-worker-split-plan.md)，代码交付与未完成接入见[实施记录](integration-worker-implementation.md)。控制面异步协议、独立 Worker 和 Studio 任务交互已接入并完成隔离专项验证；恢复账本、切换及真实外部验收仍在推进。默认开关关闭，未启用项目继续使用原入口。
+集成远端写入由独立 integration-worker 执行，控制面保留授权、写入意图、账本与结果事务。
+未启用的范围不能回退到旧同步写入口；未知写入不能自动重发。约束以
+[ADR 0006](adr/0006-independent-integration-execution.md) 为准，交付与外部验收记录见
+[实施记录](integration-worker-implementation.md)。
 
 [需求维度测试设计接口](requirement-design.md)
 
@@ -25,9 +28,9 @@
 | --- | --- |
 | `main.py` | 启动入口，调用 uvicorn 加载 `app.py` 的工厂函数 |
 | `app.py` | 应用装配、异常处理、OpenAPI 契约改写 |
-| `routers/` | 27 个路由模块，全部由 `app.py` 挂载 |
+| `routers/` | 路由注册，由 `app.py` 挂载 |
 | `handlers/` | 薄 HTTP 处理层，被 router 调用 |
-| `services/`、`services/ai_execution/` | 业务服务与 AI 任务编排 |
+| `services/` | 业务服务；AI 执行、Worker 分域处理、Bug 导入分别组织为子包 |
 | `repositories/` | 数据访问 |
 | `models/`、`schemas/` | ORM 模型与请求/响应模型 |
 | `core/` | `config.py`、`security.py`、`enums.py`、`errors.py`、`sid.py` |
@@ -39,7 +42,9 @@
 
 | 模块 | 职责 |
 | --- | --- |
-| `ai_task_contracts.py`、`ai_task_output.py` | 阶段常量、产物解析、快照与响应序列化 |
+| `domain/ai_tasks.py`、`services/ai_task_output.py` | 纯任务规则与常量、产物解析、快照与响应序列化 |
+| `ai_run_launcher.py` | 发起运行、执行授权、快照准备与显式写入 |
+| `ai_execution/writer.py` | 根据 ExecutionIntent 同步运行、阶段、attempt 与队列；flush，不提交调用者事务 |
 | `ai_source_archive.py` | 源码归档校验、替换与失败清理 |
 | `ai_stage_workflow.py` | 阶段保存、审核、修订、重试和图谱派发 |
 | `ai_report.py` | 测试报告任务、运行与 PDF 导出 |
@@ -48,6 +53,47 @@
 | `ai_task_access.py` | 各工作流依赖的最小授权接口，不依赖入口服务实现 |
 
 功能与 UI 正式资产导入继续由 `function_generate_import.py`、`ui_generate_import.py` 处理。审核只改变审核状态，正式资产由独立导入入口创建；不再保留旧的审核即导入路径。通用需求访问链集中在 `project_access.require_requirement_access`，每次调用仍显式传递操作人及权限动作。
+
+## 模块接口与事务责任
+
+以下路径相对 `src/testing_agent/`。保留同一控制面部署和业务数据库，模块划分不增加远程调用。
+
+| 职责与公共入口 | 隐藏的实现及调用约束 |
+| --- | --- |
+| `services/auth_session.py` 的 SessionService、本地/LDAP 登录模块 | 验证当前账号和会话；项目授权仍使用 `project_access` 与 `domain/project_policy.py`，资源归属不能由角色替代 |
+| `services/ai_execution/writer.py` 的 ExecutionWriter | 显式接收 ExecutionIntent；查询投影在 `repositories/ai_execution.py`，普通 repository.commit 不推进执行状态 |
+| `repositories/worker_task.py` 的 execution_context | 返回 `domain/worker_context.py` 的明确上下文；不向 WorkerTask ORM 临时附加业务字段 |
+| `services/worker_task.py` 的 ai_worker_task | 查找任务并检查当前执行授权；文档、源码包及技能入口复用它，调用方仍检查所需租约/资源条件 |
+| `services/worker_domains/` | AI、API、UI 各自维护快照和结果规则；公共协调层管理领取、租约与事件身份，集成写入使用独立协议 |
+| `services/personal_credentials.py` 的 PersonalCredentialAccess | 先检查本人归属、供应方、范围和状态，再解密；供应方查询与绑定不依赖连接管理的私有方法 |
+| `services/bug_import/` | 远端读取、准备、本地写入和文件处理分开；事务提交由导入编排负责，提交后的附件失败不回滚已创建 Bug |
+| `services/resource_deletion.py` 的 ResourceDeletion | 删除前业务检查与生命周期协调；`repositories/deletion.py` 只负责锁定和关联清理；最终提交由调用者负责 |
+| `services/integration_bug_state.py` 的 IntegrationBugState | 本地证据应用与状态投影；恢复记录通过显式能力传入，生命周期不反向依赖完整步骤执行器 |
+
+新增业务命令必须明确提交者。可复用写入辅助方法不能隐式提交；远端成功不能由本地回滚撤销。
+修改执行与删除时继续覆盖旧回传、未知写入、授权撤销及并发保护，不用统一重试掩盖各域差异。
+
+`tests/test_architecture_layers.py` 检查层次依赖、源码静态导入无环、跨模块私有调用、
+禁止 ORM 命令临时字段，以及测试准备不导入被收集的测试模块。
+这些静态约束不能证明动态依赖和业务行为正确，仍需对应行为测试。
+
+## HTTP 诊断
+
+`core/http_diagnostics.py` 在入口校验单个规范 UUID 格式的 `X-Request-ID`，不合法或重复时
+重新生成，并通过响应头、request.state 和 ContextVar 传递同一标识；请求结束后重置上下文。
+日志使用 `testing_agent.http`，只记录方法、路由模板、HTTP 状态、已知业务错误码及耗时。
+未知异常记录异常类型与模块/函数/行号，省略消息、源码、局部变量和请求内容。
+异常链最多记录 8 项、每项最多 40 帧，避免错误输出无界增长。
+
+未开始响应的未知异常返回既有 500 信封，不把原异常交给服务器重复打印。
+已开始的流式响应无法替换为 500，记录安全异常后以脱敏的中止异常结束；
+日志中的状态保留已发送状态，不能据此认为流式输出成功完成。
+成功的 Worker 领取/心跳摘要使用 DEBUG，其余正常请求摘要使用 INFO，未知异常使用 ERROR。
+官方 `mtx-control-plane` 启动入口关闭 Uvicorn 默认 access log，并配置该命名 logger；
+自行直接启动 Uvicorn 时也应采用等价配置，以免另行记录原始路径和查询。
+
+诊断契约由 `test_http_diagnostics.py` 验证，包括上下文并发隔离、隐私、错误信封、
+流式失败以及启动日志配置。完整整改状态见[实施记录](remediation-implementation.md)。
 
 ## 数据库读取与历史列表
 
@@ -135,7 +181,7 @@ Control Plane 启动时注册每日统计任务，每分钟检查一次，在北
 
 在 `apps/control-plane/` 执行 `uv run --locked --extra dev python scripts/check.py`，
 依次检查 Ruff、格式、全源码类型和完整测试。可通过 `--tests tests/<file>.py`
-选择关联回归，或 `--static-only` 仅执行静态检查。共享测试准备代码逐步集中到
+选择关联回归，或 `--static-only` 仅执行静态检查。共享测试准备代码集中到
 `tests/support/`，新增共享夹具不放在 `test_*.py` 中供其他模块导入。
 当前整改的实际测试数量、失败修复和真实 MySQL 结果见[实施记录](remediation-implementation.md)，
 模拟测试不替代真实 MySQL、S3 或外部目录验收。
