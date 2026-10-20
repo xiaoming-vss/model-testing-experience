@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 from authorization_database import AuthorizationDatabase
 
+from testing_agent.domain.worker_context import UiWorkerContext
 from testing_agent.models.ui_test_case_run import UiTestCaseRun
 from testing_agent.models.ui_test_suite_run import UiTestSuiteRun, UiTestSuiteRunItem
 from testing_agent.schemas.ui_run import DebugRunUiCaseRequest, RunUiSuiteRequest
@@ -331,7 +332,9 @@ async def test_case_snapshot_reads_only_case_run_snapshot_json():
     }
     session = SnapshotOnlySession(SimpleNamespace(snapshot_json=snapshot))
 
-    payload = await build_snapshot(session, "ui", worker_task("case_debug"))
+    payload = await build_snapshot(
+        session, "ui", worker_task("case_debug"), context=UiWorkerContext("case-1", "suite-1")
+    )
 
     assert session.scalar_calls == 1
     assert payload["caseRun"]["case"]["stepsJson"] == [{"orderNo": 1, "keyword": "open"}]
@@ -358,7 +361,9 @@ async def test_suite_snapshot_combines_suite_run_and_item_snapshots():
         [SimpleNamespace(snapshot_json=item_snapshot)],
     )
 
-    payload = await build_snapshot(session, "ui", worker_task("suite_run"))
+    payload = await build_snapshot(
+        session, "ui", worker_task("suite_run"), context=UiWorkerContext("case-1", "suite-1")
+    )
 
     assert session.scalar_calls == 1
     assert session.scalars_calls == 1
@@ -383,7 +388,9 @@ async def test_ui_snapshot_does_not_fallback_when_run_snapshot_is_empty(
 ):
     session = SnapshotOnlySession(SimpleNamespace(snapshot_json={}))
 
-    payload = await build_snapshot(session, "ui", worker_task(task_type))
+    payload = await build_snapshot(
+        session, "ui", worker_task(task_type), context=UiWorkerContext("case-1", "suite-1")
+    )
 
     assert session.scalar_calls == 1
     expected = {"items": []} if task_type == "suite_run" else {}

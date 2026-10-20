@@ -406,6 +406,11 @@ class WorkerAssetRepository:
         self.requirement = requirement
         self.session = None
 
+    async def execution_context(self, task):
+        from testing_agent.domain.worker_context import AiWorkerContext
+
+        return AiWorkerContext(task.generate_task_id, None)
+
     async def get_worker_task(self, domain, task_id):
         if domain == "ai" and task_id == self.worker_task.task_id:
             return self.worker_task

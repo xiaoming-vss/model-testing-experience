@@ -8,7 +8,9 @@ from testing_agent.core.enums import RunStatus, StageStatus
 from testing_agent.core.errors import ErrBadRequest, ErrForbidden, ErrNotFound
 from testing_agent.core.sid import new_id
 from testing_agent.domain.ai_execution_intent import ExecutionIntent
+from testing_agent.domain.worker_context import AiWorkerContext, ApiWorkerContext
 from testing_agent.models.api_case_run import ApiCaseRun
+from testing_agent.models.api_collection_run import ApiCollectionRun
 from testing_agent.models.ui_test_case_run import UiTestCaseRun
 from testing_agent.models.ui_test_suite_run import UiTestSuiteRun
 from testing_agent.repositories.worker_task import WorkerTaskRepository
@@ -122,7 +124,6 @@ class WorkerTaskService:
 
     async def expire_leases(self, domain: str):
         for task in await self.repository.expired_tasks(domain):
-            task = await self.repository.project_context(task)
             if domain == "ai":
                 run = await self.repository.get_ai_run(task.run_id)
                 if run is not None:
@@ -162,16 +163,22 @@ class WorkerTaskService:
             await authorize_execution(self.repository.session, task, pending=True)
         except type(ErrForbidden):
             return None
+        context = await self.repository.execution_context(task)
         await update_task_claimed(task, body)
         if domain == "api":
-            if task.collection_run_id:
-                run = await self.repository.get_api_collection_run(task.collection_run_id)
+            run: ApiCaseRun | ApiCollectionRun | None
+            if not isinstance(context, ApiWorkerContext):
+                raise ErrBadRequest()
+            if context.collection_run_id:
+                run = await self.repository.get_api_collection_run(context.collection_run_id)
             else:
                 run = await self.repository.get_api_run(task.run_id)
             if run is None:
                 raise ErrNotFound()
             run.status = RunStatus.QUEUED.value
         if domain == "ai":
+            if not isinstance(context, AiWorkerContext):
+                raise ErrBadRequest()
             task.lease_expires_at = datetime.now(UTC) + timedelta(seconds=AI_LEASE_SECONDS)
             ai_run = await self.repository.get_ai_run(task.run_id)
             if ai_run is None:
@@ -186,11 +193,11 @@ class WorkerTaskService:
                 "taskId": task.task_id,
                 "taskType": task.task_type,
                 "runId": task.run_id,
-                "generateTaskId": task.generate_task_id,
+                "generateTaskId": context.generate_task_id,
                 "projectId": ai_run.project_id,
                 "sprintId": ai_run.sprint_id,
                 "requirementId": ai_run.requirement_id,
-                "llmConnectionId": task.llm_connection_id,
+                "llmConnectionId": context.llm_connection_id,
                 "checkpointEnabled": ai_run.checkpoint_enabled,
                 "currentStage": ai_run.current_stage,
                 "leaseSeconds": AI_LEASE_SECONDS,
@@ -200,7 +207,7 @@ class WorkerTaskService:
             return payload
         await self.repository.commit()
         await self.repository.refresh(task)
-        payload = task_payload(task)
+        payload = task_payload(task, context)
         payload["leaseSeconds"] = LEASE_SECONDS
         return payload
 
@@ -230,8 +237,9 @@ class WorkerTaskService:
             task.heartbeat_at = started_at
             task.lease_expires_at = datetime.now(UTC) + timedelta(seconds=LEASE_SECONDS)
         if domain == "api":
-            if task.collection_run_id:
-                run = await self.repository.get_api_collection_run(task.collection_run_id)
+            run: ApiCaseRun | ApiCollectionRun | UiTestCaseRun | UiTestSuiteRun | None
+            if task.task_type == "api_collection_run":
+                run = await self.repository.get_api_collection_run(task.run_id)
             else:
                 run = await self.repository.get_api_run(task.run_id)
             if run:
@@ -376,7 +384,7 @@ class WorkerTaskService:
             run_id=new_id(),
             collection_run_id=item.collection_run_id,
             case_id=body.case_id or item.case_id,
-            collection_id=task.collection_id,
+            collection_id=collection_run.collection_id,
             environment_id=collection_run.environment_id,
             trigger_user_id=collection_run.trigger_user_id,
             trigger_type="collection",
@@ -471,11 +479,14 @@ class WorkerTaskService:
     async def llm_credentials(self, task_id: str) -> dict:
         task = await find_task(self.repository.session, "ai", task_id)
         authority = await authorize_execution(self.repository.session, task)
+        context = await self.repository.execution_context(task)
+        if not isinstance(context, AiWorkerContext):
+            raise ErrNotFound()
         connection = await require_personal_connection(
             self.repository.session,
             authority.actor,
             "llm",
-            str(task.llm_connection_id or ""),
+            str(context.llm_connection_id or ""),
             authority.project_id,
         )
         payload = llm_credentials_payload(task_id, connection, self.credential_cipher)
@@ -523,8 +534,10 @@ class WorkerTaskService:
         run = await self.repository.get_ai_run(task.run_id)
         if run is None or not run.requirement_id:
             raise ErrNotFound()
-        if task.task_type == "ui_case_generate" and run.task_id != task.generate_task_id:
-            raise ErrNotFound()
+        if task.task_type == "ui_case_generate":
+            context = await self.repository.execution_context(task)
+            if not isinstance(context, AiWorkerContext) or run.task_id != context.generate_task_id:
+                raise ErrNotFound()
         requirement = await self.repository.get_requirement(run.requirement_id)
         if requirement is None:
             raise ErrNotFound()
@@ -549,7 +562,13 @@ class WorkerTaskService:
         if task.task_type != "ui_case_generate":
             raise ErrNotFound()
         run = await self.repository.get_ai_run(task.run_id)
-        if run is None or run.task_id != task.generate_task_id or not run.task_id:
+        context = await self.repository.execution_context(task)
+        if (
+            run is None
+            or not isinstance(context, AiWorkerContext)
+            or run.task_id != context.generate_task_id
+            or not run.task_id
+        ):
             raise ErrNotFound()
         file_id = (run.snapshot_json or {}).get("sourceArchiveFileId")
         if not file_id:

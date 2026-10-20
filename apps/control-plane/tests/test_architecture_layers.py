@@ -4,6 +4,22 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_worker_domains_do_not_depend_on_protocol_dispatch_or_other_domains():
+    root = PROJECT_ROOT / "src/testing_agent/services/worker_domains"
+    for path in root.glob("*.py"):
+        allowed = {"testing_agent.services.worker_domains.events"}
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.ImportFrom):
+                module = node.module or ""
+                assert module not in {
+                    "testing_agent.services.worker",
+                    "testing_agent.services.worker_task",
+                    "testing_agent.services.worker_domains",
+                }, f"{path.name}: execution rules must not depend on their coordinator"
+                if module.startswith("testing_agent.services.worker_domains."):
+                    assert module in allowed, f"{path.name}: domains must remain independent"
+
+
 def test_ai_repositories_do_not_hide_execution_writes_in_commit():
     for name in ("ai_generate_task.py", "worker_task.py"):
         path = PROJECT_ROOT / "src/testing_agent/repositories" / name

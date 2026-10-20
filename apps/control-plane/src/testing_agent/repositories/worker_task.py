@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import overload
 
 from sqlalchemy import select
 
+from testing_agent.domain.worker_context import WorkerExecutionContext
 from testing_agent.models.ai_generate_task import AiGenerateTaskRun
 from testing_agent.models.ai_generate_task_source_archive import AiGenerateTaskSourceArchive
 from testing_agent.models.api_case_run import ApiCaseRun
@@ -15,6 +15,7 @@ from testing_agent.models.requirement import Requirement
 from testing_agent.models.ui_test_suite_run import UiTestSuiteRunItem
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.base import BaseRepository
+from testing_agent.repositories.worker_context import read_worker_context
 
 
 class WorkerTaskRepository(BaseRepository):
@@ -31,18 +32,10 @@ class WorkerTaskRepository(BaseRepository):
             )
         )
 
-        return await self.project_context(row)
+        return row
 
-    @overload
-    async def project_context(self, row: None) -> None: ...
-
-    @overload
-    async def project_context(self, row: WorkerTask) -> WorkerTask: ...
-
-    async def project_context(self, row: WorkerTask | None) -> WorkerTask | None:
-        from testing_agent.repositories.worker_context import project_worker_context
-
-        return await self.session.run_sync(lambda session: project_worker_context(session, row))
+    async def execution_context(self, task: WorkerTask) -> WorkerExecutionContext:
+        return await self.session.run_sync(lambda sync: read_worker_context(sync, task))
 
     async def expired_tasks(self, domain: str):
         return list(
@@ -70,7 +63,7 @@ class WorkerTaskRepository(BaseRepository):
             .with_for_update(skip_locked=True)
         )
 
-        return await self.project_context(row)
+        return row
 
     async def get_api_item(self, item_id: str) -> ApiCollectionRunItem | None:
         return await self.session.scalar(

@@ -24,6 +24,19 @@ class FakeWorkerRepository:
         self.session = SimpleNamespace()
         self.task = task
 
+    async def execution_context(self, task):
+        from testing_agent.domain.worker_context import (
+            AiWorkerContext,
+            ApiWorkerContext,
+            UiWorkerContext,
+        )
+
+        if task.domain == "ai":
+            return AiWorkerContext(task.generate_task_id, task.llm_connection_id)
+        if task.domain == "api":
+            return ApiWorkerContext(task.case_id, task.collection_id, task.collection_run_id)
+        return UiWorkerContext(task.case_id, task.suite_id)
+
     async def claim_pending(self, domain: str):
         return self.task if domain == "ui" else None
 
@@ -652,6 +665,7 @@ async def test_ai_worker_claim_includes_requirement_analysis_checkpoint_config()
         ).read_text()
     )
     task = SimpleNamespace(
+        domain="ai",
         task_id="worker-task-1",
         task_type="requirement_analysis",
         worker_id="",
@@ -808,6 +822,7 @@ async def test_api_collection_item_complete_creates_case_run_and_binds_item(monk
         error_message="",
     )
     collection_run = SimpleNamespace(
+        collection_id="collection-1",
         collection_run_id="collection-run-1",
         requirement_id="requirement-1",
         sprint_id="sprint-1",

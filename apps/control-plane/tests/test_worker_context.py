@@ -103,3 +103,28 @@ def test_unknown_domain_is_not_treated_as_ui(db):
     task = WorkerTask(domain="unknown", task_type="case_run", task_id="x", run_id="x")
     with pytest.raises(type(ErrBadRequest)):
         read_worker_context(db, task)
+
+
+def test_claim_payload_uses_context_instead_of_stale_queue_attributes():
+    from testing_agent.services.worker_domains.events import task_payload
+
+    task = WorkerTask(
+        domain="ui", task_type="case_debug", task_id="dispatch", run_id="run", status="claimed"
+    )
+    task.suite_id = "stale-suite"
+    task.case_id = "stale-case"
+    payload = task_payload(task, UiWorkerContext("case", "suite"))
+    assert payload["caseId"] == "case"
+    assert payload["suiteId"] == "suite"
+    assert payload["collectionId"] is None
+    assert payload["generateTaskId"] is None
+    assert payload["status"] == "claimed"
+
+
+@pytest.mark.parametrize("domain", ["api", "ui"])
+async def test_snapshot_rejects_context_for_another_domain(domain):
+    from testing_agent.services.worker import build_snapshot
+
+    task = WorkerTask(domain=domain, task_type="case_debug", task_id="x", run_id="x")
+    with pytest.raises(type(ErrBadRequest)):
+        await build_snapshot(None, domain, task, context=AiWorkerContext("task", "llm"))

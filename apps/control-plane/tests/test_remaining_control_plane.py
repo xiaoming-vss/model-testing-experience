@@ -2785,7 +2785,7 @@ async def test_save_extracted_environment_vars_upserts_successful_results(monkey
             self.added.append(row)
 
     session = FakeSession()
-    monkeypatch.setattr(worker, "new_id", lambda: "env-var-1", raising=False)
+    monkeypatch.setattr("testing_agent.services.worker_domains.api.new_id", lambda: "env-var-1")
 
     await worker.save_extracted_environment_vars(
         session,
@@ -3174,7 +3174,11 @@ async def test_api_worker_snapshot_returns_go_case_run_request_payload():
         async def scalars(self, statement):
             return EmptyScalars()
 
-    payload = await worker.build_snapshot(FakeSession(), "api", task)
+    from testing_agent.domain.worker_context import ApiWorkerContext
+
+    payload = await worker.build_snapshot(
+        FakeSession(), "api", task, context=ApiWorkerContext("case-1", "collection-1", None)
+    )
 
     assert payload == {
         "taskType": "api_case_debug",
