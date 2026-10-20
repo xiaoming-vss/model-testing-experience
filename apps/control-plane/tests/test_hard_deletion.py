@@ -215,9 +215,7 @@ async def test_ai_task_cleans_records_but_preserves_legacy_source(db, tmp_path):
     )
     await add(
         db,
-        m.AiGenerateRunImport(
-            id="import", run_id="run"
-        ),
+        m.AiGenerateRunImport(id="import", run_id="run"),
     )
     await add(db, m.WorkerTask(task_id="worker", domain="ai", task_type="generate", run_id="run"))
     source = tmp_path / "source.zip"
@@ -276,9 +274,7 @@ async def test_ai_run_deletes_its_own_stages_and_queue_only(db):
     )
     await add(
         db,
-        m.AiGenerateRunImport(
-            id="import", run_id="run"
-        ),
+        m.AiGenerateRunImport(id="import", run_id="run"),
     )
     await add(db, m.WorkerTask(task_id="worker", domain="ai", task_type="generate", run_id="run"))
     await db.commit()

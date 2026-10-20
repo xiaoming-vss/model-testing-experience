@@ -596,7 +596,8 @@ def test_local_source_archive_requires_reupload(tmp_path):
     client, _ = ui_task_client(repository)
     task_id = create_ui_task(client)
     repository.archive = SimpleNamespace(
-        task_id=task_id, file_id="",
+        task_id=task_id,
+        file_id="",
     )
     response = client.post(
         f"/v1/ui-case-generate-tasks/{task_id}/run", json={"connectionId": "llm-1"}
