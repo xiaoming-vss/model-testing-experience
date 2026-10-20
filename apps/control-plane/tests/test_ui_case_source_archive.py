@@ -15,6 +15,8 @@ from testing_agent.api.deps import (
     get_ai_generate_task_service,
     get_current_user_id,
     get_file_service,
+    get_generation_queries,
+    get_generation_task_commands,
     get_settings,
     get_worker_task_service,
 )
@@ -26,6 +28,9 @@ from testing_agent.models.ai_generate_task import (
 )
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.services.ai_generate_task import AiGenerateTaskService
+from testing_agent.services.ai_task_commands import GenerationTaskCommands
+from testing_agent.services.ai_task_queries import GenerationQueries
+from testing_agent.services.ai_task_scope import GenerationAccess
 from testing_agent.services.worker_task import WorkerTaskService
 
 
@@ -164,6 +169,12 @@ def ui_task_client(repository, storage_root=None):
     )
     app.state.test_files = files
     app.dependency_overrides[get_ai_generate_task_service] = lambda: service
+    app.dependency_overrides[get_generation_queries] = lambda: GenerationQueries(
+        repository, service.source_archive_repository, GenerationAccess(repository)
+    )
+    app.dependency_overrides[get_generation_task_commands] = lambda: GenerationTaskCommands(
+        repository, service.source_archive_repository, GenerationAccess(repository)
+    )
     return TestClient(app, raise_server_exceptions=False), service
 
 

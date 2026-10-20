@@ -23,6 +23,8 @@ from support.execution_writer import MemoryExecutionWriter
 from testing_agent.api.deps import (
     get_ai_generate_task_service,
     get_current_user_id,
+    get_generation_queries,
+    get_generation_task_commands,
     get_worker_task_service,
 )
 from testing_agent.app import create_app
@@ -1119,9 +1121,9 @@ def test_code_risk_analysis_task_endpoints_dispatch_to_service():
                 )
             )
 
-        async def owned_run(self, user_id, run_id, kind):
+        async def get_run(self, kind, run_id, user_id):
             assert kind == "code_risk_analysis"
-            return make_run(result_yaml=RISK_REPORT_YAML)
+            return dump_code_risk_analysis_run(make_run(result_yaml=RISK_REPORT_YAML))
 
         async def list(self, kind, project_id, user_id):
             return {"items": [], "total": 0}
@@ -1156,6 +1158,8 @@ def test_code_risk_analysis_task_endpoints_dispatch_to_service():
     app = create_app(worker_settings())
     fake = FakeAiGenerateTaskService()
     app.dependency_overrides[get_ai_generate_task_service] = lambda: fake
+    app.dependency_overrides[get_generation_queries] = lambda: fake
+    app.dependency_overrides[get_generation_task_commands] = lambda: fake
     app.dependency_overrides[get_current_user_id] = lambda: "user-1"
     client = TestClient(app)
 

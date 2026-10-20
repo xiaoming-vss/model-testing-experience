@@ -28,10 +28,14 @@ from testing_agent.core.errors import AppError
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generate_task import AiGenerateTaskRun as Run
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+from testing_agent.repositories.ai_generate_task_source_archive import (
+    AiGenerateTaskSourceArchiveRepository,
+)
 from testing_agent.repositories.ai_run_history import history_page
 from testing_agent.repositories.resource_binding import ResourceBindingRepository
 from testing_agent.repositories.sprint_daily_metrics import SprintDailyMetricsRepository
-from testing_agent.services.ai_generate_task import AiGenerateTaskService
+from testing_agent.services.ai_task_queries import GenerationQueries
+from testing_agent.services.ai_task_scope import GenerationAccess
 from testing_agent.services.code_risk_analysis import CodeRiskAnalysisService
 
 
@@ -79,7 +83,10 @@ async def test_history_filter_precedes_pagination_and_preserves_global_latest(da
 async def test_history_permissions_and_page_bounds(database):
     sync, session, _ = database
     seed_history(sync, 1)
-    service = AiGenerateTaskService(AiGenerateTaskRepository(session))
+    repository = AiGenerateTaskRepository(session)
+    service = GenerationQueries(
+        repository, AiGenerateTaskSourceArchiveRepository(session), GenerationAccess(repository)
+    )
     with pytest.raises(AppError):
         await service.list_run_summaries("function", "task", "outsider")
     with pytest.raises(AppError):
@@ -147,7 +154,7 @@ async def test_ai_task_scope_checks_are_batched_without_loading_requirement_docu
     sql.clear()
     repo = AiGenerateTaskRepository(session)
     scopes = await repo.task_scope_resources([task] * 40)
-    service = AiGenerateTaskService(repo)
+    service = GenerationAccess(repo)
     for row in [task] * 40:
         await service.validate_task_scope(row, scopes)
     assert len(sql) == 2
@@ -197,3 +204,22 @@ async def test_bug_snapshot_uses_project_and_found_sprint_without_pagination(db)
     assert len(rows) == 105
     assert {row["bugId"] for row in rows} == {f"b{i}" for i in range(105)}
     assert "description_html" not in rows[0]
+
+
+async def test_run_detail_keeps_artifact_and_scope_while_history_stays_compact(database):
+    sync, session, _ = database
+    seed_history(sync, 1)
+    repository = AiGenerateTaskRepository(session)
+    queries = GenerationQueries(
+        repository, AiGenerateTaskSourceArchiveRepository(session), GenerationAccess(repository)
+    )
+    with pytest.raises(AppError):
+        await queries.get_run("function", "run-00", "outsider")
+    detail = await queries.get_run("function", "run-00", "u")
+    assert detail["runId"] == "run-00"
+    assert detail["resultYaml"] == "cases: " + "Y" * 200_000
+    assert detail["snapshotJson"] == {"source": "X" * 200_000}
+    history = await queries.list_run_summaries("function", "task", "u")
+    assert history["items"][0]["hasResult"] is True
+    assert "resultYaml" not in history["items"][0]
+    assert "snapshotJson" not in history["items"][0]

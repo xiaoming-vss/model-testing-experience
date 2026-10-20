@@ -3,10 +3,15 @@ from __future__ import annotations
 from fastapi import Depends, Query
 from fastapi.responses import Response
 
-from testing_agent.api.deps import get_ai_generate_task_service, get_current_user_id
+from testing_agent.api.deps import (
+    get_ai_generate_task_service,
+    get_current_user_id,
+    get_generation_queries,
+)
 from testing_agent.core.errors import success_payload
 from testing_agent.schemas.ai_generate_task import TestReportGenerateTaskRunRequest
-from testing_agent.services.ai_generate_task import AiGenerateTaskService, dump_run
+from testing_agent.services.ai_generate_task import AiGenerateTaskService
+from testing_agent.services.ai_task_queries import GenerationQueries
 
 
 async def run_test_report_generate_run(
@@ -30,7 +35,7 @@ async def list_test_report_generate_runs(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, alias="pageSize", ge=1, le=100),
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationQueries = Depends(get_generation_queries),
 ):
     return success_payload(
         await service.list_test_report_run_summaries(
@@ -42,9 +47,9 @@ async def list_test_report_generate_runs(
 async def get_test_report_generate_run(
     run_id: str,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationQueries = Depends(get_generation_queries),
 ):
-    return success_payload(dump_run(await service.owned_run(user_id, run_id, "test_report")))
+    return success_payload(await service.get_run("test_report", run_id, user_id))
 
 
 async def export_test_report_generate_run_pdf(

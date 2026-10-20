@@ -4,7 +4,9 @@ from types import SimpleNamespace
 import pytest
 from authorization_database import AuthorizationDatabase
 
-from testing_agent.services.ai_generate_task import AiGenerateTaskService, dump_task
+from testing_agent.services.ai_task_output import dump_task
+from testing_agent.services.ai_task_queries import GenerationQueries
+from testing_agent.services.ai_task_scope import GenerationAccess
 
 CREATED_AT = datetime(2026, 8, 4, 1, 2, 3, tzinfo=UTC)
 UPDATED_AT = datetime(2026, 8, 5, 4, 5, 6, tzinfo=UTC)
@@ -74,7 +76,8 @@ class TaskQueryRepository:
 )
 async def test_task_list_and_detail_queries_include_timestamps(kind, task_type):
     task = make_task(task_type)
-    service = AiGenerateTaskService(TaskQueryRepository(task))
+    repository = TaskQueryRepository(task)
+    service = GenerationQueries(repository, repository, GenerationAccess(repository))
 
     listed = await service.list(kind, "project-1", "user-1")
     detail = await service.get(kind, "task-1", "user-1")

@@ -2,21 +2,27 @@ from __future__ import annotations
 
 from fastapi import Depends, Query
 
-from testing_agent.api.deps import get_ai_generate_task_service, get_current_user_id
+from testing_agent.api.deps import (
+    get_ai_generate_task_service,
+    get_current_user_id,
+    get_generation_queries,
+    get_generation_task_commands,
+)
 from testing_agent.core.errors import success_payload
 from testing_agent.schemas.ai_generate_task import (
     CodeRiskAnalysisRunRequest,
     CodeRiskAnalysisTaskRequest,
 )
 from testing_agent.services.ai_generate_task import AiGenerateTaskService
-from testing_agent.services.code_risk_analysis import dump_code_risk_analysis_run
+from testing_agent.services.ai_task_commands import GenerationTaskCommands
+from testing_agent.services.ai_task_queries import GenerationQueries
 
 
 async def create_code_risk_analysis_task(
     project_id: str,
     body: CodeRiskAnalysisTaskRequest,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationTaskCommands = Depends(get_generation_task_commands),
 ):
     return success_payload(
         await service.create(
@@ -31,7 +37,7 @@ async def create_code_risk_analysis_task(
 async def list_code_risk_analysis_tasks(
     project_id: str,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationQueries = Depends(get_generation_queries),
 ):
     return success_payload(await service.list("code_risk_analysis", project_id, user_id))
 
@@ -39,7 +45,7 @@ async def list_code_risk_analysis_tasks(
 async def get_code_risk_analysis_task(
     task_id: str,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationQueries = Depends(get_generation_queries),
 ):
     return success_payload(await service.get("code_risk_analysis", task_id, user_id))
 
@@ -65,7 +71,7 @@ async def list_code_risk_analysis_task_runs(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, alias="pageSize", ge=1, le=100),
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationQueries = Depends(get_generation_queries),
 ):
     return success_payload(
         await service.list_run_summaries("code_risk_analysis", task_id, user_id, page, page_size)
@@ -75,16 +81,15 @@ async def list_code_risk_analysis_task_runs(
 async def get_code_risk_analysis_run(
     run_id: str,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationQueries = Depends(get_generation_queries),
 ):
-    run = await service.owned_run(user_id, run_id, "code_risk_analysis")
-    return success_payload(dump_code_risk_analysis_run(run))
+    return success_payload(await service.get_run("code_risk_analysis", run_id, user_id))
 
 
 async def delete_code_risk_analysis_run(
     run_id: str,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationTaskCommands = Depends(get_generation_task_commands),
 ):
     return success_payload(await service.delete_run("code_risk_analysis", run_id, user_id))
 
@@ -92,6 +97,6 @@ async def delete_code_risk_analysis_run(
 async def delete_code_risk_analysis_task(
     task_id: str,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationTaskCommands = Depends(get_generation_task_commands),
 ):
     return success_payload(await service.delete("code_risk_analysis", task_id, user_id))

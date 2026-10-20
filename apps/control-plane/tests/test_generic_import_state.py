@@ -5,8 +5,9 @@ from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
-from testing_agent.api.deps import get_ai_generate_task_service, get_current_user_id
+from testing_agent.api.deps import get_current_user_id, get_generation_queries
 from testing_agent.app import create_app
+from testing_agent.services.ai_task_output import dump_run
 
 
 def _run(**overrides):
@@ -43,13 +44,13 @@ def _run(**overrides):
 
 def _get_run_detail(run):
     class FakeAiGenerateTaskService:
-        async def owned_run(self, user_id, run_id, kind):
+        async def get_run(self, kind, run_id, user_id):
             assert (user_id, run_id, kind) == ("user-1", "run-1", "api")
-            return run
+            return dump_run(run)
 
     app = create_app()
     app.dependency_overrides[get_current_user_id] = lambda: "user-1"
-    app.dependency_overrides[get_ai_generate_task_service] = lambda: FakeAiGenerateTaskService()
+    app.dependency_overrides[get_generation_queries] = lambda: FakeAiGenerateTaskService()
     return TestClient(app).get("/v1/api-case-generate-task-runs/run-1")
 
 

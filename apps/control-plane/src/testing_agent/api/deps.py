@@ -18,6 +18,9 @@ from testing_agent.core.ldap_directory import LdapDirectory
 from testing_agent.db.session import get_session
 from testing_agent.models.user import User
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+from testing_agent.repositories.ai_generate_task_source_archive import (
+    AiGenerateTaskSourceArchiveRepository,
+)
 from testing_agent.repositories.api_assert_rule import ApiAssertRuleRepository
 from testing_agent.repositories.api_case import ApiCaseRepository
 from testing_agent.repositories.api_collection import ApiCollectionRepository
@@ -46,6 +49,9 @@ from testing_agent.repositories.ui_test_suite import UiTestSuiteRepository
 from testing_agent.repositories.user import UserRepository
 from testing_agent.repositories.worker_task import WorkerTaskRepository
 from testing_agent.services.ai_generate_task import AiGenerateTaskService
+from testing_agent.services.ai_task_commands import GenerationTaskCommands
+from testing_agent.services.ai_task_queries import GenerationQueries
+from testing_agent.services.ai_task_scope import GenerationAccess
 from testing_agent.services.api_assert_rule import ApiAssertRuleService
 from testing_agent.services.api_case import ApiCaseService
 from testing_agent.services.api_collection import ApiCollectionService
@@ -369,6 +375,32 @@ def get_sprint_daily_metrics_service(
     settings: Settings = Depends(get_settings),
 ) -> SprintDailyMetricsService:
     return SprintDailyMetricsService(SprintDailyMetricsRepository(session))
+
+
+def get_generation_access(
+    session: AsyncSession = Depends(get_session),
+) -> GenerationAccess:
+    return GenerationAccess(AiGenerateTaskRepository(session))
+
+
+def get_generation_queries(
+    access: GenerationAccess = Depends(get_generation_access),
+) -> GenerationQueries:
+    return GenerationQueries(
+        access.repository,
+        AiGenerateTaskSourceArchiveRepository(access.repository.session),
+        access,
+    )
+
+
+def get_generation_task_commands(
+    access: GenerationAccess = Depends(get_generation_access),
+) -> GenerationTaskCommands:
+    return GenerationTaskCommands(
+        access.repository,
+        AiGenerateTaskSourceArchiveRepository(access.repository.session),
+        access,
+    )
 
 
 def get_ai_generate_task_service(

@@ -4,18 +4,16 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
-from testing_agent.services.project_access import ProjectAction, require_project_access
+from testing_agent.services.project_access import ProjectAction
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 
 if TYPE_CHECKING:
     from testing_agent.services.code_risk_analysis import CodeRiskAnalysisService
 
-from testing_agent.core.enums import RUN_ACTIVE_STATUSES, ReviewStatus, RunStatus
+from testing_agent.core.enums import ReviewStatus, RunStatus
 from testing_agent.core.errors import (
     ErrAiGenerateTaskRunReviewed,
-    ErrAiGenerateTaskRunRunning,
     ErrBadRequest,
-    ErrForbidden,
     ErrNotFound,
 )
 from testing_agent.core.sid import new_id
@@ -92,6 +90,7 @@ from testing_agent.services.ai_source_archive import (
     validate_source_archive as validate_source_archive,
 )
 from testing_agent.services.ai_stage_workflow import GenerationStageWorkflow
+from testing_agent.services.ai_task_commands import GenerationTaskCommands
 from testing_agent.services.ai_task_output import (
     build_generate_run_snapshot as build_generate_run_snapshot,
 )
@@ -140,10 +139,11 @@ from testing_agent.services.ai_task_output import (
 from testing_agent.services.ai_task_output import (
     worker_source_archive_download_url as worker_source_archive_download_url,
 )
+from testing_agent.services.ai_task_queries import GenerationQueries
+from testing_agent.services.ai_task_scope import GenerationAccess
 from testing_agent.services.api_generate_import import ApiCandidateImporter
 from testing_agent.services.api_import_payload import bool_value as bool_value
 from testing_agent.services.api_import_payload import validate_api_collection_import_payload
-from testing_agent.services.common import list_payload
 from testing_agent.services.import_payload import parse_import_payload
 from testing_agent.services.requirement import dump_requirement
 from testing_agent.services.sprint_daily_metrics import SprintDailyMetricsService
@@ -183,76 +183,33 @@ class AiGenerateTaskService:
     async def ensure_project_access(
         self, user_id: str, project_id: str, *, action: ProjectAction = "read"
     ) -> None:
-        getter = self.repository.get_project
-        if action != "read":
-            getter = getattr(self.repository, "get_project_for_update", getter)
-        project = await getter(project_id)
-        if project is None:
-            raise ErrNotFound()
-        await require_project_access(self.repository.session, user_id, project, action)
+        return await GenerationAccess(self.repository).ensure_project_access(
+            user_id, project_id, action=action
+        )
 
     async def ensure_sprint_access(
         self, user_id: str, sprint_id: str, *, action: ProjectAction = "read"
     ) -> None:
-        getter = self.repository.get_sprint
-        if action != "read":
-            getter = getattr(self.repository, "get_sprint_for_update", getter)
-        sprint = await getter(sprint_id)
-        if sprint is None:
-            raise ErrNotFound()
-        await self.ensure_project_access(user_id, sprint.project_id, action=action)
+        return await GenerationAccess(self.repository).ensure_sprint_access(
+            user_id, sprint_id, action=action
+        )
 
     async def ensure_requirement_access(
         self, user_id: str, requirement_id: str, *, action: ProjectAction = "read"
     ) -> None:
-        getter = self.repository.get_requirement
-        if action != "read":
-            getter = getattr(self.repository, "get_requirement_for_update", getter)
-        requirement = await getter(requirement_id)
-        if requirement is None:
-            raise ErrNotFound()
-        await self.ensure_sprint_access(user_id, requirement.sprint_id, action=action)
+        return await GenerationAccess(self.repository).ensure_requirement_access(
+            user_id, requirement_id, action=action
+        )
 
     async def ensure_collection_access(
         self, user_id: str, collection_id: str, *, action: ProjectAction = "read"
     ) -> None:
-        collection = await self.repository.get_collection(collection_id)
-        if collection is None:
-            raise ErrNotFound()
-        await self.ensure_requirement_access(user_id, collection.requirement_id, action=action)
+        return await GenerationAccess(self.repository).ensure_collection_access(
+            user_id, collection_id, action=action
+        )
 
     async def validate_task_scope(self, task, resources=None) -> None:
-        """Reject legacy or new references outside the task's project and sprint."""
-        scope_loader = getattr(self.repository, "task_scope_resources", None)
-        if resources is None and scope_loader is not None:
-            resources = await scope_loader([task])
-        sprint_id = getattr(task, "sprint_id", "") or ""
-        requirement_id = getattr(task, "requirement_id", "") or ""
-        if sprint_id:
-            sprint = (
-                resources[1].get(sprint_id)
-                if resources is not None
-                else await self.repository.get_sprint(sprint_id)
-            )
-            if sprint is None or sprint.project_id != task.project_id:
-                raise ErrNotFound()
-        if requirement_id:
-            requirement = (
-                resources[0].get(requirement_id)
-                if resources is not None
-                else await self.repository.get_requirement(requirement_id)
-            )
-            if requirement is None:
-                raise ErrNotFound()
-            sprint = (
-                resources[1].get(requirement.sprint_id)
-                if resources is not None
-                else await self.repository.get_sprint(requirement.sprint_id)
-            )
-            if sprint is None or sprint.project_id != task.project_id:
-                raise ErrNotFound()
-            if sprint_id and requirement.sprint_id != sprint_id:
-                raise ErrBadRequest()
+        return await GenerationAccess(self.repository).validate_task_scope(task, resources)
 
     async def owned_task(
         self,
@@ -263,34 +220,16 @@ class AiGenerateTaskService:
         action: ProjectAction = "read",
         current_read: bool = False,
     ) -> AiGenerateTask:
-        getter = self.repository.get_task_for_update if current_read else self.repository.get_task
-        task = await getter(task_id)
-        if task is None:
-            raise ErrNotFound()
-        if kind and task.task_type != task_type_for(kind):
-            raise ErrNotFound()
-        await self.ensure_project_access(user_id, task.project_id, action=action)
-        await self.validate_task_scope(task)
-        return task
+        return await GenerationAccess(self.repository).owned_task(
+            user_id, task_id, kind, action=action, current_read=current_read
+        )
 
     async def owned_run(
         self, user_id: str, run_id: str, kind: str | None = None, *, action: ProjectAction = "read"
     ) -> AiGenerateTaskRun:
-        getter = self.repository.get_run
-        if action != "read":
-            getter = getattr(self.repository, "get_run_reference", getter)
-        run = await getter(run_id)
-        if run is None:
-            raise ErrNotFound()
-        # Parent before child: the same order as task deletion/import creation.
-        task = await self.owned_task(user_id, run.task_id, kind, action=action)
-        if action != "read" and hasattr(self.repository, "get_run_for_update"):
-            run = await self.repository.get_run_for_update(run_id)
-            if run is None or run.task_id != task.task_id:
-                raise ErrNotFound()
-        if task.project_id != run.project_id:
-            raise ErrForbidden()
-        return run
+        return await GenerationAccess(self.repository).owned_run(
+            user_id, run_id, kind, action=action
+        )
 
     async def create(
         self,
@@ -301,114 +240,23 @@ class AiGenerateTaskService:
         *,
         task_id: str | None = None,
     ) -> dict:
-        await self.ensure_project_access(user_id, project_id, action="write")
-        sprint_id = str(body.get("sprintId") or body.get("sprint_id") or "")
-        requirement_id = str(body.get("requirementId") or body.get("requirement_id") or "")
-        requirement = None
-        if kind in {"ui", "requirement_analysis", "code_risk_analysis"}:
-            if not requirement_id:
-                raise ErrBadRequest()
-            requirement = await self.repository.get_requirement(requirement_id)
-            if requirement is None:
-                raise ErrNotFound()
-            sprint = await self.repository.get_sprint(requirement.sprint_id)
-            if sprint is None or sprint.project_id != project_id:
-                raise ErrNotFound()
-            sprint_id = requirement.sprint_id
-        if kind == "test_report":
-            if not sprint_id:
-                raise ErrBadRequest()
-            sprint = await self.repository.get_sprint(sprint_id)
-            if sprint is None or sprint.project_id != project_id:
-                raise ErrNotFound()
-            existing = await self.repository.get_active_task_by_project_sprint_type(
-                project_id, sprint_id, task_type_for(kind)
-            )
-            if existing is not None:
-                raise ErrBadRequest()
-        if sprint_id:
-            await self.ensure_sprint_access(user_id, sprint_id, action="write")
-        if requirement_id:
-            await self.ensure_requirement_access(user_id, requirement_id, action="write")
-        await self.validate_task_scope(
-            SimpleNamespace(
-                project_id=project_id, sprint_id=sprint_id, requirement_id=requirement_id
-            )
-        )
-        task = AiGenerateTask(
-            task_id=task_id or new_id(),
-            task_type=task_type_for(kind),
-            name=str(
-                body.get("name")
-                or (
-                    f"{requirement.name} analysis"
-                    if kind == "requirement_analysis" and requirement is not None
-                    else (
-                        f"{requirement.name} 代码风险分析"
-                        if kind == "code_risk_analysis" and requirement is not None
-                        else (
-                            "test-report-generate-task"
-                            if kind == "test_report"
-                            else f"{kind}-case-generate-task"
-                        )
-                    )
-                )
-            ),
-            project_id=project_id,
-            sprint_id=sprint_id,
-            requirement_id=requirement_id,
-            creator_user_id=user_id,
-            source_type=str(
-                "source_archive"
-                if kind == "ui"
-                else requirement.document_type
-                if kind in {"requirement_analysis", "code_risk_analysis"}
-                and requirement is not None
-                else (
-                    "daily_metrics"
-                    if kind == "test_report"
-                    else body.get("sourceType") or body.get("source_type") or "manual"
-                )
-            ),
-            source_content=str(
-                ""
-                if kind == "ui"
-                else requirement.document_content
-                if kind in {"requirement_analysis", "code_risk_analysis"}
-                and requirement is not None
-                else body.get("sourceContent") or body.get("source_content") or ""
-            ),
-            instruction=str(body.get("instruction") or ""),
-        )
-        self.repository.add(task)
-        await self.repository.commit()
-        await self.repository.refresh(task)
-        return dump_task(task)
+        return await GenerationTaskCommands(
+            self.repository,
+            self.source_archive_repository,
+            GenerationAccess(self.repository),
+            deletion=self.deletion,
+            id_factory=new_id,
+        ).create(kind, project_id, body, user_id, task_id=task_id)
 
     async def list(self, kind: str, project_id: str, user_id: str) -> dict[str, Any]:
-        await self.ensure_project_access(user_id, project_id, action="read")
-        rows = await self.repository.list_tasks(project_id, task_type_for(kind))
-        scope_loader = getattr(self.repository, "task_scope_resources", None)
-        scopes = await scope_loader(rows) if scope_loader is not None else None
-        payloads = []
-        for row in rows:
-            await self.validate_task_scope(row, scopes)
-            archive = (
-                await self.source_archive_repository.get_source_archive(row.task_id)
-                if kind == "ui"
-                else None
-            )
-            payloads.append(dump_task(row, archive))
-        return list_payload(payloads)
+        return await GenerationQueries(
+            self.repository, self.source_archive_repository, GenerationAccess(self.repository)
+        ).list(kind, project_id, user_id)
 
     async def get(self, kind: str, task_id: str, user_id: str) -> dict:
-        task = await self.owned_task(user_id, task_id, kind, action="read")
-        archive = (
-            await self.source_archive_repository.get_source_archive(task.task_id)
-            if kind == "ui"
-            else None
-        )
-        return dump_task(task, archive)
+        return await GenerationQueries(
+            self.repository, self.source_archive_repository, GenerationAccess(self.repository)
+        ).get(kind, task_id, user_id)
 
     async def upload_source_archive(
         self, task_id: str, file_id: str, user_id: str
@@ -430,61 +278,31 @@ class AiGenerateTaskService:
         *,
         current_read: bool = False,
     ) -> dict:
-        task = await self.owned_task(
-            user_id, task_id, kind, action="write", current_read=current_read
-        )
-        if kind == "ui":
-            requirement_key = "requirementId" if "requirementId" in body else "requirement_id"
-            if requirement_key in body:
-                requirement_id = str(body.get(requirement_key) or "")
-                if not requirement_id:
-                    raise ErrBadRequest()
-                requirement = await self.repository.get_requirement(requirement_id)
-                if requirement is None:
-                    raise ErrNotFound()
-                sprint = await self.repository.get_sprint(requirement.sprint_id)
-                if sprint is None or sprint.project_id != task.project_id:
-                    raise ErrNotFound()
-                await self.ensure_requirement_access(user_id, requirement_id, action="write")
-                task.requirement_id = requirement_id
-                task.sprint_id = requirement.sprint_id
-            field_map = {"name": "name", "instruction": "instruction"}
-            task.source_type = "source_archive"
-            task.source_content = ""
-        else:
-            field_map = {
-                "name": "name",
-                "sourceType": "source_type",
-                "source_type": "source_type",
-                "sourceContent": "source_content",
-                "source_content": "source_content",
-                "instruction": "instruction",
-            }
-        for key, attr in field_map.items():
-            if key in body:
-                setattr(task, attr, body[key])
-        await self.repository.commit()
-        await self.repository.refresh(task)
-        archive = (
-            await self.source_archive_repository.get_source_archive(task.task_id)
-            if kind == "ui"
-            else None
-        )
-        return dump_task(task, archive)
+        return await GenerationTaskCommands(
+            self.repository,
+            self.source_archive_repository,
+            GenerationAccess(self.repository),
+            deletion=self.deletion,
+            id_factory=new_id,
+        ).update(kind, task_id, body, user_id, current_read=current_read)
 
     async def delete(self, kind: str, task_id: str, user_id: str) -> dict:
-        task = await self.owned_task(user_id, task_id, kind, action="write")
-        await self.deletion.delete(self.repository.session, task)
-        await self.repository.commit()
-        return {}
+        return await GenerationTaskCommands(
+            self.repository,
+            self.source_archive_repository,
+            GenerationAccess(self.repository),
+            deletion=self.deletion,
+            id_factory=new_id,
+        ).delete(kind, task_id, user_id)
 
     async def delete_run(self, kind: str, run_id: str, user_id: str) -> dict:
-        run = await self.owned_run(user_id, run_id, kind, action="write")
-        if run.status in RUN_ACTIVE_STATUSES:
-            raise ErrAiGenerateTaskRunRunning()
-        await self.deletion.delete(self.repository.session, run)
-        await self.repository.commit()
-        return {}
+        return await GenerationTaskCommands(
+            self.repository,
+            self.source_archive_repository,
+            GenerationAccess(self.repository),
+            deletion=self.deletion,
+            id_factory=new_id,
+        ).delete_run(kind, run_id, user_id)
 
     async def test_report_task_for_run(
         self, project_id: str, body: dict[str, Any], user_id: str
@@ -620,49 +438,21 @@ class AiGenerateTaskService:
         page_size: int = 20,
         pipeline_filter: str = "all",
     ) -> dict[str, Any]:
-        from testing_agent.repositories.ai_run_history import history_page
-
-        await self.owned_task(user_id, task_id, kind, action="read")
-        return await history_page(
-            self.repository.session,
-            [AiGenerateTaskRun.task_id == task_id],
-            page,
-            page_size,
-            pipeline_filter,
-        )
+        return await GenerationQueries(
+            self.repository, self.source_archive_repository, GenerationAccess(self.repository)
+        ).list_run_summaries(kind, task_id, user_id, page, page_size, pipeline_filter)
 
     async def list_test_report_run_summaries(
         self, project_id: str, sprint_id: str, user_id: str, page: int = 1, page_size: int = 20
     ):
-        from testing_agent.repositories.ai_run_history import history_page
-
-        await self.ensure_project_access(user_id, project_id, action="read")
-        sprint = await self.repository.get_sprint(sprint_id)
-        if sprint is None or sprint.project_id != project_id:
-            raise ErrNotFound()
-        return await history_page(
-            self.repository.session,
-            [
-                AiGenerateTask.project_id == project_id,
-                AiGenerateTask.sprint_id == sprint_id,
-                AiGenerateTask.task_type == task_type_for("test_report"),
-            ],
-            page,
-            page_size,
-        )
+        return await GenerationQueries(
+            self.repository, self.source_archive_repository, GenerationAccess(self.repository)
+        ).list_test_report_run_summaries(project_id, sprint_id, user_id, page, page_size)
 
     async def list_runs(self, kind: str, task_id: str, user_id: str) -> dict[str, Any]:
-        await self.owned_task(user_id, task_id, kind, action="read")
-        rows = await self.repository.list_runs(task_id)
-        if kind == "code_risk_analysis":
-            # 代码风险分析 run 详情追加解析后的 report 结构(工单 07,RC-5)。
-            # 函数级导入避免与 services.ai_generate_task 的模块循环依赖。
-            from testing_agent.services.code_risk_analysis import dump_code_risk_analysis_run
-
-            dump = dump_code_risk_analysis_run
-        else:
-            dump = dump_run
-        return list_payload([dump(row) for row in rows])
+        return await GenerationQueries(
+            self.repository, self.source_archive_repository, GenerationAccess(self.repository)
+        ).list_runs(kind, task_id, user_id)
 
     async def import_requirement_analysis_run(self, run_id: str, user_id: str) -> dict:
         run = await self.owned_run(user_id, run_id, "requirement_analysis", action="execute")

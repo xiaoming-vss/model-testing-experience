@@ -4,6 +4,20 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_generation_queries_do_not_write_or_depend_on_task_command_facade():
+    root = PROJECT_ROOT / "src/testing_agent"
+    for name in ("ai_task_queries", "ai_task_scope"):
+        for node in ast.walk(ast.parse((root / "services" / f"{name}.py").read_text())):
+            if isinstance(node, ast.ImportFrom):
+                assert node.module not in {
+                    "testing_agent.services.ai_generate_task",
+                    "testing_agent.services.ai_task_commands",
+                    "testing_agent.services.ai_execution.writer",
+                }
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+                assert node.func.attr not in {"commit", "rollback", "add", "delete", "flush"}
+
+
 def test_function_asset_modules_do_not_depend_on_export_or_api_collection():
     root = PROJECT_ROOT / "src/testing_agent"
     for name in ("function_test_case", "function_case_import", "function_case_access"):
