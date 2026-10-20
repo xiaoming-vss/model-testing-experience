@@ -88,9 +88,8 @@ env = "local"                     # local 时开启 uvicorn reload
 ```sh
 uv sync --locked --extra dev                      # 安装依赖（含开发依赖）
 uv run mtx-control-plane                          # 启动
-uv run --extra dev pytest                         # 测试
-uv run --extra dev ruff check .                   # Lint
-uv run --extra dev mypy                           # 类型检查
+uv run --locked --extra dev python scripts/check.py  # 静态检查和完整测试
+uv run --locked --extra dev python scripts/check.py --static-only  # 仅静态检查
 uv run --extra dev alembic upgrade head           # 数据库迁移
 ```
 
@@ -134,7 +133,12 @@ Control Plane 启动时注册每日统计任务，每分钟检查一次，在北
 
 ## 测试
 
-在 `apps/control-plane/` 执行 `uv run --extra dev python -m pytest`，当前收集 935 项；最近按全部测试模块分组回归为 895 通过、40 跳过、0 失败。使用 `python -m pytest` 将项目根目录加入模块搜索路径，以支持测试夹具的模块间复用。`test_function_stage_reexecution_uses_current_actor` 已补齐关联需求与导入后的增强文本，继续验证 owner/member 的阶段重试、修订使用当前操作人的个人授权。
+在 `apps/control-plane/` 执行 `uv run --locked --extra dev python scripts/check.py`，
+依次检查 Ruff、格式、全源码类型和完整测试。可通过 `--tests tests/<file>.py`
+选择关联回归，或 `--static-only` 仅执行静态检查。共享测试准备代码逐步集中到
+`tests/support/`，新增共享夹具不放在 `test_*.py` 中供其他模块导入。
+当前整改的实际测试数量、失败修复和真实 MySQL 结果见[实施记录](remediation-implementation.md)，
+模拟测试不替代真实 MySQL、S3 或外部目录验收。
 
 - [内置 MCP 配置](builtin-mcp.md)
 - [Bug 生命周期对齐禅道](adr/0005-bug-zentao-lifecycle.md)：三个主状态、独立确认及解决方案、旧数据迁移。
