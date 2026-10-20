@@ -129,7 +129,7 @@ async def test_extraction_approval_dispatches_understanding_only(monkeypatch):
         session=None,
         commit=commit,
         refresh=refresh,
-        get_latest_worker_task_by_run_id=latest,
+        get_latest_ai_dispatch=latest,
         add=added.append,
     )
     service = workflow.GenerationStageWorkflow(
@@ -377,7 +377,7 @@ async def test_revision_accepts_historical_answers_but_save_and_approval_require
             commit=nothing,
             refresh=nothing,
             add=queued.append,
-            get_latest_worker_task_by_run_id=latest,
+            get_latest_ai_dispatch=latest,
         ),
         owned_run=owned,
         execution_writer=MemoryExecutionWriter(),
@@ -434,7 +434,7 @@ async def test_rejected_requirement_run_is_read_only(monkeypatch, stage, operati
             commit=nothing,
             refresh=nothing,
             add=queued.append,
-            get_latest_worker_task_by_run_id=latest,
+            get_latest_ai_dispatch=latest,
         ),
         owned_run=owned,
         execution_writer=MemoryExecutionWriter(),

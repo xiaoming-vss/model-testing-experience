@@ -223,7 +223,7 @@ class GenerationStageWorkflow:
         run.reviewer_user_id = user_id
         run.reviewed_at = datetime.now(UTC)
         if action == "approve":
-            latest_task = await self.repository.get_latest_worker_task_by_run_id(run.run_id)
+            latest_task = await self.repository.get_latest_ai_dispatch(run.run_id)
             next_stage = next_requirement_analysis_stage(run.current_stage)
             if latest_task is None or next_stage is None:
                 raise ErrBadRequest()
@@ -235,15 +235,17 @@ class GenerationStageWorkflow:
             run.current_stage = next_stage
             run.stage_status = StageStatus.PENDING.value
             run.error_message = ""
+            intent = replace(
+                intent,
+                llm_connection_id=await self.stage_connection(
+                    run, body or {}, user_id, latest_task.llm_connection_id
+                ),
+            )
             dispatch = WorkerTask(
                 domain="ai",
                 task_id=self.new_id(),
                 task_type=task_type_for("requirement_analysis"),
                 run_id=run.run_id,
-                generate_task_id=run.task_id,
-                llm_connection_id=await self.stage_connection(
-                    run, body or {}, user_id, latest_task.llm_connection_id
-                ),
                 status=RunStatus.PENDING.value,
             )
             self.repository.add(dispatch)
@@ -295,7 +297,7 @@ class GenerationStageWorkflow:
         if not revision_instruction:
             raise ErrBadRequest()
 
-        latest_task = await self.repository.get_latest_worker_task_by_run_id(run.run_id)
+        latest_task = await self.repository.get_latest_ai_dispatch(run.run_id)
         if latest_task is None:
             raise ErrBadRequest()
 
@@ -327,15 +329,17 @@ class GenerationStageWorkflow:
             run.current_stage = REQUIREMENT_ANALYSIS_FINAL_STAGE
         run.stage_status = StageStatus.PENDING.value
         run.error_message = ""
+        intent = replace(
+            intent,
+            llm_connection_id=await self.stage_connection(
+                run, body or {}, user_id, latest_task.llm_connection_id
+            ),
+        )
         dispatch = WorkerTask(
             domain="ai",
             task_id=self.new_id(),
             task_type=task_type_for("requirement_analysis"),
             run_id=run.run_id,
-            generate_task_id=run.task_id,
-            llm_connection_id=await self.stage_connection(
-                run, body or {}, user_id, latest_task.llm_connection_id
-            ),
             status=RunStatus.PENDING.value,
         )
         self.repository.add(dispatch)
@@ -398,7 +402,7 @@ class GenerationStageWorkflow:
                 raise ErrBadRequest()
             validate_function_candidate_cases(cases)
             config["resultYaml"] = json.dumps({"cases": cases}, ensure_ascii=False)
-        latest_task = await self.repository.get_latest_worker_task_by_run_id(run_id)
+        latest_task = await self.repository.get_latest_ai_dispatch(run_id)
         if latest_task is None:
             raise ErrBadRequest()
         config[REVISION_INSTRUCTION_FIELD] = instruction
@@ -409,15 +413,17 @@ class GenerationStageWorkflow:
         run.current_stage = stage
         run.stage_status = StageStatus.PENDING.value
         run.error_message = ""
+        intent = replace(
+            intent,
+            llm_connection_id=await self.stage_connection(
+                run, body or {}, user_id, latest_task.llm_connection_id
+            ),
+        )
         dispatch = WorkerTask(
             domain="ai",
             task_id=self.new_id(),
             task_type=task_type_for("function"),
             run_id=run.run_id,
-            generate_task_id=run.task_id,
-            llm_connection_id=await self.stage_connection(
-                run, body or {}, user_id, latest_task.llm_connection_id
-            ),
             status=RunStatus.PENDING.value,
         )
         self.repository.add(dispatch)
@@ -458,7 +464,7 @@ class GenerationStageWorkflow:
             action = "reject"
 
         if action == "approve":
-            latest_task = await self.repository.get_latest_worker_task_by_run_id(run.run_id)
+            latest_task = await self.repository.get_latest_ai_dispatch(run.run_id)
             next_stage = next_function_case_stage(run.current_stage)
             if latest_task is None or next_stage is None:
                 raise ErrBadRequest()
@@ -466,15 +472,17 @@ class GenerationStageWorkflow:
             run.current_stage = next_stage
             run.stage_status = StageStatus.PENDING.value
             run.error_message = ""
+            intent = replace(
+                intent,
+                llm_connection_id=await self.stage_connection(
+                    run, body or {}, user_id, latest_task.llm_connection_id
+                ),
+            )
             dispatch = WorkerTask(
                 domain="ai",
                 task_id=self.new_id(),
                 task_type=task_type_for("function"),
                 run_id=run.run_id,
-                generate_task_id=run.task_id,
-                llm_connection_id=await self.stage_connection(
-                    run, body or {}, user_id, latest_task.llm_connection_id
-                ),
                 status=RunStatus.PENDING.value,
             )
             self.repository.add(dispatch)
@@ -524,22 +532,24 @@ class GenerationStageWorkflow:
             or run.import_status == ImportStatus.IMPORTED.value
         ):
             raise ErrBadRequest()
-        latest_task = await self.repository.get_latest_worker_task_by_run_id(run_id)
+        latest_task = await self.repository.get_latest_ai_dispatch(run_id)
         if latest_task is None or latest_task.status in {"pending", "claimed", "running"}:
             raise ErrBadRequest()
         # Retain upstream outputs and any failed revision's instruction for this attempt.
         run.status = RunStatus.PENDING.value
         run.stage_status = StageStatus.PENDING.value
         run.error_message = ""
+        intent = replace(
+            intent,
+            llm_connection_id=await self.stage_connection(
+                run, body or {}, user_id, latest_task.llm_connection_id
+            ),
+        )
         dispatch = WorkerTask(
             domain="ai",
             task_id=self.new_id(),
             task_type=task_type_for(kind),
             run_id=run.run_id,
-            generate_task_id=run.task_id,
-            llm_connection_id=await self.stage_connection(
-                run, body or {}, user_id, latest_task.llm_connection_id
-            ),
             status=RunStatus.PENDING.value,
         )
         self.repository.add(dispatch)
@@ -572,7 +582,7 @@ class GenerationStageWorkflow:
             )
         ):
             raise ErrBadRequest()
-        latest_task = await self.repository.get_latest_worker_task_by_run_id(run_id)
+        latest_task = await self.repository.get_latest_ai_dispatch(run_id)
         if latest_task is None or latest_task.status in FUNCTION_CASE_RELATION_DISPATCH_STATUSES:
             raise ErrBadRequest()
         cases = generated_function_cases(run)
@@ -594,15 +604,17 @@ class GenerationStageWorkflow:
         run.current_stage = FUNCTION_CASE_RELATION_STAGE
         run.stage_status = StageStatus.PENDING.value
         run.error_message = ""
+        intent = replace(
+            intent,
+            llm_connection_id=await self.stage_connection(
+                run, body or {}, user_id, latest_task.llm_connection_id
+            ),
+        )
         dispatch = WorkerTask(
             domain="ai",
             task_id=self.new_id(),
             task_type=task_type_for("function"),
             run_id=run.run_id,
-            generate_task_id=run.task_id,
-            llm_connection_id=await self.stage_connection(
-                run, body or {}, user_id, latest_task.llm_connection_id
-            ),
             status=RunStatus.PENDING.value,
         )
         self.repository.add(dispatch)

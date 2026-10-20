@@ -400,16 +400,17 @@ def worker_settings(upload_dir):
 
 class WorkerAssetRepository:
     def __init__(self, worker_task, run, source_repository, requirement):
+        from testing_agent.domain.worker_context import AiWorkerContext
+
         self.worker_task = worker_task
         self.run = run
+        self.context = AiWorkerContext(run.task_id, None)
         self.source_repository = source_repository
         self.requirement = requirement
         self.session = None
 
     async def execution_context(self, task):
-        from testing_agent.domain.worker_context import AiWorkerContext
-
-        return AiWorkerContext(task.generate_task_id, None)
+        return self.context
 
     async def get_worker_task(self, domain, task_id):
         if domain == "ai" and task_id == self.worker_task.task_id:

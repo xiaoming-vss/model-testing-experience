@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from typing import Any
@@ -8,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.enums import RunStatus
-from testing_agent.core.errors import ErrForbidden
+from testing_agent.core.errors import ErrBadRequest, ErrForbidden, ErrNotFound
 from testing_agent.core.sid import new_id
 from testing_agent.domain.worker_context import ApiWorkerContext
 from testing_agent.models.api_assert_rule import ApiAssertRule
@@ -19,6 +20,7 @@ from testing_agent.models.api_environment import ApiEnvironment
 from testing_agent.models.api_environment_var import ApiEnvironmentVar
 from testing_agent.models.api_extract_rule import ApiExtractRule
 from testing_agent.models.worker_task import WorkerTask
+from testing_agent.repositories.worker_task import WorkerTaskRepository
 from testing_agent.schemas.workers import (
     WorkerTaskEventRequest,
 )
@@ -26,8 +28,9 @@ from testing_agent.services.api_request_render import (
     api_case_request_template,
     render_api_case_request,
 )
-from testing_agent.services.execution_secrets import private_payload, protect_run
+from testing_agent.services.execution_secrets import private_payload, protect_run, redact
 from testing_agent.services.worker_domains.events import (
+    ensure_final_status,
     final_run_status,
     json_text,
     parse_event_time,
@@ -364,3 +367,107 @@ async def complete_run(
             if body.duration_ms is not None:
                 run.duration_ms = body.duration_ms
             protect_run(run, secrets)
+
+
+async def start_item(
+    repository: WorkerTaskRepository, task: WorkerTask, item_id: str, body: WorkerTaskEventRequest
+) -> None:
+    if task.task_type != "api_collection_run":
+        raise ErrBadRequest()
+    item = await repository.get_api_item(item_id)
+    if item is None:
+        raise ErrNotFound()
+    if getattr(item, "collection_run_id", task.run_id) != task.run_id:
+        raise ErrBadRequest()
+    item.status = RunStatus.RUNNING.value
+    item.started_at = parse_event_time(body.started_at) or datetime.now(UTC)
+
+
+async def complete_item(
+    repository: WorkerTaskRepository,
+    task: WorkerTask,
+    item_id: str,
+    body: WorkerTaskEventRequest,
+    *,
+    id_factory: Callable[[], str] = new_id,
+) -> str:
+    if task.task_type != "api_collection_run":
+        raise ErrBadRequest()
+    status = ensure_final_status(body.status, {"success", "failed", "error", "skipped"})
+    item = await repository.get_api_item(item_id)
+    if item is None:
+        raise ErrNotFound()
+    if getattr(item, "collection_run_id", task.run_id) != task.run_id:
+        raise ErrBadRequest()
+    collection_run = await repository.get_api_collection_run(item.collection_run_id)
+    if collection_run is None:
+        raise ErrNotFound()
+    item.status = status
+    started_at = parse_event_time(body.started_at)
+    finished_at = parse_event_time(body.finished_at) or datetime.now(UTC)
+    case_run = ApiCaseRun(
+        run_id=id_factory(),
+        collection_run_id=item.collection_run_id,
+        case_id=body.case_id or item.case_id,
+        collection_id=collection_run.collection_id,
+        environment_id=collection_run.environment_id,
+        trigger_user_id=collection_run.trigger_user_id,
+        trigger_type="collection",
+        status=item.status,
+        request_snapshot_json=body.request or {},
+        response_snapshot_json=body.response or {},
+        runtime_vars_json=body.runtime_vars_json or {},
+        extract_results_json=body.extract_results or [],
+        assert_results_json=body.assert_results or body.step_results or [],
+        error_message=body.error_message or "",
+        started_at=started_at,
+        finished_at=finished_at,
+        duration_ms=body.duration_ms or 0,
+    )
+    repository.add(case_run)
+    secrets = await save_extracted_environment_vars(
+        repository.session,
+        collection_run.environment_id,
+        body.extract_results,
+        actor=collection_run.trigger_user_id,
+    )
+    secrets.extend(private_payload(collection_run).get("secrets", []))
+    protect_run(case_run, secrets)
+    protect_run(collection_run, secrets)
+    item.case_run_id = case_run.run_id
+    item.started_at = started_at
+    item.error_message = redact(body.error_message or "", secrets)
+    item.finished_at = finished_at
+    if body.duration_ms is not None:
+        item.duration_ms = body.duration_ms
+    await update_item_counts(repository.session, item.collection_run_id)
+    return item.status
+
+
+async def mark_claimed(
+    repository: WorkerTaskRepository, task: WorkerTask, context: ApiWorkerContext
+) -> None:
+    run: ApiCaseRun | ApiCollectionRun | None
+    if not isinstance(context, ApiWorkerContext):
+        raise ErrBadRequest()
+    if context.collection_run_id:
+        run = await repository.get_api_collection_run(context.collection_run_id)
+    else:
+        run = await repository.get_api_run(task.run_id)
+    if run is None:
+        raise ErrNotFound()
+    run.status = RunStatus.QUEUED.value
+
+
+async def mark_started(
+    repository: WorkerTaskRepository, task: WorkerTask, started_at: datetime | None
+) -> None:
+    run: ApiCaseRun | ApiCollectionRun | None
+    if task.task_type == "api_collection_run":
+        run = await repository.get_api_collection_run(task.run_id)
+    else:
+        run = await repository.get_api_run(task.run_id)
+    if run:
+        run.status = RunStatus.RUNNING.value
+        if getattr(run, "started_at", None) is None:
+            run.started_at = started_at or datetime.now(UTC)

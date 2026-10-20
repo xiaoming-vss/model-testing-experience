@@ -146,8 +146,6 @@ class UiTestCaseRunService:
             task_id=new_id(),
             task_type="case_debug",
             run_id=run.run_id,
-            suite_id=context.suite.suite_id,
-            case_id=context.case.case_id,
             status=RunStatus.PENDING.value,
         )
         self.repository.add_all([run, task])
@@ -205,7 +203,6 @@ class UiTestCaseRunService:
             task_id=new_id(),
             task_type="suite_run",
             run_id=run.suite_run_id,
-            suite_id=suite_id,
             status=RunStatus.PENDING.value,
         )
         self.repository.add_all([run, task])

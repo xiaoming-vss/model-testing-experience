@@ -4,15 +4,10 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
-from testing_agent.core.enums import RunStatus, StageStatus
 from testing_agent.core.errors import ErrBadRequest, ErrForbidden, ErrNotFound
 from testing_agent.core.sid import new_id
 from testing_agent.domain.ai_execution_intent import ExecutionIntent
 from testing_agent.domain.worker_context import AiWorkerContext, ApiWorkerContext
-from testing_agent.models.api_case_run import ApiCaseRun
-from testing_agent.models.api_collection_run import ApiCollectionRun
-from testing_agent.models.ui_test_case_run import UiTestCaseRun
-from testing_agent.models.ui_test_suite_run import UiTestSuiteRun
 from testing_agent.repositories.worker_task import WorkerTaskRepository
 from testing_agent.schemas.workers import (
     WorkerClaimRequest,
@@ -21,7 +16,7 @@ from testing_agent.schemas.workers import (
 )
 from testing_agent.services.ai_execution.writer import ExecutionWriter, SqlExecutionWriter
 from testing_agent.services.code_risk_analysis import gitlab_credentials_payload
-from testing_agent.services.execution_secrets import private_payload, protect_run, redact
+from testing_agent.services.execution_secrets import private_payload, redact
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.personal_authorization import require_personal_connection
 from testing_agent.services.worker import (
@@ -29,26 +24,20 @@ from testing_agent.services.worker import (
     apply_event_to_task,
     build_snapshot,
     complete_domain_run,
-    final_run_status,
     find_task,
-    json_text,
     llm_credentials_payload,
     parse_event_time,
     project_skill_worker_payload,
-    save_extracted_environment_vars,
     task_payload,
-    update_item_counts,
     update_task_claimed,
-    update_ui_item_counts,
 )
 from testing_agent.services.worker_authorization import authorize_execution
+from testing_agent.services.worker_domains import ai as ai_domain
+from testing_agent.services.worker_domains import api as api_domain
+from testing_agent.services.worker_domains import ui as ui_domain
+from testing_agent.services.worker_domains.events import ensure_final_status
 
 AI_LEASE_SECONDS = 30
-AI_WAITING_REVIEW_STAGES = {
-    "requirement_analysis",
-    "case_names",
-    "extracting_text",
-}
 
 
 def ensure_worker_match(task, worker_id: str | None) -> None:
@@ -69,13 +58,6 @@ def ensure_worker_match(task, worker_id: str | None) -> None:
 def ensure_task_id(task, body: WorkerTaskEventRequest) -> None:
     if body.task_id and body.task_id != task.task_id:
         raise ErrBadRequest()
-
-
-def ensure_final_status(status: str | None, allowed: set[str]) -> str:
-    value = final_run_status(status)
-    if value not in allowed:
-        raise ErrBadRequest()
-    return value
 
 
 class WorkerTaskService:
@@ -166,45 +148,18 @@ class WorkerTaskService:
         context = await self.repository.execution_context(task)
         await update_task_claimed(task, body)
         if domain == "api":
-            run: ApiCaseRun | ApiCollectionRun | None
             if not isinstance(context, ApiWorkerContext):
                 raise ErrBadRequest()
-            if context.collection_run_id:
-                run = await self.repository.get_api_collection_run(context.collection_run_id)
-            else:
-                run = await self.repository.get_api_run(task.run_id)
-            if run is None:
-                raise ErrNotFound()
-            run.status = RunStatus.QUEUED.value
+            await api_domain.mark_claimed(self.repository, task, context)
         if domain == "ai":
             if not isinstance(context, AiWorkerContext):
                 raise ErrBadRequest()
             task.lease_expires_at = datetime.now(UTC) + timedelta(seconds=AI_LEASE_SECONDS)
-            ai_run = await self.repository.get_ai_run(task.run_id)
-            if ai_run is None:
-                raise ErrNotFound()
-            ai_run.status = RunStatus.CLAIMED.value
-            if ai_run.checkpoint_enabled:
-                ai_run.stage_status = StageStatus.RUNNING.value
+            ai_run = await ai_domain.mark_claimed(self.repository, task)
             await self.execution.save(self.repository.session, ai_run, worker=task)
             await self.repository.commit()
             await self.repository.refresh(task)
-            payload = {
-                "taskId": task.task_id,
-                "taskType": task.task_type,
-                "runId": task.run_id,
-                "generateTaskId": context.generate_task_id,
-                "projectId": ai_run.project_id,
-                "sprintId": ai_run.sprint_id,
-                "requirementId": ai_run.requirement_id,
-                "llmConnectionId": context.llm_connection_id,
-                "checkpointEnabled": ai_run.checkpoint_enabled,
-                "currentStage": ai_run.current_stage,
-                "leaseSeconds": AI_LEASE_SECONDS,
-            }
-            if ai_run.checkpoint_enabled:
-                payload["configJson"] = json_text(getattr(ai_run, "config_json", {}) or {})
-            return payload
+            return ai_domain.claim_payload(task, ai_run, context, lease_seconds=AI_LEASE_SECONDS)
         await self.repository.commit()
         await self.repository.refresh(task)
         payload = task_payload(task, context)
@@ -237,38 +192,11 @@ class WorkerTaskService:
             task.heartbeat_at = started_at
             task.lease_expires_at = datetime.now(UTC) + timedelta(seconds=LEASE_SECONDS)
         if domain == "api":
-            run: ApiCaseRun | ApiCollectionRun | UiTestCaseRun | UiTestSuiteRun | None
-            if task.task_type == "api_collection_run":
-                run = await self.repository.get_api_collection_run(task.run_id)
-            else:
-                run = await self.repository.get_api_run(task.run_id)
-            if run:
-                run.status = RunStatus.RUNNING.value
-                if getattr(run, "started_at", None) is None:
-                    run.started_at = started_at or datetime.now(UTC)
+            await api_domain.mark_started(self.repository, task, started_at)
         if domain == "ai":
-            ai_run = await self.repository.get_ai_run(task.run_id)
-            if ai_run is None:
-                raise ErrNotFound()
-            ai_run.status = RunStatus.RUNNING.value
-            ai_run.started_at = (
-                ai_run.started_at or parse_event_time(body.started_at) or datetime.now(UTC)
-            )
-            if ai_run.checkpoint_enabled:
-                ai_run.stage_status = StageStatus.RUNNING.value
+            ai_run = await ai_domain.mark_started(self.repository, task, started_at)
         if domain == "ui":
-            if task.task_type == "suite_run":
-                run = await self.repository.session.scalar(
-                    select(UiTestSuiteRun).where(UiTestSuiteRun.suite_run_id == task.run_id)
-                )
-            else:
-                run = await self.repository.session.scalar(
-                    select(UiTestCaseRun).where(UiTestCaseRun.run_id == task.run_id)
-                )
-            if run:
-                run.status = RunStatus.RUNNING.value
-                if getattr(run, "started_at", None) is None:
-                    run.started_at = started_at or datetime.now(UTC)
+            await ui_domain.mark_started(self.repository.session, task, started_at)
         if domain == "ai":
             assert ai_run is not None
             await self.execution.save(
@@ -347,15 +275,7 @@ class WorkerTaskService:
         await authorize_execution(self.repository.session, task)
         ensure_worker_match(task, body.worker_id)
         ensure_task_id(task, body)
-        if task.task_type != "api_collection_run":
-            raise ErrBadRequest()
-        item = await self.repository.get_api_item(item_id)
-        if item is None:
-            raise ErrNotFound()
-        if getattr(item, "collection_run_id", task.run_id) != task.run_id:
-            raise ErrBadRequest()
-        item.status = RunStatus.RUNNING.value
-        item.started_at = parse_event_time(body.started_at) or datetime.now(UTC)
+        await api_domain.start_item(self.repository, task, item_id, body)
         await self.repository.commit()
         return {"taskId": task_id, "itemId": item_id, "workerId": body.worker_id}
 
@@ -366,58 +286,11 @@ class WorkerTaskService:
         await authorize_execution(self.repository.session, task)
         ensure_worker_match(task, body.worker_id)
         ensure_task_id(task, body)
-        if task.task_type != "api_collection_run":
-            raise ErrBadRequest()
-        status = ensure_final_status(body.status, {"success", "failed", "error", "skipped"})
-        item = await self.repository.get_api_item(item_id)
-        if item is None:
-            raise ErrNotFound()
-        if getattr(item, "collection_run_id", task.run_id) != task.run_id:
-            raise ErrBadRequest()
-        collection_run = await self.repository.get_api_collection_run(item.collection_run_id)
-        if collection_run is None:
-            raise ErrNotFound()
-        item.status = status
-        started_at = parse_event_time(body.started_at)
-        finished_at = parse_event_time(body.finished_at) or datetime.now(UTC)
-        case_run = ApiCaseRun(
-            run_id=new_id(),
-            collection_run_id=item.collection_run_id,
-            case_id=body.case_id or item.case_id,
-            collection_id=collection_run.collection_id,
-            environment_id=collection_run.environment_id,
-            trigger_user_id=collection_run.trigger_user_id,
-            trigger_type="collection",
-            status=item.status,
-            request_snapshot_json=body.request or {},
-            response_snapshot_json=body.response or {},
-            runtime_vars_json=body.runtime_vars_json or {},
-            extract_results_json=body.extract_results or [],
-            assert_results_json=body.assert_results or body.step_results or [],
-            error_message=body.error_message or "",
-            started_at=started_at,
-            finished_at=finished_at,
-            duration_ms=body.duration_ms or 0,
+        status = await api_domain.complete_item(
+            self.repository, task, item_id, body, id_factory=new_id
         )
-        self.repository.add(case_run)
-        secrets = await save_extracted_environment_vars(
-            self.repository.session,
-            collection_run.environment_id,
-            body.extract_results,
-            actor=collection_run.trigger_user_id,
-        )
-        secrets.extend(private_payload(collection_run).get("secrets", []))
-        protect_run(case_run, secrets)
-        protect_run(collection_run, secrets)
-        item.case_run_id = case_run.run_id
-        item.started_at = started_at
-        item.error_message = redact(body.error_message or "", secrets)
-        item.finished_at = finished_at
-        if body.duration_ms is not None:
-            item.duration_ms = body.duration_ms
-        await update_item_counts(self.repository.session, item.collection_run_id)
         await self.repository.commit()
-        return {"taskId": task_id, "itemId": item_id, "status": item.status}
+        return {"taskId": task_id, "itemId": item_id, "status": status}
 
     async def start_ui_suite_item(
         self, task_id: str, item_id: str, body: WorkerTaskEventRequest
@@ -426,13 +299,7 @@ class WorkerTaskService:
         await authorize_execution(self.repository.session, task)
         ensure_worker_match(task, body.worker_id)
         ensure_task_id(task, body)
-        item = await self.repository.get_ui_item(item_id)
-        if item is None:
-            raise ErrNotFound()
-        if item.suite_run_id != task.run_id:
-            raise ErrBadRequest()
-        item.status = RunStatus.RUNNING.value
-        item.started_at = parse_event_time(body.started_at) or datetime.now(UTC)
+        await ui_domain.start_item(self.repository, task, item_id, body)
         await self.repository.commit()
         return {"taskId": task_id, "itemId": item_id, "workerId": body.worker_id}
 
@@ -444,21 +311,9 @@ class WorkerTaskService:
         ensure_worker_match(task, body.worker_id)
         await self.validate_ui_artifacts(task_id, body)
         ensure_task_id(task, body)
-        item = await self.repository.get_ui_item(item_id)
-        if item is None:
-            raise ErrNotFound()
-        if item.suite_run_id != task.run_id:
-            raise ErrBadRequest()
-        item.status = final_run_status(body.status)
-        item.snapshot_json = body.snapshot_json or item.snapshot_json
-        item.step_results_json = body.step_results or item.step_results_json
-        item.error_message = body.error_message or ""
-        item.finished_at = parse_event_time(body.finished_at) or datetime.now(UTC)
-        if body.duration_ms is not None:
-            item.duration_ms = body.duration_ms
-        await update_ui_item_counts(self.repository.session, item.suite_run_id)
+        status = await ui_domain.complete_item(self.repository, task, item_id, body)
         await self.repository.commit()
-        return {"taskId": task_id, "itemId": item_id, "status": item.status}
+        return {"taskId": task_id, "itemId": item_id, "status": status}
 
     async def list_project_skills(self, project_id: str) -> dict:
         rows = await self.repository.list_project_skills(project_id)
@@ -586,54 +441,7 @@ class WorkerTaskService:
         run = await self.repository.get_ai_run(task.run_id)
         if run:
             await self._guard_ai_event(task, run)
-            if body.run_id and body.run_id != run.run_id:
-                raise ErrBadRequest()
-            if task.task_type == "requirement_analysis" and body.stage_status == "waiting_review":
-                from testing_agent.services.requirement_analysis_contracts import (
-                    validate_run_output,
-                )
-
-                validate_run_output(run, config=body.config_json)
-            now = datetime.now(UTC)
-            next_task_status = RunStatus.RUNNING.value
-            next_run_status = RunStatus.RUNNING.value
-            next_stage_status = run.stage_status
-            if run.checkpoint_enabled and body.stage_status == StageStatus.WAITING_REVIEW.value:
-                if not body.current_stage or body.current_stage != run.current_stage:
-                    raise ErrBadRequest()
-                if run.current_stage not in AI_WAITING_REVIEW_STAGES:
-                    raise ErrBadRequest()
-                next_task_status = RunStatus.SUCCESS.value
-                next_run_status = "waiting_review"
-                next_stage_status = StageStatus.WAITING_REVIEW.value
-            elif run.checkpoint_enabled and body.stage_status:
-                if not body.current_stage or body.current_stage != run.current_stage:
-                    raise ErrBadRequest()
-                next_stage_status = body.stage_status
-
-            task.status = next_task_status
-            task.heartbeat_at = now
-            task.lease_expires_at = now + timedelta(seconds=AI_LEASE_SECONDS)
-            if next_task_status == RunStatus.SUCCESS.value:
-                task.finished_at = now
-                task.lease_expires_at = now
-            run.status = next_run_status
-            if body.current_stage is not None:
-                run.current_stage = body.current_stage
-            if run.checkpoint_enabled:
-                run.stage_status = next_stage_status
-            elif body.stage_status is not None:
-                run.stage_status = body.stage_status
-            functional = task.task_type == "functional_case_generate"
-            if body.config_json is not None and (not functional or body.config_json):
-                run.config_json = body.config_json
-            if body.result_yaml is not None and not functional:
-                run.result_yaml = body.result_yaml
-            if body.result_summary_json is not None:
-                run.result_summary_json = body.result_summary_json
-            if body.error_message is not None:
-                task.error_message = body.error_message
-                run.error_message = body.error_message
+            ai_domain.apply_progress(run, task, body, lease_seconds=AI_LEASE_SECONDS)
         if run is not None:
             await self.execution.save(
                 self.repository.session,

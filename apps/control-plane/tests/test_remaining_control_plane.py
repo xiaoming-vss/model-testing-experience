@@ -20,6 +20,7 @@ from testing_agent.core.errors import (
 from testing_agent.models.api_assert_rule import ApiAssertRule
 from testing_agent.models.api_case import ApiCase
 from testing_agent.models.api_extract_rule import ApiExtractRule
+from testing_agent.models.worker_task import WorkerTask
 from testing_agent.schemas.ai_generate_task import (
     AiGenerateTaskReviewRequest,
     RequirementAnalysisRunRequest,
@@ -1220,8 +1221,9 @@ async def test_ai_generate_run_uses_go_connection_id_for_worker_task(monkeypatch
 
     await service.run("api", "task-1", {"connectionId": "conn-1"}, "user-1")
 
-    worker_task = next(row for row in repository.rows if hasattr(row, "llm_connection_id"))
-    assert worker_task.llm_connection_id == "conn-1"
+    worker_task = next(row for row in repository.rows if isinstance(row, WorkerTask))
+    assert service.execution.writes[-1][2] is worker_task
+    assert service.execution.writes[-1][1].llm_connection_id == "conn-1"
 
 
 @pytest.mark.asyncio
@@ -1594,7 +1596,7 @@ async def test_requirement_analysis_run_enqueues_requirement_analysis_worker_tas
 
     await service.run("requirement_analysis", "task-1", {"connectionId": "conn-1"}, "user-1")
 
-    worker_task = next(row for row in repository.rows if hasattr(row, "llm_connection_id"))
+    worker_task = next(row for row in repository.rows if isinstance(row, WorkerTask))
     run = next(row for row in repository.rows if hasattr(row, "snapshot_json"))
     assert worker_task.task_type == "requirement_analysis"
     assert "sourceType" not in run.snapshot_json
@@ -2154,7 +2156,7 @@ async def test_requirement_analysis_review_extracting_text_enqueues_feature_unde
             assert project_id == "project-1"
             return SimpleNamespace(project_id="project-1", user_id="user-1")
 
-        async def get_latest_worker_task_by_run_id(self, run_id):
+        async def get_latest_ai_dispatch(self, run_id):
             assert run_id == "run-1"
             return SimpleNamespace(llm_connection_id="connection-1")
 
@@ -2191,7 +2193,7 @@ async def test_requirement_analysis_review_extracting_text_enqueues_feature_unde
     worker_task = repository.added[0]
     assert worker_task.task_type == "requirement_analysis"
     assert worker_task.run_id == "run-1"
-    assert worker_task.llm_connection_id == "connection-1"
+    assert service.execution.writes[-1][1].llm_connection_id == "connection-1"
 
 
 @pytest.mark.asyncio
@@ -2245,7 +2247,7 @@ async def test_requirement_analysis_revise_extracting_text_enqueues_same_stage_w
             assert project_id == "project-1"
             return SimpleNamespace(project_id="project-1", user_id="user-1")
 
-        async def get_latest_worker_task_by_run_id(self, run_id):
+        async def get_latest_ai_dispatch(self, run_id):
             assert run_id == "run-1"
             return SimpleNamespace(llm_connection_id="connection-1")
 
@@ -2287,8 +2289,8 @@ async def test_requirement_analysis_revise_extracting_text_enqueues_same_stage_w
     assert worker_task.task_id == "worker-task-revise"
     assert worker_task.task_type == "requirement_analysis"
     assert worker_task.run_id == "run-1"
-    assert worker_task.generate_task_id == "task-1"
-    assert worker_task.llm_connection_id == "connection-1"
+    assert service.execution.writes[-1][0].task_id == "task-1"
+    assert service.execution.writes[-1][1].llm_connection_id == "connection-1"
     assert worker_task.status == "pending"
 
 
@@ -2424,7 +2426,7 @@ async def test_requirement_analysis_revise_final_output_enqueues_feature_underst
             assert project_id == "project-1"
             return SimpleNamespace(project_id="project-1", user_id="user-1")
 
-        async def get_latest_worker_task_by_run_id(self, run_id):
+        async def get_latest_ai_dispatch(self, run_id):
             assert run_id == "run-1"
             return SimpleNamespace(llm_connection_id="connection-1")
 
@@ -2467,7 +2469,7 @@ async def test_requirement_analysis_revise_final_output_enqueues_feature_underst
     assert worker_task.task_id == "worker-task-final-revise"
     assert worker_task.task_type == "requirement_analysis"
     assert worker_task.run_id == "run-1"
-    assert worker_task.llm_connection_id == "connection-1"
+    assert service.execution.writes[-1][1].llm_connection_id == "connection-1"
 
 
 @pytest.mark.asyncio
@@ -2525,7 +2527,7 @@ async def test_function_stage_review_approve_enqueues_next_stage_worker_task(mon
             assert project_id == "project-1"
             return SimpleNamespace(project_id="project-1", user_id="user-1")
 
-        async def get_latest_worker_task_by_run_id(self, run_id):
+        async def get_latest_ai_dispatch(self, run_id):
             assert run_id == "run-1"
             return latest_worker_task
 
@@ -2559,8 +2561,8 @@ async def test_function_stage_review_approve_enqueues_next_stage_worker_task(mon
     assert worker_task.task_id == "worker-task-next"
     assert worker_task.task_type == "functional_case_generate"
     assert worker_task.run_id == "run-1"
-    assert worker_task.generate_task_id == "task-1"
-    assert worker_task.llm_connection_id == "connection-1"
+    assert service.execution.writes[-1][0].task_id == "task-1"
+    assert service.execution.writes[-1][1].llm_connection_id == "connection-1"
     assert worker_task.status == "pending"
 
 
@@ -2613,7 +2615,7 @@ async def test_function_stage_review_approve_accepts_saved_waiting_review_stage(
             assert project_id == "project-1"
             return SimpleNamespace(project_id="project-1", user_id="user-1")
 
-        async def get_latest_worker_task_by_run_id(self, run_id):
+        async def get_latest_ai_dispatch(self, run_id):
             assert run_id == "run-1"
             return SimpleNamespace(llm_connection_id="connection-1")
 

@@ -866,10 +866,11 @@ async def test_api_collection_item_complete_creates_case_run_and_binds_item(monk
 
     repository = FakeApiItemRepository()
     monkeypatch.setattr(worker_task_service_module, "find_task", fake_find_task)
-    monkeypatch.setattr(worker_task_service_module, "update_item_counts", fake_update_item_counts)
     monkeypatch.setattr(
-        worker_task_service_module,
-        "save_extracted_environment_vars",
+        "testing_agent.services.worker_domains.api.update_item_counts", fake_update_item_counts
+    )
+    monkeypatch.setattr(
+        "testing_agent.services.worker_domains.api.save_extracted_environment_vars",
         fake_save_extracted_environment_vars,
     )
     monkeypatch.setattr(worker_task_service_module, "new_id", lambda: "case-run-1", raising=False)

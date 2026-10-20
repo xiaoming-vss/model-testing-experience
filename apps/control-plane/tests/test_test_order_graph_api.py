@@ -247,7 +247,6 @@ def test_worker_result_lands_in_result_yaml_without_review(db):
         task_id="graph-worker",
         task_type="test_order_graph",
         run_id="graph-run",
-        generate_task_id="graph-task",
         status="pending",
     )
     db.add_all([task, run, worker])

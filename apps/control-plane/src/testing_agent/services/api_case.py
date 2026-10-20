@@ -207,8 +207,6 @@ class ApiCaseService:
             task_id=new_id(),
             task_type="api_case_debug",
             run_id=run.run_id,
-            collection_id=context.collection.collection_id,
-            case_id=context.api_case.case_id,
             status=RunStatus.PENDING.value,
         )
         self.repository.add_all([run, task])

@@ -23,7 +23,7 @@ class RevisionRepository(FunctionReviewRepository):
         await self.lock.acquire()
         return self.run
 
-    async def get_latest_worker_task_by_run_id(self, run_id):
+    async def get_latest_ai_dispatch(self, run_id):
         return self.latest
 
     def add(self, task):
@@ -57,9 +57,8 @@ def revision_run(stage="requirement_analysis"):
 async def test_revision_saves_edits_and_queues_current_stage(stage, field):
     run = revision_run(stage)
     repo = RevisionRepository(run)
-    result = await AiGenerateTaskService(
-        repo, execution_writer=MemoryExecutionWriter()
-    ).revise_function_case_stage(
+    writer = MemoryExecutionWriter()
+    result = await AiGenerateTaskService(repo, execution_writer=writer).revise_function_case_stage(
         "run-1",
         {
             "stage": stage,
@@ -75,7 +74,7 @@ async def test_revision_saves_edits_and_queues_current_stage(stage, field):
     assert run.config_json["revisionInstruction"] == "cover boundaries"
     assert repo.commits == 1
     assert repo.queued[0].run_id == "run-1"
-    assert repo.queued[0].llm_connection_id == "llm-1"
+    assert writer.writes[-1][1].llm_connection_id == "llm-1"
 
 
 @pytest.mark.asyncio

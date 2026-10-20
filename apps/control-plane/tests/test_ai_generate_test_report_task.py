@@ -172,8 +172,8 @@ async def test_test_report_direct_run_lazily_creates_internal_task(monkeypatch):
     assert worker_task.task_id == "worker-task-1"
     assert worker_task.domain == "ai"
     assert worker_task.task_type == "test_report_generate"
-    assert worker_task.generate_task_id == "task-1"
-    assert worker_task.llm_connection_id == "llm-1"
+    assert service.execution.writes[-1][0].task_id == "task-1"
+    assert service.execution.writes[-1][1].llm_connection_id == "llm-1"
     assert payload["snapshotJson"] == run.snapshot_json
 
 
@@ -200,7 +200,7 @@ async def test_test_report_direct_run_reuses_existing_internal_task(monkeypatch)
     ]
     run, worker_task = repository.added_batches[0]
     assert run.task_id == "task-1"
-    assert worker_task.generate_task_id == "task-1"
+    assert service.execution.writes[-1][0].task_id == "task-1"
 
 
 @pytest.mark.asyncio

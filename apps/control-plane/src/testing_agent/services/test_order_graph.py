@@ -208,14 +208,15 @@ class TestOrderGraphService:
             task_id=new_id(),
             task_type=TEST_ORDER_GRAPH_TASK_TYPE,
             run_id=run_id,
-            generate_task_id=task.task_id,
-            llm_connection_id=connection_id,
             status=RunStatus.PENDING.value,
         )
         self.repository.add(dispatch)
         self.repository.add(run)
         await self.execution.save(
-            self.repository.session, run, intent=ExecutionIntent(actor_id=user_id), worker=dispatch
+            self.repository.session,
+            run,
+            intent=ExecutionIntent(actor_id=user_id, llm_connection_id=connection_id),
+            worker=dispatch,
         )
         await self.repository.commit()
         await self.repository.refresh(run)
@@ -251,7 +252,7 @@ class TestOrderGraphService:
 
         connection_id = str(body.get("connection_id") or "").strip()
         if not connection_id and latest is not None:
-            previous = await self.repository.get_latest_worker_task_by_run_id(latest.run_id)
+            previous = await self.repository.get_latest_ai_dispatch(latest.run_id)
             connection_id = str(getattr(previous, "llm_connection_id", "") or "")
         connection = await require_personal_connection(
             self.repository.session, user_id, "llm", connection_id, project_id

@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from testing_agent.core.enums import RunStatus
+from testing_agent.core.errors import ErrBadRequest
 from testing_agent.domain.worker_context import (
     AiWorkerContext,
     ApiWorkerContext,
@@ -89,3 +90,10 @@ async def apply_event_to_task(
         task.finished_at = parse_event_time(body.finished_at) or now
     if body.error_message is not None:
         task.error_message = body.error_message
+
+
+def ensure_final_status(status: str | None, allowed: set[str]) -> str:
+    value = final_run_status(status)
+    if value not in allowed:
+        raise ErrBadRequest()
+    return value

@@ -27,7 +27,8 @@ def test_retry_http_requeues_failed_stage_and_preserves_inputs(stage, stage_stat
     repo = failed_repository(stage, stage_status)
     repo.run.checkpoint_enabled = checkpoint
     config = dict(repo.run.config_json)
-    response = review_client(repo).post(
+    client = review_client(repo)
+    response = client.post(
         "/v1/function-case-generate-task-runs/run-1/stage-retry", json={"stage": stage}
     )
     assert response.status_code == 200
@@ -38,7 +39,7 @@ def test_retry_http_requeues_failed_stage_and_preserves_inputs(stage, stage_stat
     assert repo.run.config_json == config
     assert len(repo.queued) == 1
     assert repo.queued[0].run_id == "run-1"
-    assert repo.queued[0].llm_connection_id == "llm-1"
+    assert client.app.state.execution_writer.writes[-1][1].llm_connection_id == "llm-1"
     assert repo.commits == 1
 
 

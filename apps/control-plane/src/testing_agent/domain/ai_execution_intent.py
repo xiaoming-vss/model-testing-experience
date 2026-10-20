@@ -14,6 +14,7 @@ class StageReview:
 @dataclass(frozen=True)
 class ExecutionIntent:
     actor_id: str | None = None
+    llm_connection_id: str | None = None
     operation: Literal["generate", "revise", "retry", "edit"] | None = None
     review: StageReview | None = None
     worker_event_id: str | None = None

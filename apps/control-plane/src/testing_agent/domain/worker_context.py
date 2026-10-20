@@ -12,6 +12,15 @@ class AiWorkerContext:
 
 
 @dataclass(frozen=True)
+class AiDispatchContext:
+    """Latest dispatch facts used when deciding whether/how to launch a follow-up."""
+
+    task_id: str
+    status: str
+    llm_connection_id: str | None
+
+
+@dataclass(frozen=True)
 class ApiWorkerContext:
     case_id: str | None
     collection_id: str | None

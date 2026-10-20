@@ -70,6 +70,7 @@ def new_attempt(
     worker: WorkerTask | None = None,
     operation: str = "generate",
     actor_id: str | None = None,
+    llm_connection_id: str | None = None,
 ) -> Attempt:
     siblings = [a for a in attempts.values() if a.stage_id == stage.id]
     snapshot: dict[str, Any] = {
@@ -80,14 +81,17 @@ def new_attempt(
     instruction = snapshot["config"].pop("revisionInstruction", None)
     from testing_agent.repositories.worker_context import connection_for_attempt
 
-    snapshot["llmConnectionId"] = connection_for_attempt(session, worker)
     previous = max(siblings, key=lambda a: a.attempt_no, default=None)
     if operation == "retry" and previous and previous.status in {"failed", "error", "canceled"}:
         snapshot = mapping(previous.input_snapshot_json)
         instruction = previous.revision_instruction
         snapshot["config"] = mapping(snapshot.get("config"))
         snapshot["config"].pop("revisionInstruction", None)
-    snapshot["llmConnectionId"] = connection_for_attempt(session, worker)
+    snapshot["llmConnectionId"] = (
+        llm_connection_id
+        if llm_connection_id is not None
+        else connection_for_attempt(session, worker)
+    )
     prior_dispatch = next(
         (a for a in attempts.values() if worker and a.worker_task_id == worker.task_id), None
     )
@@ -212,6 +216,7 @@ def sync_run(
                 run,
                 worker=worker,
                 actor_id=intent.actor_id,
+                llm_connection_id=intent.llm_connection_id,
                 operation=operation
                 or ("revise" if config.get("revisionInstruction") else "generate"),
             )
@@ -290,6 +295,7 @@ def sync_run(
                 else None,
                 operation="edit" if old else "generate",
                 actor_id=intent.actor_id,
+                llm_connection_id=intent.llm_connection_id,
             )
         target.output_context_json = extra_config(config)
         publish(target, stage, value)
@@ -353,8 +359,8 @@ def persist_run(
 ) -> None:
     """Apply exactly one declared execution change, preserving the caller's transaction.
 
-    The caller retains and supplies a newly queued WorkerTask so its selected model
-    is frozen into the attempt even after flush. No session-wide dirty/new scan.
+    The caller supplies the selected model in ExecutionIntent and the associated
+    queue row explicitly. No ORM command metadata or session-wide dirty/new scan.
     """
     session.flush()
     sync_run(session, run, intent, worker)

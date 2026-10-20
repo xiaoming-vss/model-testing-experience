@@ -189,8 +189,6 @@ class GenerationRunLauncher:
             task_id=worker_task_id,
             task_type=task.task_type,
             run_id=run.run_id,
-            generate_task_id=task.task_id,
-            llm_connection_id=llm_connection_id,
             status=RunStatus.PENDING.value,
         )
         # Lock and revalidate immediately before inserting the child records.
@@ -230,7 +228,7 @@ class GenerationRunLauncher:
         await self.execution.save(
             self.repository.session,
             run,
-            intent=ExecutionIntent(actor_id=user_id),
+            intent=ExecutionIntent(actor_id=user_id, llm_connection_id=llm_connection_id),
             worker=worker_task,
         )
         await self.repository.commit()

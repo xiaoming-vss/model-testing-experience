@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from sqlalchemy import func, select
 
+from testing_agent.domain.worker_context import AiDispatchContext, AiWorkerContext
 from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
 from testing_agent.models.api_assert_rule import ApiAssertRule
 from testing_agent.models.api_case import ApiCase
@@ -18,6 +19,7 @@ from testing_agent.models.ui_test_case_run import UiTestCaseRun
 from testing_agent.models.ui_test_suite import UiTestSuite
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.base import ResourceRepository
+from testing_agent.repositories.worker_context import read_worker_context
 
 
 class AiGenerateTaskRepository(ResourceRepository):
@@ -277,9 +279,15 @@ class AiGenerateTaskRepository(ResourceRepository):
             .limit(1)
         )
 
-        from testing_agent.repositories.worker_context import project_worker_context
+        return row
 
-        return await self.session.run_sync(lambda session: project_worker_context(session, row))
+    async def get_latest_ai_dispatch(self, run_id: str) -> AiDispatchContext | None:
+        worker = await self.get_latest_worker_task_by_run_id(run_id)
+        if worker is None:
+            return None
+        context = await self.session.run_sync(lambda sync: read_worker_context(sync, worker))
+        assert isinstance(context, AiWorkerContext)
+        return AiDispatchContext(worker.task_id, worker.status, context.llm_connection_id)
 
     async def get_function_suite_by_requirement_and_name(
         self, requirement_id: str, name: str

@@ -245,15 +245,19 @@ def test_selected_model_connection_is_stored_in_attempt_and_survives_reload(db):
         task_id="selected",
         task_type="functional_case_generate",
         run_id=run.run_id,
-        llm_connection_id="selected-connection",
         status="pending",
     )
     db.add(selected)
-    persist_run(db, run, intent=ExecutionIntent(operation="revise"), worker=selected)
+    persist_run(
+        db,
+        run,
+        intent=ExecutionIntent(operation="revise", llm_connection_id="selected-connection"),
+        worker=selected,
+    )
     db.commit()
     db.expunge_all()
     loaded = db.scalar(select(WorkerTask).where(WorkerTask.task_id == "selected"))
-    assert loaded.llm_connection_id is None
+    assert not hasattr(loaded, "llm_connection_id")
     assert read_worker_context(db, loaded).llm_connection_id == "selected-connection"
 
 
@@ -348,11 +352,10 @@ async def test_revision_service_preserves_model_without_queue_object_reference(
         task_id="first",
         task_type=kind,
         run_id="run",
-        llm_connection_id="original-model",
         status="pending",
     )
     db.add_all([run, first])
-    persist_run(db, run, worker=first)
+    persist_run(db, run, intent=ExecutionIntent(llm_connection_id="original-model"), worker=first)
     db.commit()
     original, draft = "original", "draft"
     if kind == "requirement_analysis":
@@ -375,7 +378,7 @@ async def test_revision_service_preserves_model_without_queue_object_reference(
     )
     db.expunge_all()
     revised = await repo.get_latest_worker_task_by_run_id("run")
-    assert revised.llm_connection_id == "original-model"
+    assert read_worker_context(db, revised).llm_connection_id == "original-model"
 
     # A failed optimization must retry the same frozen inputs and connection.
     from testing_agent.services.ai_execution import worker_input
@@ -391,5 +394,5 @@ async def test_revision_service_preserves_model_without_queue_object_reference(
     )
     retried = await repo.get_latest_worker_task_by_run_id("run")
     assert retried.task_id != revised.task_id
-    assert retried.llm_connection_id == "original-model"
+    assert read_worker_context(db, retried).llm_connection_id == "original-model"
     assert worker_input(db, run, retried) == before

@@ -123,8 +123,6 @@ class ApiCollectionRunService:
             task_id=new_id(),
             task_type="api_collection_run",
             run_id=run.collection_run_id,
-            collection_run_id=run.collection_run_id,
-            collection_id=collection_id,
             status=RunStatus.PENDING.value,
         )
         self.repository.add_all([run, task])

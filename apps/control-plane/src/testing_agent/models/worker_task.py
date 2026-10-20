@@ -28,13 +28,6 @@ class WorkerTask(Base):
     run_id: Mapped[str] = mapped_column(
         String(64), index=True, nullable=False, comment="运行业务标识"
     )
-    # Compatibility payload attributes; never persisted in the queue.
-    suite_id = None
-    case_id = None
-    collection_run_id = None
-    collection_id = None
-    generate_task_id = None
-    llm_connection_id = None
     status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,

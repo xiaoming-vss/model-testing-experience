@@ -4,6 +4,32 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_queue_identity_context_is_not_stored_as_orm_command_attributes():
+    fields = {
+        "suite_id",
+        "case_id",
+        "collection_run_id",
+        "collection_id",
+        "generate_task_id",
+        "llm_connection_id",
+    }
+    root = PROJECT_ROOT / "src/testing_agent"
+    tree = ast.parse((root / "models/worker_task.py").read_text())
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            assert not any(isinstance(t, ast.Name) and t.id in fields for t in node.targets)
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            assert node.target.id not in fields
+    for path in (root / "services").rglob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+                if node.func.id == "WorkerTask":
+                    assert not fields.intersection(k.arg for k in node.keywords), (
+                        f"{path.name}: queue identities come from typed contexts; "
+                        "new model choices belong to ExecutionIntent"
+                    )
+
+
 def test_worker_domains_do_not_depend_on_protocol_dispatch_or_other_domains():
     root = PROJECT_ROOT / "src/testing_agent/services/worker_domains"
     for path in root.glob("*.py"):

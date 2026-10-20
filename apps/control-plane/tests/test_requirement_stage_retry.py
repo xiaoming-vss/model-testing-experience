@@ -36,7 +36,7 @@ def test_retry_http_preserves_stage_connection_and_artifacts(stage):
     assert client.app.state.execution_writer.writes[-1][1].operation == "retry"
     assert len(repo.queued) == 1
     assert repo.queued[0].task_type == "requirement_analysis"
-    assert repo.queued[0].llm_connection_id == "llm-1"
+    assert client.app.state.execution_writer.writes[-1][1].llm_connection_id == "llm-1"
 
 
 @pytest.mark.asyncio

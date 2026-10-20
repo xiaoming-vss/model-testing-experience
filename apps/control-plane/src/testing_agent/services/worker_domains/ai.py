@@ -1,15 +1,19 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.enums import RunStatus, StageStatus
+from testing_agent.core.errors import ErrBadRequest, ErrNotFound
+from testing_agent.domain.worker_context import AiWorkerContext
 from testing_agent.models.ai_generate_task import AiGenerateTaskRun
 from testing_agent.models.worker_task import WorkerTask
+from testing_agent.repositories.worker_task import WorkerTaskRepository
 from testing_agent.schemas.workers import (
+    WorkerProgressRequest,
     WorkerTaskEventRequest,
 )
 from testing_agent.services.worker_domains.events import (
@@ -112,3 +116,103 @@ async def complete_run(
         apply_ai_completion_to_run(
             run, body, functional=task.task_type == "functional_case_generate"
         )
+
+
+AI_WAITING_REVIEW_STAGES = {"requirement_analysis", "case_names", "extracting_text"}
+
+
+def apply_progress(
+    run: AiGenerateTaskRun, task: WorkerTask, body: WorkerProgressRequest, *, lease_seconds: int
+) -> None:
+    if body.run_id and body.run_id != run.run_id:
+        raise ErrBadRequest()
+    if task.task_type == "requirement_analysis" and body.stage_status == "waiting_review":
+        from testing_agent.services.requirement_analysis_contracts import (
+            validate_run_output,
+        )
+
+        validate_run_output(run, config=body.config_json)
+    now = datetime.now(UTC)
+    next_task_status = RunStatus.RUNNING.value
+    next_run_status = RunStatus.RUNNING.value
+    next_stage_status = run.stage_status
+    if run.checkpoint_enabled and body.stage_status == StageStatus.WAITING_REVIEW.value:
+        if not body.current_stage or body.current_stage != run.current_stage:
+            raise ErrBadRequest()
+        if run.current_stage not in AI_WAITING_REVIEW_STAGES:
+            raise ErrBadRequest()
+        next_task_status = RunStatus.SUCCESS.value
+        next_run_status = "waiting_review"
+        next_stage_status = StageStatus.WAITING_REVIEW.value
+    elif run.checkpoint_enabled and body.stage_status:
+        if not body.current_stage or body.current_stage != run.current_stage:
+            raise ErrBadRequest()
+        next_stage_status = body.stage_status
+
+    task.status = next_task_status
+    task.heartbeat_at = now
+    task.lease_expires_at = now + timedelta(seconds=lease_seconds)
+    if next_task_status == RunStatus.SUCCESS.value:
+        task.finished_at = now
+        task.lease_expires_at = now
+    run.status = next_run_status
+    if body.current_stage is not None:
+        run.current_stage = body.current_stage
+    if run.checkpoint_enabled:
+        run.stage_status = next_stage_status
+    elif body.stage_status is not None:
+        run.stage_status = body.stage_status
+    functional = task.task_type == "functional_case_generate"
+    if body.config_json is not None and (not functional or body.config_json):
+        run.config_json = body.config_json
+    if body.result_yaml is not None and not functional:
+        run.result_yaml = body.result_yaml
+    if body.result_summary_json is not None:
+        run.result_summary_json = body.result_summary_json
+    if body.error_message is not None:
+        task.error_message = body.error_message
+        run.error_message = body.error_message
+
+
+async def mark_claimed(repository: WorkerTaskRepository, task: WorkerTask) -> AiGenerateTaskRun:
+    ai_run = await repository.get_ai_run(task.run_id)
+    if ai_run is None:
+        raise ErrNotFound()
+    ai_run.status = RunStatus.CLAIMED.value
+    if ai_run.checkpoint_enabled:
+        ai_run.stage_status = StageStatus.RUNNING.value
+    return ai_run
+
+
+def claim_payload(
+    task: WorkerTask, ai_run: AiGenerateTaskRun, context: AiWorkerContext, *, lease_seconds: int
+) -> dict[str, Any]:
+    payload = {
+        "taskId": task.task_id,
+        "taskType": task.task_type,
+        "runId": task.run_id,
+        "generateTaskId": context.generate_task_id,
+        "projectId": ai_run.project_id,
+        "sprintId": ai_run.sprint_id,
+        "requirementId": ai_run.requirement_id,
+        "llmConnectionId": context.llm_connection_id,
+        "checkpointEnabled": ai_run.checkpoint_enabled,
+        "currentStage": ai_run.current_stage,
+        "leaseSeconds": lease_seconds,
+    }
+    if ai_run.checkpoint_enabled:
+        payload["configJson"] = json_text(getattr(ai_run, "config_json", {}) or {})
+    return payload
+
+
+async def mark_started(
+    repository: WorkerTaskRepository, task: WorkerTask, started_at: datetime | None
+) -> AiGenerateTaskRun:
+    ai_run = await repository.get_ai_run(task.run_id)
+    if ai_run is None:
+        raise ErrNotFound()
+    ai_run.status = RunStatus.RUNNING.value
+    ai_run.started_at = ai_run.started_at or started_at or datetime.now(UTC)
+    if ai_run.checkpoint_enabled:
+        ai_run.stage_status = StageStatus.RUNNING.value
+    return ai_run

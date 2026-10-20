@@ -1,5 +1,6 @@
 """Shared ai execution fixtures and helpers; no collected tests."""
 
+from dataclasses import replace
 from datetime import UTC, datetime
 
 import pytest
@@ -123,13 +124,18 @@ def enqueue(db, run, key, operation=None, *, connection_id="llm", intent=None):
         task_id=key,
         task_type="functional_case_generate",
         run_id=run.run_id,
-        generate_task_id=run.task_id,
-        llm_connection_id=connection_id,
         status="pending",
     )
     db.add(task)
     run.status = "pending"
-    persist_run(db, run, intent=intent or ExecutionIntent(operation=operation), worker=task)
+    persist_run(
+        db,
+        run,
+        intent=replace(
+            intent or ExecutionIntent(operation=operation), llm_connection_id=connection_id
+        ),
+        worker=task,
+    )
     db.commit()
     return task
 
