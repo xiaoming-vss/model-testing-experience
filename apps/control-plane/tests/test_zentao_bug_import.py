@@ -685,3 +685,53 @@ def test_viewer_and_developer_cannot_import(api, setup):
     assert (
         api.post(field["preview"], headers=viewer, json={"remoteBugIds": [50]}).status_code == 403
     )
+
+
+def test_import_database_failure_rolls_back_all_rows_and_allows_same_request_retry(
+    api, setup, monkeypatch
+):
+    from sqlalchemy import func
+    from sqlalchemy.exc import IntegrityError
+
+    from testing_agent.models.bug import Bug
+    from testing_agent.repositories.bug import BugRepository
+
+    async def counts():
+        async with api.app.state.test_sessions() as session:
+            return [
+                await session.scalar(select(func.count()).select_from(model))
+                for model in (
+                    Bug,
+                    BugActivity,
+                    BugZentaoPush,
+                    BugZentaoSyncBaseline,
+                    BugZentaoAttachment,
+                )
+            ]
+
+    original_commit = BugRepository.commit
+
+    async def fail_import_commit(repository):
+        if any(
+            isinstance(row, BugZentaoPush) and row.source == "import"
+            for row in repository.session.new
+        ):
+            await repository.session.flush()
+            raise IntegrityError("test write", {}, RuntimeError("injected unrelated constraint"))
+        await original_commit(repository)
+
+    before = asyncio.run(counts())
+    body = {
+        "requestId": "atomic-import-retry",
+        "items": [import_item(setup["sprint"], 51, setup["owner_id"])],
+    }
+    monkeypatch.setattr(BugRepository, "commit", fail_import_commit)
+    with pytest.raises(IntegrityError):
+        api.post(setup["import"], headers=setup["owner"], json=body)
+    assert asyncio.run(counts()) == before
+
+    monkeypatch.setattr(BugRepository, "commit", original_commit)
+    response = api.post(setup["import"], headers=setup["owner"], json=body)
+    assert response.status_code == 200, response.text
+    assert response.json()["data"]["items"][0]["status"] == "success"
+    assert asyncio.run(counts())[0] == before[0] + 1

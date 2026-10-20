@@ -4,6 +4,25 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_bug_import_stages_do_not_depend_on_coordinator_or_mix_remote_and_local_writes():
+    root = PROJECT_ROOT / "src/testing_agent/services/bug_import"
+    for path in root.glob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.ImportFrom):
+                module = node.module or ""
+                assert module != "testing_agent.services.zentao_bug_import"
+                if path.name == "remote.py":
+                    assert not module.startswith(
+                        ("testing_agent.models", "testing_agent.repositories")
+                    )
+                if path.name == "writer.py":
+                    assert module != "testing_agent.services.mcp_client"
+            if path.name in {"prepare.py", "remote.py"} and isinstance(node, ast.Attribute):
+                assert node.attr not in {"commit", "rollback"}, (
+                    f"{path.name}: preparation does not own a write transaction"
+                )
+
+
 def test_provider_bindings_do_not_depend_on_the_binding_facade_or_each_other():
     root = PROJECT_ROOT / "src/testing_agent/services"
     for name in ("gitlab_bindings.py", "zentao_bindings.py"):

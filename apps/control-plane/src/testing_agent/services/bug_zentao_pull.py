@@ -17,13 +17,14 @@ from testing_agent.domain import zentao_bug_mapping as mapping
 from testing_agent.models.bug_activity import BugActivity
 from testing_agent.models.bug_zentao_push import BugZentaoPush
 from testing_agent.models.bug_zentao_sync_baseline import BugZentaoSyncBaseline
+from testing_agent.repositories.zentao_bug_import import assignable_member, duplicate_local_id
 from testing_agent.schemas.bug_zentao_pull import (
     ZentaoPullGroupRequest,
     ZentaoPullRequest,
     ZentaoRemoteGroupPreview,
 )
 from testing_agent.services.mcp_client import McpCallError, McpClient
-from testing_agent.services.zentao_bug_import import assignable_member, duplicate_local_id
+from testing_agent.services.service_instance import instance_key
 from testing_agent.services.zentao_mcp import ZentaoMcpAccess
 
 
@@ -429,7 +430,9 @@ class BugZentaoPullService:
         )
 
     async def _duplicate_local(self, project_id: str, instance_url: str, remote_bug_id: int):
-        return await duplicate_local_id(self.repository, project_id, instance_url, remote_bug_id)
+        return await duplicate_local_id(
+            self.repository, project_id, instance_key(instance_url), remote_bug_id
+        )
 
     async def _assignable(self, project_id: str, user_id: str) -> bool:
         return await assignable_member(self.repository, project_id, user_id)
