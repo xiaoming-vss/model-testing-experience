@@ -266,6 +266,11 @@ def test_migration_keeps_durable_restore_fence(mysql):
     from alembic import command
     from testing_agent.models.integration_job import IntegrationRuntime
 
+    # Exercise the guard at its own revision. Starting at head first removes newer
+    # account tables via nontransactional DDL before reaching this expected rejection.
+    with mysql.connect() as connection:
+        command.downgrade(migration_config(connection), "20261010_0039")
+        connection.commit()
     with Session(mysql) as session:
         session.add(
             IntegrationRuntime(
@@ -285,6 +290,11 @@ def test_migration_keeps_durable_restore_fence(mysql):
     finally:
         with mysql.begin() as connection:
             connection.execute(delete(IntegrationRuntime).where(IntegrationRuntime.id == 1))
+        # MySQL DDL before the guarded revision is not rolled back by connection.rollback().
+        # Restore the shared module database before later tests use the current ORM.
+        with mysql.connect() as connection:
+            command.upgrade(migration_config(connection), "head")
+            connection.commit()
 
 
 def test_restore_review_scope_constraint_and_migration_evidence_guard(mysql):
@@ -297,6 +307,9 @@ def test_restore_review_scope_constraint_and_migration_evidence_guard(mysql):
     from alembic import command
     from testing_agent.models.integration_job import IntegrationRestoreReview
 
+    with mysql.connect() as connection:
+        command.downgrade(migration_config(connection), "20261010_0039")
+        connection.commit()
     prefix = uuid4().hex
 
     def row(identifier):
@@ -333,6 +346,9 @@ def test_restore_review_scope_constraint_and_migration_evidence_guard(mysql):
                     IntegrationRestoreReview.restore_id == prefix
                 )
             )
+        with mysql.connect() as connection:
+            command.upgrade(migration_config(connection), "head")
+            connection.commit()
 
 
 async def test_authorization_reads_current_role_even_after_repeatable_read_snapshot(mysql):
