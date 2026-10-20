@@ -1,10 +1,12 @@
 """Inline images exercise the real Bug API, storage and MCP orchestration."""
 
+import asyncio
 import json
 
 import httpx
 import pytest
 from integration_test_driver import dispatch_sync, enable
+from sqlalchemy import select
 from support.project_api import api as api
 from test_bug_zentao_attachments import attachments as attachments
 from test_bug_zentao_attachments import push, rows, seed
@@ -12,6 +14,7 @@ from test_bug_zentao_push_api import change
 from test_bug_zentao_push_api import setup as setup
 
 from testing_agent.models.bug import Bug
+from testing_agent.models.bug_zentao_push import BugZentaoPush
 from testing_agent.models.stored_file import StoredFile
 
 
@@ -157,6 +160,15 @@ def test_remote_description_changes_are_overwritten_and_retry_reuses_uploaded_im
     assert "截图位置" in s["steps"] and f"fileID={remote_file_id}" in s["steps"]
     assert "在禅道补充的说明" not in s["steps"] and 'style="color:red"' not in s["steps"]
     assert len(s["description_writes"]) == 1
+
+    async def read_overwrite_fact():
+        async with api.app.state.test_sessions() as session:
+            record = await session.scalar(
+                select(BugZentaoPush).where(BugZentaoPush.bug_id == s["bug"]["bugId"])
+            )
+            return record.description_sync_json["overwrote"]
+
+    assert asyncio.run(read_overwrite_fact())["remoteEdited"] is True
     count = len(s["uploads"])
     assert push(api, s)["descriptionStatus"] == "succeeded"
     assert len(s["uploads"]) == count

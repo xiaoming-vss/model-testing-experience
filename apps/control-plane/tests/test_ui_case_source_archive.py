@@ -296,6 +296,14 @@ def upload_archive(client, task_id, filename, content):
         zip_bytes([("src/main.py", b"x"), ("src/./main.py", b"y")]),
         zip_with_symlink(),
     ],
+    ids=[
+        "invalid-zip",
+        "absolute-path",
+        "windows-path",
+        "parent-path",
+        "duplicate-path",
+        "symlink",
+    ],
 )
 def test_archive_validation_rejects_malformed_and_unsafe_content(source):
     from testing_agent.core.errors import AppError
@@ -312,6 +320,7 @@ def test_archive_validation_rejects_malformed_and_unsafe_content(source):
         ("MAX_SOURCE_ARCHIVE_UNCOMPRESSED_BYTES", 1, zip_bytes([("a", b"ab")])),
         ("MAX_SOURCE_ARCHIVE_FILES", 1, zip_bytes([("a", b""), ("b", b"")])),
     ],
+    ids=["compressed-bytes", "uncompressed-bytes", "file-count"],
 )
 def test_archive_validation_preserves_capacity_limits(monkeypatch, limit, value, source):
     from testing_agent.core.errors import AppError

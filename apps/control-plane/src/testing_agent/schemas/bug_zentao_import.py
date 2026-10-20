@@ -1,5 +1,7 @@
 """禅道新建 Bug 导入的候选、预览与导入契约。"""
 
+from typing import TypedDict
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
@@ -27,14 +29,55 @@ class ZentaoBugPendingItem(BaseModel):
     reason: str
 
 
+class ZentaoImportSnapshot(TypedDict, total=False):
+    """Normalized remote fields; invalid previews retain the existing empty object."""
+
+    remoteBugId: int
+    title: str
+    severity: str
+    priority: str
+    status: str
+    confirmed: bool
+    resolution: str
+    resolvedBuild: str
+    duplicateBug: int
+    activatedCount: int
+    execution: int
+    story: int
+    project: int
+    assignedTo: str
+    openedBy: str
+    openedDate: str
+    deleted: bool
+
+
+class ZentaoImportConverted(TypedDict, total=False):
+    severity: str | None
+    priority: str | None
+    status: str
+    confirmed: bool
+    resolution: str
+    resolvedBuild: str
+    duplicateBugId: int | None
+    foundSprintId: str
+    foundSprintName: str
+    requirementId: str
+    requirementName: str
+
+
+class ZentaoImportDescription(TypedDict, total=False):
+    hasImages: bool
+    hasContent: bool
+
+
 class ZentaoBugImportPreview(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     remote_bug_id: int
     state: str  # ready / pending / pending_files / invalid
     title: str = ""
-    snapshot: dict = Field(default_factory=dict)
-    converted: dict = Field(default_factory=dict)
-    description: dict = Field(default_factory=dict)
+    snapshot: ZentaoImportSnapshot = Field(default_factory=ZentaoImportSnapshot)
+    converted: ZentaoImportConverted = Field(default_factory=ZentaoImportConverted)
+    description: ZentaoImportDescription = Field(default_factory=ZentaoImportDescription)
     pending: list[ZentaoBugPendingItem] = Field(default_factory=list)
     error_message: str = ""
 

@@ -1,6 +1,9 @@
 """已关联 Bug 从禅道拉取更新的预览与应用契约。"""
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from datetime import datetime
+from typing import TypedDict
+
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator
 from pydantic.alias_generators import to_camel
 
 FIELD_GROUPS = ("profile", "description", "status", "assignee")
@@ -16,13 +19,38 @@ GROUP_STATES = (
 )
 
 
+class ZentaoGroupValues(TypedDict, total=False):
+    """The selected group's fields; absence stays absent rather than becoming null."""
+
+    title: str
+    severity: str | None
+    priority: str | None
+    digest: str
+    hasImages: bool
+    hasContent: bool
+    status: str
+    confirmed: bool
+    resolution: str
+    resolvedBuild: str
+    activatedCount: int
+    userId: str
+    account: str
+
+
+class ZentaoGroupBaseline(TypedDict):
+    # Historical snapshots are intentionally extensible JSON, not current command input.
+    local: dict[str, JsonValue]
+    remote: dict[str, JsonValue]
+    appliedAt: datetime | None
+
+
 class ZentaoRemoteGroupPreview(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     group: str
     state: str
-    local: dict = Field(default_factory=dict)
-    remote: dict = Field(default_factory=dict)
-    baseline: dict | None = None
+    local: ZentaoGroupValues = Field(default_factory=ZentaoGroupValues)
+    remote: ZentaoGroupValues = Field(default_factory=ZentaoGroupValues)
+    baseline: ZentaoGroupBaseline | None = None
     reason: str = ""
 
 

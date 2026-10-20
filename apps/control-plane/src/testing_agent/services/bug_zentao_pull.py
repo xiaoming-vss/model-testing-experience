@@ -143,17 +143,19 @@ class BugZentaoPullService:
         ]
         account = str(snapshot["assignedTo"] or "")
         groups.append(
-            ZentaoRemoteGroupPreview(
-                group="assignee",
-                state="manual",
-                local={"userId": bug.assignee_user_id},
-                remote={"account": account},
-                baseline=self._baseline_payload(baselines.get("assignee")),
-                reason=(
-                    "禅道责任人为账号体系，需要人工映射为平台成员后应用（Q05）"
-                    if account
-                    else "禅道未设置责任人"
-                ),
+            ZentaoRemoteGroupPreview.model_validate(
+                {
+                    "group": "assignee",
+                    "state": "manual",
+                    "local": {"userId": bug.assignee_user_id},
+                    "remote": {"account": account},
+                    "baseline": self._baseline_payload(baselines.get("assignee")),
+                    "reason": (
+                        "禅道责任人为账号体系，需要人工映射为平台成员后应用（Q05）"
+                        if account
+                        else "禅道未设置责任人"
+                    ),
+                }
             )
         )
         return {
@@ -415,13 +417,15 @@ class BugZentaoPullService:
         mappable: bool = True,
     ) -> ZentaoRemoteGroupPreview:
         state, reason = _compare(group, local, remote, baseline, mappable)
-        return ZentaoRemoteGroupPreview(
-            group=group,
-            state=state,
-            local=local,
-            remote=remote,
-            baseline=BugZentaoPullService._baseline_payload(baseline),
-            reason=reason,
+        return ZentaoRemoteGroupPreview.model_validate(
+            {
+                "group": group,
+                "state": state,
+                "local": local,
+                "remote": remote,
+                "baseline": BugZentaoPullService._baseline_payload(baseline),
+                "reason": reason,
+            }
         )
 
     async def _duplicate_local(self, project_id: str, instance_url: str, remote_bug_id: int):
