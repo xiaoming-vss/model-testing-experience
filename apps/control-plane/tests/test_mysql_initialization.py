@@ -48,7 +48,10 @@ def test_mysql_baseline_and_roundtrip(mysql):
 def seed_row(connection, table, overrides=None):
     """Populate required columns and real parent rows for constraint tests."""
     values = {}
+    existing = {column["name"] for column in sa.inspect(connection).get_columns(table.name)}
     for col in table.columns:
+        if col.name not in existing:
+            continue
         if col.computed is not None or col.nullable or col.default is not None:
             continue
         if col.primary_key and isinstance(col.type, sa.Integer):

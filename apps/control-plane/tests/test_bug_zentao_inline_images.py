@@ -134,7 +134,7 @@ def test_uncertain_description_is_verified_without_repeat_update_or_upload(api, 
 
 
 @pytest.mark.parametrize("change_style", [False, True])
-def test_remote_description_changes_are_preserved_and_retry_reuses_uploaded_image(
+def test_remote_description_changes_are_overwritten_and_retry_reuses_uploaded_image(
     api, inline, change_style
 ):
     s = inline
@@ -149,15 +149,18 @@ def test_remote_description_changes_are_preserved_and_retry_reuses_uploaded_imag
     )
     s["steps"] = changed
     s["attachment_failure"] = ""
-    failed = push(api, s)
-    assert failed["latestJob"]["jobStatus"] == "partial"
-    assert failed["latestJob"]["result"]["steps"]["update_description"] == "failed"
-    assert s["steps"] == changed
-    assert not s["description_writes"]
+    synced = push(api, s)
+    assert synced["latestJob"]["jobStatus"] == "succeeded"
+    assert synced["latestJob"]["result"]["steps"]["update_description"] == "succeeded"
+    remote_file_id = rows(api)[0]["remote"]
+    assert remote_file_id is not None
+    assert "截图位置" in s["steps"] and f"fileID={remote_file_id}" in s["steps"]
+    assert "在禅道补充的说明" not in s["steps"] and 'style="color:red"' not in s["steps"]
+    assert len(s["description_writes"]) == 1
     count = len(s["uploads"])
-    s["steps"] = baseline
     assert push(api, s)["descriptionStatus"] == "succeeded"
     assert len(s["uploads"]) == count
+    assert len(s["description_writes"]) == 1
 
 
 def test_missing_or_foreign_image_never_writes_description(api, inline):

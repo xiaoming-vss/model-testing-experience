@@ -113,7 +113,9 @@ uv run --extra dev alembic upgrade head           # 数据库迁移
 
 ## 鉴权
 
-- 浏览器请求使用 `Authorization: Bearer <JWT>`，HS256，载荷键为 `userId`；`POST /v1/logout` 持久化撤销当前 Token，详见 [登录与服务端注销](authentication.md)。
+- 浏览器请求使用 `Authorization: Bearer <JWT>`，HS256，载荷键为 `userId` 和令牌版本 `ver`；账号状态、改密、禁用、登录锁定、超级管理员与删除规则详见 [认证、账号与系统管理员](authentication.md)。
+- 认证、会话、项目策略和执行授权的职责、权限矩阵与回归入口见 [认证与权限模块](auth-permission-modules.md)。
+- 2026-10-20 的全项目检查见 [结构与质量排查记录](control-plane-audit-2026-10-20.md)；后续批次与验收标准见 [模块整改方案](control-plane-remediation-plan.md)。
 - Worker 请求使用 `X-Worker-Token` 头，值等于 `security.worker.key`
 
 ## 外部调用
@@ -155,3 +157,7 @@ Control Plane 启动时注册每日统计任务，每分钟检查一次，在北
 需求分析的阶段审核及拒绝后的只读规则见 [需求分析审核规则](requirement-analysis-review.md)。
 
 需求在线图文编辑与正文文件契约见[需求富文本正文](requirement-rich-text.md)。
+
+- [LDAP 统一认证配置、切换与目录验收](ldap-authentication.md)。
+
+- [LDAP 实施与验证记录](ldap-implementation-verification.md)。

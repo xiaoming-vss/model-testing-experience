@@ -7,6 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from testing_agent.core.ldap_config import LdapSettings
 from testing_agent.core.object_storage import ObjectStorageSettings
 
 
@@ -56,6 +57,38 @@ class IntegrationExecutionSettings:
 
 
 @dataclass(frozen=True, slots=True)
+class SuperAdminSettings:
+    username: str = ""
+    email: str = ""
+    initial_password: str = "mtx123456"
+
+    @property
+    def configured(self) -> bool:
+        return bool(self.username.strip() and self.email.strip())
+
+    def __post_init__(self):
+        for name in ("username", "email", "initial_password"):
+            if not isinstance(getattr(self, name), str):
+                raise ValueError(f"security.super_admin.{name} must be a string")
+
+
+@dataclass(frozen=True, slots=True)
+class LoginSecuritySettings:
+    max_failures: int = 5
+    lock_minutes: int = 15
+    rate_limit_window_minutes: int = 15
+
+    def __post_init__(self):
+        for name, maximum in (
+            ("max_failures", 100),
+            ("lock_minutes", 1440),
+            ("rate_limit_window_minutes", 1440),
+        ):
+            if type(getattr(self, name)) is not int or not 1 <= getattr(self, name) <= maximum:
+                raise ValueError(f"security.login.{name} must be between 1 and {maximum}")
+
+
+@dataclass(frozen=True, slots=True)
 class Settings:
     env: str
     http_host: str
@@ -70,6 +103,11 @@ class Settings:
     code_overview_cache_ttl_seconds: int = 300
     integration_worker_key: str = ""
     integration_execution: IntegrationExecutionSettings = IntegrationExecutionSettings()
+    jwt_user_expire_hours: int = 72
+    jwt_super_admin_expire_hours: int = 24
+    super_admin: SuperAdminSettings = SuperAdminSettings()
+    login_security: LoginSecuritySettings = LoginSecuritySettings()
+    ldap: LdapSettings = LdapSettings()
 
     def __post_init__(self):
         if self.integration_worker_key and self.integration_worker_key == self.worker_key:
@@ -78,6 +116,10 @@ class Settings:
             )
         if self.integration_execution.enabled and not self.integration_worker_key:
             raise ValueError("Enabled integration execution requires a dedicated Worker key")
+        for name in ("jwt_user_expire_hours", "jwt_super_admin_expire_hours"):
+            value = getattr(self, name)
+            if type(value) is not int or not 1 <= value <= 24 * 365:
+                raise ValueError(f"security.jwt.{name} must be between 1 and 8760")
 
     @classmethod
     def from_mapping(cls, data: dict[str, Any]) -> Settings:
@@ -87,6 +129,7 @@ class Settings:
         if not isinstance(project_ids, (list, tuple)):
             raise ValueError("integration_execution.project_ids must be a list")
         execution["project_ids"] = tuple(project_ids)
+        jwt = security.get("jwt", {})
         return cls(
             integration_worker_key=security.get("integration_worker", {}).get("key", ""),
             integration_execution=IntegrationExecutionSettings(**execution),
@@ -94,8 +137,13 @@ class Settings:
             env=data.get("env", "local"),
             http_host=data.get("http", {}).get("host", "127.0.0.1"),
             http_port=int(data.get("http", {}).get("port", 8000)),
-            jwt_key=security.get("jwt", {}).get("key", "change-me"),
-            jwt_expire_hours=int(security.get("jwt", {}).get("expire_hours", 168)),
+            jwt_key=jwt.get("key", "change-me"),
+            jwt_expire_hours=int(jwt.get("expire_hours", 168)),
+            jwt_user_expire_hours=int(jwt.get("user_expire_hours", 72)),
+            jwt_super_admin_expire_hours=int(jwt.get("super_admin_expire_hours", 24)),
+            super_admin=SuperAdminSettings(**security.get("super_admin", {})),
+            login_security=LoginSecuritySettings(**security.get("login", {})),
+            ldap=LdapSettings(),  # LDAP is configured exclusively through the database.
             integration_key=security.get("integration", {}).get("key", "change-me"),
             worker_key=security.get("worker", {}).get("key", ""),
             database_url=data.get("data", {}).get("db", {}).get("user", {}).get("dsn", ""),

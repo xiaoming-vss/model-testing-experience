@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Typography } from 'antd'
 import { Link } from 'react-router-dom'
 import { pickCreatedAt, formatTime, pickUpdatedAt } from '@/utils/format'
+import { UserDisplayName } from '@/shared/components/UserReference/UserReference'
 import type { Bug } from '../types'
 import { BUG_PRIORITY_LABELS, BUG_SEVERITY_LABELS, getBugPriorityTone, BUG_RESOLUTION_LABELS } from '../utils/bugMeta'
 const { Text } = Typography
@@ -29,9 +30,9 @@ export function BugDetailSidebar({ bug, projectName, sprintNames, resolveUserNam
                 {bug.resolution === 'fixed' && <><dt>解决版本</dt><dd>{bug.resolvedBuild || '历史记录未提供'}</dd></>}
                 {bug.resolution === 'duplicate' && <><dt>重复 Bug ID</dt><dd>{bug.duplicateBug}</dd></>}
                 <dt>创建人</dt>
-                <dd>{resolveUserName(bug.reporterUserId)}</dd>
+                <dd><UserDisplayName name={resolveUserName(bug.reporterUserId)} /></dd>
                 <dt>责任人</dt>
-                <dd className="bug-sidebar-person"><span className="bug-person-avatar" aria-hidden="true">{resolveUserName(bug.assigneeUserId).slice(0, 1).toUpperCase()}</span>{resolveUserName(bug.assigneeUserId)}</dd>
+                <dd className="bug-sidebar-person"><span className="bug-person-avatar" aria-hidden="true">{resolveUserName(bug.assigneeUserId).slice(0, 1).toUpperCase()}</span><UserDisplayName name={resolveUserName(bug.assigneeUserId)} /></dd>
                 <dt>发现迭代</dt>
                 <dd>{sprintNames.get(bug.foundSprintId) ?? '-'}</dd>
                 <dt>计划修复迭代</dt>

@@ -8,7 +8,8 @@ import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
 import { invalidateBug } from '../utils/invalidateBug'
 import type { Bug, BugAction } from '../types'
-import { hasProjectPermission } from '@/features/projects/hooks/useProjectAccess'
+import { isBugOnlyProject, hasProjectPermission } from '@/features/projects/hooks/useProjectAccess'
+import { DELETED_ACCOUNT_LABEL } from '@/shared/components/UserReference/UserReference'
 import { useBugScope } from './useBugScope'
 
 export function useBugDetail() {
@@ -48,10 +49,10 @@ export function useBugDetail() {
     queryFn: () => api.getProject(bug!.projectId), enabled: Boolean(bug?.projectId),
     refetchInterval: 30_000,
   })
-  const bugOnly = projectQuery.data?.role === 'developer'
-  const canRead = hasProjectPermission(projectQuery.data, 'read')
-  const canHandle = hasProjectPermission(projectQuery.data, 'bug_handle')
-  const canWrite = hasProjectPermission(projectQuery.data, 'write')
+  const bugOnly = isBugOnlyProject(projectQuery.isError ? undefined : projectQuery.data)
+  const canRead = !projectQuery.isError && hasProjectPermission(projectQuery.data, 'read')
+  const canHandle = !projectQuery.isError && hasProjectPermission(projectQuery.data, 'bug_handle')
+  const canWrite = !projectQuery.isError && hasProjectPermission(projectQuery.data, 'write')
   const bugScope = useBugScope(bug?.projectId, bugOnly)
   const projectMembersQuery = useQuery({
     queryKey: ['projectMembers', bug?.projectId],
@@ -64,7 +65,8 @@ export function useBugDetail() {
     listItems(membersQuery.data).forEach((member) => map.set(member.userId, member.name))
     return map
   }, [membersQuery.data])
-  const resolveUserName = (userId: string) => memberNameMap.get(userId) ?? userId
+  const resolveUserName = (userId: string) =>
+    memberNameMap.get(userId) ?? (membersQuery.data ? DELETED_ACCOUNT_LABEL : userId)
 
   const sprintNameMap = useQuery({
     queryKey: ['sprints', bug?.projectId],

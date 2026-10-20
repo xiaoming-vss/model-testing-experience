@@ -22,6 +22,7 @@ class UpdateProjectRequest(BaseModel):
 class ProjectResponse(BaseModel):
     role: str = "owner"
     permissions: list[str] = Field(default_factory=list)
+    is_super_admin: bool = False
     project_id: str = Field()
     user_id: str = Field()
     name: str

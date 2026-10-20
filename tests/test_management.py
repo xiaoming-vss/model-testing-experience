@@ -43,6 +43,22 @@ class ManagementTests(unittest.TestCase):
         manage.init(self.root)
         self.data = manage.read(self.root / "config/platform.toml")
 
+    def test_ldap_legacy_file_settings_are_not_generated(self):
+        self.assertNotIn("ldap", self.data["control_plane"]["security"])
+        self.data["control_plane"]["security"]["ldap"] = {
+            "enabled": True, "bind_password": "legacy-secret", "tls_ca_file": "missing.pem"
+        }
+        manage.write(self.root / "config/platform.toml", manage.toml_text(self.data))
+        manage.upgrade_config(self.root)
+        for mode in ("local", "docker"):
+            config = manage.configurations(self.data, mode, self.root)["control-plane"]
+            self.assertNotIn("ldap", config["security"])
+        override = self.root / ".runtime/compose.ldap-ca.json"
+        override.parent.mkdir(exist_ok=True)
+        override.write_text("{}")
+        manage.configure("docker", self.root)
+        self.assertFalse(override.exists())
+
     def test_mysql_slow_log_is_generated_and_configurable(self):
         manage.configure("docker", self.root)
         env = (self.root / ".runtime/compose.env").read_text()

@@ -6,7 +6,20 @@ port = 9000
 
 [security.jwt]
 key = "replace-with-local-jwt-secret"
-expire_hours = 168
+expire_hours = 72
+user_expire_hours = 72
+super_admin_expire_hours = 24
+
+[security.super_admin]
+username = "admin"
+email = "admin@example.com"
+# 留空时使用需求约定的 mtx123456，并在首次登录时强制修改。
+initial_password = ""
+
+[security.login]
+max_failures = 5
+lock_minutes = 15
+rate_limit_window_minutes = 15
 
 [security.integration]
 key = "replace-with-local-integration-key"
@@ -55,3 +68,4 @@ addressing_style = "path"
 signature_seconds = 900
 temporary_hours = 24
 max_bytes = 104857600
+# LDAP 认证仅在管理员页面配置，存储于数据库。

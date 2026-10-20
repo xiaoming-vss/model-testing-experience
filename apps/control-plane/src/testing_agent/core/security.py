@@ -33,12 +33,19 @@ def verify_password(raw: str, hashed: str) -> bool:
         return False
 
 
-def create_access_token(user_id: str, settings: Settings | None = None) -> str:
+def create_access_token(
+    user_id: str,
+    settings: Settings | None = None,
+    *,
+    token_version: int = 0,
+    expire_hours: int | None = None,
+) -> str:
     settings = settings or get_settings()
     now = datetime.now(UTC)
     payload: dict[str, Any] = {
         "userId": user_id,
-        "exp": now + timedelta(hours=settings.jwt_expire_hours),
+        "ver": token_version,
+        "exp": now + timedelta(hours=expire_hours or settings.jwt_user_expire_hours),
         "iat": now,
         "jti": uuid4().hex,
     }
@@ -49,6 +56,7 @@ def create_access_token(user_id: str, settings: Settings | None = None) -> str:
 class AccessTokenClaims:
     user_id: str
     expires_at: datetime
+    token_version: int
 
 
 def access_token_hash(token: str) -> str:
@@ -70,7 +78,10 @@ def parse_access_token_claims(token: str, settings: Settings | None = None) -> A
     user_id = payload.get("userId")
     if not isinstance(user_id, str) or not user_id.strip():
         raise ErrUnauthorized()
-    return AccessTokenClaims(user_id=user_id, expires_at=expires_at)
+    token_version = payload.get("ver", 0)
+    if type(token_version) is not int or token_version < 0:
+        raise ErrUnauthorized()
+    return AccessTokenClaims(user_id=user_id, expires_at=expires_at, token_version=token_version)
 
 
 def parse_access_token(token: str, settings: Settings | None = None) -> str:

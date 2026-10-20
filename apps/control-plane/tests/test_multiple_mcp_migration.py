@@ -8,7 +8,6 @@ import sqlalchemy as sa
 from test_initial_schema_migration import migration_config
 
 from alembic import command
-from testing_agent.models import Base
 
 
 def test_backfill_preserves_original_service_and_downgrade_refuses_duplicates():
@@ -16,7 +15,9 @@ def test_backfill_preserves_original_service_and_downgrade_refuses_duplicates():
     with engine.connect() as connection:
         config = migration_config(connection)
         command.upgrade(config, "20261004_0026")
-        tables = Base.metadata.tables
+        meta = sa.MetaData()
+        meta.reflect(bind=connection)
+        tables = meta.tables
         now = datetime.now(UTC)
         connection.execute(
             tables["users"].insert(),
@@ -24,7 +25,14 @@ def test_backfill_preserves_original_service_and_downgrade_refuses_duplicates():
         )
         connection.execute(
             tables["projects"].insert(),
-            {"project_id": "p", "user_id": "u", "name": "p", "created_at": now, "updated_at": now},
+            {
+                "project_id": "p",
+                "user_id": "u",
+                "name": "p",
+                "description": "",
+                "created_at": now,
+                "updated_at": now,
+            },
         )
         services = tables["shared_services"]
         connection.execute(
@@ -36,6 +44,7 @@ def test_backfill_preserves_original_service_and_downgrade_refuses_duplicates():
                 "provider": "mcp",
                 "template_id": "zentao",
                 "base_url": "http://old.test/mcp",
+                "model_id": "",
                 "created_at": now,
                 "updated_at": now,
             },
@@ -54,6 +63,9 @@ def test_backfill_preserves_original_service_and_downgrade_refuses_duplicates():
                 "local_resource_id": "p",
                 "remote_resource_type": "project",
                 "remote_resource_id": "10",
+                "remote_parent_id": "",
+                "remote_name_snapshot": "",
+                "status": "bound",
                 "extra_json": {"preserved": 1},
                 "created_at": now,
                 "updated_at": now,
@@ -74,6 +86,7 @@ def test_backfill_preserves_original_service_and_downgrade_refuses_duplicates():
                 "provider": "mcp",
                 "template_id": "zentao",
                 "base_url": "http://new.test/mcp",
+                "model_id": "",
                 "created_at": now,
                 "updated_at": now,
             },

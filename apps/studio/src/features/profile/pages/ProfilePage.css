@@ -30,6 +30,8 @@
 .profile-settings-identity > .ant-typography-secondary { display: block; overflow-wrap: anywhere; font-size: 15px; }
 .profile-settings-identity-footer { display: flex; align-items: center; gap: 10px; margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--profile-border); color: var(--profile-muted); text-align: left; }
 .profile-settings-panel { overflow: hidden; }
+/* 身份卡只占首行，修改密码等副面板与账号信息同列纵向排列，避免落入 320px 侧栏列 */
+.profile-settings-password-panel { grid-column: 2; }
 .profile-settings-panel-heading { margin: 0 32px; padding: 28px 0 24px; border-bottom: 1px solid var(--profile-border); }
 .profile-settings-panel-heading h3.ant-typography { margin: 0 0 10px; font-size: 24px; }
 .profile-settings-panel-heading .ant-typography-secondary { margin: 0; line-height: 1.7; }
@@ -60,5 +62,6 @@
   .profile-settings-identity { padding: 28px 24px; }
   .profile-settings-identity-footer { margin-top: 24px; padding-top: 18px; justify-content: center; }
   .profile-settings-danger { grid-column: 1; flex-wrap: wrap; padding: 24px; }
+  .profile-settings-password-panel { grid-column: 1; }
   .profile-settings-actions { flex-wrap: wrap; }
 }

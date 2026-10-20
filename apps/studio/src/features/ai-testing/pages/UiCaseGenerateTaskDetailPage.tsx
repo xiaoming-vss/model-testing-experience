@@ -10,6 +10,7 @@ import '@/features/ai-testing/styles/task-review.css'
 import '@/features/ai-testing/styles/candidate-review.css'
 import '@/features/ai-testing/styles/task-detail-v2.css'
 import { ActionButton } from '@/shared/components/ActionButton'
+import { UserReference } from '@/shared/components/UserReference/UserReference'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
@@ -537,7 +538,7 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
               { label: '迭代', value: task.sprintId || '-', kind: 'chip-accent' },
               { label: '需求', value: 'UI 用例生成' },
               { label: '来源类型', value: '源码包', kind: 'chip-muted' },
-              { label: '创建人', value: task.creatorUserId || '-' },
+              { label: '创建人', value: <UserReference projectId={task.projectId ?? undefined} userId={task.creatorUserId ?? undefined} /> },
               { label: '更新时间', value: formatTime(task.updatedAt), kind: 'time', separator: 'dot' },
             ]}
             actions={(

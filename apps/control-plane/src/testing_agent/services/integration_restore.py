@@ -79,9 +79,13 @@ class IntegrationRestoreService:
             .execution_options(populate_existing=True)
         )
         user = await self.session.scalar(
-            select(User.user_id).where(User.user_id == actor).with_for_update()
+            select(User).where(User.user_id == actor).with_for_update()
         )
-        if project is None or project.user_id != actor or user is None:
+        if (
+            project is None
+            or user is None
+            or (project.user_id != actor and not user.is_super_admin)
+        ):
             raise ErrForbidden()
         return await self.session.scalar(
             select(Bug)

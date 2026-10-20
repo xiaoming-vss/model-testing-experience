@@ -7,13 +7,13 @@ import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { api, listItems, listTotal } from '@/services/api'
 import type { Bug, BugAction, BugSortField } from '../types'
 import { bugColumns } from '../components/bugColumns'
-import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
+import { isBugOnlyProject, useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { useBugScope } from './useBugScope'
 export function useBugList() {
   const navigate = useNavigate()
   const activeProjectId = useWorkbenchStore((state) => state.activeProjectId)
   const access = useProjectAccess(activeProjectId)
-  const bugOnly = access.project?.role === 'developer'
+  const bugOnly = isBugOnlyProject(access.project)
   const sprintScope = useActiveSprint(access.can('read'))
   const bugScope = useBugScope(activeProjectId, bugOnly)
   const { activeSprintId, sprints, sprintsQuery, selectSprint, sprintSelectorOptions } =
@@ -95,7 +95,7 @@ export function useBugList() {
     setKeyword('')
   }
 
-  const columns = bugColumns({ memberNameMap, sprintNameMap, optionalColumns,
+  const columns = bugColumns({ memberNameMap, membersLoaded: Boolean(membersQuery.data), sprintNameMap, optionalColumns,
     onTransition: (bug, action) => setTransition({ bug, action }),
     onEdit: (bug) => setEditBug(bug),
     sort })

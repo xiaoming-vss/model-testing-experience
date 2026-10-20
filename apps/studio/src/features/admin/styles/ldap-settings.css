@@ -1,0 +1,57 @@
+.ldap-settings-page {
+  display: flex;
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  padding: var(--app-page-gutter);
+  box-sizing: border-box;
+}
+
+.ldap-settings-page .tp-list-toolbar {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ldap-settings-section {
+  padding: 20px 0;
+}
+
+.ldap-settings-section:last-child {
+  padding-bottom: 0;
+}
+
+.ldap-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 24px;
+}
+
+.ldap-settings-page .ant-form-item {
+  margin-bottom: 16px;
+}
+
+.ldap-settings-test {
+  display: flex;
+  margin: 12px 0;
+}
+
+.ldap-settings-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--app-surface-border);
+  background: var(--app-list-toolbar-bg);
+}
+
+.ldap-settings-actions > .ant-space {
+  margin-inline-start: auto;
+}
+
+@media (max-width: 720px) {
+  .ldap-settings-grid { grid-template-columns: 1fr; }
+}

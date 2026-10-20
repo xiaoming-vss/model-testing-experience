@@ -11,7 +11,7 @@ import { ProjectActionModal } from '@/features/projects/components/ProjectAction
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ProjectMembersModal } from '../components/ProjectMembersModal'
 import { LinkOutlined } from '@ant-design/icons'
-import { roleLabels, useProjectAccess } from '../hooks/useProjectAccess'
+import { projectRoleLabel, useProjectAccess } from '../hooks/useProjectAccess'
 import {
   Alert,
   Button,
@@ -433,7 +433,7 @@ export function ProjectsPage() {
             <section className={activeBoard === 'sprints' ? 'sprint-board-shell tp-surface tp-board tp-list-panel' : 'requirements-list-panel tp-board tp-list-panel'}>
           {activeBoard === 'sprints' && <section className="sprint-board-toolbar tp-list-toolbar">
             <div className="project-overview-summary">
-              <Space align="center" size={10}><Title level={4} style={{ margin: 0 }}>{activeProject?.name || '项目概览'}</Title>{accessProject?.role ? <Tag>{roleLabels[accessProject.role]}</Tag> : null}</Space>
+              <Space align="center" size={10}><Title level={4} style={{ margin: 0 }}>{activeProject?.name || '项目概览'}</Title>{projectRoleLabel(accessProject) ? <Tag>{projectRoleLabel(accessProject)}</Tag> : null}</Space>
               <div className="project-overview-description">
                 <Text type="secondary" className="project-description-text" title={activeProject?.description || '暂无描述'}>
                   项目描述：{activeProject?.description || '暂无描述'}

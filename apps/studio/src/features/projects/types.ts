@@ -6,6 +6,7 @@ export type ProjectMember = { userId: string; name: string; role: ProjectRole }
 
 export type Project = {
   role?: ProjectRole
+  isSuperAdmin?: boolean
   permissions?: ProjectAction[]
   projectId?: string
   project_id?: string

@@ -10,6 +10,7 @@ import { BugDetailHeader } from './BugDetailHeader'
 import { BugDetailSidebar } from './BugDetailSidebar'
 import { BugAttachmentUploader } from './BugAttachmentUploader'
 import { BugDescriptionTemplates } from './BugDescriptionTemplates'
+import { UserDisplayName } from '@/shared/components/UserReference/UserReference'
 
 export function BugInlineEditor({ bug, projectName, sprintNames, resolveUserName, onClose, onBack, children }: {
   bug: Bug; projectName?: string; sprintNames: Map<string, string>; resolveUserName: (id: string) => string
@@ -69,7 +70,7 @@ export function BugInlineEditor({ bug, projectName, sprintNames, resolveUserName
           <Form.Item name="title" label="标题" rules={[{ required: true, whitespace: true, message: '请输入 Bug 标题' }]}>
             <Input maxLength={200} disabled={saveMutation.isPending} />
           </Form.Item>
-          <div className="bug-detail-subtitle">{resolveUserName(snapshot.reporterUserId)} 提交于 {formatTime(pickCreatedAt(snapshot))}</div>
+          <div className="bug-detail-subtitle"><UserDisplayName name={resolveUserName(snapshot.reporterUserId)} /> 提交于 {formatTime(pickCreatedAt(snapshot))}</div>
         </section>
         <section className="bug-detail-panel">
           <div className="bug-description-heading"><h2 className="bug-panel-title">编辑问题描述</h2>

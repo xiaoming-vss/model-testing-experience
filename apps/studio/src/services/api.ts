@@ -1,3 +1,4 @@
+import { adminApi } from '@/features/admin/api/admin.api'
 import { authApi } from '@/features/auth/api/auth.api'
 import { aiTestingApi } from '@/features/ai-testing/api/aiTesting.api'
 import { apiAutomationApi } from '@/features/api-automation/api/apiAutomation.api'
@@ -10,6 +11,7 @@ import { requirementsApi } from '@/features/requirements/api/requirements.api'
 import { uiAutomationApi } from '@/features/ui-automation/api/uiAutomation.api'
 
 export type { LoginResponse, User } from '@/features/auth/types'
+export type { AdminUser, AdminUserListParams } from '@/features/admin/types'
 export type {
   AiSkillLibraryItem,
   ApiCaseGenerateTask,
@@ -213,6 +215,7 @@ export type { ApiEnvelope, ListResponse } from '@/shared/api/request'
 export { ApiError, listItems, listTotal } from '@/shared/api/request'
 
 export const api = {
+  ...adminApi,
   ...authApi,
   ...aiTestingApi,
   ...baseServicesApi,

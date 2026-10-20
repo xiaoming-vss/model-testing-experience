@@ -10,6 +10,7 @@ import { BugInlineEditor } from '../components/BugInlineEditor'
 import { BugTransferModal } from '../components/BugTransferModal'
 import { BugTransitionModal } from '../components/BugTransitionModal'
 import { BugDetailSidebar } from '../components/BugDetailSidebar'
+import { UserDisplayName } from '@/shared/components/UserReference/UserReference'
 import { goBackOrFallback } from '@/shared/utils/backNavigation'
 import { BugDetailHeader } from '../components/BugDetailHeader'
 import { BugZentaoPushPanel } from '../components/BugZentaoPushPanel'
@@ -105,7 +106,7 @@ export function BugDetailPage() {
             <section className="bug-detail-panel bug-detail-summary">
               <div className="bug-detail-breadcrumb">{projectQuery.data?.name || bug.projectId} <span>/</span> {formatBugNo(bug.bugNo)}</div>
               <h1>{bug.title}</h1>
-              <div className="bug-detail-subtitle">{resolveUserName(bug.reporterUserId)} 提交于 {formatTime(pickCreatedAt(bug))}</div>
+              <div className="bug-detail-subtitle"><UserDisplayName name={resolveUserName(bug.reporterUserId)} /> 提交于 {formatTime(pickCreatedAt(bug))}</div>
             </section>
             <BugDescriptionView html={bug.descriptionHtml} />
             {canRead && <BugZentaoPushPanel key={`zentao:${bug.bugId}`} bugId={bug.bugId} projectId={bug.projectId} canWrite={canWrite} />}

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import ErrForbidden, ErrNotFound
 from testing_agent.domain.integration_execution import digest
+from testing_agent.domain.project_policy import allows_project_action, effective_project_role
 from testing_agent.models.bug import Bug
 from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.models.integration_job import IntegrationJob
@@ -16,7 +17,6 @@ from testing_agent.models.project_member import ProjectMember
 from testing_agent.models.shared_service import ServiceAuthorization, SharedService
 from testing_agent.models.user import User
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
-from testing_agent.services.project_access import allowed_actions
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,8 +56,8 @@ class IntegrationAuthorization:
         )
         if project is None:
             raise ErrNotFound()
-        role = (
-            "owner"
+        member_role = (
+            None
             if project.user_id == job.actor_user_id
             else await self.session.scalar(
                 select(ProjectMember.role)
@@ -68,7 +68,11 @@ class IntegrationAuthorization:
                 .with_for_update()
             )
         )
-        if "write" not in allowed_actions(role or ""):
+        # Execution requires actual project membership; no system-admin bypass here.
+        role = effective_project_role(
+            is_owner=project.user_id == job.actor_user_id, member_role=member_role
+        )
+        if not allows_project_action(role, "write"):
             raise ErrForbidden()
         user = await self.session.scalar(
             select(User.user_id).where(User.user_id == job.actor_user_id).with_for_update()

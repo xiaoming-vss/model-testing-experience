@@ -8,7 +8,7 @@ export function ProjectRouteGuard({ children }: { children: ReactNode }) {
   const projectId = useWorkbenchStore((state) => state.activeProjectId)
   const { can, loading, error } = useProjectAccess(projectId)
   const { pathname, search } = useLocation()
-  if (pathname === '/profile' || !projectId) return children
+  if (['/profile', '/change-password', '/admin/users', '/admin/ldap'].some((path) => pathname.startsWith(path)) || !projectId) return children
   if (loading) return <Spin aria-label="项目权限加载中" />
   if (error) return <Alert type="error" title="无法获取项目权限，请重新选择项目" />
   // Check the current project role before mounting requirement detail: developer

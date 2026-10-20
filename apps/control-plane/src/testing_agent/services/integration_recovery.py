@@ -3,10 +3,12 @@
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import AppError, ErrForbidden, ErrNotFound
 from testing_agent.core.sid import new_id
 from testing_agent.domain.integration_execution import StepStatus, digest, same_result
+from testing_agent.domain.project_policy import allows_project_action, effective_project_role
 from testing_agent.models.bug import Bug
 from testing_agent.models.bug_zentao_push import BugZentaoPush
 from testing_agent.models.integration_job import IntegrationJob, IntegrationJobStep
@@ -15,11 +17,10 @@ from testing_agent.models.project_member import ProjectMember
 from testing_agent.models.user import User
 from testing_agent.schemas.integration_job import IntegrationRemoteResult
 from testing_agent.services.integration_guards import require_no_active_job
-from testing_agent.services.project_access import allowed_actions
 from testing_agent.services.service_instance import instance_key
 
 
-async def lock_recovery(session, bug_id: str, actor: str | None = None) -> None:
+async def lock_recovery(session: AsyncSession, bug_id: str, actor: str | None = None) -> None:
     project_id = await session.scalar(select(Bug.project_id).where(Bug.bug_id == bug_id))
     if project_id is None:
         raise ErrNotFound()
@@ -48,8 +49,12 @@ async def lock_recovery(session, bug_id: str, actor: str | None = None) -> None:
             .with_for_update()
             .execution_options(populate_existing=True)
         )
-        role = "owner" if project.user_id == actor else member.role if member is not None else ""
-        if user is None or "write" not in allowed_actions(role):
+        role = effective_project_role(
+            is_owner=project.user_id == actor,
+            member_role=member.role if member is not None else None,
+            is_super_admin=bool(user is not None and user.is_super_admin),
+        )
+        if user is None or not allows_project_action(role, "write"):
             raise ErrForbidden()
     await require_no_active_job(session, bug_id)
 

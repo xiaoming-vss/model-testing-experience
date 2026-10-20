@@ -145,7 +145,7 @@ def test_deleting_running_case_rejects_late_worker_result(api):
     assert api.get(f"/v1/api-collections/{col}/cases", headers=owner).json()["data"]["total"] == 0
 
 
-def test_account_deletion_removes_personal_credentials(api):
+def test_account_self_deletion_is_disabled(api):
     import asyncio
 
     from sqlalchemy import func, select
@@ -171,5 +171,5 @@ def test_account_deletion_removes_personal_credentials(api):
 
     assert asyncio.run(credentials(create=True)) == 1
     response = api.delete("/v1/user", headers=headers)
-    assert response.status_code == 200, response.text
-    assert asyncio.run(credentials()) == 0
+    assert response.status_code == 405
+    assert asyncio.run(credentials()) == 1

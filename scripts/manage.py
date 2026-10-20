@@ -89,23 +89,26 @@ def write(path, content, *, container=False, permissions=None):
         temp.unlink(missing_ok=True)
 
 
+def _generate_nested(value):
+    if isinstance(value, dict):
+        return {key: _generate_nested(item) for key, item in value.items()}
+    if value == "GENERATE":
+        return secrets.token_hex(32)
+    return value
+
+
 def init(root=ROOT):
     path = root / "config/platform.toml"
     if path.exists():
         print("Existing config/platform.toml preserved.")
         return
-    data = read(root / "config/platform.example.toml")
-    for section in data.values():
-        if isinstance(section, dict):
-            for key, value in section.items():
-                if value == "GENERATE":
-                    section[key] = secrets.token_hex(32)
+    data = _generate_nested(read(root / "config/platform.example.toml"))
     write(path, toml_text(data))
     print("Created config/platform.toml with fresh local credentials.")
 
 
 def upgrade_config(root=ROOT):
-    """Add integration execution settings; preserve existing values and file mode."""
+    """Add newer settings while preserving existing values and file mode."""
     path = root / "config/platform.toml"
     if not path.exists():
         init(root)
@@ -119,16 +122,28 @@ def upgrade_config(root=ROOT):
             while value in shared.values():
                 value = secrets.token_hex(32)
             shared[key] = value
-    defaults = read(root / "config/platform.example.toml")["control_plane"]["integration_execution"]
+    example_control_plane = read(root / "config/platform.example.toml").get(
+        "control_plane", {}
+    )
+    defaults = example_control_plane["integration_execution"]
     settings = data.setdefault("control_plane", {}).setdefault("integration_execution", {})
     for key, value in defaults.items():
         settings.setdefault(key, copy.deepcopy(value))
+    security_defaults = example_control_plane.get("security", {})
+    security = data.setdefault("control_plane", {}).setdefault("security", {})
+    for section in ("super_admin", "login", "jwt"):
+        target = security.setdefault(section, {})
+        for key, value in security_defaults.get(section, {}).items():
+            target.setdefault(key, copy.deepcopy(value))
+        for key, value in list(target.items()):
+            if value == "GENERATE":
+                target[key] = secrets.token_hex(16)
     if data == original:
-        print("Unified configuration already has integration execution settings.")
+        print("Unified configuration already has current settings.")
         return
     validate(data)
     write(path, toml_text(data), permissions=path.stat().st_mode & 0o777)
-    print("Added missing integration execution settings; existing credentials preserved.")
+    print("Added missing settings; existing credentials preserved.")
 
 
 def external_database_url(data):
@@ -183,6 +198,15 @@ def validate(data):
             raise ValueError(f"Set shared.{key}, or run upgrade-config for an existing deployment")
     if shared["integration_worker_token"] == shared["worker_token"]:
         raise ValueError("The integration Worker token must differ from shared.worker_token")
+    super_admin = (
+        data.get("control_plane", {})
+        .get("security", {})
+        .get("super_admin", {})
+    )
+    if not super_admin.get("username") or not super_admin.get("email"):
+        raise ValueError(
+            "control_plane.security.super_admin.username and email are required"
+        )
     if not external:
         for key in ("password", "root_password"):
             if not db.get(key) or db[key] == "GENERATE":
@@ -252,6 +276,7 @@ def configurations(data, mode, root=ROOT):
             "data": {"db": {"user": {"dsn": dsn}}},
         },
     )
+    result["control-plane"].setdefault("security", {}).pop("ldap", None)
     result["ai-worker"] = merge(
         result["ai-worker"],
         {
@@ -338,6 +363,7 @@ def configure(mode, root=ROOT):
                 MYSQL_ROOT_PASSWORD=db["root_password"],
             )
         write(runtime / "compose.env", env_text(env))
+        (runtime / "compose.ldap-ca.json").unlink(missing_ok=True)
     else:
         write(
             root / PROJECTS["studio"] / ".env.local",
@@ -363,6 +389,9 @@ def compose_command(root=ROOT):
     ]
     if external_database_url(read(root / "config/platform.toml")):
         command.extend(["-f", str(root / "deploy/compose.external-db.yaml")])
+    ca_override = root / ".runtime/compose.ldap-ca.json"
+    if ca_override.exists():
+        command.extend(["-f", str(ca_override)])
     return command
 
 

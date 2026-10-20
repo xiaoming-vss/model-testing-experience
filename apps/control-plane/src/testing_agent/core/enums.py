@@ -223,3 +223,14 @@ TEST_ORDER_ENTRY_TERMINAL_STATUSES = {
     TestOrderEntryStatus.BLOCKED.value,
     TestOrderEntryStatus.SKIPPED.value,
 }
+
+
+class AccountStatus(StrEnum):
+    ACTIVE = "active"
+    DISABLED = "disabled"
+    PENDING_LDAP = "pending_ldap"
+
+
+class AuthSource(StrEnum):
+    LOCAL = "local"
+    LDAP = "ldap"

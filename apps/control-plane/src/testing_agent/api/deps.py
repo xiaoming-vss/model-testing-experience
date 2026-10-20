@@ -4,15 +4,18 @@ import logging
 from secrets import compare_digest
 from typing import Annotated
 
-from fastapi import Depends, Header
+from fastapi import Depends, Header, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.config import Settings, get_settings
-from testing_agent.core.errors import ErrUnauthorized
-from testing_agent.core.security import access_token_hash, parse_access_token
+from testing_agent.core.errors import (
+    AppError,
+    ErrForbidden,
+    ErrUnauthorized,
+)
+from testing_agent.core.ldap_directory import LdapDirectory
 from testing_agent.db.session import get_session
-from testing_agent.models.revoked_access_token import RevokedAccessToken
 from testing_agent.models.user import User
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.api_assert_rule import ApiAssertRuleRepository
@@ -22,10 +25,13 @@ from testing_agent.repositories.api_collection_run import ApiCollectionRunReposi
 from testing_agent.repositories.api_environment import ApiEnvironmentRepository
 from testing_agent.repositories.api_environment_var import ApiEnvironmentVarRepository
 from testing_agent.repositories.api_extract_rule import ApiExtractRuleRepository
+from testing_agent.repositories.auth_runtime import AuthRuntimeRepository
+from testing_agent.repositories.auth_session import AuthSessionRepository
 from testing_agent.repositories.bug import BugRepository
 from testing_agent.repositories.function_test_case import FunctionTestCaseRepository
 from testing_agent.repositories.function_test_suite import FunctionTestSuiteRepository
 from testing_agent.repositories.integration_connection import IntegrationConnectionRepository
+from testing_agent.repositories.login_rate_limit import LoginRateLimitRepository
 from testing_agent.repositories.project import ProjectRepository
 from testing_agent.repositories.project_skill_space import ProjectSkillSpaceRepository
 from testing_agent.repositories.requirement import RequirementRepository
@@ -48,6 +54,8 @@ from testing_agent.services.api_environment import ApiEnvironmentService
 from testing_agent.services.api_environment_var import ApiEnvironmentVarService
 from testing_agent.services.api_extract_rule import ApiExtractRuleService
 from testing_agent.services.auth import AuthService
+from testing_agent.services.auth_mode import AuthModeService
+from testing_agent.services.auth_session import SessionService
 from testing_agent.services.baseline_resolution import BaselineResolutionService
 from testing_agent.services.bug import BugService
 from testing_agent.services.code_risk_analysis import CodeRiskAnalysisService
@@ -55,6 +63,8 @@ from testing_agent.services.function_test_case import FunctionTestCaseService
 from testing_agent.services.function_test_suite import FunctionTestSuiteService
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
+from testing_agent.services.ldap_login import LdapLoginService
+from testing_agent.services.ldap_settings import LdapSettingsService, effective_settings
 from testing_agent.services.project import ProjectService
 from testing_agent.services.project_skill_space import ProjectSkillSpaceService
 from testing_agent.services.requirement import RequirementService
@@ -70,6 +80,7 @@ from testing_agent.services.test_order_graph import TestOrderGraphService
 from testing_agent.services.ui_test_case import UiTestCaseService
 from testing_agent.services.ui_test_case_run import UiTestCaseRunService
 from testing_agent.services.ui_test_suite import UiTestSuiteService
+from testing_agent.services.user_admin import UserAdminService
 from testing_agent.services.worker_task import WorkerTaskService
 from testing_agent.services.zentao_mcp import ZentaoMcpResources
 from testing_agent.services.zentao_mcp_cases import ZentaoMcpCases
@@ -84,17 +95,24 @@ async def get_access_token(
 
 
 async def get_current_user_id(
+    request: Request,
     token: str = Depends(get_access_token),
     session: AsyncSession = Depends(get_session),
 ) -> str:
-    user_id = parse_access_token(token)
-    revoked = (
-        select(RevokedAccessToken.token_hash)
-        .where(RevokedAccessToken.token_hash == access_token_hash(token))
-        .exists()
+    return await SessionService(AuthSessionRepository(session), get_settings()).authenticate(
+        token, method=request.method, path=request.url.path
     )
-    if await session.scalar(select(User.user_id).where(User.user_id == user_id, ~revoked)) is None:
-        raise ErrUnauthorized()
+
+
+async def require_super_admin(
+    user_id: str = Depends(get_current_user_id),
+    session: AsyncSession = Depends(get_session),
+) -> str:
+    is_super_admin = await session.scalar(
+        select(User.is_super_admin).where(User.user_id == user_id)
+    )
+    if not is_super_admin:
+        raise ErrForbidden()
     return user_id
 
 
@@ -120,8 +138,47 @@ def verify_integration_worker_token(
         raise ErrUnauthorized()
 
 
-def get_auth_service(session: AsyncSession = Depends(get_session)) -> AuthService:
-    return AuthService(UserRepository(session))
+async def get_effective_settings(session: AsyncSession = Depends(get_session)) -> Settings:
+    return await effective_settings(AuthRuntimeRepository(session), get_settings())
+
+
+def get_ldap_settings_service(session: AsyncSession = Depends(get_session)) -> LdapSettingsService:
+    return LdapSettingsService(AuthRuntimeRepository(session), get_settings())
+
+
+async def get_auth_service(session: AsyncSession = Depends(get_session)) -> AuthService:
+    users = UserRepository(session)
+    try:
+        settings = await effective_settings(AuthRuntimeRepository(session), get_settings())
+    except AppError:
+        # Keep local super-admin recovery available if stored LDAP credentials cannot decrypt.
+        settings = get_settings()
+        return AuthService(
+            users,
+            LoginRateLimitRepository(session),
+            settings,
+            mode=AuthModeService(AuthRuntimeRepository(session), settings),
+        )
+    users = UserRepository(session)
+    limits = LoginRateLimitRepository(session)
+    ldap_login = LdapLoginService(
+        users,
+        limits,
+        AuthModeService(AuthRuntimeRepository(session), settings),
+        settings,
+        LdapDirectory(settings.ldap),
+    )
+    return AuthService(users, limits, settings, ldap_login=ldap_login, mode=ldap_login.mode)
+
+
+async def get_user_admin_service(session: AsyncSession = Depends(get_session)) -> UserAdminService:
+    settings = await effective_settings(AuthRuntimeRepository(session), get_settings())
+    return UserAdminService(
+        UserRepository(session),
+        ProjectRepository(session),
+        settings,
+        mode=AuthModeService(AuthRuntimeRepository(session), settings),
+    )
 
 
 def get_project_service(session: AsyncSession = Depends(get_session)) -> ProjectService:

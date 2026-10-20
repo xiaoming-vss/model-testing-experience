@@ -38,6 +38,24 @@ root_password = "GENERATE"
 [control_plane.code_overview]
 cache_ttl_seconds = 300
 
+[control_plane.security.super_admin]
+# 系统预置的唯一超级管理员；用户名和邮箱必须提供。
+username = "admin"
+email = "admin@example.com"
+# init/upgrade-config 会生成随机值；生产环境必须替换为显式密码。
+initial_password = "GENERATE"
+
+[control_plane.security.login]
+# 连续失败锁定与同 IP + 用户名限流共用该阈值。
+max_failures = 5
+lock_minutes = 15
+rate_limit_window_minutes = 15
+
+[control_plane.security.jwt]
+# 普通本地账号与超级管理员的 JWT 有效期。
+user_expire_hours = 72
+super_admin_expire_hours = 24
+
 [control_plane.integration_execution]
 # 默认关闭；完成真实链路和项目验收后，按项目灰度启用。
 enabled = false
@@ -85,3 +103,4 @@ addressing_style = "path"
 signature_seconds = 900
 temporary_hours = 24
 max_bytes = 104857600
+# LDAP 认证仅在管理员页面配置，存储于数据库。

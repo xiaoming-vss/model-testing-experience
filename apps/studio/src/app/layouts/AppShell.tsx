@@ -1,13 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { RequirementDetailPage } from '../pages/RequirementDetailPage'
 import { ThemeSelect } from '@/shared/components/ThemeSelect'
 import { ActionButton } from '@/shared/components/ActionButton'
-import { DownOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons'
+import { DownOutlined, LogoutOutlined, SettingOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons'
 import { Button, Dropdown, Layout, Menu, Select, Spin, Tooltip } from 'antd'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { ApiCollectionDetailPage } from '@/features/api-automation/pages/ApiCollectionDetailPage'
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser'
 import { useLogout } from '@/features/auth/hooks/useLogout'
+import { ChangePasswordPage } from '@/features/auth/pages/ChangePasswordPage'
+import { LdapSettingsPage } from '@/features/admin/pages/LdapSettingsPage'
+import { AccountManagementPage } from '@/features/admin/pages/AccountManagementPage'
 import { ProfilePage } from '@/features/profile/pages/ProfilePage'
 import { ProjectsPage } from '@/features/projects/pages/ProjectsPage'
 import { SprintDetailPage } from '@/features/projects/pages/SprintDetailPage'
@@ -31,7 +34,7 @@ import { UiTestSuiteCasePage } from '@/features/ui-automation/pages/UiTestSuiteC
 import { AppSidebar } from './AppSidebar'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { normalizeProjectId } from '@/utils/format'
-import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
+import { isBugOnlyProject, useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { useBugScope } from '@/features/bugs/hooks/useBugScope'
 import { ProjectRouteGuard } from '../router/guards/ProjectRouteGuard'
 
@@ -42,19 +45,31 @@ export function AppShell() {
   const location = useLocation()
   const navigate = useNavigate()
   const logout = useLogout()
-  const { token } = useCurrentUser()
+  const { token, userQuery } = useCurrentUser()
+  const currentUser = userQuery.data
+  const mustChangePassword = Boolean(currentUser?.mustChangePassword ?? currentUser?.must_change_password)
+  const isSuperAdmin = Boolean(currentUser?.isSuperAdmin ?? currentUser?.is_super_admin)
   const { activeProjectId, projects, projectsQuery, setActiveProjectId } = useActiveProject()
   const access = useProjectAccess(activeProjectId)
-  const bugOnly = access.project?.role === 'developer'
+  const bugOnly = isBugOnlyProject(access.project)
   const sprintScope = useActiveSprint(access.can('read'))
   const bugScope = useBugScope(activeProjectId, bugOnly)
   const { activeSprintId, sprintsQuery, selectSprint, sprintSelectorOptions } = bugOnly ? bugScope : sprintScope
-  const showWorkbenchHeader = !location.pathname.startsWith('/profile')
+  const showWorkbenchHeader = !['/profile', '/change-password', '/admin/users', '/admin/ldap'].some((path) => location.pathname.startsWith(path))
 
   const shellClassName = `app-shell app-shell-macos${location.pathname.startsWith('/base-services') ? ' app-shell-base-services' : ''}${location.pathname.startsWith('/requirements/') ? ' app-shell-requirement-detail' : ''}`
 
+  useEffect(() => {
+    const redirect = () => navigate('/change-password', { replace: true })
+    window.addEventListener('password-change-required', redirect)
+    return () => window.removeEventListener('password-change-required', redirect)
+  }, [navigate])
+
   if (!token) {
     return <Navigate to="/login" replace state={{ from: location }} />
+  }
+  if (mustChangePassword && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />
   }
 
   return (
@@ -138,6 +153,9 @@ export function AppShell() {
             <Dropdown
               menu={{
                 items: [
+                  ...(isSuperAdmin
+                    ? [{ key: 'admin-users', icon: <TeamOutlined />, label: '账号管理' }, { key: 'admin-ldap', icon: <SettingOutlined />, label: 'LDAP 认证' }, { type: 'divider' as const }]
+                    : []),
                   { key: 'profile', icon: <SettingOutlined />, label: '个人设置' },
                   { type: 'divider' },
                   {
@@ -149,6 +167,8 @@ export function AppShell() {
                 ],
                 onClick: ({ key }) => {
                   if (key === 'profile') navigate('/profile')
+                  if (key === 'admin-users') navigate('/admin/users')
+                  if (key === 'admin-ldap') navigate('/admin/ldap')
                   if (key === 'logout') {
                     if (!logout.isPending) {
                       logout.mutate(undefined, {
@@ -193,6 +213,9 @@ export function AppShell() {
             <Route path="/ui-automation" element={<Navigate to="/testing?tab=ui" replace />} />
             <Route path="/ui-automation/suites/:suiteId" element={<UiTestSuiteCasePage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/change-password" element={<ChangePasswordPage />} />
+            <Route path="/admin/ldap" element={<LdapSettingsPage />} />
+            <Route path="/admin/users" element={<AccountManagementPage />} />
           </Routes>
           </ProjectRouteGuard>}
         </Content>

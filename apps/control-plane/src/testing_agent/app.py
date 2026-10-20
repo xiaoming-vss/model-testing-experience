@@ -15,6 +15,7 @@ from testing_agent.core.errors import (
     success_payload,
     validation_error_detail,
 )
+from testing_agent.routers.admin_users import router as admin_users_router
 from testing_agent.routers.ai_worker import router as ai_worker_router
 from testing_agent.routers.api_ai_tasks import router as api_ai_tasks_router
 from testing_agent.routers.api_case import router as api_case_router
@@ -29,6 +30,7 @@ from testing_agent.routers.function_ai_tasks import router as function_ai_tasks_
 from testing_agent.routers.function_tests import router as function_tests_router
 from testing_agent.routers.gitlab_integrations import router as gitlab_integrations_router
 from testing_agent.routers.integration_worker import router as integration_worker_router
+from testing_agent.routers.ldap_settings import router as ldap_settings_router
 from testing_agent.routers.llm_integrations import router as llm_integrations_router
 from testing_agent.routers.project_skills import router as project_skills_router
 from testing_agent.routers.projects import router as projects_router
@@ -132,6 +134,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     v1.include_router(files_router)
     v1.include_router(auth_router, tags=["Auth"])
+    v1.include_router(admin_users_router, tags=["Admin Users"])
+    v1.include_router(ldap_settings_router, tags=["LDAP Settings"])
     v1.include_router(projects_router, tags=["Projects"])
     v1.include_router(sprints_router, tags=["Sprints"])
     v1.include_router(requirements_router, tags=["Requirements"])

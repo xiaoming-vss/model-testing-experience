@@ -108,9 +108,11 @@ def test_developer_migration_preserves_members_and_refuses_unsafe_downgrade():
     with engine.connect() as connection:
         config = migration_config(connection)
         command.upgrade(config, "20260927_0021")
+        meta = sa.MetaData()
+        meta.reflect(bind=connection)
         now = datetime.now(UTC)
         connection.execute(
-            Base.metadata.tables["users"].insert(),
+            meta.tables["users"].insert(),
             {
                 "user_id": "dev",
                 "nickname": "dev",
@@ -120,7 +122,7 @@ def test_developer_migration_preserves_members_and_refuses_unsafe_downgrade():
             },
         )
         connection.execute(
-            Base.metadata.tables["projects"].insert(),
+            meta.tables["projects"].insert(),
             {
                 "project_id": "p",
                 "user_id": "dev",

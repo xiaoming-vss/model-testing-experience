@@ -1,6 +1,7 @@
 import { CopyOutlined } from '@ant-design/icons'
 import { Button, Tooltip, Typography } from 'antd'
 import { priorityTone } from '@/shared/utils/priorityTone'
+import { UserDisplayName } from '@/shared/components/UserReference/UserReference'
 import { message } from '@/shared/utils/feedback'
 import { formatTime } from '@/utils/format'
 import type { TestOrderEntry } from '../types'
@@ -59,7 +60,7 @@ export function TestOrderCaseSummary({ entry, assigneeName, executorName, locked
           </span>
         ) : null}
         <span className="test-order-meta-pill">
-          分配给 <strong className="tp-tone-tag">{assigneeName || '未分配'}</strong>
+          分配给 <strong className="tp-tone-tag">{assigneeName ? <UserDisplayName name={assigneeName} /> : '未分配'}</strong>
         </span>
         {entry.caseModule ? (
           <span className="test-order-meta-pill">
@@ -67,7 +68,7 @@ export function TestOrderCaseSummary({ entry, assigneeName, executorName, locked
           </span>
         ) : null}
         <span className="test-order-meta-pill">
-          实际执行 <strong className="tp-tone-tag">{executorName || '-'}</strong>
+          实际执行 <strong className="tp-tone-tag">{executorName ? <UserDisplayName name={executorName} /> : '-'}</strong>
         </span>
         <span className="test-order-meta-pill">
           执行时间 <strong className="tp-tone-tag">{formatTime(entry.executedAt) || '-'}</strong>

@@ -106,10 +106,12 @@ export async function request<T>(path: string, options: RequestInit = {}, config
   }))) as ApiEnvelope<T>
 
   if (!response.ok || payload.code !== 0) {
-    if (payload.code === 1001 || response.status === 401) {
+    if (payload.code === 1003) {
+      window.dispatchEvent(new Event('password-change-required'))
+    } else if (payload.code === 1001 || response.status === 401) {
       useAuthStore.getState().logout()
     }
-    if (response.status === 403 && !/^\/v1\/projects\/[^/]+$/.test(path)) {
+    if (response.status === 403 && payload.code !== 1003 && !/^\/v1\/projects\/[^/]+$/.test(path)) {
       window.dispatchEvent(new Event('project-permission-denied'))
     }
     throw new ApiError(payload.message || '请求失败', payload.code, response.status, payload.data)
@@ -151,10 +153,12 @@ export async function requestBlob(path: string, options: RequestInit = {}, requi
         data: {},
       }))) as ApiEnvelope<unknown>
 
-      if (payload.code === 1001 || response.status === 401) {
+      if (payload.code === 1003) {
+        window.dispatchEvent(new Event('password-change-required'))
+      } else if (payload.code === 1001 || response.status === 401) {
         useAuthStore.getState().logout()
       }
-      if (response.status === 403 && !/^\/v1\/projects\/[^/]+$/.test(path)) {
+      if (response.status === 403 && payload.code !== 1003 && !/^\/v1\/projects\/[^/]+$/.test(path)) {
         window.dispatchEvent(new Event('project-permission-denied'))
       }
       throw new ApiError(payload.message || '请求失败', payload.code, response.status, payload.data)

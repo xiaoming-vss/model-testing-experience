@@ -68,7 +68,8 @@ def test_mysql_comment_upgrade_preserves_definitions_constraints_and_rows(mysql)
     with mysql.connect() as connection:
         config = migration_config(connection)
         command.downgrade(config, revision.down_revision)
-        seed_row(connection, Base.metadata.tables["users"])
+        historical_users = sa.Table("users", sa.MetaData(), autoload_with=connection)
+        seed_row(connection, historical_users)
         # Nondefault per-column collation and a quoted/escaped server default must
         # survive MODIFY COLUMN along with the original nullability and auto increment.
         connection.exec_driver_sql(
@@ -77,21 +78,21 @@ def test_mysql_comment_upgrade_preserves_definitions_constraints_and_rows(mysql)
         )
         connection.commit()
         definitions, keys = column_definitions(connection), constraints(connection)
-        rows = connection.execute(sa.select(Base.metadata.tables["users"])).all()
+        rows = connection.execute(sa.select(historical_users)).all()
 
-        command.upgrade(config, "head")
+        command.upgrade(config, revision.revision)
         assert_mysql_comments(connection)
         assert column_definitions(connection) == definitions
         assert constraints(connection) == keys
-        assert connection.execute(sa.select(Base.metadata.tables["users"])).all() == rows
+        assert connection.execute(sa.select(historical_users)).all() == rows
 
         # A user edit after upgrade is retained on downgrade; our own comments clear.
         command.downgrade(config, revision.down_revision)
         assert_mysql_comments(connection, cleared=True)
         assert column_definitions(connection) == definitions
         assert constraints(connection) == keys
-        assert connection.execute(sa.select(Base.metadata.tables["users"])).all() == rows
-        command.upgrade(config, "head")
+        assert connection.execute(sa.select(historical_users)).all() == rows
+        command.upgrade(config, revision.revision)
         connection.exec_driver_sql("ALTER TABLE users COMMENT='自定义用户表说明'")
         connection.exec_driver_sql(
             "ALTER TABLE users MODIFY email VARCHAR(100) CHARACTER SET utf8mb4 "
@@ -103,6 +104,7 @@ def test_mysql_comment_upgrade_preserves_definitions_constraints_and_rows(mysql)
         assert next(c for c in inspector.get_columns("users") if c["name"] == "email")[
             "comment"
         ] == ("自定义邮箱说明")
+        command.upgrade(config, revision.revision)
+        connection.execute(historical_users.delete())
         command.upgrade(config, "head")
-        connection.execute(Base.metadata.tables["users"].delete())
         connection.commit()

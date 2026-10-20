@@ -37,14 +37,19 @@ async def monitor():
 @asynccontextmanager
 async def lifespan(app):
     from testing_agent.services.file_cleanup import monitor_files
+    from testing_agent.services.ldap_reconcile import monitor_ldap
     from testing_agent.services.sprint_metrics_scheduler import monitor_daily_metrics
 
+    ldap_task = asyncio.create_task(monitor_ldap(AsyncSessionLocal))
     metrics_task = asyncio.create_task(monitor_daily_metrics())
     files_task = asyncio.create_task(monitor_files())
     task = asyncio.create_task(monitor())
     try:
         yield
     finally:
+        ldap_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await ldap_task
         metrics_task.cancel()
         with suppress(asyncio.CancelledError):
             await metrics_task

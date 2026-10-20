@@ -14,6 +14,7 @@ from testing_agent.models.api_collection_run import ApiCollectionRun, ApiCollect
 from testing_agent.models.api_environment import ApiEnvironment
 from testing_agent.models.api_environment_var import ApiEnvironmentVar
 from testing_agent.models.api_extract_rule import ApiExtractRule
+from testing_agent.models.auth_runtime import AuthRuntime
 from testing_agent.models.bug import Bug
 from testing_agent.models.bug_activity import BugActivity
 from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
@@ -30,6 +31,7 @@ from testing_agent.models.integration_job import (
     IntegrationRuntime,
     IntegrationWorkerPresence,
 )
+from testing_agent.models.login_rate_limit import LoginRateLimit
 from testing_agent.models.project import Project
 from testing_agent.models.project_member import ProjectMember
 from testing_agent.models.project_skill_space import ProjectSkillSpace
@@ -83,6 +85,7 @@ __all__ = [
     "IntegrationRuntime",
     "IntegrationRestoreReview",
     "IntegrationWorkerPresence",
+    "LoginRateLimit",
     "Project",
     "ProjectMember",
     "ProjectSkillSpace",
@@ -98,6 +101,7 @@ __all__ = [
     "UiTestSuite",
     "UiTestSuiteRun",
     "UiTestSuiteRunItem",
+    "AuthRuntime",
     "User",
     "WorkerTask",
 ]

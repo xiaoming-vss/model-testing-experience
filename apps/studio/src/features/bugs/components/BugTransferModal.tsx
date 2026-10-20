@@ -5,7 +5,7 @@ import { api, listItems } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
 import type { Bug } from '../types'
-import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
+import { isBugOnlyProject, useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { useBugScope } from '../hooks/useBugScope'
 
 /** 独立转派：只更换责任人，不改变状态；转派历史写入动态。 */
@@ -19,7 +19,7 @@ export function BugTransferModal({
   const [form] = Form.useForm<{ assigneeUserId: string }>()
   const queryClient = useQueryClient()
   const access = useProjectAccess(bug?.projectId)
-  const bugScope = useBugScope(bug?.projectId, access.project?.role === 'developer' && Boolean(bug))
+  const bugScope = useBugScope(bug?.projectId, isBugOnlyProject(access.project) && Boolean(bug))
 
   const membersQuery = useQuery({
     queryKey: ['projectMembers', bug?.projectId],
@@ -73,11 +73,11 @@ export function BugTransferModal({
           <Select
             showSearch
             optionFilterProp="label"
-            options={(access.project?.role === 'developer' ? bugScope.members : listItems(membersQuery.data)).map((member) => ({
+            options={(isBugOnlyProject(access.project) ? bugScope.members : listItems(membersQuery.data)).map((member) => ({
               label: member.name || member.userId,
               value: member.userId,
             }))}
-            loading={access.project?.role === 'developer' ? bugScope.optionsQuery.isLoading : membersQuery.isLoading}
+            loading={isBugOnlyProject(access.project) ? bugScope.optionsQuery.isLoading : membersQuery.isLoading}
             placeholder="选择项目内的新责任人"
           />
         </Form.Item>

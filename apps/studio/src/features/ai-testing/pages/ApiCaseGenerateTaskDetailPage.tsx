@@ -37,12 +37,12 @@ import '@/features/ai-testing/styles/api-config-result.css'
 import '@/features/ai-testing/styles/run-result.css'
 import '@/features/ai-testing/styles/task-detail-v2.css'
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser'
-import { useAuthStore } from '@/features/auth/store/auth.store'
 import { api, listItems } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { goBackOrFallback } from '@/shared/utils/backNavigation'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
-import { formatTime, getErrorMessage, normalizeRequirementId, normalizeSprintId, normalizeUserName, pickUpdatedAt } from '@/utils/format'
+import { formatTime, getErrorMessage, normalizeRequirementId, normalizeSprintId, pickUpdatedAt } from '@/utils/format'
+import { UserReference } from '@/shared/components/UserReference/UserReference'
 
 const runResultSectionDefinitions = [
   { key: 'configJson', label: '中间配置' },
@@ -454,7 +454,6 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
   const [reviewForm] = Form.useForm<{ reviewComment?: string }>()
   const [importForm] = Form.useForm<{ collectionId: string }>()
   useCurrentUser()
-  const currentUser = useAuthStore((state) => state.user)
 
   const taskQuery = useQuery({
     queryKey: ['apiCaseGenerateTask', taskId],
@@ -722,7 +721,6 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
     },
   })
 
-  const creatorName = useMemo(() => normalizeUserName(currentUser), [currentUser])
   const runnableTask = isRunnableApiCaseGenerateTaskRun(latestRunRecord?.status)
 
   useEffect(() => {
@@ -923,7 +921,7 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
               { label: '迭代', value: task.sprintId ? sprintNameMap.get(task.sprintId) ?? task.sprintId : '-', kind: 'chip-accent' },
               { label: '需求', value: task.requirementId ? requirementNameMap.get(task.requirementId) ?? task.requirementId : '-' },
               { label: '来源类型', value: task.sourceType, kind: 'chip-muted' },
-              { label: '创建人', value: creatorName },
+              { label: '创建人', value: <UserReference projectId={task.projectId ?? undefined} userId={task.creatorUserId ?? undefined} /> },
               { label: '更新时间', value: formatTime(pickUpdatedAt(task)), kind: 'time', separator: 'dot' },
             ]}
             actions={(

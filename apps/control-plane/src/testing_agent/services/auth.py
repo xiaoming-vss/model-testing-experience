@@ -3,71 +3,102 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime
 
-from sqlalchemy import delete, select
-
+from testing_agent.core.config import Settings, get_settings
 from testing_agent.core.errors import (
     AppError,
+    ErrBadRequest,
     ErrEmailAlreadyUse,
+    ErrEmailRequired,
     ErrForbidden,
+    ErrLdapReadOnly,
+    ErrLdapUnavailable,
     ErrNameAlreadyUse,
     ErrNotFound,
-    ErrUnauthorized,
+    ErrOldPasswordInvalid,
+    ErrPasswordSameAsOld,
+    ErrRegistrationClosed,
+    ErrUsernameImmutable,
 )
 from testing_agent.core.security import (
-    access_token_hash,
-    create_access_token,
     hash_password,
-    parse_access_token_claims,
     verify_password,
 )
 from testing_agent.core.sid import new_id
-from testing_agent.models.integration_connection import IntegrationConnection
-from testing_agent.models.project import Project
-from testing_agent.models.project_member import ProjectMember
-from testing_agent.models.revoked_access_token import RevokedAccessToken
+from testing_agent.domain.account_policy import normalize_email, validate_password
 from testing_agent.models.user import User
+from testing_agent.repositories.auth_session import AuthSessionRepository
+from testing_agent.repositories.login_rate_limit import LoginRateLimitRepository
 from testing_agent.repositories.user import UserRepository
 from testing_agent.schemas.auth import (
+    ChangePasswordRequest,
     LoginRequest,
-    LoginResponse,
     RegisterRequest,
     UpdateProfileRequest,
     UserResponse,
 )
-from testing_agent.services.worker_authorization import revoke_executions
+from testing_agent.services.auth_mode import AuthModeService
+from testing_agent.services.auth_session import SessionService, invalidate_sessions
+from testing_agent.services.ldap_login import LdapLoginService
+from testing_agent.services.local_login import LocalLoginService
 
 
 class AuthService:
-    def __init__(self, users: UserRepository):
+    def __init__(
+        self,
+        users: UserRepository,
+        rate_limits: LoginRateLimitRepository | None = None,
+        settings: Settings | None = None,
+        ldap_login: LdapLoginService | None = None,
+        mode: AuthModeService | None = None,
+    ) -> None:
         self.users = users
+        self.rate_limits = rate_limits
+        self.settings = settings or get_settings()
+        self.ldap_login = ldap_login
+        self.mode = mode
 
     async def register(self, body: RegisterRequest) -> dict:
-        exists = await self.users.get_by_name(body.name)
+        if self.settings.ldap.enabled:
+            raise ErrRegistrationClosed()
+        if self.mode is not None:
+            await self.mode.require_current(for_update=True)
+        name = body.name.strip()
+        if not name or len(name) > 50:
+            raise AppError(400, "用户名长度必须为 1..50 个字符", 400)
+        email = normalize_email(body.email)
+        if not email:
+            raise ErrEmailRequired()
+        if len(email) > 100:
+            raise AppError(400, "邮箱长度不能超过 100 个字符", 400)
+        validate_password(body.password)
+        exists = await self.users.get_by_name(name)
         if exists is not None:
             raise ErrNameAlreadyUse()
-        if body.email:
-            email_user = await self.users.get_by_email(body.email)
-            if email_user is not None:
-                raise ErrEmailAlreadyUse()
+        email_user = await self.users.get_by_email(email)
+        if email_user is not None:
+            raise ErrEmailAlreadyUse()
+        now = datetime.now(UTC)
         user = User(
             user_id=new_id(),
-            nickname=body.name,
+            nickname=name,
             password=await asyncio.to_thread(hash_password, body.password),
-            email=body.email or None,
+            email=email,
+            status="active",
+            password_updated_at=now,
         )
         self.users.add(user)
         await self.users.commit()
         await self.users.refresh(user)
         return self._user_data(user)
 
-    async def login(self, body: LoginRequest) -> dict:
-        user = await self.users.get_by_name(body.name)
-        if user is None or not await asyncio.to_thread(
-            verify_password, body.password, user.password
-        ):
-            raise ErrUnauthorized()
-        data = LoginResponse(access_token=create_access_token(user.user_id))
-        return data.model_dump(by_alias=True)
+    async def login(self, body: LoginRequest, client_ip: str = "") -> dict:
+        if body.auth_method == "ldap":
+            if self.ldap_login is None:
+                raise ErrLdapUnavailable()
+            return await self.ldap_login.login(body, client_ip)
+        return await LocalLoginService(
+            self.users, self.rate_limits, self.settings, self.mode
+        ).login(body, client_ip)
 
     async def get_profile(self, user_id: str) -> dict:
         user = await self.users.get_by_user_id(user_id)
@@ -76,40 +107,27 @@ class AuthService:
         return self._user_data(user)
 
     async def logout(self, user_id: str, token: str) -> dict:
-        claims = parse_access_token_claims(token)
-        if claims.user_id != user_id:
-            raise ErrUnauthorized()
-        session = self.users.session
-        # Serialize revocations for this user, including simultaneous logout requests.
-        user = await session.scalar(select(User).where(User.user_id == user_id).with_for_update())
-        if user is None:
-            raise ErrUnauthorized()
-        await session.execute(
-            delete(RevokedAccessToken).where(RevokedAccessToken.expires_at <= datetime.now(UTC))
+        await SessionService(AuthSessionRepository(self.users.session), self.settings).logout(
+            user_id, token
         )
-        token_hash = access_token_hash(token)
-        if await session.get(RevokedAccessToken, token_hash) is None:
-            session.add(
-                RevokedAccessToken(
-                    token_hash=token_hash, user_id=user_id, expires_at=claims.expires_at
-                )
-            )
-        await session.commit()
         return {}
 
     async def update_profile(self, user_id: str, body: UpdateProfileRequest) -> dict:
         user = await self.users.get_by_user_id(user_id)
         if user is None:
             raise ErrForbidden()
-        if body.name is not None and body.name != user.nickname:
-            exists = await self.users.get_by_name(body.name)
-            if exists is not None:
-                raise ErrNameAlreadyUse()
-            user.nickname = body.name
+        if getattr(user, "auth_source", "local") == "ldap":
+            raise ErrLdapReadOnly()
+        if body.name is not None and body.name.strip() != user.nickname:
+            raise ErrUsernameImmutable()
         if body.email is not None:
-            new_email = body.email or None
+            new_email = normalize_email(body.email)
+            if not new_email:
+                raise ErrEmailRequired()
+            if len(new_email) > 100:
+                raise ErrBadRequest()
             if new_email != user.email:
-                email_user = await self.users.get_by_email(new_email) if new_email else None
+                email_user = await self.users.get_by_email(new_email)
                 if email_user is not None and email_user.user_id != user.user_id:
                     raise ErrEmailAlreadyUse()
                 user.email = new_email
@@ -117,25 +135,24 @@ class AuthService:
         await self.users.refresh(user)
         return self._user_data(user)
 
-    async def delete_user(self, user_id: str) -> dict:
+    async def change_password(self, user_id: str, body: ChangePasswordRequest) -> dict:
         user = await self.users.get_by_user_id(user_id)
         if user is None:
             raise ErrForbidden()
-        session = self.users.session
-        await session.scalar(select(User).where(User.user_id == user_id).with_for_update())
-        owned = await session.scalar(
-            select(Project.project_id).where(Project.user_id == user_id).with_for_update()
-        )
-        if owned is not None:
-            raise AppError(2007, "请先转移或删除所有拥有的项目", 409)
-        await revoke_executions(session, actor=user_id)
-        await session.execute(delete(ProjectMember).where(ProjectMember.user_id == user_id))
-        connections = await session.scalars(
-            select(IntegrationConnection).where(IntegrationConnection.user_id == user_id)
-        )
-        for connection in connections:
-            await self.users.hard_delete(connection)
-        await self.users.delete(user)
+        if getattr(user, "auth_source", "local") == "ldap":
+            raise ErrLdapReadOnly()
+        valid = await asyncio.to_thread(verify_password, body.old_password, user.password)
+        if not valid:
+            raise ErrOldPasswordInvalid()
+        validate_password(body.new_password)
+        if body.new_password == body.old_password:
+            raise ErrPasswordSameAsOld()
+        user.password = await asyncio.to_thread(hash_password, body.new_password)
+        user.password_updated_at = datetime.now(UTC)
+        user.must_change_password = False
+        invalidate_sessions(user)
+        user.failed_login_count = 0
+        user.locked_until = None
         await self.users.commit()
         return {}
 
@@ -144,4 +161,7 @@ class AuthService:
             user_id=user.user_id,
             name=user.nickname,
             email=user.email,
+            auth_source=getattr(user, "auth_source", None) or "local",
+            is_super_admin=bool(getattr(user, "is_super_admin", False)),
+            must_change_password=bool(getattr(user, "must_change_password", False)),
         ).model_dump(by_alias=True)

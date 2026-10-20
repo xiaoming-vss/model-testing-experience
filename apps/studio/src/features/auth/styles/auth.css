@@ -332,3 +332,18 @@
   right: 16px;
   z-index: 10;
 }
+
+.auth-forgot-hint {
+  display: block;
+  margin: -4px 0 20px;
+  font-size: 12px;
+}
+
+.auth-method-switch {
+  margin-bottom: 16px;
+}
+
+.auth-login-hint {
+  display: block;
+  margin-bottom: 16px;
+}

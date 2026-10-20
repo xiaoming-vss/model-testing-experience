@@ -5,7 +5,12 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from testing_agent.core.errors import AppError, ErrNotFound, ErrProjectNameAlreadyUse
+from testing_agent.core.errors import (
+    AppError,
+    ErrAccountDisabled,
+    ErrNotFound,
+    ErrProjectNameAlreadyUse,
+)
 from testing_agent.core.sid import new_id
 from testing_agent.models.project import Project
 from testing_agent.models.project_member import ProjectMember
@@ -21,16 +26,18 @@ from testing_agent.services.common import list_payload
 from testing_agent.services.project_access import (
     ProjectAction,
     allowed_actions,
+    is_super_admin,
     project_role,
     require_project_access,
 )
 from testing_agent.services.worker_authorization import revoke_executions
 
 
-def dump_project(project: Project, role: str = "owner") -> dict:
+def dump_project(project: Project, role: str = "owner", super_admin: bool = False) -> dict:
     data = ProjectResponse.model_validate(project)
     data.role = role
     data.permissions = allowed_actions(role)
+    data.is_super_admin = super_admin
     return data.model_dump(by_alias=True, mode="json")
 
 
@@ -65,13 +72,24 @@ class ProjectService:
         self.projects.add(project)
         await self.projects.commit()
         await self.projects.refresh(project)
-        return dump_project(project)
+        return dump_project(project, super_admin=bool(user.is_super_admin))
 
     async def list(self, user_id: str) -> dict[str, Any]:
-        rows = await self.projects.list_active_by_user(user_id)
+        super_admin = await is_super_admin(self.projects.session, user_id)
+        rows = (
+            await self.projects.list_all_active()
+            if super_admin
+            else await self.projects.list_active_by_user(user_id)
+        )
         return list_payload(
             [
-                dump_project(row, await project_role(self.projects.session, user_id, row))
+                dump_project(
+                    row,
+                    "owner"
+                    if super_admin
+                    else await project_role(self.projects.session, user_id, row),
+                    super_admin,
+                )
                 for row in rows
             ]
         )
@@ -81,12 +99,12 @@ class ProjectService:
         if project is None:
             raise ErrNotFound()
         role = await require_project_access(self.projects.session, user_id, project, "project_read")
-        return dump_project(project, role)
+        return dump_project(project, role, await is_super_admin(self.projects.session, user_id))
 
     async def update(self, user_id: str, project_id: str, body: UpdateProjectRequest) -> dict:
         project = await self.get_accessible_entity(user_id, project_id, action="manage")
         if body.name is not None and body.name != project.name:
-            exists = await self.projects.get_active_by_user_and_name(user_id, body.name)
+            exists = await self.projects.get_active_by_user_and_name(project.user_id, body.name)
             if exists is not None:
                 raise ErrProjectNameAlreadyUse()
             project.name = body.name
@@ -94,7 +112,7 @@ class ProjectService:
             project.description = body.description
         await self.projects.commit()
         await self.projects.refresh(project)
-        return dump_project(project)
+        return dump_project(project, "owner", await is_super_admin(self.projects.session, user_id))
 
     async def delete(self, user_id: str, project_id: str) -> dict:
         project = await self.get_accessible_entity(user_id, project_id, action="manage")
@@ -113,8 +131,15 @@ class ProjectService:
         project = await self._locked_project(user_id, project_id)
         if target is None:
             raise ErrNotFound()
-        existing = await project_role(session, target.user_id, project)
-        if existing:
+        if (target.status or "active") != "active":
+            raise ErrAccountDisabled()
+        existing = await session.scalar(
+            select(ProjectMember.id).where(
+                ProjectMember.project_id == project_id,
+                ProjectMember.user_id == target.user_id,
+            )
+        )
+        if existing is not None or target.user_id == project.user_id:
             raise AppError(2006, "用户已是项目成员", 409)
         session.add(ProjectMember(project_id=project_id, user_id=target.user_id, role=body.role))
         try:
@@ -220,6 +245,8 @@ class ProjectService:
         )
         if target is None or member is None:
             raise ErrNotFound()
+        if (target.status or "active") != "active":
+            raise ErrAccountDisabled()
         # The legacy owner/name uniqueness also applies to transferred projects.
         if await self.projects.get_active_by_user_and_name(target_id, project.name) is not None:
             raise ErrProjectNameAlreadyUse()
@@ -232,4 +259,4 @@ class ProjectService:
         except IntegrityError as exc:
             await session.rollback()
             raise ErrProjectNameAlreadyUse() from exc
-        return dump_project(project, "member")
+        return dump_project(project, "member", await is_super_admin(session, user_id))

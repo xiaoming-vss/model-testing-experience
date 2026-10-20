@@ -2,6 +2,7 @@ import { Space, Tooltip, Typography } from 'antd'
 import type { TableProps } from 'antd'
 import { Link } from 'react-router-dom'
 import { AppIcon } from '@/shared/icons'
+import { DeletedAccountLabel } from '@/shared/components/UserReference/UserReference'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { pickCreatedAt, formatTime, pickUpdatedAt } from '@/utils/format'
 import type { Bug, BugAction, BugSortField } from '../types'
@@ -17,9 +18,9 @@ const SORT_FIELD_BY_KEY: Record<string, BugSortField> = {
   createdAt: 'created_at', updatedAt: 'updated_at',
 }
 
-export function bugColumns({ memberNameMap, sprintNameMap, onTransition, onEdit, optionalColumns, sort }: {
+export function bugColumns({ memberNameMap, membersLoaded = true, sprintNameMap, onTransition, onEdit, optionalColumns, sort }: {
   optionalColumns: string[]
-  memberNameMap: Map<string, string>; sprintNameMap: Map<string, string>
+  memberNameMap: Map<string, string>; membersLoaded?: boolean; sprintNameMap: Map<string, string>
   onTransition: (bug: Bug, action: BugAction) => void
   onEdit: (bug: Bug) => void
   sort: BugSortState
@@ -54,9 +55,9 @@ export function bugColumns({ memberNameMap, sprintNameMap, onTransition, onEdit,
       render: (_, bug) => <span className={`bug-priority-chip tone-${getBugPriorityTone(bug.priority)}`}>
         {BUG_PRIORITY_LABELS[bug.priority] ?? bug.priority}</span> },
     { title: '创建人', key: 'reporter', width: 100, ellipsis: true,
-      render: (_, bug) => memberNameMap.get(bug.reporterUserId) ?? bug.reporterUserId },
+      render: (_, bug) => memberNameMap.get(bug.reporterUserId) ?? (membersLoaded ? <DeletedAccountLabel /> : bug.reporterUserId) },
     { title: '责任人', key: 'assignee', width: 100, ellipsis: true,
-      render: (_, bug) => memberNameMap.get(bug.assigneeUserId) ?? bug.assigneeUserId },
+      render: (_, bug) => memberNameMap.get(bug.assigneeUserId) ?? (membersLoaded ? <DeletedAccountLabel /> : bug.assigneeUserId) },
     { title: '发现迭代', key: 'foundSprint', width: 130, ellipsis: true,
       render: (_, bug) => sprintNameMap.get(bug.foundSprintId) ?? '未关联' },
     { title: '计划修复迭代', key: 'plannedFixSprint', width: 130, ellipsis: true,

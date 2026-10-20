@@ -30,6 +30,32 @@ ErrInternalServerError = AppError(500, "服务器内部错误", HTTPStatus.INTER
 
 ErrNameAlreadyUse = AppError(1001, "该用户名已被注册", HTTPStatus.CONFLICT)
 ErrEmailAlreadyUse = AppError(1002, "该邮箱已被注册", HTTPStatus.CONFLICT)
+ErrPasswordChangeRequired = AppError(
+    1003, "首次登录必须修改密码后才能继续操作", HTTPStatus.FORBIDDEN
+)
+ErrAccountDisabled = AppError(1004, "账号已被禁用，请联系系统管理员", HTTPStatus.FORBIDDEN)
+ErrAccountLocked = AppError(1005, "登录失败次数过多，账号已临时锁定", HTTPStatus.LOCKED)
+ErrTooManyLoginAttempts = AppError(
+    1006, "登录尝试过于频繁，请稍后再试", HTTPStatus.TOO_MANY_REQUESTS
+)
+ErrPasswordTooShort = AppError(1007, "密码至少需要 10 个字符", HTTPStatus.BAD_REQUEST)
+ErrPasswordTooLong = AppError(1008, "密码长度不能超过 72 个字节", HTTPStatus.BAD_REQUEST)
+ErrPasswordSameAsOld = AppError(1009, "新密码不能与旧密码相同", HTTPStatus.BAD_REQUEST)
+ErrOldPasswordInvalid = AppError(1010, "旧密码不正确", HTTPStatus.BAD_REQUEST)
+ErrUsernameImmutable = AppError(1011, "用户名创建后不允许修改", HTTPStatus.BAD_REQUEST)
+ErrEmailRequired = AppError(1012, "邮箱为必填项", HTTPStatus.BAD_REQUEST)
+ErrSuperAdminProtected = AppError(1013, "系统超级管理员不允许禁用或删除", HTTPStatus.FORBIDDEN)
+ErrCannotDeleteSelf = AppError(1014, "不能删除当前登录账号", HTTPStatus.BAD_REQUEST)
+ErrCannotDisableSelf = AppError(1015, "不能禁用当前登录账号", HTTPStatus.BAD_REQUEST)
+ErrLdapUnavailable = AppError(
+    1020, "LDAP 服务不可用或目录配置尚未验证", HTTPStatus.SERVICE_UNAVAILABLE
+)
+ErrLdapConflict = AppError(1021, "LDAP 身份或资料冲突，请检查目录与平台账号", HTTPStatus.CONFLICT)
+ErrLdapReadOnly = AppError(1022, "LDAP 用户身份资料由目录管理，平台不可修改", HTTPStatus.FORBIDDEN)
+ErrLdapPending = AppError(1023, "账号待 LDAP 关联，请使用 LDAP 登录", HTTPStatus.FORBIDDEN)
+ErrLocalLoginRestricted = AppError(1024, "本地登录仅供系统管理员使用", HTTPStatus.FORBIDDEN)
+ErrRegistrationClosed = AppError(1025, "当前认证模式不允许自助注册", HTTPStatus.FORBIDDEN)
+ErrLdapCutoverRequired = AppError(1026, "LDAP 认证切换尚未完成", HTTPStatus.SERVICE_UNAVAILABLE)
 ErrProjectNameAlreadyUse = AppError(2001, "该项目名称已存在", HTTPStatus.CONFLICT)
 ErrProjectSkillSpaceNotFound = AppError(2002, "项目技能包不存在", HTTPStatus.NOT_FOUND)
 ErrProjectSkillSpaceFileRequired = AppError(2003, "请上传技能压缩包", HTTPStatus.BAD_REQUEST)

@@ -36,6 +36,7 @@ def test_context_schemas_use_go_fields_only():
     ).model_dump(by_alias=True) == {
         "role": "owner",
         "permissions": [],
+        "isSuperAdmin": False,
         "projectId": "p1",
         "userId": "u1",
         "name": "project",

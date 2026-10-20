@@ -39,6 +39,11 @@ class ProjectRepository(ResourceRepository):
             ).all()
         )
 
+    async def list_all_active(self) -> list[Project]:
+        return list(
+            (await self.session.scalars(select(Project).order_by(Project.created_at.desc()))).all()
+        )
+
     def add(self, project: Project) -> None:
         self.session.add(project)
 

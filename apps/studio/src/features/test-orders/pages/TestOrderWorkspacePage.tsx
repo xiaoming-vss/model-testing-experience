@@ -22,6 +22,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { DELETED_ACCOUNT_LABEL, UserDisplayName } from '@/shared/components/UserReference/UserReference'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { AddCasesFromLibraryModal } from '../components/AddCasesFromLibraryModal'
@@ -115,7 +116,7 @@ export function TestOrderWorkspacePage() {
     return map
   }, [membersQuery.data])
   const personName = (userId?: string) =>
-    userId ? memberNameMap.get(userId) ?? userId : ''
+    userId ? memberNameMap.get(userId) ?? (membersQuery.data ? DELETED_ACCOUNT_LABEL : userId) : ''
   const entries = listItems(entriesQuery.data)
 
   const entriesReloaded = entriesQuery.dataUpdatedAt
@@ -446,7 +447,7 @@ export function TestOrderWorkspacePage() {
                             <span className="test-order-nav-meta">
                               {entry.caseModule ? <span>{entry.caseModule}</span> : null}
                               <span>{entryStepCount} 步</span>
-                              <span>{personName(entry.assigneeUserId) || '未分配'}</span>
+                              <span>{personName(entry.assigneeUserId) ? <UserDisplayName name={personName(entry.assigneeUserId)} /> : '未分配'}</span>
                             </span>
                           </button>
                           <Popconfirm

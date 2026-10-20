@@ -29,6 +29,17 @@ def api(tmp_path, monkeypatch):
     async def initialize():
         async with engine.begin() as connection:
             await connection.run_sync(Base.metadata.create_all)
+            from testing_agent.models.auth_runtime import AuthRuntime
+
+            await connection.execute(
+                AuthRuntime.__table__.insert().values(
+                    id=1,
+                    mode="local",
+                    fingerprint="",
+                    generation=0,
+                    reconcile_owner="",
+                )
+            )
 
     async def session():
         async with sessions() as value:
@@ -51,7 +62,10 @@ def api(tmp_path, monkeypatch):
 
 
 def account(api, name):
-    response = api.post("/v1/register", json={"name": name, "password": "test-password"})
+    response = api.post(
+        "/v1/register",
+        json={"name": name, "password": "test-password", "email": f"{name}@example.test"},
+    )
     assert response.status_code == 200, response.text
     user = response.json()["data"]
     response = api.post("/v1/login", json={"name": name, "password": "test-password"})
@@ -140,7 +154,7 @@ def test_transfer_preserves_one_owner_and_removed_member_loses_access(api):
         ).status_code
         == 200
     )
-    assert api.delete("/v1/user", headers=owner).status_code == 409
+    assert api.delete("/v1/user", headers=owner).status_code == 405
     transfer = api.post(
         f"/v1/projects/{pid}/transfer-ownership",
         headers=owner,
@@ -154,8 +168,8 @@ def test_transfer_preserves_one_owner_and_removed_member_loses_access(api):
         == 200
     )
     assert api.get(f"/v1/projects/{pid}", headers=owner).status_code == 403
-    assert api.delete("/v1/user", headers=owner).status_code == 200
-    assert api.get("/v1/projects", headers=owner).status_code == 401
+    assert api.delete("/v1/user", headers=owner).status_code == 405
+    assert api.get("/v1/projects", headers=owner).status_code == 200
 
 
 def test_member_creates_shared_sprint_and_viewer_cannot_modify_it(api):

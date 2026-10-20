@@ -2,6 +2,7 @@ import { Typography } from 'antd'
 import type { BugActivity } from '../types'
 import { BUG_ACTIVITY_ACTION_LABELS, BUG_REJECT_REASON_LABELS, BUG_SEVERITY_LABELS, BUG_PRIORITY_LABELS, getBugStatusLabel, getBugStateLabel, BUG_RESOLUTION_LABELS } from '../utils/bugMeta'
 import { RichTextViewer } from '@/shared/components/RichTextEditor'
+import { UserDisplayName } from '@/shared/components/UserReference/UserReference'
 import { pickCreatedAt, formatTime } from '@/utils/format'
 
 const { Text } = Typography
@@ -58,7 +59,7 @@ export function BugActivityFeed({
       {items.map((activity) => (
         <li key={activity.activityId} className="bug-activity-item">
           <div className="bug-activity-head">
-            <span className="bug-activity-actor">{resolveUserName(activity.actorUserId)}</span>
+            <span className="bug-activity-actor"><UserDisplayName name={resolveUserName(activity.actorUserId)} /></span>
             <span className="bug-activity-action">{activitySummary(activity, resolveUserName)}</span>
             {activity.kind === 'status_change' && activity.toStatus ? (
               <span className="bug-activity-status">{activity.fromStatus ? `${activity.detail.fromConfirmed === undefined ? getBugStatusLabel(activity.fromStatus) : getBugStateLabel({ status: activity.fromStatus, confirmed: activity.detail.fromConfirmed, resolution: activity.detail.fromResolution })} → ` : ''}{activity.detail.toConfirmed === undefined ? getBugStatusLabel(activity.toStatus) : getBugStateLabel({ status: activity.toStatus, confirmed: activity.detail.toConfirmed, resolution: activity.detail.toResolution })}</span>
