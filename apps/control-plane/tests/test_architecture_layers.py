@@ -4,6 +4,43 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_provider_bindings_do_not_depend_on_the_binding_facade_or_each_other():
+    root = PROJECT_ROOT / "src/testing_agent/services"
+    for name in ("gitlab_bindings.py", "zentao_bindings.py"):
+        for node in ast.walk(ast.parse((root / name).read_text())):
+            if isinstance(node, ast.ImportFrom):
+                assert node.module not in {
+                    "testing_agent.services.resource_binding",
+                    "testing_agent.services.gitlab_bindings",
+                    "testing_agent.services.zentao_bindings",
+                }, f"{name}: provider commands use the common access contract"
+
+
+def test_provider_queries_do_not_import_connection_management_or_commit():
+    root = PROJECT_ROOT / "src/testing_agent/services"
+    for name in ("gitlab_queries.py", "zentao_queries.py"):
+        for node in ast.walk(ast.parse((root / name).read_text())):
+            if isinstance(node, ast.ImportFrom):
+                assert node.module != "testing_agent.services.integration_connection"
+            if isinstance(node, ast.Attribute):
+                assert node.attr not in {"commit", "rollback"}, (
+                    f"{name}: resource queries do not own business transactions; "
+                    "Zentao refresh uses its explicitly injected authentication callback"
+                )
+
+
+def test_external_callers_do_not_use_connection_private_decryption():
+    root = PROJECT_ROOT / "src/testing_agent"
+    for path in root.rglob("*.py"):
+        if path == root / "services/integration_connection.py":
+            continue
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.Attribute):
+                assert node.attr != "_decrypt_secret", (
+                    f"{path.name}: use the actor-bound public credential interface"
+                )
+
+
 def test_queue_identity_context_is_not_stored_as_orm_command_attributes():
     fields = {
         "suite_id",

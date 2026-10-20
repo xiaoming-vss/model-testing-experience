@@ -12,10 +12,12 @@ from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.models.project import Project
 from testing_agent.models.shared_service import ServiceAuthorization, SharedService
 from testing_agent.repositories.deletion import delete_resource
+from testing_agent.repositories.shared_service_catalog import SharedServiceCatalogRepository
 from testing_agent.schemas.shared_service import McpTemplate
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.project_access import require_project_access
 from testing_agent.services.service_instance import instance_key, normalize_instance_url
+from testing_agent.services.shared_service_catalog import SharedServiceCatalog
 from testing_agent.services.worker_authorization import revoke_executions
 from testing_agent.services.zentao_mcp_identity import needs_instance_reset
 from testing_agent.services.zentao_mcp_instance import discover_instance
@@ -51,87 +53,29 @@ class SharedServiceService:
             raise ErrNotFound()
         return resource
 
-    async def own_connection(self, resource, user_id):
-        return await self.session.scalar(
-            select(IntegrationConnection)
-            .join(
-                ServiceAuthorization,
-                ServiceAuthorization.connection_id == IntegrationConnection.connection_id,
-            )
-            .where(
-                ServiceAuthorization.service_id == resource.service_id,
-                ServiceAuthorization.user_id == user_id,
-                IntegrationConnection.user_id == user_id,
-            )
-            .execution_options(populate_existing=True)
+    def catalog(self) -> SharedServiceCatalog:
+        return SharedServiceCatalog(
+            SharedServiceCatalogRepository(self.session),
+            self.connections.credentials,
+            discover=discover_instance,
+            needs_reset=needs_instance_reset,
         )
 
+    async def own_connection(self, resource, user_id):
+        rows = await SharedServiceCatalogRepository(self.session).owned_connections(
+            [resource], user_id
+        )
+        return rows.get(resource.service_id)
+
     async def dump(self, resource, user_id):
-        own = await self.own_connection(resource, user_id)
-        authorization = {"status": "unauthorized"}
-        if own is not None:
-            authorization = {
-                "status": "authorized" if own.status == "active" else "invalid",
-                "connectionId": own.connection_id,
-                "account": own.account,
-                "lastAuthAt": own.last_auth_at,
-            }
-        instance, instance_error = {}, ""
-        reset_required, pending_instance = False, ""
-        if resource.provider == "mcp":
-            if own and own.status == "active" and (own.secret_json or {}).get("token"):
-                try:
-                    instance = await discover_instance(
-                        resource.base_url,
-                        self.connections._decrypt_secret(own.secret_json["token"]),
-                    )
-                    if await needs_instance_reset(self.session, resource, instance):
-                        reset_required = True
-                        pending_instance = instance["instanceUrl"]
-                        instance = {}
-                        instance_error = (
-                            "禅道目标已变更或存在旧绑定，请项目所有者在编辑服务中勾选确认后保存"
-                        )
-                except AppError as exc:
-                    instance = {}
-                    instance_error = exc.message
-            else:
-                instance_error = "保存本人的 Token 后自动读取禅道实例"
-        return {
-            "serviceId": resource.service_id,
-            "projectId": resource.project_id,
-            "provider": resource.provider,
-            "name": resource.name,
-            "baseUrl": resource.base_url,
-            "modelId": resource.model_id,
-            "templateId": resource.template_id,
-            "zentaoInstanceUrl": instance.get("instanceUrl", ""),
-            "zentaoApiBaseUrl": instance.get("apiBaseUrl", ""),
-            "instanceError": instance_error,
-            "instanceResetRequired": reset_required,
-            "pendingInstanceUrl": pending_instance,
-            "connectionStatus": "available"
-            if instance
-            else ("error" if own and own.status == "active" else "unchecked"),
-            "authorization": authorization,
-        }
+        return (await self.catalog().read([resource], user_id))[0]
 
     async def list(self, user_id, project_id, provider):
         await self.project(user_id, project_id)
-        resources = list(
-            await self.session.scalars(
-                select(SharedService)
-                .where(
-                    SharedService.project_id == project_id,
-                    SharedService.provider == provider,
-                )
-                .order_by(SharedService.created_at.desc())
-            )
+        resources = await SharedServiceCatalogRepository(self.session).resources(
+            project_id, provider
         )
-        return {
-            "items": [await self.dump(row, user_id) for row in resources],
-            "total": len(resources),
-        }
+        return {"items": await self.catalog().read(resources, user_id), "total": len(resources)}
 
     async def templates(self, user_id, project_id, provider):
         await self.project(user_id, project_id)
@@ -226,7 +170,9 @@ class SharedServiceService:
             own = await self.own_connection(resource, user_id)
             if own is None or own.status != "active" or not (own.secret_json or {}).get("token"):
                 raise AppError(400, "请先保存本人的 MCP Token，以核对新禅道目标", 400)
-            token = self.connections._decrypt_secret(own.secret_json["token"])
+            token = self.connections.credentials.mcp_token(
+                own, user_id=user_id, project_id=resource.project_id
+            )
             await self.session.commit()  # Do not hold project locks during network requests.
             info = await discover_instance(endpoint, token)
             resource = await self.get_resource(user_id, project_id, provider, service_id, "manage")
@@ -236,7 +182,10 @@ class SharedServiceService:
                 or own is None
                 or own.status != "active"
                 or not (own.secret_json or {}).get("token")
-                or self.connections._decrypt_secret(own.secret_json["token"]) != token
+                or self.connections.credentials.mcp_token(
+                    own, user_id=user_id, project_id=resource.project_id
+                )
+                != token
             ):
                 raise AppError(409, "服务地址或本人授权已变更，请刷新后重新保存", 409)
             await self.accept_mcp_instance(resource, own, user_id, info)
@@ -351,7 +300,9 @@ class SharedServiceService:
         if own is None or own.status != "active" or not (own.secret_json or {}).get("token"):
             raise AppError(400, "请先保存本人的 MCP Token，以核对新禅道目标", 400)
         endpoint = resource.base_url
-        token = self.connections._decrypt_secret(own.secret_json["token"])
+        token = self.connections.credentials.mcp_token(
+            own, user_id=user_id, project_id=resource.project_id
+        )
         await self.session.commit()
         info = await discover_instance(endpoint, token)
         if instance_key(info["instanceUrl"]) != instance_key(expected_instance):
@@ -363,7 +314,10 @@ class SharedServiceService:
             or own is None
             or own.status != "active"
             or not (own.secret_json or {}).get("token")
-            or self.connections._decrypt_secret(own.secret_json["token"]) != token
+            or self.connections.credentials.mcp_token(
+                own, user_id=user_id, project_id=resource.project_id
+            )
+            != token
         ):
             raise AppError(409, "服务地址或本人授权已变更，请刷新后重新确认", 409)
         if not await needs_instance_reset(self.session, resource, info):

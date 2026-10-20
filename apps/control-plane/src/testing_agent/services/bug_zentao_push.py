@@ -178,7 +178,9 @@ class BugZentaoPushService:
         service, own, target = await self.local_context(bug, user_id)
         info = await discover_instance(
             service.base_url,
-            self.catalog.connections._decrypt_secret(own.secret_json["token"]),
+            self.catalog.connections.credentials.mcp_token(
+                own, user_id=user_id, project_id=bug.project_id
+            ),
             client_factory=self.client_factory,
         )
         await validate_identity(self.session, service, info)
@@ -281,7 +283,9 @@ class BugZentaoPushService:
         if existing and existing.status not in {"failed", "preparing"}:
             raise AppError(409, "已关联或结果待核对的 Bug 不能重新选择推送字段", 409)
         service, own, target = await self.context(bug, user_id)
-        token = self.catalog.connections._decrypt_secret(own.secret_json["token"])
+        token = self.catalog.connections.credentials.mcp_token(
+            own, user_id=user_id, project_id=bug.project_id
+        )
         try:
             async with self.client_factory(service.base_url, token) as client:
                 product_id = await self.verify_target(client, target)
@@ -301,7 +305,9 @@ class BugZentaoPushService:
         service, own, _ = await self.local_context(bug, user_id)
         if service.zentao_instance_url != row.instance_url:
             raise AppError(409, "禅道实例已变更，不能核对原推送", 409)
-        token = self.catalog.connections._decrypt_secret(own.secret_json["token"])
+        token = self.catalog.connections.credentials.mcp_token(
+            own, user_id=user_id, project_id=bug.project_id
+        )
         endpoint, expected_instance = service.base_url, row.instance_url
         operation, title, target = (
             row.operation_id,

@@ -105,7 +105,9 @@ class BugZentaoAttachmentService:
         own = await self.pushes.catalog.own_connection(service, user_id)
         if own is None or own.status != "active" or not (own.secret_json or {}).get("token"):
             raise AppError(400, "请先配置本人的禅道 MCP Token", 400)
-        token = self.pushes.catalog.connections._decrypt_secret(own.secret_json["token"])
+        token = self.pushes.catalog.connections.credentials.mcp_token(
+            own, user_id=user_id, project_id=bug.project_id
+        )
         endpoint, expected_instance = service.base_url, push.instance_url
         await self.session.commit()
         info = await discover_instance(endpoint, token, client_factory=self.pushes.client_factory)

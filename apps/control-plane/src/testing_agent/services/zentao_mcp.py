@@ -35,7 +35,9 @@ class ZentaoMcpAccess:
         own = await self.catalog.own_connection(service, user_id)
         if own is None or own.status != "active" or not (own.secret_json or {}).get("token"):
             raise AppError(400, "请在基础服务的禅道 MCP 中配置本人的 Token", 400)
-        token = self.catalog.connections._decrypt_secret(own.secret_json["token"])
+        token = self.catalog.connections.credentials.mcp_token(
+            own, user_id=user_id, project_id=project_id
+        )
         info = await discover_instance(service.base_url, token, client_factory=McpClient)
         await validate_identity(self.catalog.session, service, info)
         if expected_instance and instance_key(expected_instance) != instance_key(

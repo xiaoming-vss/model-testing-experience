@@ -5,13 +5,10 @@ from typing import Any
 
 from testing_agent.core.enums import ConnectionStatus
 from testing_agent.core.errors import (
-    AppError,
     ErrBadRequest,
-    ErrGitLabRemoteResourceUnavailable,
     ErrIntegrationConnectionAuthFailed,
     ErrNotFound,
     ErrResourceBindingInvalid,
-    ErrZentaoRemoteResourceUnavailable,
     dynamic_error,
 )
 from testing_agent.core.sid import new_id
@@ -19,12 +16,19 @@ from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.repositories.integration_connection import IntegrationConnectionRepository
 from testing_agent.services.common import list_payload
 from testing_agent.services.gitlab_auth import GitLabAuthProvider, normalize_gitlab_base_url
-from testing_agent.services.gitlab_resource import GitLabResourceClient, GitLabResourceError
+from testing_agent.services.gitlab_queries import GitLabResources
+from testing_agent.services.gitlab_resource import GitLabResourceClient
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
+from testing_agent.services.personal_credentials import PersonalCredentialAccess
 from testing_agent.services.project_access import require_project_access
 from testing_agent.services.service_instance import normalize_instance_url
 from testing_agent.services.worker_authorization import revoke_executions
 from testing_agent.services.zentao_auth import ZentaoAuthProvider
+from testing_agent.services.zentao_queries import ZentaoResources
+from testing_agent.services.zentao_queries import item_value as item_value
+from testing_agent.services.zentao_queries import visible_zentao_items as visible_zentao_items
+from testing_agent.services.zentao_queries import zentao_candidate_total as zentao_candidate_total
+from testing_agent.services.zentao_queries import zentao_list_payload as zentao_list_payload
 from testing_agent.services.zentao_resource import truncate_error
 
 
@@ -66,6 +70,17 @@ class IntegrationConnectionService:
         self.gitlab_auth_provider = gitlab_auth_provider or GitLabAuthProvider()
         self.gitlab_resource_client = gitlab_resource_client or GitLabResourceClient()
         self.credential_cipher = credential_cipher
+        self.credentials = PersonalCredentialAccess(credential_cipher)
+        self.zentao_resources = ZentaoResources(
+            authorize=self.get_active_personal,
+            ensure_token=self._ensure_zentao_token,
+            client=self.zentao_resource_client,
+        )
+        self.gitlab_resources = GitLabResources(
+            authorize=self.get_active_personal,
+            credentials=self.credentials,
+            client=self.gitlab_resource_client,
+        )
 
     async def get_owned(
         self, user_id: str, provider: str, connection_id: str, project_id: str = ""
@@ -382,42 +397,16 @@ class IntegrationConnectionService:
         page: int = 1,
         page_size: int = 100,
     ) -> dict:
-        connection = await self.get_active_personal(user_id, "zentao", connection_id, project_id)
-        if self.zentao_resource_client is None:
-            raise ErrZentaoRemoteResourceUnavailable()
-        result = await self._call_zentao(
-            self.zentao_resource_client.list_projects,
-            connection,
-            page,
-            page_size,
+        return await self.zentao_resources.list_projects(
+            connection_id, user_id, project_id=project_id, page=page, page_size=page_size
         )
-        items = [
-            {
-                "id": item_value(item, "id"),
-                "name": item_value(item, "name"),
-                "code": item_value(item, "code", default=""),
-                "description": item_value(item, "description", default=""),
-                "status": item_value(item, "status", default=""),
-                "begin": item_value(item, "begin", default=""),
-                "end": item_value(item, "end", default=""),
-                "createdAt": item_value(item, "created_at", "createdAt", default=""),
-                "updatedAt": item_value(item, "updated_at", "updatedAt", default=""),
-            }
-            for item in visible_zentao_items(result)
-        ]
-        return zentao_list_payload(connection_id, items, result)
 
     async def resolve_gitlab_group_id(
         self, connection_id: str, project_id: str, group_id: str, *, user_id: str
     ) -> str:
-        connection = await self.get_active_personal(user_id, "gitlab", connection_id, project_id)
-        group = await self._call_gitlab_resource(
-            self.gitlab_resource_client.get_group,
-            connection.base_url,
-            self._decrypt_gitlab_token(connection.access_token),
-            group_id,
+        return await self.gitlab_resources.resolve_group_id(
+            connection_id, project_id, group_id, user_id=user_id
         )
-        return str(group["id"])
 
     async def ensure_gitlab_repository_scope(
         self,
@@ -428,17 +417,9 @@ class IntegrationConnectionService:
         *,
         user_id: str,
     ) -> str:
-        connection = await self.get_active_personal(user_id, "gitlab", connection_id, project_id)
-        result = await self._call_gitlab_resource(
-            self.gitlab_resource_client.get_repository_group_scope,
-            connection.base_url,
-            self._decrypt_gitlab_token(connection.access_token),
-            group_id,
-            repository_id,
+        return await self.gitlab_resources.ensure_repository_scope(
+            connection_id, project_id, group_id, repository_id, user_id=user_id
         )
-        if not result["withinGroup"]:
-            raise dynamic_error(ErrResourceBindingInvalid, "仓库不在项目已绑群组范围内")
-        return str(result["repositoryId"])
 
     async def list_gitlab_groups(
         self,
@@ -450,17 +431,14 @@ class IntegrationConnectionService:
         page: int = 1,
         page_size: int = 100,
     ) -> dict:
-        """列出 PAT 可见群组(含子群组,搜索+分页),供级联下拉使用。"""
-        connection = await self.get_active_personal(user_id, "gitlab", connection_id, project_id)
-        result = await self._call_gitlab_resource(
-            self.gitlab_resource_client.list_groups,
-            connection.base_url,
-            self._decrypt_gitlab_token(connection.access_token),
+        return await self.gitlab_resources.list_groups(
+            connection_id,
+            user_id=user_id,
+            project_id=project_id,
             search=search,
             page=page,
             page_size=page_size,
         )
-        return {"connectionId": connection_id, **result}
 
     async def list_gitlab_group_repositories(
         self,
@@ -472,17 +450,14 @@ class IntegrationConnectionService:
         page: int = 1,
         page_size: int = 100,
     ) -> dict:
-        """列出群组内仓库(覆盖子群组仓库,分页),供级联下拉使用。"""
-        connection = await self.get_active_personal(user_id, "gitlab", connection_id, project_id)
-        result = await self._call_gitlab_resource(
-            self.gitlab_resource_client.list_group_repositories,
-            connection.base_url,
-            self._decrypt_gitlab_token(connection.access_token),
+        return await self.gitlab_resources.list_group_repositories(
+            connection_id,
             group_id,
+            user_id=user_id,
+            project_id=project_id,
             page=page,
             page_size=page_size,
         )
-        return {"connectionId": connection_id, "groupId": group_id, **result}
 
     async def list_gitlab_repository_branches(
         self,
@@ -495,35 +470,14 @@ class IntegrationConnectionService:
         page: int = 1,
         page_size: int = 100,
     ) -> dict:
-        """列出仓库分支(搜索+分页),供级联下拉使用。"""
-        connection = await self.get_active_personal(user_id, "gitlab", connection_id, project_id)
-        result = await self._call_gitlab_resource(
-            self.gitlab_resource_client.list_repository_branches,
-            connection.base_url,
-            self._decrypt_gitlab_token(connection.access_token),
+        return await self.gitlab_resources.list_repository_branches(
+            connection_id,
             repository_id,
+            user_id=user_id,
+            project_id=project_id,
             search=search,
             page=page,
             page_size=page_size,
-        )
-        return {"connectionId": connection_id, "repositoryId": repository_id, **result}
-
-    async def _call_gitlab_resource(self, method: Any, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        try:
-            return await method(*args, **kwargs)
-        except GitLabResourceError as exc:
-            raise self._gitlab_resource_error(exc) from exc
-
-    def _gitlab_resource_error(self, exc: GitLabResourceError) -> AppError:
-        # PAT 失效(HTTP 401)归入鉴权失败;其余 GitLab 异常(404/5xx/网络等)统一映射。
-        if exc.status_code == 401:
-            return dynamic_error(
-                ErrIntegrationConnectionAuthFailed,
-                truncate_error(str(exc)),
-            )
-        return dynamic_error(
-            ErrGitLabRemoteResourceUnavailable,
-            truncate_error(str(exc)),
         )
 
     async def list_zentao_project_executions(
@@ -536,38 +490,13 @@ class IntegrationConnectionService:
         page: int = 1,
         page_size: int = 100,
     ) -> dict:
-        connection = await self.get_active_personal(user_id, "zentao", connection_id, project_id)
-        if self.zentao_resource_client is None:
-            raise ErrZentaoRemoteResourceUnavailable()
-        result = await self._call_zentao(
-            self.zentao_resource_client.list_project_executions,
-            connection,
-            remote_project_id,
-            page,
-            page_size,
-        )
-        items = []
-        for item in visible_zentao_items(result):
-            data = {
-                "id": item_value(item, "id"),
-                "projectId": item_value(item, "project_id", "projectId", default=0),
-                "name": item_value(item, "name"),
-                "description": item_value(item, "description", default=""),
-                "status": item_value(item, "status", default=""),
-                "begin": item_value(item, "begin", default=""),
-                "end": item_value(item, "end", default=""),
-                "createdAt": item_value(item, "created_at", "createdAt", default=""),
-                "updatedAt": item_value(item, "updated_at", "updatedAt", default=""),
-            }
-            parent_id = item_value(item, "parent_id", "parentId", default=0)
-            if parent_id:
-                data["parentId"] = parent_id
-            items.append(data)
-        return zentao_list_payload(
+        return await self.zentao_resources.list_project_executions(
             connection_id,
-            items,
-            result,
-            remoteProjectId=remote_project_id,
+            remote_project_id,
+            user_id,
+            project_id=project_id,
+            page=page,
+            page_size=page_size,
         )
 
     async def list_zentao_execution_testtasks(
@@ -580,40 +509,13 @@ class IntegrationConnectionService:
         page: int = 1,
         page_size: int = 100,
     ) -> dict:
-        connection = await self.get_active_personal(user_id, "zentao", connection_id, project_id)
-        if self.zentao_resource_client is None:
-            raise ErrZentaoRemoteResourceUnavailable()
-        result = await self._call_zentao(
-            self.zentao_resource_client.list_execution_testtasks,
-            connection,
-            remote_execution_id,
-            page,
-            page_size,
-        )
-        items = [
-            {
-                "id": item_value(item, "id"),
-                "projectId": item_value(item, "project_id", "projectId", default=0),
-                "executionId": item_value(item, "execution_id", "executionId", default=0),
-                "name": item_value(item, "name"),
-                "title": item_value(item, "title", default=""),
-                "description": item_value(item, "description", default=""),
-                "status": item_value(item, "status", default=""),
-                "type": item_value(item, "type", default=""),
-                "owner": item_value(item, "owner", default=""),
-                "openedBy": item_value(item, "opened_by", "openedBy", default=""),
-                "begin": item_value(item, "begin", default=""),
-                "end": item_value(item, "end", default=""),
-                "createdAt": item_value(item, "created_at", "createdAt", default=""),
-                "updatedAt": item_value(item, "updated_at", "updatedAt", default=""),
-            }
-            for item in visible_zentao_items(result)
-        ]
-        return zentao_list_payload(
+        return await self.zentao_resources.list_execution_testtasks(
             connection_id,
-            items,
-            result,
-            remoteExecutionId=remote_execution_id,
+            remote_execution_id,
+            user_id,
+            project_id=project_id,
+            page=page,
+            page_size=page_size,
         )
 
     async def list_zentao_execution_stories(
@@ -623,36 +525,8 @@ class IntegrationConnectionService:
         user_id: str,
         project_id: str = "",
     ) -> dict:
-        connection = await self.get_active_personal(user_id, "zentao", connection_id, project_id)
-        if self.zentao_resource_client is None:
-            raise ErrZentaoRemoteResourceUnavailable()
-        result = await self._call_zentao(
-            self.zentao_resource_client.list_execution_stories,
-            connection,
-            remote_execution_id,
-        )
-        items = [
-            {
-                "id": item_value(item, "id"),
-                "title": item_value(item, "title"),
-                "productId": item_value(item, "product_id", "productId", default=0),
-                "moduleId": item_value(item, "module_id", "moduleId", default=0),
-                "planId": item_value(item, "plan_id", "planId", default=0),
-                "status": item_value(item, "status", default=""),
-                "stage": item_value(item, "stage", default=""),
-                "priority": item_value(item, "priority", default=""),
-                "assignedTo": item_value(item, "assigned_to", "assignedTo", default=""),
-                "openedBy": item_value(item, "opened_by", "openedBy", default=""),
-                "createdAt": item_value(item, "created_at", "createdAt", default=""),
-                "updatedAt": item_value(item, "updated_at", "updatedAt", default=""),
-            }
-            for item in visible_zentao_items(result)
-        ]
-        return zentao_list_payload(
-            connection_id,
-            items,
-            result,
-            remoteExecutionId=remote_execution_id,
+        return await self.zentao_resources.list_execution_stories(
+            connection_id, remote_execution_id, user_id, project_id
         )
 
     async def list_zentao_execution_cases(
@@ -665,54 +539,14 @@ class IntegrationConnectionService:
         page: int = 1,
         page_size: int = 100,
     ) -> dict:
-        connection = await self.get_active_personal(user_id, "zentao", connection_id, project_id)
-        if self.zentao_resource_client is None:
-            raise ErrZentaoRemoteResourceUnavailable()
-        result = await self._call_zentao(
-            self.zentao_resource_client.list_execution_cases,
-            connection,
-            remote_execution_id,
-            page,
-            page_size,
-        )
-        items = [
-            {
-                "id": item_value(item, "id"),
-                "module": item_value(item, "module", default=""),
-                "title": item_value(item, "title"),
-                "preconditions": item_value(item, "preconditions", default=""),
-                "steps": item_value(item, "steps", default=""),
-                "expectedResults": item_value(
-                    item,
-                    "expected_results",
-                    "expectedResults",
-                    default="",
-                ),
-                "priority": item_value(item, "priority", default=""),
-                "caseType": item_value(item, "case_type", "caseType", default=""),
-                "orderNo": item_value(item, "order_no", "orderNo", default=0),
-            }
-            for item in visible_zentao_items(result)
-        ]
-        return zentao_list_payload(
+        return await self.zentao_resources.list_execution_cases(
             connection_id,
-            items,
-            result,
-            remoteExecutionId=remote_execution_id,
+            remote_execution_id,
+            user_id,
+            project_id=project_id,
+            page=page,
+            page_size=page_size,
         )
-
-    async def _call_zentao(self, method: Any, *args: Any) -> dict[str, Any]:
-        if self.zentao_resource_client is None:
-            raise ErrZentaoRemoteResourceUnavailable()
-        if args and isinstance(args[0], IntegrationConnection):
-            await self._ensure_zentao_token(args[0])
-        try:
-            return await method(*args)
-        except Exception as exc:
-            raise dynamic_error(
-                ErrZentaoRemoteResourceUnavailable,
-                truncate_error(str(exc)),
-            ) from exc
 
     async def _ensure_zentao_token(self, connection: IntegrationConnection) -> None:
         if connection.access_token and connection.status == ConnectionStatus.ACTIVE.value:
@@ -837,38 +671,3 @@ class IntegrationConnectionService:
                 ErrIntegrationConnectionAuthFailed, "请配置并明确选择本人在该服务实例的有效连接"
             )
         return matching[0]
-
-
-def item_value(item: Any, *names: str, default: Any = "") -> Any:
-    for name in names:
-        if isinstance(item, dict) and name in item:
-            return item[name]
-        if hasattr(item, name):
-            return getattr(item, name)
-    return default
-
-
-def visible_zentao_items(result: dict[str, Any]) -> list[Any]:
-    return [
-        item
-        for item in result.get("items", [])
-        if not bool(item_value(item, "deleted", default=False))
-    ]
-
-
-def zentao_candidate_total(remote_total: int, visible_count: int) -> int:
-    return visible_count if remote_total < visible_count else remote_total
-
-
-def zentao_list_payload(
-    connection_id: str,
-    items: list[dict[str, Any]],
-    result: dict[str, Any],
-    **extra: str,
-) -> dict[str, Any]:
-    return {
-        "connectionId": connection_id,
-        **extra,
-        "items": items,
-        "total": zentao_candidate_total(int(result.get("total") or 0), len(items)),
-    }
