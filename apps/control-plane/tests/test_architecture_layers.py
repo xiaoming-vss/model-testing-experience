@@ -4,6 +4,25 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_generation_callers_cannot_reintroduce_the_aggregate_facade():
+    root = PROJECT_ROOT / "src/testing_agent"
+    assert not (root / "services/ai_generate_task.py").exists()
+    for path in root.rglob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.ImportFrom):
+                assert node.module != "testing_agent.services.ai_generate_task"
+                assert all(alias.name != "get_ai_generate_task_service" for alias in node.names)
+            if isinstance(node, ast.ClassDef):
+                assert node.name != "AiGenerateTaskService"
+    for node in ast.walk(ast.parse((root / "services/ai_candidate_review.py").read_text())):
+        if isinstance(node, ast.ImportFrom):
+            assert node.module not in {
+                "testing_agent.services.function_generate_import",
+                "testing_agent.services.ui_generate_import",
+                "testing_agent.services.api_generate_import",
+            }, "Candidate review must not silently create formal assets"
+
+
 def test_generation_queries_do_not_write_or_depend_on_task_command_facade():
     root = PROJECT_ROOT / "src/testing_agent"
     for name in ("ai_task_queries", "ai_task_scope"):
@@ -225,7 +244,12 @@ def test_execution_commands_do_not_scan_sessions_or_use_orm_command_flags():
         "_reset_requirement_review",
     }
     paths = [
-        root / "services/ai_generate_task.py",
+        root / "services/ai_task_commands.py",
+        root / "services/ai_candidate_review.py",
+        root / "services/requirement_generate_import.py",
+        root / "services/api_generate_import.py",
+        root / "services/ui_generate_import.py",
+        root / "services/function_generate_import.py",
         root / "services/ai_run_launcher.py",
         root / "services/ai_stage_workflow.py",
         root / "services/worker_task.py",

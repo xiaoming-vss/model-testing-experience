@@ -6,9 +6,9 @@ from authorization_database import AuthorizationDatabase
 from fastapi.testclient import TestClient
 
 from support.execution_writer import MemoryExecutionWriter
-from testing_agent.api.deps import get_ai_generate_task_service, get_current_user_id
+from support.generation import generation_services, install_generation_services
+from testing_agent.api.deps import get_current_user_id
 from testing_agent.app import create_app
-from testing_agent.services.ai_generate_task import AiGenerateTaskService
 
 
 def make_run(*, status: str = "success") -> SimpleNamespace:
@@ -80,7 +80,5 @@ def review_client(repository: FunctionReviewRepository) -> TestClient:
     writer = MemoryExecutionWriter()
     app.state.execution_writer = writer
     app.dependency_overrides[get_current_user_id] = lambda: "user-1"
-    app.dependency_overrides[get_ai_generate_task_service] = lambda: AiGenerateTaskService(
-        repository, execution_writer=writer
-    )
+    install_generation_services(app, generation_services(repository, execution_writer=writer))
     return TestClient(app)

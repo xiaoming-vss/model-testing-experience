@@ -3,9 +3,11 @@ from __future__ import annotations
 from fastapi import Depends, Query
 
 from testing_agent.api.deps import (
-    get_ai_generate_task_service,
     get_current_user_id,
+    get_generation_import_context,
+    get_generation_launcher,
     get_generation_queries,
+    get_generation_stages,
     get_generation_task_commands,
 )
 from testing_agent.core.errors import success_payload
@@ -14,9 +16,12 @@ from testing_agent.schemas.ai_generate_task import (
     RequirementAnalysisRunRequest,
     RequirementAnalysisTaskRequest,
 )
-from testing_agent.services.ai_generate_task import AiGenerateTaskService
+from testing_agent.services.ai_run_launcher import GenerationRunLauncher
+from testing_agent.services.ai_stage_workflow import GenerationStageWorkflow
+from testing_agent.services.ai_task_access import CandidateImportContext
 from testing_agent.services.ai_task_commands import GenerationTaskCommands
 from testing_agent.services.ai_task_queries import GenerationQueries
+from testing_agent.services.requirement_generate_import import import_requirement_analysis_run
 
 
 async def create_requirement_analysis_task(
@@ -79,10 +84,10 @@ async def run_requirement_analysis_task(
     task_id: str,
     body: RequirementAnalysisRunRequest,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationRunLauncher = Depends(get_generation_launcher),
 ):
     return success_payload(
-        await service.run(
+        await service.launch(
             "requirement_analysis",
             task_id,
             body.model_dump(by_alias=True, exclude_none=True),
@@ -123,7 +128,7 @@ async def save_requirement_analysis_stage_output(
     run_id: str,
     body: RequirementAnalysisRunRequest,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationStageWorkflow = Depends(get_generation_stages),
 ):
     return success_payload(
         await service.save_requirement_analysis_stage_output(
@@ -136,7 +141,7 @@ async def review_requirement_analysis_stage(
     run_id: str,
     body: AiGenerateTaskReviewRequest,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationStageWorkflow = Depends(get_generation_stages),
 ):
     return success_payload(
         await service.review_requirement_analysis_stage(
@@ -149,7 +154,7 @@ async def revise_requirement_analysis_stage(
     run_id: str,
     body: AiGenerateTaskReviewRequest,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationStageWorkflow = Depends(get_generation_stages),
 ):
     return success_payload(
         await service.revise_requirement_analysis_stage(
@@ -161,16 +166,16 @@ async def revise_requirement_analysis_stage(
 async def import_requirement_analysis_run_to_requirement(
     run_id: str,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: CandidateImportContext = Depends(get_generation_import_context),
 ):
-    return success_payload(await service.import_requirement_analysis_run(run_id, user_id))
+    return success_payload(await import_requirement_analysis_run(service, run_id, user_id))
 
 
 async def retry_requirement_analysis_stage(
     run_id: str,
     body: AiGenerateTaskReviewRequest,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationStageWorkflow = Depends(get_generation_stages),
 ):
     return success_payload(
         await service.retry_stage(

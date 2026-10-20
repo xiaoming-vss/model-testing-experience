@@ -3,9 +3,11 @@ from __future__ import annotations
 from fastapi import Depends, Query
 
 from testing_agent.api.deps import (
-    get_ai_generate_task_service,
     get_current_user_id,
+    get_generation_api_importer,
+    get_generation_launcher,
     get_generation_queries,
+    get_generation_review,
     get_generation_task_commands,
 )
 from testing_agent.core.errors import success_payload
@@ -16,9 +18,11 @@ from testing_agent.schemas.ai_generate_task import (
     AiGenerateTaskReviewRequest,
     AiGenerateTaskRunRequest,
 )
-from testing_agent.services.ai_generate_task import AiGenerateTaskService
+from testing_agent.services.ai_candidate_review import GenerationCandidateReview
+from testing_agent.services.ai_run_launcher import GenerationRunLauncher
 from testing_agent.services.ai_task_commands import GenerationTaskCommands
 from testing_agent.services.ai_task_queries import GenerationQueries
+from testing_agent.services.api_generate_import import ApiCandidateImporter
 
 
 async def create_api_case_generate_task(
@@ -81,10 +85,10 @@ async def run_api_case_generate_task(
     task_id: str,
     body: AiGenerateTaskRunRequest | None = None,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationRunLauncher = Depends(get_generation_launcher),
 ):
     payload = body.model_dump(by_alias=True, exclude_none=True) if body else None
-    return success_payload(await service.run("api", task_id, payload, user_id))
+    return success_payload(await service.launch("api", task_id, payload, user_id))
 
 
 async def list_api_case_generate_task_runs(
@@ -119,7 +123,7 @@ async def review_api_case_generate_task_run(
     run_id: str,
     body: AiGenerateTaskReviewRequest,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationCandidateReview = Depends(get_generation_review),
 ):
     return success_payload(
         await service.review(
@@ -135,7 +139,7 @@ async def update_api_case_generate_task_run_result(
     run_id: str,
     body: AiGenerateTaskResultRequest,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationCandidateReview = Depends(get_generation_review),
 ):
     return success_payload(await service.update_result("api", run_id, body.result_yaml, user_id))
 
@@ -144,7 +148,7 @@ async def import_api_case_generate_task_run(
     run_id: str,
     body: AiGenerateTaskImportRequest,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: ApiCandidateImporter = Depends(get_generation_api_importer),
 ):
     return success_payload(
         await service.import_api_run(

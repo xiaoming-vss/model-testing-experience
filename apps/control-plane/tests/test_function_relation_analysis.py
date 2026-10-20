@@ -10,6 +10,7 @@ from support.ai_execution import (
     event,
 )
 from support.ai_execution import db as db
+from support.generation import generation_services
 
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.services.ai_execution import graph, persist_run, project
@@ -67,20 +68,18 @@ def approve(db, run):
 async def test_relation_dispatch_requires_approved_review(db):
     from testing_agent.core.errors import AppError
     from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-    from testing_agent.services.ai_generate_task import AiGenerateTaskService
 
     run, worker = create_run(db)
     event(db, run, worker, status="success", stage="completed", output=cases_output())
-    service = AiGenerateTaskService(AiGenerateTaskRepository(AsyncSessionAdapter(db)))
+    service = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(db)))
     with pytest.raises(AppError, match="审核通过"):
-        await service.generate_relation_analysis("run", None, "u")
+        await service.stages.generate_relation_analysis("run", None, "u")
 
 
 @pytest.mark.asyncio
 async def test_relation_dispatch_requires_platform_case_ids(db):
     from testing_agent.core.errors import AppError
     from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-    from testing_agent.services.ai_generate_task import AiGenerateTaskService
 
     run, worker = create_run(db)
     event(
@@ -92,15 +91,14 @@ async def test_relation_dispatch_requires_platform_case_ids(db):
         output=json.dumps({"cases": [{"case_module": "任务管理"}]}),
     )
     approve(db, run)
-    service = AiGenerateTaskService(AiGenerateTaskRepository(AsyncSessionAdapter(db)))
+    service = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(db)))
     with pytest.raises(AppError, match="case_id"):
-        await service.generate_relation_analysis("run", None, "u")
+        await service.stages.generate_relation_analysis("run", None, "u")
 
 
 @pytest.mark.asyncio
 async def test_relation_dispatch_prepares_worker_input(db):
     from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-    from testing_agent.services.ai_generate_task import AiGenerateTaskService
     from testing_agent.services.worker import build_snapshot
 
     run, first = create_run(db)
@@ -114,8 +112,8 @@ async def test_relation_dispatch_prepares_worker_input(db):
         config={"requirementAnalysis": {"functionalOverview": {}}},
     )
     approve(db, run)
-    service = AiGenerateTaskService(AiGenerateTaskRepository(AsyncSessionAdapter(db)))
-    result = await service.generate_relation_analysis("run", None, "u")
+    service = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(db)))
+    result = await service.stages.generate_relation_analysis("run", None, "u")
 
     assert result["currentStage"] == "relation_analysis"
     assert result["status"] == "pending"
@@ -143,7 +141,6 @@ async def test_relation_dispatch_prepares_worker_input(db):
 @pytest.mark.asyncio
 async def test_relation_completion_projects_case_relations(db):
     from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-    from testing_agent.services.ai_generate_task import AiGenerateTaskService
 
     run, first = create_run(db)
     event(
@@ -156,8 +153,8 @@ async def test_relation_completion_projects_case_relations(db):
         config={"requirementAnalysis": {"functionalOverview": {}}},
     )
     approve(db, run)
-    service = AiGenerateTaskService(AiGenerateTaskRepository(AsyncSessionAdapter(db)))
-    await service.generate_relation_analysis("run", None, "u")
+    service = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(db)))
+    await service.stages.generate_relation_analysis("run", None, "u")
     graph_worker = db.scalar(
         select(WorkerTask)
         .where(WorkerTask.run_id == "run")
@@ -199,7 +196,6 @@ async def test_relation_completion_projects_case_relations(db):
 @pytest.mark.asyncio
 async def test_relation_failure_allows_redispatch_with_prior_relations(db):
     from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-    from testing_agent.services.ai_generate_task import AiGenerateTaskService
 
     run, first = create_run(db)
     event(
@@ -212,8 +208,8 @@ async def test_relation_failure_allows_redispatch_with_prior_relations(db):
         config={"requirementAnalysis": {"functionalOverview": {}}},
     )
     approve(db, run)
-    service = AiGenerateTaskService(AiGenerateTaskRepository(AsyncSessionAdapter(db)))
-    await service.generate_relation_analysis("run", None, "u")
+    service = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(db)))
+    await service.stages.generate_relation_analysis("run", None, "u")
     graph_worker = db.scalar(
         select(WorkerTask)
         .where(WorkerTask.run_id == "run")
@@ -224,7 +220,7 @@ async def test_relation_failure_allows_redispatch_with_prior_relations(db):
     assert run.current_stage == "relation_analysis"
 
     # 失败后允许再次点击；上一次关系产物随派发快照传入以保持编号稳定。
-    redispatched = await service.generate_relation_analysis("run", None, "u")
+    redispatched = await service.stages.generate_relation_analysis("run", None, "u")
     assert redispatched["status"] == "pending"
     assert redispatched["currentStage"] == "relation_analysis"
     retry_worker = db.scalar(

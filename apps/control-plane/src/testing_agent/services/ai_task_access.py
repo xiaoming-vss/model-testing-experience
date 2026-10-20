@@ -5,6 +5,7 @@ from typing import Protocol
 from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.services.ai_execution.writer import ExecutionWriter
+from testing_agent.services.ai_task_scope import GenerationAccess
 from testing_agent.services.project_access import ProjectAction
 
 
@@ -65,3 +66,18 @@ class RunLaunchAccess(Protocol):
     ) -> None: ...
 
     async def validate_task_scope(self, task: AiGenerateTask) -> None: ...
+
+
+class GenerationImportContext:
+    """Dependencies for candidate-to-asset transactions, with no task management facade."""
+
+    def __init__(
+        self,
+        repository: AiGenerateTaskRepository,
+        access: GenerationAccess,
+        execution: ExecutionWriter,
+    ) -> None:
+        self.repository = repository
+        self.execution = execution
+        self.owned_run = access.owned_run
+        self.ensure_requirement_access = access.ensure_requirement_access

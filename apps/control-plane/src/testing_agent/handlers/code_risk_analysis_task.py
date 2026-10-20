@@ -3,8 +3,8 @@ from __future__ import annotations
 from fastapi import Depends, Query
 
 from testing_agent.api.deps import (
-    get_ai_generate_task_service,
     get_current_user_id,
+    get_generation_launcher,
     get_generation_queries,
     get_generation_task_commands,
 )
@@ -13,7 +13,7 @@ from testing_agent.schemas.ai_generate_task import (
     CodeRiskAnalysisRunRequest,
     CodeRiskAnalysisTaskRequest,
 )
-from testing_agent.services.ai_generate_task import AiGenerateTaskService
+from testing_agent.services.ai_run_launcher import GenerationRunLauncher
 from testing_agent.services.ai_task_commands import GenerationTaskCommands
 from testing_agent.services.ai_task_queries import GenerationQueries
 
@@ -54,10 +54,10 @@ async def run_code_risk_analysis_task(
     task_id: str,
     body: CodeRiskAnalysisRunRequest,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationRunLauncher = Depends(get_generation_launcher),
 ):
     return success_payload(
-        await service.run(
+        await service.launch(
             "code_risk_analysis",
             task_id,
             body.model_dump(by_alias=True, exclude_none=True),

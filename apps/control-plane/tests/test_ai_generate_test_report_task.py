@@ -6,14 +6,15 @@ from types import SimpleNamespace
 import pytest
 from authorization_database import AuthorizationDatabase
 from fastapi.testclient import TestClient
+from support import generation as ai_tasks
 from support.execution_writer import MemoryExecutionWriter
+from support.generation import generation_services
 
-from testing_agent.api.deps import get_ai_generate_task_service, get_current_user_id
+from testing_agent.api.deps import get_current_user_id, get_generation_reports
 from testing_agent.app import create_app
 from testing_agent.core.errors import ErrBadRequest
 from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
 from testing_agent.models.worker_task import WorkerTask
-from testing_agent.services import ai_generate_task as ai_tasks
 
 
 class FakeDailyMetricsService:
@@ -136,11 +137,11 @@ async def test_test_report_direct_run_lazily_creates_internal_task(monkeypatch):
     monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
     repository = FakeRepository()
     daily_metrics = FakeDailyMetricsService()
-    service = ai_tasks.AiGenerateTaskService(
+    service = generation_services(
         repository, daily_metrics, execution_writer=MemoryExecutionWriter()
     )
 
-    payload = await service.run_test_report(
+    payload = await service.reports.run_test_report(
         "project-1",
         {
             "sprintId": "sprint-1",
@@ -183,11 +184,11 @@ async def test_test_report_direct_run_reuses_existing_internal_task(monkeypatch)
     monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
     repository = FakeRepository()
     repository.existing_task = existing_test_report_task()
-    service = ai_tasks.AiGenerateTaskService(
+    service = generation_services(
         repository, FakeDailyMetricsService(), execution_writer=MemoryExecutionWriter()
     )
 
-    await service.run_test_report(
+    await service.reports.run_test_report(
         "project-1",
         {"sprintId": "sprint-1", "llmConnectionId": "llm-1", "snapshotDate": "2026-07-27"},
         "user-1",
@@ -209,12 +210,12 @@ async def test_test_report_allows_repeated_runs_for_same_snapshot_date(monkeypat
     monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
     repository = FakeRepository()
     repository.existing_task = existing_test_report_task()
-    service = ai_tasks.AiGenerateTaskService(
+    service = generation_services(
         repository, FakeDailyMetricsService(), execution_writer=MemoryExecutionWriter()
     )
 
     for _ in range(2):
-        await service.run_test_report(
+        await service.reports.run_test_report(
             "project-1",
             {"sprintId": "sprint-1", "connectionId": "llm-1", "snapshotDate": "2026-07-27"},
             "user-1",
@@ -229,12 +230,12 @@ async def test_test_report_allows_repeated_runs_for_same_snapshot_date(monkeypat
 
 @pytest.mark.asyncio
 async def test_test_report_run_requires_snapshot_date_and_connection_id():
-    service = ai_tasks.AiGenerateTaskService(
+    service = generation_services(
         FakeRepository(), FakeDailyMetricsService(), execution_writer=MemoryExecutionWriter()
     )
 
     with pytest.raises(type(ErrBadRequest)):
-        await service.run_test_report("project-1", {"sprintId": "sprint-1"}, "user-1")
+        await service.reports.run_test_report("project-1", {"sprintId": "sprint-1"}, "user-1")
 
 
 @pytest.mark.asyncio
@@ -265,11 +266,11 @@ async def test_list_test_report_runs_filters_by_project_sprint_and_task_type():
             duration_ms=12,
         )
     ]
-    service = ai_tasks.AiGenerateTaskService(
+    service = generation_services(
         repository, FakeDailyMetricsService(), execution_writer=MemoryExecutionWriter()
     )
 
-    payload = await service.list_test_report_runs("project-1", "sprint-1", "user-1")
+    payload = await service.reports.list_test_report_runs("project-1", "sprint-1", "user-1")
 
     assert repository.list_run_queries == [("project-1", "sprint-1", "test_report_generate")]
     assert payload["total"] == 1
@@ -281,11 +282,11 @@ async def test_export_test_report_pdf_renders_markdown_bytes():
     repository = FakeRepository()
     repository.task = existing_test_report_task()
     repository.run = completed_test_report_run()
-    service = ai_tasks.AiGenerateTaskService(
+    service = generation_services(
         repository, FakeDailyMetricsService(), execution_writer=MemoryExecutionWriter()
     )
 
-    content, filename = await service.export_test_report_pdf("run-1", "user-1")
+    content, filename = await service.reports.export_test_report_pdf("run-1", "user-1")
 
     assert filename == "test-report-run-1.pdf"
     assert content.startswith(b"%PDF")
@@ -297,16 +298,16 @@ async def test_export_test_report_pdf_requires_generated_markdown():
     repository = FakeRepository()
     repository.task = existing_test_report_task()
     repository.run = completed_test_report_run(result_yaml="")
-    service = ai_tasks.AiGenerateTaskService(
+    service = generation_services(
         repository, FakeDailyMetricsService(), execution_writer=MemoryExecutionWriter()
     )
 
     with pytest.raises(type(ErrBadRequest)):
-        await service.export_test_report_pdf("run-1", "user-1")
+        await service.reports.export_test_report_pdf("run-1", "user-1")
 
 
 def test_export_test_report_pdf_endpoint_returns_file_response():
-    class FakeAiGenerateTaskService:
+    class FakeReportWorkflow:
         async def export_test_report_pdf(self, run_id: str, user_id: str):
             assert run_id == "run-1"
             assert user_id == "user-1"
@@ -314,7 +315,7 @@ def test_export_test_report_pdf_endpoint_returns_file_response():
 
     app = create_app()
     app.dependency_overrides[get_current_user_id] = lambda: "user-1"
-    app.dependency_overrides[get_ai_generate_task_service] = lambda: FakeAiGenerateTaskService()
+    app.dependency_overrides[get_generation_reports] = lambda: FakeReportWorkflow()
     client = TestClient(app)
 
     response = client.get("/v1/test-report-generate-runs/run-1/pdf")

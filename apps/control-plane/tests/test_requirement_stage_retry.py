@@ -2,9 +2,9 @@ import pytest
 from support.execution_writer import MemoryExecutionWriter
 from support.function_candidate_review import review_client
 from support.function_stage_retry import failed_repository
+from support.generation import generation_services
 
 from testing_agent.core.errors import ErrBadRequest, ErrForbidden
-from testing_agent.services.ai_generate_task import AiGenerateTaskService
 
 
 def repository(stage="extracting_text"):
@@ -58,7 +58,9 @@ async def test_retry_rejects_ineligible_runs(changes):
     for key, value in changes.items():
         setattr(repo.run, key, value)
     with pytest.raises(type(ErrBadRequest)):
-        await AiGenerateTaskService(repo, execution_writer=MemoryExecutionWriter()).retry_stage(
+        await generation_services(
+            repo, execution_writer=MemoryExecutionWriter()
+        ).stages.retry_stage(
             "run-1", {"stage": "extracting_text"}, "user-1", kind="requirement_analysis"
         )
     assert not repo.queued
@@ -74,9 +76,9 @@ async def test_retry_checks_owner_cross_stage_and_claimed_worker():
         repo = repository()
         repo.latest.status = worker
         with pytest.raises(type(error)):
-            await AiGenerateTaskService(repo, execution_writer=MemoryExecutionWriter()).retry_stage(
-                "run-1", body, user, kind="requirement_analysis"
-            )
+            await generation_services(
+                repo, execution_writer=MemoryExecutionWriter()
+            ).stages.retry_stage("run-1", body, user, kind="requirement_analysis")
         assert not repo.queued
 
 
@@ -85,10 +87,10 @@ async def test_duplicate_retry_queues_only_once():
     import asyncio
 
     repo = repository()
-    service = AiGenerateTaskService(repo, execution_writer=MemoryExecutionWriter())
+    service = generation_services(repo, execution_writer=MemoryExecutionWriter())
     results = await asyncio.gather(
-        service.retry_stage("run-1", {}, "user-1", kind="requirement_analysis"),
-        service.retry_stage("run-1", {}, "user-1", kind="requirement_analysis"),
+        service.stages.retry_stage("run-1", {}, "user-1", kind="requirement_analysis"),
+        service.stages.retry_stage("run-1", {}, "user-1", kind="requirement_analysis"),
         return_exceptions=True,
     )
     assert sum(isinstance(result, dict) for result in results) == 1

@@ -14,6 +14,7 @@ from support.ai_execution import (
     graph,
 )
 from support.ai_execution import db as db
+from support.generation import generation_services
 from support.mysql_initialization import mysql as mysql
 from support.worker_queue_storage import (
     add_business_tables as add_business_tables,
@@ -283,7 +284,6 @@ async def test_revision_service_preserves_model_without_queue_object_reference(
     from testing_agent.models.sprint import Sprint
     from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
     from testing_agent.services.ai_execution import persist_run
-    from testing_agent.services.ai_generate_task import AiGenerateTaskService
 
     db.add(
         Sprint(
@@ -346,7 +346,7 @@ async def test_revision_service_preserves_model_without_queue_object_reference(
     event(db, run, first, status="waiting_review", stage=stage, config={field: original})
     db.expunge_all()
     repo = AiGenerateTaskRepository(AsyncSessionAdapter(db))
-    await getattr(AiGenerateTaskService(repo), method)(
+    await getattr(generation_services(repo).stages, method)(
         "run",
         {"stage": stage, "revisionInstruction": "improve", "configJson": {field: draft}},
         "u",
@@ -361,7 +361,7 @@ async def test_revision_service_preserves_model_without_queue_object_reference(
     run = await repo.get_run("run")
     event(db, run, revised, status="error", stage=stage)
     before = worker_input(db, run, revised)
-    await AiGenerateTaskService(repo).retry_stage(
+    await generation_services(repo).stages.retry_stage(
         "run",
         {"stage": stage},
         "u",

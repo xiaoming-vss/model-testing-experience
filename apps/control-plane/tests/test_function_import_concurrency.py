@@ -4,10 +4,10 @@ import httpx
 import pytest
 from support.execution_writer import MemoryExecutionWriter
 from support.function_confirmed_import import FunctionImportRepository
+from support.generation import generation_services, install_generation_services
 
-from testing_agent.api.deps import get_ai_generate_task_service, get_current_user_id
+from testing_agent.api.deps import get_current_user_id
 from testing_agent.app import create_app
-from testing_agent.services.ai_generate_task import AiGenerateTaskService
 
 
 class ConcurrentFunctionImportRepository(FunctionImportRepository):
@@ -45,8 +45,8 @@ async def test_concurrent_confirmed_function_imports_only_succeed_once():
     repository = ConcurrentFunctionImportRepository()
     app = create_app()
     app.dependency_overrides[get_current_user_id] = lambda: "user-1"
-    app.dependency_overrides[get_ai_generate_task_service] = lambda: AiGenerateTaskService(
-        repository, execution_writer=MemoryExecutionWriter()
+    install_generation_services(
+        app, generation_services(repository, execution_writer=MemoryExecutionWriter())
     )
     transport = httpx.ASGITransport(app=app)
 

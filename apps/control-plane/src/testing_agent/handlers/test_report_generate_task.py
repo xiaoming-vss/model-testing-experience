@@ -4,13 +4,13 @@ from fastapi import Depends, Query
 from fastapi.responses import Response
 
 from testing_agent.api.deps import (
-    get_ai_generate_task_service,
     get_current_user_id,
     get_generation_queries,
+    get_generation_reports,
 )
 from testing_agent.core.errors import success_payload
 from testing_agent.schemas.ai_generate_task import TestReportGenerateTaskRunRequest
-from testing_agent.services.ai_generate_task import AiGenerateTaskService
+from testing_agent.services.ai_report import TestReportWorkflow
 from testing_agent.services.ai_task_queries import GenerationQueries
 
 
@@ -18,7 +18,7 @@ async def run_test_report_generate_run(
     project_id: str,
     body: TestReportGenerateTaskRunRequest,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: TestReportWorkflow = Depends(get_generation_reports),
 ):
     return success_payload(
         await service.run_test_report(
@@ -55,7 +55,7 @@ async def get_test_report_generate_run(
 async def export_test_report_generate_run_pdf(
     run_id: str,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: TestReportWorkflow = Depends(get_generation_reports),
 ):
     content, filename = await service.export_test_report_pdf(run_id, user_id)
     return Response(

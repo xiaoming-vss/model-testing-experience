@@ -7,14 +7,20 @@ import yaml
 
 from testing_agent.core.errors import AppError, ErrBadRequest, ErrNotFound
 from testing_agent.models.requirement import Requirement
+from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+from testing_agent.repositories.ai_generate_task_source_archive import (
+    AiGenerateTaskSourceArchiveRepository,
+)
 from testing_agent.repositories.requirement_design import RequirementDesignRepository
 from testing_agent.schemas.requirement_design import (
     DesignKind,
     RequirementDesignConfigurationRequest,
     RequirementDesignRunRequest,
 )
-from testing_agent.services.ai_generate_task import AiGenerateTaskService
+from testing_agent.services.ai_run_launcher import GenerationRunLauncher
+from testing_agent.services.ai_task_commands import GenerationTaskCommands
 from testing_agent.services.ai_task_output import dump_task, requirement_source_content
+from testing_agent.services.ai_task_scope import GenerationAccess
 from testing_agent.services.project_access import ProjectAction
 
 LABELS = {
@@ -50,15 +56,27 @@ def validate_openapi_source(source: str) -> None:
 
 
 class RequirementDesignService:
-    def __init__(self, tasks: AiGenerateTaskService):
-        self.tasks = tasks
-        self.repository = RequirementDesignRepository(tasks.repository.session)
+    def __init__(
+        self,
+        repository: RequirementDesignRepository,
+        task_repository: AiGenerateTaskRepository,
+        source_archive_repository: AiGenerateTaskSourceArchiveRepository,
+        access: GenerationAccess,
+        commands: GenerationTaskCommands,
+        launcher: GenerationRunLauncher,
+    ) -> None:
+        self.repository = repository
+        self.task_repository = task_repository
+        self.source_archive_repository = source_archive_repository
+        self.access = access
+        self.commands = commands
+        self.launcher = launcher
 
     async def scope(
         self, requirement_id: str, user_id: str, action: ProjectAction = "read"
     ) -> Requirement:
-        await self.tasks.ensure_requirement_access(user_id, requirement_id, action=action)
-        requirement = await self.tasks.repository.get_requirement(requirement_id)
+        await self.access.ensure_requirement_access(user_id, requirement_id, action=action)
+        requirement = await self.task_repository.get_requirement(requirement_id)
         if requirement is None:
             raise ErrNotFound()
         return requirement
@@ -96,28 +114,28 @@ class RequirementDesignService:
         if body.task_id and body.new_configuration:
             raise ErrBadRequest()
         requirement = await self.scope(requirement_id, user_id)
-        sprint = await self.tasks.repository.get_sprint(requirement.sprint_id)
+        sprint = await self.task_repository.get_sprint(requirement.sprint_id)
         if sprint is None:
             raise ErrNotFound()
         # Close the authorization snapshot before waiting on the project lock.
         # A member revoked during that wait must not retain access through an old
         # REPEATABLE READ membership snapshot.
-        await self.tasks.repository.commit()
-        await self.tasks.ensure_project_access(user_id, sprint.project_id, action="write")
-        await self.tasks.ensure_sprint_access(user_id, sprint.sprint_id, action="write")
+        await self.task_repository.commit()
+        await self.access.ensure_project_access(user_id, sprint.project_id, action="write")
+        await self.access.ensure_sprint_access(user_id, sprint.sprint_id, action="write")
         # Use the run path's project -> sprint -> requirement lock order. The parent
         # lock serializes discovery and creation across requests/processes; create
         # owns the commit. Existing legacy configurations are never merged/deleted.
-        locked_requirement = await self.tasks.repository.get_requirement_for_update(requirement_id)
+        locked_requirement = await self.task_repository.get_requirement_for_update(requirement_id)
         if locked_requirement is None:
             raise ErrNotFound()
         requirement = locked_requirement
-        sprint = await self.tasks.repository.get_sprint(requirement.sprint_id)
+        sprint = await self.task_repository.get_sprint(requirement.sprint_id)
         if sprint is None:
             raise ErrNotFound()
         task_id = body.task_id
         if body.request_id:
-            existing = await self.tasks.repository.get_task_for_update(str(body.request_id))
+            existing = await self.task_repository.get_task_for_update(str(body.request_id))
             if existing is not None:
                 if task_id and task_id != existing.task_id:
                     raise ErrBadRequest()
@@ -125,7 +143,7 @@ class RequirementDesignService:
         if not task_id and not body.new_configuration:
             task_id = await self.repository.configuration_task_id(requirement_id, kind)
         if task_id:
-            task = await self.tasks.owned_task(
+            task = await self.access.owned_task(
                 user_id, task_id, kind, action="write", current_read=True
             )
             if task.requirement_id != requirement_id:
@@ -138,16 +156,18 @@ class RequirementDesignService:
                     raise AppError(400, "请提供 OpenAPI/Swagger 文档", 400)
                 changes.update(sourceContent=body.source_content, sourceType="openapi")
             if changes:
-                return await self.tasks.update(kind, task_id, changes, user_id, current_read=True)
+                return await self.commands.update(
+                    kind, task_id, changes, user_id, current_read=True
+                )
             archive = (
-                await self.tasks.source_archive_repository.get_source_archive(task_id)
+                await self.source_archive_repository.get_source_archive(task_id)
                 if kind == "ui"
                 else None
             )
             return dump_task(task, archive)
         if kind == "api" and not (body.source_content or "").strip():
             raise AppError(400, "请提供 OpenAPI/Swagger 文档", 400)
-        return await self.tasks.create(
+        return await self.commands.create(
             kind,
             sprint.project_id,
             {
@@ -170,19 +190,19 @@ class RequirementDesignService:
         user_id: str,
     ) -> dict[str, Any]:
         requirement = await self.scope(requirement_id, user_id)
-        sprint = await self.tasks.repository.get_sprint(requirement.sprint_id)
+        sprint = await self.task_repository.get_sprint(requirement.sprint_id)
         if sprint is None:
             raise ErrNotFound()
-        await self.tasks.repository.commit()
-        await self.tasks.ensure_project_access(user_id, sprint.project_id, action="execute")
-        task = await self.tasks.owned_task(user_id, body.task_id, kind, action="read")
+        await self.task_repository.commit()
+        await self.access.ensure_project_access(user_id, sprint.project_id, action="execute")
+        task = await self.access.owned_task(user_id, body.task_id, kind, action="read")
         if task.requirement_id != requirement_id:
             raise ErrNotFound()
         if kind == "function" and not has_function_generation_input(requirement):
             raise AppError(400, "请先补充有效的需求增强文本，再生成功能用例", 400)
         if kind == "api" and not task.source_content.strip():
             raise AppError(400, "请先配置 OpenAPI/Swagger 文档", 400)
-        return await self.tasks.run(
+        return await self.launcher.launch(
             kind,
             task.task_id,
             body.model_dump(by_alias=True, exclude_none=True, exclude={"task_id", "request_id"}),

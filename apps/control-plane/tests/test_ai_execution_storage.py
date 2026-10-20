@@ -25,6 +25,7 @@ from support.ai_execution import (
 from support.ai_execution import (
     stage_by_name as stage_by_name,
 )
+from support.generation import generation_services
 
 from testing_agent.core.errors import ErrBadRequest
 from testing_agent.domain.ai_execution_intent import ExecutionIntent, StageReview
@@ -225,7 +226,6 @@ async def test_real_service_revision_progress_failure_retry_and_worker_snapshot(
         WorkerProgressRequest,
         WorkerTaskEventRequest,
     )
-    from testing_agent.services.ai_generate_task import AiGenerateTaskService
     from testing_agent.services.worker import build_snapshot
     from testing_agent.services.worker_task import WorkerTaskService
 
@@ -240,9 +240,9 @@ async def test_real_service_revision_progress_failure_retry_and_worker_snapshot(
     )
     adapter = AsyncSessionAdapter(db)
     repo = AiGenerateTaskRepository(adapter)
-    service = AiGenerateTaskService(repo)
+    service = generation_services(repo)
     # Actual task belongs to u, so no project lookup is necessary.
-    result = await service.revise_function_case_stage(
+    result = await service.stages.revise_function_case_stage(
         "run",
         {
             "stage": "requirement_analysis",
@@ -274,7 +274,7 @@ async def test_real_service_revision_progress_failure_retry_and_worker_snapshot(
     )
     loaded = await repo.get_run("run")
     assert loaded.config_json["requirementAnalysis"] == {"original": True}
-    await service.retry_stage("run", {"stage": "requirement_analysis"}, "u")
+    await service.stages.retry_stage("run", {"stage": "requirement_analysis"}, "u")
     retry = await repo.get_latest_worker_task_by_run_id("run")
     snapshot = await build_snapshot(adapter, "ai", retry)
     assert json.loads(snapshot["configJson"])["requirementAnalysis"] == {"draft": True}
@@ -378,7 +378,6 @@ async def test_stage_save_replaces_artifact_after_reload(
     db, stage, field, content_key, wrapped, as_string
 ):
     from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-    from testing_agent.services.ai_generate_task import AiGenerateTaskService
 
     run, worker = create_run(db)
     event(
@@ -389,10 +388,10 @@ async def test_stage_save_replaces_artifact_after_reload(
         stage=stage,
         config={field: {content_key: [{"name": "old"}], "removed": True}},
     )
-    service = AiGenerateTaskService(AiGenerateTaskRepository(AsyncSessionAdapter(db)))
+    service = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(db)))
     edited = {content_key: [{"name": "edited"}]}
     config = {field: edited} if wrapped else edited
-    result = await service.save_stage_output(
+    result = await service.stages.save_stage_output(
         "run",
         {
             "stage": stage,
@@ -402,10 +401,10 @@ async def test_stage_save_replaces_artifact_after_reload(
     )
     assert result["configJson"][field] == edited
     db.expire_all()
-    reloaded = await service.owned_run("u", "run", "function")
+    reloaded = await service.access.owned_run("u", "run", "function")
     assert reloaded.config_json[field] == edited
     assert reloaded.status == "waiting_review"
-    continued = await service.review_stage("run", {"stage": stage, "action": "approve"}, "u")
+    continued = await service.stages.review_stage("run", {"stage": stage, "action": "approve"}, "u")
     assert continued["status"] == "pending"
     assert (
         continued["currentStage"]
@@ -422,7 +421,6 @@ async def test_stage_save_replaces_artifact_after_reload(
 async def test_stage_save_cannot_change_frozen_result_in_database(db, review, import_status):
     from testing_agent.core.errors import AppError
     from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-    from testing_agent.services.ai_generate_task import AiGenerateTaskService
 
     run, worker = create_run(db)
     event(db, run, worker, status="success", stage="completed", output='{"cases": []}')
@@ -430,8 +428,8 @@ async def test_stage_save_cannot_change_frozen_result_in_database(db, review, im
     run.import_status = import_status
     persist_run(db, run)
     db.commit()
-    service = AiGenerateTaskService(AiGenerateTaskRepository(AsyncSessionAdapter(db)))
-    before = await service.owned_run("u", "run", "function")
+    service = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(db)))
+    before = await service.access.owned_run("u", "run", "function")
     expected = (
         before.result_yaml,
         before.review_status,
@@ -439,11 +437,11 @@ async def test_stage_save_cannot_change_frozen_result_in_database(db, review, im
         before.current_stage,
     )
     with pytest.raises(AppError):
-        await service.save_stage_output(
+        await service.stages.save_stage_output(
             "run", {"stage": "completed", "resultYaml": "unreviewed replacement"}, "u"
         )
     db.expire_all()
-    after = await service.owned_run("u", "run", "function")
+    after = await service.access.owned_run("u", "run", "function")
     assert (
         after.result_yaml,
         after.review_status,

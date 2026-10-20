@@ -7,17 +7,13 @@ from authorization_database import AuthorizationDatabase
 from fastapi.testclient import TestClient
 
 from support.execution_writer import MemoryExecutionWriter
+from support.generation import generation_services, install_generation_services
 from testing_agent.api.deps import (
-    get_ai_generate_task_service,
     get_current_user_id,
-    get_generation_queries,
     get_ui_test_case_service,
 )
 from testing_agent.app import create_app
 from testing_agent.models.ui_test_case import UiTestCase
-from testing_agent.services.ai_generate_task import AiGenerateTaskService
-from testing_agent.services.ai_task_queries import GenerationQueries
-from testing_agent.services.ai_task_scope import GenerationAccess
 from testing_agent.services.ui_test_case import UiTestCaseService
 
 
@@ -166,11 +162,8 @@ class UiImportRepository:
 def ui_import_client(repository):
     app = create_app()
     app.dependency_overrides[get_current_user_id] = lambda: "user-1"
-    app.dependency_overrides[get_ai_generate_task_service] = lambda: AiGenerateTaskService(
-        repository, execution_writer=MemoryExecutionWriter()
-    )
-    app.dependency_overrides[get_generation_queries] = lambda: GenerationQueries(
-        repository, repository, GenerationAccess(repository)
+    install_generation_services(
+        app, generation_services(repository, execution_writer=MemoryExecutionWriter())
     )
     app.dependency_overrides[get_ui_test_case_service] = lambda: UiTestCaseService(repository)
     return TestClient(app, raise_server_exceptions=False)

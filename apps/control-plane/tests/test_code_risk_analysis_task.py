@@ -19,10 +19,11 @@ import pytest
 from authorization_database import AuthorizationDatabase
 from fastapi.testclient import TestClient
 from support.execution_writer import MemoryExecutionWriter
+from support.generation import generation_services
 
 from testing_agent.api.deps import (
-    get_ai_generate_task_service,
     get_current_user_id,
+    get_generation_launcher,
     get_generation_queries,
     get_generation_task_commands,
     get_worker_task_service,
@@ -34,7 +35,7 @@ from testing_agent.models.ai_generate_task import AiGenerateTaskRun
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.schemas.workers import WorkerTaskEventRequest
 from testing_agent.services import worker_task as worker_task_service_module
-from testing_agent.services.ai_generate_task import AiGenerateTaskService, dump_run
+from testing_agent.services.ai_task_output import dump_run
 from testing_agent.services.code_risk_analysis import (
     FUNCTION_CASE_NO_RUN_NOTE,
     CodeRiskAnalysisService,
@@ -988,22 +989,22 @@ def make_risk_analysis_task() -> SimpleNamespace:
 @pytest.mark.asyncio
 async def test_repeated_runs_create_distinct_records_without_overwrite():
     repository = FakeRunCreateRepository(make_risk_analysis_task())
-    service = AiGenerateTaskService(
+    service = generation_services(
         repository,
         code_risk_analysis_service=StubCodeRiskAnalysisService(),
         execution_writer=MemoryExecutionWriter(),
     )
     run_body = {"connectionId": "llm-1", "triggerType": "manual"}
 
-    first = await service.run("code_risk_analysis", "task-1", run_body, "user-1")
-    second = await service.run("code_risk_analysis", "task-1", run_body, "user-1")
+    first = await service.launcher.launch("code_risk_analysis", "task-1", run_body, "user-1")
+    second = await service.launcher.launch("code_risk_analysis", "task-1", run_body, "user-1")
 
     assert first["runId"] != second["runId"]
     worker_tasks = [row for row in repository.added if isinstance(row, WorkerTask)]
     assert len(worker_tasks) == 2
     assert worker_tasks[0].task_id != worker_tasks[1].task_id
 
-    listed = await service.list_runs("code_risk_analysis", "task-1", "user-1")
+    listed = await service.queries.list_runs("code_risk_analysis", "task-1", "user-1")
     assert listed["total"] == 2
     assert [item["runId"] for item in listed["items"]] == [first["runId"], second["runId"]]
     assert listed["items"][0]["status"] == "pending"
@@ -1013,15 +1014,17 @@ async def test_repeated_runs_create_distinct_records_without_overwrite():
 @pytest.mark.asyncio
 async def test_list_runs_dumps_report_for_code_risk_analysis():
     repository = FakeRunCreateRepository(make_risk_analysis_task())
-    service = AiGenerateTaskService(
+    service = generation_services(
         repository,
         code_risk_analysis_service=StubCodeRiskAnalysisService(),
         execution_writer=MemoryExecutionWriter(),
     )
-    await service.run("code_risk_analysis", "task-1", {"connectionId": "llm-1"}, "user-1")
+    await service.launcher.launch(
+        "code_risk_analysis", "task-1", {"connectionId": "llm-1"}, "user-1"
+    )
     repository.runs[0].result_yaml = RISK_REPORT_YAML
 
-    listed = await service.list_runs("code_risk_analysis", "task-1", "user-1")
+    listed = await service.queries.list_runs("code_risk_analysis", "task-1", "user-1")
 
     report = listed["items"][0]["report"]
     assert report["repositories"][0]["baselineCommit"] == "abc123"
@@ -1087,7 +1090,7 @@ def test_gitlab_credentials_endpoint_requires_worker_token():
 
 
 def test_code_risk_analysis_task_endpoints_dispatch_to_service():
-    class FakeAiGenerateTaskService:
+    class FakeGenerationEndpoints:
         captured = {}
 
         async def create(self, kind, project_id, body, user_id):
@@ -1109,7 +1112,7 @@ def test_code_risk_analysis_task_endpoints_dispatch_to_service():
                 "updatedAt": None,
             }
 
-        async def run(self, kind, task_id, body, user_id):
+        async def launch(self, kind, task_id, body, user_id):
             self.captured["run"] = (kind, task_id, body, user_id)
             assert body["connectionId"] == "llm-1"
             return dump_run(
@@ -1156,8 +1159,8 @@ def test_code_risk_analysis_task_endpoints_dispatch_to_service():
             }
 
     app = create_app(worker_settings())
-    fake = FakeAiGenerateTaskService()
-    app.dependency_overrides[get_ai_generate_task_service] = lambda: fake
+    fake = FakeGenerationEndpoints()
+    app.dependency_overrides[get_generation_launcher] = lambda: fake
     app.dependency_overrides[get_generation_queries] = lambda: fake
     app.dependency_overrides[get_generation_task_commands] = lambda: fake
     app.dependency_overrides[get_current_user_id] = lambda: "user-1"

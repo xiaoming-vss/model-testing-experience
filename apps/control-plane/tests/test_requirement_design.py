@@ -9,6 +9,7 @@ import pytest
 from pydantic import ValidationError
 from support.ai_execution import db  # noqa: F401
 from support.database_read_paths import database, seed_history  # noqa: F401
+from support.generation import generation_services
 
 from testing_agent.core.errors import AppError
 from testing_agent.models.ai_generate_task import AiGenerateTask as Task
@@ -20,7 +21,6 @@ from testing_agent.schemas.requirement_design import (
     RequirementDesignConfigurationRequest as Configuration,
 )
 from testing_agent.schemas.requirement_design import RequirementDesignRunRequest as Start
-from testing_agent.services.ai_generate_task import AiGenerateTaskService
 from testing_agent.services.requirement_design import (
     RequirementDesignService,
     has_function_generation_input,
@@ -128,8 +128,8 @@ async def test_default_configuration_reuses_existing_task(database, monkeypatch)
     sync, session, _ = database
     from support.ai_execution import AsyncSessionAdapter
 
-    tasks = AiGenerateTaskService(AiGenerateTaskRepository(AsyncSessionAdapter(sync)))
-    service = RequirementDesignService(tasks)
+    tasks = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(sync)))
+    service = tasks.design
 
     async def scope(*args, **kwargs):
         return sync.query(Requirement).filter_by(requirement_id="req").one()
@@ -138,13 +138,13 @@ async def test_default_configuration_reuses_existing_task(database, monkeypatch)
         return sync.query(Task).filter_by(task_id="task").one()
 
     monkeypatch.setattr(service, "scope", scope)
-    monkeypatch.setattr(tasks, "owned_task", owned)
+    monkeypatch.setattr(tasks.access, "owned_task", owned)
 
     async def access(*args, **kwargs):
         pass
 
-    monkeypatch.setattr(tasks, "ensure_project_access", access)
-    monkeypatch.setattr(tasks, "ensure_sprint_access", access)
+    monkeypatch.setattr(tasks.access, "ensure_project_access", access)
+    monkeypatch.setattr(tasks.access, "ensure_sprint_access", access)
     first = await service.configure("req", "function", Configuration(), "u")
     second = await service.configure("req", "function", Configuration(), "u")
     assert first["taskId"] == second["taskId"] == "task"
@@ -166,7 +166,7 @@ async def test_workspace_start_rejects_empty_enhanced_text_and_cross_requirement
         repository=SimpleNamespace(session=None, get_sprint=sprint, commit=access),
         ensure_project_access=access,
     )
-    service = RequirementDesignService(tasks)
+    service = RequirementDesignService(None, tasks.repository, None, tasks, None, None)
 
     async def scope(*args):
         return requirement
@@ -198,14 +198,20 @@ async def test_run_response_loss_retry_creates_one_run_and_one_worker(database):
     task = sync.query(Task).filter_by(task_id="task").one()
     task.task_type = "api_case_generate"
     sync.commit()
-    service = AiGenerateTaskService(AiGenerateTaskRepository(AsyncSessionAdapter(sync)))
+    service = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(sync)))
     request_id = str(uuid4())
-    first = await service.run("api", "task", {"connectionId": "llm"}, "u", request_id=request_id)
-    second = await service.run("api", "task", {"connectionId": "llm"}, "u", request_id=request_id)
+    first = await service.launcher.launch(
+        "api", "task", {"connectionId": "llm"}, "u", request_id=request_id
+    )
+    second = await service.launcher.launch(
+        "api", "task", {"connectionId": "llm"}, "u", request_id=request_id
+    )
     assert first["runId"] == second["runId"] == request_id
     assert sync.query(Run).count() == sync.query(WorkerTask).count() == 1
     with pytest.raises(AppError):
-        await service.run("api", "task", {"connectionId": "llm"}, "u", request_id=str(uuid4()))
+        await service.launcher.launch(
+            "api", "task", {"connectionId": "llm"}, "u", request_id=str(uuid4())
+        )
     assert sync.query(Run).count() == 1
 
 
@@ -213,9 +219,7 @@ async def test_first_configuration_is_durable_and_reused_on_request_retry(databa
     sync, _, _ = database
     from support.ai_execution import AsyncSessionAdapter
 
-    service = RequirementDesignService(
-        AiGenerateTaskService(AiGenerateTaskRepository(AsyncSessionAdapter(sync)))
-    )
+    service = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(sync))).design
     body = Configuration(sourceContent='{"openapi":"3.0.0","paths":{}}')
     first = await service.configure("req", "api", body, "u")
     second = await service.configure("req", "api", body, "u")
@@ -263,9 +267,7 @@ async def test_workspace_starts_function_run_from_existing_enhanced_text(databas
     requirement = sync.query(Requirement).filter_by(requirement_id="req").one()
     requirement.document_content = "# 功能理解记录\n支持用户登录及权限校验"
     sync.commit()
-    service = RequirementDesignService(
-        AiGenerateTaskService(AiGenerateTaskRepository(AsyncSessionAdapter(sync)))
-    )
+    service = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(sync))).design
     assert (await service.overview("req", "u"))["adoptedUnderstanding"]
     run = await service.start(
         "req", "function", Start(taskId="task", requestId=uuid4(), connectionId="llm"), "u"

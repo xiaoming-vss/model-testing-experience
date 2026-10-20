@@ -7,16 +7,12 @@ from authorization_database import AuthorizationDatabase, AuthorizedRepositoryFi
 from fastapi.testclient import TestClient
 
 from support.execution_writer import MemoryExecutionWriter
-from testing_agent.api.deps import (
-    get_ai_generate_task_service,
-    get_api_case_service,
-    get_current_user_id,
-)
+from support.generation import generation_services, install_generation_services
+from testing_agent.api.deps import get_api_case_service, get_current_user_id
 from testing_agent.app import create_app
 from testing_agent.models.api_assert_rule import ApiAssertRule
 from testing_agent.models.api_case import ApiCase
 from testing_agent.models.api_extract_rule import ApiExtractRule
-from testing_agent.services.ai_generate_task import AiGenerateTaskService
 from testing_agent.services.api_case import ApiCaseService
 
 
@@ -78,8 +74,8 @@ class ReviewRepository(AuthorizedRepositoryFixture):
 def review_client(repository: ReviewRepository) -> TestClient:
     app = create_app()
     app.dependency_overrides[get_current_user_id] = lambda: "user-1"
-    app.dependency_overrides[get_ai_generate_task_service] = lambda: AiGenerateTaskService(
-        repository, execution_writer=MemoryExecutionWriter()
+    install_generation_services(
+        app, generation_services(repository, execution_writer=MemoryExecutionWriter())
     )
     return TestClient(app)
 
@@ -232,8 +228,8 @@ class ImportRepository(ReviewRepository):
 def import_client(repository: ImportRepository) -> TestClient:
     app = create_app()
     app.dependency_overrides[get_current_user_id] = lambda: "user-1"
-    app.dependency_overrides[get_ai_generate_task_service] = lambda: AiGenerateTaskService(
-        repository, execution_writer=MemoryExecutionWriter()
+    install_generation_services(
+        app, generation_services(repository, execution_writer=MemoryExecutionWriter())
     )
     app.dependency_overrides[get_api_case_service] = lambda: ApiCaseService(repository)
     return TestClient(app, raise_server_exceptions=False)

@@ -38,6 +38,7 @@ from testing_agent.repositories.login_rate_limit import LoginRateLimitRepository
 from testing_agent.repositories.project import ProjectRepository
 from testing_agent.repositories.project_skill_space import ProjectSkillSpaceRepository
 from testing_agent.repositories.requirement import RequirementRepository
+from testing_agent.repositories.requirement_design import RequirementDesignRepository
 from testing_agent.repositories.resource_binding import ResourceBindingRepository
 from testing_agent.repositories.sprint import SprintRepository
 from testing_agent.repositories.sprint_daily_metrics import SprintDailyMetricsRepository
@@ -48,7 +49,13 @@ from testing_agent.repositories.ui_test_case_run import UiTestCaseRunRepository
 from testing_agent.repositories.ui_test_suite import UiTestSuiteRepository
 from testing_agent.repositories.user import UserRepository
 from testing_agent.repositories.worker_task import WorkerTaskRepository
-from testing_agent.services.ai_generate_task import AiGenerateTaskService
+from testing_agent.services.ai_candidate_review import GenerationCandidateReview
+from testing_agent.services.ai_execution.writer import ExecutionWriter, SqlExecutionWriter
+from testing_agent.services.ai_report import TestReportWorkflow
+from testing_agent.services.ai_run_launcher import GenerationRunLauncher
+from testing_agent.services.ai_source_archive import SourceArchiveManager
+from testing_agent.services.ai_stage_workflow import GenerationStageWorkflow
+from testing_agent.services.ai_task_access import GenerationImportContext
 from testing_agent.services.ai_task_commands import GenerationTaskCommands
 from testing_agent.services.ai_task_queries import GenerationQueries
 from testing_agent.services.ai_task_scope import GenerationAccess
@@ -59,6 +66,7 @@ from testing_agent.services.api_collection_run import ApiCollectionRunService
 from testing_agent.services.api_environment import ApiEnvironmentService
 from testing_agent.services.api_environment_var import ApiEnvironmentVarService
 from testing_agent.services.api_extract_rule import ApiExtractRuleService
+from testing_agent.services.api_generate_import import ApiCandidateImporter
 from testing_agent.services.auth import AuthService
 from testing_agent.services.auth_mode import AuthModeService
 from testing_agent.services.auth_session import SessionService
@@ -76,6 +84,7 @@ from testing_agent.services.ldap_settings import LdapSettingsService, effective_
 from testing_agent.services.project import ProjectService
 from testing_agent.services.project_skill_space import ProjectSkillSpaceService
 from testing_agent.services.requirement import RequirementService
+from testing_agent.services.requirement_design import RequirementDesignService
 from testing_agent.services.resource_binding import ResourceBindingService
 from testing_agent.services.sprint import SprintService
 from testing_agent.services.sprint_code_overview import (
@@ -403,27 +412,116 @@ def get_generation_task_commands(
     )
 
 
-def get_ai_generate_task_service(
-    session: AsyncSession = Depends(get_session),
+def get_generation_writer() -> ExecutionWriter:
+    return SqlExecutionWriter()
+
+
+def get_generation_metrics(
+    access: GenerationAccess = Depends(get_generation_access),
+) -> SprintDailyMetricsService:
+    return SprintDailyMetricsService(SprintDailyMetricsRepository(access.repository.session))
+
+
+def get_generation_launcher(
+    access: GenerationAccess = Depends(get_generation_access),
+    execution: ExecutionWriter = Depends(get_generation_writer),
+    metrics: SprintDailyMetricsService = Depends(get_generation_metrics),
     settings: Settings = Depends(get_settings),
-) -> AiGenerateTaskService:
-    credential_cipher = IntegrationCredentialCipher(settings.integration_key)
-    integration_connection_service = IntegrationConnectionService(
-        IntegrationConnectionRepository(session),
-        credential_cipher=credential_cipher,
+) -> GenerationRunLauncher:
+    session = access.repository.session
+    cipher = IntegrationCredentialCipher(settings.integration_key)
+    connections = IntegrationConnectionService(
+        IntegrationConnectionRepository(session), credential_cipher=cipher
     )
-    binding_repository = ResourceBindingRepository(session)
-    return AiGenerateTaskService(
-        AiGenerateTaskRepository(session),
-        SprintDailyMetricsService(SprintDailyMetricsRepository(session)),
-        files=get_file_service(session, settings),
+    bindings = ResourceBindingRepository(session)
+    return GenerationRunLauncher(
+        repository=access.repository,
+        source_archive_repository=AiGenerateTaskSourceArchiveRepository(session),
+        access=access,
+        execution=execution,
+        sprint_daily_metrics_service=metrics,
         code_risk_analysis_service=CodeRiskAnalysisService(
-            AiGenerateTaskRepository(session),
-            binding_repository,
-            BaselineResolutionService(binding_repository, SprintRepository(session)),
-            integration_connection_service,
-            credential_cipher,
+            access.repository,
+            bindings,
+            BaselineResolutionService(bindings, SprintRepository(session)),
+            connections,
+            cipher,
         ),
+    )
+
+
+def get_generation_stages(
+    access: GenerationAccess = Depends(get_generation_access),
+    execution: ExecutionWriter = Depends(get_generation_writer),
+) -> GenerationStageWorkflow:
+    return GenerationStageWorkflow(
+        repository=access.repository, owned_run=access.owned_run, execution_writer=execution
+    )
+
+
+def get_generation_reports(
+    access: GenerationAccess = Depends(get_generation_access),
+    execution: ExecutionWriter = Depends(get_generation_writer),
+    metrics: SprintDailyMetricsService = Depends(get_generation_metrics),
+) -> TestReportWorkflow:
+    return TestReportWorkflow(
+        repository=access.repository,
+        sprint_daily_metrics_service=metrics,
+        ensure_project_access=access.ensure_project_access,
+        owned_run=access.owned_run,
+        execution_writer=execution,
+    )
+
+
+def get_generation_archives(
+    access: GenerationAccess = Depends(get_generation_access),
+    settings: Settings = Depends(get_settings),
+) -> SourceArchiveManager:
+    return SourceArchiveManager(
+        source_archive_repository=AiGenerateTaskSourceArchiveRepository(access.repository.session),
+        files=get_file_service(access.repository.session, settings),
+        owned_task=access.owned_task,
+    )
+
+
+def get_generation_review(
+    access: GenerationAccess = Depends(get_generation_access),
+    execution: ExecutionWriter = Depends(get_generation_writer),
+) -> GenerationCandidateReview:
+    return GenerationCandidateReview(access.repository, access.owned_run, execution)
+
+
+def get_generation_api_importer(
+    access: GenerationAccess = Depends(get_generation_access),
+    execution: ExecutionWriter = Depends(get_generation_writer),
+) -> ApiCandidateImporter:
+    return ApiCandidateImporter(
+        repository=access.repository,
+        owned_run=access.owned_run,
+        ensure_collection_access=access.ensure_collection_access,
+        execution_writer=execution,
+    )
+
+
+def get_generation_import_context(
+    access: GenerationAccess = Depends(get_generation_access),
+    execution: ExecutionWriter = Depends(get_generation_writer),
+) -> GenerationImportContext:
+    return GenerationImportContext(access.repository, access, execution)
+
+
+def get_requirement_design_service(
+    access: GenerationAccess = Depends(get_generation_access),
+    commands: GenerationTaskCommands = Depends(get_generation_task_commands),
+    launcher: GenerationRunLauncher = Depends(get_generation_launcher),
+) -> RequirementDesignService:
+    return RequirementDesignService(
+        RequirementDesignRepository(access.repository.session),
+        access.repository,
+        AiGenerateTaskSourceArchiveRepository(access.repository.session),
+        access,
+        commands,
+        launcher,
     )
 
 

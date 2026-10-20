@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from support.generation import generation_services
 from support.mysql_initialization import mysql  # noqa: F401
 
 from testing_agent.models.ai_generate_task import AiGenerateTask as Task
@@ -21,8 +22,6 @@ from testing_agent.schemas.requirement_design import (
     RequirementDesignConfigurationRequest as Configuration,
 )
 from testing_agent.schemas.requirement_design import RequirementDesignRunRequest as Start
-from testing_agent.services.ai_generate_task import AiGenerateTaskService
-from testing_agent.services.requirement_design import RequirementDesignService
 
 
 async def test_concurrent_default_configuration_and_same_request_run(mysql):  # noqa: F811
@@ -64,9 +63,9 @@ async def test_concurrent_default_configuration_and_same_request_run(mysql):  # 
 
         async def configure():
             async with sessions() as session:
-                return await RequirementDesignService(
-                    AiGenerateTaskService(AiGenerateTaskRepository(session))
-                ).configure(
+                return await generation_services(
+                    AiGenerateTaskRepository(session)
+                ).design.configure(
                     rid, "api", Configuration(sourceContent='{"openapi":"3.0.0","paths":{}}'), uid
                 )
 
@@ -80,9 +79,7 @@ async def test_concurrent_default_configuration_and_same_request_run(mysql):  # 
 
         async def start():
             async with sessions() as session:
-                return await RequirementDesignService(
-                    AiGenerateTaskService(AiGenerateTaskRepository(session))
-                ).start(
+                return await generation_services(AiGenerateTaskRepository(session)).design.start(
                     rid, "api", Start(taskId=task_id, requestId=request_id, connectionId=llm), uid
                 )
 
@@ -160,8 +157,8 @@ async def test_member_revoked_after_initial_read_cannot_save_configuration(mysql
             await session.commit()
         entered, proceed = asyncio.Event(), asyncio.Event()
         async with sessions() as session:
-            tasks = AiGenerateTaskService(AiGenerateTaskRepository(session))
-            original = tasks.ensure_project_access
+            tasks = generation_services(AiGenerateTaskRepository(session))
+            original = tasks.access.ensure_project_access
 
             async def pause_before_lock(user_id, project_id, *, action="read"):
                 if action == "write":
@@ -169,9 +166,9 @@ async def test_member_revoked_after_initial_read_cannot_save_configuration(mysql
                     await proceed.wait()
                 await original(user_id, project_id, action=action)
 
-            monkeypatch.setattr(tasks, "ensure_project_access", pause_before_lock)
+            monkeypatch.setattr(tasks.access, "ensure_project_access", pause_before_lock)
             operation = asyncio.create_task(
-                RequirementDesignService(tasks).configure(
+                tasks.design.configure(
                     rid, "api", Configuration(sourceContent='{"openapi":"3.0.0","paths":{}}'), actor
                 )
             )

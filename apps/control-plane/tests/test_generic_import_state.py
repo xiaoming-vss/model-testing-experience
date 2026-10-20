@@ -43,14 +43,14 @@ def _run(**overrides):
 
 
 def _get_run_detail(run):
-    class FakeAiGenerateTaskService:
+    class FakeGenerationQueries:
         async def get_run(self, kind, run_id, user_id):
             assert (user_id, run_id, kind) == ("user-1", "run-1", "api")
             return dump_run(run)
 
     app = create_app()
     app.dependency_overrides[get_current_user_id] = lambda: "user-1"
-    app.dependency_overrides[get_generation_queries] = lambda: FakeAiGenerateTaskService()
+    app.dependency_overrides[get_generation_queries] = lambda: FakeGenerationQueries()
     return TestClient(app).get("/v1/api-case-generate-task-runs/run-1")
 
 

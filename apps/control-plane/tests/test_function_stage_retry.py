@@ -6,9 +6,9 @@ from support.function_candidate_review import review_client
 from support.function_stage_retry import (
     failed_repository as failed_repository,
 )
+from support.generation import generation_services
 
 from testing_agent.core.errors import ErrBadRequest, ErrForbidden
-from testing_agent.services.ai_generate_task import AiGenerateTaskService
 
 
 @pytest.mark.parametrize("checkpoint", [False, True])
@@ -51,9 +51,9 @@ async def test_retry_rejects_invalid_state(changes):
     for key, value in changes.items():
         setattr(repo.run, key, value)
     with pytest.raises(type(ErrBadRequest)):
-        await AiGenerateTaskService(repo, execution_writer=MemoryExecutionWriter()).retry_stage(
-            "run-1", {"stage": "requirement_analysis"}, "user-1"
-        )
+        await generation_services(
+            repo, execution_writer=MemoryExecutionWriter()
+        ).stages.retry_stage("run-1", {"stage": "requirement_analysis"}, "user-1")
     assert not repo.queued
 
 
@@ -66,21 +66,21 @@ async def test_retry_rejects_cross_stage_and_active_worker():
         repo = failed_repository()
         repo.latest.status = worker_status
         with pytest.raises(type(ErrBadRequest)):
-            await AiGenerateTaskService(repo, execution_writer=MemoryExecutionWriter()).retry_stage(
-                "run-1", body, "user-1"
-            )
+            await generation_services(
+                repo, execution_writer=MemoryExecutionWriter()
+            ).stages.retry_stage("run-1", body, "user-1")
         assert not repo.queued
 
 
 @pytest.mark.asyncio
 async def test_retry_checks_ownership_and_concurrent_requests_queue_once():
     repo = failed_repository()
-    service = AiGenerateTaskService(repo, execution_writer=MemoryExecutionWriter())
+    service = generation_services(repo, execution_writer=MemoryExecutionWriter())
     with pytest.raises(type(ErrForbidden)):
-        await service.retry_stage("run-1", {}, "other-user")
+        await service.stages.retry_stage("run-1", {}, "other-user")
     results = await asyncio.gather(
-        service.retry_stage("run-1", {}, "user-1"),
-        service.retry_stage("run-1", {}, "user-1"),
+        service.stages.retry_stage("run-1", {}, "user-1"),
+        service.stages.retry_stage("run-1", {}, "user-1"),
         return_exceptions=True,
     )
     assert sum(isinstance(result, dict) for result in results) == 1

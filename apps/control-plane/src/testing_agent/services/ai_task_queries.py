@@ -104,7 +104,6 @@ class GenerationQueries:
         rows = await self.repository.list_runs(task_id)
         if kind == "code_risk_analysis":
             # 代码风险分析 run 详情追加解析后的 report 结构(工单 07,RC-5)。
-            # 函数级导入避免与 services.ai_generate_task 的模块循环依赖。
             from testing_agent.services.code_risk_analysis import dump_code_risk_analysis_run
 
             dump = dump_code_risk_analysis_run

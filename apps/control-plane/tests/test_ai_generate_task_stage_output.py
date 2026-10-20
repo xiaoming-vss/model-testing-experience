@@ -6,9 +6,12 @@ from uuid import UUID
 import pytest
 from authorization_database import AuthorizationDatabase
 from support.execution_writer import MemoryExecutionWriter
+from support.generation import generation_services
 
 from testing_agent.core.errors import ErrBadRequest
-from testing_agent.services import ai_generate_task as ai_tasks
+from testing_agent.services.ai_task_output import (
+    validate_function_candidate_cases as _generation_validate_function_candidate_cases,
+)
 
 
 @pytest.mark.asyncio
@@ -66,11 +69,9 @@ async def test_function_case_stage_output_persists_config_json():
         async def refresh(self, row):
             return None
 
-    service = ai_tasks.AiGenerateTaskService(
-        FakeRepository(), execution_writer=MemoryExecutionWriter()
-    )
+    service = generation_services(FakeRepository(), execution_writer=MemoryExecutionWriter())
 
-    payload = await service.save_stage_output(
+    payload = await service.stages.save_stage_output(
         "run-1",
         {
             "stage": "case_names",
@@ -213,7 +214,9 @@ def test_generated_function_case_keeps_upstream_case_id():
             "case_type": "功能测试",
         }
 
-    assert ai_tasks.validate_function_candidate_cases([generated("C001")])[0]["case_id"] == "C001"
-    assert ai_tasks.validate_function_candidate_cases([generated()])[0]["case_id"] == ""
+    assert (
+        _generation_validate_function_candidate_cases([generated("C001")])[0]["case_id"] == "C001"
+    )
+    assert _generation_validate_function_candidate_cases([generated()])[0]["case_id"] == ""
     with pytest.raises(type(ErrBadRequest)):
-        ai_tasks.validate_function_candidate_cases([generated("C" * 65)])
+        _generation_validate_function_candidate_cases([generated("C" * 65)])

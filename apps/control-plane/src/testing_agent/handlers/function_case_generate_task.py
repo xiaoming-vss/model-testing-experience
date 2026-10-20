@@ -3,9 +3,12 @@ from __future__ import annotations
 from fastapi import Depends, Query
 
 from testing_agent.api.deps import (
-    get_ai_generate_task_service,
     get_current_user_id,
+    get_generation_import_context,
+    get_generation_launcher,
     get_generation_queries,
+    get_generation_review,
+    get_generation_stages,
     get_generation_task_commands,
 )
 from testing_agent.core.errors import success_payload
@@ -16,7 +19,10 @@ from testing_agent.schemas.ai_generate_task import (
     AiGenerateTaskRunRequest,
     FunctionGenerateTaskImportRequest,
 )
-from testing_agent.services.ai_generate_task import AiGenerateTaskService
+from testing_agent.services.ai_candidate_review import GenerationCandidateReview
+from testing_agent.services.ai_run_launcher import GenerationRunLauncher
+from testing_agent.services.ai_stage_workflow import GenerationStageWorkflow
+from testing_agent.services.ai_task_access import CandidateImportContext
 from testing_agent.services.ai_task_commands import GenerationTaskCommands
 from testing_agent.services.ai_task_queries import GenerationQueries
 from testing_agent.services.function_generate_import import import_function_run
@@ -76,10 +82,10 @@ async def run_function_case_generate_task(
     task_id: str,
     body: AiGenerateTaskRunRequest | None = None,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationRunLauncher = Depends(get_generation_launcher),
 ):
     payload = body.model_dump(by_alias=True, exclude_none=True) if body else None
-    return success_payload(await service.run("function", task_id, payload, user_id))
+    return success_payload(await service.launch("function", task_id, payload, user_id))
 
 
 async def list_function_case_generate_task_runs(
@@ -121,7 +127,7 @@ async def save_function_case_stage_output(
     run_id: str,
     body: AiGenerateTaskRunRequest,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationStageWorkflow = Depends(get_generation_stages),
 ):
     return success_payload(
         await service.save_stage_output(
@@ -134,7 +140,7 @@ async def review_function_case_stage(
     run_id: str,
     body: AiGenerateTaskReviewRequest,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationStageWorkflow = Depends(get_generation_stages),
 ):
     return success_payload(
         await service.review_stage(
@@ -149,7 +155,7 @@ async def retry_function_case_stage(
     run_id: str,
     body: AiGenerateTaskRunRequest | None = None,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationStageWorkflow = Depends(get_generation_stages),
 ):
     payload = body.model_dump(by_alias=True, exclude_none=True) if body else None
     return success_payload(await service.retry_stage(run_id, payload, user_id))
@@ -159,7 +165,7 @@ async def review_function_case_generate_task_run(
     run_id: str,
     body: AiGenerateTaskReviewRequest,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationCandidateReview = Depends(get_generation_review),
 ):
     return success_payload(
         await service.review(
@@ -172,7 +178,7 @@ async def update_function_case_generate_task_run_result(
     run_id: str,
     body: AiGenerateTaskResultRequest,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationCandidateReview = Depends(get_generation_review),
 ):
     return success_payload(
         await service.update_result("function", run_id, body.result_yaml, user_id)
@@ -183,7 +189,7 @@ async def import_function_case_generate_task_run(
     run_id: str,
     body: FunctionGenerateTaskImportRequest | None = None,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: CandidateImportContext = Depends(get_generation_import_context),
 ):
     return success_payload(
         await import_function_run(
@@ -199,7 +205,7 @@ async def revise_function_case_stage(
     run_id: str,
     body: AiGenerateTaskReviewRequest,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationStageWorkflow = Depends(get_generation_stages),
 ):
     return success_payload(
         await service.revise_function_case_stage(
@@ -212,7 +218,7 @@ async def generate_function_case_relation_analysis(
     run_id: str,
     body: AiGenerateTaskRunRequest | None = None,
     user_id: str = Depends(get_current_user_id),
-    service: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: GenerationStageWorkflow = Depends(get_generation_stages),
 ):
     payload = body.model_dump(by_alias=True, exclude_none=True) if body else None
     return success_payload(await service.generate_relation_analysis(run_id, payload, user_id))

@@ -1,22 +1,21 @@
 from fastapi import Depends, Query
 
-from testing_agent.api.deps import get_ai_generate_task_service, get_current_user_id
+from testing_agent.api.deps import get_current_user_id, get_requirement_design_service
 from testing_agent.core.errors import success_payload
 from testing_agent.schemas.requirement_design import (
     DesignKind,
     RequirementDesignConfigurationRequest,
     RequirementDesignRunRequest,
 )
-from testing_agent.services.ai_generate_task import AiGenerateTaskService
 from testing_agent.services.requirement_design import RequirementDesignService
 
 
 async def get_requirement_design(
     requirement_id: str,
     user_id: str = Depends(get_current_user_id),
-    tasks: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: RequirementDesignService = Depends(get_requirement_design_service),
 ):
-    return success_payload(await RequirementDesignService(tasks).overview(requirement_id, user_id))
+    return success_payload(await service.overview(requirement_id, user_id))
 
 
 async def list_requirement_design_runs(
@@ -30,10 +29,10 @@ async def list_requirement_design_runs(
         pattern="^(all|running|review_pending|approved|import_pending|imported|rejected|failed|canceled)$",
     ),
     user_id: str = Depends(get_current_user_id),
-    tasks: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: RequirementDesignService = Depends(get_requirement_design_service),
 ):
     return success_payload(
-        await RequirementDesignService(tasks).history(
+        await service.history(
             requirement_id,
             kind,
             user_id,
@@ -49,10 +48,10 @@ async def configure_requirement_design(
     kind: DesignKind,
     body: RequirementDesignConfigurationRequest,
     user_id: str = Depends(get_current_user_id),
-    tasks: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: RequirementDesignService = Depends(get_requirement_design_service),
 ):
     return success_payload(
-        await RequirementDesignService(tasks).configure(
+        await service.configure(
             requirement_id,
             kind,
             body,
@@ -66,10 +65,10 @@ async def start_requirement_design(
     kind: DesignKind,
     body: RequirementDesignRunRequest,
     user_id: str = Depends(get_current_user_id),
-    tasks: AiGenerateTaskService = Depends(get_ai_generate_task_service),
+    service: RequirementDesignService = Depends(get_requirement_design_service),
 ):
     return success_payload(
-        await RequirementDesignService(tasks).start(
+        await service.start(
             requirement_id,
             kind,
             body,
