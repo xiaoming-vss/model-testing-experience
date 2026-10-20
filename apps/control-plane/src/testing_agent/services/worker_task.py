@@ -122,7 +122,7 @@ class WorkerTaskService:
 
     async def expire_leases(self, domain: str):
         for task in await self.repository.expired_tasks(domain):
-            task = await self.repository._hydrate(task)
+            task = await self.repository.project_context(task)
             if domain == "ai":
                 run = await self.repository.get_ai_run(task.run_id)
                 if run is not None:

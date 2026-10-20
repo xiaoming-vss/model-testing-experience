@@ -277,9 +277,9 @@ class AiGenerateTaskRepository(ResourceRepository):
             .limit(1)
         )
 
-        from testing_agent.services.worker_context import hydrate
+        from testing_agent.repositories.worker_context import project_worker_context
 
-        return await self.session.run_sync(lambda session: hydrate(session, row))
+        return await self.session.run_sync(lambda session: project_worker_context(session, row))
 
     async def get_function_suite_by_requirement_and_name(
         self, requirement_id: str, name: str

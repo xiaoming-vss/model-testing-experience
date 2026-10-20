@@ -78,7 +78,7 @@ def new_attempt(
         "currentOutput": run.result_yaml or "",
     }
     instruction = snapshot["config"].pop("revisionInstruction", None)
-    from testing_agent.services.worker_context import connection_for_attempt
+    from testing_agent.repositories.worker_context import connection_for_attempt
 
     snapshot["llmConnectionId"] = connection_for_attempt(session, worker)
     previous = max(siblings, key=lambda a: a.attempt_no, default=None)

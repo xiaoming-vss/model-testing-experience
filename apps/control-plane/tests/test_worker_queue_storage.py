@@ -23,9 +23,9 @@ from testing_agent.models.api_collection_run import ApiCollectionRun, ApiCollect
 from testing_agent.models.ui_test_case_run import UiTestCaseRun
 from testing_agent.models.ui_test_suite_run import UiTestSuiteRun
 from testing_agent.models.worker_task import WorkerTask
+from testing_agent.repositories.worker_context import read_worker_context
 from testing_agent.repositories.worker_task import WorkerTaskRepository
 from testing_agent.schemas.workers import WorkerClaimRequest, WorkerTaskEventRequest
-from testing_agent.services.worker_context import hydrate
 from testing_agent.services.worker_task import WorkerTaskService, ensure_worker_match
 
 
@@ -151,9 +151,9 @@ async def test_expired_revision_preserves_output_input_and_model_for_retry(db):
     assert run.status == "failed" and run.stage_status == "failed"
     assert run.config_json["requirementAnalysis"] == {"old": True}
     assert run.config_json["revisionInstruction"] == "fix"
-    assert hydrate(db, revised).llm_connection_id == "fixed-model"
+    assert read_worker_context(db, revised).llm_connection_id == "fixed-model"
     retried = enqueue(db, run, "retry", "retry", connection_id="fixed-model")
-    assert hydrate(db, retried).llm_connection_id == "fixed-model"
+    assert read_worker_context(db, retried).llm_connection_id == "fixed-model"
     latest = graph(db, run)[1][graph(db, run)[0][0].active_attempt_id]
     assert latest.input_snapshot_json["config"]["requirementAnalysis"] == {"draft": True}
 
@@ -254,7 +254,7 @@ def test_selected_model_connection_is_stored_in_attempt_and_survives_reload(db):
     db.expunge_all()
     loaded = db.scalar(select(WorkerTask).where(WorkerTask.task_id == "selected"))
     assert loaded.llm_connection_id is None
-    assert hydrate(db, loaded).llm_connection_id == "selected-connection"
+    assert read_worker_context(db, loaded).llm_connection_id == "selected-connection"
 
 
 @pytest.mark.asyncio

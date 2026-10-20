@@ -229,9 +229,9 @@ async def find_task(session: AsyncSession, domain: str, task_id: str) -> WorkerT
     )
     if task is None:
         raise ErrNotFound()
-    from testing_agent.services.worker_context import hydrate
+    from testing_agent.repositories.worker_context import project_worker_context
 
-    return await session.run_sync(lambda sync: hydrate(sync, task))
+    return await session.run_sync(lambda sync: project_worker_context(sync, task))
 
 
 async def api_case_worker_snapshot(

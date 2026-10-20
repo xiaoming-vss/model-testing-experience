@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import overload
 
 from sqlalchemy import select
 
@@ -30,12 +31,18 @@ class WorkerTaskRepository(BaseRepository):
             )
         )
 
-        return await self._hydrate(row)
+        return await self.project_context(row)
 
-    async def _hydrate(self, row):
-        from testing_agent.services.worker_context import hydrate
+    @overload
+    async def project_context(self, row: None) -> None: ...
 
-        return await self.session.run_sync(lambda session: hydrate(session, row))
+    @overload
+    async def project_context(self, row: WorkerTask) -> WorkerTask: ...
+
+    async def project_context(self, row: WorkerTask | None) -> WorkerTask | None:
+        from testing_agent.repositories.worker_context import project_worker_context
+
+        return await self.session.run_sync(lambda session: project_worker_context(session, row))
 
     async def expired_tasks(self, domain: str):
         return list(
@@ -63,7 +70,7 @@ class WorkerTaskRepository(BaseRepository):
             .with_for_update(skip_locked=True)
         )
 
-        return await self._hydrate(row)
+        return await self.project_context(row)
 
     async def get_api_item(self, item_id: str) -> ApiCollectionRunItem | None:
         return await self.session.scalar(
