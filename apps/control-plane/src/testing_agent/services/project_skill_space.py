@@ -3,22 +3,18 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import io
-import json
 import zipfile
-from datetime import timedelta
+from typing import Any
 
 from sqlalchemy import select
 
-from testing_agent.core.errors import AppError, ErrForbidden, ErrNotFound
-from testing_agent.core.sid import new_id
+from testing_agent.core.errors import AppError, ErrNotFound
 from testing_agent.models.project import Project
-from testing_agent.models.project_skill_space import ProjectSkillSpace
-from testing_agent.models.stored_file import StoredFile
+from testing_agent.schemas.project_skill_space import ProjectSkillUploadRequest
 from testing_agent.services.common import list_payload
 from testing_agent.services.project_access import require_project_access
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
-from testing_agent.services.skill_storage import publish_skill_files
-from testing_agent.services.stored_file import utcnow
+from testing_agent.services.skill_storage import SkillPublisher, replace_manifest
 
 
 def dump_skill(skill):
@@ -33,22 +29,6 @@ def dump_skill(skill):
         "createdAt": skill.created_at,
         "updatedAt": skill.updated_at,
     }
-
-
-async def replace_manifest(session, skill, manifest, signature_seconds):
-    """Publish a complete file set in one transaction; old objects enter normal GC."""
-    keep = {entry["fileId"] for entry in manifest}
-    old = {entry["fileId"] for entry in (skill.manifest or [])} - keep
-    if old:
-        rows = await session.scalars(select(StoredFile).where(StoredFile.file_id.in_(old)))
-        for row in rows:
-            if row.resource_type == "project_skill" and row.resource_id == skill.skill_space_id:
-                row.status = "deleting"
-                row.expires_at = utcnow() + timedelta(seconds=signature_seconds)
-    skill.manifest = sorted(manifest, key=lambda entry: entry["path"])
-    skill.hash = hashlib.sha256(json.dumps(skill.manifest, sort_keys=True).encode()).hexdigest()
-    skill.size_bytes = sum(entry["size"] for entry in manifest)
-    skill.updated_at = utcnow()
 
 
 class ProjectSkillSpaceService:
@@ -66,61 +46,12 @@ class ProjectSkillSpaceService:
         await self.ensure_project_access(user_id, project_id)
         return list_payload([dump_skill(row) for row in await self.repository.list(project_id)])
 
-    async def upload(self, project_id, body, user_id):
-        await self.ensure_project_access(user_id, project_id, action="manage")
+    async def upload(
+        self, project_id: str, body: ProjectSkillUploadRequest, user_id: str
+    ) -> dict[str, Any]:
         if self.files is None:
             raise AppError(503, "S3 文件存储未启用", 503)
-        session = self.repository.session
-        # Serialize replacements of the same project's skill file sets.
-        await session.scalar(
-            select(Project).where(Project.project_id == project_id).with_for_update()
-        )
-        default = await session.scalar(
-            select(ProjectSkillSpace).where(
-                ProjectSkillSpace.is_default.is_(True), ProjectSkillSpace.filename == body.name
-            )
-        )
-        if default:
-            raise AppError(409, "不能上传与系统默认 Skill 同名的技能", 409)
-        skill = await self.repository.get_active_by_project_and_filename(project_id, body.name)
-        if skill is None:
-            skill = ProjectSkillSpace(
-                skill_space_id=new_id(),
-                project_id=project_id,
-                scope_key=project_id,
-                filename=body.name,
-                is_default=False,
-                manifest=[],
-                hash="",
-                size_bytes=0,
-            )
-            self.repository.add(skill)
-        elif skill.is_default:
-            raise ErrForbidden()
-        manifest = []
-        old_paths = {entry["fileId"]: entry["path"] for entry in skill.manifest}
-        for entry in body.files:
-            if entry.file_id in old_paths and old_paths[entry.file_id] != entry.path:
-                raise AppError(400, "更改技能文件路径需要重新上传文件", 400)
-            row = await self.files.attach(
-                user_id,
-                entry.file_id,
-                project_id,
-                "project_skill",
-                skill.skill_space_id,
-                purpose="project_skill",
-            )
-            if row.filename != entry.path.rsplit("/", 1)[-1]:
-                raise AppError(400, "技能文件名与上传文件不一致", 400)
-            manifest.append(
-                {"path": entry.path, "fileId": row.file_id, "size": row.size, "sha256": row.sha256}
-            )
-        if sum(entry["size"] for entry in manifest) > self.files.settings.max_bytes:
-            raise AppError(400, "技能文件夹超过大小限制", 400)
-        async with publish_skill_files(self.files, skill, manifest):
-            await replace_manifest(session, skill, manifest, self.files.settings.signature_seconds)
-            await self.repository.commit()
-        await self.repository.refresh(skill)
+        skill = await SkillPublisher(self.files).project(project_id, body, user_id)
         return dump_skill(skill)
 
     async def delete(self, project_id, skill_space_id, user_id):

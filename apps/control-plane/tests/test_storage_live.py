@@ -374,6 +374,9 @@ async def test_live_backup_restore_references_and_hashes(live, tmp_path):
             )
         )
         await session.commit()
+        leased = await files.get(file_id)
+        leased.cleanup_id = "source-cleaner"
+        leased.cleanup_until = utcnow() + timedelta(minutes=5)
         session.add(
             FileVerification(
                 operation_id="interrupted-verify",
@@ -410,6 +413,7 @@ async def test_live_backup_restore_references_and_hashes(live, tmp_path):
                 "archived",
             )
             assert row.bucket == settings[1].s3.bucket
+            assert row.cleanup_id == "" and row.cleanup_until is None
             assert await downloaded(files, "viewer", file_id) == b"Live S3 P1 evidence"
             activity = await session.scalar(
                 select(BugActivity).where(BugActivity.activity_id == "audit-activity")
@@ -557,14 +561,15 @@ async def test_live_cleanup_skips_active_verification(live, monkeypatch):
         assert await asyncio.to_thread(entered.wait, 10)
         real_now = utcnow
         monkeypatch.setattr(
-            "testing_agent.services.stored_file.utcnow", lambda: real_now() + timedelta(days=3)
+            "testing_agent.services.stored_file_cleanup.utcnow",
+            lambda: real_now() + timedelta(days=3),
         )
         try:
             async with sessions() as other:
                 result = await StoredFileService(other, settings[0].s3).cleanup()
                 assert result == {"deleted": 0, "failed": 0}
         finally:
-            monkeypatch.setattr("testing_agent.services.stored_file.utcnow", real_now)
+            monkeypatch.setattr("testing_agent.services.stored_file_cleanup.utcnow", real_now)
             release.set()
             await completing
         await files.attach("owner", file_id, "p", "bug", "audit-bug", purpose="attachment")
@@ -588,7 +593,8 @@ async def test_live_failed_save_and_attachment_lock_survive_cleanup(live, monkey
         await files.attach("owner", file_id, "p", "bug", "audit-bug", purpose="attachment")
         real_now = utcnow
         monkeypatch.setattr(
-            "testing_agent.services.stored_file.utcnow", lambda: real_now() + timedelta(days=3)
+            "testing_agent.services.stored_file_cleanup.utcnow",
+            lambda: real_now() + timedelta(days=3),
         )
         try:
             async with sessions() as other:
@@ -597,7 +603,7 @@ async def test_live_failed_save_and_attachment_lock_survive_cleanup(live, monkey
                     "failed": 0,
                 }
         finally:
-            monkeypatch.setattr("testing_agent.services.stored_file.utcnow", real_now)
+            monkeypatch.setattr("testing_agent.services.stored_file_cleanup.utcnow", real_now)
         await session.commit()
         assert await downloaded(files, "viewer", file_id) == b"Live S3 P1 evidence"
 
@@ -662,3 +668,46 @@ async def test_live_queue_claims_are_unique_and_expired_leases_fail_closed(live)
         assert {task.status for task in await session.scalars(select(WorkerTask))} == {"failed"}
         assert {run.status for run in await session.scalars(select(UiTestCaseRun))} == {"failed"}
     assert await claim("worker-4") is None
+
+
+async def test_live_skill_batches_keep_previous_signed_content_and_cleanup_safely(live, tmp_path):
+    from testing_agent.services.builtin_skills import sync_builtin_skills
+
+    settings, sessions = live
+    folder = tmp_path / "builtin"
+    folder.mkdir()
+    source = folder / "SKILL.md"
+    source.write_bytes(b"old default")
+    async with sessions() as session:
+        files = StoredFileService(session, settings[0].s3)
+        await sync_builtin_skills(files, tmp_path)
+        from testing_agent.models.project_skill_space import ProjectSkillSpace
+
+        skill = await session.scalar(
+            select(ProjectSkillSpace).where(ProjectSkillSpace.filename == "builtin")
+        )
+        old_id = skill.manifest[0]["fileId"]
+        old = await files.get(old_id)
+        old_key = old.object_key
+        old_ticket = await files.ticket(old)
+        await session.commit()
+        source.write_bytes(b"new default")
+        await sync_builtin_skills(files, tmp_path)
+        skill = await session.scalar(
+            select(ProjectSkillSpace)
+            .where(ProjectSkillSpace.filename == "builtin")
+            .execution_options(populate_existing=True)
+        )
+        current = await files.get(skill.manifest[0]["fileId"])
+        assert current.object_key != old_key
+        new_ticket = await files.ticket(current)
+        await session.commit()
+        async with httpx.AsyncClient() as client:
+            assert (await client.get(old_ticket["url"])).content == b"old default"
+            assert (await client.get(new_ticket["url"])).content == b"new default"
+        old = await files.get(old_id)
+        old.expires_at = utcnow() - timedelta(seconds=1)
+        await session.commit()
+        assert (await files.cleanup())["deleted"] == 1
+        async with httpx.AsyncClient() as client:
+            assert (await client.get(new_ticket["url"])).content == b"new default"

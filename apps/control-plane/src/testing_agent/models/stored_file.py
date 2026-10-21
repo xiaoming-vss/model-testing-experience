@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, String
+from sqlalchemy import BigInteger, DateTime, Index, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from testing_agent.db.base import Base, CreatedAt, IdPk
@@ -8,7 +8,11 @@ from testing_agent.db.base import Base, CreatedAt, IdPk
 
 class StoredFile(Base):
     __tablename__ = "stored_files"
-    __table_args__ = {"comment": "统一文件元数据及对象存储上传、完成和业务关联状态"}
+    __table_args__ = (
+        Index("ix_stored_file_cleanup", "bucket", "status", "expires_at", "id"),
+        Index("ix_stored_file_object", "bucket", "object_key"),
+        {"comment": "统一文件元数据及对象存储上传、完成和业务关联状态"},
+    )
     id: Mapped[IdPk] = mapped_column(comment="数据库内部主键")
     file_id: Mapped[str] = mapped_column(String(64), unique=True, comment="统一文件业务标识")
     project_id: Mapped[str] = mapped_column(String(64), index=True, comment="项目业务标识")
@@ -25,6 +29,12 @@ class StoredFile(Base):
     )
     verification_id: Mapped[str] = mapped_column(
         String(64), default="", server_default="", comment="当前核验代次；空表示尚未领取或已失败"
+    )
+    cleanup_id: Mapped[str] = mapped_column(
+        String(64), default="", server_default="", comment="当前清理领取代次；空表示未领取"
+    )
+    cleanup_until: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True, comment="清理领取租约截止时间（UTC）；超时可由其他实例接管"
     )
     purpose: Mapped[str] = mapped_column(String(32), comment="文件业务用途")
     resource_type: Mapped[str] = mapped_column(

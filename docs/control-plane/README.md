@@ -93,6 +93,9 @@ API 导入的专用校验与实体转换继续由 `api_import_payload.py` 和 `a
 | `services/worker_domains/` | AI、API、UI 各自维护快照和结果规则；公共协调层管理领取、租约与事件身份，集成写入使用独立协议 |
 | `services/personal_credentials.py` 的 PersonalCredentialAccess | 先检查本人归属、供应方、范围和状态，再解密；供应方查询与绑定不依赖连接管理的私有方法 |
 | `services/bug_import/` | 远端读取、准备、本地写入和文件处理分开；事务提交由导入编排负责，提交后的附件失败不回滚已创建 Bug |
+| `file_verification.py` | 核验代次领取、事务外复制和当前权限/CAS 发布；持久保留未知对象回收依据 |
+| `skill_storage.py` / SkillPublisher | 项目上传、默认同步、旧路径迁移共用批次发布；复制目标独占、清单原子切换 |
+| `stored_file_cleanup.py` | 有界领取与清理租约，事务外删除，按代次及对象键记录结果；关联仍归原业务事务 |
 | `services/resource_deletion.py` 的 ResourceDeletion | 删除前业务检查与生命周期协调；`repositories/deletion.py` 只负责锁定和关联清理；最终提交由调用者负责 |
 | `services/integration_bug_state.py` 的 IntegrationBugState | 本地证据应用与状态投影；恢复记录通过显式能力传入，生命周期不反向依赖完整步骤执行器 |
 

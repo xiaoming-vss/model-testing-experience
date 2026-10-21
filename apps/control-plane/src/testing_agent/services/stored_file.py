@@ -3,20 +3,15 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import mimetypes
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import exists, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import AppError, ErrForbidden, ErrNotFound
 from testing_agent.core.object_storage import ObjectStorage, ObjectStorageSettings
 from testing_agent.core.sid import new_id
-from testing_agent.models.bug import Bug
-from testing_agent.models.file_verification import FileVerification
-from testing_agent.models.project import Project
-from testing_agent.models.project_skill_space import ProjectSkillSpace
 from testing_agent.models.stored_file import StoredFile
 from testing_agent.schemas.stored_file import FileUploadRequest
 from testing_agent.services.project_access import ProjectAction, require_project_id
@@ -50,8 +45,6 @@ PURPOSE_FOLDERS = {
     "project_skill": "skills",
     "ui_artifact": "ui-artifacts",
 }
-
-logger = logging.getLogger(__name__)
 
 
 def utcnow():
@@ -310,136 +303,7 @@ class StoredFileService:
     async def download(self, user_id: str, file_id: str):
         return await self.ticket(await self.accessible(user_id, file_id))
 
-    async def _cleanup_row(self, file_id: str):
-        # Other cleaners may already have claimed or removed this row.
-        return await self.session.scalar(
-            select(StoredFile)
-            .where(StoredFile.file_id == file_id, StoredFile.bucket == self.settings.bucket)
-            .with_for_update(skip_locked=True)
-            .execution_options(populate_existing=True)
-        )
+    async def cleanup(self) -> dict[str, int]:
+        from testing_agent.services.stored_file_cleanup import StoredFileCleanup
 
-    async def cleanup(self):
-        from testing_agent.services.file_verification import FileVerificationWorkflow
-
-        verification_gc = await FileVerificationWorkflow(
-            self.session, self.settings, self.storage
-        ).collect()
-        # Claim expired rows while holding the same lock used by complete/attach.
-        rows = list(
-            (
-                await self.session.scalars(
-                    select(StoredFile)
-                    .where(
-                        StoredFile.bucket == self.settings.bucket,
-                        StoredFile.expires_at < utcnow(),
-                        StoredFile.status.in_(["pending", "ready", "deleting"]),
-                        ~exists().where(
-                            FileVerification.operation_id == StoredFile.verification_id,
-                            FileVerification.state == "running",
-                        ),
-                    )
-                    .with_for_update(skip_locked=True)
-                    .limit(100)
-                )
-            ).all()
-        )
-        for row in rows:
-            # Old Bug updates marked evidence deleting. Preserve these records
-            # conservatively while the owning Bug exists, including its history.
-            if row.resource_type == "bug" and await self.session.scalar(
-                select(Bug.bug_id).where(
-                    Bug.bug_id == row.resource_id, Bug.project_id == row.project_id
-                )
-            ):
-                row.status = "archived"
-            else:
-                row.status = "deleting"
-        await self.session.commit()
-        deleted, failed = 0, 0
-        identifiers = [row.file_id for row in rows if row.status == "deleting"]
-        for file_id in identifiers:
-            try:
-                row = await self._cleanup_row(file_id)
-                if row is None or row.status != "deleting":
-                    await self.session.rollback()
-                    continue
-                # Readable skill paths are reused. Serialize with publication and
-                # never let an old file record delete a currently attached object.
-                if row.purpose == "project_skill":
-                    if row.project_id:
-                        await self.session.scalar(
-                            select(Project)
-                            .where(Project.project_id == row.project_id)
-                            .with_for_update()
-                        )
-                    else:
-                        await self.session.scalar(
-                            select(ProjectSkillSpace)
-                            .where(ProjectSkillSpace.skill_space_id == row.resource_id)
-                            .with_for_update()
-                        )
-                live = await self.session.scalar(
-                    select(StoredFile.file_id)
-                    .where(
-                        StoredFile.bucket == row.bucket,
-                        StoredFile.object_key == row.object_key,
-                        StoredFile.file_id != row.file_id,
-                        StoredFile.status.in_(["attached", "archived", "ready", "pending"]),
-                    )
-                    .with_for_update()
-                    .limit(1)
-                )
-                if row.staging_key:
-                    await asyncio.to_thread(self.storage.delete, row.staging_key)
-                if live is None:
-                    await asyncio.to_thread(self.storage.delete, row.object_key)
-                await self.session.delete(row)
-                await self.session.commit()
-                deleted += 1
-            except Exception as exc:
-                await self.session.rollback()
-                failed += 1
-                logger.warning(
-                    "File cleanup failed file_id=%s operation=delete error=%s; will retry",
-                    file_id,
-                    type(exc).__name__,
-                )
-        # Staging uploads can be replayed until expiry; only remove after the full temporary window.
-        attached = list(
-            (
-                await self.session.scalars(
-                    select(StoredFile)
-                    .where(
-                        StoredFile.bucket == self.settings.bucket,
-                        StoredFile.expires_at < utcnow(),
-                        StoredFile.status.in_(["attached", "archived"]),
-                        StoredFile.staging_key != "",
-                    )
-                    .limit(100)
-                )
-            ).all()
-        )
-        identifiers = [row.file_id for row in attached]
-        for file_id in identifiers:
-            try:
-                row = await self._cleanup_row(file_id)
-                if row is None:
-                    await self.session.rollback()
-                    continue
-                if row.staging_key:
-                    await asyncio.to_thread(self.storage.delete, row.staging_key)
-                row.staging_key = ""
-                await self.session.commit()
-            except Exception as exc:
-                await self.session.rollback()
-                failed += 1
-                logger.warning(
-                    "File cleanup failed file_id=%s operation=delete_staging error=%s; will retry",
-                    file_id,
-                    type(exc).__name__,
-                )
-        return {
-            "deleted": deleted + verification_gc["deleted"],
-            "failed": failed + verification_gc["failed"],
-        }
+        return await StoredFileCleanup(self.session, self.settings, self.storage).cleanup()

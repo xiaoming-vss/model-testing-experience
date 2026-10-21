@@ -1,5 +1,6 @@
 import io
 import zipfile
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,6 +14,13 @@ from testing_agent.repositories.project_skill_space import ProjectSkillSpaceRepo
 from testing_agent.schemas.project_skill_space import ProjectSkillUploadRequest
 from testing_agent.services.builtin_skills import sync_builtin_skills
 from testing_agent.services.project_skill_space import ProjectSkillSpaceService
+
+
+def assert_skill_path(key, root, relative):
+    assert key.startswith(root)
+    batch, tail = key.removeprefix(root).split("/", 1)
+    assert str(UUID(batch)) == batch
+    assert tail == relative
 
 
 def service(files):
@@ -176,20 +184,22 @@ async def test_readable_paths_survive_replacement_cleanup(files):
     skill = await svc.repository.get("p", first["skillSpaceId"])
     for entry in skill.manifest:
         row = await files.get(entry["fileId"])
-        assert row.object_key == "mtx/skills/projects/p/custom/" + entry["path"]
+        assert_skill_path(row.object_key, "mtx/skills/projects/p/custom/", entry["path"])
     await svc.upload("p", await folder(files, entries={"SKILL.md": b"replacement"}), "owner")
     for row in await files.session.scalars(select(StoredFile)):
         row.expires_at = utcnow() - timedelta(seconds=1)
     await files.session.commit()
     assert (await files.cleanup())["failed"] == 0
     objects = files.storage.client.list_objects_v2(Bucket=files.settings.bucket)["Contents"]
-    assert [obj["Key"] for obj in objects] == ["mtx/skills/projects/p/custom/SKILL.md"]
+    assert len(objects) == 1
+    assert_skill_path(objects[0]["Key"], "mtx/skills/projects/p/custom/", "SKILL.md")
     _, data = await svc.download_zip("p", first["skillSpaceId"], "owner")
     assert zipfile.ZipFile(io.BytesIO(data)).read("custom/SKILL.md") == b"replacement"
 
 
 @pytest.mark.asyncio
-async def test_default_paths_and_idempotent_migration(files, tmp_path):
+@pytest.mark.parametrize("layout", ["id", "fixed"])
+async def test_default_paths_and_idempotent_migration(files, tmp_path, layout):
     from sqlalchemy import select
 
     from testing_agent.models.project_skill_space import ProjectSkillSpace
@@ -203,20 +213,24 @@ async def test_default_paths_and_idempotent_migration(files, tmp_path):
     skill = await files.session.scalar(select(ProjectSkillSpace))
     for entry in skill.manifest:
         row = await files.get(entry["fileId"])
-        assert row.object_key == "mtx/skills/system/builtin/" + entry["path"]
+        assert_skill_path(row.object_key, "mtx/skills/system/builtin/", entry["path"])
         # Simulate the former ID-based layout without changing file associations.
-        old = "legacy/" + row.file_id + "/" + row.filename
+        old = (
+            ("legacy/" + row.file_id + "/" + row.filename)
+            if layout == "id"
+            else "mtx/skills/system/builtin/" + entry["path"]
+        )
         files.storage.client.copy_object(
             Bucket=row.bucket, Key=old, CopySource={"Bucket": row.bucket, "Key": row.object_key}
         )
         files.storage.client.delete_object(Bucket=row.bucket, Key=row.object_key)
         row.object_key = old
     await files.session.commit()
-    await migrate_skill_paths(files)
-    await migrate_skill_paths(files)
+    assert (await migrate_skill_paths(files))[0]["migrated"]
+    assert not (await migrate_skill_paths(files))[0]["migrated"]
     for entry in skill.manifest:
         row = await files.get(entry["fileId"])
-        assert row.object_key == "mtx/skills/system/builtin/" + entry["path"]
+        assert_skill_path(row.object_key, "mtx/skills/system/builtin/", entry["path"])
         obj = files.storage.client.get_object(Bucket=row.bucket, Key=row.object_key)
         assert len(obj["Body"].read()) == row.size
 
@@ -229,7 +243,9 @@ async def test_failed_publication_restores_current_contents(files, monkeypatch):
     original = files.storage.client.copy_object
 
     def fail_second(**kwargs):
-        if kwargs["Key"] == "mtx/skills/projects/p/custom/scripts/run.py":
+        if kwargs["Key"].startswith("mtx/skills/projects/p/custom/") and kwargs["Key"].endswith(
+            "/scripts/run.py"
+        ):
             # Fail only the new copy, permitting the compensation copy.
             if kwargs["CopySource"]["Key"].endswith("/run.py"):
                 raise RuntimeError("copy failure")

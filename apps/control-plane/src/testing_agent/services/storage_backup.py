@@ -212,6 +212,12 @@ def restore_backup(settings, source: Path):
                 "UPDATE stored_files SET bucket=%s WHERE bucket=%s",
                 (settings.s3.bucket, manifest["bucket"]),
             )
+            cursor.execute("SHOW COLUMNS FROM stored_files LIKE 'cleanup_id'")
+            if cursor.fetchone() is not None:
+                cursor.execute(
+                    "UPDATE stored_files SET cleanup_id='', cleanup_until=NULL WHERE bucket=%s",
+                    (settings.s3.bucket,),
+                )
             if "file_verifications" in integration_tables:
                 # Restore into a distinct bucket cannot resume a source writer's permit.
                 # Retain unknown-write tombstones conservatively for repeated cleanup.

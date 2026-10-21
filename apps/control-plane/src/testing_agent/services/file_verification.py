@@ -16,7 +16,11 @@ from testing_agent.core.errors import AppError, ErrForbidden, ErrNotFound
 from testing_agent.core.http_diagnostics import safe_exception_trace
 from testing_agent.core.object_storage import ObjectStorage, ObjectStorageSettings
 from testing_agent.core.sid import new_id
-from testing_agent.domain.project_policy import allows_project_action, effective_project_role
+from testing_agent.domain.project_policy import (
+    ProjectAction,
+    allows_project_action,
+    effective_project_role,
+)
 from testing_agent.models.file_verification import FileVerification
 from testing_agent.models.stored_file import StoredFile
 from testing_agent.repositories.file_verification import FileVerificationRepository
@@ -56,7 +60,9 @@ class FileVerificationWorkflow:
         self.session, self.settings, self.storage = session, settings, storage
         self.repository = FileVerificationRepository(session)
 
-    async def authorized(self, project_id: str, actor: str) -> None:
+    async def authorized(
+        self, project_id: str, actor: str, *, action: ProjectAction = "write"
+    ) -> None:
         project, user, role = await self.repository.access_facts(project_id, actor)
         if project is None:
             raise ErrNotFound()
@@ -67,7 +73,7 @@ class FileVerificationWorkflow:
             member_role=role,
             is_super_admin=user.is_super_admin,
         )
-        if not allows_project_action(effective, "write"):
+        if not allows_project_action(effective, action):
             raise ErrForbidden()
 
     async def complete(self, actor: str, file_id: str) -> dict[str, str]:
@@ -131,7 +137,8 @@ class FileVerificationWorkflow:
             # retained; after its deadline it is fenced and repeatedly garbage-collected.
             raise
         except Exception as exc:
-            await self.discard(file_id, operation_id)
+            # A transport failure can outlive the SDK call on the storage server.
+            await self.discard(file_id, operation_id, settled=isinstance(exc, AppError))
             if isinstance(exc, ClientError):
                 if exc.response.get("Error", {}).get("Code") in {"404", "NoSuchKey", "NotFound"}:
                     raise AppError(409, "文件尚未上传完成，请重新上传", 409) from None
@@ -191,12 +198,13 @@ class FileVerificationWorkflow:
             return len(data), hashlib.sha256(data).hexdigest()
         return source.size, source.sha256
 
-    async def discard(self, file_id: str, operation_id: str) -> None:
+    async def discard(self, file_id: str, operation_id: str, *, settled: bool = True) -> None:
         try:
             row = await self.repository.file(file_id, lock=True)
             operation = await self.repository.operation(operation_id)
             if operation is not None and operation.state != "published":
-                operation.state, operation.settled_at = "discarded", now_utc()
+                operation.state = "discarded" if settled else "abandoned"
+                operation.settled_at = now_utc() if settled else None
                 operation.gc_after = now_utc()
                 if row is not None and row.verification_id == operation_id:
                     row.verification_id = ""

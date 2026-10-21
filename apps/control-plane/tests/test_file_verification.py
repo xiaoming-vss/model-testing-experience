@@ -225,3 +225,37 @@ def test_migration_preserves_unsettled_verification_evidence():
         connection.rollback()
         assert connection.scalar(select(FileVerification.operation_id)) == "interrupted"
     engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_storage_timeout_is_uncertain_and_retry_uses_a_different_private_key(
+    files, monkeypatch
+):
+    row, _ = await upload(files)
+    file_id = row.file_id
+    original = files.storage.seal
+    calls = []
+
+    def seal(*args, **kwargs):
+        calls.append(args[1])
+        original(*args, **kwargs)
+        if len(calls) == 1:
+            raise TimeoutError("storage response lost")
+
+    monkeypatch.setattr(files.storage, "seal", seal)
+    with pytest.raises(TimeoutError):
+        await files.complete("owner", file_id)
+    unknown = await files.session.scalar(select(FileVerification))
+    assert unknown.state == "abandoned" and unknown.settled_at is None
+    assert (await files.get(file_id)).verification_id == ""
+    await files.complete("owner", file_id)
+    assert calls[0] != calls[1]
+    await FileVerificationWorkflow(files.session, files.settings, files.storage).collect()
+    current = await files.get(file_id)
+    assert current.object_key == calls[1] and current.status == "ready"
+    assert (
+        await files.session.scalar(
+            select(FileVerification).where(FileVerification.operation_id == unknown.operation_id)
+        )
+        is not None
+    )
