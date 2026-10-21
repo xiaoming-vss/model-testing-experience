@@ -20,6 +20,10 @@ from testing_agent.models.bug_activity import BugActivity
 from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
 from testing_agent.models.bug_zentao_push import BugZentaoPush
 from testing_agent.models.bug_zentao_sync_baseline import BugZentaoSyncBaseline
+from testing_agent.models.function_case_push import (
+    FunctionCasePushOperation,
+    FunctionCaseRemoteIdentity,
+)
 from testing_agent.models.function_test_case import FunctionTestCase
 from testing_agent.models.function_test_suite import FunctionTestSuite
 from testing_agent.models.integration_connection import IntegrationConnection
@@ -52,6 +56,8 @@ from testing_agent.models.user import User
 from testing_agent.models.worker_task import WorkerTask
 
 __all__ = [
+    "FunctionCasePushOperation",
+    "FunctionCaseRemoteIdentity",
     "StoredFile",
     "ServiceAuthorization",
     "SharedService",
