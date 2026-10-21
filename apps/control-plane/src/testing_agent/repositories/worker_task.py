@@ -37,22 +37,42 @@ class WorkerTaskRepository(BaseRepository):
     async def execution_context(self, task: WorkerTask) -> WorkerExecutionContext:
         return await self.session.run_sync(lambda sync: read_worker_context(sync, task))
 
-    async def expired_tasks(self, domain: str):
-        return list(
-            (
-                await self.session.scalars(
-                    select(WorkerTask)
-                    .where(
-                        WorkerTask.domain == domain,
-                        WorkerTask.status.in_(["claimed", "running"]),
-                        WorkerTask.lease_expires_at <= datetime.now(UTC),
-                    )
-                    .order_by(WorkerTask.id)
-                    .limit(100)
-                    .with_for_update(skip_locked=True)
-                )
-            ).all()
+    async def expired_tasks(self, domain: str) -> list[WorkerTask]:
+        now = datetime.now(UTC)
+        # Discover without range locks, then lock exact primary keys. This allows heartbeats
+        # and other sweepers to update neighboring lease-index entries under MySQL RR.
+        identifiers = await self.session.scalars(
+            select(WorkerTask.id)
+            .where(
+                WorkerTask.domain == domain,
+                WorkerTask.status.in_(["claimed", "running"]),
+                WorkerTask.lease_expires_at <= now,
+            )
+            .order_by(WorkerTask.lease_expires_at, WorkerTask.id)
+            .limit(500)
         )
+        candidates = list(identifiers)
+        tasks: list[WorkerTask] = []
+        offset = 0
+        while offset < len(candidates) and len(tasks) < 100:
+            chunk = candidates[offset : offset + 100 - len(tasks)]
+            offset += len(chunk)
+            rows = await self.session.scalars(
+                select(WorkerTask)
+                .where(WorkerTask.id.in_(chunk))
+                .with_hint(WorkerTask, "FORCE INDEX (PRIMARY)", dialect_name="mysql")
+                .order_by(WorkerTask.id)
+                .with_for_update(skip_locked=True)
+                .execution_options(populate_existing=True)
+            )
+            for task in rows:
+                if task.domain != domain or task.status not in {"claimed", "running"}:
+                    continue
+                lease = task.lease_expires_at
+                if lease is None or lease.replace(tzinfo=UTC) > now:
+                    continue
+                tasks.append(task)
+        return tasks
 
     async def claim_pending(self, domain: str) -> WorkerTask | None:
         row = await self.session.scalar(

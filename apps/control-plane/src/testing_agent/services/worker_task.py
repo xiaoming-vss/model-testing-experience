@@ -105,8 +105,9 @@ class WorkerTaskService:
                 lambda session: require_current_worker(session, run, task)
             )
 
-    async def expire_leases(self, domain: str):
-        for task in await self.repository.expired_tasks(domain):
+    async def expire_leases(self, domain: str) -> int:
+        tasks = await self.repository.expired_tasks(domain)
+        for task in tasks:
             if domain == "ai":
                 run = await self.repository.get_ai_run(task.run_id)
                 if run is not None:
@@ -133,12 +134,11 @@ class WorkerTaskService:
                     worker=task,
                 )
         await self.repository.commit()
+        return len(tasks)
 
     async def claim(self, domain: str, body: WorkerClaimRequest) -> dict | None:
         if not body.worker_id or not body.worker_id.strip():
             raise ErrBadRequest()
-        if isinstance(self.repository, WorkerTaskRepository):
-            await self.expire_leases(domain)
         task = await self.repository.claim_pending(domain)
         if task is None:
             return None

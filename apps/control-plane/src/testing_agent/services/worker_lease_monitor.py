@@ -11,27 +11,43 @@ from testing_agent.services.worker_task import WorkerTaskService
 logger = logging.getLogger(__name__)
 
 
-async def sweep_once(session_factory=AsyncSessionLocal):
-    for domain in ("ai", "api", "ui"):
-        async with session_factory() as session:
-            await WorkerTaskService(WorkerTaskRepository(session)).expire_leases(domain)
+async def sweep_once(session_factory=AsyncSessionLocal) -> None:
     from testing_agent.services.integration_lifecycle import lifecycle
 
-    async with session_factory() as session:
-        await lifecycle(session).expire()
-        await session.commit()
+    # Every batch has its own session/transaction. A failed domain cannot prevent another
+    # queue from recovering; durable expiry timestamps are retried on the next tick.
+    for domain in ("ai", "api", "ui", "integration"):
+        try:
+            for _ in range(5):
+                async with session_factory() as session:
+                    if domain == "integration":
+                        recovered = await lifecycle(session).expire()
+                        await session.commit()
+                    else:
+                        recovered = await WorkerTaskService(
+                            WorkerTaskRepository(session)
+                        ).expire_leases(domain)
+                if recovered != 100:
+                    break
+                await asyncio.sleep(0)
+        except Exception as exc:
+            logger.warning(
+                "Worker lease sweep failed for %s (%s); retrying next interval",
+                domain,
+                type(exc).__name__,
+            )
 
 
-async def monitor():
+async def monitor() -> None:
     while True:
-        await asyncio.sleep(5)
+        # Recover persisted expiry immediately after startup, even with no online Worker.
         try:
             await sweep_once()
         except Exception as exc:
-            # Do not log SQL parameters, snapshots or credentials.
             logger.warning(
                 "Worker lease sweep failed (%s); retrying next interval", type(exc).__name__
             )
+        await asyncio.sleep(5)
 
 
 @asynccontextmanager

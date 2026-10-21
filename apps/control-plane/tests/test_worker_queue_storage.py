@@ -371,3 +371,22 @@ async def test_revision_service_preserves_model_without_queue_object_reference(
     assert retried.task_id != revised.task_id
     assert read_worker_context(db, retried).llm_connection_id == "original-model"
     assert worker_input(db, run, retried) == before
+
+
+@pytest.mark.asyncio
+async def test_expired_obsolete_attempt_cannot_fail_new_attempt(db):
+    run, old = create_run(db)
+    event(db, run, old, status="waiting_review", stage="requirement_analysis")
+    current = enqueue(db, run, "revise", "new-revision")
+    old.status = "running"
+    old.lease_expires_at = datetime.now(UTC) - timedelta(minutes=1)
+    db.commit()
+    before = (run.status, run.stage_status)
+    service = WorkerTaskService(WorkerTaskRepository(AsyncSessionAdapter(db)))
+    assert await service.expire_leases("ai") == 1
+    assert old.status == "failed"
+    assert current.status == "pending"
+    assert (run.status, run.stage_status) == before
+    assert (
+        graph(db, run)[1][graph(db, run)[0][0].active_attempt_id].worker_task_id == current.task_id
+    )
