@@ -65,34 +65,7 @@ export function useBugForm({ open, bug, projectId, defaultSprintId, source, onCl
     [requirementsQuery.data],
   )
 
-  const sourceOrdersQuery = useQuery({
-    queryKey: ['testOrders', activeProjectId, 'forBug'],
-    queryFn: () => api.getProjectTestOrders(activeProjectId!),
-    enabled: open && !isEdit && !source && Boolean(activeProjectId),
-  })
-  const orderOptions = useMemo(
-    () =>
-      listItems(sourceOrdersQuery.data).map((order) => ({
-        label: order.name,
-        value: order.orderId,
-      })),
-    [sourceOrdersQuery.data],
-  )
-
   const selectedOrderId = Form.useWatch('sourceOrderId', form)
-  const entriesQuery = useQuery({
-    queryKey: ['testOrderEntries', selectedOrderId, 'forBug'],
-    queryFn: () => api.getTestOrderEntries(selectedOrderId!),
-    enabled: open && !isEdit && !source && Boolean(selectedOrderId),
-  })
-  const entryOptions = useMemo(
-    () =>
-      listItems(entriesQuery.data).map((entry) => ({
-        label: entry.caseTitle || entry.caseId,
-        value: entry.entryId,
-      })),
-    [entriesQuery.data],
-  )
 
   useEffect(() => {
     if (!open) return
@@ -170,6 +143,6 @@ export function useBugForm({ open, bug, projectId, defaultSprintId, source, onCl
   })
   return { removedAttachmentFileIds, setRemovedAttachmentFileIds, form, isEdit, descriptionHtml, setDescriptionHtml, attachments, setAttachments,
     activeProjectId, projectsQuery, sprintsQuery, sprints, memberOptions, membersQuery,
-    requirementOptions, requirementsQuery, orderOptions, sourceOrdersQuery, selectedOrderId,
-    entryOptions, entriesQuery, saveMutation }
+    requirementOptions, requirementsQuery, selectedOrderId,
+    saveMutation }
 }

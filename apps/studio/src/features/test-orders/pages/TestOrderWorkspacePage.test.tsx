@@ -1,10 +1,11 @@
+import type { TestOrderEntry } from '../types'
 import { ConfigProvider } from 'antd'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { api, type User } from '@/services/api'
 import { TestOrderWorkspacePage } from './TestOrderWorkspacePage'
 
@@ -48,7 +49,11 @@ const entry = {
 }
 
 function listResponse<T>(items: T[]) {
-  return Object.assign([...items], { items, total: items.length })
+  return Object.assign([...items], { items, total: items.length, page: 1, pageSize: 20,
+    matchedTotal: items.length, orderTotal: items.length, mineCount: 0,
+    preferredEntryId: (items.find((item) => (item as typeof entry).status === 'pending') as typeof entry)?.entryId ?? (items[0] as typeof entry)?.entryId ?? '',
+    statusCounts: Object.fromEntries(['pending', 'passed', 'failed', 'blocked', 'skipped'].map((status) => [status, items.filter((item) => (item as typeof entry).status === status).length])),
+  })
 }
 
 function renderWorkspace(client: QueryClient, initialEntry = '/') {
@@ -71,6 +76,14 @@ function seedAccess(client: QueryClient, role: 'owner' | 'member') {
         : ['read', 'write', 'execute', 'review'],
   })
 }
+
+beforeEach(() => {
+  vi.spyOn(api, 'getTestOrderEntry').mockImplementation(async (_, id) => {
+    const response = await vi.mocked(api.getTestOrderEntries).mock.results.at(-1)?.value
+    return response?.items.find((item: typeof entry) => item.entryId === id) ?? entry
+  })
+  vi.spyOn(api, 'lookupTestOrderEntries').mockResolvedValue(listResponse([]))
+})
 
 afterEach(() => {
   cleanup()
@@ -98,7 +111,7 @@ it('判定整条用例即时保存并显示已保存', async () => {
   expect(screen.getByRole('button', { name: '未执行 1' })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /批量标记通过/ })).not.toBeInTheDocument()
   await user.click(screen.getByRole('checkbox', { name: '选择第 1 条执行条目' }))
-  expect(screen.getByText('已选 1 条')).toBeInTheDocument()
+  expect(screen.getByText('已选 1 条（跨页）')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: /批量标记通过/ })).toBeEnabled()
   await user.click(screen.getByRole('checkbox', { name: '选择第 1 条执行条目' }))
   expect(screen.queryByRole('button', { name: /批量标记通过/ })).not.toBeInTheDocument()
@@ -305,5 +318,35 @@ it('从 Bug 详情跳转时选中指定执行条目', async () => {
   renderWorkspace(client, '/test-orders/order-1?entryId=entry-2')
   expect(await screen.findByText('指定来源的执行前置条件')).toBeInTheDocument()
   expect(screen.queryByText('已注册手机号')).not.toBeInTheDocument()
+  client.clear()
+})
+
+it('定位第二页详情，保留跨页选择，并支持键盘跨页', async () => {
+  useAuthStore.setState({ user: { userId: 'user-1', nickname: '张三' } as User })
+  const all = Array.from({ length: 25 }, (_, index) => ({ ...entry, entryId: `entry-${index + 1}`, caseId: `case-${index + 1}`, caseTitle: `page case ${index + 1}`, orderNo: index + 1 }))
+  vi.spyOn(api, 'getTestOrder').mockResolvedValue({ ...order, entriesTotal: 25 })
+  const lists = vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async (_, filters = {}) => {
+    const focus = all.findIndex((item) => item.entryId === filters.focusEntryId)
+    const page = focus >= 0 ? Math.floor(focus / 20) + 1 : filters.page ?? 1
+    const items = all.slice((page - 1) * 20, page * 20).map((item) => { const summary: TestOrderEntry = { ...item }; delete summary.snapshot; return summary })
+    return { ...listResponse(items), items, page, total: 25, orderTotal: 25, matchedTotal: 25, preferredEntryId: focus >= 0 ? all[focus].entryId : items[0]?.entryId ?? '' }
+  })
+  const details = vi.spyOn(api, 'getTestOrderEntry').mockImplementation(async (_, id) => all.find((item) => item.entryId === id)!)
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedAccess(client, 'owner')
+  renderWorkspace(client, '/?entryId=entry-24')
+  await screen.findByText('第 24 / 25 条')
+  expect(details).toHaveBeenCalledWith('order-1', 'entry-24')
+  expect(lists).toHaveBeenCalledWith('order-1', expect.objectContaining({ focusEntryId: 'entry-24' }))
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('checkbox', { name: '选择第 24 条执行条目' }))
+  await user.click(screen.getByTitle('1'))
+  await user.click(await screen.findByRole('checkbox', { name: '选择第 1 条执行条目' }))
+  expect(screen.getByText('已选 2 条（跨页）')).toBeVisible()
+  await user.click(screen.getByRole('button', { name: /page case 20/ }))
+  await user.keyboard('{ArrowDown}')
+  const next = await screen.findByRole('button', { name: /page case 21/ })
+  await waitFor(() => expect(next).toHaveFocus())
+  expect(details).toHaveBeenCalledWith('order-1', 'entry-21')
   client.clear()
 })

@@ -1,3 +1,4 @@
+import type { TestOrderEntrySummary } from '../types'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { toRecord } from '@/shared/utils/value'
 import { Alert, Button, Empty, Segmented, Spin, Tag, Typography } from 'antd'
@@ -83,23 +84,6 @@ export function TestOrderGraphViewer({
         ? GRAPH_POLL_INTERVAL
         : false,
   })
-  const entriesQuery = useQuery({
-    queryKey: ['testOrderEntries', orderId],
-    queryFn: () => api.getTestOrderEntries(orderId),
-    enabled: Boolean(orderId),
-    refetchOnWindowFocus: true,
-  })
-  const entriesByCase = useMemo(() => new Map(listItems(entriesQuery.data).map((entry) => [entry.caseId, entry])), [entriesQuery.data])
-  const caseBadges = useMemo(() => Object.fromEntries(listItems(entriesQuery.data)
-    .filter((entry) => entry.caseId)
-    .map((entry) => [entry.caseId!, getTestOrderEntryStatusMeta(entry.status)])), [entriesQuery.data])
-  const renderExecutionPanel = (caseId: string) => {
-    if (entriesQuery.isPending) return <Spin tip="加载执行条目…" />
-    if (entriesQuery.isError) return <Alert type="error" title="执行条目加载失败" action={<Button onClick={() => void entriesQuery.refetch()}>重试</Button>} />
-    const entry = entriesByCase.get(caseId)
-    if (!entry?.entryId) return <Alert type="info" title="此用例已不在当前测试单中，无法执行，请刷新或重新生成图谱" />
-    return <TestOrderGraphExecutionPanel key={`${orderId}:${entry.entryId}`} orderId={orderId} entry={entry} canExecute={canExecute} currentUserId={currentUserId} isProjectOwner={isProjectOwner} />
-  }
   const run = graphQuery.data?.run ?? null
   const inProgress = isApiCaseGenerateTaskRunInProgress(run?.status)
   const statusMeta = getApiCaseGenerateTaskRunStatusMeta(run?.status)
@@ -109,8 +93,33 @@ export function TestOrderGraphViewer({
     const data = parseCaseRelationsContent(graphContent)
     if (!data) return null
     const model = buildRelationsGraphModel(data, parseDetailedCaseMeta(casesContent))
-    return { caseCount: model.nodes.length, edgeCount: model.edges.length, pathCount: model.paths.length }
+    return { caseIds: model.nodes.map((node) => node.caseId), caseCount: model.nodes.length, edgeCount: model.edges.length, pathCount: model.paths.length }
   }, [graphContent, casesContent])
+
+  const entriesQuery = useQuery({
+    queryKey: ['testOrderEntries', orderId, 'graph', stats?.caseIds],
+    queryFn: async () => {
+      const ids = stats?.caseIds ?? []
+      const entries: TestOrderEntrySummary[] = []
+      for (let offset = 0; offset < ids.length; offset += 500) {
+        entries.push(...listItems(await api.lookupTestOrderEntries(orderId, ids.slice(offset, offset + 500))))
+      }
+      return entries
+    },
+    enabled: Boolean(orderId) && Boolean(stats?.caseIds.length),
+    refetchOnWindowFocus: true,
+  })
+  const entriesByCase = useMemo(() => new Map(listItems(entriesQuery.data).map((entry) => [entry.caseId, entry])), [entriesQuery.data])
+  const caseBadges = useMemo(() => Object.fromEntries(listItems(entriesQuery.data)
+    .filter((entry) => entry.caseId)
+    .map((entry) => [entry.caseId!, getTestOrderEntryStatusMeta(entry.status)])), [entriesQuery.data])
+  const renderExecutionPanel = (caseId: string) => {
+    if (entriesQuery.isPending) return <Spin description="加载执行条目…" />
+    if (entriesQuery.isError) return <Alert type="error" title="执行条目加载失败" action={<Button onClick={() => void entriesQuery.refetch()}>重试</Button>} />
+    const entry = entriesByCase.get(caseId)
+    if (!entry?.entryId) return <Alert type="info" title="此用例已不在当前测试单中，无法执行，请刷新或重新生成图谱" />
+    return <TestOrderGraphExecutionPanel key={`${orderId}:${entry.entryId}`} orderId={orderId} entry={entry} canExecute={canExecute} currentUserId={currentUserId} isProjectOwner={isProjectOwner} />
+  }
 
   const handleSelectionChange = useCallback((caseId: string | null) => setHasSelection(Boolean(caseId)), [])
 

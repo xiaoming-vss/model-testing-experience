@@ -10,6 +10,9 @@ from support.order_api import (
     entries_of as entries_of,
 )
 from support.order_api import (
+    entry_detail as entry_detail,
+)
+from support.order_api import (
     make_order as make_order,
 )
 from support.order_api import (
@@ -99,6 +102,8 @@ def test_adds_library_cases_as_entries_with_a_snapshot(api):
     assert entry["caseTitle"] == "登录成功"
     assert entry["caseModule"] == "登录"
     assert entry["casePriority"] == "P0"
+    assert "snapshot" not in entry
+    entry = entry_detail(api, owner, order["orderId"], entry["entryId"])
     assert entry["snapshot"]["preconditions"] == ["已注册"]
     assert entry["snapshot"]["steps"][0]["action"] == "输入验证码"
 
@@ -115,7 +120,8 @@ def test_adds_library_cases_as_entries_with_a_snapshot(api):
         },
     )
     assert patched.status_code == 200, patched.text
-    entry_after = entries_of(api, owner, order["orderId"])["items"][0]
+    summary = entries_of(api, owner, order["orderId"])["items"][0]
+    entry_after = entry_detail(api, owner, order["orderId"], summary["entryId"])
     assert entry_after["snapshot"]["preconditions"] == ["已注册"]
     assert entry_after["snapshot"]["steps"][0]["action"] == "输入验证码"
     assert entry_after["caseTitle"] == "改过的标题"
@@ -454,7 +460,8 @@ def test_judging_a_case_sets_its_status_and_records_results(api):
     assert refreshed["status"] == "completed"
 
     # 重新打开工作台时，条目带着快照与判定结果
-    entry_after = entries_of(api, owner, order["orderId"])["items"][0]
+    summary = entries_of(api, owner, order["orderId"])["items"][0]
+    entry_after = entry_detail(api, owner, order["orderId"], summary["entryId"])
     assert entry_after["snapshot"]["steps"][1]["action"] == "第二步"
     assert entry_after["status"] == "blocked"
 

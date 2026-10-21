@@ -43,6 +43,7 @@ export type TestOrderEntry = {
   requirementId?: string
   requirementName?: string
   orderNo?: number
+  stepCount?: number
   status?: TestOrderEntryStatus | string
   /** 分配执行人；空串表示未分配，仅项目所有者可分配与改派。 */
   assigneeUserId?: string
@@ -57,6 +58,18 @@ export type TestOrderEntry = {
   created_at?: string
   updatedAt?: string
   updated_at?: string
+}
+
+export type TestOrderEntrySummary = Omit<TestOrderEntry, 'snapshot' | 'actualResults' | 'failureReason' | 'blockReason' | 'zentaoBugId'>
+export type TestOrderPage = { items: TestOrder[]; total: number; page: number; pageSize: number }
+export type TestOrderEntryPage = {
+  items: TestOrderEntrySummary[]; total: number; page: number; pageSize: number
+  statusCounts: Record<string, number>; matchedTotal: number; orderTotal: number
+  mineCount: number; preferredEntryId: string
+}
+export type TestOrderEntryFilters = {
+  page?: number; pageSize?: number; keyword?: string; status?: string; onlyMine?: boolean
+  focusEntryId?: string; resume?: boolean; afterEntryId?: string
 }
 
 export type AddTestOrderCasesResult = {

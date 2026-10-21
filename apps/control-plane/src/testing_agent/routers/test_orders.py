@@ -11,10 +11,12 @@ from testing_agent.handlers.test_order import (
     delete_test_order_entry,
     dispatch_test_order_graph,
     get_test_order,
+    get_test_order_entry,
     get_test_order_graph,
     get_test_order_graph_input,
     list_project_test_orders,
     list_test_order_entries,
+    lookup_test_order_entries,
     update_test_order,
     update_test_order_entry,
 )
@@ -23,9 +25,12 @@ from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
 from testing_agent.schemas.test_order import (
     TestOrderAddCasesResponse,
     TestOrderEntriesBatchMarkResponse,
+    TestOrderEntryPageResponse,
     TestOrderEntryResponse,
+    TestOrderEntrySummary,
     TestOrderGraphInputResponse,
     TestOrderGraphResponse,
+    TestOrderPageResponse,
     TestOrderResponse,
 )
 
@@ -37,7 +42,7 @@ router.post(
 )(create_test_order)
 router.get(
     "/projects/{project_id}/test-orders",
-    response_model=ApiResponse[ListResponse[TestOrderResponse]],
+    response_model=ApiResponse[TestOrderPageResponse],
 )(list_project_test_orders)
 router.get(
     "/test-orders/{order_id}",
@@ -53,8 +58,16 @@ router.delete(
 )(delete_test_order)
 router.get(
     "/test-orders/{order_id}/entries",
-    response_model=ApiResponse[ListResponse[TestOrderEntryResponse]],
+    response_model=ApiResponse[TestOrderEntryPageResponse],
 )(list_test_order_entries)
+router.get(
+    "/test-orders/{order_id}/entries/{entry_id}",
+    response_model=ApiResponse[TestOrderEntryResponse],
+)(get_test_order_entry)
+router.post(
+    "/test-orders/{order_id}/entries/lookup",
+    response_model=ApiResponse[ListResponse[TestOrderEntrySummary]],
+)(lookup_test_order_entries)
 router.post(
     "/test-orders/{order_id}/cases",
     response_model=ApiResponse[TestOrderAddCasesResponse],

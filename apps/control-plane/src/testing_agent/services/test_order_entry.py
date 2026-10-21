@@ -10,6 +10,7 @@ from testing_agent.core.enums import TEST_ORDER_ENTRY_TERMINAL_STATUSES, TestOrd
 from testing_agent.core.errors import (
     ErrBadRequest,
     ErrFunctionTestCaseNotFound,
+    ErrNotFound,
     ErrTestOrderAssigneeInvalid,
     ErrTestOrderCaseMismatch,
     ErrTestOrderEntryAssigneeLocked,
@@ -18,10 +19,12 @@ from testing_agent.core.errors import (
 )
 from testing_agent.core.sid import new_id
 from testing_agent.domain.function_case_content import CaseContent
+from testing_agent.domain.test_order_query import EntryQuery
 from testing_agent.models.test_order import TestOrder
 from testing_agent.models.test_order_entry import TestOrderEntry
 from testing_agent.repositories.test_order_entry import FUNCTION_CASE_TYPE, TestOrderEntryRepository
-from testing_agent.schemas.test_order import TestOrderEntryResponse
+from testing_agent.repositories.test_order_reads import STATUSES, TestOrderReadRepository
+from testing_agent.schemas.test_order import TestOrderEntryResponse, TestOrderEntrySummary
 from testing_agent.services.common import dump, list_payload
 from testing_agent.services.project_access import ProjectAction
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
@@ -45,7 +48,11 @@ class TestOrderEntryService:
     async def ensure_order_access(
         self, user_id: str, order_id: str, *, action: ProjectAction = "read"
     ) -> TestOrder:
-        return await self.orders.get_accessible_entity(user_id, order_id, action=action)
+        order = await self.repository.get_test_order(order_id)
+        if order is None:
+            raise ErrNotFound()
+        await self.orders.ensure_sprint_access(user_id, order.sprint_id, action=action)
+        return order
 
     async def add_cases(self, user_id: str, order_id: str, case_ids: list[str]) -> dict:
         """把用例库里的用例加入测试单：快照加入时的内容，已存在的跳过。"""
@@ -144,10 +151,38 @@ class TestOrderEntryService:
         await self.repository.commit()
         return {"markedCount": marked, "skippedCount": len(entries) - marked}
 
-    async def list(self, user_id: str, order_id: str) -> dict[str, Any]:
+    async def list(
+        self, user_id: str, order_id: str, query: EntryQuery | None = None
+    ) -> dict[str, Any]:
         await self.ensure_order_access(user_id, order_id, action="read")
-        entries = await self.repository.list_by_order(order_id)
-        return list_payload([dump(TestOrderEntryResponse, entry) for entry in entries])
+        query = query or EntryQuery()
+        if (
+            query.page < 1
+            or not 1 <= query.page_size <= 100
+            or (query.status and query.status not in STATUSES)
+        ):
+            raise ErrBadRequest()
+        result = await TestOrderReadRepository(self.repository.session).page(
+            order_id, user_id, query
+        )
+        result["items"] = [dump(TestOrderEntrySummary, row) for row in result["items"]]
+        return result
+
+    async def detail(self, user_id: str, order_id: str, entry_id: str) -> dict[str, Any]:
+        await self.ensure_order_access(user_id, order_id, action="read")
+        row = await TestOrderReadRepository(self.repository.session).detail(order_id, entry_id)
+        if row is None:
+            raise ErrTestOrderEntryNotFound()
+        return dump(TestOrderEntryResponse, row)
+
+    async def lookup(
+        self, user_id: str, order_id: str, case_ids: builtins.list[str]
+    ) -> dict[str, Any]:
+        await self.ensure_order_access(user_id, order_id, action="read")
+        if not case_ids or len(case_ids) > 500 or any(not value.strip() for value in case_ids):
+            raise ErrBadRequest()
+        rows = await TestOrderReadRepository(self.repository.session).lookup(order_id, case_ids)
+        return list_payload([dump(TestOrderEntrySummary, row) for row in rows])
 
     async def assign(
         self,

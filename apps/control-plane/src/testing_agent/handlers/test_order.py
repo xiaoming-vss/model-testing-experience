@@ -9,10 +9,12 @@ from testing_agent.api.deps import (
     get_test_order_service,
 )
 from testing_agent.core.errors import success_payload
+from testing_agent.domain.test_order_query import EntryQuery
 from testing_agent.schemas.test_order import (
     TestOrderAddCasesRequest,
     TestOrderAssignRequest,
     TestOrderEntriesBatchMarkRequest,
+    TestOrderEntryLookupRequest,
     TestOrderEntryUpdateRequest,
     TestOrderGraphRequest,
     TestOrderRequest,
@@ -35,10 +37,22 @@ async def create_test_order(
 async def list_project_test_orders(
     project_id: str,
     sprint_id: str = Query(default="", alias="sprintId"),
+    keyword: str = Query(default="", max_length=255),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100, alias="pageSize"),
     user_id: str = Depends(get_current_user_id),
     service: TestOrderService = Depends(get_test_order_service),
 ):
-    return success_payload(await service.list_project(user_id, project_id, sprint_id=sprint_id))
+    return success_payload(
+        await service.list_project(
+            user_id,
+            project_id,
+            sprint_id=sprint_id,
+            keyword=keyword,
+            page=page,
+            page_size=page_size,
+        )
+    )
 
 
 async def get_test_order(
@@ -70,10 +84,51 @@ async def delete_test_order(
 
 async def list_test_order_entries(
     order_id: str,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100, alias="pageSize"),
+    keyword: str = Query(default="", max_length=255),
+    status: str = Query(default="", pattern=r"^(pending|passed|failed|blocked|skipped)?$"),
+    only_mine: bool = Query(default=False, alias="onlyMine"),
+    focus_entry_id: str = Query(default="", max_length=64, alias="focusEntryId"),
+    resume: bool = Query(default=False),
+    after_entry_id: str = Query(default="", max_length=64, alias="afterEntryId"),
     user_id: str = Depends(get_current_user_id),
     service: TestOrderEntryService = Depends(get_test_order_entry_service),
 ):
-    return success_payload(await service.list(user_id, order_id))
+    return success_payload(
+        await service.list(
+            user_id,
+            order_id,
+            EntryQuery(
+                page,
+                page_size,
+                keyword,
+                status,
+                only_mine,
+                focus_entry_id,
+                resume,
+                after_entry_id,
+            ),
+        )
+    )
+
+
+async def get_test_order_entry(
+    order_id: str,
+    entry_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: TestOrderEntryService = Depends(get_test_order_entry_service),
+):
+    return success_payload(await service.detail(user_id, order_id, entry_id))
+
+
+async def lookup_test_order_entries(
+    order_id: str,
+    body: TestOrderEntryLookupRequest,
+    user_id: str = Depends(get_current_user_id),
+    service: TestOrderEntryService = Depends(get_test_order_entry_service),
+):
+    return success_payload(await service.lookup(user_id, order_id, body.case_ids))
 
 
 async def add_test_order_cases(

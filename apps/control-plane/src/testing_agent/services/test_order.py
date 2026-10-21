@@ -18,7 +18,7 @@ from testing_agent.models.test_order_entry import TestOrderEntry
 from testing_agent.repositories.test_order import TestOrderRepository
 from testing_agent.repositories.test_order_entry import TestOrderEntryRepository
 from testing_agent.schemas.test_order import TestOrderRequest, TestOrderResponse
-from testing_agent.services.common import apply_patch, dump, list_payload
+from testing_agent.services.common import apply_patch, dump
 from testing_agent.services.project_access import ProjectAction, require_project_access
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 
@@ -140,14 +140,34 @@ class TestOrderService:
         await self.entry_repository.commit()
 
     async def list_project(
-        self, user_id: str, project_id: str, *, sprint_id: str = ""
+        self,
+        user_id: str,
+        project_id: str,
+        *,
+        sprint_id: str = "",
+        keyword: str = "",
+        page: int = 1,
+        page_size: int = 20,
     ) -> dict[str, Any]:
         project = await self.repository.get_project(project_id)
         if project is None:
             raise ErrNotFound()
         await require_project_access(self.repository.session, user_id, project, action="read")
-        orders = await self.repository.list_by_project(project_id, sprint_id=sprint_id.strip())
-        return list_payload([dump(TestOrderResponse, order) for order in orders])
+        if page < 1 or not 1 <= page_size <= 100:
+            raise AppError(400, "分页参数不合法", 400)
+        orders, total, current_page = await self.repository.page_by_project(
+            project_id,
+            sprint_id=sprint_id.strip(),
+            keyword=keyword,
+            page=page,
+            page_size=page_size,
+        )
+        return {
+            "items": [dump(TestOrderResponse, order) for order in orders],
+            "total": total,
+            "page": current_page,
+            "pageSize": page_size,
+        }
 
     async def get(self, user_id: str, order_id: str) -> dict:
         return dump(

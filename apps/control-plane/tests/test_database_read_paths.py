@@ -264,3 +264,91 @@ async def test_selected_function_export_batches_sql_and_preserves_requested_orde
     assert missing.value.http_code == 404
     with pytest.raises(AppError, match="不属于当前测试集"):
         await exporter.resolve_cases_for_zentao_import("foreign-suite", ["export-0"])
+
+
+async def test_order_entry_pages_project_summaries_and_preserve_focus_and_counts(database):
+    from testing_agent.domain.test_order_query import EntryQuery
+    from testing_agent.models.function_test_case import FunctionTestCase
+    from testing_agent.models.function_test_suite import FunctionTestSuite
+    from testing_agent.models.test_order import TestOrder
+    from testing_agent.models.test_order_entry import TestOrderEntry
+    from testing_agent.repositories.test_order_reads import TestOrderReadRepository
+
+    sync, session, sql = database
+    sync.add(FunctionTestSuite(suite_id="page-suite", requirement_id="req", name="pages"))
+    sync.add_all(
+        [
+            TestOrder(order_id=key, project_id="p", sprint_id="s", name=key)
+            for key in ("order", "foreign")
+        ]
+    )
+    sync.flush()
+    body = {"preconditions": ["BODY" * 10000], "steps": []}
+    sync.add_all(
+        [
+            FunctionTestCase(
+                case_id=f"page-{i}",
+                suite_id="page-suite",
+                title=f"case {i}",
+                module="50%_done" if i == 50 else "module",
+                content_json=body,
+            )
+            for i in range(52)
+        ]
+    )
+    sync.flush()
+    sync.add_all(
+        [
+            TestOrderEntry(
+                entry_id=f"entry-{i}",
+                order_id="order" if i < 51 else "foreign",
+                case_id=f"page-{i}",
+                order_no=i // 2,
+                snapshot_json=body,
+                status="passed" if i < 35 else "pending",
+                assignee_user_id="u" if i % 2 == 0 else "",
+            )
+            for i in range(52)
+        ]
+    )
+    sync.commit()
+    reader = TestOrderReadRepository(session)
+    sql.clear()
+    first = await reader.page("order", "u", EntryQuery())
+    assert first["total"] == first["orderTotal"] == 51
+    assert first["mineCount"] == 26 and len(first["items"]) == 20
+    assert [row["entry_id"] for row in first["items"]] == [f"entry-{i}" for i in range(20)]
+    assert first["statusCounts"] == {
+        "pending": 16,
+        "passed": 35,
+        "failed": 0,
+        "blocked": 0,
+        "skipped": 0,
+    }
+    assert len(sql) == 3
+    assert all(
+        "snapshot_json" not in statement and "content_json" not in statement for statement in sql
+    )
+    assert len(json.dumps(first, default=str)) < 18000
+    assert all("snapshot" not in row for row in first["items"])
+    resumed = await reader.page("order", "u", EntryQuery(resume=True))
+    assert resumed["page"] == 2 and resumed["preferredEntryId"] == "entry-35"
+    focused = await reader.page("order", "u", EntryQuery(focus_entry_id="entry-50"))
+    assert focused["page"] == 3 and focused["preferredEntryId"] == "entry-50"
+    following = await reader.page("order", "u", EntryQuery(resume=True, after_entry_id="entry-35"))
+    assert following["preferredEntryId"] == "entry-36"
+    assert (await reader.page("order", "u", EntryQuery(resume=True, after_entry_id="entry-50")))[
+        "preferredEntryId"
+    ] == ""
+    assert (await reader.page("order", "u", EntryQuery(page=999)))["page"] == 3
+    mine = await reader.page("order", "u", EntryQuery(only_mine=True, status="pending"))
+    assert mine["total"] == 8 and mine["matchedTotal"] == 26 and mine["mineCount"] == 26
+    literal = await reader.page("order", "u", EntryQuery(keyword="%_"))
+    assert literal["total"] == 1 and literal["items"][0]["entry_id"] == "entry-50"
+    assert (await reader.page("order", "u", EntryQuery(keyword="no-match")))["total"] == 0
+    assert [
+        row["entry_id"] for row in await reader.lookup("order", ["page-0", "page-50", "page-51"])
+    ] == ["entry-0", "entry-50"]
+    assert await reader.detail("order", "entry-51") is None
+    detail = await reader.detail("order", "entry-0")
+    assert detail["snapshot"] == body

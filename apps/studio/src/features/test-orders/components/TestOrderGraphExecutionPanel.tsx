@@ -1,4 +1,6 @@
-import { Alert, Button, Input, Tag, Typography } from 'antd'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@/services/api'
+import { Alert, Button, Input, Spin, Tag, Typography } from 'antd'
 import { useState } from 'react'
 import { formatTime } from '@/utils/format'
 import { useTestOrderEntrySave } from '../hooks/useTestOrderEntrySave'
@@ -18,7 +20,18 @@ type Props = {
 }
 
 /** Mount per entry so drafts and save feedback never leak into another card. */
-export function TestOrderGraphExecutionPanel({ orderId, entry, canExecute, currentUserId, isProjectOwner }: Props) {
+export function TestOrderGraphExecutionPanel(props: Props) {
+  const detail = useQuery({
+    queryKey: ['testOrderEntry', props.orderId, props.entry.entryId],
+    queryFn: () => api.getTestOrderEntry(props.orderId, props.entry.entryId!),
+    enabled: Boolean(props.entry.entryId),
+  })
+  if (detail.isPending) return <Spin description="加载执行详情…" />
+  if (detail.isError) return <Alert type="error" title="执行详情加载失败" action={<Button onClick={() => void detail.refetch()}>重试</Button>} />
+  return <TestOrderGraphExecutionContent {...props} entry={detail.data} />
+}
+
+function TestOrderGraphExecutionContent({ orderId, entry, canExecute, currentUserId, isProjectOwner }: Props) {
   const mutation = useTestOrderEntrySave(orderId)
   const [draft, setDraft] = useState<UpdateTestOrderEntryPayload>({})
   const locked = isTestOrderEntryLocked(entry.assigneeUserId, currentUserId, isProjectOwner)

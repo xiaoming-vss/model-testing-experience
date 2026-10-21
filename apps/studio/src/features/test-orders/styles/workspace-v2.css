@@ -368,3 +368,14 @@
 
 .test-order-inline-graph { flex: 1; min-width: 0; min-height: 0; display: flex; overflow: hidden; }
 .test-order-inline-graph > .test-order-graph-viewer { flex: 1; min-width: 0; min-height: 0; }
+
+.test-order-entry-pagination.table-footer {
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.test-order-entry-pagination.table-footer > .ant-pagination {
+  margin-left: 0;
+  max-width: 100%;
+}

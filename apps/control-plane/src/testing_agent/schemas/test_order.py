@@ -42,7 +42,7 @@ class TestOrderResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True, alias_generator=to_camel)
 
 
-class TestOrderEntryResponse(BaseModel):
+class TestOrderEntrySummary(BaseModel):
     entry_id: str = Field()
     order_id: str = Field()
     case_type: str = Field(default="function")
@@ -54,18 +54,55 @@ class TestOrderEntryResponse(BaseModel):
     requirement_id: str = Field(default="")
     requirement_name: str = Field(default="")
     order_no: int = Field(default=0)
+    step_count: int = Field(default=0)
     status: str = Field(default="")
     assignee_user_id: str = Field(default="")
-    actual_results: str = Field(default="")
-    failure_reason: str = Field(default="")
-    block_reason: str = Field(default="")
-    zentao_bug_id: str = Field(default="")
     executor_user_id: str = Field(default="")
     executed_at: datetime | str | None = Field(default=None)
-    snapshot: CaseContent | None = None
     created_at: datetime | str | None = Field(default="")
     updated_at: datetime | str | None = Field(default="")
     model_config = ConfigDict(from_attributes=True, populate_by_name=True, alias_generator=to_camel)
+
+
+class TestOrderEntryResponse(TestOrderEntrySummary):
+    actual_results: str = ""
+    failure_reason: str = ""
+    block_reason: str = ""
+    zentao_bug_id: str = ""
+    snapshot: CaseContent | None = None
+
+
+class TestOrderPageResponse(BaseModel):
+    items: list[TestOrderResponse]
+    total: int
+    page: int
+    page_size: int
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class TestOrderEntryPageResponse(BaseModel):
+    items: list[TestOrderEntrySummary]
+    total: int
+    page: int
+    page_size: int
+    status_counts: dict[str, int]
+    matched_total: int
+    order_total: int
+    mine_count: int
+    preferred_entry_id: str
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class TestOrderEntryLookupRequest(BaseModel):
+    case_ids: list[str] = Field(min_length=1, max_length=500)
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
+
+    @field_validator("case_ids")
+    @classmethod
+    def validate_ids(cls, values: list[str]) -> list[str]:
+        if any(not value.strip() for value in values):
+            raise ValueError("caseIds must contain non-empty IDs")
+        return list(dict.fromkeys(value.strip() for value in values))
 
 
 class TestOrderEntryUpdateRequest(BaseModel):

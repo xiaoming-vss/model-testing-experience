@@ -23,7 +23,7 @@ function renderPage(role: 'owner' | 'viewer' | 'developer') {
   vi.spyOn(api, 'getTestOrder').mockResolvedValue({ orderId: 'order-1', name: '1.2.0-b', projectId: 'project-1', sprintId: 'sprint-1', entriesTotal: 78, entriesExecuted: 1, entriesFailed: 1 })
   vi.spyOn(api, 'getSprint').mockResolvedValue({ name: 'v1.2.0', status: 'running' })
   vi.spyOn(api, 'getTestOrderGraph').mockResolvedValue({ orderId: 'order-1', run: null })
-  vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(Object.assign([], { items: [], total: 0 }))
+  vi.spyOn(api, 'lookupTestOrderEntries').mockResolvedValue(Object.assign([], { items: [], total: 0 }))
   render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/test-orders/order-1/graph']}><Routes><Route path="/test-orders/:orderId/graph" element={<TestOrderGraphPage />} /></Routes></MemoryRouter></QueryClientProvider>)
   return client
 }
@@ -54,6 +54,6 @@ it('缺少项目 read 权限时不加载图谱和执行条目', async () => {
   const client = renderPage('developer')
   expect(await screen.findByText('没有查看此测试单图谱的权限')).toBeVisible()
   expect(api.getTestOrderGraph).not.toHaveBeenCalled()
-  expect(api.getTestOrderEntries).not.toHaveBeenCalled()
+  expect(api.lookupTestOrderEntries).not.toHaveBeenCalled()
   client.clear()
 })

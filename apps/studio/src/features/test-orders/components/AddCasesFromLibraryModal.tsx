@@ -146,7 +146,13 @@ export function AddCasesFromLibraryModal({
   })
   const cases = listItems(casesQuery.data)
   const total = listTotal(casesQuery.data)
-  const existingIds = new Set(existingCaseIds.filter(Boolean))
+  const pageCaseIds = cases.map((item) => normalizeFunctionTestCaseId(item)).filter(Boolean)
+  const membershipQuery = useQuery({
+    queryKey: ['testOrderEntries', orderId, 'membership', pageCaseIds],
+    queryFn: () => api.lookupTestOrderEntries(orderId!, pageCaseIds),
+    enabled: open && Boolean(orderId) && pageCaseIds.length > 0,
+  })
+  const existingIds = new Set((membershipQuery.data ? listItems(membershipQuery.data).map((entry) => entry.caseId ?? '') : existingCaseIds).filter(Boolean))
 
   const addMutation = useMutation({
     mutationFn: () => api.addTestOrderCases(orderId!, selectedCaseIds),
@@ -327,6 +333,7 @@ export function AddCasesFromLibraryModal({
             onChange={(event) => setKeywordInput(event.target.value)}
           />
         </div>
+        {membershipQuery.error ? <Alert showIcon type="error" title="已有用例核对失败" action={<Button onClick={() => void membershipQuery.refetch()}>重试</Button>} /> : null}
         {casesQuery.error ? (
           <Alert showIcon type="error" title={getErrorMessage(casesQuery.error)} />
         ) : null}
@@ -352,7 +359,7 @@ export function AddCasesFromLibraryModal({
             getCheckboxProps: (item) => {
               const caseId = normalizeFunctionTestCaseId(item)
               return {
-                disabled: !caseId || existingIds.has(caseId),
+                disabled: membershipQuery.isFetching || membershipQuery.isError || !caseId || existingIds.has(caseId),
                 'aria-label': `选择用例：${item.title}`,
               }
             },

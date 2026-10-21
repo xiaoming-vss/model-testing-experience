@@ -1,6 +1,7 @@
+import { PagedSelect } from "@/shared/components/PagedSelect"
 import { Button, Drawer, Form, Input, Select, Space } from 'antd'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { api, listItems } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
@@ -35,20 +36,6 @@ export function TestOrderDrawer({
   const [form] = Form.useForm<FormValues>()
   const queryClient = useQueryClient()
   const isEdit = Boolean(order?.orderId)
-
-  const sourceOrdersQuery = useQuery({
-    queryKey: ['testOrders', projectId, 'forRetest'],
-    queryFn: () => api.getProjectTestOrders(projectId!),
-    enabled: open && !isEdit && Boolean(projectId),
-  })
-  const sourceOptions = useMemo(
-    () =>
-      listItems(sourceOrdersQuery.data).map((item) => ({
-        label: `${item.name}${item.testedVersion ? ` · ${item.testedVersion}` : ''}`,
-        value: item.orderId!,
-      })),
-    [sourceOrdersQuery.data],
-  )
 
   useEffect(() => {
     if (!open) return
@@ -127,12 +114,14 @@ export function TestOrderDrawer({
             name="sourceOrderId"
             extra="只带入结果非「通过」的条目，新测试单从「未执行」开始；不保留与来源单的关联。"
           >
-            <Select
-              allowClear
-              placeholder="不带入"
-              options={sourceOptions}
-              loading={sourceOrdersQuery.isLoading}
-            />
+            <PagedSelect placeholder="不带入" disabled={!open || !projectId}
+              scopeKey={projectId ?? ''} queryKey={['testOrders', projectId, 'forRetest']}
+              loadPage={async (page, keyword) => {
+                const result = await api.getProjectTestOrders(projectId!, { page, pageSize: 20, keyword })
+                return { total: result.total, page: result.page, items: listItems(result).map((item) => ({
+                  label: `${item.name}${item.testedVersion ? ` · ${item.testedVersion}` : ''}`, value: item.orderId!,
+                })) }
+              }} />
           </Form.Item>
         ) : null}
         <Space size={4}>

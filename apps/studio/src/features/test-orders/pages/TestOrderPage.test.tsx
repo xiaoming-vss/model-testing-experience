@@ -36,7 +36,7 @@ const order = {
 }
 
 function listResponse<T>(items: T[]) {
-  return Object.assign([...items], { items, total: items.length })
+  return Object.assign([...items], { items, total: items.length, page: 1, pageSize: 20 })
 }
 
 function renderPage(client: QueryClient) {
@@ -82,7 +82,7 @@ it('按项目与迭代列出测试单并展示进度与状态', async () => {
   const table = within(document.querySelector('.test-orders-table-scroll') as HTMLElement)
   expect(table.getByText('执行中')).toBeInTheDocument()
   expect(orders.mock.calls[0][0]).toBe('project-1')
-  expect(orders.mock.calls[0][1]).toMatchObject({ sprintId: 'sprint-1' })
+  expect(orders.mock.calls[0][1]).toMatchObject(expect.objectContaining({ sprintId: 'sprint-1', page: 1, pageSize: 20 }))
   client.clear()
 })
 
@@ -126,7 +126,11 @@ it('新建测试单提交后调用接口并刷新列表', async () => {
 
 it('分页展示真实测试单并在搜索后回到第一页', async () => {
   const rows = Array.from({ length: 25 }, (_, index) => ({ ...order, orderId: `order-${index}`, name: `分页测试单 ${index + 1}` }))
-  vi.spyOn(api, 'getProjectTestOrders').mockResolvedValue(listResponse(rows))
+  vi.spyOn(api, 'getProjectTestOrders').mockImplementation(async (_, filters = {}) => {
+    const matching = rows.filter((item) => !filters.keyword || item.name.includes(filters.keyword))
+    const page = filters.page ?? 1
+    return { items: matching.slice((page - 1) * 20, page * 20), total: matching.length, page, pageSize: 20 }
+  })
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   seedOwnerProject(client)
   renderPage(client)

@@ -1,3 +1,5 @@
+import { useTestOrderWindow } from '../hooks/useTestOrderWindow'
+import { ListPagination } from '@/shared/components/ListPagination'
 import { TestOrderGraphViewer } from '../components/TestOrderGraphViewer'
 import { ActionButton } from '@/shared/components/ActionButton'
 import {
@@ -16,6 +18,7 @@ import {
   Select,
   Segmented,
   Space,
+  Spin,
   Tooltip,
   Typography,
 } from 'antd'
@@ -65,7 +68,7 @@ export function TestOrderWorkspacePage() {
 
   const [workspaceView, setWorkspaceView] = useState<'execution' | 'graph'>('execution')
   const entryListRef = useRef<HTMLDivElement>(null)
-  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(() => searchParams.get('entryId'))
+  const keyboardNavigation = useRef(false)
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [onlyMine, setOnlyMine] = useState(false)
@@ -76,6 +79,17 @@ export function TestOrderWorkspacePage() {
   const [assignOpen, setAssignOpen] = useState(false)
   const [assignee, setAssignee] = useState('')
   const [addCasesOpen, setAddCasesOpen] = useState(false)
+
+  const [searchKeyword, setSearchKeyword] = useState('')
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchKeyword(keyword.trim()), 250)
+    return () => clearTimeout(timer)
+  }, [keyword])
+  const { entriesQuery, detailQuery, entries, selectedEntryId, selected, currentPage, pageSize,
+    total: entryTotal, selectEntry, clearDeletedSelection, changePage, moveSelection, advance } = useTestOrderWindow(
+    orderId, searchParams.get('entryId'), { keyword: searchKeyword, status: statusFilter === 'all' ? '' : statusFilter, onlyMine, actor: currentUserId },
+  )
+  useEffect(() => { setCheckedEntryIds([]) }, [orderId])
 
   const orderQuery = useQuery({
     queryKey: ['testOrder', orderId],
@@ -98,13 +112,6 @@ export function TestOrderWorkspacePage() {
   })
   const { project, can } = useProjectAccess(order?.projectId)
 
-  const entriesQuery = useQuery({
-    queryKey: ['testOrderEntries', orderId],
-    queryFn: () => api.getTestOrderEntries(orderId!),
-    enabled: Boolean(orderId),
-    refetchOnWindowFocus: true,
-  })
-
   const membersQuery = useQuery({
     queryKey: ['projectMembers', order?.projectId],
     queryFn: () => api.getProjectMembers(order!.projectId!),
@@ -117,45 +124,14 @@ export function TestOrderWorkspacePage() {
   }, [membersQuery.data])
   const personName = (userId?: string) =>
     userId ? memberNameMap.get(userId) ?? (membersQuery.data ? DELETED_ACCOUNT_LABEL : userId) : ''
-  const entries = listItems(entriesQuery.data)
+  const visibleEntries = entries
+  const mineCount = entriesQuery.data?.mineCount ?? 0
+  const allEntryCount = entriesQuery.data?.orderTotal ?? order?.entriesTotal ?? 0
 
-  const entriesReloaded = entriesQuery.dataUpdatedAt
-
-  const matchingEntries = useMemo(() => {
-    const text = keyword.trim().toLowerCase()
-    return entries.filter((entry) => {
-      if (onlyMine && entry.assigneeUserId !== currentUserId) return false
-      if (!text) return true
-      return `${entry.caseId ?? ''} ${entry.caseTitle ?? ''} ${entry.caseModule ?? ''}`.toLowerCase().includes(text)
-    })
-  }, [currentUserId, entries, keyword, onlyMine])
-  const visibleEntries = useMemo(() => matchingEntries.filter((entry) =>
-    statusFilter === 'all' || entry.status === statusFilter,
-  ), [matchingEntries, statusFilter])
-
-  const mineCount = entries.filter((entry) => entry.assigneeUserId === currentUserId).length
-
-  const selected = useMemo(
-    () => entries.find((entry) => entry.entryId === selectedEntryId) ?? visibleEntries[0],
-    [entries, selectedEntryId, visibleEntries],
-  )
-
-  // 进入工作台或列表刷新后，默认停在第一条未执行条目（中断后继续）。
+  const selectedReason = selected?.status === 'blocked' ? selected?.blockReason : selected?.failureReason
   useEffect(() => {
-    if (!entriesQuery.isSuccess) return
-    setSelectedEntryId((current) => {
-      if (current && entries.some((entry) => entry.entryId === current)) return current
-      const firstPending = entries.find((entry) => entry.status === 'pending') ?? entries[0]
-      return firstPending?.entryId ?? null
-    })
-  }, [entries, entriesQuery.isSuccess, entriesReloaded])
-
-  useEffect(() => {
-    if (!selected) return
-    setDrafts({
-      reason: (selected.status === 'blocked' ? selected.blockReason : selected.failureReason) ?? '',
-    })
-  }, [selected, selected?.entryId])
+    if (selectedEntryId) setDrafts({ reason: selectedReason ?? '' })
+  }, [selectedEntryId, selectedReason])
 
   const saveMutation = useTestOrderEntrySave(orderId ?? '')
 
@@ -169,6 +145,7 @@ export function TestOrderWorkspacePage() {
       )
       setCheckedEntryIds([])
       queryClient.invalidateQueries({ queryKey: ['testOrderEntries', orderId] })
+      queryClient.invalidateQueries({ queryKey: ['testOrderEntry', orderId] })
       queryClient.invalidateQueries({ queryKey: ['testOrder', orderId] })
       queryClient.invalidateQueries({ queryKey: ['testOrders'] })
     },
@@ -177,12 +154,16 @@ export function TestOrderWorkspacePage() {
 
   const removeMutation = useMutation({
     mutationFn: (entryId: string) => api.deleteTestOrderEntry(orderId!, entryId),
-    onSuccess: () => {
+    onSuccess: async (_, removedId) => {
       message.success('执行条目已移除')
       setCheckedEntryIds([])
-      queryClient.invalidateQueries({ queryKey: ['testOrderEntries', orderId] })
-      queryClient.invalidateQueries({ queryKey: ['testOrder', orderId] })
-      queryClient.invalidateQueries({ queryKey: ['testOrders'] })
+      await queryClient.invalidateQueries({ queryKey: ['testOrderEntries', orderId] })
+      clearDeletedSelection(removedId)
+      queryClient.removeQueries({ queryKey: ['testOrderEntry', orderId, removedId], exact: true })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['testOrder', orderId] }),
+        queryClient.invalidateQueries({ queryKey: ['testOrders'] }),
+      ])
     },
     onError: (error) => message.error(getErrorMessage(error)),
   })
@@ -194,47 +175,45 @@ export function TestOrderWorkspacePage() {
       setAssignOpen(false)
       setCheckedEntryIds([])
       queryClient.invalidateQueries({ queryKey: ['testOrderEntries', orderId] })
+      queryClient.invalidateQueries({ queryKey: ['testOrderEntry', orderId] })
       queryClient.invalidateQueries({ queryKey: ['testOrder', orderId] })
     },
     onError: (error) => message.error(getErrorMessage(error)),
   })
 
+  function toggleEntry(id: string | undefined, checked: boolean) {
+    if (!id) return
+    if (checked && checkedEntryIds.length >= 500) { message.warning('单次最多选择 500 条执行条目'); return }
+    setCheckedEntryIds((previous) => checked ? [...new Set([...previous, id])] : previous.filter((item) => item !== id))
+  }
+
   function save(payload: Record<string, unknown>) {
     if (!selected?.entryId) return
     saveMutation.mutate({ entryId: selected.entryId, payload }, {
-      onSuccess: () => setSavedAt(new Date().toLocaleTimeString('zh-CN', { hour12: false }).slice(0, 5)),
+      onSuccess: () => {
+        setSavedAt(new Date().toLocaleTimeString('zh-CN', { hour12: false }).slice(0, 5))
+        if (autoAdvance && payload.status) void advance(selected.entryId!).catch(() => message.warning('下一条加载失败，请手动翻页重试'))
+      },
     })
   }
 
   const isOwner = project?.role === 'owner'
   const lockedByAssignee =
     isTestOrderEntryLocked(selected?.assigneeUserId, currentUserId, isOwner)
-  const canJudge = can('execute') && !lockedByAssignee
-
-  function moveSelection(offset: number) {
-    const index = visibleEntries.findIndex((entry) => entry.entryId === selected?.entryId)
-    if (index < 0) return
-    const next = visibleEntries[index + offset]
-    if (next) setSelectedEntryId(next.entryId ?? null)
-  }
+  const canJudge = Boolean(selected) && can('execute') && !lockedByAssignee
 
   // 在清单内使用键盘切换时，焦点跟随选中项，避免旧条目残留焦点框和移除按钮。
   useEffect(() => {
     const list = entryListRef.current
     const focused = document.activeElement
-    if (focused?.matches('.test-order-nav-item') && list?.contains(focused)) {
-      list.querySelector<HTMLButtonElement>('.test-order-nav-item[aria-current="true"]')?.focus()
+    if (keyboardNavigation.current && focused !== document.body && !focused?.matches('.test-order-nav-item')) {
+      keyboardNavigation.current = false
     }
-  }, [selectedEntryId])
-
-  // 自动前进默认关闭，开启后判定会前进到下一条未执行。
-  const advanceAfterJudge = autoAdvance && selected?.status !== 'pending'
-  useEffect(() => {
-    if (workspaceView !== 'execution' || !advanceAfterJudge) return
-    const index = visibleEntries.findIndex((entry) => entry.entryId === selected?.entryId)
-    const next = visibleEntries.slice(index + 1).find((entry) => entry.status === 'pending')
-    if (next) setSelectedEntryId(next.entryId ?? null)
-  }, [workspaceView, advanceAfterJudge, selected?.entryId, visibleEntries])
+    if (keyboardNavigation.current || (focused?.matches('.test-order-nav-item') && list?.contains(focused))) {
+      const button = list?.querySelector<HTMLButtonElement>('.test-order-nav-item[aria-current="true"]')
+      if (button && selectedEntryId) { button.focus(); keyboardNavigation.current = false }
+    }
+  }, [selectedEntryId, entriesQuery.data])
 
   // 键盘：1/2/3/4 判定整条用例，上下切换条目。
   useEffect(() => {
@@ -243,11 +222,13 @@ export function TestOrderWorkspacePage() {
       const target = event.target as HTMLElement | null
       if (target && ['INPUT', 'TEXTAREA'].includes(target.tagName)) return
       if (event.key === 'ArrowDown') {
+        keyboardNavigation.current = Boolean(target?.closest('.test-order-nav-item'))
         event.preventDefault()
         moveSelection(1)
         return
       }
       if (event.key === 'ArrowUp') {
+        keyboardNavigation.current = Boolean(target?.closest('.test-order-nav-item'))
         event.preventDefault()
         moveSelection(-1)
         return
@@ -330,7 +311,7 @@ export function TestOrderWorkspacePage() {
               <div className="test-order-side-head">
                 <span className="test-order-side-title">
                   执行用例清单
-                  <span className="test-order-side-count">{entries.length}</span>
+                  <span className="test-order-side-count">{allEntryCount}</span>
                 </span>
                 <Tooltip title="刷新执行条目">
                   <ActionButton
@@ -377,7 +358,7 @@ export function TestOrderWorkspacePage() {
                     >
                       {option.label}{' '}
                       <span className="tp-chip-count">
-                        {matchingEntries.filter((entry) => option.value === 'all' || entry.status === option.value).length}
+                        {option.value === 'all' ? entriesQuery.data?.matchedTotal ?? 0 : entriesQuery.data?.statusCounts[option.value] ?? 0}
                       </span>
                     </button>
                   ))}
@@ -387,7 +368,7 @@ export function TestOrderWorkspacePage() {
                     只看我负责的
                   </Checkbox>
                   <span>
-                    {mineCount}/{entries.length} 指派给我
+                    {mineCount}/{allEntryCount} 指派给我
                   </span>
                 </div>
               </div>
@@ -401,8 +382,8 @@ export function TestOrderWorkspacePage() {
                   <div className="api-case-nav-list" ref={entryListRef}>
                     {visibleEntries.map((entry) => {
                       const meta = getTestOrderEntryStatusMeta(entry.status)
-                      const active = entry.entryId === selected?.entryId
-                      const entryStepCount = (entry.snapshot?.steps ?? []).length
+                      const active = entry.entryId === selectedEntryId
+                      const entryStepCount = entry.stepCount ?? 0
                       return (
                         <div
                           key={entry.entryId ?? entry.orderNo}
@@ -411,19 +392,15 @@ export function TestOrderWorkspacePage() {
                           <Checkbox
                             aria-label={`选择第 ${entry.orderNo ?? ''} 条执行条目`}
                             checked={checkedEntryIds.includes(entry.entryId ?? '')}
-                            onChange={(event) =>
-                              setCheckedEntryIds((prev) =>
-                                event.target.checked
-                                  ? [...prev, entry.entryId ?? '']
-                                  : prev.filter((id) => id !== entry.entryId),
-                              )
-                            }
+                            disabled={entriesQuery.isPlaceholderData}
+                            onChange={(event) => toggleEntry(entry.entryId, event.target.checked)}
                           />
                           <button
                             type="button"
                             className="test-order-nav-item"
+                            disabled={entriesQuery.isPlaceholderData}
                             aria-current={active}
-                            onClick={() => setSelectedEntryId(entry.entryId ?? null)}
+                            onClick={() => selectEntry(entry.entryId ?? null)}
                           >
                             <span className="test-order-nav-head">
                               {entry.casePriority ? (
@@ -471,8 +448,13 @@ export function TestOrderWorkspacePage() {
                   </div>
                 )}
               </div>
+              <div className="table-footer test-order-entry-pagination">
+                <ListPagination current={currentPage} pageSize={pageSize} total={entryTotal}
+                  loading={entriesQuery.isFetching || entriesQuery.isError} onChange={changePage} />
+              </div>
               {checkedEntryIds.length > 0 ? <div className="test-order-sidebar-foot">
-                <Text type="secondary" className="test-order-selection-count">已选 {checkedEntryIds.length} 条</Text>
+                <Text type="secondary" className="test-order-selection-count">已选 {checkedEntryIds.length} 条（跨页）</Text>
+                <Button type="link" onClick={() => setCheckedEntryIds([])}>清空选择</Button>
       <Popconfirm
         title={`确认将选中的 ${checkedEntryIds.length} 条标记为通过？`}
         okText="确认标记"
@@ -503,9 +485,11 @@ export function TestOrderWorkspacePage() {
             </section>
 
             <section className="test-order-panel">
-              {!selected ? (
+              {entriesQuery.isLoading || (selectedEntryId && detailQuery.isPending) ? <Spin description="加载执行详情…" />
+                : selectedEntryId && detailQuery.error ? <Alert showIcon type="error" title={getErrorMessage(detailQuery.error)} action={<Button onClick={() => void detailQuery.refetch()}>重试</Button>} />
+                : !selected ? (
                 <div className="sprint-card-loading">
-                  <Empty description="请先加入执行条目">
+                  <Empty description={order?.entriesTotal ? '当前筛选没有执行条目' : '请先加入执行条目'}>
                     <ProjectActionButton
                       action="write"
                       projectId={order?.projectId}
@@ -639,7 +623,7 @@ export function TestOrderWorkspacePage() {
                       ) : null}
                     </footer>
                     <Text className="test-order-entry-position" type="secondary">
-                      {selectedVisibleIndex >= 0 ? `第 ${selectedVisibleIndex + 1} / ${visibleEntries.length} 条` : '当前条目不在筛选结果中'}
+                      {selectedVisibleIndex >= 0 ? `第 ${(currentPage - 1) * pageSize + selectedVisibleIndex + 1} / ${entryTotal} 条` : '当前条目不在筛选结果中'}
                     </Text>
                   </section>
                 </>

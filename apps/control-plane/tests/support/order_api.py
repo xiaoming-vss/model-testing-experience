@@ -31,6 +31,12 @@ def entries_of(api, headers, order_id):
     return response.json()["data"]
 
 
+def entry_detail(api, headers, order_id, entry_id):
+    response = api.get(f"/v1/test-orders/{order_id}/entries/{entry_id}", headers=headers)
+    assert response.status_code == 200, response.text
+    return response.json()["data"]
+
+
 def seed_retest_source(db) -> None:
     db.add(
         Sprint(

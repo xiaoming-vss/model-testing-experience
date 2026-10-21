@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { Button, Form, Input, Modal, Segmented, Select } from 'antd'
 import { BugOutlined, FolderOutlined, LockOutlined, UploadOutlined } from '@ant-design/icons'
 import { RichTextEditor } from '@/shared/components/RichTextEditor'
-import { listItems } from '@/services/api'
+import { api, listItems } from '@/services/api'
+import { PagedSelect } from '@/shared/components/PagedSelect'
 import type { BugFormProps } from '../types'
 import { BUG_PRIORITY_LABELS, BUG_SEVERITY_LABELS, formatBugNo } from '../utils/bugMeta'
 import { BugDescriptionTemplates } from './BugDescriptionTemplates'
@@ -19,8 +20,8 @@ export function BugFormModal(props: BugFormProps) {
   const [templateRevision, setTemplateRevision] = useState(0)
   const { form, isEdit, descriptionHtml, setDescriptionHtml, attachments, setAttachments,
     activeProjectId, projectsQuery, sprintsQuery, sprints, memberOptions, membersQuery,
-    requirementOptions, requirementsQuery, orderOptions, sourceOrdersQuery, selectedOrderId,
-    entryOptions, entriesQuery, saveMutation } = useBugForm(props)
+    requirementOptions, requirementsQuery, selectedOrderId,
+    saveMutation } = useBugForm(props)
   const inlineFileIds = new Set(extractRichTextFileIds(bug?.descriptionHtml ?? ''))
   const existingAttachments = (bug?.attachments ?? []).filter((item) => !inlineFileIds.has(item.fileId))
   const attachmentCount = existingAttachments.length + attachments.length
@@ -86,12 +87,22 @@ export function BugFormModal(props: BugFormProps) {
               loading={requirementsQuery.isLoading} placeholder="选择关联需求（可选）" />
           </Form.Item>
           {!isEdit && !source ? <Form.Item label="关联测试单" name="sourceOrderId">
-            <Select allowClear options={orderOptions} loading={sourceOrdersQuery.isLoading} placeholder="选择测试单（可选）"
-              onChange={() => form.setFieldValue('sourceEntryId', undefined)} />
+            <PagedSelect placeholder="选择测试单（可选）" disabled={!open || !activeProjectId}
+              scopeKey={activeProjectId ?? ''} queryKey={['testOrders', activeProjectId, 'forBug']}
+              onChange={() => form.setFieldValue('sourceEntryId', undefined)}
+              loadPage={async (page, keyword) => {
+                const result = await api.getProjectTestOrders(activeProjectId!, { page, pageSize: 20, keyword })
+                return { total: result.total, page: result.page, items: listItems(result).map((item) => ({ label: item.name, value: item.orderId! })) }
+              }} />
           </Form.Item> : null}
         </div>
         {!isEdit && !source && selectedOrderId ? <Form.Item label="关联执行记录" name="sourceEntryId">
-          <Select allowClear options={entryOptions} loading={entriesQuery.isLoading} placeholder="选择测试单中的执行条目" />
+          <PagedSelect placeholder="选择测试单中的执行条目" disabled={!open}
+            scopeKey={selectedOrderId} queryKey={['testOrderEntries', selectedOrderId, 'forBug']}
+            loadPage={async (page, keyword) => {
+              const result = await api.getTestOrderEntries(selectedOrderId, { page, pageSize: 20, keyword })
+              return { total: result.total, page: result.page, items: listItems(result).map((item) => ({ label: item.caseTitle || item.caseId || '', value: item.entryId! })) }
+            }} />
         </Form.Item> : null}
         <div className="bug-description-heading">
           <span className="bug-description-label">问题描述与复现细节 <span aria-hidden="true">*</span></span>

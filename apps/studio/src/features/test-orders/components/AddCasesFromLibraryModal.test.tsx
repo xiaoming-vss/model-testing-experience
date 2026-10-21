@@ -65,6 +65,7 @@ async function pickDropdownOption(user: ReturnType<typeof userEvent.setup>, labe
 }
 
 function mockLibraryApis() {
+  vi.spyOn(api, 'lookupTestOrderEntries').mockResolvedValue(listResponse([]))
   vi.spyOn(api, 'getSprints').mockImplementation(async () => listResponse([sprint]))
   vi.spyOn(api, 'getRequirements').mockImplementation(async () => listResponse([requirement]))
   vi.spyOn(api, 'getProjectFunctionTestSuites').mockImplementation(async () => listResponse([suite]))
@@ -149,6 +150,7 @@ it('点击用例标题可以查看用例详情内容', async () => {
 
 it('已在测试单里的用例勾选框置灰', async () => {
   mockLibraryApis()
+  vi.mocked(api.lookupTestOrderEntries).mockResolvedValue(listResponse([{ caseId: 'case-9', entryId: 'already-present' }]))
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   renderModal(client, { existingCaseIds: ['case-9'] })
 

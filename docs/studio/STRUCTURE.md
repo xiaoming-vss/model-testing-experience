@@ -70,6 +70,7 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 - 值格式化与载荷构造 —— `shared/utils/value.ts`、`shared/utils/payload.ts`
 - 操作按钮与权限门控 —— `shared/components/ActionButton`
 - 列表分页 —— `shared/components/ListPagination`（数量文案、中文控件、条数切换与越界校正）；默认条数和可选值集中在 `shared/utils/pagination.ts`
+- 远端选项搜索和分页 —— `shared/components/PagedSelect`；查询键、读取函数和业务选项由调用方注入，测试单重测来源与 Bug 关联表单共用。默认每页 20 项，支持 PageUp/PageDown、加载失败重试，不预取完整集合。
 
 ## 三、样式归属与主题
 

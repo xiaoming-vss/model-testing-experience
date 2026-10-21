@@ -99,7 +99,11 @@ function makeClient() {
 }
 
 beforeEach(() => {
-  vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(listResponse([]))
+  vi.spyOn(api, 'getTestOrderEntry').mockImplementation(async (_, id) => {
+    const response = await vi.mocked(api.lookupTestOrderEntries).mock.results.at(-1)?.value
+    return response?.items.find((item: { entryId?: string }) => item.entryId === id) ?? {}
+  })
+  vi.spyOn(api, 'lookupTestOrderEntries').mockResolvedValue(listResponse([]))
 })
 
 afterEach(() => {
@@ -270,7 +274,7 @@ const executionEntry = {
 it('图谱内判定、补充原因与缺陷同步到执行条目并保持选中节点', async () => {
   let saved = { ...executionEntry, failureReason: '', zentaoBugId: '' }
   vi.spyOn(api, 'getTestOrderGraph').mockResolvedValue({ orderId: 'order-1', run: RUN_WITH_GRAPH })
-  vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async () => listResponse([saved]))
+  vi.spyOn(api, 'lookupTestOrderEntries').mockImplementation(async () => listResponse([saved]))
   const update = vi.spyOn(api, 'updateTestOrderEntry').mockImplementation(async (_order, _entry, payload) => {
     saved = { ...saved, ...payload }
     return saved
@@ -309,7 +313,7 @@ it.each([
   { canExecute: true, isProjectOwner: false, assignee: 'user-1', allowed: true },
 ])('图谱执行遵守权限与分配规则 %j', async ({ canExecute, isProjectOwner, assignee, allowed }) => {
   vi.spyOn(api, 'getTestOrderGraph').mockResolvedValue({ orderId: 'order-1', run: RUN_WITH_GRAPH })
-  vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(listResponse([{ ...executionEntry, assigneeUserId: assignee }]))
+  vi.spyOn(api, 'lookupTestOrderEntries').mockResolvedValue(listResponse([{ ...executionEntry, assigneeUserId: assignee }]))
   const client = makeClient()
   renderViewer(client, { canExecute, isProjectOwner, currentUserId: 'user-1' })
   fireEvent.click(await screen.findByText('验证转换'))
@@ -332,7 +336,7 @@ it('已移除的用例只显示提示，不提供执行操作', async () => {
 
 it('保存失败保留草稿且不伪造执行成功', async () => {
   vi.spyOn(api, 'getTestOrderGraph').mockResolvedValue({ orderId: 'order-1', run: RUN_WITH_GRAPH })
-  vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(listResponse([{ ...executionEntry, status: 'failed' }]))
+  vi.spyOn(api, 'lookupTestOrderEntries').mockResolvedValue(listResponse([{ ...executionEntry, status: 'failed' }]))
   vi.spyOn(api, 'updateTestOrderEntry').mockRejectedValue(new Error('保存被拒绝'))
   const client = makeClient()
   renderViewer(client)
@@ -350,7 +354,7 @@ it('保存失败保留草稿且不伪造执行成功', async () => {
 it.each(['passed', 'blocked', 'skipped'] as const)('图谱支持判定为 %s', async (status) => {
   let saved = { ...executionEntry }
   vi.spyOn(api, 'getTestOrderGraph').mockResolvedValue({ orderId: 'order-1', run: RUN_WITH_GRAPH })
-  vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async () => listResponse([saved]))
+  vi.spyOn(api, 'lookupTestOrderEntries').mockImplementation(async () => listResponse([saved]))
   const update = vi.spyOn(api, 'updateTestOrderEntry').mockImplementation(async (_order, _entry, payload) => {
     saved = { ...saved, ...payload }
     return saved
@@ -370,7 +374,7 @@ it.each(['passed', 'blocked', 'skipped'] as const)('图谱支持判定为 %s', a
 it('保存途中切换卡片不会将响应应用到另一条用例', async () => {
   let entries = [executionEntry, { ...executionEntry, entryId: 'entry-2', caseId: 'case-2', caseTitle: '第二条执行用例' }]
   vi.spyOn(api, 'getTestOrderGraph').mockResolvedValue({ orderId: 'order-1', run: RUN_WITH_GRAPH })
-  vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async () => listResponse(entries))
+  vi.spyOn(api, 'lookupTestOrderEntries').mockImplementation(async () => listResponse(entries))
   let complete!: () => void
   const update = vi.spyOn(api, 'updateTestOrderEntry').mockImplementation((_order, entryId, payload) => new Promise((resolve) => {
     complete = () => {

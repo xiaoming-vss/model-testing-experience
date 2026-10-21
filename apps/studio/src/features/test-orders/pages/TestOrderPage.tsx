@@ -52,6 +52,7 @@ export function TestOrderPage() {
     useActiveSprint()
 
   const [keyword, setKeyword] = useState('')
+  const [searchKeyword, setSearchKeyword] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -68,25 +69,23 @@ export function TestOrderPage() {
   }, [sprints])
 
   const ordersQuery = useQuery({
-    queryKey: ['testOrders', activeProjectId, activeSprintId],
+    queryKey: ['testOrders', activeProjectId, activeSprintId, searchKeyword, page, pageSize],
     queryFn: () =>
-      api.getProjectTestOrders(activeProjectId!, { sprintId: activeSprintId ?? '' }),
+      api.getProjectTestOrders(activeProjectId!, { sprintId: activeSprintId ?? '', keyword: searchKeyword, page, pageSize }),
     enabled: Boolean(activeProjectId) && !sprintsQuery.isLoading,
   })
 
-  const orders = listItems(ordersQuery.data)
-  const visibleOrders = useMemo(() => {
-    const text = keyword.trim().toLowerCase()
-    return orders.filter((order) => {
-      if (!text) return true
-      const haystack = `${order.name} ${order.testedVersion ?? ''}`.toLowerCase()
-      return haystack.includes(text)
-    })
-  }, [keyword, orders])
-
-  const currentPage = Math.max(1, Math.min(page, Math.ceil(visibleOrders.length / pageSize) || 1))
-  const pageOrders = visibleOrders.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-  useEffect(() => { setPage(1) }, [activeProjectId, activeSprintId, keyword])
+  const pageOrders = listItems(ordersQuery.data)
+  const total = ordersQuery.data?.total ?? 0
+  const currentPage = ordersQuery.data?.page ?? page
+  useEffect(() => {
+    if (ordersQuery.isSuccess && currentPage !== page) setPage(currentPage)
+  }, [ordersQuery.isSuccess, currentPage, page])
+  useEffect(() => { setPage(1) }, [activeProjectId, activeSprintId])
+  useEffect(() => {
+    const timer = setTimeout(() => { setSearchKeyword(keyword.trim()); setPage(1) }, 250)
+    return () => clearTimeout(timer)
+  }, [keyword])
 
   // 保留搜索框快捷键：Mac 用 ⌘K，其他平台用 Ctrl+K。
   useEffect(() => {
@@ -349,7 +348,7 @@ export function TestOrderPage() {
                     <div className="sprint-card-loading">
                       <Empty description="测试单加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
                     </div>
-                  ) : visibleOrders.length === 0 ? (
+                  ) : total === 0 ? (
                     <div className="sprint-card-loading">
                       <Empty
                         image={<AppstoreOutlined />}
@@ -412,7 +411,7 @@ export function TestOrderPage() {
                   )}
                 </div>
                 <div className="table-footer test-orders-footer">
-                  <ListPagination current={currentPage} pageSize={pageSize} total={visibleOrders.length}
+                  <ListPagination current={currentPage} pageSize={pageSize} total={total}
                     loading={ordersQuery.isFetching} onChange={(next, size) => { setPage(next); setPageSize(size) }} />
                 </div>
               </div>

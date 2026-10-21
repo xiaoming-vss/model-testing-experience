@@ -5,6 +5,10 @@ import type {
   DispatchTestOrderGraphPayload,
   TestOrder,
   TestOrderEntry,
+  TestOrderEntrySummary,
+  TestOrderPage,
+  TestOrderEntryPage,
+  TestOrderEntryFilters,
   TestOrderGraph,
   TestOrderGraphInput,
   TestOrderGraphRun,
@@ -13,8 +17,8 @@ import type {
 } from '../types'
 
 export const testOrdersApi = {
-  getProjectTestOrders: (projectId: string, filters: { sprintId?: string } = {}) =>
-    request<ListResponse<TestOrder>>(
+  getProjectTestOrders: (projectId: string, filters: { sprintId?: string; keyword?: string; page?: number; pageSize?: number } = {}) =>
+    request<TestOrderPage>(
       `/v1/projects/${projectId}/test-orders${buildQuery({ ...filters })}`,
     ),
   createTestOrder: (sprintId: string, body: CreateTestOrderPayload) =>
@@ -30,8 +34,16 @@ export const testOrdersApi = {
     }),
   deleteTestOrder: (orderId: string) =>
     request<Record<string, never>>(`/v1/test-orders/${orderId}`, { method: 'DELETE' }),
-  getTestOrderEntries: (orderId: string) =>
-    request<ListResponse<TestOrderEntry>>(`/v1/test-orders/${orderId}/entries`),
+  getTestOrderEntries: (orderId: string, filters: TestOrderEntryFilters = {}) =>
+    request<TestOrderEntryPage>(`/v1/test-orders/${orderId}/entries${buildQuery({
+      ...filters, onlyMine: filters.onlyMine ? 'true' : undefined, resume: filters.resume ? 'true' : undefined,
+    })}`),
+  getTestOrderEntry: (orderId: string, entryId: string) =>
+    request<TestOrderEntry>(`/v1/test-orders/${orderId}/entries/${entryId}`),
+  lookupTestOrderEntries: (orderId: string, caseIds: string[]) =>
+    request<ListResponse<TestOrderEntrySummary>>(`/v1/test-orders/${orderId}/entries/lookup`, {
+      method: 'POST', body: JSON.stringify({ caseIds }),
+    }),
   addTestOrderCases: (orderId: string, caseIds: string[]) =>
     request<AddTestOrderCasesResult>(`/v1/test-orders/${orderId}/cases`, {
       method: 'POST',

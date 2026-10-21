@@ -80,6 +80,33 @@ class TestOrderRepository(ResourceRepository):
         )
         return await self._with_progress(orders)
 
+    async def page_by_project(
+        self, project_id: str, *, sprint_id: str, keyword: str, page: int, page_size: int
+    ) -> tuple[list[TestOrder], int, int]:
+        conditions = [TestOrder.project_id == project_id]
+        if sprint_id:
+            conditions.append(TestOrder.sprint_id == sprint_id)
+        if keyword.strip():
+            conditions.append(
+                func.lower(TestOrder.name + " " + TestOrder.tested_version).contains(
+                    keyword.strip().lower(), autoescape=True
+                )
+            )
+        total = int(
+            await self.session.scalar(select(func.count(TestOrder.id)).where(*conditions)) or 0
+        )
+        page = min(page, max(1, (total + page_size - 1) // page_size))
+        rows = list(
+            await self.session.scalars(
+                select(TestOrder)
+                .where(*conditions)
+                .order_by(TestOrder.created_at.desc(), TestOrder.id.desc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+            )
+        )
+        return await self._with_progress(rows), total, page
+
     def add(self, order: TestOrder) -> None:
         self.session.add(order)
 

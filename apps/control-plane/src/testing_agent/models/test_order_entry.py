@@ -17,6 +17,8 @@ class TestOrderEntry(Base):
     __table_args__ = (
         UniqueConstraint("order_id", "case_type", "case_id", name="uk_test_order_entry_case"),
         Index("idx_test_order_entry_order", "order_id", "order_no"),
+        Index("idx_order_entry_status_page", "order_id", "status", "order_no", "id"),
+        Index("idx_order_entry_assignee_page", "order_id", "assignee_user_id", "order_no", "id"),
         {"comment": "测试单执行条目；保存选入时用例快照、执行人分配及人工结论"},
     )
     id: Mapped[IdPk] = mapped_column(comment="数据库内部主键")
@@ -46,6 +48,13 @@ class TestOrderEntry(Base):
     )
     order_no: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, comment="执行或展示顺序"
+    )
+    step_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
+        comment="冻结用例快照中的步骤条数；供摘要列表展示，随快照创建后保持不变",
     )
     snapshot_json: Mapped[dict[str, Any]] = mapped_column(
         JSON,
@@ -96,6 +105,12 @@ class TestOrderEntry(Base):
     case_priority = ""
     requirement_id = ""
     requirement_name = ""
+
+    def __init__(self, **kwargs: Any) -> None:
+        snapshot = kwargs.get("snapshot_json")
+        steps = snapshot.get("steps", []) if isinstance(snapshot, dict) else []
+        kwargs.setdefault("step_count", len(steps) if isinstance(steps, list) else 0)
+        super().__init__(**kwargs)
 
     @property
     def snapshot(self) -> dict[str, Any]:
