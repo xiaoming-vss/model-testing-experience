@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { api } from '@/services/api'
+import { functionTestingApi } from '../api/functionTesting.api'
 import { CaseLibraryPage } from './CaseLibraryPage'
 
 const testScope = vi.hoisted(() => ({ sprintId: 'sprint-1', requirementId: undefined as string | undefined }))
@@ -490,7 +491,8 @@ it('用例推送使用项目 MCP，部分失败保留详情并阻止未知结果
   vi.spyOn(api, 'getProjectFunctionTestSuites').mockResolvedValue(listResponse([suite]))
   vi.spyOn(api, 'getProjectFunctionTestCases').mockResolvedValue(listResponse([loginCase]))
   const oldConnections = vi.spyOn(api, 'getZentaoConnections')
-  const push = vi.spyOn(api, 'importFunctionTestCasesToZentao').mockResolvedValue({
+  vi.spyOn(functionTestingApi, 'previewFunctionCasePush').mockResolvedValue({ items: [{ caseId: 'case-1', title: '待推送用例', candidates: [], mappedRemoteCaseId: null, operation: null }] })
+  const push = vi.spyOn(functionTestingApi, 'importFunctionTestCasesToZentao').mockResolvedValue({
     status: 'partial_failure', importedCaseCount: 1,
     items: [{ caseId: 'case-1', status: 'uncertain', errorMessage: '请先在禅道核对，勿直接重试' }],
   })
@@ -498,11 +500,13 @@ it('用例推送使用项目 MCP，部分失败保留详情并阻止未知结果
   const { container } = renderPage(client)
   await selectSuite(container)
   await userEvent.click(button('导入禅道'))
-  await userEvent.click(button('开始导入'))
-  await waitFor(() => expect(push).toHaveBeenCalledWith('suite-1', { productId: 1, moduleId: 0, caseIds: undefined }))
+  await userEvent.click(button('预览并核对'))
+  await screen.findByText('待推送用例')
+  await userEvent.click(button('确认推送'))
+  await waitFor(() => expect(push).toHaveBeenCalledWith('suite-1', expect.objectContaining({ productId: 1, moduleId: 0, caseIds: undefined, choices: { 'case-1': 0 }, requestId: expect.any(String) })))
   expect(await screen.findByText('推送未全部完成')).toBeInTheDocument()
   expect(screen.getByText(/请先在禅道核对/)).toBeInTheDocument()
-  expect(button('开始导入')).toBeDisabled()
+  expect(button('用原请求查询／重试')).toBeDisabled()
   expect(oldConnections).not.toHaveBeenCalled()
   client.clear()
 })

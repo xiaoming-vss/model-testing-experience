@@ -123,3 +123,11 @@ npm run verify        # type-check + lint + build
 - [Skill 文件夹与默认技能维护](../control-plane/skills.md)
 
 需求在线图文编辑见[需求富文本编辑](requirement-rich-text.md)。
+
+### 功能用例推送核对
+
+用例库的禅道弹窗由 `features/test-cases/components/CasePushModal.tsx` 维护：先预览，
+再逐条选择新建或绑定。同一提交失败重试复用原编号和参数，刷新后重新读取持久化未决记录。
+核对表单在同一个弹窗内展开；确认未写入仅对服务端确认的当前项目所有者开放，并要求理由和
+显式勾选。数据库恢复后的额外核对由后端按用例状态声明。接口和审计规则见
+[功能用例推送与未决写入核对](../control-plane/zentao-mcp-case-push.md)。

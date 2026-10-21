@@ -22,6 +22,7 @@ from testing_agent.models.bug_zentao_push import BugZentaoPush
 from testing_agent.models.bug_zentao_sync_baseline import BugZentaoSyncBaseline
 from testing_agent.models.function_case_push import (
     FunctionCasePushOperation,
+    FunctionCasePushRequest,
     FunctionCaseRemoteIdentity,
 )
 from testing_agent.models.function_test_case import FunctionTestCase
@@ -57,6 +58,7 @@ from testing_agent.models.worker_task import WorkerTask
 
 __all__ = [
     "FunctionCasePushOperation",
+    "FunctionCasePushRequest",
     "FunctionCaseRemoteIdentity",
     "StoredFile",
     "ServiceAuthorization",

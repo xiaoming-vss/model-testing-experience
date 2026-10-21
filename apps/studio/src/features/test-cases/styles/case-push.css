@@ -1,0 +1,25 @@
+.case-push-body {
+  max-height: 62vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.case-push-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.case-push-choice { width: 100%; }
+.case-push-review {
+  padding-block: 16px;
+  border-block-start: 1px solid var(--app-list-row-border);
+}
+.case-push-review .ant-form { margin-block-start: 16px; }
+.case-push-review .ant-checkbox-wrapper { margin-block: 12px; }
+
+.case-push-title { display: block; max-width: 100%; }
+.case-push-review .ant-space { margin-block-end: 16px; }
+.case-push-review .ant-btn-dangerous { display: block; margin-block-start: 8px; }

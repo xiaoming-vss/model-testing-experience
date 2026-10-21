@@ -305,6 +305,7 @@ def get_function_case_exporter(
             credential_cipher=IntegrationCredentialCipher(settings.integration_key),
         ),
         ZentaoMcpCases(),
+        settings=settings,
     )
 
 

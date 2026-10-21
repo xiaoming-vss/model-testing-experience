@@ -54,9 +54,21 @@ def test_function_asset_modules_do_not_depend_on_export_or_api_collection():
             )
     for node in ast.walk(ast.parse((root / "services/function_case_export.py").read_text())):
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-            assert node.func.attr not in {"commit", "rollback"}, (
-                "Remote export must not imply a local transaction can undo remote writes"
+            assert node.func.attr != "commit", (
+                "Exporter releases read transactions but delegates durable writes to the workflow"
             )
+    for name in ("zentao_case_gateway", "function_case_push_journal"):
+        for node in ast.walk(ast.parse((root / f"services/{name}.py").read_text())):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+                assert node.func.attr not in {"commit", "rollback"}, (
+                    "Gateway and reusable journal cannot commit or roll back caller transactions"
+                )
+    legacy = ast.parse((root / "services/zentao_mcp_cases.py").read_text())
+    assert not any(
+        isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == "create_test_cases"
+        for node in ast.walk(legacy)
+    ), "The title-based write entry must not return"
 
 
 def test_source_does_not_call_foreign_private_interfaces():

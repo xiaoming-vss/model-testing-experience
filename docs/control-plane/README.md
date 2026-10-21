@@ -69,7 +69,10 @@ AI 生成任务按能力装配，HTTP handler 直接获取所需的查询、管�
 | --- | --- |
 | `function_test_case.py` / FunctionTestCaseService | 本地查询、创建、编辑、删除；不装配禅道客户端 |
 | `function_case_import.py` / FunctionCaseImporter | 文件读取后的内容验证与本地导入；完整处理后一次提交，异常请求会话撤销未提交数据 |
-| `function_case_export.py` / FunctionCaseExporter | 本人授权、绑定目标核验、单测试集/需求批量导出及逐项结果汇总；不提交或回滚本地事务，不自动重试远端写入 |
+| `function_case_export.py` / FunctionCaseExporter | 本人授权、目标核验、预览及结果汇总；结束只读事务后委托写入工作流 |
+| `function_case_push_flow.py` / FunctionCasePushFlow | 冻结批次、当前权限与目标复查、意图提交、一次远端写入及回执事务；拥有提交责任 |
+| `function_case_push_journal.py` / CasePushJournal | 稳定映射、一次许可和安全回执；不隐式提交或回滚调用者事务 |
+| `zentao_case_gateway.py` | 请求内目录复用、明确编号的远端读写及内容核对；不按标题决定更新，不重试写入 |
 | `function_case_access.py` / FunctionCaseAccess | 共用资源归属与项目动作检查；本地读写和导出仍使用各自要求的动作 |
 | `domain/function_case_export.py` | 普通值对象到禅道载荷的纯转换；保留结构化多行步骤、旧文本、优先级与步骤/预期补齐 |
 | `import_payload.py` | 功能/API/UI 等资产导入共用的文件读取与 YAML/JSON 信封解析，不依赖 API 集合业务模块 |

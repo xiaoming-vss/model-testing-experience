@@ -53,6 +53,9 @@ export type FunctionTestCaseImportResult = {
 }
 
 export type ImportFunctionTestCasesToZentaoPayload = {
+  requestId?: string
+  restoreConfirmed?: boolean
+  choices?: Record<string, number>
   connectionId?: string
   productId: number
   caseIds?: string[]
@@ -60,6 +63,8 @@ export type ImportFunctionTestCasesToZentaoPayload = {
 }
 
 export type FunctionTestCaseZentaoImportItem = {
+  operationId?: string
+
   errorMessage?: string
   caseId?: string
   case_id?: string
@@ -84,6 +89,9 @@ export type FunctionTestCaseZentaoImportResult = {
 }
 
 export type ImportFunctionTestSuitesToZentaoPayload = {
+  requestId?: string
+  restoreConfirmed?: boolean
+  choices?: Record<string, number>
   connectionId?: string
   productId: number
   moduleId?: number
@@ -143,4 +151,20 @@ export type FunctionCaseLibraryFilters = {
   keyword?: string
   page?: number
   pageSize?: number
+}
+
+
+export type CasePushPreviewItem = {
+  caseId: string
+  title: string
+  mappedRemoteCaseId: number | null
+  candidates: { id: number; title: string }[]
+  operation: FunctionTestCaseZentaoImportItem | null
+}
+
+export type CasePushReconcilePayload = {
+  resolution: 'confirm' | 'not_applied'
+  remoteCaseId?: number
+  reason?: string
+  confirmedNotApplied?: boolean
 }

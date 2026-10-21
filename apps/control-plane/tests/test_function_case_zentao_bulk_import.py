@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 from authorization_database import AuthorizationDatabase
 from pydantic import ValidationError
+from support.function_case_export import exporter as FunctionCaseExporter
 
 from testing_agent.app import create_app
 from testing_agent.core.errors import ErrBadRequest, ErrForbidden, ErrNotFound
@@ -12,7 +13,6 @@ from testing_agent.schemas.function_test_case import (
     FunctionSuitesZentaoImportResponse,
     ImportFunctionSuitesToZentaoRequest,
 )
-from testing_agent.services.function_case_export import FunctionCaseExporter
 
 
 def make_case(case_id: str, suite_id: str, title: str) -> SimpleNamespace:
@@ -24,6 +24,7 @@ def make_case(case_id: str, suite_id: str, title: str) -> SimpleNamespace:
         steps="步骤一",
         expected_results="结果一",
         priority="P2",
+        content_json=None,
     )
 
 

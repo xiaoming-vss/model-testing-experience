@@ -13,6 +13,7 @@ from testing_agent.api.deps import (
 from testing_agent.core.errors import success_payload
 from testing_agent.domain.function_case_query import FunctionCaseQuery
 from testing_agent.schemas.function_test_case import (
+    CasePushReconcileRequest,
     FunctionCaseRequest,
     FunctionCasesBatchDeleteRequest,
     FunctionCaseUpdateRequest,
@@ -138,3 +139,39 @@ async def batch_delete_function_cases(
     service: FunctionTestCaseService = Depends(get_function_test_case_service),
 ):
     return success_payload(await service.batch_delete(user_id, suite_id, body.case_ids))
+
+
+async def preview_function_case_push(
+    suite_id: str,
+    body: ImportFunctionCasesToZentaoRequest,
+    user_id: str = Depends(get_current_user_id),
+    service: FunctionCaseExporter = Depends(get_function_case_exporter),
+):
+    return success_payload(await service.preview_suite(user_id, suite_id, body))
+
+
+async def preview_function_suite_push(
+    requirement_id: str,
+    body: ImportFunctionSuitesToZentaoRequest,
+    user_id: str = Depends(get_current_user_id),
+    service: FunctionCaseExporter = Depends(get_function_case_exporter),
+):
+    return success_payload(await service.preview_requirement(user_id, requirement_id, body))
+
+
+async def function_case_push_status(
+    operation_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: FunctionCaseExporter = Depends(get_function_case_exporter),
+):
+    return success_payload(await service.operation_status(user_id, operation_id))
+
+
+async def reconcile_function_case_push(
+    suite_id: str,
+    operation_id: str,
+    body: CasePushReconcileRequest,
+    user_id: str = Depends(get_current_user_id),
+    service: FunctionCaseExporter = Depends(get_function_case_exporter),
+):
+    return success_payload(await service.reconcile_operation(user_id, suite_id, operation_id, body))

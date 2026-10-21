@@ -36,9 +36,14 @@ class CaseWriteIntent:
     payload: dict[str, Any]
     # None means explicit creation; an integer is a binding verified by the coordinator.
     remote_case_id: int | None = None
+    request_fingerprint: str | None = None
+    restore_id: str = ""
+    restore_reviewer: str = ""
 
     @property
     def fingerprint(self) -> str:
+        if self.request_fingerprint is not None:
+            return self.request_fingerprint
         return digest(
             {
                 "projectId": self.project_id,
@@ -92,9 +97,12 @@ class CasePushJournal:
         elif (
             identity.project_id != intent.project_id
             or identity.target_json != intent.target
-            or identity.remote_case_id != intent.remote_case_id
+            or identity.remote_case_id not in (None, intent.remote_case_id)
         ):
             raise conflict("用例映射或目标已变化，请重新读取后确认")
+        if identity.remote_case_id is None and intent.remote_case_id is not None:
+            identity.remote_case_id = intent.remote_case_id
+            identity.revision += 1
         operation = FunctionCasePushOperation(
             operation_id=uuid4().hex,
             identity_id=identity.id,
@@ -106,7 +114,18 @@ class CasePushJournal:
             active_key=key,
             status="prepared",
             action="create" if intent.remote_case_id is None else "update",
-            target_json={**deepcopy(intent.target), "remoteCaseId": intent.remote_case_id},
+            target_json={
+                **deepcopy(intent.target),
+                "remoteCaseId": intent.remote_case_id,
+                **(
+                    {
+                        "_restoreId": intent.restore_id,
+                        "_restoreConfirmedBy": intent.restore_reviewer or intent.actor,
+                    }
+                    if intent.restore_id
+                    else {}
+                ),
+            },
             payload_json=deepcopy(intent.payload),
             result_json={},
             deadline=datetime.now(UTC) + timedelta(minutes=5),
@@ -122,13 +141,18 @@ class CasePushJournal:
         *,
         remote_case_id: int | None = None,
         error_code: str = "",
+        reconciled_by: str = "",
+        reconciliation_note: str = "",
+        evidence_digest: str = "",
     ) -> FunctionCasePushOperation:
         operation = await self.repository.operation(operation_id)
         if operation is None:
             raise AppError(404, "推送操作不存在", 404)
         result = {"remoteCaseId": remote_case_id, "errorCode": error_code}
         if operation.status in {"succeeded", "failed"}:
-            if operation.status != status or operation.result_json != result:
+            if operation.status != status or any(
+                operation.result_json.get(key) != value for key, value in result.items()
+            ):
                 raise conflict("原操作已有不同的终态回执")
             return operation
         if status == "succeeded":
@@ -140,7 +164,19 @@ class CasePushJournal:
             identity.remote_case_id = remote_case_id
             identity.revision += 1
         operation.status = status
-        operation.result_json = result
+        operation.result_json = {
+            **result,
+            **(
+                {
+                    "reconciledBy": reconciled_by,
+                    "reconciledAt": datetime.now(UTC).isoformat(),
+                    "note": reconciliation_note,
+                    "evidenceDigest": evidence_digest,
+                }
+                if reconciled_by
+                else {}
+            ),
+        }
         if status in {"succeeded", "failed"}:
             operation.active_key = None
         await self.repository.flush()

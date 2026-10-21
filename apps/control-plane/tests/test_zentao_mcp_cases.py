@@ -1,9 +1,7 @@
-from types import SimpleNamespace
-
 import pytest
 
-from testing_agent.services.mcp_client import McpCallError
-from testing_agent.services.zentao_mcp_cases import ZentaoMcpCases
+from testing_agent.core.errors import AppError
+from testing_agent.services.zentao_case_gateway import ZentaoCaseGateway
 
 
 class Client:
@@ -21,7 +19,7 @@ class Client:
                 "total": 101,
             }
         if name == "get_testcases_caseID":
-            return {"testcase": {"id": args["caseID"], "title": "用例" + args["caseID"]}}
+            return {"testcase": {"id": args["caseID"], "title": "用例" + str(args["caseID"])}}
         return {"status": "success", "id": 200}
 
     async def __aenter__(self):
@@ -32,24 +30,23 @@ class Client:
 
 
 @pytest.mark.asyncio
-async def test_all_pages_are_read_before_writes_and_batch_titles_are_reused(monkeypatch):
+async def test_all_pages_are_read_and_update_requires_explicit_remote_id():
     client = Client()
-    monkeypatch.setattr("testing_agent.services.zentao_mcp_cases.McpClient", lambda *a: client)
+    gateway = ZentaoCaseGateway(client)
+    assert len(await gateway.catalog(201)) == 101
     case = {"title": "新增", "steps": ["步骤"], "expects": ["结果"]}
-    result = await ZentaoMcpCases().create_test_cases(
-        SimpleNamespace(endpoint="unused", token="unused"),
-        {"productID": 9, "project": 101, "execution": 201, "cases": [case, case]},
-    )
+    target = {"productID": 9, "project": 101, "execution": 201}
+    assert await gateway.write(case, target, None) == 200
+    assert await gateway.write(case, target, 200) == 200
     writes = [(n, a) for n, a in client.calls if n.startswith(("post", "put"))]
     assert [n for n, _ in writes] == ["post_testcases", "put_testcases_testcasID"]
     assert writes[1][1]["testcasID"] == 200
     assert len([1 for n, _ in client.calls if n == "get_testcases_caseID"]) == 101
-    assert [i["id"] for i in result["items"]] == [200, 200]
 
 
 @pytest.mark.asyncio
 async def test_repeated_pages_abort_before_writes():
     client = Client(repeat=True)
-    with pytest.raises(McpCallError, match="分页重复"):
-        await ZentaoMcpCases()._existing(client, 201)
+    with pytest.raises(AppError, match="分页重复"):
+        await ZentaoCaseGateway(client).catalog(201)
     assert all(n.startswith("get_") for n, _ in client.calls)

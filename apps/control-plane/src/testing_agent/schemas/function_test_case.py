@@ -3,7 +3,8 @@ from __future__ import annotations
 # ruff: noqa: F401
 import json
 from datetime import datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
+from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
@@ -60,19 +61,39 @@ class FunctionCaseImportResponse(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class ImportFunctionCasesToZentaoRequest(BaseModel):
+class CasePushOptions(BaseModel):
+    restore_confirmed: bool = False
+    request_id: str = Field(default_factory=lambda: uuid4().hex, min_length=1, max_length=64)
+    # Missing means unresolved; 0 explicitly creates; positive explicitly binds a remote ID.
+    choices: dict[str, Annotated[int, Field(strict=True, ge=0, le=2_147_483_647)]] = Field(
+        default_factory=dict, max_length=10000
+    )
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    @field_validator("choices")
+    @classmethod
+    def valid_choices(cls, value: dict[str, int]) -> dict[str, int]:
+        if any(
+            not key or identifier < 0 or identifier > 2_147_483_647
+            for key, identifier in value.items()
+        ):
+            raise ValueError("choices 必须指定用例编号及有效远端编号，0 表示新建")
+        return value
+
+
+class ImportFunctionCasesToZentaoRequest(CasePushOptions):
     connection_id: str = Field(default="")
     product_id: int = Field(alias="productId", gt=0)
-    case_ids: list[str] = Field(default_factory=list)
+    case_ids: list[str] = Field(default_factory=list, max_length=10000)
     module_id: int = Field(default=0, ge=0)
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class ImportFunctionSuitesToZentaoRequest(BaseModel):
+class ImportFunctionSuitesToZentaoRequest(CasePushOptions):
     connection_id: str = Field(default="")
     product_id: int = Field(gt=0)
     module_id: int = Field(default=0, ge=0)
-    suite_ids: list[str] = Field(min_length=1)
+    suite_ids: list[str] = Field(min_length=1, max_length=10000)
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
     @field_validator("suite_ids")
@@ -87,6 +108,7 @@ class ImportFunctionSuitesToZentaoRequest(BaseModel):
 
 
 class FunctionCaseZentaoImportItemResponse(BaseModel):
+    operation_id: str | None = None
     case_id: str = Field()
     remote_case_id: int = Field()
     error_message: str | None = None
@@ -142,3 +164,32 @@ class FunctionCasesBatchDeleteResponse(BaseModel):
     deleted_ids: list[str]
     deleted_count: int
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class CasePushCandidate(BaseModel):
+    id: int
+    title: str
+
+
+class CasePushPreviewItem(BaseModel):
+    case_id: str
+    title: str
+    mapped_remote_case_id: int | None = None
+    operation: FunctionCaseZentaoImportItemResponse | None = None
+    candidates: list[CasePushCandidate] = Field(default_factory=list)
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class CasePushPreview(BaseModel):
+    can_confirm_not_applied: bool = False
+    restore_required: bool = False
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    items: list[CasePushPreviewItem]
+
+
+class CasePushReconcileRequest(BaseModel):
+    resolution: Literal["confirm", "not_applied"] = "confirm"
+    remote_case_id: int | None = Field(default=None, gt=0, le=2_147_483_647)
+    reason: str = Field(default="", max_length=1000)
+    confirmed_not_applied: bool = False
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")

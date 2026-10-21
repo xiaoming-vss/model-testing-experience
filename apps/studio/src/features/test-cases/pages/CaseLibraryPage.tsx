@@ -17,7 +17,6 @@ import {
   Empty,
   Form,
   Input,
-  InputNumber,
   Modal,
   Popconfirm,
   Segmented,
@@ -38,6 +37,7 @@ import { REQUIREMENTS_STALE_TIME, requirementsQueryKey, fetchSprintRequirements 
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
+import { CasePushModal } from '../components/CasePushModal'
 import { FunctionCaseEditor } from '@/features/test-cases/components/FunctionCaseEditor'
 import {
   buildCaseFormValues,
@@ -94,11 +94,6 @@ type SuiteFormValues = {
 }
 
 type CaseImportMode = 'upload' | 'editor'
-
-type ZentaoImportFormValues = {
-  productId: number
-  moduleId?: number
-}
 
 /** 一次禅道导入的目标：测试集、所属需求、要导入的用例（留空表示该测试集全部用例）。 */
 type ZentaoImportTarget = {
@@ -164,8 +159,6 @@ export function CaseLibraryPage() {
   const [importJsonFile, setImportJsonFile] = useState<File | null>(null)
   const [importJsonText, setImportJsonText] = useState('')
   const [zentaoImportTarget, setZentaoImportTarget] = useState<ZentaoImportTarget | null>(null)
-  const [zentaoPushFeedback, setZentaoPushFeedback] = useState<{ text: string; uncertain: boolean } | null>(null)
-  const [zentaoImportForm] = Form.useForm<ZentaoImportFormValues>()
 
   const {
     currentRequirementSelection,
@@ -184,7 +177,7 @@ export function CaseLibraryPage() {
     sprintScope: { value: globalSprintId, onChange: selectGlobalSprint },
   })
   const selectedSprintId = resolvedSelectedSprintId
-  useEffect(() => { setSuiteId(null); setPage(1) }, [activeProjectId, selectedSprintId])
+  useEffect(() => { setSuiteId(null); setPage(1); setZentaoImportTarget(null) }, [activeProjectId, selectedSprintId])
   const selectedRequirementId = resolvedSelectedRequirementId
 
   // 翻页保留选择，业务范围变化则清空，避免把旧测试集的 ID 提交给新范围。
@@ -438,31 +431,6 @@ export function CaseLibraryPage() {
     onError: (error) => message.error(getFunctionCaseErrorMessage(error)),
   })
 
-  const importZentaoTestCasesMutation = useMutation({
-    mutationFn: async (values: ZentaoImportFormValues) => {
-      const target = zentaoImportTarget!
-      return api.importFunctionTestCasesToZentao(target.suiteId, {
-        ...values,
-        caseIds: target.caseIds.length > 0 ? target.caseIds : undefined,
-      })
-    },
-    onSuccess: (result) => {
-      const importedCount =
-        result.importedCaseCount ?? result.imported_case_count ?? result.items?.length ?? 0
-      if (result.status && result.status !== 'success') {
-        const detail = result.items?.filter(item => item.status !== 'success').map(item => `${item.caseId}: ${item.errorMessage || item.status}`).join('；')
-        setZentaoPushFeedback({ text: `已推送 ${importedCount} 条；${detail}`, uncertain: Boolean(result.items?.some(item => item.status === 'uncertain')) })
-        return
-      }
-      message.success(`已推送禅道：${importedCount} 条用例`)
-      setZentaoImportTarget(null)
-      zentaoImportForm.resetFields()
-    },
-    onError: (error) => {
-      message.error(getFunctionCaseErrorMessage(error))
-    },
-  })
-
   /** 删掉的用例如果正开在弹窗里，顺手关掉弹窗并从勾选里摘掉。 */
   function forgetDeletedCases(deletedIds: string[]) {
     const deleted = new Set(deletedIds.filter(Boolean))
@@ -541,9 +509,7 @@ export function CaseLibraryPage() {
   }
 
   function openZentaoImport(caseIds: string[]) {
-    setZentaoPushFeedback(null)
     if (!selectedSuite?.suiteId) return
-    zentaoImportForm.setFieldsValue({ productId: 1, moduleId: 0 })
     setZentaoImportTarget({
       suiteId: selectedSuite.suiteId,
       requirementId: suiteRequirementId(selectedSuite),
@@ -758,9 +724,6 @@ export function CaseLibraryPage() {
 
   // 新建用例、用例导入与测试集操作都按测试集执行，未选中测试集时整组不显示。
   const canCreateCase = Boolean(selectedSuite?.suiteId)
-  const zentaoImportCaseCount = zentaoImportTarget
-    ? zentaoImportTarget.caseIds.length || zentaoImportTarget.suiteCaseCount
-    : 0
 
   return (
     <div className="workbench-page api-automation-page functional-test-page tp-list-surface case-library-page tp-surface">
@@ -1410,57 +1373,14 @@ export function CaseLibraryPage() {
         </div>
       </ProjectActionModal>
 
-      <ProjectActionModal
-        action="execute"
-        mask={{ closable: false }}
-        open={Boolean(zentaoImportTarget)}
-        title="导入到禅道"
-        width={560}
-        okText="开始导入"
-        cancelText="取消"
-        onCancel={() => {
-          if (importZentaoTestCasesMutation.isPending) return
-          setZentaoImportTarget(null)
-        }}
-        confirmLoading={importZentaoTestCasesMutation.isPending}
-        okButtonProps={{ className: 'action-btn-save', disabled: zentaoPushFeedback?.uncertain }}
-        onOk={() => zentaoImportForm.submit()}
-        destroyOnHidden
-      >
-        <div className="functional-case-zentao-import-modal">
-          {zentaoPushFeedback && <Alert showIcon type="warning" title="推送未全部完成" description={zentaoPushFeedback.text} />}
-          <Alert
-            showIcon
-            type="info"
-            title={`本次将导入 ${zentaoImportCaseCount} 条用例`}
-            description={
-              zentaoImportTarget && zentaoImportTarget.caseIds.length > 0
-                ? '只会导入本次选中的用例。使用项目 MCP 和本人 Token，须先绑定项目、迭代和需求。执行内同名用例会更新，否则创建。'
-                : '默认导入该测试集全部用例。使用项目 MCP 和本人 Token，须先绑定项目、迭代和需求。执行内同名用例会更新，否则创建。'
-            }
-          />
-          <Form<ZentaoImportFormValues>
-            form={zentaoImportForm}
-            layout="vertical"
-            initialValues={{ productId: 1, moduleId: 0 }}
-            onFinish={(values) => importZentaoTestCasesMutation.mutate(values)}
-          >
-            <Form.Item
-              name="productId"
-              label="禅道产品 ID"
-              rules={[
-                { required: true, message: '请输入禅道产品 ID' },
-                { type: 'number', min: 1, message: '产品 ID 必须大于 0' },
-              ]}
-            >
-              <InputNumber min={1} precision={0} placeholder="例如：1" />
-            </Form.Item>
-            <Form.Item name="moduleId" label="禅道模块 ID">
-              <InputNumber min={0} precision={0} placeholder="默认 0" />
-            </Form.Item>
-          </Form>
-        </div>
-      </ProjectActionModal>
+      {zentaoImportTarget && activeProjectId && <CasePushModal
+        key={`${activeProjectId}:${zentaoImportTarget.suiteId}`}
+        projectId={activeProjectId}
+        suiteId={zentaoImportTarget.suiteId}
+        caseIds={zentaoImportTarget.caseIds}
+        count={zentaoImportTarget.caseIds.length || zentaoImportTarget.suiteCaseCount}
+        onClose={() => setZentaoImportTarget(null)}
+      />}
     </div>
   )
 }

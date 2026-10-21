@@ -17,19 +17,25 @@ def push(api, setup, monkeypatch):
     bind_parents(api, s)
     assert bind(api, s, "requirement", 301).status_code == 200
     suite = make_suite(api, s["owner"], s["req"])
+    case_ids = []
     for title in ("已有用例", "新用例", "第三用例"):
-        make_case(
-            api,
-            s["owner"],
-            suite,
-            title=title,
-            priority="P1",
-            content={
-                "preconditions": ["已登录"],
-                "steps": [{"action": "点击", "expected": "成功"}],
-            },
+        case_ids.append(
+            make_case(
+                api,
+                s["owner"],
+                suite,
+                title=title,
+                priority="P1",
+                content={
+                    "preconditions": ["已登录"],
+                    "steps": [{"action": "点击", "expected": "成功"}],
+                },
+            )
         )
     state = {"mode": "", "writes": [], "tokens": [], "reads": [], "endpoints": []}
+
+    state["choices"] = {case_ids[0]: 41}
+    state["rows"] = {41: {"id": 41, "title": "已有用例", "product": 9, "story": 301}}
 
     async def handle(request):
         body = json.loads(request.content)
@@ -42,17 +48,33 @@ def push(api, setup, monkeypatch):
         if name == "get_stories_storyID":
             data = {"story": {"id": "301", "product": "9"}}
         elif name == "get_executions_executionID_testcases":
-            data = {"testcases": [{"id": "800", "case": "41"}], "total": 1}
+            data = {
+                "testcases": [
+                    {"id": identifier + 1000, "case": identifier, "title": row["title"]}
+                    for identifier, row in state["rows"].items()
+                ],
+                "total": len(state["rows"]),
+            }
         elif name == "get_testcases_caseID":
-            assert str(args["caseID"]) == "41"
-            data = {"testcase": {"id": "41", "title": " 已有用例 "}}
+            data = {"testcase": state["rows"][int(args["caseID"])]}
         elif name.startswith(("post_", "put_")):
             state["writes"].append((name, args))
             if state["mode"] == "timeout" and name == "post_testcases":
                 raise httpx.ReadTimeout("never expose token", request=request)
             if state["mode"] == "403":
                 return httpx.Response(403)
-            data = {} if name.startswith("put_") else {"id": 42}
+            identifier = args.get("testcasID", max(state["rows"]) + 1)
+            payload = args["payload"]
+            state["rows"][identifier] = {
+                "id": identifier,
+                **payload,
+                "product": 9,
+                "steps": [
+                    {"desc": action, "expect": expected}
+                    for action, expected in zip(payload["steps"], payload["expects"], strict=True)
+                ],
+            }
+            data = {"id": identifier}
         else:
             return await s["remote"].handle(request)
         return httpx.Response(
@@ -68,12 +90,18 @@ def push(api, setup, monkeypatch):
         "testing_agent.services.zentao_mcp_cases.McpClient",
         lambda url, token: McpClient(url, token, transport=httpx.MockTransport(handle)),
     )
+    monkeypatch.setattr(
+        "testing_agent.services.zentao_case_gateway.McpClient",
+        lambda url, token: McpClient(url, token, transport=httpx.MockTransport(handle)),
+    )
     return s, state, f"/v1/function-test-suites/{suite}/zentao/testcases/import"
 
 
 def test_push_updates_and_creates_without_connector(api, push):
     s, state, url = push
-    response = api.post(url, headers=s["owner"], json={"productId": 9, "moduleId": 3})
+    response = api.post(
+        url, headers=s["owner"], json={"productId": 9, "moduleId": 3, "choices": state["choices"]}
+    )
     assert response.status_code == 200, response.text
     data = response.json()["data"]
     assert data["importedCaseCount"] == 3 and data["status"] == "success"
@@ -105,7 +133,7 @@ def test_push_updates_and_creates_without_connector(api, push):
 def test_partial_write_is_reported_and_timeout_stops_remaining_cases(api, push):
     s, state, url = push
     state["mode"] = "timeout"
-    response = api.post(url, headers=s["owner"], json={"productId": 9})
+    response = api.post(url, headers=s["owner"], json={"productId": 9, "choices": state["choices"]})
     assert response.status_code == 200, response.text
     data = response.json()["data"]
     assert data["importedCaseCount"] == 1 and data["status"] == "partial_failure"
@@ -118,16 +146,23 @@ def test_product_and_authorization_rejection_never_write(api, push):
     s, state, url = push
     assert api.post(url, headers=s["owner"], json={"productId": 999}).status_code == 400
     api.delete(s["auth"], headers=s["owner"])
-    assert api.post(url, headers=s["owner"], json={"productId": 9}).status_code == 400
+    assert (
+        api.post(
+            url, headers=s["owner"], json={"productId": 9, "choices": state["choices"]}
+        ).status_code
+        == 400
+    )
     _, outsider = account(api, "outsider")
-    assert api.post(url, headers=outsider, json={"productId": 9}).status_code in (403, 404)
+    assert api.post(
+        url, headers=outsider, json={"productId": 9, "choices": state["choices"]}
+    ).status_code in (403, 404)
     assert not state["writes"]
 
 
 def test_rejected_write_is_not_counted_as_success(api, push):
     s, state, url = push
     state["mode"] = "403"
-    response = api.post(url, headers=s["owner"], json={"productId": 9})
+    response = api.post(url, headers=s["owner"], json={"productId": 9, "choices": state["choices"]})
     data = response.json()["data"]
     assert data["importedCaseCount"] == 0
     assert [item["status"] for item in data["items"]] == ["failed", "skipped", "skipped"]
@@ -159,13 +194,28 @@ def test_member_uses_own_mcp_token_and_viewer_cannot_push(api, push):
             == 200
         )
         if role == "member":
-            assert api.post(url, headers=headers, json={"productId": 9}).status_code == 400
+            assert (
+                api.post(
+                    url, headers=headers, json={"productId": 9, "choices": state["choices"]}
+                ).status_code
+                == 400
+            )
             api.put(s["auth"], headers=headers, json={"token": "member-token"})
-            assert api.post(url, headers=headers, json={"productId": 9}).status_code == 200
+            assert (
+                api.post(
+                    url, headers=headers, json={"productId": 9, "choices": state["choices"]}
+                ).status_code
+                == 200
+            )
             assert set(state["tokens"]) == {"member-token"}
         else:
             before = len(state["writes"])
-            assert api.post(url, headers=headers, json={"productId": 9}).status_code == 403
+            assert (
+                api.post(
+                    url, headers=headers, json={"productId": 9, "choices": state["choices"]}
+                ).status_code
+                == 403
+            )
             assert len(state["writes"]) == before
 
 
@@ -183,8 +233,129 @@ def test_case_push_uses_project_selected_mcp_without_an_operation_selector(api, 
         json={"remoteResourceId": "101", "mcpServiceId": sid},
     )
     assert response.status_code == 200, response.text
-    response = api.post(url, headers=s["owner"], json={"productId": 9})
+    response = api.post(url, headers=s["owner"], json={"productId": 9, "choices": state["choices"]})
     assert response.status_code == 200, response.text
     assert response.json()["data"]["importedCaseCount"] == 3
     assert set(state["endpoints"]) == {"http://second-mcp.test/mcp"}
     assert set(state["tokens"]) == {"second-token"}
+
+
+def test_same_title_requires_explicit_choice_and_preview_preserves_candidate(api, push):
+    s, state, url = push
+    response = api.post(url, headers=s["owner"], json={"productId": 9})
+    assert response.status_code == 200
+    assert response.json()["data"]["items"][0]["status"] == "failed"
+    assert not state["writes"]
+    preview = api.post(
+        url.removesuffix("/import") + "/preview", headers=s["owner"], json={"productId": 9}
+    )
+    assert preview.status_code == 200, preview.text
+    first = preview.json()["data"]["items"][0]
+    assert first["candidates"] == [{"id": 41, "title": "已有用例"}]
+    assert first["mappedRemoteCaseId"] is None
+    assert not state["writes"]
+
+
+def test_http_retry_replays_original_operations_without_writes(api, push):
+    s, state, url = push
+    body = {"productId": 9, "choices": state["choices"], "requestId": "same-request"}
+    first = api.post(url, headers=s["owner"], json=body)
+    assert first.json()["data"]["status"] == "success", first.text
+    count = len(state["writes"])
+    repeated = api.post(url, headers=s["owner"], json=body)
+    assert repeated.json()["data"] == first.json()["data"]
+    assert len(state["writes"]) == count
+
+
+def test_unknown_state_survives_new_request_and_has_authorized_status_endpoint(api, push):
+    s, state, url = push
+    state["mode"] = "timeout"
+    first = api.post(
+        url, headers=s["owner"], json={"productId": 9, "choices": state["choices"]}
+    ).json()["data"]
+    uncertain = first["items"][1]
+    writes = len(state["writes"])
+    repeated = api.post(
+        url,
+        headers=s["owner"],
+        json={"productId": 9, "caseIds": [uncertain["caseId"]], "requestId": "different-request"},
+    )
+    assert repeated.json()["data"]["importedCaseCount"] == 0
+    assert len(state["writes"]) == writes
+    status_url = "/v1/function-case-push-operations/" + uncertain["operationId"]
+    status = api.get(status_url, headers=s["owner"])
+    assert status.status_code == 200 and status.json()["data"]["status"] == "uncertain"
+    _, outsider = account(api, "receipt-outsider")
+    assert api.get(status_url, headers=outsider).status_code == 403
+
+
+def test_retry_does_not_include_cases_added_after_original_batch(api, push):
+    s, state, url = push
+    body = {"productId": 9, "choices": state["choices"], "requestId": "frozen-batch"}
+    first = api.post(url, headers=s["owner"], json=body)
+    assert first.json()["data"]["importedCaseCount"] == 3, first.text
+    suite = url.split("/")[3]
+    # Even a newly added unfinished draft must not change the original batch or its receipt.
+    make_case(api, s["owner"], suite, title="提交之后新增的未完成草稿")
+    repeated = api.post(url, headers=s["owner"], json=body)
+    assert repeated.status_code == 200, repeated.text
+    assert repeated.json()["data"] == first.json()["data"]
+    assert len(state["writes"]) == 3
+
+
+def test_request_identity_cannot_be_reused_for_a_disjoint_case_selection(api, push):
+    s, state, url = push
+    suite = url.split("/")[3]
+    cases = api.get(f"/v1/function-test-suites/{suite}/cases", headers=s["owner"]).json()["data"][
+        "items"
+    ]
+    first = api.post(
+        url,
+        headers=s["owner"],
+        json={
+            "productId": 9,
+            "choices": state["choices"],
+            "caseIds": [cases[0]["caseId"]],
+            "requestId": "one-batch",
+        },
+    )
+    assert first.json()["data"]["status"] == "success", first.text
+    second = api.post(
+        url,
+        headers=s["owner"],
+        json={"productId": 9, "caseIds": [cases[1]["caseId"]], "requestId": "one-batch"},
+    )
+    assert second.status_code == 409, second.text
+    assert len(state["writes"]) == 1
+
+
+def test_bulk_preview_and_push_share_one_remote_catalog_per_request(api, push):
+    s, state, url = push
+    first_suite = url.split("/")[3]
+    second_suite = make_suite(api, s["owner"], s["req"], name="第二测试集")
+    make_case(
+        api,
+        s["owner"],
+        second_suite,
+        title="第二测试集的新用例",
+        content={"preconditions": [], "steps": [{"action": "第二步骤", "expected": "第二预期"}]},
+    )
+    body = {
+        "productId": 9,
+        "suiteIds": [first_suite, second_suite],
+        "choices": state["choices"],
+        "requestId": "bulk-manifest",
+    }
+    root = f"/v1/requirements/{s['req']}/zentao/testcases"
+    preview = api.post(root + "/preview", headers=s["owner"], json=body)
+    assert preview.status_code == 200, preview.text
+    assert len(preview.json()["data"]["items"]) == 4
+    assert preview.json()["data"]["canConfirmNotApplied"]
+    assert state["reads"].count("get_executions_executionID_testcases") == 1
+    assert not state["writes"]
+    state["reads"].clear()
+    result = api.post(root + "/import", headers=s["owner"], json=body)
+    assert result.status_code == 200, result.text
+    assert result.json()["data"]["importedCaseCount"] == 4, result.text
+    assert state["reads"].count("get_executions_executionID_testcases") == 1
+    assert len(state["writes"]) == 4

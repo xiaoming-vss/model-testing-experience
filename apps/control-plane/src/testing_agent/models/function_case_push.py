@@ -94,3 +94,25 @@ class FunctionCasePushOperation(Base):
     )
     created_at: Mapped[CreatedAt] = mapped_column(comment="远端调用前意图持久化时间（UTC）")
     updated_at: Mapped[UpdatedAt] = mapped_column(comment="最近回执或核对更新时间（UTC）")
+
+
+class FunctionCasePushRequest(Base):
+    __tablename__ = "function_case_push_requests"
+    __table_args__ = (
+        UniqueConstraint("actor_user_id", "request_id", name="uk_function_push_batch"),
+        {"comment": "功能用例推送批次原始选择及内容摘要；重试不自动纳入新增用例"},
+    )
+    id: Mapped[IdPk] = mapped_column(comment="批次记录内部主键")
+    actor_user_id: Mapped[str] = mapped_column(String(64), comment="原批次发起用户业务标识")
+    request_id: Mapped[str] = mapped_column(String(64), comment="客户端批次编号；同一用户全局唯一")
+    project_id: Mapped[str] = mapped_column(String(64), comment="原批次所属项目业务标识")
+    request_digest: Mapped[str] = mapped_column(
+        String(64), comment="原客户端参数和资源范围摘要；重试变更参数拒绝"
+    )
+    target_digest: Mapped[str] = mapped_column(
+        String(64), comment="原远端实例与目标摘要；绑定变化后不得重用批次"
+    )
+    manifest_json: Mapped[dict[str, Any]] = mapped_column(
+        JSON, comment="按用例编号冻结所属测试集和原内容摘要；不包含正文或凭据"
+    )
+    created_at: Mapped[CreatedAt] = mapped_column(comment="批次首次提交时间（UTC）")

@@ -4,9 +4,9 @@ from types import SimpleNamespace
 
 import pytest
 from authorization_database import AuthorizationDatabase
+from support.function_case_export import exporter as FunctionCaseExporter
 
 from testing_agent.core.errors import ErrResourceBindingNotFound
-from testing_agent.services.function_case_export import FunctionCaseExporter
 from testing_agent.services.function_test_case import FunctionTestCaseService
 
 
@@ -32,6 +32,7 @@ class FakeFunctionCaseRepository:
                 steps="1. 输入账号\n2. 点击登录",
                 expected_results="1. 进入首页\n2. 显示欢迎语",
                 priority="P1",
+                content_json=None,
             ),
             "case-2": SimpleNamespace(
                 case_id="case-2",
@@ -41,6 +42,7 @@ class FakeFunctionCaseRepository:
                 steps="1. 输入账号",
                 expected_results="1. 提示失败",
                 priority="",
+                content_json=None,
             ),
         }
         self.bindings = {
@@ -159,6 +161,7 @@ async def test_function_case_import_to_zentao_imports_all_cases():
     assert integration_service.calls == [("user-1", "conn-1", "project-1")]
 
     _, body = zentao_client.calls[0]
+    sent_cases = [request["cases"][0] for _, request in zentao_client.calls]
     assert body["productID"] == 9
     assert body["project"] == 11
     assert body["execution"] == 22
@@ -171,7 +174,7 @@ async def test_function_case_import_to_zentao_imports_all_cases():
         "steps": ["1. 输入账号", "2. 点击登录"],
         "expects": ["1. 进入首页", "2. 显示欢迎语"],
     }
-    assert body["cases"][1]["pri"] == 3
+    assert sent_cases[1]["pri"] == 3
 
 
 @pytest.mark.asyncio

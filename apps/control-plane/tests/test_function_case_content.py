@@ -124,17 +124,7 @@ async def test_import_rejects_invalid_structured_body(db):
 
 @pytest.mark.asyncio
 async def test_zentao_export_preserves_multiline_step_boundaries():
-    from testing_agent.services.function_case_export import (
-        FunctionCaseExporter,
-        ZentaoFunctionCaseImportTarget,
-    )
-
-    sent = []
-
-    class Client:
-        async def create_test_cases(self, connection, payload):
-            sent.append(payload)
-            return {"items": [{"id": 1, "status": "success"}]}
+    from testing_agent.services.function_case_push_flow import export_payload
 
     case = FunctionTestCase(
         case_id="multi",
@@ -148,8 +138,6 @@ async def test_zentao_export_preserves_multiline_step_boundaries():
             ],
         },
     )
-    service = FunctionCaseExporter(None, zentao_resource_client=Client())
-    target = ZentaoFunctionCaseImportTarget(None, 1, 0, 2, 3, 4)
-    await service.import_suite_cases_to_zentao("suite", [case], target)
-    assert sent[0]["cases"][0]["steps"] == ["输入账号\n输入密码", "提交"]
-    assert sent[0]["cases"][0]["expects"] == ["保持页面\n展示输入", "成功"]
+    payload = export_payload(case, {"module": 0, "story": 4})
+    assert payload["steps"] == ["输入账号\n输入密码", "提交"]
+    assert payload["expects"] == ["保持页面\n展示输入", "成功"]

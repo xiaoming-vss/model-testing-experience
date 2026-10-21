@@ -6,12 +6,16 @@ from testing_agent.handlers.function_test_case import (
     batch_delete_function_cases,
     create_function_case,
     delete_function_case,
+    function_case_push_status,
     get_function_case,
     import_function_cases,
     import_function_cases_to_zentao,
     import_function_suites_to_zentao,
     list_function_cases,
     list_project_function_cases,
+    preview_function_case_push,
+    preview_function_suite_push,
+    reconcile_function_case_push,
     update_function_case,
 )
 from testing_agent.handlers.function_test_suite import (
@@ -24,10 +28,12 @@ from testing_agent.handlers.function_test_suite import (
 )
 from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
 from testing_agent.schemas.function_test_case import (
+    CasePushPreview,
     FunctionCaseImportResponse,
     FunctionCaseLibraryItem,
     FunctionCaseResponse,
     FunctionCasesBatchDeleteResponse,
+    FunctionCaseZentaoImportItemResponse,
     FunctionCaseZentaoImportResponse,
     FunctionSuitesZentaoImportResponse,
 )
@@ -102,3 +108,21 @@ router.get(
     "/projects/{project_id}/function-test-cases",
     response_model=ApiResponse[ListResponse[FunctionCaseLibraryItem]],
 )(list_project_function_cases)
+
+
+router.post(
+    "/function-test-suites/{suite_id}/zentao/testcases/preview",
+    response_model=ApiResponse[CasePushPreview],
+)(preview_function_case_push)
+router.post(
+    "/requirements/{requirement_id}/zentao/testcases/preview",
+    response_model=ApiResponse[CasePushPreview],
+)(preview_function_suite_push)
+router.get(
+    "/function-case-push-operations/{operation_id}",
+    response_model=ApiResponse[FunctionCaseZentaoImportItemResponse],
+)(function_case_push_status)
+router.post(
+    "/function-test-suites/{suite_id}/zentao/testcases/operations/{operation_id}/reconcile",
+    response_model=ApiResponse[FunctionCaseZentaoImportItemResponse],
+)(reconcile_function_case_push)

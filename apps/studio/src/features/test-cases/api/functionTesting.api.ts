@@ -1,5 +1,8 @@
 import { buildQuery, request, type ListResponse } from '@/shared/api/request'
 import type {
+  CasePushPreviewItem,
+  CasePushReconcilePayload,
+  FunctionTestCaseZentaoImportItem,
   CreateFunctionTestCasePayload,
   CreateFunctionTestSuitePayload,
   FunctionCaseLibraryFilters,
@@ -54,6 +57,20 @@ export const functionTestingApi = {
       body: formData,
     })
   },
+  previewFunctionCasePush: (suiteId: string, body: ImportFunctionTestCasesToZentaoPayload) =>
+    request<{ items: CasePushPreviewItem[]; restoreRequired?: boolean; canConfirmNotApplied?: boolean }>(`/v1/function-test-suites/${suiteId}/zentao/testcases/preview`, {
+      method: 'POST', body: JSON.stringify(body),
+    }, { normalizeListResponse: false }),
+  previewFunctionSuitePush: (requirementId: string, body: ImportFunctionTestSuitesToZentaoPayload) =>
+    request<{ items: CasePushPreviewItem[]; restoreRequired?: boolean; canConfirmNotApplied?: boolean }>(`/v1/requirements/${requirementId}/zentao/testcases/preview`, {
+      method: 'POST', body: JSON.stringify(body),
+    }, { normalizeListResponse: false }),
+  functionCasePushStatus: (operationId: string) =>
+    request<FunctionTestCaseZentaoImportItem>(`/v1/function-case-push-operations/${operationId}`),
+  reconcileFunctionCasePush: (suiteId: string, operationId: string, body: CasePushReconcilePayload) =>
+    request<FunctionTestCaseZentaoImportItem>(`/v1/function-test-suites/${suiteId}/zentao/testcases/operations/${operationId}/reconcile`, {
+      method: 'POST', body: JSON.stringify(body),
+    }),
   importFunctionTestCasesToZentao: (suiteId: string, body: ImportFunctionTestCasesToZentaoPayload) =>
     request<FunctionTestCaseZentaoImportResult>(`/v1/function-test-suites/${suiteId}/zentao/testcases/import`, {
       method: 'POST',

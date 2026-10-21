@@ -83,3 +83,64 @@ async def test_mysql_project_serialization_grants_one_remote_write_permit(mysql)
             )
             await session.commit()
         await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_mysql_restore_review_and_batch_order_are_persisted(mysql):
+    from testing_agent.models.function_case_push import FunctionCasePushRequest
+
+    with mysql.begin() as connection:
+        project = seed_row(connection, Project.__table__)
+    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
+    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    try:
+        async with sessions() as session:
+            await session.scalar(
+                select(Project).where(Project.project_id == project["project_id"]).with_for_update()
+            )
+            repository = FunctionCasePushRepository(session)
+            journal = CasePushJournal(repository)
+            permit = await journal.reserve(
+                CaseWriteIntent(
+                    project_id=project["project_id"],
+                    case_id="reviewed-case",
+                    instance_key="b" * 64,
+                    actor=project["user_id"],
+                    request_id="restored-request",
+                    target={"execution": 1},
+                    payload={"title": "case"},
+                    restore_id="restore-1",
+                    restore_reviewer=project["user_id"],
+                )
+            )
+            await journal.record(permit.operation.operation_id, "succeeded", remote_case_id=71)
+            session.add(
+                FunctionCasePushRequest(
+                    actor_user_id=project["user_id"],
+                    request_id="batch",
+                    project_id=project["project_id"],
+                    request_digest="c" * 64,
+                    target_digest="d" * 64,
+                    manifest_json={"b": {"order": "0"}, "a": {"order": "1"}},
+                )
+            )
+            await session.commit()
+        async with sessions() as session:
+            repository = FunctionCasePushRepository(session)
+            assert await repository.restore_reviewers(
+                project["project_id"], "b" * 64, "restore-1", ["reviewed-case"]
+            ) == {"reviewed-case": project["user_id"]}
+            batch = await repository.request(project["user_id"], "batch")
+            assert sorted(
+                batch.manifest_json, key=lambda key: int(batch.manifest_json[key]["order"])
+            ) == ["b", "a"]
+    finally:
+        async with sessions() as session:
+            await session.execute(delete(FunctionCasePushRequest))
+            await session.execute(delete(FunctionCasePushOperation))
+            await session.execute(delete(FunctionCaseRemoteIdentity))
+            await session.execute(
+                delete(Project).where(Project.project_id == project["project_id"])
+            )
+            await session.commit()
+        await engine.dispose()
