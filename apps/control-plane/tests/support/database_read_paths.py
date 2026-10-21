@@ -48,6 +48,9 @@ class AsyncAdapter:
     async def scalars(self, statement):
         return self.sync.scalars(statement)
 
+    async def rollback(self):
+        self.sync.rollback()
+
     async def run_sync(self, operation):
         return operation(self.sync)
 
@@ -153,6 +156,9 @@ def seed_history(session, size=25):
 
 
 class CapturingSession:
+    async def rollback(self):
+        self.sync.rollback()
+
     async def run_sync(self, operation):
         return operation(self)
 

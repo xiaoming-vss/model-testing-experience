@@ -352,3 +352,94 @@ async def test_order_entry_pages_project_summaries_and_preserve_focus_and_counts
     assert await reader.detail("order", "entry-51") is None
     detail = await reader.detail("order", "entry-0")
     assert detail["snapshot"] == body
+
+
+async def test_export_manifest_bounds_bodies_and_defers_late_batch_failures(database):
+    from types import SimpleNamespace
+
+    from testing_agent.domain.integration_execution import digest
+    from testing_agent.models.function_test_case import FunctionTestCase
+    from testing_agent.models.function_test_suite import FunctionTestSuite
+    from testing_agent.repositories.function_test_case import FunctionTestCaseRepository
+    from testing_agent.schemas.function_test_case import ImportFunctionCasesToZentaoRequest
+    from testing_agent.services.function_case_export import FunctionCaseExporter
+    from testing_agent.services.function_case_push_flow import CasePushScope
+
+    sync, session, sql = database
+    sync.add(FunctionTestSuite(suite_id="bounded", requirement_id="req", name="bounded"))
+    sync.flush()
+    sync.add_all(
+        [
+            FunctionTestCase(
+                case_id=f"body-{i}",
+                suite_id="bounded",
+                title=f"case {i}",
+                order_no=i,
+                content_json={
+                    "preconditions": [],
+                    "steps": [{"action": "A" * 4096, "expected": "E" * 4096}],
+                },
+            )
+            for i in range(1001)
+        ]
+    )
+    sync.commit()
+    sizes = []
+
+    class MeasuredRepository(FunctionTestCaseRepository):
+        async def list_cases_by_ids(self, case_ids):
+            sizes.append(len(case_ids))
+            return await super().list_cases_by_ids(case_ids)
+
+    writes = []
+
+    class Flow:
+        async def push_one(
+            self, actor, scope, gateway, *, case_id, payload, expected_payload_digest, **kwargs
+        ):
+            if digest(payload) != expected_payload_digest:
+                raise AppError(409, "内容已变化", 409)
+            writes.append(case_id)
+            if case_id == "body-499":
+                # A later batch changes after admission: preserve earlier receipts, reject that row.
+                row = sync.scalar(
+                    select(FunctionTestCase).where(FunctionTestCase.case_id == "body-501")
+                )
+                row.title = "changed after admission"
+                sync.commit()
+            return {"caseId": case_id, "status": "success", "remoteCaseId": len(writes)}
+
+    exporter = FunctionCaseExporter(MeasuredRepository(session), push_flow=Flow())
+    scope = CasePushScope(
+        "p",
+        "bounded",
+        "req",
+        "s",
+        SimpleNamespace(),
+        {"productID": 1, "project": 2, "execution": 3, "story": 4, "module": 0},
+    )
+    sql.clear()
+    references = await exporter.resolve_cases_for_zentao_import("bounded", [])
+    assert [row.case_id for row in references] == [f"body-{i}" for i in range(1001)]
+    assert len(sql) == 1 and "content_json" not in sql[0] and "steps" not in sql[0]
+    identifiers = [row.case_id for row in references]
+    manifest = await exporter.prepare_manifest(scope, identifiers)
+    assert sizes == [500, 500, 1]
+    assert all(set(value) == {"suiteId", "digest", "order"} for value in manifest.values())
+    assert len(json.dumps(manifest)) < 160_000
+    sizes.clear()
+    result = await exporter.push_suite(
+        "u", scope, ImportFunctionCasesToZentaoRequest(productId=1), None, manifest, "fingerprint"
+    )
+    assert sizes == [500, 500]  # No body reads after the first changed item stops the push.
+    assert writes == identifiers[:501]
+    assert result["items"][501]["status"] == "failed"
+    assert result["items"][501]["caseId"] == "body-501"
+    assert all(item["status"] == "skipped" for item in result["items"][502:])
+    # A malformed final item must fail the complete preflight, before any push is admitted.
+    last = sync.scalar(select(FunctionTestCase).where(FunctionTestCase.case_id == "body-1000"))
+    last.content_json = {"preconditions": [], "steps": []}
+    sync.commit()
+    with pytest.raises(AppError, match="测试步骤不能为空"):
+        await exporter.prepare_manifest(scope, identifiers)
+    assert writes == identifiers[:501]

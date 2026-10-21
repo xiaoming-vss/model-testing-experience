@@ -16,8 +16,8 @@ from testing_agent.core.errors import (
     ErrZentaoRemoteResourceUnavailable,
     dynamic_error,
 )
+from testing_agent.domain.function_case_export import FunctionCaseExportReference
 from testing_agent.domain.integration_execution import digest
-from testing_agent.models.function_test_case import FunctionTestCase
 from testing_agent.models.function_test_suite import FunctionTestSuite
 from testing_agent.models.project import Project
 from testing_agent.models.requirement import Requirement
@@ -149,11 +149,47 @@ class FunctionCaseExporter:
         scope = self.scope(
             suite_id, requirement.requirement_id, sprint.sprint_id, project.project_id, target
         )
-        payloads = {
-            case.case_id: ({"title": case.title} if preview else export_payload(case, scope.target))
-            for case in cases
-        }
-        return scope, payloads
+        if preview:
+            return scope, {case.case_id: {"title": case.title} for case in cases}
+        return scope, await self.prepare_manifest(scope, [case.case_id for case in cases])
+
+    async def load_payload_batch(
+        self, scope: CasePushScope, case_ids: list[str]
+    ) -> dict[str, dict[str, Any] | AppError]:
+        cases = await self.repository.list_cases_by_ids(case_ids)
+        by_id = {case.case_id: case for case in cases}
+        payloads: dict[str, dict[str, Any] | AppError] = {}
+        for case_id in case_ids:
+            try:
+                case = by_id.get(case_id)
+                if case is None:
+                    raise ErrNotFound()
+                if case.suite_id != scope.suite_id:
+                    raise dynamic_error(
+                        ErrFunctionTestCaseImportInvalid, f"用例不属于当前测试集: {case_id}"
+                    )
+                payloads[case_id] = export_payload(case, scope.target)
+            except AppError as exc:
+                payloads[case_id] = exc
+        return payloads
+
+    async def prepare_manifest(
+        self, scope: CasePushScope, case_ids: list[str], *, order_offset: int = 0
+    ) -> dict[str, dict[str, str]]:
+        """Validate the entire selection before admitting any remote write; retain digests only."""
+        entries = {}
+        for offset in range(0, len(case_ids), 500):
+            payloads = await self.load_payload_batch(scope, case_ids[offset : offset + 500])
+            for index, (case_id, body) in enumerate(payloads.items()):
+                if isinstance(body, AppError):
+                    raise body
+                entries[case_id] = {
+                    "suiteId": scope.suite_id,
+                    "digest": digest(body),
+                    "order": str(order_offset + offset + index),
+                }
+            del payloads
+        return entries
 
     async def import_to_zentao(self, user_id: str, suite_id: str, payload: Any) -> dict:
         try:
@@ -164,7 +200,7 @@ class FunctionCaseExporter:
             )
         except ValidationError as exc:
             raise ErrBadRequest() from exc
-        scope, payloads = await self.prepare_suite(user_id, suite_id, request)
+        scope, entries = await self.prepare_suite(user_id, suite_id, request)
         fingerprint = digest(
             {
                 "suiteId": suite_id,
@@ -176,15 +212,10 @@ class FunctionCaseExporter:
             scope,
             request.request_id,
             fingerprint,
-            {
-                case_id: {"suiteId": suite_id, "digest": digest(body), "order": str(index)}
-                for index, (case_id, body) in enumerate(payloads.items())
-            },
+            entries,
         )
         async with self.gateway_factory(scope.connection) as gateway:
-            return await self.push_suite(
-                user_id, scope, payloads, request, gateway, manifest, fingerprint
-            )
+            return await self.push_suite(user_id, scope, request, gateway, manifest, fingerprint)
 
     async def preview_suite(
         self, user_id: str, suite_id: str, request: ImportFunctionCasesToZentaoRequest
@@ -198,7 +229,6 @@ class FunctionCaseExporter:
         self,
         user_id: str,
         scope: CasePushScope,
-        payloads: dict[str, dict[str, Any]],
         request: ImportFunctionCasesToZentaoRequest | ImportFunctionSuitesToZentaoRequest,
         gateway: ZentaoCaseGateway,
         manifest: dict[str, dict[str, str]],
@@ -210,7 +240,8 @@ class FunctionCaseExporter:
             (key for key, entry in manifest.items() if entry["suiteId"] == scope.suite_id),
             key=lambda key: int(manifest[key]["order"]),
         )
-        for case_id in selected:
+        payloads: dict[str, dict[str, Any] | AppError] = {}
+        for index, case_id in enumerate(selected):
             if stopped:
                 items.append(
                     {
@@ -222,9 +253,14 @@ class FunctionCaseExporter:
                 )
                 continue
             try:
+                if index % 500 == 0:
+                    payloads.clear()
+                    payloads = await self.load_payload_batch(scope, selected[index : index + 500])
                 if case_id not in payloads:
                     raise ErrNotFound()
                 payload = payloads[case_id]
+                if isinstance(payload, AppError):
+                    raise payload
                 result = await self.workflow().push_one(
                     user_id,
                     scope,
@@ -296,22 +332,14 @@ class FunctionCaseExporter:
             }
         )
         selected = await self.workflow().frozen_selection(user_id, request.request_id, fingerprint)
-        batches: dict[str, dict[str, dict[str, Any]]] = {}
         entries: dict[str, dict[str, str]] = {}
         for suite_id in suite_ids:
             scope = self.scope(suite_id, requirement_id, sprint_id, project_id, target)
-            cases = await self.repository.list_by_suite(suite_id)
-            batches[suite_id] = {
-                case.case_id: export_payload(case, scope.target)
-                for case in cases
-                if selected is None or case.case_id in selected
-            }
-            for case_id, body in batches[suite_id].items():
-                entries[case_id] = {
-                    "suiteId": suite_id,
-                    "digest": digest(body),
-                    "order": str(len(entries)),
-                }
+            references = await self.repository.export_references(suite_id)
+            case_ids = [
+                case.case_id for case in references if selected is None or case.case_id in selected
+            ]
+            entries.update(await self.prepare_manifest(scope, case_ids, order_offset=len(entries)))
         fingerprint = digest(
             {
                 "requirementId": requirement_id,
@@ -340,14 +368,13 @@ class FunctionCaseExporter:
                     )
                     continue
                 try:
-                    payloads = batches[suite_id]
                     if not any(entry["suiteId"] == suite_id for entry in manifest.values()):
                         raise dynamic_error(
                             ErrFunctionTestCaseImportInvalid, "测试集下没有可导入用例"
                         )
                     scope = self.scope(suite_id, requirement_id, sprint_id, project_id, target)
                     result = await self.push_suite(
-                        user_id, scope, payloads, request, gateway, manifest, fingerprint
+                        user_id, scope, request, gateway, manifest, fingerprint
                     )
                     if result["importedCaseCount"] == 0 and result["items"][0].get("errorCode"):
                         error = result["items"][0]
@@ -502,9 +529,9 @@ class FunctionCaseExporter:
         self,
         suite_id: str,
         case_ids: list[str],
-    ) -> list[FunctionTestCase]:
+    ) -> list[FunctionCaseExportReference]:
         if not case_ids:
-            return await self.repository.list_by_suite(suite_id)
+            return await self.repository.export_references(suite_id)
         identifiers = []
         seen = set()
         for index, case_id in enumerate(case_ids):
@@ -519,7 +546,8 @@ class FunctionCaseExporter:
             seen.add(normalized)
             identifiers.append(normalized)
         by_id = {
-            case.case_id: case for case in await self.repository.list_cases_by_ids(identifiers)
+            case.case_id: case
+            for case in await self.repository.export_references(suite_id, identifiers)
         }
         result = []
         for identifier in identifiers:
@@ -583,7 +611,7 @@ class FunctionCaseExporter:
         async with self.gateway_factory(target.connection) as gateway:
             for suite_id in suite_ids:
                 scope = self.scope(suite_id, requirement_id, sprint_id, project_id, target)
-                cases = await self.repository.list_by_suite(suite_id)
+                cases = await self.repository.export_references(suite_id)
                 payloads = {case.case_id: {"title": case.title} for case in cases}
                 preview = await self.workflow().preview(actor, scope, gateway, payloads)
                 result.extend(preview["items"])

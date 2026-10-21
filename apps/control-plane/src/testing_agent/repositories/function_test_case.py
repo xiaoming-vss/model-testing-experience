@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from sqlalchemy import func, or_, select
 
+from testing_agent.domain.function_case_export import FunctionCaseExportReference
 from testing_agent.domain.function_case_query import FunctionCaseQuery
 from testing_agent.models.function_test_case import FunctionTestCase
 from testing_agent.models.function_test_suite import FunctionTestSuite
@@ -54,15 +55,35 @@ class FunctionTestCaseRepository(ResourceRepository):
             )
         )
 
+    async def export_references(
+        self, suite_id: str, case_ids: list[str] | None = None
+    ) -> list[FunctionCaseExportReference]:
+        """Freeze ordering/identity without retaining any case bodies."""
+        query = select(FunctionTestCase.case_id, FunctionTestCase.suite_id, FunctionTestCase.title)
+        if case_ids is None:
+            rows = await self.session.execute(
+                query.where(FunctionTestCase.suite_id == suite_id).order_by(
+                    FunctionTestCase.order_no, FunctionTestCase.id
+                )
+            )
+            return [FunctionCaseExportReference(*row) for row in rows]
+        references: list[FunctionCaseExportReference] = []
+        for offset in range(0, len(case_ids), 500):
+            rows = await self.session.execute(
+                query.where(FunctionTestCase.case_id.in_(case_ids[offset : offset + 500]))
+            )
+            references.extend(FunctionCaseExportReference(*row) for row in rows)
+        return references
+
     async def list_cases_by_ids(self, case_ids: list[str]) -> list[FunctionTestCase]:
         """Bound SQL parameter counts while loading complete selected export content."""
         result: list[FunctionTestCase] = []
         for offset in range(0, len(case_ids), 500):
             result.extend(
                 await self.session.scalars(
-                    select(FunctionTestCase).where(
-                        FunctionTestCase.case_id.in_(case_ids[offset : offset + 500])
-                    )
+                    select(FunctionTestCase)
+                    .where(FunctionTestCase.case_id.in_(case_ids[offset : offset + 500]))
+                    .execution_options(populate_existing=True)
                 )
             )
         return result

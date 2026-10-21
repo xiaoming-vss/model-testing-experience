@@ -88,6 +88,18 @@ class FakeFunctionCaseRepository:
     async def get_project(self, project_id):
         return self.project if project_id == self.project.project_id else None
 
+    async def export_references(self, suite_id, case_ids=None):
+        from testing_agent.domain.function_case_export import FunctionCaseExportReference
+
+        cases = (
+            (await self.list_by_suite(suite_id))
+            if case_ids is None
+            else [case for key, case in self.cases.items() if key in case_ids]
+        )
+        return [
+            FunctionCaseExportReference(case.case_id, case.suite_id, case.title) for case in cases
+        ]
+
     async def list_by_suite(self, suite_id):
         return [case for case in self.cases.values() if case.suite_id == suite_id]
 

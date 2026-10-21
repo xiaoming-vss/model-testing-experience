@@ -8,6 +8,13 @@ from testing_agent.domain.function_case_content import CaseContent
 
 
 @dataclass(frozen=True, slots=True)
+class FunctionCaseExportReference:
+    case_id: str
+    suite_id: str
+    title: str
+
+
+@dataclass(frozen=True, slots=True)
 class FunctionCaseExportSource:
     case_id: str
     title: str
