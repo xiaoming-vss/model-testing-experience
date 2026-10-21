@@ -154,3 +154,7 @@ connector-zentao 的源码、专属文档及独立启动入口已删除；平台
 ## ZenTao-MCP 手动部署模板
 
 平台默认编排不启动 MCP。仓库的 `deploy/zentao-mcp/` 只保存 Compose、无凭据配置示例和启动入口，直接使用 `xiaoming-x/zentao-mcp:2026-10-04` 的已发布镜像。用户复制并编辑配置后，在独立部署目录执行 `docker compose pull` 和 `docker compose up -d`；不通过 `manage.py` 生成 MCP 配置，也不依赖平台 TOML。项目所有者填写各自可达的 MCP 地址，成员各自授权。配置、多容器、端口、网络与排障见 [完整指南](control-plane/zentao-mcp-deployment.md)。
+
+## AI Agent 底座选择
+
+`config/platform.toml` 的 `[ai_worker.agent] backend` 支持 `nanobot`（默认）和 `pi`。Compose 的 `ai-worker` 服务自动选择原项目或独立 `apps/ai-worker-pi` 镜像、配置与数据卷。切换前处理在途任务，再执行 `python3 scripts/manage.py compose up -d --build ai-worker`。安装、模型配置和会话边界见 [Pi Worker](ai-worker-pi/README.md)。

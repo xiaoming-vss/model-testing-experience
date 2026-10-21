@@ -4,6 +4,8 @@ import reviewCss from './task-review.css?raw'
 import candidateCss from './candidate-review.css?raw'
 import resultCss from './run-result.css?raw'
 import analysisCss from './requirement-analysis.css?raw'
+import revisionCss from '../components/RevisionSidePanel.css?raw'
+import artifactCss from './functional-artifact-modal.css?raw'
 
 const aiTestingCss = `${sharedCss}\n${reviewCss}\n${candidateCss}\n${resultCss}`
 
@@ -13,6 +15,21 @@ afterEach(() => {
 })
 
 describe('运行结果弹框布局', () => {
+  it('继续优化保留横向工作区，不被需求分析内部纵向布局覆盖', () => {
+    document.head.innerHTML = `<style>${revisionCss}\n${aiTestingCss}\n${analysisCss}\n${artifactCss}</style>`
+    document.body.innerHTML = `
+      <div class="ant-modal functional-artifact-modal ai-task-run-result-modal ai-requirement-analysis-preview-modal review functional-stage-review-modal">
+        <div class="ant-modal-body"><div class="revision-workspace is-revising">
+          <div class="revision-source"><div class="ai-task-run-result-modal-content review"></div></div>
+          <div class="revision-divider"></div><aside class="revision-side-panel"></aside>
+        </div></div>
+      </div>`
+    const workspace = getComputedStyle(document.querySelector('.revision-workspace')!)
+    expect(workspace.display).toBe('flex')
+    expect(workspace.flexDirection || 'row').toBe('row')
+    expect(getComputedStyle(document.querySelector('.revision-side-panel')!).display).toBe('flex')
+  })
+
   it('需求分析 JSON 预览约束编辑器高度并由内部滚动', () => {
     document.head.innerHTML = `<style>${aiTestingCss}\n${analysisCss}</style>`
     document.body.innerHTML = `

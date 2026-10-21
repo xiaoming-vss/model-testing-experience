@@ -6,7 +6,8 @@ Model Testing Experience（简称 MTX）是面向测试协作的平台，包含�
 | --- | --- | --- |
 | studio | `apps/studio` | React 前端 |
 | control-plane | `apps/control-plane` | FastAPI 控制面 |
-| ai-worker | `apps/ai-worker` | AI 测试生成 |
+| ai-worker | `apps/ai-worker` | AI 测试生成（Nanobot） |
+| ai-worker-pi | `apps/ai-worker-pi` | AI 测试生成（Python + Pi，可按部署配置选择） |
 | api-ui-worker | `apps/api-ui-worker` | API / Playwright 测试执行 |
 | integration-worker | `apps/integration-worker` | 禅道 Bug、附件、正文图片和字段同步执行 |
 | mysql | — | MySQL 8.4 |
@@ -19,6 +20,7 @@ model-testing-experience/
 ├── apps/
 │   ├── studio/
 │   ├── control-plane/
+│   ├── ai-worker-pi/
 │   ├── ai-worker/
 │   ├── api-ui-worker/
 │   └── integration-worker/

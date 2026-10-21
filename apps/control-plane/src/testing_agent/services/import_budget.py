@@ -21,6 +21,13 @@ def too_large(message: str) -> AppError:
     return AppError(413, message, 413)
 
 
+def utf8_size(value: str) -> int:
+    try:
+        return len(value.encode("utf-8"))
+    except UnicodeEncodeError:
+        raise invalid("导入内容包含无效的 Unicode 字符") from None
+
+
 def validate_structure(value: Any, limits: ImportLimits) -> None:
     pending = [(value, 0)]
     containers: set[int] = set()
@@ -33,7 +40,7 @@ def validate_structure(value: Any, limits: ImportLimits) -> None:
         if isinstance(item, str):
             if len(item) > limits.max_field_chars:
                 raise too_large("导入字段超过长度限制")
-            size += len(item.encode("utf-8"))
+            size += utf8_size(item)
         elif isinstance(item, (list, dict)):
             if id(item) in containers:
                 raise invalid("导入内容不支持 YAML 别名或循环引用")
@@ -63,7 +70,7 @@ def parse_bounded(payload: Any, limits: ImportLimits) -> dict[str, Any]:
         except UnicodeDecodeError:
             raise invalid("导入文件必须使用 UTF-8 编码") from None
     if isinstance(payload, str):
-        if len(payload) > limits.max_bytes or len(payload.encode("utf-8")) > limits.max_bytes:
+        if len(payload) > limits.max_bytes or utf8_size(payload) > limits.max_bytes:
             raise too_large("导入内容超过大小限制")
 
         class BoundedLoader(yaml.SafeLoader):

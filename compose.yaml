@@ -49,13 +49,14 @@ services:
         condition: service_completed_successfully
 
   ai-worker:
-    image: mtx/ai-worker:local
-    build: ./apps/ai-worker
+    init: true
+    image: mtx/${AI_WORKER_PROJECT:-ai-worker}:local
+    build: ./apps/${AI_WORKER_PROJECT:-ai-worker}
     restart: unless-stopped
     volumes:
-      - ./.runtime/docker/ai-worker.toml:/app/config/worker.toml:ro
-      - ai-runtime:/data/runtime
-      - ai-logs:/app/logs
+      - ./.runtime/docker/${AI_WORKER_PROJECT:-ai-worker}.toml:/app/config/worker.toml:ro
+      - ${AI_RUNTIME_VOLUME:-ai-runtime}:/data/runtime
+      - ${AI_LOGS_VOLUME:-ai-logs}:/app/logs
     depends_on:
       control-plane:
         condition: service_healthy
@@ -99,6 +100,8 @@ services:
 volumes:
   mysql-data:
   control-plane-storage:
+  ai-pi-runtime:
+  ai-pi-logs:
   ai-runtime:
   ai-logs:
   worker-artifacts:

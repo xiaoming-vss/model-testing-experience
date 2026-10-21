@@ -48,3 +48,7 @@
 .ai-generated-case-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; }
 .ai-generated-case-meta .ant-tag { margin: 0; padding-inline: 8px; line-height: 24px; font-size: 12px; }
 .ai-generated-case-browser .ai-generated-case-meta .ai-generated-cases-review-index { padding: 2px 10px; line-height: 24px; }
+
+.ai-generated-case-editor { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
+.ai-generated-case-editor > p { color: var(--ai-text-secondary); font-size: 12px; margin: 0; }
+.ai-generated-case-editor label { display: flex; flex-direction: column; gap: 8px; }

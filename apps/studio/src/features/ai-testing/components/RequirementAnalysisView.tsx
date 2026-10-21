@@ -110,6 +110,7 @@ function StructuredAnalysisSections({ parsed }: { parsed: RequirementAnalysisSec
         <AnalysisContentBrowser title={title} compact={id === 'ruleId' || id === 'scenarioId'} filterStatus={id === 'scenarioId'} entries={entries.map((item, index) => ({
           key: `${toDisplayText(item[id])}-${index}`,
           code: toDisplayText(item[id]) || `${index + 1}`,
+          directoryTitle: id === 'scenarioId' ? formatTextList(item.verificationObjective) || undefined : undefined,
           title: toDisplayText(item.name) || (id === 'scenarioId' ? `场景 ${index + 1}` : id === 'questionId' ? toDisplayText(item.question) || title : title),
           searchText: Object.values(item).map(formatTextList).join(' '),
           status: item.readyForTestPointGeneration === true ? 'ready' : item.readyForTestPointGeneration === false ? 'blocked' : 'unknown',

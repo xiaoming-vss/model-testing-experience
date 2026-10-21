@@ -1284,7 +1284,7 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
 
         <Modal
           mask={{ closable: false }}
-          className={`ai-task-run-result-modal${!showStageReviewInRunResultModal && (runResultModal?.key === 'requirementAnalysis' || runResultModal?.key === 'caseNames') ? ' functional-artifact-modal' : ''}${runResultModal?.key === 'requirementAnalysis' && !showStageReviewInRunResultModal ? ' ai-requirement-analysis-preview-modal' : ''}${showStageReviewInRunResultModal ? ' review functional-stage-review-modal' : ''}${showStageReviewInRunResultModal && revisionTarget !== 'stage' ? ' stage-review-with-comment' : ''}`}
+          className={`ai-task-run-result-modal${(runResultModal?.key === 'requirementAnalysis' || runResultModal?.key === 'caseNames') ? ' functional-artifact-modal' : ''}${runResultModal?.key === 'requirementAnalysis' ? ' ai-requirement-analysis-preview-modal' : ''}${showStageReviewInRunResultModal ? ' review functional-stage-review-modal' : ''}${showStageReviewInRunResultModal && revisionTarget !== 'stage' ? ' stage-review-with-comment' : ''}`}
           title={showStageReviewInRunResultModal ? '审核' : runResultModal?.label ?? '运行结果'}
           open={Boolean(runResultModal)}
           onCancel={() => { if (!reviseStageMutation.isPending) { setRevisionTarget(null); setRunResultModal(null) } }}
@@ -1343,7 +1343,7 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
                 </Button>,
               ]
           }
-          width={!showStageReviewInRunResultModal && (runResultModal?.key === 'requirementAnalysis' || runResultModal?.key === 'caseNames') ? "min(2000px, calc(100vw - 56px))" : revisionTarget === 'stage' ? "calc(100vw - 56px)" : "min(1620px, calc(100vw - 72px))"}
+          width={(runResultModal?.key === 'requirementAnalysis' || runResultModal?.key === 'caseNames') ? "min(2000px, calc(100vw - 56px))" : revisionTarget === 'stage' ? "calc(100vw - 56px)" : "min(1620px, calc(100vw - 72px))"}
           centered
           destroyOnHidden
         >
@@ -1564,7 +1564,7 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
                   {selectedRunQuery.isLoading ? (
                     <div className="ai-task-run-result-popover-loading"><Spin /></div>
                   ) : candidateYaml ? (
-                    <GeneratedCasesReviewView content={candidateYaml} pointsContent={getConfigStageFieldContent(selectedRun?.configJson, 'caseNames')} rootTitle={importTargetRequirementName || task?.name || '功能测试用例'} />
+                    <GeneratedCasesReviewView onChange={canEditCandidate ? setCandidateYaml : undefined} content={candidateYaml} pointsContent={getConfigStageFieldContent(selectedRun?.configJson, 'caseNames')} rootTitle={importTargetRequirementName || task?.name || '功能测试用例'} />
                   ) : (
                     <div className="ai-task-run-result-popover-empty">当前记录暂无结果</div>
                   )}

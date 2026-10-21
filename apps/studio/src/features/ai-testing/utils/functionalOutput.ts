@@ -162,6 +162,7 @@ export function formatRoleConcerns(value: unknown) {
 }
 
 export type GeneratedTestCase = {
+  sourceIndex: number
   raw: Record<string, unknown>
   moduleName: string
   displayName: string
@@ -248,6 +249,13 @@ function formatFieldLabel(key: string): string {
   return key.replace(/[_-]/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+export function getGeneratedCaseEditableFields(testCase: GeneratedTestCase) {
+  return Object.entries(testCase.raw)
+    .filter(([key, value]) => !CASE_ID_FIELDS.includes(key) && !MODULE_FIELD_CANDIDATES.includes(key)
+      && (typeof value === 'string' || (Array.isArray(value) && value.every((item) => typeof item === 'string'))))
+    .map(([key]) => ({ key, label: formatFieldLabel(key) }))
+}
+
 export function parseGeneratedCases(content?: string): GeneratedCaseModuleGroup[] {
   if (!content?.trim()) return []
   try {
@@ -260,10 +268,10 @@ export function parseGeneratedCases(content?: string): GeneratedCaseModuleGroup[
     if (rawCases.length === 0) return []
 
     const moduleMap = new Map<string, GeneratedTestCase[]>()
-    rawCases.forEach((item) => {
+    rawCases.forEach((item, sourceIndex) => {
       if (!item || typeof item !== 'object') {
         const group = moduleMap.get('未分组') ?? []
-        group.push({ raw: {}, moduleName: '未分组', displayName: toDisplayText(item) || '未命名用例', tagFields: [], detailFields: [] })
+        group.push({ sourceIndex, raw: {}, moduleName: '未分组', displayName: toDisplayText(item) || '未命名用例', tagFields: [], detailFields: [] })
         moduleMap.set('未分组', group)
         return
       }
@@ -287,7 +295,7 @@ export function parseGeneratedCases(content?: string): GeneratedCaseModuleGroup[
         }
       })
 
-      const testCase: GeneratedTestCase = { raw: record, moduleName, displayName, tagFields, detailFields }
+      const testCase: GeneratedTestCase = { sourceIndex, raw: record, moduleName, displayName, tagFields, detailFields }
       const group = moduleMap.get(moduleName) ?? []
       group.push(testCase)
       moduleMap.set(moduleName, group)

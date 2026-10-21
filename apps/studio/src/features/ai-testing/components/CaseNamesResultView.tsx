@@ -215,8 +215,8 @@ export function CaseNameTreeView({
   onNodeSelect?: (id: string) => void
 }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
-  const { zoom, viewportRef } = useCaseTreeZoom(Boolean(treeData))
   const sourceTree = treeData ?? buildCaseNameTree(content, rootTitle)
+  const { zoom, viewportRef } = useCaseTreeZoom(Boolean(sourceTree))
   const prune = (node: CaseNameTreeNode): CaseNameTreeNode => ({ ...node, children: collapsed.has(node.id) ? [] : node.children.map(prune) })
   const tree = treeData && sourceTree ? prune(sourceTree) : sourceTree
   const toggle = treeData ? (id: string) => setCollapsed((current) => {
@@ -271,7 +271,7 @@ export function CaseNameTreeView({
   return (
     <div className={treeData ? 'ai-case-tree-shell' : 'ai-case-tree-passthrough'}>
 
-      <div ref={viewportRef} title={treeData ? '滚轮缩放图谱，点击节点查看用例' : undefined} className={`ai-case-name-tree${expanded ? ' expanded' : ''}${editable ? ' editable' : ''}`}>
+      <div ref={viewportRef} title={treeData ? '滚轮上下浏览，Ctrl + 滚轮缩放图谱，点击节点查看用例' : '滚轮上下浏览，Ctrl + 滚轮缩放图谱'} className={`ai-case-name-tree${expanded ? ' expanded' : ''}${editable ? ' editable' : ''}`}>
       {treeData ? null : <div className="ai-case-name-tree-stats">
         <Tag color="green">model {counts.models}</Tag>
         <Tag color="cyan">test_model {counts.testModels}</Tag>
@@ -286,7 +286,7 @@ export function CaseNameTreeView({
           保存图片
         </ProjectActionButton>
       </div>}
-      <div className="ai-case-name-tree-canvas" ref={canvasRef} style={treeData ? { zoom } : undefined}>
+      <div className="ai-case-name-tree-canvas" ref={canvasRef} style={{ zoom }}>
         <CaseNameTreeNodeView
           node={tree}
           className="ai-case-name-tree-root"

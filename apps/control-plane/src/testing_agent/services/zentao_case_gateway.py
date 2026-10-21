@@ -56,7 +56,12 @@ class ZentaoCaseGateway:
                 {
                     **data,
                     "testcases": [
-                        {**item, "id": item.get("case") or item.get("caseID") or item.get("id")}
+                        {
+                            **item,
+                            "id": remote_id(
+                                item.get("case") or item.get("caseID") or item.get("id")
+                            ),
+                        }
                         for item in raw
                     ],
                 },

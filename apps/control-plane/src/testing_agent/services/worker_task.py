@@ -360,7 +360,7 @@ class WorkerTaskService:
         响应时解密,仅驻内存、不落盘、不入日志。
         """
         task = await find_task(self.repository.session, "ai", task_id)
-        await authorize_execution(self.repository.session, task)
+        authority = await authorize_execution(self.repository.session, task)
         if task.task_type != "code_risk_analysis":
             raise ErrNotFound()
         run = await self.repository.get_ai_run(task.run_id)
@@ -374,7 +374,7 @@ class WorkerTaskService:
             run.project_id,
             list(bindings),
             self.credential_cipher,
-            user_id=(await authorize_execution(self.repository.session, task)).actor,
+            user_id=authority.actor,
         )
 
     async def requirement_document(self, task_id: str):

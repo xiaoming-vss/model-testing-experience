@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
-/** Zoom only the tree viewport, keeping the content under the pointer stationary. */
+/** Use Ctrl + wheel to zoom only the tree viewport, keeping the content under the pointer stationary. */
 export function useCaseTreeZoom(enabled = true) {
   const [zoom, setZoom] = useState(1)
   const viewportRef = useRef<HTMLDivElement | null>(null)
@@ -11,7 +11,7 @@ export function useCaseTreeZoom(enabled = true) {
     const viewport = viewportRef.current
     if (!enabled || !viewport) return
     const onWheel = (event: WheelEvent) => {
-      if (!event.deltaY) return
+      if (!event.ctrlKey || !event.deltaY) return
       event.preventDefault()
       const next = Math.max(0.5, Math.min(1.5, scale.current * Math.exp(-event.deltaY * (event.deltaMode === 1 ? 0.03 : 0.002))))
       if (next === scale.current) return

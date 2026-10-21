@@ -33,7 +33,7 @@
   color: var(--mac-glass-text);
   font-size: 15px;
   font-weight: 700;
-  border-bottom: 0;
+  border-bottom: 1px solid var(--app-shell-border);
 }
 
 .app-sidebar-collapsed .sidebar-brand {

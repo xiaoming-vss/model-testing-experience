@@ -17,6 +17,9 @@ from testing_agent.services.import_budget import parse_bounded, read_bounded
     ("payload", "limits", "status"),
     [
         (b"\xff", ImportLimits(), 400),
+        ("\ud800", ImportLimits(), 400),
+        ('cases: [{title: "\\ud800"}]', ImportLimits(), 400),
+        ({"cases": [{"title": "\udfff"}]}, ImportLimits(), 400),
         ("cases: [", ImportLimits(), 400),
         ("cases: &cases [*cases]", ImportLimits(), 400),
         ("cases: [[[[[1]]]]]", ImportLimits(max_depth=4), 413),

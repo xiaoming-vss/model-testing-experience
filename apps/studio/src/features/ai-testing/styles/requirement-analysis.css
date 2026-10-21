@@ -325,7 +325,8 @@
   overflow: hidden;
 }
 
-.ai-requirement-analysis-preview-modal :is(.revision-workspace, .revision-source, .ai-task-run-result-modal-content, .ai-requirement-analysis-tabs, .ant-tabs-content-holder, .ant-tabs-content, .ant-tabs-tabpane-active, .ai-requirement-analysis-view) {
+/* 工作区的左右分栏及窄屏堆叠由 RevisionSidePanel 管理。 */
+.ai-requirement-analysis-preview-modal :is(.revision-source, .ai-task-run-result-modal-content, .ai-requirement-analysis-tabs, .ant-tabs-content-holder, .ant-tabs-content, .ant-tabs-tabpane-active, .ai-requirement-analysis-view) {
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -566,3 +567,14 @@
     height: calc(100dvh - 32px);
   }
 }
+
+/* 阶段审核复用预览的高度链，目录与详情分别滚动。 */
+.ai-requirement-analysis-preview-modal .ai-requirement-analysis-review-diagram {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: auto;
+  min-height: 0;
+  overflow: hidden;
+}
+.ai-requirement-analysis-preview-modal .ai-analysis-directory-tools { flex-shrink: 0; }

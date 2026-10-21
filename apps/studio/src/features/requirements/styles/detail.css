@@ -5,13 +5,13 @@
 .requirement-detail-title-row .tp-list-title { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .requirement-detail-title-row .ant-tag { flex-shrink: 0; margin: 0; }
 .requirement-detail-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
-.requirement-detail-header { flex: 0 0 auto; }
+.requirement-detail-header { flex: 0 0 auto; flex-wrap: wrap; gap: 12px 16px; }
 .requirement-detail-main { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: hidden; }
 @media (max-width: 840px) { .requirement-detail-summary { flex-basis: 100%; } .requirement-detail-actions { margin-left: auto; } }
 
 .requirement-detail-container { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; min-width: 0; }
 
-.requirement-detail-tabs { flex: 0 0 auto; min-width: 0; }
+.requirement-detail-tabs { flex: 0 0 auto; min-width: 0; max-width: 100%; }
 .requirement-detail-tabs:empty { display: none; }
 
 .requirement-detail-workspace-actions:empty, .requirement-detail-workspace-actions:has(> [hidden]) { display: none; }

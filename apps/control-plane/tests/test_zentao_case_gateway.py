@@ -1,3 +1,5 @@
+from unittest.mock import AsyncMock
+
 import pytest
 
 from testing_agent.core.errors import AppError
@@ -21,6 +23,18 @@ class Client:
         if name == "get_testcases_caseID":
             return {"testcase": {"id": args["caseID"], "title": "same", "product": 1, "story": 3}}
         return {"status": "success", "id": args.get("testcasID", 73)}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("identifier", [True, 1.5, "1.5", -1, 2_147_483_648])
+async def test_catalog_rejects_invalid_ids_before_list_normalization(identifier):
+    client = Client()
+    client.call = AsyncMock(
+        return_value={"testcases": [{"case": identifier, "title": "case"}], "total": 1}
+    )
+    with pytest.raises(AppError) as error:
+        await ZentaoCaseGateway(client).catalog(2)
+    assert error.value.http_code == 502
 
 
 @pytest.mark.asyncio

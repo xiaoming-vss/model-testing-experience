@@ -1,0 +1,1024 @@
+{
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "2.0"
+    },
+    "artifactType": {
+      "const": "requirement_understanding"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/source"
+      },
+      "minItems": 1
+    },
+    "functionalOverview": {
+      "type": "object",
+      "properties": {
+        "purpose": {
+          "$ref": "#/$defs/narrative"
+        },
+        "scope": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/textFact"
+          }
+        },
+        "actors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/textFact"
+          }
+        },
+        "explicitExclusions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/textFact"
+          }
+        }
+      },
+      "required": [
+        "purpose",
+        "scope",
+        "actors",
+        "explicitExclusions"
+      ],
+      "additionalProperties": false
+    },
+    "businessFlows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/businessFlow"
+      }
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/module"
+      }
+    },
+    "businessRules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/businessRule"
+      }
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/question"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "artifactType",
+    "title",
+    "sources",
+    "functionalOverview",
+    "businessFlows",
+    "modules",
+    "businessRules",
+    "questions",
+    "evidence"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "需求理解产物 2.0（集中证据）",
+  "$defs": {
+    "source": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "enum": [
+            "document",
+            "text",
+            "prototype",
+            "screenshot",
+            "design",
+            "user_confirmation",
+            "example"
+          ]
+        },
+        "location": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "fact": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "minLength": 1
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ],
+                "minLength": 1
+              }
+            }
+          ]
+        },
+        "confirmationStatus": {
+          "enum": [
+            "confirmed",
+            "unconfirmed",
+            "conflicting",
+            "example",
+            "not_applicable"
+          ],
+          "default": "confirmed"
+        },
+        "relatedQuestionIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "evidenceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "confirmationStatus": {
+                "enum": [
+                  "confirmed",
+                  "example",
+                  "not_applicable",
+                  "conflicting"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "evidenceIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "minItems": 1
+              }
+            },
+            "required": [
+              "evidenceIds"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "confirmationStatus": {
+                "const": "conflicting"
+              }
+            },
+            "required": [
+              "confirmationStatus"
+            ]
+          },
+          "then": {
+            "properties": {
+              "relatedQuestionIds": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "relatedQuestionIds"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "confirmationStatus": {
+                "const": "not_applicable"
+              }
+            },
+            "required": [
+              "confirmationStatus"
+            ]
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "confirmationStatus": {
+                "enum": [
+                  "unconfirmed",
+                  "conflicting",
+                  "not_applicable"
+                ]
+              }
+            },
+            "required": [
+              "confirmationStatus"
+            ]
+          }
+        }
+      ]
+    },
+    "textFact": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/fact"
+        },
+        {
+          "properties": {
+            "value": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "scalarFact": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/fact"
+        },
+        {
+          "properties": {
+            "value": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "affectedRef": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "module",
+            "operation",
+            "control",
+            "rule",
+            "flow",
+            "entry",
+            "block",
+            "extracted_fact",
+            "requirement"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "impact": {
+      "type": "object",
+      "properties": {
+        "stage": {
+          "enum": [
+            "extraction",
+            "understanding",
+            "test_points",
+            "test_cases",
+            "other"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blocking": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "stage",
+        "description",
+        "blocking"
+      ],
+      "additionalProperties": false
+    },
+    "question": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "const": "open"
+        },
+        "affectedRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/affectedRef"
+          },
+          "minItems": 1
+        },
+        "impacts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/impact"
+          },
+          "minItems": 1
+        },
+        "answer": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/fact"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "剩余问题所需的部分答复；完整答复合并到正文后移除整个问题，不保留问答历史。"
+        },
+        "evidenceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "question",
+        "status",
+        "affectedRefs",
+        "impacts"
+      ],
+      "additionalProperties": false,
+      "description": "只记录尚未解决的缺口。明确答复先合并到受影响业务内容，再删除已解决问题及全部关联引用；部分解决仅保留剩余缺口。"
+    },
+    "entryPoint": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "$ref": "#/$defs/textFact"
+        },
+        "actors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/textFact"
+          }
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/textFact"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "path",
+        "actors",
+        "conditions"
+      ],
+      "additionalProperties": false
+    },
+    "option": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "$ref": "#/$defs/scalarFact"
+        },
+        "meaning": {
+          "$ref": "#/$defs/textFact"
+        }
+      },
+      "required": [
+        "id",
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    "optionCompleteness": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/textFact"
+        },
+        {
+          "properties": {
+            "value": {
+              "enum": [
+                "complete",
+                "partial",
+                "unknown",
+                "not_applicable",
+                null
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "control": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "$ref": "#/$defs/textFact"
+        },
+        "businessMeaning": {
+          "$ref": "#/$defs/textFact"
+        },
+        "type": {
+          "$ref": "#/$defs/textFact"
+        },
+        "options": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/option"
+              }
+            },
+            "completeness": {
+              "$ref": "#/$defs/optionCompleteness"
+            }
+          },
+          "required": [
+            "items",
+            "completeness"
+          ],
+          "additionalProperties": false
+        },
+        "inputRules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/textFact"
+          }
+        },
+        "defaultValue": {
+          "$ref": "#/$defs/fact"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "businessMeaning",
+        "type",
+        "options"
+      ],
+      "additionalProperties": false
+    },
+    "results": {
+      "type": "object",
+      "properties": {
+        "location": {
+          "$ref": "#/$defs/textFact"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/textFact"
+          }
+        },
+        "recordIdentity": {
+          "$ref": "#/$defs/textFact"
+        },
+        "scope": {
+          "$ref": "#/$defs/textFact"
+        },
+        "emptyState": {
+          "$ref": "#/$defs/textFact"
+        }
+      },
+      "required": [
+        "location",
+        "fields",
+        "recordIdentity",
+        "scope"
+      ],
+      "additionalProperties": false
+    },
+    "interaction": {
+      "type": "object",
+      "properties": {
+        "controls": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/control"
+          }
+        },
+        "trigger": {
+          "$ref": "#/$defs/textFact"
+        },
+        "initialState": {
+          "$ref": "#/$defs/textFact"
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/textFact"
+          }
+        },
+        "results": {
+          "$ref": "#/$defs/results"
+        },
+        "pagination": {
+          "$ref": "#/$defs/textFact"
+        },
+        "sorting": {
+          "$ref": "#/$defs/textFact"
+        },
+        "validationAndFeedback": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/textFact"
+          }
+        }
+      },
+      "required": [
+        "controls",
+        "trigger",
+        "initialState",
+        "results"
+      ],
+      "additionalProperties": false
+    },
+    "operationStep": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actor": {
+          "$ref": "#/$defs/narrative"
+        },
+        "action": {
+          "$ref": "#/$defs/narrative"
+        },
+        "systemResponse": {
+          "$ref": "#/$defs/narrative"
+        }
+      },
+      "required": [
+        "id",
+        "actor",
+        "action",
+        "systemResponse"
+      ],
+      "additionalProperties": false
+    },
+    "operation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "goal": {
+          "$ref": "#/$defs/narrative"
+        },
+        "preconditions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/textFact"
+          }
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/operationStep"
+          }
+        },
+        "interaction": {
+          "$ref": "#/$defs/interaction"
+        },
+        "ruleIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "relatedQuestionIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "goal",
+        "steps",
+        "interaction"
+      ],
+      "additionalProperties": false
+    },
+    "moduleFlowStep": {
+      "type": "object",
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "note": {
+          "$ref": "#/$defs/narrative"
+        }
+      },
+      "required": [
+        "operationId"
+      ],
+      "additionalProperties": false
+    },
+    "module": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "purpose": {
+          "$ref": "#/$defs/narrative"
+        },
+        "entryPoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/entryPoint"
+          }
+        },
+        "operations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/operation"
+          }
+        },
+        "userVisibleFlow": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/moduleFlowStep"
+          }
+        },
+        "relatedQuestionIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "purpose",
+        "operations"
+      ],
+      "additionalProperties": false
+    },
+    "nextStep": {
+      "type": "object",
+      "properties": {
+        "stepId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "condition": {
+          "$ref": "#/$defs/textFact"
+        },
+        "conditionRuleIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "stepId"
+      ],
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "condition"
+          ]
+        },
+        {
+          "required": [
+            "conditionRuleIds"
+          ]
+        }
+      ]
+    },
+    "flowStep": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "moduleId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nextSteps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nextStep"
+          }
+        },
+        "relatedQuestionIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "moduleId",
+        "operationId",
+        "nextSteps"
+      ],
+      "additionalProperties": false
+    },
+    "businessFlow": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "moduleIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/flowStep"
+          },
+          "minItems": 1
+        },
+        "relatedQuestionIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "moduleIds",
+        "steps"
+      ],
+      "additionalProperties": false
+    },
+    "businessRule": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "moduleIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "operationIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "preconditions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/textFact"
+          }
+        },
+        "trigger": {
+          "$ref": "#/$defs/textFact"
+        },
+        "expectedBehavior": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/textFact"
+          },
+          "minItems": 1
+        },
+        "observableOutcome": {
+          "$ref": "#/$defs/textFact"
+        },
+        "relatedQuestionIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "moduleIds",
+        "operationIds",
+        "trigger",
+        "expectedBehavior",
+        "observableOutcome"
+      ],
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "sourceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "excerpt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "sourceId",
+        "locator"
+      ],
+      "additionalProperties": false
+    },
+    "narrative": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "$ref": "#/$defs/textFact"
+        }
+      ]
+    }
+  }
+}

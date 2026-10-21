@@ -1,6 +1,6 @@
 # 通用后端开发规则
 
-本规则适用于 `apps/control-plane/`、`apps/ai-worker/`、`apps/api-ui-worker/` 和 `apps/integration-worker/` 的新增功能、修改及代码审查。版本日期为 2026 年 10 月 7 日。前端 `studio` 按其自身项目规则开发。
+本规则适用于 `apps/control-plane/`、`apps/ai-worker/`、`apps/ai-worker-pi/`、`apps/api-ui-worker/` 和 `apps/integration-worker/` 的新增功能、修改及代码审查。版本日期为 2026 年 10 月 7 日。前端 `studio` 按其自身项目规则开发。
 
 源码路径、工具配置、测试命令和专用协议以目标项目为准。通用规则规定执行标准，项目补充规则规定具体模块与验证入口；项目差异只有明确限定范围时才构成例外。
 
@@ -8,6 +8,7 @@
 | --- | --- |
 | 控制面 | [控制面开发规则](../control-plane/development-rules.md)：HTTP、数据库、权限、业务状态与本地事务 |
 | AI Worker | [AI Worker 开发规则](../ai-worker/development-rules.md)：模型调用、技能输入、产物验证和回传 |
+| AI Worker Pi | [Pi Worker 开发规则](../ai-worker-pi/development-rules.md)：Python 编排、Pi RPC 与进程生命周期 |
 | API/UI Worker | [API/UI Worker 开发规则](../api-ui-worker/development-rules.md)：HTTP 与浏览器执行、步骤结果、文件上传和停止 |
 | 集成 Worker | [集成 Worker 开发规则](../integration-worker/development-rules.md)：外部写许可、一次执行、未知结果和安全证据 |
 

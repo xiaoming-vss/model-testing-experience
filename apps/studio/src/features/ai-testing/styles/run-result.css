@@ -87,7 +87,7 @@
   padding-bottom: 10px;
 }
 
-.ai-task-run-result-modal.review :is(.ant-modal-container, .ant-modal-content) {
+.ai-task-run-result-modal.review:not(.functional-artifact-modal) :is(.ant-modal-container, .ant-modal-content) {
   max-height: calc(100vh - 72px);
 }
 
@@ -268,7 +268,7 @@
 
 /* 功能用例阶段审核：正文占满备注上方空间，编辑器不再嵌套卡片。 */
 
-.functional-stage-review-modal :is(.ant-modal-container, .ant-modal-content) {
+.functional-stage-review-modal:not(.functional-artifact-modal) :is(.ant-modal-container, .ant-modal-content) {
   height: calc(100dvh - 72px);
   max-height: calc(100dvh - 72px);
 }

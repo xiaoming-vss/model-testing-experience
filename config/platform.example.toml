@@ -81,6 +81,21 @@ maintenance_batch_size = 100
 restore_review_max_age_seconds = 3600
 worker_presence_ttl_seconds = 120
 
+# Deployment selects one implementation of the logical ai-worker service.
+[ai_worker.agent]
+backend = "nanobot" # nanobot | pi
+
+[ai_worker_pi.worker]
+worker_id = "pi-worker-01"
+max_concurrent_tasks = 2
+
+[ai_worker_pi.pi]
+stream_idle_timeout_seconds = 300
+run_timeout_seconds = 1800
+context_window_tokens = 500000
+max_output_tokens = 65536
+api = "openai-completions"
+
 [ai_worker.worker]
 max_concurrent_tasks = 2
 poll_interval_seconds = 5

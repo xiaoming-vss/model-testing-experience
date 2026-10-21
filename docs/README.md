@@ -13,6 +13,7 @@
 | 目录 | 内容 | 对应代码 |
 | --- | --- | --- |
 | [control-plane](control-plane/README.md) | 控制面：源码结构、配置、接口与鉴权 | [apps/control-plane](../apps/control-plane/) |
+| [ai-worker-pi](ai-worker-pi/README.md) | Python + Pi RPC、部署选择与独立运行时 | [apps/ai-worker-pi](../apps/ai-worker-pi/) |
 | [ai-worker](ai-worker/README.md) | AI 任务执行、技能预置与轮询协议 | [apps/ai-worker](../apps/ai-worker/) |
 | [studio](studio/README.md) | 前端开发、配置与构建 | [apps/studio](../apps/studio/) |
 | [api-ui-worker](api-ui-worker/README.md) | API/UI 执行、S3 产物上传与 Worker 配置 | [apps/api-ui-worker](../apps/api-ui-worker/) |

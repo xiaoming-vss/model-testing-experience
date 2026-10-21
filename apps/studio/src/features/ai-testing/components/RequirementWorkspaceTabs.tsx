@@ -1,4 +1,4 @@
-import '@/shared/styles/page-navigation-tabs.css'
+import '../styles/requirement-workspace-tabs.css'
 import { Tooltip } from 'antd'
 import type { KeyboardEvent } from 'react'
 import type { RequirementDesignKind } from '../api/requirementDesign.api'
@@ -27,7 +27,7 @@ export function RequirementWorkspaceTabs({ activeTab, includeDocument, counts, c
     buttons[next].focus()
     buttons[next].scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
   }
-  return <div role="tablist" aria-label="需求工作区" className="ai-requirement-workspace-tabs page-navigation-tabs" onKeyDown={navigateTabs}>
+  return <div role="tablist" aria-label="需求工作区" className="ai-requirement-workspace-tabs" onKeyDown={navigateTabs}>
     {tabs.map(item => {
       const count = item.key === 'content' ? undefined : item.key === 'codeRisk' ? codeRiskCount : counts?.[item.key]
       const description = item.key === 'content' ? undefined : item.key === 'codeRisk'

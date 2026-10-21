@@ -1,0 +1,430 @@
+{
+  "schemaVersion": "2.0",
+  "artifactType": "requirement_understanding",
+  "title": "转换任务列表使用理解：合成示例",
+  "sources": [
+    {
+      "id": "SRC01",
+      "name": "转换任务列表：合成演示输入，非产品已确认事实",
+      "type": "example"
+    }
+  ],
+  "functionalOverview": {
+    "purpose": {
+      "value": "查看和筛选转换任务",
+      "confirmationStatus": "example",
+      "evidenceIds": [
+        "EV001"
+      ]
+    },
+    "scope": [
+      {
+        "value": "转换任务列表筛选、分页与排序",
+        "confirmationStatus": "example",
+        "evidenceIds": [
+          "EV001"
+        ]
+      }
+    ],
+    "actors": [
+      {
+        "value": "用户",
+        "confirmationStatus": "example",
+        "evidenceIds": [
+          "EV001"
+        ]
+      }
+    ],
+    "explicitExclusions": []
+  },
+  "businessFlows": [
+    {
+      "id": "F01",
+      "name": "筛选并观察转换任务",
+      "moduleIds": [
+        "M01"
+      ],
+      "steps": [
+        {
+          "id": "FN01",
+          "moduleId": "M01",
+          "operationId": "O01",
+          "nextSteps": [],
+          "relatedQuestionIds": [
+            "Q01",
+            "Q02"
+          ]
+        }
+      ],
+      "relatedQuestionIds": [
+        "Q01",
+        "Q02"
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "id": "M01",
+      "name": "转换数据",
+      "purpose": {
+        "value": "查看和筛选转换任务",
+        "confirmationStatus": "example",
+        "evidenceIds": [
+          "EV001"
+        ]
+      },
+      "entryPoints": [
+        {
+          "id": "E01",
+          "path": {
+            "value": "数据管理 → 转换数据",
+            "confirmationStatus": "example",
+            "evidenceIds": [
+              "EV001"
+            ]
+          },
+          "actors": [
+            {
+              "value": "用户",
+              "confirmationStatus": "example",
+              "evidenceIds": [
+                "EV001"
+              ]
+            }
+          ],
+          "conditions": []
+        }
+      ],
+      "operations": [
+        {
+          "id": "O01",
+          "name": "筛选任务列表",
+          "goal": {
+            "value": "设置筛选条件并查看转换任务列表",
+            "confirmationStatus": "example",
+            "evidenceIds": [
+              "EV001"
+            ]
+          },
+          "steps": [
+            {
+              "id": "ST01",
+              "actor": {
+                "value": "用户",
+                "confirmationStatus": "example",
+                "evidenceIds": [
+                  "EV001"
+                ]
+              },
+              "action": {
+                "value": "进入转换数据页面并设置已明确的筛选条件",
+                "confirmationStatus": "example",
+                "evidenceIds": [
+                  "EV001"
+                ]
+              },
+              "systemResponse": {
+                "value": null,
+                "confirmationStatus": "unconfirmed"
+              }
+            },
+            {
+              "id": "ST02",
+              "actor": {
+                "value": "用户",
+                "confirmationStatus": "example",
+                "evidenceIds": [
+                  "EV001"
+                ]
+              },
+              "action": {
+                "value": "执行刷新操作",
+                "confirmationStatus": "example",
+                "evidenceIds": [
+                  "EV001"
+                ]
+              },
+              "systemResponse": {
+                "value": "查看任务列表的记录标识与筛选字段",
+                "confirmationStatus": "example",
+                "evidenceIds": [
+                  "EV001"
+                ]
+              }
+            }
+          ],
+          "interaction": {
+            "controls": [
+              {
+                "id": "C01",
+                "label": {
+                  "value": "转换类型",
+                  "confirmationStatus": "example",
+                  "evidenceIds": [
+                    "EV001"
+                  ]
+                },
+                "businessMeaning": {
+                  "value": null,
+                  "confirmationStatus": "unconfirmed",
+                  "relatedQuestionIds": [
+                    "Q01"
+                  ]
+                },
+                "type": {
+                  "value": null,
+                  "confirmationStatus": "unconfirmed"
+                },
+                "options": {
+                  "items": [],
+                  "completeness": {
+                    "value": "unknown",
+                    "confirmationStatus": "unconfirmed",
+                    "evidenceIds": [
+                      "EV001"
+                    ],
+                    "relatedQuestionIds": [
+                      "Q01"
+                    ]
+                  }
+                }
+              },
+              {
+                "id": "C02",
+                "label": {
+                  "value": "状态",
+                  "confirmationStatus": "example",
+                  "evidenceIds": [
+                    "EV001"
+                  ]
+                },
+                "businessMeaning": {
+                  "value": null,
+                  "confirmationStatus": "unconfirmed"
+                },
+                "type": {
+                  "value": null,
+                  "confirmationStatus": "unconfirmed"
+                },
+                "options": {
+                  "items": [],
+                  "completeness": {
+                    "value": "unknown",
+                    "confirmationStatus": "unconfirmed",
+                    "evidenceIds": [
+                      "EV001"
+                    ]
+                  }
+                }
+              }
+            ],
+            "trigger": {
+              "value": "设置条件并刷新",
+              "confirmationStatus": "example",
+              "evidenceIds": [
+                "EV001"
+              ],
+              "relatedQuestionIds": [
+                "Q02"
+              ]
+            },
+            "initialState": {
+              "value": null,
+              "confirmationStatus": "unconfirmed"
+            },
+            "results": {
+              "location": {
+                "value": "转换任务列表",
+                "confirmationStatus": "example",
+                "evidenceIds": [
+                  "EV001"
+                ]
+              },
+              "fields": [
+                {
+                  "value": "转换任务 ID",
+                  "confirmationStatus": "example",
+                  "evidenceIds": [
+                    "EV001"
+                  ]
+                },
+                {
+                  "value": "转换类型",
+                  "confirmationStatus": "example",
+                  "evidenceIds": [
+                    "EV001"
+                  ]
+                },
+                {
+                  "value": "状态",
+                  "confirmationStatus": "example",
+                  "evidenceIds": [
+                    "EV001"
+                  ]
+                }
+              ],
+              "recordIdentity": {
+                "value": "转换任务 ID",
+                "confirmationStatus": "example",
+                "evidenceIds": [
+                  "EV001"
+                ]
+              },
+              "scope": {
+                "value": null,
+                "confirmationStatus": "unconfirmed"
+              }
+            },
+            "pagination": {
+              "value": null,
+              "confirmationStatus": "unconfirmed",
+              "relatedQuestionIds": [
+                "Q03"
+              ]
+            }
+          },
+          "ruleIds": [
+            "R01"
+          ],
+          "relatedQuestionIds": [
+            "Q01",
+            "Q02",
+            "Q03"
+          ]
+        }
+      ],
+      "userVisibleFlow": [
+        {
+          "operationId": "O01",
+          "note": {
+            "value": "进入页面，设置筛选条件，刷新并观察结果",
+            "confirmationStatus": "example",
+            "evidenceIds": [
+              "EV001"
+            ]
+          }
+        }
+      ],
+      "relatedQuestionIds": [
+        "Q01",
+        "Q02",
+        "Q03"
+      ]
+    }
+  ],
+  "businessRules": [
+    {
+      "id": "R01",
+      "name": "设置条件并刷新查询",
+      "moduleIds": [
+        "M01"
+      ],
+      "operationIds": [
+        "O01"
+      ],
+      "trigger": {
+        "value": "执行刷新操作",
+        "confirmationStatus": "example",
+        "evidenceIds": [
+          "EV001"
+        ]
+      },
+      "expectedBehavior": [
+        {
+          "value": "按设置的条件查询转换任务列表",
+          "confirmationStatus": "example",
+          "evidenceIds": [
+            "EV001"
+          ]
+        }
+      ],
+      "observableOutcome": {
+        "value": "在转换任务列表核对记录标识与筛选字段",
+        "confirmationStatus": "example",
+        "evidenceIds": [
+          "EV001"
+        ]
+      },
+      "relatedQuestionIds": [
+        "Q02"
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q01",
+      "question": "转换类型的实际选项及各选项业务含义是什么？",
+      "status": "open",
+      "affectedRefs": [
+        {
+          "kind": "control",
+          "id": "C01"
+        }
+      ],
+      "impacts": [
+        {
+          "stage": "test_points",
+          "description": "不阻塞已有依据的筛选目标名称，但本示例尚不能当产品依据",
+          "blocking": false
+        },
+        {
+          "stage": "test_cases",
+          "description": "阻塞选择条件及判断命中/排除记录",
+          "blocking": true
+        }
+      ],
+      "evidenceIds": [
+        "EV001"
+      ]
+    },
+    {
+      "id": "Q02",
+      "question": "选择筛选条件后是否自动更新，还是仅点击刷新后更新？",
+      "status": "open",
+      "affectedRefs": [
+        {
+          "kind": "operation",
+          "id": "O01"
+        }
+      ],
+      "impacts": [
+        {
+          "stage": "test_cases",
+          "description": "阻塞仅刷新生效规则的判定；已知刷新动作可保留",
+          "blocking": true
+        }
+      ],
+      "evidenceIds": [
+        "EV001"
+      ]
+    },
+    {
+      "id": "Q03",
+      "question": "更换筛选条件后如何处理当前页码？",
+      "status": "open",
+      "affectedRefs": [
+        {
+          "kind": "operation",
+          "id": "O01"
+        }
+      ],
+      "impacts": [
+        {
+          "stage": "test_cases",
+          "description": "阻塞条件变化与分页联动目标，不阻塞独立筛选目标",
+          "blocking": true
+        }
+      ],
+      "evidenceIds": [
+        "EV001"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "EV001",
+      "sourceId": "SRC01",
+      "locator": "示例输入约定"
+    }
+  ]
+}

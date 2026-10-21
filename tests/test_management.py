@@ -43,6 +43,46 @@ class ManagementTests(unittest.TestCase):
         manage.init(self.root)
         self.data = manage.read(self.root / "config/platform.toml")
 
+    def test_ai_worker_selection_renders_only_one_service_and_isolated_storage(self):
+        for backend, project, volume in (
+            ("nanobot", "ai-worker", "ai-runtime"),
+            ("pi", "ai-worker-pi", "ai-pi-runtime"),
+        ):
+            with self.subTest(backend=backend):
+                self.data.setdefault("ai_worker", {})["agent"] = {"backend": backend}
+                manage.write(self.root / "config/platform.toml", manage.toml_text(self.data))
+                manage.configure("docker", self.root)
+                rendered = json.loads(subprocess.check_output(
+                    manage.compose_command(self.root) + ["config", "--format", "json"],
+                    text=True,
+                ))
+                self.assertNotIn("ai-worker-pi", rendered["services"])
+                worker = rendered["services"]["ai-worker"]
+                self.assertEqual(worker["image"], f"mtx/{project}:local")
+                self.assertEqual(Path(worker["build"]["context"]), self.root / "apps" / project)
+                self.assertEqual(next(v["source"] for v in worker["volumes"]
+                                      if v["target"] == "/data/runtime"), volume)
+                self.assertEqual(next(v["source"] for v in worker["volumes"]
+                                      if v["target"] == "/app/config/worker.toml"),
+                                 str(self.root / ".runtime/docker" / f"{project}.toml"))
+                config = manage.read(self.root / ".runtime/docker" / f"{project}.toml")
+                self.assertEqual(config["platform"]["worker_token"], self.data["shared"]["worker_token"])
+                self.assertNotIn("agent", config)
+
+    def test_legacy_ai_selection_defaults_to_nanobot_and_rejects_typos(self):
+        self.data["ai_worker"].pop("agent", None)
+        self.assertEqual(manage.selected_ai_worker(self.data), "ai-worker")
+        self.data["ai_worker"]["agent"] = {"backend": "typo"}
+        with self.assertRaisesRegex(ValueError, "backend"):
+            manage.configurations(self.data, "docker", self.root)
+
+    def test_pi_local_configuration_is_independent(self):
+        self.data["ai_worker_pi"]["pi"]["run_timeout_seconds"] = 42
+        configs = manage.configurations(self.data, "local", self.root)
+        self.assertEqual(configs["ai-worker-pi"]["pi"]["run_timeout_seconds"], 42)
+        self.assertNotIn("pi", configs["ai-worker"])
+        self.assertNotIn("nanobot", configs["ai-worker-pi"])
+
     def test_asset_import_limits_are_generated_for_both_modes(self):
         self.data["control_plane"]["asset_import"]["max_items"] = 123
         for mode in ("local", "docker"):

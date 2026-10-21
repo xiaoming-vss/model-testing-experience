@@ -4,10 +4,11 @@ import '@/features/ai-testing/styles/generated-cases-review.css'
 import '../styles/generated-case-browser.css'
 import { CaseNameTreeView } from './CaseNamesResultView'
 import { buildGeneratedCaseTree } from '../utils/generatedCaseTree'
-import { CASE_ID_FIELDS, formatCaseIdTag, isJsonText, toDisplayText } from '@/features/ai-testing/utils/functionalOutput'
+import { CASE_ID_FIELDS, formatCaseIdTag, getGeneratedCaseEditableFields, isJsonText, toDisplayText } from '@/features/ai-testing/utils/functionalOutput'
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
 import { CheckCircleFilled, FileTextOutlined, PlayCircleOutlined, SnippetsOutlined } from '@ant-design/icons'
-import { Empty, Tag } from 'antd'
+import { Empty, Input, Tag } from 'antd'
+import type { GeneratedTestCase } from '../utils/functionalOutput'
 import { useMemo, useState } from 'react'
 
 function getGeneratedCaseTagKind(key: string): 'id' | 'type' | 'priority' | 'default' {
@@ -48,13 +49,14 @@ function isExpectedResultField(key: string) {
 
 type GeneratedCasesReviewViewProps = {
   content: string
+  onChange?: (content: string) => void
   pointsContent?: string
   rootTitle?: string
   selectedCaseKey?: string
   onCaseSelect?: (key: string, raw: Record<string, unknown>) => void
 }
 
-export function GeneratedCasesReviewView({ content, pointsContent = '', rootTitle = '功能测试用例', selectedCaseKey, onCaseSelect }: GeneratedCasesReviewViewProps) {
+export function GeneratedCasesReviewView({ content, pointsContent = '', rootTitle = '功能测试用例', selectedCaseKey, onCaseSelect, onChange }: GeneratedCasesReviewViewProps) {
   const [localKey, setLocalKey] = useState('')
   const model = useMemo(() => buildGeneratedCaseTree(content, pointsContent, rootTitle), [content, pointsContent, rootTitle])
   const active = model.visible.find((entry) => entry.key === (selectedCaseKey || localKey)) ?? model.visible[0]
@@ -78,7 +80,12 @@ export function GeneratedCasesReviewView({ content, pointsContent = '', rootTitl
       {testCase ? <>
         <div className="ai-generated-case-reading-scroll">
           <p className="ai-generated-case-breadcrumb">{testCase.moduleName} / {active.scene}</p>
-          <article>
+          {onChange ? <GeneratedCaseEditor key={testCase.sourceIndex} testCase={testCase} onChange={(patch) => {
+            const parsed = JSON.parse(content)
+            const cases = Array.isArray(parsed) ? parsed : parsed.cases
+            cases[testCase.sourceIndex] = { ...cases[testCase.sourceIndex], ...patch }
+            onChange(JSON.stringify(parsed, null, 2))
+          }} /> : <article>
                 <header>
                   <div className="ai-generated-case-meta">
                   <span className="ai-generated-cases-review-index">{String(activeIndex + 1).padStart(2, '0')}</span>
@@ -119,10 +126,27 @@ export function GeneratedCasesReviewView({ content, pointsContent = '', rootTitl
                   })}
                 </div>
 
-          </article>
+          </article>}
         </div>
 
       </> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="请选择用例" />}
     </aside>
+  </div>
+}
+
+function GeneratedCaseEditor({ testCase, onChange }: { testCase: GeneratedTestCase; onChange: (patch: Record<string, unknown>) => void }) {
+  const fields = getGeneratedCaseEditableFields(testCase)
+  return <div className="ai-generated-case-editor">
+    {testCase.tagFields.some(({ key }) => CASE_ID_FIELDS.includes(key)) && <div className="ai-generated-case-meta">
+      {testCase.tagFields.filter(({ key }) => CASE_ID_FIELDS.includes(key)).map(({ key, value }) => <Tag key={key} title={value}>{formatCaseIdTag(value)}</Tag>)}
+    </div>}
+    <p>修改同步到当前草稿，点击底部“保存当前修改”后保存。</p>
+    {fields.map(({ key, label }) => {
+      const value = testCase.raw[key]
+      const array = Array.isArray(value)
+      return <label key={key}><span>{label}</span><Input.TextArea aria-label={label} autoSize={{ minRows: 2, maxRows: 12 }}
+        value={array ? value.join('\n') : String(value ?? '')}
+        onChange={(event) => onChange({ [key]: array ? event.target.value.split('\n') : event.target.value })} /></label>
+    })}
   </div>
 }
