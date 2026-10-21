@@ -94,6 +94,9 @@ class FakeFunctionCaseRepository:
     async def get_case(self, case_id):
         return self.cases.get(case_id)
 
+    async def list_cases_by_ids(self, case_ids):
+        return [case for key, case in self.cases.items() if key in case_ids]
+
     async def get_active_binding(self, resource_type, resource_id):
         return self.bindings.get((resource_type, resource_id))
 

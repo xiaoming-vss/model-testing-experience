@@ -223,3 +223,44 @@ async def test_run_detail_keeps_artifact_and_scope_while_history_stays_compact(d
     assert history["items"][0]["hasResult"] is True
     assert "resultYaml" not in history["items"][0]
     assert "snapshotJson" not in history["items"][0]
+
+
+async def test_selected_function_export_batches_sql_and_preserves_requested_order(database):
+    from testing_agent.models.function_test_case import FunctionTestCase
+    from testing_agent.models.function_test_suite import FunctionTestSuite
+    from testing_agent.repositories.function_test_case import FunctionTestCaseRepository
+    from testing_agent.services.function_case_export import FunctionCaseExporter
+
+    sync, session, sql = database
+    sync.add(FunctionTestSuite(suite_id="export-suite", requirement_id="req", name="export"))
+    sync.flush()
+    sync.add_all(
+        [
+            FunctionTestCase(
+                case_id=f"export-{i}",
+                suite_id="export-suite",
+                title=f"case {i}",
+                content_json={"preconditions": [], "steps": []},
+            )
+            for i in range(1201)
+        ]
+    )
+    sync.commit()
+    exporter = FunctionCaseExporter(FunctionTestCaseRepository(session))
+    selected = [f"export-{i}" for i in reversed(range(1201))]
+    sql.clear()
+    result = await exporter.resolve_cases_for_zentao_import("export-suite", selected)
+    assert [case.case_id for case in result] == selected
+    assert len(sql) == 3 and all(" IN (" in statement for statement in sql)
+    sql.clear()
+    with pytest.raises(AppError, match="重复"):
+        await exporter.resolve_cases_for_zentao_import("export-suite", ["export-0", " export-0 "])
+    assert not sql
+    with pytest.raises(AppError, match="不能为空"):
+        await exporter.resolve_cases_for_zentao_import("export-suite", ["export-0", " "])
+    assert not sql
+    with pytest.raises(AppError) as missing:
+        await exporter.resolve_cases_for_zentao_import("export-suite", ["missing"])
+    assert missing.value.http_code == 404
+    with pytest.raises(AppError, match="不属于当前测试集"):
+        await exporter.resolve_cases_for_zentao_import("foreign-suite", ["export-0"])

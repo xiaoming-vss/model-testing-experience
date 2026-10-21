@@ -505,7 +505,7 @@ class FunctionCaseExporter:
     ) -> list[FunctionTestCase]:
         if not case_ids:
             return await self.repository.list_by_suite(suite_id)
-        result = []
+        identifiers = []
         seen = set()
         for index, case_id in enumerate(case_ids):
             normalized = str(case_id or "").strip()
@@ -517,13 +517,19 @@ class FunctionCaseExporter:
                     f"caseIds[{index}] 重复: {normalized}",
                 )
             seen.add(normalized)
-            case = await self.repository.get_case(normalized)
+            identifiers.append(normalized)
+        by_id = {
+            case.case_id: case for case in await self.repository.list_cases_by_ids(identifiers)
+        }
+        result = []
+        for identifier in identifiers:
+            case = by_id.get(identifier)
             if case is None:
                 raise ErrNotFound()
             if case.suite_id != suite_id:
                 raise dynamic_error(
                     ErrFunctionTestCaseImportInvalid,
-                    f"用例不属于当前测试集: {normalized}",
+                    f"用例不属于当前测试集: {identifier}",
                 )
             result.append(case)
         return result

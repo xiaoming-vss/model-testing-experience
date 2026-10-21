@@ -54,6 +54,19 @@ class FunctionTestCaseRepository(ResourceRepository):
             )
         )
 
+    async def list_cases_by_ids(self, case_ids: list[str]) -> list[FunctionTestCase]:
+        """Bound SQL parameter counts while loading complete selected export content."""
+        result: list[FunctionTestCase] = []
+        for offset in range(0, len(case_ids), 500):
+            result.extend(
+                await self.session.scalars(
+                    select(FunctionTestCase).where(
+                        FunctionTestCase.case_id.in_(case_ids[offset : offset + 500])
+                    )
+                )
+            )
+        return result
+
     async def list_by_suite(self, suite_id: str) -> list[FunctionTestCase]:
         return list(
             (
