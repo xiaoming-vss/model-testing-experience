@@ -274,8 +274,10 @@ class UiTestCaseService:
 
     async def import_cases(self, user_id: str, suite_id: str, payload: Any, file: Any) -> dict:
         await self.get_accessible_suite(user_id, suite_id, action="write")
+        await self.repository.session.rollback()
         parsed = await read_import_payload(payload, file)
         cases = validate_ui_import_payload(parsed)
+        await self.get_accessible_suite(user_id, suite_id, action="write")
         for item in cases:
             self.repository.add(
                 UiTestCase(

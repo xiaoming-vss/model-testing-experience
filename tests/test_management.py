@@ -43,6 +43,13 @@ class ManagementTests(unittest.TestCase):
         manage.init(self.root)
         self.data = manage.read(self.root / "config/platform.toml")
 
+    def test_asset_import_limits_are_generated_for_both_modes(self):
+        self.data["control_plane"]["asset_import"]["max_items"] = 123
+        for mode in ("local", "docker"):
+            config = manage.configurations(self.data, mode, self.root)["control-plane"]
+            self.assertEqual(config["asset_import"]["max_items"], 123)
+            self.assertEqual(config["asset_import"]["max_concurrent"], 2)
+
     def test_ldap_legacy_file_settings_are_not_generated(self):
         self.assertNotIn("ldap", self.data["control_plane"]["security"])
         self.data["control_plane"]["security"]["ldap"] = {

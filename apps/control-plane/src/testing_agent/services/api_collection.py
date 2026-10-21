@@ -150,7 +150,9 @@ class ApiCollectionService:
                 raise ErrApiCollectionImportFileRequired()
             if not filename.lower().endswith((".yaml", ".yml")):
                 raise import_error("仅支持导入 .yaml 或 .yml 文件")
+        await self.repository.session.rollback()
         parsed = await read_import_payload(payload, file)
+        collection = await self.get_accessible_entity(user_id, collection_id, action="write")
         cases = await validate_api_collection_import_payload(
             self.repository, collection.collection_id, parsed
         )

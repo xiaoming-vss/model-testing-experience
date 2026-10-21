@@ -69,3 +69,59 @@ def test_local_case_creation_does_not_construct_remote_export_client(api, monkey
         f"/v1/function-test-suites/{suite}/cases", headers=owner, json={"title": "本地用例"}
     )
     assert response.status_code == 200, response.text
+
+
+@pytest.mark.parametrize("bad_item", ["not-an-object", {"title": "bad", "orderNo": "NaN"}])
+def test_invalid_file_item_is_reported_without_partial_assets(api, bad_item):
+    _, owner = account(api, "invalid-file-owner")
+    pid = project(api, owner)
+    suite = make_suite(api, owner, make_requirement(api, owner, make_sprint(api, owner, pid)))
+    response = api.post(
+        f"/v1/function-test-suites/{suite}/cases/import",
+        headers=owner,
+        files={"file": ("cases.json", json.dumps({"cases": [{"title": "valid"}, bad_item]}))},
+    )
+    assert response.status_code == 400
+    assert "第 2 条" in response.json()["message"]
+    assert (
+        api.get(f"/v1/function-test-suites/{suite}/cases", headers=owner).json()["data"]["items"]
+        == []
+    )
+
+
+def test_import_releases_read_transaction_and_rechecks_target_after_parsing(api, monkeypatch):
+    from sqlalchemy import delete
+
+    from testing_agent.models.function_test_suite import FunctionTestSuite
+    from testing_agent.services import function_case_import
+    from testing_agent.services.function_case_access import FunctionCaseAccess
+
+    _, owner = account(api, "recheck-file-owner")
+    pid = project(api, owner)
+    suite = make_suite(api, owner, make_requirement(api, owner, make_sprint(api, owner, pid)))
+    sessions = []
+    original_access = FunctionCaseAccess.get_accessible_suite
+    original_parse = function_case_import.read_import_payload
+
+    async def access(service, *args, **kwargs):
+        sessions.append(service.repository.session)
+        return await original_access(service, *args, **kwargs)
+
+    async def parse(payload, file):
+        assert not sessions[-1].in_transaction()
+        async with api.app.state.test_sessions() as session:
+            await session.execute(
+                delete(FunctionTestSuite).where(FunctionTestSuite.suite_id == suite)
+            )
+            await session.commit()
+        return await original_parse(payload, file)
+
+    monkeypatch.setattr(FunctionCaseAccess, "get_accessible_suite", access)
+    monkeypatch.setattr(function_case_import, "read_import_payload", parse)
+    response = api.post(
+        f"/v1/function-test-suites/{suite}/cases/import",
+        headers=owner,
+        files={"file": ("cases.json", json.dumps({"cases": [{"title": "valid"}]}))},
+    )
+    assert response.status_code == 404
+    assert len(sessions) == 2

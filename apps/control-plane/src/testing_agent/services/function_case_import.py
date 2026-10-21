@@ -26,11 +26,21 @@ class FunctionCaseImporter:
 
     async def import_cases(self, user_id: str, suite_id: str, payload: Any, file: Any) -> dict:
         await self.access.get_accessible_suite(user_id, suite_id, action="write")
+        # Authorization reads must not hold a connection while parsing an upload.
+        await self.repository.session.rollback()
         parsed = await read_import_payload(payload, file)
-        created = 0
+        rows = []
         for index, item in enumerate(import_items(parsed, "cases", "functionCases", "testcases")):
             if not isinstance(item, dict):
-                continue
+                raise dynamic_error(
+                    ErrFunctionTestCaseImportInvalid, f"第 {index + 1} 条用例必须是对象"
+                )
+            try:
+                order_no = int(item.get("orderNo", item.get("order_no", index)) or 0)
+            except (ValueError, TypeError, OverflowError):
+                raise dynamic_error(
+                    ErrFunctionTestCaseImportInvalid, f"第 {index + 1} 条用例顺序必须是整数"
+                ) from None
             content = item.get("content")
             if content is not None:
                 try:
@@ -40,7 +50,7 @@ class FunctionCaseImporter:
                         ErrFunctionTestCaseImportInvalid,
                         f"第 {index + 1} 条用例正文格式不正确",
                     ) from exc
-            self.repository.add(
+            rows.append(
                 FunctionTestCase(
                     case_id=new_id(),
                     suite_id=suite_id,
@@ -56,9 +66,11 @@ class FunctionCaseImporter:
                     ),
                     priority=str(item.get("priority") or ""),
                     case_type=str(item.get("caseType") or item.get("case_type") or ""),
-                    order_no=int(item.get("orderNo", item.get("order_no", index)) or 0),
+                    order_no=order_no,
                 )
             )
-            created += 1
+        await self.access.get_accessible_suite(user_id, suite_id, action="write")
+        for row in rows:
+            self.repository.add(row)
         await self.repository.commit()
-        return {"imported": created}
+        return {"imported": len(rows)}

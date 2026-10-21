@@ -38,6 +38,15 @@ root_password = "GENERATE"
 [control_plane.code_overview]
 cache_ttl_seconds = 300
 
+# 每个控制面进程的资产导入预算；超限请求明确拒绝，整批导入保持原子性。
+[control_plane.asset_import]
+max_bytes = 8388608
+max_items = 10000
+max_field_chars = 262144
+max_depth = 32
+max_nodes = 200000
+max_concurrent = 2
+
 [control_plane.security.super_admin]
 # 系统预置的唯一超级管理员；用户名和邮箱必须提供。
 username = "admin"

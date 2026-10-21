@@ -7,6 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from testing_agent.core.import_limits import ImportLimits
 from testing_agent.core.ldap_config import LdapSettings
 from testing_agent.core.object_storage import ObjectStorageSettings
 
@@ -108,6 +109,7 @@ class Settings:
     super_admin: SuperAdminSettings = SuperAdminSettings()
     login_security: LoginSecuritySettings = LoginSecuritySettings()
     ldap: LdapSettings = LdapSettings()
+    asset_import: ImportLimits = ImportLimits()
 
     def __post_init__(self):
         if self.integration_worker_key and self.integration_worker_key == self.worker_key:
@@ -131,6 +133,7 @@ class Settings:
         execution["project_ids"] = tuple(project_ids)
         jwt = security.get("jwt", {})
         return cls(
+            asset_import=ImportLimits(**data.get("asset_import", {})),
             integration_worker_key=security.get("integration_worker", {}).get("key", ""),
             integration_execution=IntegrationExecutionSettings(**execution),
             s3=ObjectStorageSettings(**data.get("storage", {}).get("s3", {})),

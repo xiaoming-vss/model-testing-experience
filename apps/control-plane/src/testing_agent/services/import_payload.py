@@ -4,6 +4,9 @@ from typing import Any
 
 import yaml
 
+from testing_agent.core.config import get_settings
+from testing_agent.services.import_budget import read_bounded
+
 
 def parse_import_payload(payload: Any) -> dict[str, Any]:
     if isinstance(payload, dict):
@@ -17,11 +20,7 @@ def parse_import_payload(payload: Any) -> dict[str, Any]:
 
 
 async def read_import_payload(payload: Any = None, file: Any = None) -> dict[str, Any]:
-    if file is not None:
-        raw = await file.read()
-        text = raw.decode("utf-8-sig")
-        return parse_import_payload(text)
-    return parse_import_payload(payload)
+    return await read_bounded(payload, file, get_settings().asset_import)
 
 
 def import_items(payload: Any, *keys: str) -> list[Any]:

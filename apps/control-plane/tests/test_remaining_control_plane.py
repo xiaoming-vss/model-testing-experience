@@ -78,8 +78,11 @@ class FakeUpload:
         self.content = content
         self.filename = filename
 
-    async def read(self) -> bytes:
-        return self.content
+    async def read(self, size: int = -1) -> bytes:
+        if size < 0:
+            size = len(self.content)
+        result, self.content = self.content[:size], self.content[size:]
+        return result
 
 
 class FakeResourceBindingRepository:

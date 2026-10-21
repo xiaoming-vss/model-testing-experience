@@ -102,6 +102,9 @@ class AuthorizationDatabase:
     async def run_sync(self, fn):
         return fn(self.sync)
 
+    async def rollback(self):
+        self.sync.rollback()
+
     async def commit(self):
         self.sync.commit()
 

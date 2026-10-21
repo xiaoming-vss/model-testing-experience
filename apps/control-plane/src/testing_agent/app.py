@@ -16,6 +16,7 @@ from testing_agent.core.errors import (
     validation_error_detail,
 )
 from testing_agent.core.http_diagnostics import RequestDiagnosticsMiddleware
+from testing_agent.core.import_http import ImportEnvelopeMiddleware
 from testing_agent.routers.admin_users import router as admin_users_router
 from testing_agent.routers.ai_worker import router as ai_worker_router
 from testing_agent.routers.api_ai_tasks import router as api_ai_tasks_router
@@ -98,6 +99,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     app = FastAPI(title="Model Testing Experience API", version="1.0.0", lifespan=lifespan)
     app.state.settings = settings
+    app.add_middleware(ImportEnvelopeMiddleware, limits=settings.asset_import)
     app.add_middleware(RequestDiagnosticsMiddleware)
 
     @app.exception_handler(AppError)
