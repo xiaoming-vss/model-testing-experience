@@ -145,6 +145,34 @@ async def test_background_sweep_drains_persisted_backlog_without_worker(monkeypa
                 )
                 == 0
             )
+        from testing_agent.services import worker_task
+
+        complete = worker_task.complete_domain_run
+
+        async def fail_after_business_update(*args):
+            await complete(*args)
+            raise RuntimeError("temporary database failure")
+
+        with monkeypatch.context() as patches:
+            patches.setattr(worker_task, "complete_domain_run", fail_after_business_update)
+            await worker_lease_monitor.sweep_once(sessions)
+        async with sessions() as session:
+            assert (
+                await session.scalar(
+                    select(func.count())
+                    .select_from(WorkerTask)
+                    .where(WorkerTask.status == "failed")
+                )
+                == 0
+            )
+            assert (
+                await session.scalar(
+                    select(func.count())
+                    .select_from(ApiCaseRun)
+                    .where(ApiCaseRun.status == "failed")
+                )
+                == 0
+            )
         sizes = []
         original = WorkerTaskService.expire_leases
 
