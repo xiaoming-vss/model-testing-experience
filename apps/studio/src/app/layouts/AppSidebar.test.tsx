@@ -47,7 +47,7 @@ describe('AppSidebar', () => {
     expect(screen.queryByRole('button', { name: '测试' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'API测试' })).not.toBeInTheDocument()
     // jsdom 的 getComputedStyle 在重渲染后会返回过期宽度,这里断言 antd Sider 的内联样式。
-    expect(screen.getByRole('complementary').style.width).toBe('192px')
+    expect(screen.getByRole('complementary').style.width).toBe('176px')
     expect(screen.getByRole('button', { name: '折叠侧边栏' })).toHaveAttribute('aria-expanded', 'true')
     fireEvent.click(screen.getByRole('button', { name: '折叠侧边栏' }))
     expect(screen.getByRole('complementary').style.width).toBe('76px')

@@ -46,7 +46,7 @@ export function AppSidebar({ bugOnly = false }: { bugOnly?: boolean }) {
   const avatarChar = displayName.trim().charAt(0).toUpperCase()
 
   return (
-    <Layout.Sider collapsed={collapsed} collapsedWidth={76} width={192} trigger={null}
+    <Layout.Sider collapsed={collapsed} collapsedWidth={76} width={176} trigger={null}
       theme={resolvedTheme}
       className={`app-sider app-sidebar${collapsed ? ' app-sidebar-collapsed' : ''}`}>
       <div className="sidebar-content">

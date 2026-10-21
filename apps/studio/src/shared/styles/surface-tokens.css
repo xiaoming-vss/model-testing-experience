@@ -63,7 +63,7 @@
   --srf-terminal-info: #93c5fd;
   --srf-terminal-danger: #f87171;
   --srf-terminal-danger-text: #fca5a5;
-  --srf-radius-card: 12px;
+  --srf-radius-card: var(--app-panel-radius);
   --srf-radius-control: 8px;
 }
 

@@ -1,4 +1,4 @@
-import { requirementMetadataColumns } from '../components/requirementMetadataColumns'
+import { RequirementCards } from '../components/RequirementCards'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import '../styles/requirements-list.css'
@@ -22,16 +22,14 @@ import {
   Form,
   Input,
   Space,
-  Table,
   Tag,
   Tooltip,
   Typography,
 } from 'antd'
-import type { TableProps } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { type BindingDepth, ZentaoBindingBadge, ZentaoBindingModal, ZentaoBindingSummary } from '@/features/base-services/components/ZentaoBindingPanel'
 import { GitlabBindingModal, GitlabBindingSummary } from '@/features/base-services/components/GitlabBindingPanel'
 import { RequirementCodeBindingModal } from '@/features/base-services/components/RequirementCodeBindingModal'
@@ -40,9 +38,6 @@ import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
 import { useSprintBoundaryRefresh } from '@/features/projects/hooks/useSprintBoundaryRefresh'
 import { RequirementDrawer, type RequirementFormValues } from '@/features/requirements/components/RequirementDrawer'
 import {
-  getRequirementDocumentSummary,
-  getRequirementDocumentTypeLabel,
-  hasRequirementDocument,
   normalizeRequirementDocumentType,
 } from '@/features/requirements/utils/requirementDocument'
 import { SprintBoard } from '../components/SprintBoard'
@@ -379,31 +374,8 @@ export function ProjectsPage() {
     setZentaoBindingTarget(target)
   }
 
-  const requirementColumns: TableProps<RequirementPoolItem>['columns'] = [
-    { title: '需求名称', key: 'name', render: (_, requirement) => (
-      <div className="tp-list-name project-requirement-list-name requirements-list-name">
-        <span className="requirements-list-icon"><AppIcon name="navRequirement" size={16} /></span>
-        <Tooltip title={requirement.name}><Link to={`/requirements/${normalizeRequirementId(requirement)}`}><Text>{requirement.name}</Text></Link></Tooltip>
-      </div>
-    ) },
-    { title: '所属迭代', dataIndex: 'sprintName', key: 'sprint', width: 120, render: name => <div className="requirements-list-wrap">{name || '—'}</div> },
-    { title: '需求文档', key: 'document', width: 320, render: (_, requirement) => hasRequirementDocument(requirement) ? (
-        <div className="requirements-list-file" title={getRequirementDocumentSummary(requirement)}>
-          <span className="requirements-list-file-type">{getRequirementDocumentTypeLabel(requirement.documentType)}</span>
-          <span className="requirements-list-filename">{getRequirementDocumentSummary(requirement)}</span>
-        </div>
-    ) : <Text type="secondary">未提供文档</Text> },
-    { title: '禅道绑定', key: 'binding', width: 280, render: (_, requirement) => {
-      const binding = requirement.zentaoBinding
-      if (!binding) return <Text type="secondary">未绑定</Text>
-      const name = binding.remoteNameSnapshot || binding.remote_name_snapshot || binding.remoteResourceId || binding.remote_resource_id || '已绑定'
-      return <Tooltip title={<ZentaoBindingBadge targetType="requirement" binding={binding} />}>
-        <div className="requirements-list-wrap" tabIndex={0}>{name}{binding.status && binding.status !== 'active' ? <Text type="secondary">（绑定状态待确认）</Text> : null}</div>
-      </Tooltip>
-    } },
-    ...requirementMetadataColumns<RequirementPoolItem>(),
-    { title: <span className="tp-actions-col-title" style={{ width: 64 }}>操作</span>, key: 'actions', width: 100, align: 'right', fixed: 'right', render: (_, requirement) => (
-      <RequirementRowActions name={requirement.name} canWrite={can('write')} canManage={can('manage')}
+  const renderRequirementActions = (requirement: RequirementPoolItem) => (
+      <RequirementRowActions showBinding name={requirement.name} canWrite={can('write')} canManage={can('manage')}
         deleting={deleteRequirementMutation.isPending && deleteRequirementMutation.variables === normalizeRequirementId(requirement)}
         onEdit={() => openRequirementDrawer(requirement)}
         onBind={() => openZentaoBinding({ targetType: 'requirement', resourceId: normalizeRequirementId(requirement),
@@ -411,8 +383,7 @@ export function ProjectsPage() {
           depth: 'story', title: `绑定禅道需求 Story · ${requirement.name}` })}
         onCodeBind={() => setCodeBindingRequirement(requirement)}
         onDelete={() => deleteRequirementMutation.mutateAsync(normalizeRequirementId(requirement))} />
-    ) },
-  ]
+  )
   const refreshRequirements = () => { void sprintsQuery.refetch(); void requirementsQuery.refetch() }
 
   return (
@@ -467,6 +438,7 @@ export function ProjectsPage() {
                   </div>
                   {sprintsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(sprintsQuery.error)} action={<Button onClick={refreshRequirements}>重试读取</Button>} /> : null}
                   {requirementsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(requirementsQuery.error)} action={<Button onClick={refreshRequirements}>重试读取</Button>} /> : null}
+                  <div className="tp-list-body">
                   <div className="requirements-list-scroll tp-list-scroll">
                     {sprintsQuery.isLoading || requirementsQuery.isLoading ? (
                       <div className="sprint-card-loading">
@@ -480,15 +452,15 @@ export function ProjectsPage() {
                       <Empty description="暂无需求" />
                     ) : null}
                     {!sprintsQuery.isLoading && !requirementsQuery.isLoading && visibleRequirements.length > 0 ? (
-                      <Table<RequirementPoolItem>
-                        className="project-requirement-list-table requirements-list-table tp-list-table"
-                        size="small"
-                        tableLayout="fixed" scroll={{ x: 1580 }}
-                        columns={requirementColumns}
-                        dataSource={visibleRequirements}
-                        rowKey={(requirement) => normalizeRequirementId(requirement)}
-                        pagination={false}
-                      />
+                      <RequirementCards requirements={visibleRequirements} renderActions={renderRequirementActions}
+                        renderBinding={requirement => {
+                          const binding = requirement.zentaoBinding
+                          if (!binding) return <Text type="secondary">未绑定</Text>
+                          const name = binding.remoteNameSnapshot || binding.remote_name_snapshot || binding.remoteResourceId || binding.remote_resource_id || '已绑定'
+                          return <Tooltip title={<ZentaoBindingBadge targetType="requirement" binding={binding} />}>
+                            <div className="requirements-list-wrap" tabIndex={0}>{name}{binding.status && binding.status !== 'active' ? <Text type="secondary">（绑定状态待确认）</Text> : null}</div>
+                          </Tooltip>
+                        }} />
                     ) : null}
                   </div>
                   <div className="table-footer">
@@ -506,6 +478,7 @@ export function ProjectsPage() {
                         setRequirementPageSize(pageSize)
                       }}
                     />
+                  </div>
                   </div>
                 </>
               )}

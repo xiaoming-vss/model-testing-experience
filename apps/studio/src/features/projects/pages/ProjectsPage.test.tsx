@@ -38,7 +38,7 @@ function mount(board: string, selectedSprint: string | null = 's1', documentType
 
 it.each(['sprints', 'requirements'])('进入 %s 列表不逐条查询绑定，需求只查当前范围', async board => {
   const { paths, client } = mount(board)
-  await waitFor(() => expect(document.querySelectorAll(board === 'sprints' ? '.sprint-board-card' : '.ant-table-row').length).toBe(board === 'sprints' ? 3 : 8))
+  await waitFor(() => expect(document.querySelectorAll(board === 'sprints' ? '.sprint-board-card' : '.requirements-card').length).toBe(board === 'sprints' ? 3 : 8))
   await waitFor(() => expect(client.isFetching()).toBe(0))
   expect(paths.filter(path => new URL(path, 'http://localhost').pathname.endsWith('/requirements'))).toEqual(board === 'sprints' ? [] : ['/v1/projects/p1/requirements?page=1&pageSize=20&sprintId=s1'])
   expect(paths.filter(path => path.endsWith('/bindings'))).toEqual([])
@@ -88,10 +88,12 @@ it('列表编辑缺失原文时允许切换 Word，旧下载结果不再阻塞�
   expect(update).not.toHaveBeenCalled()
 })
 
-it('需求列表使用七列和全局迭代范围，不重复显示局部迭代筛选', async () => {
+it('需求列表使用卡片和全局迭代范围，不重复显示局部迭代筛选', async () => {
   mount('requirements')
   await screen.findByText('需求1-0')
-  expect(screen.getAllByRole('columnheader').map(cell => cell.textContent)).toEqual(['需求名称', '所属迭代', '需求文档', '禅道绑定', '代码绑定', '创建时间', '操作'])
+  expect(screen.getAllByRole('article')).toHaveLength(8)
+  expect(screen.getByRole('link', { name: '需求1-0' })).toHaveAttribute('href', '/requirements/s1-r1-0')
+  expect(screen.queryByRole('table')).not.toBeInTheDocument()
   expect(screen.queryByText('筛选迭代')).not.toBeInTheDocument()
   expect(screen.getByText('team/service · dev（共 2 项）')).toBeInTheDocument()
   expect(screen.getAllByText('2026/10/13 13:21')).toHaveLength(8)

@@ -521,7 +521,7 @@ body,
   display: none;
 }
 
-/* 侧边栏宽度由 sidebar.css 管理:192px 展开 / 76px 折叠。 */
+/* 侧边栏宽度由 sidebar.css 管理:176px 展开 / 76px 折叠。 */
 
 .app-sider .ant-menu {
   padding: 8px 0 12px;

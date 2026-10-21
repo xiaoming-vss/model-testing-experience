@@ -1,0 +1,33 @@
+/* The content owns the boundary so its top and left edges join in one arc. */
+.app-shell.app-shell-macos > .ant-layout {
+  background: var(--mac-glass-header) !important;
+}
+
+.app-shell.app-shell-macos .app-sidebar {
+  border-right: 0 !important;
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell-macos .sidebar-brand {
+  border-bottom: 0;
+}
+
+.app-shell.app-shell-macos .app-header.compact-header {
+  border-bottom: 0;
+}
+
+.app-shell.app-shell-macos .app-content {
+  position: relative;
+  border-top-left-radius: var(--app-panel-radius);
+}
+
+.app-shell.app-shell-macos .app-content::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  border-top: 1px solid var(--mac-glass-border);
+  border-left: 1px solid var(--mac-glass-border);
+  border-top-left-radius: var(--app-panel-radius);
+}

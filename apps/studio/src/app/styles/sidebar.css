@@ -1,11 +1,11 @@
-/* 侧边栏:192px 展宽标签轨,可折叠为 76px 图标文字轨。
+/* 侧边栏:176px 展宽标签轨,可折叠为 76px 图标文字轨。
    分组(工作管理/质量管理/集成)+ 底部用户区;激活态用主题的墨蓝 accent 基因(淡墨蓝底),
    与实底主按钮区分重量;琥珀只保留给状态语义。暗色主题不改激活基因,只走全局 token。 */
 .app-shell.app-shell-macos .app-sidebar {
-  width: 192px !important;
-  min-width: 192px !important;
-  max-width: 192px !important;
-  flex: 0 0 192px !important;
+  width: 176px !important;
+  min-width: 176px !important;
+  max-width: 176px !important;
+  flex: 0 0 176px !important;
 }
 
 .app-shell.app-shell-macos .app-sidebar.app-sidebar-collapsed {
@@ -24,7 +24,7 @@
 }
 
 .sidebar-brand {
-  height: 64px;
+  height: 48px;
   flex-shrink: 0;
   display: flex;
   align-items: center;

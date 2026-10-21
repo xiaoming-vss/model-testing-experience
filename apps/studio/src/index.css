@@ -10,6 +10,7 @@
 @import './shared/styles/scrollbars.css';
 @import './shared/styles/list-name.css';
 :root {
+  --app-panel-radius: 12px;
   --app-font-sans: -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   font-family: var(--app-font-sans);
   font-size: 13px;

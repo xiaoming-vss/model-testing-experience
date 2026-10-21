@@ -15,3 +15,19 @@
 .requirements-list-name a .ant-typography { color: var(--app-list-name); font-weight: 400; }
 
 .requirements-list-icon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex-shrink: 0; }
+
+.requirements-card-grid { display: grid; grid-template-columns: repeat(auto-fill, min(100%, 328px)); justify-content: start; gap: 16px; }
+.requirements-card { display: flex; flex-direction: column; min-width: 0; min-height: 290px; border: 1px solid var(--srf-card-border); border-radius: var(--srf-radius-card); background: var(--srf-card); color: var(--srf-text); }
+.requirements-card-heading { padding: 12px 18px; min-height: 73px; background: var(--srf-list-header-bg); border-bottom: 1px solid var(--srf-card-border); border-radius: var(--srf-radius-card) var(--srf-radius-card) 0 0; }
+.requirements-card-heading h2 { margin: 0; font-size: 15px; font-weight: 500; line-height: 24px; overflow-wrap: anywhere; }
+.requirements-card-heading a { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--app-list-name); }
+.requirements-card-heading a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.requirements-card-heading a:focus-visible { outline: 2px solid var(--srf-accent); outline-offset: 2px; border-radius: 2px; }
+.requirements-card-details { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 16px 18px; font-size: 12px; line-height: 20px; }
+.requirements-card-details > div { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 12px; }
+.requirements-card-details dt { color: var(--srf-text-secondary); }
+.requirements-card-details dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.requirements-card-document { min-height: 40px; }
+.requirements-card .requirements-list-file { align-items: flex-start; }
+.requirements-card .requirements-list-filename { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.requirements-card-actions { display: flex; justify-content: flex-end; margin: auto 18px 0; padding: 8px 0 14px; border-top: 1px solid var(--srf-card-border); }
