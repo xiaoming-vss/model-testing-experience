@@ -66,10 +66,14 @@ async def test_pending_link_retains_identity_and_atomically_clears_password(user
         ({"status": "disabled"}, 1004),
         ({"status": "active"}, 1026),
         ({"is_super_admin": True}, 1021),
-        ({"locked_until": datetime.now(UTC) + timedelta(minutes=10)}, 1005),
+        ({"locked_until": timedelta(minutes=10)}, 1005),
     ],
 )
 async def test_forbidden_candidates_never_link(users, overrides, code):
+    overrides = dict(overrides)
+    if isinstance(overrides.get("locked_until"), timedelta):
+        # Full-suite collection can precede this test by more than the lock window.
+        overrides["locked_until"] = datetime.now(UTC) + overrides["locked_until"]
     await local(users, **overrides)
     with pytest.raises(AppError) as error:
         await LdapAccountService(users, auto_link=True).snapshot(IDENTITY)

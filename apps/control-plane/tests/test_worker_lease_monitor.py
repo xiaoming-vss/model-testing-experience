@@ -38,6 +38,15 @@ async def test_sweep_bounds_transactions_and_continues_after_domain_failure(monk
     integration.expire.assert_awaited_once()
     assert "RuntimeError" in caplog.text and "secret must not be logged" not in caplog.text
     assert sessions[-1].commit.await_count == 1
+    assert len(caplog.records) == 1
+    assert "for ai" in caplog.text
+    record = caplog.records[0]
+    assert record.levelname == "ERROR" and record.task_domain == "ai"
+    assert record.error_type == "RuntimeError"
+    assert any(
+        frame["function"] == "expire" for item in record.stack_trace for frame in item["frames"]
+    )
+    assert "secret must not be logged" not in str(record.__dict__)
 
 
 async def test_monitor_recovers_on_startup_and_retries_next_interval(monkeypatch):

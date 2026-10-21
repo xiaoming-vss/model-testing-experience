@@ -4,6 +4,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager, suppress
 
+from testing_agent.core.http_diagnostics import safe_exception_trace
 from testing_agent.db.session import AsyncSessionLocal
 from testing_agent.repositories.worker_task import WorkerTaskRepository
 from testing_agent.services.worker_task import WorkerTaskService
@@ -31,11 +32,7 @@ async def sweep_once(session_factory=AsyncSessionLocal) -> None:
                     break
                 await asyncio.sleep(0)
         except Exception as exc:
-            logger.warning(
-                "Worker lease sweep failed for %s (%s); retrying next interval",
-                domain,
-                type(exc).__name__,
-            )
+            _log_failure(exc, domain)
 
 
 async def monitor() -> None:
@@ -44,10 +41,23 @@ async def monitor() -> None:
         try:
             await sweep_once()
         except Exception as exc:
-            logger.warning(
-                "Worker lease sweep failed (%s); retrying next interval", type(exc).__name__
-            )
+            _log_failure(exc)
         await asyncio.sleep(5)
+
+
+def _log_failure(exc: Exception, domain: str | None = None) -> None:
+    trace = safe_exception_trace(exc)
+    fields: dict[str, object] = {"error_type": type(exc).__name__, "stack_trace": trace}
+    if domain is not None:
+        fields["task_domain"] = domain
+    event = f"Worker lease sweep failed for {domain}" if domain else "Worker lease sweep failed"
+    logger.error(
+        "%s (%s); retrying next interval: %s",
+        event,
+        type(exc).__name__,
+        trace,
+        extra=fields,
+    )
 
 
 @asynccontextmanager

@@ -36,12 +36,17 @@ def test_one_frozen_initial_revision():
     assert "create_all" not in source
 
 
-def test_empty_database_initialization_and_roundtrip():
+def test_empty_database_initialization_and_roundtrip(monkeypatch):
+    import logging
+
+    logger = logging.getLogger("testing_agent.migration_probe")
+    monkeypatch.setattr(logger, "disabled", False)
     engine = sa.create_engine("sqlite://")
     with engine.connect() as connection:
         connection.exec_driver_sql("PRAGMA foreign_keys=ON")
         config = migration_config(connection)
         command.upgrade(config, "head")
+        assert not logger.disabled
         assert_current_schema(connection)
         for table in ("shared_services", "service_authorizations"):
             assert (
@@ -51,6 +56,7 @@ def test_empty_database_initialization_and_roundtrip():
                 == 0
             )
         command.upgrade(config, "head")
+        assert not logger.disabled
         assert_current_schema(connection)
         for table in ("shared_services", "service_authorizations"):
             assert (
@@ -62,6 +68,7 @@ def test_empty_database_initialization_and_roundtrip():
         command.downgrade(config, "base")
         assert sa.inspect(connection).get_table_names() == ["alembic_version"]
         command.upgrade(config, "head")
+        assert not logger.disabled
         assert_current_schema(connection)
         for table in ("shared_services", "service_authorizations"):
             assert (
