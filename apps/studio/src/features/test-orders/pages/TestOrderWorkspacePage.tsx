@@ -448,7 +448,7 @@ export function TestOrderWorkspacePage() {
                   </div>
                 )}
               </div>
-              <div className="table-footer test-order-entry-pagination">
+              <div className="table-footer">
                 <ListPagination current={currentPage} pageSize={pageSize} total={entryTotal}
                   loading={entriesQuery.isFetching || entriesQuery.isError} onChange={changePage} />
               </div>

@@ -233,13 +233,17 @@ it('在当前页面切换图谱并保留执行页筛选', async () => {
   await screen.findByText('账号锁定')
   const user = userEvent.setup()
   await user.type(screen.getByPlaceholderText('搜索用例 ID 或关键字'), '锁定')
+  await waitFor(() => expect(api.getTestOrderEntries).toHaveBeenLastCalledWith(
+    'order-1', expect.objectContaining({ keyword: '锁定' }),
+  ))
+  await waitFor(() => expect(screen.getByText('账号锁定')).toBeVisible())
   await user.click(screen.getByText('用例图谱', { exact: true }))
   expect(open).not.toHaveBeenCalled()
   expect(screen.getByTestId('inline-graph')).toHaveTextContent('order-1')
   expect(screen.getByText('账号锁定')).not.toBeVisible()
   await user.click(screen.getByText('用例执行', { exact: true }))
   expect(screen.getByPlaceholderText('搜索用例 ID 或关键字')).toHaveValue('锁定')
-  expect(screen.getByText('账号锁定')).toBeVisible()
+  await waitFor(() => expect(screen.getByText('账号锁定')).toBeVisible())
   expect(screen.queryByRole('dialog', { name: '用例图谱' })).not.toBeInTheDocument()
   expect(graph).not.toHaveBeenCalled()
   client.clear()
