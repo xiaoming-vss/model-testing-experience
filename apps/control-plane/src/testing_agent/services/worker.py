@@ -92,6 +92,7 @@ async def find_task(session: AsyncSession, domain: str, task_id: str) -> WorkerT
         select(WorkerTask)
         .where(WorkerTask.domain == domain, WorkerTask.task_id == task_id)
         .with_for_update()
+        .execution_options(populate_existing=True)
     )
     if task is None:
         raise ErrNotFound()

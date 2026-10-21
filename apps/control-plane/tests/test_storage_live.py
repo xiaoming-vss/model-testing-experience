@@ -23,6 +23,7 @@ from testing_agent.core.object_storage import ObjectStorage
 from testing_agent.models import Base
 from testing_agent.models.bug import Bug
 from testing_agent.models.bug_activity import BugActivity
+from testing_agent.models.file_verification import FileVerification
 from testing_agent.models.project import Project
 from testing_agent.models.project_member import ProjectMember
 from testing_agent.models.requirement import Requirement
@@ -373,6 +374,18 @@ async def test_live_backup_restore_references_and_hashes(live, tmp_path):
             )
         )
         await session.commit()
+        session.add(
+            FileVerification(
+                operation_id="interrupted-verify",
+                file_id="missing-source-file",
+                bucket=settings[0].s3.bucket,
+                object_key="p1-audit/interrupted-object",
+                state="running",
+                deadline=utcnow() + timedelta(minutes=10),
+                gc_after=utcnow() + timedelta(minutes=10),
+            )
+        )
+        await session.commit()
     # Fixture writers have stopped; use a real MySQL read lock while copying RustFS.
     bundle = tmp_path / "bundle"
     summary = await asyncio.to_thread(create_backup, settings[0], bundle)
@@ -384,6 +397,12 @@ async def test_live_backup_restore_references_and_hashes(live, tmp_path):
     try:
         async with async_sessionmaker(engine, expire_on_commit=False)() as session:
             files = StoredFileService(session, settings[1].s3)
+            operations = list(await session.scalars(select(FileVerification)))
+            assert all(item.bucket == settings[1].s3.bucket for item in operations)
+            interrupted = next(
+                item for item in operations if item.operation_id == "interrupted-verify"
+            )
+            assert interrupted.state == "abandoned" and interrupted.settled_at is None
             row = await files.get(file_id)
             assert (row.resource_type, row.resource_id, row.status) == (
                 "bug",
@@ -518,7 +537,7 @@ async def test_live_restored_queue_is_quarantined_after_source_confirms_remote_s
         await restored_engine.dispose()
 
 
-async def test_live_cleanup_skips_completion_lock(live, monkeypatch):
+async def test_live_cleanup_skips_active_verification(live, monkeypatch):
     settings, sessions = live
     entered, release = threading.Event(), threading.Event()
     async with sessions() as session:

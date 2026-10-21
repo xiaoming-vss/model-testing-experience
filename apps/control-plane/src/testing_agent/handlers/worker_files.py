@@ -70,6 +70,8 @@ async def complete_artifact(
     ):
         raise ErrForbidden()
     await files.complete(actor.actor, file_id)
+    # Verification releases its transaction; the task may have lost its lease meanwhile.
+    actor = await authority(service, task_id, body.worker_id)
     await files.attach(
         actor.actor, file_id, actor.project_id, "ui_worker_task", task_id, purpose="ui_artifact"
     )

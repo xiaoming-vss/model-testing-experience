@@ -23,6 +23,9 @@ class StoredFile(Base):
     status: Mapped[str] = mapped_column(
         String(20), default="pending", comment="文件状态：pending/ready/attached/archived/deleting"
     )
+    verification_id: Mapped[str] = mapped_column(
+        String(64), default="", server_default="", comment="当前核验代次；空表示尚未领取或已失败"
+    )
     purpose: Mapped[str] = mapped_column(String(32), comment="文件业务用途")
     resource_type: Mapped[str] = mapped_column(
         String(32), default="", comment="已关联的业务资源类型"

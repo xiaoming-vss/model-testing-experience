@@ -20,6 +20,7 @@ from testing_agent.models.bug_activity import BugActivity
 from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
 from testing_agent.models.bug_zentao_push import BugZentaoPush
 from testing_agent.models.bug_zentao_sync_baseline import BugZentaoSyncBaseline
+from testing_agent.models.file_verification import FileVerification
 from testing_agent.models.function_case_push import (
     FunctionCasePushOperation,
     FunctionCasePushRequest,
@@ -79,6 +80,7 @@ __all__ = [
     "ApiEnvironmentVar",
     "ApiExtractRule",
     "Base",
+    "FileVerification",
     "Bug",
     "BugActivity",
     "BugZentaoAttachment",

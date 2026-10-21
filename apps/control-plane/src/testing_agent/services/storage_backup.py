@@ -212,6 +212,16 @@ def restore_backup(settings, source: Path):
                 "UPDATE stored_files SET bucket=%s WHERE bucket=%s",
                 (settings.s3.bucket, manifest["bucket"]),
             )
+            if "file_verifications" in integration_tables:
+                # Restore into a distinct bucket cannot resume a source writer's permit.
+                # Retain unknown-write tombstones conservatively for repeated cleanup.
+                cursor.execute(
+                    "UPDATE file_verifications SET bucket=%s, "
+                    "gc_after=CASE WHEN state='published' THEN gc_after ELSE UTC_TIMESTAMP() END, "
+                    "state=CASE WHEN state='running' THEN 'abandoned' ELSE state END "
+                    "WHERE bucket=%s",
+                    (settings.s3.bucket, manifest["bucket"]),
+                )
             cursor.execute("SET FOREIGN_KEY_CHECKS=1")
         if "integration_jobs" in integration_tables:
             quarantine_restored_integrations(database, settings)

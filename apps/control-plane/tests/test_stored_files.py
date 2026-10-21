@@ -226,9 +226,13 @@ async def test_repair_legacy_names_preserves_bytes_id_and_old_object(files):
     from testing_agent.services.file_naming import repair_file_names
 
     row, _ = await upload(files)
-    row.object_key = row.object_key.rsplit("/", 1)[0] + "/content"
-    await files.session.commit()
     await files.complete("owner", row.file_id)
+    old_key = row.object_key.rsplit("/", 1)[0] + "/content"
+    files.storage.client.copy_object(
+        Bucket=row.bucket, Key=old_key, CopySource={"Bucket": row.bucket, "Key": row.object_key}
+    )
+    row.object_key = old_key
+    await files.session.commit()
     old_key, file_id = row.object_key, row.file_id
     assert (await repair_file_names(files))[0]["status"] == "eligible"
     assert row.object_key == old_key
