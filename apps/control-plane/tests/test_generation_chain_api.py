@@ -3,9 +3,9 @@
 import asyncio
 from datetime import UTC, datetime, timedelta
 
+from support.openapi_schema import openapi_schema
 from support.project_api import account, api, project  # noqa: F401
 
-from testing_agent.app import create_app
 from testing_agent.models.requirement import Requirement
 from testing_agent.models.sprint import Sprint
 
@@ -36,7 +36,7 @@ def seed_requirement(client, project_id):
 
 
 def test_generation_version_import_routes_are_public():
-    paths = create_app().openapi()["paths"]
+    paths = openapi_schema()["paths"]
     assert (
         "get"
         in paths[

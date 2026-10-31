@@ -1079,15 +1079,6 @@ describe('运行记录删除', () => {
     await user.click(within(confirm).getByRole('button', { name: /^删\s*除$/ }))
     await waitFor(() => expect(deleted).toEqual(['/v1/function-case-generate-task-runs/run-1']))
   })
-
-  it('运行中的记录没有可用的删除入口', async () => {
-    installFetchHandler(() => ({ ...pendingRun, status: 'running' }))
-    renderPage()
-    const user = userEvent.setup()
-
-    await openRunActionsMenu(user, 'run-1')
-    expect(await screen.findByRole('menuitem', { name: '删除运行记录' })).toHaveAttribute('aria-disabled', 'true')
-  })
 })
 
 

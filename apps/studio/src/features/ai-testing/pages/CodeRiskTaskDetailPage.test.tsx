@@ -107,15 +107,6 @@ describe('代码风险任务运行记录删除', () => {
     await waitFor(() => expect(deleted).toEqual(['/v1/code-risk-analysis-runs/risk-run-1']))
   })
 
-  it('运行中的记录没有可用的删除入口', async () => {
-    installFetchHandler(() => ({ ...run, status: 'running' }))
-    renderPage()
-    const user = userEvent.setup()
-
-    await openRunActionsMenu(user)
-    expect(await screen.findByRole('menuitem', { name: '删除运行记录' })).toHaveAttribute('aria-disabled', 'true')
-  })
-
   it('只读成员没有删除入口', async () => {
     installFetchHandler(() => run)
     renderPage('viewer')

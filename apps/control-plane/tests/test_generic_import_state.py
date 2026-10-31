@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
+from support.openapi_schema import openapi_schema
 
 from testing_agent.api.deps import get_current_user_id, get_generation_queries
 from testing_agent.app import create_app
@@ -88,8 +89,6 @@ def test_run_detail_exposes_multiple_supported_import_target_types():
 
 
 def test_openapi_run_contract_omits_legacy_imported_collection_id():
-    app = create_app()
-
-    schema = app.openapi()["components"]["schemas"]["AiGenerateTaskRunResponse"]
+    schema = openapi_schema()["components"]["schemas"]["AiGenerateTaskRunResponse"]
 
     assert "importedCollectionId" not in schema["properties"]

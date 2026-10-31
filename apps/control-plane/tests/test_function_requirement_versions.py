@@ -3,8 +3,8 @@
 import pytest
 from support.ai_execution import AsyncSessionAdapter, create_run, db, event  # noqa: F401
 from support.generation import generation_services
-from support.requirement_versions import understanding_version
 from support.generation_chain import latest_worker
+from support.requirement_versions import understanding_version
 
 from testing_agent.core.errors import AppError
 from testing_agent.models.ai_generate_task import AiGenerateTask

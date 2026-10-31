@@ -28,6 +28,7 @@ from support.gitlab_resource_proxy import (
 from support.gitlab_resource_proxy import (
     proxy_client as proxy_client,
 )
+from support.openapi_schema import openapi_schema
 
 from testing_agent.api.deps import get_integration_connection_service
 from testing_agent.app import create_app
@@ -445,7 +446,7 @@ def test_endpoints_require_authentication():
 
 
 def test_proxy_routes_follow_go_contract_path_conversion():
-    paths = create_app().openapi()["paths"]
+    paths = openapi_schema()["paths"]
 
     assert "/v1/projects/{projectId}/integrations/gitlab/connections/{connectionId}/groups" in paths
     repositories_path = (

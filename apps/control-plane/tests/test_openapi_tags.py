@@ -1,8 +1,8 @@
-from testing_agent.app import create_app
+from support.openapi_schema import openapi_schema
 
 
 def tags_for(path: str, method: str) -> list[str]:
-    operation = create_app().openapi()["paths"][path][method.lower()]
+    operation = openapi_schema()["paths"][path][method.lower()]
     return operation["tags"]
 
 
@@ -29,7 +29,7 @@ def test_internal_worker_routes_are_grouped_in_openapi():
 
 
 def test_json_success_responses_have_go_style_schema():
-    schema = create_app().openapi()
+    schema = openapi_schema()
     offenders: list[str] = []
 
     def resolve_ref(node: dict) -> dict:
@@ -65,7 +65,7 @@ def test_json_success_responses_have_go_style_schema():
 
 
 def test_core_success_response_data_uses_declared_models():
-    schema = create_app().openapi()
+    schema = openapi_schema()
 
     def resolve_ref(node: dict) -> dict:
         ref = node.get("$ref")
@@ -93,7 +93,7 @@ def test_core_success_response_data_uses_declared_models():
 
 
 def test_openapi_does_not_emit_additional_properties_placeholders():
-    schema = create_app().openapi()
+    schema = openapi_schema()
     offenders: list[str] = []
 
     def walk(node: object, path: str) -> None:
@@ -112,7 +112,7 @@ def test_openapi_does_not_emit_additional_properties_placeholders():
 
 
 def test_requirement_analysis_run_request_exposes_checkpoint_protocol_fields():
-    schema = create_app().openapi()
+    schema = openapi_schema()
     request_schema = schema["paths"]["/v1/requirement-analysis-tasks/{taskId}/run"]["post"][
         "requestBody"
     ]["content"]["application/json"]["schema"]
@@ -126,7 +126,7 @@ def test_requirement_analysis_run_request_exposes_checkpoint_protocol_fields():
 
 
 def test_requirement_response_does_not_expose_document_file_metadata_noise():
-    schema = create_app().openapi()
+    schema = openapi_schema()
     properties = schema["components"]["schemas"]["RequirementResponse"]["properties"]
 
     assert "documentContentType" not in properties
@@ -136,7 +136,7 @@ def test_requirement_response_does_not_expose_document_file_metadata_noise():
 
 
 def test_requirement_requests_do_not_expose_description_or_status():
-    schema = create_app().openapi()
+    schema = openapi_schema()
     create_properties = schema["components"]["schemas"]["CreateRequirementRequest"]["properties"]
     update_properties = schema["components"]["schemas"]["UpdateRequirementRequest"]["properties"]
 

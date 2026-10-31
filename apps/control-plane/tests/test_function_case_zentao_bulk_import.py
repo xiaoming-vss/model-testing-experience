@@ -6,8 +6,8 @@ import pytest
 from authorization_database import AuthorizationDatabase
 from pydantic import ValidationError
 from support.function_case_export import exporter as FunctionCaseExporter
+from support.openapi_schema import openapi_schema
 
-from testing_agent.app import create_app
 from testing_agent.core.errors import ErrBadRequest, ErrForbidden, ErrNotFound
 from testing_agent.schemas.function_test_case import (
     FunctionSuitesZentaoImportResponse,
@@ -333,7 +333,7 @@ def test_bulk_import_response_uses_camel_case_and_omits_success_errors():
 
 
 def test_bulk_import_route_is_public():
-    paths = create_app().openapi()["paths"]
+    paths = openapi_schema()["paths"]
 
     assert "post" in paths["/v1/requirements/{requirementId}/zentao/testcases/import"]
 

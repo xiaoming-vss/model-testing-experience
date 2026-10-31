@@ -18,13 +18,13 @@ from support.api_review_confirmed_import import (
 from support.api_review_confirmed_import import (
     review_client as review_client,
 )
+from support.openapi_schema import openapi_schema
 
-from testing_agent.app import create_app
 from testing_agent.models.api_case import ApiCase
 
 
 def test_api_candidate_edit_and_confirmed_import_routes_are_public():
-    paths = create_app().openapi()["paths"]
+    paths = openapi_schema()["paths"]
 
     assert "patch" in paths["/v1/api-case-generate-task-runs/{runId}/result"]
     assert "post" in paths["/v1/api-case-generate-task-runs/{runId}/import"]

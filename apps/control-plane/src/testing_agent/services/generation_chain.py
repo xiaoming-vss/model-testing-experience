@@ -48,6 +48,7 @@ from testing_agent.schemas.generation_chain import (
     ChainImportRecordView,
     ChainImportTargetView,
     ChainLeafView,
+    ChainSourceInputsView,
     ChainStageDraftView,
     ChainStageVersionSummary,
     ChainStageView,
@@ -98,6 +99,11 @@ def _config_mapping(value: Any) -> dict[str, Any]:
         except ValueError:
             return {}
     return dict(value) if isinstance(value, dict) else {}
+
+
+def _source_inputs_view(source: dict[str, Any] | None) -> ChainSourceInputsView | None:
+    """Coerce stored UI provenance into the response model declared by the schema."""
+    return ChainSourceInputsView.model_validate(source) if source is not None else None
 
 
 class GenerationChainService:
@@ -234,7 +240,11 @@ class GenerationChainService:
             review_comment=row.review_comment,
             upstream_versions=upstream,
             upstream=summaries,
-            source_inputs=await self._version_source_inputs(row) if kind == "ui" else None,
+            source_inputs=(
+                _source_inputs_view(await self._version_source_inputs(row))
+                if kind == "ui"
+                else None
+            ),
         )
 
     async def import_options(
@@ -1542,7 +1552,7 @@ class GenerationChainService:
             active=bool(run and run.status in RUN_ACTIVE_STATUSES),
             busy=bool(run and run.status in RUN_ACTIVE_STATUSES),
             source_changed=source_changed,
-            source_inputs=ui_source_inputs(run.snapshot_json)
+            source_inputs=_source_inputs_view(ui_source_inputs(run.snapshot_json))
             if kind == "ui" and run and detail
             else None,
             updated_at=max((value for value in updated if value), default=None),
@@ -1636,7 +1646,9 @@ class GenerationChainService:
                 for key, value in (versioning.get("upstreamVersions") or {}).items()
                 if isinstance(value, str)
             },
-            source_inputs=ui_source_inputs((attempt.input_snapshot_json or {}).get("source"))
+            source_inputs=_source_inputs_view(
+                ui_source_inputs((attempt.input_snapshot_json or {}).get("source"))
+            )
             if kind == "ui" and detail
             else None,
             instruction=attempt.revision_instruction or "",

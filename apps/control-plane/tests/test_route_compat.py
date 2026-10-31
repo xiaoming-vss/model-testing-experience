@@ -1,10 +1,9 @@
-from testing_agent.app import create_app
+from support.openapi_schema import openapi_schema
 
 
 def route_set():
-    app = create_app()
     result = set()
-    for path, methods in app.openapi()["paths"].items():
+    for path, methods in openapi_schema()["paths"].items():
         for method in methods:
             result.add((method.upper(), path))
     return result
@@ -46,8 +45,7 @@ def test_test_asset_routes_match_go_contract_subset():
 
 
 def test_openapi_paths_use_go_camel_case_path_parameters():
-    app = create_app()
-    paths = set(app.openapi()["paths"])
+    paths = set(openapi_schema()["paths"])
 
     assert "/v1/projects/{projectId}" in paths
     assert "/internal/api-worker/tasks/{taskId}/collection-items/{itemId}/completed" in paths

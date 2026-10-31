@@ -189,12 +189,15 @@ Worker 领取、心跳、执行结果和取消操作遵循各自状态机、领�
 
 表中的测试文件均位于 `tests/`。测试入口重命名或职责调整时同步更新此表；基础入口不能代替本次业务改动的专项验证。真实 MySQL、对象存储等外部验收被跳过时，必须报告对应范围未验证。
 
+全量测试通过 `scripts/check.py` 执行时默认使用 `pytest -n auto --dist loadfile` 并行运行；设置 `CONTROL_PLANE_TEST_DATABASE_URL` 或 `CONTROL_PLANE_STORAGE_LIVE` 时自动退回单进程，因为这两类用例共享同一个一次性数据库或存储。通过 `--tests` 指定的定向回归同样保持单进程。
+
 源码和测试变更必须通过修改范围内的 Ruff 检查、格式检查、类型检查及上表回归。新增类型与修改过的公共函数必须检查参数、返回值和函数体；第三方缺少类型声明时局部说明，不能用全局忽略掩盖业务类型错误。
 
 在 `apps/control-plane/` 执行应用检查：
 
 ```sh
 uv sync --locked --extra dev
+uv run --locked --extra dev python scripts/check.py
 uv run --locked --extra dev python -m pytest tests/<相关测试文件>.py
 uv run --locked --extra dev ruff check <修改的源码及测试路径>
 uv run --locked --extra dev ruff format --check <修改的源码及测试路径>

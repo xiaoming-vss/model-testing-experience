@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 from support.execution_writer import MemoryExecutionWriter
+from support.openapi_schema import openapi_schema
 from support.ui_task_archive import (
     UiTaskRepository,
     create_ui_task,
@@ -28,7 +29,7 @@ from testing_agent.services.worker_task import WorkerTaskService
 
 
 def test_ui_case_generate_source_archive_routes_are_public():
-    paths = create_app().openapi()["paths"]
+    paths = openapi_schema()["paths"]
 
     assert "post" in paths["/v1/projects/{projectId}/ui-case-generate-tasks"]
     assert "get" in paths["/v1/projects/{projectId}/ui-case-generate-tasks"]

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from testing_agent.app import create_app
+from support.openapi_schema import openapi_schema
 
 
 def go_path(path: str) -> str:
@@ -32,9 +32,8 @@ def go_path(path: str) -> str:
 
 
 def route_set():
-    app = create_app()
     result = set()
-    for path, methods in app.openapi()["paths"].items():
+    for path, methods in openapi_schema()["paths"].items():
         for method in methods:
             result.add((method.upper(), path))
     return result

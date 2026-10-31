@@ -5,6 +5,7 @@ import pytest
 from authorization_database import AuthorizationDatabase
 from fastapi.testclient import TestClient
 from support.deletion import MemoryResourceDeletion
+from support.openapi_schema import openapi_schema
 
 from testing_agent.api.deps import get_current_user_id, get_integration_connection_service
 from testing_agent.app import create_app
@@ -276,7 +277,7 @@ def test_user_lists_gets_and_deletes_a_gitlab_connection():
 
 
 def test_gitlab_only_exposes_project_scoped_connections_and_keeps_zentao_routes():
-    paths = create_app().openapi()["paths"]
+    paths = openapi_schema()["paths"]
 
     assert not any(path.startswith("/v1/integrations/gitlab/") for path in paths)
     assert "post" not in paths["/v1/integrations/zentao/connections"]
