@@ -119,3 +119,16 @@ async def requirement_image(
 
     ticket = await requirement_image_ticket(task_id, file_id, worker_id, service, files)
     return JSONResponse(ticket, headers={"Cache-Control": "no-store"})
+
+
+async def revision_attachment(
+    task_id: str,
+    file_id: str,
+    worker_id: str = Query(alias="workerId"),
+    service: WorkerTaskService = Depends(get_worker_task_service),
+    files=Depends(get_file_service),
+) -> JSONResponse:
+    from testing_agent.services.revision_attachment_access import revision_attachment_ticket
+
+    ticket = await revision_attachment_ticket(task_id, file_id, worker_id, service, files)
+    return JSONResponse(ticket, headers={"Cache-Control": "no-store"})

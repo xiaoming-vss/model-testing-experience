@@ -31,6 +31,15 @@ TASK_SKILLS = {
 
 
 def required_skills(task):
+    if (
+        task.task_type == "ui_case_generate"
+        and task.payload.metadata.get("uiWorkflowVersion") == "ui_three_stage/1.0"
+    ):
+        from testing_agent_ai_worker.tasks.ui_case_generate.artifacts import UI_SKILLS
+
+        if not task.checkpoint_enabled or task.current_stage not in UI_SKILLS:
+            raise ValueError("UI 三阶段生成需要有效阶段及人工审核")
+        return [UI_SKILLS[task.current_stage]]
     stages = {
         "requirement_analysis": REQUIREMENT_SKILLS,
         "functional_case_generate": FUNCTIONAL_SKILLS,

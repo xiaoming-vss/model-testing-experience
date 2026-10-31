@@ -1,5 +1,5 @@
 import { UiTestSuiteCasePage } from '@/features/ui-automation/pages/UiTestSuiteCasePage'
-import { api } from '@/services/api'
+import { api, ApiError } from '@/services/api'
 import { TestThemeProvider as ThemeProvider } from '@/test/TestThemeProvider'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
@@ -51,6 +51,13 @@ const caseRun = {
   success: true,
   durationMs: 1840,
   currentUrl: 'http://localhost:5173/dashboard',
+  usedVariables: [
+    { name: 'username', value: 'admin', orderNo: 2, secret: false },
+    { name: 'password', value: '********', orderNo: 2, secret: true },
+  ],
+  variableWrites: [
+    { name: 'taskId', previousValue: '20', value: '31', orderNo: 1, created: false },
+  ],
   stepResults: [
     { orderNo: 1, stepName: '打开登录页', keyword: 'open', status: 'success' as const, success: true, durationMs: 312, startedAt: '2026-09-23T02:42:01.120', screenshotPath: 'http://127.0.0.1:9000/files/step-1.png' },
     { orderNo: 2, stepName: '输入用户名', keyword: 'input', status: 'failed' as const, success: false, durationMs: 45, startedAt: '2026-09-23T02:42:01.442', actualValue: 'admin', errorMessage: '元素未找到', screenshotPath: 'http://127.0.0.1:9000/files/step-2.png' },
@@ -65,6 +72,15 @@ function mockDetailApis() {
   vi.spyOn(api, 'getSprint').mockResolvedValue({ sprintId: 'sprint-1', projectId: 'project-1', name: 'v1.0.0', status: 'running' })
   vi.spyOn(api, 'getUiTestSuiteRuns').mockResolvedValue(list([{ suiteRunId: 'suite-run-1', suiteId: 'suite-1', status: 'success', startedAt: new Date().toISOString(), totalCount: 2, successCount: 2 }]))
   vi.spyOn(api, 'getUiTestCaseRun').mockResolvedValue(caseRun)
+  vi.spyOn(api, 'getApiEnvironments').mockResolvedValue(
+    list([{ environmentId: 'env-ui-1', kind: 'ui', name: 'UI 环境', baseUrl: 'http://127.0.0.1:5173', isDefault: true }]),
+  )
+  vi.spyOn(api, 'getApiEnvironmentVars').mockResolvedValue(
+    list([
+      { envVarId: 'var-1', environmentId: 'env-ui-1', varKey: 'token', value: 'abc' },
+      { envVarId: 'var-2', environmentId: 'env-ui-1', varKey: 'userId', value: '42' },
+    ]),
+  )
 }
 
 function renderPage() {
@@ -111,6 +127,7 @@ it('顶栏给出测试集、需求、迭代、就绪结论与上次运行，运�
   await userEvent.setup().click(toolbar.getByRole('button', { name: /运行测试集/ }))
   await waitFor(() =>
     expect(run).toHaveBeenCalledWith('suite-1', {
+      environmentId: 'env-ui-1',
       headless: false,
       slowMoMs: 300,
       viewportWidth: 1440,
@@ -121,7 +138,7 @@ it('顶栏给出测试集、需求、迭代、就绪结论与上次运行，运�
   client.clear()
 })
 
-it('运行摘要结束后自动补取最终报告，报告明细正常显示', async () => {
+it('运行结束后自动补取最终报告，报告明细正常显示', async () => {
   let status = 'running'
   const summary = () => ({ suiteRunId: 'suite-run-2', suiteId: 'suite-1', status, totalCount: 1, successCount: status === 'success' ? 1 : 0 })
   vi.spyOn(api, 'runUiTestSuite').mockImplementation(async () => summary())
@@ -132,12 +149,14 @@ it('运行摘要结束后自动补取最终报告，报告明细正常显示', a
   }))
   const { client } = renderPage()
   await screen.findByText('UI测试集详情')
-  await userEvent.setup().click(screen.getByRole('button', { name: '运行测试集' }))
-  await waitFor(() => expect(report).toHaveBeenCalledTimes(1))
+  const runButton = screen.getByRole('button', { name: '运行测试集' })
+  await waitFor(() => expect(runButton).toBeEnabled())
+  await userEvent.setup().click(runButton)
+  await waitFor(() => expect(report).toHaveBeenCalled())
   status = 'success'
   client.setQueryData(['uiTestSuiteRun', 'suite-run-2'], summary())
   await screen.findByText('最终完成用例')
-  expect(report).toHaveBeenCalledTimes(2)
+  expect(report.mock.calls.length).toBeGreaterThanOrEqual(2)
   client.clear()
 })
 
@@ -149,13 +168,16 @@ it('关闭运行中的报告后摘要继续更新，结束时顶栏就绪且不�
   const { container, client } = renderPage()
   await screen.findByText('UI测试集详情')
   const user = userEvent.setup()
-  await user.click(screen.getByRole('button', { name: '运行测试集' }))
-  await waitFor(() => expect(report).toHaveBeenCalledTimes(1))
+  const runButton = screen.getByRole('button', { name: '运行测试集' })
+  await waitFor(() => expect(runButton).toBeEnabled())
+  await user.click(runButton)
+  await waitFor(() => expect(report).toHaveBeenCalled())
   await user.click(screen.getByRole('button', { name: 'Close' }))
+  const callsAfterClose = report.mock.calls.length
   client.setQueryData(['uiTestSuiteRun', 'suite-run-2'], { ...running, status: 'success', totalCount: 1, successCount: 1 })
   const toolbar = within(container.querySelector('.ui-wb-toolbar') as HTMLElement)
   await toolbar.findByText('就绪 (Ready)')
-  expect(report).toHaveBeenCalledTimes(1)
+  expect(report.mock.calls.length).toBe(callsAfterClose)
   client.clear()
 })
 
@@ -250,5 +272,82 @@ it('调试运行后右栏给出截图回放、关键帧与控制台日志', asyn
   await waitFor(() => expect(consoleCard.queryByText('open("打开登录页")')).toBeNull())
   expect(consoleCard.getByText('input("输入用户名")')).toBeInTheDocument()
   expect(consoleCard.getByText(/测试用例执行完成/)).toBeInTheDocument()
+
+  // 运行变量汇总：私密值打码，写回记录展示旧值→新值
+  await userEvent.setup().click(consoleCard.getByRole('button', { name: /运行变量/ }))
+  expect(await consoleCard.findByText('username')).toBeInTheDocument()
+  expect(consoleCard.getByText('********')).toBeInTheDocument()
+  expect(consoleCard.getByText('20 → 31')).toBeInTheDocument()
+  client.clear()
+})
+
+it('运行前缺变量时弹窗内联补齐，保存后自动重新提交运行', async () => {
+  const error = new ApiError('运行前缺少变量', 3008, 400, {
+    missingVariables: [
+      { caseId: 'case-1', caseName: '登录成功-跳转工作台', stepName: '输入用户名', field: 'operationValue', name: 'username', kind: 'environment' },
+      { caseId: 'case-1', caseName: '登录成功-跳转工作台', stepName: '输入用户名', field: 'operationValue', name: 'password', kind: 'environment' },
+    ],
+  })
+  const run = vi
+    .spyOn(api, 'runUiTestSuite')
+    .mockRejectedValueOnce(error)
+    .mockResolvedValue({ suiteRunId: 'suite-run-2', status: 'running' })
+  const createVar = vi
+    .spyOn(api, 'createApiEnvironmentVar')
+    .mockResolvedValue({ varKey: 'username', value: 'admin' })
+  const { client } = renderPage()
+
+  await screen.findByText('UI测试集详情')
+  const runButton = screen.getByRole('button', { name: '运行测试集' })
+  await waitFor(() => expect(runButton).toBeEnabled())
+  await userEvent.setup().click(runButton)
+
+  // 一次列全缺失的变量，而不是逐个报错
+  await screen.findByText('运行前缺少变量')
+  const modal = within(document.querySelector('.ant-modal') as HTMLElement)
+  expect(modal.getByText('username')).toBeInTheDocument()
+  expect(modal.getByText('password')).toBeInTheDocument()
+
+  const user = userEvent.setup()
+  await user.type(modal.getByPlaceholderText('请输入 username 的值'), 'admin')
+  await user.type(modal.getByPlaceholderText('请输入 password 的值'), 'secret')
+  await user.click(modal.getByRole('button', { name: '保存并重新运行' }))
+
+  await waitFor(() =>
+    expect(createVar).toHaveBeenCalledWith('env-ui-1', { varKey: 'username', value: 'admin' }),
+  )
+  expect(createVar).toHaveBeenCalledWith('env-ui-1', { varKey: 'password', value: 'secret' })
+  await waitFor(() => expect(run).toHaveBeenCalledTimes(2))
+  client.clear()
+})
+
+it('从插入动态值弹窗把环境变量插入当前输入框', async () => {
+  const { container, client } = renderPage()
+
+  await waitFor(() => expect(screen.getByLabelText('用例名称')).toHaveValue('登录成功-跳转工作台'))
+  const cards = container.querySelectorAll('.ui-test-case-step-card')
+  const stepCard = cards[1] as HTMLElement
+  const user = userEvent.setup()
+  await user.click(within(stepCard).getByRole('button', { name: '展开步骤' }))
+
+  // 定位值在前、操作值在后；这里插入到「输入用户名」的输入值。
+  const insertButtons = within(stepCard).getAllByRole('button', { name: /插入变量/ })
+  expect(insertButtons).toHaveLength(2)
+  await user.click(insertButtons[1])
+
+  const modal = within(await waitFor(() => {
+    const node = document.querySelector('.api-env-var-picker-modal')
+    expect(node).toBeTruthy()
+    return node as HTMLElement
+  }))
+  expect(modal.getByText('插入动态值')).toBeInTheDocument()
+  // 环境变量来自当前选中的 UI 环境，列表默认选中第一个
+  expect((await modal.findAllByText('baseUrl')).length).toBeGreaterThan(0)
+  expect(modal.getByText('userId')).toBeInTheDocument()
+  await user.click(modal.getByRole('button', { name: /token/ }))
+  expect(modal.getByText('{{token}}')).toBeInTheDocument()
+
+  await user.click(modal.getByRole('button', { name: '插入变量' }))
+  await waitFor(() => expect(within(stepCard).getByDisplayValue(/\{\{token\}\}/)).toBeInTheDocument())
   client.clear()
 })

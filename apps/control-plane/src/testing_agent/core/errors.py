@@ -93,6 +93,9 @@ ErrApiCaseRunNotFound = AppError(2404, "API用例运行记录不存在", HTTPSta
 ErrApiWorkerTaskNotFound = AppError(2405, "API Worker任务不存在", HTTPStatus.NOT_FOUND)
 ErrApiEnvironmentNotFound = AppError(2501, "API环境不存在", HTTPStatus.NOT_FOUND)
 ErrApiEnvironmentNameAlreadyUse = AppError(2502, "该API环境名称已存在", HTTPStatus.CONFLICT)
+ErrApiEnvironmentKindMismatch = AppError(
+    2503, "环境类型与当前测试类型不匹配", HTTPStatus.BAD_REQUEST
+)
 ErrApiEnvironmentVarNotFound = AppError(2601, "API环境变量不存在", HTTPStatus.NOT_FOUND)
 ErrApiEnvironmentVarNameAlreadyUse = AppError(2602, "该API环境变量名已存在", HTTPStatus.CONFLICT)
 ErrApiAssertRuleNotFound = AppError(2701, "API断言规则不存在", HTTPStatus.NOT_FOUND)
@@ -109,6 +112,8 @@ ErrUiTestCaseRunNotFound = AppError(3003, "UI测试用例运行记录不存在",
 ErrUiWorkerTaskNotFound = AppError(3004, "UI Worker任务不存在", HTTPStatus.NOT_FOUND)
 ErrUiTestSuiteRunNotFound = AppError(3005, "UI测试集运行记录不存在", HTTPStatus.NOT_FOUND)
 ErrUiTestSuiteRunItemNotFound = AppError(3006, "UI测试集运行子项不存在", HTTPStatus.NOT_FOUND)
+ErrUiRunEnvironmentMismatch = AppError(3007, "UI运行与环境不属于同一项目", HTTPStatus.BAD_REQUEST)
+ErrUiRunVariableMissing = AppError(3008, "运行前变量校验未通过", HTTPStatus.BAD_REQUEST)
 ErrApiCaseGenerateTaskNotFound = AppError(3101, "API用例生成任务不存在", HTTPStatus.NOT_FOUND)
 ErrAiGenerateTaskRunNotFound = AppError(3102, "API用例生成任务运行记录不存在", HTTPStatus.NOT_FOUND)
 ErrAiWorkerTaskNotFound = AppError(3103, "AI Worker任务不存在", HTTPStatus.NOT_FOUND)
@@ -174,8 +179,8 @@ def success_payload(data: Any | None = None) -> dict[str, Any]:
     return app_error_payload(ErrSuccess, data)
 
 
-def dynamic_error(base: AppError, message: str) -> AppError:
-    return AppError(base.code, message, base.http_code)
+def dynamic_error(base: AppError, message: str, data: Any | None = None) -> AppError:
+    return AppError(base.code, message, base.http_code, data)
 
 
 def validation_error_detail(errors: list[Mapping[str, Any]]) -> str:

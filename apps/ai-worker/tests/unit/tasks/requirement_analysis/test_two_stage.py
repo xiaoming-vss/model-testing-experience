@@ -37,7 +37,7 @@ class TwoStageTests(unittest.TestCase):
             ),
         )
 
-    def run_stage(self, task, runner, progress):
+    def run_stage(self, task, runner, progress, attachment_downloader=None):
         return execute_two_stage(
             task=task,
             started_at=datetime.now().astimezone(),
@@ -48,6 +48,7 @@ class TwoStageTests(unittest.TestCase):
             source_downloader=SimpleNamespace(
                 download_source=lambda **kwargs: Path("/tmp/source.txt")
             ),
+            attachment_downloader=attachment_downloader,
             first_skill_name="extract-docx-enhanced-text",
             second_skill_name="prd-feature-understanding-skill",
         )
@@ -90,6 +91,51 @@ class TwoStageTests(unittest.TestCase):
                 if revision:
                     self.assertEqual(body["currentArtifact"], understanding)
                     self.assertEqual(body["currentArtifact"]["questions"][0]["status"], "open")
+
+    def test_revision_attachments_are_downloaded_and_sent_as_media(self):
+        extraction, understanding = (
+            example("document-extraction"),
+            example("requirement-understanding"),
+        )
+        downloads = []
+        captured = []
+
+        class Downloader:
+            def download(self, *, task_id, workspace, attachments):
+                downloads.append((task_id, attachments))
+                return [
+                    {
+                        "fileId": "image-1",
+                        "filename": "login.png",
+                        "sourcePath": "/tmp/revision-attachments/image-1.png",
+                        "sourceLocation": "/v1/files/image-1/download",
+                    }
+                ]
+
+        def runner(**kwargs):
+            captured.append(kwargs)
+            return json.dumps(understanding)
+
+        self.run_stage(
+            self.task(
+                "feature_understanding",
+                {
+                    "firstStepOutput": extraction,
+                    "resultYaml": json.dumps(understanding),
+                    "revisionInstruction": "按截图补充登录异常",
+                    "revisionAttachments": [{"fileId": "image-1", "filename": "login.png"}],
+                },
+            ),
+            runner,
+            [],
+            attachment_downloader=Downloader(),
+        )
+        self.assertEqual(downloads[0][0], "worker")
+        self.assertEqual(captured[0]["media"], ["/tmp/revision-attachments/image-1.png"])
+        self.assertEqual(
+            json.loads(captured[0]["input_text"])["revisionAttachments"],
+            [{"fileId": "image-1", "filename": "login.png"}],
+        )
 
     def test_bad_generation_does_not_publish_artifact(self):
         progress = []

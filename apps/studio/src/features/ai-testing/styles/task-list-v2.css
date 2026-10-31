@@ -457,7 +457,8 @@
   -webkit-text-stroke: 0 !important;
 }
 
-.app-shell.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-tbody > tr > td span:not(.tp-tone-tag) {
+/* 操作单元格保留按钮自身的语义色，不套用正文弱化色。 */
+.app-shell.app-shell-macos .ai-testing-page .ai-task-list-table .ant-table-tbody > tr > td:not(:has(.ant-btn)) span:not(.tp-tone-tag) {
   color: var(--srf-text-secondary, var(--app-text-subtle)) !important;
   font-family: inherit !important;
   font-size: 12px !important;

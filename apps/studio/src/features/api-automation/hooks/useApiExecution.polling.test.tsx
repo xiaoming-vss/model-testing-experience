@@ -52,7 +52,7 @@ it('队列用例低频刷新，执行后加快，终态停止请求并保留结�
   expect(detail).toHaveBeenCalledTimes(3)
 })
 
-it('详情负责轮询，历史关闭时静止，打开的报告只在结束后补取一次', async () => {
+it('详情与打开的报告都负责轮询，终态后停止，历史关闭时静止', async () => {
   let summary: ApiCollectionRunSummary = { collectionRunId: 'run-1', status: 'running', successCount: 0 }
   const history = vi.spyOn(api, 'getApiCollectionRuns').mockImplementation(async () => list([summary]))
   const detail = vi.spyOn(api, 'getApiCollectionRun').mockImplementation(async () => ({ ...summary }))
@@ -69,18 +69,18 @@ it('详情负责轮询，历史关闭时静止，打开的报告只在结束后�
   expect(report).toHaveBeenCalledTimes(1)
   await tick(10_000)
   expect(detail).toHaveBeenCalledTimes(3)
-  expect(report).toHaveBeenCalledTimes(1)
+  expect(report).toHaveBeenCalledTimes(3)
   expect(history).toHaveBeenCalledTimes(1)
   summary = { ...summary, status: 'success', successCount: 2 }
   await tick(5000)
-  expect(report).toHaveBeenCalledTimes(2)
+  expect(report.mock.calls.length).toBeGreaterThanOrEqual(4)
   expect(result.current.collectionRunReportQuery.data?.successCount).toBe(2)
   expect(client.getQueryData<ApiCollectionRunSummary[]>(['apiCollectionRuns', 'collection-1'])?.[0].status).toBe('success')
-  const calls = { detail: detail.mock.calls.length, history: history.mock.calls.length }
+  const calls = { detail: detail.mock.calls.length, history: history.mock.calls.length, report: report.mock.calls.length }
   await tick(60_000)
   expect(detail).toHaveBeenCalledTimes(calls.detail)
   expect(history).toHaveBeenCalledTimes(calls.history)
-  expect(report).toHaveBeenCalledTimes(2)
+  expect(report).toHaveBeenCalledTimes(calls.report)
 })
 
 it('历史每三十秒发现他人新运行，关闭后停止，重新打开立即更新', async () => {

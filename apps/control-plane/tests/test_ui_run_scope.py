@@ -22,8 +22,10 @@ from testing_agent.services.ui_test_case_run import UiTestCaseRunService
 async def test_scope_move_updates_permissions_and_live_metrics_not_saved_daily_counts(db):
     seed(db)
     service = UiTestCaseRunService(UiTestCaseRunRepository(AsyncSessionAdapter(db)))
-    single = await service.debug_run_case("u1", "case", DebugRunUiCaseRequest())
-    suite = await service.run_suite("u1", "suite", RunUiSuiteRequest())
+    single = await service.debug_run_case(
+        "u1", "case", DebugRunUiCaseRequest(environmentId="ui-env")
+    )
+    suite = await service.run_suite("u1", "suite", RunUiSuiteRequest(environmentId="ui-env"))
     assert single["projectId"] == suite["projectId"] == "p1"
     assert single["requirementId"] == "req" and suite["sprintId"] == "s1"
     metrics = SprintDailyMetricsRepository(AsyncSessionAdapter(db))

@@ -165,6 +165,19 @@ describe('API 候选结果审核与导入', () => {
     expect(screen.queryByRole('button', { name: '结果 YAML' })).not.toBeInTheDocument()
   })
 
+  it('执行中的记录不把尚未生成的结果 YAML 显示为可查看', async () => {
+    const runningRun = { ...run, status: 'running', resultYaml: '', hasResult: false }
+    installFetchHandler((url) => {
+      if (url.pathname === '/v1/api-case-generate-tasks/task-1/runs') return jsonResponse({ items: [runningRun], total: 1 })
+      if (url.pathname === '/v1/api-case-generate-task-runs/run-1') return jsonResponse(runningRun)
+    })
+    renderPage()
+
+    expect(await screen.findByRole('button', { name: '中间配置' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '结果 YAML' })).not.toBeInTheDocument()
+    expect(screen.getByText('结果 YAML')).toBeInTheDocument()
+  })
+
   it('日间主题下候选审核弹窗使用不透明的浅色表面', async () => {
     installFetchHandler()
     const user = userEvent.setup()

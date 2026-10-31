@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text
-from sqlalchemy.dialects.mysql import JSON
+from sqlalchemy.dialects.mysql import JSON, LONGTEXT
 from sqlalchemy.orm import Mapped, mapped_column
 
 from testing_agent.db.base import Base, CreatedAt, IdPk, UpdatedAt
@@ -28,6 +28,12 @@ class UiTestSuiteRun(Base):
         index=True,
         nullable=False,
         comment="测试集或套件业务标识",
+    )
+    environment_id: Mapped[str] = mapped_column(
+        String(64), index=True, nullable=False, default="", comment="运行使用的测试环境业务标识"
+    )
+    environment_name: Mapped[str] = mapped_column(
+        String(100), nullable=False, default="", comment="运行时的环境名称快照"
     )
     requirement_id = ""  # Response-only: derived from the current suite ownership.
     sprint_id = ""  # Response-only: derived from the current suite ownership.
@@ -65,6 +71,17 @@ class UiTestSuiteRun(Base):
     )
     snapshot_json: Mapped[dict[str, Any] | None] = mapped_column(
         JSON, nullable=True, comment="执行输入或业务内容快照 JSON"
+    )
+    used_variables_json: Mapped[list[Any] | None] = mapped_column(
+        JSON, nullable=True, comment="本次运行实际读取的变量及来源步骤 JSON"
+    )
+    variable_writes_json: Mapped[list[Any] | None] = mapped_column(
+        JSON, nullable=True, comment="后置提取写回环境的值及旧值 JSON"
+    )
+    private_payload: Mapped[str | None] = mapped_column(
+        Text().with_variant(LONGTEXT(), "mysql"),
+        nullable=True,
+        comment="使用集成密钥加密的变量取值，仅供本次运行使用",
     )
     error_message: Mapped[str] = mapped_column(
         Text, nullable=False, default="", comment="执行或同步错误信息"

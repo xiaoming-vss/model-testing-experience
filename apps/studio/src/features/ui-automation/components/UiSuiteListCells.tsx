@@ -37,12 +37,14 @@ export function UiSuiteRowActions({
   onEdit,
   onDelete,
   running,
+  runDisabled = false,
   deleting,
 }: {
   onRun: () => void
   onEdit: () => void
   onDelete: () => void
   running: boolean
+  runDisabled?: boolean
   deleting: boolean
 }) {
   return (
@@ -52,11 +54,12 @@ export function UiSuiteRowActions({
       onClick={(event) => event.stopPropagation()}
       onMouseDown={(event) => event.stopPropagation()}
     >
-      <Tooltip title="运行测试集">
+      <Tooltip title={runDisabled ? '请先在工具栏选择 UI 环境' : '运行测试集'}>
         <ProjectActionButton
           action="execute"
           type="text"
           shape="circle"
+          disabled={runDisabled}
           className="action-btn-read"
           operation="run"
           iconOnly

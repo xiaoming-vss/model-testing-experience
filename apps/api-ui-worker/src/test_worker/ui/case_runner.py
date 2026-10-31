@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from playwright.async_api import async_playwright
 
@@ -27,6 +28,7 @@ from .browser_options import (
 from .step_executor import StepExecutionContext, StepExecutor, now_iso
 from .step_normalizer import normalize_case_steps
 from .step_results import build_failed_step_result
+from .variables import StepVariableResolver
 
 
 def _normalize_steps(snapshot: UiCaseRunSnapshot) -> list[UiStepDefinition]:
@@ -62,14 +64,18 @@ def _build_artifact_dir(config: WorkerConfig, snapshot: UiCaseRunSnapshot) -> st
 class UiCaseRunner:
     """用例运行器类"""
 
-    def __init__(self, config: WorkerConfig) -> None:
+    def __init__(
+        self, config: WorkerConfig, control_plane_client: Any | None = None
+    ) -> None:
         """
         初始化用例运行器
 
         Args:
             config: 工作配置
+            control_plane_client: 控制面客户端（可选，用于逐步解析环境变量）
         """
         self._config = config
+        self._control_plane_client = control_plane_client
         self._step_executor = StepExecutor()
 
     async def run(self, snapshot: UiCaseRunSnapshot) -> UiCaseRunResult:
@@ -131,10 +137,18 @@ class UiCaseRunner:
                 # 创建页面
                 page = await context.new_page()
                 default_step_timeout = default_step_timeout_from_suite(snapshot.suite)
+                resolver = (
+                    StepVariableResolver(
+                        self._control_plane_client, snapshot.task_id, snapshot.run_id
+                    )
+                    if self._control_plane_client is not None
+                    else None
+                )
                 execution_context = StepExecutionContext(
                     page=page,
                     artifact_dir=artifact_dir,
                     default_step_timeout_ms=default_step_timeout,
+                    variables=resolver,
                 )
                 screenshot_policy = screenshot_policy_from_suite(snapshot.suite)
 
@@ -151,7 +165,10 @@ class UiCaseRunner:
                         if screenshot_policy == "after_each_step":
                             screenshot_path = (
                                 await self._step_executor.capture_step_screenshot(
-                                    page, artifact_dir, fallback_order
+                                    page,
+                                    artifact_dir,
+                                    fallback_order,
+                                    execution_context.masked_locators,
                                 )
                             )
                             result = result.__class__(
@@ -169,13 +186,18 @@ class UiCaseRunner:
                             step_started_at_iso,
                             step_started_at,
                             message,
+                            save_results=getattr(e, "save_results", None),
+                            used_variables=getattr(e, "used_variables", None),
                         )
 
                         # 捕获失败截图
                         if screenshot_policy in ("on_failure", "after_each_step"):
                             try:
                                 screenshot_path = await self._step_executor.capture_failure_screenshot(
-                                    page, artifact_dir, fallback_order
+                                    page,
+                                    artifact_dir,
+                                    fallback_order,
+                                    execution_context.masked_locators,
                                 )
                                 failed_result = failed_result.__class__(
                                     **{

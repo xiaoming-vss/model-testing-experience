@@ -1,0 +1,168 @@
+/* 需求生成画布：布局独立，配色沿用平台语义 token。 */
+.gc-canvas-panorama { gap: 12px; padding: 0; overflow: hidden; background: transparent; background-image: none; }
+.gc-canvas-workspace { display: flex; flex: 1 1 auto; gap: 12px; min-height: 0; min-width: 0; }
+.gc-canvas-frame { position: relative; display: flex; flex: 1 1 auto; min-width: 0; min-height: 0; }
+.gc-canvas-frame { overflow: hidden; border: 1px solid var(--app-surface-border); border-radius: 12px; background: var(--app-bg); }
+.gc-canvas-frame .react-flow { width: 100%; height: 100%; background: var(--app-bg); }
+.gc-canvas-frame .react-flow__background { opacity: 0.55; }
+.gc-canvas-frame .react-flow__node { font: inherit; color: var(--app-surface-text); }
+/* 实线保留路径；连续短光带沿 source → target 推进，各分支始终流动。 */
+.gc-canvas-frame .gc-flow-edge-track { opacity: 0.24; }
+.gc-canvas-frame .gc-flow-edge-stream { stroke: color-mix(in srgb, var(--app-accent) 65%, var(--app-surface-text-muted)); stroke-width: 1.4; opacity: 0.72; stroke-linecap: round; stroke-dasharray: 10 10; pointer-events: none; animation: gc-edge-flow 0.8s linear infinite; animation-play-state: paused; }
+.gc-canvas-frame[data-flow-visible="true"] .gc-flow-edge-stream { animation-play-state: running; }
+.gc-canvas-stage.is-reading .gc-flow-edge-stream { animation-play-state: paused; }
+@keyframes gc-edge-flow { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -20; } }
+@media (prefers-reduced-motion: reduce) {
+  .gc-canvas-frame .gc-flow-edge-track { opacity: 0.65; }
+  .gc-canvas-frame .gc-flow-edge-stream { display: none; animation: none; }
+}
+.gc-flow-group, .gc-flow-special { box-sizing: border-box; width: 100%; height: 100%; padding: 14px; border: 1px solid var(--app-surface-border); border-radius: 10px; background: var(--app-surface); }
+.gc-flow-group.is-dim, .gc-flow-stage.is-dim { opacity: 0.4; }
+.gc-flow-group.is-selected { border-color: var(--app-accent); }
+.gc-flow-group-header { display: flex; align-items: center; gap: 8px; }
+.gc-flow-group-header strong { font-size: 13px; }
+.gc-flow-group-select { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.gc-flow-group-header small { margin-left: auto; color: var(--app-surface-text-muted); font-size: 11px; }
+.gc-flow-group .gc-lane-empty { width: 100%; margin-top: 10px; min-height: 84px; }
+.gc-flow-special .gc-document-node, .gc-flow-special .gc-lane-empty { width: 100%; margin-top: 10px; min-height: 72px; }
+.gc-flow-stage { position: relative; width: 100%; }
+.gc-flow-stage .gc-node { width: 100%; min-width: 0; min-height: 84px; padding: 8px 9px; }
+.gc-flow-stage .gc-node-main { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.gc-flow-stage .gc-node-main .anticon { flex: none; color: var(--app-accent); font-size: 15px; }
+.gc-flow-stage .gc-node.is-running {
+  border-color: color-mix(in srgb, var(--app-generation-running-accent) 45%, var(--gc-line));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--app-generation-running-accent) 10%, var(--gc-surface)), var(--gc-surface));
+  color: var(--gc-text);
+  box-shadow: none;
+}
+.gc-flow-stage .gc-node.is-running :is(.gc-node-main .anticon, .gc-node-state) { color: var(--app-generation-running-accent); }
+/* 只让状态渐变呼吸，保持标题、状态文字和选中边框稳定。 */
+.gc-flow-stage .gc-node:is(.is-running, .is-draft) { isolation: isolate; }
+.gc-flow-stage .gc-node:is(.is-running, .is-draft) > span { position: relative; z-index: 1; }
+.gc-flow-stage .gc-node:is(.is-running, .is-draft)::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; border-radius: inherit; pointer-events: none;
+  opacity: 0.08; animation: gc-card-breathe 2.6s ease-in-out infinite; animation-play-state: paused;
+}
+.gc-flow-stage .gc-node.is-running::before { background: linear-gradient(120deg, transparent, color-mix(in srgb, var(--app-generation-running-accent) 35%, transparent) 35%, color-mix(in srgb, var(--app-generation-running-accent) 35%, transparent) 65%, transparent); }
+.gc-flow-stage .gc-node.is-draft::before { background: linear-gradient(120deg, transparent, color-mix(in srgb, var(--app-task-status-warning) 32%, transparent) 35%, color-mix(in srgb, var(--app-task-status-warning) 32%, transparent) 65%, transparent); animation-duration: 3.2s; }
+.gc-canvas-frame[data-flow-visible="true"] .gc-flow-stage .gc-node::before { animation-play-state: running; }
+.gc-canvas-stage.is-reading .gc-flow-stage .gc-node::before { animation-play-state: paused; }
+.gc-flow-stage .gc-node:is(.is-running, .is-draft)::before { background-size: 200% 100%; }
+@keyframes gc-card-breathe {
+  0%, 100% { opacity: 0.08; background-position: 100% 50%; }
+  50% { opacity: 0.9; background-position: 0% 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gc-flow-stage .gc-node:is(.is-running, .is-draft)::before { animation: none; opacity: 0.25; }
+}
+.gc-flow-stage .gc-node-main strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.gc-flow-stage .gc-node.is-selected, .gc-flow-special .gc-document-node.is-selected, .gc-flow-special .gc-lane-empty.is-selected { border-color: var(--app-accent); outline: 2px solid var(--app-accent-soft); outline-offset: 1px; }
+.gc-flow-stage .gc-node.is-running.is-selected { border-color: var(--app-generation-running-accent); outline: none; }
+.gc-flow-stage .gc-node.is-running:focus-visible { outline: 2px solid var(--app-generation-running-accent); outline-offset: 2px; }
+/* 用例图谱是「完整用例」派生的入口，不进入版本链，用虚线区分。 */
+.gc-node.is-derived { border-style: dashed; border-color: color-mix(in srgb, var(--app-accent) 34%, var(--gc-line)); background: linear-gradient(180deg, var(--app-accent-soft), transparent 70%), var(--gc-surface); }
+.gc-node.is-derived .gc-node-state { color: var(--app-accent); }
+.gc-flow-handle { opacity: 0; pointer-events: none; }
+.gc-inspector { display: flex; flex: 0 0 304px; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; border: 1px solid var(--app-surface-border); border-radius: 12px; background: var(--app-surface); }
+.gc-inspector-header { display: flex; flex: none; flex-direction: column; align-items: stretch; gap: 6px; padding: 16px; border-bottom: 1px solid var(--app-surface-divider); background: var(--app-list-toolbar-bg); }
+.gc-inspector-header h2 { margin: 0; font-size: 15px; line-height: 1.4; }
+.gc-inspector-header p { margin: 4px 0 0; color: var(--app-surface-text-muted); font-size: 12px; }
+.gc-inspector-header .gc-state { flex: none; }
+.gc-inspector-header .gc-state.is-draft { color: var(--app-status-warning-text); background: var(--app-status-warning-bg); border-color: var(--app-review-warning-border); }
+.gc-inspector-header .gc-state.is-approved, .gc-inspector-header .gc-state.is-imported { color: var(--app-result-success-text); background: var(--app-testing-success-tag-bg); }
+.gc-inspector-content { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 0 16px 16px; }
+.gc-inspector-summary { margin-bottom: 14px; color: var(--app-surface-text-muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.gc-inspector-summary dl { margin: 12px 0 0; border-top: 1px solid var(--app-surface-divider); }
+.gc-inspector-summary dl div { display: flex; justify-content: space-between; gap: 10px; padding-top: 8px; }
+.gc-inspector-summary dt { color: var(--app-surface-text-muted); }
+.gc-inspector-summary dd { margin: 0; color: var(--app-surface-text); text-align: right; }
+.gc-inspector-section { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--app-surface-divider); }
+.gc-inspector-section h3 { margin: 0; font-size: 12px; font-weight: 600; }
+.gc-inspector-versions { display: flex; flex-wrap: wrap; gap: 5px; }
+.gc-inspector-versions > span { color: var(--app-surface-text-muted); font-size: 12px; }
+.gc-inspector-trace { display: flex; flex-wrap: wrap; gap: 5px; }
+.gc-inspector-trace .gc-trace-chip { max-width: 100%; }
+.gc-inspector-actions { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--app-surface-divider); }
+@media (max-width: 900px) { .gc-canvas-workspace { flex-direction: column; overflow: auto; } .gc-canvas-frame { flex: 0 0 auto; height: min(60vh, 600px); min-height: 380px; } .gc-inspector { flex: 0 0 auto; min-height: 220px; } }
+
+
+/* 画布内产物占满左侧容器，侧栏保持独立交互。保留地图实例以恢复缩放与位置。 */
+.gc-canvas-stage { position: relative; display: flex; flex: 1 1 auto; min-width: 0; min-height: 0; }
+.gc-canvas-map { display: flex; flex: 1 1 auto; min-width: 0; min-height: 0; }
+.gc-canvas-stage.is-reading > .gc-canvas-map { visibility: hidden; pointer-events: none; }
+.gc-canvas-stage > .gc-embedded-artifact { position: absolute; inset: 0; display: flex; flex-direction: column; width: 100%; max-width: none; height: 100%; margin: 0; padding: 0; top: 0; overflow: hidden; border: 1px solid var(--app-surface-border); border-radius: 12px; background: var(--app-surface); }
+
+.gc-embedded-artifact .ant-modal-header { position: relative; flex: 0 0 auto; margin: 0; padding: 16px 24px; border-bottom: 1px solid var(--app-surface-border); background: var(--app-list-toolbar-bg); }
+.gc-embedded-artifact .ant-modal-title { padding-right: 100px; }
+.gc-embedded-artifact .gc-return-canvas { position: absolute; top: 16px; right: 16px; }
+.gc-embedded-artifact .ant-modal-body { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }
+@media (max-width: 900px) {
+  .gc-canvas-stage { flex: 0 0 auto; height: min(60vh, 600px); min-height: 380px; }
+  .gc-canvas-stage.is-reading { height: max(600px, 75dvh); }
+  .gc-canvas-stage .gc-canvas-frame { flex: 1 1 auto; height: auto; min-height: 0; }
+}
+.gc-canvas-stage .gc-embedded-artifact .ant-modal-header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 16px 24px; }
+.gc-canvas-stage .gc-embedded-artifact .ant-modal-title { flex: 1 1 200px; min-width: 0; padding-right: 0; }
+.gc-canvas-stage .gc-embedded-artifact .gc-return-canvas { position: static; flex: 0 0 auto; margin-left: auto; }
+
+/* 画布阅读时，版本、阅读工具与业务操作集中在侧栏。 */
+.gc-inspector-reading-tools .gc-title-tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 8px; }
+.gc-inspector-reading-tools .gc-title-tools > .gc-upstream-trigger { grid-column: 1 / -1; width: 100%; max-width: 100%; }
+.gc-inspector-reading-tools .ai-artifact-mode-toolbar { justify-content: flex-start; margin: 8px 0 0; }
+.gc-inspector-reading-tools .ai-artifact-mode-controls { flex-wrap: wrap; justify-content: space-between; width: 100%; }
+.gc-inspector-reading-tools .gc-footer-row { display: flex; flex-direction: column; align-items: stretch; }
+.gc-inspector-reading-tools .gc-modal-actions { display: flex; flex-direction: column; align-items: stretch; gap: 10px; width: 100%; margin: 0; }
+.gc-inspector-reading-tools .gc-modal-actions > span > button { width: 100%; }
+.gc-inspector-reading-tools .gc-modal-actions > button,
+.gc-inspector-reading-tools .gc-modal-actions > span > button { width: 100%; height: auto; min-height: 36px; padding: 7px 12px; line-height: 1.5; white-space: normal; }
+.gc-inspector-reading-tools .gc-footer-status:empty { display: none; }
+.gc-inspector-reading-tools .gc-modal-meta { flex-wrap: wrap; padding: 0; line-height: 1.6; }
+.gc-inspector-reading-tools .revision-side-panel { flex: none; min-width: 0; padding: 0; border: 0; border-radius: 0; background: transparent; overflow: visible; }
+.gc-inspector-reading-tools .revision-side-panel header { display: none; }
+.gc-inspector-reading-tools .revision-footer-actions { flex-wrap: wrap; }
+.gc-inspector-reading-tools .revision-footer-actions > button { flex: 1; }
+.gc-reading-body { display: flex; flex: 1 1 0%; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+.gc-embedded-artifact .gc-workspace.is-revising > .gc-reading-body { flex: 0 0 auto; width: var(--revision-source-width, 60%); min-width: 35%; max-width: min(75%, calc(100% - 320px)); overflow: hidden; }
+.gc-embedded-artifact .gc-workspace.is-revising > .revision-side-panel { flex: 1 1 0%; min-width: 300px; margin: 0; border: 0; border-radius: 0; padding: 20px; }
+.gc-embedded-artifact .gc-workspace.is-revising .revision-footer-actions { margin-top: auto; flex-wrap: wrap; }
+@media (max-width: 1100px) {
+  .gc-embedded-artifact .gc-workspace.is-revising { flex-direction: column; overflow: auto; }
+  .gc-embedded-artifact .gc-workspace.is-revising > .gc-reading-body { flex: 0 0 auto; width: 100%; max-width: none; min-height: 280px; height: 40%; }
+  .gc-embedded-artifact .gc-workspace.is-revising > .revision-divider { display: none; }
+  .gc-embedded-artifact .gc-workspace.is-revising > .revision-side-panel { flex: 0 0 auto; min-width: 0; min-height: 480px; }
+}
+.gc-reading-body > .gc-artifact-scroll { flex: 1 1 0%; margin: 0; border: 0; }
+/* 嵌入式测试点树图由左侧面板提供唯一外框。 */
+.gc-reading-body > .gc-artifact-scroll.is-case-names { padding: 0; }
+.gc-reading-body > .is-case-names .ai-case-name-tree { padding: 0; border: 0; border-radius: 0; background: transparent; }
+.gc-reading-body > .is-case-names .ai-case-name-tree-stats { margin: 0; padding: 12px; }
+.gc-reading-body > .gc-artifact-scroll.is-raw { padding: 0; }
+.gc-reading-body > .gc-artifact-scroll.is-raw > .gc-raw-editor { flex: 1 1 0%; height: 100%; overflow: hidden; }
+
+.gc-inspector-reading { box-shadow: none; }
+
+.gc-inspector-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.gc-inspector-header .gc-inspector-back { align-self: flex-start; margin: -4px 0 6px -7px; color: var(--app-surface-text-muted); font-size: 12px; }
+.gc-inspector-header p { margin: 0; line-height: 1.6; overflow-wrap: anywhere; }
+.gc-inspector-stage-summary::before { content: ' · '; }
+.gc-inspector-stage-summary { color: var(--app-surface-text-muted); }
+.gc-inspector-content > .gc-inspector-section:first-child { border-top: 0; padding-top: 0; }
+.gc-inspector-source p { margin: 0; overflow-wrap: anywhere; }
+.gc-inspector-source .ant-upload-wrapper { min-width: 0; }
+.gc-inspector-source .ant-upload-select { max-width: 100%; }
+.gc-inspector-footer { flex: 0 0 auto; max-height: 60%; overflow: auto; }
+.gc-inspector-footer:empty { display: none; }
+.gc-inspector-review { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-top: 1px solid var(--app-surface-border); background: var(--app-list-toolbar-bg); }
+.gc-inspector-review-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.gc-inspector-review h3 { margin: 0; font-size: 12px; font-weight: 600; }
+.gc-inspector-review .gc-based-chip { flex: none; width: auto; }
+.gc-inspector-reading-tools .gc-title-tools > .ant-btn { min-width: 0; min-height: 32px; font-size: 12px; }
+.gc-inspector-reading-tools .ai-artifact-mode-controls > .ant-segmented { order: -1; flex: 1; }
+.gc-inspector-reading-tools .ai-artifact-mode-controls .ant-segmented-group { display: flex; }
+.gc-inspector-reading-tools .ai-artifact-mode-controls .ant-segmented-item { flex: 1; text-align: center; }
+.gc-inspector-reading-tools .ai-artifact-mode-toolbar { margin-top: 4px; }
+@media (max-width: 900px) {
+  .gc-inspector-content { flex: 0 0 auto; overflow: visible; }
+  .gc-inspector-footer { max-height: none; overflow: visible; }
+}
+

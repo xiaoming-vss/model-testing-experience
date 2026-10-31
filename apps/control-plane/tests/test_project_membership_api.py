@@ -32,6 +32,50 @@ from support.project_api import (
 )
 
 
+def seed_approved_understanding(api, rid, pid, user_id):
+    async def seed():
+        from sqlalchemy import select
+
+        from testing_agent.models.ai_generate_stage_version import AiGenerateStageVersion
+        from testing_agent.models.ai_generate_task import AiGenerateTask
+        from testing_agent.models.requirement import Requirement
+
+        async with api.app.state.test_sessions() as session:
+            requirement_row = await session.scalar(
+                select(Requirement).where(Requirement.requirement_id == rid)
+            )
+            task = AiGenerateTask(
+                task_id=f"understanding-{rid}",
+                task_type="requirement_analysis",
+                name="需求分析",
+                project_id=pid,
+                sprint_id=requirement_row.sprint_id,
+                requirement_id=rid,
+                creator_user_id=user_id,
+                source_type="requirement",
+                source_content="",
+            )
+            session.add(task)
+            await session.flush()
+            session.add(
+                AiGenerateStageVersion(
+                    version_id=f"understanding-{rid}-v1",
+                    task_id=task.task_id,
+                    stage="feature_understanding",
+                    version_no=1,
+                    run_id=f"understanding-run-{rid}",
+                    attempt_id=f"understanding-attempt-{rid}-1",
+                    artifact_content="已确认的需求分析：登录成功后进入首页。",
+                    artifact_format="text",
+                    upstream_versions_json={},
+                    reviewer_user_id=user_id,
+                )
+            )
+            await session.commit()
+
+    asyncio.run(seed())
+
+
 def test_owner_adds_member_who_can_read_shared_project_but_not_manage_it(api):
     _, owner = account(api, "owner")
     member_user, member = account(api, "member")
@@ -709,7 +753,7 @@ def test_function_stage_reexecution_uses_current_actor(api, operation, creator_r
     from testing_agent.api.deps import verify_worker_token
 
     api.app.dependency_overrides[verify_worker_token] = lambda: None
-    _, owner = account(api, "owner")
+    owner_user, owner = account(api, "owner")
     _, member = account(api, "member")
     pid = project(api, owner)
     api.post(
@@ -737,6 +781,7 @@ def test_function_stage_reexecution_uses_current_actor(api, operation, creator_r
         json={"documentContent": "已确认的需求分析：登录成功后进入首页。"},
     )
     assert response.status_code == 200, response.text
+    seed_approved_understanding(api, rid, pid, owner_user["userId"])
     actors = {"owner": owner, "member": member}
     operator_role = "member" if creator_role == "owner" else "owner"
     response = api.post(

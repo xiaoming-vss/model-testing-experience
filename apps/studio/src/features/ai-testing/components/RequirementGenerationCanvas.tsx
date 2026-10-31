@@ -1,0 +1,194 @@
+import { ApartmentOutlined, AppstoreOutlined, FileTextOutlined, LoadingOutlined, ProfileOutlined, UnorderedListOutlined } from '@ant-design/icons'
+import { Background, BackgroundVariant, BaseEdge, getBezierPath, Handle, MarkerType, Position, ReactFlow, ReactFlowProvider, useEdgesState, useNodesState, type Edge, type EdgeProps, type Node, type NodeProps } from '@xyflow/react'
+import { useEffect, useMemo, useRef } from 'react'
+import { useThemeStore } from '@/shared/theme/theme.store'
+import type { GenerationChain, GenerationChainKind, GenerationChainStage } from '../api/generationChain.api'
+import type { ChainFilter } from '../hooks/useRequirementGenerationChain'
+import '@xyflow/react/dist/style.css'
+
+import { generationStageClass, generationStageLabel } from '../utils/generationStageDisplay'
+
+type GroupData = { label: string; status: string; dim: boolean; active?: boolean; unconfigured?: boolean; onConfigure?: () => void; onSelect?: () => void }
+type CardActions = { onSelect: () => void; onOpen: () => void }
+type StageData = { stage: GenerationChainStage; active: boolean; dim: boolean } & CardActions
+type SpecialData = { kind: 'content' | 'codeRisk'; active: boolean } & CardActions
+type RelationsData = { index: string; active: boolean; dim: boolean } & CardActions
+type GroupNode = Node<GroupData, 'chainGroup'>
+type StageNode = Node<StageData, 'stage'>
+type SpecialNode = Node<SpecialData, 'special'>
+type RelationsNode = Node<RelationsData, 'relations'>
+type CanvasNode = GroupNode | StageNode | SpecialNode | RelationsNode
+
+type CanvasProps = {
+  uiSourceSelected: boolean
+  onSelectUiSource: () => void
+  chains: GenerationChain[]; filter: ChainFilter; selected?: { kind: GenerationChainKind; stage: string }; special: 'content' | 'codeRisk' | 'relations' | null
+  /** 功能测试「完整用例」派生出的用例图谱入口；没有可用运行记录时不渲染。 */
+  relations?: { active: boolean } & CardActions
+  onSelectStage: (kind: GenerationChainKind, stage: GenerationChainStage) => void
+  onOpenStage: (kind: GenerationChainKind, stage: GenerationChainStage) => void
+  onSelectSpecial: (kind: 'content' | 'codeRisk' | 'relations') => void
+  onOpenSpecial: (kind: 'content' | 'codeRisk' | 'relations') => void
+  onOpenTab: (kind: 'content' | GenerationChainKind) => void
+}
+const ports = <><Handle type="target" position={Position.Left} className="gc-flow-handle" /><Handle type="source" position={Position.Right} className="gc-flow-handle" /></>
+function cardActions(data: CardActions) {
+  return {
+    onClick: (event: React.MouseEvent<HTMLButtonElement>) => { data.onSelect(); if (event.detail === 0) data.onOpen() },
+    onDoubleClick: data.onOpen,
+    title: '单击选中，双击打开；键盘按 Enter 或空格打开',
+  }
+}
+function ChainGroup({ data }: NodeProps<GroupNode>) {
+  return <section className={`gc-flow-group${data.dim ? ' is-dim' : ''}${data.active ? ' is-selected' : ''}`} aria-label={data.label}
+    onClick={event => { if (!(event.target as HTMLElement).closest('button')) data.onSelect?.() }}>
+    {ports}
+    <div className="gc-flow-group-header">{data.onSelect ? <button type="button" className="gc-flow-group-select nodrag" aria-label={`选择${data.label}分组`} aria-pressed={Boolean(data.active)} onClick={data.onSelect}><strong>{data.label}</strong></button> : <strong>{data.label}</strong>}<small>{data.status}</small></div>
+    {data.unconfigured ? <button type="button" className="gc-lane-empty nodrag" onClick={data.onConfigure}><span>未开始</span><strong>开始{data.label}</strong><small>先完成生成设置，再运行首阶段</small></button> : null}
+  </section>
+}
+function StageCard({ data }: NodeProps<StageNode>) {
+  const { stage } = data
+  const Icon = stage.stage === 'ui_surface' ? AppstoreOutlined : stage.stage === 'ui_design' ? ProfileOutlined : stage.stage === 'case_names' ? UnorderedListOutlined : FileTextOutlined
+  const summary = stage.draft?.summary ?? stage.latestVersion?.summary ?? stage.blockedReason ?? '暂无产物'
+  return <div className={`gc-flow-stage${data.dim ? ' is-dim' : ''}`}>{ports}<button type="button" className={`gc-node ${generationStageClass(stage)}${data.active ? ' is-selected' : ''}`} {...cardActions(data)} aria-label={`${stage.label} · ${generationStageLabel(stage)}`} aria-pressed={data.active} aria-busy={stage.state === 'running'}>
+    <span className="gc-node-top"><span className="gc-node-index">{String(stage.order + 1).padStart(2, '0')}</span><span className="gc-node-state">{stage.state === 'running' ? <LoadingOutlined className="gc-running-indicator" aria-hidden /> : null}{generationStageLabel(stage)}</span></span>
+    <span className="gc-node-main"><Icon aria-hidden /><strong>{stage.label}</strong></span><span className="gc-node-meta">{!stage.draft && stage.latestVersion ? <span className="gc-node-version">{stage.latestVersion.label}</span> : null}<span>{summary}</span></span>
+  </button></div>
+}
+function SpecialCard({ data }: NodeProps<SpecialNode>) {
+  const doc = data.kind === 'content'
+  return <section className="gc-flow-special" aria-label={doc ? '需求文档' : '代码风险'}>{doc ? ports : null}
+    <div className="gc-flow-group-header"><strong>{doc ? '需求文档' : '代码风险'}</strong><small>{doc ? '只读来源' : '独立分析链'}</small></div>
+    <button type="button" className={`${doc ? 'gc-document-node' : 'gc-lane-empty'}${data.active ? ' is-selected' : ''}`} aria-pressed={data.active} {...cardActions(data)}>
+      <span>{doc ? '需求材料' : '独立'}</span><strong>{doc ? <><FileTextOutlined aria-hidden /> 查看需求文档</> : '代码风险分析'}</strong><small>{doc ? '生成链读取这里的最新正文' : '查看代码风险运行报告'}</small>
+    </button>
+  </section>
+}
+function RelationsCard({ data }: NodeProps<RelationsNode>) {
+  return <div className={`gc-flow-stage${data.dim ? ' is-dim' : ''}`}>{ports}
+    <button type="button" className={`gc-node is-derived${data.active ? ' is-selected' : ''}`} {...cardActions(data)}
+      aria-label="用例图谱 · 派生" aria-pressed={data.active}>
+      <span className="gc-node-top"><span className="gc-node-index">{data.index}</span><span className="gc-node-state">派生</span></span>
+      <span className="gc-node-main"><ApartmentOutlined aria-hidden /><strong>用例图谱</strong></span>
+      <span className="gc-node-meta"><span>完整用例的关联图</span></span>
+    </button>
+  </div>
+}
+const nodeTypes = { chainGroup: ChainGroup, stage: StageCard, special: SpecialCard, relations: RelationsCard }
+function FlowEdge(props: EdgeProps) {
+  const [path] = getBezierPath(props)
+  return <>
+    <BaseEdge id={props.id} path={path} markerEnd={props.markerEnd} style={props.style} className="gc-flow-edge-track" />
+    <path d={path} className="gc-flow-edge-stream" fill="none" aria-hidden="true" />
+  </>
+}
+const edgeTypes = { generationFlow: FlowEdge }
+const positions: Record<GenerationChainKind, { x: number; y: number; width: number }> = {
+  requirement_analysis: { x: 434, y: 273, width: 292 }, function: { x: 992, y: -8, width: 455 },
+  api: { x: 1027, y: 286, width: 455 }, ui: { x: 1044, y: 630, width: 455 },
+}
+const stageInset = 20
+const stageGap = 40
+const itemWidth = 126
+function buildCanvas({ chains, filter, selected, special, relations, uiSourceSelected, onSelectUiSource, onSelectStage, onOpenStage, onSelectSpecial, onOpenSpecial, onOpenTab }: CanvasProps) {
+  const nodes: CanvasNode[] = [
+    { id: 'document', type: 'special', position: { x: 35, y: 275 }, style: { width: 184 }, data: { kind: 'content', active: special === 'content', onSelect: () => onSelectSpecial('content'), onOpen: () => onOpenSpecial('content') } },
+    { id: 'risk', type: 'special', position: { x: 198, y: 643 }, style: { width: 300 }, data: { kind: 'codeRisk', active: special === 'codeRisk', onSelect: () => onSelectSpecial('codeRisk'), onOpen: () => onOpenSpecial('codeRisk') } },
+  ]
+  const edges: Edge[] = []
+  for (const chain of chains) {
+    const layout = positions[chain.kind]
+    const dim = (filter === 'draft' && !chain.draftCount) || (filter === 'empty' && chain.configured)
+    const groupId = `group:${chain.kind}`
+    const status = !chain.configured ? '未开始' : chain.draftCount ? `${chain.draftCount} 个待审核` : chain.stages.length > 0 && chain.stages.every(stage => ['approved', 'imported'].includes(stage.state)) ? '已通过' : '已配置'
+    const count = chain.stages.length
+    const groupWidth = Math.max(layout.width, stageInset * 2 + count * itemWidth + Math.max(0, count - 1) * stageGap)
+    nodes.push({ id: groupId, type: 'chainGroup', position: { x: layout.x, y: layout.y }, style: { width: groupWidth, height: 144 }, data: { label: chain.label, status, dim, active: chain.kind === 'ui' && uiSourceSelected, onSelect: chain.kind === 'ui' ? onSelectUiSource : undefined, unconfigured: !chain.configured, onConfigure: () => chain.kind === 'ui' ? onSelectUiSource() : onOpenTab(chain.kind) } })
+    if (!chain.configured) continue
+    chain.stages.forEach((entry, index) => {
+      const id = `${chain.kind}:${entry.stage}`
+      nodes.push({ id, type: 'stage', parentId: groupId, position: { x: stageInset + index * (itemWidth + stageGap), y: 44 }, style: { width: itemWidth }, data: { stage: entry, active: !special && selected?.kind === chain.kind && selected.stage === entry.stage, dim, onSelect: () => onSelectStage(chain.kind, entry), onOpen: () => onOpenStage(chain.kind, entry) } })
+      if (index > 0) edges.push({ id: `${chain.kind}:${index}`, source: `${chain.kind}:${chain.stages[index - 1].stage}`, target: id })
+    })
+  }
+  const analysis = chains.find(item => item.kind === 'requirement_analysis' && item.configured)
+  const functional = chains.find(item => item.kind === 'function' && item.configured)
+  if (relations && functional) {
+    const count = functional.stages.length
+    const groupWidth = Math.max(positions.function.width, stageInset * 2 + count * itemWidth + Math.max(0, count - 1) * stageGap)
+    // 作为泳道子节点固定在分组右侧，随分组一起缩放和平移。
+    nodes.push({
+      id: 'case-relations', type: 'relations', parentId: `group:function`, position: { x: groupWidth + stageGap, y: 44 }, style: { width: itemWidth },
+      data: { index: String(count + 1).padStart(2, '0'), active: relations.active, dim: (filter === 'draft' && !functional.draftCount) || (filter === 'empty' && functional.configured), onSelect: relations.onSelect, onOpen: relations.onOpen },
+    })
+    const lastStage = functional.stages.at(-1)
+    if (lastStage) edges.push({ id: 'function-to-relations', source: `function:${lastStage.stage}`, target: 'case-relations' })
+  }
+  if (analysis?.stages[0]) edges.push({ id: 'document-to-analysis', source: 'document', target: `requirement_analysis:${analysis.stages[0].stage}` })
+  if (analysis?.stages.length && functional?.stages[0]) edges.push({ id: 'analysis-to-function', source: `requirement_analysis:${analysis.stages.at(-1)!.stage}`, target: `function:${functional.stages[0].stage}` })
+  if (analysis?.stages.length) {
+    for (const kind of ['api', 'ui'] as const) {
+      const targetChain = chains.find(item => item.kind === kind)
+      if (!targetChain) continue
+      const target = targetChain.configured && targetChain.stages[0] ? `${kind}:${targetChain.stages[0].stage}` : `group:${kind}`
+      edges.push({ id: `analysis-to-${kind}`, source: `requirement_analysis:${analysis.stages.at(-1)!.stage}`, target })
+    }
+  }
+  return { nodes, edges: edges.map(edge => ({ ...edge, type: 'generationFlow', markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: 'var(--app-accent)', strokeWidth: 1.5 } })) }
+}
+function CanvasInner(props: CanvasProps) {
+  const { chains, filter, selected, special, relations, uiSourceSelected, onSelectUiSource, onSelectStage, onOpenStage, onSelectSpecial, onOpenSpecial, onOpenTab } = props
+  const graph = useMemo(() => buildCanvas({ chains, filter, selected, special, relations, uiSourceSelected, onSelectUiSource, onSelectStage, onOpenStage, onSelectSpecial, onOpenSpecial, onOpenTab }), [chains, filter, selected, special, relations, uiSourceSelected, onSelectUiSource, onSelectStage, onOpenStage, onSelectSpecial, onOpenSpecial, onOpenTab])
+  const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>(graph.nodes)
+  const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges)
+  const frameRef = useRef<HTMLDivElement>(null)
+  const resolvedTheme = useThemeStore(state => state.resolvedTheme)
+  useEffect(() => {
+    const frame = frameRef.current
+    if (!frame) return
+    let visible = true
+    const update = () => { frame.dataset.flowVisible = String(visible && !document.hidden) }
+    const observer = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting
+      update()
+    })
+    observer?.observe(frame)
+    document.addEventListener('visibilitychange', update)
+    update()
+    return () => {
+      observer?.disconnect()
+      document.removeEventListener('visibilitychange', update)
+    }
+  }, [])
+  useEffect(() => {
+    setNodes(current => {
+      const previous = new Map(current.map(node => [node.id, node]))
+      // 刷新产物数据时保留节点尺寸；丢失 measured 会让 React Flow 隐藏节点，
+      // 而阅读期间延迟的 ResizeObserver 通知不一定会在返回后重新触发。
+      return graph.nodes.map(node => ({ ...node, measured: previous.get(node.id)?.measured, position: previous.get(node.id)?.position ?? node.position }))
+    })
+    setEdges(graph.edges)
+  }, [graph, setNodes, setEdges])
+  return <div ref={frameRef} className="gc-canvas-frame" aria-label="需求生成流程"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
+    nodesConnectable={false} elementsSelectable={false} deleteKeyCode={null} minZoom={0.5} maxZoom={1.5} onInit={flow => {
+      const width = frameRef.current?.clientWidth ?? 1650
+      const roots = flow.getNodes().filter(node => !node.parentId)
+      // 功能测试分组的图谱节点位于分组右侧，缩放时把它的宽度一并计入。
+      const nodeWidth = (node: CanvasNode) => (node.measured?.width ?? (typeof node.style?.width === 'number' ? node.style.width : 0))
+        + (relations && node.id === 'group:function' ? stageGap + itemWidth : 0)
+      const spacing = Math.max(0.62, Math.min(1, ...roots.filter(node => node.position.x > 35)
+        .map(node => (width - 95 - nodeWidth(node)) / (node.position.x - 35))))
+      setNodes(current => current.map(node => node.parentId ? node : { ...node, position: { ...node.position, x: 35 + (node.position.x - 35) * spacing } }))
+      const right = Math.max(35, ...roots.map(node => 35 + (node.position.x - 35) * spacing + nodeWidth(node)))
+      // 图谱节点让功能测试分组更宽：超出画布时缩小初始缩放，避免节点被右侧裁掉。
+      const zoom = Math.max(0.5, Math.min(1, width / Math.max(right - 35 + 60, 1)))
+      void flow.setCenter((35 + right) / 2, 390, { zoom })
+    }}
+    zoomOnDoubleClick={false} zoomOnScroll={false} zoomOnPinch panOnScroll={false} zoomActivationKeyCode="Control" colorMode={resolvedTheme} proOptions={{ hideAttribution: true }}>
+    <Background variant={BackgroundVariant.Dots} gap={18} size={0.8} color="var(--graph-grid)" />
+  </ReactFlow></div>
+}
+export function RequirementGenerationCanvas(props: CanvasProps) {
+  return <ReactFlowProvider><CanvasInner {...props} /></ReactFlowProvider>
+}

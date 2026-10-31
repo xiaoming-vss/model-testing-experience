@@ -76,12 +76,14 @@ class FunctionalCaseNanobotExecutor(TaskExecutor):
         chain_runner=run_functional_chain,
         skill_runner=run_skill_step,
         detailed_batch_runner=run_functional_detailed_case_batches,
+        attachment_downloader=None,
     ) -> None:
         self.nanobot_config = nanobot_config
         self.runtime_paths = resolve_runtime_paths(nanobot_config)
         self.chain_runner = chain_runner
         self.skill_runner = skill_runner
         self.detailed_batch_runner = detailed_batch_runner
+        self.attachment_downloader = attachment_downloader
 
     def execute(self, task: Task, started_at: datetime, progress_callback) -> TaskResult | None:
         workspace = resolve_task_workspace(self.nanobot_config, task)
@@ -159,6 +161,7 @@ class FunctionalCaseNanobotExecutor(TaskExecutor):
                     workspace=workspace,
                     skill_runner=self.skill_runner,
                     detailed_batch_runner=self.detailed_batch_runner,
+                    attachment_downloader=self.attachment_downloader,
                 )
 
             # 非 checkpoint 模式下，使用临时状态保存前两段产物，供 progress 和最后一段分片生成复用。

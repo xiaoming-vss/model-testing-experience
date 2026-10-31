@@ -146,3 +146,12 @@
 .ai-relations-modal .ai-relations-page-legend {
   flex-wrap: wrap;
 }
+
+/* 嵌入生成全景时只保留外层阅读区，工具和运行操作由检查栏承接。 */
+.gc-relations-inspector .gc-relations-body { display: flex; flex: 1 1 0%; height: auto; min-height: 0; overflow: hidden; }
+.gc-relations-inspector .ai-relations-page { flex: 1 1 0%; min-width: 0; border: 0; border-radius: 0; background: var(--app-surface); }
+.ai-relations-page-body > .ant-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0; }
+.gc-relations-controls { display: flex; flex-direction: column; gap: 10px; }
+.gc-relations-controls .ai-artifact-mode-toolbar { margin: 0; }
+.gc-relations-controls .ai-relations-page-legend { flex-wrap: wrap; gap: 8px 14px; margin: 0; }
+.gc-relations-meta { margin: 0; color: var(--app-surface-text-muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }

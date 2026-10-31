@@ -33,7 +33,10 @@ export function getRunPipelineModel(
   const succeeded = status === 'success' || reviewStatus === 'approved'
   const failed = status === 'failed' || status === 'error'
   const canceled = status === 'canceled'
-  const inProgress = inProgressRunStatuses.includes(status) && reviewStatus !== 'approved'
+  // 审核通过后仍可能有图谱分析等附加阶段在运行；
+  // 仅旧数据的 waiting_review + approved 视为已经结束。
+  const inProgress = inProgressRunStatuses.includes(status)
+    && !(status === 'waiting_review' && reviewStatus === 'approved')
 
   const generateState: RunPipelineStageState = succeeded ? 'done' : failed ? 'fail' : inProgress ? 'current' : 'idle'
   const reviewState: RunPipelineStageState = !succeeded

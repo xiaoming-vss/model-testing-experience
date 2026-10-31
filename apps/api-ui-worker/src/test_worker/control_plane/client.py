@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import time
 from dataclasses import asdict
 from typing import Any
 
@@ -53,9 +54,13 @@ class ControlPlaneClient:
         Returns:
             任务对象，如果没有可用任务则返回 None
         """
-        data = self._request("POST", "/internal/ui-worker/tasks/claim", {
-            "workerId": self._config.worker_id,
-        })
+        data = self._request(
+            "POST",
+            "/internal/ui-worker/tasks/claim",
+            {
+                "workerId": self._config.worker_id,
+            },
+        )
         if data is None:
             return None
         return UiWorkerTask(
@@ -69,9 +74,13 @@ class ControlPlaneClient:
 
     def claim_api_task(self) -> dict[str, Any] | None:
         """领取 API worker 任务。"""
-        data = self._request("POST", "/internal/api-worker/tasks/claim", {
-            "workerId": self._config.worker_id,
-        })
+        data = self._request(
+            "POST",
+            "/internal/api-worker/tasks/claim",
+            {
+                "workerId": self._config.worker_id,
+            },
+        )
         return data
 
     def get_api_task_snapshot(self, task_id: str) -> dict[str, Any]:
@@ -83,33 +92,53 @@ class ControlPlaneClient:
 
     def report_api_task_started(self, task_id: str, started_at: str) -> None:
         """上报 API 任务开始。"""
-        self._request("POST", f"/internal/api-worker/tasks/{task_id}/started", {
-            "workerId": self._config.worker_id,
-            "startedAt": started_at,
-        })
+        self._request(
+            "POST",
+            f"/internal/api-worker/tasks/{task_id}/started",
+            {
+                "workerId": self._config.worker_id,
+                "startedAt": started_at,
+            },
+        )
 
     def report_api_task_heartbeat(self, task_id: str, heartbeat_at: str) -> None:
         """上报 API 任务心跳。"""
-        self._request("POST", f"/internal/api-worker/tasks/{task_id}/heartbeat", {
-            "workerId": self._config.worker_id,
-            "heartbeatAt": heartbeat_at,
-        })
+        self._request(
+            "POST",
+            f"/internal/api-worker/tasks/{task_id}/heartbeat",
+            {
+                "workerId": self._config.worker_id,
+                "heartbeatAt": heartbeat_at,
+            },
+        )
 
-    def report_api_collection_item_started(self, task_id: str, item_id: str, payload: dict[str, Any]) -> None:
+    def report_api_collection_item_started(
+        self, task_id: str, item_id: str, payload: dict[str, Any]
+    ) -> None:
         """上报 API collection item 开始。"""
         body = {
             "workerId": self._config.worker_id,
             **payload,
         }
-        self._request("POST", f"/internal/api-worker/tasks/{task_id}/collection-items/{item_id}/started", body)
+        self._request(
+            "POST",
+            f"/internal/api-worker/tasks/{task_id}/collection-items/{item_id}/started",
+            body,
+        )
 
-    def report_api_collection_item_completed(self, task_id: str, item_id: str, payload: dict[str, Any]) -> None:
+    def report_api_collection_item_completed(
+        self, task_id: str, item_id: str, payload: dict[str, Any]
+    ) -> None:
         """上报 API collection item 完成。"""
         body = {
             "workerId": self._config.worker_id,
             **payload,
         }
-        self._request("POST", f"/internal/api-worker/tasks/{task_id}/collection-items/{item_id}/completed", body)
+        self._request(
+            "POST",
+            f"/internal/api-worker/tasks/{task_id}/collection-items/{item_id}/completed",
+            body,
+        )
 
     def report_api_task_completed(self, task_id: str, payload: dict[str, Any]) -> None:
         """上报 API 任务完成。"""
@@ -144,14 +173,20 @@ class ControlPlaneClient:
         if task_type == "case_debug" and "caseRun" in data:
             case_run_data = {
                 **data["caseRun"],
-                "taskId": data["caseRun"].get("taskId") or data.get("taskId") or task_id,
+                "taskId": data["caseRun"].get("taskId")
+                or data.get("taskId")
+                or task_id,
             }
             case_run = self._parse_case_run_snapshot(case_run_data)
         elif task_type == "suite_run" and "suiteRun" in data:
             suite_run_data = {
                 **data["suiteRun"],
-                "taskId": data["suiteRun"].get("taskId") or data.get("taskId") or task_id,
-                "runId": data["suiteRun"].get("runId") or data["suiteRun"].get("suiteRunId") or data.get("runId", ""),
+                "taskId": data["suiteRun"].get("taskId")
+                or data.get("taskId")
+                or task_id,
+                "runId": data["suiteRun"].get("runId")
+                or data["suiteRun"].get("suiteRunId")
+                or data.get("runId", ""),
             }
             suite_run = self._parse_suite_run_snapshot(suite_run_data)
 
@@ -161,6 +196,60 @@ class ControlPlaneClient:
             suite_run=suite_run,
         )
 
+    def resolve_ui_run_variables(
+        self, task_id: str, run_id: str, names: list[str]
+    ) -> dict[str, Any]:
+        """
+        获取本次运行环境下指定变量的当前取值。
+
+        Args:
+            task_id: 当前任务 ID
+            run_id: 用例运行或套件运行的业务标识
+            names: 需要解析的变量名
+
+        Returns:
+            包含 values 与 missing 的响应
+        """
+        data = self._request(
+            "POST",
+            f"/internal/ui-runs/{run_id}/variables:resolve",
+            {
+                "taskId": task_id,
+                "workerId": self._config.worker_id,
+                "names": list(names),
+            },
+            timeout=5.0,
+            retries=1,
+        )
+        return data or {}
+
+    def write_ui_run_variables(
+        self, task_id: str, run_id: str, items: list[dict[str, Any]]
+    ) -> dict[str, Any]:
+        """
+        把后置提取的结果立即写回运行环境。
+
+        Args:
+            task_id: 当前任务 ID
+            run_id: 用例运行或套件运行的业务标识
+            items: name / value / orderNo 列表
+
+        Returns:
+            包含 results 的响应
+        """
+        data = self._request(
+            "POST",
+            f"/internal/ui-runs/{run_id}/variables:write",
+            {
+                "taskId": task_id,
+                "workerId": self._config.worker_id,
+                "items": list(items),
+            },
+            timeout=5.0,
+            retries=1,
+        )
+        return data or {}
+
     def report_task_started(self, task_id: str, payload: UiTaskStartedPayload) -> None:
         """
         上报任务开始
@@ -169,9 +258,13 @@ class ControlPlaneClient:
             task_id: 任务 ID
             payload: 开始负载
         """
-        self._request("POST", f"/internal/ui-worker/tasks/{task_id}/started", asdict(payload))
+        self._request(
+            "POST", f"/internal/ui-worker/tasks/{task_id}/started", asdict(payload)
+        )
 
-    def report_task_heartbeat(self, task_id: str, payload: UiTaskHeartbeatPayload) -> None:
+    def report_task_heartbeat(
+        self, task_id: str, payload: UiTaskHeartbeatPayload
+    ) -> None:
         """
         上报心跳
 
@@ -179,9 +272,13 @@ class ControlPlaneClient:
             task_id: 任务 ID
             payload: 心跳负载
         """
-        self._request("POST", f"/internal/ui-worker/tasks/{task_id}/heartbeat", asdict(payload))
+        self._request(
+            "POST", f"/internal/ui-worker/tasks/{task_id}/heartbeat", asdict(payload)
+        )
 
-    def report_suite_item_started(self, task_id: str, item_id: str, payload: UiSuiteItemStartedPayload) -> None:
+    def report_suite_item_started(
+        self, task_id: str, item_id: str, payload: UiSuiteItemStartedPayload
+    ) -> None:
         """
         上报测试集项开始
 
@@ -194,9 +291,15 @@ class ControlPlaneClient:
             "workerId": self._config.worker_id,
             **asdict(payload),
         }
-        self._request("POST", f"/internal/ui-worker/tasks/{task_id}/suite-items/{item_id}/started", body)
+        self._request(
+            "POST",
+            f"/internal/ui-worker/tasks/{task_id}/suite-items/{item_id}/started",
+            body,
+        )
 
-    def report_suite_item_completed(self, task_id: str, item_id: str, payload: UiSuiteItemRunResult) -> None:
+    def report_suite_item_completed(
+        self, task_id: str, item_id: str, payload: UiSuiteItemRunResult
+    ) -> None:
         """
         上报测试集项完成
 
@@ -207,11 +310,19 @@ class ControlPlaneClient:
         """
         body = {
             "workerId": self._config.worker_id,
-            **self._artifacts.publish(task_id, self._serialize_suite_item_result(payload)),
+            **self._artifacts.publish(
+                task_id, self._serialize_suite_item_result(payload)
+            ),
         }
-        self._request("POST", f"/internal/ui-worker/tasks/{task_id}/suite-items/{item_id}/completed", body)
+        self._request(
+            "POST",
+            f"/internal/ui-worker/tasks/{task_id}/suite-items/{item_id}/completed",
+            body,
+        )
 
-    def report_task_completed(self, task_id: str, payload: UiCaseRunResult | UiSuiteRunResult) -> None:
+    def report_task_completed(
+        self, task_id: str, payload: UiCaseRunResult | UiSuiteRunResult
+    ) -> None:
         """
         上报任务完成
 
@@ -228,24 +339,35 @@ class ControlPlaneClient:
 
     def log_planned_contract(self) -> None:
         """记录 API 契约"""
-        logger.info("control plane contract", {
-            "claim": "/internal/ui-worker/tasks/claim",
-            "apiClaim": "/internal/api-worker/tasks/claim",
-            "snapshot": "/internal/ui-worker/tasks/{taskId}/snapshot",
-            "apiSnapshot": "/internal/api-worker/tasks/{taskId}/snapshot",
-            "started": "/internal/ui-worker/tasks/{taskId}/started",
-            "apiStarted": "/internal/api-worker/tasks/{taskId}/started",
-            "heartbeat": "/internal/ui-worker/tasks/{taskId}/heartbeat",
-            "apiHeartbeat": "/internal/api-worker/tasks/{taskId}/heartbeat",
-            "suiteItemStarted": "/internal/ui-worker/tasks/{taskId}/suite-items/{itemId}/started",
-            "suiteItemCompleted": "/internal/ui-worker/tasks/{taskId}/suite-items/{itemId}/completed",
-            "apiCollectionItemStarted": "/internal/api-worker/tasks/{taskId}/collection-items/{itemId}/started",
-            "apiCollectionItemCompleted": "/internal/api-worker/tasks/{taskId}/collection-items/{itemId}/completed",
-            "completed": "/internal/ui-worker/tasks/{taskId}/completed",
-            "apiCompleted": "/internal/api-worker/tasks/{taskId}/completed",
-        })
+        logger.info(
+            "control plane contract",
+            {
+                "claim": "/internal/ui-worker/tasks/claim",
+                "apiClaim": "/internal/api-worker/tasks/claim",
+                "snapshot": "/internal/ui-worker/tasks/{taskId}/snapshot",
+                "apiSnapshot": "/internal/api-worker/tasks/{taskId}/snapshot",
+                "started": "/internal/ui-worker/tasks/{taskId}/started",
+                "apiStarted": "/internal/api-worker/tasks/{taskId}/started",
+                "heartbeat": "/internal/ui-worker/tasks/{taskId}/heartbeat",
+                "apiHeartbeat": "/internal/api-worker/tasks/{taskId}/heartbeat",
+                "suiteItemStarted": "/internal/ui-worker/tasks/{taskId}/suite-items/{itemId}/started",
+                "suiteItemCompleted": "/internal/ui-worker/tasks/{taskId}/suite-items/{itemId}/completed",
+                "apiCollectionItemStarted": "/internal/api-worker/tasks/{taskId}/collection-items/{itemId}/started",
+                "apiCollectionItemCompleted": "/internal/api-worker/tasks/{taskId}/collection-items/{itemId}/completed",
+                "completed": "/internal/ui-worker/tasks/{taskId}/completed",
+                "apiCompleted": "/internal/api-worker/tasks/{taskId}/completed",
+            },
+        )
 
-    def _request(self, method: str, pathname: str, body: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    def _request(
+        self,
+        method: str,
+        pathname: str,
+        body: dict[str, Any] | None = None,
+        *,
+        timeout: float | None = None,
+        retries: int = 0,
+    ) -> dict[str, Any] | None:
         """
         发送 HTTP 请求
 
@@ -253,33 +375,52 @@ class ControlPlaneClient:
             method: HTTP 方法
             pathname: 请求路径
             body: 请求体
+            timeout: 本次请求超时秒数，缺省使用客户端配置
+            retries: 传输失败或 5xx 时的重试次数
 
         Returns:
             响应数据，如果状态码为 204 则返回 None
 
         Raises:
-            httpx.HTTPStatusError: HTTP 状态码错误时抛出
+            Exception: 请求失败时抛出
         """
-        try:
-            if body is not None:
-                response = self._client.request(method, pathname, json=body)
-            else:
-                response = self._client.request(method, pathname)
+        attempt = 0
+        while True:
+            try:
+                kwargs: dict[str, Any] = {}
+                if body is not None:
+                    kwargs["json"] = body
+                if timeout is not None:
+                    kwargs["timeout"] = timeout
+                response = self._client.request(method, pathname, **kwargs)
 
-            if response.status_code == 204:
-                return None
+                if response.status_code == 204:
+                    return None
 
-            response.raise_for_status()
+                response.raise_for_status()
 
-            text = response.text
-            if not text:
-                return None
+                text = response.text
+                if not text:
+                    return None
 
-            return self._unwrap_response_data(response.json())
-        except httpx.HTTPStatusError as e:
-            raise Exception(f"control plane request failed: {method} {pathname} -> {e.response.status_code} {e.response.text}") from e
-        except Exception as e:
-            raise Exception(f"control plane request failed: {method} {pathname} -> {str(e)}") from e
+                return self._unwrap_response_data(response.json())
+            except httpx.HTTPStatusError as e:
+                if attempt < retries and e.response.status_code >= 500:
+                    attempt += 1
+                    time.sleep(0.2)
+                    continue
+                raise Exception(
+                    f"control plane request failed: {method} {pathname} -> "
+                    f"{e.response.status_code} {e.response.text}"
+                ) from e
+            except Exception as e:
+                if attempt < retries:
+                    attempt += 1
+                    time.sleep(0.2)
+                    continue
+                raise Exception(
+                    f"control plane request failed: {method} {pathname} -> {str(e)}"
+                ) from e
 
     def _unwrap_response_data(self, payload: Any) -> dict[str, Any] | None:
         """兼容后端标准响应包裹和 worker 裸响应。"""
@@ -319,6 +460,7 @@ class ControlPlaneClient:
                     enabled=s.get("enabled"),
                     description=s.get("description"),
                     comparator=s.get("comparator"),
+                    save_to=s.get("saveTo"),
                 )
                 for s in case_data["steps"]
             ]
@@ -411,6 +553,7 @@ class ControlPlaneClient:
                         enabled=s.get("enabled"),
                         description=s.get("description"),
                         comparator=s.get("comparator"),
+                        save_to=s.get("saveTo"),
                     )
                     for s in case_data["steps"]
                 ]
@@ -426,11 +569,13 @@ class ControlPlaneClient:
                 steps=steps,
             )
 
-            items.append(UiSuiteRunItemSnapshot(
-                item_id=item_data.get("itemId", ""),
-                continue_on_failure=item_data.get("continueOnFailure", False),
-                case=case,
-            ))
+            items.append(
+                UiSuiteRunItemSnapshot(
+                    item_id=item_data.get("itemId", ""),
+                    continue_on_failure=item_data.get("continueOnFailure", False),
+                    case=case,
+                )
+            )
 
         suite = None
         if "suite" in data and data["suite"]:
@@ -477,13 +622,17 @@ class ControlPlaneClient:
             options=options,
         )
 
-    def _serialize_task_result(self, payload: UiCaseRunResult | UiSuiteRunResult) -> dict[str, Any]:
+    def _serialize_task_result(
+        self, payload: UiCaseRunResult | UiSuiteRunResult
+    ) -> dict[str, Any]:
         """序列化任务结果"""
         result = asdict(payload)
         # 转换字段名为驼峰命名
         return self._to_camel_case(result)
 
-    def _serialize_suite_item_result(self, payload: UiSuiteItemRunResult) -> dict[str, Any]:
+    def _serialize_suite_item_result(
+        self, payload: UiSuiteItemRunResult
+    ) -> dict[str, Any]:
         """序列化测试集项结果"""
         result = asdict(payload)
         return self._to_camel_case(result)
@@ -509,4 +658,3 @@ class ControlPlaneClient:
                 result[camel_key] = value
 
         return result
-

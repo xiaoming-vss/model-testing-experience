@@ -2,9 +2,22 @@ from __future__ import annotations
 
 from typing import Any
 
+from sqlalchemy import select
+
 from testing_agent.core.enums import RunStatus
-from testing_agent.core.errors import ErrNotFound
+from testing_agent.core.errors import (
+    ErrApiEnvironmentKindMismatch,
+    ErrBadRequest,
+    ErrNotFound,
+    ErrUiRunEnvironmentMismatch,
+    ErrUiRunVariableMissing,
+    dynamic_error,
+)
 from testing_agent.core.sid import new_id
+from testing_agent.domain.ui_missing_fields import require_complete_ui_steps
+from testing_agent.domain.ui_variable_check import missing_variables
+from testing_agent.models.api_environment import ApiEnvironment
+from testing_agent.models.api_environment_var import ApiEnvironmentVar
 from testing_agent.models.project import Project
 from testing_agent.models.requirement import Requirement
 from testing_agent.models.sprint import Sprint
@@ -22,7 +35,11 @@ from testing_agent.schemas.ui_run import (
 )
 from testing_agent.services.common import dump, list_payload
 from testing_agent.services.project_access import ProjectAction, require_project_access
-from testing_agent.services.ui_execution_payload import ui_case_payload, ui_suite_payload
+from testing_agent.services.ui_execution_payload import (
+    ui_case_payload,
+    ui_environment_payload,
+    ui_suite_payload,
+)
 
 
 class UiCaseRunContext:
@@ -124,13 +141,61 @@ class UiTestCaseRunService:
             suite_context.project,
         )
 
-    async def debug_run_case(self, user_id: str, case_id: str, _: DebugRunUiCaseRequest) -> dict:
+    async def _selected_environment(self, environment_id: str, project_id: str) -> ApiEnvironment:
+        environment = await self.repository.session.scalar(
+            select(ApiEnvironment).where(ApiEnvironment.environment_id == environment_id)
+        )
+        if environment is None:
+            raise ErrNotFound()
+        if environment.project_id != project_id:
+            raise ErrUiRunEnvironmentMismatch()
+        if environment.kind != "ui":
+            raise ErrApiEnvironmentKindMismatch()
+        return environment
+
+    async def _ensure_variables_available(
+        self, environment: ApiEnvironment, cases: list[Any]
+    ) -> None:
+        names = (
+            await self.repository.session.scalars(
+                select(ApiEnvironmentVar.var_key).where(
+                    ApiEnvironmentVar.environment_id == environment.environment_id
+                )
+            )
+        ).all()
+        payload = [
+            {"caseId": case.case_id, "name": case.name, "stepsJson": case.steps_json or []}
+            for case in cases
+        ]
+        try:
+            missing = missing_variables(
+                payload,
+                {str(name) for name in names},
+                base_url=environment.base_url,
+            )
+        except ValueError as exc:
+            raise dynamic_error(ErrBadRequest, f"用例变量引用不合法：{exc}") from exc
+        if missing:
+            raise dynamic_error(
+                ErrUiRunVariableMissing,
+                f"运行前校验未通过：{len(missing)} 处变量无法解析",
+                {"missingVariables": missing},
+            )
+
+    async def debug_run_case(self, user_id: str, case_id: str, body: DebugRunUiCaseRequest) -> dict:
         context = await self.get_accessible_case(user_id, case_id, action="execute")
+        require_complete_ui_steps(context.case.steps_json)
+        environment = await self._selected_environment(
+            body.environment_id, context.project.project_id
+        )
+        await self._ensure_variables_available(environment, [context.case])
         run_id = new_id()
         run = UiTestCaseRun(
             run_id=run_id,
             case_id=context.case.case_id,
             suite_id=context.suite.suite_id,
+            environment_id=environment.environment_id,
+            environment_name=environment.name,
             trigger_user_id=user_id,
             trigger_type="manual",
             status=RunStatus.PENDING.value,
@@ -138,6 +203,7 @@ class UiTestCaseRunService:
                 "runId": run_id,
                 "suite": ui_suite_payload(context.suite),
                 "case": ui_case_payload(context.case),
+                "environment": ui_environment_payload(environment),
             },
             step_results_json=[],
         )
@@ -162,9 +228,15 @@ class UiTestCaseRunService:
         apply_run_scope(run, context)
         return dump_case_run(run)
 
-    async def run_suite(self, user_id: str, suite_id: str, _: RunUiSuiteRequest) -> dict:
+    async def run_suite(self, user_id: str, suite_id: str, body: RunUiSuiteRequest) -> dict:
         context = await self.get_accessible_suite(user_id, suite_id, action="execute")
         cases = await self.repository.list_cases(suite_id)
+        for case in cases:
+            require_complete_ui_steps(case.steps_json)
+        environment = await self._selected_environment(
+            body.environment_id, context.project.project_id
+        )
+        await self._ensure_variables_available(environment, cases)
         suite_run_id = new_id()
         items = []
         for case in cases:
@@ -189,6 +261,8 @@ class UiTestCaseRunService:
         run = UiTestSuiteRun(
             suite_run_id=suite_run_id,
             suite_id=suite_id,
+            environment_id=environment.environment_id,
+            environment_name=environment.name,
             trigger_user_id=user_id,
             trigger_type="manual",
             status=RunStatus.PENDING.value,
@@ -196,6 +270,7 @@ class UiTestCaseRunService:
             snapshot_json={
                 "suiteRunId": suite_run_id,
                 "suite": ui_suite_payload(context.suite),
+                "environment": ui_environment_payload(environment),
             },
         )
         task = WorkerTask(

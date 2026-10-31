@@ -7,7 +7,7 @@ import type { UnderstandingArtifact } from '../utils/understandingComparison'
 type Props = {
   control: Record<string, unknown>
   artifact: UnderstandingArtifact
-  onSourceReference: (reference: RequirementSourceReference) => void
+  onSourceReference?: (reference: RequirementSourceReference) => void
 }
 
 /** Read the recorded facts independently, including each fact's evidence and uncertainty. */

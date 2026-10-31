@@ -259,6 +259,7 @@
   --app-surface-chip: var(--gh-subtle);
   --app-surface-shadow-selected: var(--gh-shadow);
   --app-task-status-running: var(--gh-blue);
+  --app-generation-running-accent: var(--gh-purple);
   --app-task-status-success: var(--gh-cyan);
   --app-task-status-warning: var(--gh-orange);
   --app-task-status-danger: var(--gh-red);
@@ -543,6 +544,8 @@
   --app-revision-bg: var(--gh-surface);
   --app-revision-divider: var(--gh-border);
   --app-revision-divider-hover: var(--gh-border);
+  --app-revision-attachment-scrim: rgba(15, 23, 42, 0.55);
+  --app-revision-attachment-on-scrim: var(--app-on-accent);
   --app-profile-avatar-gradient-start: var(--gh-surface);
   --app-profile-avatar-gradient-end: var(--gh-surface);
   --app-profile-danger-border: var(--gh-red-border);

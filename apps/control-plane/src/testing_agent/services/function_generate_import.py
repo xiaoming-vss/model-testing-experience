@@ -79,17 +79,20 @@ async def import_function_run(
     run_id: str,
     confirm_overwrite: bool,
     user_id: str,
+    *,
+    artifact_content: str | None = None,
+    allow_reimport: bool = False,
 ) -> dict[str, Any]:
     run = await service.owned_run(user_id, run_id, "function", action="execute")
-    if (
+    if artifact_content is None and (
         run.status != "success"
         or run.review_status != "approved"
-        or run.import_status == ImportStatus.IMPORTED.value
+        or (run.import_status == ImportStatus.IMPORTED.value and not allow_reimport)
     ):
         raise ErrBadRequest()
     await service.ensure_requirement_access(user_id, run.requirement_id, action="write")
 
-    raw_cases = generated_function_cases(run)
+    raw_cases = generated_function_cases(run, artifact_content)
     if not raw_cases:
         raise ErrBadRequest()
     generated_cases = validate_function_candidate_cases(raw_cases)
@@ -134,6 +137,7 @@ async def import_function_run(
         return {
             "requiresConfirmation": True,
             "conflicts": conflicts,
+            "importChanges": [],
             "run": dump_run(run),
         }
 
@@ -145,6 +149,7 @@ async def import_function_run(
     )
     try:
         target_ids: list[str] = []
+        changed_by_suite: dict[str, set[str]] = {}
         max_order_by_suite: dict[str, int] = {}
         for module, suite in list(suites_by_module.items()):
             if suite is None:
@@ -166,6 +171,7 @@ async def import_function_run(
             existing = existing_by_module[module].get(normalized_case_name(item["title"]))
             if existing is not None:
                 apply_generated_case(existing, item)
+                changed_by_suite.setdefault(suite.suite_id, set()).add(existing.case_id)
                 continue
 
             max_order = max_order_by_suite.get(suite.suite_id)
@@ -182,6 +188,7 @@ async def import_function_run(
             )
             apply_generated_case(new_case, item)
             service.repository.add(new_case)
+            changed_by_suite.setdefault(suite.suite_id, set()).add(new_case.case_id)
 
         run.import_status = ImportStatus.IMPORTED.value
         run.imported_targets = [
@@ -219,5 +226,13 @@ async def import_function_run(
     return {
         "requiresConfirmation": False,
         "conflicts": [],
+        "importChanges": [
+            {
+                "targetType": "function_suite",
+                "targetId": target_id,
+                "changedCaseIds": sorted(changed_by_suite.get(target_id, set())),
+            }
+            for target_id in target_ids
+        ],
         "run": dump_run(run),
     }

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import builtins
 import json
+from hashlib import sha256
 from types import SimpleNamespace
 from typing import Any
 
@@ -15,7 +16,9 @@ from testing_agent.domain.ai_tasks import DEFAULT_FUNCTION_CASE_MODULE
 from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
 from testing_agent.models.ai_generate_task_source_archive import AiGenerateTaskSourceArchive
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+from testing_agent.repositories.generation_chain import GenerationChainRepository
 from testing_agent.schemas.requirement import normalize_document_type
+from testing_agent.services.functional_requirement_source import functional_requirement_source
 from testing_agent.services.import_payload import import_items, parse_import_payload
 from testing_agent.services.ui_test_case import ui_import_cases
 
@@ -54,6 +57,13 @@ def dump_task(
 
 
 def dump_run(run: AiGenerateTaskRun) -> dict[str, Any]:
+    summary = run.result_summary_json or {}
+    if isinstance(summary, dict) and isinstance(summary.get("uiSemanticReview"), dict):
+        review = summary["uiSemanticReview"]
+        digest = sha256((run.result_yaml or "").encode("utf-8")).hexdigest()
+        if review.get("artifactSha256") != digest:
+            # Derive staleness without rewriting the historical report or attempt ledger.
+            summary = {**summary, "uiSemanticReview": {**review, "status": "stale"}}
     return {
         "createdAt": getattr(run, "created_at", None),
         "startedAt": getattr(run, "started_at", None),
@@ -67,6 +77,8 @@ def dump_run(run: AiGenerateTaskRun) -> dict[str, Any]:
                 "caseNames",
                 "caseRelations",
                 "firstStepOutput",
+                "uiSurface",
+                "uiDesign",
             )
             if isinstance(run.config_json, dict) and run.config_json.get(key)
         ],
@@ -87,7 +99,7 @@ def dump_run(run: AiGenerateTaskRun) -> dict[str, Any]:
         "remediation": str(getattr(run, "remediation", "") or ""),
         "configJson": run.config_json or {},
         "resultYaml": run.result_yaml,
-        "resultSummaryJson": run.result_summary_json or {},
+        "resultSummaryJson": summary,
         "reviewStatus": run.review_status,
         "importStatus": getattr(run, "import_status", "pending"),
         "importedTargets": getattr(run, "imported_targets", None) or [],
@@ -137,18 +149,22 @@ async def build_generate_run_snapshot(
     run_id: str,
     instruction: str | None = None,
     worker_task_id: str | None = None,
+    understanding_version_id: str = "",
 ) -> dict[str, Any]:
     source_content = task.source_content
     document_type = ""
     document_download_url = ""
     uses_requirement_document = False
-    if kind in {"function", "requirement_analysis"}:
+    functional_source: dict[str, Any] = {}
+    if kind == "function":
+        functional_source = await functional_requirement_source(
+            GenerationChainRepository(repository.session),
+            task.requirement_id,
+            understanding_version_id,
+        )
+        source_content = functional_source["sourceContent"]
+    elif kind == "requirement_analysis":
         requirement = await repository.get_requirement(task.requirement_id)
-        if (
-            kind == "function"
-            and not str(getattr(requirement, "document_content", "") or "").strip()
-        ):
-            raise AppError(400, "请先完成需求分析并导入增强文本，再生成功能用例", 400)
         if requirement is not None:
             uses_requirement_document = True
             document_type = normalize_document_type(str(requirement.document_type or "text"))
@@ -157,11 +173,7 @@ async def build_generate_run_snapshot(
                 if worker_task_id
                 else requirement_document_download_url(requirement, str(task.requirement_id or ""))
             )
-            source_content = (
-                str(getattr(requirement, "document_content", "") or "")
-                if kind == "requirement_analysis"
-                else requirement_source_content(requirement)
-            )
+            source_content = str(getattr(requirement, "document_content", "") or "")
             if not source_content and (
                 document_type == "docx" or bool(getattr(requirement, "document_file_id", ""))
             ):
@@ -194,11 +206,12 @@ async def build_generate_run_snapshot(
         snapshot["sourceType"] = task.source_type
     if kind == "ui" and worker_task_id:
         snapshot["sourceArchiveDownloadUrl"] = worker_source_archive_download_url(worker_task_id)
+    snapshot.update(functional_source)
     return snapshot
 
 
-def generated_payload(run: AiGenerateTaskRun | Any) -> dict[str, Any]:
-    raw = run.result_yaml or ""
+def generated_payload(run: AiGenerateTaskRun | Any, content: str | None = None) -> dict[str, Any]:
+    raw = (run.result_yaml or "") if content is None else content
     if not raw.strip():
         raise ErrBadRequest()
     try:
@@ -208,16 +221,20 @@ def generated_payload(run: AiGenerateTaskRun | Any) -> dict[str, Any]:
     return parse_import_payload(data)
 
 
-def generated_api_cases(run: AiGenerateTaskRun | Any) -> builtins.list[dict[str, Any]]:
+def generated_api_cases(
+    run: AiGenerateTaskRun | Any, content: str | None = None
+) -> builtins.list[dict[str, Any]]:
     return [
         item
-        for item in import_items(generated_payload(run), "cases", "apiCases")
+        for item in import_items(generated_payload(run, content), "cases", "apiCases")
         if isinstance(item, dict)
     ]
 
 
-def generated_function_suites(run: AiGenerateTaskRun | Any) -> builtins.list[dict[str, Any]]:
-    payload = generated_payload(run)
+def generated_function_suites(
+    run: AiGenerateTaskRun | Any, content: str | None = None
+) -> builtins.list[dict[str, Any]]:
+    payload = generated_payload(run, content)
     raw_suites = payload.get("suites")
     if isinstance(raw_suites, list):
         return [suite for suite in raw_suites if isinstance(suite, dict)]
@@ -229,8 +246,10 @@ def generated_function_suites(run: AiGenerateTaskRun | Any) -> builtins.list[dic
     return [{"name": "AI Generated", "cases": cases}] if cases else []
 
 
-def generated_function_cases(run: AiGenerateTaskRun | Any) -> builtins.list[dict[str, Any]]:
-    payload = generated_payload(run)
+def generated_function_cases(
+    run: AiGenerateTaskRun | Any, content: str | None = None
+) -> builtins.list[dict[str, Any]]:
+    payload = generated_payload(run, content)
     cases = [
         item
         for item in import_items(payload, "cases", "functionCases", "testcases")

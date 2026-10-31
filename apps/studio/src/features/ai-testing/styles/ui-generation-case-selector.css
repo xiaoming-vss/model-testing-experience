@@ -1,0 +1,40 @@
+.ui-generation-case-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  margin-bottom: 20px;
+}
+
+.ui-generation-case-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.ui-generation-case-filters > * {
+  min-width: 0;
+  width: 100%;
+}
+
+.llm-connection-select-modal-expanded :is(.ant-modal-container, .ant-modal-content) {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 48px);
+}
+
+.llm-connection-select-modal-expanded .ant-modal-body {
+  min-height: 0;
+  overflow: auto;
+}
+
+.llm-connection-select-modal-expanded .ant-modal-header,
+.llm-connection-select-modal-expanded .ant-modal-footer {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 600px) {
+  .ui-generation-case-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

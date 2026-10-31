@@ -11,6 +11,7 @@ from support.ai_execution import (
 )
 from support.ai_execution import db as db
 from support.generation import generation_services
+from support.requirement_versions import understanding_version
 
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.services.ai_execution import graph, persist_run, project
@@ -55,6 +56,7 @@ def relations_output():
 
 
 def approve(db, run):
+    understanding_version(db)
     run.review_status = "approved"
     run.reviewer_user_id = "u"
     from datetime import UTC, datetime
@@ -106,6 +108,14 @@ async def test_relation_dispatch_prepares_worker_input(db):
         db,
         run,
         first,
+        status="running",
+        stage="requirement_analysis",
+        config={"requirementAnalysis": {"functionalOverview": {}}},
+    )
+    event(
+        db,
+        run,
+        first,
         status="success",
         stage="completed",
         output=cases_output(),
@@ -128,14 +138,40 @@ async def test_relation_dispatch_prepares_worker_input(db):
     assert graph_worker.task_id != first.task_id
     assert graph_worker.status == "pending"
 
-    # worker 快照输入 = 派发快照：原始需求 + 需求分析 + 带 case_id 的完整用例。
+    # 派发输入使用已审核需求理解版本、分析产物和带 case_id 的完整用例。
     payload = await build_snapshot(AsyncSessionAdapter(db), "ai", graph_worker)
     snapshot_task = payload["run"]
     config = json.loads(payload["configJson"])
-    assert snapshot_task["sourceContent"] == "sample"
+    assert snapshot_task["sourceContent"] == "versioned source"
     assert config["requirementAnalysis"] == {"functionalOverview": {}}
     dispatched_cases = json.loads(config["resultYaml"])["cases"]
     assert [case["case_id"] for case in dispatched_cases] == ["case-1", "case-2", "case-3"]
+
+
+@pytest.mark.asyncio
+async def test_relation_uses_frozen_requirement_version_after_a_new_approval(db):
+    from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+    from testing_agent.services.worker import build_snapshot
+
+    run, first = create_run(db)
+    event(db, run, first, status="success", stage="completed", output=cases_output())
+    approve(db, run)
+    run.snapshot_json = {
+        "sourceContent": "selected requirement v1",
+        "requirementUnderstandingVersion": {"versionId": "understanding-r-v1", "versionNo": 1},
+    }
+    db.commit()
+    understanding_version(db, version_no=2, content="latest requirement v2")
+    service = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(db)))
+    await service.stages.generate_relation_analysis("run", None, "u")
+    dispatch = db.scalar(
+        select(WorkerTask)
+        .where(WorkerTask.run_id == "run")
+        .order_by(WorkerTask.created_at.desc(), WorkerTask.id.desc())
+    )
+    payload = await build_snapshot(AsyncSessionAdapter(db), "ai", dispatch)
+    assert payload["run"]["sourceContent"] == "selected requirement v1"
+    assert payload["run"]["requirementUnderstandingVersion"]["versionId"] == "understanding-r-v1"
 
 
 @pytest.mark.asyncio

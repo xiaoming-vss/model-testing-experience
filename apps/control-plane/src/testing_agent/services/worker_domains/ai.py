@@ -16,6 +16,7 @@ from testing_agent.schemas.workers import (
     WorkerProgressRequest,
     WorkerTaskEventRequest,
 )
+from testing_agent.services.ui_generation_contracts import is_ui_workflow, validate_ui_worker_output
 from testing_agent.services.worker_domains.events import (
     final_run_status,
     json_text,
@@ -28,6 +29,26 @@ def apply_ai_completion_to_run(
 ) -> None:
     snapshot = body.snapshot_json or {}
     status = final_run_status(body.status)
+    if is_ui_workflow(run):
+        reported_stage = snapshot.get("currentStage") or snapshot.get("stage")
+        allowed_stages = {None, run.current_stage}
+        if status == RunStatus.SUCCESS.value and run.current_stage == "ui_yaml":
+            allowed_stages.add("completed")
+        if reported_stage not in allowed_stages:
+            raise ErrBadRequest()
+        if status == RunStatus.SUCCESS.value:
+            if run.current_stage != "ui_yaml" or (
+                snapshot.get("currentStage") or snapshot.get("stage")
+            ) not in {None, "ui_yaml", "completed"}:
+                raise ErrBadRequest()
+            config = (
+                body.config_json if body.config_json is not None else snapshot.get("configJson", {})
+            )
+            result = body.result_yaml if body.result_yaml is not None else body.output_yaml
+            validate_ui_worker_output(run, run.current_stage, config, result)
+        else:
+            functional = True  # A failed UI attempt cannot replace approved upstream artifacts.
+
     run.status = status
     current_stage = snapshot.get("currentStage") or snapshot.get("stage")
     if current_stage is not None:
@@ -97,6 +118,10 @@ async def build_snapshot(session: AsyncSession, task: WorkerTask) -> dict[str, A
             snapshot["documentDownloadUrl"] = document_url
             if document_type in {"word", "docx"} and not snapshot.get("sourceContent"):
                 snapshot["sourceContent"] = document_url
+    if task.task_type == "ui_case_generate" and snapshot:
+        snapshot["sourceArchiveDownloadUrl"] = (
+            f"/internal/ai-worker/tasks/{task.task_id}/source-archive"
+        )
     return {
         "taskType": task.task_type,
         "checkpointEnabled": run.checkpoint_enabled,
@@ -118,7 +143,13 @@ async def complete_run(
         )
 
 
-AI_WAITING_REVIEW_STAGES = {"requirement_analysis", "case_names", "extracting_text"}
+AI_WAITING_REVIEW_STAGES = {
+    "requirement_analysis",
+    "case_names",
+    "extracting_text",
+    "ui_surface",
+    "ui_design",
+}
 
 
 def apply_progress(
@@ -132,6 +163,22 @@ def apply_progress(
         )
 
         validate_run_output(run, config=body.config_json)
+    if is_ui_workflow(run):
+        if body.current_stage != run.current_stage:
+            raise ErrBadRequest()
+        if body.result_yaml:
+            raise ErrBadRequest()  # Final YAML is published by completion, never progress.
+        if body.stage_status == "waiting_review":
+            if run.current_stage not in {"ui_surface", "ui_design"}:
+                raise ErrBadRequest()
+            validate_ui_worker_output(run, run.current_stage, body.config_json, body.result_yaml)
+        elif body.config_json:
+            current = run.config_json or {}
+            supplied = body.config_json
+            if not isinstance(supplied, dict) or any(
+                supplied.get(key) != current.get(key) for key in ("uiSurface", "uiDesign")
+            ):
+                raise ErrBadRequest()
     now = datetime.now(UTC)
     next_task_status = RunStatus.RUNNING.value
     next_run_status = RunStatus.RUNNING.value
@@ -163,9 +210,13 @@ def apply_progress(
     elif body.stage_status is not None:
         run.stage_status = body.stage_status
     functional = task.task_type == "functional_case_generate"
-    if body.config_json is not None and (not functional or body.config_json):
+    if (
+        body.config_json is not None
+        and (not functional or body.config_json)
+        and (not is_ui_workflow(run) or body.stage_status == "waiting_review")
+    ):
         run.config_json = body.config_json
-    if body.result_yaml is not None and not functional:
+    if body.result_yaml is not None and not functional and not is_ui_workflow(run):
         run.result_yaml = body.result_yaml
     if body.result_summary_json is not None:
         run.result_summary_json = body.result_summary_json

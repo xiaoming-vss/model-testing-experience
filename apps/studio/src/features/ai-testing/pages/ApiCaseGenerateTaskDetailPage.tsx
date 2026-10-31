@@ -1,22 +1,23 @@
-import { ArtifactModeSwitch, ArtifactViewTabs } from '../components/ArtifactViewTabs'
+import { ArtifactViewTabs } from '../components/ArtifactViewTabs'
+import { ApiCandidateResultView, ApiConfigResultView } from '../components/ApiConfigDiagramView'
+import { normalizeApiConfigCases } from '../utils/apiConfigDiagram'
 import { useTaskRunDialog, type TaskRunDialogRequest } from '../hooks/useTaskRunDialog'
 import { listTotal } from '@/shared/api/request'
 import { getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
 import { useTaskRunHistorySync } from '@/features/ai-testing/hooks/useTaskRunHistorySync'
 import { saveBlob } from '@/shared/utils/download'
 import { useDeleteTaskRun, useStartTaskRun } from '@/features/ai-testing/hooks/useTaskRunActions'
-import { formatStructuredContent, toRecord, toRecordArray } from '@/shared/utils/value'
+import { formatStructuredContent } from '@/shared/utils/value'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
-import { ArrowLeftOutlined, CodeOutlined, CopyOutlined, DownOutlined, FileTextOutlined, HistoryOutlined, RightOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, CodeOutlined, CopyOutlined, FileTextOutlined, HistoryOutlined } from '@ant-design/icons'
 import { Alert, Button, Empty, Form, Input, Modal, Popconfirm, Select, Spin, Tag, Tooltip } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { parse } from 'yaml'
 import { ApiCaseGenerateTaskDrawer, type ApiCaseGenerateTaskFormValues } from '../components/ApiCaseGenerateTaskDrawer'
 import { ApiImportConflictModal } from '../components/ApiImportConflictModal'
 import { RunHistoryTable, RunMigrationWarningIcon, RunRowActions, type RunMenuAction } from '../components/RunHistoryTable'
@@ -62,370 +63,6 @@ type ImportConflictState = {
   collectionId: string
   conflicts: ApiCaseGenerateTaskRunImportConflict[]
 } | null
-
-type ApiConfigRule = {
-  name: string
-  detail: string
-}
-
-type ApiConfigCaseView = {
-  key: string
-  name: string
-  orderNo?: number
-  method: string
-  path: string
-  headers?: unknown
-  query?: unknown
-  body?: unknown
-  response?: unknown
-  extractRules: ApiConfigRule[]
-  assertRules: ApiConfigRule[]
-  usedVariables: string[]
-  extractedVariables: string[]
-}
-
-type ApiConfigDiagramData = {
-  cases: ApiConfigCaseView[]
-  totalExtractRules: number
-  totalAssertRules: number
-  authHeaderCount: number
-}
-
-function toDisplayText(value: unknown) {
-  if (value === undefined || value === null || value === '') return ''
-  if (typeof value === 'string') return value.trim()
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
-  try {
-    return JSON.stringify(value)
-  } catch {
-    return String(value)
-  }
-}
-
-function pickText(record: Record<string, unknown>, keys: string[]) {
-  for (const key of keys) {
-    const text = toDisplayText(record[key])
-    if (text) return text
-  }
-  return ''
-}
-
-function pickValue(record: Record<string, unknown>, keys: string[]) {
-  for (const key of keys) {
-    const value = record[key]
-    if (value !== undefined && value !== null && value !== '') return value
-  }
-  return undefined
-}
-
-function parseJsonLikeValue(value: unknown) {
-  if (typeof value !== 'string') return value
-  const trimmed = value.trim()
-  if (!trimmed) return value
-  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return value
-  try {
-    return JSON.parse(trimmed)
-  } catch {
-    return value
-  }
-}
-
-function stringifyCompact(value: unknown) {
-  if (value === undefined || value === null || value === '') return ''
-  const parsed = parseJsonLikeValue(value)
-  if (typeof parsed === 'string') return parsed
-  try {
-    return JSON.stringify(parsed, null, 2)
-  } catch {
-    return String(parsed)
-  }
-}
-
-function collectTemplateVariables(value: unknown) {
-  const source = stringifyCompact(value)
-  if (!source) return []
-  const variables = new Set<string>()
-  const pattern = /\{\{\s*([A-Za-z_][\w.-]*)\s*\}\}|\{\s*([A-Za-z_][\w.-]*)\s*\}/g
-  let match: RegExpExecArray | null
-
-  while ((match = pattern.exec(source)) !== null) {
-    const variable = match[1] || match[2]
-    if (variable) variables.add(variable)
-  }
-
-  return [...variables]
-}
-
-function formatRule(rule: Record<string, unknown>, fallback: string): ApiConfigRule {
-  const name = pickText(rule, ['name', 'ruleName', 'varKey', 'targetExpr', 'sourceExpr']) || fallback
-  const detailCandidates = [
-    pickText(rule, ['sourceExpr', 'targetExpr', 'assertSource']),
-    pickText(rule, ['comparator', 'operator']),
-    pickText(rule, ['expectedValue', 'value', 'source']),
-  ].filter(Boolean)
-
-  return {
-    name,
-    detail: detailCandidates.join(' / ') || stringifyCompact(rule),
-  }
-}
-
-function normalizeApiConfigCases(content?: string): ApiConfigDiagramData | null {
-  if (!content?.trim()) return null
-
-  try {
-    const parsed = parse(content)
-    const entries: Array<{ key: string; value: unknown; index: number }> = []
-
-    if (Array.isArray(parsed)) {
-      parsed.forEach((value, index) => entries.push({ key: `case-${index + 1}`, value, index }))
-    } else if (parsed && typeof parsed === 'object') {
-      const record = parsed as Record<string, unknown>
-      const cases = Array.isArray(record.cases) ? record.cases : Array.isArray(record.apiCases) ? record.apiCases : null
-      if (cases) {
-        cases.forEach((value, index) => entries.push({ key: `case-${index + 1}`, value, index }))
-      } else {
-        Object.entries(record).forEach(([key, value], index) => entries.push({ key, value, index }))
-      }
-    }
-
-    const cases = entries
-      .map((entry): ApiConfigCaseView | null => {
-        const record = toRecord(entry.value)
-        if (!record) return null
-
-        const method = pickText(record, ['method', 'httpMethod']).toUpperCase() || 'API'
-        const path = pickText(record, ['path', 'urlTemplate', 'url', 'endpoint']) || '-'
-        const headers = parseJsonLikeValue(pickValue(record, ['headers', 'headersJson', 'requestHeaders']))
-        const query = parseJsonLikeValue(pickValue(record, ['query', 'queryJson', 'params', 'queryParams']))
-        const body = parseJsonLikeValue(pickValue(record, ['json', 'bodyJson', 'body', 'bodyText', 'requestBody']))
-        const response = parseJsonLikeValue(pickValue(record, ['response', 'responseJson', 'responseBody']))
-        const extractRules = toRecordArray(pickValue(record, ['extractRules', 'extract_rules', 'extractors', 'extractions']))
-          .map((rule, index) => formatRule(rule, `提取规则 ${index + 1}`))
-        const assertRules = toRecordArray(pickValue(record, ['assertRules', 'assert_rules', 'assertions', 'checks']))
-          .map((rule, index) => formatRule(rule, `断言规则 ${index + 1}`))
-        const extractedVariables = extractRules
-          .map((rule) => rule.name)
-          .filter(Boolean)
-        const usedVariables = [
-          ...collectTemplateVariables(path),
-          ...collectTemplateVariables(headers),
-          ...collectTemplateVariables(query),
-          ...collectTemplateVariables(body),
-        ]
-        const orderText = pickText(record, ['orderNo', 'order', 'sort'])
-        const orderNo = Number(orderText)
-
-        return {
-          key: `${entry.key}-${entry.index}`,
-          name: pickText(record, ['name', 'caseName', 'title']) || entry.key,
-          ...(Number.isFinite(orderNo) ? { orderNo } : {}),
-          method,
-          path,
-          ...(headers !== undefined && headers !== null && headers !== '' ? { headers } : {}),
-          ...(query !== undefined && query !== null && query !== '' ? { query } : {}),
-          ...(body !== undefined && body !== null && body !== '' ? { body } : {}),
-          ...(response !== undefined && response !== null && response !== '' ? { response } : {}),
-          extractRules,
-          assertRules,
-          usedVariables: [...new Set(usedVariables)],
-          extractedVariables: [...new Set(extractedVariables)],
-        }
-      })
-      .filter((item): item is ApiConfigCaseView => Boolean(item))
-      .sort((left, right) => (left.orderNo ?? Number.MAX_SAFE_INTEGER) - (right.orderNo ?? Number.MAX_SAFE_INTEGER))
-
-    if (cases.length === 0) return null
-
-    return {
-      cases,
-      totalExtractRules: cases.reduce((sum, item) => sum + item.extractRules.length, 0),
-      totalAssertRules: cases.reduce((sum, item) => sum + item.assertRules.length, 0),
-      authHeaderCount: cases.filter((item) => {
-        const headers = toRecord(parseJsonLikeValue(item.headers))
-        return Boolean(headers && Object.keys(headers).some((key) => key.toLowerCase().includes('authorization')))
-      }).length,
-    }
-  } catch {
-    return null
-  }
-}
-
-function getMethodTagColor(method: string) {
-  const normalizedMethod = method.toUpperCase()
-  if (normalizedMethod === 'GET') return 'blue'
-  if (normalizedMethod === 'POST') return 'green'
-  if (normalizedMethod === 'PUT' || normalizedMethod === 'PATCH') return 'orange'
-  if (normalizedMethod === 'DELETE') return 'red'
-  return 'default'
-}
-
-function ApiConfigPreviewField({ label, value }: { label: string; value: unknown }) {
-  const text = stringifyCompact(value)
-  if (!text) return null
-
-  return (
-    <div className="api-config-visual-field">
-      <span>{label}</span>
-      <pre>{text}</pre>
-    </div>
-  )
-}
-
-function ApiConfigRuleList({ title, rules, emptyText }: { title: string; rules: ApiConfigRule[]; emptyText: string }) {
-  return (
-    <div className="api-config-visual-rule-group">
-      <div className="api-config-visual-rule-title">
-        <span>{title}</span>
-        <Tag color={rules.length > 0 ? 'cyan' : 'default'}>{rules.length}</Tag>
-      </div>
-      {rules.length > 0 ? (
-        <div className="api-config-visual-rule-list">
-          {rules.map((rule, index) => (
-            <div key={`${rule.name}-${index}`} className="api-config-visual-rule">
-              <strong>{rule.name}</strong>
-              {rule.detail ? <span>{rule.detail}</span> : null}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="api-config-visual-empty">{emptyText}</div>
-      )}
-    </div>
-  )
-}
-
-function ApiConfigDiagramView({ content, defaultCollapsed = false }: { content: string; defaultCollapsed?: boolean }) {
-  const diagramData = useMemo(() => normalizeApiConfigCases(content), [content])
-  const [collapsedCaseKeys, setCollapsedCaseKeys] = useState<Set<string>>(
-    () => new Set(defaultCollapsed ? diagramData?.cases.map((apiCase) => apiCase.key) : []),
-  )
-
-  useEffect(() => {
-    setCollapsedCaseKeys(new Set(defaultCollapsed ? diagramData?.cases.map((apiCase) => apiCase.key) : []))
-  }, [defaultCollapsed, diagramData])
-
-  if (!diagramData) {
-    return <div className="ai-task-run-result-popover-empty">当前中间配置无法解析为 API 链路</div>
-  }
-
-  return (
-    <div className="api-config-visual-view">
-      <div className="api-config-visual-stats">
-        <Tag color="blue">接口 {diagramData.cases.length}</Tag>
-        <Tag color="cyan">提取 {diagramData.totalExtractRules}</Tag>
-        <Tag color="purple">断言 {diagramData.totalAssertRules}</Tag>
-        <Tag color="green">认证头 {diagramData.authHeaderCount}</Tag>
-      </div>
-      <div className="api-config-visual-chain">
-        {diagramData.cases.map((apiCase, index) => {
-          const collapsed = collapsedCaseKeys.has(apiCase.key)
-          const toggleCase = () => {
-            setCollapsedCaseKeys((current) => {
-              const next = new Set(current)
-              if (next.has(apiCase.key)) next.delete(apiCase.key)
-              else next.add(apiCase.key)
-              return next
-            })
-          }
-
-          return (
-          <div key={apiCase.key} className="api-config-visual-step">
-            <article className={`api-config-visual-card${collapsed ? ' collapsed' : ''}`}>
-              <button
-                type="button"
-                className="api-config-visual-card-head"
-                aria-expanded={!collapsed}
-                aria-label={`${collapsed ? '展开' : '折叠'} ${apiCase.method} ${apiCase.name}`}
-                onClick={toggleCase}
-              >
-                <div className="api-config-visual-method-line">
-                  <span className="api-config-visual-collapse-icon" aria-hidden>
-                    {collapsed ? <RightOutlined /> : <DownOutlined />}
-                  </span>
-                  <Tag color={getMethodTagColor(apiCase.method)}>{apiCase.method}</Tag>
-                  <strong>{apiCase.name}</strong>
-                </div>
-                {apiCase.orderNo ? <span className="api-config-visual-order">#{apiCase.orderNo}</span> : null}
-              </button>
-              {!collapsed ? (
-                <div className="api-config-visual-card-body">
-                  <div className="api-config-visual-path">{apiCase.path}</div>
-                  <div className="api-config-visual-variable-row">
-                    {apiCase.usedVariables.map((variable) => (
-                      <Tag key={`used-${variable}`} color="gold">使用 {variable}</Tag>
-                    ))}
-                    {apiCase.extractedVariables.map((variable) => (
-                      <Tag key={`extract-${variable}`} color="success">提取 {variable}</Tag>
-                    ))}
-                    {apiCase.usedVariables.length === 0 && apiCase.extractedVariables.length === 0 ? (
-                      <span className="api-config-visual-muted">无变量依赖</span>
-                    ) : null}
-                  </div>
-                  <div className="api-config-visual-grid">
-                    <ApiConfigPreviewField label="Headers" value={apiCase.headers} />
-                    <ApiConfigPreviewField label="Query" value={apiCase.query} />
-                    <ApiConfigPreviewField label="Body" value={apiCase.body} />
-                    <ApiConfigPreviewField label="Response" value={apiCase.response} />
-                  </div>
-                  <div className="api-config-visual-rules">
-                    <ApiConfigRuleList title="提取规则" rules={apiCase.extractRules} emptyText="暂无提取规则" />
-                    <ApiConfigRuleList title="断言规则" rules={apiCase.assertRules} emptyText="暂无断言规则" />
-                  </div>
-                </div>
-              ) : null}
-            </article>
-            {index < diagramData.cases.length - 1 ? <div className="api-config-visual-connector" /> : null}
-          </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-function ApiConfigResultView({ content }: { content: string }) {
-  const canRenderDiagram = Boolean(normalizeApiConfigCases(content))
-  const [activeView, setActiveView] = useState<'diagram' | 'json'>('diagram')
-
-  return (
-    <div className="api-config-result-tabs">
-      <ArtifactModeSwitch copyText={activeView === 'json' ? content : undefined} value={activeView} onChange={(value) => setActiveView(value as 'diagram' | 'json')}
-        options={[{ label: '预览', value: 'diagram' }, { label: 'JSON', value: 'json' }]} />
-      <div
-        id="api-config-result-panel"
-        className="api-config-result-panel"
-        role="region"
-        aria-label="中间配置内容"
-      >
-        {activeView === 'diagram' ? (
-          canRenderDiagram ? (
-            <ApiConfigDiagramView content={content} />
-          ) : (
-            <div className="ai-task-run-result-popover-empty">当前中间配置无法解析为 API 链路</div>
-          )
-        ) : (
-          <TextCodeEditor
-            ariaLabel="中间配置 JSON"
-            value={content}
-            readOnly
-            language="json"
-            height="100%"
-            minHeight={0}
-          />
-        )}
-      </div>
-    </div>
-  )
-}
-
-function ApiCandidateResultView({ content }: { content: string }) {
-  if (!normalizeApiConfigCases(content)) {
-    return <div className="ai-task-run-result-popover-empty">当前候选结果无法解析为 API 用例</div>
-  }
-
-  return <ApiConfigDiagramView content={content} defaultCollapsed />
-}
 
 export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?: TaskRunDialogRequest } = {}) {
   const { taskId: routeTaskId = '' } = useParams()
@@ -1041,11 +678,12 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
                           const data = resolveRunRecord(row)
                           const runSucceeded = String(data.status ?? '').toLowerCase() === 'success'
                           const runAwaitingReview = runSucceeded && normalizeGenerateTaskReviewStatus(data.reviewStatus) === 'pending'
+                          const runHasResult = data.hasResult ?? Boolean(data.resultYaml)
                           return (
                             <RunArtifacts
                               artifacts={[
                                 { key: 'configJson', label: '中间配置', available: true },
-                                { key: 'resultYaml', label: '结果 YAML', available: !runAwaitingReview },
+                                { key: 'resultYaml', label: '结果 YAML', available: runHasResult && !runAwaitingReview },
                               ]}
                               onOpen={(key) => {
                                 const section = runResultSectionDefinitions.find((item) => item.key === key)

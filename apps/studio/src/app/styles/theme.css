@@ -1,7 +1,7 @@
 @import '../../App.css';
 
 /* Approved soft-blue control surfaces, scoped to the light theme. */
-:root:root:not([data-theme='dark']) .app-shell :is(.ant-input-affix-wrapper, .ant-select-selector, .ant-select:not(.ant-select-disabled) .ant-select-content, .app-search-field) {
+:root:root:not([data-theme='dark']) .app-shell :is(.ant-input-affix-wrapper, .ant-select-selector, .ant-select:not(.ant-select-borderless):not(.ant-select-disabled) .ant-select-content, .app-search-field) {
   background: var(--app-control-surface) !important;
   border-color: var(--button-border) !important;
 }

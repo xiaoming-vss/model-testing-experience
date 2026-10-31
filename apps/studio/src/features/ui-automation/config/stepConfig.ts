@@ -9,6 +9,7 @@ export const uiTestKeywordOptions = [
   { label: 'wait_text · 等待文本出现', value: 'wait_text' },
   { label: 'assert_text · 断言元素文本', value: 'assert_text' },
   { label: 'assert_visible · 断言元素可见', value: 'assert_visible' },
+  { label: 'assert_hidden · 断言元素不可见/不存在', value: 'assert_hidden' },
   { label: 'assert_url · 断言当前 URL', value: 'assert_url' },
   { label: 'screenshot · 截图', value: 'screenshot' },
   { label: 'sleep · 固定等待', value: 'sleep' },
@@ -30,6 +31,30 @@ export const uiTestComparatorOptions = [
   { label: 'eq', value: 'eq' },
 ]
 
+export const uiStepSaveSourceOptions = [
+  { label: '文本', value: 'text' },
+  { label: '输入值', value: 'value' },
+  { label: '属性', value: 'attribute' },
+  { label: '当前地址', value: 'url' },
+]
+
+const uiTemplateTokenPattern = /\{\{.*?\}\}/
+
+/** open 的页面 URL 允许完整 URL，或含 {{变量}} 的模板（运行时再拼成完整地址）。 */
+export function isValidUiOpenUrl(value: string | undefined) {
+  const trimmed = value?.trim()
+  if (!trimmed) return false
+  if (uiTemplateTokenPattern.test(trimmed)) return true
+  return /^https?:\/\//i.test(trimmed)
+}
+
+/** sleep / assert_visible / assert_hidden 的毫秒数允许直接填数字，或含 {{变量}} 的模板。 */
+export function isValidUiIntegerOrVariable(value: string | undefined) {
+  const trimmed = value?.trim()
+  if (!trimmed) return false
+  return /^\d+$/.test(trimmed) || uiTemplateTokenPattern.test(trimmed)
+}
+
 const uiTestKeywords = new Set(uiTestKeywordOptions.map((item) => item.value))
 const uiTestLocatorTypes = new Set(uiTestLocatorTypeOptions.map((item) => item.value))
 const uiTestComparators = new Set(uiTestComparatorOptions.map((item) => item.value))
@@ -41,6 +66,7 @@ const uiStepOperationKeywords = new Set([
   'wait_text',
   'assert_text',
   'assert_visible',
+  'assert_hidden',
   'assert_url',
   'sleep',
 ])
@@ -53,6 +79,7 @@ const uiStepLocatorRequiredKeywords = new Set([
   'wait_text',
   'assert_text',
   'assert_visible',
+  'assert_hidden',
 ])
 
 const uiStepComparatorKeywords = new Set(['assert_text', 'assert_url'])
@@ -67,8 +94,8 @@ type UiStepFieldMeta = {
 const uiStepFieldMetaMap: Record<string, UiStepFieldMeta> = {
   open: {
     operationLabel: '页面 URL',
-    operationPlaceholder: '例如：https://test.example.com/login',
-    operationHint: 'open 步骤必须填写完整 URL。',
+    operationPlaceholder: '例如：https://test.example.com/login 或 {{baseUrl}}/login',
+    operationHint: 'open 步骤必须填写完整 URL，也可以使用 {{baseUrl}} 变量拼出地址。',
   },
   input: {
     locatorHint: 'input 必须定位可编辑元素，并会自动清空后再输入。',
@@ -101,6 +128,12 @@ const uiStepFieldMetaMap: Record<string, UiStepFieldMeta> = {
     operationLabel: '超时时间(ms)',
     operationPlaceholder: '例如：3000',
     operationHint: '填写等待元素可见的超时时间，单位为毫秒。',
+  },
+  assert_hidden: {
+    locatorHint: 'assert_hidden 需要定位目标元素；元素在超时内不可见或不存在即通过。',
+    operationLabel: '超时时间(ms)',
+    operationPlaceholder: '例如：3000',
+    operationHint: '填写等待元素不可见或消失的超时时间，单位为毫秒。',
   },
   assert_url: {
     operationLabel: '期望 URL',

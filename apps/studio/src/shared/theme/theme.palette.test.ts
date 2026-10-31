@@ -98,6 +98,11 @@ describe('dark palette contract', () => {
     expect(resolve('--graph-export-border')).toBe('1px solid #30363d')
   })
 
+  it('keeps list rows on the same surface as their panel', () => {
+    expect(resolve('--srf-list-row-bg')).toBe(resolve('--srf-card'))
+    expect(resolve('--srf-card')).toBe(resolve('--app-surface'))
+  })
+
   it('keeps status and hover text readable against their tinted backgrounds', () => {
     const rgb = (color: string) => color.startsWith('#')
       ? color.slice(1).match(/../g)!.map((channel) => parseInt(channel, 16))

@@ -1,23 +1,21 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import compact from './fixtures/requirement-understanding.example.json'
-import extraction from './fixtures/document-extraction.example.json'
 import { RequirementArtifactValue } from './RequirementArtifactView'
 import { RequirementUnderstandingComparison } from '@/features/ai-testing/components/RequirementUnderstandingComparison'
 import { TestThemeProvider } from '@/test/TestThemeProvider'
 
 afterEach(cleanup)
 
-it('renders compact review citations and locates original material', () => {
-  render(<TestThemeProvider><RequirementUnderstandingComparison content={compact} extractionContent={extraction} /></TestThemeProvider>)
+it('renders compact review citations as text without the original-material pane', () => {
+  render(<TestThemeProvider><RequirementUnderstandingComparison content={compact} /></TestThemeProvider>)
   fireEvent.click(screen.getByRole('tab', { name: '业务规则' }))
   fireEvent.click(screen.getByText(compact.businessRules[0].name))
   const evidence = compact.evidence[0]
   const source = compact.sources.find(s => s.id === evidence.sourceId)!
-  const citations = screen.getAllByRole('button', { name: `${source.name} · ${evidence.locator}` })
-  fireEvent.click(citations[0])
-  expect(screen.queryByText('需求理解缺少集中证据表')).not.toBeInTheDocument()
-  expect(screen.getByRole('region', { name: '材料与需求理解对照' })).toBeInTheDocument()
+  expect(screen.getAllByText(`${source.name} · ${evidence.locator}`).length).toBeGreaterThan(0)
+  expect(screen.queryByRole('region', { name: '材料内容' })).not.toBeInTheDocument()
+  expect(screen.getByRole('region', { name: '需求理解结果' })).toBeInTheDocument()
 })
 
 it('renders rule-based flow conditions with expandable business meaning', async () => {
@@ -60,7 +58,7 @@ it('keeps narrative strings, omits absent fields and preserves explicit unknown 
   const control = artifact.modules[0].operations[0].interaction.controls[0]
   control.defaultValue = { value: null, confirmationStatus: 'unconfirmed' }
   const saved = JSON.stringify(artifact)
-  render(<TestThemeProvider><RequirementUnderstandingComparison content={artifact} extractionContent={extraction} /></TestThemeProvider>)
+  render(<TestThemeProvider><RequirementUnderstandingComparison content={artifact} /></TestThemeProvider>)
   expect(screen.getByText('查看并筛选任务')).toBeInTheDocument()
   fireEvent.click(screen.getByRole('tab', { name: 'UI 交互' }))
   // 控件、触发反馈与操作步骤均默认折叠，展开后才挂载对应事实。

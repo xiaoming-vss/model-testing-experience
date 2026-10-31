@@ -14,6 +14,7 @@ import { LlmConnectionSelectModal } from '@/features/ai-testing/components/LlmCo
 import type { RequirementAnalysisViewMode } from '@/features/ai-testing/components/RequirementAnalysisView'
 import { RequirementAnalysisDiagramView, RequirementAnalysisView } from '@/features/ai-testing/components/RequirementAnalysisView'
 import { RevisionDivider, RevisionSidePanel } from '@/features/ai-testing/components/RevisionSidePanel'
+import { useRevisionAttachments } from '@/features/ai-testing/hooks/useRevisionAttachments'
 import { RunHistoryTable, RunMigrationWarningIcon, RunRowActions } from '@/features/ai-testing/components/RunHistoryTable'
 import { confirmDeleteRun, isRunDeletable } from '@/features/ai-testing/utils/runDeletion'
 import { RunArtifacts, RunPipelineStatus } from '@/features/ai-testing/components/RunPipelineStatus'
@@ -40,7 +41,7 @@ import { ProjectActionModal } from '@/features/projects/components/ProjectAction
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { RequirementDocumentPreviewContent } from '@/features/requirements/components/RequirementDocumentPreviewModal'
 import { TaskDetailInstructionEditor, TaskDetailNavItem, TaskDetailNavPanel, TaskDetailRunMetrics, TaskDetailToolbar } from '../components/TaskDetailShell'
-import { hasRequirementDocument, hasRequirementEnhancedText } from '@/features/requirements/utils/requirementDocument'
+import { hasRequirementDocument } from '@/features/requirements/utils/requirementDocument'
 import { api, listItems } from '@/services/api'
 import { ApiError } from '@/shared/api/request'
 import { ActionButton } from '@/shared/components/ActionButton'
@@ -159,6 +160,7 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
   const [revisionInstruction, setRevisionInstruction] = useState('')
   const [revisionDraftKey, setRevisionDraftKey] = useState('')
   const [revisionTemplate, setRevisionTemplate] = useState('')
+  const revisionAttachments = useRevisionAttachments()
   const [importConfirmRunId, setImportConfirmRunId] = useState<string | null>(null)
   const [importAcknowledged, setImportAcknowledged] = useState(false)
   const [importConflict, setImportConflict] = useState<{
@@ -530,13 +532,14 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
   })
 
   const reviseStageMutation = useMutation({
-    mutationFn: async (payload: { runId: string; body: { llmConnectionId: string; stage: string; revisionInstruction: string; configJson?: Record<string, unknown>; resultYaml?: string } }) =>
+    mutationFn: async (payload: { runId: string; body: { llmConnectionId: string; stage: string; revisionInstruction: string; configJson?: Record<string, unknown>; resultYaml?: string; attachmentFileIds?: string[] } }) =>
       api.reviseFunctionalCaseGenerateTaskRunStage(payload.runId, payload.body),
     onSuccess: (updatedRun, payload) => {
       message.success('已提交优化，等待重新生成')
       setRevisionTarget(null)
       setRevisionInstruction('')
       setRevisionDraftKey('')
+      revisionAttachments.clearAttachments()
       setRunResultModal(null)
       setResultModalRunId(null)
       setStageOutputDirty(false)
@@ -689,24 +692,6 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
       return
     }
 
-    let requirement = taskRequirementQuery.data
-    if (!requirement && task?.requirementId) {
-      try {
-        requirement = await queryClient.fetchQuery({
-          queryKey: ['requirement', task.requirementId],
-          queryFn: () => api.getRequirement(task.requirementId!),
-        })
-      } catch (error) {
-        message.error(getErrorMessage(error))
-        return
-      }
-    }
-
-    if (!hasRequirementEnhancedText(requirement)) {
-      message.warning('请先完成需求分析并导入增强文本，再生成功能用例')
-      return
-    }
-
     setLlmSelectOpen(true)
   }
 
@@ -733,6 +718,7 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
       setRevisionTemplate(template)
       setRevisionInstruction(template)
       setRevisionDraftKey(key)
+      revisionAttachments.clearAttachments()
     }
     setRevisionTarget(target)
   }
@@ -772,6 +758,9 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
         stage: final ? 'detailed_cases' : selectedStage!,
         revisionInstruction: revisionInstruction.trim(),
         llmConnectionId: connectionId,
+        ...(revisionAttachments.attachments.length ? {
+          attachmentFileIds: revisionAttachments.attachments.map(item => item.fileId),
+        } : {}),
         ...(final ? { resultYaml: content } : { configJson }),
       },
     })
@@ -1473,7 +1462,7 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
                 <div className="ai-task-run-result-popover-empty">暂无内容</div>
               )}
             </div>
-          </div>{revisionTarget === 'stage' && <><RevisionDivider /><RevisionSidePanel footerContainer={revisionFooter} projectId={task?.projectId} value={revisionInstruction} onChange={setRevisionInstruction} loading={reviseStageMutation.isPending} onCancel={() => setRevisionTarget(null)} onSubmit={handleReviseStage} /></>}</div>
+          </div>{revisionTarget === 'stage' && <><RevisionDivider /><RevisionSidePanel footerContainer={revisionFooter} projectId={task?.projectId} value={revisionInstruction} onChange={setRevisionInstruction} attachments={revisionAttachments.attachments} onAddAttachment={revisionAttachments.addAttachment} onRemoveAttachment={revisionAttachments.removeAttachment} loading={reviseStageMutation.isPending} onCancel={() => setRevisionTarget(null)} onSubmit={handleReviseStage} /></>}</div>
         </Modal>
 
         <Modal
@@ -1607,7 +1596,7 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
               </div>
               {reviewRunMutation.error ? <Alert showIcon type="error" title={getErrorMessage(reviewRunMutation.error)} /> : null}
             </Form>
-          </div>{revisionTarget === 'final' && <><RevisionDivider /><RevisionSidePanel footerContainer={revisionFooter} projectId={task?.projectId} value={revisionInstruction} onChange={setRevisionInstruction} loading={reviseStageMutation.isPending} onCancel={() => setRevisionTarget(null)} onSubmit={handleReviseStage} /></>}</div>
+          </div>{revisionTarget === 'final' && <><RevisionDivider /><RevisionSidePanel footerContainer={revisionFooter} projectId={task?.projectId} value={revisionInstruction} onChange={setRevisionInstruction} attachments={revisionAttachments.attachments} onAddAttachment={revisionAttachments.addAttachment} onRemoveAttachment={revisionAttachments.removeAttachment} loading={reviseStageMutation.isPending} onCancel={() => setRevisionTarget(null)} onSubmit={handleReviseStage} /></>}</div>
         </Modal>
 
         {importConfirmRunId ? <ProjectActionModal action="execute"

@@ -216,6 +216,9 @@ export function AppShell() {
             <Route path="/change-password" element={<ChangePasswordPage />} />
             <Route path="/admin/ldap" element={<LdapSettingsPage />} />
             <Route path="/admin/users" element={<AccountManagementPage />} />
+            <Route path="/projects/board=requirements" element={<Navigate to="/projects?board=requirements" replace />} />
+            <Route path="/projects/board=sprints" element={<Navigate to="/projects?board=sprints" replace />} />
+            <Route path="*" element={<Navigate to="/projects" replace />} />
           </Routes>
           </ProjectRouteGuard>}
         </Content>

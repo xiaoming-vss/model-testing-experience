@@ -9,7 +9,7 @@ from testing_agent.db.base import Base, CreatedAt, IdPk, UpdatedAt
 class ApiEnvironment(Base):
     __tablename__ = "api_environments"
     __table_args__ = (
-        UniqueConstraint("project_id", "name", name="uk_api_environment_project_name"),
+        UniqueConstraint("project_id", "kind", "name", name="uk_api_environment_project_kind_name"),
         {"comment": "项目 API 测试环境及基础地址"},
     )
     id: Mapped[IdPk] = mapped_column(comment="数据库内部主键")
@@ -23,6 +23,9 @@ class ApiEnvironment(Base):
         ),
         nullable=False,
         comment="项目业务标识",
+    )
+    kind: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="api", comment="环境用途：api / ui"
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False, comment="名称")
     base_url: Mapped[str] = mapped_column(

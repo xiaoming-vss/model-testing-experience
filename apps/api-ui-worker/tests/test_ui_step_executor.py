@@ -68,6 +68,37 @@ def test_assert_visible_uses_operation_value_as_timeout(monkeypatch) -> None:
     assert captured == {"state": "visible", "timeout": 2500}
 
 
+def test_assert_hidden_uses_operation_value_as_timeout(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeLocator:
+        async def wait_for(self, *, state: str, timeout: int) -> None:
+            captured["state"] = state
+            captured["timeout"] = timeout
+
+    monkeypatch.setattr(
+        "test_worker.ui.step_executor.resolve_locator",
+        lambda page, step: FakeLocator(),
+    )
+
+    step = UiStepDefinition(
+        keyword="assert_hidden",
+        locator_value="text=转换格式必填",
+        operation_value="2500",
+        timeout_ms=9000,
+    )
+    context = StepExecutionContext(
+        page=object(),
+        artifact_dir="",
+        default_step_timeout_ms=5000,
+    )
+
+    result = asyncio.run(StepExecutor().execute(step, 1, context))
+
+    assert result.success is True
+    assert captured == {"state": "hidden", "timeout": 2500}
+
+
 def test_assert_url_uses_operation_value_and_ignores_expect_value() -> None:
     class FakePage:
         url = "https://example.test/dashboard"
@@ -119,6 +150,23 @@ def test_assert_visible_rejects_non_positive_timeout(operation_value) -> None:
     step = UiStepDefinition(
         keyword="assert_visible",
         locator_value="#submit",
+        operation_value=operation_value,
+    )
+    context = StepExecutionContext(
+        page=object(),
+        artifact_dir="",
+        default_step_timeout_ms=5000,
+    )
+
+    with pytest.raises(Exception, match="必须为正整数"):
+        asyncio.run(StepExecutor().execute(step, 1, context))
+
+
+@pytest.mark.parametrize("operation_value", ["0", "-1"])
+def test_assert_hidden_rejects_non_positive_timeout(operation_value) -> None:
+    step = UiStepDefinition(
+        keyword="assert_hidden",
+        locator_value="text=转换格式必填",
         operation_value=operation_value,
     )
     context = StepExecutionContext(

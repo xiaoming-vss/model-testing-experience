@@ -46,6 +46,14 @@
   padding-right: 2px;
 }
 
+/* 列表是 flex 列容器，卡片默认 flex-shrink: 1；高度不够时它们会被压扁
+   （卡片自己 overflow: hidden，展开面板的下半截直接被裁掉），列表的
+   scrollHeight 也随卡片一起收缩，滚动条永远不出现。卡片保持自然高度，
+   超出部分交给上面的 overflow-y: auto。 */
+.ui-suite-detail-page .ui-wb-pipeline > .ui-test-case-step-list > .ui-test-case-step-card {
+  flex: 0 0 auto;
+}
+
 /* 空态在长高的卡片里居中，而不是贴顶。 */
 .ui-suite-detail-page .ui-wb-pipeline > .ui-test-case-empty-editor {
   flex: 1 1 auto;

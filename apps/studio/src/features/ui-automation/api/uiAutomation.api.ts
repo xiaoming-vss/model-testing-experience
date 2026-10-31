@@ -66,7 +66,7 @@ export const uiAutomationApi = {
     }),
   deleteUiTestCase: (caseId: string) =>
     request<Record<string, never>>(`/v1/ui-test-cases/${caseId}`, { method: 'DELETE' }),
-  debugRunUiTestCase: (caseId: string, body: UiTestCaseDebugRunPayload = {}) =>
+  debugRunUiTestCase: (caseId: string, body: UiTestCaseDebugRunPayload) =>
     request<UiTestCaseRun>(`/v1/ui-test-cases/${caseId}/debug-run`, {
       method: 'POST',
       body: JSON.stringify(body),

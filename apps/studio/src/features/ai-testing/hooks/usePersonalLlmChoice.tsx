@@ -1,8 +1,11 @@
 import { api, listItems } from '@/services/api'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { LlmConnectionSelectModal } from '../components/LlmConnectionSelectModal'
 
-export function usePersonalLlmChoice(projectId?: string) {
+export function usePersonalLlmChoice(projectId?: string, runOptions?: {
+  render: (open: boolean) => ReactNode
+  confirmDisabled: boolean
+}) {
   const [instruction, setInstruction] = useState('')
   const [showInstruction, setShowInstruction] = useState(false)
   const [open, setOpen] = useState(false)
@@ -18,10 +21,12 @@ export function usePersonalLlmChoice(projectId?: string) {
     pending.current?.reject(new Error('页面已关闭'))
     pending.current = null
   }, [projectId])
-  async function requestChoice(withCheckpoint: boolean, withInstruction = false) {
+  async function requestChoice(withCheckpoint: boolean, withInstruction = false, alwaysConfirm = false) {
     if (!projectId) return Promise.reject(new Error('项目尚未加载'))
-    const connections = listItems(await api.getLlmConnections(projectId)).filter(c => c.status === 'active')
-    if (!withCheckpoint && !withInstruction && connections.length === 1) return { connectionId: connections[0].connectionId, checkpointEnabled: false, instruction: '' }
+    if (!alwaysConfirm) {
+      const connections = listItems(await api.getLlmConnections(projectId)).filter(c => c.status === 'active')
+      if (!withCheckpoint && !withInstruction && connections.length === 1) return { connectionId: connections[0].connectionId, checkpointEnabled: false, instruction: '' }
+    }
     pending.current?.reject(new Error('已取消上一次操作'))
     setShowInstruction(withInstruction)
     setInstruction('')
@@ -30,14 +35,15 @@ export function usePersonalLlmChoice(projectId?: string) {
     setOpen(true)
     return new Promise<{ connectionId: string; checkpointEnabled: boolean; instruction: string }>((resolve, reject) => { pending.current = { resolve, reject } })
   }
-  async function choose() { return (await requestChoice(false)).connectionId }
+  async function choose(options?: { alwaysConfirm?: boolean }) { return (await requestChoice(false, false, options?.alwaysConfirm)).connectionId }
   function chooseRun(withCheckpoint = true) { return requestChoice(withCheckpoint, true) }
   const dialog = <LlmConnectionSelectModal key={projectId} open={open} projectId={projectId} onClose={cancel}
+    confirmDisabled={showInstruction && runOptions?.confirmDisabled}
     instruction={instruction} onInstructionChange={showInstruction ? setInstruction : undefined}
     showCheckpointOption={showCheckpointOption} checkpointEnabled={checkpointEnabled} onCheckpointEnabledChange={setCheckpointEnabled} onConfirm={id => {
     pending.current?.resolve({ connectionId: id, checkpointEnabled, instruction })
     pending.current = null
     setOpen(false)
-  }} />
+  }}>{showInstruction ? runOptions?.render(open) : null}</LlmConnectionSelectModal>
   return { choose, chooseRun, dialog }
 }

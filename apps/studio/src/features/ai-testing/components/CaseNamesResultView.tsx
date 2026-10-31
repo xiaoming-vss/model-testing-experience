@@ -1,10 +1,12 @@
-import { useCaseTreeZoom } from '../hooks/useCaseTreeZoom'
+import { ReactFlow, Handle, Position, applyNodeChanges, getNodesBounds, getViewportForBounds, type ReactFlowInstance, type NodeProps } from '@xyflow/react'
+import '@xyflow/react/dist/style.css'
+import { buildTreeFlow, layoutTreeFlow, type TreeFlowNode } from '../utils/caseNameTreeLayout'
 import { saveBlob } from '@/shared/utils/download'
 import '@/features/ai-testing/styles/functional-import-confirm.css'
 import '@/features/ai-testing/styles/index.css'
 import '@/features/ai-testing/styles/case-name-tree.css'
 import type { CaseNameTreeNode } from '@/features/ai-testing/utils/caseNameTree'
-import { CASE_NAME_TREE_CONNECTOR_WIDTH, CASE_NAME_TREE_NODE_HEIGHT, buildCaseNameTree, countCaseNameTree, deleteCaseNameTreeNode, getModelHeight, getModelTargetYs, getPointTargetYs, getTestModelHeight, getTestModelTargetYs, getTreeHeight, renameCaseNameTreeNode, serializeCaseNameTree, updateCategoryCaseNamesContent } from '@/features/ai-testing/utils/caseNameTree'
+import { buildCaseNameTree, countCaseNameTree, deleteCaseNameTreeNode, renameCaseNameTreeNode, serializeCaseNameTree, updateCategoryCaseNamesContent } from '@/features/ai-testing/utils/caseNameTree'
 import { isJsonText } from '@/features/ai-testing/utils/functionalOutput'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
@@ -13,91 +15,9 @@ import { PictureOutlined } from '@ant-design/icons'
 import { ArtifactViewTabs } from './ArtifactViewTabs'
 import { Input, Popconfirm, Tag } from 'antd'
 import { toBlob } from 'html-to-image'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 export type CaseNamesViewMode = 'json' | 'tree'
-
-const CURVE_STROKE_META = {
-  green: { color: 'var(--app-graph-edge-primary)', width: 2 },
-  blue: { color: 'var(--app-graph-edge-reference)', width: 2 },
-  slate: { color: 'var(--app-graph-edge-muted)', width: 1.8 },
-} as const
-
-function CaseNameTreeCurves({ height, targetYs, layoutKey, tone = 'green' }: { height: number; targetYs: number[]; layoutKey: string; tone?: 'green' | 'blue' | 'slate' }) {
-  const svgRef = useRef<SVGSVGElement | null>(null)
-  const [layout, setLayout] = useState<{ height: number; targetYs: number[] } | null>(null)
-  const targetKey = targetYs.join(',')
-
-  useLayoutEffect(() => {
-    const svg = svgRef.current
-    const source = svg?.previousElementSibling
-    const targets = svg?.nextElementSibling
-    if (!source || !targets) return
-
-    // 换行后的节点高度各不相同，连接线使用实际布局中的节点中心。
-    const measure = () => {
-      const canvas = svg?.closest('.ai-case-name-tree-canvas')
-      const scale = canvas ? Number.parseFloat(getComputedStyle(canvas).zoom) || 1 : 1
-      const bounds = targets.getBoundingClientRect()
-      if (!bounds.height) return
-      const measuredHeight = Math.max(bounds.height, source.getBoundingClientRect().height)
-      const next = {
-        height: measuredHeight / scale,
-        targetYs: Array.from(targets.children, (child) => {
-          const rect = child.getBoundingClientRect()
-          return (rect.top - bounds.top + rect.height / 2 + (measuredHeight - bounds.height) / 2) / scale
-        }),
-      }
-      setLayout((current) => current?.height === next.height
-        && current.targetYs.length === next.targetYs.length
-        && current.targetYs.every((y, index) => y === next.targetYs[index]) ? current : next)
-    }
-    measure()
-    const observer = new ResizeObserver(measure)
-    observer.observe(source)
-    observer.observe(targets)
-    Array.from(targets.children).forEach((child) => observer.observe(child))
-    return () => observer.disconnect()
-  }, [height, targetKey, layoutKey])
-
-  // Collapsed branches have no targets: stale SVG geometry must not hold their rows open.
-  if (targetYs.length === 0) return null
-
-  const safeHeight = Math.max(layout?.height ?? height, CASE_NAME_TREE_NODE_HEIGHT)
-  const sourceY = safeHeight / 2
-  const width = CASE_NAME_TREE_CONNECTOR_WIDTH
-  // 描边同时写成 presentation attributes，保证 html-to-image 导出图片时曲线样式不丢失
-  const stroke = CURVE_STROKE_META[tone]
-
-  return (
-    <svg
-      ref={svgRef}
-      className={`ai-case-name-tree-curves ${tone}`}
-      width={width}
-      height={safeHeight}
-      viewBox={`0 0 ${width} ${safeHeight}`}
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
-      {(layout?.targetYs ?? targetYs).map((targetY, index) => {
-        const controlOffset = Math.min(42, Math.max(24, Math.abs(targetY - sourceY) * 0.42 + 18))
-        const d = `M 2 ${sourceY} C ${controlOffset} ${sourceY}, ${width - controlOffset} ${targetY}, ${width - 2} ${targetY}`
-        return (
-          <path
-            key={`${targetY}-${index}`}
-            d={d}
-            fill="none"
-            stroke={stroke.color}
-            strokeWidth={stroke.width}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-        )
-      })}
-    </svg>
-  )
-}
 
 function CaseNameTreeNodeView({
   node,
@@ -116,10 +36,6 @@ function CaseNameTreeNodeView({
   onSelect?: (nodeId: string) => void
   selected?: boolean
 }) {
-  const nodeRef = useRef<HTMLDivElement | null>(null)
-  useLayoutEffect(() => {
-    if (selected) nodeRef.current?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
-  }, [selected])
   const [editing, setEditing] = useState(false)
   const [draftTitle, setDraftTitle] = useState(node.title)
   const canEdit = Boolean(editable && node.kind !== 'root')
@@ -144,7 +60,7 @@ function CaseNameTreeNodeView({
   }
 
   return (
-    <div ref={nodeRef} role={onSelect ? 'button' : undefined} tabIndex={onSelect ? 0 : undefined} aria-pressed={onSelect ? Boolean(selected) : undefined} onClick={() => onSelect?.(node.id)} onKeyDown={(event) => { if (onSelect && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onSelect(node.id) } }} className={`${className}${selected ? ' is-selected' : ''}${canEdit ? ' editable' : ''}`} title={node.title}>
+    <div role={onSelect ? 'button' : undefined} tabIndex={onSelect ? 0 : undefined} aria-pressed={onSelect ? Boolean(selected) : undefined} onClick={() => onSelect?.(node.id)} onKeyDown={(event) => { if (onSelect && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onSelect(node.id) } }} className={`${className}${selected ? ' is-selected' : ''}${canEdit ? ' editable' : ''}`} title={node.title}>
       {editing ? (
         <Input
           className="ai-case-name-tree-node-input"
@@ -195,6 +111,17 @@ function CaseNameTreeNodeView({
   )
 }
 
+function FlowTreeNode({ data }: NodeProps<TreeFlowNode>) {
+  const node = data.treeNode
+  const className = node.kind === 'root' ? 'ai-case-name-tree-root' : `ai-case-name-tree-node ${node.kind === 'testModel' ? 'test-model' : node.kind}`
+  return <>
+    {node.kind !== 'root' && <Handle type="target" position={Position.Left} className="ai-case-flow-handle" />}
+    <CaseNameTreeNodeView node={node} className={className} editable={data.editable} selected={data.selected} onSelect={data.onSelect} onRename={data.onRename} onDelete={data.onDelete} />
+    {node.kind !== 'point' && <Handle type="source" position={Position.Right} className="ai-case-flow-handle" />}
+  </>
+}
+const treeNodeTypes = { caseTree: FlowTreeNode }
+
 export function CaseNameTreeView({
   content,
   rootTitle,
@@ -216,7 +143,6 @@ export function CaseNameTreeView({
 }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const sourceTree = treeData ?? buildCaseNameTree(content, rootTitle)
-  const { zoom, viewportRef } = useCaseTreeZoom(Boolean(sourceTree))
   const prune = (node: CaseNameTreeNode): CaseNameTreeNode => ({ ...node, children: collapsed.has(node.id) ? [] : node.children.map(prune) })
   const tree = treeData && sourceTree ? prune(sourceTree) : sourceTree
   const toggle = treeData ? (id: string) => setCollapsed((current) => {
@@ -227,6 +153,7 @@ export function CaseNameTreeView({
   }) : undefined
   const counts = countCaseNameTree(tree)
   const canvasRef = useRef<HTMLDivElement | null>(null)
+  const flowRef = useRef<ReactFlowInstance<TreeFlowNode> | null>(null)
   const [exportingImage, setExportingImage] = useState(false)
 
   async function handleSaveTreeImage() {
@@ -234,17 +161,17 @@ export function CaseNameTreeView({
     if (!canvas) return
     setExportingImage(true)
     try {
-      // 页面上的树卡片带有边框、圆角和渐变背景，导出时在克隆节点上补齐，保证图片与页面显示一致
+      const viewport = canvas.querySelector<HTMLElement>('.react-flow__viewport')
+      const flow = flowRef.current
+      if (!viewport || !flow) throw new Error('图谱尚未准备完成')
+      const bounds = getNodesBounds(flow.getNodes())
+      const width = Math.ceil(bounds.width + 48)
+      const height = Math.ceil(bounds.height + 48)
+      const transform = getViewportForBounds(bounds, width, height, 1, 1, 0)
       const canvasStyle = getComputedStyle(canvas)
-      const cardVisualStyle = {
-        background: canvasStyle.getPropertyValue('--graph-export-background').trim(),
-        border: canvasStyle.getPropertyValue('--graph-export-border').trim(),
-        borderRadius: '14px',
-      }
-      const blob = await toBlob(canvas, {
-        pixelRatio: 2,
-        skipFonts: true,
-        style: cardVisualStyle,
+      const blob = await toBlob(viewport, {
+        pixelRatio: 2, skipFonts: true, width, height,
+        style: { width: `${width}px`, height: `${height}px`, transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`, background: canvasStyle.getPropertyValue('--graph-export-background').trim() },
       })
       if (!blob) throw new Error('导出内容为空')
       saveBlob(blob, `${rootTitle}-测试点树图.png`)
@@ -260,7 +187,6 @@ export function CaseNameTreeView({
     return <JsonEditor value={content} showCopy={false} readOnly foldable minHeight={expanded ? 560 : 260} />
   }
 
-  const treeHeight = getTreeHeight(tree)
   const handleRename = (nodeId: string, title: string) => {
     onTreeChange?.(updateCategoryCaseNamesContent(content, nodeId, 'rename', title) ?? serializeCaseNameTree(renameCaseNameTreeNode(tree, nodeId, title)))
   }
@@ -271,79 +197,49 @@ export function CaseNameTreeView({
   return (
     <div className={treeData ? 'ai-case-tree-shell' : 'ai-case-tree-passthrough'}>
 
-      <div ref={viewportRef} title={treeData ? '滚轮上下浏览，Ctrl + 滚轮缩放图谱，点击节点查看用例' : '滚轮上下浏览，Ctrl + 滚轮缩放图谱'} className={`ai-case-name-tree${expanded ? ' expanded' : ''}${editable ? ' editable' : ''}`}>
+      <div title={treeData ? '滚轮上下浏览，Ctrl + 滚轮缩放图谱，点击节点查看用例' : '滚轮上下浏览，Ctrl + 滚轮缩放图谱'} className={`ai-case-name-tree${expanded ? ' expanded' : ''}${editable ? ' editable' : ''}`}>
       {treeData ? null : <div className="ai-case-name-tree-stats">
-        <Tag color="green">model {counts.models}</Tag>
-        <Tag color="cyan">test_model {counts.testModels}</Tag>
-        <Tag color="blue">test_points {counts.testPoints}</Tag>
-        <ProjectActionButton action="write"
-          className="ai-case-name-tree-export"
-          size="small"
-          icon={<PictureOutlined />}
-          loading={exportingImage}
-          onClick={handleSaveTreeImage}
-        >
-          保存图片
-        </ProjectActionButton>
+        <Tag color="green">model {counts.models}</Tag><Tag color="cyan">test_model {counts.testModels}</Tag><Tag color="blue">test_points {counts.testPoints}</Tag>
+        <ProjectActionButton action="write" className="ai-case-name-tree-export" size="small" icon={<PictureOutlined />} loading={exportingImage} onClick={handleSaveTreeImage}>保存图片</ProjectActionButton>
       </div>}
-      <div className="ai-case-name-tree-canvas" ref={canvasRef} style={{ zoom }}>
-        <CaseNameTreeNodeView
-          node={tree}
-          className="ai-case-name-tree-root"
-          editable={editable}
-          onRename={handleRename}
-          onDelete={handleDelete}
-        />
-        <CaseNameTreeCurves layoutKey={content} height={treeHeight} targetYs={getModelTargetYs(tree)} tone="green" />
-        <div className="ai-case-name-tree-branches">
-          {tree.children.map((model) => (
-            <div key={model.id} className="ai-case-name-tree-row">
-              <CaseNameTreeNodeView
-                node={model}
-                onSelect={toggle}
-                className="ai-case-name-tree-node model"
-                editable={editable}
-                onRename={handleRename}
-                onDelete={handleDelete}
-              />
-              <CaseNameTreeCurves layoutKey={content} height={getModelHeight(model)} targetYs={getTestModelTargetYs(model)} tone="blue" />
-              <div className="ai-case-name-tree-children">
-                {model.children.map((testModel) => (
-                  <div key={testModel.id} className="ai-case-name-tree-row nested">
-                    <CaseNameTreeNodeView
-                      node={testModel}
-                      onSelect={toggle}
-                      className="ai-case-name-tree-node test-model"
-                      editable={editable}
-                      onRename={handleRename}
-                      onDelete={handleDelete}
-                    />
-                    <CaseNameTreeCurves layoutKey={content} height={getTestModelHeight(testModel)} targetYs={getPointTargetYs(testModel)} tone="slate" />
-                    <div className="ai-case-name-tree-children point-list">
-                      {testModel.children.map((point) => (
-                        <CaseNameTreeNodeView
-                          key={point.id}
-                          node={point}
-                          selected={point.id === selectedNodeId}
-                          onSelect={onNodeSelect}
-                          className="ai-case-name-tree-node point"
-                          editable={editable}
-                          onRename={handleRename}
-                          onDelete={handleDelete}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <CaseTreeFlow tree={tree} selectedNodeId={selectedNodeId} editable={editable} onSelect={onNodeSelect} onToggle={toggle} onRename={handleRename} onDelete={handleDelete} canvasRef={canvasRef} flowRef={flowRef} />
       </div>
 
     </div>
   )
+}
+
+function CaseTreeFlow({ tree, selectedNodeId, editable, onSelect, onToggle, onRename, onDelete, canvasRef, flowRef }: {
+  tree: CaseNameTreeNode; selectedNodeId?: string; editable: boolean; onSelect?: (id: string) => void; onToggle?: (id: string) => void
+  onRename: (id: string, title: string) => void; onDelete: (id: string) => void
+  canvasRef: React.RefObject<HTMLDivElement | null>; flowRef: React.RefObject<ReactFlowInstance<TreeFlowNode> | null>
+}) {
+  const graph = useMemo(() => buildTreeFlow(tree, selectedNodeId, editable, onSelect, onRename, onDelete, onToggle), [tree, selectedNodeId, editable, onSelect, onRename, onDelete, onToggle])
+  const [nodes, setNodes] = useState(() => layoutTreeFlow(graph.nodes, graph.edges))
+  useEffect(() => {
+    setNodes(current => {
+      const previous = new Map(current.map(node => [node.id, node]))
+      return layoutTreeFlow(graph.nodes.map(node => ({ ...node, measured: previous.get(node.id)?.measured })), graph.edges)
+    })
+  }, [graph])
+  const onNodesChange = useCallback<NonNullable<React.ComponentProps<typeof ReactFlow<TreeFlowNode>>['onNodesChange']>>(changes => {
+    setNodes(current => {
+      const updated = applyNodeChanges(changes, current)
+      return changes.some(change => change.type === 'dimensions' && change.dimensions) ? layoutTreeFlow(updated, graph.edges) : updated
+    })
+  }, [graph.edges])
+  return <div ref={canvasRef} className="ai-case-flow-canvas">
+    <ReactFlow nodes={nodes} edges={graph.edges} nodeTypes={treeNodeTypes} onNodesChange={onNodesChange} onInit={instance => {
+      flowRef.current = instance
+      const firstPoint = instance.getNodes().find(node => node.data.treeNode.kind === 'point')
+      if (firstPoint && canvasRef.current) {
+        const x = Math.min(0, canvasRef.current.clientWidth - firstPoint.position.x - (firstPoint.measured?.width ?? 360) - 24)
+        void instance.setViewport({ x, y: 0, zoom: 1 })
+      }
+    }}
+      nodesDraggable={false} nodesConnectable={false} elementsSelectable={false} deleteKeyCode={null} minZoom={0.5} maxZoom={1.5}
+      panOnScroll zoomOnScroll={false} zoomActivationKeyCode="Control" proOptions={{ hideAttribution: true }} />
+  </div>
 }
 
 export function CaseNamesResultView({

@@ -1,3 +1,10 @@
+import { UiGenerationStageReviewModal } from '../components/UiGenerationStageReviewModal'
+import {
+  currentUiGenerationStage,
+  uiStageHasContent,
+  type UiGenerationStage,
+} from '../utils/uiGenerationStage'
+import { UiGenerationCaseSelector } from '../components/UiGenerationCaseSelector'
 import { ArtifactViewTabs } from '../components/ArtifactViewTabs'
 import { useTaskRunDialog, type TaskRunDialogRequest } from '../hooks/useTaskRunDialog'
 import { listTotal } from '@/shared/api/request'
@@ -9,6 +16,8 @@ import '@/features/ai-testing/styles/index.css'
 import '@/features/ai-testing/styles/task-review.css'
 import '@/features/ai-testing/styles/candidate-review.css'
 import '@/features/ai-testing/styles/task-detail-v2.css'
+import '@/features/ai-testing/styles/run-result.css'
+import '@/features/ai-testing/styles/functional-artifact-modal.css'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { UserReference } from '@/shared/components/UserReference/UserReference'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
@@ -26,7 +35,7 @@ import { ImportMigrationWarning } from '../components/ImportMigrationWarning'
 import { RunHistoryTable, RunRowActions, type RunMenuAction } from '../components/RunHistoryTable'
 import { TaskDetailInstructionEditor, TaskDetailNavItem, TaskDetailNavPanel, TaskDetailRunMetrics, TaskDetailToolbar } from '../components/TaskDetailShell'
 import { confirmDeleteRun, isRunDeletable } from '../utils/runDeletion'
-import { RunPipelineStatus } from '../components/RunPipelineStatus'
+import { RunArtifacts, RunPipelineStatus } from '../components/RunPipelineStatus'
 import { validateUiSourceArchive } from '../utils/uiSourceArchive'
 import type { UiCaseGenerateTaskRun, UiCaseGenerateTaskRunImportConflict } from '../types'
 import { parseUiCaseCandidate } from '../utils/uiCaseCandidate'
@@ -143,6 +152,24 @@ function CandidatePreview({ yaml }: { yaml: string }) {
 
 type DetailLocationState = { pendingSourceArchive?: File; pendingSourceArchiveError?: string } | null
 
+/** 需求页产物列用 configJson 字段名寻址，阶段面板用阶段名寻址。 */
+function stageForArtifact(artifact?: string): UiGenerationStage | undefined {
+  if (artifact === 'uiSurface') return 'ui_surface'
+  if (artifact === 'uiDesign') return 'ui_design'
+  if (artifact === 'resultYaml') return 'ui_yaml'
+  return undefined
+}
+
+function isStagedUiRunRecord(run?: UiCaseGenerateTaskRun) {
+  return Boolean(run?.checkpointEnabled && (run.currentStage?.startsWith('ui_') || run.currentStage === 'completed'))
+}
+
+/** 三阶段运行在任一阶段停下等待审核时，入口都应显示为审核而不是只读查看。 */
+function isStageAwaitingReview(run?: UiCaseGenerateTaskRun) {
+  return isStagedUiRunRecord(run) && run?.reviewStatus === 'pending'
+    && (run.status === 'waiting_review' || (run.currentStage === 'completed' && run.status === 'success'))
+}
+
 export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?: TaskRunDialogRequest } = {}) {
   const { taskId: routeTaskId = '' } = useParams()
   const taskId = dialogRequest?.taskId ?? routeTaskId
@@ -155,6 +182,10 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
   const pendingNavigationFile = (location.state as DetailLocationState)?.pendingSourceArchive
   const pendingNavigationError = (location.state as DetailLocationState)?.pendingSourceArchiveError
   const [selectedRunId, setSelectedRunId] = useState<string | undefined>(dialogRequest?.runId)
+  const [modalStage, setModalStage] = useState<UiGenerationStage | undefined>(() => stageForArtifact(dialogRequest?.artifact))
+  const [selectedFunctionCaseIds, setSelectedFunctionCaseIds] = useState<string[] | undefined>(undefined)
+  const [sourceCasesReady, setSourceCasesReady] = useState(false)
+  const [stageDirty, setStageDirty] = useState(false)
   const [draftYaml, setDraftYaml] = useState('')
   const [savedYaml, setSavedYaml] = useState('')
   const [reviewComment, setReviewComment] = useState('')
@@ -265,11 +296,17 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
   const resolveRunRecord = (record: UiCaseGenerateTaskRun) =>
     record.runId === selectedRunId && selectedRun ? selectedRun : record
   const { can } = useProjectAccess(taskQuery.data?.projectId ?? '')
-  const candidateEditable = selectedRun?.status === 'success' && selectedRun.reviewStatus === 'pending'
+  const isStagedUiRun = isStagedUiRunRecord(selectedRun)
+  const stagedReview = isStageAwaitingReview(selectedRun)
+  const candidateEditable = !isStagedUiRun && selectedRun?.status === 'success' && selectedRun.reviewStatus === 'pending'
   const canEditCandidate = can('write') && candidateEditable
-  const hasUnsavedChanges = draftYaml !== savedYaml
+  const hasUnsavedChanges = draftYaml !== savedYaml || stageDirty
   const canReview = canEditCandidate && Boolean(savedYaml.trim()) && !hasUnsavedChanges
   const canImport = isGenerateTaskRunImportable(selectedRun)
+  // 三阶段产物各自独立打开：产物入口决定展示阶段，行内审核入口跟随当前阶段。
+  const stageInView = isStagedUiRun && selectedRun
+    ? (modalStage && uiStageHasContent(selectedRun, modalStage) ? modalStage : currentUiGenerationStage(selectedRun))
+    : undefined
   const candidateStats = useMemo(() => {
     const parsed = parseUiCaseCandidate(draftYaml)
     return {
@@ -281,6 +318,18 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
   const importedSuiteId = selectedRun?.importedTargets.find((target) => target.targetType === 'ui_suite')?.targetId
   const conflictSuiteAvailable = !importConflict
     || listItems(suitesQuery.data).some((suite) => suite.suiteId === importConflict.suiteId)
+  const stagedFooterExtras = isStagedUiRun ? [
+    ...(canImport ? [
+      <ProjectActionButton action="execute" key="import" type="primary" aria-label="导入正式 UI 套件" onClick={openImportModal}>
+        导入正式 UI 套件
+      </ProjectActionButton>,
+    ] : []),
+    ...(selectedRun?.importStatus === 'imported' && importedSuiteId ? [
+      <Button key="view-suite" type="primary" onClick={() => navigate(`/ui-automation/suites/${importedSuiteId}`)}>
+        查看正式套件
+      </Button>,
+    ] : []),
+  ] : []
 
   const applyImportedRun = useCallback((updatedRun: UiCaseGenerateTaskRun) => {
     queryClient.setQueryData(['uiCaseGenerateTaskRun', updatedRun.runId], updatedRun)
@@ -367,6 +416,7 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
     },
   })
   // 内联指令保存单独一条：编辑弹窗那条读的是弹窗自己的 state，不能复用。
+  useEffect(() => { setSelectedFunctionCaseIds(undefined) }, [taskQuery.data?.requirementId])
   const taskInstruction = taskQuery.data?.instruction
   useEffect(() => {
     setInstructionDraft(taskInstruction ?? '')
@@ -391,7 +441,7 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
   const runMutation = useStartTaskRun({
     kind: 'ui',
     taskId,
-    startRun: (connectionId: string) => api.runUiCaseGenerateTask(taskId, { connectionId }),
+    startRun: (connectionId: string) => api.runUiCaseGenerateTask(taskId, { connectionId, functionCaseIds: selectedFunctionCaseIds, checkpointEnabled: true }),
     onStarted: (createdRun) => {
       setLlmModalOpen(false)
       setSelectedRunId(createdRun.runId)
@@ -633,13 +683,31 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
                           resolveRow={resolveRunRecord}
                           onSelect={(runId) => selectRun(runId)}
                           renderStatus={(row) => <RunPipelineStatus run={resolveRunRecord(row)} />}
+                          renderArtifacts={(row) => {
+                            const data = resolveRunRecord(row)
+                            const artifacts = isStagedUiRunRecord(data)
+                              ? [
+                                  { key: 'uiSurface', label: '元素控件清单', available: (data.availableArtifacts ?? []).includes('uiSurface') },
+                                  { key: 'uiDesign', label: 'UI 用例设计', available: (data.availableArtifacts ?? []).includes('uiDesign') },
+                                  { key: 'resultYaml', label: 'UI 用例', available: Boolean(data.hasResult) },
+                                ]
+                              : [{ key: 'resultYaml', label: 'UI 用例', available: Boolean(data.hasResult) }]
+                            return <RunArtifacts artifacts={artifacts} onOpen={(key) => {
+                              selectRun(data.runId)
+                              setModalStage(stageForArtifact(key))
+                              setCandidateModalOpen(true)
+                            }} />
+                          }}
                           getReviewedAt={(row) => resolveRunRecord(row).reviewedAt}
                           getReviewComment={(row) => resolveRunRecord(row).reviewComment}
                           getImportedAt={(row) => resolveRunRecord(row).importedAt}
                           renderActions={(row) => {
                             const data = resolveRunRecord(row)
                             const importedSuiteId = (data.importedTargets ?? []).find((target) => target.targetType === 'ui_suite')?.targetId
-                            const label = canEditCandidate && data.runId === selectedRunId ? '审核结果' : '查看候选结果'
+                            const reviewable = data.runId === selectedRunId
+                              ? canEditCandidate || (stagedReview && can('review'))
+                              : isStageAwaitingReview(data) && can('review')
+                            const label = reviewable ? '审核结果' : '查看候选结果'
                             const menuItems: RunMenuAction[] = [
                               ...(can('execute') && isGenerateTaskRunImportable(data)
                                 ? [{ key: 'importSuite', label: '导入正式 UI 套件', disabled: importMutation.isPending }]
@@ -667,6 +735,7 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
                                       onClick={(event) => {
                                         event.stopPropagation()
                                         selectRun(row.runId)
+                                        setModalStage(undefined)
                                         setCandidateModalOpen(true)
                                       }}
                                     >
@@ -707,6 +776,22 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
       </div>
       )}
 
+      {selectedRun && isStagedUiRun ? (
+        <UiGenerationStageReviewModal
+          key={`${selectedRun.runId}-${candidateEditorVersion}`}
+          open={candidateModalOpen}
+          run={selectedRun}
+          projectId={task.projectId}
+          stage={stageInView}
+          extraFooter={stagedFooterExtras}
+          onClose={closeCandidateModal}
+          onDirtyChange={setStageDirty}
+          onUpdated={updated => {
+            queryClient.setQueryData(['uiCaseGenerateTaskRun', selectedRunId], updated)
+            queryClient.invalidateQueries({ queryKey: ['uiCaseGenerateTaskRuns', taskId] })
+          }}
+        />
+      ) : (
       <Modal
         mask={{ closable: false }}
         className="ai-task-import-result-modal ui-task-candidate-result-modal"
@@ -841,6 +926,7 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
           <Empty description="请选择一条运行记录查看候选结果" />
         )}
       </Modal>
+      )}
 
       <ProjectActionModal action="write"
         mask={{ closable: false }}
@@ -957,7 +1043,11 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
         loading={runMutation.isPending}
         onClose={() => setLlmModalOpen(false)}
         onConfirm={(connectionId) => runMutation.mutate(connectionId)}
-      />
+        confirmDisabled={!sourceCasesReady}
+      >
+        <UiGenerationCaseSelector requirementId={task.requirementId} open={llmModalOpen} value={selectedFunctionCaseIds}
+          onChange={setSelectedFunctionCaseIds} onReady={setSourceCasesReady} />
+      </LlmConnectionSelectModal>
     </div>
   )}</ProjectAccessScope>)
 }

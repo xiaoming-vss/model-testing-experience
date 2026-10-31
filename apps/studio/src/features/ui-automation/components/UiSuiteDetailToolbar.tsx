@@ -5,7 +5,7 @@ import {
   HistoryOutlined,
   SaveOutlined
 } from '@ant-design/icons'
-import { Button, Tooltip } from 'antd'
+import { Button, Select, Tooltip } from 'antd'
 
 import type { UiSuiteReadiness } from '../utils/detailRunView'
 
@@ -30,6 +30,11 @@ type Props = {
   canRun: boolean
   canDebug: boolean
   canSave: boolean
+  environmentId?: string
+  environmentOptions: Array<{ label: string; value: string }>
+  environmentsLoading?: boolean
+  onEnvironmentChange: (value: string) => void
+  onOpenEnvironments: () => void
   onBack: () => void
   onOpenRunHistory: () => void
   onDebugRun: () => void
@@ -50,6 +55,11 @@ export function UiSuiteDetailToolbar({
   canRun,
   canDebug,
   canSave,
+  environmentId,
+  environmentOptions,
+  environmentsLoading,
+  onEnvironmentChange,
+  onOpenEnvironments,
   onBack,
   onOpenRunHistory,
   onDebugRun,
@@ -91,6 +101,19 @@ export function UiSuiteDetailToolbar({
       </div>
 
       <div className="ui-wb-toolbar-actions">
+        <Select
+          className="ui-wb-toolbar-environment"
+          size="small"
+          placeholder="选择 UI 环境"
+          value={environmentId || undefined}
+          loading={environmentsLoading}
+          options={environmentOptions}
+          onChange={onEnvironmentChange}
+          popupMatchSelectWidth={false}
+        />
+        <Button className="ui-wb-toolbar-manage-environment" size="small" onClick={onOpenEnvironments}>
+          环境
+        </Button>
         <Button className="ui-wb-toolbar-history" icon={<HistoryOutlined />} onClick={onOpenRunHistory}>
           运行记录{runHistoryCount > 0 ? ` (${runHistoryCount})` : ''}
         </Button>

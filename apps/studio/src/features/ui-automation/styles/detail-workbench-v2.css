@@ -215,6 +215,50 @@
   gap: 8px;
 }
 
+/* 环境选择器与「环境」按钮放在整套运行操作之前，窄屏时和按钮组一起换行。 */
+.ui-suite-detail-page .ui-wb-toolbar-environment {
+  min-width: 150px;
+  max-width: 200px;
+}
+
+/* 缺失变量补齐弹窗：变量名与输入框逐行对齐，缺失位置清单只读展示。 */
+.ui-missing-variables {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ui-missing-variable-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ui-missing-variable-name {
+  flex: 0 0 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--srf-font-mono, monospace);
+  font-size: 12px;
+}
+
+.ui-missing-variable-row .ant-input {
+  flex: 1 1 auto;
+}
+
+.ui-missing-variable-locations {
+  margin-top: 16px;
+  font-size: 12px;
+}
+
+.ui-missing-variable-locations ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--srf-text-muted);
+}
+
 /* 测试集描述：设计稿没有这一块，但它是测试集自身的说明，保留为板面末尾一行弱化文字。 */
 .ui-suite-detail-page .ui-wb-board-note.ant-typography {
   margin: 0;

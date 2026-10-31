@@ -25,6 +25,7 @@ from testing_agent.services.api_import_payload import (
     validate_api_collection_import_payload,
 )
 from testing_agent.services.import_payload import parse_import_payload
+from testing_agent.services.ui_generation_contracts import is_ui_workflow, validate_ui_yaml
 
 
 class GenerationCandidateReview:
@@ -59,7 +60,10 @@ class GenerationCandidateReview:
                 raise ErrBadRequest()
             validate_function_candidate_cases(cases)
         else:
-            validate_ui_candidate_cases(result_yaml)
+            if is_ui_workflow(run):
+                validate_ui_yaml(result_yaml)
+            else:
+                validate_ui_candidate_cases(result_yaml)
         run.result_yaml = result_yaml
         await self.execution.save(
             self.repository.session, run, intent=ExecutionIntent(actor_id=user_id)
@@ -95,7 +99,12 @@ class GenerationCandidateReview:
                         raise ErrBadRequest()
                     validate_function_candidate_cases(cases)
                 else:
-                    validate_ui_candidate_cases(run.result_yaml)
+                    if is_ui_workflow(run):
+                        if run.current_stage not in {"completed", "ui_yaml"}:
+                            raise ErrBadRequest()
+                        validate_ui_yaml(run.result_yaml)
+                    else:
+                        validate_ui_candidate_cases(run.result_yaml)
                 run.review_status = ReviewStatus.APPROVED.value
             elif action == "reject":
                 run.review_status = ReviewStatus.REJECTED.value

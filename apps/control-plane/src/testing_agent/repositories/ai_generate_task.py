@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from copy import deepcopy
+
 from sqlalchemy import func, select
 
 from testing_agent.domain.worker_context import AiDispatchContext, AiWorkerContext
@@ -30,6 +32,32 @@ class AiGenerateTaskRepository(ResourceRepository):
 
     model = AiGenerateTask
     id_column = "task_id"
+
+    async def list_ui_source_cases(
+        self, requirement_id: str, case_ids: list[str] | None = None
+    ) -> list[dict]:
+        query = (
+            select(FunctionTestCase, FunctionTestSuite.name)
+            .join(FunctionTestSuite, FunctionTestCase.suite_id == FunctionTestSuite.suite_id)
+            .where(FunctionTestSuite.requirement_id == requirement_id)
+            .order_by(FunctionTestSuite.id, FunctionTestCase.order_no, FunctionTestCase.id)
+        )
+        if case_ids is not None:
+            query = query.where(FunctionTestCase.case_id.in_(case_ids))
+        rows = (await self.session.execute(query)).all()
+        return [
+            {
+                "caseId": case.case_id,
+                "suiteId": case.suite_id,
+                "suiteName": name,
+                "module": case.module,
+                "title": case.title,
+                "priority": case.priority,
+                "caseType": case.case_type,
+                "content": deepcopy(case.content_json),
+            }
+            for case, name in rows
+        ]
 
     async def get_project(self, project_id: str) -> Project | None:
         return await self.session.scalar(select(Project).where(Project.project_id == project_id))
@@ -299,6 +327,11 @@ class AiGenerateTaskRepository(ResourceRepository):
                 FunctionTestSuite.name == name,
             )
             .with_for_update()
+        )
+
+    async def get_function_suite(self, suite_id: str) -> FunctionTestSuite | None:
+        return await self.session.scalar(
+            select(FunctionTestSuite).where(FunctionTestSuite.suite_id == suite_id)
         )
 
     async def get_case(self, case_id: str) -> FunctionTestCase | None:

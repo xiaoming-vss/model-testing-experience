@@ -14,6 +14,23 @@ it('完整流程审核通过后显示待导入', () => {
   expect(getRunPipelineModel({ status: 'success', reviewStatus: 'approved' }).statusLabel).toBe('待导入')
 })
 
+it('审核通过后图谱分析运行中仍显示执行中', () => {
+  const model = getRunPipelineModel({
+    status: 'pending',
+    reviewStatus: 'approved',
+    importStatus: 'pending',
+  })
+  expect(model.statusLabel).toBe('执行中')
+  expect(model.statusTone).toBe('processing')
+  expect(model.filterKey).toBe('running')
+})
+
+it('旧数据的等待审核且审核通过仍显示待导入', () => {
+  expect(
+    getRunPipelineModel({ status: 'waiting_review', reviewStatus: 'approved' }).statusLabel,
+  ).toBe('待导入')
+})
+
 it('未审核和拒绝仍显示各自状态', () => {
   for (const [reviewStatus, label] of [['pending', '待审核'], ['rejected', '已拒绝']]) {
     expect(getRunPipelineModel({ status: 'success', reviewStatus }, { stages: ['generate', 'review'] }).statusLabel).toBe(label)

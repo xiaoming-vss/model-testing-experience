@@ -1,3 +1,4 @@
+import { useState, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -10,18 +11,20 @@ import { requirementsApi } from '@/features/requirements/api/requirements.api'
 import { RequirementDetailPage } from './RequirementDetailPage'
 
 vi.mock('@/features/ai-testing/components/RequirementDesignWorkspace', () => ({
-  RequirementDesignWorkspace: ({ requirementId, projectId, activeTab, onTabChange, document }: {
-    requirementId: string; projectId: string; activeTab: string; onTabChange: (tab: string) => void; document: React.ReactNode
-  }) => <div>
-    <button role="tab" aria-selected={activeTab === 'content'} onClick={() => onTabChange('content')}>需求文档</button>
-    <button role="tab" aria-selected={activeTab === 'requirement_analysis'} onClick={() => onTabChange('requirement_analysis')}>需求分析</button>
-    <div hidden={activeTab !== 'content'}>{document}</div>
-    {activeTab !== 'content' ? <div data-testid="generation-workspace">{requirementId} · {projectId}</div> : null}
-  </div>,
+  RequirementDesignWorkspace: ({ requirementId, projectId, documentPreview }: {
+    requirementId: string; projectId: string; documentPreview?: ReactNode
+  }) => {
+    const [open, setOpen] = useState(false)
+    return <div data-testid="generation-workspace">
+      {requirementId} · {projectId}
+      <button type="button" onClick={() => setOpen(true)}>查看需求文档</button>
+      {open ? <div role="dialog" aria-label="需求文档">{documentPreview}</div> : null}
+    </div>
+  },
 }))
 vi.mock('@/features/requirements/components/RequirementDocumentPreviewModal', () => ({
   RequirementDocumentPreviewContent: () => <div>需求正文内容</div>,
-  RequirementDocumentPreviewModal: () => null,
+  RequirementDocumentPreviewModal: ({ open }: { open: boolean }) => open ? <div role="dialog" aria-label="需求文档">需求正文内容</div> : null,
 }))
 const clients: QueryClient[] = []
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.restoreAllMocks(); useWorkbenchStore.setState({ activeProjectId: undefined, activeSprintId: undefined }) })
@@ -38,32 +41,30 @@ function mount(forbidden = false, entry = '/requirements/req', documentType = 'd
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client)
   render(<TestThemeProvider><QueryClientProvider client={client}><MemoryRouter initialEntries={[entry]}><Routes><Route path="/projects" element={<div>需求列表页面</div>} /><Route path="/requirements/:requirementId" element={<RequirementDetailPage />} /></Routes></MemoryRouter></QueryClientProvider></TestThemeProvider>)
 }
-it('默认阅读文档，切换测试设计使用真实需求且保留文档节点', async () => {
+it('进入需求直接展示生成全景，文档交给工作区在画布内打开', async () => {
   mount()
   expect(await screen.findByRole('heading', { name: '登录需求' })).toBeInTheDocument()
-  const document = await screen.findByText('需求正文内容')
-  expect(screen.queryByTestId('generation-workspace')).not.toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: '登录需求' }).closest('.requirement-detail-header')?.parentElement).toHaveClass('requirement-detail-page')
+  expect(await screen.findByTestId('generation-workspace')).toHaveTextContent('req · canonical-project')
+  expect(screen.queryByRole('tablist', { name: '需求工作区' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('tab')).not.toBeInTheDocument()
+  expect(screen.queryByText('需求正文内容')).not.toBeInTheDocument()
   await waitFor(() => expect(useWorkbenchStore.getState()).toMatchObject({ activeProjectId: 'canonical-project', activeSprintId: 'sprint' }))
-  const user = userEvent.setup()
-  await user.click(screen.getByRole('tab', { name: '需求分析' }))
-  expect(await screen.findByTestId('generation-workspace')).toHaveTextContent('req · canonical-project')
-  expect(screen.queryByRole('separator')).not.toBeInTheDocument()
-  expect(document).not.toBeVisible()
-  await user.click(screen.getByRole('tab', { name: '需求文档' }))
-  expect(screen.getByText('需求正文内容')).toBe(document)
-  expect(document).toBeVisible()
+  await userEvent.setup().click(screen.getByRole('button', { name: '查看需求文档' }))
+  expect(await screen.findByRole('dialog', { name: '需求文档' })).toBeInTheDocument()
 })
-it.each(['design', 'requirement_analysis', 'function', 'api', 'ui'])('tab=%s 链接直接进入设计工作区', async tab => {
+it.each(['design', 'requirement_analysis', 'function', 'api', 'ui', 'codeRisk', 'content'])('旧 tab=%s 链接仍直接展示生成全景', async tab => {
   mount(false, `/requirements/req?tab=${tab}`)
   expect(await screen.findByTestId('generation-workspace')).toHaveTextContent('req · canonical-project')
-  expect(screen.getByText('需求正文内容')).not.toBeVisible()
+  expect(screen.queryByRole('tab')).not.toBeInTheDocument()
 })
-it.each(['requirement_analysis', 'function', 'api', 'ui', 'codeRisk'])('tab=%s 工作区不显示编辑需求入口', async tab => {
-  mount(false, `/requirements/req?tab=${tab}`)
+it('需求详情始终提供下载、编辑与生成链刷新入口', async () => {
+  mount()
   expect(await screen.findByRole('heading', { name: '登录需求' })).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: '编辑需求' })).not.toBeInTheDocument()
-  await userEvent.click(screen.getByRole('tab', { name: '需求文档' }))
-  expect(await screen.findByRole('button', { name: '编辑需求' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '编辑需求' })).toBeInTheDocument()
+  // 刷新从生成全景移到需求标题栏。
+  const refresh = await screen.findByRole('button', { name: '刷新' })
+  expect(refresh.closest('.requirement-detail-header')).not.toBeNull()
 })
 
 it('无权读取需求时隐藏工作区且不改变当前项目范围', async () => {
@@ -154,11 +155,10 @@ function pasteRequirementText(text: string) {
   fireEvent.paste(editor, { clipboardData: { getData: (type: string) => type === 'text/plain' ? text : '', types: ['text/plain'], files: [] } })
 }
 
-it('切换多个 Tab 后返回需求列表，保留当前项目与迭代范围', async () => {
+it('从生成全景返回需求列表，保留当前项目与迭代范围', async () => {
   mount()
   const user = userEvent.setup()
-  await user.click(await screen.findByRole('tab', { name: '需求分析' }))
-  await user.click(screen.getByRole('tab', { name: '需求文档' }))
+  await user.click(await screen.findByRole('button', { name: '查看需求文档' }))
   await user.click(screen.getByRole('button', { name: '返回需求列表' }))
   expect(await screen.findByText('需求列表页面')).toBeInTheDocument()
   expect(useWorkbenchStore.getState()).toMatchObject({ activeProjectId: 'canonical-project', activeSprintId: 'sprint' })

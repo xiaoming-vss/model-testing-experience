@@ -10,6 +10,7 @@ from testing_agent.api.deps import (
     get_generation_queries,
     get_generation_review,
     get_generation_task_commands,
+    get_ui_generation_stages,
 )
 from testing_agent.core.errors import success_payload
 from testing_agent.schemas.ai_generate_task import (
@@ -27,6 +28,7 @@ from testing_agent.services.ai_task_access import CandidateImportContext
 from testing_agent.services.ai_task_commands import GenerationTaskCommands
 from testing_agent.services.ai_task_queries import GenerationQueries
 from testing_agent.services.ui_generate_import import import_ui_run
+from testing_agent.services.ui_generation_workflow import UiGenerationWorkflow
 
 
 async def create_ui_case_generate_task(
@@ -156,4 +158,57 @@ async def import_ui_case_generate_task_run(
 ):
     return success_payload(
         await import_ui_run(service, run_id, body.suite_id, body.confirm_overwrite, user_id)
+    )
+
+
+async def save_ui_generation_stage(
+    run_id: str,
+    body: AiGenerateTaskRunRequest,
+    user_id: str = Depends(get_current_user_id),
+    service: UiGenerationWorkflow = Depends(get_ui_generation_stages),
+) -> dict:
+    return success_payload(
+        await service.save_output(
+            run_id, body.model_dump(by_alias=True, exclude_none=True), user_id
+        )
+    )
+
+
+async def review_ui_generation_stage(
+    run_id: str,
+    body: AiGenerateTaskReviewRequest,
+    user_id: str = Depends(get_current_user_id),
+    service: UiGenerationWorkflow = Depends(get_ui_generation_stages),
+) -> dict:
+    return success_payload(
+        await service.review_output(
+            run_id, body.model_dump(by_alias=True, exclude_none=True), user_id
+        )
+    )
+
+
+async def revise_ui_generation_stage(
+    run_id: str,
+    body: AiGenerateTaskReviewRequest,
+    user_id: str = Depends(get_current_user_id),
+    service: UiGenerationWorkflow = Depends(get_ui_generation_stages),
+) -> dict:
+    return success_payload(
+        await service.regenerate(run_id, body.model_dump(by_alias=True, exclude_none=True), user_id)
+    )
+
+
+async def retry_ui_generation_stage(
+    run_id: str,
+    body: AiGenerateTaskRunRequest | None = None,
+    user_id: str = Depends(get_current_user_id),
+    service: UiGenerationWorkflow = Depends(get_ui_generation_stages),
+) -> dict:
+    return success_payload(
+        await service.regenerate(
+            run_id,
+            body.model_dump(by_alias=True, exclude_none=True) if body else {},
+            user_id,
+            retry=True,
+        )
     )

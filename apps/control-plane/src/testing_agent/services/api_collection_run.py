@@ -7,6 +7,7 @@ from typing import Any
 from testing_agent.core.enums import RunStatus
 from testing_agent.core.errors import (
     ErrApiCaseRunEnvironmentMismatch,
+    ErrApiEnvironmentKindMismatch,
     ErrNotFound,
 )
 from testing_agent.core.sid import new_id
@@ -97,6 +98,8 @@ class ApiCollectionRunService:
             raise ErrNotFound()
         if environment.project_id != context.project.project_id:
             raise ErrApiCaseRunEnvironmentMismatch()
+        if environment.kind != "api":
+            raise ErrApiEnvironmentKindMismatch()
         cases = await self.repository.list_cases(collection_id)
         env_vars = await authorized_environment_vars(
             self.repository.session, user_id, environment.environment_id
@@ -157,12 +160,14 @@ class ApiCollectionRunService:
         run = await self.ensure_owned_run(user_id, collection_run_id)
         items = await self.repository.list_items(collection_run_id)
         data = dump_run(run)
+        cases = await self.repository.report_cases(list({item.case_id for item in items}))
+        case_runs = await self.repository.report_case_runs(
+            list({item.case_run_id for item in items if item.case_run_id})
+        )
         report_items = []
         for item in items:
-            api_case = await self.repository.get_case(item.case_id)
-            case_run = (
-                await self.repository.get_case_run(item.case_run_id) if item.case_run_id else None
-            )
+            api_case = cases.get(item.case_id)
+            case_run = case_runs.get(item.case_run_id) if item.case_run_id else None
             report_item = {
                 "itemId": item.item_id,
                 "caseId": item.case_id,

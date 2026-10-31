@@ -129,14 +129,24 @@
   gap: 10px;
 }
 
+.base-services-connection-card .base-services-connection-head {
+  flex-wrap: nowrap;
+}
+
 .base-services-connection-title-wrap {
   min-width: 0;
   flex: 1 1 auto;
   max-width: 100%;
 }
 
-.base-services-connection-title {
+.base-services-connection-title-wrap .ant-space-item {
   min-width: 0;
+}
+
+.base-services-connection-title {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
   line-height: 22px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -495,7 +505,7 @@
 }
 
 .base-services-connection-grid {
-  grid-template-columns: repeat(4, minmax(260px, 310px));
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
   grid-auto-rows: auto;
   gap: 18px;
 }
@@ -978,3 +988,29 @@ green stays reserved for status only. */
 .base-services-unified-panel { margin: 12px var(--app-page-gutter) 16px; }
 
 .base-services-unified-panel > .base-services-panel-body { flex: 1; height: auto; min-width: 0; }
+
+/* 桌面按可用宽度自动填充列；窄屏保留固定列数，避免卡片被压得过窄。 */
+@media (max-width: 1560px) {
+  .base-services-connection-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1220px) {
+  .base-services-connection-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 980px) {
+  .base-services-connection-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .base-services-connection-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+

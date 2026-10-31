@@ -1,4 +1,4 @@
-import type { CreateUiTestCasePayload, UiTestCase } from '@/services/api'
+import type { CreateUiTestCasePayload, UiStepSaveRule, UiTestCase } from '@/services/api'
 import { moveArrayItem } from '@/shared/utils/array'
 import { formatOptionalValue, prettyPrintValue } from '@/shared/utils/value'
 import { normalizeUiTestCaseId, pickCreatedAt } from '@/utils/format'
@@ -20,6 +20,26 @@ export type UiTestStepFormValue = {
   continueOnFailure?: boolean
   enabled?: boolean
   description?: string
+  saveTo?: UiStepSaveRule[]
+}
+
+/** 后置提取的白名单规范化：空规则保留在表单里，序列化时丢弃。 */
+export function normalizeSaveRule(rule: Partial<UiStepSaveRule>): UiStepSaveRule {
+  const source = rule.source === 'value' || rule.source === 'attribute' || rule.source === 'url'
+    ? rule.source
+    : 'text'
+  const normalized: UiStepSaveRule = {
+    name: (rule.name ?? '').trim(),
+    source,
+  }
+  if (source !== 'url') {
+    if (rule.locatorType?.trim()) normalized.locatorType = rule.locatorType.trim()
+    if (rule.locatorValue?.trim()) normalized.locatorValue = rule.locatorValue.trim()
+  }
+  if (source === 'attribute' && rule.attribute?.trim()) normalized.attribute = rule.attribute.trim()
+  if (rule.defaultValue !== undefined) normalized.defaultValue = rule.defaultValue
+  if (rule.trim === false) normalized.trim = false
+  return normalized
 }
 
 export type UiTestCaseFormValues = {
@@ -41,7 +61,7 @@ function normalizeStepValue(step: Partial<UiTestStepFormValue>, index: number): 
   const keyword = step.keyword ?? ''
   const legacyOperationValue = ['wait_text', 'assert_text', 'assert_url'].includes(keyword)
     ? step.expectValue
-    : keyword === 'assert_visible' && typeof step.timeoutMs === 'number'
+    : ['assert_visible', 'assert_hidden'].includes(keyword) && typeof step.timeoutMs === 'number'
       ? String(step.timeoutMs)
       : undefined
   const operationValue = step.operationValue?.trim() ? step.operationValue : legacyOperationValue ?? step.operationValue ?? ''
@@ -59,6 +79,7 @@ function normalizeStepValue(step: Partial<UiTestStepFormValue>, index: number): 
     continueOnFailure: Boolean(step.continueOnFailure),
     enabled: step.enabled ?? true,
     description: step.description ?? '',
+    saveTo: Array.isArray(step.saveTo) ? step.saveTo.map(normalizeSaveRule) : undefined,
   }
 }
 
@@ -102,11 +123,19 @@ export function serializeSteps(steps?: UiTestStepFormValue[]) {
       ...(requiresUiStepLocator(step.keyword?.trim()) && step.locatorValue?.trim() ? { locatorValue: step.locatorValue.trim() } : {}),
       ...(usesUiStepOperation(step.keyword?.trim()) && step.operationValue?.trim() ? { operationValue: step.operationValue.trim() } : {}),
       ...(usesUiStepComparator(step.keyword?.trim()) && step.comparator?.trim() ? { comparator: step.comparator.trim() } : {}),
+      ...buildSaveToPayload(step.saveTo),
       continueOnFailure: Boolean(step.continueOnFailure),
       enabled: step.enabled ?? true,
     }))
 
   return JSON.stringify(normalizedSteps)
+}
+
+function buildSaveToPayload(saveTo?: UiStepSaveRule[]) {
+  const rules = (saveTo ?? [])
+    .map(normalizeSaveRule)
+    .filter((rule) => rule.name)
+  return rules.length > 0 ? { saveTo: rules } : {}
 }
 
 export function serializeUiTestCaseValues(values: UiTestCaseFormValues): CreateUiTestCasePayload {

@@ -19,6 +19,7 @@ async def generate_validated(
     validate: Callable[[str], Any],
     diagnostic_dir: Path | None = None,
     report: Callable[[dict[str, Any]], None] | None = None,
+    repair_instruction: str = "返回当前阶段完整结果，沿用原有 JSON/YAML 格式，不返回补丁或额外说明。",
 ) -> str:
     prompt = inputs
     directory = diagnostic_dir / uuid4().hex if diagnostic_dir else None
@@ -46,7 +47,9 @@ async def generate_validated(
             try:
                 if not isinstance(raw, str):
                     raise ValueError("模型结果必须为文本")
-                validate(raw)
+                validation = validate(raw)
+                if inspect.isawaitable(validation):
+                    await validation
             except ValidationError as exc:
                 error = json.dumps(
                     [
@@ -84,8 +87,7 @@ async def generate_validated(
             + "\n\n【校验问题】\n"
             + error
             + "\n保留原始输入、用户要求和未涉及修改的业务内容，修复上述问题。"
-            "不得编造接口、字段、定位器或业务预期，不为通过校验删除有效用例。"
-            "返回当前阶段完整结果，沿用原有 JSON/YAML 格式，不返回补丁或额外说明。"
+            "不得编造接口、字段、定位器或业务预期，不为通过校验删除有效用例。" + repair_instruction
         )
     raise AssertionError("unreachable")
 

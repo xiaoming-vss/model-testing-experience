@@ -1,5 +1,7 @@
 # 前端（studio）
 
+[UI 用例三阶段原文审核](../control-plane/ui-three-stage-generation.md)
+
 React 单页应用，提供项目、迭代、需求、功能/API/UI 测试资产、AI 任务与执行报告的完整工作台。整体设计说明见 [DESIGN](DESIGN.md)，领域术语见 [CONTEXT](CONTEXT.md)，结构与代码规范见 [STRUCTURE](STRUCTURE.md)，界面布局与交互规范见 [UI-GUIDELINES](UI-GUIDELINES.md)。
 
 禅道同步的异步提交、轮询与恢复交互见 [集成任务交互](zentao-sync-jobs.md)。需求分析第一阶段的来源与事实核对见 [材料对照视图](requirement-material-comparison.md)，第二阶段的模块、流程和规则核对见 [需求理解对照视图](requirement-understanding-comparison.md)。
@@ -42,6 +44,7 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 - AI 测试样式按页面和组件职责维护，文件与引用约定见下表。
 - API 集合页面的查询、用例编辑、规则编辑和运行轮询分别在 `api-automation/hooks/useApiCollectionData.ts`、`useApiCaseEditing.ts`、`useApiRuleEditing.ts`、`useApiExecution.ts`。组件目录维护用例编辑器、规则弹窗、导入弹窗及运行历史/报告；查询键和缓存失效由对应 hook 管理。
 - UI 套件页面保留草稿与执行编排，步骤编辑器、导入弹窗、运行历史和报告位于 `ui-automation/components/`；单用例和套件报告共用步骤结果渲染。
+- UI 自动化复用 `features/projects/components/EnvironmentDrawer` 管理 `kind=ui` 的环境：列表工具栏、详情顶栏和调试运行都从项目 UI 环境中选择，缺变量时弹窗内联补齐后重新提交。步骤编辑器的「插入变量」弹窗复用 API 自动化的动态值选择交互，列出当前 UI 环境变量、`baseUrl` 和 UI 内置函数；XPath 定位自动插入 `{{名字|xpath}}`。步骤编辑器也可配置后置提取（`saveTo`），执行控制台汇总实际引用与写回。协议见 [UI 环境变量与后置提取](../control-plane/ui-environment-variables.md)。
 - `shared/utils/` 集中下载、分页文案与值格式化。任务产物使用 `formatStructuredContent` 保留 JSON 字符串表示；一般展示使用 `prettyPrintValue`，两者空值和字符串行为不同。
 
 ### AI 测试样式归属

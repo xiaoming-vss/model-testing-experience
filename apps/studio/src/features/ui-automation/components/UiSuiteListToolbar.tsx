@@ -1,5 +1,5 @@
 import { SearchOutlined } from '@ant-design/icons'
-import { Input, Select, Space, Tooltip } from 'antd'
+import { Button, Input, Select, Space, Tooltip } from 'antd'
 import type { InputRef } from 'antd'
 import { useEffect, useRef } from 'react'
 
@@ -24,6 +24,11 @@ export function UiSuiteListToolbar({
   onCreate,
   refreshing,
   onRefresh,
+  environmentId,
+  environmentOptions,
+  environmentsLoading,
+  onEnvironmentChange,
+  onOpenEnvironments,
 }: {
   showScopeFilters: boolean
   requirementValue: string
@@ -37,6 +42,11 @@ export function UiSuiteListToolbar({
   onCreate: () => void
   refreshing: boolean
   onRefresh: () => void
+  environmentId: string
+  environmentOptions: Array<{ label: string; value: string }>
+  environmentsLoading: boolean
+  onEnvironmentChange: (value: string) => void
+  onOpenEnvironments: () => void
 }) {
   const keywordInputRef = useRef<InputRef>(null)
 
@@ -88,6 +98,19 @@ export function UiSuiteListToolbar({
       </div>
 
       <Space size={8} className="ui-suite-list-toolbar-actions tp-refresh-actions">
+        <Select
+          className="ui-suite-list-environment-select"
+          size="small"
+          placeholder="选择 UI 环境"
+          value={environmentId || undefined}
+          options={environmentOptions}
+          loading={environmentsLoading}
+          onChange={onEnvironmentChange}
+          popupMatchSelectWidth={false}
+        />
+        <Button size="small" onClick={onOpenEnvironments}>
+          环境
+        </Button>
         <Tooltip title="刷新测试集列表">
           <ProjectActionButton
             action="read"

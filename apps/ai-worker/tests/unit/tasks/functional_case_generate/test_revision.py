@@ -44,6 +44,73 @@ class FunctionalRevisionTests(unittest.TestCase):
             ),
         )
 
+    def with_attachment(self, stage):
+        task = self.task(stage)
+        config = json.loads(task.config_json)
+        config["revisionAttachments"] = [{"fileId": "image-1", "filename": "login.png"}]
+        task.config_json = json.dumps(config)
+        return task
+
+    def downloader(self, downloads):
+        class Downloader:
+            def download(self, *, task_id, workspace, attachments):
+                downloads.append((task_id, attachments))
+                return [
+                    {
+                        "fileId": "image-1",
+                        "filename": "login.png",
+                        "sourcePath": "/tmp/revision-attachments/image-1.png",
+                        "sourceLocation": "/v1/files/image-1/download",
+                    }
+                ]
+
+        return Downloader()
+
+    def test_checkpoint_revision_passes_images_as_media(self):
+        downloads, calls = [], []
+
+        def skill(**kwargs):
+            calls.append(kwargs)
+            return '{"updated":true}'
+
+        executor = FunctionalCaseNanobotExecutor(
+            nanobot_config=NanobotConfig(),
+            skill_runner=skill,
+            chain_runner=lambda **kwargs: self.fail("must not run full chain"),
+            attachment_downloader=self.downloader(downloads),
+        )
+        executor.execute(
+            self.with_attachment("requirement_analysis"),
+            datetime.now().astimezone(),
+            lambda _: None,
+        )
+        self.assertEqual(downloads[0][0], "task")
+        self.assertEqual(calls[0]["media"], ["/tmp/revision-attachments/image-1.png"])
+        self.assertIn("【本轮优化依据图片】", calls[0]["input_text"])
+        self.assertIn("login.png", calls[0]["input_text"])
+
+    def test_final_revision_passes_images_to_detailed_batches(self):
+        downloads, calls = [], []
+
+        def batches(**kwargs):
+            calls.append(kwargs)
+            return '{"cases":[{"name":"revised"}]}'
+
+        executor = FunctionalCaseNanobotExecutor(
+            nanobot_config=NanobotConfig(),
+            detailed_batch_runner=batches,
+            chain_runner=lambda **kwargs: self.fail("must not run full chain"),
+            skill_runner=lambda **kwargs: self.fail("must not rerun upstream"),
+            attachment_downloader=self.downloader(downloads),
+        )
+        executor.execute(
+            self.with_attachment("detailed_cases"),
+            datetime.now().astimezone(),
+            lambda _: None,
+        )
+        self.assertEqual(calls[0]["media"], ["/tmp/revision-attachments/image-1.png"])
+        self.assertIn("login.png", calls[0]["revision_instruction"])
+
     def test_checkpoint_revision_uses_current_output_and_clears_instruction(self):
         for stage, expected in [
             ("requirement_analysis", "existing analysis"),

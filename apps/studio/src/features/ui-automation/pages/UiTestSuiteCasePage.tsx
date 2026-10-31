@@ -12,12 +12,16 @@ import { UI_TEMPLATE_FIELD_LABELS, isYamlFileName, type CaseImportMode, type UiT
 
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { DynamicValuePickerModal } from '@/features/projects/components/DynamicValuePickerModal'
+import { EnvironmentDrawer } from '@/features/projects/components/EnvironmentDrawer'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
 import { useRunReportRefresh } from '@/domain/runs/useRunReportRefresh'
 import {
   api,
+  ApiError,
   listItems,
+  type UiMissingVariable,
   type UiTestCase,
   type UiTestCaseRun,
   type UiTestSuiteRunSummary
@@ -32,7 +36,7 @@ import { buildUiTestCaseUpdatePayload } from '@/utils/updatePayload'
 import { CodeOutlined, UnorderedListOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InputRef } from 'antd'
-import { Alert, Button, Empty, Form, Popover } from 'antd'
+import { Alert, Button, Empty, Form, Input, Modal } from 'antd'
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { goBackOrFallback } from '@/shared/utils/backNavigation'
@@ -90,7 +94,7 @@ export function UiTestSuiteCasePage() {
   const [caseImportMode, setCaseImportMode] = useState<CaseImportMode>('upload')
   const [importYamlFile, setImportYamlFile] = useState<File | null>(null)
   const [importYamlText, setImportYamlText] = useState('')
-  const [templatePickerOpenKey, setTemplatePickerOpenKey] = useState<string | null>(null)
+  const [templatePickerTarget, setTemplatePickerTarget] = useState<{ stepIndex: number; fieldKey: UiTemplateFieldKey } | null>(null)
   const [caseForm] = Form.useForm<UiTestCaseFormValues>()
   const caseOrderRollbackRef = useRef<string[]>([])
   const templateInputRefs = useRef<Record<string, InputRef | null>>({})
@@ -116,6 +120,70 @@ export function UiTestSuiteCasePage() {
     queryFn: () => api.getSprint(sprintId),
     enabled: Boolean(sprintId),
   })
+
+  const projectId = sprintQuery.data?.projectId ?? sprintQuery.data?.project_id ?? ''
+  const environmentsQuery = useQuery({
+    queryKey: ['testEnvironments', projectId, 'ui'],
+    queryFn: () => api.getApiEnvironments(projectId, 'ui'),
+    enabled: Boolean(projectId),
+  })
+  const uiEnvironments = useMemo(() => listItems(environmentsQuery.data), [environmentsQuery.data])
+  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState('')
+  const [environmentDrawerOpen, setEnvironmentDrawerOpen] = useState(false)
+  const [missingVariables, setMissingVariables] = useState<UiMissingVariable[]>([])
+  const [missingValues, setMissingValues] = useState<Record<string, string>>({})
+  const [lastRunAction, setLastRunAction] = useState<'suite' | 'debug' | ''>('')
+  const defaultEnvironmentId = useMemo(
+    () => (uiEnvironments.find((item) => item.isDefault) ?? uiEnvironments[0])?.environmentId ?? '',
+    [uiEnvironments],
+  )
+  const resolvedEnvironmentId = selectedEnvironmentId || defaultEnvironmentId
+  const environmentVarsQuery = useQuery({
+    queryKey: ['apiEnvironmentVars', resolvedEnvironmentId],
+    queryFn: () => api.getApiEnvironmentVars(resolvedEnvironmentId),
+    enabled: Boolean(resolvedEnvironmentId),
+  })
+  const environmentVars = useMemo(
+    () => listItems(environmentVarsQuery.data),
+    [environmentVarsQuery.data],
+  )
+  // baseUrl 不在变量表里，但它是 UI 运行内置变量，插入弹窗要和它一起展示。
+  const pickerEnvironmentVars = useMemo(() => {
+    const baseUrl = uiEnvironments.find((item) => item.environmentId === resolvedEnvironmentId)?.baseUrl?.trim()
+    if (!baseUrl) return environmentVars
+    return [
+      {
+        envVarId: '__builtin_base_url__',
+        environmentId: resolvedEnvironmentId,
+        varKey: 'baseUrl',
+        value: baseUrl,
+        description: '当前环境基础地址',
+      },
+      ...environmentVars,
+    ]
+  }, [environmentVars, resolvedEnvironmentId, uiEnvironments])
+  const environmentOptions = useMemo(
+    () =>
+      uiEnvironments
+        .map((item) => ({ label: item.name, value: item.environmentId ?? '' }))
+        .filter((item) => item.value),
+    [uiEnvironments],
+  )
+  const missingEnvironmentNames = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          missingVariables
+            .filter((item) => item.kind !== 'builtin' && item.name)
+            .map((item) => String(item.name)),
+        ),
+      ),
+    [missingVariables],
+  )
+  const hasMissingBuiltin = useMemo(
+    () => missingVariables.some((item) => item.kind === 'builtin'),
+    [missingVariables],
+  )
 
   const { can } = useProjectAccess(sprintQuery.data?.projectId ?? sprintQuery.data?.project_id ?? '')
   const casesQuery = useQuery({
@@ -169,7 +237,8 @@ export function UiTestSuiteCasePage() {
     queryFn: () => api.getUiTestSuiteRunReport(selectedSuiteRunId),
     enabled: suiteRunReportOpen && Boolean(selectedSuiteRunId),
     refetchOnWindowFocus: false,
-    refetchInterval: false,
+    // 用例级进度靠报告明细轮询：打开期间与运行摘要同节奏刷新，终态自动停止。
+    refetchInterval: (query) => getRunPollingInterval(query.state.data?.status),
   })
 
   const polledSuiteRunSummary = activeSuiteRunQuery.data?.suiteRunId === selectedSuiteRunId
@@ -262,17 +331,25 @@ export function UiTestSuiteCasePage() {
     return `${stepIndex}:${fieldKey}`
   }
 
-  function getTemplatePickerKey(stepIndex: number, fieldKey: UiTemplateFieldKey) {
-    return `step-${stepIndex}-${fieldKey}`
-  }
-
   function bindTemplateInputRef(stepIndex: number, fieldKey: UiTemplateFieldKey) {
     return (instance: InputRef | null) => {
       templateInputRefs.current[getTemplateRefKey(stepIndex, fieldKey)] = instance
     }
   }
 
-  function insertBuiltinTemplate(stepIndex: number, fieldKey: UiTemplateFieldKey, token: string) {
+  // XPath 定位里的变量必须带 |xpath，插入时直接生成执行器能用的形式。
+  const templatePickerStep = templatePickerTarget
+    ? watchedSteps[templatePickerTarget.stepIndex]
+    : undefined
+  const templatePickerUsesXpath =
+    templatePickerTarget?.fieldKey === 'locatorValue' && templatePickerStep?.locatorType === 'xpath'
+
+  function formatEnvironmentTokenForTarget(name: string) {
+    if (name === 'baseUrl') return '{{baseUrl}}'
+    return templatePickerUsesXpath ? `{{${name}|xpath}}` : `{{${name}}}`
+  }
+
+  function insertTemplateToken(stepIndex: number, fieldKey: UiTemplateFieldKey, token: string) {
     const path: ['steps', number, UiTemplateFieldKey] = ['steps', stepIndex, fieldKey]
     const currentValue = (caseForm.getFieldValue(path) as string | undefined) ?? ''
     const inputRef = templateInputRefs.current[getTemplateRefKey(stepIndex, fieldKey)]
@@ -280,7 +357,7 @@ export function UiTestSuiteCasePage() {
 
     if (!inputElement) {
       caseForm.setFieldValue(path, `${currentValue}${token}`)
-      setTemplatePickerOpenKey(null)
+      setTemplatePickerTarget(null)
       return
     }
 
@@ -290,7 +367,7 @@ export function UiTestSuiteCasePage() {
     const nextCursor = selectionStart + token.length
 
     caseForm.setFieldValue(path, nextValue)
-    setTemplatePickerOpenKey(null)
+    setTemplatePickerTarget(null)
 
     requestAnimationFrame(() => {
       inputElement.focus()
@@ -298,56 +375,19 @@ export function UiTestSuiteCasePage() {
     })
   }
 
-  function renderTemplatePickerContent(stepIndex: number, fieldKey: UiTemplateFieldKey) {
-    return (
-      <div className="ui-template-picker">
-        <div className="ui-template-picker-head">
-          <div className="ui-template-picker-title">插入内置函数</div>
-          <div className="ui-template-picker-subtitle">
-            当前只会渲染
-            <strong>{` ${UI_TEMPLATE_FIELD_LABELS[fieldKey]} `}</strong>
-            里的内置函数模板，普通变量占位 <code>{'{{token}}'}</code> 不会生效。
-          </div>
-        </div>
-        <div className="ui-template-picker-list">
-          {uiBuiltinTemplateFunctions.map((item) => (
-            <button
-              key={`${fieldKey}-${item.token}`}
-              type="button"
-              className="ui-template-picker-item"
-              onClick={() => insertBuiltinTemplate(stepIndex, fieldKey, item.token)}
-            >
-              <div className="ui-template-picker-item-head">
-                <span className="ui-template-picker-item-label">{item.label}</span>
-                <code className="ui-template-picker-item-token">{item.token}</code>
-              </div>
-              <div className="ui-template-picker-item-desc">{item.description}</div>
-              {item.example ? <div className="ui-template-picker-item-example">示例：{item.example}</div> : null}
-            </button>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
   function renderTemplatePickerLabel(stepIndex: number, fieldKey: UiTemplateFieldKey, label: string) {
-    const pickerKey = getTemplatePickerKey(stepIndex, fieldKey)
-
     return (
       <div className="ui-template-picker-label">
         <span>{label}</span>
-        <Popover
-          trigger="click"
-          placement="bottomLeft"
-          open={templatePickerOpenKey === pickerKey}
-          onOpenChange={(open) => setTemplatePickerOpenKey(open ? pickerKey : null)}
-          overlayClassName="ui-template-picker-overlay"
-          content={renderTemplatePickerContent(stepIndex, fieldKey)}
+        <Button
+          type="link"
+          size="small"
+          className="ui-template-picker-trigger"
+          icon={<CodeOutlined />}
+          onClick={() => setTemplatePickerTarget({ stepIndex, fieldKey })}
         >
-          <Button type="link" size="small" className="ui-template-picker-trigger" icon={<CodeOutlined />}>
-            内置函数
-          </Button>
-        </Popover>
+          插入变量
+        </Button>
       </div>
     )
   }
@@ -420,9 +460,16 @@ export function UiTestSuiteCasePage() {
       if (!activeCaseId) {
         throw new Error('未选择可运行的 UI测试用例')
       }
+      if (!resolvedEnvironmentId) {
+        throw new Error('请先选择 UI 环境')
+      }
 
-      return api.debugRunUiTestCase(activeCaseId, buildUiSuiteDebugRunPayload(suiteQuery.data))
+      return api.debugRunUiTestCase(
+        activeCaseId,
+        buildUiSuiteDebugRunPayload(resolvedEnvironmentId, suiteQuery.data),
+      )
     },
+    onError: handleRunError,
     onSuccess: (runRecord) => {
       const runId = getUiTestCaseRunId(runRecord)
       if (!runId) {
@@ -440,9 +487,16 @@ export function UiTestSuiteCasePage() {
       if (!suiteId) {
         throw new Error('未找到可运行的 UI测试集')
       }
+      if (!resolvedEnvironmentId) {
+        throw new Error('请先选择 UI 环境')
+      }
 
-      return api.runUiTestSuite(suiteId, buildUiSuiteRunPayload(suiteQuery.data))
+      return api.runUiTestSuite(
+        suiteId,
+        buildUiSuiteRunPayload(resolvedEnvironmentId, suiteQuery.data),
+      )
     },
+    onError: handleRunError,
     onSuccess: (runRecord) => {
       const suiteRunId = getUiTestSuiteRunId(runRecord)
       if (!suiteRunId) {
@@ -466,6 +520,36 @@ export function UiTestSuiteCasePage() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['uiTestSuiteRuns', suiteId] })
     },
+  })
+
+  const saveMissingVariablesMutation = useMutation({
+    mutationFn: async () => {
+      if (!resolvedEnvironmentId) {
+        throw new Error('请先选择 UI 环境')
+      }
+      for (const name of missingEnvironmentNames) {
+        const value = missingValues[name]
+        if (value === undefined) {
+          throw new Error(`请填写变量 ${name}`)
+        }
+        await api.createApiEnvironmentVar(resolvedEnvironmentId, { varKey: name, value })
+      }
+    },
+    onSuccess: () => {
+      message.success('变量已补充，正在重新校验')
+      setMissingVariables([])
+      setMissingValues({})
+      queryClient.invalidateQueries({ queryKey: ['testEnvironments', projectId, 'ui'] })
+      if (resolvedEnvironmentId) {
+        queryClient.invalidateQueries({ queryKey: ['apiEnvironmentVars', resolvedEnvironmentId] })
+      }
+      if (lastRunAction === 'suite') {
+        runSuiteMutation.mutate()
+      } else if (lastRunAction === 'debug') {
+        debugRunMutation.mutate()
+      }
+    },
+    onError: (error) => message.error(getErrorMessage(error)),
   })
 
   const reorderCasesMutation = useMutation({
@@ -612,7 +696,7 @@ export function UiTestSuiteCasePage() {
     setCaseImportMode('upload')
     setImportYamlFile(null)
     setImportYamlText('')
-    setTemplatePickerOpenKey(null)
+    setTemplatePickerTarget(null)
     caseForm.setFieldsValue(createDefaultUiTestCaseFormValues())
   }, [caseForm, suiteId])
 
@@ -719,23 +803,51 @@ export function UiTestSuiteCasePage() {
     caseForm.setFieldsValue(nextDraft)
   }
 
+  function handleRunError(error: Error) {
+    if (error instanceof ApiError) {
+      const missing = (error.data as { missingVariables?: UiMissingVariable[] } | undefined)
+        ?.missingVariables
+      if (missing?.length) {
+        setMissingVariables(missing)
+        setMissingValues({})
+        return
+      }
+    }
+    message.error(getErrorMessage(error))
+  }
+
+  function closeMissingVariablesModal() {
+    setMissingVariables([])
+    setMissingValues({})
+  }
+
   function handleDebugRun() {
     if (!activeCaseId || isCreatingCase) return
+    if (!resolvedEnvironmentId) {
+      message.warning('请先选择 UI 环境')
+      return
+    }
 
     if (hasUnsavedCaseChanges) {
       message.warning('当前页面还有未保存修改，调试运行会基于最近一次保存的用例内容。')
     }
 
+    setLastRunAction('debug')
     debugRunMutation.mutate()
   }
 
   function handleRunSuite() {
     if (!suiteId || uiTestCases.length === 0) return
+    if (!resolvedEnvironmentId) {
+      message.warning('请先选择 UI 环境')
+      return
+    }
 
     if (hasUnsavedCaseChanges) {
       message.warning('当前页面还有未保存修改，正式运行会基于最近一次保存的用例内容。')
     }
 
+    setLastRunAction('suite')
     runSuiteMutation.mutate()
   }
 
@@ -816,6 +928,7 @@ export function UiTestSuiteCasePage() {
   }
 
   function handleSelectCase(caseId: string) {
+    setTemplatePickerTarget(null)
     setSelectedCaseId(caseId)
   }
 
@@ -892,7 +1005,20 @@ export function UiTestSuiteCasePage() {
           {requirementQuery.error ? <Alert showIcon type="error" title={getErrorMessage(requirementQuery.error)} /> : null}
           {sprintQuery.error ? <Alert showIcon type="error" title={getErrorMessage(sprintQuery.error)} /> : null}
           {uiTestCaseRunQuery.error && !currentRun ? <Alert showIcon type="error" title={getErrorMessage(uiTestCaseRunQuery.error)} /> : null}
-          {currentRun?.errorMessage ? <Alert showIcon type="error" title={currentRun.errorMessage} /> : null}
+          {environmentsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(environmentsQuery.error)} /> : null}
+          {environmentsQuery.isSuccess && uiEnvironments.length === 0 ? (
+            <Alert
+              showIcon
+              type="info"
+              title="当前项目还没有 UI 测试环境，请先在“环境”中创建并选择环境后再运行。"
+              action={
+                <Button size="small" onClick={() => setEnvironmentDrawerOpen(true)}>
+                  去创建
+                </Button>
+              }
+            />
+          ) : null}
+          {/* 运行级错误已经作为 run 行写进右栏执行控制台（见 buildUiRunLogLines），顶部不再重复告警。 */}
 
           <UiSuiteDetailToolbar
             suiteName={suiteQuery.data?.name || '-'}
@@ -904,9 +1030,14 @@ export function UiTestSuiteCasePage() {
             runningSuite={runSuiteMutation.isPending}
             debugging={debugRunMutation.isPending}
             saving={createCaseMutation.isPending || updateCaseMutation.isPending}
-            canRun={Boolean(suiteId) && uiTestCases.length > 0}
-            canDebug={Boolean(activeCaseId) && !isCreatingCase}
+            canRun={Boolean(suiteId) && uiTestCases.length > 0 && Boolean(resolvedEnvironmentId)}
+            canDebug={Boolean(activeCaseId) && !isCreatingCase && Boolean(resolvedEnvironmentId)}
             canSave={showEditorForm}
+            environmentId={resolvedEnvironmentId}
+            environmentOptions={environmentOptions}
+            environmentsLoading={environmentsQuery.isLoading}
+            onEnvironmentChange={setSelectedEnvironmentId}
+            onOpenEnvironments={() => setEnvironmentDrawerOpen(true)}
             onBack={() => goBackOrFallback(navigate, '/testing?tab=ui')}
             onOpenRunHistory={() => setSuiteRunHistoryOpen(true)}
             onDebugRun={handleDebugRun}
@@ -1084,6 +1215,86 @@ export function UiTestSuiteCasePage() {
       <UiSuiteRunHistory suiteRunHistoryOpen={suiteRunHistoryOpen} setSuiteRunHistoryOpen={setSuiteRunHistoryOpen} suiteRunHistoryQuery={suiteRunHistoryQuery} suiteRunHistory={suiteRunHistory} loadingSuiteRunHistoryId={loadingSuiteRunHistoryId} handleOpenSuiteRunHistoryItem={handleOpenSuiteRunHistoryItem} />
 
       <UiSuiteRunReport suiteRunReportOpen={suiteRunReportOpen} closeSuiteRunReport={closeSuiteRunReport} suiteRunReportQuery={suiteRunReportQuery} suiteRunReport={suiteRunReport} handleRefreshSuiteRunReport={handleRefreshSuiteRunReport} refreshingSuiteRunReport={refreshingSuiteRunReport} selectedSuiteRunId={selectedSuiteRunId} suiteRunReportView={suiteRunReportView} setSuiteRunReportView={setSuiteRunReportView} orderedSuiteRunItems={orderedSuiteRunItems} selectedSuiteRunSummary={selectedSuiteRunSummary} expandedSuiteRunItemIds={expandedSuiteRunItemIds} toggleSuiteRunItem={toggleSuiteRunItem} />
+
+      <EnvironmentDrawer
+        open={environmentDrawerOpen}
+        projectId={projectId}
+        kind="ui"
+        currentEnvironmentId={resolvedEnvironmentId}
+        onClose={() => setEnvironmentDrawerOpen(false)}
+        onSelectEnvironment={(environmentId) => setSelectedEnvironmentId(environmentId ?? '')}
+      />
+
+      <DynamicValuePickerModal
+        open={Boolean(templatePickerTarget)}
+        environmentVars={pickerEnvironmentVars}
+        hasEnvironment={Boolean(resolvedEnvironmentId)}
+        environmentLoading={environmentVarsQuery.isLoading}
+        builtinFunctions={uiBuiltinTemplateFunctions}
+        formatVariableToken={formatEnvironmentTokenForTarget}
+        targetLabel={
+          templatePickerTarget ? UI_TEMPLATE_FIELD_LABELS[templatePickerTarget.fieldKey] : undefined
+        }
+        onInsert={(token) => {
+          if (!templatePickerTarget) return
+          insertTemplateToken(templatePickerTarget.stepIndex, templatePickerTarget.fieldKey, token)
+        }}
+        onClose={() => setTemplatePickerTarget(null)}
+      />
+
+      <Modal
+        open={missingVariables.length > 0}
+        title="运行前缺少变量"
+        okText="保存并重新运行"
+        cancelText="稍后处理"
+        destroyOnHidden
+        confirmLoading={saveMissingVariablesMutation.isPending}
+        okButtonProps={{ disabled: hasMissingBuiltin }}
+        onOk={() => saveMissingVariablesMutation.mutate()}
+        onCancel={closeMissingVariablesModal}
+      >
+        {hasMissingBuiltin ? (
+          <Alert
+            showIcon
+            type="warning"
+            title="所选 UI 环境未配置基础地址（baseUrl），请先在环境管理中补充。"
+            style={{ marginBottom: 12 }}
+          />
+        ) : null}
+        {missingEnvironmentNames.length > 0 ? (
+          <>
+            <Text type="secondary">以下变量在所选 UI 环境中不存在，填写后保存到环境并重新运行。</Text>
+            <div className="ui-missing-variables">
+              {missingEnvironmentNames.map((name) => (
+                <label key={name} className="ui-missing-variable-row">
+                  <span className="ui-missing-variable-name">{name}</span>
+                  <Input
+                    size="small"
+                    placeholder={`请输入 ${name} 的值`}
+                    value={missingValues[name] ?? ''}
+                    onChange={(event) =>
+                      setMissingValues((current) => ({ ...current, [name]: event.target.value }))
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+          </>
+        ) : null}
+        <div className="ui-missing-variable-locations">
+          <Text strong>缺失位置</Text>
+          <ul>
+            {missingVariables.map((item, index) => (
+              <li key={`${item.caseId ?? ''}-${item.orderNo ?? ''}-${item.field ?? ''}-${item.name ?? ''}-${index}`}>
+                {[item.caseName, item.stepName, item.field]
+                  .filter(Boolean)
+                  .join(' / ')}
+                ：{item.name}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Modal>
     </div>
   )}</ProjectAccessScope>)
 }

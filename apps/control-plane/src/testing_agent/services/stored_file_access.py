@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import ErrNotFound
-from testing_agent.models.ai_generate_task import AiGenerateTask
+from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
 from testing_agent.models.bug import Bug
 from testing_agent.models.project_skill_space import ProjectSkillSpace
 from testing_agent.models.requirement import Requirement
@@ -37,6 +37,15 @@ async def require_file_resource(session: AsyncSession, row: StoredFile) -> None:
     elif row.resource_type == "bug" and row.purpose == "attachment":
         query = select(Bug.bug_id).where(
             Bug.bug_id == row.resource_id, Bug.project_id == row.project_id
+        )
+    elif row.resource_type == "ai_generate_run" and row.purpose == "attachment":
+        query = (
+            select(AiGenerateTaskRun.run_id)
+            .join(AiGenerateTask, AiGenerateTask.task_id == AiGenerateTaskRun.task_id)
+            .where(
+                AiGenerateTaskRun.run_id == row.resource_id,
+                AiGenerateTask.project_id == row.project_id,
+            )
         )
     elif row.resource_type == "ui_source_archive" and row.purpose == "ui_source_archive":
         query = select(AiGenerateTask.task_id).where(

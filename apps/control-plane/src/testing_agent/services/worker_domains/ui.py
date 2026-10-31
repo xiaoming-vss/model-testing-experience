@@ -17,12 +17,14 @@ from testing_agent.repositories.worker_task import WorkerTaskRepository
 from testing_agent.schemas.workers import (
     WorkerTaskEventRequest,
 )
+from testing_agent.services.execution_secrets import private_payload, redact
 from testing_agent.services.ui_execution_payload import (
     ui_case_payload as ui_case_model_payload,
 )
 from testing_agent.services.ui_execution_payload import (
     ui_suite_payload as ui_suite_model_payload,
 )
+from testing_agent.services.ui_run_variable_records import record_step_variable_usage
 from testing_agent.services.worker_domains.events import (
     final_run_status,
     parse_event_time,
@@ -101,7 +103,9 @@ async def complete_run(
         if run:
             run.trace_path = body.trace_path or ""
             run.status = status
-            run.error_message = body.error_message or ""
+            run.error_message = redact(
+                body.error_message or "", private_payload(run).get("secrets", [])
+            )
             run.finished_at = parse_event_time(body.finished_at) or datetime.now(UTC)
             if body.duration_ms is not None:
                 run.duration_ms = body.duration_ms
@@ -110,8 +114,14 @@ async def complete_run(
         if run:
             run.trace_path = body.trace_path or ""
             run.status = status
-            run.step_results_json = body.step_results or run.step_results_json
-            run.error_message = body.error_message or ""
+            record_step_variable_usage(run, body.step_results)
+            if body.step_results:
+                run.step_results_json = redact(
+                    body.step_results, private_payload(run).get("secrets", [])
+                )
+            run.error_message = redact(
+                body.error_message or "", private_payload(run).get("secrets", [])
+            )
             run.finished_at = parse_event_time(body.finished_at) or datetime.now(UTC)
             if body.duration_ms is not None:
                 run.duration_ms = body.duration_ms
@@ -139,11 +149,21 @@ async def complete_item(
         raise ErrBadRequest()
     item.status = final_run_status(body.status)
     item.snapshot_json = body.snapshot_json or item.snapshot_json
-    item.step_results_json = body.step_results or item.step_results_json
     item.error_message = body.error_message or ""
     item.finished_at = parse_event_time(body.finished_at) or datetime.now(UTC)
     if body.duration_ms is not None:
         item.duration_ms = body.duration_ms
+    suite_run = await repository.session.scalar(
+        select(UiTestSuiteRun).where(UiTestSuiteRun.suite_run_id == item.suite_run_id)
+    )
+    if suite_run:
+        record_step_variable_usage(suite_run, body.step_results)
+        secrets = private_payload(suite_run).get("secrets", [])
+        if body.step_results:
+            item.step_results_json = redact(body.step_results, secrets)
+        item.error_message = redact(item.error_message, secrets)
+    elif body.step_results:
+        item.step_results_json = body.step_results
     await update_ui_item_counts(repository.session, item.suite_run_id)
     return item.status
 

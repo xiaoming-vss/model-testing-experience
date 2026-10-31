@@ -9,9 +9,18 @@
 .requirement-detail-main { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: hidden; }
 @media (max-width: 840px) { .requirement-detail-summary { flex-basis: 100%; } .requirement-detail-actions { margin-left: auto; } }
 
-.requirement-detail-container { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; min-width: 0; }
+.requirement-detail-page > .requirement-detail-header { border: 1px solid var(--app-surface-border); border-radius: 12px; background: var(--app-list-toolbar-bg); }
 
 .requirement-detail-tabs { flex: 0 0 auto; min-width: 0; max-width: 100%; }
 .requirement-detail-tabs:empty { display: none; }
 
 .requirement-detail-workspace-actions:empty, .requirement-detail-workspace-actions:has(> [hidden]) { display: none; }
+
+/* 质量档案：正式测试资产按 effective_import_id 展示来源。 */
+
+/* 需求详情中的原文与增强文本随画布阅读容器分配高度，分别在列内滚动。 */
+.requirement-detail-main .requirement-document-inline .requirement-document-workspace {
+  flex: 1 1 0%;
+  min-height: 0;
+  height: 100%;
+}

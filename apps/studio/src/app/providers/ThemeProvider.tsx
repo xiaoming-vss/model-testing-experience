@@ -16,7 +16,7 @@ const themeConfig = {
     colorBgBase: '#f5f8fc',
     colorBgContainer: '#ffffff',
     colorBgElevated: '#ffffff',
-    colorBgLayout: '#f0f4f9',
+    colorBgLayout: '#f8fafd',
     colorBorder: '#c7d0e3',
     colorBorderSecondary: '#d3ddeb',
     colorText: '#35455d',
@@ -38,7 +38,7 @@ const themeConfig = {
     Layout: {
       headerBg: '#f5f8fc',
       siderBg: '#f5f8fc',
-      bodyBg: '#f0f4f9',
+      bodyBg: '#f8fafd',
       triggerBg: '#f5f8fc',
     },
     Menu: {

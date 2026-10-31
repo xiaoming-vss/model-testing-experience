@@ -113,6 +113,7 @@ async def run_functional_detailed_case_batches(
     current_cases_json: str = "",
     revision_instruction: str = "",
     source_text: str = "",
+    media: list[str] | None = None,
 ) -> str:
     """执行 detailed cases 的分片生成并合并结果。"""
 
@@ -166,7 +167,9 @@ async def run_functional_detailed_case_batches(
                 module=batch["model_name"],
                 batch=index,
                 previous_cases=merged_cases,
-                generate=lambda prompt: bot.run(prompt, session_key=session_key),
+                generate=lambda prompt: bot.run(
+                    prompt, session_key=session_key, **({"media": media} if media else {})
+                ),
                 inputs=build_skill_message(
                     skill_name=skill_name,
                     body_text=body,

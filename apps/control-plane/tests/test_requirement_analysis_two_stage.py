@@ -1,10 +1,10 @@
 import json
 from copy import deepcopy
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 from support.execution_writer import MemoryExecutionWriter
+from support.requirement_analysis import example
 
 from testing_agent.core.errors import AppError
 from testing_agent.domain.ai_tasks import next_requirement_analysis_stage
@@ -16,12 +16,6 @@ from testing_agent.services.requirement_analysis_contracts import (
     validate_run_output,
 )
 from testing_agent.services.worker_task import WorkerTaskService
-
-FIXTURES = Path(__file__).resolve().parent / "fixtures/requirement_artifacts"
-
-
-def example(name):
-    return json.loads((FIXTURES / (name + ".example.json")).read_text())
 
 
 def run(version=2):
@@ -505,3 +499,34 @@ def test_compact_result_survives_review_import_and_downstream_snapshot():
     )
     assert json.loads(imported)["schemaVersion"] == "2.0"
     assert "sourceReferences" not in imported
+
+
+@pytest.mark.asyncio
+async def test_chain_review_can_pause_without_dispatching_next_stage(monkeypatch):
+    candidate, added = run(), []
+
+    async def owned(*args, **kwargs):
+        return candidate
+
+    async def commit():
+        pass
+
+    async def refresh(value):
+        pass
+
+    monkeypatch.setattr(workflow, "dump_run", lambda value: {"status": value.status})
+    repository = SimpleNamespace(session=None, commit=commit, refresh=refresh, add=added.append)
+    service = workflow.GenerationStageWorkflow(
+        repository=repository, owned_run=owned, execution_writer=MemoryExecutionWriter()
+    )
+    result = await service.review_requirement_analysis_stage(
+        "run",
+        {"stage": "extracting_text", "action": "approve"},
+        "user",
+        continue_after=False,
+    )
+    assert result["status"] == "success"
+    assert candidate.status == "success"
+    assert candidate.stage_status == "completed"
+    assert candidate.current_stage == "extracting_text"
+    assert added == []

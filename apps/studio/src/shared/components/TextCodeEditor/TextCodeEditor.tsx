@@ -50,6 +50,7 @@ export function TextCodeEditor({
       <div className="json-editor-shell">
         <CodeMirror
           value={value ?? ''}
+          theme="none"
           height={typeof height === 'number' ? `${height}px` : height}
           minHeight={`${minHeight}px`}
           basicSetup={{

@@ -2,11 +2,14 @@ import '@/features/ui-automation/styles/index.css'
 import '@/features/ui-automation/styles/step-editor-layout.css'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import {
+  isValidUiIntegerOrVariable,
+  isValidUiOpenUrl,
   isValidUiStepComparator,
   isValidUiStepKeyword,
   isValidUiStepLocatorType,
   requiresUiStepLocator,
   uiTestComparatorOptions,
+  uiStepSaveSourceOptions,
   uiTestKeywordOptions,
   uiTestLocatorTypeOptions,
   usesUiStepComparator
@@ -25,7 +28,7 @@ import { Empty, Form, Input, Select, Switch, Tooltip } from 'antd'
 import type { ProjectAction } from '@/features/projects/types'
 
 import { UiStepResultBadge } from './UiStepResultBadge'
-import type { JSX } from 'react'
+import { useLayoutEffect, useRef, type JSX } from 'react'
 
 type Props = {
   addStep: (add: (defaultValue?: UiTestStepFormValue | undefined, insertIndex?: number | undefined) => void, stepCount: number) => void
@@ -46,6 +49,44 @@ type Props = {
 
 export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, draggingStepIndex, handleStepDrop, can, handleStepDragStart, setDraggingStepIndex, toggleStepPanel, removeStep, renderTemplatePickerLabel, bindTemplateInputRef, stepResults = [] }: Props) {
   const stepResultByOrder = indexUiRunStepResultsByOrder(stepResults)
+  const stepListRef = useRef<HTMLDivElement | null>(null)
+  const previousExpandedRef = useRef(expandedStepIndexes)
+  // 同一用例内允许跨步骤重名（后写覆盖），编辑器提示第一次写入的步骤号。
+  const saveNameOwners = new Map<string, number>()
+  watchedSteps.forEach((step, stepIndex) => {
+    step.saveTo?.forEach((rule) => {
+      const name = rule.name?.trim()
+      if (name && !saveNameOwners.has(name)) saveNameOwners.set(name, stepIndex)
+    })
+  })
+
+  // 展开靠后的步骤时，新露出的表单在列表可视区下方，看起来像被「添加步骤」挡住。
+  // 只对这次新展开的卡片做最小滚动：卡片能整张放进列表就滚到完整可见，放不下就对到列表顶部。
+  useLayoutEffect(() => {
+    const previousExpanded = previousExpandedRef.current
+    previousExpandedRef.current = expandedStepIndexes
+    const newlyExpandedIndex = [...expandedStepIndexes].reverse().find((index) => !previousExpanded.includes(index))
+    if (newlyExpandedIndex === undefined) return
+
+    const list = stepListRef.current
+    const card = list?.querySelector<HTMLElement>(`[data-step-index="${newlyExpandedIndex}"]`)
+    if (!list || !card) return
+
+    const listRect = list.getBoundingClientRect()
+    const cardRect = card.getBoundingClientRect()
+    if (cardRect.height <= list.clientHeight) {
+      if (cardRect.top < listRect.top) {
+        list.scrollTop -= listRect.top - cardRect.top
+      } else if (cardRect.bottom > listRect.bottom) {
+        list.scrollTop += cardRect.bottom - listRect.bottom
+      }
+      return
+    }
+
+    if (cardRect.top < listRect.top || cardRect.top > listRect.bottom) {
+      list.scrollTop += cardRect.top - listRect.top
+    }
+  }, [expandedStepIndexes])
 
   return (
     <Form.List name="steps">
@@ -60,7 +101,7 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
               </Empty>
             </div>
           ) : (
-            <div className="ui-test-case-step-list">
+            <div className="ui-test-case-step-list" ref={stepListRef}>
               {fields.map((field, index) => {
                 const { key: fieldKey, ...fieldProps } = field
                 const step = watchedSteps[index]
@@ -84,6 +125,7 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                 return (
                   <div
                     key={fieldKey}
+                    data-step-index={index}
                     className={`ui-test-case-step-card${expanded ? ' expanded' : ''}${draggingStepIndex === index ? ' dragging' : ''}`}
                     onDragOver={(event) => {
                       event.preventDefault()
@@ -262,6 +304,15 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                           className={`ui-test-case-step-field ${operationValueFieldClass}`}
                           dependencies={[['steps', field.name, 'keyword']]}
                           rules={[
+                            {
+                              warningOnly: true,
+                              validator(_, value: string | undefined) {
+                                if (value && /\{\{\s*baseUrl\s*\}\}(?![/?#]|$)/.test(value.trim())) {
+                                  return Promise.reject(new Error('{{baseUrl}} 后面建议加 /，避免和域名拼在一起'))
+                                }
+                                return Promise.resolve()
+                              },
+                            },
                             ({ getFieldValue }) => ({
                               validator(_, value: string | undefined) {
                                 const keyword = getFieldValue(['steps', field.name, 'keyword'])
@@ -269,12 +320,12 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
 
                                 if (keyword === 'open') {
                                   if (!trimmedValue) {
-                                    return Promise.reject(new Error('open 步骤请填写完整 URL'))
+                                    return Promise.reject(new Error('open 步骤请填写完整 URL 或 {{baseUrl}} 模板'))
                                   }
-                                  if (/^https?:\/\//i.test(trimmedValue)) {
+                                  if (isValidUiOpenUrl(trimmedValue)) {
                                     return Promise.resolve()
                                   }
-                                  return Promise.reject(new Error('open 步骤请填写完整 URL'))
+                                  return Promise.reject(new Error('open 步骤请填写完整 URL 或 {{baseUrl}} 模板'))
                                 }
 
                                 const requiredValueLabels: Record<string, string> = {
@@ -288,14 +339,14 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                                   return Promise.reject(new Error(`${keyword} 步骤请填写${requiredValueLabels[keyword]}`))
                                 }
 
-                                if (keyword === 'sleep' || keyword === 'assert_visible') {
+                                if (keyword === 'sleep' || keyword === 'assert_visible' || keyword === 'assert_hidden') {
                                   if (!trimmedValue) {
                                     return Promise.reject(new Error(`${keyword} 步骤请填写毫秒数`))
                                   }
-                                  if (/^\d+$/.test(trimmedValue)) {
+                                  if (isValidUiIntegerOrVariable(trimmedValue)) {
                                     return Promise.resolve()
                                   }
-                                  return Promise.reject(new Error(`${keyword} 步骤请填写非负整数毫秒数`))
+                                  return Promise.reject(new Error(`${keyword} 步骤请填写非负整数毫秒数或变量模板`))
                                 }
 
                                 if (!trimmedValue) {
@@ -348,6 +399,171 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                         >
                           <Select placeholder="请选择比较器" options={uiTestComparatorOptions} />
                         </Form.Item>
+                      </div>
+
+                      <div className="ui-test-case-step-extract">
+                        <div className="ui-test-case-step-extract-head">
+                          <span className="ui-test-case-step-extract-title">后置提取</span>
+                          <span className="ui-test-case-step-extract-hint">
+                            步骤成功后读取页面上的值，立即写回环境变量
+                          </span>
+                        </div>
+                        <Form.List name={[field.name, 'saveTo']}>
+                          {(saveFields, { add: addSaveRule, remove: removeSaveRule }) => (
+                            <>
+                              {saveFields.length === 0 ? (
+                                <div className="ui-test-case-step-extract-empty">当前没有提取规则</div>
+                              ) : null}
+                              {saveFields.map((saveField) => {
+                                const { key: saveKey, ...saveFieldProps } = saveField
+                                const ruleName = step?.saveTo?.[saveField.name]?.name?.trim() ?? ''
+                                const ownerStepIndex = ruleName ? saveNameOwners.get(ruleName) : undefined
+                                return (
+                                  <div key={saveKey} className="ui-test-case-step-extract-row">
+                                    <Form.Item
+                                      {...saveFieldProps}
+                                      name={[saveField.name, 'name']}
+                                      className="ui-test-case-step-extract-name"
+                                      extra={
+                                        ownerStepIndex !== undefined && ownerStepIndex < index ? (
+                                          <span className="ui-test-case-step-extract-warning">
+                                            同名变量会覆盖第 {ownerStepIndex + 1} 步写入的值
+                                          </span>
+                                        ) : undefined
+                                      }
+                                      rules={[
+                                        { required: true, whitespace: true, message: '请输入变量名' },
+                                        {
+                                          validator(_, value: string | undefined) {
+                                            const name = value?.trim() ?? ''
+                                            if (!name) return Promise.resolve()
+                                            if (/[{}|]/.test(name) || /\s/.test(name)) {
+                                              return Promise.reject(new Error('变量名不能包含空白、{ } 或 |'))
+                                            }
+                                            if (name === 'baseUrl') {
+                                              return Promise.reject(new Error('baseUrl 是内置变量名'))
+                                            }
+                                            if (name.startsWith('$') || name.startsWith('data.')) {
+                                              return Promise.reject(new Error('变量名不能以 $ 或 data. 开头'))
+                                            }
+                                            return Promise.resolve()
+                                          },
+                                        },
+                                      ]}
+                                    >
+                                      <Input placeholder="变量名" maxLength={120} />
+                                    </Form.Item>
+                                    <Form.Item
+                                      {...saveFieldProps}
+                                      name={[saveField.name, 'source']}
+                                      className="ui-test-case-step-extract-source"
+                                      initialValue="text"
+                                    >
+                                      <Select options={uiStepSaveSourceOptions} />
+                                    </Form.Item>
+                                    <Form.Item
+                                      {...saveFieldProps}
+                                      name={[saveField.name, 'locatorType']}
+                                      className="ui-test-case-step-extract-locator-type"
+                                      dependencies={[['steps', field.name, 'saveTo', saveField.name, 'locatorValue']]}
+                                    >
+                                      <Select
+                                        allowClear
+                                        placeholder="定位方式"
+                                        options={uiTestLocatorTypeOptions}
+                                        optionFilterProp="label"
+                                        showSearch
+                                      />
+                                    </Form.Item>
+                                    <Form.Item
+                                      {...saveFieldProps}
+                                      name={[saveField.name, 'locatorValue']}
+                                      className="ui-test-case-step-extract-locator-value"
+                                      dependencies={[['steps', field.name, 'saveTo', saveField.name, 'locatorType']]}
+                                      rules={[
+                                        ({ getFieldValue }) => ({
+                                          validator(_, value: string | undefined) {
+                                            const path = ['steps', field.name, 'saveTo', saveField.name] as const
+                                            const locatorType = getFieldValue([...path, 'locatorType']) as string | undefined
+                                            const source = getFieldValue([...path, 'source']) as string | undefined
+                                            const locatorValue = value?.trim() ?? ''
+                                            if (source === 'url') return Promise.resolve()
+                                            if (/\{\{/.test(locatorValue)) {
+                                              return Promise.reject(new Error('提取定位不支持变量'))
+                                            }
+                                            if (Boolean(locatorType?.trim()) !== Boolean(locatorValue)) {
+                                              return Promise.reject(new Error('定位方式与定位值需要同时填写或同时留空'))
+                                            }
+                                            const stepLocatorType = getFieldValue(['steps', field.name, 'locatorType']) as string | undefined
+                                            const stepLocatorValue = getFieldValue(['steps', field.name, 'locatorValue']) as string | undefined
+                                            if (!locatorType?.trim() && !locatorValue && !(stepLocatorType?.trim() && stepLocatorValue?.trim())) {
+                                              return Promise.reject(new Error('本步骤没有可继承的定位，请填写定位方式与定位值'))
+                                            }
+                                            return Promise.resolve()
+                                          },
+                                        }),
+                                      ]}
+                                    >
+                                      <Input placeholder="定位值，留空继承步骤定位" maxLength={400} />
+                                    </Form.Item>
+                                    <Form.Item
+                                      {...saveFieldProps}
+                                      name={[saveField.name, 'attribute']}
+                                      className="ui-test-case-step-extract-attribute"
+                                      dependencies={[['steps', field.name, 'saveTo', saveField.name, 'source']]}
+                                      rules={[
+                                        ({ getFieldValue }) => ({
+                                          validator(_, value: string | undefined) {
+                                            const source = getFieldValue([
+                                              'steps',
+                                              field.name,
+                                              'saveTo',
+                                              saveField.name,
+                                              'source',
+                                            ]) as string | undefined
+                                            if (source === 'attribute' && !value?.trim()) {
+                                              return Promise.reject(new Error('属性来源必须填写属性名'))
+                                            }
+                                            return Promise.resolve()
+                                          },
+                                        }),
+                                      ]}
+                                    >
+                                      <Input placeholder="属性名（属性来源必填）" maxLength={120} />
+                                    </Form.Item>
+                                    <Form.Item
+                                      {...saveFieldProps}
+                                      name={[saveField.name, 'defaultValue']}
+                                      className="ui-test-case-step-extract-default"
+                                    >
+                                      <Input placeholder="默认值（可选）" maxLength={400} />
+                                    </Form.Item>
+                                    <Tooltip title="删除提取规则">
+                                      <ProjectActionButton
+                                        action="write"
+                                        type="text"
+                                        size="small"
+                                        operation="delete"
+                                        iconOnly
+                                        className="ui-test-case-step-extract-remove action-btn-delete"
+                                        onClick={() => removeSaveRule(saveField.name)}
+                                      />
+                                    </Tooltip>
+                                  </div>
+                                )
+                              })}
+                              <ProjectActionButton
+                                action="write"
+                                type="dashed"
+                                size="small"
+                                operation="create"
+                                onClick={() => addSaveRule({ name: '', source: 'text' })}
+                              >
+                                添加提取
+                              </ProjectActionButton>
+                            </>
+                          )}
+                        </Form.List>
                       </div>
 
                       <div className="ui-test-case-step-footer">

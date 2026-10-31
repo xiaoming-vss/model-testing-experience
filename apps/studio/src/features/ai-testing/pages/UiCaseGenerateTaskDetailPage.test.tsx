@@ -73,6 +73,8 @@ function installFetchHandler(onRequest?: (url: URL, init?: RequestInit) => Respo
     if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-1') return jsonResponse(task)
     if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-1/runs') return jsonResponse({ items: [run], total: 1 })
     if (url.pathname === '/v1/ui-case-generate-task-runs/ui-run-1') return jsonResponse(run)
+    if (url.pathname === '/v1/requirements/requirement-1/function-test-suites') return jsonResponse({ items: [{ suiteId: 'function-suite-1', name: '登录功能' }], total: 1 })
+    if (url.pathname === '/v1/function-test-suites/function-suite-1/cases') return jsonResponse({ items: [{ caseId: 'function-case-1', title: '登录成功' }], total: 1 })
     if (url.pathname === '/v1/projects/project-1/integrations/llm/connections') {
       return jsonResponse({ items: [{ connectionId: 'llm-1', name: '主模型', status: 'active' }], total: 1 })
     }
@@ -80,7 +82,7 @@ function installFetchHandler(onRequest?: (url: URL, init?: RequestInit) => Respo
   })
 }
 
-function renderPage(embedded = false, dialogMode: 'view' | 'review' | 'import' = 'review', onClose = vi.fn()) {
+function renderPage(embedded = false, dialogMode: 'view' | 'review' | 'import' = 'review', onClose = vi.fn(), artifact = 'resultYaml') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   seedOwnerProject(queryClient)
   render(
@@ -88,7 +90,7 @@ function renderPage(embedded = false, dialogMode: 'view' | 'review' | 'import' =
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={['/ai-testing/ui-tasks/ui-task-1']}>
           <Routes>
-            <Route path="/ai-testing/ui-tasks/:taskId" element={<UiCaseGenerateTaskDetailPage dialogRequest={embedded ? { taskId: 'ui-task-1', runId: 'ui-run-1', artifact: 'resultYaml', mode: dialogMode, onClose } : undefined} />} />
+            <Route path="/ai-testing/ui-tasks/:taskId" element={<UiCaseGenerateTaskDetailPage dialogRequest={embedded ? { taskId: 'ui-task-1', runId: 'ui-run-1', artifact, mode: dialogMode, onClose } : undefined} />} />
             <Route path="/ai-testing" element={<div>生成任务列表</div>} />
             <Route path="/ui-automation/suites/:suiteId" element={<div>正式 UI 套件详情</div>} />
           </Routes>
@@ -712,7 +714,7 @@ describe('UI 用例生成任务详情', () => {
     expect(screen.getAllByText('请先上传源码 ZIP').length).toBeGreaterThan(0)
   })
 
-  it('选择 LLM 后运行请求只发送 connectionId', async () => {
+  it('选择 LLM 后运行请求发送正式功能用例并固定开启阶段审核', async () => {
     let runBody: unknown
     const startedRun = { ...run, runId: 'ui-run-2', status: 'pending' }
     installFetchHandler((url, init) => {
@@ -729,7 +731,7 @@ describe('UI 用例生成任务详情', () => {
     await user.click(await screen.findByText('主模型'))
     await user.click(screen.getByRole('button', { name: /确认运行/ }))
 
-    await waitFor(() => expect(runBody).toEqual({ connectionId: 'llm-1' }))
+    await waitFor(() => expect(runBody).toEqual({ connectionId: 'llm-1', functionCaseIds: ['function-case-1'], checkpointEnabled: true }))
   })
 
   it('运行返回 403 时展示权限错误且保留任务内容', async () => {
@@ -1087,4 +1089,74 @@ it('需求详情导入时记录已被其他操作导入，关闭工作区而不�
   renderPage(true, 'import', close)
   await waitFor(() => expect(close).toHaveBeenCalledTimes(1))
   expect(screen.queryByText('导入正式 UI 套件')).not.toBeInTheDocument()
+})
+
+it('三阶段运行默认显示可视化并保留 JSON 切换', async () => {
+  const surface = {
+    schemaVersion: 'ui_test_surface/1.0',
+    app: { name: '记录' },
+    pages: [{ pageId: 'page_1', title: '数据检索', route: '/data-management/retrieval' }],
+    controls: [{ controlId: 'ctl_convert', pageId: 'page_1', semanticName: '转换数据', controlType: 'button', locatorCandidates: [] }],
+    unknowns: [],
+  }
+  const staged = { ...run, status: 'waiting_review', checkpointEnabled: true, currentStage: 'ui_surface', stageStatus: 'waiting_review', configJson: { uiSurface: surface }, resultYaml: '' }
+  const writes: string[] = []
+  installFetchHandler((url, init) => {
+    if (init?.method && init.method !== 'GET') writes.push(url.pathname)
+    if (url.pathname === '/v1/ui-case-generate-task-runs/ui-run-1') return jsonResponse(staged)
+    if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-1/runs') return jsonResponse({ items: [staged], total: 1 })
+    return undefined
+  })
+  renderPage(true)
+  expect(await screen.findByRole('heading', { name: /数据检索/ })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: '转换数据' })).toBeInTheDocument()
+  expect(screen.getByRole('radio', { name: 'JSON' })).toBeInTheDocument()
+  const dialog = screen.getByRole('heading', { name: /数据检索/ }).closest<HTMLElement>('.ant-modal')!
+  const footer = within(dialog.querySelector<HTMLElement>('.ant-modal-footer')!)
+  expect(footer.getByRole('button', { name: '审核通过并继续' })).toBeEnabled()
+  expect(footer.getByRole('textbox', { name: '审核备注' })).toBeInTheDocument()
+  expect(dialog.querySelector('.ant-modal-body textarea[aria-label="审核备注"]')).toBeNull()
+  expect(screen.queryByRole('button', { name: '批准候选' })).not.toBeInTheDocument()
+  expect(screen.queryByText('结构化预览')).not.toBeInTheDocument()
+  await userEvent.setup().click(screen.getByRole('radio', { name: 'JSON' }).closest('label')!)
+  expect(await screen.findByRole('textbox', { name: '元素控件清单 JSON' })).toHaveTextContent('ui_test_surface/1.0')
+  expect(writes).toEqual([])
+})
+
+it('从需求页产物入口打开运行详情时定位到对应阶段', async () => {
+  const staged = {
+    ...run, status: 'waiting_review', checkpointEnabled: true, currentStage: 'ui_design', stageStatus: 'waiting_review',
+    configJson: { uiSurface: { schemaVersion: 'ui_test_surface/1.0' }, uiDesign: { schemaVersion: 'ui_test_scenarios/2.0' } },
+    resultYaml: '',
+  }
+  installFetchHandler((url) => {
+    if (url.pathname === '/v1/ui-case-generate-task-runs/ui-run-1') return jsonResponse(staged)
+    if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-1/runs') return jsonResponse({ items: [staged], total: 1 })
+    return undefined
+  })
+  renderPage(true, 'view', vi.fn(), 'uiSurface')
+  expect(await screen.findByRole('radio', { name: 'JSON' })).toBeInTheDocument()
+  await userEvent.setup().click(screen.getByRole('radio', { name: 'JSON' }).closest('label')!)
+  expect(await screen.findByRole('textbox', { name: '元素控件清单 JSON' })).toHaveTextContent('ui_test_surface/1.0')
+  expect(screen.queryByRole('button', { name: '审核通过并继续' })).not.toBeInTheDocument()
+})
+
+it('三阶段运行按产物列分别打开对应阶段，不使用页签切换', async () => {
+  const staged = {
+    ...run, status: 'waiting_review', checkpointEnabled: true, currentStage: 'ui_design', stageStatus: 'waiting_review',
+    configJson: { uiSurface: { schemaVersion: 'ui_test_surface/1.0' }, uiDesign: { schemaVersion: 'ui_test_scenarios/2.0' } },
+    resultYaml: '', availableArtifacts: ['uiSurface', 'uiDesign'],
+  }
+  installFetchHandler((url) => {
+    if (url.pathname === '/v1/ui-case-generate-task-runs/ui-run-1') return jsonResponse(staged)
+    if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-1/runs') return jsonResponse({ items: [staged], total: 1 })
+    return undefined
+  })
+  renderPage()
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: '元素控件清单' }))
+  await user.click((await screen.findByRole('radio', { name: 'JSON' })).closest('label')!)
+  expect(await screen.findByRole('textbox', { name: '元素控件清单 JSON' })).toHaveTextContent('ui_test_surface/1.0')
+  expect(screen.getByText('元素控件清单', { selector: '.ant-modal-title' })).toBeInTheDocument()
+  expect(screen.queryByRole('tab')).toBeNull()
 })

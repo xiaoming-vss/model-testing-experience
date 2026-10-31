@@ -30,6 +30,8 @@ from testing_agent.domain.ai_execution_format import (
     output_format,
 )
 from testing_agent.domain.ai_execution_intent import ExecutionIntent
+from testing_agent.domain.ai_tasks import REVISION_ATTACHMENTS_FIELD
+from testing_agent.domain.ui_generation_artifacts import UI_STAGES, UI_WORKFLOW_VERSION
 from testing_agent.models.ai_generate_execution import (
     AiGenerateRunImport as Import,
 )
@@ -71,6 +73,8 @@ def new_attempt(
     operation: str = "generate",
     actor_id: str | None = None,
     llm_connection_id: str | None = None,
+    revision_attachments: tuple[dict[str, str], ...] = (),
+    input_snapshot: dict[str, Any] | None = None,
 ) -> Attempt:
     siblings = [a for a in attempts.values() if a.stage_id == stage.id]
     snapshot: dict[str, Any] = {
@@ -78,7 +82,13 @@ def new_attempt(
         "config": mapping(run.config_json),
         "currentOutput": run.result_yaml or "",
     }
+    if input_snapshot is not None:
+        snapshot = deepcopy(input_snapshot)
     instruction = snapshot["config"].pop("revisionInstruction", None)
+    if operation == "revise" and revision_attachments:
+        snapshot["config"][REVISION_ATTACHMENTS_FIELD] = [
+            dict(attachment) for attachment in revision_attachments
+        ]
     from testing_agent.repositories.worker_context import connection_for_attempt
 
     previous = max(siblings, key=lambda a: a.attempt_no, default=None)
@@ -120,7 +130,12 @@ def ensure_stages(
     stages, attempts = graph(session, run)
     if stages:
         return stages, attempts
-    names = layout(kind)
+    names = (
+        list(UI_STAGES)
+        if kind == "ui_case_generate"
+        and (run.snapshot_json or {}).get("uiWorkflowVersion") == UI_WORKFLOW_VERSION
+        else layout(kind)
+    )
     for i, name in enumerate(names):
         if name in NO_REVIEW_STAGES or kind in NO_REVIEW_KINDS:
             review_status = "not_required"
@@ -219,6 +234,8 @@ def sync_run(
                 llm_connection_id=intent.llm_connection_id,
                 operation=operation
                 or ("revise" if config.get("revisionInstruction") else "generate"),
+                revision_attachments=intent.revision_attachments,
+                input_snapshot=intent.input_snapshot,
             )
         current.active_attempt_id = match.id
         if match.status != "success":
@@ -235,6 +252,13 @@ def sync_run(
         reviewed_stage.review_comment = review.comment
 
     for stage in stages:
+        # A checkpoint dispatch owns one stage. Other fields are frozen upstream
+        # inputs, possibly older approved versions than a separate pending draft.
+        # Only an explicit review may also publish the stage being reviewed when
+        # approve-and-continue has already advanced the run pointer.
+        if run.checkpoint_enabled and stage is not current:
+            if review is None or review.stage != stage.stage:
+                continue
         value = (
             run.result_yaml
             if stage is final

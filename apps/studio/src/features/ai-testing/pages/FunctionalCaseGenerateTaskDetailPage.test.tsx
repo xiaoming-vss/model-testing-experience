@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TestThemeProvider as ThemeProvider } from '@/test/TestThemeProvider'
 import analysisFixture from '../__fixtures__/functional-requirement-analysis.json'
 import type { FunctionalCaseGenerateTaskRun } from '../types'
@@ -109,6 +109,30 @@ function renderPage(embedded = false) {
   )
   return queryClient
 }
+
+// React Flow 量出节点尺寸后才显示节点；jsdom 没有布局引擎，需要补上尺寸。
+const stopFlowDragInJsdom = (event: MouseEvent) => {
+  if ((event.target as Element).closest('.react-flow__node')) event.stopPropagation()
+}
+beforeAll(() => {
+  document.addEventListener('mousedown', stopFlowDragInJsdom, true)
+  vi.stubGlobal('DOMMatrixReadOnly', class { m22 = 1 })
+  vi.stubGlobal('ResizeObserver', class {
+    callback: ResizeObserverCallback
+    constructor(callback: ResizeObserverCallback) { this.callback = callback }
+    observe(target: Element) { queueMicrotask(() => this.callback([{ target, contentRect: { width: 180, height: 100 } } as ResizeObserverEntry], this as unknown as ResizeObserver)) }
+    unobserve() {}
+    disconnect() {}
+  })
+})
+afterAll(() => {
+  document.removeEventListener('mousedown', stopFlowDragInJsdom, true)
+  vi.unstubAllGlobals()
+})
+beforeEach(() => {
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(180)
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(100)
+})
 
 afterEach(() => {
   cleanup()
@@ -936,7 +960,7 @@ it('优化在原窗口右侧展开，取消保留草稿并使用内联选择的�
   await waitFor(() => expect(body).toMatchObject({ llmConnectionId: 'second', revisionInstruction: '补充异常场景' }))
 })
 
-it('功能任务详情有原文但无增强文本时禁止运行', async () => {
+it('功能任务详情不再依赖绑定的增强文本才能打开运行设置', async () => {
   let runRequested = false
   installFetchHandler(() => pendingRun, (url) => {
     if (url.pathname === '/v1/requirements/requirement-1') return jsonResponse({ requirementId: 'requirement-1', name: '需求', documentType: 'docx', documentFilename: '原文.docx', documentContent: ' \n ' })
@@ -947,8 +971,8 @@ it('功能任务详情有原文但无增强文本时禁止运行', async () => {
   const button = await screen.findByRole('button', { name: /^运行$/ })
   await waitFor(() => expect(button).toBeEnabled())
   await user.click(button)
-  expect(await screen.findByText('请先完成需求分析并导入增强文本，再生成功能用例')).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: '确认运行' })).not.toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: '确认运行' })).toBeInTheDocument()
+  expect(screen.queryByText('请先完成需求分析并导入增强文本，再生成功能用例')).not.toBeInTheDocument()
   expect(runRequested).toBe(false)
 })
 

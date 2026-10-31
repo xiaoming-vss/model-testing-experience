@@ -9,6 +9,7 @@ from pydantic.alias_generators import to_camel
 
 
 class DebugRunUiCaseRequest(BaseModel):
+    environment_id: str = Field()
     headless: bool | None = None
     slow_mo_ms: int | None = Field(default=None)
     viewport_width: int | None = Field(default=None)
@@ -27,6 +28,8 @@ class UiCaseRunResponse(BaseModel):
     run_id: str = Field()
     case_id: str = Field()
     suite_id: str = Field()
+    environment_id: str = Field(default="")
+    environment_name: str = Field(default="")
     requirement_id: str = Field()
     sprint_id: str = Field()
     project_id: str = Field()
@@ -44,6 +47,16 @@ class UiCaseRunResponse(BaseModel):
         validation_alias=AliasChoices("stepResults", "step_results_json"),
         serialization_alias="stepResults",
     )
+    used_variables: list[Any] | None = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("usedVariables", "used_variables_json"),
+        serialization_alias="usedVariables",
+    )
+    variable_writes: list[Any] | None = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("variableWrites", "variable_writes_json"),
+        serialization_alias="variableWrites",
+    )
     error_message: str = Field()
     duration_ms: int = Field()
     started_at: datetime | str | None = Field(default="")
@@ -57,6 +70,8 @@ class UiSuiteRunResponse(BaseModel):
     trace_path: str = ""
     suite_run_id: str = Field()
     suite_id: str = Field()
+    environment_id: str = Field(default="")
+    environment_name: str = Field(default="")
     requirement_id: str = Field()
     sprint_id: str = Field()
     project_id: str = Field()
@@ -68,6 +83,16 @@ class UiSuiteRunResponse(BaseModel):
     failed_count: int = Field()
     error_count: int = Field()
     skipped_count: int = Field()
+    used_variables: list[Any] | None = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("usedVariables", "used_variables_json"),
+        serialization_alias="usedVariables",
+    )
+    variable_writes: list[Any] | None = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("variableWrites", "variable_writes_json"),
+        serialization_alias="variableWrites",
+    )
     error_message: str = Field()
     started_at: datetime | str | None = Field(default="")
     finished_at: datetime | str | None = Field(default="")

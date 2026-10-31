@@ -160,19 +160,22 @@ class ApiCandidateImporter:
         collection_id: str,
         confirm_overwrite: bool,
         user_id: str,
+        *,
+        artifact_content: str | None = None,
+        allow_reimport: bool = False,
     ) -> dict[str, Any]:
         run = await self.owned_run(user_id, run_id, "api", action="execute")
-        if (
+        if artifact_content is None and (
             run.status != RunStatus.SUCCESS.value
             or run.review_status != ReviewStatus.APPROVED.value
-            or run.import_status == ImportStatus.IMPORTED.value
+            or (run.import_status == ImportStatus.IMPORTED.value and not allow_reimport)
         ):
             raise ErrBadRequest()
         await self.ensure_collection_access(user_id, collection_id, action="execute")
         raw_cases = await validate_api_collection_import_payload(
             self.repository,
             collection_id,
-            generated_payload(run),
+            generated_payload(run, artifact_content),
             check_existing=False,
         )
         generated_cases = [normalize_api_case(item, index) for index, item in enumerate(raw_cases)]
@@ -199,6 +202,7 @@ class ApiCandidateImporter:
             return {
                 "requiresConfirmation": True,
                 "conflicts": conflicts,
+                "importChanges": [],
                 "run": dump_run(run),
             }
 
@@ -209,6 +213,7 @@ class ApiCandidateImporter:
             run.import_migration_complete,
         )
         try:
+            changed_case_ids: set[str] = set()
             for item in generated_cases:
                 normalized_name = self._normalized_api_case_name(item["name"])
                 target_case = existing_by_name.get(normalized_name)
@@ -220,6 +225,7 @@ class ApiCandidateImporter:
                 else:
                     apply_api_case(target_case, item)
                     await self._replace_api_rules(target_case.case_id, item)
+                changed_case_ids.add(target_case.case_id)
             imported_at = datetime.now(UTC)
             run.import_status = ImportStatus.IMPORTED.value
             run.imported_targets = [{"targetType": "api_collection", "targetId": collection_id}]
@@ -242,5 +248,12 @@ class ApiCandidateImporter:
         return {
             "requiresConfirmation": False,
             "conflicts": [],
+            "importChanges": [
+                {
+                    "targetType": "api_collection",
+                    "targetId": collection_id,
+                    "changedCaseIds": sorted(changed_case_ids),
+                }
+            ],
             "run": dump_run(run),
         }

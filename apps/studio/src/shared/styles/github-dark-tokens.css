@@ -40,6 +40,7 @@
   --gh-primary-hover: #2ea043;
   --gh-primary-active: #196c2e;
   --app-bg: var(--gh-bg);
+  --app-board-gradient: linear-gradient(180deg, var(--gh-bg) 0%, var(--gh-inset) 100%);
   --app-text: var(--gh-fg);
   --app-link: var(--gh-blue);
   --description-text: var(--gh-muted);
@@ -48,7 +49,7 @@
   --description-border: var(--gh-border);
   --srf-list-header-text: var(--gh-muted);
   --srf-list-header-bg: var(--gh-surface);
-  --srf-list-row-bg: var(--gh-bg);
+  --srf-list-row-bg: var(--gh-surface);
   --srf-list-row-hover: var(--gh-subtle);
   --legacy-tp-border: var(--gh-border);
   --legacy-tp-border-soft: var(--gh-border);

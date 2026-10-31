@@ -33,6 +33,7 @@ from testing_agent.repositories.auth_session import AuthSessionRepository
 from testing_agent.repositories.bug import BugRepository
 from testing_agent.repositories.function_test_case import FunctionTestCaseRepository
 from testing_agent.repositories.function_test_suite import FunctionTestSuiteRepository
+from testing_agent.repositories.generation_chain import GenerationChainRepository
 from testing_agent.repositories.integration_connection import IntegrationConnectionRepository
 from testing_agent.repositories.login_rate_limit import LoginRateLimitRepository
 from testing_agent.repositories.project import ProjectRepository
@@ -77,6 +78,7 @@ from testing_agent.services.function_case_export import FunctionCaseExporter
 from testing_agent.services.function_case_import import FunctionCaseImporter
 from testing_agent.services.function_test_case import FunctionTestCaseService
 from testing_agent.services.function_test_suite import FunctionTestSuiteService
+from testing_agent.services.generation_chain import GenerationChainService
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.ldap_login import LdapLoginService
@@ -94,6 +96,8 @@ from testing_agent.services.sprint_daily_metrics import SprintDailyMetricsServic
 from testing_agent.services.test_order import TestOrderService
 from testing_agent.services.test_order_entry import TestOrderEntryService
 from testing_agent.services.test_order_graph import TestOrderGraphService
+from testing_agent.services.ui_generation_workflow import UiGenerationWorkflow
+from testing_agent.services.ui_run_variables import UiRunVariablesService
 from testing_agent.services.ui_test_case import UiTestCaseService
 from testing_agent.services.ui_test_case_run import UiTestCaseRunService
 from testing_agent.services.ui_test_suite import UiTestSuiteService
@@ -327,6 +331,12 @@ def get_ui_test_case_run_service(
     return UiTestCaseRunService(UiTestCaseRunRepository(session))
 
 
+def get_ui_run_variables_service(
+    session: AsyncSession = Depends(get_session),
+) -> UiRunVariablesService:
+    return UiRunVariablesService(session)
+
+
 def get_integration_connection_service(
     session: AsyncSession = Depends(get_session),
     settings: Settings = Depends(get_settings),
@@ -448,15 +458,6 @@ def get_generation_launcher(
             connections,
             cipher,
         ),
-    )
-
-
-def get_generation_stages(
-    access: GenerationAccess = Depends(get_generation_access),
-    execution: ExecutionWriter = Depends(get_generation_writer),
-) -> GenerationStageWorkflow:
-    return GenerationStageWorkflow(
-        repository=access.repository, owned_run=access.owned_run, execution_writer=execution
     )
 
 
@@ -607,3 +608,53 @@ def get_file_service(
     from testing_agent.services.stored_file import StoredFileService
 
     return StoredFileService(session, settings.s3)
+
+
+def get_generation_stages(
+    access: GenerationAccess = Depends(get_generation_access),
+    execution: ExecutionWriter = Depends(get_generation_writer),
+    files=Depends(get_file_service),
+) -> GenerationStageWorkflow:
+    return GenerationStageWorkflow(
+        repository=access.repository,
+        owned_run=access.owned_run,
+        execution_writer=execution,
+        files=files,
+    )
+
+
+def get_ui_generation_stages(
+    access: GenerationAccess = Depends(get_generation_access),
+    execution: ExecutionWriter = Depends(get_generation_writer),
+    files=Depends(get_file_service),
+) -> UiGenerationWorkflow:
+    return UiGenerationWorkflow(
+        repository=access.repository,
+        owned_run=access.owned_run,
+        execution_writer=execution,
+        files=files,
+    )
+
+
+def get_generation_chain(
+    access: GenerationAccess = Depends(get_generation_access),
+    execution: ExecutionWriter = Depends(get_generation_writer),
+    launcher: GenerationRunLauncher = Depends(get_generation_launcher),
+    stages: GenerationStageWorkflow = Depends(get_generation_stages),
+    ui_stages: UiGenerationWorkflow = Depends(get_ui_generation_stages),
+    review: GenerationCandidateReview = Depends(get_generation_review),
+    imports: GenerationImportContext = Depends(get_generation_import_context),
+    api_importer: ApiCandidateImporter = Depends(get_generation_api_importer),
+) -> GenerationChainService:
+    return GenerationChainService(
+        repository=GenerationChainRepository(access.repository.session),
+        tasks=access.repository,
+        access=access,
+        launcher=launcher,
+        stages=stages,
+        ui_stages=ui_stages,
+        review=review,
+        execution=execution,
+        imports=imports,
+        api_importer=api_importer,
+    )

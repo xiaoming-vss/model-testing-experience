@@ -10,7 +10,7 @@ import type { UnderstandingArtifact, UnderstandingModule } from '../utils/unders
 type Props = {
   artifact: UnderstandingArtifact
   module?: UnderstandingModule
-  onSourceReference: (ref: RequirementSourceReference) => void
+  onSourceReference?: (ref: RequirementSourceReference) => void
   onModule: (moduleId: string) => void
   onRules: () => void
   onUiOperation: (moduleId: string, operationId: string) => void
@@ -41,13 +41,13 @@ export function RequirementModuleOverview({ artifact, module, onSourceReference,
       const source = artifact.sources.find(item => item.id === ref.sourceId)
       const label = `${source?.name ?? ref.sourceId} · ${ref.locator}`
       return <Tooltip key={`${ref.sourceId}/${ref.locator}/${index}`} title={ref.excerpt ? `${label}：${ref.excerpt}` : label}>
-        <button className="requirement-reading-citation" aria-label={label} onClick={() => { setDetailOpen(undefined); onSourceReference(ref) }}>来源：{ref.locator.split(/[（(]/)[0]}</button>
+        {onSourceReference ? <button className="requirement-reading-citation" aria-label={label} onClick={() => { setDetailOpen(undefined); onSourceReference(ref) }}>来源：{ref.locator.split(/[（(]/)[0]}</button> : <span className="requirement-reading-citation">来源：{ref.locator.split(/[（(]/)[0]}</span>}
       </Tooltip>
     })
   }
   return <div className="requirement-module-overview">
     <section className="requirement-reading-section">
-      <h3 aria-label="业务模块"><AppstoreOutlined aria-hidden />业务模块{module && <Popover trigger="click" open={detailOpen === 'flow'} onOpenChange={open => setDetailOpen(open ? 'flow' : undefined)} title="当前模块入口与使用说明" content={<div className="requirement-reading-flow-popover"><RequirementArtifactValue artifact={artifact} value={{ entryPoints: module.entryPoints, userVisibleFlow: module.userVisibleFlow, relatedQuestionIds: module.relatedQuestionIds }} onSourceReference={ref => { setDetailOpen(undefined); onSourceReference(ref) }} expandCollections /></div>}><Button type="text" size="small" aria-label="查看当前模块入口与使用说明" icon={<LinkOutlined />} /></Popover>}</h3>
+      <h3 aria-label="业务模块"><AppstoreOutlined aria-hidden />业务模块{module && <Popover trigger="click" open={detailOpen === 'flow'} onOpenChange={open => setDetailOpen(open ? 'flow' : undefined)} title="当前模块入口与使用说明" content={<div className="requirement-reading-flow-popover"><RequirementArtifactValue artifact={artifact} value={{ entryPoints: module.entryPoints, userVisibleFlow: module.userVisibleFlow, relatedQuestionIds: module.relatedQuestionIds }} onSourceReference={onSourceReference} expandCollections /></div>}><Button type="text" size="small" aria-label="查看当前模块入口与使用说明" icon={<LinkOutlined />} /></Popover>}</h3>
       <ul className="requirement-module-navigation" aria-label="业务模块导航">{artifact.modules.map(candidate => {
         const purpose = toRecord(candidate.purpose)
         return <li key={candidate.id}>

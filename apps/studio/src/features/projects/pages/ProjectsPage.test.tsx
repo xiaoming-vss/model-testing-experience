@@ -42,7 +42,12 @@ it.each(['sprints', 'requirements'])('进入 %s 列表不逐条查询绑定，�
   await waitFor(() => expect(client.isFetching()).toBe(0))
   expect(paths.filter(path => new URL(path, 'http://localhost').pathname.endsWith('/requirements'))).toEqual(board === 'sprints' ? [] : ['/v1/projects/p1/requirements?page=1&pageSize=20&sprintId=s1'])
   expect(paths.filter(path => path.endsWith('/bindings'))).toEqual([])
-  expect(screen.getAllByText('绑定对象')).toHaveLength(1)
+  if (board === 'sprints') {
+    expect(screen.getByText('禅道 已绑定')).toBeInTheDocument()
+    expect(screen.getByText('绑定对象')).toBeInTheDocument()
+    const pageHeader = screen.getByRole('heading', { name: '项目' }).closest('.sprint-board-page-header')!
+    expect(pageHeader.closest('.sprint-board-shell')).toBeNull()
+  } else expect(screen.getAllByText('禅道 已绑定')).toHaveLength(1)
 })
 
 it('全部迭代使用项目级分页，翻页后只展示服务器返回的本页', async () => {
@@ -95,11 +100,14 @@ it('需求列表使用卡片和全局迭代范围，不重复显示局部迭代�
   expect(screen.getByRole('link', { name: '需求1-0' })).toHaveAttribute('href', '/requirements/s1-r1-0')
   expect(screen.queryByRole('table')).not.toBeInTheDocument()
   expect(screen.queryByText('筛选迭代')).not.toBeInTheDocument()
-  expect(screen.getByText('team/service · dev（共 2 项）')).toBeInTheDocument()
+  expect(screen.getByText('代码 已绑定（2）')).toBeInTheDocument()
   expect(screen.getAllByText('2026/10/13 13:21')).toHaveLength(8)
   expect(screen.queryByText('迭代1 · 8 条需求')).not.toBeInTheDocument()
   expect(screen.getAllByText('未提供文档')).toHaveLength(7)
   expect(screen.queryByRole('button', { name: '查看文档' })).not.toBeInTheDocument()
   expect(screen.getByText('需求说明.docx')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '刷新' })).toBeInTheDocument()
+  const pageHeader = screen.getByRole('heading', { name: '需求' }).closest('.requirements-list-page-header')!
+  expect(pageHeader).toHaveTextContent('共 8 条')
+  expect(pageHeader.closest('.requirements-list-panel')).toBeNull()
 })

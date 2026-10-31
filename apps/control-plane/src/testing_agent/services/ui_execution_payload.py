@@ -22,6 +22,16 @@ def ui_suite_payload(suite: UiTestSuite | Any | None) -> dict[str, Any]:
     }
 
 
+def ui_environment_payload(environment: Any | None) -> dict[str, Any]:
+    if environment is None:
+        return {}
+    return {
+        "id": environment.environment_id,
+        "name": environment.name,
+        "baseUrl": environment.base_url,
+    }
+
+
 def ui_case_payload(case: UiTestCase | Any | None) -> dict[str, Any]:
     if case is None:
         return {}

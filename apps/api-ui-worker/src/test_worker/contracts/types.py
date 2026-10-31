@@ -37,6 +37,7 @@ ScreenshotPolicy = Literal["on_failure", "after_each_step", "never"]
 @dataclass
 class WorkerConfig:
     """工作配置"""
+
     mode: WorkerMode
     worker_id: str
     control_plane_base_url: str
@@ -55,6 +56,7 @@ class WorkerConfig:
 @dataclass
 class UiWorkerTask:
     """UI 工作任务"""
+
     task_id: str
     task_type: UiTaskType
     run_id: str
@@ -66,6 +68,7 @@ class UiWorkerTask:
 @dataclass
 class UiBrowserViewport:
     """浏览器视口"""
+
     width: int
     height: int
 
@@ -73,6 +76,7 @@ class UiBrowserViewport:
 @dataclass
 class UiBrowserOptionsSnapshot:
     """浏览器选项快照"""
+
     headless: bool | None = None
     slow_mo_ms: int | None = None
     viewport: UiBrowserViewport | None = None
@@ -81,12 +85,14 @@ class UiBrowserOptionsSnapshot:
 @dataclass
 class UiRunOptionsSnapshot:
     """运行选项快照"""
+
     default_step_timeout_ms: int | None = None
 
 
 @dataclass
 class UiSuiteSnapshot:
     """测试套件快照"""
+
     suite_id: str
     name: str
     headless: bool | None = None
@@ -100,6 +106,7 @@ class UiSuiteSnapshot:
 @dataclass
 class UiStepDefinition:
     """步骤定义"""
+
     keyword: str
     order_no: int | None = None
     step_name: str | None = None
@@ -112,11 +119,14 @@ class UiStepDefinition:
     enabled: bool | None = None
     description: str | None = None
     comparator: ComparatorType | None = None
+    missing_fields: list[dict[str, Any]] | None = None
+    save_to: list[dict[str, Any]] | None = None
 
 
 @dataclass
 class UiCaseSnapshot:
     """用例快照"""
+
     case_id: str
     name: str
     suite_id: str | None = None
@@ -130,6 +140,7 @@ class UiCaseSnapshot:
 @dataclass
 class UiCaseRunSnapshot:
     """用例运行快照"""
+
     task_id: str
     run_id: str
     case: UiCaseSnapshot
@@ -141,6 +152,7 @@ class UiCaseRunSnapshot:
 @dataclass
 class UiSuiteRunItemSnapshot:
     """测试集运行项快照"""
+
     item_id: str
     continue_on_failure: bool
     case: UiCaseSnapshot
@@ -149,6 +161,7 @@ class UiSuiteRunItemSnapshot:
 @dataclass
 class UiTestSuiteRunSnapshot:
     """测试集运行快照"""
+
     task_id: str
     run_id: str
     items: list[UiSuiteRunItemSnapshot]
@@ -160,6 +173,7 @@ class UiTestSuiteRunSnapshot:
 @dataclass
 class UiWorkerTaskSnapshotResponse:
     """任务快照响应"""
+
     task_type: UiTaskType
     case_run: UiCaseRunSnapshot | None = None
     suite_run: UiTestSuiteRunSnapshot | None = None
@@ -168,6 +182,7 @@ class UiWorkerTaskSnapshotResponse:
 @dataclass
 class UiStepRunResult:
     """步骤运行结果"""
+
     order_no: int
     step_name: str
     keyword: str
@@ -179,11 +194,14 @@ class UiStepRunResult:
     actual_value: str | None = None
     screenshot_path: str | None = None
     error_message: str | None = None
+    save_results: list[dict[str, Any]] = field(default_factory=list)
+    used_variables: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
 class UiCaseRunResult:
     """用例运行结果"""
+
     task_id: str
     run_id: str
     case_id: str
@@ -201,6 +219,7 @@ class UiCaseRunResult:
 @dataclass
 class UiSuiteItemRunResult:
     """测试集项运行结果"""
+
     item_id: str
     run_id: str
     case_id: str
@@ -217,6 +236,7 @@ class UiSuiteItemRunResult:
 @dataclass
 class UiSuiteRunResult:
     """测试集运行结果"""
+
     task_id: str
     run_id: str
     suite_id: str
@@ -233,6 +253,7 @@ class UiSuiteRunResult:
 @dataclass
 class UiTaskStartedPayload:
     """任务开始上报负载"""
+
     worker_id: str
     started_at: str
 
@@ -240,6 +261,7 @@ class UiTaskStartedPayload:
 @dataclass
 class UiTaskHeartbeatPayload:
     """心跳上报负载"""
+
     worker_id: str
     heartbeat_at: str
 
@@ -247,8 +269,7 @@ class UiTaskHeartbeatPayload:
 @dataclass
 class UiSuiteItemStartedPayload:
     """测试集项开始上报负载"""
+
     run_id: str
     case_id: str
     started_at: str
-
-

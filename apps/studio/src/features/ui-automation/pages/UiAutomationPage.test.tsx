@@ -102,6 +102,17 @@ it('列出测试集，行内徽标展示运行配置', async () => {
 
   await screen.findByText('xiaoming')
 
+  // 列顺序：名称、运行配置、归属、时间在前，描述固定在操作列左侧。
+  expect(screen.getAllByRole('columnheader').map((header) => header.textContent?.trim())).toEqual([
+    '测试集名称',
+    '运行配置',
+    '所属迭代/需求',
+    '创建时间',
+    '最近更新',
+    '描述',
+    '操作',
+  ])
+
   // 所属迭代 / 需求：迭代是等宽色块，需求是普通文字
   expect(screen.getByText('V1.0.0 迭代')).toBeInTheDocument()
   expect(screen.getByText('安装部署')).toBeInTheDocument()

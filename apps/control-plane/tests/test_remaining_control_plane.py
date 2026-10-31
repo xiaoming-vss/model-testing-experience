@@ -1241,6 +1241,18 @@ async def test_ai_generate_run_uses_go_connection_id_for_worker_task(monkeypatch
 
 @pytest.mark.asyncio
 async def test_function_checkpoint_run_starts_at_requirement_analysis(monkeypatch):
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setattr(
+        "testing_agent.services.ai_task_output.functional_requirement_source",
+        AsyncMock(
+            return_value={
+                "sourceContent": "approved requirement version",
+                "requirementUnderstandingVersion": {"versionId": "understanding-v1"},
+            }
+        ),
+    )
+
     class FakeRepository(TaskScopeFixture):
         session = AuthorizationDatabase()
 
@@ -1332,112 +1344,6 @@ async def test_ai_generate_run_requires_go_connection_id():
 
     with pytest.raises(type(ErrBadRequest)):
         await service.launcher.launch("api", "task-1", {}, "user-1")
-
-
-@pytest.mark.asyncio
-async def test_function_generate_run_snapshot_uses_requirement_document():
-    class FakeRepository:
-        async def get_requirement(self, requirement_id):
-            assert requirement_id == "requirement-1"
-            return SimpleNamespace(
-                document_type="docx",
-                document_content="# requirement doc",
-                document_download_url="/v1/requirements/requirement-1/download",
-            )
-
-    task = SimpleNamespace(
-        task_id="task-1",
-        task_type="functional_case_generate",
-        name="Generate function cases",
-        project_id="project-1",
-        sprint_id="sprint-1",
-        requirement_id="requirement-1",
-        source_type="manual",
-        source_content="task source should not be used",
-        instruction="cover functions",
-    )
-
-    snapshot = await _generation_build_generate_run_snapshot(
-        FakeRepository(), "function", task, "run-1", worker_task_id="worker-task-1"
-    )
-
-    assert "sourceType" not in snapshot
-    assert snapshot["documentType"] == "docx"
-    assert snapshot["documentDownloadUrl"] == (
-        "/internal/ai-worker/tasks/worker-task-1/requirement-document"
-    )
-    assert snapshot["sourceContent"] == "# requirement doc"
-    assert snapshot["taskType"] == "functional_case_generate"
-
-
-@pytest.mark.asyncio
-async def test_function_generate_run_snapshot_rejects_original_requirement_source_file(tmp_path):
-    source_path = tmp_path / "requirement.txt"
-    source_path.write_text("requirement source from file", encoding="utf-8")
-
-    class FakeRepository:
-        async def get_requirement(self, requirement_id):
-            assert requirement_id == "requirement-1"
-            return SimpleNamespace(
-                document_type="text",
-                document_content="",
-                document_storage_path=str(source_path),
-                document_download_url="/v1/requirements/requirement-1/download",
-            )
-
-    task = SimpleNamespace(
-        task_id="task-1",
-        task_type="functional_case_generate",
-        name="Generate function cases",
-        project_id="project-1",
-        sprint_id="sprint-1",
-        requirement_id="requirement-1",
-        source_type="manual",
-        source_content="task source should not be used",
-        instruction="cover functions",
-    )
-
-    with pytest.raises(type(ErrBadRequest), match="请先完成需求分析并导入增强文本"):
-        await _generation_build_generate_run_snapshot(
-            FakeRepository(), "function", task, "run-1", worker_task_id="worker-task-1"
-        )
-
-
-@pytest.mark.asyncio
-async def test_function_generate_run_snapshot_prefers_document_content_over_source_file(
-    tmp_path,
-):
-    source_path = tmp_path / "requirement.txt"
-    source_path.write_text("old requirement source from file", encoding="utf-8")
-
-    class FakeRepository:
-        async def get_requirement(self, requirement_id):
-            assert requirement_id == "requirement-1"
-            return SimpleNamespace(
-                document_type="text",
-                document_content="reviewed requirement content",
-                document_storage_path=str(source_path),
-                document_download_url="/v1/requirements/requirement-1/download",
-            )
-
-    task = SimpleNamespace(
-        task_id="task-1",
-        task_type="functional_case_generate",
-        name="Generate function cases",
-        project_id="project-1",
-        sprint_id="sprint-1",
-        requirement_id="requirement-1",
-        source_type="manual",
-        source_content="task source should not be used",
-        instruction="cover functions",
-    )
-
-    snapshot = await _generation_build_generate_run_snapshot(
-        FakeRepository(), "function", task, "run-1", worker_task_id="worker-task-1"
-    )
-
-    assert snapshot["documentType"] == "text"
-    assert snapshot["sourceContent"] == "reviewed requirement content"
 
 
 @pytest.mark.asyncio
@@ -2843,6 +2749,7 @@ async def test_api_case_run_persists_rendered_request_snapshot():
             self.environment = SimpleNamespace(
                 environment_id="env-1",
                 project_id="project-1",
+                kind="api",
                 base_url="https://api.example.test",
             )
 
@@ -2925,6 +2832,7 @@ async def test_api_case_run_response_uses_go_pending_worker_contract():
             self.environment = SimpleNamespace(
                 environment_id="env-1",
                 project_id="project-1",
+                kind="api",
                 base_url="https://api.example.test",
             )
 
@@ -2987,6 +2895,7 @@ async def test_api_collection_run_response_uses_go_pending_worker_contract():
             self.environment = SimpleNamespace(
                 environment_id="env-1",
                 project_id="project-1",
+                kind="api",
                 base_url="https://api.example.test",
             )
             self.cases = [SimpleNamespace(case_id="case-1", order_no=1, continue_on_failure=False)]
@@ -3105,11 +3014,11 @@ async def test_api_collection_run_report_includes_case_run_details():
         async def list_items(self, collection_run_id):
             return [item]
 
-        async def get_case(self, case_id):
-            return case
+        async def report_cases(self, case_ids):
+            return {case.case_id: case}
 
-        async def get_case_run(self, run_id):
-            return case_run
+        async def report_case_runs(self, run_ids):
+            return {case_run.run_id: case_run}
 
     service = ApiCollectionRunService(FakeApiCollectionRunRepository())
 

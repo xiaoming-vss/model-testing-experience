@@ -1,5 +1,7 @@
 # 控制面（control-plane）
 
+[UI 用例三阶段生成与审核](ui-three-stage-generation.md)
+
 平台的浏览器后端与业务状态管理服务。组织测试资产、AI 生成任务、人工审核与导入、执行调度、权限、外部集成凭据与报告，并向浏览器提供 `/v1/*`、向 Worker 提供 `/internal/*`。
 
 这是 Go 控制面的 Python 重写版本，保留原 `/v1` 与 `/internal/*` 契约。领域术语见 [CONTEXT](CONTEXT.md)。
@@ -12,6 +14,8 @@
 [实施记录](integration-worker-implementation.md)。
 
 [需求维度测试设计接口](requirement-design.md)
+
+[生成链、阶段版本与正式资产导入来源](generation-chain.md)
 
 ## 运行时与依赖
 
@@ -50,6 +54,7 @@ AI 生成任务按能力装配，HTTP handler 直接获取所需的查询、管�
 | `ai_run_launcher.py` / GenerationRunLauncher | 准备快照、重查权限、发起运行；使用显式 ExecutionWriter |
 | `ai_stage_workflow.py` / GenerationStageWorkflow | 阶段保存、审核、修订、重试和图谱派发 |
 | `ai_candidate_review.py` / GenerationCandidateReview | 整次候选运行的内容编辑与审核，不创建正式资产 |
+| `generation_chain.py` / GenerationChainService | 需求生成链全景、阶段草稿/版本、单步运行、审核、版本删除与版本级正式资产导入 |
 | `ai_report.py` / TestReportWorkflow | 报告任务、运行及 PDF 导出 |
 | `ai_source_archive.py` / SourceArchiveManager | 源码归档校验、替换和失败清理 |
 | `api_generate_import.py` / ApiCandidateImporter | API 候选冲突预览、确认覆盖及正式资产事务 |

@@ -5,10 +5,19 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, it, vi } from 'vitest'
 import { TestThemeProvider as ThemeProvider } from '@/test/TestThemeProvider'
+import { uploadStoredFile } from '@/shared/api/files'
 import type { RequirementAnalysisTaskRun } from '../types'
 import { RequirementAnalysisTaskDetailPage } from './RequirementAnalysisTaskDetailPage'
 import extractionText from '@/domain/requirements/fixtures/document-extraction.example.json?raw'
 import understandingText from '@/domain/requirements/fixtures/requirement-understanding.example.json?raw'
+
+vi.mock('@/shared/api/files', () => ({
+  uploadStoredFile: vi.fn(async () => 'image-1'),
+  downloadStoredFile: vi.fn(async () => ({
+    blob: new Blob(['png'], { type: 'image/png' }),
+    filename: 'shot.png',
+  })),
+}))
 
 const extraction = JSON.parse(extractionText)
 const understanding = JSON.parse(understandingText)
@@ -134,6 +143,16 @@ it('成功记录仍展示全部阶段产物入口', async () => {
   expect(screen.queryByRole('button', { name: '错误信息' })).toBeNull()
 })
 
+it('第二阶段执行中不把尚未生成的理解记录显示为可查看', async () => {
+  setup('feature_understanding', 'running', false, {
+    availableArtifacts: ['firstStepOutput'], hasResult: false, resultYaml: '',
+  })
+  await screen.findByText('run')
+  expect(screen.getByRole('button', { name: '材料提取结果' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '需求理解记录' })).toBeNull()
+  expect(screen.getByText('需求理解记录')).toBeInTheDocument()
+})
+
 
 it.each([
   ['extracting_text', '材料提取结果', []],
@@ -161,7 +180,7 @@ it('已完成的材料提取入口只查看对应产物', async () => {
   })
   await userEvent.setup().click(await screen.findByRole('button', { name: '材料提取结果' }))
   expect(await screen.findByRole('dialog', { name: '材料提取结果' })).toBeInTheDocument()
-  expect(screen.getByRole('region', { name: '材料与提取结果对照' })).toBeInTheDocument()
+  expect(screen.getByRole('region', { name: '材料提取结果' })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '审核通过并继续' })).toBeNull()
 })
 
@@ -275,6 +294,44 @@ it.each(['extracting_text', 'completed'] as const)('%s 优化预填当前待确�
   else expect(submitted?.resultYaml).toBe(JSON.stringify(understanding, null, 2))
   await waitFor(() => expect(dialog.getByRole('button', { name: '提交优化' })).toBeEnabled())
   expect(instruction).toHaveValue(answered)
+})
+
+it('右侧继续优化可携带上传的图片附件', async () => {
+  setup('extracting_text', 'waiting_review', false, {
+    checkpointEnabled: true, stageStatus: 'waiting_review', configJson: { firstStepOutput: extraction },
+  })
+  URL.createObjectURL = vi.fn(() => 'blob:shot')
+  URL.revokeObjectURL = vi.fn()
+  const previousFetch = vi.mocked(globalThis.fetch).getMockImplementation()!
+  let body: Record<string, unknown> | undefined
+  vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {
+    if (String(input).includes('/stage-revise')) {
+      body = JSON.parse(String(init?.body))
+      return response({ runId: 'run', status: 'pending', currentStage: 'extracting_text', stageStatus: 'pending' })
+    }
+    return previousFetch(input, init)
+  })
+  const user = userEvent.setup()
+  await user.click(await findRunInlineAction('审核'))
+  const dialog = within(screen.getByRole('dialog'))
+  await user.click(dialog.getByRole('button', { name: '继续优化' }))
+  await user.clear(dialog.getByLabelText('优化指令'))
+  await user.type(dialog.getByLabelText('优化指令'), '按截图补充登录异常')
+  const panel = document.querySelector('.revision-side-panel') as HTMLElement
+  await user.upload(
+    panel.querySelector('input[type="file"]') as HTMLInputElement,
+    new File(['png'], 'shot.png', { type: 'image/png' }),
+  )
+  expect(await dialog.findByAltText('shot.png')).toHaveAttribute('src', 'blob:shot')
+  expect(vi.mocked(uploadStoredFile)).toHaveBeenCalledWith(
+    'project-1', expect.any(File), 'attachment'
+  )
+  await user.click(dialog.getByRole('button', { name: '取消优化' }))
+  await user.click(dialog.getByRole('button', { name: '继续优化' }))
+  expect(await dialog.findByAltText('shot.png')).toBeInTheDocument()
+  await waitFor(() => expect(dialog.getByRole('button', { name: '提交优化' })).toBeEnabled())
+  await user.click(dialog.getByRole('button', { name: '提交优化' }))
+  await waitFor(() => expect(body).toMatchObject({ attachmentFileIds: ['image-1'] }))
 })
 
 it('没有待确认问题时优化指令留空，手写要求可保留', async () => {
@@ -477,7 +534,7 @@ it('首次点击较早的已拒绝运行即可打开只读产物，不被运行�
   await waitFor(()=>expect(document.querySelector('.requirement-analysis-artifact-tabs')).toBeNull())
   await user.click(within(row).getByRole('button',{name:'需求理解记录'}))
   await waitFor(()=>expect(screen.getAllByRole('dialog').some(node=>node.querySelector('.requirement-analysis-artifact-tabs'))).toBe(true))
-  await waitFor(()=>expect(screen.getByRole('region',{name:'材料与需求理解对照'})).toBeVisible())
+  await waitFor(()=>expect(screen.getByRole('region',{name:'需求理解结果'})).toBeVisible())
   expect(screen.queryByRole('button',{name:'审核通过'})).toBeNull()
 })
 

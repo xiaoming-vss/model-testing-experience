@@ -14,7 +14,7 @@ import { UiSuiteRunConfigCell } from './UiSuiteRunConfigCell'
 import { UiTestSuiteDrawer, type UiTestSuiteFormValues } from './UiTestSuiteDrawer'
 import { DEFAULT_UI_TEST_SUITE_RUN_CONFIG } from '../constants/defaultRunConfig'
 import { buildUiSuiteRunPayload } from '../utils/runHelpers'
-import { api, type UiTestSuite, type UiTestSuiteRunSummary } from '@/services/api'
+import { api, ApiError, type UiTestSuite, type UiTestSuiteRunSummary } from '@/services/api'
 import { formatTime, getErrorMessage, normalizeUiTestSuiteId, pickCreatedAt, pickUpdatedAt } from '@/utils/format'
 import { message } from '@/shared/utils/feedback'
 import { buildUiTestSuiteUpdatePayload } from '@/utils/updatePayload'
@@ -52,6 +52,9 @@ export const UiTestSuiteSection = forwardRef<
     onClearKeyword?: () => void
     /** 把查询的加载态回传给工具栏的刷新按钮。 */
     onRefreshingChange?: (refreshing: boolean) => void
+    /** 项目当前选中的 UI 环境；为空时不允许直接运行。 */
+    environmentId?: string
+    onOpenEnvironments?: () => void
   }
 >(function UiTestSuiteSection(
   {
@@ -68,6 +71,8 @@ export const UiTestSuiteSection = forwardRef<
     keyword = '',
     onClearKeyword,
     onRefreshingChange,
+    environmentId = '',
+    onOpenEnvironments,
   },
   ref,
 ) {
@@ -183,7 +188,21 @@ export const UiTestSuiteSection = forwardRef<
     mutationFn: (suite: UiTestSuite) => {
       const suiteId = normalizeUiTestSuiteId(suite)
       if (!suiteId) throw new Error('未找到可运行的 UI测试集')
-      return api.runUiTestSuite(suiteId, buildUiSuiteRunPayload(suite))
+      if (!environmentId) throw new Error('请先选择 UI 环境')
+      return api.runUiTestSuite(suiteId, buildUiSuiteRunPayload(environmentId, suite))
+    },
+    onError: (error) => {
+      if (error instanceof ApiError) {
+        const missing = (error.data as { missingVariables?: Array<{ name?: string }> } | undefined)
+          ?.missingVariables
+        const names = Array.from(new Set((missing ?? []).map((item) => item.name).filter(Boolean)))
+        if (names.length > 0) {
+          message.error(`运行前缺少变量：${names.join('、')}。请在“环境”中补充后再运行。`)
+          onOpenEnvironments?.()
+          return
+        }
+      }
+      message.error(getErrorMessage(error))
     },
     onSuccess: (runRecord, suite) => {
       const suiteId = normalizeUiTestSuiteId(suite)
@@ -248,13 +267,20 @@ export const UiTestSuiteSection = forwardRef<
       title: '测试集名称',
       dataIndex: 'name',
       key: 'name',
-      width: '26%',
+      width: '19%',
       render: (name: UiTestSuite['name']) => <UiSuiteNameCell name={name} />,
+    },
+    {
+      title: '运行配置',
+      key: 'runConfig',
+      // 23% 在 1600px 最小表宽下约 368px，配合 nowrap 保证三个徽标单行。
+      width: '23%',
+      render: (_, suite) => <UiSuiteRunConfigCell suite={suite} />,
     },
     {
       title: '所属迭代/需求',
       key: 'scope',
-      width: 200,
+      width: '14%',
       render: (_, suite) => {
         const { suiteRequirementName, suiteSprintName } = getSuiteRowContext(suite)
         return <UiSuiteScopeCell sprintName={suiteSprintName} requirementName={suiteRequirementName} />
@@ -263,7 +289,7 @@ export const UiTestSuiteSection = forwardRef<
     {
       title: '创建时间',
       key: 'createdAt',
-      width: 168,
+      width: '10%',
       render: (_, suite) => (
         <Text className="ui-suite-list-time-cell" type="secondary">
           {formatTime(pickCreatedAt(suite))}
@@ -273,7 +299,7 @@ export const UiTestSuiteSection = forwardRef<
     {
       title: '最近更新',
       key: 'updatedAt',
-      width: 168,
+      width: '10%',
       render: (_, suite) => (
         <Text className="ui-suite-list-time-cell" type="secondary">
           {formatTime(pickUpdatedAt(suite))}
@@ -281,15 +307,9 @@ export const UiTestSuiteSection = forwardRef<
       ),
     },
     {
-      title: '运行配置',
-      key: 'runConfig',
-      // 320 是三个徽标（可视 / 视口 / 超时 + 截图策略）能排成一行所需的宽度，再窄「每个步骤后截图」会换行。
-      width: 320,
-      render: (_, suite) => <UiSuiteRunConfigCell suite={suite} />,
-    },
-    {
       title: '描述',
       key: 'description',
+      width: '16%',
       ellipsis: true,
       render: (_, suite) => {
         const { suiteDescription } = getSuiteRowContext(suite)
@@ -309,13 +329,15 @@ export const UiTestSuiteSection = forwardRef<
     {
       title: <span className="tp-actions-col-title" style={{ width: 92 }}>操作</span>,
       key: 'actions',
-      width: 138,
+      width: '8%',
       align: 'right',
+      fixed: 'right',
       render: (_, suite) => {
         const { suiteId } = getSuiteRowContext(suite)
         return (
           <UiSuiteRowActions
             running={runSuiteMutation.isPending && runSuiteMutation.variables === suite}
+            runDisabled={!environmentId}
             deleting={deleteSuiteMutation.isPending && deleteSuiteMutation.variables === suiteId}
             onRun={() => runSuiteMutation.mutate(suite)}
             onEdit={() => openEditDrawer(suite)}
@@ -381,6 +403,9 @@ export const UiTestSuiteSection = forwardRef<
               dataSource={pagedSuites}
               rowKey={(suite) => getSuiteRowContext(suite).suiteId || suite.name}
               pagination={false}
+              // 列宽按百分比分配；容器不足 1600px 时改为表格内部横向滚动，避免名称和描述被压成 0 宽。
+              tableLayout="fixed"
+              scroll={{ x: 1600 }}
               onRow={(suite) => ({
                 onClick: () => openSuiteCasePage(getSuiteRowContext(suite).suiteId),
               })}

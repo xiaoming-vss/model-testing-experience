@@ -1,13 +1,15 @@
 import { Alert, Empty } from 'antd'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useProjectRequirements } from '@/features/projects/hooks/useProjectRequirements'
 import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
 import { useSprintRequirementScope } from '@/features/projects/hooks/useSprintRequirementScope'
+import { EnvironmentDrawer } from '@/features/projects/components/EnvironmentDrawer'
 import { UiSuiteListToolbar } from '@/features/ui-automation/components/UiSuiteListToolbar'
 import { UiTestSuiteSection, type UiTestSuiteSectionRef } from '@/features/ui-automation/components/UiTestSuiteSection'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
-import type { Requirement } from '@/services/api'
+import { api, listItems, type Requirement } from '@/services/api'
 import { getErrorMessage, normalizeRequirementId, normalizeSprintId } from '@/utils/format'
 import '@/shared/styles/surface-tokens.css'
 import '@/features/ui-automation/styles/list-v2.css'
@@ -76,6 +78,30 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
     return targetRequirements.map(normalizeRequirementId)
   }, [allRequirements, selectedRequirementId, selectedSprintId])
   const canCreateSuite = Boolean(activeProjectId) && sprints.length > 0
+  const environmentsQuery = useQuery({
+    queryKey: ['testEnvironments', activeProjectId, 'ui'],
+    queryFn: () => api.getApiEnvironments(activeProjectId!, 'ui'),
+    enabled: Boolean(activeProjectId),
+  })
+  const uiEnvironments = useMemo(() => listItems(environmentsQuery.data), [environmentsQuery.data])
+  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState('')
+  const [environmentDrawerOpen, setEnvironmentDrawerOpen] = useState(false)
+  const defaultEnvironmentId = useMemo(
+    () => (uiEnvironments.find((item) => item.isDefault) ?? uiEnvironments[0])?.environmentId ?? '',
+    [uiEnvironments],
+  )
+  const resolvedEnvironmentId = selectedEnvironmentId || defaultEnvironmentId
+  useEffect(() => {
+    // 切换项目后，上一个项目的环境选择不再有效，回到新项目的默认环境。
+    setSelectedEnvironmentId('')
+  }, [activeProjectId])
+  const environmentOptions = useMemo(
+    () =>
+      uiEnvironments
+        .map((item) => ({ label: item.name, value: item.environmentId ?? '' }))
+        .filter((item) => item.value),
+    [uiEnvironments],
+  )
   return (
     <div className="workbench-page api-automation-page functional-test-page tp-list-surface ui-test-page tp-surface">
       <div className="api-automation-content">
@@ -94,9 +120,15 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
             onCreate={() => uiTestSuiteSectionRef.current?.openCreateDrawer()}
             refreshing={refreshing}
             onRefresh={() => uiTestSuiteSectionRef.current?.refresh()}
+            environmentId={resolvedEnvironmentId}
+            environmentOptions={environmentOptions}
+            environmentsLoading={environmentsQuery.isLoading}
+            onEnvironmentChange={setSelectedEnvironmentId}
+            onOpenEnvironments={() => setEnvironmentDrawerOpen(true)}
           />
 
           {sprintsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(sprintsQuery.error)} /> : null}
+          {environmentsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(environmentsQuery.error)} /> : null}
           {!isRequirementLocked ? <>{requirementsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(requirementsQuery.error)} /> : null}</> : null}
           {!isRequirementLocked ? <>{allRequirementsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(allRequirementsQuery.error)} /> : null}</> : null}
 
@@ -131,10 +163,21 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
               keyword={keyword}
               onClearKeyword={() => setKeyword('')}
               onRefreshingChange={setRefreshing}
+              environmentId={resolvedEnvironmentId}
+              onOpenEnvironments={() => setEnvironmentDrawerOpen(true)}
             />
           )}
         </section>
       </div>
+
+      <EnvironmentDrawer
+        open={environmentDrawerOpen}
+        projectId={activeProjectId}
+        kind="ui"
+        currentEnvironmentId={resolvedEnvironmentId}
+        onClose={() => setEnvironmentDrawerOpen(false)}
+        onSelectEnvironment={(environmentId) => setSelectedEnvironmentId(environmentId ?? '')}
+      />
     </div>
   )
 }

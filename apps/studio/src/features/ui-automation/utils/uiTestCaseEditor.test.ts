@@ -43,12 +43,12 @@ describe('UI 用例步骤解析', () => {
       parseStepsJson([
         { keyword: 'assert_text', expectValue: '登录成功' },
         { keyword: 'assert_visible', timeoutMs: 3000 },
+        { keyword: 'assert_hidden', timeoutMs: 2000 },
       ]).map((step) => step.operationValue),
-    ).toEqual(['登录成功', '3000'])
+    ).toEqual(['登录成功', '3000', '2000'])
   })
 
-  it('只序列化关键字规范允许的步骤字段', () => {
-    const steps = JSON.parse(
+  it('只序列化关键字规范允许的步骤字段', () => {    const steps = JSON.parse(
       serializeSteps([
         {
           stepName: '断言提示文案',
@@ -95,5 +95,42 @@ describe('UI 用例步骤解析', () => {
         enabled: true,
       },
     ])
+  })
+
+  it('后置提取在解析与序列化之间不丢失', () => {
+    const saveTo = [
+      {
+        name: 'taskId',
+        source: 'text' as const,
+        locatorType: 'xpath',
+        locatorValue: '//td[1]',
+        defaultValue: '',
+      },
+      { name: 'currentUrl', source: 'url' as const },
+    ]
+
+    const parsed = parseStepsJson([
+      { orderNo: 1, stepName: '读取编号', keyword: 'click', saveTo },
+    ])
+    expect(parsed[0].saveTo).toEqual(saveTo)
+
+    const serialized = JSON.parse(
+      serializeSteps([{ stepName: '读取编号', keyword: 'click', saveTo }]),
+    )
+    expect(serialized[0].saveTo).toEqual(saveTo)
+  })
+
+  it('空名称的提取规则不会写进 stepsJson', () => {
+    const serialized = JSON.parse(
+      serializeSteps([
+        {
+          stepName: '读取编号',
+          keyword: 'click',
+          saveTo: [{ name: '  ', source: 'text' }],
+        },
+      ]),
+    )
+
+    expect(serialized[0].saveTo).toBeUndefined()
   })
 })

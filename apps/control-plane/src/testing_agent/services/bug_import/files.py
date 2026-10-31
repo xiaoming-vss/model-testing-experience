@@ -51,7 +51,8 @@ class BugImportFiles:
         steps = str(detail.get("steps") or "")
         catalog = _attachment_index(detail.get("attachments"))
         targets: dict[int, dict] = dict(catalog)
-        for rid in _image_refs(steps):
+        image_refs = _image_refs(steps)
+        for rid in image_refs:
             targets.setdefault(rid, catalog.get(rid, {}))
         file_map: dict[int, str] = {}
         notes: list[str] = []
@@ -71,10 +72,10 @@ class BugImportFiles:
         if bug is None:
             return
         complete = (
-            bool(_image_refs(steps))
+            bool(image_refs)
             and bool(clean)
             and has_rich_text_content(clean)
-            and not [rid for rid in _image_refs(steps) if rid not in file_map]
+            and all(rid in file_map for rid in image_refs)
         )
         if clean and clean != bug.description_html and (resolved or has_rich_text_content(clean)):
             bug.description_html = clean
@@ -249,18 +250,15 @@ _FILE_REF = r"file-read-(\d+)"
 _SRC_ATTR = r"\ssrc=(\"[^\"]*\"|'[^']*')"
 
 
-def _search_file_ref(tag: str) -> int | None:
-    match = _re_search(_FILE_REF, tag, _RE_I)
-    return int(match.group(1)) if match else None
-
-
 def _image_refs(raw_html: str) -> list[int]:
     """正文图片引用的禅道文件编号，按出现顺序去重（R44）。"""
     refs: list[int] = []
+    seen: set[int] = set()
     for match in _re_finditer(_FILE_REF, raw_html or "", _RE_I):
         rid = int(match.group(1))
-        if rid not in refs:
+        if rid not in seen:
             refs.append(rid)
+            seen.add(rid)
     return refs
 
 

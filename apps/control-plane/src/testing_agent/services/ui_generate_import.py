@@ -9,6 +9,9 @@ from testing_agent.core.sid import new_id
 from testing_agent.domain.ai_execution_intent import ExecutionIntent
 from testing_agent.models.ui_test_case import UiTestCase
 from testing_agent.services.ai_task_output import dump_run, validate_ui_candidate_cases
+from testing_agent.services.import_payload import parse_import_payload
+from testing_agent.services.ui_generation_contracts import is_ui_workflow
+from testing_agent.services.ui_test_case import validate_ui_import_payload
 
 if TYPE_CHECKING:
     from testing_agent.services.ai_task_access import CandidateImportContext
@@ -49,15 +52,18 @@ async def import_ui_run(
     suite_id: str,
     confirm_overwrite: bool,
     user_id: str,
+    *,
+    artifact_content: str | None = None,
+    allow_reimport: bool = False,
 ) -> dict[str, Any]:
     owned_run = await service.owned_run(user_id, run_id, "ui", action="execute")
     run = await service.repository.get_run_for_update(run_id)
     if run is None or run.run_id != owned_run.run_id:
         raise ErrBadRequest()
-    if (
+    if artifact_content is None and (
         run.status != "success"
         or run.review_status != "approved"
-        or run.import_status == ImportStatus.IMPORTED.value
+        or (run.import_status == ImportStatus.IMPORTED.value and not allow_reimport)
     ):
         raise ErrBadRequest()
 
@@ -66,7 +72,12 @@ async def import_ui_run(
         raise ErrNotFound()
     await service.ensure_requirement_access(user_id, suite.requirement_id, action="execute")
 
-    generated_cases = validate_ui_candidate_cases(run.result_yaml)
+    raw_content = (run.result_yaml or "") if artifact_content is None else artifact_content
+    generated_cases = (
+        validate_ui_import_payload(parse_import_payload(raw_content))
+        if is_ui_workflow(run)
+        else validate_ui_candidate_cases(raw_content)
+    )
     generated_names: set[str] = set()
     for item in generated_cases:
         normalized_name = normalized_case_name(item["name"])
@@ -99,6 +110,7 @@ async def import_ui_run(
         return {
             "requiresConfirmation": True,
             "conflicts": conflicts,
+            "importChanges": [],
             "run": dump_run(run),
         }
 
@@ -109,12 +121,14 @@ async def import_ui_run(
         run.import_migration_complete,
     )
     try:
+        changed_case_ids: set[str] = set()
         for item in generated_cases:
             target = existing_by_name.get(normalized_case_name(item["name"]))
             if target is None:
                 target = UiTestCase(case_id=new_id(), suite_id=suite_id)
                 service.repository.add(target)
             apply_generated_case(target, item)
+            changed_case_ids.add(target.case_id)
 
         run.import_status = ImportStatus.IMPORTED.value
         run.imported_targets = [{"targetType": "ui_suite", "targetId": suite_id}]
@@ -138,5 +152,12 @@ async def import_ui_run(
     return {
         "requiresConfirmation": False,
         "conflicts": [],
+        "importChanges": [
+            {
+                "targetType": "ui_suite",
+                "targetId": suite_id,
+                "changedCaseIds": sorted(changed_case_ids),
+            }
+        ],
         "run": dump_run(run),
     }

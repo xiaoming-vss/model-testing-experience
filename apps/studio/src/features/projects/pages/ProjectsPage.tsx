@@ -30,7 +30,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { type BindingDepth, ZentaoBindingBadge, ZentaoBindingModal, ZentaoBindingSummary } from '@/features/base-services/components/ZentaoBindingPanel'
+import { type BindingDepth, ZentaoBindingModal, ZentaoBindingSummary } from '@/features/base-services/components/ZentaoBindingPanel'
 import { GitlabBindingModal, GitlabBindingSummary } from '@/features/base-services/components/GitlabBindingPanel'
 import { RequirementCodeBindingModal } from '@/features/base-services/components/RequirementCodeBindingModal'
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
@@ -401,41 +401,64 @@ export function ProjectsPage() {
       ) : (
         <>
           <div className="workbench-tabs">
+            {activeBoard === 'requirements' ? (
+              <section className="requirements-list-page-header" aria-label="需求列表标题">
+                <div className="requirements-list-heading">
+                  <span className="requirements-list-title-accent" aria-hidden="true"></span>
+                  <h1 className="tp-list-title">需求</h1>
+                  <span className="requirements-list-count">共 {listTotal(requirementsQuery.data)} 条</span>
+                </div>
+                <div className="requirements-list-tools tp-refresh-actions">
+                  <ActionButton operation="refresh" loading={requirementsQuery.isFetching || sprintsQuery.isFetching} onClick={refreshRequirements}>刷新</ActionButton>
+                  <ProjectActionButton action="write" type="primary" operation="create" disabled={!activeProjectId || !sprints.length} onClick={() => openRequirementDrawer()}>新建需求</ProjectActionButton>
+                </div>
+              </section>
+            ) : null}
+            {activeBoard === 'sprints' ? (
+              <section className="sprint-board-page-header" aria-label="迭代列表标题">
+                <div className="project-overview-summary">
+                  <Space align="center" size={10}><Title level={4} style={{ margin: 0 }}>{activeProject?.name || '项目概览'}</Title>{projectRoleLabel(accessProject) ? <Tag>{projectRoleLabel(accessProject)}</Tag> : null}</Space>
+                  <div className="project-overview-description">
+                    <Text type="secondary" className="project-description-text" title={activeProject?.description || '暂无描述'}>
+                      项目描述：{activeProject?.description || '暂无描述'}
+                    </Text>
+                  </div>
+                </div>
+                <div className="sprint-board-tools tp-refresh-actions">
+                  <ActionButton operation="refresh" loading={sprintsQuery.isFetching} onClick={() => { void sprintsQuery.refetch() }}>刷新</ActionButton>
+                  <ProjectActionButton action="write" operation="create" type="primary" disabled={!activeProjectId} onClick={() => openSprintDrawer()}>新建迭代</ProjectActionButton>
+                </div>
+              </section>
+            ) : null}
             <section className={activeBoard === 'sprints' ? 'sprint-board-shell tp-surface tp-board tp-list-panel' : 'requirements-list-panel tp-board tp-list-panel'}>
-          {activeBoard === 'sprints' && <section className="sprint-board-toolbar tp-list-toolbar">
-            <div className="project-overview-summary">
-              <Space align="center" size={10}><Title level={4} style={{ margin: 0 }}>{activeProject?.name || '项目概览'}</Title>{projectRoleLabel(accessProject) ? <Tag>{projectRoleLabel(accessProject)}</Tag> : null}</Space>
-              <div className="project-overview-description">
-                <Text type="secondary" className="project-description-text" title={activeProject?.description || '暂无描述'}>
-                  项目描述：{activeProject?.description || '暂无描述'}
-                </Text>
-              </div>
-            </div>
-            <div className="sprint-board-tools tp-refresh-actions">
-              <ActionButton operation="refresh" loading={sprintsQuery.isFetching} onClick={() => { void sprintsQuery.refetch() }}>刷新</ActionButton>
-              <ProjectActionButton action="write" operation="create" type="primary" disabled={!activeProjectId} onClick={() => openSprintDrawer()}>新建迭代</ProjectActionButton>
-            </div>
-          </section>}
-
               {activeBoard === 'sprints' ? (
                 <SprintBoard key={activeProjectId} projectId={activeProjectId} sprints={sprints}
                   loading={sprintsQuery.isLoading} refreshing={sprintsQuery.isFetching} error={sprintsQuery.error}
                   deletingId={deleteSprintMutation.isPending ? deleteSprintMutation.variables : undefined}
                   onRefresh={() => { void sprintsQuery.refetch() }}
-                  renderBinding={sprint => sprint.zentaoBinding ? <ZentaoBindingBadge targetType="sprint" binding={sprint.zentaoBinding} /> : <span>禅道 · 未绑定</span>}
+                  renderBinding={sprint => {
+                    const binding = sprint.zentaoBinding
+                    const pending = Boolean(binding?.status && binding.status !== 'active')
+                    const remoteName = binding?.remoteNameSnapshot ?? binding?.remote_name_snapshot
+                    const remoteId = binding?.remoteResourceId ?? binding?.remote_resource_id
+                    const statusText = binding?.status === 'active' ? '已绑定' : binding?.status === 'disabled' ? '已停用' : binding?.status || '-'
+                    return <Tooltip title={binding ? <div className="sprint-board-binding-tooltip">
+                      <div>{remoteName || remoteId || '-'}</div>
+                      <div><span>ID </span>{remoteId || '-'}</div>
+                      <div><span>状态 </span>{statusText}</div>
+                    </div> : undefined}>
+                      <span className={`sprint-board-binding-status${binding ? pending ? ' is-pending' : ' is-bound' : ''}`} tabIndex={binding ? 0 : undefined}>
+                        <AppIcon name="zentao" size={13} />
+                        <span>禅道 {binding ? pending ? '待确认' : '已绑定' : '未绑定'}</span>
+                        {binding && remoteName ? <><span className="sprint-board-binding-separator" aria-hidden="true">·</span><span className="sprint-board-binding-name" title={remoteName}>{remoteName}</span></> : null}
+                      </span>
+                    </Tooltip>
+                  }}
                   onEdit={openSprintDrawer} onDelete={id => deleteSprintMutation.mutate(id)}
                   onBind={sprint => openZentaoBinding({ targetType: 'sprint', resourceId: normalizeSprintId(sprint),
                     parentProjectId: activeProjectId, depth: 'execution', title: `绑定禅道执行 · ${sprint.name}` })} />
               ) : (
                 <>
-                  <div className="tp-list-toolbar requirements-list-header">
-                    <div className="requirements-list-heading"><h1 className="tp-list-title">需求</h1>
-                    </div>
-                    <div className="requirements-list-tools tp-refresh-actions">
-                      <ActionButton operation="refresh" loading={requirementsQuery.isFetching || sprintsQuery.isFetching} onClick={refreshRequirements}>刷新</ActionButton>
-                      <ProjectActionButton action="write" type="primary" operation="create" disabled={!activeProjectId || !sprints.length} onClick={() => openRequirementDrawer()}>新建需求</ProjectActionButton>
-                    </div>
-                  </div>
                   {sprintsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(sprintsQuery.error)} action={<Button onClick={refreshRequirements}>重试读取</Button>} /> : null}
                   {requirementsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(requirementsQuery.error)} action={<Button onClick={refreshRequirements}>重试读取</Button>} /> : null}
                   <div className="tp-list-body">
@@ -455,10 +478,20 @@ export function ProjectsPage() {
                       <RequirementCards requirements={visibleRequirements} renderActions={renderRequirementActions}
                         renderBinding={requirement => {
                           const binding = requirement.zentaoBinding
-                          if (!binding) return <Text type="secondary">未绑定</Text>
-                          const name = binding.remoteNameSnapshot || binding.remote_name_snapshot || binding.remoteResourceId || binding.remote_resource_id || '已绑定'
-                          return <Tooltip title={<ZentaoBindingBadge targetType="requirement" binding={binding} />}>
-                            <div className="requirements-list-wrap" tabIndex={0}>{name}{binding.status && binding.status !== 'active' ? <Text type="secondary">（绑定状态待确认）</Text> : null}</div>
+                          const pending = Boolean(binding?.status && binding.status !== 'active')
+                          const className = `requirements-binding-item${binding ? pending ? ' is-pending' : ' is-bound' : ''}`
+                          const remoteName = binding?.remoteNameSnapshot ?? binding?.remote_name_snapshot
+                          const remoteId = binding?.remoteResourceId ?? binding?.remote_resource_id
+                          const statusText = binding?.status === 'active' ? '已绑定' : binding?.status === 'disabled' ? '已停用' : binding?.status || '-'
+                          return <Tooltip title={binding ? <div className="requirements-binding-tooltip">
+                            <div>{remoteName || remoteId || '-'}</div>
+                            <div><span>ID </span>{remoteId || '-'}</div>
+                            <div><span>状态 </span>{statusText}</div>
+                          </div> : undefined}>
+                            <span className={className} tabIndex={binding ? 0 : undefined}>
+                              <AppIcon name="zentao" size={14} />
+                              <span>禅道 {binding ? pending ? '待确认' : '已绑定' : '未绑定'}</span>
+                            </span>
                           </Tooltip>
                         }} />
                     ) : null}

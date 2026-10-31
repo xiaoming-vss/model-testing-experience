@@ -178,6 +178,21 @@
   min-height: 0;
 }
 
+/* tabpane 有固定高度，但预览内容此前没有形成高度链：展开候选用例后表格按内容
+   长到两千多像素、从 tab 区域溢出去，正好盖住审核备注和底部按钮。让当前
+   tabpane 成为 flex 列，预览网格行取剩余高度，展开的表格改在预览框内部滚动。
+   只作用于 active pane，避免把隐藏 pane 的 display:none 覆盖掉。 */
+.ui-task-candidate-result-modal .ai-task-import-result-form > .ant-tabs .ant-tabs-tabpane-active {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ui-task-candidate-result-modal .ai-task-import-result-preview-content {
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+}
+
 .ui-task-candidate-yaml-pane {
   height: 100%;
   min-height: 0;

@@ -28,6 +28,14 @@ class RequirementDesignRunRequest(DesignModel):
     connection_id: str = Field(min_length=1, max_length=64)
     checkpoint_enabled: bool = False
     instruction: str | None = None
+    requirement_understanding_version_id: str | None = Field(
+        default=None,
+        max_length=64,
+        description="功能生成使用的已审核需求理解版本；未传时使用最新版本并冻结输入",
+    )
+    function_case_ids: list[str] | None = Field(
+        default=None, description="UI 生成选中的正式功能用例编号；未传时沿用当前需求全部正式用例"
+    )
 
 
 class RequirementDesignTaskSummary(DesignModel):

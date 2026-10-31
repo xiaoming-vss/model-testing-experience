@@ -1,13 +1,16 @@
-import type { RunUiTestSuitePayload, UiScreenshotPolicy, UiTestCaseRun, UiTestSuiteRunItem, UiTestSuiteRunReport, UiTestSuiteRunSummary } from '@/services/api'
+import type { RunUiTestSuitePayload, UiScreenshotPolicy, UiTestCaseDebugRunPayload, UiTestCaseRun, UiTestSuiteRunItem, UiTestSuiteRunReport, UiTestSuiteRunSummary } from '@/services/api'
 
-export function buildUiSuiteRunPayload(uiTestSuite?: {
-  headless?: boolean
-  slowMoMs?: number
-  viewportWidth?: number
-  viewportHeight?: number
-  defaultStepTimeoutMs?: number
-} | null): RunUiTestSuitePayload {
-  const payload: RunUiTestSuitePayload = {}
+export function buildUiSuiteRunPayload(
+  environmentId: string,
+  uiTestSuite?: {
+    headless?: boolean
+    slowMoMs?: number
+    viewportWidth?: number
+    viewportHeight?: number
+    defaultStepTimeoutMs?: number
+  } | null
+): RunUiTestSuitePayload {
+  const payload: RunUiTestSuitePayload = { environmentId }
 
   if (uiTestSuite?.headless !== undefined) payload.headless = uiTestSuite.headless
   if (uiTestSuite?.slowMoMs !== undefined) payload.slowMoMs = uiTestSuite.slowMoMs
@@ -18,22 +21,18 @@ export function buildUiSuiteRunPayload(uiTestSuite?: {
   return payload
 }
 
-export function buildUiSuiteDebugRunPayload(uiTestSuite?: {
-  headless?: boolean
-  slowMoMs?: number
-  viewportWidth?: number
-  viewportHeight?: number
-  defaultStepTimeoutMs?: number
-  screenshotPolicy?: UiScreenshotPolicy
-} | null) {
-  const payload: {
+export function buildUiSuiteDebugRunPayload(
+  environmentId: string,
+  uiTestSuite?: {
     headless?: boolean
     slowMoMs?: number
     viewportWidth?: number
     viewportHeight?: number
     defaultStepTimeoutMs?: number
     screenshotPolicy?: UiScreenshotPolicy
-  } = {}
+  } | null
+): UiTestCaseDebugRunPayload {
+  const payload: UiTestCaseDebugRunPayload = { environmentId }
 
   if (uiTestSuite?.headless !== undefined) payload.headless = uiTestSuite.headless
   if (uiTestSuite?.slowMoMs !== undefined) payload.slowMoMs = uiTestSuite.slowMoMs

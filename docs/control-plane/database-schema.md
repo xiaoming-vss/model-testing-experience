@@ -35,3 +35,13 @@ ORDER BY TABLE_NAME, ORDINAL_POSITION;
 迁移 `20261020_0042` 新建 `auth_runtime` 单例（主键 1），初始为本地模式。`mode`、`fingerprint`、`generation` 记录已完成的认证配置切换；`changed_at` 为切换时间；`reconcile_owner`、`reconcile_until` 协调对账租约。配置摘要不公开给浏览器，不替代配置源。
 
 账号状态转换与会话撤销由显式切换事务执行，不由迁移或每次启动重复执行。写事务按运行状态行、用户行的顺序加锁，目录网络调用不持有用户写锁。恢复、回退及部署步骤见 [LDAP 统一认证](ldap-authentication.md)。
+
+## UI 环境变量
+
+迁移 `20261028_0050`、`20261028_0051` 为 UI 自动化扩展环境与运行记录：
+
+- `api_environments.kind`：`api` / `ui`，存量默认 `api`；唯一约束改为 `(project_id, kind, name)`，两类环境可以同名。
+- `api_environment_vars.var_key`：MySQL 下改为 `utf8mb4_bin`，变量引用区分大小写；升级与回退都要重建 `(environment_id, var_key)` 唯一索引。
+- `ui_test_case_runs`、`ui_test_suite_runs`：增加 `environment_id`、`environment_name`（名称快照）、`used_variables_json`、`variable_writes_json` 与加密的 `private_payload`。
+
+表名仍保留 `api_` 前缀，因为改名会牵动 API 自动化的全部代码与既有迁移。运行协议与隐私规则见 [UI 环境变量与后置提取](ui-environment-variables.md)。

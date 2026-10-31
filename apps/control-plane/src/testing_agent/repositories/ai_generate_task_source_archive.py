@@ -7,6 +7,19 @@ from testing_agent.repositories.base import BaseRepository
 
 
 class AiGenerateTaskSourceArchiveRepository(BaseRepository):
+    async def list_source_archives(
+        self, task_ids: list[str]
+    ) -> dict[str, AiGenerateTaskSourceArchive]:
+        result = {}
+        for offset in range(0, len(task_ids), 500):
+            rows = await self.session.scalars(
+                select(AiGenerateTaskSourceArchive).where(
+                    AiGenerateTaskSourceArchive.task_id.in_(task_ids[offset : offset + 500])
+                )
+            )
+            result.update({row.task_id: row for row in rows})
+        return result
+
     async def get_source_archive(self, task_id: str) -> AiGenerateTaskSourceArchive | None:
         return await self.session.scalar(
             select(AiGenerateTaskSourceArchive).where(

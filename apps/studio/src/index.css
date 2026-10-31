@@ -3,6 +3,7 @@
 @import './shared/styles/foundation-tokens.css';
 @import './shared/styles/editor-tokens.css';
 @import './shared/styles/chart-tokens.css';
+@import './shared/styles/ui-stage-visual-tokens.css';
 @import './shared/styles/legacy-tokens.css';
 @import './shared/styles/github-dark-tokens.css';
 @import './shared/styles/github-dark-foundation.css';
@@ -62,8 +63,7 @@ a {
 .ant-form-item-extra,
 .project-description-text,
 .api-collection-description,
-.api-env-var-picker-item-desc,
-.ui-template-picker-item-desc {
+.api-env-var-picker-item-desc {
   color: var(--description-text) !important;
   font-family: var(--description-font);
   font-size: 13px;

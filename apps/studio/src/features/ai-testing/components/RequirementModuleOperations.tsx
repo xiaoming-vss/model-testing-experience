@@ -9,7 +9,7 @@ type Props = {
   artifact: UnderstandingArtifact
   moduleId?: string
   operationId?: string
-  onSourceReference: (ref: RequirementSourceReference) => void
+  onSourceReference?: (ref: RequirementSourceReference) => void
   onUiOperation: (moduleId: string, operationId: string) => void
 }
 

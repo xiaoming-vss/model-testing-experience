@@ -42,7 +42,10 @@ export const apiAutomationApi = {
     }),
   deleteApiCollection: (collectionId: string) =>
     request<Record<string, never>>(`/v1/api-collections/${collectionId}`, { method: 'DELETE' }),
-  getApiEnvironments: (projectId: string) => request<ListResponse<ApiEnvironment>>(`/v1/projects/${projectId}/api-environments`),
+  getApiEnvironments: (projectId: string, kind: 'api' | 'ui' = 'api') =>
+    request<ListResponse<ApiEnvironment>>(
+      `/v1/projects/${projectId}/api-environments?kind=${kind}`,
+    ),
   createApiEnvironment: (projectId: string, body: CreateApiEnvironmentPayload) =>
     request<ApiEnvironment>(`/v1/projects/${projectId}/api-environments`, {
       method: 'POST',

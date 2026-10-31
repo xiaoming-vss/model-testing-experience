@@ -140,6 +140,10 @@ export type UiCaseGenerateTaskRunSnapshot = {
 }
 
 export type UiCaseGenerateTaskRun = GenerateTaskRunImportLifecycle & {
+  checkpointEnabled?: boolean
+  currentStage?: string
+  stageStatus?: string
+  snapshotJson?: UiCaseGenerateTaskRunSnapshot
   runId?: string
   taskId?: string
   projectId?: string
@@ -219,6 +223,8 @@ export type CreateUiCaseGenerateTaskPayload = {
 export type UpdateUiCaseGenerateTaskPayload = Partial<CreateUiCaseGenerateTaskPayload>
 
 export type RunUiCaseGenerateTaskPayload = {
+  functionCaseIds?: string[]
+  checkpointEnabled?: boolean
   connectionId: string
 }
 
@@ -413,6 +419,9 @@ export type FunctionalCaseGenerateTaskRun = GenerateTaskRunImportLifecycle & {
 
 export type RequirementAnalysisTaskRun = {
   importStatus?: GenerateTaskRunImportLifecycle['importStatus']
+  /** 历史摘要按已发布阶段返回，详情接口按 configJson 返回，均为后端真实产物。 */
+  availableArtifacts?: string[]
+  hasResult?: boolean
   workflowVersion?: number
   runId?: string
   taskId?: string
@@ -454,6 +463,7 @@ export type UpdateFunctionalCaseGenerateTaskPayload = Partial<CreateFunctionalCa
 export type RunFunctionalCaseGenerateTaskPayload = {
   connectionId: string
   checkpointEnabled?: boolean
+  requirementUnderstandingVersionId?: string
 }
 
 export type CreateRequirementAnalysisTaskPayload = {
@@ -564,6 +574,7 @@ export type ReviseRequirementAnalysisTaskRunStagePayload = {
   revisionInstruction: string
   configJson: Record<string, unknown>
   resultYaml?: string
+  attachmentFileIds?: string[]
 }
 
 export type CodeRiskTask = {

@@ -37,6 +37,7 @@ class RequirementAnalysisPiExecutor(TaskExecutor):
         first_skill_name: str = REQUIREMENT_ANALYSIS_FIRST_SKILL_NAME,
         second_skill_name: str = REQUIREMENT_ANALYSIS_SECOND_SKILL_NAME,
         source_downloader: RequirementSourceDownloader | None = None,
+        attachment_downloader=None,
     ) -> None:
         self.pi_config = pi_config
         self.runtime_paths = resolve_runtime_paths(pi_config)
@@ -44,6 +45,7 @@ class RequirementAnalysisPiExecutor(TaskExecutor):
         self.first_skill_name = first_skill_name
         self.second_skill_name = second_skill_name
         self.source_downloader = source_downloader
+        self.attachment_downloader = attachment_downloader
 
     def execute(self, task: Task, started_at: datetime, progress_callback) -> TaskResult | None:
         if task.task_type != "requirement_analysis":
@@ -79,6 +81,7 @@ class RequirementAnalysisPiExecutor(TaskExecutor):
                 workspace=workspace,
                 skill_runner=self.skill_runner,
                 source_downloader=self.source_downloader,
+                attachment_downloader=self.attachment_downloader,
                 first_skill_name=(
                     extraction_skill(task.payload.document_type)
                     if (task.current_stage or "extracting_text") == "extracting_text"

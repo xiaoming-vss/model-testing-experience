@@ -3,6 +3,17 @@ from __future__ import annotations
 from fastapi import APIRouter
 from fastapi.responses import Response
 
+from testing_agent.handlers.generation_chain import (
+    delete_generation_chain_version,
+    get_generation_chain_import_options,
+    get_generation_chain_version,
+    get_generation_chain_view,
+    get_generation_chains,
+    import_generation_chain_version,
+    review_generation_chain_stage,
+    revise_generation_chain_stage,
+    run_generation_chain_stage,
+)
 from testing_agent.handlers.requirement import (
     create_requirement,
     delete_requirement,
@@ -26,6 +37,14 @@ from testing_agent.schemas.ai_generate_task import (
     AiGenerateTaskRunResponse,
 )
 from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
+from testing_agent.schemas.generation_chain import (
+    GenerationChainDeleteVersionResponse,
+    GenerationChainImportOptions,
+    GenerationChainImportResponse,
+    GenerationChainOverview,
+    GenerationChainVersionDetail,
+    GenerationChainView,
+)
 from testing_agent.schemas.requirement import RequirementListItemResponse, RequirementResponse
 from testing_agent.schemas.requirement_design import RequirementDesignResponse
 
@@ -78,3 +97,40 @@ router.post(
     "/requirements/{requirement_id}/design/{kind}/run",
     response_model=ApiResponse[AiGenerateTaskRunResponse],
 )(start_requirement_design)
+
+router.get(
+    "/requirements/{requirement_id}/generation",
+    response_model=ApiResponse[GenerationChainOverview],
+)(get_generation_chains)
+router.get(
+    "/requirements/{requirement_id}/generation/{kind}",
+    response_model=ApiResponse[GenerationChainView],
+)(get_generation_chain_view)
+router.get(
+    "/requirements/{requirement_id}/generation/{kind}/versions/{version_id}",
+    response_model=ApiResponse[GenerationChainVersionDetail],
+)(get_generation_chain_version)
+router.get(
+    "/requirements/{requirement_id}/generation/{kind}/versions/{version_id}/import-options",
+    response_model=ApiResponse[GenerationChainImportOptions],
+)(get_generation_chain_import_options)
+router.post(
+    "/requirements/{requirement_id}/generation/{kind}/versions/{version_id}/import",
+    response_model=ApiResponse[GenerationChainImportResponse],
+)(import_generation_chain_version)
+router.post(
+    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/run",
+    response_model=ApiResponse[GenerationChainView],
+)(run_generation_chain_stage)
+router.post(
+    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/revision",
+    response_model=ApiResponse[GenerationChainView],
+)(revise_generation_chain_stage)
+router.post(
+    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/review",
+    response_model=ApiResponse[GenerationChainView],
+)(review_generation_chain_stage)
+router.delete(
+    "/requirements/{requirement_id}/generation/{kind}/versions/{version_id}",
+    response_model=ApiResponse[GenerationChainDeleteVersionResponse],
+)(delete_generation_chain_version)

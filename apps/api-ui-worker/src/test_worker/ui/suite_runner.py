@@ -32,6 +32,7 @@ from .browser_options import (
 from .step_executor import StepExecutionContext, StepExecutor, now_iso
 from .step_normalizer import normalize_case_steps
 from .step_results import build_failed_step_result
+from .variables import StepVariableResolver
 
 
 def _normalize_steps(item: UiSuiteRunItemSnapshot) -> list[UiStepDefinition]:
@@ -343,10 +344,18 @@ class UiSuiteRunner:
         steps.sort(key=lambda s: s.order_no or 0)
 
         # 创建用例执行上下文
+        resolver = (
+            StepVariableResolver(
+                self._control_plane_client, snapshot.task_id, snapshot.run_id
+            )
+            if self._control_plane_client is not None
+            else None
+        )
         case_execution_context = StepExecutionContext(
             page=execution_context.page,
             artifact_dir=case_artifact_dir,
             default_step_timeout_ms=execution_context.default_step_timeout_ms,
+            variables=resolver,
         )
         screenshot_policy = screenshot_policy_from_suite(snapshot.suite)
 
@@ -373,6 +382,7 @@ class UiSuiteRunner:
                                 execution_context.page,
                                 case_artifact_dir,
                                 fallback_order,
+                                case_execution_context.masked_locators,
                             )
                         )
                         result = result.__class__(
@@ -387,6 +397,8 @@ class UiSuiteRunner:
                         step_started_at_iso,
                         step_started_at,
                         message,
+                        save_results=getattr(e, "save_results", None),
+                        used_variables=getattr(e, "used_variables", None),
                     )
 
                     # 捕获失败截图
@@ -395,7 +407,10 @@ class UiSuiteRunner:
                             page = execution_context.page
                             screenshot_path = (
                                 await self._step_executor.capture_failure_screenshot(
-                                    page, case_artifact_dir, fallback_order
+                                    page,
+                                    case_artifact_dir,
+                                    fallback_order,
+                                    case_execution_context.masked_locators,
                                 )
                             )
                             failed_result = failed_result.__class__(

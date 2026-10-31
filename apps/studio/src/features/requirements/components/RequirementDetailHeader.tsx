@@ -10,9 +10,9 @@ import { getErrorMessage } from '@/utils/format'
 import type { Requirement } from '../types'
 import '../styles/detail.css'
 
-export function RequirementDetailHeader({ requirement, requirementId, canWrite, onBack, onEdit, workspaceActionsRef, showDownload, showEdit = true }: {
+export function RequirementDetailHeader({ requirement, requirementId, canWrite, onBack, onEdit, onRefresh, refreshing, workspaceActionsRef, showDownload, showEdit = true }: {
   requirement: Requirement; requirementId: string; canWrite: boolean; showDownload: boolean; showEdit?: boolean;
-  onBack: () => void; onEdit: () => void; workspaceActionsRef?: Ref<HTMLDivElement>
+  onBack: () => void; onEdit: () => void; onRefresh?: () => void; refreshing?: boolean; workspaceActionsRef?: Ref<HTMLDivElement>
 }) {
   const download = useMutation({
     mutationFn: () => requirementsApi.downloadRequirementDocument(requirementId),
@@ -29,6 +29,7 @@ export function RequirementDetailHeader({ requirement, requirementId, canWrite, 
     <div className="requirement-detail-actions">
       {showDownload ? <ActionButton operation="download" loading={download.isPending} onClick={() => download.mutate()}>下载原文件</ActionButton> : null}
       {canWrite && showEdit ? <ActionButton operation="edit" onClick={onEdit}>编辑需求</ActionButton> : null}
+      {onRefresh ? <ActionButton operation="refresh" loading={refreshing} onClick={onRefresh}>刷新</ActionButton> : null}
       <div className="requirement-detail-workspace-actions" ref={workspaceActionsRef} />
     </div>
   </header>

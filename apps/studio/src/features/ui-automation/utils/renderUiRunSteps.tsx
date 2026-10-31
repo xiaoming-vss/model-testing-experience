@@ -51,6 +51,31 @@ export function renderUiRunStepResult(stepResult: UiTestCaseRunStepResult, index
           <span>{formatOptionalValue(stepResult.actualValue)}</span>
         </span>
       </div>
+      {stepResult.usedVariables?.length ? (
+        <div className="ui-test-run-step-variables">
+          <strong>使用变量</strong>
+          <div className="ui-test-run-step-tags">
+            {stepResult.usedVariables.map((item, variableIndex) => (
+              <Tag key={`${item.name ?? ''}-${variableIndex}`} color={item.secret ? 'gold' : 'blue'}>
+                {item.name ?? '-'} = {item.secret ? '********' : formatOptionalValue(item.value)}
+              </Tag>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {stepResult.saveResults?.length ? (
+        <div className="ui-test-run-step-variables">
+          <strong>写回变量</strong>
+          <div className="ui-test-run-step-tags">
+            {stepResult.saveResults.map((item, saveIndex) => (
+              <Tag key={`${item.name ?? ''}-${saveIndex}`} color={item.usedDefault ? 'warning' : 'green'}>
+                {item.name ?? '-'} ← {formatOptionalValue(item.value)}
+                {item.usedDefault ? '（默认值）' : ''}
+              </Tag>
+            ))}
+          </div>
+        </div>
+      ) : null}
       {stepResult.screenshotPath ? (
         <div className="ui-test-run-step-screenshot">
           <strong>截图</strong>

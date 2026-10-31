@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import Boolean, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy.dialects.mysql import VARCHAR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from testing_agent.db.base import Base, CreatedAt, IdPk, UpdatedAt
@@ -27,7 +28,11 @@ class ApiEnvironmentVar(Base):
         nullable=False,
         comment="API 环境业务标识",
     )
-    var_key: Mapped[str] = mapped_column(String(120), nullable=False, comment="变量名称")
+    var_key: Mapped[str] = mapped_column(
+        String(120).with_variant(VARCHAR(120, collation="utf8mb4_bin"), "mysql"),
+        nullable=False,
+        comment="变量名称；区分大小写",
+    )
     value: Mapped[str] = mapped_column(
         Text,
         nullable=False,

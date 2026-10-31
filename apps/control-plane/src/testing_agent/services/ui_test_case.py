@@ -8,6 +8,10 @@ from testing_agent.core.errors import (
     dynamic_error,
 )
 from testing_agent.core.sid import new_id
+from testing_agent.domain.ui_completion import compile_case
+from testing_agent.domain.ui_missing_fields import require_complete_ui_steps
+from testing_agent.domain.ui_step_extract import normalize_save_to
+from testing_agent.domain.ui_variable_template import TOKEN_PATTERN, validate_step_variables
 from testing_agent.models.ui_test_case import UiTestCase
 from testing_agent.models.ui_test_suite import UiTestSuite
 from testing_agent.repositories.ui_test_case import UiTestCaseRepository
@@ -19,6 +23,7 @@ from testing_agent.services.resource_deletion import ResourceDeletion, SqlResour
 
 UI_IMPORT_CASE_FIELDS = {"name", "enabled", "stepsJson", "orderNo"}
 UI_IMPORT_STEP_FIELDS = {
+    "missingFields",
     "orderNo",
     "stepName",
     "keyword",
@@ -28,6 +33,7 @@ UI_IMPORT_STEP_FIELDS = {
     "comparator",
     "continueOnFailure",
     "enabled",
+    "saveTo",
 }
 UI_IMPORT_LOCATOR_TYPES = {
     "css",
@@ -50,6 +56,7 @@ UI_IMPORT_KEYWORDS = {
     "wait_text",
     "assert_text",
     "assert_visible",
+    "assert_hidden",
     "assert_url",
     "screenshot",
     "sleep",
@@ -64,6 +71,7 @@ UI_KEYWORDS_REQUIRING_LOCATOR = {
     "wait_text",
     "assert_text",
     "assert_visible",
+    "assert_hidden",
 }
 UI_KEYWORDS_WITHOUT_LOCATOR = UI_IMPORT_KEYWORDS - UI_KEYWORDS_REQUIRING_LOCATOR
 UI_KEYWORDS_REQUIRING_OPERATION = {
@@ -73,6 +81,7 @@ UI_KEYWORDS_REQUIRING_OPERATION = {
     "wait_text",
     "assert_text",
     "assert_visible",
+    "assert_hidden",
     "assert_url",
     "sleep",
 }
@@ -121,11 +130,13 @@ def require_milliseconds(value: Any, field_path: str) -> None:
     if isinstance(value, int):
         valid = value >= 0
     elif isinstance(value, str):
-        valid = value.strip().isdigit()
+        stripped = value.strip()
+        # 允许 {{变量}} 模板：执行器渲染后才做正整数校验。
+        valid = stripped.isdigit() or bool(TOKEN_PATTERN.search(stripped))
     else:
         valid = False
     if not valid:
-        raise ui_import_error(f"{field_path} 必须是非负毫秒数")
+        raise ui_import_error(f"{field_path} 必须是非负毫秒数，或使用变量模板")
 
 
 def validate_ui_import_step(step: Any, case_index: int, step_index: int) -> dict[str, Any]:
@@ -133,7 +144,13 @@ def validate_ui_import_step(step: Any, case_index: int, step_index: int) -> dict
     if not isinstance(step, dict):
         raise ui_import_error(f"{field_path} 必须是对象")
     check_ui_import_fields(step, UI_IMPORT_STEP_FIELDS, field_path)
+    require_complete_ui_steps([step])
+    try:
+        validate_step_variables(step)
+    except ValueError as exc:
+        raise ui_import_error(f"{field_path} {exc}") from exc
     normalized = dict(step)
+    normalized.pop("missingFields", None)
 
     require_positive_order(step.get("orderNo"), f"{field_path}.orderNo", step_index + 1)
     require_non_empty_string(step.get("stepName"), f"{field_path}.stepName")
@@ -163,11 +180,11 @@ def validate_ui_import_step(step: Any, case_index: int, step_index: int) -> dict
     if keyword in UI_KEYWORDS_REQUIRING_OPERATION:
         if not has_operation_value(step):
             raise ui_import_error(f"{field_path}.operationValue 不能为空")
-        if keyword not in {"assert_visible", "sleep"}:
+        if keyword not in {"assert_visible", "assert_hidden", "sleep"}:
             require_non_empty_string(step.get("operationValue"), f"{field_path}.operationValue")
     if keyword in UI_KEYWORDS_WITHOUT_OPERATION and "operationValue" in step:
         raise ui_import_error(f"{field_path}.{keyword} 不支持 operationValue")
-    if keyword in {"assert_visible", "sleep"}:
+    if keyword in {"assert_visible", "assert_hidden", "sleep"}:
         require_milliseconds(step.get("operationValue"), f"{field_path}.operationValue")
 
     comparator = step.get("comparator")
@@ -178,6 +195,13 @@ def validate_ui_import_step(step: Any, case_index: int, step_index: int) -> dict
             raise ui_import_error(f"{field_path}.comparator 仅支持 {allowed}")
     elif comparator is not None:
         raise ui_import_error(f"{field_path}.{keyword} 不支持 comparator")
+
+    try:
+        save_to = normalize_save_to(step, field_path=field_path)
+    except ValueError as exc:
+        raise ui_import_error(str(exc)) from exc
+    if save_to:
+        normalized["saveTo"] = save_to
     return normalized
 
 
@@ -203,6 +227,10 @@ def validate_ui_import_payload(payload: dict[str, Any]) -> list[dict[str, Any]]:
         field_path = f"cases[{case_index}]"
         if not isinstance(case, dict):
             raise ui_import_error(f"{field_path} 必须是对象")
+        try:
+            case = compile_case(case, complete=True)
+        except ValueError as exc:
+            raise ui_import_error(f"{field_path}: {exc}") from exc
         check_ui_import_fields(case, UI_IMPORT_CASE_FIELDS, field_path)
         name = require_non_empty_string(case.get("name"), f"{field_path}.name")
         enabled = require_boolean(case.get("enabled"), f"{field_path}.enabled")
@@ -212,6 +240,7 @@ def validate_ui_import_payload(payload: dict[str, Any]) -> list[dict[str, Any]]:
         steps = case.get("stepsJson")
         if not isinstance(steps, list):
             raise ui_import_error(f"{field_path}.stepsJson 必须是数组")
+        require_complete_ui_steps(steps, case_label=f"用例 {case_index + 1}")
         normalized_cases.append(
             {
                 "name": name,

@@ -9,44 +9,43 @@ const extraction = JSON.parse(extractionSource)
 afterEach(cleanup)
 function setup(content: unknown = extraction) {
   render(<TestThemeProvider><RequirementMaterialComparison content={content} /></TestThemeProvider>)
-  return { user: userEvent.setup(), materials: screen.getByRole('region', { name: '材料内容' }), facts: screen.getByRole('region', { name: '提取事实' }) }
+  return { user: userEvent.setup(), facts: screen.getByRole('region', { name: '提取事实' }) }
 }
 
 it('展示全部事实，保留表格、示例和待确认含义，缺失值可以通过关联问题理解', async () => {
-  const { user, materials, facts } = setup()
-  expect(within(facts).getAllByRole('button', { name: /^定位材料：/ })).toHaveLength(4)
-  expect(within(materials).getByRole('cell', { name: '实际选项、业务含义及默认值未提供' })).toBeVisible()
+  const { user, facts } = setup()
+  expect(within(facts).getAllByRole('button', { name: /^查看依据：/ })).toHaveLength(4)
+  expect(screen.queryByRole('region', { name: '材料内容' })).not.toBeInTheDocument()
   expect(within(facts).getAllByText('示例').length).toBeGreaterThan(0)
   expect(within(facts).getByText('待确认')).toBeVisible()
   expect(within(facts).queryByText('有明确依据')).toBeNull()
   await user.type(screen.getByRole('textbox', { name: '搜索事实' }), '实际选项')
-  expect(within(facts).getAllByRole('button', { name: /^定位材料：/ })).toHaveLength(1)
+  expect(within(facts).getAllByRole('button', { name: /^查看依据：/ })).toHaveLength(1)
   expect(within(facts).getByRole('button', { name: /转换类型的实际选项及各选项业务含义/ })).toBeVisible()
 })
 
-it('选择引用另一来源的事实后，切换材料并突出对应块，图片文字不丢失', async () => {
+it('事实在结果内展开依据摘录，不再切换或显示原始材料', async () => {
   const artifact = structuredClone(extraction)
-  artifact.sources.push({ id: 'SRC02', name: '原型A', type: 'prototype', location: null, version: null })
-  artifact.contentBlocks.push({ ...artifact.contentBlocks[1], id: 'B04', kind: 'image', text: null, image: { visibleTexts: ['原型可见控件'], meaning: '预览面板' }, sourceReferences: [{ sourceId: 'SRC02', locator: '第2张原型', excerpt: null }] })
-  artifact.extractedFacts[1].relatedBlockIds = ['B04']
-  artifact.extractedFacts[1].fact.sourceReferences = [{ sourceId: 'SRC02', locator: '第2张原型', excerpt: '转换类型' }]
-  const { user, materials, facts } = setup(artifact)
-  await user.click(within(facts).getByRole('button', { name: '定位材料：转换类型' }))
-  expect(within(materials).getByRole('heading', { name: '原型A' })).toBeVisible()
-  expect(within(materials).getByText('原型可见控件')).toBeVisible()
-  expect(within(materials).getByText('关联依据')).toBeVisible()
-  expect(within(materials).queryByText('示例入口：数据管理 → 转换数据。设置条件并刷新；列表展示转换任务 ID、转换类型、状态等字段。')).toBeNull()
-  expect(within(facts).getByRole('button', { name: '原型A' })).toBeVisible()
+  artifact.extractedFacts[1].fact.sourceReferences[0].excerpt = '保留的依据摘录'
+  const { user, facts } = setup(artifact)
+  const toggle = within(facts).getAllByRole('button', { name: /^查看依据：/ })[1]
+  await user.click(toggle)
+  expect(toggle).toHaveAttribute('aria-expanded', 'true')
+  expect(within(facts).getByText('依据来源与摘录')).toBeVisible()
+  expect(facts.querySelector('blockquote')).not.toBeNull()
+  expect(screen.queryByRole('region', { name: '材料内容' })).not.toBeInTheDocument()
+  await user.click(toggle)
+  expect(toggle).toHaveAttribute('aria-expanded', 'false')
 })
 
-it('问题可查看答复与影响，并定位关联事实对应的材料', async () => {
-  const { user, materials } = setup()
+it('问题保留影响说明，不显示材料对照', async () => {
+  const { user } = setup()
   await user.click(screen.getByText('待确认问题', { exact: true }))
   const questions = screen.getByRole('region', { name: '待确认问题' })
   await user.click(within(questions).getByRole('tab', { name: /转换类型的实际选项及各选项业务含义/ }))
   expect(within(questions).queryByText('答复')).toBeNull()
   expect(within(questions).getByText('影响的工作')).toBeVisible()
-  expect(within(materials).getByText('关联依据')).toBeVisible()
+  expect(screen.queryByRole('region', { name: '材料内容' })).not.toBeInTheDocument()
   expect(within(questions).queryByRole('textbox')).toBeNull()
 })
 
@@ -66,7 +65,9 @@ it('待确认分类仅显示剩余缺口，全部解决后自动回到事实并�
   const remaining = artifact.questions.filter((q: { status: string }) => q.status === 'open').length
   const { rerender } = render(<TestThemeProvider><RequirementMaterialComparison content={artifact} /></TestThemeProvider>)
   const user = userEvent.setup()
-  await user.click(screen.getByText('待确认问题', { exact: true }))
+  const entry = screen.getByRole('radio', { name: `待确认问题 ${remaining}` })
+  expect(entry.closest('.ant-segmented-item')?.querySelector('.requirement-pending-questions-label')).not.toBeNull()
+  await user.click(entry.closest('label')!)
   const questions = screen.getByRole('region', { name: '待确认问题' })
   expect(within(questions).queryByText(artifact.questions[0].question)).toBeNull()
   expect(questions.querySelectorAll('.ant-collapse-item')).toHaveLength(remaining)

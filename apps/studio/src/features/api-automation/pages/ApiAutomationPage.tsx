@@ -20,7 +20,7 @@ import type { InputRef, TableProps } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ApiEnvironmentDrawer } from '@/features/api-automation/components/ApiEnvironmentDrawer'
+import { EnvironmentDrawer } from '@/features/projects/components/EnvironmentDrawer'
 import { CollectionDrawer, type CollectionFormValues } from '@/features/api-automation/components/CollectionDrawer'
 import { useProjectRequirements } from '@/features/projects/hooks/useProjectRequirements'
 import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
@@ -167,8 +167,8 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
   const collections = useMemo(() => collectionsQuery.data ?? [], [collectionsQuery.data])
 
   const environmentsQuery = useQuery({
-    queryKey: ['apiEnvironments', activeProjectId],
-    queryFn: () => api.getApiEnvironments(activeProjectId!),
+    queryKey: ['testEnvironments', activeProjectId, 'api'],
+    queryFn: () => api.getApiEnvironments(activeProjectId!, 'api'),
     enabled: Boolean(activeProjectId),
   })
   const environments = listItems(environmentsQuery.data)
@@ -632,9 +632,10 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
         onFinish={(values) => saveCollectionMutation.mutate(values)}
       />
 
-      <ApiEnvironmentDrawer
+      <EnvironmentDrawer
         open={environmentDrawerOpen}
         projectId={activeProjectId}
+        kind="api"
         currentEnvironmentId={resolvedEnvironmentId}
         onClose={() => setEnvironmentDrawerOpen(false)}
         onSelectEnvironment={setSelectedEnvironmentId}

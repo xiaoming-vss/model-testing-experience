@@ -69,3 +69,4 @@ it.each([false, true])('缺陷未采集时仍可更新本地统计（授权接�
   expect(screen.queryByText(/选择本人禅道授权/)).not.toBeInTheDocument()
   client.clear()
 })
+

@@ -4,7 +4,7 @@ import { ProjectActionButton } from '@/features/projects/components/ProjectActio
 import { LinkOutlined } from '@ant-design/icons'
 import { Alert, Button, Empty, Input, Modal, Radio, Space, Spin, Switch, Tag, Typography, theme } from 'antd'
 import { useQuery } from '@tanstack/react-query'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, listItems } from '@/services/api'
 import { getErrorMessage } from '@/utils/format'
@@ -21,8 +21,12 @@ export function LlmConnectionSelectModal({
   checkpointEnabled = false,
   onCheckpointEnabledChange,
   instruction,
+  children,
+  confirmDisabled = false,
   onInstructionChange,
 }: {
+  children?: ReactNode
+  confirmDisabled?: boolean
   instruction?: string
   onInstructionChange?: (value: string) => void
   open: boolean
@@ -69,13 +73,13 @@ export function LlmConnectionSelectModal({
     <Modal
       mask={{ closable: false }}
       centered
-      rootClassName="llm-connection-select-modal"
+      rootClassName={`llm-connection-select-modal${children ? ' llm-connection-select-modal-expanded' : ''}`}
       // 模型选择可能由层级为 PopupBase + 200 的优化弹窗触发。
       zIndex={token.zIndexPopupBase + 300}
       title="选择本人 LLM 授权"
       open={open}
       onCancel={handleClose}
-      width={480}
+      width={children ? 840 : 480}
       destroyOnHidden
       afterClose={() => setSelectedId('')}
       footer={
@@ -83,7 +87,7 @@ export function LlmConnectionSelectModal({
           <Button onClick={handleClose}>取消</Button>
           <ProjectActionButton action="execute"
             type="primary"
-            disabled={!activeConnections.some(c => c.connectionId === selectedId)}
+            disabled={confirmDisabled || !activeConnections.some(c => c.connectionId === selectedId)}
             loading={loading}
             onClick={handleConfirm}
           >
@@ -92,6 +96,7 @@ export function LlmConnectionSelectModal({
         </Space>
       }
     >
+      {children}
       {connectionsQuery.isLoading ? (
         <div style={{ textAlign: 'center', padding: '32px 0' }}>
           <Spin />

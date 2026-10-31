@@ -48,6 +48,7 @@ from testing_agent.routers.sprints import router as sprints_router
 from testing_agent.routers.test_orders import router as test_orders_router
 from testing_agent.routers.test_report_ai_tasks import router as test_report_ai_tasks_router
 from testing_agent.routers.ui_ai_tasks import router as ui_ai_tasks_router
+from testing_agent.routers.ui_run_variables import router as ui_run_variables_router
 from testing_agent.routers.ui_runs import router as ui_runs_router
 from testing_agent.routers.ui_tests import router as ui_tests_router
 from testing_agent.routers.ui_worker import router as ui_worker_router
@@ -173,6 +174,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     internal = APIRouter(prefix="/internal")
     internal.include_router(ui_worker_router, tags=["Internal UI Worker"])
+    internal.include_router(ui_run_variables_router, tags=["Internal UI Worker"])
     internal.include_router(api_worker_router, tags=["Internal API Worker"])
     internal.include_router(ai_worker_router, tags=["Internal AI Worker"])
     internal.include_router(integration_worker_router, tags=["Internal Integration Worker"])

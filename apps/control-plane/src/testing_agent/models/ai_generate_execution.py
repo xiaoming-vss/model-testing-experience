@@ -86,6 +86,14 @@ class AiGenerateStageAttempt(Base):
     progress_json: Mapped[Any | None] = mapped_column(JSON, comment="阶段尝试进度信息 JSON")
     error_message: Mapped[str | None] = mapped_column(Text, comment="执行或同步错误信息")
     remediation: Mapped[str | None] = mapped_column(Text, comment="失败后的处理建议")
+    invalidated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="草稿因上游版本被删除而作废的时间（UTC）",
+    )
+    invalidated_reason: Mapped[str] = mapped_column(
+        String(512), nullable=False, default="", comment="草稿作废原因"
+    )
     started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), comment="执行开始时间（UTC）"
     )

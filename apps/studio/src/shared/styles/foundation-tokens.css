@@ -274,6 +274,7 @@
   --app-surface-chip: #f1f5f9;
   --app-surface-shadow-selected: rgba(15, 23, 42, 0.05);
   --app-task-status-running: #2563eb;
+  --app-generation-running-accent: #8065aa;
   --app-task-status-success: #10b981;
   --app-task-status-warning: #f59e0b;
   --app-task-status-danger: #ef4444;
@@ -560,6 +561,8 @@
   --app-revision-bg: #f8faff;
   --app-revision-divider: #dce5f1;
   --app-revision-divider-hover: #1687ff;
+  --app-revision-attachment-scrim: rgba(15, 23, 42, 0.55);
+  --app-revision-attachment-on-scrim: var(--app-on-accent);
   --app-profile-avatar-gradient-start: #218cff;
   --app-profile-avatar-gradient-end: #0877ff;
   --app-profile-danger-border: #ffd9de;

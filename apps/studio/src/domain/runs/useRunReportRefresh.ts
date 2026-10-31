@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
 import { getRunPollingInterval } from './polling'
 
-/** Fetch the final report once, only while it is open, after its summary finishes. */
+/** Fetch the final report as soon as its summary finishes, without waiting for the report's own poll. */
 export function useRunReportRefresh({ queryKey, runId, open, status, reportStatus }: {
   queryKey: string
   runId: string

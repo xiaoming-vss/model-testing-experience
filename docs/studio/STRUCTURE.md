@@ -95,6 +95,7 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 | `src/shared/styles/indigo-amber-light-tokens.css` | 上述语义 token 及侧栏局部别名 | 浅色交互强调使用清爽蓝（`#2563c9`），链接悬停加深为 `#1d4fa5`；主按钮使用浅蓝底（`#e8f1ff`）、蓝字（`#24578f`）和浅蓝描边，琥珀只保留状态语义（警告/待处理、P1、update 图标）；浅蓝灰导航与页面背景、白色内容面；所有赋值以 `:root:not([data-theme='dark'])` 限定，只覆盖既有颜色角色 |
 | `src/shared/styles/editor-tokens.css` | `--editor-*` | CodeMirror 的表面、选区、光标及 JSON/YAML 语法高亮，由 `index.css` 引入 |
 | `src/shared/styles/chart-tokens.css` | `--chart-*`、`--graph-*` | 图表序列、坐标轴、提示框、关系图连线/缩略图及树图导出配色，由 `index.css` 引入 |
+| `src/shared/styles/ui-stage-visual-tokens.css` | `--uisv-*` | UI 三阶段可视化只读视图的色板（工作台表面、表格、缺失字段与暗色适配），由 `index.css` 引入；feature CSS 只消费，不另写裸色值 |
 | `src/app/styles/workbench.css` 的 `:root` 块 | `--tp-*`、`--mac-*` | 工作台基础与 macOS 外壳 |
 | `src/app/styles/buttons.css` | `--button-*` | 按钮调色板（全站唯一按钮皮肤） |
 | `src/shared/styles/surface-tokens.css` | `--srf-*` | 列表页共用的表面与色盘 |

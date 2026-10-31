@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "ui_test_scenarios/2.0",
+  "capabilities": {
+    "operations": [
+      "navigate",
+      "click",
+      "dblclick",
+      "input",
+      "clear",
+      "press",
+      "wait",
+      "observe",
+      "reload",
+      "screenshot",
+      "sleep"
+    ],
+    "assertions": [
+      "visible",
+      "text_eq",
+      "text_contains",
+      "url_eq",
+      "url_contains",
+      "absent"
+    ]
+  },
+  "cases": [
+    {
+      "caseId": "C1",
+      "name": "核对记录名称",
+      "sourceTitle": "显示记录名称",
+      "preconditions": [
+        "已登录且存在记录甲"
+      ],
+      "goal": "名称显示正确",
+      "coreExpectationIds": [
+        "E1"
+      ],
+      "coverage": "full",
+      "limitations": [],
+      "steps": [
+        {
+          "sourceStepNo": 1,
+          "sourceAction": "打开记录页面。",
+          "actions": [
+            {
+              "actionId": "A1",
+              "sourceQuote": "打开记录页面。",
+              "action": "打开记录页面",
+              "operation": "navigate",
+              "target": "记录页面",
+              "value": null,
+              "status": "included"
+            }
+          ],
+          "expectations": [
+            {
+              "expectationId": "E1",
+              "sourceQuote": "页面显示记录名称“甲”。",
+              "assertion": "text_eq",
+              "target": "记录名称",
+              "value": "甲",
+              "status": "included"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

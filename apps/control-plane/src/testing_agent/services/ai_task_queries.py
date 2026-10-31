@@ -39,15 +39,15 @@ class GenerationQueries:
         rows = await self.repository.list_tasks(project_id, task_type_for(kind))
         scope_loader = getattr(self.repository, "task_scope_resources", None)
         scopes = await scope_loader(rows) if scope_loader is not None else None
+        archives = (
+            await self.source_archive_repository.list_source_archives([row.task_id for row in rows])
+            if kind == "ui"
+            else {}
+        )
         payloads = []
         for row in rows:
             await self.access.validate_task_scope(row, scopes)
-            archive = (
-                await self.source_archive_repository.get_source_archive(row.task_id)
-                if kind == "ui"
-                else None
-            )
-            payloads.append(dump_task(row, archive))
+            payloads.append(dump_task(row, archives.get(row.task_id)))
         return list_payload(payloads)
 
     async def get(self, kind: str, task_id: str, user_id: str) -> dict:

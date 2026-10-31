@@ -27,7 +27,10 @@ describe('requirement document preview layout', () => {
 
     expect(container).not.toBeNull()
     expect(workspace).not.toBeNull()
-    expect(getComputedStyle(container!).maxHeight).toBe(`${window.innerHeight - 72}px`)
+    // 与需求分析／功能测试产物弹窗一致：桌面固定高度，窗口过矮或过窄时占满视口。
+    expect(getComputedStyle(container!).height).toBe('min(94dvh, 1200px)')
+    expect(getComputedStyle(container!).maxHeight).toBe('calc(100dvh - 32px)')
+    expect(getComputedStyle(container!).display).toBe('flex')
     expect(getComputedStyle(container!).padding).toBe('0px')
     expect(getComputedStyle(container!).borderTopWidth).toBe('0px')
     expect(getComputedStyle(container!).borderRadius).toBe('12px')

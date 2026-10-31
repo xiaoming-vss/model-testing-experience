@@ -128,3 +128,9 @@ uv run python -m testing_agent.cli.skills /home/xiaoming/下载/skills/default-s
 用户确认发布后，从 `/home/xiaoming/下载/skills/default-skill-005` 同步 `extract-docx-enhanced-text` 与 `extract-richtext-enhanced-text`，各6个文件，共12个文件。发布前核对源文件与已验收实验快照完全一致，并核对远端旧清单未被其他更新覆盖；通过既有 `sync_builtin_skills` 发布后，逐项回读真实S3对象，内容、大小、SHA-256均一致，其他默认技能哈希未变化。
 
 发布及重启检查时AI任务队列为空。原AI Worker正常停止后，使用原启动参数与环境启动新Worker，加载确认来源承接及完整JSON文件交接代码，日志确认恢复5秒轮询。未改写历史任务、未代替用户发起业务审核；新第一阶段执行使用更新后的技能与Worker。验收明细保存在本次本地实验记录中。
+
+## 2026-10-29 UI YAML 辅助复核
+
+从当前默认库回读 `generate-ui-test-case` 的 35 个文件，以其为基线修改 `SKILL.md`、`references/semantic-review.md` 和 `references/handoff.md`。复核模式优先于生成和导出流程，只提交当前候选的证据和建议，不创建生成审计账本、不触发 YAML 重写；用户明确修订时才修改候选。保留已有动态取值、控件源码证据、业务目标和导入完整性规则。
+
+同一变更已同步本地来源 `/home/xiaoming/下载/skills/default-skill-10-28/generate-ui-test-case`，通过默认技能发布服务更新；35 个文件逐项从真实 S3 回读，字节、大小和 SHA-256 一致，其他技能清单与摘要不变。skill 结构验证及 70 项脚本回归通过。两个 Worker 的辅助复核编排同步调整，本地空队列时重启 Pi Worker，已恢复轮询。生成/复核行为使用模型替身验证，本轮没有发起新的真实模型业务生成；证据在 `.scratch/ui-advisory-review/`。

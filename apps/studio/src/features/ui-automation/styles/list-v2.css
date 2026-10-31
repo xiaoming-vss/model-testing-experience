@@ -38,6 +38,10 @@
   flex: 0 0 auto;
 }
 
+.ui-test-page .ui-suite-list-environment-select {
+  min-width: 150px;
+}
+
 /* ===== 表格卡片 ===== */
 
 .ui-test-page .ui-suite-list-table-card {
@@ -151,7 +155,7 @@
 
 .ui-test-page .ui-suite-list-config-cell {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 6px;
 }

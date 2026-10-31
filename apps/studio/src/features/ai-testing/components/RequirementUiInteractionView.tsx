@@ -10,7 +10,7 @@ import type { UnderstandingArtifact } from '../utils/understandingComparison'
 
 type Props = {
   artifact: UnderstandingArtifact
-  onSourceReference: (reference: RequirementSourceReference) => void
+  onSourceReference?: (reference: RequirementSourceReference) => void
   onSelectionChange: () => void
   initialModuleId?: string
   initialOperationId?: string

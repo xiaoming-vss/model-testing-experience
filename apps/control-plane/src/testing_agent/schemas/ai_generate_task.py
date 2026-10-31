@@ -24,6 +24,10 @@ class AiGenerateTaskRequest(BaseModel):
 
 
 class AiGenerateTaskRunRequest(BaseModel):
+    requirement_understanding_version_id: str | None = Field(default=None, max_length=64)
+    stage: str | None = None
+    current_stage: str | None = None
+    function_case_ids: list[str] | None = Field(default=None)
     connection_id: str | None = Field(default=None)
     llm_connection_id: str | None = Field(default=None)
     trigger_type: str | None = Field(default=None)
@@ -142,6 +146,7 @@ class AiGenerateTaskReviewRequest(BaseModel):
     collection_id: str | None = Field(default=None)
     config_json: Any | None = Field(default=None)
     revision_instruction: str | None = Field(default=None)
+    attachment_file_ids: list[str] | None = Field(default=None, max_length=6)
     result_yaml: str | None = Field(default=None)
 
     model_config = ConfigDict(

@@ -32,6 +32,7 @@ from testing_agent.repositories.ai_generate_task_source_archive import (
     AiGenerateTaskSourceArchiveRepository,
 )
 from testing_agent.repositories.ai_run_history import history_page
+from testing_agent.repositories.api_collection_run import ApiCollectionRunRepository
 from testing_agent.repositories.resource_binding import ResourceBindingRepository
 from testing_agent.repositories.sprint_daily_metrics import SprintDailyMetricsRepository
 from testing_agent.services.ai_task_queries import GenerationQueries
@@ -66,6 +67,46 @@ async def test_history_is_bounded_and_omits_large_inputs_outputs(database):
     detail = await AiGenerateTaskRepository(session).get_run("run-24")
     assert len(detail.snapshot_json["source"]) == 200_000
     assert len(detail.result_yaml) > 200_000
+
+
+@pytest.mark.parametrize("size", [1, 100])
+async def test_api_report_related_reads_are_batched(database, size):
+    sync, session, sql = database
+    seed_cases(sync, size)
+    repository = ApiCollectionRunRepository(session)
+    sql.clear()
+    cases = await repository.report_cases([f"api-{i}" for i in range(size)])
+    runs = await repository.report_case_runs([f"api-{i}-0" for i in range(size)])
+    assert len(cases) == len(runs) == size
+    assert len(sql) == 2
+    sql.clear()
+    assert await repository.report_cases([]) == {}
+    assert await repository.report_case_runs([]) == {}
+    assert not sql
+
+
+async def test_source_archives_are_batched_and_missing_ids_are_omitted(database):
+    from testing_agent.models.ai_generate_task_source_archive import AiGenerateTaskSourceArchive
+
+    sync, session, sql = database
+    sync.add(
+        AiGenerateTaskSourceArchive(
+            archive_id="archive",
+            task_id="task",
+            filename="source.zip",
+            size_bytes=3,
+            sha256="a" * 64,
+            uploaded_at=NOW,
+        )
+    )
+    sync.commit()
+    sql.clear()
+    archives = await AiGenerateTaskSourceArchiveRepository(session).list_source_archives(
+        ["task", "missing"]
+    )
+    assert list(archives) == ["task"]
+    assert archives["task"].filename == "source.zip"
+    assert len(sql) == 1
 
 
 async def test_history_filter_precedes_pagination_and_preserves_global_latest(database):

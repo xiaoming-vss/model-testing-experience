@@ -14,6 +14,7 @@ export type ApiCollection = {
 export type ApiEnvironment = {
   environmentId?: string
   projectId?: string
+  kind?: 'api' | 'ui'
   name: string
   baseUrl: string
   description?: string
@@ -129,6 +130,7 @@ export type UpdateApiCollectionPayload = Partial<CreateApiCollectionPayload>
 
 export type CreateApiEnvironmentPayload = {
   name: string
+  kind?: 'api' | 'ui'
   baseUrl: string
   description?: string
   isDefault?: boolean

@@ -75,3 +75,23 @@ Worker 不再监听文件下载端口，9010 截图服务已移除。截图和 T
 - API 任务：`/internal/api-worker/tasks/claim` 与 `/{task_id}/snapshot`、`/started`、`/heartbeat`、`/completed`，集合任务另有 `/collection-items/{item_id}/started` 与 `/completed`
 
 该服务没有健康检查端点，Dockerfile 中也没有 `HEALTHCHECK`，Compose 因此不对它设置健康检查条件。
+
+## UI 环境变量与后置提取
+
+步骤执行前收集 `locatorValue` / `operationValue` 中的 `{{名字}}`，通过
+`POST /internal/ui-runs/{runId}/variables:resolve` 一次取回当前值，再按定位类型转义渲染；
+同一步骤内不重复请求。`{{baseUrl}}` 取运行环境的 `base_url`。`once` 离线调试模式没有
+控制面连接，遇到命名变量会直接报错。
+
+步骤成功后按 `saveTo` 顺序读取页面值，并逐条调用
+`POST /internal/ui-runs/{runId}/variables:write` 立即写回环境；读取或写回失败都让步骤
+失败，失败结果保留此前已成功的提取项。`source` 支持 `text` / `value` / `attribute` /
+`url`，多元素匹配直接失败，`defaultValue` 只在零匹配或空值时生效。私密变量填充的输入框
+会加入 Playwright 截图的 `mask`。
+
+步骤结果新增 `usedVariables` 与 `saveResults`，由控制面聚合进运行记录。完整协议见
+[UI 环境变量与后置提取](../control-plane/ui-environment-variables.md)。
+
+## UI YAML 待补内容
+
+步骤中的 `missingFields` 是人工编辑草稿标记，不是执行指令。规范化之前检查原始 stepsJson，即使同时提供显式 steps 也不丢弃该标记；显式 UiStepDefinition 的 missing_fields 及直接步骤执行入口同样拒绝待补内容。空数组兼容已补齐文件。控制面在导入和创建运行前执行对应检查，详见[UI YAML 待补内容](../control-plane/ui-yaml-completion.md)。

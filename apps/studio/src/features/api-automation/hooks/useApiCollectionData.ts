@@ -51,8 +51,8 @@ export function useApiCollectionData({ collectionId, selectedEnvironmentId, sele
   const projectId = sprintQuery.data?.projectId ?? sprintQuery.data?.project_id
 
   const environmentsQuery = useQuery({
-    queryKey: ['apiEnvironments', projectId],
-    queryFn: () => api.getApiEnvironments(projectId!),
+    queryKey: ['testEnvironments', projectId, 'api'],
+    queryFn: () => api.getApiEnvironments(projectId!, 'api'),
     enabled: Boolean(projectId),
   })
 

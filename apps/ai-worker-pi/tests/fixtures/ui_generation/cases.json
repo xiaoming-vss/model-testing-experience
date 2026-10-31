@@ -1,0 +1,17 @@
+[
+  {
+    "caseId": "C1",
+    "title": "显示记录名称",
+    "content": {
+      "preconditions": [
+        "已登录且存在记录甲"
+      ],
+      "steps": [
+        {
+          "action": "打开记录页面。",
+          "expected": "页面显示记录名称“甲”。"
+        }
+      ]
+    }
+  }
+]

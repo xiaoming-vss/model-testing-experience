@@ -826,7 +826,7 @@ body,
   padding: 0 10px 0 12px;
   gap: 8px;
   border: 1px solid var(--app-glass-border);
-  border-radius: 999px;
+  border-radius: 10px;
   background: var(--app-glass-surface-58);
   color: var(--app-glass-text-secondary);
   box-shadow: inset 0 1px 0 var(--app-glass-highlight-76);
@@ -1111,7 +1111,7 @@ body,
 .app-shell.app-shell-macos .project-selector-wrap {
   padding: 0 12px;
   border: 1px solid var(--mac-glass-border);
-  border-radius: 18px;
+  border-radius: 10px;
   background: var(--app-surface) !important;
   box-shadow: none !important;
 }
@@ -1785,7 +1785,7 @@ body,
   border-radius: 10px !important;
 }
 
-.app-shell.app-shell-macos :is(.ai-testing-page, .ai-testing-overview-page) :is(.ai-testing-hero-action, .ai-skill-library-empty .ant-btn-primary).ant-btn-primary {
+.app-shell.app-shell-macos :is(.ai-testing-page, .ai-testing-overview-page) :is(.ai-testing-hero-action).ant-btn-primary {
   border: 1px solid var(--app-glass-action-border) !important;
   border-radius: 10px !important;
 }

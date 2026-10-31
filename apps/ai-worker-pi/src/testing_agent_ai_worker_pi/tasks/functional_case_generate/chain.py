@@ -114,6 +114,7 @@ async def run_skill_step(
     workspace: str | None = None,
     extra_instruction: str = "",
     expected_case_ids: list[str] | None = None,
+    media: list[str] | None = None,
     from_config: Callable[..., Any] | None = None,
 ) -> str:
     """执行单步 skill。"""
@@ -125,6 +126,7 @@ async def run_skill_step(
         body_text=input_text,
         extra_instruction=_build_functional_instruction_for_skill(skill_name, extra_instruction),
     )
+    media_args = {"media": media} if media else {}
     async with factory(config_path=config_path, workspace=workspace) as bot:
         stage = {
             "analyze-functional-requirements": "requirement_analysis",
@@ -132,11 +134,11 @@ async def run_skill_step(
             "analyze-test-case-relations": "relation_analysis",
         }.get(skill_name)
         if stage is None:
-            return (await bot.run(message, session_key=session_key)).content
+            return (await bot.run(message, session_key=session_key, **media_args)).content
         return await generate_validated(
             stage=stage,
             inputs=message,
-            generate=lambda prompt: bot.run(prompt, session_key=session_key),
+            generate=lambda prompt: bot.run(prompt, session_key=session_key, **media_args),
             expected_case_ids=expected_case_ids,
         )
 

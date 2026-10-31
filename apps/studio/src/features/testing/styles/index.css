@@ -478,10 +478,6 @@
   word-break: break-word;
 }
 
-.requirement-document-dialog .ant-modal-content {
-  max-height: calc(100vh - 96px);
-}
-
 .requirement-document-understanding-empty {
   display: flex;
   align-items: center;
@@ -1042,15 +1038,22 @@
   -webkit-text-stroke: 0 !important;
 }
 
-/* Requirement document comparison workspace. */
+/* Requirement document comparison workspace. 尺寸与产物弹窗一致。 */
 .requirement-document-dialog :is(.ant-modal-container, .ant-modal-content) {
-  max-height: calc(100vh - 72px);
+  display: flex;
+  flex-direction: column;
+  height: min(94dvh, 1200px);
+  max-height: calc(100dvh - 32px);
   overflow: hidden;
   padding: 0 !important;
   border: 0;
   border-radius: 12px;
   background: var(--app-surface);
   box-shadow: none;
+}
+
+@media (max-width: 640px), (max-height: 700px) {
+  .requirement-document-dialog :is(.ant-modal-container, .ant-modal-content) { height: calc(100dvh - 32px); }
 }
 
 .requirement-document-dialog .ant-modal-close {

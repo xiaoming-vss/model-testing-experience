@@ -8,6 +8,7 @@ import { useTaskRunHistorySync } from '@/features/ai-testing/hooks/useTaskRunHis
 import { useDeleteTaskRun, useStartTaskRun } from '@/features/ai-testing/hooks/useTaskRunActions'
 import { formatStructuredContent } from '@/shared/utils/value'
 import { RevisionDivider, RevisionSidePanel } from '../components/RevisionSidePanel'
+import { useRevisionAttachments } from '../hooks/useRevisionAttachments'
 import { TaskDetailInstructionEditor, TaskDetailNavItem, TaskDetailNavPanel, TaskDetailToolbar } from '../components/TaskDetailShell'
 import { RunArtifacts, RunPipelineStatus } from '../components/RunPipelineStatus'
 import { RunHistoryTable, RunRowActions } from '../components/RunHistoryTable'
@@ -145,6 +146,7 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
   const [revisionInstruction, setRevisionInstruction] = useState('')
   const [revisionTemplate, setRevisionTemplate] = useState('')
   const [revisionDraftKey, setRevisionDraftKey] = useState('')
+  const revisionAttachments = useRevisionAttachments()
   const [instructionDraft, setInstructionDraft] = useState('')
   const [instructionDirty, setInstructionDirty] = useState(false)
   const [form] = Form.useForm<RequirementAnalysisTaskFormValues>()
@@ -581,6 +583,7 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
       setRevisionInstruction('')
       setRevisionTemplate('')
       setRevisionDraftKey('')
+      revisionAttachments.clearAttachments()
       setRunResultModal(null)
       setStageOutputDirty(false)
       setStageReviewAction(null)
@@ -748,6 +751,7 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
         setRevisionTemplate(template)
         setRevisionInstruction(template)
         setRevisionDraftKey(key)
+        revisionAttachments.clearAttachments()
       } catch (error) {
         message.warning(getErrorMessage(error))
         return
@@ -782,6 +786,9 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
         llmConnectionId: connectionId,
         configJson: payload.configJson,
         resultYaml: payload.resultYaml,
+        ...(revisionAttachments.attachments.length ? {
+          attachmentFileIds: revisionAttachments.attachments.map(item => item.fileId),
+        } : {}),
       },
     })
   }
@@ -953,6 +960,7 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
                             const reviewStatus = String(data.reviewStatus ?? '').toLowerCase()
                             const stageKeys = ['extracting_text', 'feature_understanding', 'completed']
                             const reachedStageIndex = stageKeys.indexOf(data.currentStage ?? '')
+                            const availableArtifacts = data.availableArtifacts
                             return (
                               <RunArtifacts
                                 artifacts={runResultSectionDefinitions
@@ -961,7 +969,13 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
                                   .map((section, index) => ({
                                     key: section.key,
                                     label: section.label,
-                                    available: recordStatus === 'success' || index <= reachedStageIndex,
+                                    // 摘要行没有 configJson：有可用产物清单时以真实发布结果为准，
+                                    // 否则第二阶段执行中也会把尚未生成的理解记录显示成可打开。
+                                    available: availableArtifacts
+                                      ? section.key === 'resultYaml'
+                                        ? Boolean(data.hasResult)
+                                        : availableArtifacts.includes(section.key)
+                                      : recordStatus === 'success' || index <= reachedStageIndex,
                                   }))}
                                 onOpen={(key) => {
                                   const section = runResultSectionDefinitions.find((item) => item.key === key)
@@ -1267,14 +1281,14 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
           ) : editableRunResultModal ? (
             <div className="ai-task-stage-review-popover">
               <ArtifactViewTabs jsonCopyText={stageOutputDraft} className="requirement-analysis-artifact-tabs" defaultActiveKey="business" items={[
-                { key: 'business', label: '业务内容', children: <div className="requirement-analysis-artifact-scroll is-material-comparison" role="region" aria-label="业务内容" tabIndex={0}>{runResultModal?.key === 'firstStepOutput' ? <RequirementMaterialComparison content={stageOutputDraft} /> : <RequirementUnderstandingComparison hideTitle approved={finalResultApproved} content={stageOutputDraft} extractionContent={selectedRunConfigJson.firstStepOutput} />}</div> },
+                { key: 'business', label: '业务内容', children: <div className="requirement-analysis-artifact-scroll is-material-comparison" role="region" aria-label="业务内容" tabIndex={0}>{runResultModal?.key === 'firstStepOutput' ? <RequirementMaterialComparison content={stageOutputDraft} /> : <RequirementUnderstandingComparison hideTitle content={stageOutputDraft} />}</div> },
                 { key: 'json', label: '原始 JSON', children: <TextCodeEditor language="json" ariaLabel="阶段产物 JSON" value={stageOutputDraft} minHeight={360} onChange={value => { setStageOutputDraft(value); setStageOutputDirty(true) }} /> },
               ]} />
             </div>
           ) : runResultModalContent ? (
             runResultModal?.key !== 'errorMessage'
               ? <ArtifactViewTabs jsonCopyText={runResultModalContent} className="requirement-analysis-artifact-tabs" items={[
-                { key: 'business', label: '业务内容', children: <div className="requirement-analysis-artifact-scroll is-material-comparison" role="region" aria-label="业务内容" tabIndex={0}>{runResultModal?.key === 'firstStepOutput' ? <RequirementMaterialComparison content={runResultModalContent} /> : <RequirementUnderstandingComparison hideTitle approved={finalResultApproved} content={runResultModalContent} extractionContent={selectedRunConfigJson.firstStepOutput} />}</div> },
+                { key: 'business', label: '业务内容', children: <div className="requirement-analysis-artifact-scroll is-material-comparison" role="region" aria-label="业务内容" tabIndex={0}>{runResultModal?.key === 'firstStepOutput' ? <RequirementMaterialComparison content={runResultModalContent} /> : <RequirementUnderstandingComparison hideTitle content={runResultModalContent} />}</div> },
                 { key: 'json', label: '原始 JSON', children: <TextCodeEditor language="json" ariaLabel="阶段产物 JSON" readOnly value={runResultModalContent} /> },
               ]} />
               : <pre className="ai-task-code-block">{runResultModalContent}</pre>
@@ -1282,7 +1296,7 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无内容" />
           )}
         </div>
-        </div>{reviseModalOpen && <><RevisionDivider /><RevisionSidePanel footerContainer={revisionFooter} projectId={task?.projectId} value={revisionInstruction} onChange={setRevisionInstruction} loading={reviseStageMutation.isPending} onCancel={() => setReviseModalOpen(false)} onSubmit={handleReviseStage} /></>}</div>
+        </div>{reviseModalOpen && <><RevisionDivider /><RevisionSidePanel footerContainer={revisionFooter} projectId={task?.projectId} value={revisionInstruction} onChange={setRevisionInstruction} attachments={revisionAttachments.attachments} onAddAttachment={revisionAttachments.addAttachment} onRemoveAttachment={revisionAttachments.removeAttachment} loading={reviseStageMutation.isPending} onCancel={() => setReviseModalOpen(false)} onSubmit={handleReviseStage} /></>}</div>
       </Modal>
 
     </div>

@@ -572,12 +572,6 @@
   line-height: 18px;
 }
 
-.ui-template-picker-item-token,
-.ui-template-picker-item-token,
-.ui-template-picker-head code {
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-}
-
 .ui-template-picker-label {
   display: inline-flex;
   align-items: center;
@@ -591,95 +585,61 @@
   line-height: 18px;
 }
 
-.ui-template-picker-overlay .ant-popover-inner {
-  padding: 0;
-  overflow: hidden;
-  border-radius: 14px;
-}
-
-.ui-template-picker {
-  width: min(520px, calc(100vw - 48px));
-  background: var(--tp-bg-elevated, var(--app-surface));
-}
-
-.ui-template-picker-head {
-  padding: 14px 16px 10px;
-  border-bottom: 1px solid var(--tp-border-soft);
-}
-
-.ui-template-picker-title {
-  color: var(--tp-text);
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 700;
-}
-
-.ui-template-picker-subtitle {
-  margin-top: 6px;
-  color: var(--tp-text-secondary);
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.ui-template-picker-list {
-  display: flex;
-  flex-direction: column;
-  padding: 8px;
-  max-height: min(420px, 60vh);
-  overflow: auto;
-}
-
-.ui-template-picker-item {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
-  background: transparent;
-  border: 0;
-  border-radius: 10px;
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.18s ease;
-}
-
-.ui-template-picker-item:hover {
-  background: var(--tp-bg-soft, var(--app-option-icon-bg-disabled));
-}
-
-.ui-template-picker-item-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.ui-template-picker-item-label {
-  color: var(--tp-text);
-  font-size: 13px;
-  line-height: 20px;
-  font-weight: 600;
-}
-
-.ui-template-picker-item-token {
-  color: var(--tp-accent);
-  font-size: 12px;
-  line-height: 18px;
-  white-space: nowrap;
-}
-
-.ui-template-picker-item-desc,
-.ui-template-picker-item-example {
-  color: var(--tp-text-secondary);
-  font-size: 12px;
-  line-height: 18px;
-}
-
 .ui-test-case-step-footer {
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding-top: 2px;
+}
+
+/* 后置提取：步骤卡片内的独立小节，一行一条规则。 */
+.ui-test-case-step-extract {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--tp-border);
+}
+
+.ui-test-case-step-extract-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.ui-test-case-step-extract-title {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ui-test-case-step-extract-hint,
+.ui-test-case-step-extract-empty {
+  color: var(--tp-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.ui-test-case-step-extract-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 100px 120px minmax(150px, 1.4fr) minmax(110px, 1fr) minmax(110px, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.ui-test-case-step-extract-row .ant-form-item {
+  margin-bottom: 0;
+}
+
+.ui-test-case-step-extract-warning {
+  color: var(--app-status-warning-text);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+@media (max-width: 1180px) {
+  .ui-test-case-step-extract-row {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .ui-test-case-step-footer-grid {
@@ -736,6 +696,25 @@
   gap: 8px;
   justify-items: start;
   margin-top: 10px;
+}
+
+.ui-test-run-step-variables {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.ui-test-run-step-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ui-test-run-step-tags .ant-tag {
+  margin-inline-end: 0;
 }
 
 .ui-test-run-step-screenshot .ant-image {

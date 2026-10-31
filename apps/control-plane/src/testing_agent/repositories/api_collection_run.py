@@ -101,6 +101,24 @@ class ApiCollectionRunRepository(ApiRunScopeRepositoryMixin, BaseRepository):
     async def get_case_run(self, run_id: str) -> ApiCaseRun | None:
         return await self.session.scalar(select(ApiCaseRun).where(ApiCaseRun.run_id == run_id))
 
+    async def report_cases(self, case_ids: list[str]) -> dict[str, ApiCase]:
+        result = {}
+        for offset in range(0, len(case_ids), 500):
+            rows = await self.session.scalars(
+                select(ApiCase).where(ApiCase.case_id.in_(case_ids[offset : offset + 500]))
+            )
+            result.update({row.case_id: row for row in rows})
+        return result
+
+    async def report_case_runs(self, run_ids: list[str]) -> dict[str, ApiCaseRun]:
+        result = {}
+        for offset in range(0, len(run_ids), 500):
+            rows = await self.session.scalars(
+                select(ApiCaseRun).where(ApiCaseRun.run_id.in_(run_ids[offset : offset + 500]))
+            )
+            result.update({row.run_id: row for row in rows})
+        return result
+
     def add_all(self, rows: list[ApiCollectionRun | WorkerTask | ApiCollectionRunItem]) -> None:
         self.session.add_all(rows)
 

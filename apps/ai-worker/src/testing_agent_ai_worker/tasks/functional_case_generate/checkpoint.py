@@ -8,6 +8,9 @@ from datetime import datetime
 
 from testing_agent_ai_worker.models.execution import TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
+from testing_agent_ai_worker.platform.revision_attachments import (
+    parse_revision_attachments,
+)
 from testing_agent_ai_worker.tasks.functional_case_generate.chain import (
     _build_functional_analysis_instruction,
     _build_functional_case_names_body,
@@ -33,6 +36,7 @@ def execute_checkpoint_task(
     workspace,
     skill_runner,
     detailed_batch_runner,
+    attachment_downloader=None,
 ) -> TaskResult | None:
     """执行 checkpoint 模式的阶段恢复。"""
 
@@ -45,12 +49,29 @@ def execute_checkpoint_task(
         # Initial analysis historically ignores malformed legacy config.
         config = {}
     revision = _optional_config_json_text(config, "revisionInstruction").strip()
+    media: list[str] = []
+    attachment_note = ""
+    if revision:
+        attachments = parse_revision_attachments(config)
+        if attachments:
+            if attachment_downloader is None:
+                raise ValueError("未配置继续优化图片下载器")
+            images = attachment_downloader.download(
+                task_id=task.task_id, workspace=workspace, attachments=attachments
+            )
+            media = [entry["sourcePath"] for entry in images]
+            attachment_note = "\n\n【本轮优化依据图片】\n" + "\n".join(
+                f"- {entry['filename'] or entry['fileId']}" for entry in images
+            )
 
     def revision_input(source: str, field: str) -> str:
         if not revision:
             return source
         current = _require_config_json_text(config, field, stage)
-        return f"{source}\n\n【当前阶段产物】\n{current}\n\n【本轮优化要求】\n{revision}\n请输出优化后的完整阶段产物。"
+        return (
+            f"{source}\n\n【当前阶段产物】\n{current}\n\n【本轮优化要求】\n"
+            f"{revision}{attachment_note}\n请输出优化后的完整阶段产物。"
+        )
 
     if stage == "requirement_analysis":
         requirement_analysis_json = _resolve_text_result(
@@ -63,6 +84,7 @@ def execute_checkpoint_task(
                 extra_instruction=_build_functional_analysis_instruction(
                     task.payload.extra_instruction
                 ),
+                **({"media": media} if media else {}),
             )
         )
         progress_callback(
@@ -95,6 +117,7 @@ def execute_checkpoint_task(
                 extra_instruction=_build_functional_case_names_instruction(
                     task.payload.extra_instruction
                 ),
+                **({"media": media} if media else {}),
             )
         )
         progress_callback(
@@ -126,11 +149,12 @@ def execute_checkpoint_task(
                         "current_cases_json": _require_config_json_text(
                             config, "resultYaml", stage
                         ),
-                        "revision_instruction": revision,
+                        "revision_instruction": revision + attachment_note,
                     }
                     if revision
                     else {}
                 ),
+                **({"media": media} if media else {}),
                 on_progress=lambda accumulated_result, _model_name, _index, _total: (
                     progress_callback(
                         build_progress(

@@ -94,7 +94,8 @@ export function useApiExecution({ collectionId }: Options) {
     queryFn: () => api.getApiCollectionRunReport(selectedCollectionRunId),
     enabled: collectionRunReportOpen && Boolean(selectedCollectionRunId),
     refetchOnWindowFocus: false,
-    refetchInterval: false,
+    // 用例级进度靠报告明细轮询：打开期间与运行摘要同节奏刷新，终态自动停止。
+    refetchInterval: (query) => getRunPollingInterval(query.state.data?.status),
   })
 
   const selectedRunSummary = activeCollectionRunQuery.data?.collectionRunId === selectedCollectionRunId

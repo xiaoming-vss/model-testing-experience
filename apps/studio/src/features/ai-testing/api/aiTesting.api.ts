@@ -142,7 +142,7 @@ export const aiTestingApi = {
     }),
   reviseFunctionalCaseGenerateTaskRunStage: (
     runId: string,
-    body: { llmConnectionId?: string; stage: string; revisionInstruction: string; configJson?: Record<string, unknown>; resultYaml?: string },
+    body: { llmConnectionId?: string; stage: string; revisionInstruction: string; configJson?: Record<string, unknown>; resultYaml?: string; attachmentFileIds?: string[] },
   ) => request<FunctionalCaseGenerateTaskRun>(`/v1/function-case-generate-task-runs/${runId}/stage-revise`, {
     method: 'POST',
     body: JSON.stringify(body),
@@ -222,6 +222,14 @@ export const aiTestingApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  saveUiGenerationStage: (runId: string, body: Record<string, unknown>) =>
+    request<UiCaseGenerateTaskRun>(`/v1/ui-case-generate-task-runs/${runId}/stage-output`, { method: 'PATCH', body: JSON.stringify(body) }),
+  reviewUiGenerationStage: (runId: string, body: Record<string, unknown>) =>
+    request<UiCaseGenerateTaskRun>(`/v1/ui-case-generate-task-runs/${runId}/review-stage`, { method: 'POST', body: JSON.stringify(body) }),
+  reviseUiGenerationStage: (runId: string, body: Record<string, unknown>) =>
+    request<UiCaseGenerateTaskRun>(`/v1/ui-case-generate-task-runs/${runId}/revise-stage`, { method: 'POST', body: JSON.stringify(body) }),
+  retryUiGenerationStage: (runId: string, body: Record<string, unknown>) =>
+    request<UiCaseGenerateTaskRun>(`/v1/ui-case-generate-task-runs/${runId}/retry-stage`, { method: 'POST', body: JSON.stringify(body) }),
   importUiCaseGenerateTaskRun: (runId: string, body: ImportUiCaseGenerateTaskRunPayload) =>
     request<UiCaseGenerateTaskRunImportResult>(`/v1/ui-case-generate-task-runs/${runId}/import`, {
       method: 'POST',

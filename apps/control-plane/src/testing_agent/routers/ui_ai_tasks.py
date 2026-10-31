@@ -11,8 +11,12 @@ from testing_agent.handlers.ui_case_generate_task import (
     import_ui_case_generate_task_run,
     list_ui_case_generate_task_runs,
     list_ui_case_generate_tasks,
+    retry_ui_generation_stage,
     review_ui_case_generate_task_run,
+    review_ui_generation_stage,
+    revise_ui_generation_stage,
     run_ui_case_generate_task,
+    save_ui_generation_stage,
     update_ui_case_generate_task,
     update_ui_case_generate_task_run_result,
     upload_ui_case_source_archive,
@@ -76,3 +80,21 @@ router.post(
     "/ui-case-generate-task-runs/{run_id}/import",
     response_model=ApiResponse[UiGenerateTaskImportResponse],
 )(import_ui_case_generate_task_run)
+
+
+router.patch(
+    "/ui-case-generate-task-runs/{run_id}/stage-output",
+    response_model=ApiResponse[AiGenerateTaskRunResponse],
+)(save_ui_generation_stage)
+router.post(
+    "/ui-case-generate-task-runs/{run_id}/review-stage",
+    response_model=ApiResponse[AiGenerateTaskRunResponse],
+)(review_ui_generation_stage)
+router.post(
+    "/ui-case-generate-task-runs/{run_id}/revise-stage",
+    response_model=ApiResponse[AiGenerateTaskRunResponse],
+)(revise_ui_generation_stage)
+router.post(
+    "/ui-case-generate-task-runs/{run_id}/retry-stage",
+    response_model=ApiResponse[AiGenerateTaskRunResponse],
+)(retry_ui_generation_stage)

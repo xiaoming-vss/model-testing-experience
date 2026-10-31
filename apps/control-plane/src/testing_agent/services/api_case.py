@@ -9,6 +9,7 @@ from testing_agent.core.errors import (
     ErrApiCaseNameAlreadyUse,
     ErrApiCaseRunEnvironmentMismatch,
     ErrApiCaseRunNotFound,
+    ErrApiEnvironmentKindMismatch,
     ErrNotFound,
 )
 from testing_agent.core.sid import new_id
@@ -185,6 +186,8 @@ class ApiCaseService:
             raise ErrNotFound()
         if environment.project_id != context.project.project_id:
             raise ErrApiCaseRunEnvironmentMismatch()
+        if environment.kind != "api":
+            raise ErrApiEnvironmentKindMismatch()
         env_vars = await authorized_environment_vars(
             self.repository.session, user_id, environment.environment_id
         )

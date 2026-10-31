@@ -1,0 +1,49 @@
+.gc-ui-input-modal :is(.ant-modal-container, .ant-modal-content) {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 48px);
+}
+
+.gc-ui-input-modal .ant-modal-body {
+  min-height: 0;
+  overflow: auto;
+}
+
+.gc-ui-source-upload {
+  margin-block: 16px;
+}
+
+.gc-ui-input-cases {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.gc-ui-source-details {
+  max-width: min(640px, calc(100vw - 64px));
+  max-height: min(520px, 60dvh);
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+
+.gc-ui-source-details pre {
+  white-space: pre-wrap;
+}
+
+.gc-ui-source-details details {
+  padding-block: 8px;
+  border-bottom: 1px solid var(--app-surface-divider);
+}
+
+.gc-ui-source-details summary {
+  cursor: pointer;
+}
+
+.gc-ui-source-trigger.ant-btn {
+  height: auto;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: start;
+}

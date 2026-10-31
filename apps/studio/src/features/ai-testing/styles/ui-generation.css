@@ -1,0 +1,84 @@
+/* 三阶段审核沿用功能测试阶段审核的产物弹窗：单个阶段、无页签、编辑器占满正文。
+   审核备注和阶段动作在弹窗底部，继续优化使用右侧优化面板。 */
+.functional-stage-review-modal .ai-task-stage-review-popover.ui-generation-stage-panel {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.ui-generation-stage-panel > .ai-task-run-result-popover-header,
+.ui-generation-stage-panel > .ai-task-stage-review-note,
+.ui-generation-stage-panel > .ant-alert {
+  flex: 0 0 auto;
+}
+
+.ui-generation-stage-editor {
+  flex: 1 1 0%;
+  min-height: 260px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* CodeMirror 的高度必须逐层约束；否则编辑器按 JSON 内容长高，越过自己的盒子。
+   run-result 的固定高度需要 !important 才能被这里覆盖，滚动交给 .cm-scroller。 */
+.functional-stage-review-modal .ai-task-run-result-modal-content.review .ui-generation-stage-editor :is(.json-editor-wrap, .json-editor-shell, .json-editor-codemirror, .cm-editor) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0%;
+  height: 100% !important;
+  min-height: 0 !important;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ui-generation-stage-editor .cm-scroller {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow: auto;
+}
+
+.ui-generation-stage-visual {
+  flex: 1 1 0%;
+  min-height: 260px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ui-generation-stage-visual > * {
+  min-height: 0;
+}
+
+.ui-semantic-review {
+  flex: 0 0 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ui-semantic-review summary {
+  cursor: pointer;
+  padding-block: 8px;
+}
+
+.ui-semantic-review summary:focus-visible {
+  outline: 2px solid var(--ant-color-primary);
+  outline-offset: 2px;
+}
+
+.ui-semantic-review-details {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.ui-semantic-review-issue {
+  border-top: 1px solid var(--app-surface-border);
+  padding-block: 12px;
+}
+
+.ui-semantic-review-issue p {
+  margin-block: 8px;
+  white-space: pre-wrap;
+}

@@ -18,6 +18,41 @@ export type UiTestSuite = {
   updated_at?: string
 }
 
+export type UiStepSaveSource = 'text' | 'value' | 'attribute' | 'url'
+
+/** 步骤成功后的后置提取：读页面上的值并立即写回环境变量。 */
+export type UiStepSaveRule = {
+  name: string
+  source: UiStepSaveSource
+  locatorType?: string
+  locatorValue?: string
+  attribute?: string
+  defaultValue?: string
+  trim?: boolean
+}
+
+export type UiStepSaveResult = {
+  name?: string
+  value?: string
+  source?: string
+  usedDefault?: boolean
+}
+
+export type UiStepUsedVariable = {
+  name?: string
+  value?: string
+  orderNo?: number
+  secret?: boolean
+}
+
+export type UiRunVariableWrite = {
+  name?: string
+  previousValue?: string | null
+  value?: string
+  orderNo?: number
+  created?: boolean
+}
+
 export type UiTestCaseStep = {
   orderNo?: number
   stepName?: string
@@ -31,6 +66,7 @@ export type UiTestCaseStep = {
   continueOnFailure?: boolean
   enabled?: boolean
   description?: string
+  saveTo?: UiStepSaveRule[]
 }
 
 export type UiTestCase = {
@@ -47,7 +83,19 @@ export type UiTestCase = {
   updated_at?: string
 }
 
+export type UiMissingVariable = {
+  caseId?: string
+  caseName?: string
+  orderNo?: number
+  stepName?: string
+  field?: string
+  name?: string
+  kind?: 'environment' | 'builtin'
+  reason?: string
+}
+
 export type UiTestCaseDebugRunPayload = {
+  environmentId: string
   headless?: boolean
   slowMoMs?: number
   viewportWidth?: number
@@ -68,6 +116,8 @@ export type UiTestCaseRunStepResult = {
   actualValue?: string
   screenshotPath?: string
   errorMessage?: string
+  saveResults?: UiStepSaveResult[]
+  usedVariables?: UiStepUsedVariable[]
 }
 
 export type UiTestCaseRun = {
@@ -81,6 +131,8 @@ export type UiTestCaseRun = {
   tracePath?: string
   durationMs?: number
   stepResults?: UiTestCaseRunStepResult[]
+  usedVariables?: UiStepUsedVariable[]
+  variableWrites?: UiRunVariableWrite[]
   snapshot?: {
     browser?: unknown
     options?: unknown
@@ -123,6 +175,8 @@ export type UiTestSuiteRunSummary = {
   startedAt?: string
   finishedAt?: string
   durationMs?: number
+  usedVariables?: UiStepUsedVariable[]
+  variableWrites?: UiRunVariableWrite[]
   snapshot?: unknown
   createdAt?: string
   created_at?: string
@@ -154,7 +208,9 @@ export type CreateUiTestSuitePayload = {
 export type RunUiTestSuitePayload = Pick<
   CreateUiTestSuitePayload,
   'headless' | 'slowMoMs' | 'viewportWidth' | 'viewportHeight' | 'defaultStepTimeoutMs'
->
+> & {
+  environmentId: string
+}
 
 export type UpdateUiTestSuitePayload = Partial<CreateUiTestSuitePayload>
 

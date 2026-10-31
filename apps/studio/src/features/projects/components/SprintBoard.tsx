@@ -1,21 +1,23 @@
 import { useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { Alert, Button, Empty, Popconfirm, Skeleton, Tag } from 'antd'
-import { CalendarOutlined } from '@ant-design/icons'
+import { Link, useNavigate } from 'react-router-dom'
+import { Alert, Button, Empty, Popconfirm, Skeleton } from 'antd'
+import { AppIcon } from '@/shared/icons'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { formatTime, getErrorMessage, normalizeSprintId, pickEndTime, pickStartTime } from '@/utils/format'
 import type { Sprint } from '../types'
 import { ProjectActionButton } from './ProjectActionButton'
+import { isInteractiveCardTarget } from '../utils/cardNavigation'
 import '../styles/sprint-board.css'
 
 const groups = [
-  { key: 'running', label: '进行中', color: 'processing' },
-  { key: 'planned', label: '未开始', color: 'default' },
-  { key: 'completed', label: '已完成', color: 'success' },
-  { key: 'other', label: '其他状态', color: 'default' },
+  { key: 'running', label: '进行中' },
+  { key: 'planned', label: '未开始' },
+  { key: 'completed', label: '已完成' },
+  { key: 'other', label: '其他状态' },
 ]
 const groupKey = (status: string) => groups.some(group => group.key === status) ? status : 'other'
+const displayTime = (value?: string) => formatTime(value).replace(/:\d{2}$/, '')
 
 export function SprintBoard({ projectId, sprints, loading, refreshing, error, deletingId,
   onRefresh, onEdit, onDelete, onBind, renderBinding }: {
@@ -23,6 +25,7 @@ export function SprintBoard({ projectId, sprints, loading, refreshing, error, de
   onRefresh: () => void; onEdit: (sprint: Sprint) => void
   onDelete: (id: string) => void; onBind: (sprint: Sprint) => void; renderBinding: (sprint: Sprint) => ReactNode
 }) {
+  const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const ordered = groups.flatMap(group => sprints.filter(sprint => groupKey(sprint.status) === group.key))
@@ -35,23 +38,38 @@ export function SprintBoard({ projectId, sprints, loading, refreshing, error, de
       {!loading && !error && !ordered.length ? <Empty description="暂无迭代，创建后即可开始管理需求与测试" /> : null}
       {!loading ? <div className="sprint-board-grid" aria-label="迭代列表">{visible.map(sprint => {
         const group = groups.find(item => item.key === groupKey(sprint.status))!
-        return <article key={normalizeSprintId(sprint)} className={`sprint-board-card sprint-board-card-${group.key}`}>
-            <div className="sprint-board-card-heading">
-              <h3><Link to={`/projects/${projectId}/sprints/${normalizeSprintId(sprint)}`} title={sprint.name}>{sprint.name}</Link></h3>
-              <Tag color={group.color}>{group.key === 'other' ? sprint.status || '未知状态' : group.label}</Tag>
+        const sprintId = normalizeSprintId(sprint)
+        return <article key={sprintId} className={`sprint-board-card sprint-board-card-${group.key}`}
+          onClick={(event) => {
+            if (isInteractiveCardTarget(event.target)) return
+            if (sprintId && projectId) navigate(`/projects/${projectId}/sprints/${sprintId}`)
+          }}>
+            <div className="sprint-board-main">
+              <div className="sprint-board-title-row">
+                <h3 className="sprint-board-title"><Link to={`/projects/${projectId}/sprints/${sprintId}`} title={sprint.name}>{sprint.name}</Link></h3>
+                <span className={`sprint-board-status sprint-board-status-${group.key}`}>
+                  {group.key === 'other' ? sprint.status || '未知状态' : group.label}
+                </span>
+              </div>
+              <div className="sprint-board-doc">
+                <span className="sprint-board-doc-icon" aria-hidden="true"><AppIcon name="sprint" size={13} /></span>
+                <span className="sprint-board-doc-text" title={sprint.description || '暂无迭代描述'}>{sprint.description || '暂无迭代描述'}</span>
+              </div>
+              <dl className="sprint-board-meta">
+                <div><dt>开始时间</dt><dd><time>{displayTime(pickStartTime(sprint))}</time></dd></div>
+                <div><dt>结束时间</dt><dd><time>{displayTime(pickEndTime(sprint))}</time></dd></div>
+              </dl>
             </div>
-            <p className="sprint-board-description" title={sprint.description || '暂无迭代描述'}>{sprint.description || '暂无迭代描述'}</p>
-            <div className="sprint-board-period"><span><CalendarOutlined /> 迭代周期</span>
-              <div><time>{formatTime(pickStartTime(sprint))}</time><span>至</span><time>{formatTime(pickEndTime(sprint))}</time></div>
-            </div>
-            <div className="sprint-board-binding">{renderBinding(sprint)}</div>
-            <div className="sprint-board-actions">
-              <ProjectActionButton action="write" operation="edit" iconOnly onClick={() => onEdit(sprint)}>编辑</ProjectActionButton>
-              <ProjectActionButton action="manage" operation="bind" iconOnly onClick={() => onBind(sprint)}>禅道绑定</ProjectActionButton>
-              <Popconfirm title="确认删除该迭代？" okText="删除" cancelText="取消" onConfirm={() => onDelete(normalizeSprintId(sprint))}>
-                <ProjectActionButton action="write" operation="delete" iconOnly loading={deletingId === normalizeSprintId(sprint)}>删除</ProjectActionButton>
-              </Popconfirm>
-            </div>
+            <footer className="sprint-board-foot">
+              <div className="sprint-board-binding">{renderBinding(sprint)}</div>
+              <div className="sprint-board-actions">
+                <ProjectActionButton action="write" operation="edit" iconOnly onClick={() => onEdit(sprint)}>编辑</ProjectActionButton>
+                <ProjectActionButton action="manage" operation="bind" iconOnly onClick={() => onBind(sprint)}>禅道绑定</ProjectActionButton>
+                <Popconfirm title="确认删除该迭代？" okText="删除" cancelText="取消" onConfirm={() => onDelete(normalizeSprintId(sprint))}>
+                  <ProjectActionButton action="write" operation="delete" iconOnly loading={deletingId === normalizeSprintId(sprint)}>删除</ProjectActionButton>
+                </Popconfirm>
+              </div>
+            </footer>
           </article>
       })}</div> : null}
     </div>

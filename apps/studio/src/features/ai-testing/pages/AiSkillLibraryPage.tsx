@@ -1,6 +1,7 @@
 import { saveBlob } from '@/shared/utils/download'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
+import { AppIcon } from '@/shared/icons'
 import { Alert, Card, Drawer, Empty, Popconfirm, Space, Tag, Tooltip, Typography } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -10,12 +11,19 @@ import '@/features/ai-testing/styles/skill-library.css'
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
 import { api, listItems, type AiSkillLibraryItem, type UploadAiSkillPayload } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
-import { getErrorMessage } from '@/utils/format'
+import { formatTime, getErrorMessage } from '@/utils/format'
 
 const { Text } = Typography
 
 function getSkillSpaceId(skill: AiSkillLibraryItem) {
   return skill.skillSpaceId
+}
+
+function formatSkillSize(size?: number) {
+  if (size === undefined) return '-'
+  if (size < 1024) return `${size} B`
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`
 }
 
 function footerRange(total: number) {
@@ -92,10 +100,10 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
   const content = (
     <>
       <div className="workbench-tabs ai-skill-library-tabs">
-        <section className="workbench-panel workbench-board-panel ai-testing-task-panel ai-skill-library-panel tp-board tp-list-panel">
-          <div className="panel-header ai-task-panel-header ai-skill-library-panel-head tp-list-toolbar">
-            <Text strong>Skill 列表</Text>
-            <Space wrap size={8} className="tp-refresh-actions">
+        <section className="workbench-panel workbench-board-panel ai-skill-library-panel tp-board tp-list-panel">
+          <div className="tp-list-toolbar">
+            <h1 className="tp-list-title">Skill库</h1>
+            <Space wrap size={8}>
               <ActionButton operation="refresh" onClick={() => skillsQuery.refetch()} disabled={!activeProjectId}>
                 刷新
               </ActionButton>
@@ -111,70 +119,82 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
           {deleteSkillMutation.error ? <Alert showIcon type="error" title={getErrorMessage(deleteSkillMutation.error)} style={{ margin: '12px 18px 0' }} /> : null}
           {downloadSkillMutation.error ? <Alert showIcon type="error" title={getErrorMessage(downloadSkillMutation.error)} style={{ margin: '12px 18px 0' }} /> : null}
 
-          <div className="table-body-scroll ai-testing-card-scroll ai-skill-library-body tp-list-scroll">
+          <div className="table-body-scroll sprint-card-scroll base-services-card-scroll tp-list-scroll">
             {!activeProjectId ? (
-              <div className="sprint-card-loading ai-testing-empty-shell ai-skill-library-empty">
+              <div className="base-services-empty-card base-services-empty-card-list">
                 <Empty description="请先选择项目，再进入 Skill库" />
               </div>
             ) : skillsQuery.isLoading ? (
-              <div className="sprint-card-loading ai-testing-empty-shell ai-skill-library-empty">
+              <div className="sprint-card-loading">
                 <Empty description="Skill库加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
               </div>
             ) : skills.length === 0 ? (
-              <div className="ai-testing-empty-shell ai-skill-library-empty">
-                <Empty description="当前项目下暂无 Skill">
+              <div className="base-services-empty-card base-services-empty-card-list">
+                <Empty description="当前项目下暂无 Skill" image={Empty.PRESENTED_IMAGE_SIMPLE}>
                   <ProjectActionButton action="manage" type="primary" operation="create" onClick={openUploadModal}>
                     上传第一个 Skill
                   </ProjectActionButton>
                 </Empty>
               </div>
             ) : (
-              <div className="ai-skill-library-grid">
+              <div className="api-collection-grid base-services-connection-grid">
                 {skills.map((skill) => {
                   const skillSpaceId = getSkillSpaceId(skill)
                   const isDefaultSkill = Boolean(skill.isDefault)
+                  const skillName = skill.filename || '未命名技能'
                   return (
-                    <Card key={skillSpaceId} className="ai-skill-card" hoverable>
-                      <div className="ai-skill-card-head">
-                        <div className="ai-skill-card-title">
-                          <Text strong>
-                            {skill.filename || '未命名技能'}
-                          </Text>
-                        </div>
-                        <div className="ai-skill-card-footer">
-                          <Tag color={isDefaultSkill ? 'blue' : 'default'}>{isDefaultSkill ? '系统默认' : '项目自定义'}</Tag>
-                          <Space size={6}>
-                            <Tooltip title="下载">
-                              <ActionButton
+                    <Card key={skillSpaceId} className="sprint-card api-collection-card base-services-connection-card">
+                      <div className="api-collection-card-top base-services-connection-head">
+                        <Space size={10} className="base-services-connection-title-wrap">
+                          <AppIcon name="skills" size={24} />
+                          <Typography.Text strong className="base-services-connection-title" title={skillName}>
+                            {skillName}
+                          </Typography.Text>
+                        </Space>
+                        <Tag color={isDefaultSkill ? 'blue' : 'default'}>{isDefaultSkill ? '系统默认' : '项目自定义'}</Tag>
+                      </div>
+                      <div className="sprint-card-meta">
+                        <span className="sprint-card-label">文件数</span>
+                        <span className="api-collection-inline-value">{skill.fileCount ?? '-'}</span>
+                      </div>
+                      <div className="sprint-card-meta">
+                        <span className="sprint-card-label">大小</span>
+                        <span className="api-collection-inline-value">{formatSkillSize(skill.size)}</span>
+                      </div>
+                      <div className="sprint-card-meta">
+                        <span className="sprint-card-label">最近更新</span>
+                        <span className="api-collection-inline-value">{formatTime(skill.updatedAt ?? skill.createdAt)}</span>
+                      </div>
+                      <div className="sprint-card-actions base-services-connection-actions">
+                        <Tooltip title="下载">
+                          <ActionButton
+                            type="text"
+                            shape="circle"
+                            operation="download" iconOnly
+                            aria-label="下载 Skill"
+                            loading={downloadSkillMutation.isPending && downloadSkillMutation.variables === skill}
+                            onClick={() => downloadSkillMutation.mutate(skill)}
+                          />
+                        </Tooltip>
+                        <Popconfirm
+                          title="确认删除该 Skill？"
+                          disabled={isDefaultSkill}
+                          onConfirm={() => handleDeleteSkill(skill)}
+                        >
+                          <Tooltip title={isDefaultSkill ? '系统默认 Skill 不允许删除' : '删除'}>
+                            <span>
+                              <ProjectActionButton action="manage"
+                                danger
                                 type="text"
                                 shape="circle"
-                                operation="download" iconOnly
-                                aria-label="下载 Skill"
-                                loading={downloadSkillMutation.isPending && downloadSkillMutation.variables === skill}
-                                onClick={() => downloadSkillMutation.mutate(skill)}
+                                operation="delete" iconOnly
+                                aria-label={isDefaultSkill ? '系统默认 Skill 不允许删除' : '删除 Skill'}
+                                disabled={isDefaultSkill}
+                                loading={deleteSkillMutation.isPending && deleteSkillMutation.variables === skillSpaceId}
                               />
-                            </Tooltip>
-                            <Popconfirm
-                              title="确认删除该 Skill？"
-                              disabled={isDefaultSkill}
-                              onConfirm={() => handleDeleteSkill(skill)}
-                            >
-                              <Tooltip title={isDefaultSkill ? '系统默认 Skill 不允许删除' : '删除'}>
-                                <span>
-                                  <ProjectActionButton action="manage"
-                                    danger
-                                    type="text"
-                                    shape="circle"
-                                    operation="delete" iconOnly
-                                    aria-label={isDefaultSkill ? '系统默认 Skill 不允许删除' : '删除 Skill'}
-                                    disabled={isDefaultSkill}
-                                    loading={deleteSkillMutation.isPending && deleteSkillMutation.variables === skillSpaceId}
-                                  />
-                                </span>
-                              </Tooltip>
-                            </Popconfirm>
-                          </Space>
-                        </div>
+                            </span>
+                          </Tooltip>
+                        </Popconfirm>
                       </div>
                     </Card>
                   )
@@ -183,7 +203,7 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
             )}
           </div>
 
-          <div className="table-footer ai-skill-library-footer">
+          <div className="table-footer">
             <Text type="secondary">{footerRange(skills.length)}</Text>
 
           </div>

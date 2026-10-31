@@ -15,6 +15,9 @@ from testing_agent_ai_worker.config.models import Settings
 from testing_agent_ai_worker.nanobot_runtime.paths import migrate_legacy_sessions
 from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
 from testing_agent_ai_worker.platform.result_sink import HttpResultSink
+from testing_agent_ai_worker.platform.revision_attachments import (
+    PlatformRevisionAttachmentDownloader,
+)
 from testing_agent_ai_worker.platform.skills import SkillPreparer
 from testing_agent_ai_worker.platform.task_source import HttpClaimTaskSource
 from testing_agent_ai_worker.services.result_service import ResultService
@@ -96,10 +99,16 @@ def build_task_runner(
             ),
             functional_executor=FunctionalCaseNanobotExecutor(
                 nanobot_config=settings.nanobot,
+                attachment_downloader=PlatformRevisionAttachmentDownloader(
+                    resolved_client, settings.worker.worker_id
+                ),
             ),
             requirement_executor=RequirementAnalysisNanobotExecutor(
                 nanobot_config=settings.nanobot,
                 source_downloader=PlatformRequirementSourceDownloader(
+                    resolved_client, settings.worker.worker_id
+                ),
+                attachment_downloader=PlatformRevisionAttachmentDownloader(
                     resolved_client, settings.worker.worker_id
                 ),
             ),

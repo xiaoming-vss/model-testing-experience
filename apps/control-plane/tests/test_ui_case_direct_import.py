@@ -296,9 +296,16 @@ def test_all_supported_keywords_and_locator_types_are_accepted():
             locatorValue="button",
             operationValue="5000",
         ),
-        step(11, "assert_url", operationValue="/projects", comparator="eq"),
-        step(12, "screenshot"),
-        step(13, "sleep", operationValue=1000),
+        step(
+            11,
+            "assert_hidden",
+            locatorType="text",
+            locatorValue="转换格式必填",
+            operationValue="3000",
+        ),
+        step(12, "assert_url", operationValue="/projects", comparator="eq"),
+        step(13, "screenshot"),
+        step(14, "sleep", operationValue=1000),
     ]
 
     result = validate_ui_import_payload(ui_case(*steps))
@@ -314,6 +321,7 @@ def test_all_supported_keywords_and_locator_types_are_accepted():
         "wait_text",
         "assert_text",
         "assert_visible",
+        "assert_hidden",
         "assert_url",
         "screenshot",
         "sleep",
@@ -332,6 +340,27 @@ def test_all_supported_keywords_and_locator_types_are_accepted():
         ),
         (ui_case(step(1, "wait_visible")), "keyword 仅支持"),
         (ui_case(step(1, "wait_hidden")), "keyword 仅支持"),
+        (
+            ui_case(step(1, "assert_hidden", operationValue="3000")),
+            "locatorType 不能为空",
+        ),
+        (
+            ui_case(step(1, "assert_hidden", locatorType="text", locatorValue="转换格式必填")),
+            "operationValue 不能为空",
+        ),
+        (
+            ui_case(
+                step(
+                    1,
+                    "assert_hidden",
+                    locatorType="text",
+                    locatorValue="转换格式必填",
+                    operationValue="3000",
+                    comparator="eq",
+                )
+            ),
+            "不支持 comparator",
+        ),
         (
             ui_case(step(1, "click", locatorType="id", locatorValue="submit")),
             "locatorType 仅支持",

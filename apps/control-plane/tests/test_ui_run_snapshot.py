@@ -4,6 +4,7 @@ import pytest
 from authorization_database import AuthorizationDatabase
 
 from testing_agent.domain.worker_context import UiWorkerContext
+from testing_agent.models.api_environment import ApiEnvironment
 from testing_agent.models.ui_test_case_run import UiTestCaseRun
 from testing_agent.models.ui_test_suite_run import UiTestSuiteRun, UiTestSuiteRunItem
 from testing_agent.schemas.ui_run import DebugRunUiCaseRequest, RunUiSuiteRequest
@@ -13,9 +14,18 @@ from testing_agent.services.worker import build_snapshot, complete_domain_run
 
 
 class FakeUiRunRepository:
-    session = AuthorizationDatabase()
-
     def __init__(self, cases):
+        self.session = AuthorizationDatabase(environment=True)
+        self.session.sync.add(
+            ApiEnvironment(
+                environment_id="ui-env",
+                project_id="project-1",
+                kind="ui",
+                name="ui-env",
+                base_url="https://web.example.test",
+            )
+        )
+        self.session.sync.commit()
         self.rows = []
         self.cases = cases
         self.suite = SimpleNamespace(
@@ -109,12 +119,19 @@ async def test_debug_run_freezes_case_execution_data_in_snapshot():
     repository = FakeUiRunRepository([case])
 
     await UiTestCaseRunService(repository).debug_run_case(
-        "user-1", "case-1", DebugRunUiCaseRequest()
+        "user-1", "case-1", DebugRunUiCaseRequest(environmentId="ui-env")
     )
 
     run = next(row for row in repository.rows if isinstance(row, UiTestCaseRun))
     assert run.snapshot_json["runId"] == run.run_id
     assert run.snapshot_json["suite"]["name"] == "xiaoming"
+    assert run.snapshot_json["environment"] == {
+        "id": "ui-env",
+        "name": "ui-env",
+        "baseUrl": "https://web.example.test",
+    }
+    assert run.environment_id == "ui-env"
+    assert run.environment_name == "ui-env"
     assert run.snapshot_json["case"] == {
         "caseId": "case-1",
         "suiteId": "suite-1",
@@ -139,12 +156,16 @@ async def test_suite_run_freezes_ordered_case_execution_data_and_item_ids():
     ]
     repository = FakeUiRunRepository(cases)
 
-    await UiTestCaseRunService(repository).run_suite("user-1", "suite-1", RunUiSuiteRequest())
+    await UiTestCaseRunService(repository).run_suite(
+        "user-1", "suite-1", RunUiSuiteRequest(environmentId="ui-env")
+    )
 
     run = next(row for row in repository.rows if isinstance(row, UiTestSuiteRun))
     items = [row for row in repository.rows if isinstance(row, UiTestSuiteRunItem)]
     assert run.snapshot_json["suiteRunId"] == run.suite_run_id
     assert run.snapshot_json["suite"]["name"] == "xiaoming"
+    assert run.snapshot_json["environment"]["id"] == "ui-env"
+    assert run.environment_id == "ui-env"
     assert "items" not in run.snapshot_json
     assert [item.snapshot_json["caseId"] for item in items] == [
         "case-1",

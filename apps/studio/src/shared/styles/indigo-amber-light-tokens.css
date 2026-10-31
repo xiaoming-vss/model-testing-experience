@@ -6,10 +6,11 @@
  * remain.
  */
 :root:not([data-theme='dark']) {
-  --app-bg: #f0f4f9;
+  --app-bg: #f8fafd;
+  --app-board-gradient: linear-gradient(180deg, #eef4fa 0%, #f6fafe 48%, #fdfefe 100%);
   --app-text: #273449;
   --app-link: #2563c9;
-  --app-shell-bg: #f0f4f9;
+  --app-shell-bg: #f8fafd;
   --app-shell-sidebar: #f5f8fc;
   --app-shell-text: #273449;
   --app-shell-text-secondary: #46566e;
@@ -58,7 +59,7 @@
   --app-control-link: #2563c9;
   --app-context-selected: #e8f1ff;
   --app-request-add-hover: #e8f1ff;
-  --app-glass-page: #f0f4f9;
+  --app-glass-page: #f8fafd;
   /* Legacy glass layers must use the same content surface as modern cards.
    * Otherwise nested toolbars, status strips and older pages add white veils.
    * Inputs and small controls share this palette through their own roles too.
@@ -226,7 +227,7 @@
   --legacy-tp-text: #273449;
   --legacy-tp-text-secondary: #46566e;
   --legacy-tp-text-muted: #59677c;
-  --legacy-mac-glass-page: #f0f4f9;
+  --legacy-mac-glass-page: #f8fafd;
   --legacy-mac-glass-sidebar: var(--app-shell-sidebar);
   --legacy-mac-glass-header: #f5f8fc;
   --legacy-mac-glass-panel: var(--app-surface);

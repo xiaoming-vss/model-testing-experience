@@ -25,10 +25,4 @@
 
 .requirement-operation-actions { display: flex; justify-content: flex-end; margin-bottom: 8px; }
 
-.requirement-understanding-workspace.is-reading-only .requirement-material-comparison { grid-template-columns: minmax(0, 1fr); grid-auto-rows: minmax(0, 1fr); }
-.requirement-understanding-workspace.is-reading-only .requirement-fact-source,
-.requirement-understanding-workspace.is-reading-only .requirement-fact-confirmed,
-.requirement-understanding-workspace.is-reading-only .requirement-reading-citation,
-.requirement-understanding-workspace.is-reading-only button[aria-label="查看模块说明依据"] { display: none; }
-
 .requirement-understanding-workspace .requirement-material-overview.is-title-in-header { justify-content: flex-end; }

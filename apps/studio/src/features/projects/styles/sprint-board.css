@@ -1,26 +1,62 @@
+.sprint-board-page-header { display: flex; align-items: center; justify-content: space-between; flex: 0 0 56px; flex-wrap: wrap; gap: 16px; min-width: 0; padding: 0 16px; border: 1px solid var(--srf-card-border); border-radius: var(--srf-radius-card); background: var(--srf-list-header-bg); }
+.sprint-board-page-header .project-overview-summary { min-width: 0; flex: 1 1 320px; }
 .sprint-board-shell { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
 .sprint-board { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; gap: 0; color: var(--srf-text); border: 1px solid var(--srf-card-border); border-radius: var(--srf-radius-card); background: var(--srf-card); overflow: hidden; }
 .sprint-board-tools { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
-.sprint-board-scroll { flex: 1; min-height: 0; overflow: auto; padding: 16px; background: var(--srf-card); }
+#root .sprint-board-shell.tp-list-panel { --app-list-toolbar-bg: transparent; background: var(--app-board-gradient) !important; }
+.sprint-board-scroll { flex: 1; min-height: 0; overflow: auto; padding: 16px; background: transparent; }
 .sprint-board-scroll > .ant-alert { margin-bottom: 16px; }
 .sprint-board-scroll > .ant-empty { margin: 48px 16px; }
-.sprint-board-grid { display: grid; grid-template-columns: repeat(auto-fill, min(100%, 328px)); justify-content: start; gap: 16px; }
-.sprint-board .sprint-board-card { display: flex; flex-direction: column; min-width: 0; min-height: 274px; gap: 12px; padding: 0 18px 14px; border: 1px solid var(--srf-card-border); border-radius: var(--srf-radius-card); background: var(--srf-card); box-shadow: none; }
-.sprint-board-card-heading { display: flex; align-items: center; gap: 12px; min-height: 49px; margin: 0 -18px; padding: 12px 18px; background: var(--srf-list-header-bg); border-bottom: 1px solid var(--srf-card-border); border-radius: var(--srf-radius-card) var(--srf-radius-card) 0 0; }
-.sprint-board-card-heading h3 { flex: 1; min-width: 0; margin: 0; font-size: 15px; line-height: 24px; font-weight: 500; overflow-wrap: anywhere; }
-.sprint-board-card-heading a { color: var(--srf-accent); }
-.sprint-board-card-heading a:hover { color: var(--srf-accent); text-decoration: underline; text-underline-offset: 4px; }
-.sprint-board-card-heading a:focus-visible { outline: 2px solid var(--srf-accent); outline-offset: 4px; border-radius: 2px; }
-.sprint-board-card-heading .ant-tag { margin: 0; flex-shrink: 0; }
-.sprint-board-description { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-height: 80px; margin: 0; color: var(--srf-text-secondary); font-size: 13px; line-height: 20px; overflow-wrap: anywhere; }
-.sprint-board-period { margin-top: auto; font-size: 12px; line-height: 20px; }
-.sprint-board-period > span { color: var(--srf-text-secondary); }
-.sprint-board-period > div { display: flex; flex-wrap: wrap; gap: 4px 8px; margin-top: 4px; font-variant-numeric: tabular-nums; }
-.sprint-board-period time { white-space: nowrap; }
-.sprint-board-period > div > span { color: var(--srf-text-secondary); }
-.sprint-board-binding { color: var(--srf-text-secondary); font-size: 12px; min-height: 22px; overflow-wrap: anywhere; }
-.sprint-board-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; padding-top: 8px; border-top: 1px solid var(--srf-card-border); }
+.sprint-board-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 328px), 1fr)); justify-content: start; gap: 16px; }
+.sprint-board .sprint-board-card { display: flex; flex-direction: column; min-width: 0; min-height: 218px; padding: 0; overflow: hidden; border: 1px solid var(--srf-card-border); border-radius: 12px; background: var(--srf-card); box-shadow: none; transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease; cursor: pointer; }
+.sprint-board .sprint-board-card:hover { border-color: var(--app-glass-action-border-hover); box-shadow: 0 12px 28px var(--app-service-card-shadow-hover); transform: translateY(-2px); }
+.sprint-board-main { flex: 1; padding: 15px 16px 12px; }
+.sprint-board-title-row { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0 0 6px; }
+.sprint-board-title { flex: 1; min-width: 0; margin: 0; color: var(--srf-text); font-size: 14.5px; line-height: 22px; font-weight: 650; }
+.sprint-board-title a { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: inherit; }
+.sprint-board-title a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.sprint-board-title a:focus-visible { outline: 2px solid var(--srf-accent); outline-offset: 2px; border-radius: 2px; }
+.sprint-board-status { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; color: var(--srf-text-secondary); font-size: 10.5px; line-height: 18px; font-weight: 500; white-space: nowrap; }
+.sprint-board-status::before { content: ""; width: 5px; height: 5px; flex: 0 0 auto; border-radius: 50%; background: currentColor; }
+.sprint-board-status-running { color: var(--app-action-read); }
+.sprint-board-status-completed { color: var(--app-result-success-text); }
+.sprint-board-status-other { color: var(--srf-text-muted); }
+.sprint-board-doc { display: flex; align-items: flex-start; gap: 8px; min-width: 0; margin: 0 0 10px; color: var(--srf-text-secondary); font-size: 10.5px; line-height: 16px; }
+.sprint-board-doc-icon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex: 0 0 auto; border-radius: 6px; background: var(--app-accent-surface); color: var(--app-action-read); }
+.sprint-board-doc-icon img, .sprint-board-doc-icon svg { width: 13px; height: 13px; }
+.sprint-board-doc-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-width: 0; max-height: 32px; overflow: hidden; overflow-wrap: anywhere; }
+.sprint-board-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--srf-hover); }
+.sprint-board-meta > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sprint-board-meta dt { color: var(--srf-text-secondary); font-size: 9.5px; line-height: 14px; font-weight: 400; }
+.sprint-board-meta dd { min-width: 0; margin: 0; overflow: hidden; color: var(--srf-text); font-size: 11.5px; line-height: 17px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; text-overflow: ellipsis; }
+.sprint-board-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 43px; margin-top: auto; padding: 9px 16px 10px; background: var(--srf-card); }
+.sprint-board-binding { display: flex; align-items: center; flex: 1 1 auto; min-width: 0; color: var(--srf-text-secondary); font-size: 10.5px; line-height: 18px; }
+.sprint-board-binding-status { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; color: var(--srf-text-secondary); font-size: 10.5px; line-height: 18px; font-weight: 500; white-space: nowrap; }
+.sprint-board-binding-status img { width: 13px; height: 13px; opacity: 0.4; filter: grayscale(1); }
+.sprint-board-binding-status.is-bound { color: var(--srf-text); }
+.sprint-board-binding-status.is-bound img { opacity: 1; filter: none; }
+.sprint-board-binding-status.is-pending { color: var(--app-status-warning-text); }
+.sprint-board-binding-status.is-pending img { opacity: 1; filter: none; }
+.sprint-board-binding-status:focus-visible { outline: 2px solid var(--srf-accent); outline-offset: 2px; border-radius: 4px; }
+.sprint-board-binding-separator { color: var(--srf-text-muted); opacity: 0.55; }
+.sprint-board-binding-name { min-width: 0; max-width: 100px; overflow: hidden; color: var(--srf-text); font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.sprint-board-binding-tooltip { display: grid; gap: 2px; font-size: 12px; line-height: 18px; }
+.sprint-board-binding-tooltip span { opacity: 0.68; }
+.sprint-board-actions { display: flex; align-items: center; justify-content: flex-end; flex: 0 0 auto; gap: 0; color: var(--app-action-read); }
+.sprint-board-actions .ant-btn {
+  --action-tone: var(--app-action-read);
+  --button-current-text: var(--app-action-read);
+  --button-current-hover: var(--app-action-read-soft);
+  --button-current-hover-border: transparent;
+  --button-current-active: var(--app-action-read-soft);
+}
 
-.sprint-board-toolbar .project-overview-summary { min-width: 0; flex: 1 1 320px; }
+@media (max-width: 900px) {
+  .sprint-board-page-header { flex: 0 0 auto; min-height: 56px; padding: 10px 16px; }
+}
 
-:root:root:not([data-theme='dark']) .app-shell .sprint-board-card { box-shadow: none; }
+@media (max-width: 680px) {
+  .sprint-board-foot { flex-wrap: wrap; }
+  .sprint-board-binding { flex: 1 1 100%; }
+  .sprint-board-actions { margin-left: auto; }
+}

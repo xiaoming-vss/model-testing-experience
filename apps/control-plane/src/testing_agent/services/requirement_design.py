@@ -11,6 +11,7 @@ from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.ai_generate_task_source_archive import (
     AiGenerateTaskSourceArchiveRepository,
 )
+from testing_agent.repositories.generation_chain import GenerationChainRepository
 from testing_agent.repositories.requirement_design import RequirementDesignRepository
 from testing_agent.schemas.requirement_design import (
     DesignKind,
@@ -19,7 +20,7 @@ from testing_agent.schemas.requirement_design import (
 )
 from testing_agent.services.ai_run_launcher import GenerationRunLauncher
 from testing_agent.services.ai_task_commands import GenerationTaskCommands
-from testing_agent.services.ai_task_output import dump_task, requirement_source_content
+from testing_agent.services.ai_task_output import dump_task
 from testing_agent.services.ai_task_scope import GenerationAccess
 from testing_agent.services.project_access import ProjectAction
 
@@ -29,15 +30,6 @@ LABELS = {
     "api": "API 测试",
     "ui": "UI 测试",
 }
-
-
-def has_function_generation_input(requirement: Requirement) -> bool:
-    # Use the same enhanced-text parser as run snapshots, including legacy Markdown.
-    # The original attachment alone is not sufficient input.
-    try:
-        return bool(requirement_source_content(requirement).strip())
-    except AppError:
-        return False
 
 
 def validate_openapi_source(source: str) -> None:
@@ -82,12 +74,19 @@ class RequirementDesignService:
         return requirement
 
     async def overview(self, requirement_id: str, user_id: str) -> dict[str, Any]:
-        requirement = await self.scope(requirement_id, user_id)
+        await self.scope(requirement_id, user_id)
+        chain = GenerationChainRepository(self.task_repository.session)
+        analysis_task = await chain.task(requirement_id, "requirement_analysis")
+        has_understanding = (
+            await chain.has_stage_version(analysis_task.task_id, "feature_understanding")
+            if analysis_task
+            else False
+        )
         return {
             "tasks": await self.repository.task_summaries(requirement_id),
             "runCounts": await self.repository.run_counts(requirement_id),
             "activeTaskIds": await self.repository.active_task_ids(requirement_id),
-            "adoptedUnderstanding": has_function_generation_input(requirement),
+            "adoptedUnderstanding": has_understanding,
         }
 
     async def history(
@@ -198,8 +197,6 @@ class RequirementDesignService:
         task = await self.access.owned_task(user_id, body.task_id, kind, action="read")
         if task.requirement_id != requirement_id:
             raise ErrNotFound()
-        if kind == "function" and not has_function_generation_input(requirement):
-            raise AppError(400, "请先补充有效的需求增强文本，再生成功能用例", 400)
         if kind == "api" and not task.source_content.strip():
             raise AppError(400, "请先配置 OpenAPI/Swagger 文档", 400)
         return await self.launcher.launch(

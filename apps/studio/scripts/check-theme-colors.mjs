@@ -13,6 +13,7 @@ const tokenFiles = new Set([
   'shared/styles/surface-tokens.css',
   'shared/styles/editor-tokens.css',
   'shared/styles/chart-tokens.css',
+  'shared/styles/ui-stage-visual-tokens.css',
   'shared/styles/legacy-tokens.css',
   'shared/styles/github-dark-tokens.css',
   'shared/styles/github-dark-foundation.css',

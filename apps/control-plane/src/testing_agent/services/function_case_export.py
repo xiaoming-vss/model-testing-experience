@@ -340,12 +340,6 @@ class FunctionCaseExporter:
                 case.case_id for case in references if selected is None or case.case_id in selected
             ]
             entries.update(await self.prepare_manifest(scope, case_ids, order_offset=len(entries)))
-        fingerprint = digest(
-            {
-                "requirementId": requirement_id,
-                "request": request.model_dump(mode="json", exclude={"request_id"}),
-            }
-        )
         manifest = await self.workflow().admit(
             user_id,
             self.scope(suite_ids[0], requirement_id, sprint_id, project_id, target),

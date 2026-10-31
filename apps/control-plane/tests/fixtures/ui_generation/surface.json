@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "ui_test_surface/1.0",
+  "app": {
+    "framework": "fixture",
+    "sourceRoot": "."
+  },
+  "pages": [
+    {
+      "pageId": "records",
+      "route": "/records",
+      "componentFile": "page.vue",
+      "title": "记录",
+      "sourceRef": "page.vue:1"
+    }
+  ],
+  "controls": [
+    {
+      "controlId": "record-name",
+      "pageId": "records",
+      "semanticName": "记录名称",
+      "controlType": "readOnlyText",
+      "sourceRef": "page.vue:1",
+      "uniqueness": "unknown",
+      "locatorCandidates": []
+    }
+  ],
+  "containers": [],
+  "feedback": [],
+  "interactions": [],
+  "unknowns": [
+    {
+      "topic": "record-name定位",
+      "reason": "待确认"
+    }
+  ],
+  "inspectionCoverage": [
+    {
+      "area": "records",
+      "caseIds": [
+        "C1"
+      ],
+      "pageIds": [
+        "records"
+      ],
+      "componentFiles": [
+        "page.vue"
+      ],
+      "status": "inspected",
+      "reason": ""
+    }
+  ]
+}

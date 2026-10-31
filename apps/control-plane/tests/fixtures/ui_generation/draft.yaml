@@ -1,0 +1,19 @@
+- name: 核对记录名称
+  enabled: true
+  orderNo: 1
+  stepsJson:
+  - orderNo: 1
+    stepName: 核对名称
+    keyword: assert_text
+    locatorType: null
+    locatorValue: null
+    operationValue: 甲
+    comparator: eq
+    continueOnFailure: false
+    enabled: true
+    missingFields:
+    - fields: [locatorType, locatorValue]
+      operation: 核对记录名称
+      target: 记录甲的名称单元格
+      value: 甲
+      reason: 请补充名称单元格定位

@@ -22,13 +22,29 @@ from testing_agent_ai_worker_pi.pi_runtime.paths import (
 from testing_agent_ai_worker_pi.pi_runtime.skill_step import run_skill_step
 from testing_agent_ai_worker_pi.tasks.output_repair import generate_validated, parse_yaml
 from testing_agent_ai_worker_pi.tasks.result_summary import build_task_result_summary
+from testing_agent_ai_worker_pi.tasks.ui_case_generate.missing_fields import (
+    draft_step_for_validation,
+)
 from testing_agent_ai_worker_pi.tasks.ui_case_generate.source_archive import SourceArchiveDownloader
 from testing_agent_ai_worker_pi.worker.runner import TaskExecutor
+
+from .ui_step_extract import normalize_save_to
+from .ui_variable_template import TOKEN_PATTERN, validate_step_variables
 
 UI_CASE_SKILL_NAME = "generate-ui-test-case"
 UI_CASE_YAML_ONLY_INSTRUCTION = """请分析指定的前端源码目录并生成 UI 自动化测试用例。
 源码根目录：{source_root}
-始终返回非空 YAML list，即使只有一条用例。每条用例必须包含 name、enabled、stepsJson、orderNo；每个步骤必须包含 orderNo、stepName、keyword、continueOnFailure、enabled。operationValue、locatorType、locatorValue、comparator 必须严格按照 keyword 规则提供。不要输出 Markdown 代码块、解释文字或 JSON。"""
+始终返回 YAML list，即使只有一条用例。每条用例必须包含 name、enabled、stepsJson、orderNo；每个步骤必须包含 orderNo、stepName、keyword、continueOnFailure、enabled。operationValue、locatorType、locatorValue、comparator 必须严格按照 keyword 规则提供。缺失内容保留步骤并使用 missingFields 数组：每项含 fields、operation、target、value、reason，fields列出的字段显式为null，其他已知字段保留。前置准备缺口使用空fields。不要返回阻塞字符串。全部目标明确排除时可返回空列表[]。不要输出 Markdown 代码块、解释文字或 JSON。"""
+
+
+UI_STAGE_YAML_INSTRUCTION = """直接返回平台原格式的 YAML 用例列表。
+每条用例仅包含 name、enabled、orderNo、stepsJson；每步包含 orderNo、stepName、keyword、continueOnFailure、enabled 及操作需要的字段。
+支持 locatorValue/operationValue 中的环境变量和步骤成功后的 saveTo 提取；按平台协议填写，不以未知静态数据替代可提取的运行时值。
+未知字段通过步骤内 missingFields 标记，每项包含 fields、operation、target、value、reason；缺失字段显式为 null，已知内容直接填写。
+同一步中同一根因的缺口合并为一项。仅缺记录ID时保留已知定位类型，在reason中说明缺少数据及已知行定位规则，不重复声明缺少控件或再追加准备提醒。
+无法操作或断言的目标由第二阶段筛选；保留已审核的可实现业务目标，不以人工确认替代断言。
+不输出 draftVersion、dataRequirements、dataBindings、designConflicts、sourceRefs、purpose 或新变量协议。
+"""
 
 
 VALID_UI_LOCATOR_TYPES = {
@@ -62,6 +78,7 @@ UI_KEYWORD_RULES = {
     "wait_text": UiKeywordRule(True, "required"),
     "assert_text": UiKeywordRule(True, "required", True),
     "assert_visible": UiKeywordRule(True, "required"),
+    "assert_hidden": UiKeywordRule(True, "required"),
     "assert_url": UiKeywordRule(False, "required", True),
     "screenshot": UiKeywordRule(False, "forbidden"),
     "sleep": UiKeywordRule(False, "required"),
@@ -85,7 +102,7 @@ class UiCasePiExecutor(TaskExecutor):
         self.skill_runner = skill_runner
         self.skill_name = skill_name
 
-    def execute(self, task: Task, started_at: datetime, progress_callback) -> TaskResult:
+    def execute(self, task: Task, started_at: datetime, progress_callback) -> TaskResult | None:
         if task.task_type != "ui_case_generate":
             return self._failure(task, started_at, f"不支持的任务类型: {task.task_type}")
 
@@ -96,6 +113,21 @@ class UiCasePiExecutor(TaskExecutor):
                 task=task,
                 workspace=workspace,
             )
+            if task.payload.metadata.get("uiWorkflowVersion") == "ui_three_stage/1.0":
+                from testing_agent_ai_worker_pi.tasks.ui_case_generate.chain import execute_stage
+
+                with task_config_path(pi_config=self.pi_config, task=task) as config_path:
+                    return execute_stage(
+                        task=task,
+                        started_at=started_at,
+                        progress_callback=progress_callback,
+                        source_root=source_root,
+                        workspace=workspace,
+                        config_path=config_path,
+                        skill_runner=self.skill_runner,
+                        validate_yaml=_validate_ui_stage_yaml,
+                        yaml_instruction=UI_STAGE_YAML_INSTRUCTION,
+                    )
             input_text = UI_CASE_YAML_ONLY_INSTRUCTION.format(source_root=source_root)
             if task.payload.extra_instruction.strip():
                 input_text = f"{input_text}\n\n{task.payload.extra_instruction.strip()}"
@@ -182,10 +214,10 @@ class UiCasePiExecutor(TaskExecutor):
 
 def _validate_ui_cases_yaml(output_yaml: str) -> int:
     parsed = parse_yaml(output_yaml)
-    if isinstance(parsed, list) and parsed:
+    if isinstance(parsed, list):
         cases = parsed
     else:
-        raise ValueError("UI 用例结果顶层必须是非空 YAML list")
+        raise ValueError("UI 用例结果顶层必须是 YAML list")
 
     for case_index, case in enumerate(cases, start=1):
         _validate_ui_case(case, case_index)
@@ -215,6 +247,10 @@ def _validate_ui_step(step: object, case_index: int, step_index: int) -> None:
     prefix = f"第 {case_index} 条 UI 用例的第 {step_index} 个步骤"
     if not isinstance(step, dict):
         raise ValueError(f"{prefix}必须是 mapping")
+    try:
+        step = draft_step_for_validation(step)
+    except ValueError as exc:
+        raise ValueError(f"{prefix}: {exc}") from exc
     required_fields = {"orderNo", "stepName", "keyword", "continueOnFailure", "enabled"}
     if not required_fields.issubset(step):
         raise ValueError(f"{prefix}缺少必填字段")
@@ -262,3 +298,52 @@ def _validate_ui_step(step: object, case_index: int, step_index: int) -> None:
 
 def _is_integer(value: object) -> bool:
     return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _validate_ui_stage_yaml(output_yaml: str) -> int:
+    """Reject draft fields/types that the control plane cannot accept before publishing."""
+    from .completion import compile_case
+
+    parsed = parse_yaml(output_yaml)
+    if not isinstance(parsed, list):
+        raise ValueError("UI 用例结果顶层必须是 YAML list")
+    output_yaml = yaml.safe_dump(
+        [compile_case(case, for_validation=True) for case in parsed], allow_unicode=True
+    )
+    count = _validate_ui_cases_yaml(output_yaml)
+    case_fields = {"name", "enabled", "stepsJson", "orderNo"}
+    step_fields = {
+        "orderNo",
+        "stepName",
+        "keyword",
+        "continueOnFailure",
+        "enabled",
+        "locatorType",
+        "locatorValue",
+        "operationValue",
+        "comparator",
+        "missingFields",
+        "saveTo",
+    }
+    for case in parse_yaml(output_yaml):
+        if set(case) - case_fields:
+            raise ValueError("UI 用例包含不支持的字段")
+        for raw_step in case["stepsJson"]:
+            if set(raw_step) - step_fields:
+                raise ValueError("UI 步骤包含不支持的字段")
+            step = draft_step_for_validation(raw_step)
+            validate_step_variables(step)
+            normalize_save_to(step, field_path=f"用例 {case['orderNo']} 步骤 {step['orderNo']}")
+            keyword, value = step["keyword"], step.get("operationValue")
+            if keyword in {"sleep", "assert_visible", "assert_hidden"}:
+                if not (
+                    (_is_integer(value) and value >= 0)
+                    or (
+                        isinstance(value, str)
+                        and (value.strip().isdigit() or TOKEN_PATTERN.search(value))
+                    )
+                ):
+                    raise ValueError("等待时间必须是非负毫秒数")
+            elif UI_KEYWORD_RULES[keyword].operation == "required" and not isinstance(value, str):
+                raise ValueError("operationValue 必须是字符串")
+    return count

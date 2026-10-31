@@ -13,6 +13,9 @@ from testing_agent_ai_worker_pi.config.loader import load_settings
 from testing_agent_ai_worker_pi.config.models import Settings
 from testing_agent_ai_worker_pi.platform.http_client import PlatformHttpClient
 from testing_agent_ai_worker_pi.platform.result_sink import HttpResultSink
+from testing_agent_ai_worker_pi.platform.revision_attachments import (
+    PlatformRevisionAttachmentDownloader,
+)
 from testing_agent_ai_worker_pi.platform.skills import SkillPreparer
 from testing_agent_ai_worker_pi.platform.task_source import HttpClaimTaskSource
 from testing_agent_ai_worker_pi.services.result_service import ResultService
@@ -92,10 +95,16 @@ def build_task_runner(
             ),
             functional_executor=FunctionalCasePiExecutor(
                 pi_config=settings.pi,
+                attachment_downloader=PlatformRevisionAttachmentDownloader(
+                    resolved_client, settings.worker.worker_id
+                ),
             ),
             requirement_executor=RequirementAnalysisPiExecutor(
                 pi_config=settings.pi,
                 source_downloader=PlatformRequirementSourceDownloader(
+                    resolved_client, settings.worker.worker_id
+                ),
+                attachment_downloader=PlatformRevisionAttachmentDownloader(
                     resolved_client, settings.worker.worker_id
                 ),
             ),

@@ -108,9 +108,11 @@ class FunctionTestCaseService:
 
     async def batch_delete(self, user_id: str, suite_id: str, case_ids: builtins.list[str]) -> dict:
         await self.access.get_accessible_suite(user_id, suite_id, action="write")
+        rows = await self.repository.list_cases_by_ids(case_ids)
+        by_id = {case.case_id: case for case in rows}
         cases = []
         for case_id in case_ids:
-            case = await self.repository.get_case(case_id)
+            case = by_id.get(case_id)
             if case is None or case.suite_id != suite_id:
                 raise ErrNotFound()
             cases.append(case)

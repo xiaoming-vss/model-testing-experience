@@ -3,7 +3,7 @@ from __future__ import annotations
 # ruff: noqa: F401
 import json
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
@@ -11,6 +11,7 @@ from pydantic.alias_generators import to_camel
 
 class ApiEnvironmentRequest(BaseModel):
     name: str
+    kind: Literal["api", "ui"] = Field(default="api")
     base_url: str = Field(default="")
     description: str = ""
     is_default: bool = Field(default=False)

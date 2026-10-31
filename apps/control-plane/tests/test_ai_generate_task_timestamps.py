@@ -64,6 +64,9 @@ class TaskQueryRepository:
     async def get_source_archive(self, _task_id):
         return None
 
+    async def list_source_archives(self, _task_ids):
+        return {}
+
 
 @pytest.mark.parametrize(
     ("kind", "task_type"),

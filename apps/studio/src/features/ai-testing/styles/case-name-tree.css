@@ -257,3 +257,14 @@
 }
 
 .ai-case-tree-passthrough { display: contents; }
+
+/* React Flow keeps the existing tree cards while providing the graph viewport. */
+.ai-case-name-tree { display: flex; flex-direction: column; overflow: hidden; }
+.ai-case-name-tree-stats { position: relative; flex: 0 0 auto; }
+.ai-case-flow-canvas { position: relative; flex: 1 1 auto; min-width: 0; min-height: 220px; }
+.ai-case-flow-canvas > .react-flow { position: absolute !important; inset: 0; background: transparent; }
+.ai-case-flow-canvas .react-flow__node { width: max-content; max-width: 360px; font: inherit; pointer-events: all !important; }
+.ai-case-flow-canvas .ai-case-name-tree-root,
+.ai-case-flow-canvas .ai-case-name-tree-node { width: max-content; }
+.ai-case-flow-canvas .ai-case-flow-handle { width: 1px; height: 1px; border: 0; opacity: 0; pointer-events: none; }
+.ai-case-flow-canvas .react-flow__edge-path { stroke-linecap: round; vector-effect: non-scaling-stroke; }

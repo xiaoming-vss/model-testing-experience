@@ -21,13 +21,14 @@ class ApiEnvironmentRepository(ResourceRepository):
             )
         )
 
-    async def list_by_project(self, project_id: str) -> list[ApiEnvironment]:
+    async def list_by_project(self, project_id: str, kind: str = "api") -> list[ApiEnvironment]:
         return list(
             (
                 await self.session.scalars(
                     select(ApiEnvironment)
                     .where(
                         ApiEnvironment.project_id == project_id,
+                        ApiEnvironment.kind == kind,
                     )
                     .order_by(ApiEnvironment.created_at.desc())
                 )

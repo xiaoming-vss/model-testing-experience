@@ -15,6 +15,7 @@ from testing_agent.handlers.ai_worker import (
     report_progress,
     requirement_document,
     requirement_image,
+    revision_attachment,
     source_archive,
 )
 from testing_agent.handlers.worker_skills import skill_file, skill_manifest
@@ -69,3 +70,8 @@ router.get(
     "/tasks/{task_id}/requirement-images/{file_id}",
     response_model=FileDownloadTicket,
 )(requirement_image)
+
+router.get(
+    "/tasks/{task_id}/revision-attachments/{file_id}",
+    response_model=FileDownloadTicket,
+)(revision_attachment)

@@ -1,7 +1,8 @@
 import { ArtifactModeSwitch } from './ArtifactViewTabs'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
-import { Button, Empty, Spin } from 'antd'
+import { Alert, Button, Empty, Spin } from 'antd'
+import { createPortal } from 'react-dom'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   FunctionalCaseRelationsGraph,
@@ -16,6 +17,7 @@ import type { FunctionalCaseGenerateTaskRun } from '../types'
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { api } from '@/services/api'
+import { relationFailed, relationGenerating, useFunctionalCaseRelationsRun } from '../hooks/useFunctionalCaseRelationsRun'
 import './FunctionalCaseRelationsViewer.css'
 
 // relation_analysis 产物只存在 configJson.caseRelations 里，是已通过校验的 JSON 对象。
@@ -39,7 +41,7 @@ function getCaseRelationsContent(run?: FunctionalCaseGenerateTaskRun) {
   }
 }
 
-export function FunctionalCaseRelationsViewer({ taskId, runId, onBack }: { taskId: string; runId: string; onBack?: () => void }) {
+export function FunctionalCaseRelationsViewer({ taskId, runId, onBack, embedded = false, controlsContainer }: { taskId: string; runId: string; onBack?: () => void; embedded?: boolean; controlsContainer?: HTMLElement | null }) {
   const [activeTab, setActiveTab] = useState<'graph' | 'json'>('graph')
   const [jsonToolbar, setJsonToolbar] = useState<HTMLDivElement | null>(null)
   const [hasSelection, setHasSelection] = useState(false)
@@ -50,13 +52,11 @@ export function FunctionalCaseRelationsViewer({ taskId, runId, onBack }: { taskI
     queryFn: () => api.getFunctionalCaseGenerateTask(taskId as string),
     enabled: Boolean(taskId),
   })
-  const runQuery = useQuery({
-    queryKey: ['functionalCaseGenerateTaskRun', runId],
-    queryFn: () => api.getFunctionalCaseGenerateTaskRun(runId as string),
-    enabled: Boolean(runId),
-  })
+  const runQuery = useFunctionalCaseRelationsRun(runId)
 
   const run = runQuery.data
+  const generating = relationGenerating(run)
+  const failed = relationFailed(run)
   const relationsContent = useMemo(() => getCaseRelationsContent(run), [run])
   const stats = useMemo(() => {
     const data = parseCaseRelationsContent(relationsContent)
@@ -73,10 +73,41 @@ export function FunctionalCaseRelationsViewer({ taskId, runId, onBack }: { taskI
     if (activeTab !== 'graph') setHasSelection(false)
   }, [activeTab])
 
+  const tools = <>
+          <ArtifactModeSwitch
+            value={activeTab}
+            onChange={(value) => setActiveTab(value as 'graph' | 'json')}
+            options={[
+              { label: '可视化', value: 'graph' },
+              { label: 'JSON', value: 'json' },
+            ]}
+          />
+          {activeTab === 'graph' ? (
+            <>
+              <Button size="small" disabled={!stats?.caseCount} onClick={() => graphRef.current?.fitView()}>查看全图</Button>
+              <Button size="small" disabled={!hasSelection} onClick={() => graphRef.current?.locateSelected()}>
+                定位选中用例
+              </Button>
+            </>
+          ) : null}
+          {activeTab === 'json' ? <div className="ai-relations-json-actions" ref={setJsonToolbar} /> : null}
+          {activeTab === 'graph' ? <span className="ai-relations-page-legend">
+            <span className="legend-item"><i className="legend-line solid" aria-hidden />主线 / 后续</span>
+            <span className="legend-item"><i className="legend-line dashed" aria-hidden />分支</span>
+          </span> : null}
+  </>
+  const sidebarTools = embedded && controlsContainer ? createPortal(
+    <section className="gc-inspector-section gc-relations-controls"><h3>阅读工具</h3>
+      {tools}
+      <p className="gc-relations-meta">{stats ? `${stats.caseCount} 条用例 · ${stats.edgeCount} 条关联 · ${stats.pathCount} 条业务主线 · ` : ''}运行 {runId.slice(0, 8)}</p>
+    </section>, controlsContainer,
+  ) : null
+
   return (
     <ProjectAccessScope resourceError={taskQuery.error} projectId={taskQuery.data?.projectId ?? ''}>
-      <div className="ai-relations-page">
-        <div className="ai-relations-page-bar">
+      <div className={`ai-relations-page${embedded ? " is-embedded" : ""}`}>
+        {sidebarTools}
+        {!embedded ? <div className="ai-relations-page-bar">
           {onBack ? (
             <Button type="text" size="small" icon={<ArrowLeftOutlined />} onClick={onBack}>返回任务</Button>
           ) : null}
@@ -88,34 +119,19 @@ export function FunctionalCaseRelationsViewer({ taskId, runId, onBack }: { taskI
             </span>
           </div>
           <span className="ai-relations-page-spacer" />
-          <ArtifactModeSwitch
-            value={activeTab}
-            onChange={(value) => setActiveTab(value as 'graph' | 'json')}
-            options={[
-              { label: '可视化', value: 'graph' },
-              { label: 'JSON', value: 'json' },
-            ]}
-          />
-          {activeTab === 'graph' ? (
-            <>
-              <Button size="small" onClick={() => graphRef.current?.fitView()}>查看全图</Button>
-              <Button size="small" disabled={!hasSelection} onClick={() => graphRef.current?.locateSelected()}>
-                定位选中用例
-              </Button>
-            </>
-          ) : null}
-          {activeTab === 'json' ? <div className="ai-relations-json-actions" ref={setJsonToolbar} /> : null}
-          {activeTab === 'graph' ? <span className="ai-relations-page-legend">
-            <span className="legend-item"><i className="legend-line solid" aria-hidden />主线 / 后续</span>
-            <span className="legend-item"><i className="legend-line dashed" aria-hidden />分支</span>
-          </span> : null}
-        </div>
+          {tools}
+        </div> : null}
 
+        {failed ? <Alert type="error" showIcon title={run?.status === 'canceled' ? '图谱生成已取消' : '图谱生成失败'} description={run?.errorMessage || '本次图谱未生成成功，请重试。'} /> : null}
+        {generating ? <Alert type="info" showIcon title="图谱生成中，完成后会自动显示" description={relationsContent ? '正在重新生成，当前保留展示上一次图谱。' : '任务已提交，正在等待生成结果。'} /> : null}
         <div className="ai-relations-page-body">
           {loading ? (
             <div className="ai-relations-page-loading"><Spin /></div>
           ) : runQuery.error ? (
             <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="运行记录加载失败，请返回任务页重试" />
+          ) : !relationsContent ? (
+            generating ? <div className="ai-relations-page-loading"><Spin /></div>
+              : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={failed ? '本次未产生图谱，可重新生成' : '当前运行尚未生成用例图谱'} />
           ) : activeTab === 'graph' ? (
             <FunctionalCaseRelationsGraph
               ref={graphRef}

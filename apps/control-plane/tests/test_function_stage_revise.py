@@ -1,4 +1,6 @@
 import asyncio
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from support.execution_writer import MemoryExecutionWriter
@@ -41,6 +43,45 @@ async def test_revision_saves_edits_and_queues_current_stage(stage, field):
     assert repo.commits == 1
     assert repo.queued[0].run_id == "run-1"
     assert writer.writes[-1][1].llm_connection_id == "llm-1"
+
+
+@pytest.mark.asyncio
+async def test_revision_freezes_uploaded_images_for_the_attempt():
+    run = revision_run("requirement_analysis")
+    repo = RevisionRepository(run)
+    writer = MemoryExecutionWriter()
+    files = SimpleNamespace(
+        get=AsyncMock(
+            return_value=SimpleNamespace(
+                file_id="image-1",
+                project_id="project-1",
+                uploaded_by="user-1",
+                purpose="attachment",
+                content_type="image/png",
+                filename="login.png",
+                size=1024,
+            )
+        ),
+        attach=AsyncMock(),
+    )
+    await generation_services(
+        repo, files=files, execution_writer=writer
+    ).stages.revise_function_case_stage(
+        "run-1",
+        {
+            "stage": "requirement_analysis",
+            "revisionInstruction": "按截图补充",
+            "attachmentFileIds": ["image-1"],
+        },
+        "user-1",
+    )
+    assert writer.writes[-1][1].revision_attachments == (
+        {"fileId": "image-1", "filename": "login.png", "contentType": "image/png"},
+    )
+    assert "revisionAttachments" not in run.config_json
+    files.attach.assert_awaited_once_with(
+        "user-1", "image-1", "project-1", "ai_generate_run", "run-1", purpose="attachment"
+    )
 
 
 @pytest.mark.asyncio

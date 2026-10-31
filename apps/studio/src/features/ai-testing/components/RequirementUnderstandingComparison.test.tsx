@@ -1,4 +1,3 @@
-import extractionSource from '@/domain/requirements/fixtures/document-extraction.example.json?raw'
 import understandingSource from '@/domain/requirements/fixtures/requirement-understanding.example.json?raw'
 import { TestThemeProvider } from '@/test/TestThemeProvider'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
@@ -6,10 +5,10 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it } from 'vitest'
 import { RequirementUnderstandingComparison } from './RequirementUnderstandingComparison'
 
-const extraction = JSON.parse(extractionSource), understanding = JSON.parse(understandingSource)
+const understanding = JSON.parse(understandingSource)
 afterEach(cleanup)
-function setup(content: unknown = understanding, upstream: unknown = extraction, selectFirst = true) {
-  render(<TestThemeProvider><RequirementUnderstandingComparison content={content} extractionContent={upstream} /></TestThemeProvider>)
+function setup(content: unknown = understanding, selectFirst = true) {
+  render(<TestThemeProvider><RequirementUnderstandingComparison content={content} /></TestThemeProvider>)
   const firstCard = screen.queryByRole('list', { name: '业务模块导航' })?.querySelector('button')
   if (selectFirst && firstCard) fireEvent.click(firstCard)
   return userEvent.setup()
@@ -33,63 +32,32 @@ it('默认需求解析提供流程和规则，模块详情与分类保留示例�
   expect(within(right).getByText('适用范围')).toBeVisible()
   await user.click(screen.getByRole('tab', { name: '业务规则' }))
   expect(within(right).getByText('设置条件并刷新查询')).toBeVisible()
-  await user.click(screen.getByRole('tab', { name: '待确认问题' }))
+  await user.click(screen.getByRole('tab', { name: /待确认问题/ }))
   expect(within(right).getByText('转换类型的实际选项及各选项业务含义是什么？')).toBeVisible()
 })
 
-it('点击说明中的依据能切换来源并显示对应图片文字', async () => {
-  const upstream = structuredClone(extraction), result = structuredClone(understanding)
-  const source = { id: 'SRC02', name: '第二张图', type: 'prototype', location: null, version: null }
-  upstream.sources.push(source); result.sources.push(source)
-  upstream.contentBlocks.push({ ...upstream.contentBlocks[1], id: 'B04', kind: 'image', text: null, image: { visibleTexts: ['可见控件A'], meaning: '界面说明' }, sourceReferences: [{ sourceId: 'SRC02', locator: '页面二', excerpt: null }] })
-  result.evidence.push({ id: 'EV_IMAGE', sourceId: 'SRC02', locator: '页面二', excerpt: '可见控件A' })
-  result.modules[0].operations[0].goal.evidenceIds = ['EV_IMAGE']
-  setup(result, upstream)
-  fireEvent.click(within(screen.getByRole('region', { name: '需求理解内容' })).getByRole('button', { name: '第二张图 · 页面二' }))
-  const left = screen.getByRole('region', { name: '材料内容' })
-  expect(within(within(left).getByRole('article', { name: '页面二' })).getByText('可见控件A')).toBeVisible()
-  expect(within(left).getByText('关联依据')).toBeVisible()
-  expect(within(left).getByText('页面二')).toBeVisible()
+it('只展示需求理解结果，不再提供原始材料、提取事实或显隐入口', () => {
+  setup()
+  expect(screen.getByRole('region', { name: '需求理解结果' })).toBeVisible()
+  expect(screen.queryByRole('region', { name: '材料内容' })).not.toBeInTheDocument()
+  expect(screen.queryByText('提取事实', { exact: true })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /材料／依据/ })).not.toBeInTheDocument()
 })
-
-it('上游提取事实仍保留未确认信息，不被阶段审核升级成已确认', async () => {
-  const user = setup()
-  await user.click(screen.getByText('提取事实', { exact: true }))
-  const left = screen.getByRole('region', { name: '已审核提取事实' })
-  expect(within(left).getByText('待确认')).toBeVisible()
-  expect(within(left).queryByText('有明确依据')).toBeNull()
-})
-
-it('缺少上游时仍可查看理解内容和新补充来源，不编造材料块', async () => {
-  const result = structuredClone(understanding)
-  result.sources.push({ id: 'SRC02', name: '业务确认', type: 'user_confirmation', location: null, version: null })
-  result.evidence.push({ id: 'EV_ANSWER', sourceId: 'SRC02', locator: '本次答复', excerpt: '只需手动刷新' })
-  result.modules[0].operations[0].goal.evidenceIds = ['EV_ANSWER']
-  setup(result, null)
-  const right = screen.getByRole('region', { name: '需求理解内容' })
-  expect(within(right).getAllByText('操作目的').some(element => element.closest('details')?.open ?? true)).toBe(true)
-  // This assertion covers citation navigation, not Tooltip hover/layout in jsdom.
-  fireEvent.click(within(right).getByRole('button', { name: '业务确认 · 本次答复' }))
-  const left = screen.getByRole('region', { name: '材料内容' })
-  expect(within(left).getByText('只需手动刷新')).toBeVisible()
-  expect(within(left).queryByText('关联依据')).toBeNull()
-  expect(within(left).getByText(/没有可用的材料提取记录/)).toBeVisible()
-})
-
 
 it('仅展示未解决问题和计数，全部解决后隐藏分类并回到模块正文', async () => {
   const artifact = structuredClone(understanding)
   artifact.questions[0].status = 'resolved'
   const remaining = artifact.questions.filter((q: { status: string }) => q.status === 'open').length
-  const { rerender } = render(<TestThemeProvider><RequirementUnderstandingComparison content={artifact} extractionContent={extraction} /></TestThemeProvider>)
+  const { rerender } = render(<TestThemeProvider><RequirementUnderstandingComparison content={artifact} /></TestThemeProvider>)
   const user = userEvent.setup()
-  await user.click(screen.getByRole('tab', { name: '待确认问题' }))
+  expect(screen.getByRole('tab', { name: `待确认问题 ${remaining}` })).toBeInTheDocument()
+  await user.click(screen.getByRole('tab', { name: /待确认问题/ }))
   expect(within(screen.getByRole('region', { name: '需求理解内容' })).queryByText(artifact.questions[0].question)).toBeNull()
   expect(screen.getByText(`${remaining} 条`)).toBeVisible()
   artifact.questions.forEach((q: { status: string }) => { q.status = 'resolved' })
   artifact.modules[0].operations[0].goal.value = '上游算子为 hoi_tool'
-  rerender(<TestThemeProvider><RequirementUnderstandingComparison content={structuredClone(artifact)} extractionContent={extraction} /></TestThemeProvider>)
-  expect(screen.queryByRole('tab', { name: '待确认问题' })).toBeNull()
+  rerender(<TestThemeProvider><RequirementUnderstandingComparison content={structuredClone(artifact)} /></TestThemeProvider>)
+  expect(screen.queryByRole('tab', { name: /待确认问题/ })).toBeNull()
   expect(screen.queryByRole('tab', { name: '模块与操作' })).toBeNull()
   expect(screen.getByRole('tab', { name: '需求解析' })).toHaveAttribute('aria-selected', 'true')
   await user.click(screen.getByRole('button', { name: artifact.modules[0].name }))
@@ -97,7 +65,7 @@ it('仅展示未解决问题和计数，全部解决后隐藏分类并回到模�
 })
 
 
-it('独立 UI 页签手动展开控件、选项和未知状态，引用可定位材料且原始数据不变', async () => {
+it('独立 UI 页签手动展开控件、选项和未知状态，保留来源文本且原始数据不变', async () => {
   const result = structuredClone(understanding)
   const snapshot = JSON.stringify(result)
   const user = setup(result)
@@ -112,8 +80,8 @@ it('独立 UI 页签手动展开控件、选项和未知状态，引用可定位
   expect(within(right).getByText('触发方式')).toBeVisible()
   expect(within(right).queryByText('条件联动')).toBeNull()
   expect(within(right).queryByText('校验与反馈')).toBeNull()
-  await user.click(within(right).getAllByRole('button', { name: /转换任务列表：合成演示输入/ })[0])
-  expect(screen.getByRole('region', { name: '材料内容' })).toHaveTextContent('关联依据')
+  expect(within(right).getAllByText(/转换任务列表：合成演示输入/).length).toBeGreaterThan(0)
+  expect(screen.queryByRole('region', { name: '材料内容' })).not.toBeInTheDocument()
   expect(JSON.stringify(result)).toBe(snapshot)
 })
 
@@ -242,16 +210,16 @@ it('规则摘要不借用另一条预期的引用，展开后仍能核对该条�
   rule.expectedBehavior.push({ ...rule.expectedBehavior[0], value: '第二条预期', evidenceIds: ['EV_SECOND'] })
   const user = setup(result)
   const right = screen.getByRole('region', { name: '需求理解内容' })
-  expect(within(right).getByRole('button', { name: /仅第二项依据/ })).not.toBeVisible()
+  expect(within(right).getByText(/仅第二项依据/)).not.toBeVisible()
   await user.click(within(right).getByTitle(rule.name))
-  expect(within(right).getByRole('button', { name: /仅第二项依据/ })).toBeVisible()
+  expect(within(right).getByText(/仅第二项依据/)).toBeVisible()
 })
 
 
 it('默认显示全部模块，卡片单选过滤，再次点击取消并恢复全部', async () => {
   const result = structuredClone(understanding)
   result.modules.push({ ...structuredClone(result.modules[0]), id: 'OTHER', name: '另一个模块' })
-  const user = setup(result, extraction, false)
+  const user = setup(result, false)
   const navigation = screen.getByRole('list', { name: '业务模块导航' })
   const operations = screen.getByRole('region', { name: '模块操作详情' })
   const cards = within(navigation).getAllByRole('button')
@@ -269,26 +237,6 @@ it('默认显示全部模块，卡片单选过滤，再次点击取消并恢复�
   expect(cards.every(card => card.getAttribute('aria-pressed') === 'false')).toBe(true)
   expect(operations.querySelectorAll('.requirement-operation-module')).toHaveLength(2)
   expect(screen.getByRole('tab', { name: '需求解析' })).toHaveAttribute('aria-selected', 'true')
-})
-
-it('已审核默认通栏阅读，可恢复材料与依据，仍保留未知状态', async () => {
-  const result = structuredClone(understanding)
-  result.modules[0].operations[0].interaction.controls[0].label.confirmationStatus = 'confirmed'
-  render(<TestThemeProvider><RequirementUnderstandingComparison approved content={result} extractionContent={extraction} /></TestThemeProvider>)
-  const user = userEvent.setup()
-  expect(screen.queryByRole('region', { name: '材料内容' })).toBeNull()
-  await user.click(screen.getByRole('tab', { name: 'UI 交互' }))
-  expandUiDetails()
-  const right = screen.getByRole('region', { name: '需求理解内容' })
-  expect(within(right).getByText('有明确依据')).not.toBeVisible()
-  expect(within(right).getAllByText('待确认')[0]).toBeVisible()
-  expect(within(right).getAllByText('示例')[0]).toBeVisible()
-  await user.click(screen.getByRole('button', { name: '查看材料／依据' }))
-  expect(screen.getByRole('region', { name: '材料内容' })).toBeVisible()
-  expect(within(right).getByText('有明确依据')).toBeVisible()
-  await user.click(screen.getByRole('button', { name: '收起材料／依据' }))
-  expect(screen.queryByRole('region', { name: '材料内容' })).toBeNull()
-  expect(screen.getByRole('tab', { name: 'UI 交互' })).toHaveAttribute('aria-selected', 'true')
 })
 
 it('UI 控件和操作详情默认折叠，点击标题可展开再收起', async () => {

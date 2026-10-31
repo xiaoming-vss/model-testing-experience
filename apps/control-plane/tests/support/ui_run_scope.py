@@ -5,6 +5,7 @@ from datetime import UTC, date, datetime, timedelta
 from support.ai_execution import db as db
 from support.worker_queue_storage import row
 from testing_agent.db.base import Base
+from testing_agent.models.api_environment import ApiEnvironment
 from testing_agent.models.project import Project
 from testing_agent.models.project_member import ProjectMember
 from testing_agent.models.requirement import Requirement
@@ -21,6 +22,7 @@ def seed(db):
     models = (
         ProjectMember,
         Project,
+        ApiEnvironment,
         Sprint,
         Requirement,
         UiTestSuite,
@@ -37,6 +39,14 @@ def seed(db):
         row(User, user_id="u2", nickname="u2"),
         row(Project, project_id="p1", user_id="u1"),
         row(Project, project_id="p2", user_id="u2"),
+        row(
+            ApiEnvironment,
+            environment_id="ui-env",
+            project_id="p1",
+            kind="ui",
+            name="ui-env",
+            base_url="https://web.example.test",
+        ),
         row(
             Sprint,
             sprint_id="s1",

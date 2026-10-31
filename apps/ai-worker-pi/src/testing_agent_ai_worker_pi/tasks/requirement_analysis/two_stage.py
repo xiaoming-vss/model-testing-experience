@@ -5,6 +5,9 @@ from datetime import datetime
 from pathlib import Path
 
 from testing_agent_ai_worker_pi.models.execution import TaskProgress, TaskResult, TaskStatus
+from testing_agent_ai_worker_pi.platform.revision_attachments import (
+    parse_revision_attachments,
+)
 from testing_agent_ai_worker_pi.requirement_artifacts import validate_artifact
 from testing_agent_ai_worker_pi.tasks.requirement_analysis.confirmation_coverage import (
     collect_confirmation_references,
@@ -21,6 +24,7 @@ JSON_INSTRUCTION = (
     "明确答复必须补入对应事实、操作、规则或交互，并更新确认状态和来源；"
     "已解决问题从 questions 删除，清理所有 relatedQuestionIds；不能只删问题而保留对应未知内容。"
     "questions 仅保留 status=open 的剩余缺口，全部解决时为 []；修订不自动关闭未答复问题。"
+    "本轮优化附带的图片是用户补充依据，需结合图片修订，不得凭空追加图片中不存在的内容。"
 )
 
 
@@ -35,6 +39,7 @@ def execute_two_stage(
     source_downloader,
     first_skill_name,
     second_skill_name,
+    attachment_downloader=None,
 ):
     if task.payload.metadata.get("workflowVersion", 2) != 2:
         raise ValueError("不支持的需求分析工作流版本")
@@ -103,6 +108,18 @@ def execute_two_stage(
     else:
         raise ValueError(f"两阶段需求分析不支持阶段: {stage}")
     if revision:
+        attachments = parse_revision_attachments(config)
+        if attachments:
+            if attachment_downloader is None:
+                raise ValueError("未配置继续优化图片下载器")
+            revision_images = attachment_downloader.download(
+                task_id=task.task_id, workspace=workspace, attachments=attachments
+            )
+            media.extend(entry["sourcePath"] for entry in revision_images)
+            body["revisionAttachments"] = [
+                {"fileId": entry["fileId"], "filename": entry["filename"]}
+                for entry in revision_images
+            ]
         body["revisionInstruction"] = revision
     artifact = generate_validated(
         kind=kind,

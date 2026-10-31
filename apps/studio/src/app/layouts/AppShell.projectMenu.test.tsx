@@ -62,3 +62,15 @@ it('旧项目的菜单参数不会打开当前项目的设置', async () => {
   await screen.findByText('暂无迭代，创建后即可开始管理需求与测试')
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
+
+it('把缺少问号的 board 地址重定向到需求页', async () => {
+  mount('owner', '/projects/board=requirements')
+  await screen.findByText('请先创建迭代，再添加需求')
+  expect(screen.getByRole('link', { name: '需求' })).toHaveAttribute('aria-current', 'page')
+})
+
+it('未知地址回到项目页', async () => {
+  mount('owner', '/unknown-page')
+  await screen.findByText('暂无迭代，创建后即可开始管理需求与测试')
+  expect(screen.getByRole('link', { name: '迭代' })).toHaveAttribute('aria-current', 'page')
+})

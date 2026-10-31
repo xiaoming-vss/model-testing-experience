@@ -1,7 +1,5 @@
 """Requirement-scoped history/configuration and execution reuse the real database paths."""
 
-import json
-from pathlib import Path
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -23,7 +21,6 @@ from testing_agent.schemas.requirement_design import (
 from testing_agent.schemas.requirement_design import RequirementDesignRunRequest as Start
 from testing_agent.services.requirement_design import (
     RequirementDesignService,
-    has_function_generation_input,
     validate_openapi_source,
 )
 
@@ -103,20 +100,6 @@ async def test_api_and_requirement_final_review_filters_use_their_own_stage(data
         assert (await repository.history("req", kind, 1, 20, "imported"))["total"] == 1
 
 
-def test_function_input_accepts_enhanced_text_and_structured_understanding():
-    requirement = Requirement(document_content="# 功能理解记录\n支持用户登录及权限校验")
-    assert has_function_generation_input(requirement)
-    requirement.document_content = (
-        Path(__file__).parent
-        / "fixtures/requirement_artifacts/requirement-understanding.example.json"
-    ).read_text()
-    assert has_function_generation_input(requirement)
-    data = json.loads(requirement.document_content)
-    data["artifactType"] = "document_extraction"
-    requirement.document_content = json.dumps(data)
-    assert not has_function_generation_input(requirement)
-
-
 def test_workspace_requests_are_strict_and_have_no_client_owned_scope():
     with pytest.raises(ValidationError):
         Configuration(projectId="foreign")
@@ -153,7 +136,9 @@ async def test_default_configuration_reuses_existing_task(database, monkeypatch)
         await service.configure("other", "function", Configuration(taskId="task"), "u")
 
 
-async def test_workspace_start_rejects_empty_enhanced_text_and_cross_requirement(monkeypatch):
+async def test_workspace_start_delegates_version_resolution_and_rejects_cross_requirement(
+    monkeypatch,
+):
     requirement = Requirement(requirement_id="req", sprint_id="s", document_content="  \n ")
 
     async def sprint(*args):
@@ -166,7 +151,10 @@ async def test_workspace_start_rejects_empty_enhanced_text_and_cross_requirement
         repository=SimpleNamespace(session=None, get_sprint=sprint, commit=access),
         ensure_project_access=access,
     )
-    service = RequirementDesignService(None, tasks.repository, None, tasks, None, None)
+    from unittest.mock import AsyncMock
+
+    launcher = SimpleNamespace(launch=AsyncMock(return_value={"runId": "versioned"}))
+    service = RequirementDesignService(None, tasks.repository, None, tasks, None, launcher)
 
     async def scope(*args):
         return requirement
@@ -177,8 +165,7 @@ async def test_workspace_start_rejects_empty_enhanced_text_and_cross_requirement
     monkeypatch.setattr(service, "scope", scope)
     tasks.owned_task = owned
     body = Start(taskId="task", requestId=uuid4(), connectionId="llm")
-    with pytest.raises(AppError, match="有效的需求增强文本"):
-        await service.start("req", "function", body, "u")
+    assert (await service.start("req", "function", body, "u"))["runId"] == "versioned"
     requirement.requirement_id = "other"
 
     async def foreign(*args, **kwargs):
@@ -253,24 +240,20 @@ def test_openapi_configuration_accepts_json_yaml_and_legacy_urls(source):
     validate_openapi_source(source)
 
 
-@pytest.mark.parametrize(
-    "content", [None, "", " \n\t", '{"artifactType":"requirement_understanding",']
-)
-def test_function_input_rejects_empty_or_damaged_enhanced_text(content):
-    assert not has_function_generation_input(Requirement(document_content=content))
-
-
-async def test_workspace_starts_function_run_from_existing_enhanced_text(database):  # noqa: F811
+async def test_workspace_starts_function_run_from_approved_version_without_binding(database):  # noqa: F811
     sync, _, _ = database
     from support.ai_execution import AsyncSessionAdapter
+    from support.requirement_versions import understanding_version
 
     requirement = sync.query(Requirement).filter_by(requirement_id="req").one()
-    requirement.document_content = "# 功能理解记录\n支持用户登录及权限校验"
+    requirement.document_content = ""
     sync.commit()
+    version = understanding_version(sync, "req")
     service = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(sync))).design
     assert (await service.overview("req", "u"))["adoptedUnderstanding"]
     run = await service.start(
         "req", "function", Start(taskId="task", requestId=uuid4(), connectionId="llm"), "u"
     )
     saved = sync.query(Run).filter_by(run_id=run["runId"]).one()
-    assert saved.snapshot_json["sourceContent"] == requirement.document_content
+    assert saved.snapshot_json["sourceContent"] == version.artifact_content
+    assert saved.snapshot_json["requirementUnderstandingVersion"]["versionId"] == version.version_id

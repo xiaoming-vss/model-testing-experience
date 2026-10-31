@@ -53,85 +53,117 @@ async def _run_once(
     if "taskType" in parsed:
         if parsed.get("taskType") == "api_case_debug" and parsed.get("caseRun"):
             result = await ApiCaseRunner().run(parsed["caseRun"])
-            logger.info("once mode api case result", {
-                "taskId": result.get("taskId"),
-                "status": result.get("status"),
-                "success": result.get("success"),
-            })
+            logger.info(
+                "once mode api case result",
+                {
+                    "taskId": result.get("taskId"),
+                    "status": result.get("status"),
+                    "success": result.get("success"),
+                },
+            )
             return
 
-        if parsed.get("taskType") == "api_collection_run" and parsed.get("collectionRun"):
-            result = await ApiCollectionRunner(_NoopControlPlaneClient()).run(parsed["collectionRun"])
-            logger.info("once mode api collection result", {
-                "taskId": result.get("taskId"),
-                "status": result.get("status"),
-                "success": result.get("success"),
-            })
+        if parsed.get("taskType") == "api_collection_run" and parsed.get(
+            "collectionRun"
+        ):
+            result = await ApiCollectionRunner(_NoopControlPlaneClient()).run(
+                parsed["collectionRun"]
+            )
+            logger.info(
+                "once mode api collection result",
+                {
+                    "taskId": result.get("taskId"),
+                    "status": result.get("status"),
+                    "success": result.get("success"),
+                },
+            )
             return
 
         snapshot = UiWorkerTaskSnapshotResponse(
             task_type=parsed.get("taskType", "case_debug"),
-            case_run=_parse_case_run_snapshot(parsed.get("caseRun")) if "caseRun" in parsed else None,
-            suite_run=_parse_suite_run_snapshot(parsed.get("suiteRun")) if "suiteRun" in parsed else None,
+            case_run=_parse_case_run_snapshot(parsed.get("caseRun"))
+            if "caseRun" in parsed
+            else None,
+            suite_run=_parse_suite_run_snapshot(parsed.get("suiteRun"))
+            if "suiteRun" in parsed
+            else None,
         )
 
         if snapshot.task_type == "suite_run" and snapshot.suite_run:
             result = await suite_runner.run(snapshot.suite_run)
-            logger.info("once mode suite result", {
-                "taskId": result.task_id,
-                "status": result.status,
-                "success": result.success,
-            })
+            logger.info(
+                "once mode suite result",
+                {
+                    "taskId": result.task_id,
+                    "status": result.status,
+                    "success": result.success,
+                },
+            )
             return
 
         if snapshot.task_type == "case_debug" and snapshot.case_run:
             result = await case_runner.run(snapshot.case_run)
-            logger.info("once mode case result", {
-                "taskId": result.task_id,
-                "status": result.status,
-                "success": result.success,
-            })
+            logger.info(
+                "once mode case result",
+                {
+                    "taskId": result.task_id,
+                    "status": result.status,
+                    "success": result.success,
+                },
+            )
             return
 
         raise ValueError("once 模式快照缺少可执行内容")
 
     if "collectionRunId" in parsed and "items" in parsed:
         result = await ApiCollectionRunner(_NoopControlPlaneClient()).run(parsed)
-        logger.info("once mode api collection result", {
-            "taskId": result.get("taskId"),
-            "status": result.get("status"),
-            "success": result.get("success"),
-        })
+        logger.info(
+            "once mode api collection result",
+            {
+                "taskId": result.get("taskId"),
+                "status": result.get("status"),
+                "success": result.get("success"),
+            },
+        )
         return
 
     # 直接是测试集快照
     if "items" in parsed:
         snapshot = _parse_suite_run_snapshot(parsed)
         result = await suite_runner.run(snapshot)
-        logger.info("once mode suite result", {
-            "taskId": result.task_id,
-            "status": result.status,
-            "success": result.success,
-        })
+        logger.info(
+            "once mode suite result",
+            {
+                "taskId": result.task_id,
+                "status": result.status,
+                "success": result.success,
+            },
+        )
         return
 
     if "request" in parsed and "caseId" in parsed:
         result = await ApiCaseRunner().run(parsed)
-        logger.info("once mode api case result", {
-            "taskId": result.get("taskId"),
-            "status": result.get("status"),
-            "success": result.get("success"),
-        })
+        logger.info(
+            "once mode api case result",
+            {
+                "taskId": result.get("taskId"),
+                "status": result.get("status"),
+                "success": result.get("success"),
+            },
+        )
         return
 
     # 直接是用例快照
     snapshot = _parse_case_run_snapshot(parsed)
     result = await case_runner.run(snapshot)
-    logger.info("once mode case result", {
-        "taskId": result.task_id,
-        "status": result.status,
-        "success": result.success,
-    })
+    logger.info(
+        "once mode case result",
+        {
+            "taskId": result.task_id,
+            "status": result.status,
+            "success": result.success,
+        },
+    )
 
 
 async def _run_poll(config: WorkerConfig) -> None:
@@ -149,7 +181,7 @@ async def _run_poll(config: WorkerConfig) -> None:
 
     # 创建客户端和运行器
     control_plane_client = ControlPlaneClient(config)
-    case_runner = UiCaseRunner(config)
+    case_runner = UiCaseRunner(config, control_plane_client)
     suite_runner = UiSuiteRunner(config, control_plane_client)
 
     # 记录 API 契约
@@ -157,6 +189,7 @@ async def _run_poll(config: WorkerConfig) -> None:
 
     # 创建轮询器
     from .poller.task_poller import TaskPoller
+
     poller = TaskPoller(config, control_plane_client, case_runner, suite_runner)
 
     # 开始轮询
@@ -188,9 +221,12 @@ async def _run_with_shutdown_signals() -> None:
         if shutdown_signal is not None or worker_task.done():
             return
         shutdown_signal = received_signal
-        logger.info("test worker shutdown requested", {
-            "signal": received_signal.name,
-        })
+        logger.info(
+            "test worker shutdown requested",
+            {
+                "signal": received_signal.name,
+            },
+        )
         worker_task.cancel()
 
     for handled_signal in (signal.SIGTERM, signal.SIGINT):
@@ -211,9 +247,12 @@ async def _run_with_shutdown_signals() -> None:
     except asyncio.CancelledError:
         if shutdown_signal is None:
             raise
-        logger.info("test worker shutdown completed", {
-            "signal": shutdown_signal.name,
-        })
+        logger.info(
+            "test worker shutdown completed",
+            {
+                "signal": shutdown_signal.name,
+            },
+        )
     finally:
         for handled_signal in registered_signals:
             loop.remove_signal_handler(handled_signal)
@@ -233,10 +272,14 @@ def main() -> None:
 class _NoopControlPlaneClient:
     """No-op client for collection once mode."""
 
-    def report_api_collection_item_started(self, task_id: str, item_id: str, payload: dict) -> None:
+    def report_api_collection_item_started(
+        self, task_id: str, item_id: str, payload: dict
+    ) -> None:
         return None
 
-    def report_api_collection_item_completed(self, task_id: str, item_id: str, payload: dict) -> None:
+    def report_api_collection_item_completed(
+        self, task_id: str, item_id: str, payload: dict
+    ) -> None:
         return None
 
 
@@ -271,6 +314,7 @@ def _parse_case_run_snapshot(data: dict | None) -> UiCaseRunSnapshot | None:
                 enabled=s.get("enabled"),
                 description=s.get("description"),
                 comparator=s.get("comparator"),
+                save_to=s.get("saveTo"),
             )
             for s in case_data["steps"]
         ]
@@ -366,6 +410,7 @@ def _parse_suite_run_snapshot(data: dict | None) -> UiTestSuiteRunSnapshot | Non
                     enabled=s.get("enabled"),
                     description=s.get("description"),
                     comparator=s.get("comparator"),
+                    save_to=s.get("saveTo"),
                 )
                 for s in case_data["steps"]
             ]
@@ -381,11 +426,13 @@ def _parse_suite_run_snapshot(data: dict | None) -> UiTestSuiteRunSnapshot | Non
             steps=steps,
         )
 
-        items.append(UiSuiteRunItemSnapshot(
-            item_id=item_data.get("itemId", ""),
-            continue_on_failure=item_data.get("continueOnFailure", False),
-            case=case,
-        ))
+        items.append(
+            UiSuiteRunItemSnapshot(
+                item_id=item_data.get("itemId", ""),
+                continue_on_failure=item_data.get("continueOnFailure", False),
+                case=case,
+            )
+        )
 
     suite = None
     if "suite" in data and data["suite"]:
@@ -435,4 +482,3 @@ def _parse_suite_run_snapshot(data: dict | None) -> UiTestSuiteRunSnapshot | Non
 
 if __name__ == "__main__":
     main()
-

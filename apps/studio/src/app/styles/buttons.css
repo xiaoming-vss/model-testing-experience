@@ -148,13 +148,18 @@
     --button-current-active: var(--button-danger-active-bg);
   }
 
-  /* Reference-style icon actions have transparent backgrounds and quiet ink strokes.
-     Create stays green; hover and destructive confirmation retain semantic feedback. */
+  /* Icon actions stay transparent and take a semantic ink color by operation:
+     read → blue, create/upload → green, edit/update → amber, bind/save → teal,
+     delete → red. Refresh remains neutral; hover keeps a matching soft wash. */
   .ant-btn.app-action-icon {
     --action-tone: var(--app-action-read);
   }
 
   .ant-btn.app-action-create {
+    --action-tone: var(--app-action-create);
+  }
+
+  .ant-btn.app-action-run {
     --action-tone: var(--app-action-create);
   }
 
@@ -173,18 +178,15 @@
   }
 
   .ant-btn.app-action.app-action-icon:not(.app-action-refresh):not(:disabled):not(.ant-btn-disabled) {
-    --button-current-text: var(--app-shell-text-secondary);
+    --button-current-text: var(--action-tone);
     --button-current-bg: transparent;
     --button-current-border: transparent;
     --button-current-hover: color-mix(in srgb, var(--action-tone) 18%, transparent);
     --button-current-hover-border: transparent;
     --button-current-active: color-mix(in srgb, var(--action-tone) 26%, transparent);
   }
-  .ant-btn.app-action.app-action-icon.app-action-create:not(:disabled):not(.ant-btn-disabled) {
-    --button-current-text: var(--app-action-create);
-  }
   .ant-btn.app-action.app-action-icon.app-action-delete:not(:disabled):not(.ant-btn-disabled) {
-    --button-current-text: var(--app-text-caption);
+    --button-current-text: var(--app-action-delete);
     --button-current-hover: var(--button-danger-hover-bg);
     --button-current-active: var(--button-danger-active-bg);
   }

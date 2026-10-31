@@ -15,6 +15,7 @@ from testing_agent.core.errors import ErrAiGenerateTaskRunRunning, ErrBadRequest
 from testing_agent.core.sid import new_id
 from testing_agent.domain.ai_execution_intent import ExecutionIntent
 from testing_agent.domain.ai_tasks import REQUIREMENT_ANALYSIS_INITIAL_STAGE
+from testing_agent.domain.ui_generation_artifacts import UI_STAGES, UI_WORKFLOW_VERSION
 from testing_agent.models.ai_generate_task import AiGenerateTaskRun
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
@@ -87,6 +88,7 @@ class GenerationRunLauncher:
 
                 raise ErrRequirementFileMissing()
         source_archive_file_id = ""
+        source_archive_metadata: dict[str, Any] = {}
         if kind == "ui":
             archive = await self.source_archive_repository.get_source_archive(task.task_id)
             if archive is None:
@@ -96,6 +98,11 @@ class GenerationRunLauncher:
                 from testing_agent.core.errors import AppError
 
                 raise AppError(409, "源码包未存储到 S3，请重新上传", 409)
+            source_archive_metadata = {
+                "filename": archive.filename,
+                "sha256": archive.sha256,
+                "sizeBytes": archive.size_bytes,
+            }
         llm_connection_id = str(body.get("connectionId") or body.get("llmConnectionId") or "")
         if not llm_connection_id:
             raise ErrBadRequest()
@@ -148,9 +155,12 @@ class GenerationRunLauncher:
                 run_id,
                 None if run_instruction is None else str(run_instruction),
                 worker_task_id=worker_task_id,
+                understanding_version_id=str(body.get("requirementUnderstandingVersionId") or ""),
             )
         if kind == "ui":
             snapshot["sourceArchiveFileId"] = source_archive_file_id
+            snapshot["sourceArchive"] = source_archive_metadata
+            snapshot["uiWorkflowVersion"] = UI_WORKFLOW_VERSION
         if kind == "requirement_analysis":
             snapshot["workflowVersion"] = 2
             snapshot["sourceContent"] = snapshot.get("documentDownloadUrl", "")
@@ -159,7 +169,9 @@ class GenerationRunLauncher:
         # keep seeing credentials or roles revoked during a remote request.
         await self.repository.commit()
         checkpoint_enabled = (
-            True if kind == "requirement_analysis" else bool(body.get("checkpointEnabled", False))
+            True
+            if kind in {"requirement_analysis", "ui"}
+            else bool(body.get("checkpointEnabled", False))
         )
         current_stage = ""
         if checkpoint_enabled:
@@ -167,6 +179,8 @@ class GenerationRunLauncher:
                 current_stage = "requirement_analysis"
             elif kind == "requirement_analysis":
                 current_stage = REQUIREMENT_ANALYSIS_INITIAL_STAGE
+            elif kind == "ui":
+                current_stage = UI_STAGES[0]
         stage_status = StageStatus.PENDING.value if current_stage else ""
         run = AiGenerateTaskRun(
             run_id=run_id,
@@ -224,11 +238,48 @@ class GenerationRunLauncher:
                 return dump_run(existing)
             if await self.repository.has_active_run(task_id):
                 raise ErrAiGenerateTaskRunRunning()
+        if kind == "ui":
+            ids = body.get("functionCaseIds")
+            if ids is not None and (
+                not isinstance(ids, list)
+                or not ids
+                or not all(isinstance(value, str) and value for value in ids)
+                or len(set(ids)) != len(ids)
+            ):
+                raise ErrBadRequest()
+            cases = await self.repository.list_ui_source_cases(task.requirement_id, ids)
+            if not cases or (ids is not None and {c["caseId"] for c in cases} != set(ids)):
+                from testing_agent.core.errors import dynamic_error
+
+                raise dynamic_error(ErrBadRequest, "请选择当前需求下至少一条正式功能用例")
+            run.snapshot_json = {**snapshot, "functionalCases": cases}
+            config = normalize_config_json(body.get("configJson"))
+            if {"uiSurface", "uiDesign", "resultYaml", "revisionInstruction"} & set(config):
+                raise ErrBadRequest()
+            run.config_json = config
         self.repository.add_all([run, worker_task])
         await self.execution.save(
             self.repository.session,
             run,
-            intent=ExecutionIntent(actor_id=user_id, llm_connection_id=llm_connection_id),
+            intent=ExecutionIntent(
+                actor_id=user_id,
+                llm_connection_id=llm_connection_id,
+                input_snapshot={
+                    "source": snapshot,
+                    "config": run.config_json or {},
+                    "currentOutput": "",
+                    "versioning": {
+                        "baseVersionId": "",
+                        "upstreamVersions": {
+                            "feature_understanding": snapshot["requirementUnderstandingVersion"][
+                                "versionId"
+                            ]
+                        },
+                    },
+                }
+                if kind == "function"
+                else None,
+            ),
             worker=worker_task,
         )
         await self.repository.commit()

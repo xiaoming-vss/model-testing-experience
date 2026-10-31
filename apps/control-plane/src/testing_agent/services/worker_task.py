@@ -258,6 +258,11 @@ class WorkerTaskService:
             task.error_message = redact(
                 task.error_message, private_payload(authority.run).get("secrets", [])
             )
+        if domain == "ui":
+            # 私密变量的取值在运行记录里加密保存，错误信息里出现时同样打码。
+            task.error_message = redact(
+                task.error_message, private_payload(authority.run).get("secrets", [])
+            )
         if domain == "ai":
             assert guarded_run is not None
             await self.execution.save(

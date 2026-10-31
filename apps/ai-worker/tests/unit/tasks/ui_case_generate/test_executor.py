@@ -17,6 +17,7 @@ from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.tasks.ui_case_generate.executor import (
     UiCaseNanobotExecutor,
     _validate_ui_cases_yaml,
+    _validate_ui_stage_yaml,
 )
 from testing_agent_ai_worker.tasks.ui_case_generate.source_archive import (
     PlatformSourceArchiveDownloader,
@@ -55,9 +56,10 @@ ALL_KEYWORDS_YAML = """- name: 所有关键字字段规则
     - {orderNo: 8, stepName: 等待文本, keyword: wait_text, locatorType: testid, locatorValue: result, operationValue: 成功, continueOnFailure: false, enabled: true}
     - {orderNo: 9, stepName: 断言文本, keyword: assert_text, locatorType: text, locatorValue: 成功, operationValue: 成功, comparator: contains, continueOnFailure: false, enabled: true}
     - {orderNo: 10, stepName: 断言可见, keyword: assert_visible, locatorType: role, locatorValue: button, operationValue: '3000', continueOnFailure: false, enabled: true}
-    - {orderNo: 11, stepName: 断言地址, keyword: assert_url, operationValue: /projects, comparator: eq, continueOnFailure: false, enabled: true}
-    - {orderNo: 12, stepName: 截图, keyword: screenshot, continueOnFailure: false, enabled: true}
-    - {orderNo: 13, stepName: 固定等待, keyword: sleep, operationValue: '1000', continueOnFailure: false, enabled: true}
+    - {orderNo: 11, stepName: 断言隐藏, keyword: assert_hidden, locatorType: text, locatorValue: 转换格式必填, operationValue: '3000', continueOnFailure: false, enabled: true}
+    - {orderNo: 12, stepName: 断言地址, keyword: assert_url, operationValue: /projects, comparator: eq, continueOnFailure: false, enabled: true}
+    - {orderNo: 13, stepName: 截图, keyword: screenshot, continueOnFailure: false, enabled: true}
+    - {orderNo: 14, stepName: 固定等待, keyword: sleep, operationValue: '1000', continueOnFailure: false, enabled: true}
   orderNo: 1
 """
 
@@ -114,7 +116,7 @@ class UiCaseExecutorTests(unittest.TestCase):
         self.assertEqual("generate-ui-test-case", captured["skill_name"])
         self.assertIn("sourceRoot", result.intermediate_json_text)
         self.assertIn("登录流程", captured["input_text"])
-        self.assertIn("始终返回非空 YAML list", captured["input_text"])
+        self.assertIn("始终返回 YAML list", captured["input_text"])
         self.assertNotIn(
             "步骤必须包含 orderNo、stepName、keyword、operationValue", captured["input_text"]
         )
@@ -153,7 +155,7 @@ class UiCaseExecutorTests(unittest.TestCase):
         self.assertIn("缺少必填字段", result.error_message or "")
 
     def test_validator_rejects_single_mapping(self) -> None:
-        with self.assertRaisesRegex(ValueError, "顶层必须是非空 YAML list"):
+        with self.assertRaisesRegex(ValueError, "顶层必须是 YAML list"):
             _validate_ui_cases_yaml(VALID_YAML.removeprefix("- ").replace("\n  ", "\n"))
 
     def test_validator_accepts_multiple_cases_with_empty_steps_and_incrementing_order(self) -> None:
@@ -170,6 +172,7 @@ class UiCaseExecutorTests(unittest.TestCase):
 
     def test_validator_accepts_all_supported_keyword_contracts(self) -> None:
         self.assertEqual(1, _validate_ui_cases_yaml(ALL_KEYWORDS_YAML))
+        self.assertEqual(1, _validate_ui_stage_yaml(ALL_KEYWORDS_YAML))
 
     def test_validator_rejects_invalid_case_and_step_order(self) -> None:
         with self.assertRaisesRegex(ValueError, "跨用例连续递增"):

@@ -26,6 +26,7 @@ class ApiCollectionResponse(BaseModel):
     requirement_id: str = Field()
     name: str
     description: str = ""
+    effective_import_id: str | None = Field(default=None)
     created_at: datetime | str | None = Field(default="")
     updated_at: datetime | str | None = Field(default="")
     model_config = ConfigDict(from_attributes=True, populate_by_name=True, alias_generator=to_camel)

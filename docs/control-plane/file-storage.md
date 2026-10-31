@@ -1,6 +1,6 @@
 # 统一 S3 文件存储
 
-平台采用私有桶：前端通过短期签名 POST 直传，Worker 在下载时申请短期 GET URL 后直接读取。控制面保管凭证、核验对象、管理项目权限和文件关联。已接入需求文档、UI 源码包、项目上传技能包及 UI 截图/Trace。Bug 附件可复用通用上传能力。报告目前在内存中按需导出，未依赖本地文件持久化。
+平台采用私有桶：前端通过短期签名 POST 直传，Worker 在下载时申请短期 GET URL 后直接读取。控制面保管凭证、核验对象、管理项目权限和文件关联。已接入需求文档、UI 源码包、项目上传技能包及 UI 截图/Trace。Bug 附件可复用通用上传能力；继续优化图片复用 `attachment` 用途并关联 `ai_generate_run`。报告目前在内存中按需导出，未依赖本地文件持久化。
 
 ## 配置和部署
 
@@ -64,7 +64,7 @@ apps/control-plane/.venv/bin/python .scratch/debug/s3_upload_cors.py http://loca
 原需求下载地址保持稳定。用户请求添加 `Accept: application/json` 时返回 S3 JSON 下载票据，否则重定向至短期签名链接。Worker 入口固定返回 JSON 票据。需求文件不再接受本地二进制回退；没有 `documentFileId` 的历史需求返回 409 并提示重新上传。
 
 
-Worker 使用原任务需求下载入口，通过原有任务执行者授权后获取对应文件票据。签名不保存进任务，不把 Worker Token 发送到对象存储。下载完成验证大小、SHA-256；网络失败或 403 等临时错误最多尝试三次，每次重新申请票据；404 和内容校验失败直接报告。
+Worker 使用原任务需求下载入口，通过原有任务执行者授权后获取对应文件票据。继续优化图片最多 6 张、单张不超过 10 MiB，使用 `/internal/ai-worker/tasks/{taskId}/revision-attachments/{fileId}`：校验 Worker 租约、任务类型、运行归属、`attachment` 用途及 PNG/JPEG 类型后返回票据，签名不保存进任务，不把 Worker Token 发送到对象存储。移除或取消后未关联的临时上传按现有临时文件清理规则回收；已随修订关联的图片保守保留。下载完成验证大小、SHA-256；网络失败或 403 等临时错误最多尝试三次，每次重新申请票据；404 和内容校验失败直接报告。
 
 前端上传/下载遇到签名过期、网络中断或临时服务故障时最多三次尝试，重新申请票据；上传完成通知的响应丢失也可恢复。平台 401/403、永久存储 AccessDenied、404 不自动重试。富文本图片与截图先鉴权下载，再以 Blob URL 展示，页面停留不依赖签名有效期；失败可手动重新加载，卸载时释放 Blob URL。旧临时对象由清理器回收。签名 URL 不记录日志，后端签名响应使用 no-store。已签发 URL 在有效期内仍可访问，权限撤销不能立即撤销旧签名。
 
@@ -141,7 +141,7 @@ UI 文件授权路由挂在 `/internal/ui-worker/tasks/{taskId}/files` 下。申
 | 业务目录 | 用途 | 接入状态 |
 | --- | --- | --- |
 | `requirements` | 需求原文件 | 已实现，`purpose=requirement` |
-| `attachments` | 通用附件、富文本图片 | 存储分类已实现，`purpose=attachment`；具体编辑器接入另行验收 |
+| `attachments` | 通用附件、富文本图片及继续优化图片 | 存储分类已实现，`purpose=attachment`；继续优化图片关联 AI 运行 |
 | `bugs` | Bug 图片和附件 | 预留，随 Bug 文件功能接入 |
 | `reports` | 持久化测试报告 | 预留，当前报告在内存中导出 |
 | `source-archives` | UI 源码包 | 已实现，`purpose=ui_source_archive` |

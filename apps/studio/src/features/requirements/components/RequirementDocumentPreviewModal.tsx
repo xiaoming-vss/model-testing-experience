@@ -516,7 +516,7 @@ export function RequirementDocumentPreviewModal({
       open={open}
       onCancel={onClose}
       footer={null}
-      width="min(1620px, calc(100vw - 72px))"
+      width="min(2000px, calc(100vw - 56px))"
       centered
       destroyOnHidden
       className="requirement-document-dialog"

@@ -236,7 +236,7 @@ export function ApiCollectionDetailPage() {
       message.error(getErrorMessage(error))
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['apiEnvironments', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['testEnvironments', projectId, 'api'] })
     },
   })
 

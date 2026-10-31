@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  isValidUiIntegerOrVariable,
+  isValidUiOpenUrl,
   isValidUiStepComparator,
   isValidUiStepKeyword,
   isValidUiStepLocatorType,
@@ -23,6 +25,7 @@ describe('UI 步骤规范', () => {
       'wait_text',
       'assert_text',
       'assert_visible',
+      'assert_hidden',
       'assert_url',
       'screenshot',
       'sleep',
@@ -42,12 +45,25 @@ describe('UI 步骤规范', () => {
   it('按关键字决定条件字段', () => {
     expect(requiresUiStepLocator('assert_text')).toBe(true)
     expect(requiresUiStepLocator('assert_url')).toBe(false)
+    expect(requiresUiStepLocator('assert_hidden')).toBe(true)
     expect(usesUiStepOperation('assert_text')).toBe(true)
     expect(usesUiStepOperation('assert_visible')).toBe(true)
+    expect(usesUiStepOperation('assert_hidden')).toBe(true)
     expect(usesUiStepOperation('screenshot')).toBe(false)
     expect(usesUiStepComparator('assert_text')).toBe(true)
     expect(usesUiStepComparator('assert_url')).toBe(true)
+    expect(usesUiStepComparator('assert_hidden')).toBe(false)
     expect(usesUiStepComparator('wait_text')).toBe(false)
+  })
+
+  it('open 接受完整 URL 或变量模板，sleep 接受数字或变量模板', () => {
+    expect(isValidUiOpenUrl('https://web.example.test/login')).toBe(true)
+    expect(isValidUiOpenUrl('{{baseUrl}}/login')).toBe(true)
+    expect(isValidUiOpenUrl('/login')).toBe(false)
+    expect(isValidUiOpenUrl('')).toBe(false)
+    expect(isValidUiIntegerOrVariable('3000')).toBe(true)
+    expect(isValidUiIntegerOrVariable('{{timeout}}')).toBe(true)
+    expect(isValidUiIntegerOrVariable('3s')).toBe(false)
   })
 
   it('拒绝规范之外的关键字、定位方式和比较器', () => {

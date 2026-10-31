@@ -48,9 +48,9 @@ class ApiEnvironmentService:
         await self.repository.refresh(environment)
         return dump(ApiEnvironmentResponse, environment)
 
-    async def list(self, user_id: str, project_id: str) -> dict[str, Any]:
+    async def list(self, user_id: str, project_id: str, kind: str = "api") -> dict[str, Any]:
         await self.ensure_project_access(user_id, project_id, action="read")
-        rows = await self.repository.list_by_project(project_id)
+        rows = await self.repository.list_by_project(project_id, kind)
         return list_payload([dump(ApiEnvironmentResponse, row) for row in rows])
 
     async def get(self, user_id: str, environment_id: str) -> dict:

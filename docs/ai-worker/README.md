@@ -1,5 +1,7 @@
 # AI Worker（ai-worker）
 
+[UI 用例三阶段执行协议](../control-plane/ui-three-stage-generation.md)
+
 开发与审查先阅读[通用后端规则](../agents/backend-development.md)和[AI Worker 开发规则](development-rules.md)，保留本项目的运行模型、产物契约和验证入口。
 
 接收平台派发的 AI 测试任务，调用 LLM 生成测试产物并回传。领取需求分析、功能/API/UI 用例生成、代码风险分析、测试报告生成六类任务。
@@ -79,3 +81,17 @@ API 提取校验非空接口映射、snake_case 名称、path/method 与已定�
 修正期间复用 `outputValidation` 摘要上报 `repairAttempt/maxRepairs/status`。API 生成阶段进度保留已验证的提取 JSON；UI 进度保留源码位置，修正失败不发布非法用例。每轮输出和校验错误保存在任务 workspace 的 `diagnostics/api-output` 或 `diagnostics/ui-output`，文件权限 0600，不保存模型连接设置或完整提示词。
 
 验证：Worker 全量 232 项测试、控制面 API/UI 导入与 Worker 契约 40 项回归通过；API 标准技能样例（含提取和断言规则）、UI 全部支持关键字样例同时通过 Worker 验证器与控制面导入验证。Worker Ruff 与修改范围格式检查通过。未调用真实模型生成或执行 API/UI 用例。
+
+## UI YAML 人工补全
+
+UI 候选生成接受步骤级 `missingFields` 结构化待补项，明确字段、操作、目标、值和原因；对应字段可为 null，其余已知字段仍按关键字规则校验。该候选原文回传而不强制模型修复。用户补齐同一 YAML 后再导入；正式导入/执行门禁见[UI YAML 待补内容](../control-plane/ui-yaml-completion.md)。全部目标排除时允许空列表表示零候选，不能将生成成功当成可执行或测试通过。
+
+### UI YAML 缺口复核
+
+第三阶段先按模块完成原格式、字段和名称顺序硬校验；只有这些确定性错误进入同模块最多两轮自愈。完整合并通过后将草稿保存为诊断目录的 `candidate.yaml`，再逐模块通过独立模型会话提供辅助复核。复核检查 `missingFields` 的可补全性、字段用途和设计目标覆盖，读取原始用例、已审核设计、控件清单、源码与候选 YAML。复核意见不触发 YAML 重生成，也不使生成失败。报告附在 `resultSummaryJson.uiSemanticReview`，不加入用户 YAML，最终仍需人工审核。
+
+每模块复核总时限为 120 秒，报告格式最多修复一次；调用失败、超时、截断或格式仍不合法时标记 `incomplete`，保留草稿并继续交付。取消及权限异常继续传播。报告记录完整 YAML 的 SHA-256 和合并后的用例/步骤位置；控制面发现草稿被修改后展示 `stale`，不将旧报告当作新草稿的结论。报告状态 `completed` 仅指复核完成，不代表没有问题或用例可直接导入。
+
+`assert_visible` / `assert_hidden` / `sleep` 的 `operationValue` 表示等待毫秒数，不可标成缺少业务期望。运行时生成值不能作为执行前待补数据；无法忠实实现的已审核目标必须报告冲突，不以删断言、改预期或人工核对绕过。诊断目录保留每次生成原文和复核报告，验证不修改产物。该检查只收紧新生成流程，历史导入兼容契约不变。
+
+每次第三阶段生成/修复及内部复核均使用新会话。调用输入包含完整的当前模块材料、候选或错误反馈，避免重复会话历史叠加大型 YAML 导致上下文溢出；不依赖历史聊天恢复任务。
