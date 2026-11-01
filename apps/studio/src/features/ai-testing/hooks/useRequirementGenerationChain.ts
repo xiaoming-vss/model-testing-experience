@@ -262,9 +262,12 @@ export function useRequirementGenerationChain({
   const runStage = useMutation({
     mutationFn: async (inputs: { refreshInputs?: boolean; functionCaseIds?: string[] } | void) => {
       if (!selected) throw new Error('请选择阶段')
-      const connectionId = await personalLlm.choose({ alwaysConfirm: true })
+      const choice = selected.kind === 'api'
+        ? await personalLlm.chooseRun(false, { label: '生成要求（选填）', placeholder: '例如：只处理登录接口，覆盖鉴权失败和参数边界' })
+        : { connectionId: await personalLlm.choose({ alwaysConfirm: true }), instruction: '' }
       return generationChainApi.run(requirementId, selected.kind, selected.stage, {
-        connectionId,
+        connectionId: choice.connectionId,
+        ...(selected.kind === 'api' ? { instruction: choice.instruction.trim() } : {}),
         requestId: crypto.randomUUID(),
         upstreamVersions: upstream,
         ...inputs,
@@ -282,12 +285,16 @@ export function useRequirementGenerationChain({
   const review = useMutation({
     mutationFn: async ({ action, continueAfter }: { action: ReviewAction; continueAfter?: boolean }) => {
       if (!selected) throw new Error('请选择阶段')
-      const connectionId =
-        action === 'approve' && continueAfter ? await personalLlm.choose({ alwaysConfirm: true }) : undefined
+      const choice = action === 'approve' && continueAfter
+        ? selected.kind === 'api'
+          ? await personalLlm.chooseRun(false, { label: '生成要求（选填）', placeholder: '例如：只处理登录接口，覆盖鉴权失败和参数边界' })
+          : { connectionId: await personalLlm.choose({ alwaysConfirm: true }), instruction: '' }
+        : undefined
       return generationChainApi.review(requirementId, selected.kind, selected.stage, {
         action,
         continueAfter: Boolean(continueAfter),
-        ...(connectionId ? { connectionId } : {}),
+        ...(choice?.connectionId ? { connectionId: choice.connectionId } : {}),
+        ...(choice && selected.kind === 'api' ? { instruction: choice.instruction.trim() } : {}),
       })
     },
     onSuccess: (_, variables) => {

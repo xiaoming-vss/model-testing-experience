@@ -1,1 +1,0 @@
-"""Test order graph task."""

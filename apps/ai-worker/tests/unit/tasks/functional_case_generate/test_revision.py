@@ -4,13 +4,13 @@ import unittest
 from datetime import datetime
 from types import SimpleNamespace
 
-from testing_agent_ai_worker.config.models import NanobotConfig
+from testing_agent_ai_worker.config.models import PiConfig
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.tasks.functional_case_generate.detailed_batches import (
     run_functional_detailed_case_batches,
 )
 from testing_agent_ai_worker.tasks.functional_case_generate.executor import (
-    FunctionalCaseNanobotExecutor,
+    FunctionalCaseExecutor,
 )
 from tests.unit.tasks.functional_case_generate.fixtures import case
 
@@ -73,8 +73,8 @@ class FunctionalRevisionTests(unittest.TestCase):
             calls.append(kwargs)
             return '{"updated":true}'
 
-        executor = FunctionalCaseNanobotExecutor(
-            nanobot_config=NanobotConfig(),
+        executor = FunctionalCaseExecutor(
+            agent_config=PiConfig(),
             skill_runner=skill,
             chain_runner=lambda **kwargs: self.fail("must not run full chain"),
             attachment_downloader=self.downloader(downloads),
@@ -96,8 +96,8 @@ class FunctionalRevisionTests(unittest.TestCase):
             calls.append(kwargs)
             return '{"cases":[{"name":"revised"}]}'
 
-        executor = FunctionalCaseNanobotExecutor(
-            nanobot_config=NanobotConfig(),
+        executor = FunctionalCaseExecutor(
+            agent_config=PiConfig(),
             detailed_batch_runner=batches,
             chain_runner=lambda **kwargs: self.fail("must not run full chain"),
             skill_runner=lambda **kwargs: self.fail("must not rerun upstream"),
@@ -123,8 +123,8 @@ class FunctionalRevisionTests(unittest.TestCase):
                     calls.append(kwargs)
                     return '{"updated":true}'
 
-                executor = FunctionalCaseNanobotExecutor(
-                    nanobot_config=NanobotConfig(),
+                executor = FunctionalCaseExecutor(
+                    agent_config=PiConfig(),
                     skill_runner=skill,
                     chain_runner=lambda **kwargs: self.fail("must not run full chain"),
                 )
@@ -150,8 +150,8 @@ class FunctionalRevisionTests(unittest.TestCase):
                     calls.append(kwargs)
                     return '{"cases":[{"name":"revised"}]}'
 
-                executor = FunctionalCaseNanobotExecutor(
-                    nanobot_config=NanobotConfig(),
+                executor = FunctionalCaseExecutor(
+                    agent_config=PiConfig(),
                     detailed_batch_runner=batches,
                     chain_runner=lambda **kwargs: self.fail("must not run full chain"),
                     skill_runner=lambda **kwargs: self.fail("must not rerun upstream"),

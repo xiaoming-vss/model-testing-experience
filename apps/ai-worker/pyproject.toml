@@ -13,12 +13,12 @@ dependencies = [
 ]
 
 [project.scripts]
-mtx-ai-demo = "testing_agent_ai_worker.cli.nanobot_demo:main"
+mtx-ai-demo = "testing_agent_ai_worker.cli.agent_demo:main"
 # Compatibility alias for existing deployments.
-testing-agent-ai-demo = "testing_agent_ai_worker.cli.nanobot_demo:main"
-mtx-ai-chain-demo = "testing_agent_ai_worker.cli.nanobot_chain_demo:main"
+testing-agent-ai-demo = "testing_agent_ai_worker.cli.agent_demo:main"
+mtx-ai-chain-demo = "testing_agent_ai_worker.cli.agent_chain_demo:main"
 # Compatibility alias for existing deployments.
-testing-agent-ai-chain-demo = "testing_agent_ai_worker.cli.nanobot_chain_demo:main"
+testing-agent-ai-chain-demo = "testing_agent_ai_worker.cli.agent_chain_demo:main"
 mtx-ai-worker = "testing_agent_ai_worker.main:main"
 # Compatibility alias for existing deployments.
 testing-agent-ai-worker = "testing_agent_ai_worker.main:main"

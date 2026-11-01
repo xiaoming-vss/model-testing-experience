@@ -2,14 +2,14 @@
 
 from datetime import datetime
 
-from testing_agent_ai_worker.config.models import NanobotConfig
-from testing_agent_ai_worker.models.execution import TaskResult, TaskStatus
-from testing_agent_ai_worker.models.task import Task
-from testing_agent_ai_worker.nanobot_runtime.config_builder import task_config_path
-from testing_agent_ai_worker.nanobot_runtime.paths import (
+from testing_agent_ai_worker.agent.config_builder import task_config_path
+from testing_agent_ai_worker.agent.paths import (
     resolve_runtime_paths,
     resolve_task_workspace,
 )
+from testing_agent_ai_worker.config.models import AgentBackendConfig
+from testing_agent_ai_worker.models.execution import TaskResult, TaskStatus
+from testing_agent_ai_worker.models.task import Task
 from testing_agent_ai_worker.tasks.requirement_analysis.document_type import extraction_skill
 from testing_agent_ai_worker.tasks.requirement_analysis.skill import run_skill_step
 from testing_agent_ai_worker.tasks.requirement_analysis.source_downloader import (
@@ -28,19 +28,19 @@ def normalize_requirement_analysis_document_type(document_type: str) -> str:
     return {"docx": "word", "txt": "text"}.get(normalized, normalized)
 
 
-class RequirementAnalysisNanobotExecutor(TaskExecutor):
+class RequirementAnalysisExecutor(TaskExecutor):
     def __init__(
         self,
         *,
-        nanobot_config: NanobotConfig,
+        agent_config: AgentBackendConfig,
         skill_runner=run_skill_step,
         first_skill_name: str = REQUIREMENT_ANALYSIS_FIRST_SKILL_NAME,
         second_skill_name: str = REQUIREMENT_ANALYSIS_SECOND_SKILL_NAME,
         source_downloader: RequirementSourceDownloader | None = None,
         attachment_downloader=None,
     ) -> None:
-        self.nanobot_config = nanobot_config
-        self.runtime_paths = resolve_runtime_paths(nanobot_config)
+        self.agent_config = agent_config
+        self.runtime_paths = resolve_runtime_paths(agent_config)
         self.skill_runner = skill_runner
         self.first_skill_name = first_skill_name
         self.second_skill_name = second_skill_name
@@ -71,8 +71,8 @@ class RequirementAnalysisNanobotExecutor(TaskExecutor):
                 started_at=started_at,
                 finished_at=datetime.now().astimezone(),
             )
-        workspace = resolve_task_workspace(self.nanobot_config, task)
-        with task_config_path(nanobot_config=self.nanobot_config, task=task) as config_path:
+        workspace = resolve_task_workspace(self.agent_config, task)
+        with task_config_path(agent_config=self.agent_config, task=task) as config_path:
             return execute_two_stage(
                 task=task,
                 started_at=started_at,

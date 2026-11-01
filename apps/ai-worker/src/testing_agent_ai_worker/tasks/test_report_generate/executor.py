@@ -6,14 +6,14 @@ import asyncio
 import json
 from datetime import datetime
 
-from testing_agent_ai_worker.config.models import NanobotConfig
-from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
-from testing_agent_ai_worker.models.task import Task
-from testing_agent_ai_worker.nanobot_runtime.config_builder import task_config_path
-from testing_agent_ai_worker.nanobot_runtime.paths import (
+from testing_agent_ai_worker.agent.config_builder import task_config_path
+from testing_agent_ai_worker.agent.paths import (
     resolve_runtime_paths,
     resolve_task_workspace,
 )
+from testing_agent_ai_worker.config.models import AgentBackendConfig
+from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
+from testing_agent_ai_worker.models.task import Task
 from testing_agent_ai_worker.tasks.functional_case_generate.chain import run_skill_step
 from testing_agent_ai_worker.tasks.result_summary import build_task_result_summary
 from testing_agent_ai_worker.worker.runner import TaskExecutor
@@ -31,18 +31,18 @@ def _resolve_text_result(result) -> str:
     return resolved
 
 
-class TestReportNanobotExecutor(TaskExecutor):
+class TestReportExecutor(TaskExecutor):
     """测试报告生成执行器。"""
 
     def __init__(
         self,
         *,
-        nanobot_config: NanobotConfig,
+        agent_config: AgentBackendConfig,
         skill_runner=run_skill_step,
         skill_name: str = TEST_REPORT_SKILL_NAME,
     ) -> None:
-        self.nanobot_config = nanobot_config
-        self.runtime_paths = resolve_runtime_paths(nanobot_config)
+        self.agent_config = agent_config
+        self.runtime_paths = resolve_runtime_paths(agent_config)
         self.skill_runner = skill_runner
         self.skill_name = skill_name
 
@@ -72,7 +72,7 @@ class TestReportNanobotExecutor(TaskExecutor):
                 finished_at=datetime.now().astimezone(),
             )
 
-        workspace = resolve_task_workspace(self.nanobot_config, task)
+        workspace = resolve_task_workspace(self.agent_config, task)
 
         input_text = json.dumps(daily_metrics, ensure_ascii=False, indent=2)
         progress_callback(
@@ -92,7 +92,7 @@ class TestReportNanobotExecutor(TaskExecutor):
             )
         )
 
-        with task_config_path(nanobot_config=self.nanobot_config, task=task) as config_path:
+        with task_config_path(agent_config=self.agent_config, task=task) as config_path:
             report_text = _resolve_text_result(
                 self.skill_runner(
                     input_text=input_text,

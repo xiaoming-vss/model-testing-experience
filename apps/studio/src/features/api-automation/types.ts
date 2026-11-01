@@ -126,7 +126,7 @@ export type CreateApiCollectionPayload = {
   description?: string
 }
 
-export type UpdateApiCollectionPayload = Partial<CreateApiCollectionPayload>
+export type UpdateApiCollectionPayload = Partial<CreateApiCollectionPayload> & { requirementId?: string }
 
 export type CreateApiEnvironmentPayload = {
   name: string

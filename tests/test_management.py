@@ -44,9 +44,9 @@ class ManagementTests(unittest.TestCase):
         self.data = manage.read(self.root / "config/platform.toml")
 
     def test_ai_worker_selection_renders_only_one_service_and_isolated_storage(self):
-        for backend, project, volume in (
-            ("nanobot", "ai-worker", "ai-runtime"),
-            ("pi", "ai-worker-pi", "ai-pi-runtime"),
+        for backend, volume in (
+            ("nanobot", "ai-runtime"),
+            ("pi", "ai-pi-runtime"),
         ):
             with self.subTest(backend=backend):
                 self.data.setdefault("ai_worker", {})["agent"] = {"backend": backend}
@@ -58,30 +58,70 @@ class ManagementTests(unittest.TestCase):
                 ))
                 self.assertNotIn("ai-worker-pi", rendered["services"])
                 worker = rendered["services"]["ai-worker"]
-                self.assertEqual(worker["image"], f"mtx/{project}:local")
-                self.assertEqual(Path(worker["build"]["context"]), self.root / "apps" / project)
+                self.assertEqual(worker["image"], "mtx/ai-worker:local")
+                self.assertEqual(Path(worker["build"]["context"]), self.root / "apps" / "ai-worker")
                 self.assertEqual(next(v["source"] for v in worker["volumes"]
                                       if v["target"] == "/data/runtime"), volume)
                 self.assertEqual(next(v["source"] for v in worker["volumes"]
                                       if v["target"] == "/app/config/worker.toml"),
-                                 str(self.root / ".runtime/docker" / f"{project}.toml"))
-                config = manage.read(self.root / ".runtime/docker" / f"{project}.toml")
+                                 str(self.root / ".runtime/docker" / "ai-worker.toml"))
+                config = manage.read(self.root / ".runtime/docker" / "ai-worker.toml")
                 self.assertEqual(config["platform"]["worker_token"], self.data["shared"]["worker_token"])
-                self.assertNotIn("agent", config)
+                self.assertEqual(config["agent"]["backend"], backend)
+                self.assertIn(backend, config["agent"])
+                other = "pi" if backend == "nanobot" else "nanobot"
+                self.assertNotIn(other, config["agent"])
 
     def test_legacy_ai_selection_defaults_to_nanobot_and_rejects_typos(self):
         self.data["ai_worker"].pop("agent", None)
-        self.assertEqual(manage.selected_ai_worker(self.data), "ai-worker")
+        self.assertEqual(manage.selected_agent_backend(self.data), "nanobot")
         self.data["ai_worker"]["agent"] = {"backend": "typo"}
         with self.assertRaisesRegex(ValueError, "backend"):
             manage.configurations(self.data, "docker", self.root)
 
-    def test_pi_local_configuration_is_independent(self):
-        self.data["ai_worker_pi"]["pi"]["run_timeout_seconds"] = 42
+    def test_backend_configuration_is_regenerated_without_leaking(self):
+        self.data["ai_worker"]["agent"] = {
+            "backend": "pi",
+            "pi": {"run_timeout_seconds": 42},
+        }
         configs = manage.configurations(self.data, "local", self.root)
-        self.assertEqual(configs["ai-worker-pi"]["pi"]["run_timeout_seconds"], 42)
-        self.assertNotIn("pi", configs["ai-worker"])
-        self.assertNotIn("nanobot", configs["ai-worker-pi"])
+        config = configs["ai-worker"]
+        self.assertEqual(config["agent"]["backend"], "pi")
+        self.assertEqual(config["agent"]["pi"]["run_timeout_seconds"], 42)
+        self.assertNotIn("nanobot", config["agent"])
+
+        self.data["ai_worker"]["agent"]["backend"] = "nanobot"
+        config = manage.configurations(self.data, "local", self.root)["ai-worker"]
+        self.assertEqual(config["agent"]["backend"], "nanobot")
+        self.assertIn("nanobot", config["agent"])
+        self.assertNotIn("pi", config["agent"])
+
+    def test_upgrade_moves_legacy_pi_layout_into_agent_tree(self):
+        path = self.root / "config/platform.toml"
+        old = manage.read(path)
+        old["ai_worker"].pop("agent", None)
+        old["ai_worker"]["agent"] = {"backend": "pi"}
+        old["ai_worker_pi"] = {
+            "worker": {"worker_id": "pi-worker-01", "max_concurrent_tasks": 4},
+            "pi": {"run_timeout_seconds": 42, "executable": "pi-custom"},
+        }
+        old.setdefault("ai_worker", {})["nanobot"] = {"provider_request_timeout_seconds": 120}
+        manage.write(path, manage.toml_text(old))
+
+        manage.upgrade_config(self.root)
+        upgraded = manage.read(path)
+
+        self.assertNotIn("ai_worker_pi", upgraded)
+        self.assertNotIn("nanobot", upgraded["ai_worker"])
+        self.assertEqual(upgraded["ai_worker"]["agent"]["pi"]["run_timeout_seconds"], 42)
+        self.assertEqual(upgraded["ai_worker"]["agent"]["pi"]["executable"], "pi-custom")
+        self.assertEqual(
+            upgraded["ai_worker"]["agent"]["nanobot"]["provider_request_timeout_seconds"],
+            120,
+        )
+        self.assertEqual(upgraded["ai_worker"]["worker"]["worker_id"], "pi-worker-01")
+        # 已有统一配置优先，不被旧 pi 配置覆盖。
+        self.assertEqual(upgraded["ai_worker"]["worker"]["max_concurrent_tasks"], 2)
 
     def test_asset_import_limits_are_generated_for_both_modes(self):
         self.data["control_plane"]["asset_import"]["max_items"] = 123

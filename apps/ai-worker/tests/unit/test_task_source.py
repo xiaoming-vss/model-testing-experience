@@ -80,13 +80,11 @@ class FakePlatformHttpClient:
 
 
 class TaskSourceTests(unittest.TestCase):
-    def test_task_nanobot_session_key_uses_run_id_directly(self) -> None:
+    def test_task_session_key_uses_run_id_directly(self) -> None:
         payload = TaskPayload(openapi_content="{}")
 
         self.assertEqual(
-            Task(
-                claim_id="claim-1", task_id="task-1", run_id="run-1", payload=payload
-            ).nanobot_session_key,
+            Task(claim_id="claim-1", task_id="task-1", run_id="run-1", payload=payload).session_key,
             "run-1",
         )
         self.assertEqual("", payload.source_type)

@@ -157,6 +157,8 @@ class GenerationRunLauncher:
                 worker_task_id=worker_task_id,
                 understanding_version_id=str(body.get("requirementUnderstandingVersionId") or ""),
             )
+        if kind == "api" and body.get("apiWorkflowVersion") == "api_two_stage/1.0":
+            snapshot["apiWorkflowVersion"] = "api_two_stage/1.0"
         if kind == "ui":
             snapshot["sourceArchiveFileId"] = source_archive_file_id
             snapshot["sourceArchive"] = source_archive_metadata
@@ -181,6 +183,8 @@ class GenerationRunLauncher:
                 current_stage = REQUIREMENT_ANALYSIS_INITIAL_STAGE
             elif kind == "ui":
                 current_stage = UI_STAGES[0]
+            elif kind == "api" and snapshot.get("apiWorkflowVersion") == "api_two_stage/1.0":
+                current_stage = "openapi_extract"
         stage_status = StageStatus.PENDING.value if current_stage else ""
         run = AiGenerateTaskRun(
             run_id=run_id,

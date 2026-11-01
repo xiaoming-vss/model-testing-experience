@@ -3,7 +3,7 @@ import { RequirementDetailPage } from '../pages/RequirementDetailPage'
 import { ThemeSelect } from '@/shared/components/ThemeSelect'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { DownOutlined, LogoutOutlined, SettingOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons'
-import { Button, Dropdown, Layout, Menu, Select, Spin, Tooltip } from 'antd'
+import { Button, Dropdown, Layout, Menu, Popover, Select, Spin, Tooltip } from 'antd'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { ApiCollectionDetailPage } from '@/features/api-automation/pages/ApiCollectionDetailPage'
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser'
@@ -31,7 +31,12 @@ import { TestOrderWorkspacePage } from '@/features/test-orders/pages/TestOrderWo
 import { BugDetailPage } from '@/features/bugs/pages/BugDetailPage'
 import { BugSubmitPage } from '@/features/bugs/pages/BugSubmitPage'
 import { UiTestSuiteCasePage } from '@/features/ui-automation/pages/UiTestSuiteCasePage'
-import { AppSidebar } from './AppSidebar'
+import { AppNavigationBrand, AppSidebar } from './AppSidebar'
+import { navigationIndex } from './navigation'
+import { useNavigationTransition } from './useNavigationTransition'
+import { useScopeTransition } from './useScopeTransition'
+import { installTabMotion } from '@/shared/ui/tabMotion'
+import '@/shared/styles/tab-motion.css'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { normalizeProjectId } from '@/utils/format'
 import { isBugOnlyProject, useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
@@ -52,12 +57,16 @@ export function AppShell() {
   const { activeProjectId, projects, projectsQuery, setActiveProjectId } = useActiveProject()
   const access = useProjectAccess(activeProjectId)
   const bugOnly = isBugOnlyProject(access.project)
+  const contentRef = useNavigationTransition(navigationIndex(location.pathname, location.search, bugOnly))
   const sprintScope = useActiveSprint(access.can('read'))
   const bugScope = useBugScope(activeProjectId, bugOnly)
   const { activeSprintId, sprintsQuery, selectSprint, sprintSelectorOptions } = bugOnly ? bugScope : sprintScope
+  const prepareScopeTransition = useScopeTransition(contentRef, activeProjectId, activeSprintId)
   const showWorkbenchHeader = !['/profile', '/change-password', '/admin/users', '/admin/ldap'].some((path) => location.pathname.startsWith(path))
 
   const shellClassName = `app-shell app-shell-macos${location.pathname.startsWith('/base-services') ? ' app-shell-base-services' : ''}${location.pathname.startsWith('/requirements/') ? ' app-shell-requirement-detail' : ''}`
+
+  useEffect(() => installTabMotion(document.body), [])
 
   useEffect(() => {
     const redirect = () => navigate('/change-password', { replace: true })
@@ -74,18 +83,17 @@ export function AppShell() {
 
   return (
     <Layout className={shellClassName}>
-      <AppSidebar bugOnly={bugOnly} />
       <Layout>
         <Header className="app-header compact-header">
+          <AppNavigationBrand bugOnly={bugOnly} />
           <div className="app-header-main">
             {showWorkbenchHeader ? (
               <div className="project-header-bar project-header-bar-select-only">
                 <div className="project-selector-wrap">
-                  <span className="project-selector-label">当前项目</span>
-                  <span className="project-separator">/</span>
                   <Select
                     className="project-select"
                     aria-label="当前项目"
+                    popupMatchSelectWidth={false}
                     open={projectSelectorOpen}
                     onOpenChange={setProjectSelectorOpen}
                     popupRender={(menu) => <>
@@ -114,6 +122,7 @@ export function AppShell() {
                     suffixIcon={<DownOutlined />}
                     options={projects.map((project) => ({ label: project.name, value: normalizeProjectId(project) }))}
                     onChange={id => {
+                      prepareScopeTransition('project', activeProjectId, id, projects.map(normalizeProjectId))
                       setActiveProjectId(id)
                       if (location.pathname.startsWith('/requirements/')) navigate('/projects?board=requirements')
                     }}
@@ -121,20 +130,20 @@ export function AppShell() {
                   />
                   {activeProjectId ? (
                     <>
-                      <span className="project-selector-divider" />
-                      <span className="project-selector-label">当前迭代</span>
-                      <span className="project-separator">/</span>
+                      <span className="project-scope-separator" aria-hidden="true">/</span>
                       <Select
                         className="project-select sprint-select"
+                        popupMatchSelectWidth={false}
                         loading={sprintsQuery.isLoading}
                         value={activeSprintId ?? 'all'}
                         placeholder="全部迭代"
                         suffixIcon={<DownOutlined />}
                         options={sprintSelectorOptions}
                         onChange={id => {
-                        selectSprint(id)
-                        if (location.pathname.startsWith('/requirements/')) navigate('/projects?board=requirements')
-                      }}
+                          prepareScopeTransition('sprint', activeSprintId, id, sprintSelectorOptions.map(option => option.value))
+                          selectSprint(id)
+                          if (location.pathname.startsWith('/requirements/')) navigate('/projects?board=requirements')
+                        }}
                         variant="borderless"
                       />
                     </>
@@ -143,11 +152,13 @@ export function AppShell() {
               </div>
             ) : null}
           </div>
-          <div className="app-header-feedback" role="note" aria-label="测试阶段反馈联系方式">
-            <span className="app-header-feedback-badge">测试阶段</span>
-            <span>需求、想法和问题，请联系 <a href="mailto:limingjiang.x@gmail.com">limingjiang.x@gmail.com</a></span>
-          </div>
+          <AppSidebar bugOnly={bugOnly} />
           <div className="app-header-actions">
+            <Popover trigger="click" placement="bottomRight" content={
+              <div className="app-feedback-content">需求、想法和问题，请联系 <a href="mailto:limingjiang.x@gmail.com">limingjiang.x@gmail.com</a></div>
+            }>
+              <Button type="text" className="app-feedback-trigger" aria-label="测试阶段反馈联系方式">测试阶段</Button>
+            </Popover>
             {showWorkbenchHeader && !bugOnly ? <ActionButton type="primary" className="app-header-create-project action-btn-create" operation="create" onClick={() => { useWorkbenchStore.getState().openProjectModal(); navigate('/projects') }}>新建项目</ActionButton> : null}
             <ThemeSelect />
             <Dropdown
@@ -186,7 +197,7 @@ export function AppShell() {
             </Dropdown>
           </div>
         </Header>
-        <Content className="app-content">
+        <Content ref={contentRef} className="app-content">
           {projectsQuery.isPending || (projects.length > 0 && !activeProjectId) ? <Spin aria-label="项目加载中" /> : <ProjectRouteGuard>
           <Routes>
             <Route path="/" element={<Navigate to="/projects" replace />} />

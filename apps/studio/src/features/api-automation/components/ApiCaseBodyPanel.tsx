@@ -55,9 +55,9 @@ export function ApiCaseBodyPanel({ bodyType, templates }: Props) {
   }
 
   return (
-    <div className="api-wb-body-panel">
+    <div className="api-wb-body-panel" data-tab-motion-scope>
       <div className="api-wb-body-bar">
-        <div className="api-wb-body-types" role="tablist" aria-label="请求体类型">
+        <div className="api-wb-body-types" role="tablist" data-tab-motion-scoped aria-label="请求体类型">
           {bodyTypeOptions.map((option) => (
             <button
               key={option.value}
@@ -118,6 +118,7 @@ export function ApiCaseBodyPanel({ bodyType, templates }: Props) {
         <Input />
       </Form.Item>
 
+      <div data-tab-motion-panel>
       {bodyType === 'json' ? (
         <Form.Item
           name="bodyJson"
@@ -157,6 +158,7 @@ export function ApiCaseBodyPanel({ bodyType, templates }: Props) {
         </Card>
       ) : null}
 
+      </div>
       <div className="api-wb-body-status">
         <div className="api-wb-body-status-main">
           {bodyType === 'json' ? (

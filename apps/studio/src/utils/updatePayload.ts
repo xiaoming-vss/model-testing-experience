@@ -88,8 +88,9 @@ export function buildRequirementMetadataUpdatePayload(
 }
 
 export function buildApiCollectionUpdatePayload(collection: ApiCollection, values: CollectionFormValues) {
-  const payload: Partial<Pick<ApiCollection, 'name' | 'description'>> = {}
+  const payload: Partial<Pick<ApiCollection, 'name' | 'description' | 'requirementId'>> = {}
 
+  if (values.requirementId) setValueIfChanged(payload, 'requirementId', collection.requirementId ?? collection.requirement_id, values.requirementId)
   setValueIfChanged(payload, 'name', collection.name, values.name)
   setNormalizedTextIfChanged(payload, 'description', collection.description, values.summary)
 

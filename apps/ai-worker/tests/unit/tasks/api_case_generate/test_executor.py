@@ -10,12 +10,12 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from testing_agent_ai_worker.config.models import NanobotConfig
+from testing_agent_ai_worker.agent.paths import resolve_task_workspace
+from testing_agent_ai_worker.config.models import PiConfig
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskStatus
 from testing_agent_ai_worker.models.task import LlmCredentials, Task, TaskPayload
-from testing_agent_ai_worker.nanobot_runtime.paths import resolve_task_workspace
 from testing_agent_ai_worker.tasks.api_case_generate.chain import ChainRunResult
-from testing_agent_ai_worker.tasks.api_case_generate.executor import ApiCaseNanobotExecutor
+from testing_agent_ai_worker.tasks.api_case_generate.executor import ApiCaseExecutor
 
 
 class ApiCaseExecutorTests(unittest.TestCase):
@@ -56,9 +56,9 @@ class ApiCaseExecutorTests(unittest.TestCase):
                 generator_output="cases:\n  - {name: login, orderNo: 1, method: POST, urlTemplate: /login}",
             )
 
-        executor = ApiCaseNanobotExecutor(
-            nanobot_config=NanobotConfig(
-                runtime_root="D:/tmp/nanobot-runtime",
+        executor = ApiCaseExecutor(
+            agent_config=PiConfig(
+                runtime_root="D:/tmp/pi-runtime",
             ),
             chain_runner=fake_chain_runner,
         )
@@ -87,12 +87,12 @@ class ApiCaseExecutorTests(unittest.TestCase):
         self.assertEqual(captured["session_key"], "run-1")
         self.assertEqual(
             Path(str(captured["workspace"])),
-            resolve_task_workspace(executor.nanobot_config, task),
+            resolve_task_workspace(executor.agent_config, task),
         )
         self.assertEqual(events, ["chain"])
         self.assertEqual(
             Path(str(captured["config_path"])).parent,
-            Path("D:/tmp/nanobot-runtime").resolve(),
+            Path("D:/tmp/pi-runtime").resolve(),
         )
         self.assertFalse(Path(str(captured["config_path"])).exists())
         self.assertEqual(captured["extractor_skill_name"], "openapi-test-config-extractor")
@@ -106,8 +106,8 @@ class ApiCaseExecutorTests(unittest.TestCase):
 
     def test_execute_returns_failed_result_for_unsupported_task_type(self) -> None:
         task = self._make_task(task_type="functional_case_generate")
-        executor = ApiCaseNanobotExecutor(
-            nanobot_config=NanobotConfig(),
+        executor = ApiCaseExecutor(
+            agent_config=PiConfig(),
             chain_runner=lambda **kwargs: ChainRunResult("", ""),
         )
 
@@ -120,7 +120,7 @@ class ApiCaseExecutorTests(unittest.TestCase):
         self.assertEqual(result.status, TaskStatus.FAILED)
         self.assertIn("functional_case_generate", result.error_message or "")
 
-    def test_execute_uses_task_scoped_nanobot_config_when_llm_credentials_exist(self) -> None:
+    def test_execute_uses_task_scoped_agent_config_when_llm_credentials_exist(self) -> None:
         task = self._make_task()
         task.payload.llm_credentials = LlmCredentials(
             model="gpt-5.4-mini",
@@ -130,7 +130,7 @@ class ApiCaseExecutorTests(unittest.TestCase):
         captured: dict[str, object] = {}
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            base_config_path = Path(temp_dir) / "nanobot.json"
+            base_config_path = Path(temp_dir) / "pi.json"
             base_config_path.write_text(
                 json.dumps(
                     {
@@ -147,11 +147,10 @@ class ApiCaseExecutorTests(unittest.TestCase):
                 generated_config = json.loads(
                     Path(str(kwargs["config_path"])).read_text(encoding="utf-8")
                 )
-                self.assertEqual(generated_config["agents"]["defaults"]["provider"], "auto")
-                self.assertEqual(generated_config["agents"]["defaults"]["model"], "gpt-5.4-mini")
-                self.assertEqual(generated_config["providers"]["custom"]["apiKey"], "platform-key")
+                self.assertEqual(generated_config["model"], "gpt-5.4-mini")
+                self.assertEqual(generated_config["api_key"], "platform-key")
                 self.assertEqual(
-                    generated_config["providers"]["custom"]["apiBase"],
+                    generated_config["base_url"],
                     "https://example.test/v1",
                 )
                 return ChainRunResult(
@@ -159,8 +158,8 @@ class ApiCaseExecutorTests(unittest.TestCase):
                     generator_output="cases:\n  - {name: login, orderNo: 1, method: POST, urlTemplate: /login}",
                 )
 
-            executor = ApiCaseNanobotExecutor(
-                nanobot_config=NanobotConfig(
+            executor = ApiCaseExecutor(
+                agent_config=PiConfig(
                     runtime_root=str(Path(temp_dir) / "runtime-root"),
                 ),
                 chain_runner=fake_chain_runner,
@@ -178,3 +177,63 @@ class ApiCaseExecutorTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ApiStageExecutionTests(ApiCaseExecutorTests):
+    def test_extract_stops_for_review_and_generate_uses_approved_input(self):
+        task = self._make_task()
+        task.checkpoint_enabled = True
+        task.current_stage = "openapi_extract"
+        task.payload.metadata["apiWorkflowVersion"] = "api_two_stage/1.0"
+        outputs = [
+            '{"login":{"path":"/login","method":"POST"}}',
+            "cases:\n  - {name: login, orderNo: 1, method: POST, urlTemplate: /login}",
+        ]
+        calls = []
+
+        def stage_runner(**kwargs):
+            calls.append(kwargs)
+            return outputs[len(calls) - 1]
+
+        executor = ApiCaseExecutor(agent_config=PiConfig(), stage_runner=stage_runner)
+        events = []
+        start = datetime.fromisoformat("2026-06-23T10:00:00+08:00")
+        self.assertIsNone(executor.execute(task, start, events.append))
+        self.assertEqual(events[-1].stage_status, "waiting_review")
+        self.assertEqual(calls[0]["stage"], "openapi_extract")
+        task.current_stage = "generate"
+        task.config_json = events[-1].intermediate_json_text
+        result = executor.execute(task, start, events.append)
+        self.assertEqual(result.status, TaskStatus.SUCCESS)
+        self.assertEqual(calls[1]["stage"], "generate")
+        self.assertIn("/login", calls[1]["input_text"])
+
+    def test_stage_revision_supplies_attachments_to_skill(self):
+        task = self._make_task()
+        task.checkpoint_enabled = True
+        task.current_stage = "openapi_extract"
+        task.payload.metadata["apiWorkflowVersion"] = "api_two_stage/1.0"
+        task.config_json = json.dumps(
+            {
+                "apiExtraction": {"login": {"path": "/login", "method": "POST"}},
+                "revisionInstruction": "参考截图",
+                "revisionAttachments": [{"fileId": "image-1", "filename": "screen.png"}],
+            }
+        )
+        captured = {}
+
+        class Downloader:
+            def download(self, **kwargs):
+                captured["download"] = kwargs
+                return [{"sourcePath": "/tmp/example.png"}]
+
+        def runner(**kwargs):
+            captured.update(kwargs)
+            return '{"login":{"path":"/login","method":"POST"}}'
+
+        executor = ApiCaseExecutor(
+            agent_config=PiConfig(), stage_runner=runner, attachment_downloader=Downloader()
+        )
+        executor.execute(task, datetime.fromisoformat("2026-06-23T10:00:00+08:00"), lambda _: None)
+        self.assertEqual(captured["media"], ["/tmp/example.png"])
+        self.assertIn("参考截图", captured["extra_instruction"])

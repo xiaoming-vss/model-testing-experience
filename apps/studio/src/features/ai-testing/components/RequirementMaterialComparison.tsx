@@ -5,6 +5,7 @@ import { Alert, Collapse, Empty, Input, Segmented, Select, Tag } from 'antd'
 import { useMemo, useState } from 'react'
 import { extractedFactText, readExtractionArtifact, type ExtractionArtifact, type MaterialQuestion } from '../utils/materialComparison'
 import { PendingQuestionsLabel } from './PendingQuestionsLabel'
+import { useViewMotion } from '@/shared/ui/useViewMotion'
 import '../styles/material-comparison.css'
 
 const categories: Record<string, string> = { scope: '范围', actor: '角色', entry: '入口', operation: '操作', control: '控件', option: '选项', default: '默认值', trigger: '触发', dependency: '联动', result: '结果', pagination: '分页', sorting: '排序', validation: '校验', business_rule: '业务规则', other: '其他' }
@@ -24,6 +25,7 @@ function ComparisonContent({ artifact }: { artifact: ExtractionArtifact }) {
   const [selectedTab, setTab] = useState('facts')
   const pendingQuestions = pendingRequirementQuestions(artifact.questions)
   const tab = selectedTab === 'questions' && !pendingQuestions.length ? 'facts' : selectedTab
+  const panelRef = useViewMotion(tab === 'facts' ? 0 : 1)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('all')
   const facts = artifact.extractedFacts.filter(f => (status === 'all' || f.fact.confirmationStatus === status) && extractedFactText(artifact, f).includes(search))
@@ -31,8 +33,8 @@ function ComparisonContent({ artifact }: { artifact: ExtractionArtifact }) {
 
   return <div className="requirement-material-comparison" role="region" aria-label="材料提取结果" tabIndex={0}>
     <section className="requirement-material-panel">
-      <div className="requirement-material-filter">{pendingQuestions.length > 0 && <Segmented aria-label="提取内容分类" value={tab} onChange={value => { setTab(String(value)); setSearch('') }} options={[{ value: 'facts', label: '提取的事实' }, { value: 'questions', label: <PendingQuestionsLabel count={pendingQuestions.length} /> }]} />}<Input aria-label={tab === 'facts' ? '搜索事实' : '搜索问题'} placeholder={tab === 'facts' ? '搜索事实内容' : '搜索待确认问题'} prefix={<SearchOutlined />} allowClear value={search} onChange={e => setSearch(e.target.value)} />{tab === 'facts' && <Select aria-label="事实确认状态" value={status} onChange={setStatus} options={[{ value: 'all', label: '全部状态' }, ...Object.entries(statuses).map(([value, meta]) => ({ value, label: meta.label }))]} />}</div>
-      <div className="requirement-material-extracted" role="region" aria-label={tab === 'facts' ? '提取事实' : '待确认问题'} tabIndex={0}>
+      <div className="requirement-material-filter">{pendingQuestions.length > 0 && <Segmented className="tab-view-switch" aria-label="提取内容分类" value={tab} onChange={value => { setTab(String(value)); setSearch('') }} options={[{ value: 'facts', label: '提取的事实' }, { value: 'questions', label: <PendingQuestionsLabel count={pendingQuestions.length} /> }]} />}<Input aria-label={tab === 'facts' ? '搜索事实' : '搜索问题'} placeholder={tab === 'facts' ? '搜索事实内容' : '搜索待确认问题'} prefix={<SearchOutlined />} allowClear value={search} onChange={e => setSearch(e.target.value)} />{tab === 'facts' && <Select aria-label="事实确认状态" value={status} onChange={setStatus} options={[{ value: 'all', label: '全部状态' }, ...Object.entries(statuses).map(([value, meta]) => ({ value, label: meta.label }))]} />}</div>
+      <div ref={panelRef} className="requirement-material-extracted" role="region" aria-label={tab === 'facts' ? '提取事实' : '待确认问题'} tabIndex={0}>
         {tab === 'questions' ? <Questions artifact={artifact} questions={questions} /> : facts.length ? facts.map(f => {
           const active = expandedFactId === f.id
           const meta = statuses[f.fact.confirmationStatus] ?? { label: f.fact.confirmationStatus }

@@ -2,6 +2,7 @@ import { useTestOrderWindow } from '../hooks/useTestOrderWindow'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { TestOrderGraphViewer } from '../components/TestOrderGraphViewer'
 import { ActionButton } from '@/shared/components/ActionButton'
+import { useViewMotion } from '@/shared/ui/useViewMotion'
 import {
   ArrowLeftOutlined,
   QuestionCircleOutlined,
@@ -67,6 +68,7 @@ export function TestOrderWorkspacePage() {
   const currentUserId = useAuthStore((state) => state.user?.userId)
 
   const [workspaceView, setWorkspaceView] = useState<'execution' | 'graph'>('execution')
+  const workspaceViewRef = useViewMotion(workspaceView === 'execution' ? 0 : 1)
   const entryListRef = useRef<HTMLDivElement>(null)
   const keyboardNavigation = useRef(false)
   const [keyword, setKeyword] = useState('')
@@ -281,7 +283,7 @@ export function TestOrderWorkspacePage() {
               已执行 {order?.entriesExecuted ?? 0}/{order?.entriesTotal ?? 0}
             </span>
             <div className="test-order-orderbar-actions">
-              <Segmented aria-label="测试单视图" value={workspaceView} disabled={!order?.orderId}
+              <Segmented className="tab-view-switch" aria-label="测试单视图" value={workspaceView} disabled={!order?.orderId}
                 options={[{ label: '用例执行', value: 'execution' }, { label: '用例图谱', value: 'graph' }]}
                 onChange={value => setWorkspaceView(value as 'execution' | 'graph')} />
               <ProjectActionButton
@@ -305,8 +307,8 @@ export function TestOrderWorkspacePage() {
             <Alert showIcon type="error" title={getErrorMessage(entriesQuery.error)} />
           ) : null}
 
-          {workspaceView === 'graph' && orderId && <div className="test-order-inline-graph"><TestOrderGraphViewer orderId={orderId} projectId={order?.projectId} canExecute={can('execute')} currentUserId={currentUserId} isProjectOwner={isOwner} /></div>}
-          <div className="test-order-workspace-cols" style={workspaceView === 'graph' ? { display: 'none' } : undefined}>
+          {workspaceView === 'graph' && orderId && <div ref={workspaceViewRef} className="test-order-inline-graph"><TestOrderGraphViewer orderId={orderId} projectId={order?.projectId} canExecute={can('execute')} currentUserId={currentUserId} isProjectOwner={isOwner} /></div>}
+          <div ref={workspaceView === 'execution' ? workspaceViewRef : undefined} className="test-order-workspace-cols" style={workspaceView === 'graph' ? { display: 'none' } : undefined}>
             <section className="workbench-panel test-order-side-panel">
               <div className="test-order-side-head">
                 <span className="test-order-side-title">

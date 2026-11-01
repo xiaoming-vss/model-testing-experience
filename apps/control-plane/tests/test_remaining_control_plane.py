@@ -712,6 +712,9 @@ async def test_api_collection_import_creates_go_extract_and_assert_rules(monkeyp
         def add(self, row):
             self.rows.append(row)
 
+        async def flush(self):
+            return None
+
         async def commit(self):
             return None
 
@@ -790,6 +793,9 @@ async def test_api_collection_import_accepts_go_generated_yaml_sample(monkeypatc
 
         def add(self, row):
             self.rows.append(row)
+
+        async def flush(self):
+            return None
 
         async def commit(self):
             return None

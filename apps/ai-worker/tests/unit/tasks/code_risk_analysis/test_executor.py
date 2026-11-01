@@ -9,7 +9,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from testing_agent_ai_worker.config.models import NanobotConfig
+from testing_agent_ai_worker.config.models import PiConfig
 from testing_agent_ai_worker.models.execution import TaskStatus
 from testing_agent_ai_worker.models.task import (
     ExistingTestCases,
@@ -21,7 +21,7 @@ from testing_agent_ai_worker.models.task import (
 )
 from testing_agent_ai_worker.tasks.code_risk_analysis.executor import (
     CODE_RISK_SKILL_NAME,
-    CodeRiskAnalysisNanobotExecutor,
+    CodeRiskAnalysisExecutor,
 )
 from testing_agent_ai_worker.tasks.code_risk_analysis.gitlab_diffs import (
     GitlabDiffError,
@@ -182,15 +182,15 @@ class CodeRiskAnalysisExecutorTests(unittest.TestCase):
         fetcher: _FakeCredentialsFetcher | None = None,
         diff_fetcher: _FakeDiffFetcher | None = None,
         skill_checker=None,
-    ) -> CodeRiskAnalysisNanobotExecutor:
+    ) -> CodeRiskAnalysisExecutor:
         # 单测环境无实际 skills 目录,默认视为技能包存在;专门测缺失场景时传 False。
         if skill_checker is None:
 
             def skill_checker(_workspace, _name):
                 return True
 
-        return CodeRiskAnalysisNanobotExecutor(
-            nanobot_config=NanobotConfig(runtime_root=str(Path("runtime/code-risk-analysis"))),
+        return CodeRiskAnalysisExecutor(
+            agent_config=PiConfig(runtime_root=str(Path("runtime/code-risk-analysis"))),
             skill_runner=skill_runner,
             credentials_fetcher=fetcher or _FakeCredentialsFetcher(),
             diff_fetcher=diff_fetcher or _FakeDiffFetcher(),

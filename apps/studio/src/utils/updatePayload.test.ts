@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildApiCollectionUpdatePayload,
   buildSprintCreatePayload,
   buildSprintUpdatePayload,
   buildUiTestCaseUpdatePayload,
@@ -50,4 +51,11 @@ describe('UI 用例更新载荷', () => {
       { name: '登录成功', enabled: true, orderNo: 1, stepsJson: JSON.stringify(stepsJson) },
     )).toEqual({})
   })
+})
+
+it('更改 API 测试集所属需求时提交新的需求 ID', () => {
+  expect(buildApiCollectionUpdatePayload(
+    { collectionId: 'collection-1', requirementId: 'req-old', name: 'demo', description: '' },
+    { requirementId: 'req-new', name: 'demo', summary: '' },
+  )).toEqual({ requirementId: 'req-new' })
 })

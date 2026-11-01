@@ -15,15 +15,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from testing_agent_ai_worker.config.models import NanobotConfig
-from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
-from testing_agent_ai_worker.models.task import Task
-from testing_agent_ai_worker.nanobot_runtime.config_builder import task_config_path
-from testing_agent_ai_worker.nanobot_runtime.paths import (
+from testing_agent_ai_worker.agent.config_builder import task_config_path
+from testing_agent_ai_worker.agent.paths import (
     resolve_runtime_paths,
     resolve_task_workspace,
 )
-from testing_agent_ai_worker.nanobot_runtime.prompt import TEST_ORDER_GRAPH_JSON_ONLY_INSTRUCTION
+from testing_agent_ai_worker.agent.prompt import TEST_ORDER_GRAPH_JSON_ONLY_INSTRUCTION
+from testing_agent_ai_worker.config.models import AgentBackendConfig
+from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
+from testing_agent_ai_worker.models.task import Task
 from testing_agent_ai_worker.tasks.functional_case_generate.chain import run_skill_step
 from testing_agent_ai_worker.tasks.functional_case_generate.summary import build_task_result_summary
 from testing_agent_ai_worker.tasks.test_order_graph.rounds import (
@@ -99,13 +99,13 @@ class TestOrderGraphExecutor(TaskExecutor):
     def __init__(
         self,
         *,
-        nanobot_config: NanobotConfig,
+        agent_config: AgentBackendConfig,
         skill_runner: Callable[..., Any] = run_skill_step,
         skill_name: str = TEST_ORDER_GRAPH_SKILL_NAME,
         skill_dir_checker: Callable[[Path, str], bool] | None = None,
     ) -> None:
-        self.nanobot_config = nanobot_config
-        self.runtime_paths = resolve_runtime_paths(nanobot_config)
+        self.agent_config = agent_config
+        self.runtime_paths = resolve_runtime_paths(agent_config)
         self.skill_runner = skill_runner
         self.skill_name = skill_name
         self.skill_dir_checker = skill_dir_checker or _default_skill_dir_checker
@@ -120,7 +120,7 @@ class TestOrderGraphExecutor(TaskExecutor):
         except GraphInputError as exc:
             return self._result(task, started_at, TaskStatus.FAILED, str(exc))
 
-        workspace = resolve_task_workspace(self.nanobot_config, task)
+        workspace = resolve_task_workspace(self.agent_config, task)
         skill_dir = workspace / "skills" / self.skill_name
         if not self.skill_dir_checker(workspace, self.skill_name):
             return self._result(
@@ -150,7 +150,7 @@ class TestOrderGraphExecutor(TaskExecutor):
         run_dir = workspace / GRAPH_DIR_NAME / task.run_id
         cases_path = write_cases_file(run_dir, task.run_id, cases)
         graph = empty_graph()
-        with task_config_path(nanobot_config=self.nanobot_config, task=task) as config_path:
+        with task_config_path(agent_config=self.agent_config, task=task) as config_path:
             for index, links in enumerate(batches, 1):
                 round_graph, attempts, error = self._run_round(
                     task=task,
@@ -223,7 +223,7 @@ class TestOrderGraphExecutor(TaskExecutor):
                 raw = _resolve_skill_result(
                     self.skill_runner(
                         input_text=prompt,
-                        session_key=f"{task.nanobot_session_key}-round-{index}",
+                        session_key=f"{task.session_key}-round-{index}",
                         skill_name=self.skill_name,
                         config_path=config_path,
                         workspace=str(workspace),

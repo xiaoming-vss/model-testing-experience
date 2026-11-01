@@ -28,7 +28,7 @@ export function TestingNavigation({ activeTab, onChange }: {
   }
 
   return <header className="testing-navigation">
-    <div className="testing-navigation-tabs page-navigation-tabs" role="tablist" aria-label="测试工作区" onKeyDown={handleKeyDown}>
+    <div className="testing-navigation-tabs page-navigation-tabs" role="tablist" data-tab-motion-scoped aria-label="测试工作区" onKeyDown={handleKeyDown}>
       {tabs.map(tab => <button key={tab.key} type="button" role="tab" id={`testing-tab-${tab.key}`}
         aria-selected={activeTab === tab.key} aria-controls={`testing-panel-${tab.key}`}
         tabIndex={activeTab === tab.key ? 0 : -1} onClick={() => onChange(tab.key)}>

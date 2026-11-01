@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal, TypeAlias
+
 from pydantic import BaseModel, Field
 
 
@@ -27,9 +29,40 @@ class PlatformConfig(BaseModel):
 
 
 class NanobotConfig(BaseModel):
+    backend: Literal["nanobot"] = "nanobot"
     runtime_root: str = ""
     stream_idle_timeout_seconds: float = Field(default=300.0, gt=0, allow_inf_nan=False)
     provider_request_timeout_seconds: float | None = None
+
+
+class PiConfig(BaseModel):
+    backend: Literal["pi"] = "pi"
+    runtime_root: str = ""
+    stream_idle_timeout_seconds: float = Field(default=300.0, gt=0, allow_inf_nan=False)
+    executable: str = "pi"
+    run_timeout_seconds: float = Field(default=1800, gt=0, allow_inf_nan=False)
+    api: Literal["openai-completions", "openai-responses", "anthropic-messages"] = (
+        "openai-completions"
+    )
+    context_window_tokens: int = Field(default=500000, gt=0)
+    max_output_tokens: int = Field(default=65536, gt=0)
+    reasoning: bool = False
+    thinking_level: Literal["off", "minimal", "low", "medium", "high", "xhigh", "max"] = "off"
+
+
+AgentBackendConfig: TypeAlias = NanobotConfig | PiConfig
+
+
+class AgentConfig(BaseModel):
+    """执行底座选择：`backend` 决定实际生效的子配置。"""
+
+    backend: Literal["nanobot", "pi"] = "nanobot"
+    nanobot: NanobotConfig = NanobotConfig()
+    pi: PiConfig = PiConfig()
+
+    @property
+    def active(self) -> AgentBackendConfig:
+        return self.pi if self.backend == "pi" else self.nanobot
 
 
 class CodeRiskAnalysisConfig(BaseModel):
@@ -47,6 +80,6 @@ class LoggingConfig(BaseModel):
 class Settings(BaseModel):
     worker: WorkerConfig = WorkerConfig()
     platform: PlatformConfig = PlatformConfig()
-    nanobot: NanobotConfig = NanobotConfig()
+    agent: AgentConfig = AgentConfig()
     code_risk_analysis: CodeRiskAnalysisConfig = CodeRiskAnalysisConfig()
     logging: LoggingConfig = LoggingConfig()

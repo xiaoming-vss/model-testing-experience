@@ -61,3 +61,22 @@ it('其他入口未要求确认时保留单授权自动选择行为', async () =
   await waitFor(() => expect(onChosen).toHaveBeenCalledWith('llm-0'))
   expect(screen.queryByText('选择本人 LLM 授权')).not.toBeInTheDocument()
 })
+
+it('API 运行选择模型时填写本次生成要求', async () => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ code: 0, data: { items: [{ connectionId: 'llm', name: '本人模型', status: 'active', modelId: 'model' }], total: 1 } }), { headers: { 'Content-Type': 'application/json' } }))
+  const onChosen = vi.fn()
+  function Host() {
+    const choice = usePersonalLlmChoice('project')
+    return <><button onClick={() => { void choice.chooseRun(false, { label: '生成要求（选填）' }).then(onChosen) }}>运行 API</button>{choice.dialog}</>
+  }
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  clients.push(client)
+  render(<TestThemeProvider><QueryClientProvider client={client}><MemoryRouter><Host /></MemoryRouter></QueryClientProvider></TestThemeProvider>)
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: '运行 API' }))
+  await user.click(await screen.findByRole('radio', { name: /本人模型/ }))
+  expect(screen.getByText('仅用于本次阶段运行')).toBeInTheDocument()
+  await user.type(screen.getByRole('textbox', { name: '生成要求（选填）' }), '只覆盖登录鉴权')
+  await user.click(screen.getByRole('button', { name: '确认运行' }))
+  await waitFor(() => expect(onChosen).toHaveBeenCalledWith(expect.objectContaining({ connectionId: 'llm', instruction: '只覆盖登录鉴权' })))
+})

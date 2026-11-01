@@ -1,5 +1,13 @@
 # syntax=docker/dockerfile:1.7
 
+FROM node:24-bookworm-slim AS pi-builder
+
+WORKDIR /opt/pi
+
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+
 FROM python:3.13-slim-bookworm AS builder
 
 RUN apt-get update \
@@ -29,12 +37,24 @@ FROM python:3.13-slim-bookworm AS runtime
 ENV PATH="/app/.venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    TESTING_AGENT_NANOBOT_RUNTIME_ROOT=/data/runtime
+    TESTING_AGENT_NANOBOT_RUNTIME_ROOT=/data/runtime \
+    TESTING_AGENT_PI_RUNTIME_ROOT=/data/runtime \
+    PI_OFFLINE=1 \
+    PI_TELEMETRY=0
 
-RUN groupadd --system --gid 10001 worker \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git ca-certificates libstdc++6 \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system --gid 10001 worker \
     && useradd --system --uid 10001 --gid worker --home-dir /app worker \
     && mkdir -p /app/logs /data/runtime \
     && chown -R worker:worker /app /data/runtime
+
+# Both execution backends ship in one image; `agent.backend` selects at runtime.
+COPY --from=pi-builder /usr/local/bin/node /usr/local/bin/node
+COPY --from=pi-builder /opt/pi/node_modules /opt/pi/node_modules
+RUN ln -s /opt/pi/node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js \
+    /usr/local/bin/pi
 
 WORKDIR /app
 

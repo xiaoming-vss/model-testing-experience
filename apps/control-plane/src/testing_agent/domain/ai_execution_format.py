@@ -17,6 +17,7 @@ FIELDS = {
     "requirement_analysis": "requirementAnalysis",
     "case_names": "caseNames",
     "extracting_text": "firstStepOutput",
+    "openapi_extract": "apiExtraction",
     "relation_analysis": "caseRelations",
     "ui_surface": "uiSurface",
     "ui_design": "uiDesign",

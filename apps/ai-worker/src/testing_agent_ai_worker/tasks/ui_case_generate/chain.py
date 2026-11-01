@@ -147,7 +147,7 @@ def execute_stage(
                 report=report,
                 generate=lambda prompt, batch, rules: skill_runner(
                     input_text=prompt,
-                    session_key=f"{task.nanobot_session_key}:ui-design:{batch}",
+                    session_key=f"{task.session_key}:ui-design:{batch}",
                     skill_name=UI_SKILLS[stage],
                     config_path=config_path,
                     workspace=str(workspace),
@@ -167,7 +167,7 @@ def execute_stage(
                 review_report=semantic_review.update,
                 review=lambda prompt, batch, rules: skill_runner(
                     input_text=prompt,
-                    session_key=f"{task.nanobot_session_key}:ui-yaml-review:{batch}:{uuid4().hex}",
+                    session_key=f"{task.session_key}:ui-yaml-review:{batch}:{uuid4().hex}",
                     skill_name=UI_SKILLS[stage],
                     config_path=config_path,
                     workspace=str(workspace),
@@ -175,7 +175,7 @@ def execute_stage(
                 ),
                 generate=lambda prompt, batch, rules: skill_runner(
                     input_text=prompt,
-                    session_key=f"{task.nanobot_session_key}:ui-yaml:{batch}:{uuid4().hex}",
+                    session_key=f"{task.session_key}:ui-yaml:{batch}:{uuid4().hex}",
                     skill_name=UI_SKILLS[stage],
                     config_path=config_path,
                     workspace=str(workspace),
@@ -190,7 +190,7 @@ def execute_stage(
                 inputs=inputs,
                 generate=lambda prompt: skill_runner(
                     input_text=prompt,
-                    session_key=task.nanobot_session_key,
+                    session_key=task.session_key,
                     skill_name=UI_SKILLS[stage],
                     config_path=config_path,
                     workspace=str(workspace),

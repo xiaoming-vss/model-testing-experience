@@ -246,6 +246,7 @@ class HttpClaimTaskSource:
                 metadata={
                     "workflowVersion": snapshot_task.workflow_version,
                     "uiWorkflowVersion": (raw_snapshot.get("run") or {}).get("uiWorkflowVersion"),
+                    "apiWorkflowVersion": (raw_snapshot.get("run") or {}).get("apiWorkflowVersion"),
                     "functionalCases": (raw_snapshot.get("run") or {}).get("functionalCases", []),
                     "documentFilename": (raw_snapshot.get("run") or {}).get("documentFilename", ""),
                     "documentFileId": (raw_snapshot.get("run") or {}).get("documentFileId", ""),

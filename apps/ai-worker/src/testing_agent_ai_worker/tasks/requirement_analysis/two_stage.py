@@ -132,7 +132,7 @@ def execute_two_stage(
         arguments={
             **({"media": media} if media else {}),
             "input_text": json.dumps(body, ensure_ascii=False),
-            "session_key": task.nanobot_session_key,
+            "session_key": task.session_key,
             "skill_name": name,
             "config_path": config_path,
             "workspace": str(workspace),

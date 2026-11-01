@@ -1,0 +1,33 @@
+[role='tablist'].has-shared-tab-motion { position: relative; }
+.shared-tab-motion-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 8px;
+  background: var(--app-accent-surface);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 1;
+  transition: transform 420ms cubic-bezier(.2, .8, .2, 1), width 420ms cubic-bezier(.2, .8, .2, 1), height 420ms cubic-bezier(.2, .8, .2, 1), opacity 150ms ease;
+}
+.has-shared-tab-motion > [role='tab'],
+.has-shared-tab-motion .ant-tabs-tab { position: relative; z-index: 2; }
+.has-shared-tab-motion .ant-tabs-nav-list { position: relative; }
+:root [role='tablist'].has-shared-tab-motion [role='tab'][aria-selected='true'] { background: transparent !important; box-shadow: none !important; border-color: transparent !important; }
+:root [role='tablist'].has-shared-tab-motion .ant-tabs-tab-active { background: transparent !important; box-shadow: none !important; }
+.has-shared-tab-motion .ant-tabs-ink-bar { visibility: hidden; }
+@media (prefers-reduced-motion: reduce) {
+  .shared-tab-motion-indicator, .ant-segmented-thumb { transition: none !important; }
+}
+
+/* Segmented controls that switch views use the same moving selection surface. */
+:root :is(.tab-view-switch, .ai-artifact-mode-controls .ant-segmented, .api-case-run-result-segmented) :is(.ant-segmented-thumb, .ant-segmented-item-selected) {
+  background: var(--app-accent-surface);
+  box-shadow: none;
+}
+:root :is(.tab-view-switch, .ai-artifact-mode-controls .ant-segmented, .api-case-run-result-segmented) .ant-segmented-thumb-motion-appear-active {
+  transition: transform 420ms cubic-bezier(.2, .8, .2, 1), width 420ms cubic-bezier(.2, .8, .2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  :root :is(.tab-view-switch, .ai-artifact-mode-controls .ant-segmented, .api-case-run-result-segmented) .ant-segmented-thumb-motion-appear-active { transition: none; }
+}

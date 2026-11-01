@@ -107,5 +107,6 @@ it('文档与代码风险从泳道入口打开，未配置链打开生成设置'
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
 
   await user.click(screen.getByRole('button', { name: /开始\s*API 测试/ }))
-  expect(await screen.findByText('生成设置')).toBeInTheDocument()
+  expect(await screen.findByRole('region', { name: 'API 测试文档' })).toBeInTheDocument()
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })

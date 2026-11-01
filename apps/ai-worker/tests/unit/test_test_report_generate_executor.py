@@ -5,12 +5,12 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-from testing_agent_ai_worker.config.models import NanobotConfig
+from testing_agent_ai_worker.config.models import PiConfig
 from testing_agent_ai_worker.models.execution import TaskStatus
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.tasks.test_report_generate.executor import (
     TEST_REPORT_SKILL_NAME,
-    TestReportNanobotExecutor,
+    TestReportExecutor,
 )
 
 
@@ -24,7 +24,7 @@ class _RecordingSkillRunner:
         return self.output
 
 
-class TestReportNanobotExecutorTest(unittest.TestCase):
+class TestReportExecutorTest(unittest.TestCase):
     def _task(self, *, daily_metrics: dict[str, object] | None = None) -> Task:
         return Task(
             task_id="task-1",
@@ -46,8 +46,8 @@ class TestReportNanobotExecutorTest(unittest.TestCase):
             "bug": {"total": 8, "resolved": 8},
         }
         skill_runner = _RecordingSkillRunner("测试报告正文")
-        executor = TestReportNanobotExecutor(
-            nanobot_config=NanobotConfig(runtime_root=str(Path("runtime/test-report"))),
+        executor = TestReportExecutor(
+            agent_config=PiConfig(runtime_root=str(Path("runtime/test-report"))),
             skill_runner=skill_runner,
         )
         progresses = []
@@ -67,8 +67,8 @@ class TestReportNanobotExecutorTest(unittest.TestCase):
 
     def test_execute_fails_when_daily_metrics_missing(self) -> None:
         skill_runner = _RecordingSkillRunner()
-        executor = TestReportNanobotExecutor(
-            nanobot_config=NanobotConfig(runtime_root=str(Path("runtime/test-report"))),
+        executor = TestReportExecutor(
+            agent_config=PiConfig(runtime_root=str(Path("runtime/test-report"))),
             skill_runner=skill_runner,
         )
 

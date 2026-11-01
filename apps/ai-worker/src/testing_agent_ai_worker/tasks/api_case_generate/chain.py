@@ -1,4 +1,4 @@
-"""API case generation nanobot chain."""
+"""API case generation agent chain."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from testing_agent_ai_worker.nanobot_runtime.prompt import (
+from testing_agent_ai_worker.agent.prompt import (
     API_EXTRACTOR_JSON_ONLY_INSTRUCTION,
     API_GENERATOR_YAML_ONLY_INSTRUCTION,
     append_stage_instruction,
@@ -21,11 +21,11 @@ from testing_agent_ai_worker.tasks.output_repair import generate_validated
 
 
 def _default_from_config(**kwargs: Any) -> Any:
-    """延迟导入 nanobot，避免单元测试在无 SDK 环境下提前失败。"""
+    """延迟导入 agent，避免单元测试在无 SDK 环境下提前失败。"""
 
-    from nanobot import Nanobot
+    from testing_agent_ai_worker.agent import create_agent
 
-    return Nanobot.from_config(**kwargs)
+    return create_agent(**kwargs)
 
 
 @dataclass(slots=True)
@@ -97,3 +97,42 @@ async def run_chain(
         )
 
     return ChainRunResult(extractor_output=extractor_output, generator_output=generator_output)
+
+
+async def run_api_stage(
+    *,
+    stage: str,
+    input_text: str,
+    session_key: str,
+    config_path: str | None = None,
+    workspace: str | None = None,
+    extra_instruction: str = "",
+    on_validation_progress: Callable[[dict[str, Any]], None] | None = None,
+    from_config: Callable[..., Any] | None = None,
+    media: list[str] | None = None,
+) -> str:
+    """Execute and validate one API skill without advancing the other stage."""
+    if stage == "openapi_extract":
+        skill = "openapi-test-config-extractor"
+        instruction = _build_api_extractor_instruction(extra_instruction)
+        validate = validate_extraction
+    elif stage == "generate":
+        skill = "api-cases-yaml-generator"
+        instruction = _build_api_generator_instruction(extra_instruction)
+        validate = validate_cases
+    else:
+        raise ValueError("不支持的 API 生成阶段")
+    factory = from_config or _default_from_config
+    async with factory(config_path=config_path, workspace=workspace) as bot:
+        return await generate_validated(
+            stage=stage,
+            inputs=build_skill_message(
+                skill_name=skill, body_text=input_text, extra_instruction=instruction
+            ),
+            generate=lambda prompt: bot.run(
+                prompt, session_key=session_key, **({"media": media} if media else {})
+            ),
+            validate=validate,
+            diagnostic_dir=Path(workspace) / "diagnostics" / "api-output" if workspace else None,
+            report=on_validation_progress,
+        )

@@ -5,11 +5,11 @@ from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 
-from testing_agent_ai_worker.config.models import NanobotConfig
+from testing_agent_ai_worker.config.models import PiConfig
 from testing_agent_ai_worker.models.execution import TaskStatus
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.tasks.requirement_analysis.executor import (
-    RequirementAnalysisNanobotExecutor,
+    RequirementAnalysisExecutor,
 )
 
 FIXTURES = Path(__file__).resolve().parents[4] / "tests/fixtures/requirement_artifacts"
@@ -45,8 +45,8 @@ class RequirementAnalysisExecutorTests(unittest.TestCase):
             downloads.append(kwargs)
             return Path(root) / "source.txt"
 
-        return RequirementAnalysisNanobotExecutor(
-            nanobot_config=NanobotConfig(runtime_root=root),
+        return RequirementAnalysisExecutor(
+            agent_config=PiConfig(runtime_root=root),
             skill_runner=runner,
             source_downloader=SimpleNamespace(download_source=download),
         )

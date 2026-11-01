@@ -7,10 +7,10 @@ from unittest.mock import patch
 from nanobot import Nanobot
 from pydantic import ValidationError
 
+from testing_agent_ai_worker.agent import nanobot as config_builder
+from testing_agent_ai_worker.agent.nanobot import migrate_legacy_sessions
 from testing_agent_ai_worker.config.models import NanobotConfig
 from testing_agent_ai_worker.models.task import LlmCredentials, Task, TaskPayload
-from testing_agent_ai_worker.nanobot_runtime import config_builder
-from testing_agent_ai_worker.nanobot_runtime.paths import migrate_legacy_sessions
 
 
 class NanobotRuntimeStorageTests(unittest.TestCase):
@@ -36,7 +36,7 @@ class NanobotRuntimeStorageTests(unittest.TestCase):
                 ),
             )
             with patch.object(config_builder, "DEFAULT_TEMPLATE_PATH", template):
-                with config_builder.task_config_path(nanobot_config=settings, task=task) as first:
+                with config_builder.task_config_path(agent_config=settings, task=task) as first:
                     bot = Nanobot.from_config(config_path=first, workspace=workspace)
                     manager = bot._loop.sessions
                     self.assertEqual(manager.sessions_dir.parent, root / "sessions")
@@ -44,7 +44,7 @@ class NanobotRuntimeStorageTests(unittest.TestCase):
                     session.add_message("user", "preserved across task configurations")
                     manager.save(session)
                 self.assertFalse(Path(first).exists())
-                with config_builder.task_config_path(nanobot_config=settings, task=task) as second:
+                with config_builder.task_config_path(agent_config=settings, task=task) as second:
                     self.assertNotEqual(first, second)
                     bot = Nanobot.from_config(config_path=second, workspace=workspace)
                     session = bot._loop.sessions.get_or_create("persistent-test")

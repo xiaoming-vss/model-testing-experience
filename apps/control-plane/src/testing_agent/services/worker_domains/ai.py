@@ -29,6 +29,23 @@ def apply_ai_completion_to_run(
 ) -> None:
     snapshot = body.snapshot_json or {}
     status = final_run_status(body.status)
+    if (getattr(run, "snapshot_json", None) or {}).get("apiWorkflowVersion") == "api_two_stage/1.0":
+        if status == RunStatus.SUCCESS.value:
+            reported_stage = snapshot.get("currentStage") or snapshot.get("stage")
+            config = (
+                body.config_json if body.config_json is not None else snapshot.get("configJson", {})
+            )
+            result = body.result_yaml if body.result_yaml is not None else body.output_yaml
+            if (
+                run.current_stage != "generate"
+                or reported_stage not in {None, "generate", "completed"}
+                or not result
+                or not isinstance(config, dict)
+                or config.get("apiExtraction") != (run.config_json or {}).get("apiExtraction")
+            ):
+                raise ErrBadRequest()
+        else:
+            functional = True
     if is_ui_workflow(run):
         reported_stage = snapshot.get("currentStage") or snapshot.get("stage")
         allowed_stages = {None, run.current_stage}
@@ -147,6 +164,7 @@ AI_WAITING_REVIEW_STAGES = {
     "requirement_analysis",
     "case_names",
     "extracting_text",
+    "openapi_extract",
     "ui_surface",
     "ui_design",
 }
@@ -157,6 +175,33 @@ def apply_progress(
 ) -> None:
     if body.run_id and body.run_id != run.run_id:
         raise ErrBadRequest()
+    api_workflow = (getattr(run, "snapshot_json", None) or {}).get(
+        "apiWorkflowVersion"
+    ) == "api_two_stage/1.0"
+    if api_workflow:
+        if task.task_type != "api_case_generate" or body.current_stage != run.current_stage:
+            raise ErrBadRequest()
+        if body.result_yaml:
+            raise ErrBadRequest()
+        if body.stage_status == "waiting_review":
+            config = body.config_json
+            extraction = config.get("apiExtraction") if isinstance(config, dict) else None
+            if (
+                run.current_stage != "openapi_extract"
+                or not isinstance(extraction, dict)
+                or not extraction
+            ):
+                raise ErrBadRequest()
+        elif body.config_json and (
+            not isinstance(body.config_json, dict)
+            or body.config_json.get("apiExtraction") != (run.config_json or {}).get("apiExtraction")
+        ):
+            raise ErrBadRequest()
+    elif task.task_type == "api_case_generate" and run.checkpoint_enabled:
+        # Legacy API runs executed both skills under the single generate stage.
+        if body.current_stage in {"openapi_extract", "api_case_generating"}:
+            body.current_stage = "generate"
+            run.current_stage = "generate"
     if task.task_type == "requirement_analysis" and body.stage_status == "waiting_review":
         from testing_agent.services.requirement_analysis_contracts import (
             validate_run_output,

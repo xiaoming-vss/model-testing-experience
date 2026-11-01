@@ -20,7 +20,6 @@ ROOT = Path(__file__).resolve().parents[1]
 PROJECTS = {
     "control-plane": "apps/control-plane",
     "ai-worker": "apps/ai-worker",
-    "ai-worker-pi": "apps/ai-worker-pi",
     "api-ui-worker": "apps/api-ui-worker",
     "integration-worker": "apps/integration-worker",
     "studio": "apps/studio",
@@ -108,6 +107,33 @@ def init(root=ROOT):
     print("Created config/platform.toml with fresh local credentials.")
 
 
+def _migrate_agent_config(data):
+    """Move the retired ai-worker-pi layout into the unified [ai_worker.agent] tree."""
+
+    ai_worker = data.setdefault("ai_worker", {})
+    agent = ai_worker.setdefault("agent", {})
+
+    legacy_nanobot = ai_worker.pop("nanobot", None)
+    if isinstance(legacy_nanobot, dict):
+        target = agent.setdefault("nanobot", {})
+        for key, value in legacy_nanobot.items():
+            target.setdefault(key, copy.deepcopy(value))
+
+    legacy_pi = data.pop("ai_worker_pi", None)
+    if not isinstance(legacy_pi, dict):
+        return
+    pi_values = legacy_pi.get("pi")
+    if isinstance(pi_values, dict):
+        target = agent.setdefault("pi", {})
+        for key, value in pi_values.items():
+            target.setdefault(key, copy.deepcopy(value))
+    worker_values = legacy_pi.get("worker")
+    if isinstance(worker_values, dict):
+        target_worker = ai_worker.setdefault("worker", {})
+        for key, value in worker_values.items():
+            target_worker.setdefault(key, copy.deepcopy(value))
+
+
 def upgrade_config(root=ROOT):
     """Add newer settings while preserving existing values and file mode."""
     path = root / "config/platform.toml"
@@ -116,6 +142,7 @@ def upgrade_config(root=ROOT):
         return
     data = read(path)
     original = copy.deepcopy(data)
+    _migrate_agent_config(data)
     shared = data.setdefault("shared", {})
     for key in ("integration_worker_token", "integration_runtime_generation"):
         if key not in shared or shared[key] == "GENERATE":
@@ -187,15 +214,15 @@ def mysql_observability(data):
     return {"MYSQL_SLOW_QUERY_LOG": int(enabled), "MYSQL_LONG_QUERY_TIME": threshold}
 
 
-def selected_ai_worker(data):
+def selected_agent_backend(data):
     backend = data.get("ai_worker", {}).get("agent", {}).get("backend", "nanobot")
     if backend not in {"nanobot", "pi"}:
         raise ValueError("ai_worker.agent.backend must be nanobot or pi")
-    return "ai-worker-pi" if backend == "pi" else "ai-worker"
+    return backend
 
 
 def validate(data):
-    selected_ai_worker(data)
+    selected_agent_backend(data)
     shared, db = data["shared"], data["database"]
     external = bool(external_database_url(data))
     mysql_observability(data)
@@ -260,7 +287,6 @@ def configurations(data, mode, root=ROOT):
     specs = {
         "control-plane": ("config/local.example.toml", "control_plane"),
         "ai-worker": ("config/worker.example.toml", "ai_worker"),
-        "ai-worker-pi": ("config/worker.example.toml", "ai_worker_pi"),
         "api-ui-worker": ("config.example.toml", "api_ui_worker"),
         "integration-worker": ("config/local.example.toml", "integration_worker"),
     }
@@ -287,20 +313,27 @@ def configurations(data, mode, root=ROOT):
         },
     )
     result["control-plane"].setdefault("security", {}).pop("ldap", None)
+    backend = selected_agent_backend(data)
+    agent_overrides = data.get("ai_worker", {}).get("agent", {})
+    backend_overrides = agent_overrides.get(backend, {}) or {}
     result["ai-worker"] = merge(
         result["ai-worker"],
         {
             "platform": {"base_url": cp_url, "worker_token": s["worker_token"]},
-            "nanobot": {"runtime_root": "/data/runtime" if docker else "runtime"},
+            "agent": {
+                "backend": backend,
+                backend: {
+                    **backend_overrides,
+                    "runtime_root": "/data/runtime" if docker else "runtime",
+                },
+            },
             "logging": {"dir": "/app/logs" if docker else "logs"},
         },
     )
-    result["ai-worker"].pop("agent", None)
-    result["ai-worker-pi"] = merge(result["ai-worker-pi"], {
-        "platform": {"base_url": cp_url, "worker_token": s["worker_token"]},
-        "pi": {"runtime_root": "/data/runtime" if docker else "runtime"},
-        "logging": {"dir": "/app/logs" if docker else "logs"},
-    })
+    # 只保留选中后端的配置，避免把另一底座的参数写进运行时文件。
+    result["ai-worker"].setdefault("agent", {}).pop(
+        "pi" if backend == "nanobot" else "nanobot", None
+    )
     result["api-ui-worker"] = merge(
         result["api-ui-worker"],
         {
@@ -335,7 +368,6 @@ def configure(mode, root=ROOT):
     local_files = {
         "control-plane": "config/local.toml",
         "ai-worker": "config/worker.toml",
-        "ai-worker-pi": "config/worker.toml",
         "api-ui-worker": "config.toml",
         "integration-worker": "config/local.toml",
     }
@@ -356,10 +388,9 @@ def configure(mode, root=ROOT):
                 "control_plane_port",
             )
         }
-        ai_service = selected_ai_worker(data)
-        env["AI_WORKER_PROJECT"] = ai_service
-        env["AI_RUNTIME_VOLUME"] = "ai-pi-runtime" if ai_service == "ai-worker-pi" else "ai-runtime"
-        env["AI_LOGS_VOLUME"] = "ai-pi-logs" if ai_service == "ai-worker-pi" else "ai-logs"
+        ai_backend = selected_agent_backend(data)
+        env["AI_RUNTIME_VOLUME"] = "ai-pi-runtime" if ai_backend == "pi" else "ai-runtime"
+        env["AI_LOGS_VOLUME"] = "ai-pi-logs" if ai_backend == "pi" else "ai-logs"
         env["MYSQL_PORT"] = s.get("mysql_port", 13306)
         env.update(mysql_observability(data))
         if external_database_url(data):
@@ -455,12 +486,9 @@ def main():
         raise SystemExit(subprocess.call(compose_command() + args.args, cwd=ROOT))
     configure("local")
     name = "control-plane" if args.action == "migrate" else args.service
-    if name == "ai-worker":
-        name = selected_ai_worker(read(ROOT / "config/platform.toml"))
     commands = {
         "control-plane": ["uv", "run", "--locked", "mtx-control-plane"],
         "ai-worker": ["uv", "run", "--locked", "mtx-ai-worker"],
-        "ai-worker-pi": ["uv", "run", "--locked", "mtx-ai-worker-pi"],
         "api-ui-worker": ["uv", "run", "--locked", "mtx-api-ui-worker"],
         "integration-worker": ["uv", "run", "--locked", "mtx-integration-worker"],
         "studio": ["npm", "run", "dev"],
@@ -471,8 +499,12 @@ def main():
         else commands[name]
     )
     env = os.environ.copy()
-    if name == "ai-worker-pi":
-        env["PATH"] = str(ROOT / PROJECTS[name] / "node_modules/.bin") + os.pathsep + env.get("PATH", "")
+    if name == "ai-worker" and selected_agent_backend(
+        read(ROOT / "config/platform.toml")
+    ) == "pi":
+        env["PATH"] = (
+            str(ROOT / PROJECTS[name] / "node_modules/.bin") + os.pathsep + env.get("PATH", "")
+        )
     if name in {"control-plane", "integration-worker"}:
         env["APP_CONF"] = str(ROOT / PROJECTS[name] / "config/local.toml")
     raise SystemExit(subprocess.call(command, cwd=ROOT / PROJECTS[name], env=env))

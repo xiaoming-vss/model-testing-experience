@@ -8,14 +8,14 @@ import logging
 from datetime import datetime
 from uuid import uuid4
 
-from testing_agent_ai_worker.config.models import NanobotConfig
-from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
-from testing_agent_ai_worker.models.task import Task
-from testing_agent_ai_worker.nanobot_runtime.config_builder import task_config_path
-from testing_agent_ai_worker.nanobot_runtime.paths import (
+from testing_agent_ai_worker.agent.config_builder import task_config_path
+from testing_agent_ai_worker.agent.paths import (
     resolve_runtime_paths,
     resolve_task_workspace,
 )
+from testing_agent_ai_worker.config.models import AgentBackendConfig
+from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
+from testing_agent_ai_worker.models.task import Task
 from testing_agent_ai_worker.tasks.functional_case_generate.chain import (
     FunctionalChainRunResult,
     run_functional_chain,
@@ -61,7 +61,7 @@ def _resolve_runner_result(result):
     return result
 
 
-class FunctionalCaseNanobotExecutor(TaskExecutor):
+class FunctionalCaseExecutor(TaskExecutor):
     """功能测试用例生成执行器。
 
     支持两种模式：
@@ -72,21 +72,21 @@ class FunctionalCaseNanobotExecutor(TaskExecutor):
     def __init__(
         self,
         *,
-        nanobot_config: NanobotConfig,
+        agent_config: AgentBackendConfig,
         chain_runner=run_functional_chain,
         skill_runner=run_skill_step,
         detailed_batch_runner=run_functional_detailed_case_batches,
         attachment_downloader=None,
     ) -> None:
-        self.nanobot_config = nanobot_config
-        self.runtime_paths = resolve_runtime_paths(nanobot_config)
+        self.agent_config = agent_config
+        self.runtime_paths = resolve_runtime_paths(agent_config)
         self.chain_runner = chain_runner
         self.skill_runner = skill_runner
         self.detailed_batch_runner = detailed_batch_runner
         self.attachment_downloader = attachment_downloader
 
     def execute(self, task: Task, started_at: datetime, progress_callback) -> TaskResult | None:
-        workspace = resolve_task_workspace(self.nanobot_config, task)
+        workspace = resolve_task_workspace(self.agent_config, task)
 
         def report(event):
             progress_callback(
@@ -139,9 +139,9 @@ class FunctionalCaseNanobotExecutor(TaskExecutor):
                 finished_at=datetime.now().astimezone(),
             )
 
-        workspace = resolve_task_workspace(self.nanobot_config, task)
+        workspace = resolve_task_workspace(self.agent_config, task)
 
-        with task_config_path(nanobot_config=self.nanobot_config, task=task) as config_path:
+        with task_config_path(agent_config=self.agent_config, task=task) as config_path:
             self._log_execution_context(task, config_path=config_path, workspace=workspace)
             # checkpoint 模式优先从平台下发的 currentStage/configJson 恢复。
             # relation_analysis 由“生成图谱”按钮派发，总是走单阶段 checkpoint 路径。
@@ -195,7 +195,7 @@ class FunctionalCaseNanobotExecutor(TaskExecutor):
             result = self.chain_runner(
                 **resume,
                 source_text=source_text,
-                session_key=task.nanobot_session_key,
+                session_key=task.session_key,
                 analysis_skill_name="analyze-functional-requirements",
                 case_name_skill_name="generate-solution-test-points",
                 detailed_case_skill_name="generate-solution-test-cases",

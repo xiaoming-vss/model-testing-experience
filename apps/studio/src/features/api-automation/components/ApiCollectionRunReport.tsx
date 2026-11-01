@@ -15,6 +15,7 @@ import {
   type ApiCollectionRunSummary
 } from '@/services/api'
 import { ActionButton } from '@/shared/components/ActionButton'
+import { useViewMotion } from '@/shared/ui/useViewMotion'
 import {
   formatTime,
   getErrorMessage,
@@ -48,7 +49,13 @@ type Props = {
   selectedCollectionRunSummary: ApiCollectionRunSummary | undefined
 }
 
+function RunResultPanel({ view, children }: { view: RunResultView; children: React.ReactNode }) {
+  const panelRef = useViewMotion(runResultViewOptions.findIndex(option => option.value === view))
+  return <div ref={panelRef} className="api-case-run-result-block">{children}</div>
+}
+
 export function ApiCollectionRunReportModal({ collectionRunReportOpen, setCollectionRunReportOpen, setSelectedCollectionRunId, collectionRunReportQuery, collectionRunReport, environments, handleExportCollectionRunReportHtml, handleRefreshCollectionRunReport, refreshingCollectionRunReport, selectedCollectionRunId, collectionRunReportView, setCollectionRunReportView, orderedCollectionRunItems, expandedCollectionRunItemIds, collectionRunItemViews, toggleCollectionRunItem, handleCollectionRunItemViewChange, selectedCollectionRunSummary }: Props) {
+  const viewRef = useViewMotion(collectionReportViewOptions.findIndex(option => option.value === collectionRunReportView))
   return (
     <Modal
       mask={{ closable: false }}
@@ -140,7 +147,7 @@ export function ApiCollectionRunReportModal({ collectionRunReportOpen, setCollec
             />
           </div>
 
-          <div className="api-collection-run-report-scroll">
+          <div ref={viewRef} className="api-collection-run-report-scroll">
             <div className="api-collection-run-report-content">
               {collectionRunReportView === 'runtime' ? (
                 <pre className="api-case-run-result-pre compact">
@@ -191,7 +198,7 @@ export function ApiCollectionRunReportModal({ collectionRunReportOpen, setCollec
                               value={itemView}
                               onChange={(value) => handleCollectionRunItemViewChange(itemKey, value as RunResultView)}
                             />
-                            <div className="api-case-run-result-block">
+                            <RunResultPanel view={itemView}>
                               {renderRunResultContent({
                                 view: itemView,
                                 request: item.request,
@@ -201,7 +208,7 @@ export function ApiCollectionRunReportModal({ collectionRunReportOpen, setCollec
                                 emptyExtractDescription: '该用例没有提取结果',
                                 emptyAssertDescription: '该用例没有断言结果',
                               })}
-                            </div>
+                            </RunResultPanel>
                           </div>
                         ) : null}
                       </div>

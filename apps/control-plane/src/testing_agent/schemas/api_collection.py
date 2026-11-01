@@ -16,6 +16,7 @@ class ApiCollectionRequest(BaseModel):
 
 
 class ApiCollectionUpdateRequest(BaseModel):
+    requirement_id: str | None = Field(default=None, min_length=1, max_length=64)
     name: str | None = None
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
     description: str | None = None

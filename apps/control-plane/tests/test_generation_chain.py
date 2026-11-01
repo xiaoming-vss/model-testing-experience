@@ -1140,3 +1140,291 @@ async def test_upstream_review_does_not_stop_downstream_execution(db, action):  
     assert completed.stages[0].draft is None
     assert completed.stages[0].latest_version.version_no == (2 if action == "approve" else 1)
     assert completed.stages[1].draft is not None
+
+
+@pytest.mark.parametrize("auto_continue", [False, True])
+async def test_api_two_stage_approves_extraction_then_dispatches_selected_version(
+    db,  # noqa: F811
+    auto_continue,
+):
+    from testing_agent.domain.ai_execution_intent import ExecutionIntent
+    from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
+    from testing_agent.schemas.workers import WorkerProgressRequest, WorkerTaskEventRequest
+    from testing_agent.services.ai_execution import persist_run
+    from testing_agent.services.worker_domains.ai import apply_ai_completion_to_run, apply_progress
+
+    create_run(db)
+    task = AiGenerateTask(
+        task_id="api-task",
+        task_type="api_case_generate",
+        name="API",
+        project_id="p",
+        sprint_id="s",
+        requirement_id="r",
+        creator_user_id="u",
+        source_type="openapi",
+        source_content="{}",
+        instruction="",
+    )
+    run = AiGenerateTaskRun(
+        run_id="api-run",
+        task_id="api-task",
+        project_id="p",
+        sprint_id="s",
+        requirement_id="r",
+        trigger_user_id="u",
+        status="pending",
+        checkpoint_enabled=True,
+        current_stage="openapi_extract",
+        stage_status="pending",
+        config_json={},
+        snapshot_json={"apiWorkflowVersion": "api_two_stage/1.0", "sourceContent": "{}"},
+    )
+    worker = WorkerTask(
+        domain="ai",
+        task_id="api-worker",
+        task_type="api_case_generate",
+        run_id="api-run",
+        status="pending",
+    )
+    db.add_all([task, run, worker])
+    db.flush()
+    persist_run(
+        db,
+        run,
+        intent=ExecutionIntent(operation="generate", llm_connection_id="llm"),
+        worker=worker,
+    )
+    db.commit()
+    apply_progress(
+        run,
+        worker,
+        WorkerProgressRequest(
+            workerId="worker",
+            taskId="api-worker",
+            runId="api-run",
+            currentStage="openapi_extract",
+            stageStatus="waiting_review",
+            configJson={"apiExtraction": {"login": {"path": "/login", "method": "POST"}}},
+        ),
+        lease_seconds=30,
+    )
+    persist_run(db, run, intent=ExecutionIntent(worker_event_id=worker.task_id), worker=worker)
+    db.commit()
+    bundle = services(db)
+    view = await bundle.chain.review_stage(
+        "r",
+        "api",
+        "openapi_extract",
+        GenerationChainReviewRequest(
+            action="approve",
+            continue_after=auto_continue,
+            connection_id="llm",
+            instruction="覆盖鉴权异常",
+        ),
+        "u",
+    )
+    version_id = view.stages[0].latest_version.version_id
+    if not auto_continue:
+        await bundle.chain.run_stage(
+            "r",
+            "api",
+            "generate",
+            GenerationChainRunRequest(
+                connection_id="llm",
+                instruction="覆盖鉴权异常",
+                upstream_versions={"openapi_extract": version_id},
+            ),
+            "u",
+        )
+    source, config = worker_input(db, run, latest_worker(db, "api-run"))
+    assert source["instruction"] == "覆盖鉴权异常"
+    assert config["apiExtraction"]["login"]["path"] == "/login"
+    final_worker = latest_worker(db, "api-run")
+    apply_ai_completion_to_run(
+        run,
+        WorkerTaskEventRequest(
+            worker_id="worker",
+            status="success",
+            config_json=config,
+            output_yaml=(
+                "cases:\n  - name: login\n    orderNo: 1\n    method: POST\n"
+                "    urlTemplate: /login\n    extractRules:\n"
+                "      - {name: token, source: body_jsonpath, sourceExpr: $.token, varKey: token}\n"
+                "    assertRules:\n"
+                "      - {name: status, assertSource: status_code, comparator: eq, "
+                "expectedValue: '200'}\n"
+            ),
+        ),
+    )
+    final_worker.status = "success"
+    persist_run(
+        db, run, intent=ExecutionIntent(worker_event_id=final_worker.task_id), worker=final_worker
+    )
+    db.commit()
+    view = await bundle.chain.review_stage(
+        "r", "api", "generate", GenerationChainReviewRequest(action="approve"), "u"
+    )
+    final = await bundle.chain.repository.version(
+        "api-task", view.stages[1].latest_version.version_id
+    )
+    assert final.upstream_versions_json == {"openapi_extract": version_id}
+    assert (await bundle.chain._complete_parent_versions(task, "api", final))[
+        "openapi_extract"
+    ].version_id == version_id
+    from testing_agent.models.api_collection import ApiCollection
+
+    db.add(ApiCollection(collection_id="api-target", requirement_id="r", name="目标集合"))
+    db.commit()
+    result = await bundle.chain.import_version(
+        "r",
+        "api",
+        final.version_id,
+        GenerationChainImportRequest(target_id="api-target"),
+        "u",
+    )
+    assert result.imported is True
+    assert result.changed_case_count == 1
+    from testing_agent.models.api_assert_rule import ApiAssertRule
+    from testing_agent.models.api_case import ApiCase
+    from testing_agent.models.api_extract_rule import ApiExtractRule
+
+    imported_case = db.scalar(select(ApiCase).where(ApiCase.collection_id == "api-target"))
+    assert imported_case.name == "login"
+    assert db.scalar(select(ApiExtractRule).where(ApiExtractRule.case_id == imported_case.case_id))
+    assert db.scalar(select(ApiAssertRule).where(ApiAssertRule.case_id == imported_case.case_id))
+    final.artifact_context_json = {}
+    final.upstream_versions_json = None
+    assert await bundle.chain._complete_parent_versions(task, "api", final) == {}
+    final.artifact_context_json = {"apiWorkflowVersion": "api_two_stage/1.0"}
+    final.upstream_versions_json = {"openapi_extract": "deleted"}
+    with pytest.raises(AppError):
+        await bundle.chain._complete_parent_versions(task, "api", final)
+
+
+async def test_api_first_dispatch_creates_two_stage_run(db):  # noqa: F811
+    from testing_agent.models.ai_generate_task import AiGenerateTask
+
+    create_run(db)
+    db.add(
+        AiGenerateTask(
+            task_id="api-task",
+            task_type="api_case_generate",
+            name="API",
+            project_id="p",
+            sprint_id="s",
+            requirement_id="r",
+            creator_user_id="u",
+            source_type="openapi",
+            source_content='{"openapi":"3.0.0","paths":{}}',
+            instruction="",
+        )
+    )
+    db.commit()
+    bundle = services(db)
+    view = await bundle.chain.run_stage(
+        "r",
+        "api",
+        "openapi_extract",
+        GenerationChainRunRequest(connection_id="llm", instruction="只处理登录接口"),
+        "u",
+    )
+    run = await bundle.chain.repository.latest_run("api-task")
+    assert run.snapshot_json["apiWorkflowVersion"] == "api_two_stage/1.0"
+    assert run.snapshot_json["instruction"] == "只处理登录接口"
+    assert run.current_stage == "openapi_extract"
+    assert [stage.stage for stage in view.stages] == ["openapi_extract", "generate"]
+    assert view.stages[1].blocked_reason
+
+
+def test_legacy_api_checkpoint_progress_remains_single_stage():
+    from testing_agent.schemas.workers import WorkerProgressRequest
+    from testing_agent.services.worker_domains.ai import apply_progress
+
+    run = SimpleNamespace(
+        run_id="legacy",
+        checkpoint_enabled=True,
+        current_stage="",
+        stage_status="pending",
+        status="running",
+        config_json={},
+        result_yaml="",
+        result_summary_json={},
+        error_message="",
+        snapshot_json={},
+    )
+    worker = SimpleNamespace(
+        task_type="api_case_generate",
+        status="running",
+        heartbeat_at=None,
+        lease_expires_at=None,
+        finished_at=None,
+        error_message="",
+    )
+    for stage in ("openapi_extract", "api_case_generating"):
+        apply_progress(
+            run,
+            worker,
+            WorkerProgressRequest(
+                worker_id="w", run_id="legacy", current_stage=stage, stage_status="running"
+            ),
+            lease_seconds=30,
+        )
+        assert run.current_stage == "generate"
+
+
+def test_api_two_stage_rejects_wrong_stage_and_modified_upstream():
+    from testing_agent.schemas.workers import WorkerProgressRequest, WorkerTaskEventRequest
+    from testing_agent.services.worker_domains.ai import apply_ai_completion_to_run, apply_progress
+
+    run = SimpleNamespace(
+        run_id="r",
+        checkpoint_enabled=True,
+        current_stage="openapi_extract",
+        stage_status="running",
+        status="running",
+        config_json={},
+        result_yaml="",
+        result_summary_json={},
+        error_message="",
+        snapshot_json={"apiWorkflowVersion": "api_two_stage/1.0"},
+    )
+    worker = SimpleNamespace(
+        task_type="api_case_generate",
+        status="running",
+        heartbeat_at=None,
+        lease_expires_at=None,
+        finished_at=None,
+        error_message="",
+    )
+    with pytest.raises(AppError):
+        apply_ai_completion_to_run(
+            run,
+            WorkerTaskEventRequest(
+                worker_id="w", status="success", output_yaml="cases: []", config_json={}
+            ),
+        )
+    with pytest.raises(AppError):
+        apply_progress(
+            run,
+            worker,
+            WorkerProgressRequest(
+                worker_id="w",
+                current_stage="openapi_extract",
+                stage_status="waiting_review",
+                config_json={},
+            ),
+            lease_seconds=30,
+        )
+    run.current_stage = "generate"
+    run.config_json = {"apiExtraction": {"a": {"path": "/a", "method": "GET"}}}
+    with pytest.raises(AppError):
+        apply_ai_completion_to_run(
+            run,
+            WorkerTaskEventRequest(
+                worker_id="w",
+                status="success",
+                output_yaml="cases: []",
+                config_json={"apiExtraction": {"b": {}}},
+            ),
+        )

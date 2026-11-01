@@ -221,6 +221,7 @@ class ApiCandidateImporter:
                     target_case = ApiCase(case_id=self.new_id(), collection_id=collection_id)
                     apply_api_case(target_case, item)
                     self.repository.add(target_case)
+                    await self.repository.flush()
                     add_api_rules(self.repository, target_case.case_id, item)
                 else:
                     apply_api_case(target_case, item)

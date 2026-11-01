@@ -4,15 +4,27 @@
 
 开发与审查先阅读[通用后端规则](../agents/backend-development.md)和[AI Worker 开发规则](development-rules.md)，保留本项目的运行模型、产物契约和验证入口。
 
-接收平台派发的 AI 测试任务，调用 LLM 生成测试产物并回传。领取需求分析、功能/API/UI 用例生成、代码风险分析、测试报告生成六类任务。
+接收平台派发的 AI 测试任务，调用 LLM 生成测试产物并回传。领取需求分析、功能/API/UI 用例生成、代码风险分析、测试报告生成、用例执行顺序图谱七类任务。
 
 领域术语与任务类型见 [CONTEXT](CONTEXT.md)。任务执行遵循两条设计约定：技能包由部署侧预置，worker 不下载技能；轮询无锁并行，收到 SIGTERM 立即退出。
 
 ## 运行时与依赖
 
 - Python 3.13（`.python-version`），包管理使用 uv（`uv.lock`），构建后端 hatchling
-- 依赖极简：`nanobot-ai==0.3.5`（LLM Agent SDK）、`httpx`、`pydantic`、`pyyaml`
-- 不监听任何端口，Compose 中无 `ports`
+- Python 依赖：`nanobot-ai==0.3.5`（LLM Agent SDK）、`httpx`、`pydantic`、`pyyaml`、`jsonschema`
+- Node 运行时：`@earendil-works/pi-coding-agent==1.3.0`，由 `package.json` / `package-lock.json` 固定
+- 一个镜像同时包含两个底座，由 `agent.backend` 在启动时选择；不监听任何端口，Compose 中无 `ports`
+
+## 执行底座
+
+业务代码只依赖 `agent/` 门面，Nanobot 与 Pi 是同一契约下的两个适配器：
+
+| backend | 实现 | 运行方式 |
+| --- | --- | --- |
+| `nanobot`（默认） | `agent/nanobot.py` | Python 进程内调用 `nanobot-ai` SDK |
+| `pi` | `agent/pi.py` | 每次模型调用启动固定版本 Pi CLI 的 RPC 子进程 |
+
+选择方式、Pi 的会话/超时/进程回收语义和容器验收见 [Pi 后端](pi-backend.md)；收敛决策见 [ADR 0001](adr/0001-unified-agent-backend.md)。两个底座的任务类型、技能下载、阶段检查点、产物校验和控制面协议完全一致；切换前处理在途任务和人工检查点，会话历史不跨底座迁移。
 
 ## 源码结构
 
@@ -20,36 +32,56 @@
 
 | 路径 | 作用 |
 | --- | --- |
-| `main.py`、`__main__.py` | 入口：加载配置、初始化日志、进入 `run_worker` |
+| `main.py`、`__main__.py` | 入口：加载配置、校验后端运行时、初始化日志、进入 `run_worker` |
+| `agent/` | 后端门面与适配器：`base.py`（契约）、`nanobot.py`、`pi.py`、`prompt.py`、`paths.py`、`config_builder.py` |
 | `app/bootstrap.py` | 构建 poller 与 runner，提供 `run_worker` 与 `run_poll_once` |
 | `worker/` | `loop.py`、`poller.py`、`runner.py`、`dispatcher.py`、`executor.py`、`lifecycle.py` |
-| `tasks/` | 六类任务各自的实现，另有 `result_summary.py` |
+| `tasks/` | 七类任务各自的实现，另有 `result_summary.py` |
 | `platform/` | 与控制面通信：`http_client.py`、`task_source.py`、`result_sink.py`、`schemas.py`、`errors.py` |
 | `config/`、`logging/` | 配置加载与日志设置 |
-| `nanobot/`、`nanobot_runtime/` | 运行时装配与提示词 |
-
-`nanobot/` 与 `nanobot_runtime/` 两个目录职责有重叠（都含 `config_builder.py` 与 `paths.py`），是待收敛的历史结构。
 
 ## 配置
 
-读取 `config/worker.toml`（容器内 `/app/config/worker.toml`）。**没有**类似 `APP_CONF` 的路径覆盖机制，只能通过环境变量覆盖三个字段：
+读取 `config/worker.toml`（容器内 `/app/config/worker.toml`）。**没有**类似 `APP_CONF` 的路径覆盖机制，只能通过环境变量覆盖以下字段：
 
 | 环境变量 | 覆盖的配置项 |
 | --- | --- |
 | `TESTING_AGENT_PLATFORM_BASE_URL` | `platform.base_url` |
 | `TESTING_AGENT_WORKER_TOKEN` | `platform.worker_token` |
-| `TESTING_AGENT_NANOBOT_RUNTIME_ROOT` | `nanobot.runtime_root` |
+| `TESTING_AGENT_NANOBOT_RUNTIME_ROOT` | `agent.nanobot.runtime_root` |
+| `TESTING_AGENT_PI_RUNTIME_ROOT` | `agent.pi.runtime_root` |
 
-其余配置只能改文件，顶层段为 `[worker]`（`worker_id`、`poll_interval_seconds`、`heartbeat_interval_seconds`、`max_concurrent_tasks`、`run_once`）、`[platform]`（`base_url`、`worker_token` 及各任务回调路径）、`[nanobot]`（`runtime_root`、超时）、`[logging]`。启动时还会写入 `NANOBOT_STREAM_IDLE_TIMEOUT_S` 与 `NANOBOT_OPENAI_COMPAT_TIMEOUT_S`。
+其余配置只能改文件，顶层段为 `[worker]`、`[platform]`、`[agent]`、`[logging]`。`[agent]` 结构如下；部署生成时只写入选中的后端子段：
+
+```toml
+[agent]
+backend = "nanobot"
+
+[agent.nanobot]
+runtime_root = "/data/runtime"
+stream_idle_timeout_seconds = 300
+provider_request_timeout_seconds = 300
+
+[agent.pi]
+runtime_root = "/data/runtime"
+executable = "pi"
+run_timeout_seconds = 1800
+api = "openai-completions"
+context_window_tokens = 500000
+max_output_tokens = 65536
+```
+
+Nanobot 后端启动时还会写入 `NANOBOT_STREAM_IDLE_TIMEOUT_S` 与 `NANOBOT_OPENAI_COMPAT_TIMEOUT_S`。
 
 ## 命令
 
 在 `apps/ai-worker/` 下执行：
 
 ```sh
-uv sync --locked                                  # 安装依赖
-uv run mtx-ai-worker                              # 启动
-uv run python -m unittest discover -s tests       # 测试（196 项）
+uv sync --locked                                  # 安装 Python 依赖
+npm ci                                            # Pi 后端需要固定版本 CLI
+uv run mtx-ai-worker                              # 启动（后端由配置决定）
+uv run python -m unittest discover -s tests       # 测试（358 项，3 项按环境跳过）
 uv run ruff check .                               # Lint
 ```
 
@@ -95,3 +127,5 @@ UI 候选生成接受步骤级 `missingFields` 结构化待补项，明确字段
 `assert_visible` / `assert_hidden` / `sleep` 的 `operationValue` 表示等待毫秒数，不可标成缺少业务期望。运行时生成值不能作为执行前待补数据；无法忠实实现的已审核目标必须报告冲突，不以删断言、改预期或人工核对绕过。诊断目录保留每次生成原文和复核报告，验证不修改产物。该检查只收紧新生成流程，历史导入兼容契约不变。
 
 每次第三阶段生成/修复及内部复核均使用新会话。调用输入包含完整的当前模块材料、候选或错误反馈，避免重复会话历史叠加大型 YAML 导致上下文溢出；不依赖历史聊天恢复任务。
+
+需求生成链的新 API 两阶段运行使用快照标记 `apiWorkflowVersion: api_two_stage/1.0`。`openapi_extract` 只调用 `openapi-test-config-extractor` 并在结果校验通过后等待审核；`generate` 读取已选审核版本调用 `api-cases-yaml-generator`。每次只获取当前阶段的 Skill；旧运行保持原先自动串联两个 Skill 的协议。

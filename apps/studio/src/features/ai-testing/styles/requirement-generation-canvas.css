@@ -4,34 +4,73 @@
 .gc-canvas-frame { position: relative; display: flex; flex: 1 1 auto; min-width: 0; min-height: 0; }
 .gc-canvas-frame { overflow: hidden; border: 1px solid var(--app-surface-border); border-radius: 12px; background: var(--app-bg); }
 .gc-canvas-frame .react-flow { width: 100%; height: 100%; background: var(--app-bg); }
-.gc-canvas-frame .react-flow__background { opacity: 0.55; }
+.gc-canvas-frame .react-flow__background { opacity: 1; }
 .gc-canvas-frame .react-flow__node { font: inherit; color: var(--app-surface-text); }
 /* 实线保留路径；连续短光带沿 source → target 推进，各分支始终流动。 */
-.gc-canvas-frame .gc-flow-edge-track { opacity: 0.24; }
+.gc-canvas-frame .gc-flow-edge-track { opacity: 0.5; }
 .gc-canvas-frame .gc-flow-edge-stream { stroke: color-mix(in srgb, var(--app-accent) 65%, var(--app-surface-text-muted)); stroke-width: 1.4; opacity: 0.72; stroke-linecap: round; stroke-dasharray: 10 10; pointer-events: none; animation: gc-edge-flow 0.8s linear infinite; animation-play-state: paused; }
 .gc-canvas-frame[data-flow-visible="true"] .gc-flow-edge-stream { animation-play-state: running; }
 .gc-canvas-stage.is-reading .gc-flow-edge-stream { animation-play-state: paused; }
 @keyframes gc-edge-flow { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -20; } }
+/* 每秒从运行节点发出一束紫色光线，仅沿该节点直接相连的出边输出。 */
+.gc-flow-edge-output { pointer-events: none; }
+.gc-flow-edge-output .gc-flow-beam {
+  fill: none; stroke: var(--app-generation-running-accent); stroke-width: 1.8; stroke-linecap: butt;
+  stroke-dasharray: 7.25 312.75; animation: gc-beam-output 1s linear infinite; animation-play-state: paused;
+}
+.gc-flow-edge-output .gc-flow-beam-halo { --gc-beam-offset: 79.75px; stroke-width: 6; stroke-dasharray: 87 233; opacity: 0.1; }
+.gc-canvas-frame[data-flow-visible="true"] .gc-flow-beam { animation-play-state: running; }
+.gc-canvas-stage.is-reading .gc-flow-beam { animation-play-state: paused; }
+@keyframes gc-beam-output { from { stroke-dashoffset: var(--gc-beam-offset); } to { stroke-dashoffset: calc(var(--gc-beam-offset) - 320px); } }
 @media (prefers-reduced-motion: reduce) {
   .gc-canvas-frame .gc-flow-edge-track { opacity: 0.65; }
   .gc-canvas-frame .gc-flow-edge-stream { display: none; animation: none; }
+  .gc-flow-edge-output { display: none; }
+  .gc-flow-edge-output .gc-flow-beam { animation: none; }
 }
 .gc-flow-group, .gc-flow-special { box-sizing: border-box; width: 100%; height: 100%; padding: 14px; border: 1px solid var(--app-surface-border); border-radius: 10px; background: var(--app-surface); }
+.gc-flow-group {
+  position: relative; border-color: transparent; background: var(--app-surface);
+}
+.gc-flow-special { border-color: transparent; background: transparent; }
+.gc-flow-special.is-document { position: relative; padding: 0; border: 0; }
+.gc-flow-special.is-document .gc-document-node { margin-top: 0; }
+/* 对齐容器 border-box，描边居中跨在外沿，避免背景在虚线外露出一圈。 */
+.gc-flow-group-outline { position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); overflow: visible; pointer-events: none; }
+.gc-flow-group-outline rect {
+  width: 100%; height: 100%; fill: none;
+  stroke: color-mix(in srgb, var(--app-surface-text-muted) 65%, var(--app-surface-border));
+  stroke-width: 2.2; stroke-dasharray: 2 7; stroke-linecap: round;
+  animation: gc-group-outline-flow 10s linear infinite; animation-play-state: paused;
+}
+.gc-canvas-frame[data-flow-visible="true"] .gc-flow-group-outline rect { animation-play-state: running; }
+.gc-canvas-stage.is-reading .gc-flow-group-outline rect { animation-play-state: paused; }
+@keyframes gc-group-outline-flow { to { stroke-dashoffset: -36; } }
+@media (prefers-reduced-motion: reduce) { .gc-flow-group-outline rect { animation: none; } }
 .gc-flow-group.is-dim, .gc-flow-stage.is-dim { opacity: 0.4; }
-.gc-flow-group.is-selected { border-color: var(--app-accent); }
+.gc-flow-group.is-selected .gc-flow-group-outline rect { stroke: var(--app-accent); }
 .gc-flow-group-header { display: flex; align-items: center; gap: 8px; }
 .gc-flow-group-header strong { font-size: 13px; }
 .gc-flow-group-select { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .gc-flow-group-header small { margin-left: auto; color: var(--app-surface-text-muted); font-size: 11px; }
 .gc-flow-group .gc-lane-empty { width: 100%; margin-top: 10px; min-height: 84px; }
+.gc-flow-empty-card { position: relative; margin-top: 10px; }
+.gc-flow-empty-card .gc-lane-empty { margin-top: 0; }
 .gc-flow-special .gc-document-node, .gc-flow-special .gc-lane-empty { width: 100%; margin-top: 10px; min-height: 72px; }
 .gc-flow-stage { position: relative; width: 100%; }
-.gc-flow-stage .gc-node { width: 100%; min-width: 0; min-height: 84px; padding: 8px 9px; }
+.gc-flow-stage .gc-node {
+  width: 100%; min-width: 0; min-height: 84px; padding: 8px 9px; border-width: 2px; overflow: hidden;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--gc-surface) 80%, var(--app-accent-soft)), var(--gc-surface) 55%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--app-surface) 85%, transparent);
+}
+.gc-flow-stage .gc-node:is(.is-approved, .is-imported) { background: linear-gradient(160deg, var(--app-testing-success-tag-bg), var(--gc-surface) 75%); }
+.gc-flow-stage .gc-node.is-draft { background: linear-gradient(160deg, var(--app-status-warning-bg), var(--gc-surface) 75%); }
+.gc-flow-stage .gc-node.is-rejected { background: linear-gradient(160deg, var(--app-danger-surface-soft), var(--gc-surface) 75%); }
 .gc-flow-stage .gc-node-main { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .gc-flow-stage .gc-node-main .anticon { flex: none; color: var(--app-accent); font-size: 15px; }
 .gc-flow-stage .gc-node.is-running {
   border-color: color-mix(in srgb, var(--app-generation-running-accent) 45%, var(--gc-line));
-  background: linear-gradient(135deg, color-mix(in srgb, var(--app-generation-running-accent) 10%, var(--gc-surface)), var(--gc-surface));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--app-generation-running-accent) 8%, var(--gc-surface)), var(--gc-surface) 55%);
   color: var(--gc-text);
   box-shadow: none;
 }
@@ -43,11 +82,16 @@
   content: ''; position: absolute; inset: 0; z-index: 0; border-radius: inherit; pointer-events: none;
   opacity: 0.08; animation: gc-card-breathe 2.6s ease-in-out infinite; animation-play-state: paused;
 }
-.gc-flow-stage .gc-node.is-running::before { background: linear-gradient(120deg, transparent, color-mix(in srgb, var(--app-generation-running-accent) 35%, transparent) 35%, color-mix(in srgb, var(--app-generation-running-accent) 35%, transparent) 65%, transparent); }
+.gc-flow-stage .gc-node.is-running::before { inset: -20% -60%; background: linear-gradient(110deg, transparent 36%, color-mix(in srgb, var(--app-generation-running-accent) 30%, transparent) 49%, transparent 62%); animation-name: gc-card-sheen; animation-duration: 3s; }
 .gc-flow-stage .gc-node.is-draft::before { background: linear-gradient(120deg, transparent, color-mix(in srgb, var(--app-task-status-warning) 32%, transparent) 35%, color-mix(in srgb, var(--app-task-status-warning) 32%, transparent) 65%, transparent); animation-duration: 3.2s; }
 .gc-canvas-frame[data-flow-visible="true"] .gc-flow-stage .gc-node::before { animation-play-state: running; }
 .gc-canvas-stage.is-reading .gc-flow-stage .gc-node::before { animation-play-state: paused; }
-.gc-flow-stage .gc-node:is(.is-running, .is-draft)::before { background-size: 200% 100%; }
+.gc-flow-stage .gc-node.is-draft::before { background-size: 200% 100%; }
+@keyframes gc-card-sheen {
+  0%, 15% { transform: translateX(-26%); opacity: 0; }
+  50% { opacity: 0.8; }
+  85%, 100% { transform: translateX(26%); opacity: 0; }
+}
 @keyframes gc-card-breathe {
   0%, 100% { opacity: 0.08; background-position: 100% 50%; }
   50% { opacity: 0.9; background-position: 0% 50%; }
@@ -62,8 +106,18 @@
 /* 用例图谱是「完整用例」派生的入口，不进入版本链，用虚线区分。 */
 .gc-node.is-derived { border-style: dashed; border-color: color-mix(in srgb, var(--app-accent) 34%, var(--gc-line)); background: linear-gradient(180deg, var(--app-accent-soft), transparent 70%), var(--gc-surface); }
 .gc-node.is-derived .gc-node-state { color: var(--app-accent); }
-.gc-flow-handle { opacity: 0; pointer-events: none; }
-.gc-inspector { display: flex; flex: 0 0 304px; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; border: 1px solid var(--app-surface-border); border-radius: 12px; background: var(--app-surface); }
+.gc-flow-handle { width: 0; height: 0; min-width: 0; min-height: 0; border: 0; opacity: 0; pointer-events: none; }
+.gc-flow-handle.react-flow__handle-left { left: 0; }
+.gc-flow-handle.react-flow__handle-right { right: 0; }
+.gc-inspector { display: flex; flex: 0 0 304px; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; border: 1px solid var(--app-surface-border); border-radius: 12px; background: var(--app-surface); animation: gc-inspector-enter 450ms cubic-bezier(.16, 1, .3, 1) backwards; }
+.gc-inspector-header { animation: gc-inspector-heading-enter 450ms cubic-bezier(.16, 1, .3, 1) backwards; }
+.gc-inspector-content > .gc-inspector-section, .gc-inspector-content > .gc-inspector-summary, .gc-inspector-content > .gc-inspector-source { animation: gc-inspector-section-enter 450ms cubic-bezier(.16, 1, .3, 1) backwards; }
+.gc-inspector-content > .gc-inspector-section:nth-of-type(2) { animation-delay: 80ms; }
+.gc-inspector-content > .gc-inspector-section:nth-of-type(3) { animation-delay: 160ms; }
+@keyframes gc-inspector-enter { from { opacity: .65; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+@keyframes gc-inspector-heading-enter { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes gc-inspector-section-enter { from { opacity: 0; clip-path: inset(0 0 100% 0); transform: translateY(18px); } to { opacity: 1; clip-path: inset(0); transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .gc-inspector, .gc-inspector-header, .gc-inspector-content > .gc-inspector-section, .gc-inspector-content > .gc-inspector-summary, .gc-inspector-content > .gc-inspector-source { animation: none; } }
 .gc-inspector-header { display: flex; flex: none; flex-direction: column; align-items: stretch; gap: 6px; padding: 16px; border-bottom: 1px solid var(--app-surface-divider); background: var(--app-list-toolbar-bg); }
 .gc-inspector-header h2 { margin: 0; font-size: 15px; line-height: 1.4; }
 .gc-inspector-header p { margin: 4px 0 0; color: var(--app-surface-text-muted); font-size: 12px; }
@@ -82,6 +136,9 @@
 .gc-inspector-versions > span { color: var(--app-surface-text-muted); font-size: 12px; }
 .gc-inspector-trace { display: flex; flex-wrap: wrap; gap: 5px; }
 .gc-inspector-trace .gc-trace-chip { max-width: 100%; }
+.gc-inspector-run-meta { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; color: var(--app-surface-text-muted); font-size: 12px; }
+.gc-inspector-run-meta > span:first-child { flex: none; }
+.gc-inspector-run-id { min-width: 0; font-size: 12px; white-space: nowrap; }
 .gc-inspector-actions { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--app-surface-divider); }
 @media (max-width: 900px) { .gc-canvas-workspace { flex-direction: column; overflow: auto; } .gc-canvas-frame { flex: 0 0 auto; height: min(60vh, 600px); min-height: 380px; } .gc-inspector { flex: 0 0 auto; min-height: 220px; } }
 
@@ -89,7 +146,10 @@
 /* 画布内产物占满左侧容器，侧栏保持独立交互。保留地图实例以恢复缩放与位置。 */
 .gc-canvas-stage { position: relative; display: flex; flex: 1 1 auto; min-width: 0; min-height: 0; }
 .gc-canvas-map { display: flex; flex: 1 1 auto; min-width: 0; min-height: 0; }
-.gc-canvas-stage.is-reading > .gc-canvas-map { visibility: hidden; pointer-events: none; }
+.gc-canvas-stage.is-reading > .gc-canvas-map { pointer-events: none; }
+.gc-canvas-stage > .gc-embedded-artifact { transform-origin: var(--gc-reading-origin-x, 50%) var(--gc-reading-origin-y, 50%); animation: gc-reading-enter 380ms cubic-bezier(.22, 1, .36, 1) backwards; }
+@keyframes gc-reading-enter { from { opacity: 0; transform: scale(.93); } to { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .gc-canvas-stage > .gc-embedded-artifact { animation: none; } }
 .gc-canvas-stage > .gc-embedded-artifact { position: absolute; inset: 0; display: flex; flex-direction: column; width: 100%; max-width: none; height: 100%; margin: 0; padding: 0; top: 0; overflow: hidden; border: 1px solid var(--app-surface-border); border-radius: 12px; background: var(--app-surface); }
 
 .gc-embedded-artifact .ant-modal-header { position: relative; flex: 0 0 auto; margin: 0; padding: 16px 24px; border-bottom: 1px solid var(--app-surface-border); background: var(--app-list-toolbar-bg); }
@@ -105,11 +165,9 @@
 .gc-canvas-stage .gc-embedded-artifact .ant-modal-title { flex: 1 1 200px; min-width: 0; padding-right: 0; }
 .gc-canvas-stage .gc-embedded-artifact .gc-return-canvas { position: static; flex: 0 0 auto; margin-left: auto; }
 
-/* 画布阅读时，版本、阅读工具与业务操作集中在侧栏。 */
+/* 画布阅读时，版本、上游与对比集中在侧栏；视图切换和复制跟随正文。 */
 .gc-inspector-reading-tools .gc-title-tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 8px; }
 .gc-inspector-reading-tools .gc-title-tools > .gc-upstream-trigger { grid-column: 1 / -1; width: 100%; max-width: 100%; }
-.gc-inspector-reading-tools .ai-artifact-mode-toolbar { justify-content: flex-start; margin: 8px 0 0; }
-.gc-inspector-reading-tools .ai-artifact-mode-controls { flex-wrap: wrap; justify-content: space-between; width: 100%; }
 .gc-inspector-reading-tools .gc-footer-row { display: flex; flex-direction: column; align-items: stretch; }
 .gc-inspector-reading-tools .gc-modal-actions { display: flex; flex-direction: column; align-items: stretch; gap: 10px; width: 100%; margin: 0; }
 .gc-inspector-reading-tools .gc-modal-actions > span > button { width: 100%; }
@@ -132,11 +190,17 @@
   .gc-embedded-artifact .gc-workspace.is-revising > .revision-side-panel { flex: 0 0 auto; min-width: 0; min-height: 480px; }
 }
 .gc-reading-body > .gc-artifact-scroll { flex: 1 1 0%; margin: 0; border: 0; }
+/* 阅读区顶栏沿用产物标题栏：16px 内距、工具栏底色和底部分隔线，左侧阶段名，右侧视图切换与复制。 */
+.gc-reading-toolbar { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 24px; background: var(--app-list-toolbar-bg); border-bottom: 1px solid var(--app-surface-border); }
+.gc-reading-toolbar-title { min-width: 0; overflow: hidden; font-size: 16px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 900px) { .gc-reading-toolbar { padding-inline: 16px; } }
 /* 嵌入式测试点树图由左侧面板提供唯一外框。 */
 .gc-reading-body > .gc-artifact-scroll.is-case-names { padding: 0; }
 .gc-reading-body > .is-case-names .ai-case-name-tree { padding: 0; border: 0; border-radius: 0; background: transparent; }
 .gc-reading-body > .is-case-names .ai-case-name-tree-stats { margin: 0; padding: 12px; }
 .gc-reading-body > .gc-artifact-scroll.is-raw { padding: 0; }
+.gc-reading-body > .gc-artifact-scroll.is-raw .json-editor-shell,
+.gc-reading-body > .gc-artifact-scroll.is-raw .json-editor-shell:focus-within { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .gc-reading-body > .gc-artifact-scroll.is-raw > .gc-raw-editor { flex: 1 1 0%; height: 100%; overflow: hidden; }
 
 .gc-inspector-reading { box-shadow: none; }
@@ -157,10 +221,6 @@
 .gc-inspector-review h3 { margin: 0; font-size: 12px; font-weight: 600; }
 .gc-inspector-review .gc-based-chip { flex: none; width: auto; }
 .gc-inspector-reading-tools .gc-title-tools > .ant-btn { min-width: 0; min-height: 32px; font-size: 12px; }
-.gc-inspector-reading-tools .ai-artifact-mode-controls > .ant-segmented { order: -1; flex: 1; }
-.gc-inspector-reading-tools .ai-artifact-mode-controls .ant-segmented-group { display: flex; }
-.gc-inspector-reading-tools .ai-artifact-mode-controls .ant-segmented-item { flex: 1; text-align: center; }
-.gc-inspector-reading-tools .ai-artifact-mode-toolbar { margin-top: 4px; }
 @media (max-width: 900px) {
   .gc-inspector-content { flex: 0 0 auto; overflow: visible; }
   .gc-inspector-footer { max-height: none; overflow: visible; }

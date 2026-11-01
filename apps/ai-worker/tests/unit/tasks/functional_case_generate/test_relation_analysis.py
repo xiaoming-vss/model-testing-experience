@@ -3,11 +3,11 @@ import tempfile
 import unittest
 from datetime import datetime
 
-from testing_agent_ai_worker.config.models import NanobotConfig
+from testing_agent_ai_worker.config.models import PiConfig
 from testing_agent_ai_worker.models.execution import TaskStatus
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.tasks.functional_case_generate.executor import (
-    FunctionalCaseNanobotExecutor,
+    FunctionalCaseExecutor,
 )
 from testing_agent_ai_worker.tasks.functional_case_generate.validation import (
     generate_validated,
@@ -24,11 +24,41 @@ def relation_output():
             {"path_id": "P01", "case_ids": ["C001", "C002", "C003"]},
         ],
         "edges": [
-            {"edge_id": "E01", "from_case_id": "C001", "to_case_id": "C002", "relation_type": "next", "order": 1},
-            {"edge_id": "E02", "from_case_id": "C002", "to_case_id": "C003", "relation_type": "next", "order": 1},
-            {"edge_id": "E03", "from_case_id": "C002", "to_case_id": "C004", "relation_type": "branch", "order": 2},
-            {"edge_id": "E04", "from_case_id": "C004", "to_case_id": "C005", "relation_type": "next", "order": 1},
-            {"edge_id": "E05", "from_case_id": "C006", "to_case_id": "C003", "relation_type": "next", "order": 1},
+            {
+                "edge_id": "E01",
+                "from_case_id": "C001",
+                "to_case_id": "C002",
+                "relation_type": "next",
+                "order": 1,
+            },
+            {
+                "edge_id": "E02",
+                "from_case_id": "C002",
+                "to_case_id": "C003",
+                "relation_type": "next",
+                "order": 1,
+            },
+            {
+                "edge_id": "E03",
+                "from_case_id": "C002",
+                "to_case_id": "C004",
+                "relation_type": "branch",
+                "order": 2,
+            },
+            {
+                "edge_id": "E04",
+                "from_case_id": "C004",
+                "to_case_id": "C005",
+                "relation_type": "next",
+                "order": 1,
+            },
+            {
+                "edge_id": "E05",
+                "from_case_id": "C006",
+                "to_case_id": "C003",
+                "relation_type": "next",
+                "order": 1,
+            },
         ],
     }
 
@@ -76,7 +106,9 @@ class RelationContractTests(unittest.TestCase):
 
     def test_references_must_come_from_input_cases(self):
         # C007 未被任何主骨或连线引用仍合法：未出现表示独立用例。
-        validate_output("relation_analysis", json.dumps(relation_output()), expected_case_ids=CASE_IDS)
+        validate_output(
+            "relation_analysis", json.dumps(relation_output()), expected_case_ids=CASE_IDS
+        )
 
         def unknown_edge_target(data):
             data["edges"][3]["to_case_id"] = "C999"
@@ -88,7 +120,11 @@ class RelationContractTests(unittest.TestCase):
             data["main_paths"][0]["case_ids"] = ["C001", "C999"]
             data["edges"][0]["to_case_id"] = "C999"
 
-        for change in (unknown_edge_target, unknown_edge_source, unknown_path_member_with_matching_edge):
+        for change in (
+            unknown_edge_target,
+            unknown_edge_source,
+            unknown_path_member_with_matching_edge,
+        ):
             with self.subTest(change=change), self.assertRaisesRegex(ValueError, "未知 ID"):
                 validate_output(
                     "relation_analysis",
@@ -109,7 +145,12 @@ class RelationContractTests(unittest.TestCase):
         def duplicated_path_id(data):
             data["main_paths"].append({"path_id": "P01", "case_ids": ["C002", "C004"]})
 
-        for change in (single_case_path, repeated_case_in_path, duplicated_path_sequence, duplicated_path_id):
+        for change in (
+            single_case_path,
+            repeated_case_in_path,
+            duplicated_path_sequence,
+            duplicated_path_id,
+        ):
             with self.subTest(change=change), self.assertRaises(ValueError):
                 validate_output("relation_analysis", json.dumps(edit(relation_output(), change)))
 
@@ -140,7 +181,12 @@ class RelationContractTests(unittest.TestCase):
         def duplicated_order_for_source(data):
             data["edges"].append(dict(data["edges"][3], from_case_id="C002", to_case_id="C005"))
 
-        for change in (duplicated_edge_id, self_edge, duplicated_directed_pair, duplicated_order_for_source):
+        for change in (
+            duplicated_edge_id,
+            self_edge,
+            duplicated_directed_pair,
+            duplicated_order_for_source,
+        ):
             with self.subTest(change=change), self.assertRaises(ValueError):
                 validate_output("relation_analysis", json.dumps(edit(relation_output(), change)))
 
@@ -153,7 +199,9 @@ class RelationContractTests(unittest.TestCase):
 
         for value in (0, -1, "1", 1.5, True, None):
             with self.subTest(order=value), self.assertRaises(ValueError):
-                validate_output("relation_analysis", json.dumps(edit(relation_output(), retyped(value))))
+                validate_output(
+                    "relation_analysis", json.dumps(edit(relation_output(), retyped(value)))
+                )
 
 
 class RelationValidationLoopTests(unittest.IsolatedAsyncioTestCase):
@@ -206,7 +254,16 @@ class RelationCheckpointTests(unittest.TestCase):
 
         cases = {
             "cases": [
-                {"case_id": case_id, "case_module": "任务管理", "case_title": f"用例{i}", "case_type": "功能测试", "priority": "1", "precondition": ["1. 准备"], "test_steps": ["1. 执行"], "expected_results": ["1. 成功"]}
+                {
+                    "case_id": case_id,
+                    "case_module": "任务管理",
+                    "case_title": f"用例{i}",
+                    "case_type": "功能测试",
+                    "priority": "1",
+                    "precondition": ["1. 准备"],
+                    "test_steps": ["1. 执行"],
+                    "expected_results": ["1. 成功"],
+                }
                 for i, case_id in enumerate(CASE_IDS, 1)
             ]
         }
@@ -238,8 +295,8 @@ class RelationCheckpointTests(unittest.TestCase):
                     openapi_content="",
                 ),
             )
-            result = FunctionalCaseNanobotExecutor(
-                nanobot_config=NanobotConfig(runtime_root=tmp), skill_runner=skill_runner
+            result = FunctionalCaseExecutor(
+                agent_config=PiConfig(runtime_root=tmp), skill_runner=skill_runner
             ).execute(task, datetime.now().astimezone(), progress.append)
 
         self.assertEqual(result.status, TaskStatus.SUCCESS)
@@ -291,8 +348,8 @@ class RelationCheckpointTests(unittest.TestCase):
                 ),
             )
             with self.assertRaisesRegex(ValueError, "case_id"):
-                FunctionalCaseNanobotExecutor(
-                    nanobot_config=NanobotConfig(runtime_root=tmp),
+                FunctionalCaseExecutor(
+                    agent_config=PiConfig(runtime_root=tmp),
                     skill_runner=unexpected_skill_runner,
                 ).execute(task, datetime.now().astimezone(), lambda event: None)
 

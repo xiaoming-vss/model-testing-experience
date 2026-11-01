@@ -11,15 +11,15 @@ from typing import Any
 
 import yaml
 
-from testing_agent_ai_worker.config.models import NanobotConfig
-from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
-from testing_agent_ai_worker.models.task import Task
-from testing_agent_ai_worker.nanobot_runtime.config_builder import task_config_path
-from testing_agent_ai_worker.nanobot_runtime.paths import (
+from testing_agent_ai_worker.agent.config_builder import task_config_path
+from testing_agent_ai_worker.agent.paths import (
     resolve_runtime_paths,
     resolve_task_workspace,
 )
-from testing_agent_ai_worker.nanobot_runtime.skill_step import run_skill_step
+from testing_agent_ai_worker.agent.skill_step import run_skill_step
+from testing_agent_ai_worker.config.models import AgentBackendConfig
+from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
+from testing_agent_ai_worker.models.task import Task
 from testing_agent_ai_worker.tasks.output_repair import generate_validated, parse_yaml
 from testing_agent_ai_worker.tasks.result_summary import build_task_result_summary
 from testing_agent_ai_worker.tasks.ui_case_generate.missing_fields import draft_step_for_validation
@@ -83,19 +83,19 @@ UI_KEYWORD_RULES = {
 }
 
 
-class UiCaseNanobotExecutor(TaskExecutor):
+class UiCaseExecutor(TaskExecutor):
     """下载前端源码归档并调用 UI 用例生成技能。"""
 
     def __init__(
         self,
         *,
-        nanobot_config: NanobotConfig,
+        agent_config: AgentBackendConfig,
         source_downloader: SourceArchiveDownloader,
         skill_runner=run_skill_step,
         skill_name: str = UI_CASE_SKILL_NAME,
     ) -> None:
-        self.nanobot_config = nanobot_config
-        self.runtime_paths = resolve_runtime_paths(nanobot_config)
+        self.agent_config = agent_config
+        self.runtime_paths = resolve_runtime_paths(agent_config)
         self.source_downloader = source_downloader
         self.skill_runner = skill_runner
         self.skill_name = skill_name
@@ -105,7 +105,7 @@ class UiCaseNanobotExecutor(TaskExecutor):
             return self._failure(task, started_at, f"不支持的任务类型: {task.task_type}")
 
         try:
-            workspace = resolve_task_workspace(self.nanobot_config, task)
+            workspace = resolve_task_workspace(self.agent_config, task)
             source_root = self.source_downloader.download_and_extract(
                 source_archive_download_url=task.payload.source_archive_download_url,
                 task=task,
@@ -114,7 +114,7 @@ class UiCaseNanobotExecutor(TaskExecutor):
             if task.payload.metadata.get("uiWorkflowVersion") == "ui_three_stage/1.0":
                 from testing_agent_ai_worker.tasks.ui_case_generate.chain import execute_stage
 
-                with task_config_path(nanobot_config=self.nanobot_config, task=task) as config_path:
+                with task_config_path(agent_config=self.agent_config, task=task) as config_path:
                     return execute_stage(
                         task=task,
                         started_at=started_at,
@@ -130,7 +130,7 @@ class UiCaseNanobotExecutor(TaskExecutor):
             if task.payload.extra_instruction.strip():
                 input_text = f"{input_text}\n\n{task.payload.extra_instruction.strip()}"
             progress_callback(self._progress(task, source_root))
-            with task_config_path(nanobot_config=self.nanobot_config, task=task) as config_path:
+            with task_config_path(agent_config=self.agent_config, task=task) as config_path:
 
                 def repair_progress(event: dict[str, Any]) -> None:
                     progress = self._progress(task, source_root)
@@ -145,7 +145,7 @@ class UiCaseNanobotExecutor(TaskExecutor):
                         inputs=input_text,
                         generate=lambda prompt: self.skill_runner(
                             input_text=prompt,
-                            session_key=task.nanobot_session_key,
+                            session_key=task.session_key,
                             skill_name=self.skill_name,
                             config_path=config_path,
                             workspace=str(workspace),

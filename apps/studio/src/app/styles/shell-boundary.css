@@ -1,25 +1,8 @@
-/* The sidebar owns the vertical boundary for the full shell height. */
 .app-shell.app-shell-macos > .ant-layout {
   background: var(--mac-glass-header) !important;
 }
-
-.app-shell.app-shell-macos .app-sidebar {
-  border-right: 1px solid var(--app-shell-border) !important;
-  box-shadow: none !important;
-}
-
-.app-shell.app-shell-macos .sidebar-brand {
-  border-bottom: 1px solid var(--app-shell-border);
-}
-
-.app-shell.app-shell-macos .app-header.compact-header {
-  border-bottom: 0;
-}
-
-.app-shell.app-shell-macos .app-content {
-  position: relative;
-}
-
+.app-shell.app-shell-macos .app-header.compact-header { border-bottom: 0; }
+.app-shell.app-shell-macos .app-content { position: relative; }
 .app-shell.app-shell-macos .app-content::before {
   content: '';
   position: absolute;

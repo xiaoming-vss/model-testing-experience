@@ -131,7 +131,10 @@ def ensure_stages(
     if stages:
         return stages, attempts
     names = (
-        list(UI_STAGES)
+        ["openapi_extract", "generate"]
+        if kind == "api_case_generate"
+        and (run.snapshot_json or {}).get("apiWorkflowVersion") == "api_two_stage/1.0"
+        else list(UI_STAGES)
         if kind == "ui_case_generate"
         and (run.snapshot_json or {}).get("uiWorkflowVersion") == UI_WORKFLOW_VERSION
         else layout(kind)

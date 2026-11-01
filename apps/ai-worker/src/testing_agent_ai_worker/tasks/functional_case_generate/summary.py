@@ -115,7 +115,9 @@ def relation_summary_stats(relations_json: str) -> dict[str, int]:
         for edge in edges:
             if isinstance(edge, dict):
                 referenced.update(
-                    edge[key] for key in ("from_case_id", "to_case_id") if isinstance(edge.get(key), str)
+                    edge[key]
+                    for key in ("from_case_id", "to_case_id")
+                    if isinstance(edge.get(key), str)
                 )
     if referenced:
         stats["linkedCaseCount"] = len(referenced)

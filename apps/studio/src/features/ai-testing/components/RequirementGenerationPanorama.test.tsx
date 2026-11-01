@@ -1,7 +1,7 @@
 import extractionSource from '@/domain/requirements/fixtures/document-extraction.example.json?raw'
 import understandingSource from '@/domain/requirements/fixtures/requirement-understanding.example.json?raw'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest'
@@ -29,14 +29,14 @@ vi.mock('../api/generationChain.api', () => ({
 vi.mock('../api/aiTesting.api', () => ({
   aiTestingApi: {
     getFunctionalCaseGenerateTaskRun: vi.fn(), getFunctionalCaseGenerateTask: vi.fn(),
-    getUiCaseGenerateTask: vi.fn(), uploadUiCaseGenerateTaskSourceArchive: vi.fn(),
+    getUiCaseGenerateTask: vi.fn(), getApiCaseGenerateTask: vi.fn(), uploadUiCaseGenerateTaskSourceArchive: vi.fn(),
     generateFunctionalCaseRelationAnalysis: vi.fn(async (runId: string) => ({ runId })),
   },
 }))
 vi.mock('../hooks/usePersonalLlmChoice', () => ({
   usePersonalLlmChoice: () => ({
     choose: async () => 'llm',
-    chooseRun: async () => ({ connectionId: 'llm', checkpointEnabled: true }),
+    chooseRun: async () => ({ connectionId: 'llm', checkpointEnabled: true, instruction: '只覆盖登录接口' }),
     dialog: null,
   }),
 }))
@@ -201,16 +201,22 @@ it('单击选中并展示侧栏，双击在画布内打开阶段产物', async (
   mount()
   const user = userEvent.setup()
   expect(await screen.findByRole('button', { name: 'UI 用例设计 · 待审核' })).toBeInTheDocument()
-  expect(screen.getAllByText('需求文档').length).toBeGreaterThan(0)
+  expect(screen.getByText('查看需求文档')).toBeInTheDocument()
+  expect(screen.queryByText('只读来源')).not.toBeInTheDocument()
   expect(screen.getAllByText('UI 测试').length).toBeGreaterThan(0)
   expect(screen.queryByRole('group', { name: '筛选生成链' })).not.toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: '需求的生成链' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('complementary', { name: '阶段详情' })).not.toBeInTheDocument()
 
   const card = screen.getByRole('button', { name: 'UI 用例设计 · 待审核' })
   await user.click(card)
   expect(card).toHaveAttribute('aria-pressed', 'true')
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   expect(within(screen.getByRole('complementary', { name: '阶段详情' })).getByRole('heading', { name: 'UI 用例设计' })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: '关闭阶段详情' }))
+  expect(screen.queryByRole('complementary', { name: '阶段详情' })).not.toBeInTheDocument()
+  await user.click(card)
+  expect(screen.getByRole('complementary', { name: '阶段详情' })).toBeVisible()
   await user.dblClick(card)
   const dialog = (await screen.findByRole('dialog')).closest('.gc-canvas-workspace') as HTMLElement
   expect(within(dialog).getByRole('heading', { name: 'UI 用例设计' })).toBeInTheDocument()
@@ -229,6 +235,40 @@ it('单击选中并展示侧栏，双击在画布内打开阶段产物', async (
   await waitFor(() => expect(generationChainApi.review).toHaveBeenCalledWith('req', 'ui', 'ui_design', {
     action: 'approve', continueAfter: true, connectionId: 'llm',
   }))
+})
+
+it('进入和返回阅读区时只为详情栏内容添加轻微过渡', async () => {
+  mount()
+  const user = userEvent.setup()
+  const card = await screen.findByRole('button', { name: 'UI 用例设计 · 待审核' })
+  await user.click(card)
+  const inspector = screen.getByRole('complementary', { name: '阶段详情' })
+  const header = inspector.querySelector<HTMLElement>('.gc-inspector-header')!
+  const animate = vi.fn(() => ({ id: '', cancel: vi.fn() }))
+  Object.defineProperty(header, 'animate', { value: animate, configurable: true })
+  await user.dblClick(card)
+  expect(await screen.findByRole('dialog')).toBeInTheDocument()
+  expect(animate).toHaveBeenCalledTimes(1)
+  await user.click(within(inspector).getByRole('button', { name: '返回流程' }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  expect(animate).toHaveBeenCalledTimes(2)
+})
+
+it('返回时等待阅读区收回后恢复原画布', async () => {
+  mount()
+  const user = userEvent.setup()
+  await user.dblClick(await screen.findByRole('button', { name: 'UI 用例设计 · 待审核' }))
+  const reader = await screen.findByRole('dialog')
+  const animation = { onfinish: null as (() => void) | null, cancel: vi.fn() }
+  const animate = vi.fn(() => animation)
+  Object.defineProperty(reader, 'animate', { value: animate, configurable: true })
+  await user.click(within(screen.getByRole('complementary', { name: '阶段详情' })).getByRole('button', { name: '返回流程' }))
+  expect(animate).toHaveBeenCalledTimes(1)
+  expect(screen.getByRole('dialog')).toBeInTheDocument()
+  expect(reader.closest('.gc-canvas-stage')?.querySelector('.gc-canvas-map')).toHaveAttribute('inert')
+  act(() => { animation.onfinish?.() })
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  expect(screen.getByRole('button', { name: 'UI 用例设计 · 待审核' })).toBeVisible()
 })
 
 it('单击切换卡片只更新选中与侧栏，键盘可打开选中阶段', async () => {
@@ -254,9 +294,9 @@ it('单击切换卡片只更新选中与侧栏，键盘可打开选中阶段', a
 it('选择 UI 测试分组才显示源码设置，阶段卡片只显示阶段信息', async () => {
   mount()
   const user = userEvent.setup()
-  const inspector = await screen.findByRole('complementary', { name: '阶段详情' })
   const stage = await screen.findByRole('button', { name: 'UI 用例设计 · 待审核' })
   await user.click(stage)
+  const inspector = screen.getByRole('complementary', { name: '阶段详情' })
   expect(within(inspector).queryByRole('region', { name: 'UI 测试源码包' })).not.toBeInTheDocument()
   const group = screen.getByRole('button', { name: '选择UI 测试分组' })
   await user.click(group)
@@ -273,6 +313,39 @@ it('选择 UI 测试分组才显示源码设置，阶段卡片只显示阶段信
   expect(within(inspector).getByRole('region', { name: 'UI 测试源码包' })).toBeInTheDocument()
 })
 
+it('单击 API 阶段可在侧栏运行两步生成', async () => {
+  const apiChain = { ...emptyChain('api', 'API 测试'), configured: true, taskId: 'api-task' }
+  apiChain.stages[0] = { ...apiChain.stages[0], stage: 'openapi_extract', label: '接口配置提取' }
+  apiChain.stages.push({ stage: 'generate', label: 'API 用例生成', order: 1, state: 'not_started', versions: [], upstreamStages: ['openapi_extract'], blockedReason: '请先审核通过「接口配置提取」' })
+  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [apiChain] })
+  vi.mocked(generationChainApi.chain).mockResolvedValue(apiChain)
+  vi.mocked(generationChainApi.run).mockResolvedValue(apiChain)
+  mount()
+  const user = userEvent.setup()
+  expect(await screen.findByRole('button', { name: 'API 用例生成 · 未开始' })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: '接口配置提取 · 未开始' }))
+  const inspector = screen.getByRole('complementary', { name: '阶段详情' })
+  expect(within(inspector).getByText(/提取 OpenAPI 接口配置/)).toBeInTheDocument()
+  expect(within(inspector).getByText('OpenAPI 文档')).toBeInTheDocument()
+  expect(within(inspector).queryByText('需求材料')).not.toBeInTheDocument()
+  await user.click(await within(inspector).findByRole('button', { name: '运行此阶段' }))
+  await waitFor(() => expect(generationChainApi.run).toHaveBeenCalledWith('req', 'api', 'openapi_extract', expect.objectContaining({ instruction: '只覆盖登录接口' })))
+})
+
+it('API 阶段阻塞时侧栏展示原因并禁止运行', async () => {
+  const apiChain = { ...emptyChain('api', 'API 测试'), configured: true, taskId: 'api-task' }
+  apiChain.stages[0].label = 'API 用例生成'
+  apiChain.stages[0].blockedReason = '请先配置文档'
+  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [apiChain] })
+  vi.mocked(generationChainApi.chain).mockResolvedValue(apiChain)
+  mount()
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'API 用例生成 · 未开始' }))
+  const inspector = screen.getByRole('complementary', { name: '阶段详情' })
+  expect(await within(inspector).findByText('请先配置文档')).toBeInTheDocument()
+  expect(within(inspector).getByRole('button', { name: '运行此阶段' })).toBeDisabled()
+})
+
 it('未配置 UI 测试时单击入口在侧栏添加源码包', async () => {
   vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [{ ...chain(), configured: false, taskId: undefined, stages: [], draftCount: 0 }] })
   mount()
@@ -285,7 +358,23 @@ it('未配置 UI 测试时单击入口在侧栏添加源码包', async () => {
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
 
-it('阅读工具和审核操作集中在侧栏，正文没有重复操作栏', async () => {
+it('API 测试从分组侧栏打开文档编辑弹框并保存', async () => {
+  vi.mocked(requirementDesignApi.configure).mockResolvedValue({ taskId: 'api-task' } as never)
+  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [{ ...emptyChain('api', 'API 测试'), taskId: '' }] })
+  mount()
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: /开始API 测试/ }))
+  const inspector = screen.getByRole('complementary', { name: '阶段详情' })
+  expect(within(inspector).getByText('尚未配置文档')).toBeInTheDocument()
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  await user.click(within(inspector).getByRole('button', { name: '添加文档' }))
+  const dialog = await screen.findByRole('dialog')
+  await user.type(within(dialog).getByRole('textbox', { name: 'OpenAPI / Swagger 文档' }), 'openapi: 3.0.0')
+  await user.click(within(dialog).getByRole('button', { name: '保存设置' }))
+  await waitFor(() => expect(requirementDesignApi.configure).toHaveBeenCalledWith('req', 'api', expect.objectContaining({ sourceContent: 'openapi: 3.0.0' })))
+})
+
+it('阅读工具和审核操作在侧栏，视图切换与复制在正文右上角', async () => {
   mount()
   const user = userEvent.setup()
   await user.dblClick(await screen.findByRole('button', { name: 'UI 用例设计 · 待审核' }))
@@ -296,11 +385,34 @@ it('阅读工具和审核操作集中在侧栏，正文没有重复操作栏', a
   expect(within(inspector).getByRole('button', { name: '继续优化' })).toBeInTheDocument()
   expect(within(inspector).getByRole('button', { name: /对比/ })).toBeInTheDocument()
   expect(within(inspector).getByRole('group', { name: '侧栏选择版本' })).toBeInTheDocument()
-  expect(within(inspector).getByLabelText('内容展示方式')).toBeInTheDocument()
+  expect(within(inspector).queryByLabelText('内容展示方式')).not.toBeInTheDocument()
+  const toolbar = within(reader).getByRole('toolbar', { name: '阅读视图工具' })
+  expect(within(toolbar).getByLabelText('内容展示方式')).toBeInTheDocument()
+  expect(within(toolbar).queryByRole('button', { name: /复制/ })).not.toBeInTheDocument()
+  await user.click(within(toolbar).getByTitle('YAML'))
+  expect(within(toolbar).getByRole('button', { name: '复制 YAML' })).toBeInTheDocument()
   expect(reader.querySelector('.ant-modal-footer')).toBeNull()
   expect(reader.querySelector('.gc-artifact-head')).toBeNull()
   expect(within(inspector).queryByText('基于 v1')).not.toBeInTheDocument()
   expect(within(reader).queryByRole('button', { name: '审核通过' })).not.toBeInTheDocument()
+})
+
+it('侧栏展示所选产物对应的运行 ID，切换版本时同步更新，无来源时隐藏', async () => {
+  const data = chain()
+  data.stages[1].draft!.runId = '01af1479-ec86-4acb-b51d-88b12fcff3da'
+  data.stages[1].versions[0].sourceRunId = 'approved-run-id'
+  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [data] })
+  vi.mocked(generationChainApi.chain).mockResolvedValue(data)
+  mount()
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'UI 用例设计 · 待审核' }))
+  const inspector = screen.getByRole('complementary', { name: '阶段详情' })
+  expect(await within(inspector).findByText('01af1479…f3da')).toHaveAttribute('title', '01af1479-ec86-4acb-b51d-88b12fcff3da')
+  await user.click(within(inspector).getByRole('button', { name: 'v1' }))
+  expect(await within(inspector).findByText('approved-run-id')).toBeInTheDocument()
+  expect(within(inspector).queryByText('01af1479…f3da')).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: '用例 YAML · 未开始' }))
+  await waitFor(() => expect(within(inspector).queryByText('运行 ID')).not.toBeInTheDocument())
 })
 
 it('侧栏保留上游选择、版本历史与追溯，阅读区直接展示正文，返回流程位于侧栏', async () => {
@@ -711,6 +823,21 @@ it('完整用例还没有运行记录时不显示用例图谱节点', async () =
   expect(screen.queryByRole('button', { name: '用例图谱 · 派生' })).not.toBeInTheDocument()
 })
 
+it('API 提取审核通过并继续时向下一阶段传递生成要求', async () => {
+  const apiData = chainWith('api', 'API 测试', [
+    draftStage('openapi_extract', '接口配置提取', 0, '{"login":{"path":"/login","method":"POST"}}'),
+    { stage: 'generate', label: 'API 用例生成', order: 1, state: 'not_started', versions: [], upstreamStages: ['openapi_extract'] },
+  ])
+  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [apiData] })
+  vi.mocked(generationChainApi.chain).mockResolvedValue(apiData)
+  vi.mocked(generationChainApi.review).mockResolvedValue(apiData)
+  mount()
+  const user = userEvent.setup()
+  await user.dblClick(await screen.findByRole('button', { name: '接口配置提取 · 待审核' }))
+  await user.click(await screen.findByRole('button', { name: /审核通过并继续/ }))
+  await waitFor(() => expect(generationChainApi.review).toHaveBeenCalledWith('req', 'api', 'openapi_extract', expect.objectContaining({ continueAfter: true, instruction: '只覆盖登录接口' })))
+})
+
 it('API 与 UI 阶段沿用页签的接口链路和 UI 三阶段工作台', async () => {
   const apiData = chainWith('api', 'API 测试', [
     draftStage('generate', 'API 用例生成', 0, '- name: 查询任务\n  method: GET\n  path: /api/tasks\n'),
@@ -863,6 +990,24 @@ it('运行中节点优先显示加载状态，保留旧草稿时也不显示为�
   expect(screen.getByRole('button', { name: '元素控件清单 · 已通过' }).querySelector('.gc-running-indicator')).toBeNull()
 })
 
+
+it('运行光束只到紧邻下游，运行结束后恢复普通连线', async () => {
+  const data = chain()
+  data.stages = data.stages.map((stage, index) => index === 0 ? { ...stage, state: 'running' } : stage)
+  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [data] })
+  vi.mocked(generationChainApi.chain).mockResolvedValue(data)
+  mount()
+  await screen.findByRole('button', { name: '元素控件清单 · 运行中' })
+  await waitFor(() => expect(document.querySelector('[data-testid="rf__edge-ui:1"] .gc-flow-edge-output')).not.toBeNull())
+  expect(document.querySelector('[data-testid="rf__edge-ui:2"] .gc-flow-edge-output')).toBeNull()
+  expect(document.querySelector('[data-testid="rf__edge-ui:2"] .gc-flow-edge-stream')).not.toBeNull()
+  const completed = { ...data, stages: data.stages.map((stage, index) => index === 0 ? { ...stage, state: 'approved' as const } : stage) }
+  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [completed] })
+  vi.mocked(generationChainApi.chain).mockResolvedValue(completed)
+  await act(async () => { await clients.at(-1)!.invalidateQueries({ queryKey: ['generationChain', 'req'] }) })
+  await waitFor(() => expect(document.querySelector('.gc-flow-edge-output')).toBeNull())
+  expect(document.querySelector('[data-testid="rf__edge-ui:1"] .gc-flow-edge-stream')).not.toBeNull()
+})
 
 it('后续阶段运行时可独立审核前序候选，但不能继续派发', async () => {
   const running = chain()

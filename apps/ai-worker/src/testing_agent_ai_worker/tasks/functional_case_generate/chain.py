@@ -1,4 +1,4 @@
-"""Functional test case generation nanobot chain."""
+"""Functional test case generation agent chain."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from testing_agent_ai_worker.nanobot_runtime.prompt import (
+from testing_agent_ai_worker.agent.prompt import (
     FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION,
     FUNCTIONAL_CASE_NAMES_JSON_ONLY_INSTRUCTION,
     FUNCTIONAL_RELATION_JSON_ONLY_INSTRUCTION,
@@ -26,11 +26,11 @@ from .validation import generate_validated
 
 
 def _default_from_config(**kwargs: Any) -> Any:
-    """延迟导入 nanobot，避免单元测试在无 SDK 环境下提前失败。"""
+    """延迟导入 agent，避免单元测试在无 SDK 环境下提前失败。"""
 
-    from nanobot import Nanobot
+    from testing_agent_ai_worker.agent import create_agent
 
-    return Nanobot.from_config(**kwargs)
+    return create_agent(**kwargs)
 
 
 @dataclass(slots=True)

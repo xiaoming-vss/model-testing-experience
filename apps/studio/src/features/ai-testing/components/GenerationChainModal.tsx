@@ -16,7 +16,7 @@ import { createPortal } from 'react-dom'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
-import { ApiCandidateResultView } from './ApiConfigDiagramView'
+import { ApiCandidateResultView, ApiConfigDiagramView } from './ApiConfigDiagramView'
 import { CaseNameTreeView } from './CaseNamesResultView'
 import { GeneratedCasesReviewView } from './GeneratedCasesReviewView'
 import { GenerationChainImportModal } from './GenerationChainImportModal'
@@ -24,7 +24,8 @@ import { RequirementAnalysisDiagramView } from './RequirementAnalysisView'
 import { RequirementMaterialComparison } from './RequirementMaterialComparison'
 import { RequirementUnderstandingComparison } from './RequirementUnderstandingComparison'
 import { RevisionDivider, RevisionSidePanel } from './RevisionSidePanel'
-import { ArtifactModeSwitch } from './ArtifactViewTabs'
+import { ArtifactModeControls, ArtifactModeSwitch } from './ArtifactViewTabs'
+import { useViewMotion } from '@/shared/ui/useViewMotion'
 import { UiStageVisual } from './uiStageVisual/UiStageVisual'
 import { ChainVisualArtifact } from './ChainVisualArtifact'
 import { UiGenerationInputsModal } from './UiGenerationInputsModal'
@@ -206,8 +207,9 @@ function ChainHeaderControls({ workspace, canWrite, inline = false }: {
   return inline ? controls : <><span ref={anchor} hidden />{target ? createPortal(controls, target) : null}</>
 }
 
-export function GenerationChainModal({ workspace, requirementId, projectId, open, onClose, onOpenLegacy, embedded = false, inspectorContainer, inspectorActionContainer }: {
+export function GenerationChainModal({ workspace, requirementId, projectId, open, onClose, onOpenLegacy, embedded = false, inspectorContainer, inspectorActionContainer, showApiRunInInspector = false }: {
   embedded?: boolean
+  showApiRunInInspector?: boolean
   inspectorContainer?: HTMLElement | null
   inspectorActionContainer?: HTMLElement | null
   workspace: GenerationChainWorkspace
@@ -225,6 +227,7 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
     runStage, review, revise, importOpen, importVersion,
     importableVersionId, openImport, closeImport, busy, operationPending, detail,
   } = workspace
+  const modePanelRef = useViewMotion(mode === 'visual' ? 0 : 1)
   const [inputsOpen, setInputsOpen] = useState(false)
   const access = useProjectAccess(projectId)
   const canWrite = access.can('write')
@@ -265,7 +268,7 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
       : stageKind === 'api' ? 'is-api-cases' : stageKind === 'ui' ? 'is-ui-stage' : ''
   const rawLabel = displayedContent.trim().startsWith('{') || displayedContent.trim().startsWith('[') ? 'JSON' : 'YAML'
   const rawContent = useMemo(() => formatRawArtifact(displayedContent, rawLabel), [displayedContent, rawLabel])
-  const copyText = mode === 'raw' ? rawContent : displayedContent
+  const copyText = mode === 'raw' ? rawContent : undefined
 
   if (!selected) return null
   if (detail.isPending && !stage) {
@@ -290,7 +293,7 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
         {upstreamStage?.label ?? name}
         <b>{version?.label ?? (missing ? '上游已删除' : '未选择')}</b>
       </span>
-    }) : chain.kind !== 'ui' ? <span className="gc-trace-chip">需求材料 <b>只读来源</b></span> : null}
+    }) : chain.kind !== 'ui' ? <span className="gc-trace-chip">{chain.kind === 'api' ? 'OpenAPI 文档' : '需求材料'} <b>只读来源</b></span> : null}
     {chain.kind === 'ui' ? <UiGenerationSourceTrace source={sourceInputs} loading={Boolean(selectedVersion && versionDetail.isFetching)} /> : null}
     {stage.latestVersion?.imported ? <span className="gc-trace-chip is-ok"><CheckCircleFilled /> 已导入正式资产</span> : null}
   </div>
@@ -325,15 +328,24 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
     </div>
   </div>
 
+  const modeOptions = [{ label: '可视化', value: 'visual' }, { label: rawLabel, value: 'raw' }]
+  // 画布内阅读时，视图切换与复制跟随正文放在右上角；侧栏只保留版本、上游与对比。
+  const readingModeControls = <ArtifactModeControls
+    value={mode}
+    onChange={value => { setMode(value as 'visual' | 'raw'); setDiffOpen(false) }}
+    options={modeOptions}
+    copyText={copyText}
+    copyLabel={`复制 ${rawLabel}`}
+  />
   const readingControls = <>
     <ChainHeaderControls inline={embedded} workspace={workspace} canWrite={canWrite} />
-    <ArtifactModeSwitch
+    {!embedded ? <ArtifactModeSwitch
       value={mode}
       onChange={value => { setMode(value as 'visual' | 'raw'); setDiffOpen(false) }}
-      options={[{ label: '可视化', value: 'visual' }, { label: rawLabel, value: 'raw' }]}
+      options={modeOptions}
       copyText={copyText}
       copyLabel={`复制 ${rawLabel}`}
-    />
+    /> : null}
   </>
   const revisionPanel = <>
       {revisionOpen ? <RevisionSidePanel projectId={projectId} value={revisionInstruction} sourceEditable={false}
@@ -347,7 +359,7 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
   const inspector = embedded && open && inspectorContainer ? createPortal(<div className="gc-inspector-reading-tools">
     <section className="gc-inspector-section"><h3>阅读工具</h3>{readingControls}</section>
   </div>, inspectorContainer) : null
-  const inspectorActions = embedded && open && inspectorActionContainer && !revisionOpen ? createPortal(
+  const inspectorActions = embedded && (open || (showApiRunInInspector && chain.kind === 'api' && !hasDraft)) && inspectorActionContainer && !revisionOpen ? createPortal(
     <section className="gc-inspector-review gc-inspector-reading-tools">
       <div className="gc-inspector-review-heading"><h3>{revisionOpen ? '继续优化' : '阶段操作'}</h3>
         {selectedVersion?.basedOnOld ? <span className="gc-based-chip is-warn">基于旧版上游</span> : null}
@@ -392,7 +404,12 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
           {versionDetail.isFetching ? <Spin size="small" /> : null}
         </div> : null}
 
-        <div className={`gc-artifact-scroll${!isDiff && mode === 'raw' ? ' is-raw' : ''}${!isDiff && mode !== 'raw' && stageArtifactClass ? ` ${stageArtifactClass}` : ''}`}>
+        {embedded ? <div className="gc-reading-toolbar" role="toolbar" aria-label="阅读视图工具">
+          <strong className="gc-reading-toolbar-title">{stage.label}</strong>
+          {readingModeControls}
+        </div> : null}
+
+        <div ref={modePanelRef} className={`gc-artifact-scroll${!isDiff && mode === 'raw' ? ' is-raw' : ''}${!isDiff && mode !== 'raw' && stageArtifactClass ? ` ${stageArtifactClass}` : ''}`}>
           {isDiff ? <GenerationArtifactDiff before={comparisonContent} after={displayedContent}
             beforeLabel={stage.versions.find(version => version.versionId === comparisonId)?.label ?? '旧版本'}
             afterLabel={versionKey === 'draft' ? '待审核产物' : selectedVersion?.label ?? '当前内容'} /> : mode === 'raw'
@@ -411,7 +428,7 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
                     ? <CaseNameTreeView content={displayedContent} rootTitle={stage.label} expanded />
                     : <GeneratedCasesReviewView content={displayedContent} pointsContent={pointsUpstream.data?.content ?? ''} rootTitle={stage.label} />
                 : stageKind === 'api'
-                  ? <ApiCandidateResultView content={displayedContent} />
+                  ? stageName === 'openapi_extract' ? <ApiConfigDiagramView content={displayedContent} /> : <ApiCandidateResultView content={displayedContent} />
                   : stageKind === 'ui'
                     ? <div className="ui-generation-stage-visual"><UiStageVisual stage={stageName as UiGenerationStage} content={displayedContent} onShowRaw={() => setMode('raw')} /></div>
                     : <ChainVisualArtifact content={displayedContent} />}

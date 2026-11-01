@@ -2,9 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
+
 from testing_agent.core.errors import (
     ErrApiCollectionImportFileRequired,
+    ErrApiCollectionNameAlreadyUse,
+    ErrBadRequest,
     ErrNotFound,
+    dynamic_error,
 )
 from testing_agent.core.sid import new_id
 from testing_agent.models.api_case import ApiCase
@@ -131,8 +136,32 @@ class ApiCollectionService:
 
     async def update(self, user_id: str, collection_id: str, body: dict[str, Any]) -> dict:
         collection = await self.get_accessible_entity(user_id, collection_id, action="write")
+        target_id = body.get("requirementId")
+        if target_id and target_id != collection.requirement_id:
+            await self.ensure_requirement_access(user_id, target_id, action="write")
+            source = await self.repository.get_requirement(collection.requirement_id)
+            target = await self.repository.get_requirement(target_id)
+            if source is None or target is None:
+                raise ErrNotFound()
+            source_sprint = await self.repository.get_sprint(source.sprint_id)
+            target_sprint = await self.repository.get_sprint(target.sprint_id)
+            if source_sprint is None or target_sprint is None:
+                raise ErrNotFound()
+            if source_sprint.project_id != target_sprint.project_id:
+                raise dynamic_error(ErrBadRequest, "API测试集只能调整到同一项目的需求")
+            collection.requirement_id = target_id
         apply_patch(collection, body, {"name", "description"})
-        await self.repository.commit()
+        try:
+            await self.repository.commit()
+        except IntegrityError as exc:
+            await self.repository.rollback()
+            detail = str(exc.orig)
+            if "uk_api_collection_requirement_name" in detail or (
+                "UNIQUE constraint failed: api_collections.requirement_id, api_collections.name"
+                in detail
+            ):
+                raise ErrApiCollectionNameAlreadyUse() from exc
+            raise
         await self.repository.refresh(collection)
         return dump(ApiCollectionResponse, collection)
 
@@ -164,6 +193,7 @@ class ApiCollectionService:
             case = ApiCase(case_id=new_id(), collection_id=collection_id)
             apply_api_case(case, normalized)
             self.repository.add(case)
+            await self.repository.flush()
             add_api_rules(self.repository, case.case_id, normalized)
             imported_extract_rule_count += len(normalized["extractRules"])
             imported_assert_rule_count += len(normalized["assertRules"])

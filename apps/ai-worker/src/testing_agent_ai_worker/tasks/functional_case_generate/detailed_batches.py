@@ -6,7 +6,7 @@ import json
 from collections.abc import Callable
 from typing import Any
 
-from testing_agent_ai_worker.nanobot_runtime.prompt import (
+from testing_agent_ai_worker.agent.prompt import (
     FUNCTIONAL_DETAILED_CASES_JSON_ONLY_INSTRUCTION,
     append_stage_instruction,
     build_skill_message,
@@ -17,11 +17,11 @@ from .validation import generate_validated, normalize_json
 
 
 def _default_from_config(**kwargs: Any) -> Any:
-    """延迟导入 nanobot，避免单元测试在无 SDK 环境下提前失败。"""
+    """延迟导入 agent，避免单元测试在无 SDK 环境下提前失败。"""
 
-    from nanobot import Nanobot
+    from testing_agent_ai_worker.agent import create_agent
 
-    return Nanobot.from_config(**kwargs)
+    return create_agent(**kwargs)
 
 
 def _build_functional_detailed_case_body(

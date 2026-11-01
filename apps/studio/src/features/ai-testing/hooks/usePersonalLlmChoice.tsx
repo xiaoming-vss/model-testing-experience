@@ -8,6 +8,7 @@ export function usePersonalLlmChoice(projectId?: string, runOptions?: {
 }) {
   const [instruction, setInstruction] = useState('')
   const [showInstruction, setShowInstruction] = useState(false)
+  const [instructionCopy, setInstructionCopy] = useState<{ label?: string; placeholder?: string }>({})
   const [open, setOpen] = useState(false)
   const [showCheckpointOption, setShowCheckpointOption] = useState(false)
   const [checkpointEnabled, setCheckpointEnabled] = useState(true)
@@ -36,10 +37,10 @@ export function usePersonalLlmChoice(projectId?: string, runOptions?: {
     return new Promise<{ connectionId: string; checkpointEnabled: boolean; instruction: string }>((resolve, reject) => { pending.current = { resolve, reject } })
   }
   async function choose(options?: { alwaysConfirm?: boolean }) { return (await requestChoice(false, false, options?.alwaysConfirm)).connectionId }
-  function chooseRun(withCheckpoint = true) { return requestChoice(withCheckpoint, true) }
+  function chooseRun(withCheckpoint = true, copy: { label?: string; placeholder?: string } = {}) { setInstructionCopy(copy); return requestChoice(withCheckpoint, true) }
   const dialog = <LlmConnectionSelectModal key={projectId} open={open} projectId={projectId} onClose={cancel}
     confirmDisabled={showInstruction && runOptions?.confirmDisabled}
-    instruction={instruction} onInstructionChange={showInstruction ? setInstruction : undefined}
+    instruction={instruction} instructionLabel={instructionCopy.label} instructionPlaceholder={instructionCopy.placeholder} onInstructionChange={showInstruction ? setInstruction : undefined}
     showCheckpointOption={showCheckpointOption} checkpointEnabled={checkpointEnabled} onCheckpointEnabledChange={setCheckpointEnabled} onConfirm={id => {
     pending.current?.resolve({ connectionId: id, checkpointEnabled, instruction })
     pending.current = null

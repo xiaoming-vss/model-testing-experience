@@ -157,4 +157,10 @@ connector-zentao 的源码、专属文档及独立启动入口已删除；平台
 
 ## AI Agent 底座选择
 
-`config/platform.toml` 的 `[ai_worker.agent] backend` 支持 `nanobot`（默认）和 `pi`。Compose 的 `ai-worker` 服务自动选择原项目或独立 `apps/ai-worker-pi` 镜像、配置与数据卷。切换前处理在途任务，再执行 `python3 scripts/manage.py compose up -d --build ai-worker`。安装、模型配置和会话边界见 [Pi Worker](ai-worker-pi/README.md)。
+`config/platform.toml` 的 `[ai_worker.agent] backend` 支持 `nanobot`（默认）和 `pi`。Compose 始终只有一个 `ai-worker` 服务和 `mtx/ai-worker:local` 镜像，后端只决定生成的 `worker.toml` 与运行时卷（`ai-runtime` / `ai-pi-runtime`）。切换前处理在途任务，再执行 `python3 scripts/manage.py compose up -d --build ai-worker`。安装、模型配置和会话边界见 [Pi 后端](ai-worker/pi-backend.md)。
+
+从旧的 `ai-worker` / `ai-worker-pi` 双项目布局升级时：
+
+1. 先执行 `python3 scripts/manage.py upgrade-config`，把旧的 `[ai_worker_pi.*]` 和 `[ai_worker.nanobot]` 迁移到 `[ai_worker.agent.*]`；已有统一配置优先，不会被旧值覆盖。
+2. 再执行 `python3 scripts/manage.py configure --mode docker`。镜像名和运行时配置路径已统一为 `mtx/ai-worker:local` 与 `.runtime/docker/ai-worker.toml`，不重新生成会继续使用旧文件。
+3. 旧的 `.runtime/docker/ai-worker-pi.toml` 不会自动删除，也不再被 Compose 挂载；确认新的 `ai-worker.toml` 已生成并可启动后，可手工清理该残留文件。运行时卷名未变（`ai-pi-runtime` / `ai-pi-logs`），已有会话数据不受影响，但会话历史不跨底座迁移。

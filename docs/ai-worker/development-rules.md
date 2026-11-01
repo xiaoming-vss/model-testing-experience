@@ -5,7 +5,8 @@
 ## 模块与运行边界
 
 - 沿用本项目 Python 3.13、独立 `pyproject.toml`、`uv.lock` 及启动入口；不引入控制面 ORM、Web 服务或直接数据库访问。
-- `app/` 装配执行依赖，`worker/` 管理轮询、领取、心跳和运行，`tasks/` 管理各类任务，`platform/` 封装控制面协议，`nanobot/` 及 `nanobot_runtime/` 负责现有模型运行时。
+- `app/` 装配执行依赖，`worker/` 管理轮询、领取、心跳和运行，`tasks/` 管理各类任务，`platform/` 封装控制面协议，`agent/` 负责执行底座门面与适配器。
+- 业务模块不得直接导入 Nanobot SDK 或 Pi RPC；新增底座只扩展 `agent/` 适配器，并实现 `agent/base.py` 的契约。底座专属逻辑（凭据文件、会话、进程回收、超时）留在适配器内。
 - 新任务类型必须同时更新分派、任务载荷、执行器、结果解析与控制面消费方；不能只在提示词中添加名称就视为支持新任务。
 - 调整并发、停止或中断策略时，必须保留独立任务 workspace 和任务关联身份，并验证心跳及结果回传，不套用其他 Worker 的排空期限。
 
@@ -37,4 +38,4 @@ uv run --locked --group dev ruff format --check <修改的源码及测试路径>
 | 技能或签名下载 | `tests/unit/platform/test_skills.py`、`test_signed_download.py`，真实存储变化追加显式验收 |
 | 其他模型任务 | 对应 `tests/unit/tasks/` 专项，报告和图谱使用各自执行器回归 |
 
-同一单元格中的短文件名相对首个路径所在目录。新增任务必须添加其行为专项；变更模型运行时同时检查 `test_nanobot_chain_runner.py` 等实际受影响入口。模拟模型回归不代表真实模型、GitLab 或 S3 已完成验收。
+同一单元格中的短文件名相对首个路径所在目录。新增任务必须添加其行为专项；变更模型运行时同时检查 `test_agent_factory.py`、`test_nanobot_adapter.py`、`test_pi_rpc.py` 等实际受影响入口。模拟模型回归不代表真实模型、GitLab 或 S3 已完成验收。

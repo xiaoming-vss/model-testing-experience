@@ -1,14 +1,9 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { AppSidebar } from './AppSidebar'
-import { useSidebarStore } from './sidebar.store'
 
 afterEach(cleanup)
-
-beforeEach(() => {
-  useSidebarStore.setState({ collapsed: false })
-})
 
 describe('AppSidebar', () => {
   it('limits developer navigation to Bugs and restores navigation after switching roles', () => {
@@ -41,24 +36,13 @@ describe('AppSidebar', () => {
     expect(screen.getByRole('link', { name: '需求' })).toBeVisible()
   })
 
-  it('keeps Testing directly accessible and collapses to the icon rail on demand', () => {
+  it('keeps Testing and Bugs accessible in the top navigation', () => {
     render(<MemoryRouter initialEntries={['/testing?tab=api']}><AppSidebar /></MemoryRouter>)
     expect(screen.getByRole('link', { name: '测试' })).toHaveAttribute('aria-current', 'page')
-    expect(screen.queryByRole('button', { name: '测试' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'API测试' })).not.toBeInTheDocument()
-    // jsdom 的 getComputedStyle 在重渲染后会返回过期宽度,这里断言 antd Sider 的内联样式。
-    expect(screen.getByRole('complementary').style.width).toBe('176px')
-    expect(screen.getByRole('button', { name: '折叠侧边栏' })).toHaveAttribute('aria-expanded', 'true')
-    fireEvent.click(screen.getByRole('button', { name: '折叠侧边栏' }))
-    expect(screen.getByRole('complementary').style.width).toBe('76px')
-    expect(screen.getByRole('button', { name: '展开侧边栏' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('link', { name: 'Bug列表' }))
     expect(screen.getByRole('link', { name: 'Bug列表' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: '测试' })).not.toHaveAttribute('aria-current')
-    for (const name of ['Bug列表', '测试']) {
-      expect(screen.getByRole('link', { name }).querySelector('svg.sidebar-icon-duotone'))
-        .toHaveAttribute('aria-hidden', 'true')
-    }
+    expect(screen.getByRole('navigation', { name: '主导航' })).toHaveClass('top-navigation-links')
   })
 
   it.each([

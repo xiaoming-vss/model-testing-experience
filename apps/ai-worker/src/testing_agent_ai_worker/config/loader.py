@@ -25,11 +25,19 @@ def load_settings(config_path: str | Path | None = None) -> Settings:
         }.items()
         if (value := os.getenv(environment_name)) is not None
     }
-    runtime_root = os.getenv("TESTING_AGENT_NANOBOT_RUNTIME_ROOT")
-    nanobot_updates = {"runtime_root": runtime_root} if runtime_root is not None else {}
+    runtime_overrides = {
+        "nanobot": os.getenv("TESTING_AGENT_NANOBOT_RUNTIME_ROOT"),
+        "pi": os.getenv("TESTING_AGENT_PI_RUNTIME_ROOT"),
+    }
     return settings.model_copy(
         update={
             "platform": settings.platform.model_copy(update=platform_updates),
-            "nanobot": settings.nanobot.model_copy(update=nanobot_updates),
+            "agent": settings.agent.model_copy(
+                update={
+                    name: getattr(settings.agent, name).model_copy(update={"runtime_root": value})
+                    for name, value in runtime_overrides.items()
+                    if value is not None
+                }
+            ),
         }
     )

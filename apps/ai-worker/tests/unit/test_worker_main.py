@@ -15,12 +15,12 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-import testing_agent_ai_worker.worker.executor as executor_module
 from testing_agent_ai_worker.config.loader import load_settings
 from testing_agent_ai_worker.config.models import (
+    AgentConfig,
     CodeRiskAnalysisConfig,
     LoggingConfig,
-    NanobotConfig,
+    PiConfig,
     PlatformConfig,
     Settings,
     WorkerConfig,
@@ -29,6 +29,7 @@ from testing_agent_ai_worker.logging.setup import setup_logging
 from testing_agent_ai_worker.main import build_task_runner, run_poll_once, run_worker
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.platform.errors import TaskSourceError
+from testing_agent_ai_worker.worker.dispatcher import WorkerTaskDispatcherExecutor
 
 
 class _FakePoller:
@@ -149,10 +150,12 @@ class WorkerMainTests(unittest.TestCase):
                         'task_llm_credentials_path = "/tasks/{task_id}/llm-credentials"',
                         "request_timeout_seconds = 12.5",
                         "",
-                        "[nanobot]",
-                        'runtime_root = "D:/tmp/nanobot-runtime"',
+                        "[agent]",
+                        'backend = "pi"',
+                        "",
+                        "[agent.pi]",
+                        'runtime_root = "D:/tmp/pi-runtime"',
                         "stream_idle_timeout_seconds = 240",
-                        "provider_request_timeout_seconds = 300",
                         "",
                         "[logging]",
                         'level = "INFO"',
@@ -189,10 +192,12 @@ class WorkerMainTests(unittest.TestCase):
                     task_llm_credentials_path="/tasks/{task_id}/llm-credentials",
                     request_timeout_seconds=12.5,
                 ),
-                nanobot=NanobotConfig(
-                    runtime_root="D:/tmp/nanobot-runtime",
-                    stream_idle_timeout_seconds=240,
-                    provider_request_timeout_seconds=300,
+                agent=AgentConfig(
+                    backend="pi",
+                    pi=PiConfig(
+                        runtime_root="D:/tmp/pi-runtime",
+                        stream_idle_timeout_seconds=240,
+                    ),
                 ),
                 logging=LoggingConfig(
                     level="INFO",
@@ -210,14 +215,14 @@ class WorkerMainTests(unittest.TestCase):
             {
                 "TESTING_AGENT_PLATFORM_BASE_URL": "https://platform.runtime.example",
                 "TESTING_AGENT_WORKER_TOKEN": "runtime-worker-token",
-                "TESTING_AGENT_NANOBOT_RUNTIME_ROOT": "D:/runtime/nanobot",
+                "TESTING_AGENT_PI_RUNTIME_ROOT": "D:/runtime/pi",
             },
         ):
-            settings = load_settings(PROJECT_ROOT / "config" / "worker.toml")
+            settings = load_settings(PROJECT_ROOT / "config" / "worker.example.toml")
 
         self.assertEqual("https://platform.runtime.example", settings.platform.base_url)
         self.assertEqual("runtime-worker-token", settings.platform.worker_token)
-        self.assertEqual("D:/runtime/nanobot", settings.nanobot.runtime_root)
+        self.assertEqual("D:/runtime/pi", settings.agent.pi.runtime_root)
 
     def test_run_poll_once_prints_no_task_when_platform_returns_empty(self) -> None:
         poller = _FakePoller(task=None)
@@ -228,7 +233,7 @@ class WorkerMainTests(unittest.TestCase):
                 settings=Settings(
                     worker=WorkerConfig(),
                     platform=PlatformConfig(base_url="https://platform.example.com"),
-                    nanobot=NanobotConfig(runtime_root="D:/tmp/nanobot-runtime"),
+                    agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")),
                     logging=LoggingConfig(),
                 ),
                 poller=poller,
@@ -264,7 +269,7 @@ class WorkerMainTests(unittest.TestCase):
                 settings=Settings(
                     worker=WorkerConfig(),
                     platform=PlatformConfig(base_url="https://platform.example.com"),
-                    nanobot=NanobotConfig(runtime_root="D:/tmp/nanobot-runtime"),
+                    agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")),
                     logging=LoggingConfig(),
                 ),
                 poller=poller,
@@ -315,7 +320,7 @@ class WorkerMainTests(unittest.TestCase):
                 settings=Settings(
                     worker=WorkerConfig(poll_interval_seconds=3, run_once=False),
                     platform=PlatformConfig(base_url="https://platform.example.com"),
-                    nanobot=NanobotConfig(runtime_root="D:/tmp/nanobot-runtime"),
+                    agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")),
                     logging=LoggingConfig(),
                 ),
                 poller=poller,
@@ -345,7 +350,7 @@ class WorkerMainTests(unittest.TestCase):
                 settings=Settings(
                     worker=WorkerConfig(poll_interval_seconds=3, run_once=True),
                     platform=PlatformConfig(base_url="https://platform.example.com"),
-                    nanobot=NanobotConfig(runtime_root="D:/tmp/nanobot-runtime"),
+                    agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")),
                     logging=LoggingConfig(),
                 ),
                 poller=poller,
@@ -388,7 +393,9 @@ class WorkerMainTests(unittest.TestCase):
                                 poll_interval_seconds=0, run_once=False, max_concurrent_tasks=2
                             ),
                             platform=PlatformConfig(base_url="https://platform.example.com"),
-                            nanobot=NanobotConfig(runtime_root="D:/tmp/nanobot-runtime"),
+                            agent=AgentConfig(
+                                backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")
+                            ),
                             logging=LoggingConfig(),
                         ),
                         poller=poller,
@@ -432,7 +439,9 @@ class WorkerMainTests(unittest.TestCase):
                                 poll_interval_seconds=0, run_once=True, max_concurrent_tasks=2
                             ),
                             platform=PlatformConfig(base_url="https://platform.example.com"),
-                            nanobot=NanobotConfig(runtime_root="D:/tmp/nanobot-runtime"),
+                            agent=AgentConfig(
+                                backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")
+                            ),
                             logging=LoggingConfig(),
                         ),
                         poller=poller,
@@ -472,7 +481,9 @@ class WorkerMainTests(unittest.TestCase):
                         settings=Settings(
                             worker=WorkerConfig(poll_interval_seconds=5),
                             platform=PlatformConfig(base_url="https://platform.example.com"),
-                            nanobot=NanobotConfig(runtime_root="D:/tmp/nanobot-runtime"),
+                            agent=AgentConfig(
+                                backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")
+                            ),
                         ),
                         poller=_SequenceThenIdlePoller([self._make_simple_task("task-drain")]),
                         task_runner=runner,
@@ -520,7 +531,9 @@ class WorkerMainTests(unittest.TestCase):
                                 poll_interval_seconds=0, run_once=True, max_concurrent_tasks=2
                             ),
                             platform=PlatformConfig(base_url="https://platform.example.com"),
-                            nanobot=NanobotConfig(runtime_root="D:/tmp/nanobot-runtime"),
+                            agent=AgentConfig(
+                                backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")
+                            ),
                             logging=LoggingConfig(),
                         ),
                         poller=poller,
@@ -572,7 +585,7 @@ class WorkerMainTests(unittest.TestCase):
                         poll_interval_seconds=0, run_once=False, max_concurrent_tasks=2
                     ),
                     platform=PlatformConfig(base_url="https://platform.example.com"),
-                    nanobot=NanobotConfig(runtime_root="D:/tmp/nanobot-runtime"),
+                    agent=AgentConfig(backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")),
                     logging=LoggingConfig(),
                 ),
                 poller=poller,
@@ -583,36 +596,6 @@ class WorkerMainTests(unittest.TestCase):
 
         self.assertEqual(0, exit_code)
         self.assertEqual(["task-good"], task_runner.finished_task_ids)
-
-    def test_run_worker_applies_nanobot_timeout_environment(self) -> None:
-        poller = _SequencePoller([None])
-        task_runner = _FakeTaskRunner()
-        output = io.StringIO()
-
-        with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("NANOBOT_STREAM_IDLE_TIMEOUT_S", None)
-            os.environ.pop("NANOBOT_OPENAI_COMPAT_TIMEOUT_S", None)
-            with redirect_stdout(output):
-                exit_code = run_worker(
-                    settings=Settings(
-                        worker=WorkerConfig(poll_interval_seconds=3, run_once=True),
-                        platform=PlatformConfig(base_url="https://platform.example.com"),
-                        nanobot=NanobotConfig(
-                            runtime_root="D:/tmp/nanobot-runtime",
-                            stream_idle_timeout_seconds=240,
-                            provider_request_timeout_seconds=300,
-                        ),
-                        logging=LoggingConfig(),
-                    ),
-                    poller=poller,
-                    task_runner=task_runner,
-                    sleep=lambda _seconds: None,
-                    max_iterations=1,
-                )
-
-            self.assertEqual(exit_code, 0)
-            self.assertEqual(os.environ["NANOBOT_STREAM_IDLE_TIMEOUT_S"], "240")
-            self.assertEqual(os.environ["NANOBOT_OPENAI_COMPAT_TIMEOUT_S"], "300")
 
     def test_run_worker_logs_task_source_errors_and_continues_polling(self) -> None:
         poller = _FlakyPoller()
@@ -629,7 +612,9 @@ class WorkerMainTests(unittest.TestCase):
                     settings=Settings(
                         worker=WorkerConfig(poll_interval_seconds=3, run_once=False),
                         platform=PlatformConfig(base_url="https://platform.example.com"),
-                        nanobot=NanobotConfig(runtime_root="D:/tmp/nanobot-runtime"),
+                        agent=AgentConfig(
+                            backend="pi", pi=PiConfig(runtime_root="D:/tmp/pi-runtime")
+                        ),
                         logging=LoggingConfig(),
                     ),
                     poller=poller,
@@ -651,19 +636,18 @@ class WorkerMainTests(unittest.TestCase):
             Settings(
                 worker=WorkerConfig(),
                 platform=PlatformConfig(base_url="https://platform.example.com"),
-                nanobot=NanobotConfig(
-                    runtime_root="D:/tmp/nanobot-runtime",
+                agent=AgentConfig(
+                    backend="pi",
+                    pi=PiConfig(
+                        runtime_root="D:/tmp/pi-runtime",
+                    ),
                 ),
                 code_risk_analysis=CodeRiskAnalysisConfig(gitlab_timeout_seconds=45.0),
                 logging=LoggingConfig(),
             )
         )
 
-        dispatcher_cls = getattr(executor_module, "WorkerTaskDispatcherExecutor", None)
-        self.assertIsNotNone(dispatcher_cls)
-        if dispatcher_cls is None:
-            return
-        self.assertIsInstance(task_runner.executor, dispatcher_cls)
+        self.assertIsInstance(task_runner.executor, WorkerTaskDispatcherExecutor)
         self.assertIsNotNone(task_runner.executor.requirement_executor.source_downloader)
         self.assertIsNotNone(task_runner.executor.code_risk_executor)
         # gitlab_timeout_seconds 必须来自配置,而非写死的默认值。

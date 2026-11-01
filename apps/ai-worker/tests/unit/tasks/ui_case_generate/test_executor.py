@@ -11,11 +11,11 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from testing_agent_ai_worker.config.models import NanobotConfig
+from testing_agent_ai_worker.config.models import PiConfig
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskStatus
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.tasks.ui_case_generate.executor import (
-    UiCaseNanobotExecutor,
+    UiCaseExecutor,
     _validate_ui_cases_yaml,
     _validate_ui_stage_yaml,
 )
@@ -104,8 +104,8 @@ class UiCaseExecutorTests(unittest.TestCase):
             return VALID_YAML
 
         temp_dir = self.enterContext(tempfile.TemporaryDirectory())
-        executor = UiCaseNanobotExecutor(
-            nanobot_config=NanobotConfig(runtime_root=temp_dir),
+        executor = UiCaseExecutor(
+            agent_config=PiConfig(runtime_root=temp_dir),
             source_downloader=PlatformSourceArchiveDownloader(Client()),
             skill_runner=fake_skill_runner,
         )
@@ -129,8 +129,8 @@ class UiCaseExecutorTests(unittest.TestCase):
             def download_and_extract(self, **kwargs):
                 raise ValueError("ui_case_generate 缺少 sourceArchiveDownloadUrl")
 
-        executor = UiCaseNanobotExecutor(
-            nanobot_config=NanobotConfig(),
+        executor = UiCaseExecutor(
+            agent_config=PiConfig(),
             source_downloader=Downloader(),
             skill_runner=lambda **kwargs: VALID_YAML,
         )
@@ -145,8 +145,8 @@ class UiCaseExecutorTests(unittest.TestCase):
             def download_and_extract(self, **kwargs):
                 return Path("D:/tmp/source")
 
-        executor = UiCaseNanobotExecutor(
-            nanobot_config=NanobotConfig(),
+        executor = UiCaseExecutor(
+            agent_config=PiConfig(),
             source_downloader=Downloader(),
             skill_runner=lambda **kwargs: "- name: incomplete",
         )

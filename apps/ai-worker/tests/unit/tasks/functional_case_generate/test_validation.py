@@ -292,10 +292,10 @@ class CheckpointValidationTests(unittest.TestCase):
         from datetime import datetime
         from unittest.mock import patch
 
-        from testing_agent_ai_worker.config.models import NanobotConfig
+        from testing_agent_ai_worker.config.models import PiConfig
         from testing_agent_ai_worker.models.task import Task, TaskPayload
         from testing_agent_ai_worker.tasks.functional_case_generate.executor import (
-            FunctionalCaseNanobotExecutor,
+            FunctionalCaseExecutor,
         )
 
         for stage, valid, field in [
@@ -349,9 +349,9 @@ class CheckpointValidationTests(unittest.TestCase):
                         openapi_content="",
                     ),
                 )
-                result = FunctionalCaseNanobotExecutor(
-                    nanobot_config=NanobotConfig(runtime_root=tmp)
-                ).execute(task, datetime.now().astimezone(), progress.append)
+                result = FunctionalCaseExecutor(agent_config=PiConfig(runtime_root=tmp)).execute(
+                    task, datetime.now().astimezone(), progress.append
+                )
                 self.assertIsNone(result)
                 self.assertEqual(len(calls), 2)
                 self.assertIn("补充异常", calls[1])

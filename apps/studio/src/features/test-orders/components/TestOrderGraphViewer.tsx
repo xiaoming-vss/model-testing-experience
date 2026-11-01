@@ -1,5 +1,6 @@
 import type { TestOrderEntrySummary } from '../types'
 import { ActionButton } from '@/shared/components/ActionButton'
+import { useViewMotion } from '@/shared/ui/useViewMotion'
 import { toRecord } from '@/shared/utils/value'
 import { Alert, Button, Empty, Segmented, Spin, Tag, Typography } from 'antd'
 import { useMutation, useQuery } from '@tanstack/react-query'
@@ -70,6 +71,7 @@ export function TestOrderGraphViewer({
 }: TestOrderGraphViewerProps) {
   const personalLlm = usePersonalLlmChoice(projectId)
   const [activeTab, setActiveTab] = useState<'graph' | 'json'>('graph')
+  const viewRef = useViewMotion(activeTab === 'graph' ? 0 : 1)
   const [jsonToolbar, setJsonToolbar] = useState<HTMLDivElement | null>(null)
   const [hasSelection, setHasSelection] = useState(false)
   const graphRef = useRef<FunctionalCaseRelationsGraphHandle | null>(null)
@@ -217,6 +219,7 @@ export function TestOrderGraphViewer({
           </div>
           <span className="ai-relations-page-spacer" />
           <Segmented
+            className="tab-view-switch"
             size="small"
             value={activeTab}
             onChange={(value) => setActiveTab(value as 'graph' | 'json')}
@@ -267,7 +270,7 @@ export function TestOrderGraphViewer({
           <Alert showIcon type="error" title={run.errorMessage} />
         ) : null}
 
-        <div className="ai-relations-page-body">{body}</div>
+        <div ref={viewRef} className="ai-relations-page-body">{body}</div>
       </div>
       {personalLlm.dialog}
     </>

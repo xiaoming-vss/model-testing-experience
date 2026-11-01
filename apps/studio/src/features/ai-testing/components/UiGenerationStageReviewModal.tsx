@@ -9,6 +9,7 @@ import { ProjectActionButton } from '@/features/projects/components/ProjectActio
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { LlmConnectionSelectModal } from './LlmConnectionSelectModal'
 import { ArtifactModeSwitch } from './ArtifactViewTabs'
+import { useViewMotion } from '@/shared/ui/useViewMotion'
 import { UiStageVisual } from './uiStageVisual/UiStageVisual'
 import { UiSemanticReview } from './UiSemanticReview'
 import { RevisionDivider, RevisionSidePanel } from './RevisionSidePanel'
@@ -54,6 +55,7 @@ export function UiGenerationStageReviewModal({ open, run, projectId, stage, extr
   const [modelAction, setModelAction] = useState<'approve' | 'retry' | null>(null)
   const [parseError, setParseError] = useState('')
   const [viewMode, setViewMode] = useState<'visual' | 'raw'>('visual')
+  const viewRef = useViewMotion(viewMode === 'visual' ? 0 : 1)
   useEffect(() => { setDraft(saved) }, [saved, shown, run.runId])
   useEffect(() => {
     setComment('')
@@ -175,9 +177,9 @@ export function UiGenerationStageReviewModal({ open, run, projectId, stage, extr
                 setRevision(instruction)
                 setRevisionOpen(true)
               } : undefined} /> : null}
-            {viewMode === 'visual' ? <div className="ui-generation-stage-visual">
+            {viewMode === 'visual' ? <div ref={viewRef} className="ui-generation-stage-visual">
               <UiStageVisual stage={shown} content={draft} onShowRaw={() => setViewMode('raw')} />
-            </div> : <div className="ui-generation-stage-editor">
+            </div> : <div ref={viewRef} className="ui-generation-stage-editor">
               <TextCodeEditor value={draft} onChange={setDraft} readOnly={!editable || !can('write') || mutation.isPending}
                 language={info.language} ariaLabel={`${info.label} ${info.language === 'json' ? 'JSON' : 'YAML'}`}
                 foldable height="100%" minHeight={0} />

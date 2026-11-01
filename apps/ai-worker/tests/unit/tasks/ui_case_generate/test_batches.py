@@ -5,7 +5,10 @@ import unittest
 from copy import deepcopy
 from pathlib import Path
 
-from testing_agent_ai_worker.tasks.ui_case_generate.batches import build_batches, generate_batches
+from testing_agent_ai_worker.tasks.ui_case_generate.batches import (
+    build_batches,
+    generate_batches,
+)
 from tests.unit.tasks.ui_case_generate.test_three_stage import read
 
 

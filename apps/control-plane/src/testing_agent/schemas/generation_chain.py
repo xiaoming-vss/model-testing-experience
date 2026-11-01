@@ -149,6 +149,7 @@ class GenerationChainReviewRequest(ChainModel):
     action: Literal["approve", "reject"]
     continue_after: bool = False
     comment: str = Field(default="", max_length=4000)
+    instruction: str | None = None
     connection_id: str | None = Field(default=None, max_length=64)
     request_id: UUID | None = None
 

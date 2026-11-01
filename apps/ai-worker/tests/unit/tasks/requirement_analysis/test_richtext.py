@@ -5,11 +5,11 @@ from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 
-from testing_agent_ai_worker.config.models import NanobotConfig
+from testing_agent_ai_worker.config.models import PiConfig
 from testing_agent_ai_worker.models.task import Task, TaskPayload
 from testing_agent_ai_worker.platform.skills import required_skills
 from testing_agent_ai_worker.tasks.requirement_analysis.executor import (
-    RequirementAnalysisNanobotExecutor,
+    RequirementAnalysisExecutor,
 )
 from testing_agent_ai_worker.tasks.requirement_analysis.skill import run_skill_step
 from testing_agent_ai_worker.tasks.requirement_analysis.source_downloader import (
@@ -68,8 +68,8 @@ class RichtextTests(unittest.TestCase):
             return (FIXTURE / "document-extraction.example.json").read_text()
 
         with tempfile.TemporaryDirectory() as root:
-            executor = RequirementAnalysisNanobotExecutor(
-                nanobot_config=NanobotConfig(runtime_root=root),
+            executor = RequirementAnalysisExecutor(
+                agent_config=PiConfig(runtime_root=root),
                 skill_runner=runner,
                 source_downloader=PlatformRequirementSourceDownloader(
                     SimpleNamespace(get_signed_file_bytes=get), "worker"

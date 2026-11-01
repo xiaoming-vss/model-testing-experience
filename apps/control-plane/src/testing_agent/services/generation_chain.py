@@ -209,6 +209,11 @@ class GenerationChainService:
         upstream = {}
         summaries = []
         recorded_upstream = row.upstream_versions_json
+        if (
+            kind == "api"
+            and (row.artifact_context_json or {}).get("apiWorkflowVersion") != "api_two_stage/1.0"
+        ):
+            recorded_upstream = {}
         if recorded_upstream is None:
             # Historical approvals were migrated without parent mappings. Use
             # the same time boundary as legacy import parent resolution.
@@ -420,6 +425,11 @@ class GenerationChainService:
         self, task: AiGenerateTask, kind: DesignKind, leaf: AiGenerateStageVersion
     ) -> dict[str, AiGenerateStageVersion]:
         selected: dict[str, AiGenerateStageVersion] = {}
+        if (
+            kind == "api"
+            and (leaf.artifact_context_json or {}).get("apiWorkflowVersion") != "api_two_stage/1.0"
+        ):
+            return selected
         visiting: set[str] = set()
         expected = set(stage_names(kind)) - {leaf.stage}
 
@@ -441,6 +451,14 @@ class GenerationChainService:
                             "叶子版本引用的上游版本已删除，请重新生成并审核完整链路后再导入",
                         )
                 else:
+                    if (
+                        kind == "api"
+                        and (version.artifact_context_json or {}).get("apiWorkflowVersion")
+                        == "api_two_stage/1.0"
+                    ):
+                        raise dynamic_error(
+                            ErrBadRequest, "叶子版本缺少上游版本，请重新生成并审核完整链路后再导入"
+                        )
                     latest = await self._latest_upstream_versions(
                         task,
                         kind,
@@ -619,7 +637,21 @@ class GenerationChainService:
                 raise dynamic_error(ErrBadRequest, "只能在元素控件清单阶段更换 UI 生成输入")
             if run is not None and not body.refresh_inputs:
                 raise dynamic_error(ErrBadRequest, "更换功能用例需要重新开始 UI 生成链")
-        if run is None or body.refresh_inputs:
+        legacy_api = (
+            kind == "api"
+            and run is not None
+            and (run.snapshot_json or {}).get("apiWorkflowVersion") != "api_two_stage/1.0"
+        )
+        if (
+            legacy_api
+            and run is not None
+            and stage == "openapi_extract"
+            and (
+                run.status in RUN_ACTIVE_STATUSES or await self.repository.active_worker(run.run_id)
+            )
+        ):
+            raise dynamic_error(ErrBadRequest, "当前生成链正在执行，请等待完成后再试")
+        if run is None or body.refresh_inputs or (legacy_api and stage == "openapi_extract"):
             if stage != first_stage(kind):
                 raise dynamic_error(ErrBadRequest, "请先运行链路的首个阶段")
             payload: dict[str, Any] = {
@@ -627,6 +659,8 @@ class GenerationChainService:
                 "checkpointEnabled": True,
                 "instruction": body.instruction or "",
             }
+            if kind == "api":
+                payload["apiWorkflowVersion"] = "api_two_stage/1.0"
             if kind == "function":
                 if set(body.upstream_versions) - {"feature_understanding"}:
                     raise ErrBadRequest()
@@ -956,7 +990,9 @@ class GenerationChainService:
                     requirement_id,
                     kind,
                     next_stage,
-                    GenerationChainRunRequest(connection_id=continuation_connection),
+                    GenerationChainRunRequest(
+                        connection_id=continuation_connection, instruction=body.instruction
+                    ),
                     user_id,
                 )
             return await self._chain_view(requirement_id, kind, task, detail=True)
@@ -978,7 +1014,9 @@ class GenerationChainService:
                     requirement_id,
                     kind,
                     next_stage,
-                    GenerationChainRunRequest(connection_id=continuation_connection),
+                    GenerationChainRunRequest(
+                        connection_id=continuation_connection, instruction=body.instruction
+                    ),
                     user_id,
                 )
         else:
@@ -1067,7 +1105,32 @@ class GenerationChainService:
         }
         if body.connection_id:
             payload["connectionId"] = body.connection_id
-        if kind == "function" and stage in {"requirement_analysis", "case_names"}:
+        if kind == "api" and stage == "openapi_extract":
+            from testing_agent.domain.ai_execution_intent import StageReview
+
+            locked_run = await self.repository.run_for_update(run.run_id)
+            locked_stage = await self.repository.stage_for_update(run.run_id, stage)
+            if (
+                locked_run is None
+                or locked_stage is None
+                or locked_run.current_stage != stage
+                or locked_run.status != "waiting_review"
+                or locked_stage.review_status != ReviewStatus.PENDING.value
+            ):
+                raise dynamic_error(ErrBadRequest, "当前阶段状态已变化，请刷新后重试")
+            run = locked_run
+            run.status = RunStatus.SUCCESS.value
+            run.stage_status = StageStatus.COMPLETED.value
+            await self.execution.save(
+                self.tasks.session,
+                run,
+                intent=ExecutionIntent(
+                    actor_id=user_id,
+                    review=StageReview(stage, ReviewStatus.APPROVED.value, body.comment),
+                ),
+            )
+            await self.tasks.commit()
+        elif kind == "function" and stage in {"requirement_analysis", "case_names"}:
             await self.stages.review_stage(
                 run.run_id,
                 payload,
@@ -1185,6 +1248,12 @@ class GenerationChainService:
             artifact_context_json={
                 **(attempt.output_context_json or {}),
                 **(
+                    {"apiWorkflowVersion": "api_two_stage/1.0"}
+                    if kind == "api"
+                    and (run.snapshot_json or {}).get("apiWorkflowVersion") == "api_two_stage/1.0"
+                    else {}
+                ),
+                **(
                     {
                         "uiSourceInputs": ui_source_inputs(
                             (attempt.input_snapshot_json or {}).get("source") or run.snapshot_json
@@ -1232,6 +1301,10 @@ class GenerationChainService:
         attempt: AiGenerateStageAttempt,
     ) -> dict[str, str]:
         versioning = self.attempt_versioning(attempt)
+        if kind == "api" and stage == "generate":
+            source = (attempt.input_snapshot_json or {}).get("source") or {}
+            if source.get("apiWorkflowVersion") != "api_two_stage/1.0":
+                return {}
         selected = {
             name: value
             for name, value in (versioning.get("upstreamVersions") or {}).items()

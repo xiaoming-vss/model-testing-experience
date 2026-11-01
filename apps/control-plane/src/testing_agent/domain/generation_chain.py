@@ -29,7 +29,7 @@ STAGE_DEFINITIONS: dict[str, tuple[tuple[str, str], ...]] = {
         ("case_names", "测试点"),
         ("detailed_cases", "完整用例"),
     ),
-    "api": (("generate", "API 用例生成"),),
+    "api": (("openapi_extract", "接口配置提取"), ("generate", "API 用例生成")),
     "ui": (
         ("ui_surface", "元素控件清单"),
         ("ui_design", "UI 用例设计"),
@@ -47,7 +47,8 @@ STAGE_UPSTREAMS: dict[str, tuple[str, ...]] = {
     "ui_surface": (),
     "ui_design": ("ui_surface",),
     "ui_yaml": ("ui_surface", "ui_design"),
-    "generate": (),
+    "openapi_extract": (),
+    "generate": ("openapi_extract",),
 }
 
 # JSON artifacts are stored as a single config field; final artifacts use resultYaml.
@@ -60,11 +61,13 @@ STAGE_CONFIG_FIELDS = {
     "feature_understanding": "resultYaml",
     "detailed_cases": "resultYaml",
     "ui_yaml": "resultYaml",
+    "openapi_extract": "apiExtraction",
     "generate": "resultYaml",
 }
 
 JSON_ARTIFACT_STAGES = {
     "extracting_text",
+    "openapi_extract",
     "requirement_analysis",
     "case_names",
     "ui_surface",

@@ -60,7 +60,7 @@ export function ApiCaseRunConsole({ result, environmentName, view, onViewChange 
   }))
 
   return (
-    <div className="api-wb-console">
+    <div className="api-wb-console" data-tab-motion-scope>
       <div className="api-wb-console-banner">
         <div className="api-wb-console-banner-main">
           <span className="api-wb-console-title">请求结果</span>
@@ -95,7 +95,7 @@ export function ApiCaseRunConsole({ result, environmentName, view, onViewChange 
         <Alert showIcon type="error" title={result.errorMessage} className="api-wb-console-alert" />
       ) : null}
 
-      <div className="api-wb-console-tabs" role="tablist">
+      <div className="api-wb-console-tabs" role="tablist" data-tab-motion-scoped>
         {viewTabs.map((tab) => (
           <button
             key={tab.value}
@@ -111,7 +111,7 @@ export function ApiCaseRunConsole({ result, environmentName, view, onViewChange 
         ))}
       </div>
 
-      <div className="api-wb-console-body">
+      <div className="api-wb-console-body" data-tab-motion-panel>
         {renderRunResultContent({
           view,
           request: result.request,

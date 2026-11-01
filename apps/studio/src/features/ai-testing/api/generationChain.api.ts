@@ -173,6 +173,7 @@ export type GenerationChainReviewBody = {
   continueAfter?: boolean
   comment?: string
   connectionId?: string
+  instruction?: string
   requestId?: string
 }
 

@@ -3,6 +3,8 @@ import { message } from '@/shared/utils/feedback'
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Button, Segmented, Tabs, type TabsProps } from 'antd'
+import type { TabsRef } from 'antd/es/tabs'
+import { animateTabPanel } from '@/shared/ui/tabMotion'
 import '@/features/ai-testing/styles/artifact-view-switch.css'
 
 /** 把产物操作放进弹窗标题栏右侧，标题左侧保留原有标题。 */
@@ -39,6 +41,18 @@ export function ArtifactCopyAction({ copyText, copyLabel = '复制 JSON' }: { co
   return <><span ref={anchor} hidden />{target ? createPortal(control, target) : <div className="ai-artifact-mode-toolbar">{control}</div>}</>
 }
 
+/** 视图切换与复制本体，供标题栏或正文内工具条直接摆放。 */
+export function ArtifactModeControls({ value, onChange, options, extra, copyText, copyLabel = '复制 JSON' }: {
+  copyText?: string
+  copyLabel?: string
+  extra?: ReactNode
+  value: string
+  onChange: (value: string) => void
+  options: { label: string; value: string }[]
+}) {
+  return <div className="ai-artifact-mode-controls">{extra}{copyText !== undefined && <CopyButton copyText={copyText} copyLabel={copyLabel} />}<Segmented aria-label="内容展示方式" size="small" value={value} onChange={onChange} options={options} /></div>
+}
+
 export function ArtifactModeSwitch({ value, onChange, options, extra, copyText, copyLabel = '复制 JSON' }: {
   copyText?: string
   copyLabel?: string
@@ -48,18 +62,28 @@ export function ArtifactModeSwitch({ value, onChange, options, extra, copyText, 
   options: { label: string; value: string }[]
 }) {
   const { anchor, target } = useArtifactHeaderSlot()
-  const control = <div className="ai-artifact-mode-controls">{extra}{copyText !== undefined && <CopyButton copyText={copyText} copyLabel={copyLabel} />}<Segmented aria-label="内容展示方式" size="small" value={value} onChange={onChange} options={options} /></div>
+  const control = <ArtifactModeControls value={value} onChange={onChange} options={options} extra={extra} copyText={copyText} copyLabel={copyLabel} />
   return <><span ref={anchor} hidden />{target ? createPortal(control, target) : <div className="ai-artifact-mode-toolbar">{control}</div>}</>
 }
 
 export function ArtifactViewTabs({ activeKey, defaultActiveKey, onChange, items, jsonCopyText, copyKey = 'json', copyLabel, ...props }: TabsProps & { jsonCopyText?: string; copyKey?: string; copyLabel?: string }) {
   const [localKey, setLocalKey] = useState(defaultActiveKey ?? items?.[0]?.key ?? '')
   const value = activeKey ?? localKey
+  const tabsRef = useRef<TabsRef>(null)
+  const selectedIndex = (items ?? []).findIndex(item => item.key === value)
+  const previousIndex = useRef(selectedIndex)
+  useLayoutEffect(() => {
+    const previous = previousIndex.current
+    previousIndex.current = selectedIndex
+    if (previous < 0 || selectedIndex < 0 || previous === selectedIndex) return
+    const panel = tabsRef.current?.nativeElement?.querySelector<HTMLElement>('.ant-tabs-content-holder')
+    if (panel) animateTabPanel(panel, selectedIndex - previous)
+  }, [selectedIndex])
   const change = (key: string) => { setLocalKey(key); onChange?.(key) }
   return <>
     <ArtifactModeSwitch copyText={value === copyKey ? jsonCopyText : undefined} copyLabel={copyLabel} value={value} onChange={change} options={(items ?? []).map((item) => ({
       value: item.key, label: item.key === 'json' ? 'JSON' : String(item.label),
     }))} />
-    <Tabs {...props} items={items} activeKey={value} onChange={change} renderTabBar={() => <></>} />
+    <Tabs ref={tabsRef} {...props} items={items} activeKey={value} onChange={change} renderTabBar={() => <></>} />
   </>
 }

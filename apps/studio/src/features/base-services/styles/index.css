@@ -1014,3 +1014,5 @@ green stays reserved for status only. */
   }
 }
 
+
+.base-services-motion-panel { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }

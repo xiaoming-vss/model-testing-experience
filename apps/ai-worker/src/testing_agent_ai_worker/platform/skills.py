@@ -8,7 +8,7 @@ from urllib.parse import quote
 
 import httpx
 
-from testing_agent_ai_worker.nanobot_runtime.paths import resolve_task_workspace
+from testing_agent_ai_worker.agent.paths import resolve_task_workspace
 from testing_agent_ai_worker.tasks.requirement_analysis.document_type import extraction_skill
 
 REQUIREMENT_SKILLS = {
@@ -31,6 +31,17 @@ TASK_SKILLS = {
 
 
 def required_skills(task):
+    if (
+        task.task_type == "api_case_generate"
+        and task.payload.metadata.get("apiWorkflowVersion") == "api_two_stage/1.0"
+    ):
+        names = {
+            "openapi_extract": "openapi-test-config-extractor",
+            "generate": "api-cases-yaml-generator",
+        }
+        if not task.checkpoint_enabled or task.current_stage not in names:
+            raise ValueError("API 两阶段生成需要有效阶段及人工审核")
+        return [names[task.current_stage]]
     if (
         task.task_type == "ui_case_generate"
         and task.payload.metadata.get("uiWorkflowVersion") == "ui_three_stage/1.0"
@@ -65,8 +76,8 @@ def required_skills(task):
 
 
 class SkillPreparer:
-    def __init__(self, client, nanobot_config, worker_id):
-        self.client, self.config, self.worker_id = client, nanobot_config, worker_id
+    def __init__(self, client, agent_config, worker_id):
+        self.client, self.config, self.worker_id = client, agent_config, worker_id
 
     def __call__(self, task):
         names = required_skills(task)

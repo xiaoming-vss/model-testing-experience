@@ -3,16 +3,15 @@
 from __future__ import annotations
 
 import logging
-import os
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Callable
 
+from testing_agent_ai_worker.agent import apply_environment, migrate_legacy_sessions
 from testing_agent_ai_worker.config.loader import load_settings
 from testing_agent_ai_worker.config.models import Settings
-from testing_agent_ai_worker.nanobot_runtime.paths import migrate_legacy_sessions
 from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
 from testing_agent_ai_worker.platform.result_sink import HttpResultSink
 from testing_agent_ai_worker.platform.revision_attachments import (
@@ -22,22 +21,22 @@ from testing_agent_ai_worker.platform.skills import SkillPreparer
 from testing_agent_ai_worker.platform.task_source import HttpClaimTaskSource
 from testing_agent_ai_worker.services.result_service import ResultService
 from testing_agent_ai_worker.services.task_service import TaskService
-from testing_agent_ai_worker.tasks.api_case_generate.executor import ApiCaseNanobotExecutor
+from testing_agent_ai_worker.tasks.api_case_generate.executor import ApiCaseExecutor
 from testing_agent_ai_worker.tasks.code_risk_analysis.executor import (
-    CodeRiskAnalysisNanobotExecutor,
+    CodeRiskAnalysisExecutor,
 )
 from testing_agent_ai_worker.tasks.functional_case_generate.executor import (
-    FunctionalCaseNanobotExecutor,
+    FunctionalCaseExecutor,
 )
 from testing_agent_ai_worker.tasks.requirement_analysis.executor import (
-    RequirementAnalysisNanobotExecutor,
+    RequirementAnalysisExecutor,
 )
 from testing_agent_ai_worker.tasks.requirement_analysis.source_downloader import (
     PlatformRequirementSourceDownloader,
 )
 from testing_agent_ai_worker.tasks.test_order_graph.executor import TestOrderGraphExecutor
-from testing_agent_ai_worker.tasks.test_report_generate.executor import TestReportNanobotExecutor
-from testing_agent_ai_worker.tasks.ui_case_generate.executor import UiCaseNanobotExecutor
+from testing_agent_ai_worker.tasks.test_report_generate.executor import TestReportExecutor
+from testing_agent_ai_worker.tasks.ui_case_generate.executor import UiCaseExecutor
 from testing_agent_ai_worker.tasks.ui_case_generate.source_archive import (
     PlatformSourceArchiveDownloader,
 )
@@ -92,19 +91,22 @@ def build_task_runner(
     return WorkerRunner(
         executor=WorkerTaskDispatcherExecutor(
             skill_preparer=SkillPreparer(
-                resolved_client, settings.nanobot, settings.worker.worker_id
+                resolved_client, settings.agent.active, settings.worker.worker_id
             ),
-            api_executor=ApiCaseNanobotExecutor(
-                nanobot_config=settings.nanobot,
-            ),
-            functional_executor=FunctionalCaseNanobotExecutor(
-                nanobot_config=settings.nanobot,
+            api_executor=ApiCaseExecutor(
+                agent_config=settings.agent.active,
                 attachment_downloader=PlatformRevisionAttachmentDownloader(
                     resolved_client, settings.worker.worker_id
                 ),
             ),
-            requirement_executor=RequirementAnalysisNanobotExecutor(
-                nanobot_config=settings.nanobot,
+            functional_executor=FunctionalCaseExecutor(
+                agent_config=settings.agent.active,
+                attachment_downloader=PlatformRevisionAttachmentDownloader(
+                    resolved_client, settings.worker.worker_id
+                ),
+            ),
+            requirement_executor=RequirementAnalysisExecutor(
+                agent_config=settings.agent.active,
                 source_downloader=PlatformRequirementSourceDownloader(
                     resolved_client, settings.worker.worker_id
                 ),
@@ -112,20 +114,20 @@ def build_task_runner(
                     resolved_client, settings.worker.worker_id
                 ),
             ),
-            test_report_executor=TestReportNanobotExecutor(
-                nanobot_config=settings.nanobot,
+            test_report_executor=TestReportExecutor(
+                agent_config=settings.agent.active,
             ),
-            ui_executor=UiCaseNanobotExecutor(
-                nanobot_config=settings.nanobot,
+            ui_executor=UiCaseExecutor(
+                agent_config=settings.agent.active,
                 source_downloader=PlatformSourceArchiveDownloader(resolved_client),
             ),
-            code_risk_executor=CodeRiskAnalysisNanobotExecutor(
-                nanobot_config=settings.nanobot,
+            code_risk_executor=CodeRiskAnalysisExecutor(
+                agent_config=settings.agent.active,
                 client=resolved_client,
                 timeout_seconds=settings.code_risk_analysis.gitlab_timeout_seconds,
             ),
             test_order_graph_executor=TestOrderGraphExecutor(
-                nanobot_config=settings.nanobot,
+                agent_config=settings.agent.active,
             ),
         ),
         result_service=ResultService(result_sink),
@@ -181,8 +183,8 @@ def run_worker(
     """运行 worker 主循环。"""
 
     resolved_settings = settings or load_settings(config_path)
-    _apply_nanobot_runtime_environment(resolved_settings)
-    migrate_legacy_sessions(resolved_settings.nanobot)
+    apply_environment(resolved_settings.agent.active)
+    migrate_legacy_sessions(resolved_settings.agent.active)
     resolved_poller = poller or build_task_poller(resolved_settings)
     resolved_task_runner = task_runner or build_task_runner(resolved_settings)
     resolved_logger = logger or logging.getLogger("testing_agent_ai_worker")
@@ -214,16 +216,6 @@ def run_worker(
     finally:
         # 正常退出及第一次 Ctrl+C 都排空在途任务；SIGTERM 直接终止进程。
         task_pool.shutdown(wait=True)
-
-
-def _apply_nanobot_runtime_environment(settings: Settings) -> None:
-    os.environ["NANOBOT_STREAM_IDLE_TIMEOUT_S"] = (
-        f"{settings.nanobot.stream_idle_timeout_seconds:g}"
-    )
-
-    provider_request_timeout_seconds = settings.nanobot.provider_request_timeout_seconds
-    if provider_request_timeout_seconds is not None:
-        os.environ["NANOBOT_OPENAI_COMPAT_TIMEOUT_S"] = f"{provider_request_timeout_seconds:g}"
 
 
 def _run_worker_iteration(

@@ -203,5 +203,5 @@ class Task(BaseModel):
         return self.payload.llm_credentials is not None
 
     @property
-    def nanobot_session_key(self) -> str:
+    def session_key(self) -> str:
         return self.run_id.strip()

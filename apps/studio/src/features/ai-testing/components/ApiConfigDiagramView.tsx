@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
 import { normalizeApiConfigCases, stringifyCompact, type ApiConfigRule } from '../utils/apiConfigDiagram'
 import { ArtifactModeSwitch } from './ArtifactViewTabs'
+import { useViewMotion } from '@/shared/ui/useViewMotion'
 import '../styles/api-config-result.css'
 
 function getMethodTagColor(method: string) {
@@ -143,12 +144,14 @@ export function ApiConfigDiagramView({ content, defaultCollapsed = false }: { co
 export function ApiConfigResultView({ content }: { content: string }) {
   const canRenderDiagram = Boolean(normalizeApiConfigCases(content))
   const [activeView, setActiveView] = useState<'diagram' | 'json'>('diagram')
+  const panelRef = useViewMotion(activeView === 'diagram' ? 0 : 1)
 
   return (
     <div className="api-config-result-tabs">
       <ArtifactModeSwitch copyText={activeView === 'json' ? content : undefined} value={activeView} onChange={(value) => setActiveView(value as 'diagram' | 'json')}
         options={[{ label: '预览', value: 'diagram' }, { label: 'JSON', value: 'json' }]} />
       <div
+        ref={panelRef}
         id="api-config-result-panel"
         className="api-config-result-panel"
         role="region"

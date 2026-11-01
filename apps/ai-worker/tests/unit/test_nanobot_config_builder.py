@@ -11,10 +11,10 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-import testing_agent_ai_worker.nanobot.config_builder as config_builder_module
+import testing_agent_ai_worker.agent.nanobot as config_builder_module
+from testing_agent_ai_worker.agent.config_builder import task_config_path
 from testing_agent_ai_worker.config.models import NanobotConfig
 from testing_agent_ai_worker.models.task import LlmCredentials, Task, TaskPayload
-from testing_agent_ai_worker.nanobot.config_builder import task_config_path
 
 
 class NanobotConfigBuilderTests(unittest.TestCase):
@@ -27,7 +27,7 @@ class NanobotConfigBuilderTests(unittest.TestCase):
             )
             with chdir(app_root):
                 with task_config_path(
-                    nanobot_config=NanobotConfig(runtime_root=str(app_root / "runtime")),
+                    agent_config=NanobotConfig(runtime_root=str(app_root / "runtime")),
                     task=self._make_task(),
                 ) as config_path:
                     config = json.loads(Path(config_path).read_text(encoding="utf-8"))
@@ -86,7 +86,7 @@ class NanobotConfigBuilderTests(unittest.TestCase):
 
             with patch.object(config_builder_module, "DEFAULT_TEMPLATE_PATH", template_path):
                 with task_config_path(
-                    nanobot_config=nanobot_config,
+                    agent_config=nanobot_config,
                     task=self._make_task(),
                 ) as resolved_path:
                     self.assertIsNotNone(resolved_path)
@@ -117,7 +117,7 @@ class NanobotConfigBuilderTests(unittest.TestCase):
 
             with patch.object(config_builder_module, "DEFAULT_TEMPLATE_PATH", template_path):
                 with task_config_path(
-                    nanobot_config=nanobot_config,
+                    agent_config=nanobot_config,
                     task=self._make_task(with_credentials=False),
                 ) as resolved_path:
                     self.assertEqual(Path(resolved_path).parent, Path(nanobot_config.runtime_root))

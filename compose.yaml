@@ -50,11 +50,11 @@ services:
 
   ai-worker:
     init: true
-    image: mtx/${AI_WORKER_PROJECT:-ai-worker}:local
-    build: ./apps/${AI_WORKER_PROJECT:-ai-worker}
+    image: mtx/ai-worker:local
+    build: ./apps/ai-worker
     restart: unless-stopped
     volumes:
-      - ./.runtime/docker/${AI_WORKER_PROJECT:-ai-worker}.toml:/app/config/worker.toml:ro
+      - ./.runtime/docker/ai-worker.toml:/app/config/worker.toml:ro
       - ${AI_RUNTIME_VOLUME:-ai-runtime}:/data/runtime
       - ${AI_LOGS_VOLUME:-ai-logs}:/app/logs
     depends_on:

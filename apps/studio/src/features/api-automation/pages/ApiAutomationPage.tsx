@@ -208,7 +208,11 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
         description: values.summary,
       })
     },
-    onSuccess: () => {
+    onSuccess: (_result, values) => {
+      const previousRequirementId = editingCollection?.requirementId ?? editingCollection?.requirement_id
+      for (const requirementId of new Set([previousRequirementId, values.requirementId])) {
+        if (requirementId) void queryClient.invalidateQueries({ queryKey: ['generationChain', requirementId, 'api', 'importOptions'] })
+      }
       message.success(editingCollection ? 'API测试集已更新' : 'API测试集已创建')
       setDrawerOpen(false)
       setEditingCollection(null)

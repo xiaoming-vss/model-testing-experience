@@ -47,9 +47,9 @@ export function BaseServicesPage({ skillLibrary }: { skillLibrary: ReactNode }) 
   }
 
   return (
-    <div className="workbench-page base-services-page tp-surface">
+    <div className="workbench-page base-services-page tp-surface" data-tab-motion-scope>
       <div className="base-services-navigation">
-          <div className="base-services-tab-switcher" role="tablist" aria-label="基础服务模块切换">
+          <div className="base-services-tab-switcher" role="tablist" data-tab-motion-scoped aria-label="基础服务模块切换">
             {tabOptions.map((option) => {
               const active = option.key === activeTab
               return (
@@ -69,6 +69,7 @@ export function BaseServicesPage({ skillLibrary }: { skillLibrary: ReactNode }) 
           </div>
       </div>
 
+      <div className="base-services-motion-panel" data-tab-motion-panel>
       {activeTab === 'skills' ? skillLibrary : <section className="base-services-unified-panel tp-board tp-list-panel">
         <div className="tp-list-toolbar">
           <h1 className="tp-list-title">{tabOptions.find(option => option.key === activeTab)?.label}</h1>
@@ -78,6 +79,7 @@ export function BaseServicesPage({ skillLibrary }: { skillLibrary: ReactNode }) 
           <SharedServicesPanel projectId={activeProjectId} provider={activeTab} toolbarActions={toolbarActions} />
         </div>
       </section>}
+      </div>
     </div>
   )
 }

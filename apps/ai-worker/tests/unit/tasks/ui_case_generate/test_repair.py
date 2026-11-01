@@ -6,9 +6,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from testing_agent_ai_worker.config.models import NanobotConfig
+from testing_agent_ai_worker.config.models import PiConfig
 from testing_agent_ai_worker.models.execution import TaskStatus
-from testing_agent_ai_worker.tasks.ui_case_generate.executor import UiCaseNanobotExecutor
+from testing_agent_ai_worker.tasks.ui_case_generate.executor import UiCaseExecutor
 from tests.unit.tasks.ui_case_generate import test_executor as fixtures
 
 VALID_YAML = fixtures.VALID_YAML
@@ -17,8 +17,8 @@ VALID_YAML = fixtures.VALID_YAML
 class UiRepairTests(unittest.TestCase):
     def execute(self, root, runner, progress, downloader=None):
         downloader = downloader or Mock(return_value=Path(root) / "source")
-        executor = UiCaseNanobotExecutor(
-            nanobot_config=NanobotConfig(runtime_root=root),
+        executor = UiCaseExecutor(
+            agent_config=PiConfig(runtime_root=root),
             source_downloader=SimpleNamespace(download_and_extract=downloader),
             skill_runner=runner,
         )

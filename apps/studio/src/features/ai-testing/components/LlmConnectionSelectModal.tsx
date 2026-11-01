@@ -21,6 +21,8 @@ export function LlmConnectionSelectModal({
   checkpointEnabled = false,
   onCheckpointEnabledChange,
   instruction,
+  instructionLabel = '补充指令',
+  instructionPlaceholder = '选填，仅用于本次运行',
   children,
   confirmDisabled = false,
   onInstructionChange,
@@ -28,6 +30,8 @@ export function LlmConnectionSelectModal({
   children?: ReactNode
   confirmDisabled?: boolean
   instruction?: string
+  instructionLabel?: string
+  instructionPlaceholder?: string
   onInstructionChange?: (value: string) => void
   open: boolean
   onClose: () => void
@@ -149,9 +153,10 @@ export function LlmConnectionSelectModal({
             </div>
           </Radio.Group>
           {onInstructionChange ? <label style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <Text strong>补充指令</Text>
-            <Input.TextArea aria-label="补充指令" value={instruction} onChange={event => onInstructionChange(event.target.value)}
-              autoSize={{ minRows: 3, maxRows: 8 }} placeholder="选填，仅用于本次运行" />
+            <Text strong>{instructionLabel}</Text>
+            {instructionLabel !== '补充指令' ? <Text type="secondary">仅用于本次阶段运行</Text> : null}
+            <Input.TextArea aria-label={instructionLabel} value={instruction} onChange={event => onInstructionChange(event.target.value)}
+              autoSize={{ minRows: 3, maxRows: 8 }} placeholder={instructionPlaceholder} />
           </label> : null}
           {showCheckpointOption ? (
             <div

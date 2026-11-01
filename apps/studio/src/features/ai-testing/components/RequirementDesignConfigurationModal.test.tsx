@@ -9,10 +9,10 @@ vi.mock('@/shared/api/files', () => ({ storageCapabilities: async () => ({ enabl
 const clients: QueryClient[] = []
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.restoreAllMocks() })
 function response(data: unknown, status = 200) { return new Response(JSON.stringify({ code: status === 200 ? 0 : status, message: status === 200 ? 'ok' : '上传失败', data }), { status, headers: { 'Content-Type': 'application/json' } }) }
-function mount(kind: 'ui' | 'api', onSaved = vi.fn()) {
+function mount(kind: 'ui' | 'api', onSaved = vi.fn(), initialTaskId?: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   clients.push(client)
-  const rendered = render(<TestThemeProvider><QueryClientProvider client={client}><RequirementDesignConfigurationModal requirementId="req" kind={kind} tasks={[]}
+  const rendered = render(<TestThemeProvider><QueryClientProvider client={client}><RequirementDesignConfigurationModal requirementId="req" kind={kind} tasks={[]} initialTaskId={initialTaskId}
     onClose={vi.fn()} onSaved={onSaved} /></QueryClientProvider></TestThemeProvider>)
   return { ...rendered, onSaved }
 }
@@ -55,4 +55,60 @@ it('首次 API 配置直接保存文档，自动使用当前需求', async () =>
   await user.click(screen.getByRole('button', { name: '保存设置' }))
   await waitFor(() => expect(onSaved).toHaveBeenCalledWith('api-task'))
   expect(submitted).toHaveBeenCalledWith(expect.objectContaining({ sourceContent: '{"openapi":"3.0.0"}', requestId: expect.any(String) }))
+})
+
+it('未配置时空任务 ID 不触发读取，允许保存文档', async () => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+    if (!init?.method || init.method === 'GET') return response({}, 404)
+    return response({ taskId: 'api-task' })
+  })
+  const user = userEvent.setup()
+  const { onSaved } = mount('api', vi.fn(), '')
+  await user.type(screen.getByRole('textbox', { name: 'OpenAPI / Swagger 文档' }), 'openapi: 3.0.0')
+  expect(screen.getByRole('button', { name: '保存设置' })).toBeEnabled()
+  await user.click(screen.getByRole('button', { name: '保存设置' }))
+  await waitFor(() => expect(onSaved).toHaveBeenCalledWith('api-task'))
+  expect(fetchMock).toHaveBeenCalledTimes(1)
+})
+it('格式化 JSON 后保存', async () => {
+  const submitted = vi.fn()
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+    submitted(JSON.parse(String(init?.body)))
+    return response({ taskId: 'api-task' })
+  })
+  const user = userEvent.setup()
+  const { onSaved } = mount('api')
+  const editor = screen.getByRole('textbox', { name: 'OpenAPI / Swagger 文档' })
+  await user.click(editor)
+  await user.paste('{"openapi":"3.0.0"}')
+  await user.click(screen.getByRole('button', { name: '格式化' }))
+  await user.click(screen.getByRole('button', { name: '保存设置' }))
+  await waitFor(() => expect(onSaved).toHaveBeenCalled())
+  expect(submitted).toHaveBeenCalledWith(expect.objectContaining({ sourceContent: '{\n  "openapi": "3.0.0"\n}' }))
+})
+
+it('文档格式错误时提示并保留原文', async () => {
+  const user = userEvent.setup()
+  mount('api')
+  const editor = screen.getByRole('textbox', { name: 'OpenAPI / Swagger 文档' })
+  await user.click(editor)
+  await user.paste('{"openapi":}')
+  await user.click(screen.getByRole('button', { name: '格式化' }))
+  expect(screen.getByText('文档格式不正确，请检查 JSON 或 YAML 后重试')).toBeInTheDocument()
+  expect(editor).toHaveTextContent('{"openapi":}')
+})
+it('格式化 YAML 时保留注释并保存内容', async () => {
+  const submitted = vi.fn()
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+    submitted(JSON.parse(String(init?.body)))
+    return response({ taskId: 'api-task' })
+  })
+  const user = userEvent.setup()
+  const { onSaved } = mount('api')
+  await user.click(screen.getByRole('textbox', { name: 'OpenAPI / Swagger 文档' }))
+  await user.paste('# API 版本\nopenapi: 3.0.0')
+  await user.click(screen.getByRole('button', { name: '格式化' }))
+  await user.click(screen.getByRole('button', { name: '保存设置' }))
+  await waitFor(() => expect(onSaved).toHaveBeenCalled())
+  expect(submitted).toHaveBeenCalledWith(expect.objectContaining({ sourceContent: '# API 版本\nopenapi: 3.0.0\n' }))
 })

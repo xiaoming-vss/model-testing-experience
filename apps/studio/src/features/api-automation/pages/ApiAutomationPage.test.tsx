@@ -209,3 +209,28 @@ it('有环境时行内运行按钮提交当前环境，没有环境时不可用'
   expect(iconButton('运行API测试集', second.container)).toBeDisabled()
   clientWithoutEnv.clear()
 })
+
+it('编辑所属需求后提交归属并刷新导入目标', async () => {
+  vi.spyOn(api, 'getApiCollections').mockImplementation(async () => listResponse([collection]))
+  vi.spyOn(api, 'getApiEnvironments').mockImplementation(async () => listResponse([environment]))
+  vi.spyOn(api, 'getRequirements').mockImplementation(async () => listResponse([
+    { requirementId: 'req-1', name: '安装部署', sprintId: 'sprint-1' },
+    { requirementId: 'req-2', name: '目标需求', sprintId: 'sprint-1' },
+  ]))
+  const update = vi.spyOn(api, 'updateApiCollection').mockResolvedValue({ ...collection, requirementId: 'req-2' })
+  const client = buildClient()
+  const invalidate = vi.spyOn(client, 'invalidateQueries')
+  const { container } = renderPage(client)
+  const user = userEvent.setup()
+  await screen.findByText('dev-a')
+  await user.click(iconButton('编辑API测试集', container))
+  const drawer = (await screen.findByText('编辑API测试集', { selector: '.ant-drawer-title' })).closest('.ant-drawer') as HTMLElement
+  const requirement = within(drawer).getByLabelText('所属需求')
+  await user.click(requirement)
+  await user.click(await screen.findByText('目标需求'))
+  await user.click(within(drawer).getByRole('button', { name: '保存' }))
+  await waitFor(() => expect(update).toHaveBeenCalledWith('collection-1', { requirementId: 'req-2' }))
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['generationChain', 'req-1', 'api', 'importOptions'] })
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['generationChain', 'req-2', 'api', 'importOptions'] })
+  client.clear()
+})

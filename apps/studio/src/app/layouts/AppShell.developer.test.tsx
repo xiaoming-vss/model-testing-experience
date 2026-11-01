@@ -106,3 +106,10 @@ it('开发可评论、转派和更新状态，详情不提供其他业务模块�
   await waitFor(() => expect(requests.some(({ path }) => path === '/v1/bugs/b/transition')).toBe(true))
   expect(requests.some(({ path }) => path.endsWith('/members') || path.endsWith('/sprints'))).toBe(false)
 })
+
+it('在顶栏的测试阶段入口显示反馈联系方式', async () => {
+  renderShell('/testing?tab=bugs')
+  await screen.findByText('开发需要修复的问题')
+  await userEvent.click(screen.getByRole('button', { name: '测试阶段反馈联系方式' }))
+  expect(await screen.findByRole('link', { name: 'limingjiang.x@gmail.com' })).toHaveAttribute('href', 'mailto:limingjiang.x@gmail.com')
+})

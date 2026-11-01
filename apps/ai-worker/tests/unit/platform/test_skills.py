@@ -3,9 +3,9 @@ import tempfile
 import unittest
 from unittest.mock import Mock
 
-from testing_agent_ai_worker.config.models import NanobotConfig
+from testing_agent_ai_worker.agent.paths import resolve_task_workspace
+from testing_agent_ai_worker.config.models import PiConfig
 from testing_agent_ai_worker.models.task import Task, TaskPayload
-from testing_agent_ai_worker.nanobot_runtime.paths import resolve_task_workspace
 from testing_agent_ai_worker.platform.skills import SkillPreparer, required_skills
 
 
@@ -49,7 +49,7 @@ class SkillTests(unittest.TestCase):
 
     def test_fresh_download_replaces_removed_files_and_preserves_other_task(self):
         with tempfile.TemporaryDirectory() as temp:
-            config = NanobotConfig(runtime_root=temp)
+            config = PiConfig(runtime_root=temp)
             task = self.task(task_type="ui_case_generate")
             client = Mock()
             data = b"# skill"
@@ -77,7 +77,7 @@ class SkillTests(unittest.TestCase):
 
     def test_bad_download_aborts_before_replacing_skill_directory(self):
         with tempfile.TemporaryDirectory() as temp:
-            config = NanobotConfig(runtime_root=temp)
+            config = PiConfig(runtime_root=temp)
             task = self.task(task_type="ui_case_generate")
             client = Mock()
             client.get.return_value = {
@@ -93,7 +93,7 @@ class SkillTests(unittest.TestCase):
             client = Mock()
             client.get.return_value = {"files": [{"path": "../escape", "size": 1}]}
             with self.assertRaisesRegex(ValueError, "路径"):
-                SkillPreparer(client, NanobotConfig(runtime_root=temp), "w")(
+                SkillPreparer(client, PiConfig(runtime_root=temp), "w")(
                     self.task(task_type="ui_case_generate")
                 )
             client.get_signed_file_bytes.assert_not_called()

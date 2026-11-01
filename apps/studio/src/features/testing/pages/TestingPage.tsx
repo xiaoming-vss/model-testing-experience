@@ -33,13 +33,13 @@ export function TestingPage() {
   }, [activeTab])
 
   return (
-    <div className="workbench-page testing-page">
+    <div className="workbench-page testing-page" data-tab-motion-scope>
       {activeTab !== 'bugs' && <TestingNavigation activeTab={activeTab} onChange={tab => {
         const params = new URLSearchParams(searchParams)
         params.set('tab', tab)
         setSearchParams(params)
       }} />}
-      <div className="testing-tab-panel">
+      <div className="testing-tab-panel" data-tab-motion-panel>
         {TESTING_TAB_PAGES.map(({ key, Page }) => {
           if (!visitedTabs.has(key)) return null
           return (

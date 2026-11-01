@@ -11,7 +11,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from testing_agent_ai_worker.nanobot_runtime.prompt import (
+from testing_agent_ai_worker.agent.prompt import (
     FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION,
     FUNCTIONAL_CASE_NAMES_JSON_ONLY_INSTRUCTION,
     FUNCTIONAL_DETAILED_CASES_JSON_ONLY_INSTRUCTION,

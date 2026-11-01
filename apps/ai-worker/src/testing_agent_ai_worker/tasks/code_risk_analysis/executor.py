@@ -10,14 +10,14 @@ from typing import Any, Callable
 
 import yaml
 
-from testing_agent_ai_worker.config.models import NanobotConfig
-from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
-from testing_agent_ai_worker.models.task import GitlabCredentials, Task
-from testing_agent_ai_worker.nanobot_runtime.config_builder import task_config_path
-from testing_agent_ai_worker.nanobot_runtime.paths import (
+from testing_agent_ai_worker.agent.config_builder import task_config_path
+from testing_agent_ai_worker.agent.paths import (
     resolve_runtime_paths,
     resolve_task_workspace,
 )
+from testing_agent_ai_worker.config.models import AgentBackendConfig
+from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
+from testing_agent_ai_worker.models.task import GitlabCredentials, Task
 from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
 from testing_agent_ai_worker.platform.task_source import parse_gitlab_credentials
 from testing_agent_ai_worker.tasks.code_risk_analysis.gitlab_diffs import fetch_repo_diffs
@@ -72,13 +72,13 @@ def _platform_credentials_fetcher(client: PlatformHttpClient):
     return _fetch
 
 
-class CodeRiskAnalysisNanobotExecutor(TaskExecutor):
+class CodeRiskAnalysisExecutor(TaskExecutor):
     """代码风险分析执行器:单次执行,无 checkpoint/分片,凭据仅驻内存。"""
 
     def __init__(
         self,
         *,
-        nanobot_config: NanobotConfig,
+        agent_config: AgentBackendConfig,
         skill_runner: Callable[..., Any] = run_skill_step,
         skill_name: str = CODE_RISK_SKILL_NAME,
         credentials_fetcher: Callable[[Task], list[GitlabCredentials]] | None = None,
@@ -87,8 +87,8 @@ class CodeRiskAnalysisNanobotExecutor(TaskExecutor):
         client: PlatformHttpClient | None = None,
         timeout_seconds: float = 120.0,
     ) -> None:
-        self.nanobot_config = nanobot_config
-        self.runtime_paths = resolve_runtime_paths(nanobot_config)
+        self.agent_config = agent_config
+        self.runtime_paths = resolve_runtime_paths(agent_config)
         self.skill_runner = skill_runner
         self.skill_name = skill_name
         self.credentials_fetcher = credentials_fetcher or (
@@ -132,7 +132,7 @@ class CodeRiskAnalysisNanobotExecutor(TaskExecutor):
                 remediation="检查 GitLab PAT 或重新绑定",
             )
 
-        workspace = resolve_task_workspace(self.nanobot_config, task)
+        workspace = resolve_task_workspace(self.agent_config, task)
         if not self.skill_dir_checker(workspace, self.skill_name):
             return self._failed_result(
                 task,
@@ -172,11 +172,11 @@ class CodeRiskAnalysisNanobotExecutor(TaskExecutor):
             )
         )
         input_text = self._build_input_text(task, list(repo_diffs))
-        with task_config_path(nanobot_config=self.nanobot_config, task=task) as config_path:
+        with task_config_path(agent_config=self.agent_config, task=task) as config_path:
             raw_report = self._resolve_runner_result(
                 self.skill_runner(
                     input_text=input_text,
-                    session_key=task.nanobot_session_key,
+                    session_key=task.session_key,
                     skill_name=self.skill_name,
                     config_path=config_path,
                     workspace=str(workspace),
@@ -227,7 +227,7 @@ class CodeRiskAnalysisNanobotExecutor(TaskExecutor):
     def _build_input_text(task: Task, repo_diffs: list[Any]) -> str:
         parts: list[str] = ["# 需求理解记录"]
         if task.requirement_input is not None:
-            from testing_agent_ai_worker.nanobot_runtime.prompt import (
+            from testing_agent_ai_worker.agent.prompt import (
                 STRUCTURED_REQUIREMENT_INPUT_INSTRUCTION,
             )
             from testing_agent_ai_worker.requirement_artifacts import requirement_content

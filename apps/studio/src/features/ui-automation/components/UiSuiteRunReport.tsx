@@ -1,4 +1,5 @@
 import { ActionButton } from '@/shared/components/ActionButton'
+import { useViewMotion } from '@/shared/ui/useViewMotion'
 import { StoredFileDownload } from '@/shared/components/files/StoredFile'
 import {
   uiSuiteRunReportViewOptions,
@@ -45,6 +46,7 @@ type Props = {
 }
 
 export function UiSuiteRunReport({ suiteRunReportOpen, closeSuiteRunReport, suiteRunReportQuery, suiteRunReport, handleRefreshSuiteRunReport, refreshingSuiteRunReport, selectedSuiteRunId, suiteRunReportView, setSuiteRunReportView, orderedSuiteRunItems, selectedSuiteRunSummary, expandedSuiteRunItemIds, toggleSuiteRunItem }: Props) {
+  const viewRef = useViewMotion(uiSuiteRunReportViewOptions.findIndex(option => option.value === suiteRunReportView))
   return (
     <Modal
       mask={{ closable: false }}
@@ -122,7 +124,7 @@ export function UiSuiteRunReport({ suiteRunReportOpen, closeSuiteRunReport, suit
             />
           </div>
 
-          <div className="api-collection-run-report-scroll">
+          <div ref={viewRef} className="api-collection-run-report-scroll">
             <div className="api-collection-run-report-content">
               {suiteRunReportView === 'snapshot' ? (
                 suiteRunReport.snapshot ? (

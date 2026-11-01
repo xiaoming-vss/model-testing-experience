@@ -1,15 +1,15 @@
-"""Run one requirement-analysis skill in an isolated nanobot session."""
+"""Run one requirement-analysis skill in an isolated agent session."""
 
 from collections.abc import Callable
 from typing import Any
 
-from testing_agent_ai_worker.nanobot_runtime.prompt import build_skill_message
+from testing_agent_ai_worker.agent.prompt import build_skill_message
 
 
 def _default_from_config(**kwargs: Any) -> Any:
-    from nanobot import Nanobot
+    from testing_agent_ai_worker.agent import create_agent
 
-    return Nanobot.from_config(**kwargs)
+    return create_agent(**kwargs)
 
 
 async def run_skill_step(

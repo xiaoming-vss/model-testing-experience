@@ -37,11 +37,11 @@ class ThreeStageTests(unittest.TestCase):
         from datetime import datetime
         from types import SimpleNamespace
 
-        from testing_agent_ai_worker.config.models import NanobotConfig
-        from testing_agent_ai_worker.tasks.ui_case_generate.executor import UiCaseNanobotExecutor
+        from testing_agent_ai_worker.config.models import PiConfig
+        from testing_agent_ai_worker.tasks.ui_case_generate.executor import UiCaseExecutor
 
-        executor = UiCaseNanobotExecutor(
-            nanobot_config=NanobotConfig(runtime_root=root),
+        executor = UiCaseExecutor(
+            agent_config=PiConfig(runtime_root=root),
             source_downloader=SimpleNamespace(download_and_extract=Mock(return_value=source)),
             skill_runner=runner,
         )

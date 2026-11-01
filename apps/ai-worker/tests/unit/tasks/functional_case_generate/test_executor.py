@@ -11,14 +11,14 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 import testing_agent_ai_worker.tasks.functional_case_generate.executor as executor_module
-from testing_agent_ai_worker.config.models import NanobotConfig
-from testing_agent_ai_worker.models.execution import TaskProgress, TaskStatus
-from testing_agent_ai_worker.models.task import LlmCredentials, Task, TaskPayload
-from testing_agent_ai_worker.nanobot_runtime.paths import resolve_task_workspace
-from testing_agent_ai_worker.nanobot_runtime.prompt import (
+from testing_agent_ai_worker.agent.paths import resolve_task_workspace
+from testing_agent_ai_worker.agent.prompt import (
     FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION,
     FUNCTIONAL_CASE_NAMES_JSON_ONLY_INSTRUCTION,
 )
+from testing_agent_ai_worker.config.models import PiConfig
+from testing_agent_ai_worker.models.execution import TaskProgress, TaskStatus
+from testing_agent_ai_worker.models.task import LlmCredentials, Task, TaskPayload
 from testing_agent_ai_worker.tasks.functional_case_generate.chain import FunctionalChainRunResult
 
 
@@ -56,7 +56,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
     def test_execute_runs_three_step_chain_submits_two_progress_events_and_returns_success(
         self,
     ) -> None:
-        executor_cls = getattr(executor_module, "FunctionalCaseNanobotExecutor", None)
+        executor_cls = getattr(executor_module, "FunctionalCaseExecutor", None)
         chain_result_cls = getattr(executor_module, "FunctionalChainRunResult", None)
         self.assertIsNotNone(executor_cls)
         self.assertIsNotNone(chain_result_cls)
@@ -159,8 +159,8 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
             )
 
         executor = executor_cls(
-            nanobot_config=NanobotConfig(
-                runtime_root="D:/tmp/nanobot-runtime",
+            agent_config=PiConfig(
+                runtime_root="D:/tmp/pi-runtime",
             ),
             chain_runner=fake_chain_runner,
         )
@@ -189,12 +189,12 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         self.assertEqual(captured["session_key"], "run-functional-1")
         self.assertEqual(
             Path(str(captured["workspace"])),
-            resolve_task_workspace(executor.nanobot_config, task),
+            resolve_task_workspace(executor.agent_config, task),
         )
         self.assertEqual(events, ["chain"])
         self.assertEqual(
             Path(str(captured["config_path"])).parent,
-            Path("D:/tmp/nanobot-runtime").resolve(),
+            Path("D:/tmp/pi-runtime").resolve(),
         )
         self.assertFalse(Path(str(captured["config_path"])).exists())
         self.assertEqual(captured["analysis_skill_name"], "analyze-functional-requirements")
@@ -220,14 +220,14 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         self.assertEqual(summary["caseCount"], 2)
 
     def test_execute_returns_failed_result_for_unsupported_functional_document_type(self) -> None:
-        executor_cls = getattr(executor_module, "FunctionalCaseNanobotExecutor", None)
+        executor_cls = getattr(executor_module, "FunctionalCaseExecutor", None)
         self.assertIsNotNone(executor_cls)
         if executor_cls is None:
             return
 
         task = self._make_task(source_type="text", document_type="pdf")
         executor = executor_cls(
-            nanobot_config=NanobotConfig(),
+            agent_config=PiConfig(),
             chain_runner=lambda **kwargs: None,
         )
 
@@ -263,8 +263,8 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
                     captured.update(kwargs)
                     return '{"Platform_core_functions": []}'
 
-                executor = executor_module.FunctionalCaseNanobotExecutor(
-                    nanobot_config=NanobotConfig(runtime_root=runtime),
+                executor = executor_module.FunctionalCaseExecutor(
+                    agent_config=PiConfig(runtime_root=runtime),
                     chain_runner=chain_runner,
                     skill_runner=skill_runner,
                 )
@@ -282,7 +282,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
                     )
 
     def test_execute_accepts_word_document_type_and_uses_source_content(self) -> None:
-        executor_cls = getattr(executor_module, "FunctionalCaseNanobotExecutor", None)
+        executor_cls = getattr(executor_module, "FunctionalCaseExecutor", None)
         self.assertIsNotNone(executor_cls)
         if executor_cls is None:
             return
@@ -301,7 +301,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
             )
 
         executor = executor_cls(
-            nanobot_config=NanobotConfig(runtime_root="D:/tmp/nanobot-runtime"),
+            agent_config=PiConfig(runtime_root="D:/tmp/pi-runtime"),
             chain_runner=fake_chain_runner,
         )
 
@@ -320,7 +320,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
     def test_execute_checkpoint_requirement_analysis_uses_source_content_without_enhanced_stage(
         self,
     ) -> None:
-        executor_cls = getattr(executor_module, "FunctionalCaseNanobotExecutor", None)
+        executor_cls = getattr(executor_module, "FunctionalCaseExecutor", None)
         self.assertIsNotNone(executor_cls)
         if executor_cls is None:
             return
@@ -349,7 +349,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         )
 
         executor = executor_cls(
-            nanobot_config=NanobotConfig(),
+            agent_config=PiConfig(),
             chain_runner=lambda **kwargs: None,
             skill_runner=fake_skill_runner,
         )
@@ -376,7 +376,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
     def test_execute_checkpoint_requirement_analysis_ignores_legacy_enhanced_text_and_returns_none(
         self,
     ) -> None:
-        executor_cls = getattr(executor_module, "FunctionalCaseNanobotExecutor", None)
+        executor_cls = getattr(executor_module, "FunctionalCaseExecutor", None)
         self.assertIsNotNone(executor_cls)
         if executor_cls is None:
             return
@@ -411,8 +411,8 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
             ),
         )
         executor = executor_cls(
-            nanobot_config=NanobotConfig(
-                runtime_root="D:/tmp/nanobot-runtime",
+            agent_config=PiConfig(
+                runtime_root="D:/tmp/pi-runtime",
             ),
             chain_runner=lambda **kwargs: None,
             skill_runner=fake_skill_runner,
@@ -432,12 +432,12 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         self.assertEqual(captured["session_key"], "run-functional-1")
         self.assertEqual(
             Path(str(captured["config_path"])).parent,
-            Path("D:/tmp/nanobot-runtime").resolve(),
+            Path("D:/tmp/pi-runtime").resolve(),
         )
         self.assertFalse(Path(str(captured["config_path"])).exists())
         self.assertEqual(
             Path(str(captured["workspace"])),
-            resolve_task_workspace(executor.nanobot_config, task),
+            resolve_task_workspace(executor.agent_config, task),
         )
         self.assertEqual(len(progress_events), 1)
         self.assertEqual(progress_events[0].current_stage, "requirement_analysis")
@@ -448,7 +448,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         self.assertIsNone(config["caseNames"])
 
     def test_execute_checkpoint_requirement_analysis_ignores_invalid_old_config(self) -> None:
-        executor_cls = getattr(executor_module, "FunctionalCaseNanobotExecutor", None)
+        executor_cls = getattr(executor_module, "FunctionalCaseExecutor", None)
         self.assertIsNotNone(executor_cls)
         if executor_cls is None:
             return
@@ -460,7 +460,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
             config_json="not-json",
         )
         executor = executor_cls(
-            nanobot_config=NanobotConfig(),
+            agent_config=PiConfig(),
             chain_runner=lambda **kwargs: None,
             skill_runner=lambda **kwargs: '{"Platform_core_functions": []}',
         )
@@ -478,7 +478,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
     def test_execute_checkpoint_case_names_uses_saved_requirement_analysis_and_returns_none(
         self,
     ) -> None:
-        executor_cls = getattr(executor_module, "FunctionalCaseNanobotExecutor", None)
+        executor_cls = getattr(executor_module, "FunctionalCaseExecutor", None)
         self.assertIsNotNone(executor_cls)
         if executor_cls is None:
             return
@@ -525,7 +525,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
             ),
         )
         executor = executor_cls(
-            nanobot_config=NanobotConfig(),
+            agent_config=PiConfig(),
             chain_runner=lambda **kwargs: None,
             skill_runner=fake_skill_runner,
         )
@@ -552,7 +552,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
     def test_execute_checkpoint_detailed_cases_resumes_from_config_and_returns_success(
         self,
     ) -> None:
-        executor_cls = getattr(executor_module, "FunctionalCaseNanobotExecutor", None)
+        executor_cls = getattr(executor_module, "FunctionalCaseExecutor", None)
         self.assertIsNotNone(executor_cls)
         if executor_cls is None:
             return
@@ -648,7 +648,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
             ),
         )
         executor = executor_cls(
-            nanobot_config=NanobotConfig(),
+            agent_config=PiConfig(),
             chain_runner=lambda **kwargs: None,
             detailed_batch_runner=fake_detailed_batch_runner,
         )
@@ -676,8 +676,8 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         self.assertNotIn("enhancedText", final_config)
         self.assertEqual(len(final_config["caseNames"]["categories"]), 2)
 
-    def test_execute_uses_task_scoped_nanobot_config_when_llm_credentials_exist(self) -> None:
-        executor_cls = getattr(executor_module, "FunctionalCaseNanobotExecutor", None)
+    def test_execute_uses_task_scoped_agent_config_when_llm_credentials_exist(self) -> None:
+        executor_cls = getattr(executor_module, "FunctionalCaseExecutor", None)
         self.assertIsNotNone(executor_cls)
         if executor_cls is None:
             return
@@ -718,7 +718,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         detailed_cases_json = json.dumps({"cases": []}, ensure_ascii=False)
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            base_config_path = Path(temp_dir) / "nanobot.json"
+            base_config_path = Path(temp_dir) / "pi.json"
             base_config_path.write_text(
                 json.dumps(
                     {
@@ -735,11 +735,10 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
                 generated_config = json.loads(
                     Path(str(kwargs["config_path"])).read_text(encoding="utf-8")
                 )
-                self.assertEqual(generated_config["agents"]["defaults"]["provider"], "auto")
-                self.assertEqual(generated_config["agents"]["defaults"]["model"], "gpt-5.4-mini")
-                self.assertEqual(generated_config["providers"]["custom"]["apiKey"], "platform-key")
+                self.assertEqual(generated_config["model"], "gpt-5.4-mini")
+                self.assertEqual(generated_config["api_key"], "platform-key")
                 self.assertEqual(
-                    generated_config["providers"]["custom"]["apiBase"],
+                    generated_config["base_url"],
                     "https://example.test/v1",
                 )
                 return FunctionalChainRunResult(
@@ -749,7 +748,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
                 )
 
             executor = executor_cls(
-                nanobot_config=NanobotConfig(
+                agent_config=PiConfig(
                     runtime_root=str(Path(temp_dir) / "runtime-root"),
                 ),
                 chain_runner=fake_chain_runner,

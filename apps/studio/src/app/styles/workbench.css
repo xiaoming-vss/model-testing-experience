@@ -2061,3 +2061,49 @@ body,
     max-width: none;
   }
 }
+
+/* One shared header: navigation, project scope, and actions. */
+.app-shell.app-shell-macos .app-header.compact-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  height: auto;
+  min-height: 56px;
+}
+.app-shell .app-header.compact-header .app-header-main { flex: 0 1 auto; }
+.app-feedback-trigger { color: var(--app-accent) !important; font-size: 12px; white-space: nowrap; }
+.app-feedback-content { max-width: 280px; color: var(--app-shell-text); }
+.app-feedback-content a { color: var(--app-accent); overflow-wrap: anywhere; }
+@media (max-width: 1200px) {
+  .app-shell.app-shell-macos .app-header.compact-header { flex-wrap: wrap; padding-block: 8px; }
+  .app-top-navigation { flex-basis: 100%; }
+}
+@media (max-width: 900px) {
+  .app-shell .app-header.compact-header .app-header-main { flex: 1 1 auto; width: auto; }
+  .app-shell.app-shell-macos .project-selector-wrap { width: auto; }
+}
+
+/* Project and sprint form a compact path before global navigation. */
+.app-shell.app-shell-macos .project-selector-wrap {
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent !important;
+}
+.project-scope-separator { color: var(--mac-glass-muted); }
+.app-shell .project-select .ant-select-selector { font-weight: 600; }
+.app-top-navigation { padding-left: 5px; }
+@media (max-width: 1200px) {
+  .app-top-navigation { order: 3; padding-left: 0; }
+  .app-header-actions { margin-left: auto; }
+}
+
+/* Size the scope controls to their labels instead of reserving fixed columns. */
+.app-shell.app-shell-macos .project-selector-wrap .project-select {
+  flex: 0 1 auto;
+  width: max-content;
+  min-width: 0;
+  max-width: 200px;
+}
+.app-shell.app-shell-macos .project-selector-wrap .sprint-select { max-width: 140px; }
