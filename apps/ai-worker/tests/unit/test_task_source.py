@@ -9,6 +9,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from testing_agent_ai_worker.models.task import Task, TaskPayload
+from testing_agent_ai_worker.platform.errors import TaskSourceError
 from testing_agent_ai_worker.platform.task_source import HttpClaimTaskSource
 from testing_agent_ai_worker.services.task_service import TaskService
 from testing_agent_ai_worker.worker.poller import TaskPoller
@@ -108,6 +109,27 @@ class TaskSourceTests(unittest.TestCase):
         task = task_source.poll_task()
 
         self.assertIsNone(task)
+
+    def test_poll_task_rejects_empty_attempt_identity(self) -> None:
+        class EmptyAttemptClient(FakePlatformHttpClient):
+            def post(self, path: str, json_body: dict[str, Any]) -> dict[str, Any] | None:
+                payload = super().post(path, json_body)
+                assert payload is not None
+                payload["attemptId"] = ""
+                return payload
+
+        client = EmptyAttemptClient()
+        task_source = HttpClaimTaskSource(
+            client=client,
+            claim_path="/internal/ai-worker/tasks/claim",
+            snapshot_path_template="/internal/ai-worker/tasks/{task_id}/snapshot",
+            llm_credentials_path_template="/internal/ai-worker/tasks/{task_id}/llm-credentials",
+            worker_id="worker-local",
+        )
+
+        with self.assertRaises(TaskSourceError):
+            task_source.poll_task()
+        self.assertFalse(client.snapshot_called)
 
     def test_poll_task_maps_platform_payload_to_domain_task(self) -> None:
         client = FakePlatformHttpClient()

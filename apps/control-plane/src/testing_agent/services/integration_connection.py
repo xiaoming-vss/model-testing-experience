@@ -23,7 +23,10 @@ from testing_agent.services.personal_credentials import PersonalCredentialAccess
 from testing_agent.services.project_access import require_project_access
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 from testing_agent.services.service_instance import normalize_instance_url
-from testing_agent.services.worker_authorization import revoke_executions
+from testing_agent.services.worker_authorization import (
+    notify_revoked_executions,
+    revoke_executions,
+)
 from testing_agent.services.zentao_auth import ZentaoAuthProvider
 from testing_agent.services.zentao_queries import ZentaoResources
 from testing_agent.services.zentao_queries import item_value as item_value
@@ -387,9 +390,12 @@ class IntegrationConnectionService:
     ) -> dict:
         await self.ensure_project_access(user_id, project_id)
         connection = await self.get_owned(user_id, provider, connection_id, project_id)
-        await revoke_executions(self.repository.session, actor=user_id, connection_id=connection_id)
+        revoked = await revoke_executions(
+            self.repository.session, actor=user_id, connection_id=connection_id
+        )
         await self.deletion.delete(self.repository.session, connection)
         await self.repository.commit()
+        await notify_revoked_executions(revoked)
         return {}
 
     async def list_zentao_projects(

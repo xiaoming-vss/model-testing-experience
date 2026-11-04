@@ -35,7 +35,10 @@ from testing_agent.services.auth_mode import AuthModeService
 from testing_agent.services.auth_session import invalidate_sessions
 from testing_agent.services.common import paged_payload
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
-from testing_agent.services.worker_authorization import revoke_executions
+from testing_agent.services.worker_authorization import (
+    notify_revoked_executions,
+    revoke_executions,
+)
 
 
 class UserAdminService:
@@ -191,7 +194,7 @@ class UserAdminService:
             await session.execute(
                 delete(ProjectMember).where(ProjectMember.user_id == target.user_id)
             )
-            await revoke_executions(session, actor=target.user_id)
+            revoked = await revoke_executions(session, actor=target.user_id)
             await session.execute(
                 delete(ServiceAuthorization).where(ServiceAuthorization.user_id == target.user_id)
             )
@@ -215,6 +218,7 @@ class UserAdminService:
             await self.users.clear_login_limits(target.nickname)
             await self.users.delete(target)
             await self.users.commit()
+            await notify_revoked_executions(revoked)
         except Exception:
             await session.rollback()
             raise

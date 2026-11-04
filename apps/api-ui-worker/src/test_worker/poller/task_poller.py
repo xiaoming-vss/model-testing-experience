@@ -385,6 +385,8 @@ class TaskPoller:
         while True:
             try:
                 await asyncio.sleep(self._config.heartbeat_interval_ms / 1000)
+                if task_id in self._finishing_tasks:
+                    break
                 await asyncio.to_thread(
                     self._control_plane_client.report_task_heartbeat,
                     task_id,
@@ -566,6 +568,8 @@ class TaskPoller:
         while True:
             try:
                 await asyncio.sleep(self._config.heartbeat_interval_ms / 1000)
+                if task_id in self._finishing_tasks:
+                    break
                 await asyncio.to_thread(
                     self._control_plane_client.report_api_task_heartbeat,
                     task_id,

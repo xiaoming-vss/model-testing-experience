@@ -19,17 +19,17 @@ from testing_agent_ai_worker.worker.runner import TaskExecutor, WorkerRunner
 
 class _RecordingSink(ResultSink):
     def __init__(self) -> None:
-        self.started_calls: list[tuple[str, str]] = []
-        self.heartbeat_calls: list[tuple[str, str]] = []
+        self.started_calls: list[tuple[str, str, str]] = []
+        self.heartbeat_calls: list[tuple[str, str, str]] = []
         self.progress_calls: list[TaskProgress] = []
         self.result_calls: list[TaskResult] = []
         self.first_heartbeat = threading.Event()
 
-    def mark_started(self, task_id: str, started_at_iso: str) -> None:
-        self.started_calls.append((task_id, started_at_iso))
+    def mark_started(self, task_id: str, attempt_id: str, started_at_iso: str) -> None:
+        self.started_calls.append((task_id, attempt_id, started_at_iso))
 
-    def send_heartbeat(self, task_id: str, heartbeat_at_iso: str) -> None:
-        self.heartbeat_calls.append((task_id, heartbeat_at_iso))
+    def send_heartbeat(self, task_id: str, attempt_id: str, heartbeat_at_iso: str) -> None:
+        self.heartbeat_calls.append((task_id, attempt_id, heartbeat_at_iso))
         self.first_heartbeat.set()
 
     def submit_progress(self, progress: TaskProgress) -> None:
@@ -159,6 +159,7 @@ class WorkerRunnerTests(unittest.TestCase):
         result = runner.process_task(self._make_task())
 
         self.assertEqual(len(sink.started_calls), 1)
+        self.assertEqual(sink.started_calls[0][1], "run-1")
         self.assertEqual(len(sink.progress_calls), 1)
         self.assertEqual(len(sink.result_calls), 1)
         self.assertEqual(result.status, TaskStatus.SUCCESS)

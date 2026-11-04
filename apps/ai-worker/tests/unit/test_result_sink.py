@@ -38,8 +38,8 @@ class ResultSinkTests(unittest.TestCase):
             completed_path_template="/tasks/{task_id}/completed",
         )
 
-        sink.mark_started("task-1", "2026-06-23T10:00:00+08:00")
-        sink.send_heartbeat("task-1", "2026-06-23T10:00:05+08:00")
+        sink.mark_started("task-1", "attempt-1", "2026-06-23T10:00:00+08:00")
+        sink.send_heartbeat("task-1", "attempt-1", "2026-06-23T10:00:05+08:00")
 
         self.assertEqual(
             client.post_calls,
@@ -48,6 +48,7 @@ class ResultSinkTests(unittest.TestCase):
                     "path": "/tasks/task-1/started",
                     "json_body": {
                         "workerId": "worker-1",
+                        "attemptId": "attempt-1",
                         "startedAt": "2026-06-23T10:00:00+08:00",
                     },
                 },
@@ -55,6 +56,7 @@ class ResultSinkTests(unittest.TestCase):
                     "path": "/tasks/task-1/heartbeat",
                     "json_body": {
                         "workerId": "worker-1",
+                        "attemptId": "attempt-1",
                         "heartbeatAt": "2026-06-23T10:00:05+08:00",
                     },
                 },

@@ -392,3 +392,74 @@ async def test_debug_stream_rechecks_access_before_delivering_sensitive_result(m
     assert "event: started" in await anext(stream)
     with pytest.raises(StopAsyncIteration):
         await anext(stream)
+
+
+@pytest.mark.asyncio
+async def test_ui_step_progress_is_ignored_after_the_run_closed(monkeypatch):
+    from testing_agent.schemas.workers import WorkerTaskEventRequest
+    from testing_agent.services import worker_task as module
+
+    task = SimpleNamespace(
+        task_id="task",
+        task_type="case_debug",
+        run_id="run",
+        worker_id="w",
+        status="canceled",
+        lease_expires_at=None,
+    )
+    run = SimpleNamespace(step_results_json=[{"status": "canceled"}])
+    actions = []
+
+    class Repository:
+        session = object()
+
+        async def get_ui_case_run(self, run_id):
+            return run
+
+        async def commit(self):
+            actions.append("commit")
+
+    async def find_task(*args):
+        return task
+
+    monkeypatch.setattr(module, "find_task", find_task)
+    service = module.WorkerTaskService(Repository())
+    body = WorkerTaskEventRequest(workerId="w", stepResults=[{"status": "running"}])
+
+    await service.update_ui_steps("task", None, body)
+
+    assert run.step_results_json == [{"status": "canceled"}]
+    assert actions == []
+
+
+@pytest.mark.asyncio
+async def test_terminal_heartbeat_does_not_extend_the_lease(monkeypatch):
+    from testing_agent.schemas.workers import WorkerTaskEventRequest
+    from testing_agent.services import worker_task as module
+
+    task = SimpleNamespace(
+        task_id="task",
+        status="success",
+        lease_expires_at=None,
+        heartbeat_at=None,
+        finished_at=None,
+    )
+
+    async def find_task(*args):
+        return task
+
+    class Repository:
+        session = object()
+
+        async def commit(self):
+            raise AssertionError("terminal heartbeat must not commit")
+
+    monkeypatch.setattr(module, "find_task", find_task)
+    service = module.WorkerTaskService(Repository())
+    body = WorkerTaskEventRequest(workerId="w", heartbeatAt="2026-01-01T00:00:00+00:00")
+
+    result = await service.heartbeat("ui", "task", body)
+
+    assert result == {"taskId": "task", "workerId": "w"}
+    assert task.lease_expires_at is None
+    assert task.finished_at is None

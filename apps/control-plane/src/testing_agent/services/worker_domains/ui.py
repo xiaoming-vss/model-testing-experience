@@ -6,7 +6,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from testing_agent.core.enums import RunStatus
+from testing_agent.core.enums import RUN_CLOSED_STATUSES, RUN_TERMINAL_STATUSES, RunStatus
 from testing_agent.core.errors import ErrBadRequest, ErrNotFound
 from testing_agent.domain.worker_context import UiWorkerContext
 from testing_agent.models.ui_test_case import UiTestCase
@@ -168,15 +168,25 @@ async def complete_item(
         raise ErrNotFound()
     if item.suite_run_id != task.run_id:
         raise ErrBadRequest()
+    if task.status in RUN_CLOSED_STATUSES or item.status not in {
+        RunStatus.PENDING.value,
+        RunStatus.QUEUED.value,
+        RunStatus.CLAIMED.value,
+        RunStatus.RUNNING.value,
+    }:
+        # Stop or a retry already closed this item; a late completion is a no-op.
+        return item.status
+    suite_run = await repository.session.scalar(
+        select(UiTestSuiteRun).where(UiTestSuiteRun.suite_run_id == item.suite_run_id)
+    )
+    if suite_run is not None and getattr(suite_run, "status", "") in RUN_TERMINAL_STATUSES:
+        return item.status
     item.status = final_run_status(body.status)
     item.snapshot_json = body.snapshot_json or item.snapshot_json
     item.error_message = body.error_message or ""
     item.finished_at = parse_event_time(body.finished_at) or datetime.now(UTC)
     if body.duration_ms is not None:
         item.duration_ms = body.duration_ms
-    suite_run = await repository.session.scalar(
-        select(UiTestSuiteRun).where(UiTestSuiteRun.suite_run_id == item.suite_run_id)
-    )
     if suite_run:
         record_step_variable_usage(suite_run, body.step_results)
         secrets = private_payload(suite_run).get("secrets", [])

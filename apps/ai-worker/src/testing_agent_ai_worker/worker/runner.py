@@ -93,7 +93,9 @@ class WorkerRunner:
             return result
 
         try:
-            self.result_service.mark_started(task.task_id, started_at.isoformat())
+            self.result_service.mark_started(
+                task.task_id, task.attempt_id, started_at.isoformat()
+            )
             heartbeat_thread = threading.Thread(
                 target=self._heartbeat_loop,
                 args=(task, stop_event),
@@ -156,6 +158,7 @@ class WorkerRunner:
             try:
                 self.result_service.send_heartbeat(
                     task.task_id,
+                    task.attempt_id,
                     datetime.now().astimezone().isoformat(),
                 )
             except Exception:

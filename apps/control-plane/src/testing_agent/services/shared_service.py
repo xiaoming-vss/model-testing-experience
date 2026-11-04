@@ -18,7 +18,10 @@ from testing_agent.services.project_access import require_project_access
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 from testing_agent.services.service_instance import instance_key, normalize_instance_url
 from testing_agent.services.shared_service_catalog import SharedServiceCatalog
-from testing_agent.services.worker_authorization import revoke_executions
+from testing_agent.services.worker_authorization import (
+    notify_revoked_executions,
+    revoke_executions,
+)
 from testing_agent.services.zentao_mcp_identity import needs_instance_reset
 from testing_agent.services.zentao_mcp_instance import discover_instance
 
@@ -155,6 +158,7 @@ class SharedServiceService:
         confirm_instance_switch=False,
     ):
         resource = await self.get_resource(user_id, project_id, provider, service_id, "manage")
+        revoked: list[tuple[str, str, str]] = []
         if not name.strip():
             raise ErrBadRequest()
         if zentao_instance_url is not None:
@@ -191,7 +195,7 @@ class SharedServiceService:
                 != token
             ):
                 raise AppError(409, "服务地址或本人授权已变更，请刷新后重新保存", 409)
-            await self.accept_mcp_instance(resource, own, user_id, info)
+            revoked = await self.accept_mcp_instance(resource, own, user_id, info)
         resource.base_url = endpoint
         # Instance identity is read from MCP, including for legacy catalog rows.
         resource.name = name.strip()
@@ -208,6 +212,7 @@ class SharedServiceService:
             if provider == "mcp":
                 connection.base_url = resource.base_url
         await self.commit_name()
+        await notify_revoked_executions(revoked)
         return await self.dump(resource, user_id)
 
     async def commit_name(self):
@@ -325,12 +330,14 @@ class SharedServiceService:
             raise AppError(409, "服务地址或本人授权已变更，请刷新后重新确认", 409)
         if not await needs_instance_reset(self.session, resource, info):
             raise AppError(409, "禅道目标未变更，无需清除绑定", 409)
-        await self.accept_mcp_instance(resource, own, user_id, info)
+        revoked = await self.accept_mcp_instance(resource, own, user_id, info)
         await self.session.commit()
+        await notify_revoked_executions(revoked)
         return await self.dump(resource, user_id)
 
     async def accept_mcp_instance(self, resource, own, user_id, info):
         """Caller owns the project lock; endpoint and association updates commit together."""
+        notifications: list[tuple[str, str, str]] = []
         if await needs_instance_reset(self.session, resource, info):
             from testing_agent.services.zentao_mcp_authorization import invalidate_others
             from testing_agent.services.zentao_mcp_reset import clear_project_associations
@@ -344,16 +351,23 @@ class SharedServiceService:
             if changed:
                 explicitly_authorized = (own.extra_json or {}).get("zentaoAuthorizedInstance")
                 keep = own.connection_id if explicitly_authorized == info["instanceUrl"] else None
-                await invalidate_others(self.session, resource.service_id, keep)
+                notifications.extend(
+                    await invalidate_others(self.session, resource.service_id, keep)
+                )
         resource.zentao_instance_url = info["instanceUrl"]
+        return notifications
 
     async def revoke(self, user_id, project_id, provider, service_id):
         resource = await self.get_resource(user_id, project_id, provider, service_id, lock=True)
         own = await self.own_connection(resource, user_id)
+        revoked: list[tuple[str, str, str]] = []
         if own:
-            await revoke_executions(self.session, actor=user_id, connection_id=own.connection_id)
+            revoked = await revoke_executions(
+                self.session, actor=user_id, connection_id=own.connection_id
+            )
             await self.deletion.delete(self.session, own)
         await self.session.commit()
+        await notify_revoked_executions(revoked)
         return await self.dump(resource, user_id)
 
     async def delete(self, user_id, project_id, provider, service_id):
@@ -368,11 +382,15 @@ class SharedServiceService:
                 .where(ServiceAuthorization.service_id == service_id)
             )
         )
+        revoked: list[tuple[str, str, str]] = []
         for own in connections:
-            await revoke_executions(
-                self.session, actor=own.user_id, connection_id=own.connection_id
+            revoked.extend(
+                await revoke_executions(
+                    self.session, actor=own.user_id, connection_id=own.connection_id
+                )
             )
             await self.deletion.delete(self.session, own)
         await self.deletion.delete(self.session, resource)
         await self.session.commit()
+        await notify_revoked_executions(revoked)
         return {}

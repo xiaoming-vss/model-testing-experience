@@ -8,7 +8,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from testing_agent.core.enums import RunStatus
+from testing_agent.core.enums import RUN_CLOSED_STATUSES, RUN_TERMINAL_STATUSES, RunStatus
 from testing_agent.core.errors import ErrBadRequest, ErrForbidden, ErrNotFound
 from testing_agent.core.sid import new_id
 from testing_agent.domain.worker_context import ApiWorkerContext
@@ -399,9 +399,19 @@ async def complete_item(
         raise ErrNotFound()
     if getattr(item, "collection_run_id", task.run_id) != task.run_id:
         raise ErrBadRequest()
+    if task.status in RUN_CLOSED_STATUSES or item.status not in {
+        RunStatus.PENDING.value,
+        RunStatus.QUEUED.value,
+        RunStatus.CLAIMED.value,
+        RunStatus.RUNNING.value,
+    }:
+        # Stop already closed this item; a late completion is a no-op.
+        return item.status
     collection_run = await repository.get_api_collection_run(item.collection_run_id)
     if collection_run is None:
         raise ErrNotFound()
+    if getattr(collection_run, "status", "") in RUN_TERMINAL_STATUSES:
+        return item.status
     item.status = status
     started_at = parse_event_time(body.started_at)
     finished_at = parse_event_time(body.finished_at) or datetime.now(UTC)

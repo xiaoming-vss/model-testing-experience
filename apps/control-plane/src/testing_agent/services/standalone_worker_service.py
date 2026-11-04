@@ -10,6 +10,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from testing_agent.core.enums import RUN_TERMINAL_STATUSES
 from testing_agent.core.errors import AppError, ErrBadRequest, ErrForbidden
 from testing_agent.models.ai_execution import AiExecution
 from testing_agent.models.ai_generate_task import AiGenerateTask
@@ -110,6 +111,9 @@ class StandaloneWorkerService:
         ensure_task_id(queue, body)
         if body.run_id and body.run_id != queue.run_id:
             raise ErrBadRequest()
+        if queue.status in RUN_TERMINAL_STATUSES:
+            # A late start must not reopen a run that already finished.
+            return {"taskId": queue.task_id, "workerId": body.worker_id}
         authority = await self.authorize(queue)
         await self.transitions.started(authority.task, queue)
         await apply_event_to_task(queue, body, "running")
@@ -121,6 +125,9 @@ class StandaloneWorkerService:
         ensure_task_id(queue, body)
         if body.run_id and body.run_id != queue.run_id:
             raise ErrBadRequest()
+        if queue.status in RUN_TERMINAL_STATUSES:
+            # A late heartbeat must not rewrite finished_at or extend the lease.
+            return {"taskId": queue.task_id, "workerId": body.worker_id}
         authority = await self.authorize(queue)
         await self.transitions.current(authority.task, queue)
         await apply_event_to_task(queue, body, queue.status)

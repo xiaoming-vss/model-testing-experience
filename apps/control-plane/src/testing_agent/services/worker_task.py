@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
-from testing_agent.core.enums import RunStatus
+from testing_agent.core.enums import RUN_CLOSED_STATUSES, RUN_TERMINAL_STATUSES, RunStatus
 from testing_agent.core.errors import (
     AppError,
     ErrBadRequest,
@@ -245,6 +245,11 @@ class WorkerTaskService:
         await authorize_execution(self.repository.session, task)
         ensure_worker_match(task, body.worker_id)
         ensure_task_id(task, body)
+        if task.status in RUN_TERMINAL_STATUSES:
+            # A late start must not reopen a run that already finished.
+            return {"taskId": task_id, "workerId": body.worker_id}
+        if body.run_id and body.run_id != task.run_id:
+            raise ErrBadRequest()
         if domain in {"api", "ui"} and task.status == "stopping":
             return {"taskId": task_id, "workerId": body.worker_id}
         started_at = parse_event_time(body.started_at)
@@ -292,6 +297,11 @@ class WorkerTaskService:
             if await direct.is_direct(task):
                 return await direct.heartbeat(task, body)
             raise ErrNotFound()
+        if task.status in RUN_TERMINAL_STATUSES:
+            # A late heartbeat must not rewrite finished_at or extend the lease.
+            return {"taskId": task_id, "workerId": body.worker_id}
+        if body.run_id and body.run_id != task.run_id:
+            raise ErrBadRequest()
         await authorize_execution(self.repository.session, task)
         ensure_worker_match(task, body.worker_id)
         ensure_task_id(task, body)
@@ -318,6 +328,9 @@ class WorkerTaskService:
         authority = await authorize_execution(self.repository.session, task)
         ensure_worker_match(task, body.worker_id)
         ensure_task_id(task, body)
+        if domain in {"api", "ui"} and task.status in RUN_TERMINAL_STATUSES:
+            # Duplicate completion after the run closed is a no-op.
+            return {"taskId": task_id, "workerId": body.worker_id, "status": task.status}
         if domain == "ui":
             await self.validate_ui_artifacts(task_id, body)
         status = ensure_final_status(body.status, {"success", "failed", "error", "canceled"})
@@ -384,6 +397,10 @@ class WorkerTaskService:
     ) -> dict:
         """Persist a current step snapshot only for the active, authorized UI task."""
         task = await find_task(self.repository.session, "ui", task_id)
+        if task.status in RUN_CLOSED_STATUSES:
+            # Stop/completion already closed the run; a late progress frame must
+            # not reopen a step or replace the canceled snapshot.
+            return {"taskId": task_id}
         authority = await authorize_execution(self.repository.session, task)
         ensure_worker_match(task, body.worker_id)
         ensure_task_id(task, body)

@@ -665,3 +665,75 @@ async def test_ui_debug_cleanup_recovers_terminal_run_after_process_restart(db, 
     assert await live_debug_cleanup.recover_ui_debug_runs(AsyncSessionAdapter(db)) == 1
     assert db.scalar(select(UiTestCaseRun).where(UiTestCaseRun.run_id == "recovered-ui")) is None
     assert db.scalar(select(WorkerTask).where(WorkerTask.task_id == "recovered-task")) is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("domain", ["api", "ui"])
+async def test_late_item_completion_does_not_reopen_a_stopped_item(domain):
+    from testing_agent.schemas.workers import WorkerTaskEventRequest
+    from testing_agent.services.worker_domains import api as api_domain
+    from testing_agent.services.worker_domains import ui as ui_domain
+
+    item = SimpleNamespace(
+        suite_run_id="run",
+        collection_run_id="run",
+        status="canceled" if domain == "ui" else "skipped",
+    )
+
+    class Repository:
+        async def get_ui_item(self, item_id):
+            return item
+
+        async def get_api_item(self, item_id):
+            return item
+
+    task = SimpleNamespace(
+        run_id="run",
+        status="stopping",
+        task_type="api_collection_run" if domain == "api" else "suite_run",
+    )
+    body = WorkerTaskEventRequest(workerId="w", status="success")
+
+    if domain == "ui":
+        status = await ui_domain.complete_item(Repository(), task, "item", body)
+    else:
+        status = await api_domain.complete_item(Repository(), task, "item", body)
+
+    assert status == item.status
+
+
+@pytest.mark.asyncio
+async def test_revocation_lock_scope_is_limited_to_the_actor(db):
+    from support.api_run_scope import seed, services
+
+    from testing_agent.core.enums import RUN_ACTIVE_STATUSES
+    from testing_agent.models.project_member import ProjectMember
+    from testing_agent.schemas.api_run import RunApiCollectionRequest
+    from testing_agent.services.worker_authorization import _actor_execution_filter
+
+    seed(db)
+    db.add(ProjectMember(project_id="p1", user_id="u2", role="member"))
+    db.commit()
+    _, service = services(db)
+    revoked_run = await service.run(
+        "u2", "collection", RunApiCollectionRequest(environmentId="env")
+    )
+    kept_run = await service.run("u1", "collection", RunApiCollectionRequest(environmentId="env"))
+    revoked_task = db.scalar(
+        select(WorkerTask).where(WorkerTask.run_id == revoked_run["collectionRunId"])
+    )
+    kept_task = db.scalar(
+        select(WorkerTask).where(WorkerTask.run_id == kept_run["collectionRunId"])
+    )
+
+    scoped = list(
+        db.scalars(
+            select(WorkerTask.task_id).where(
+                WorkerTask.status.in_(RUN_ACTIVE_STATUSES),
+                _actor_execution_filter("u2"),
+            )
+        ).all()
+    )
+
+    assert scoped == [revoked_task.task_id]
+    assert kept_task.task_id not in scoped

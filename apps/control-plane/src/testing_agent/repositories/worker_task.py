@@ -78,12 +78,23 @@ class WorkerTaskRepository(BaseRepository):
         return tasks
 
     async def claim_pending(self, domain: str) -> WorkerTask | None:
+        # Match the API/UI claim path: READ COMMITTED avoids next-key/gap locks
+        # when the row leaves the pending index under MySQL REPEATABLE READ.
+        if (
+            isinstance(self.session, AsyncSession)
+            and self.session.get_bind().dialect.name == "mysql"
+        ):
+            await self.session.connection(execution_options={"isolation_level": "READ COMMITTED"})
         row = await self.session.scalar(
             select(WorkerTask)
             .where(WorkerTask.domain == domain, WorkerTask.status == "pending")
             .order_by(WorkerTask.created_at.asc(), WorkerTask.id.asc())
+            .with_hint(
+                WorkerTask, "FORCE INDEX (idx_worker_status_created_domain)", dialect_name="mysql"
+            )
             .limit(1)
             .with_for_update(skip_locked=True)
+            .execution_options(populate_existing=True)
         )
 
         return row

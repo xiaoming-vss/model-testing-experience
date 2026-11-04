@@ -217,6 +217,17 @@ RUN_ACTIVE_STATUSES = {
     RunStatus.RUNNING.value,
 }
 
+# 运行已结束:迟到的进度、条目完成和心跳不得再改写状态或完成时间。
+RUN_TERMINAL_STATUSES = {
+    RunStatus.SUCCESS.value,
+    RunStatus.FAILED.value,
+    RunStatus.ERROR.value,
+    RunStatus.CANCELED.value,
+}
+
+# 终态或正在停止:停止优先,迟到写入一律忽略。
+RUN_CLOSED_STATUSES = RUN_TERMINAL_STATUSES | {RunStatus.STOPPING.value}
+
 # 执行条目的终态:到达其中之一即视为本条已执行完。
 TEST_ORDER_ENTRY_TERMINAL_STATUSES = {
     TestOrderEntryStatus.PASSED.value,

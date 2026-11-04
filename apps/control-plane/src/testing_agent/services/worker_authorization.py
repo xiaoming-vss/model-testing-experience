@@ -4,10 +4,11 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import and_, exists, or_, select
 
 from testing_agent.core.enums import RunStatus
 from testing_agent.core.errors import AppError, ErrForbidden
+from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.api_case_run import ApiCaseRun
 from testing_agent.models.api_collection import ApiCollection
 from testing_agent.models.api_collection_run import ApiCollectionRun
@@ -17,6 +18,7 @@ from testing_agent.models.ui_test_case_run import UiTestCaseRun
 from testing_agent.models.ui_test_suite import UiTestSuite
 from testing_agent.models.ui_test_suite_run import UiTestSuiteRun
 from testing_agent.models.user import User
+from testing_agent.models.worker_task import WorkerTask
 from testing_agent.services.environment_access import authorized_environment_vars
 from testing_agent.services.personal_authorization import require_personal_connection
 from testing_agent.services.project_access import require_project_id
@@ -144,6 +146,50 @@ async def authorize_execution(session, task, *, pending=False) -> ExecutionAutho
     return authority
 
 
+def _actor_execution_filter(actor: str):
+    """Restrict the revocation lock set to tasks started by this actor.
+
+    Locking every active queue row blocked unrelated runs while a member was
+    removed. Filtering by the recorded trigger user keeps the lock window
+    proportional to the revoked actor's own work.
+    """
+    return or_(
+        and_(
+            WorkerTask.domain == "ai",
+            exists().where(
+                AiGenerationAttempt.id == WorkerTask.run_id,
+                AiGenerationAttempt.requested_by == actor,
+            ),
+        ),
+        and_(
+            WorkerTask.domain == "api",
+            or_(
+                exists().where(
+                    ApiCaseRun.run_id == WorkerTask.run_id,
+                    ApiCaseRun.trigger_user_id == actor,
+                ),
+                exists().where(
+                    ApiCollectionRun.collection_run_id == WorkerTask.run_id,
+                    ApiCollectionRun.trigger_user_id == actor,
+                ),
+            ),
+        ),
+        and_(
+            WorkerTask.domain == "ui",
+            or_(
+                exists().where(
+                    UiTestCaseRun.run_id == WorkerTask.run_id,
+                    UiTestCaseRun.trigger_user_id == actor,
+                ),
+                exists().where(
+                    UiTestSuiteRun.suite_run_id == WorkerTask.run_id,
+                    UiTestSuiteRun.trigger_user_id == actor,
+                ),
+            ),
+        ),
+    )
+
+
 async def revoke_executions(
     session, *, actor: str = "", project_id: str = "", connection_id: str = ""
 ) -> list[tuple[str, str, str]]:
@@ -154,21 +200,15 @@ async def revoke_executions(
         await revoke_integrations(
             session, actor=actor, project_id=project_id, connection_id=connection_id
         )
-    from testing_agent.models.worker_task import WorkerTask
 
-    tasks = list(
-        (
-            await session.scalars(
-                select(WorkerTask)
-                .where(
-                    WorkerTask.status.in_(
-                        (RunStatus.PENDING.value, RunStatus.CLAIMED.value, RunStatus.RUNNING.value)
-                    )
-                )
-                .with_for_update()
-            )
-        ).all()
+    candidate = select(WorkerTask).where(
+        WorkerTask.status.in_(
+            (RunStatus.PENDING.value, RunStatus.CLAIMED.value, RunStatus.RUNNING.value)
+        )
     )
+    if actor:
+        candidate = candidate.where(_actor_execution_filter(actor))
+    tasks = list((await session.scalars(candidate.with_for_update())).all())
     notifications = []
     for task in tasks:
         if task.domain == "ai":

@@ -20,6 +20,7 @@ from testing_agent.api.deps import get_worker_task_service
 from testing_agent.app import create_app
 from testing_agent.core.config import get_settings
 from testing_agent.core.errors import AppError
+from testing_agent.handlers.ai_worker import claim_task
 from testing_agent.schemas.workers import (
     WorkerClaimRequest,
     WorkerProgressRequest,
@@ -1148,3 +1149,26 @@ def test_ui_case_generate_ai_worker_http_lifecycle_and_token_contract():
     ]
     assert completed.status_code == 204
     assert events == ["claim", "snapshot", "started", "heartbeat", "progress", "complete"]
+
+
+@pytest.mark.asyncio
+async def test_ai_claim_rejects_missing_attempt_identity():
+    class MissingIdentityService:
+        async def claim(self, domain, body):
+            return {"taskId": "task-1", "taskType": "api_case_generate", "attemptId": ""}
+
+    with pytest.raises(AppError) as exc:
+        await claim_task(WorkerClaimRequest(worker_id="node"), MissingIdentityService())
+
+    assert exc.value.code == 400
+
+
+@pytest.mark.asyncio
+async def test_ai_claim_keeps_the_attempt_identity():
+    class Service:
+        async def claim(self, domain, body):
+            return {"taskId": "task-1", "taskType": "api_case_generate", "attemptId": "run-1"}
+
+    payload = await claim_task(WorkerClaimRequest(worker_id="node"), Service())
+
+    assert payload.attempt_id == "run-1"

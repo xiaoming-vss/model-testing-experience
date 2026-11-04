@@ -16,8 +16,8 @@ from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
 
 
 class ResultSink(Protocol):
-    def mark_started(self, task_id: str, started_at_iso: str) -> None: ...
-    def send_heartbeat(self, task_id: str, heartbeat_at_iso: str) -> None: ...
+    def mark_started(self, task_id: str, attempt_id: str, started_at_iso: str) -> None: ...
+    def send_heartbeat(self, task_id: str, attempt_id: str, heartbeat_at_iso: str) -> None: ...
     def submit_progress(self, progress: TaskProgress) -> None: ...
     def submit_result(self, result: TaskResult) -> None: ...
 
@@ -42,24 +42,26 @@ class HttpResultSink:
         self.progress_path_template = progress_path_template
         self.completed_path_template = completed_path_template
 
-    def mark_started(self, task_id: str, started_at_iso: str) -> None:
+    def mark_started(self, task_id: str, attempt_id: str, started_at_iso: str) -> None:
         """回传 started。"""
 
         self.client.post(
             self.started_path_template.format(task_id=task_id),
             json_body={
                 "workerId": self.worker_id,
+                "attemptId": attempt_id,
                 "startedAt": started_at_iso,
             },
         )
 
-    def send_heartbeat(self, task_id: str, heartbeat_at_iso: str) -> None:
+    def send_heartbeat(self, task_id: str, attempt_id: str, heartbeat_at_iso: str) -> None:
         """回传 heartbeat。"""
 
         self.client.post(
             self.heartbeat_path_template.format(task_id=task_id),
             json_body={
                 "workerId": self.worker_id,
+                "attemptId": attempt_id,
                 "heartbeatAt": heartbeat_at_iso,
             },
         )

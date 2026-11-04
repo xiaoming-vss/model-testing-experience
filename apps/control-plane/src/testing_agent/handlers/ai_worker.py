@@ -4,6 +4,7 @@ from fastapi import Depends, Query
 from fastapi.responses import JSONResponse, Response
 
 from testing_agent.api.deps import get_file_service, get_worker_task_service
+from testing_agent.core.errors import ErrBadRequest, dynamic_error
 from testing_agent.schemas.workers import (
     AiWorkerClaimPayload,
     AiWorkerProgressRequest,
@@ -35,7 +36,13 @@ async def claim_task(
     if payload is None:
         return Response(status_code=204)
     data = dict(payload)
-    data["attempt_id"] = data.pop("runId", "")
+    attempt_id = data.get("attemptId")
+    if not isinstance(attempt_id, str) or not attempt_id.strip():
+        raise dynamic_error(
+            ErrBadRequest,
+            "AI 任务缺少 attemptId，请确认控制面与 Worker 版本一致",
+        )
+    data["attempt_id"] = attempt_id
     return AiWorkerClaimPayload(**data)
 
 

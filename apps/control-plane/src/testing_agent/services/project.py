@@ -120,9 +120,10 @@ class ProjectService:
 
     async def delete(self, user_id: str, project_id: str) -> dict:
         project = await self.get_accessible_entity(user_id, project_id, action="manage")
-        await revoke_executions(self.projects.session, project_id=project_id)
+        revoked = await revoke_executions(self.projects.session, project_id=project_id)
         await self.deletion.delete(self.projects.session, project)
         await self.projects.commit()
+        await notify_revoked_executions(revoked)
         return {}
 
     async def add_member(

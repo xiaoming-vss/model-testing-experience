@@ -19,9 +19,13 @@ async def invalidate_others(session, service_id, current_connection_id=None):
     if current_connection_id is not None:
         statement = statement.where(IntegrationConnection.connection_id != current_connection_id)
     connections = await session.scalars(statement)
+    notifications = []
     for connection in connections:
-        await revoke_executions(
-            session, actor=connection.user_id, connection_id=connection.connection_id
+        notifications.extend(
+            await revoke_executions(
+                session, actor=connection.user_id, connection_id=connection.connection_id
+            )
         )
         connection.status = "invalid"
         connection.secret_json = {}
+    return notifications

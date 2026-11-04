@@ -97,6 +97,11 @@ class HttpClaimTaskSource:
                 return None
 
             claimed_task = PlatformClaimTask.model_validate(claim_payload)
+            if not claimed_task.attempt_id.strip():
+                raise TaskSourceError(
+                    f"任务身份缺失(attemptId): task_id={claimed_task.task_id}; "
+                    "请确认控制面与 AI Worker 同为最新版本"
+                )
             snapshot_payload = self.client.get(
                 self.snapshot_path_template.format(task_id=claimed_task.task_id)
             )
