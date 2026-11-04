@@ -115,6 +115,11 @@ async def _take_named_screenshot(
         截图文件路径
     """
     sanitized = _sanitize_filename(filename)
+    # The control plane only accepts png/zip/mp4/webm artifacts for UI runs and
+    # Playwright encodes by extension. A screenshot name without .png (or with
+    # a non-png suffix) would otherwise fail the upload ticket with 400.
+    path = Path(sanitized)
+    sanitized = path.with_suffix(".png").name if path.suffix else f"{path.name}.png"
     full_path = Path(artifact_dir) / sanitized
     full_path.parent.mkdir(parents=True, exist_ok=True)
     kwargs: dict[str, Any] = {}

@@ -41,6 +41,7 @@ export async function startDebugStream<T>(
   let buffer = ''
   let active = false
   let ended = false
+  let stopped = false
   let silenceExpired = false
   let silenceTimer: ReturnType<typeof setTimeout> | undefined
   let changeTimer: ReturnType<typeof setTimeout> | undefined
@@ -112,15 +113,17 @@ export async function startDebugStream<T>(
   }
 
   function deliver(event: Event) {
+    if (stopped) return
     if (active) onEvent(event)
     else queued.push(event)
   }
   void (async () => {
     try {
       expectHeartbeat()
-      while (!ended) {
+      while (!ended && !stopped) {
         const { value, done } = await reader.read()
         if (done) break
+        if (stopped) break
         expectHeartbeat()
         buffer = (buffer + decoder.decode(value, { stream: true })).replace(/\r\n/g, '\n')
         let separator = buffer.indexOf('\n\n')
@@ -182,6 +185,8 @@ export async function startDebugStream<T>(
     clearTimeout(initialTimer)
   }
   const abort = () => {
+    stopped = true
+    active = false
     if (changeTimer) clearTimeout(changeTimer)
     if (silenceTimer) clearTimeout(silenceTimer)
     if (activationTimer) clearTimeout(activationTimer)
@@ -196,6 +201,7 @@ export async function startDebugStream<T>(
   return {
     initial,
     activate: () => {
+      if (stopped) return
       active = true
       if (activationTimer) clearTimeout(activationTimer)
       queued.splice(0).forEach(event => onEvent(event))

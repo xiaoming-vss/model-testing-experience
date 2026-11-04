@@ -79,6 +79,18 @@ async def standalone_history_rows(
     imported = (
         select(Import.id).where(Import.attempt_id == final_id).correlate(Execution, Task).exists()
     )
+    active_final = (
+        select(Attempt.id)
+        .join(Stage, Stage.id == Attempt.stage_id)
+        .where(
+            Attempt.execution_id == Execution.execution_id,
+            Stage.task_id == Task.task_id,
+            Stage.stage == final_stage,
+            Attempt.status.in_(["pending", "queued", "claimed", "running"]),
+        )
+        .correlate(Execution, Task)
+        .exists()
+    )
     status = Execution.workflow_status
     pending = func.coalesce(review, "pending")
     pipeline = case(
@@ -87,7 +99,10 @@ async def standalone_history_rows(
         (review == "rejected", "rejected"),
         (status == "waiting_review", "review_pending"),
         (
-            (status.in_(["pending", "queued", "claimed", "running"])) & (pending != "approved"),
+            # A running revision keeps the previous approved attempt as the
+            # last successful one; the active attempt still means "running".
+            (status.in_(["pending", "queued", "claimed", "running"]))
+            & ((pending != "approved") | active_final),
             "running",
         ),
         ((review == "approved") & imported, "imported"),

@@ -223,3 +223,22 @@ it('does not report a disconnection when the page closes the debug stream', asyn
   await Promise.resolve()
   expect(events).not.toHaveBeenCalled()
 })
+
+it('ignores frames that arrive after the page aborts the stream', async () => {
+  let controller!: ReadableStreamDefaultController<Uint8Array>
+  const stream = new ReadableStream<Uint8Array>({
+    start(value) {
+      controller = value
+      value.enqueue(new TextEncoder().encode('event: started\ndata: {"runId":"r"}\n\n'))
+    },
+  })
+  vi.mocked(openEventStream).mockResolvedValue(new Response(stream, { status: 200 }))
+  const events = vi.fn()
+  const handle = await startDebugStream('api-case', 'case', {}, events)
+  handle.activate()
+  handle.abort()
+  controller.enqueue(new TextEncoder().encode('event: finished\ndata: {"status":"success"}\n\n'))
+  await new Promise(resolve => setTimeout(resolve, 10))
+  expect(events).not.toHaveBeenCalled()
+  controller.close()
+})

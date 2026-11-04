@@ -104,6 +104,23 @@ async def delete_stage_version(session: AsyncSession, task: AiGenerateTask, vers
                 )
             ).all()
         )
+        # Deleting the version behind a stage's current candidate turns that
+        # candidate back into a draft. Reset the stage in the same transaction
+        # so save/approve accept it again instead of staying "approved".
+        current_stages = list(
+            (
+                await session.scalars(
+                    select(AiGenerationStage)
+                    .where(
+                        AiGenerationStage.task_id.in_(task_ids),
+                        AiGenerationStage.current_attempt_id == version.attempt_id,
+                        AiGenerationStage.review_status == "approved",
+                    )
+                    .with_for_update(nowait=True)
+                    .execution_options(populate_existing=True)
+                )
+            ).all()
+        )
     except OperationalError as exc:
         if (getattr(exc.orig, "args", ()) or (None,))[0] in {1205, 3572}:
             raise dynamic_error(ErrBadRequest, "阶段仍在处理回传，请稍后重试") from exc
@@ -118,6 +135,8 @@ async def delete_stage_version(session: AsyncSession, task: AiGenerateTask, vers
         attempt.invalidated_reason = "上游版本已删除，请重新生成该阶段"
         if attempt.output_content and attempt.status == "success":
             invalidated += 1
+    for stage in current_stages:
+        stage.review_status = "pending"
     await session.execute(
         delete(AiGenerateVersionImport).where(AiGenerateVersionImport.version_id == version_id)
     )

@@ -39,7 +39,7 @@ def test_late_driver_handle_is_reaped_after_stop_was_not_confirmed(monkeypatch):
         task = asyncio.create_task(execution())
         await entered.wait()
         task.cancel()
-        with pytest.raises(RuntimeError, match="无法确认浏览器驱动已退出"):
+        with pytest.raises(asyncio.CancelledError):
             await asyncio.wait_for(task, 1)
         transport._proc = process
         await asyncio.wait_for(killed.wait(), 1)
@@ -139,7 +139,7 @@ def test_stalled_driver_is_killed_and_original_cancellation_survives(
     asyncio.run(run())
 
 
-def test_missing_driver_handle_cannot_confirm_successful_stop(monkeypatch):
+def test_missing_driver_handle_keeps_cancellation_when_stop_is_unconfirmed(monkeypatch):
     async def run():
         release = asyncio.Event()
 
@@ -151,7 +151,7 @@ def test_missing_driver_handle_cannot_confirm_successful_stop(monkeypatch):
                 await release.wait()
 
         try:
-            with pytest.raises(RuntimeError, match="浏览器驱动未能退出"):
+            with pytest.raises(asyncio.CancelledError):
                 async with playwright_session.playwright_session(Manager, "task"):
                     raise asyncio.CancelledError()
         finally:

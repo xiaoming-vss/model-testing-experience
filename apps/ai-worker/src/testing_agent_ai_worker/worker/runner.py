@@ -135,7 +135,17 @@ class WorkerRunner:
 
         # checkpoint 中间阶段会返回 None，此时只允许平台看到 progress，不提交 completed。
         if result is not None:
-            self.result_service.submit(result)
+            try:
+                self.result_service.submit(result)
+            except Exception as exc:
+                # The task already ran; surface the lost delivery instead of
+                # letting the lease expire without any diagnostic.
+                LOGGER.error(
+                    "task result submission failed: task=%s attempt=%s error=%s",
+                    task.task_id,
+                    task.attempt_id,
+                    type(exc).__name__,
+                )
         return result
 
     def _heartbeat_loop(self, task: Task, stop_event: threading.Event) -> None:

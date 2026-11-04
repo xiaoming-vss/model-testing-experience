@@ -36,7 +36,17 @@ def test_explicitly_rejected_lease_cancels_active_execution(domain):
     assert canceled == [True]
 
 
-@pytest.mark.parametrize("status, rejected", [(400, True), (403, True), (503, False)])
+@pytest.mark.parametrize(
+    "status, rejected",
+    [
+        (400, False),
+        (401, True),
+        (403, True),
+        (409, True),
+        (422, False),
+        (503, False),
+    ],
+)
 def test_step_progress_stops_only_on_explicit_control_plane_rejection(status, rejected):
     class Client:
         def report_ui_steps(self, *_args):

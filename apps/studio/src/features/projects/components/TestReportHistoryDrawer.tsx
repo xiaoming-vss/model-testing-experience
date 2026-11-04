@@ -38,15 +38,15 @@ export function TestReportHistoryDrawer({ open, projectId, sprintId, onClose, on
   })
   return <Drawer title="测试报告历史" open={open} onClose={onClose} size="min(760px, 100vw)" destroyOnHidden>
     {query.error ? <Alert type="error" showIcon title={getErrorMessage(query.error)} action={<Button onClick={() => void query.refetch()}>重试</Button>} /> : null}
-    <Table<TestReportGenerateRun> rowKey={idOf} size="small" loading={query.isFetching} dataSource={listItems(query.data)}
+    <Table<TestReportGenerateRun> rowKey={run => idOf(run) || `${run.createdAt ?? run.created_at ?? ''}-${run.status ?? ''}`} size="small" loading={query.isFetching} dataSource={listItems(query.data)}
       locale={{ emptyText: '暂无报告记录' }} pagination={{ current: page, pageSize: 20, total: listTotal(query.data), onChange: setPage, showSizeChanger: false }}
       columns={[
         { title: '生成时间', key: 'created', render: (_, run) => formatTime(run.createdAt ?? run.created_at) },
         { title: '状态', key: 'status', render: (_, run) => <div><Tag>{statusLabels[run.status ?? ''] ?? run.status ?? '未知'}</Tag>{run.errorMessage || run.error_message ? <div role="note">{run.errorMessage ?? run.error_message}</div> : null}</div> },
         { title: '操作', key: 'actions', render: (_, run) => <Space>
           <Button type="link" size="small" disabled={run.status !== 'success' || !idOf(run)} onClick={() => onView(run)}>查看</Button>
-          {can('write') ? <Popconfirm title="删除这条报告记录？" description="删除后无法恢复。" onConfirm={() => remove.mutate(idOf(run))} okText="删除" cancelText="取消" disabled={activeStatuses.has(run.status ?? '') || remove.isPending}>
-            <Button type="link" size="small" danger disabled={activeStatuses.has(run.status ?? '') || remove.isPending}>删除</Button>
+          {can('write') ? <Popconfirm title="删除这条报告记录？" description="删除后无法恢复。" onConfirm={() => remove.mutate(idOf(run))} okText="删除" cancelText="取消" disabled={!idOf(run) || activeStatuses.has(run.status ?? '') || remove.isPending}>
+            <Button type="link" size="small" danger disabled={!idOf(run) || activeStatuses.has(run.status ?? '') || remove.isPending}>删除</Button>
           </Popconfirm> : null}
         </Space> },
       ]} />

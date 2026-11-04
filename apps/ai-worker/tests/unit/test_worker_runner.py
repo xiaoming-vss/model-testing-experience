@@ -44,6 +44,11 @@ class _FailingProgressSink(_RecordingSink):
         raise RuntimeError("progress endpoint unavailable")
 
 
+class _FailingResultSink(_RecordingSink):
+    def submit_result(self, result: TaskResult) -> None:
+        raise RuntimeError("result endpoint unavailable")
+
+
 class _SuccessfulExecutor(TaskExecutor):
     def execute(self, task: Task, started_at: datetime, progress_callback) -> TaskResult:
         progress_callback(
@@ -176,6 +181,29 @@ class WorkerRunnerTests(unittest.TestCase):
         self.assertEqual(TaskStatus.SUCCESS, result.status)
         self.assertEqual(1, len(sink.result_calls))
         self.assertEqual(TaskStatus.SUCCESS, sink.result_calls[0].status)
+
+    def test_process_task_logs_result_submission_failure_without_raising(self) -> None:
+        sink = _FailingResultSink()
+        runner = WorkerRunner(
+            executor=_SuccessfulExecutor(),
+            result_service=ResultService(sink),
+            lifecycle=WorkerLifecycle(
+                poll_interval_seconds=10,
+                heartbeat_interval_seconds=60,
+                run_once=False,
+            ),
+        )
+
+        with self.assertLogs(
+            "testing_agent_ai_worker.worker.runner", level="ERROR"
+        ) as logs:
+            result = runner.process_task(self._make_task())
+
+        self.assertEqual(TaskStatus.SUCCESS, result.status)
+        self.assertEqual([], sink.result_calls)
+        self.assertIn(
+            "task=task-1 attempt=run-1 error=RuntimeError", "\n".join(logs.output)
+        )
 
     def test_process_task_sends_heartbeat_while_executor_is_running(self) -> None:
         sink = _RecordingSink()

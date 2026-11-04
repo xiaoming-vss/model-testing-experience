@@ -8,6 +8,7 @@ from support.ai_execution import db as db
 
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generate_version_import import AiGenerateVersionImport
+from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
 from testing_agent.schemas.ai_generate_task import AiGenerateRunHistoryResponse
 from testing_agent.services.standalone_execution import start_standalone_execution
@@ -86,3 +87,48 @@ async def test_paginated_history_filters_and_does_not_mix_candidates(db):  # noq
     ):
         filtered = await standalone_history(session, "task", 1, 20, selection)
         assert [item["runId"] for item in filtered["items"]] == [expected]
+
+
+async def test_running_revision_on_approved_stage_is_filtered_as_running(db):  # noqa: F811
+    seed_task(db)
+    task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == "task"))
+    task.requirement_id = ""
+    db.commit()
+    session = AsyncSessionAdapter(db)
+    now = datetime.now(UTC)
+    execution, attempt, _ = await start_standalone_execution(
+        session,
+        task=task,
+        execution_id="run-running",
+        request_id="worker-running",
+        actor_id="user",
+        connection_id="llm",
+        source={},
+        config={},
+        checkpoint_enabled=False,
+    )
+    stage = db.get(AiGenerationStage, attempt.stage_id)
+    stage.stage = "detailed_cases"
+    execution.workflow_status, execution.current_stage = "pending", "detailed_cases"
+    attempt.status, attempt.output_content, attempt.output_format = "success", "result", "text"
+    attempt.review_status = "approved"
+    db.add(
+        AiGenerationAttempt(
+            id="attempt-revision",
+            stage_id=stage.id,
+            execution_id=execution.execution_id,
+            attempt_no=attempt.attempt_no + 1,
+            operation="revise",
+            requested_by="user",
+            input_snapshot_json={},
+            status="pending",
+            invalidated_reason="",
+            created_at=now,
+        )
+    )
+    db.commit()
+    running = await standalone_history(session, "task", 1, 20, "running")
+    assert [item["runId"] for item in running["items"]] == ["run-running"]
+    assert running["items"][0]["reviewStatus"] == "approved"
+    import_pending = await standalone_history(session, "task", 1, 20, "import_pending")
+    assert import_pending["items"] == []

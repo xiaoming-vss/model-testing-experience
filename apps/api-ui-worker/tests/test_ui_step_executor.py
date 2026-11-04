@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 import pytest
 
 from test_worker.contracts.types import UiStepDefinition
-from test_worker.ui.step_executor import StepExecutionContext, StepExecutor
+from test_worker.ui.step_executor import (
+    StepExecutionContext,
+    StepExecutor,
+    _take_named_screenshot,
+)
 
 
 def test_assert_text_uses_operation_value_and_ignores_expect_value(monkeypatch) -> None:
@@ -177,3 +182,21 @@ def test_assert_hidden_rejects_non_positive_timeout(operation_value) -> None:
 
     with pytest.raises(Exception, match="必须为正整数"):
         asyncio.run(StepExecutor().execute(step, 1, context))
+
+
+@pytest.mark.parametrize(
+    ("filename", "expected"),
+    [("登录页", "登录页.png"), ("shot.jpg", "shot.png"), ("step-1.png", "step-1.png")],
+)
+def test_screenshot_names_are_normalized_to_png(tmp_path, filename, expected) -> None:
+    captured: dict[str, object] = {}
+
+    class FakePage:
+        async def screenshot(self, *, path: str, full_page: bool) -> None:
+            captured["path"] = path
+            Path(path).write_bytes(b"png")
+
+    result = asyncio.run(_take_named_screenshot(FakePage(), str(tmp_path), filename))
+
+    assert Path(result).name == expected
+    assert Path(captured["path"]).name == expected

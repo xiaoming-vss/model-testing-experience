@@ -1461,6 +1461,43 @@ async def test_deleting_upstream_blocks_active_then_invalidates_only_draft(db): 
         )
 
 
+async def test_deleting_current_approved_version_returns_candidate_to_draft(db):  # noqa: F811
+    from testing_agent.models.ai_generate_task import AiGenerateTask
+    from testing_agent.services.stage_storage.version_delete import delete_stage_version
+
+    stage, storage = setup_stage(db)
+    task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == stage.task_id))
+    first = await storage.prepare(
+        stage.id, worker_task_id="first", requested_by="u", input_snapshot={}
+    )
+    await storage.publish(
+        stage.id,
+        attempt_id=first.id,
+        worker_task_id="first",
+        content='{"approved":1}',
+        output_format="json",
+        output_context=None,
+    )
+    version = await storage.approve(
+        stage.id, expected_attempt_id=first.id, reviewer_user_id="u", comment=""
+    )
+    assert stage.review_status == "approved"
+    assert await delete_stage_version(AsyncSessionAdapter(db), task, version.version_id) == 0
+    assert stage.review_status == "pending"
+    draft = await storage.save_draft(
+        stage.id,
+        expected_attempt_id=first.id,
+        requested_by="u",
+        content='{"edited":2}',
+        output_format="json",
+    )
+    assert draft.operation == "edit" and draft.output_content == '{"edited":2}'
+    approved = await storage.approve(
+        stage.id, expected_attempt_id=draft.id, reviewer_user_id="u", comment=""
+    )
+    assert approved.version_no == 2
+
+
 async def test_cross_chain_requirement_version_delete_preserves_approved_function_version(db):  # noqa: F811
     from datetime import UTC, datetime
 
