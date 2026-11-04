@@ -175,7 +175,7 @@ def execute_checkpoint_task(
         )
         return TaskResult(
             task_id=task.task_id,
-            run_id=task.run_id,
+            attempt_id=task.attempt_id,
             generate_task_id=task.generate_task_id,
             status=TaskStatus.SUCCESS,
             intermediate_json_text=config_json,
@@ -221,7 +221,7 @@ def execute_checkpoint_task(
         # 关系产物只进 configJson.caseRelations，不写入 resultYaml，避免覆盖已确认用例。
         return TaskResult(
             task_id=task.task_id,
-            run_id=task.run_id,
+            attempt_id=task.attempt_id,
             generate_task_id=task.generate_task_id,
             status=TaskStatus.SUCCESS,
             intermediate_json_text=config_json,
@@ -240,7 +240,7 @@ def execute_checkpoint_task(
 
     return TaskResult(
         task_id=task.task_id,
-        run_id=task.run_id,
+        attempt_id=task.attempt_id,
         generate_task_id=task.generate_task_id,
         status=TaskStatus.FAILED,
         error_message=f"不支持的 currentStage: {stage}",

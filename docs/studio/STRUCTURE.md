@@ -267,13 +267,14 @@ API 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 
 ### UI 测试集详情页（`detail-workbench-v2.css` / `detail-pipeline-v2.css` / `detail-inspector-v2.css`）
 
-UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（返回 / 标题 + 测试集 / 需求 / 迭代 / 就绪结论 / 上次运行 /
-运行记录 / 调试运行 / 运行测试集 / 保存）+ 控制条（选用例 + 运行环境）+ 两栏（左：用例信息条与步骤编辑器；
-右：执行回放 / 关键帧快照 / 执行控制台）。样式按职责拆三个文件，都由 `UiTestSuiteCasePage` 引入，选择器互不重叠：
-`detail-workbench-v2.css` 是板面、顶栏、控制条与用例顺序弹层，`detail-pipeline-v2.css` 是用例信息条与步骤卡片皮肤，
-`detail-inspector-v2.css` 是右栏三张卡片。页面结构同样按职责切：`UiSuiteDetailToolbar`、`UiCaseControlRibbon`、
-`UiCaseOrderPopover`、`UiCaseMetaBar`、`UiRunInspector`（内含 `UiRunReplayStage` / `UiRunSnapshotStrip` /
-`UiRunConsoleCard`）各自负责一段，页面只留编排、查询与变更。右栏的纯展示数据在 `utils/detailRunView.ts`。
+UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（返回 / 面包屑 + 测试集 / 需求 / 迭代 + 环境选择 + 保存；
+测试集流程另带就绪结论、上次运行、运行记录、导入用例与运行测试集，步骤流程改为当前用例信息（启用状态、步骤数）与调试运行）+ 两栏（左：测试集流程画布，或步骤流程画布 + 用例信息条与步骤编辑器；
+右：执行回放 / 执行日志 / 运行变量）。样式按职责拆三个文件，都由 `UiTestSuiteCasePage` 引入，选择器互不重叠：
+`detail-workbench-v2.css` 是板面、顶栏、流程工具栏与画布外壳，`detail-pipeline-v2.css` 是用例信息条与步骤卡片皮肤，
+`detail-inspector-v2.css` 是右栏三张卡片。页面结构同样按职责切：`UiSuiteDetailToolbar`、`UiCaseControlRibbon`
+（返回测试集流程 + 当前用例路径）、`UiCaseMetaBar`、`UiExecutionFlow`、`UiRunInspector`（内含 `UiRunReplayStage` /
+`UiRunSnapshotStrip` / `UiRunConsoleCard`）各自负责一段，页面只留编排、查询与变更。
+右栏的纯展示数据在 `utils/detailRunView.ts`。
 
 - **板面必须显式压平**：这条路由不在 `.testing-page` 里（实测 `document.querySelector('.testing-page')` 为 null），
   所以 `workbench.css` 的 `.app-shell.app-shell-macos .workbench-panel`（(0,3,0) + `!important`，玻璃底 + 内高光 +
@@ -281,10 +282,10 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
   (0,6,0) 规则也匹配不到。详情页因此自己写了一条带 `.ui-suite-detail-page` 的 (0,6,0)。
   判据：板面应是 `background: rgba(0,0,0,0)`、`box-shadow: none`、`border-width: 0`
   （它本来是半透明白 + 投影，肉眼不容易发现）。
-- **用例列表收进下拉，但要保留的能力有落脚点**：设计稿控制条上只有一个原生 select，而既有能力不能随列表一起消失——
-  用例搜索、拖拽重排、逐条删除分别落在 select 的 `showSearch`、`.ui-wb-ribbon-case` 的「用例顺序」弹层
-  （`UiCaseOrderPopover`，仍可拖拽）与信息条上的「删除用例」。弹层挂在 body 下，所以它的根节点带 `tp-surface`、
-  样式作用域写成 `.ui-wb-order-overlay .ui-wb-order-*`（不是 `.ui-suite-detail-page`）。
+- **用例管理收进流程画布**：不再有「用例管理」下拉/顺序弹层。测试集流程画布始终显示用例卡片，点击卡片进入步骤画布，
+  拖拽卡片调整执行顺序；用例删除在用例信息条的「更多操作」。每个流程末尾由 `UiExecutionFlow` 渲染一张虚线
+  「+ 添加用例 / + 添加步骤」卡片（虚拟节点，不进入执行顺序）：添加用例先产生未保存草稿卡片并进入该用例画布，
+  保存后才创建；添加步骤直接追加步骤并选中，内容在右侧「步骤配置」填写，侧栏不再提供添加按钮。
 - **设计稿控制条上的三个工作区页签（步骤编排 / 回放快照 / 执行控制台）已按用户要求去掉**：工作区只有一种排布
   （左步骤编排 + 右回放与控制台），三张卡片恒定显示，`UiStudioView` / `uiStudioViewOptions` / `ui-wb-cols--*` /
   `ui-wb-ribbon-view*` 一并删除。`detail-workbench-v2.css` 里那条 `.ui-suite-detail-page [hidden] { display: none !important }`
@@ -335,7 +336,7 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 | 路径末端的版本色块 `v1.0.0` | 测试集没有版本字段；路径只到迭代 |
 | 序列化编号 `CASE-##` 之外的用例版本 | 用例没有版本字段 |
 
-`UiTestSuiteCasePage.test.tsx` 依赖的钩子：`.ui-wb-toolbar`（含「运行记录 (N)」与「运行测试集」两个按钮）、
+`UiTestSuiteCasePage.test.tsx` 依赖的钩子：`.ui-wb-toolbar`（测试集流程含「运行记录 (N)」「导入用例」「运行测试集」，步骤流程隐藏这三个测试集级动作、只留「调试运行」）、
 `.ui-wb-ribbon`（「选择用例」「N 个用例」、运行环境文案；`role="tab"` 的视图页签已删除，改这一页时不要加回来）、`.ui-wb-case-meta`（序号与
 「包含 N 个步骤」）、`.ui-wb-pipeline`、`.ui-wb-order-panel` 与 `.ui-wb-order-item.selected`、
 `.ui-wb-replay`（`.ui-wb-replay-overlay`、`AUT DONE`）、`.ui-wb-strip`（角标形如 `#1 0.0s`）、

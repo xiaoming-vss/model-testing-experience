@@ -48,6 +48,10 @@ export function getExecutionStatusMeta(status?: string) {
   switch (status) {
     case 'pending':
       return { color: 'default' as const, label: '等待中' }
+    case 'queued':
+      return { color: 'default' as const, label: '等待中' }
+    case 'stopping':
+      return { color: 'default' as const, label: '正在停止' }
     case 'claimed':
       return { color: 'green' as const, label: '准备中' }
     case 'running':
@@ -59,7 +63,7 @@ export function getExecutionStatusMeta(status?: string) {
     case 'error':
       return { color: 'volcano' as const, label: '异常' }
     case 'canceled':
-      return { color: 'default' as const, label: '已取消' }
+      return { color: 'default' as const, label: '已停止' }
     case 'skipped':
       return { color: 'default' as const, label: '跳过' }
     default:
@@ -68,7 +72,7 @@ export function getExecutionStatusMeta(status?: string) {
 }
 
 export function isUiRunPollingStatus(status?: string) {
-  return status === 'pending' || status === 'claimed' || status === 'running'
+  return status === 'pending' || status === 'queued' || status === 'claimed' || status === 'running' || status === 'stopping'
 }
 
 export function getUiTestCaseRunId(run?: UiTestCaseRun | null) {

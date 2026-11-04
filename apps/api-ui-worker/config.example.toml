@@ -4,6 +4,10 @@ mode = "poll"
 base_url = "http://127.0.0.1:8011"
 worker_token = "replace-with-worker-token"
 
+[notifications]
+# Optional; an empty value retains polling-only compatibility.
+redis_url = ""
+
 [worker]
 id = ""
 poll_interval_ms = 3000

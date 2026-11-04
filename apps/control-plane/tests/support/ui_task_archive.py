@@ -14,7 +14,7 @@ from support.execution_writer import MemoryExecutionWriter
 from support.generation import generation_services, install_generation_services
 from testing_agent.api.deps import get_current_user_id
 from testing_agent.app import create_app
-from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
+from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.worker_task import WorkerTask
 
 
@@ -28,7 +28,7 @@ class UiTaskRepository:
             requirement_id="requirement-1",
             sprint_id="sprint-1",
             name="Login",
-            document_type="text",
+            document_type="richtext",
             document_content="",
             document_download_url="",
         )
@@ -95,16 +95,6 @@ class UiTaskRepository:
             self.tasks[row.task_id] = row
         elif hasattr(row, "archive_id"):
             self.archive = row
-        elif isinstance(row, AiGenerateTaskRun):
-            self.runs[row.run_id] = row
-            row.error_message = ""
-            row.result_yaml = ""
-            row.review_status = "pending"
-            row.import_status = "pending"
-            row.imported_targets = []
-            row.imported_at = None
-            row.import_migration_complete = True
-            row.reviewer_user_id = ""
             row.reviewed_at = None
             row.review_comment = ""
             row.duration_ms = 0

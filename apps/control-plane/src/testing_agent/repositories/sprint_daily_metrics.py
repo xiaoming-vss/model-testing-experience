@@ -151,6 +151,7 @@ class SprintDailyMetricsRepository(BaseRepository):
             .where(
                 Requirement.sprint_id == sprint_id,
                 ApiCase.collection_id == ApiCollection.collection_id,
+                ApiCaseRun.trigger_type != "live_debug",
             )
         )
         rows = await self.session.execute(

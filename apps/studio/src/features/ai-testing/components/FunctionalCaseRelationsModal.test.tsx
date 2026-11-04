@@ -14,7 +14,7 @@ vi.mock('@/features/projects/components/ProjectAccessScope', () => ({ ProjectAcc
 vi.mock('./FunctionalCaseRelationsGraph', () => ({ FunctionalCaseRelationsGraph: ({ content }: { content: string }) => <div data-testid="relations-content">{content}</div> }))
 
 let client: QueryClient
-const ready: FunctionalCaseGenerateTaskRun = { runId: 'run', taskId: 'task', status: 'success', currentStage: 'completed', reviewStatus: 'approved', configJson: {}, resultYaml: '[]', importStatus: 'pending', importedTargets: [], importedAt: '', importMigrationComplete: true }
+const ready: FunctionalCaseGenerateTaskRun = { runId: 'run', taskId: 'task', status: 'success', currentStage: 'completed', reviewStatus: 'approved', configJson: {}, resultYaml: '[]', importStatus: 'pending', importedTargets: [], importedAt: '' }
 const queued: FunctionalCaseGenerateTaskRun = { ...ready, status: 'pending', currentStage: 'relation_analysis' }
 const relations = { schema_version: '2.0', main_paths: [{ path_id: 'P01', case_ids: ['c1', 'c2'] }], edges: [] }
 beforeEach(() => {

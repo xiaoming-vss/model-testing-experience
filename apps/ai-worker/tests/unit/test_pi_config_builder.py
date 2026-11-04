@@ -15,7 +15,7 @@ class PiConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             task = Task(
                 task_id="a",
-                run_id="b",
+                attempt_id="b",
                 generate_task_id="c",
                 task_type="api_case_generate",
                 payload=TaskPayload(
@@ -42,7 +42,7 @@ class PiConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             task = Task(
                 task_id="a",
-                run_id="b",
+                attempt_id="b",
                 generate_task_id="c",
                 task_type="api_case_generate",
                 payload=TaskPayload(openapi_content=""),

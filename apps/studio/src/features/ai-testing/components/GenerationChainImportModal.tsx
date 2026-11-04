@@ -108,16 +108,16 @@ export function GenerationChainImportModal({ workspace, open, onClose }: {
         <div><span>发布状态</span><b>{selectedVersion?.imported ? '已导入过正式资产' : '尚未导入'}</b></div>
       </div>
 
-      <section className="gc-import-section">
-        <h4><LinkOutlined /> 完整父链</h4>
-        {options.parents.length ? <div className="gc-import-parents">
+      {options.parents.length ? <section className="gc-import-section">
+        <h4><LinkOutlined /> 关联阶段</h4>
+        <div className="gc-import-parents">
           {options.parents.map(parent => <span className="gc-import-parent" key={parent.versionId}>
             <small>{parent.stageLabel || parent.stage}</small>
             <b>{parent.label}</b>
             <em>{parent.summary}</em>
           </span>)}
-        </div> : <p className="gc-import-hint">该链路只有当前叶子阶段，无上游 AI 版本。</p>}
-      </section>
+        </div>
+      </section> : null}
 
       <section className="gc-import-section">
         <h4>目标正式资产</h4>

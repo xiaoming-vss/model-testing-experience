@@ -11,7 +11,7 @@
 
 import type { UiTestCaseRun, UiTestCaseRunStepResult, UiTestSuiteRunSummary } from '@/services/api'
 
-import { getExecutionStatusMeta } from './runHelpers'
+import { getExecutionStatusMeta, isUiRunPollingStatus } from './runHelpers'
 
 /** 九色盘里本页用到的色调，对应 `.tone-green` 等类名。 */
 export type UiRunTone = 'green' | 'red' | 'orange' | 'blue' | 'slate'
@@ -270,7 +270,7 @@ export function buildUiRunLogLines(run?: UiTestCaseRun | null): UiRunLogLine[] {
     })
   }
 
-  if (!run) return lines
+  if (!run?.status || isUiRunPollingStatus(run.status)) return lines
 
   const successCount = snapshots.filter((item) => item.status === 'success').length
   const failedCount = snapshots.filter((item) => item.status === 'failed' || item.status === 'error').length
@@ -281,7 +281,7 @@ export function buildUiRunLogLines(run?: UiTestCaseRun | null): UiRunLogLine[] {
     level: 'done',
     time: '',
     command: '',
-    result: `测试用例执行完成，共 ${snapshots.length} 步，通过 ${successCount} 步，失败 ${failedCount} 步${durationText}。`,
+    result: `测试用例${run.status === 'canceled' ? '已停止' : '执行完成'}，共 ${snapshots.length} 步，通过 ${successCount} 步，失败 ${failedCount} 步${durationText}。`,
   })
 
   return lines

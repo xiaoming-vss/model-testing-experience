@@ -31,14 +31,20 @@ async def requirement_image_ticket(
         raise ErrForbidden()
     if requirement.document_type != "richtext":
         raise ErrNotFound()
-    run = await service.repository.get_ai_run(task.run_id)
-    if run is None:
+    from testing_agent.services.stage_storage.worker_service import DirectStageWorkerService
+
+    session = getattr(service.repository, "session", None)
+    direct = DirectStageWorkerService(session) if session is not None else None
+    if direct is not None and await direct.is_direct(task):
+        authority = await direct.authorize(task)
+        project_id = authority.task.project_id
+    else:
         raise ErrNotFound()
     document = await files.get(requirement.document_file_id)
     image = await files.get(file_id)
     for row, purpose in ((document, "requirement"), (image, "attachment")):
         if (
-            row.project_id != run.project_id
+            row.project_id != project_id
             or row.resource_type != "requirement"
             or row.resource_id != requirement.requirement_id
             or row.purpose != purpose

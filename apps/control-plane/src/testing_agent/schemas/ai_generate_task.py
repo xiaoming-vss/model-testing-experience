@@ -87,6 +87,7 @@ class CodeRiskAnalysisTaskRequest(BaseModel):
 
 
 class CodeRiskAnalysisRunRequest(BaseModel):
+    request_id: str | None = Field(default=None, min_length=1, max_length=64)
     gitlab_connection_ids: dict[str, str] = Field(default_factory=dict)
     connection_id: str | None = Field(default=None)
     llm_connection_id: str | None = Field(default=None)
@@ -94,6 +95,7 @@ class CodeRiskAnalysisRunRequest(BaseModel):
     trigger_type: str | None = Field(default=None)
     config_json: Any | None = Field(default=None)
     result_yaml: str | None = Field(default=None)
+    requirement_understanding_version_id: str | None = Field(default=None, max_length=64)
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -117,6 +119,7 @@ class TestReportGenerateTaskRequest(BaseModel):
 
 
 class TestReportGenerateTaskRunRequest(BaseModel):
+    request_id: str | None = Field(default=None, min_length=1, max_length=64)
     sprint_id: str | None = Field(default=None)
     connection_id: str | None = Field(default=None)
     llm_connection_id: str | None = Field(default=None)
@@ -172,6 +175,7 @@ class AiGenerateTaskImportRequest(BaseModel):
 
 class FunctionGenerateTaskImportRequest(BaseModel):
     confirm_overwrite: bool = Field(default=False)
+    requirement_id: str | None = Field(default=None)
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
@@ -242,15 +246,14 @@ class AiGenerateRunSummary(BaseModel):
     trigger_type: str = Field()
     status: str
     checkpoint_enabled: bool = Field()
+    generation_chain_managed: bool = False
     current_stage: str = Field()
     stage_status: str = Field()
     error_message: str = Field()
-    remediation: str = ""
     review_status: str = Field()
     import_status: Literal["pending", "imported"] = Field()
     imported_targets: list[ImportedTarget] = Field(default_factory=list)
     imported_at: datetime | str | None = Field(default=None)
-    import_migration_complete: bool = Field()
     reviewer_user_id: str = Field()
     reviewed_at: datetime | str | None = Field(default=None)
     review_comment: str = Field()

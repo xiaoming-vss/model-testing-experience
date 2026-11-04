@@ -37,6 +37,28 @@ def test_generation_queries_do_not_write_or_depend_on_task_command_facade():
                 assert node.func.attr not in {"commit", "rollback", "add", "delete", "flush"}
 
 
+def test_production_does_not_import_retired_ai_execution_storage():
+    root = PROJECT_ROOT / "src/testing_agent"
+    retired = {
+        "testing_agent.services.ai_execution",
+        "testing_agent.repositories.ai_execution",
+        "testing_agent.domain.ai_execution_intent",
+    }
+    for path in root.rglob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.ImportFrom) and node.module:
+                assert not any(
+                    node.module == name or node.module.startswith(name + ".") for name in retired
+                ), f"{path} imports retired execution storage"
+            if isinstance(node, ast.Import):
+                assert all(
+                    not any(
+                        alias.name == name or alias.name.startswith(name + ".") for name in retired
+                    )
+                    for alias in node.names
+                ), f"{path} imports retired execution storage"
+
+
 def test_function_asset_modules_do_not_depend_on_export_or_api_collection():
     root = PROJECT_ROOT / "src/testing_agent"
     for name in ("function_test_case", "function_case_import", "function_case_access"):
@@ -258,7 +280,6 @@ def test_execution_commands_do_not_scan_sessions_or_use_orm_command_flags():
     paths = [
         root / "services/ai_task_commands.py",
         root / "services/ai_candidate_review.py",
-        root / "services/requirement_generate_import.py",
         root / "services/api_generate_import.py",
         root / "services/ui_generate_import.py",
         root / "services/function_generate_import.py",

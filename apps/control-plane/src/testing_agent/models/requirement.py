@@ -25,7 +25,7 @@ class Requirement(Base):
     )
     name: Mapped[str] = mapped_column(String(120), nullable=False, comment="名称")
     document_type: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="text", comment="需求文档类型"
+        String(20), nullable=False, default="richtext", comment="需求文档类型"
     )
     document_content: Mapped[str] = mapped_column(
         LONGTEXT, nullable=False, default="", comment="需求文档正文或提取内容"

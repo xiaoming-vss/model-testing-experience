@@ -7,6 +7,7 @@ import { useAuthStore } from '@/features/auth/store/auth.store'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { AppShell } from './AppShell'
 import { TestThemeProvider } from '@/test/TestThemeProvider'
+import { UNSAVED_NAVIGATION_EVENT } from '@/shared/utils/unsavedChanges'
 
 const clients: QueryClient[] = []
 afterEach(() => {
@@ -17,14 +18,15 @@ afterEach(() => {
   useWorkbenchStore.getState().setActiveProjectId(undefined)
 })
 
-function mount(role = 'owner', path = '/projects?board=requirements') {
+function mount(role = 'owner', path = '/projects?board=requirements', extraProject = false) {
   useAuthStore.setState({ token: 'test', user: { userId: 'u', name: '用户' } })
   useWorkbenchStore.setState({ activeProjectId: 'p', projectModalOpen: false, editingProject: null })
   const project = { projectId: 'p', name: '示例项目', role, permissions: role === 'owner' ? ['read', 'write', 'manage'] : ['read'] }
+  const projects = extraProject ? [project, { ...project, projectId: 'p2', name: '另一项目' }] : [project]
   vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
     const url = new URL(String(input), 'http://localhost')
     const data = url.pathname === '/v1/user' ? { userId: 'u', name: '用户' }
-      : url.pathname === '/v1/projects' ? { items: [project], total: 1 }
+      : url.pathname === '/v1/projects' ? { items: projects, total: projects.length }
         : url.pathname === '/v1/projects/p' ? project : { items: [], total: 0 }
     return new Response(JSON.stringify({ code: 0, message: 'ok', data }))
   })
@@ -46,6 +48,21 @@ it.each(['项目成员', '项目设置'])('从顶部当前项目菜单打开%s�
   await user.click(screen.getByRole('button', { name: 'Close' }))
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   expect(screen.getByRole('link', { name: '需求' })).toHaveAttribute('aria-current', 'page')
+})
+
+it('取消未保存确认时保持当前项目', async () => {
+  mount('owner', '/projects?board=requirements', true)
+  const user = userEvent.setup()
+  await screen.findByText('请先创建迭代，再添加需求')
+  const preventLeave = (event: Event) => event.preventDefault()
+  window.addEventListener(UNSAVED_NAVIGATION_EVENT, preventLeave)
+  try {
+    await user.click(screen.getByRole('combobox', { name: '当前项目' }))
+    await user.click(await screen.findByText('另一项目'))
+    expect(useWorkbenchStore.getState().activeProjectId).toBe('p')
+  } finally {
+    window.removeEventListener(UNSAVED_NAVIGATION_EVENT, preventLeave)
+  }
 })
 
 it('只读成员不能打开项目设置', async () => {
@@ -73,4 +90,22 @@ it('未知地址回到项目页', async () => {
   mount('owner', '/unknown-page')
   await screen.findByText('暂无迭代，创建后即可开始管理需求与测试')
   expect(screen.getByRole('link', { name: '迭代' })).toHaveAttribute('aria-current', 'page')
+})
+
+it('取消未保存确认时不打开项目菜单或新建项目', async () => {
+  mount()
+  const user = userEvent.setup()
+  await screen.findByText('请先创建迭代，再添加需求')
+  const preventLeave = vi.fn((event: Event) => event.preventDefault())
+  window.addEventListener(UNSAVED_NAVIGATION_EVENT, preventLeave)
+  try {
+    await user.click(screen.getByRole('combobox', { name: '当前项目' }))
+    await user.click(await screen.findByRole('menuitem', { name: /项目成员/ }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '新建项目' }))
+    expect(useWorkbenchStore.getState().projectModalOpen).toBe(false)
+    expect(preventLeave).toHaveBeenCalledTimes(2)
+  } finally {
+    window.removeEventListener(UNSAVED_NAVIGATION_EVENT, preventLeave)
+  }
 })

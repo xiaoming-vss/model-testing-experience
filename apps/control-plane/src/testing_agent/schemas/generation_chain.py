@@ -43,8 +43,8 @@ class ChainStageVersionSummary(ChainModel):
     artifact_format: str
     created_at: datetime | str | None = None
     reviewer_user_id: str = ""
-    based_on_old: bool = False
     source_run_id: str = ""
+    source_batch_id: str = ""
     imported: bool = False
 
 
@@ -77,6 +77,8 @@ class ChainStageView(ChainModel):
     upstream_stages: list[str] = Field(default_factory=list)
     blocked_reason: str = ""
     error_message: str = ""
+    failure_run_id: str = ""
+    failed_at: datetime | str | None = None
     active_run_id: str = ""
 
 
@@ -95,12 +97,14 @@ class GenerationChainView(ChainModel):
     configured: bool
     task_id: str = ""
     run_id: str = ""
+    source_batch_id: str = ""
     active: bool = False
     busy: bool = False
     source_inputs: ChainSourceInputsView | None = None
     source_changed: bool = False
     updated_at: datetime | str | None = None
     draft_count: int = 0
+    continuation_error: str = ""
     stages: list[ChainStageView] = Field(default_factory=list)
     leaf: ChainLeafView = Field(default_factory=ChainLeafView)
 
@@ -119,7 +123,6 @@ class GenerationChainVersionDetail(ChainModel):
     summary: str
     artifact_format: str
     content: str
-    based_on_old: bool = False
     reviewer_user_id: str = ""
     reviewed_at: datetime | str | None = None
     review_comment: str = ""
@@ -135,6 +138,7 @@ class GenerationChainRunRequest(ChainModel):
     connection_id: str = Field(min_length=1, max_length=64)
     request_id: UUID | None = None
     instruction: str | None = None
+    config_json: Any | None = None
     upstream_versions: dict[str, str] = Field(default_factory=dict)
 
 
@@ -147,11 +151,17 @@ class GenerationChainRevisionRequest(ChainModel):
 
 class GenerationChainReviewRequest(ChainModel):
     action: Literal["approve", "reject"]
+    expected_attempt_id: str | None = Field(default=None, min_length=1, max_length=64)
     continue_after: bool = False
     comment: str = Field(default="", max_length=4000)
     instruction: str | None = None
     connection_id: str | None = Field(default=None, max_length=64)
     request_id: UUID | None = None
+
+
+class GenerationChainSaveDraftRequest(ChainModel):
+    expected_attempt_id: str = Field(min_length=1, max_length=64)
+    content: str
 
 
 class GenerationChainDeleteVersionResponse(ChainModel):

@@ -69,6 +69,51 @@ async def test_monitor_recovers_on_startup_and_retries_next_interval(monkeypatch
     assert calls == ["sweep", 5, "sweep", 5]
 
 
+async def test_debug_cleanup_isolates_api_failure_from_ui(monkeypatch, caplog):
+    from testing_agent.services import live_debug_cleanup
+
+    sessions = []
+
+    @asynccontextmanager
+    async def factory():
+        session = AsyncMock()
+        sessions.append(session)
+        yield session
+
+    async def fail_api(session, *, cursor=None):
+        raise RuntimeError("secret must not be logged")
+
+    recover_ui = AsyncMock(return_value=1)
+    monkeypatch.setattr(live_debug_cleanup, "recover_api_debug_runs", fail_api)
+    monkeypatch.setattr(live_debug_cleanup, "recover_ui_debug_runs", recover_ui)
+
+    await worker_lease_monitor.recover_debug_cleanup_once(factory)
+
+    assert len(sessions) == 2
+    recover_ui.assert_awaited_once_with(sessions[1], cursor=None)
+    assert "debug-cleanup-api" in caplog.text
+    assert "secret must not be logged" not in caplog.text
+
+
+async def test_debug_cleanup_rolls_back_bad_record_and_continues(caplog):
+    from testing_agent.services.live_debug_cleanup import _recover_debug_records
+
+    session = AsyncMock()
+    calls = []
+
+    async def finish(current_session, task_id):
+        calls.append(task_id)
+        if task_id == "broken":
+            raise ValueError("secret must not be logged")
+        return True
+
+    assert await _recover_debug_records(session, ["broken", "healthy"], "ui", finish) == 1
+    assert calls == ["broken", "healthy"]
+    session.rollback.assert_awaited_once()
+    assert "broken" in caplog.text
+    assert "secret must not be logged" not in caplog.text
+
+
 async def test_background_sweep_drains_persisted_backlog_without_worker(monkeypatch):
     from datetime import UTC, datetime, timedelta
 
@@ -148,9 +193,7 @@ async def test_background_sweep_drains_persisted_backlog_without_worker(monkeypa
             assert claimed["taskId"] == "ready"
             assert (
                 await session.scalar(
-                    select(func.count())
-                    .select_from(WorkerTask)
-                    .where(WorkerTask.status == "failed")
+                    select(func.count()).select_from(WorkerTask).where(WorkerTask.status == "error")
                 )
                 == 0
             )
@@ -168,17 +211,13 @@ async def test_background_sweep_drains_persisted_backlog_without_worker(monkeypa
         async with sessions() as session:
             assert (
                 await session.scalar(
-                    select(func.count())
-                    .select_from(WorkerTask)
-                    .where(WorkerTask.status == "failed")
+                    select(func.count()).select_from(WorkerTask).where(WorkerTask.status == "error")
                 )
                 == 0
             )
             assert (
                 await session.scalar(
-                    select(func.count())
-                    .select_from(ApiCaseRun)
-                    .where(ApiCaseRun.status == "failed")
+                    select(func.count()).select_from(ApiCaseRun).where(ApiCaseRun.status == "error")
                 )
                 == 0
             )
@@ -197,17 +236,13 @@ async def test_background_sweep_drains_persisted_backlog_without_worker(monkeypa
         async with sessions() as session:
             assert (
                 await session.scalar(
-                    select(func.count())
-                    .select_from(WorkerTask)
-                    .where(WorkerTask.status == "failed")
+                    select(func.count()).select_from(WorkerTask).where(WorkerTask.status == "error")
                 )
                 == 201
             )
             assert (
                 await session.scalar(
-                    select(func.count())
-                    .select_from(ApiCaseRun)
-                    .where(ApiCaseRun.status == "failed")
+                    select(func.count()).select_from(ApiCaseRun).where(ApiCaseRun.status == "error")
                 )
                 == 201
             )

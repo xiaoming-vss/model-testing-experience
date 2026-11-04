@@ -9,15 +9,18 @@ from support.initial_schema_migration import assert_current_schema, migration_co
 from support.mysql_initialization import (
     UNIQUE_TABLES as UNIQUE_TABLES,
 )
-from support.mysql_initialization import (
-    mysql as mysql,
-)
+from support.mysql_initialization import _mysql_fixture
 from support.mysql_initialization import (
     seed_row as seed_row,
 )
 
 from alembic import command
 from testing_agent.models import Base
+
+
+@pytest.fixture(scope="module")
+def mysql():
+    yield from _mysql_fixture("head")
 
 
 def test_mysql_baseline_and_roundtrip(mysql):

@@ -1,4 +1,4 @@
-"""Formal-asset import provenance for an approved generation-chain leaf version.
+"""Formal-asset provenance for an approved version or independent candidate.
 
 One row is written for each formal target changed by an import. The target's
 ``effective_import_id`` points at its most recent row. Version hard deletion
@@ -12,6 +12,7 @@ from datetime import datetime
 from sqlalchemy import (
     JSON,
     Boolean,
+    CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
@@ -30,8 +31,15 @@ class AiGenerateVersionImport(Base):
     __table_args__ = (
         UniqueConstraint("import_id", name="uq_ai_version_import_id"),
         Index("idx_ai_version_import_leaf", "task_id", "version_id"),
+        Index("idx_ai_version_import_attempt", "attempt_id"),
+        CheckConstraint(
+            "(version_id IS NOT NULL AND attempt_id IS NULL) OR "
+            "(version_id IS NULL AND attempt_id IS NOT NULL)",
+            name="ck_ai_version_import_source",
+        ),
+        Index("idx_ai_version_import_task_fk", "task_id"),
         Index("idx_ai_version_import_target", "target_type", "target_id", "imported_at"),
-        {"comment": "已通过叶子版本导入正式资产的来源、父链和变更用例记录"},
+        {"comment": "已审核版本或独立候选导入正式资产的来源及变更用例记录"},
     )
     id: Mapped[IdPk] = mapped_column(comment="数据库内部主键")
     import_id: Mapped[str] = mapped_column(String(64), nullable=False, comment="导入记录业务标识")
@@ -43,20 +51,30 @@ class AiGenerateVersionImport(Base):
             ondelete="CASCADE",
         ),
         nullable=False,
-        comment="叶子版本所属生成链任务业务标识",
+        comment="来源版本或独立候选所属 AI 任务业务标识",
     )
-    version_id: Mapped[str] = mapped_column(
+    version_id: Mapped[str | None] = mapped_column(
         String(64),
         ForeignKey(
             "ai_generate_stage_versions.version_id",
             name="fk_ai_version_import_version",
             ondelete="CASCADE",
         ),
-        nullable=False,
-        comment="被导入的叶子阶段版本业务标识",
+        nullable=True,
+        comment="被导入的叶子阶段版本业务标识；独立候选导入时为空",
+    )
+    attempt_id: Mapped[str | None] = mapped_column(
+        String(64),
+        ForeignKey(
+            "ai_generation_attempts.id",
+            name="fk_ai_version_import_attempt",
+            ondelete="CASCADE",
+        ),
+        nullable=True,
+        comment="被导入的独立候选阶段尝试业务标识；版本导入时为空",
     )
     leaf_stage: Mapped[str] = mapped_column(
-        String(40), nullable=False, comment="被导入叶子版本对应的阶段标识"
+        String(40), nullable=False, comment="被导入版本或独立候选对应的阶段标识"
     )
     target_type: Mapped[str] = mapped_column(
         String(30),
@@ -83,13 +101,13 @@ class AiGenerateVersionImport(Base):
         comment="正式目标是否仍有本次导入未覆盖的旧来源用例",
     )
     reviewer_user_id: Mapped[str] = mapped_column(
-        String(64), nullable=False, default="", comment="叶子版本审核人用户业务标识"
+        String(64), nullable=False, default="", comment="来源版本或独立候选的审核人用户业务标识"
     )
     reviewed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, comment="叶子版本审核通过时间（UTC）"
+        DateTime(timezone=True), nullable=True, comment="来源版本或独立候选的审核通过时间（UTC）"
     )
     review_comment: Mapped[str] = mapped_column(
-        Text, nullable=False, default="", comment="叶子版本审核意见"
+        Text, nullable=False, default="", comment="来源版本或独立候选的审核意见"
     )
     imported_by: Mapped[str] = mapped_column(
         String(64), nullable=False, comment="执行导入的用户业务标识"

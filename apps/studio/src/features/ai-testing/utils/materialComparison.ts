@@ -5,7 +5,7 @@ type SourceReference = RequirementSourceReference
 export type MaterialSource = { id: string; name: string; type: string; location: string | null; version: string | null }
 export type MaterialBlock = { id: string; parentId: string | null; kind: string; title: string | null; text: string | null; items: string[]; table: unknown; image: unknown; parseStatus: string; sourceReferences: SourceReference[]; relatedQuestionIds: string[] }
 export type ExtractedFact = { id: string; category: string; fact: { value: unknown; confirmationStatus: string; sourceReferences: SourceReference[]; relatedQuestionIds: string[] }; relatedBlockIds: string[] }
-export type MaterialQuestion = { id: string; question: string; status: string; affectedRefs: { kind: string; id: string }[]; sourceReferences: SourceReference[]; answer: unknown }
+export type MaterialQuestion = { id: string; question: string; status: string; affectedRefs: { kind: string; id: string }[]; impacts?: { stage: string; description: string; blocking: boolean }[]; sourceReferences: SourceReference[]; answer: unknown }
 export type ExtractionArtifact = Record<string, unknown> & { documentTitle: string; sources: MaterialSource[]; contentBlocks: MaterialBlock[]; extractedFacts: ExtractedFact[]; questions: MaterialQuestion[] }
 export type MaterialSelection = { kind: 'fact' | 'question'; id: string }
 const record = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value)

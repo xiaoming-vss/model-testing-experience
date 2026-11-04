@@ -38,6 +38,13 @@ export function getExecutionStatusMeta(status?: string) {
   switch (status) {
     case 'pending':
       return { color: 'default' as const, label: '等待中' }
+    case 'queued':
+    case 'claimed':
+      return { color: 'default' as const, label: '等待中' }
+    case 'stopping':
+      return { color: 'default' as const, label: '正在停止' }
+    case 'canceled':
+      return { color: 'default' as const, label: '已停止' }
     case 'running':
       return { color: 'green' as const, label: '运行中' }
     case 'success':

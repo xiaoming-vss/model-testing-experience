@@ -4,6 +4,7 @@ import type { ApiCaseGenerateTaskRunStatus } from '../types'
 const statusMetaMap: Record<string, { label: string; color: string }> = {
   draft: { label: '草稿', color: 'default' },
   pending: { label: '待执行', color: 'gold' },
+  queued: { label: '排队中', color: 'gold' },
   claimed: { label: '已领取', color: 'cyan' },
   running: { label: '执行中', color: 'cyan' },
   waiting_review: { label: '待审核', color: 'gold' },
@@ -19,7 +20,7 @@ export function normalizeApiCaseGenerateTaskRunStatus(status?: ApiCaseGenerateTa
 
 export function isApiCaseGenerateTaskRunInProgress(status?: ApiCaseGenerateTaskRunStatus) {
   const normalizedStatus = normalizeApiCaseGenerateTaskRunStatus(status)
-  return ['pending', 'claimed', 'running', 'waiting_review'].includes(normalizedStatus)
+  return ['pending', 'queued', 'claimed', 'running', 'waiting_review'].includes(normalizedStatus)
 }
 
 export function isRunnableApiCaseGenerateTaskRun(status?: ApiCaseGenerateTaskRunStatus) {

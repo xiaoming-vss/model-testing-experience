@@ -1,5 +1,9 @@
 """Pure AI task kinds and stage transitions, independent of persistence and HTTP."""
 
+AUXILIARY_EXECUTION_TYPES = frozenset(
+    {"code_risk_analysis", "test_report_generate", "test_order_graph"}
+)
+
 
 def task_type_for(kind: str) -> str:
     if kind == "ui":

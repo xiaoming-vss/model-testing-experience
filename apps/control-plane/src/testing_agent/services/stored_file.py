@@ -15,7 +15,10 @@ from testing_agent.core.sid import new_id
 from testing_agent.models.stored_file import StoredFile
 from testing_agent.schemas.stored_file import FileUploadRequest
 from testing_agent.services.project_access import ProjectAction, require_project_id
-from testing_agent.services.stored_file_access import require_file_resource
+from testing_agent.services.stored_file_access import (
+    require_file_resource,
+    require_live_debug_file_owner,
+)
 
 ALLOWED_EXTENSIONS = {
     "txt",
@@ -82,7 +85,7 @@ class StoredFileService:
         await require_project_id(self.session, user_id, body.project_id, "write")
         ext = body.filename.rsplit(".", 1)[-1].lower()
         allowed: set[str] | None = (
-            {"txt", "md", "docx", "html"} if body.purpose == "requirement" else ALLOWED_EXTENSIONS
+            {"docx", "html"} if body.purpose == "requirement" else ALLOWED_EXTENSIONS
         )
         maximum = self.settings.max_bytes
         if body.purpose == "requirement" and ext == "html":
@@ -264,6 +267,7 @@ class StoredFileService:
         if row.status == "deleting":
             raise ErrNotFound()
         await require_file_resource(self.session, row)
+        await require_live_debug_file_owner(self.session, row, user_id)
         return row
 
     async def list_by_resource(

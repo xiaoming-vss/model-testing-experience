@@ -203,7 +203,7 @@ it('代码风险分析列表运行使用当前项目加载模型授权', async (
       }], total: 1 })
     }
     if (url.pathname === '/v1/sprints/sprint-1/requirements' || url.pathname === '/v1/requirements/requirement-1') {
-      const requirement = { requirementId: 'requirement-1', name: '登录需求', documentType: 'text', documentFilename: '需求.md', documentContent: '已导入增强文本' }
+      const requirement = { requirementId: 'requirement-1', name: '登录需求', documentType: 'richtext', documentFilename: 'requirement.html', documentContent: '已导入增强文本' }
       return jsonResponse(url.pathname.endsWith('/requirements') ? { items: [requirement], total: 1 } : requirement)
     }
     if (url.pathname.includes('/integrations/llm/connections')) {

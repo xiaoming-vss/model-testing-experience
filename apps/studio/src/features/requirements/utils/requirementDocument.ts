@@ -14,7 +14,6 @@ export function isWordRequirementDocument(documentType?: Requirement['documentTy
 export function getRequirementDocumentTypeLabel(documentType?: Requirement['documentType']) {
   if (isWordRequirementDocument(documentType)) return 'Word'
   if (documentType === 'richtext') return '富文本'
-  if (documentType === 'text') return '文本'
   return '未配置'
 }
 
@@ -40,7 +39,7 @@ export function getRequirementDocumentDisplayName({
     return documentFileName || documentFilename || requirementName || '未命名文档'
   }
 
-  return documentFileName || documentFilename || requirementName || '文本内容'
+  return documentFileName || documentFilename || requirementName || '需求正文'
 }
 
 export function hasRequirementEnhancedText(requirement?: Pick<Requirement, 'documentContent'>) {
@@ -67,9 +66,6 @@ export function getRequirementDocumentSummary(
   }
 
   if (requirement.documentType === 'richtext') return '图文需求正文'
-  if (requirement.documentType === 'text') {
-    return requirement.documentFilename || getRequirementDocumentFileName(requirement.documentDownloadUrl) || '已保存文本源文件'
-  }
 
   return '未配置需求文档'
 }

@@ -2,7 +2,7 @@
 
 import pytest
 from sqlalchemy import select
-from support.ai_execution import AsyncSessionAdapter
+from support.ai_execution import AsyncSessionAdapter  # noqa: F401
 from support.ai_execution import db as db
 from support.api_run_scope import (
     seed as seed,
@@ -17,6 +17,7 @@ from testing_agent.models.api_case import ApiCase
 from testing_agent.models.api_case_run import ApiCaseRun
 from testing_agent.models.api_collection import ApiCollection
 from testing_agent.models.api_collection_run import ApiCollectionRun, ApiCollectionRunItem
+from testing_agent.models.project_member import ProjectMember
 from testing_agent.models.requirement import Requirement
 from testing_agent.models.sprint_daily_metrics import SprintDailyMetrics
 from testing_agent.models.worker_task import WorkerTask
@@ -25,6 +26,21 @@ from testing_agent.repositories.worker_task import WorkerTaskRepository
 from testing_agent.schemas.api_run import RunApiCaseRequest, RunApiCollectionRequest
 from testing_agent.schemas.workers import WorkerClaimRequest, WorkerTaskEventRequest
 from testing_agent.services.worker_task import WorkerTaskService
+
+
+@pytest.mark.asyncio
+async def test_live_api_debug_result_is_private_but_manual_result_remains_shared(db):
+    seed(db)
+    db.add(ProjectMember(project_id="p1", user_id="u2", role="viewer"))
+    db.commit()
+    cases, _ = services(db)
+    body = RunApiCaseRequest(environmentId="env")
+    live = await cases.run("u1", "api-case", body, live_debug=True)
+    manual = await cases.run("u1", "api-case", body)
+    assert (await cases.get_run("u1", live["runId"]))["runId"] == live["runId"]
+    with pytest.raises(type(ErrForbidden)):
+        await cases.get_run("u2", live["runId"])
+    assert (await cases.get_run("u2", manual["runId"]))["runId"] == manual["runId"]
 
 
 @pytest.mark.asyncio

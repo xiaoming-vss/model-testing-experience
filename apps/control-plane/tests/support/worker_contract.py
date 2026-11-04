@@ -59,6 +59,6 @@ def worker_contract_authority(monkeypatch):
     """
 
     async def authority(session, task, *, pending=False):
-        return SimpleNamespace(actor="user-1", project_id="project-1")
+        return SimpleNamespace(actor="user-1", project_id="project-1", run=None)
 
     monkeypatch.setattr(worker_task_service_module, "authorize_execution", authority)

@@ -179,7 +179,7 @@ class TaskPayload(BaseModel):
 class Task(BaseModel):
     claim_id: str = ""
     task_id: str
-    run_id: str = ""
+    attempt_id: str = ""
     generate_task_id: str = ""
     task_type: str = "api_case_generate"
     name: str = ""
@@ -204,4 +204,4 @@ class Task(BaseModel):
 
     @property
     def session_key(self) -> str:
-        return self.run_id.strip()
+        return self.attempt_id.strip()

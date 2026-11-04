@@ -12,14 +12,18 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
-from authorization_database import AuthorizationDatabase
 from fastapi.testclient import TestClient
+from support.ai_execution import AsyncSessionAdapter, seed_task  # noqa: F401
+from support.ai_execution import db as db
 from support.execution_writer import MemoryExecutionWriter
 from support.generation import generation_services
+from support.requirement_versions import understanding_artifact
 
 from testing_agent.api.deps import (
     get_current_user_id,
@@ -31,7 +35,6 @@ from testing_agent.api.deps import (
 from testing_agent.app import create_app
 from testing_agent.core.config import Settings, get_settings
 from testing_agent.core.errors import AppError
-from testing_agent.models.ai_generate_task import AiGenerateTaskRun
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.schemas.workers import WorkerTaskEventRequest
 from testing_agent.services import worker_task as worker_task_service_module
@@ -90,11 +93,40 @@ def make_task(**overrides) -> SimpleNamespace:
     return SimpleNamespace(**fields)
 
 
+def understanding_version(content: str | None = None) -> SimpleNamespace:
+    from support.requirement_versions import understanding_artifact
+
+    return SimpleNamespace(
+        version_id="sv-understanding-1",
+        version_no=1,
+        task_id="understanding-task",
+        attempt_id="understanding-attempt",
+        stage="feature_understanding",
+        artifact_content=content
+        if content is not None
+        else json.dumps(understanding_artifact(), ensure_ascii=False),
+    )
+
+
+@pytest.fixture(autouse=True)
+def approved_understanding(monkeypatch):
+    """代码风险分析读取已审核的需求理解版本；快照测试用固定版本替身。"""
+    from testing_agent.services import code_risk_analysis as module
+
+    version = understanding_version()
+
+    async def resolve(repository, requirement_id, version_id=""):
+        return version
+
+    monkeypatch.setattr(module, "approved_understanding", resolve)
+    return version
+
+
 def make_requirement() -> SimpleNamespace:
     return SimpleNamespace(
         requirement_id="req-1",
         name="登录改造",
-        document_type="text",
+        document_type="richtext",
         document_content="登录模块需求正文",
         document_filename="",
         document_download_url="",
@@ -152,6 +184,7 @@ class FakeTaskRepository:
         self.api_collections = api_collections or []
         self.ui_suites = ui_suites or []
         self.api_rules = api_rules or {}
+        self.session = SimpleNamespace()
 
     async def get_requirement(self, requirement_id: str):
         return self.requirement
@@ -284,7 +317,6 @@ def make_run(**overrides) -> SimpleNamespace:
         "stage_status": "",
         "snapshot_json": {},
         "error_message": "GitLab 基线分支已删除",
-        "remediation": "请在仓库设置中恢复基线分支或重新绑定",
         "config_json": {},
         "result_yaml": "",
         "result_summary_json": {},
@@ -293,6 +325,13 @@ def make_run(**overrides) -> SimpleNamespace:
         "reviewed_at": None,
         "review_comment": "",
         "duration_ms": 0,
+        "created_at": None,
+        "started_at": None,
+        "finished_at": None,
+        "history_updated_at": None,
+        "import_status": "pending",
+        "imported_targets": [],
+        "imported_at": None,
     }
     fields.update(overrides)
     return SimpleNamespace(**fields)
@@ -381,11 +420,16 @@ async def test_build_snapshot_contains_requirement_bindings_and_existing_tests()
     assert snapshot["gitlabCredentialsUrl"] == (
         "/internal/ai-worker/tasks/worker-task-1/gitlab-credentials"
     )
-    assert snapshot["requirement"] == {
-        "requirementId": "req-1",
-        "name": "登录改造",
-        "documentType": "text",
-        "documentContent": "登录模块需求正文",
+    assert snapshot["requirement"]["requirementId"] == "req-1"
+    assert snapshot["requirement"]["name"] == "登录改造"
+    assert snapshot["requirement"]["documentType"] == "richtext"
+    # 需求内容来自已审核的需求理解版本，不读取需求正文。
+    assert json.loads(snapshot["requirement"]["documentContent"]) == understanding_artifact()
+    assert snapshot["requirementUnderstandingVersion"] == {
+        "versionId": "sv-understanding-1",
+        "versionNo": 1,
+        "taskId": "understanding-task",
+        "runId": "understanding-attempt",
     }
     entry = snapshot["bindings"][0]
     assert entry["bindingId"] == "binding-1"
@@ -425,7 +469,7 @@ def test_dump_last_run_only_carries_status_and_finished_at():
 
 
 @pytest.mark.asyncio
-async def test_docx_without_content_falls_back_to_internal_document_url():
+async def test_docx_requirement_still_uses_approved_understanding():
     requirement = make_requirement()
     requirement.document_type = "docx"
     requirement.document_content = ""
@@ -434,9 +478,43 @@ async def test_docx_without_content_falls_back_to_internal_document_url():
     snapshot = await service.build_snapshot(make_task(), "run-1", "worker-task-1", user_id="user-1")
 
     assert snapshot["requirement"]["documentType"] == "docx"
-    assert snapshot["requirement"]["documentContent"] == (
-        "/internal/ai-worker/tasks/worker-task-1/requirement-document"
+    assert json.loads(snapshot["requirement"]["documentContent"]) == understanding_artifact()
+
+
+@pytest.mark.asyncio
+async def test_missing_approved_understanding_rejects_the_run(monkeypatch):
+    from testing_agent.services import code_risk_analysis as module
+
+    async def missing(repository, requirement_id, version_id=""):
+        return None
+
+    monkeypatch.setattr(module, "approved_understanding", missing)
+    service, _ = make_service()
+
+    with pytest.raises(AppError) as error:
+        await service.build_snapshot(make_task(), "run-1", "worker-task-1", user_id="user-1")
+
+    assert "请先审核通过需求理解" in str(error.value)
+
+
+@pytest.mark.asyncio
+async def test_explicit_understanding_version_is_forwarded(monkeypatch):
+    from testing_agent.services import code_risk_analysis as module
+
+    requested = {}
+
+    async def resolve(repository, requirement_id, version_id=""):
+        requested["version_id"] = version_id
+        return understanding_version()
+
+    monkeypatch.setattr(module, "approved_understanding", resolve)
+    service, _ = make_service()
+
+    await service.build_snapshot(
+        make_task(), "run-1", "worker-task-1", user_id="user-1", understanding_version_id="sv-old"
     )
+
+    assert requested["version_id"] == "sv-old"
 
 
 @pytest.mark.asyncio
@@ -629,6 +707,17 @@ async def test_worker_task_service_gitlab_credentials_reads_run_snapshot(monkeyp
 
     monkeypatch.setattr(worker_task_service_module, "find_task", fake_find_task)
     monkeypatch.setattr(worker_task_service_module, "gitlab_credentials_payload", fake_payload)
+    direct = SimpleNamespace(
+        is_direct=AsyncMock(return_value=True),
+        authorize=AsyncMock(
+            return_value=SimpleNamespace(
+                actor_id="actor",
+                task=SimpleNamespace(project_id="project-1"),
+                input_snapshot={"source": {"bindings": [{"repositoryId": "repo-1"}]}},
+            )
+        ),
+    )
+    monkeypatch.setattr(worker_task_service_module, "DirectStageWorkerService", lambda _: direct)
 
     payload = await WorkerTaskService(
         FakeRepository(), execution_writer=MemoryExecutionWriter()
@@ -637,7 +726,7 @@ async def test_worker_task_service_gitlab_credentials_reads_run_snapshot(monkeyp
 
 
 @pytest.mark.asyncio
-async def test_worker_requirement_document_allows_code_risk_analysis():
+async def test_worker_requirement_document_allows_code_risk_analysis(monkeypatch):
     class FakeRepository:
         session = object()
 
@@ -661,6 +750,15 @@ async def test_worker_requirement_document_allows_code_risk_analysis():
                 document_filename="",
             )
 
+    direct = SimpleNamespace(
+        is_direct=AsyncMock(return_value=True),
+        authorize=AsyncMock(
+            return_value=SimpleNamespace(
+                task=SimpleNamespace(requirement_id="req-1"), input_snapshot={}
+            )
+        ),
+    )
+    monkeypatch.setattr(worker_task_service_module, "DirectStageWorkerService", lambda _: direct)
     requirement = await WorkerTaskService(
         FakeRepository(), execution_writer=MemoryExecutionWriter()
     ).requirement_document("worker-task-1")
@@ -669,50 +767,6 @@ async def test_worker_requirement_document_allows_code_risk_analysis():
 
 # ---------------------------------------------------------------------------
 # 失败错误消息与补救建议回显
-# ---------------------------------------------------------------------------
-
-
-def test_apply_ai_completion_to_run_records_remediation_and_error():
-    run = make_run()
-    body = WorkerTaskEventRequest(
-        workerId="worker-1",
-        taskId="task-1",
-        runId="run-1",
-        status="failed",
-        errorMessage="GitLab 基线分支已删除",
-        remediation="请在仓库设置中恢复基线分支",
-    )
-
-    apply_ai_completion_to_run(run, body)
-
-    payload = dump_run(run)
-    assert payload["status"] == "failed"
-    assert payload["errorMessage"] == "GitLab 基线分支已删除"
-    assert payload["remediation"] == "请在仓库设置中恢复基线分支"
-
-
-def test_apply_ai_completion_to_run_remediation_falls_back_to_snapshot():
-    run = make_run()
-    body = WorkerTaskEventRequest(
-        workerId="worker-1",
-        status="failed",
-        snapshotJson={"errorMessage": "快照错误", "remediation": "快照建议"},
-    )
-
-    apply_ai_completion_to_run(run, body)
-
-    assert run.error_message == "快照错误"
-    assert run.remediation == "快照建议"
-
-
-def test_apply_ai_completion_to_run_remediation_defaults_to_empty():
-    run = make_run()
-    apply_ai_completion_to_run(run, WorkerTaskEventRequest(workerId="worker-1", status="success"))
-    assert run.remediation == ""
-
-
-# ---------------------------------------------------------------------------
-# 风险报告解析与回读(工单 07,RC-5)
 # ---------------------------------------------------------------------------
 
 
@@ -867,7 +921,7 @@ def test_completion_callback_reads_report_from_snapshot_fallback():
 
 
 @pytest.mark.asyncio
-async def test_worker_complete_persists_report_readable_via_detail_dump(monkeypatch):
+async def test_worker_rejects_legacy_code_risk_completion(monkeypatch):
     """验收口径:WorkerTaskService.complete 全链路落报告到 run 表,详情可回读。"""
     run = make_run(status="running", result_yaml="")
     task = SimpleNamespace(
@@ -909,126 +963,77 @@ async def test_worker_complete_persists_report_readable_via_detail_dump(monkeypa
         status="success",
         resultYaml=RISK_REPORT_YAML,
     )
-    await WorkerTaskService(FakeRepository(), execution_writer=MemoryExecutionWriter()).complete(
-        "ai", "worker-task-1", body
-    )
-
-    assert run.result_yaml == RISK_REPORT_YAML
-    payload = dump_code_risk_analysis_run(run)
-    assert payload["status"] == "success"
-    assert payload["report"]["repositories"][0]["baselineCommit"] == "abc123"
-    assert payload["report"]["analyzedAt"] == "2026-08-21T10:30:00Z"
+    with pytest.raises(AppError) as rejected:
+        await WorkerTaskService(
+            FakeRepository(), execution_writer=MemoryExecutionWriter()
+        ).complete("ai", "worker-task-1", body)
+    assert rejected.value.http_code == 404
+    assert run.result_yaml == ""
 
 
 class StubCodeRiskAnalysisService:
     async def build_snapshot(
-        self, task, run_id, worker_task_id, instruction=None, *, user_id, connection_ids=None
+        self,
+        task,
+        run_id,
+        worker_task_id,
+        instruction=None,
+        *,
+        user_id,
+        connection_ids=None,
+        understanding_version_id="",
     ):
         return {"taskId": task.task_id, "runId": run_id}
 
 
-class FakeRunCreateRepository:
-    session = AuthorizationDatabase()
+def real_risk_service(session_db):
+    from sqlalchemy import select
 
-    async def get_project(self, project_id):
-        return SimpleNamespace(project_id=project_id, user_id="user-1")
+    from testing_agent.models.ai_generate_task import AiGenerateTask
+    from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 
-    """记录 run/worker 任务创建的服务级仓库桩(工单 07 重复发起口径)。"""
-
-    def __init__(self, task):
-        self.task = task
-        self.added: list[object] = []
-        self.runs: list[AiGenerateTaskRun] = []
-
-    async def get_task(self, task_id):
-        assert task_id == self.task.task_id
-        return self.task
-
-    async def get_sprint(self, sprint_id):
-        return SimpleNamespace(sprint_id=sprint_id, project_id=self.task.project_id)
-
-    async def get_requirement(self, requirement_id):
-        return SimpleNamespace(requirement_id=requirement_id, sprint_id=self.task.sprint_id)
-
-    def add_all(self, rows):
-        self.added.extend(rows)
-        self.runs.extend(row for row in rows if isinstance(row, AiGenerateTaskRun))
-
-    async def commit(self):
-        return None
-
-    async def refresh(self, row):
-        if isinstance(row, AiGenerateTaskRun):
-            row.error_message = row.error_message or ""
-            row.remediation = row.remediation or ""
-            row.result_yaml = row.result_yaml or ""
-            row.review_status = row.review_status or "pending"
-            row.reviewer_user_id = row.reviewer_user_id or ""
-            row.reviewed_at = None
-            row.review_comment = row.review_comment or ""
-            row.duration_ms = row.duration_ms or 0
-            row.import_status = row.import_status or "pending"
-
-    async def list_runs(self, task_id):
-        assert task_id == self.task.task_id
-        return self.runs
-
-
-def make_risk_analysis_task() -> SimpleNamespace:
-    return SimpleNamespace(
-        task_id="task-1",
-        task_type="code_risk_analysis",
-        name="登录改造 代码风险分析",
-        project_id="project-1",
-        sprint_id="sprint-1",
-        requirement_id="req-1",
-        creator_user_id="user-1",
-    )
+    seed_task(session_db)
+    task = session_db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == "task"))
+    task.task_type = "code_risk_analysis"
+    session_db.commit()
+    repository = AiGenerateTaskRepository(AsyncSessionAdapter(session_db))
+    return generation_services(repository, code_risk_analysis_service=StubCodeRiskAnalysisService())
 
 
 @pytest.mark.asyncio
-async def test_repeated_runs_create_distinct_records_without_overwrite():
-    repository = FakeRunCreateRepository(make_risk_analysis_task())
-    service = generation_services(
-        repository,
-        code_risk_analysis_service=StubCodeRiskAnalysisService(),
-        execution_writer=MemoryExecutionWriter(),
+async def test_repeated_runs_create_distinct_records_without_overwrite(db):  # noqa: F811
+    from sqlalchemy import select
+
+    from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
+    from testing_agent.services.stage_storage.worker import StageWorkerTransitions
+
+    service = real_risk_service(db)
+    run_body = {"connectionId": "llm", "triggerType": "manual"}
+    first = await service.launcher.launch("code_risk_analysis", "task", run_body, "u")
+    with pytest.raises(AppError, match="代码风险正在生成中"):
+        await service.launcher.launch("code_risk_analysis", "task", run_body, "u")
+    attempt = db.scalar(
+        select(AiGenerationAttempt).where(AiGenerationAttempt.execution_id == first["runId"])
     )
-    run_body = {"connectionId": "llm-1", "triggerType": "manual"}
-
-    first = await service.launcher.launch("code_risk_analysis", "task-1", run_body, "user-1")
-    second = await service.launcher.launch("code_risk_analysis", "task-1", run_body, "user-1")
-
+    worker = db.scalar(select(WorkerTask).where(WorkerTask.run_id == attempt.id))
+    await StageWorkerTransitions(AsyncSessionAdapter(db)).completed(
+        attempt.stage_id,
+        attempt.id,
+        worker.task_id,
+        content=RISK_REPORT_YAML,
+        output_format="text",
+        output_context=None,
+    )
+    worker.status = "success"
+    db.commit()
+    second = await service.launcher.launch("code_risk_analysis", "task", run_body, "u")
     assert first["runId"] != second["runId"]
-    worker_tasks = [row for row in repository.added if isinstance(row, WorkerTask)]
-    assert len(worker_tasks) == 2
-    assert worker_tasks[0].task_id != worker_tasks[1].task_id
-
-    listed = await service.queries.list_runs("code_risk_analysis", "task-1", "user-1")
+    listed = await service.queries.list_run_summaries("code_risk_analysis", "task", "u")
     assert listed["total"] == 2
-    assert [item["runId"] for item in listed["items"]] == [first["runId"], second["runId"]]
-    assert listed["items"][0]["status"] == "pending"
-    assert listed["items"][0]["report"] is None
-
-
-@pytest.mark.asyncio
-async def test_list_runs_dumps_report_for_code_risk_analysis():
-    repository = FakeRunCreateRepository(make_risk_analysis_task())
-    service = generation_services(
-        repository,
-        code_risk_analysis_service=StubCodeRiskAnalysisService(),
-        execution_writer=MemoryExecutionWriter(),
-    )
-    await service.launcher.launch(
-        "code_risk_analysis", "task-1", {"connectionId": "llm-1"}, "user-1"
-    )
-    repository.runs[0].result_yaml = RISK_REPORT_YAML
-
-    listed = await service.queries.list_runs("code_risk_analysis", "task-1", "user-1")
-
-    report = listed["items"][0]["report"]
-    assert report["repositories"][0]["baselineCommit"] == "abc123"
-    assert report["analyzedAt"] == "2026-08-21T10:30:00Z"
+    assert [item["runId"] for item in listed["items"]] == [second["runId"], first["runId"]]
+    detail = await service.queries.get_run("code_risk_analysis", first["runId"], "u")
+    assert detail["report"]["repositories"][0]["baselineCommit"] == "abc123"
+    assert detail["report"]["analyzedAt"] == "2026-08-21T10:30:00Z"
 
 
 # ---------------------------------------------------------------------------
@@ -1119,7 +1124,6 @@ def test_code_risk_analysis_task_endpoints_dispatch_to_service():
                 make_run(
                     status="pending",
                     error_message="",
-                    remediation="",
                     snapshot_json={},
                 )
             )
@@ -1201,7 +1205,6 @@ def test_code_risk_analysis_task_endpoints_dispatch_to_service():
     detail = run_detail.json()["data"]
     assert detail["status"] == "failed"
     assert detail["errorMessage"] == "GitLab 基线分支已删除"
-    assert detail["remediation"] == "请在仓库设置中恢复基线分支或重新绑定"
     assert detail["resultYaml"] == RISK_REPORT_YAML
     report = detail["report"]
     assert report["analyzedAt"] == "2026-08-21T10:30:00Z"

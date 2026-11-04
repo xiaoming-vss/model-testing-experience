@@ -710,17 +710,17 @@ export function ApiCollectionDetailPage() {
     caseForm.setFieldsValue(createDefaultCaseFormValues())
   }, [caseForm])
 
-  function openCreateDrawer() {
+  const openCreateDrawer = useCallback(() => {
     const nextDraft = draftCaseValues ?? createDefaultCaseFormValues()
     setDraftCaseValues(nextDraft)
     setSelectedCaseId(DRAFT_CASE_ID)
     setEditingCase(null)
     caseForm.setFieldsValue(nextDraft)
-  }
+  }, [caseForm, draftCaseValues])
 
-  function openCaseImportModal() {
+  const openCaseImportModal = useCallback(() => {
     setCaseImportModalOpen(true)
-  }
+  }, [])
 
   function closeCaseImportModal() {
     if (importApiCasesMutation.isPending) return
@@ -894,7 +894,7 @@ export function ApiCollectionDetailPage() {
     }
   }, [resetCaseForm, selectedCaseId, sidebarCases])
 
-  function handleDiscardDraft() {
+  const handleDiscardDraft = useCallback(() => {
     setDraftCaseValues(null)
     const fallbackCase = filteredCases[0] ?? null
     if (fallbackCase) {
@@ -904,16 +904,18 @@ export function ApiCollectionDetailPage() {
     setSelectedCaseId('')
     setEditingCase(null)
     resetCaseForm()
-  }
+  }, [filteredCases, resetCaseForm])
 
-  function handleCaseDragStart(event: DragEvent<HTMLDivElement>, caseId: string) {
+  const handleCaseDragStart = useCallback((event: DragEvent<HTMLDivElement>, caseId: string) => {
     if (!canReorder || caseId === DRAFT_CASE_ID) return
     setDraggingCaseId(caseId)
     event.dataTransfer.effectAllowed = 'move'
     event.dataTransfer.setData('text/plain', caseId)
-  }
+  }, [canReorder])
 
-  function handleCaseDrop(targetCaseId: string) {
+  const reorderCases = reorderCasesMutation.mutate
+  const deleteCase = deleteCaseMutation.mutate
+  const handleCaseDrop = useCallback((targetCaseId: string) => {
     if (!draggingCaseId || draggingCaseId === targetCaseId || !canReorder) return
     if (draggingCaseId === DRAFT_CASE_ID || targetCaseId === DRAFT_CASE_ID) return
 
@@ -927,8 +929,11 @@ export function ApiCollectionDetailPage() {
     const nextOrderIds = moveArrayItem(baseOrderIds, fromIndex, toIndex)
     caseOrderRollbackRef.current = caseOrderIds
     setCaseOrderIds(nextOrderIds)
-    reorderCasesMutation.mutate(nextOrderIds)
-  }
+    reorderCases(nextOrderIds)
+  }, [canReorder, caseOrderIds, draggingCaseId, orderedCases, reorderCases])
+
+  const handleDeleteCase = useCallback((caseId: string) => deleteCase(caseId), [deleteCase])
+  const handleCaseDragEnd = useCallback(() => setDraggingCaseId(null), [])
 
   return (<ProjectAccessScope projectId={projectId ?? ''}>{(
     <div className="workbench-page api-collection-detail-page api-collection-workbench-page tp-surface">
@@ -969,11 +974,11 @@ export function ApiCollectionDetailPage() {
               onSelectCase={setSelectedCaseId}
               onCreateCase={openCreateDrawer}
               onImportCases={openCaseImportModal}
-              onDeleteCase={(caseId) => deleteCaseMutation.mutate(caseId)}
+              onDeleteCase={handleDeleteCase}
               onDiscardDraft={handleDiscardDraft}
               onDragStart={handleCaseDragStart}
               onDrop={handleCaseDrop}
-              onDragEnd={() => setDraggingCaseId(null)}
+              onDragEnd={handleCaseDragEnd}
             />
 
             <section className="api-wb-editor-panel">
@@ -999,6 +1004,7 @@ export function ApiCollectionDetailPage() {
                       <div className="api-wb-console-scroll">
                         <ApiCaseRunConsole
                           result={runResult}
+                          canStop={can('execute')}
                           environmentName={selectedEnvironment?.name ?? runResult.environmentId ?? '-'}
                           view={runResultView}
                           onViewChange={(value) => setRunResultView(value)}
@@ -1017,7 +1023,7 @@ export function ApiCollectionDetailPage() {
 
       <ApiCollectionRunHistory collectionRunHistoryOpen={collectionRunHistoryOpen} setCollectionRunHistoryOpen={setCollectionRunHistoryOpen} collectionRunHistoryQuery={collectionRunHistoryQuery} collectionRunHistory={collectionRunHistory} loadingCollectionRunHistoryId={loadingCollectionRunHistoryId} environments={environments} handleOpenCollectionRunHistoryItem={handleOpenCollectionRunHistoryItem} />
 
-      <ApiCollectionRunReportModal collectionRunReportOpen={collectionRunReportOpen} setCollectionRunReportOpen={setCollectionRunReportOpen} setSelectedCollectionRunId={setSelectedCollectionRunId} collectionRunReportQuery={collectionRunReportQuery} collectionRunReport={collectionRunReport} environments={environments} handleExportCollectionRunReportHtml={handleExportCollectionRunReportHtml} handleRefreshCollectionRunReport={handleRefreshCollectionRunReport} refreshingCollectionRunReport={refreshingCollectionRunReport} selectedCollectionRunId={selectedCollectionRunId} collectionRunReportView={collectionRunReportView} setCollectionRunReportView={setCollectionRunReportView} orderedCollectionRunItems={orderedCollectionRunItems} expandedCollectionRunItemIds={expandedCollectionRunItemIds} collectionRunItemViews={collectionRunItemViews} toggleCollectionRunItem={toggleCollectionRunItem} handleCollectionRunItemViewChange={handleCollectionRunItemViewChange} selectedCollectionRunSummary={selectedCollectionRunSummary} />
+      <ApiCollectionRunReportModal canStop={can('execute')} collectionRunReportOpen={collectionRunReportOpen} setCollectionRunReportOpen={setCollectionRunReportOpen} setSelectedCollectionRunId={setSelectedCollectionRunId} collectionRunReportQuery={collectionRunReportQuery} collectionRunReport={collectionRunReport} environments={environments} handleExportCollectionRunReportHtml={handleExportCollectionRunReportHtml} handleRefreshCollectionRunReport={handleRefreshCollectionRunReport} refreshingCollectionRunReport={refreshingCollectionRunReport} selectedCollectionRunId={selectedCollectionRunId} collectionRunReportView={collectionRunReportView} setCollectionRunReportView={setCollectionRunReportView} orderedCollectionRunItems={orderedCollectionRunItems} expandedCollectionRunItemIds={expandedCollectionRunItemIds} collectionRunItemViews={collectionRunItemViews} toggleCollectionRunItem={toggleCollectionRunItem} handleCollectionRunItemViewChange={handleCollectionRunItemViewChange} selectedCollectionRunSummary={selectedCollectionRunSummary} />
 
       <ApiAssertRuleEditor assertRuleModalOpen={assertRuleModalOpen} editingAssertRule={editingAssertRule} setAssertRuleModalOpen={setAssertRuleModalOpen} setEditingAssertRule={setEditingAssertRule} assertRuleForm={assertRuleForm} saveAssertRuleMutation={saveAssertRuleMutation} watchedAssertSource={watchedAssertSource} watchedAssertComparator={watchedAssertComparator} />
 

@@ -47,11 +47,11 @@ def usable_cases(cases: Any) -> tuple[list[dict[str, Any]], list[str]]:
     return usable, skipped
 
 
-def write_cases_file(run_dir: Path, run_id: str, cases: list[dict[str, Any]]) -> Path:
-    """写本任务独有的临时用例文件；文件名就是 run_id，内容顶层只有 cases。"""
+def write_cases_file(run_dir: Path, attempt_id: str, cases: list[dict[str, Any]]) -> Path:
+    """写本任务独有的临时用例文件；文件名就是 attempt_id，内容顶层只有 cases。"""
 
     run_dir.mkdir(parents=True, exist_ok=True)
-    path = run_dir / f"{run_id}.json"
+    path = run_dir / f"{attempt_id}.json"
     path.write_text(json.dumps({"cases": cases}, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
 

@@ -75,12 +75,10 @@ class HttpResultSink:
             json_body={
                 "workerId": self.worker_id,
                 "taskId": progress.task_id,
-                "runId": progress.run_id,
+                "attemptId": progress.attempt_id,
                 "currentStage": progress.current_stage,
                 "stageStatus": progress.stage_status,
-                "errorMessage": progress.error_message or "",
                 "configJson": progress.intermediate_json_text,
-                "resultYaml": progress.output_yaml,
                 "resultSummaryJson": progress.result_summary_json,
             },
         )
@@ -93,12 +91,11 @@ class HttpResultSink:
             json_body={
                 "workerId": self.worker_id,
                 "taskId": result.task_id,
-                "runId": result.run_id,
+                "attemptId": result.attempt_id,
                 "status": result.status.value,
                 "startedAt": result.started_at.isoformat(),
                 "finishedAt": result.finished_at.isoformat(),
                 "errorMessage": result.error_message or "",
-                "remediation": result.remediation or "",
                 "configJson": result.intermediate_json_text,
                 "resultYaml": result.output_yaml,
                 "resultSummaryJson": result.result_summary_json,

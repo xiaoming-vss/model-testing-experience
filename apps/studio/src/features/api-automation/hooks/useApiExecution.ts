@@ -1,5 +1,8 @@
-import { getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
+import { getRunEventFallbackInterval, getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
 import { useRunReportRefresh } from '@/domain/runs/useRunReportRefresh'
+import { useRunEvents } from '@/domain/runs/useRunEvents'
+import { refreshRunQuery } from '@/domain/runs/refreshRunQuery'
+import { DebugStreamUnavailable, startDebugStream } from '@/domain/runs/startDebugStream'
 import {
   type CollectionReportView,
   type RunResultView
@@ -29,6 +32,9 @@ export function useApiExecution({ collectionId }: Options) {
   const [runResult, setRunResult] = useState<ApiCaseRunResult | null>(null)
 
   const [activeApiCaseRunId, setActiveApiCaseRunId] = useState('')
+  const [liveApiCaseRunId, setLiveApiCaseRunId] = useState('')
+  const debugStreamRef = useRef<{ abort: () => void } | null>(null)
+  useEffect(() => () => { debugStreamRef.current?.abort() }, [])
 
   const [runResultView, setRunResultView] = useState<RunResultView>('response')
 
@@ -54,14 +60,29 @@ export function useApiExecution({ collectionId }: Options) {
 
   const previousActiveRunStatusRef = useRef<ApiCollectionRunSummary['status'] | ''>('')
 
+  const initializedReportRef = useRef('')
+
+  const caseEventsConnected = useRunEvents('api-case', activeApiCaseRunId, Boolean(activeApiCaseRunId) && activeApiCaseRunId !== liveApiCaseRunId, () => {
+    void refreshRunQuery(queryClient, ['apiCaseRun', activeApiCaseRunId])
+  })
+  const activeCollectionEventsConnected = useRunEvents('api-collection', activePollingCollectionRunId, Boolean(activePollingCollectionRunId), () => {
+    void refreshRunQuery(queryClient, ['apiCollectionRun', activePollingCollectionRunId])
+    void refreshRunQuery(queryClient, ['apiCollectionRunReport', activePollingCollectionRunId])
+  })
+  const reportStatus = queryClient.getQueryData<ApiCollectionRunSummary>(['apiCollectionRunReport', selectedCollectionRunId])?.status
+  const reportEventsConnected = useRunEvents('api-collection', selectedCollectionRunId,
+    collectionRunReportOpen && selectedCollectionRunId !== activePollingCollectionRunId && Boolean(selectedCollectionRunId) && getRunPollingInterval(reportStatus) !== false, () => {
+      void refreshRunQuery(queryClient, ['apiCollectionRunReport', selectedCollectionRunId])
+    })
+
   const activeApiCaseRunQuery = useQuery({
     queryKey: ['apiCaseRun', activeApiCaseRunId],
-    queryFn: () => api.getApiCaseRun(activeApiCaseRunId),
+    queryFn: ({ signal }) => api.getApiCaseRun(activeApiCaseRunId, signal),
     enabled: Boolean(activeApiCaseRunId),
     refetchOnWindowFocus: false,
     refetchInterval: (query) => {
       const data = query.state.data as ApiCaseRunResult | undefined
-      return getRunPollingInterval(data?.status)
+      return (caseEventsConnected || activeApiCaseRunId === liveApiCaseRunId) ? false : getRunEventFallbackInterval(data?.status)
     },
   })
 
@@ -80,22 +101,23 @@ export function useApiExecution({ collectionId }: Options) {
 
   const activeCollectionRunQuery = useQuery({
     queryKey: ['apiCollectionRun', activePollingCollectionRunId],
-    queryFn: () => api.getApiCollectionRun(activePollingCollectionRunId),
+    queryFn: ({ signal }) => api.getApiCollectionRun(activePollingCollectionRunId, signal),
     enabled: Boolean(activePollingCollectionRunId),
     refetchOnWindowFocus: false,
     refetchInterval: (query) => {
       const data = query.state.data as ApiCollectionRunSummary | undefined
-      return getRunPollingInterval(data?.status)
+      return activeCollectionEventsConnected ? false : getRunEventFallbackInterval(data?.status)
     },
   })
 
   const collectionRunReportQuery = useQuery({
     queryKey: ['apiCollectionRunReport', selectedCollectionRunId],
-    queryFn: () => api.getApiCollectionRunReport(selectedCollectionRunId),
+    queryFn: ({ signal }) => api.getApiCollectionRunReport(selectedCollectionRunId, signal),
     enabled: collectionRunReportOpen && Boolean(selectedCollectionRunId),
     refetchOnWindowFocus: false,
     // 用例级进度靠报告明细轮询：打开期间与运行摘要同节奏刷新，终态自动停止。
-    refetchInterval: (query) => getRunPollingInterval(query.state.data?.status),
+    refetchInterval: (query) => (reportEventsConnected || (selectedCollectionRunId === activePollingCollectionRunId && activeCollectionEventsConnected))
+      ? false : getRunEventFallbackInterval(query.state.data?.status),
   })
 
   const selectedRunSummary = activeCollectionRunQuery.data?.collectionRunId === selectedCollectionRunId
@@ -155,6 +177,10 @@ export function useApiExecution({ collectionId }: Options) {
       queryClient.invalidateQueries({ queryKey: ['apiEnvironmentVars', normalizedRun.environmentId] })
     }
 
+    if (normalizedRun.status === 'canceled') {
+      message.info('运行已停止')
+      return
+    }
     if (normalizedRun.status === 'success') {
       message.success('运行完成')
       return
@@ -167,7 +193,7 @@ export function useApiExecution({ collectionId }: Options) {
   }, [activeApiCaseRunId, activeApiCaseRunQuery.data, queryClient])
 
   useEffect(() => {
-    if (!activeApiCaseRunId || !activeApiCaseRunQuery.error) return
+    if (!activeApiCaseRunId || activeApiCaseRunId === liveApiCaseRunId || !activeApiCaseRunQuery.error) return
 
     const errorMessage = getErrorMessage(activeApiCaseRunQuery.error)
     setRunResult((currentRun) => ({
@@ -179,11 +205,16 @@ export function useApiExecution({ collectionId }: Options) {
     previousApiCaseRunStatusRef.current = 'error'
     setActiveApiCaseRunId('')
     message.error(errorMessage)
-  }, [activeApiCaseRunId, activeApiCaseRunQuery.error])
+  }, [activeApiCaseRunId, liveApiCaseRunId, activeApiCaseRunQuery.error])
 
   useEffect(() => {
+    if (!collectionRunReportOpen || !selectedCollectionRunId) {
+      initializedReportRef.current = ''
+      return
+    }
     const report = collectionRunReportQuery.data
-    if (!report) return
+    if (!report || report.collectionRunId !== selectedCollectionRunId || initializedReportRef.current === selectedCollectionRunId) return
+    initializedReportRef.current = selectedCollectionRunId
 
     const orderedItems = [...(report.items ?? [])].sort((left, right) => {
       const leftOrderNo = left.orderNo ?? Number.MAX_SAFE_INTEGER
@@ -200,7 +231,7 @@ export function useApiExecution({ collectionId }: Options) {
     setCollectionRunReportView('items')
     setExpandedCollectionRunItemIds(firstExpandedItem ? [getCollectionRunItemKey(firstExpandedItem, fallbackExpandedIndex)] : [])
     setCollectionRunItemViews({})
-  }, [collectionRunReportQuery.data])
+  }, [collectionRunReportOpen, collectionRunReportQuery.data, selectedCollectionRunId])
 
   useEffect(() => {
     if (!selectedCollectionRunId) {
@@ -214,8 +245,38 @@ export function useApiExecution({ collectionId }: Options) {
   }, [collectionRunReportQuery.isFetching, loadingCollectionRunHistoryId, selectedCollectionRunId])
 
   const runApiCaseMutation = useMutation({
-    mutationFn: ({ caseId, environmentId }: { caseId: string; environmentId: string }) => api.runApiCase(caseId, { environmentId }),
-    onSuccess: (result) => {
+    mutationFn: async ({ caseId, environmentId }: { caseId: string; environmentId: string }) => {
+      let runId = ''
+      try {
+        const stream = await startDebugStream<ApiCaseRunResult>('api-case', caseId, { environmentId }, (event) => {
+          if (event.type === 'changed') {
+            void queryClient.invalidateQueries({ queryKey: ['apiCaseRun', runId] })
+          } else if (event.type === 'finished') {
+            const result = event.data as ApiCaseRunResult
+            void queryClient.cancelQueries({ queryKey: ['apiCaseRun', runId], exact: true })
+            setRunResult(result)
+            setLiveApiCaseRunId('')
+            setActiveApiCaseRunId('')
+            previousApiCaseRunStatusRef.current = result.status ?? ''
+            if (result.status === 'success') message.success('运行完成')
+            else if (result.status === 'canceled') message.info('运行已停止')
+            else message.error(result.errorMessage || '运行完成，存在失败项')
+          } else if (event.type === 'disconnected') {
+            setLiveApiCaseRunId('')
+            message.warning('实时连接已断开，结果可能无法找回')
+          }
+        })
+        runId = getApiCaseRunId(stream.initial)
+        return { result: stream.initial, stream }
+      } catch (error) {
+        if (!(error instanceof DebugStreamUnavailable)) throw error
+        message.warning('实时连接不可用，结果可能无法找回')
+        return { result: await api.runApiCase(caseId, { environmentId, liveDebug: true }), stream: null }
+      }
+    },
+    onSuccess: ({ result, stream }) => {
+      debugStreamRef.current?.abort()
+      debugStreamRef.current = stream
       setRunResult(result)
       setRunResultView('response')
       previousApiCaseRunStatusRef.current = result.status ?? ''
@@ -223,13 +284,17 @@ export function useApiExecution({ collectionId }: Options) {
 
       if (resultRunId && isApiRunPollingStatus(result.status)) {
         setActiveApiCaseRunId(resultRunId)
+        setLiveApiCaseRunId(stream ? resultRunId : '')
         message.info('已开始运行用例')
+        stream?.activate()
         return
       }
 
       if (resultRunId && !isApiRunTerminalStatus(result.status)) {
         setActiveApiCaseRunId(resultRunId)
+        setLiveApiCaseRunId(stream ? resultRunId : '')
         message.info('已创建运行记录，正在等待结果')
+        stream?.activate()
         return
       }
 
@@ -254,6 +319,7 @@ export function useApiExecution({ collectionId }: Options) {
       queryClient.invalidateQueries({ queryKey: ['apiEnvironmentVars', variables.environmentId] })
     },
     onError: () => {
+      setLiveApiCaseRunId('')
       setRunResult(null)
       setActiveApiCaseRunId('')
       previousApiCaseRunStatusRef.current = ''

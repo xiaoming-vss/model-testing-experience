@@ -52,7 +52,7 @@ class TestReportExecutor(TaskExecutor):
         if task.task_type != "test_report_generate":
             return TaskResult(
                 task_id=task.task_id,
-                run_id=task.run_id,
+                attempt_id=task.attempt_id,
                 generate_task_id=task.generate_task_id,
                 status=TaskStatus.FAILED,
                 error_message=f"不支持的任务类型: {task.task_type}",
@@ -64,7 +64,7 @@ class TestReportExecutor(TaskExecutor):
         if not daily_metrics:
             return TaskResult(
                 task_id=task.task_id,
-                run_id=task.run_id,
+                attempt_id=task.attempt_id,
                 generate_task_id=task.generate_task_id,
                 status=TaskStatus.FAILED,
                 error_message="test_report_generate 缺少 dailyMetrics",
@@ -78,7 +78,7 @@ class TestReportExecutor(TaskExecutor):
         progress_callback(
             TaskProgress(
                 task_id=task.task_id,
-                run_id=task.run_id,
+                attempt_id=task.attempt_id,
                 current_stage="report_generating",
                 stage_status="running",
                 intermediate_json_text=input_text,
@@ -106,7 +106,7 @@ class TestReportExecutor(TaskExecutor):
 
         return TaskResult(
             task_id=task.task_id,
-            run_id=task.run_id,
+            attempt_id=task.attempt_id,
             generate_task_id=task.generate_task_id,
             status=TaskStatus.SUCCESS,
             intermediate_json_text=input_text,

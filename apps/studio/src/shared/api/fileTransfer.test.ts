@@ -33,7 +33,7 @@ it('stops when renewed platform authorization is revoked', async () => {
 it('bounds transient storage failures and does not expose signed URLs in errors', async () => {
   const authorize = vi.fn().mockResolvedValue({ url: 'https://s3.test/file?secret=hidden' })
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('secret=hidden')))
-  await expect(fetchSignedFile(authorize)).rejects.toThrow('文件传输中断')
+  await expect(fetchSignedFile(authorize)).rejects.toThrow('文件传输中断，请检查网络或对象存储跨域配置后重试')
   expect(authorize).toHaveBeenCalledTimes(3)
 })
 

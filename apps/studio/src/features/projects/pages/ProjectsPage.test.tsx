@@ -76,7 +76,7 @@ it('列表编辑缺失原文时允许切换 Word，旧下载结果不再阻塞�
   vi.spyOn(api, 'downloadRequirementDocument').mockReturnValue(new Promise((_, no) => { reject = no }))
   const replace = vi.spyOn(api, 'replaceRequirementDocument').mockResolvedValue({ name: '更新需求', documentType: 'docx' })
   const update = vi.spyOn(api, 'updateRequirement')
-  mount('requirements', 's1', 'text')
+  mount('requirements', 's1', 'richtext')
   const user = userEvent.setup()
   await screen.findByText('需求1-0')
   await user.click(screen.getAllByRole('button', { name: '编辑需求' })[0])

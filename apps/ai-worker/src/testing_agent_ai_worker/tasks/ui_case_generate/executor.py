@@ -159,7 +159,7 @@ class UiCaseExecutor(TaskExecutor):
             case_count = _validate_ui_cases_yaml(output_yaml)
             return TaskResult(
                 task_id=task.task_id,
-                run_id=task.run_id,
+                attempt_id=task.attempt_id,
                 generate_task_id=task.generate_task_id,
                 status=TaskStatus.SUCCESS,
                 intermediate_json_text=json.dumps(
@@ -179,9 +179,11 @@ class UiCaseExecutor(TaskExecutor):
             return self._failure(task, started_at, str(error))
 
     def _failure(self, task: Task, started_at: datetime, error_message: str) -> TaskResult:
+        # Timeouts surface through OSError and may have no message of their own.
+        error_message = error_message or "UI 用例生成执行失败，未返回错误信息"
         return TaskResult(
             task_id=task.task_id,
-            run_id=task.run_id,
+            attempt_id=task.attempt_id,
             generate_task_id=task.generate_task_id,
             status=TaskStatus.FAILED,
             error_message=error_message,
@@ -194,7 +196,7 @@ class UiCaseExecutor(TaskExecutor):
     def _progress(task: Task, source_root: Path) -> TaskProgress:
         return TaskProgress(
             task_id=task.task_id,
-            run_id=task.run_id,
+            attempt_id=task.attempt_id,
             current_stage="ui_case_generating",
             stage_status="running",
             intermediate_json_text=json.dumps({"sourceRoot": str(source_root)}, ensure_ascii=False),

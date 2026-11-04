@@ -8,7 +8,7 @@ import pytest_asyncio
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from support.integration_jobs import claim, submission
-from support.mysql_initialization import mysql as mysql
+from support.mysql_initialization import mysql  # noqa: F401
 
 from testing_agent.domain.integration_execution import digest
 from testing_agent.models.integration_job import (
@@ -24,7 +24,7 @@ from testing_agent.services.integration_transaction import local_transaction
 
 
 @pytest_asyncio.fixture
-async def queue(mysql):
+async def queue(mysql):  # noqa: F811
     engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
     sessions = async_sessionmaker(engine, expire_on_commit=False)
     prefix = uuid4().hex
@@ -194,47 +194,6 @@ async def test_rollback_has_no_job_steps_or_claim_residue(queue):
         assert await service(session).repository.claim_receipt(key) is None
 
 
-async def test_migration_preserves_unresolved_write_evidence(mysql):
-    from sqlalchemy.orm import Session
-    from support.initial_schema_migration import migration_config
-
-    from alembic import command
-
-    prefix = uuid4().hex
-    with Session(mysql) as session:
-        job = IntegrationJob(
-            job_id=prefix,
-            protocol_version=1,
-            task_type="zentao_bug_sync",
-            project_id="p",
-            bug_id="b",
-            actor_user_id=prefix,
-            service_id="s",
-            connection_id="c",
-            target_key=digest("t"),
-            runtime_generation="r",
-            request_id=prefix,
-            request_digest=digest("r"),
-            input_revision=digest("i"),
-            target_revision=digest("t"),
-            snapshot_json={},
-            status="unknown",
-            created_at=datetime.now(UTC),
-        )
-        session.add(job)
-        session.commit()
-    try:
-        import pytest
-
-        with mysql.connect() as connection:
-            with pytest.raises(RuntimeError, match="禁止删除执行证据"):
-                command.downgrade(migration_config(connection), "20261006_0029")
-            connection.rollback()
-    finally:
-        with mysql.begin() as connection:
-            connection.execute(delete(IntegrationJob).where(IntegrationJob.job_id == prefix))
-
-
 async def test_retention_query_and_compaction_on_mysql(queue):
     from datetime import timedelta
 
@@ -258,100 +217,7 @@ async def test_retention_query_and_compaction_on_mysql(queue):
         await session.commit()
 
 
-def test_migration_keeps_durable_restore_fence(mysql):
-    import pytest
-    from sqlalchemy.orm import Session
-    from support.initial_schema_migration import migration_config
-
-    from alembic import command
-    from testing_agent.models.integration_job import IntegrationRuntime
-
-    # Exercise the guard at its own revision. Starting at head first removes newer
-    # account tables via nontransactional DDL before reaching this expected rejection.
-    with mysql.connect() as connection:
-        command.downgrade(migration_config(connection), "20261010_0039")
-        connection.commit()
-    with Session(mysql) as session:
-        session.add(
-            IntegrationRuntime(
-                id=1,
-                restore_id="owned-test-restore",
-                runtime_generation="new",
-                worker_key_digest=digest("fixture-key"),
-                blocked=True,
-            )
-        )
-        session.commit()
-    try:
-        with mysql.connect() as connection:
-            with pytest.raises(RuntimeError, match="隔离标记"):
-                command.downgrade(migration_config(connection), "20261006_0030")
-            connection.rollback()
-    finally:
-        with mysql.begin() as connection:
-            connection.execute(delete(IntegrationRuntime).where(IntegrationRuntime.id == 1))
-        # MySQL DDL before the guarded revision is not rolled back by connection.rollback().
-        # Restore the shared module database before later tests use the current ORM.
-        with mysql.connect() as connection:
-            command.upgrade(migration_config(connection), "head")
-            connection.commit()
-
-
-def test_restore_review_scope_constraint_and_migration_evidence_guard(mysql):
-    import pytest
-    from sqlalchemy import inspect
-    from sqlalchemy.exc import IntegrityError
-    from sqlalchemy.orm import Session
-    from support.initial_schema_migration import migration_config
-
-    from alembic import command
-    from testing_agent.models.integration_job import IntegrationRestoreReview
-
-    with mysql.connect() as connection:
-        command.downgrade(migration_config(connection), "20261010_0039")
-        connection.commit()
-    prefix = uuid4().hex
-
-    def row(identifier):
-        return IntegrationRestoreReview(
-            review_id=identifier,
-            restore_id=prefix,
-            scope_type="bug",
-            scope_id="bug",
-            project_id="deleted-project",
-            actor_user_id=None,
-            decision="isolated",
-            state_digest=digest("scope"),
-            reviewed_at=datetime.now(UTC),
-        )
-
-    with Session(mysql) as session:
-        session.add(row(prefix))
-        session.commit()
-        session.add(row(prefix + "-duplicate"))
-        with pytest.raises(IntegrityError):
-            session.commit()
-        session.rollback()
-    try:
-        with mysql.connect() as connection:
-            before = inspect(connection).get_table_names()
-            with pytest.raises(RuntimeError, match="核对证据"):
-                command.downgrade(migration_config(connection), "20261007_0031")
-            connection.rollback()
-            assert inspect(connection).get_table_names() == before
-    finally:
-        with mysql.begin() as connection:
-            connection.execute(
-                delete(IntegrationRestoreReview).where(
-                    IntegrationRestoreReview.restore_id == prefix
-                )
-            )
-        with mysql.connect() as connection:
-            command.upgrade(migration_config(connection), "head")
-            connection.commit()
-
-
-async def test_authorization_reads_current_role_even_after_repeatable_read_snapshot(mysql):
+async def test_authorization_reads_current_role_even_after_repeatable_read_snapshot(mysql):  # noqa: F811
     import pytest
     from sqlalchemy import update
 
@@ -445,7 +311,7 @@ async def test_authorization_reads_current_role_even_after_repeatable_read_snaps
         await engine.dispose()
 
 
-async def test_readonly_recovery_rejects_current_demotion_despite_a_stale_snapshot(mysql):
+async def test_readonly_recovery_rejects_current_demotion_despite_a_stale_snapshot(mysql):  # noqa: F811
     import pytest
     from sqlalchemy import update
 

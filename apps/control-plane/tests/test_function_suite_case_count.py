@@ -1,5 +1,5 @@
 import pytest
-from support.ai_execution import AsyncSessionAdapter
+from support.ai_execution import AsyncSessionAdapter  # noqa: F401
 from support.ai_execution import db as db
 from support.function_case_content import prepare
 

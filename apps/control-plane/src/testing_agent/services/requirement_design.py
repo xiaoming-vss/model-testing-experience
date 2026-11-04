@@ -16,9 +16,7 @@ from testing_agent.repositories.requirement_design import RequirementDesignRepos
 from testing_agent.schemas.requirement_design import (
     DesignKind,
     RequirementDesignConfigurationRequest,
-    RequirementDesignRunRequest,
 )
-from testing_agent.services.ai_run_launcher import GenerationRunLauncher
 from testing_agent.services.ai_task_commands import GenerationTaskCommands
 from testing_agent.services.ai_task_output import dump_task
 from testing_agent.services.ai_task_scope import GenerationAccess
@@ -55,14 +53,12 @@ class RequirementDesignService:
         source_archive_repository: AiGenerateTaskSourceArchiveRepository,
         access: GenerationAccess,
         commands: GenerationTaskCommands,
-        launcher: GenerationRunLauncher,
     ) -> None:
         self.repository = repository
         self.task_repository = task_repository
         self.source_archive_repository = source_archive_repository
         self.access = access
         self.commands = commands
-        self.launcher = launcher
 
     async def scope(
         self, requirement_id: str, user_id: str, action: ProjectAction = "read"
@@ -179,30 +175,4 @@ class RequirementDesignService:
             },
             user_id,
             task_id=str(body.request_id) if body.request_id else None,
-        )
-
-    async def start(
-        self,
-        requirement_id: str,
-        kind: DesignKind,
-        body: RequirementDesignRunRequest,
-        user_id: str,
-    ) -> dict[str, Any]:
-        requirement = await self.scope(requirement_id, user_id)
-        sprint = await self.task_repository.get_sprint(requirement.sprint_id)
-        if sprint is None:
-            raise ErrNotFound()
-        await self.task_repository.commit()
-        await self.access.ensure_project_access(user_id, sprint.project_id, action="execute")
-        task = await self.access.owned_task(user_id, body.task_id, kind, action="read")
-        if task.requirement_id != requirement_id:
-            raise ErrNotFound()
-        if kind == "api" and not task.source_content.strip():
-            raise AppError(400, "请先配置 OpenAPI/Swagger 文档", 400)
-        return await self.launcher.launch(
-            kind,
-            task.task_id,
-            body.model_dump(by_alias=True, exclude_none=True, exclude={"task_id", "request_id"}),
-            user_id,
-            request_id=str(body.request_id),
         )

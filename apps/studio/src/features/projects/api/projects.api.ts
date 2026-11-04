@@ -1,4 +1,4 @@
-import { request, requestBlob, type ListResponse } from '@/shared/api/request'
+import { buildQuery, request, requestBlob, type ListResponse } from '@/shared/api/request'
 import type {
   CreateTestReportGenerateRunPayload,
   Project,
@@ -52,11 +52,12 @@ export const projectsApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  getTestReportGenerateRuns: (projectId: string, params: { sprintId: string }) =>
+  getTestReportGenerateRuns: (projectId: string, params: { sprintId: string; page?: number; pageSize?: number }) =>
     request<ListResponse<TestReportGenerateRun>>(
-      `/v1/projects/${projectId}/test-report-generate-runs?${new URLSearchParams(params).toString()}`,
+      `/v1/projects/${projectId}/test-report-generate-runs${buildQuery(params)}`,
     ),
   getTestReportGenerateRun: (runId: string) => request<TestReportGenerateRun>(`/v1/test-report-generate-runs/${runId}`),
+  deleteTestReportGenerateRun: (runId: string) => request<Record<string, never>>(`/v1/test-report-generate-runs/${runId}`, { method: 'DELETE' }),
   downloadTestReportGenerateRunPdf: (runId: string) => requestBlob(`/v1/test-report-generate-runs/${runId}/pdf`),
   getSprintCodeOverview: (sprintId: string, connectionIds: Record<string, string> = {}) => request<SprintCodeOverview>(`/v1/sprints/${sprintId}/code-overview?${new URLSearchParams({ connectionIds: JSON.stringify(connectionIds) })}`),
 }

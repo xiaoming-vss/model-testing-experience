@@ -8,6 +8,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vite
 import { TestThemeProvider } from '@/test/TestThemeProvider'
 import { api } from '@/services/api'
 import * as storedFiles from '@/shared/api/files'
+import { message } from '@/shared/utils/feedback'
+import { canNavigateAway } from '@/shared/utils/unsavedChanges'
 import { requirementDesignApi } from '../api/requirementDesign.api'
 import { aiTestingApi } from '../api/aiTesting.api'
 import { generationChainApi } from '../api/generationChain.api'
@@ -22,7 +24,7 @@ vi.mock('../api/requirementDesign.api', () => ({
 vi.mock('../api/generationChain.api', () => ({
   generationChainApi: {
     overview: vi.fn(), chain: vi.fn(), version: vi.fn(), run: vi.fn(),
-    revise: vi.fn(), review: vi.fn(), deleteVersion: vi.fn(),
+    revise: vi.fn(), review: vi.fn(), saveDraft: vi.fn(), deleteVersion: vi.fn(),
     importOptions: vi.fn(), importVersion: vi.fn(),
   },
 }))
@@ -67,7 +69,7 @@ function version(versionId: string, versionNo: number, sourceRunId = 'run') {
   return {
     versionId, versionNo, label: `v${versionNo}`, summary: '2 个页面 · 5 个控件',
     artifactFormat: 'json', createdAt: '2026-10-29T09:30:00Z', reviewerUserId: 'u',
-    basedOnOld: false, sourceRunId, imported: false,
+    sourceRunId, imported: false,
   }
 }
 
@@ -163,7 +165,7 @@ beforeEach(() => {
   vi.mocked(generationChainApi.version).mockResolvedValue({
     versionId: 'sv-v1', kind: 'ui', stage: 'ui_surface', stageLabel: '元素控件清单', versionNo: 1,
     label: 'v1', summary: '2 个页面', artifactFormat: 'yaml', content: 'name: 登录\nstepsJson:\n  - stepName: 输入账号\n',
-    basedOnOld: false, reviewerUserId: 'u', reviewedAt: '2026-10-29T09:30:00Z',
+    reviewerUserId: 'u', reviewedAt: '2026-10-29T09:30:00Z',
     reviewComment: '', upstreamVersions: {}, upstream: [],
   })
   vi.mocked(generationChainApi.review).mockResolvedValue(chain())
@@ -193,7 +195,7 @@ beforeEach(() => {
     importRecords: [],
   })
   vi.spyOn(api, 'getLlmConnections').mockResolvedValue(Object.assign([{ connectionId: 'llm', name: '本人模型', status: 'active' as const, provider: 'openai', baseUrl: 'https://example.test', authType: 'api_key', account: '', hasAccessToken: true, modelId: 'model' }], { items: [{ connectionId: 'llm', name: '本人模型', status: 'active' as const, provider: 'openai', baseUrl: 'https://example.test', authType: 'api_key', account: '', hasAccessToken: true, modelId: 'model' }], total: 1 }))
-  vi.spyOn(api, 'getFunctionalCaseGenerateTaskRun').mockImplementation(async runId => ({ runId, status: 'success', currentStage: 'completed', reviewStatus: 'approved', configJson: {}, importStatus: 'pending', importedTargets: [], importedAt: '', importMigrationComplete: true }))
+  vi.spyOn(api, 'getFunctionalCaseGenerateTaskRun').mockImplementation(async runId => ({ runId, status: 'success', currentStage: 'completed', reviewStatus: 'approved', configJson: {}, importStatus: 'pending', importedTargets: [], importedAt: '' }))
   vi.spyOn(api, 'getFunctionalCaseGenerateTask').mockResolvedValue({ taskId: 'task-function', name: '功能测试', projectId: 'project', instruction: '' })
 })
 
@@ -233,8 +235,152 @@ it('单击选中并展示侧栏，双击在画布内打开阶段产物', async (
     .toEqual(['v1旧版本', '待审核产物当前内容'])
   await user.click(within(dialog).getByRole('button', { name: /审核通过并继续/ }))
   await waitFor(() => expect(generationChainApi.review).toHaveBeenCalledWith('req', 'ui', 'ui_design', {
-    action: 'approve', continueAfter: true, connectionId: 'llm',
+    action: 'approve', expectedAttemptId: 'draft', continueAfter: true, connectionId: 'llm', requestId: expect.any(String),
   }))
+})
+
+it('执行失败且 Worker 未返回原因时仍展示失败详情和运行信息', async () => {
+  const failed = chain()
+  failed.stages[0] = {
+    stage: 'ui_surface', label: '元素控件清单', order: 0, state: 'failed',
+    latestVersion: null, draft: null, versions: [], upstreamStages: [],
+    errorMessage: '', failureRunId: 'failed-run-1234', failedAt: '2026-11-03T10:11:48Z',
+  }
+  vi.mocked(generationChainApi.overview).mockResolvedValue({
+    chains: [emptyChain('requirement_analysis', '需求分析'), emptyChain('function', '功能测试'), emptyChain('api', 'API 测试'), failed],
+  })
+  vi.mocked(generationChainApi.chain).mockResolvedValue(failed)
+  mount()
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: '元素控件清单 · 执行失败' }))
+  const inspector = screen.getByRole('complementary', { name: '阶段详情' })
+  expect(within(inspector).getByRole('heading', { name: '失败详情' })).toBeInTheDocument()
+  expect(within(inspector).getByText('阶段执行失败，Worker 未返回具体原因')).toBeInTheDocument()
+  expect(within(inspector).getByText(/failed-run-1234/)).toBeInTheDocument()
+  expect(within(inspector).getByText(/失败时间/)).toBeInTheDocument()
+  await user.dblClick(screen.getByRole('button', { name: '元素控件清单 · 执行失败' }))
+  expect(await screen.findAllByText('阶段执行失败，Worker 未返回具体原因')).toHaveLength(2)
+})
+
+it('审核通过后下一阶段未启动时提示已通过和具体原因', async () => {
+  const warning = vi.spyOn(message, 'warning')
+  vi.mocked(generationChainApi.review).mockResolvedValue({ ...chain(), continuationError: '下一阶段已有待审核产物' })
+  mount()
+  const user = userEvent.setup()
+  await user.dblClick(await screen.findByRole('button', { name: 'UI 用例设计 · 待审核' }))
+  await user.click(await screen.findByRole('button', { name: /审核通过并继续/ }))
+  await waitFor(() => expect(warning).toHaveBeenCalledWith('已审核通过，下一阶段未启动：下一阶段已有待审核产物'))
+  warning.mockRestore()
+})
+
+it('历史版本不提示基于旧版上游', async () => {
+  const data = chain()
+  data.stages[1].latestVersion = data.stages[1].versions[0]
+  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [data] })
+  vi.mocked(generationChainApi.chain).mockResolvedValue(data)
+  mount()
+  const user = userEvent.setup()
+  await user.dblClick(await screen.findByRole('button', { name: 'UI 用例设计 · 待审核' }))
+  const workspace = (await screen.findByRole('dialog')).closest('.gc-canvas-workspace') as HTMLElement
+  await user.click(within(workspace).getByRole('button', { name: /v1/ }))
+  expect(within(workspace).queryByText(/基于旧版/)).not.toBeInTheDocument()
+})
+
+it('已审核版本的上游缺失时不提示缺失且仍可导入', async () => {
+  const data = chain()
+  data.stages[2] = {
+    ...data.stages[2], state: 'approved', latestVersion: version('leaf-v1', 1),
+    versions: [version('leaf-v1', 1)],
+  }
+  data.stages[1].versions = []
+  data.stages[1].latestVersion = null
+  data.stages[1].draft = null
+  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [data] })
+  vi.mocked(generationChainApi.chain).mockResolvedValue(data)
+  vi.mocked(generationChainApi.version).mockResolvedValue({
+    versionId: 'leaf-v1', kind: 'ui', stage: 'ui_yaml', stageLabel: '用例 YAML', versionNo: 1,
+    label: 'v1', summary: '已审核用例', artifactFormat: 'yaml', content: '- name: 登录\n',
+    reviewerUserId: 'u', reviewedAt: null, reviewComment: '',
+    upstreamVersions: { ui_surface: 'sv-v1', ui_design: 'deleted' }, upstream: [],
+  })
+  mount()
+  const user = userEvent.setup()
+  await user.dblClick(await screen.findByRole('button', { name: '用例 YAML · 已通过' }))
+  await waitFor(() => expect(generationChainApi.version).toHaveBeenCalledWith('req', 'ui', 'leaf-v1'))
+  expect(screen.queryByText('上游已删除')).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '导入此版本' })).toBeEnabled()
+})
+
+it('编辑候选时提示未保存修改并以候选标识保存', async () => {
+  const saved = chain()
+  saved.stages[1].draft = { ...saved.stages[1].draft!, attemptId: 'draft-new', content: 'new content' }
+  vi.mocked(generationChainApi.saveDraft).mockResolvedValue(saved)
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+  mount()
+  const user = userEvent.setup()
+  await user.dblClick(await screen.findByRole('button', { name: 'UI 用例设计 · 待审核' }))
+  expect(screen.queryByRole('button', { name: '编辑产物' })).toBeNull()
+  expect(screen.queryByRole('button', { name: '撤销修改' })).toBeNull()
+  expect(screen.queryByRole('button', { name: '保存修改' })).toBeNull()
+  await user.click(screen.getByRole('radio', { name: 'YAML' }).closest('label')!)
+  const editor = await screen.findByRole('textbox', { name: /阶段产物/ })
+  expect(editor).toHaveAttribute('aria-readonly', 'false')
+  await user.click(editor)
+  await user.keyboard('x')
+  expect(screen.getByRole('button', { name: '撤销修改' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: '保存修改' })).toBeEnabled()
+  await user.click(screen.getByRole('button', { name: '撤销修改' }))
+  expect(confirm).toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: '保存修改' })).toBeEnabled()
+  await user.click(screen.getByRole('button', { name: '保存修改' }))
+  await waitFor(() => expect(generationChainApi.saveDraft).toHaveBeenCalledWith(
+    'req', 'ui', 'ui_design', expect.objectContaining({ expectedAttemptId: 'draft', content: expect.stringContaining('x') }),
+  ))
+  confirm.mockRestore()
+})
+
+it('未保存时阻止页面离开和切换版本，确认后才放弃修改', async () => {
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+  mount()
+  const user = userEvent.setup()
+  await user.dblClick(await screen.findByRole('button', { name: 'UI 用例设计 · 待审核' }))
+  await user.click(screen.getByRole('radio', { name: 'YAML' }).closest('label')!)
+  await user.click(await screen.findByRole('textbox', { name: /阶段产物/ }))
+  await user.keyboard('x')
+  expect(canNavigateAway()).toBe(false)
+  const unload = new Event('beforeunload', { cancelable: true })
+  expect(window.dispatchEvent(unload)).toBe(false)
+  const inspector = screen.getByRole('complementary', { name: '阶段详情' })
+  await user.click(within(inspector).getByRole('button', { name: 'v1' }))
+  expect(screen.getByRole('button', { name: '保存修改' })).toBeEnabled()
+  confirm.mockReturnValue(true)
+  await user.click(within(inspector).getByRole('button', { name: 'v1' }))
+  await waitFor(() => expect(screen.queryByRole('button', { name: '保存修改' })).not.toBeInTheDocument())
+  expect(canNavigateAway()).toBe(true)
+  confirm.mockRestore()
+})
+
+it('浏览器后退时取消确认会恢复原历史位置', async () => {
+  const previousState = window.history.state
+  window.history.replaceState({ ...previousState, idx: 3 }, '')
+  const go = vi.spyOn(window.history, 'go').mockImplementation(() => undefined)
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+  try {
+    mount()
+    const user = userEvent.setup()
+    await user.dblClick(await screen.findByRole('button', { name: 'UI 用例设计 · 待审核' }))
+    await user.click(screen.getByRole('radio', { name: 'YAML' }).closest('label')!)
+    await user.click(await screen.findByRole('textbox', { name: /阶段产物/ }))
+    await user.keyboard('x')
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { idx: 2 } }))
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(go).toHaveBeenCalledWith(1)
+    expect(screen.getByRole('button', { name: '保存修改' })).toBeEnabled()
+  } finally {
+    confirm.mockRestore()
+    go.mockRestore()
+    window.history.replaceState(previousState, '')
+  }
 })
 
 it('进入和返回阅读区时只为详情栏内容添加轻微过渡', async () => {
@@ -311,6 +457,26 @@ it('选择 UI 测试分组才显示源码设置，阶段卡片只显示阶段信
   const container = document.querySelector<HTMLElement>('[data-id="group:ui"] .gc-flow-group')!
   await user.click(container)
   expect(within(inspector).getByRole('region', { name: 'UI 测试源码包' })).toBeInTheDocument()
+})
+
+it('UI 测试分组与功能测试使用相同大小', async () => {
+  const functional = { ...emptyChain('function', '功能测试'), configured: true, taskId: 'function-task' }
+  functional.stages = [
+    { stage: 'requirement_analysis', label: '测试需求分析', order: 0, state: 'not_started', versions: [], upstreamStages: [] },
+    { stage: 'case_names', label: '测试点', order: 1, state: 'not_started', versions: [], upstreamStages: [] },
+    { stage: 'detailed_cases', label: '完整用例', order: 2, state: 'not_started', versions: [], upstreamStages: [] },
+  ]
+  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [functional, chain()] })
+  vi.mocked(generationChainApi.chain).mockResolvedValue(chain())
+  mount()
+  await screen.findByRole('button', { name: 'UI 用例设计 · 待审核' })
+  const node = (id: string) => document.querySelector<HTMLElement>(`[data-id="${id}"]`)!
+  const ui = node('group:ui')
+  const functionalGroup = node('group:function')
+  expect(ui.style.width).toBe(functionalGroup.style.width)
+  expect(ui.style.height).toBe(functionalGroup.style.height)
+  expect(ui.style.width).toBe('594px')
+  expect(ui.style.height).toBe('280px')
 })
 
 it('单击 API 阶段可在侧栏运行两步生成', async () => {
@@ -476,7 +642,7 @@ it('最终阶段没有审核通过并继续，版本切换保留可视化与原�
   expect(within(dialog).getByRole('textbox', { name: '阶段产物 YAML' })).toHaveTextContent('name: 登录')
 })
 
-it('已通过叶子版本可以查看完整父链和正式来源并导入', async () => {
+it('已通过叶子版本可以查看关联阶段和正式来源并导入', async () => {
   const data = chain()
   data.stages[2] = {
     ...data.stages[2], state: 'approved', latestVersion: version('sv-v2', 2),
@@ -498,7 +664,7 @@ it('已通过叶子版本可以查看完整父链和正式来源并导入', asyn
   const stageDialog = (await screen.findByRole('dialog')).closest('.gc-canvas-workspace') as HTMLElement
   await user.click(within(stageDialog).getByRole('button', { name: /^v2/ }))
   await user.click(within(stageDialog).getByRole('button', { name: '导入此版本' }))
-  expect(await screen.findByText('完整父链')).toBeInTheDocument()
+  expect(await screen.findByText('关联阶段')).toBeInTheDocument()
   expect(screen.getByText('正式 UI 套件')).toBeInTheDocument()
   expect(screen.getByText(/当前正式来源 v1/)).toBeInTheDocument()
   const dialogs = screen.getAllByRole('dialog')
@@ -721,7 +887,7 @@ it('需求理解阶段沿用需求理解记录的材料对照视图并读取上�
   vi.mocked(generationChainApi.version).mockResolvedValue({
     versionId: 'v-extract', kind: 'requirement_analysis', stage: 'extracting_text', stageLabel: '提取与整理', versionNo: 1,
     label: 'v1', summary: '材料提取', artifactFormat: 'json', content: extractionSource,
-    basedOnOld: false, reviewerUserId: 'u', reviewedAt: null, reviewComment: '', upstreamVersions: {}, upstream: [],
+    reviewerUserId: 'u', reviewedAt: null, reviewComment: '', upstreamVersions: {}, upstream: [],
   })
 
   const { user, dialog } = await openStage('需求理解')
@@ -751,7 +917,7 @@ it('功能测试各阶段沿用页签的测试需求分析、测试点与完整�
   vi.mocked(generationChainApi.version).mockImplementation(async (_requirementId, kind, versionId) => ({
     versionId, kind, stage: 'case_names', stageLabel: '测试点', versionNo: 1, label: 'v1', summary: '上游',
     artifactFormat: 'json', content: versionId === 'v-case-names' ? JSON.stringify(points) : JSON.stringify(analysis),
-    basedOnOld: false, reviewerUserId: 'u', reviewedAt: null, reviewComment: '', upstreamVersions: {}, upstream: [],
+    reviewerUserId: 'u', reviewedAt: null, reviewComment: '', upstreamVersions: {}, upstream: [],
   }))
 
   const analysisView = await openStage('测试需求分析')
@@ -790,7 +956,7 @@ it('用例图谱节点使用完整用例已通过版本的来源运行', async (
   vi.mocked(generationChainApi.version).mockResolvedValue({
     versionId: 'func-cases-v1', kind: 'function', stage: 'detailed_cases', stageLabel: '完整用例',
     versionNo: 1, label: 'v1', summary: '1 条用例', artifactFormat: 'json', content: JSON.stringify(cases),
-    basedOnOld: false, reviewerUserId: 'u', reviewedAt: null, reviewComment: '', upstreamVersions: {}, upstream: [],
+    reviewerUserId: 'u', reviewedAt: null, reviewComment: '', upstreamVersions: {}, upstream: [],
   })
   mount()
   const user = userEvent.setup()
@@ -966,7 +1132,7 @@ it('审核不通过后移除待审核候选，保留历史版本并允许重新�
   expect(within(dialog).queryByText('已丢弃')).not.toBeInTheDocument()
   expect(within(dialog).queryByText('审核未通过，候选产物已丢弃')).not.toBeInTheDocument()
   expect(dialog.querySelector('.gc-inspector-header .gc-state')).toHaveTextContent('已通过')
-  expect(generationChainApi.review).toHaveBeenCalledWith('req', 'ui', 'ui_design', { action: 'reject', continueAfter: false })
+  expect(generationChainApi.review).toHaveBeenCalledWith('req', 'ui', 'ui_design', { action: 'reject', expectedAttemptId: 'draft', continueAfter: false })
   const versions = within(dialog).getByRole('group', { name: '侧栏选择版本' })
   expect(within(versions).queryByRole('button', { name: '待审核' })).not.toBeInTheDocument()
   expect(within(versions).getByRole('button', { name: /^v1/ })).toBeInTheDocument()
@@ -1009,7 +1175,7 @@ it('运行光束只到紧邻下游，运行结束后恢复普通连线', async (
   expect(document.querySelector('[data-testid="rf__edge-ui:1"] .gc-flow-edge-stream')).not.toBeNull()
 })
 
-it('后续阶段运行时可独立审核前序候选，但不能继续派发', async () => {
+it('后续阶段运行时可审核前序候选，并允许尝试继续', async () => {
   const running = chain()
   running.active = true
   running.busy = true
@@ -1022,11 +1188,11 @@ it('后续阶段运行时可独立审核前序候选，但不能继续派发', a
   const dialog = (await screen.findByRole('dialog')).closest('.gc-canvas-workspace') as HTMLElement
   expect(within(dialog).getByRole('button', { name: /^审核通过$/ })).toBeEnabled()
   expect(within(dialog).getByRole('button', { name: '审核不通过' })).toBeEnabled()
-  expect(within(dialog).getByRole('button', { name: /审核通过并继续/ })).toBeDisabled()
-  expect(within(dialog).getByRole('button', { name: '继续优化' })).toBeDisabled()
+  expect(within(dialog).getByRole('button', { name: /审核通过并继续/ })).toBeEnabled()
+  expect(within(dialog).getByRole('button', { name: '继续优化' })).toBeEnabled()
   await user.click(within(dialog).getByRole('button', { name: /^审核通过$/ }))
   await waitFor(() => expect(generationChainApi.review).toHaveBeenCalledWith(
-    'req', 'ui', 'ui_design', { action: 'approve', continueAfter: false },
+    'req', 'ui', 'ui_design', { action: 'approve', expectedAttemptId: 'draft', continueAfter: false },
   ))
 })
 

@@ -9,22 +9,26 @@ from __future__ import annotations
 
 from typing import Any
 
-from testing_agent.core.enums import RunStatus, StageStatus
-from testing_agent.core.errors import ErrBadRequest, dynamic_error
+from testing_agent.core.enums import RunStatus
+from testing_agent.core.errors import ErrBadRequest, ErrNotFound, dynamic_error
 from testing_agent.core.sid import new_id
-from testing_agent.domain.ai_execution_intent import ExecutionIntent
 from testing_agent.domain.ai_tasks import task_type_for
 from testing_agent.domain.function_case_content import generation_fields
-from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
+from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.test_order import TestOrder
-from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+from testing_agent.repositories.auxiliary_execution import lock_or_create_stage
+from testing_agent.repositories.generation_chain import GenerationChainRepository
 from testing_agent.repositories.test_order_entry import TestOrderEntryRepository
 from testing_agent.schemas.test_order import TestOrderGraphInputResponse
-from testing_agent.services.ai_execution.writer import ExecutionWriter, SqlExecutionWriter
-from testing_agent.services.ai_task_output import dump_run, requirement_source_content
+from testing_agent.services.auxiliary_execution import dispatch_auxiliary_execution
+from testing_agent.services.auxiliary_execution_view import auxiliary_detail, auxiliary_history
 from testing_agent.services.common import dump
 from testing_agent.services.personal_authorization import require_personal_connection
+from testing_agent.services.requirement_understanding_source import (
+    approved_understanding,
+    understanding_source,
+)
 from testing_agent.services.test_order import TestOrderService
 
 TEST_ORDER_GRAPH_TASK_TYPE = task_type_for("test_order_graph")
@@ -32,6 +36,7 @@ TEST_ORDER_GRAPH_TASK_TYPE = task_type_for("test_order_graph")
 TEST_ORDER_GRAPH_STAGE = "generate"
 TEST_ORDER_GRAPH_DISPATCH_STATUSES = {
     RunStatus.PENDING.value,
+    RunStatus.QUEUED.value,
     RunStatus.CLAIMED.value,
     RunStatus.RUNNING.value,
 }
@@ -57,6 +62,13 @@ def graph_input_counts(graph_input: dict[str, Any]) -> dict[str, int]:
         "caseCount": len(graph_input["cases"]),
         "linkCount": len(graph_input["case_requirement_links"]),
     }
+
+
+def _missing_understanding_message(names: list[str]) -> str:
+    shown = "、".join(names[:5])
+    if len(names) > 5:
+        shown = f"{shown} 等 {len(names)} 条"
+    return f"以下需求还没有审核通过的需求理解：{shown}"
 
 
 def build_graph_run_snapshot(
@@ -104,18 +116,34 @@ def build_graph_task(order: TestOrder, user_id: str) -> AiGenerateTask:
     )
 
 
+def validate_graph_task_scope(task: AiGenerateTask | None, order: TestOrder) -> None:
+    if task is not None and (
+        task.order_id != order.order_id
+        or task.project_id != order.project_id
+        or task.sprint_id != order.sprint_id
+        or task.requirement_id
+        or task.task_type != TEST_ORDER_GRAPH_TASK_TYPE
+    ):
+        raise ErrNotFound()
+
+
 class TestOrderGraphService:
     def __init__(
         self,
         repository: AiGenerateTaskRepository,
         test_order_service: TestOrderService,
         entries: TestOrderEntryRepository,
-        execution_writer: ExecutionWriter | None = None,
     ) -> None:
         self.repository = repository
-        self.execution = execution_writer or SqlExecutionWriter()
         self.orders = test_order_service
         self.entries = entries
+
+    async def _read_order(self, user_id: str, order_id: str) -> TestOrder:
+        order = await self.orders.get_accessible_entity(user_id, order_id, action="read")
+        sprint = await self.orders.repository.get_sprint(order.sprint_id)
+        if sprint is None or sprint.project_id != order.project_id:
+            raise ErrNotFound()
+        return order
 
     async def graph_input(self, user_id: str, order_id: str) -> dict[str, Any]:
         """组装该测试单的图谱输入：全部用例、本迭代的需求、需求到用例的关联。
@@ -125,10 +153,11 @@ class TestOrderGraphService:
         `requirement_id` 为 null 的分组；`requirements` 只含本迭代的需求。
         """
 
-        order = await self.orders.get_accessible_entity(user_id, order_id, action="read")
+        order = await self._read_order(user_id, order_id)
         rows = await self.entries.list_order_cases_with_scope(order.order_id)
         cases: list[dict[str, Any]] = []
         requirements: list[dict[str, Any]] = []
+        pending: list[tuple[dict[str, Any], str, str]] = []
         links: list[dict[str, Any]] = []
         by_group: dict[str | None, dict[str, Any]] = {}
         for entry, case, _suite, requirement in rows:
@@ -147,17 +176,18 @@ class TestOrderGraphService:
             link = by_group.get(group_id)
             if link is None:
                 if in_iteration:
-                    requirements.append(
-                        {
-                            "requirement_id": requirement.requirement_id,
-                            "requirement_title": requirement.name,
-                            "requirement_content": requirement_source_content(requirement),
-                        }
-                    )
+                    item = {
+                        "requirement_id": requirement.requirement_id,
+                        "requirement_title": requirement.name,
+                        "requirement_content": "",
+                    }
+                    requirements.append(item)
+                    pending.append((item, requirement.requirement_id, requirement.name))
                 link = {"requirement_id": group_id, "case_ids": []}
                 by_group[group_id] = link
                 links.append(link)
             link["case_ids"].append(case.case_id)
+        await self._fill_understanding(pending)
         return dump(
             TestOrderGraphInputResponse,
             {
@@ -167,93 +197,160 @@ class TestOrderGraphService:
             },
         )
 
+    async def _fill_understanding(self, pending: list[tuple[dict[str, Any], str, str]]) -> None:
+        """Fill each requirement's latest approved understanding; reject if any is missing."""
+        chain = GenerationChainRepository(self.repository.session)
+        missing: list[str] = []
+        for item, requirement_id, name in pending:
+            version = await approved_understanding(chain, requirement_id)
+            if version is None:
+                missing.append(name)
+                continue
+            item["requirement_content"] = understanding_source(version)
+        if missing:
+            raise dynamic_error(ErrBadRequest, _missing_understanding_message(missing))
+
     async def dispatch(self, user_id: str, order_id: str, body: dict[str, Any]) -> dict[str, Any]:
         """派发一次图谱分析；一次生成完成前重复点击返回 400。"""
 
-        order = await self.orders.get_accessible_entity(user_id, order_id, action="execute")
+        await self.orders.get_accessible_entity(user_id, order_id, action="execute")
+        # 调用方可以自行组装图谱输入（模块契约），平台只校验结构并原样转发。
         graph_input = require_graph_input(body.get("graph_input"))
         counts = graph_input_counts(graph_input)
+        # End the initial authorization snapshot before waiting on the order lock.
+        await self.repository.commit()
+        order = await self.orders.repository.get_order_for_update(order_id)
+        if order is None:
+            raise ErrNotFound()
+        sprint = await self.orders.ensure_sprint_access(user_id, order.sprint_id, action="execute")
+        if sprint.project_id != order.project_id:
+            raise ErrNotFound()
         task = await self.repository.get_task_by_order_type(
             order.order_id, TEST_ORDER_GRAPH_TASK_TYPE
         )
-        latest = await self._latest_run(task)
-        if latest is not None and latest.status in TEST_ORDER_GRAPH_DISPATCH_STATUSES:
-            raise dynamic_error(ErrBadRequest, "图谱正在生成中，请等待完成后再试")
+        if task is not None:
+            task = await self.repository.get_task_for_update(task.task_id)
+            if task is None:
+                raise ErrNotFound()
+        validate_graph_task_scope(task, order)
+        from testing_agent.services.auxiliary_request import (
+            find_replay,
+            request_id,
+            request_signature,
+        )
+
+        dispatch_id = request_id(body.get("request_id"), new_id())
+        signature = request_signature(
+            "test_order_graph",
+            {"graphInput": graph_input, "connectionId": str(body.get("connection_id") or "")},
+        )
+        if task is not None and body.get("request_id") is not None:
+            replay = await find_replay(
+                self.repository.session,
+                task=task,
+                actor_id=user_id,
+                request_id=dispatch_id,
+                signature=signature,
+            )
+            if replay is not None:
+                await self.repository.commit()
+                if replay.execution_id is None:
+                    raise ErrNotFound()
+                return await auxiliary_detail(self.repository.session, replay.execution_id)
+        latest = None
+        if not str(body.get("connection_id") or "").strip():
+            latest = await self._latest_unified(task)
 
         connection_id = await self._resolve_connection_id(user_id, body, order.project_id, latest)
         if task is None:
             task = build_graph_task(order, user_id)
             self.repository.add(task)
+            await self.repository.session.flush()
+        stage = await lock_or_create_stage(self.repository.session, task.task_id)
+        if body.get("request_id") is not None:
+            replay = await find_replay(
+                self.repository.session,
+                task=task,
+                actor_id=user_id,
+                request_id=dispatch_id,
+                signature=signature,
+                current_read=True,
+                active_attempt_id=stage.active_attempt_id,
+            )
+            if replay is not None:
+                await self.repository.commit()
+                if replay.execution_id is None:
+                    raise ErrNotFound()
+                return await auxiliary_detail(self.repository.session, replay.execution_id)
+        if stage.active_attempt_id:
+            raise dynamic_error(ErrBadRequest, "图谱正在生成中，请等待完成后再试")
         run_id = new_id()
-        run = AiGenerateTaskRun(
-            run_id=run_id,
-            task_id=task.task_id,
-            requirement_id="",
-            sprint_id=order.sprint_id,
-            project_id=order.project_id,
-            trigger_user_id=user_id,
-            trigger_type="manual",
-            status=RunStatus.PENDING.value,
-            checkpoint_enabled=False,
-            current_stage=TEST_ORDER_GRAPH_STAGE,
-            stage_status=StageStatus.PENDING.value,
-            snapshot_json=build_graph_run_snapshot(
-                order, run_id, task.task_id, counts, connection_id
-            ),
-            config_json={"graphInput": graph_input},
-            result_summary_json={},
-        )
-        dispatch = WorkerTask(
-            domain="ai",
-            task_id=new_id(),
-            task_type=TEST_ORDER_GRAPH_TASK_TYPE,
-            run_id=run_id,
-            status=RunStatus.PENDING.value,
-        )
-        self.repository.add(dispatch)
-        self.repository.add(run)
-        await self.execution.save(
+        attempt, _ = await dispatch_auxiliary_execution(
             self.repository.session,
-            run,
-            intent=ExecutionIntent(actor_id=user_id, llm_connection_id=connection_id),
-            worker=dispatch,
+            task=task,
+            actor_id=user_id,
+            request_id=dispatch_id,
+            execution_id=run_id,
+            connection_id=connection_id,
+            source=build_graph_run_snapshot(order, run_id, task.task_id, counts, connection_id),
+            config={"graphInput": graph_input},
+            request_signature=signature,
         )
         await self.repository.commit()
-        await self.repository.refresh(run)
-        return dump_run(run)
+        return await auxiliary_detail(self.repository.session, attempt.execution_id or run_id)
 
     async def get(self, user_id: str, order_id: str) -> dict[str, Any]:
         """返回该测试单最近一次图谱 run；从未生成过时 run 为 null。"""
 
-        order = await self.orders.get_accessible_entity(user_id, order_id, action="read")
+        order = await self._read_order(user_id, order_id)
         task = await self.repository.get_task_by_order_type(
             order.order_id, TEST_ORDER_GRAPH_TASK_TYPE
         )
-        latest = await self._latest_run(task)
+        validate_graph_task_scope(task, order)
+        return {"orderId": order.order_id, "run": await self._latest_unified(task)}
+
+    async def history(
+        self, user_id: str, order_id: str, page: int, page_size: int
+    ) -> dict[str, Any]:
+        """Read bounded graph history after verifying the test-order scope."""
+        order = await self._read_order(user_id, order_id)
+        task = await self.repository.get_task_by_order_type(
+            order.order_id, TEST_ORDER_GRAPH_TASK_TYPE
+        )
+        validate_graph_task_scope(task, order)
+        if task is not None:
+            return await auxiliary_history(self.repository.session, task.task_id, page, page_size)
+        if page < 1 or not 1 <= page_size <= 100:
+            raise ErrBadRequest()
         return {
-            "orderId": order.order_id,
-            "run": dump_run(latest) if latest is not None else None,
+            "items": [],
+            "total": 0,
+            "statusCounts": {},
+            "reviewPendingCount": 0,
+            "latestRun": None,
         }
 
-    async def _latest_run(self, task: AiGenerateTask | None):
+    async def _latest_unified(self, task: AiGenerateTask | None) -> dict[str, Any] | None:
         if task is None:
             return None
-        runs = await self.repository.list_runs(task.task_id)
-        return runs[0] if runs else None
+        history = await auxiliary_history(self.repository.session, task.task_id, 1, 1)
+        latest = history["latestRun"]
+        if latest is None:
+            return None
+        return await auxiliary_detail(self.repository.session, latest["runId"])
 
     async def _resolve_connection_id(
         self,
         user_id: str,
         body: dict[str, Any],
         project_id: str,
-        latest: Any,
+        latest: dict[str, Any] | None,
     ) -> str:
         """本次指定的连接优先，其次沿用上一次派发用过的连接。"""
 
         connection_id = str(body.get("connection_id") or "").strip()
         if not connection_id and latest is not None:
-            previous = await self.repository.get_latest_ai_dispatch(latest.run_id)
-            connection_id = str(getattr(previous, "llm_connection_id", "") or "")
+            connection_id = str((latest.get("snapshotJson") or {}).get("llmConnectionId") or "")
         connection = await require_personal_connection(
             self.repository.session, user_id, "llm", connection_id, project_id
         )

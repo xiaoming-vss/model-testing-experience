@@ -36,6 +36,7 @@ import { navigationIndex } from './navigation'
 import { useNavigationTransition } from './useNavigationTransition'
 import { useScopeTransition } from './useScopeTransition'
 import { installTabMotion } from '@/shared/ui/tabMotion'
+import { canNavigateAway } from '@/shared/utils/unsavedChanges'
 import '@/shared/styles/tab-motion.css'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { normalizeProjectId } from '@/utils/format'
@@ -108,6 +109,7 @@ export function AppShell() {
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={({ key }) => {
                           if (key === 'settings' && !access.can('manage')) return
+                          if (!canNavigateAway()) return
                           setProjectSelectorOpen(false)
                           const params = new URLSearchParams(location.pathname === '/projects' ? location.search : '')
                           params.set('projectPanel', key)
@@ -122,6 +124,7 @@ export function AppShell() {
                     suffixIcon={<DownOutlined />}
                     options={projects.map((project) => ({ label: project.name, value: normalizeProjectId(project) }))}
                     onChange={id => {
+                      if (id === activeProjectId || !canNavigateAway()) return
                       prepareScopeTransition('project', activeProjectId, id, projects.map(normalizeProjectId))
                       setActiveProjectId(id)
                       if (location.pathname.startsWith('/requirements/')) navigate('/projects?board=requirements')
@@ -140,6 +143,7 @@ export function AppShell() {
                         suffixIcon={<DownOutlined />}
                         options={sprintSelectorOptions}
                         onChange={id => {
+                          if (id === (activeSprintId ?? 'all') || !canNavigateAway()) return
                           prepareScopeTransition('sprint', activeSprintId, id, sprintSelectorOptions.map(option => option.value))
                           selectSprint(id)
                           if (location.pathname.startsWith('/requirements/')) navigate('/projects?board=requirements')
@@ -159,7 +163,7 @@ export function AppShell() {
             }>
               <Button type="text" className="app-feedback-trigger" aria-label="测试阶段反馈联系方式">测试阶段</Button>
             </Popover>
-            {showWorkbenchHeader && !bugOnly ? <ActionButton type="primary" className="app-header-create-project action-btn-create" operation="create" onClick={() => { useWorkbenchStore.getState().openProjectModal(); navigate('/projects') }}>新建项目</ActionButton> : null}
+            {showWorkbenchHeader && !bugOnly ? <ActionButton type="primary" className="app-header-create-project action-btn-create" operation="create" onClick={() => { if (!canNavigateAway()) return; useWorkbenchStore.getState().openProjectModal(); navigate('/projects') }}>新建项目</ActionButton> : null}
             <ThemeSelect />
             <Dropdown
               menu={{
@@ -177,6 +181,7 @@ export function AppShell() {
                   },
                 ],
                 onClick: ({ key }) => {
+                  if (['profile', 'admin-users', 'admin-ldap', 'logout'].includes(key) && !canNavigateAway()) return
                   if (key === 'profile') navigate('/profile')
                   if (key === 'admin-users') navigate('/admin/users')
                   if (key === 'admin-ldap') navigate('/admin/ldap')

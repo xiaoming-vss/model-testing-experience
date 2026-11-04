@@ -140,6 +140,7 @@ export type TestOrderGraph = {
 }
 
 export type DispatchTestOrderGraphPayload = {
+  requestId?: string
   graphInput: TestOrderGraphInput
   connectionId: string
 }

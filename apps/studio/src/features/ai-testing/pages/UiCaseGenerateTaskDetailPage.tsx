@@ -31,7 +31,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { LlmConnectionSelectModal } from '../components/LlmConnectionSelectModal'
 import { UiImportConflictModal } from '../components/UiImportConflictModal'
-import { ImportMigrationWarning } from '../components/ImportMigrationWarning'
 import { RunHistoryTable, RunRowActions, type RunMenuAction } from '../components/RunHistoryTable'
 import { TaskDetailInstructionEditor, TaskDetailNavItem, TaskDetailNavPanel, TaskDetailRunMetrics, TaskDetailToolbar } from '../components/TaskDetailShell'
 import { confirmDeleteRun, isRunDeletable } from '../utils/runDeletion'
@@ -297,12 +296,13 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
     record.runId === selectedRunId && selectedRun ? selectedRun : record
   const { can } = useProjectAccess(taskQuery.data?.projectId ?? '')
   const isStagedUiRun = isStagedUiRunRecord(selectedRun)
-  const stagedReview = isStageAwaitingReview(selectedRun)
-  const candidateEditable = !isStagedUiRun && selectedRun?.status === 'success' && selectedRun.reviewStatus === 'pending'
+  const chainManagedRun = Boolean(selectedRun?.generationChainManaged || selectedRun?.snapshotJson?.generationChainManaged)
+  const stagedReview = !chainManagedRun && isStageAwaitingReview(selectedRun)
+  const candidateEditable = !chainManagedRun && !isStagedUiRun && selectedRun?.status === 'success' && selectedRun.reviewStatus === 'pending'
   const canEditCandidate = can('write') && candidateEditable
   const hasUnsavedChanges = draftYaml !== savedYaml || stageDirty
   const canReview = canEditCandidate && Boolean(savedYaml.trim()) && !hasUnsavedChanges
-  const canImport = isGenerateTaskRunImportable(selectedRun)
+  const canImport = !chainManagedRun && isGenerateTaskRunImportable(selectedRun)
   // 三阶段产物各自独立打开：产物入口决定展示阶段，行内审核入口跟随当前阶段。
   const stageInView = isStagedUiRun && selectedRun
     ? (modalStage && uiStageHasContent(selectedRun, modalStage) ? modalStage : currentUiGenerationStage(selectedRun))
@@ -593,7 +593,7 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
             ]}
             actions={(
               <>
-                <Tooltip title={!task.sourceArchive ? '请先上传源码 ZIP' : hasActiveRun ? '任务执行中，暂时不能重复运行' : '运行任务'}><span><ProjectActionButton action="execute" aria-label="运行任务" className="action-btn-run" operation="run" disabled={!task.sourceArchive || hasActiveRun} onClick={() => setLlmModalOpen(true)}>运行</ProjectActionButton></span></Tooltip>
+                <Tooltip title={task.requirementId ? '前往需求生成链' : !task.sourceArchive ? '请先上传源码 ZIP' : hasActiveRun ? '任务执行中，暂时不能重复运行' : '运行任务'}><span><ProjectActionButton action="execute" aria-label={task.requirementId ? '前往需求生成链' : '运行任务'} className="action-btn-run" operation="run" disabled={!task.requirementId && (!task.sourceArchive || hasActiveRun)} onClick={() => { if (task.requirementId) navigate(`/requirements/${encodeURIComponent(task.requirementId)}`); else setLlmModalOpen(true) }}>{task.requirementId ? '生成链' : '运行'}</ProjectActionButton></span></Tooltip>
                 <ProjectActionButton action="write" aria-label="编辑任务" className="action-btn-update" operation="edit" onClick={() => { setEditName(task.name); setEditInstruction(task.instruction); setEditSprintId(task.sprintId); setEditRequirementId(task.requirementId); setEditModalOpen(true) }}>编辑</ProjectActionButton>
                 <Popconfirm title="确认删除该任务？" onConfirm={() => deleteTaskMutation.mutate()}><ProjectActionButton operation="delete" action="write" danger className="action-btn-delete" loading={deleteTaskMutation.isPending}>删除</ProjectActionButton></Popconfirm>
               </>
@@ -703,19 +703,20 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
                           getImportedAt={(row) => resolveRunRecord(row).importedAt}
                           renderActions={(row) => {
                             const data = resolveRunRecord(row)
+                            const chainManaged = Boolean(data.generationChainManaged || data.snapshotJson?.generationChainManaged)
                             const importedSuiteId = (data.importedTargets ?? []).find((target) => target.targetType === 'ui_suite')?.targetId
                             const reviewable = data.runId === selectedRunId
                               ? canEditCandidate || (stagedReview && can('review'))
                               : isStageAwaitingReview(data) && can('review')
                             const label = reviewable ? '审核结果' : '查看候选结果'
                             const menuItems: RunMenuAction[] = [
-                              ...(can('execute') && isGenerateTaskRunImportable(data)
+                              ...(can('execute') && !chainManaged && isGenerateTaskRunImportable(data)
                                 ? [{ key: 'importSuite', label: '导入正式 UI 套件', disabled: importMutation.isPending }]
                                 : []),
                               ...(data.importStatus === 'imported' && importedSuiteId
                                 ? [{ key: 'openSuite', label: '查看正式套件' }]
                                 : []),
-                              ...(row.runId && can('write')
+                              ...(row.runId && can('write') && !chainManaged
                                 ? [{
                                     key: 'deleteRun',
                                     label: '删除运行记录',
@@ -728,7 +729,18 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
                               <RunRowActions
                                 inline={
                                   /* 候选结果入口（含审核）直接放在操作列，「更多」只留导入等状态变更操作。 */
-                                  can('read') ? (
+                                  chainManaged && task.requirementId ? (<>
+                                    <Button size="small" type="primary" onClick={(event) => {
+                                      event.stopPropagation()
+                                      navigate(`/requirements/${encodeURIComponent(task.requirementId!)}`)
+                                    }}>前往生成链</Button>
+                                    {can('read') ? <Button size="small" onClick={(event) => {
+                                      event.stopPropagation()
+                                      selectRun(row.runId)
+                                      setModalStage(undefined)
+                                      setCandidateModalOpen(true)
+                                    }}>查看候选结果</Button> : null}
+                                  </>) : can('read') ? (
                                     <Button
                                       size="small"
                                       type="primary"
@@ -854,7 +866,6 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
           <Alert showIcon type="error" title={getErrorMessage(selectedRunQuery.error)} />
         ) : selectedRun ? (
           <div className="ai-task-import-result-form">
-            <ImportMigrationWarning importMigrationComplete={selectedRun.importMigrationComplete} />
             <div className="ai-task-import-target-summary">
               <div className="ai-task-import-target-copy">
                 <strong>候选结果</strong>

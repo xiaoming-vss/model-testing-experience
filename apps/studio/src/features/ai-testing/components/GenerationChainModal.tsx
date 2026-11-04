@@ -35,6 +35,7 @@ import type { GenerationChainKind, GenerationChainStage, GenerationChainVersion 
 import type { UiGenerationStage } from '../utils/uiGenerationStage'
 import { generationChainApi } from '../api/generationChain.api'
 import { diffArtifact, diffStats } from '../utils/chainArtifact'
+import { generationFailureMeta } from '../utils/generationStageDisplay'
 import { GenerationArtifactFrame } from './GenerationArtifactFrame'
 import { GenerationArtifactDiff } from './GenerationArtifactDiff'
 
@@ -95,9 +96,8 @@ function VersionHistory({ stage, versions, onPick, onDelete, activeVersion, late
           <small>{formatTime(version.createdAt)}{version.reviewerUserId ? ` · ${version.reviewerUserId}` : ''}</small>
         </span>
         {version.versionId === latestId ? <Tag color="success">最新</Tag> : null}
-        {version.basedOnOld ? <Tag color="warning">基于旧版</Tag> : null}
       </button>
-      {canWrite ? <Popconfirm title={`删除 ${version.label}？`} description="已引用该版本的下游内容会显示上游已删除，依赖它的待审核产物会作废。" okText="删除" cancelText="取消"
+      {canWrite ? <Popconfirm title={`删除 ${version.label}？`} description="依赖它的待审核产物会作废，已通过的下游版本保留。" okText="删除" cancelText="取消"
         onConfirm={() => onDelete(version.versionId)}>
         <Button size="small" type="text" danger aria-label={`删除版本 ${version.label}`} icon={<DeleteOutlined />} />
       </Popconfirm> : null}
@@ -148,7 +148,7 @@ function ChainHeaderControls({ workspace, canWrite, inline = false }: {
       label: upstreamStage?.label ?? name,
       latestUpstreamId: upstreamStage?.latestVersion?.versionId,
       options: (upstreamStage?.versions ?? [])
-        .filter(version => chain.kind !== 'ui' || !version.sourceRunId || version.sourceRunId === chain.runId)
+        .filter(version => chain.kind !== 'ui' || !(version.sourceBatchId || version.sourceRunId) || (version.sourceBatchId || version.sourceRunId) === (chain.sourceBatchId || chain.runId))
         .map(version => ({
         value: version.versionId,
         label: `${version.label} · ${version.summary}`,
@@ -181,7 +181,6 @@ function ChainHeaderControls({ workspace, canWrite, inline = false }: {
             onChange={value => setUpstream(previous => ({ ...previous, [field.name]: value }))}
             optionRender={option => <span>{option.label}{option.value === field.latestUpstreamId ? ' · 最新' : ' · 历史'}</span>} />
         </div>)}
-        {!hasDraft ? <span className="gc-upstream-hint">选择历史上游后重新生成；审核通过后标记“基于旧版”。</span> : null}
       </div>
     }>
       <Button size="small" className={`gc-upstream-trigger${upstreamMissing ? ' has-missing' : ''}`} aria-label="选择上游版本">
@@ -221,7 +220,7 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
 }) {
   const {
     chain, stage, selected, versionKey, selectedVersion,
-    versionDetail, displayedContent, comparisonContent, comparisonId, diffOpen, setDiffOpen,
+    versionDetail, displayedContent, workingContent, comparisonContent, comparisonId, diffOpen, setDiffOpen,
     mode, setMode, revisionOpen, setRevisionOpen,
     revisionInstruction, setRevisionInstruction, upstream,
     runStage, review, revise, importOpen, importVersion,
@@ -236,12 +235,15 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
   const hasDraft = Boolean(stage?.draft && !invalidDraft)
   const viewingDraft = versionKey === 'draft'
   const draftActions = hasDraft && viewingDraft
+  // 只要有待审核草稿且有写权限就可输入；工作副本在首次输入时建立，不依赖编辑态初始化时序。
+  const draftEditable = Boolean(draftActions && canWrite)
   const rejected = stage?.draft?.status === 'rejected'
   const upstreamVersions = versionKey === 'draft' ? stage?.draft?.upstreamVersions : versionDetail.data?.upstreamVersions
   const sourceInputs = versionKey === 'draft' ? stage?.draft?.sourceInputs : selectedVersion ? versionDetail.data?.sourceInputs : chain?.sourceInputs
   const uiSurface = chain?.kind === 'ui' && stage?.stage === 'ui_surface'
   const canRun = Boolean(chain?.configured && stage && !busy && !stage.blockedReason && !hasDraft)
-  const canApprove = Boolean(draftActions && !rejected && !operationPending && stage?.state !== 'running')
+  const canApprove = Boolean(draftActions && !rejected && !workspace.editingDirty && !operationPending && stage?.state !== 'running')
+  const canReject = Boolean(draftActions && !rejected && !operationPending && stage?.state !== 'running')
   const canImport = Boolean(
     finalStage
     && versionKey !== 'draft'
@@ -266,8 +268,8 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
     : stageKind === 'function'
       ? stageName === 'case_names' ? 'is-case-names' : stageName === 'detailed_cases' ? 'is-detailed-cases' : 'is-requirement-analysis'
       : stageKind === 'api' ? 'is-api-cases' : stageKind === 'ui' ? 'is-ui-stage' : ''
-  const rawLabel = displayedContent.trim().startsWith('{') || displayedContent.trim().startsWith('[') ? 'JSON' : 'YAML'
-  const rawContent = useMemo(() => formatRawArtifact(displayedContent, rawLabel), [displayedContent, rawLabel])
+  const rawLabel = workingContent.trim().startsWith('{') || workingContent.trim().startsWith('[') ? 'JSON' : 'YAML'
+  const rawContent = useMemo(() => formatRawArtifact(workingContent, rawLabel), [workingContent, rawLabel])
   const copyText = mode === 'raw' ? rawContent : undefined
 
   if (!selected) return null
@@ -288,6 +290,7 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
       const upstreamStage = workspace.upstreamStages.find(item => item.stage === name)
       const selectedId = versionKey === 'draft' || !versionKey ? upstream[name] : upstreamVersions?.[name]
       const version = upstreamStage?.versions.find(item => item.versionId === selectedId)
+      if (versionKey && versionKey !== 'draft' && !version) return null
       const missing = selectedId && !version
       return <span className={`gc-trace-chip${missing ? ' is-danger' : ''}`} key={name}>
         {upstreamStage?.label ?? name}
@@ -302,20 +305,24 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
     <div className="gc-footer-row">
       <div className="gc-footer-status">
         {!embedded ? trace : null}
+        {workspace.editingDirty ? <div className="gc-modal-meta is-warn">修改尚未保存，保存后才能审核。</div> : null}
         {versionKey !== 'draft' && selectedVersion?.createdAt ? <div className="gc-modal-meta">
           <ClockCircleOutlined /> {selectedVersion.label} · {formatTime(selectedVersion.createdAt)} · {selectedVersion.reviewerUserId || '系统'}
-          {selectedVersion.basedOnOld ? ' · 基于旧版上游' : ''}
           {selectedVersion.imported ? ' · 已导入' : ''}
         </div> : null}
       </div>
       {revisionOpen ? null : <div className="gc-modal-actions">
         {!embedded ? <Button onClick={onClose}>关闭</Button> : null}
-        {uiSurface && chain.runId ? <ProjectActionButton action="execute" disabled={busy} onClick={() => setInputsOpen(true)}>更换输入并重新生成</ProjectActionButton> : null}
+        {uiSurface && chain.runId ? <ProjectActionButton action="execute" disabled={busy || chain.busy} onClick={() => setInputsOpen(true)}>更换输入并重新生成</ProjectActionButton> : null}
         {canImport ? <ProjectActionButton action="execute" type="primary" ghost onClick={openImport}>导入此版本</ProjectActionButton> : null}
-        {draftActions ? <ProjectActionButton action="execute" disabled={busy} onClick={workspace.openRevision}>继续优化</ProjectActionButton> : null}
-        {draftActions && !rejected ? <ProjectActionButton action="review" danger ghost disabled={!canApprove} onClick={() => review.mutate({ action: 'reject' })}>审核不通过</ProjectActionButton> : null}
-        {draftActions && !rejected ? <ProjectActionButton action="review" type={finalStage ? 'primary' : 'default'} disabled={!canApprove} onClick={() => review.mutate({ action: 'approve' })}>审核通过</ProjectActionButton> : null}
-        {draftActions && !rejected && !finalStage ? <ProjectActionButton action="review" type="primary" disabled={!canApprove || busy} onClick={() => review.mutate({ action: 'approve', continueAfter: true })}>审核通过并继续 <RightOutlined /></ProjectActionButton> : null}
+        {draftActions && canWrite && workspace.editingDirty ? <>
+          <Button disabled={workspace.saveDraft.isPending} onClick={workspace.resetEditing}>撤销修改</Button>
+          <ProjectActionButton action="write" type="primary" disabled={workspace.saveDraft.isPending} onClick={() => workspace.saveDraft.mutate()}>保存修改</ProjectActionButton>
+        </> : null}
+        {draftActions ? <ProjectActionButton action="execute" disabled={busy || workspace.editingDirty} title={workspace.editingDirty ? '请先保存修改' : undefined} onClick={workspace.openRevision}>继续优化</ProjectActionButton> : null}
+        {draftActions && !rejected ? <ProjectActionButton action="review" danger ghost disabled={!canReject} onClick={() => review.mutate({ action: 'reject' })}>审核不通过</ProjectActionButton> : null}
+        {draftActions && !rejected ? <ProjectActionButton action="review" type={finalStage ? 'primary' : 'default'} disabled={!canApprove} title={workspace.editingDirty ? '请先保存修改' : undefined} onClick={() => review.mutate({ action: 'approve' })}>审核通过</ProjectActionButton> : null}
+        {draftActions && !rejected && !finalStage ? <ProjectActionButton action="review" type="primary" disabled={!canApprove || busy} title={workspace.editingDirty ? '请先保存修改' : undefined} onClick={() => review.mutate({ action: 'approve', continueAfter: true })}>审核通过并继续 <RightOutlined /></ProjectActionButton> : null}
         {!hasDraft && (!viewingDraft || invalidDraft) ? <Tooltip title={stage.blockedReason || (chain.active ? '当前链路正在执行' : undefined)}>
           <span tabIndex={stage.blockedReason ? 0 : undefined} aria-label={stage.blockedReason}>
             <ProjectActionButton action="execute" operation={stage.latestVersion ? 'run' : 'create'} type="primary"
@@ -362,7 +369,6 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
   const inspectorActions = embedded && (open || (showApiRunInInspector && chain.kind === 'api' && !hasDraft)) && inspectorActionContainer && !revisionOpen ? createPortal(
     <section className="gc-inspector-review gc-inspector-reading-tools">
       <div className="gc-inspector-review-heading"><h3>{revisionOpen ? '继续优化' : '阶段操作'}</h3>
-        {selectedVersion?.basedOnOld ? <span className="gc-based-chip is-warn">基于旧版上游</span> : null}
         {versionDetail.isFetching ? <Spin size="small" /> : null}
       </div>
       {footer}
@@ -392,7 +398,9 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
         {chain.sourceChanged ? <Alert showIcon type="warning" title={chain.kind === 'ui' ? '源码包或功能用例已更新。请在元素控件清单更换输入后重新生成；旧版本保留输入快照。' : '需求材料已更新，旧版本保留生成时的材料快照。'} /> : null}
         {invalidDraft ? <Alert showIcon type="warning" title="产物已作废"
           description={stage.draft?.invalidatedReason || '该产物依赖的上游版本已被删除，不能继续审核或优化，请重新生成。'} /> : null}
-        {stage.errorMessage ? <Alert showIcon type="error" title={stage.errorMessage} /> : null}
+        {stage.state === 'failed' ? <Alert showIcon type="error"
+          title={stage.errorMessage || '阶段执行失败，Worker 未返回具体原因'}
+          description={generationFailureMeta(stage) || '请重新执行；若持续失败，请查看 Worker 日志。'} /> : null}
         {stage.blockedReason ? <Alert showIcon type="info" title={stage.blockedReason} /> : null}
 
         {!embedded ? <div className="gc-artifact-head">
@@ -400,12 +408,14 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
             <strong>{versionKey === 'draft' ? '待审核产物' : selectedVersion ? `${selectedVersion.label} 已通过版本` : '阶段产物'}</strong>
             <span>{versionKey === 'draft' ? stage.draft?.summary : selectedVersion?.summary ?? stage.latestVersion?.summary}</span>
           </div>
-          {selectedVersion?.basedOnOld ? <span className="gc-based-chip is-warn">基于旧版</span> : null}
           {versionDetail.isFetching ? <Spin size="small" /> : null}
         </div> : null}
 
         {embedded ? <div className="gc-reading-toolbar" role="toolbar" aria-label="阅读视图工具">
-          <strong className="gc-reading-toolbar-title">{stage.label}</strong>
+          <div className="gc-reading-toolbar-title-group">
+            <strong className="gc-reading-toolbar-title">{stage.label}</strong>
+            {draftEditable ? <Tag color="processing">待审核/可编辑</Tag> : null}
+          </div>
           {readingModeControls}
         </div> : null}
 
@@ -414,24 +424,25 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
             beforeLabel={stage.versions.find(version => version.versionId === comparisonId)?.label ?? '旧版本'}
             afterLabel={versionKey === 'draft' ? '待审核产物' : selectedVersion?.label ?? '当前内容'} /> : mode === 'raw'
             ? <div className="gc-raw-editor">
-              <TextCodeEditor language="auto" ariaLabel={`阶段产物 ${rawLabel}`} readOnly height="100%" minHeight={0}
-                value={rawContent || '暂无内容'} />
+              <TextCodeEditor language="auto" ariaLabel={`阶段产物 ${rawLabel}`} readOnly={!draftEditable} height="100%" minHeight={0}
+                value={workspace.editing?.content ?? (rawContent || '暂无内容')} onChange={workspace.setEditingContent} />
             </div>
             : stageKind === 'requirement_analysis'
               ? materialExtraction
-                ? <RequirementMaterialComparison content={displayedContent} />
-                : <RequirementUnderstandingComparison hideTitle content={displayedContent} />
+                ? <RequirementMaterialComparison content={workingContent} editable={draftEditable} onChange={workspace.setEditingContent} />
+                : <RequirementUnderstandingComparison hideTitle content={workingContent} />
               : stageKind === 'function'
                 ? stageName === 'requirement_analysis'
-                  ? <RequirementAnalysisDiagramView content={displayedContent} />
+                  ? <RequirementAnalysisDiagramView content={workingContent} />
                   : stageName === 'case_names'
-                    ? <CaseNameTreeView content={displayedContent} rootTitle={stage.label} expanded />
-                    : <GeneratedCasesReviewView content={displayedContent} pointsContent={pointsUpstream.data?.content ?? ''} rootTitle={stage.label} />
+                    ? <CaseNameTreeView content={workingContent} rootTitle={stage.label} expanded editable={draftEditable} onTreeChange={workspace.setEditingContent} />
+                    : <GeneratedCasesReviewView content={workingContent} pointsContent={pointsUpstream.data?.content ?? ''} rootTitle={stage.label}
+                      onChange={draftEditable ? workspace.setEditingContent : undefined} />
                 : stageKind === 'api'
-                  ? stageName === 'openapi_extract' ? <ApiConfigDiagramView content={displayedContent} /> : <ApiCandidateResultView content={displayedContent} />
+                  ? stageName === 'openapi_extract' ? <ApiConfigDiagramView content={workingContent} /> : <ApiCandidateResultView content={workingContent} />
                   : stageKind === 'ui'
-                    ? <div className="ui-generation-stage-visual"><UiStageVisual stage={stageName as UiGenerationStage} content={displayedContent} onShowRaw={() => setMode('raw')} /></div>
-                    : <ChainVisualArtifact content={displayedContent} />}
+                    ? <div className="ui-generation-stage-visual"><UiStageVisual stage={stageName as UiGenerationStage} content={workingContent} onShowRaw={() => setMode('raw')} /></div>
+                    : <ChainVisualArtifact content={workingContent} />}
         </div>
 
         {!chain.configured ? <div className="gc-empty-panel">

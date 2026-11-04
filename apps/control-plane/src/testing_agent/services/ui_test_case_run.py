@@ -8,6 +8,7 @@ from testing_agent.core.enums import RunStatus
 from testing_agent.core.errors import (
     ErrApiEnvironmentKindMismatch,
     ErrBadRequest,
+    ErrForbidden,
     ErrNotFound,
     ErrUiRunEnvironmentMismatch,
     ErrUiRunVariableMissing,
@@ -182,14 +183,22 @@ class UiTestCaseRunService:
                 {"missingVariables": missing},
             )
 
-    async def debug_run_case(self, user_id: str, case_id: str, body: DebugRunUiCaseRequest) -> dict:
+    async def debug_run_case(
+        self,
+        user_id: str,
+        case_id: str,
+        body: DebugRunUiCaseRequest,
+        *,
+        run_id: str | None = None,
+        live_debug: bool = False,
+    ) -> dict:
         context = await self.get_accessible_case(user_id, case_id, action="execute")
         require_complete_ui_steps(context.case.steps_json)
         environment = await self._selected_environment(
             body.environment_id, context.project.project_id
         )
         await self._ensure_variables_available(environment, [context.case])
-        run_id = new_id()
+        run_id = run_id or new_id()
         run = UiTestCaseRun(
             run_id=run_id,
             case_id=context.case.case_id,
@@ -197,7 +206,7 @@ class UiTestCaseRunService:
             environment_id=environment.environment_id,
             environment_name=environment.name,
             trigger_user_id=user_id,
-            trigger_type="manual",
+            trigger_type="live_debug" if live_debug or body.live_debug else "manual",
             status=RunStatus.PENDING.value,
             snapshot_json={
                 "runId": run_id,
@@ -216,15 +225,20 @@ class UiTestCaseRunService:
         )
         self.repository.add_all([run, task])
         await self.repository.commit()
-        await self.repository.refresh(run)
         apply_run_scope(run, context)
-        return dump_case_run(run)
+        initial = dump_case_run(run)
+        from testing_agent.services.test_run_notifications import notify_task_available
+
+        await notify_task_available()
+        return initial
 
     async def get_case_run(self, user_id: str, run_id: str) -> dict:
         run = await self.repository.get_case_run(run_id)
         if run is None:
             raise ErrNotFound()
         context = await self.get_accessible_suite(user_id, run.suite_id, action="read")
+        if run.trigger_type == "live_debug" and run.trigger_user_id != user_id:
+            raise ErrForbidden()
         apply_run_scope(run, context)
         return dump_case_run(run)
 
@@ -285,6 +299,9 @@ class UiTestCaseRunService:
         for item in items:
             self.repository.add(item)
         await self.repository.commit()
+        from testing_agent.services.test_run_notifications import notify_task_available
+
+        await notify_task_available()
         await self.repository.refresh(run)
         apply_run_scope(run, context)
         return dump_suite_run(run)

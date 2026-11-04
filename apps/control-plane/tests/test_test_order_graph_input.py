@@ -1,9 +1,12 @@
 """测试单图谱输入：本迭代需求的用例、需求与关联，可直接作为派发的 graphInput。"""
 
+import json
+
 from support.function_case_library import make_case, make_requirement, make_sprint, make_suite
 from support.order_api import make_order, seed_case
 from support.project_api import account, project
 from support.project_api import api as api
+from support.requirement_versions import approve_understanding, understanding_artifact
 
 REQUIREMENT_CONTENT = "管理员可以在系统配置-服务配置中开启或关闭「启用本地清洗」开关。"
 
@@ -45,6 +48,7 @@ def test_graph_input_returns_order_cases_requirements_and_links(api):
     requirement_id = make_requirement_with_content(
         api, owner, sprint_id, "本地清洗开关", REQUIREMENT_CONTENT
     )
+    approve_understanding(api, requirement_id, project_id=pid, sprint_id=sprint_id)
     suite_id = make_suite(api, owner, requirement_id, "系统配置集")
     case_a = make_case(
         api,
@@ -68,13 +72,11 @@ def test_graph_input_returns_order_cases_requirements_and_links(api):
 
     data = graph_input(api, owner, order["orderId"])
 
-    assert data["requirements"] == [
-        {
-            "requirement_id": requirement_id,
-            "requirement_title": "本地清洗开关",
-            "requirement_content": REQUIREMENT_CONTENT,
-        }
-    ]
+    # 需求内容取已审核的需求理解版本，而不是需求正文。
+    assert [item["requirement_id"] for item in data["requirements"]] == [requirement_id]
+    assert data["requirements"][0]["requirement_title"] == "本地清洗开关"
+    assert json.loads(data["requirements"][0]["requirement_content"]) == understanding_artifact()
+    assert REQUIREMENT_CONTENT not in data["requirements"][0]["requirement_content"]
     assert [case["case_id"] for case in data["cases"]] == [case_a, case_b]
     first = data["cases"][0]
     # 字段名与 worker 侧 skill 的输入契约一致：snake_case，不是 camelCase。
@@ -109,6 +111,7 @@ def test_graph_input_keeps_unbound_cases_under_null_requirement(api):
     requirement_a = make_requirement(api, owner, sprint_a, "本迭代需求")
     requirement_b = make_requirement(api, owner, sprint_b, "别的迭代需求")
     requirement_c = make_requirement(api, owner, sprint_b, "别的迭代另一个需求")
+    approve_understanding(api, requirement_a, project_id=pid, sprint_id=sprint_a)
     case_a = seed_case(api, owner, requirement_a, title="本迭代用例")
     case_b = seed_case(api, owner, requirement_b, title="别的迭代用例")
     case_c = seed_case(api, owner, requirement_c, title="别的迭代另一个用例")
@@ -134,6 +137,8 @@ def test_graph_input_groups_cases_by_requirement(api):
     sprint_id = make_sprint(api, owner, pid, "迭代A")
     requirement_a = make_requirement(api, owner, sprint_id, "需求A")
     requirement_b = make_requirement(api, owner, sprint_id, "需求B")
+    approve_understanding(api, requirement_a, project_id=pid, sprint_id=sprint_id)
+    approve_understanding(api, requirement_b, project_id=pid, sprint_id=sprint_id)
     case_a1 = seed_case(api, owner, requirement_a, title="A1")
     case_a2 = seed_case(api, owner, requirement_a, title="A2")
     case_b1 = seed_case(api, owner, requirement_b, title="B1")
@@ -159,6 +164,7 @@ def test_graph_input_keeps_existing_step_numbering(api):
     pid = project(api, owner)
     sprint_id = make_sprint(api, owner, pid, "迭代A")
     requirement_id = make_requirement(api, owner, sprint_id, "需求")
+    approve_understanding(api, requirement_id, project_id=pid, sprint_id=sprint_id)
     suite_id = make_suite(api, owner, requirement_id, "用例集")
     case_id = make_case(
         api,
@@ -178,6 +184,55 @@ def test_graph_input_keeps_existing_step_numbering(api):
     assert data["cases"][0]["precondition"] == ["1. 已准备好环境"]
     assert data["cases"][0]["test_steps"] == ["1. 第一步\n2. 第二步"]
     assert data["cases"][0]["expected_results"] == ["1. 预期一\n2. 预期二"]
+
+
+def test_graph_input_uses_latest_approved_understanding(api):
+    _, owner = account(api, "owner")
+    pid = project(api, owner)
+    sprint_id = make_sprint(api, owner, pid, "迭代A")
+    requirement_id = make_requirement(api, owner, sprint_id, "需求")
+    first = understanding_artifact()
+    first["title"] = "第一版理解"
+    second = understanding_artifact()
+    second["title"] = "第二版理解"
+    approve_understanding(
+        api,
+        requirement_id,
+        project_id=pid,
+        sprint_id=sprint_id,
+        content=json.dumps(first, ensure_ascii=False),
+        version_no=1,
+    )
+    approve_understanding(
+        api,
+        requirement_id,
+        project_id=pid,
+        sprint_id=sprint_id,
+        content=json.dumps(second, ensure_ascii=False),
+        version_no=2,
+    )
+    case_id = seed_case(api, owner, requirement_id, title="用例")
+    order = make_order(api, owner, sprint_id, name="V1.2 回归")
+    add_cases(api, owner, order["orderId"], [case_id])
+
+    data = graph_input(api, owner, order["orderId"])
+
+    assert json.loads(data["requirements"][0]["requirement_content"])["title"] == "第二版理解"
+
+
+def test_graph_input_requires_approved_understanding(api):
+    _, owner = account(api, "owner")
+    pid = project(api, owner)
+    sprint_id = make_sprint(api, owner, pid, "迭代A")
+    requirement_id = make_requirement(api, owner, sprint_id, "未分析需求")
+    case_id = seed_case(api, owner, requirement_id, title="用例")
+    order = make_order(api, owner, sprint_id, name="V1.2 回归")
+    add_cases(api, owner, order["orderId"], [case_id])
+
+    response = api.get(f"/v1/test-orders/{order['orderId']}/graph-input", headers=owner)
+
+    assert response.status_code == 400
+    assert "未分析需求" in response.json()["message"]
 
 
 def test_graph_input_is_empty_for_order_without_cases(api):

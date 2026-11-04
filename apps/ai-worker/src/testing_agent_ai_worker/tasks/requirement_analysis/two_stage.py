@@ -146,7 +146,7 @@ def execute_two_stage(
         progress_callback(
             TaskProgress(
                 task_id=task.task_id,
-                run_id=task.run_id,
+                attempt_id=task.attempt_id,
                 current_stage=stage,
                 stage_status="waiting_review",
                 intermediate_json_text=config_json,
@@ -165,7 +165,7 @@ def execute_two_stage(
     final = json.dumps(artifact, ensure_ascii=False, separators=(",", ":"))
     return TaskResult(
         task_id=task.task_id,
-        run_id=task.run_id,
+        attempt_id=task.attempt_id,
         generate_task_id=task.generate_task_id,
         status=TaskStatus.SUCCESS,
         intermediate_json_text=config_json,

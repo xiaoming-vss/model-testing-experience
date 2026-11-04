@@ -35,7 +35,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         return Task(
             claim_id="claim-functional-1",
             task_id="task-functional-1",
-            run_id="run-functional-1",
+            attempt_id="run-functional-1",
             generate_task_id="generate-functional-1",
             task_type="functional_case_generate",
             project_id="project-1",
@@ -316,6 +316,43 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         summary = json.loads(result.result_summary_json)
         self.assertEqual(summary["documentType"], "word")
         self.assertEqual(summary["sourceType"], "word")
+
+    def test_execute_accepts_requirement_source_type_as_text(self) -> None:
+        executor_cls = getattr(executor_module, "FunctionalCaseExecutor", None)
+        self.assertIsNotNone(executor_cls)
+        if executor_cls is None:
+            return
+
+        task = self._make_task(source_type="requirement", document_type="")
+        captured: dict[str, object] = {}
+
+        def fake_chain_runner(**kwargs):
+            captured.update(kwargs)
+            kwargs["on_requirement_analysis_result"]("{}")
+            kwargs["on_case_names_result"]('{"categories":[]}')
+            return FunctionalChainRunResult(
+                requirement_analysis_output="{}",
+                case_names_output='{"categories":[]}',
+                detailed_cases_output='{"cases":[]}',
+            )
+
+        with tempfile.TemporaryDirectory() as runtime:
+            executor = executor_cls(
+                agent_config=PiConfig(runtime_root=runtime),
+                chain_runner=fake_chain_runner,
+            )
+
+            result = executor.execute(
+                task,
+                datetime.fromisoformat("2026-06-23T10:00:00+08:00"),
+                lambda progress: None,
+            )
+
+        self.assertEqual(result.status, TaskStatus.SUCCESS, result.error_message)
+        self.assertEqual(captured["source_text"], task.payload.source_content)
+        summary = json.loads(result.result_summary_json)
+        self.assertEqual(summary["documentType"], "text")
+        self.assertEqual(summary["sourceType"], "text")
 
     def test_execute_checkpoint_requirement_analysis_uses_source_content_without_enhanced_stage(
         self,

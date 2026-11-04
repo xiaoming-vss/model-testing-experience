@@ -7,20 +7,21 @@ from pydantic.alias_generators import to_camel
 
 from testing_agent.schemas.resource_binding import ZentaoBindingSummaryResponse
 
-DOCUMENT_TYPES = {"text", "docx", "richtext"}
-DOCUMENT_TYPE_ALIASES = {"txt": "text", "word": "docx"}
+# 需求文档只支持富文本与 Word/DOCX；历史 TXT 已通过迁移转换为富文本。
+DOCUMENT_TYPES = {"docx", "richtext"}
+DOCUMENT_TYPE_ALIASES = {"word": "docx"}
 
 
 def normalize_document_type(value: str) -> str:
     normalized = DOCUMENT_TYPE_ALIASES.get(value, value)
     if normalized not in DOCUMENT_TYPES:
-        raise ValueError("documentType must be text, docx or richtext")
+        raise ValueError("documentType must be docx or richtext")
     return normalized
 
 
 class CreateRequirementRequest(BaseModel):
     name: str
-    document_type: str = Field(default="text")
+    document_type: str = Field(default="richtext")
     document_file_id: str = Field(default="", max_length=64)
     document_content: str = Field(default="")
 
@@ -52,7 +53,7 @@ class RequirementMetadataResponse(BaseModel):
     requirement_id: str = Field()
     sprint_id: str = Field()
     name: str
-    document_type: str = Field(default="text")
+    document_type: str = Field(default="richtext")
     document_file_id: str = Field(default="", max_length=64)
     document_filename: str = Field(default="")
     document_hash: str = Field(default="")

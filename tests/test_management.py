@@ -43,6 +43,25 @@ class ManagementTests(unittest.TestCase):
         manage.init(self.root)
         self.data = manage.read(self.root / "config/platform.toml")
 
+    def test_realtime_redis_configuration_supports_local_docker_and_shared_deployment(self):
+        local = manage.configurations(self.data, "local", self.root)
+        docker = manage.configurations(self.data, "docker", self.root)
+        self.assertEqual(local["control-plane"]["test_run_notifications"]["redis_url"],
+                         "redis://127.0.0.1:16379/0")
+        self.assertEqual(docker["api-ui-worker"]["notifications"]["redis_url"],
+                         "redis://redis:6379/0")
+        self.assertEqual(docker["api-ui-worker"]["worker"]["poll_interval_ms"], 30000)
+        self.data["redis"]["url"] = "rediss://shared.example:6380/1"
+        for mode in ("local", "docker"):
+            configs = manage.configurations(self.data, mode, self.root)
+            self.assertEqual(configs["control-plane"]["test_run_notifications"]["redis_url"],
+                             "rediss://shared.example:6380/1")
+            self.assertEqual(configs["api-ui-worker"]["notifications"]["redis_url"],
+                             "rediss://shared.example:6380/1")
+        self.data["redis"]["url"] = "http://bad.example"
+        with self.assertRaisesRegex(ValueError, "redis.url"):
+            manage.configurations(self.data, "docker", self.root)
+
     def test_ai_worker_selection_renders_only_one_service_and_isolated_storage(self):
         for backend, volume in (
             ("nanobot", "ai-runtime"),

@@ -1,6 +1,6 @@
 import { SearchOutlined } from '@ant-design/icons'
 import { Empty, Input, Popconfirm, Tooltip } from 'antd'
-import type { DragEvent } from 'react'
+import { memo, type DragEvent } from 'react'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import type { ApiCase } from '@/services/api'
 import { DRAFT_CASE_ID, methodTone } from '../config/collectionConfig'
@@ -33,7 +33,7 @@ type Props = {
   onDragEnd: () => void
 }
 
-export function ApiCaseExplorer({
+export const ApiCaseExplorer = memo(function ApiCaseExplorer({
   cases,
   selectedCaseId,
   loading,
@@ -189,4 +189,4 @@ export function ApiCaseExplorer({
       </div>
     </section>
   )
-}
+})

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from typing import Any
 
 from testing_agent.core.errors import (
@@ -41,11 +42,13 @@ class RequirementService:
         files=None,
         *,
         deletion: ResourceDeletion | None = None,
+        initialize_generation: Callable[[Requirement, str, str], None] | None = None,
     ) -> None:
         self.deletion = deletion or SqlResourceDeletion()
         self.requirements = requirements
         self.sprints = sprints
         self.files = files
+        self.initialize_generation = initialize_generation
 
     async def get_accessible_entity(
         self, user_id: str, requirement_id: str, *, action: ProjectAction = "read"
@@ -62,7 +65,7 @@ class RequirementService:
         sprint_id: str,
         body: CreateRequirementRequest,
     ) -> dict:
-        await self.sprints.get_accessible_entity(user_id, sprint_id, action="write")
+        sprint = await self.sprints.get_accessible_entity(user_id, sprint_id, action="write")
         existing = await self.requirements.get_active_by_sprint_and_name(sprint_id, body.name)
         if existing is not None:
             raise ErrRequirementNameAlreadyUse()
@@ -78,6 +81,8 @@ class RequirementService:
         elif body.document_content:
             raise AppError(400, "请先上传需求原文件到 S3，再提交 documentFileId", 400)
         self.requirements.add(requirement)
+        if self.initialize_generation is not None:
+            self.initialize_generation(requirement, sprint.project_id, user_id)
         await self.requirements.commit()
         await self.requirements.refresh(requirement)
         return dump_requirement(requirement)
@@ -185,8 +190,8 @@ class RequirementService:
             purpose="requirement",
         )
         suffix = row.filename.rsplit(".", 1)[-1].lower()
-        expected = {"docx": "docx", "html": "richtext"}.get(suffix, "text")
-        if requirement.document_type != expected:
+        expected = {"docx": "docx", "html": "richtext"}.get(suffix)
+        if expected is None or requirement.document_type != expected:
             raise ErrBadRequest()
         if expected == "richtext":
             from testing_agent.domain.rich_text import extract_file_ids

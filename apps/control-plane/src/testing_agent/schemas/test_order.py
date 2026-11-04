@@ -175,6 +175,7 @@ class TestOrderGraphRequest(BaseModel):
 
     graph_input: Any = Field(default_factory=dict)
     connection_id: str = Field(default="")
+    request_id: str | None = Field(default=None, min_length=1, max_length=64)
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 

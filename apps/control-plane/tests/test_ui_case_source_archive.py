@@ -181,54 +181,40 @@ def test_archive_validation_preserves_capacity_limits(monkeypatch, limit, value,
         module.validate_source_archive("source.zip", source)
 
 
-def test_ui_run_requires_archive_and_snapshot_pins_file_id(tmp_path):
+def test_requirement_linked_ui_run_directs_user_to_stage_chain(tmp_path):
     repository = UiTaskRepository()
     client, _ = ui_task_client(repository, tmp_path)
     task_id = create_ui_task(client)
-
-    missing_archive = client.post(
-        f"/v1/ui-case-generate-tasks/{task_id}/run",
-        json={"connectionId": "llm-1"},
+    response = client.post(
+        f"/v1/ui-case-generate-tasks/{task_id}/run", json={"connectionId": "llm-1"}
     )
-    assert missing_archive.status_code == 400
-
+    assert response.status_code == 400 and "请在需求生成链" in response.text
+    assert not any(isinstance(item, WorkerTask) for item in repository.added)
     source = zip_bytes([("src/main.py", b"v1")])
     assert upload_archive(client, task_id, "source.zip", source).status_code == 200
-
-    started = client.post(
-        f"/v1/ui-case-generate-tasks/{task_id}/run",
-        json={"connectionId": "llm-1"},
+    response = client.post(
+        f"/v1/ui-case-generate-tasks/{task_id}/run", json={"connectionId": "llm-1"}
     )
-
-    assert started.status_code == 200
-    worker_task = next(row for row in repository.added if isinstance(row, WorkerTask))
-    snapshot = started.json()["data"]["snapshotJson"]
-    assert snapshot["sourceArchiveFileId"] == repository.archive.file_id
-    assert snapshot["sourceType"] == "source_archive"
-    assert snapshot["sourceContent"] == ""
-    assert snapshot["sourceArchiveDownloadUrl"] == (
-        f"/internal/ai-worker/tasks/{worker_task.task_id}/source-archive"
-    )
-    assert "documentDownloadUrl" not in snapshot
+    assert response.status_code == 400 and "请在需求生成链" in response.text
+    assert not any(isinstance(item, WorkerTask) for item in repository.added)
 
 
-def test_ui_run_snapshot_includes_imported_requirement_enhanced_text(tmp_path):
+def test_unbound_historical_ui_task_cannot_write_old_run_ledger(tmp_path):
     repository = UiTaskRepository()
-    repository.requirement.document_content = "已确认的登录需求"
     client, _ = ui_task_client(repository, tmp_path)
     task_id = create_ui_task(client)
-    uploaded = upload_archive(client, task_id, "source.zip", zip_bytes([("src/main.py", b"v1")]))
-    assert uploaded.status_code == 200
-
-    started = client.post(
-        f"/v1/ui-case-generate-tasks/{task_id}/run",
-        json={"connectionId": "llm-1"},
+    source = zip_bytes([("src/main.py", b"v1")])
+    assert upload_archive(client, task_id, "source.zip", source).status_code == 200
+    archive = repository.archive
+    # Old databases may contain an unbound task even though new UI tasks require a requirement.
+    repository.tasks[task_id].requirement_id = ""
+    repository.tasks[task_id].sprint_id = ""
+    response = client.post(
+        f"/v1/ui-case-generate-tasks/{task_id}/run", json={"connectionId": "llm-1"}
     )
-
-    assert started.status_code == 200
-    snapshot = started.json()["data"]["snapshotJson"]
-    assert snapshot["sourceContent"] == "已确认的登录需求"
-    assert "documentDownloadUrl" not in snapshot
+    assert response.status_code == 400 and "关联需求" in response.text
+    assert repository.archive is archive
+    assert not any(isinstance(item, WorkerTask) for item in repository.added)
 
 
 def worker_settings(upload_dir):
@@ -289,13 +275,20 @@ def test_worker_downloads_pinned_s3_archive_and_rejects_local_requirement(tmp_pa
     first = zip_bytes([("version.txt", b"v1")])
     second = zip_bytes([("version.txt", b"v2")])
     assert upload_archive(user_client, task_id, "v1.zip", first).status_code == 200
-    started = user_client.post(
-        f"/v1/ui-case-generate-tasks/{task_id}/run",
-        json={"connectionId": "llm-1"},
+    run = SimpleNamespace(
+        run_id="standalone-run",
+        task_id=task_id,
+        project_id="project-1",
+        requirement_id="requirement-1",
+        snapshot_json={"sourceArchiveFileId": repository.archive.file_id},
     )
-    assert started.status_code == 200
-    run = repository.runs[started.json()["data"]["runId"]]
-    worker_task = next(row for row in repository.added if isinstance(row, WorkerTask))
+    worker_task = WorkerTask(
+        domain="ai",
+        task_id="standalone-worker",
+        task_type="ui_case_generate",
+        run_id=run.run_id,
+        status="running",
+    )
 
     first_file_id = repository.archive.file_id
     assert upload_archive(user_client, task_id, "v2.zip", second).status_code == 200
@@ -303,6 +296,22 @@ def test_worker_downloads_pinned_s3_archive_and_rejects_local_requirement(tmp_pa
 
     settings = worker_settings(tmp_path)
     worker_repository = WorkerAssetRepository(worker_task, run, repository, repository.requirement)
+    worker_repository.session = object()
+    direct = SimpleNamespace(
+        is_direct=AsyncMock(return_value=True),
+        authorize=AsyncMock(
+            return_value=SimpleNamespace(
+                task=SimpleNamespace(requirement_id="requirement-1"),
+                input_snapshot={"source": {"sourceArchiveFileId": first_file_id}},
+            )
+        ),
+    )
+    monkeypatch.setattr(worker_module, "DirectStageWorkerService", lambda _: direct)
+    monkeypatch.setattr(
+        worker_module,
+        "StandaloneWorkerService",
+        lambda _: SimpleNamespace(is_standalone=AsyncMock(return_value=False)),
+    )
     app = create_app(settings)
     app.dependency_overrides[get_settings] = lambda: settings
     app.dependency_overrides[get_file_service] = lambda: user_client.app.state.test_files
@@ -344,7 +353,10 @@ def test_worker_downloads_pinned_s3_archive_and_rejects_local_requirement(tmp_pa
 
     assert inline_document_response.status_code == 409
 
-    run.task_id = "different-generate-task"
+    from testing_agent.core.errors import ErrNotFound
+
+    # A mismatched queue is rejected by the stage authorization boundary.
+    direct.authorize.side_effect = ErrNotFound()
     wrong_archive = worker_client.get(
         f"/internal/ai-worker/tasks/{worker_task.task_id}/source-archive",
         headers=headers,
@@ -358,63 +370,6 @@ def test_worker_downloads_pinned_s3_archive_and_rejects_local_requirement(tmp_pa
     assert wrong_document.status_code == 404
 
 
-@pytest.mark.parametrize("root_key", ["cases", "items"])
-def test_ui_candidate_can_be_edited_approved_and_then_frozen(tmp_path, root_key):
-    repository = UiTaskRepository()
-    client, _ = ui_task_client(repository, tmp_path)
-    task_id = create_ui_task(client)
-    assert (
-        upload_archive(client, task_id, "source.zip", zip_bytes([("main.py", b"x")])).status_code
-        == 200
-    )
-    started = client.post(
-        f"/v1/ui-case-generate-tasks/{task_id}/run",
-        json={"connectionId": "llm-1"},
-    )
-    run_id = started.json()["data"]["runId"]
-    repository.runs[run_id].status = "success"
-    # This regression specifically preserves wrapped output from legacy single-stage runs.
-    repository.runs[run_id].snapshot_json.pop("uiWorkflowVersion", None)
-    candidate = f"""{root_key}:
-  - name: Login
-    enabled: true
-    orderNo: 1
-    stepsJson:
-      - orderNo: 1
-        stepName: Open login
-        keyword: open
-        operationValue: https://example.test/login
-        continueOnFailure: false
-        enabled: true
-"""
-
-    invalid = client.patch(
-        f"/v1/ui-case-generate-task-runs/{run_id}/result",
-        json={"resultYaml": "cases:\n  - name: Missing fields\n"},
-    )
-    saved = client.patch(
-        f"/v1/ui-case-generate-task-runs/{run_id}/result",
-        json={"resultYaml": candidate},
-    )
-    approved = client.post(
-        f"/v1/ui-case-generate-task-runs/{run_id}/review",
-        json={"action": "approve", "reviewComment": "ready"},
-    )
-    frozen = client.patch(
-        f"/v1/ui-case-generate-task-runs/{run_id}/result",
-        json={"resultYaml": "cases: []"},
-    )
-
-    assert invalid.status_code == 400
-    assert saved.status_code == 200
-    assert saved.json()["data"]["resultYaml"] == candidate
-    assert approved.status_code == 200
-    assert approved.json()["data"]["reviewStatus"] == "approved"
-    assert approved.json()["data"]["importStatus"] == "pending"
-    assert approved.json()["data"]["importedTargets"] == []
-    assert frozen.status_code == 400
-
-
 def test_ui_generation_user_routes_reject_cross_user_access(tmp_path):
     repository = UiTaskRepository()
     client, _ = ui_task_client(repository, tmp_path)
@@ -423,12 +378,17 @@ def test_ui_generation_user_routes_reject_cross_user_access(tmp_path):
         upload_archive(client, task_id, "source.zip", zip_bytes([("main.py", b"x")])).status_code
         == 200
     )
-    started = client.post(
-        f"/v1/ui-case-generate-tasks/{task_id}/run",
-        json={"connectionId": "llm-1"},
+    run_id = "existing-run"
+    repository.runs[run_id] = SimpleNamespace(
+        run_id=run_id,
+        task_id=task_id,
+        trigger_user_id="user-1",
+        status="success",
+        project_id="project-1",
+        sprint_id="sprint-1",
+        requirement_id="requirement-1",
+        snapshot_json={},
     )
-    assert started.status_code == 200
-    run_id = started.json()["data"]["runId"]
 
     client.app.dependency_overrides[get_current_user_id] = lambda: "user-2"
     responses = [
@@ -457,7 +417,10 @@ def test_ui_generation_user_routes_reject_cross_user_access(tmp_path):
         ),
     ]
 
-    assert [response.status_code for response in responses] == [403] * len(responses)
+    # Retired runs resolve as missing before the cross-user check; neither
+    # outcome may disclose or mutate the other user's record.
+    assert [response.status_code for response in responses[:8]] == [403] * 8
+    assert {response.status_code for response in responses[8:]} <= {403, 404}
 
 
 def test_local_source_archive_requires_reupload(tmp_path):
@@ -471,8 +434,8 @@ def test_local_source_archive_requires_reupload(tmp_path):
     response = client.post(
         f"/v1/ui-case-generate-tasks/{task_id}/run", json={"connectionId": "llm-1"}
     )
-    assert response.status_code == 409
-    assert "重新上传" in response.json()["message"]
+    assert response.status_code == 400
+    assert "请在需求生成链" in response.json()["message"]
     response = client.put(
         f"/v1/ui-case-generate-tasks/{task_id}/source-archive", files={"file": ("old.zip", b"ZIP")}
     )

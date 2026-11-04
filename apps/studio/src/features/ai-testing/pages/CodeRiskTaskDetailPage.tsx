@@ -1,4 +1,5 @@
 import { listTotal } from '@/shared/api/request'
+import { usePendingRequestId } from '@/shared/hooks/usePendingRequestId'
 import { getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
 import { useTaskRunHistorySync } from '@/features/ai-testing/hooks/useTaskRunHistorySync'
 import { useDeleteTaskRun, useStartTaskRun } from '@/features/ai-testing/hooks/useTaskRunActions'
@@ -113,12 +114,18 @@ export function CodeRiskTaskDetailPage() {
     if (latest) setSelectedRunRecordId(latest)
   }, [runRecords, selectedRunRecordId])
 
+  const pendingRiskRequest = usePendingRequestId()
   const runTaskMutation = useStartTaskRun({
     kind: 'codeRisk',
     taskId,
     projectId: task?.projectId,
-    startRun: async (connectionId: string) => api.runCodeRiskTask(taskId, { llmConnectionId: connectionId, triggerType: 'manual', gitlabConnectionIds: await personalGitlab.forRequirement(task!.projectId!, task!.requirementId!) }),
+    startRun: async (connectionId: string) => {
+      const gitlabConnectionIds = await personalGitlab.forRequirement(task!.projectId!, task!.requirementId!)
+      const key = JSON.stringify({ taskId, connectionId, gitlabConnectionIds: Object.entries(gitlabConnectionIds).sort(([a], [b]) => a.localeCompare(b)) })
+      return api.runCodeRiskTask(taskId, { llmConnectionId: connectionId, triggerType: 'manual', gitlabConnectionIds, requestId: pendingRiskRequest.forInput(key) })
+    },
     onStarted: (run) => {
+      pendingRiskRequest.clear()
       setRunPage(1)
       setLlmSelectOpen(false)
       if (run.runId) setSelectedRunRecordId(run.runId)
@@ -282,7 +289,6 @@ export function CodeRiskTaskDetailPage() {
                       type="error"
                       className="ai-task-detail-report-failure"
                       title={selectedRun.errorMessage || '运行失败'}
-                      description={selectedRun.remediation || undefined}
                     />
                   ) : null}
                   {selectedRun.report ? (
@@ -292,9 +298,6 @@ export function CodeRiskTaskDetailPage() {
                   ) : (
                     <Empty description="该运行没有报告内容" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                   )}
-                  {selectedRun.remediation && !selectedRunFailed ? (
-                    <Alert showIcon type="info" title={selectedRun.remediation} />
-                  ) : null}
                 </>
               )}
             </Card>

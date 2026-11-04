@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -16,18 +17,27 @@ from ..contracts.types import (
     UiCaseRunSnapshot,
     UiCaseRunStatus,
     UiStepDefinition,
+    UiStepRunResult,
     WorkerConfig,
 )
 from ..core import logger
+from ..control_plane.client import ExecutionLeaseLost
+from .browser_cancellation import (
+    await_browser_operation,
+    await_browser_start,
+    close_browser_resource,
+)
 from .browser_options import (
     context_options_from_suite,
     default_step_timeout_from_suite,
     launch_options_from_suite,
     screenshot_policy_from_suite,
 )
+from .playwright_session import playwright_session
 from .step_executor import StepExecutionContext, StepExecutor, now_iso
 from .step_normalizer import normalize_case_steps
 from .step_results import build_failed_step_result
+from .step_progress import report_steps
 from .variables import StepVariableResolver
 
 
@@ -102,7 +112,7 @@ class UiCaseRunner:
         steps.sort(key=lambda s: s.order_no or 0)
 
         # 启动浏览器
-        async with async_playwright() as p:
+        async with playwright_session(async_playwright, snapshot.task_id) as p:
             launch_options = launch_options_from_suite(snapshot.suite)
             context_options = context_options_from_suite(snapshot.suite)
             logger.info(
@@ -114,10 +124,10 @@ class UiCaseRunner:
                     "ignoreHTTPSErrors": context_options.get("ignore_https_errors"),
                 },
             )
-            browser = await p.chromium.launch(**launch_options)
+            browser = await await_browser_start(p.chromium.launch(**launch_options))
 
             trace_path = ""
-            step_results = []
+            step_results: list[UiStepRunResult] = []
             error_message = ""
             status: UiCaseRunStatus = "success"
             success = True
@@ -157,19 +167,32 @@ class UiCaseRunner:
                     fallback_order = step.order_no or index + 1
                     step_started_at_iso = now_iso()
                     step_started_at = datetime.now().timestamp()
+                    await report_steps(
+                        self._control_plane_client,
+                        snapshot.task_id,
+                        None,
+                        step_results,
+                        step,
+                        fallback_order,
+                        step_started_at_iso,
+                    )
 
                     try:
-                        result = await self._step_executor.execute(
-                            step, fallback_order, execution_context
+                        result = await await_browser_operation(
+                            self._step_executor.execute(
+                                step, fallback_order, execution_context
+                            ),
+                            page,
                         )
                         if screenshot_policy == "after_each_step":
-                            screenshot_path = (
-                                await self._step_executor.capture_step_screenshot(
+                            screenshot_path = await await_browser_operation(
+                                self._step_executor.capture_step_screenshot(
                                     page,
                                     artifact_dir,
                                     fallback_order,
                                     execution_context.masked_locators,
-                                )
+                                ),
+                                page,
                             )
                             result = result.__class__(
                                 **{
@@ -178,6 +201,14 @@ class UiCaseRunner:
                                 }
                             )
                         step_results.append(result)
+                        await report_steps(
+                            self._control_plane_client,
+                            snapshot.task_id,
+                            None,
+                            step_results,
+                        )
+                    except ExecutionLeaseLost:
+                        raise
                     except Exception as e:
                         message = str(e)
                         failed_result = build_failed_step_result(
@@ -193,11 +224,14 @@ class UiCaseRunner:
                         # 捕获失败截图
                         if screenshot_policy in ("on_failure", "after_each_step"):
                             try:
-                                screenshot_path = await self._step_executor.capture_failure_screenshot(
+                                screenshot_path = await await_browser_operation(
+                                    self._step_executor.capture_failure_screenshot(
+                                        page,
+                                        artifact_dir,
+                                        fallback_order,
+                                        execution_context.masked_locators,
+                                    ),
                                     page,
-                                    artifact_dir,
-                                    fallback_order,
-                                    execution_context.masked_locators,
                                 )
                                 failed_result = failed_result.__class__(
                                     **{
@@ -216,6 +250,12 @@ class UiCaseRunner:
                                 )
 
                         step_results.append(failed_result)
+                        await report_steps(
+                            self._control_plane_client,
+                            snapshot.task_id,
+                            None,
+                            step_results,
+                        )
                         success = False
                         status = "failed"
                         error_message = message
@@ -232,6 +272,8 @@ class UiCaseRunner:
                     await context.tracing.stop(path=trace_path)
                     trace_stopped = True
 
+            except ExecutionLeaseLost:
+                raise
             except Exception as e:
                 success = False
                 status = "error"
@@ -240,33 +282,24 @@ class UiCaseRunner:
             finally:
                 # 停止 trace
                 if context and self._config.trace_enabled and not trace_stopped:
-                    try:
-                        trace_path = str(Path(artifact_dir) / "trace.zip")
-                        await context.tracing.stop(path=trace_path)
-                    except Exception as trace_error:
-                        logger.warn(
-                            "stop trace error",
-                            {
-                                "taskId": snapshot.task_id,
-                                "error": str(trace_error),
-                            },
-                        )
+                    candidate = str(Path(artifact_dir) / "trace.zip")
+                    if await close_browser_resource(
+                        context.tracing.stop(path=candidate), snapshot.task_id, "trace"
+                    ):
+                        trace_path = candidate
 
                 # 关闭上下文
                 if context:
-                    try:
-                        await context.close()
-                    except Exception as context_error:
-                        logger.warn(
-                            "close browser context error",
-                            {
-                                "taskId": snapshot.task_id,
-                                "error": str(context_error),
-                            },
-                        )
+                    await close_browser_resource(
+                        context.close(), snapshot.task_id, "context"
+                    )
 
                 # 关闭浏览器
-                await browser.close()
+                closed = await close_browser_resource(
+                    browser.close(), snapshot.task_id, "browser"
+                )
+                if not closed and sys.exc_info()[0] is None:
+                    raise RuntimeError("浏览器关闭异常，请检查 Worker 资源后手动重试")
 
         return UiCaseRunResult(
             task_id=snapshot.task_id,

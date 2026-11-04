@@ -1,13 +1,11 @@
 from testing_agent.db.base import Base
-from testing_agent.models.ai_generate_execution import (
-    AiGenerateRunImport,
-    AiGenerateRunStage,
-    AiGenerateStageAttempt,
-)
+from testing_agent.models.ai_execution import AiExecution
 from testing_agent.models.ai_generate_stage_version import AiGenerateStageVersion
-from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
+from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generate_task_source_archive import AiGenerateTaskSourceArchive
 from testing_agent.models.ai_generate_version_import import AiGenerateVersionImport
+from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
+from testing_agent.models.ai_generation_stage import AiGenerationStage
 from testing_agent.models.api_assert_rule import ApiAssertRule
 from testing_agent.models.api_case import ApiCase
 from testing_agent.models.api_case_run import ApiCaseRun
@@ -66,16 +64,15 @@ __all__ = [
     "StoredFile",
     "ServiceAuthorization",
     "SharedService",
-    "AiGenerateRunImport",
-    "AiGenerateRunStage",
-    "AiGenerateStageAttempt",
+    "AiExecution",
     "AiGenerateStageVersion",
     "AiGenerateVersionImport",
+    "AiGenerationAttempt",
+    "AiGenerationStage",
     "AiGenerateTask",
     "AiGenerateTaskSourceArchive",
     "ApiAssertRule",
     "ApiCase",
-    "AiGenerateTaskRun",
     "ApiCaseRun",
     "ApiCollection",
     "ApiCollectionRun",

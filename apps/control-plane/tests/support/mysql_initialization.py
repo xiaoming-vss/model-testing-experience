@@ -12,8 +12,7 @@ from support.initial_schema_migration import migration_config
 from testing_agent.models import Base
 
 
-@pytest.fixture(scope="module")
-def mysql():
+def _mysql_fixture(revision):
     url = os.environ.get("CONTROL_PLANE_TEST_DATABASE_URL")
     if not url:
         pytest.skip("Set CONTROL_PLANE_TEST_DATABASE_URL to an empty disposable MySQL database")
@@ -23,21 +22,32 @@ def mysql():
     with engine.connect() as connection:
         assert sa.inspect(connection).get_table_names() == [], "Test database must be empty"
         config = migration_config(connection)
-        command.upgrade(config, "head")
+        command.upgrade(config, revision)
         connection.commit()
         yield engine
-        command.downgrade(config, "base")
-        connection.exec_driver_sql("DROP TABLE alembic_version")
+        # The database was checked empty and has a test-only name, so discard
+        # its schema after the module finishes instead of relying on downgrade.
+        connection.exec_driver_sql("SET FOREIGN_KEY_CHECKS=0")
+        for name in sa.inspect(connection).get_table_names():
+            quoted = connection.dialect.identifier_preparer.quote(name)
+            connection.exec_driver_sql(f"DROP TABLE {quoted}")
+        connection.exec_driver_sql("SET FOREIGN_KEY_CHECKS=1")
         connection.commit()
     engine.dispose()
+
+
+@pytest.fixture(scope="module")
+def mysql():
+    yield from _mysql_fixture("head")
 
 
 def seed_row(connection, table, overrides=None):
     """Populate required columns and real parent rows for constraint tests."""
     values = {}
+    overrides = overrides or {}
     existing = {column["name"] for column in sa.inspect(connection).get_columns(table.name)}
     for col in table.columns:
-        if col.name not in existing:
+        if col.name not in existing or col.name in overrides:
             continue
         if col.computed is not None or col.nullable or col.default is not None:
             continue
@@ -62,7 +72,7 @@ def seed_row(connection, table, overrides=None):
         values["role"] = "member"
     if table.name == "sprints":
         values["end_time"] = values["start_time"] + timedelta(days=1)
-    values.update(overrides or {})
+    values.update(overrides)
     result = connection.execute(table.insert().values(**values))
     for key, value in zip(
         table.primary_key.columns.keys(), result.inserted_primary_key, strict=True

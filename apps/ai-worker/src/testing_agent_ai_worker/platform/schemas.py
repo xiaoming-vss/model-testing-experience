@@ -11,7 +11,7 @@ class PlatformClaimTask(BaseModel):
         validation_alias=AliasChoices("id", "claimId", "claim_id", "leaseId", "lease_id"),
     )
     task_id: str = Field(validation_alias=AliasChoices("taskId", "task_id", "id"))
-    run_id: str = Field(default="", validation_alias=AliasChoices("runId", "run_id"))
+    attempt_id: str = Field(default="", validation_alias=AliasChoices("attemptId", "attempt_id"))
     generate_task_id: str = Field(
         default="",
         validation_alias=AliasChoices("generateTaskId", "generate_task_id"),
@@ -61,7 +61,7 @@ class PlatformLlmCredentials(BaseModel):
 class PlatformSnapshotRun(BaseModel):
     workflow_version: int = Field(default=2, validation_alias="workflowVersion")
     task_id: str = Field(validation_alias=AliasChoices("taskId", "task_id", "id"))
-    run_id: str = Field(default="", validation_alias=AliasChoices("runId", "run_id"))
+    attempt_id: str = Field(default="", validation_alias=AliasChoices("attemptId", "attempt_id"))
     generate_task_id: str = Field(
         default="",
         validation_alias=AliasChoices("generateTaskId", "generate_task_id"),

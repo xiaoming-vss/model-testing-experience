@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import select
+from sqlalchemy.orm import load_only
 
 from testing_agent.models.api_case import ApiCase
 from testing_agent.models.api_case_run import ApiCaseRun
@@ -43,7 +44,8 @@ class ApiCollectionRunRepository(ApiRunScopeRepositoryMixin, BaseRepository):
             .where(
                 ApiEnvironment.environment_id == environment_id,
             )
-            .with_for_update()
+            # Snapshot readers may run concurrently while environment writers wait.
+            .with_for_update(read=True)
         )
 
     async def list_environment_vars(self, environment_id: str) -> list[ApiEnvironmentVar]:
@@ -105,7 +107,9 @@ class ApiCollectionRunRepository(ApiRunScopeRepositoryMixin, BaseRepository):
         result = {}
         for offset in range(0, len(case_ids), 500):
             rows = await self.session.scalars(
-                select(ApiCase).where(ApiCase.case_id.in_(case_ids[offset : offset + 500]))
+                select(ApiCase)
+                .options(load_only(ApiCase.case_id, ApiCase.name, raiseload=True))
+                .where(ApiCase.case_id.in_(case_ids[offset : offset + 500]))
             )
             result.update({row.case_id: row for row in rows})
         return result
@@ -114,7 +118,19 @@ class ApiCollectionRunRepository(ApiRunScopeRepositoryMixin, BaseRepository):
         result = {}
         for offset in range(0, len(run_ids), 500):
             rows = await self.session.scalars(
-                select(ApiCaseRun).where(ApiCaseRun.run_id.in_(run_ids[offset : offset + 500]))
+                select(ApiCaseRun)
+                .options(
+                    load_only(
+                        ApiCaseRun.run_id,
+                        ApiCaseRun.request_snapshot_json,
+                        ApiCaseRun.response_snapshot_json,
+                        ApiCaseRun.runtime_vars_json,
+                        ApiCaseRun.extract_results_json,
+                        ApiCaseRun.assert_results_json,
+                        raiseload=True,
+                    )
+                )
+                .where(ApiCaseRun.run_id.in_(run_ids[offset : offset + 500]))
             )
             result.update({row.run_id: row for row in rows})
         return result

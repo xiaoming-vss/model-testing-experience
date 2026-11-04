@@ -17,7 +17,7 @@ const surface = { schemaVersion: 'ui_test_surface/1.0', pages: [], controls: [],
 const initial: UiCaseGenerateTaskRun = {
   runId: 'ui-run', projectId: 'project-1', status: 'waiting_review', checkpointEnabled: true,
   currentStage: 'ui_surface', stageStatus: 'waiting_review', reviewStatus: 'pending', importStatus: 'pending',
-  importedTargets: [], importedAt: null, importMigrationComplete: true,
+  importedTargets: [], importedAt: null,
   configJson: { uiSurface: surface },
 }
 function response(data: unknown) { return new Response(JSON.stringify({ code: 0, message: 'ok', data }), { status: 200 }) }
@@ -127,6 +127,11 @@ it('offers retry only for the failed current stage', async () => {
   mount({ ...initial, status: 'failed', currentStage: 'ui_design', errorMessage: '模型超时' })
   expect(await screen.findByRole('button', { name: '重试本阶段' })).toBeEnabled()
   expect(screen.queryByRole('button', { name: '审核通过并继续' })).not.toBeInTheDocument()
+})
+
+it('still explains a failure when the worker returned no reason', async () => {
+  mount({ ...initial, status: 'failed', currentStage: 'ui_design', errorMessage: '' })
+  expect(await screen.findByText('阶段执行失败，Worker 未返回具体原因')).toBeInTheDocument()
 })
 
 it('opens the stage requested by the artifact entry instead of the current stage', async () => {

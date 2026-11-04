@@ -107,7 +107,7 @@ async def test_cross_project_image_cannot_attach_and_old_source_is_preserved(fil
     assert (await files.get(file_id)).status == "ready"
     assert (await files.get(image_id)).status == "ready"
     original = await RequirementRepository(files.session).get_active_by_id("r")
-    assert original.document_type == "text"
+    assert original.document_type == "richtext"
     assert original.document_file_id == ""
 
 

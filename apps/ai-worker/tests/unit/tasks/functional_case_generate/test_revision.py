@@ -20,7 +20,7 @@ class FunctionalRevisionTests(unittest.TestCase):
         return Task(
             claim_id="claim",
             task_id="task",
-            run_id="run",
+            attempt_id="run",
             generate_task_id="generate",
             task_type="functional_case_generate",
             project_id="project",

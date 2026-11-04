@@ -95,3 +95,5 @@ Worker 不再监听文件下载端口，9010 截图服务已移除。截图和 T
 ## UI YAML 待补内容
 
 步骤中的 `missingFields` 是人工编辑草稿标记，不是执行指令。规范化之前检查原始 stepsJson，即使同时提供显式 steps 也不丢弃该标记；显式 UiStepDefinition 的 missing_fields 及直接步骤执行入口同样拒绝待补内容。空数组兼容已补齐文件。控制面在导入和创建运行前执行对应检查，详见[UI YAML 待补内容](../control-plane/ui-yaml-completion.md)。
+
+API/UI 实时通知、停止与临时调试结果的部署和故障处理见 [实时执行](../control-plane/realtime-test-execution.md)。

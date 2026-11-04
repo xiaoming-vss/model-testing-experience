@@ -9,18 +9,24 @@ from testing_agent.handlers.test_order import (
     create_test_order,
     delete_test_order,
     delete_test_order_entry,
+    delete_test_order_graph_run,
     dispatch_test_order_graph,
     get_test_order,
     get_test_order_entry,
     get_test_order_graph,
     get_test_order_graph_input,
+    get_test_order_graph_run,
     list_project_test_orders,
     list_test_order_entries,
+    list_test_order_graph_runs,
     lookup_test_order_entries,
     update_test_order,
     update_test_order_entry,
 )
-from testing_agent.schemas.ai_generate_task import AiGenerateTaskRunResponse
+from testing_agent.schemas.ai_generate_task import (
+    AiGenerateRunHistoryResponse,
+    AiGenerateTaskRunResponse,
+)
 from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
 from testing_agent.schemas.test_order import (
     TestOrderAddCasesResponse,
@@ -100,3 +106,17 @@ router.get(
     "/test-orders/{order_id}/graph-input",
     response_model=ApiResponse[TestOrderGraphInputResponse],
 )(get_test_order_graph_input)
+
+router.delete(
+    "/test-order-graph-runs/{run_id}",
+    response_model=ApiResponse[EmptyData],
+)(delete_test_order_graph_run)
+
+router.get(
+    "/test-orders/{order_id}/graph-analysis/runs",
+    response_model=ApiResponse[AiGenerateRunHistoryResponse],
+)(list_test_order_graph_runs)
+router.get(
+    "/test-order-graph-runs/{run_id}",
+    response_model=ApiResponse[AiGenerateTaskRunResponse],
+)(get_test_order_graph_run)

@@ -46,7 +46,7 @@ def _task(
         )
     return Task(
         task_id="task-1",
-        run_id="run-1",
+        attempt_id="run-1",
         generate_task_id="generate-1",
         task_type="code_risk_analysis",
         project_id="project-1",
@@ -241,7 +241,6 @@ class CodeRiskAnalysisExecutorTests(unittest.TestCase):
 
         self.assertEqual(TaskStatus.FAILED, result.status)
         self.assertIn("尚未完成需求分析", result.error_message or "")
-        self.assertIn("requirement_analysis", result.remediation or "")
         self.assertEqual([], progresses)
         self.assertEqual([], skill_runner.calls)
 
@@ -256,7 +255,6 @@ class CodeRiskAnalysisExecutorTests(unittest.TestCase):
 
         self.assertEqual(TaskStatus.FAILED, result.status)
         self.assertIn("凭证接口不可用", result.error_message or "")
-        self.assertIn("PAT", result.remediation or "")
         self.assertEqual([], progresses)
         self.assertEqual([], skill_runner.calls)
 
@@ -271,7 +269,6 @@ class CodeRiskAnalysisExecutorTests(unittest.TestCase):
 
         self.assertEqual(TaskStatus.FAILED, result.status)
         self.assertIn("项目技能包未预置", result.error_message or "")
-        self.assertIn("预置", result.remediation or "")
         self.assertEqual([], progresses)
         self.assertEqual([], skill_runner.calls)
 
@@ -289,7 +286,6 @@ class CodeRiskAnalysisExecutorTests(unittest.TestCase):
 
         self.assertEqual(TaskStatus.FAILED, result.status)
         self.assertIn("repo-2", result.error_message or "")
-        self.assertIn("基线", result.remediation or "")
         self.assertEqual(["fetching_diff"], [p.current_stage for p in progresses])
         self.assertEqual([], skill_runner.calls)
 

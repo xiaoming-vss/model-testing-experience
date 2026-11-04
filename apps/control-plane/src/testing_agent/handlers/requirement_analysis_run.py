@@ -4,13 +4,13 @@ from fastapi import Depends, Query
 
 from testing_agent.api.deps import (
     get_current_user_id,
-    get_generation_import_context,
     get_generation_launcher,
     get_generation_queries,
     get_generation_stages,
     get_generation_task_commands,
 )
 from testing_agent.core.errors import success_payload
+from testing_agent.handlers.generation_guards import ensure_legacy_mutation_allowed
 from testing_agent.schemas.ai_generate_task import (
     AiGenerateTaskReviewRequest,
     RequirementAnalysisRunRequest,
@@ -18,10 +18,8 @@ from testing_agent.schemas.ai_generate_task import (
 )
 from testing_agent.services.ai_run_launcher import GenerationRunLauncher
 from testing_agent.services.ai_stage_workflow import GenerationStageWorkflow
-from testing_agent.services.ai_task_access import CandidateImportContext
 from testing_agent.services.ai_task_commands import GenerationTaskCommands
 from testing_agent.services.ai_task_queries import GenerationQueries
-from testing_agent.services.requirement_generate_import import import_requirement_analysis_run
 
 
 async def create_requirement_analysis_task(
@@ -121,6 +119,9 @@ async def delete_requirement_analysis_run(
     user_id: str = Depends(get_current_user_id),
     service: GenerationTaskCommands = Depends(get_generation_task_commands),
 ):
+    await ensure_legacy_mutation_allowed(
+        service.access.owned_run, "requirement_analysis", run_id, user_id, action="write"
+    )
     return success_payload(await service.delete_run("requirement_analysis", run_id, user_id))
 
 
@@ -130,6 +131,7 @@ async def save_requirement_analysis_stage_output(
     user_id: str = Depends(get_current_user_id),
     service: GenerationStageWorkflow = Depends(get_generation_stages),
 ):
+    await ensure_legacy_mutation_allowed(service.owned_run, "requirement_analysis", run_id, user_id)
     return success_payload(
         await service.save_requirement_analysis_stage_output(
             run_id, body.model_dump(by_alias=True, exclude_none=True), user_id
@@ -143,6 +145,7 @@ async def review_requirement_analysis_stage(
     user_id: str = Depends(get_current_user_id),
     service: GenerationStageWorkflow = Depends(get_generation_stages),
 ):
+    await ensure_legacy_mutation_allowed(service.owned_run, "requirement_analysis", run_id, user_id)
     return success_payload(
         await service.review_requirement_analysis_stage(
             run_id, body.model_dump(by_alias=True, exclude_none=True), user_id
@@ -156,19 +159,14 @@ async def revise_requirement_analysis_stage(
     user_id: str = Depends(get_current_user_id),
     service: GenerationStageWorkflow = Depends(get_generation_stages),
 ):
+    await ensure_legacy_mutation_allowed(
+        service.owned_run, "requirement_analysis", run_id, user_id, action="execute"
+    )
     return success_payload(
         await service.revise_requirement_analysis_stage(
             run_id, body.model_dump(by_alias=True, exclude_none=True), user_id
         )
     )
-
-
-async def import_requirement_analysis_run_to_requirement(
-    run_id: str,
-    user_id: str = Depends(get_current_user_id),
-    service: CandidateImportContext = Depends(get_generation_import_context),
-):
-    return success_payload(await import_requirement_analysis_run(service, run_id, user_id))
 
 
 async def retry_requirement_analysis_stage(
@@ -177,6 +175,9 @@ async def retry_requirement_analysis_stage(
     user_id: str = Depends(get_current_user_id),
     service: GenerationStageWorkflow = Depends(get_generation_stages),
 ):
+    await ensure_legacy_mutation_allowed(
+        service.owned_run, "requirement_analysis", run_id, user_id, action="execute"
+    )
     return success_payload(
         await service.retry_stage(
             run_id,

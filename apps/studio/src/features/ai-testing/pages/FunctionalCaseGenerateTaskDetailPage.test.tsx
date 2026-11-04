@@ -44,7 +44,6 @@ const pendingRun: FunctionalCaseGenerateTaskRun = {
   importStatus: 'pending',
   importedTargets: [],
   importedAt: null,
-  importMigrationComplete: true,
   resultYaml: candidateYaml,
   createdAt: '2026-08-02T07:00:00.000Z',
 }
@@ -102,6 +101,7 @@ function renderPage(embedded = false) {
           <Routes>
             <Route path="/ai-testing/function-tasks/:taskId" element={<FunctionalCaseGenerateTaskDetailPage dialogRequest={embedded ? { taskId: 'task-1', runId: 'run-1', artifact: 'resultYaml', mode: 'review', onClose: vi.fn() } : undefined} />} />
             <Route path="/ai-testing/function-tasks/:taskId/runs/:runId/graph" element={<FunctionalCaseRelationsPage />} />
+            <Route path="/requirements/:requirementId" element={<div>需求生成链</div>} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
@@ -171,6 +171,13 @@ async function openRunActionsMenu(user: ReturnType<typeof userEvent.setup>, runI
 }
 
 describe('功能候选结果审核与正式资产导入', () => {
+  it('新流程阶段待审核时提供需求生成链入口', async () => {
+    installFetchHandler(() => ({ ...pendingRun, status: 'waiting_review', checkpointEnabled: true,
+      currentStage: 'requirement_analysis', stageStatus: 'waiting_review', snapshotJson: { generationChainManaged: true } }))
+    renderPage()
+    expect(await within(await findRunRow('run-1')).findByRole('button', { name: '前往阶段审核' })).toBeEnabled()
+    expect(screen.queryByRole('button', { name: '审核' })).not.toBeInTheDocument()
+  })
   it.each([false, true])('非选中运行详情加载完成前禁止确认导入，支持加载失败重试（失败：%s）', async (failFirst) => {
     const targetRun = { ...pendingRun, runId: 'run-2', reviewStatus: 'approved', createdAt: '2026-08-01T07:00:00.000Z' }
     let resolveDetails!: (response: Response) => void
@@ -502,6 +509,50 @@ describe('功能候选结果审核与正式资产导入', () => {
     expect(screen.getByText('2026/8/2 17:00:00')).toBeInTheDocument()
     await openRunActionsMenu(user, 'run-1')
     expect(screen.queryByRole('menuitem', { name: '导入正式用例' })).not.toBeInTheDocument()
+  })
+
+  it('独立任务导入时选择目标需求，并在覆盖确认中保留选择', async () => {
+    let currentRun: FunctionalCaseGenerateTaskRun = { ...pendingRun, requirementId: '', reviewStatus: 'approved' }
+    const requestBodies: unknown[] = []
+    const requested: string[] = []
+    installFetchHandler(() => currentRun, (url, init) => {
+      requested.push(url.pathname)
+      if (url.pathname === '/v1/function-case-generate-tasks/task-1') return jsonResponse({ ...task, requirementId: '' })
+      if (url.pathname === '/v1/projects/project-1/sprints') return jsonResponse({ items: [{ sprintId: 'sprint-1', name: '当前迭代' }], total: 1 })
+      if (url.pathname === '/v1/sprints/sprint-1/requirements') return jsonResponse({ items: [{ requirementId: 'target-requirement', name: '支付需求 A' }], total: 1 })
+      if (url.pathname.endsWith('/import') && init?.method === 'POST') {
+        const body = JSON.parse(String(init.body)) as { confirmOverwrite: boolean; requirementId: string }
+        requestBodies.push(body)
+        if (!body.confirmOverwrite) return jsonResponse({
+          requiresConfirmation: true,
+          conflicts: [{
+            normalizedName: 'login',
+            existingCase: { module: '登录', title: '旧标题', preconditions: '', steps: '', expectedResults: '', priority: 'P1', caseType: '功能' },
+            generatedCase: { module: '登录', title: '新标题', preconditions: '', steps: '', expectedResults: '', priority: 'P0', caseType: '功能' },
+          }],
+          run: currentRun,
+        })
+        currentRun = { ...currentRun, importStatus: 'imported' }
+        return jsonResponse({ requiresConfirmation: false, conflicts: [], run: currentRun })
+      }
+    })
+    const user = userEvent.setup()
+    renderPage()
+    await openRunActionsMenu(user, 'run-1')
+    await user.click(await screen.findByRole('menuitem', { name: '导入正式用例' }))
+    const confirm = screen.getByRole('button', { name: '确认导入' })
+    await user.click(screen.getByRole('checkbox', { name: '我已确认结果，确定导入正式用例' }))
+    expect(confirm).toBeDisabled()
+    await waitFor(() => expect(requested).toContain('/v1/sprints/sprint-1/requirements'))
+    await user.click(screen.getByRole('combobox', { name: '目标需求' }))
+    await user.click(await screen.findByText('支付需求 A'))
+    await user.click(screen.getByRole('checkbox', { name: '我已确认结果，确定导入正式用例' }))
+    await user.click(confirm)
+    await user.click(await screen.findByRole('button', { name: '整批确认覆盖' }))
+    await waitFor(() => expect(requestBodies).toEqual([
+      { confirmOverwrite: false, requirementId: 'target-requirement' },
+      { confirmOverwrite: true, requirementId: 'target-requirement' },
+    ]))
   })
 
   it('首次冲突只展示完整新旧字段，取消后仍可重试', async () => {
@@ -859,7 +910,7 @@ it('优化侧栏预填当前编辑中的待确认项，并保留补充内容', a
 })
 
 
-it('显示模型输出自动修复进度，终态不显示过期修复信息', async () => {
+it('运行中不显示模型输出自动修复的详细进度', async () => {
   let currentRun: FunctionalCaseGenerateTaskRun = {
     ...pendingRun, status: 'running', currentStage: 'detailed_cases',
     resultSummaryJson: JSON.stringify({ outputValidation: {
@@ -869,7 +920,8 @@ it('显示模型输出自动修复进度，终态不显示过期修复信息', a
   installFetchHandler(() => currentRun)
   const user = userEvent.setup()
   renderPage()
-  expect(await screen.findByLabelText('详细用例 / 登录：输出校验未通过，正在进行第 1/2 次自动修复')).toBeInTheDocument()
+  await screen.findAllByText('执行中')
+  expect(screen.queryByLabelText(/正在进行第 1\/2 次自动修复/)).not.toBeInTheDocument()
   currentRun = { ...currentRun, status: 'error', stageStatus: 'failed' }
   await user.click(screen.getByRole('button', { name: /刷新/ }))
   await waitFor(() => expect(screen.queryByLabelText(/正在进行第 1\/2 次自动修复/)).not.toBeInTheDocument())
@@ -960,7 +1012,7 @@ it('优化在原窗口右侧展开，取消保留草稿并使用内联选择的�
   await waitFor(() => expect(body).toMatchObject({ llmConnectionId: 'second', revisionInstruction: '补充异常场景' }))
 })
 
-it('功能任务详情不再依赖绑定的增强文本才能打开运行设置', async () => {
+it('需求关联的功能任务从运行入口进入生成链', async () => {
   let runRequested = false
   installFetchHandler(() => pendingRun, (url) => {
     if (url.pathname === '/v1/requirements/requirement-1') return jsonResponse({ requirementId: 'requirement-1', name: '需求', documentType: 'docx', documentFilename: '原文.docx', documentContent: ' \n ' })
@@ -968,11 +1020,10 @@ it('功能任务详情不再依赖绑定的增强文本才能打开运行设置'
   })
   const user = userEvent.setup()
   renderPage()
-  const button = await screen.findByRole('button', { name: /^运行$/ })
+  const button = await screen.findByRole('button', { name: /^生成链$/ })
   await waitFor(() => expect(button).toBeEnabled())
   await user.click(button)
-  expect(await screen.findByRole('button', { name: '确认运行' })).toBeInTheDocument()
-  expect(screen.queryByText('请先完成需求分析并导入增强文本，再生成功能用例')).not.toBeInTheDocument()
+  expect(await screen.findByText('需求生成链')).toBeInTheDocument()
   expect(runRequested).toBe(false)
 })
 

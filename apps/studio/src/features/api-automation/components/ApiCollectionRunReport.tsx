@@ -1,3 +1,5 @@
+import { RunWaitingReason } from '@/domain/runs/RunWaitingReason'
+import { StopRunButton } from '@/domain/runs/StopRunButton'
 import {
   collectionReportViewOptions,
   runResultViewOptions,
@@ -30,6 +32,7 @@ import type { UseQueryResult } from '@tanstack/react-query'
 
 type Props = {
   collectionRunReportOpen: boolean
+  canStop?: boolean
   setCollectionRunReportOpen: React.Dispatch<React.SetStateAction<boolean>>
   setSelectedCollectionRunId: React.Dispatch<React.SetStateAction<string>>
   collectionRunReportQuery: UseQueryResult<ApiCollectionRunReport, Error>
@@ -54,7 +57,7 @@ function RunResultPanel({ view, children }: { view: RunResultView; children: Rea
   return <div ref={panelRef} className="api-case-run-result-block">{children}</div>
 }
 
-export function ApiCollectionRunReportModal({ collectionRunReportOpen, setCollectionRunReportOpen, setSelectedCollectionRunId, collectionRunReportQuery, collectionRunReport, environments, handleExportCollectionRunReportHtml, handleRefreshCollectionRunReport, refreshingCollectionRunReport, selectedCollectionRunId, collectionRunReportView, setCollectionRunReportView, orderedCollectionRunItems, expandedCollectionRunItemIds, collectionRunItemViews, toggleCollectionRunItem, handleCollectionRunItemViewChange, selectedCollectionRunSummary }: Props) {
+export function ApiCollectionRunReportModal({ canStop, collectionRunReportOpen, setCollectionRunReportOpen, setSelectedCollectionRunId, collectionRunReportQuery, collectionRunReport, environments, handleExportCollectionRunReportHtml, handleRefreshCollectionRunReport, refreshingCollectionRunReport, selectedCollectionRunId, collectionRunReportView, setCollectionRunReportView, orderedCollectionRunItems, expandedCollectionRunItemIds, collectionRunItemViews, toggleCollectionRunItem, handleCollectionRunItemViewChange, selectedCollectionRunSummary }: Props) {
   const viewRef = useViewMotion(collectionReportViewOptions.findIndex(option => option.value === collectionRunReportView))
   return (
     <Modal
@@ -83,6 +86,7 @@ export function ApiCollectionRunReportModal({ collectionRunReportOpen, setCollec
                 <div className="api-collection-run-report-title">
                   <Text strong>运行结果</Text>
                   <Tag color={getExecutionStatusMeta(collectionRunReport.status).color}>{getExecutionStatusMeta(collectionRunReport.status).label}</Tag>
+                  <RunWaitingReason status={collectionRunReport.status} />
                 </div>
                 <div className="api-collection-run-report-meta">
                   <span>
@@ -97,6 +101,7 @@ export function ApiCollectionRunReportModal({ collectionRunReportOpen, setCollec
                 </div>
               </div>
               <div className="api-collection-run-report-head-actions">
+                {canStop ? <StopRunButton kind="api-collection" runId={selectedCollectionRunId} status={collectionRunReport.status} /> : null}
                 <ActionButton operation="download" onClick={handleExportCollectionRunReportHtml} disabled={!collectionRunReport}>
                   导出 HTML
                 </ActionButton>

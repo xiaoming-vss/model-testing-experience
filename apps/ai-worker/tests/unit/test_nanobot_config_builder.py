@@ -37,7 +37,7 @@ class NanobotConfigBuilderTests(unittest.TestCase):
     def _make_task(self, *, with_credentials: bool = True) -> Task:
         return Task(
             task_id="task-1",
-            run_id="run-1",
+            attempt_id="run-1",
             generate_task_id="generate-1",
             task_type="api_case_generate",
             payload=TaskPayload(

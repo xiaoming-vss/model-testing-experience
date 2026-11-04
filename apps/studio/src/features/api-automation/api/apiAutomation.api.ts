@@ -130,8 +130,8 @@ export const apiAutomationApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  getApiCaseRun: (runId: string) =>
-    request<ApiCaseRunResult>(`/v1/api-case-runs/${runId}`),
+  getApiCaseRun: (runId: string, signal?: AbortSignal) =>
+    request<ApiCaseRunResult>(`/v1/api-case-runs/${runId}`, { signal }),
   runApiCollection: (collectionId: string, body: RunApiCollectionPayload) =>
     request<ApiCollectionRunSummary>(`/v1/api-collections/${collectionId}/run`, {
       method: 'POST',
@@ -139,8 +139,8 @@ export const apiAutomationApi = {
     }),
   getApiCollectionRuns: (collectionId: string) =>
     request<ListResponse<ApiCollectionRunSummary>>(`/v1/api-collections/${collectionId}/runs`),
-  getApiCollectionRun: (collectionRunId: string) =>
-    request<ApiCollectionRunSummary>(`/v1/api-collection-runs/${collectionRunId}`),
-  getApiCollectionRunReport: (collectionRunId: string) =>
-    request<ApiCollectionRunReport>(`/v1/api-collection-runs/${collectionRunId}/report`),
+  getApiCollectionRun: (collectionRunId: string, signal?: AbortSignal) =>
+    request<ApiCollectionRunSummary>(`/v1/api-collection-runs/${collectionRunId}`, { signal }),
+  getApiCollectionRunReport: (collectionRunId: string, signal?: AbortSignal) =>
+    request<ApiCollectionRunReport>(`/v1/api-collection-runs/${collectionRunId}/report`, { signal }),
 }

@@ -7,13 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.domain.ai_tasks import task_type_for
 from testing_agent.models.ai_generate_task import AiGenerateTask as Task
-from testing_agent.models.ai_generate_task import AiGenerateTaskRun as Run
 from testing_agent.models.ai_generate_task_source_archive import (
     AiGenerateTaskSourceArchive as Archive,
 )
+from testing_agent.models.ai_generation_attempt import AiGenerationAttempt as Attempt
+from testing_agent.models.ai_generation_stage import AiGenerationStage as Stage
 from testing_agent.models.requirement import Requirement
 from testing_agent.models.sprint import Sprint
-from testing_agent.repositories.ai_run_history import history_page
 from testing_agent.schemas.requirement_design import DesignKind
 
 KINDS: tuple[DesignKind, ...] = ("requirement_analysis", "function", "api", "ui")
@@ -90,8 +90,9 @@ class RequirementDesignRepository:
 
     async def run_counts(self, requirement_id: str) -> dict[str, int]:
         rows = await self.session.execute(
-            select(Task.task_type, func.count(Run.id))
-            .join(Run, Run.task_id == Task.task_id)
+            select(Task.task_type, func.count(Attempt.id))
+            .join(Stage, Stage.task_id == Task.task_id)
+            .join(Attempt, Attempt.stage_id == Stage.id)
             .where(*requirement_scope(requirement_id), Task.task_type.in_(TYPE_KINDS))
             .group_by(Task.task_type)
         )
@@ -106,11 +107,12 @@ class RequirementDesignRepository:
             (
                 await self.session.scalars(
                     select(Task.task_id)
-                    .join(Run, Run.task_id == Task.task_id)
+                    .join(Stage, Stage.task_id == Task.task_id)
+                    .join(Attempt, Attempt.stage_id == Stage.id)
                     .where(
                         *requirement_scope(requirement_id),
                         Task.task_type.in_(TYPE_KINDS),
-                        Run.status.in_(RUN_ACTIVE_STATUSES),
+                        Attempt.status.in_(RUN_ACTIVE_STATUSES),
                     )
                     .distinct()
                 )
@@ -125,10 +127,18 @@ class RequirementDesignRepository:
         page_size: int,
         pipeline_filter: str,
     ) -> dict[str, Any]:
-        return await history_page(
+        from testing_agent.domain.direct_history_projection import project_direct_history
+        from testing_agent.repositories.direct_attempt_history import direct_history_rows
+
+        rows = await direct_history_rows(
             self.session,
-            [*requirement_scope(requirement_id), Task.task_type == task_type_for(kind)],
+            None,
             page,
             page_size,
             pipeline_filter,
+            task_conditions=(
+                *requirement_scope(requirement_id),
+                Task.task_type == task_type_for(kind),
+            ),
         )
+        return project_direct_history(*rows)

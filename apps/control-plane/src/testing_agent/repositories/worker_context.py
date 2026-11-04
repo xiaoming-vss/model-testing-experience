@@ -10,8 +10,8 @@ from testing_agent.domain.worker_context import (
     UiWorkerContext,
     WorkerExecutionContext,
 )
-from testing_agent.models.ai_generate_execution import AiGenerateRunStage, AiGenerateStageAttempt
-from testing_agent.models.ai_generate_task import AiGenerateTaskRun
+from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
+from testing_agent.models.ai_generation_stage import AiGenerationStage
 from testing_agent.models.api_case_run import ApiCaseRun
 from testing_agent.models.api_collection_run import ApiCollectionRun
 from testing_agent.models.ui_test_case_run import UiTestCaseRun
@@ -27,22 +27,17 @@ def read_worker_context(session: Session, task: WorkerTask) -> WorkerExecutionCo
     this read result as authorization or as a replacement for locking the queue.
     """
     if task.domain == "ai":
-        generate_task_id = session.scalar(
-            select(AiGenerateTaskRun.task_id).where(AiGenerateTaskRun.run_id == task.run_id)
-        )
-        attempt = session.scalar(
-            select(AiGenerateStageAttempt)
-            .join(AiGenerateRunStage, AiGenerateRunStage.id == AiGenerateStageAttempt.stage_id)
+        row = session.execute(
+            select(AiGenerationStage.task_id, AiGenerationAttempt.input_snapshot_json)
+            .join(AiGenerationStage, AiGenerationStage.id == AiGenerationAttempt.stage_id)
             .where(
-                AiGenerateRunStage.run_id == task.run_id,
-                AiGenerateStageAttempt.worker_task_id == task.task_id,
+                AiGenerationAttempt.id == task.run_id,
+                AiGenerationAttempt.worker_task_id == task.task_id,
             )
-            .order_by(AiGenerateStageAttempt.attempt_no.desc())
-        )
-        connection_id = (
-            (attempt.input_snapshot_json or {}).get("llmConnectionId") if attempt else None
-        )
-        return AiWorkerContext(generate_task_id, connection_id)
+        ).one_or_none()
+        if row is None:
+            return AiWorkerContext(None, None)
+        return AiWorkerContext(row.task_id, (row.input_snapshot_json or {}).get("llmConnectionId"))
     if task.domain == "api":
         if task.task_type == "api_collection_run":
             collection_run = session.scalar(

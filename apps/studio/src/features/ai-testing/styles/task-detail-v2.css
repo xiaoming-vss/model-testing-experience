@@ -557,14 +557,6 @@
   color: var(--ai-text-secondary);
 }
 
-.ai-task-run-table-migration {
-  display: inline-flex;
-  align-items: center;
-  color: var(--app-result-warning-text);
-  cursor: help;
-  font-size: 13px;
-}
-
 .ai-task-run-stage-filter {
   min-width: 96px;
 }

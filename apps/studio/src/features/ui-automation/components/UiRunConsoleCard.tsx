@@ -1,3 +1,5 @@
+import { RunWaitingReason } from '@/domain/runs/RunWaitingReason'
+import { StopRunButton } from '@/domain/runs/StopRunButton'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { StoredFileDownload } from '@/shared/components/files/StoredFile'
 import type { UiTestCaseRun } from '@/services/api'
@@ -40,11 +42,11 @@ type Props = {
   run: UiTestCaseRun | null
   refreshing: boolean
   onRefresh: () => void
+  canStop?: boolean
 }
 
-export function UiRunConsoleCard({ run, refreshing, onRefresh }: Props) {
+export function UiRunConsoleCard({ run, refreshing, onRefresh, canStop }: Props) {
   const [snapshotOpen, setSnapshotOpen] = useState(false)
-  const [variablesOpen, setVariablesOpen] = useState(false)
   const [levelFilter, setLevelFilter] = useState<UiRunLogLevel | 'all'>('all')
   const logLines = useMemo(() => buildUiRunLogLines(run), [run])
   // 汇总行永远保留：过滤后看不到结论会让控制台读起来少一截。
@@ -54,9 +56,6 @@ export function UiRunConsoleCard({ run, refreshing, onRefresh }: Props) {
   )
   const metrics = buildUiRunMetrics(run)
   const statusMeta = getExecutionStatusMeta(run?.status)
-  const usedVariables = run?.usedVariables ?? []
-  const variableWrites = run?.variableWrites ?? []
-  const hasVariableSummary = usedVariables.length > 0 || variableWrites.length > 0
   const snapshotSections = [
     { label: '浏览器信息', value: run?.snapshot?.browser },
     { label: '运行配置', value: run?.snapshot?.options },
@@ -82,8 +81,10 @@ export function UiRunConsoleCard({ run, refreshing, onRefresh }: Props) {
           执行控制台
           <span className="ui-wb-card-chip">Live Log</span>
           {run ? <span className={`ui-wb-console-status tone-${run.success === false ? 'red' : 'green'}`}>{statusMeta.label}</span> : null}
+          <RunWaitingReason status={run?.status} />
         </div>
         <div className="ui-wb-card-head-side">
+          {canStop ? <StopRunButton kind="ui-case" runId={run?.runId ?? run?.uiTestCaseRunId} status={run?.status} /> : null}
           <span className="ui-wb-console-meta">
             {run ? `运行 ID ${run.runId ?? run.uiTestCaseRunId ?? '-'}` : '暂无运行记录'}
           </span>
@@ -130,54 +131,6 @@ export function UiRunConsoleCard({ run, refreshing, onRefresh }: Props) {
           </div>
         ))}
       </div>
-
-      {hasVariableSummary ? (
-        <div className="ui-wb-console-snapshot">
-          <Button
-            type="text"
-            size="small"
-            className="ui-wb-console-snapshot-toggle"
-            icon={variablesOpen ? <UpOutlined /> : <DownOutlined />}
-            onClick={() => setVariablesOpen((current) => !current)}
-          >
-            运行变量（{usedVariables.length} 次引用 / {variableWrites.length} 次写回）
-          </Button>
-          {variablesOpen ? (
-            <div className="ui-wb-console-snapshot-body">
-              {usedVariables.length > 0 ? (
-                <div className="ui-wb-console-snapshot-block">
-                  <div className="ui-wb-console-snapshot-label">使用变量</div>
-                  <ul className="ui-wb-variable-list">
-                    {usedVariables.map((item, index) => (
-                      <li key={`used-${item.name ?? ''}-${item.orderNo ?? ''}-${index}`}>
-                        <span className="ui-wb-variable-order">#{item.orderNo ?? '-'}</span>
-                        <span className="ui-wb-variable-name">{item.name ?? '-'}</span>
-                        <span className="ui-wb-variable-value">{item.secret ? '********' : item.value ?? ''}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              {variableWrites.length > 0 ? (
-                <div className="ui-wb-console-snapshot-block">
-                  <div className="ui-wb-console-snapshot-label">写回变量</div>
-                  <ul className="ui-wb-variable-list">
-                    {variableWrites.map((item, index) => (
-                      <li key={`write-${item.name ?? ''}-${item.orderNo ?? ''}-${index}`}>
-                        <span className="ui-wb-variable-order">#{item.orderNo ?? '-'}</span>
-                        <span className="ui-wb-variable-name">{item.name ?? '-'}</span>
-                        <span className="ui-wb-variable-value">
-                          {item.created ? '新建' : item.previousValue ?? '-'} → {item.value ?? ''}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
 
       {snapshotSections.length > 0 ? (
         <div className="ui-wb-console-snapshot">

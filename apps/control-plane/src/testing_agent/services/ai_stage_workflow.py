@@ -1,61 +1,19 @@
-from __future__ import annotations
+"""Checkpoint commands for independent functional and API executions."""
 
-import json
 from collections.abc import Callable
-from dataclasses import replace
-from datetime import UTC, datetime
-from types import SimpleNamespace
 from typing import Any
 
-from testing_agent.core.enums import ImportStatus, ReviewStatus, RunStatus, StageStatus
-from testing_agent.core.errors import (
-    ErrBadRequest,
-    dynamic_error,
-)
+from testing_agent.core.errors import ErrBadRequest, ErrNotFound, dynamic_error
 from testing_agent.core.sid import new_id
-from testing_agent.domain.ai_execution_intent import ExecutionIntent, StageReview
-from testing_agent.domain.ai_tasks import (
-    FUNCTION_CASE_RELATION_DISPATCH_STATUSES,
-    FUNCTION_CASE_RELATION_STAGE,
-    FUNCTION_CASE_REVIEW_READY_STATUSES,
-    FUNCTION_CASE_REVIEWABLE_STAGES,
-    REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES,
-    REQUIREMENT_ANALYSIS_FINAL_STAGE,
-    REQUIREMENT_ANALYSIS_REVIEW_READY_STATUSES,
-    REQUIREMENT_ANALYSIS_REVIEWABLE_STAGES,
-    REVISION_INSTRUCTION_FIELD,
-    next_function_case_stage,
-    next_requirement_analysis_stage,
-    task_type_for,
-)
-from testing_agent.models.ai_generate_task import AiGenerateTaskRun
-from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-from testing_agent.repositories.generation_chain import GenerationChainRepository
-from testing_agent.services.ai_execution.writer import ExecutionWriter, SqlExecutionWriter
-from testing_agent.services.ai_task_access import (
-    OwnedRun,
-)
-from testing_agent.services.ai_task_output import (
-    dump_run,
-    first_present,
-    generated_function_cases,
-    normalize_config_json,
-    normalize_function_stage_config,
-    validate_function_candidate_cases,
-)
-from testing_agent.services.functional_requirement_source import functional_requirement_source
+from testing_agent.services.ai_task_access import OwnedRun
+from testing_agent.services.ai_task_scope import GenerationAccess
 from testing_agent.services.personal_authorization import require_personal_connection
-from testing_agent.services.requirement_analysis_contracts import (
-    ensure_requirement_run_mutable,
-    merge_stage_config,
-    normalize_requirement_config,
-    validate_run_output,
-)
 from testing_agent.services.revision_attachments import (
     attach_revision_attachments,
     normalize_attachment_file_ids,
 )
+from testing_agent.services.standalone_run import StandaloneRun
 from testing_agent.services.stored_file import StoredFileService
 
 
@@ -66,16 +24,16 @@ class GenerationStageWorkflow:
         repository: AiGenerateTaskRepository,
         owned_run: OwnedRun,
         id_factory: Callable[[], str] = new_id,
-        execution_writer: ExecutionWriter | None = None,
         files: StoredFileService | None = None,
-    ):
+        access: GenerationAccess | None = None,
+    ) -> None:
         self.repository = repository
-        self.execution = execution_writer or SqlExecutionWriter()
         self.owned_run = owned_run
         self.new_id = id_factory
         self.files = files
+        self.access = access
 
-    async def stage_connection(self, run, body, user_id, previous_id):
+    async def stage_connection(self, run: Any, body: Any, user_id: Any, previous_id: Any) -> str:
         connection_id = str(
             body.get("connectionId") or body.get("llmConnectionId") or previous_id or ""
         )
@@ -85,9 +43,8 @@ class GenerationStageWorkflow:
         return connection.connection_id
 
     async def prepare_revision_attachments(
-        self, user_id: str, run: AiGenerateTaskRun, body: dict[str, Any]
+        self, user_id: str, run: StandaloneRun, body: dict[str, Any]
     ) -> tuple[dict[str, str], ...]:
-        """Validate this revision's images and freeze their metadata for the attempt."""
         file_ids = normalize_attachment_file_ids(body.get("attachmentFileIds"))
         if not file_ids:
             return ()
@@ -101,601 +58,125 @@ class GenerationStageWorkflow:
             file_ids=file_ids,
         )
 
+    async def review_api_checkpoint(self, run_id: str, body: dict[str, Any], user_id: str) -> dict:
+        from testing_agent.services.standalone_api_stage import review_api_checkpoint
+
+        run = await self.owned_run(user_id, run_id, "api", action="review")
+        if not isinstance(run, StandaloneRun):
+            raise ErrNotFound()
+        return await review_api_checkpoint(self, run, body, user_id)
+
+    async def save_api_checkpoint(self, run_id: str, body: dict[str, Any], user_id: str) -> dict:
+        from testing_agent.services.standalone_api_stage import save_api_checkpoint
+
+        run = await self.owned_run(user_id, run_id, "api", action="write")
+        if not isinstance(run, StandaloneRun):
+            raise ErrNotFound()
+        return await save_api_checkpoint(self, run, body, user_id)
+
+    async def revise_api_stage(self, run_id: str, body: dict[str, Any], user_id: str) -> dict:
+        from testing_agent.services.standalone_api_stage import revise_api_stage
+
+        run = await self.owned_run(user_id, run_id, "api", action="execute")
+        if not isinstance(run, StandaloneRun):
+            raise ErrNotFound()
+        return await revise_api_stage(self, run, body, user_id)
+
+    async def retry_api_stage(self, run_id: str, body: dict[str, Any], user_id: str) -> dict:
+        from testing_agent.services.standalone_api_stage import retry_api_stage
+
+        run = await self.owned_run(user_id, run_id, "api", action="execute")
+        if not isinstance(run, StandaloneRun):
+            raise ErrNotFound()
+        return await retry_api_stage(self, run, body, user_id)
+
     async def save_stage_output(self, run_id: str, body: dict[str, Any], user_id: str) -> dict:
-        intent = ExecutionIntent(actor_id=user_id)
-        dispatch: WorkerTask | None = None
+        from testing_agent.services.standalone_stage_workflow import save_function_stage
+
         run = await self.owned_run(user_id, run_id, "function", action="review")
-        if (
-            not run.checkpoint_enabled
-            or run.status != "waiting_review"
-            or run.stage_status not in FUNCTION_CASE_REVIEW_READY_STATUSES
-            or run.current_stage not in FUNCTION_CASE_REVIEWABLE_STAGES
-            or run.review_status != ReviewStatus.PENDING.value
-            or getattr(run, "import_status", ImportStatus.PENDING.value)
-            == ImportStatus.IMPORTED.value
-        ):
-            raise dynamic_error(ErrBadRequest, "仅允许保存未审核、未导入且等待审核的当前阶段产物")
-        if set(body) - {"stage", "currentStage", "configJson"} or "configJson" not in body:
-            raise dynamic_error(ErrBadRequest, "阶段保存仅支持当前阶段的 configJson")
-        for key in ("stage", "currentStage"):
-            if key in body and body[key] != run.current_stage:
-                raise dynamic_error(ErrBadRequest, "不能修改其他阶段的产物")
-        field = {"requirement_analysis": "requirementAnalysis", "case_names": "caseNames"}[
-            run.current_stage
-        ]
-        raw_config = normalize_config_json(body["configJson"])
-        # Stage editors may send a bare artifact, but cannot change another stage.
-        if (set(raw_config) & {"enhancedText", "requirementAnalysis", "caseNames"}) - {field}:
-            raise dynamic_error(ErrBadRequest, "不能修改其他阶段的产物")
-        edits = normalize_function_stage_config(run.current_stage, raw_config)
-        if set(edits) != {field} or not isinstance(edits[field], dict) or not edits[field]:
-            raise dynamic_error(ErrBadRequest, "阶段产物必须是当前阶段的非空 JSON 对象")
-        run.config_json = {**normalize_config_json(run.config_json), field: edits[field]}
-        run.stage_status = StageStatus.WAITING_REVIEW.value
-        await self.execution.save(self.repository.session, run, intent=intent, worker=dispatch)
-        await self.repository.commit()
-        await self.repository.refresh(run)
-        return dump_run(run)
-
-    async def save_requirement_analysis_stage_output(
-        self, run_id: str, body: dict[str, Any], user_id: str
-    ) -> dict:
-        intent = ExecutionIntent(actor_id=user_id)
-        dispatch: WorkerTask | None = None
-        run = await self.owned_run(user_id, run_id, "requirement_analysis", action="review")
-        ensure_requirement_run_mutable(run.review_status)
-        current_stage = str(body.get("currentStage") or body.get("stage") or run.current_stage)
-        is_review_stage = (
-            run.checkpoint_enabled
-            and current_stage == run.current_stage
-            and current_stage in REQUIREMENT_ANALYSIS_REVIEWABLE_STAGES
-            and run.status == "waiting_review"
-            and run.stage_status in REQUIREMENT_ANALYSIS_REVIEW_READY_STATUSES
-        )
-        is_final_stage = (
-            run.status == RunStatus.SUCCESS.value
-            and current_stage in REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES
-            and run.current_stage in REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES
-        )
-        if not (is_review_stage or is_final_stage):
-            raise ErrBadRequest()
-        raw_config = body.get("configJson", run.config_json)
-        config = normalize_requirement_config(raw_config)
-        result = str(body.get("resultYaml", run.result_yaml) or "")
-        if is_review_stage and (current_stage != "extracting_text" or "resultYaml" in body):
-            raise ErrBadRequest()
-        config = merge_stage_config(run, config, current_stage)
-        validate_run_output(run, config=config, result=result, final=is_final_stage)
-        if is_final_stage and result != (run.result_yaml or ""):
-            intent = replace(intent, reset_requirement_review=True)
-            run.review_status = ReviewStatus.PENDING.value
-            run.reviewer_user_id = ""
-            run.reviewed_at = None
-        if is_review_stage:
-            run.stage_status = StageStatus.WAITING_REVIEW.value
-        run.config_json = config
-        if "resultYaml" in body:
-            run.result_yaml = result
-        run.result_summary_json = body.get("resultSummaryJson") or run.result_summary_json
-        await self.execution.save(self.repository.session, run, intent=intent, worker=dispatch)
-        await self.repository.commit()
-        await self.repository.refresh(run)
-        return dump_run(run)
-
-    async def review_requirement_analysis_stage(
-        self,
-        run_id: str,
-        body: dict[str, Any],
-        user_id: str,
-        *,
-        continue_after: bool = True,
-        retain_rejected_draft: bool = False,
-    ) -> dict:
-        intent = ExecutionIntent(actor_id=user_id)
-        dispatch: WorkerTask | None = None
-        run = await self.owned_run(user_id, run_id, "requirement_analysis", action="review")
-        ensure_requirement_run_mutable(run.review_status)
-        current_stage = str(body.get("currentStage") or body.get("stage") or "")
-        is_final_review = (
-            current_stage in REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES
-            and run.current_stage in REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES
-            and run.status in {RunStatus.SUCCESS.value, "waiting_review"}
-            and run.review_status == ReviewStatus.PENDING.value
-        )
-        if is_final_review:
-            action = str(
-                body.get("action") or body.get("reviewStatus") or body.get("status") or "approve"
-            )
-            if action == "approved":
-                action = "approve"
-            if action == "rejected":
-                action = "reject"
-            if action not in {"approve", "reject"}:
-                raise ErrBadRequest()
-            if action == "approve":
-                validate_run_output(run, final=True)
-            run.review_status = (
-                ReviewStatus.APPROVED.value if action == "approve" else ReviewStatus.REJECTED.value
-            )
-            # Generation is complete for either review outcome; rejection is terminal
-            # unless the chain endpoint explicitly keeps the draft editable.
-            run.status = RunStatus.SUCCESS.value
-            run.stage_status = StageStatus.COMPLETED.value
-            run.review_comment = str(body.get("reviewComment") or body.get("comment") or "")
-            run.reviewer_user_id = user_id
-            run.reviewed_at = datetime.now(UTC)
-            await self.execution.save(self.repository.session, run, intent=intent, worker=dispatch)
-            await self.repository.commit()
-            await self.repository.refresh(run)
-            return dump_run(run)
-        if (
-            not run.checkpoint_enabled
-            or run.status != "waiting_review"
-            or run.stage_status not in REQUIREMENT_ANALYSIS_REVIEW_READY_STATUSES
-        ):
-            raise ErrBadRequest()
-
-        if (
-            current_stage != run.current_stage
-            or current_stage not in REQUIREMENT_ANALYSIS_REVIEWABLE_STAGES
-        ):
-            raise ErrBadRequest()
-
-        action = str(
-            body.get("action")
-            or body.get("reviewStatus")
-            or body.get("status")
-            or body.get("stageStatus")
-            or "approve"
-        )
-        if action == "approved":
-            action = "approve"
-        if action == "rejected":
-            action = "reject"
-
-        run.review_comment = str(body.get("reviewComment") or body.get("comment") or "")
-        run.reviewer_user_id = user_id
-        run.reviewed_at = datetime.now(UTC)
-        if action == "approve":
-            if "configJson" in body:
-                edits = normalize_requirement_config(body["configJson"])
-                run.config_json = merge_stage_config(run, edits, current_stage)
-            validate_run_output(run)
-            if not continue_after:
-                run.status = RunStatus.SUCCESS.value
-                run.stage_status = StageStatus.COMPLETED.value
-                run.error_message = ""
-            else:
-                latest_task = await self.repository.get_latest_ai_dispatch(run.run_id)
-                next_stage = next_requirement_analysis_stage(run.current_stage)
-                if latest_task is None or next_stage is None:
-                    raise ErrBadRequest()
-                run.status = RunStatus.PENDING.value
-                run.current_stage = next_stage
-                run.stage_status = StageStatus.PENDING.value
-                run.error_message = ""
-                intent = replace(
-                    intent,
-                    llm_connection_id=await self.stage_connection(
-                        run, body or {}, user_id, latest_task.llm_connection_id
-                    ),
-                )
-                dispatch = WorkerTask(
-                    domain="ai",
-                    task_id=self.new_id(),
-                    task_type=task_type_for("requirement_analysis"),
-                    run_id=run.run_id,
-                    status=RunStatus.PENDING.value,
-                )
-                self.repository.add(dispatch)
-        elif action == "reject":
-            if retain_rejected_draft:
-                run.status = RunStatus.SUCCESS.value
-                run.stage_status = StageStatus.COMPLETED.value
-            else:
-                run.status = RunStatus.CANCELED.value
-                run.stage_status = StageStatus.FAILED.value
-        else:
-            raise ErrBadRequest()
-        intent = replace(
-            intent,
-            review=StageReview(
-                current_stage,
-                "approved" if action == "approve" else "rejected",
-                str(body.get("reviewComment") or body.get("comment") or ""),
-            ),
-        )
-        await self.execution.save(self.repository.session, run, intent=intent, worker=dispatch)
-        await self.repository.commit()
-        await self.repository.refresh(run)
-        return dump_run(run)
-
-    async def revise_requirement_analysis_stage(
-        self, run_id: str, body: dict[str, Any], user_id: str
-    ) -> dict:
-        intent = ExecutionIntent(actor_id=user_id)
-        dispatch: WorkerTask | None = None
-        run = await self.owned_run(user_id, run_id, "requirement_analysis", action="execute")
-        ensure_requirement_run_mutable(run.review_status)
-
-        current_stage = str(body.get("currentStage") or body.get("stage") or "")
-        is_review_stage = (
-            run.checkpoint_enabled
-            and run.status == "waiting_review"
-            and run.stage_status in REQUIREMENT_ANALYSIS_REVIEW_READY_STATUSES
-            and current_stage == run.current_stage
-            and current_stage in REQUIREMENT_ANALYSIS_REVIEWABLE_STAGES
-        )
-        is_final_stage = (
-            run.status in {RunStatus.SUCCESS.value, "waiting_review"}
-            and current_stage == REQUIREMENT_ANALYSIS_FINAL_STAGE
-            and run.current_stage in REQUIREMENT_ANALYSIS_FINAL_RUN_STAGES
-        )
-        if not is_review_stage and not is_final_stage:
-            raise ErrBadRequest()
-
-        revision_instruction = str(
-            body.get(REVISION_INSTRUCTION_FIELD) or body.get("revision_instruction") or ""
-        ).strip()
-        if not revision_instruction:
-            raise ErrBadRequest()
-
-        latest_task = await self.repository.get_latest_ai_dispatch(run.run_id)
-        if latest_task is None:
-            raise ErrBadRequest()
-
-        if "configJson" in body:
-            edits = normalize_requirement_config(body["configJson"])
-            run.config_json = merge_stage_config(
-                run, edits, current_stage, allow_resolved_questions=True
-            )
-        elif not isinstance(run.config_json, dict):
-            run.config_json = normalize_config_json(run.config_json)
-        if is_final_stage:
-            result_yaml = str(body.get("resultYaml") or run.result_yaml or "").strip()
-            if not result_yaml:
-                raise ErrBadRequest()
-            run.config_json["resultYaml"] = str(body.get("resultYaml") or run.result_yaml or "")
-        validate_run_output(
-            run,
-            result=run.config_json.get("resultYaml"),
-            final=is_final_stage,
-            allow_resolved_questions=True,
-        )
-        attachments = await self.prepare_revision_attachments(user_id, run, body)
-        intent = replace(intent, reset_requirement_review=True)
-        run.review_status = ReviewStatus.PENDING.value
-        run.reviewer_user_id = ""
-        run.reviewed_at = None
-        run.config_json[REVISION_INSTRUCTION_FIELD] = revision_instruction
-        run.status = RunStatus.PENDING.value
-        if is_final_stage:
-            run.current_stage = REQUIREMENT_ANALYSIS_FINAL_STAGE
-        run.stage_status = StageStatus.PENDING.value
-        run.error_message = ""
-        intent = replace(
-            intent,
-            llm_connection_id=await self.stage_connection(
-                run, body or {}, user_id, latest_task.llm_connection_id
-            ),
-            revision_attachments=attachments,
-        )
-        dispatch = WorkerTask(
-            domain="ai",
-            task_id=self.new_id(),
-            task_type=task_type_for("requirement_analysis"),
-            run_id=run.run_id,
-            status=RunStatus.PENDING.value,
-        )
-        self.repository.add(dispatch)
-        intent = replace(intent, operation="revise")
-        await self.execution.save(self.repository.session, run, intent=intent, worker=dispatch)
-        await self.repository.commit()
-        await self.repository.refresh(run)
-        return dump_run(run)
+        if not isinstance(run, StandaloneRun):
+            raise ErrNotFound()
+        return await save_function_stage(self, run, body, user_id)
 
     async def revise_function_case_stage(
         self, run_id: str, body: dict[str, Any], user_id: str
     ) -> dict:
-        intent = ExecutionIntent(actor_id=user_id)
-        dispatch: WorkerTask | None = None
+        from testing_agent.services.standalone_stage_workflow import revise_function_stage
+
         run = await self.owned_run(user_id, run_id, "function", action="execute")
-        stage = str(body.get("stage") or body.get("currentStage") or "")
-        is_checkpoint = (
-            run.checkpoint_enabled
-            and run.status == "waiting_review"
-            and run.stage_status in FUNCTION_CASE_REVIEW_READY_STATUSES
-            and stage == run.current_stage
-            and stage in FUNCTION_CASE_REVIEWABLE_STAGES
-        )
-        is_final = (
-            stage == "detailed_cases"
-            and run.current_stage in {"detailed_cases", "completed", ""}
-            and run.status == RunStatus.SUCCESS.value
-        )
-        if (
-            not (is_checkpoint or is_final)
-            or run.review_status != ReviewStatus.PENDING.value
-            or run.import_status == ImportStatus.IMPORTED.value
-        ):
-            raise ErrBadRequest()
-        instruction = str(body.get("revisionInstruction") or "").strip()
-        if not instruction:
-            raise ErrBadRequest()
-        config = dict(normalize_config_json(run.config_json))
-        field = {"requirement_analysis": "requirementAnalysis", "case_names": "caseNames"}.get(
-            stage
-        )
-        if field and "configJson" in body:
-            edits = normalize_function_stage_config(stage, body["configJson"])
-            # Confirmed upstream inputs cannot be edited by a revision request.
-            if field not in edits:
-                raise ErrBadRequest()
-            config[field] = edits[field]
-        if field:
-            current_output = config.get(field)
-            if not current_output or (
-                isinstance(current_output, str) and not current_output.strip()
-            ):
-                raise ErrBadRequest()
-        else:
-            current_output = str(body.get("resultYaml", run.result_yaml) or "")
-            if not current_output.strip():
-                raise ErrBadRequest()
-            cases = generated_function_cases(SimpleNamespace(result_yaml=current_output))
-            if not cases:
-                raise ErrBadRequest()
-            validate_function_candidate_cases(cases)
-            config["resultYaml"] = json.dumps({"cases": cases}, ensure_ascii=False)
-        latest_task = await self.repository.get_latest_ai_dispatch(run_id)
-        if latest_task is None:
-            raise ErrBadRequest()
-        attachments = await self.prepare_revision_attachments(user_id, run, body)
-        config[REVISION_INSTRUCTION_FIELD] = instruction
-        run.config_json = config
-        if is_final:
-            run.result_yaml = current_output
-        run.status = RunStatus.PENDING.value
-        run.current_stage = stage
-        run.stage_status = StageStatus.PENDING.value
-        run.error_message = ""
-        intent = replace(
-            intent,
-            llm_connection_id=await self.stage_connection(
-                run, body or {}, user_id, latest_task.llm_connection_id
-            ),
-            revision_attachments=attachments,
-        )
-        dispatch = WorkerTask(
-            domain="ai",
-            task_id=self.new_id(),
-            task_type=task_type_for("function"),
-            run_id=run.run_id,
-            status=RunStatus.PENDING.value,
-        )
-        self.repository.add(dispatch)
-        intent = replace(intent, operation="revise")
-        await self.execution.save(self.repository.session, run, intent=intent, worker=dispatch)
-        await self.repository.commit()
-        await self.repository.refresh(run)
-        return dump_run(run)
+        if not isinstance(run, StandaloneRun):
+            raise ErrNotFound()
+        return await revise_function_stage(self, run, body, user_id)
 
-    async def review_stage(
-        self,
-        run_id: str,
-        body: dict[str, Any],
-        user_id: str,
-        *,
-        continue_after: bool = True,
-        retain_rejected_draft: bool = False,
-    ) -> dict:
-        intent = ExecutionIntent(actor_id=user_id)
-        dispatch: WorkerTask | None = None
+    async def review_stage(self, run_id: str, body: dict[str, Any], user_id: str) -> dict:
+        from testing_agent.services.standalone_stage_workflow import review_function_stage
+
         run = await self.owned_run(user_id, run_id, "function", action="review")
-        if (
-            not run.checkpoint_enabled
-            or run.status != "waiting_review"
-            or run.stage_status not in FUNCTION_CASE_REVIEW_READY_STATUSES
-        ):
-            raise ErrBadRequest()
-
-        current_stage = str(body.get("currentStage") or body.get("stage") or "")
-        if (
-            current_stage != run.current_stage
-            or current_stage not in FUNCTION_CASE_REVIEWABLE_STAGES
-        ):
-            raise ErrBadRequest()
-
-        action = str(
-            body.get("action")
-            or body.get("reviewStatus")
-            or body.get("status")
-            or body.get("stageStatus")
-            or "approve"
-        )
-        if action == "approved":
-            action = "approve"
-        if action == "rejected":
-            action = "reject"
-
-        if action == "approve":
-            if not continue_after:
-                run.status = RunStatus.SUCCESS.value
-                run.stage_status = StageStatus.COMPLETED.value
-                run.error_message = ""
-            else:
-                latest_task = await self.repository.get_latest_ai_dispatch(run.run_id)
-                next_stage = next_function_case_stage(run.current_stage)
-                if latest_task is None or next_stage is None:
-                    raise ErrBadRequest()
-                run.status = RunStatus.PENDING.value
-                run.current_stage = next_stage
-                run.stage_status = StageStatus.PENDING.value
-                run.error_message = ""
-                intent = replace(
-                    intent,
-                    llm_connection_id=await self.stage_connection(
-                        run, body or {}, user_id, latest_task.llm_connection_id
-                    ),
-                )
-                dispatch = WorkerTask(
-                    domain="ai",
-                    task_id=self.new_id(),
-                    task_type=task_type_for("function"),
-                    run_id=run.run_id,
-                    status=RunStatus.PENDING.value,
-                )
-                self.repository.add(dispatch)
-        elif action == "reject":
-            if retain_rejected_draft:
-                run.status = RunStatus.SUCCESS.value
-                run.stage_status = StageStatus.COMPLETED.value
-            else:
-                run.status = RunStatus.CANCELED.value
-                run.stage_status = StageStatus.FAILED.value
-        else:
-            raise ErrBadRequest()
-        intent = replace(
-            intent,
-            review=StageReview(
-                current_stage,
-                "approved" if action == "approve" else "rejected",
-                str(body.get("reviewComment") or body.get("comment") or ""),
-            ),
-        )
-        await self.execution.save(self.repository.session, run, intent=intent, worker=dispatch)
-        await self.repository.commit()
-        await self.repository.refresh(run)
-        return dump_run(run)
+        if not isinstance(run, StandaloneRun):
+            raise ErrNotFound()
+        return await review_function_stage(self, run, body, user_id)
 
     async def retry_stage(
-        self,
-        run_id: str,
-        body: dict[str, Any] | None,
-        user_id: str,
-        *,
-        kind: str = "function",
+        self, run_id: str, body: dict[str, Any] | None, user_id: str, *, kind: str = "function"
     ) -> dict:
-        intent = ExecutionIntent(actor_id=user_id)
-        dispatch: WorkerTask | None = None
+        from testing_agent.services.standalone_stage_workflow import retry_function_stage
+
+        if kind != "function":
+            raise ErrNotFound()
         run = await self.owned_run(user_id, run_id, kind, action="execute")
-        allowed_stages = (
-            {*REQUIREMENT_ANALYSIS_REVIEWABLE_STAGES, REQUIREMENT_ANALYSIS_FINAL_STAGE}
-            if kind == "requirement_analysis"
-            else {*FUNCTION_CASE_REVIEWABLE_STAGES, "detailed_cases"}
-        )
-        payload = body or {}
-        stage = str(payload.get("stage") or payload.get("currentStage") or run.current_stage)
-        if (
-            run.status not in {"failed", "error"}
-            # Older retries changed only this field without enqueueing a task.
-            or run.stage_status not in {"failed", "retrying"}
-            or stage != run.current_stage
-            or stage not in allowed_stages
-            or run.review_status != ReviewStatus.PENDING.value
-            or run.import_status == ImportStatus.IMPORTED.value
-        ):
-            raise ErrBadRequest()
-        latest_task = await self.repository.get_latest_ai_dispatch(run_id)
-        if latest_task is None or latest_task.status in {"pending", "claimed", "running"}:
-            raise ErrBadRequest()
-        # Retain upstream outputs and any failed revision's instruction for this attempt.
-        run.status = RunStatus.PENDING.value
-        run.stage_status = StageStatus.PENDING.value
-        run.error_message = ""
-        intent = replace(
-            intent,
-            llm_connection_id=await self.stage_connection(
-                run, body or {}, user_id, latest_task.llm_connection_id
-            ),
-        )
-        dispatch = WorkerTask(
-            domain="ai",
-            task_id=self.new_id(),
-            task_type=task_type_for(kind),
-            run_id=run.run_id,
-            status=RunStatus.PENDING.value,
-        )
-        self.repository.add(dispatch)
-        intent = replace(intent, operation="retry")
-        await self.execution.save(self.repository.session, run, intent=intent, worker=dispatch)
-        await self.repository.commit()
-        await self.repository.refresh(run)
-        return dump_run(run)
+        if not isinstance(run, StandaloneRun):
+            raise ErrNotFound()
+        return await retry_function_stage(self, run, body or {}, user_id)
 
     async def generate_relation_analysis(
         self, run_id: str, body: dict[str, Any] | None, user_id: str
     ) -> dict:
-        """审核通过后按用户触发派发图谱分析；重复点击基于最新用例重新生成。"""
-        intent = ExecutionIntent(actor_id=user_id)
-        dispatch: WorkerTask | None = None
+        from testing_agent.services.stage_storage.relations import (
+            find_leaf,
+            graph_view,
+            launch_graph,
+        )
+        from testing_agent.services.standalone_stage_workflow import generate_function_graph
 
+        session = self.repository.session
+        access = self.access
+        found = await find_leaf(session, run_id) if access is not None else None
+        if found is not None:
+            assert access is not None
+            leaf, source_task = found
+            task = await access.owned_task(
+                user_id,
+                source_task.task_id,
+                "function",
+                action="execute",
+                current_read=True,
+            )
+            snapshot = leaf.input_snapshot_json or {}
+            connection = (body.get("connectionId") or body.get("llmConnectionId")) if body else None
+            connection = connection or (
+                snapshot.get("llmConnectionId") if isinstance(snapshot, dict) else ""
+            )
+            await launch_graph(session, task, leaf.id, user_id, connection or "")
+            await session.commit()
+            return await graph_view(session, task, leaf)
         run = await self.owned_run(user_id, run_id, "function", action="execute")
-        if (
-            run.current_stage == FUNCTION_CASE_RELATION_STAGE
-            and run.status in FUNCTION_CASE_RELATION_DISPATCH_STATUSES
-        ):
-            raise dynamic_error(ErrBadRequest, "图谱正在生成中，请等待完成后再试")
-        if run.review_status != ReviewStatus.APPROVED.value:
-            raise dynamic_error(ErrBadRequest, "候选结果审核通过后才能生成图谱")
-        if not (
-            run.status == RunStatus.SUCCESS.value
-            or (
-                run.status in {"failed", "error"}
-                and run.current_stage == FUNCTION_CASE_RELATION_STAGE
-            )
-        ):
-            raise ErrBadRequest()
-        latest_task = await self.repository.get_latest_ai_dispatch(run_id)
-        if latest_task is None or latest_task.status in FUNCTION_CASE_RELATION_DISPATCH_STATUSES:
-            raise ErrBadRequest()
-        cases = generated_function_cases(run)
-        if not cases:
-            raise ErrBadRequest()
-        case_ids = [str(first_present(case, "case_id", "caseId") or "").strip() for case in cases]
-        if any(not case_id for case_id in case_ids):
-            raise dynamic_error(
-                ErrBadRequest, "用例缺少平台签发的 case_id，请重新生成用例后再生成图谱"
-            )
-        if len(case_ids) != len(set(case_ids)):
-            raise dynamic_error(ErrBadRequest, "用例 case_id 重复，请重新生成用例后再生成图谱")
-        config = dict(normalize_config_json(run.config_json))
-        config.pop(REVISION_INSTRUCTION_FIELD, None)
-        # 上一次关系产物随 config 进入派发快照，skill 据此沿用既有流程/节点/连线 ID。
-        config["resultYaml"] = json.dumps({"cases": cases}, ensure_ascii=False)
-        if not (run.snapshot_json or {}).get("requirementUnderstandingVersion"):
-            run.snapshot_json = {
-                **(run.snapshot_json or {}),
-                **await functional_requirement_source(
-                    GenerationChainRepository(self.repository.session), run.requirement_id
-                ),
-            }
-        relation_snapshot = {
-            "source": dict(run.snapshot_json or {}),
-            "config": config,
-            "currentOutput": run.result_yaml or "",
-        }
-        run.config_json = config
-        run.status = RunStatus.PENDING.value
-        run.current_stage = FUNCTION_CASE_RELATION_STAGE
-        run.stage_status = StageStatus.PENDING.value
-        run.error_message = ""
-        intent = replace(
-            intent,
-            llm_connection_id=await self.stage_connection(
-                run, body or {}, user_id, latest_task.llm_connection_id
-            ),
-            input_snapshot=relation_snapshot,
-        )
-        dispatch = WorkerTask(
-            domain="ai",
-            task_id=self.new_id(),
-            task_type=task_type_for("function"),
-            run_id=run.run_id,
-            status=RunStatus.PENDING.value,
-        )
-        self.repository.add(dispatch)
-        await self.execution.save(self.repository.session, run, intent=intent, worker=dispatch)
-        await self.repository.commit()
-        await self.repository.refresh(run)
-        return dump_run(run)
+        if not isinstance(run, StandaloneRun):
+            raise ErrNotFound()
+        return await generate_function_graph(self, run, body or {}, user_id)
+
+    # Retired requirement-run URLs remain registered for existing clients. New
+    # requirement work uses the requirement generation-chain stage endpoints.
+    async def save_requirement_analysis_stage_output(
+        self, run_id: str, body: dict[str, Any], user_id: str
+    ) -> dict:
+        raise ErrNotFound()
+
+    async def review_requirement_analysis_stage(
+        self, run_id: str, body: dict[str, Any], user_id: str
+    ) -> dict:
+        raise ErrNotFound()
+
+    async def revise_requirement_analysis_stage(
+        self, run_id: str, body: dict[str, Any], user_id: str
+    ) -> dict:
+        raise ErrNotFound()

@@ -3,15 +3,9 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from testing_agent.core.enums import RunStatus, StageStatus
-from testing_agent.core.errors import ErrBadRequest, ErrNotFound
-from testing_agent.domain.worker_context import AiWorkerContext
-from testing_agent.models.ai_generate_task import AiGenerateTaskRun
+from testing_agent.core.errors import ErrBadRequest
 from testing_agent.models.worker_task import WorkerTask
-from testing_agent.repositories.worker_task import WorkerTaskRepository
 from testing_agent.schemas.workers import (
     WorkerProgressRequest,
     WorkerTaskEventRequest,
@@ -19,13 +13,12 @@ from testing_agent.schemas.workers import (
 from testing_agent.services.ui_generation_contracts import is_ui_workflow, validate_ui_worker_output
 from testing_agent.services.worker_domains.events import (
     final_run_status,
-    json_text,
     parse_event_time,
 )
 
 
 def apply_ai_completion_to_run(
-    run: AiGenerateTaskRun | Any, body: WorkerTaskEventRequest, *, functional: bool = False
+    run: Any, body: WorkerTaskEventRequest, *, functional: bool = False
 ) -> None:
     snapshot = body.snapshot_json or {}
     status = final_run_status(body.status)
@@ -79,7 +72,6 @@ def apply_ai_completion_to_run(
     elif status in {"failed", "error", "canceled"}:
         run.stage_status = StageStatus.FAILED.value
     run.error_message = body.error_message or snapshot.get("errorMessage") or ""
-    run.remediation = body.remediation or snapshot.get("remediation") or ""
     if not functional or status == RunStatus.SUCCESS.value:
         if body.config_json is not None:
             run.config_json = body.config_json
@@ -103,63 +95,6 @@ def apply_ai_completion_to_run(
         run.duration_ms = body.duration_ms
 
 
-async def build_snapshot(session: AsyncSession, task: WorkerTask) -> dict[str, Any]:
-    run = await session.scalar(
-        select(AiGenerateTaskRun).where(AiGenerateTaskRun.run_id == task.run_id)
-    )
-    if run is None:
-        return {
-            "taskType": task.task_type,
-            "checkpointEnabled": False,
-            "currentStage": "",
-            "configJson": "{}",
-            "run": None,
-        }
-    snapshot = dict(run.snapshot_json or {})
-    config = run.config_json or {}
-    if isinstance(run, AiGenerateTaskRun):
-        from testing_agent.services.ai_execution import worker_input
-
-        ai_run = run
-        snapshot, config = await session.run_sync(
-            lambda sync_session: worker_input(sync_session, ai_run, task)
-        )
-    if snapshot:
-        snapshot["runId"] = run.run_id
-        document_type = snapshot.get("documentType") or snapshot.get("sourceType")
-        if snapshot.get("taskType") in {
-            "requirement_analysis",
-            "functional_case_generate",
-        } and document_type in {"text", "word", "docx", "richtext"}:
-            document_url = f"/internal/ai-worker/tasks/{task.task_id}/requirement-document"
-            snapshot["documentDownloadUrl"] = document_url
-            if document_type in {"word", "docx"} and not snapshot.get("sourceContent"):
-                snapshot["sourceContent"] = document_url
-    if task.task_type == "ui_case_generate" and snapshot:
-        snapshot["sourceArchiveDownloadUrl"] = (
-            f"/internal/ai-worker/tasks/{task.task_id}/source-archive"
-        )
-    return {
-        "taskType": task.task_type,
-        "checkpointEnabled": run.checkpoint_enabled,
-        "currentStage": run.current_stage,
-        "configJson": json_text(config),
-        "run": snapshot or None,
-    }
-
-
-async def complete_run(
-    session: AsyncSession, task: WorkerTask, body: WorkerTaskEventRequest
-) -> None:
-    run = await session.scalar(
-        select(AiGenerateTaskRun).where(AiGenerateTaskRun.run_id == task.run_id)
-    )
-    if run:
-        apply_ai_completion_to_run(
-            run, body, functional=task.task_type == "functional_case_generate"
-        )
-
-
 AI_WAITING_REVIEW_STAGES = {
     "requirement_analysis",
     "case_names",
@@ -171,7 +106,7 @@ AI_WAITING_REVIEW_STAGES = {
 
 
 def apply_progress(
-    run: AiGenerateTaskRun, task: WorkerTask, body: WorkerProgressRequest, *, lease_seconds: int
+    run: Any, task: WorkerTask, body: WorkerProgressRequest, *, lease_seconds: int
 ) -> None:
     if body.run_id and body.run_id != run.run_id:
         raise ErrBadRequest()
@@ -268,47 +203,3 @@ def apply_progress(
     if body.error_message is not None:
         task.error_message = body.error_message
         run.error_message = body.error_message
-
-
-async def mark_claimed(repository: WorkerTaskRepository, task: WorkerTask) -> AiGenerateTaskRun:
-    ai_run = await repository.get_ai_run(task.run_id)
-    if ai_run is None:
-        raise ErrNotFound()
-    ai_run.status = RunStatus.CLAIMED.value
-    if ai_run.checkpoint_enabled:
-        ai_run.stage_status = StageStatus.RUNNING.value
-    return ai_run
-
-
-def claim_payload(
-    task: WorkerTask, ai_run: AiGenerateTaskRun, context: AiWorkerContext, *, lease_seconds: int
-) -> dict[str, Any]:
-    payload = {
-        "taskId": task.task_id,
-        "taskType": task.task_type,
-        "runId": task.run_id,
-        "generateTaskId": context.generate_task_id,
-        "projectId": ai_run.project_id,
-        "sprintId": ai_run.sprint_id,
-        "requirementId": ai_run.requirement_id,
-        "llmConnectionId": context.llm_connection_id,
-        "checkpointEnabled": ai_run.checkpoint_enabled,
-        "currentStage": ai_run.current_stage,
-        "leaseSeconds": lease_seconds,
-    }
-    if ai_run.checkpoint_enabled:
-        payload["configJson"] = json_text(getattr(ai_run, "config_json", {}) or {})
-    return payload
-
-
-async def mark_started(
-    repository: WorkerTaskRepository, task: WorkerTask, started_at: datetime | None
-) -> AiGenerateTaskRun:
-    ai_run = await repository.get_ai_run(task.run_id)
-    if ai_run is None:
-        raise ErrNotFound()
-    ai_run.status = RunStatus.RUNNING.value
-    ai_run.started_at = ai_run.started_at or started_at or datetime.now(UTC)
-    if ai_run.checkpoint_enabled:
-        ai_run.stage_status = StageStatus.RUNNING.value
-    return ai_run

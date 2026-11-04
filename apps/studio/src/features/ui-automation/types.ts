@@ -96,6 +96,7 @@ export type UiMissingVariable = {
 
 export type UiTestCaseDebugRunPayload = {
   environmentId: string
+  liveDebug?: boolean
   headless?: boolean
   slowMoMs?: number
   viewportWidth?: number
@@ -190,6 +191,7 @@ export type UiTestSuiteRunReport = UiTestSuiteRunSummary & {
 
 export type UiTestSuiteImportResult = {
   suiteId?: string
+  imported?: number
   importedCaseCount?: number
   importedStepCount?: number
 }

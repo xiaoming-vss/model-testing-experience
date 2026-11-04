@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 
 import pytest
-from support.ai_execution import AsyncSessionAdapter
+from support.ai_execution import AsyncSessionAdapter  # noqa: F401
 from support.ai_execution import db as db
 from support.function_case_library import make_requirement, make_sprint
 from support.order_api import (

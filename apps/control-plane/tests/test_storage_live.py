@@ -370,7 +370,7 @@ async def test_live_backup_restore_references_and_hashes(live, tmp_path):
                 sprint_id="audit-sprint",
                 name="Audit requirement",
                 document_file_id=requirement_file_id,
-                document_type="text",
+                document_type="richtext",
             )
         )
         await session.commit()

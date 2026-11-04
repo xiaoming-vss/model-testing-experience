@@ -172,7 +172,6 @@ class WorkerTaskEventRequest(BaseModel):
     status: str | None = None
     success: bool | None = None
     error_message: str | None = Field(default=None)
-    remediation: str | None = None
     duration_ms: int | None = Field(default=None)
     snapshot_json: Any | None = Field(default=None)
     step_results: list[Any] | None = Field(default=None)
@@ -196,3 +195,73 @@ class WorkerTaskEventRequest(BaseModel):
     _accept_result_summary_json = field_validator("result_summary_json", mode="before")(
         accept_worker_json_text
     )
+
+
+class AiWorkerProgressRequest(BaseModel):
+    """Progress reported by the AI worker for one dispatched attempt."""
+
+    worker_id: str = Field()
+    task_id: str | None = Field(default=None)
+    attempt_id: str | None = Field(default=None)
+    current_stage: str | None = Field(default=None)
+    stage_status: str | None = Field(default=None)
+    config_json: Any | None = Field(default=None)
+    result_summary_json: Any | None = Field(default=None)
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    _accept_config_json = field_validator("config_json", mode="before")(accept_worker_json_text)
+    _parse_result_summary_json = field_validator("result_summary_json", mode="before")(
+        accept_worker_json_text
+    )
+
+
+class AiWorkerTaskEventRequest(BaseModel):
+    """Lifecycle event reported by the AI worker for one dispatched attempt."""
+
+    trace_path: str | None = None
+    worker_id: str = Field()
+    task_id: str | None = Field(default=None)
+    attempt_id: str | None = Field(default=None)
+    started_at: str | None = Field(default=None)
+    heartbeat_at: str | None = Field(default=None)
+    finished_at: str | None = Field(default=None)
+    status: str | None = None
+    success: bool | None = None
+    error_message: str | None = Field(default=None)
+    duration_ms: int | None = Field(default=None)
+    snapshot_json: Any | None = Field(default=None)
+    step_results: list[Any] | None = Field(default=None)
+    request: Any | None = None
+    response: Any | None = None
+    config_json: Any | None = Field(default=None)
+    result_yaml: str | None = Field(default=None)
+    output_yaml: str | None = Field(default=None)
+    result_summary_json: Any | None = Field(default=None)
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+    _parse_snapshot_json = field_validator("snapshot_json", mode="before")(parse_json_object)
+    _accept_config_json = field_validator("config_json", mode="before")(accept_worker_json_text)
+    _accept_result_summary_json = field_validator("result_summary_json", mode="before")(
+        accept_worker_json_text
+    )
+
+
+class AiWorkerClaimPayload(BaseModel):
+    task_id: str = Field()
+    task_type: str = Field()
+    attempt_id: str = Field()
+    domain: str | None = None
+    generate_task_id: str | None = Field(default=None)
+    project_id: str | None = Field(default=None)
+    sprint_id: str | None = Field(default=None)
+    requirement_id: str | None = Field(default=None)
+    llm_connection_id: str | None = Field(default=None)
+    status: str | None = None
+    checkpoint_enabled: bool | None = Field(default=None)
+    current_stage: str | None = Field(default=None)
+    config_json: str | None = Field(default=None)
+    lease_seconds: int | None = Field(default=None)
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)

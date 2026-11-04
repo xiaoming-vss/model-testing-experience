@@ -28,7 +28,7 @@ def build_progress(
     )
     return TaskProgress(
         task_id=task.task_id,
-        run_id=task.run_id,
+        attempt_id=task.attempt_id,
         current_stage=current_stage,
         stage_status=stage_status,
         intermediate_json_text=""

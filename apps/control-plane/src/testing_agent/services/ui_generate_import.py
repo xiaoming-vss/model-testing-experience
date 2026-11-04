@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-from testing_agent.core.enums import ImportStatus
 from testing_agent.core.errors import ErrBadRequest, ErrNotFound
 from testing_agent.core.sid import new_id
-from testing_agent.domain.ai_execution_intent import ExecutionIntent
 from testing_agent.models.ui_test_case import UiTestCase
-from testing_agent.services.ai_task_output import dump_run, validate_ui_candidate_cases
+from testing_agent.services.ai_task_output import validate_ui_candidate_cases
 from testing_agent.services.import_payload import parse_import_payload
+from testing_agent.services.standalone_run import StandaloneRun
 from testing_agent.services.ui_generation_contracts import is_ui_workflow
 from testing_agent.services.ui_test_case import validate_ui_import_payload
 
@@ -55,15 +53,27 @@ async def import_ui_run(
     *,
     artifact_content: str | None = None,
     allow_reimport: bool = False,
+    approved_source: Any | None = None,
 ) -> dict[str, Any]:
-    owned_run = await service.owned_run(user_id, run_id, "ui", action="execute")
-    run = await service.repository.get_run_for_update(run_id)
-    if run is None or run.run_id != owned_run.run_id:
-        raise ErrBadRequest()
+    if approved_source is None:
+        owned_run = await service.owned_run(user_id, run_id, "ui", action="execute")
+        if not isinstance(owned_run, StandaloneRun):
+            raise ErrNotFound()
+        from testing_agent.services.standalone_ui_import import import_standalone_ui
+
+        return await import_standalone_ui(
+            service,
+            owned_run,
+            suite_id=suite_id,
+            confirm_overwrite=confirm_overwrite,
+            user_id=user_id,
+            apply_import=import_ui_run,
+        )
+    run = approved_source
     if artifact_content is None and (
         run.status != "success"
         or run.review_status != "approved"
-        or (run.import_status == ImportStatus.IMPORTED.value and not allow_reimport)
+        or (run.import_status == "imported" and not allow_reimport)
     ):
         raise ErrBadRequest()
 
@@ -111,15 +121,9 @@ async def import_ui_run(
             "requiresConfirmation": True,
             "conflicts": conflicts,
             "importChanges": [],
-            "run": dump_run(run),
+            "run": {},
         }
 
-    old_import_state = (
-        run.import_status,
-        run.imported_targets,
-        run.imported_at,
-        run.import_migration_complete,
-    )
     try:
         changed_case_ids: set[str] = set()
         for item in generated_cases:
@@ -130,22 +134,8 @@ async def import_ui_run(
             apply_generated_case(target, item)
             changed_case_ids.add(target.case_id)
 
-        run.import_status = ImportStatus.IMPORTED.value
-        run.imported_targets = [{"targetType": "ui_suite", "targetId": suite_id}]
-        run.imported_at = datetime.now(UTC)
-        run.import_migration_complete = True
-        await service.execution.save(
-            service.repository.session, run, intent=ExecutionIntent(actor_id=user_id)
-        )
-        await service.repository.commit()
-        await service.repository.refresh(run)
+        await service.repository.flush()
     except Exception:
-        (
-            run.import_status,
-            run.imported_targets,
-            run.imported_at,
-            run.import_migration_complete,
-        ) = old_import_state
         await service.repository.rollback()
         raise
 
@@ -159,5 +149,5 @@ async def import_ui_run(
                 "changedCaseIds": sorted(changed_case_ids),
             }
         ],
-        "run": dump_run(run),
+        "run": {},
     }

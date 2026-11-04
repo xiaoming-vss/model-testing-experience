@@ -38,6 +38,4 @@ export const requirementDesignApi = {
     request<RequirementDesignHistory>(`/v1/requirements/${requirementId}/design/${kind}/runs${buildQuery(params)}`),
   configure: (requirementId: string, kind: RequirementDesignKind, body: RequirementDesignConfiguration) =>
     request<RequirementAnalysisTask>(`/v1/requirements/${requirementId}/design/${kind}/configuration`, { method: 'POST', body: JSON.stringify(body) }),
-  start: (requirementId: string, kind: RequirementDesignKind, body: { taskId: string; requestId: string; connectionId: string; checkpointEnabled: boolean; instruction?: string; functionCaseIds?: string[]; requirementUnderstandingVersionId?: string }) =>
-    request<RequirementAnalysisTaskRun>(`/v1/requirements/${requirementId}/design/${kind}/run`, { method: 'POST', body: JSON.stringify(body) }),
 }

@@ -3,39 +3,27 @@
 from typing import Any
 
 from testing_agent.core.errors import ErrBadRequest, dynamic_error
-from testing_agent.domain.requirement_artifacts import requirement_content
 from testing_agent.repositories.generation_chain import GenerationChainRepository
+from testing_agent.services.requirement_understanding_source import (
+    approved_understanding,
+    understanding_source,
+    understanding_version_ref,
+)
 
 
 async def functional_requirement_source(
     repository: GenerationChainRepository, requirement_id: str, version_id: str = ""
 ) -> dict[str, Any]:
-    task = await repository.task(requirement_id, "requirement_analysis")
-    version = None
-    if task is not None:
-        if version_id:
-            version = await repository.version(task.task_id, version_id)
-        else:
-            version = await repository.latest_version(task.task_id, "feature_understanding")
-    if version is None or version.stage != "feature_understanding":
-        raise dynamic_error(
-            ErrBadRequest,
-            "选择的需求理解版本不存在或不属于当前需求"
-            if version_id
-            else "请先审核通过需求理解，再生成功能用例",
-        )
-    try:
-        content = requirement_content(version.artifact_content)
-    except ValueError as exc:
-        raise dynamic_error(ErrBadRequest, "需求理解版本内容无效，请重新生成并审核") from exc
+    version = await approved_understanding(repository, requirement_id, version_id)
+    if version is None:
+        raise dynamic_error(ErrBadRequest, "请先审核通过需求理解，再生成功能用例")
+    content = understanding_source(version)
     if not content.strip():
         raise dynamic_error(ErrBadRequest, "需求理解版本内容为空，请重新生成并审核")
     return {
         "sourceContent": content,
-        "requirementUnderstandingVersion": {
-            "versionId": version.version_id,
-            "versionNo": version.version_no,
-            "taskId": version.task_id,
-            "runId": version.run_id,
-        },
+        "requirementUnderstandingVersion": understanding_version_ref(version),
+        # 功能用例消费的是需求理解正文，不是原始材料文件；显式声明类型，
+        # 避免 Worker 回退使用 sourceType="requirement" 作为文档类型。
+        "documentType": "text",
     }

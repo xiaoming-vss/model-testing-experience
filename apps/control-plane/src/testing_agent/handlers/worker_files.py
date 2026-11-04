@@ -8,7 +8,7 @@ from testing_agent.core.errors import ErrForbidden
 from testing_agent.schemas.stored_file import FileUploadRequest
 from testing_agent.services.worker import find_task
 from testing_agent.services.worker_authorization import authorize_execution
-from testing_agent.services.worker_task import ensure_worker_match
+from testing_agent.services.worker_domains.guard import ensure_worker_match
 
 
 class WorkerFileRequest(BaseModel):

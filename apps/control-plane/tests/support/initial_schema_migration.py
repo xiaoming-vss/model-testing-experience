@@ -29,14 +29,13 @@ def migration_config(connection):
 
 def assert_current_schema(connection):
     context = MigrationContext.configure(connection, opts={"compare_type": True})
+    expected_revision = ScriptDirectory.from_config(
+        Config(str(ROOT / "alembic.ini"))
+    ).get_current_head()
+    assert context.get_current_revision() == expected_revision
     assert compare_metadata(context, Base.metadata) == []
-    assert set(sa.inspect(connection).get_table_names()) == set(Base.metadata.tables) | {
-        "alembic_version"
-    }
-    assert (
-        context.get_current_revision()
-        == ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini"))).get_current_head()
-    )
+    expected_tables = set(Base.metadata.tables) | {"alembic_version"}
+    assert set(sa.inspect(connection).get_table_names()) == expected_tables
     # These FKs existed in development migrations and must survive the squash.
     expected = {
         "requirements": "fk_requirements_sprint",

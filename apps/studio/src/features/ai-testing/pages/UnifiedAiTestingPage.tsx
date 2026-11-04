@@ -3,6 +3,7 @@ import { ListPagination } from '@/shared/components/ListPagination'
 import '@/shared/styles/list-table.css'
 import '@/shared/styles/surface-tokens.css'
 import { ActionButton } from '@/shared/components/ActionButton'
+import { usePendingRequestId } from '@/shared/hooks/usePendingRequestId'
 import { usePersonalConnectionChoice } from '@/features/base-services/components/usePersonalConnectionChoice'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import {
@@ -289,10 +290,15 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
     codeRiskForm.resetFields()
   }
 
+  const pendingRiskRequest = usePendingRequestId()
   const runCodeRiskTaskMutation = useMutation({
-    mutationFn: async ({ taskId, connectionId }: { taskId: string; connectionId: string }) =>
-      api.runCodeRiskTask(taskId, { llmConnectionId: connectionId, triggerType: 'manual', gitlabConnectionIds: await personalGitlab.forRequirement(activeProjectId!, (await api.getCodeRiskTask(taskId)).requirementId!) }),
+    mutationFn: async ({ taskId, connectionId }: { taskId: string; connectionId: string }) => {
+      const gitlabConnectionIds = await personalGitlab.forRequirement(activeProjectId!, (await api.getCodeRiskTask(taskId)).requirementId!)
+      const key = JSON.stringify({ taskId, connectionId, gitlabConnectionIds: Object.entries(gitlabConnectionIds).sort(([a], [b]) => a.localeCompare(b)) })
+      return api.runCodeRiskTask(taskId, { llmConnectionId: connectionId, triggerType: 'manual', gitlabConnectionIds, requestId: pendingRiskRequest.forInput(key) })
+    },
     onSuccess: (run) => {
+      pendingRiskRequest.clear()
       message.success('任务已加入执行队列')
       setCodeRiskLlmSelectTaskId(null)
       queryClient.invalidateQueries({ queryKey: ['codeRiskTaskRuns', run.taskId] })

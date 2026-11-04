@@ -12,6 +12,7 @@ from testing_agent.api.deps import (
     get_generation_task_commands,
 )
 from testing_agent.core.errors import success_payload
+from testing_agent.handlers.generation_guards import ensure_legacy_mutation_allowed
 from testing_agent.schemas.ai_generate_task import (
     AiGenerateTaskRequest,
     AiGenerateTaskResultRequest,
@@ -84,7 +85,7 @@ async def run_function_case_generate_task(
     user_id: str = Depends(get_current_user_id),
     service: GenerationRunLauncher = Depends(get_generation_launcher),
 ):
-    payload = body.model_dump(by_alias=True, exclude_none=True) if body else None
+    payload = body.model_dump(by_alias=True, exclude_none=True) if body else {}
     return success_payload(await service.launch("function", task_id, payload, user_id))
 
 
@@ -120,6 +121,9 @@ async def delete_function_case_generate_task_run(
     user_id: str = Depends(get_current_user_id),
     service: GenerationTaskCommands = Depends(get_generation_task_commands),
 ):
+    await ensure_legacy_mutation_allowed(
+        service.access.owned_run, "function", run_id, user_id, action="write"
+    )
     return success_payload(await service.delete_run("function", run_id, user_id))
 
 
@@ -129,6 +133,7 @@ async def save_function_case_stage_output(
     user_id: str = Depends(get_current_user_id),
     service: GenerationStageWorkflow = Depends(get_generation_stages),
 ):
+    await ensure_legacy_mutation_allowed(service.owned_run, "function", run_id, user_id)
     return success_payload(
         await service.save_stage_output(
             run_id, body.model_dump(by_alias=True, exclude_none=True), user_id
@@ -142,6 +147,7 @@ async def review_function_case_stage(
     user_id: str = Depends(get_current_user_id),
     service: GenerationStageWorkflow = Depends(get_generation_stages),
 ):
+    await ensure_legacy_mutation_allowed(service.owned_run, "function", run_id, user_id)
     return success_payload(
         await service.review_stage(
             run_id,
@@ -157,6 +163,12 @@ async def retry_function_case_stage(
     user_id: str = Depends(get_current_user_id),
     service: GenerationStageWorkflow = Depends(get_generation_stages),
 ):
+    await ensure_legacy_mutation_allowed(
+        service.owned_run, "function", run_id, user_id, action="execute"
+    )
+    await ensure_legacy_mutation_allowed(
+        service.owned_run, "function", run_id, user_id, action="execute"
+    )
     payload = body.model_dump(by_alias=True, exclude_none=True) if body else None
     return success_payload(await service.retry_stage(run_id, payload, user_id))
 
@@ -167,6 +179,7 @@ async def review_function_case_generate_task_run(
     user_id: str = Depends(get_current_user_id),
     service: GenerationCandidateReview = Depends(get_generation_review),
 ):
+    await ensure_legacy_mutation_allowed(service.owned_run, "function", run_id, user_id)
     return success_payload(
         await service.review(
             "function", run_id, body.model_dump(by_alias=True, exclude_none=True), user_id
@@ -180,6 +193,9 @@ async def update_function_case_generate_task_run_result(
     user_id: str = Depends(get_current_user_id),
     service: GenerationCandidateReview = Depends(get_generation_review),
 ):
+    await ensure_legacy_mutation_allowed(
+        service.owned_run, "function", run_id, user_id, action="write"
+    )
     return success_payload(
         await service.update_result("function", run_id, body.result_yaml, user_id)
     )
@@ -191,12 +207,16 @@ async def import_function_case_generate_task_run(
     user_id: str = Depends(get_current_user_id),
     service: CandidateImportContext = Depends(get_generation_import_context),
 ):
+    await ensure_legacy_mutation_allowed(
+        service.owned_run, "function", run_id, user_id, action="execute"
+    )
     return success_payload(
         await import_function_run(
             service,
             run_id,
             body.confirm_overwrite if body else False,
             user_id,
+            target_requirement_id=body.requirement_id if body else None,
         )
     )
 
@@ -207,6 +227,9 @@ async def revise_function_case_stage(
     user_id: str = Depends(get_current_user_id),
     service: GenerationStageWorkflow = Depends(get_generation_stages),
 ):
+    await ensure_legacy_mutation_allowed(
+        service.owned_run, "function", run_id, user_id, action="execute"
+    )
     return success_payload(
         await service.revise_function_case_stage(
             run_id, body.model_dump(by_alias=True, exclude_none=True), user_id

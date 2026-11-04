@@ -5,11 +5,26 @@ from fastapi.responses import JSONResponse, Response
 
 from testing_agent.api.deps import get_file_service, get_worker_task_service
 from testing_agent.schemas.workers import (
+    AiWorkerClaimPayload,
+    AiWorkerProgressRequest,
+    AiWorkerTaskEventRequest,
     WorkerClaimRequest,
     WorkerProgressRequest,
     WorkerTaskEventRequest,
 )
 from testing_agent.services.worker_task import WorkerTaskService
+
+
+def _event_body(body: AiWorkerTaskEventRequest) -> WorkerTaskEventRequest:
+    data = body.model_dump()
+    data["run_id"] = data.pop("attempt_id")
+    return WorkerTaskEventRequest(**data)
+
+
+def _progress_body(body: AiWorkerProgressRequest) -> WorkerProgressRequest:
+    data = body.model_dump()
+    data["run_id"] = data.pop("attempt_id")
+    return WorkerProgressRequest(**data)
 
 
 async def claim_task(
@@ -19,7 +34,9 @@ async def claim_task(
     payload = await service.claim("ai", body)
     if payload is None:
         return Response(status_code=204)
-    return payload
+    data = dict(payload)
+    data["attempt_id"] = data.pop("runId", "")
+    return AiWorkerClaimPayload(**data)
 
 
 async def get_snapshot(
@@ -31,28 +48,28 @@ async def get_snapshot(
 
 async def mark_started(
     task_id: str,
-    body: WorkerTaskEventRequest,
+    body: AiWorkerTaskEventRequest,
     service: WorkerTaskService = Depends(get_worker_task_service),
 ):
-    await service.started("ai", task_id, body)
+    await service.started("ai", task_id, _event_body(body))
     return Response(status_code=204)
 
 
 async def heartbeat(
     task_id: str,
-    body: WorkerTaskEventRequest,
+    body: AiWorkerTaskEventRequest,
     service: WorkerTaskService = Depends(get_worker_task_service),
 ):
-    await service.heartbeat("ai", task_id, body)
+    await service.heartbeat("ai", task_id, _event_body(body))
     return Response(status_code=204)
 
 
 async def complete_task(
     task_id: str,
-    body: WorkerTaskEventRequest,
+    body: AiWorkerTaskEventRequest,
     service: WorkerTaskService = Depends(get_worker_task_service),
 ):
-    await service.complete("ai", task_id, body)
+    await service.complete("ai", task_id, _event_body(body))
     return Response(status_code=204)
 
 
@@ -101,10 +118,10 @@ async def source_archive(
 
 async def report_progress(
     task_id: str,
-    body: WorkerProgressRequest,
+    body: AiWorkerProgressRequest,
     service: WorkerTaskService = Depends(get_worker_task_service),
 ):
-    await service.progress(task_id, body)
+    await service.progress(task_id, _progress_body(body))
     return Response(status_code=204)
 
 

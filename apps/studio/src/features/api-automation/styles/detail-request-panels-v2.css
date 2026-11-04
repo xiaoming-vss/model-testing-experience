@@ -384,6 +384,7 @@
 .api-collection-workbench-page .api-wb-body-panel .json-editor-codemirror .cm-editor {
   font-size: 12px;
   line-height: 24px;
+  max-height: max(260px, calc(100cqh - 200px));
 }
 
 .api-collection-workbench-page .api-wb-body-panel .json-editor-codemirror .cm-gutterElement {

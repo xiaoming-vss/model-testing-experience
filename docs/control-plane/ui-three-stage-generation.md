@@ -21,9 +21,9 @@
 | `ui_design` | `map-functional-cases-to-ui-scenarios` | `configJson.uiDesign`，`ui_test_scenarios/2.0` | `waiting_review` |
 | `ui_yaml` | `generate-ui-test-case` | `resultYaml`，UI 用例列表 | 生成成功，整体审核仍为 `pending` |
 
-新运行快照包含 `uiWorkflowVersion: ui_three_stage/1.0`、`functionalCases`。正式用例的标题、前置条件、步骤和预期冻结在启动事务内，后续编辑正式用例不改变本次输入。显式选择为空、重复 ID、其他需求的用例均拒绝。未传选择列表的旧客户端默认采用当前需求全部正式用例。新运行固定 `checkpointEnabled: true`。
+新运行快照包含 `uiWorkflowVersion: ui_three_stage/1.0`、`functionalCases`。正式用例的标题、前置条件、步骤和预期冻结在启动事务内，后续编辑正式用例不改变本次输入。显式选择为空、重复 ID、其他需求的用例均拒绝。未传选择列表的旧客户端默认采用当前需求全部正式用例。新运行固定 `checkpointEnabled: true`。三个阶段的技能与 Worker 只使用源码包、正式功能用例和已审核阶段产物，不读取需求正文或需求理解版本；启动快照的 `sourceContent` 保持为空，历史需求正文里的旧版需求理解 JSON 不再影响 UI 生成。
 
-复用 ADR 0008 的 stage/attempt/dispatch 账本，不新增数据库字段。每个审核通过动作原子保存本阶段审核和下一阶段派发。Worker 每次只获取、执行当前阶段默认技能；两个独立 AI Worker 均支持相同协议。源码文件身份固定，下载 URL 按当前 dispatch 刷新。修订和重试保持尝试身份隔离，旧 Worker 回传不能覆盖新尝试；失败不能清空已确认产物。
+UI 三个阶段各自归属稳定阶段和独立尝试。审核通过先提交本阶段版本，再按需派发下一阶段；后续派发失败不会回滚已通过版本。Worker 每次只获取、执行当前阶段默认技能；两个独立 AI Worker 均支持相同协议。源码文件身份固定，下载 URL 按当前 dispatch 刷新。修订和重试保持尝试身份隔离，旧 Worker 回传不能覆盖新尝试；失败不能清空已确认产物。
 
 第一阶段由调用方指定 workspace 内的 `outputPath`，Worker 优先读取固定路径上的 JSON 文件并完整校验；文件不存在时兼容直接 JSON。不得跟随其他路径或符号链接。
 
@@ -52,11 +52,11 @@ Worker 对每批执行平台 YAML 草稿校验和用例范围检查，最多修�
 | `POST /revise-stage` | 当前阶段继续优化 | `stage`、`revisionInstruction`、当前产物、可选 `llmConnectionId` |
 | `POST /retry-stage` | 失败重试 | `stage`、可选 `llmConnectionId` |
 
-独立任务启动入口为 `POST /v1/ui-case-generate-tasks/{taskId}/run`，需求页启动入口为 `POST /v1/requirements/{requirementId}/design/ui/run`；两者均接收可选 `functionCaseIds` 并经同一启动器冻结选中正式用例。保存要求写权限，审核要求审核权限，修订和重试要求执行权限；模型连接必须属于本次操作者。
+需求关联任务通过 `POST /v1/requirements/{requirementId}/generation/ui/stages/ui_surface/run` 启动，可选 `functionCaseIds` 用于冻结选中的正式用例；旧需求关联启动入口引导到阶段链。保存要求写权限，审核要求审核权限，修订和重试要求执行权限；模型连接必须属于本次操作者。
 
 ## 兼容与运维
 
-没有 `uiWorkflowVersion` 的既有 UI 运行保持旧的单阶段结果展示和最终审核行为；新阶段布局只应用于新标记运行。旧兼容入口在历史运行清理前保留，本次不迁移旧产物。源码包、默认技能继续通过统一 S3 文件生命周期维护，发布命令见 [默认技能维护](skills.md)。不要将技能实验目录一并发布。
+审核通过的最终阶段内容可独立导入，不要求补造缺失的上游审核版本。源码包、默认技能继续通过统一 S3 文件生命周期维护，发布命令见 [默认技能维护](skills.md)。不要将技能实验目录一并发布。
 
 本次发布只更新上述三个默认技能，21 个文件从真实 S3 回读核对大小和 SHA-256；其他 11 个默认技能摘要不变。控制面状态流、HTTP 接口、导入门禁、Worker 模型替身回归及 Studio 原文审核均已覆盖。浏览器使用实际组件与 CodeMirror 检查桌面、窄屏 JSON/YAML；该检查未调用真实模型，也不代表已对业务站点执行 UI 自动化。
 

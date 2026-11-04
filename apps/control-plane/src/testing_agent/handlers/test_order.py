@@ -4,6 +4,8 @@ from fastapi import Depends, Query
 
 from testing_agent.api.deps import (
     get_current_user_id,
+    get_generation_queries,
+    get_generation_task_commands,
     get_test_order_entry_service,
     get_test_order_graph_service,
     get_test_order_service,
@@ -20,6 +22,8 @@ from testing_agent.schemas.test_order import (
     TestOrderRequest,
     TestOrderUpdateRequest,
 )
+from testing_agent.services.ai_task_commands import GenerationTaskCommands
+from testing_agent.services.ai_task_queries import GenerationQueries
 from testing_agent.services.test_order import TestOrderService
 from testing_agent.services.test_order_entry import TestOrderEntryService
 from testing_agent.services.test_order_graph import TestOrderGraphService
@@ -206,3 +210,29 @@ async def get_test_order_graph_input(
     service: TestOrderGraphService = Depends(get_test_order_graph_service),
 ):
     return success_payload(await service.graph_input(user_id, order_id))
+
+
+async def delete_test_order_graph_run(
+    run_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: GenerationTaskCommands = Depends(get_generation_task_commands),
+):
+    return success_payload(await service.delete_run("test_order_graph", run_id, user_id))
+
+
+async def list_test_order_graph_runs(
+    order_id: str,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100, alias="pageSize"),
+    user_id: str = Depends(get_current_user_id),
+    service: TestOrderGraphService = Depends(get_test_order_graph_service),
+):
+    return success_payload(await service.history(user_id, order_id, page, page_size))
+
+
+async def get_test_order_graph_run(
+    run_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: GenerationQueries = Depends(get_generation_queries),
+):
+    return success_payload(await service.get_run("test_order_graph", run_id, user_id))

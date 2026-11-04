@@ -185,3 +185,12 @@ export async function requestBlob(path: string, options: RequestInit = {}, requi
     filename: getFilenameFromContentDisposition(response.headers.get('Content-Disposition')),
   }
 }
+
+/** Open an authenticated event stream without putting the access token in the URL. */
+export async function openEventStream(path: string, signal: AbortSignal, options: RequestInit = {}): Promise<Response> {
+  const token = useAuthStore.getState().token
+  const headers = new Headers(options.headers)
+  headers.set('Accept', 'text/event-stream')
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+  return fetch(`${API_BASE_URL}${path}`, { ...options, headers, signal })
+}

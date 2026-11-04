@@ -23,7 +23,7 @@ class RichtextTests(unittest.TestCase):
     def task(self, document_type="richtext"):
         return Task(
             task_id="task",
-            run_id="run",
+            attempt_id="run",
             task_type="requirement_analysis",
             checkpoint_enabled=True,
             current_stage="extracting_text",
@@ -44,9 +44,6 @@ class RichtextTests(unittest.TestCase):
         for kind in ("txt", "text"):
             with self.assertRaisesRegex(ValueError, "Word/DOCX"):
                 required_skills(self.task(kind))
-        task = self.task("text")
-        task.current_stage = "feature_understanding"
-        self.assertEqual(required_skills(task), ["prd-feature-understanding-skill"])
 
     def test_html_images_reach_model_and_keep_original_positions(self):
         html = b'<p>## Title</p><img data-file-id="img-1"><p>after</p><img data-file-id="img-1">'

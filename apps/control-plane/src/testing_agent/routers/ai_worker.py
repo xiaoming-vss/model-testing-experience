@@ -21,7 +21,7 @@ from testing_agent.handlers.ai_worker import (
 from testing_agent.handlers.worker_skills import skill_file, skill_manifest
 from testing_agent.schemas.stored_file import FileDownloadTicket
 from testing_agent.schemas.workers import (
-    WorkerClaimPayload,
+    AiWorkerClaimPayload,
     WorkerGitlabCredentialsResponse,
     WorkerLlmCredentialsResponse,
     WorkerProjectSkillsResponse,
@@ -32,7 +32,7 @@ router = APIRouter(prefix="/ai-worker", dependencies=[Depends(verify_worker_toke
 
 router.post(
     "/tasks/claim",
-    response_model=WorkerClaimPayload,
+    response_model=AiWorkerClaimPayload,
     response_model_exclude_none=True,
 )(claim_task)
 router.get("/tasks/{task_id}/snapshot", response_model=WorkerSnapshotResponse)(get_snapshot)

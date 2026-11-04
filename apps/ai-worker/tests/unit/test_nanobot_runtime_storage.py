@@ -23,7 +23,7 @@ class NanobotRuntimeStorageTests(unittest.TestCase):
             settings = NanobotConfig(runtime_root=str(root))
             task = Task(
                 task_id="storage-test",
-                run_id="run-test",
+                attempt_id="run-test",
                 generate_task_id="generate-test",
                 task_type="functional_case_generate",
                 payload=TaskPayload(

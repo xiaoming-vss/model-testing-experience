@@ -18,7 +18,7 @@
 | [MCP 客户端](../../apps/control-plane/src/testing_agent/services/mcp_client.py) | 区分明确拒绝与不确定写入，禁代理环境和重定向 | Worker 保留这些传输与错误分类规则 |
 | [推送记录](../../apps/control-plane/src/testing_agent/models/bug_zentao_push.py)、[附件记录](../../apps/control-plane/src/testing_agent/models/bug_zentao_attachment.py) | 保存 operation ID、远端 ID、目标和各自状态 | 继续作为业务关联和同步结果的持久化来源 |
 | [Worker 队列](../../apps/control-plane/src/testing_agent/models/worker_task.py) | `domain` 长度为 10，队列围绕业务 `run_id` 组织 | 不直接塞入长度为 11 的 `integration`；更关键的是现有业务运行假设不同 |
-| [队列上下文](../../apps/control-plane/src/testing_agent/services/worker_context.py)、[执行授权](../../apps/control-plane/src/testing_agent/services/worker_authorization.py) | 按 AI/API/UI 解释运行，其他分支按 UI 处理 | 新集成任务使用自己的授权与上下文实现 |
+| [队列上下文](../../apps/control-plane/src/testing_agent/domain/worker_context.py)、[执行授权](../../apps/control-plane/src/testing_agent/services/worker_authorization.py) | 按 AI/API/UI 解释运行，其他分支按 UI 处理 | 新集成任务使用自己的授权与上下文实现 |
 | [Worker repository](../../apps/control-plane/src/testing_agent/repositories/worker_task.py) | `commit()` 隐式执行 AI 阶段持久化 | 第一期开独立任务表和 repository，避免同时重构既有三类队列 |
 | [实例切换](../../apps/control-plane/src/testing_agent/services/zentao_mcp_reset.py) | 阻止进行中的推送、附件、正文写入并归档旧关联 | 新任务、写入预约和旧 operation ID 必须一起参与切换校验 |
 | [项目成员变更](../../apps/control-plane/src/testing_agent/services/project.py)、[个人授权撤销](../../apps/control-plane/src/testing_agent/services/shared_service.py) | 本地权限或授权变化会使相关既有任务失效 | 新任务必须接入撤销，并按 `write` 权限校验 Bug 推送 |

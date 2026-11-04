@@ -1,12 +1,23 @@
 # 需求富文本正文
 
-新增 `documentType=richtext`，对应经服务端清理的 `requirement.html`，元数据仍使用 `documentFileId`、`documentFilename`、`documentHash`。原有 text/docx 读取及 Word 上传继续兼容；不迁移历史数据。`documentContent` 仍用于现有增强文本，不保存富文本正文。
+新增 `documentType=richtext`，对应经服务端清理的 `requirement.html`，元数据仍使用 `documentFileId`、`documentFilename`、`documentHash`。需求文档只接受 `docx`/`richtext`（`word` 归一化为 `docx`）；`text` 已完全移除，创建、更新、读取和上传都不再接受 TXT。`documentContent` 仍用于现有增强文本，不保存富文本正文。
+
+## TXT 退役与迁移
+
+历史 `document_type=text` 需求通过一次性命令转换为富文本：正文按空行分段、转义后生成清洗过的 `requirement.html`，走统一上传核验并补齐 `StoredFile` 关联，最后清空 `documentContent`、更新文档元数据。命令默认只输出计划，确认后再写入：
+
+```bash
+python -m testing_agent.cli.requirement_documents migrate-text          # dry-run
+python -m testing_agent.cli.requirement_documents migrate-text --apply  # 执行转换
+```
+
+空正文或正文是历史 artifact JSON 的需求会返回 `skipped_*`，需人工处理。迁移可重复执行，已转换的需求不会被再次处理。**升级到移除 `text` 的版本前，必须先在每个环境执行迁移并确认 `requirements.document_type='text'` 为 0**；否则读取存量需求会失败。迁移命令走 ORM，不依赖当前 schema，仍可对备份库执行。
 
 Studio 使用统一上传管线提交 HTML：申请上传、直传 S3、完成校验、关联需求。HTML 上传上限为 1 MiB（同时受平台文件上限约束）。完成阶段先验证原始上传大小和 SHA-256，再用共享白名单清理 HTML，把清理后的字节写入已验证对象，更新文件大小及摘要，最后标记 ready。只有 ready 的文件可以关联或获取下载授权。临时上传失败或需求关联失败沿用已有过期清理；已经关联的旧版本继续保留。
 
 HTML 支持标题、段落、列表、引用、代码、基本表格与 PNG/JPEG 图片。图片只保存 `data-file-id`，不保存临时 URL。需求关联正文时，把其中图片按 attachment 用途关联到同一需求；统一文件服务验证项目、上传者、状态及归属。同一需求已关联图片允许其他有写权限的项目成员继续引用。正文和图片关联与需求更新同一数据库事务提交；关联失败时必须回滚。图片下载验证项目读取权限及需求仍然存在，需求删除后不能申请新下载授权。
 
-AI 分析第一阶段按文档类型选择提取技能：Word/DOCX 使用 `extract-docx-enhanced-text`，richtext 使用 `extract-richtext-enhanced-text`。富文本以原始 HTML 与关联图片输入模型，保留原有 `document_extraction` 1.0 输出及两阶段审核流程。历史 TXT 可继续查看、使用已审核提取产物进行第二阶段理解；重新提取时需替换为 Word 或富文本。
+AI 分析第一阶段按文档类型选择提取技能：Word/DOCX 使用 `extract-docx-enhanced-text`，richtext 使用 `extract-richtext-enhanced-text`。富文本以原始 HTML 与关联图片输入模型，保留原有 `document_extraction` 1.0 输出及两阶段审核流程。历史 TXT 需先执行上述迁移转换为富文本，才能重新提取；已审核的提取产物仍可继续用于第二阶段理解。
 
 图片通过 `GET /internal/ai-worker/tasks/{task_id}/requirement-images/{file_id}?workerId=...` 获取短期下载票据。接口复用当前运行授权与原始文档身份检查，校验 Worker、有效租约、项目与需求归属，以及图片仍在正文中被引用；票据响应 no-store。任务快照不新增签名 URL。Worker 下载时沿用大小与 SHA-256 校验，图片引用重复时仅下载一次，正文保留所有出现位置。下载失败中止本次准备，不静默丢图。
 

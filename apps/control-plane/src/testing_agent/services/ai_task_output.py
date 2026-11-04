@@ -13,13 +13,14 @@ from testing_agent.core.errors import (
     ErrBadRequest,
 )
 from testing_agent.domain.ai_tasks import DEFAULT_FUNCTION_CASE_MODULE
-from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
+from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generate_task_source_archive import AiGenerateTaskSourceArchive
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.generation_chain import GenerationChainRepository
 from testing_agent.schemas.requirement import normalize_document_type
 from testing_agent.services.functional_requirement_source import functional_requirement_source
 from testing_agent.services.import_payload import import_items, parse_import_payload
+from testing_agent.services.standalone_run import StandaloneRun
 from testing_agent.services.ui_test_case import ui_import_cases
 
 
@@ -56,7 +57,7 @@ def dump_task(
     }
 
 
-def dump_run(run: AiGenerateTaskRun) -> dict[str, Any]:
+def dump_run(run: StandaloneRun) -> dict[str, Any]:
     summary = run.result_summary_json or {}
     if isinstance(summary, dict) and isinstance(summary.get("uiSemanticReview"), dict):
         review = summary["uiSemanticReview"]
@@ -65,10 +66,10 @@ def dump_run(run: AiGenerateTaskRun) -> dict[str, Any]:
             # Derive staleness without rewriting the historical report or attempt ledger.
             summary = {**summary, "uiSemanticReview": {**review, "status": "stale"}}
     return {
-        "createdAt": getattr(run, "created_at", None),
-        "startedAt": getattr(run, "started_at", None),
-        "finishedAt": getattr(run, "finished_at", None),
-        "updatedAt": getattr(run, "history_updated_at", None),
+        "createdAt": run.created_at,
+        "startedAt": run.started_at,
+        "finishedAt": run.finished_at,
+        "updatedAt": run.history_updated_at,
         "hasResult": bool(run.result_yaml),
         "availableArtifacts": [
             key
@@ -90,35 +91,25 @@ def dump_run(run: AiGenerateTaskRun) -> dict[str, Any]:
         "triggerUserId": run.trigger_user_id,
         "triggerType": run.trigger_type,
         "status": run.status,
-        "workflowVersion": (getattr(run, "snapshot_json", None) or {}).get("workflowVersion", 2),
+        "workflowVersion": (run.snapshot_json or {}).get("workflowVersion", 2),
         "checkpointEnabled": run.checkpoint_enabled,
+        "generationChainManaged": bool((run.snapshot_json or {}).get("generationChainManaged")),
         "currentStage": run.current_stage,
         "stageStatus": run.stage_status,
         "snapshotJson": run.snapshot_json or {},
         "errorMessage": run.error_message,
-        "remediation": str(getattr(run, "remediation", "") or ""),
         "configJson": run.config_json or {},
         "resultYaml": run.result_yaml,
         "resultSummaryJson": summary,
         "reviewStatus": run.review_status,
-        "importStatus": getattr(run, "import_status", "pending"),
-        "importedTargets": getattr(run, "imported_targets", None) or [],
-        "importedAt": getattr(run, "imported_at", None),
-        "importMigrationComplete": getattr(run, "import_migration_complete", True),
+        "importStatus": run.import_status,
+        "importedTargets": run.imported_targets or [],
+        "importedAt": run.imported_at,
         "reviewerUserId": run.reviewer_user_id,
         "reviewedAt": run.reviewed_at,
         "reviewComment": run.review_comment,
         "durationMs": run.duration_ms,
     }
-
-
-def requirement_source_content(requirement: Any) -> str:
-    from testing_agent.domain.requirement_artifacts import requirement_content
-
-    try:
-        return requirement_content(getattr(requirement, "document_content", "") or "")
-    except ValueError as exc:
-        raise AppError(400, str(exc), 400) from exc
 
 
 def requirement_document_download_url(requirement: Any, requirement_id: str) -> str:
@@ -156,7 +147,7 @@ async def build_generate_run_snapshot(
     document_download_url = ""
     uses_requirement_document = False
     functional_source: dict[str, Any] = {}
-    if kind == "function":
+    if kind == "function" and task.requirement_id:
         functional_source = await functional_requirement_source(
             GenerationChainRepository(repository.session),
             task.requirement_id,
@@ -167,7 +158,7 @@ async def build_generate_run_snapshot(
         requirement = await repository.get_requirement(task.requirement_id)
         if requirement is not None:
             uses_requirement_document = True
-            document_type = normalize_document_type(str(requirement.document_type or "text"))
+            document_type = normalize_document_type(str(requirement.document_type or "richtext"))
             document_download_url = (
                 worker_requirement_document_download_url(worker_task_id)
                 if worker_task_id
@@ -178,13 +169,6 @@ async def build_generate_run_snapshot(
                 document_type == "docx" or bool(getattr(requirement, "document_file_id", ""))
             ):
                 source_content = document_download_url
-    elif kind == "ui":
-        requirement = await repository.get_requirement(task.requirement_id)
-        if requirement is not None:
-            # Requirement analysis imports its enhanced text into document_content.
-            # UI generation consumes only that text; it must not fall back to the
-            # original requirement document or expose a document download URL.
-            source_content = requirement_source_content(requirement)
     snapshot = {
         "taskId": task.task_id,
         "runId": run_id,
@@ -210,7 +194,7 @@ async def build_generate_run_snapshot(
     return snapshot
 
 
-def generated_payload(run: AiGenerateTaskRun | Any, content: str | None = None) -> dict[str, Any]:
+def generated_payload(run: Any, content: str | None = None) -> dict[str, Any]:
     raw = (run.result_yaml or "") if content is None else content
     if not raw.strip():
         raise ErrBadRequest()
@@ -221,34 +205,7 @@ def generated_payload(run: AiGenerateTaskRun | Any, content: str | None = None) 
     return parse_import_payload(data)
 
 
-def generated_api_cases(
-    run: AiGenerateTaskRun | Any, content: str | None = None
-) -> builtins.list[dict[str, Any]]:
-    return [
-        item
-        for item in import_items(generated_payload(run, content), "cases", "apiCases")
-        if isinstance(item, dict)
-    ]
-
-
-def generated_function_suites(
-    run: AiGenerateTaskRun | Any, content: str | None = None
-) -> builtins.list[dict[str, Any]]:
-    payload = generated_payload(run, content)
-    raw_suites = payload.get("suites")
-    if isinstance(raw_suites, list):
-        return [suite for suite in raw_suites if isinstance(suite, dict)]
-    cases = [
-        item
-        for item in import_items(payload, "cases", "functionCases", "testcases")
-        if isinstance(item, dict)
-    ]
-    return [{"name": "AI Generated", "cases": cases}] if cases else []
-
-
-def generated_function_cases(
-    run: AiGenerateTaskRun | Any, content: str | None = None
-) -> builtins.list[dict[str, Any]]:
+def generated_function_cases(run: Any, content: str | None = None) -> builtins.list[dict[str, Any]]:
     payload = generated_payload(run, content)
     cases = [
         item
@@ -374,12 +331,6 @@ def normalize_function_stage_config(stage: str, value: Any) -> dict[str, Any]:
             case_names = {}
         config["caseNames"] = {**case_names, "categories": config.pop("categories")}
     return config
-
-
-def requirement_analysis_import_content(run: AiGenerateTaskRun | Any) -> str:
-    from testing_agent.services.requirement_analysis_contracts import imported_content
-
-    return imported_content(run)
 
 
 def validate_ui_candidate_cases(result_yaml: str) -> builtins.list[dict[str, Any]]:

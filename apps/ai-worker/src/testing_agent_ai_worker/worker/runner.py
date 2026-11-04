@@ -81,7 +81,7 @@ class WorkerRunner:
         if task.credential_error:
             result = TaskResult(
                 task_id=task.task_id,
-                run_id=task.run_id,
+                attempt_id=task.attempt_id,
                 generate_task_id=task.generate_task_id,
                 status=TaskStatus.FAILED,
                 intermediate_json_text=task.config_json,
@@ -107,6 +107,7 @@ class WorkerRunner:
                 submit_progress,
             )
         except Exception as exc:
+            LOGGER.exception("task execution failed: task_id=%s", task.task_id)
             intermediate_json_text = (
                 latest_progress.intermediate_json_text
                 if latest_progress is not None
@@ -114,7 +115,7 @@ class WorkerRunner:
             )
             result = TaskResult(
                 task_id=task.task_id,
-                run_id=task.run_id,
+                attempt_id=task.attempt_id,
                 generate_task_id=task.generate_task_id,
                 status=TaskStatus.ERROR,
                 intermediate_json_text=intermediate_json_text,
@@ -122,7 +123,8 @@ class WorkerRunner:
                 result_summary_json=(
                     latest_progress.result_summary_json if latest_progress is not None else ""
                 ),
-                error_message=str(exc),
+                # Timeout and bare exceptions can have no message; never publish a blank reason.
+                error_message=str(exc) or f"{type(exc).__name__}（未返回错误信息）",
                 started_at=started_at,
                 finished_at=datetime.now().astimezone(),
             )

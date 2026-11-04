@@ -42,6 +42,43 @@ python3 scripts/manage.py compose logs -f
 
 内置数据库模式的启动顺序：MySQL 就绪 → migrate 执行 `alembic upgrade head` → 控制面就绪 → 前端与 Worker。数据库使用独立持久卷，业务文件使用私有 S3；AI 会话、日志及 Worker 临时产物仍使用运行目录或卷。控制面旧 storage 卷仅保留历史文件供恢复，不参与业务文件读取。第一次部署初始化空数据库，原备份目录中的数据库及运行数据不会自动导入。
 
+### v1 数据库初始化
+
+v1 只支持空数据库初始化。控制面只有一个冻结基线迁移 `20261103_0001_v1_baseline`，在空库执行 `alembic upgrade head` 创建全部业务表和 `alembic_version`；不提供从任何旧 revision 升级或迁移历史数据的路径。外部 MySQL 同样必须是空库，或只包含可丢弃的测试表。
+
+数据库结构与模型的一致性由控制面测试验证；部署后如启动失败，先检查 `alembic_version` 是否为 `20261103_0001`，不要把已有旧库直接接到 v1 控制面。
+
+### 本地已有库的一次性 stamp
+
+本地开发库 `testing-agent-control-plane-b` 可以保留数据，但只允许做一次性 stamp，不执行 DDL。操作前先备份数据库，并在控制面目录确认：
+
+```sh
+uv run python - <<'PY'
+import sqlalchemy as sa
+from alembic.autogenerate import compare_metadata
+from alembic.migration import MigrationContext
+from testing_agent.core.config import load_settings
+from testing_agent.models import Base
+
+url = load_settings().database_url.replace("mysql+asyncmy://", "mysql+pymysql://")
+engine = sa.create_engine(url)
+with engine.connect() as conn:
+    context = MigrationContext.configure(conn, opts={"compare_type": True})
+    assert compare_metadata(context, Base.metadata) == []
+    print("metadata diff: 0")
+engine.dispose()
+PY
+```
+
+确认 `compare_metadata` 为零差异、关键表行数与备份前一致后，执行：
+
+```sh
+cd apps/control-plane
+uv run alembic stamp --purge 20261103_0001
+```
+
+`--purge` 用于移除旧 revision 行后写入 v1 baseline；stamp 只更新 `alembic_version`，不修改业务表。随后重新核对行数并访问 `/v1/health` 完成启动 smoke。该操作不适用于生产或任何需要升级的数据库。
+
 AI 任务需要先配置平台中的模型服务及个人授权，并通过控制面的 [默认技能同步命令](control-plane/skills.md) 将技能源文件上传到 S3。Worker 按任务／阶段拉取当前默认技能到任务独立目录，不再按项目手工预置技能。代码部署不等于默认技能源文件及业务数据迁移。
 
 停止服务并保留数据：

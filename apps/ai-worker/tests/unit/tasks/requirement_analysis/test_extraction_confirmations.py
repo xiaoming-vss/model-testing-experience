@@ -43,7 +43,7 @@ class ExtractionConfirmationTests(unittest.TestCase):
     def run_revision(self, current, runner):
         task = Task(
             task_id="extraction",
-            run_id="local",
+            attempt_id="local",
             task_type="requirement_analysis",
             checkpoint_enabled=True,
             current_stage="extracting_text",

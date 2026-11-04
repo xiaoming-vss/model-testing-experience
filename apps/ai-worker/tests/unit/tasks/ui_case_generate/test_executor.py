@@ -76,7 +76,7 @@ class UiCaseExecutorTests(unittest.TestCase):
     def _task(self, *, source_archive_download_url: str = "/source.zip") -> Task:
         return Task(
             task_id="ui-task-1",
-            run_id="run-1",
+            attempt_id="run-1",
             generate_task_id="generate-1",
             task_type="ui_case_generate",
             project_id="project-1",
@@ -139,6 +139,23 @@ class UiCaseExecutorTests(unittest.TestCase):
         )
         self.assertEqual(TaskStatus.FAILED, result.status)
         self.assertIn("sourceArchiveDownloadUrl", result.error_message or "")
+
+    def test_execute_never_returns_blank_failure_reason_for_timeout(self) -> None:
+        class Downloader:
+            def download_and_extract(self, **kwargs):
+                return Path("D:/tmp/source")
+
+        def timed_out(**kwargs):
+            raise TimeoutError()
+
+        executor = UiCaseExecutor(
+            agent_config=PiConfig(),
+            source_downloader=Downloader(),
+            skill_runner=timed_out,
+        )
+        result = executor.execute(self._task(), datetime.now().astimezone(), lambda _: None)
+        self.assertEqual(TaskStatus.FAILED, result.status)
+        self.assertEqual("UI 用例生成执行失败，未返回错误信息", result.error_message)
 
     def test_execute_fails_when_skill_output_is_not_a_complete_yaml_case(self) -> None:
         class Downloader:

@@ -2,22 +2,19 @@ from __future__ import annotations
 
 import builtins
 from collections.abc import Callable
-from datetime import UTC, datetime
 from typing import Any
 
-from testing_agent.core.enums import ImportStatus, ReviewStatus, RunStatus
 from testing_agent.core.errors import (
     ErrBadRequest,
+    ErrNotFound,
 )
 from testing_agent.core.sid import new_id
-from testing_agent.domain.ai_execution_intent import ExecutionIntent
 from testing_agent.models.api_assert_rule import ApiAssertRule
 from testing_agent.models.api_case import ApiCase
 from testing_agent.models.api_extract_rule import ApiExtractRule
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-from testing_agent.services.ai_execution.writer import ExecutionWriter, SqlExecutionWriter
 from testing_agent.services.ai_task_access import OwnedRun, RequireCollectionAccess
-from testing_agent.services.ai_task_output import dump_run, generated_payload
+from testing_agent.services.ai_task_output import generated_payload
 from testing_agent.services.api_import_entities import (
     add_api_rules,
     apply_api_case,
@@ -26,6 +23,7 @@ from testing_agent.services.api_import_entities import (
 from testing_agent.services.api_import_payload import (
     validate_api_collection_import_payload,
 )
+from testing_agent.services.standalone_run import StandaloneRun
 
 
 class ApiCandidateImporter:
@@ -36,10 +34,8 @@ class ApiCandidateImporter:
         owned_run: OwnedRun,
         ensure_collection_access: RequireCollectionAccess,
         id_factory: Callable[[], str] = new_id,
-        execution_writer: ExecutionWriter | None = None,
     ):
         self.repository = repository
-        self.execution = execution_writer or SqlExecutionWriter()
         self.owned_run = owned_run
         self.ensure_collection_access = ensure_collection_access
         self.new_id = id_factory
@@ -163,12 +159,26 @@ class ApiCandidateImporter:
         *,
         artifact_content: str | None = None,
         allow_reimport: bool = False,
+        approved_source: Any | None = None,
     ) -> dict[str, Any]:
-        run = await self.owned_run(user_id, run_id, "api", action="execute")
+        if approved_source is None:
+            run = await self.owned_run(user_id, run_id, "api", action="execute")
+            if not isinstance(run, StandaloneRun):
+                raise ErrNotFound()
+            from testing_agent.services.standalone_api_import import import_standalone_api
+
+            return await import_standalone_api(
+                self,
+                run,
+                collection_id=collection_id,
+                confirm_overwrite=confirm_overwrite,
+                user_id=user_id,
+            )
+        run = approved_source
         if artifact_content is None and (
-            run.status != RunStatus.SUCCESS.value
-            or run.review_status != ReviewStatus.APPROVED.value
-            or (run.import_status == ImportStatus.IMPORTED.value and not allow_reimport)
+            run.status != "success"
+            or run.review_status != "approved"
+            or (run.import_status == "imported" and not allow_reimport)
         ):
             raise ErrBadRequest()
         await self.ensure_collection_access(user_id, collection_id, action="execute")
@@ -203,15 +213,9 @@ class ApiCandidateImporter:
                 "requiresConfirmation": True,
                 "conflicts": conflicts,
                 "importChanges": [],
-                "run": dump_run(run),
+                "run": {},
             }
 
-        old_import_state = (
-            run.import_status,
-            run.imported_targets,
-            run.imported_at,
-            run.import_migration_complete,
-        )
         try:
             changed_case_ids: set[str] = set()
             for item in generated_cases:
@@ -227,23 +231,8 @@ class ApiCandidateImporter:
                     apply_api_case(target_case, item)
                     await self._replace_api_rules(target_case.case_id, item)
                 changed_case_ids.add(target_case.case_id)
-            imported_at = datetime.now(UTC)
-            run.import_status = ImportStatus.IMPORTED.value
-            run.imported_targets = [{"targetType": "api_collection", "targetId": collection_id}]
-            run.imported_at = imported_at
-            run.import_migration_complete = True
-            await self.execution.save(
-                self.repository.session, run, intent=ExecutionIntent(actor_id=user_id)
-            )
-            await self.repository.commit()
-            await self.repository.refresh(run)
+            await self.repository.flush()
         except Exception:
-            (
-                run.import_status,
-                run.imported_targets,
-                run.imported_at,
-                run.import_migration_complete,
-            ) = old_import_state
             await self.repository.rollback()
             raise
         return {
@@ -256,5 +245,5 @@ class ApiCandidateImporter:
                     "changedCaseIds": sorted(changed_case_ids),
                 }
             ],
-            "run": dump_run(run),
+            "run": {},
         }

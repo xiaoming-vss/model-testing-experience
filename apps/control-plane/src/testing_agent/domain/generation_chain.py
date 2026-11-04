@@ -110,10 +110,6 @@ def upstream_stages(kind: str, stage: str) -> tuple[str, ...]:
     return STAGE_UPSTREAMS.get(stage, ())
 
 
-def config_field(stage: str) -> str:
-    return STAGE_CONFIG_FIELDS.get(stage, "resultYaml")
-
-
 def artifact_is_json(stage: str, artifact_format: str | None = None) -> bool:
     if artifact_format:
         return artifact_format == "json"
@@ -160,20 +156,3 @@ def artifact_summary(stage: str, content: str, artifact_format: str | None = Non
     if stripped.startswith("- "):
         return f"{sum(1 for line in stripped.splitlines() if line.startswith('- '))} 条记录"
     return f"{len(stripped)} 字符"
-
-
-def stage_states(kind: str, stages: set[str], has_drafts: set[str]) -> list[dict[str, Any]]:
-    """Small helper for empty/unconfigured chain responses."""
-    return [
-        {
-            "stage": stage,
-            "label": label,
-            "order": order,
-            "state": "draft"
-            if stage in has_drafts
-            else "approved"
-            if stage in stages
-            else "not_started",
-        }
-        for order, (stage, label) in enumerate(STAGE_DEFINITIONS[kind])
-    ]

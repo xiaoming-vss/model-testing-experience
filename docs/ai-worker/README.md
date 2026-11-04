@@ -93,6 +93,10 @@ uv run ruff check .                               # Lint
 
 `/internal/ai-worker/tasks/claim`、`/snapshot`、`/started`、`/heartbeat`、`/progress`、`/completed`、`/llm-credentials`
 
+领取、快照、进度和完成回传使用 `attemptId` 表示本次派发的阶段尝试；面向客户端的独立任务执行 ID 只在控制面接口以 `runId` 出现。两者不可互换，Worker 不应把执行 ID 当作队列尝试标识。
+
+进度回传只发送当前阶段、阶段状态、配置中间产物和结果摘要；不再发送 `remediation` 或不被持久化的结果正文。完成回传发送状态、结果 YAML、中间产物、结果摘要和错误信息，失败原因通过 `errorMessage` 展示。旧版 Worker 多发的字段由平台按既有反序列化策略忽略。
+
 ## 默认技能按需获取
 
 Worker 每次执行前按任务类型／阶段从控制面获取默认技能清单，直读 S3 并验证文件大小和 SHA-256。技能恢复到任务独立 workspace 中，不再手工向项目目录放置技能；本期每次重新获取当前内容，不做历史版本或跨运行缓存。项目自定义技能不自动加入任务。

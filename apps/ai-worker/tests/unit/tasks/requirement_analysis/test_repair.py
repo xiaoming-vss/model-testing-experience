@@ -29,7 +29,7 @@ class RepairTests(unittest.TestCase):
             )
         task = Task(
             task_id="task",
-            run_id="run",
+            attempt_id="run",
             task_type="requirement_analysis",
             checkpoint_enabled=True,
             current_stage=stage,

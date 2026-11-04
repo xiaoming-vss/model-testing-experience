@@ -161,6 +161,13 @@ class Pi:
             try:
                 async with asyncio.timeout(c["run_timeout_seconds"]):
                     return await self._exchange(process, message, images)
+            except TimeoutError as error:
+                # A bare TimeoutError would reach the platform as an empty failure reason.
+                if str(error):
+                    raise
+                raise TimeoutError(
+                    f"模型执行超过 {c['run_timeout_seconds']:g} 秒，执行已终止"
+                ) from error
             finally:
                 await self._close(process)
 
@@ -178,9 +185,15 @@ class Pi:
         settled = False
         usage: dict[str, float] = {}
         while not (accepted and settled):
-            line = await asyncio.wait_for(
-                process.stdout.readline(), self.config["stream_idle_timeout_seconds"]
-            )
+            try:
+                line = await asyncio.wait_for(
+                    process.stdout.readline(), self.config["stream_idle_timeout_seconds"]
+                )
+            except TimeoutError as error:
+                raise TimeoutError(
+                    "模型输出空闲超过 "
+                    f"{self.config['stream_idle_timeout_seconds']:g} 秒，执行已终止"
+                ) from error
             if not line:
                 raise RuntimeError("Pi exited before completing the run")
             try:

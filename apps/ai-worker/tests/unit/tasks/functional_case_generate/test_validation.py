@@ -327,7 +327,7 @@ class CheckpointValidationTests(unittest.TestCase):
                 task = Task(
                     claim_id="c",
                     task_id="t",
-                    run_id="r",
+                    attempt_id="r",
                     generate_task_id="g",
                     task_type="functional_case_generate",
                     project_id="p",

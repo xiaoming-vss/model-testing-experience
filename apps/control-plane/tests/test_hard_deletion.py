@@ -51,7 +51,7 @@ async def db(tmp_path):
                 requirement_id="r",
                 sprint_id="s",
                 name="req",
-                document_type="text",
+                document_type="richtext",
                 document_content="",
             ),
         )
@@ -191,108 +191,6 @@ async def test_api_case_cleans_rules_runs_and_queue(db):
     ):
         assert await count(db, model) == 0
     assert await count(db, m.ApiCollection) == 1
-
-
-async def test_ai_task_cleans_records_but_preserves_legacy_source(db, tmp_path):
-    task = await add(
-        db,
-        m.AiGenerateTask(
-            task_id="task",
-            task_type="ui_case_generate",
-            name="task",
-            project_id="p",
-            sprint_id="s",
-            requirement_id="r",
-            creator_user_id="u",
-            source_type="manual",
-            source_content="",
-        ),
-    )
-    await add(db, m.AiGenerateTaskRun(run_id="run", task_id="task", trigger_user_id="u"))
-    await add(db, m.AiGenerateRunStage(id="stage", run_id="run", stage="generate", stage_order=1))
-    await add(
-        db,
-        m.AiGenerateStageAttempt(
-            id="attempt", stage_id="stage", attempt_no=1, operation="generate", status="succeeded"
-        ),
-    )
-    await add(
-        db,
-        m.AiGenerateRunImport(id="import", run_id="run"),
-    )
-    await add(db, m.WorkerTask(task_id="worker", domain="ai", task_type="generate", run_id="run"))
-    source = tmp_path / "source.zip"
-    source.write_bytes(b"source")
-    await add(
-        db,
-        m.AiGenerateTaskSourceArchive(
-            archive_id="archive",
-            task_id="task",
-            filename="source.zip",
-            size_bytes=6,
-            sha256="hash",
-            uploaded_at=datetime.now(UTC),
-        ),
-    )
-    await db.commit()
-    await delete_resource(db, task)
-    assert source.exists()
-    await db.commit()
-    assert source.exists()
-    for model in (
-        m.AiGenerateTask,
-        m.AiGenerateTaskRun,
-        m.AiGenerateRunStage,
-        m.AiGenerateStageAttempt,
-        m.AiGenerateRunImport,
-        m.AiGenerateTaskSourceArchive,
-        m.WorkerTask,
-    ):
-        assert await count(db, model) == 0
-
-
-async def test_ai_run_deletes_its_own_stages_and_queue_only(db):
-    await add(
-        db,
-        m.AiGenerateTask(
-            task_id="task",
-            task_type="api_case_generate",
-            name="task",
-            project_id="p",
-            sprint_id="s",
-            requirement_id="r",
-            creator_user_id="u",
-            source_type="manual",
-            source_content="",
-        ),
-    )
-    for run_id in ("run", "other"):
-        await add(db, m.AiGenerateTaskRun(run_id=run_id, task_id="task", trigger_user_id="u"))
-    await add(db, m.AiGenerateRunStage(id="stage", run_id="run", stage="generate", stage_order=1))
-    await add(
-        db,
-        m.AiGenerateStageAttempt(
-            id="attempt", stage_id="stage", attempt_no=1, operation="generate", status="succeeded"
-        ),
-    )
-    await add(
-        db,
-        m.AiGenerateRunImport(id="import", run_id="run"),
-    )
-    await add(db, m.WorkerTask(task_id="worker", domain="ai", task_type="generate", run_id="run"))
-    await db.commit()
-    run = await db.scalar(select(m.AiGenerateTaskRun).where(m.AiGenerateTaskRun.run_id == "run"))
-    await delete_resource(db, run)
-    await db.commit()
-    for model in (
-        m.AiGenerateRunStage,
-        m.AiGenerateStageAttempt,
-        m.AiGenerateRunImport,
-        m.WorkerTask,
-    ):
-        assert await count(db, model) == 0
-    assert await count(db, m.AiGenerateTask) == 1
-    assert await count(db, m.AiGenerateTaskRun) == 1
 
 
 async def test_rollback_keeps_resource(db):

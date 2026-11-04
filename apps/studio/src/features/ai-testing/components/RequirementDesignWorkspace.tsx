@@ -26,7 +26,7 @@ export function RequirementDesignWorkspace({ requirementId, projectId, canWrite,
   const openPanoramaTab = (next: 'content' | RequirementDesignKind | 'codeRisk') => {
     if (next === 'content') { onOpenDocument?.(); return }
     if (next === 'codeRisk') { setRiskOpen(true); return }
-    setConfigureKind(next)
+    if (canWrite && (next === 'api' || next === 'ui')) setConfigureKind(next)
   }
   return <div className="ai-requirement-design tp-surface tp-list-surface">
     <div className="ai-requirement-design-panel ai-requirement-generation-panel">

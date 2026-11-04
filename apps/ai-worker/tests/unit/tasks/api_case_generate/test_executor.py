@@ -23,7 +23,7 @@ class ApiCaseExecutorTests(unittest.TestCase):
         return Task(
             claim_id="claim-api-1",
             task_id="task-1",
-            run_id="run-1",
+            attempt_id="run-1",
             generate_task_id="generate-1",
             task_type=task_type,
             project_id="project-1",

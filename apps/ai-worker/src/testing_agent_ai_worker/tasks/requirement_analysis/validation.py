@@ -87,7 +87,7 @@ def generate_validated(
             report(
                 TaskProgress(
                     task_id=task.task_id,
-                    run_id=task.run_id,
+                    attempt_id=task.attempt_id,
                     current_stage=stage,
                     stage_status="running",
                     intermediate_json_text=task.config_json or "{}",

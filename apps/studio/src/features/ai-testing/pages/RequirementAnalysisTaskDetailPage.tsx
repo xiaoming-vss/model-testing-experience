@@ -263,22 +263,18 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
   const selectedRun = selectedRunQuery.data
   const resolveRunRecord = (record: RequirementAnalysisTaskRun) =>
     record.runId === selectedRunId && selectedRun ? selectedRun : record
-  const selectedRunRecord = useMemo(
-    () => runRecords.find((record) => record.runId === selectedRunId),
-    [runRecords, selectedRunId],
-  )
-  const activeSelectedRun = selectedRun?.runId === selectedRunId ? selectedRun : selectedRunRecord
   const selectedRunConfigJson = useMemo(() => parseConfigJsonRecord(selectedRun?.configJson), [selectedRun?.configJson])
   const selectedStage = selectedRun?.currentStage
   const selectedStageField = getRequirementAnalysisStageField(selectedStage)
   const selectedRunStatus = String(selectedRun?.status ?? '').toLowerCase()
   const selectedRunReviewStatus = String(selectedRun?.reviewStatus ?? '').toLowerCase()
+  const chainManagedRun = Boolean(selectedRun?.generationChainManaged || selectedRun?.snapshotJson?.generationChainManaged)
   useEffect(() => { if (selectedRunReviewStatus === 'rejected') setReviseModalOpen(false) }, [selectedRunReviewStatus])
   const selectedStageOutputContent = selectedStageField
     ? formatStructuredContent(selectedRunConfigJson[selectedStageField.key] ?? selectedRun?.[selectedStageField.key])
     : ''
   const checkpointStageWaitingReview = Boolean(
-    selectedRun?.checkpointEnabled &&
+    !chainManagedRun && selectedRun?.checkpointEnabled &&
       String(selectedRun?.status ?? '').toLowerCase() === 'waiting_review' &&
       selectedRun?.stageStatus === 'waiting_review' &&
       selectedRunReviewStatus === 'pending' &&
@@ -290,7 +286,7 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
       runResultModal.key === selectedStageField?.key && checkpointStageWaitingReview,
   )
   const finalResultEditable = Boolean(
-    selectedRun?.runId &&
+    !chainManagedRun && selectedRun?.runId &&
       runResultModal?.key === 'resultYaml' &&
       ['success', 'waiting_review'].includes(selectedRunStatus) &&
       requirementAnalysisFinalStages.includes(selectedStage ?? '') &&
@@ -298,7 +294,7 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
       selectedRun?.importStatus !== 'imported',
   )
   const finalResultApproved = Boolean(
-    selectedRun?.runId &&
+    !chainManagedRun && selectedRun?.runId &&
       runResultModal?.key === 'resultYaml' &&
       selectedRunStatus === 'success' &&
       requirementAnalysisFinalStages.includes(selectedStage ?? '') &&
@@ -339,14 +335,6 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
 
   const runHistoryRefreshing = runsQuery.isFetching || selectedRunQuery.isFetching
   const runnableTask = isRunnableApiCaseGenerateTaskRun(latestRunRecord?.status)
-  const selectedRunTaskType = activeSelectedRun?.snapshotJson?.taskType ?? task?.taskType
-  const canImportSelectedRun =
-    Boolean(activeSelectedRun?.runId) &&
-    selectedRunTaskType === 'requirement_analysis' &&
-    String(activeSelectedRun?.status ?? '').toLowerCase() === 'success' &&
-    String(activeSelectedRun?.reviewStatus ?? '').toLowerCase() === 'approved' &&
-    activeSelectedRun?.importStatus !== 'imported'
-  const canImportRunResultModal = canImportSelectedRun && runResultModal?.key === 'resultYaml'
 
   const sprintName = task
     ? sprintNameMap.get(task.sprintId ?? '') ?? task.sprintId ?? '-'
@@ -493,23 +481,6 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
     },
   })
 
-  const importRunMutation = useMutation({
-    mutationFn: (runId: string) => api.importRequirementAnalysisRunToRequirement(runId),
-    onSuccess: (updatedRequirement, runId) => {
-      const updatedRequirementId = normalizeRequirementId(updatedRequirement)
-      message.success('已导入到需求')
-      setRunResultModal(null)
-      queryClient.setQueryData(
-        ['requirement', 'requirementAnalysisTaskDetail', updatedRequirementId],
-        updatedRequirement,
-      )
-      queryClient.setQueryData(['requirement', updatedRequirementId], updatedRequirement)
-      queryClient.invalidateQueries({ queryKey: ['requirementAnalysisRun', runId] })
-      queryClient.invalidateQueries({ queryKey: ['requirementAnalysisTaskRuns', taskId] })
-      queryClient.invalidateQueries({ queryKey: ['requirementsPool', 'requirementAnalysisTaskDetail', task?.projectId] })
-      queryClient.invalidateQueries({ queryKey: ['requirementsPool', task?.projectId] })
-    },
-  })
 
   const saveStageOutputMutation = useMutation({
     mutationFn: (payload: { runId: string; stage: string; configJson: Record<string, unknown>; resultYaml?: string; silent?: boolean }) =>
@@ -632,6 +603,10 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
   }
 
   function handleRunTask() {
+    if (task?.requirementId) {
+      navigate(`/requirements/${encodeURIComponent(task.requirementId)}`)
+      return
+    }
     if (runsQuery.isLoading) {
       message.warning('运行记录加载中，请稍后再试')
       return
@@ -793,19 +768,6 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
     })
   }
 
-  function handleImportSelectedRun() {
-    if (!activeSelectedRun?.runId || !canImportSelectedRun) return
-
-    Modal.confirm({
-      mask: { closable: false },
-      title: '导入需求',
-      content: '导入后会把本次分析结果写回需求，并覆盖当前需求理解结果。',
-      okText: '导入需求',
-      cancelText: '取消',
-      onOk: () => importRunMutation.mutateAsync(activeSelectedRun.runId!),
-    })
-  }
-
   useTaskRunDialog(dialogRequest, Boolean(taskQuery.data && selectedRunQuery.data), Boolean(runResultModal || reviseModalOpen), () => {
     const section = runResultSectionDefinitions.find(item => item.key === dialogRequest?.artifact)
     if (section && dialogRequest) setRunResultModal({ runId: dialogRequest.runId, key: section.key, label: section.label, mode: dialogRequest.mode === 'view' ? 'view' : 'review' })
@@ -840,11 +802,11 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
                   <ProjectActionButton action="execute"
                     className="action-btn-run"
                     operation="run"
-                    disabled={runsQuery.isLoading || !runnableTask}
+                    disabled={!task.requirementId && (runsQuery.isLoading || !runnableTask)}
                     loading={runTaskMutation.isPending}
                     onClick={handleRunTask}
                   >
-                    运行
+                    {task.requirementId ? '生成链' : '运行'}
                   </ProjectActionButton>
                   <ProjectActionButton action="write" className="action-btn-update" operation="edit" onClick={() => setDrawerOpen(true)}>
                     编辑
@@ -988,27 +950,27 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
                           }}
                           renderActions={(row) => {
                             const data = resolveRunRecord(row)
+                            const chainManaged = Boolean(data.generationChainManaged || data.snapshotJson?.generationChainManaged)
                             const recordStatus = String(data.status ?? '').toLowerCase()
                             const recordFailed = ['failed', 'error'].includes(recordStatus)
                             const recordReviewStatus = String(data.reviewStatus ?? '').toLowerCase()
                             const recordHasErrorMessage = Boolean(data.errorMessage?.trim())
                             const reviewField = getRequirementAnalysisStageField(data.currentStage)
                             const showStageReview = Boolean(
-                              reviewField && data.checkpointEnabled && recordStatus === 'waiting_review' && data.stageStatus === 'waiting_review' && recordReviewStatus === 'pending' && data.importStatus !== 'imported',
+                              !chainManaged && reviewField && data.checkpointEnabled && recordStatus === 'waiting_review' && data.stageStatus === 'waiting_review' && recordReviewStatus === 'pending' && data.importStatus !== 'imported',
                             )
                             const showFinalReview = Boolean(
-                              data.checkpointEnabled &&
+                              !chainManaged && data.checkpointEnabled &&
                                 ['success', 'waiting_review'].includes(recordStatus) &&
                                 requirementAnalysisFinalStages.includes(data.currentStage ?? '') &&
                                 recordReviewStatus === 'pending' &&
                                 data.importStatus !== 'imported',
                             )
-                            const canImportRecord = Boolean(
+                            const canViewApprovedRecord = Boolean(
                               data.reviewStatus?.toLowerCase() === 'approved' &&
-                                data.importStatus !== 'imported' &&
                                 ['success', 'waiting_review'].includes(recordStatus),
                             )
-                            const canRetry = recordFailed && row.runId &&
+                            const canRetry = !chainManaged && recordFailed && row.runId &&
                               ['extracting_text', 'feature_understanding'].includes(data.currentStage ?? '') &&
                               ['failed', 'retrying'].includes(data.stageStatus ?? '') &&
                               recordReviewStatus === 'pending' && data.importStatus !== 'imported'
@@ -1016,6 +978,12 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
                               <RunRowActions
                                 inline={
                                   <>
+                                    {chainManaged && task?.requirementId ? (
+                                      <Button size="small" type="primary" onClick={(event) => {
+                                        event.stopPropagation()
+                                        navigate(`/requirements/${encodeURIComponent(task.requirementId!)}`)
+                                      }}>前往生成链</Button>
+                                    ) : null}
                                     {/* 当前状态至多三个操作，按界面规范全部直接展示。 */}
                                     {showStageReview && reviewField ? (
                                       <Button
@@ -1043,7 +1011,7 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
                                         审核
                                       </Button>
                                     ) : null}
-                                    {canImportRecord ? (
+                                    {canViewApprovedRecord ? (
                                       <Button
                                         size="small"
                                         type="primary"
@@ -1053,7 +1021,7 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
                                           setRunResultModal({ runId: row.runId, key: 'resultYaml', label: '需求理解记录', mode: 'view' })
                                         }}
                                       >
-                                        查看结果并导入
+                                        查看结果
                                       </Button>
                                     ) : null}
                                     {recordFailed && recordHasErrorMessage ? (
@@ -1206,18 +1174,6 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
         title={
           <div className="ai-task-run-result-expanded-title">
             <span>{understandingModalTitle ?? (runResultModal?.key === 'firstStepOutput' ? '材料提取结果' : showStageReviewInRunResultModal ? '审核' : runResultModal?.label || '运行结果')}</span>
-            <div className="ai-task-run-result-expanded-actions">
-              {canImportRunResultModal && !finalResultEditable && !editableRunResultModal ? (
-                <ProjectActionButton action="execute"
-                  type="primary"
-                  size="small"
-                  loading={importRunMutation.isPending}
-                  onClick={handleImportSelectedRun}
-                >
-                  导入需求
-                </ProjectActionButton>
-              ) : null}
-            </div>
           </div>
         }
         open={Boolean(runResultModal)}
@@ -1255,15 +1211,17 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
                 >
                   继续优化
                 </ProjectActionButton>,
-                <ProjectActionButton action="execute"
-                  key="approve"
-                  type="primary"
-                  onClick={finalResultEditable ? handleApproveStageReview : finalResultApproved ? handleImportSelectedRun : handleApproveStageReview}
-                  loading={finalResultEditable ? stageActionPending && stageReviewAction === 'approve' : finalResultApproved ? importRunMutation.isPending : stageActionPending && stageReviewAction === 'approve'}
-                  disabled={reviseModalOpen || (finalResultEditable ? stageActionPending && stageReviewAction !== 'approve' : finalResultApproved ? importRunMutation.isPending : stageActionPending && stageReviewAction !== 'approve')}
-                >
-                  {finalResultEditable ? '审核通过' : finalResultApproved ? '导入需求' : '审核通过并继续'}
-                </ProjectActionButton>,
+                ...(finalResultApproved && !finalResultEditable ? [] : [
+                  <ProjectActionButton action="execute"
+                    key="approve"
+                    type="primary"
+                    onClick={handleApproveStageReview}
+                    loading={stageActionPending && stageReviewAction === 'approve'}
+                    disabled={reviseModalOpen || (stageActionPending && stageReviewAction !== 'approve')}
+                  >
+                    {finalResultEditable ? '审核通过' : '审核通过并继续'}
+                  </ProjectActionButton>,
+                ]),
               ]
             : null
         }

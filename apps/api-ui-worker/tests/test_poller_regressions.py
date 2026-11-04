@@ -1,7 +1,55 @@
 import asyncio
 from types import SimpleNamespace
 
+import pytest
+
+from test_worker.control_plane.client import (
+    ControlPlaneRequestError,
+    ExecutionLeaseLost,
+)
 from test_worker.poller.task_poller import TaskPoller
+from test_worker.ui.step_progress import report_steps
+
+
+@pytest.mark.parametrize("domain", ["api", "ui"])
+def test_explicitly_rejected_lease_cancels_active_execution(domain):
+    canceled = []
+
+    class Client:
+        def task_stop_requested(self, *_args):
+            raise ControlPlaneRequestError("rejected", 400)
+
+    async def run():
+        async def operation():
+            try:
+                await asyncio.Event().wait()
+            finally:
+                canceled.append(True)
+
+        poller = TaskPoller(SimpleNamespace(redis_url=""), Client(), None, None)
+        with pytest.raises(ExecutionLeaseLost):
+            await asyncio.wait_for(
+                poller._run_until_stopped(domain, "task", operation()), 1
+            )
+
+    asyncio.run(run())
+    assert canceled == [True]
+
+
+@pytest.mark.parametrize("status, rejected", [(400, True), (403, True), (503, False)])
+def test_step_progress_stops_only_on_explicit_control_plane_rejection(status, rejected):
+    class Client:
+        def report_ui_steps(self, *_args):
+            raise ControlPlaneRequestError("unavailable", status)
+
+    async def run():
+        if rejected:
+            with pytest.raises(ExecutionLeaseLost):
+                await report_steps(Client(), "task", "item", [])
+        else:
+            await report_steps(Client(), "task", "item", [])
+
+    asyncio.run(run())
 
 
 def test_api_queue_is_not_starved_by_continuous_ui_backlog():

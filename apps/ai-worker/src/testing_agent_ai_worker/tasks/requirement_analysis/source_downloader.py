@@ -57,9 +57,10 @@ class PlatformRequirementSourceDownloader:
 def _filename_from_url(source_url: str, document_type: str) -> str:
     parsed = urlparse(source_url)
     filename = Path(unquote(parsed.path)).name
+    suffix = _default_suffix(document_type)
     if not filename or "." not in filename:
-        filename = f"source{_default_suffix(document_type)}"
-    return _safe_filename(filename)
+        filename = f"source{suffix}"
+    return _safe_filename(filename, suffix)
 
 
 def _default_suffix(document_type: str) -> str:
@@ -68,17 +69,17 @@ def _default_suffix(document_type: str) -> str:
         return ".html"
     if normalized in {"word", "docx"}:
         return ".docx"
-    return ".txt"
+    raise ValueError("需求材料提取仅支持 Word/DOCX 或富文本")
 
 
-def _safe_filename(filename: str) -> str:
+def _safe_filename(filename: str, default_suffix: str) -> str:
     path = Path(filename)
     suffix = path.suffix if re.fullmatch(r"\.[A-Za-z0-9]+", path.suffix) else ""
     stem = re.sub(r"[^A-Za-z0-9_-]+", "_", path.stem).strip("_")
     if not stem:
         stem = "source"
     if not suffix:
-        suffix = ".txt"
+        suffix = default_suffix
     return f"{stem}{suffix}"
 
 

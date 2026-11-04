@@ -30,7 +30,6 @@ const run = {
   importStatus: 'pending',
   importedTargets: [],
   importedAt: null,
-  importMigrationComplete: true,
   resultYaml: 'cases:\n  - name: Login\n',
   createdAt: '2026-08-02T07:00:00.000Z',
 }
@@ -79,6 +78,7 @@ function renderPage(role: 'owner' | 'viewer' = 'owner', embedded = false) {
         <MemoryRouter initialEntries={['/ai-testing/tasks/task-1']}>
           <Routes>
             <Route path="/ai-testing/tasks/:taskId" element={<ApiCaseGenerateTaskDetailPage dialogRequest={embedded ? { taskId: 'task-1', runId: 'run-1', artifact: 'resultYaml', mode: 'review', onClose: vi.fn() } : undefined} />} />
+            <Route path="/requirements/:requirementId" element={<div>需求生成链</div>} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
@@ -118,6 +118,34 @@ afterEach(() => {
 })
 
 describe('API 候选结果审核与导入', () => {
+  it('需求关联任务的生成入口打开需求生成链', async () => {
+    installFetchHandler()
+    renderPage()
+    await userEvent.setup().click(await screen.findByRole('button', { name: /^生成链$/ }))
+    expect(await screen.findByText('需求生成链')).toBeInTheDocument()
+  })
+  it('阶段链管理的历史候选可以查看但不能编辑或审核', async () => {
+    const managed = { ...run, generationChainManaged: true }
+    installFetchHandler((url) => {
+      if (url.pathname === '/v1/api-case-generate-tasks/task-1/runs') return jsonResponse({ items: [managed], total: 1 })
+      if (url.pathname === '/v1/api-case-generate-task-runs/run-1') return jsonResponse(managed)
+      return undefined
+    })
+    renderPage()
+    await userEvent.setup().click(await findRunInlineAction('查看候选结果'))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).queryByRole('button', { name: '批准' })).not.toBeInTheDocument()
+    expect(within(dialog).queryByRole('button', { name: '保存候选结果' })).not.toBeInTheDocument()
+  })
+  it('阶段待审核时提供入口前往需求生成链', async () => {
+    installFetchHandler((url) => {
+      if (url.pathname === '/v1/api-case-generate-tasks/task-1/runs') return jsonResponse({ items: [{ ...run, status: 'waiting_review', generationChainManaged: true }], total: 1 })
+      if (url.pathname === '/v1/api-case-generate-task-runs/run-1') return jsonResponse({ ...run, status: 'waiting_review', generationChainManaged: true })
+      return undefined
+    })
+    renderPage()
+    expect(await findRunInlineAction('前往阶段审核')).toBeEnabled()
+  })
   it('中间配置使用全局 JSON 高亮与折叠样式', async () => {
     const configJson = '{"login":{"path":"/v1/login","method":"POST"}}'
     installFetchHandler((url) => {
@@ -376,6 +404,37 @@ describe('API 候选结果审核与导入', () => {
     expect(await screen.findByText('已导入')).toBeInTheDocument()
     expect(screen.getByText(/导入：登录接口集/)).toBeInTheDocument()
     expect(screen.getByText(/2026/)).toBeInTheDocument()
+  })
+
+  it('独立任务选择项目内迭代、需求和目标集合后导入', async () => {
+    const independentTask = { ...task, sprintId: '', requirementId: '' }
+    const approvedRun = { ...run, requirementId: '', reviewStatus: 'approved', importStatus: 'pending' }
+    let importBody: unknown
+    installFetchHandler((url, init) => {
+      if (url.pathname === '/v1/api-case-generate-tasks/task-1') return jsonResponse(independentTask)
+      if (url.pathname === '/v1/api-case-generate-tasks/task-1/runs') return jsonResponse({ items: [approvedRun], total: 1 })
+      if (url.pathname === '/v1/api-case-generate-task-runs/run-1') return jsonResponse(approvedRun)
+      if (url.pathname === '/v1/projects/project-1/sprints') return jsonResponse({ items: [{ sprintId: 'target-sprint', name: '目标迭代 A' }], total: 1 })
+      if (url.pathname === '/v1/sprints/target-sprint/requirements') return jsonResponse({ items: [{ requirementId: 'target-requirement', name: '目标需求 A' }], total: 1 })
+      if (url.pathname === '/v1/requirements/target-requirement/api-collections') return jsonResponse({ items: [{ collectionId: 'target-collection', name: '目标接口集 A' }], total: 1 })
+      if (url.pathname === '/v1/api-case-generate-task-runs/run-1/import' && init?.method === 'POST') {
+        importBody = JSON.parse(String(init.body))
+        return jsonResponse({ requiresConfirmation: false, conflicts: [], run: { ...approvedRun, importStatus: 'imported' } })
+      }
+    })
+    const user = userEvent.setup()
+    renderPage()
+    await openRunActionsMenu(user)
+    await user.click(await screen.findByRole('menuitem', { name: '导入 API 集合' }))
+    expect(screen.getByRole('combobox', { name: '目标 API 集合' })).toBeDisabled()
+    await user.click(screen.getByRole('combobox', { name: '目标迭代' }))
+    await user.click(await screen.findByText('目标迭代 A'))
+    await user.click(screen.getByRole('combobox', { name: '目标需求' }))
+    await user.click(await screen.findByText('目标需求 A'))
+    await user.click(screen.getByRole('combobox', { name: '目标 API 集合' }))
+    await user.click(await screen.findByText('目标接口集 A'))
+    await user.click(screen.getByRole('button', { name: '开始导入' }))
+    await waitFor(() => expect(importBody).toEqual({ collectionId: 'target-collection', confirmOverwrite: false }))
   })
 
   it('无权访问目标集合时保留已批准待导入并允许重试', async () => {

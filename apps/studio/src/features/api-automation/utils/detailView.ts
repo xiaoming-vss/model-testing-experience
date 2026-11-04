@@ -13,10 +13,10 @@ export type ExtractRuleFormValues = CreateApiExtractRulePayload
 
 export type CaseImportMode = 'upload' | 'editor'
 
-export const API_RUN_TERMINAL_STATUSES = ['success', 'failed', 'error'] as const
+export const API_RUN_TERMINAL_STATUSES = ['success', 'failed', 'error', 'canceled'] as const
 
 export function isApiRunPollingStatus(status?: string) {
-  return status === 'pending' || status === 'running'
+  return status === 'pending' || status === 'queued' || status === 'claimed' || status === 'running' || status === 'stopping'
 }
 
 export function isApiRunTerminalStatus(status?: string) {

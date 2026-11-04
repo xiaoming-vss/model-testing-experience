@@ -2,17 +2,17 @@
 
 from typing import Protocol
 
-from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
+from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-from testing_agent.services.ai_execution.writer import ExecutionWriter
 from testing_agent.services.ai_task_scope import GenerationAccess
 from testing_agent.services.project_access import ProjectAction
+from testing_agent.services.standalone_run import StandaloneRun
 
 
 class OwnedRun(Protocol):
     async def __call__(
         self, user_id: str, run_id: str, kind: str | None = None, *, action: ProjectAction = "read"
-    ) -> AiGenerateTaskRun: ...
+    ) -> StandaloneRun: ...
 
 
 class OwnedTask(Protocol):
@@ -34,12 +34,11 @@ class RequireCollectionAccess(Protocol):
 
 
 class CandidateImportContext(Protocol):
-    execution: ExecutionWriter
     repository: AiGenerateTaskRepository
 
     async def owned_run(
         self, user_id: str, run_id: str, kind: str | None = None, *, action: ProjectAction = "read"
-    ) -> AiGenerateTaskRun: ...
+    ) -> StandaloneRun: ...
 
     async def ensure_requirement_access(
         self, user_id: str, requirement_id: str, *, action: ProjectAction = "read"
@@ -75,9 +74,7 @@ class GenerationImportContext:
         self,
         repository: AiGenerateTaskRepository,
         access: GenerationAccess,
-        execution: ExecutionWriter,
     ) -> None:
         self.repository = repository
-        self.execution = execution
         self.owned_run = access.owned_run
         self.ensure_requirement_access = access.ensure_requirement_access

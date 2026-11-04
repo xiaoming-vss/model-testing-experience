@@ -20,7 +20,7 @@ def build_task_result_summary(
 
     summary: dict[str, Any] = {
         "taskId": task.task_id,
-        "runId": task.run_id,
+        "attemptId": task.attempt_id,
         "generateTaskId": task.generate_task_id,
         "taskType": task.task_type,
         "status": status.value if isinstance(status, TaskStatus) else status,

@@ -2,6 +2,7 @@ import extractionSource from '@/domain/requirements/fixtures/document-extraction
 import { TestThemeProvider } from '@/test/TestThemeProvider'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { afterEach, expect, it } from 'vitest'
 import { RequirementMaterialComparison } from './RequirementMaterialComparison'
 
@@ -79,3 +80,37 @@ it('待确认分类仅显示剩余缺口，全部解决后自动回到事实并�
   expect(screen.getByText('上游算子为 hoi_tool')).toBeVisible()
   expect(screen.queryByText('已答复')).toBeNull()
 })
+
+function EditableHarness({ initial, onChange }: { initial: unknown; onChange: (content: string) => void }) {
+  const [content, setContent] = useState(initial)
+  return <TestThemeProvider><RequirementMaterialComparison content={content} editable
+    onChange={next => { setContent(next); onChange(next) }} /></TestThemeProvider>
+}
+
+it('待审核时事实文本和确认状态直接可编辑并回写 JSON', async () => {
+  let latest = ''
+  render(<EditableHarness initial={extraction} onChange={content => { latest = content }} />)
+  const user = userEvent.setup()
+  const editor = screen.getByRole('textbox', { name: '事实内容 EF01' })
+  await user.clear(editor)
+  await user.type(editor, '数据管理 → 批量转换')
+  expect(JSON.parse(latest).extractedFacts[0].fact.value).toBe('数据管理 → 批量转换')
+
+  await user.click(screen.getByRole('combobox', { name: '确认状态 EF01' }))
+  const dropdown = document.querySelector('.ant-select-dropdown:not(.ant-select-dropdown-hidden)')
+  if (!dropdown) throw new Error('确认状态选项未展开')
+  await user.click(within(dropdown as HTMLElement).getByTitle('待确认'))
+  expect(JSON.parse(latest).extractedFacts[0].fact.confirmationStatus).toBe('unconfirmed')
+})
+
+it('待审核时待确认问题可直接修改并回写 JSON', async () => {
+  let latest = ''
+  render(<EditableHarness initial={extraction} onChange={content => { latest = content }} />)
+  const user = userEvent.setup()
+  await user.click(screen.getByText('待确认问题', { exact: true }))
+  const editor = screen.getByRole('textbox', { name: '问题内容 Q01' })
+  await user.clear(editor)
+  await user.type(editor, '转换类型有哪些可选项？')
+  expect(JSON.parse(latest).questions[0].question).toBe('转换类型有哪些可选项？')
+})
+

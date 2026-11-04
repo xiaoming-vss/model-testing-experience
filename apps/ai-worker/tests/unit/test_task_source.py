@@ -29,7 +29,7 @@ class FakePlatformHttpClient:
         return {
             "id": "claim-lease-1",
             "taskId": "worker-task-1",
-            "runId": "run-1",
+            "attemptId": "run-1",
             "generateTaskId": "generate-task-1",
             "taskType": "api_case_generate",
             "projectId": "project-1",
@@ -45,7 +45,7 @@ class FakePlatformHttpClient:
         return {
             "run": {
                 "taskId": "worker-task-1",
-                "runId": "run-1",
+                "attemptId": "run-1",
                 "generateTaskId": "generate-task-1",
                 "taskType": "api_case_generate",
                 "name": "OpenAPI 用例生成",
@@ -84,7 +84,9 @@ class TaskSourceTests(unittest.TestCase):
         payload = TaskPayload(openapi_content="{}")
 
         self.assertEqual(
-            Task(claim_id="claim-1", task_id="task-1", run_id="run-1", payload=payload).session_key,
+            Task(
+                claim_id="claim-1", task_id="task-1", attempt_id="run-1", payload=payload
+            ).session_key,
             "run-1",
         )
         self.assertEqual("", payload.source_type)
@@ -126,7 +128,7 @@ class TaskSourceTests(unittest.TestCase):
         assert task is not None
         self.assertEqual("claim-lease-1", task.claim_id)
         self.assertEqual("worker-task-1", task.task_id)
-        self.assertEqual("run-1", task.run_id)
+        self.assertEqual("run-1", task.attempt_id)
         self.assertEqual("generate-task-1", task.generate_task_id)
         self.assertEqual("api_case_generate", task.task_type)
         self.assertEqual("project-1", task.project_id)
@@ -395,7 +397,7 @@ class TaskSourceTests(unittest.TestCase):
                     "id": "claim-lease-req-1",
                     "taskId": "worker-task-1",
                     "taskType": "requirement_analysis",
-                    "runId": "run-1",
+                    "attemptId": "run-1",
                     "generateTaskId": "task-1",
                     "projectId": "project-1",
                     "sprintId": "sprint-1",
@@ -416,7 +418,7 @@ class TaskSourceTests(unittest.TestCase):
                     "configJson": "{}",
                     "run": {
                         "taskId": "task-1",
-                        "runId": "run-1",
+                        "attemptId": "run-1",
                         "taskType": "requirement_analysis",
                         "name": "Login requirement analysis",
                         "projectId": "project-1",
@@ -449,7 +451,7 @@ class TaskSourceTests(unittest.TestCase):
         assert task is not None
         self.assertEqual("claim-lease-req-1", task.claim_id)
         self.assertEqual("worker-task-1", task.task_id)
-        self.assertEqual("run-1", task.run_id)
+        self.assertEqual("run-1", task.attempt_id)
         self.assertEqual("task-1", task.generate_task_id)
         self.assertEqual("requirement_analysis", task.task_type)
         self.assertEqual("project-1", task.project_id)
@@ -479,7 +481,7 @@ class TaskSourceTests(unittest.TestCase):
                     "taskType": "requirement_analysis",
                     "run": {
                         "taskId": "task-1",
-                        "runId": "run-1",
+                        "attemptId": "run-1",
                         "taskType": "requirement_analysis",
                         "name": "Docx requirement analysis",
                         "projectId": "project-1",
@@ -555,7 +557,7 @@ class TaskSourceTests(unittest.TestCase):
                     "taskType": "requirement_analysis",
                     "run": {
                         "taskId": "task-1",
-                        "runId": "run-1",
+                        "attemptId": "run-1",
                         "taskType": "requirement_analysis",
                         "name": "Docx requirement analysis",
                         "projectId": "project-1",

@@ -67,8 +67,9 @@ export function UiGenerationStageReviewModal({ open, run, projectId, stage, extr
   }, [shown, run.runId])
   const dirty = draft !== saved
   useEffect(() => { onDirtyChange(dirty); return () => onDirtyChange(false) }, [dirty, onDirtyChange])
-  const editable = uiStageEditable(run, shown)
-  const failed = shown === current && ['failed', 'error'].includes(run.status ?? '') && run.reviewStatus === 'pending'
+  const chainManaged = Boolean(run.generationChainManaged || run.snapshotJson?.generationChainManaged)
+  const editable = !chainManaged && uiStageEditable(run, shown)
+  const failed = !chainManaged && shown === current && ['failed', 'error'].includes(run.status ?? '') && run.reviewStatus === 'pending'
   function outputBody(): Record<string, unknown> {
     return info.field
       ? { stage: shown, configJson: { [info.field]: JSON.parse(draft) } }
@@ -186,7 +187,8 @@ export function UiGenerationStageReviewModal({ open, run, projectId, stage, extr
             </div>}
             {!saved && !editable ? <Alert type="info" title={shown === current ? '当前阶段尚未生成产物' : '此阶段尚未生成'} /> : null}
             {parseError || mutation.error ? <Alert type="error" showIcon title={parseError || getErrorMessage(mutation.error)} /> : null}
-            {run.errorMessage ? <Alert type="error" showIcon title={run.errorMessage} /> : null}
+            {run.errorMessage ? <Alert type="error" showIcon title={run.errorMessage} />
+              : failed ? <Alert type="error" showIcon title="阶段执行失败，Worker 未返回具体原因" /> : null}
             {run.status === 'canceled' && run.reviewComment ? <Alert type="warning" showIcon title="本阶段已拒绝" description={run.reviewComment} /> : null}
           </div>
         </div>

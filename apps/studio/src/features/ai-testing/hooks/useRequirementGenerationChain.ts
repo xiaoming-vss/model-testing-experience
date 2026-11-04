@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { message } from '@/shared/utils/feedback'
+import { UNSAVED_NAVIGATION_EVENT } from '@/shared/utils/unsavedChanges'
+import { usePendingRequestId } from '@/shared/hooks/usePendingRequestId'
 import { getErrorMessage } from '@/utils/format'
 import { RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
 import {
@@ -35,6 +37,7 @@ export function useRequirementGenerationChain({
   const [filter, setFilter] = useState<ChainFilter>('all')
   const [mode, setMode] = useState<ChainArtifactMode>('visual')
   const [versionKey, setVersionKey] = useState('')
+  const [editing, setEditing] = useState<{ content: string; original: string; attemptId: string }>()
   const [diffOpen, setDiffOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [revisionOpen, setRevisionOpen] = useState(false)
@@ -47,6 +50,58 @@ export function useRequirementGenerationChain({
   const [importTargetId, setImportTargetId] = useState('')
   const [importConflicts, setImportConflicts] = useState<Record<string, unknown>[]>([])
   const personalLlm = usePersonalLlmChoice(projectId)
+  const pendingRun = usePendingRequestId()
+  const pendingRevision = usePendingRequestId()
+  const pendingReview = usePendingRequestId()
+  const editingDirty = Boolean(editing && editing.content !== editing.original)
+  const guardUnsaved = useCallback(() => {
+    if (editingDirty && !window.confirm('有未保存的修改，确定放弃并离开吗？')) return false
+    setEditing(undefined)
+    return true
+  }, [editingDirty])
+  const resetEditing = useCallback(() => {
+    if (editingDirty && !window.confirm('有未保存的修改，确定撤销吗？')) return false
+    setEditing(current => current ? { ...current, content: current.original } : current)
+    return true
+  }, [editingDirty])
+
+  useEffect(() => {
+    if (!editingDirty) return
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
+    const programmaticLeave = (event: Event) => {
+      if (!window.confirm('有未保存的修改，确定放弃并离开吗？')) event.preventDefault()
+    }
+    const linkClick = (event: MouseEvent) => {
+      const link = (event.target as Element).closest?.('a[href]') as HTMLAnchorElement | null
+      if (!link || link.target === '_blank' || event.ctrlKey || event.metaKey || link.href === window.location.href) return
+      if (!window.confirm('有未保存的修改，确定放弃并离开吗？')) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+    }
+    const historyIndex = window.history.state?.idx
+    let restoringHistory = false
+    const popState = (event: PopStateEvent) => {
+      if (restoringHistory) { restoringHistory = false; event.stopImmediatePropagation(); return }
+      const nextIndex = event.state?.idx
+      if (typeof historyIndex !== 'number' || typeof nextIndex !== 'number' || nextIndex === historyIndex) return
+      if (!window.confirm('有未保存的修改，确定放弃并离开吗？')) {
+        event.stopImmediatePropagation()
+        restoringHistory = true
+        window.history.go(historyIndex - nextIndex)
+      }
+    }
+    window.addEventListener('popstate', popState, true)
+    window.addEventListener('beforeunload', warn)
+    window.addEventListener(UNSAVED_NAVIGATION_EVENT, programmaticLeave)
+    document.addEventListener('click', linkClick, true)
+    return () => {
+      window.removeEventListener('popstate', popState, true)
+      window.removeEventListener('beforeunload', warn)
+      window.removeEventListener(UNSAVED_NAVIGATION_EVENT, programmaticLeave)
+      document.removeEventListener('click', linkClick, true)
+    }
+  }, [editingDirty])
 
   const overview = useQuery({
     queryKey: ['generationChain', requirementId, 'overview'],
@@ -94,7 +149,7 @@ export function useRequirementGenerationChain({
   }, [stage])
 
   useEffect(() => {
-    if (!stage) return
+    if (!stage || editing) return
     const valid =
       versionKey === 'draft'
         ? Boolean(stage.draft)
@@ -106,7 +161,28 @@ export function useRequirementGenerationChain({
           : stage.latestVersion?.versionId ?? (stage.draft ? 'draft' : ''),
       )
     }
-  }, [stage, versionKey])
+  }, [stage, versionKey, editing])
+
+  // 待审核产物默认就是编辑态：打开草稿即建立工作副本，可视化与 JSON 共用同一份内容。
+  const autoEditAttemptId = stage?.draft?.attemptId
+  const autoEditContent = stage?.draft?.content
+  const autoEditInvalidated = stage?.draft?.invalidated
+  useEffect(() => {
+    if (!autoEditAttemptId || !autoEditContent || autoEditInvalidated || versionKey !== 'draft') {
+      setEditing(undefined)
+      return
+    }
+    setEditing(current => {
+      if (current?.attemptId === autoEditAttemptId) {
+        // 其他人保存或轮询更新了草稿时，未修改的副本跟随最新内容；本地未保存的修改不覆盖。
+        if (current.content === current.original && current.original !== autoEditContent) {
+          return { ...current, content: autoEditContent, original: autoEditContent }
+        }
+        return current
+      }
+      return { content: autoEditContent, original: autoEditContent, attemptId: autoEditAttemptId }
+    })
+  }, [autoEditAttemptId, autoEditContent, autoEditInvalidated, versionKey, editing?.attemptId])
 
   const selectedVersion = useMemo(
     () =>
@@ -265,15 +341,17 @@ export function useRequirementGenerationChain({
       const choice = selected.kind === 'api'
         ? await personalLlm.chooseRun(false, { label: '生成要求（选填）', placeholder: '例如：只处理登录接口，覆盖鉴权失败和参数边界' })
         : { connectionId: await personalLlm.choose({ alwaysConfirm: true }), instruction: '' }
-      return generationChainApi.run(requirementId, selected.kind, selected.stage, {
+      const params = {
         connectionId: choice.connectionId,
         ...(selected.kind === 'api' ? { instruction: choice.instruction.trim() } : {}),
-        requestId: crypto.randomUUID(),
         upstreamVersions: upstream,
         ...inputs,
-      })
+      }
+      const requestId = pendingRun.forInput(JSON.stringify({ requirementId, ...selected, ...params }))
+      return generationChainApi.run(requirementId, selected.kind, selected.stage, { ...params, requestId })
     },
     onSuccess: () => {
+      pendingRun.clear()
       invalidate()
       message.success('已开始生成')
     },
@@ -290,15 +368,25 @@ export function useRequirementGenerationChain({
           ? await personalLlm.chooseRun(false, { label: '生成要求（选填）', placeholder: '例如：只处理登录接口，覆盖鉴权失败和参数边界' })
           : { connectionId: await personalLlm.choose({ alwaysConfirm: true }), instruction: '' }
         : undefined
-      return generationChainApi.review(requirementId, selected.kind, selected.stage, {
+      const params = {
         action,
+        ...(stage?.draft?.attemptId ? { expectedAttemptId: stage.draft.attemptId } : {}),
         continueAfter: Boolean(continueAfter),
         ...(choice?.connectionId ? { connectionId: choice.connectionId } : {}),
         ...(choice && selected.kind === 'api' ? { instruction: choice.instruction.trim() } : {}),
-      })
+      }
+      const requestId = continueAfter
+        ? pendingReview.forInput(JSON.stringify({ requirementId, ...selected, ...params }))
+        : undefined
+      return generationChainApi.review(requirementId, selected.kind, selected.stage, { ...params, requestId })
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (result, variables) => {
+      pendingReview.clear()
       invalidate()
+      if (result.continuationError) {
+        message.warning(`已审核通过，下一阶段未启动：${result.continuationError}`)
+        return
+      }
       message.success(
         variables.action === 'reject'
           ? '已删除候选'
@@ -312,6 +400,23 @@ export function useRequirementGenerationChain({
     },
   })
 
+  const saveDraft = useMutation({
+    mutationFn: async () => {
+      if (!selected || !editing) throw new Error('当前没有可保存的产物')
+      return generationChainApi.saveDraft(requirementId, selected.kind, selected.stage, {
+        expectedAttemptId: editing.attemptId,
+        content: editing.content,
+      })
+    },
+    onSuccess: result => {
+      client.setQueryData(['generationChain', requirementId, selected?.kind, 'detail'], result)
+      setEditing(undefined)
+      invalidate()
+      message.success('已保存，等待审核')
+    },
+    onError: reason => message.error(getErrorMessage(reason)),
+  })
+
   const revise = useMutation({
     mutationFn: async (connectionId: string) => {
       if (!selected) throw new Error('请选择阶段')
@@ -319,19 +424,22 @@ export function useRequirementGenerationChain({
       if (revisionTemplate && revisionInstruction.trim() === revisionTemplate.trim()) {
         throw new Error('请补充已确认的信息，或填写其他优化要求')
       }
+      const params = {
+        connectionId, instruction: revisionInstruction.trim(),
+        ...(revisionAttachments.attachments.length ? {
+          attachmentFileIds: revisionAttachments.attachments.map(item => item.fileId),
+        } : {}),
+      }
+      const requestId = pendingRevision.forInput(JSON.stringify({ requirementId, ...selected, ...params }))
       return generationChainApi.revise(
         requirementId,
         selected.kind,
         selected.stage,
-        {
-          connectionId, instruction: revisionInstruction.trim(), requestId: crypto.randomUUID(),
-          ...(revisionAttachments.attachments.length ? {
-            attachmentFileIds: revisionAttachments.attachments.map(item => item.fileId),
-          } : {}),
-        },
+        { ...params, requestId },
       )
     },
     onSuccess: () => {
+      pendingRevision.clear()
       invalidate()
       setRevisionOpen(false)
       setRevisionInstruction('')
@@ -429,6 +537,8 @@ export function useRequirementGenerationChain({
       ? stage?.draft?.content ?? ''
       : versionDetail.data?.content ?? ''
 
+  const workingContent = editing?.content ?? displayedContent
+
   const comparisonContent =
     versionKey === 'draft'
       ? comparison.data?.content ?? ''
@@ -437,10 +547,11 @@ export function useRequirementGenerationChain({
   const operationPending =
     runStage.isPending ||
     review.isPending ||
+    saveDraft.isPending ||
     revise.isPending ||
     deleteVersion.isPending ||
     importVersion.isPending
-  const busy = operationPending || Boolean(chain?.busy)
+  const busy = operationPending || stage?.state === 'running'
 
   return {
     overview,
@@ -453,8 +564,9 @@ export function useRequirementGenerationChain({
     versionDetail,
     versionOptions,
     versionKey,
-    setVersionKey,
+    setVersionKey: (value: string) => { if (value === versionKey || guardUnsaved()) setVersionKey(value) },
     displayedContent,
+    workingContent,
     comparisonContent,
     comparisonId,
     diffOpen,
@@ -478,6 +590,16 @@ export function useRequirementGenerationChain({
     refresh,
     runStage,
     review,
+    editing,
+    editingDirty,
+    setEditingContent: (content: string) => setEditing(current => current
+      ? { ...current, content }
+      : stage?.draft
+        ? { content, original: stage.draft.content, attemptId: stage.draft.attemptId }
+        : current),
+    resetEditing,
+    guardUnsaved,
+    saveDraft,
     revise,
     deleteVersion,
     importOpen,

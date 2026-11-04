@@ -7,6 +7,7 @@ import { TestThemeProvider } from '@/test/TestThemeProvider'
 import { aiTestingApi } from '../api/aiTesting.api'
 import { baseServicesApi } from '@/features/base-services/api/baseServices.api'
 import { generationChainApi } from '../api/generationChain.api'
+import { requirementDesignApi } from '../api/requirementDesign.api'
 import type { GenerationChain } from '../api/generationChain.api'
 import type { ListResponse } from '@/shared/api/request'
 import { RequirementDesignWorkspace } from './RequirementDesignWorkspace'
@@ -72,11 +73,11 @@ beforeEach(() => {
   })
 })
 
-function mount(onOpenDocument = vi.fn()) {
+function mount(onOpenDocument = vi.fn(), canWrite = true) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   clients.push(client)
   render(<TestThemeProvider><QueryClientProvider client={client}><MemoryRouter>
-    <RequirementDesignWorkspace requirementId="req" projectId="project" canWrite onOpenDocument={onOpenDocument} />
+    <RequirementDesignWorkspace requirementId="req" projectId="project" canWrite={canWrite} onOpenDocument={onOpenDocument} />
   </MemoryRouter></QueryClientProvider></TestThemeProvider>)
   return { onOpenDocument }
 }
@@ -109,4 +110,43 @@ it('文档与代码风险从泳道入口打开，未配置链打开生成设置'
   await user.click(screen.getByRole('button', { name: /开始\s*API 测试/ }))
   expect(await screen.findByRole('region', { name: 'API 测试文档' })).toBeInTheDocument()
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+})
+
+
+it('历史需求自动补齐需求分析和功能测试，不打开设置弹窗', async () => {
+  vi.mocked(generationChainApi.overview)
+    .mockResolvedValueOnce({ chains: [chainWith('requirement_analysis', '需求分析', false), chainWith('function', '功能测试', false)] })
+    .mockResolvedValue({ chains: [chainWith('requirement_analysis', '需求分析', true), chainWith('function', '功能测试', true)] })
+  const configure = vi.spyOn(requirementDesignApi, 'configure').mockResolvedValue({ taskId: 'task' } as Awaited<ReturnType<typeof requirementDesignApi.configure>>)
+  mount()
+  await waitFor(() => expect(configure).toHaveBeenCalledTimes(2))
+  expect(configure).toHaveBeenCalledWith('req', 'requirement_analysis', { newConfiguration: false })
+  expect(configure).toHaveBeenCalledWith('req', 'function', { newConfiguration: false })
+  expect(await screen.findAllByRole('button', { name: '提取与整理 · 待审核' })).toHaveLength(2)
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+})
+
+it('历史需求补建失败时显示错误并允许重试', async () => {
+  vi.mocked(generationChainApi.overview)
+    .mockResolvedValueOnce({ chains: [chainWith('requirement_analysis', '需求分析', false)] })
+    .mockResolvedValue({ chains: [chainWith('requirement_analysis', '需求分析', true)] })
+  const configure = vi.spyOn(requirementDesignApi, 'configure')
+    .mockRejectedValueOnce(new Error('网络异常'))
+    .mockResolvedValue({ taskId: 'task' } as Awaited<ReturnType<typeof requirementDesignApi.configure>>)
+  mount()
+  expect(await screen.findByText(/初始化生成流程失败/)).toBeInTheDocument()
+  await userEvent.setup().click(screen.getByRole('button', { name: /重\s*试/ }))
+  expect(await screen.findByRole('button', { name: '提取与整理 · 待审核' })).toBeInTheDocument()
+  expect(configure).toHaveBeenCalledTimes(2)
+})
+
+
+it('只读成员不会补建历史需求的生成任务', async () => {
+  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [chainWith('requirement_analysis', '需求分析', false)] })
+  const configure = vi.spyOn(requirementDesignApi, 'configure')
+  mount(vi.fn(), false)
+  const entry = await screen.findByRole('button', { name: /开始需求分析/ })
+  expect(entry).toBeDisabled()
+  expect(screen.getByText('等待有编辑权限的成员初始化生成流程')).toBeInTheDocument()
+  expect(configure).not.toHaveBeenCalled()
 })

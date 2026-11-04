@@ -56,6 +56,15 @@ export function createDefaultUiTestCaseFormValues(): UiTestCaseFormValues {
   }
 }
 
+function normalizeOperationValue(step: Partial<UiTestStepFormValue>, legacyOperationValue: string | undefined) {
+  // 导入 YAML 允许 sleep / assert_visible / assert_hidden 的 operationValue 直接写毫秒数，
+  // 表单统一按字符串回显，避免对数字调用 trim() 抛错后整条用例被当成空步骤。
+  const rawValue: unknown = step.operationValue
+  const value = typeof rawValue === 'number' ? String(rawValue) : rawValue
+  if (typeof value === 'string' && value.trim()) return value
+  return legacyOperationValue ?? (typeof value === 'string' ? value : '')
+}
+
 function normalizeStepValue(step: Partial<UiTestStepFormValue>, index: number): UiTestStepFormValue {
   const orderNo = typeof step.orderNo === 'number' && Number.isFinite(step.orderNo) ? step.orderNo : index + 1
   const keyword = step.keyword ?? ''
@@ -64,7 +73,7 @@ function normalizeStepValue(step: Partial<UiTestStepFormValue>, index: number): 
     : ['assert_visible', 'assert_hidden'].includes(keyword) && typeof step.timeoutMs === 'number'
       ? String(step.timeoutMs)
       : undefined
-  const operationValue = step.operationValue?.trim() ? step.operationValue : legacyOperationValue ?? step.operationValue ?? ''
+  const operationValue = normalizeOperationValue(step, legacyOperationValue)
 
   return {
     orderNo,

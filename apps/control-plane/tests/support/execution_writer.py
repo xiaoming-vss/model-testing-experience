@@ -6,7 +6,7 @@ Real transaction/attempt tests use SqlExecutionWriter and a database, never this
 from dataclasses import dataclass, field
 from typing import Any
 
-from testing_agent.domain.ai_execution_intent import ExecutionIntent
+from support.execution_intent import ExecutionIntent
 
 
 @dataclass

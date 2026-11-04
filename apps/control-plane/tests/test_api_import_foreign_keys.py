@@ -1,7 +1,8 @@
 """API file import persists cases before their dependent rules."""
 
 from sqlalchemy import select
-from support.ai_execution import AsyncSessionAdapter, create_run, db  # noqa: F401
+from support.ai_execution import AsyncSessionAdapter, seed_task  # noqa: F401
+from support.ai_execution import db as db
 
 from testing_agent.models.api_assert_rule import ApiAssertRule
 from testing_agent.models.api_case import ApiCase
@@ -12,7 +13,7 @@ from testing_agent.services.api_collection import ApiCollectionService
 
 
 async def test_file_import_with_rules_respects_foreign_keys(db):  # noqa: F811
-    create_run(db)
+    seed_task(db)
     db.add(ApiCollection(collection_id="target", requirement_id="r", name="target"))
     db.commit()
     service = ApiCollectionService(ApiCollectionRepository(AsyncSessionAdapter(db)))

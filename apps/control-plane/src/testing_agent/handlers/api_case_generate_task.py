@@ -8,9 +8,11 @@ from testing_agent.api.deps import (
     get_generation_launcher,
     get_generation_queries,
     get_generation_review,
+    get_generation_stages,
     get_generation_task_commands,
 )
 from testing_agent.core.errors import success_payload
+from testing_agent.handlers.generation_guards import ensure_legacy_mutation_allowed
 from testing_agent.schemas.ai_generate_task import (
     AiGenerateTaskImportRequest,
     AiGenerateTaskRequest,
@@ -20,6 +22,7 @@ from testing_agent.schemas.ai_generate_task import (
 )
 from testing_agent.services.ai_candidate_review import GenerationCandidateReview
 from testing_agent.services.ai_run_launcher import GenerationRunLauncher
+from testing_agent.services.ai_stage_workflow import GenerationStageWorkflow
 from testing_agent.services.ai_task_commands import GenerationTaskCommands
 from testing_agent.services.ai_task_queries import GenerationQueries
 from testing_agent.services.api_generate_import import ApiCandidateImporter
@@ -87,7 +90,7 @@ async def run_api_case_generate_task(
     user_id: str = Depends(get_current_user_id),
     service: GenerationRunLauncher = Depends(get_generation_launcher),
 ):
-    payload = body.model_dump(by_alias=True, exclude_none=True) if body else None
+    payload = body.model_dump(by_alias=True, exclude_none=True) if body else {}
     return success_payload(await service.launch("api", task_id, payload, user_id))
 
 
@@ -116,6 +119,9 @@ async def delete_api_case_generate_task_run(
     user_id: str = Depends(get_current_user_id),
     service: GenerationTaskCommands = Depends(get_generation_task_commands),
 ):
+    await ensure_legacy_mutation_allowed(
+        service.access.owned_run, "api", run_id, user_id, action="write"
+    )
     return success_payload(await service.delete_run("api", run_id, user_id))
 
 
@@ -125,6 +131,7 @@ async def review_api_case_generate_task_run(
     user_id: str = Depends(get_current_user_id),
     service: GenerationCandidateReview = Depends(get_generation_review),
 ):
+    await ensure_legacy_mutation_allowed(service.owned_run, "api", run_id, user_id)
     return success_payload(
         await service.review(
             "api",
@@ -135,12 +142,73 @@ async def review_api_case_generate_task_run(
     )
 
 
+async def review_api_case_stage(
+    run_id: str,
+    body: AiGenerateTaskReviewRequest,
+    user_id: str = Depends(get_current_user_id),
+    service: GenerationStageWorkflow = Depends(get_generation_stages),
+):
+    await ensure_legacy_mutation_allowed(service.owned_run, "api", run_id, user_id)
+    return success_payload(
+        await service.review_api_checkpoint(
+            run_id, body.model_dump(by_alias=True, exclude_none=True), user_id
+        )
+    )
+
+
+async def save_api_case_stage_output(
+    run_id: str,
+    body: AiGenerateTaskRunRequest,
+    user_id: str = Depends(get_current_user_id),
+    service: GenerationStageWorkflow = Depends(get_generation_stages),
+):
+    await ensure_legacy_mutation_allowed(service.owned_run, "api", run_id, user_id, action="write")
+    return success_payload(
+        await service.save_api_checkpoint(
+            run_id, body.model_dump(by_alias=True, exclude_none=True), user_id
+        )
+    )
+
+
+async def revise_api_case_stage(
+    run_id: str,
+    body: AiGenerateTaskReviewRequest,
+    user_id: str = Depends(get_current_user_id),
+    service: GenerationStageWorkflow = Depends(get_generation_stages),
+):
+    await ensure_legacy_mutation_allowed(
+        service.owned_run, "api", run_id, user_id, action="execute"
+    )
+    return success_payload(
+        await service.revise_api_stage(
+            run_id, body.model_dump(by_alias=True, exclude_none=True), user_id
+        )
+    )
+
+
+async def retry_api_case_stage(
+    run_id: str,
+    body: AiGenerateTaskRunRequest | None = None,
+    user_id: str = Depends(get_current_user_id),
+    service: GenerationStageWorkflow = Depends(get_generation_stages),
+):
+    await ensure_legacy_mutation_allowed(
+        service.owned_run, "api", run_id, user_id, action="execute"
+    )
+    return success_payload(
+        await service.retry_api_stage(
+            run_id, body.model_dump(by_alias=True, exclude_none=True) if body else {}, user_id
+        )
+    )
+
+
 async def update_api_case_generate_task_run_result(
     run_id: str,
     body: AiGenerateTaskResultRequest,
     user_id: str = Depends(get_current_user_id),
     service: GenerationCandidateReview = Depends(get_generation_review),
 ):
+    await ensure_legacy_mutation_allowed(service.owned_run, "api", run_id, user_id, action="write")
     return success_payload(await service.update_result("api", run_id, body.result_yaml, user_id))
 
 
@@ -150,6 +218,9 @@ async def import_api_case_generate_task_run(
     user_id: str = Depends(get_current_user_id),
     service: ApiCandidateImporter = Depends(get_generation_api_importer),
 ):
+    await ensure_legacy_mutation_allowed(
+        service.owned_run, "api", run_id, user_id, action="execute"
+    )
     return success_payload(
         await service.import_api_run(
             run_id,

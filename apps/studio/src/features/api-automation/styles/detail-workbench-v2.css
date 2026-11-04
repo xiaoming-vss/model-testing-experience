@@ -10,9 +10,17 @@
 
 /* ===== 板面与两栏 ===== */
 
+.api-collection-workbench-page .api-collection-workbench {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  gap: 12px;
+}
+
 .api-collection-workbench-page .api-wb-cols {
   flex: 1 1 auto;
-  min-height: min(620px, calc(100vh - 300px));
+  min-height: 0;
   display: grid;
   grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
   gap: 12px;
@@ -309,6 +317,8 @@
 @media (max-width: 1180px) {
   .api-collection-workbench-page .api-wb-cols {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(180px, 460px) minmax(400px, 1fr);
+    overflow-y: auto;
   }
 
   .api-collection-workbench-page .api-wb-explorer {

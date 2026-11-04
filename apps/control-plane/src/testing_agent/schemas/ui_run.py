@@ -10,6 +10,7 @@ from pydantic.alias_generators import to_camel
 
 class DebugRunUiCaseRequest(BaseModel):
     environment_id: str = Field()
+    live_debug: bool = False
     headless: bool | None = None
     slow_mo_ms: int | None = Field(default=None)
     viewport_width: int | None = Field(default=None)

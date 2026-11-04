@@ -29,6 +29,22 @@ class ApiCaseRepository(ApiRunScopeRepositoryMixin, ResourceRepository):
     async def get_case(self, case_id: str) -> ApiCase | None:
         return await self.session.scalar(select(ApiCase).where(ApiCase.case_id == case_id))
 
+    async def get_execution_context(
+        self, case_id: str
+    ) -> tuple[ApiCase, ApiCollection, Requirement, Sprint, Project] | None:
+        """Load the current ownership chain in one round trip for live execution."""
+        row = (
+            await self.session.execute(
+                select(ApiCase, ApiCollection, Requirement, Sprint, Project)
+                .join(ApiCollection, ApiCollection.collection_id == ApiCase.collection_id)
+                .join(Requirement, Requirement.requirement_id == ApiCollection.requirement_id)
+                .join(Sprint, Sprint.sprint_id == Requirement.sprint_id)
+                .join(Project, Project.project_id == Sprint.project_id)
+                .where(ApiCase.case_id == case_id)
+            )
+        ).one_or_none()
+        return tuple(row) if row is not None else None
+
     async def get_case_by_collection_and_name(
         self, collection_id: str, name: str, exclude_case_id: str | None = None
     ) -> ApiCase | None:
@@ -72,7 +88,9 @@ class ApiCaseRepository(ApiRunScopeRepositoryMixin, ResourceRepository):
             .where(
                 ApiEnvironment.environment_id == environment_id,
             )
-            .with_for_update()
+            # Multiple submissions may snapshot the same environment together;
+            # writers still wait until those snapshots have committed.
+            .with_for_update(read=True)
         )
 
     async def list_environment_vars(self, environment_id: str) -> list[ApiEnvironmentVar]:

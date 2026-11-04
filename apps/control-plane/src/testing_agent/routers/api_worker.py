@@ -4,9 +4,11 @@ from fastapi import APIRouter, Depends
 
 from testing_agent.api.deps import verify_worker_token
 from testing_agent.handlers.api_worker import (
+    claim_api_ui_task,
     claim_task,
     complete_collection_item,
     complete_task,
+    control_state,
     get_snapshot,
     heartbeat,
     mark_collection_item_started,
@@ -47,3 +49,7 @@ router.post(
     "/tasks/{task_id}/collection-items/{item_id}/completed",
     response_model=ApiResponse[WorkerItemAckResponse],
 )(complete_collection_item)
+
+router.get("/tasks/{task_id}/control")(control_state)
+
+router.post("/tasks/claim-next", response_model=ApiResponse[WorkerClaimPayload])(claim_api_ui_task)

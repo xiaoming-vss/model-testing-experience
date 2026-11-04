@@ -191,13 +191,14 @@ export type UpdateApiExtractRulePayload = Partial<CreateApiExtractRulePayload>
 
 export type RunApiCasePayload = {
   environmentId: string
+  liveDebug?: boolean
 }
 
 export type RunApiCollectionPayload = {
   environmentId: string
 }
 
-export type ApiCaseRunStatus = 'pending' | 'running' | 'success' | 'failed' | 'error'
+export type ApiCaseRunStatus = 'pending' | 'queued' | 'claimed' | 'running' | 'stopping' | 'success' | 'failed' | 'error' | 'canceled'
 
 export type ApiCaseRunRequestSnapshot = {
   url?: string
@@ -260,7 +261,7 @@ export type ApiCollectionRunItem = {
   caseRunId?: string
   caseName?: string
   orderNo?: number
-  status?: 'pending' | 'running' | 'success' | 'failed' | 'error' | 'skipped'
+  status?: ApiCaseRunStatus | 'skipped'
   continueOnFailure?: boolean
   errorMessage?: string
   startedAt?: string
@@ -277,7 +278,7 @@ export type ApiCollectionRunSummary = {
   collectionRunId?: string
   collectionId?: string
   environmentId?: string
-  status?: 'pending' | 'running' | 'success' | 'failed' | 'error'
+  status?: ApiCaseRunStatus
   totalCount?: number
   successCount?: number
   failedCount?: number

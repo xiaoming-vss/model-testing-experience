@@ -4,17 +4,14 @@ import asyncio
 import json
 
 from sqlalchemy import select
-from support.ai_execution import db as db
-from support.ai_execution import event, persist_run
 from support.function_case_library import make_sprint
 from support.order_api import make_order
 from support.project_api import account, project
 from support.project_api import api as api
 
-from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
+from testing_agent.models.ai_generate_task import AiGenerateTask
+from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.worker_task import WorkerTask
-from testing_agent.services.ai_execution import graph
-from testing_agent.services.ai_execution import project as project_run
 
 GRAPH_INPUT = {
     "requirements": [
@@ -115,9 +112,31 @@ def test_dispatch_records_graph_task_run_and_worker_task(api):
 
     workers = query(api, select(WorkerTask).where(WorkerTask.task_type == "test_order_graph"))
     assert len(workers) == 1
-    assert workers[0].run_id == run["runId"]
+    attempt = query(
+        api, select(AiGenerationAttempt).where(AiGenerationAttempt.execution_id == run["runId"])
+    )[0]
+    assert workers[0].run_id == attempt.id != run["runId"]
     assert workers[0].task_id
     assert workers[0].domain == "ai"
+
+
+def test_graph_request_id_replays_and_rejects_changed_input(api):
+    owner, pid, _, order_id = order_fixture(api, "graph-replay")
+    connection_id = make_llm(api, owner, pid)
+    url = f"/v1/test-orders/{order_id}/graph-analysis"
+    payload = {
+        "graphInput": GRAPH_INPUT,
+        "connectionId": connection_id,
+        "requestId": "graph-replay",
+    }
+    first = api.post(url, headers=owner, json=payload)
+    assert first.status_code == 200, first.text
+    replay = api.post(url, headers=owner, json=payload)
+    assert replay.status_code == 200, replay.text
+    assert replay.json()["data"]["runId"] == first.json()["data"]["runId"]
+    changed = json.loads(json.dumps(GRAPH_INPUT))
+    changed["requirements"][0]["requirement_title"] = "不同标题"
+    assert api.post(url, headers=owner, json={**payload, "graphInput": changed}).status_code == 400
 
 
 def test_worker_snapshot_carries_graph_task_id(api):
@@ -126,19 +145,25 @@ def test_worker_snapshot_carries_graph_task_id(api):
     run_id = dispatch(api, owner, order_id, connection_id).json()["data"]["runId"]
 
     async def load():
-        from testing_agent.services.worker import build_snapshot
+        from testing_agent.schemas.workers import WorkerClaimRequest
+        from testing_agent.services.stage_storage.worker_service import DirectStageWorkerService
 
         async with api.app.state.test_sessions() as session:
-            worker = await session.scalar(select(WorkerTask).where(WorkerTask.run_id == run_id))
+            attempt = await session.scalar(
+                select(AiGenerationAttempt).where(AiGenerationAttempt.execution_id == run_id)
+            )
+            worker = await session.scalar(select(WorkerTask).where(WorkerTask.run_id == attempt.id))
             task = await session.scalar(
                 select(AiGenerateTask).where(AiGenerateTask.task_type == "test_order_graph")
             )
-            return await build_snapshot(session, "ai", worker), task.task_id
+            service = DirectStageWorkerService(session)
+            await service.claim(worker, WorkerClaimRequest(worker_id="test-worker"))
+            return await service.snapshot(worker), task.task_id, attempt.id
 
-    payload, task_id = asyncio.run(load())
+    payload, task_id, attempt_id = asyncio.run(load())
     # worker 端 run.taskId 必填：缺了它的快照整轮都领取不到任务。
     assert payload["run"]["taskId"] == task_id
-    assert payload["run"]["runId"] == run_id
+    assert payload["run"]["attemptId"] == attempt_id != run_id
 
 
 def test_redispatch_reuses_task_and_blocks_while_running(api):
@@ -153,10 +178,10 @@ def test_redispatch_reuses_task_and_blocks_while_running(api):
     # 一张测试单只有一个图谱任务，重复派发只新增 run。
     tasks = query(api, select(AiGenerateTask).where(AiGenerateTask.task_type == "test_order_graph"))
     assert len(tasks) == 1
-    runs = query(
-        api, select(AiGenerateTaskRun).where(AiGenerateTaskRun.task_id == tasks[0].task_id)
+    attempts = query(
+        api, select(AiGenerationAttempt).where(AiGenerationAttempt.execution_id.is_not(None))
     )
-    assert len(runs) == 1
+    assert len(attempts) == 1
 
 
 def test_dispatch_rejects_incomplete_graph_input(api):
@@ -214,55 +239,179 @@ def test_deleting_order_cascades_graph_task_and_sprint_still_deletes(api):
     assert sprint_deleted.status_code == 200, sprint_deleted.text
 
 
-def test_worker_result_lands_in_result_yaml_without_review(db):
-    task = AiGenerateTask(
-        task_id="graph-task",
-        task_type="test_order_graph",
-        name="测试图谱",
-        project_id="p",
-        sprint_id="s",
-        requirement_id="",
-        order_id="order-1",
-        creator_user_id="u",
-        source_type="test_order_graph",
-        source_content="",
-        instruction="",
-    )
-    run = AiGenerateTaskRun(
-        run_id="graph-run",
-        task_id="graph-task",
-        project_id="p",
-        sprint_id="s",
-        requirement_id="",
-        trigger_user_id="u",
-        status="pending",
-        checkpoint_enabled=False,
-        current_stage="generate",
-        stage_status="pending",
-        config_json={"graphInput": GRAPH_INPUT},
-        snapshot_json={"orderId": "order-1"},
-    )
-    worker = WorkerTask(
-        domain="ai",
-        task_id="graph-worker",
-        task_type="test_order_graph",
-        run_id="graph-run",
-        status="pending",
-    )
-    db.add_all([task, run, worker])
-    db.flush()
-    persist_run(db, run, worker=worker)
-    db.commit()
+def test_graph_history_supports_paged_summaries_and_details(api):
+    owner, pid, _, order_id = order_fixture(api)
+    connection_id = make_llm(api, owner, pid)
+    before = api.get(f"/v1/test-orders/{order_id}/graph-analysis/runs", headers=owner)
+    assert before.status_code == 200, before.text
+    assert before.json()["data"]["total"] == 0
+    run_id = dispatch(api, owner, order_id, connection_id).json()["data"]["runId"]
+    response = api.get(f"/v1/test-orders/{order_id}/graph-analysis/runs", headers=owner)
+    assert response.status_code == 200, response.text
+    assert response.json()["data"]["total"] == 1
+    assert response.json()["data"]["items"][0]["runId"] == run_id
+    assert "configJson" not in response.json()["data"]["items"][0]
+    detail = api.get(f"/v1/test-order-graph-runs/{run_id}", headers=owner)
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["data"]["configJson"]["graphInput"] == GRAPH_INPUT
 
-    event(db, run, worker, status="success", stage="generate", output=json.dumps(graph_output()))
 
-    stages, _ = graph(db, run)
-    assert [stage.stage for stage in stages] == ["generate"]
-    # 图谱是派生产物，不进人工审核。
-    assert stages[0].review_status == "not_required"
+def test_graph_worker_lifecycle_keeps_old_success_when_later_run_fails(api):
+    from testing_agent.api.deps import verify_worker_token
 
-    projected = project_run(db, run)
-    # 产物落在 resultYaml，而不是 configJson 的某个键。
-    assert json.loads(projected.result_yaml) == graph_output()
-    # 图谱输入留在 configJson 里，前端据此渲染节点名。
-    assert projected.config_json["graphInput"] == GRAPH_INPUT
+    owner, pid, _, order_id = order_fixture(api)
+    connection_id = make_llm(api, owner, pid)
+    api.app.dependency_overrides[verify_worker_token] = lambda: None
+
+    def execute(status, content=None):
+        run_response = dispatch(api, owner, order_id, connection_id)
+        assert run_response.status_code == 200, run_response.text
+        execution_id = run_response.json()["data"]["runId"]
+        claim = api.post("/internal/ai-worker/tasks/claim", json={"workerId": "worker"})
+        assert claim.status_code == 200, claim.text
+        payload = claim.json()
+        task_id, attempt_id = payload["taskId"], payload["attemptId"]
+        assert execution_id != attempt_id
+        base = f"/internal/ai-worker/tasks/{task_id}"
+        snapshot = api.get(f"{base}/snapshot")
+        assert snapshot.status_code == 200, snapshot.text
+        assert snapshot.json()["run"]["attemptId"] == attempt_id
+        started = api.post(f"{base}/started", json={"workerId": "worker", "attemptId": attempt_id})
+        assert started.status_code == 204, started.text
+        progress = api.patch(
+            f"{base}/progress",
+            json={
+                "workerId": "worker",
+                "attemptId": attempt_id,
+                "currentStage": "generate",
+                "stageStatus": "running",
+                "resultSummaryJson": {"round": "discarded"},
+            },
+        )
+        assert progress.status_code == 204, progress.text
+        completed = api.post(
+            f"{base}/completed",
+            json={
+                "workerId": "worker",
+                "attemptId": attempt_id,
+                "status": status,
+                "resultYaml": content,
+                "errorMessage": "later failure" if status == "failed" else "",
+            },
+        )
+        assert completed.status_code == 204, completed.text
+        return execution_id
+
+    try:
+        first = execute("success", json.dumps(graph_output()))
+        second = execute("failed")
+        history = api.get(f"/v1/test-orders/{order_id}/graph-analysis/runs", headers=owner).json()[
+            "data"
+        ]
+        assert history["total"] == 2
+        assert [item["runId"] for item in history["items"]] == [second, first]
+        assert history["items"][0]["errorMessage"] == "later failure"
+        old = api.get(f"/v1/test-order-graph-runs/{first}", headers=owner).json()["data"]
+        assert json.loads(old["resultYaml"]) == graph_output()
+        assert old["resultSummaryJson"] == {}
+        assert api.delete(f"/v1/test-order-graph-runs/{second}", headers=owner).status_code == 200
+        latest = api.get(f"/v1/test-orders/{order_id}/graph-analysis", headers=owner).json()["data"]
+        assert latest["run"]["runId"] == first
+        assert latest["run"]["configJson"]["graphInput"] == GRAPH_INPUT
+    finally:
+        api.app.dependency_overrides.pop(verify_worker_token, None)
+
+
+def test_unified_graph_execution_detail_and_delete_respect_permissions(api):
+    from testing_agent import models as m
+    from testing_agent.services.auxiliary_execution import dispatch_auxiliary_execution
+    from testing_agent.services.stage_storage.worker import StageWorkerTransitions
+    from testing_agent.services.test_order_graph import build_graph_task
+
+    owner, pid, _, order_id = order_fixture(api)
+    _, viewer = account(api, "viewer-unified")
+    _, stranger = account(api, "stranger-unified")
+    assert (
+        api.post(
+            f"/v1/projects/{pid}/members",
+            headers=owner,
+            json={"name": "viewer-unified", "role": "viewer"},
+        ).status_code
+        == 200
+    )
+
+    async def seed():
+        async with api.app.state.test_sessions() as session:
+            order = await session.scalar(
+                select(m.TestOrder).where(m.TestOrder.order_id == order_id)
+            )
+            project = await session.scalar(select(m.Project).where(m.Project.project_id == pid))
+            task = build_graph_task(order, project.user_id)
+            session.add(task)
+            await session.flush()
+            attempt, _ = await dispatch_auxiliary_execution(
+                session,
+                task=task,
+                actor_id=project.user_id,
+                request_id="unified-worker",
+                execution_id="unified-run",
+                connection_id="llm",
+                source={"orderId": order_id},
+                config={"graphInput": GRAPH_INPUT},
+            )
+            await session.commit()
+            return attempt.id
+
+    attempt_id = asyncio.run(seed())
+    path = "/v1/test-order-graph-runs/unified-run"
+    detail = api.get(path, headers=viewer)
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["data"]["configJson"]["graphInput"] == GRAPH_INPUT
+    assert api.get(path, headers=stranger).status_code in (403, 404)
+    assert api.delete(path, headers=viewer).status_code == 403
+    assert api.delete(path, headers=owner).status_code == 409
+
+    async def complete():
+        async with api.app.state.test_sessions() as session:
+            attempt = await session.get(m.AiGenerationAttempt, attempt_id)
+            queue = await session.scalar(
+                select(WorkerTask).where(
+                    WorkerTask.domain == "ai", WorkerTask.task_id == "unified-worker"
+                )
+            )
+            await StageWorkerTransitions(session).completed(
+                attempt.stage_id,
+                attempt.id,
+                queue.task_id,
+                content=json.dumps(graph_output()),
+                output_format="json",
+                output_context=None,
+            )
+            queue.status = "success"
+            await session.commit()
+
+    asyncio.run(complete())
+    assert api.delete(path, headers=owner).status_code == 200
+    assert api.get(path, headers=owner).status_code == 404
+
+
+def test_queued_graph_run_blocks_another_dispatch(api):
+    owner, pid, _, order_id = order_fixture(api)
+    connection_id = make_llm(api, owner, pid)
+    run_id = dispatch(api, owner, order_id, connection_id).json()["data"]["runId"]
+
+    async def set_queued():
+        from sqlalchemy import update
+
+        async with api.app.state.test_sessions() as session:
+            await session.execute(
+                update(AiGenerationAttempt)
+                .where(AiGenerationAttempt.execution_id == run_id)
+                .values(status="queued")
+            )
+            await session.commit()
+
+    asyncio.run(set_queued())
+    blocked = dispatch(api, owner, order_id, connection_id)
+    assert blocked.status_code == 400
+    assert "正在生成中" in blocked.text

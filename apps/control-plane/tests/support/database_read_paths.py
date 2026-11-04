@@ -7,17 +7,7 @@ from sqlalchemy import event
 from sqlalchemy.dialects import mysql
 
 from support.ai_execution import db  # noqa: F401
-from testing_agent.models.ai_generate_execution import (
-    AiGenerateRunImport as Import,
-)
-from testing_agent.models.ai_generate_execution import (
-    AiGenerateRunStage as Stage,
-)
-from testing_agent.models.ai_generate_execution import (
-    AiGenerateStageAttempt as Attempt,
-)
 from testing_agent.models.ai_generate_task import AiGenerateTask
-from testing_agent.models.ai_generate_task import AiGenerateTaskRun as Run
 from testing_agent.models.api_case import ApiCase
 from testing_agent.models.api_case_run import ApiCaseRun
 from testing_agent.models.api_collection import ApiCollection
@@ -96,63 +86,6 @@ def database(db):  # noqa: F811
     event.listen(db.bind, "before_cursor_execute", record)
     yield db, AsyncAdapter(db), statements
     event.remove(db.bind, "before_cursor_execute", record)
-
-
-def seed_history(session, size=25):
-    for i in range(size):
-        run_id = f"run-{i:02d}"
-        session.add(
-            Run(
-                run_id=run_id,
-                task_id="task",
-                trigger_user_id="u",
-                status="success",
-                current_stage="completed",
-                snapshot_json={"source": "X" * 200_000},
-                created_at=NOW,
-                started_at=NOW,
-                finished_at=NOW + timedelta(seconds=2),
-            )
-        )
-        session.flush()
-        session.add(
-            Stage(
-                id=f"stage-{i}",
-                run_id=run_id,
-                stage="detailed_cases",
-                stage_order=2,
-                execution_status="success",
-                review_status="approved" if i == 0 else "pending",
-                current_artifact_attempt_id=f"artifact-{i}",
-                created_at=NOW,
-                updated_at=NOW,
-            )
-        )
-        session.flush()
-        session.add(
-            Attempt(
-                id=f"artifact-{i}",
-                stage_id=f"stage-{i}",
-                attempt_no=1,
-                operation="generate",
-                status="success",
-                created_at=NOW,
-                input_snapshot_json={"source": "X" * 200_000},
-                output_content="cases: " + "Y" * 200_000,
-                output_context_json={"secret": "Z" * 200_000},
-            )
-        )
-    session.flush()
-    session.add(
-        Import(
-            id="import",
-            run_id="run-00",
-            imported_at=NOW,
-            imported_targets_json=[],
-        )
-    )
-    session.commit()
-    session.expunge_all()
 
 
 class CapturingSession:

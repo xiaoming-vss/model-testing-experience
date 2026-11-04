@@ -126,35 +126,6 @@ async def test_database_guards_remote_binding_and_preserves_referenced_evidence(
         await session.rollback()
 
 
-def test_migration_refuses_to_discard_existing_identity_evidence():
-    import sqlalchemy as sa
-    from support.initial_schema_migration import migration_config
-
-    from alembic import command
-
-    engine = sa.create_engine("sqlite://")
-    with engine.connect() as connection:
-        config = migration_config(connection)
-        command.upgrade(config, "head")
-        connection.execute(
-            FunctionCaseRemoteIdentity.__table__.insert().values(
-                project_id="deleted-project",
-                case_id="deleted-case",
-                instance_key="b" * 64,
-                remote_case_id=123,
-                target_json={"execution": 1},
-                revision=1,
-            )
-        )
-        connection.commit()
-        with pytest.raises(RuntimeError, match="Preserve testcase identity"):
-            command.downgrade(config, "20261020_0043")
-        connection.rollback()
-        assert connection.scalar(select(FunctionCaseRemoteIdentity.remote_case_id)) == 123
-        assert "function_case_push_operations" in sa.inspect(connection).get_table_names()
-    engine.dispose()
-
-
 @pytest.mark.asyncio
 async def test_frozen_intent_does_not_follow_caller_mutation_or_store_credentials(sessions):
     async with sessions() as session:

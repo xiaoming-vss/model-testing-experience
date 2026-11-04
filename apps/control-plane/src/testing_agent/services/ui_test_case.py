@@ -319,7 +319,11 @@ class UiTestCaseService:
                 )
             )
         await self.repository.commit()
-        return {"imported": len(cases)}
+        return {
+            "imported": len(cases),
+            "imported_case_count": len(cases),
+            "imported_step_count": sum(len(item["stepsJson"]) for item in cases),
+        }
 
     async def list(self, user_id: str, suite_id: str) -> dict[str, Any]:
         await self.get_accessible_suite(user_id, suite_id, action="read")

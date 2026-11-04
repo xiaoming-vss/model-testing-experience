@@ -110,8 +110,15 @@ class Settings:
     login_security: LoginSecuritySettings = LoginSecuritySettings()
     ldap: LdapSettings = LdapSettings()
     asset_import: ImportLimits = ImportLimits()
+    test_run_redis_url: str = ""
+    db_pool_size: int = 20
+    db_max_overflow: int = 10
 
     def __post_init__(self):
+        if type(self.db_pool_size) is not int or not 1 <= self.db_pool_size <= 100:
+            raise ValueError("data.db.user.pool_size must be between 1 and 100")
+        if type(self.db_max_overflow) is not int or not 0 <= self.db_max_overflow <= 100:
+            raise ValueError("data.db.user.max_overflow must be between 0 and 100")
         if self.integration_worker_key and self.integration_worker_key == self.worker_key:
             raise ValueError(
                 "Integration Worker credentials must differ from existing Worker credentials"
@@ -132,8 +139,10 @@ class Settings:
             raise ValueError("integration_execution.project_ids must be a list")
         execution["project_ids"] = tuple(project_ids)
         jwt = security.get("jwt", {})
+        db_user = data.get("data", {}).get("db", {}).get("user", {})
         return cls(
             asset_import=ImportLimits(**data.get("asset_import", {})),
+            test_run_redis_url=data.get("test_run_notifications", {}).get("redis_url", ""),
             integration_worker_key=security.get("integration_worker", {}).get("key", ""),
             integration_execution=IntegrationExecutionSettings(**execution),
             s3=ObjectStorageSettings(**data.get("storage", {}).get("s3", {})),
@@ -149,7 +158,9 @@ class Settings:
             ldap=LdapSettings(),  # LDAP is configured exclusively through the database.
             integration_key=security.get("integration", {}).get("key", "change-me"),
             worker_key=security.get("worker", {}).get("key", ""),
-            database_url=data.get("data", {}).get("db", {}).get("user", {}).get("dsn", ""),
+            database_url=db_user.get("dsn", ""),
+            db_pool_size=db_user.get("pool_size", 20),
+            db_max_overflow=db_user.get("max_overflow", 10),
             uploads_dir=data.get("storage", {}).get("uploads_dir", ""),
             code_overview_cache_ttl_seconds=int(
                 data.get("code_overview", {}).get("cache_ttl_seconds", 300)

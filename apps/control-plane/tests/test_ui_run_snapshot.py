@@ -80,7 +80,11 @@ class FakeUiRunRepository:
         return None
 
     async def commit(self):
-        return None
+        for row in self.rows:
+            if isinstance(row, (UiTestCaseRun, UiTestSuiteRun)):
+                row.error_message = row.error_message or ""
+                row.trace_path = row.trace_path or ""
+                row.duration_ms = row.duration_ms or 0
 
     async def refresh(self, row):
         row.error_message = ""

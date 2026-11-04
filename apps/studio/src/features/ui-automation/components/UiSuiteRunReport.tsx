@@ -1,3 +1,5 @@
+import { RunWaitingReason } from '@/domain/runs/RunWaitingReason'
+import { StopRunButton } from '@/domain/runs/StopRunButton'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { useViewMotion } from '@/shared/ui/useViewMotion'
 import { StoredFileDownload } from '@/shared/components/files/StoredFile'
@@ -31,6 +33,7 @@ import type { UseQueryResult } from '@tanstack/react-query'
 
 type Props = {
   suiteRunReportOpen: boolean
+  canStop?: boolean
   closeSuiteRunReport: () => void
   suiteRunReportQuery: UseQueryResult<UiTestSuiteRunReport, Error>
   suiteRunReport: UiTestSuiteRunReport | null
@@ -45,7 +48,7 @@ type Props = {
   toggleSuiteRunItem: (itemKey: string) => void
 }
 
-export function UiSuiteRunReport({ suiteRunReportOpen, closeSuiteRunReport, suiteRunReportQuery, suiteRunReport, handleRefreshSuiteRunReport, refreshingSuiteRunReport, selectedSuiteRunId, suiteRunReportView, setSuiteRunReportView, orderedSuiteRunItems, selectedSuiteRunSummary, expandedSuiteRunItemIds, toggleSuiteRunItem }: Props) {
+export function UiSuiteRunReport({ canStop, suiteRunReportOpen, closeSuiteRunReport, suiteRunReportQuery, suiteRunReport, handleRefreshSuiteRunReport, refreshingSuiteRunReport, selectedSuiteRunId, suiteRunReportView, setSuiteRunReportView, orderedSuiteRunItems, selectedSuiteRunSummary, expandedSuiteRunItemIds, toggleSuiteRunItem }: Props) {
   const viewRef = useViewMotion(uiSuiteRunReportViewOptions.findIndex(option => option.value === suiteRunReportView))
   return (
     <Modal
@@ -71,6 +74,7 @@ export function UiSuiteRunReport({ suiteRunReportOpen, closeSuiteRunReport, suit
                 <div className="api-collection-run-report-title">
                   <Text strong>运行结果</Text>
                   <Tag color={getExecutionStatusMeta(suiteRunReport.status).color}>{getExecutionStatusMeta(suiteRunReport.status).label}</Tag>
+                  <RunWaitingReason status={suiteRunReport.status} />
                 </div>
                 <div className="api-collection-run-report-meta">
                   <span>开始：{formatTime(suiteRunReport.startedAt)}</span>
@@ -81,6 +85,7 @@ export function UiSuiteRunReport({ suiteRunReportOpen, closeSuiteRunReport, suit
                 </div>
               </div>
               <div className="api-collection-run-report-head-actions">
+                {canStop ? <StopRunButton kind="ui-suite" runId={selectedSuiteRunId} status={suiteRunReport.status} /> : null}
                 <ActionButton operation="refresh" onClick={handleRefreshSuiteRunReport} loading={refreshingSuiteRunReport} disabled={!selectedSuiteRunId}>刷新报告</ActionButton>
               </div>
             </div>

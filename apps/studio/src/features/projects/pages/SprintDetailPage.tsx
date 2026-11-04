@@ -2,6 +2,7 @@ import '../styles/sprint-overview.css'
 import { useLocalDate } from '../hooks/useLocalDate'
 import { saveBlob } from '@/shared/utils/download'
 import { ActionButton } from '@/shared/components/ActionButton'
+import { usePendingRequestId } from '@/shared/hooks/usePendingRequestId'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { AppstoreOutlined, ArrowLeftOutlined, CodeOutlined, DesktopOutlined, FileTextOutlined } from '@ant-design/icons'
@@ -26,6 +27,7 @@ import {
 } from 'recharts'
 import dayjs, { type Dayjs } from 'dayjs'
 import { SprintCodeOverviewSection } from '@/features/projects/components/SprintCodeOverviewSection'
+import { TestReportHistoryDrawer } from '@/features/projects/components/TestReportHistoryDrawer'
 import { useSprintBoundaryRefresh } from '@/features/projects/hooks/useSprintBoundaryRefresh'
 import { api, listItems, type SprintDailyMetricsSnapshot, type SprintDailyMetricsTestStats, type TestReportGenerateRun } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
@@ -494,7 +496,7 @@ function getRunStatusMeta(status?: TestReportGenerateRun['status']) {
 }
 
 function isTestReportRunGenerating(run?: TestReportGenerateRun) {
-  return ['pending', 'claimed', 'running', 'waiting_review'].includes(getRunStatusMeta(run?.status).value)
+  return ['pending', 'queued', 'claimed', 'running', 'waiting_review'].includes(getRunStatusMeta(run?.status).value)
 }
 
 function getRunId(run?: TestReportGenerateRun) {
@@ -828,6 +830,7 @@ export function SprintDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [reportDrawerOpen, setReportDrawerOpen] = useState(false)
+  const [reportHistoryOpen, setReportHistoryOpen] = useState(false)
   const [reportModalRunId, setReportModalRunId] = useState('')
   const [historyDateRange, setHistoryDateRange] = useState<[Dayjs, Dayjs]>(() => [dayjs().subtract(6, 'day'), dayjs()])
   const [reportForm] = Form.useForm<TestReportGenerateFormValues>()
@@ -900,17 +903,21 @@ export function SprintDetailPage() {
     enabled: Boolean(reportModalRunId),
   })
 
+  const pendingReportRequest = usePendingRequestId()
   const createReportRunMutation = useMutation({
     mutationFn: (values: TestReportGenerateFormValues) => {
       if (!projectId) throw new Error('缺少项目信息，无法生成测试报告')
-      return api.createTestReportGenerateRun(projectId, {
+      const input = {
         sprintId,
         snapshotDate: todayDate,
         connectionId: values.connectionId,
         instruction: values.instruction?.trim() || undefined,
-      })
+      }
+      const requestId = pendingReportRequest.forInput(JSON.stringify({ projectId, ...input }))
+      return api.createTestReportGenerateRun(projectId, { ...input, requestId })
     },
     onSuccess: () => {
+      pendingReportRequest.clear()
       message.success('报告生成已开始')
       setReportDrawerOpen(false)
       reportForm.resetFields()
@@ -929,10 +936,12 @@ export function SprintDetailPage() {
     },
   })
 
-  const latestReportRun = listItems(reportRunsQuery.data)[0]
+  const reportRuns = listItems(reportRunsQuery.data)
+  const latestReportRun = reportRuns[0]
+  const latestSuccessfulReport = reportRuns.find(run => getRunStatusMeta(run.status).value === 'success' && Boolean(getRunId(run)))
   const isReportGenerating = createReportRunMutation.isPending || isTestReportRunGenerating(latestReportRun)
   const canViewLatestReport =
-    Boolean(latestReportRun) && getRunStatusMeta(latestReportRun?.status).value === 'success' && Boolean(getRunId(latestReportRun))
+    Boolean(latestSuccessfulReport)
 
   function closeReportDrawer() {
     setReportDrawerOpen(false)
@@ -1017,12 +1026,13 @@ export function SprintDetailPage() {
                 <SummaryMetric label="总用例数" value={latestMetrics.totalCases} />
                 <SummaryMetric label="Bug 总数" value={latestMetrics.bug.collected ? latestMetrics.bug.total : '—'} />
 
+                <Button onClick={() => setReportHistoryOpen(true)}>报告历史</Button>
                 <Tooltip title={canViewLatestReport ? '查看最近一次成功报告' : '暂无可查看的成功报告'}>
                   <Button
                     icon={<FileTextOutlined />}
                     disabled={!canViewLatestReport}
                     onClick={() => {
-                      if (latestReportRun) handleViewReport(latestReportRun)
+                      if (latestSuccessfulReport) handleViewReport(latestSuccessfulReport)
                     }}
                   >
                     查看报告
@@ -1142,6 +1152,8 @@ export function SprintDetailPage() {
         onClose={closeReportDrawer}
         onFinish={handleCreateReportRun}
       />
+      <TestReportHistoryDrawer key={`${projectId}:${sprintId}`} open={reportHistoryOpen} projectId={projectId} sprintId={sprintId}
+        onClose={() => setReportHistoryOpen(false)} onView={run => { setReportHistoryOpen(false); handleViewReport(run) }} />
       <TestReportMarkdownModal
         open={Boolean(reportModalRunId)}
         run={reportRunDetailQuery.data}

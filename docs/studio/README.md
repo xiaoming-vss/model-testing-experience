@@ -41,6 +41,7 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 - 功能用例生成页面负责运行选择与操作编排；`ai-testing/utils/functionalOutput.ts` 负责产物解析，`caseNameTree.ts` 负责树编辑与布局计算，三个结果展示组件分别负责需求分析、候选用例和测试点树。
 - 五类 AI 任务详情页的执行后缓存刷新、运行记录删除收敛在 `ai-testing/hooks/useTaskRunActions.ts`。各页保留不同的执行参数、授权查询、审核业务和草稿清理；删除失败不清空草稿，删除非当前记录不切换选中项。UI 与代码风险任务仍只刷新运行列表，其余三类任务同步刷新详情与项目任务列表。
 - 运行详情按状态刷新，历史与报告减少重复请求，详见 [运行页面刷新策略](run-polling.md)。AI 详情与历史的缓存同步由 `ai-testing/hooks/useTaskRunHistorySync.ts` 维护。
+- 代码风险、测试报告和测试单图谱按执行 ID 展示并逐条删除已结束历史，运行中禁用删除；正式测试资产不受影响。AI Worker 队列协议中的 `runId` 是该次派发尝试 ID，页面请求和执行详情使用执行 ID，两者不得在前端混用。
 - AI 测试样式按页面和组件职责维护，文件与引用约定见下表。
 - API 集合页面的查询、用例编辑、规则编辑和运行轮询分别在 `api-automation/hooks/useApiCollectionData.ts`、`useApiCaseEditing.ts`、`useApiRuleEditing.ts`、`useApiExecution.ts`。组件目录维护用例编辑器、规则弹窗、导入弹窗及运行历史/报告；查询键和缓存失效由对应 hook 管理。
 - UI 套件页面保留草稿与执行编排，步骤编辑器、导入弹窗、运行历史和报告位于 `ui-automation/components/`；单用例和套件报告共用步骤结果渲染。
@@ -135,3 +136,5 @@ npm run verify        # type-check + lint + build
 显式勾选。数据库恢复后的额外核对由后端按用例状态声明。接口和审计规则见
 [功能用例推送与未决写入核对](../control-plane/zentao-mcp-case-push.md)。
 - 编辑 API 测试集时可调整同一项目内的所属迭代和需求；保存会刷新原需求和目标需求的生成链导入目标。运行历史显示的需求和迭代跟随测试集当前归属。
+
+API/UI 运行的实时更新、断线及临时调试结果见 [实时执行](../control-plane/realtime-test-execution.md)。

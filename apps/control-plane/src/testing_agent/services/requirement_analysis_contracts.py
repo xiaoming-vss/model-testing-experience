@@ -4,7 +4,7 @@ import json
 
 from testing_agent.core.enums import ReviewStatus
 from testing_agent.core.errors import ErrBadRequest, dynamic_error
-from testing_agent.domain.requirement_artifacts import serialize_artifact, validate_artifact
+from testing_agent.domain.requirement_artifacts import validate_artifact
 
 
 def ensure_requirement_run_mutable(review_status: str | None) -> None:
@@ -60,11 +60,6 @@ def merge_stage_config(run, edits, stage, *, allow_resolved_questions=False):
         allow_resolved_questions=stage != "extracting_text" or allow_resolved_questions,
     )
     return merged
-
-
-def imported_content(run):
-    validate_run_output(run, final=True)
-    return serialize_artifact(run.result_yaml, "requirement_understanding")
 
 
 def normalize_requirement_config(value):

@@ -28,11 +28,14 @@ import { Empty, Form, Input, Select, Switch, Tooltip } from 'antd'
 import type { ProjectAction } from '@/features/projects/types'
 
 import { UiStepResultBadge } from './UiStepResultBadge'
-import { useLayoutEffect, useRef, type JSX } from 'react'
+import { useLayoutEffect, useRef, type JSX, type ReactNode } from 'react'
 
 type Props = {
-  addStep: (add: (defaultValue?: UiTestStepFormValue | undefined, insertIndex?: number | undefined) => void, stepCount: number) => void
   watchedSteps: UiTestStepFormValue[]
+  selectedStepIndex?: number
+  activeTab?: 'basic' | 'extract'
+  onTabChange?: (tab: 'basic' | 'extract') => void
+  detailActions?: ReactNode
   expandedStepIndexes: number[]
   draggingStepIndex: number | null
   handleStepDrop: (move: (from: number, to: number) => void, targetIndex: number) => void
@@ -47,7 +50,7 @@ type Props = {
   stepResults?: UiTestCaseRunStepResult[]
 }
 
-export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, draggingStepIndex, handleStepDrop, can, handleStepDragStart, setDraggingStepIndex, toggleStepPanel, removeStep, renderTemplatePickerLabel, bindTemplateInputRef, stepResults = [] }: Props) {
+export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'basic', onTabChange, detailActions, expandedStepIndexes, draggingStepIndex, handleStepDrop, can, handleStepDragStart, setDraggingStepIndex, toggleStepPanel, removeStep, renderTemplatePickerLabel, bindTemplateInputRef, stepResults = [] }: Props) {
   const stepResultByOrder = indexUiRunStepResultsByOrder(stepResults)
   const stepListRef = useRef<HTMLDivElement | null>(null)
   const previousExpandedRef = useRef(expandedStepIndexes)
@@ -60,7 +63,7 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
     })
   })
 
-  // 展开靠后的步骤时，新露出的表单在列表可视区下方，看起来像被「添加步骤」挡住。
+  // 展开靠后的步骤时，新露出的表单可能落在列表可视区下方。
   // 只对这次新展开的卡片做最小滚动：卡片能整张放进列表就滚到完整可见，放不下就对到列表顶部。
   useLayoutEffect(() => {
     const previousExpanded = previousExpandedRef.current
@@ -90,15 +93,11 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
 
   return (
     <Form.List name="steps">
-      {(fields, { add, remove, move }) => (
+      {(fields, { remove, move }) => (
         <>
           {fields.length === 0 ? (
             <div className="ui-test-case-step-empty">
-              <Empty description="当前还没有步骤">
-                <ProjectActionButton action="write" type="dashed" operation="create" onClick={() => addStep(add, fields.length)}>
-                  添加步骤
-                </ProjectActionButton>
-              </Empty>
+              <Empty description="当前还没有步骤，请在流程末尾的「+ 添加步骤」卡片中添加" />
             </div>
           ) : (
             <div className="ui-test-case-step-list" ref={stepListRef}>
@@ -119,14 +118,15 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                   operationValueFieldClass,
                   summary: stepSummary,
                 } = buildUiStepRowView(step)
-                const expanded = expandedStepIndexes.includes(index)
+                const expanded = selectedStepIndex !== undefined || expandedStepIndexes.includes(index)
                 const stepResult = stepResultByOrder.get(index + 1)
 
                 return (
                   <div
                     key={fieldKey}
                     data-step-index={index}
-                    className={`ui-test-case-step-card${expanded ? ' expanded' : ''}${draggingStepIndex === index ? ' dragging' : ''}`}
+                    hidden={selectedStepIndex !== undefined && selectedStepIndex !== index}
+                    className={`ui-test-case-step-card${expanded ? ' expanded' : ''}${selectedStepIndex !== undefined ? ' is-detail' : ''}${draggingStepIndex === index ? ' dragging' : ''}`}
                     onDragOver={(event) => {
                       event.preventDefault()
                     }}
@@ -137,18 +137,18 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                   >
                     <div
                       className="ui-test-case-step-card-top"
-                      draggable={can('write')}
+                      draggable={can('write') && selectedStepIndex === undefined}
                       onDragStart={(event) => handleStepDragStart(event, index)}
                       onDragEnd={() => setDraggingStepIndex(null)}
-                      onClick={() => toggleStepPanel(index)}
+                      onClick={selectedStepIndex === undefined ? () => toggleStepPanel(index) : undefined}
                     >
                       <div className="ui-test-case-step-card-main">
                         <div className="ui-test-case-step-card-leading">
                           {/* 设计稿在行首画了拖拽手柄；整行本来就可拖（见上面的 draggable），这里只是把可拖这件事画出来。 */}
-                          <span className="ui-wb-step-grip" aria-hidden="true">
+                          {selectedStepIndex === undefined ? <span className="ui-wb-step-grip" aria-hidden="true">
                             <HolderOutlined />
-                          </span>
-                          <button
+                          </span> : null}
+                          {selectedStepIndex === undefined ? <button
                             type="button"
                             className={`ui-test-case-step-toggle${expanded ? ' expanded' : ''}`}
                             aria-label={expanded ? '折叠步骤' : '展开步骤'}
@@ -159,7 +159,7 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                             }}
                           >
                             <DownOutlined />
-                          </button>
+                          </button> : null}
                           <span className="ui-test-case-step-order">#{index + 1}</span>
                         </div>
                         <div
@@ -182,14 +182,14 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                               />
                             </Form.Item>
                           </div>
-                          <div className="ui-wb-step-summary">
+                          {selectedStepIndex === undefined ? <div className="ui-wb-step-summary">
                             <span className="ui-wb-step-summary-text">{stepSummary}</span>
                             {stepResult ? (
                               <UiStepResultBadge stepResult={stepResult} />
                             ) : step?.keyword?.trim() ? null : (
                               <span className="ui-wb-step-status is-draft">草稿</span>
                             )}
-                          </div>
+                          </div> : null}
                         </div>
                       </div>
                       <div className="ui-test-case-step-actions" onClick={(event) => event.stopPropagation()}>
@@ -205,8 +205,13 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                       </div>
                     </div>
 
+                    {selectedStepIndex === index ? detailActions : null}
+                    {selectedStepIndex !== undefined ? <div className="ui-step-config-tabs" role="tablist" aria-label="步骤配置分类">
+                      <button type="button" role="tab" aria-selected={activeTab === 'basic'} onClick={() => onTabChange?.('basic')}>基础配置</button>
+                      <button type="button" role="tab" aria-selected={activeTab === 'extract'} onClick={() => onTabChange?.('extract')}>后置提取</button>
+                    </div> : null}
                     <div className="ui-test-case-step-body" hidden={!expanded} aria-hidden={!expanded}>
-                      <div className="ui-test-case-step-grid ui-test-case-step-core-grid">
+                      <div className="ui-test-case-step-grid ui-test-case-step-core-grid" hidden={selectedStepIndex !== undefined && activeTab !== 'basic'}>
                         <Form.Item
                           {...fieldProps}
                           name={[field.name, 'keyword']}
@@ -262,10 +267,10 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                         </Form.Item>
                       </div>
 
-                      <div className="ui-test-case-step-detail-grid">
+                      <div className="ui-test-case-step-detail-grid" hidden={selectedStepIndex !== undefined && activeTab !== 'basic'}>
                         <div
                           className="ui-test-case-step-field-note ui-test-case-step-field-wide"
-                          hidden={!showLocatorTypeField || !locatorFieldHint}
+                          hidden={selectedStepIndex !== undefined || !showLocatorTypeField || !locatorFieldHint}
                         >
                           {locatorFieldHint}
                         </div>
@@ -273,7 +278,7 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                         <Form.Item
                           {...fieldProps}
                           name={[field.name, 'locatorValue']}
-                          label={renderTemplatePickerLabel(field.name, 'locatorValue', '定位值')}
+                          label={selectedStepIndex !== undefined ? '定位值' : renderTemplatePickerLabel(field.name, 'locatorValue', '定位值')}
                           hidden={!showLocatorFields}
                           className={`ui-test-case-step-field ${locatorValueFieldClass}`}
                           dependencies={[['steps', field.name, 'keyword']]}
@@ -291,6 +296,7 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                         >
                           <Input
                             ref={bindTemplateInputRef(field.name, 'locatorValue')}
+                            suffix={selectedStepIndex !== undefined ? renderTemplatePickerLabel(field.name, 'locatorValue', '') : undefined}
                             placeholder={stepRequiresLocator ? '例如：#username' : '按需填写'}
                             maxLength={400}
                           />
@@ -299,7 +305,7 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                         <Form.Item
                           {...fieldProps}
                           name={[field.name, 'operationValue']}
-                          label={renderTemplatePickerLabel(field.name, 'operationValue', operationFieldLabel)}
+                          label={selectedStepIndex !== undefined ? <span title={operationFieldLabel}>{step?.keyword === 'open' ? '页面 URL' : '操作值'}</span> : renderTemplatePickerLabel(field.name, 'operationValue', operationFieldLabel)}
                           hidden={!showOperationField}
                           className={`ui-test-case-step-field ${operationValueFieldClass}`}
                           dependencies={[['steps', field.name, 'keyword']]}
@@ -360,6 +366,7 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                         >
                           <Input
                             ref={bindTemplateInputRef(field.name, 'operationValue')}
+                            suffix={selectedStepIndex !== undefined ? renderTemplatePickerLabel(field.name, 'operationValue', '') : undefined}
                             placeholder={operationFieldPlaceholder}
                             maxLength={400}
                           />
@@ -367,7 +374,7 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
 
                         <div
                           className="ui-test-case-step-field-note ui-test-case-step-field-wide"
-                          hidden={!showOperationField || !operationFieldHint}
+                          hidden={selectedStepIndex !== undefined || !showOperationField || !operationFieldHint}
                         >
                           {operationFieldHint}
                         </div>
@@ -401,12 +408,12 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                         </Form.Item>
                       </div>
 
-                      <div className="ui-test-case-step-extract">
+                      <div className="ui-test-case-step-extract" hidden={selectedStepIndex !== undefined && activeTab !== 'extract'}>
                         <div className="ui-test-case-step-extract-head">
                           <span className="ui-test-case-step-extract-title">后置提取</span>
-                          <span className="ui-test-case-step-extract-hint">
+                          {selectedStepIndex === undefined ? <span className="ui-test-case-step-extract-hint">
                             步骤成功后读取页面上的值，立即写回环境变量
-                          </span>
+                          </span> : null}
                         </div>
                         <Form.List name={[field.name, 'saveTo']}>
                           {(saveFields, { add: addSaveRule, remove: removeSaveRule }) => (
@@ -566,7 +573,7 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                         </Form.List>
                       </div>
 
-                      <div className="ui-test-case-step-footer">
+                      {selectedStepIndex === undefined ? <div className="ui-test-case-step-footer">
                         <div className="ui-test-case-step-footer-grid">
                           <div className="ui-test-case-step-status-row">
                             <Form.Item
@@ -589,19 +596,13 @@ export function UiStepEditor({ addStep, watchedSteps, expandedStepIndexes, dragg
                             </Form.Item>
                           </div>
                         </div>
-                      </div>
+                      </div> : null}
                     </div>
                   </div>
                 )
               })}
             </div>
           )}
-
-          <div className="ui-test-case-step-add-row">
-            <ProjectActionButton action="write" type="dashed" operation="create" onClick={() => addStep(add, fields.length)}>
-              添加步骤
-            </ProjectActionButton>
-          </div>
         </>
       )}
     </Form.List>

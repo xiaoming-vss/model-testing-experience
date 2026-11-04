@@ -23,7 +23,7 @@ class RequirementAnalysisExecutorTests(unittest.TestCase):
     def task(self, **updates):
         return Task(
             task_id="worker",
-            run_id="run",
+            attempt_id="run",
             task_type=updates.pop("task_type", "requirement_analysis"),
             project_id="project",
             requirement_id="requirement",
@@ -104,9 +104,21 @@ class RequirementAnalysisExecutorTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as root:
             executor = self.executor(root, runner, [])
-            for task in [self.task(task_type="api_case_generate"), self.task(document_type="pdf")]:
+            for task in [
+                self.task(task_type="api_case_generate"),
+                self.task(document_type="pdf"),
+                self.task(document_type="text"),
+            ]:
                 result = executor.execute(task, datetime.now().astimezone(), lambda _: None)
                 self.assertEqual(result.status, TaskStatus.FAILED)
+
+    def test_retired_text_type_cannot_resume_understanding(self):
+        with tempfile.TemporaryDirectory() as root:
+            executor = self.executor(root, lambda **kw: self.fail("unexpected model call"), [])
+            task = self.task(current_stage="feature_understanding", document_type="text")
+            result = executor.execute(task, datetime.now().astimezone(), lambda _: None)
+        self.assertEqual(result.status, TaskStatus.FAILED)
+        self.assertIn("text", result.error_message or "")
 
     def test_unknown_stage_and_disabled_review_cannot_run(self):
         with tempfile.TemporaryDirectory() as root:

@@ -3,7 +3,7 @@ import time
 
 import pytest
 from sqlalchemy import event
-from support.ai_execution import AsyncSessionAdapter
+from support.ai_execution import AsyncSessionAdapter  # noqa: F401
 from support.ai_execution import db as db
 
 from testing_agent.core.errors import AppError

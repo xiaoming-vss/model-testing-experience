@@ -31,7 +31,7 @@ from testing_agent.services.project_access import (
     require_project_access,
 )
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
-from testing_agent.services.worker_authorization import revoke_executions
+from testing_agent.services.worker_authorization import notify_revoked_executions, revoke_executions
 
 
 def dump_project(project: Project, role: str = "owner", super_admin: bool = False) -> dict:
@@ -202,14 +202,18 @@ class ProjectService:
         )
         if member is None:
             raise ErrNotFound()
+        revoked = []
         if "read" in allowed_actions(member.role) and "read" not in allowed_actions(role):
-            await revoke_executions(self.projects.session, actor=target_id, project_id=project_id)
+            revoked = await revoke_executions(
+                self.projects.session, actor=target_id, project_id=project_id
+            )
         elif "write" in allowed_actions(member.role) and "write" not in allowed_actions(role):
             from testing_agent.services.integration_lifecycle import revoke_integrations
 
             await revoke_integrations(self.projects.session, actor=target_id, project_id=project_id)
         member.role = role
         await self.projects.commit()
+        await notify_revoked_executions(revoked)
         return {}
 
     async def remove_member(self, user_id: str, project_id: str, target_id: str) -> dict:
@@ -223,9 +227,12 @@ class ProjectService:
         )
         if member is None:
             raise ErrNotFound()
-        await revoke_executions(self.projects.session, actor=target_id, project_id=project_id)
+        revoked = await revoke_executions(
+            self.projects.session, actor=target_id, project_id=project_id
+        )
         await self.projects.session.delete(member)
         await self.projects.commit()
+        await notify_revoked_executions(revoked)
         return {}
 
     async def transfer(self, user_id: str, project_id: str, target_id: str) -> dict:

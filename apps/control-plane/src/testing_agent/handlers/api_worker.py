@@ -65,3 +65,21 @@ async def complete_collection_item(
     service: WorkerTaskService = Depends(get_worker_task_service),
 ):
     return success_payload(await service.complete_api_collection_item(task_id, item_id, body))
+
+
+async def control_state(
+    task_id: str,
+    worker_id: str,
+    service: WorkerTaskService = Depends(get_worker_task_service),
+):
+    return await service.control_state("api", task_id, worker_id)
+
+
+async def claim_api_ui_task(
+    body: WorkerClaimRequest,
+    service: WorkerTaskService = Depends(get_worker_task_service),
+):
+    payload = await service.claim_api_ui(body)
+    if payload is None:
+        return Response(status_code=204)
+    return success_payload(payload)

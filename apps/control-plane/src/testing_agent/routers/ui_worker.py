@@ -7,10 +7,13 @@ from testing_agent.handlers.ui_worker import (
     claim_task,
     complete_suite_item,
     complete_task,
+    control_state,
     get_snapshot,
     heartbeat,
     mark_started,
     mark_suite_item_started,
+    update_case_steps,
+    update_suite_item_steps,
 )
 from testing_agent.handlers.worker_files import complete_artifact, initiate_artifact
 from testing_agent.schemas.workers import WorkerClaimPayload, WorkerSnapshotResponse
@@ -36,3 +39,10 @@ router.post("/tasks/{task_id}/suite-items/{item_id}/completed", status_code=204)
 
 router.post("/tasks/{task_id}/files/uploads")(initiate_artifact)
 router.post("/tasks/{task_id}/files/{file_id}/complete")(complete_artifact)
+
+router.post("/tasks/{task_id}/steps", status_code=204)(update_case_steps)
+router.post("/tasks/{task_id}/suite-items/{item_id}/steps", status_code=204)(
+    update_suite_item_steps
+)
+
+router.get("/tasks/{task_id}/control")(control_state)

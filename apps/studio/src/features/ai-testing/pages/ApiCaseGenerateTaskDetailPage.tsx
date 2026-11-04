@@ -20,7 +20,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ApiCaseGenerateTaskDrawer, type ApiCaseGenerateTaskFormValues } from '../components/ApiCaseGenerateTaskDrawer'
 import { ApiImportConflictModal } from '../components/ApiImportConflictModal'
-import { RunHistoryTable, RunMigrationWarningIcon, RunRowActions, type RunMenuAction } from '../components/RunHistoryTable'
+import { ApiCheckpointActions } from '../components/ApiCheckpointActions'
+import { RunHistoryTable, RunRowActions, type RunMenuAction } from '../components/RunHistoryTable'
 import { confirmDeleteRun, isRunDeletable } from '../utils/runDeletion'
 import { TaskDetailInstructionEditor, TaskDetailNavItem, TaskDetailNavPanel, TaskDetailRunMetrics, TaskDetailToolbar } from '../components/TaskDetailShell'
 import { RunArtifacts, RunPipelineStatus } from '../components/RunPipelineStatus'
@@ -75,6 +76,7 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerSprintId, setDrawerSprintId] = useState<string | undefined>(undefined)
   const [llmSelectOpen, setLlmSelectOpen] = useState(false)
+  const [checkpointEnabled, setCheckpointEnabled] = useState(false)
   const [expandedSection, setExpandedSection] = useState<'instruction' | 'sourceContent' | 'runHistory' | null>('runHistory')
   const [instructionDraft, setInstructionDraft] = useState('')
   const [instructionDirty, setInstructionDirty] = useState(false)
@@ -83,6 +85,8 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
   const [reviewModalRunId, setReviewModalRunId] = useState<string | null>(null)
   const [discardCandidateConfirmOpen, setDiscardCandidateConfirmOpen] = useState(false)
   const [importModalRunId, setImportModalRunId] = useState<string | null>(null)
+  const [importSprintId, setImportSprintId] = useState<string | undefined>()
+  const [importRequirementId, setImportRequirementId] = useState<string | undefined>()
   const [importConflict, setImportConflict] = useState<ImportConflictState>(null)
   const [reviewSubmitAction, setReviewSubmitAction] = useState<'approve' | 'reject' | null>(null)
   const [candidateModalView, setCandidateModalView] = useState<'preview' | 'edit'>('preview')
@@ -158,6 +162,22 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
     },
     enabled: Boolean(task?.requirementId),
   })
+  const importRequirementsQuery = useQuery({
+    queryKey: ['requirements', 'apiImportTarget', importSprintId],
+    queryFn: () => api.getRequirements(importSprintId!),
+    enabled: Boolean(importModalRunId && importSprintId && !task?.requirementId),
+  })
+  const importCollectionsQuery = useQuery({
+    queryKey: ['apiCollections', 'apiImportTarget', importRequirementId],
+    queryFn: () => api.getApiCollections(importRequirementId!),
+    enabled: Boolean(importModalRunId && importRequirementId && !task?.requirementId),
+  })
+  const importRequirementOptions = useMemo(
+    () => listItems(importRequirementsQuery.data).map((requirement) => ({
+      label: requirement.name, value: normalizeRequirementId(requirement),
+    })),
+    [importRequirementsQuery.data],
+  )
   const sprintNameMap = useMemo(
     () => new Map(listItems(sprintsQuery.data).map((sprint) => [normalizeSprintId(sprint), sprint.name])),
     [sprintsQuery.data],
@@ -204,21 +224,21 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
   )
   const apiCollectionOptions = useMemo(
     () =>
-      listItems(apiCollectionsQuery.data).map((collection) => ({
+      listItems(task?.requirementId ? apiCollectionsQuery.data : importCollectionsQuery.data).map((collection) => ({
         label: collection.name,
         value: collection.collectionId ?? collection.collection_id ?? '',
       })),
-    [apiCollectionsQuery.data],
+    [apiCollectionsQuery.data, importCollectionsQuery.data, task?.requirementId],
   )
   const apiCollectionNameMap = useMemo(
     () =>
       new Map(
-        listItems(apiCollectionsQuery.data).map((collection) => [
+        [...listItems(apiCollectionsQuery.data), ...listItems(importCollectionsQuery.data)].map((collection) => [
           collection.collectionId ?? collection.collection_id ?? '',
           collection.name,
         ]),
       ),
-    [apiCollectionsQuery.data],
+    [apiCollectionsQuery.data, importCollectionsQuery.data],
   )
 
   useEffect(() => {
@@ -270,10 +290,11 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
     kind: 'api',
     taskId,
     projectId: task?.projectId,
-    startRun: (connectionId: string) => api.runApiCaseGenerateTask(taskId, connectionId),
+    startRun: (connectionId: string) => api.runApiCaseGenerateTask(taskId, connectionId, checkpointEnabled),
     onStarted: (run) => {
       setRunPage(1)
       setLlmSelectOpen(false)
+      setCheckpointEnabled(false)
       setExpandedSection('runHistory')
       setSelectedRunRecordId(run.runId ?? null)
     },
@@ -388,7 +409,7 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
   )
   const runResultModalContent = runResultModal ? selectedRunResultSectionMap.get(runResultModal.key) : undefined
   const selectedRunReviewStatus = normalizeGenerateTaskReviewStatus(selectedRun?.reviewStatus)
-  const reviewAvailable = Boolean(selectedRun) && selectedRunReviewStatus === 'pending' && selectedRun?.status === 'success'
+  const reviewAvailable = Boolean(selectedRun) && !selectedRun?.generationChainManaged && selectedRunReviewStatus === 'pending' && selectedRun?.status === 'success'
   const canReviewSelectedRun = can('review') && reviewAvailable
   const candidateDirty = candidateYaml !== (selectedRun?.resultYaml ?? '')
   const selectedRunCandidateStats = useMemo(
@@ -403,6 +424,10 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
   const runHistoryRefreshing = runsQuery.isFetching || selectedRunQuery.isFetching
 
   function handleRunTask() {
+    if (task?.requirementId) {
+      navigate(`/requirements/${encodeURIComponent(task.requirementId)}`)
+      return
+    }
     if (runsQuery.isLoading) {
       message.warning('运行记录加载中，请稍后再试')
       return
@@ -461,6 +486,13 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
       collectionId: values.collectionId,
       confirmOverwrite: false,
     })
+  }
+
+  function openImportModal(runId: string) {
+    importForm.resetFields()
+    setImportSprintId(task?.sprintId || undefined)
+    setImportRequirementId(undefined)
+    setImportModalRunId(runId)
   }
 
   function handleConfirmImportOverwrite() {
@@ -530,7 +562,7 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
 
   useTaskRunDialog(dialogRequest, Boolean(taskQuery.data && selectedRunQuery.data), Boolean(runResultModal || reviewModalRunId || importModalRunId || importConflict), () => {
     if (!dialogRequest) return
-    if (dialogRequest.mode === 'import') setImportModalRunId(dialogRequest.runId)
+    if (dialogRequest.mode === 'import') openImportModal(dialogRequest.runId)
     else if (dialogRequest.artifact === 'resultYaml') openReviewModal(dialogRequest.runId)
     else setRunResultModal({ key: dialogRequest.artifact as RunResultSectionKey, label: dialogRequest.artifact === 'errorMessage' ? '错误信息' : '运行产物' })
   }, taskQuery.error ?? selectedRunQuery.error)
@@ -566,11 +598,11 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
                 <ProjectActionButton action="execute"
                   className="action-btn-run"
                   operation="run"
-                  disabled={runsQuery.isLoading || !runnableTask}
+                  disabled={!task.requirementId && (runsQuery.isLoading || !runnableTask)}
                   loading={runTaskMutation.isPending}
                   onClick={handleRunTask}
                 >
-                  运行
+                  {task.requirementId ? '生成链' : '运行'}
                 </ProjectActionButton>
                 <ProjectActionButton action="write"
                   className="action-btn-update"
@@ -709,13 +741,13 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
                             ? (apiCollectionNameMap.get(importedTargetId) ?? importedTargetId)
                             : ''
                           const menuItems: RunMenuAction[] = [
-                            ...(can('execute') && data.status === 'success' && reviewStatus === 'approved' && data.importStatus === 'pending'
+                            ...(can('execute') && !data.generationChainManaged && data.status === 'success' && reviewStatus === 'approved' && data.importStatus === 'pending'
                               ? [{ key: 'importCollection', label: '导入 API 集合', disabled: importRunMutation.isPending }]
                               : []),
                             ...(data.importStatus === 'imported' && importedTargetId
                               ? [{ key: 'openCollection', label: '查看目标集合' }]
                               : []),
-                            ...(row.runId && can('write')
+                            ...(row.runId && can('write') && !data.generationChainManaged
                               ? [{
                                   key: 'deleteRun',
                                   label: '删除运行记录',
@@ -728,8 +760,31 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
                             <RunRowActions
                               inline={
                                 <>
+                                  {!task.requirementId && row.runId === selectedRunId && selectedRun ? <ApiCheckpointActions
+                                    run={selectedRun}
+                                    projectId={task.projectId}
+                                    canReview={can('review')}
+                                    canWrite={can('write')}
+                                    canExecute={can('execute')}
+                                    onChange={(updated) => {
+                                      queryClient.setQueryData(['apiCaseGenerateTaskRun', row.runId], updated)
+                                      queryClient.invalidateQueries({ queryKey: ['apiCaseGenerateTaskRuns', taskId] })
+                                    }}
+                                  /> : null}
+                                  {data.generationChainManaged && task?.requirementId ? (
+                                    <Button size="small" type="primary" onClick={(event) => {
+                                      event.stopPropagation()
+                                      navigate(`/requirements/${encodeURIComponent(task.requirementId!)}`)
+                                    }}>前往阶段审核</Button>
+                                  ) : null}
+                                  {data.generationChainManaged && runSucceeded && can('read') ? (
+                                    <Button size="small" onClick={(event) => {
+                                      event.stopPropagation()
+                                      openReviewModal(row.runId)
+                                    }}>查看候选结果</Button>
+                                  ) : null}
                                   {/* 审核是本行最需要用户处理的动作，直接放在操作列，「更多」只留状态变更类操作。 */}
-                                  {runSucceeded && reviewStatus === 'pending' && can('read') ? (
+                                  {!data.generationChainManaged && runSucceeded && reviewStatus === 'pending' && can('read') ? (
                                     <Button
                                       size="small"
                                       type="primary"
@@ -757,13 +812,12 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
                                   {data.importStatus === 'imported' && importedTargetName ? (
                                     <span className="ai-task-run-history-record-field">导入：{importedTargetName}</span>
                                   ) : null}
-                                  {!data.importMigrationComplete ? <RunMigrationWarningIcon /> : null}
                                 </>
                               }
                               menuItems={menuItems}
                               onMenuAction={(key) => {
                                 if (key === 'importCollection') {
-                                  setImportModalRunId(row.runId ?? null)
+                                  if (row.runId) openImportModal(row.runId)
                                   return
                                 }
                                 if (key === 'openCollection' && importedTargetId) {
@@ -989,17 +1043,35 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
           <Alert showIcon type="error" title={getErrorMessage(importRunMutation.error)} />
         ) : null}
         <Form form={importForm} layout="vertical">
+          {!task?.requirementId ? <>
+            <Form.Item label="目标迭代" required>
+              <Select aria-label="目标迭代" placeholder="请选择迭代" options={sprintOptions}
+                value={importSprintId} loading={sprintsQuery.isLoading}
+                onChange={(value) => { setImportSprintId(value); setImportRequirementId(undefined); importForm.resetFields(['collectionId']) }} />
+            </Form.Item>
+            <Form.Item label="目标需求" required>
+              <Select aria-label="目标需求" placeholder="请选择需求" showSearch optionFilterProp="label"
+                value={importRequirementId} options={importRequirementOptions} disabled={!importSprintId}
+                loading={importRequirementsQuery.isFetching}
+                onChange={(value) => { setImportRequirementId(value); importForm.resetFields(['collectionId']) }} />
+              {importRequirementsQuery.isError ? <Alert showIcon type="error" title="需求加载失败，请重新选择迭代" /> : null}
+            </Form.Item>
+          </> : null}
           <Form.Item
             label="目标 API 集合"
             name="collectionId"
             rules={[{ required: true, message: '请选择目标 API 集合' }]}
-            extra={!apiCollectionsQuery.isLoading && apiCollectionOptions.length === 0 ? '当前需求下还没有可用的 API 集合' : undefined}
+            extra={(task?.requirementId ? apiCollectionsQuery.isError : importCollectionsQuery.isError)
+              ? 'API 集合加载失败，请重新选择需求或稍后重试'
+              : (task?.requirementId || importRequirementId) && !(task?.requirementId ? apiCollectionsQuery.isFetching : importCollectionsQuery.isFetching) && apiCollectionOptions.length === 0 ? '当前需求下还没有可用的 API 集合' : undefined}
           >
             <Select
               showSearch
-              placeholder={apiCollectionsQuery.isLoading ? 'API 集合加载中...' : '请选择 API 集合'}
+              aria-label="目标 API 集合"
+              placeholder={(task?.requirementId ? apiCollectionsQuery.isFetching : importCollectionsQuery.isFetching) ? 'API 集合加载中...' : '请选择 API 集合'}
               options={apiCollectionOptions}
-              loading={apiCollectionsQuery.isLoading}
+              disabled={!task?.requirementId && !importRequirementId}
+              loading={task?.requirementId ? apiCollectionsQuery.isFetching : importCollectionsQuery.isFetching}
               optionFilterProp="label"
             />
           </Form.Item>
@@ -1062,6 +1134,9 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
         onClose={() => setLlmSelectOpen(false)}
         onConfirm={handleLlmSelectConfirm}
         loading={runTaskMutation.isPending}
+        showCheckpointOption
+        checkpointEnabled={checkpointEnabled}
+        onCheckpointEnabledChange={setCheckpointEnabled}
       />
       </div>
     </div>

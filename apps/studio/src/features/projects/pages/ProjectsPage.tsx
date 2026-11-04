@@ -240,13 +240,7 @@ export function ProjectsPage() {
           })
         }
 
-        if (normalizedDocumentType === 'text') {
-          updatedRequirement = await api.updateRequirement(requirementId, {
-            ...metadataPayload,
-            documentType: 'text',
-            documentContent: values.documentContent?.trim() ?? '',
-          })
-        } else if (Object.keys(metadataPayload).length > 0) {
+        if (Object.keys(metadataPayload).length > 0) {
           updatedRequirement = await api.updateRequirement(requirementId, metadataPayload)
         }
 
@@ -255,7 +249,7 @@ export function ProjectsPage() {
 
       return api.createRequirement(values.sprintId!, {
         name: values.name,
-        documentType: normalizeRequirementDocumentType(values.documentType) ?? 'text',
+        documentType: normalizeRequirementDocumentType(values.documentType) ?? 'richtext',
         documentContent: values.file ? undefined : values.documentContent,
         file: values.file,
         onUploadProgress: values.onUploadProgress,
@@ -303,7 +297,7 @@ export function ProjectsPage() {
     sprintForm.resetFields()
   }
 
-  async function hydrateRequirementTextDocument(requirement: RequirementPoolItem, sequence: number) {
+  async function hydrateRequirementRichTextDocument(requirement: RequirementPoolItem, sequence: number) {
     setRequirementDocumentLoading(true)
 
     try {
@@ -326,7 +320,7 @@ export function ProjectsPage() {
   function openRequirementDrawer(requirement?: RequirementPoolItem) {
     const sequence = requirementEditHydrationSeq.current + 1
     requirementEditHydrationSeq.current = sequence
-    const normalizedDocumentType = normalizeRequirementDocumentType(requirement?.documentType) ?? 'text'
+    const normalizedDocumentType = normalizeRequirementDocumentType(requirement?.documentType) ?? 'richtext'
 
     setRequirementDocumentError(undefined)
     setEditingRequirement(requirement ?? null)
@@ -355,8 +349,8 @@ export function ProjectsPage() {
     )
     setRequirementDrawerOpen(true)
 
-    if (requirement && (normalizedDocumentType === 'text' || normalizedDocumentType === 'richtext')) {
-      void hydrateRequirementTextDocument(requirement, sequence)
+    if (requirement && normalizedDocumentType === 'richtext') {
+      void hydrateRequirementRichTextDocument(requirement, sequence)
     } else {
       setRequirementDocumentLoading(false)
     }

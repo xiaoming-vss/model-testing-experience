@@ -1,16 +1,11 @@
-import json
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 from authorization_database import AuthorizationDatabase, AuthorizedRepositoryFixture
-from fastapi.testclient import TestClient
 from support import generation as ai_tasks
 from support.execution_writer import MemoryExecutionWriter
 from support.generation import generation_services
 
-from testing_agent.api.deps import get_current_user_id, get_generation_import_context
-from testing_agent.app import create_app
 from testing_agent.core.errors import (
     AppError,
     ErrApiCollectionImportInvalid,
@@ -23,7 +18,6 @@ from testing_agent.domain.ai_tasks import task_type_for as _generation_task_type
 from testing_agent.models.api_assert_rule import ApiAssertRule
 from testing_agent.models.api_case import ApiCase
 from testing_agent.models.api_extract_rule import ApiExtractRule
-from testing_agent.models.worker_task import WorkerTask
 from testing_agent.schemas.ai_generate_task import (
     AiGenerateTaskReviewRequest,
     RequirementAnalysisRunRequest,
@@ -34,13 +28,6 @@ from testing_agent.services import api_collection, worker
 from testing_agent.services.ai_task_output import (
     build_generate_run_snapshot as _generation_build_generate_run_snapshot,
 )
-from testing_agent.services.ai_task_output import dump_run as _generation_dump_run
-from testing_agent.services.ai_task_output import (
-    generated_api_cases as _generation_generated_api_cases,
-)
-from testing_agent.services.ai_task_output import (
-    generated_function_suites as _generation_generated_function_suites,
-)
 from testing_agent.services.api_case import ApiCaseService
 from testing_agent.services.api_collection_run import ApiCollectionRunService
 from testing_agent.services.api_request_render import (
@@ -50,7 +37,6 @@ from testing_agent.services.api_request_render import (
 from testing_agent.services.import_payload import read_import_payload
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
-from testing_agent.services.requirement_generate_import import import_requirement_analysis_run
 from testing_agent.services.resource_binding import ResourceBindingService
 from testing_agent.services.zentao_auth import ZentaoAuthProvider
 
@@ -364,17 +350,6 @@ class FakeZentaoAuthHttpClient:
             text='{"token":"token-ssl"}',
             json=lambda: {"token": "token-ssl"},
         )
-
-
-def requirement_artifact(name):
-    path = Path(__file__).parent / "fixtures/requirement_artifacts" / (name + ".example.json")
-    return json.loads(path.read_text())
-
-
-def requirement_understanding(title="需求理解记录"):
-    value = requirement_artifact("requirement-understanding")
-    value["title"] = title
-    return json.dumps(value, ensure_ascii=False)
 
 
 @pytest.mark.asyncio
@@ -1014,55 +989,6 @@ def test_apply_ai_completion_to_run_persists_result_fields():
     assert run.finished_at is not None
 
 
-def test_ai_review_extracts_api_cases_from_result_yaml():
-    run = SimpleNamespace(
-        result_yaml="cases:\n  - name: generated\n    method: GET\n    url: /ping\n"
-    )
-
-    cases = _generation_generated_api_cases(run)
-
-    assert cases == [{"name": "generated", "method": "GET", "url": "/ping"}]
-
-
-def test_ai_confirmed_import_preserves_go_api_collection_rules():
-    from support.api_review_confirmed_import import ImportRepository, make_run, review_client
-
-    run = make_run()
-    run.review_status = "approved"
-    run.result_yaml = """cases:
-  - name: generated
-    method: GET
-    urlTemplate: /ping
-    extractRules:
-      - name: token
-        source: body_jsonpath
-        sourceExpr: $.token
-        varKey: token
-    assertRules:
-      - name: ok
-        assertSource: status_code
-        comparator: eq
-        expectedValue: '200'
-"""
-    repository = ImportRepository(run)
-    response = review_client(repository).post(
-        "/v1/api-case-generate-task-runs/run-1/import",
-        json={"collectionId": "collection-1"},
-    )
-
-    assert response.status_code == 200
-    api_case = next(row for row in repository.cases if row.name == "generated")
-    extract = next(row for row in repository.extract_rules if row.case_id == api_case.case_id)
-    assertion = next(row for row in repository.assert_rules if row.case_id == api_case.case_id)
-    assert extract.source == "body_jsonpath"
-    assert extract.source_expr == "$.token"
-    assert extract.var_key == "token"
-    assert assertion.assert_source == "status_code"
-    assert assertion.comparator == "eq"
-    assert assertion.expected_value == "200"
-    assert run.import_status == "imported"
-
-
 @pytest.mark.asyncio
 async def test_ai_review_rejects_non_terminal_runs_like_go():
     class FakeRepository(AuthorizedRepositoryFixture):
@@ -1095,34 +1021,6 @@ async def test_ai_review_rejects_non_terminal_runs_like_go():
 
     with pytest.raises(type(ErrBadRequest)):
         await service.review.review("api", "run-1", {"action": "reject"}, "user-1")
-
-
-def test_ai_review_extracts_function_suites_from_result_yaml():
-    run = SimpleNamespace(
-        result_yaml=(
-            "suites:\n"
-            "  - name: 登录\n"
-            "    cases:\n"
-            "      - title: 成功登录\n"
-            "        steps: 输入账号\n"
-            "        expectedResults: 进入首页\n"
-        )
-    )
-
-    suites = _generation_generated_function_suites(run)
-
-    assert suites == [
-        {
-            "name": "登录",
-            "cases": [
-                {
-                    "title": "成功登录",
-                    "steps": "输入账号",
-                    "expectedResults": "进入首页",
-                }
-            ],
-        }
-    ]
 
 
 def test_requirement_analysis_kind_maps_to_requirement_analysis_task_type():
@@ -1205,6 +1103,14 @@ async def test_api_generate_run_snapshot_uses_task_source():
 
 @pytest.mark.asyncio
 async def test_ai_generate_run_uses_go_connection_id_for_worker_task(monkeypatch):
+    from unittest.mock import AsyncMock
+
+    from testing_agent.services import (
+        ai_run_launcher,
+        standalone_execution,
+        standalone_execution_view,
+    )
+
     class FakeRepository(TaskScopeFixture):
         def __init__(self):
             self.rows = []
@@ -1217,7 +1123,7 @@ async def test_ai_generate_run_uses_go_connection_id_for_worker_task(monkeypatch
                 name="Generate API cases",
                 project_id="project-1",
                 sprint_id="sprint-1",
-                requirement_id="requirement-1",
+                requirement_id="",
                 creator_user_id="user-1",
                 source_type="text",
                 source_content="api source",
@@ -1237,90 +1143,17 @@ async def test_ai_generate_run_uses_go_connection_id_for_worker_task(monkeypatch
     monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
     repository = FakeRepository()
     service = generation_services(repository, execution_writer=MemoryExecutionWriter())
+    dispatch = AsyncMock(return_value=(SimpleNamespace(execution_id="run-1"), None, None))
+    monkeypatch.setattr(standalone_execution, "start_standalone_execution", dispatch)
+    monkeypatch.setattr(standalone_execution_view, "project_standalone_execution", AsyncMock())
+    monkeypatch.setattr(ai_run_launcher, "dump_run", lambda projected: {})
 
     await service.launcher.launch("api", "task-1", {"connectionId": "conn-1"}, "user-1")
 
-    worker_task = next(row for row in repository.rows if isinstance(row, WorkerTask))
-    assert service.execution.writes[-1][2] is worker_task
-    assert service.execution.writes[-1][1].llm_connection_id == "conn-1"
-
-
-@pytest.mark.asyncio
-async def test_function_checkpoint_run_starts_at_requirement_analysis(monkeypatch):
-    from unittest.mock import AsyncMock
-
-    monkeypatch.setattr(
-        "testing_agent.services.ai_task_output.functional_requirement_source",
-        AsyncMock(
-            return_value={
-                "sourceContent": "approved requirement version",
-                "requirementUnderstandingVersion": {"versionId": "understanding-v1"},
-            }
-        ),
-    )
-
-    class FakeRepository(TaskScopeFixture):
-        session = AuthorizationDatabase()
-
-        def __init__(self):
-            self.rows = []
-
-        async def get_task(self, task_id):
-            assert task_id == "task-1"
-            return SimpleNamespace(
-                task_id="task-1",
-                task_type="functional_case_generate",
-                name="Generate function cases",
-                project_id="project-1",
-                sprint_id="sprint-1",
-                requirement_id="requirement-1",
-                creator_user_id="user-1",
-                source_type="text",
-                source_content="task source",
-                instruction="cover functions",
-            )
-
-        async def get_project(self, project_id):
-            assert project_id == "project-1"
-            return SimpleNamespace(project_id="project-1", user_id="user-1")
-
-        async def get_integration_connection(self, connection_id):
-            assert connection_id == "conn-1"
-            return SimpleNamespace(connection_id="conn-1")
-
-        async def get_requirement(self, requirement_id):
-            assert requirement_id == "requirement-1"
-            return SimpleNamespace(
-                requirement_id="requirement-1",
-                sprint_id="sprint-1",
-                document_type="text",
-                document_content="requirement source",
-            )
-
-        def add_all(self, rows):
-            self.rows.extend(rows)
-
-        async def commit(self):
-            return None
-
-        async def refresh(self, row):
-            return None
-
-    ids = iter(["run-1", "worker-task-1"])
-    monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
-    repository = FakeRepository()
-    service = generation_services(repository, execution_writer=MemoryExecutionWriter())
-
-    await service.launcher.launch(
-        "function",
-        "task-1",
-        {"connectionId": "conn-1", "checkpointEnabled": True},
-        "user-1",
-    )
-
-    run = next(row for row in repository.rows if hasattr(row, "checkpoint_enabled"))
-    assert run.current_stage == "requirement_analysis"
-    assert run.stage_status == "pending"
+    assert dispatch.await_args.kwargs["connection_id"] == "conn-1"
+    assert dispatch.await_args.kwargs["execution_id"] == "run-1"
+    assert dispatch.await_args.kwargs["request_id"] == "worker-task-1"
+    assert repository.rows == []
 
 
 @pytest.mark.asyncio
@@ -1333,7 +1166,7 @@ async def test_ai_generate_run_requires_go_connection_id():
                 name="Generate API cases",
                 project_id="project-1",
                 sprint_id="sprint-1",
-                requirement_id="requirement-1",
+                requirement_id="",
                 creator_user_id="user-1",
                 source_type="text",
                 source_content="api source",
@@ -1461,6 +1294,32 @@ async def test_requirement_analysis_run_snapshot_uses_requirement_document():
 
 
 @pytest.mark.asyncio
+async def test_ui_snapshot_does_not_read_requirement_document_content():
+    """UI 三阶段只消费源码包与正式用例，历史需求正文不再参与快照组装。"""
+
+    class FakeRepository:
+        async def get_requirement(self, requirement_id):
+            raise AssertionError("UI 快照不应读取需求正文")
+
+    task = SimpleNamespace(
+        task_id="task-1",
+        task_type="ui_case_generate",
+        name="UI 用例生成",
+        project_id="project-1",
+        sprint_id="sprint-1",
+        requirement_id="requirement-1",
+        source_type="source_archive",
+        source_content="",
+        instruction="",
+    )
+
+    snapshot = await _generation_build_generate_run_snapshot(FakeRepository(), "ui", task, "run-1")
+
+    assert snapshot["sourceContent"] == ""
+    assert snapshot["taskType"] == "ui_case_generate"
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("document_file_id", ["file-1", ""])
 async def test_requirement_analysis_run_enqueues_requirement_analysis_worker_task(
     monkeypatch, document_file_id
@@ -1489,7 +1348,7 @@ async def test_requirement_analysis_run_enqueues_requirement_analysis_worker_tas
             return SimpleNamespace(
                 requirement_id="requirement-1",
                 sprint_id="sprint-1",
-                document_type="text",
+                document_type="richtext",
                 document_content="saved requirement text",
                 document_file_id=document_file_id,
                 document_download_url="/v1/requirements/requirement-1/download",
@@ -1509,28 +1368,11 @@ async def test_requirement_analysis_run_enqueues_requirement_analysis_worker_tas
     repository = FakeRepository()
     service = generation_services(repository, execution_writer=MemoryExecutionWriter())
 
-    if not document_file_id:
-        with pytest.raises(AppError, match="需求原文件未存储到 S3，请重新上传"):
-            await service.launcher.launch(
-                "requirement_analysis", "task-1", {"connectionId": "conn-1"}, "user-1"
-            )
-        assert repository.rows == []
-        return
-
-    await service.launcher.launch(
-        "requirement_analysis", "task-1", {"connectionId": "conn-1"}, "user-1"
-    )
-
-    worker_task = next(row for row in repository.rows if isinstance(row, WorkerTask))
-    run = next(row for row in repository.rows if hasattr(row, "snapshot_json"))
-    assert worker_task.task_type == "requirement_analysis"
-    assert "sourceType" not in run.snapshot_json
-    assert run.snapshot_json["documentType"] == "text"
-    assert run.snapshot_json["documentDownloadUrl"] == (
-        "/internal/ai-worker/tasks/worker-task-1/requirement-document"
-    )
-    assert run.snapshot_json["workflowVersion"] == 2
-    assert run.snapshot_json["sourceContent"] == run.snapshot_json["documentDownloadUrl"]
+    with pytest.raises(AppError, match="请在需求生成链"):
+        await service.launcher.launch(
+            "requirement_analysis", "task-1", {"connectionId": "conn-1"}, "user-1"
+        )
+    assert repository.rows == []
 
 
 @pytest.mark.asyncio
@@ -1548,7 +1390,7 @@ async def test_requirement_analysis_task_create_persists_task_without_running(mo
                 requirement_id="requirement-1",
                 sprint_id="sprint-1",
                 name="Login requirement",
-                document_type="text",
+                document_type="richtext",
                 document_content="saved requirement text",
             )
 
@@ -1588,7 +1430,7 @@ async def test_requirement_analysis_task_create_persists_task_without_running(mo
     assert payload["taskId"] == "task-1"
     assert payload["taskType"] == "requirement_analysis"
     assert payload["name"] == "Login requirement analysis"
-    assert repository.task.source_type == "text"
+    assert repository.task.source_type == "richtext"
     assert repository.task.source_content == "saved requirement text"
     assert repository.task.instruction == "find ambiguity"
     assert len(repository.rows) == 1
@@ -1630,30 +1472,14 @@ async def test_requirement_analysis_run_requires_connection_id():
 
 
 @pytest.mark.asyncio
-async def test_requirement_analysis_list_runs_uses_task_scope():
-    run = SimpleNamespace(
-        run_id="run-1",
-        task_id="task-1",
-        requirement_id="requirement-1",
-        sprint_id="sprint-1",
-        project_id="project-1",
-        trigger_user_id="user-1",
-        trigger_type="manual",
-        status="success",
-        checkpoint_enabled=True,
-        current_stage="feature_understanding",
-        stage_status="completed",
-        snapshot_json={"workflowVersion": 2},
-        error_message="",
-        config_json={"firstStepOutput": requirement_artifact("document-extraction")},
-        result_yaml=requirement_understanding("已确认记录"),
-        result_summary_json={},
-        review_status="pending",
-        reviewer_user_id="",
-        reviewed_at=None,
-        review_comment="",
-        duration_ms=10,
-    )
+async def test_requirement_analysis_list_runs_uses_task_scope(monkeypatch):
+    from unittest.mock import AsyncMock
+
+    from testing_agent.services.stage_storage import history_view
+
+    expected = {"total": 0, "items": [], "latestRun": None}
+    history = AsyncMock(return_value=expected)
+    monkeypatch.setattr(history_view, "direct_history", history)
 
     class FakeRepository:
         session = AuthorizationDatabase()
@@ -1665,965 +1491,17 @@ async def test_requirement_analysis_list_runs_uses_task_scope():
                 task_type="requirement_analysis",
                 project_id="project-1",
                 creator_user_id="user-1",
+                requirement_id="",
             )
 
         async def get_project(self, project_id):
             assert project_id == "project-1"
             return SimpleNamespace(project_id="project-1", user_id="user-1")
-
-        async def list_runs(self, task_id):
-            assert task_id == "task-1"
-            return [run]
 
     service = generation_services(FakeRepository(), execution_writer=MemoryExecutionWriter())
-
-    payload = await service.queries.list_runs("requirement_analysis", "task-1", "user-1")
-
-    assert payload == {"total": 1, "items": [_generation_dump_run(run)]}
-
-
-@pytest.mark.asyncio
-async def test_requirement_analysis_run_import_writes_result_to_requirement_document_content():
-    requirement = SimpleNamespace(
-        requirement_id="requirement-1",
-        sprint_id="sprint-1",
-        name="Login requirement",
-        document_type="text",
-        document_content="",
-        document_filename="requirement.txt",
-        document_hash="hash",
-        document_download_url="/v1/requirements/requirement-1/download",
-        created_at="",
-        updated_at="",
-    )
-    run = SimpleNamespace(
-        run_id="run-1",
-        task_id="task-1",
-        requirement_id="requirement-1",
-        sprint_id="sprint-1",
-        project_id="project-1",
-        trigger_user_id="user-1",
-        trigger_type="manual",
-        status="success",
-        checkpoint_enabled=True,
-        current_stage="feature_understanding",
-        stage_status="completed",
-        snapshot_json={"workflowVersion": 2},
-        error_message="",
-        config_json={"firstStepOutput": requirement_artifact("document-extraction")},
-        result_yaml=requirement_understanding("已确认记录"),
-        result_summary_json={"summary": "fallback"},
-        review_status="approved",
-        reviewer_user_id="",
-        reviewed_at=None,
-        review_comment="",
-        duration_ms=0,
-        finished_at=None,
-    )
-
-    class FakeRepository:
-        session = AuthorizationDatabase()
-
-        def __init__(self):
-            self.committed = False
-            self.refreshed = None
-
-        async def get_run(self, run_id):
-            assert run_id == "run-1"
-            return run
-
-        async def get_task(self, task_id):
-            assert task_id == "task-1"
-            return SimpleNamespace(
-                task_id="task-1",
-                task_type="requirement_analysis",
-                project_id="project-1",
-                creator_user_id="user-1",
-            )
-
-        async def get_requirement(self, requirement_id):
-            assert requirement_id == "requirement-1"
-            return requirement
-
-        async def get_sprint(self, sprint_id):
-            assert sprint_id == "sprint-1"
-            return SimpleNamespace(sprint_id="sprint-1", project_id="project-1")
-
-        async def get_project(self, project_id):
-            assert project_id == "project-1"
-            return SimpleNamespace(project_id="project-1", user_id="user-1")
-
-        async def commit(self):
-            self.committed = True
-
-        async def refresh(self, row):
-            self.refreshed = row
-
-    repository = FakeRepository()
-    service = generation_services(repository, execution_writer=MemoryExecutionWriter())
-
-    payload = await import_requirement_analysis_run(service.imports, "run-1", "user-1")
-
-    assert json.loads(requirement.document_content) == json.loads(
-        requirement_understanding("已确认记录")
-    )
-    assert json.loads(payload["documentContent"]) == json.loads(
-        requirement_understanding("已确认记录")
-    )
-    assert repository.committed is True
-    assert repository.refreshed is requirement
-
-
-def test_requirement_analysis_run_import_endpoint_delegates_to_service(monkeypatch):
-    context = object()
-
-    async def import_requirement_analysis_run(received_context, run_id, user_id):
-        assert received_context is context
-        assert run_id == "run-1"
-        assert user_id == "user-1"
-        return {
-            "requirementId": "requirement-1",
-            "sprintId": "sprint-1",
-            "name": "Login requirement",
-            "documentType": "text",
-            "documentContent": requirement_understanding("已确认记录"),
-            "documentFilename": "requirement.txt",
-            "documentHash": "hash",
-            "documentDownloadUrl": "/v1/requirements/requirement-1/download",
-            "createdAt": "",
-            "updatedAt": "",
-        }
-
-    app = create_app()
-    app.dependency_overrides[get_current_user_id] = lambda: "user-1"
-    app.dependency_overrides[get_generation_import_context] = lambda: context
-    monkeypatch.setattr(
-        "testing_agent.handlers.requirement_analysis_run.import_requirement_analysis_run",
-        import_requirement_analysis_run,
-    )
-    client = TestClient(app)
-
-    response = client.post("/v1/requirement-analysis-runs/run-1/import-to-requirement")
-
-    assert response.status_code == 200
-    payload = response.json()
-    assert payload["code"] == 0
-    assert payload["data"]["documentContent"] == requirement_understanding("已确认记录")
-
-
-@pytest.mark.asyncio
-async def test_requirement_analysis_checkpoint_run_starts_extracting_text(monkeypatch):
-    task = SimpleNamespace(
-        task_id="task-1",
-        task_type="requirement_analysis",
-        name="Analyze requirement",
-        project_id="project-1",
-        sprint_id="sprint-1",
-        requirement_id="requirement-1",
-        creator_user_id="user-1",
-        source_type="text",
-        source_content="raw requirement",
-        instruction="",
-    )
-
-    class FakeRepository:
-        session = AuthorizationDatabase()
-
-        def __init__(self):
-            self.rows = []
-
-        async def get_task(self, task_id):
-            assert task_id == "task-1"
-            return task
-
-        async def get_project(self, project_id):
-            assert project_id == "project-1"
-            return SimpleNamespace(project_id="project-1", user_id="user-1")
-
-        async def get_requirement(self, requirement_id):
-            assert requirement_id == "requirement-1"
-            return SimpleNamespace(
-                requirement_id="requirement-1",
-                sprint_id="sprint-1",
-                document_type="text",
-                document_content="raw requirement",
-                document_file_id="file-1",
-                document_storage_path="",
-                document_download_url="",
-            )
-
-        async def get_sprint(self, sprint_id):
-            assert sprint_id == "sprint-1"
-            return SimpleNamespace(sprint_id="sprint-1", project_id="project-1")
-
-        def add_all(self, rows):
-            self.rows.extend(rows)
-
-        async def commit(self):
-            return None
-
-        async def refresh(self, row):
-            return None
-
-    ids = iter(["run-1", "worker-task-1"])
-    monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
-    service = generation_services(FakeRepository(), execution_writer=MemoryExecutionWriter())
-
-    payload = await service.launcher.launch(
-        "requirement_analysis",
-        "task-1",
-        {
-            "connectionId": "connection-1",
-            "checkpointEnabled": True,
-            "configJson": "{}",
-        },
-        "user-1",
-    )
-
-    assert payload["checkpointEnabled"] is True
-    assert payload["currentStage"] == "extracting_text"
-    assert payload["stageStatus"] == "pending"
-    assert payload["configJson"] == {}
-
-
-@pytest.mark.asyncio
-async def test_requirement_analysis_run_defaults_to_checkpoint(monkeypatch):
-    task = SimpleNamespace(
-        task_id="task-1",
-        task_type="requirement_analysis",
-        name="Analyze requirement",
-        project_id="project-1",
-        sprint_id="sprint-1",
-        requirement_id="requirement-1",
-        creator_user_id="user-1",
-        source_type="text",
-        source_content="raw requirement",
-        instruction="",
-    )
-
-    class FakeRepository:
-        session = AuthorizationDatabase()
-
-        def __init__(self):
-            self.rows = []
-
-        async def get_task(self, task_id):
-            assert task_id == "task-1"
-            return task
-
-        async def get_project(self, project_id):
-            assert project_id == "project-1"
-            return SimpleNamespace(project_id="project-1", user_id="user-1")
-
-        async def get_requirement(self, requirement_id):
-            assert requirement_id == "requirement-1"
-            return SimpleNamespace(
-                requirement_id="requirement-1",
-                sprint_id="sprint-1",
-                document_type="text",
-                document_content="raw requirement",
-                document_file_id="file-1",
-                document_storage_path="",
-                document_download_url="",
-            )
-
-        async def get_sprint(self, sprint_id):
-            assert sprint_id == "sprint-1"
-            return SimpleNamespace(sprint_id="sprint-1", project_id="project-1")
-
-        def add_all(self, rows):
-            self.rows.extend(rows)
-
-        async def commit(self):
-            return None
-
-        async def refresh(self, row):
-            return None
-
-    ids = iter(["run-1", "worker-task-1"])
-    monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
-    service = generation_services(FakeRepository(), execution_writer=MemoryExecutionWriter())
-
-    payload = await service.launcher.launch(
-        "requirement_analysis",
-        "task-1",
-        {"connectionId": "connection-1"},
-        "user-1",
-    )
-
-    assert payload["checkpointEnabled"] is True
-    assert payload["currentStage"] == "extracting_text"
-    assert payload["stageStatus"] == "pending"
-
-
-@pytest.mark.asyncio
-async def test_requirement_analysis_run_ignores_false_checkpoint_flag(monkeypatch):
-    task = SimpleNamespace(
-        task_id="task-1",
-        task_type="requirement_analysis",
-        name="Analyze requirement",
-        project_id="project-1",
-        sprint_id="sprint-1",
-        requirement_id="requirement-1",
-        creator_user_id="user-1",
-        source_type="text",
-        source_content="raw requirement",
-        instruction="",
-    )
-
-    class FakeRepository:
-        session = AuthorizationDatabase()
-
-        def __init__(self):
-            self.rows = []
-
-        async def get_task(self, task_id):
-            assert task_id == "task-1"
-            return task
-
-        async def get_project(self, project_id):
-            assert project_id == "project-1"
-            return SimpleNamespace(project_id="project-1", user_id="user-1")
-
-        async def get_requirement(self, requirement_id):
-            assert requirement_id == "requirement-1"
-            return SimpleNamespace(
-                requirement_id="requirement-1",
-                sprint_id="sprint-1",
-                document_type="text",
-                document_content="raw requirement",
-                document_file_id="file-1",
-                document_storage_path="",
-                document_download_url="",
-            )
-
-        async def get_sprint(self, sprint_id):
-            assert sprint_id == "sprint-1"
-            return SimpleNamespace(sprint_id="sprint-1", project_id="project-1")
-
-        def add_all(self, rows):
-            self.rows.extend(rows)
-
-        async def commit(self):
-            return None
-
-        async def refresh(self, row):
-            return None
-
-    ids = iter(["run-1", "worker-task-1"])
-    monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
-    service = generation_services(FakeRepository(), execution_writer=MemoryExecutionWriter())
-
-    payload = await service.launcher.launch(
-        "requirement_analysis",
-        "task-1",
-        {"connectionId": "connection-1", "checkpointEnabled": False},
-        "user-1",
-    )
-
-    assert payload["checkpointEnabled"] is True
-    assert payload["currentStage"] == "extracting_text"
-    assert payload["stageStatus"] == "pending"
-
-
-@pytest.mark.asyncio
-async def test_requirement_analysis_review_extracting_text_enqueues_feature_understanding(
-    monkeypatch,
-):
-    run = SimpleNamespace(
-        run_id="run-1",
-        task_id="task-1",
-        requirement_id="requirement-1",
-        sprint_id="sprint-1",
-        project_id="project-1",
-        trigger_user_id="user-1",
-        trigger_type="manual",
-        status="waiting_review",
-        checkpoint_enabled=True,
-        current_stage="extracting_text",
-        stage_status="waiting_review",
-        snapshot_json={"workflowVersion": 2},
-        error_message="",
-        config_json={"firstStepOutput": requirement_artifact("document-extraction")},
-        result_yaml="",
-        result_summary_json={},
-        review_status="pending",
-        reviewer_user_id="",
-        reviewed_at=None,
-        review_comment="",
-        duration_ms=0,
-    )
-
-    class FakeRepository:
-        session = AuthorizationDatabase()
-
-        def __init__(self):
-            self.added = []
-
-        async def get_run(self, run_id):
-            assert run_id == "run-1"
-            return run
-
-        async def get_task(self, task_id):
-            assert task_id == "task-1"
-            return SimpleNamespace(
-                task_id="task-1",
-                task_type="requirement_analysis",
-                project_id="project-1",
-                creator_user_id="user-1",
-            )
-
-        async def get_project(self, project_id):
-            assert project_id == "project-1"
-            return SimpleNamespace(project_id="project-1", user_id="user-1")
-
-        async def get_latest_ai_dispatch(self, run_id):
-            assert run_id == "run-1"
-            return SimpleNamespace(llm_connection_id="connection-1")
-
-        def add(self, row):
-            self.added.append(row)
-
-        async def commit(self):
-            return None
-
-        async def refresh(self, row):
-            return None
-
-    monkeypatch.setattr(ai_tasks, "new_id", lambda: "worker-task-next")
-    repository = FakeRepository()
-    service = generation_services(repository, execution_writer=MemoryExecutionWriter())
-
-    payload = await service.stages.review_requirement_analysis_stage(
-        "run-1",
-        {
-            "stage": "extracting_text",
-            "action": "approve",
-            "configJson": json.dumps(
-                {"firstStepOutput": requirement_artifact("document-extraction")}
-            ),
-        },
-        "user-1",
-    )
-
-    assert payload["status"] == "pending"
-    assert payload["currentStage"] == "feature_understanding"
-    assert payload["stageStatus"] == "pending"
-    assert payload["configJson"] == {"firstStepOutput": requirement_artifact("document-extraction")}
-    assert len(repository.added) == 1
-    worker_task = repository.added[0]
-    assert worker_task.task_type == "requirement_analysis"
-    assert worker_task.run_id == "run-1"
-    assert service.execution.writes[-1][1].llm_connection_id == "connection-1"
-
-
-@pytest.mark.asyncio
-async def test_requirement_analysis_revise_extracting_text_enqueues_same_stage_worker_task(
-    monkeypatch,
-):
-    run = SimpleNamespace(
-        run_id="run-1",
-        task_id="task-1",
-        requirement_id="requirement-1",
-        sprint_id="sprint-1",
-        project_id="project-1",
-        trigger_user_id="user-1",
-        trigger_type="manual",
-        status="waiting_review",
-        checkpoint_enabled=True,
-        current_stage="extracting_text",
-        stage_status="waiting_review",
-        snapshot_json={"workflowVersion": 2},
-        error_message="",
-        config_json={"firstStepOutput": requirement_artifact("document-extraction")},
-        result_yaml="",
-        result_summary_json={},
-        review_status="pending",
-        reviewer_user_id="",
-        reviewed_at=None,
-        review_comment="",
-        duration_ms=0,
-    )
-
-    class FakeRepository:
-        session = AuthorizationDatabase()
-
-        def __init__(self):
-            self.added = []
-
-        async def get_run(self, run_id):
-            assert run_id == "run-1"
-            return run
-
-        async def get_task(self, task_id):
-            assert task_id == "task-1"
-            return SimpleNamespace(
-                task_id="task-1",
-                task_type="requirement_analysis",
-                project_id="project-1",
-                creator_user_id="user-1",
-            )
-
-        async def get_project(self, project_id):
-            assert project_id == "project-1"
-            return SimpleNamespace(project_id="project-1", user_id="user-1")
-
-        async def get_latest_ai_dispatch(self, run_id):
-            assert run_id == "run-1"
-            return SimpleNamespace(llm_connection_id="connection-1")
-
-        def add(self, row):
-            self.added.append(row)
-
-        async def commit(self):
-            return None
-
-        async def refresh(self, row):
-            return None
-
-    monkeypatch.setattr(ai_tasks, "new_id", lambda: "worker-task-revise")
-    repository = FakeRepository()
-    service = generation_services(repository, execution_writer=MemoryExecutionWriter())
-
-    payload = await service.stages.revise_requirement_analysis_stage(
-        "run-1",
-        {
-            "stage": "extracting_text",
-            "revisionInstruction": "补充图片流程和异常场景",
-            "configJson": json.dumps(
-                {"firstStepOutput": requirement_artifact("document-extraction")}
-            ),
-        },
-        "user-1",
-    )
-
-    assert payload["status"] == "pending"
-    assert payload["currentStage"] == "extracting_text"
-    assert payload["stageStatus"] == "pending"
-    assert payload["configJson"] == {
-        "firstStepOutput": requirement_artifact("document-extraction"),
-        "revisionInstruction": "补充图片流程和异常场景",
-    }
-    assert len(repository.added) == 1
-    worker_task = repository.added[0]
-    assert worker_task.domain == "ai"
-    assert worker_task.task_id == "worker-task-revise"
-    assert worker_task.task_type == "requirement_analysis"
-    assert worker_task.run_id == "run-1"
-    assert service.execution.writes[-1][0].task_id == "task-1"
-    assert service.execution.writes[-1][1].llm_connection_id == "connection-1"
-    assert worker_task.status == "pending"
-
-
-@pytest.mark.asyncio
-async def test_requirement_analysis_save_final_output_before_import():
-    run = SimpleNamespace(
-        run_id="run-1",
-        task_id="task-1",
-        requirement_id="requirement-1",
-        sprint_id="sprint-1",
-        project_id="project-1",
-        trigger_user_id="user-1",
-        trigger_type="manual",
-        status="success",
-        checkpoint_enabled=True,
-        current_stage="feature_understanding",
-        stage_status="completed",
-        snapshot_json={"workflowVersion": 2},
-        error_message="",
-        config_json={
-            "firstStepOutput": requirement_artifact("document-extraction"),
-        },
-        result_yaml=requirement_understanding("old final"),
-        result_summary_json={},
-        review_status="pending",
-        reviewer_user_id="",
-        reviewed_at=None,
-        review_comment="",
-        duration_ms=0,
-    )
-
-    class FakeRepository:
-        session = AuthorizationDatabase()
-
-        async def get_run(self, run_id):
-            assert run_id == "run-1"
-            return run
-
-        async def get_task(self, task_id):
-            assert task_id == "task-1"
-            return SimpleNamespace(
-                task_id="task-1",
-                task_type="requirement_analysis",
-                project_id="project-1",
-                creator_user_id="user-1",
-            )
-
-        async def get_project(self, project_id):
-            assert project_id == "project-1"
-            return SimpleNamespace(project_id="project-1", user_id="user-1")
-
-        async def commit(self):
-            return None
-
-        async def refresh(self, row):
-            return None
-
-    service = generation_services(FakeRepository(), execution_writer=MemoryExecutionWriter())
-
-    payload = await service.stages.save_requirement_analysis_stage_output(
-        "run-1",
-        {
-            "stage": "feature_understanding",
-            "resultYaml": requirement_understanding("edited final"),
-            "configJson": {
-                "firstStepOutput": requirement_artifact("document-extraction"),
-            },
-        },
-        "user-1",
-    )
-
-    assert payload["status"] == "success"
-    assert payload["currentStage"] == "feature_understanding"
-    assert payload["stageStatus"] == "completed"
-    assert payload["resultYaml"] == requirement_understanding("edited final")
-    assert payload["configJson"] == {
-        "firstStepOutput": requirement_artifact("document-extraction"),
-    }
-
-
-@pytest.mark.asyncio
-async def test_requirement_analysis_revise_final_output_enqueues_feature_understanding(
-    monkeypatch,
-):
-    run = SimpleNamespace(
-        run_id="run-1",
-        task_id="task-1",
-        requirement_id="requirement-1",
-        sprint_id="sprint-1",
-        project_id="project-1",
-        trigger_user_id="user-1",
-        trigger_type="manual",
-        status="success",
-        checkpoint_enabled=True,
-        current_stage="feature_understanding",
-        stage_status="completed",
-        snapshot_json={"workflowVersion": 2},
-        error_message="",
-        config_json={
-            "firstStepOutput": requirement_artifact("document-extraction"),
-        },
-        result_yaml=requirement_understanding("current final"),
-        result_summary_json={},
-        review_status="pending",
-        reviewer_user_id="",
-        reviewed_at=None,
-        review_comment="",
-        duration_ms=0,
-    )
-
-    class FakeRepository:
-        session = AuthorizationDatabase()
-
-        def __init__(self):
-            self.added = []
-
-        async def get_run(self, run_id):
-            assert run_id == "run-1"
-            return run
-
-        async def get_task(self, task_id):
-            assert task_id == "task-1"
-            return SimpleNamespace(
-                task_id="task-1",
-                task_type="requirement_analysis",
-                project_id="project-1",
-                creator_user_id="user-1",
-            )
-
-        async def get_project(self, project_id):
-            assert project_id == "project-1"
-            return SimpleNamespace(project_id="project-1", user_id="user-1")
-
-        async def get_latest_ai_dispatch(self, run_id):
-            assert run_id == "run-1"
-            return SimpleNamespace(llm_connection_id="connection-1")
-
-        def add(self, row):
-            self.added.append(row)
-
-        async def commit(self):
-            return None
-
-        async def refresh(self, row):
-            return None
-
-    monkeypatch.setattr(ai_tasks, "new_id", lambda: "worker-task-final-revise")
-    repository = FakeRepository()
-    service = generation_services(repository, execution_writer=MemoryExecutionWriter())
-
-    payload = await service.stages.revise_requirement_analysis_stage(
-        "run-1",
-        {
-            "stage": "feature_understanding",
-            "revisionInstruction": "补充验收口径",
-            "resultYaml": requirement_understanding("edited final"),
-            "configJson": {
-                "firstStepOutput": requirement_artifact("document-extraction"),
-            },
-        },
-        "user-1",
-    )
-
-    assert payload["status"] == "pending"
-    assert payload["currentStage"] == "feature_understanding"
-    assert payload["stageStatus"] == "pending"
-    assert payload["configJson"] == {
-        "firstStepOutput": requirement_artifact("document-extraction"),
-        "resultYaml": requirement_understanding("edited final"),
-        "revisionInstruction": "补充验收口径",
-    }
-    assert len(repository.added) == 1
-    worker_task = repository.added[0]
-    assert worker_task.task_id == "worker-task-final-revise"
-    assert worker_task.task_type == "requirement_analysis"
-    assert worker_task.run_id == "run-1"
-    assert service.execution.writes[-1][1].llm_connection_id == "connection-1"
-
-
-@pytest.mark.asyncio
-async def test_function_stage_review_approve_enqueues_next_stage_worker_task(monkeypatch):
-    run = SimpleNamespace(
-        run_id="run-1",
-        task_id="task-1",
-        requirement_id="requirement-1",
-        sprint_id="sprint-1",
-        project_id="project-1",
-        trigger_user_id="user-1",
-        trigger_type="manual",
-        status="waiting_review",
-        checkpoint_enabled=True,
-        current_stage="requirement_analysis",
-        stage_status="waiting_review",
-        snapshot_json={},
-        error_message="",
-        config_json={"requirementAnalysis": {"summary": "ok"}},
-        result_yaml="",
-        result_summary_json={},
-        review_status="pending",
-        reviewer_user_id="",
-        reviewed_at=None,
-        review_comment="",
-        duration_ms=0,
-        started_at="started",
-        finished_at="finished",
-    )
-    task = SimpleNamespace(
-        task_id="task-1",
-        task_type="functional_case_generate",
-        project_id="project-1",
-        creator_user_id="user-1",
-    )
-    latest_worker_task = SimpleNamespace(llm_connection_id="connection-1")
-
-    class FakeRepository:
-        session = AuthorizationDatabase()
-
-        def __init__(self):
-            self.added = []
-            self.committed = False
-            self.refreshed = None
-
-        async def get_run(self, run_id):
-            assert run_id == "run-1"
-            return run
-
-        async def get_task(self, task_id):
-            assert task_id == "task-1"
-            return task
-
-        async def get_project(self, project_id):
-            assert project_id == "project-1"
-            return SimpleNamespace(project_id="project-1", user_id="user-1")
-
-        async def get_latest_ai_dispatch(self, run_id):
-            assert run_id == "run-1"
-            return latest_worker_task
-
-        def add(self, row):
-            self.added.append(row)
-
-        async def commit(self):
-            self.committed = True
-
-        async def refresh(self, row):
-            self.refreshed = row
-
-    monkeypatch.setattr(ai_tasks, "new_id", lambda: "worker-task-next")
-    repository = FakeRepository()
-    service = generation_services(repository, execution_writer=MemoryExecutionWriter())
-
-    payload = await service.stages.review_stage(
-        "run-1",
-        {"action": "approve", "currentStage": "requirement_analysis"},
-        "user-1",
-    )
-
-    assert payload["status"] == "pending"
-    assert payload["currentStage"] == "case_names"
-    assert payload["stageStatus"] == "pending"
-    assert repository.committed is True
-    assert repository.refreshed is run
-    assert len(repository.added) == 1
-    worker_task = repository.added[0]
-    assert worker_task.domain == "ai"
-    assert worker_task.task_id == "worker-task-next"
-    assert worker_task.task_type == "functional_case_generate"
-    assert worker_task.run_id == "run-1"
-    assert service.execution.writes[-1][0].task_id == "task-1"
-    assert service.execution.writes[-1][1].llm_connection_id == "connection-1"
-    assert worker_task.status == "pending"
-
-
-@pytest.mark.asyncio
-async def test_function_stage_review_approve_accepts_saved_waiting_review_stage(monkeypatch):
-    run = SimpleNamespace(
-        run_id="run-1",
-        task_id="task-1",
-        requirement_id="requirement-1",
-        sprint_id="sprint-1",
-        project_id="project-1",
-        trigger_user_id="user-1",
-        trigger_type="manual",
-        status="waiting_review",
-        checkpoint_enabled=True,
-        current_stage="requirement_analysis",
-        stage_status="saved",
-        snapshot_json={},
-        error_message="",
-        config_json={},
-        result_yaml="",
-        result_summary_json={},
-        review_status="pending",
-        reviewer_user_id="",
-        reviewed_at=None,
-        review_comment="",
-        duration_ms=0,
-    )
-
-    class FakeRepository:
-        session = AuthorizationDatabase()
-
-        def __init__(self):
-            self.added = []
-
-        async def get_run(self, run_id):
-            assert run_id == "run-1"
-            return run
-
-        async def get_task(self, task_id):
-            assert task_id == "task-1"
-            return SimpleNamespace(
-                task_id="task-1",
-                task_type="functional_case_generate",
-                project_id="project-1",
-                creator_user_id="user-1",
-            )
-
-        async def get_project(self, project_id):
-            assert project_id == "project-1"
-            return SimpleNamespace(project_id="project-1", user_id="user-1")
-
-        async def get_latest_ai_dispatch(self, run_id):
-            assert run_id == "run-1"
-            return SimpleNamespace(llm_connection_id="connection-1")
-
-        def add(self, row):
-            self.added.append(row)
-
-        async def commit(self):
-            return None
-
-        async def refresh(self, row):
-            return None
-
-    monkeypatch.setattr(ai_tasks, "new_id", lambda: "worker-task-next")
-    service = generation_services(FakeRepository(), execution_writer=MemoryExecutionWriter())
-
-    payload = await service.stages.review_stage(
-        "run-1",
-        {"stage": "requirement_analysis", "action": "approve"},
-        "user-1",
-    )
-
-    assert payload["status"] == "pending"
-    assert payload["currentStage"] == "case_names"
-    assert payload["stageStatus"] == "pending"
-
-
-@pytest.mark.asyncio
-async def test_save_stage_output_preserves_waiting_review_stage_status():
-    run = SimpleNamespace(
-        run_id="run-1",
-        task_id="task-1",
-        requirement_id="requirement-1",
-        sprint_id="sprint-1",
-        project_id="project-1",
-        trigger_user_id="user-1",
-        trigger_type="manual",
-        status="waiting_review",
-        checkpoint_enabled=True,
-        current_stage="requirement_analysis",
-        stage_status="waiting_review",
-        snapshot_json={},
-        error_message="",
-        config_json={},
-        result_yaml="old",
-        result_summary_json={},
-        review_status="pending",
-        reviewer_user_id="",
-        reviewed_at=None,
-        review_comment="",
-        duration_ms=0,
-    )
-
-    class FakeRepository:
-        session = AuthorizationDatabase()
-
-        async def get_run(self, run_id):
-            assert run_id == "run-1"
-            return run
-
-        async def get_task(self, task_id):
-            assert task_id == "task-1"
-            return SimpleNamespace(
-                task_id="task-1",
-                task_type="functional_case_generate",
-                project_id="project-1",
-                creator_user_id="user-1",
-            )
-
-        async def get_project(self, project_id):
-            assert project_id == "project-1"
-            return SimpleNamespace(project_id="project-1", user_id="user-1")
-
-        async def commit(self):
-            return None
-
-        async def refresh(self, row):
-            return None
-
-    service = generation_services(FakeRepository(), execution_writer=MemoryExecutionWriter())
-
-    payload = await service.stages.save_stage_output(
-        "run-1",
-        {"stage": "requirement_analysis", "configJson": {"purpose": "new"}},
-        "user-1",
-    )
-
-    assert payload["stageStatus"] == "waiting_review"
-    assert payload["resultYaml"] == "old"
-    assert payload["configJson"]["requirementAnalysis"] == {"purpose": "new"}
+    payload = await service.queries.list_run_summaries("requirement_analysis", "task-1", "user-1")
+    assert payload == expected
+    history.assert_awaited_once_with(service.queries.repository.session, "task-1", 1, 20, "all")
 
 
 def test_api_case_request_render_matches_go_worker_snapshot_contract():

@@ -52,7 +52,6 @@ const run = {
   importStatus: 'pending',
   importedTargets: [],
   importedAt: null,
-  importMigrationComplete: true,
   resultYaml,
   createdAt: '2026-08-02T09:00:00.000Z',
 }
@@ -92,6 +91,7 @@ function renderPage(embedded = false, dialogMode: 'view' | 'review' | 'import' =
           <Routes>
             <Route path="/ai-testing/ui-tasks/:taskId" element={<UiCaseGenerateTaskDetailPage dialogRequest={embedded ? { taskId: 'ui-task-1', runId: 'ui-run-1', artifact, mode: dialogMode, onClose } : undefined} />} />
             <Route path="/ai-testing" element={<div>生成任务列表</div>} />
+            <Route path="/requirements/:requirementId" element={<div>需求生成链</div>} />
             <Route path="/ui-automation/suites/:suiteId" element={<div>正式 UI 套件详情</div>} />
           </Routes>
         </MemoryRouter>
@@ -138,6 +138,29 @@ function queryVisibleMenuItems(name: string) {
 }
 
 describe('UI 用例生成任务详情', () => {
+  it('阶段链管理的历史候选仍能只读查看', async () => {
+    const managed = { ...run, generationChainManaged: true }
+    installFetchHandler(url => {
+      if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-1/runs') return jsonResponse({ items: [managed], total: 1 })
+      if (url.pathname === '/v1/ui-case-generate-task-runs/ui-run-1') return jsonResponse(managed)
+      return undefined
+    })
+    renderPage()
+    await userEvent.setup().click(await findRunInlineAction('查看候选结果'))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).queryByRole('button', { name: '保存候选结果' })).not.toBeInTheDocument()
+    expect(within(dialog).queryByRole('button', { name: '拒绝候选' })).not.toBeInTheDocument()
+  })
+  it('阶段链管理的运行提供需求生成链入口', async () => {
+    installFetchHandler(url => {
+      const managed = { ...run, status: 'waiting_review', generationChainManaged: true }
+      if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-1/runs') return jsonResponse({ items: [managed], total: 1 })
+      if (url.pathname === '/v1/ui-case-generate-task-runs/ui-run-1') return jsonResponse(managed)
+      return undefined
+    })
+    renderPage()
+    expect(await within(await findRunRow()).findByRole('button', { name: '前往生成链' })).toBeEnabled()
+  })
   it('运行记录不显示中间配置入口', async () => {
     installFetchHandler()
     renderPage()
@@ -703,7 +726,7 @@ describe('UI 用例生成任务详情', () => {
 
   it('未上传源码包时禁用运行并解释前置条件', async () => {
     installFetchHandler((url) => {
-      if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-1') return jsonResponse({ ...task, sourceArchive: null })
+      if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-1') return jsonResponse({ ...task, requirementId: '', sourceArchive: null })
     })
     const user = userEvent.setup()
     renderPage()
@@ -714,40 +737,28 @@ describe('UI 用例生成任务详情', () => {
     expect(screen.getAllByText('请先上传源码 ZIP').length).toBeGreaterThan(0)
   })
 
-  it('选择 LLM 后运行请求发送正式功能用例并固定开启阶段审核', async () => {
+  it('需求关联任务从运行入口进入生成链', async () => {
     let runBody: unknown
-    const startedRun = { ...run, runId: 'ui-run-2', status: 'pending' }
     installFetchHandler((url, init) => {
       if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-1/run' && init?.method === 'POST') {
         runBody = JSON.parse(String(init.body))
-        return jsonResponse(startedRun)
+        return jsonResponse(run)
       }
-      if (url.pathname === '/v1/ui-case-generate-task-runs/ui-run-2') return jsonResponse(startedRun)
     })
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: /运行任务/ }))
-    await user.click(await screen.findByText('主模型'))
-    await user.click(screen.getByRole('button', { name: /确认运行/ }))
-
-    await waitFor(() => expect(runBody).toEqual({ connectionId: 'llm-1', functionCaseIds: ['function-case-1'], checkpointEnabled: true }))
+    await user.click(await screen.findByRole('button', { name: /前往需求生成链/ }))
+    expect(await screen.findByText('需求生成链')).toBeInTheDocument()
+    expect(runBody).toBeUndefined()
   })
 
-  it('运行返回 403 时展示权限错误且保留任务内容', async () => {
-    installFetchHandler((url, init) => {
-      if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-1/run' && init?.method === 'POST') {
-        return jsonResponse({}, 403, '无权运行该任务')
-      }
-    })
-    const user = userEvent.setup()
-    renderPage()
+  it('没有执行权限时不能从任务详情发起生成', async () => {
+    installFetchHandler()
+    const client = renderPage()
+    client.setQueryData(['projectAccess', 'project-1'], { projectId: 'project-1', role: 'viewer', permissions: ['read'] })
 
-    await user.click(await screen.findByRole('button', { name: /运行任务/ }))
-    await user.click(await screen.findByText('主模型'))
-    await user.click(screen.getByRole('button', { name: /确认运行/ }))
-
-    expect(await screen.findByText('无权运行该任务')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /前往需求生成链/ })).toBeDisabled()
     expect(screen.getByText('source.zip')).toBeInTheDocument()
   })
 

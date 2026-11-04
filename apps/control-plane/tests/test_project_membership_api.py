@@ -63,7 +63,6 @@ def seed_approved_understanding(api, rid, pid, user_id):
                     task_id=task.task_id,
                     stage="feature_understanding",
                     version_no=1,
-                    run_id=f"understanding-run-{rid}",
                     attempt_id=f"understanding-attempt-{rid}-1",
                     artifact_content="已确认的需求分析：登录成功后进入首页。",
                     artifact_format="text",
@@ -516,7 +515,7 @@ def test_shared_ai_task_requires_actor_llm_and_creator_loses_access_on_removal(a
         )
         assert response.status_code == 200, response.text
         ids.append(response.json()["data"]["connectionId"])
-    url = f"/v1/requirement-analysis-tasks/{task}/run"
+    url = f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text/run"
     assert api.post(url, headers=member, json={"connectionId": ids[0]}).status_code == 404
     response = api.post(url, headers=member, json={"connectionId": ids[1]})
     assert response.status_code == 200, response.text
@@ -551,16 +550,18 @@ def test_worker_credentials_check_current_membership_and_connection_status(api):
             "modelId": "model",
         },
     ).json()["data"]["connectionId"]
-    tid = api.post(
+    task_created = api.post(
         f"/v1/projects/{pid}/requirement-analysis-tasks",
         headers=member,
         json={"name": "analysis", "requirementId": rid},
-    ).json()["data"]["taskId"]
+    )
+    assert task_created.status_code == 200
     response = api.post(
-        f"/v1/requirement-analysis-tasks/{tid}/run", headers=member, json={"connectionId": cid}
+        f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text/run",
+        headers=member,
+        json={"connectionId": cid},
     )
     assert response.status_code == 200, response.text
-    run_id = response.json()["data"]["runId"]
     response = api.post("/internal/ai-worker/tasks/claim", json={"workerId": "test"})
     assert response.status_code == 200, response.text
     wid = response.json()["taskId"]
@@ -575,9 +576,9 @@ def test_worker_credentials_check_current_membership_and_connection_status(api):
     api.delete(f"/v1/projects/{pid}/members/{user['userId']}", headers=owner)
     assert api.get(url).status_code == 403
     assert "private-key" not in api.get(url).text
-    response = api.get(f"/v1/requirement-analysis-runs/{run_id}", headers=owner)
+    response = api.get(f"/v1/requirements/{rid}/generation/requirement_analysis", headers=owner)
     assert response.status_code == 200, response.text
-    assert response.json()["data"]["status"] == "failed"
+    assert response.json()["data"]["stages"][0]["state"] == "failed"
 
 
 def test_stage_approval_records_new_actor_and_uses_their_llm(api):
@@ -618,19 +619,18 @@ def test_stage_approval_records_new_actor_and_uses_their_llm(api):
             },
         )
         connections.append(response.json()["data"]["connectionId"])
-    tid = api.post(
+    task_created = api.post(
         f"/v1/projects/{pid}/requirement-analysis-tasks",
         headers=owner,
         json={"name": "analysis", "requirementId": rid},
-    ).json()["data"]["taskId"]
+    )
+    assert task_created.status_code == 200
     response = api.post(
-        f"/v1/requirement-analysis-tasks/{tid}/run",
+        f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text/run",
         headers=owner,
-        json={"connectionId": connections[0], "checkpointEnabled": True},
+        json={"connectionId": connections[0]},
     )
     assert response.status_code == 200, response.text
-    rid_run = response.json()["data"]["runId"]
-    assert response.json()["data"]["workflowVersion"] == 2
     extraction = json.loads(
         (
             Path(__file__).parent
@@ -648,12 +648,24 @@ def test_stage_approval_records_new_actor_and_uses_their_llm(api):
         },
     )
     assert response.status_code == 204, response.text
-    url = f"/v1/requirement-analysis-runs/{rid_run}/stage-review"
-    body = {"stage": "extracting_text", "action": "approve"}
-    assert api.post(url, headers=member, json=body).status_code == 404
-    response = api.post(url, headers=member, json={**body, "llmConnectionId": connections[1]})
+
+    url = f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text/review"
+    view = api.get(f"/v1/requirements/{rid}/generation/requirement_analysis", headers=member)
+    assert view.status_code == 200, view.text
+    draft = view.json()["data"]["stages"][0]["draft"]
+    response = api.post(
+        url,
+        headers=member,
+        json={
+            "action": "approve",
+            "expectedAttemptId": draft["attemptId"],
+            "continueAfter": True,
+            "connectionId": connections[1],
+        },
+    )
     assert response.status_code == 200, response.text
-    assert response.json()["data"]["currentStage"] == "feature_understanding"
+    assert response.json()["data"]["continuationError"] == ""
+    assert response.json()["data"]["stages"][1]["state"] == "running"
     response = api.post("/internal/ai-worker/tasks/claim", json={"workerId": "worker"})
     assert response.status_code == 200, response.text
     next_wid = response.json()["taskId"]
@@ -676,10 +688,11 @@ def test_code_risk_keeps_same_repository_ids_on_different_instances_separate(
         return {"withinGroup": True, "repositoryId": "9"}
 
     monkeypatch.setattr(GitLabResourceClient, "get_repository_group_scope", scope)
-    _, owner = account(api, "owner")
+    owner_user, owner = account(api, "owner")
     _, member = account(api, "member")
     pid = project(api, owner)
     rid = requirement(api, owner, pid)
+    seed_approved_understanding(api, rid, pid, owner_user["userId"])
     api.post(
         f"/v1/projects/{pid}/members", headers=owner, json={"name": "member", "role": "member"}
     )
@@ -790,14 +803,12 @@ def test_function_stage_reexecution_uses_current_actor(api, operation, creator_r
         json={"name": "cases", "requirementId": rid},
     )
     assert response.status_code == 200, response.text
-    tid = response.json()["data"]["taskId"]
     response = api.post(
-        f"/v1/function-case-generate-tasks/{tid}/run",
+        f"/v1/requirements/{rid}/generation/function/stages/requirement_analysis/run",
         headers=actors[creator_role],
-        json={"connectionId": credentials[creator_role], "checkpointEnabled": True},
+        json={"connectionId": credentials[creator_role]},
     )
     assert response.status_code == 200, response.text
-    run_id = response.json()["data"]["runId"]
     claim = api.post("/internal/ai-worker/tasks/claim", json={"workerId": "worker"})
     assert claim.status_code == 200, claim.text
     worker_id = claim.json()["taskId"]
@@ -817,14 +828,19 @@ def test_function_stage_reexecution_uses_current_actor(api, operation, creator_r
             },
         )
     assert response.status_code == 204, response.text
+    suffix = "run" if operation == "stage-retry" else "revision"
+    body = {"connectionId": credentials[operator_role]}
+    if operation == "stage-revise":
+        body["instruction"] = "improve coverage"
+    url = f"/v1/requirements/{rid}/generation/function/stages/requirement_analysis/{suffix}"
+    denied = api.post(
+        url, headers=actors[operator_role], json={**body, "connectionId": credentials[creator_role]}
+    )
+    assert denied.status_code == 404, denied.text
     response = api.post(
-        f"/v1/function-case-generate-task-runs/{run_id}/{operation}",
+        url,
         headers=actors[operator_role],
-        json={
-            "stage": "requirement_analysis",
-            "llmConnectionId": credentials[operator_role],
-            "revisionInstruction": "improve coverage",
-        },
+        json=body,
     )
     assert response.status_code == 200, response.text
     claim = api.post("/internal/ai-worker/tasks/claim", json={"workerId": "worker"})

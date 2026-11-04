@@ -45,6 +45,31 @@ async def monitor() -> None:
         await asyncio.sleep(5)
 
 
+async def recover_debug_cleanup_once(session_factory=AsyncSessionLocal, *, cursors=None) -> None:
+    """Isolate recovery failures between API and UI debug runs."""
+    from testing_agent.services.live_debug_cleanup import (
+        recover_api_debug_runs,
+        recover_ui_debug_runs,
+    )
+
+    for domain, recover in (("api", recover_api_debug_runs), ("ui", recover_ui_debug_runs)):
+        try:
+            async with session_factory() as session:
+                await recover(session, cursor=cursors[domain] if cursors else None)
+        except Exception as exc:
+            _log_failure(exc, f"debug-cleanup-{domain}")
+
+
+async def monitor_debug_cleanup() -> None:
+    """Recover transient debug cleanup independently of the lease sweeper."""
+    from testing_agent.services.live_debug_cleanup import DebugCleanupCursor
+
+    cursors = {domain: DebugCleanupCursor() for domain in ("api", "ui")}
+    while True:
+        await recover_debug_cleanup_once(cursors=cursors)
+        await asyncio.sleep(5)
+
+
 def _log_failure(exc: Exception, domain: str | None = None) -> None:
     trace = safe_exception_trace(exc)
     fields: dict[str, object] = {"error_type": type(exc).__name__, "stack_trace": trace}
@@ -70,6 +95,7 @@ async def lifespan(app):
     metrics_task = asyncio.create_task(monitor_daily_metrics())
     files_task = asyncio.create_task(monitor_files())
     task = asyncio.create_task(monitor())
+    debug_cleanup_task = asyncio.create_task(monitor_debug_cleanup())
     try:
         yield
     finally:
@@ -85,3 +111,9 @@ async def lifespan(app):
         task.cancel()
         with suppress(asyncio.CancelledError):
             await task
+        debug_cleanup_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await debug_cleanup_task
+        from testing_agent.services.test_run_notifications import close_notification_clients
+
+        await close_notification_clients()

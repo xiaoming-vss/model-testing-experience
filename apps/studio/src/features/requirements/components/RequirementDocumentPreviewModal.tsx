@@ -353,7 +353,7 @@ export function RequirementDocumentPreviewContent({
     [documentFilename, documentType, requirementName],
   )
   const previewUrl = useMemo(() => resolveRequirementDocumentPreviewUrl(documentUrl), [documentUrl])
-  const documentTypeLabel = isWord ? 'Word 文档' : documentType === 'richtext' ? '富文本需求' : '文本源文件'
+  const documentTypeLabel = isWord ? 'Word 文档' : documentType === 'richtext' ? '富文本需求' : '未配置需求文档'
   const understandingResult = documentContent?.trim() ?? ''
   const downloadMutation = useMutation({
     mutationFn: () => api.downloadRequirementDocument(requirementId!),

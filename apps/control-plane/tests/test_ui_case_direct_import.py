@@ -192,7 +192,7 @@ orderNo: 1
 
     result = await service.import_cases("user-1", "suite-1", payload, None)
 
-    assert result == {"imported": 1}
+    assert result == {"imported": 1, "imported_case_count": 1, "imported_step_count": 1}
     assert repository.commits == 1
     assert repository.rows[0].name == "登录成功"
     assert repository.rows[0].steps_json[0]["continueOnFailure"] is False
@@ -220,7 +220,11 @@ orderNo: 1
     )
 
     assert response.status_code == 200
-    assert response.json()["data"] == {"imported": 1}
+    assert response.json()["data"] == {
+        "imported": 1,
+        "importedCaseCount": 1,
+        "importedStepCount": 1,
+    }
     assert repository.rows[0].steps_json[0]["keyword"] == "open"
 
 
@@ -254,7 +258,7 @@ async def test_direct_import_accepts_root_list_and_restarts_step_order_per_case(
 
     result = await service.import_cases("user-1", "suite-1", None, FakeUpload(payload))
 
-    assert result == {"imported": 2}
+    assert result == {"imported": 2, "imported_case_count": 2, "imported_step_count": 2}
     assert [row.order_no for row in repository.rows] == [1, 2]
     assert [row.steps_json[0]["orderNo"] for row in repository.rows] == [1, 1]
 

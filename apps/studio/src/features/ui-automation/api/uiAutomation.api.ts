@@ -36,11 +36,11 @@ export const uiAutomationApi = {
       body: JSON.stringify(body),
     }),
   getUiTestSuiteRuns: (suiteId: string) => request<ListResponse<UiTestSuiteRunSummary>>(`/v1/ui-test-suites/${suiteId}/runs`),
-  getUiTestSuiteRun: (suiteRunId: string) => request<UiTestSuiteRunSummary>(`/v1/ui-test-suite-runs/${suiteRunId}`),
-  getUiTestSuiteRunReport: (suiteRunId: string) =>
+  getUiTestSuiteRun: (suiteRunId: string, signal?: AbortSignal) => request<UiTestSuiteRunSummary>(`/v1/ui-test-suite-runs/${suiteRunId}`, { signal }),
+  getUiTestSuiteRunReport: (suiteRunId: string, signal?: AbortSignal) =>
     request<UiTestSuiteRunReport>(
       `/v1/ui-test-suite-runs/${suiteRunId}/report`,
-      {},
+      { signal },
       { normalizeListResponse: false },
     ),
   getUiTestCases: (suiteId: string) => request<ListResponse<UiTestCase>>(`/v1/ui-test-suites/${suiteId}/cases`),
@@ -71,5 +71,5 @@ export const uiAutomationApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  getUiTestCaseRun: (runId: string) => request<UiTestCaseRun>(`/v1/ui-test-case-runs/${runId}`),
+  getUiTestCaseRun: (runId: string, signal?: AbortSignal) => request<UiTestCaseRun>(`/v1/ui-test-case-runs/${runId}`, { signal }),
 }

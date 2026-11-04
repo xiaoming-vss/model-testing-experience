@@ -139,6 +139,7 @@
 .gc-inspector-run-meta { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; color: var(--app-surface-text-muted); font-size: 12px; }
 .gc-inspector-run-meta > span:first-child { flex: none; }
 .gc-inspector-run-id { min-width: 0; font-size: 12px; white-space: nowrap; }
+.gc-failure-meta { margin: 0; color: var(--app-surface-text-muted); font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
 .gc-inspector-actions { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--app-surface-divider); }
 @media (max-width: 900px) { .gc-canvas-workspace { flex-direction: column; overflow: auto; } .gc-canvas-frame { flex: 0 0 auto; height: min(60vh, 600px); min-height: 380px; } .gc-inspector { flex: 0 0 auto; min-height: 220px; } }
 
@@ -193,6 +194,8 @@
 /* 阅读区顶栏沿用产物标题栏：16px 内距、工具栏底色和底部分隔线，左侧阶段名，右侧视图切换与复制。 */
 .gc-reading-toolbar { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 24px; background: var(--app-list-toolbar-bg); border-bottom: 1px solid var(--app-surface-border); }
 .gc-reading-toolbar-title { min-width: 0; overflow: hidden; font-size: 16px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.gc-reading-toolbar-title-group { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.gc-reading-toolbar-title-group .ant-tag { flex-shrink: 0; margin: 0; }
 @media (max-width: 900px) { .gc-reading-toolbar { padding-inline: 16px; } }
 /* 嵌入式测试点树图由左侧面板提供唯一外框。 */
 .gc-reading-body > .gc-artifact-scroll.is-case-names { padding: 0; }

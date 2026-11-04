@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy.exc import IntegrityError
 
-from testing_agent.core.enums import ImportStatus
 from testing_agent.core.errors import (
     ErrBadRequest,
     ErrFunctionTestSuiteNameAlreadyUse,
+    ErrNotFound,
     dynamic_error,
 )
 from testing_agent.core.sid import new_id
-from testing_agent.domain.ai_execution_intent import ExecutionIntent
 from testing_agent.domain.function_case_content import (
     from_legacy,
     legacy_fields,
@@ -22,10 +20,10 @@ from testing_agent.domain.function_case_identity import pinned_case_id
 from testing_agent.models.function_test_case import FunctionTestCase
 from testing_agent.models.function_test_suite import FunctionTestSuite
 from testing_agent.services.ai_task_output import (
-    dump_run,
     generated_function_cases,
     validate_function_candidate_cases,
 )
+from testing_agent.services.standalone_run import StandaloneRun
 
 if TYPE_CHECKING:
     from testing_agent.services.ai_task_access import CandidateImportContext
@@ -82,12 +80,28 @@ async def import_function_run(
     *,
     artifact_content: str | None = None,
     allow_reimport: bool = False,
+    approved_source: Any | None = None,
+    target_requirement_id: str | None = None,
 ) -> dict[str, Any]:
-    run = await service.owned_run(user_id, run_id, "function", action="execute")
+    if approved_source is None:
+        run = await service.owned_run(user_id, run_id, "function", action="execute")
+        if not isinstance(run, StandaloneRun):
+            raise ErrNotFound()
+        from testing_agent.services.standalone_function_import import import_standalone_function
+
+        return await import_standalone_function(
+            service,
+            run,
+            target_requirement_id=target_requirement_id,
+            confirm_overwrite=confirm_overwrite,
+            user_id=user_id,
+            apply_import=import_function_run,
+        )
+    run = approved_source
     if artifact_content is None and (
         run.status != "success"
         or run.review_status != "approved"
-        or (run.import_status == ImportStatus.IMPORTED.value and not allow_reimport)
+        or (run.import_status == "imported" and not allow_reimport)
     ):
         raise ErrBadRequest()
     await service.ensure_requirement_access(user_id, run.requirement_id, action="write")
@@ -138,15 +152,9 @@ async def import_function_run(
             "requiresConfirmation": True,
             "conflicts": conflicts,
             "importChanges": [],
-            "run": dump_run(run),
+            "run": {},
         }
 
-    old_import_state = (
-        run.import_status,
-        run.imported_targets,
-        run.imported_at,
-        run.import_migration_complete,
-    )
     try:
         target_ids: list[str] = []
         changed_by_suite: dict[str, set[str]] = {}
@@ -190,24 +198,8 @@ async def import_function_run(
             service.repository.add(new_case)
             changed_by_suite.setdefault(suite.suite_id, set()).add(new_case.case_id)
 
-        run.import_status = ImportStatus.IMPORTED.value
-        run.imported_targets = [
-            {"targetType": "function_suite", "targetId": target_id} for target_id in target_ids
-        ]
-        run.imported_at = datetime.now(UTC)
-        run.import_migration_complete = True
-        await service.execution.save(
-            service.repository.session, run, intent=ExecutionIntent(actor_id=user_id)
-        )
-        await service.repository.commit()
-        await service.repository.refresh(run)
+        await service.repository.flush()
     except Exception as exc:
-        (
-            run.import_status,
-            run.imported_targets,
-            run.imported_at,
-            run.import_migration_complete,
-        ) = old_import_state
         await service.repository.rollback()
         # Concurrent inserts may collide during autoflush or commit; translate only the
         # suite business key, preserving unrelated database failures.
@@ -234,5 +226,5 @@ async def import_function_run(
             }
             for target_id in target_ids
         ],
-        "run": dump_run(run),
+        "run": {},
     }

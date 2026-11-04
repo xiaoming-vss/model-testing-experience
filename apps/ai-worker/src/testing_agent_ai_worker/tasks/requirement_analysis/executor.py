@@ -20,12 +20,12 @@ from testing_agent_ai_worker.worker.runner import TaskExecutor
 
 REQUIREMENT_ANALYSIS_FIRST_SKILL_NAME = "extract-docx-enhanced-text"
 REQUIREMENT_ANALYSIS_SECOND_SKILL_NAME = "prd-feature-understanding-skill"
-SUPPORTED_REQUIREMENT_ANALYSIS_DOCUMENT_TYPES = {"text", "word", "richtext"}
+SUPPORTED_REQUIREMENT_ANALYSIS_DOCUMENT_TYPES = {"word", "richtext"}
 
 
 def normalize_requirement_analysis_document_type(document_type: str) -> str:
     normalized = document_type.strip().lower()
-    return {"docx": "word", "txt": "text"}.get(normalized, normalized)
+    return {"docx": "word"}.get(normalized, normalized)
 
 
 class RequirementAnalysisExecutor(TaskExecutor):
@@ -51,7 +51,7 @@ class RequirementAnalysisExecutor(TaskExecutor):
         if task.task_type != "requirement_analysis":
             return TaskResult(
                 task_id=task.task_id,
-                run_id=task.run_id,
+                attempt_id=task.attempt_id,
                 generate_task_id=task.generate_task_id,
                 status=TaskStatus.FAILED,
                 error_message=f"不支持的任务类型: {task.task_type}",
@@ -64,7 +64,7 @@ class RequirementAnalysisExecutor(TaskExecutor):
         if task.payload.document_type not in SUPPORTED_REQUIREMENT_ANALYSIS_DOCUMENT_TYPES:
             return TaskResult(
                 task_id=task.task_id,
-                run_id=task.run_id,
+                attempt_id=task.attempt_id,
                 generate_task_id=task.generate_task_id,
                 status=TaskStatus.FAILED,
                 error_message=f"不支持的 document_type: {task.payload.document_type}",

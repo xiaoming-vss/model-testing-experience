@@ -1,7 +1,7 @@
 import pytest
 from sqlalchemy import select
-from support.ai_execution import create_run
-from support.ai_execution import db as db
+from support.ai_execution import db as db  # noqa: F401
+from support.ai_execution import seed_task
 
 from testing_agent.core.errors import ErrBadRequest
 from testing_agent.domain.worker_context import AiWorkerContext, ApiWorkerContext, UiWorkerContext
@@ -18,10 +18,37 @@ from testing_agent.repositories.worker_context import read_worker_context
 
 
 def test_ai_context_reads_frozen_connection_without_mutating_queue(db):
-    _, task = create_run(db)
-    task_id = task.task_id
+    from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
+    from testing_agent.models.ai_generation_stage import AiGenerationStage
+
+    seed_task(db)
+    stage = AiGenerationStage(id="context-stage", task_id="task", stage="requirement_analysis")
+    db.add(stage)
+    db.flush()
+    attempt = AiGenerationAttempt(
+        id="context-attempt",
+        stage_id=stage.id,
+        attempt_no=1,
+        operation="generate",
+        worker_task_id="context-worker",
+        status="pending",
+        input_snapshot_json={"llmConnectionId": "llm"},
+    )
+    db.add_all(
+        [
+            attempt,
+            WorkerTask(
+                domain="ai",
+                task_id="context-worker",
+                task_type="functional_case_generate",
+                run_id=attempt.id,
+                status="pending",
+            ),
+        ]
+    )
+    db.commit()
     db.expunge_all()
-    loaded = db.scalar(select(WorkerTask).where(WorkerTask.task_id == task_id))
+    loaded = db.scalar(select(WorkerTask).where(WorkerTask.task_id == "context-worker"))
     before = dict(loaded.__dict__)
     assert read_worker_context(db, loaded) == AiWorkerContext("task", "llm")
     assert loaded.__dict__ == before
@@ -40,7 +67,7 @@ def test_ai_context_reads_frozen_connection_without_mutating_queue(db):
 def test_context_resolves_domain_owner_without_adding_queue_fields(
     db, domain, task_type, run_id, expected
 ):
-    create_run(db)
+    seed_task(db)
     db.add_all(
         [
             ApiCollection(collection_id="ac", requirement_id="r", name="API"),

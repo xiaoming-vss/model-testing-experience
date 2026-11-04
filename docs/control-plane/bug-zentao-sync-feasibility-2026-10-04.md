@@ -23,12 +23,12 @@
 
 ## 当前实现证据
 
-- [首次推送](/home/xiaoming/GitCloneData/model-testing-experience/apps/control-plane/src/testing_agent/services/bug_zentao_push.py:273)：成功记录存在时直接返回，仍只有创建行为；281 行排除图片，284 行发送初始描述的 `steps`，没有附件和状态。这是正文已存在的背景，不把后续正文同步列为本次用户请求。
-- [富文本契约](/home/xiaoming/GitCloneData/model-testing-experience/apps/control-plane/src/testing_agent/domain/rich_text.py:15)：图片仅保存 `data-file-id`，38 行白名单不允许 `src`。不能把本地 HTML 直接交给禅道显示，也不能把有时效的 S3 签名 URL 当成长期图片地址。
-- [状态流转](/home/xiaoming/GitCloneData/model-testing-experience/apps/control-plane/src/testing_agent/services/bug.py:302) 和 [追加评论](/home/xiaoming/GitCloneData/model-testing-experience/apps/control-plane/src/testing_agent/services/bug.py:450)：只保存本地 Bug/activities，没有 MCP 远端同步调用。
-- [MCP 输入 schema](/home/xiaoming/zentao-mcp-deploy/source/internal/service/schema/build_input.go:57) 只处理 `application/json`；[执行器](/home/xiaoming/zentao-mcp-deploy/source/internal/service/tool/execute.go:72) 把 payload JSON 编码并设置 `Content-Type: application/json`。只修改 OpenAPI 不能得到 multipart 上传。
-- [本机 Bug 编辑 schema](/home/xiaoming/zentao-mcp-deploy/source/docs/zentao-openapi.json:12523) 没有 `status`、`confirmed`、`comment`；resolve/close/activate 分别位于 14348、14427、14481 行，支持状态操作备注；21596 行的 `/files` POST 仅定义 `fileName`。没有 confirm 或独立 actions/comment 路径。
-- 现有 [创建推送记录](/home/xiaoming/GitCloneData/model-testing-experience/apps/control-plane/src/testing_agent/models/bug_zentao_push.py:12) 不足以表达每次附件上传、评论和状态写入的独立结果。
+- [首次推送](../../apps/control-plane/src/testing_agent/services/bug_zentao_push.py#L273)：成功记录存在时直接返回，仍只有创建行为；281 行排除图片，284 行发送初始描述的 `steps`，没有附件和状态。这是正文已存在的背景，不把后续正文同步列为本次用户请求。
+- [富文本契约](../../apps/control-plane/src/testing_agent/domain/rich_text.py#L15)：图片仅保存 `data-file-id`，38 行白名单不允许 `src`。不能把本地 HTML 直接交给禅道显示，也不能把有时效的 S3 签名 URL 当成长期图片地址。
+- [状态流转](../../apps/control-plane/src/testing_agent/services/bug.py#L302) 和 [追加评论](../../apps/control-plane/src/testing_agent/services/bug.py#L450)：只保存本地 Bug/activities，没有 MCP 远端同步调用。
+- `/home/xiaoming/zentao-mcp-deploy/source/internal/service/schema/build_input.go:57` 只处理 `application/json`；`/home/xiaoming/zentao-mcp-deploy/source/internal/service/tool/execute.go:72` 把 payload JSON 编码并设置 `Content-Type: application/json`。只修改 OpenAPI 不能得到 multipart 上传。
+- `/home/xiaoming/zentao-mcp-deploy/source/docs/zentao-openapi.json:12523` 没有 `status`、`confirmed`、`comment`；resolve/close/activate 分别位于 14348、14427、14481 行，支持状态操作备注；21596 行的 `/files` POST 仅定义 `fileName`。没有 confirm 或独立 actions/comment 路径。
+- 现有 [创建推送记录](../../apps/control-plane/src/testing_agent/models/bug_zentao_push.py#L12) 不足以表达每次附件上传、评论和状态写入的独立结果。
 
 主分析任务定向运行 `test_manual_push_uses_bindings_persists_result_and_never_recreates` 与 `test_abandoned_preparation_can_retry_but_images_are_not_transferred`，2 项通过。只验证现有创建映射、排除图片和不重复创建行为，不证明真实图片/评论/状态同步成功。
 
@@ -108,7 +108,7 @@
 4. 逐文件持久化 `pending/uploading/succeeded/failed/unknown`。确定未写入的失败可重试；开始上传后的超时或进程中断进入待核对。回读远端 Bug 的附件进行核对，无法唯一确认时继续保留 unknown，不能仅凭同名文件自动认定成功或盲目重传。
 5. 用户确认不需要新增附件完成情况展示。复用现有“推送到禅道/重试推送”按钮、整体成功/失败提示，附件失败时说明 Bug 已创建。不新增进度条、逐附件状态面板或恢复按钮；未知结果使用后端只读核对接口处理。当前用户主动同步；已有 Bug 与后续新增附件均可补传。每个文件处理完成后即时保存，部分失败不会重传已成功项。
 
-建议修改区域为控制面附件同步 service/model/schema/router 与迁移、Studio 禅道同步面板、项目外 MCP 上传工具和镜像；通用 S3 文件状态及 Bug 创建去重保持各自职责。当前 [MCP 客户端](/home/xiaoming/GitCloneData/model-testing-experience/apps/control-plane/src/testing_agent/services/mcp_client.py:16) 统一 30 秒超时，附件工具调用需要单独的传输超时配置。
+建议修改区域为控制面附件同步 service/model/schema/router 与迁移、Studio 禅道同步面板、项目外 MCP 上传工具和镜像；通用 S3 文件状态及 Bug 创建去重保持各自职责。当前 [MCP 客户端](../../apps/control-plane/src/testing_agent/services/mcp_client.py#L16) 统一 30 秒超时，附件工具调用需要单独的传输超时配置。
 
 ### 附件验收
 

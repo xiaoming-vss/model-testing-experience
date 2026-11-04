@@ -8,7 +8,7 @@
 
 工具栏右侧提供「放大编辑」：点击在弹框（宽 `min(1080px, 94vw)`，编辑区约 56vh 高、内部滚动）中继续编辑，内容与撤销历史实时同步到表单值；弹框内工具栏同一按钮变为「恢复内联编辑」，关闭弹框或点击底部按钮回到内联。放大能力属于共享编辑器，所有使用方（新建/编辑需求、Bug 描述等）一致生效。
 
-历史 TXT 保持原有读取入口，不自动迁移。编辑时可切换为富文本重新填写，或切换为 Word 上传新文件；保存成功后替换文档关联。Word 上传行为保持兼容。AI 分析的 HTML 与图片读取已在后续 Worker 接入中补齐，见[需求富文本正文](../control-plane/requirement-rich-text.md)。
+历史 TXT 需求已通过控制面迁移转换为富文本，前端不再提供纯文本类型、纯文本编辑入口或 `.txt` 上传。编辑时按富文本下载当前正文并回填编辑器，或切换为 Word 上传新文件；保存成功后替换文档关联。Word 上传行为保持兼容。AI 分析的 HTML 与图片读取见[需求富文本正文](../control-plane/requirement-rich-text.md)。
 
 相关检查：需求 API、需求预览、ProjectsPage、RichTextEditor/RichTextViewer 测试及 `npm run verify`。服务端约定见 [需求富文本正文](../control-plane/requirement-rich-text.md)。
 

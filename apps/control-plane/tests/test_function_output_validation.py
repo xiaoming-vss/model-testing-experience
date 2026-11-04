@@ -4,6 +4,7 @@ import pytest
 from support.execution_writer import MemoryExecutionWriter
 from support.worker_contract import FakeWorkerRepository
 
+from testing_agent.core.errors import AppError
 from testing_agent.schemas.workers import WorkerProgressRequest, WorkerTaskEventRequest
 from testing_agent.services import worker_task as module
 from testing_agent.services.worker import apply_ai_completion_to_run
@@ -60,7 +61,7 @@ def test_successful_functional_completion_replaces_artifacts_and_instruction():
 
 
 @pytest.mark.asyncio
-async def test_repair_progress_preserves_outputs_and_passes_summary(monkeypatch):
+async def test_legacy_repair_progress_cannot_change_output(monkeypatch):
     from unittest.mock import AsyncMock
 
     from testing_agent.services import worker_task
@@ -83,28 +84,21 @@ async def test_repair_progress_preserves_outputs_and_passes_summary(monkeypatch)
         return task
 
     monkeypatch.setattr(module, "find_task", find_task)
-    event = {
-        "outputValidation": {
-            "stage": "detailed_cases",
-            "module": "登录",
-            "repairAttempt": 1,
-            "maxRepairs": 2,
-            "status": "repairing",
-        }
-    }
     old = run.config_json.copy(), run.result_yaml
-    await WorkerTaskService(Repository(task), execution_writer=MemoryExecutionWriter()).progress(
-        "worker-task",
-        WorkerProgressRequest(
-            workerId="w",
-            runId="run",
-            currentStage="detailed_cases",
-            stageStatus="running",
-            configJson="",
-            resultYaml="",
-            resultSummaryJson=event,
-        ),
-    )
+    with pytest.raises(AppError) as rejected:
+        await WorkerTaskService(
+            Repository(task), execution_writer=MemoryExecutionWriter()
+        ).progress(
+            "worker-task",
+            WorkerProgressRequest(
+                workerId="w",
+                runId="run",
+                currentStage="detailed_cases",
+                stageStatus="running",
+                configJson="",
+                resultYaml="",
+                resultSummaryJson={"outputValidation": {"status": "repairing"}},
+            ),
+        )
+    assert rejected.value.http_code == 404
     assert (run.config_json, run.result_yaml) == old
-    assert run.result_summary_json == event
-    assert run.status == "running"

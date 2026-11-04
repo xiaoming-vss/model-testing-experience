@@ -6,10 +6,8 @@ from typing import Any
 
 from sqlalchemy import select
 
-from testing_agent.core.enums import RunStatus, StageStatus
+from testing_agent.core.enums import RunStatus
 from testing_agent.core.errors import AppError, ErrForbidden
-from testing_agent.models.ai_generate_execution import AiGenerateRunStage, AiGenerateStageAttempt
-from testing_agent.models.ai_generate_task import AiGenerateTaskRun
 from testing_agent.models.api_case_run import ApiCaseRun
 from testing_agent.models.api_collection import ApiCollection
 from testing_agent.models.api_collection_run import ApiCollectionRun
@@ -33,31 +31,8 @@ class ExecutionAuthority:
 
 
 async def execution_authority(session, task) -> ExecutionAuthority:
-    if task.domain == "ai":
-        run = await session.scalar(
-            select(AiGenerateTaskRun).where(AiGenerateTaskRun.run_id == task.run_id)
-        )
-        attempt = await session.scalar(
-            select(AiGenerateStageAttempt)
-            .join(AiGenerateRunStage, AiGenerateRunStage.id == AiGenerateStageAttempt.stage_id)
-            .where(
-                AiGenerateRunStage.run_id == task.run_id,
-                AiGenerateStageAttempt.worker_task_id == task.task_id,
-            )
-            .order_by(
-                AiGenerateRunStage.stage_order.desc(), AiGenerateStageAttempt.attempt_no.desc()
-            )
-        )
-        if run is None or attempt is None or not attempt.requested_by:
-            raise ErrForbidden()
-        from testing_agent.services.ai_execution import project
-
-        run = await session.run_sync(lambda sync: project(sync, run))
-        snapshot = attempt.input_snapshot_json or {}
-        connections = [("llm", str(snapshot.get("llmConnectionId") or ""))]
-        for binding in (snapshot.get("source") or {}).get("bindings", []):
-            connections.append(("gitlab", str(binding.get("connectionId") or "")))
-        return ExecutionAuthority(attempt.requested_by, run.project_id, run, connections)
+    if task.domain not in {"api", "ui"}:
+        raise ErrForbidden()
     model: Any
     container: Any
     if task.domain == "api":
@@ -74,55 +49,54 @@ async def execution_authority(session, task) -> ExecutionAuthority:
             else (UiTestCaseRun, "run_id")
         )
         container, field = UiTestSuite, "suite_id"
-    run = await session.scalar(select(model).where(getattr(model, key) == task.run_id))
-    if run is None:
-        raise ErrForbidden()
-    project_id = await session.scalar(
-        select(Sprint.project_id)
-        .select_from(container)
-        .join(Requirement, Requirement.requirement_id == container.requirement_id)
-        .join(Sprint, Sprint.sprint_id == Requirement.sprint_id)
-        .where(
-            getattr(container, field) == getattr(run, field),
+    row = (
+        await session.execute(
+            select(model, Sprint.project_id)
+            .select_from(model)
+            .join(container, getattr(container, field) == getattr(model, field))
+            .join(Requirement, Requirement.requirement_id == container.requirement_id)
+            .join(Sprint, Sprint.sprint_id == Requirement.sprint_id)
+            .where(getattr(model, key) == task.run_id)
         )
-    )
-    if not project_id:
+    ).one_or_none()
+    if row is None or not row[1]:
         raise ErrForbidden()
+    run, project_id = row
     return ExecutionAuthority(run.trigger_user_id, project_id, run, [])
 
 
 async def fail_authorization(session, task, authority=None):
-    from testing_agent.domain.ai_execution_intent import ExecutionIntent
-    from testing_agent.services.ai_execution import project
-    from testing_agent.services.ai_execution.writer import SqlExecutionWriter
-
+    if task.domain not in {"api", "ui"}:
+        raise ErrForbidden()
     now = datetime.now(UTC)
+    message = "操作人的项目访问或个人授权已失效，请配置本人授权后重新执行"
+    if task.domain in {"api", "ui"}:
+        from testing_agent.services.test_run_stop import finish_stopped_items
+
+        await finish_stopped_items(session, task, interrupted=True, reason=message)
     task.status = RunStatus.FAILED.value
-    task.error_message = "操作人的项目访问或个人授权已失效，请配置本人授权后重新执行"
+    task.error_message = message
     task.finished_at = now
     task.lease_expires_at = now
     if authority:
         run = authority.run
-        if task.domain == "ai":
-            run = await session.run_sync(lambda sync: project(sync, run))
-            run.stage_status = StageStatus.FAILED.value
         run.status = RunStatus.FAILED.value
         run.error_message = task.error_message
         run.finished_at = now
-        if task.domain == "ai":
-            await SqlExecutionWriter().save(
-                session,
-                run,
-                intent=ExecutionIntent(actor_id=authority.actor, worker_event_id=task.task_id),
-                worker=task,
-            )
+        if isinstance(run, UiTestCaseRun):
+            from testing_agent.services.worker_domains.ui import close_running_steps
+
+            run.step_results_json = close_running_steps(run.step_results_json, "error", message)
 
 
 async def authorize_execution(session, task, *, pending=False) -> ExecutionAuthority:
+    if task.domain not in {"api", "ui"}:
+        raise ErrForbidden()
     if task.status not in (
         {RunStatus.PENDING.value, RunStatus.CLAIMED.value, RunStatus.RUNNING.value}
         if pending
         else {RunStatus.CLAIMED.value, RunStatus.RUNNING.value}
+        | ({RunStatus.STOPPING.value} if task.domain in {"api", "ui"} else set())
     ):
         raise ErrForbidden()
     authority = None
@@ -150,15 +124,29 @@ async def authorize_execution(session, task, *, pending=False) -> ExecutionAutho
                 session, authority.actor, authority.run.environment_id
             )
     except AppError:
+        should_notify = task.domain in {"api", "ui"} and task.status in {
+            "pending",
+            "claimed",
+            "running",
+            "stopping",
+        }
         await fail_authorization(session, task, authority)
         await session.commit()
+        if should_notify:
+            from testing_agent.services.test_run_notifications import (
+                notify_run_changed,
+                notify_task_control,
+            )
+
+            await notify_run_changed(task.domain, task.run_id)
+            await notify_task_control(task.task_id)
         raise ErrForbidden() from None
     return authority
 
 
 async def revoke_executions(
     session, *, actor: str = "", project_id: str = "", connection_id: str = ""
-):
+) -> list[tuple[str, str, str]]:
     """Record revocation in the same transaction; rejoining cannot revive queued work."""
     from testing_agent.services.integration_lifecycle import revoke_integrations
 
@@ -181,7 +169,37 @@ async def revoke_executions(
             )
         ).all()
     )
+    notifications = []
     for task in tasks:
+        if task.domain == "ai":
+            from testing_agent.services.stage_storage.authorization import (
+                direct_revocation_identity,
+            )
+            from testing_agent.services.stage_storage.worker_service import DirectStageWorkerService
+
+            direct = DirectStageWorkerService(session)
+            if await direct.is_direct(task):
+                identity = await direct_revocation_identity(session, task)
+                if identity is None:
+                    continue
+                if actor and identity.actor_id != actor:
+                    continue
+                if project_id and identity.project_id != project_id:
+                    continue
+                if connection_id and connection_id not in identity.connection_ids:
+                    continue
+                from testing_agent.services.standalone_worker_service import StandaloneWorkerService
+
+                standalone = StandaloneWorkerService(session)
+                if await standalone.is_standalone(task):
+                    await standalone.retire(
+                        task, "操作人的项目访问或个人授权已失效，请配置本人授权后重新执行"
+                    )
+                else:
+                    await direct.retire_authorization(task)
+            # Unknown legacy AI entries are handled by the coordinated cutover,
+            # and must never fall back to the retired ledger during revocation.
+            continue
         try:
             authority = await execution_authority(session, task)
         except AppError:
@@ -193,3 +211,18 @@ async def revoke_executions(
         if connection_id and not any(cid == connection_id for _, cid in authority.connection_ids):
             continue
         await fail_authorization(session, task, authority)
+        if task.domain in {"api", "ui"}:
+            notifications.append((task.domain, task.run_id, task.task_id))
+    return notifications
+
+
+async def notify_revoked_executions(tasks: list[tuple[str, str, str]]) -> None:
+    """Publish only after the transaction that revoked execution commits."""
+    from testing_agent.services.test_run_notifications import (
+        notify_run_changed,
+        notify_task_control,
+    )
+
+    for domain, run_id, task_id in tasks:
+        await notify_run_changed(domain, run_id)
+        await notify_task_control(task_id)

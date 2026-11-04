@@ -28,7 +28,7 @@ class ApiCollection(Base):
         String(512), nullable=False, default="", comment="业务描述"
     )
     effective_import_id: Mapped[str | None] = mapped_column(
-        String(64), nullable=True, comment="当前正式来源的版本导入记录业务标识"
+        String(64), nullable=True, comment="当前正式来源的审核版本或独立候选导入记录业务标识"
     )
     created_at: Mapped[CreatedAt] = mapped_column(comment="记录创建时间（UTC）")
     updated_at: Mapped[UpdatedAt] = mapped_column(comment="记录最后更新时间（UTC）")

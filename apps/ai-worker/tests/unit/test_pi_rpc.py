@@ -104,7 +104,7 @@ class PiRpcTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(_CHILDREN)
 
     async def test_idle_timeout_reaps_process(self):
-        with self.assertRaises(TimeoutError):
+        with self.assertRaisesRegex(TimeoutError, "模型输出空闲超过 0.3 秒"):
             await self.client().run("timeout", session_key="run")
         pid = int((self.workspace / "pid").read_text())
         with self.assertRaises(ProcessLookupError):
@@ -114,7 +114,7 @@ class PiRpcTests(unittest.IsolatedAsyncioTestCase):
     async def test_total_deadline_and_cancellation_reap_process(self):
         self.config.update(run_timeout_seconds=0.2, stream_idle_timeout_seconds=30)
         self.save()
-        with self.assertRaises(TimeoutError):
+        with self.assertRaisesRegex(TimeoutError, "模型执行超过 0.2 秒"):
             await self.client().run("timeout", session_key="run")
         self.config["run_timeout_seconds"] = 30
         self.save()

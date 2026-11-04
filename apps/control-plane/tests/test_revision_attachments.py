@@ -83,7 +83,7 @@ async def test_rejects_unowned_or_non_image_files(change):
     files.attach.assert_not_awaited()
 
 
-def ticket_inputs():
+def ticket_inputs(monkeypatch):
     task = SimpleNamespace(
         task_type="requirement_analysis",
         worker_id="worker",
@@ -99,9 +99,24 @@ def ticket_inputs():
     )
     service = SimpleNamespace(
         repository=SimpleNamespace(
+            session=object(),
             get_worker_task=AsyncMock(return_value=task),
             get_ai_run=AsyncMock(return_value=run),
         )
+    )
+    from testing_agent.services.stage_storage.worker_service import DirectStageWorkerService
+
+    monkeypatch.setattr(DirectStageWorkerService, "is_direct", AsyncMock(return_value=True))
+    monkeypatch.setattr(
+        DirectStageWorkerService,
+        "authorize",
+        AsyncMock(
+            return_value=SimpleNamespace(
+                task=SimpleNamespace(project_id="project"),
+                attempt_id="run",
+                input_snapshot={"config": {"revisionAttachments": [{"fileId": "file"}]}},
+            )
+        ),
     )
     files = SimpleNamespace(
         get=AsyncMock(return_value=image),
@@ -111,8 +126,8 @@ def ticket_inputs():
 
 
 @pytest.mark.asyncio
-async def test_revision_attachment_ticket():
-    service, files, _, _ = ticket_inputs()
+async def test_revision_attachment_ticket(monkeypatch):
+    service, files, _, _ = ticket_inputs(monkeypatch)
     assert await revision_attachment_ticket("task", "file", "worker", service, files) == {
         "url": "signed"
     }
@@ -123,8 +138,8 @@ async def test_revision_attachment_ticket():
     "change",
     ["worker", "lease", "task_type", "project", "resource", "purpose", "status", "content"],
 )
-async def test_revision_attachment_access_boundaries(change):
-    service, files, task, image = ticket_inputs()
+async def test_revision_attachment_access_boundaries(change, monkeypatch):
+    service, files, task, image = ticket_inputs(monkeypatch)
     if change == "worker":
         task.worker_id = "other"
     if change == "lease":
@@ -146,7 +161,7 @@ async def test_revision_attachment_access_boundaries(change):
     files.ticket.assert_not_awaited()
 
 
-def test_revision_attachment_route_requires_worker_token_and_disables_cache():
+def test_revision_attachment_route_requires_worker_token_and_disables_cache(monkeypatch):
     from fastapi.testclient import TestClient
 
     from testing_agent.api.deps import get_file_service, get_worker_task_service
@@ -154,7 +169,7 @@ def test_revision_attachment_route_requires_worker_token_and_disables_cache():
     from testing_agent.core.config import Settings, get_settings
 
     settings = Settings.from_mapping({"security": {"worker": {"key": "worker-token"}}})
-    service, files, _, _ = ticket_inputs()
+    service, files, _, _ = ticket_inputs(monkeypatch)
     app = create_app(settings)
     app.dependency_overrides[get_settings] = lambda: settings
     app.dependency_overrides[get_worker_task_service] = lambda: service
@@ -177,8 +192,11 @@ async def test_run_attachment_access_requires_existing_run():
         resource_id="run",
         status="attached",
     )
-    session = SimpleNamespace(scalar=AsyncMock(return_value="run"))
+    attempt = SimpleNamespace(
+        input_snapshot_json={"config": {"revisionAttachments": [{"fileId": "file"}]}}
+    )
+    session = SimpleNamespace(scalars=AsyncMock(return_value=[attempt]))
     await require_file_resource(session, image)
-    session.scalar.return_value = None
+    session.scalars.return_value = []
     with pytest.raises(AppError):
         await require_file_resource(session, image)

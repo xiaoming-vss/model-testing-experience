@@ -1,5 +1,5 @@
 import { Button, Dropdown, Empty, Popover, Table, Tooltip, Typography } from 'antd'
-import { MoreOutlined, WarningOutlined } from '@ant-design/icons'
+import { MoreOutlined } from '@ant-design/icons'
 import type { MenuProps, TableProps } from 'antd'
 import type { ReactNode } from 'react'
 import { ListPagination } from '@/shared/components/ListPagination'
@@ -211,20 +211,5 @@ export function RunReviewNoteButton({ comment }: { comment: string }) {
         审核备注
       </button>
     </Popover>
-  )
-}
-
-export function RunMigrationWarningIcon() {
-  return (
-    <Tooltip title="历史导入目标数据不完整：部分历史功能套件目标未能完整恢复；这不影响查看、审核或继续处理当前运行。">
-      <span
-        role="img"
-        aria-label="历史导入目标数据不完整"
-        className="ai-task-run-table-migration"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <WarningOutlined />
-      </span>
-    </Tooltip>
   )
 }

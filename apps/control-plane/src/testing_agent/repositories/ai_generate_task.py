@@ -4,8 +4,7 @@ from copy import deepcopy
 
 from sqlalchemy import func, select
 
-from testing_agent.domain.worker_context import AiDispatchContext, AiWorkerContext
-from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
+from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.api_assert_rule import ApiAssertRule
 from testing_agent.models.api_case import ApiCase
 from testing_agent.models.api_case_run import ApiCaseRun
@@ -16,20 +15,14 @@ from testing_agent.models.function_test_suite import FunctionTestSuite
 from testing_agent.models.project import Project
 from testing_agent.models.requirement import Requirement
 from testing_agent.models.sprint import Sprint
+from testing_agent.models.test_order import TestOrder
 from testing_agent.models.ui_test_case import UiTestCase
 from testing_agent.models.ui_test_case_run import UiTestCaseRun
 from testing_agent.models.ui_test_suite import UiTestSuite
-from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.base import ResourceRepository
-from testing_agent.repositories.worker_context import read_worker_context
 
 
 class AiGenerateTaskRepository(ResourceRepository):
-    async def _project_run(self, row):
-        from testing_agent.repositories.ai_execution import project
-
-        return await self.session.run_sync(lambda session: project(session, row))
-
     model = AiGenerateTask
     id_column = "task_id"
 
@@ -72,6 +65,9 @@ class AiGenerateTaskRepository(ResourceRepository):
 
     async def get_sprint(self, sprint_id: str) -> Sprint | None:
         return await self.session.scalar(select(Sprint).where(Sprint.sprint_id == sprint_id))
+
+    async def get_test_order(self, order_id: str) -> TestOrder | None:
+        return await self.session.scalar(select(TestOrder).where(TestOrder.order_id == order_id))
 
     async def get_sprint_for_update(self, sprint_id: str) -> Sprint | None:
         return await self.session.scalar(
@@ -211,6 +207,20 @@ class AiGenerateTaskRepository(ResourceRepository):
         self, project_id: str, sprint_id: str, task_type: str
     ) -> AiGenerateTask | None:
         return await self.session.scalar(
+            select(AiGenerateTask)
+            .where(
+                AiGenerateTask.project_id == project_id,
+                AiGenerateTask.sprint_id == sprint_id,
+                AiGenerateTask.task_type == task_type,
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+
+    async def get_task_by_project_sprint_type(
+        self, project_id: str, sprint_id: str, task_type: str
+    ) -> AiGenerateTask | None:
+        return await self.session.scalar(
             select(AiGenerateTask).where(
                 AiGenerateTask.project_id == project_id,
                 AiGenerateTask.sprint_id == sprint_id,
@@ -218,104 +228,17 @@ class AiGenerateTaskRepository(ResourceRepository):
             )
         )
 
-    async def get_task_by_order_type(self, order_id: str, task_type: str) -> AiGenerateTask | None:
-        """测试单域任务按测试单定位；同迭代可以有多张测试单，(project, sprint) 定位不到。"""
-        return await self.session.scalar(
-            select(AiGenerateTask).where(
-                AiGenerateTask.order_id == order_id,
-                AiGenerateTask.task_type == task_type,
-            )
+    async def get_task_by_order_type(
+        self, order_id: str, task_type: str, *, current_read: bool = False
+    ) -> AiGenerateTask | None:
+        """测试单域任务按测试单定位；派发时使用当前读。"""
+        statement = select(AiGenerateTask).where(
+            AiGenerateTask.order_id == order_id,
+            AiGenerateTask.task_type == task_type,
         )
-
-    async def list_runs_by_project_sprint_task_type(
-        self, project_id: str, sprint_id: str, task_type: str
-    ) -> list[AiGenerateTaskRun]:
-        rows = list(
-            (
-                await self.session.scalars(
-                    select(AiGenerateTaskRun)
-                    .join(AiGenerateTask, AiGenerateTask.task_id == AiGenerateTaskRun.task_id)
-                    .where(
-                        AiGenerateTask.project_id == project_id,
-                        AiGenerateTask.sprint_id == sprint_id,
-                        AiGenerateTask.task_type == task_type,
-                    )
-                    .order_by(AiGenerateTaskRun.created_at.desc())
-                )
-            ).all()
-        )
-        from testing_agent.repositories.ai_execution import project_many
-
-        return await self.session.run_sync(lambda session: project_many(session, rows))
-
-    async def has_active_run(self, task_id: str) -> bool:
-        from testing_agent.core.enums import RUN_ACTIVE_STATUSES
-
-        return bool(
-            await self.session.scalar(
-                select(AiGenerateTaskRun.run_id)
-                .where(
-                    AiGenerateTaskRun.task_id == task_id,
-                    AiGenerateTaskRun.status.in_(RUN_ACTIVE_STATUSES),
-                )
-                .limit(1)
-            )
-        )
-
-    async def get_run_reference(self, run_id: str):
-        # A scalar projection must not alter ORM loader state of the locked run.
-        return (
-            await self.session.execute(
-                select(AiGenerateTaskRun.task_id).where(AiGenerateTaskRun.run_id == run_id)
-            )
-        ).first()
-
-    async def get_run(self, run_id: str) -> AiGenerateTaskRun | None:
-        row = await self.session.scalar(
-            select(AiGenerateTaskRun).where(AiGenerateTaskRun.run_id == run_id)
-        )
-        return await self._project_run(row)
-
-    async def get_run_for_update(self, run_id: str) -> AiGenerateTaskRun | None:
-        row = await self.session.scalar(
-            select(AiGenerateTaskRun)
-            .where(AiGenerateTaskRun.run_id == run_id)
-            .with_for_update()
-            .execution_options(populate_existing=True)
-        )
-        return await self._project_run(row)
-
-    async def list_runs(self, task_id: str) -> list[AiGenerateTaskRun]:
-        rows = list(
-            (
-                await self.session.scalars(
-                    select(AiGenerateTaskRun)
-                    .where(AiGenerateTaskRun.task_id == task_id)
-                    .order_by(AiGenerateTaskRun.created_at.desc())
-                )
-            ).all()
-        )
-        from testing_agent.repositories.ai_execution import project_many
-
-        return await self.session.run_sync(lambda session: project_many(session, rows))
-
-    async def get_latest_worker_task_by_run_id(self, run_id: str) -> WorkerTask | None:
-        row = await self.session.scalar(
-            select(WorkerTask)
-            .where(WorkerTask.domain == "ai", WorkerTask.run_id == run_id)
-            .order_by(WorkerTask.created_at.desc(), WorkerTask.id.desc())
-            .limit(1)
-        )
-
-        return row
-
-    async def get_latest_ai_dispatch(self, run_id: str) -> AiDispatchContext | None:
-        worker = await self.get_latest_worker_task_by_run_id(run_id)
-        if worker is None:
-            return None
-        context = await self.session.run_sync(lambda sync: read_worker_context(sync, worker))
-        assert isinstance(context, AiWorkerContext)
-        return AiDispatchContext(worker.task_id, worker.status, context.llm_connection_id)
+        if current_read:
+            statement = statement.with_for_update().execution_options(populate_existing=True)
+        return await self.session.scalar(statement)
 
     async def get_function_suite_by_requirement_and_name(
         self, requirement_id: str, name: str
@@ -480,7 +403,7 @@ class AiGenerateTaskRepository(ResourceRepository):
         rows = await self.session.execute(
             latest_per_resource(
                 select(model.case_id, model.status, model.finished_at).where(
-                    model.case_id.in_(case_ids)
+                    model.case_id.in_(case_ids), model.trigger_type != "live_debug"
                 ),
                 model.case_id,
                 model.created_at,
@@ -493,7 +416,7 @@ class AiGenerateTaskRepository(ResourceRepository):
         """该用例最近一次 run(创建时间最新在前,同刻取 id 较大者,结果确定)。"""
         return await self.session.scalar(
             select(ApiCaseRun)
-            .where(ApiCaseRun.case_id == case_id)
+            .where(ApiCaseRun.case_id == case_id, ApiCaseRun.trigger_type != "live_debug")
             .order_by(ApiCaseRun.created_at.desc(), ApiCaseRun.id.desc())
             .limit(1)
         )
@@ -502,7 +425,7 @@ class AiGenerateTaskRepository(ResourceRepository):
         """该用例最近一次 run(创建时间最新在前,同刻取 id 较大者,结果确定)。"""
         return await self.session.scalar(
             select(UiTestCaseRun)
-            .where(UiTestCaseRun.case_id == case_id)
+            .where(UiTestCaseRun.case_id == case_id, UiTestCaseRun.trigger_type != "live_debug")
             .order_by(UiTestCaseRun.created_at.desc(), UiTestCaseRun.id.desc())
             .limit(1)
         )

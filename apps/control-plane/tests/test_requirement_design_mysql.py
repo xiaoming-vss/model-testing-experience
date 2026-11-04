@@ -10,7 +10,6 @@ from support.generation import generation_services
 from support.mysql_initialization import mysql  # noqa: F401
 
 from testing_agent.models.ai_generate_task import AiGenerateTask as Task
-from testing_agent.models.ai_generate_task import AiGenerateTaskRun as Run
 from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.models.project import Project
 from testing_agent.models.requirement import Requirement
@@ -18,16 +17,18 @@ from testing_agent.models.sprint import Sprint
 from testing_agent.models.user import User
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+from testing_agent.schemas.generation_chain import GenerationChainRunRequest
 from testing_agent.schemas.requirement_design import (
     RequirementDesignConfigurationRequest as Configuration,
 )
-from testing_agent.schemas.requirement_design import RequirementDesignRunRequest as Start
+from testing_agent.services.stage_storage.commands import DirectStageCommands
 
 
 async def test_concurrent_default_configuration_and_same_request_run(mysql):  # noqa: F811
     engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
     sessions = async_sessionmaker(engine, expire_on_commit=False)
     uid, pid, sid, rid, llm = [str(uuid4()) for _ in range(5)]
+    request_id = uuid4()
     try:
         async with sessions() as session:
             now = datetime.now(UTC)
@@ -74,18 +75,23 @@ async def test_concurrent_default_configuration_and_same_request_run(mysql):  # 
         )
         assert not any(isinstance(row, BaseException) for row in configured), configured
         assert len({row["taskId"] for row in configured}) == 1
-        task_id = configured[0]["taskId"]
-        request_id = uuid4()
 
         async def start():
             async with sessions() as session:
-                return await generation_services(AiGenerateTaskRepository(session)).design.start(
-                    rid, "api", Start(taskId=task_id, requestId=request_id, connectionId=llm), uid
+                bundle = generation_services(AiGenerateTaskRepository(session))
+                return await DirectStageCommands(bundle.chain).run(
+                    rid,
+                    "api",
+                    "openapi_extract",
+                    GenerationChainRunRequest(requestId=request_id, connectionId=llm),
+                    uid,
                 )
 
         runs = await asyncio.gather(start(), start(), start(), return_exceptions=True)
         assert not any(isinstance(row, BaseException) for row in runs), runs
-        assert {row["runId"] for row in runs} == {str(request_id)}
+        attempt_ids = {row.stages[0].active_run_id for row in runs}
+        assert len(attempt_ids) == 1
+        attempt_id = next(iter(attempt_ids))
         async with sessions() as session:
             assert (
                 await session.scalar(
@@ -95,23 +101,15 @@ async def test_concurrent_default_configuration_and_same_request_run(mysql):  # 
             )
             assert (
                 await session.scalar(
-                    select(func.count()).select_from(Run).where(Run.task_id == task_id)
-                )
-                == 1
-            )
-            assert (
-                await session.scalar(
                     select(func.count())
                     .select_from(WorkerTask)
-                    .where(WorkerTask.run_id == str(request_id))
+                    .where(WorkerTask.task_id == str(request_id), WorkerTask.run_id == attempt_id)
                 )
                 == 1
             )
     finally:
         async with sessions() as session:
-            task_ids = select(Task.task_id).where(Task.requirement_id == rid)
-            run_ids = select(Run.run_id).where(Run.task_id.in_(task_ids))
-            await session.execute(delete(WorkerTask).where(WorkerTask.run_id.in_(run_ids)))
+            await session.execute(delete(WorkerTask).where(WorkerTask.task_id == str(request_id)))
             await session.execute(delete(Task).where(Task.requirement_id == rid))
             await session.execute(delete(Requirement).where(Requirement.requirement_id == rid))
             await session.execute(delete(Sprint).where(Sprint.sprint_id == sid))

@@ -154,3 +154,34 @@
 }
 
 .requirement-material-evidence-source { color: var(--app-text-secondary); font-size: 12px; }
+
+/* 待审核即可直接编辑：字段保持阅读态排版，用虚线边界提示可输入。 */
+.requirement-material-fact.is-editing { padding-block: 10px; }
+.requirement-material-fact-edit { display: flex; flex-direction: column; gap: 6px; }
+.requirement-material-fact-edit .requirement-material-fact-meta { justify-content: flex-start; gap: 4px; }
+.requirement-material-fact-category.ant-select .ant-select-selector,
+.requirement-material-fact-status.ant-select .ant-select-selector { padding-inline: 6px; }
+.requirement-material-fact-editor.ant-input { border: 1px dashed var(--app-surface-border); border-radius: 6px; padding: 4px 6px; font-size: 13px; line-height: 1.75; }
+.requirement-material-fact-editor.ant-input:hover,
+.requirement-material-fact-editor.ant-input:focus { border-color: var(--app-accent); background: var(--app-option-icon-bg-disabled); }
+.requirement-material-fact-evidence-toggle {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--app-text-secondary);
+  font-size: 11px;
+  line-height: 1.7;
+  text-align: left;
+  cursor: pointer;
+}
+.requirement-material-fact-evidence-toggle:hover { color: var(--app-accent); }
+
+.requirement-material-question-list { display: flex; flex-direction: column; }
+.requirement-material-question { display: flex; flex-direction: column; gap: 6px; padding: 12px 10px; border-bottom: 1px solid var(--app-surface-border); }
+.requirement-material-question-head { display: flex; align-items: flex-start; gap: 8px; }
+.requirement-material-question-head > .ant-input { flex: 1; border: 1px dashed var(--app-surface-border); border-radius: 6px; padding: 4px 6px; font-size: 13px; line-height: 1.7; }
+.requirement-material-question > .ant-input { border: 1px dashed var(--app-surface-border); border-radius: 6px; padding: 4px 6px; font-size: 12px; }
+.requirement-material-question :is(.ant-input:hover, .ant-input:focus) { border-color: var(--app-accent); background: var(--app-option-icon-bg-disabled); }
+.requirement-material-question-detail summary { cursor: pointer; font-size: 12px; color: var(--app-text-secondary); }
+.requirement-material-question-detail[open] summary { margin-bottom: 8px; }
+

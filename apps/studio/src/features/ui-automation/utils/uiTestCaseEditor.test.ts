@@ -48,6 +48,18 @@ describe('UI 用例步骤解析', () => {
     ).toEqual(['登录成功', '3000', '2000'])
   })
 
+  it('接受导入 YAML 中写成数字的毫秒数', () => {
+    // 后端允许 assert_visible / sleep 的 operationValue 直接写毫秒数；
+    // 曾经这里对数字调用 trim() 抛错，导致整条用例被解析成 0 个步骤。
+    const stepsJson = [
+      { orderNo: 1, stepName: '等待登录', keyword: 'assert_visible', locatorType: 'xpath', locatorValue: '//div', operationValue: 15000 },
+      { orderNo: 2, stepName: '点击登录', keyword: 'click', locatorType: 'xpath', locatorValue: '//button' },
+    ] as unknown as Parameters<typeof parseStepsJson>[0]
+
+    expect(parseStepsJson(stepsJson).map((step) => step.operationValue)).toEqual(['15000', ''])
+    expect(getUiTestCaseStepCount({ name: '数字超时步骤', stepsJson })).toBe(2)
+  })
+
   it('只序列化关键字规范允许的步骤字段', () => {    const steps = JSON.parse(
       serializeSteps([
         {

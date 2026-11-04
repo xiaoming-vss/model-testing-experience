@@ -15,7 +15,7 @@ import type { RequirementAnalysisViewMode } from '@/features/ai-testing/componen
 import { RequirementAnalysisDiagramView, RequirementAnalysisView } from '@/features/ai-testing/components/RequirementAnalysisView'
 import { RevisionDivider, RevisionSidePanel } from '@/features/ai-testing/components/RevisionSidePanel'
 import { useRevisionAttachments } from '@/features/ai-testing/hooks/useRevisionAttachments'
-import { RunHistoryTable, RunMigrationWarningIcon, RunRowActions } from '@/features/ai-testing/components/RunHistoryTable'
+import { RunHistoryTable, RunRowActions } from '@/features/ai-testing/components/RunHistoryTable'
 import { confirmDeleteRun, isRunDeletable } from '@/features/ai-testing/utils/runDeletion'
 import { RunArtifacts, RunPipelineStatus } from '@/features/ai-testing/components/RunPipelineStatus'
 import { usePersonalLlmChoice } from '@/features/ai-testing/hooks/usePersonalLlmChoice'
@@ -31,7 +31,7 @@ import '@/features/ai-testing/styles/run-result.css'
 import '@/features/ai-testing/styles/task-detail-v2.css'
 import '@/features/ai-testing/styles/functional-artifact-modal.css'
 import type { FunctionalCaseGenerateTaskRun, FunctionalCaseGenerateTaskRunImportConflict } from '@/features/ai-testing/types'
-import { getConfigStageFieldContent, getGeneratedCaseImportStats, getOutputRepairProgress, isJsonText } from '@/features/ai-testing/utils/functionalOutput'
+import { getConfigStageFieldContent, getGeneratedCaseImportStats, isJsonText } from '@/features/ai-testing/utils/functionalOutput'
 import { buildRevisionTemplate, getRevisionQuestions } from '@/features/ai-testing/utils/functionalRevision'
 import { getRunPipelineModel, type RunPipelineFilterKey } from '@/features/ai-testing/utils/runPipeline'
 import { getApiCaseGenerateTaskRunStatusMeta, isRunnableApiCaseGenerateTaskRun, renderApiCaseGenerateTaskRunStatusTag, summarizeRunStatuses } from '@/features/ai-testing/utils/taskStatus'
@@ -163,8 +163,11 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
   const revisionAttachments = useRevisionAttachments()
   const [importConfirmRunId, setImportConfirmRunId] = useState<string | null>(null)
   const [importAcknowledged, setImportAcknowledged] = useState(false)
+  const [importSprintId, setImportSprintId] = useState<string | undefined>()
+  const [importRequirementId, setImportRequirementId] = useState<string | undefined>()
   const [importConflict, setImportConflict] = useState<{
     runId: string
+    requirementId?: string
     conflicts: FunctionalCaseGenerateTaskRunImportConflict[]
   } | null>(null)
   const [checkpointEnabled, setCheckpointEnabled] = useState(false)
@@ -232,6 +235,18 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
     queryFn: () => api.getRequirements(drawerSprintId!),
     enabled: Boolean(drawerSprintId),
   })
+  const importRequirementsQuery = useQuery({
+    queryKey: ['requirements', 'functionalImportTarget', importSprintId],
+    queryFn: () => api.getRequirements(importSprintId!),
+    enabled: Boolean(importConfirmRunId && importSprintId && !task?.requirementId),
+  })
+  const importRequirementOptions = useMemo(
+    () => listItems(importRequirementsQuery.data).map((requirement) => ({
+      label: requirement.name,
+      value: normalizeRequirementId(requirement),
+    })),
+    [importRequirementsQuery.data],
+  )
   const requirementOptions = useMemo(
     () =>
       listItems(requirementsQuery.data).map((requirement) => ({
@@ -428,9 +443,10 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
   })
 
   const importRunMutation = useMutation({
-    mutationFn: (payload: { runId: string; confirmOverwrite: boolean }) =>
+    mutationFn: (payload: { runId: string; confirmOverwrite: boolean; requirementId?: string }) =>
       api.importFunctionalCaseGenerateTaskRun(payload.runId, {
         confirmOverwrite: payload.confirmOverwrite,
+        requirementId: payload.requirementId,
       }),
     onSuccess: (result, payload) => {
       queryClient.setQueryData(['functionalCaseGenerateTaskRun', payload.runId], result.run)
@@ -438,13 +454,13 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
       queryClient.invalidateQueries({ queryKey: ['functionalCaseGenerateTaskRuns', taskId] })
 
       if (result.requiresConfirmation) {
-        setImportConflict({ runId: payload.runId, conflicts: result.conflicts })
+        setImportConflict({ runId: payload.runId, requirementId: payload.requirementId, conflicts: result.conflicts })
         return
       }
 
       setImportConflict(null)
       message.success('正式功能用例导入成功')
-      const targetRequirementId = task?.requirementId ?? result.run.requirementId
+      const targetRequirementId = payload.requirementId || task?.requirementId || result.run.requirementId
       if (targetRequirementId) {
         queryClient.invalidateQueries({ queryKey: ['functionTestSuites', targetRequirementId] })
       }
@@ -608,20 +624,21 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
   const runHistoryRefreshing = runsQuery.isFetching || selectedRunQuery.isFetching
   const resultModalOpen = Boolean(resultModalRunId)
   const selectedRunReviewStatus = normalizeReviewStatus(selectedRun?.reviewStatus)
+  const chainManagedRun = Boolean(selectedRun?.generationChainManaged || selectedRun?.snapshotJson?.generationChainManaged)
   const selectedRunStatus = String(selectedRun?.status ?? '')
   const selectedStageMeta = getFunctionalStageMeta(selectedStage)
   const stageOutputIsCaseNames = selectedStageField?.key === 'caseNames'
   const stageOutputIsRequirementAnalysis = selectedStageField?.key === 'requirementAnalysis'
   const selectedStageStatusMeta = getApiCaseGenerateTaskRunStatusMeta(selectedRun?.stageStatus)
   const canRetryStage = Boolean(
-    ['failed', 'retrying'].includes(String(selectedRun?.stageStatus ?? '')) &&
+    !chainManagedRun && ['failed', 'retrying'].includes(String(selectedRun?.stageStatus ?? '')) &&
     ['requirement_analysis', 'case_names', 'detailed_cases'].includes(String(selectedStage ?? '')) &&
     selectedRunReviewStatus === 'pending' &&
     selectedRun?.importStatus !== 'imported' &&
     (selectedRunStatus === 'failed' || selectedRunStatus === 'error'),
   )
   const checkpointStageWaitingReview = Boolean(
-    selectedRun?.checkpointEnabled &&
+    !chainManagedRun && selectedRun?.checkpointEnabled &&
     selectedRunStatus === 'waiting_review' &&
     selectedRun?.stageStatus === 'waiting_review' &&
     selectedStage,
@@ -639,7 +656,7 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
     && (selectedStage === 'requirement_analysis' || selectedStage === 'case_names')
     && selectedRunReviewStatus === 'pending' && selectedRun?.importStatus !== 'imported'
   const stageActionPending = saveStageOutputMutation.isPending || reviewStageMutation.isPending || reviseStageMutation.isPending
-  const reviewAvailable = Boolean(selectedRun) && selectedRunReviewStatus === 'pending' && selectedRunStatus === 'success'
+  const reviewAvailable = Boolean(selectedRun) && !chainManagedRun && selectedRunReviewStatus === 'pending' && selectedRunStatus === 'success'
   const canReviewSelectedRun = can('review') && reviewAvailable
   const canReviseFinal = canReviewSelectedRun && selectedRun?.importStatus !== 'imported'
     && (!selectedStage || selectedStage === 'detailed_cases' || selectedStage === 'completed')
@@ -683,6 +700,10 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
   ])
 
   async function handleRunTask() {
+    if (task?.requirementId) {
+      navigate(`/requirements/${encodeURIComponent(task.requirementId)}`)
+      return
+    }
     if (runsQuery.isLoading) {
       message.warning('运行记录加载中，请稍后再试')
       return
@@ -887,19 +908,22 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
     if (!runId || importRunMutation.isPending) return
     setSelectedRunRecordId(runId)
     setImportAcknowledged(false)
+    setImportSprintId(task?.sprintId || undefined)
+    setImportRequirementId(undefined)
     setImportConfirmRunId(runId)
   }
 
   function handleConfirmImport() {
-    if (!importConfirmRunId || !importDetailsReady || !importAcknowledged || importRunMutation.isPending) return
-    importRunMutation.mutate({ runId: importConfirmRunId, confirmOverwrite: false })
+    const needsTarget = !task?.requirementId && !selectedRun?.requirementId
+    if (!importConfirmRunId || !importDetailsReady || !importAcknowledged || importRunMutation.isPending || (needsTarget && !importRequirementId)) return
+    importRunMutation.mutate({ runId: importConfirmRunId, confirmOverwrite: false, requirementId: needsTarget ? importRequirementId : undefined })
     setImportConfirmRunId(null)
     setImportAcknowledged(false)
   }
 
   function handleConfirmImportOverwrite() {
     if (!importConflict || importRunMutation.isPending) return
-    importRunMutation.mutate({ runId: importConflict.runId, confirmOverwrite: true })
+    importRunMutation.mutate({ runId: importConflict.runId, confirmOverwrite: true, requirementId: importConflict.requirementId })
   }
 
   function resolveRunRecord(record: FunctionalCaseGenerateTaskRun): FunctionalCaseGenerateTaskRun {
@@ -954,11 +978,11 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
                   <ProjectActionButton action="execute"
                     className="action-btn-run"
                     operation="run"
-                    disabled={runsQuery.isLoading || !runnableTask}
+                    disabled={!task.requirementId && (runsQuery.isLoading || !runnableTask)}
                     loading={runTaskMutation.isPending}
                     onClick={handleRunTask}
                   >
-                    运行
+                    {task.requirementId ? '生成链' : '运行'}
                   </ProjectActionButton>
                   <ProjectActionButton action="write" className="action-btn-update" operation="edit" onClick={() => setDrawerOpen(true)}>
                     编辑
@@ -1081,11 +1105,10 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
                             onSelect={(runId) => setSelectedRunRecordId(runId ?? null)}
                             renderStatus={(row) => {
                               const data = resolveRunRecord(row)
-                              const repairProgress = String(data.status ?? '') === 'running' ? getOutputRepairProgress(data.resultSummaryJson) : null
                               const stageTag = row.runId === selectedRunId && data.checkpointEnabled && data.currentStage && data.currentStage !== 'completed'
                                 ? <Tag color={selectedStageMeta.color}>{selectedStageMeta.label}</Tag>
                                 : null
-                              return <RunPipelineStatus run={data} repairProgress={repairProgress} stageTag={stageTag} />
+                              return <RunPipelineStatus run={data} stageTag={stageTag} />
                             }}
                             renderArtifacts={(row) => {
                               const artifacts = getRunRecordArtifacts(resolveRunRecord(row).configJson, resolveRunRecord(row).availableArtifacts)
@@ -1108,8 +1131,9 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
                               const recordSucceeded = recordStatus.toLowerCase() === 'success'
                               const recordFailed = ['failed', 'error'].includes(recordStatus.toLowerCase())
                               const reviewStatus = normalizeReviewStatus(data.reviewStatus)
-                              const canReviewRecord = reviewStatus === 'pending' && recordStatus === 'success'
-                              const canImportRecord = reviewStatus === 'approved' && data.importStatus === 'pending' && recordStatus === 'success'
+                              const recordManaged = Boolean(data.generationChainManaged || data.snapshotJson?.generationChainManaged)
+                              const canReviewRecord = !recordManaged && reviewStatus === 'pending' && recordStatus === 'success'
+                              const canImportRecord = !recordManaged && reviewStatus === 'approved' && data.importStatus === 'pending' && recordStatus === 'success'
                               const recordHasResultYaml = data.hasResult ?? Boolean(formatStructuredContent(data.resultYaml))
                               const recordHasErrorMessage = Boolean(data.errorMessage?.trim())
                               const hasGraph = data.availableArtifacts?.includes('caseRelations') ?? Boolean(getConfigStageFieldContent(data.configJson, 'caseRelations'))
@@ -1119,6 +1143,12 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
                                 <RunRowActions
                                   inline={
                                     <>
+                                      {recordManaged && task?.requirementId ? (
+                                        <Button size="small" type="primary" onClick={(event) => {
+                                          event.stopPropagation()
+                                          navigate(`/requirements/${encodeURIComponent(task.requirementId!)}`)
+                                        }}>前往阶段审核</Button>
+                                      ) : null}
                                       {/* 审核是本行最需要用户处理的动作，直接放在操作列，「更多」只留状态变更类操作。 */}
                                       {stageReviewEntry ? (
                                         <Button
@@ -1166,7 +1196,6 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
                                           错误信息
                                         </button>
                                       ) : null}
-                                      {!data.importMigrationComplete ? <RunMigrationWarningIcon /> : null}
                                     </>
                                   }
                                   menuItems={[
@@ -1607,7 +1636,7 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
           open={Boolean(importConfirmRunId)}
           okText="确认导入"
           cancelText="取消"
-          okButtonProps={{ disabled: !importDetailsReady || !importAcknowledged }}
+          okButtonProps={{ disabled: !importDetailsReady || !importAcknowledged || (!task?.requirementId && !selectedRun?.requirementId && !importRequirementId) }}
           onOk={handleConfirmImport}
           onCancel={() => { setImportConfirmRunId(null); setImportAcknowledged(false) }}
         >
@@ -1623,8 +1652,33 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
             <div role="status"><Spin size="small" /> <span>正在加载待导入结果…</span></div>
           ) : (
             <div className="functional-import-confirm-summary">
-              <span className="functional-import-confirm-label">关联需求</span>
-              <strong>{importTargetRequirementName}</strong>
+              <span className="functional-import-confirm-label">导入目标需求</span>
+              {task?.requirementId || selectedRun?.requirementId ? (
+                <strong>{importTargetRequirementName}</strong>
+              ) : (
+                <div className="functional-import-target-selectors">
+                  <Select
+                    aria-label="目标迭代"
+                    placeholder="选择目标迭代"
+                    options={sprintOptions}
+                    value={importSprintId}
+                    loading={sprintsQuery.isLoading}
+                    onChange={(value) => { setImportSprintId(value); setImportRequirementId(undefined); setImportAcknowledged(false) }}
+                  />
+                  <Select
+                    aria-label="目标需求"
+                    showSearch
+                    optionFilterProp="label"
+                    placeholder="选择目标需求"
+                    options={importRequirementOptions}
+                    value={importRequirementId}
+                    disabled={!importSprintId}
+                    loading={importRequirementsQuery.isFetching}
+                    onChange={(value) => { setImportRequirementId(value); setImportAcknowledged(false) }}
+                  />
+                  {importRequirementsQuery.isError ? <Alert showIcon type="error" title="需求加载失败，请重新选择迭代" /> : null}
+                </div>
+              )}
               <div className="functional-import-confirm-counts">
                 <span><b>{selectedRunImportStats.moduleCount}</b> 个模块</span>
                 <span><b>{selectedRunImportStats.caseCount}</b> 条用例</span>

@@ -33,11 +33,14 @@ def _run(**overrides):
         "import_status": "pending",
         "imported_targets": [],
         "imported_at": None,
-        "import_migration_complete": True,
         "reviewer_user_id": "user-1",
         "reviewed_at": datetime(2026, 8, 1, tzinfo=UTC),
         "review_comment": "",
         "duration_ms": 100,
+        "created_at": None,
+        "started_at": None,
+        "finished_at": None,
+        "history_updated_at": None,
     }
     values.update(overrides)
     return SimpleNamespace(**values)
@@ -63,8 +66,8 @@ def test_run_detail_exposes_only_pending_generic_import_state():
     assert data["importStatus"] == "pending"
     assert data["importedTargets"] == []
     assert data["importedAt"] is None
-    assert data["importMigrationComplete"] is True
     assert "importedCollectionId" not in data
+    assert "importMigrationComplete" not in data
 
 
 def test_run_detail_exposes_multiple_supported_import_target_types():
@@ -84,11 +87,12 @@ def test_run_detail_exposes_multiple_supported_import_target_types():
     assert data["importStatus"] == "imported"
     assert data["importedTargets"] == targets
     assert data["importedAt"] == "2026-08-01T06:30:00Z"
-    assert data["importMigrationComplete"] is True
     assert "importedCollectionId" not in data
+    assert "importMigrationComplete" not in data
 
 
 def test_openapi_run_contract_omits_legacy_imported_collection_id():
     schema = openapi_schema()["components"]["schemas"]["AiGenerateTaskRunResponse"]
 
     assert "importedCollectionId" not in schema["properties"]
+    assert "importMigrationComplete" not in schema["properties"]

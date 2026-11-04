@@ -172,7 +172,7 @@ export function RequirementDrawer({
         >
           <Select
             placeholder="请选择需求文档类型"
-            options={documentType === 'text' ? [{ label: '纯文本', value: 'text' }, ...documentTypeOptions] : documentTypeOptions}
+            options={documentTypeOptions}
             disabled={loading || imageUploading}
             onChange={(value: RequirementDocumentType) => {
               onDocumentTypeChange?.()
@@ -201,9 +201,7 @@ export function RequirementDrawer({
             {
               validator: async (_, value) => {
                 if (!isWordDocument(documentType)) {
-                  if (value && (documentType === 'richtext'
-                    ? new DOMParser().parseFromString(String(value), 'text/html').body.textContent?.trim() || /<img\b[^>]*data-file-id=/.test(value)
-                    : String(value).trim())) return
+                  if (value && (new DOMParser().parseFromString(String(value), 'text/html').body.textContent?.trim() || /<img\b[^>]*data-file-id=/.test(value))) return
                   throw new Error('请输入需求正文')
                 }
 
@@ -220,13 +218,6 @@ export function RequirementDrawer({
               disabled={documentLoading || loading || !!documentError}
               ariaLabel="需求正文"
               onUploadingChange={setImageUploading}
-            />
-          ) : !isWordDocument(documentType) ? (
-            <Input.TextArea
-              rows={10}
-              maxLength={20000}
-              disabled={documentLoading}
-              placeholder={documentLoading ? '需求正文加载中...' : '请输入纯文本需求正文'}
             />
           ) : (
             <Upload.Dragger

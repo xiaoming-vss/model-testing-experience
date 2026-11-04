@@ -13,6 +13,7 @@ from testing_agent.handlers.generation_chain import (
     review_generation_chain_stage,
     revise_generation_chain_stage,
     run_generation_chain_stage,
+    save_generation_chain_stage_draft,
 )
 from testing_agent.handlers.requirement import (
     create_requirement,
@@ -130,6 +131,10 @@ router.post(
     "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/review",
     response_model=ApiResponse[GenerationChainView],
 )(review_generation_chain_stage)
+router.put(
+    "/requirements/{requirement_id}/generation/{kind}/stages/{stage}/draft",
+    response_model=ApiResponse[GenerationChainView],
+)(save_generation_chain_stage_draft)
 router.delete(
     "/requirements/{requirement_id}/generation/{kind}/versions/{version_id}",
     response_model=ApiResponse[GenerationChainDeleteVersionResponse],

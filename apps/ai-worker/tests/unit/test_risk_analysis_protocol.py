@@ -20,7 +20,7 @@ def _snapshot_missing_new_fields() -> dict[str, Any]:
     return {
         "run": {
             "taskId": "worker-task-1",
-            "runId": "run-1",
+            "attemptId": "run-1",
             "taskType": "api_case_generate",
             "name": "OpenAPI 用例生成",
             "projectId": "project-1",
@@ -43,7 +43,7 @@ class FakePlatformHttpClient:
         return {
             "id": "claim-lease-1",
             "taskId": "worker-task-1",
-            "runId": "run-1",
+            "attemptId": "run-1",
             "taskType": "code_risk_analysis",
             "projectId": "project-1",
             "sprintId": "sprint-1",
@@ -72,7 +72,7 @@ class FakePlatformHttpClient:
 def _risk_snapshot(*, fields_inside_run: bool = False) -> dict[str, Any]:
     base_run = {
         "taskId": "worker-task-1",
-        "runId": "run-1",
+        "attemptId": "run-1",
         "taskType": "code_risk_analysis",
         "name": "登录需求风险分析",
         "projectId": "project-1",

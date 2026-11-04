@@ -38,6 +38,7 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
+  container-type: size;
 }
 
 .api-collection-workbench-page .api-wb-form {

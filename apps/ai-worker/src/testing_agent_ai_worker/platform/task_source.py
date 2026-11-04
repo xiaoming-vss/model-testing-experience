@@ -208,7 +208,7 @@ class HttpClaimTaskSource:
         return Task(
             claim_id=claimed_task.claim_id or claimed_task.task_id,
             task_id=claimed_task.task_id,
-            run_id=claimed_task.run_id or snapshot_task.run_id,
+            attempt_id=claimed_task.attempt_id or snapshot_task.attempt_id,
             generate_task_id=claimed_task.generate_task_id or snapshot_task.generate_task_id,
             task_type=task_type,
             name=snapshot_task.name,
@@ -251,7 +251,7 @@ class HttpClaimTaskSource:
                     "documentFilename": (raw_snapshot.get("run") or {}).get("documentFilename", ""),
                     "documentFileId": (raw_snapshot.get("run") or {}).get("documentFileId", ""),
                     "name": snapshot_task.name,
-                    "runId": claimed_task.run_id or snapshot_task.run_id,
+                    "attemptId": claimed_task.attempt_id or snapshot_task.attempt_id,
                     "generateTaskId": claimed_task.generate_task_id
                     or snapshot_task.generate_task_id,
                     "projectId": claimed_task.project_id or snapshot_task.project_id,

@@ -13,6 +13,7 @@ class WorkerTask(Base):
     __table_args__ = (
         UniqueConstraint("domain", "task_id", name="uk_worker_domain_task"),
         Index("idx_worker_domain_status_created", "domain", "status", "created_at"),
+        Index("idx_worker_status_created_domain", "status", "created_at", "id", "domain"),
         Index("idx_worker_domain_lease", "domain", "status", "lease_expires_at", "id"),
         {"comment": "AI/API/UI Worker 执行队列及领取租约；集成任务使用独立队列"},
     )

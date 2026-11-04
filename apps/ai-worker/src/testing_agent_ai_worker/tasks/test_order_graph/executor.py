@@ -128,7 +128,6 @@ class TestOrderGraphExecutor(TaskExecutor):
                 started_at,
                 TaskStatus.FAILED,
                 f"项目技能包未预置(缺少 {self.skill_name})",
-                remediation="由部署侧按项目预置技能包后重新发起",
             )
 
         cases, skipped_case_ids = usable_cases(payload["cases"])
@@ -147,8 +146,8 @@ class TestOrderGraphExecutor(TaskExecutor):
             # 空批次合法：没有可分析的用例时返回空图谱，而不是判失败。
             return self._success(task, started_at, empty_graph(), archive, None)
 
-        run_dir = workspace / GRAPH_DIR_NAME / task.run_id
-        cases_path = write_cases_file(run_dir, task.run_id, cases)
+        run_dir = workspace / GRAPH_DIR_NAME / task.attempt_id
+        cases_path = write_cases_file(run_dir, task.attempt_id, cases)
         graph = empty_graph()
         with task_config_path(agent_config=self.agent_config, task=task) as config_path:
             for index, links in enumerate(batches, 1):
@@ -249,7 +248,7 @@ class TestOrderGraphExecutor(TaskExecutor):
     ) -> TaskProgress:
         return TaskProgress(
             task_id=task.task_id,
-            run_id=task.run_id,
+            attempt_id=task.attempt_id,
             current_stage=GRAPH_STAGE,
             stage_status="running" if status == "running" else "failed",
             intermediate_json_text=self._config_with_archive(task, archive),
@@ -283,7 +282,7 @@ class TestOrderGraphExecutor(TaskExecutor):
         archive["mainPathCount"] = len(graph.get("main_paths") or [])
         return TaskResult(
             task_id=task.task_id,
-            run_id=task.run_id,
+            attempt_id=task.attempt_id,
             generate_task_id=task.generate_task_id,
             status=TaskStatus.SUCCESS,
             intermediate_json_text=self._config_with_archive(task, archive),
@@ -301,11 +300,10 @@ class TestOrderGraphExecutor(TaskExecutor):
         error_message: str,
         *,
         archive: dict[str, Any] | None = None,
-        remediation: str = "",
     ) -> TaskResult:
         return TaskResult(
             task_id=task.task_id,
-            run_id=task.run_id,
+            attempt_id=task.attempt_id,
             generate_task_id=task.generate_task_id,
             status=status,
             intermediate_json_text=(
@@ -314,7 +312,6 @@ class TestOrderGraphExecutor(TaskExecutor):
                 else task.config_json
             ),
             error_message=error_message,
-            remediation=remediation,
             result_summary_json=self._summary(task, archive or {}, status, error_message),
             started_at=started_at,
             finished_at=datetime.now().astimezone(),

@@ -23,7 +23,7 @@ class _FakeExecutor:
         self.last_task = task
         return TaskResult(
             task_id=task.task_id,
-            run_id=task.run_id,
+            attempt_id=task.attempt_id,
             status=TaskStatus.SUCCESS,
             started_at=started_at,
             finished_at=datetime.now().astimezone(),
@@ -44,7 +44,7 @@ class WorkerTaskDispatcherCodeRiskTests(unittest.TestCase):
     def _task(self, task_type: str = "code_risk_analysis") -> Task:
         return Task(
             task_id="task-1",
-            run_id="run-1",
+            attempt_id="run-1",
             task_type=task_type,
             project_id="project-1",
             payload=TaskPayload(openapi_content="{}"),

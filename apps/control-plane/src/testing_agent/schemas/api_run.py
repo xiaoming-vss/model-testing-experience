@@ -19,6 +19,7 @@ def json_text(value: Any, default: str = "{}") -> str:
 
 class RunApiCaseRequest(BaseModel):
     environment_id: str = Field()
+    live_debug: bool = False
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 

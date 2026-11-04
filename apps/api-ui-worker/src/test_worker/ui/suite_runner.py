@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from playwright.async_api import async_playwright
 
 from ..contracts.types import (
     UiStepDefinition,
+    UiStepRunResult,
     UiSuiteItemRunResult,
     UiSuiteItemRunStatus,
     UiSuiteRunItemSnapshot,
@@ -21,17 +23,24 @@ from ..contracts.types import (
     UiTestSuiteRunSnapshot,
     WorkerConfig,
 )
-from ..control_plane.client import ControlPlaneClient
+from ..control_plane.client import ControlPlaneClient, ExecutionLeaseLost
 from ..core import logger
+from .browser_cancellation import (
+    await_browser_operation,
+    await_browser_start,
+    close_browser_resource,
+)
 from .browser_options import (
     context_options_from_suite,
     default_step_timeout_from_suite,
     launch_options_from_suite,
     screenshot_policy_from_suite,
 )
+from .playwright_session import playwright_session
 from .step_executor import StepExecutionContext, StepExecutor, now_iso
 from .step_normalizer import normalize_case_steps
 from .step_results import build_failed_step_result
+from .step_progress import report_steps
 from .variables import StepVariableResolver
 
 
@@ -150,7 +159,7 @@ class UiSuiteRunner:
         items = sorted(snapshot.items, key=lambda i: i.case.order_no or 0)
 
         # 启动浏览器
-        async with async_playwright() as p:
+        async with playwright_session(async_playwright, snapshot.task_id) as p:
             launch_options = launch_options_from_suite(snapshot.suite)
             context_options = context_options_from_suite(snapshot.suite)
             logger.info(
@@ -162,7 +171,7 @@ class UiSuiteRunner:
                     "ignoreHTTPSErrors": context_options.get("ignore_https_errors"),
                 },
             )
-            browser = await p.chromium.launch(**launch_options)
+            browser = await await_browser_start(p.chromium.launch(**launch_options))
 
             trace_path = ""
             error_message = ""
@@ -254,6 +263,8 @@ class UiSuiteRunner:
                     await context.tracing.stop(path=trace_path)
                     trace_stopped = True
 
+            except ExecutionLeaseLost:
+                raise
             except Exception as e:
                 has_error = True
                 error_message = str(e)
@@ -261,33 +272,24 @@ class UiSuiteRunner:
             finally:
                 # 停止 trace
                 if context and self._config.trace_enabled and not trace_stopped:
-                    try:
-                        trace_path = str(Path(artifact_dir) / "trace.zip")
-                        await context.tracing.stop(path=trace_path)
-                    except Exception as trace_error:
-                        logger.warn(
-                            "stop suite trace error",
-                            {
-                                "taskId": snapshot.task_id,
-                                "error": str(trace_error),
-                            },
-                        )
+                    candidate = str(Path(artifact_dir) / "trace.zip")
+                    if await close_browser_resource(
+                        context.tracing.stop(path=candidate), snapshot.task_id, "trace"
+                    ):
+                        trace_path = candidate
 
                 # 关闭上下文
                 if context:
-                    try:
-                        await context.close()
-                    except Exception as context_error:
-                        logger.warn(
-                            "close suite browser context error",
-                            {
-                                "taskId": snapshot.task_id,
-                                "error": str(context_error),
-                            },
-                        )
+                    await close_browser_resource(
+                        context.close(), snapshot.task_id, "context"
+                    )
 
                 # 关闭浏览器
-                await browser.close()
+                closed = await close_browser_resource(
+                    browser.close(), snapshot.task_id, "browser"
+                )
+                if not closed and sys.exc_info()[0] is None:
+                    raise RuntimeError("浏览器关闭异常，请检查 Worker 资源后手动重试")
 
         # 计算最终状态
         status: UiSuiteRunStatus
@@ -359,7 +361,7 @@ class UiSuiteRunner:
         )
         screenshot_policy = screenshot_policy_from_suite(snapshot.suite)
 
-        step_results = []
+        step_results: list[UiStepRunResult] = []
         error_message = ""
         status: UiSuiteItemRunStatus = "success"
         success = True
@@ -371,24 +373,45 @@ class UiSuiteRunner:
                 fallback_order = step.order_no or index + 1
                 step_started_at_iso = now_iso()
                 step_started_at = datetime.now().timestamp()
+                await report_steps(
+                    self._control_plane_client,
+                    snapshot.task_id,
+                    item.item_id,
+                    step_results,
+                    step,
+                    fallback_order,
+                    step_started_at_iso,
+                )
 
                 try:
-                    result = await self._step_executor.execute(
-                        step, fallback_order, case_execution_context
+                    result = await await_browser_operation(
+                        self._step_executor.execute(
+                            step, fallback_order, case_execution_context
+                        ),
+                        execution_context.page,
                     )
                     if screenshot_policy == "after_each_step":
-                        screenshot_path = (
-                            await self._step_executor.capture_step_screenshot(
+                        screenshot_path = await await_browser_operation(
+                            self._step_executor.capture_step_screenshot(
                                 execution_context.page,
                                 case_artifact_dir,
                                 fallback_order,
                                 case_execution_context.masked_locators,
-                            )
+                            ),
+                            execution_context.page,
                         )
                         result = result.__class__(
                             **{**result.__dict__, "screenshot_path": screenshot_path}
                         )
                     step_results.append(result)
+                    await report_steps(
+                        self._control_plane_client,
+                        snapshot.task_id,
+                        item.item_id,
+                        step_results,
+                    )
+                except ExecutionLeaseLost:
+                    raise
                 except Exception as e:
                     message = str(e)
                     failed_result = build_failed_step_result(
@@ -405,13 +428,14 @@ class UiSuiteRunner:
                     if screenshot_policy in ("on_failure", "after_each_step"):
                         try:
                             page = execution_context.page
-                            screenshot_path = (
-                                await self._step_executor.capture_failure_screenshot(
+                            screenshot_path = await await_browser_operation(
+                                self._step_executor.capture_failure_screenshot(
                                     page,
                                     case_artifact_dir,
                                     fallback_order,
                                     case_execution_context.masked_locators,
-                                )
+                                ),
+                                page,
                             )
                             failed_result = failed_result.__class__(
                                 **{
@@ -431,6 +455,12 @@ class UiSuiteRunner:
                             )
 
                     step_results.append(failed_result)
+                    await report_steps(
+                        self._control_plane_client,
+                        snapshot.task_id,
+                        item.item_id,
+                        step_results,
+                    )
                     success = False
                     status = "failed"
                     error_message = message
@@ -441,6 +471,8 @@ class UiSuiteRunner:
             # 获取当前 URL
             current_url = execution_context.page.url
 
+        except ExecutionLeaseLost:
+            raise
         except Exception as e:
             success = False
             status = "error"

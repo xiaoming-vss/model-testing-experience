@@ -7,10 +7,12 @@ from testing_agent.api.deps import (
     get_current_user_id,
     get_generation_queries,
     get_generation_reports,
+    get_generation_task_commands,
 )
 from testing_agent.core.errors import success_payload
 from testing_agent.schemas.ai_generate_task import TestReportGenerateTaskRunRequest
 from testing_agent.services.ai_report import TestReportWorkflow
+from testing_agent.services.ai_task_commands import GenerationTaskCommands
 from testing_agent.services.ai_task_queries import GenerationQueries
 
 
@@ -63,3 +65,11 @@ async def export_test_report_generate_run_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+async def delete_test_report_generate_run(
+    run_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: GenerationTaskCommands = Depends(get_generation_task_commands),
+):
+    return success_payload(await service.delete_run("test_report", run_id, user_id))

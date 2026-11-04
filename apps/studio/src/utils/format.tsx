@@ -78,6 +78,12 @@ export function pickUpdatedAt(entity?: { updatedAt?: string; updated_at?: string
   return entity?.updatedAt ?? entity?.updated_at
 }
 
+const timeFormatter = new Intl.DateTimeFormat('zh-CN', {
+  timeZone: 'Asia/Shanghai', hour12: false,
+  year: 'numeric', month: 'numeric', day: 'numeric',
+  hour: 'numeric', minute: 'numeric', second: 'numeric',
+})
+
 export function formatTime(value?: string) {
   if (!value) return '-'
   const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value)
@@ -86,7 +92,7 @@ export function formatTime(value?: string) {
   const date = new Date(normalizedValue)
   return Number.isNaN(date.getTime())
     ? value
-    : date.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })
+    : timeFormatter.format(date)
 }
 
 export function getErrorMessage(error: unknown) {

@@ -142,6 +142,9 @@ class ApiCollectionRunService:
                 )
             )
         await self.repository.commit()
+        from testing_agent.services.test_run_notifications import notify_task_available
+
+        await notify_task_available()
         await self.repository.refresh(run)
         apply_run_scope(run, context)
         return dump_run(run)

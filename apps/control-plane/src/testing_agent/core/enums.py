@@ -16,6 +16,7 @@ class RunStatus(StrEnum):
     QUEUED = "queued"
     CLAIMED = "claimed"
     RUNNING = "running"
+    STOPPING = "stopping"
     SUCCESS = "success"
     FAILED = "failed"
     ERROR = "error"

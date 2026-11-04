@@ -2,13 +2,14 @@
 
 import pytest
 from sqlalchemy import select
-from support.ai_execution import AsyncSessionAdapter
+from support.ai_execution import AsyncSessionAdapter  # noqa: F401
 from support.ai_execution import db as db
 from support.ui_run_scope import (
     seed as seed,
 )
 
 from testing_agent.core.errors import ErrForbidden
+from testing_agent.models.project_member import ProjectMember
 from testing_agent.models.requirement import Requirement
 from testing_agent.models.ui_test_case import UiTestCase
 from testing_agent.models.ui_test_suite import UiTestSuite
@@ -16,6 +17,21 @@ from testing_agent.repositories.sprint_daily_metrics import SprintDailyMetricsRe
 from testing_agent.repositories.ui_test_case_run import UiTestCaseRunRepository
 from testing_agent.schemas.ui_run import DebugRunUiCaseRequest, RunUiSuiteRequest
 from testing_agent.services.ui_test_case_run import UiTestCaseRunService
+
+
+@pytest.mark.asyncio
+async def test_live_ui_debug_result_is_private_but_manual_result_remains_shared(db):
+    seed(db)
+    db.add(ProjectMember(project_id="p1", user_id="u2", role="viewer"))
+    db.commit()
+    service = UiTestCaseRunService(UiTestCaseRunRepository(AsyncSessionAdapter(db)))
+    body = DebugRunUiCaseRequest(environmentId="ui-env")
+    live = await service.debug_run_case("u1", "case", body, live_debug=True)
+    manual = await service.debug_run_case("u1", "case", body)
+    assert (await service.get_case_run("u1", live["runId"]))["runId"] == live["runId"]
+    with pytest.raises(type(ErrForbidden)):
+        await service.get_case_run("u2", live["runId"])
+    assert (await service.get_case_run("u2", manual["runId"]))["runId"] == manual["runId"]
 
 
 @pytest.mark.asyncio

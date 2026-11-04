@@ -37,7 +37,8 @@ from testing_agent_ai_worker.worker.runner import TaskExecutor
 
 from .validation import ValidationContext, context
 
-# source_content 已由控制面提供需求理解正文，document_type 保留原始材料类型。
+# source_content 已由控制面提供需求理解正文，document_type 描述实际下发的正文格式。
+# 旧平台会用 sourceType="requirement" 标记“输入来自需求理解”，这里按纯文本处理。
 SUPPORTED_FUNCTIONAL_SOURCE_TYPES = {"text", "word", "richtext"}
 LOGGER = logging.getLogger("testing_agent_ai_worker")
 
@@ -46,6 +47,8 @@ def _resolve_functional_document_type(task: Task) -> str:
     document_type = (task.payload.document_type or "").strip().lower()
     if not document_type:
         document_type = (task.payload.source_type or "").strip().lower()
+    if document_type == "requirement":
+        return "text"
     if document_type in {"docx", "word"}:
         return "word"
     if document_type in {"txt", "text"}:
@@ -92,7 +95,7 @@ class FunctionalCaseExecutor(TaskExecutor):
             progress_callback(
                 TaskProgress(
                     task_id=task.task_id,
-                    run_id=task.run_id,
+                    attempt_id=task.attempt_id,
                     current_stage=event["stage"],
                     stage_status="running",
                     result_summary_json=json.dumps({"outputValidation": event}, ensure_ascii=False),
@@ -104,7 +107,7 @@ class FunctionalCaseExecutor(TaskExecutor):
                 diagnostic_dir=workspace
                 / "diagnostics"
                 / "functional-output"
-                / str(task.run_id)
+                / str(task.attempt_id)
                 / uuid4().hex,
                 report=report,
             )
@@ -120,7 +123,7 @@ class FunctionalCaseExecutor(TaskExecutor):
         if task.task_type != "functional_case_generate":
             return TaskResult(
                 task_id=task.task_id,
-                run_id=task.run_id,
+                attempt_id=task.attempt_id,
                 generate_task_id=task.generate_task_id,
                 status=TaskStatus.FAILED,
                 error_message=f"不支持的任务类型: {task.task_type}",
@@ -131,13 +134,15 @@ class FunctionalCaseExecutor(TaskExecutor):
         if document_type not in SUPPORTED_FUNCTIONAL_SOURCE_TYPES:
             return TaskResult(
                 task_id=task.task_id,
-                run_id=task.run_id,
+                attempt_id=task.attempt_id,
                 generate_task_id=task.generate_task_id,
                 status=TaskStatus.FAILED,
                 error_message=f"不支持的 document_type: {document_type}",
                 started_at=started_at,
                 finished_at=datetime.now().astimezone(),
             )
+        # 摘要与日志统一使用归一化后的类型，避免把内部来源标记 requirement 透出。
+        task.payload.document_type = document_type
 
         workspace = resolve_task_workspace(self.agent_config, task)
 
@@ -238,7 +243,7 @@ class FunctionalCaseExecutor(TaskExecutor):
             )
             return TaskResult(
                 task_id=task.task_id,
-                run_id=task.run_id,
+                attempt_id=task.attempt_id,
                 generate_task_id=task.generate_task_id,
                 status=TaskStatus.SUCCESS,
                 intermediate_json_text=config_json,

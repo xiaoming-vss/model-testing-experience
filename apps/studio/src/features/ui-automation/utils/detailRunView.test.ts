@@ -39,6 +39,18 @@ describe('UI 运行视图数据', () => {
     expect(lines[2].result).toBe('测试用例执行完成，共 2 步，通过 1 步，失败 1 步，总耗时 1840 ms。')
   })
 
+  it.each(['pending', 'queued', 'claimed', 'running', 'stopping'] as const)(
+    '%s 时不提前显示执行完成', (status) => {
+      const lines = buildUiRunLogLines({ status, stepResults })
+      expect(lines.some((line) => line.level === 'done')).toBe(false)
+    },
+  )
+
+  it('停止后汇总明确显示已停止', () => {
+    const lines = buildUiRunLogLines({ status: 'canceled', stepResults })
+    expect(lines.at(-1)?.result).toContain('测试用例已停止')
+  })
+
   it('等待与断言步骤各有自己的日志级别', () => {
     const lines = buildUiRunLogLines({
       status: 'success',

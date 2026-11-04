@@ -76,7 +76,7 @@ class ResultSinkTests(unittest.TestCase):
         sink.submit_progress(
             TaskProgress(
                 task_id="task-1",
-                run_id="run-1",
+                attempt_id="run-1",
                 current_stage="openapi_extract",
                 stage_status="running",
                 intermediate_json_text='{"cases":[]}',
@@ -92,12 +92,10 @@ class ResultSinkTests(unittest.TestCase):
             {
                 "workerId": "worker-1",
                 "taskId": "task-1",
-                "runId": "run-1",
+                "attemptId": "run-1",
                 "currentStage": "openapi_extract",
                 "stageStatus": "running",
-                "errorMessage": "",
                 "configJson": '{"cases":[]}',
-                "resultYaml": "",
                 "resultSummaryJson": summary,
             },
             progress_call["json_body"],
@@ -122,7 +120,7 @@ class ResultSinkTests(unittest.TestCase):
         sink.submit_result(
             TaskResult(
                 task_id="task-1",
-                run_id="run-1",
+                attempt_id="run-1",
                 generate_task_id="generate-1",
                 status=TaskStatus.SUCCESS,
                 intermediate_json_text='{"cases":[]}',
@@ -140,46 +138,16 @@ class ResultSinkTests(unittest.TestCase):
                 "json_body": {
                     "workerId": "worker-1",
                     "taskId": "task-1",
-                    "runId": "run-1",
+                    "attemptId": "run-1",
                     "status": "success",
                     "startedAt": "2026-06-23T10:00:00+08:00",
                     "finishedAt": "2026-06-23T10:00:08+08:00",
                     "errorMessage": "",
-                    "remediation": "",
                     "configJson": '{"cases":[]}',
                     "resultYaml": "cases: []",
                     "resultSummaryJson": '{"status":"success"}',
                 },
             },
-        )
-
-    def test_http_result_sink_posts_remediation_on_failure(self) -> None:
-        client = _FakePlatformClient()
-        sink = HttpResultSink(
-            client=client,  # type: ignore[arg-type]
-            worker_id="worker-1",
-            started_path_template="/tasks/{task_id}/started",
-            heartbeat_path_template="/tasks/{task_id}/heartbeat",
-            progress_path_template="/tasks/{task_id}/progress",
-            completed_path_template="/tasks/{task_id}/completed",
-        )
-        started_at = datetime.fromisoformat("2026-06-23T10:00:00+08:00")
-        finished_at = datetime.fromisoformat("2026-06-23T10:00:08+08:00")
-
-        sink.submit_result(
-            TaskResult(
-                task_id="task-1",
-                run_id="run-1",
-                status=TaskStatus.FAILED,
-                error_message="仓库 repo-1 基线解析失败",
-                remediation="请手工指定基线 / 检查 PAT",
-                started_at=started_at,
-                finished_at=finished_at,
-            )
-        )
-
-        self.assertEqual(
-            "请手工指定基线 / 检查 PAT", client.post_calls[0]["json_body"]["remediation"]
         )
 
 

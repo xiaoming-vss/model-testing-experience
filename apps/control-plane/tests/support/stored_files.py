@@ -68,7 +68,8 @@ async def files():
         await engine.dispose()
 
 
-async def upload(files, content=b"hello", filename="a.txt", purpose="requirement"):
+async def upload(files, content=b"hello", filename=None, purpose="requirement"):
+    filename = filename or ("a.html" if purpose == "requirement" else "a.txt")
     ticket = await files.initiate(
         "owner",
         FileUploadRequest(

@@ -131,6 +131,8 @@ async def linked_file(files, kind, *, suite_run=False):
         content, filename = buffer.getvalue(), "source.zip"
     elif purpose == "ui_artifact":
         content, filename = b"\x89PNG\r\n\x1a\nimage", "evidence.png"
+    elif purpose == "requirement":
+        content, filename = b"<p>evidence</p>", "evidence.html"
     else:
         content, filename = b"evidence", "evidence.txt"
     row, _ = await upload(files, content, filename, purpose)
@@ -244,6 +246,20 @@ async def test_skill_file_removed_from_manifest_is_not_readable(files):
     with pytest.raises(AppError) as rejected:
         await files.download("viewer", row.file_id)
     assert rejected.value.http_code == 404
+
+
+async def test_live_ui_debug_artifact_is_private_but_manual_artifact_is_shared(files):
+    row, entities = await linked_file(files, "ui_worker_task")
+    assert (await files.download("viewer", row.file_id))["size"] == row.size
+    entities["run"].trigger_type = "live_debug"
+    await files.session.commit()
+    assert (await files.download("owner", row.file_id))["size"] == row.size
+    with pytest.raises(AppError) as rejected:
+        await files.download("viewer", row.file_id)
+    assert rejected.value.http_code == 403
+    with pytest.raises(AppError) as rejected:
+        await files.metadata("viewer", row.file_id)
+    assert rejected.value.http_code == 403
 
 
 async def test_finished_suite_artifact_readable_until_run_deleted(files):

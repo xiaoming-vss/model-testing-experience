@@ -126,6 +126,7 @@ export type SprintDailyMetricsSnapshot = {
   updated_at?: string
 }
 export type CreateTestReportGenerateRunPayload = {
+  requestId?: string
   sprintId: string
   snapshotDate: string
   connectionId: string

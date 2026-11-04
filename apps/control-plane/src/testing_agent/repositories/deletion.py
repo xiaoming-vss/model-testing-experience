@@ -6,7 +6,7 @@ by the unified file lifecycle; resource deletion never touches historical local 
 
 from __future__ import annotations
 
-from sqlalchemy import delete, inspect, or_, select
+from sqlalchemy import delete, inspect, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent import models as m
@@ -61,27 +61,6 @@ async def _ui_suite_runs(session, condition):
         await _workers(session, "ui", ids)
         await _erase(session, m.UiTestSuiteRunItem, m.UiTestSuiteRunItem.suite_run_id.in_(ids))
         await _erase(session, m.UiTestSuiteRun, m.UiTestSuiteRun.suite_run_id.in_(ids))
-
-
-async def _ai_run_children(session, run_ids):
-    """Erase what a set of AI runs owns; the run rows themselves are deleted by the caller."""
-    if not run_ids:
-        return
-    stages = select(m.AiGenerateRunStage.id).where(m.AiGenerateRunStage.run_id.in_(run_ids))
-    await _workers(session, "ai", run_ids)
-    # Imports reference attempts, so remove them before stage/attempt cleanup.
-    await _erase(session, m.AiGenerateRunImport, m.AiGenerateRunImport.run_id.in_(run_ids))
-    await _erase(session, m.AiGenerateStageAttempt, m.AiGenerateStageAttempt.stage_id.in_(stages))
-    await _erase(session, m.AiGenerateRunStage, m.AiGenerateRunStage.run_id.in_(run_ids))
-
-
-async def _ai_runs(session, condition):
-    ids = list(
-        await session.scalars(select(m.AiGenerateTaskRun.run_id).where(condition).with_for_update())
-    )
-    await _ai_run_children(session, ids)
-    if ids:
-        await _erase(session, m.AiGenerateTaskRun, m.AiGenerateTaskRun.run_id.in_(ids))
 
 
 async def delete_owned_data(session: AsyncSession, obj: Base) -> None:
@@ -149,10 +128,32 @@ async def delete_owned_data(session: AsyncSession, obj: Base) -> None:
     elif isinstance(obj, m.FunctionTestCase):
         # 引用了该用例的执行条目随用例一起删除（条目只按业务键引用用例，没有外键）。
         await _erase(session, m.TestOrderEntry, m.TestOrderEntry.case_id == obj.case_id)
-    elif isinstance(obj, m.AiGenerateTaskRun):
-        await _ai_run_children(session, [obj.run_id])
     elif isinstance(obj, m.AiGenerateTask):
-        await _ai_runs(session, m.AiGenerateTaskRun.task_id == obj.task_id)
+        # Candidate pointers clear; version pointers retain the "source deleted" state.
+        independent_import_ids = list(
+            await session.scalars(
+                select(m.AiGenerateVersionImport.import_id).where(
+                    m.AiGenerateVersionImport.task_id == obj.task_id,
+                    m.AiGenerateVersionImport.attempt_id.is_not(None),
+                )
+            )
+        )
+        if independent_import_ids:
+            for target in (m.FunctionTestSuite, m.ApiCollection, m.UiTestSuite):
+                await session.execute(
+                    update(target)
+                    .where(target.effective_import_id.in_(independent_import_ids))
+                    .values(effective_import_id=None)
+                )
+        attempt_ids = list(
+            await session.scalars(
+                select(m.AiGenerationAttempt.id)
+                .join(m.AiGenerationStage, m.AiGenerationStage.id == m.AiGenerationAttempt.stage_id)
+                .where(m.AiGenerationStage.task_id == obj.task_id)
+                .with_for_update()
+            )
+        )
+        await _workers(session, "ai", attempt_ids)
         await _erase(
             session,
             m.AiGenerateTaskSourceArchive,

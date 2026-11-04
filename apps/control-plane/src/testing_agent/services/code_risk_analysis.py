@@ -27,6 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import (
+    ErrBadRequest,
     ErrIntegrationConnectionAuthFailed,
     ErrIntegrationConnectionNotFound,
     ErrNotFound,
@@ -36,13 +37,10 @@ from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.models.resource_binding import ResourceBinding
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+from testing_agent.repositories.generation_chain import GenerationChainRepository
 from testing_agent.repositories.resource_binding import ResourceBindingRepository
 from testing_agent.schemas.requirement import normalize_document_type
-from testing_agent.services.ai_task_output import (
-    dump_run,
-    requirement_source_content,
-    worker_requirement_document_download_url,
-)
+from testing_agent.services.ai_task_output import dump_run
 from testing_agent.services.baseline_resolution import (
     BaselineResolutionService,
     RepoBaselineResolution,
@@ -53,6 +51,12 @@ from testing_agent.services.repo_gitlab_access import (
     RepoGitlabAccess,
     resolve_repo_gitlab_access,
 )
+from testing_agent.services.requirement_understanding_source import (
+    approved_understanding,
+    understanding_source,
+    understanding_version_ref,
+)
+from testing_agent.services.standalone_run import StandaloneRun
 
 FUNCTION_CASE_NO_RUN_NOTE = "功能用例暂无执行记录"
 CONNECTION_UNRESOLVED_NOTE = "未解析到该仓库的 GitLab 凭据连接(群组绑定缺失或连接不可用)"
@@ -150,10 +154,10 @@ def parse_risk_report(result_yaml: str | None) -> dict[str, Any] | None:
     }
 
 
-def dump_code_risk_analysis_run(run: Any) -> dict[str, Any]:
+def dump_code_risk_analysis_run(run: StandaloneRun) -> dict[str, Any]:
     """run 详情负载(任务详情接口口径):通用字段 + 解析后的 `report` 结构。"""
     payload = dump_run(run)
-    payload["report"] = parse_risk_report(str(getattr(run, "result_yaml", "") or ""))
+    payload["report"] = parse_risk_report(str(run.result_yaml or ""))
     return payload
 
 
@@ -181,11 +185,21 @@ class CodeRiskAnalysisService:
         *,
         user_id: str,
         connection_ids: dict[str, str] | None = None,
+        understanding_version_id: str = "",
     ) -> dict[str, Any]:
         """组装 code_risk_analysis 任务的 run 快照(创建时固化)。"""
         requirement = await self.task_repository.get_requirement(task.requirement_id)
         if requirement is None:
             raise ErrNotFound()
+
+        understanding = await approved_understanding(
+            GenerationChainRepository(self.task_repository.session),
+            task.requirement_id,
+            understanding_version_id,
+        )
+        if understanding is None:
+            raise dynamic_error(ErrBadRequest, "请先审核通过需求理解，再进行代码风险分析")
+        document_content = understanding_source(understanding)
 
         bindings = list(
             await self.binding_repository.list_active_repo_bindings_for_requirement(
@@ -222,12 +236,7 @@ class CodeRiskAnalysisService:
                         resolution, error="基线分支不可访问，请管理员检查绑定"
                     )
 
-        document_type = normalize_document_type(str(requirement.document_type or "text"))
-        document_content = requirement_source_content(requirement)
-        if not document_content and document_type == "docx":
-            # 文档正文为空时按内部端点下发下载地址(worker token 鉴权,与
-            # build_generate_run_snapshot 同口径),而不是用户态 /v1 下载地址。
-            document_content = worker_requirement_document_download_url(worker_task_id)
+        document_type = normalize_document_type(str(requirement.document_type or "richtext"))
         return {
             "taskId": task.task_id,
             "runId": run_id,
@@ -244,6 +253,7 @@ class CodeRiskAnalysisService:
                 "documentType": document_type,
                 "documentContent": document_content,
             },
+            "requirementUnderstandingVersion": understanding_version_ref(understanding),
             "bindings": [
                 self._binding_entry(binding, by_binding.get(binding.binding_id), repo_access)
                 for binding in bindings

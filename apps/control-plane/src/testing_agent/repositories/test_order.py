@@ -67,6 +67,15 @@ class TestOrderRepository(ResourceRepository):
             return None
         return (await self._with_progress([order]))[0]
 
+    async def get_order_for_update(self, order_id: str) -> TestOrder | None:
+        """Lock the order as the serialization point for graph dispatch."""
+        return await self.session.scalar(
+            select(TestOrder)
+            .where(TestOrder.order_id == order_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+
     async def list_by_project(self, project_id: str, *, sprint_id: str = "") -> list[TestOrder]:
         statement = select(TestOrder).where(TestOrder.project_id == project_id)
         if sprint_id:

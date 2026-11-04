@@ -1,8 +1,9 @@
 import { UiTestSuiteCasePage } from '@/features/ui-automation/pages/UiTestSuiteCasePage'
+import * as debugStream from '@/domain/runs/startDebugStream'
 import { api, ApiError } from '@/services/api'
 import { TestThemeProvider as ThemeProvider } from '@/test/TestThemeProvider'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -109,16 +110,31 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
+// 进入用例改由测试集流程画布上的卡片完成；点击卡片即进入该用例的步骤画布。
+// React Flow 的拖拽层在 jsdom 下没有可用的 document，用 click 事件避免触发 d3-drag。
+async function openCase(name: string) {
+  const user = userEvent.setup()
+  await waitFor(() => {
+    const canvas = document.querySelector('.ui-flow-canvas')
+    expect(canvas).toBeTruthy()
+    expect(within(canvas as HTMLElement).getByText(name)).toBeInTheDocument()
+  })
+  // 用例查询返回后流程图会按 key 重建，重新取当前画布再点击。
+  fireEvent.click(within(document.querySelector('.ui-flow-canvas') as HTMLElement).getByText(name))
+  await waitFor(() => expect(screen.getByLabelText('用例名称')).toHaveValue(name))
+  return user
+}
+
 it('顶栏给出测试集、需求、迭代、就绪结论与上次运行，运行测试集提交运行配置', async () => {
   const run = vi.spyOn(api, 'runUiTestSuite').mockResolvedValue({ suiteRunId: 'suite-run-2', status: 'running' })
   const { container, client } = renderPage()
 
   await screen.findByText('UI测试集详情')
   const toolbar = within(container.querySelector('.ui-wb-toolbar') as HTMLElement)
-  // 测试集 / 需求 / 迭代跟在标题后面，需求与迭代随各自查询到达
-  const title = container.querySelector('.ui-wb-toolbar-title') as HTMLElement
-  await waitFor(() => expect(title).toHaveTextContent('xiaoming'))
-  await waitFor(() => expect(title).toHaveTextContent('安装部署'))
+  // 测试集 / 需求 / 迭代收进同一条面包屑，需求与迭代随各自查询到达
+  const crumbs = container.querySelector('.ui-wb-crumbs') as HTMLElement
+  await waitFor(() => expect(crumbs).toHaveTextContent('xiaoming'))
+  await waitFor(() => expect(crumbs).toHaveTextContent('安装部署'))
   // 就绪结论与「上次运行」都取自最近一次测试集运行
   expect(toolbar.getByText('就绪 (Ready)')).toBeInTheDocument()
   expect(await toolbar.findByText(/上次运行/)).toBeInTheDocument()
@@ -185,78 +201,194 @@ it('控制条与两栏工作区按设计稿结构渲染，步骤行上带运行�
   const { container, client } = renderPage()
 
   await screen.findByText('UI测试集详情')
-  // 控制条：用例下拉 + 计数 + 视图切换 + 运行环境
-  const ribbon = within(container.querySelector('.ui-wb-ribbon') as HTMLElement)
-  expect(ribbon.getByText('选择用例')).toBeInTheDocument()
-  expect(ribbon.getByText('2 个用例')).toBeInTheDocument()
-  expect(ribbon.getByText(/可视模式 · 1440 x 900/)).toBeInTheDocument()
+  // 测试集流程画布：用例卡片 + 末尾添加用例卡片，不再有用例管理弹层
+  await waitFor(() => expect(container.querySelector('.ui-flow-canvas')).toBeTruthy())
+  expect(screen.queryByRole('button', { name: '用例管理' })).not.toBeInTheDocument()
+  expect(screen.getByText('添加用例')).toBeInTheDocument()
+  expect(screen.getByText('登录成功-跳转工作台')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '删除连线' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '还原连线' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '应用顺序' })).not.toBeInTheDocument()
+  expect(within(container.querySelector('.ui-wb-toolbar') as HTMLElement).getByRole('button', { name: /保存/ })).toBeEnabled()
+  expect(within(container.querySelector('.ui-wb-toolbar') as HTMLElement).getByRole('button', { name: /导入用例/ })).toBeEnabled()
   // 工作区只有「左步骤编排 + 右回放与控制台」一种排布，没有视图切换
   expect(container.querySelector('.ui-wb-ribbon-views')).toBeNull()
 
-  // 左栏：用例信息条 + 步骤编辑器
-  await waitFor(() => expect(screen.getByLabelText('用例名称')).toHaveValue('登录成功-跳转工作台'))
+  // 外层用例卡片承载管理动作：删除在卡片菜单里，不进入步骤页
+  const caseCanvas = await waitFor(() => container.querySelector('.ui-flow-canvas') as HTMLElement)
+  const caseActions = await within(caseCanvas).findByRole('button', { name: '登录成功-跳转工作台 更多操作' })
+  fireEvent.click(caseActions)
+  expect(await screen.findByText('删除用例')).toBeInTheDocument()
+  expect(screen.getByText('打开用例')).toBeInTheDocument()
+  fireEvent.click(caseActions)
+
+  // 左栏：用例信息并入顶栏面包屑 + 步骤编辑器
+  await openCase('登录成功-跳转工作台')
+  const pageToolbar = within(container.querySelector('.ui-wb-toolbar') as HTMLElement)
+  const crumbs = within(container.querySelector('.ui-wb-crumbs') as HTMLElement)
+  // 测试集名就是返回测试集流程的入口，不再单独占一个“测试集流程”层级
+  expect(crumbs.getByRole('button', { name: /测试集流程/ })).toHaveTextContent('xiaoming')
+  expect(crumbs.queryByText('步骤流程')).not.toBeInTheDocument()
+  expect(container.querySelector('.ui-wb-crumb-case')).toHaveAttribute('aria-current', 'page')
+  await waitFor(() => expect(container.querySelector('.ui-wb-case-meta')).toBeTruthy())
   expect(container.querySelector('.ui-wb-case-serial')).toHaveTextContent('CASE-01')
+  expect(pageToolbar.getByRole('button', { name: /调试运行/ })).toBeInTheDocument()
+  // 测试集级动作（运行记录 / 导入用例 / 运行测试集）都留在测试集流程
+  expect(pageToolbar.queryByRole('button', { name: /运行记录/ })).not.toBeInTheDocument()
+  expect(pageToolbar.queryByRole('button', { name: /导入用例/ })).not.toBeInTheDocument()
+  expect(pageToolbar.queryByRole('button', { name: /运行测试集/ })).not.toBeInTheDocument()
   const caseMeta = within(container.querySelector('.ui-wb-case-meta') as HTMLElement)
-  expect(caseMeta.getByText('包含 2 个步骤')).toBeInTheDocument()
-  const pipeline = within(container.querySelector('.ui-wb-pipeline') as HTMLElement)
-  expect(pipeline.getByText('步骤编辑器')).toBeInTheDocument()
+  expect(caseMeta.getByText('2 个步骤')).toBeInTheDocument()
+  expect(caseMeta.getByRole('switch', { name: '启用当前用例' })).toBeChecked()
+  expect(caseMeta.queryByRole('button', { name: /更多操作/ })).not.toBeInTheDocument()
+  expect(caseMeta.queryByRole('button', { name: '用例导入' })).not.toBeInTheDocument()
+  expect(caseMeta.queryByRole('button', { name: '删除用例' })).not.toBeInTheDocument()
+  // 用例信息与测试集动作同处一行，不再有第二条用例工具栏
+  expect(container.querySelector('.ui-flow-case-toolbar')).toBeNull()
+  const pipelineElement = container.querySelector('.ui-inspector-step-host .ui-wb-pipeline') as HTMLElement
+  expect(pipelineElement).toBeVisible()
+  expect(container.querySelector('.ui-flow-editor .ui-wb-pipeline')).toBeNull()
+  const pipeline = within(pipelineElement)
+  expect(pipeline.getByText('步骤配置')).toBeInTheDocument()
   // 还没有运行记录时步骤行不编造结论
   expect(container.querySelector('.ui-wb-step-status')).toBeNull()
 
-  // 右栏三张卡片同时在位
+  // 回放、快照和控制台位于同一面板中
+  expect(container.querySelector('.ui-wb-inspector.ui-wb-inspector-unified')).toBeTruthy()
+  // 右栏功能同时在位
   expect(container.querySelector('.ui-wb-replay')).toBeTruthy()
-  expect(container.querySelector('.ui-wb-strip')).toBeTruthy()
+  expect(container.querySelector('.ui-wb-strip')).toBeNull()
+  expect(screen.getByRole('tab', { name: '运行变量' })).toBeInTheDocument()
   expect(container.querySelector('.ui-wb-console')).toBeTruthy()
   client.clear()
 })
 
-it('切换当前用例走控制条的前后按钮与用例顺序弹层', async () => {
-  const { client } = renderPage()
+it('步骤流程隐藏测试集级动作，回到测试集流程后恢复', async () => {
+  const { container, client } = renderPage()
+  const user = await openCase('登录成功-跳转工作台')
+  const toolbar = () => within(container.querySelector('.ui-wb-toolbar') as HTMLElement)
 
-  await waitFor(() => expect(screen.getByLabelText('用例名称')).toHaveValue('登录成功-跳转工作台'))
+  expect(toolbar().queryByRole('button', { name: /运行记录/ })).not.toBeInTheDocument()
+  expect(toolbar().queryByRole('button', { name: /导入用例/ })).not.toBeInTheDocument()
+  expect(toolbar().queryByRole('button', { name: /运行测试集/ })).not.toBeInTheDocument()
+  expect(toolbar().getByRole('button', { name: /调试运行/ })).toBeInTheDocument()
 
-  await userEvent.setup().click(screen.getByLabelText('后一个用例'))
+  await user.click(toolbar().getByRole('button', { name: /测试集流程/ }))
+  await waitFor(() => expect(toolbar().getByRole('button', { name: /运行测试集/ })).toBeInTheDocument())
+  expect(toolbar().getByRole('button', { name: /运行记录/ })).toBeInTheDocument()
+  expect(toolbar().getByRole('button', { name: /导入用例/ })).toBeInTheDocument()
+  expect(toolbar().queryByRole('button', { name: /调试运行/ })).not.toBeInTheDocument()
+  client.clear()
+})
+
+it('顶栏面包屑内直接切换当前用例的启用状态', async () => {
+  const { container, client } = renderPage()
+  const user = await openCase('登录成功-跳转工作台')
+  const enabledSwitch = screen.getByRole('switch', { name: '启用当前用例' })
+
+  expect(enabledSwitch).toBeChecked()
+  await user.click(enabledSwitch)
+  expect(enabledSwitch).not.toBeChecked()
+  expect(screen.getByText('已停用')).toBeInTheDocument()
+
+  await user.click(enabledSwitch)
+  expect(enabledSwitch).toBeChecked()
+  expect(container.querySelector('.ui-wb-case-status')).toHaveTextContent('● 已启用')
+  client.clear()
+})
+
+it('编辑用例后保存按钮高亮，保存成功后恢复', async () => {
+  const save = vi.spyOn(api, 'updateUiTestCase').mockResolvedValue(cases[0])
+  const { container, client } = renderPage()
+  const user = await openCase('登录成功-跳转工作台')
+  const toolbar = within(container.querySelector('.ui-wb-toolbar') as HTMLElement)
+  const saveButton = toolbar.getByRole('button', { name: /保存/ })
+
+  expect(saveButton).not.toHaveClass('is-dirty')
+  const nameInput = screen.getByLabelText('用例名称')
+  await user.clear(nameInput)
+  await user.type(nameInput, '登录成功-跳转工作台改')
+  expect(saveButton).toHaveClass('is-dirty')
+  expect(toolbar.getByText('未保存')).toBeInTheDocument()
+
+  await user.click(saveButton)
+  await waitFor(() => expect(save).toHaveBeenCalled())
+  await waitFor(() => expect(saveButton).not.toHaveClass('is-dirty'))
+  expect(toolbar.queryByText('未保存')).not.toBeInTheDocument()
+  client.clear()
+})
+
+it('用例切换与新建都走测试集流程卡片', async () => {
+  const { container, client } = renderPage()
+
+  await waitFor(() => expect(screen.getByText('登录成功-跳转工作台')).toBeInTheDocument())
+  const user = await openCase('登录成功-跳转工作台')
+  // 返回测试集流程后点击另一张用例卡片即可切换
+  await user.click(screen.getByRole('button', { name: /测试集流程/ }))
+  const canvas = await waitFor(() => container.querySelector('.ui-flow-canvas') as HTMLElement)
+  fireEvent.click(await within(canvas).findByText('登录失败-密码为空'))
   await waitFor(() => expect(screen.getByLabelText('用例名称')).toHaveValue('登录失败-密码为空'))
-  // 顺序弹层里保留重排与删除入口
-  await userEvent.setup().click(screen.getByRole('button', { name: /用例顺序/ }))
-  const panel = await waitFor(() => {
-    const node = document.querySelector('.ui-wb-order-panel')
-    expect(node).toBeTruthy()
-    return within(node as HTMLElement)
-  })
-  expect(panel.getByText('拖拽调整执行顺序')).toBeInTheDocument()
-  expect(panel.getAllByLabelText('删除 UI测试用例')).toHaveLength(2)
-  // 选中的那一条是当前用例
-  expect(panel.getByText('登录失败-密码为空')).toBeInTheDocument()
-  // 弹层挂在 body 下，不在 render 的 container 里
-  expect(document.querySelector('.ui-wb-order-item.selected')).toHaveTextContent('登录失败-密码为空')
+  expect(screen.getByLabelText('用例名称')).toHaveValue('登录失败-密码为空')
+
+  // 流程末尾的「+ 添加用例」先产生草稿卡片，再进入该用例的步骤画布
+  await user.click(screen.getByRole('button', { name: /测试集流程/ }))
+  await waitFor(() => expect(container.querySelector('.ui-flow-canvas')).toBeTruthy())
+  fireEvent.click(screen.getByText('添加用例'))
+  await waitFor(() => expect(screen.getByLabelText('用例名称')).toHaveValue(''))
+  expect(screen.getByLabelText('用例名称')).toHaveAttribute('placeholder', '例如：登录成功验证')
+  // 返回后草稿卡片仍在测试集流程末尾
+  await user.click(screen.getByRole('button', { name: /测试集流程/ }))
+  await waitFor(() => expect(screen.getByText('未保存用例')).toBeInTheDocument())
+  expect(screen.getByText('0 个步骤 · 未保存草稿')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '用例管理' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /用例顺序/ })).not.toBeInTheDocument()
+  client.clear()
+})
+
+it('流程末尾的添加步骤卡片追加步骤并在侧栏编辑', async () => {
+  const { container, client } = renderPage()
+  await openCase('登录成功-跳转工作台')
+
+  fireEvent.click(screen.getByText('添加步骤'))
+  await waitFor(() => expect(screen.getByText('#3 / 3')).toBeInTheDocument())
+  const caseMeta = within(container.querySelector('.ui-wb-case-meta') as HTMLElement)
+  expect(caseMeta.getByText('3 个步骤')).toBeInTheDocument()
+  const third = container.querySelector('[data-step-index="2"]') as HTMLElement
+  expect(third).toBeVisible()
+  expect(third).toHaveClass('is-detail')
+  expect(within(third).getByPlaceholderText('点击输入步骤名称')).toHaveValue('')
+
+  // 新用例没有步骤时，末尾仍有添加入口，第一次添加即落到 #1
+  fireEvent.click(screen.getByRole('button', { name: /测试集流程/ }))
+  await waitFor(() => expect(container.querySelector('.ui-flow-canvas')).toBeTruthy())
+  fireEvent.click(screen.getByText('添加用例'))
+  await waitFor(() => expect(screen.getByLabelText('用例名称')).toHaveValue(''))
+  fireEvent.click(screen.getByText('添加步骤'))
+  await waitFor(() => expect(screen.getByText('#1 / 1')).toBeInTheDocument())
   client.clear()
 })
 
 it('调试运行后右栏给出截图回放、关键帧与控制台日志', async () => {
-  vi.spyOn(api, 'debugRunUiTestCase').mockResolvedValue({ runId: 'case-run-1', status: 'success' })
+  vi.spyOn(debugStream, 'startDebugStream').mockResolvedValue({ initial: caseRun, activate: vi.fn(), abort: vi.fn() })
   const { container, client } = renderPage()
 
-  await waitFor(() => expect(screen.getByLabelText('用例名称')).toHaveValue('登录成功-跳转工作台'))
-  const toolbar = within(container.querySelector('.ui-wb-toolbar') as HTMLElement)
-  await userEvent.setup().click(toolbar.getByRole('button', { name: /调试运行/ }))
+  const user = await openCase('登录成功-跳转工作台')
+  const pageToolbar = within(container.querySelector('.ui-wb-toolbar') as HTMLElement)
+  await user.click(pageToolbar.getByRole('button', { name: /调试运行/ }))
 
   await waitFor(() => expect(container.querySelector('.ui-wb-replay-overlay')).toBeTruthy())
   const replay = within(container.querySelector('.ui-wb-replay') as HTMLElement)
+  expect(container.querySelector('.ui-wb-replay-canvas')).toHaveStyle({ aspectRatio: '1440 / 900' })
   // 浏览器外壳显示运行时的地址与状态，舞台叠加当前步骤
   expect(replay.getByText('http://localhost:5173/dashboard')).toBeInTheDocument()
   expect(replay.getByText('AUT DONE')).toBeInTheDocument()
   expect(replay.getByText('Step 1: open（打开登录页）')).toBeInTheDocument()
   expect(replay.getByText('1 / 2')).toBeInTheDocument()
 
-  // 关键帧：只有带截图的步骤进入缩略图条，且全部渲染在同一个横向滚动条里
-  const strip = within(container.querySelector('.ui-wb-strip') as HTMLElement)
-  expect(strip.getByText('2 / 2 步有截图')).toBeInTheDocument()
-  expect(container.querySelectorAll('.ui-wb-strip-list > .ui-wb-strip-item')).toHaveLength(2)
-  // 关键帧角标是「#序号 + 相对本次运行起点的耗时」
-  expect(strip.getByText('#1 0.0s')).toBeInTheDocument()
-  expect(strip.getByText('#2 0.3s')).toBeInTheDocument()
+  // 回放保留按步骤切换的控制。
+  expect(replay.getByRole('button', { name: '跳转到第 2 步 输入用户名' })).toBeInTheDocument()
 
+  await userEvent.click(screen.getByRole('tab', { name: '执行日志' }))
   // 控制台：逐步骤日志 + 汇总结论 + 真实指标
   const consoleCard = within(container.querySelector('.ui-wb-console') as HTMLElement)
   expect(consoleCard.getByText('open("打开登录页")')).toBeInTheDocument()
@@ -274,10 +406,11 @@ it('调试运行后右栏给出截图回放、关键帧与控制台日志', asyn
   expect(consoleCard.getByText(/测试用例执行完成/)).toBeInTheDocument()
 
   // 运行变量汇总：私密值打码，写回记录展示旧值→新值
-  await userEvent.setup().click(consoleCard.getByRole('button', { name: /运行变量/ }))
-  expect(await consoleCard.findByText('username')).toBeInTheDocument()
-  expect(consoleCard.getByText('********')).toBeInTheDocument()
-  expect(consoleCard.getByText('20 → 31')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('tab', { name: '运行变量' }))
+  const variables = within(container.querySelector('.ui-wb-run-variables') as HTMLElement)
+  expect(await variables.findByText('username')).toBeInTheDocument()
+  expect(variables.getByText('********')).toBeInTheDocument()
+  expect(variables.getByText('20 → 31')).toBeInTheDocument()
   client.clear()
 })
 
@@ -324,11 +457,11 @@ it('运行前缺变量时弹窗内联补齐，保存后自动重新提交运行'
 it('从插入动态值弹窗把环境变量插入当前输入框', async () => {
   const { container, client } = renderPage()
 
-  await waitFor(() => expect(screen.getByLabelText('用例名称')).toHaveValue('登录成功-跳转工作台'))
+  const user = await openCase('登录成功-跳转工作台')
+  await user.click(screen.getByRole('button', { name: '下一个步骤' }))
   const cards = container.querySelectorAll('.ui-test-case-step-card')
   const stepCard = cards[1] as HTMLElement
-  const user = userEvent.setup()
-  await user.click(within(stepCard).getByRole('button', { name: '展开步骤' }))
+  expect(stepCard).toBeVisible()
 
   // 定位值在前、操作值在后；这里插入到「输入用户名」的输入值。
   const insertButtons = within(stepCard).getAllByRole('button', { name: /插入变量/ })
@@ -349,5 +482,119 @@ it('从插入动态值弹窗把环境变量插入当前输入框', async () => {
 
   await user.click(modal.getByRole('button', { name: '插入变量' }))
   await waitFor(() => expect(within(stepCard).getByDisplayValue(/\{\{token\}\}/)).toBeInTheDocument())
+  client.clear()
+})
+
+it('快速完成的 UI 调试直接展示实时推送的步骤结果', async () => {
+  vi.spyOn(debugStream, 'startDebugStream').mockImplementation(async (_kind, _case, _body, onEvent) => ({
+    initial: { runId: 'case-run-live', status: 'pending' },
+    abort: vi.fn(),
+    activate: () => onEvent({ type: 'finished', data: { ...caseRun, runId: 'case-run-live' } }),
+  }))
+  const { container, client } = renderPage()
+  vi.spyOn(api, 'getUiTestCaseRun').mockRejectedValue(new Error('record already removed'))
+  const user = await openCase('登录成功-跳转工作台')
+  const pageToolbar = within(container.querySelector('.ui-wb-toolbar') as HTMLElement)
+  await user.click(pageToolbar.getByRole('button', { name: /调试运行/ }))
+  await waitFor(() => expect(container.querySelector('.ui-wb-replay-overlay')).toHaveTextContent('打开登录页'))
+  client.clear()
+})
+
+it('最终调试结果不会被较早发出的查询覆盖', async () => {
+  let emit!: (event: { type: string; data: unknown }) => void
+  let resolveQuery!: (value: { runId: string; status: 'running' }) => void
+  const pendingQuery = new Promise<{ runId: string; status: 'running' }>((resolve) => { resolveQuery = resolve })
+  vi.spyOn(debugStream, 'startDebugStream').mockImplementation(async (_kind, _case, _body, onEvent) => {
+    emit = onEvent
+    return { initial: { runId: 'case-run-live', status: 'pending' }, abort: vi.fn(), activate: vi.fn() }
+  })
+  const getRun = vi.spyOn(api, 'getUiTestCaseRun').mockReturnValue(pendingQuery)
+  const { container, client } = renderPage()
+  const user = await openCase('登录成功-跳转工作台')
+  const pageToolbar = within(container.querySelector('.ui-wb-toolbar') as HTMLElement)
+  await user.click(pageToolbar.getByRole('button', { name: /调试运行/ }))
+  await waitFor(() => expect(getRun).toHaveBeenCalledWith('case-run-live', expect.any(AbortSignal)))
+
+  act(() => { emit({ type: 'finished', data: { ...caseRun, runId: 'case-run-live' } }) })
+  await waitFor(() => expect(client.getQueryData<{ status: string }>(['uiTestCaseRun', 'case-run-live'])?.status).toBe('success'))
+  await act(async () => { resolveQuery({ runId: 'case-run-live', status: 'running' }); await pendingQuery })
+  expect(client.getQueryData<{ status: string }>(['uiTestCaseRun', 'case-run-live'])?.status).toBe('success')
+  client.clear()
+})
+
+it('截图接收期间先显示执行结果，旧查询不会覆盖该状态', async () => {
+  let emit!: (event: { type: string; data: unknown }) => void
+  let resolveQuery!: (value: { runId: string; status: 'running' }) => void
+  const pendingQuery = new Promise<{ runId: string; status: 'running' }>((resolve) => { resolveQuery = resolve })
+  vi.spyOn(debugStream, 'startDebugStream').mockImplementation(async (_kind, _case, _body, onEvent) => {
+    emit = onEvent
+    return { initial: { runId: 'case-run-live', status: 'pending' }, abort: vi.fn(), activate: vi.fn() }
+  })
+  vi.spyOn(api, 'getUiTestCaseRun').mockReturnValue(pendingQuery)
+  const { container, client } = renderPage()
+  const user = await openCase('登录成功-跳转工作台')
+  await user.click(within(container.querySelector('.ui-wb-toolbar') as HTMLElement).getByRole('button', { name: /调试运行/ }))
+  act(() => { emit({ type: 'execution_finished', data: { status: 'success' } }) })
+  await userEvent.click(screen.getByRole('tab', { name: '执行日志' }))
+  await waitFor(() => expect(screen.getByText('执行已结束，正在接收截图等临时产物')).toBeInTheDocument())
+  await act(async () => { resolveQuery({ runId: 'case-run-live', status: 'running' }); await pendingQuery })
+  expect(client.getQueryData<{ status: string }>(['uiTestCaseRun', 'case-run-live'])?.status).toBe('success')
+  act(() => { emit({ type: 'finished', data: { ...caseRun, runId: 'case-run-live' } }) })
+  await waitFor(() => expect(screen.queryByText('执行已结束，正在接收截图等临时产物')).not.toBeInTheDocument())
+  client.clear()
+})
+
+it('底部切换步骤时保留其他步骤的修改并一起保存', async () => {
+  const save = vi.spyOn(api, 'updateUiTestCase').mockResolvedValue(cases[0])
+  const { container, client } = renderPage()
+  const user = await openCase('登录成功-跳转工作台')
+  const first = container.querySelector('[data-step-index="0"]') as HTMLElement
+  const second = container.querySelector('[data-step-index="1"]') as HTMLElement
+  expect(first).toBeVisible()
+  expect(container.querySelector('.ui-step-details-body .ui-test-case-step-add-row')).not.toBeInTheDocument()
+  expect(first).toHaveClass('is-detail')
+  expect(within(first).queryByRole('button', { name: '折叠步骤' })).not.toBeInTheDocument()
+  expect(first.querySelector('.ui-test-case-step-body')).toBeVisible()
+  expect(second).not.toBeVisible()
+  await user.click(screen.getByRole('switch', { name: '失败后继续' }))
+  await user.click(within(first).getByRole('tab', { name: '后置提取' }))
+  expect(within(first).getByText('当前没有提取规则')).toBeVisible()
+  await user.click(within(first).getByRole('tab', { name: '基础配置' }))
+  const firstName = within(first).getByPlaceholderText('点击输入步骤名称')
+  await user.clear(firstName)
+  await user.type(firstName, '新的打开页面步骤')
+  expect(screen.queryByRole('button', { name: '折叠步骤配置' })).not.toBeInTheDocument()
+  expect(firstName).toHaveValue('新的打开页面步骤')
+  await user.click(screen.getByRole('button', { name: '下一个步骤' }))
+  expect(first).not.toBeVisible()
+  expect(second).toBeVisible()
+  expect(screen.getByRole('switch', { name: '失败后继续' })).not.toBeChecked()
+  const secondName = within(second).getByPlaceholderText('点击输入步骤名称')
+  await user.clear(secondName)
+  await user.type(secondName, '新的用户名步骤')
+  const pageToolbar = within(container.querySelector('.ui-wb-toolbar') as HTMLElement)
+  await user.click(pageToolbar.getByRole('button', { name: /保存/ }))
+  await waitFor(() => expect(save).toHaveBeenCalled())
+  const payload = save.mock.calls[0][1]
+  const savedSteps = JSON.parse(String(payload.stepsJson))
+  expect(savedSteps.map((step: { stepName: string }) => step.stepName)).toEqual(['新的打开页面步骤', '新的用户名步骤'])
+  expect(savedSteps[0].continueOnFailure).toBe(true)
+  expect(savedSteps[1].continueOnFailure).toBe(false)
+  client.clear()
+})
+
+it('保存时检查未选中步骤，并切换到有错误的步骤', async () => {
+  const save = vi.spyOn(api, 'updateUiTestCase').mockResolvedValue(cases[0])
+  const { container, client } = renderPage()
+  const user = await openCase('登录成功-跳转工作台')
+  await user.click(screen.getByRole('button', { name: '下一个步骤' }))
+  const second = container.querySelector('[data-step-index="1"]') as HTMLElement
+  await user.clear(within(second).getByPlaceholderText('点击输入步骤名称'))
+  await user.click(screen.getByRole('button', { name: '上一个步骤' }))
+  expect(second).not.toBeVisible()
+  await user.click(within(container.querySelector('.ui-wb-toolbar') as HTMLElement).getByRole('button', { name: /保存/ }))
+  await waitFor(() => expect(second).toBeVisible())
+  expect(within(second).getByText('请输入步骤名称')).toBeInTheDocument()
+  expect(save).not.toHaveBeenCalled()
   client.clear()
 })

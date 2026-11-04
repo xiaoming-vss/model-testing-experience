@@ -83,21 +83,21 @@ def test_requirement_document_fields_match_go_contract():
     body = CreateRequirementRequest.model_validate(
         {
             "name": "req",
-            "documentType": "text",
+            "documentType": "richtext",
             "documentContent": "content",
         }
     )
 
-    assert body.document_type == "text"
+    assert body.document_type == "richtext"
     assert body.document_content == "content"
     assert "description" not in CreateRequirementRequest.model_json_schema()["properties"]
     assert RequirementResponse(
         requirementId="r1",
         sprintId="s1",
         name="req",
-        documentType="text",
+        documentType="richtext",
         documentContent="content",
-        documentFilename="requirement.txt",
+        documentFilename="requirement.html",
         documentHash="hash",
         documentDownloadUrl="/v1/requirements/r1/download",
         createdAt="2026-01-01T00:00:00Z",
@@ -106,9 +106,9 @@ def test_requirement_document_fields_match_go_contract():
         "requirementId": "r1",
         "sprintId": "s1",
         "name": "req",
-        "documentType": "text",
+        "documentType": "richtext",
         "documentContent": "content",
-        "documentFilename": "requirement.txt",
+        "documentFilename": "requirement.html",
         "documentFileId": "",
         "documentHash": "hash",
         "documentDownloadUrl": "/v1/requirements/r1/download",

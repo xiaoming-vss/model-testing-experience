@@ -8,7 +8,6 @@ from testing_agent.handlers.requirement_analysis_run import (
     delete_requirement_analysis_task,
     get_requirement_analysis_run,
     get_requirement_analysis_task,
-    import_requirement_analysis_run_to_requirement,
     list_requirement_analysis_task_runs,
     list_requirement_analysis_tasks,
     retry_requirement_analysis_stage,
@@ -24,7 +23,6 @@ from testing_agent.schemas.ai_generate_task import (
     AiGenerateTaskRunResponse,
 )
 from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
-from testing_agent.schemas.requirement import RequirementResponse
 
 router = APIRouter()
 
@@ -76,11 +74,6 @@ router.post(
     "/requirement-analysis-runs/{run_id}/stage-revise",
     response_model=ApiResponse[AiGenerateTaskRunResponse],
 )(revise_requirement_analysis_stage)
-router.post(
-    "/requirement-analysis-runs/{run_id}/import-to-requirement",
-    response_model=ApiResponse[RequirementResponse],
-)(import_requirement_analysis_run_to_requirement)
-
 router.post(
     "/requirement-analysis-runs/{run_id}/stage-retry",
     response_model=ApiResponse[AiGenerateTaskRunResponse],

@@ -26,13 +26,13 @@ export type ImportedTarget = {
 }
 
 export type GenerateTaskRunImportLifecycle = {
+  generationChainManaged?: boolean
   availableArtifacts?: string[]
   hasResult?: boolean
   reviewStatus: GenerateTaskRunReviewStatus
   importStatus: GenerateTaskRunImportStatus
   importedTargets: ImportedTarget[]
   importedAt: string | null
-  importMigrationComplete: boolean
 }
 
 export type ApiCaseGenerateTaskRunReviewStatus = GenerateTaskRunReviewStatus
@@ -181,6 +181,9 @@ export type ApiCaseGenerateTaskRunSnapshot = {
 }
 
 export type ApiCaseGenerateTaskRun = GenerateTaskRunImportLifecycle & {
+  checkpointEnabled?: boolean
+  currentStage?: string
+  stageStatus?: string
   runId?: string
   taskId?: string
   projectId?: string
@@ -362,6 +365,7 @@ export type RequirementAnalysisTask = {
 }
 
 export type FunctionalCaseGenerateTaskRunSnapshot = {
+  generationChainManaged?: boolean
   instruction?: string
   name?: string
   projectId?: string
@@ -390,6 +394,7 @@ export type RequirementAnalysisTaskRunSnapshot = {
 }
 
 export type FunctionalCaseGenerateTaskRun = GenerateTaskRunImportLifecycle & {
+  snapshotJson?: FunctionalCaseGenerateTaskRunSnapshot
   runId?: string
   taskId?: string
   projectId?: string
@@ -418,6 +423,7 @@ export type FunctionalCaseGenerateTaskRun = GenerateTaskRunImportLifecycle & {
 }
 
 export type RequirementAnalysisTaskRun = {
+  generationChainManaged?: boolean
   importStatus?: GenerateTaskRunImportLifecycle['importStatus']
   /** 历史摘要按已发布阶段返回，详情接口按 configJson 返回，均为后端真实产物。 */
   availableArtifacts?: string[]
@@ -508,6 +514,7 @@ export type UpdateFunctionalCaseGenerateTaskRunResultPayload = {
 
 export type ImportFunctionalCaseGenerateTaskRunPayload = {
   confirmOverwrite: boolean
+  requirementId?: string
 }
 
 export type FunctionalCaseGenerateTaskRunImportCase = {
@@ -649,7 +656,6 @@ export type CodeRiskTaskRun = {
   finishedAt?: string
   durationMs?: number
   errorMessage?: string
-  remediation?: string
   currentStage?: string
   stageStatus?: string
   snapshot?: unknown
@@ -668,8 +674,10 @@ export type CreateCodeRiskTaskPayload = {
 }
 
 export type RunCodeRiskTaskPayload = {
+  requestId?: string
   gitlabConnectionIds?: Record<string, string>
   llmConnectionId?: string
   instruction?: string
   triggerType?: 'manual' | string
+  requirementUnderstandingVersionId?: string
 }

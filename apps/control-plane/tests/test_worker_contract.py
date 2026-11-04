@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -18,6 +19,7 @@ from support.worker_contract import (
 from testing_agent.api.deps import get_worker_task_service
 from testing_agent.app import create_app
 from testing_agent.core.config import get_settings
+from testing_agent.core.errors import AppError
 from testing_agent.schemas.workers import (
     WorkerClaimRequest,
     WorkerProgressRequest,
@@ -170,7 +172,6 @@ def test_internal_ai_worker_progress_accepts_go_string_payload_fields():
             assert body.current_stage == "requirement_analysis"
             assert body.stage_status == "running"
             assert body.config_json == "plain config snapshot"
-            assert body.result_yaml == "cases: []"
             assert body.result_summary_json == "summary text"
             return {"taskId": task_id}
 
@@ -185,7 +186,7 @@ def test_internal_ai_worker_progress_accepts_go_string_payload_fields():
         json={
             "workerId": "worker-1",
             "taskId": "task-1",
-            "runId": "run-1",
+            "attemptId": "run-1",
             "currentStage": "requirement_analysis",
             "stageStatus": "running",
             "configJson": "plain config snapshot",
@@ -205,7 +206,6 @@ def test_internal_ai_worker_completed_accepts_go_string_payload_fields():
             assert task_id == "task-1"
             assert body.worker_id == "worker-1"
             assert body.config_json == "plain config snapshot"
-            assert body.result_yaml == "cases: []"
             assert body.result_summary_json == "summary text"
             return {"taskId": task_id, "workerId": body.worker_id, "status": body.status}
 
@@ -220,7 +220,7 @@ def test_internal_ai_worker_completed_accepts_go_string_payload_fields():
         json={
             "workerId": "worker-1",
             "taskId": "task-1",
-            "runId": "run-1",
+            "attemptId": "run-1",
             "status": "success",
             "startedAt": "2026-06-28T14:08:00Z",
             "finishedAt": "2026-06-28T14:08:05Z",
@@ -294,6 +294,17 @@ async def test_functional_case_worker_can_download_requirement_document(monkeypa
         )
 
     FakeRepository.get_worker_task = fake_find_task
+    direct = SimpleNamespace(
+        is_direct=AsyncMock(return_value=True),
+        authorize=AsyncMock(
+            return_value=SimpleNamespace(
+                task=SimpleNamespace(requirement_id="requirement-1"), input_snapshot={}
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        worker_task_service_module, "DirectStageWorkerService", lambda session: direct
+    )
 
     requirement = await WorkerTaskService(
         FakeRepository(), execution_writer=MemoryExecutionWriter()
@@ -303,7 +314,7 @@ async def test_functional_case_worker_can_download_requirement_document(monkeypa
 
 
 @pytest.mark.asyncio
-async def test_ai_worker_claim_returns_go_style_generation_fields():
+async def test_ai_worker_claim_rejects_legacy_run_without_changing_it():
     task = SimpleNamespace(
         task_id="worker-task-1",
         task_type="api_case_generate",
@@ -343,26 +354,15 @@ async def test_ai_worker_claim_returns_go_style_generation_fields():
         FakeAiWorkerRepository(task), execution_writer=MemoryExecutionWriter()
     )
 
-    payload = await service.claim("ai", WorkerClaimRequest(workerId="worker-1"))
-
-    assert payload == {
-        "taskId": "worker-task-1",
-        "taskType": "api_case_generate",
-        "runId": "run-1",
-        "generateTaskId": "generate-task-1",
-        "projectId": "project-1",
-        "sprintId": "sprint-1",
-        "requirementId": "requirement-1",
-        "llmConnectionId": "llm-1",
-        "checkpointEnabled": False,
-        "currentStage": "queued",
-        "leaseSeconds": 30,
-    }
-    assert run.status == "claimed"
+    with pytest.raises(AppError, match="AI 队列未关联有效的阶段尝试") as exc:
+        await service.claim("ai", WorkerClaimRequest(workerId="worker-1"))
+    assert exc.value.http_code == 400
+    assert task.status == "pending"
+    assert run.status == "pending"
 
 
 @pytest.mark.asyncio
-async def test_ai_worker_started_updates_run_status_to_running(monkeypatch):
+async def test_ai_worker_started_updates_run_status_to_running_rejects_legacy_queue(monkeypatch):
     task = SimpleNamespace(
         task_id="worker-task-1",
         domain="ai",
@@ -398,19 +398,52 @@ async def test_ai_worker_started_updates_run_status_to_running(monkeypatch):
         FakeAiWorkerRepository(task), execution_writer=MemoryExecutionWriter()
     )
 
-    await service.started(
-        "ai",
-        "worker-task-1",
-        WorkerTaskEventRequest(
-            workerId="worker-1",
-            startedAt="2026-06-28T14:08:00Z",
-        ),
-    )
+    with pytest.raises(AppError) as rejected:
+        await service.started(
+            "ai",
+            "worker-task-1",
+            WorkerTaskEventRequest(
+                workerId="worker-1",
+                startedAt="2026-06-28T14:08:00Z",
+            ),
+        )
+    assert rejected.value.http_code == 404
+    assert task.status == "claimed"
+    assert run.status == "claimed"
 
-    assert task.status == "running"
-    assert run.status == "running"
-    assert run.stage_status == "running"
-    assert run.started_at is not None
+
+def direct_stage_snapshot(run, worker, stage):
+    from testing_agent.services.stage_storage.payload import worker_payloads
+
+    source = run.snapshot_json
+    task = SimpleNamespace(
+        task_id=worker.generate_task_id,
+        task_type=worker.task_type,
+        name=source.get("name", ""),
+        project_id=source.get("projectId", ""),
+        sprint_id=source.get("sprintId", ""),
+        requirement_id=source.get("requirementId", ""),
+    )
+    authority = SimpleNamespace(
+        task=task,
+        attempt_id=run.run_id,
+        revision_instruction=None,
+        input_snapshot={"source": source, "config": run.config_json, "llmConnectionId": "llm"},
+    )
+    return worker_payloads(authority, worker, stage_name=stage, lease_seconds=30)[1]
+
+
+@pytest.mark.asyncio
+async def test_generic_worker_dispatch_rejects_ai_ledger_fallback():
+    task = SimpleNamespace(task_id="old", run_id="old")
+    with pytest.raises(AppError) as snapshot:
+        await worker_service_module.build_snapshot(None, "ai", task)
+    assert snapshot.value.http_code == 404
+    with pytest.raises(AppError) as completion:
+        await worker_service_module.complete_domain_run(
+            None, "ai", task, WorkerTaskEventRequest(workerId="node")
+        )
+    assert completion.value.http_code == 404
 
 
 @pytest.mark.asyncio
@@ -429,7 +462,7 @@ async def test_ai_worker_snapshot_returns_go_style_run_payload():
         config_json={"temperature": 0.2},
         snapshot_json={
             "taskId": "generate-task-1",
-            "runId": "run-1",
+            "attemptId": "run-1",
             "taskType": "functional_case_generate",
             "name": "Generate function cases",
             "projectId": "project-1",
@@ -441,20 +474,16 @@ async def test_ai_worker_snapshot_returns_go_style_run_payload():
         },
     )
 
-    class FakeSession:
-        async def scalar(self, statement):
-            return run
-
-    payload = await worker_service_module.build_snapshot(FakeSession(), "ai", task)
+    payload = direct_stage_snapshot(run, task, "requirement_analysis")
 
     assert payload == {
         "taskType": "functional_case_generate",
         "checkpointEnabled": True,
         "currentStage": "requirement_analysis",
-        "configJson": '{"temperature":0.2}',
+        "configJson": '{"temperature": 0.2}',
         "run": {
             "taskId": "generate-task-1",
-            "runId": "run-1",
+            "attemptId": "run-1",
             "taskType": "functional_case_generate",
             "name": "Generate function cases",
             "projectId": "project-1",
@@ -492,11 +521,7 @@ async def test_functional_case_worker_snapshot_exposes_requirement_document_url(
         },
     )
 
-    class FakeSession:
-        async def scalar(self, statement):
-            return run
-
-    payload = await worker_service_module.build_snapshot(FakeSession(), "ai", task)
+    payload = direct_stage_snapshot(run, task, "requirement_analysis")
 
     assert payload["run"]["documentDownloadUrl"] == (
         "/internal/ai-worker/tasks/worker-task-1/requirement-document"
@@ -522,39 +547,35 @@ async def test_ai_worker_snapshot_returns_go_style_requirement_analysis_payload(
         config_json={"temperature": 0.2},
         snapshot_json={
             "taskId": "generate-task-1",
-            "runId": "run-1",
+            "attemptId": "run-1",
             "taskType": "requirement_analysis",
             "name": "Analyze requirement",
             "projectId": "project-1",
             "sprintId": "sprint-1",
             "requirementId": "requirement-1",
-            "documentType": "text",
+            "documentType": "richtext",
             "documentDownloadUrl": "/v1/requirements/requirement-1/download",
             "sourceContent": "requirement doc",
             "instruction": "find ambiguities",
         },
     )
 
-    class FakeSession:
-        async def scalar(self, statement):
-            return run
-
-    payload = await worker_service_module.build_snapshot(FakeSession(), "ai", task)
+    payload = direct_stage_snapshot(run, task, "extracting_text")
 
     assert payload == {
         "taskType": "requirement_analysis",
-        "checkpointEnabled": False,
-        "currentStage": "",
-        "configJson": '{"temperature":0.2}',
+        "checkpointEnabled": True,
+        "currentStage": "extracting_text",
+        "configJson": '{"temperature": 0.2}',
         "run": {
             "taskId": "generate-task-1",
-            "runId": "run-1",
+            "attemptId": "run-1",
             "taskType": "requirement_analysis",
             "name": "Analyze requirement",
             "projectId": "project-1",
             "sprintId": "sprint-1",
             "requirementId": "requirement-1",
-            "documentType": "text",
+            "documentType": "richtext",
             "sourceContent": "requirement doc",
             "documentDownloadUrl": ("/internal/ai-worker/tasks/worker-task-1/requirement-document"),
             "instruction": "find ambiguities",
@@ -563,7 +584,9 @@ async def test_ai_worker_snapshot_returns_go_style_requirement_analysis_payload(
 
 
 @pytest.mark.asyncio
-async def test_ai_worker_progress_waiting_review_marks_checkpoint_run_waiting(monkeypatch):
+async def test_legacy_checkpoint_progress_is_rejected(
+    monkeypatch,
+):
     task = SimpleNamespace(
         task_id="worker-task-1",
         task_type="functional_case_generate",
@@ -600,31 +623,27 @@ async def test_ai_worker_progress_waiting_review_marks_checkpoint_run_waiting(mo
     monkeypatch.setattr(worker_task_service_module, "find_task", fake_find_task)
     service = WorkerTaskService(FakeRepository(task), execution_writer=MemoryExecutionWriter())
 
-    await service.progress(
-        "worker-task-1",
-        WorkerProgressRequest(
-            workerId="worker-1",
-            taskId="worker-task-1",
-            runId="run-1",
-            currentStage="requirement_analysis",
-            stageStatus="waiting_review",
-            configJson='{"enhancedText":"需求"}',
-            resultYaml='{"cases":[]}',
-            resultSummaryJson='{"status":"running"}',
-        ),
-    )
-
-    assert task.status == "success"
-    assert task.finished_at is not None
-    assert run.status == "waiting_review"
-    assert run.stage_status == "waiting_review"
-    assert run.current_stage == "requirement_analysis"
-    assert run.config_json == {"enhancedText": "需求"}
-    assert run.result_summary_json == {"status": "running"}
+    with pytest.raises(AppError) as rejected:
+        await service.progress(
+            "worker-task-1",
+            WorkerProgressRequest(
+                workerId="worker-1",
+                taskId="worker-task-1",
+                runId="run-1",
+                currentStage="requirement_analysis",
+                stageStatus="waiting_review",
+                configJson='{"enhancedText":"需求"}',
+                resultYaml='{"cases":[]}',
+                resultSummaryJson='{"status":"running"}',
+            ),
+        )
+    assert rejected.value.http_code == 404
+    assert task.status == "running"
+    assert run.status == "running"
 
 
 @pytest.mark.asyncio
-async def test_ai_worker_claim_includes_requirement_analysis_checkpoint_config():
+async def test_ai_worker_claim_rejects_legacy_requirement_queue():
     extraction = json.loads(
         (
             Path(__file__).parent
@@ -666,16 +685,14 @@ async def test_ai_worker_claim_includes_requirement_analysis_checkpoint_config()
 
     service = WorkerTaskService(FakeRepository(task), execution_writer=MemoryExecutionWriter())
 
-    payload = await service.claim("ai", WorkerClaimRequest(workerId="worker-1"))
-
-    assert payload["taskType"] == "requirement_analysis"
-    assert payload["checkpointEnabled"] is True
-    assert payload["currentStage"] == "feature_understanding"
-    assert json.loads(payload["configJson"]) == {"firstStepOutput": extraction}
+    with pytest.raises(AppError, match="AI 队列未关联有效的阶段尝试"):
+        await service.claim("ai", WorkerClaimRequest(workerId="worker-1"))
+    assert task.status == "pending"
+    assert run.status == "pending"
 
 
 @pytest.mark.asyncio
-async def test_ai_worker_progress_requirement_analysis_extracting_text_waits_for_review(
+async def test_legacy_extraction_progress_is_rejected(
     monkeypatch,
 ):
     extraction = json.loads(
@@ -720,22 +737,21 @@ async def test_ai_worker_progress_requirement_analysis_extracting_text_waits_for
     monkeypatch.setattr(worker_task_service_module, "find_task", fake_find_task)
     service = WorkerTaskService(FakeRepository(task), execution_writer=MemoryExecutionWriter())
 
-    await service.progress(
-        "worker-task-1",
-        WorkerProgressRequest(
-            workerId="worker-1",
-            taskId="worker-task-1",
-            runId="run-1",
-            currentStage="extracting_text",
-            stageStatus="waiting_review",
-            configJson=json.dumps({"firstStepOutput": extraction}),
-        ),
-    )
-
-    assert task.status == "success"
-    assert run.status == "waiting_review"
-    assert run.stage_status == "waiting_review"
-    assert run.config_json == {"firstStepOutput": extraction}
+    with pytest.raises(AppError) as rejected:
+        await service.progress(
+            "worker-task-1",
+            WorkerProgressRequest(
+                workerId="worker-1",
+                taskId="worker-task-1",
+                runId="run-1",
+                currentStage="extracting_text",
+                stageStatus="waiting_review",
+                configJson=json.dumps({"firstStepOutput": extraction}),
+            ),
+        )
+    assert rejected.value.http_code == 404
+    assert task.status == "running"
+    assert run.status == "running"
 
 
 def test_ai_worker_completion_accepts_output_yaml_alias_for_requirement_analysis():
@@ -1043,7 +1059,7 @@ def test_ui_case_generate_ai_worker_http_lifecycle_and_token_contract():
             return {
                 "taskId": "worker-task-1",
                 "taskType": "ui_case_generate",
-                "runId": "run-1",
+                "attemptId": "run-1",
                 "generateTaskId": "generate-task-1",
             }
 
@@ -1095,7 +1111,7 @@ def test_ui_case_generate_ai_worker_http_lifecycle_and_token_contract():
     app.dependency_overrides[get_settings] = worker_settings
     client = TestClient(app)
     headers = {"X-Worker-Token": "worker-token"}
-    event = {"workerId": "worker-1", "taskId": "worker-task-1", "runId": "run-1"}
+    event = {"workerId": "worker-1", "taskId": "worker-task-1", "attemptId": "run-1"}
 
     unauthorized = client.post("/internal/ai-worker/tasks/claim", json={"workerId": "worker-1"})
     claimed = client.post(
@@ -1122,6 +1138,7 @@ def test_ui_case_generate_ai_worker_http_lifecycle_and_token_contract():
     assert unauthorized.status_code == 401
     assert claimed.status_code == 200
     assert claimed.json()["taskType"] == "ui_case_generate"
+    assert claimed.json()["attemptId"] == "run-1"
     assert snapshot.status_code == 200
     assert snapshot.json()["taskType"] == "ui_case_generate"
     assert [started.status_code, heartbeat_response.status_code, progress.status_code] == [

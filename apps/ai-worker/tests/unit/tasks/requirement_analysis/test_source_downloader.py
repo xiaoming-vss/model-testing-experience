@@ -58,13 +58,31 @@ class PlatformRequirementSourceDownloaderTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             saved_path = downloader.download_source(
                 document_download_url="/internal/ai-worker/tasks/worker-task-2/requirement-document",
-                document_type="text",
+                document_type="richtext",
                 task=task,
                 workspace=Path(temp_dir),
             )
 
-            self.assertEqual(saved_path, Path(temp_dir) / "inputs" / "worker_task_2" / "source.txt")
+            self.assertEqual(
+                saved_path, Path(temp_dir) / "inputs" / "worker_task_2" / "source.html"
+            )
             self.assertEqual(saved_path.read_bytes(), b"text bytes")
+
+    def test_download_source_rejects_retired_text_document_type(self) -> None:
+        client = FakeClient(b"text bytes")
+        downloader = PlatformRequirementSourceDownloader(client)
+        task = Task(
+            task_id="worker task 2", project_id="project-1", payload=TaskPayload(openapi_content="")
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with self.assertRaisesRegex(ValueError, "Word/DOCX"):
+                downloader.download_source(
+                    document_download_url="/internal/ai-worker/tasks/worker-task-2/requirement-document",
+                    document_type="text",
+                    task=task,
+                    workspace=Path(temp_dir),
+                )
 
     def test_download_source_treats_word_document_type_as_docx(self) -> None:
         client = FakeClient(b"word bytes")

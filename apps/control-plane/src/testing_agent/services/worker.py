@@ -20,7 +20,7 @@ from testing_agent.repositories.worker_context import read_worker_context
 from testing_agent.schemas.workers import (
     WorkerTaskEventRequest,
 )
-from testing_agent.services.worker_domains import ai, api, ui
+from testing_agent.services.worker_domains import api, ui
 from testing_agent.services.worker_domains.ai import (
     apply_ai_completion_to_run as apply_ai_completion_to_run,
 )
@@ -107,7 +107,7 @@ async def build_snapshot(
     context: WorkerExecutionContext | None = None,
 ) -> dict[str, Any]:
     if domain == "ai":
-        return await ai.build_snapshot(session, task)
+        raise ErrNotFound()
     if context is None and domain in {"api", "ui"}:
         context = await session.run_sync(lambda sync: read_worker_context(sync, task))
     if domain == "api":
@@ -125,7 +125,7 @@ async def complete_domain_run(
     session: AsyncSession, domain: str, task: WorkerTask, body: WorkerTaskEventRequest
 ) -> None:
     if domain == "ai":
-        await ai.complete_run(session, task, body)
+        raise ErrNotFound()
     elif domain == "api":
         await api.complete_run(session, task, body)
     elif domain == "ui":

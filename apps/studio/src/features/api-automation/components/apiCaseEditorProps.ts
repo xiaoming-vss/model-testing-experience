@@ -6,7 +6,6 @@ import type { JsonEditorRef } from '@/shared/components/JsonEditor/JsonEditor'
 import type {
   ApiAssertRule,
   ApiCase,
-  ApiCaseRunResult,
   ApiExtractRule,
 } from '@/services/api'
 import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query'
@@ -75,7 +74,7 @@ export type ApiCaseEditorProps = {
   activeCaseId: string
   updateCaseMutation: UseMutationResult<ApiCase, Error, ApiCaseFormValues, unknown>
   pathInputRef: React.RefObject<InputRef | null>
-  runApiCaseMutation: UseMutationResult<ApiCaseRunResult, Error, { caseId: string; environmentId: string }, unknown>
+  runApiCaseMutation: { isPending: boolean }
   isApiCaseRunInProgress: boolean
   isSelectedCaseReady: boolean
   handleSendRequest: () => Promise<void>

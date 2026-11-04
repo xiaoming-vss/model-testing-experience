@@ -17,14 +17,13 @@ class TaskStatus(str, Enum):
 
 class TaskResult(BaseModel):
     task_id: str
-    run_id: str = ""
+    attempt_id: str = ""
     generate_task_id: str = ""
     status: TaskStatus
     intermediate_json_text: str = ""
     output_yaml: str = ""
     result_summary_json: str = ""
     error_message: str | None = None
-    remediation: str | None = None
     started_at: datetime
     finished_at: datetime
     metadata: dict[str, object] = Field(default_factory=dict)
@@ -32,7 +31,7 @@ class TaskResult(BaseModel):
 
 class TaskProgress(BaseModel):
     task_id: str
-    run_id: str = ""
+    attempt_id: str = ""
     current_stage: str = ""
     stage_status: str = ""
     intermediate_json_text: str = ""

@@ -1,8 +1,11 @@
+import { RunWaitingReason } from '@/domain/runs/RunWaitingReason'
 import { type RunResultView, runResultViewOptions } from '../config/collectionConfig'
 import { getExecutionStatusMeta } from '../utils/collectionRunReport'
 import { renderRunResultContent } from '../utils/renderApiRunResult'
 import type { ApiCaseRunResult } from '@/services/api'
 import { Alert } from 'antd'
+import { StopRunButton } from '@/domain/runs/StopRunButton'
+import { getApiCaseRunId } from '../utils/detailView'
 
 /*
  * API 用例运行结果控制台：设计稿里是右栏下半部分的一条独立区域
@@ -16,6 +19,7 @@ type Props = {
   environmentName: string
   view: RunResultView
   onViewChange: (view: RunResultView) => void
+  canStop?: boolean
 }
 
 /** 运行状态 → 色盘色调，取值来自 shared/styles/surface-tokens.css 的 `.tone-*`。 */
@@ -41,7 +45,7 @@ function formatResponseSize(body?: string) {
   return `${(bytes / 1024).toFixed(2)} KB`
 }
 
-export function ApiCaseRunConsole({ result, environmentName, view, onViewChange }: Props) {
+export function ApiCaseRunConsole({ result, environmentName, view, onViewChange, canStop }: Props) {
   const status = result.status ?? (result.success ? 'success' : 'failed')
   const statusMeta = getExecutionStatusMeta(status)
   const tone = resolveStatusTone(status)
@@ -69,6 +73,7 @@ export function ApiCaseRunConsole({ result, environmentName, view, onViewChange 
             {statusCode ? `${statusCode} · ` : ''}
             {statusMeta.label}
           </span>
+          <RunWaitingReason status={status} />
           <span className="api-wb-console-meta">
             <span>耗时 <strong>{result.durationMs ?? 0} ms</strong></span>
             <span>大小 <strong>{formatResponseSize(result.response?.body)}</strong></span>
@@ -77,6 +82,7 @@ export function ApiCaseRunConsole({ result, environmentName, view, onViewChange 
           </span>
         </div>
         <div className="api-wb-console-verdict">
+          {canStop ? <StopRunButton kind="api-case" runId={getApiCaseRunId(result)} status={status} /> : null}
           {assertResults.length === 0 ? (
             <span className="api-wb-assert-summary tone-slate">没有断言规则</span>
           ) : failedAssertCount === 0 ? (

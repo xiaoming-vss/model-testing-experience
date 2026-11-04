@@ -56,4 +56,6 @@ class UiCaseResponse(UiCaseRequest):
 
 class UiCaseImportResponse(BaseModel):
     imported: int
+    imported_case_count: int
+    imported_step_count: int
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)

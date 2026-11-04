@@ -98,7 +98,6 @@ async def test_inline_source_creation_is_rejected():
 @pytest.mark.asyncio
 async def test_existing_local_file_and_inline_content_are_not_download_fallbacks(tmp_path):
     from testing_agent.core.errors import AppError
-    from testing_agent.services.ai_task_output import requirement_source_content
 
     path = tmp_path / "original.txt"
     path.write_text("old source")
@@ -109,7 +108,6 @@ async def test_existing_local_file_and_inline_content_are_not_download_fallbacks
         document_content="",
     )
     service = RequirementService(repository, FakeSprintService())
-    assert requirement_source_content(repository.requirement) == ""
     for content in ("", "enhanced text"):
         repository.requirement.document_content = content
         with pytest.raises(AppError, match="重新上传"):
@@ -126,4 +124,60 @@ def test_local_upload_routes_are_removed():
 def test_requirement_request_validates_document_types():
     with pytest.raises(ValidationError):
         CreateRequirementRequest(name="r", documentType="unsupported")
+    with pytest.raises(ValidationError):
+        CreateRequirementRequest(name="r", documentType="text")
+    with pytest.raises(ValidationError):
+        CreateRequirementRequest(name="r", documentType="txt")
     assert CreateRequirementRequest(name="r", documentType="word").document_type == "docx"
+    assert CreateRequirementRequest(name="r").document_type == "richtext"
+    with pytest.raises(ValidationError):
+        UpdateRequirementRequest(documentType="text")
+
+
+@pytest.mark.asyncio
+async def test_requirement_creation_initializes_generation_before_commit():
+    repository = FakeRequirementRepository()
+    calls = []
+
+    def initialize(requirement, project_id, user_id):
+        assert repository.requirement is requirement
+        calls.append((requirement.requirement_id, project_id, user_id))
+
+    service = RequirementService(
+        repository, FakeSprintService(), files=FakeFiles(), initialize_generation=initialize
+    )
+    created = await service.create(
+        "user-1",
+        "sprint-1",
+        CreateRequirementRequest(name="需求", documentType="word", documentFileId="file-1"),
+    )
+    assert calls == [(created["requirementId"], "project-1", "user-1")]
+
+
+def test_default_generation_tasks_belong_to_new_requirement():
+    from testing_agent.models.requirement import Requirement
+    from testing_agent.services.requirement_generation_defaults import add_default_generation_tasks
+
+    class Session:
+        def __init__(self):
+            self.tasks = []
+
+        def add(self, task):
+            self.tasks.append(task)
+
+    session = Session()
+    requirement = Requirement(
+        requirement_id="req",
+        sprint_id="sprint",
+        name="登录",
+        document_type="word",
+        document_content="",
+    )
+    add_default_generation_tasks(session, requirement, "project", "user")
+    assert {task.task_type for task in session.tasks} == {
+        "requirement_analysis",
+        "functional_case_generate",
+    }
+    assert all(
+        task.requirement_id == "req" and task.project_id == "project" for task in session.tasks
+    )

@@ -5,15 +5,15 @@ from typing import Protocol
 
 from testing_agent.core.errors import (
     ErrBadRequest,
-    ErrForbidden,
     ErrNotFound,
 )
 from testing_agent.domain.ai_tasks import (
     task_type_for,
 )
-from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
+from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.services.project_access import ProjectAction, require_project_access
+from testing_agent.services.standalone_run import StandaloneRun
 
 
 class RequirementScope(Protocol):
@@ -115,6 +115,11 @@ class GenerationAccess:
                 raise ErrNotFound()
             if sprint_id and requirement.sprint_id != sprint_id:
                 raise ErrBadRequest()
+        order_id = getattr(task, "order_id", "") or ""
+        if order_id:
+            order = await self.repository.get_test_order(order_id)
+            if order is None or order.project_id != task.project_id or order.sprint_id != sprint_id:
+                raise ErrNotFound()
 
     async def owned_task(
         self,
@@ -137,19 +142,27 @@ class GenerationAccess:
 
     async def owned_run(
         self, user_id: str, run_id: str, kind: str | None = None, *, action: ProjectAction = "read"
-    ) -> AiGenerateTaskRun:
-        getter = self.repository.get_run
-        if action != "read":
-            getter = getattr(self.repository, "get_run_reference", getter)
-        run = await getter(run_id)
-        if run is None:
+    ) -> StandaloneRun:
+        from sqlalchemy import select
+
+        from testing_agent.models.ai_execution import AiExecution
+        from testing_agent.repositories.standalone_execution import workflow_task_id
+        from testing_agent.services.standalone_execution_view import project_standalone_execution
+
+        session = self.repository.session
+        task_id = await workflow_task_id(session, run_id)
+        if task_id is None:
             raise ErrNotFound()
-        # Parent before child: the same order as task deletion/import creation.
-        task = await self.owned_task(user_id, run.task_id, kind, action=action)
-        if action != "read" and hasattr(self.repository, "get_run_for_update"):
-            run = await self.repository.get_run_for_update(run_id)
-            if run is None or run.task_id != task.task_id:
+        task = await self.owned_task(
+            user_id, task_id, kind, action=action, current_read=action != "read"
+        )
+        if action != "read":
+            execution = await session.scalar(
+                select(AiExecution)
+                .where(AiExecution.execution_id == run_id, AiExecution.task_id == task.task_id)
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            )
+            if execution is None or execution.workflow_status is None:
                 raise ErrNotFound()
-        if task.project_id != run.project_id:
-            raise ErrForbidden()
-        return run
+        return await project_standalone_execution(session, run_id)

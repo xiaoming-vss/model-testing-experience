@@ -8,7 +8,7 @@ from testing_agent.core.errors import AppError
 from testing_agent.services.requirement_image import requirement_image_ticket
 
 
-def inputs():
+def inputs(monkeypatch):
     task = SimpleNamespace(
         task_type="requirement_analysis",
         worker_id="worker",
@@ -38,9 +38,18 @@ def inputs():
     service = SimpleNamespace(
         requirement_document=AsyncMock(return_value=requirement),
         repository=SimpleNamespace(
+            session=object(),
             get_worker_task=AsyncMock(return_value=task),
             get_ai_run=AsyncMock(return_value=SimpleNamespace(project_id="p")),
         ),
+    )
+    from testing_agent.services.stage_storage.worker_service import DirectStageWorkerService
+
+    monkeypatch.setattr(DirectStageWorkerService, "is_direct", AsyncMock(return_value=True))
+    monkeypatch.setattr(
+        DirectStageWorkerService,
+        "authorize",
+        AsyncMock(return_value=SimpleNamespace(task=SimpleNamespace(project_id="p"))),
     )
     files = SimpleNamespace(
         get=AsyncMock(side_effect=[doc, img]),
@@ -51,8 +60,8 @@ def inputs():
 
 
 @pytest.mark.asyncio
-async def test_referenced_image_ticket():
-    service, files, _, _ = inputs()
+async def test_referenced_image_ticket(monkeypatch):
+    service, files, _, _ = inputs(monkeypatch)
     assert await requirement_image_ticket("task", "image", "worker", service, files) == {
         "url": "signed"
     }
@@ -62,8 +71,8 @@ async def test_referenced_image_ticket():
 @pytest.mark.parametrize(
     "change", ["worker", "lease", "project", "requirement", "reference", "status", "authority"]
 )
-async def test_image_access_boundaries(change):
-    service, files, task, img = inputs()
+async def test_image_access_boundaries(change, monkeypatch):
+    service, files, task, img = inputs(monkeypatch)
     if change == "worker":
         task.worker_id = "other"
     if change == "lease":
@@ -83,7 +92,7 @@ async def test_image_access_boundaries(change):
     files.ticket.assert_not_awaited()
 
 
-def test_image_route_requires_worker_token_and_disables_cache():
+def test_image_route_requires_worker_token_and_disables_cache(monkeypatch):
     from fastapi.testclient import TestClient
 
     from testing_agent.api.deps import get_file_service, get_worker_task_service
@@ -91,7 +100,7 @@ def test_image_route_requires_worker_token_and_disables_cache():
     from testing_agent.core.config import Settings, get_settings
 
     settings = Settings.from_mapping({"security": {"worker": {"key": "worker-token"}}})
-    service, files, _, _ = inputs()
+    service, files, _, _ = inputs(monkeypatch)
     app = create_app(settings)
     app.dependency_overrides[get_settings] = lambda: settings
     app.dependency_overrides[get_worker_task_service] = lambda: service
@@ -105,23 +114,30 @@ def test_image_route_requires_worker_token_and_disables_cache():
         assert response.json()["url"] == "signed"
 
 
-@pytest.mark.asyncio
-async def test_richtext_retry_uses_current_worker_document_endpoint():
-    from testing_agent.services.worker import build_snapshot
+def test_richtext_retry_uses_current_worker_document_endpoint():
+    from testing_agent.services.stage_storage.payload import worker_payloads
 
-    run = SimpleNamespace(
-        run_id="run",
-        checkpoint_enabled=True,
-        current_stage="extracting_text",
-        config_json={},
-        snapshot_json={
-            "taskType": "requirement_analysis",
-            "documentType": "richtext",
-            "documentDownloadUrl": "/internal/ai-worker/tasks/old/requirement-document",
-        },
+    source = {
+        "taskType": "requirement_analysis",
+        "documentType": "richtext",
+        "documentDownloadUrl": "/internal/ai-worker/tasks/old/requirement-document",
+    }
+    task = SimpleNamespace(
+        task_id="generate-task",
+        task_type="requirement_analysis",
+        name="需求分析",
+        project_id="p",
+        sprint_id="s",
+        requirement_id="r",
     )
-    task = SimpleNamespace(task_id="retry", run_id="run", task_type="requirement_analysis")
-    result = await build_snapshot(SimpleNamespace(scalar=AsyncMock(return_value=run)), "ai", task)
+    authority = SimpleNamespace(
+        task=task,
+        attempt_id="run",
+        revision_instruction=None,
+        input_snapshot={"source": source, "config": {}, "llmConnectionId": "llm"},
+    )
+    worker = SimpleNamespace(task_id="retry")
+    result = worker_payloads(authority, worker, stage_name="extracting_text", lease_seconds=30)[1]
     assert (
         result["run"]["documentDownloadUrl"]
         == "/internal/ai-worker/tasks/retry/requirement-document"

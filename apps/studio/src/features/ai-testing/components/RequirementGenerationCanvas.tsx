@@ -8,7 +8,7 @@ import '@xyflow/react/dist/style.css'
 
 import { generationStageClass, generationStageLabel } from '../utils/generationStageDisplay'
 
-type GroupData = { label: string; status: string; dim: boolean; active?: boolean; unconfigured?: boolean; onConfigure?: () => void; onSelect?: () => void }
+type GroupData = { kind: GenerationChainKind; label: string; status: string; dim: boolean; active?: boolean; unconfigured?: boolean; readOnlyUnconfigured?: boolean; onConfigure?: () => void; onSelect?: () => void }
 type CardActions = { onSelect: () => void; onOpen: (origin?: HTMLElement) => void }
 type StageData = { stage: GenerationChainStage; active: boolean; dim: boolean } & CardActions
 type SpecialData = { kind: 'content' | 'codeRisk'; active: boolean } & CardActions
@@ -20,6 +20,7 @@ type RelationsNode = Node<RelationsData, 'relations'>
 type CanvasNode = GroupNode | StageNode | SpecialNode | RelationsNode
 
 type CanvasProps = {
+  canWrite: boolean
   sourceSelected: 'ui' | 'api' | null
   onSelectSource: (kind: 'ui' | 'api') => void
   chains: GenerationChain[]; filter: ChainFilter; selected?: { kind: GenerationChainKind; stage: string }; special: 'content' | 'codeRisk' | 'relations' | null
@@ -44,7 +45,7 @@ function ChainGroup({ data }: NodeProps<GroupNode>) {
     onClick={event => { if (!(event.target as HTMLElement).closest('button')) data.onSelect?.() }}>
     <svg className="gc-flow-group-outline" aria-hidden="true"><rect x="0" y="0" rx="10" /></svg>
     <div className="gc-flow-group-header">{data.onSelect ? <button type="button" className="gc-flow-group-select nodrag" aria-label={`选择${data.label}分组`} aria-pressed={Boolean(data.active)} onClick={data.onSelect}><strong>{data.label}</strong></button> : <strong>{data.label}</strong>}<small>{data.status}</small></div>
-    {data.unconfigured ? <div className="gc-flow-empty-card">{ports}<button type="button" className="gc-lane-empty nodrag" onClick={data.onConfigure}><span>未开始</span><strong>开始{data.label}</strong><small>先完成生成设置，再运行首阶段</small></button></div> : null}
+    {data.unconfigured ? <div className="gc-flow-empty-card">{ports}<button type="button" className="gc-lane-empty nodrag" disabled={data.readOnlyUnconfigured} onClick={data.onConfigure}><span>未开始</span><strong>开始{data.label}</strong><small>{data.readOnlyUnconfigured ? '等待有编辑权限的成员初始化生成流程' : '先完成生成设置，再运行首阶段'}</small></button></div> : null}
   </section>
 }
 function StageCard({ data }: NodeProps<StageNode>) {
@@ -100,9 +101,16 @@ const positions: Record<GenerationChainKind, { x: number; y: number; width: numb
 const stageInset = 20
 const stageGap = 40
 const stageTop = 44
+const stageBottom = 176
 const itemWidth = 126
-const functionExtraWidth = 96
-function buildCanvas({ chains, filter, selected, special, relations, sourceSelected, onSelectSource, onSelectStage, onOpenStage, onSelectSpecial, onOpenSpecial, onOpenTab }: CanvasProps) {
+// 三阶段链路（功能测试、UI 测试）外框向右加宽、向下加高，阶段卡片交错排布。
+const staggeredKinds = new Set<GenerationChainKind>(['function', 'ui'])
+const staggeredExtraWidth = 96
+const staggeredGroupHeight = 280
+const compactGroupHeight = 144
+const isStaggered = (kind: GenerationChainKind) => staggeredKinds.has(kind)
+const isStaggeredGroup = (node: CanvasNode) => node.type === 'chainGroup' && isStaggered(node.data.kind)
+function buildCanvas({ chains, filter, selected, special, relations, canWrite, sourceSelected, onSelectSource, onSelectStage, onOpenStage, onSelectSpecial, onOpenSpecial, onOpenTab }: CanvasProps) {
   const nodes: CanvasNode[] = [
     { id: 'document', type: 'special', position: { x: 35, y: 275 }, style: { width: 184 }, data: { kind: 'content', active: special === 'content', onSelect: () => onSelectSpecial('content'), onOpen: (origin) => onOpenSpecial('content', origin) } },
     { id: 'risk', type: 'special', position: { x: 198, y: 643 }, style: { width: 300 }, data: { kind: 'codeRisk', active: special === 'codeRisk', onSelect: () => onSelectSpecial('codeRisk'), onOpen: (origin) => onOpenSpecial('codeRisk', origin) } },
@@ -114,15 +122,16 @@ function buildCanvas({ chains, filter, selected, special, relations, sourceSelec
     const groupId = `group:${chain.kind}`
     const status = !chain.configured ? '未开始' : chain.draftCount ? `${chain.draftCount} 个待审核` : chain.stages.length > 0 && chain.stages.every(stage => ['approved', 'imported'].includes(stage.state)) ? '已通过' : '已配置'
     const count = chain.stages.length
+    const staggered = isStaggered(chain.kind)
     const groupWidth = Math.max(layout.width, stageInset * 2 + count * itemWidth + Math.max(0, count - 1) * stageGap)
-      + (chain.kind === 'function' ? functionExtraWidth : 0)
-    nodes.push({ id: groupId, type: 'chainGroup', position: { x: layout.x, y: layout.y }, style: { width: groupWidth, height: chain.kind === 'function' ? 280 : 144 }, data: { label: chain.label, status, dim, active: chain.kind === sourceSelected, onSelect: chain.kind === 'ui' || chain.kind === 'api' ? () => onSelectSource(chain.kind as 'ui' | 'api') : undefined, unconfigured: !chain.configured, onConfigure: () => chain.kind === 'ui' || chain.kind === 'api' ? onSelectSource(chain.kind) : onOpenTab(chain.kind) } })
+      + (staggered ? staggeredExtraWidth : 0)
+    nodes.push({ id: groupId, type: 'chainGroup', position: { x: layout.x, y: layout.y }, style: { width: groupWidth, height: staggered ? staggeredGroupHeight : compactGroupHeight }, data: { kind: chain.kind, label: chain.label, status, dim, active: chain.kind === sourceSelected, onSelect: chain.kind === 'ui' || chain.kind === 'api' ? () => onSelectSource(chain.kind as 'ui' | 'api') : undefined, unconfigured: !chain.configured, readOnlyUnconfigured: !canWrite && (chain.kind === 'requirement_analysis' || chain.kind === 'function'), onConfigure: () => chain.kind === 'ui' || chain.kind === 'api' ? onSelectSource(chain.kind) : onOpenTab(chain.kind) } })
     if (!chain.configured) continue
     chain.stages.forEach((entry, index) => {
       const id = `${chain.kind}:${entry.stage}`
-      const position = chain.kind === 'function' ? {
+      const position = staggered ? {
         x: stageInset + index * (groupWidth - stageInset * 2 - itemWidth) / Math.max(1, count - 1),
-        y: index % 2 === 1 ? 176 : stageTop,
+        y: index % 2 === 1 ? stageBottom : stageTop,
       } : { x: stageInset + index * (itemWidth + stageGap), y: stageTop }
       nodes.push({ id, type: 'stage', parentId: groupId, extent: 'parent', position, style: { width: itemWidth }, data: { stage: entry, active: !special && selected?.kind === chain.kind && selected.stage === entry.stage, dim, onSelect: () => onSelectStage(chain.kind, entry), onOpen: (origin) => onOpenStage(chain.kind, entry, origin) } })
       if (index > 0) edges.push({ id: `${chain.kind}:${index}`, source: `${chain.kind}:${chain.stages[index - 1].stage}`, target: id })
@@ -132,7 +141,7 @@ function buildCanvas({ chains, filter, selected, special, relations, sourceSelec
   const functional = chains.find(item => item.kind === 'function' && item.configured)
   if (relations && functional) {
     const count = functional.stages.length
-    const groupWidth = Math.max(positions.function.width, stageInset * 2 + count * itemWidth + Math.max(0, count - 1) * stageGap) + functionExtraWidth
+    const groupWidth = Math.max(positions.function.width, stageInset * 2 + count * itemWidth + Math.max(0, count - 1) * stageGap) + staggeredExtraWidth
     // 作为泳道子节点固定在分组右侧，随分组一起缩放和平移。
     nodes.push({
       id: 'case-relations', type: 'relations', parentId: `group:function`, position: { x: groupWidth + stageGap, y: stageTop }, style: { width: itemWidth },
@@ -156,8 +165,8 @@ function buildCanvas({ chains, filter, selected, special, relations, sourceSelec
   return { nodes, edges: edges.map((edge): GenerationFlowEdge => ({ ...edge, type: 'generationFlow', data: { running: runningStages.has(edge.source) }, markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: 'var(--app-accent)', strokeWidth: 1.5 } })) }
 }
 function CanvasInner(props: CanvasProps) {
-  const { chains, filter, selected, special, relations, sourceSelected, onSelectSource, onSelectStage, onOpenStage, onSelectSpecial, onOpenSpecial, onOpenTab } = props
-  const graph = useMemo(() => buildCanvas({ chains, filter, selected, special, relations, sourceSelected, onSelectSource, onSelectStage, onOpenStage, onSelectSpecial, onOpenSpecial, onOpenTab }), [chains, filter, selected, special, relations, sourceSelected, onSelectSource, onSelectStage, onOpenStage, onSelectSpecial, onOpenSpecial, onOpenTab])
+  const { chains, filter, selected, special, relations, canWrite, sourceSelected, onSelectSource, onSelectStage, onOpenStage, onSelectSpecial, onOpenSpecial, onOpenTab } = props
+  const graph = useMemo(() => buildCanvas({ chains, filter, selected, special, relations, canWrite, sourceSelected, onSelectSource, onSelectStage, onOpenStage, onSelectSpecial, onOpenSpecial, onOpenTab }), [chains, filter, selected, special, relations, canWrite, sourceSelected, onSelectSource, onSelectStage, onOpenStage, onSelectSpecial, onOpenSpecial, onOpenTab])
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>(graph.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges)
   const frameRef = useRef<HTMLDivElement>(null)
@@ -196,9 +205,9 @@ function CanvasInner(props: CanvasProps) {
       // 功能测试分组的图谱节点位于分组右侧，缩放时把它的宽度一并计入。
       const nodeWidth = (node: CanvasNode) => (typeof node.style?.width === 'number' ? node.style.width : node.measured?.width ?? 0)
         + (relations && node.id === 'group:function' ? stageGap + itemWidth : 0)
-      // 功能测试只扩展外框，初始横向位置仍按扩展前的宽度计算。
+      // 交错排布的分组只扩展外框，初始横向位置仍按扩展前的宽度计算。
       const spacing = Math.max(0.62, Math.min(1, ...roots.filter(node => node.position.x > 35)
-        .map(node => (width - 95 - nodeWidth(node) + (node.id === 'group:function' ? functionExtraWidth : 0)) / (node.position.x - 35))))
+        .map(node => (width - 95 - nodeWidth(node) + (isStaggeredGroup(node) ? staggeredExtraWidth : 0)) / (node.position.x - 35))))
       setNodes(current => current.map(node => node.parentId ? node : { ...node, position: { ...node.position, x: 35 + (node.position.x - 35) * spacing } }))
       const right = Math.max(35, ...roots.map(node => 35 + (node.position.x - 35) * spacing + nodeWidth(node)))
       // 图谱节点让功能测试分组更宽：超出画布时缩小初始缩放，避免节点被右侧裁掉。

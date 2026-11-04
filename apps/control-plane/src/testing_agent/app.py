@@ -45,8 +45,11 @@ from testing_agent.routers.shared_services import router as shared_services_rout
 from testing_agent.routers.sprint_code_overview import router as sprint_code_overview_router
 from testing_agent.routers.sprint_metrics import router as sprint_metrics_router
 from testing_agent.routers.sprints import router as sprints_router
+from testing_agent.routers.test_debug_stream import router as test_debug_stream_router
 from testing_agent.routers.test_orders import router as test_orders_router
 from testing_agent.routers.test_report_ai_tasks import router as test_report_ai_tasks_router
+from testing_agent.routers.test_run_availability import router as test_run_availability_router
+from testing_agent.routers.test_run_events import router as test_run_events_router
 from testing_agent.routers.ui_ai_tasks import router as ui_ai_tasks_router
 from testing_agent.routers.ui_run_variables import router as ui_run_variables_router
 from testing_agent.routers.ui_runs import router as ui_runs_router
@@ -168,6 +171,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(requirement_analysis_runs_router, tags=["Requirement Analysis Tasks"])
     v1.include_router(code_risk_analysis_tasks_router, tags=["Code Risk Analysis Tasks"])
     v1.include_router(test_report_ai_tasks_router, tags=["Test Report AI Tasks"])
+    v1.include_router(test_run_availability_router, tags=["Test Run Events"])
+    v1.include_router(test_debug_stream_router, tags=["Test Debug Stream"])
+    v1.include_router(test_run_events_router, tags=["Test Run Events"])
     v1.include_router(api_runs_router, tags=["API Runs"])
     v1.include_router(ui_runs_router, tags=["UI Runs"])
     app.include_router(v1)

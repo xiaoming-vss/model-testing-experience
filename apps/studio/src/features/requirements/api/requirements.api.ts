@@ -32,8 +32,8 @@ export const requirementsApi = {
   createRequirement: async (sprintId: string, body: RequirementCreatePayload) => {
     const capabilities = await storageCapabilities()
     if (!capabilities.enabled) throw new Error('S3 文件存储未启用，请联系管理员配置')
-    const file = body.file ?? (body.documentContent
-      ? new File([body.documentContent], body.documentType === 'richtext' ? 'requirement.html' : 'requirement.txt', { type: body.documentType === 'richtext' ? 'text/html' : 'text/plain' }) : undefined)
+    const file = body.file ?? (body.documentType === 'richtext' && body.documentContent
+      ? new File([body.documentContent], 'requirement.html', { type: 'text/html' }) : undefined)
     if (file) {
       const sprint = await request<{ projectId: string }>(`/v1/sprints/${sprintId}`)
       if (file.size > capabilities.maxBytes) throw new Error('文件超过大小限制')

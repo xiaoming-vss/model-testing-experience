@@ -11,7 +11,6 @@ from typing import Any
 
 from sqlalchemy import (
     JSON,
-    Boolean,
     DateTime,
     ForeignKey,
     Index,
@@ -57,9 +56,6 @@ class AiGenerateStageVersion(Base):
     version_no: Mapped[int] = mapped_column(
         Integer, nullable=False, comment="同一生成链同一阶段内从 1 开始递增的版本号"
     )
-    run_id: Mapped[str] = mapped_column(
-        String(64), nullable=False, comment="产生该版本的运行业务标识"
-    )
     attempt_id: Mapped[str] = mapped_column(
         String(64), nullable=False, comment="产生该版本的阶段尝试主键标识"
     )
@@ -76,12 +72,6 @@ class AiGenerateStageVersion(Base):
         JSON,
         nullable=True,
         comment="生成该版本时读取的上游阶段及版本业务标识映射 JSON",
-    )
-    based_on_old: Mapped[bool] = mapped_column(
-        Boolean,
-        nullable=False,
-        default=False,
-        comment="是否基于非最新上游版本审核通过",
     )
     reviewer_user_id: Mapped[str] = mapped_column(
         String(64), nullable=False, default="", comment="阶段审核人用户业务标识"

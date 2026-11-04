@@ -49,7 +49,7 @@ class _SuccessfulExecutor(TaskExecutor):
         progress_callback(
             TaskProgress(
                 task_id=task.task_id,
-                run_id=task.run_id,
+                attempt_id=task.attempt_id,
                 current_stage="openapi_extract",
                 stage_status="running",
                 intermediate_json_text='{"cases":[]}',
@@ -58,7 +58,7 @@ class _SuccessfulExecutor(TaskExecutor):
         )
         return TaskResult(
             task_id=task.task_id,
-            run_id=task.run_id,
+            attempt_id=task.attempt_id,
             generate_task_id=task.generate_task_id,
             status=TaskStatus.SUCCESS,
             intermediate_json_text='{"cases":[]}',
@@ -77,7 +77,7 @@ class _HeartbeatAwareExecutor(TaskExecutor):
         self.sink.first_heartbeat.wait(timeout=2.0)
         return TaskResult(
             task_id=task.task_id,
-            run_id=task.run_id,
+            attempt_id=task.attempt_id,
             generate_task_id=task.generate_task_id,
             status=TaskStatus.SUCCESS,
             started_at=started_at,
@@ -90,12 +90,17 @@ class _ExplodingExecutor(TaskExecutor):
         raise RuntimeError("executor boom")
 
 
+class _BlankErrorExecutor(TaskExecutor):
+    def execute(self, task: Task, started_at: datetime, progress_callback) -> TaskResult:
+        raise TimeoutError()
+
+
 class _ProgressThenExplodingExecutor(TaskExecutor):
     def execute(self, task: Task, started_at: datetime, progress_callback) -> TaskResult:
         progress_callback(
             TaskProgress(
                 task_id=task.task_id,
-                run_id=task.run_id,
+                attempt_id=task.attempt_id,
                 current_stage="case_names",
                 stage_status="running",
                 intermediate_json_text='{"enhancedText":"progress text","caseNames":[]}',
@@ -111,7 +116,7 @@ class _CheckpointPauseExecutor(TaskExecutor):
         progress_callback(
             TaskProgress(
                 task_id=task.task_id,
-                run_id=task.run_id,
+                attempt_id=task.attempt_id,
                 current_stage="requirement_analysis",
                 stage_status="waiting_review",
                 intermediate_json_text='{"enhancedText":"text"}',
@@ -126,7 +131,7 @@ class WorkerRunnerTests(unittest.TestCase):
     def _make_task(self) -> Task:
         return Task(
             task_id="task-1",
-            run_id="run-1",
+            attempt_id="run-1",
             generate_task_id="generate-1",
             task_type="api_case_generate",
             lease_seconds=1,
@@ -210,6 +215,22 @@ class WorkerRunnerTests(unittest.TestCase):
         self.assertEqual(
             sink.result_calls[0].intermediate_json_text, '{"enhancedText":"snapshot text"}'
         )
+
+    def test_process_task_never_publishes_a_blank_error_message(self) -> None:
+        runner = WorkerRunner(
+            executor=_BlankErrorExecutor(),
+            result_service=ResultService(_RecordingSink()),
+            lifecycle=WorkerLifecycle(
+                poll_interval_seconds=10,
+                heartbeat_interval_seconds=60,
+                run_once=False,
+            ),
+        )
+
+        result = runner.process_task(self._make_task())
+
+        self.assertEqual(result.status, TaskStatus.ERROR)
+        self.assertEqual(result.error_message, "TimeoutError（未返回错误信息）")
 
     def test_process_task_preserves_latest_progress_config_when_executor_errors_after_progress(
         self,

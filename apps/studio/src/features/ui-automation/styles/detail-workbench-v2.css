@@ -140,43 +140,181 @@
   min-width: 0;
 }
 
-.ui-suite-detail-page .ui-wb-toolbar-title {
+/* 标题改成面包屑后只保留一个语义标题，视觉内容由 crumbs 承担。 */
+.ui-suite-detail-page .ui-wb-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.ui-suite-detail-page .ui-wb-crumbs {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px;
-  margin: 0;
+  align-items: center;
+  gap: 2px;
   min-width: 0;
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 22px;
-  color: var(--srf-text);
 }
 
-.ui-suite-detail-page .ui-wb-toolbar-suite {
+.ui-suite-detail-page .ui-wb-crumb {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--srf-text-secondary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.ui-suite-detail-page button.ui-wb-crumb {
+  color: var(--srf-accent);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ui-suite-detail-page button.ui-wb-crumb:hover,
+.ui-suite-detail-page button.ui-wb-crumb:focus-visible {
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ui-suite-detail-page button.ui-wb-crumb:focus-visible {
+  outline: 2px solid var(--srf-accent);
+  outline-offset: 2px;
+}
+
+.ui-suite-detail-page .ui-wb-crumb.is-current {
+  color: var(--srf-text);
+  font-weight: 600;
+}
+
+.ui-suite-detail-page .ui-wb-crumb-sep {
+  flex: 0 0 auto;
+  color: var(--srf-card-border);
+  font-size: 12px;
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* 测试集名就是“返回测试集流程”的入口：整段可点，需求只作为弱化上下文。 */
+.ui-suite-detail-page .ui-wb-crumb-suite {
+  flex: 0 1 auto;
+  min-width: 0;
   max-width: 280px;
   overflow: hidden;
-  color: var(--srf-text);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.ui-suite-detail-page .ui-wb-toolbar-path {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  max-width: 420px;
+.ui-suite-detail-page .ui-wb-crumb-suite-text {
+  display: block;
+  min-width: 0;
   overflow: hidden;
-  color: var(--srf-text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 12px;
-  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.ui-suite-detail-page .ui-wb-toolbar-sep {
-  color: var(--srf-card-border);
+.ui-suite-detail-page .ui-wb-crumb-suite strong {
+  color: var(--srf-accent);
+  font-weight: 600;
+}
+
+.ui-suite-detail-page .ui-wb-crumb-suite.is-current strong {
+  color: var(--srf-text);
+}
+
+.ui-suite-detail-page button.ui-wb-crumb-suite:hover strong,
+.ui-suite-detail-page button.ui-wb-crumb-suite:focus-visible strong {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ui-suite-detail-page .ui-wb-crumb-context-rest,
+.ui-suite-detail-page .ui-wb-crumb-muted {
+  color: var(--srf-text-muted);
+  font-size: 12px;
+}
+
+.ui-suite-detail-page .ui-wb-crumb-case {
+  flex: 0 1 auto;
+  min-width: 150px;
+  padding: 0;
+}
+
+.ui-suite-detail-page .ui-wb-crumb-case-name {
+  max-width: 260px;
+  overflow: hidden;
+  color: var(--srf-text);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-suite-detail-page .ui-wb-crumb-name-item {
+  position: relative;
+  flex: 0 1 220px;
+  min-width: 110px;
+  max-width: 260px;
+  margin: 0;
+}
+
+.ui-suite-detail-page .ui-wb-crumb-name-item .ant-form-item-control-input {
+  min-height: 26px;
+}
+
+.ui-suite-detail-page .ui-wb-crumb-name-item .ant-form-item-control-input-content {
+  display: flex;
+}
+
+.ui-suite-detail-page .ui-wb-crumb-name-item .ant-input-affix-wrapper {
+  height: 26px;
+  padding: 0 7px;
+  border-color: transparent;
+  background: var(--srf-hover);
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ui-suite-detail-page .ui-wb-crumb-name-item .ant-input-affix-wrapper:is(:hover, :focus-within) {
+  border-color: var(--srf-accent-border);
+  background: var(--srf-card);
+}
+
+.ui-suite-detail-page .ui-wb-crumb-name-item .ant-input {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ui-suite-detail-page .ui-wb-crumb-name-icon {
+  color: var(--srf-text-muted);
+  font-size: 11px;
+}
+
+.ui-suite-detail-page .ui-wb-crumb-name-item .ant-form-item-explain {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 5;
+  padding: 2px 6px;
+  border: 1px solid var(--srf-tone-border, var(--srf-card-border));
+  border-radius: 4px;
+  background: var(--srf-card);
+  box-shadow: 0 4px 12px var(--srf-shadow-color);
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 /* 就绪结论是状态胶囊（与列表页徽标同一套九色盘），不是按钮。 */
@@ -213,6 +351,154 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+/* 有未保存修改时：保存成为当前页最优先的动作，运行测试集让出主按钮。 */
+.ui-suite-detail-page .ui-wb-toolbar-save.is-dirty {
+  border-color: var(--srf-accent);
+  background: var(--srf-accent);
+  color: var(--srf-on-accent);
+  box-shadow: 0 0 0 3px var(--srf-accent-soft);
+}
+
+.ui-suite-detail-page .ui-wb-toolbar-save.is-dirty:hover,
+.ui-suite-detail-page .ui-wb-toolbar-save.is-dirty:focus-visible {
+  border-color: var(--srf-accent-strong);
+  background: var(--srf-accent-strong);
+  color: var(--srf-on-accent);
+}
+
+.ui-suite-detail-page .ui-wb-toolbar-save.is-dirty::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--srf-on-accent);
+  box-shadow: 0 0 0 2px var(--srf-accent);
+}
+
+.ui-suite-detail-page .ui-wb-toolbar.has-unsaved-case .ui-wb-toolbar-run:not(:disabled) {
+  border-color: var(--srf-accent-border);
+  background: transparent;
+  color: var(--srf-accent);
+  box-shadow: none;
+}
+
+.ui-suite-detail-page .ui-wb-toolbar.has-unsaved-case .ui-wb-toolbar-run:not(:disabled):hover {
+  border-color: var(--srf-accent);
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent);
+}
+
+.ui-suite-detail-page .ui-wb-unsaved-chip {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid var(--srf-tone-border);
+  border-radius: 999px;
+  background: var(--srf-tone-bg);
+  color: var(--srf-tone-text);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.ui-suite-detail-page .ui-wb-unsaved-dot {
+  flex: 0 0 auto;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ui-suite-detail-page .ui-wb-toolbar-save.is-dirty::before {
+    animation: ui-wb-save-pulse 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes ui-wb-save-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
+
+/* 顶栏、两栏工作区与描述同属一个表单：用例名/启用开关在顶栏，步骤字段在左右两栏。 */
+.ui-suite-detail-page .ui-suite-detail-form {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.ui-suite-detail-page .ui-wb-toolbar-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--srf-card-border);
+}
+
+/* 用例信息在顶栏内联显示，不再单独占一行。 */
+.ui-suite-detail-page .ui-wb-toolbar .ui-wb-case-meta {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.ui-suite-detail-page .ui-wb-case-enabled {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ui-suite-detail-page .ui-wb-case-status {
+  color: var(--srf-text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.ui-suite-detail-page .ui-wb-case-status.tone-green {
+  color: var(--srf-tone-text);
+}
+
+.ui-suite-detail-page .ui-wb-case-count {
+  color: var(--srf-text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* 桌面宽度保持单行：动作组不换行，面包屑在剩余空间里截断。 */
+@media (min-width: 1181px) {
+  .ui-suite-detail-page .ui-wb-toolbar {
+    flex-wrap: nowrap;
+  }
+
+  .ui-suite-detail-page .ui-wb-toolbar-main {
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+
+  .ui-suite-detail-page .ui-wb-crumbs {
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
+
+  .ui-suite-detail-page .ui-wb-toolbar-actions {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+  }
 }
 
 /* 环境选择器与「环境」按钮放在整套运行操作之前，窄屏时和按钮组一起换行。 */
@@ -282,59 +568,7 @@
   background: var(--srf-card);
 }
 
-/* 这一组的子项（下拉 / 计数 / 前后切换 / 顺序 / 新建）加起来接近 560px。flex-basis 也取 560px，
-   空间不够时让右边那组换行到第二行，而不是让左组的子项溢出、画到右边那组上面——
-   那种遮挡在 jsdom 的布局盲区里看不见，只能靠这条不变量守住。 */
-.ui-suite-detail-page .ui-wb-ribbon-case {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  flex: 1 1 560px;
-}
-
-.ui-suite-detail-page .ui-wb-ribbon-case > * {
-  flex-shrink: 0;
-}
-
-.ui-suite-detail-page .ui-wb-ribbon-case > .ui-wb-ribbon-case-select {
-  flex-shrink: 1;
-}
-
-.ui-suite-detail-page .ui-wb-ribbon-case-icon {
-  color: var(--srf-folder);
-  font-size: 16px;
-}
-
-.ui-suite-detail-page .ui-wb-ribbon-case-label {
-  flex: 0 0 auto;
-  color: var(--srf-text-secondary);
-  font-size: 12px;
-}
-
-.ui-suite-detail-page .ui-wb-ribbon-case-select {
-  min-width: 120px;
-  flex: 1 1 auto;
-  max-width: 460px;
-}
-
-.ui-suite-detail-page .ui-wb-ribbon-case-select .ant-select-selector {
-  border-color: var(--srf-card-border) !important;
-  background: var(--srf-hover) !important;
-}
-
-.ui-suite-detail-page .ui-wb-ribbon-count {
-  flex: 0 0 auto;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--srf-count-badge);
-  color: var(--srf-accent-strong);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 18px;
-}
-
+/* 用例的新建、切换、排序、删除都在流程画布卡片上完成，这里只保留运行环境。 */
 .ui-suite-detail-page .ui-wb-ribbon-workspace {
   display: flex;
   flex-wrap: wrap;
@@ -357,117 +591,6 @@
   white-space: nowrap;
 }
 
-/* ===== 用例顺序弹层 ===== */
-
-.ui-wb-order-overlay .ui-wb-order-panel {
-  width: 360px;
-}
-
-.ui-wb-order-overlay .ui-wb-order-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--srf-divider);
-}
-
-.ui-wb-order-overlay .ui-wb-order-title {
-  color: var(--srf-text);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.ui-wb-order-overlay .ui-wb-order-hint {
-  color: var(--srf-text-muted);
-  font-size: 11px;
-}
-
-.ui-wb-order-overlay .ui-wb-order-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: 360px;
-  overflow: auto;
-  padding-top: 8px;
-}
-
-.ui-wb-order-overlay .ui-wb-order-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border: 1px solid transparent;
-  border-radius: var(--srf-radius-control);
-  cursor: pointer;
-}
-
-.ui-wb-order-overlay .ui-wb-order-item.can-drag {
-  cursor: grab;
-}
-
-.ui-wb-order-overlay .ui-wb-order-item:hover {
-  border-color: var(--srf-card-border);
-  background: var(--srf-hover);
-}
-
-.ui-wb-order-overlay .ui-wb-order-item.selected,
-.ui-wb-order-overlay .ui-wb-order-item.selected:hover {
-  border-color: var(--srf-accent-border);
-  background: var(--srf-accent-soft);
-}
-
-.ui-wb-order-overlay .ui-wb-order-item.dragging {
-  opacity: 0.5;
-}
-
-.ui-wb-order-overlay .ui-wb-order-grip {
-  flex: 0 0 auto;
-  color: var(--srf-text-muted);
-  font-size: 12px;
-}
-
-.ui-wb-order-overlay .ui-wb-order-serial {
-  flex: 0 0 auto;
-  color: var(--srf-text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11px;
-}
-
-.ui-wb-order-overlay .ui-wb-order-name {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--srf-text);
-  font-size: 12px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ui-wb-order-overlay .ui-wb-order-meta {
-  flex: 0 0 auto;
-  color: var(--srf-text-muted);
-  font-size: 11px;
-}
-
-.ui-wb-order-overlay .ui-wb-order-actions {
-  flex: 0 0 auto;
-  opacity: 0;
-  transition: opacity 0.16s ease;
-}
-
-.ui-wb-order-overlay .ui-wb-order-item:hover .ui-wb-order-actions,
-.ui-wb-order-overlay .ui-wb-order-item.selected .ui-wb-order-actions,
-.ui-wb-order-overlay .ui-wb-order-item:focus-within .ui-wb-order-actions {
-  opacity: 1;
-}
-
-.ui-wb-order-overlay .ui-wb-order-empty {
-  padding: 12px;
-}
-
 /* ===== 窄屏 ===== */
 
 /* 断点与 API 详情页一致（1180px）：再窄就把 7:5 双栏改成上下堆叠。 */
@@ -477,17 +600,93 @@
     min-height: 0;
   }
 
-  .ui-suite-detail-page .ui-wb-toolbar-path {
-    max-width: 260px;
-  }
-
-  .ui-suite-detail-page .ui-wb-ribbon-case {
-    flex: 1 1 100%;
+  .ui-suite-detail-page .ui-wb-crumb-suite {
+    max-width: 280px;
   }
 }
 
-@media (max-width: 720px) {
-  .ui-wb-order-overlay .ui-wb-order-panel {
-    width: min(360px, calc(100vw - 64px));
+@media (max-width: 1439px) {
+  /* 中等宽度只保留测试集名，需求与迭代仍在 title 中；避免截到需求名的一半。 */
+  .ui-suite-detail-page .ui-wb-crumb-context-rest {
+    display: none;
+  }
+
+  .ui-suite-detail-page .ui-wb-crumb-suite {
+    max-width: 140px;
   }
 }
+
+/* 顶栏动作留给运行/保存，次级动作在中等宽度收成图标；title/aria-label 保留完整名称。 */
+@media (max-width: 1800px) {
+  .ui-suite-detail-page .ui-wb-toolbar-actions .ui-wb-toolbar-compact {
+    width: 28px;
+    padding-inline: 0;
+  }
+
+  .ui-suite-detail-page .ui-wb-toolbar-actions .ui-wb-toolbar-compact .ui-wb-btn-label {
+    display: none;
+  }
+
+  .ui-suite-detail-page .ui-wb-toolbar-actions .ui-wb-toolbar-compact .ant-btn-icon {
+    margin-inline-end: 0;
+  }
+
+  .ui-suite-detail-page .ui-wb-toolbar-actions {
+    gap: 6px;
+  }
+
+  .ui-suite-detail-page .ui-wb-toolbar-environment {
+    min-width: 140px;
+  }
+}
+
+@media (max-width: 900px) {
+  .ui-suite-detail-page .ui-wb-crumb-suite {
+    max-width: 220px;
+  }
+
+  .ui-suite-detail-page .ui-wb-crumb-name-item {
+    flex-basis: 180px;
+  }
+}
+
+@media (max-width: 700px) {
+  .ui-suite-detail-page .ui-wb-crumb-suite {
+    max-width: 180px;
+  }
+
+  .ui-suite-detail-page .ui-wb-crumb-case-name {
+    max-width: 150px;
+  }
+
+  .ui-suite-detail-page .ui-wb-crumb-name-item {
+    flex-basis: 150px;
+    min-width: 96px;
+  }
+
+  .ui-suite-detail-page .ui-wb-toolbar-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+/* 测试集流程和当前用例共用一条导航；用例的新建与切换都在流程画布卡片上。 */
+.ui-suite-detail-page .ui-wb-flow-breadcrumb { display:flex; align-items:center; flex-wrap:wrap; gap:4px; min-width:0; }
+.ui-suite-detail-page .ui-wb-flow-breadcrumb-current { color:var(--srf-text-secondary); overflow-wrap:anywhere; }
+.ui-suite-detail-page .ui-wb-inspector.ui-wb-inspector-unified { gap:0; padding:12px; border:1px solid var(--srf-card-border); border-radius:var(--srf-radius-card); background:var(--srf-card); }
+.ui-suite-detail-page .ui-wb-inspector.ui-wb-inspector-unified > .ui-wb-inspector-slot { flex:0 0 auto; min-height:0; }
+.ui-suite-detail-page .ui-wb-inspector-unified > .ui-wb-inspector-slot + .ui-wb-inspector-slot { margin-top:16px; }
+.ui-suite-detail-page .ui-wb-inspector-unified .ui-wb-card { padding:0; border:0; border-radius:0; background:transparent; overflow:visible; }
+.ui-suite-detail-page .ui-wb-inspector-unified .ui-wb-strip-empty { padding:0; }
+.ui-suite-detail-page .ui-wb-inspector-unified .ui-wb-console-log { min-height:85px; max-height:240px; }
+/* 让回放、快照和日志在一个视口中保持可见；截图与日志仍使用各自的原有控件。 */
+.ui-suite-detail-page .ui-wb-inspector-unified .ui-wb-replay-stage { flex:0 0 auto; }
+.ui-suite-detail-page .ui-wb-inspector-unified .ui-wb-replay-canvas { flex:0 0 auto; width:100%; height:auto; aspect-ratio:16 / 9; max-height:none; }
+.ui-suite-detail-page .ui-wb-inspector-unified .ui-wb-replay-placeholder .ant-empty-image,
+.ui-suite-detail-page .ui-wb-inspector-unified .ui-wb-strip-empty .ant-empty-image,
+.ui-suite-detail-page .ui-wb-inspector-unified .ui-wb-console-empty .ant-empty-image { display:none; }
+.ui-suite-detail-page .ui-wb-inspector-unified .ui-wb-strip-empty .ant-empty,
+.ui-suite-detail-page .ui-wb-inspector-unified .ui-wb-console-empty.ant-empty { margin:0; }
+
+.ui-suite-detail-page .ui-wb-inspector-unified .ui-wb-replay-shot { width:100%; height:100%; }
+.ui-suite-detail-page .ui-wb-inspector-unified .ui-wb-replay-shot img { width:100%; height:100%; object-fit:contain; }

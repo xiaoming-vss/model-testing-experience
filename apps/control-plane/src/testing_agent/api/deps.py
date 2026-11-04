@@ -51,7 +51,6 @@ from testing_agent.repositories.ui_test_suite import UiTestSuiteRepository
 from testing_agent.repositories.user import UserRepository
 from testing_agent.repositories.worker_task import WorkerTaskRepository
 from testing_agent.services.ai_candidate_review import GenerationCandidateReview
-from testing_agent.services.ai_execution.writer import ExecutionWriter, SqlExecutionWriter
 from testing_agent.services.ai_report import TestReportWorkflow
 from testing_agent.services.ai_run_launcher import GenerationRunLauncher
 from testing_agent.services.ai_source_archive import SourceArchiveManager
@@ -221,12 +220,16 @@ def build_sprint_service(session: AsyncSession) -> SprintService:
 def get_requirement_service(
     session: AsyncSession = Depends(get_session), settings: Settings = Depends(get_settings)
 ) -> RequirementService:
+    from testing_agent.services.requirement_generation_defaults import add_default_generation_tasks
     from testing_agent.services.stored_file import StoredFileService
 
     return RequirementService(
         RequirementRepository(session),
         build_sprint_service(session),
         StoredFileService(session, settings.s3),
+        initialize_generation=lambda requirement, project_id, user_id: add_default_generation_tasks(
+            session, requirement, project_id, user_id
+        ),
     )
 
 
@@ -423,10 +426,6 @@ def get_generation_task_commands(
     )
 
 
-def get_generation_writer() -> ExecutionWriter:
-    return SqlExecutionWriter()
-
-
 def get_generation_metrics(
     access: GenerationAccess = Depends(get_generation_access),
 ) -> SprintDailyMetricsService:
@@ -435,7 +434,6 @@ def get_generation_metrics(
 
 def get_generation_launcher(
     access: GenerationAccess = Depends(get_generation_access),
-    execution: ExecutionWriter = Depends(get_generation_writer),
     metrics: SprintDailyMetricsService = Depends(get_generation_metrics),
     settings: Settings = Depends(get_settings),
 ) -> GenerationRunLauncher:
@@ -449,7 +447,6 @@ def get_generation_launcher(
         repository=access.repository,
         source_archive_repository=AiGenerateTaskSourceArchiveRepository(session),
         access=access,
-        execution=execution,
         sprint_daily_metrics_service=metrics,
         code_risk_analysis_service=CodeRiskAnalysisService(
             access.repository,
@@ -463,7 +460,6 @@ def get_generation_launcher(
 
 def get_generation_reports(
     access: GenerationAccess = Depends(get_generation_access),
-    execution: ExecutionWriter = Depends(get_generation_writer),
     metrics: SprintDailyMetricsService = Depends(get_generation_metrics),
 ) -> TestReportWorkflow:
     return TestReportWorkflow(
@@ -471,7 +467,6 @@ def get_generation_reports(
         sprint_daily_metrics_service=metrics,
         ensure_project_access=access.ensure_project_access,
         owned_run=access.owned_run,
-        execution_writer=execution,
     )
 
 
@@ -488,34 +483,29 @@ def get_generation_archives(
 
 def get_generation_review(
     access: GenerationAccess = Depends(get_generation_access),
-    execution: ExecutionWriter = Depends(get_generation_writer),
 ) -> GenerationCandidateReview:
-    return GenerationCandidateReview(access.repository, access.owned_run, execution)
+    return GenerationCandidateReview(access.repository, access.owned_run)
 
 
 def get_generation_api_importer(
     access: GenerationAccess = Depends(get_generation_access),
-    execution: ExecutionWriter = Depends(get_generation_writer),
 ) -> ApiCandidateImporter:
     return ApiCandidateImporter(
         repository=access.repository,
         owned_run=access.owned_run,
         ensure_collection_access=access.ensure_collection_access,
-        execution_writer=execution,
     )
 
 
 def get_generation_import_context(
     access: GenerationAccess = Depends(get_generation_access),
-    execution: ExecutionWriter = Depends(get_generation_writer),
 ) -> GenerationImportContext:
-    return GenerationImportContext(access.repository, access, execution)
+    return GenerationImportContext(access.repository, access)
 
 
 def get_requirement_design_service(
     access: GenerationAccess = Depends(get_generation_access),
     commands: GenerationTaskCommands = Depends(get_generation_task_commands),
-    launcher: GenerationRunLauncher = Depends(get_generation_launcher),
 ) -> RequirementDesignService:
     return RequirementDesignService(
         RequirementDesignRepository(access.repository.session),
@@ -523,7 +513,6 @@ def get_requirement_design_service(
         AiGenerateTaskSourceArchiveRepository(access.repository.session),
         access,
         commands,
-        launcher,
     )
 
 
@@ -612,37 +601,30 @@ def get_file_service(
 
 def get_generation_stages(
     access: GenerationAccess = Depends(get_generation_access),
-    execution: ExecutionWriter = Depends(get_generation_writer),
     files=Depends(get_file_service),
 ) -> GenerationStageWorkflow:
     return GenerationStageWorkflow(
         repository=access.repository,
         owned_run=access.owned_run,
-        execution_writer=execution,
         files=files,
+        access=access,
     )
 
 
 def get_ui_generation_stages(
     access: GenerationAccess = Depends(get_generation_access),
-    execution: ExecutionWriter = Depends(get_generation_writer),
     files=Depends(get_file_service),
 ) -> UiGenerationWorkflow:
     return UiGenerationWorkflow(
         repository=access.repository,
         owned_run=access.owned_run,
-        execution_writer=execution,
         files=files,
     )
 
 
 def get_generation_chain(
     access: GenerationAccess = Depends(get_generation_access),
-    execution: ExecutionWriter = Depends(get_generation_writer),
-    launcher: GenerationRunLauncher = Depends(get_generation_launcher),
-    stages: GenerationStageWorkflow = Depends(get_generation_stages),
-    ui_stages: UiGenerationWorkflow = Depends(get_ui_generation_stages),
-    review: GenerationCandidateReview = Depends(get_generation_review),
+    files=Depends(get_file_service),
     imports: GenerationImportContext = Depends(get_generation_import_context),
     api_importer: ApiCandidateImporter = Depends(get_generation_api_importer),
 ) -> GenerationChainService:
@@ -650,11 +632,7 @@ def get_generation_chain(
         repository=GenerationChainRepository(access.repository.session),
         tasks=access.repository,
         access=access,
-        launcher=launcher,
-        stages=stages,
-        ui_stages=ui_stages,
-        review=review,
-        execution=execution,
+        files=files,
         imports=imports,
         api_importer=api_importer,
     )

@@ -12,6 +12,7 @@ import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { RequirementDetailHeader } from '@/features/requirements/components/RequirementDetailHeader'
 import { message } from '@/shared/utils/feedback'
+import { canNavigateAway } from '@/shared/utils/unsavedChanges'
 import { getErrorMessage } from '@/utils/format'
 import '@/shared/styles/surface-tokens.css'
 import '@/features/requirements/styles/detail.css'
@@ -41,7 +42,7 @@ export function RequirementDetailPage() {
     if (useWorkbenchStore.getState().activeSprintId !== sprintId) useWorkbenchStore.getState().setActiveSprintId(sprintId)
   }, [canRead, canonicalProjectId, sprintId])
   useEffect(() => {
-    if (!editing || !['text', 'richtext'].includes(requirement?.documentType ?? '')) return
+    if (!editing || requirement?.documentType !== 'richtext') return
     const sequence = ++documentHydrationSeq.current
     let cancelled = false
     setDocumentLoading(true)
@@ -59,10 +60,9 @@ export function RequirementDetailPage() {
       onUploadProgress: values.onUploadProgress,
     })
     if (values.file) return requirementsApi.replaceRequirementDocument(requirementId, { name: values.name, file: values.file, documentType: values.documentType, onUploadProgress: values.onUploadProgress })
-    return requirementsApi.updateRequirement(requirementId, { name: values.name,
-      ...(values.documentType === 'text' ? { documentContent: values.documentContent ?? '', documentType: 'text' } : {}) })
+    return requirementsApi.updateRequirement(requirementId, { name: values.name })
   }, onSuccess: () => { setEditing(false); void client.invalidateQueries({ queryKey: ['requirement', requirementId] }); void client.invalidateQueries({ queryKey: ['requirementDesign', requirementId] }); void client.invalidateQueries({ queryKey: ['requirementsPool'] }); message.success('需求已更新') } })
-  const back = () => navigate('/projects?board=requirements')
+  const back = () => { if (canNavigateAway()) navigate('/projects?board=requirements') }
   // 生成全景的刷新入口在需求标题栏，这里直接刷新生成链查询。
   const refreshGeneration = () => {
     setRefreshingGeneration(true)
@@ -83,9 +83,9 @@ export function RequirementDetailPage() {
       <RequirementDetailHeader showDownload showEdit requirement={requirement} requirementId={requirementId}
         canWrite={access.can('write')} onRefresh={sprint.data ? refreshGeneration : undefined} refreshing={refreshingGeneration} onBack={back} onEdit={() => {
           setDocumentError(undefined)
-          setDocumentLoading(requirement.documentType === 'richtext' || requirement.documentType === 'text')
+          setDocumentLoading(requirement.documentType === 'richtext')
           form.setFieldsValue({ name: requirement.name,
-            documentType: requirement.documentType === 'docx' ? 'word' : requirement.documentType ?? 'text',
+            documentType: requirement.documentType === 'docx' ? 'word' : requirement.documentType ?? 'richtext',
             documentContent: '', documentFilename: requirement.documentFilename,
             documentFileName: requirement.documentFilename, documentDownloadUrl: requirement.documentDownloadUrl,
             file: undefined }); setEditing(true)

@@ -38,7 +38,7 @@
 }
 
 /* 步骤列表是左栏的滚动区：步骤多的时候在这里滚，卡片与页面都不再变长；
-   「添加步骤」固定留在卡片底部。 */
+   新建步骤的入口在流程画布末尾的虚线卡片上。 */
 .ui-suite-detail-page .ui-wb-pipeline > .ui-test-case-step-list {
   flex: 1 1 auto;
   min-height: 0;

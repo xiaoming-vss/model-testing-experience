@@ -20,7 +20,7 @@ from testing_agent.schemas.ui_variables import (
 )
 from testing_agent.services.ui_run_variable_records import record_variable_writes
 from testing_agent.services.worker_authorization import authorize_execution
-from testing_agent.services.worker_task import ensure_worker_match
+from testing_agent.services.worker_domains.guard import ensure_worker_match
 
 BASE_URL_NAME = "baseUrl"
 MAX_NAMES = 200

@@ -190,14 +190,147 @@ class GenerationTaskCommands:
 
     async def delete(self, kind: str, task_id: str, user_id: str) -> dict:
         task = await self.access.owned_task(user_id, task_id, kind, action="write")
+        if task.requirement_id and kind in {
+            "function",
+            "api",
+            "ui",
+            "requirement_analysis",
+            "code_risk_analysis",
+        }:
+            from sqlalchemy import select
+
+            from testing_agent.models.ai_generate_task import AiGenerateTask
+            from testing_agent.models.ai_generation_stage import AiGenerationStage
+
+            await self.repository.session.scalar(
+                select(AiGenerateTask).where(AiGenerateTask.task_id == task_id).with_for_update()
+            )
+            active = await self.repository.session.scalar(
+                select(AiGenerationStage.id)
+                .where(
+                    AiGenerationStage.task_id == task_id,
+                    AiGenerationStage.active_attempt_id.is_not(None),
+                )
+                .limit(1)
+                .with_for_update()
+            )
+            if active:
+                raise ErrAiGenerateTaskRunRunning()
+        if kind in {"function", "api", "ui"} and not task.requirement_id:
+            from sqlalchemy import select
+
+            from testing_agent.models.ai_execution import AiExecution
+
+            session = self.repository.session
+            expected_scope = (
+                task.project_id,
+                task.sprint_id,
+                task.requirement_id,
+                task.order_id,
+                task.task_type,
+            )
+            current = await self.repository.get_task_for_update(task_id)
+            if (
+                current is None
+                or (
+                    current.project_id,
+                    current.sprint_id,
+                    current.requirement_id,
+                    current.order_id,
+                    current.task_type,
+                )
+                != expected_scope
+            ):
+                raise ErrNotFound()
+            await self.access.validate_task_scope(current)
+            active = await session.scalar(
+                select(AiExecution.execution_id)
+                .where(
+                    AiExecution.task_id == task_id,
+                    AiExecution.workflow_status.in_(RUN_ACTIVE_STATUSES),
+                )
+                .limit(1)
+                .with_for_update()
+            )
+            if active:
+                raise ErrAiGenerateTaskRunRunning()
         await self.deletion.delete(self.repository.session, task)
         await self.repository.commit()
         return {}
 
     async def delete_run(self, kind: str, run_id: str, user_id: str) -> dict:
-        run = await self.access.owned_run(user_id, run_id, kind, action="write")
-        if run.status in RUN_ACTIVE_STATUSES:
-            raise ErrAiGenerateTaskRunRunning()
-        await self.deletion.delete(self.repository.session, run)
-        await self.repository.commit()
-        return {}
+        if kind in {"code_risk_analysis", "test_report", "test_order_graph"}:
+            from testing_agent.repositories.auxiliary_execution import detail_row
+            from testing_agent.services.auxiliary_execution_delete import delete_auxiliary_execution
+
+            row = await detail_row(self.repository.session, run_id)
+            if row is not None:
+                _, task, _ = row
+                task_id = task.task_id
+                # Discard the initial snapshot before rechecking current permissions.
+                await self.repository.commit()
+                authorized = await self.access.owned_task(user_id, task_id, kind, action="write")
+                scope = (
+                    authorized.project_id,
+                    authorized.sprint_id,
+                    authorized.requirement_id,
+                    authorized.order_id,
+                    authorized.task_type,
+                )
+                current = await self.repository.get_task_for_update(task_id)
+                if (
+                    current is None
+                    or (
+                        current.project_id,
+                        current.sprint_id,
+                        current.requirement_id,
+                        current.order_id,
+                        current.task_type,
+                    )
+                    != scope
+                ):
+                    raise ErrNotFound()
+                await self.access.validate_task_scope(current)
+                await delete_auxiliary_execution(
+                    self.repository.session, task_id=current.task_id, execution_id=run_id
+                )
+                await self.repository.commit()
+                return {}
+            raise ErrNotFound()
+        if kind in {"function", "api", "ui"}:
+            from testing_agent.repositories.standalone_execution import workflow_task_id
+            from testing_agent.services.standalone_execution_delete import (
+                delete_standalone_execution,
+            )
+
+            session = self.repository.session
+            task_id = await workflow_task_id(session, run_id)
+            if task_id is None:
+                raise ErrNotFound()
+            await self.repository.commit()
+            authorized = await self.access.owned_task(user_id, task_id, kind, action="write")
+            standalone_scope = (
+                authorized.project_id,
+                authorized.sprint_id,
+                authorized.requirement_id,
+                authorized.order_id,
+                authorized.task_type,
+            )
+            current = await self.repository.get_task_for_update(task_id)
+            if (
+                current is None
+                or (
+                    current.project_id,
+                    current.sprint_id,
+                    current.requirement_id,
+                    current.order_id,
+                    current.task_type,
+                )
+                != standalone_scope
+            ):
+                raise ErrNotFound()
+            await self.access.validate_task_scope(current)
+            await delete_standalone_execution(session, task_id=task_id, execution_id=run_id)
+            await self.repository.commit()
+            return {}
+        raise ErrNotFound()

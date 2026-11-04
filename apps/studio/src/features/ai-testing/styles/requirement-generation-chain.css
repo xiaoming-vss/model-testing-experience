@@ -350,6 +350,7 @@
 .gc-modal-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-left: auto; }
 .gc-modal-meta { display: flex; align-items: center; gap: 5px; padding: 0 24px 10px; color: var(--app-surface-text-muted); font-size: 11px; }
 .gc-modal-meta.is-danger { color: var(--app-profile-danger-text); }
+.gc-modal-meta.is-warn { color: var(--app-status-warning-text); }
 
 .gc-history { width: min(380px, 82vw); max-height: 360px; overflow: auto; }
 .gc-history-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 2px 4px 8px; }

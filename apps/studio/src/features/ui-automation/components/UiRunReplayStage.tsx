@@ -20,13 +20,17 @@ type Props = {
   snapshots: UiStepSnapshot[]
   activeIndex: number
   viewportText: string
+  viewportWidth?: number
+  viewportHeight?: number
   screenshotText: string
   onActiveIndexChange: (index: number) => void
 }
 
-export function UiRunReplayStage({ run, snapshots, activeIndex, viewportText, screenshotText, onActiveIndexChange }: Props) {
+export function UiRunReplayStage({ run, snapshots, activeIndex, viewportText, viewportWidth, viewportHeight, screenshotText, onActiveIndexChange }: Props) {
   const activeSnapshot = snapshots[activeIndex]
   const total = snapshots.length
+  const aspectRatio = viewportWidth && viewportHeight && Number.isFinite(viewportWidth) && Number.isFinite(viewportHeight) && viewportWidth > 0 && viewportHeight > 0
+    ? `${viewportWidth} / ${viewportHeight}` : undefined
   const progress = total > 1 ? (activeIndex / (total - 1)) * 100 : total === 1 ? 100 : 0
 
   return (
@@ -60,7 +64,7 @@ export function UiRunReplayStage({ run, snapshots, activeIndex, viewportText, sc
           </span>
         </div>
 
-        <div className="ui-wb-replay-canvas">
+        <div className="ui-wb-replay-canvas" style={{ aspectRatio }}>
           {activeSnapshot?.screenshotPath ? (
             <StoredImage
               src={activeSnapshot.screenshotPath}

@@ -77,7 +77,7 @@ class ArtifactHandoffTests(unittest.TestCase):
     def run_generation(self, workspace, generate):
         task = Task(
             task_id="file-result",
-            run_id="file-result",
+            attempt_id="file-result",
             task_type="requirement_analysis",
             config_json="{}",
             payload=TaskPayload(openapi_content=""),

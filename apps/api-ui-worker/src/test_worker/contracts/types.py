@@ -19,7 +19,7 @@ UiTaskType = Literal["case_debug", "suite_run"]
 UiStepStatus = Literal["success", "failed", "error", "skipped"]
 
 # 用例运行状态
-UiCaseRunStatus = Literal["success", "failed", "error"]
+UiCaseRunStatus = Literal["success", "failed", "error", "canceled"]
 
 # 测试集项运行状态
 UiSuiteItemRunStatus = Literal["success", "failed", "error", "skipped"]
@@ -51,6 +51,7 @@ class WorkerConfig:
     trace_enabled: bool
     screenshot_on_failure: bool
     snapshot_file: str
+    redis_url: str = ""
 
 
 @dataclass

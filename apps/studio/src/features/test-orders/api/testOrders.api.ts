@@ -75,6 +75,10 @@ export const testOrdersApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  getTestOrderGraphRuns: (orderId: string, params: { page: number; pageSize: number }) =>
+    request<ListResponse<TestOrderGraphRun>>(`/v1/test-orders/${orderId}/graph-analysis/runs${buildQuery(params)}`),
+  getTestOrderGraphRun: (runId: string) => request<TestOrderGraphRun>(`/v1/test-order-graph-runs/${runId}`),
+  deleteTestOrderGraphRun: (runId: string) => request<Record<string, never>>(`/v1/test-order-graph-runs/${runId}`, { method: 'DELETE' }),
   getTestOrderGraph: (orderId: string) =>
     request<TestOrderGraph>(`/v1/test-orders/${orderId}/graph-analysis`),
 }

@@ -80,15 +80,21 @@ def test_requirement_workspace_scope_roles_and_idempotent_run(api):  # noqa: F81
         api.post("/v1/requirements/other/design/api/run", headers=owner, json=run).status_code
         == 404
     )
-    assert api.post(base + "/api/run", headers=member, json=run).status_code == 404
-    first_run = api.post(base + "/api/run", headers=owner, json=run)
+    assert api.post(base + "/api/run", headers=owner, json=run).status_code == 400
+    stage_url = "/v1/requirements/req/generation/api/stages/openapi_extract/run"
+    stage_request = {"requestId": run["requestId"], "connectionId": "mine"}
+    assert api.post(stage_url, headers=viewer, json=stage_request).status_code == 403
+    assert api.post(stage_url, headers=member, json=stage_request).status_code == 404
+    first_run = api.post(stage_url, headers=owner, json=stage_request)
     assert first_run.status_code == 200, first_run.text
-    second_run = api.post(base + "/api/run", headers=owner, json=run)
+    second_run = api.post(stage_url, headers=owner, json=stage_request)
     assert second_run.status_code == 200, second_run.text
-    assert first_run.json()["data"]["runId"] == second_run.json()["data"]["runId"]
+    first_stage = first_run.json()["data"]["stages"][0]
+    second_stage = second_run.json()["data"]["stages"][0]
+    assert first_stage["activeRunId"] == second_stage["activeRunId"]
     history = api.get(base + "/api/runs", headers=owner).json()["data"]
     assert history["total"] == 1
-    assert "snapshotJson" not in history["items"][0]
+    assert history["items"][0]["runId"] == first_stage["activeRunId"]
     overview = api.get(base, headers=owner).json()["data"]
     assert overview["runCounts"] == {"api": 1, "ui": 0, "function": 0, "requirement_analysis": 0}
     assert overview["activeTaskIds"] == [task_id]
@@ -100,3 +106,19 @@ def test_requirement_workspace_scope_roles_and_idempotent_run(api):  # noqa: F81
         api.post(base + "/api/configuration", headers=owner, json={"projectId": pid}).status_code
         == 400
     )
+
+
+def test_new_requirement_has_default_generation_chains(api):  # noqa: F811
+    user, owner = account(api, "owner")
+    pid = project(api, owner)
+    seed_requirement(api, pid, user["userId"])
+    response = api.post("/v1/sprints/s/requirements", headers=owner, json={"name": "新需求"})
+    assert response.status_code == 200, response.text
+    requirement_id = response.json()["data"]["requirementId"]
+    response = api.get(f"/v1/requirements/{requirement_id}/generation", headers=owner)
+    assert response.status_code == 200, response.text
+    chains = {chain["kind"]: chain for chain in response.json()["data"]["chains"]}
+    assert chains["requirement_analysis"]["configured"]
+    assert chains["function"]["configured"]
+    assert not chains["api"]["configured"]
+    assert not chains["ui"]["configured"]

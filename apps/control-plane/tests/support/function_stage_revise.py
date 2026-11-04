@@ -15,10 +15,14 @@ class RevisionRepository(FunctionReviewRepository):
         super().__init__(run)
         self.queued = []
         self.lock = asyncio.Lock()
+        self.lock_owner = None
         self.latest = SimpleNamespace(llm_connection_id="llm-1")
 
     async def get_run_for_update(self, run_id):
-        await self.lock.acquire()
+        current = asyncio.current_task()
+        if self.lock_owner is not current:
+            await self.lock.acquire()
+            self.lock_owner = current
         return self.run
 
     async def get_latest_ai_dispatch(self, run_id):
@@ -30,6 +34,7 @@ class RevisionRepository(FunctionReviewRepository):
     async def commit(self):
         await super().commit()
         if self.lock.locked():
+            self.lock_owner = None
             self.lock.release()
 
     async def get_project(self, project_id):

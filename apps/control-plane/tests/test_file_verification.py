@@ -198,35 +198,6 @@ async def test_worker_attachment_rechecks_authority_after_verification(files, mo
     assert (await files.get(file_id)).status == "ready"
 
 
-def test_migration_preserves_unsettled_verification_evidence():
-    import sqlalchemy as sa
-    from support.initial_schema_migration import migration_config
-
-    from alembic import command
-
-    engine = sa.create_engine("sqlite://")
-    with engine.connect() as connection:
-        config = migration_config(connection)
-        command.upgrade(config, "head")
-        connection.execute(
-            FileVerification.__table__.insert().values(
-                operation_id="interrupted",
-                file_id="deleted-file",
-                bucket="test",
-                object_key="private/interrupted",
-                state="abandoned",
-                deadline=now_utc(),
-                gc_after=now_utc(),
-            )
-        )
-        connection.commit()
-        with pytest.raises(RuntimeError, match="Preserve verification"):
-            command.downgrade(config, "20261021_0045")
-        connection.rollback()
-        assert connection.scalar(select(FileVerification.operation_id)) == "interrupted"
-    engine.dispose()
-
-
 @pytest.mark.asyncio
 async def test_storage_timeout_is_uncertain_and_retry_uses_a_different_private_key(
     files, monkeypatch

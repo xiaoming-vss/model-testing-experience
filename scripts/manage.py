@@ -262,7 +262,7 @@ def validate(data):
     port_keys = ["studio_port", "control_plane_port"]
     if not external:
         port_keys.append("mysql_port")
-    ports = [shared[k] for k in port_keys]
+    ports = [shared[k] for k in port_keys] + [shared.get("redis_port", 16379)]
     if any(type(p) is not int or not 1 <= p <= 65535 for p in ports) or len(
         set(ports)
     ) != len(ports):
@@ -284,6 +284,14 @@ def configurations(data, mode, root=ROOT):
         db_host = "mysql" if docker else host
         db_port = 3306 if docker else s["mysql_port"]
         dsn = f"mysql+asyncmy://{quote(db['user'], safe='')}:{quote(db['password'], safe='')}@{db_host}:{db_port}/{db['name']}?charset=utf8mb4"
+    redis_host = "redis" if docker else "127.0.0.1"
+    redis_port = 6379 if docker else s.get("redis_port", 16379)
+    redis_url = (data.get("redis", {}).get("url", "") or "").strip()
+    if redis_url:
+        parsed_redis = urlsplit(redis_url)
+        if parsed_redis.scheme not in {"redis", "rediss"} or not parsed_redis.hostname:
+            raise ValueError("redis.url must use redis:// or rediss:// and include a host")
+    redis_url = redis_url or f"redis://{redis_host}:{redis_port}/0"
     specs = {
         "control-plane": ("config/local.example.toml", "control_plane"),
         "ai-worker": ("config/worker.example.toml", "ai_worker"),
@@ -310,6 +318,7 @@ def configurations(data, mode, root=ROOT):
             },
             "integration_execution": {"runtime_generation": s["integration_runtime_generation"]},
             "data": {"db": {"user": {"dsn": dsn}}},
+            "test_run_notifications": {"redis_url": redis_url},
         },
     )
     result["control-plane"].setdefault("security", {}).pop("ldap", None)
@@ -338,6 +347,12 @@ def configurations(data, mode, root=ROOT):
         result["api-ui-worker"],
         {
             "control_plane": {"base_url": cp_url, "worker_token": s["worker_token"]},
+            "notifications": {"redis_url": redis_url},
+            "worker": {
+                "poll_interval_ms": data.get("api_ui_worker", {}).get("worker", {}).get(
+                    "poll_interval_ms", 30000
+                )
+            },
             "ui": {
                 "artifacts_dir": "/app/artifacts" if docker else "artifacts",
             },
@@ -392,6 +407,7 @@ def configure(mode, root=ROOT):
         env["AI_RUNTIME_VOLUME"] = "ai-pi-runtime" if ai_backend == "pi" else "ai-runtime"
         env["AI_LOGS_VOLUME"] = "ai-pi-logs" if ai_backend == "pi" else "ai-logs"
         env["MYSQL_PORT"] = s.get("mysql_port", 13306)
+        env["REDIS_PORT"] = s.get("redis_port", 16379)
         env.update(mysql_observability(data))
         if external_database_url(data):
             # Compose interpolates the base file before !reset removes mysql.

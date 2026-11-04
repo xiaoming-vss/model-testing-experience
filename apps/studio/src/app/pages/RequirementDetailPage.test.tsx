@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, expect, it, vi } from 'vitest'
@@ -90,42 +90,6 @@ it('详情编辑从源文件加载富文本，并保存为新的正文文件', a
   expect(update).not.toHaveBeenCalled()
 })
 
-it('源文件缺失仍可切换富文本并重新填写保存', async () => {
-  vi.spyOn(requirementsApi, 'downloadRequirementDocument').mockRejectedValue(new Error('需求原文件未存储到 S3'))
-  const replace = vi.spyOn(requirementsApi, 'replaceRequirementDocument').mockResolvedValue({ name: '登录需求', documentType: 'richtext' })
-  mount(false, '/requirements/req', 'text')
-  const user = userEvent.setup()
-  await user.click(await screen.findByRole('button', { name: '编辑需求' }))
-  await screen.findByText(/需求正文加载失败/)
-  expect(screen.getByRole('button', { name: '保存' })).toBeDisabled()
-  await user.click(screen.getByRole('combobox', { name: '需求文档类型' }))
-  await user.click(screen.getByText('富文本', { selector: '.ant-select-item-option-content' }))
-  expect(screen.queryByText(/需求正文加载失败/)).not.toBeInTheDocument()
-  pasteRequirementText('重新填写的正文')
-  await user.click(screen.getByRole('button', { name: '保存' }))
-  await waitFor(() => expect(replace).toHaveBeenCalledWith('req', expect.objectContaining({ documentType: 'richtext', documentContent: '<p>重新填写的正文</p>' })))
-})
-
-it.each(['resolve', 'reject'])('类型切换后忽略旧下载的迟到结果：%s', async outcome => {
-  let resolve!: (response: Awaited<ReturnType<typeof requirementsApi.downloadRequirementDocument>>) => void
-  let reject!: (error: Error) => void
-  vi.spyOn(requirementsApi, 'downloadRequirementDocument').mockReturnValue(new Promise((yes, no) => { resolve = yes; reject = no }))
-  mount(false, '/requirements/req', 'text')
-  const user = userEvent.setup()
-  await user.click(await screen.findByRole('button', { name: '编辑需求' }))
-  await user.click(screen.getByRole('combobox', { name: '需求文档类型' }))
-  await user.click(screen.getByText('富文本', { selector: '.ant-select-item-option-content' }))
-  pasteRequirementText('新正文')
-  const blob = await new Response('旧正文').blob()
-  await act(async () => {
-    if (outcome === 'resolve') resolve({ blob, filename: 'old.txt' })
-    else reject(new Error('迟到的错误'))
-  })
-  expect(screen.getByLabelText('需求正文')).toHaveTextContent('新正文')
-  expect(screen.queryByText(/迟到的错误/)).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '保存' })).toBeEnabled()
-})
-
 it('从富文本切换 Word 后必须上传新文件，再同时保存名称与文件', async () => {
   vi.spyOn(requirementsApi, 'downloadRequirementDocument').mockRejectedValue(new Error('文件缺失'))
   const replace = vi.spyOn(requirementsApi, 'replaceRequirementDocument').mockResolvedValue({ name: '更新需求', documentType: 'docx' })
@@ -148,12 +112,6 @@ it('从富文本切换 Word 后必须上传新文件，再同时保存名称与�
   expect(update).not.toHaveBeenCalled()
 })
 
-
-function pasteRequirementText(text: string) {
-  const editor = screen.getByLabelText('需求正文')
-  act(() => { editor.focus() })
-  fireEvent.paste(editor, { clipboardData: { getData: (type: string) => type === 'text/plain' ? text : '', types: ['text/plain'], files: [] } })
-}
 
 it('从生成全景返回需求列表，保留当前项目与迭代范围', async () => {
   mount()

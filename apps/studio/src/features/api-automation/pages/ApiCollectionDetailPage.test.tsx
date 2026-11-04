@@ -1,8 +1,9 @@
 import { ApiCollectionDetailPage } from '@/features/api-automation/pages/ApiCollectionDetailPage'
+import * as debugStream from '@/domain/runs/startDebugStream'
 import { api } from '@/services/api'
 import { TestThemeProvider as ThemeProvider } from '@/test/TestThemeProvider'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -148,8 +149,26 @@ it('搜索按用例名与接口路径在本地过滤', async () => {
   client.clear()
 })
 
+it('拖动用例后使用最新的顺序保存排序', async () => {
+  const update = vi.spyOn(api, 'updateApiCase').mockResolvedValue(cases[0])
+  const { container, client } = renderPage()
+  await waitFor(() => expect(container.querySelectorAll('.api-wb-case-item')).toHaveLength(2))
+  const [first, second] = [...container.querySelectorAll('.api-wb-case-item')]
+  fireEvent.dragStart(first, { dataTransfer: { setData: vi.fn(), effectAllowed: '' } })
+  fireEvent.drop(second)
+  await waitFor(() => {
+    expect(update).toHaveBeenCalledWith('case-1', { orderNo: 2 })
+    expect(update).toHaveBeenCalledWith('case-2', { orderNo: 1 })
+  })
+  client.clear()
+})
+
 it('运行单条用例后控制台给出状态、耗时与逐条断言结论', async () => {
-  vi.spyOn(api, 'runApiCase').mockResolvedValue(runResult)
+  vi.spyOn(debugStream, 'startDebugStream').mockImplementation(async (_kind, _caseId, _body, onEvent) => ({
+    initial: { runId: runResult.runId, status: 'running' } as never,
+    activate: () => onEvent({ type: 'finished', data: runResult }),
+    abort: vi.fn(),
+  }))
   const { container, client } = renderPage()
 
   await screen.findByText('xiaoming')
@@ -159,7 +178,7 @@ it('运行单条用例后控制台给出状态、耗时与逐条断言结论', a
   await waitFor(() => expect(container.querySelector('.api-wb-console')).toBeTruthy())
 
   const console_ = within(container.querySelector('.api-wb-console') as HTMLElement)
-  expect(console_.getByText('200 · 成功')).toBeInTheDocument()
+  expect(await console_.findByText('200 · 成功')).toBeInTheDocument()
   expect(console_.getByText(/耗时/).parentElement).toHaveTextContent('459 ms')
   // 一条通过一条失败：简报给失败数，底部逐条断言给 PASS / FAIL
   expect(console_.getByText('断言失败 1/2')).toBeInTheDocument()

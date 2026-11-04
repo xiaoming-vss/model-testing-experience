@@ -21,8 +21,8 @@ export type GenerationChainVersion = {
   artifactFormat: string
   createdAt?: string | null
   reviewerUserId?: string
-  basedOnOld?: boolean
   sourceRunId?: string
+  sourceBatchId?: string
   imported?: boolean
 }
 
@@ -60,6 +60,8 @@ export type GenerationChainStage = {
   upstreamStages: string[]
   blockedReason?: string
   errorMessage?: string
+  failureRunId?: string
+  failedAt?: string | null
   activeRunId?: string
 }
 
@@ -78,12 +80,14 @@ export type GenerationChain = {
   configured: boolean
   taskId?: string
   runId?: string
+  sourceBatchId?: string
   active?: boolean
   busy?: boolean
   sourceInputs?: UiGenerationSourceInputs | null
   sourceChanged?: boolean
   updatedAt?: string | null
   draftCount: number
+  continuationError?: string
   stages: GenerationChainStage[]
   leaf: GenerationChainLeaf
 }
@@ -100,7 +104,6 @@ export type GenerationChainVersionDetail = {
   summary: string
   artifactFormat: string
   content: string
-  basedOnOld: boolean
   reviewerUserId: string
   reviewedAt?: string | null
   reviewComment: string
@@ -170,6 +173,7 @@ export type GenerationChainImportResult = {
 
 export type GenerationChainReviewBody = {
   action: 'approve' | 'reject'
+  expectedAttemptId?: string
   continueAfter?: boolean
   comment?: string
   connectionId?: string
@@ -215,6 +219,16 @@ export const generationChainApi = {
     request<GenerationChain>(
       `/v1/requirements/${requirementId}/generation/${kind}/stages/${stage}/review`,
       { method: 'POST', body: JSON.stringify(body) },
+    ),
+  saveDraft: (
+    requirementId: string,
+    kind: GenerationChainKind,
+    stage: string,
+    body: { expectedAttemptId: string; content: string },
+  ) =>
+    request<GenerationChain>(
+      `/v1/requirements/${requirementId}/generation/${kind}/stages/${stage}/draft`,
+      { method: 'PUT', body: JSON.stringify(body) },
     ),
   importOptions: (
     requirementId: string,

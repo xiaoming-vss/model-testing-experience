@@ -45,7 +45,6 @@ import type {
   UpdateUiCaseGenerateTaskPayload,
   UpdateUiCaseGenerateTaskRunResultPayload,
 } from '../types'
-import type { Requirement } from '@/features/requirements/types'
 
 export const aiTestingApi = {
   ...skillsApi,
@@ -61,10 +60,10 @@ export const aiTestingApi = {
       method: 'PATCH',
       body: JSON.stringify(body),
     }),
-  runApiCaseGenerateTask: (taskId: string, connectionId: string) =>
+  runApiCaseGenerateTask: (taskId: string, connectionId: string, checkpointEnabled = false) =>
     request<ApiCaseGenerateTaskRun>(`/v1/api-case-generate-tasks/${taskId}/run`, {
       method: 'POST',
-      body: JSON.stringify({ connectionId }),
+      body: JSON.stringify({ connectionId, ...(checkpointEnabled ? { checkpointEnabled: true, apiWorkflowVersion: 'api_two_stage/1.0' } : {}) }),
     }),
   getApiCaseGenerateTaskRuns: (taskId: string, params: { page?: number; pageSize?: number; pipelineFilter?: string } = {}) =>
     request<RunHistoryResponse<ApiCaseGenerateTaskRun>>(`/v1/api-case-generate-tasks/${taskId}/runs${buildQuery(params)}`),
@@ -81,6 +80,22 @@ export const aiTestingApi = {
     request<ApiCaseGenerateTaskRun>(`/v1/api-case-generate-task-runs/${runId}/review`, {
       method: 'POST',
       body: JSON.stringify(body),
+    }),
+  saveApiCaseStageOutput: (runId: string, configJson: Record<string, unknown>) =>
+    request<ApiCaseGenerateTaskRun>(`/v1/api-case-generate-task-runs/${runId}/stage-output`, {
+      method: 'PATCH', body: JSON.stringify({ stage: 'openapi_extract', configJson }),
+    }),
+  reviewApiCaseStage: (runId: string, body: { stage: string; action: 'approve' | 'reject'; llmConnectionId?: string; requestId?: string }) =>
+    request<ApiCaseGenerateTaskRun>(`/v1/api-case-generate-task-runs/${runId}/stage-review`, {
+      method: 'POST', body: JSON.stringify(body),
+    }),
+  retryApiCaseStage: (runId: string, body: { stage: string; llmConnectionId: string; requestId?: string }) =>
+    request<ApiCaseGenerateTaskRun>(`/v1/api-case-generate-task-runs/${runId}/stage-retry`, {
+      method: 'POST', body: JSON.stringify(body),
+    }),
+  reviseApiCaseStage: (runId: string, body: { stage: string; revisionInstruction: string; llmConnectionId: string; requestId?: string }) =>
+    request<ApiCaseGenerateTaskRun>(`/v1/api-case-generate-task-runs/${runId}/stage-revise`, {
+      method: 'POST', body: JSON.stringify(body),
     }),
   importApiCaseGenerateTaskRun: (runId: string, body: ImportApiCaseGenerateTaskRunPayload) =>
     request<ImportApiCaseGenerateTaskRunResult>(`/v1/api-case-generate-task-runs/${runId}/import`, {
@@ -290,10 +305,6 @@ export const aiTestingApi = {
     request<RequirementAnalysisTaskRun>(`/v1/requirement-analysis-runs/${runId}/stage-revise`, {
       method: 'POST',
       body: JSON.stringify(body),
-    }),
-  importRequirementAnalysisRunToRequirement: (runId: string) =>
-    request<Requirement>(`/v1/requirement-analysis-runs/${runId}/import-to-requirement`, {
-      method: 'POST',
     }),
   getCodeRiskTasks: (projectId: string) =>
     request<ListResponse<CodeRiskTask>>(`/v1/projects/${projectId}/code-risk-analysis-tasks`),

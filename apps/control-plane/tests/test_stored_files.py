@@ -168,14 +168,15 @@ async def test_requirement_api_binds_verified_file_and_negotiates_download(files
     app.dependency_overrides[get_requirement_service] = lambda: RequirementService(
         RequirementRepository(files.session), Sprints(), files=files
     )
-    row, _ = await upload(files)
+    row, _ = await upload(files, b"<p>source</p>", "requirement.html")
     await files.complete("owner", row.file_id)
+    row = await files.get(row.file_id)
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app), base_url="http://test"
     ) as client:
         response = await client.post(
             "/v1/sprints/s/requirements",
-            json={"name": "Requirement", "documentType": "text", "documentFileId": row.file_id},
+            json={"name": "Requirement", "documentType": "richtext", "documentFileId": row.file_id},
         )
         assert response.status_code == 200, response.text
         payload = response.json()["data"]
@@ -188,7 +189,7 @@ async def test_requirement_api_binds_verified_file_and_negotiates_download(files
         assert response.json()["sha256"] == row.sha256
         assert "X-Amz-Signature=" in response.json()["url"]
         # Replacing the document keeps old associated objects available for history.
-        newer, _ = await upload(files, b"new content")
+        newer, _ = await upload(files, b"<p>new content</p>", "requirement.html")
         await files.complete("owner", newer.file_id)
         response = await client.patch(
             "/v1/requirements/" + payload["requirementId"], json={"documentFileId": newer.file_id}
@@ -238,7 +239,7 @@ async def test_repair_legacy_names_preserves_bytes_id_and_old_object(files):
     assert row.object_key == old_key
     assert (await repair_file_names(files, apply=True))[0]["status"] == "repaired"
     assert row.file_id == file_id
-    assert row.object_key.endswith("/a.txt")
+    assert row.object_key.endswith("/a.html")
     for key in (old_key, row.object_key):
         assert (
             files.storage.client.get_object(Bucket=row.bucket, Key=key)["Body"].read() == b"hello"
@@ -451,7 +452,7 @@ async def test_project_skill_file_is_verified_bound_and_downloaded_privately(fil
 @pytest.mark.parametrize(
     "purpose,filename,folder",
     [
-        ("requirement", "需求.txt", "requirements"),
+        ("requirement", "需求.html", "requirements"),
         ("attachment", "图片.png", "attachments"),
         ("ui_source_archive", "源码.zip", "source-archives"),
         ("project_skill", "SKILL.md", "skills"),

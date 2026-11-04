@@ -28,7 +28,7 @@ class UiTestSuite(Base):
         String(512), nullable=False, default="", comment="业务描述"
     )
     effective_import_id: Mapped[str | None] = mapped_column(
-        String(64), nullable=True, comment="当前正式来源的版本导入记录业务标识"
+        String(64), nullable=True, comment="当前正式来源的审核版本或独立候选导入记录业务标识"
     )
     headless: Mapped[bool | None] = mapped_column(
         Boolean, nullable=True, comment="是否使用无头浏览器；空值时沿用 Worker 默认配置"

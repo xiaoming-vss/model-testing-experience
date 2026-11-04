@@ -55,7 +55,7 @@ class WorkerTaskDispatcherExecutor(TaskExecutor):
             return self.test_order_graph_executor.execute(task, started_at, progress_callback)
         return TaskResult(
             task_id=task.task_id,
-            run_id=task.run_id,
+            attempt_id=task.attempt_id,
             generate_task_id=task.generate_task_id,
             status=TaskStatus.FAILED,
             error_message=f"不支持的任务类型: {task.task_type}",

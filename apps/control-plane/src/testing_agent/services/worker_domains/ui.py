@@ -92,6 +92,18 @@ async def build_snapshot(
     return payload
 
 
+def close_running_steps(steps: Any, status: str, message: str) -> Any:
+    """Close an interrupted current step without losing previous results."""
+    if not isinstance(steps, list):
+        return steps
+    return [
+        {**step, "status": status, "success": False, "errorMessage": message}
+        if isinstance(step, dict) and step.get("status") == "running"
+        else step
+        for step in steps
+    ]
+
+
 async def complete_run(
     session: AsyncSession, task: WorkerTask, body: WorkerTaskEventRequest
 ) -> None:
@@ -118,6 +130,15 @@ async def complete_run(
             if body.step_results:
                 run.step_results_json = redact(
                     body.step_results, private_payload(run).get("secrets", [])
+                )
+            if status in {"error", "canceled"}:
+                run.step_results_json = close_running_steps(
+                    run.step_results_json,
+                    status,
+                    redact(
+                        body.error_message or "运行已结束",
+                        private_payload(run).get("secrets", []),
+                    ),
                 )
             run.error_message = redact(
                 body.error_message or "", private_payload(run).get("secrets", [])

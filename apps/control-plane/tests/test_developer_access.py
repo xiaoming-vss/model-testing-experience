@@ -189,14 +189,18 @@ def test_downgrade_to_developer_revokes_worker_access_even_after_repromotion(api
             "modelId": "model",
         },
     ).json()["data"]["connectionId"]
-    tid = api.post(
+    task = api.post(
         f"/v1/projects/{pid}/requirement-analysis-tasks",
         headers=member,
         json={"name": "analysis", "requirementId": rid},
-    ).json()["data"]["taskId"]
-    run = api.post(
-        f"/v1/requirement-analysis-tasks/{tid}/run", headers=member, json={"connectionId": cid}
-    ).json()["data"]["runId"]
+    )
+    assert task.status_code == 200, task.text
+    launched = api.post(
+        f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text/run",
+        headers=member,
+        json={"connectionId": cid},
+    )
+    assert launched.status_code == 200, launched.text
     wid = api.post("/internal/ai-worker/tasks/claim", json={"workerId": "worker"}).json()["taskId"]
     url = f"/internal/ai-worker/tasks/{wid}/llm-credentials"
     assert api.get(url).status_code == 200
@@ -209,9 +213,11 @@ def test_downgrade_to_developer_revokes_worker_access_even_after_repromotion(api
         == 200
     )
     assert api.get(url).status_code == 403
+    stages = api.get(
+        f"/v1/requirements/{rid}/generation/requirement_analysis", headers=owner
+    ).json()["data"]["stages"]
     assert (
-        api.get(f"/v1/requirement-analysis-runs/{run}", headers=owner).json()["data"]["status"]
-        == "failed"
+        next(stage for stage in stages if stage["stage"] == "extracting_text")["state"] == "failed"
     )
     assert (
         api.patch(

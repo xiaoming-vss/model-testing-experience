@@ -9,6 +9,8 @@ local_host = "127.0.0.1"
 studio_port = 8081
 control_plane_port = 19000
 mysql_port = 13306
+# Redis 用于 API/UI 实时通知；仅绑定本机，不对外网发布。
+redis_port = 16379
 worker_token = "GENERATE"
 # 独立集成 Worker 专属认证；不得与 AI/API/UI Worker 令牌相同。
 integration_worker_token = "GENERATE"
@@ -16,6 +18,10 @@ integration_worker_token = "GENERATE"
 integration_runtime_generation = "GENERATE"
 jwt_key = "GENERATE"
 integration_key = "GENERATE"
+
+[redis]
+# 多机部署可填共享 Redis 地址（redis:// 或 rediss://）；留空使用内置 Redis。
+url = ""
 
 [database]
 # 已有 MySQL：填写完整 URL。非空时优先使用，下面的内置数据库字段不再需要。
@@ -35,6 +41,11 @@ password = "GENERATE"
 root_password = "GENERATE"
 
 # 以下配置覆盖各项目的示例配置；地址、令牌和存储路径由 shared 统一生成。
+# 每个控制面进程最多 pool_size + max_overflow 条数据库连接。
+[control_plane.data.db.user]
+pool_size = 20
+max_overflow = 10
+
 [control_plane.code_overview]
 cache_ttl_seconds = 300
 

@@ -8,6 +8,8 @@ from __future__ import annotations
 import time
 from dataclasses import asdict
 from typing import Any
+from types import NotImplementedType
+from urllib.parse import urlencode
 
 import httpx
 
@@ -24,6 +26,30 @@ from ..contracts.types import (
     UiWorkerTaskSnapshotResponse,
     WorkerConfig,
 )
+
+
+class ControlPlaneRequestError(Exception):
+    """Control-plane HTTP failure with a machine-readable status."""
+
+    def __init__(self, message: str, status_code: int) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
+
+class ExecutionLeaseLost(Exception):
+    """The control plane has definitively rejected this execution's authority."""
+
+
+def is_execution_rejected(error: Exception) -> bool:
+    """Distinguish an explicit client rejection from a temporary outage."""
+    return isinstance(error, ControlPlaneRequestError) and error.status_code in {
+        400,
+        401,
+        403,
+        404,
+        409,
+        422,
+    }
 
 
 class ControlPlaneClient:
@@ -46,6 +72,19 @@ class ControlPlaneClient:
             },
             timeout=config.request_timeout_ms / 1000,
         )
+
+    def claim_next_task(self) -> dict[str, Any] | None | NotImplementedType:
+        """Claim the globally oldest task, falling back against an older server."""
+        response = self._client.post(
+            "/internal/api-worker/tasks/claim-next",
+            json={"workerId": self._config.worker_id},
+        )
+        if response.status_code == 404:
+            return NotImplemented
+        if response.status_code == 204:
+            return None
+        response.raise_for_status()
+        return self._unwrap_response_data(response.json())
 
     def claim_task(self) -> UiWorkerTask | None:
         """
@@ -82,6 +121,16 @@ class ControlPlaneClient:
             },
         )
         return data
+
+    def task_stop_requested(self, domain: str, task_id: str) -> bool:
+        """Check persistent stop intent for the current worker lease."""
+        query = urlencode({"worker_id": self._config.worker_id})
+        result = self._request(
+            "GET",
+            f"/internal/{domain}-worker/tasks/{task_id}/control?{query}",
+            timeout=3,
+        )
+        return bool(result and result.get("stopRequested"))
 
     def get_api_task_snapshot(self, task_id: str) -> dict[str, Any]:
         """获取 API worker 任务快照。"""
@@ -276,6 +325,22 @@ class ControlPlaneClient:
             "POST", f"/internal/ui-worker/tasks/{task_id}/heartbeat", asdict(payload)
         )
 
+    def report_ui_steps(
+        self, task_id: str, item_id: str | None, steps: list[dict[str, Any]]
+    ) -> None:
+        """Publish a snapshot of UI progress, with verified artifact references."""
+        path = f"/internal/ui-worker/tasks/{task_id}"
+        if item_id is not None:
+            path += f"/suite-items/{item_id}"
+        body = self._to_camel_case({"step_results": steps})
+        body = self._artifacts.publish(task_id, body)
+        self._request(
+            "POST",
+            path + "/steps",
+            {"workerId": self._config.worker_id, **body},
+            timeout=3,
+        )
+
     def report_suite_item_started(
         self, task_id: str, item_id: str, payload: UiSuiteItemStartedPayload
     ) -> None:
@@ -334,7 +399,9 @@ class ControlPlaneClient:
             "workerId": self._config.worker_id,
             **self._artifacts.publish(task_id, self._serialize_task_result(payload)),
         }
-        self._request("POST", f"/internal/ui-worker/tasks/{task_id}/completed", body)
+        self._request(
+            "POST", f"/internal/ui-worker/tasks/{task_id}/completed", body, timeout=300
+        )
         self._artifacts.cleanup(task_id)
 
     def log_planned_contract(self) -> None:
@@ -409,9 +476,10 @@ class ControlPlaneClient:
                     attempt += 1
                     time.sleep(0.2)
                     continue
-                raise Exception(
+                raise ControlPlaneRequestError(
                     f"control plane request failed: {method} {pathname} -> "
-                    f"{e.response.status_code} {e.response.text}"
+                    f"{e.response.status_code} {e.response.text}",
+                    e.response.status_code,
                 ) from e
             except Exception as e:
                 if attempt < retries:

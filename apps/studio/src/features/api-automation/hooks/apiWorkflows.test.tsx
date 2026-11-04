@@ -8,6 +8,7 @@ import { message } from '@/shared/utils/feedback'
 import type { ApiCaseFormValues } from '../utils/apiCaseEditor'
 import { useApiCaseEditing } from './useApiCaseEditing'
 import { useApiExecution } from './useApiExecution'
+import * as debugStream from '@/domain/runs/startDebugStream'
 
 vi.mock('@/shared/utils/feedback', () => ({
   message: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
@@ -33,6 +34,7 @@ function setup() {
 
 it('API 执行从运行中收敛为成功，并刷新本次环境变量', async () => {
   const { client, wrapper } = setup()
+  vi.spyOn(debugStream, 'startDebugStream').mockRejectedValue(new debugStream.DebugStreamUnavailable('offline'))
   const invalidate = vi.spyOn(client, 'invalidateQueries')
   vi.spyOn(api, 'runApiCase').mockResolvedValue({ runId: 'run-1', status: 'running' })
   const fetchRun = vi.spyOn(api, 'getApiCaseRun').mockResolvedValue({ runId: 'run-1', status: 'success', environmentId: 'env-1' })
@@ -43,13 +45,14 @@ it('API 执行从运行中收敛为成功，并刷新本次环境变量', async 
   })
 
   await waitFor(() => expect(result.current.runResult?.status).toBe('success'))
-  expect(fetchRun).toHaveBeenCalledWith('run-1')
+  expect(fetchRun).toHaveBeenCalledWith('run-1', expect.any(AbortSignal))
   expect(invalidate).toHaveBeenCalledWith({ queryKey: ['apiEnvironmentVars', 'env-1'] })
   await waitFor(() => expect(client.getQueryCache().find({ queryKey: ['apiCaseRun', 'run-1'] })?.isActive()).toBe(false))
 })
 
 it('运行详情请求失败时保留运行身份并停止轮询', async () => {
   const { client, wrapper } = setup()
+  vi.spyOn(debugStream, 'startDebugStream').mockRejectedValue(new debugStream.DebugStreamUnavailable('offline'))
   vi.spyOn(api, 'runApiCase').mockResolvedValue({ runId: 'run-failed', status: 'running' })
   vi.spyOn(api, 'getApiCaseRun').mockRejectedValue(new Error('运行详情暂不可用'))
   const { result } = renderHook(() => useApiExecution({ collectionId: '' }), { wrapper })
@@ -94,4 +97,18 @@ it('用例排序保存失败时恢复拖拽前的顺序并清除拖拽状态', a
   expect(result.current.order).toEqual(['a', 'b'])
   expect(result.current.dragging).toBeNull()
   expect(result.current.rollback.current).toEqual([])
+})
+
+it('快速完成的实时调试直接展示推送结果', async () => {
+  const { wrapper } = setup()
+  vi.spyOn(debugStream, 'startDebugStream').mockImplementation(async (_kind, _case, _body, onEvent) => ({
+    initial: { runId: 'fast-run', status: 'pending' },
+    abort: vi.fn(),
+    activate: () => onEvent({ type: 'finished', data: { runId: 'fast-run', status: 'success', response: { body: 'ok' } } }),
+  }))
+  vi.spyOn(api, 'getApiCaseRun').mockRejectedValue(new Error('record already removed'))
+  const { result } = renderHook(() => useApiExecution({ collectionId: '' }), { wrapper })
+  await act(async () => { await result.current.runApiCaseMutation.mutateAsync({ caseId: 'case-1', environmentId: 'env-1' }) })
+  await waitFor(() => expect(result.current.runResult?.response?.body).toBe('ok'))
+  expect(result.current.runResult?.status).toBe('success')
 })

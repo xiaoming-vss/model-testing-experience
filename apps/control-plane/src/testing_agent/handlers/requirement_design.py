@@ -1,7 +1,7 @@
 from fastapi import Depends, Query
 
 from testing_agent.api.deps import get_current_user_id, get_requirement_design_service
-from testing_agent.core.errors import success_payload
+from testing_agent.core.errors import ErrBadRequest, ErrNotFound, dynamic_error, success_payload
 from testing_agent.schemas.requirement_design import (
     DesignKind,
     RequirementDesignConfigurationRequest,
@@ -67,11 +67,8 @@ async def start_requirement_design(
     user_id: str = Depends(get_current_user_id),
     service: RequirementDesignService = Depends(get_requirement_design_service),
 ):
-    return success_payload(
-        await service.start(
-            requirement_id,
-            kind,
-            body,
-            user_id,
-        )
-    )
+    await service.scope(requirement_id, user_id, action="execute")
+    task = await service.access.owned_task(user_id, body.task_id, kind, action="read")
+    if task.requirement_id != requirement_id:
+        raise ErrNotFound()
+    raise dynamic_error(ErrBadRequest, "请在需求生成链中启动独立阶段")

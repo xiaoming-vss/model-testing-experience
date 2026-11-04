@@ -10,6 +10,7 @@ from testing_agent.core.errors import (
     ErrApiCaseRunEnvironmentMismatch,
     ErrApiCaseRunNotFound,
     ErrApiEnvironmentKindMismatch,
+    ErrForbidden,
     ErrNotFound,
 )
 from testing_agent.core.sid import new_id
@@ -179,8 +180,25 @@ class ApiCaseService:
         await self.repository.commit()
         return {}
 
-    async def run(self, user_id: str, case_id: str, body: RunApiCaseRequest) -> dict:
-        context = await self.get_accessible_context(user_id, case_id, action="execute")
+    async def run(
+        self,
+        user_id: str,
+        case_id: str,
+        body: RunApiCaseRequest,
+        *,
+        run_id: str | None = None,
+        live_debug: bool = False,
+    ) -> dict:
+        if live_debug or body.live_debug:
+            rows = await self.repository.get_execution_context(case_id)
+            if rows is None:
+                raise ErrNotFound()
+            context = ApiCaseContext(*rows)
+            await require_project_access(
+                self.repository.session, user_id, context.project, "execute"
+            )
+        else:
+            context = await self.get_accessible_context(user_id, case_id, action="execute")
         environment = await self.repository.get_environment(body.environment_id)
         if environment is None:
             raise ErrNotFound()
@@ -193,12 +211,12 @@ class ApiCaseService:
         )
         rendered = render_api_case_request(context.api_case, environment, env_vars)
         run = ApiCaseRun(
-            run_id=new_id(),
+            run_id=run_id or new_id(),
             case_id=context.api_case.case_id,
             collection_id=context.collection.collection_id,
             environment_id=environment.environment_id,
             trigger_user_id=user_id,
-            trigger_type="manual",
+            trigger_type="live_debug" if live_debug or body.live_debug else "manual",
             status=RunStatus.PENDING.value,
             request_snapshot_json=rendered.snapshot,
             response_snapshot_json={"statusCode": 0, "headersJson": "{}", "body": ""},
@@ -218,13 +236,18 @@ class ApiCaseService:
         )
         self.repository.add_all([run, task])
         await self.repository.commit()
-        await self.repository.refresh(run)
         apply_run_scope(run, context)
-        return dump(ApiCaseRunResponse, run)
+        initial = dump(ApiCaseRunResponse, run)
+        from testing_agent.services.test_run_notifications import notify_task_available
+
+        await notify_task_available()
+        return initial
 
     async def get_run(self, user_id: str, run_id: str) -> dict:
         run = await self.repository.get_run(run_id)
         if run is None:
             raise ErrApiCaseRunNotFound()
         await authorize_run(self.repository, user_id, run)
+        if run.trigger_type == "live_debug" and run.trigger_user_id != user_id:
+            raise ErrForbidden()
         return dump(ApiCaseRunResponse, run)

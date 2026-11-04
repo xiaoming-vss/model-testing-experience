@@ -65,8 +65,8 @@ it('UI 编辑器可在草稿中添加步骤而不触发保存', async () => {
   setup('ui')
 
   await screen.findByText('UI 套件')
-  fireEvent.click(screen.getByRole('button', { name: '新建 UI测试用例' }))
-  fireEvent.click((await screen.findAllByRole('button', { name: '添加步骤' }))[0])
+  fireEvent.click(screen.getByText('添加用例'))
+  fireEvent.click((await screen.findAllByText('添加步骤'))[0])
 
   await waitFor(() => expect(screen.queryByText('当前还没有步骤')).not.toBeInTheDocument())
   expect(create).not.toHaveBeenCalled()

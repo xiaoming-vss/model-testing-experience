@@ -69,3 +69,30 @@ async def complete_suite_item(
 ):
     await service.complete_ui_suite_item(task_id, item_id, body)
     return Response(status_code=204)
+
+
+async def update_case_steps(
+    task_id: str,
+    body: WorkerTaskEventRequest,
+    service: WorkerTaskService = Depends(get_worker_task_service),
+):
+    await service.update_ui_steps(task_id, None, body)
+    return Response(status_code=204)
+
+
+async def update_suite_item_steps(
+    task_id: str,
+    item_id: str,
+    body: WorkerTaskEventRequest,
+    service: WorkerTaskService = Depends(get_worker_task_service),
+):
+    await service.update_ui_steps(task_id, item_id, body)
+    return Response(status_code=204)
+
+
+async def control_state(
+    task_id: str,
+    worker_id: str,
+    service: WorkerTaskService = Depends(get_worker_task_service),
+):
+    return await service.control_state("ui", task_id, worker_id)

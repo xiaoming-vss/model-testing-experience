@@ -3,12 +3,12 @@ from __future__ import annotations
 from typing import Any
 
 from testing_agent.core.errors import (
+    ErrBadRequest,
     ErrNotFound,
 )
 from testing_agent.domain.ai_tasks import (
     task_type_for,
 )
-from testing_agent.models.ai_generate_task import AiGenerateTask, AiGenerateTaskRun
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.ai_generate_task_source_archive import (
     AiGenerateTaskSourceArchiveRepository,
@@ -68,53 +68,91 @@ class GenerationQueries:
         page_size: int = 20,
         pipeline_filter: str = "all",
     ) -> dict[str, Any]:
-        from testing_agent.repositories.ai_run_history import history_page
+        task = await self.access.owned_task(user_id, task_id, kind, action="read")
+        if kind == "requirement_analysis" or (
+            kind in {"function", "api", "ui"} and task.requirement_id
+        ):
+            from testing_agent.services.stage_storage.history_view import direct_history
 
-        await self.access.owned_task(user_id, task_id, kind, action="read")
-        return await history_page(
-            self.repository.session,
-            [AiGenerateTaskRun.task_id == task_id],
-            page,
-            page_size,
-            pipeline_filter,
-        )
+            return await direct_history(
+                self.repository.session, task_id, page, page_size, pipeline_filter
+            )
+        if kind in {"function", "api", "ui"} and not task.requirement_id:
+            from testing_agent.services.standalone_history import standalone_history
+
+            return await standalone_history(
+                self.repository.session, task_id, page, page_size, pipeline_filter
+            )
+        if kind == "code_risk_analysis" and pipeline_filter == "all":
+            from testing_agent.services.auxiliary_execution_view import auxiliary_history
+
+            return await auxiliary_history(self.repository.session, task_id, page, page_size)
+        raise ErrBadRequest()
 
     async def list_test_report_run_summaries(
         self, project_id: str, sprint_id: str, user_id: str, page: int = 1, page_size: int = 20
     ) -> dict[str, Any]:
-        from testing_agent.repositories.ai_run_history import history_page
+        from testing_agent.core.errors import ErrBadRequest
+        from testing_agent.services.auxiliary_execution_view import auxiliary_history
 
         await self.access.ensure_project_access(user_id, project_id, action="read")
         sprint = await self.repository.get_sprint(sprint_id)
         if sprint is None or sprint.project_id != project_id:
             raise ErrNotFound()
-        return await history_page(
-            self.repository.session,
-            [
-                AiGenerateTask.project_id == project_id,
-                AiGenerateTask.sprint_id == sprint_id,
-                AiGenerateTask.task_type == task_type_for("test_report"),
-            ],
-            page,
-            page_size,
+        task = await self.repository.get_task_by_project_sprint_type(
+            project_id, sprint_id, task_type_for("test_report")
         )
-
-    async def list_runs(self, kind: str, task_id: str, user_id: str) -> dict[str, Any]:
-        await self.access.owned_task(user_id, task_id, kind, action="read")
-        rows = await self.repository.list_runs(task_id)
-        if kind == "code_risk_analysis":
-            # 代码风险分析 run 详情追加解析后的 report 结构(工单 07,RC-5)。
-            from testing_agent.services.code_risk_analysis import dump_code_risk_analysis_run
-
-            dump = dump_code_risk_analysis_run
-        else:
-            dump = dump_run
-        return list_payload([dump(row) for row in rows])
+        if task is not None:
+            return await auxiliary_history(self.repository.session, task.task_id, page, page_size)
+        if page < 1 or not 1 <= page_size <= 100:
+            raise ErrBadRequest()
+        return {
+            "items": [],
+            "total": 0,
+            "statusCounts": {},
+            "reviewPendingCount": 0,
+            "latestRun": None,
+        }
 
     async def get_run(self, kind: str, run_id: str, user_id: str) -> dict[str, Any]:
-        run = await self.access.owned_run(user_id, run_id, kind, action="read")
-        if kind == "code_risk_analysis":
-            from testing_agent.services.code_risk_analysis import dump_code_risk_analysis_run
+        if kind == "function":
+            from testing_agent.services.stage_storage.relations import find_leaf, graph_view
 
-            return dump_code_risk_analysis_run(run)
-        return dump_run(run)
+            session = self.repository.session
+            found = await find_leaf(session, run_id)
+            if found is not None:
+                leaf, task = found
+                await self.access.owned_task(user_id, task.task_id, "function", action="read")
+                return await graph_view(session, task, leaf)
+        if kind in {"requirement_analysis", "function", "api", "ui"}:
+            from testing_agent.repositories.direct_attempt_view import direct_attempt_task_id
+            from testing_agent.services.stage_storage.run_view import direct_attempt_view
+
+            session = self.repository.session
+            task_id = await direct_attempt_task_id(session, run_id)
+            if task_id is not None:
+                await self.access.owned_task(user_id, task_id, kind, action="read")
+                return await direct_attempt_view(session, task_id, run_id)
+        if kind in {"function", "api", "ui"}:
+            from testing_agent.repositories.standalone_execution import workflow_task_id
+            from testing_agent.services.standalone_execution_view import (
+                project_standalone_execution,
+            )
+
+            session = self.repository.session
+            task_id = await workflow_task_id(session, run_id)
+            if task_id is not None:
+                await self.access.owned_task(user_id, task_id, kind, action="read")
+                return dump_run(await project_standalone_execution(session, run_id))
+            raise ErrNotFound()
+        if kind in {"code_risk_analysis", "test_report", "test_order_graph"}:
+            from testing_agent.repositories.auxiliary_execution import detail_row
+            from testing_agent.services.auxiliary_execution_view import auxiliary_detail
+
+            row = await detail_row(self.repository.session, run_id)
+            if row is not None:
+                _, task, _ = row
+                await self.access.owned_task(user_id, task.task_id, kind, action="read")
+                return await auxiliary_detail(self.repository.session, run_id)
+            raise ErrNotFound()
+        raise ErrNotFound()

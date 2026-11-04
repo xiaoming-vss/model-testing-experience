@@ -47,6 +47,7 @@ def test_generation_version_import_routes_are_public():
         "post"
         in paths["/v1/requirements/{requirementId}/generation/{kind}/versions/{versionId}/import"]
     )
+    assert "put" in paths["/v1/requirements/{requirementId}/generation/{kind}/stages/{stage}/draft"]
 
 
 def test_generation_panorama_scope_and_empty_chain_contract(api):  # noqa: F811
@@ -76,6 +77,13 @@ def test_generation_panorama_scope_and_empty_chain_contract(api):  # noqa: F811
             api.get("/v1/requirements/req/generation/function", headers=headers).status_code
             == expected
         )
+    for headers in (viewer, developer, stranger):
+        response = api.put(
+            "/v1/requirements/req/generation/function/stages/case_names/draft",
+            headers=headers,
+            json={"expectedAttemptId": "draft", "content": "{}"},
+        )
+        assert response.status_code == 403
     data = api.get("/v1/requirements/req/generation", headers=owner).json()["data"]
     assert [chain["kind"] for chain in data["chains"]] == [
         "requirement_analysis",

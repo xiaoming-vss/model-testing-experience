@@ -59,7 +59,7 @@ class ApiCaseExecutor(TaskExecutor):
         if task.task_type != "api_case_generate":
             return TaskResult(
                 task_id=task.task_id,
-                run_id=task.run_id,
+                attempt_id=task.attempt_id,
                 generate_task_id=task.generate_task_id,
                 status=TaskStatus.FAILED,
                 error_message=f"不支持的任务类型: {task.task_type}",
@@ -83,7 +83,7 @@ class ApiCaseExecutor(TaskExecutor):
                 on_validation_progress=lambda event, extracted: progress_callback(
                     TaskProgress(
                         task_id=task.task_id,
-                        run_id=task.run_id,
+                        attempt_id=task.attempt_id,
                         current_stage=event["stage"],
                         stage_status="running",
                         intermediate_json_text=extracted or task.config_json,
@@ -103,7 +103,7 @@ class ApiCaseExecutor(TaskExecutor):
 
         return TaskResult(
             task_id=task.task_id,
-            run_id=task.run_id,
+            attempt_id=task.attempt_id,
             generate_task_id=task.generate_task_id,
             status=TaskStatus.SUCCESS,
             intermediate_json_text=chain_result.extractor_output,
@@ -170,7 +170,7 @@ class ApiCaseExecutor(TaskExecutor):
                     on_validation_progress=lambda event: progress_callback(
                         TaskProgress(
                             task_id=task.task_id,
-                            run_id=task.run_id,
+                            attempt_id=task.attempt_id,
                             current_stage=stage,
                             stage_status="running",
                             intermediate_json_text=json.dumps(config, ensure_ascii=False),
@@ -184,7 +184,7 @@ class ApiCaseExecutor(TaskExecutor):
             progress_callback(
                 TaskProgress(
                     task_id=task.task_id,
-                    run_id=task.run_id,
+                    attempt_id=task.attempt_id,
                     current_stage=stage,
                     stage_status="waiting_review",
                     intermediate_json_text=json.dumps(
@@ -196,7 +196,7 @@ class ApiCaseExecutor(TaskExecutor):
         validate_cases(output)
         return TaskResult(
             task_id=task.task_id,
-            run_id=task.run_id,
+            attempt_id=task.attempt_id,
             generate_task_id=task.generate_task_id,
             status=TaskStatus.SUCCESS,
             intermediate_json_text=json.dumps({"apiExtraction": extracted}, ensure_ascii=False),
@@ -212,7 +212,7 @@ class ApiCaseExecutor(TaskExecutor):
         validate_extraction(extractor_output)
         return TaskProgress(
             task_id=task.task_id,
-            run_id=task.run_id,
+            attempt_id=task.attempt_id,
             current_stage="openapi_extract",
             stage_status="running",
             intermediate_json_text=extractor_output,

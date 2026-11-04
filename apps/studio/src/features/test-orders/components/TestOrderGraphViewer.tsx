@@ -1,5 +1,6 @@
 import type { TestOrderEntrySummary } from '../types'
 import { ActionButton } from '@/shared/components/ActionButton'
+import { usePendingRequestId } from '@/shared/hooks/usePendingRequestId'
 import { useViewMotion } from '@/shared/ui/useViewMotion'
 import { toRecord } from '@/shared/utils/value'
 import { Alert, Button, Empty, Segmented, Spin, Tag, Typography } from 'antd'
@@ -21,6 +22,7 @@ import {
 } from '@/features/ai-testing/utils/taskStatus'
 import { api, listItems } from '@/services/api'
 import { TestOrderGraphExecutionPanel } from './TestOrderGraphExecutionPanel'
+import { TestOrderGraphHistoryDrawer } from './TestOrderGraphHistoryDrawer'
 import { getTestOrderEntryStatusMeta } from '../utils/testOrderStatus'
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
 import { message } from '@/shared/utils/feedback'
@@ -74,6 +76,8 @@ export function TestOrderGraphViewer({
   const viewRef = useViewMotion(activeTab === 'graph' ? 0 : 1)
   const [jsonToolbar, setJsonToolbar] = useState<HTMLDivElement | null>(null)
   const [hasSelection, setHasSelection] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [selectedRunId, setSelectedRunId] = useState('')
   const graphRef = useRef<FunctionalCaseRelationsGraphHandle | null>(null)
 
   const graphQuery = useQuery({
@@ -86,8 +90,14 @@ export function TestOrderGraphViewer({
         ? GRAPH_POLL_INTERVAL
         : false,
   })
-  const run = graphQuery.data?.run ?? null
+  const selectedRunQuery = useQuery({
+    queryKey: ['testOrderGraphRun', selectedRunId],
+    queryFn: () => api.getTestOrderGraphRun(selectedRunId),
+    enabled: Boolean(selectedRunId),
+  })
+  const run = selectedRunId ? selectedRunQuery.data ?? null : graphQuery.data?.run ?? null
   const inProgress = isApiCaseGenerateTaskRunInProgress(run?.status)
+  const latestInProgress = isApiCaseGenerateTaskRunInProgress(graphQuery.data?.run?.status)
   const statusMeta = getApiCaseGenerateTaskRunStatusMeta(run?.status)
   const graphContent = useMemo(() => formatStructuredContent(run?.resultYaml), [run?.resultYaml])
   const casesContent = useMemo(() => getGraphCasesContent(run?.configJson), [run?.configJson])
@@ -130,28 +140,32 @@ export function TestOrderGraphViewer({
     if (activeTab !== 'graph') setHasSelection(false)
   }, [activeTab])
 
+  const pendingRequest = usePendingRequestId()
   const dispatchMutation = useMutation({
     mutationFn: async () => {
       // 图谱输入是全平台唯一一处 snake_case 契约：原样取回、原样回传，不做字段改名。
       const graphInput = await api.getTestOrderGraphInput(orderId)
       const connectionId = await personalLlm.choose()
-      return api.dispatchTestOrderGraph(orderId, { graphInput, connectionId })
+      const requestId = pendingRequest.forInput(JSON.stringify({ orderId, graphInput, connectionId }))
+      return api.dispatchTestOrderGraph(orderId, { graphInput, connectionId, requestId })
     },
     onSuccess: () => {
+      pendingRequest.clear()
       message.success('图谱生成任务已提交')
+      setSelectedRunId('')
       void graphQuery.refetch()
     },
     onError: (error) => message.error(getErrorMessage(error)),
   })
 
   let body
-  if (graphQuery.isLoading) {
+  if (graphQuery.isLoading || (selectedRunId && selectedRunQuery.isLoading)) {
     body = (
       <div className="ai-relations-page-loading">
         <Spin />
       </div>
     )
-  } else if (graphQuery.error) {
+  } else if (graphQuery.error || (selectedRunId && selectedRunQuery.error)) {
     body = (
       <div className="ai-relations-page-loading">
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="图谱记录加载失败，请刷新重试" />
@@ -251,6 +265,8 @@ export function TestOrderGraphViewer({
               </span>
             </span>
           ) : null}
+          {selectedRunId ? <Button size="small" onClick={() => setSelectedRunId('')}>查看最新</Button> : null}
+          <Button size="small" onClick={() => setHistoryOpen(true)}>生成历史</Button>
           <ActionButton operation="refresh" size="small" onClick={() => void graphQuery.refetch()}>刷新</ActionButton>
           {canExecute ? (
             <Button
@@ -258,7 +274,7 @@ export function TestOrderGraphViewer({
               size="small"
               className="action-btn-create"
               loading={dispatchMutation.isPending}
-              disabled={inProgress}
+              disabled={latestInProgress}
               onClick={() => dispatchMutation.mutate()}
             >
               {run ? '重新生成' : '生成图谱'}
@@ -266,12 +282,15 @@ export function TestOrderGraphViewer({
           ) : null}
         </div>
 
-        {run?.status === 'failed' && run.errorMessage ? (
+        {['failed', 'error'].includes(run?.status ?? '') && run?.errorMessage ? (
           <Alert showIcon type="error" title={run.errorMessage} />
         ) : null}
 
         <div ref={viewRef} className="ai-relations-page-body">{body}</div>
       </div>
+      <TestOrderGraphHistoryDrawer key={orderId} open={historyOpen} orderId={orderId} projectId={projectId}
+        onClose={() => setHistoryOpen(false)} onSelect={runId => { setSelectedRunId(runId); setHistoryOpen(false) }}
+        onDeleted={runId => { if (selectedRunId === runId) setSelectedRunId('') }} />
       {personalLlm.dialog}
     </>
   )

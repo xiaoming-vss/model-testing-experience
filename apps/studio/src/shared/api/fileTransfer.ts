@@ -56,7 +56,7 @@ export async function fetchSignedFile(
       const body = await response.arrayBuffer()
       return { response: new Response(body, { headers: response.headers }), ticket }
     } catch (error) {
-      if (error instanceof TypeError) throw new FileTransferError('文件传输中断，请重试', true)
+      if (error instanceof TypeError) throw new FileTransferError('文件传输中断，请检查网络或对象存储跨域配置后重试', true)
       throw error
     }
   })

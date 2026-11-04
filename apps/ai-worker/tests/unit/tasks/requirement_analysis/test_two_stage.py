@@ -24,7 +24,7 @@ class TwoStageTests(unittest.TestCase):
     def task(self, stage, config=None):
         return Task(
             task_id="worker",
-            run_id="run",
+            attempt_id="run",
             task_type="requirement_analysis",
             checkpoint_enabled=True,
             current_stage=stage,

@@ -85,7 +85,7 @@ class ParseGraphInputTest(unittest.TestCase):
         payload = make_graph_input(["C01"])
         task = Task(
             task_id="task-1",
-            run_id="run-1",
+            attempt_id="run-1",
             generate_task_id="generate-1",
             task_type="test_order_graph",
             config_json=json.dumps({"graphInput": payload}, ensure_ascii=False),
@@ -104,10 +104,10 @@ class TestOrderGraphExecutorTest(unittest.TestCase):
             PiConfig(runtime_root=str(self.runtime_root)), self._task({})
         )
 
-    def _task(self, payload: dict, *, run_id: str = "run-1") -> Task:
+    def _task(self, payload: dict, *, attempt_id: str = "run-1") -> Task:
         return Task(
             task_id="task-1",
-            run_id=run_id,
+            attempt_id=attempt_id,
             generate_task_id="generate-1",
             task_type="test_order_graph",
             project_id="project-1",
@@ -132,8 +132,8 @@ class TestOrderGraphExecutorTest(unittest.TestCase):
         result = executor.execute(task, datetime.now().astimezone(), progresses.append)
         return result, progresses
 
-    def _run_dir(self, run_id: str = "run-1") -> Path:
-        return self.workspace / "test-case-graph" / run_id
+    def _run_dir(self, attempt_id: str = "run-1") -> Path:
+        return self.workspace / "test-case-graph" / attempt_id
 
     def test_runs_one_round_per_batch_and_carries_existing_graph(self) -> None:
         case_ids = [f"C{index:02d}" for index in range(1, GRAPH_BATCH_SIZE + 2)]
@@ -261,7 +261,6 @@ class TestOrderGraphExecutorTest(unittest.TestCase):
 
         self.assertEqual(TaskStatus.FAILED, result.status)
         self.assertIn(TEST_ORDER_GRAPH_SKILL_NAME, str(result.error_message))
-        self.assertTrue(result.remediation)
         self.assertEqual([], runner.calls)
         self.assertEqual([], progresses)
 

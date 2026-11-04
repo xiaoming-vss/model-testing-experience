@@ -1,5 +1,9 @@
 env = "local"
 
+[test_run_notifications]
+# Optional; an empty value retains polling-only compatibility.
+redis_url = ""
+
 [http]
 host = "127.0.0.1"
 port = 9000
@@ -46,6 +50,9 @@ worker_presence_ttl_seconds = 120
 
 [data.db.user]
 driver = "mysql"
+# 每个控制面进程的数据库连接上限为 pool_size + max_overflow。
+pool_size = 20
+max_overflow = 10
 dsn = "mysql+asyncmy://root:password@127.0.0.1:3306/testing-agent-python?charset=utf8mb4"
 
 [storage]

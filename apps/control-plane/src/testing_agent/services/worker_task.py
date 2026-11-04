@@ -1,13 +1,21 @@
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
-from testing_agent.core.errors import ErrBadRequest, ErrForbidden, ErrNotFound
+from testing_agent.core.enums import RunStatus
+from testing_agent.core.errors import (
+    AppError,
+    ErrBadRequest,
+    ErrForbidden,
+    ErrNotFound,
+    dynamic_error,
+)
 from testing_agent.core.sid import new_id
-from testing_agent.domain.ai_execution_intent import ExecutionIntent
-from testing_agent.domain.worker_context import AiWorkerContext, ApiWorkerContext
+from testing_agent.domain.worker_context import ApiWorkerContext
+from testing_agent.models.api_case_run import ApiCaseRun
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.worker_task import WorkerTaskRepository
 from testing_agent.schemas.workers import (
@@ -15,11 +23,17 @@ from testing_agent.schemas.workers import (
     WorkerProgressRequest,
     WorkerTaskEventRequest,
 )
-from testing_agent.services.ai_execution.writer import ExecutionWriter, SqlExecutionWriter
 from testing_agent.services.code_risk_analysis import gitlab_credentials_payload
 from testing_agent.services.execution_secrets import private_payload, redact
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.personal_authorization import require_personal_connection
+from testing_agent.services.stage_storage.worker_service import DirectStageWorkerService
+from testing_agent.services.standalone_worker_service import StandaloneWorkerService
+from testing_agent.services.test_run_notifications import (
+    notify_run_changed,
+    notify_task_control,
+    notify_ui_debug_execution_finished,
+)
 from testing_agent.services.worker import (
     LEASE_SECONDS,
     apply_event_to_task,
@@ -33,32 +47,12 @@ from testing_agent.services.worker import (
     update_task_claimed,
 )
 from testing_agent.services.worker_authorization import authorize_execution
-from testing_agent.services.worker_domains import ai as ai_domain
 from testing_agent.services.worker_domains import api as api_domain
 from testing_agent.services.worker_domains import ui as ui_domain
 from testing_agent.services.worker_domains.events import ensure_final_status
+from testing_agent.services.worker_domains.guard import ensure_task_id, ensure_worker_match
 
-AI_LEASE_SECONDS = 30
-
-
-def ensure_worker_match(task, worker_id: str | None) -> None:
-    if not worker_id or not worker_id.strip():
-        raise ErrBadRequest()
-    if not task.worker_id or task.worker_id != worker_id:
-        raise ErrForbidden()
-    if task.status not in {"claimed", "running"}:
-        raise ErrBadRequest()
-    lease = getattr(task, "lease_expires_at", None)
-    if lease is not None:
-        if lease.tzinfo is None:
-            lease = lease.replace(tzinfo=UTC)
-        if lease <= datetime.now(UTC):
-            raise ErrBadRequest()
-
-
-def ensure_task_id(task, body: WorkerTaskEventRequest) -> None:
-    if body.task_id and body.task_id != task.task_id:
-        raise ErrBadRequest()
+logger = logging.getLogger(__name__)
 
 
 class WorkerTaskService:
@@ -66,10 +60,9 @@ class WorkerTaskService:
         self,
         repository: WorkerTaskRepository,
         credential_cipher: IntegrationCredentialCipher | None = None,
-        execution_writer: ExecutionWriter | None = None,
+        execution_writer: object | None = None,
     ):
         self.repository = repository
-        self.execution = execution_writer or SqlExecutionWriter()
         self.credential_cipher = credential_cipher
 
     async def validate_ui_artifacts(self, task_id, body):
@@ -96,79 +89,144 @@ class WorkerTaskService:
             if row is None:
                 raise ErrForbidden()
 
-    async def _guard_ai_event(self, task, run):
-        from testing_agent.models.ai_generate_task import AiGenerateTaskRun
-        from testing_agent.services.ai_execution import require_current_worker
-
-        if isinstance(run, AiGenerateTaskRun):
-            await self.repository.session.run_sync(
-                lambda session: require_current_worker(session, run, task)
-            )
-
     async def expire_leases(self, domain: str) -> int:
         tasks = await self.repository.expired_tasks(domain)
+        processed = []
         for task in tasks:
             if domain == "ai":
-                run = await self.repository.get_ai_run(task.run_id)
-                if run is not None:
-                    # An obsolete queue entry must never fail a newer attempt.
-                    try:
-                        await self._guard_ai_event(task, run)
-                    except type(ErrBadRequest):
-                        task.status = "failed"
-                        task.error_message = "Worker 租约过期"
-                        task.finished_at = datetime.now(UTC)
-                        continue
+                standalone = StandaloneWorkerService(self.repository.session)
+                if await standalone.is_standalone(task):
+                    await standalone.retire(task, "Worker 心跳超时，执行已终止，请重试")
+                    processed.append(task)
+                    continue
+                direct = DirectStageWorkerService(self.repository.session)
+                if await direct.is_direct(task):
+                    await direct.expire(task)
+                    processed.append(task)
+                    continue
+                logger.warning("AI 队列 %s 未关联有效的阶段尝试，租约未处理", task.task_id)
+                continue
+            final_status = "error" if domain in {"api", "ui"} else "failed"
             body = WorkerTaskEventRequest(
                 worker_id=task.worker_id,
-                status="failed",
+                status=final_status,
                 error_message="Worker 心跳超时，执行已终止，请重试",
             )
-            await apply_event_to_task(task, body, "failed")
+            if domain in {"api", "ui"}:
+                from testing_agent.services.test_run_stop import finish_stopped_items
+
+                await finish_stopped_items(self.repository.session, task, interrupted=True)
+            await apply_event_to_task(task, body, final_status)
             await complete_domain_run(self.repository.session, domain, task, body)
-            if domain == "ai" and run is not None:
-                await self.execution.save(
-                    self.repository.session,
-                    run,
-                    intent=ExecutionIntent(worker_event_id=task.task_id),
-                    worker=task,
-                )
+            processed.append(task)
         await self.repository.commit()
-        return len(tasks)
+        for task in processed:
+            await notify_run_changed(domain, task.run_id)
+            if domain in {"api", "ui"}:
+                await notify_task_control(task.task_id)
+            if domain == "api" and task.task_type == "api_case_debug":
+                api_run = await self.repository.get_api_run(task.run_id)
+                if api_run is not None and api_run.trigger_type == "live_debug":
+                    from testing_agent.services.live_debug_cleanup import finish_api_debug
+
+                    await finish_api_debug(self.repository.session, task.task_id)
+            elif domain == "ui" and task.task_type == "case_debug":
+                ui_run = await self.repository.get_ui_case_run(task.run_id)
+                if ui_run is not None and ui_run.trigger_type == "live_debug":
+                    from testing_agent.services.live_debug_cleanup import finish_ui_debug
+
+                    await finish_ui_debug(self.repository.session, task.task_id)
+        return len(processed)
 
     async def claim(self, domain: str, body: WorkerClaimRequest) -> dict | None:
         if not body.worker_id or not body.worker_id.strip():
             raise ErrBadRequest()
         task = await self.repository.claim_pending(domain)
+        return await self._claim_task(domain, task, body)
+
+    async def claim_api_ui(self, body: WorkerClaimRequest) -> dict | None:
+        """Claim the oldest API/UI task with the same lease and authorization checks."""
+        if not body.worker_id or not body.worker_id.strip():
+            raise ErrBadRequest()
+        # Authorization may retire a queued task; keep looking so a rejected
+        # task does not make this worker sleep while later work is available.
+        for _ in range(100):
+            task = await self.repository.claim_oldest_api_ui()
+            if task is None:
+                return None
+            payload = await self._claim_task(task.domain, task, body)
+            if payload is not None:
+                return payload
+        return None
+
+    async def _claim_task(self, domain: str, task: WorkerTask | None, body: WorkerClaimRequest):
         if task is None:
             return None
+        if domain == "ai":
+            standalone = StandaloneWorkerService(self.repository.session)
+            if await standalone.is_standalone(task):
+                try:
+                    return await standalone.claim(task, body)
+                except AppError as exc:
+                    if exc.code == ErrForbidden.code:
+                        return None
+                    raise
+            direct = DirectStageWorkerService(self.repository.session)
+            if await direct.is_direct(task):
+                try:
+                    return await direct.claim(task, body)
+                except AppError as exc:
+                    if exc.code == ErrForbidden.code:
+                        return None
+                    raise
+            raise dynamic_error(
+                ErrBadRequest, "AI 队列未关联有效的阶段尝试，请停止 Worker 并完成切换"
+            )
         try:
-            await authorize_execution(self.repository.session, task, pending=True)
+            authority = await authorize_execution(self.repository.session, task, pending=True)
         except type(ErrForbidden):
             return None
-        context = await self.repository.execution_context(task)
+        run = authority.run
+        direct_debug = (
+            domain == "api"
+            and task.task_type == "api_case_debug"
+            and isinstance(run, ApiCaseRun)
+            and run.trigger_type == "live_debug"
+            and not run.collection_run_id
+        )
+        context = (
+            ApiWorkerContext(run.case_id, run.collection_id, None)
+            if direct_debug
+            else await self.repository.execution_context(task)
+        )
         await update_task_claimed(task, body)
         if domain == "api":
             if not isinstance(context, ApiWorkerContext):
                 raise ErrBadRequest()
-            await api_domain.mark_claimed(self.repository, task, context)
-        if domain == "ai":
-            if not isinstance(context, AiWorkerContext):
-                raise ErrBadRequest()
-            task.lease_expires_at = datetime.now(UTC) + timedelta(seconds=AI_LEASE_SECONDS)
-            ai_run = await ai_domain.mark_claimed(self.repository, task)
-            await self.execution.save(self.repository.session, ai_run, worker=task)
-            await self.repository.commit()
-            await self.repository.refresh(task)
-            return ai_domain.claim_payload(task, ai_run, context, lease_seconds=AI_LEASE_SECONDS)
+            if direct_debug:
+                run.status = RunStatus.QUEUED.value
+            else:
+                await api_domain.mark_claimed(self.repository, task, context)
         await self.repository.commit()
-        await self.repository.refresh(task)
         payload = task_payload(task, context)
         payload["leaseSeconds"] = LEASE_SECONDS
+        await notify_run_changed(domain, task.run_id)
         return payload
 
     async def snapshot(self, domain: str, task_id: str) -> dict:
         task = await find_task(self.repository.session, domain, task_id)
+        if domain == "ai":
+            standalone = StandaloneWorkerService(self.repository.session)
+            if await standalone.is_standalone(task):
+                payload = await standalone.snapshot(task)
+                await self.repository.commit()
+                return payload
+            direct = DirectStageWorkerService(self.repository.session)
+            if await direct.is_direct(task):
+                payload = await direct.snapshot(task)
+                await self.repository.commit()
+                return payload
+            raise ErrNotFound()
         await authorize_execution(self.repository.session, task)
         payload = await build_snapshot(self.repository.session, domain, task)
         await self.repository.commit()
@@ -176,17 +234,22 @@ class WorkerTaskService:
 
     async def started(self, domain: str, task_id: str, body: WorkerTaskEventRequest) -> dict:
         task = await find_task(self.repository.session, domain, task_id)
+        if domain == "ai":
+            standalone = StandaloneWorkerService(self.repository.session)
+            if await standalone.is_standalone(task):
+                return await standalone.started(task, body)
+            direct = DirectStageWorkerService(self.repository.session)
+            if await direct.is_direct(task):
+                return await direct.started(task, body)
+            raise ErrNotFound()
         await authorize_execution(self.repository.session, task)
         ensure_worker_match(task, body.worker_id)
         ensure_task_id(task, body)
+        if domain in {"api", "ui"} and task.status == "stopping":
+            return {"taskId": task_id, "workerId": body.worker_id}
         started_at = parse_event_time(body.started_at)
         if body.started_at and started_at is None:
             raise ErrBadRequest()
-        if domain == "ai":
-            guarded_run = await self.repository.get_ai_run(task.run_id)
-            if guarded_run is None:
-                raise ErrNotFound()
-            await self._guard_ai_event(task, guarded_run)
         await apply_event_to_task(task, body, "running")
         if started_at is not None:
             task.started_at = started_at
@@ -194,31 +257,44 @@ class WorkerTaskService:
             task.lease_expires_at = datetime.now(UTC) + timedelta(seconds=LEASE_SECONDS)
         if domain == "api":
             await api_domain.mark_started(self.repository, task, started_at)
-        if domain == "ai":
-            ai_run = await ai_domain.mark_started(self.repository, task, started_at)
         if domain == "ui":
             await ui_domain.mark_started(self.repository.session, task, started_at)
-        if domain == "ai":
-            assert ai_run is not None
-            await self.execution.save(
-                self.repository.session,
-                ai_run,
-                intent=ExecutionIntent(worker_event_id=task.task_id),
-                worker=task,
-            )
         await self.repository.commit()
+        await notify_run_changed(domain, task.run_id)
         return {"taskId": task_id, "workerId": body.worker_id}
+
+    async def control_state(self, domain: str, task_id: str, worker_id: str) -> dict:
+        """Read stop intent only for the current, authorized lease holder."""
+        task = await find_task(self.repository.session, domain, task_id)
+        if domain == "ai":
+            standalone = StandaloneWorkerService(self.repository.session)
+            if await standalone.is_standalone(task):
+                await standalone.authorize(task)
+                ensure_worker_match(task, worker_id)
+                return {"stopRequested": False}
+            direct = DirectStageWorkerService(self.repository.session)
+            if await direct.is_direct(task):
+                await direct.authorize(task)
+                ensure_worker_match(task, worker_id)
+                return {"stopRequested": False}
+            raise ErrNotFound()
+        await authorize_execution(self.repository.session, task)
+        ensure_worker_match(task, worker_id)
+        return {"stopRequested": task.status == "stopping"}
 
     async def heartbeat(self, domain: str, task_id: str, body: WorkerTaskEventRequest) -> dict:
         task = await find_task(self.repository.session, domain, task_id)
+        if domain == "ai":
+            standalone = StandaloneWorkerService(self.repository.session)
+            if await standalone.is_standalone(task):
+                return await standalone.heartbeat(task, body)
+            direct = DirectStageWorkerService(self.repository.session)
+            if await direct.is_direct(task):
+                return await direct.heartbeat(task, body)
+            raise ErrNotFound()
         await authorize_execution(self.repository.session, task)
         ensure_worker_match(task, body.worker_id)
         ensure_task_id(task, body)
-        if domain == "ai":
-            ai_run = await self.repository.get_ai_run(task.run_id)
-            if ai_run is None:
-                raise ErrNotFound()
-            await self._guard_ai_event(task, ai_run)
         heartbeat_at = parse_event_time(body.heartbeat_at)
         if body.heartbeat_at and heartbeat_at is None:
             raise ErrBadRequest()
@@ -231,27 +307,27 @@ class WorkerTaskService:
 
     async def complete(self, domain: str, task_id: str, body: WorkerTaskEventRequest) -> dict:
         task = await find_task(self.repository.session, domain, task_id)
+        if domain == "ai":
+            standalone = StandaloneWorkerService(self.repository.session)
+            if await standalone.is_standalone(task):
+                return await standalone.complete(task, body)
+            direct = DirectStageWorkerService(self.repository.session)
+            if await direct.is_direct(task):
+                return await direct.complete(task, body)
+            raise ErrNotFound()
         authority = await authorize_execution(self.repository.session, task)
         ensure_worker_match(task, body.worker_id)
         ensure_task_id(task, body)
         if domain == "ui":
             await self.validate_ui_artifacts(task_id, body)
         status = ensure_final_status(body.status, {"success", "failed", "error", "canceled"})
-        if domain == "ai":
-            guarded_run = await self.repository.get_ai_run(task.run_id)
-            if guarded_run is None:
-                raise ErrNotFound()
-            await self._guard_ai_event(task, guarded_run)
-            if task.task_type == "requirement_analysis" and status == "success":
-                from testing_agent.services.requirement_analysis_contracts import (
-                    validate_run_output,
-                )
+        if domain in {"api", "ui"} and task.status == "stopping":
+            status = "canceled"
+            body = body.model_copy(update={"status": status, "success": False})
+        if domain in {"api", "ui"} and status == "canceled":
+            from testing_agent.services.test_run_stop import finish_stopped_items
 
-                if guarded_run.current_stage != "feature_understanding":
-                    raise ErrBadRequest()
-                validate_run_output(
-                    guarded_run, config=body.config_json, result=body.result_yaml, final=True
-                )
+            await finish_stopped_items(self.repository.session, task)
         await apply_event_to_task(task, body, status)
         await complete_domain_run(self.repository.session, domain, task, body)
         if domain == "api":
@@ -263,15 +339,18 @@ class WorkerTaskService:
             task.error_message = redact(
                 task.error_message, private_payload(authority.run).get("secrets", [])
             )
-        if domain == "ai":
-            assert guarded_run is not None
-            await self.execution.save(
-                self.repository.session,
-                guarded_run,
-                intent=ExecutionIntent(worker_event_id=task.task_id),
-                worker=task,
-            )
         await self.repository.commit()
+        await notify_run_changed(domain, task.run_id)
+        if domain in {"api", "ui"} and getattr(authority.run, "trigger_type", "") == "live_debug":
+            if domain == "api":
+                from testing_agent.services.live_debug_cleanup import finish_api_debug
+
+                await finish_api_debug(self.repository.session, task_id)
+            else:
+                from testing_agent.services.live_debug_cleanup import schedule_ui_debug_delivery
+
+                await notify_ui_debug_execution_finished(task.run_id, status)
+                schedule_ui_debug_delivery(task_id)
         return {"taskId": task_id, "workerId": body.worker_id, "status": status}
 
     async def start_api_collection_item(
@@ -283,6 +362,7 @@ class WorkerTaskService:
         ensure_task_id(task, body)
         await api_domain.start_item(self.repository, task, item_id, body)
         await self.repository.commit()
+        await notify_run_changed("api", task.run_id)
         return {"taskId": task_id, "itemId": item_id, "workerId": body.worker_id}
 
     async def complete_api_collection_item(
@@ -296,7 +376,40 @@ class WorkerTaskService:
             self.repository, task, item_id, body, id_factory=new_id
         )
         await self.repository.commit()
+        await notify_run_changed("api", task.run_id)
         return {"taskId": task_id, "itemId": item_id, "status": status}
+
+    async def update_ui_steps(
+        self, task_id: str, item_id: str | None, body: WorkerTaskEventRequest
+    ) -> dict:
+        """Persist a current step snapshot only for the active, authorized UI task."""
+        task = await find_task(self.repository.session, "ui", task_id)
+        authority = await authorize_execution(self.repository.session, task)
+        ensure_worker_match(task, body.worker_id)
+        ensure_task_id(task, body)
+        if body.step_results is None or len(body.step_results) > 10000:
+            raise ErrBadRequest()
+        await self.validate_ui_artifacts(task_id, body)
+        step_results = redact(body.step_results, private_payload(authority.run).get("secrets", []))
+        if item_id is None:
+            if task.task_type != "case_debug":
+                raise ErrBadRequest()
+            run = await self.repository.get_ui_case_run(task.run_id)
+            if run is None:
+                raise ErrNotFound()
+            run.step_results_json = step_results
+        else:
+            if task.task_type != "suite_run":
+                raise ErrBadRequest()
+            item = await self.repository.get_ui_item(item_id)
+            if item is None:
+                raise ErrNotFound()
+            if item.suite_run_id != task.run_id or item.status != "running":
+                raise ErrBadRequest()
+            item.step_results_json = step_results
+        await self.repository.commit()
+        await notify_run_changed("ui", task.run_id)
+        return {"taskId": task_id}
 
     async def start_ui_suite_item(
         self, task_id: str, item_id: str, body: WorkerTaskEventRequest
@@ -307,6 +420,7 @@ class WorkerTaskService:
         ensure_task_id(task, body)
         await ui_domain.start_item(self.repository, task, item_id, body)
         await self.repository.commit()
+        await notify_run_changed("ui", task.run_id)
         return {"taskId": task_id, "itemId": item_id, "workerId": body.worker_id}
 
     async def complete_ui_suite_item(
@@ -319,6 +433,7 @@ class WorkerTaskService:
         ensure_task_id(task, body)
         status = await ui_domain.complete_item(self.repository, task, item_id, body)
         await self.repository.commit()
+        await notify_run_changed("ui", task.run_id)
         return {"taskId": task_id, "itemId": item_id, "status": status}
 
     async def list_project_skills(self, project_id: str) -> dict:
@@ -333,30 +448,52 @@ class WorkerTaskService:
         task = await self.repository.get_worker_task("ai", task_id)
         if task is None:
             raise ErrNotFound()
-        await authorize_execution(self.repository.session, task)
-        return task
+        session = getattr(self.repository, "session", None)
+        standalone = StandaloneWorkerService(session) if session is not None else None
+        if standalone is not None and await standalone.is_standalone(task):
+            await standalone.authorize(task)
+            return task
+        direct = DirectStageWorkerService(session) if session is not None else None
+        if direct is not None and await direct.is_direct(task):
+            await direct.authorize(task)
+            return task
+        raise ErrNotFound()
 
     async def llm_credentials(self, task_id: str) -> dict:
         task = await find_task(self.repository.session, "ai", task_id)
-        authority = await authorize_execution(self.repository.session, task)
-        context = await self.repository.execution_context(task)
-        if not isinstance(context, AiWorkerContext):
-            raise ErrNotFound()
-        connection = await require_personal_connection(
-            self.repository.session,
-            authority.actor,
-            "llm",
-            str(context.llm_connection_id or ""),
-            authority.project_id,
-        )
-        payload = llm_credentials_payload(task_id, connection, self.credential_cipher)
-        if not str(payload.get("apiKey") or "").strip():
-            from testing_agent.services.worker_authorization import fail_authorization
-
-            await fail_authorization(self.repository.session, task, authority)
-            await self.repository.commit()
-            raise ErrForbidden()
-        return payload
+        standalone = StandaloneWorkerService(self.repository.session)
+        if await standalone.is_standalone(task):
+            standalone_authority = await standalone.authorize(task)
+            snapshot = standalone_authority.dispatched_attempt.input_snapshot_json or {}
+            connection = await require_personal_connection(
+                self.repository.session,
+                standalone_authority.actor_id,
+                "llm",
+                str(snapshot.get("llmConnectionId") or ""),
+                standalone_authority.task.project_id,
+            )
+            payload = llm_credentials_payload(task_id, connection, self.credential_cipher)
+            if not str(payload.get("apiKey") or "").strip():
+                await standalone.retire(task, "操作人的模型授权已失效，请重新配置")
+                await self.repository.commit()
+                raise ErrForbidden()
+            return payload
+        direct = DirectStageWorkerService(self.repository.session)
+        if await direct.is_direct(task):
+            authority = await direct.authorize(task)
+            connection = await require_personal_connection(
+                self.repository.session,
+                authority.actor_id,
+                "llm",
+                str(authority.input_snapshot.get("llmConnectionId") or ""),
+                authority.task.project_id,
+            )
+            payload = llm_credentials_payload(task_id, connection, self.credential_cipher)
+            if not str(payload.get("apiKey") or "").strip():
+                await direct.fail_authorization(task)
+                raise ErrForbidden()
+            return payload
+        raise ErrNotFound()
 
     async def gitlab_credentials(self, task_id: str) -> dict:
         """代码风险分析任务的 GitLab 凭据与绑定清单下发(凭据按快照复现)。
@@ -365,94 +502,101 @@ class WorkerTaskService:
         响应时解密,仅驻内存、不落盘、不入日志。
         """
         task = await find_task(self.repository.session, "ai", task_id)
-        authority = await authorize_execution(self.repository.session, task)
-        if task.task_type != "code_risk_analysis":
+        standalone = StandaloneWorkerService(self.repository.session)
+        if await standalone.is_standalone(task):
+            await standalone.authorize(task)
             raise ErrNotFound()
-        run = await self.repository.get_ai_run(task.run_id)
-        if run is None:
-            raise ErrNotFound()
-        snapshot = run.snapshot_json or {}
-        bindings = snapshot.get("bindings") or []
-        return await gitlab_credentials_payload(
-            self.repository.session,
-            task.task_id,
-            run.project_id,
-            list(bindings),
-            self.credential_cipher,
-            user_id=authority.actor,
-        )
+        direct = DirectStageWorkerService(self.repository.session)
+        if await direct.is_direct(task):
+            stage_authority = await direct.authorize(task)
+            if task.task_type != "code_risk_analysis":
+                raise ErrNotFound()
+            source = stage_authority.input_snapshot.get("source") or {}
+            bindings = source.get("bindings") or []
+            if not isinstance(bindings, list):
+                raise ErrForbidden()
+            return await gitlab_credentials_payload(
+                self.repository.session,
+                task.task_id,
+                stage_authority.task.project_id,
+                bindings,
+                self.credential_cipher,
+                user_id=stage_authority.actor_id,
+            )
+        raise ErrNotFound()
 
     async def requirement_document(self, task_id: str):
         task = await self.ai_worker_task(task_id)
-        if task.task_type not in {
-            "requirement_analysis",
-            "functional_case_generate",
-            "ui_case_generate",
-            "code_risk_analysis",
-        }:
+        session = getattr(self.repository, "session", None)
+        standalone = StandaloneWorkerService(session) if session is not None else None
+        if standalone is not None and await standalone.is_standalone(task):
+            await standalone.authorize(task)
+            # Independent runs use their frozen inline source, not a requirement file.
             raise ErrNotFound()
-        run = await self.repository.get_ai_run(task.run_id)
-        if run is None or not run.requirement_id:
-            raise ErrNotFound()
-        if task.task_type == "ui_case_generate":
-            context = await self.repository.execution_context(task)
-            if not isinstance(context, AiWorkerContext) or run.task_id != context.generate_task_id:
+        direct = DirectStageWorkerService(session) if session is not None else None
+        if direct is not None and await direct.is_direct(task):
+            authority = await direct.authorize(task)
+            if task.task_type not in {
+                "requirement_analysis",
+                "functional_case_generate",
+                "ui_case_generate",
+                "code_risk_analysis",
+            }:
                 raise ErrNotFound()
-        requirement = await self.repository.get_requirement(run.requirement_id)
-        if requirement is None:
-            raise ErrNotFound()
-        snapshot = getattr(run, "snapshot_json", None) or {}
-        if task.task_type == "requirement_analysis" and snapshot.get("workflowVersion") == 2:
-            original_file = snapshot.get("documentFileId")
-            original_hash = snapshot.get("documentHash")
-            if (original_file and original_file != requirement.document_file_id) or (
-                original_hash and original_hash != requirement.document_hash
-            ):
-                from testing_agent.core.errors import AppError
+            requirement = await self.repository.get_requirement(authority.task.requirement_id)
+            if requirement is None:
+                raise ErrNotFound()
+            source = authority.input_snapshot.get("source") or {}
+            original_file, original_hash = source.get("documentFileId"), source.get("documentHash")
+            if task.task_type == "requirement_analysis" and source.get("workflowVersion") == 2:
+                if (original_file and original_file != requirement.document_file_id) or (
+                    original_hash and original_hash != requirement.document_hash
+                ):
+                    from testing_agent.core.errors import AppError
 
-                raise AppError(409, "原始需求文件已变更，请发起新运行；历史产物仍保留", 409)
-        if not getattr(requirement, "document_file_id", ""):
-            from testing_agent.core.errors import ErrRequirementFileMissing
+                    raise AppError(409, "原始需求文件已变更，请发起新运行；历史产物仍保留", 409)
+            if not getattr(requirement, "document_file_id", ""):
+                from testing_agent.core.errors import ErrRequirementFileMissing
 
-            raise ErrRequirementFileMissing()
-        return requirement
+                raise ErrRequirementFileMissing()
+            return requirement
+        raise ErrNotFound()
 
     async def source_archive(self, task_id: str):
         task = await self.ai_worker_task(task_id)
-        if task.task_type != "ui_case_generate":
-            raise ErrNotFound()
-        run = await self.repository.get_ai_run(task.run_id)
-        context = await self.repository.execution_context(task)
-        if (
-            run is None
-            or not isinstance(context, AiWorkerContext)
-            or run.task_id != context.generate_task_id
-            or not run.task_id
-        ):
-            raise ErrNotFound()
-        file_id = (run.snapshot_json or {}).get("sourceArchiveFileId")
-        if not file_id:
-            from testing_agent.core.errors import AppError
+        session = getattr(self.repository, "session", None)
+        standalone = StandaloneWorkerService(session) if session is not None else None
+        if standalone is not None and await standalone.is_standalone(task):
+            authority = await standalone.authorize(task)
+            if task.task_type != "ui_case_generate":
+                raise ErrNotFound()
+            snapshot = authority.dispatched_attempt.input_snapshot_json or {}
+            source = snapshot.get("source") or {}
+            file_id = source.get("sourceArchiveFileId") if isinstance(source, dict) else None
+            if not file_id:
+                from testing_agent.core.errors import AppError
 
-            raise AppError(409, "运行未关联 S3 源码包，请重新上传源码包并发起新运行", 409)
-        return file_id
+                raise AppError(409, "运行未关联 S3 源码包，请重新上传源码包并发起新运行", 409)
+            return file_id
+        direct = DirectStageWorkerService(session) if session is not None else None
+        if direct is not None and await direct.is_direct(task):
+            authority = await direct.authorize(task)
+            if task.task_type != "ui_case_generate":
+                raise ErrNotFound()
+            file_id = (authority.input_snapshot.get("source") or {}).get("sourceArchiveFileId")
+            if not file_id:
+                from testing_agent.core.errors import AppError
+
+                raise AppError(409, "运行未关联 S3 源码包，请重新上传源码包并发起新运行", 409)
+            return file_id
+        raise ErrNotFound()
 
     async def progress(self, task_id: str, body: WorkerProgressRequest) -> dict:
         task = await find_task(self.repository.session, "ai", task_id)
-        await authorize_execution(self.repository.session, task)
-        ensure_worker_match(task, body.worker_id)
-        if body.task_id and body.task_id != task.task_id:
-            raise ErrBadRequest()
-        run = await self.repository.get_ai_run(task.run_id)
-        if run:
-            await self._guard_ai_event(task, run)
-            ai_domain.apply_progress(run, task, body, lease_seconds=AI_LEASE_SECONDS)
-        if run is not None:
-            await self.execution.save(
-                self.repository.session,
-                run,
-                intent=ExecutionIntent(worker_event_id=task.task_id),
-                worker=task,
-            )
-        await self.repository.commit()
-        return {"taskId": task_id}
+        standalone = StandaloneWorkerService(self.repository.session)
+        if await standalone.is_standalone(task):
+            return await standalone.progress(task, body)
+        direct = DirectStageWorkerService(self.repository.session)
+        if await direct.is_direct(task):
+            return await direct.progress(task, body)
+        raise ErrNotFound()

@@ -1,12 +1,25 @@
 import { useEffect, useState } from 'react'
 import { Button, Image, Typography, message, type ImageProps } from 'antd'
 import { downloadStoredFile } from '@/shared/api/files'
+import { liveArtifactMedia } from '@/shared/utils/liveArtifactUrls'
 
 function storedFileId(path: string) {
   return /^\/v1\/files\/([a-zA-Z0-9-]+)\/download$/.exec(path)?.[1]
 }
 
 async function readFile(path: string) {
+  // Ephemeral UI debug artifacts arrive only in memory with the final result.
+  const media = liveArtifactMedia(path)
+  if (media) {
+    const response = await fetch(path)
+    if (!response.ok) throw new Error('临时产物读取失败')
+    return { blob: await response.blob(), filename: media === 'image/png' ? 'screenshot.png' : 'trace.zip' }
+  }
+  if (/^data:(?:image\/png|application\/zip);base64,/.test(path)) {
+    const response = await fetch(path)
+    if (!response.ok) throw new Error('临时产物读取失败')
+    return { blob: await response.blob(), filename: path.startsWith('data:image/') ? 'screenshot.png' : 'trace.zip' }
+  }
   const id = storedFileId(path)
   if (!id) throw new Error('历史文件未存入 S3，请重新执行任务')
   return downloadStoredFile(id)

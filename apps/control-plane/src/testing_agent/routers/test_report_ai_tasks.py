@@ -4,6 +4,7 @@ from fastapi import APIRouter
 from fastapi.responses import Response
 
 from testing_agent.handlers.test_report_generate_task import (
+    delete_test_report_generate_run,
     export_test_report_generate_run_pdf,
     get_test_report_generate_run,
     list_test_report_generate_runs,
@@ -13,7 +14,7 @@ from testing_agent.schemas.ai_generate_task import (
     AiGenerateRunHistoryResponse,
     AiGenerateTaskRunResponse,
 )
-from testing_agent.schemas.common import ApiResponse
+from testing_agent.schemas.common import ApiResponse, EmptyData
 
 router = APIRouter()
 
@@ -34,3 +35,8 @@ router.get(
     response_class=Response,
     responses={200: {"content": {"application/pdf": {}}}},
 )(export_test_report_generate_run_pdf)
+
+router.delete(
+    "/test-report-generate-runs/{run_id}",
+    response_model=ApiResponse[EmptyData],
+)(delete_test_report_generate_run)

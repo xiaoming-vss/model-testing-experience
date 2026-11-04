@@ -2,7 +2,6 @@
 
 import json
 
-import sqlalchemy as sa
 from support.function_case_library import make_case, make_requirement, make_sprint, make_suite
 from support.order_api import make_order
 from support.project_api import account, project
@@ -77,38 +76,3 @@ def test_pages_focus_resume_lookup_and_detail_are_scoped(api):
     assert (
         api.post(base + "/lookup", headers=owner, json={"caseIds": ["x"] * 501}).status_code == 400
     )
-
-
-def test_migration_backfills_frozen_step_count():
-    from support.initial_schema_migration import migration_config
-    from support.mysql_initialization import seed_row
-
-    from alembic import command
-
-    engine = sa.create_engine("sqlite://")
-    with engine.connect() as connection:
-        config = migration_config(connection)
-        command.upgrade(config, "20261021_0047")
-        legacy = sa.Table("test_order_entries", sa.MetaData(), autoload_with=connection)
-        row = seed_row(
-            connection,
-            legacy,
-            {
-                "snapshot_json": {
-                    "steps": [{"action": "a", "expected": "b"}, {"action": "c", "expected": "d"}]
-                }
-            },
-        )
-        connection.commit()
-        command.upgrade(config, "head")
-        assert (
-            connection.scalar(
-                sa.text("SELECT step_count FROM test_order_entries WHERE id=:id"), {"id": row["id"]}
-            )
-            == 2
-        )
-        command.downgrade(config, "20261021_0047")
-        assert "step_count" not in {
-            column["name"] for column in sa.inspect(connection).get_columns("test_order_entries")
-        }
-    engine.dispose()

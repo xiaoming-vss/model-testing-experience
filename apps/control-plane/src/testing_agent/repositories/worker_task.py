@@ -3,15 +3,17 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.domain.worker_context import WorkerExecutionContext
-from testing_agent.models.ai_generate_task import AiGenerateTaskRun
 from testing_agent.models.ai_generate_task_source_archive import AiGenerateTaskSourceArchive
+from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.api_case_run import ApiCaseRun
 from testing_agent.models.api_collection_run import ApiCollectionRun, ApiCollectionRunItem
 from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.models.project_skill_space import ProjectSkillSpace
 from testing_agent.models.requirement import Requirement
+from testing_agent.models.ui_test_case_run import UiTestCaseRun
 from testing_agent.models.ui_test_suite_run import UiTestSuiteRunItem
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.base import BaseRepository
@@ -19,11 +21,6 @@ from testing_agent.repositories.worker_context import read_worker_context
 
 
 class WorkerTaskRepository(BaseRepository):
-    async def _project_run(self, row):
-        from testing_agent.repositories.ai_execution import project
-
-        return await self.session.run_sync(lambda session: project(session, row))
-
     async def get_worker_task(self, domain: str, task_id: str) -> WorkerTask | None:
         row = await self.session.scalar(
             select(WorkerTask).where(
@@ -41,15 +38,21 @@ class WorkerTaskRepository(BaseRepository):
         now = datetime.now(UTC)
         # Discover without range locks, then lock exact primary keys. This allows heartbeats
         # and other sweepers to update neighboring lease-index entries under MySQL RR.
-        identifiers = await self.session.scalars(
-            select(WorkerTask.id)
-            .where(
-                WorkerTask.domain == domain,
-                WorkerTask.status.in_(["claimed", "running"]),
-                WorkerTask.lease_expires_at <= now,
+        candidates_query = select(WorkerTask.id).where(
+            WorkerTask.domain == domain,
+            WorkerTask.status.in_(["claimed", "running", "stopping"]),
+            WorkerTask.lease_expires_at <= now,
+        )
+        if domain == "ai":
+            # Retired or orphaned entries must not fill the bounded discovery window
+            # and starve live attempts. Cutover inventory reports the old records.
+            candidates_query = candidates_query.where(
+                select(AiGenerationAttempt.id)
+                .where(AiGenerationAttempt.id == WorkerTask.run_id)
+                .exists()
             )
-            .order_by(WorkerTask.lease_expires_at, WorkerTask.id)
-            .limit(500)
+        identifiers = await self.session.scalars(
+            candidates_query.order_by(WorkerTask.lease_expires_at, WorkerTask.id).limit(500)
         )
         candidates = list(identifiers)
         tasks: list[WorkerTask] = []
@@ -66,7 +69,7 @@ class WorkerTaskRepository(BaseRepository):
                 .execution_options(populate_existing=True)
             )
             for task in rows:
-                if task.domain != domain or task.status not in {"claimed", "running"}:
+                if task.domain != domain or task.status not in {"claimed", "running", "stopping"}:
                     continue
                 lease = task.lease_expires_at
                 if lease is None or lease.replace(tzinfo=UTC) > now:
@@ -85,6 +88,28 @@ class WorkerTaskRepository(BaseRepository):
 
         return row
 
+    async def claim_oldest_api_ui(self) -> WorkerTask | None:
+        """Claim the oldest API/UI task without locking the remainder of the queue."""
+        # READ COMMITTED avoids MySQL next-key/gap locks when moving a claimed
+        # row out of the pending index. This is the first DB operation in the
+        # dedicated claim transaction; it does not change the engine default.
+        if (
+            isinstance(self.session, AsyncSession)
+            and self.session.get_bind().dialect.name == "mysql"
+        ):
+            await self.session.connection(execution_options={"isolation_level": "READ COMMITTED"})
+        return await self.session.scalar(
+            select(WorkerTask)
+            .where(WorkerTask.domain.in_(["api", "ui"]), WorkerTask.status == "pending")
+            .order_by(WorkerTask.created_at.asc(), WorkerTask.id.asc())
+            .with_hint(
+                WorkerTask, "FORCE INDEX (idx_worker_status_created_domain)", dialect_name="mysql"
+            )
+            .limit(1)
+            .with_for_update(skip_locked=True)
+            .execution_options(populate_existing=True)
+        )
+
     async def get_api_item(self, item_id: str) -> ApiCollectionRunItem | None:
         return await self.session.scalar(
             select(ApiCollectionRunItem).where(ApiCollectionRunItem.item_id == item_id)
@@ -100,6 +125,11 @@ class WorkerTaskRepository(BaseRepository):
 
     def add(self, row: ApiCaseRun) -> None:
         self.session.add(row)
+
+    async def get_ui_case_run(self, run_id: str) -> UiTestCaseRun | None:
+        return await self.session.scalar(
+            select(UiTestCaseRun).where(UiTestCaseRun.run_id == run_id)
+        )
 
     async def get_ui_item(self, item_id: str) -> UiTestSuiteRunItem | None:
         return await self.session.scalar(
@@ -130,12 +160,6 @@ class WorkerTaskRepository(BaseRepository):
                 IntegrationConnection.provider == "llm",
             )
         )
-
-    async def get_ai_run(self, run_id: str) -> AiGenerateTaskRun | None:
-        row = await self.session.scalar(
-            select(AiGenerateTaskRun).where(AiGenerateTaskRun.run_id == run_id).with_for_update()
-        )
-        return await self._project_run(row)
 
     async def get_source_archive(self, task_id: str) -> AiGenerateTaskSourceArchive | None:
         return await self.session.scalar(

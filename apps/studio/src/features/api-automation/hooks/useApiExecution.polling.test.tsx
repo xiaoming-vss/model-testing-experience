@@ -30,7 +30,7 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-it('队列用例低频刷新，执行后加快，终态停止请求并保留结果', async () => {
+it('连接不可用时每三十秒恢复查询，终态停止并保留结果', async () => {
   let status: 'pending' | 'running' | 'success' = 'pending'
   vi.spyOn(api, 'getApiCollectionRuns').mockResolvedValue(list([]))
   const detail = vi.spyOn(api, 'getApiCaseRun').mockImplementation(async () => ({ runId: 'case-run-1', status }))
@@ -42,10 +42,10 @@ it('队列用例低频刷新，执行后加快，终态停止请求并保留结�
   await tick(5000)
   expect(detail).toHaveBeenCalledTimes(1)
   status = 'running'
-  await tick(10_000)
+  await tick(25_000)
   expect(detail).toHaveBeenCalledTimes(2)
   status = 'success'
-  await tick(5000)
+  await tick(30_000)
   expect(detail).toHaveBeenCalledTimes(3)
   expect(result.current.runResult?.status).toBe('success')
   await tick(60_000)
@@ -67,13 +67,13 @@ it('详情与打开的报告都负责轮询，终态后停止，历史关闭时�
   await tick()
   expect(detail).toHaveBeenCalledTimes(1)
   expect(report).toHaveBeenCalledTimes(1)
-  await tick(10_000)
-  expect(detail).toHaveBeenCalledTimes(3)
-  expect(report).toHaveBeenCalledTimes(3)
+  await tick(30_000)
+  expect(detail).toHaveBeenCalledTimes(2)
+  expect(report).toHaveBeenCalledTimes(2)
   expect(history).toHaveBeenCalledTimes(1)
   summary = { ...summary, status: 'success', successCount: 2 }
-  await tick(5000)
-  expect(report.mock.calls.length).toBeGreaterThanOrEqual(4)
+  await tick(30_000)
+  expect(report.mock.calls.length).toBeGreaterThanOrEqual(3)
   expect(result.current.collectionRunReportQuery.data?.successCount).toBe(2)
   expect(client.getQueryData<ApiCollectionRunSummary[]>(['apiCollectionRuns', 'collection-1'])?.[0].status).toBe('success')
   const calls = { detail: detail.mock.calls.length, history: history.mock.calls.length, report: report.mock.calls.length }
@@ -125,4 +125,39 @@ it('报告关闭时，运行结束不下载报告；之后打开直接加载最�
   await tick()
   expect(report).toHaveBeenCalledTimes(1)
   expect(result.current.collectionRunReportQuery.data?.status).toBe('success')
+})
+
+it('报告实时更新时保留用户选择，重新打开后恢复初始视图', async () => {
+  vi.spyOn(api, 'getApiCollectionRuns').mockResolvedValue(list([]))
+  vi.spyOn(api, 'getApiCollectionRunReport').mockResolvedValue({
+    collectionRunId: 'run-1', status: 'running',
+    items: [{ itemId: 'item-1', orderNo: 1, status: 'running' }, { itemId: 'item-2', orderNo: 2, status: 'pending' }],
+  })
+  const { result, client } = setup()
+  await tick()
+  act(() => {
+    result.current.setSelectedCollectionRunId('run-1')
+    result.current.setCollectionRunReportOpen(true)
+  })
+  await tick()
+  expect(result.current.expandedCollectionRunItemIds).toEqual(['item-1'])
+  act(() => {
+    result.current.setCollectionRunReportView('runtime')
+    result.current.setExpandedCollectionRunItemIds(['item-2'])
+    result.current.setCollectionRunItemViews({ 'item-2': 'request' })
+    client.setQueryData(['apiCollectionRunReport', 'run-1'], {
+      collectionRunId: 'run-1', status: 'running',
+      items: [{ itemId: 'item-1', orderNo: 1, status: 'success' }, { itemId: 'item-2', orderNo: 2, status: 'running' }],
+    })
+  })
+  await tick()
+  expect(result.current.collectionRunReportView).toBe('runtime')
+  expect(result.current.expandedCollectionRunItemIds).toEqual(['item-2'])
+  expect(result.current.collectionRunItemViews).toEqual({ 'item-2': 'request' })
+  act(() => { result.current.setCollectionRunReportOpen(false) })
+  await tick()
+  act(() => { result.current.setCollectionRunReportOpen(true) })
+  await tick()
+  expect(result.current.collectionRunReportView).toBe('items')
+  expect(result.current.collectionRunItemViews).toEqual({})
 })

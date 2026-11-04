@@ -113,14 +113,12 @@ class CodeRiskAnalysisExecutor(TaskExecutor):
                 task,
                 started_at,
                 "该需求尚未完成需求分析(快照缺少需求理解记录)",
-                remediation="先对需求发起 requirement_analysis",
             )
         if self.credentials_fetcher is None:
             return self._failed_result(
                 task,
                 started_at,
                 "worker 未配置 GitLab 凭据获取",
-                remediation="检查 worker 配置或重新绑定",
             )
         try:
             credentials = self.credentials_fetcher(task)
@@ -129,7 +127,6 @@ class CodeRiskAnalysisExecutor(TaskExecutor):
                 task,
                 started_at,
                 f"GitLab 凭据不可用: {exc}",
-                remediation="检查 GitLab PAT 或重新绑定",
             )
 
         workspace = resolve_task_workspace(self.agent_config, task)
@@ -138,13 +135,12 @@ class CodeRiskAnalysisExecutor(TaskExecutor):
                 task,
                 started_at,
                 "项目技能包未预置(缺少 code-risk-analysis)",
-                remediation="由部署侧按项目预置技能包后重新发起",
             )
 
         progress_callback(
             TaskProgress(
                 task_id=task.task_id,
-                run_id=task.run_id,
+                attempt_id=task.attempt_id,
                 current_stage="fetching_diff",
                 stage_status="running",
             )
@@ -160,13 +156,12 @@ class CodeRiskAnalysisExecutor(TaskExecutor):
                 task,
                 started_at,
                 str(exc),
-                remediation="手工指定基线 / 重新绑定 / 检查 PAT",
             )
 
         progress_callback(
             TaskProgress(
                 task_id=task.task_id,
-                run_id=task.run_id,
+                attempt_id=task.attempt_id,
                 current_stage="analyzing",
                 stage_status="running",
             )
@@ -190,12 +185,11 @@ class CodeRiskAnalysisExecutor(TaskExecutor):
                 task,
                 started_at,
                 str(exc),
-                remediation="重新发起风险分析(报告格式异常)",
             )
 
         return TaskResult(
             task_id=task.task_id,
-            run_id=task.run_id,
+            attempt_id=task.attempt_id,
             generate_task_id=task.generate_task_id,
             status=TaskStatus.SUCCESS,
             output_yaml=report_text,
@@ -283,20 +277,17 @@ class CodeRiskAnalysisExecutor(TaskExecutor):
         task: Task,
         started_at: datetime,
         message: str,
-        remediation: str | None = None,
     ) -> TaskResult:
         return TaskResult(
             task_id=task.task_id,
-            run_id=task.run_id,
+            attempt_id=task.attempt_id,
             generate_task_id=task.generate_task_id,
             status=TaskStatus.FAILED,
             error_message=message,
-            remediation=remediation,
             result_summary_json=build_task_result_summary(
                 task=task,
                 status=TaskStatus.FAILED,
                 error_message=message,
-                details={"remediation": remediation} if remediation else None,
             ),
             started_at=started_at,
             finished_at=datetime.now().astimezone(),

@@ -13,6 +13,7 @@ from testing_agent.api.deps import (
     get_ui_generation_stages,
 )
 from testing_agent.core.errors import success_payload
+from testing_agent.handlers.generation_guards import ensure_legacy_mutation_allowed
 from testing_agent.schemas.ai_generate_task import (
     AiGenerateTaskRequest,
     AiGenerateTaskResultRequest,
@@ -96,7 +97,7 @@ async def run_ui_case_generate_task(
     user_id: str = Depends(get_current_user_id),
     service: GenerationRunLauncher = Depends(get_generation_launcher),
 ):
-    payload = body.model_dump(by_alias=True, exclude_none=True) if body else None
+    payload = body.model_dump(by_alias=True, exclude_none=True) if body else {}
     return success_payload(await service.launch("ui", task_id, payload, user_id))
 
 
@@ -125,6 +126,9 @@ async def delete_ui_case_generate_task_run(
     user_id: str = Depends(get_current_user_id),
     service: GenerationTaskCommands = Depends(get_generation_task_commands),
 ):
+    await ensure_legacy_mutation_allowed(
+        service.access.owned_run, "ui", run_id, user_id, action="write"
+    )
     return success_payload(await service.delete_run("ui", run_id, user_id))
 
 
@@ -134,6 +138,7 @@ async def update_ui_case_generate_task_run_result(
     user_id: str = Depends(get_current_user_id),
     service: GenerationCandidateReview = Depends(get_generation_review),
 ):
+    await ensure_legacy_mutation_allowed(service.owned_run, "ui", run_id, user_id, action="write")
     return success_payload(await service.update_result("ui", run_id, body.result_yaml, user_id))
 
 
@@ -143,6 +148,7 @@ async def review_ui_case_generate_task_run(
     user_id: str = Depends(get_current_user_id),
     service: GenerationCandidateReview = Depends(get_generation_review),
 ):
+    await ensure_legacy_mutation_allowed(service.owned_run, "ui", run_id, user_id)
     return success_payload(
         await service.review(
             "ui", run_id, body.model_dump(by_alias=True, exclude_none=True), user_id
@@ -156,6 +162,7 @@ async def import_ui_case_generate_task_run(
     user_id: str = Depends(get_current_user_id),
     service: CandidateImportContext = Depends(get_generation_import_context),
 ):
+    await ensure_legacy_mutation_allowed(service.owned_run, "ui", run_id, user_id, action="execute")
     return success_payload(
         await import_ui_run(service, run_id, body.suite_id, body.confirm_overwrite, user_id)
     )
@@ -167,6 +174,7 @@ async def save_ui_generation_stage(
     user_id: str = Depends(get_current_user_id),
     service: UiGenerationWorkflow = Depends(get_ui_generation_stages),
 ) -> dict:
+    await ensure_legacy_mutation_allowed(service.owned_run, "ui", run_id, user_id)
     return success_payload(
         await service.save_output(
             run_id, body.model_dump(by_alias=True, exclude_none=True), user_id
@@ -180,6 +188,7 @@ async def review_ui_generation_stage(
     user_id: str = Depends(get_current_user_id),
     service: UiGenerationWorkflow = Depends(get_ui_generation_stages),
 ) -> dict:
+    await ensure_legacy_mutation_allowed(service.owned_run, "ui", run_id, user_id)
     return success_payload(
         await service.review_output(
             run_id, body.model_dump(by_alias=True, exclude_none=True), user_id
@@ -193,6 +202,7 @@ async def revise_ui_generation_stage(
     user_id: str = Depends(get_current_user_id),
     service: UiGenerationWorkflow = Depends(get_ui_generation_stages),
 ) -> dict:
+    await ensure_legacy_mutation_allowed(service.owned_run, "ui", run_id, user_id, action="execute")
     return success_payload(
         await service.regenerate(run_id, body.model_dump(by_alias=True, exclude_none=True), user_id)
     )
@@ -204,11 +214,11 @@ async def retry_ui_generation_stage(
     user_id: str = Depends(get_current_user_id),
     service: UiGenerationWorkflow = Depends(get_ui_generation_stages),
 ) -> dict:
+    await ensure_legacy_mutation_allowed(service.owned_run, "ui", run_id, user_id, action="execute")
     return success_payload(
         await service.regenerate(
             run_id,
             body.model_dump(by_alias=True, exclude_none=True) if body else {},
             user_id,
-            retry=True,
         )
     )

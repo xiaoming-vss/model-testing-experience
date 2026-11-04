@@ -11,8 +11,12 @@ from testing_agent.handlers.api_case_generate_task import (
     import_api_case_generate_task_run,
     list_api_case_generate_task_runs,
     list_api_case_generate_tasks,
+    retry_api_case_stage,
     review_api_case_generate_task_run,
+    review_api_case_stage,
+    revise_api_case_stage,
     run_api_case_generate_task,
+    save_api_case_stage_output,
     update_api_case_generate_task,
     update_api_case_generate_task_run_result,
 )
@@ -62,6 +66,22 @@ router.delete(
     "/api-case-generate-task-runs/{run_id}",
     response_model=ApiResponse[EmptyData],
 )(delete_api_case_generate_task_run)
+router.post(
+    "/api-case-generate-task-runs/{run_id}/stage-revise",
+    response_model=ApiResponse[AiGenerateTaskRunResponse],
+)(revise_api_case_stage)
+router.patch(
+    "/api-case-generate-task-runs/{run_id}/stage-output",
+    response_model=ApiResponse[AiGenerateTaskRunResponse],
+)(save_api_case_stage_output)
+router.post(
+    "/api-case-generate-task-runs/{run_id}/stage-review",
+    response_model=ApiResponse[AiGenerateTaskRunResponse],
+)(review_api_case_stage)
+router.post(
+    "/api-case-generate-task-runs/{run_id}/stage-retry",
+    response_model=ApiResponse[AiGenerateTaskRunResponse],
+)(retry_api_case_stage)
 router.post(
     "/api-case-generate-task-runs/{run_id}/review",
     response_model=ApiResponse[AiGenerateTaskRunResponse],

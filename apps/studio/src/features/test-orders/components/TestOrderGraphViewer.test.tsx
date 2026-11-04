@@ -222,10 +222,10 @@ it('默认展开所有主线及多级分支，仍可通过节点逐级展开和�
   client.clear()
 })
 
-it('失败时显示运行错误', async () => {
+it.each(['failed', 'error'] as const)('运行状态为 %s 时显示错误', async (status) => {
   vi.spyOn(api, 'getTestOrderGraph').mockImplementation(async () => ({
     orderId: 'order-1',
-    run: { runId: 'run-1', status: 'failed', errorMessage: '图谱生成失败：invalid_json' },
+    run: { runId: 'run-1', status, errorMessage: '图谱生成失败：invalid_json' },
   }))
   const client = makeClient()
 
@@ -250,7 +250,28 @@ it('生成图谱会先取输入再选连接并派发', async () => {
   await waitFor(() => expect(dispatch).toHaveBeenCalledTimes(1))
   expect(dispatch.mock.calls[0][0]).toBe('order-1')
   // 图谱输入必须原样回传：字段名是 skill 的 snake_case 契约，不能被改写。
-  expect(dispatch.mock.calls[0][1]).toEqual({ graphInput: GRAPH_INPUT, connectionId: 'conn-1' })
+  expect(dispatch.mock.calls[0][1]).toEqual({ graphInput: GRAPH_INPUT, connectionId: 'conn-1', requestId: expect.any(String) })
+  client.clear()
+})
+
+it('网络失败后重试图谱生成会复用请求标识', async () => {
+  vi.spyOn(api, 'getTestOrderGraph').mockImplementation(async () => ({ orderId: 'order-1', run: null }))
+  vi.spyOn(api, 'getTestOrderGraphInput').mockImplementation(async () => GRAPH_INPUT)
+  vi.spyOn(api, 'getLlmConnections').mockImplementation(async () => listResponse([LLM_CONNECTION]))
+  const dispatch = vi.spyOn(api, 'dispatchTestOrderGraph')
+    .mockRejectedValueOnce(new TypeError('network unavailable'))
+    .mockResolvedValueOnce({ runId: 'run-1', status: 'pending' })
+  const client = makeClient()
+  const user = userEvent.setup()
+  renderViewer(client)
+
+  await user.click(await screen.findByRole('button', { name: '生成图谱' }))
+  await waitFor(() => expect(dispatch).toHaveBeenCalledTimes(1))
+  await waitFor(() => expect(screen.getByRole('button', { name: '生成图谱' })).toBeEnabled())
+  await user.click(screen.getByRole('button', { name: '生成图谱' }))
+  await waitFor(() => expect(dispatch).toHaveBeenCalledTimes(2))
+  expect(dispatch.mock.calls[0][1].requestId).toBeTruthy()
+  expect(dispatch.mock.calls[1][1].requestId).toBe(dispatch.mock.calls[0][1].requestId)
   client.clear()
 })
 
@@ -396,5 +417,24 @@ it('保存途中切换卡片不会将响应应用到另一条用例', async () =
   const panel = screen.getByRole('region', { name: '图谱用例执行' })
   expect(within(panel).getByRole('button', { name: '判定该用例为通过' })).toHaveAttribute('aria-pressed', 'false')
   expect(update).toHaveBeenCalledWith('order-1', 'entry-1', { status: 'passed' })
+  client.clear()
+})
+
+it('从生成历史查看旧图谱并返回最新结果', async () => {
+  const { testOrdersApi } = await import('../api/testOrders.api')
+  vi.spyOn(api, 'getTestOrderGraph').mockResolvedValue({ orderId: 'order-1', run: RUN_WITH_GRAPH })
+  vi.spyOn(testOrdersApi, 'getTestOrderGraphRuns').mockResolvedValue(listResponse([
+    { runId: 'old', status: 'failed', createdAt: '2026-01-01T00:00:00Z' },
+  ]))
+  vi.spyOn(api, 'getTestOrderGraphRun').mockResolvedValue({ runId: 'old', status: 'failed', errorMessage: '旧任务失败' })
+  const client = makeClient()
+  renderViewer(client)
+  expect(await screen.findByText('验证转换')).toBeInTheDocument()
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: '生成历史' }))
+  await user.click(await screen.findByRole('button', { name: '查看' }))
+  expect(await screen.findByText('旧任务失败')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: '查看最新' }))
+  expect(await screen.findByText('验证转换')).toBeInTheDocument()
   client.clear()
 })
