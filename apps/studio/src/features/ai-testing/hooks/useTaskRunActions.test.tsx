@@ -108,4 +108,22 @@ describe('任务运行公共操作', () => {
     expect(onStarted).not.toHaveBeenCalled()
     expect(client.getQueryState(['apiCaseGenerateTaskRuns', 'task-1'])?.isInvalidated).toBe(false)
   })
+
+  it('代码风险执行后同时失效项目级最新运行摘要', async () => {
+    const { client, wrapper } = setup()
+    client.setQueryData(['codeRiskTaskLatestRuns', 'project-1'], [])
+    const run = { runId: 'new-run', projectId: 'project-1' }
+    const startRun = vi.fn<(input: { connectionId: string }) => Promise<typeof run>>(async () => run)
+    const { result } = renderHook(() => useStartTaskRun({ kind: 'codeRisk', taskId: 'task-1', projectId: 'project-1', startRun, onStarted: vi.fn() }), { wrapper })
+    await act(async () => { await result.current.mutateAsync({ connectionId: 'connection-1' }) })
+    expect(client.getQueryState(['codeRiskTaskLatestRuns', 'project-1'])?.isInvalidated).toBe(true)
+  })
+
+  it('代码风险删除后同时失效项目级最新运行摘要', async () => {
+    const { client, wrapper } = setup()
+    client.setQueryData(['codeRiskTaskLatestRuns', 'project-1'], [])
+    const { result } = renderHook(() => useDeleteTaskRun({ kind: 'codeRisk', taskId: 'task-1', selectedRunId: null, onSelectedRunDeleted: vi.fn() }), { wrapper })
+    await act(async () => { await result.current.mutateAsync('run-1') })
+    expect(client.getQueryState(['codeRiskTaskLatestRuns', 'project-1'])?.isInvalidated).toBe(true)
+  })
 })

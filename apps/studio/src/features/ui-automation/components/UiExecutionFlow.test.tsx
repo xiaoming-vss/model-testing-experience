@@ -11,8 +11,8 @@ vi.mock('@xyflow/react', async (load) => {
   const actual = await load<typeof import('@xyflow/react')>()
   return {
     ...actual,
-    ReactFlow: (props: ComponentProps<typeof ReactFlow>) => <div>
-      {props.nodes?.map((node) => <span key={node.id} data-testid={`node-${node.id}`} data-x={node.position.x} data-y={node.position.y} data-source={String((node.data as { sourceSide?: unknown }).sourceSide ?? '')} data-target={String((node.data as { targetSide?: unknown }).targetSide ?? '')} />)}
+    ReactFlow: (props: ComponentProps<typeof ReactFlow>) => <div data-testid="flow-mock" data-only-visible={String(props.onlyRenderVisibleElements ?? false)}>
+      {props.nodes?.map((node) => <span key={node.id} data-testid={`node-${node.id}`} data-x={node.position.x} data-y={node.position.y} data-source={String((node.data as { sourceSide?: unknown }).sourceSide ?? '')} data-target={String((node.data as { targetSide?: unknown }).targetSide ?? '')} data-reveal={String((node.data as { revealDelay?: unknown }).revealDelay ?? '')} />)}
       {props.edges?.map((edge) => <span key={edge.id} data-testid={`edge-${edge.id}`} data-running={String(edge.data?.running)} />)}
       <button onClick={(event) => props.onNodeClick?.(event, props.nodes![1])}>选择 b</button>
       <button onClick={() => props.onEdgesChange?.([{ id: 'a-b', type: 'remove' }, { id: 'b-c', type: 'remove' }])}>断开</button>
@@ -69,6 +69,15 @@ it('只在运行节点的出边显示运行光束，结束后恢复常态', () =
   expect(screen.getByTestId('edge-b-c')).toHaveAttribute('data-running', 'true')
   rerender(<UiExecutionFlow storageKey="test-flow-running" editable onApply={() => {}} items={items} runningIds={[]} />)
   expect(screen.getByTestId('edge-b-c')).toHaveAttribute('data-running', 'false')
+})
+
+
+it('只挂载视口内卡片，并按执行顺序错开入场', () => {
+  const items = ['a', 'b', 'c'].map((id) => ({ id, title: id, serial: id, caption: '', enabled: true }))
+  render(<UiExecutionFlow storageKey="test-flow-viewport" editable onApply={() => {}} items={items} />)
+  expect(screen.getByTestId('flow-mock')).toHaveAttribute('data-only-visible', 'true')
+  expect(screen.getByTestId('node-a')).toHaveAttribute('data-reveal', '0')
+  expect(screen.getByTestId('node-b')).toHaveAttribute('data-reveal', '8')
 })
 
 

@@ -43,17 +43,10 @@ export function useApiCaseEditing({ setEditingCase, setSelectedCaseId, caseForm,
     queryClient.setQueryData(['apiCase', caseId], apiCase)
   }
 
-  async function resolveCompleteCaseAfterSave(savedCase: ApiCase, submittedValues: ApiCaseFormValues, previousCase?: ApiCase | null) {
-    const caseId = getCaseId(savedCase)
-    const optimisticCase = mergeDefinedApiCaseFields(mergeApiCaseWithFormValues(previousCase ?? savedCase, submittedValues), savedCase)
-
-    if (!caseId) return optimisticCase
-
-    try {
-      return await api.getApiCase(caseId)
-    } catch {
-      return optimisticCase
-    }
+  // create/update 的响应本身就是完整用例，直接用响应 + 提交值合并，
+  // 不再保存后补一次详情请求。
+  function resolveCompleteCaseAfterSave(savedCase: ApiCase, submittedValues: ApiCaseFormValues, previousCase?: ApiCase | null) {
+    return mergeDefinedApiCaseFields(mergeApiCaseWithFormValues(previousCase ?? savedCase, submittedValues), savedCase)
   }
 
   const createCaseMutation = useMutation({
@@ -66,7 +59,7 @@ export function useApiCaseEditing({ setEditingCase, setSelectedCaseId, caseForm,
       const createdCaseId = getCaseId(createdCase)
       const currentOrderIds = (caseOrderIds.length > 0 ? caseOrderIds : sortCasesByOrderNo(cases).map((item) => getCaseId(item))).filter(Boolean)
       const nextOrderIds = [createdCaseId, ...currentOrderIds.filter((id) => id !== createdCaseId)]
-      const completeCase = await resolveCompleteCaseAfterSave(createdCase, values)
+      const completeCase = resolveCompleteCaseAfterSave(createdCase, values)
 
       message.success('用例已创建')
       setDraftCaseValues(null)
@@ -89,7 +82,7 @@ export function useApiCaseEditing({ setEditingCase, setSelectedCaseId, caseForm,
       return api.updateApiCase(getCaseId(editingCase!), payload)
     },
     onSuccess: async (updatedCase, values) => {
-      const completeCase = await resolveCompleteCaseAfterSave(updatedCase, values, editingCase)
+      const completeCase = resolveCompleteCaseAfterSave(updatedCase, values, editingCase)
 
       message.success('用例已更新')
       syncCaseDetailState(completeCase)
@@ -109,22 +102,11 @@ export function useApiCaseEditing({ setEditingCase, setSelectedCaseId, caseForm,
   })
 
   const reorderCasesMutation = useMutation({
-    mutationFn: async (nextOrderIds: string[]) => {
-      const caseMap = new Map(cases.map((item) => [getCaseId(item), item]))
-
-      await Promise.all(
-        nextOrderIds.map((caseId, index) => {
-          const targetCase = caseMap.get(caseId)
-          const nextOrderNo = index + 1
-
-          if (targetCase?.orderNo === nextOrderNo) return Promise.resolve()
-          return api.updateApiCase(caseId, { orderNo: nextOrderNo })
-        }),
-      )
-    },
-    onSuccess: () => {
+    // 一次拖拽只提交一条批量排序请求；响应即完整的新顺序，直接写入缓存，不再整表重拉。
+    mutationFn: (nextOrderIds: string[]) => api.reorderApiCases(collectionId, nextOrderIds),
+    onSuccess: (result) => {
       message.success('用例顺序已更新')
-      queryClient.invalidateQueries({ queryKey: ['apiCases', collectionId] })
+      queryClient.setQueryData(['apiCases', collectionId], result)
     },
     onError: (error) => {
       setCaseOrderIds(caseOrderRollbackRef.current)

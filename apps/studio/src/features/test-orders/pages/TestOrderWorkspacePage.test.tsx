@@ -244,6 +244,8 @@ it('在当前页面切换图谱并保留执行页筛选', async () => {
   await user.click(screen.getByText('用例执行', { exact: true }))
   expect(screen.getByPlaceholderText('搜索用例 ID 或关键字')).toHaveValue('锁定')
   await waitFor(() => expect(screen.getByText('账号锁定')).toBeVisible())
+  // 图谱首次打开后保持挂载，切回来只是隐藏，不会重新请求和全量布局。
+  expect(screen.getByTestId('inline-graph')).not.toBeVisible()
   expect(screen.queryByRole('dialog', { name: '用例图谱' })).not.toBeInTheDocument()
   expect(graph).not.toHaveBeenCalled()
   client.clear()
@@ -283,6 +285,38 @@ it('快捷键说明按需显示，键盘切换详情时步骤与预期保持对�
   await user.keyboard('{ArrowUp}')
   expect(firstItem).toHaveFocus()
   expect(await screen.findByText('账号锁定')).toBeInTheDocument()
+  client.clear()
+})
+
+it('切换条目时详情面板常驻，pending 条目不查关联 Bug', async () => {
+  useAuthStore.setState({ user: { userId: 'user-1' } as User })
+  vi.spyOn(api, 'getTestOrder').mockImplementation(async () => order)
+  vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async () => listResponse([
+    entry,
+    { ...entry, entryId: 'entry-2', orderNo: 2, caseTitle: '第二条用例' },
+  ]))
+  // 第二条的详情一直不返回，模拟慢接口。
+  vi.mocked(api.getTestOrderEntry).mockImplementation(async (_orderId, id) => {
+    if (id === 'entry-2') return new Promise<never>(() => {})
+    return entry
+  })
+  const bugs = vi.spyOn(api, 'getProjectBugs').mockResolvedValue(listResponse([]))
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedAccess(client, 'owner')
+  const { container } = renderWorkspace(client)
+
+  await screen.findByText('账号锁定')
+  // pending 条目不会有关联 Bug，键盘逐条审查时不再逐条发请求。
+  expect(bugs).not.toHaveBeenCalled()
+
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: /第二条用例/ }))
+
+  // 摘要和判定条用列表里的数据先撑住，只有步骤内容区等待详情。
+  expect(container.querySelector('.test-order-case-summary')).toHaveTextContent('第二条用例')
+  expect(screen.getByText('加载执行详情…')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '判定该用例为通过' })).toBeDisabled()
+  expect(bugs).not.toHaveBeenCalled()
   client.clear()
 })
 

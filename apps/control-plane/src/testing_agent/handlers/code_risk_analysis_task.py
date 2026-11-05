@@ -42,6 +42,16 @@ async def list_code_risk_analysis_tasks(
     return success_payload(await service.list("code_risk_analysis", project_id, user_id))
 
 
+async def list_code_risk_analysis_latest_runs(
+    project_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: GenerationQueries = Depends(get_generation_queries),
+):
+    return success_payload(
+        await service.list_project_latest_runs("code_risk_analysis", project_id, user_id)
+    )
+
+
 async def get_code_risk_analysis_task(
     task_id: str,
     user_id: str = Depends(get_current_user_id),

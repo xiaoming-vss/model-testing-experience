@@ -415,7 +415,7 @@ describe('API 候选结果审核与导入', () => {
       if (url.pathname === '/v1/api-case-generate-tasks/task-1/runs') return jsonResponse({ items: [approvedRun], total: 1 })
       if (url.pathname === '/v1/api-case-generate-task-runs/run-1') return jsonResponse(approvedRun)
       if (url.pathname === '/v1/projects/project-1/sprints') return jsonResponse({ items: [{ sprintId: 'target-sprint', name: '目标迭代 A' }], total: 1 })
-      if (url.pathname === '/v1/sprints/target-sprint/requirements') return jsonResponse({ items: [{ requirementId: 'target-requirement', name: '目标需求 A' }], total: 1 })
+      if (url.pathname === '/v1/projects/project-1/requirements/options') return jsonResponse({ items: [{ requirementId: 'target-requirement', name: '目标需求 A', sprintId: 'target-sprint', sprintName: '目标迭代 A' }], total: 1 })
       if (url.pathname === '/v1/requirements/target-requirement/api-collections') return jsonResponse({ items: [{ collectionId: 'target-collection', name: '目标接口集 A' }], total: 1 })
       if (url.pathname === '/v1/api-case-generate-task-runs/run-1/import' && init?.method === 'POST') {
         importBody = JSON.parse(String(init.body))

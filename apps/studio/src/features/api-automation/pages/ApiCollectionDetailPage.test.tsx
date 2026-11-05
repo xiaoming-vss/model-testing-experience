@@ -33,7 +33,14 @@ const collection = {
 }
 
 const cases = [
-  { caseId: 'case-1', collectionId: 'collection-1', name: 'login', method: 'POST' as const, urlTemplate: '/v1/login', enabled: true, orderNo: 1, timeoutMs: 5000 },
+  // 列表接口返回的就是完整用例（含 query/body），详情页直接用它填表单。
+  {
+    caseId: 'case-1', collectionId: 'collection-1', name: 'login', method: 'POST' as const, urlTemplate: '/v1/login',
+    enabled: true, orderNo: 1, timeoutMs: 5000,
+    query: [{ enabled: true, key: 'client_type', value: 'web_desktop' }],
+    bodyType: 'json' as const,
+    bodyJson: '{"username":"admin"}',
+  },
   { caseId: 'case-2', collectionId: 'collection-1', name: 'list_projects', method: 'GET' as const, urlTemplate: '/v1/projects', enabled: true, orderNo: 2 },
 ]
 
@@ -138,6 +145,22 @@ it('左栏按请求方式列出用例，点击切换当前用例', async () => {
   client.clear()
 })
 
+it('切换用例直接使用列表数据，不再请求详情', async () => {
+  const detail = vi.mocked(api.getApiCase)
+  const { container, client } = renderPage()
+
+  await screen.findByText('xiaoming')
+  await waitFor(() => expect(container.querySelectorAll('.api-wb-case-item')).toHaveLength(2))
+  detail.mockClear()
+
+  const items = [...container.querySelectorAll('.api-wb-case-item')]
+  await userEvent.setup().click(items[1])
+  await waitFor(() => expect(screen.getByLabelText('用例名称')).toHaveValue('list_projects'))
+
+  expect(detail).not.toHaveBeenCalled()
+  client.clear()
+})
+
 it('搜索按用例名与接口路径在本地过滤', async () => {
   const { container, client } = renderPage()
 
@@ -149,17 +172,16 @@ it('搜索按用例名与接口路径在本地过滤', async () => {
   client.clear()
 })
 
-it('拖动用例后使用最新的顺序保存排序', async () => {
-  const update = vi.spyOn(api, 'updateApiCase').mockResolvedValue(cases[0])
+it('拖动用例后使用最新的顺序一次提交排序', async () => {
+  const reorder = vi.spyOn(api, 'reorderApiCases').mockImplementation(async (_collectionId, caseIds) =>
+    list(caseIds.map((caseId, index) => ({ ...cases.find((item) => item.caseId === caseId)!, orderNo: index + 1 }))),
+  )
   const { container, client } = renderPage()
   await waitFor(() => expect(container.querySelectorAll('.api-wb-case-item')).toHaveLength(2))
   const [first, second] = [...container.querySelectorAll('.api-wb-case-item')]
   fireEvent.dragStart(first, { dataTransfer: { setData: vi.fn(), effectAllowed: '' } })
   fireEvent.drop(second)
-  await waitFor(() => {
-    expect(update).toHaveBeenCalledWith('case-1', { orderNo: 2 })
-    expect(update).toHaveBeenCalledWith('case-2', { orderNo: 1 })
-  })
+  await waitFor(() => expect(reorder).toHaveBeenCalledWith('collection-1', ['case-2', 'case-1']))
   client.clear()
 })
 

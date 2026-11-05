@@ -23,7 +23,7 @@ import {
   Typography,
 } from 'antd'
 import type { InputRef, TableProps } from 'antd'
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LlmConnectionSelectModal } from '../components/LlmConnectionSelectModal'
@@ -34,6 +34,7 @@ import '@/features/ai-testing/styles/index.css'
 import '@/features/ai-testing/styles/task-list-v2.css'
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
 import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
+import { useProjectRequirementOptions } from '@/features/projects/hooks/useProjectRequirementOptions'
 import { api, listItems } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { formatTime, getErrorMessage, normalizeRequirementId, normalizeSprintId, pickCreatedAt, pickUpdatedAt } from '@/utils/format'
@@ -47,14 +48,6 @@ function getCodeRiskTaskId(task: CodeRiskTask) {
 function getTaskTime(item: CodeRiskTask) {
   const time = new Date(item.updatedAt || item.createdAt || '').getTime()
   return Number.isNaN(time) ? 0 : time
-}
-
-function getLatestRun(runs?: CodeRiskTaskRun[]) {
-  const time = (run: CodeRiskTaskRun) => {
-    const value = new Date(run.createdAt || run.startedAt || run.updatedAt || '').getTime()
-    return Number.isNaN(value) ? 0 : value
-  }
-  return [...(runs ?? [])].sort((left, right) => time(right) - time(left))[0]
 }
 
 /**
@@ -137,33 +130,25 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
     () => listItems(sprintsQuery.data).map((sprint) => ({ label: sprint.name, value: normalizeSprintId(sprint) })),
     [sprintsQuery.data],
   )
-  const allRequirementsQuery = useQuery({
-    queryKey: ['requirementsPool', 'aiTesting', activeProjectId, sprintOptions.map((item) => item.value).join(',')],
-    queryFn: async () => {
-      if (!sprintsQuery.data || sprintsQuery.data.length === 0) return []
-      const groups = await Promise.all(sprintsQuery.data.map((sprint) => api.getRequirements(normalizeSprintId(sprint))))
-      return groups.flat()
-    },
-    enabled: Boolean(activeProjectId) && !sprintsQuery.isLoading,
-  })
+  const { allRequirements } = useProjectRequirementOptions({ activeProjectId })
   const codeRiskRequirementOptions = useMemo(
     () =>
-      listItems(allRequirementsQuery.data)
+      allRequirements
         .filter((requirement) => !codeRiskDrawerSprintId || requirement.sprintId === codeRiskDrawerSprintId)
         .map((requirement) => ({ label: requirement.name, value: normalizeRequirementId(requirement) })),
-    [allRequirementsQuery.data, codeRiskDrawerSprintId],
+    [allRequirements, codeRiskDrawerSprintId],
   )
   const sprintNameMap = useMemo(
     () => new Map(listItems(sprintsQuery.data).map((sprint) => [normalizeSprintId(sprint), sprint.name])),
     [sprintsQuery.data],
   )
   const requirementNameMap = useMemo(
-    () => new Map(listItems(allRequirementsQuery.data).map((requirement) => [normalizeRequirementId(requirement), requirement.name])),
-    [allRequirementsQuery.data],
+    () => new Map(allRequirements.map((requirement) => [normalizeRequirementId(requirement), requirement.name])),
+    [allRequirements],
   )
   const requirementMap = useMemo(
-    () => new Map(listItems(allRequirementsQuery.data).map((requirement) => [normalizeRequirementId(requirement), requirement])),
-    [allRequirementsQuery.data],
+    () => new Map(allRequirements.map((requirement) => [normalizeRequirementId(requirement), requirement])),
+    [allRequirements],
   )
 
   const tasks = useMemo(
@@ -186,26 +171,28 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
       return fields.some((field) => (field ?? '').toLowerCase().includes(text))
     })
   }, [keyword, tasks, requirementNameMap, sprintNameMap])
-  const codeRiskTaskRunQueries = useQueries({
-    queries: keywordTasks.map((task) => {
-      const taskId = getCodeRiskTaskId(task)
-      return {
-        queryKey: ['codeRiskTaskRuns', taskId],
-        queryFn: () => api.getCodeRiskTaskRuns(taskId),
-        enabled: Boolean(taskId),
-      }
-    }),
+  // 项目级批量取每个任务的最新运行，替代按任务逐个请求（100 个任务原来会打出 100 个并行请求）。
+  const codeRiskLatestRunsQuery = useQuery({
+    queryKey: ['codeRiskTaskLatestRuns', activeProjectId],
+    queryFn: () => api.getCodeRiskLatestRuns(activeProjectId!),
+    enabled: Boolean(activeProjectId),
+    staleTime: 15_000,
   })
   const latestCodeRiskRunMap = useMemo(() => {
-    const entries = keywordTasks.map((task, index) => [
+    const latestByTask = new Map<string, CodeRiskTaskRun>()
+    for (const run of listItems(codeRiskLatestRunsQuery.data)) {
+      const taskId = run.taskId ?? ''
+      if (taskId) latestByTask.set(taskId, run)
+    }
+    const entries = keywordTasks.map((task) => [
       getCodeRiskTaskId(task),
       {
-        isLoading: codeRiskTaskRunQueries[index]?.isLoading ?? false,
-        latestRun: getLatestRun(codeRiskTaskRunQueries[index]?.data),
+        isLoading: codeRiskLatestRunsQuery.isLoading,
+        latestRun: latestByTask.get(getCodeRiskTaskId(task)),
       },
     ] as const)
     return new Map(entries)
-  }, [codeRiskTaskRunQueries, keywordTasks])
+  }, [codeRiskLatestRunsQuery.data, codeRiskLatestRunsQuery.isLoading, keywordTasks])
 
   /** 一条任务的最新运行状态，供状态档位计数与过滤共用。 */
   const latestRunStatusOf = useCallback(
@@ -238,7 +225,7 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
   async function refreshActiveTaskList() {
     await Promise.all([
       codeRiskTasksQuery.refetch(),
-      queryClient.refetchQueries({ queryKey: ['codeRiskTaskRuns'], type: 'active' }),
+      queryClient.refetchQueries({ queryKey: ['codeRiskTaskLatestRuns'], type: 'active' }),
     ])
   }
 
@@ -297,11 +284,11 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
       const key = JSON.stringify({ taskId, connectionId, gitlabConnectionIds: Object.entries(gitlabConnectionIds).sort(([a], [b]) => a.localeCompare(b)) })
       return api.runCodeRiskTask(taskId, { llmConnectionId: connectionId, triggerType: 'manual', gitlabConnectionIds, requestId: pendingRiskRequest.forInput(key) })
     },
-    onSuccess: (run) => {
+    onSuccess: () => {
       pendingRiskRequest.clear()
       message.success('任务已加入执行队列')
       setCodeRiskLlmSelectTaskId(null)
-      queryClient.invalidateQueries({ queryKey: ['codeRiskTaskRuns', run.taskId] })
+      queryClient.invalidateQueries({ queryKey: ['codeRiskTaskLatestRuns', activeProjectId] })
       queryClient.invalidateQueries({ queryKey: ['codeRiskTasks', activeProjectId] })
     },
   })

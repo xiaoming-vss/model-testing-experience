@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useImperativeHandle, useMemo, useState, type ReactNode, type CSSProperties } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode, type CSSProperties } from 'react'
 import { Alert, Button, Dropdown, Space } from 'antd'
 import { MoreOutlined } from '@ant-design/icons'
 import { Background, BaseEdge, Controls, EdgeLabelRenderer, getBezierPath, Handle, MarkerType, Position, ReactFlow, addEdge, reconnectEdge, useEdgesState, useNodesState, type Connection, type Edge, type EdgeProps, type Node, type NodeProps, type OnReconnect, type XYPosition } from '@xyflow/react'
@@ -11,8 +11,8 @@ import '../styles/execution-flow.css'
 
 export type FlowItemAction = { key: string; label: string; danger?: boolean; onSelect: () => void }
 export type FlowItem = { id: string; title: string; caption: string; serial: string; enabled: boolean; result?: UiTestCaseRunStepResult; actions?: FlowItemAction[] }
-type FlowNodeData = FlowItem & { sourceSide: FlowHandleSide; targetSide: FlowHandleSide }
-type AddFlowNodeData = { label: string; targetSide: FlowHandleSide }
+type FlowNodeData = FlowItem & { sourceSide: FlowHandleSide; targetSide: FlowHandleSide; revealDelay: number }
+type AddFlowNodeData = { label: string; targetSide: FlowHandleSide; revealDelay: number }
 type FlowNode = Node<FlowNodeData, 'execution'>
 type AddFlowNode = Node<AddFlowNodeData, 'add'>
 type StoredFlowPosition = XYPosition & Partial<Pick<FlowNodeData, 'sourceSide' | 'targetSide'>>
@@ -26,7 +26,7 @@ const HIDDEN_HANDLE_STYLE: CSSProperties = { opacity: 0, pointerEvents: 'none' }
 
 function ExecutionNode({ data }: NodeProps<FlowNode>) {
   const actions = data.actions ?? []
-  return <div className={`ui-flow-node${actions.length ? ' has-actions' : ''}`}>
+  return <div className={`ui-flow-node${actions.length ? ' has-actions' : ''}`} style={{ animationDelay: `${data.revealDelay}ms` }}>
     <Handle type="target" position={HANDLE_POSITION[data.targetSide]} />
     <div className="ui-flow-node-head"><span className="ui-flow-node-serial">{data.serial}</span><span className={`ui-flow-node-status${data.enabled ? ' tone-green' : ''}`}>{data.enabled ? '● 已启用' : '已禁用'}</span></div>
     <strong title={data.title}>{data.title}</strong><span className="ui-flow-node-caption">{data.caption}</span>{data.result ? <UiStepResultBadge stepResult={data.result} /> : null}
@@ -49,7 +49,7 @@ function ExecutionNode({ data }: NodeProps<FlowNode>) {
 }
 
 function AddNode({ data }: NodeProps<AddFlowNode>) {
-  return <div className="ui-flow-node ui-flow-node-add">
+  return <div className="ui-flow-node ui-flow-node-add" style={{ animationDelay: `${data.revealDelay}ms` }}>
     {/* 三个方向的入线口常驻，按终点方向选择其中一个，避免连接点位置变化后需要重新测量。 */}
     {ADD_TARGET_SIDES.map((side) => <Handle key={side} id={`add-${side}`} type="target" position={HANDLE_POSITION[side]} style={side === data.targetSide ? undefined : HIDDEN_HANDLE_STYLE} />)}
     <span className="ui-flow-node-add-icon" aria-hidden="true">+</span>
@@ -124,7 +124,7 @@ export const UiExecutionFlow = forwardRef<UiExecutionFlowHandle, Props>(function
   const savedPositions = readPositions(storageKey)
   const legacyLayout = isLegacyAutoLayout(savedPositions, ids)
   const initialLayout = computeFlowLayout(items.length, { withAddSlot: Boolean(onAdd) })
-  const [nodes, , onNodesChange] = useNodesState<Node>(items.map((item, index) => {
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>(items.map((item, index) => {
     const placement = initialLayout.nodes[index]
     const saved = legacyLayout ? undefined : savedPositions[item.id]
     return {
@@ -135,11 +135,45 @@ export const UiExecutionFlow = forwardRef<UiExecutionFlowHandle, Props>(function
       initialWidth: FLOW_NODE_WIDTH,
       initialHeight: FLOW_NODE_HEIGHT,
       // 旧版保存的位置没有连接点方向，按原来的左右连线兜底。
-      data: { ...item, sourceSide: saved?.sourceSide ?? (saved ? 'right' : placement.sourceSide), targetSide: saved?.targetSide ?? (saved ? 'left' : placement.targetSide) },
+      data: { ...item, sourceSide: saved?.sourceSide ?? (saved ? 'right' : placement.sourceSide), targetSide: saved?.targetSide ?? (saved ? 'left' : placement.targetSide), revealDelay: Math.min(index * 8, 240) },
     }
   }))
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(items.slice(1).map((item, index) => ({ id: `${items[index].id}-${item.id}`, source: items[index].id, target: item.id, ...edgeStyle })))
+  /*
+   * 步骤增删/重排时不再整棵重挂（会丢失视口与节点测量结果），而是按 id 增量同步：
+   * 已有节点保留位置与连接点方向，新节点按当前布局补位，边重置为与 items 一致的链。
+   */
+  const itemsSignature = ids.join('|')
+  const itemsSignatureRef = useRef(itemsSignature)
+  useEffect(() => {
+    if (itemsSignatureRef.current === itemsSignature) return
+    itemsSignatureRef.current = itemsSignature
+    const nextLayout = computeFlowLayout(items.length, { withAddSlot: Boolean(onAdd) })
+    setNodes((current) => {
+      const currentById = new Map(current.map((node) => [node.id, node]))
+      return items.map((item, index) => {
+        const existing = currentById.get(item.id)
+        if (existing) return { ...existing, data: { ...existing.data, ...item } }
+        const placement = nextLayout.nodes[index]
+        return {
+          id: item.id,
+          type: 'execution',
+          position: placement.position,
+          initialWidth: FLOW_NODE_WIDTH,
+          initialHeight: FLOW_NODE_HEIGHT,
+          data: { ...item, sourceSide: placement.sourceSide, targetSide: placement.targetSide, revealDelay: Math.min(index * 8, 240) },
+        }
+      })
+    })
+    setEdges(items.slice(1).map((item, index) => ({ id: `${items[index].id}-${item.id}`, source: items[index].id, target: item.id, ...edgeStyle })))
+  }, [items, itemsSignature, onAdd, setEdges, setNodes])
   const [selectedEdge, setSelectedEdge] = useState('')
+  // 首帧后撤掉依次入场的类，后续平移缩放时新挂载的卡片不再重复播放动画。
+  const [revealing, setRevealing] = useState(true)
+  useEffect(() => {
+    const timer = window.setTimeout(() => setRevealing(false), 800)
+    return () => window.clearTimeout(timer)
+  }, [])
   const order = getFlowOrder(ids, edges)
   const dirty = !order || order.some((id, index) => id !== ids[index])
   // 虚线入口挂在流程实际的终点；连线不完整时退回最后一张卡片。
@@ -157,10 +191,10 @@ export const UiExecutionFlow = forwardRef<UiExecutionFlowHandle, Props>(function
     return {
       id: ADD_NODE_ID, type: 'add',
       position: lastNode ? { x: lastNode.position.x + offset.x, y: lastNode.position.y + offset.y } : { x: 0, y: 0 },
-      data: { label: addLabel, targetSide: oppositeFlowSide(sourceSide) },
+      data: { label: addLabel, targetSide: oppositeFlowSide(sourceSide), revealDelay: Math.min(items.length * 8, 240) },
       draggable: false, selectable: false, deletable: false, connectable: false, initialWidth: FLOW_NODE_WIDTH, initialHeight: FLOW_NODE_HEIGHT,
     }
-  }, [addLabel, nodes, onAdd, terminalId])
+  }, [addLabel, nodes, onAdd, terminalId, items.length])
   const displayedNodes = useMemo(() => {
     const list = nodes.map((node) => {
       const item = items.find((entry) => entry.id === node.id)
@@ -212,7 +246,7 @@ export const UiExecutionFlow = forwardRef<UiExecutionFlowHandle, Props>(function
         <Button size="small" type="primary" loading={applying} disabled={!editable || !dirty || !order} onClick={() => { if (order) applyOrder(order) }}>应用顺序</Button>
       </Space> : null}
     </div> : null}
-    <div className="ui-flow-canvas" onKeyDown={(event) => {
+    <div className={`ui-flow-canvas${revealing ? ' is-revealing' : ''}`} onKeyDown={(event) => {
       if (event.key !== 'Enter' || (!onOpen && !onSelect)) return
       const nodeId = (event.target as HTMLElement).closest<HTMLElement>('.react-flow__node')?.dataset.id
       if (nodeId) {
@@ -221,7 +255,7 @@ export const UiExecutionFlow = forwardRef<UiExecutionFlowHandle, Props>(function
       }
     }}>
       <div className="ui-flow-hint">{hint ?? (onSelect ? '点击步骤编辑 · ' : '')}拖动卡片摆放 · 拖动连接点连线 · 选中连线后可删除或拖动端点</div>
-      <ReactFlow nodes={displayedNodes} edges={displayedEdges} nodeTypes={nodeTypes} edgeTypes={edgeTypes} onNodesChange={onNodesChange} onEdgesChange={editable ? onEdgesChange : undefined}
+      <ReactFlow nodes={displayedNodes} edges={displayedEdges} onlyRenderVisibleElements nodeTypes={nodeTypes} edgeTypes={edgeTypes} onNodesChange={onNodesChange} onEdgesChange={editable ? onEdgesChange : undefined}
         onConnect={editable ? onConnect : undefined} onReconnect={editable ? onReconnect : undefined} edgesReconnectable={editable} nodesConnectable={editable}
         onNodeDragStop={(_, __, allNodes) => savePositions(allNodes)} onEdgeClick={(_, edge) => setSelectedEdge(edge.id)} onPaneClick={() => setSelectedEdge('')}
         onNodeClick={(event, node) => {

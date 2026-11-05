@@ -19,6 +19,8 @@ export function TestOrderGraphPage() {
     queryFn: () => api.getTestOrder(orderId),
     enabled: Boolean(orderId),
     refetchOnWindowFocus: true,
+    // 从列表进入时缓存里已有完整测试单，短时间内不重复请求。
+    staleTime: 30_000,
   })
   const order = orderQuery.data
   const { project, can, loading, error } = useProjectAccess(order?.projectId)

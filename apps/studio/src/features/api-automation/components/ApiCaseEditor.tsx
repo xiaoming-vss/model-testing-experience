@@ -24,7 +24,7 @@ import {
 } from '@/utils/format'
 import { CodeOutlined, DownOutlined, InfoCircleOutlined, PlusOutlined, SendOutlined } from '@ant-design/icons'
 import { Button, Card, Checkbox, Dropdown, Empty, Form, Input, InputNumber, Popconfirm, Popover, Select, Space, Switch, Tabs, Tag, Tooltip } from 'antd'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 /** 顶部一行只读元信息与页签计数都要看当前表单值，草稿态下这些值还没落库。 */
 function countFilledRows(rows?: Array<{ key?: string; value?: string }>) {
@@ -36,7 +36,7 @@ function countEnabledRows(rows?: Array<{ enabled?: boolean; key?: string; value?
   return (rows ?? []).filter((row) => row.enabled !== false && ((row.key ?? '').trim() || (row.value ?? '').trim())).length
 }
 
-export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, getCompleteCaseFormValues, createCaseMutation, editingCase, activeCaseId, updateCaseMutation, pathInputRef, runApiCaseMutation, isApiCaseRunInProgress, isSelectedCaseReady, handleSendRequest, watchedBodyType, environment, templates, rules }: ApiCaseEditorProps) {
+export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, getCompleteCaseFormValues, createCaseMutation, editingCase, activeCaseId, updateCaseMutation, pathInputRef, runApiCaseMutation, isApiCaseRunInProgress, isSelectedCaseReady, handleSendRequest, ensureQueryTrailingRow, environment, templates, rules }: ApiCaseEditorProps) {
   const { environmentPopoverOpen, setEnvironmentPopoverOpen, environments, resolvedEnvironmentId, handleSelectEnvironment, switchDefaultEnvironmentMutation, projectId, selectedEnvironment, environmentsQuery } = environment
   const { setEnvVarInputRef, renderEnvVarPicker, insertTemplateText } = templates
   const { postOperationCount, can, openCreateAssertRule, openCreateExtractRule, assertRulesQuery, extractRulesQuery, assertRules, toggleAssertRuleMutation, openEditAssertRule, deleteAssertRuleMutation, extractRules, toggleExtractRuleMutation, openEditExtractRule, deleteExtractRuleMutation } = rules
@@ -47,12 +47,15 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
   const watchedTimeoutMs = Form.useWatch('timeoutMs', caseForm)
   const watchedQuery = Form.useWatch('query', caseForm)
   const watchedHeaders = Form.useWatch('headers', caseForm)
+  const watchedBodyType = Form.useWatch('bodyType', caseForm)
   const queryCount = countFilledRows(watchedQuery)
   const headerCount = countFilledRows(watchedHeaders)
   const enabledHeaderCount = countEnabledRows(watchedHeaders)
 
   /* `useWatch` 对没挂载的 Form.Item 返回 undefined：请求体与设置两个页签只有被打开时才挂载，
      所以首屏的请求体类型 / 超时 / 启用状态要回落到已加载的用例记录上。 */
+  useEffect(() => { ensureQueryTrailingRow(watchedQuery) }, [ensureQueryTrailingRow, watchedQuery])
+
   const bodyType = watchedBodyType ?? editingCase?.bodyType ?? editingCase?.body_type ?? 'none'
   const caseTimeoutMs = watchedTimeoutMs ?? editingCase?.timeoutMs ?? editingCase?.timeout_ms
   const caseEnabled = watchedEnabled ?? editingCase?.enabled ?? true

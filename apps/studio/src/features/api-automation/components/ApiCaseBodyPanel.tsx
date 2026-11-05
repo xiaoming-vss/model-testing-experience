@@ -6,7 +6,7 @@ import { JsonEditor, type JsonEditorCursor } from '@/shared/components/JsonEdito
 import { message } from '@/shared/utils/feedback'
 import { CheckCircleFilled, CodeOutlined, CompressOutlined, FormatPainterOutlined, WarningFilled } from '@ant-design/icons'
 import { Card, Form, Input } from 'antd'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import type { ApiCase } from '@/services/api'
 
@@ -42,12 +42,18 @@ export function ApiCaseBodyPanel({ bodyType, templates }: Props) {
   const watchedBodyJson = Form.useWatch('bodyJson', caseForm)
   const bodyJson = watchedBodyJson ?? String(caseForm.getFieldValue('bodyJson') ?? '')
   const [cursor, setCursor] = useState<JsonEditorCursor>({ line: 1, column: 1 })
-
-  const jsonValid = isJsonTextValid(bodyJson)
-  const sizeText = formatByteSize(new TextEncoder().encode(bodyJson).length)
+  // 语法结论和字节数只用于状态条：停止输入后再算，避免大请求体每敲一个字都 JSON.parse + 编码。
+  const [stableBodyJson, setStableBodyJson] = useState(bodyJson)
+  useEffect(() => {
+    const timer = window.setTimeout(() => setStableBodyJson(bodyJson), 150)
+    return () => window.clearTimeout(timer)
+  }, [bodyJson])
+  const jsonValid = useMemo(() => isJsonTextValid(stableBodyJson), [stableBodyJson])
+  const sizeText = useMemo(() => formatByteSize(new TextEncoder().encode(stableBodyJson).length), [stableBodyJson])
 
   function guardJsonAction(action: () => void, actionLabel: string) {
-    if (!jsonValid) {
+    // 动作用当前文本重新校验，不依赖防抖后的状态。
+    if (!isJsonTextValid(bodyJson)) {
       message.warning(`${actionLabel}已跳过：当前请求体不是合法 JSON`)
       return
     }

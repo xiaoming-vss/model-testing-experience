@@ -99,6 +99,18 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
     [],
   )
 
+  /* extensions 引用必须稳定：每次渲染都新建数组会让 CodeMirror 反复 reconfigure。 */
+  const editorExtensions = useMemo(() => [
+    json(),
+    linter(jsonParseLinter()),
+    keymap.of([indentWithTab]),
+    cursorListener,
+    ...(ariaLabel ? [EditorView.contentAttributes.of({ 'aria-label': ariaLabel })] : []),
+    EditorView.lineWrapping,
+    resolvedTheme === 'dark' ? darkCodeEditorTheme : codeEditorTheme,
+    syntaxHighlighting(jsonEditorHighlightStyle),
+  ], [ariaLabel, cursorListener, resolvedTheme])
+
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(value ?? '')
@@ -200,16 +212,7 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
             highlightActiveLine: false,
             highlightActiveLineGutter: false,
           }}
-          extensions={[
-            json(),
-            linter(jsonParseLinter()),
-            keymap.of([indentWithTab]),
-            cursorListener,
-            ...(ariaLabel ? [EditorView.contentAttributes.of({ 'aria-label': ariaLabel })] : []),
-            EditorView.lineWrapping,
-            resolvedTheme === 'dark' ? darkCodeEditorTheme : codeEditorTheme,
-            syntaxHighlighting(jsonEditorHighlightStyle),
-          ]}
+          extensions={editorExtensions}
           className="json-editor-codemirror"
           onCreateEditor={(view) => {
             editorViewRef.current = view

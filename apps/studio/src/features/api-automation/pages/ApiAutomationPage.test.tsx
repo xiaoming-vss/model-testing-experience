@@ -40,12 +40,15 @@ vi.mock('@/features/projects/hooks/useSprintRequirementScope', () => ({
     selectSprint: vi.fn(),
   }),
 }))
-vi.mock('@/features/projects/hooks/useProjectRequirements', () => ({
-  useProjectRequirements: () => ({
-    allRequirements: [{ requirementId: 'req-1', name: '安装部署', sprintId: 'sprint-1' }],
+vi.mock('@/features/projects/hooks/useProjectRequirementOptions', () => ({
+  useProjectRequirementOptions: () => ({
+    allRequirements: [
+      { requirementId: 'req-1', name: '安装部署', sprintId: 'sprint-1', sprintName: 'V1.0.0 迭代' },
+      { requirementId: 'req-2', name: '目标需求', sprintId: 'sprint-1', sprintName: 'V1.0.0 迭代' },
+    ],
     allRequirementsQuery: { isLoading: false, error: null },
-    requirementNameMap: new Map([['req-1', '安装部署']]),
-    requirementSprintMap: new Map([['req-1', 'sprint-1']]),
+    requirementNameMap: new Map([['req-1', '安装部署'], ['req-2', '目标需求']]),
+    requirementSprintMap: new Map([['req-1', 'sprint-1'], ['req-2', 'sprint-1']]),
     sprintNameMap: new Map([['sprint-1', 'V1.0.0 迭代']]),
   }),
 }))
@@ -111,7 +114,7 @@ afterEach(() => {
 })
 
 it('列出测试集，并在头部卡片里展示当前环境信息', async () => {
-  vi.spyOn(api, 'getApiCollections').mockImplementation(async () => listResponse([collection]))
+  vi.spyOn(api, 'getProjectApiCollections').mockImplementation(async () => listResponse([collection]))
   const environments = vi
     .spyOn(api, 'getApiEnvironments')
     .mockImplementation(async () => listResponse([environment]))
@@ -137,7 +140,7 @@ it('列出测试集，并在头部卡片里展示当前环境信息', async () =
 
 it('搜索按名称与描述在本地过滤，清空后恢复', async () => {
   const other = { ...collection, collectionId: 'collection-2', name: 'smoke-b', description: '' }
-  vi.spyOn(api, 'getApiCollections').mockImplementation(async () =>
+  vi.spyOn(api, 'getProjectApiCollections').mockImplementation(async () =>
     listResponse([collection, other]),
   )
   vi.spyOn(api, 'getApiEnvironments').mockImplementation(async () => listResponse([environment]))
@@ -160,7 +163,7 @@ it('搜索按名称与描述在本地过滤，清空后恢复', async () => {
 })
 
 it('搜索无结果时空态给出清空入口，而不是新建入口', async () => {
-  vi.spyOn(api, 'getApiCollections').mockImplementation(async () => listResponse([collection]))
+  vi.spyOn(api, 'getProjectApiCollections').mockImplementation(async () => listResponse([collection]))
   vi.spyOn(api, 'getApiEnvironments').mockImplementation(async () => listResponse([environment]))
   vi.spyOn(api, 'getApiEnvironmentVars').mockImplementation(async () => listResponse(envVars))
   const client = buildClient()
@@ -180,7 +183,7 @@ it('搜索无结果时空态给出清空入口，而不是新建入口', async (
 })
 
 it('有环境时行内运行按钮提交当前环境，没有环境时不可用', async () => {
-  vi.spyOn(api, 'getApiCollections').mockImplementation(async () => listResponse([collection]))
+  vi.spyOn(api, 'getProjectApiCollections').mockImplementation(async () => listResponse([collection]))
   const run = vi
     .spyOn(api, 'runApiCollection')
     .mockImplementation(async () => ({ status: 'success' }))
@@ -211,7 +214,7 @@ it('有环境时行内运行按钮提交当前环境，没有环境时不可用'
 })
 
 it('编辑所属需求后提交归属并刷新导入目标', async () => {
-  vi.spyOn(api, 'getApiCollections').mockImplementation(async () => listResponse([collection]))
+  vi.spyOn(api, 'getProjectApiCollections').mockImplementation(async () => listResponse([collection]))
   vi.spyOn(api, 'getApiEnvironments').mockImplementation(async () => listResponse([environment]))
   vi.spyOn(api, 'getRequirements').mockImplementation(async () => listResponse([
     { requirementId: 'req-1', name: '安装部署', sprintId: 'sprint-1' },

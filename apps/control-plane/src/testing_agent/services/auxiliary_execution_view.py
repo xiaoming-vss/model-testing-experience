@@ -7,7 +7,11 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import ErrNotFound
-from testing_agent.repositories.auxiliary_execution import detail_row, history_rows
+from testing_agent.repositories.auxiliary_execution import (
+    detail_row,
+    history_rows,
+    latest_rows_for_project,
+)
 from testing_agent.services.code_risk_analysis import parse_risk_report
 
 
@@ -111,3 +115,11 @@ async def auxiliary_detail(session: AsyncSession, execution_id: str) -> dict[str
     if task.task_type == "code_risk_analysis":
         result["report"] = parse_risk_report(output)
     return result
+
+
+async def latest_project_run_summaries(
+    session: AsyncSession, project_id: str
+) -> list[dict[str, Any]]:
+    """One summary per auxiliary task that has at least one execution."""
+    rows = await latest_rows_for_project(session, project_id)
+    return [_summary(row) for row in rows]

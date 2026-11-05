@@ -35,6 +35,11 @@ class ApiCaseRequest(BaseModel):
         return json.dumps(value, ensure_ascii=False)
 
 
+class ApiCaseReorderRequest(BaseModel):
+    case_ids: list[str] = Field(default_factory=list)
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
+
+
 class ApiCaseUpdateRequest(BaseModel):
     name: str | None = None
     description: str | None = None

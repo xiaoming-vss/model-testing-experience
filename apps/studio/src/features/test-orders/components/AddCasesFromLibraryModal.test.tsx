@@ -8,7 +8,7 @@ import { AddCasesFromLibraryModal } from './AddCasesFromLibraryModal'
 vi.mock('@/shared/utils/feedback', () => ({ message: { success: vi.fn(), error: vi.fn() } }))
 
 const sprint = { sprintId: 'sprint-1', name: 'v1.2.0', status: 'running' as const }
-const requirement = { requirementId: 'req-1', name: '租户隔离', sprintId: 'sprint-1' }
+const requirement = { requirementId: 'req-1', name: '租户隔离', sprintId: 'sprint-1', sprintName: 'V1.0.0 迭代' }
 const suite = { suiteId: 'suite-1', name: '转换数据', requirementId: 'req-1' }
 const libraryCase = {
   caseId: 'case-9',
@@ -68,6 +68,7 @@ function mockLibraryApis() {
   vi.spyOn(api, 'lookupTestOrderEntries').mockResolvedValue(listResponse([]))
   vi.spyOn(api, 'getSprints').mockImplementation(async () => listResponse([sprint]))
   vi.spyOn(api, 'getRequirements').mockImplementation(async () => listResponse([requirement]))
+  vi.spyOn(api, 'getProjectRequirementOptions').mockImplementation(async () => listResponse([requirement]))
   vi.spyOn(api, 'getProjectFunctionTestSuites').mockImplementation(async () => listResponse([suite]))
   return vi
     .spyOn(api, 'getProjectFunctionTestCases')
@@ -92,6 +93,7 @@ it('打开弹窗默认按测试单迭代查询用例', async () => {
       expect.objectContaining({ sprintId: 'sprint-1', requirementId: '', suiteId: '' }),
     ),
   )
+  expect(vi.mocked(api.getRequirements)).not.toHaveBeenCalled()
   client.clear()
 })
 

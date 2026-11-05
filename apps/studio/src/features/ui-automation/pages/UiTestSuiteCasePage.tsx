@@ -39,7 +39,7 @@ import { CodeOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InputRef } from 'antd'
 import { Alert, Button, Empty, Form, Input, Modal, Switch } from 'antd'
-import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import { goBackOrFallback } from '@/shared/utils/backNavigation'
@@ -72,6 +72,15 @@ import '@/features/ui-automation/styles/detail-workbench-v2.css'
 import '@/features/ui-automation/styles/detail-pipeline-v2.css'
 import '@/features/ui-automation/styles/detail-inspector-v2.css'
 
+function UiFlowLoading({ label }: { label: string }) {
+  return <div className="ui-wb-pipeline ui-flow-loading" role="status" aria-live="polite">
+    <span className="ui-flow-loading-label">{label}</span>
+    <div className="ui-flow-loading-grid" aria-hidden="true">
+      {Array.from({ length: 12 }, (_, index) => <span className="ui-flow-loading-card" key={index} />)}
+    </div>
+  </div>
+}
+
 export function UiTestSuiteCasePage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -82,7 +91,6 @@ export function UiTestSuiteCasePage() {
   const stepFlowRef = useRef<UiExecutionFlowHandle>(null)
   const caseFlowRef = useRef<UiExecutionFlowHandle>(null)
   const [flowLevel, setFlowLevel] = useState<'cases' | 'steps'>('cases')
-  const [stepFlowRevision, setStepFlowRevision] = useState(0)
   const [selectedStepIndex, setSelectedStepIndex] = useState(0)
   const [stepConfigHost, setStepConfigHost] = useState<HTMLDivElement | null>(null)
   const [stepConfigTab, setStepConfigTab] = useState<'basic' | 'extract'>('basic')
@@ -212,6 +220,9 @@ export function UiTestSuiteCasePage() {
     queryFn: () => api.getUiTestCase(activeCaseId),
     enabled: Boolean(activeCaseId),
     refetchOnWindowFocus: false,
+    // 列表接口返回的就是同一份完整用例（含 stepsJson），进入用例时直接复用；
+    // 不再每次切换都发详情请求，避免“编辑器先卸载、等数据回来再重建”。
+    staleTime: Number.POSITIVE_INFINITY,
   })
   const caseStatus = queryClient.getQueryData<UiTestCaseRun>(['uiTestCaseRun', selectedRunId])?.status
   const caseEventsConnected = useRunEvents('ui-case', selectedRunId, Boolean(selectedRunId) && selectedRunId !== liveUiRunId && getRunPollingInterval(caseStatus) !== false, () => {
@@ -366,7 +377,6 @@ export function UiTestSuiteCasePage() {
     if (draggingStepIndex === null || draggingStepIndex === targetIndex) return
 
     moveStep(move, draggingStepIndex, targetIndex)
-    setStepFlowRevision((current) => current + 1)
     setDraggingStepIndex(null)
   }
 
@@ -828,12 +838,27 @@ export function UiTestSuiteCasePage() {
     caseForm.setFieldsValue(draftCaseValues ?? createDefaultUiTestCaseFormValues())
   }, [caseForm, draftCaseValues, selectedCaseId, uiTestCases])
 
-  useEffect(() => {
+  // 列表接口已经带回每个用例的完整步骤，先预热详情缓存；
+  // 这样进入用例时详情查询直接命中缓存，不需要额外的网络往返。
+  useLayoutEffect(() => {
+    if (uiTestCases.length === 0) return
+
+    for (const item of uiTestCases) {
+      const caseId = normalizeUiTestCaseId(item)
+      if (!caseId || queryClient.getQueryData(['uiTestCase', caseId])) continue
+      queryClient.setQueryData(['uiTestCase', caseId], item)
+    }
+  }, [queryClient, uiTestCases])
+
+  // 查询数据同步到编辑态必须发生在绘制前，否则会先闪一帧“未找到”或空表单。
+  useLayoutEffect(() => {
     if (!activeCaseId || !selectedCaseDetailQuery.data) return
+    // 点击卡片时已经用列表数据同步过编辑态，这里不再覆盖，避免多一次整树渲染。
+    if (editingCase && normalizeUiTestCaseId(editingCase) === activeCaseId) return
 
     setEditingCase(selectedCaseDetailQuery.data)
     caseForm.setFieldsValue(buildUiTestCaseFormValues(selectedCaseDetailQuery.data))
-  }, [activeCaseId, caseForm, selectedCaseDetailQuery.data])
+  }, [activeCaseId, caseForm, editingCase, selectedCaseDetailQuery.data])
 
   useEffect(() => {
     if (reorderCasesMutation.isPending) return
@@ -855,7 +880,8 @@ export function UiTestSuiteCasePage() {
     })
   }, [reorderCasesMutation.isPending, uiTestCases])
 
-  useEffect(() => {
+  // 用例列表到达后立刻补上默认选中，避免首帧落到“未找到”兜底。
+  useLayoutEffect(() => {
     if (caseList.length === 0) {
       if (selectedCaseId) {
         setSelectedCaseId('')
@@ -986,6 +1012,19 @@ export function UiTestSuiteCasePage() {
   function handleSelectCase(caseId: string) {
     setFlowLevel('steps')
     setTemplatePickerTarget(null)
+    // 列表里已经有完整步骤，立即切换编辑态：不卸载编辑器，也不等详情请求。
+    if (caseId !== DRAFT_CASE_ID) {
+      const nextCase = queryClient.getQueryData<UiTestCase>(['uiTestCase', caseId])
+        ?? orderedCases.find((item) => normalizeUiTestCaseId(item) === caseId)
+      if (nextCase) {
+        if (!queryClient.getQueryData(['uiTestCase', caseId])) {
+          queryClient.setQueryData(['uiTestCase', caseId], nextCase)
+        }
+        setEditingCase(nextCase)
+        caseForm.setFieldsValue(buildUiTestCaseFormValues(nextCase))
+        setCaseDirty(false)
+      }
+    }
     if (caseId !== selectedCaseId) {
       setSelectedStepIndex(0)
       setExpandedStepIndexes([])
@@ -1058,6 +1097,8 @@ export function UiTestSuiteCasePage() {
   }
 
   const showEditorForm = isCreatingCase || (Boolean(activeCaseId) && Boolean(editingCase) && normalizeUiTestCaseId(editingCase!) === activeCaseId)
+  // 自动选中、详情请求以及数据同步到 editingCase 之间都有一帧空档；先占位，避免闪出“未找到”。
+  const caseDetailLoading = !showEditorForm && (!activeCaseId || selectedCaseDetailQuery.isPending || Boolean(selectedCaseDetailQuery.data))
   const hasUnsavedCaseChanges = caseDirty
   const runningSuiteItems = activeSuiteReportQuery.data?.status === 'running' && activeSuiteRunQuery.data?.status === 'running'
     ? activeSuiteReportQuery.data.items ?? [] : []
@@ -1112,7 +1153,6 @@ export function UiTestSuiteCasePage() {
     const nextSelectedIndex = order.indexOf(String(selectedStepIndex))
     setSelectedStepIndex(Math.max(0, nextSelectedIndex))
     setExpandedStepIndexes([Math.max(0, nextSelectedIndex)])
-    setStepFlowRevision((current) => current + 1)
   }
   function handleCaseSave() {
     if (flowLevel === 'cases' && caseFlowRef.current) {
@@ -1266,26 +1306,24 @@ export function UiTestSuiteCasePage() {
               /> : null}
               <div className="ui-flow-editor" hidden={flowLevel === 'cases'}>
               {caseList.length === 0 ? (
-                <div className="ui-wb-pipeline">
-                  <div className="ui-test-case-empty-editor">
-                    <Empty description="当前测试集还没有 UI测试用例">
-                      <ProjectActionButton action="write" type="primary" className="action-btn-create" operation="create" onClick={openCreateCase}>
-                        新建用例
-                      </ProjectActionButton>
-                    </Empty>
+                casesQuery.isLoading ? <UiFlowLoading label="正在加载 UI 测试用例..." /> : (
+                  <div className="ui-wb-pipeline">
+                    <div className="ui-test-case-empty-editor">
+                      <Empty description="当前测试集还没有 UI测试用例">
+                        <ProjectActionButton action="write" type="primary" className="action-btn-create" operation="create" onClick={openCreateCase}>
+                          新建用例
+                        </ProjectActionButton>
+                      </Empty>
+                    </div>
                   </div>
-                </div>
-              ) : !showEditorForm && selectedCaseDetailQuery.isLoading ? (
-                <div className="ui-wb-pipeline">
-                  <div className="ui-test-case-empty-editor">
-                    <Empty description="UI测试用例详情加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                  </div>
-                </div>
+                )
+              ) : caseDetailLoading ? (
+                <UiFlowLoading label="正在加载 UI 测试用例详情..." />
               ) : showEditorForm ? (
                 <>
                   {flowLevel === 'steps' ? <UiExecutionFlow
                     ref={stepFlowRef} inlineSave
-                    key={`steps:${suiteId}:${selectedCaseId}:${stepFlowItems.length}:${stepFlowRevision}`}
+                    key={`steps:${suiteId}:${selectedCaseId}`}
                     items={stepFlowItems} runningIds={runningStepIds} storageKey={`ui-flow:${suiteId}:steps:${selectedCaseId}`} editable={can('write')} remapPositionsOnApply
                     selectedId={String(selectedStepIndex)} onApply={applyStepFlowOrder}
                     onAdd={can('write') ? addStep : undefined} addLabel="添加步骤"
@@ -1329,7 +1367,7 @@ export function UiTestSuiteCasePage() {
               ) : (
                 <div className="ui-wb-pipeline">
                   <div className="ui-test-case-empty-editor">
-                    <Empty description="未找到对应的 UI测试用例" />
+                    <Empty description={selectedCaseDetailQuery.isError ? 'UI测试用例详情加载失败' : '未找到对应的 UI测试用例'} />
                   </div>
                 </div>
               )}

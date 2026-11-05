@@ -20,3 +20,31 @@ it('copies the current JSON draft only from JSON mode and reports clipboard fail
   await user.click(screen.getByRole('button', { name: '复制 JSON' }))
   await waitFor(() => expect(message.error).toHaveBeenCalled())
 })
+
+it('隐藏的页签保留状态，但不跟着父级更新重渲染', async () => {
+  const user = userEvent.setup()
+  const renders = { visual: 0 }
+  function Probe({ text }: { text: string }) {
+    renders.visual += 1
+    return <p>{text}</p>
+  }
+  const renderTabs = (text: string) => (
+    <TestThemeProvider>
+      <ArtifactViewTabs defaultActiveKey="visual" items={[
+        { key: 'visual', label: '可视化', children: <Probe text={text} /> },
+        { key: 'json', label: 'JSON', children: 'JSON 内容' },
+      ]} />
+    </TestThemeProvider>
+  )
+  const view = render(renderTabs('第一版'))
+  expect(screen.getByText('第一版')).toBeInTheDocument()
+  await user.click(screen.getByText('JSON', { exact: true }))
+  const rendersAfterSwitch = renders.visual
+
+  view.rerender(renderTabs('第二版'))
+  expect(renders.visual).toBe(rendersAfterSwitch)
+
+  await user.click(screen.getByText('可视化', { exact: true }))
+  expect(await screen.findByText('第二版')).toBeInTheDocument()
+  expect(renders.visual).toBeGreaterThan(rendersAfterSwitch)
+})

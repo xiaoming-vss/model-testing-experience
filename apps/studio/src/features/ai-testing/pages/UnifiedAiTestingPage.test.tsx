@@ -93,6 +93,17 @@ describe('代码风险分析列表', () => {
     expect(requests.some(path => /case-generate-tasks|requirement-analysis-tasks/.test(path))).toBe(false)
   })
 
+  it('需求下拉只请求项目级摘要接口，不再按迭代拉全文', async () => {
+    const requests: string[] = []
+    installFetchHandler((url) => {
+      requests.push(url.pathname)
+    })
+    renderPage()
+
+    await waitFor(() => expect(requests).toContain('/v1/projects/project-1/requirements/options'))
+    expect(requests.some((path) => /^\/v1\/sprints\/[^/]+\/requirements$/.test(path))).toBe(false)
+  })
+
   it('任务列表展示任务更新时间而不是最近运行时间', async () => {
     const updatedAt = '2026-08-05T06:47:06.000Z'
     installFetchHandler((url) => {
@@ -146,11 +157,14 @@ describe('代码风险分析列表', () => {
           total: 2,
         })
       }
-      if (url.pathname === '/v1/code-risk-analysis-tasks/api-success/runs') {
-        return jsonResponse({ items: [{ runId: 'run-1', taskId: 'api-success', status: 'success', createdAt: '2026-08-01T03:00:00.000Z' }], total: 1 })
-      }
-      if (url.pathname === '/v1/code-risk-analysis-tasks/api-review/runs') {
-        return jsonResponse({ items: [{ runId: 'run-2', taskId: 'api-review', status: 'waiting_review', createdAt: '2026-08-01T03:00:00.000Z' }], total: 1 })
+      if (url.pathname === '/v1/projects/project-1/code-risk-analysis-tasks/latest-runs') {
+        return jsonResponse({
+          items: [
+            { runId: 'run-1', taskId: 'api-success', status: 'success', createdAt: '2026-08-01T03:00:00.000Z' },
+            { runId: 'run-2', taskId: 'api-review', status: 'waiting_review', createdAt: '2026-08-01T03:00:00.000Z' },
+          ],
+          total: 2,
+        })
       }
     })
     const user = userEvent.setup()

@@ -24,7 +24,8 @@ import {
   normalizeEnvironmentId
 } from '@/utils/format'
 import { DownOutlined } from '@ant-design/icons'
-import { Alert, Empty, Modal, Segmented, Tag } from 'antd'
+import { Alert, Button, Empty, Modal, Segmented, Tag } from 'antd'
+import { useEffect, useState } from 'react'
 import { renderRunResultContent } from '../utils/renderApiRunResult'
 
 import type { ApiCollectionRunItem, ApiEnvironment } from '@/features/api-automation/types'
@@ -52,6 +53,8 @@ type Props = {
   selectedCollectionRunSummary: ApiCollectionRunSummary | undefined
 }
 
+const RUN_REPORT_PAGE_SIZE = 30
+
 function RunResultPanel({ view, children }: { view: RunResultView; children: React.ReactNode }) {
   const panelRef = useViewMotion(runResultViewOptions.findIndex(option => option.value === view))
   return <div ref={panelRef} className="api-case-run-result-block">{children}</div>
@@ -59,6 +62,13 @@ function RunResultPanel({ view, children }: { view: RunResultView; children: Rea
 
 export function ApiCollectionRunReportModal({ canStop, collectionRunReportOpen, setCollectionRunReportOpen, setSelectedCollectionRunId, collectionRunReportQuery, collectionRunReport, environments, handleExportCollectionRunReportHtml, handleRefreshCollectionRunReport, refreshingCollectionRunReport, selectedCollectionRunId, collectionRunReportView, setCollectionRunReportView, orderedCollectionRunItems, expandedCollectionRunItemIds, collectionRunItemViews, toggleCollectionRunItem, handleCollectionRunItemViewChange, selectedCollectionRunSummary }: Props) {
   const viewRef = useViewMotion(collectionReportViewOptions.findIndex(option => option.value === collectionRunReportView))
+  // 报告条目可能很多，运行中还会持续刷新；先渲染前一段，展开详情按需追加，避免每轮轮询重画全部行。
+  const [visibleItemCount, setVisibleItemCount] = useState(RUN_REPORT_PAGE_SIZE)
+  useEffect(() => {
+    setVisibleItemCount(RUN_REPORT_PAGE_SIZE)
+  }, [selectedCollectionRunId])
+  const visibleRunItems = orderedCollectionRunItems.slice(0, visibleItemCount)
+  const remainingRunItems = orderedCollectionRunItems.length - visibleRunItems.length
   return (
     <Modal
       mask={{ closable: false }}
@@ -70,7 +80,7 @@ export function ApiCollectionRunReportModal({ canStop, collectionRunReportOpen, 
         setCollectionRunReportOpen(false)
         setSelectedCollectionRunId('')
       }}
-      destroyOnHidden={false}
+      destroyOnHidden
       rootClassName="api-collection-run-report-modal-root"
       className="api-collection-run-report-modal"
     >
@@ -162,7 +172,7 @@ export function ApiCollectionRunReportModal({ canStop, collectionRunReportOpen, 
                 <Empty description="暂无API测试集运行明细" image={Empty.PRESENTED_IMAGE_SIMPLE} />
               ) : (
                 <div className="api-collection-run-report-list">
-                  {orderedCollectionRunItems.map((item, index) => {
+                  {visibleRunItems.map((item, index) => {
                     const itemKey = getCollectionRunItemKey(item, index)
                     const expanded = expandedCollectionRunItemIds.includes(itemKey)
                     const itemView = collectionRunItemViews[itemKey] ?? 'response'
@@ -219,6 +229,13 @@ export function ApiCollectionRunReportModal({ canStop, collectionRunReportOpen, 
                       </div>
                     )
                   })}
+                  {remainingRunItems > 0 ? (
+                    <div className="api-collection-run-report-list-more">
+                      <Button size="small" onClick={() => setVisibleItemCount(count => count + RUN_REPORT_PAGE_SIZE)}>
+                        显示更多（还剩 {remainingRunItems} 条）
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>

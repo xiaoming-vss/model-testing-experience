@@ -119,6 +119,9 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                   summary: stepSummary,
                 } = buildUiStepRowView(step)
                 const expanded = selectedStepIndex !== undefined || expandedStepIndexes.includes(index)
+                // 详情模式一次只显示一个步骤；其余步骤只保留字段注册（noStyle + 无控件），
+                // 这样保存时仍校验全部步骤，却不用为每步挂载一整套 Select / Input。
+                const compact = selectedStepIndex !== undefined && selectedStepIndex !== index
                 const stepResult = stepResultByOrder.get(index + 1)
 
                 return (
@@ -170,16 +173,17 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                           <div className="ui-test-case-step-title-head">
                             <Form.Item
                               {...fieldProps}
+                              noStyle={compact}
                               name={[field.name, 'stepName']}
                               className="ui-test-case-step-title-item"
                               rules={[{ required: true, whitespace: true, message: '请输入步骤名称' }]}
                             >
-                              <Input
+                              {compact ? null : <Input
                                 placeholder="点击输入步骤名称"
                                 maxLength={120}
                                 className="ui-test-case-step-title-input"
                                 suffix={<EditOutlined className="ui-test-case-step-title-edit-icon" />}
-                              />
+                              />}
                             </Form.Item>
                           </div>
                           {selectedStepIndex === undefined ? <div className="ui-wb-step-summary">
@@ -193,7 +197,7 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                         </div>
                       </div>
                       <div className="ui-test-case-step-actions" onClick={(event) => event.stopPropagation()}>
-                        <Tooltip title="删除步骤">
+                        {compact ? null : <Tooltip title="删除步骤">
                           <ProjectActionButton action="write"
                             type="text"
                             size="small"
@@ -201,12 +205,12 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                             operation="delete" iconOnly
                             onClick={() => removeStep(remove, index)}
                           />
-                        </Tooltip>
+                        </Tooltip>}
                       </div>
                     </div>
 
                     {selectedStepIndex === index ? detailActions : null}
-                    {selectedStepIndex !== undefined ? <div className="ui-step-config-tabs" role="tablist" aria-label="步骤配置分类">
+                    {selectedStepIndex !== undefined && selectedStepIndex === index ? <div className="ui-step-config-tabs" role="tablist" aria-label="步骤配置分类">
                       <button type="button" role="tab" aria-selected={activeTab === 'basic'} onClick={() => onTabChange?.('basic')}>基础配置</button>
                       <button type="button" role="tab" aria-selected={activeTab === 'extract'} onClick={() => onTabChange?.('extract')}>后置提取</button>
                     </div> : null}
@@ -214,6 +218,7 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                       <div className="ui-test-case-step-grid ui-test-case-step-core-grid" hidden={selectedStepIndex !== undefined && activeTab !== 'basic'}>
                         <Form.Item
                           {...fieldProps}
+                          noStyle={compact}
                           name={[field.name, 'keyword']}
                           label="关键字"
                           rules={[
@@ -226,18 +231,19 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                             },
                           ]}
                         >
-                          <Select
+                          {compact ? null : <Select
                             showSearch
                             placeholder="请选择关键字"
                             options={uiTestKeywordOptions}
                             optionFilterProp="label"
-                          />
+                          />}
                         </Form.Item>
                         <Form.Item
                           {...fieldProps}
+                          noStyle={compact}
                           name={[field.name, 'locatorType']}
                           label="定位方式"
-                          hidden={!showLocatorTypeField}
+                          hidden={!compact && !showLocatorTypeField}
                           dependencies={[['steps', field.name, 'keyword']]}
                           rules={[
                             ({ getFieldValue }) => ({
@@ -257,13 +263,13 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                             }),
                           ]}
                         >
-                          <Select
+                          {compact ? null : <Select
                             showSearch
                             placeholder={stepRequiresLocator ? '请选择定位方式' : '按需选择定位方式'}
                             options={uiTestLocatorTypeOptions}
                             optionFilterProp="label"
                             allowClear={!stepRequiresLocator}
-                          />
+                          />}
                         </Form.Item>
                       </div>
 
@@ -277,9 +283,10 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
 
                         <Form.Item
                           {...fieldProps}
+                          noStyle={compact}
                           name={[field.name, 'locatorValue']}
                           label={selectedStepIndex !== undefined ? '定位值' : renderTemplatePickerLabel(field.name, 'locatorValue', '定位值')}
-                          hidden={!showLocatorFields}
+                          hidden={!compact && !showLocatorFields}
                           className={`ui-test-case-step-field ${locatorValueFieldClass}`}
                           dependencies={[['steps', field.name, 'keyword']]}
                           rules={[
@@ -294,19 +301,20 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                             }),
                           ]}
                         >
-                          <Input
+                          {compact ? null : <Input
                             ref={bindTemplateInputRef(field.name, 'locatorValue')}
                             suffix={selectedStepIndex !== undefined ? renderTemplatePickerLabel(field.name, 'locatorValue', '') : undefined}
                             placeholder={stepRequiresLocator ? '例如：#username' : '按需填写'}
                             maxLength={400}
-                          />
+                          />}
                         </Form.Item>
 
                         <Form.Item
                           {...fieldProps}
+                          noStyle={compact}
                           name={[field.name, 'operationValue']}
                           label={selectedStepIndex !== undefined ? <span title={operationFieldLabel}>{step?.keyword === 'open' ? '页面 URL' : '操作值'}</span> : renderTemplatePickerLabel(field.name, 'operationValue', operationFieldLabel)}
-                          hidden={!showOperationField}
+                          hidden={!compact && !showOperationField}
                           className={`ui-test-case-step-field ${operationValueFieldClass}`}
                           dependencies={[['steps', field.name, 'keyword']]}
                           rules={[
@@ -364,12 +372,12 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                             }),
                           ]}
                         >
-                          <Input
+                          {compact ? null : <Input
                             ref={bindTemplateInputRef(field.name, 'operationValue')}
                             suffix={selectedStepIndex !== undefined ? renderTemplatePickerLabel(field.name, 'operationValue', '') : undefined}
                             placeholder={operationFieldPlaceholder}
                             maxLength={400}
-                          />
+                          />}
                         </Form.Item>
 
                         <div
@@ -381,9 +389,10 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
 
                         <Form.Item
                           {...fieldProps}
+                          noStyle={compact}
                           name={[field.name, 'comparator']}
                           label="比较器"
-                          hidden={!stepUsesComparator}
+                          hidden={!compact && !stepUsesComparator}
                           className="ui-test-case-step-field ui-test-case-step-field-third"
                           dependencies={[['steps', field.name, 'keyword']]}
                           rules={[
@@ -404,7 +413,7 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                             }),
                           ]}
                         >
-                          <Select placeholder="请选择比较器" options={uiTestComparatorOptions} />
+                          {compact ? null : <Select placeholder="请选择比较器" options={uiTestComparatorOptions} />}
                         </Form.Item>
                       </div>
 
@@ -418,7 +427,7 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                         <Form.List name={[field.name, 'saveTo']}>
                           {(saveFields, { add: addSaveRule, remove: removeSaveRule }) => (
                             <>
-                              {saveFields.length === 0 ? (
+                              {saveFields.length === 0 && !compact ? (
                                 <div className="ui-test-case-step-extract-empty">当前没有提取规则</div>
                               ) : null}
                               {saveFields.map((saveField) => {
@@ -429,6 +438,7 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                                   <div key={saveKey} className="ui-test-case-step-extract-row">
                                     <Form.Item
                                       {...saveFieldProps}
+                                      noStyle={compact}
                                       name={[saveField.name, 'name']}
                                       className="ui-test-case-step-extract-name"
                                       extra={
@@ -458,32 +468,35 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                                         },
                                       ]}
                                     >
-                                      <Input placeholder="变量名" maxLength={120} />
+                                      {compact ? null : <Input placeholder="变量名" maxLength={120} />}
                                     </Form.Item>
                                     <Form.Item
                                       {...saveFieldProps}
+                                      noStyle={compact}
                                       name={[saveField.name, 'source']}
                                       className="ui-test-case-step-extract-source"
                                       initialValue="text"
                                     >
-                                      <Select options={uiStepSaveSourceOptions} />
+                                      {compact ? null : <Select options={uiStepSaveSourceOptions} />}
                                     </Form.Item>
                                     <Form.Item
                                       {...saveFieldProps}
+                                      noStyle={compact}
                                       name={[saveField.name, 'locatorType']}
                                       className="ui-test-case-step-extract-locator-type"
                                       dependencies={[['steps', field.name, 'saveTo', saveField.name, 'locatorValue']]}
                                     >
-                                      <Select
+                                      {compact ? null : <Select
                                         allowClear
                                         placeholder="定位方式"
                                         options={uiTestLocatorTypeOptions}
                                         optionFilterProp="label"
                                         showSearch
-                                      />
+                                      />}
                                     </Form.Item>
                                     <Form.Item
                                       {...saveFieldProps}
+                                      noStyle={compact}
                                       name={[saveField.name, 'locatorValue']}
                                       className="ui-test-case-step-extract-locator-value"
                                       dependencies={[['steps', field.name, 'saveTo', saveField.name, 'locatorType']]}
@@ -511,10 +524,11 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                                         }),
                                       ]}
                                     >
-                                      <Input placeholder="定位值，留空继承步骤定位" maxLength={400} />
+                                      {compact ? null : <Input placeholder="定位值，留空继承步骤定位" maxLength={400} />}
                                     </Form.Item>
                                     <Form.Item
                                       {...saveFieldProps}
+                                      noStyle={compact}
                                       name={[saveField.name, 'attribute']}
                                       className="ui-test-case-step-extract-attribute"
                                       dependencies={[['steps', field.name, 'saveTo', saveField.name, 'source']]}
@@ -536,16 +550,17 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                                         }),
                                       ]}
                                     >
-                                      <Input placeholder="属性名（属性来源必填）" maxLength={120} />
+                                      {compact ? null : <Input placeholder="属性名（属性来源必填）" maxLength={120} />}
                                     </Form.Item>
                                     <Form.Item
                                       {...saveFieldProps}
+                                      noStyle={compact}
                                       name={[saveField.name, 'defaultValue']}
                                       className="ui-test-case-step-extract-default"
                                     >
-                                      <Input placeholder="默认值（可选）" maxLength={400} />
+                                      {compact ? null : <Input placeholder="默认值（可选）" maxLength={400} />}
                                     </Form.Item>
-                                    <Tooltip title="删除提取规则">
+                                    {compact ? null : <Tooltip title="删除提取规则">
                                       <ProjectActionButton
                                         action="write"
                                         type="text"
@@ -555,11 +570,11 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                                         className="ui-test-case-step-extract-remove action-btn-delete"
                                         onClick={() => removeSaveRule(saveField.name)}
                                       />
-                                    </Tooltip>
+                                    </Tooltip>}
                                   </div>
                                 )
                               })}
-                              <ProjectActionButton
+                              {compact ? null : <ProjectActionButton
                                 action="write"
                                 type="dashed"
                                 size="small"
@@ -567,7 +582,7 @@ export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'bas
                                 onClick={() => addSaveRule({ name: '', source: 'text' })}
                               >
                                 添加提取
-                              </ProjectActionButton>
+                              </ProjectActionButton>}
                             </>
                           )}
                         </Form.List>

@@ -34,7 +34,7 @@ import { CheckOutlined, CodeSandboxOutlined, FunctionOutlined, SearchOutlined } 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { InputRef } from 'antd'
 import { Alert, Button, Form, Input, Modal } from 'antd'
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode, type PointerEvent as ReactPointerEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type ReactNode, type PointerEvent as ReactPointerEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { goBackOrFallback } from '@/shared/utils/backNavigation'
 import '@/shared/styles/surface-tokens.css'
@@ -95,9 +95,6 @@ export function ApiCollectionDetailPage() {
   const bodyJsonEditorRef = useRef<JsonEditorRef | null>(null)
   const editorLayoutRef = useRef<HTMLDivElement | null>(null)
   const editorResizeRef = useRef<{ startY: number; startHeight: number } | null>(null)
-
-  const watchedBodyType = Form.useWatch('bodyType', caseForm)
-  const watchedQuery = Form.useWatch('query', caseForm)
 
   const isCreatingCase = selectedCaseId === DRAFT_CASE_ID
 
@@ -377,10 +374,6 @@ export function ApiCollectionDetailPage() {
   }, [caseForm])
 
   useEffect(() => {
-    ensureQueryTrailingRow(watchedQuery)
-  }, [ensureQueryTrailingRow, watchedQuery])
-
-  useEffect(() => {
     setRunResult(null)
     setRunResultView('response')
     setAssertRuleModalOpen(false)
@@ -398,12 +391,26 @@ export function ApiCollectionDetailPage() {
     caseForm.setFieldsValue(draftCaseValues ?? createDefaultCaseFormValues())
   }, [caseForm, draftCaseValues, selectedCaseId])
 
-  useEffect(() => {
+  // 列表接口返回的就是完整用例（含 headers / query / body），先预热详情缓存；
+  // 切换用例时不再多发一次详情请求，也不会让迟到的响应覆盖正在编辑的表单。
+  useLayoutEffect(() => {
+    if (cases.length === 0) return
+
+    for (const item of cases) {
+      const caseId = getCaseId(item)
+      if (!caseId || queryClient.getQueryData(['apiCase', caseId])) continue
+      queryClient.setQueryData(['apiCase', caseId], item)
+    }
+  }, [cases, queryClient])
+
+  useLayoutEffect(() => {
     if (!activeCaseId || !selectedCaseDetailQuery.data) return
+    // 选中时已经用列表数据同步过编辑态，这里不再重复覆盖。
+    if (editingCase && getCaseId(editingCase) === activeCaseId) return
 
     setEditingCase(selectedCaseDetailQuery.data)
     caseForm.setFieldsValue(buildCaseFormValues(selectedCaseDetailQuery.data))
-  }, [activeCaseId, caseForm, selectedCaseDetailQuery.data])
+  }, [activeCaseId, caseForm, editingCase, selectedCaseDetailQuery.data])
 
   useEffect(() => {
     if (!runResult || !isResizingEditor) return
@@ -599,7 +606,7 @@ export function ApiCollectionDetailPage() {
         footer={null}
         centered
         width={880}
-        destroyOnHidden={false}
+        destroyOnHidden
         className="api-env-var-picker-modal"
         onCancel={closeEnvVarPicker}
       >
@@ -867,7 +874,8 @@ export function ApiCollectionDetailPage() {
 
   const canReorder = can('write') && caseSearch.trim().length === 0
 
-  useEffect(() => {
+  // 选中用例后立刻用列表数据填表单，避免绘制出一帧上一条用例的内容。
+  useLayoutEffect(() => {
     if (!activeCaseId || selectedCaseId === DRAFT_CASE_ID) return
     if (editingCase && getCaseId(editingCase) === activeCaseId) return
     if (!selectedCasePreview) return
@@ -985,7 +993,7 @@ export function ApiCollectionDetailPage() {
               <div className="api-wb-editor-shell" ref={editorLayoutRef}>
                 <div className="api-wb-editor-main" style={runResult ? { flexBasis: `${editorTopHeight}px` } : undefined}>
                   <div className="api-wb-editor-main-scroll">
-                    <ApiCaseEditor caseForm={caseForm} isCreatingCase={isCreatingCase} setDraftCaseValues={setDraftCaseValues} getCompleteCaseFormValues={getCompleteCaseFormValues} createCaseMutation={createCaseMutation} editingCase={editingCase} activeCaseId={activeCaseId} updateCaseMutation={updateCaseMutation} pathInputRef={pathInputRef} runApiCaseMutation={runApiCaseMutation} isApiCaseRunInProgress={isApiCaseRunInProgress} isSelectedCaseReady={isSelectedCaseReady} handleSendRequest={handleSendRequest} watchedBodyType={watchedBodyType} environment={{ environmentPopoverOpen, setEnvironmentPopoverOpen, environments, resolvedEnvironmentId, handleSelectEnvironment, switchDefaultEnvironmentMutation, projectId, selectedEnvironment, environmentsQuery }} templates={{ setEnvVarInputRef, renderEnvVarPicker, insertTemplateText, bodyJsonEditorRef, insertTemplateTextIntoJson, handleFormatBodyJson, handleCompressBodyJson }} rules={{ postOperationCount, can, openCreateAssertRule, openCreateExtractRule, assertRulesQuery, extractRulesQuery, assertRules, toggleAssertRuleMutation, openEditAssertRule, deleteAssertRuleMutation, extractRules, toggleExtractRuleMutation, openEditExtractRule, deleteExtractRuleMutation }} />
+                    <ApiCaseEditor caseForm={caseForm} isCreatingCase={isCreatingCase} setDraftCaseValues={setDraftCaseValues} getCompleteCaseFormValues={getCompleteCaseFormValues} createCaseMutation={createCaseMutation} editingCase={editingCase} activeCaseId={activeCaseId} updateCaseMutation={updateCaseMutation} pathInputRef={pathInputRef} runApiCaseMutation={runApiCaseMutation} isApiCaseRunInProgress={isApiCaseRunInProgress} isSelectedCaseReady={isSelectedCaseReady} handleSendRequest={handleSendRequest} ensureQueryTrailingRow={ensureQueryTrailingRow} environment={{ environmentPopoverOpen, setEnvironmentPopoverOpen, environments, resolvedEnvironmentId, handleSelectEnvironment, switchDefaultEnvironmentMutation, projectId, selectedEnvironment, environmentsQuery }} templates={{ setEnvVarInputRef, renderEnvVarPicker, insertTemplateText, bodyJsonEditorRef, insertTemplateTextIntoJson, handleFormatBodyJson, handleCompressBodyJson }} rules={{ postOperationCount, can, openCreateAssertRule, openCreateExtractRule, assertRulesQuery, extractRulesQuery, assertRules, toggleAssertRuleMutation, openEditAssertRule, deleteAssertRuleMutation, extractRules, toggleExtractRuleMutation, openEditExtractRule, deleteExtractRuleMutation }} />
                   </div>
                 </div>
                 {runResult ? (

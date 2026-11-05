@@ -80,6 +80,9 @@ export function useApiCollectionData({ collectionId, selectedEnvironmentId, sele
     queryFn: () => api.getApiCase(activeCaseId),
     enabled: Boolean(activeCaseId),
     refetchOnWindowFocus: false,
+    // 列表接口返回的就是同一份完整用例，进入用例时直接复用这份数据，
+    // 不再为每次切换多发一次详情请求（保存路径会单独刷新缓存）。
+    staleTime: Number.POSITIVE_INFINITY,
   })
   return {
     collectionQuery,

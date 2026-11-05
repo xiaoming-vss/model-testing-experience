@@ -109,6 +109,8 @@ export function useRequirementCodeRiskWorkspace(requirementId: string, projectId
     void client.invalidateQueries({ queryKey: ['codeRiskTasks', projectId] })
     void client.invalidateQueries({ queryKey: ['requirementCodeBindings', requirementId] })
     void client.invalidateQueries({ queryKey: ['codeRiskTaskRuns'] })
+    // 统一 AI 测试列表用的是项目级最新运行摘要，发起或刷新后一并失效。
+    void client.invalidateQueries({ queryKey: ['codeRiskTaskLatestRuns'] })
   }, [client, projectId, requirementId])
 
   const start = useMutation({

@@ -39,6 +39,7 @@ import { ProjectAccessScope } from '@/features/projects/components/ProjectAccess
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
+import { useProjectRequirementOptions } from '@/features/projects/hooks/useProjectRequirementOptions'
 import { RequirementDocumentPreviewContent } from '@/features/requirements/components/RequirementDocumentPreviewModal'
 import { TaskDetailInstructionEditor, TaskDetailNavItem, TaskDetailNavPanel, TaskDetailRunMetrics, TaskDetailToolbar } from '../components/TaskDetailShell'
 import { hasRequirementDocument } from '@/features/requirements/utils/requirementDocument'
@@ -155,6 +156,8 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
   const [reviewComment, setReviewComment] = useState('')
   const [candidateYaml, setCandidateYaml] = useState('')
   const [candidateView, setCandidateView] = useState('visual')
+  // 视图切换只挂当前一侧，用例树的选中项由页面记住，切回可视化时仍然停在原用例。
+  const [candidateSelectedCase, setCandidateSelectedCase] = useState('')
   const [revisionTarget, setRevisionTarget] = useState<'stage' | 'final' | null>(null)
   const [revisionFooter, setRevisionFooter] = useState<HTMLDivElement | null>(null)
   const [revisionInstruction, setRevisionInstruction] = useState('')
@@ -230,38 +233,35 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
     () => listItems(sprintsQuery.data).map((sprint) => ({ label: sprint.name, value: normalizeSprintId(sprint) })),
     [sprintsQuery.data],
   )
-  const requirementsQuery = useQuery({
-    queryKey: ['requirements', 'functionalAiTestingDetail', drawerSprintId],
-    queryFn: () => api.getRequirements(drawerSprintId!),
-    enabled: Boolean(drawerSprintId),
-  })
-  const importRequirementsQuery = useQuery({
-    queryKey: ['requirements', 'functionalImportTarget', importSprintId],
-    queryFn: () => api.getRequirements(importSprintId!),
-    enabled: Boolean(importConfirmRunId && importSprintId && !task?.requirementId),
+  const { allRequirements, allRequirementsQuery } = useProjectRequirementOptions({
+    activeProjectId: task?.projectId,
+    enabled: Boolean(task?.projectId),
   })
   const importRequirementOptions = useMemo(
-    () => listItems(importRequirementsQuery.data).map((requirement) => ({
-      label: requirement.name,
-      value: normalizeRequirementId(requirement),
-    })),
-    [importRequirementsQuery.data],
-  )
-  const requirementOptions = useMemo(
-    () =>
-      listItems(requirementsQuery.data).map((requirement) => ({
+    () => allRequirements
+      .filter((requirement) => requirement.sprintId === importSprintId)
+      .map((requirement) => ({
         label: requirement.name,
         value: normalizeRequirementId(requirement),
       })),
-    [requirementsQuery.data],
+    [allRequirements, importSprintId],
+  )
+  const requirementOptions = useMemo(
+    () => allRequirements
+      .filter((requirement) => requirement.sprintId === drawerSprintId)
+      .map((requirement) => ({
+        label: requirement.name,
+        value: normalizeRequirementId(requirement),
+      })),
+    [allRequirements, drawerSprintId],
   )
   const sprintNameMap = useMemo(
     () => new Map(listItems(sprintsQuery.data).map((sprint) => [normalizeSprintId(sprint), sprint.name])),
     [sprintsQuery.data],
   )
   const requirementNameMap = useMemo(
-    () => new Map(listItems(requirementsQuery.data).map((requirement) => [normalizeRequirementId(requirement), requirement.name])),
-    [requirementsQuery.data],
+    () => new Map(allRequirements.map((requirement) => [normalizeRequirementId(requirement), requirement.name])),
+    [allRequirements],
   )
 
   const runRecords = useMemo(
@@ -1578,16 +1578,17 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
             <Form layout="vertical" className="ai-task-import-result-form">
               <ArtifactModeSwitch copyText={candidateView === 'json' ? candidateYaml : undefined} value={candidateView} onChange={setCandidateView} options={[{ label: '可视化', value: 'visual' }, { label: 'JSON', value: 'json' }]} />
               <div className="functional-candidate-workbench is-single-view">
-                <section hidden={candidateView !== 'visual'} className="functional-candidate-visual-pane" aria-label="候选用例可视化">
+                {/* 只挂载当前视图：隐藏的一侧不再跟着每次击键重建用例树 / 重配 JSON 编辑器。 */}
+                {candidateView === 'visual' ? <section className="functional-candidate-visual-pane" aria-label="候选用例可视化">
                   {selectedRunQuery.isLoading ? (
                     <div className="ai-task-run-result-popover-loading"><Spin /></div>
                   ) : candidateYaml ? (
-                    <GeneratedCasesReviewView onChange={canEditCandidate ? setCandidateYaml : undefined} content={candidateYaml} pointsContent={getConfigStageFieldContent(selectedRun?.configJson, 'caseNames')} rootTitle={importTargetRequirementName || task?.name || '功能测试用例'} />
+                    <GeneratedCasesReviewView onChange={canEditCandidate ? setCandidateYaml : undefined} content={candidateYaml} pointsContent={getConfigStageFieldContent(selectedRun?.configJson, 'caseNames')} rootTitle={importTargetRequirementName || task?.name || '功能测试用例'} selectedCaseKey={candidateSelectedCase} onCaseSelect={setCandidateSelectedCase} />
                   ) : (
                     <div className="ai-task-run-result-popover-empty">当前记录暂无结果</div>
                   )}
-                </section>
-                <section hidden={candidateView !== 'json'} className="functional-candidate-code-pane" aria-label="候选 JSON 编辑区">
+                </section> : null}
+                {candidateView === 'json' ? <section className="functional-candidate-code-pane" aria-label="候选 JSON 编辑区">
                   <header className="functional-candidate-code-heading">
                     <div className="functional-candidate-code-heading-main">
                       <JavaScriptOutlined aria-hidden className="functional-candidate-code-icon tone-amber" />
@@ -1621,7 +1622,7 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
                       <Alert showIcon type="error" title={getErrorMessage(updateRunResultMutation.error)} />
                     ) : null}
                   </div>
-                </section>
+                </section> : null}
               </div>
               {reviewRunMutation.error ? <Alert showIcon type="error" title={getErrorMessage(reviewRunMutation.error)} /> : null}
             </Form>
@@ -1673,10 +1674,10 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
                     options={importRequirementOptions}
                     value={importRequirementId}
                     disabled={!importSprintId}
-                    loading={importRequirementsQuery.isFetching}
+                    loading={allRequirementsQuery.isFetching}
                     onChange={(value) => { setImportRequirementId(value); setImportAcknowledged(false) }}
                   />
-                  {importRequirementsQuery.isError ? <Alert showIcon type="error" title="需求加载失败，请重新选择迭代" /> : null}
+                  {allRequirementsQuery.isError ? <Alert showIcon type="error" title="需求加载失败，请重新选择迭代" /> : null}
                 </div>
               )}
               <div className="functional-import-confirm-counts">

@@ -47,6 +47,19 @@ class ApiCollectionRepository(ResourceRepository):
             ).all()
         )
 
+    async def list_by_project(self, project_id: str) -> list[ApiCollection]:
+        return list(
+            (
+                await self.session.scalars(
+                    select(ApiCollection)
+                    .join(Requirement, Requirement.requirement_id == ApiCollection.requirement_id)
+                    .join(Sprint, Sprint.sprint_id == Requirement.sprint_id)
+                    .where(Sprint.project_id == project_id)
+                    .order_by(ApiCollection.created_at.desc(), ApiCollection.id.desc())
+                )
+            ).all()
+        )
+
     async def exists_case_by_collection_and_name(self, collection_id: str, name: str) -> bool:
         row = await self.session.scalar(
             select(ApiCase.case_id).where(

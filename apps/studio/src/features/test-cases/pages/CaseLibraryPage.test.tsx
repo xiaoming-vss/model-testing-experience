@@ -42,8 +42,8 @@ vi.mock('@/features/projects/hooks/useSprintRequirementScope', () => ({
     selectSprint: vi.fn(),
   }),
 }))
-vi.mock('@/features/projects/hooks/useProjectRequirements', () => ({
-  useProjectRequirements: () => ({
+vi.mock('@/features/projects/hooks/useProjectRequirementOptions', () => ({
+  useProjectRequirementOptions: () => ({
     allRequirements: [],
     allRequirementsQuery: { isLoading: false, error: null },
     requirementNameMap: new Map([['req-1', '私有化云服务器部署流程']]),

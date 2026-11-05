@@ -1,11 +1,12 @@
 import { Alert, Button, Form, Space, Spin } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { useNavigate, useParams } from 'react-router-dom'
 import { RequirementDocumentPreviewContent } from '@/features/requirements/components/RequirementDocumentPreviewModal'
 import { RequirementDrawer, type RequirementFormValues } from '@/features/requirements/components/RequirementDrawer'
 import { RequirementDesignWorkspace } from '@/features/ai-testing/components/RequirementDesignWorkspace'
+import type { RequirementReadingNode } from '@/features/ai-testing/components/RequirementGenerationPanorama'
 import { requirementsApi } from '@/features/requirements/api/requirements.api'
 import { projectsApi } from '@/features/projects/api/projects.api'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
@@ -25,6 +26,18 @@ export function RequirementDetailPage() {
   const [documentError, setDocumentError] = useState<string | undefined>()
   const [editing, setEditing] = useState(false)
   const [refreshingGeneration, setRefreshingGeneration] = useState(false)
+  const [readingNode, setReadingNode] = useState<RequirementReadingNode | null>(null)
+  // 阅读态的「退回流程」动作由生成全景提供，用 ref 保存，避免函数身份变化触发重渲染。
+  const leaveReadingRef = useRef<(() => void) | null>(null)
+  // 画布阅读态会随渲染重复上报同一个产物，值没变时不触发标题栏重渲染。
+  const handleReadingNode = useCallback((next: RequirementReadingNode | null) => {
+    leaveReadingRef.current = next?.leave ?? null
+    setReadingNode(current => {
+      if (!next) return current === null ? current : null
+      return current?.label === next.label && current.status === next.status && current.tone === next.tone ? current : { label: next.label, status: next.status, tone: next.tone }
+    })
+  }, [])
+  const handleLeaveReading = useCallback(() => { leaveReadingRef.current?.() }, [])
   const [form] = Form.useForm<RequirementFormValues>()
   const client = useQueryClient()
   const query = useQuery({ queryKey: ['requirement', requirementId],
@@ -80,19 +93,21 @@ export function RequirementDetailPage() {
     documentContent: requirement.documentContent, documentFilename: requirement.documentFilename, documentDownloadUrl: requirement.documentDownloadUrl }
   return <ProjectAccessScope projectId={sprint.data?.projectId ?? ''} resourceError={query.error}>
     <div className="requirement-detail-page tp-surface">
-      <RequirementDetailHeader showDownload showEdit requirement={requirement} requirementId={requirementId}
-        canWrite={access.can('write')} onRefresh={sprint.data ? refreshGeneration : undefined} refreshing={refreshingGeneration} onBack={back} onEdit={() => {
-          setDocumentError(undefined)
-          setDocumentLoading(requirement.documentType === 'richtext')
-          form.setFieldsValue({ name: requirement.name,
-            documentType: requirement.documentType === 'docx' ? 'word' : requirement.documentType ?? 'richtext',
-            documentContent: '', documentFilename: requirement.documentFilename,
-            documentFileName: requirement.documentFilename, documentDownloadUrl: requirement.documentDownloadUrl,
-            file: undefined }); setEditing(true)
-        }} />
+      {/* 标题栏与生成全景共用同一个容器：标题栏是容器内的工具栏，画布紧贴其下。 */}
       <section className="requirement-detail-main">
+        <RequirementDetailHeader showDownload showEdit requirement={requirement} requirementId={requirementId} readingNode={readingNode} onLeaveReading={handleLeaveReading}
+          canWrite={access.can('write')} onRefresh={sprint.data ? refreshGeneration : undefined} refreshing={refreshingGeneration} onBack={back} onEdit={() => {
+            setDocumentError(undefined)
+            setDocumentLoading(requirement.documentType === 'richtext')
+            form.setFieldsValue({ name: requirement.name,
+              documentType: requirement.documentType === 'docx' ? 'word' : requirement.documentType ?? 'richtext',
+              documentContent: '', documentFilename: requirement.documentFilename,
+              documentFileName: requirement.documentFilename, documentDownloadUrl: requirement.documentDownloadUrl,
+              file: undefined }); setEditing(true)
+          }} />
         {sprint.data ? <RequirementDesignWorkspace key={requirementId} requirementId={requirementId} projectId={sprint.data.projectId ?? ''}
-          canWrite={access.can('write')} documentPreview={<RequirementDocumentPreviewContent embedded {...documentProps} />} /> : <Spin />}
+          canWrite={access.can('write')} onReadingNodeChange={handleReadingNode}
+          documentPreview={<RequirementDocumentPreviewContent embedded {...documentProps} />} /> : <Spin />}
       </section>
       <RequirementDrawer title="编辑需求" open={editing} mode="edit" form={form} loading={save.isPending} error={save.error}
         projectId={canonicalProjectId} documentLoading={documentLoading} documentError={documentError}

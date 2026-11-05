@@ -111,6 +111,10 @@ function CaseNameTreeNodeView({
   )
 }
 
+function pruneTree(node: CaseNameTreeNode, collapsed: Set<string>): CaseNameTreeNode {
+  return { ...node, children: collapsed.has(node.id) ? [] : node.children.map((child) => pruneTree(child, collapsed)) }
+}
+
 function FlowTreeNode({ data }: NodeProps<TreeFlowNode>) {
   const node = data.treeNode
   const className = node.kind === 'root' ? 'ai-case-name-tree-root' : `ai-case-name-tree-node ${node.kind === 'testModel' ? 'test-model' : node.kind}`
@@ -142,16 +146,16 @@ export function CaseNameTreeView({
   onNodeSelect?: (id: string) => void
 }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
-  const sourceTree = treeData ?? buildCaseNameTree(content, rootTitle)
-  const prune = (node: CaseNameTreeNode): CaseNameTreeNode => ({ ...node, children: collapsed.has(node.id) ? [] : node.children.map(prune) })
-  const tree = treeData && sourceTree ? prune(sourceTree) : sourceTree
-  const toggle = treeData ? (id: string) => setCollapsed((current) => {
+  // 树构建、折叠裁剪、计数和布局都按输入 memo：每次父级重渲染都重跑一遍 dagre 会明显拖慢大树。
+  const sourceTree = useMemo(() => treeData ?? buildCaseNameTree(content, rootTitle), [content, rootTitle, treeData])
+  const tree = useMemo(() => treeData && sourceTree ? pruneTree(sourceTree, collapsed) : sourceTree, [collapsed, sourceTree, treeData])
+  const toggle = useMemo(() => treeData ? (id: string) => setCollapsed((current) => {
     const next = new Set(current)
     if (next.has(id)) next.delete(id)
     else next.add(id)
     return next
-  }) : undefined
-  const counts = countCaseNameTree(tree)
+  }) : undefined, [treeData])
+  const counts = useMemo(() => tree ? countCaseNameTree(tree) : null, [tree])
   const canvasRef = useRef<HTMLDivElement | null>(null)
   const flowRef = useRef<ReactFlowInstance<TreeFlowNode> | null>(null)
   const [exportingImage, setExportingImage] = useState(false)
@@ -183,15 +187,17 @@ export function CaseNameTreeView({
     }
   }
 
+  const handleRename = useCallback((nodeId: string, title: string) => {
+    if (!tree) return
+    onTreeChange?.(updateCategoryCaseNamesContent(content, nodeId, 'rename', title) ?? serializeCaseNameTree(renameCaseNameTreeNode(tree, nodeId, title)))
+  }, [content, onTreeChange, tree])
+  const handleDelete = useCallback((nodeId: string) => {
+    if (!tree) return
+    onTreeChange?.(updateCategoryCaseNamesContent(content, nodeId, 'delete') ?? serializeCaseNameTree(deleteCaseNameTreeNode(tree, nodeId)))
+  }, [content, onTreeChange, tree])
+
   if (!tree) {
     return <JsonEditor value={content} showCopy={false} readOnly foldable minHeight={expanded ? 560 : 260} />
-  }
-
-  const handleRename = (nodeId: string, title: string) => {
-    onTreeChange?.(updateCategoryCaseNamesContent(content, nodeId, 'rename', title) ?? serializeCaseNameTree(renameCaseNameTreeNode(tree, nodeId, title)))
-  }
-  const handleDelete = (nodeId: string) => {
-    onTreeChange?.(updateCategoryCaseNamesContent(content, nodeId, 'delete') ?? serializeCaseNameTree(deleteCaseNameTreeNode(tree, nodeId)))
   }
 
   return (
@@ -199,7 +205,7 @@ export function CaseNameTreeView({
 
       <div title={treeData ? '滚轮上下浏览，Ctrl + 滚轮缩放图谱，点击节点查看用例' : '滚轮上下浏览，Ctrl + 滚轮缩放图谱'} className={`ai-case-name-tree${expanded ? ' expanded' : ''}${editable ? ' editable' : ''}`}>
       {treeData ? null : <div className="ai-case-name-tree-stats">
-        <Tag color="green">model {counts.models}</Tag><Tag color="cyan">test_model {counts.testModels}</Tag><Tag color="blue">test_points {counts.testPoints}</Tag>
+        <Tag color="green">model {counts?.models ?? 0}</Tag><Tag color="cyan">test_model {counts?.testModels ?? 0}</Tag><Tag color="blue">test_points {counts?.testPoints ?? 0}</Tag>
         <ProjectActionButton action="write" className="ai-case-name-tree-export" size="small" icon={<PictureOutlined />} loading={exportingImage} onClick={handleSaveTreeImage}>保存图片</ProjectActionButton>
       </div>}
       <CaseTreeFlow tree={tree} selectedNodeId={selectedNodeId} editable={editable} onSelect={onNodeSelect} onToggle={toggle} onRename={handleRename} onDelete={handleDelete} canvasRef={canvasRef} flowRef={flowRef} />

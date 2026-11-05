@@ -78,6 +78,19 @@ class RequirementCodeSummaryResponse(BaseModel):
     branch: str
 
 
+class RequirementOptionResponse(BaseModel):
+    """下拉选项只带识别与展示字段，刻意不包含 document_content。"""
+
+    requirement_id: str = Field()
+    sprint_id: str = Field()
+    sprint_name: str
+    name: str
+    document_filename: str = Field(default="")
+    created_at: datetime | str | None = Field(default="")
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True, alias_generator=to_camel)
+
+
 class RequirementListItemResponse(RequirementMetadataResponse):
     sprint_name: str
     zentao_binding: ZentaoBindingSummaryResponse | None = None

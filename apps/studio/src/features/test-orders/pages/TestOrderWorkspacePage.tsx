@@ -53,6 +53,29 @@ import '@/features/test-orders/styles/workspace-verdict-v2.css'
 
 const { Text } = Typography
 
+/**
+ * 原因输入框自己保存输入态，失焦时才提交。
+ * 这样逐字输入不会重渲染左侧清单和当前条目的步骤表。
+ */
+function TestOrderReasonInput({ label, value, disabled, onCommit }: {
+  label: string
+  value: string
+  disabled: boolean
+  onCommit: (reason: string) => void
+}) {
+  const [draft, setDraft] = useState(value)
+  useEffect(() => { setDraft(value) }, [value])
+  return <Input.TextArea
+    aria-label={label}
+    autoSize={{ minRows: 2, maxRows: 3 }}
+    value={draft}
+    disabled={disabled}
+    placeholder="填写原因"
+    onChange={(event) => setDraft(event.target.value)}
+    onBlur={() => { if (draft !== value) onCommit(draft) }}
+  />
+}
+
 const STATUS_FILTERS: Array<{ value: string; label: string }> = [
   { value: 'all', label: '全部' },
   { value: 'pending', label: '未执行' },
@@ -68,6 +91,12 @@ export function TestOrderWorkspacePage() {
   const currentUserId = useAuthStore((state) => state.user?.userId)
 
   const [workspaceView, setWorkspaceView] = useState<'execution' | 'graph'>('execution')
+  // 图谱首次打开后保持挂载：布局、选中节点和缩放都留在原地，来回切视图不再重新请求和全量布局。
+  const [graphVisited, setGraphVisited] = useState(false)
+  const graphMounted = graphVisited || workspaceView === 'graph'
+  useEffect(() => {
+    if (workspaceView === 'graph' && !graphVisited) setGraphVisited(true)
+  }, [graphVisited, workspaceView])
   const workspaceViewRef = useViewMotion(workspaceView === 'execution' ? 0 : 1)
   const entryListRef = useRef<HTMLDivElement>(null)
   const keyboardNavigation = useRef(false)
@@ -98,10 +127,20 @@ export function TestOrderWorkspacePage() {
     queryFn: () => api.getTestOrder(orderId!),
     enabled: Boolean(orderId),
     refetchOnWindowFocus: true,
+    // 列表跳转前已写入同一份测试单；短时间内不重复请求。
+    staleTime: 30_000,
   })
   const order = orderQuery.data
+  // 列表行已经带回摘要（编号、标题、状态、执行人），切换条目时先用它撑住详情区，
+  // 只有步骤快照需要等详情请求，避免整块面板卸载成 Spin 再重建。
+  const selectedEntry = selectedEntryId
+    ? entries.find((entry) => entry.entryId === selectedEntryId) ?? null
+    : null
+  const detailReady = Boolean(selected?.entryId && selected.entryId === selectedEntryId)
+  const entryView = detailReady ? selected : selectedEntry
 
-  // 当前执行条目已关联的平台 Bug（从本条提交的），随选择刷新。
+  // 只有判定过的条目才可能关联平台 Bug：pending 条目不会出现在这里，
+  // 键盘逐条审查时不再为每个条目多发一次 Bug 查询。
   const linkedBugsQuery = useQuery({
     queryKey: ['bugs', order?.projectId, 'forEntry', selectedEntryId],
     queryFn: () =>
@@ -110,7 +149,7 @@ export function TestOrderWorkspacePage() {
         page: 1,
         pageSize: 20,
       }),
-    enabled: Boolean(order?.projectId && selectedEntryId),
+    enabled: Boolean(order?.projectId && detailReady && selected?.status && selected.status !== 'pending'),
   })
   const { project, can } = useProjectAccess(order?.projectId)
 
@@ -201,8 +240,8 @@ export function TestOrderWorkspacePage() {
 
   const isOwner = project?.role === 'owner'
   const lockedByAssignee =
-    isTestOrderEntryLocked(selected?.assigneeUserId, currentUserId, isOwner)
-  const canJudge = Boolean(selected) && can('execute') && !lockedByAssignee
+    isTestOrderEntryLocked(entryView?.assigneeUserId, currentUserId, isOwner)
+  const canJudge = detailReady && can('execute') && !lockedByAssignee
 
   // 在清单内使用键盘切换时，焦点跟随选中项，避免旧条目残留焦点框和移除按钮。
   useEffect(() => {
@@ -218,8 +257,10 @@ export function TestOrderWorkspacePage() {
   }, [selectedEntryId, entriesQuery.data])
 
   // 键盘：1/2/3/4 判定整条用例，上下切换条目。
+  // 监听器只注册一次，处理函数通过 ref 取最新状态，避免每次渲染重挂监听。
+  const keyDownHandlerRef = useRef<(event: KeyboardEvent) => void>(() => {})
   useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
+    keyDownHandlerRef.current = (event: KeyboardEvent) => {
       if (workspaceView !== 'execution' || saveMutation.isPending) return
       const target = event.target as HTMLElement | null
       if (target && ['INPUT', 'TEXTAREA'].includes(target.tagName)) return
@@ -240,14 +281,17 @@ export function TestOrderWorkspacePage() {
       event.preventDefault()
       save({ status })
     }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
   })
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => keyDownHandlerRef.current(event)
+    window.addEventListener('keydown', listener)
+    return () => window.removeEventListener('keydown', listener)
+  }, [])
 
   const orderTotal = order?.entriesTotal ?? 0
   const orderExecuted = order?.entriesExecuted ?? 0
   const orderProgressPercent = orderTotal > 0 ? Math.round((orderExecuted / orderTotal) * 100) : 0
-  const selectedVisibleIndex = visibleEntries.findIndex((entry) => entry.entryId === selected?.entryId)
+  const selectedVisibleIndex = visibleEntries.findIndex((entry) => entry.entryId === selectedEntryId)
   const isSaving = saveMutation.isPending
   const saveStateText = isSaving ? '保存中…' : savedAt ? `已保存 ${savedAt}` : ''
   const orderStatusMeta = order ? getTestOrderStatusMeta(order.status) : null
@@ -307,7 +351,7 @@ export function TestOrderWorkspacePage() {
             <Alert showIcon type="error" title={getErrorMessage(entriesQuery.error)} />
           ) : null}
 
-          {workspaceView === 'graph' && orderId && <div ref={workspaceViewRef} className="test-order-inline-graph"><TestOrderGraphViewer orderId={orderId} projectId={order?.projectId} canExecute={can('execute')} currentUserId={currentUserId} isProjectOwner={isOwner} /></div>}
+          {graphMounted && orderId && <div ref={workspaceView === 'graph' ? workspaceViewRef : undefined} className="test-order-inline-graph" style={workspaceView === 'graph' ? undefined : { display: 'none' }}><TestOrderGraphViewer orderId={orderId} projectId={order?.projectId} canExecute={can('execute')} currentUserId={currentUserId} isProjectOwner={isOwner} /></div>}
           <div ref={workspaceView === 'execution' ? workspaceViewRef : undefined} className="test-order-workspace-cols" style={workspaceView === 'graph' ? { display: 'none' } : undefined}>
             <section className="workbench-panel test-order-side-panel">
               <div className="test-order-side-head">
@@ -487,9 +531,8 @@ export function TestOrderWorkspacePage() {
             </section>
 
             <section className="test-order-panel">
-              {entriesQuery.isLoading || (selectedEntryId && detailQuery.isPending) ? <Spin description="加载执行详情…" />
-                : selectedEntryId && detailQuery.error ? <Alert showIcon type="error" title={getErrorMessage(detailQuery.error)} action={<Button onClick={() => void detailQuery.refetch()}>重试</Button>} />
-                : !selected ? (
+              {entriesQuery.isLoading ? <Spin description="加载执行详情…" />
+                : !selectedEntryId ? (
                 <div className="sprint-card-loading">
                   <Empty description={order?.entriesTotal ? '当前筛选没有执行条目' : '请先加入执行条目'}>
                     <ProjectActionButton
@@ -508,25 +551,31 @@ export function TestOrderWorkspacePage() {
               ) : (
                 <>
                   <div className="test-order-editor-body">
-                    <TestOrderCaseSummary
-                      entry={selected}
-                      assigneeName={personName(selected.assigneeUserId)}
-                      executorName={personName(selected.executorUserId)}
+                    {entryView ? <TestOrderCaseSummary
+                      entry={entryView}
+                      assigneeName={personName(entryView.assigneeUserId)}
+                      executorName={personName(entryView.executorUserId)}
                       lockedByAssignee={lockedByAssignee}
-                    />
-                    <TestOrderCaseContent snapshot={selected.snapshot} />
+                    /> : null}
+                    {detailReady && selected ? <TestOrderCaseContent snapshot={selected.snapshot} />
+                      : detailQuery.error ? <div className="test-order-case-content-status">
+                        <Alert showIcon type="error" title={getErrorMessage(detailQuery.error)} action={<Button onClick={() => void detailQuery.refetch()}>重试</Button>} />
+                      </div>
+                      : <div className="test-order-case-content-status" role="status" aria-live="polite">
+                        <Spin size="small" /><span>加载执行详情…</span>
+                      </div>}
                   </div>
                   <section className="test-order-execution-bar" aria-label="执行判定与缺陷关联">
                     <div className="test-order-execution-actions">
                       <span className="test-order-verdict-title">执行判定结果</span>
                       <TestOrderVerdictButtons
-                        status={selected.status}
+                        status={entryView?.status}
                         disabled={!canJudge || saveMutation.isPending}
                         showShortcuts
                         reverseOrder
                         onJudge={(status) => save({ status })}
                       />
-                      {selected.status === 'failed' ? (
+                      {detailReady && selected?.status === 'failed' ? (
                         <div className="test-order-defect-controls">
                           <ProjectActionButton
                             action="write"
@@ -554,7 +603,7 @@ export function TestOrderWorkspacePage() {
                         </div>
                       ) : null}
                     </div>
-                    {selected.status === 'failed' || selected.status === 'blocked' || listItems(linkedBugsQuery.data).length > 0 ? (
+                    {detailReady && selected && (selected.status === 'failed' || selected.status === 'blocked' || listItems(linkedBugsQuery.data).length > 0) ? (
                       <div className="test-order-defect-section">
                         {linkedBugsQuery.data && listItems(linkedBugsQuery.data).length > 0 ? (
                           <div className="test-order-linked-bugs">
@@ -578,22 +627,14 @@ export function TestOrderWorkspacePage() {
                             <Text type="secondary">
                               {selected.status === 'failed' ? '失败原因' : '阻塞原因'}
                             </Text>
-                            <Input.TextArea
-                              aria-label={selected.status === 'failed' ? '失败原因' : '阻塞原因'}
-                              autoSize={{ minRows: 2, maxRows: 3 }}
+                            <TestOrderReasonInput
+                              label={selected.status === 'failed' ? '失败原因' : '阻塞原因'}
                               value={drafts.reason ?? ''}
                               disabled={!canJudge}
-                              placeholder="填写原因"
-                              onChange={(event) =>
-                                setDrafts((prev) => ({ ...prev, reason: event.target.value }))
-                              }
-                              onBlur={() =>
-                                save(
-                                  selected.status === 'failed'
-                                    ? { failureReason: drafts.reason ?? '' }
-                                    : { blockReason: drafts.reason ?? '' },
-                                )
-                              }
+                              onCommit={(reason) => {
+                                setDrafts((prev) => ({ ...prev, reason }))
+                                save(selected.status === 'failed' ? { failureReason: reason } : { blockReason: reason })
+                              }}
                             />
                           </>
                         ) : null}

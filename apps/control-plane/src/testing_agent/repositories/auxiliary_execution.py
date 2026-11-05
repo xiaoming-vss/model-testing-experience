@@ -2,7 +2,7 @@
 
 from uuid import uuid4
 
-from sqlalchemy import func, select
+from sqlalchemy import RowMapping, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -80,6 +80,83 @@ def _ranked_attempts(task_id: str):
             AiGenerateTask.task_type.in_(AUXILIARY_EXECUTION_TYPES),
         )
         .subquery()
+    )
+
+
+def _ranked_project_attempts(project_id: str):
+    """Newest attempt of the newest execution for every auxiliary task in a project.
+
+    Window ranking keeps the batch read bounded to one row per task even when the
+    project accumulated many executions. Attempt rank picks the newest attempt in
+    an execution; task rank picks the newest execution for the task.
+    """
+    return (
+        select(
+            AiExecution.execution_id,
+            AiExecution.task_id,
+            AiExecution.requested_by,
+            AiExecution.created_at,
+            AiGenerateTask.project_id,
+            AiGenerateTask.sprint_id,
+            AiGenerateTask.requirement_id,
+            AiGenerateTask.task_type,
+            AiGenerationAttempt.status,
+            AiGenerationAttempt.started_at,
+            AiGenerationAttempt.finished_at,
+            AiGenerationAttempt.error_message,
+            func.coalesce(func.length(AiGenerationAttempt.output_content), 0).label(
+                "output_length"
+            ),
+            AiGenerationAttempt.input_snapshot_json["triggerType"]
+            .as_string()
+            .label("trigger_type"),
+            func.row_number()
+            .over(
+                partition_by=AiExecution.execution_id,
+                order_by=(AiGenerationAttempt.attempt_no.desc(), AiGenerationAttempt.id.desc()),
+            )
+            .label("attempt_rank"),
+            func.row_number()
+            .over(
+                partition_by=AiGenerateTask.task_id,
+                order_by=(
+                    AiExecution.created_at.desc(),
+                    AiExecution.execution_id.desc(),
+                    AiGenerationAttempt.attempt_no.desc(),
+                    AiGenerationAttempt.id.desc(),
+                ),
+            )
+            .label("task_rank"),
+        )
+        .join(AiGenerateTask, AiGenerateTask.task_id == AiExecution.task_id)
+        .join(AiGenerationStage, AiGenerationStage.task_id == AiGenerateTask.task_id)
+        .join(
+            AiGenerationAttempt,
+            (AiGenerationAttempt.stage_id == AiGenerationStage.id)
+            & (AiGenerationAttempt.execution_id == AiExecution.execution_id),
+        )
+        .where(
+            AiGenerateTask.project_id == project_id,
+            AiGenerationStage.stage == "generate",
+            AiGenerateTask.task_type.in_(AUXILIARY_EXECUTION_TYPES),
+        )
+        .subquery()
+    )
+
+
+async def latest_rows_for_project(session: AsyncSession, project_id: str) -> list[RowMapping]:
+    ranked = _ranked_project_attempts(project_id)
+    return list(
+        (
+            await session.execute(
+                select(ranked).where(
+                    ranked.c.attempt_rank == 1,
+                    ranked.c.task_rank == 1,
+                )
+            )
+        )
+        .mappings()
+        .all()
     )
 
 

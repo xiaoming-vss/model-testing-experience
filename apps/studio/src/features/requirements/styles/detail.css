@@ -1,15 +1,38 @@
-.requirement-detail-page { display: flex; flex-direction: column; gap: 12px; padding: var(--app-page-gutter) var(--app-page-gutter) 16px; height: 100%; min-height: 0; min-width: 0; box-sizing: border-box; overflow: hidden; color: var(--srf-text); background: transparent; }
-.requirement-detail-summary { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 360px; }
-.requirement-detail-heading { min-width: 0; }
-.requirement-detail-title-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.requirement-detail-title-row .tp-list-title { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.requirement-detail-title-row .ant-tag { flex-shrink: 0; margin: 0; }
+.requirement-detail-page { display: flex; flex-direction: column; gap: 0; padding: var(--app-page-gutter) var(--app-page-gutter) 16px; height: 100%; min-height: 0; min-width: 0; box-sizing: border-box; overflow: hidden; color: var(--srf-text); background: transparent; }
+/* 面包屑：祖先项用链接色并带悬停底色，当前项沿用标题字阶。 */
+.requirement-detail-crumbs { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 360px; }
+.requirement-crumb-link { display: inline-flex; align-items: center; height: 26px; padding: 0 8px; margin-left: -8px; border: 0; border-radius: 6px; background: transparent; color: var(--app-accent); font: inherit; font-size: 13px; line-height: 1; cursor: pointer; }
+.requirement-crumb-link:hover { background: var(--app-accent-surface); color: var(--app-accent-hover); text-decoration: underline; }
+.requirement-crumb-sep { flex: 0 0 auto; color: var(--app-surface-text-muted); font-size: 10px; }
+.requirement-detail-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.requirement-detail-crumbs .tp-list-title { flex: 0 1 auto; }
+/* 阅读态的「需求名」一级可点，退回生成流程。 */
+.requirement-crumb-parent-link { max-width: 320px; padding: 3px 8px; border: 0; border-radius: 6px; background: transparent; color: var(--app-accent); font: inherit; font-size: 13px; line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.requirement-crumb-parent-link:hover { background: var(--app-accent-surface); color: var(--app-accent-hover); text-decoration: underline; }
+.requirement-detail-title--current { color: var(--app-surface-text); font-size: 15px; font-weight: 600; }
+.requirement-detail-crumbs .ant-tag { flex-shrink: 0; margin: 0; }
+.requirement-crumb-status { display: inline-flex; align-items: center; flex: 0 0 auto; height: 20px; padding: 0 8px; border: 1px solid var(--app-surface-border); border-radius: 999px; color: var(--app-surface-text-muted); font-size: 11px; white-space: nowrap; }
+.requirement-crumb-status.is-approved, .requirement-crumb-status.is-imported { border-color: color-mix(in srgb, var(--app-result-success) 32%, var(--app-surface-border)); background: var(--app-testing-success-tag-bg); color: var(--app-result-success-text); }
+.requirement-crumb-status.is-draft { border-color: var(--app-review-warning-border); background: var(--app-status-warning-bg); color: var(--app-status-warning-text); }
+.requirement-crumb-status.is-failed, .requirement-crumb-status.is-rejected { border-color: var(--app-danger-border); background: var(--app-danger-surface-soft); color: var(--app-profile-danger-text); }
+.requirement-crumb-status.is-running { border-color: var(--app-accent-border); background: var(--app-accent-surface); color: var(--app-accent); }
 .requirement-detail-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .requirement-detail-header { flex: 0 0 auto; flex-wrap: wrap; gap: 12px 16px; }
-.requirement-detail-main { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: hidden; }
-@media (max-width: 840px) { .requirement-detail-summary { flex-basis: 100%; } .requirement-detail-actions { margin-left: auto; } }
+.requirement-detail-main { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: hidden; border: 1px solid var(--app-surface-border); border-radius: 12px; background: var(--srf-card); }
+@media (max-width: 840px) { .requirement-detail-crumbs { flex-basis: 100%; } .requirement-detail-actions { margin-left: auto; } }
 
-.requirement-detail-page > .requirement-detail-header { border: 1px solid var(--app-surface-border); border-radius: 12px; background: var(--app-list-toolbar-bg); }
+/* 标题栏并入容器后不再自带卡片边框，改为容器内的工具栏与分隔线。 */
+.requirement-detail-page .requirement-detail-main > .requirement-detail-header { border: 0; border-bottom: 1px solid var(--app-surface-border); border-radius: 0; background: var(--app-list-toolbar-bg, var(--srf-card)); }
+/* 画布与阶段检查器跟着容器走：不加自己的边框圆角，用细线分隔。 */
+.requirement-detail-main .gc-canvas-frame { border: 0; border-radius: 0; }
+/* 点开卡片后的阅读页（产物、文档、用例图谱）铺满容器，不再自己套一层圆角卡片。 */
+.requirement-detail-main .gc-canvas-stage > .gc-embedded-artifact { border: 0; border-radius: 0; }
+.requirement-detail-main .gc-canvas-workspace { gap: 0; }
+.requirement-detail-main .gc-inspector { border: 0; border-left: 1px solid var(--app-surface-border); border-radius: 0; }
+/* 窄屏时检查器落到画布下方，分隔线改到上方。 */
+@media (max-width: 900px) {
+  .requirement-detail-main .gc-inspector { border-left: 0; border-top: 1px solid var(--app-surface-border); }
+}
 
 .requirement-detail-tabs { flex: 0 0 auto; min-width: 0; max-width: 100%; }
 .requirement-detail-tabs:empty { display: none; }

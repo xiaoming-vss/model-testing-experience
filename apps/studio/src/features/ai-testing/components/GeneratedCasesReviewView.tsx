@@ -9,7 +9,7 @@ import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
 import { CheckCircleFilled, FileTextOutlined, PlayCircleOutlined, SnippetsOutlined } from '@ant-design/icons'
 import { Empty, Input, Tag } from 'antd'
 import type { GeneratedTestCase } from '../utils/functionalOutput'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 function getGeneratedCaseTagKind(key: string): 'id' | 'type' | 'priority' | 'default' {
   if (CASE_ID_FIELDS.includes(key)) return 'id'
@@ -62,12 +62,12 @@ export function GeneratedCasesReviewView({ content, pointsContent = '', rootTitl
   const active = model.visible.find((entry) => entry.key === (selectedCaseKey || localKey)) ?? model.visible[0]
   const activeIndex = model.visible.findIndex((entry) => entry.key === active?.key)
   const testCase = active?.testCase
-  const select = (key: string) => {
+  const select = useCallback((key: string) => {
     const entry = model.entries.find((item) => item.key === key)
     if (!entry) return
     setLocalKey(key)
     onCaseSelect?.(key, entry.testCase.raw)
-  }
+  }, [model.entries, onCaseSelect])
   if (!model.entries.length) return isJsonText(content)
     ? <JsonEditor value={content} readOnly foldable minHeight={0} />
     : <pre className="ai-task-code-block">{content}</pre>

@@ -6,6 +6,7 @@ import type { ApiCaseRunResult } from '@/services/api'
 import { Alert } from 'antd'
 import { StopRunButton } from '@/domain/runs/StopRunButton'
 import { getApiCaseRunId } from '../utils/detailView'
+import { useMemo } from 'react'
 
 /*
  * API 用例运行结果控制台：设计稿里是右栏下半部分的一条独立区域
@@ -49,12 +50,20 @@ export function ApiCaseRunConsole({ result, environmentName, view, onViewChange,
   const status = result.status ?? (result.success ? 'success' : 'failed')
   const statusMeta = getExecutionStatusMeta(status)
   const tone = resolveStatusTone(status)
-  const extractResults = result.extractResults ?? []
-  const assertResults = result.assertResults ?? []
+  const extractResults = useMemo(() => result.extractResults ?? [], [result.extractResults])
+  const assertResults = useMemo(() => result.assertResults ?? [], [result.assertResults])
   const failedExtractCount = extractResults.filter((item) => !item.success).length
   const failedAssertCount = assertResults.filter((item) => !item.success).length
   const passedAssertCount = assertResults.length - failedAssertCount
   const statusCode = result.response?.statusCode
+  const responseSize = useMemo(() => formatResponseSize(result.response?.body), [result.response?.body])
+  const resultContent = useMemo(() => renderRunResultContent({
+    view,
+    request: result.request,
+    response: result.response,
+    extractResults,
+    assertResults,
+  }), [assertResults, extractResults, result.request, result.response, view])
 
   const viewTabs = runResultViewOptions.map((option) => ({
     ...option,
@@ -76,7 +85,7 @@ export function ApiCaseRunConsole({ result, environmentName, view, onViewChange,
           <RunWaitingReason status={status} />
           <span className="api-wb-console-meta">
             <span>耗时 <strong>{result.durationMs ?? 0} ms</strong></span>
-            <span>大小 <strong>{formatResponseSize(result.response?.body)}</strong></span>
+            <span>大小 <strong>{responseSize}</strong></span>
             <span>环境 <strong>{environmentName}</strong></span>
             <span>提取失败 <strong>{failedExtractCount}</strong></span>
           </span>
@@ -118,13 +127,7 @@ export function ApiCaseRunConsole({ result, environmentName, view, onViewChange,
       </div>
 
       <div className="api-wb-console-body" data-tab-motion-panel>
-        {renderRunResultContent({
-          view,
-          request: result.request,
-          response: result.response,
-          extractResults,
-          assertResults,
-        })}
+        {resultContent}
       </div>
 
       <div className="api-wb-console-foot">

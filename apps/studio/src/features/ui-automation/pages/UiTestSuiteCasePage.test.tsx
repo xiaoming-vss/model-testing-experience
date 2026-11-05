@@ -154,6 +154,43 @@ it('顶栏给出测试集、需求、迭代、就绪结论与上次运行，运�
   client.clear()
 })
 
+it('进入用例直接用列表里的步骤渲染，不再请求详情', async () => {
+  const detail = vi.mocked(api.getUiTestCase)
+  detail.mockClear()
+
+  const { container } = renderPage()
+  await openCase('登录成功-跳转工作台')
+
+  expect(detail).not.toHaveBeenCalled()
+  expect(container.querySelector('.ui-flow-loading')).not.toBeInTheDocument()
+  expect(screen.queryByText('未找到对应的 UI测试用例')).not.toBeInTheDocument()
+})
+
+it('进入步骤很多的用例时只挂载当前步骤的编辑控件', async () => {
+  const manySteps = JSON.stringify(Array.from({ length: 32 }, (_, index) => ({
+    orderNo: index + 1,
+    stepName: `步骤 ${index + 1}`,
+    keyword: 'click',
+    locatorType: 'css',
+    locatorValue: '#submit',
+    enabled: true,
+  })))
+  vi.spyOn(api, 'getUiTestCases').mockResolvedValue(list([
+    { caseId: 'case-32', suiteId: 'suite-1', name: '32 步用例', enabled: true, orderNo: 1, stepsJson: manySteps },
+  ]))
+
+  const { container } = renderPage()
+  await openCase('32 步用例')
+
+  expect(container.querySelectorAll('.ui-test-case-step-card')).toHaveLength(32)
+  const editor = container.querySelector('.ui-step-details-body') as HTMLElement
+  expect(editor).toBeTruthy()
+  // 32 个步骤里只有当前步骤挂载控件，其余步骤只注册字段，保存时仍参与校验。
+  expect(editor.querySelectorAll('.ant-select')).toHaveLength(3)
+  expect(editor.querySelectorAll('.ant-input')).toHaveLength(3)
+})
+
+
 it('运行结束后自动补取最终报告，报告明细正常显示', async () => {
   let status = 'running'
   const summary = () => ({ suiteRunId: 'suite-run-2', suiteId: 'suite-1', status, totalCount: 1, successCount: status === 'success' ? 1 : 0 })

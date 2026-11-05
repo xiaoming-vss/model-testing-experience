@@ -30,10 +30,10 @@ import {
 import type { InputRef, TableProps } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { DebouncedSearchInput } from '@/shared/components/DebouncedSearchInput'
 import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
-import { useProjectRequirements } from '@/features/projects/hooks/useProjectRequirements'
+import { useProjectRequirementOptions } from '@/features/projects/hooks/useProjectRequirementOptions'
 import { useSprintRequirementScope } from '@/features/projects/hooks/useSprintRequirementScope'
-import { REQUIREMENTS_STALE_TIME, requirementsQueryKey, fetchSprintRequirements } from '@/features/projects/hooks/requirementQueries'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
@@ -142,8 +142,8 @@ export function CaseLibraryPage() {
   const [priority, setPriority] = useState<string | null>(null)
   const [caseType, setCaseType] = useState<string | null>(null)
   const [suiteFilter, setSuiteFilter] = useState('')
-  const [keywordInput, setKeywordInput] = useState('')
   const [keyword, setKeyword] = useState('')
+  const [searchResetKey, setSearchResetKey] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const keywordInputRef = useRef<InputRef>(null)
@@ -161,9 +161,17 @@ export function CaseLibraryPage() {
   const [zentaoImportTarget, setZentaoImportTarget] = useState<ZentaoImportTarget | null>(null)
 
   const {
+    allRequirements,
+    allRequirementsQuery,
+    requirementNameMap,
+    requirementSprintMap,
+    sprintNameMap,
+  } = useProjectRequirementOptions({ activeProjectId })
+
+  const {
     currentRequirementSelection,
     requirementFilterOptions,
-    requirementsQuery,
+    requirementsLoading,
     resolvedSelectedRequirementId,
     resolvedSelectedSprintId,
     selectRequirement,
@@ -175,6 +183,8 @@ export function CaseLibraryPage() {
     includeAllSprintOption: true,
     defaultToAllWhenIncluded: true,
     sprintScope: { value: globalSprintId, onChange: selectGlobalSprint },
+    requirementOptions: allRequirements,
+    requirementOptionsLoading: allRequirementsQuery.isLoading,
   })
   const selectedSprintId = resolvedSelectedSprintId
   useEffect(() => { setSuiteId(null); setPage(1); setZentaoImportTarget(null) }, [activeProjectId, selectedSprintId])
@@ -184,18 +194,6 @@ export function CaseLibraryPage() {
   useEffect(() => {
     setSelectedCaseIds([])
   }, [activeProjectId, selectedSprintId, selectedRequirementId, suiteId])
-
-  const {
-    allRequirements,
-    allRequirementsQuery,
-    requirementNameMap,
-    requirementSprintMap,
-    sprintNameMap,
-  } = useProjectRequirements({
-    activeProjectId,
-    enabled: !sprintsQuery.isLoading,
-    sprints,
-  })
 
   const displayRequirementFilterOptions = useMemo(() => {
     if (selectedSprintId) return requirementFilterOptions
@@ -268,7 +266,7 @@ export function CaseLibraryPage() {
   })
   const cases = listItems(casesQuery.data)
   const total = listTotal(casesQuery.data)
-  const hasCaseFilters = Boolean(priority || caseType || keyword || keywordInput)
+  const hasCaseFilters = Boolean(priority || caseType || keyword)
   const hasSuiteData = suitesQuery.data !== undefined
   const hasCaseData = casesQuery.data !== undefined
   const noSuites = suitesQuery.isSuccess && suites.length === 0
@@ -277,18 +275,15 @@ export function CaseLibraryPage() {
   function clearCaseFilters() {
     setPriority(null)
     setCaseType(null)
-    setKeywordInput('')
+    setSearchResetKey((current) => current + 1)
     setKeyword('')
     setPage(1)
   }
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setKeyword(keywordInput.trim())
-      setPage(1)
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [keywordInput])
+  const commitKeyword = useCallback((value: string) => {
+    setKeyword(value)
+    setPage(1)
+  }, [])
 
   // 搜索框右侧标了 ⌘K，那就得真的能按：Mac 用 ⌘，其他平台用 Ctrl。
   useEffect(() => {
@@ -333,13 +328,12 @@ export function CaseLibraryPage() {
     [requirementNameMap, requirementSprintMap, sprintNameMap, suites],
   )
 
-  const suiteDrawerRequirementsQuery = useQuery({
-    queryKey: requirementsQueryKey(suiteDrawerSprintId),
-    queryFn: () => fetchSprintRequirements(suiteDrawerSprintId!),
-    // 编辑态下这两个下拉是禁用的，但仍要取到选项，否则「所属需求」只会显示需求 ID。
-    enabled: suiteDrawerOpen && Boolean(suiteDrawerSprintId),
-    staleTime: REQUIREMENTS_STALE_TIME,
-  })
+  const suiteDrawerRequirements = useMemo(
+    () => suiteDrawerSprintId
+      ? allRequirements.filter((requirement) => requirement.sprintId === suiteDrawerSprintId)
+      : [],
+    [allRequirements, suiteDrawerSprintId],
+  )
 
   const saveSuiteMutation = useMutation({
     mutationFn: (values: SuiteFormValues) => {
@@ -741,7 +735,7 @@ export function CaseLibraryPage() {
                     currentRequirementSelection === null ? 'all' : selectedRequirementId ?? 'all'
                   }
                   options={displayRequirementFilterOptions}
-                  loading={requirementsQuery.isLoading || allRequirementsQuery.isLoading}
+                  loading={requirementsLoading || allRequirementsQuery.isLoading}
                   placeholder="请选择需求"
                   disabled={!selectedSprintId && allRequirements.length === 0}
                   onChange={(value: string) => {
@@ -765,16 +759,15 @@ export function CaseLibraryPage() {
                 />
               </div>
               <div className="api-filter-field case-library-search-field">
-                <Input
-                  ref={keywordInputRef}
+                <DebouncedSearchInput
                   className="api-filter-input case-library-search-input"
-                  allowClear
+                  inputRef={keywordInputRef}
                   prefix={<SearchOutlined />}
                   suffix={<span className="case-library-search-hint" aria-hidden="true">{searchShortcut}</span>}
-                  aria-label="搜索用例名称或模块"
+                  ariaLabel="搜索用例名称或模块"
                   placeholder="搜索用例名称 / 模块"
-                  value={keywordInput}
-                  onChange={(event) => setKeywordInput(event.target.value)}
+                  resetKey={searchResetKey}
+                  onCommit={commitKeyword}
                 />
               </div>
             </div>
@@ -863,13 +856,10 @@ export function CaseLibraryPage() {
             <Alert showIcon type="error" title="迭代加载失败" description={getErrorMessage(sprintsQuery.error)}
               action={<ProjectActionButton action="read" onClick={() => sprintsQuery.refetch()}>重试迭代</ProjectActionButton>} />
           ) : null}
-          {requirementsQuery.error || allRequirementsQuery.error ? (
+          {allRequirementsQuery.error ? (
             <Alert showIcon type="error" title="需求加载失败"
-              description={getErrorMessage(requirementsQuery.error ?? allRequirementsQuery.error)}
-              action={<ProjectActionButton action="read" onClick={() => {
-                if (requirementsQuery.error) void requirementsQuery.refetch()
-                if (allRequirementsQuery.error) void allRequirementsQuery.refetch()
-              }}>重试需求</ProjectActionButton>} />
+              description={getErrorMessage(allRequirementsQuery.error)}
+              action={<ProjectActionButton action="read" onClick={() => void allRequirementsQuery.refetch()}>重试需求</ProjectActionButton>} />
           ) : null}
 
           {!activeProjectId ? (
@@ -1282,11 +1272,11 @@ export function CaseLibraryPage() {
             rules={[{ required: true, message: '请选择需求' }]}
           >
             <Select
-              options={listItems(suiteDrawerRequirementsQuery.data).map((requirement) => ({
+              options={suiteDrawerRequirements.map((requirement) => ({
                 label: requirement.name,
                 value: normalizeRequirementId(requirement),
               }))}
-              loading={suiteDrawerRequirementsQuery.isLoading}
+              loading={allRequirementsQuery.isLoading}
               placeholder="请选择需求"
               disabled={Boolean(editingSuite)}
             />

@@ -15,6 +15,7 @@ from testing_agent.handlers.api_collection import (
     get_api_collection,
     import_api_cases,
     list_api_collections,
+    list_project_api_collections,
     update_api_collection,
 )
 from testing_agent.handlers.api_environment import (
@@ -58,6 +59,10 @@ router.get(
     "/requirements/{requirement_id}/api-collections",
     response_model=ApiResponse[ListResponse[ApiCollectionResponse]],
 )(list_api_collections)
+router.get(
+    "/projects/{project_id}/api-collections",
+    response_model=ApiResponse[ListResponse[ApiCollectionResponse]],
+)(list_project_api_collections)
 router.get(
     "/api-collections/{collection_id}",
     response_model=ApiResponse[ApiCollectionResponse],

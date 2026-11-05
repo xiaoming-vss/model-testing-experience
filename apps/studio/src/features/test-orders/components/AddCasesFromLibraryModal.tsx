@@ -19,7 +19,7 @@ import {
 import type { TableProps } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
-import { useProjectRequirements } from '@/features/projects/hooks/useProjectRequirements'
+import { useProjectRequirementOptions } from '@/features/projects/hooks/useProjectRequirementOptions'
 import { priorityColor } from '@/features/test-cases/utils/casePriority'
 import { readFunctionCaseContent } from '@/features/test-cases/utils/caseForm'
 import { api, listItems, listTotal, type FunctionCaseLibraryItem } from '@/services/api'
@@ -105,10 +105,9 @@ export function AddCasesFromLibraryModal({
   const sprints = useMemo(() => sprintsQuery.data ?? [], [sprintsQuery.data])
 
   // 需求池按迭代聚合：选中迭代只列该迭代的需求，「全部迭代」时列项目全部需求。
-  const { allRequirements, allRequirementsQuery, requirementSprintMap } = useProjectRequirements({
+  const { allRequirements, allRequirementsQuery, requirementSprintMap } = useProjectRequirementOptions({
     activeProjectId: projectId,
     enabled: open,
-    sprints,
   })
 
   const suitesQuery = useQuery({

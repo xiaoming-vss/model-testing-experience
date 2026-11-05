@@ -519,7 +519,7 @@ describe('功能候选结果审核与正式资产导入', () => {
       requested.push(url.pathname)
       if (url.pathname === '/v1/function-case-generate-tasks/task-1') return jsonResponse({ ...task, requirementId: '' })
       if (url.pathname === '/v1/projects/project-1/sprints') return jsonResponse({ items: [{ sprintId: 'sprint-1', name: '当前迭代' }], total: 1 })
-      if (url.pathname === '/v1/sprints/sprint-1/requirements') return jsonResponse({ items: [{ requirementId: 'target-requirement', name: '支付需求 A' }], total: 1 })
+      if (url.pathname === '/v1/projects/project-1/requirements/options') return jsonResponse({ items: [{ requirementId: 'target-requirement', name: '支付需求 A', sprintId: 'sprint-1', sprintName: '当前迭代' }], total: 1 })
       if (url.pathname.endsWith('/import') && init?.method === 'POST') {
         const body = JSON.parse(String(init.body)) as { confirmOverwrite: boolean; requirementId: string }
         requestBodies.push(body)
@@ -543,7 +543,7 @@ describe('功能候选结果审核与正式资产导入', () => {
     const confirm = screen.getByRole('button', { name: '确认导入' })
     await user.click(screen.getByRole('checkbox', { name: '我已确认结果，确定导入正式用例' }))
     expect(confirm).toBeDisabled()
-    await waitFor(() => expect(requested).toContain('/v1/sprints/sprint-1/requirements'))
+    await waitFor(() => expect(requested).toContain('/v1/projects/project-1/requirements/options'))
     await user.click(screen.getByRole('combobox', { name: '目标需求' }))
     await user.click(await screen.findByText('支付需求 A'))
     await user.click(screen.getByRole('checkbox', { name: '我已确认结果，确定导入正式用例' }))

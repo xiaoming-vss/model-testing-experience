@@ -308,6 +308,10 @@ export const aiTestingApi = {
     }),
   getCodeRiskTasks: (projectId: string) =>
     request<ListResponse<CodeRiskTask>>(`/v1/projects/${projectId}/code-risk-analysis-tasks`),
+  getCodeRiskLatestRuns: (projectId: string) =>
+    request<ListResponse<CodeRiskTaskRun>>(
+      `/v1/projects/${projectId}/code-risk-analysis-tasks/latest-runs`,
+    ),
   createCodeRiskTask: (projectId: string, body: CreateCodeRiskTaskPayload) =>
     request<CodeRiskTask>(`/v1/projects/${projectId}/code-risk-analysis-tasks`, {
       method: 'POST',

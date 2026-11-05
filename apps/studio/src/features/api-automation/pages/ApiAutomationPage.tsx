@@ -22,10 +22,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { EnvironmentDrawer } from '@/features/projects/components/EnvironmentDrawer'
 import { CollectionDrawer, type CollectionFormValues } from '@/features/api-automation/components/CollectionDrawer'
-import { useProjectRequirements } from '@/features/projects/hooks/useProjectRequirements'
+import { useProjectRequirementOptions } from '@/features/projects/hooks/useProjectRequirementOptions'
 import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
 import { useSprintRequirementScope } from '@/features/projects/hooks/useSprintRequirementScope'
-import { api, listItems, type ApiCollection, type ApiEnvironment, type Requirement } from '@/services/api'
+import { api, listItems, type ApiCollection, type ApiEnvironment } from '@/services/api'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import {
   formatTime,
@@ -74,10 +74,13 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
   const isRequirementLocked = Boolean(scope?.requirementId)
   const { activeSprintId: globalSprintId, selectSprint: selectGlobalSprint } = useActiveSprint()
 
+  const { allRequirements, allRequirementsQuery, requirementNameMap, requirementSprintMap, sprintNameMap } =
+    useProjectRequirementOptions({ activeProjectId })
+
   const {
     currentRequirementSelection,
     requirementFilterOptions,
-    requirementsQuery,
+    requirementsLoading,
     resolvedSelectedRequirementId,
     resolvedSelectedSprintId,
     selectRequirement,
@@ -89,31 +92,18 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
     includeAllSprintOption: true,
     defaultToAllWhenIncluded: true,
     sprintScope: scope ? undefined : { value: globalSprintId, onChange: selectGlobalSprint },
+    requirementOptions: allRequirements,
+    requirementOptionsLoading: allRequirementsQuery.isLoading,
   })
   const selectedSprintId = scope?.sprintId ?? resolvedSelectedSprintId
   const selectedRequirementId = scope?.requirementId ?? resolvedSelectedRequirementId
 
   useEffect(() => { setPage(1) }, [activeProjectId, selectedSprintId, selectedRequirementId, keyword])
 
-  const { allRequirements, allRequirementsQuery, requirementNameMap, requirementSprintMap, sprintNameMap } =
-    useProjectRequirements({
-      activeProjectId,
-      enabled: !sprintsQuery.isLoading && !isRequirementLocked,
-      sprints,
-    })
-
   const collectionsQuery = useQuery({
-    // queryFn 在没有选中需求时要靠 allRequirements 才能知道去哪些需求下取测试集，
-    // 所以这个依赖必须进 key：否则需求池还没回来就先算出空列表，而且被缓存住不再重算。
-    queryKey: [
-      'apiCollections',
-      activeProjectId,
-      selectedSprintId,
-      selectedRequirementId,
-      sprints.map(normalizeSprintId).join(','),
-      allRequirements.map(normalizeRequirementId).join(','),
-    ],
-    // 同理，未锁定需求时等需求池回来再查，避免拿到「需求还没回来」的空结果。
+    // 「全部需求」用项目级列表一次取回，不再按需求逐个请求；选中需求时仍走需求维度接口。
+    queryKey: ['apiCollections', activeProjectId, selectedRequirementId ?? 'all'],
+    // 未锁定需求时等需求池回来，才能按迭代在前端筛选；请求本身只依赖项目。
     enabled:
       Boolean(activeProjectId) &&
       !sprintsQuery.isLoading &&
@@ -126,45 +116,18 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
           requirementId: collection.requirementId ?? collection.requirement_id ?? selectedRequirementId,
         }))
       }
-
-      const targetRequirements: Requirement[] = selectedSprintId
-        ? (() => {
-            const pool = allRequirements.length > 0 ? allRequirements : []
-            const targets = pool.filter((item) => (item.sprintId ?? item.sprint_id) === selectedSprintId)
-            return targets
-          })()
-        : sprints.length === 0
-          ? []
-          : (await Promise.all(sprints.map((sprint) => api.getRequirements(normalizeSprintId(sprint))))).flat()
-
-      if (targetRequirements.length === 0 && selectedSprintId) {
-        return []
-      }
-
-      const requirementPool =
-        targetRequirements.length > 0
-          ? targetRequirements
-          : sprints.length === 0
-            ? []
-            : (await Promise.all(sprints.map((sprint) => api.getRequirements(normalizeSprintId(sprint))))).flat()
-
-      if (requirementPool.length === 0) return []
-
-      const collectionGroups = await Promise.all(
-        requirementPool.map(async (requirement) => {
-          const requirementId = normalizeRequirementId(requirement)
-          const collections = await api.getApiCollections(requirementId)
-          return collections.map((collection) => ({
-            ...collection,
-            requirementId: collection.requirementId ?? collection.requirement_id ?? requirementId,
-          }))
-        }),
-      )
-
-      return collectionGroups.flat()
+      const response = await api.getProjectApiCollections(activeProjectId!)
+      return listItems(response).map((collection) => ({
+        ...collection,
+        requirementId: collection.requirementId ?? collection.requirement_id,
+      }))
     },
   })
-  const collections = useMemo(() => collectionsQuery.data ?? [], [collectionsQuery.data])
+  const collections = useMemo(() => {
+    const data = collectionsQuery.data ?? []
+    if (selectedRequirementId || !selectedSprintId) return data
+    return data.filter((collection) => requirementSprintMap.get(collection.requirementId ?? collection.requirement_id ?? '') === selectedSprintId)
+  }, [collectionsQuery.data, requirementSprintMap, selectedRequirementId, selectedSprintId])
 
   const environmentsQuery = useQuery({
     queryKey: ['testEnvironments', activeProjectId, 'api'],
@@ -185,14 +148,11 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
     [sprints],
   )
 
-  const drawerRequirementsQuery = useQuery({
-    queryKey: ['requirements', 'drawer', drawerSprintId],
-    queryFn: () => api.getRequirements(drawerSprintId!),
-    enabled: Boolean(drawerSprintId),
-  })
   const drawerRequirementOptions = useMemo(
-    () => listItems(drawerRequirementsQuery.data).map((requirement) => ({ label: requirement.name, value: normalizeRequirementId(requirement) })),
-    [drawerRequirementsQuery.data],
+    () => allRequirements
+      .filter((requirement) => !drawerSprintId || requirement.sprintId === drawerSprintId)
+      .map((requirement) => ({ label: requirement.name, value: normalizeRequirementId(requirement) })),
+    [allRequirements, drawerSprintId],
   )
 
   const saveCollectionMutation = useMutation({
@@ -472,7 +432,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
                         className="api-filter-select business-filter-select"
                         value={currentRequirementSelection === null ? 'all' : selectedRequirementId ?? 'all'}
                         options={requirementFilterOptions}
-                        loading={requirementsQuery.isLoading}
+                        loading={requirementsLoading}
                         placeholder="筛选需求"
                         disabled={!selectedSprintId && sprints.length === 0}
                         onChange={(value: string) => {
@@ -541,7 +501,6 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
           </div>
 
           {sprintsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(sprintsQuery.error)} /> : null}
-          {!isRequirementLocked ? <>{requirementsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(requirementsQuery.error)} /> : null}</> : null}
           {!isRequirementLocked ? <>{allRequirementsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(allRequirementsQuery.error)} /> : null}</> : null}
           {collectionsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(collectionsQuery.error)} /> : null}
           {environmentsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(environmentsQuery.error)} /> : null}
@@ -619,7 +578,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
         open={drawerOpen}
         form={drawerForm}
         loading={saveCollectionMutation.isPending}
-        error={saveCollectionMutation.error ?? drawerRequirementsQuery.error}
+        error={saveCollectionMutation.error ?? allRequirementsQuery.error}
         sprintOptions={drawerSprintOptions}
         requirementOptions={drawerRequirementOptions}
         showScopeFields={!isRequirementLocked}

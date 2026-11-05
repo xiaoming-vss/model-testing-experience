@@ -10,6 +10,7 @@ import { useDeleteTaskRun, useStartTaskRun } from '@/features/ai-testing/hooks/u
 import { formatStructuredContent } from '@/shared/utils/value'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
+import { useProjectRequirementOptions } from '@/features/projects/hooks/useProjectRequirementOptions'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
@@ -140,18 +141,18 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
     () => listItems(sprintsQuery.data).map((sprint) => ({ label: sprint.name, value: normalizeSprintId(sprint) })),
     [sprintsQuery.data],
   )
-  const requirementsQuery = useQuery({
-    queryKey: ['requirements', 'aiTestingDetail', drawerSprintId],
-    queryFn: () => api.getRequirements(drawerSprintId!),
-    enabled: Boolean(drawerSprintId),
+  const { allRequirements, allRequirementsQuery } = useProjectRequirementOptions({
+    activeProjectId: task?.projectId,
+    enabled: Boolean(task?.projectId),
   })
   const requirementOptions = useMemo(
-    () =>
-      listItems(requirementsQuery.data).map((requirement) => ({
+    () => allRequirements
+      .filter((requirement) => requirement.sprintId === drawerSprintId)
+      .map((requirement) => ({
         label: requirement.name,
         value: normalizeRequirementId(requirement),
       })),
-    [requirementsQuery.data],
+    [allRequirements, drawerSprintId],
   )
   const apiCollectionsQuery = useQuery({
     queryKey: ['apiCollections', 'aiTestingReview', task?.requirementId],
@@ -162,29 +163,26 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
     },
     enabled: Boolean(task?.requirementId),
   })
-  const importRequirementsQuery = useQuery({
-    queryKey: ['requirements', 'apiImportTarget', importSprintId],
-    queryFn: () => api.getRequirements(importSprintId!),
-    enabled: Boolean(importModalRunId && importSprintId && !task?.requirementId),
-  })
   const importCollectionsQuery = useQuery({
     queryKey: ['apiCollections', 'apiImportTarget', importRequirementId],
     queryFn: () => api.getApiCollections(importRequirementId!),
     enabled: Boolean(importModalRunId && importRequirementId && !task?.requirementId),
   })
   const importRequirementOptions = useMemo(
-    () => listItems(importRequirementsQuery.data).map((requirement) => ({
-      label: requirement.name, value: normalizeRequirementId(requirement),
-    })),
-    [importRequirementsQuery.data],
+    () => allRequirements
+      .filter((requirement) => requirement.sprintId === importSprintId)
+      .map((requirement) => ({
+        label: requirement.name, value: normalizeRequirementId(requirement),
+      })),
+    [allRequirements, importSprintId],
   )
   const sprintNameMap = useMemo(
     () => new Map(listItems(sprintsQuery.data).map((sprint) => [normalizeSprintId(sprint), sprint.name])),
     [sprintsQuery.data],
   )
   const requirementNameMap = useMemo(
-    () => new Map(listItems(requirementsQuery.data).map((requirement) => [normalizeRequirementId(requirement), requirement.name])),
-    [requirementsQuery.data],
+    () => new Map(allRequirements.map((requirement) => [normalizeRequirementId(requirement), requirement.name])),
+    [allRequirements],
   )
 
   const runRecords = useMemo(
@@ -1052,9 +1050,9 @@ export function ApiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest
             <Form.Item label="目标需求" required>
               <Select aria-label="目标需求" placeholder="请选择需求" showSearch optionFilterProp="label"
                 value={importRequirementId} options={importRequirementOptions} disabled={!importSprintId}
-                loading={importRequirementsQuery.isFetching}
+                loading={allRequirementsQuery.isFetching}
                 onChange={(value) => { setImportRequirementId(value); importForm.resetFields(['collectionId']) }} />
-              {importRequirementsQuery.isError ? <Alert showIcon type="error" title="需求加载失败，请重新选择迭代" /> : null}
+              {allRequirementsQuery.isError ? <Alert showIcon type="error" title="需求加载失败，请重新选择迭代" /> : null}
             </Form.Item>
           </> : null}
           <Form.Item

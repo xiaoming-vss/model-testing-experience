@@ -1,10 +1,12 @@
 import { SearchOutlined } from '@ant-design/icons'
-import { Empty, Input, Popconfirm, Tooltip } from 'antd'
-import { memo, type DragEvent } from 'react'
+import { Button, Empty, Input, Popconfirm, Tooltip } from 'antd'
+import { memo, useEffect, useState, type DragEvent } from 'react'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import type { ApiCase } from '@/services/api'
 import { DRAFT_CASE_ID, methodTone } from '../config/collectionConfig'
 import { getCaseDisplayPath, getCaseId } from '../utils/apiCaseEditor'
+
+const CASE_PAGE_SIZE = 40
 
 /*
  * API 测试集详情页左栏：用例列表。
@@ -51,6 +53,17 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
   onDrop,
   onDragEnd,
 }: Props) {
+  // 用例列表接口不分页，一次渲染全部用例在数量大时会拖慢进入页面；先渲染一段，其余按需展开。
+  const [visibleCount, setVisibleCount] = useState(CASE_PAGE_SIZE)
+  useEffect(() => {
+    setVisibleCount(CASE_PAGE_SIZE)
+  }, [search])
+  // 当前选中项可能不在默认窗口内（例如深链接或导入后自动选中），保证它一定被渲染出来。
+  const selectedIndex = cases.findIndex((item) => getCaseId(item) === selectedCaseId)
+  const sliceCount = Math.max(visibleCount, selectedIndex + 1)
+  const visibleCases = sliceCount < cases.length ? cases.slice(0, sliceCount) : cases
+  const remainingCount = cases.length - visibleCases.length
+
   return (
     <section className="api-wb-explorer" aria-label="用例列表">
       <div className="api-wb-explorer-head">
@@ -113,7 +126,7 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
           </div>
         ) : (
           <div className="api-wb-case-list">
-            {cases.map((item) => {
+            {visibleCases.map((item) => {
               const caseId = getCaseId(item)
               const isDraft = caseId === DRAFT_CASE_ID
               const selected = caseId === selectedCaseId
@@ -184,6 +197,13 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
                 </div>
               )
             })}
+            {remainingCount > 0 ? (
+              <div className="api-wb-case-list-more">
+                <Button size="small" onClick={() => setVisibleCount(sliceCount + CASE_PAGE_SIZE)}>
+                  显示更多（还剩 {remainingCount} 个）
+                </Button>
+              </div>
+            ) : null}
           </div>
         )}
       </div>

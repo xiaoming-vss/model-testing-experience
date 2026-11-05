@@ -1190,6 +1190,13 @@
   overflow: auto;
 }
 
+.api-collection-run-history-more,
+.api-collection-run-report-list-more {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 8px;
+}
+
 .api-collection-run-history-item {
   width: 100%;
   padding: 14px 16px;

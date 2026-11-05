@@ -2,7 +2,7 @@ import { pendingRequirementQuestions } from '@/domain/requirements/requirementAr
 import { RequirementArtifactValue } from '@/domain/requirements/RequirementArtifactView'
 import { SearchOutlined } from '@ant-design/icons'
 import { Alert, Collapse, Empty, Input, Segmented, Select, Tag } from 'antd'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { extractedFactText, readExtractionArtifact, type ExtractionArtifact, type ExtractedFact, type MaterialQuestion } from '../utils/materialComparison'
 import { PendingQuestionsLabel } from './PendingQuestionsLabel'
 import { useViewMotion } from '@/shared/ui/useViewMotion'
@@ -39,6 +39,46 @@ function FactEditor({ fact, onChangeValue, onChangeCategory, onChangeStatus }: {
   const value = fact.fact.value
   const multiline = Array.isArray(value)
   const text = multiline ? value.map(String).join('\n') : value == null ? '' : String(value)
+  /*
+   * 事实正文先在本地保存草稿，停止输入后再回写整份产物：
+   * 每敲一个字都 JSON.parse + stringify 整个材料在事实较多时会明显卡顿。
+   */
+  const [draft, setDraft] = useState(text)
+  const draftRef = useRef(text)
+  const committedRef = useRef(text)
+  const timerRef = useRef<number | undefined>(undefined)
+  const commitRef = useRef({ text, multiline, value, onChangeValue })
+  useEffect(() => {
+    commitRef.current = { text, multiline, value, onChangeValue }
+  }, [multiline, onChangeValue, text, value])
+  useEffect(() => {
+    setDraft(text)
+    draftRef.current = text
+    committedRef.current = text
+    window.clearTimeout(timerRef.current)
+  }, [text])
+  // 输入后 150ms 内切换页签/视图会卸载编辑器，未提交的草稿要在卸载前回写。
+  useEffect(() => () => {
+    window.clearTimeout(timerRef.current)
+    const current = commitRef.current
+    const pending = draftRef.current
+    if (pending === current.text || pending === committedRef.current) return
+    if (current.multiline) current.onChangeValue(pending.split(/\r?\n/).map(line => line.trim()).filter(Boolean))
+    else current.onChangeValue(pending || (current.value == null ? null : ''))
+  }, [])
+  function commit(next: string) {
+    const current = commitRef.current
+    if (next === current.text) return
+    committedRef.current = next
+    if (current.multiline) current.onChangeValue(next.split(/\r?\n/).map(line => line.trim()).filter(Boolean))
+    else current.onChangeValue(next || (current.value == null ? null : ''))
+  }
+  function handleChange(next: string) {
+    setDraft(next)
+    draftRef.current = next
+    window.clearTimeout(timerRef.current)
+    timerRef.current = window.setTimeout(() => commit(next), 150)
+  }
   return <div className="requirement-material-fact-edit">
     <div className="requirement-material-fact-meta">
       <Select size="small" variant="borderless" className="requirement-material-fact-category" aria-label={`事实分类 ${fact.id}`}
@@ -47,11 +87,11 @@ function FactEditor({ fact, onChangeValue, onChangeCategory, onChangeStatus }: {
         value={fact.fact.confirmationStatus} options={Object.entries(statuses).map(([key, meta]) => ({ value: key, label: meta.label }))} onChange={onChangeStatus} />
     </div>
     <Input.TextArea aria-label={`事实内容 ${fact.id}`} variant="borderless" autoSize={{ minRows: 1, maxRows: 8 }}
-      className="requirement-material-fact-editor" value={text} placeholder="未明确，可直接填写"
-      onChange={event => {
-        const next = event.target.value
-        if (multiline) onChangeValue(next.split(/\r?\n/).map(line => line.trim()).filter(Boolean))
-        else onChangeValue(next || (value == null ? null : ''))
+      className="requirement-material-fact-editor" value={draft} placeholder="未明确，可直接填写"
+      onChange={event => handleChange(event.target.value)}
+      onBlur={event => {
+        window.clearTimeout(timerRef.current)
+        commit(event.target.value)
       }} />
   </div>
 }

@@ -7,6 +7,7 @@ import { TestOrderPage } from '@/features/test-orders/pages/TestOrderPage'
 import { TestingNavigation } from '../components/TestingNavigation'
 import { resolveTestingTab, type TestingTab } from '@/features/testing/components/testingTab'
 import { UiAutomationPage } from '@/features/ui-automation/pages/UiAutomationPage'
+import { PaneActivityProvider } from '@/shared/ui/PaneActivityProvider'
 import '@/features/testing/styles/index.css'
 
 const TESTING_TAB_PAGES = [
@@ -48,7 +49,9 @@ export function TestingPage() {
               id={`testing-panel-${key}`}
               aria-labelledby={key === 'bugs' ? undefined : `testing-tab-${key}`}
               hidden={activeTab !== key}>
-              <Page />
+              <PaneActivityProvider active={activeTab === key}>
+                <Page />
+              </PaneActivityProvider>
             </div>
           )
         })}

@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { RequirementDesignKind } from '../api/requirementDesign.api'
 import { RequirementDesignConfigurationModal } from './RequirementDesignConfigurationModal'
 import { RequirementCodeRiskPanel } from './RequirementCodeRiskPanel'
-import { RequirementGenerationPanorama } from './RequirementGenerationPanorama'
+import { RequirementGenerationPanorama, type RequirementReadingNode } from './RequirementGenerationPanorama'
 import { useRequirementCodeRiskWorkspace } from '../hooks/useRequirementCodeRiskWorkspace'
 import '../styles/index.css'
 import '../styles/task-detail-v2.css'
@@ -12,12 +12,13 @@ import '@/shared/styles/list-table.css'
 import '../styles/requirement-design.css'
 
 /** 需求详情正文：生成全景是唯一入口，文档、代码风险和生成设置从泳道入口打开。 */
-export function RequirementDesignWorkspace({ requirementId, projectId, canWrite, onOpenDocument, documentPreview }: {
+export function RequirementDesignWorkspace({ requirementId, projectId, canWrite, onOpenDocument, documentPreview, onReadingNodeChange }: {
   requirementId: string
   projectId: string
   canWrite: boolean
   documentPreview?: ReactNode
   onOpenDocument?: () => void
+  onReadingNodeChange?: (node: RequirementReadingNode | null) => void
 }) {
   const [riskOpen, setRiskOpen] = useState(false)
   const [configureKind, setConfigureKind] = useState<RequirementDesignKind>()
@@ -30,7 +31,7 @@ export function RequirementDesignWorkspace({ requirementId, projectId, canWrite,
   }
   return <div className="ai-requirement-design tp-surface tp-list-surface">
     <div className="ai-requirement-design-panel ai-requirement-generation-panel">
-      <RequirementGenerationPanorama requirementId={requirementId} projectId={projectId} canWrite={canWrite} onOpenTab={openPanoramaTab} documentPreview={documentPreview} />
+      <RequirementGenerationPanorama requirementId={requirementId} projectId={projectId} canWrite={canWrite} onOpenTab={openPanoramaTab} documentPreview={documentPreview} onReadingNodeChange={onReadingNodeChange} />
     </div>
     <Modal open={riskOpen} onCancel={() => setRiskOpen(false)} footer={null} width="min(2000px, calc(100vw - 56px))" centered destroyOnHidden
       className="requirement-code-risk-dialog" title="代码风险分析">

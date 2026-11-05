@@ -78,7 +78,8 @@ export type ApiCaseEditorProps = {
   isApiCaseRunInProgress: boolean
   isSelectedCaseReady: boolean
   handleSendRequest: () => Promise<void>
-  watchedBodyType: ApiCase['bodyType'] | undefined
+  /** Query 行变化时补齐末尾空行；由编辑器监听，避免页面为每次键入重渲染。 */
+  ensureQueryTrailingRow: (items?: Array<{ enabled?: boolean; key?: string; value?: string }>) => void
   environment: EnvironmentProps
   templates: TemplatesProps
   rules: RulesProps

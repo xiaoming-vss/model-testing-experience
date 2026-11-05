@@ -47,6 +47,14 @@ async def list_project_requirements(
     )
 
 
+async def list_project_requirement_options(
+    project_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: RequirementService = Depends(get_requirement_service),
+):
+    return success_payload(await service.list_options(user_id, project_id))
+
+
 async def update_requirement(
     requirement_id: str,
     body: UpdateRequirementRequest,

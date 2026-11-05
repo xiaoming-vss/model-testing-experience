@@ -1,6 +1,6 @@
 import extractionSource from '@/domain/requirements/fixtures/document-extraction.example.json?raw'
 import { TestThemeProvider } from '@/test/TestThemeProvider'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { afterEach, expect, it } from 'vitest'
@@ -87,6 +87,15 @@ function EditableHarness({ initial, onChange }: { initial: unknown; onChange: (c
     onChange={next => { setContent(next); onChange(next) }} /></TestThemeProvider>
 }
 
+it('输入后立即卸载会提交还没到防抖时间的草稿', () => {
+  let latest = ''
+  const { unmount } = render(<TestThemeProvider><RequirementMaterialComparison content={extraction} editable
+    onChange={next => { latest = next }} /></TestThemeProvider>)
+  fireEvent.change(screen.getByRole('textbox', { name: '事实内容 EF01' }), { target: { value: '未提交草稿' } })
+  unmount()
+  expect(JSON.parse(latest).extractedFacts[0].fact.value).toBe('未提交草稿')
+})
+
 it('待审核时事实文本和确认状态直接可编辑并回写 JSON', async () => {
   let latest = ''
   render(<EditableHarness initial={extraction} onChange={content => { latest = content }} />)
@@ -94,7 +103,7 @@ it('待审核时事实文本和确认状态直接可编辑并回写 JSON', async
   const editor = screen.getByRole('textbox', { name: '事实内容 EF01' })
   await user.clear(editor)
   await user.type(editor, '数据管理 → 批量转换')
-  expect(JSON.parse(latest).extractedFacts[0].fact.value).toBe('数据管理 → 批量转换')
+  await waitFor(() => expect(JSON.parse(latest).extractedFacts[0].fact.value).toBe('数据管理 → 批量转换'))
 
   await user.click(screen.getByRole('combobox', { name: '确认状态 EF01' }))
   const dropdown = document.querySelector('.ant-select-dropdown:not(.ant-select-dropdown-hidden)')

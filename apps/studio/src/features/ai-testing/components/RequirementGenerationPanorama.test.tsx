@@ -109,11 +109,11 @@ const emptyChain = (kind: 'requirement_analysis' | 'function' | 'api', label: st
   leaf: {},
 })
 
-function mount(documentPreview?: import('react').ReactNode) {
+function mount(documentPreview?: import('react').ReactNode, onReadingNodeChange?: Parameters<typeof RequirementDesignWorkspace>[0]['onReadingNodeChange']) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   clients.push(client)
   render(<TestThemeProvider><QueryClientProvider client={client}><MemoryRouter>
-    <RequirementDesignWorkspace requirementId="req" projectId="project" canWrite documentPreview={documentPreview} />
+    <RequirementDesignWorkspace requirementId="req" projectId="project" canWrite documentPreview={documentPreview} onReadingNodeChange={onReadingNodeChange} />
   </MemoryRouter></QueryClientProvider></TestThemeProvider>)
 }
 
@@ -1197,7 +1197,8 @@ it('后续阶段运行时可审核前序候选，并允许尝试继续', async (
 })
 
 it('需求文档直接占满画布阅读区，侧栏保持可见，返回后保留流程', async () => {
-  mount(<div>需求文档阅读内容</div>)
+  const onReadingNodeChange = vi.fn()
+  mount(<div>需求文档阅读内容</div>, onReadingNodeChange)
   const user = userEvent.setup()
   const card = await screen.findByRole('button', { name: /查看需求文档/ })
   await user.click(card)
@@ -1210,9 +1211,26 @@ it('需求文档直接占满画布阅读区，侧栏保持可见，返回后保�
   expect(document.closest('.gc-canvas-stage')).not.toBeNull()
   expect(within(document).getByText('需求文档阅读内容')).toBeInTheDocument()
   expect(screen.getByRole('complementary', { name: '阶段详情' })).toBeVisible()
+  // 阅读态把当前产物交给页面标题栏，作为面包屑的最后一级。
+  expect(onReadingNodeChange).toHaveBeenLastCalledWith(expect.objectContaining({ label: '需求文档' }))
   await user.click(within(document).getByRole('button', { name: '返回流程' }))
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: /查看需求文档/ })).toBeInTheDocument()
+  expect(onReadingNodeChange).toHaveBeenLastCalledWith(null)
+})
+
+it('阅读态上报的上级面包屑能退回生成流程', async () => {
+  const onReadingNodeChange = vi.fn()
+  mount(<div>需求文档阅读内容</div>, onReadingNodeChange)
+  const user = userEvent.setup()
+  const card = await screen.findByRole('button', { name: /查看需求文档/ })
+  await user.dblClick(card)
+  expect(await screen.findByRole('dialog', { name: '需求文档' })).toBeInTheDocument()
+  const reported: { leave?: () => void } | null = onReadingNodeChange.mock.lastCall?.[0]
+  expect(reported?.leave).toBeTypeOf('function')
+  await act(async () => { reported?.leave?.() })
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(onReadingNodeChange).toHaveBeenLastCalledWith(null)
 })
 
 it('隐藏期间延迟尺寸通知，返回流程后已测量节点仍可见', async () => {

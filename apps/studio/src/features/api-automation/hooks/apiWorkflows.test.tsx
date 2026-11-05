@@ -69,7 +69,7 @@ it('运行详情请求失败时保留运行身份并停止轮询', async () => {
 
 it('用例排序保存失败时恢复拖拽前的顺序并清除拖拽状态', async () => {
   const { wrapper } = setup()
-  vi.spyOn(api, 'updateApiCase').mockRejectedValue(new Error('保存失败'))
+  vi.spyOn(api, 'reorderApiCases').mockRejectedValue(new Error('保存失败'))
   const cases: ApiCase[] = [
     { caseId: 'a', name: 'A', method: 'GET', urlTemplate: '/ping', orderNo: 1 },
     { caseId: 'b', name: 'B', method: 'GET', urlTemplate: '/ping', orderNo: 2 },

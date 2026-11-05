@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { usePaneActive } from '@/shared/ui/paneActivity'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { bugsApi } from '../api/bugs.api'
 
@@ -7,11 +8,13 @@ export function useBugScope(projectId: string | undefined, enabled: boolean) {
   const storedSprintId = useWorkbenchStore((state) => state.activeSprintId)
   const storedProjectId = useWorkbenchStore((state) => state.activeSprintProjectId)
   const setActiveSprintId = useWorkbenchStore((state) => state.setActiveSprintId)
+  // 隐藏的标签页不刷新迭代/成员选项，切回来后的下一个周期恢复。
+  const paneActive = usePaneActive()
   const optionsQuery = useQuery({
     queryKey: ['bugOptions', projectId],
     queryFn: () => bugsApi.getBugOptions(projectId!),
     enabled: Boolean(projectId) && enabled,
-    refetchInterval: enabled ? 30_000 : false,
+    refetchInterval: enabled && paneActive ? 30_000 : false,
   })
   const sprints = optionsQuery.data?.sprints ?? []
   const activeSprintId = storedProjectId === projectId && sprints.some((sprint) => sprint.sprintId === storedSprintId)

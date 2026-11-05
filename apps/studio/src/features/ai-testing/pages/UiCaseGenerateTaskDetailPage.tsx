@@ -21,6 +21,7 @@ import '@/features/ai-testing/styles/functional-artifact-modal.css'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { UserReference } from '@/shared/components/UserReference/UserReference'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
+import { useProjectRequirementOptions } from '@/features/projects/hooks/useProjectRequirementOptions'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
@@ -269,11 +270,16 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
     queryFn: () => api.getSprints(taskQuery.data!.projectId!),
     enabled: editModalOpen && Boolean(taskQuery.data?.projectId),
   })
-  const editRequirementsQuery = useQuery({
-    queryKey: ['requirements', 'uiTaskEdit', editSprintId],
-    queryFn: () => api.getRequirements(editSprintId!),
-    enabled: editModalOpen && Boolean(editSprintId),
+  const { allRequirements, allRequirementsQuery } = useProjectRequirementOptions({
+    activeProjectId: taskQuery.data?.projectId,
+    enabled: editModalOpen && Boolean(taskQuery.data?.projectId),
   })
+  const editRequirementOptions = useMemo(
+    () => allRequirements
+      .filter((requirement) => requirement.sprintId === editSprintId)
+      .map((requirement) => ({ label: requirement.name, value: normalizeRequirementId(requirement) })),
+    [allRequirements, editSprintId],
+  )
   const importRequirementId = selectedRun?.requirementId ?? taskQuery.data?.requirementId
   const suitesQuery = useQuery({
     queryKey: ['uiTestSuites', importRequirementId],
@@ -1025,7 +1031,7 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
         <Space orientation="vertical" style={{ width: '100%' }}>
           <label>任务名称<Input aria-label="编辑任务名称" value={editName} maxLength={120} onChange={(event) => setEditName(event.target.value)} /></label>
           <label>所属迭代<Select aria-label="编辑所属迭代" value={editSprintId} loading={editSprintsQuery.isLoading} options={listItems(editSprintsQuery.data).map((sprint) => ({ label: sprint.name, value: normalizeSprintId(sprint) }))} onChange={(value) => { setEditSprintId(value); setEditRequirementId(undefined) }} style={{ width: '100%' }} /></label>
-          <label>所属需求<Select aria-label="编辑所属需求" value={editRequirementId} loading={editRequirementsQuery.isLoading} options={listItems(editRequirementsQuery.data).map((requirement) => ({ label: requirement.name, value: normalizeRequirementId(requirement) }))} onChange={setEditRequirementId} style={{ width: '100%' }} /></label>
+          <label>所属需求<Select aria-label="编辑所属需求" value={editRequirementId} loading={allRequirementsQuery.isLoading} options={editRequirementOptions} onChange={setEditRequirementId} style={{ width: '100%' }} /></label>
           <label>生成指令<Input.TextArea aria-label="编辑生成指令" value={editInstruction} maxLength={1000} onChange={(event) => setEditInstruction(event.target.value)} /></label>
         </Space>
       </ProjectActionModal>

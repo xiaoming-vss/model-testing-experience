@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
 import { storageCapabilities, uploadStoredFile } from '@/shared/api/files'
 import { api, listItems } from '@/services/api'
+import { useProjectRequirementOptions } from '@/features/projects/hooks/useProjectRequirementOptions'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
 import { invalidateBug } from '../utils/invalidateBug'
@@ -46,23 +47,17 @@ export function useBugForm({ open, bug, projectId, defaultSprintId, source, onCl
     [membersQuery.data],
   )
 
-  const requirementsQuery = useQuery({
-    queryKey: ['requirementsPool', activeProjectId, 'forBug', sprints.map((sprint) => sprint.sprintId)],
-    queryFn: async () => {
-      const groups = await Promise.all(
-        sprints.map((sprint) => api.getRequirements(sprint.sprintId ?? '')),
-      )
-      return groups.flat()
-    },
-    enabled: open && Boolean(activeProjectId) && sprints.length > 0,
+  const { allRequirements, allRequirementsQuery } = useProjectRequirementOptions({
+    activeProjectId,
+    enabled: open && Boolean(activeProjectId),
   })
   const requirementOptions = useMemo(
     () =>
-      listItems(requirementsQuery.data).map((requirement) => ({
+      allRequirements.map((requirement) => ({
         label: requirement.name,
         value: requirement.requirementId,
       })),
-    [requirementsQuery.data],
+    [allRequirements],
   )
 
   const selectedOrderId = Form.useWatch('sourceOrderId', form)
@@ -143,6 +138,6 @@ export function useBugForm({ open, bug, projectId, defaultSprintId, source, onCl
   })
   return { removedAttachmentFileIds, setRemovedAttachmentFileIds, form, isEdit, descriptionHtml, setDescriptionHtml, attachments, setAttachments,
     activeProjectId, projectsQuery, sprintsQuery, sprints, memberOptions, membersQuery,
-    requirementOptions, requirementsQuery, selectedOrderId,
+    requirementOptions, requirementsQuery: allRequirementsQuery, selectedOrderId,
     saveMutation }
 }

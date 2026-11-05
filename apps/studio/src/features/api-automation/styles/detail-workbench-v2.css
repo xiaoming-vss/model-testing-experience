@@ -195,6 +195,12 @@
   gap: 4px;
 }
 
+.api-collection-workbench-page .api-wb-case-list-more {
+  display: flex;
+  justify-content: center;
+  padding: 6px 0 2px;
+}
+
 .api-collection-workbench-page .api-wb-case-item {
   position: relative;
   display: flex;

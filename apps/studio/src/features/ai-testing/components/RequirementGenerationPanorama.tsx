@@ -1,6 +1,6 @@
 import { ArrowLeftOutlined, CloseOutlined } from '@ant-design/icons'
 import { Alert, Button, Empty, Spin, Typography } from 'antd'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { getErrorMessage } from '@/utils/format'
 import { requirementDesignApi } from '../api/requirementDesign.api'
 import { useRequirementGenerationChain } from '../hooks/useRequirementGenerationChain'
@@ -44,11 +44,14 @@ function UpstreamTrace({ stage, chain, upstreamStages, versionKey, upstream, ver
   </div></section>
 }
 type SpecialKind = 'content' | 'codeRisk' | 'relations'
-export function RequirementGenerationPanorama({ requirementId, projectId, canWrite, onOpenTab, documentPreview }: {
+/** 阅读态交给页面标题栏的面包屑末项；leave 用于点上级需求名时退回生成流程。 */
+export type RequirementReadingNode = { label: string; status?: string; tone?: string; leave?: () => void }
+export function RequirementGenerationPanorama({ requirementId, projectId, canWrite, onOpenTab, documentPreview, onReadingNodeChange }: {
   canWrite: boolean
   documentPreview?: ReactNode
   requirementId: string; projectId: string
   onOpenTab: (tab: 'content' | GenerationChainKind | 'codeRisk') => void
+  onReadingNodeChange?: (node: RequirementReadingNode | null) => void
 }) {
   const stageRef = useRef<HTMLDivElement>(null)
   const inspectorRef = useRef<HTMLElement>(null)
@@ -126,6 +129,21 @@ export function RequirementGenerationPanorama({ requirementId, projectId, canWri
   const closeStageReading = () => { if (workspace.guardUnsaved()) closeReading(() => {
     setModalOpen(false); setRelationsOpen(false); workspace.setRevisionOpen(false); refresh()
   }) }
+  // 面包屑点「需求名」一级：退出阅读态，回到生成流程。
+  const leaveReading = () => { if (workspace.guardUnsaved()) closeReading(() => {
+    setModalOpen(false); setRelationsOpen(false); setDocumentOpen(false); workspace.setRevisionOpen(false); refresh()
+  }) }
+  const leaveReadingRef = useRef<() => void>(() => {})
+  useEffect(() => { leaveReadingRef.current = leaveReading })
+  const leaveReadingAction = useCallback(() => leaveReadingRef.current(), [])
+  // 进入阅读态时把当前产物交给页面标题栏，作为面包屑的最后一级。
+  useEffect(() => {
+    if (!onReadingNodeChange) return
+    if (documentOpen) { onReadingNodeChange({ label: '需求文档', status: '只读来源', tone: 'is-muted', leave: leaveReadingAction }); return }
+    if (relationsOpen) { onReadingNodeChange({ label: '用例图谱', status: '派生', tone: 'is-muted', leave: leaveReadingAction }); return }
+    if (modalOpen && stage) { onReadingNodeChange({ label: stage.label, status: generationStageLabel(stage), tone: generationStageClass(stage), leave: leaveReadingAction }); return }
+    onReadingNodeChange(null)
+  }, [onReadingNodeChange, documentOpen, relationsOpen, modalOpen, stage, leaveReadingAction])
   const selectSpecial = (value: SpecialKind) => {
     if (!workspace.guardUnsaved()) return false
     setInspectorOpen(true)
@@ -177,7 +195,7 @@ export function RequirementGenerationPanorama({ requirementId, projectId, canWri
     </div>{inspectorOpen ? <aside ref={inspectorRef} className="gc-inspector" aria-label="阶段详情">
       {special || selected || sourceSelected ? <><div className="gc-inspector-header" key={inspectorSelection}>
         {modalOpen || relationsOpen ? <Button className="gc-inspector-back" type="text" size="small" icon={<ArrowLeftOutlined aria-hidden />} onClick={closeStageReading}>返回流程</Button> : null}
-        <div className="gc-inspector-heading"><h2>{sourceSelected ? sourceChain?.label : special === 'content' ? '需求文档' : special === 'codeRisk' ? '代码风险分析' : special === 'relations' ? '用例图谱' : activeStage?.label ?? '阶段详情'}</h2>{status ? <span className={`gc-state ${activeStage ? generationStageClass(activeStage) : 'is-muted'}`}>{status}</span> : null}{!modalOpen && !relationsOpen && !documentOpen ? <Button type="text" size="small" icon={<CloseOutlined />} aria-label="关闭阶段详情" onClick={() => { if (workspace.guardUnsaved()) setInspectorOpen(false) }} /> : null}</div>
+        <div className="gc-inspector-heading"><h2>{sourceSelected ? sourceChain?.label : special === 'content' ? '需求文档' : special === 'codeRisk' ? '代码风险分析' : special === 'relations' ? '用例图谱' : activeStage?.label ?? '阶段详情'}</h2>{status ? <span className={`gc-state ${activeStage ? generationStageClass(activeStage) : 'is-muted'}`}>{status}</span> : null}{!modalOpen && !relationsOpen && !documentOpen ? <Button type="text" size="small" icon={<CloseOutlined />} aria-label="关闭阶段详情" onClick={() => { if (workspace.guardUnsaved()) { setInspectorOpen(false); workspace.clearStage() } }} /> : null}</div>
         <p>{activeChain?.label ?? (special === 'content' ? '需求材料' : special === 'codeRisk' ? '代码风险' : '正在读取阶段信息')}{activeStage && !(activeChain?.kind === 'api' && details === activeStage.blockedReason) ? <span className="gc-inspector-stage-summary">{details}</span> : null}</p>
         {runId ? <div className="gc-inspector-run-meta"><span>运行 ID</span><Typography.Text className="gc-inspector-run-id" title={runId} copyable={{ text: runId, tooltips: ['复制运行 ID', '已复制'] }}>{runId.length > 20 ? `${runId.slice(0, 8)}…${runId.slice(-4)}` : runId}</Typography.Text></div> : null}
       </div>

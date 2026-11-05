@@ -3,6 +3,7 @@ import { storageCapabilities, uploadStoredFile } from '@/shared/api/files'
 import type {
   Requirement,
   RequirementListItem,
+  RequirementOption,
   RequirementCreatePayload,
   RequirementDocumentType,
   RequirementDocumentUploadPayload,
@@ -26,6 +27,8 @@ function buildRequirementJsonBody(body: RequirementCreatePayload | RequirementUp
 }
 
 export const requirementsApi = {
+  getProjectRequirementOptions: (projectId: string) =>
+    request<ListResponse<RequirementOption>>(`/v1/projects/${projectId}/requirements/options`),
   getProjectRequirements: (projectId: string, params: { page: number; pageSize: number; sprintId?: string }) =>
     request<ListResponse<RequirementListItem>>(`/v1/projects/${projectId}/requirements${buildQuery(params)}`),
   getRequirements: (sprintId: string) => request<ListResponse<Requirement>>(`/v1/sprints/${sprintId}/requirements`),

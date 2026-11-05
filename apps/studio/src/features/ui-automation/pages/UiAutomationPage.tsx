@@ -2,14 +2,14 @@ import { Alert, Empty } from 'antd'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useProjectRequirements } from '@/features/projects/hooks/useProjectRequirements'
+import { useProjectRequirementOptions } from '@/features/projects/hooks/useProjectRequirementOptions'
 import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
 import { useSprintRequirementScope } from '@/features/projects/hooks/useSprintRequirementScope'
 import { EnvironmentDrawer } from '@/features/projects/components/EnvironmentDrawer'
 import { UiSuiteListToolbar } from '@/features/ui-automation/components/UiSuiteListToolbar'
 import { UiTestSuiteSection, type UiTestSuiteSectionRef } from '@/features/ui-automation/components/UiTestSuiteSection'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
-import { api, listItems, type Requirement } from '@/services/api'
+import { api, listItems } from '@/services/api'
 import { getErrorMessage, normalizeRequirementId, normalizeSprintId } from '@/utils/format'
 import '@/shared/styles/surface-tokens.css'
 import '@/features/ui-automation/styles/list-v2.css'
@@ -31,10 +31,12 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
   const [refreshing, setRefreshing] = useState(false)
   const isRequirementLocked = Boolean(scope?.requirementId)
   const { activeSprintId: globalSprintId, selectSprint: selectGlobalSprint } = useActiveSprint()
+  const { allRequirements, allRequirementsQuery, requirementNameMap, requirementSprintMap, sprintNameMap } =
+    useProjectRequirementOptions({ activeProjectId })
   const {
     currentRequirementSelection,
     requirementFilterOptions,
-    requirementsQuery,
+    requirementsLoading,
     resolvedSelectedRequirementId,
     resolvedSelectedSprintId,
     selectRequirement,
@@ -47,15 +49,11 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
     includeAllSprintOption: true,
     defaultToAllWhenIncluded: true,
     sprintScope: scope ? undefined : { value: globalSprintId, onChange: selectGlobalSprint },
+    requirementOptions: allRequirements,
+    requirementOptionsLoading: allRequirementsQuery.isLoading,
   })
   const selectedSprintId = scope?.sprintId ?? resolvedSelectedSprintId
   const selectedRequirementId = scope?.requirementId ?? resolvedSelectedRequirementId
-  const { allRequirements, allRequirementsQuery, requirementNameMap, requirementSprintMap, sprintNameMap } =
-    useProjectRequirements({
-      activeProjectId,
-      enabled: !sprintsQuery.isLoading && !isRequirementLocked,
-      sprints,
-    })
   const displayRequirementFilterOptions = useMemo(() => {
     if (selectedSprintId) return requirementFilterOptions
     return [
@@ -72,8 +70,8 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
   )
   const visibleRequirementIds = useMemo(() => {
     if (selectedRequirementId) return [selectedRequirementId]
-    const targetRequirements: Requirement[] = selectedSprintId
-      ? allRequirements.filter((item) => (item.sprintId ?? item.sprint_id) === selectedSprintId)
+    const targetRequirements = selectedSprintId
+      ? allRequirements.filter((item) => item.sprintId === selectedSprintId)
       : allRequirements
     return targetRequirements.map(normalizeRequirementId)
   }, [allRequirements, selectedRequirementId, selectedSprintId])
@@ -111,7 +109,7 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
             showScopeFilters={!isRequirementLocked}
             requirementValue={currentRequirementSelection === null ? 'all' : selectedRequirementId ?? 'all'}
             requirementOptions={displayRequirementFilterOptions}
-            requirementLoading={requirementsQuery.isLoading || allRequirementsQuery.isLoading}
+            requirementLoading={requirementsLoading || allRequirementsQuery.isLoading}
             requirementDisabled={!selectedSprintId && allRequirements.length === 0}
             onRequirementChange={(value: string) => selectRequirement(value === 'all' ? null : value)}
             keyword={keyword}
@@ -129,7 +127,6 @@ export function UiAutomationPage({ scope }: { scope?: UiAutomationPageScope }) {
 
           {sprintsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(sprintsQuery.error)} /> : null}
           {environmentsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(environmentsQuery.error)} /> : null}
-          {!isRequirementLocked ? <>{requirementsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(requirementsQuery.error)} /> : null}</> : null}
           {!isRequirementLocked ? <>{allRequirementsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(allRequirementsQuery.error)} /> : null}</> : null}
 
           {!activeProjectId ? (

@@ -27,6 +27,14 @@ async def list_api_collections(
     return success_payload(await service.list(user_id, requirement_id))
 
 
+async def list_project_api_collections(
+    project_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: ApiCollectionService = Depends(get_api_collection_service),
+):
+    return success_payload(await service.list_by_project(user_id, project_id))
+
+
 async def get_api_collection(
     collection_id: str,
     user_id: str = Depends(get_current_user_id),

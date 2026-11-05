@@ -40,8 +40,8 @@ vi.mock('@/features/projects/hooks/useSprintRequirementScope', () => ({
     selectSprint: vi.fn(),
   }),
 }))
-vi.mock('@/features/projects/hooks/useProjectRequirements', () => ({
-  useProjectRequirements: () => ({
+vi.mock('@/features/projects/hooks/useProjectRequirementOptions', () => ({
+  useProjectRequirementOptions: () => ({
     allRequirements: [{ requirementId: 'req-1', name: '安装部署', sprintId: 'sprint-1' }],
     allRequirementsQuery: { isLoading: false, error: null },
     requirementNameMap: new Map([['req-1', '安装部署']]),

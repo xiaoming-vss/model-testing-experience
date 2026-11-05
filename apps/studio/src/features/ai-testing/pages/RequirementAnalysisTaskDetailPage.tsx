@@ -19,6 +19,7 @@ import { ActionButton } from '@/shared/components/ActionButton'
 import { usePersonalLlmChoice } from '../hooks/usePersonalLlmChoice'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
+import { useProjectRequirementOptions } from '@/features/projects/hooks/useProjectRequirementOptions'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { ArrowLeftOutlined, CodeOutlined, FileTextOutlined, HistoryOutlined } from '@ant-design/icons'
 import { Alert, Button, Empty, Form, Modal, Popconfirm, Spin, Tag } from 'antd'
@@ -48,17 +49,12 @@ import '@/features/ai-testing/styles/task-detail-v2.css'
 import './RequirementAnalysisTaskDetailPage.css'
 import '@/features/ai-testing/styles/functional-artifact-modal.css'
 import { RequirementDocumentPreviewContent } from '@/features/requirements/components/RequirementDocumentPreviewModal'
-import type { Requirement } from '@/features/requirements/types'
+import type { RequirementOption } from '@/features/requirements/types'
 import { hasRequirementDocument } from '@/features/requirements/utils/requirementDocument'
 import { api, listItems } from '@/services/api'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
 import { message } from '@/shared/utils/feedback'
 import { formatTime, getErrorMessage, normalizeRequirementId, normalizeSprintId, pickUpdatedAt } from '@/utils/format'
-
-type RequirementPoolItem = Requirement & {
-  sprintName: string
-  sprintIdForCreate: string
-}
 
 const runResultSectionDefinitions = [
   { key: 'firstStepOutput', label: '材料提取结果' },
@@ -200,25 +196,7 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
     enabled: Boolean(task?.projectId),
   })
 
-  const requirementsQuery = useQuery({
-    queryKey: ['requirementsPool', 'requirementAnalysisTaskDetail', task?.projectId],
-    queryFn: async () => {
-      if (!sprintsQuery.data || sprintsQuery.data.length === 0) return [] as RequirementPoolItem[]
-      const groups = await Promise.all(
-        sprintsQuery.data.map(async (sprint) => {
-          const sprintId = normalizeSprintId(sprint)
-          const requirements = await api.getRequirements(sprintId)
-          return requirements.map((requirement) => ({
-            ...requirement,
-            sprintName: sprint.name,
-            sprintIdForCreate: sprintId,
-          }))
-        }),
-      )
-      return groups.flat()
-    },
-    enabled: Boolean(task?.projectId) && !sprintsQuery.isLoading,
-  })
+  const { allRequirements } = useProjectRequirementOptions({ activeProjectId: task?.projectId })
 
   const sprintOptions = useMemo(
     () => listItems(sprintsQuery.data).map((sprint) => ({ label: sprint.name, value: normalizeSprintId(sprint) })),
@@ -226,23 +204,24 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
   )
   const requirementOptions = useMemo(
     () =>
-      listItems(requirementsQuery.data)
-        .filter((requirement) => !drawerSprintId || requirement.sprintIdForCreate === drawerSprintId)
+      allRequirements
+        .filter((requirement) => !drawerSprintId || requirement.sprintId === drawerSprintId)
         .map((requirement) => ({
           label: `${requirement.name}${drawerSprintId ? '' : `（${requirement.sprintName}）`}`,
           value: normalizeRequirementId(requirement),
         })),
-    [drawerSprintId, requirementsQuery.data],
+    [allRequirements, drawerSprintId],
   )
   const sprintNameMap = useMemo(
     () => new Map(listItems(sprintsQuery.data).map((sprint) => [normalizeSprintId(sprint), sprint.name])),
     [sprintsQuery.data],
   )
   const requirementMap = useMemo(
-    () => new Map(listItems(requirementsQuery.data).map((requirement) => [normalizeRequirementId(requirement), requirement])),
-    [requirementsQuery.data],
+    () => new Map<string, RequirementOption>(allRequirements.map((requirement) => [normalizeRequirementId(requirement), requirement])),
+    [allRequirements],
   )
-  const boundRequirement = boundRequirementQuery.data ?? (task?.requirementId ? requirementMap.get(task.requirementId) : undefined)
+  // 正文只来自详情接口；下拉摘要只用于名称、迭代和文档元信息。
+  const boundRequirement = boundRequirementQuery.data
 
   const runRecords = useMemo(
     () => [...listItems(runsQuery.data)].sort((left, right) => getRunSortTime(right) - getRunSortTime(left)),
@@ -381,7 +360,7 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
   useEffect(() => {
     if (!task) return
     const requirement = task.requirementId ? requirementMap.get(task.requirementId) : undefined
-    const sprintId = task.sprintId || requirement?.sprintIdForCreate
+    const sprintId = task.sprintId || requirement?.sprintId
     setDrawerSprintId(sprintId)
     form.setFieldsValue({
       name: task.name,

@@ -20,6 +20,7 @@ from testing_agent.handlers.requirement import (
     delete_requirement,
     download_requirement_document,
     get_requirement,
+    list_project_requirement_options,
     list_project_requirements,
     list_requirements,
     update_requirement,
@@ -46,11 +47,19 @@ from testing_agent.schemas.generation_chain import (
     GenerationChainVersionDetail,
     GenerationChainView,
 )
-from testing_agent.schemas.requirement import RequirementListItemResponse, RequirementResponse
+from testing_agent.schemas.requirement import (
+    RequirementListItemResponse,
+    RequirementOptionResponse,
+    RequirementResponse,
+)
 from testing_agent.schemas.requirement_design import RequirementDesignResponse
 
 router = APIRouter()
 
+router.get(
+    "/projects/{project_id}/requirements/options",
+    response_model=ApiResponse[ListResponse[RequirementOptionResponse]],
+)(list_project_requirement_options)
 router.get(
     "/projects/{project_id}/requirements",
     response_model=ApiResponse[ListResponse[RequirementListItemResponse]],

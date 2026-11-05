@@ -10,8 +10,10 @@ from testing_agent.core.errors import (
     ErrApiCaseRunEnvironmentMismatch,
     ErrApiCaseRunNotFound,
     ErrApiEnvironmentKindMismatch,
+    ErrBadRequest,
     ErrForbidden,
     ErrNotFound,
+    dynamic_error,
 )
 from testing_agent.core.sid import new_id
 from testing_agent.models.api_case import ApiCase
@@ -173,6 +175,18 @@ class ApiCaseService:
         await self.repository.commit()
         await self.repository.refresh(context.api_case)
         return dump(ApiCaseResponse, context.api_case)
+
+    async def reorder(self, user_id: str, collection_id: str, case_ids: list[str]) -> dict:
+        # 请求必须完整描述测试集：缺 id/未知 id 会留下重复或歧义的顺序，直接拒绝而不是部分应用。
+        await self.get_accessible_collection(user_id, collection_id, action="write")
+        rows = await self.repository.list_cases(collection_id)
+        by_id = {row.case_id: row for row in rows}
+        if len(case_ids) != len(rows) or set(case_ids) != set(by_id):
+            raise dynamic_error(ErrBadRequest, "用例顺序与测试集不一致，请刷新后重试")
+        for index, case_id in enumerate(case_ids):
+            by_id[case_id].order_no = index + 1
+        await self.repository.commit()
+        return list_payload([dump(ApiCaseResponse, by_id[case_id]) for case_id in case_ids])
 
     async def delete(self, user_id: str, case_id: str) -> dict:
         context = await self.get_accessible_context(user_id, case_id, action="write")

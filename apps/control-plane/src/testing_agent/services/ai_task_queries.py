@@ -89,6 +89,23 @@ class GenerationQueries:
             return await auxiliary_history(self.repository.session, task_id, page, page_size)
         raise ErrBadRequest()
 
+    async def list_project_latest_runs(
+        self, kind: str, project_id: str, user_id: str
+    ) -> dict[str, Any]:
+        """Latest run summary for every auxiliary task in a project.
+
+        The Studio used to issue one runs request per task to fill its list; this
+        read keeps the same summary shape but returns the project in one request.
+        """
+        if kind != "code_risk_analysis":
+            raise ErrBadRequest()
+        await self.access.ensure_project_access(user_id, project_id, action="read")
+        from testing_agent.services.auxiliary_execution_view import (
+            latest_project_run_summaries,
+        )
+
+        return list_payload(await latest_project_run_summaries(self.repository.session, project_id))
+
     async def list_test_report_run_summaries(
         self, project_id: str, sprint_id: str, user_id: str, page: int = 1, page_size: int = 20
     ) -> dict[str, Any]:

@@ -29,6 +29,8 @@ import type {
 export const apiAutomationApi = {
   getApiCollections: (requirementId: string) =>
     request<ListResponse<ApiCollection>>(`/v1/requirements/${requirementId}/api-collections`),
+  getProjectApiCollections: (projectId: string) =>
+    request<ListResponse<ApiCollection>>(`/v1/projects/${projectId}/api-collections`),
   createApiCollection: (requirementId: string, body: CreateApiCollectionPayload) =>
     request<ApiCollection>(`/v1/requirements/${requirementId}/api-collections`, {
       method: 'POST',
@@ -75,6 +77,11 @@ export const apiAutomationApi = {
   deleteApiEnvironmentVar: (envVarId: string) =>
     request<Record<string, never>>(`/v1/api-environment-vars/${envVarId}`, { method: 'DELETE' }),
   getApiCases: (collectionId: string) => request<ListResponse<ApiCase>>(`/v1/api-collections/${collectionId}/cases`),
+  reorderApiCases: (collectionId: string, caseIds: string[]) =>
+    request<ListResponse<ApiCase>>(`/v1/api-collections/${collectionId}/cases/reorder`, {
+      method: 'PATCH',
+      body: JSON.stringify({ caseIds }),
+    }),
   createApiCase: (collectionId: string, body: CreateApiCasePayload) =>
     request<ApiCase>(`/v1/api-collections/${collectionId}/cases`, {
       method: 'POST',

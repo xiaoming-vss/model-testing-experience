@@ -339,3 +339,38 @@
 .ui-suite-detail-page .ui-test-case-step-card-top:active .ui-wb-step-grip {
   cursor: grabbing;
 }
+
+/* 用例列表/详情加载时的流程骨架：按真实卡片尺寸占位，避免先闪空态再跳到画布。 */
+.ui-suite-detail-page .ui-flow-loading {
+  min-height: 360px;
+}
+
+.ui-suite-detail-page .ui-flow-loading-label {
+  color: var(--srf-text-muted);
+  font-size: 12px;
+}
+
+.ui-suite-detail-page .ui-flow-loading-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 180px);
+  align-content: start;
+  gap: 20px;
+}
+
+.ui-suite-detail-page .ui-flow-loading-card {
+  height: 86px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--srf-hover) 20%, var(--srf-card) 40%, var(--srf-hover) 60%);
+  background-size: 300% 100%;
+  animation: ui-flow-loading-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes ui-flow-loading-shimmer {
+  from { background-position: 100% 50%; }
+  to { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-suite-detail-page .ui-flow-loading-card { animation: none; }
+}

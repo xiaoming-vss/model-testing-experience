@@ -4,7 +4,6 @@ import {
   Alert,
   Button,
   Empty,
-  Input,
   Popconfirm,
   Space,
   Table,
@@ -13,7 +12,8 @@ import {
 } from 'antd'
 import type { InputRef, TableProps } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { DebouncedSearchInput } from '@/shared/components/DebouncedSearchInput'
 import { useNavigate } from 'react-router-dom'
 import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
@@ -51,8 +51,8 @@ export function TestOrderPage() {
   const { activeSprintId, sprints, sprintsQuery, sprintSelectorOptions } =
     useActiveSprint()
 
-  const [keyword, setKeyword] = useState('')
   const [searchKeyword, setSearchKeyword] = useState('')
+  const [searchResetKey, setSearchResetKey] = useState(0)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -82,10 +82,10 @@ export function TestOrderPage() {
     if (ordersQuery.isSuccess && currentPage !== page) setPage(currentPage)
   }, [ordersQuery.isSuccess, currentPage, page])
   useEffect(() => { setPage(1) }, [activeProjectId, activeSprintId])
-  useEffect(() => {
-    const timer = setTimeout(() => { setSearchKeyword(keyword.trim()); setPage(1) }, 250)
-    return () => clearTimeout(timer)
-  }, [keyword])
+  const commitSearch = useCallback((value: string) => {
+    setSearchKeyword(value)
+    setPage(1)
+  }, [])
 
   // 保留搜索框快捷键：Mac 用 ⌘K，其他平台用 Ctrl+K。
   useEffect(() => {
@@ -274,7 +274,7 @@ export function TestOrderPage() {
     setDrawerOpen(true)
   }
 
-  const hasLocalFilters = Boolean(keyword.trim())
+  const hasLocalFilters = Boolean(searchKeyword.trim())
 
   return (
     <div className="workbench-page api-automation-page functional-test-page tp-list-surface test-orders-page tp-surface">
@@ -284,15 +284,15 @@ export function TestOrderPage() {
             <div className="api-filter-group test-orders-filters">
               <h1 className="tp-list-title">测试单</h1>
               <div className="api-filter-field test-orders-search-field">
-                <Input
-                  ref={keywordInputRef}
+                <DebouncedSearchInput
+                  inputRef={keywordInputRef}
                   className="api-filter-input test-orders-search-input"
-                  allowClear
                   prefix={<SearchOutlined />}
                   suffix={<button type="button" className="test-orders-search-submit" onClick={() => { setPage(1); keywordInputRef.current?.focus() }}>搜索</button>}
                   placeholder="搜索测试单名称 / 被测版本"
-                  value={keyword}
-                  onChange={(event) => setKeyword(event.target.value)}
+                  ariaLabel="搜索测试单名称 / 被测版本"
+                  resetKey={searchResetKey}
+                  onCommit={commitSearch}
                 />
               </div>
             </div>
@@ -368,7 +368,9 @@ export function TestOrderPage() {
                         {hasLocalFilters ? (
                           <Button
                             onClick={() => {
-                              setKeyword('')
+                              setSearchResetKey((current) => current + 1)
+                              setSearchKeyword('')
+                              setPage(1)
                             }}
                           >
                             清空筛选
@@ -404,7 +406,11 @@ export function TestOrderPage() {
                           ) {
                             return
                           }
-                          if (order.orderId) navigate(`/test-orders/${order.orderId}`)
+                          if (order.orderId) {
+                            // 列表行本身就是完整测试单，先写缓存，工作台不必再取一次详情。
+                            queryClient.setQueryData(['testOrder', order.orderId], order)
+                            navigate(`/test-orders/${order.orderId}`)
+                          }
                         },
                       })}
                     />

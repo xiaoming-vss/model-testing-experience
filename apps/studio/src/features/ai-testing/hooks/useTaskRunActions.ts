@@ -50,6 +50,8 @@ export function useDeleteTaskRun({ kind, taskId, selectedRunId, onSelectedRunDel
       if (selectedRunId === runId) onSelectedRunDeleted()
       queryClient.removeQueries({ queryKey: [config.run, runId], exact: true })
       queryClient.invalidateQueries({ queryKey: [config.runs, taskId] })
+      // 统一 AI 测试列表按项目批量取每个任务的最新运行，删除后同一份摘要也要失效。
+      if (kind === 'codeRisk') queryClient.invalidateQueries({ queryKey: ['codeRiskTaskLatestRuns'] })
     },
     onError: (error) => message.error(getErrorMessage(error)),
   })
@@ -79,6 +81,8 @@ export function useStartTaskRun<TInput, TRun extends { runId?: string; projectId
         queryClient.invalidateQueries({ queryKey: [config.tasks, projectId ?? run.projectId] })
       }
       queryClient.invalidateQueries({ queryKey: [config.runs, taskId] })
+      // 代码风险任务在统一 AI 测试列表里展示项目级最新运行摘要，发起后同步失效。
+      if (kind === 'codeRisk') queryClient.invalidateQueries({ queryKey: ['codeRiskTaskLatestRuns'] })
     },
     // 其它详情页使用 mutation.error 呈现错误，代码风险页使用消息提示。
     onError: kind === 'codeRisk' ? (error) => message.error(getErrorMessage(error)) : undefined,

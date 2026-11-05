@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import type { RequirementOption } from '@/features/requirements/types'
 import { useQuery } from '@tanstack/react-query'
 import { api, type Requirement, type Sprint } from '@/services/api'
 import { normalizeRequirementId, normalizeSprintId, pickCreatedAt } from '@/utils/format'
@@ -26,6 +27,9 @@ type UseSprintRequirementScopeOptions = {
   initialSprintId?: string | null
   initialRequirementId?: string | null
   sprintScope?: SprintScopeController
+  /** 已由 useProjectRequirementOptions 取回的项目级摘要；传入时不再请求 sprint 全量列表。 */
+  requirementOptions?: RequirementOption[]
+  requirementOptionsLoading?: boolean
 }
 
 function pickLatestItem<T>(items: T[], getTime: (item: T) => string | undefined) {
@@ -45,6 +49,8 @@ export function useSprintRequirementScope(options: UseSprintRequirementScopeOpti
     initialSprintId,
     initialRequirementId,
     sprintScope,
+    requirementOptions,
+    requirementOptionsLoading = false,
   } = options
   const [sprintSelection, setSprintSelection] = useState<ProjectScopedSelection>({})
   const [requirementSelection, setRequirementSelection] = useState<ProjectScopedSelection>({})
@@ -78,11 +84,20 @@ export function useSprintRequirementScope(options: UseSprintRequirementScopeOpti
   const requirementsQuery = useQuery({
     queryKey: requirementsQueryKey(resolvedSelectedSprintId),
     queryFn: () => fetchSprintRequirements(resolvedSelectedSprintId!),
-    enabled: Boolean(resolvedSelectedSprintId),
+    // 有项目级摘要时按 sprint 本地过滤，避免下拉再拉一次含正文的 sprint 列表。
+    enabled: Boolean(resolvedSelectedSprintId) && !requirementOptions,
     staleTime: REQUIREMENTS_STALE_TIME,
   })
 
-  const requirements = useMemo(() => requirementsQuery.data ?? [], [requirementsQuery.data])
+  const requirements = useMemo(
+    () => requirementOptions
+      ? (resolvedSelectedSprintId
+        ? requirementOptions.filter((requirement) => requirement.sprintId === resolvedSelectedSprintId)
+        : requirementOptions)
+      : requirementsQuery.data ?? [],
+    [requirementOptions, requirementsQuery.data, resolvedSelectedSprintId],
+  )
+  const requirementsLoading = requirementOptions ? requirementOptionsLoading : requirementsQuery.isLoading
   const latestRequirement = useMemo(() => pickLatestItem<Requirement>(requirements, pickCreatedAt), [requirements])
   const currentRequirementSelection: ScopeSelectionValue =
     requirementSelection.projectId === activeProjectId && requirementSelection.sprintId === resolvedSelectedSprintId ? (requirementSelection.value ?? null) : UNSET_SELECTION
@@ -147,6 +162,7 @@ export function useSprintRequirementScope(options: UseSprintRequirementScopeOpti
     currentSprintSelection,
     requirementFilterOptions,
     requirements,
+    requirementsLoading,
     requirementsQuery,
     resolvedSelectedRequirementId,
     resolvedSelectedSprintId,

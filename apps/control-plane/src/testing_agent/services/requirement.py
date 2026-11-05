@@ -16,6 +16,7 @@ from testing_agent.repositories.requirement import RequirementRepository
 from testing_agent.schemas.requirement import (
     CreateRequirementRequest,
     RequirementListItemResponse,
+    RequirementOptionResponse,
     RequirementResponse,
     UpdateRequirementRequest,
     normalize_document_type,
@@ -120,6 +121,16 @@ class RequirementService:
             for row in rows
         ]
         return {"items": items, "total": total}
+
+    async def list_options(self, user_id: str, project_id: str) -> dict[str, Any]:
+        await self.sprints.projects.get_accessible_entity(user_id, project_id, action="read")
+        rows = await self.requirements.list_options_by_project(project_id)
+        return list_payload(
+            [
+                RequirementOptionResponse.model_validate(row).model_dump(by_alias=True, mode="json")
+                for row in rows
+            ]
+        )
 
     async def get(self, user_id: str, requirement_id: str) -> dict:
         return dump_requirement(

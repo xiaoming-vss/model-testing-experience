@@ -1,6 +1,6 @@
 import { CopyOutlined } from '@ant-design/icons'
 import { message } from '@/shared/utils/feedback'
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Button, Segmented, Tabs, type TabsProps } from 'antd'
 import type { TabsRef } from 'antd/es/tabs'
@@ -70,6 +70,23 @@ export function ArtifactViewTabs({ activeKey, defaultActiveKey, onChange, items,
   const [localKey, setLocalKey] = useState(defaultActiveKey ?? items?.[0]?.key ?? '')
   const value = activeKey ?? localKey
   const tabsRef = useRef<TabsRef>(null)
+  // 隐藏的页签保持挂载以保留展开/滚动/选中状态，但冻结它最后一次可见时的 children：
+  // 父级编辑当前页签时不再把新内容推给隐藏页签，隐藏页签就不会跟着每次击键重算。
+  const [inactiveChildren, setInactiveChildren] = useState<Record<string, ReactNode>>({})
+  const paneStateRef = useRef({ key: value, items })
+  const visibleItems = useMemo(() => (items ?? []).map(item => {
+    const key = String(item.key ?? '')
+    if (key === value) return item
+    return key in inactiveChildren ? { ...item, children: inactiveChildren[key] } : item
+  }), [inactiveChildren, items, value])
+  useLayoutEffect(() => {
+    const previous = paneStateRef.current
+    if (previous.key !== value) {
+      const leaving = (items ?? []).find(item => String(item.key ?? '') === previous.key)
+      if (leaving) setInactiveChildren(current => ({ ...current, [previous.key]: leaving.children }))
+    }
+    paneStateRef.current = { key: value, items }
+  }, [items, value])
   const selectedIndex = (items ?? []).findIndex(item => item.key === value)
   const previousIndex = useRef(selectedIndex)
   useLayoutEffect(() => {
@@ -84,6 +101,6 @@ export function ArtifactViewTabs({ activeKey, defaultActiveKey, onChange, items,
     <ArtifactModeSwitch copyText={value === copyKey ? jsonCopyText : undefined} copyLabel={copyLabel} value={value} onChange={change} options={(items ?? []).map((item) => ({
       value: item.key, label: item.key === 'json' ? 'JSON' : String(item.label),
     }))} />
-    <Tabs ref={tabsRef} {...props} items={items} activeKey={value} onChange={change} renderTabBar={() => <></>} />
+    <Tabs ref={tabsRef} {...props} items={visibleItems} activeKey={value} onChange={change} renderTabBar={() => <></>} />
   </>
 }

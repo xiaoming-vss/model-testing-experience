@@ -17,6 +17,10 @@
 .ui-suite-detail-page .ui-flow-node-action-trigger:hover, .ui-suite-detail-page .ui-flow-node-action-trigger:focus-visible { border-color:var(--srf-accent); color:var(--srf-accent); }
 @media (max-width: 700px) { .ui-suite-detail-page .ui-flow-node-actions { opacity:1; } }
 @media (pointer: coarse) { .ui-suite-detail-page .ui-flow-node-actions { opacity:1; } }
+/* 首屏按执行顺序依次浮现；卡片仍一次性挂载，避免反复 fitView 和连线重算。 */
+@keyframes ui-flow-node-reveal { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+.ui-suite-detail-page .ui-flow-canvas.is-revealing .ui-flow-node { animation:ui-flow-node-reveal .24s ease-out both; }
+@media (prefers-reduced-motion:reduce) { .ui-suite-detail-page .ui-flow-canvas.is-revealing .ui-flow-node { animation:none; } }
 /* 流程末尾的添加入口：虚线卡片，点击在末尾追加一张卡片。 */
 .ui-suite-detail-page .ui-flow-node-add { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; border-style:dashed; background:transparent; color:var(--srf-text-secondary); cursor:pointer; }
 .ui-suite-detail-page .ui-flow-node-add:hover, .ui-suite-detail-page .ui-flow-node-add:focus-within { border-color:var(--srf-accent); color:var(--srf-accent); }

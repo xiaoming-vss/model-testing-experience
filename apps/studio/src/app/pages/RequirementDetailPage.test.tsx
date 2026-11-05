@@ -44,7 +44,10 @@ function mount(forbidden = false, entry = '/requirements/req', documentType = 'd
 it('进入需求直接展示生成全景，文档交给工作区在画布内打开', async () => {
   mount()
   expect(await screen.findByRole('heading', { name: '登录需求' })).toBeInTheDocument()
-  expect(screen.getByRole('heading', { name: '登录需求' }).closest('.requirement-detail-header')?.parentElement).toHaveClass('requirement-detail-page')
+  // 标题栏与生成全景共用同一个容器。
+  const header = screen.getByRole('heading', { name: '登录需求' }).closest('.requirement-detail-header')
+  expect(header?.parentElement).toHaveClass('requirement-detail-main')
+  expect(header?.closest('.requirement-detail-page')).not.toBeNull()
   expect(await screen.findByTestId('generation-workspace')).toHaveTextContent('req · canonical-project')
   expect(screen.queryByRole('tablist', { name: '需求工作区' })).not.toBeInTheDocument()
   expect(screen.queryByRole('tab')).not.toBeInTheDocument()

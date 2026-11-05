@@ -45,6 +45,27 @@ class RequirementRepository(ResourceRepository):
         )
         return total or 0, list(result.mappings().all())
 
+    async def list_options_by_project(self, project_id: str) -> list[RowMapping]:
+        """Lightweight requirement options for dropdowns: no document body, no bindings."""
+        result = await self.session.execute(
+            select(
+                Requirement.requirement_id,
+                Requirement.sprint_id,
+                Requirement.name,
+                Requirement.document_filename,
+                Requirement.created_at,
+                Sprint.name.label("sprint_name"),
+            )
+            .join(Sprint, Sprint.sprint_id == Requirement.sprint_id)
+            .where(Sprint.project_id == project_id)
+            .order_by(
+                Sprint.created_at.desc(),
+                Requirement.created_at.desc(),
+                Requirement.id.desc(),
+            )
+        )
+        return list(result.mappings().all())
+
     async def get_active_by_sprint_and_name(self, sprint_id: str, name: str) -> Requirement | None:
         return await self.session.scalar(
             select(Requirement).where(

@@ -328,6 +328,12 @@ export function useRequirementGenerationChain({
     refresh()
   }, [refresh])
 
+  // 关闭侧栏只需要退出阶段选择：清掉 selected 后详情查询自然停用，
+  // 不再在后台按 30s/5s 轮询整条链的草稿正文；重新打开时会重新取一次。
+  const clearStage = useCallback(() => {
+    setSelected(undefined)
+  }, [])
+
   const invalidate = () => {
     refresh()
     void client.invalidateQueries({
@@ -587,6 +593,7 @@ export function useRequirementGenerationChain({
     setFilter,
     openStage,
     closeStage,
+    clearStage,
     refresh,
     runStage,
     review,

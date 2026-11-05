@@ -84,6 +84,7 @@ from testing_agent.services.import_payload import (
 )
 from testing_agent.services.project_access import (
     ProjectAction,
+    require_project_access,
     require_requirement_access,
 )
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
@@ -126,6 +127,20 @@ class ApiCollectionService:
     async def list(self, user_id: str, requirement_id: str) -> dict[str, Any]:
         await self.ensure_requirement_access(user_id, requirement_id, action="read")
         rows = await self.repository.list_by_requirement(requirement_id)
+        return list_payload([dump(ApiCollectionResponse, row) for row in rows])
+
+    async def list_by_project(self, user_id: str, project_id: str) -> dict[str, Any]:
+        """List every collection in a project in one read.
+
+        The Studio's "all requirements" scope otherwise fans out one request per
+        requirement; project access is checked once here and returned rows are
+        scoped by the requirement -> sprint -> project join.
+        """
+        project = await self.repository.get_project(project_id)
+        if project is None:
+            raise ErrNotFound()
+        await require_project_access(self.repository.session, user_id, project, "read")
+        rows = await self.repository.list_by_project(project_id)
         return list_payload([dump(ApiCollectionResponse, row) for row in rows])
 
     async def get(self, user_id: str, collection_id: str) -> dict:
