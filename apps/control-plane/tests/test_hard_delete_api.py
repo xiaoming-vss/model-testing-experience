@@ -65,6 +65,28 @@ def test_code_risk_task_can_be_deleted_before_requirement(api):
     assert remaining.json()["data"]["blockers"][0]["count"] == 2
 
 
+def test_repository_profile_task_does_not_block_requirement_deletion(api):
+    _, owner = account(api, "profile-delete-owner")
+    pid = project(api, owner)
+    rid = requirement(api, owner, pid)
+    response = api.post(
+        f"/v1/projects/{pid}/repository-profile-tasks",
+        headers=owner,
+        json={"requirementId": rid},
+    )
+    assert response.status_code == 200, response.text
+    tid = response.json()["data"]["taskId"]
+    tasks = api.get(f"/v1/projects/{pid}/repository-profile-tasks", headers=owner)
+    assert tasks.status_code == 200, tasks.text
+    assert [item["taskId"] for item in tasks.json()["data"]["items"]] == [tid]
+
+    blocked = api.delete(f"/v1/requirements/{rid}", headers=owner)
+    assert blocked.status_code == 409
+    blockers = blocked.json()["data"]["blockers"]
+    ai_blocker = next(item for item in blockers if item["name"] == "AI 任务")
+    assert ai_blocker["count"] == 2
+
+
 def test_deleting_running_case_rejects_late_worker_result(api):
     from testing_agent.api.deps import verify_worker_token
 

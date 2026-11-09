@@ -3,7 +3,7 @@
 UI 自动化运行时可读取项目环境变量，并在步骤成功后把页面上的值写回环境。环境与 API
 自动化共用 `api_environments` / `api_environment_vars`，用 `kind` 区分 `api` 与 `ui`。
 设计决策来源：`.scratch/ui-env-vars/spec.md`；原始需求见
-`~/data/文档/test-agent/需求/UI自动化环境变量与测试数据复用需求.md`。
+`~/data/文档/test-agent/需求/已完成/UI自动化环境变量与测试数据复用需求.md`。
 
 ## 变量引用
 

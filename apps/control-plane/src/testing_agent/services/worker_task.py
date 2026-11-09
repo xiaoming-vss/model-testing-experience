@@ -526,7 +526,7 @@ class WorkerTaskService:
         direct = DirectStageWorkerService(self.repository.session)
         if await direct.is_direct(task):
             stage_authority = await direct.authorize(task)
-            if task.task_type != "code_risk_analysis":
+            if task.task_type not in {"code_risk_analysis", "repository_profile"}:
                 raise ErrNotFound()
             source = stage_authority.input_snapshot.get("source") or {}
             bindings = source.get("bindings") or []

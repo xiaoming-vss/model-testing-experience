@@ -4,7 +4,6 @@
 .requirements-list-page-header { display: flex; align-items: center; justify-content: space-between; flex: 0 0 56px; flex-wrap: wrap; gap: 16px; min-width: 0; padding: 0 16px; border: 1px solid var(--srf-card-border); border-radius: var(--srf-radius-card); background: var(--srf-list-header-bg); }
 .requirements-list-title-accent { width: 3px; height: 14px; flex: 0 0 auto; border-radius: 2px; background: var(--srf-accent); }
 .requirements-list-count { color: var(--srf-text-secondary); font-size: 11px; line-height: 18px; white-space: nowrap; }
-#root .requirements-list-panel.tp-list-panel { --app-list-toolbar-bg: transparent; background: var(--app-board-gradient) !important; }
 #root .requirements-page .requirements-list-panel.tp-list-panel { flex: 1 1 auto; }
 .requirements-list-scroll { flex: 1; min-height: 0; min-width: 0; overflow: auto; padding: 16px; background: transparent; }
 .requirements-list-scroll > .ant-empty { margin: 32px 0; }

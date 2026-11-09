@@ -1,0 +1,100 @@
+.gc-profile-inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.gc-profile-binding-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.gc-profile-tool-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gc-inspector-hint {
+  margin: 0;
+  color: var(--app-text-secondary);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.gc-artifact-scroll.is-profile-reading {
+  padding: 16px 24px 24px;
+}
+
+.gc-profile-reading-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+}
+
+.repository-profile-report {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.repository-profile-summary-text {
+  margin: 0;
+}
+
+.repository-profile-table .ant-table-expanded-row > td {
+  background: var(--app-surface-hover);
+}
+
+.repository-profile-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 2px;
+}
+
+.repository-profile-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 24px;
+  margin: 0;
+}
+
+.repository-profile-detail-grid > div {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.repository-profile-detail-grid dt {
+  color: var(--app-text-secondary);
+  font-size: 12px;
+  line-height: 22px;
+}
+
+.repository-profile-detail-grid dd {
+  margin: 0;
+  min-width: 0;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+
+.repository-profile-evidence {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.repository-profile-raw {
+  max-height: 60vh;
+  overflow: auto;
+}
+
+@media (max-width: 900px) {
+  .repository-profile-detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -377,11 +377,15 @@ def test_gitlab_overview_does_not_reuse_another_members_authorization(
     async def scope(self, base_url, token, group_id, repository_id):
         return {"withinGroup": True, "repositoryId": "9"}
 
+    async def branch(self, base_url, token, repository_id, branch_name):
+        return {"name": branch_name, "commitId": "sha"}
+
     async def compare(self, base_url, token, repository_id, **kwargs):
         gitlab_remote.append(("compare", base_url, token))
         return {"commitsCount": 1, "additions": 3, "deletions": 0}
 
     monkeypatch.setattr(GitLabResourceClient, "get_repository_group_scope", scope)
+    monkeypatch.setattr(GitLabResourceClient, "get_branch", branch)
     monkeypatch.setattr(GitLabResourceClient, "compare_repository_branches", compare)
     _, owner = account(api, "owner")
     _, member = account(api, "member")
@@ -687,7 +691,24 @@ def test_code_risk_keeps_same_repository_ids_on_different_instances_separate(
     async def scope(self, base_url, token, group_id, repository_id):
         return {"withinGroup": True, "repositoryId": "9"}
 
+    async def branch(self, base_url, token, repository_id, branch_name):
+        return {"name": branch_name, "commitId": "sha"}
+
+    async def gitlab_project(self, base_url, token, repository_id):
+        return {
+            "id": "9",
+            "pathWithNamespace": "team/repo",
+            "cloneUrl": f"{base_url}/team/repo.git",
+            "defaultBranch": "main",
+        }
+
+    async def commit(self, base_url, token, repository_id, ref):
+        return "base-sha" if ref == "base" else "head-sha"
+
     monkeypatch.setattr(GitLabResourceClient, "get_repository_group_scope", scope)
+    monkeypatch.setattr(GitLabResourceClient, "get_branch", branch)
+    monkeypatch.setattr(GitLabResourceClient, "get_project", gitlab_project)
+    monkeypatch.setattr(GitLabResourceClient, "resolve_commit", commit)
     owner_user, owner = account(api, "owner")
     _, member = account(api, "member")
     pid = project(api, owner)
@@ -713,7 +734,7 @@ def test_code_risk_keeps_same_repository_ids_on_different_instances_separate(
                 "connectionId": cid,
                 "remoteResourceId": "9",
                 "remoteParentId": "7",
-                "extraJson": {"branch": "main"},
+                "extraJson": {"branch": "main", "baselineBranch": "base"},
             },
         )
         assert response.status_code == 200, response.text

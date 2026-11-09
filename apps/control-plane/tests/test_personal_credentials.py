@@ -2,7 +2,11 @@ from unittest.mock import Mock
 
 import pytest
 
-from testing_agent.core.errors import ErrIntegrationConnectionAuthFailed, ErrNotFound
+from testing_agent.core.errors import (
+    AppError,
+    ErrIntegrationConnectionAuthFailed,
+    ErrNotFound,
+)
 from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.personal_credentials import PersonalCredentialAccess
@@ -73,12 +77,13 @@ def test_mcp_credentials_decrypt_only_the_selected_personal_token(stored_project
 def test_mcp_credentials_do_not_fall_back_to_ciphertext_or_plaintext():
     cipher = IntegrationCredentialCipher("personal-credential-test-key")
     access = PersonalCredentialAccess(cipher)
-    with pytest.raises(ValueError, match="集成凭据无法解密"):
+    with pytest.raises(AppError, match="请重新授权该连接") as exc_info:
         access.mcp_token(
             connection(secret_json={"token": "unprotected-token"}),
             user_id="owner",
             project_id="project",
         )
+    assert exc_info.value.code == 3403
 
 
 @pytest.mark.parametrize("project_id", ["project", ""])

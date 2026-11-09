@@ -10,9 +10,9 @@ import { getErrorMessage } from '@/utils/format'
 import type { Requirement } from '../types'
 import '../styles/detail.css'
 
-export function RequirementDetailHeader({ requirement, requirementId, canWrite, onBack, onEdit, onRefresh, refreshing, workspaceActionsRef, showDownload, showEdit = true, readingNode, onLeaveReading }: {
+export function RequirementDetailHeader({ requirement, requirementId, canWrite, onBack, onEdit, onRefresh, refreshing, readingActionsRef, showDownload, showEdit = true, readingNode, onLeaveReading }: {
   requirement: Requirement; requirementId: string; canWrite: boolean; showDownload: boolean; showEdit?: boolean;
-  onBack: () => void; onEdit: () => void; onRefresh?: () => void; refreshing?: boolean; workspaceActionsRef?: Ref<HTMLDivElement>
+  onBack: () => void; onEdit: () => void; onRefresh?: () => void; refreshing?: boolean; readingActionsRef?: Ref<HTMLDivElement>
   /** 画布内正在阅读的产物；有值时面包屑追加一级「需求 / 当前产物」。 */
   readingNode?: { label: string; status?: string; tone?: string } | null
   /** 阅读态点「需求名」一级退回生成流程。 */
@@ -40,8 +40,8 @@ export function RequirementDetailHeader({ requirement, requirementId, canWrite, 
     <div className="requirement-detail-actions">
       {showDownload ? <ActionButton operation="download" loading={download.isPending} onClick={() => download.mutate()}>下载原文件</ActionButton> : null}
       {canWrite && showEdit ? <ActionButton operation="edit" onClick={onEdit}>编辑需求</ActionButton> : null}
+      <div className="requirement-detail-workspace-actions" ref={readingActionsRef} />
       {onRefresh ? <ActionButton operation="refresh" loading={refreshing} onClick={onRefresh}>刷新</ActionButton> : null}
-      <div className="requirement-detail-workspace-actions" ref={workspaceActionsRef} />
     </div>
   </header>
 }

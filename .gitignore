@@ -2,6 +2,7 @@
 /config/platform.toml
 /.runtime/
 /runtime/
+/deploy/helm/mtx/charts/
 /deploy/zentao-mcp/config/
 **/.env
 **/.env.*

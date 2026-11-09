@@ -208,11 +208,12 @@ async def apply_stage_progress(
         or (body.stage_status is not None and body.current_stage != stage)
     ):
         raise ErrBadRequest()
-    supplied = _check_inputs(stage, frozen_config, body.config_json)
     transitions = StageWorkerTransitions(session)
     if body.stage_status == "waiting_review":
         if body.current_stage != stage or is_final_stage(kind, stage):
             raise ErrBadRequest()
+        # 只有等待审核的进展会落产物，需要核对上游输入；running 心跳不读取 config。
+        supplied = _check_inputs(stage, frozen_config, body.config_json)
         content, output_format = await _artifact(session, kind, stage, source, supplied, None)
         await transitions.completed(
             stage_id,

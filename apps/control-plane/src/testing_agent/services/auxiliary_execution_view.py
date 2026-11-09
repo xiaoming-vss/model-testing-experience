@@ -13,6 +13,7 @@ from testing_agent.repositories.auxiliary_execution import (
     latest_rows_for_project,
 )
 from testing_agent.services.code_risk_analysis import parse_risk_report
+from testing_agent.services.repository_profile import parse_repository_profile
 
 
 def _duration(started: datetime | None, finished: datetime | None) -> int:
@@ -46,7 +47,7 @@ def _summary(row: Any) -> dict[str, Any]:
         "generationChainManaged": False,
         "currentStage": current_stage,
         "stageStatus": stage_status,
-        "reviewStatus": "pending",
+        "reviewStatus": "not_required" if task_type == "repository_profile" else "pending",
         "reviewerUserId": "",
         "reviewedAt": None,
         "reviewComment": "",
@@ -114,12 +115,14 @@ async def auxiliary_detail(session: AsyncSession, execution_id: str) -> dict[str
     )
     if task.task_type == "code_risk_analysis":
         result["report"] = parse_risk_report(output)
+    if task.task_type == "repository_profile":
+        result["profile"] = parse_repository_profile(output)
     return result
 
 
 async def latest_project_run_summaries(
-    session: AsyncSession, project_id: str
+    session: AsyncSession, project_id: str, task_type: str
 ) -> list[dict[str, Any]]:
-    """One summary per auxiliary task that has at least one execution."""
-    rows = await latest_rows_for_project(session, project_id)
+    """One summary per task of the requested type that has at least one execution."""
+    rows = await latest_rows_for_project(session, project_id, task_type)
     return [_summary(row) for row in rows]

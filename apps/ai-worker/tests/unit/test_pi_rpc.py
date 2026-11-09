@@ -35,7 +35,7 @@ history.append(m);session.write_text(json.dumps(history))
 if m=='recover':
  emit({'type':'message_end','message':{'role':'assistant','stopReason':'error','errorMessage':'SECRET'}})
  emit({'type':'agent_end'})
-content=json.dumps({'history':history,'images':r.get('images',[]),'agentDir':os.environ['PI_CODING_AGENT_DIR'],'hasKey':bool(os.environ.get('MTX_PI_API_KEY'))})
+content=json.dumps({'history':history,'images':r.get('images',[]),'agentDir':os.environ['PI_CODING_AGENT_DIR'],'hasKey':bool(os.environ.get('MTX_PI_API_KEY')),'argv':sys.argv})
 emit({'type':'message_end','message':{'role':'assistant','stopReason':m if m in ('length','error','aborted') else 'stop','content':[{'type':'text','text':content}],'usage':{'input':3,'output':2}}})
 emit({'type':'agent_end'})
 emit({'type':'agent_settled'})
@@ -91,6 +91,28 @@ class PiRpcTests(unittest.IsolatedAsyncioTestCase):
         for message in ["fast", "recover"]:
             result = await self.client().run(message, session_key=message)
             self.assertEqual(result.finish_reason, "stop")
+
+    async def test_tools_allowlist_is_forwarded_only_when_configured(self) -> None:
+        with_tools = Pi.from_config(
+            config_path=str(self.path),
+            workspace=str(self.workspace),
+            tools=("read", "grep", "find", "ls"),
+        )
+        result = await with_tools.run("tools", session_key="tools")
+        argv = json.loads(result.content)["argv"]
+        self.assertEqual("read,grep,find,ls", argv[argv.index("--tools") + 1])
+        self.assertIn("--no-extensions", argv)
+
+        plain = await self.client().run("plain", session_key="plain")
+        self.assertNotIn("--tools", json.loads(plain.content)["argv"])
+
+        no_tools = Pi.from_config(
+            config_path=str(self.path), workspace=str(self.workspace), tools=()
+        )
+        result = await no_tools.run("no-tools", session_key="no-tools")
+        argv = json.loads(result.content)["argv"]
+        self.assertIn("--no-tools", argv)
+        self.assertNotIn("--tools", argv)
 
     async def test_truncation_cannot_be_published_as_a_complete_artifact(self):
         with self.assertRaisesRegex(RuntimeError, "length"):

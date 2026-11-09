@@ -107,6 +107,23 @@ context_window_tokens = 500000
 max_output_tokens = 65536
 api = "openai-completions"
 
+# 代码风险分析与仓库画像当前仅支持 Pi 后端；
+# [ai_worker.agent].backend 为 nanobot 时这两类任务会明确失败。
+# 代码风险分析每次 run 的代码工作区与上下文预算。
+[ai_worker.code_risk_analysis]
+gitlab_timeout_seconds = 120
+git_timeout_seconds = 300
+workspace_retention_hours = 24
+max_diff_chars = 1000000
+max_repos = 20
+
+# 仓库画像只 checkout 工作分支 HEAD，不生成 diff。
+[ai_worker.repository_profile]
+git_timeout_seconds = 300
+workspace_retention_hours = 24
+max_repos = 20
+max_output_chars = 100000
+
 [ai_worker.worker]
 max_concurrent_tasks = 2
 poll_interval_seconds = 5

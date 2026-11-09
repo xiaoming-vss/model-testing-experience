@@ -105,6 +105,37 @@ class CodeRiskAnalysisRunRequest(BaseModel):
     )
 
 
+class RepositoryProfileTaskRequest(BaseModel):
+    name: str | None = None
+    requirement_id: str | None = Field(default=None)
+    instruction: str | None = None
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        extra="allow",
+        json_schema_extra={"additionalProperties": False},
+        alias_generator=to_camel,
+    )
+
+
+class RepositoryProfileRunRequest(BaseModel):
+    request_id: str | None = Field(default=None, min_length=1, max_length=64)
+    gitlab_connection_ids: dict[str, str] = Field(default_factory=dict)
+    connection_id: str | None = Field(default=None)
+    llm_connection_id: str | None = Field(default=None)
+    instruction: str | None = None
+    trigger_type: str | None = Field(default=None)
+    config_json: Any | None = Field(default=None)
+    requirement_understanding_version_id: str | None = Field(default=None, max_length=64)
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        extra="allow",
+        json_schema_extra={"additionalProperties": False},
+        alias_generator=to_camel,
+    )
+
+
 class TestReportGenerateTaskRequest(BaseModel):
     name: str | None = None
     sprint_id: str | None = Field(default=None)
@@ -293,6 +324,7 @@ class CodeRiskAnalysisReportResponse(BaseModel):
     risks: list[Any] | None = None
     affected_cases: list[Any] | None = Field(default=None)
     coverage_gaps: list[Any] | None = Field(default=None)
+    context_receipt: Any | None = Field(default=None)
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
@@ -301,6 +333,59 @@ class CodeRiskAnalysisRunResponse(AiGenerateTaskRunResponse):
     """code_risk_analysis 专用 run 响应:追加解析后的 `report` 结构。"""
 
     report: CodeRiskAnalysisReportResponse | None = None
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class RepositoryProfileRepositoryResponse(BaseModel):
+    repository_id: str
+    path_with_namespace: str
+    role: Literal["frontend", "backend", "fullstack", "infra", "test", "unknown"]
+    responsibility_summary: str
+    tech_stack: list[str] = Field(default_factory=list)
+    key_paths: list[str] = Field(default_factory=list)
+    confidence: float = Field(ge=0, le=1)
+    evidence: list[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class RepositoryProfileResponse(BaseModel):
+    repositories: list[RepositoryProfileRepositoryResponse] = Field(default_factory=list)
+    overall_summary: str = ""
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class RepositoryProfileRunResponse(AiGenerateTaskRunResponse):
+    """repository_profile run 响应:追加解析后的画像结构。"""
+
+    profile: RepositoryProfileResponse | None = None
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class RepositoryProfileUnderstandingVersionResponse(BaseModel):
+    """画像运行冻结的需求理解版本引用。"""
+
+    version_id: str
+    version_no: int
+    task_id: str
+    run_id: str
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class RepositoryProfileVersionResponse(BaseModel):
+    """成功画像运行形成的不可变版本视图。"""
+
+    version_id: str
+    version_no: int
+    label: str
+    profile: RepositoryProfileResponse | None = None
+    result_yaml: str
+    source_run_id: str
+    requirement_understanding_version: RepositoryProfileUnderstandingVersionResponse | None = None
+    created_at: datetime
+
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 

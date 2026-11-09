@@ -1,9 +1,10 @@
 """工单 03:需求级 GitLab 仓库+分支绑定 API 与删除保护。
 
 覆盖:
-- 需求级绑定(仓库 + 分支)创建/查询/更新/删除,同一需求可绑多个仓库;
+- 需求级绑定(仓库 + 工作分支 + 基线分支)创建/查询/更新/删除,同一需求可绑多个仓库;
 - 仓库不在项目已绑群组范围内(remote_parent_id 非激活群组绑定)时返回参数错误;
-- 缺少 branch 返回参数错误,baseline_branch 可选;
+- 缺少 branch 或 baseline_branch 返回参数错误,基线与工作分支相同拒绝;
+- 绑定时校验工作分支和基线分支存在且当前操作人可访问;
 - 绑定是项目级共享资产(ADR-0002):其他用户可见、可创建、可更新、可删除;
 - 删除被需求绑定引用的群组绑定被阻止,返回受影响需求绑定清单(3506)。
 """
@@ -38,7 +39,7 @@ def _request(**overrides: object) -> dict[str, object]:
         "remoteResourceId": "repo-1",
         "remoteParentId": "group-1",
         "remoteNameSnapshot": "repo-one",
-        "extraJson": {"branch": "main"},
+        "extraJson": {"branch": "main", "baseline_branch": "release/1.0"},
     }
     body.update(overrides)
     return body
@@ -61,7 +62,7 @@ def _binding(**overrides: object) -> SimpleNamespace:
         "status": "active",
         "bound_at": None,
         "last_verified_at": None,
-        "extra_json": {"branch": "main"},
+        "extra_json": {"branch": "main", "baseline_branch": "release/1.0"},
         "created_at": None,
         "updated_at": None,
     }
@@ -100,6 +101,13 @@ class RecordingConnectionService:
 
     def __init__(self) -> None:
         self.calls: list[tuple] = []
+        self.missing_branches: set[str] = set()
+
+    async def get_gitlab_branch(self, connection_id, project_id, repository_id, branch, *, user_id):
+        self.calls.append(("branch", connection_id, repository_id, branch))
+        if branch in self.missing_branches:
+            raise ErrResourceBindingInvalid
+        return {"name": branch, "commitId": "sha"}
 
     async def ensure_gitlab_repository_scope(
         self, connection_id, project_id, group_id, repository_id, *, user_id
@@ -226,9 +234,13 @@ class FakeRepository:
         pass
 
 
-def _service(repository: FakeRepository) -> ResourceBindingService:
+def _service(
+    repository: FakeRepository, connections: RecordingConnectionService | None = None
+) -> ResourceBindingService:
     return ResourceBindingService(
-        repository, RecordingConnectionService(), deletion=MemoryResourceDeletion(repository)
+        repository,
+        connections or RecordingConnectionService(),
+        deletion=MemoryResourceDeletion(repository),
     )
 
 
@@ -249,28 +261,58 @@ async def test_create_requirement_gitlab_repo_binding():
     assert result["remoteResourceId"] == "repo-1"
     assert result["remoteParentId"] == "group-1"
     assert result["branch"] == "main"
-    assert result["baselineBranch"] == ""
+    assert result["baselineBranch"] == "release/1.0"
     assert binding.user_id == "user-1"
-    assert binding.extra_json == {"branch": "main"}
+    assert binding.extra_json == {"branch": "main", "baseline_branch": "release/1.0"}
 
 
 @pytest.mark.asyncio
-async def test_create_with_baseline_branch_is_optional_but_stored():
+async def test_create_requires_baseline_branch():
     repository = FakeRepository()
     service = _service(repository)
 
-    result = await service.create(
-        "requirement",
-        "req-1",
-        _request(extraJson={"branch": "main", "baseline_branch": "release/1.0"}),
-        "user-1",
-    )
+    for extra in (
+        {"branch": "main"},
+        {"branch": "main", "baseline_branch": ""},
+        {"branch": "main", "baseline_branch": "  "},
+    ):
+        with pytest.raises(type(ErrResourceBindingInvalid)) as exc_info:
+            await service.create("requirement", "req-1", _request(extraJson=extra), "user-1")
+        assert "基线分支" in exc_info.value.message
 
-    assert result["baselineBranch"] == "release/1.0"
-    assert repository.rows[0].extra_json == {
-        "branch": "main",
-        "baseline_branch": "release/1.0",
-    }
+    assert repository.rows == []
+
+
+@pytest.mark.asyncio
+async def test_create_rejects_baseline_equal_to_working_branch():
+    repository = FakeRepository()
+    service = _service(repository)
+
+    with pytest.raises(type(ErrResourceBindingInvalid)) as exc_info:
+        await service.create(
+            "requirement",
+            "req-1",
+            _request(extraJson={"branch": "main", "baseline_branch": "main"}),
+            "user-1",
+        )
+
+    assert "不能与工作分支相同" in exc_info.value.message
+    assert repository.rows == []
+
+
+@pytest.mark.asyncio
+async def test_create_rejects_missing_or_inaccessible_branch():
+    repository = FakeRepository()
+    connections = RecordingConnectionService()
+    connections.missing_branches = {"release/1.0"}
+    service = _service(repository, connections)
+
+    with pytest.raises(type(ErrResourceBindingInvalid)) as exc_info:
+        await service.create("requirement", "req-1", _request(), "user-1")
+
+    assert "不存在或当前操作人无权访问" in exc_info.value.message
+    assert ("branch", "conn-1", "repo-1", "release/1.0") in connections.calls
+    assert repository.rows == []
 
 
 @pytest.mark.asyncio
@@ -354,7 +396,11 @@ async def test_same_requirement_can_bind_multiple_repositories():
     await service.create(
         "requirement",
         "req-1",
-        _request(remoteResourceId="repo-2", remoteParentId="group-2", extraJson={"branch": "dev"}),
+        _request(
+            remoteResourceId="repo-2",
+            remoteParentId="group-2",
+            extraJson={"branch": "dev", "baseline_branch": "release/1.0"},
+        ),
         "user-1",
     )
 
@@ -435,18 +481,51 @@ async def test_update_branch_and_baseline_branch():
 
 
 @pytest.mark.asyncio
-async def test_update_can_clear_baseline_branch():
+async def test_update_cannot_clear_baseline_branch():
     repository = FakeRepository()
     binding = _binding(extra_json={"branch": "main", "baseline_branch": "release/1.0"})
     repository.rows.append(binding)
     service = _service(repository)
 
-    result = await service.update(
-        "requirement", "req-1", "binding-1", {"baselineBranch": ""}, "user-1"
-    )
+    with pytest.raises(type(ErrResourceBindingInvalid)) as exc_info:
+        await service.update("requirement", "req-1", "binding-1", {"baselineBranch": ""}, "user-1")
 
-    assert result["baselineBranch"] == ""
-    assert binding.extra_json == {"branch": "main"}
+    assert "基线分支" in exc_info.value.message
+    assert binding.extra_json == {"branch": "main", "baseline_branch": "release/1.0"}
+
+
+@pytest.mark.asyncio
+async def test_update_rejects_baseline_equal_to_working_branch():
+    repository = FakeRepository()
+    binding = _binding()
+    repository.rows.append(binding)
+    service = _service(repository)
+
+    with pytest.raises(type(ErrResourceBindingInvalid)) as exc_info:
+        await service.update(
+            "requirement", "req-1", "binding-1", {"baselineBranch": "main"}, "user-1"
+        )
+
+    assert "不能与工作分支相同" in exc_info.value.message
+    assert binding.extra_json == {"branch": "main", "baseline_branch": "release/1.0"}
+
+
+@pytest.mark.asyncio
+async def test_update_rejects_missing_or_inaccessible_branch():
+    repository = FakeRepository()
+    binding = _binding()
+    repository.rows.append(binding)
+    connections = RecordingConnectionService()
+    connections.missing_branches = {"release/2.0"}
+    service = _service(repository, connections)
+
+    with pytest.raises(type(ErrResourceBindingInvalid)) as exc_info:
+        await service.update(
+            "requirement", "req-1", "binding-1", {"baselineBranch": "release/2.0"}, "user-1"
+        )
+
+    assert "不存在或当前操作人无权访问" in exc_info.value.message
+    assert ("branch", "conn-1", "repo-1", "release/2.0") in connections.calls
 
 
 @pytest.mark.asyncio
@@ -574,7 +653,7 @@ def test_requirement_binding_routes_serve_full_lifecycle():
             "provider": "gitlab",
             "remoteResourceId": "repo-1",
             "remoteParentId": "group-1",
-            "extraJson": {"branch": "main"},
+            "extraJson": {"branch": "main", "baseline_branch": "release/1.0"},
         },
     )
     assert created.status_code == 200

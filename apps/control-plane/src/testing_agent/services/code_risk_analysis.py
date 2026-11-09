@@ -2,16 +2,18 @@
 
 任务快照(创建 run 时一次性组装并固化)含:
 - 需求文档(名称、类型、正文);
-- 绑定清单:需求级仓库绑定 + RC-3 基线解析结果 + 创建时解析快照的
-  connection_id(ADR-0007:快照记录实际执行人的个人连接引用，下发前重新校验);
+- 绑定清单:需求级仓库绑定、绑定时选择的基线与工作分支,以及创建时
+  解析固化的 cloneUrl/baseCommit/headCommit(ADR-0007:快照记录实际执行
+  人的个人连接引用，下发前重新校验);
 - 现有测试内容:该需求下功能/API/UI 用例的名称/步骤/断言与最近执行结果
   (功能用例暂无执行记录、留空标注;API/UI 取最近一次 run 的 status 与
   完成时间,不带日志);
 - GitLab 凭据获取指引(内部端点 URL)。
 
-报告读取:worker 完成回调把风险报告 YAML 存入通用 run 表 `result_yaml`;
-run 详情接口把 YAML 解析为 `report` 结构(四区块 + 各仓库
-baselineCommit/headCommit + analyzedAt)供前端渲染。
+报告读取:worker 完成回调把结果 YAML 存入通用 run 表 `result_yaml`;
+run 详情接口把 YAML 解析为 `report` 结构。正式报告为四区块 + 各仓库
+baselineCommit/headCommit + analyzedAt;上下文预览阶段为 `contextReceipt`
+(仓库/commit/计数/模型摘要/读取文件),供前端区分展示。
 
 凭据安全边界:解密后的 access_token 只存在于请求进程内存(任务创建时
 用于远端分支校验、内部端点响应),不写入任务快照、不落盘、不入日志。
@@ -20,6 +22,7 @@ baselineCommit/headCommit + analyzedAt)供前端渲染。
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any
 
 import yaml
@@ -31,6 +34,7 @@ from testing_agent.core.errors import (
     ErrIntegrationConnectionAuthFailed,
     ErrIntegrationConnectionNotFound,
     ErrNotFound,
+    ErrResourceBindingInvalid,
     dynamic_error,
 )
 from testing_agent.models.ai_generate_task import AiGenerateTask
@@ -41,10 +45,6 @@ from testing_agent.repositories.generation_chain import GenerationChainRepositor
 from testing_agent.repositories.resource_binding import ResourceBindingRepository
 from testing_agent.schemas.requirement import normalize_document_type
 from testing_agent.services.ai_task_output import dump_run
-from testing_agent.services.baseline_resolution import (
-    BaselineResolutionService,
-    RepoBaselineResolution,
-)
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.repo_gitlab_access import (
@@ -60,6 +60,16 @@ from testing_agent.services.standalone_run import StandaloneRun
 
 FUNCTION_CASE_NO_RUN_NOTE = "功能用例暂无执行记录"
 CONNECTION_UNRESOLVED_NOTE = "未解析到该仓库的 GitLab 凭据连接(群组绑定缺失或连接不可用)"
+
+
+@dataclass(frozen=True, slots=True)
+class RepoPin:
+    """建 run 时固化的仓库代码版本与克隆地址。"""
+
+    clone_url: str
+    path_with_namespace: str
+    base_commit: str
+    head_commit: str
 
 
 def dump_last_run(run: Any | None) -> dict[str, Any] | None:
@@ -130,6 +140,28 @@ def parse_risk_report(result_yaml: str | None) -> dict[str, Any] | None:
         return None
     if not isinstance(data, dict):
         return None
+    receipt = None
+    for key in ("contextReceipt", "context_receipt"):
+        if key in data:
+            receipt = data[key]
+            break
+    if receipt is not None:
+        if not isinstance(receipt, dict):
+            return None
+        analyzed_at = data.get("analyzedAt", data.get("analyzed_at"))
+        if analyzed_at is not None and not isinstance(analyzed_at, str):
+            return None
+        repositories = receipt.get("repositories")
+        if repositories is not None and (
+            not isinstance(repositories, list)
+            or any(not isinstance(item, dict) for item in repositories)
+        ):
+            return None
+        return {
+            "analyzedAt": analyzed_at,
+            "repositories": repositories or [],
+            "contextReceipt": receipt,
+        }
     sections = {key: _risk_report_section(data, key) for key in RISK_REPORT_SECTION_KEYS}
     if all(sections[key] is None for key in RISK_REPORT_SECTION_KEYS):
         return None
@@ -166,13 +198,11 @@ class CodeRiskAnalysisService:
         self,
         task_repository: AiGenerateTaskRepository,
         binding_repository: ResourceBindingRepository,
-        baseline_resolution_service: BaselineResolutionService,
         integration_connection_service: IntegrationConnectionService,
         credential_cipher: IntegrationCredentialCipher,
     ):
         self.task_repository = task_repository
         self.binding_repository = binding_repository
-        self.baseline_resolution_service = baseline_resolution_service
         self.integration_connection_service = integration_connection_service
         self.credential_cipher = credential_cipher
 
@@ -209,32 +239,7 @@ class CodeRiskAnalysisService:
         repo_access = await self._resolve_repo_access(
             task.project_id, bindings, user_id, connection_ids or {}
         )
-        resolutions = await self.baseline_resolution_service.resolve_requirement_bindings(
-            task.requirement_id
-        )
-        by_binding = {row.binding.binding_id: row.resolution for row in resolutions}
-        for binding in bindings:
-            resolution = by_binding[binding.binding_id]
-            if resolution.baseline_ref:
-                access = repo_access[binding.binding_id]
-                client = self.integration_connection_service.gitlab_resource_client
-                result = await client.list_repository_branches(
-                    access.base_url,
-                    access.access_token,
-                    binding.remote_resource_id,
-                    search=resolution.baseline_ref,
-                    page=1,
-                    page_size=100,
-                )
-                if not any(
-                    str(item.get("name") or "") == resolution.baseline_ref
-                    for item in result.get("items", [])
-                ):
-                    from dataclasses import replace
-
-                    by_binding[binding.binding_id] = replace(
-                        resolution, error="基线分支不可访问，请管理员检查绑定"
-                    )
+        pins = await self._resolve_repo_pins(task.project_id, bindings, repo_access, user_id)
 
         document_type = normalize_document_type(str(requirement.document_type or "richtext"))
         return {
@@ -255,7 +260,7 @@ class CodeRiskAnalysisService:
             },
             "requirementUnderstandingVersion": understanding_version_ref(understanding),
             "bindings": [
-                self._binding_entry(binding, by_binding.get(binding.binding_id), repo_access)
+                self._binding_entry(binding, pins[binding.binding_id], repo_access)
                 for binding in bindings
             ],
             "existingTests": {
@@ -291,15 +296,73 @@ class CodeRiskAnalysisService:
                 access[binding.binding_id] = resolved
         return access
 
+    async def _resolve_repo_pins(
+        self,
+        project_id: str,
+        bindings: Sequence[ResourceBinding],
+        repo_access: dict[str, RepoGitlabAccess],
+        user_id: str,
+    ) -> dict[str, RepoPin]:
+        """按绑定的工作分支和基线分支解析固定 commit 与克隆地址。
+
+        代码风险不再使用历史绑定推断基线；缺少基线分支直接拒绝建 run。
+        """
+        if not bindings:
+            raise dynamic_error(ErrResourceBindingInvalid, "需求尚未绑定代码仓库，无法分析")
+        pins: dict[str, RepoPin] = {}
+        for binding in bindings:
+            extra = binding.extra_json or {}
+            branch = str(extra.get("branch") or "").strip()
+            baseline_branch = str(
+                extra.get("baseline_branch") or extra.get("baselineBranch") or ""
+            ).strip()
+            if not branch:
+                raise dynamic_error(ErrResourceBindingInvalid, "仓库绑定缺少工作分支，请重新绑定")
+            if not baseline_branch:
+                raise dynamic_error(ErrResourceBindingInvalid, "请先为仓库绑定选择基线分支")
+            access = repo_access.get(binding.binding_id)
+            if access is None:
+                raise dynamic_error(ErrResourceBindingInvalid, "未解析到该仓库的 GitLab 凭据连接")
+            project = await self.integration_connection_service.get_gitlab_project(
+                access.connection_id,
+                project_id,
+                binding.remote_resource_id,
+                user_id=user_id,
+            )
+            clone_url = str(project.get("cloneUrl") or "").strip()
+            if not clone_url:
+                raise dynamic_error(ErrResourceBindingInvalid, "GitLab 仓库缺少克隆地址")
+            base_commit = await self.integration_connection_service.resolve_gitlab_commit(
+                access.connection_id,
+                project_id,
+                binding.remote_resource_id,
+                baseline_branch,
+                user_id=user_id,
+            )
+            head_commit = await self.integration_connection_service.resolve_gitlab_commit(
+                access.connection_id,
+                project_id,
+                binding.remote_resource_id,
+                branch,
+                user_id=user_id,
+            )
+            pins[binding.binding_id] = RepoPin(
+                clone_url=clone_url,
+                path_with_namespace=str(project.get("pathWithNamespace") or ""),
+                base_commit=base_commit,
+                head_commit=head_commit,
+            )
+        return pins
+
     @staticmethod
     def _binding_entry(
         binding: ResourceBinding,
-        resolution: RepoBaselineResolution | None,
+        pin: RepoPin,
         repo_access: dict[str, RepoGitlabAccess],
     ) -> dict[str, Any]:
         extra = binding.extra_json or {}
         access = repo_access.get(binding.binding_id)
-        notes = [note for note in [resolution.note if resolution is not None else ""] if note]
+        notes = []
         if access is None:
             notes.append(CONNECTION_UNRESOLVED_NOTE)
         return {
@@ -307,13 +370,17 @@ class CodeRiskAnalysisService:
             "instanceUrl": binding.instance_url,
             "repositoryId": binding.remote_resource_id,
             "groupId": binding.remote_parent_id or "",
+            "pathWithNamespace": pin.path_with_namespace,
+            "cloneUrl": pin.clone_url,
             "branch": str(extra.get("branch") or "").strip(),
             "baselineBranch": str(
                 extra.get("baseline_branch") or extra.get("baselineBranch") or ""
             ).strip(),
-            "baselineRef": resolution.baseline_ref if resolution is not None else None,
+            "baseCommit": pin.base_commit,
+            "headCommit": pin.head_commit,
+            "baselineRef": pin.base_commit,
             "note": "；".join(notes),
-            "error": resolution.error if resolution is not None else "",
+            "error": "",
             "connectionId": access.connection_id if access is not None else "",
         }
 

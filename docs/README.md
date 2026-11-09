@@ -5,6 +5,7 @@
 ## 平台公共文档
 
 - [统一配置、部署与本地开发](deployment.md)
+- [Kubernetes 部署](deployment-k8s.md)
 - [MTX 命名与旧部署兼容](naming.md)
 - [领域上下文导航](../CONTEXT-MAP.md)
 

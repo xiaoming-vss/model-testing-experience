@@ -44,7 +44,7 @@ class RequirementInput(BaseModel):
 
 
 class RepositoryBinding(BaseModel):
-    """需求与(仓库 + 分支)的代码绑定,含控制面的基线解析结果。"""
+    """需求与(仓库 + 分支)的代码绑定,含控制面固化的代码版本。"""
 
     model_config = ConfigDict(extra="allow")
 
@@ -54,6 +54,18 @@ class RepositoryBinding(BaseModel):
         validation_alias=AliasChoices("repositoryId", "repository_id"),
     )
     group_id: str = Field(default="", validation_alias=AliasChoices("groupId", "group_id"))
+    instance_url: str = Field(
+        default="",
+        validation_alias=AliasChoices("instanceUrl", "instance_url"),
+    )
+    clone_url: str = Field(
+        default="",
+        validation_alias=AliasChoices("cloneUrl", "clone_url"),
+    )
+    path_with_namespace: str = Field(
+        default="",
+        validation_alias=AliasChoices("pathWithNamespace", "path_with_namespace"),
+    )
     branch: str = ""
     baseline_branch: str = Field(
         default="",
@@ -63,8 +75,20 @@ class RepositoryBinding(BaseModel):
         default=None,
         validation_alias=AliasChoices("baselineRef", "baseline_ref"),
     )
+    base_commit: str = Field(
+        default="",
+        validation_alias=AliasChoices("baseCommit", "base_commit"),
+    )
+    head_commit: str = Field(
+        default="",
+        validation_alias=AliasChoices("headCommit", "head_commit"),
+    )
     note: str = ""
     error: str = ""
+    profile_error: str = Field(
+        default="",
+        validation_alias=AliasChoices("profileError", "profile_error"),
+    )
     connection_id: str = Field(
         default="",
         validation_alias=AliasChoices("connectionId", "connection_id"),

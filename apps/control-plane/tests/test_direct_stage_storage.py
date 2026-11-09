@@ -763,6 +763,56 @@ async def test_stage_worker_progress_validates_frozen_inputs_and_waits_for_revie
     assert attempt.output_content == '{"name": "x"}' and queue.status == "success"
 
 
+async def test_stage_worker_running_progress_accepts_empty_config(db):  # noqa: F811
+    from testing_agent.models.worker_task import WorkerTask
+    from testing_agent.schemas.workers import WorkerProgressRequest
+    from testing_agent.services.stage_storage.worker import StageWorkerTransitions
+    from testing_agent.services.stage_storage.worker_events import apply_stage_progress
+
+    stage, storage = setup_stage(db)
+    stage.stage = "relation_analysis"
+    frozen = {
+        "requirementAnalysis": {"scope": "approved"},
+        "caseNames": {"items": []},
+        "resultYaml": '{"cases": []}',
+    }
+    attempt = await storage.prepare(
+        stage.id,
+        worker_task_id="worker-graph",
+        requested_by="u",
+        input_snapshot={"config": frozen},
+    )
+    queue = WorkerTask(
+        domain="ai",
+        task_type="functional_case_generate",
+        task_id="worker-graph",
+        run_id=attempt.id,
+        worker_id="node",
+        status="running",
+    )
+    await StageWorkerTransitions(AsyncSessionAdapter(db)).started(
+        stage.id, attempt.id, queue.task_id
+    )
+
+    # Worker 的进度上报（validation report）不带中间产物，configJson 会被解析为空对象。
+    await apply_stage_progress(
+        AsyncSessionAdapter(db),
+        queue,
+        stage_id=stage.id,
+        attempt_id=attempt.id,
+        kind="function",
+        stage="relation_analysis",
+        source={},
+        frozen_config=frozen,
+        body=WorkerProgressRequest(
+            worker_id="node",
+            current_stage="relation_analysis",
+            stage_status="running",
+            config_json={},
+        ),
+    )
+
+
 async def test_direct_worker_claim_snapshot_start_and_review_handoff(db, monkeypatch):  # noqa: F811
     from unittest.mock import AsyncMock
 

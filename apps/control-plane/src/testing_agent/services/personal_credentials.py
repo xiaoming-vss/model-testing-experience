@@ -1,7 +1,11 @@
 """Deliver provider credentials only from a caller's own authorized connection."""
 
 from testing_agent.core.enums import ConnectionStatus
-from testing_agent.core.errors import ErrIntegrationConnectionAuthFailed, ErrNotFound
+from testing_agent.core.errors import (
+    ErrIntegrationConnectionAuthFailed,
+    ErrNotFound,
+    dynamic_error,
+)
 from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 
@@ -28,7 +32,12 @@ class PersonalCredentialAccess:
             raise ErrIntegrationConnectionAuthFailed()
         if self.cipher is None:
             raise RuntimeError("未配置集成凭据加密器")
-        return self.cipher.decrypt(ciphertext)
+        try:
+            return self.cipher.decrypt(ciphertext)
+        except ValueError as exc:
+            raise dynamic_error(
+                ErrIntegrationConnectionAuthFailed, "集成凭据解密失败,请重新授权该连接"
+            ) from exc
 
     def gitlab_token(
         self, connection: IntegrationConnection, *, user_id: str, project_id: str

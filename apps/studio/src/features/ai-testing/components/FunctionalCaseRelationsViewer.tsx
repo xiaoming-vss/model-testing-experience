@@ -125,7 +125,6 @@ export function FunctionalCaseRelationsViewer({ taskId, runId, onBack, embedded 
         </div> : null}
 
         {failed ? <Alert type="error" showIcon title={run?.status === 'canceled' ? '图谱生成已取消' : '图谱生成失败'} description={run?.errorMessage || '本次图谱未生成成功，请重试。'} /> : null}
-        {generating ? <Alert type="info" showIcon title="图谱生成中，完成后会自动显示" description={relationsContent ? '正在重新生成，当前保留展示上一次图谱。' : '任务已提交，正在等待生成结果。'} /> : null}
         <div ref={viewRef} className="ai-relations-page-body">
           {loading ? (
             <div className="ai-relations-page-loading"><Spin /></div>

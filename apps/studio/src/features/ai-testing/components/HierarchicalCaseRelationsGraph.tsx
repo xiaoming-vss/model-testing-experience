@@ -21,7 +21,7 @@ export type HierarchicalGraphProps = {
   panelWidth?: number
 }
 
-function HierarchyGraphView({ model, caseMeta, onSelectionChange, handleRef, renderCaseDetails, caseBadges, panelWidth = 296 }: Omit<HierarchicalGraphProps, 'content' | 'casesContent'> & {
+function HierarchyGraphView({ model, caseMeta, onSelectionChange, handleRef, renderCaseDetails, caseBadges, panelWidth = 432 }: Omit<HierarchicalGraphProps, 'content' | 'casesContent'> & {
   model: RelationsGraphModel
   caseMeta: Map<string, CaseRelationsCaseMeta>
 }) {

@@ -74,7 +74,7 @@ Worker 不再监听文件下载端口，9010 截图服务已移除。截图和 T
 - UI 任务：`/internal/ui-worker/tasks/claim` 与 `/{task_id}/snapshot`，文件授权与完成为 `/{task_id}/files/uploads`、`/{task_id}/files/{file_id}/complete`；控制面校验 Worker、租约、执行人和项目归属
 - API 任务：`/internal/api-worker/tasks/claim` 与 `/{task_id}/snapshot`、`/started`、`/heartbeat`、`/completed`，集合任务另有 `/collection-items/{item_id}/started` 与 `/completed`
 
-该服务没有健康检查端点，Dockerfile 中也没有 `HEALTHCHECK`，Compose 因此不对它设置健康检查条件。
+设置 `TEST_WORKER_HEALTH_PORT` 时启动 `GET /healthz`（默认端口 8080，未设置时不监听，便于本地开发）；Kubernetes chart 用它提供存活/就绪探针。Dockerfile 仍不声明 `HEALTHCHECK`，Compose 不设置健康检查条件。
 
 ## UI 环境变量与后置提取
 

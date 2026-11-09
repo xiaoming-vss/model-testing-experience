@@ -12,13 +12,15 @@ import '@/shared/styles/list-table.css'
 import '../styles/requirement-design.css'
 
 /** 需求详情正文：生成全景是唯一入口，文档、代码风险和生成设置从泳道入口打开。 */
-export function RequirementDesignWorkspace({ requirementId, projectId, canWrite, onOpenDocument, documentPreview, onReadingNodeChange }: {
+export function RequirementDesignWorkspace({ requirementId, projectId, canWrite, onOpenDocument, documentPreview, onReadingNodeChange, inspectorHost, readingActionsHost }: {
   requirementId: string
   projectId: string
   canWrite: boolean
   documentPreview?: ReactNode
   onOpenDocument?: () => void
   onReadingNodeChange?: (node: RequirementReadingNode | null) => void
+  inspectorHost?: HTMLElement | null
+  readingActionsHost?: HTMLElement | null
 }) {
   const [riskOpen, setRiskOpen] = useState(false)
   const [configureKind, setConfigureKind] = useState<RequirementDesignKind>()
@@ -31,7 +33,7 @@ export function RequirementDesignWorkspace({ requirementId, projectId, canWrite,
   }
   return <div className="ai-requirement-design tp-surface tp-list-surface">
     <div className="ai-requirement-design-panel ai-requirement-generation-panel">
-      <RequirementGenerationPanorama requirementId={requirementId} projectId={projectId} canWrite={canWrite} onOpenTab={openPanoramaTab} documentPreview={documentPreview} onReadingNodeChange={onReadingNodeChange} />
+      <RequirementGenerationPanorama requirementId={requirementId} projectId={projectId} canWrite={canWrite} onOpenTab={openPanoramaTab} documentPreview={documentPreview} onReadingNodeChange={onReadingNodeChange} inspectorHost={inspectorHost} readingActionsHost={readingActionsHost} />
     </div>
     <Modal open={riskOpen} onCancel={() => setRiskOpen(false)} footer={null} width="min(2000px, calc(100vw - 56px))" centered destroyOnHidden
       className="requirement-code-risk-dialog" title="代码风险分析">

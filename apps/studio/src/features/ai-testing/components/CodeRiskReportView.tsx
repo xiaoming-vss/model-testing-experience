@@ -1,7 +1,12 @@
 import { Alert, Card, Descriptions, Empty, Space, Table, Tag, Typography } from 'antd'
 import type { TableProps } from 'antd'
 import { useMemo } from 'react'
-import type { CodeRiskReport, CodeRiskReportRepository } from '@/features/ai-testing/types'
+import type {
+  CodeRiskContextReceipt,
+  CodeRiskContextReceiptRepository,
+  CodeRiskReport,
+  CodeRiskReportRepository,
+} from '@/features/ai-testing/types'
 import { formatTime } from '@/utils/format'
 
 const { Text, Title, Paragraph } = Typography
@@ -61,6 +66,10 @@ export function CodeRiskReportView({ report }: { report: CodeRiskReport }) {
   const risks = report.risks ?? []
   const affectedCases = report.affectedCases ?? []
   const coverageGaps = report.coverageGaps ?? []
+
+  if (report.contextReceipt) {
+    return <CodeRiskContextReceiptView report={report} receipt={report.contextReceipt} />
+  }
 
   return (
     <div className="code-risk-report">
@@ -179,6 +188,108 @@ export function CodeRiskReportView({ report }: { report: CodeRiskReport }) {
       affectedCases.length === 0 &&
       coverageGaps.length === 0 ? (
         <Alert showIcon type="warning" title="报告中暂无有效区块，可查看运行历史中的 resultYaml 原文" />
+      ) : null}
+    </div>
+  )
+}
+
+function CodeRiskContextReceiptView({
+  report,
+  receipt,
+}: {
+  report: CodeRiskReport
+  receipt: CodeRiskContextReceipt
+}) {
+  const repositories = receipt.repositories ?? []
+  const counts = receipt.counts ?? {}
+  const columns: TableProps<CodeRiskContextReceiptRepository & { key: string }>['columns'] = [
+    { title: '仓库', dataIndex: 'repositoryId', key: 'repositoryId', ellipsis: true },
+    { title: '路径', dataIndex: 'pathWithNamespace', key: 'pathWithNamespace', ellipsis: true },
+    { title: '分支', dataIndex: 'branch', key: 'branch', width: 160 },
+    {
+      title: '基线 → HEAD',
+      key: 'commits',
+      render: (_, repository) => (
+        <Text type="secondary" className="code-risk-report-sha" ellipsis>
+          {repository.baseCommit || 'none'} → {repository.headCommit || '-'}
+        </Text>
+      ),
+    },
+    { title: '变更文件', dataIndex: 'filesChanged', key: 'filesChanged', width: 96, align: 'right' },
+  ]
+  const rows = repositories.map((repository, index) => ({
+    key: [repository.instanceUrl, repository.repositoryId, repository.headCommit]
+      .filter(Boolean)
+      .join('|') || String(index),
+    ...repository,
+  }))
+
+  return (
+    <div className="code-risk-report">
+      <Alert
+        showIcon
+        type="info"
+        title="上下文预览（分析 skill 未启用）"
+        description="本次运行只验证代码拉取、上下文组装和模型读取，不产出正式风险结论。"
+      />
+      <Card className="ai-task-detail-card code-risk-report-header" size="small" title="上下文回执">
+        <Descriptions column={1} size="small">
+          <Descriptions.Item label="分析时间">
+            {formatTime(report.analyzedAt ?? undefined)}
+          </Descriptions.Item>
+          <Descriptions.Item label="仓库数">{counts.repositories ?? repositories.length}</Descriptions.Item>
+          <Descriptions.Item label="变更文件数">{counts.changedFiles ?? '-'}</Descriptions.Item>
+          <Descriptions.Item label="Diff 字符数">{counts.diffChars ?? '-'}</Descriptions.Item>
+          <Descriptions.Item label="模型摘要">{receipt.summary || '-'}</Descriptions.Item>
+          <Descriptions.Item label="使用工具">
+            {(receipt.toolsUsed ?? []).length === 0 ? (
+              <Text type="secondary">未记录</Text>
+            ) : (
+              <Space size={4} wrap>
+                {(receipt.toolsUsed ?? []).map((tool, index) => (
+                  <Tag key={`${tool}-${index}`}>{tool}</Tag>
+                ))}
+              </Space>
+            )}
+          </Descriptions.Item>
+        </Descriptions>
+      </Card>
+
+      <Card className="ai-task-detail-card code-risk-report-block" size="small" title="仓库与代码版本">
+        {rows.length === 0 ? (
+          <Empty description="暂无仓库回执" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        ) : (
+          <Table<CodeRiskContextReceiptRepository & { key: string }>
+            className="code-risk-report-table"
+            columns={columns}
+            dataSource={rows}
+            pagination={false}
+            size="small"
+          />
+        )}
+      </Card>
+
+      <Card className="ai-task-detail-card code-risk-report-block" size="small" title="模型读取的文件">
+        {(receipt.filesRead ?? []).length === 0 ? (
+          <Text type="secondary">模型未列出读取文件</Text>
+        ) : (
+          <ul className="code-risk-report-cases">
+            {(receipt.filesRead ?? []).map((file, index) => (
+              <li key={`${file}-${index}`} className="code-risk-report-case">
+                <Text className="code-risk-report-case-title">{file}</Text>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      {(receipt.truncatedFiles ?? []).length > 0 ? (
+        <Alert
+          showIcon
+          type="warning"
+          title="部分 diff 因上下文预算被排除"
+          description={(receipt.truncatedFiles ?? []).join('、')}
+        />
       ) : null}
     </div>
   )

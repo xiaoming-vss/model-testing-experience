@@ -83,7 +83,7 @@ def _ranked_attempts(task_id: str):
     )
 
 
-def _ranked_project_attempts(project_id: str):
+def _ranked_project_attempts(project_id: str, task_type: str):
     """Newest attempt of the newest execution for every auxiliary task in a project.
 
     Window ranking keeps the batch read bounded to one row per task even when the
@@ -138,14 +138,16 @@ def _ranked_project_attempts(project_id: str):
         .where(
             AiGenerateTask.project_id == project_id,
             AiGenerationStage.stage == "generate",
-            AiGenerateTask.task_type.in_(AUXILIARY_EXECUTION_TYPES),
+            AiGenerateTask.task_type == task_type,
         )
         .subquery()
     )
 
 
-async def latest_rows_for_project(session: AsyncSession, project_id: str) -> list[RowMapping]:
-    ranked = _ranked_project_attempts(project_id)
+async def latest_rows_for_project(
+    session: AsyncSession, project_id: str, task_type: str
+) -> list[RowMapping]:
+    ranked = _ranked_project_attempts(project_id, task_type)
     return list(
         (
             await session.execute(

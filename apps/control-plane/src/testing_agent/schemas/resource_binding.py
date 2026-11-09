@@ -35,7 +35,7 @@ class UpdateResourceBindingRequest(BaseModel):
 
 class UpdateRequirementBindingRequest(BaseModel):
     remote_resource_id: str | None = None
-    """需求级 GitLab 仓库绑定更新:分支与基线分支(可选,未传字段保持不变)。"""
+    """需求级 GitLab 仓库绑定更新:未传字段保持不变;基线分支不可清空。"""
 
     connection_id: str = ""
     mcp_service_id: str = Field(default="", max_length=64)

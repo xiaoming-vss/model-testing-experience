@@ -26,6 +26,10 @@ python3 scripts/manage.py upgrade-config
 
 默认只允许本机访问。服务器部署时将 `shared.public_host` 改为浏览器能访问的服务器 IP/域名，将 `shared.bind_host` 改为 `0.0.0.0`。当前编排提供 HTTP；域名 HTTPS 可由部署环境的反向代理提供。S3 Endpoint 必须能被浏览器和 Worker 访问，并为前端配置 CORS。
 
+## Kubernetes
+
+平台提供 chart-per-service + umbrella 的 Helm 部署方式，见 [Kubernetes 部署](deployment-k8s.md)。当前只覆盖平台本身，不包含 CI Worker；MySQL、Redis、S3 使用外部地址。
+
 ## Docker 整体启动
 
 当前 Compose 项目名是 `mtx`。从旧 `testing-agent` 部署升级时，先阅读 [旧数据卷兼容说明](naming.md#已有-docker-部署的数据卷)，避免创建另一套空卷。

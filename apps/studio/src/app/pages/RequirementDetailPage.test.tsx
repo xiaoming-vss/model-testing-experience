@@ -11,13 +11,19 @@ import { requirementsApi } from '@/features/requirements/api/requirements.api'
 import { RequirementDetailPage } from './RequirementDetailPage'
 
 vi.mock('@/features/ai-testing/components/RequirementDesignWorkspace', () => ({
-  RequirementDesignWorkspace: ({ requirementId, projectId, documentPreview }: {
+  RequirementDesignWorkspace: ({ requirementId, projectId, documentPreview, onReadingNodeChange }: {
     requirementId: string; projectId: string; documentPreview?: ReactNode
+    onReadingNodeChange?: (node: { label: string; status?: string; tone?: string; kind?: 'document' } | null) => void
   }) => {
     const [open, setOpen] = useState(false)
+    const toggle = () => {
+      const next = !open
+      setOpen(next)
+      onReadingNodeChange?.(next ? { label: '需求文档', status: '只读来源', tone: 'is-muted', kind: 'document' } : null)
+    }
     return <div data-testid="generation-workspace">
       {requirementId} · {projectId}
-      <button type="button" onClick={() => setOpen(true)}>查看需求文档</button>
+      <button type="button" onClick={toggle}>查看需求文档</button>
       {open ? <div role="dialog" aria-label="需求文档">{documentPreview}</div> : null}
     </div>
   },
@@ -61,13 +67,18 @@ it.each(['design', 'requirement_analysis', 'function', 'api', 'ui', 'codeRisk', 
   expect(await screen.findByTestId('generation-workspace')).toHaveTextContent('req · canonical-project')
   expect(screen.queryByRole('tab')).not.toBeInTheDocument()
 })
-it('需求详情始终提供下载、编辑与生成链刷新入口', async () => {
+it('下载与编辑只在打开需求文档时出现，生成链刷新始终可用', async () => {
   mount()
   expect(await screen.findByRole('heading', { name: '登录需求' })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '编辑需求' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '编辑需求' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '下载原文件' })).not.toBeInTheDocument()
   // 刷新从生成全景移到需求标题栏。
   const refresh = await screen.findByRole('button', { name: '刷新' })
   expect(refresh.closest('.requirement-detail-header')).not.toBeNull()
+  await userEvent.setup().click(screen.getByRole('button', { name: '查看需求文档' }))
+  expect(await screen.findByRole('dialog', { name: '需求文档' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '编辑需求' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '下载原文件' })).toBeInTheDocument()
 })
 
 it('无权读取需求时隐藏工作区且不改变当前项目范围', async () => {
@@ -85,6 +96,7 @@ it('详情编辑从源文件加载富文本，并保存为新的正文文件', a
   const update = vi.spyOn(requirementsApi, 'updateRequirement')
   mount(false, '/requirements/req', 'richtext')
   const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: '查看需求文档' }))
   await user.click(await screen.findByRole('button', { name: '编辑需求' }))
   expect(await screen.findByRole('heading', { name: '从 S3 加载的正文' })).toBeInTheDocument()
   expect(download).toHaveBeenCalledWith('req')
@@ -99,6 +111,7 @@ it('从富文本切换 Word 后必须上传新文件，再同时保存名称与�
   const update = vi.spyOn(requirementsApi, 'updateRequirement')
   mount(false, '/requirements/req', 'richtext')
   const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: '查看需求文档' }))
   await user.click(await screen.findByRole('button', { name: '编辑需求' }))
   await screen.findByText(/需求正文加载失败/)
   await user.click(screen.getByRole('combobox', { name: '需求文档类型' }))
@@ -141,6 +154,7 @@ it('顶部下载原文件使用当前需求并保留服务端文件名', async (
   const saveBlob = vi.spyOn(downloads, 'saveBlob').mockImplementation(() => {})
   mount()
   const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: '查看需求文档' }))
   const button = await screen.findByRole('button', { name: '下载原文件' })
   expect(button.closest('.requirement-detail-header')).not.toBeNull()
   await user.click(button)

@@ -1,6 +1,8 @@
 """GitLab resource queries over an explicitly authorized personal connection."""
 
-from typing import Any
+from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar
+from urllib.parse import urlsplit
 
 from testing_agent.core.errors import (
     AppError,
@@ -13,6 +15,8 @@ from testing_agent.services.gitlab_resource import GitLabResourceClient, GitLabR
 from testing_agent.services.integration_access import ActivePersonalConnection
 from testing_agent.services.personal_credentials import PersonalCredentialAccess
 from testing_agent.services.zentao_resource import truncate_error
+
+T = TypeVar("T")
 
 
 class GitLabResources:
@@ -59,6 +63,66 @@ class GitLabResources:
         if not result["withinGroup"]:
             raise dynamic_error(ErrResourceBindingInvalid, "仓库不在项目已绑群组范围内")
         return str(result["repositoryId"])
+
+    async def get_project(
+        self,
+        connection_id: str,
+        project_id: str,
+        repository_id: str,
+        *,
+        user_id: str,
+    ) -> dict[str, Any]:
+        connection = await self.authorize(user_id, "gitlab", connection_id, project_id)
+        result = await self._call(
+            self.client.get_project,
+            connection.base_url,
+            self.credentials.gitlab_token(connection, user_id=user_id, project_id=project_id),
+            repository_id,
+        )
+        base = urlsplit(connection.base_url)
+        clone = urlsplit(str(result.get("cloneUrl") or ""))
+        if (
+            clone.scheme.lower() != base.scheme.lower()
+            or clone.netloc.lower() != base.netloc.lower()
+        ):
+            raise dynamic_error(ErrResourceBindingInvalid, "仓库克隆地址与 GitLab 服务地址不一致")
+        return result
+
+    async def get_branch(
+        self,
+        connection_id: str,
+        project_id: str,
+        repository_id: str,
+        branch: str,
+        *,
+        user_id: str,
+    ) -> dict[str, Any]:
+        connection = await self.authorize(user_id, "gitlab", connection_id, project_id)
+        return await self._call(
+            self.client.get_branch,
+            connection.base_url,
+            self.credentials.gitlab_token(connection, user_id=user_id, project_id=project_id),
+            repository_id,
+            branch,
+        )
+
+    async def resolve_commit(
+        self,
+        connection_id: str,
+        project_id: str,
+        repository_id: str,
+        ref: str,
+        *,
+        user_id: str,
+    ) -> str:
+        connection = await self.authorize(user_id, "gitlab", connection_id, project_id)
+        return await self._call(
+            self.client.resolve_commit,
+            connection.base_url,
+            self.credentials.gitlab_token(connection, user_id=user_id, project_id=project_id),
+            repository_id,
+            ref,
+        )
 
     async def list_groups(
         self,
@@ -128,7 +192,7 @@ class GitLabResources:
         )
         return {"connectionId": connection_id, "repositoryId": repository_id, **result}
 
-    async def _call(self, method: Any, *args: Any, **kwargs: Any) -> dict[str, Any]:
+    async def _call(self, method: Callable[..., Awaitable[T]], *args: Any, **kwargs: Any) -> T:
         try:
             return await method(*args, **kwargs)
         except GitLabResourceError as exc:

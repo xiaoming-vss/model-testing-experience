@@ -98,7 +98,6 @@ def test_requirement_workspace_scope_roles_and_idempotent_run(api):  # noqa: F81
     overview = api.get(base, headers=owner).json()["data"]
     assert overview["runCounts"] == {"api": 1, "ui": 0, "function": 0, "requirement_analysis": 0}
     assert overview["activeTaskIds"] == [task_id]
-    assert not overview["adoptedUnderstanding"]
     assert api.get(base + "/api/runs?page=0", headers=owner).status_code == 400
     assert api.get(base + "/api/runs?pageSize=101", headers=owner).status_code == 400
     assert api.get(base + "/invented/runs", headers=owner).status_code == 400

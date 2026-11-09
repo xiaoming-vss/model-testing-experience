@@ -46,19 +46,32 @@ def terminate_children() -> None:
 class Pi:
     """One sequential agent context; each call resumes its named session on disk."""
 
-    def __init__(self, *, config_path: str, workspace: str) -> None:
+    def __init__(
+        self,
+        *,
+        config_path: str,
+        workspace: str,
+        tools: tuple[str, ...] | None = None,
+    ) -> None:
         self.config = json.loads(Path(config_path).read_text())
         if not all(self.config.get(key, "").strip() for key in ("model", "api_key", "base_url")):
             raise ValueError("Pi requires platform model credentials")
         self.workspace = Path(workspace).resolve()
         self.workspace.mkdir(parents=True, exist_ok=True)
+        self.tools = None if tools is None else tuple(tool for tool in tools if tool)
         self._lock = asyncio.Lock()
 
     @classmethod
-    def from_config(cls, *, config_path: str | None = None, workspace: str | None = None) -> Pi:
+    def from_config(
+        cls,
+        *,
+        config_path: str | None = None,
+        workspace: str | None = None,
+        tools: tuple[str, ...] | None = None,
+    ) -> Pi:
         if not config_path or not workspace:
             raise ValueError("Pi requires a task configuration and workspace")
-        return cls(config_path=config_path, workspace=workspace)
+        return cls(config_path=config_path, workspace=workspace, tools=tools)
 
     async def __aenter__(self) -> Pi:
         return self
@@ -130,6 +143,11 @@ class Pi:
                 "--model",
                 c["model"],
             ]
+            if self.tools is not None:
+                if self.tools:
+                    command.extend(["--tools", ",".join(self.tools)])
+                else:
+                    command.append("--no-tools")
             skills = self.workspace / "skills"
             if skills.is_dir():
                 command += ["--skill", str(skills)]

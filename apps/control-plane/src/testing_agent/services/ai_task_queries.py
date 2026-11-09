@@ -83,11 +83,17 @@ class GenerationQueries:
             return await standalone_history(
                 self.repository.session, task_id, page, page_size, pipeline_filter
             )
-        if kind == "code_risk_analysis" and pipeline_filter == "all":
+        if kind in {"code_risk_analysis", "repository_profile"} and pipeline_filter == "all":
             from testing_agent.services.auxiliary_execution_view import auxiliary_history
 
             return await auxiliary_history(self.repository.session, task_id, page, page_size)
         raise ErrBadRequest()
+
+    async def list_profile_versions(self, task_id: str, user_id: str) -> dict[str, Any]:
+        task = await self.access.owned_task(user_id, task_id, "repository_profile", action="read")
+        from testing_agent.services.repository_profile_versions import list_profile_versions
+
+        return list_payload(await list_profile_versions(self.repository.session, task.task_id))
 
     async def list_project_latest_runs(
         self, kind: str, project_id: str, user_id: str
@@ -104,7 +110,11 @@ class GenerationQueries:
             latest_project_run_summaries,
         )
 
-        return list_payload(await latest_project_run_summaries(self.repository.session, project_id))
+        return list_payload(
+            await latest_project_run_summaries(
+                self.repository.session, project_id, "code_risk_analysis"
+            )
+        )
 
     async def list_test_report_run_summaries(
         self, project_id: str, sprint_id: str, user_id: str, page: int = 1, page_size: int = 20
@@ -162,7 +172,12 @@ class GenerationQueries:
                 await self.access.owned_task(user_id, task_id, kind, action="read")
                 return dump_run(await project_standalone_execution(session, run_id))
             raise ErrNotFound()
-        if kind in {"code_risk_analysis", "test_report", "test_order_graph"}:
+        if kind in {
+            "code_risk_analysis",
+            "repository_profile",
+            "test_report",
+            "test_order_graph",
+        }:
             from testing_agent.repositories.auxiliary_execution import detail_row
             from testing_agent.services.auxiliary_execution_view import auxiliary_detail
 

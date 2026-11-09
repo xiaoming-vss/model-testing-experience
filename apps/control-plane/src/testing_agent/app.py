@@ -36,6 +36,9 @@ from testing_agent.routers.ldap_settings import router as ldap_settings_router
 from testing_agent.routers.llm_integrations import router as llm_integrations_router
 from testing_agent.routers.project_skills import router as project_skills_router
 from testing_agent.routers.projects import router as projects_router
+from testing_agent.routers.repository_profile_tasks import (
+    router as repository_profile_tasks_router,
+)
 from testing_agent.routers.requirement_analysis_runs import (
     router as requirement_analysis_runs_router,
 )
@@ -170,6 +173,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(function_ai_tasks_router, tags=["Function AI Tasks"])
     v1.include_router(requirement_analysis_runs_router, tags=["Requirement Analysis Tasks"])
     v1.include_router(code_risk_analysis_tasks_router, tags=["Code Risk Analysis Tasks"])
+    v1.include_router(repository_profile_tasks_router, tags=["Repository Profile Tasks"])
     v1.include_router(test_report_ai_tasks_router, tags=["Test Report AI Tasks"])
     v1.include_router(test_run_availability_router, tags=["Test Run Events"])
     v1.include_router(test_debug_stream_router, tags=["Test Debug Stream"])

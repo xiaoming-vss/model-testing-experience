@@ -10,7 +10,7 @@
 - 技能修改以 `/home/xiaoming/下载/skills/default-skill-003` 为基础，保留其它技能和前两版目录。
 - 功能用例链路的五字段分析 JSON、测试点 JSON、完整用例 JSON 保持现有输出协议。
 
-需求原文：`/home/xiaoming/data/文档/test-agent/需求/测试用例生成的UI交互信息输入需求.md`。
+需求原文：`/home/xiaoming/data/文档/test-agent/需求/已完成/测试用例生成的UI交互信息输入需求.md`。
 
 ## 2. 阶段与技能
 

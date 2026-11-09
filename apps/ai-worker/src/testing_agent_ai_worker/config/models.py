@@ -67,6 +67,17 @@ class AgentConfig(BaseModel):
 
 class CodeRiskAnalysisConfig(BaseModel):
     gitlab_timeout_seconds: float = 120.0
+    git_timeout_seconds: float = Field(default=300.0, gt=0, allow_inf_nan=False)
+    workspace_retention_hours: float = Field(default=24.0, gt=0, allow_inf_nan=False)
+    max_diff_chars: int = Field(default=1_000_000, gt=0)
+    max_repos: int = Field(default=20, gt=0)
+
+
+class RepositoryProfileConfig(BaseModel):
+    git_timeout_seconds: float = Field(default=300.0, gt=0, allow_inf_nan=False)
+    workspace_retention_hours: float = Field(default=24.0, gt=0, allow_inf_nan=False)
+    max_repos: int = Field(default=20, gt=0)
+    max_output_chars: int = Field(default=100_000, gt=0)
 
 
 class LoggingConfig(BaseModel):
@@ -82,4 +93,5 @@ class Settings(BaseModel):
     platform: PlatformConfig = PlatformConfig()
     agent: AgentConfig = AgentConfig()
     code_risk_analysis: CodeRiskAnalysisConfig = CodeRiskAnalysisConfig()
+    repository_profile: RepositoryProfileConfig = RepositoryProfileConfig()
     logging: LoggingConfig = LoggingConfig()

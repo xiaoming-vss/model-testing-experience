@@ -227,42 +227,63 @@ class FakeBindingRepository:
         return self.group_bindings.get(group_id)
 
 
-class FakeBaselineResolutionService:
-    def __init__(self, resolutions: list):
-        self.resolutions = resolutions
-        self.captured_branch_exists = None
-
-    async def resolve_requirement_bindings(self, requirement_id):
-        from testing_agent.services.baseline_resolution import (
-            BindingResolution,
-            RepoBaselineResolution,
-        )
-
-        return [
-            BindingResolution(
-                binding,
-                self.resolutions[i]
-                if i < len(self.resolutions)
-                else RepoBaselineResolution(binding.remote_resource_id, "develop", "release-1.0"),
-            )
-            for i, binding in enumerate(self.bindings)
-        ]
-
-
 class FakeIntegrationConnectionService:
-    def __init__(self, connections: list, branches: list | None = None):
+    def __init__(
+        self,
+        connections: list,
+        branches: list | None = None,
+        commits: dict[str, str] | None = None,
+    ):
         self.connections = {c.connection_id: c for c in connections}
         self.calls: list[dict] = []
         self.gitlab_resource_client = SimpleNamespace(
             list_repository_branches=self._list_repository_branches
         )
         self.branches = branches
+        self.commits = commits or {"release-1.0": "abc123", "develop": "def456"}
 
     async def resolve_personal_connection(
         self, user_id, provider, project_id, instance_url, connection_id=""
     ):
         assert user_id == "user-1"
-        return next(c for c in self.connections.values() if c.base_url == instance_url)
+        connection = next(
+            (c for c in self.connections.values() if c.base_url == instance_url),
+            None,
+        )
+        if connection is None:
+            raise ValueError("GitLab connection unavailable")
+        return connection
+
+    async def get_gitlab_project(self, connection_id, project_id, repository_id, *, user_id):
+        self.calls.append(
+            {
+                "kind": "project",
+                "connection_id": connection_id,
+                "project_id": project_id,
+                "repository_id": repository_id,
+            }
+        )
+        connection = self.connections[connection_id]
+        return {
+            "id": repository_id,
+            "pathWithNamespace": f"team/{repository_id}",
+            "cloneUrl": f"{connection.base_url}/team/{repository_id}.git",
+            "defaultBranch": "main",
+        }
+
+    async def resolve_gitlab_commit(
+        self, connection_id, project_id, repository_id, ref, *, user_id
+    ):
+        self.calls.append(
+            {
+                "kind": "commit",
+                "connection_id": connection_id,
+                "project_id": project_id,
+                "repository_id": repository_id,
+                "ref": ref,
+            }
+        )
+        return self.commits.get(ref, f"sha-{ref}")
 
     async def _list_repository_branches(
         self, base_url, access_token, repository_id, *, search="", page=1, page_size=100
@@ -282,24 +303,34 @@ def make_service(
     *,
     bindings: list | None = None,
     group_bindings: dict | None = None,
-    resolutions: list | None = None,
     connections: list | None = None,
     branches: list | None = None,
     tokens: dict | None = None,
     requirement: SimpleNamespace | None = None,
     task_repository: FakeTaskRepository | None = None,
-) -> tuple[CodeRiskAnalysisService, FakeBaselineResolutionService]:
+) -> tuple[CodeRiskAnalysisService, FakeIntegrationConnectionService]:
     bindings = bindings if bindings is not None else []
-    resolutions = resolutions or []
+    integration = FakeIntegrationConnectionService(connections or [], branches)
     service = CodeRiskAnalysisService(
         task_repository or FakeTaskRepository(requirement or make_requirement()),
         FakeBindingRepository(bindings, group_bindings or {}),
-        FakeBaselineResolutionService(resolutions),
-        FakeIntegrationConnectionService(connections or [], branches),
+        integration,
         FakeCipher(tokens or {}),
     )
-    service.baseline_resolution_service.bindings = bindings
-    return service, service.baseline_resolution_service  # type: ignore[attr-defined]
+    return service, integration
+
+
+def make_ready_service(
+    requirement: SimpleNamespace | None = None,
+) -> tuple[CodeRiskAnalysisService, FakeIntegrationConnectionService]:
+    """Service with one bound repository and a resolvable personal connection."""
+    return make_service(
+        bindings=[make_binding("binding-1", "repo-1", "group-1")],
+        group_bindings={"group-1": SimpleNamespace(connection_id="conn-1")},
+        connections=[make_connection("conn-1", "https://gitlab.example.com", "enc:token-1")],
+        tokens={"enc:token-1": "plain-token-1"},
+        requirement=requirement,
+    )
 
 
 def make_run(**overrides) -> SimpleNamespace:
@@ -353,7 +384,6 @@ class FakeSession:
 @pytest.mark.asyncio
 async def test_build_snapshot_contains_requirement_bindings_and_existing_tests():
     binding = make_binding("binding-1", "repo-1", "group-1")
-    resolution = SimpleNamespace(repository_id="repo-1", baseline_ref="abc123", note="", error="")
     function_case = SimpleNamespace(
         case_id="fc-1",
         title="登录成功用例",
@@ -406,7 +436,6 @@ async def test_build_snapshot_contains_requirement_bindings_and_existing_tests()
     service, _ = make_service(
         bindings=[binding],
         group_bindings={"group-1": SimpleNamespace(connection_id="conn-1")},
-        resolutions=[resolution],
         connections=[connection],
         tokens={"enc:token-1": "plain-token-1"},
         task_repository=task_repository,
@@ -438,6 +467,10 @@ async def test_build_snapshot_contains_requirement_bindings_and_existing_tests()
     assert entry["branch"] == "develop"
     assert entry["baselineBranch"] == "release-1.0"
     assert entry["baselineRef"] == "abc123"
+    assert entry["pathWithNamespace"] == "team/repo-1"
+    assert entry["cloneUrl"] == "https://gitlab.example.com/team/repo-1.git"
+    assert entry["baseCommit"] == "abc123"
+    assert entry["headCommit"] == "def456"
     assert entry["connectionId"] == "conn-1"
     assert entry["note"] == ""
     assert entry["error"] == ""
@@ -473,12 +506,22 @@ async def test_docx_requirement_still_uses_approved_understanding():
     requirement = make_requirement()
     requirement.document_type = "docx"
     requirement.document_content = ""
-    service, _ = make_service(requirement=requirement)
+    service, _ = make_ready_service(requirement=requirement)
 
     snapshot = await service.build_snapshot(make_task(), "run-1", "worker-task-1", user_id="user-1")
 
     assert snapshot["requirement"]["documentType"] == "docx"
     assert json.loads(snapshot["requirement"]["documentContent"]) == understanding_artifact()
+
+
+@pytest.mark.asyncio
+async def test_snapshot_rejects_when_requirement_has_no_repository_binding():
+    service, _ = make_service()
+
+    with pytest.raises(AppError) as error:
+        await service.build_snapshot(make_task(), "run-1", "worker-task-1", user_id="user-1")
+
+    assert "尚未绑定代码仓库" in str(error.value)
 
 
 @pytest.mark.asyncio
@@ -508,7 +551,7 @@ async def test_explicit_understanding_version_is_forwarded(monkeypatch):
         return understanding_version()
 
     monkeypatch.setattr(module, "approved_understanding", resolve)
-    service, _ = make_service()
+    service, _ = make_ready_service()
 
     await service.build_snapshot(
         make_task(), "run-1", "worker-task-1", user_id="user-1", understanding_version_id="sv-old"
@@ -518,32 +561,51 @@ async def test_explicit_understanding_version_is_forwarded(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_branch_checker_is_wired_to_resolve_via_snapshot_connection():
+async def test_build_snapshot_freezes_clone_url_and_pinned_commits():
     binding = make_binding("binding-1", "repo-1", "group-1", baseline_branch="release-1.0")
     connection = make_connection("conn-1", "https://gitlab.example.com", "enc:token-1")
-    service, baseline = make_service(
+    service, integration = make_service(
         bindings=[binding],
         group_bindings={"group-1": SimpleNamespace(connection_id="conn-1")},
-        resolutions=[],
         connections=[connection],
         tokens={"enc:token-1": "plain-token-1"},
-        branches=[{"name": "main"}, {"name": "develop"}],
     )
 
-    await service.build_snapshot(make_task(), "run-1", "worker-task-1", user_id="user-1")
+    snapshot = await service.build_snapshot(make_task(), "run-1", "worker-task-1", user_id="user-1")
 
-    call = service.integration_connection_service.calls[0]  # type: ignore[attr-defined]
-    assert call["base_url"] == "https://gitlab.example.com"
-    assert call["access_token"] == "plain-token-1"
-    assert call["repository_id"] == "repo-1"
-    assert call["search"] == "release-1.0"
+    entry = snapshot["bindings"][0]
+    assert entry["cloneUrl"] == "https://gitlab.example.com/team/repo-1.git"
+    assert entry["pathWithNamespace"] == "team/repo-1"
+    assert entry["baseCommit"] == "abc123"
+    assert entry["headCommit"] == "def456"
+    assert entry["baselineRef"] == "abc123"
+    assert [(call["kind"], call["ref"]) for call in integration.calls if "ref" in call] == [
+        ("commit", "release-1.0"),
+        ("commit", "develop"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_missing_baseline_branch_rejects_snapshot():
+    binding = make_binding("binding-1", "repo-1", "group-1", baseline_branch="")
+    connection = make_connection("conn-1", "https://gitlab.example.com", "enc:token-1")
+    service, _ = make_service(
+        bindings=[binding],
+        group_bindings={"group-1": SimpleNamespace(connection_id="conn-1")},
+        connections=[connection],
+        tokens={"enc:token-1": "plain-token-1"},
+    )
+
+    with pytest.raises(AppError) as error:
+        await service.build_snapshot(make_task(), "run-1", "worker-task-1", user_id="user-1")
+
+    assert "选择基线分支" in str(error.value)
 
 
 @pytest.mark.asyncio
 async def test_branch_checker_raises_when_repo_has_no_resolved_connection():
-    service, baseline = make_service(
+    service, _ = make_service(
         bindings=[make_binding("binding-1", "repo-1", "group-1")],
-        resolutions=[],
     )
 
     with pytest.raises((AppError, ValueError)):
@@ -553,10 +615,7 @@ async def test_branch_checker_raises_when_repo_has_no_resolved_connection():
 @pytest.mark.asyncio
 async def test_missing_group_binding_marks_binding_connection_unresolved():
     binding = make_binding("binding-1", "repo-1", "group-missing")
-    resolution = SimpleNamespace(
-        repository_id="repo-1", baseline_ref=None, note="基线分支缺失", error=""
-    )
-    service, _ = make_service(bindings=[binding], resolutions=[resolution])
+    service, _ = make_service(bindings=[binding])
 
     with pytest.raises((AppError, ValueError)):
         await service.build_snapshot(make_task(), "run-1", "worker-task-1", user_id="user-1")
@@ -568,7 +627,6 @@ async def test_decrypt_failure_treats_binding_as_connection_unresolved():
     service, _ = make_service(
         bindings=[make_binding("binding-1", "repo-1", "group-1")],
         group_bindings={"group-1": SimpleNamespace(connection_id="conn-1")},
-        resolutions=[],
         connections=[connection],
         tokens={},
     )
@@ -768,6 +826,64 @@ async def test_worker_requirement_document_allows_code_risk_analysis(monkeypatch
 # ---------------------------------------------------------------------------
 # 失败错误消息与补救建议回显
 # ---------------------------------------------------------------------------
+
+
+def test_parse_risk_report_reads_context_preview_receipt():
+    report = parse_risk_report(
+        """\
+analyzedAt: "2026-08-27T10:00:00Z"
+contextReceipt:
+  mode: context_preview
+  repositories:
+    - repositoryId: "repo-1"
+      headCommit: "def456"
+  counts:
+    repositories: 1
+    changedFiles: 2
+    diffChars: 123
+  truncatedFiles: ["src/big.py"]
+  summary: "已读取仓库上下文"
+  filesRead: ["src/login.py"]
+  toolsUsed: ["read"]
+"""
+    )
+
+    assert report["analyzedAt"] == "2026-08-27T10:00:00Z"
+    assert report["repositories"] == [{"repositoryId": "repo-1", "headCommit": "def456"}]
+    assert report["contextReceipt"]["mode"] == "context_preview"
+    assert report["contextReceipt"]["counts"]["diffChars"] == 123
+    assert report["contextReceipt"]["truncatedFiles"] == ["src/big.py"]
+    assert report["contextReceipt"]["summary"] == "已读取仓库上下文"
+    assert "risks" not in report
+
+    snake = parse_risk_report("context_receipt:\n  summary: snake\n")
+    assert snake["contextReceipt"]["summary"] == "snake"
+    assert snake["repositories"] == []
+
+
+def test_parse_risk_report_rejects_malformed_context_receipt():
+    for raw in (
+        "contextReceipt: []\n",
+        "contextReceipt:\n  repositories: not-a-list\n",
+        "contextReceipt:\n  repositories:\n    - not-an-object\n",
+        "analyzedAt: 2026-08-27\ncontextReceipt: {}\n",
+    ):
+        assert parse_risk_report(raw) is None
+
+
+def test_dump_code_risk_analysis_run_includes_context_receipt():
+    receipt_yaml = (
+        "analyzedAt: '2026-08-27T10:00:00Z'\n"
+        "contextReceipt:\n"
+        "  mode: context_preview\n"
+        "  repositories: []\n"
+        "  counts: {repositories: 0}\n"
+        "  summary: preview\n"
+    )
+    payload = dump_code_risk_analysis_run(make_run(status="success", result_yaml=receipt_yaml))
+
+    assert payload["report"]["contextReceipt"]["mode"] == "context_preview"
+    assert payload["report"]["repositories"] == []
 
 
 def test_parse_risk_report_full_structure():

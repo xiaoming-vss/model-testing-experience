@@ -36,6 +36,30 @@ max_output_tokens = 65536
 reasoning = false
 thinking_level = "off"
 
+# 当前仅支持 Pi 后端；[agent].backend 为 nanobot 时任务会明确失败。
+[code_risk_analysis]
+# 兼容旧配置；代码拉取与本地 diff 使用下方 git_timeout_seconds
+gitlab_timeout_seconds = 120
+# 单次 git 命令超时;代码拉取、checkout 与本地 diff 共用
+git_timeout_seconds = 300
+# 失败 run 的代码工作区保留时长;成功 run 立即删除
+workspace_retention_hours = 24
+# 预置 diff 字符预算;超出时按文件记录到 truncatedFiles
+max_diff_chars = 1000000
+# 单次 run 允许绑定的仓库数上限
+max_repos = 20
+
+# 当前仅支持 Pi 后端；[agent].backend 为 nanobot 时任务会明确失败。
+[repository_profile]
+# 单次 git 命令超时;仓库画像只 checkout 工作分支 HEAD
+git_timeout_seconds = 300
+# 失败 run 的代码工作区保留时长;成功 run 立即删除
+workspace_retention_hours = 24
+# 单次 run 允许分析的仓库数上限
+max_repos = 20
+# 模型输出 JSON 字符上限
+max_output_chars = 100000
+
 [logging]
 level = "INFO"
 console = true

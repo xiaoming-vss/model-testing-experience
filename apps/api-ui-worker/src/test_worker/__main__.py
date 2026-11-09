@@ -16,6 +16,7 @@ from .api.case_runner import ApiCaseRunner
 from .api.collection_runner import ApiCollectionRunner
 from .core.config import load_config
 from .control_plane.client import ControlPlaneClient
+from .health import HealthServer, health_port_from_env
 from .contracts.types import (
     UiCaseRunSnapshot,
     UiTestSuiteRunSnapshot,
@@ -260,6 +261,11 @@ async def _run_with_shutdown_signals() -> None:
 
 def main() -> None:
     """入口函数"""
+    # 本地开发不注入探针端口，此时不启动 health server。
+    health_port = health_port_from_env()
+    health_server = HealthServer(port=health_port) if health_port is not None else None
+    if health_server is not None:
+        health_server.start()
     try:
         asyncio.run(_run_with_shutdown_signals())
     except KeyboardInterrupt:
@@ -267,6 +273,9 @@ def main() -> None:
     except Exception as e:
         logger.error("test worker process fatal error", {"error": str(e)})
         sys.exit(1)
+    finally:
+        if health_server is not None:
+            health_server.stop()
 
 
 class _NoopControlPlaneClient:

@@ -1,0 +1,45 @@
+global: {}
+
+replicaCount: 1
+
+image:
+  registry: ""
+  repository: mtx/integration-worker
+  tag: local
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Complete integration-worker TOML. Contains secrets; provide it through a
+# user-managed values file, not the committed defaults.
+configToml: ""
+
+persistence:
+  runtimeSize: 5Gi
+  storageClass: ""
+
+resources: {}
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+terminationGracePeriodSeconds: 215
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  fsGroupChangePolicy: OnRootMismatch
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+  seccompProfile:
+    type: RuntimeDefault

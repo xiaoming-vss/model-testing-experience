@@ -31,7 +31,9 @@ class _FakeExecutor:
 
 
 class WorkerTaskDispatcherCodeRiskTests(unittest.TestCase):
-    def _dispatcher(self, code_risk_executor=None) -> WorkerTaskDispatcherExecutor:
+    def _dispatcher(
+        self, code_risk_executor=None, repository_profile_executor=None
+    ) -> WorkerTaskDispatcherExecutor:
         return WorkerTaskDispatcherExecutor(
             api_executor=_FakeExecutor(),
             functional_executor=_FakeExecutor(),
@@ -39,6 +41,7 @@ class WorkerTaskDispatcherCodeRiskTests(unittest.TestCase):
             test_report_executor=_FakeExecutor(),
             ui_executor=_FakeExecutor(),
             code_risk_executor=code_risk_executor,
+            repository_profile_executor=repository_profile_executor,
         )
 
     def _task(self, task_type: str = "code_risk_analysis") -> Task:
@@ -85,6 +88,32 @@ class WorkerTaskDispatcherCodeRiskTests(unittest.TestCase):
         )
 
         self.assertEqual(0, code_risk_executor.calls)
+
+    def test_dispatches_repository_profile_to_configured_executor(self) -> None:
+        profile_executor = _FakeExecutor()
+        dispatcher = self._dispatcher(repository_profile_executor=profile_executor)
+
+        result = dispatcher.execute(
+            self._task("repository_profile"),
+            datetime.now().astimezone(),
+            lambda _progress: None,
+        )
+
+        self.assertEqual(TaskStatus.SUCCESS, result.status)
+        self.assertEqual(1, profile_executor.calls)
+        self.assertEqual("repository_profile", profile_executor.last_task.task_type)
+
+    def test_fails_when_repository_profile_executor_not_configured(self) -> None:
+        dispatcher = self._dispatcher(repository_profile_executor=None)
+
+        result = dispatcher.execute(
+            self._task("repository_profile"),
+            datetime.now().astimezone(),
+            lambda _progress: None,
+        )
+
+        self.assertEqual(TaskStatus.FAILED, result.status)
+        self.assertIn("repository_profile", result.error_message or "")
 
 
 if __name__ == "__main__":

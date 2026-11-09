@@ -1,0 +1,22 @@
+apiVersion: v2
+name: mtx
+description: MTX platform umbrella chart
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+dependencies:
+  - name: control-plane
+    version: 0.1.0
+    repository: file://../charts/control-plane
+  - name: studio
+    version: 0.1.0
+    repository: file://../charts/studio
+  - name: ai-worker
+    version: 0.1.0
+    repository: file://../charts/ai-worker
+  - name: api-ui-worker
+    version: 0.1.0
+    repository: file://../charts/api-ui-worker
+  - name: integration-worker
+    version: 0.1.0
+    repository: file://../charts/integration-worker

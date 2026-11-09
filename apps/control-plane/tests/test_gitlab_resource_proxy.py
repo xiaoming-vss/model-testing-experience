@@ -32,8 +32,12 @@ from support.openapi_schema import openapi_schema
 
 from testing_agent.api.deps import get_integration_connection_service
 from testing_agent.app import create_app
-from testing_agent.core.errors import AppError, ErrNotFound
-from testing_agent.services.gitlab_resource import GitLabResourceClient, GitLabResourceError
+from testing_agent.core.errors import AppError, ErrNotFound, ErrResourceBindingInvalid
+from testing_agent.services.gitlab_resource import (
+    GitLabResourceClient,
+    GitLabResourceError,
+    normalize_clone_url,
+)
 from testing_agent.services.integration_connection import IntegrationConnectionService
 
 
@@ -393,6 +397,24 @@ def test_repositories_and_branches_endpoints_return_context_ids():
     )
 
 
+class UndecryptableCipher(FakeCipher):
+    def decrypt(self, ciphertext):
+        raise ValueError("集成凭据无法解密")
+
+
+def test_stale_stored_credential_returns_auth_failure_instead_of_500():
+    repository = FakeIntegrationConnectionRepository([connection_row()])
+    resource_client = FakeGitLabResourceClient()
+    client = proxy_client(repository, resource_client, cipher=UndecryptableCipher())
+
+    response = client.get(GROUPS_URL)
+
+    assert response.status_code == 400
+    assert response.json()["code"] == 3403
+    assert "请重新授权该连接" in response.json()["message"]
+    assert resource_client.calls == []
+
+
 def test_endpoints_return_structured_error_codes_instead_of_500():
     repository = FakeIntegrationConnectionRepository([connection_row()])
     resource_client = FakeGitLabResourceClient()
@@ -545,3 +567,186 @@ async def test_client_compare_missing_ref_raises_resource_error():
         )
 
     assert exc_info.value.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# 代码分析固化:项目克隆地址、分支与 commit 解析
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_client_reads_project_clone_url_with_encoded_repository_id():
+    requests = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "id": 11,
+                "path_with_namespace": "team/api",
+                "http_url_to_repo": "https://gitlab.example.com/team/api.git",
+                "default_branch": "main",
+            },
+        )
+
+    client = GitLabResourceClient(transport=httpx.MockTransport(respond))
+
+    result = await client.get_project(
+        "https://gitlab.example.com", "glpat-secret-token", "team/api"
+    )
+
+    assert str(requests[0].url) == "https://gitlab.example.com/api/v4/projects/team%2Fapi"
+    assert result == {
+        "id": "11",
+        "pathWithNamespace": "team/api",
+        "cloneUrl": "https://gitlab.example.com/team/api.git",
+        "defaultBranch": "main",
+    }
+
+
+@pytest.mark.asyncio
+async def test_client_reads_single_branch_with_encoded_name():
+    requests = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            json={"name": "feature/login", "commit": {"id": "abc123"}},
+        )
+
+    client = GitLabResourceClient(transport=httpx.MockTransport(respond))
+
+    result = await client.get_branch(
+        "https://gitlab.example.com",
+        "glpat-secret-token",
+        "team/api",
+        "feature/login",
+    )
+
+    assert str(requests[0].url) == (
+        "https://gitlab.example.com/api/v4/projects/team%2Fapi/repository/branches/feature%2Flogin"
+    )
+    assert result == {"name": "feature/login", "commitId": "abc123"}
+
+
+@pytest.mark.asyncio
+async def test_client_resolves_ref_to_commit_sha():
+    requests = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json=[{"id": "abc123"}])
+
+    client = GitLabResourceClient(transport=httpx.MockTransport(respond))
+
+    result = await client.resolve_commit(
+        "https://gitlab.example.com",
+        "glpat-secret-token",
+        "team/api",
+        "release/1.0",
+    )
+
+    assert str(requests[0].url) == (
+        "https://gitlab.example.com/api/v4/projects/team%2Fapi/repository/commits"
+        "?ref_name=release%2F1.0&per_page=1"
+    )
+    assert result == "abc123"
+
+
+@pytest.mark.asyncio
+async def test_client_rejects_ref_that_resolves_to_no_commit():
+    client = GitLabResourceClient(
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, json=[]))
+    )
+
+    with pytest.raises(GitLabResourceError):
+        await client.resolve_commit(
+            "https://gitlab.example.com", "glpat-secret-token", "team/api", "missing"
+        )
+
+
+def test_normalize_clone_url_rejects_credentials_and_non_http_urls():
+    assert normalize_clone_url("https://gitlab.example.com/team/api.git/") == (
+        "https://gitlab.example.com/team/api.git"
+    )
+    for raw in (
+        "ssh://git@gitlab.example.com/team/api.git",
+        "https://user:token@gitlab.example.com/team/api.git",
+        "https://gitlab.example.com/team/api.git?token=secret",
+        "not-a-url",
+    ):
+        with pytest.raises(GitLabResourceError):
+            normalize_clone_url(raw)
+
+
+@pytest.mark.asyncio
+async def test_service_reads_project_branch_and_commit_with_personal_connection():
+    repository = FakeIntegrationConnectionRepository([connection_row()])
+    resource_client = FakeGitLabResourceClient()
+    resource_client.results["project"] = {
+        "id": "team/api",
+        "pathWithNamespace": "team/api",
+        "cloneUrl": "https://gitlab.example.com/team/api.git",
+        "defaultBranch": "main",
+    }
+    resource_client.results["branch"] = {"name": "feature/login", "commitId": "abc123"}
+    resource_client.results["commit"] = "abc123"
+    service = IntegrationConnectionService(
+        repository,
+        gitlab_resource_client=resource_client,
+        credential_cipher=FakeCipher(),
+    )
+
+    project = await service.get_gitlab_project("conn-1", "project-1", "team/api", user_id="user-1")
+    branch = await service.get_gitlab_branch(
+        "conn-1", "project-1", "team/api", "feature/login", user_id="user-1"
+    )
+    commit = await service.resolve_gitlab_commit(
+        "conn-1", "project-1", "team/api", "feature/login", user_id="user-1"
+    )
+
+    assert project["cloneUrl"] == "https://gitlab.example.com/team/api.git"
+    assert branch == {"name": "feature/login", "commitId": "abc123"}
+    assert commit == "abc123"
+    assert resource_client.calls == [
+        ("project", "https://gitlab.example.com", "glpat-secret-token", "team/api"),
+        (
+            "branch",
+            "https://gitlab.example.com",
+            "glpat-secret-token",
+            "team/api",
+            "feature/login",
+        ),
+        (
+            "commit",
+            "https://gitlab.example.com",
+            "glpat-secret-token",
+            "team/api",
+            "feature/login",
+        ),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_service_rejects_clone_url_on_other_gitlab_instance():
+    repository = FakeIntegrationConnectionRepository([connection_row()])
+    resource_client = FakeGitLabResourceClient()
+    resource_client.results["project"] = {
+        "id": "team/api",
+        "pathWithNamespace": "team/api",
+        "cloneUrl": "https://other-gitlab.example.com/team/api.git",
+        "defaultBranch": "main",
+    }
+    service = IntegrationConnectionService(
+        repository,
+        gitlab_resource_client=resource_client,
+        credential_cipher=FakeCipher(),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        await service.get_gitlab_project("conn-1", "project-1", "team/api", user_id="user-1")
+
+    assert exc_info.value.code == ErrResourceBindingInvalid.code
+    assert "克隆地址" in exc_info.value.message

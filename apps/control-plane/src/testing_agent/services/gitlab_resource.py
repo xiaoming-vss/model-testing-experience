@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 import httpx
 
@@ -33,6 +33,17 @@ def encode_gitlab_id(resource_id: str) -> str:
     if not text:
         raise GitLabResourceError("GitLab 资源ID不能为空")
     return quote(text, safe="")
+
+
+def normalize_clone_url(clone_url: str) -> str:
+    """校验仓库克隆地址：只允许 HTTP(S)，且不能内嵌凭据、查询参数或片段。"""
+    normalized = str(clone_url or "").strip()
+    parsed = urlsplit(normalized)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise GitLabResourceError("GitLab 仓库克隆地址不合法")
+    if parsed.username or parsed.password or parsed.query or parsed.fragment:
+        raise GitLabResourceError("GitLab 仓库克隆地址不能包含凭据、查询参数或片段")
+    return normalized.rstrip("/")
 
 
 def group_payload(item: dict[str, Any]) -> dict[str, Any]:
@@ -138,6 +149,70 @@ class GitLabResourceClient:
         if not isinstance(group, dict):
             raise GitLabResourceError("GitLab 群组信息格式不合法")
         return {**group_payload(group), "id": canonical_resource_id(group.get("id"))}
+
+    async def get_project(
+        self, base_url: str, access_token: str, repository_id: str
+    ) -> dict[str, Any]:
+        """读取仓库元信息，供代码分析固定克隆地址和默认分支。"""
+        project, _ = await self._request_json(
+            base_url,
+            access_token,
+            f"/api/v4/projects/{encode_gitlab_id(repository_id)}",
+            {},
+        )
+        if not isinstance(project, dict):
+            raise GitLabResourceError("GitLab 仓库信息格式不合法")
+        clone_url = project.get("http_url_to_repo")
+        if not isinstance(clone_url, str) or not clone_url.strip():
+            raise GitLabResourceError("GitLab 仓库缺少克隆地址")
+        return {
+            "id": canonical_resource_id(project.get("id")),
+            "pathWithNamespace": str(project.get("path_with_namespace") or ""),
+            "cloneUrl": normalize_clone_url(clone_url),
+            "defaultBranch": str(project.get("default_branch") or ""),
+        }
+
+    async def get_branch(
+        self,
+        base_url: str,
+        access_token: str,
+        repository_id: str,
+        branch: str,
+    ) -> dict[str, Any]:
+        """读取单个分支，用于绑定前校验分支存在且当前操作人可访问。"""
+        encoded_branch = encode_gitlab_id(branch)
+        data, _ = await self._request_json(
+            base_url,
+            access_token,
+            f"/api/v4/projects/{encode_gitlab_id(repository_id)}/repository/branches/{encoded_branch}",
+            {},
+        )
+        if not isinstance(data, dict):
+            raise GitLabResourceError("GitLab 分支信息格式不合法")
+        name = str(data.get("name") or "")
+        commit = data.get("commit")
+        commit_id = str(commit.get("id") or "") if isinstance(commit, dict) else ""
+        if not name or not commit_id:
+            raise GitLabResourceError("GitLab 分支信息缺少名称或提交")
+        return {"name": name, "commitId": commit_id}
+
+    async def resolve_commit(
+        self,
+        base_url: str,
+        access_token: str,
+        repository_id: str,
+        ref: str,
+    ) -> str:
+        """把分支/tag/SHA 解析为固定 commit SHA。"""
+        data, _ = await self._request(
+            base_url,
+            access_token,
+            f"/api/v4/projects/{encode_gitlab_id(repository_id)}/repository/commits",
+            {"ref_name": str(ref), "per_page": "1"},
+        )
+        if not data or not isinstance(data[0], dict) or not data[0].get("id"):
+            raise GitLabResourceError(f"GitLab ref {ref} 无法解析为 commit")
+        return str(data[0]["id"])
 
     async def get_repository_group_scope(
         self, base_url: str, access_token: str, group_id: str, repository_id: str

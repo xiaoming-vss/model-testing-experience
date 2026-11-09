@@ -44,6 +44,33 @@
   .sprint-overview-page .sprint-dashboard-trend-pane + .sprint-dashboard-trend-pane { border-left: 0; padding-left: 0; }
 }
 
+/* 宽屏下让现有三段布局吃满容器高度；窄屏仍按内容高度排列并滚动。
+   高度不足时布局内容最小高度会撑开面板，由 panel-body 滚动兜底。 */
+@media (min-width: 1281px) {
+  .sprint-overview-page .sprint-overview-panel-body {
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+  }
+  .sprint-overview-page .sprint-overview-layout {
+    flex: 1 1 auto;
+    min-height: 0;
+    grid-template-rows: auto minmax(260px, 1fr) minmax(0, 1.18fr);
+    align-content: stretch;
+  }
+  .sprint-overview-page .sprint-overview-card-rich .ant-card-body {
+    height: 100%;
+    min-height: 0;
+  }
+  .sprint-overview-page .sprint-dashboard-test-table {
+    grid-template-rows: 32px repeat(3, minmax(56px, 1fr));
+  }
+  .sprint-overview-page .sprint-overview-chart-host {
+    height: auto;
+    min-height: 210px;
+  }
+}
+
 .sprint-overview-page .sprint-dashboard-health-progress-head strong { font-size: 14px; }
 .sprint-overview-page .sprint-dashboard-health-caption { font-size: 13px; }
 .sprint-overview-page .sprint-dashboard-risk-layout { grid-template-columns: minmax(240px, 1fr) minmax(0, 1fr); gap: 16px; }

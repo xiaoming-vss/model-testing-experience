@@ -25,8 +25,14 @@ from testing_agent_ai_worker.tasks.api_case_generate.executor import ApiCaseExec
 from testing_agent_ai_worker.tasks.code_risk_analysis.executor import (
     CodeRiskAnalysisExecutor,
 )
+from testing_agent_ai_worker.tasks.code_risk_analysis.workspace import (
+    sweep_expired_workspaces,
+)
 from testing_agent_ai_worker.tasks.functional_case_generate.executor import (
     FunctionalCaseExecutor,
+)
+from testing_agent_ai_worker.tasks.repository_profile.executor import (
+    RepositoryProfileExecutor,
 )
 from testing_agent_ai_worker.tasks.requirement_analysis.executor import (
     RequirementAnalysisExecutor,
@@ -123,8 +129,14 @@ def build_task_runner(
             ),
             code_risk_executor=CodeRiskAnalysisExecutor(
                 agent_config=settings.agent.active,
+                code_risk_config=settings.code_risk_analysis,
                 client=resolved_client,
                 timeout_seconds=settings.code_risk_analysis.gitlab_timeout_seconds,
+            ),
+            repository_profile_executor=RepositoryProfileExecutor(
+                agent_config=settings.agent.active,
+                profile_config=settings.repository_profile,
+                client=resolved_client,
             ),
             test_order_graph_executor=TestOrderGraphExecutor(
                 agent_config=settings.agent.active,
@@ -185,6 +197,7 @@ def run_worker(
     resolved_settings = settings or load_settings(config_path)
     apply_environment(resolved_settings.agent.active)
     migrate_legacy_sessions(resolved_settings.agent.active)
+    sweep_expired_workspaces(resolved_settings.agent.active)
     resolved_poller = poller or build_task_poller(resolved_settings)
     resolved_task_runner = task_runner or build_task_runner(resolved_settings)
     resolved_logger = logger or logging.getLogger("testing_agent_ai_worker")

@@ -44,7 +44,9 @@ class AgentSelectionTests(unittest.TestCase):
                 create_agent(config_path=AgentConfigPath("task.json", "pi"), workspace="work"),
                 sentinel,
             )
-            pi_factory.assert_called_once_with(config_path="task.json", workspace="work")
+            pi_factory.assert_called_once_with(
+                config_path="task.json", workspace="work", tools=None
+            )
             self.assertIs(create_agent(config_path="task.json", workspace="work"), sentinel)
             nanobot_factory.assert_called_once_with(config_path="task.json", workspace="work")
 
@@ -57,7 +59,7 @@ class AgentSelectionTests(unittest.TestCase):
                 create_agent(config_path="task.json", workspace="work", backend="pi"),
                 sentinel,
             )
-        pi_factory.assert_called_once_with(config_path="task.json", workspace="work")
+        pi_factory.assert_called_once_with(config_path="task.json", workspace="work", tools=None)
 
     def test_create_agent_rejects_unknown_backend(self) -> None:
         with self.assertRaisesRegex(ValueError, "unsupported agent backend"):

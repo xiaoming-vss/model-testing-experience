@@ -206,11 +206,12 @@ function ChainHeaderControls({ workspace, canWrite, inline = false }: {
   return inline ? controls : <><span ref={anchor} hidden />{target ? createPortal(controls, target) : null}</>
 }
 
-export function GenerationChainModal({ workspace, requirementId, projectId, open, onClose, onOpenLegacy, embedded = false, inspectorContainer, inspectorActionContainer, showApiRunInInspector = false }: {
+export function GenerationChainModal({ workspace, requirementId, projectId, open, onClose, onOpenLegacy, embedded = false, inspectorContainer, inspectorActionContainer, readingActionsContainer, showApiRunInInspector = false }: {
   embedded?: boolean
   showApiRunInInspector?: boolean
   inspectorContainer?: HTMLElement | null
   inspectorActionContainer?: HTMLElement | null
+  readingActionsContainer?: HTMLElement | null
   workspace: GenerationChainWorkspace
   requirementId: string
   projectId: string
@@ -335,6 +336,7 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
     </div>
   </div>
 
+  const artifactScrollClass = `gc-artifact-scroll${!isDiff && mode === 'raw' ? ' is-raw' : ''}${!isDiff && mode !== 'raw' && stageArtifactClass ? ` ${stageArtifactClass}` : ''}`
   const modeOptions = [{ label: '可视化', value: 'visual' }, { label: rawLabel, value: 'raw' }]
   // 画布内阅读时，视图切换与复制跟随正文放在右上角；侧栏只保留版本、上游与对比。
   const readingModeControls = <ArtifactModeControls
@@ -354,6 +356,10 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
       copyLabel={`复制 ${rawLabel}`}
     /> : null}
   </>
+  // 画布内阅读时，视图切换与复制放进页面标题栏；阅读正文不再保留工具行。
+  const readingHeaderActions = embedded && open && readingActionsContainer
+    ? createPortal(readingModeControls, readingActionsContainer)
+    : null
   const revisionPanel = <>
       {revisionOpen ? <RevisionSidePanel projectId={projectId} value={revisionInstruction} sourceEditable={false}
         onChange={setRevisionInstruction} loading={revise.isPending}
@@ -411,15 +417,7 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
           {versionDetail.isFetching ? <Spin size="small" /> : null}
         </div> : null}
 
-        {embedded ? <div className="gc-reading-toolbar" role="toolbar" aria-label="阅读视图工具">
-          <div className="gc-reading-toolbar-title-group">
-            <strong className="gc-reading-toolbar-title">{stage.label}</strong>
-            {draftEditable ? <Tag color="processing">待审核/可编辑</Tag> : null}
-          </div>
-          {readingModeControls}
-        </div> : null}
-
-        <div ref={modePanelRef} className={`gc-artifact-scroll${!isDiff && mode === 'raw' ? ' is-raw' : ''}${!isDiff && mode !== 'raw' && stageArtifactClass ? ` ${stageArtifactClass}` : ''}`}>
+        <div ref={modePanelRef} className={artifactScrollClass}>
           {isDiff ? <GenerationArtifactDiff before={comparisonContent} after={displayedContent}
             beforeLabel={stage.versions.find(version => version.versionId === comparisonId)?.label ?? '旧版本'}
             afterLabel={versionKey === 'draft' ? '待审核产物' : selectedVersion?.label ?? '当前内容'} /> : mode === 'raw'
@@ -462,5 +460,5 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
       refreshInputs={Boolean(chain.runId)} source={chain.sourceInputs}
       onClose={() => setInputsOpen(false)} onSubmit={inputs => runStage.mutateAsync(inputs)} /> : null}
     <GenerationChainImportModal workspace={workspace} open={importOpen} onClose={closeImport} />
-  </GenerationArtifactFrame>{inspector}{inspectorActions}</>
+  </GenerationArtifactFrame>{inspector}{inspectorActions}{readingHeaderActions}</>
 }

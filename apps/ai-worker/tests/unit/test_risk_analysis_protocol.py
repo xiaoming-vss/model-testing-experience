@@ -91,9 +91,14 @@ def _risk_snapshot(*, fields_inside_run: bool = False) -> dict[str, Any]:
             "bindingId": "binding-1",
             "repositoryId": "repo-1",
             "groupId": "group-1",
+            "instanceUrl": "https://gitlab.example.com",
+            "pathWithNamespace": "team/repo-one",
+            "cloneUrl": "https://gitlab.example.com/team/repo-one.git",
             "branch": "feat/login",
-            "baselineBranch": "",
-            "baselineRef": "refs/heads/master",
+            "baselineBranch": "release/1.0",
+            "baselineRef": "abc123",
+            "baseCommit": "abc123",
+            "headCommit": "def456",
             "note": "",
             "error": "",
             "connectionId": "conn-gitlab-1",
@@ -170,6 +175,52 @@ def _risk_snapshot(*, fields_inside_run: bool = False) -> dict[str, Any]:
     return {"taskType": "code_risk_analysis", "run": base_run, **fields}
 
 
+def _profile_snapshot() -> dict[str, Any]:
+    return {
+        "taskType": "repository_profile",
+        "run": {
+            "taskId": "worker-task-1",
+            "attemptId": "run-1",
+            "taskType": "repository_profile",
+            "name": "登录需求仓库画像",
+            "projectId": "project-1",
+            "sprintId": "sprint-1",
+            "requirementId": "req-1",
+            "instruction": "",
+            "requirement": {
+                "requirementId": "req-1",
+                "name": "登录功能需求",
+                "documentType": "text",
+                "documentContent": "需求理解记录正文",
+            },
+            "bindings": [
+                {
+                    "bindingId": "binding-1",
+                    "repositoryId": "repo-1",
+                    "instanceUrl": "https://gitlab.example.com",
+                    "pathWithNamespace": "team/repo-one",
+                    "branch": "feat/login",
+                    "cloneUrl": "https://gitlab.example.com/team/repo-one.git",
+                    "headCommit": "def456",
+                    "connectionId": "conn-gitlab-1",
+                },
+                {
+                    "bindingId": "binding-2",
+                    "repositoryId": "repo-2",
+                    "instanceUrl": "https://gitlab.example.com",
+                    "pathWithNamespace": "team/repo-two",
+                    "branch": "dev",
+                    "cloneUrl": "",
+                    "headCommit": "",
+                    "connectionId": "",
+                    "profileError": "工作分支不存在或无权限",
+                },
+            ],
+            "gitlabCredentialsUrl": "/internal/ai-worker/tasks/worker-task-1/gitlab-credentials",
+        },
+    }
+
+
 class _PollingTestCase(unittest.TestCase):
     def _poll(self, snapshot_payload: dict[str, Any]) -> Task:
         task_source = HttpClaimTaskSource(
@@ -203,8 +254,14 @@ class RiskAnalysisSnapshotTests(_PollingTestCase):
         self.assertEqual("binding-1", binding.binding_id)
         self.assertEqual("repo-1", binding.repository_id)
         self.assertEqual("group-1", binding.group_id)
+        self.assertEqual("https://gitlab.example.com", binding.instance_url)
+        self.assertEqual("team/repo-one", binding.path_with_namespace)
+        self.assertEqual("https://gitlab.example.com/team/repo-one.git", binding.clone_url)
         self.assertEqual("feat/login", binding.branch)
-        self.assertEqual("refs/heads/master", binding.baseline_ref)
+        self.assertEqual("release/1.0", binding.baseline_branch)
+        self.assertEqual("abc123", binding.base_commit)
+        self.assertEqual("def456", binding.head_commit)
+        self.assertEqual("abc123", binding.baseline_ref)
         self.assertEqual("conn-gitlab-1", binding.connection_id)
         self.assertEqual("基线分支已删除", task.bindings[1].error)
         self.assertIsNone(task.bindings[1].baseline_ref)
@@ -374,6 +431,89 @@ class CodeRiskAnalysisConfigTests(unittest.TestCase):
             Path(config_path).unlink(missing_ok=True)
 
         self.assertEqual(45.0, settings.code_risk_analysis.gitlab_timeout_seconds)
+
+    def test_code_workspace_limits_have_safe_defaults(self) -> None:
+        config = Settings().code_risk_analysis
+
+        self.assertEqual(300.0, config.git_timeout_seconds)
+        self.assertEqual(24.0, config.workspace_retention_hours)
+        self.assertEqual(1_000_000, config.max_diff_chars)
+        self.assertEqual(20, config.max_repos)
+
+    def test_code_workspace_limits_overridable_via_toml(self) -> None:
+        import tempfile
+
+        from testing_agent_ai_worker.config.loader import load_settings
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+            f.write(
+                "[code_risk_analysis]\n"
+                "git_timeout_seconds = 30\n"
+                "workspace_retention_hours = 2\n"
+                "max_diff_chars = 5000\n"
+                "max_repos = 3\n"
+            )
+            config_path = f.name
+        try:
+            settings = load_settings(config_path)
+        finally:
+            Path(config_path).unlink(missing_ok=True)
+
+        config = settings.code_risk_analysis
+        self.assertEqual(30.0, config.git_timeout_seconds)
+        self.assertEqual(2.0, config.workspace_retention_hours)
+        self.assertEqual(5000, config.max_diff_chars)
+        self.assertEqual(3, config.max_repos)
+
+
+class RepositoryProfileConfigTests(unittest.TestCase):
+    def test_profile_limits_have_safe_defaults(self) -> None:
+        config = Settings().repository_profile
+
+        self.assertEqual(300.0, config.git_timeout_seconds)
+        self.assertEqual(24.0, config.workspace_retention_hours)
+        self.assertEqual(20, config.max_repos)
+        self.assertEqual(100_000, config.max_output_chars)
+
+    def test_profile_limits_overridable_via_toml(self) -> None:
+        import tempfile
+
+        from testing_agent_ai_worker.config.loader import load_settings
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+            f.write(
+                "[repository_profile]\n"
+                "git_timeout_seconds = 30\n"
+                "workspace_retention_hours = 2\n"
+                "max_repos = 3\n"
+                "max_output_chars = 5000\n"
+            )
+            config_path = f.name
+        try:
+            settings = load_settings(config_path)
+        finally:
+            Path(config_path).unlink(missing_ok=True)
+
+        config = settings.repository_profile
+        self.assertEqual(30.0, config.git_timeout_seconds)
+        self.assertEqual(2.0, config.workspace_retention_hours)
+        self.assertEqual(3, config.max_repos)
+        self.assertEqual(5000, config.max_output_chars)
+
+
+class RepositoryProfileSnapshotTests(_PollingTestCase):
+    def test_poll_maps_profile_bindings_without_baseline_and_keeps_profile_error(self) -> None:
+        task = self._poll(_profile_snapshot())
+
+        self.assertEqual("repository_profile", task.task_type)
+        self.assertEqual("登录需求仓库画像", task.name)
+        self.assertEqual(2, len(task.bindings))
+        self.assertEqual("repo-1", task.bindings[0].repository_id)
+        self.assertEqual("def456", task.bindings[0].head_commit)
+        self.assertEqual("", task.bindings[0].baseline_branch)
+        self.assertEqual("", task.bindings[0].base_commit)
+        self.assertEqual("工作分支不存在或无权限", task.bindings[1].profile_error)
+        self.assertEqual("", task.bindings[1].head_commit)
 
 
 if __name__ == "__main__":

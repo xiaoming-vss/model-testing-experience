@@ -24,7 +24,8 @@ FUNCTIONAL_SKILLS = {
 TASK_SKILLS = {
     "api_case_generate": ["openapi-test-config-extractor", "api-cases-yaml-generator"],
     "ui_case_generate": ["generate-ui-test-case"],
-    "code_risk_analysis": ["code-risk-analysis"],
+    # Code risk currently runs the built-in context preview; the real
+    # code-risk-analysis skill will be reintroduced when it is published.
     "test_report_generate": ["advanced-test-report-generator"],
     "test_order_graph": ["update-test-case-graph"],
 }

@@ -25,7 +25,7 @@ RUN uv sync --frozen --no-dev --no-editable \
 RUN mkdir -p /app/artifacts
 
 VOLUME ["/app/artifacts"]
-EXPOSE 9010
+EXPOSE 8080
 
 # The official Playwright image runs trusted end-to-end tests as root so
 # Chromium can launch without a custom seccomp profile. Harden the runtime

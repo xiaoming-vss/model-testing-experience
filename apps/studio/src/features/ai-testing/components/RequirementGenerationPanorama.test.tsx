@@ -13,6 +13,8 @@ import { canNavigateAway } from '@/shared/utils/unsavedChanges'
 import { requirementDesignApi } from '../api/requirementDesign.api'
 import { aiTestingApi } from '../api/aiTesting.api'
 import { generationChainApi } from '../api/generationChain.api'
+import { repositoryProfileApi } from '../api/repositoryProfile.api'
+import { baseServicesApi } from '@/features/base-services/api/baseServices.api'
 import type { GenerationChain, GenerationChainStage } from '../api/generationChain.api'
 import { RequirementDesignWorkspace } from './RequirementDesignWorkspace'
 import { buildRevisionTemplate, getRevisionQuestions } from '../utils/functionalRevision'
@@ -35,6 +37,16 @@ vi.mock('../api/aiTesting.api', () => ({
     generateFunctionalCaseRelationAnalysis: vi.fn(async (runId: string) => ({ runId })),
   },
 }))
+vi.mock('../api/repositoryProfile.api', () => ({
+  repositoryProfileApi: {
+    getRepositoryProfileTasks: vi.fn(),
+    createRepositoryProfileTask: vi.fn(),
+    runRepositoryProfileTask: vi.fn(),
+    getRepositoryProfileTaskRuns: vi.fn(),
+    getRepositoryProfileRun: vi.fn(),
+    getRepositoryProfileVersions: vi.fn(),
+  },
+}))
 vi.mock('../hooks/usePersonalLlmChoice', () => ({
   usePersonalLlmChoice: () => ({
     choose: async () => 'llm',
@@ -45,6 +57,7 @@ vi.mock('../hooks/usePersonalLlmChoice', () => ({
 vi.mock('@/features/projects/hooks/useProjectAccess', () => ({ useProjectAccess: () => ({ can: () => true }) }))
 
 const clients: QueryClient[] = []
+const readingActionHosts: HTMLElement[] = []
 const stopFlowDragInJsdom = (event: MouseEvent) => {
   if ((event.target as Element).closest('.react-flow__node button, .gc-flow-group')) event.stopPropagation()
 }
@@ -63,7 +76,7 @@ beforeAll(() => {
   })
 })
 afterAll(() => { document.removeEventListener('mousedown', stopFlowDragInJsdom, true); vi.restoreAllMocks(); vi.unstubAllGlobals() })
-afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.clearAllMocks() })
+afterEach(() => { cleanup(); readingActionHosts.splice(0).forEach(host => host.remove()); clients.forEach(client => client.clear()); clients.length = 0; vi.clearAllMocks() })
 
 function version(versionId: string, versionNo: number, sourceRunId = 'run') {
   return {
@@ -109,11 +122,16 @@ const emptyChain = (kind: 'requirement_analysis' | 'function' | 'api', label: st
   leaf: {},
 })
 
-function mount(documentPreview?: import('react').ReactNode, onReadingNodeChange?: Parameters<typeof RequirementDesignWorkspace>[0]['onReadingNodeChange']) {
+function mount(documentPreview?: import('react').ReactNode, onReadingNodeChange?: Parameters<typeof RequirementDesignWorkspace>[0]['onReadingNodeChange'], inspectorHost?: HTMLElement | null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   clients.push(client)
+  // 阅读态的视图切换与复制走页面标题栏插槽，测试中提供与真实页面等价的宿主节点。
+  const readingActionsHost = document.createElement('div')
+  readingActionsHost.dataset.testid = 'reading-actions'
+  document.body.appendChild(readingActionsHost)
+  readingActionHosts.push(readingActionsHost)
   render(<TestThemeProvider><QueryClientProvider client={client}><MemoryRouter>
-    <RequirementDesignWorkspace requirementId="req" projectId="project" canWrite documentPreview={documentPreview} onReadingNodeChange={onReadingNodeChange} />
+    <RequirementDesignWorkspace requirementId="req" projectId="project" canWrite documentPreview={documentPreview} onReadingNodeChange={onReadingNodeChange} inspectorHost={inspectorHost} readingActionsHost={readingActionsHost} />
   </MemoryRouter></QueryClientProvider></TestThemeProvider>)
 }
 
@@ -155,7 +173,6 @@ beforeEach(() => {
   vi.mocked(aiTestingApi.getUiCaseGenerateTask).mockResolvedValue({ name: 'UI', sourceType: 'source_archive', instruction: '', sourceArchive: null })
   vi.mocked(requirementDesignApi.overview).mockResolvedValue({
     tasks: [], runCounts: { requirement_analysis: 0, function: 0, api: 0, ui: 0 },
-    adoptedUnderstanding: true,
   })
   vi.mocked(requirementDesignApi.history).mockResolvedValue({ items: [], total: 0 })
   vi.mocked(generationChainApi.overview).mockResolvedValue({
@@ -237,6 +254,20 @@ it('单击选中并展示侧栏，双击在画布内打开阶段产物', async (
   await waitFor(() => expect(generationChainApi.review).toHaveBeenCalledWith('req', 'ui', 'ui_design', {
     action: 'approve', expectedAttemptId: 'draft', continueAfter: true, connectionId: 'llm', requestId: expect.any(String),
   }))
+})
+
+it('阶段侧栏渲染到页面级独立容器，不放进画布大容器', async () => {
+  const host = document.createElement('div')
+  document.body.append(host)
+  try {
+    mount(undefined, undefined, host)
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: 'UI 用例设计 · 待审核' }))
+    const inspector = await screen.findByRole('complementary', { name: '阶段详情' })
+    expect(host.contains(inspector)).toBe(true)
+    expect(inspector.closest('.gc-canvas-workspace')).toBeNull()
+    expect(inspector.closest('.requirement-detail-main')).toBeNull()
+  } finally { host.remove() }
 })
 
 it('执行失败且 Worker 未返回原因时仍展示失败详情和运行信息', async () => {
@@ -540,7 +571,7 @@ it('API 测试从分组侧栏打开文档编辑弹框并保存', async () => {
   await waitFor(() => expect(requirementDesignApi.configure).toHaveBeenCalledWith('req', 'api', expect.objectContaining({ sourceContent: 'openapi: 3.0.0' })))
 })
 
-it('阅读工具和审核操作在侧栏，视图切换与复制在正文右上角', async () => {
+it('阅读工具和审核操作在侧栏，视图切换与复制在页面标题栏', async () => {
   mount()
   const user = userEvent.setup()
   await user.dblClick(await screen.findByRole('button', { name: 'UI 用例设计 · 待审核' }))
@@ -552,11 +583,13 @@ it('阅读工具和审核操作在侧栏，视图切换与复制在正文右上�
   expect(within(inspector).getByRole('button', { name: /对比/ })).toBeInTheDocument()
   expect(within(inspector).getByRole('group', { name: '侧栏选择版本' })).toBeInTheDocument()
   expect(within(inspector).queryByLabelText('内容展示方式')).not.toBeInTheDocument()
-  const toolbar = within(reader).getByRole('toolbar', { name: '阅读视图工具' })
-  expect(within(toolbar).getByLabelText('内容展示方式')).toBeInTheDocument()
-  expect(within(toolbar).queryByRole('button', { name: /复制/ })).not.toBeInTheDocument()
-  await user.click(within(toolbar).getByTitle('YAML'))
-  expect(within(toolbar).getByRole('button', { name: '复制 YAML' })).toBeInTheDocument()
+  expect(within(reader).queryByRole('toolbar', { name: '阅读视图工具' })).not.toBeInTheDocument()
+  expect(within(reader).queryByLabelText('内容展示方式')).not.toBeInTheDocument()
+  const headerActions = screen.getByTestId('reading-actions')
+  expect(within(headerActions).getByLabelText('内容展示方式')).toBeInTheDocument()
+  expect(within(headerActions).queryByRole('button', { name: /复制/ })).not.toBeInTheDocument()
+  await user.click(within(headerActions).getByTitle('YAML'))
+  expect(within(headerActions).getByRole('button', { name: '复制 YAML' })).toBeInTheDocument()
   expect(reader.querySelector('.ant-modal-footer')).toBeNull()
   expect(reader.querySelector('.gc-artifact-head')).toBeNull()
   expect(within(inspector).queryByText('基于 v1')).not.toBeInTheDocument()
@@ -638,7 +671,7 @@ it('最终阶段没有审核通过并继续，版本切换保留可视化与原�
 
   await user.click(within(dialog).getByRole('button', { name: /^v2/ }))
   await waitFor(() => expect(generationChainApi.version).toHaveBeenCalledWith('req', 'ui', 'sv-v2'))
-  await user.click(await within(dialog).findByTitle('YAML'))
+  await user.click(within(screen.getByTestId('reading-actions')).getByTitle('YAML'))
   expect(within(dialog).getByRole('textbox', { name: '阶段产物 YAML' })).toHaveTextContent('name: 登录')
 })
 
@@ -811,7 +844,7 @@ it('需求分析第一阶段沿用材料提取结果的对照阅读', async () =
   expect(within(dialog).queryByRole('region', { name: '材料内容' })).not.toBeInTheDocument()
   expect(within(dialog).getByRole('region', { name: '提取事实' })).toBeInTheDocument()
 
-  await user.click(within(dialog).getByTitle('JSON'))
+  await user.click(within(screen.getByTestId('reading-actions')).getByTitle('JSON'))
   expect(within(dialog).queryByRole('region', { name: '材料内容' })).not.toBeInTheDocument()
   expect(within(dialog).getByRole('textbox', { name: '阶段产物 JSON' })).toHaveTextContent('"artifactType": "document_extraction"')
 })
@@ -899,6 +932,126 @@ it('需求理解阶段沿用需求理解记录的材料对照视图并读取上�
   await user.click(within(dialog).getByRole('tab', { name: '功能概况' }))
   expect(within(dialog).getByText('完成转换数据导出')).toBeInTheDocument()
   expect(generationChainApi.version).not.toHaveBeenCalledWith('req', 'requirement_analysis', 'v-extract')
+})
+
+it('需求分析分组内提供仓库画像卡片，进入阅读区后在侧栏运行', async () => {
+  const featureVersion = {
+    ...version('sv-understanding-1', 1),
+    stage: 'feature_understanding',
+    summary: '需求理解',
+  }
+  const data = chainWith('requirement_analysis', '需求分析', [
+    {
+      stage: 'extracting_text', label: '提取与整理', order: 0, state: 'approved',
+      latestVersion: { ...version('sv-extract-1', 1), stage: 'extracting_text' },
+      draft: null, versions: [{ ...version('sv-extract-1', 1), stage: 'extracting_text' }],
+      upstreamStages: [],
+    },
+    {
+      stage: 'feature_understanding', label: '需求理解', order: 1, state: 'approved',
+      latestVersion: featureVersion, draft: null, versions: [featureVersion],
+      upstreamStages: ['extracting_text'],
+    },
+  ])
+  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [data] })
+  vi.mocked(generationChainApi.chain).mockResolvedValue(data)
+  vi.mocked(repositoryProfileApi.getRepositoryProfileTasks).mockResolvedValue([
+    { taskId: 'profile-task', requirementId: 'req', name: '画像', instruction: '' },
+  ] as never)
+  vi.mocked(repositoryProfileApi.getRepositoryProfileTaskRuns).mockResolvedValue([
+    {
+      runId: 'run-1', status: 'success', reviewStatus: 'not_required',
+      createdAt: '2026-11-09T10:00:00Z',
+    },
+  ] as never)
+  vi.mocked(repositoryProfileApi.getRepositoryProfileVersions).mockResolvedValue([
+    {
+      versionId: 'run-1', versionNo: 1, label: 'v1', sourceRunId: 'run-1',
+      resultYaml: '{"repositories":[],"overallSummary":"当前需求主要涉及后端仓库"}',
+      createdAt: '2026-11-09T10:00:00Z',
+      requirementUnderstandingVersion: { versionId: 'sv-understanding-1', versionNo: 1 },
+      profile: {
+        repositories: [
+          {
+            repositoryId: 'repo-1', pathWithNamespace: 'team/repo-1', role: 'backend',
+            responsibilitySummary: '提供登录接口', techStack: ['Java'],
+            keyPaths: ['src'], confidence: 0.9, evidence: ['pom.xml'],
+          },
+        ],
+        overallSummary: '当前需求主要涉及后端仓库',
+      },
+    },
+  ] as never)
+  vi.spyOn(baseServicesApi, 'getGitlabRequirementBindings').mockResolvedValue([
+    {
+      bindingId: 'binding-1', provider: 'gitlab', remoteResourceType: 'repository',
+      remoteResourceId: 'repo-1', remoteNameSnapshot: 'team/repo-1', branch: 'main',
+    },
+  ] as never)
+
+  mount()
+  const user = userEvent.setup()
+  const card = await screen.findByRole('button', { name: '仓库画像 · 已生成' })
+  expect(card).toBeInTheDocument()
+
+  await user.click(card)
+  const inspector = screen.getByRole('complementary', { name: '阶段详情' })
+  expect(within(inspector).getByText('画像版本')).toBeInTheDocument()
+  expect(within(inspector).getByRole('button', { name: 'v1（最新）' })).toBeInTheDocument()
+  expect(within(inspector).getByText('上游追溯')).toBeInTheDocument()
+  expect(within(inspector).queryByText('阅读工具')).not.toBeInTheDocument()
+  expect(within(inspector).queryByRole('button', { name: '打开画像结果' })).not.toBeInTheDocument()
+  expect(within(inspector).queryByText('需求理解版本')).not.toBeInTheDocument()
+  expect(within(inspector).queryByText('阶段操作')).not.toBeInTheDocument()
+  expect(within(inspector).queryByText('最近结果')).not.toBeInTheDocument()
+  expect(within(inspector).queryByRole('button', { name: '重新生成画像' })).not.toBeInTheDocument()
+
+  await user.dblClick(card)
+  const reading = await screen.findByRole('dialog', { name: '仓库画像' })
+  expect(within(reading).getByText('整体画像')).toBeInTheDocument()
+  expect(within(reading).getByText('team/repo-1')).toBeInTheDocument()
+  expect(within(reading).queryByRole('button', { name: '重新生成画像' })).not.toBeInTheDocument()
+  expect(within(inspector).getByRole('heading', { name: '运行' })).toBeInTheDocument()
+  expect(within(inspector).getByRole('button', { name: '重新生成画像' })).toBeInTheDocument()
+})
+
+it('仓库画像运行中复用阶段卡片的运行状态和加载动画', async () => {
+  const featureVersion = {
+    ...version('sv-understanding-1', 1),
+    stage: 'feature_understanding',
+    summary: '需求理解',
+  }
+  const data = chainWith('requirement_analysis', '需求分析', [
+    {
+      stage: 'extracting_text', label: '提取与整理', order: 0, state: 'approved',
+      latestVersion: { ...version('sv-extract-1', 1), stage: 'extracting_text' },
+      draft: null, versions: [{ ...version('sv-extract-1', 1), stage: 'extracting_text' }],
+      upstreamStages: [],
+    },
+    {
+      stage: 'feature_understanding', label: '需求理解', order: 1, state: 'approved',
+      latestVersion: featureVersion, draft: null, versions: [featureVersion],
+      upstreamStages: ['extracting_text'],
+    },
+  ])
+  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [data] })
+  vi.mocked(generationChainApi.chain).mockResolvedValue(data)
+  vi.mocked(repositoryProfileApi.getRepositoryProfileTasks).mockResolvedValue([
+    { taskId: 'profile-task', requirementId: 'req', name: '画像', instruction: '' },
+  ] as never)
+  vi.mocked(repositoryProfileApi.getRepositoryProfileTaskRuns).mockResolvedValue([
+    {
+      runId: 'run-running', status: 'running', reviewStatus: 'not_required',
+      createdAt: '2026-11-09T10:00:00Z',
+    },
+  ] as never)
+  vi.mocked(repositoryProfileApi.getRepositoryProfileVersions).mockResolvedValue([] as never)
+
+  mount()
+  const card = await screen.findByRole('button', { name: '仓库画像 · 运行中' })
+  expect(card).toHaveClass('is-running')
+  expect(card).toHaveAttribute('aria-busy', 'true')
+  expect(card.querySelector('.gc-running-indicator')).toBeInTheDocument()
 })
 
 it('功能测试各阶段沿用页签的测试需求分析、测试点与完整用例视图', async () => {

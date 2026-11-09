@@ -303,6 +303,8 @@ type RequirementDocumentPreviewModalProps = {
 
 type RequirementDocumentPreviewContentProps = Omit<RequirementDocumentPreviewModalProps, 'open' | 'onClose'> & {
   embedded?: boolean
+  /** 旧流程把需求理解导入需求正文；新需求生成链直接读审核版本，不再展示这块历史内容。 */
+  showEnhancedText?: boolean
 }
 
 function RequirementPreviewPane({
@@ -338,6 +340,7 @@ export function RequirementDocumentPreviewContent({
   documentFilename,
   documentDownloadUrl,
   embedded = false,
+  showEnhancedText = true,
 }: RequirementDocumentPreviewContentProps) {
   const [splitPercent, setSplitPercent] = useState(50)
   const isWord = isWordDocument(documentType)
@@ -420,7 +423,7 @@ export function RequirementDocumentPreviewContent({
     </div>
   ) : (
     <div className="requirement-document-understanding-empty">
-      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无增强文本，可在需求分析中生成需求理解记录，审核通过后导入需求，用于功能用例生成。" />
+      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无增强文本。需求理解在需求生成链中生成并审核，下游阶段直接引用审核通过的版本，无需导入需求。" />
     </div>
   )
 
@@ -453,8 +456,8 @@ export function RequirementDocumentPreviewContent({
       </header> : null}
       {downloadMutation.error ? <Alert showIcon type="error" title={getErrorMessage(downloadMutation.error)} /> : null}
       <div
-        className="requirement-document-workspace is-compare"
-        style={{ gridTemplateColumns: `${splitPercent}fr 1px ${100 - splitPercent}fr` }}
+        className={`requirement-document-workspace${showEnhancedText ? ' is-compare' : ''}`}
+        style={showEnhancedText ? { gridTemplateColumns: `${splitPercent}fr 1px ${100 - splitPercent}fr` } : undefined}
       >
         <RequirementPreviewPane
           title="需求文档"
@@ -463,38 +466,40 @@ export function RequirementDocumentPreviewContent({
         >
           {documentPreviewContent}
         </RequirementPreviewPane>
-        <div
-          className="requirement-document-pane-divider"
-          role="separator"
-          aria-label="调整原文与增强文本宽度"
-          aria-orientation="vertical"
-          aria-valuemin={32}
-          aria-valuemax={68}
-          aria-valuenow={Math.round(splitPercent)}
-          tabIndex={0}
-          onPointerDown={(event) => event.currentTarget.setPointerCapture(event.pointerId)}
-          onPointerMove={handleSplitPointerMove}
-          onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}
-          onKeyDown={handleSplitKeyDown}
-        >
-          <ColumnWidthOutlined />
-        </div>
-        <RequirementPreviewPane
-          title="增强文本"
-          icon={<FileTextOutlined />}
-          meta={
-            understandingResult ? (
-              <span className="requirement-document-analysis-status">
-                <CheckCircleFilled />
-                已有内容
-              </span>
-            ) : (
-              <span className="requirement-document-pane-meta">暂无内容</span>
-            )
-            }
-        >
-          {analysisResultContent}
-        </RequirementPreviewPane>
+        {showEnhancedText ? <>
+          <div
+            className="requirement-document-pane-divider"
+            role="separator"
+            aria-label="调整原文与增强文本宽度"
+            aria-orientation="vertical"
+            aria-valuemin={32}
+            aria-valuemax={68}
+            aria-valuenow={Math.round(splitPercent)}
+            tabIndex={0}
+            onPointerDown={(event) => event.currentTarget.setPointerCapture(event.pointerId)}
+            onPointerMove={handleSplitPointerMove}
+            onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}
+            onKeyDown={handleSplitKeyDown}
+          >
+            <ColumnWidthOutlined />
+          </div>
+          <RequirementPreviewPane
+            title="增强文本"
+            icon={<FileTextOutlined />}
+            meta={
+              understandingResult ? (
+                <span className="requirement-document-analysis-status">
+                  <CheckCircleFilled />
+                  已有内容
+                </span>
+              ) : (
+                <span className="requirement-document-pane-meta">暂无内容</span>
+              )
+              }
+          >
+            {analysisResultContent}
+          </RequirementPreviewPane>
+        </> : null}
       </div>
     </div>
   )

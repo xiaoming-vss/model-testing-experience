@@ -650,6 +650,7 @@ class WorkerMainTests(unittest.TestCase):
         self.assertIsInstance(task_runner.executor, WorkerTaskDispatcherExecutor)
         self.assertIsNotNone(task_runner.executor.requirement_executor.source_downloader)
         self.assertIsNotNone(task_runner.executor.code_risk_executor)
+        self.assertIsNotNone(task_runner.executor.repository_profile_executor)
         # gitlab_timeout_seconds 必须来自配置,而非写死的默认值。
         self.assertEqual(45.0, task_runner.executor.code_risk_executor.timeout_seconds)
 

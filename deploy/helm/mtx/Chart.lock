@@ -1,0 +1,18 @@
+dependencies:
+- name: control-plane
+  repository: file://../charts/control-plane
+  version: 0.1.0
+- name: studio
+  repository: file://../charts/studio
+  version: 0.1.0
+- name: ai-worker
+  repository: file://../charts/ai-worker
+  version: 0.1.0
+- name: api-ui-worker
+  repository: file://../charts/api-ui-worker
+  version: 0.1.0
+- name: integration-worker
+  repository: file://../charts/integration-worker
+  version: 0.1.0
+digest: sha256:98efb16fdffc8d8b0058b239107a1e30f8fcd2feee29b4bedc1a2ea37be8c744
+generated: "2026-11-06T02:20:43.853314213Z"

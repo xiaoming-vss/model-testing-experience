@@ -53,6 +53,7 @@ AI 生成任务按能力装配，HTTP handler 直接获取所需的查询、管�
 | `ai_task_scope.py` / GenerationAccess | 当前成员动作、任务/运行归属、父资源先于子资源的锁顺序；不提交事务 |
 | `ai_task_queries.py` / GenerationQueries | 任务列表/详情、运行详情与分页历史；代码风险详情保留 report，历史摘要不读取正文 |
 | `ai_task_commands.py` / GenerationTaskCommands | 任务创建、修改、删除与运行删除；业务命令保留各自提交点 |
+| `repository_profile.py` / RepositoryProfileService | 冻结已审核需求理解版本与全部仓库工作分支 HEAD，组装画像快照；不解析基线、不生成 diff |
 | `ai_run_launcher.py` / GenerationRunLauncher | 准备快照、重查权限、发起运行；使用显式 ExecutionWriter |
 | `ai_stage_workflow.py` / GenerationStageWorkflow | 阶段保存、审核、修订、重试和图谱派发 |
 | `ai_candidate_review.py` / GenerationCandidateReview | 整次候选运行的内容编辑与审核，不创建正式资产 |
@@ -142,6 +143,8 @@ AI 任务与资源绑定的普通读取不使用 `FOR UPDATE`；修改时通过�
 六类 AI 运行历史 HTTP 接口返回分页摘要：`page` 从 1 开始，`pageSize` 默认 20、最大 100，按创建时间和数据库 ID 倒序。响应包含 `items`、匹配条件的 `total`、`statusCounts` 和任务范围内的 `latestRun`。摘要保留阶段、审核、导入、错误和时间信息，使用 `availableArtifacts` / `hasResult` 表示产物是否存在，不返回 `snapshotJson`、`configJson`、`resultYaml` 或解析后的报告。完整内容仍从单次运行详情接口读取。功能用例运行支持 `pipelineFilter`，先在数据库筛选，再分页；`latestRun` 不受筛选或页码影响。
 
 `repositories/ai_run_history.py` 只查询本页及最新运行的轻量记录，不把大字段加载到 ORM；`repositories/latest.py` 通过窗口函数按创建时间、ID 筛选每个资源最近一次运行。代码风险快照批量读取功能/API/UI 用例、API 断言及最近执行摘要，每日统计只读取最新状态与计数，不传输执行日志、请求快照或全部历史。
+
+代码风险建 run 时按需求仓库绑定的基线与工作分支，通过当前执行人的个人连接解析仓库克隆地址和两侧 commit；解析结果固化进快照，任一仓库失败整次 run 创建失败。绑定缺基线或基线与工作分支相同时直接拒绝，不在运行期回退历史推断。
 
 迁移 `20261004_0025` 增加 AI 任务列表、AI 运行历史、共享绑定、Bug 列表以及 API/UI 最近运行的七个联合索引，保留既有唯一约束与外键索引。空库初始化及升级、回退由 `test_initial_schema_migration.py` 验证；`test_database_read_paths.py` 覆盖权限、分页、大字段排除、相同创建时间的 ID 排序，以及 1 / 100 条用例下固定的批量查询数。
 

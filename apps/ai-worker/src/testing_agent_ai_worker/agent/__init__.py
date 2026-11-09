@@ -47,16 +47,19 @@ def create_agent(
     config_path: str | None = None,
     workspace: str | None = None,
     backend: str | None = None,
+    tools: tuple[str, ...] | None = None,
 ) -> Agent:
     """按任务级配置携带的 backend 选择适配器。"""
 
     resolved_backend = backend or _configured_backend(config_path)
     if resolved_backend not in {"nanobot", "pi"}:
         raise ValueError(f"unsupported agent backend: {resolved_backend}")
+    if tools and resolved_backend != "pi":
+        raise ValueError("tool selection is only supported by the pi backend")
     if resolved_backend == "pi":
         from testing_agent_ai_worker.agent.pi import Pi
 
-        return Pi.from_config(config_path=config_path, workspace=workspace)
+        return Pi.from_config(config_path=config_path, workspace=workspace, tools=tools)
 
     from testing_agent_ai_worker.agent.nanobot import NanobotAgent
 

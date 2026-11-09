@@ -4,7 +4,7 @@
 
 开发与审查先阅读[通用后端规则](../agents/backend-development.md)和[AI Worker 开发规则](development-rules.md)，保留本项目的运行模型、产物契约和验证入口。
 
-接收平台派发的 AI 测试任务，调用 LLM 生成测试产物并回传。领取需求分析、功能/API/UI 用例生成、代码风险分析、测试报告生成、用例执行顺序图谱七类任务。
+接收平台派发的 AI 测试任务，调用 LLM 生成测试产物并回传。领取需求分析、功能/API/UI 用例生成、代码风险分析、仓库画像、测试报告生成、用例执行顺序图谱八类任务。
 
 领域术语与任务类型见 [CONTEXT](CONTEXT.md)。任务执行遵循两条设计约定：技能包由部署侧预置，worker 不下载技能；轮询无锁并行，收到 SIGTERM 立即退出。
 
@@ -36,7 +36,7 @@
 | `agent/` | 后端门面与适配器：`base.py`（契约）、`nanobot.py`、`pi.py`、`prompt.py`、`paths.py`、`config_builder.py` |
 | `app/bootstrap.py` | 构建 poller 与 runner，提供 `run_worker` 与 `run_poll_once` |
 | `worker/` | `loop.py`、`poller.py`、`runner.py`、`dispatcher.py`、`executor.py`、`lifecycle.py` |
-| `tasks/` | 七类任务各自的实现，另有 `result_summary.py` |
+| `tasks/` | 八类任务各自的实现，另有共享 `git_workspace.py` 与 `result_summary.py` |
 | `platform/` | 与控制面通信：`http_client.py`、`task_source.py`、`result_sink.py`、`schemas.py`、`errors.py` |
 | `config/`、`logging/` | 配置加载与日志设置 |
 
@@ -51,7 +51,7 @@
 | `TESTING_AGENT_NANOBOT_RUNTIME_ROOT` | `agent.nanobot.runtime_root` |
 | `TESTING_AGENT_PI_RUNTIME_ROOT` | `agent.pi.runtime_root` |
 
-其余配置只能改文件，顶层段为 `[worker]`、`[platform]`、`[agent]`、`[logging]`。`[agent]` 结构如下；部署生成时只写入选中的后端子段：
+其余配置只能改文件，顶层段为 `[worker]`、`[platform]`、`[agent]`、`[code_risk_analysis]`、`[repository_profile]`、`[logging]`。`[agent]` 结构如下；部署生成时只写入选中的后端子段：
 
 ```toml
 [agent]
@@ -73,6 +73,27 @@ max_output_tokens = 65536
 
 Nanobot 后端启动时还会写入 `NANOBOT_STREAM_IDLE_TIMEOUT_S` 与 `NANOBOT_OPENAI_COMPAT_TIMEOUT_S`。
 
+代码风险分析的 git 超时、失败工作区保留时长、diff 预算和仓库上限在 `[code_risk_analysis]` 中配置：
+
+```toml
+[code_risk_analysis]
+gitlab_timeout_seconds = 120
+git_timeout_seconds = 300
+workspace_retention_hours = 24
+max_diff_chars = 1000000
+max_repos = 20
+```
+
+仓库画像的 git 超时、失败工作区保留时长、仓库上限和输出上限在 `[repository_profile]` 中配置：
+
+```toml
+[repository_profile]
+git_timeout_seconds = 300
+workspace_retention_hours = 24
+max_repos = 20
+max_output_chars = 100000
+```
+
 ## 命令
 
 在 `apps/ai-worker/` 下执行：
@@ -81,7 +102,7 @@ Nanobot 后端启动时还会写入 `NANOBOT_STREAM_IDLE_TIMEOUT_S` 与 `NANOBOT
 uv sync --locked                                  # 安装 Python 依赖
 npm ci                                            # Pi 后端需要固定版本 CLI
 uv run mtx-ai-worker                              # 启动（后端由配置决定）
-uv run python -m unittest discover -s tests       # 测试（358 项，3 项按环境跳过）
+uv run python -m unittest discover -s tests       # 测试（434 项，3 项按环境跳过）
 uv run ruff check .                               # Lint
 ```
 
@@ -101,8 +122,10 @@ uv run ruff check .                               # Lint
 
 Worker 每次执行前按任务类型／阶段从控制面获取默认技能清单，直读 S3 并验证文件大小和 SHA-256。技能恢复到任务独立 workspace 中，不再手工向项目目录放置技能；本期每次重新获取当前内容，不做历史版本或跨运行缓存。项目自定义技能不自动加入任务。
 
-平台初始化与更新方式见 [Skill 库维护](../control-plane/skills.md)。缺少默认技能或下载失败时任务报错，不回退旧目录。目前初始源中不含 `code-risk-analysis`，对应任务需补齐后使用。
+平台初始化与更新方式见 [Skill 库维护](../control-plane/skills.md)。缺少默认技能或下载失败时任务报错，不回退旧目录。`code_risk_analysis` 当前使用内置上下文预览 prompt，不下载技能；正式分析 skill 发布后再接入，代码工作区与只读工具边界不变。`repository_profile` 同样使用内置 prompt，不注册默认 skill，后续由 `repository-profile-analysis` 替换 prompt 构建入口。
 
+- [代码分析代码工作区与上下文回执](code-analysis-context.md)
+- [仓库画像分析](repository-profile.md)
 - [S3 任务文件读取](file-storage.md)
 - [需求分析两阶段与 JSON 产物设计](requirement-analysis-two-stage-design.md)（实施前设计）
 

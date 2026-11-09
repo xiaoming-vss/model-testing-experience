@@ -10,15 +10,24 @@
 .ai-hierarchy-node-footer .ant-btn { padding: 0 4px; font-size: 12px; }
 .ai-hierarchy-node-id { font-size: 11px; color: var(--ant-color-text-secondary); }
 .ai-hierarchy-routing { max-width: calc(100% - 28px); border-radius: 6px; pointer-events: auto; white-space: normal; }
-.ai-hierarchy-details.ai-relations-panel { position: static; flex: 0 1 auto; max-width: 45%; margin: 0; border: 0; border-left: 1px solid var(--ant-color-border-secondary); border-radius: 0; box-shadow: none; min-height: 0; }
-.ai-hierarchy-associations { display: flex; flex-direction: column; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--ant-color-border-secondary); }
-.ai-hierarchy-association-title { color: var(--ant-color-text-secondary); font-size: 12px; }
-.ai-hierarchy-associations .ant-btn { display: flex; justify-content: space-between; gap: 8px; width: 100%; padding: 2px 0; }
-.ai-hierarchy-associations .ant-btn > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-hierarchy-details.ai-relations-panel { position: static; flex: 0 1 auto; max-width: 52%; margin: 0; padding: 16px 18px 20px; gap: 12px; border: 0; border-left: 1px solid var(--ant-color-border-secondary); border-radius: 0; box-shadow: none; min-height: 0; }
+/* 用例详情放宽栏宽与行距，长文本按词换行，步骤用序号圆点分条。 */
+.ai-hierarchy-details.ai-relations-panel .panel-tags { gap: 6px; }
+.ai-hierarchy-details.ai-relations-panel .panel-title { font-size: 15px; line-height: 1.55; word-break: break-word; }
+.ai-hierarchy-details.ai-relations-panel .panel-uuid { font-size: 11px; }
+.ai-hierarchy-details.ai-relations-panel .panel-section { gap: 10px; margin-top: 6px; }
+.ai-hierarchy-details.ai-relations-panel .panel-section > strong { font-size: 12.5px; }
+.ai-hierarchy-details.ai-relations-panel .panel-list { counter-reset: hierarchy-detail; padding-left: 0; gap: 10px; font-size: 13px; line-height: 1.72; list-style: none; }
+.ai-hierarchy-details.ai-relations-panel .panel-list li { position: relative; padding-left: 26px; word-break: break-word; }
+.ai-hierarchy-details.ai-relations-panel .panel-list li::before { counter-increment: hierarchy-detail; content: counter(hierarchy-detail); position: absolute; left: 0; top: 1px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--ant-color-fill-secondary); color: var(--ant-color-text-secondary); font-size: 10px; line-height: 1; }
+.ai-hierarchy-associations { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1px solid var(--ant-color-border-secondary); border-radius: 10px; background: var(--ant-color-fill-quaternary); }
+.ai-hierarchy-association-title { color: var(--ant-color-text-secondary); font-size: 11.5px; }
+.ai-hierarchy-associations .ant-btn { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; width: 100%; height: auto; min-height: 0; padding: 0; font-size: 12.5px; line-height: 1.6; text-align: left; white-space: normal; }
+.ai-hierarchy-associations .ant-btn > span:first-child { min-width: 0; overflow: visible; text-overflow: clip; white-space: normal; }
 .ai-hierarchy-associations .ant-btn > span:last-child { flex-shrink: 0; color: var(--ant-color-text-secondary); font-size: 11px; }
 .ai-hierarchy-footer { display: flex; flex: 0 0 auto; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--ant-color-border-secondary); color: var(--ant-color-text-secondary); font-size: 12px; }
 @media (max-width: 768px) {
   .ai-hierarchy-body { flex-direction: column; }
-  .ai-hierarchy-details.ai-relations-panel { width: 100% !important; max-width: 100%; max-height: 45%; border-left: 0; border-top: 1px solid var(--ant-color-border-secondary); }
+  .ai-hierarchy-details.ai-relations-panel { width: 100% !important; max-width: 100%; max-height: 55%; border-left: 0; border-top: 1px solid var(--ant-color-border-secondary); }
   .ai-hierarchy-canvas .react-flow__minimap { display: none; }
 }

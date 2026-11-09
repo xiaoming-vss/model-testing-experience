@@ -610,9 +610,43 @@ export type CodeRiskReportRepository = {
   [key: string]: unknown
 }
 
+export type CodeRiskContextReceiptRepository = {
+  repositoryId?: string
+  instanceUrl?: string
+  pathWithNamespace?: string
+  branch?: string
+  baselineBranch?: string
+  baseCommit?: string
+  headCommit?: string
+  localPath?: string
+  changedFiles?: string[]
+  filesChanged?: number
+  additions?: number
+  deletions?: number
+  [key: string]: unknown
+}
+
+export type CodeRiskContextReceipt = {
+  mode?: string
+  repositories?: CodeRiskContextReceiptRepository[]
+  counts?: {
+    repositories?: number
+    changedFiles?: number
+    diffChars?: number
+    [key: string]: unknown
+  }
+  truncatedFiles?: string[]
+  summary?: string
+  filesRead?: string[]
+  toolsUsed?: string[]
+  receivedRepositories?: unknown[]
+  [key: string]: unknown
+}
+
 export type CodeRiskReport = {
   analyzedAt?: string | null
   repositories?: CodeRiskReportRepository[]
+  contextReceipt?: CodeRiskContextReceipt | null
   changeOverview?: {
     filesChanged?: number
     additions?: number
@@ -674,6 +708,119 @@ export type CreateCodeRiskTaskPayload = {
 }
 
 export type RunCodeRiskTaskPayload = {
+  requestId?: string
+  gitlabConnectionIds?: Record<string, string>
+  llmConnectionId?: string
+  instruction?: string
+  triggerType?: 'manual' | string
+  requirementUnderstandingVersionId?: string
+}
+
+export type RepositoryProfileRole = 'frontend' | 'backend' | 'fullstack' | 'infra' | 'test' | 'unknown'
+
+export type RepositoryProfileRepository = {
+  repositoryId: string
+  pathWithNamespace: string
+  role: RepositoryProfileRole
+  responsibilitySummary: string
+  techStack: string[]
+  keyPaths: string[]
+  confidence: number
+  evidence: string[]
+}
+
+export type RepositoryProfile = {
+  repositories: RepositoryProfileRepository[]
+  overallSummary: string
+}
+
+export type RepositoryProfileTask = {
+  taskId?: string
+  taskType?: 'repository_profile' | string
+  name: string
+  projectId?: string
+  sprintId?: string
+  requirementId?: string
+  creatorUserId?: string
+  sourceType?: string
+  sourceContent?: string
+  instruction: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type RepositoryProfileSnapshotBinding = {
+  bindingId?: string
+  repositoryId?: string
+  pathWithNamespace?: string
+  branch?: string
+  headCommit?: string
+  profileError?: string
+  [key: string]: unknown
+}
+
+export type RepositoryProfileTaskRun = {
+  availableArtifacts?: string[]
+  hasResult?: boolean
+  runId?: string
+  taskId?: string
+  projectId?: string
+  sprintId?: string
+  requirementId?: string
+  status?: ApiCaseGenerateTaskRunStatus
+  triggerType?: string
+  triggerUserId?: string
+  startedAt?: string
+  finishedAt?: string
+  durationMs?: number
+  errorMessage?: string
+  currentStage?: string
+  stageStatus?: string
+  reviewStatus?: string
+  snapshotJson?: {
+    requirementUnderstandingVersion?: {
+      versionId?: string
+      versionNo?: number
+      taskId?: string
+      runId?: string
+      [key: string]: unknown
+    } | null
+    bindings?: RepositoryProfileSnapshotBinding[]
+    [key: string]: unknown
+  }
+  configJson?: unknown
+  resultYaml?: string
+  resultSummaryJson?: unknown
+  createdAt?: string
+  updatedAt?: string
+  profile?: RepositoryProfile | null
+}
+
+/** 一次成功的仓库画像运行投影为一个不可变版本。 */
+export type RepositoryProfileVersion = {
+  versionId: string
+  versionNo: number
+  label: string
+  profile?: RepositoryProfile | null
+  resultYaml: string
+  sourceRunId: string
+  requirementUnderstandingVersion?: {
+    versionId?: string
+    versionNo?: number
+    taskId?: string
+    runId?: string
+    [key: string]: unknown
+  } | null
+  createdAt: string
+}
+
+export type CreateRepositoryProfileTaskPayload = {
+  name?: string
+  requirementId: string
+  instruction?: string
+}
+
+export type RunRepositoryProfileTaskPayload = {
   requestId?: string
   gitlabConnectionIds?: Record<string, string>
   llmConnectionId?: string

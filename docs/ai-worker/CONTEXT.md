@@ -25,8 +25,24 @@ _Avoid_: 项目预置包、手工技能包
 _Avoid_: 技能预置
 
 **代码绑定**：
-需求与（仓库 + 分支）的关联，可绑多个；代码风险分析按绑定计算代码差异。区别于「项目群组绑定」。
+需求与（仓库 + 工作分支 + 基线分支）的关联，可绑多个；代码风险分析按绑定拉取固定 commit 的代码。基线分支在绑定时必填，不再从历史迭代推断。区别于「项目群组绑定」。
 _Avoid_: 需求绑定
+
+**代码工作区**：
+每次代码风险分析 run 在任务 workspace 的 `runs/<attemptId>/code/` 下为每个绑定仓库检出的固定 commit 代码；模型通过只读工具在此工作区读取文件。成功 run 删除工作区，失败 run 保留 24 小时供排查。
+_Avoid_: 共享代码目录、全局缓存
+
+**仓库画像**：
+人工运行的独立辅助任务，读取所选已审核需求理解版本和全部激活代码绑定，只 checkout 各仓库工作分支 HEAD，用只读工具判断仓库角色并输出固定 JSON。画像不进入生成链、不传给下游；工作区成功删除、失败保留 24 小时。
+_Avoid_: 代码风险画像、仓库分析报告
+
+**不可分析仓库**：
+仓库画像快照或工作区准备阶段无法解析授权、分支或 HEAD 的仓库；Worker 在结果中补为 `role=unknown`、`confidence=0`、`evidence=[]`，其他仓库继续分析。全部仓库不可分析时本次运行失败。
+_Avoid_: 忽略仓库、部分成功
+
+**上下文回执**：
+代码分析 skill 就绪前，占位 prompt 要求模型回传的 YAML 结构；记录收到的仓库/HEAD commit、模型摘要、读取文件与使用工具，用于验证代码上下文确实送达模型，不代表正式风险结论。
+_Avoid_: 风险报告、正式分析结果
 
 **需求理解记录**：
 需求分析任务经材料提取、需求理解两个阶段形成并经审核的模块化需求产物，保留业务流程、操作、交互、来源和问题；功能用例生成与代码风险分析复用该产物。需求分析执行统一为两个阶段。
@@ -46,8 +62,8 @@ _Avoid_: 受影响测试、被影响用例
 
 ## 任务类型
 
-`worker/dispatcher.py` 分派七种任务，未知类型返回 `不支持的任务类型: <type>`：
+`worker/dispatcher.py` 分派八种任务，未知类型返回 `不支持的任务类型: <type>`：
 
-`requirement_analysis`、`functional_case_generate`、`api_case_generate`、`ui_case_generate`、`code_risk_analysis`、`test_report_generate`、`test_order_graph`
+`requirement_analysis`、`functional_case_generate`、`api_case_generate`、`ui_case_generate`、`code_risk_analysis`、`repository_profile`、`test_report_generate`、`test_order_graph`
 
 `test_order_graph` 的图谱输入由控制端组装（需求、用例、需求用例关联）经 `configJson.graphInput` 传入，`cases[]` 字段名与 `analyze-test-case-relations` 的输入契约一致，因此不需要转换层。执行时使用 `update-test-case-graph` 按批次累积图谱。

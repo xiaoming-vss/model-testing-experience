@@ -1,0 +1,40 @@
+global: {}
+
+replicaCount: 1
+
+image:
+  registry: ""
+  repository: mtx/api-ui-worker
+  tag: local
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Complete api-ui-worker TOML. Contains secrets; provide it through a
+# user-managed values file, not the committed defaults.
+configToml: ""
+
+healthPort: 8080
+artifactsSizeLimit: 5Gi
+shmSizeLimit: 1Gi
+
+resources: {}
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+terminationGracePeriodSeconds: 120
+
+# The Playwright image runs as root so Chromium can start without a custom
+# seccomp profile. Keep runAsNonRoot disabled unless the image is hardened.
+podSecurityContext:
+  runAsUser: 0
+  runAsNonRoot: false
+
+securityContext:
+  allowPrivilegeEscalation: false
+  seccompProfile:
+    type: RuntimeDefault

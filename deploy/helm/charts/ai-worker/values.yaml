@@ -1,0 +1,48 @@
+global: {}
+
+replicaCount: 1
+
+image:
+  registry: ""
+  repository: mtx/ai-worker
+  tag: local
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Complete ai-worker TOML. Contains secrets; provide it through a
+# user-managed values file, not the committed defaults.
+configToml: ""
+
+healthPort: 8080
+
+persistence:
+  runtimeSize: 20Gi
+  logsSize: 10Gi
+  storageClass: ""
+
+resources: {}
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+terminationGracePeriodSeconds: 10
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  fsGroupChangePolicy: OnRootMismatch
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+  seccompProfile:
+    type: RuntimeDefault

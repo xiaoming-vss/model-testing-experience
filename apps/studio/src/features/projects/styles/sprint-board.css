@@ -3,7 +3,6 @@
 .sprint-board-shell { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
 .sprint-board { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; gap: 0; color: var(--srf-text); border: 1px solid var(--srf-card-border); border-radius: var(--srf-radius-card); background: var(--srf-card); overflow: hidden; }
 .sprint-board-tools { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
-#root .sprint-board-shell.tp-list-panel { --app-list-toolbar-bg: transparent; background: var(--app-board-gradient) !important; }
 .sprint-board-scroll { flex: 1; min-height: 0; overflow: auto; padding: 16px; background: transparent; }
 .sprint-board-scroll > .ant-alert { margin-bottom: 16px; }
 .sprint-board-scroll > .ant-empty { margin: 48px 16px; }

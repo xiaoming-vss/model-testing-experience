@@ -15,6 +15,7 @@ from testing_agent.core.errors import (
     ErrResourceBindingInvalid,
     dynamic_error,
 )
+from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.models.resource_binding import ResourceBinding
 from testing_agent.repositories.resource_binding import ResourceBindingRepository
 from testing_agent.services.binding_support import LocalBindingAccess, commit_binding, dump_binding
@@ -114,7 +115,10 @@ class GitLabBindings:
         group_id: str,
         repository_id: str,
         body: dict[str, Any],
-    ) -> tuple[str, ResourceBinding]:
+        *,
+        branch: str = "",
+        baseline_branch: str = "",
+    ) -> tuple[str, ResourceBinding, IntegrationConnection]:
         service = self.integration_connection_service
         if service is None:
             raise ErrIntegrationConnectionNotFound()
@@ -140,7 +144,43 @@ class GitLabBindings:
         canonical = await service.ensure_gitlab_repository_scope(
             connection.connection_id, project_id, group_id, repository_id, user_id=user_id
         )
-        return canonical, group
+        if branch:
+            await self._ensure_branch_exists(
+                service, connection, project_id, canonical, branch, user_id
+            )
+        if baseline_branch:
+            await self._ensure_branch_exists(
+                service, connection, project_id, canonical, baseline_branch, user_id
+            )
+        return canonical, group, connection
+
+    async def _ensure_branch_exists(
+        self,
+        service: IntegrationConnectionService,
+        connection: IntegrationConnection,
+        project_id: str,
+        repository_id: str,
+        branch: str,
+        user_id: str,
+    ) -> None:
+        try:
+            info = await service.get_gitlab_branch(
+                connection.connection_id,
+                project_id,
+                repository_id,
+                branch,
+                user_id=user_id,
+            )
+        except AppError as exc:
+            raise dynamic_error(
+                ErrResourceBindingInvalid,
+                f"分支 {branch} 不存在或当前操作人无权访问",
+            ) from exc
+        if str(info.get("name") or "") != branch:
+            raise dynamic_error(
+                ErrResourceBindingInvalid,
+                f"分支 {branch} 不存在或当前操作人无权访问",
+            )
 
     async def _create_requirement(
         self,
@@ -163,9 +203,19 @@ class GitLabBindings:
         baseline_branch = str(
             extra.get("baseline_branch") or extra.get("baselineBranch") or ""
         ).strip()
+        if not baseline_branch:
+            raise dynamic_error(ErrResourceBindingInvalid, "绑定仓库必须选择基线分支")
+        if baseline_branch == branch:
+            raise dynamic_error(ErrResourceBindingInvalid, "基线分支不能与工作分支相同")
 
-        repository_id, group = await self._ensure_repository_in_group(
-            user_id, project_id, group_id, repository_id, body
+        repository_id, group, _connection = await self._ensure_repository_in_group(
+            user_id,
+            project_id,
+            group_id,
+            repository_id,
+            body,
+            branch=branch,
+            baseline_branch=baseline_branch,
         )
         if await self.repository.exists_active_requirement_repo_binding(
             requirement_id, repository_id, instance=group.instance_key
@@ -233,27 +283,37 @@ class GitLabBindings:
     ) -> dict:
         # 更新仅覆盖分支与基线分支;换仓库/换凭据来源群组走解绑重建。
         project_id = await self._requirement_project_id(binding.local_resource_id)
+        extra = dict(binding.extra_json or {})
+        effective_branch = str(extra.get("branch") or "").strip()
+        if "branch" in body:
+            effective_branch = str(body.get("branch") or "").strip()
+        if not effective_branch:
+            raise dynamic_error(ErrResourceBindingInvalid, "绑定仓库必须携带 branch")
+
+        effective_baseline = str(extra.get("baseline_branch") or "").strip()
+        if "baselineBranch" in body or "baseline_branch" in body:
+            effective_baseline = str(
+                body.get("baselineBranch", body.get("baseline_branch")) or ""
+            ).strip()
+        if not effective_baseline:
+            raise dynamic_error(ErrResourceBindingInvalid, "绑定仓库必须选择基线分支")
+        if effective_baseline == effective_branch:
+            raise dynamic_error(ErrResourceBindingInvalid, "基线分支不能与工作分支相同")
+
         await self._ensure_repository_in_group(
             user_id,
             project_id,
             binding.remote_parent_id,
             binding.remote_resource_id,
             {**body, "instanceUrl": binding.instance_url},
+            branch=effective_branch,
+            baseline_branch=effective_baseline,
         )
-        extra = dict(binding.extra_json or {})
-        branch = body.get("branch")
-        if branch is not None:
-            branch_value = str(branch or "").strip()
-            if not branch_value:
-                raise dynamic_error(ErrResourceBindingInvalid, "绑定仓库必须携带 branch")
-            extra["branch"] = branch_value
+
+        if "branch" in body:
+            extra["branch"] = effective_branch
         if "baselineBranch" in body or "baseline_branch" in body:
-            baseline = body.get("baselineBranch", body.get("baseline_branch"))
-            baseline_value = str(baseline or "").strip()
-            if baseline_value:
-                extra["baseline_branch"] = baseline_value
-            else:
-                extra.pop("baseline_branch", None)
+            extra["baseline_branch"] = effective_baseline
         binding.extra_json = extra
         await self.repository.commit()
         await self.repository.refresh(binding)

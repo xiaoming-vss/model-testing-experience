@@ -11,7 +11,6 @@ from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.ai_generate_task_source_archive import (
     AiGenerateTaskSourceArchiveRepository,
 )
-from testing_agent.repositories.generation_chain import GenerationChainRepository
 from testing_agent.repositories.requirement_design import RequirementDesignRepository
 from testing_agent.schemas.requirement_design import (
     DesignKind,
@@ -71,18 +70,10 @@ class RequirementDesignService:
 
     async def overview(self, requirement_id: str, user_id: str) -> dict[str, Any]:
         await self.scope(requirement_id, user_id)
-        chain = GenerationChainRepository(self.task_repository.session)
-        analysis_task = await chain.task(requirement_id, "requirement_analysis")
-        has_understanding = (
-            await chain.has_stage_version(analysis_task.task_id, "feature_understanding")
-            if analysis_task
-            else False
-        )
         return {
             "tasks": await self.repository.task_summaries(requirement_id),
             "runCounts": await self.repository.run_counts(requirement_id),
             "activeTaskIds": await self.repository.active_task_ids(requirement_id),
-            "adoptedUnderstanding": has_understanding,
         }
 
     async def history(

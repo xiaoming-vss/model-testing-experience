@@ -1,0 +1,49 @@
+# Values for the MTX umbrella chart. The keys are stable; replace the empty
+# `configToml` values with the complete per-service TOML for your environment.
+# Do not commit a values file that contains real secrets.
+
+global:
+  imageRegistry: ""
+  imageTag: "local"
+  imagePullSecrets: []
+
+# Informational: pass the same namespace to `helm --namespace`.
+namespace: "mtx-dev"
+
+control-plane:
+  replicaCount: 2
+  configToml: ""
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  migration:
+    enabled: true
+
+studio:
+  replicaCount: 1
+  apiUpstream: "http://control-plane:9000"
+  service:
+    type: NodePort
+    port: 80
+    nodePort: 30080
+
+ai-worker:
+  replicaCount: 1
+  configToml: ""
+  persistence:
+    runtimeSize: 20Gi
+    logsSize: 10Gi
+    storageClass: ""
+
+api-ui-worker:
+  replicaCount: 1
+  configToml: ""
+  artifactsSizeLimit: 5Gi
+  shmSizeLimit: 1Gi
+
+integration-worker:
+  replicaCount: 1
+  configToml: ""
+  persistence:
+    runtimeSize: 5Gi
+    storageClass: ""

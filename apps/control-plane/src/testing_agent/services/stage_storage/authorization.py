@@ -123,8 +123,14 @@ async def authorize_worker_actor(
     if not isinstance(bindings, list):
         raise ErrForbidden()
     for binding in bindings:
-        if not isinstance(binding, dict) or not isinstance(binding.get("connectionId"), str):
+        if not isinstance(binding, dict):
             raise ErrForbidden()
+        if task.task_type == "repository_profile" and binding.get("profileError"):
+            continue
+        if not isinstance(binding.get("connectionId"), str):
+            raise ErrForbidden()
+        if task.task_type == "repository_profile" and not binding["connectionId"]:
+            continue
         connection = await require_personal_connection(
             session, actor, "gitlab", binding["connectionId"], task.project_id
         )

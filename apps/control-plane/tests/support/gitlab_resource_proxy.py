@@ -88,6 +88,21 @@ class FakeGitLabResourceClient:
         )
         return self._resolve("branches")
 
+    async def get_project(self, base_url, access_token, repository_id):
+        self.calls.append(("project", base_url, access_token, repository_id))
+        return self._resolve("project")
+
+    async def get_branch(self, base_url, access_token, repository_id, branch):
+        self.calls.append(("branch", base_url, access_token, repository_id, branch))
+        return self._resolve("branch")
+
+    async def resolve_commit(self, base_url, access_token, repository_id, ref):
+        self.calls.append(("commit", base_url, access_token, repository_id, ref))
+        value = self.results.get("commit")
+        if isinstance(value, Exception):
+            raise value
+        return value or "abc123"
+
     def _resolve(self, key):
         value = self.results.get(key)
         if isinstance(value, Exception):
@@ -97,12 +112,12 @@ class FakeGitLabResourceClient:
         return value
 
 
-def proxy_client(repository, resource_client):
+def proxy_client(repository, resource_client, cipher=None):
     app = create_app()
     service = IntegrationConnectionService(
         repository,
         gitlab_resource_client=resource_client,
-        credential_cipher=FakeCipher(),
+        credential_cipher=cipher or FakeCipher(),
     )
     app.dependency_overrides[get_current_user_id] = lambda: "user-1"
     app.dependency_overrides[get_integration_connection_service] = lambda: service

@@ -45,6 +45,7 @@ def generation_services(
     sprint_daily_metrics_service=None,
     files=None,
     code_risk_analysis_service=None,
+    repository_profile_service=None,
     execution_writer=None,
     *,
     deletion=None,
@@ -72,6 +73,7 @@ def generation_services(
         access=access,
         sprint_daily_metrics_service=metrics,
         code_risk_analysis_service=code_risk_analysis_service,
+        repository_profile_service=repository_profile_service,
         id_factory=identifiers,
     )
     stages_workflow = GenerationStageWorkflow(

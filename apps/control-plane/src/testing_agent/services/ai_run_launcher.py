@@ -32,6 +32,7 @@ from testing_agent.services.sprint_daily_metrics import SprintDailyMetricsServic
 
 if TYPE_CHECKING:
     from testing_agent.services.code_risk_analysis import CodeRiskAnalysisService
+    from testing_agent.services.repository_profile import RepositoryProfileService
 
 
 class GenerationRunLauncher:
@@ -44,6 +45,7 @@ class GenerationRunLauncher:
         execution: object | None = None,
         sprint_daily_metrics_service: SprintDailyMetricsService | None = None,
         code_risk_analysis_service: CodeRiskAnalysisService | None = None,
+        repository_profile_service: RepositoryProfileService | None = None,
         id_factory: Callable[[], str] = new_id,
     ) -> None:
         self.repository = repository
@@ -51,6 +53,7 @@ class GenerationRunLauncher:
         self.access = access
         self.sprint_daily_metrics_service = sprint_daily_metrics_service
         self.code_risk_analysis_service = code_risk_analysis_service
+        self.repository_profile_service = repository_profile_service
         self.id_factory = id_factory
 
     async def launch(
@@ -77,7 +80,7 @@ class GenerationRunLauncher:
             raise dynamic_error(ErrBadRequest, "请在需求生成链中启动独立阶段")
         if kind == "ui":
             raise dynamic_error(ErrBadRequest, "请先为 UI 任务关联需求，再使用需求生成链")
-        if kind not in {"function", "api", "code_risk_analysis"}:
+        if kind not in {"function", "api", "code_risk_analysis", "repository_profile"}:
             raise ErrBadRequest()
         task_scope = (task.project_id, task.sprint_id, task.requirement_id)
         body = body or {}
@@ -92,9 +95,9 @@ class GenerationRunLauncher:
         run_instruction = body.get("instruction")
         config = normalize_config_json(body.get("configJson")) or {}
         trigger_type = str(body.get("triggerType") or "manual")
-        risk_request_id = worker_task_id
-        risk_signature = ""
-        if kind == "code_risk_analysis":
+        auxiliary_request_id = worker_task_id
+        auxiliary_signature = ""
+        if kind in {"code_risk_analysis", "repository_profile"}:
             from testing_agent.services.auxiliary_execution_view import auxiliary_detail
             from testing_agent.services.auxiliary_request import (
                 find_replay,
@@ -104,8 +107,8 @@ class GenerationRunLauncher:
                 request_id as normalize_request_id,
             )
 
-            risk_request_id = normalize_request_id(body.get("requestId"), worker_task_id)
-            risk_signature = request_signature(
+            auxiliary_request_id = normalize_request_id(body.get("requestId"), worker_task_id)
+            auxiliary_signature = request_signature(
                 kind,
                 {
                     "connectionId": llm_connection_id,
@@ -123,25 +126,42 @@ class GenerationRunLauncher:
                     self.repository.session,
                     task=task,
                     actor_id=user_id,
-                    request_id=risk_request_id,
-                    signature=risk_signature,
+                    request_id=auxiliary_request_id,
+                    signature=auxiliary_signature,
                 )
                 if replay is not None:
                     if not replay.execution_id:
                         raise ErrNotFound()
                     return await auxiliary_detail(self.repository.session, replay.execution_id)
-            if self.code_risk_analysis_service is None:
-                raise ErrBadRequest()
             await self.repository.commit()
-            snapshot = await self.code_risk_analysis_service.build_snapshot(
-                task,
-                run_id,
-                risk_request_id,
-                None if run_instruction is None else str(run_instruction),
-                user_id=user_id,
-                connection_ids=body.get("gitlabConnectionIds") or {},
-                understanding_version_id=str(body.get("requirementUnderstandingVersionId") or ""),
-            )
+            if kind == "code_risk_analysis":
+                if self.code_risk_analysis_service is None:
+                    raise ErrBadRequest()
+                snapshot = await self.code_risk_analysis_service.build_snapshot(
+                    task,
+                    run_id,
+                    auxiliary_request_id,
+                    None if run_instruction is None else str(run_instruction),
+                    user_id=user_id,
+                    connection_ids=body.get("gitlabConnectionIds") or {},
+                    understanding_version_id=str(
+                        body.get("requirementUnderstandingVersionId") or ""
+                    ),
+                )
+            else:
+                if self.repository_profile_service is None:
+                    raise ErrBadRequest()
+                snapshot = await self.repository_profile_service.build_snapshot(
+                    task,
+                    run_id,
+                    auxiliary_request_id,
+                    None if run_instruction is None else str(run_instruction),
+                    user_id=user_id,
+                    connection_ids=body.get("gitlabConnectionIds") or {},
+                    understanding_version_id=str(
+                        body.get("requirementUnderstandingVersionId") or ""
+                    ),
+                )
         else:
             snapshot = await build_generate_run_snapshot(
                 self.repository,
@@ -185,7 +205,7 @@ class GenerationRunLauncher:
             self.repository.session, user_id, "llm", llm_connection_id, task.project_id
         )
         await self.access.validate_task_scope(current_task)
-        if kind == "code_risk_analysis":
+        if kind in {"code_risk_analysis", "repository_profile"}:
             from testing_agent.repositories.auxiliary_execution import lock_or_create_stage
             from testing_agent.services.auxiliary_execution import dispatch_auxiliary_execution
             from testing_agent.services.auxiliary_execution_view import auxiliary_detail
@@ -196,8 +216,8 @@ class GenerationRunLauncher:
                     self.repository.session,
                     task=current_task,
                     actor_id=user_id,
-                    request_id=risk_request_id,
-                    signature=risk_signature,
+                    request_id=auxiliary_request_id,
+                    signature=auxiliary_signature,
                     current_read=True,
                     active_attempt_id=stage.active_attempt_id,
                 )
@@ -207,18 +227,23 @@ class GenerationRunLauncher:
                     await self.repository.commit()
                     return await auxiliary_detail(self.repository.session, replay.execution_id)
             if stage.active_attempt_id:
-                raise dynamic_error(ErrBadRequest, "代码风险正在生成中，请等待完成后再试")
+                running_message = (
+                    "仓库画像正在生成中，请等待完成后再试"
+                    if kind == "repository_profile"
+                    else "代码风险正在生成中，请等待完成后再试"
+                )
+                raise dynamic_error(ErrBadRequest, running_message)
             attempt, _ = await dispatch_auxiliary_execution(
                 self.repository.session,
                 task=current_task,
                 actor_id=user_id,
-                request_id=risk_request_id,
+                request_id=auxiliary_request_id,
                 execution_id=run_id,
                 connection_id=llm_connection_id,
                 source=snapshot,
                 config=config,
                 trigger_type=trigger_type,
-                request_signature=risk_signature,
+                request_signature=auxiliary_signature,
             )
             await self.repository.commit()
             return await auxiliary_detail(self.repository.session, attempt.execution_id or run_id)

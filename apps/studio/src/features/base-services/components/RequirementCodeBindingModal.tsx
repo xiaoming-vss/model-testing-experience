@@ -152,6 +152,8 @@ export function RequirementCodeBindingModal({
     mutationFn: async () => {
       if (!selectedRepoInfo) throw new Error('请选择仓库')
       if (!selectedBranch) throw new Error('请选择分支')
+      if (!selectedBaseline) throw new Error('请选择基线分支')
+      if (selectedBaseline === selectedBranch) throw new Error('基线分支不能与工作分支相同')
       return api.createGitlabRequirementBinding(requirementId, {
         provider: 'gitlab',
         connectionId: selectedRepoInfo.connectionId,
@@ -161,7 +163,7 @@ export function RequirementCodeBindingModal({
         remoteNameSnapshot: selectedRepoInfo.repository.pathWithNamespace ?? selectedRepoInfo.repository.name ?? getRepoId(selectedRepoInfo.repository),
         extraJson: {
           branch: selectedBranch,
-          ...(selectedBaseline ? { baselineBranch: selectedBaseline } : {}),
+          baselineBranch: selectedBaseline,
         },
       })
     },
@@ -190,9 +192,10 @@ export function RequirementCodeBindingModal({
   })
 
   const updateBaselineMutation = useMutation({
-    mutationFn: ({ bindingId, baselineBranch }: { bindingId: string; baselineBranch?: string }) => {
+    mutationFn: ({ bindingId, baselineBranch }: { bindingId: string; baselineBranch: string }) => {
       if (!can('manage')) throw new Error('仅项目所有者可以修改代码绑定')
-      return api.updateGitlabRequirementBinding(requirementId, bindingId, { baselineBranch: baselineBranch ?? '', connectionId: personal.resolve(codeBindings.find(b => getBindingId(b) === bindingId)?.instanceUrl ?? '') })
+      if (!baselineBranch) throw new Error('请选择基线分支')
+      return api.updateGitlabRequirementBinding(requirementId, bindingId, { baselineBranch, connectionId: personal.resolve(codeBindings.find(b => getBindingId(b) === bindingId)?.instanceUrl ?? '') })
     },
     onSuccess: () => {
       message.success('基线分支已更新')
@@ -281,9 +284,12 @@ export function RequirementCodeBindingModal({
                     connectionId={repositoryConnectionId}
                     repositoryId={repositoryId}
                     value={binding.baselineBranch || undefined}
-                    placeholder="设置基线分支（可选）"
+                    placeholder="选择基线分支（必选）"
                     disabled={!can('manage')}
-                    onChange={(baseline) => updateBaselineMutation.mutate({ bindingId, baselineBranch: baseline ?? '' })}
+                    allowClear={false}
+                    onChange={(baseline) => {
+                      if (baseline) updateBaselineMutation.mutate({ bindingId, baselineBranch: baseline })
+                    }}
                   />
                   <Popconfirm title="确认删除该仓库绑定？" onConfirm={() => deleteBindingMutation.mutate(bindingId)}>
                     <ProjectActionButton operation="delete" action="manage" projectId={projectId} danger size="small" className="action-btn-delete">
@@ -338,8 +344,9 @@ export function RequirementCodeBindingModal({
               connectionId={selectedRepoInfo?.connectionId ?? ''}
               repositoryId={selectedRepoInfo ? getRepoId(selectedRepoInfo.repository) : ''}
               value={selectedBaseline}
-              placeholder="基线分支（可选）"
+              placeholder="基线分支（必选）"
               disabled={!can('manage') || !selectedRepoInfo}
+              allowClear={false}
               onChange={(value) => setSelectedBaseline(value ?? '')}
             />
             <ProjectActionButton action="manage" projectId={projectId}
@@ -347,18 +354,18 @@ export function RequirementCodeBindingModal({
               className="action-btn-save"
               operation="create"
               loading={createBindingMutation.isPending}
-              disabled={!selectedRepoInfo || !selectedBranch}
+              disabled={!selectedRepoInfo || !selectedBranch || !selectedBaseline}
               onClick={() => createBindingMutation.mutate()}
             >
               添加
             </ProjectActionButton>
           </div>
-          {selectedBaseline && selectedRepoInfo ? (
+          {selectedRepoInfo ? (
             <Alert
               showIcon
               type="info"
               className="requirement-code-binding-baseline-note"
-              title="设置基线分支后，分析将直接以此分支作为基线，不再自动查找历史迭代。"
+              title="代码风险分析需要基线分支，且基线分支不能与工作分支相同。"
             />
           ) : null}
           {hasMoreRepositories ? (

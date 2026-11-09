@@ -26,6 +26,8 @@ export function RequirementDetailPage() {
   const [documentError, setDocumentError] = useState<string | undefined>()
   const [editing, setEditing] = useState(false)
   const [refreshingGeneration, setRefreshingGeneration] = useState(false)
+  const [inspectorHost, setInspectorHost] = useState<HTMLDivElement | null>(null)
+  const [readingActionsHost, setReadingActionsHost] = useState<HTMLDivElement | null>(null)
   const [readingNode, setReadingNode] = useState<RequirementReadingNode | null>(null)
   // 阅读态的「退回流程」动作由生成全景提供，用 ref 保存，避免函数身份变化触发重渲染。
   const leaveReadingRef = useRef<(() => void) | null>(null)
@@ -34,7 +36,7 @@ export function RequirementDetailPage() {
     leaveReadingRef.current = next?.leave ?? null
     setReadingNode(current => {
       if (!next) return current === null ? current : null
-      return current?.label === next.label && current.status === next.status && current.tone === next.tone ? current : { label: next.label, status: next.status, tone: next.tone }
+      return current?.label === next.label && current.status === next.status && current.tone === next.tone ? current : { label: next.label, status: next.status, tone: next.tone, kind: next.kind }
     })
   }, [])
   const handleLeaveReading = useCallback(() => { leaveReadingRef.current?.() }, [])
@@ -90,25 +92,32 @@ export function RequirementDetailPage() {
   if (query.error || sprint.error) return <Alert type="error" title={getErrorMessage(query.error ?? sprint.error)} action={<Space wrap><Button loading={query.isFetching || sprint.isFetching} onClick={retryRead}>重试读取</Button><Button onClick={back}>返回需求列表</Button></Space>} />
   if (!requirement) return <Alert type="warning" title="需求不存在" action={<Button onClick={back}>返回需求列表</Button>} />
   const documentProps = { requirementId, requirementName: requirement.name, documentType: requirement.documentType,
-    documentContent: requirement.documentContent, documentFilename: requirement.documentFilename, documentDownloadUrl: requirement.documentDownloadUrl }
+    documentContent: requirement.documentContent, documentFilename: requirement.documentFilename, documentDownloadUrl: requirement.documentDownloadUrl,
+    showEnhancedText: false }
+  // 下载与编辑只服务需求正文，打开需求文档时才出现在标题栏。
+  const readingDocument = readingNode?.kind === 'document'
   return <ProjectAccessScope projectId={sprint.data?.projectId ?? ''} resourceError={query.error}>
     <div className="requirement-detail-page tp-surface">
-      {/* 标题栏与生成全景共用同一个容器：标题栏是容器内的工具栏，画布紧贴其下。 */}
-      <section className="requirement-detail-main">
-        <RequirementDetailHeader showDownload showEdit requirement={requirement} requirementId={requirementId} readingNode={readingNode} onLeaveReading={handleLeaveReading}
-          canWrite={access.can('write')} onRefresh={sprint.data ? refreshGeneration : undefined} refreshing={refreshingGeneration} onBack={back} onEdit={() => {
-            setDocumentError(undefined)
-            setDocumentLoading(requirement.documentType === 'richtext')
-            form.setFieldsValue({ name: requirement.name,
-              documentType: requirement.documentType === 'docx' ? 'word' : requirement.documentType ?? 'richtext',
-              documentContent: '', documentFilename: requirement.documentFilename,
-              documentFileName: requirement.documentFilename, documentDownloadUrl: requirement.documentDownloadUrl,
-              file: undefined }); setEditing(true)
-          }} />
-        {sprint.data ? <RequirementDesignWorkspace key={requirementId} requirementId={requirementId} projectId={sprint.data.projectId ?? ''}
-          canWrite={access.can('write')} onReadingNodeChange={handleReadingNode}
-          documentPreview={<RequirementDocumentPreviewContent embedded {...documentProps} />} /> : <Spin />}
-      </section>
+      <div className="requirement-detail-layout">
+        {/* 标题栏与画布共用左侧容器：标题栏是容器内的工具栏，画布紧贴其下。 */}
+        <section className="requirement-detail-main">
+          <RequirementDetailHeader showDownload={readingDocument} showEdit={readingDocument} requirement={requirement} requirementId={requirementId} readingNode={readingNode} onLeaveReading={handleLeaveReading} readingActionsRef={setReadingActionsHost}
+            canWrite={access.can('write')} onRefresh={sprint.data ? refreshGeneration : undefined} refreshing={refreshingGeneration} onBack={back} onEdit={() => {
+              setDocumentError(undefined)
+              setDocumentLoading(requirement.documentType === 'richtext')
+              form.setFieldsValue({ name: requirement.name,
+                documentType: requirement.documentType === 'docx' ? 'word' : requirement.documentType ?? 'richtext',
+                documentContent: '', documentFilename: requirement.documentFilename,
+                documentFileName: requirement.documentFilename, documentDownloadUrl: requirement.documentDownloadUrl,
+                file: undefined }); setEditing(true)
+            }} />
+          {sprint.data ? <RequirementDesignWorkspace key={requirementId} requirementId={requirementId} projectId={sprint.data.projectId ?? ''}
+            canWrite={access.can('write')} onReadingNodeChange={handleReadingNode} inspectorHost={inspectorHost} readingActionsHost={readingActionsHost}
+            documentPreview={<RequirementDocumentPreviewContent embedded {...documentProps} />} /> : <Spin />}
+        </section>
+        {/* 阶段侧栏独立成卡片，挂在画布大容器外侧。 */}
+        <div className="requirement-detail-side" ref={setInspectorHost} />
+      </div>
       <RequirementDrawer title="编辑需求" open={editing} mode="edit" form={form} loading={save.isPending} error={save.error}
         projectId={canonicalProjectId} documentLoading={documentLoading} documentError={documentError}
         onDocumentTypeChange={() => {

@@ -18,6 +18,7 @@ from testing_agent_ai_worker.app.bootstrap import (
     run_poll_once,
     run_worker,
 )
+from testing_agent_ai_worker.app.health import HealthServer, health_port_from_env
 from testing_agent_ai_worker.config.loader import load_settings
 from testing_agent_ai_worker.logging.setup import setup_logging
 
@@ -49,4 +50,13 @@ def main(config_path: str | Path | None = None) -> int:
 
     signal.signal(signal.SIGTERM, stop)
     setup_logging(settings.logging)
-    return run_worker(settings=settings)
+    # 本地开发不注入探针端口，此时不启动 health server。
+    health_port = health_port_from_env()
+    health_server = HealthServer(port=health_port) if health_port is not None else None
+    if health_server is not None:
+        health_server.start()
+    try:
+        return run_worker(settings=settings)
+    finally:
+        if health_server is not None:
+            health_server.stop()

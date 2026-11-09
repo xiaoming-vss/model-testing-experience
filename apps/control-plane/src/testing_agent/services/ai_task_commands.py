@@ -57,7 +57,7 @@ class GenerationTaskCommands:
         sprint_id = str(body.get("sprintId") or body.get("sprint_id") or "")
         requirement_id = str(body.get("requirementId") or body.get("requirement_id") or "")
         requirement = None
-        if kind in {"ui", "requirement_analysis", "code_risk_analysis"}:
+        if kind in {"ui", "requirement_analysis", "code_risk_analysis", "repository_profile"}:
             if not requirement_id:
                 raise ErrBadRequest()
             requirement = await self.repository.get_requirement(requirement_id)
@@ -99,9 +99,13 @@ class GenerationTaskCommands:
                         f"{requirement.name} 代码风险分析"
                         if kind == "code_risk_analysis" and requirement is not None
                         else (
-                            "test-report-generate-task"
-                            if kind == "test_report"
-                            else f"{kind}-case-generate-task"
+                            f"{requirement.name} 仓库画像"
+                            if kind == "repository_profile" and requirement is not None
+                            else (
+                                "test-report-generate-task"
+                                if kind == "test_report"
+                                else f"{kind}-case-generate-task"
+                            )
                         )
                     )
                 )
@@ -114,7 +118,7 @@ class GenerationTaskCommands:
                 "source_archive"
                 if kind == "ui"
                 else requirement.document_type
-                if kind in {"requirement_analysis", "code_risk_analysis"}
+                if kind in {"requirement_analysis", "code_risk_analysis", "repository_profile"}
                 and requirement is not None
                 else (
                     "daily_metrics"
@@ -126,7 +130,7 @@ class GenerationTaskCommands:
                 ""
                 if kind == "ui"
                 else requirement.document_content
-                if kind in {"requirement_analysis", "code_risk_analysis"}
+                if kind in {"requirement_analysis", "code_risk_analysis", "repository_profile"}
                 and requirement is not None
                 else body.get("sourceContent") or body.get("source_content") or ""
             ),

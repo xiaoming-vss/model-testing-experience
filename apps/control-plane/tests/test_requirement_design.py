@@ -236,7 +236,6 @@ async def test_workspace_starts_function_stage_from_approved_version_without_bin
     sync.commit()
     version = understanding_version(sync, "req")
     bundle = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(sync)))
-    assert (await bundle.design.overview("req", "u"))["adoptedUnderstanding"]
     result = await DirectStageCommands(bundle.chain).run(
         "req",
         "function",

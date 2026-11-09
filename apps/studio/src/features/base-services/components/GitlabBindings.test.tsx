@@ -48,6 +48,20 @@ it('管理权限撤销后禁用已绑定仓库的分支与基线修改', async (
   expect(update).not.toHaveBeenCalled()
 })
 
+it('存量绑定缺少基线时显示必选基线占位', async () => {
+  vi.spyOn(api, 'getGitlabProjectBindings').mockResolvedValue(listResponse([]))
+  vi.spyOn(api, 'getGitlabConnections').mockResolvedValue(listResponse([]))
+  vi.spyOn(api, 'getGitlabRequirementBindings').mockResolvedValue(listResponse([{
+    bindingId: 'binding-1', provider: 'gitlab', remoteResourceType: 'repository', remoteResourceId: 'repo-1',
+    instanceUrl: 'https://gitlab.example.com', branch: 'dev',
+  }]))
+  renderModal(<RequirementCodeBindingModal open projectId="project-1" requirementId="requirement-1" onClose={() => {}} />)
+
+  await screen.findByText('repo-1')
+  const row = screen.getByText('repo-1').closest('.requirement-code-binding-row')!
+  expect(row.querySelector('.ant-select-placeholder')).toHaveTextContent('选择基线分支（必选）')
+})
+
 it('部分群组绑定成功后刷新成功项，重试仅提交失败项', async () => {
   const bindings: ResourceBinding[] = []
   vi.spyOn(api, 'getGitlabConnections').mockResolvedValue(listResponse([{

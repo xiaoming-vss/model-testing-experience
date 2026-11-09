@@ -26,7 +26,6 @@ import {
   YAxis,
 } from 'recharts'
 import dayjs, { type Dayjs } from 'dayjs'
-import { SprintCodeOverviewSection } from '@/features/projects/components/SprintCodeOverviewSection'
 import { TestReportHistoryDrawer } from '@/features/projects/components/TestReportHistoryDrawer'
 import { useSprintBoundaryRefresh } from '@/features/projects/hooks/useSprintBoundaryRefresh'
 import { api, listItems, type SprintDailyMetricsSnapshot, type SprintDailyMetricsTestStats, type TestReportGenerateRun } from '@/services/api'
@@ -1070,8 +1069,6 @@ export function SprintDetailPage() {
                     <TestExecutionOverviewCard metrics={latestMetrics} />
                     <BugRiskOverviewCard bug={latestMetrics.bug} />
                   </div>
-
-                  <SprintCodeOverviewSection projectId={projectId} sprintId={sprintId} />
 
                   <div className="sprint-overview-section sprint-dashboard-trend-section">
                     {historyMetricsQuery.isLoading ? (

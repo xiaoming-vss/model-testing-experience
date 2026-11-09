@@ -84,6 +84,7 @@ from testing_agent.services.ldap_login import LdapLoginService
 from testing_agent.services.ldap_settings import LdapSettingsService, effective_settings
 from testing_agent.services.project import ProjectService
 from testing_agent.services.project_skill_space import ProjectSkillSpaceService
+from testing_agent.services.repository_profile import RepositoryProfileService
 from testing_agent.services.requirement import RequirementService
 from testing_agent.services.requirement_design import RequirementDesignService
 from testing_agent.services.resource_binding import ResourceBindingService
@@ -451,7 +452,12 @@ def get_generation_launcher(
         code_risk_analysis_service=CodeRiskAnalysisService(
             access.repository,
             bindings,
-            BaselineResolutionService(bindings, SprintRepository(session)),
+            connections,
+            cipher,
+        ),
+        repository_profile_service=RepositoryProfileService(
+            access.repository,
+            bindings,
             connections,
             cipher,
         ),

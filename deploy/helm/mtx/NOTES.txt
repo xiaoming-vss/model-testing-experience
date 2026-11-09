@@ -1,0 +1,21 @@
+MTX has been deployed in namespace {{ .Release.Namespace }}.
+
+Before relying on this release, confirm that every `configToml` value is
+filled. The committed defaults are empty placeholders and only define the
+values keys.
+
+Studio is exposed through the following Service:
+
+  kubectl get service studio -n {{ .Release.Namespace }}
+
+The default NodePort is {{ .Values.studio.service.nodePort | default 30080 }}.
+
+Check workloads:
+
+  kubectl get pods -n {{ .Release.Namespace }}
+  kubectl get job -n {{ .Release.Namespace }}
+
+If the migration Job did not complete, the control-plane Deployment will not
+start. Inspect it with:
+
+  kubectl logs -n {{ .Release.Namespace }} job/{{ .Release.Name }}-control-plane-migrate

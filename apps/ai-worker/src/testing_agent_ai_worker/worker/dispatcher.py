@@ -21,6 +21,7 @@ class WorkerTaskDispatcherExecutor(TaskExecutor):
         test_report_executor: TaskExecutor | None = None,
         ui_executor: TaskExecutor | None = None,
         code_risk_executor: TaskExecutor | None = None,
+        repository_profile_executor: TaskExecutor | None = None,
         test_order_graph_executor: TaskExecutor | None = None,
         skill_preparer=None,
     ) -> None:
@@ -31,6 +32,7 @@ class WorkerTaskDispatcherExecutor(TaskExecutor):
         self.test_report_executor = test_report_executor
         self.ui_executor = ui_executor
         self.code_risk_executor = code_risk_executor
+        self.repository_profile_executor = repository_profile_executor
         self.test_order_graph_executor = test_order_graph_executor
 
     def execute(self, task: Task, started_at: datetime, progress_callback) -> TaskResult:
@@ -51,6 +53,8 @@ class WorkerTaskDispatcherExecutor(TaskExecutor):
             return self.ui_executor.execute(task, started_at, progress_callback)
         if task.task_type == "code_risk_analysis" and self.code_risk_executor is not None:
             return self.code_risk_executor.execute(task, started_at, progress_callback)
+        if task.task_type == "repository_profile" and self.repository_profile_executor is not None:
+            return self.repository_profile_executor.execute(task, started_at, progress_callback)
         if task.task_type == "test_order_graph" and self.test_order_graph_executor is not None:
             return self.test_order_graph_executor.execute(task, started_at, progress_callback)
         return TaskResult(

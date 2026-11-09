@@ -53,6 +53,29 @@ describe('RequirementDocumentPreviewContent', () => {
     expect(separator).toHaveAttribute('aria-valuenow', '52')
   })
 
+  it('新需求生成页只展示原文，不再渲染历史增强文本', () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    try {
+      const { container } = render(
+        <QueryClientProvider client={queryClient}>
+          <RequirementDocumentPreviewContent
+            requirementName="转换数据（Export）"
+            documentType="richtext"
+            documentContent={understandingSource}
+            documentFilename="understanding.json"
+            showEnhancedText={false}
+          />
+        </QueryClientProvider>,
+      )
+
+      expect(container.querySelectorAll('.requirement-document-pane')).toHaveLength(1)
+      expect(screen.queryByRole('separator', { name: '调整原文与增强文本宽度' })).not.toBeInTheDocument()
+      expect(screen.queryByText('增强文本')).not.toBeInTheDocument()
+    } finally {
+      queryClient.clear()
+    }
+  })
+
   it('结构化需求理解产物在增强文本面板折叠展示 UI 交互章节', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     try {

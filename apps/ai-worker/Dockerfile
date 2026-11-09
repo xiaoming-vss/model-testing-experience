@@ -64,6 +64,8 @@ COPY --chown=worker:worker config/worker.example.toml ./config/worker.toml
 
 USER 10001:10001
 
+EXPOSE 8080
+
 STOPSIGNAL SIGTERM
 
 CMD ["mtx-ai-worker"]

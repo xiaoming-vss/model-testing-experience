@@ -1,0 +1,33 @@
+global: {}
+
+replicaCount: 1
+
+image:
+  registry: ""
+  repository: mtx/studio
+  tag: local
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+apiUpstream: http://control-plane:9000
+
+service:
+  type: NodePort
+  port: 80
+  nodePort: 30080
+
+resources: {}
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+terminationGracePeriodSeconds: 30
+
+# The official nginx image starts its master process as root. Leave the
+# security contexts empty unless the image is replaced with a non-root build.
+podSecurityContext: {}
+securityContext: {}

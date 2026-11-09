@@ -22,7 +22,6 @@ export type RequirementDesignTask = {
 export type RequirementDesignOverview = {
   tasks: RequirementDesignTask[]
   runCounts: Record<RequirementDesignKind, number>
-  adoptedUnderstanding: boolean
   activeTaskIds?: string[]
 }
 export type RequirementDesignConfiguration = {

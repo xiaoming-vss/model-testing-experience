@@ -53,4 +53,3 @@ class RequirementDesignResponse(DesignModel):
     tasks: list[RequirementDesignTaskSummary]
     run_counts: dict[str, int]
     active_task_ids: list[str] = Field(default_factory=list)
-    adopted_understanding: bool

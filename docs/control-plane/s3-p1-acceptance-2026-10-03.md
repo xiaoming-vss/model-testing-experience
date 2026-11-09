@@ -1,6 +1,6 @@
 # 2026-10-03 统一 S3 P1 验收记录
 
-验收范围为本机控制面 `127.0.0.1:9000`、Studio `localhost:5173`、MySQL 8.4 和 RustFS `localhost:19000`。需求文件为 `/home/xiaoming/data/文档/test-agent/需求/平台统一S3文件存储需求.md`。核对包含工作区已有未提交改动；本次不提交其他人的工作、不修改在线部署。
+验收范围为本机控制面 `127.0.0.1:9000`、Studio `localhost:5173`、MySQL 8.4 和 RustFS `localhost:19000`。需求文件为 `/home/xiaoming/data/文档/test-agent/需求/已完成/平台统一S3文件存储需求【已完成】.md`。核对包含工作区已有未提交改动；本次不提交其他人的工作、不修改在线部署。
 
 ## P1 状态
 

@@ -431,6 +431,44 @@ class IntegrationConnectionService:
             connection_id, project_id, group_id, repository_id, user_id=user_id
         )
 
+    async def get_gitlab_project(
+        self,
+        connection_id: str,
+        project_id: str,
+        repository_id: str,
+        *,
+        user_id: str,
+    ) -> dict[str, Any]:
+        return await self.gitlab_resources.get_project(
+            connection_id, project_id, repository_id, user_id=user_id
+        )
+
+    async def get_gitlab_branch(
+        self,
+        connection_id: str,
+        project_id: str,
+        repository_id: str,
+        branch: str,
+        *,
+        user_id: str,
+    ) -> dict[str, Any]:
+        return await self.gitlab_resources.get_branch(
+            connection_id, project_id, repository_id, branch, user_id=user_id
+        )
+
+    async def resolve_gitlab_commit(
+        self,
+        connection_id: str,
+        project_id: str,
+        repository_id: str,
+        ref: str,
+        *,
+        user_id: str,
+    ) -> str:
+        return await self.gitlab_resources.resolve_commit(
+            connection_id, project_id, repository_id, ref, user_id=user_id
+        )
+
     async def list_gitlab_groups(
         self,
         connection_id: str,
@@ -610,7 +648,12 @@ class IntegrationConnectionService:
     def _decrypt_secret(self, ciphertext: str) -> str:
         if self.credential_cipher is None:
             raise RuntimeError("未配置集成凭据加密器")
-        return self.credential_cipher.decrypt(ciphertext)
+        try:
+            return self.credential_cipher.decrypt(ciphertext)
+        except ValueError as exc:
+            raise dynamic_error(
+                ErrIntegrationConnectionAuthFailed, "集成凭据解密失败,请重新授权该连接"
+            ) from exc
 
     def _normalize_gitlab_base_url(self, base_url: str) -> str:
         try:
