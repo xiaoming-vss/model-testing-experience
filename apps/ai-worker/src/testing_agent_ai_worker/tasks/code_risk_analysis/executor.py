@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from datetime import datetime
 from typing import Any, Callable
@@ -24,11 +25,11 @@ from testing_agent_ai_worker.tasks.code_risk_analysis.context import (
     ContextPackage,
     build_code_context,
 )
-from testing_agent_ai_worker.tasks.code_risk_analysis.preview_prompt import (
-    ContextReceiptError,
-    build_preview_prompt,
-    build_result_receipt,
-    validate_context_receipt,
+from testing_agent_ai_worker.tasks.code_risk_analysis.preview_prompt import ContextReceiptError
+from testing_agent_ai_worker.tasks.code_risk_analysis.report_prompt import build_report_prompt
+from testing_agent_ai_worker.tasks.code_risk_analysis.report_validation import (
+    RiskReportValidationError,
+    validate_risk_report,
 )
 from testing_agent_ai_worker.tasks.code_risk_analysis.workspace import (
     CodeWorkspace,
@@ -135,19 +136,65 @@ class CodeRiskAnalysisExecutor(TaskExecutor):
                     stage_status="running",
                 )
             )
-            prompt = build_preview_prompt(context, prepared)
             with task_config_path(agent_config=self.agent_config, task=task) as config_path:
-                raw_output = self._resolve_runner_result(
-                    self.prompt_runner(
-                        input_text=prompt,
-                        session_key=task.session_key,
-                        config_path=config_path,
-                        workspace=str(prepared.code_root),
-                        tools=READ_ONLY_TOOLS,
+                expected_case_ids = {
+                    case.case_id
+                    for cases in (
+                        task.existing_tests.function_cases,
+                        task.existing_tests.api_cases,
+                        task.existing_tests.ui_cases,
                     )
-                )
-            model_receipt = validate_context_receipt(raw_output, prepared)
-            receipt = build_result_receipt(prepared, context, model_receipt)
+                    for case in cases
+                    if case.case_id
+                }
+                raw_output = ""
+                report = None
+                errors = None
+                for attempt in range(3):
+                    progress_callback(
+                        TaskProgress(
+                            task_id=task.task_id,
+                            attempt_id=task.attempt_id,
+                            current_stage="analyzing",
+                            stage_status="repairing" if attempt else "running",
+                            result_summary_json=json.dumps(
+                                {"outputValidation": {"repairAttempt": attempt, "maxRepairs": 2}},
+                                ensure_ascii=False,
+                            ),
+                        )
+                    )
+                    raw_output = self._resolve_runner_result(
+                        self.prompt_runner(
+                            input_text=build_report_prompt(
+                                context,
+                                prepared,
+                                previous_output=raw_output if errors else "",
+                                errors=errors,
+                            ),
+                            session_key=task.session_key,
+                            config_path=config_path,
+                            workspace=str(prepared.code_root),
+                            tools=READ_ONLY_TOOLS,
+                        )
+                    )
+                    try:
+                        report = validate_risk_report(
+                            raw_output,
+                            prepared,
+                            expected_case_ids=expected_case_ids,
+                        )
+                        break
+                    except RiskReportValidationError as exc:
+                        errors = exc.issues
+                        if attempt == 2:
+                            raise
+                if report is None:
+                    raise RiskReportValidationError(errors or [])
+            receipt = {
+                "analyzedAt": datetime.now().astimezone().isoformat(),
+                "repositories": prepared.manifest["repositories"],
+                **report,
+            }
             output_yaml = yaml.safe_dump(receipt, allow_unicode=True, sort_keys=False)
             result_summary = build_task_result_summary(
                 task=task,
@@ -158,7 +205,6 @@ class CodeRiskAnalysisExecutor(TaskExecutor):
                     "filesChangedTotal": sum(repo.files_changed for repo in prepared.repositories),
                     "diffChars": context.diff_chars,
                     "truncatedFiles": len(context.truncated_files),
-                    "modelFilesRead": len(model_receipt["filesRead"]),
                 },
             )
             cleanup_code_workspace(
@@ -177,7 +223,9 @@ class CodeRiskAnalysisExecutor(TaskExecutor):
                 finished_at=datetime.now().astimezone(),
             )
         except Exception as exc:
-            if isinstance(exc, (CodeWorkspaceError, ContextReceiptError)):
+            if isinstance(
+                exc, (CodeWorkspaceError, ContextReceiptError, RiskReportValidationError)
+            ):
                 LOGGER.warning(
                     "code risk context failed: task_id=%s attempt_id=%s error=%s",
                     task.task_id,
@@ -222,7 +270,7 @@ class CodeRiskAnalysisExecutor(TaskExecutor):
 
     @staticmethod
     def _safe_error(exc: Exception) -> str:
-        if isinstance(exc, (CodeWorkspaceError, ContextReceiptError)):
+        if isinstance(exc, (CodeWorkspaceError, ContextReceiptError, RiskReportValidationError)):
             return str(exc)
         return "代码上下文准备或模型调用失败"
 

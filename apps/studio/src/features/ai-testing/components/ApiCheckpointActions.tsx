@@ -3,6 +3,7 @@ import { Alert, Button, Input, Modal, Space } from 'antd'
 import { useMutation } from '@tanstack/react-query'
 import { api } from '@/services/api'
 import { getErrorMessage } from '@/utils/format'
+import { randomId } from '@/shared/utils/crypto'
 import { usePersonalLlmChoice } from '../hooks/usePersonalLlmChoice'
 import type { ApiCaseGenerateTaskRun } from '../types'
 
@@ -35,12 +36,12 @@ export function ApiCheckpointActions({ run, projectId, canReview, canWrite, canE
       if (action === 'approve' || action === 'reject') {
         const llmConnectionId = action === 'approve' ? await choice.choose() : undefined
         const key = JSON.stringify([run.runId, stage, action, llmConnectionId])
-        if (pendingRequest.current?.key !== key) pendingRequest.current = { key, id: crypto.randomUUID() }
+        if (pendingRequest.current?.key !== key) pendingRequest.current = { key, id: randomId() }
         return api.reviewApiCaseStage(run.runId, { stage, action, llmConnectionId, requestId: pendingRequest.current.id })
       }
       const llmConnectionId = await choice.choose()
       const key = JSON.stringify([run.runId, stage, action, llmConnectionId, instruction.trim()])
-      if (pendingRequest.current?.key !== key) pendingRequest.current = { key, id: crypto.randomUUID() }
+      if (pendingRequest.current?.key !== key) pendingRequest.current = { key, id: randomId() }
       if (action === 'retry') return api.retryApiCaseStage(run.runId, { stage, llmConnectionId, requestId: pendingRequest.current.id })
       if (!instruction.trim()) throw new Error('请填写优化要求')
       return api.reviseApiCaseStage(run.runId, { stage, revisionInstruction: instruction.trim(), llmConnectionId, requestId: pendingRequest.current.id })

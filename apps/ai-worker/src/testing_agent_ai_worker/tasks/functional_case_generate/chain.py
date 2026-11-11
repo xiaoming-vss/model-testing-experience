@@ -22,6 +22,7 @@ from testing_agent_ai_worker.tasks.functional_case_generate.detailed_batches imp
     _extract_cases,
 )
 
+from .point_review import generate_reviewed_points
 from .validation import generate_validated
 
 
@@ -135,6 +136,17 @@ async def run_skill_step(
         }.get(skill_name)
         if stage is None:
             return (await bot.run(message, session_key=session_key, **media_args)).content
+        if stage == "case_names":
+            return await generate_reviewed_points(
+                generation_input=message,
+                evidence_input=input_text,
+                user_instruction=extra_instruction,
+                generate=lambda prompt, phase: bot.run(
+                    prompt,
+                    session_key=(session_key if phase == "generate" else f"{session_key}:{phase}"),
+                    **media_args,
+                ),
+            )
         return await generate_validated(
             stage=stage,
             inputs=message,
@@ -191,16 +203,21 @@ async def run_functional_chain(
                 raise ValueError("阶段重试缺少已确认测试点")
             case_names_result = prior_case_names
         else:
-            case_names_result = await generate_validated(
-                stage="case_names",
-                generate=lambda prompt: bot.run(prompt, session_key=session_key),
-                inputs=build_skill_message(
+            case_names_body = _build_functional_case_names_body(
+                source_text=source_text,
+                analysis_json=analysis_result,
+            )
+            case_names_result = await generate_reviewed_points(
+                generation_input=build_skill_message(
                     skill_name=case_name_skill_name,
-                    body_text=_build_functional_case_names_body(
-                        source_text=source_text,
-                        analysis_json=analysis_result,
-                    ),
+                    body_text=case_names_body,
                     extra_instruction=_build_functional_case_names_instruction(extra_instruction),
+                ),
+                evidence_input=case_names_body,
+                user_instruction=extra_instruction,
+                generate=lambda prompt, phase: bot.run(
+                    prompt,
+                    session_key=(session_key if phase == "generate" else f"{session_key}:{phase}"),
                 ),
             )
         if on_case_names_result is not None and resume_stage != "detailed_cases":

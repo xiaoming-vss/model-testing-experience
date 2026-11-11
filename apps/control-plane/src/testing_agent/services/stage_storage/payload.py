@@ -61,8 +61,8 @@ def worker_payloads(
         if document_type in {"word", "docx"} and not run.get("sourceContent"):
             run["sourceContent"] = url
     if task.task_type == "ui_case_generate":
-        run["sourceArchiveDownloadUrl"] = (
-            f"/internal/ai-worker/tasks/{worker_task.task_id}/source-archive"
+        run["gitlabCredentialsUrl"] = (
+            f"/internal/ai-worker/tasks/{worker_task.task_id}/gitlab-credentials"
         )
     config_text = json.dumps(config, ensure_ascii=False)
     claim = {

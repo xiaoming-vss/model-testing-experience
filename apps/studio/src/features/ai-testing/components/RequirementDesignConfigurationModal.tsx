@@ -1,5 +1,5 @@
 import { ActionButton } from '@/shared/components/ActionButton'
-import { Alert, Button, Form, Modal, Progress, Space, Upload } from 'antd'
+import { Alert, Button, Form, Modal, Space, Upload } from 'antd'
 import { parseDocument } from 'yaml'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
 import { useQuery } from '@tanstack/react-query'
@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 import { aiTestingApi } from '../api/aiTesting.api'
 import { requirementDesignApi, type RequirementDesignKind, type RequirementDesignTask } from '../api/requirementDesign.api'
 import { getErrorMessage } from '@/utils/format'
+import { randomId } from '@/shared/utils/crypto'
 
 const getters = {
   requirement_analysis: aiTestingApi.getRequirementAnalysisTask,
@@ -24,12 +25,10 @@ export function RequirementDesignConfigurationModal({ requirementId, kind, tasks
   onClose: () => void
   onSaved: (taskId: string) => void
 }) {
-  const [requestId] = useState(() => crypto.randomUUID())
+  const [requestId] = useState(() => randomId())
   const [taskId] = useState(initialTaskId || tasks[0]?.taskId || 'new')
   const [createdTaskId, setCreatedTaskId] = useState<string>()
   const [source, setSource] = useState('')
-  const [archive, setArchive] = useState<File>()
-  const [uploadProgress, setUploadProgress] = useState<number>()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<unknown>()
   const loadedTaskId = useRef<string | undefined>(undefined)
@@ -66,10 +65,6 @@ export function RequirementDesignConfigurationModal({ requirementId, kind, tasks
       })
       const id = configured.taskId!
       setCreatedTaskId(id)
-      if (kind === 'ui') {
-        if (archive) { setUploadProgress(0); await aiTestingApi.uploadUiCaseGenerateTaskSourceArchive(id, archive, setUploadProgress); setUploadProgress(100) }
-        else if (!tasks.find(task => task.taskId === id)?.hasSource) throw new Error('设置已保存，请上传源码 ZIP 后继续')
-      }
       onSaved(id)
     } catch (reason) { setError(reason) }
     finally { setSaving(false) }
@@ -89,14 +84,8 @@ export function RequirementDesignConfigurationModal({ requirementId, kind, tasks
         <TextCodeEditor readOnly={readOnly || saving} ariaLabel="OpenAPI / Swagger 文档" value={source} onChange={setSource}
           language="auto" height="min(45vh, 420px)" minHeight={240} />
       </Form.Item> : null}
-      {kind === 'ui' ? <Form.Item label="源码 ZIP">
-        <p>{archive?.name ?? tasks.find(task => task.taskId === taskId)?.sourceFilename ?? '尚未上传源码包'}</p>
-        <Upload disabled={saving} accept=".zip" maxCount={1} fileList={archive ? [{ uid: archive.name, name: archive.name, status: 'done' }] : []}
-          beforeUpload={file => { setArchive(file); return false }} onRemove={() => { setArchive(undefined); return true }}>
-          <ActionButton operation="upload" size="small" disabled={saving}>上传 / 替换源码包</ActionButton>
-        </Upload>
-      </Form.Item> : null}
-      {uploadProgress !== undefined ? <Progress percent={uploadProgress} status={error ? 'exception' : undefined} /> : null}
+      {kind === 'ui' ? <Alert showIcon type="info" title="UI 生成来源由仓库画像提供"
+        description="请在需求生成全景的 UI 测试分组中选择画像版本、前端仓库和 commit 模式。" /> : null}
     </Form>
   </Modal>
 }

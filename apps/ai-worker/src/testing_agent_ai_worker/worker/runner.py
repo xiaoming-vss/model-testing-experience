@@ -93,9 +93,7 @@ class WorkerRunner:
             return result
 
         try:
-            self.result_service.mark_started(
-                task.task_id, task.attempt_id, started_at.isoformat()
-            )
+            self.result_service.mark_started(task.task_id, task.attempt_id, started_at.isoformat())
             heartbeat_thread = threading.Thread(
                 target=self._heartbeat_loop,
                 args=(task, stop_event),

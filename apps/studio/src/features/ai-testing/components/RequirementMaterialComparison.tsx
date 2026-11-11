@@ -1,6 +1,6 @@
 import { pendingRequirementQuestions } from '@/domain/requirements/requirementArtifact'
 import { RequirementArtifactValue } from '@/domain/requirements/RequirementArtifactView'
-import { SearchOutlined } from '@ant-design/icons'
+import { FileTextOutlined, SearchOutlined } from '@ant-design/icons'
 import { Alert, Collapse, Empty, Input, Segmented, Select, Tag } from 'antd'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { extractedFactText, readExtractionArtifact, type ExtractionArtifact, type ExtractedFact, type MaterialQuestion } from '../utils/materialComparison'
@@ -11,6 +11,15 @@ import '../styles/material-comparison.css'
 const categories: Record<string, string> = { scope: '范围', actor: '角色', entry: '入口', operation: '操作', control: '控件', option: '选项', default: '默认值', trigger: '触发', dependency: '联动', result: '结果', pagination: '分页', sorting: '排序', validation: '校验', business_rule: '业务规则', other: '其他' }
 const statuses: Record<string, { label: string; color?: string }> = { confirmed: { label: '有明确依据', color: 'success' }, unconfirmed: { label: '待确认', color: 'warning' }, conflicting: { label: '存在冲突', color: 'error' }, example: { label: '示例', color: 'blue' }, not_applicable: { label: '不适用' } }
 const questionStatuses: Record<string, string> = { open: '未解决', resolved: '已答复' }
+
+/** 用首条来源定位生成事实所属章节，避免在列表里重复整段来源路径。 */
+function factSectionLabel(fact: ExtractedFact) {
+  const locator = fact.fact.sourceReferences[0]?.locator ?? ''
+  const parts = locator.split('/').map(part => part.trim()).filter(Boolean)
+  if (!parts.length) return '来源未标注章节'
+  if (parts.length > 1 && /^[12]\./.test(parts[0])) return `${parts[0]} / ${parts[1]}`
+  return parts[0]
+}
 
 type ArtifactMutation = (mutate: (raw: Record<string, unknown>) => void) => void
 type FactUpdate = (factId: string, patch: { category?: string; confirmationStatus?: string; value?: unknown }) => void
@@ -135,16 +144,59 @@ function Questions({ artifact, questions, editable = false, onUpdateQuestion }: 
 }
 
 function ComparisonContent({ artifact, editable = false, onEdit }: { artifact: ExtractionArtifact; editable?: boolean; onEdit?: ArtifactMutation }) {
-  const [expandedFactId, setExpandedFactId] = useState<string | undefined>(() => artifact.extractedFacts[0]?.id)
   const [selectedTab, setTab] = useState('facts')
+  const [selectedCategory, setCategory] = useState('all')
+  const [selectedFactId, setSelectedFactId] = useState<string | undefined>(() => artifact.extractedFacts[0]?.id)
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState('all')
   const pendingQuestions = pendingRequirementQuestions(artifact.questions)
   const tab = selectedTab === 'questions' && !pendingQuestions.length ? 'facts' : selectedTab
   const panelRef = useViewMotion(tab === 'facts' ? 0 : 1)
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('all')
-  const facts = artifact.extractedFacts.filter(f => (status === 'all' || f.fact.confirmationStatus === status) && extractedFactText(artifact, f).includes(search))
-  const questions = pendingQuestions.filter(q => q.question.includes(search))
   const editing = Boolean(editable && onEdit)
+
+  const filteredFacts = useMemo(() => artifact.extractedFacts.filter(fact =>
+    (status === 'all' || fact.fact.confirmationStatus === status)
+    && (selectedCategory === 'all' || fact.category === selectedCategory)
+    && extractedFactText(artifact, fact).includes(search),
+  ), [artifact, search, selectedCategory, status])
+  const filteredQuestions = useMemo(
+    () => pendingQuestions.filter(question => question.question.includes(search)),
+    [pendingQuestions, search],
+  )
+  useEffect(() => {
+    if (tab !== 'facts') return
+    if (filteredFacts.some(fact => fact.id === selectedFactId)) return
+    setSelectedFactId(filteredFacts[0]?.id)
+  }, [filteredFacts, selectedFactId, tab])
+  const activeFact = filteredFacts.find(fact => fact.id === selectedFactId) ?? filteredFacts[0]
+  const categoryCounts = useMemo(
+    () => Object.entries(categories)
+      .map(([key, label]) => ({ key, label, count: artifact.extractedFacts.filter(fact => fact.category === key).length }))
+      .filter(item => item.count > 0),
+    [artifact.extractedFacts],
+  )
+  const maxCategoryCount = Math.max(1, ...categoryCounts.map(item => item.count))
+  const groupedFacts = useMemo(() => {
+    if (selectedCategory !== 'all') return [{ label: undefined, facts: filteredFacts }]
+    const groups: { label: string; facts: ExtractedFact[] }[] = []
+    const indexes = new Map<string, number>()
+    for (const fact of filteredFacts) {
+      const label = factSectionLabel(fact)
+      let index = indexes.get(label)
+      if (index === undefined) {
+        index = groups.length
+        indexes.set(label, index)
+        groups.push({ label, facts: [] })
+      }
+      groups[index].facts.push(fact)
+    }
+    return groups
+  }, [filteredFacts, selectedCategory])
+  const sourceName = (sourceId: string) => artifact.sources.find(source => source.id === sourceId)?.name ?? sourceId
+  const relatedQuestions = activeFact
+    ? pendingQuestions.filter(question => activeFact.fact.relatedQuestionIds.includes(question.id))
+    : []
+
   const updateFact: FactUpdate = (factId, patch) => onEdit?.(raw => {
     const fact = (Array.isArray(raw.extractedFacts) ? raw.extractedFacts : []).find(item => asRecord(item) && item.id === factId)
     if (!asRecord(fact) || !asRecord(fact.fact)) return
@@ -160,38 +212,92 @@ function ComparisonContent({ artifact, editable = false, onEdit }: { artifact: E
     if ('answer' in patch) question.answer = patch.answer
   })
 
-  return <div className="requirement-material-comparison" role="region" aria-label="材料提取结果" tabIndex={0}>
-    <section className="requirement-material-panel">
-      <div className="requirement-material-filter">{pendingQuestions.length > 0 && <Segmented className="tab-view-switch" aria-label="提取内容分类" value={tab} onChange={value => { setTab(String(value)); setSearch('') }} options={[{ value: 'facts', label: '提取的事实' }, { value: 'questions', label: <PendingQuestionsLabel count={pendingQuestions.length} /> }]} />}<Input aria-label={tab === 'facts' ? '搜索事实' : '搜索问题'} placeholder={tab === 'facts' ? '搜索事实内容' : '搜索待确认问题'} prefix={<SearchOutlined />} allowClear value={search} onChange={e => setSearch(e.target.value)} />{tab === 'facts' && <Select aria-label="事实确认状态" value={status} onChange={setStatus} options={[{ value: 'all', label: '全部状态' }, ...Object.entries(statuses).map(([value, meta]) => ({ value, label: meta.label }))]} />}</div>
+  return <div className={`requirement-material-comparison${tab === 'questions' ? ' is-questions' : ''}`} role="region" aria-label="材料提取结果" tabIndex={0}>
+    {tab === 'facts' ? <aside className="requirement-material-rail" aria-label="事实分类">
+      <div className="requirement-material-summary">
+        <div><b>{artifact.extractedFacts.length}</b><span>提取事实</span></div>
+        <div><b>{artifact.extractedFacts.filter(fact => fact.category === 'business_rule').length}</b><span>业务规则</span></div>
+        <div><b>{artifact.sources.length}</b><span>来源文件</span></div>
+      </div>
+      <section className="requirement-material-rail-block">
+        <h3>按分类浏览</h3>
+        <button type="button" className={`requirement-material-cat-row${selectedCategory === 'all' ? ' is-active' : ''}`}
+          aria-pressed={selectedCategory === 'all'} onClick={() => setCategory('all')}>
+          <span>全部事实</span><span className="requirement-material-cat-count">{artifact.extractedFacts.length}</span>
+        </button>
+        {categoryCounts.map(item => <button type="button" key={item.key}
+          className={`requirement-material-cat-row${selectedCategory === item.key ? ' is-active' : ''}`}
+          aria-pressed={selectedCategory === item.key} onClick={() => setCategory(item.key)}>
+          <span>{item.label}</span>
+          <span className="requirement-material-cat-bar" aria-hidden="true"><i style={{ width: `${Math.max(8, item.count / maxCategoryCount * 100)}%` }} /></span>
+          <span className="requirement-material-cat-count">{item.count}</span>
+        </button>)}
+      </section>
+      <section className="requirement-material-rail-block">
+        <h3>来源文件</h3>
+        {artifact.sources.map(source => <div className="requirement-material-source-card" key={source.id}>
+          <FileTextOutlined aria-hidden />
+          <span>{source.name}</span>
+        </div>)}
+      </section>
+    </aside> : null}
+
+    <section className="requirement-material-list">
+      <div className="requirement-material-list-head">
+        <div><h2>{tab === 'facts' ? '提取事实' : '待确认问题'}</h2><p>{tab === 'facts' ? `${filteredFacts.length} 条事实` : `${filteredQuestions.length} 个未解决问题`}</p></div>
+        <Input aria-label={tab === 'facts' ? '搜索事实' : '搜索问题'} placeholder={tab === 'facts' ? '搜索事实内容' : '搜索待确认问题'} prefix={<SearchOutlined />} allowClear value={search} onChange={event => setSearch(event.target.value)} />
+      </div>
+      <div className="requirement-material-list-tools">
+        {pendingQuestions.length > 0 ? <Segmented className="tab-view-switch" aria-label="提取内容分类" value={tab} onChange={value => { setTab(String(value)); setSearch('') }} options={[{ value: 'facts', label: '提取的事实' }, { value: 'questions', label: <PendingQuestionsLabel count={pendingQuestions.length} /> }]} /> : null}
+        {tab === 'facts' ? <Select aria-label="事实确认状态" value={status} onChange={setStatus} options={[{ value: 'all', label: '全部状态' }, ...Object.entries(statuses).map(([value, meta]) => ({ value, label: meta.label }))]} /> : null}
+        <span className="requirement-material-count">{tab === 'facts' ? `${filteredFacts.length} 条` : `${filteredQuestions.length} 个`}</span>
+      </div>
       <div ref={panelRef} className="requirement-material-extracted" role="region" aria-label={tab === 'facts' ? '提取事实' : '待确认问题'} tabIndex={0}>
-        {tab === 'questions' ? <Questions artifact={artifact} questions={questions} editable={editing} onUpdateQuestion={updateQuestion} /> : facts.length ? facts.map(f => {
-          const active = expandedFactId === f.id
-          const meta = statuses[f.fact.confirmationStatus] ?? { label: f.fact.confirmationStatus }
-          return <article key={f.id} className={`requirement-material-fact${active ? ' is-selected' : ''}${editing ? ' is-editing' : ''}`}>
-            {editing ? <div className="requirement-material-fact-edit">
-              <FactEditor fact={f}
-                onChangeValue={value => updateFact(f.id, { value })}
-                onChangeCategory={value => updateFact(f.id, { category: value })}
-                onChangeStatus={value => updateFact(f.id, { confirmationStatus: value })} />
-              <button type="button" className="requirement-material-fact-locator requirement-material-fact-evidence-toggle"
-                aria-label={`查看依据：${extractedFactText(artifact, f)}`} aria-expanded={active}
-                onClick={() => setExpandedFactId(current => current === f.id ? undefined : f.id)}>
-                {f.fact.sourceReferences.map(r => r.locator).join('；') || '来源尚未明确'} · {active ? '收起依据' : '查看依据'}
-              </button>
-            </div> : <button className="requirement-material-fact-select" aria-label={`查看依据：${extractedFactText(artifact, f)}`} aria-expanded={active} aria-pressed={active} onClick={() => setExpandedFactId(current => current === f.id ? undefined : f.id)}>
-              <span className="requirement-material-fact-meta"><Tag>{categories[f.category] ?? f.category}</Tag><Tag color={meta.color}>{meta.label}</Tag></span>
-              <span className="requirement-material-fact-text">{extractedFactText(artifact, f)}</span>
-              <span className="requirement-material-fact-locator">{f.fact.sourceReferences.map(r => r.locator).join('；') || '来源尚未明确'}</span>
-            </button>}
-            {active && <div className="requirement-material-fact-evidence">
-              <strong>依据来源与摘录</strong>
-              {f.fact.sourceReferences.map((ref, index) => <div key={index}><span className="requirement-material-evidence-source">{artifact.sources.find(s => s.id === ref.sourceId)?.name ?? ref.sourceId}</span>{ref.excerpt && <blockquote>{ref.excerpt}</blockquote>}</div>)}
-              {pendingQuestions.some(q => f.fact.relatedQuestionIds.includes(q.id)) && <Questions artifact={artifact} editable={editing} onUpdateQuestion={updateQuestion} questions={pendingQuestions.filter(q => f.fact.relatedQuestionIds.includes(q.id))} />}
-            </div>}
-          </article>
-        }) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无匹配的提取事实" />}
+        {tab === 'questions' ? <Questions artifact={artifact} questions={filteredQuestions} editable={editing} onUpdateQuestion={updateQuestion} /> : filteredFacts.length ? groupedFacts.map(group => <div key={group.label ?? 'all'}>
+          {group.label ? <div className="requirement-material-fact-group"><span>{group.label}</span><b>{group.facts.length}</b></div> : null}
+          {group.facts.map(fact => {
+            const meta = statuses[fact.fact.confirmationStatus] ?? { label: fact.fact.confirmationStatus }
+            const active = activeFact?.id === fact.id
+            const text = extractedFactText(artifact, fact)
+            return <button type="button" key={fact.id} className={`requirement-material-fact-row${active ? ' is-selected' : ''}`}
+              aria-label={`查看依据：${text}`} aria-pressed={active} onClick={() => setSelectedFactId(fact.id)}>
+              <span className="requirement-material-fact-row-id">{fact.id}</span>
+              <span className="requirement-material-fact-row-copy">
+                <span className="requirement-material-fact-row-meta"><Tag>{categories[fact.category] ?? fact.category}</Tag><span>{fact.fact.sourceReferences.length} 条依据</span></span>
+                <span className="requirement-material-fact-row-text">{text}</span>
+                <span className="requirement-material-fact-row-locator">{factSectionLabel(fact)}</span>
+              </span>
+              <span className={`requirement-material-fact-row-state${meta.color ? ` is-${meta.color}` : ''}`}><i aria-hidden />{meta.label}</span>
+            </button>
+          })}
+        </div>) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无匹配的提取事实" />}
       </div>
     </section>
+
+    {tab === 'facts' ? <aside className="requirement-material-detail" aria-label="事实详情">
+      {activeFact ? <>
+        <div className="requirement-material-detail-head"><span className="requirement-material-detail-id">{activeFact.id}</span>{!editing ? <><Tag>{categories[activeFact.category] ?? activeFact.category}</Tag><Tag color={statuses[activeFact.fact.confirmationStatus]?.color}>{statuses[activeFact.fact.confirmationStatus]?.label ?? activeFact.fact.confirmationStatus}</Tag></> : null}</div>
+        <div className="requirement-material-detail-section">{factSectionLabel(activeFact)}</div>
+        {editing ? <FactEditor fact={activeFact}
+          onChangeValue={value => updateFact(activeFact.id, { value })}
+          onChangeCategory={value => updateFact(activeFact.id, { category: value })}
+          onChangeStatus={value => updateFact(activeFact.id, { confirmationStatus: value })} />
+          : <p className="requirement-material-detail-text">{extractedFactText(artifact, activeFact)}</p>}
+        <div className="requirement-material-detail-meta"><span>{factSectionLabel(activeFact)}</span><span>{activeFact.fact.sourceReferences.length} 条依据</span></div>
+        <section className="requirement-material-detail-evidence">
+          <h4>依据与摘录</h4>
+          {activeFact.fact.sourceReferences.map((ref, index) => <div className="requirement-material-evidence-item" key={`${ref.sourceId}-${index}`}>
+            <span className="requirement-material-evidence-source">{sourceName(ref.sourceId)}</span>
+            <span className="requirement-material-evidence-locator">{ref.locator}</span>
+            {ref.excerpt ? <blockquote>{ref.excerpt}</blockquote> : null}
+          </div>)}
+        </section>
+        {relatedQuestions.length ? <section className="requirement-material-detail-evidence">
+          <h4>关联待确认问题</h4>
+          <Questions artifact={artifact} questions={relatedQuestions} editable={editing} onUpdateQuestion={updateQuestion} />
+        </section> : null}
+      </> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="选择一条事实查看详情" />}
+    </aside> : null}
   </div>
 }
 

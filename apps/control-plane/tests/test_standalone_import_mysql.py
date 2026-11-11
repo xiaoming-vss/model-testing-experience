@@ -115,7 +115,7 @@ async def test_mysql_candidate_provenance_retains_official_case(mysql):  # noqa:
             access = SimpleNamespace(
                 owned_task=AsyncMock(return_value=owned), validate_task_scope=AsyncMock()
             )
-            commands = GenerationTaskCommands(AiGenerateTaskRepository(session), None, access)
+            commands = GenerationTaskCommands(AiGenerateTaskRepository(session), access)
             assert await commands.delete_run("function", "import-run", "importer") == {}
             session.expire_all()
             assert await session.scalar(

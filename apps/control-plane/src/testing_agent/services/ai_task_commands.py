@@ -16,9 +16,6 @@ from testing_agent.domain.ai_tasks import (
 )
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-from testing_agent.repositories.ai_generate_task_source_archive import (
-    AiGenerateTaskSourceArchiveRepository,
-)
 from testing_agent.services.ai_task_output import (
     dump_task,
 )
@@ -32,14 +29,12 @@ class GenerationTaskCommands:
     def __init__(
         self,
         repository: AiGenerateTaskRepository,
-        source_archive_repository: AiGenerateTaskSourceArchiveRepository,
         access: GenerationAccess,
         *,
         deletion: ResourceDeletion | None = None,
         id_factory: Callable[[], str] = new_id,
     ) -> None:
         self.repository = repository
-        self.source_archive_repository = source_archive_repository
         self.access = access
         self.deletion = deletion or SqlResourceDeletion()
         self.id_factory = id_factory
@@ -115,7 +110,7 @@ class GenerationTaskCommands:
             requirement_id=requirement_id,
             creator_user_id=user_id,
             source_type=str(
-                "source_archive"
+                "repository"
                 if kind == "ui"
                 else requirement.document_type
                 if kind in {"requirement_analysis", "code_risk_analysis", "repository_profile"}
@@ -169,7 +164,7 @@ class GenerationTaskCommands:
                 task.requirement_id = requirement_id
                 task.sprint_id = requirement.sprint_id
             field_map = {"name": "name", "instruction": "instruction"}
-            task.source_type = "source_archive"
+            task.source_type = "repository"
             task.source_content = ""
         else:
             field_map = {
@@ -185,12 +180,7 @@ class GenerationTaskCommands:
                 setattr(task, attr, body[key])
         await self.repository.commit()
         await self.repository.refresh(task)
-        archive = (
-            await self.source_archive_repository.get_source_archive(task.task_id)
-            if kind == "ui"
-            else None
-        )
-        return dump_task(task, archive)
+        return dump_task(task)
 
     async def delete(self, kind: str, task_id: str, user_id: str) -> dict:
         task = await self.access.owned_task(user_id, task_id, kind, action="write")

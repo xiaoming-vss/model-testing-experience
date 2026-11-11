@@ -9,12 +9,14 @@ import '../styles/ui-generation-case-selector.css'
 
 type SourceCase = { caseId: string; title: string; suiteId: string; suiteName: string }
 
-export function UiGenerationCaseSelector({ requirementId, open, value, onChange, onReady }: {
+export function UiGenerationCaseSelector({ requirementId, open, value, onChange, onReady, showIntro = true, tableHeight = 216 }: {
   requirementId?: string
   open: boolean
   value: string[] | undefined
   onChange: (ids: string[] | undefined) => void
   onReady: (ready: boolean) => void
+  showIntro?: boolean
+  tableHeight?: number
 }) {
   const [suiteIds, setSuiteIds] = useState<string[]>([])
   const [search, setSearch] = useState('')
@@ -42,8 +44,8 @@ export function UiGenerationCaseSelector({ requirementId, open, value, onChange,
   const visibleSelected = filtered.filter(item => selected.has(item.caseId)).length
   const busy = query.isFetching || query.isError
   return <section className="ui-generation-case-selector" aria-label="来源功能用例">
-    <Typography.Text strong>来源功能用例</Typography.Text>
-    <Typography.Text type="secondary">默认选中当前需求全部正式功能用例。筛选不改变已选内容，生成时依次审核 JSON、JSON 和 YAML。</Typography.Text>
+    {showIntro ? <><Typography.Text strong>来源功能用例</Typography.Text>
+    <Typography.Text type="secondary">默认选中当前需求全部正式功能用例。筛选不改变已选内容，生成时依次审核 JSON、JSON 和 YAML。</Typography.Text></> : null}
     <div className="ui-generation-case-filters">
       <Select mode="multiple" allowClear maxTagCount={1} aria-label="按用例集筛选" placeholder="全部用例集" options={suites}
         value={suiteIds} onChange={ids => { setSuiteIds(ids); setPage(1) }} optionFilterProp="label" />
@@ -59,7 +61,7 @@ export function UiGenerationCaseSelector({ requirementId, open, value, onChange,
       <Button size="small" disabled={busy || !value?.length} onClick={() => onChange([])}>清空选择</Button>
     </Space>
     <Table<SourceCase> size="small" rowKey="caseId" tableLayout="fixed" dataSource={filtered.slice((page - 1) * pageSize, page * pageSize)}
-      loading={query.isFetching} pagination={false} scroll={{ y: 216 }}
+      loading={query.isFetching} pagination={false} scroll={{ y: tableHeight }}
       locale={{ emptyText: query.error ? '用例读取失败' : !query.data?.length ? '暂无正式功能用例' : '没有符合筛选条件的用例' }}
       rowSelection={{ selectedRowKeys: value ?? [], preserveSelectedRowKeys: true, columnWidth: 40,
         getTitleCheckboxProps: () => ({ 'aria-label': '选择当前页用例', disabled: busy }),

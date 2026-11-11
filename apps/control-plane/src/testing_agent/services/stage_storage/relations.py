@@ -17,6 +17,7 @@ from testing_agent.services.ai_task_output import generated_function_cases
 from testing_agent.services.personal_authorization import require_personal_connection
 from testing_agent.services.stage_storage.dispatch import dispatch_stage_attempt
 from testing_agent.services.stage_storage.views import attempt_source
+from testing_agent.services.ui_generation_sources import public_ui_source_snapshot
 
 
 async def find_leaf(session: AsyncSession, attempt_id: str):
@@ -60,6 +61,9 @@ async def graph_view(session: AsyncSession, task: AiGenerateTask, leaf: AiGenera
     graph_active = latest and latest.status in {"pending", "queued", "claimed", "running"}
     graph_failed = latest and latest.status in {"failed", "error", "canceled"}
     status = latest.status if latest is not None and (graph_active or graph_failed) else "success"
+    public_source = attempt_source(leaf)
+    if task.task_type == "ui_case_generate":
+        public_source = public_ui_source_snapshot(public_source)
     return {
         "runId": leaf.id,
         "taskId": task.task_id,
@@ -73,7 +77,7 @@ async def graph_view(session: AsyncSession, task: AiGenerateTask, leaf: AiGenera
         "generationChainManaged": True,
         "currentStage": "relation_analysis" if graph_active or graph_failed else "completed",
         "stageStatus": status,
-        "snapshotJson": attempt_source(leaf),
+        "snapshotJson": public_source,
         "errorMessage": (latest.error_message or "") if graph_failed and latest else "",
         "configJson": config,
         "resultYaml": version.artifact_content if version else leaf.output_content or "",

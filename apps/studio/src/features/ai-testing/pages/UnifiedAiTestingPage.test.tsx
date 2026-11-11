@@ -213,7 +213,6 @@ it('代码风险分析列表运行使用当前项目加载模型授权', async (
     if (url.pathname === '/v1/projects/project-1/code-risk-analysis-tasks') {
       return jsonResponse({ items: [{ taskId: 'task-run-1', name: '可运行任务',
         projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1',
-        sourceArchive: { fileName: 'source.zip' },
       }], total: 1 })
     }
     if (url.pathname === '/v1/sprints/sprint-1/requirements' || url.pathname === '/v1/requirements/requirement-1') {

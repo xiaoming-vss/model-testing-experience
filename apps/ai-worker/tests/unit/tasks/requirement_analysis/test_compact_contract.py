@@ -79,6 +79,13 @@ class CompactContractTests(unittest.TestCase):
             "conflicting",
         )
 
+    def test_confirmed_content_cannot_reference_open_question(self):
+        fact = self.compact["businessRules"][0]["expectedBehavior"][0]
+        fact["confirmationStatus"] = "confirmed"
+        fact["relatedQuestionIds"] = [self.compact["questions"][0]["id"]]
+        with self.assertRaisesRegex(ValueError, "已确认内容不能继续引用未解决问题"):
+            validate_artifact(self.compact, KIND)
+
     def test_partial_confirmed_answer_survives_revision(self):
         self.compact["sources"][0]["type"] = "user_confirmation"
         answer = deepcopy(self.compact["businessRules"][0]["expectedBehavior"][0])

@@ -35,14 +35,14 @@ class ThreeStageTests(unittest.TestCase):
         source.mkdir(exist_ok=True)
         (source / "page.vue").write_text("<div>甲</div>")
         from datetime import datetime
-        from types import SimpleNamespace
 
         from testing_agent_ai_worker.config.models import PiConfig
         from testing_agent_ai_worker.tasks.ui_case_generate.executor import UiCaseExecutor
 
         executor = UiCaseExecutor(
             agent_config=PiConfig(runtime_root=root),
-            source_downloader=SimpleNamespace(download_and_extract=Mock(return_value=source)),
+            repository_source_preparer=test_executor.FakeRepositoryPreparer(Path(root) / "run"),
+            credentials_fetcher=lambda task: ["credential"],
             skill_runner=runner,
         )
         progress = []
@@ -89,7 +89,11 @@ class ThreeStageTests(unittest.TestCase):
             )
         self.assertEqual(result.status, TaskStatus.SUCCESS)
         self.assertEqual(yaml.safe_load(result.output_yaml), yaml.safe_load(raw))
-        self.assertEqual(json.loads(result.intermediate_json_text), config)
+        intermediate = json.loads(result.intermediate_json_text)
+        self.assertEqual(intermediate.pop("sourceKind"), "repository")
+        self.assertEqual(intermediate.pop("sourceCommit"), "a1b2c3d")
+        self.assertEqual(intermediate.pop("sourceRepository")["repositoryId"], "repo-1")
+        self.assertEqual(intermediate, config)
         self.assertEqual(required_skills(task), ["generate-ui-test-case"])
         self.assertEqual(runner.call_count, 2)
         self.assertIn(":ui-yaml-review:", runner.call_args.kwargs["session_key"])

@@ -7,7 +7,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import yaml
 
@@ -17,13 +17,26 @@ from testing_agent_ai_worker.agent.paths import (
     resolve_task_workspace,
 )
 from testing_agent_ai_worker.agent.skill_step import run_skill_step
-from testing_agent_ai_worker.config.models import AgentBackendConfig
+from testing_agent_ai_worker.config.models import AgentBackendConfig, UiGenerationConfig
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
-from testing_agent_ai_worker.models.task import Task
+from testing_agent_ai_worker.models.task import GitlabCredentials, Task
+from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
+from testing_agent_ai_worker.tasks.git_workspace import (
+    GitWorkspaceError,
+    retain_failed_workspace,
+    task_run_root,
+)
 from testing_agent_ai_worker.tasks.output_repair import generate_validated, parse_yaml
 from testing_agent_ai_worker.tasks.result_summary import build_task_result_summary
 from testing_agent_ai_worker.tasks.ui_case_generate.missing_fields import draft_step_for_validation
-from testing_agent_ai_worker.tasks.ui_case_generate.source_archive import SourceArchiveDownloader
+from testing_agent_ai_worker.tasks.ui_case_generate.repository_source import (
+    PinnedRepositorySourcePreparer,
+    RepositorySource,
+    RepositorySourceError,
+    RepositorySourcePreparer,
+    build_credentials_fetcher,
+    cleanup_repository_source,
+)
 from testing_agent_ai_worker.worker.runner import TaskExecutor
 
 from .ui_step_extract import normalize_save_to
@@ -84,19 +97,32 @@ UI_KEYWORD_RULES = {
 
 
 class UiCaseExecutor(TaskExecutor):
-    """下载前端源码归档并调用 UI 用例生成技能。"""
+    """解析仓库来源并调用 UI 用例生成技能。"""
 
     def __init__(
         self,
         *,
         agent_config: AgentBackendConfig,
-        source_downloader: SourceArchiveDownloader,
+        repository_source_preparer: RepositorySourcePreparer | None = None,
+        credentials_fetcher: Callable[[Task], list[GitlabCredentials]] | None = None,
+        ui_generation_config: UiGenerationConfig | None = None,
+        client: PlatformHttpClient | None = None,
         skill_runner=run_skill_step,
         skill_name: str = UI_CASE_SKILL_NAME,
     ) -> None:
         self.agent_config = agent_config
         self.runtime_paths = resolve_runtime_paths(agent_config)
-        self.source_downloader = source_downloader
+        self.ui_generation_config = ui_generation_config or UiGenerationConfig()
+        self.repository_source_preparer = (
+            repository_source_preparer
+            or PinnedRepositorySourcePreparer(
+                agent_config=agent_config,
+                config=self.ui_generation_config,
+            )
+        )
+        self.credentials_fetcher = credentials_fetcher or (
+            build_credentials_fetcher(client) if client is not None else None
+        )
         self.skill_runner = skill_runner
         self.skill_name = skill_name
 
@@ -104,18 +130,17 @@ class UiCaseExecutor(TaskExecutor):
         if task.task_type != "ui_case_generate":
             return self._failure(task, started_at, f"不支持的任务类型: {task.task_type}")
 
+        repository_source: RepositorySource | None = None
+        repository_run_root: Path | None = None
         try:
             workspace = resolve_task_workspace(self.agent_config, task)
-            source_root = self.source_downloader.download_and_extract(
-                source_archive_download_url=task.payload.source_archive_download_url,
-                task=task,
-                workspace=workspace,
-            )
+            repository_run_root = task_run_root(self.agent_config, task)
+            source_root, repository_source = self._prepare_repository_source(task)
             if task.payload.metadata.get("uiWorkflowVersion") == "ui_three_stage/1.0":
                 from testing_agent_ai_worker.tasks.ui_case_generate.chain import execute_stage
 
                 with task_config_path(agent_config=self.agent_config, task=task) as config_path:
-                    return execute_stage(
+                    result = execute_stage(
                         task=task,
                         started_at=started_at,
                         progress_callback=progress_callback,
@@ -125,15 +150,18 @@ class UiCaseExecutor(TaskExecutor):
                         skill_runner=self.skill_runner,
                         validate_yaml=_validate_ui_stage_yaml,
                         yaml_instruction=UI_STAGE_YAML_INSTRUCTION,
+                        source_metadata=repository_source.metadata,
                     )
+                self._cleanup_repository_source(repository_source, success=True)
+                return result
             input_text = UI_CASE_YAML_ONLY_INSTRUCTION.format(source_root=source_root)
             if task.payload.extra_instruction.strip():
                 input_text = f"{input_text}\n\n{task.payload.extra_instruction.strip()}"
-            progress_callback(self._progress(task, source_root))
+            progress_callback(self._progress(task, source_root, repository_source))
             with task_config_path(agent_config=self.agent_config, task=task) as config_path:
 
                 def repair_progress(event: dict[str, Any]) -> None:
-                    progress = self._progress(task, source_root)
+                    progress = self._progress(task, source_root, repository_source)
                     progress.result_summary_json = json.dumps(
                         {"outputValidation": event}, ensure_ascii=False
                     )
@@ -157,26 +185,78 @@ class UiCaseExecutor(TaskExecutor):
                     )
                 )
             case_count = _validate_ui_cases_yaml(output_yaml)
-            return TaskResult(
+            intermediate = {
+                "sourceRoot": str(source_root),
+                "caseCount": case_count,
+            }
+            intermediate.update(repository_source.metadata)
+            result = TaskResult(
                 task_id=task.task_id,
                 attempt_id=task.attempt_id,
                 generate_task_id=task.generate_task_id,
                 status=TaskStatus.SUCCESS,
-                intermediate_json_text=json.dumps(
-                    {
-                        "sourceArchiveDownloadUrl": task.payload.source_archive_download_url,
-                        "sourceRoot": str(source_root),
-                        "caseCount": case_count,
-                    },
-                    ensure_ascii=False,
-                ),
+                intermediate_json_text=json.dumps(intermediate, ensure_ascii=False),
                 output_yaml=output_yaml,
                 result_summary_json=self._summary(task, "success", case_count, None),
                 started_at=started_at,
                 finished_at=datetime.now().astimezone(),
             )
-        except (OSError, ValueError, yaml.YAMLError) as error:
+            self._cleanup_repository_source(repository_source, success=True)
+            return result
+        except (OSError, ValueError, yaml.YAMLError, RepositorySourceError) as error:
+            self._cleanup_failed_source(repository_source, repository_run_root)
             return self._failure(task, started_at, str(error))
+        except Exception:
+            # 未知异常仍按 worker 既有协议向上抛出,但仓库工作区必须保留供排查。
+            self._cleanup_failed_source(repository_source, repository_run_root)
+            raise
+
+    def _prepare_repository_source(self, task: Task) -> tuple[Path, RepositorySource]:
+        if self.credentials_fetcher is None or self.repository_source_preparer is None:
+            raise RepositorySourceError("worker 未配置 GitLab 凭据获取")
+        try:
+            credentials = self.credentials_fetcher(task)
+        except RepositorySourceError:
+            raise
+        except Exception as error:
+            raise RepositorySourceError("GitLab 凭据不可用，请检查个人授权后重试") from error
+        if not credentials:
+            raise RepositorySourceError("GitLab 凭据不可用，请检查个人授权后重试")
+        try:
+            source = self.repository_source_preparer.prepare(
+                task=task,
+                credentials=credentials,
+            )
+        except GitWorkspaceError as error:
+            raise RepositorySourceError(str(error)) from error
+        return source.source_root, source
+
+    def _cleanup_repository_source(self, source: RepositorySource | None, *, success: bool) -> None:
+        if source is None:
+            return
+        try:
+            cleanup_repository_source(
+                source,
+                success=success,
+                config=self.ui_generation_config,
+            )
+        except OSError:
+            pass
+
+    def _cleanup_failed_source(
+        self,
+        source: RepositorySource | None,
+        run_root: Path | None,
+    ) -> None:
+        if source is not None:
+            self._cleanup_repository_source(source, success=False)
+            return
+        if run_root is None:
+            return
+        try:
+            retain_failed_workspace(run_root, self.ui_generation_config.workspace_retention_hours)
+        except OSError:
+            pass
 
     def _failure(self, task: Task, started_at: datetime, error_message: str) -> TaskResult:
         # Timeouts surface through OSError and may have no message of their own.
@@ -193,13 +273,19 @@ class UiCaseExecutor(TaskExecutor):
         )
 
     @staticmethod
-    def _progress(task: Task, source_root: Path) -> TaskProgress:
+    def _progress(
+        task: Task,
+        source_root: Path,
+        repository_source: RepositorySource,
+    ) -> TaskProgress:
+        intermediate: dict[str, Any] = {"sourceRoot": str(source_root)}
+        intermediate.update(repository_source.metadata)
         return TaskProgress(
             task_id=task.task_id,
             attempt_id=task.attempt_id,
             current_stage="ui_case_generating",
             stage_status="running",
-            intermediate_json_text=json.dumps({"sourceRoot": str(source_root)}, ensure_ascii=False),
+            intermediate_json_text=json.dumps(intermediate, ensure_ascii=False),
         )
 
     @staticmethod

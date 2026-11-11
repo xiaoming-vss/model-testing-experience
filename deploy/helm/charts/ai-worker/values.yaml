@@ -1,36 +1,116 @@
-global: {}
+# ai-worker chart 的默认 values。
+# 部署时复制本文件到 Git 外（例如 .runtime/k8s/ai-worker-values.yaml），
+# 只覆盖需要修改的字段即可；Helm 会与这里的默认值合并。
 
+# AI Worker 副本数。每个副本会创建自己的 runtime/logs PVC。
 replicaCount: 1
 
+# 容器镜像。registry 为空时直接使用 repository。
 image:
   registry: ""
   repository: mtx/ai-worker
   tag: local
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
+# 拉取私有镜像使用的 Secret，例如：
+# imagePullSecrets:
+#   - name: mtx-registry
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-# Complete ai-worker TOML. Contains secrets; provide it through a
-# user-managed values file, not the committed defaults.
-configToml: ""
-
+# 健康检查端口；设置后进程会启动 /healthz。
 healthPort: 8080
 
+# 结构化 ai-worker 配置。chart 会把它渲染成 ConfigMap 的 worker.toml，
+# 结构与 worker TOML 一一对应。
+config:
+  worker:
+    worker_id: ai-worker-01
+    poll_interval_seconds: 5
+    heartbeat_interval_seconds: 15
+    max_concurrent_tasks: 2
+    run_once: false
+
+  # 控制面地址和 Worker 令牌。worker_token 必须与控制面的
+  # security.worker.key 一致。
+  platform:
+    base_url: http://control-plane:9000
+    worker_token: ""
+    task_claim_path: /internal/ai-worker/tasks/claim
+    task_snapshot_path: /internal/ai-worker/tasks/{task_id}/snapshot
+    task_started_path: /internal/ai-worker/tasks/{task_id}/started
+    task_heartbeat_path: /internal/ai-worker/tasks/{task_id}/heartbeat
+    task_progress_path: /internal/ai-worker/tasks/{task_id}/progress
+    task_completed_path: /internal/ai-worker/tasks/{task_id}/completed
+    task_llm_credentials_path: /internal/ai-worker/tasks/{task_id}/llm-credentials
+    request_timeout_seconds: 60
+
+  # 执行底座。backend 只决定实际渲染和生效的子配置。
+  # 当前代码仅支持 pi；nanobot 配置保留用于兼容。
+  agent:
+    backend: pi
+
+    nanobot:
+      runtime_root: /data/runtime
+      stream_idle_timeout_seconds: 300
+      # 留空时不在 TOML 中输出该字段，使用服务默认值。
+      provider_request_timeout_seconds: null
+
+    pi:
+      runtime_root: /data/runtime
+      stream_idle_timeout_seconds: 300
+      executable: pi
+      run_timeout_seconds: 1800
+      api: openai-completions
+      context_window_tokens: 500000
+      max_output_tokens: 65536
+      reasoning: false
+      thinking_level: off
+
+  code_risk_analysis:
+    gitlab_timeout_seconds: 120
+    git_timeout_seconds: 300
+    workspace_retention_hours: 24
+    max_diff_chars: 1000000
+    max_repos: 20
+
+  repository_profile:
+    git_timeout_seconds: 300
+    workspace_retention_hours: 24
+    max_repos: 20
+    max_output_chars: 100000
+
+  ui_generation:
+    git_timeout_seconds: 300
+    workspace_retention_hours: 24
+    max_repo_size_mb: 500
+    max_repo_files: 200000
+
+  logging:
+    level: INFO
+    console: true
+    dir: /app/logs
+    filename: worker.log
+    retention_days: 7
+
+# /data/runtime 和 /app/logs 的 PVC 配置。
 persistence:
   runtimeSize: 20Gi
   logsSize: 10Gi
   storageClass: ""
 
+# 容器资源限制和调度配置。
 resources: {}
 podAnnotations: {}
 nodeSelector: {}
 tolerations: []
 affinity: {}
 
+# 收到 SIGTERM 后等待退出的时间。
 terminationGracePeriodSeconds: 10
 
+# Pod 级安全上下文；PVC 和 ConfigMap 需要 fsGroup 才能被 10001 用户读写。
 podSecurityContext:
   runAsNonRoot: true
   runAsUser: 10001
@@ -38,6 +118,7 @@ podSecurityContext:
   fsGroup: 10001
   fsGroupChangePolicy: OnRootMismatch
 
+# 容器级安全上下文；只读根文件系统，丢弃全部 capability。
 securityContext:
   allowPrivilegeEscalation: false
   readOnlyRootFilesystem: true

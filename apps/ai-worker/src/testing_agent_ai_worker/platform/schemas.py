@@ -88,10 +88,6 @@ class PlatformSnapshotRun(BaseModel):
         default="",
         validation_alias=AliasChoices("documentDownloadUrl", "document_download_url"),
     )
-    source_archive_download_url: str = Field(
-        default="",
-        validation_alias=AliasChoices("sourceArchiveDownloadUrl", "source_archive_download_url"),
-    )
     document_type: str = Field(
         default="",
         validation_alias=AliasChoices("documentType", "document_type"),
@@ -128,6 +124,19 @@ class PlatformSnapshotRun(BaseModel):
         default="",
         validation_alias=AliasChoices("gitlabCredentialsUrl", "gitlab_credentials_url"),
     )
+    # UI 仓库来源快照;旧 ZIP 运行没有这些字段,保持缺省为空。
+    source_kind: str = Field(
+        default="",
+        validation_alias=AliasChoices("sourceKind", "source_kind"),
+    )
+    source_repository: dict[str, object] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("sourceRepository", "source_repository"),
+    )
+    source_commit: str = Field(
+        default="",
+        validation_alias=AliasChoices("sourceCommit", "source_commit"),
+    )
 
 
 class PlatformSnapshotResponse(BaseModel):
@@ -162,6 +171,19 @@ class PlatformSnapshotResponse(BaseModel):
     gitlab_credentials_url: str = Field(
         default="",
         validation_alias=AliasChoices("gitlabCredentialsUrl", "gitlab_credentials_url"),
+    )
+    # UI 仓库来源字段可能落在 snapshot 顶层或 run 内,两层都声明以兼容位置漂移。
+    source_kind: str = Field(
+        default="",
+        validation_alias=AliasChoices("sourceKind", "source_kind"),
+    )
+    source_repository: dict[str, object] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("sourceRepository", "source_repository"),
+    )
+    source_commit: str = Field(
+        default="",
+        validation_alias=AliasChoices("sourceCommit", "source_commit"),
     )
 
 

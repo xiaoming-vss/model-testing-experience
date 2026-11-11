@@ -9,7 +9,7 @@
 配置、生命周期和验收参见 [控制面统一存储](../control-plane/file-storage.md)。
 
 
-UI 源码包复用签名直传，purpose 为 `ui_source_archive`；完成核验后把 `fileId` 以 JSON 关联到 UI 任务，不再向业务接口发送 multipart 文件。上传或核验失败不替换当前包，旧任务运行固定使用启动时的文件 ID。S3 未启用时明确报错，无本地回退。
+UI 生成不再上传源码 ZIP，也不使用 `ui_source_archive` 用途。UI 源码配置只选择仓库画像版本、前端仓库、commit 模式和来源功能用例；启动后来源追溯展示仓库、分支、commit、画像版本和用例，不展示克隆地址、连接 ID 或凭据。历史 ZIP 运行数据已清理，不再提供上传、替换或归档只读展示。
 
 
 项目上传技能包使用 `project_skill` 签名直传并提交 fileId；下载经项目权限校验。UI 截图使用共享 `StoredImage` 组件按稳定文件路径申请票据、独立获取 Blob 并释放临时 URL；Trace 提供鉴权下载按钮。旧 Worker URL 不再加载，提示历史文件未存入 S3。

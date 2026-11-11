@@ -1,0 +1,19 @@
+{
+  "cases": [
+    {
+      "case_module": "业务模块名称",
+      "case_title": "已确认的测试点名称",
+      "case_type": "测试类型",
+      "priority": "2",
+      "precondition": [
+        "1. 必要前置条件。"
+      ],
+      "test_steps": [
+        "1. 具体操作或观察动作。"
+      ],
+      "expected_results": [
+        "1. 与该步骤对应的可观察结果。"
+      ]
+    }
+  ]
+}

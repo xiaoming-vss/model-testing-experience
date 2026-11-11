@@ -40,9 +40,7 @@ async def test_task_delete_rejects_active_independent_execution(db):  # noqa: F8
     db.commit()
     repository = AiGenerateTaskRepository(session)
     deletion = AsyncMock()
-    commands = GenerationTaskCommands(
-        repository, None, GenerationAccess(repository), deletion=deletion
-    )
+    commands = GenerationTaskCommands(repository, GenerationAccess(repository), deletion=deletion)
     with pytest.raises(AppError):
         await commands.delete("function", "task", "u")
     deletion.delete.assert_not_awaited()
@@ -72,7 +70,7 @@ async def test_task_delete_rejects_changed_scope_after_authorization(db):  # noq
     )
     deletion = AsyncMock()
     commands = GenerationTaskCommands(
-        AiGenerateTaskRepository(AsyncSessionAdapter(db)), None, access, deletion=deletion
+        AiGenerateTaskRepository(AsyncSessionAdapter(db)), access, deletion=deletion
     )
     with pytest.raises(AppError) as missing:
         await commands.delete("function", "task", "u")

@@ -154,11 +154,6 @@ async def delete_owned_data(session: AsyncSession, obj: Base) -> None:
             )
         )
         await _workers(session, "ai", attempt_ids)
-        await _erase(
-            session,
-            m.AiGenerateTaskSourceArchive,
-            m.AiGenerateTaskSourceArchive.task_id == obj.task_id,
-        )
     elif isinstance(obj, m.IntegrationConnection):
         await _erase(
             session,

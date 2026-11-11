@@ -1,0 +1,7 @@
+interface:
+  display_name: "API Cases YAML Generator"
+  short_description: "Convert API config JSON into cases-based YAML test definitions"
+  default_prompt: "Use $api-cases-yaml-generator to convert this API test configuration JSON into cases-based YAML test definitions."
+
+policy:
+  allow_implicit_invocation: true

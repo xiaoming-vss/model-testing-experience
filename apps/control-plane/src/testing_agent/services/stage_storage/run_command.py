@@ -17,7 +17,6 @@ from testing_agent.domain.generation_chain import (
 from testing_agent.domain.request_identity import request_signature
 from testing_agent.models.ai_generate_stage_version import AiGenerateStageVersion
 from testing_agent.models.ai_generate_task import AiGenerateTask
-from testing_agent.models.ai_generate_task_source_archive import AiGenerateTaskSourceArchive
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
 from testing_agent.schemas.generation_chain import GenerationChainRunRequest
@@ -78,6 +77,11 @@ async def _start_stage(
         raise dynamic_error(ErrBadRequest, "只能在元素控件清单阶段更换 UI 生成输入")
     if body.function_case_ids is not None and (kind != "ui" or stage != "ui_surface"):
         raise ErrBadRequest()
+    if kind != "ui" or stage != "ui_surface":
+        if body.source_profile_version_id or body.source_repository_id:
+            raise dynamic_error(ErrBadRequest, "只有元素控件清单阶段可以选择源码")
+        if body.gitlab_connection_id:
+            raise ErrBadRequest()
     config = normalize_config_json(body.config_json)
     if set(config) & (set(STAGE_CONFIG_FIELDS.values()) | {"resultYaml", "revisionInstruction"}):
         raise dynamic_error(ErrBadRequest, "不能通过配置直接指定阶段产物，请先审核上游阶段")
@@ -92,6 +96,10 @@ async def _start_stage(
             "refreshInputs": body.refresh_inputs,
             "functionCaseIds": body.function_case_ids,
             "upstreamVersions": body.upstream_versions,
+            "sourceProfileVersionId": body.source_profile_version_id,
+            "sourceRepositoryId": body.source_repository_id,
+            "sourceCommitMode": body.source_commit_mode,
+            "gitlabConnectionId": body.gitlab_connection_id,
         },
     )
     await require_personal_connection(session, user_id, "llm", body.connection_id, task.project_id)
@@ -167,13 +175,25 @@ async def _start_stage(
         if not first.source_batch_id or body.refresh_inputs:
             if first.active_attempt_id:
                 raise dynamic_error(ErrBadRequest, "当前阶段正在执行，请等待完成后再更换输入")
-            archive = await session.scalar(
-                select(AiGenerateTaskSourceArchive).where(
-                    AiGenerateTaskSourceArchive.task_id == task.task_id
+            profile_version_id = str(body.source_profile_version_id or "").strip()
+            repository_id = str(body.source_repository_id or "").strip()
+            if not profile_version_id or not repository_id:
+                raise dynamic_error(
+                    ErrBadRequest,
+                    "请选择仓库画像版本和前端仓库",
+                    {"reason": "source_required"},
                 )
+            if chain.ui_sources is None:
+                raise dynamic_error(ErrBadRequest, "UI 仓库源码解析未配置")
+            resolved = await chain.ui_sources.resolve(
+                requirement_id=task.requirement_id,
+                project_id=task.project_id,
+                user_id=user_id,
+                profile_version_id=profile_version_id,
+                repository_id=repository_id,
+                commit_mode=body.source_commit_mode,
+                gitlab_connection_id=body.gitlab_connection_id,
             )
-            if archive is None or not archive.file_id:
-                raise dynamic_error(ErrBadRequest, "请先上传源码包")
             ids = body.function_case_ids
             if ids is not None and (
                 not ids or len(set(ids)) != len(ids) or any(not item for item in ids)
@@ -187,14 +207,17 @@ async def _start_stage(
 
                 await detach_old_ui_batch(session, task.task_id)
             batch = str(uuid4())
+            task.source_type = "repository"
+            task.source_content = ""
             source.update(
                 {
-                    "sourceArchiveFileId": archive.file_id,
-                    "sourceArchive": {
-                        "filename": archive.filename,
-                        "sha256": archive.sha256,
-                        "sizeBytes": archive.size_bytes,
-                    },
+                    "sourceKind": "repository",
+                    "sourceType": "repository",
+                    "sourceContent": "",
+                    "sourceProfileVersionId": resolved.profile_version_id,
+                    "sourceProfileVersionNo": resolved.profile_version_no,
+                    "sourceRepository": resolved.repository,
+                    "bindings": [resolved.binding],
                     "functionalCases": cases,
                     "uiWorkflowVersion": "ui_three_stage/1.0",
                     "uiSourceBatchId": batch,
@@ -204,10 +227,13 @@ async def _start_stage(
             first.source_snapshot_json = {
                 key: deepcopy(source[key])
                 for key in (
+                    "sourceKind",
                     "sourceContent",
                     "functionalCases",
-                    "sourceArchiveFileId",
-                    "sourceArchive",
+                    "sourceProfileVersionId",
+                    "sourceProfileVersionNo",
+                    "sourceRepository",
+                    "bindings",
                     "sourceType",
                     "uiWorkflowVersion",
                     "uiSourceBatchId",

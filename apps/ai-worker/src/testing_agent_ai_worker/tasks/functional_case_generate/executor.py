@@ -96,7 +96,9 @@ class FunctionalCaseExecutor(TaskExecutor):
                 TaskProgress(
                     task_id=task.task_id,
                     attempt_id=task.attempt_id,
-                    current_stage=event["stage"],
+                    current_stage=(
+                        "case_names" if event["stage"] == "case_names_audit" else event["stage"]
+                    ),
                     stage_status="running",
                     result_summary_json=json.dumps({"outputValidation": event}, ensure_ascii=False),
                 )

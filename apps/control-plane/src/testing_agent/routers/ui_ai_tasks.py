@@ -19,7 +19,6 @@ from testing_agent.handlers.ui_case_generate_task import (
     save_ui_generation_stage,
     update_ui_case_generate_task,
     update_ui_case_generate_task_run_result,
-    upload_ui_case_source_archive,
 )
 from testing_agent.schemas.ai_generate_task import (
     AiGenerateRunHistoryResponse,
@@ -48,10 +47,6 @@ router.patch(
 router.delete("/ui-case-generate-tasks/{task_id}", response_model=ApiResponse[EmptyData])(
     delete_ui_case_generate_task
 )
-router.put(
-    "/ui-case-generate-tasks/{task_id}/source-archive",
-    response_model=ApiResponse[AiGenerateTaskResponse],
-)(upload_ui_case_source_archive)
 router.post(
     "/ui-case-generate-tasks/{task_id}/run",
     response_model=ApiResponse[AiGenerateTaskRunResponse],

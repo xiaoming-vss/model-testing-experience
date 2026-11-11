@@ -109,7 +109,7 @@ class PiChainRunnerTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("不要返回 JSON、meta/config/testCases 结构", factory.bot.calls[1]["message"])
         self.assertNotIn("请直接返回 JSON 内容", factory.bot.calls[1]["message"])
 
-    async def test_run_functional_chain_uses_three_skill_names_and_reuses_one_session_key(
+    async def test_run_functional_chain_uses_independent_audit_session(
         self,
     ) -> None:
         case_names_json = (
@@ -122,6 +122,8 @@ class PiChainRunnerTests(unittest.IsolatedAsyncioTestCase):
             [
                 json.dumps(analysis(), ensure_ascii=False, separators=(",", ":")),
                 case_names_json,
+                json.dumps({"issues": []}),
+                json.dumps({"issues": []}),
                 json.dumps({"cases": [{**case("验证登录成功"), "case_id": "MODEL-99"}]}),
                 json.dumps(
                     {"cases": [{**case("验证项目新增成功", "项目管理"), "case_id": "MODEL-99"}]}
@@ -175,7 +177,14 @@ class PiChainRunnerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(batch_progress[1][1:], ("项目管理", 2, 2))
         self.assertEqual(
             [call["session_key"] for call in factory.bot.calls],
-            ["demo:functional", "demo:functional", "demo:functional", "demo:functional"],
+            [
+                "demo:functional",
+                "demo:functional",
+                "demo:functional:audit-conditions-0",
+                "demo:functional:audit-coverage-0",
+                "demo:functional",
+                "demo:functional",
+            ],
         )
         self.assertIn(
             "请先加载本地 skill：analyze-functional-requirements", factory.bot.calls[0]["message"]
@@ -189,24 +198,24 @@ class PiChainRunnerTests(unittest.IsolatedAsyncioTestCase):
             factory.bot.calls[1]["message"],
         )
         self.assertIn(
-            "请先加载本地 skill：generate-solution-test-cases", factory.bot.calls[2]["message"]
+            "请先加载本地 skill：generate-solution-test-cases", factory.bot.calls[4]["message"]
         )
         self.assertIn(
             json.dumps(analysis(), ensure_ascii=False, separators=(",", ":")),
-            factory.bot.calls[2]["message"],
+            factory.bot.calls[4]["message"],
         )
-        self.assertIn('"model": "登录"', factory.bot.calls[2]["message"])
+        self.assertIn('"model": "登录"', factory.bot.calls[4]["message"])
         self.assertIn(
-            "请直接返回包含 cases 数组的详细测试用例 JSON", factory.bot.calls[2]["message"]
+            "请直接返回包含 cases 数组的详细测试用例 JSON", factory.bot.calls[4]["message"]
         )
         self.assertIn(
-            "请先加载本地 skill：generate-solution-test-cases", factory.bot.calls[3]["message"]
+            "请先加载本地 skill：generate-solution-test-cases", factory.bot.calls[5]["message"]
         )
-        self.assertIn('"model": "项目管理"', factory.bot.calls[3]["message"])
+        self.assertIn('"model": "项目管理"', factory.bot.calls[5]["message"])
         self.assertIn(
-            "请直接返回包含 cases 数组的详细测试用例 JSON", factory.bot.calls[3]["message"]
+            "请直接返回包含 cases 数组的详细测试用例 JSON", factory.bot.calls[5]["message"]
         )
-        self.assertIn("只保留核心业务场景", factory.bot.calls[3]["message"])
+        self.assertIn("只保留核心业务场景", factory.bot.calls[5]["message"])
 
 
 if __name__ == "__main__":

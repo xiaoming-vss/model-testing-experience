@@ -1,0 +1,15 @@
+# 迁移 Job 专用配置副本；内容与 control-plane-config 一致，
+# 供 pre-install/pre-upgrade hook 在 Deployment 创建前挂载。
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "control-plane.fullname" . }}-migrate-config
+  labels:
+    {{- include "control-plane.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-20"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+data:
+  local.toml: |
+{{ include "control-plane.configToml" . | indent 4 }}

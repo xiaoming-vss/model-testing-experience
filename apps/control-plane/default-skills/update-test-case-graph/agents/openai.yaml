@@ -1,0 +1,4 @@
+interface:
+  display_name: "测试用例图谱增量分析"
+  short_description: "根据需求与本轮用例ID映射，分批查询完整用例并更新累计图谱"
+  default_prompt: "使用 $update-test-case-graph，根据需求和本轮用例ID映射，分批查询临时文件中的完整用例，包含未绑定需求用例，保留有效历史关系并返回完整图谱。"

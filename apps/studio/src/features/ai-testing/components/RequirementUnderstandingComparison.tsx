@@ -47,7 +47,11 @@ function UnderstandingContent({ artifact, hideTitle = false }: { artifact: Under
 }
 
 export function RequirementUnderstandingComparison({ content, hideTitle }: Props) {
-  const result = useMemo(() => { try { return { artifact: readUnderstandingArtifact(content) } } catch (error) { return { error: error instanceof Error ? error.message : '需求理解内容无法读取' } } }, [content])
+  const result = useMemo(() => {
+    if (content == null || (typeof content === 'string' && !content.trim())) return { blank: true as const }
+    try { return { artifact: readUnderstandingArtifact(content) } } catch (error) { return { error: error instanceof Error ? error.message : '需求理解内容无法读取' } }
+  }, [content])
+  if ('blank' in result) return null
   if (!result.artifact) return <Alert type="error" showIcon title={result.error} />
   return <RequirementArtifactScope artifact={result.artifact}><UnderstandingContent hideTitle={hideTitle} artifact={result.artifact} /></RequirementArtifactScope>
 }

@@ -13,8 +13,8 @@ import '../styles/detail.css'
 export function RequirementDetailHeader({ requirement, requirementId, canWrite, onBack, onEdit, onRefresh, refreshing, readingActionsRef, showDownload, showEdit = true, readingNode, onLeaveReading }: {
   requirement: Requirement; requirementId: string; canWrite: boolean; showDownload: boolean; showEdit?: boolean;
   onBack: () => void; onEdit: () => void; onRefresh?: () => void; refreshing?: boolean; readingActionsRef?: Ref<HTMLDivElement>
-  /** 画布内正在阅读的产物；有值时面包屑追加一级「需求 / 当前产物」。 */
-  readingNode?: { label: string; status?: string; tone?: string } | null
+  /** 画布内正在阅读的产物；有值时面包屑追加一级「需求 / 当前产物」。状态由阶段侧栏展示。 */
+  readingNode?: { label: string } | null
   /** 阅读态点「需求名」一级退回生成流程。 */
   onLeaveReading?: () => void
 }) {
@@ -31,7 +31,6 @@ export function RequirementDetailHeader({ requirement, requirementId, canWrite, 
         <Tooltip title="返回生成流程"><button type="button" className="requirement-crumb-parent-link" onClick={onLeaveReading}>{requirement.name}</button></Tooltip>
         <RightOutlined className="requirement-crumb-sep" aria-hidden />
         <h1 className="requirement-detail-title requirement-detail-title--current" aria-current="page" title={readingNode.label}>{readingNode.label}</h1>
-        {readingNode.status ? <span className={`requirement-crumb-status ${readingNode.tone ?? 'is-muted'}`}>{readingNode.status}</span> : null}
       </> : <>
         <h1 className="tp-list-title requirement-detail-title" title={requirement.name}>{requirement.name}</h1>
         <Tag>需求</Tag>

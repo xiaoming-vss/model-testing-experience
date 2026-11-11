@@ -13,10 +13,10 @@ export function AnalysisRuleDetails({ item }: { item: Record<string, unknown> })
       <RulePanel title="触发操作"><RuleValue value={item.trigger} /></RulePanel>
     </div>
     <RulePanel title="预期行为" emphasis><RuleValue value={item.expectedBehavior} list /></RulePanel>
-    <div className="ai-analysis-rule-pair">
+    {('prohibitedOrSkippedBehavior' in item || 'observableOutcome' in item) && <div className="ai-analysis-rule-pair">
       <RulePanel title="禁止或跳过的行为"><RuleValue value={item.prohibitedOrSkippedBehavior} list /></RulePanel>
       <RulePanel title="可观察结果"><RuleValue value={item.observableOutcome} list /></RulePanel>
-    </div>
+    </div>}
     <RulePanel title="来源与关联">
       <div className="ai-analysis-rule-sources"><span>来源依据</span><RuleValue value={item.sourceReferences} list /></div>
       <div className="ai-analysis-rule-questions"><span>关联待确认项</span><RuleValue value={item.relatedQuestionIds} list /></div>

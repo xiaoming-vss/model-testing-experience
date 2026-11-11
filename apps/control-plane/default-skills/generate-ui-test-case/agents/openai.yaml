@@ -1,0 +1,4 @@
+interface:
+  display_name: "UI Test Case Generator"
+  short_description: "Complete UI YAML with structured fields for human input"
+  default_prompt: "Use $generate-ui-test-case to complete UI test designs as YAML using source and controls, marking unresolved content with missingFields."

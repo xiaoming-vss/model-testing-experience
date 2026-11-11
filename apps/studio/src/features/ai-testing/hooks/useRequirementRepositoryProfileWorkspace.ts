@@ -6,6 +6,7 @@ import { isGitlabRepositoryBinding } from '@/features/base-services/utils/resour
 import { RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
 import { getErrorMessage } from '@/utils/format'
 import { message } from '@/shared/utils/feedback'
+import { randomId } from '@/shared/utils/crypto'
 import { generationChainApi } from '../api/generationChain.api'
 import { repositoryProfileApi } from '../api/repositoryProfile.api'
 import { isApiCaseGenerateTaskRunInProgress } from '../utils/taskStatus'
@@ -208,7 +209,7 @@ export function useRequirementRepositoryProfileWorkspace(
         requirementUnderstandingVersionId: understandingVersionId,
       })
       if (requestId.current?.taskId !== taskId || requestId.current.options !== options) {
-        requestId.current = { taskId, options, id: crypto.randomUUID() }
+        requestId.current = { taskId, options, id: randomId() }
       }
       return repositoryProfileApi.runRepositoryProfileTask(taskId, {
         llmConnectionId: connectionId,

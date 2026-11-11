@@ -90,7 +90,6 @@ async def test_function_checkpoint_workflow_and_import(mysql, monkeypatch):  # n
             identifiers = iter(("function-run", "unused-1", "other-run", "unused-2"))
             launcher = GenerationRunLauncher(
                 repository=repository,
-                source_archive_repository=None,
                 access=access,
                 id_factory=lambda: next(identifiers),
             )
@@ -251,7 +250,7 @@ async def test_function_checkpoint_workflow_and_import(mysql, monkeypatch):  # n
                     error_message="model failed",
                 ),
             )
-            failed = await GenerationQueries(repository, None, access).get_run(
+            failed = await GenerationQueries(repository, access).get_run(
                 "function", "function-run", "actor"
             )
             assert failed["errorMessage"] == "model failed"
@@ -343,11 +342,11 @@ async def test_function_checkpoint_workflow_and_import(mysql, monkeypatch):  # n
                     },
                 ),
             )
-            history = await GenerationQueries(repository, None, access).list_run_summaries(
+            history = await GenerationQueries(repository, access).list_run_summaries(
                 "function", task["task_id"], "actor"
             )
             assert history["total"] == 1 and history["items"][0]["importStatus"] == "imported"
-            commands = GenerationTaskCommands(repository, None, access)
+            commands = GenerationTaskCommands(repository, access)
             await commands.delete_run("function", "function-run", "actor")
             preserved = await session.scalar(
                 sa.select(FunctionTestCase).where(FunctionTestCase.case_id == case["case_id"])

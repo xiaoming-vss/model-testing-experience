@@ -2,7 +2,6 @@ from testing_agent.db.base import Base
 from testing_agent.models.ai_execution import AiExecution
 from testing_agent.models.ai_generate_stage_version import AiGenerateStageVersion
 from testing_agent.models.ai_generate_task import AiGenerateTask
-from testing_agent.models.ai_generate_task_source_archive import AiGenerateTaskSourceArchive
 from testing_agent.models.ai_generate_version_import import AiGenerateVersionImport
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
@@ -70,7 +69,6 @@ __all__ = [
     "AiGenerationAttempt",
     "AiGenerationStage",
     "AiGenerateTask",
-    "AiGenerateTaskSourceArchive",
     "ApiAssertRule",
     "ApiCase",
     "ApiCaseRun",

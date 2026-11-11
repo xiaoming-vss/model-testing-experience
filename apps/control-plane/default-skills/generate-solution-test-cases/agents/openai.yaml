@@ -1,0 +1,4 @@
+interface:
+  display_name: "解决方案测试用例生成"
+  short_description: "将需求、最新版需求分析和已确认测试点展开为步骤与预期逐项对应的完整测试用例"
+  default_prompt: "使用 $generate-solution-test-cases 结合需求、最新版需求分析和已确认测试点，按业务目标编写步骤与预期；接口、数据和工具等未落实项写入执行前准备，仅业务预期或必需判据未知时澄清，正式用例保持固定 JSON 模板。"

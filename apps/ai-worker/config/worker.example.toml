@@ -60,6 +60,17 @@ max_repos = 20
 # 模型输出 JSON 字符上限
 max_output_chars = 100000
 
+# UI 用例生成的仓库源码准备;只 clone 一个冻结 commit 的仓库
+[ui_generation]
+# 单次 git 命令超时;clone、fetch 和 checkout 共用
+git_timeout_seconds = 300
+# 失败 run 的工作区保留时长;成功 run 立即删除
+workspace_retention_hours = 24
+# checkout 后工作树大小上限(不含 .git)
+max_repo_size_mb = 500
+# checkout 后工作树文件数上限(不含 .git)
+max_repo_files = 200000
+
 [logging]
 level = "INFO"
 console = true

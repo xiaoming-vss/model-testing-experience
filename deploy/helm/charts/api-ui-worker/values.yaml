@@ -1,35 +1,78 @@
-global: {}
+# api-ui-worker chart 的默认 values。
+# 部署时复制本文件到 Git 外（例如 .runtime/k8s/api-ui-worker-values.yaml），
+# 只覆盖需要修改的字段即可；Helm 会与这里的默认值合并。
 
+# API/UI 测试执行 Worker 副本数。
 replicaCount: 1
 
+# 容器镜像。registry 为空时直接使用 repository。
 image:
   registry: ""
   repository: mtx/api-ui-worker
   tag: local
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
+# 拉取私有镜像使用的 Secret，例如：
+# imagePullSecrets:
+#   - name: mtx-registry
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-# Complete api-ui-worker TOML. Contains secrets; provide it through a
-# user-managed values file, not the committed defaults.
-configToml: ""
-
+# 健康检查端口；设置后进程会启动 /healthz。
 healthPort: 8080
+
+# /app/artifacts emptyDir 上限。
 artifactsSizeLimit: 5Gi
+
+# /dev/shm 内存 emptyDir 上限；Chromium 需要足够的共享内存。
 shmSizeLimit: 1Gi
 
+# 结构化 api-ui-worker 配置。chart 会把它渲染成 ConfigMap 的 config.toml，
+# 结构与 worker TOML 一一对应。
+config:
+  # poll 持续轮询任务；once 执行一次 snapshot_file 后退出。
+  mode: poll
+
+  # 控制面地址和 Worker 令牌。worker_token 必须与控制面的
+  # security.worker.key 一致。
+  control_plane:
+    base_url: http://control-plane:9000
+    worker_token: ""
+
+  # 实时通知使用的 Redis；留空时降级为轮询。
+  notifications:
+    redis_url: ""
+
+  worker:
+    # 留空时根据 Pod hostname 和进程号自动生成，保证多副本不冲突。
+    id: ""
+    poll_interval_ms: 30000
+    request_timeout_ms: 15000
+    heartbeat_interval_ms: 10000
+
+  ui:
+    # 与 Deployment 挂载的 emptyDir 路径保持一致。
+    artifacts_dir: /app/artifacts
+    headless: true
+    slow_mo_ms: 0
+    trace_enabled: true
+    screenshot_on_failure: true
+
+  once:
+    snapshot_file: ""
+
+# 容器资源限制和调度配置。
 resources: {}
 podAnnotations: {}
 nodeSelector: {}
 tolerations: []
 affinity: {}
 
+# 收到 SIGTERM 后等待退出的时间。
 terminationGracePeriodSeconds: 120
 
-# The Playwright image runs as root so Chromium can start without a custom
-# seccomp profile. Keep runAsNonRoot disabled unless the image is hardened.
+# Playwright 官方镜像默认以 root 运行，Chromium 需要这样才能启动。
 podSecurityContext:
   runAsUser: 0
   runAsNonRoot: false

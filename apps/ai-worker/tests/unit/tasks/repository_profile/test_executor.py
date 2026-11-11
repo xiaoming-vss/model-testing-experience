@@ -113,6 +113,16 @@ class _PromptRunner:
         return self.output
 
 
+class _RepairingPromptRunner:
+    def __init__(self, outputs: list[str]) -> None:
+        self.outputs = outputs
+        self.calls: list[dict[str, Any]] = []
+
+    def __call__(self, **kwargs):
+        self.calls.append(kwargs)
+        return self.outputs[min(len(self.calls) - 1, len(self.outputs) - 1)]
+
+
 class RepositoryProfileExecutorTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
@@ -175,6 +185,25 @@ class RepositoryProfileExecutorTests(unittest.TestCase):
         self.assertEqual(TaskStatus.FAILED, result.status)
         self.assertIn("顶层字段", result.error_message or "")
         self.assertTrue((self.run_root / ".retain-until").exists())
+
+    def test_contract_failure_is_repaired_at_most_twice(self) -> None:
+        runner = _RepairingPromptRunner(
+            [
+                '{"repositories": [], "overallSummary": "无"}',
+                json.dumps(VALID_PROFILE),
+            ]
+        )
+        progress: list[tuple[str, str]] = []
+        result = self._executor(runner).execute(
+            _task(),
+            datetime.now().astimezone(),
+            lambda item: progress.append((item.current_stage, item.stage_status)),
+        )
+
+        self.assertEqual(TaskStatus.SUCCESS, result.status)
+        self.assertEqual(2, len(runner.calls))
+        self.assertIn("校验问题", runner.calls[1]["input_text"])
+        self.assertIn(("profiling", "repairing"), progress)
 
     def test_non_pi_backend_fails(self) -> None:
         executor = RepositoryProfileExecutor(

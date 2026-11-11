@@ -44,6 +44,7 @@ from testing_agent.services.function_generate_import import import_function_run
 from testing_agent.services.project_access import ProjectAction
 from testing_agent.services.stored_file import StoredFileService
 from testing_agent.services.ui_generate_import import import_ui_run
+from testing_agent.services.ui_generation_source import UiGenerationSourceService
 
 
 def _version_label(version_no: int) -> str:
@@ -60,6 +61,7 @@ class GenerationChainService:
         files: StoredFileService | None,
         imports: GenerationImportContext,
         api_importer: ApiCandidateImporter,
+        ui_sources: UiGenerationSourceService | None = None,
         id_factory: Callable[[], str] = new_id,
     ) -> None:
         self.repository = repository
@@ -68,6 +70,7 @@ class GenerationChainService:
         self.files = files
         self.imports = imports
         self.api_importer = api_importer
+        self.ui_sources = ui_sources
         self.new_id = id_factory
 
     async def scope(self, requirement_id: str, user_id: str, action: ProjectAction = "read"):

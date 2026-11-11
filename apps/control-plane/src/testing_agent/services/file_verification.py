@@ -7,7 +7,6 @@ import hashlib
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from functools import partial
 
 from botocore.exceptions import BotoCoreError, ClientError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -174,18 +173,12 @@ class FileVerificationWorkflow:
         return {"fileId": file_id, "status": "ready"}
 
     def verify(self, source: VerificationInput, key: str) -> tuple[int, str]:
-        validator = None
-        if source.purpose == "ui_source_archive":
-            from testing_agent.services.ai_source_archive import validate_source_archive
-
-            validator = partial(validate_source_archive, source.filename)
         self.storage.seal(
             source.staging_key,
             key,
             source.size,
             source.sha256,
             source.filename,
-            validator=validator,
         )
         if source.purpose == "requirement" and source.filename.lower().endswith(".html"):
             from testing_agent.domain.rich_text import has_rich_text_content, sanitize_rich_text

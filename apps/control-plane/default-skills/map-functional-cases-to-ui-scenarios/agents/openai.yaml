@@ -1,0 +1,4 @@
+interface:
+  display_name: "UI Scenario Mapper"
+  short_description: "Design UI cases without requiring element locators"
+  default_prompt: "Use $map-functional-cases-to-ui-scenarios to design UI cases and identify unsupported operations or assertions without requiring element locators."

@@ -1,0 +1,15 @@
+{
+  "repositories": [
+    {
+      "repositoryId": "repo-1",
+      "pathWithNamespace": "team/order-service",
+      "role": "backend",
+      "responsibilitySummary": "提供订单创建与查询接口",
+      "techStack": ["Java", "Spring Boot"],
+      "keyPaths": ["src/main/java", "pom.xml"],
+      "confidence": 0.86,
+      "evidence": ["pom.xml", "src/main/java"]
+    }
+  ],
+  "overallSummary": "当前需求主要涉及后端订单服务"
+}

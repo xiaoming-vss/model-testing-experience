@@ -190,6 +190,9 @@ class HttpClaimTaskSource:
             if snapshot_response.existing_tests is not None
             else snapshot_task.existing_tests
         )
+        source_kind = snapshot_response.source_kind or snapshot_task.source_kind
+        source_repository = snapshot_response.source_repository or snapshot_task.source_repository
+        source_commit = snapshot_response.source_commit or snapshot_task.source_commit
 
         if snapshot_response.checkpoint_enabled is not None:
             snapshot_checkpoint_enabled = snapshot_response.checkpoint_enabled
@@ -242,7 +245,6 @@ class HttpClaimTaskSource:
                 openapi_content=snapshot_task.source_content,
                 source_content=snapshot_task.source_content,
                 document_download_url=snapshot_task.document_download_url,
-                source_archive_download_url=snapshot_task.source_archive_download_url,
                 document_type=document_type,
                 source_type=source_type,
                 target_scope=snapshot_task.target_scope,
@@ -264,11 +266,13 @@ class HttpClaimTaskSource:
                     "requirementId": claimed_task.requirement_id or snapshot_task.requirement_id,
                     "targetScope": snapshot_task.target_scope,
                     "documentDownloadUrl": snapshot_task.document_download_url,
-                    "sourceArchiveDownloadUrl": snapshot_task.source_archive_download_url,
                     "documentType": document_type,
                     "dailyMetrics": daily_metrics,
                     "checkpointEnabled": checkpoint_enabled,
                     "currentStage": current_stage,
+                    "sourceKind": source_kind,
+                    "sourceRepository": source_repository or {},
+                    "sourceCommit": source_commit,
                 },
             ),
             raw={

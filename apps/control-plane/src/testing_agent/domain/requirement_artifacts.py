@@ -144,6 +144,14 @@ def validate_artifact(
             questions[q]["status"] != "open" for q in item["relatedQuestionIds"] if q in questions
         ):
             _problem("冲突事实必须关联未解决问题", errors)
+        if status == "confirmed":
+            for question_id in item.get("relatedQuestionIds", []):
+                if question_id in questions and questions[question_id]["status"] == "open":
+                    _problem(
+                        f"已确认内容不能继续引用未解决问题: {question_id}；"
+                        "请将用户答复补入业务内容并从 questions 删除该问题",
+                        errors,
+                    )
     if kind == "document_extraction":
         try:
             targets = _check_extraction(value)

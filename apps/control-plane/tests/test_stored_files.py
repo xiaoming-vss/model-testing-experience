@@ -248,123 +248,6 @@ async def test_repair_legacy_names_preserves_bytes_id_and_old_object(files):
 
 
 @pytest.mark.asyncio
-async def test_source_archive_completion_validates_zip_before_attachment(files):
-    from io import BytesIO
-    from zipfile import ZipFile
-
-    for entries in ([("../escape.js", b"x")], [("a.js", b"x"), ("a.js", b"y")]):
-        buffer = BytesIO()
-        with ZipFile(buffer, "w") as archive:
-            for name, content in entries:
-                archive.writestr(name, content)
-        row, _ = await upload(files, buffer.getvalue(), "source.zip", "ui_source_archive")
-        with pytest.raises(AppError):
-            await files.complete("owner", row.file_id)
-        assert row.status == "pending"
-        with pytest.raises(AppError):
-            await files.attach(
-                "owner", row.file_id, "p", "ui_source_archive", "task", purpose="ui_source_archive"
-            )
-        await files.session.rollback()
-
-
-@pytest.mark.asyncio
-async def test_source_archive_s3_binding_replacement_and_transaction_rollback(files, monkeypatch):
-    from io import BytesIO
-    from zipfile import ZipFile
-
-    from testing_agent.models.ai_generate_task import AiGenerateTask
-    from testing_agent.repositories.ai_generate_task_source_archive import (
-        AiGenerateTaskSourceArchiveRepository,
-    )
-    from testing_agent.services.ai_source_archive import SourceArchiveManager
-
-    task = AiGenerateTask(
-        task_id="task",
-        task_type="ui_case_generate",
-        name="UI",
-        project_id="p",
-        sprint_id="s",
-        requirement_id="r",
-        creator_user_id="owner",
-        source_type="source_archive",
-        source_content="",
-    )
-    files.session.add(task)
-    await files.session.commit()
-
-    async def owned(user, task_id, kind, *, action):
-        return await files.session.scalar(
-            select(AiGenerateTask).where(AiGenerateTask.task_id == task_id)
-        )
-
-    repo = AiGenerateTaskSourceArchiveRepository(files.session)
-    manager = SourceArchiveManager(source_archive_repository=repo, files=files, owned_task=owned)
-    identifiers = []
-    for version in (b"v1", b"v2"):
-        buffer = BytesIO()
-        with ZipFile(buffer, "w") as archive:
-            archive.writestr("src/index.ts", version)
-        row, _ = await upload(files, buffer.getvalue(), "source.zip", "ui_source_archive")
-        await files.complete("owner", row.file_id)
-        identifiers.append(row.file_id)
-        result = await manager.upload_source_archive("task", row.file_id, "owner")
-        assert result["sourceArchive"]["fileId"] == row.file_id
-    for identifier in identifiers:
-        row = await files.get(identifier)
-        assert row.status == "attached"
-        assert (await files.ticket(row))["url"]
-        assert (
-            files.storage.client.get_object(Bucket=row.bucket, Key=row.object_key)["ContentLength"]
-            == row.size
-        )
-
-    # A file uploaded for another purpose cannot replace the current archive.
-    wrong, _ = await upload(files)
-    await files.complete("owner", wrong.file_id)
-    with pytest.raises(AppError):
-        await manager.upload_source_archive("task", wrong.file_id, "owner")
-    assert (await repo.get_source_archive("task")).file_id == identifiers[-1]
-
-    # A failed business commit rolls back both file binding and the archive pointer.
-    buffer = BytesIO()
-    with ZipFile(buffer, "w") as archive:
-        archive.writestr("src/index.ts", b"v3")
-    pending, _ = await upload(files, buffer.getvalue(), "source.zip", "ui_source_archive")
-    await files.complete("owner", pending.file_id)
-    pending_id = pending.file_id
-
-    async def fail_commit():
-        raise RuntimeError("database unavailable")
-
-    monkeypatch.setattr(repo, "commit", fail_commit)
-    with pytest.raises(RuntimeError):
-        await manager.upload_source_archive("task", pending_id, "owner")
-    assert (await repo.get_source_archive("task")).file_id == identifiers[-1]
-    assert (await files.get(pending_id)).status == "ready"
-
-
-@pytest.mark.asyncio
-async def test_ui_source_upload_restricts_extension_size_and_project_role(files):
-    for filename, size, user in [
-        ("source.txt", 10, "owner"),
-        ("source.zip", 104857601, "owner"),
-        ("source.zip", 10, "viewer"),
-    ]:
-        with pytest.raises(AppError):
-            await files.initiate(
-                user,
-                FileUploadRequest(
-                    project_id="p",
-                    filename=filename,
-                    size=size,
-                    sha256="0" * 64,
-                    purpose="ui_source_archive",
-                ),
-            )
-
-
-@pytest.mark.asyncio
 async def test_worker_artifact_gateway_binds_only_authorized_execution(files, monkeypatch):
     from types import SimpleNamespace
 
@@ -454,7 +337,6 @@ async def test_project_skill_file_is_verified_bound_and_downloaded_privately(fil
     [
         ("requirement", "需求.html", "requirements"),
         ("attachment", "图片.png", "attachments"),
-        ("ui_source_archive", "源码.zip", "source-archives"),
         ("project_skill", "SKILL.md", "skills"),
         ("ui_artifact", "trace.zip", "ui-artifacts"),
     ],

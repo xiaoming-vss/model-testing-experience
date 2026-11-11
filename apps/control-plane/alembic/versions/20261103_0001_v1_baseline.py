@@ -2073,33 +2073,6 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_table(
-        "ai_generate_task_source_archives",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
-        sa.Column(
-            "archive_id", sa.String(length=64), nullable=False, comment="源代码压缩包业务标识"
-        ),
-        sa.Column("task_id", sa.String(length=64), nullable=False, comment="任务业务标识"),
-        sa.Column("filename", sa.String(length=255), nullable=False, comment="原始文件名"),
-        sa.Column("size_bytes", sa.BigInteger(), nullable=False, comment="文件大小，单位字节"),
-        sa.Column("sha256", sa.String(length=64), nullable=False, comment="文件内容 SHA-256 摘要"),
-        sa.Column("file_id", sa.String(length=64), nullable=False, comment="统一文件业务标识"),
-        sa.Column(
-            "uploaded_at", sa.DateTime(timezone=True), nullable=False, comment="上传时间（UTC）"
-        ),
-        sa.ForeignKeyConstraint(
-            ["task_id"],
-            ["ai_generate_tasks.task_id"],
-            name="fk_ai_generate_task_source_archives_task_id",
-            ondelete="CASCADE",
-        ),
-        sa.PrimaryKeyConstraint("id", name=op.f("pk_ai_generate_task_source_archives")),
-        sa.UniqueConstraint(
-            "archive_id", name=op.f("uq_ai_generate_task_source_archives_archive_id")
-        ),
-        sa.UniqueConstraint("task_id", name=op.f("uq_ai_generate_task_source_archives_task_id")),
-        comment="AI 任务源代码压缩包及统一文件引用",
-    )
-    op.create_table(
         "ai_generation_stages",
         sa.Column("id", sa.String(length=64), nullable=False, comment="生成链阶段业务标识"),
         sa.Column(
@@ -3929,7 +3902,6 @@ def downgrade() -> None:
     op.drop_table("bug_activities")
     op.drop_table("api_environment_vars")
     op.drop_table("ai_generation_stages")
-    op.drop_table("ai_generate_task_source_archives")
     op.drop_table("ai_generate_stage_versions")
     op.drop_table("ai_executions")
     op.drop_table("sprints")

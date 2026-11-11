@@ -117,16 +117,18 @@ class _RecordingPromptRunner:
         if self.output is not None:
             return self.output
         return (
-            "analyzedAt: '2026-08-27T10:00:00+08:00'\n"
-            "contextReceipt:\n"
-            "  receivedRepositories:\n"
-            "    - repositoryId: repo-1\n"
-            "      headCommit: def456\n"
-            "  summary: 已读取仓库上下文\n"
-            "  filesRead:\n"
-            "    - src/login.py\n"
-            "  toolsUsed:\n"
-            "    - read\n"
+            "changeOverview:\n"
+            "  summary: 鉴权变更\n"
+            "risks:\n"
+            "  - level: high\n"
+            "    reason: 鉴权逻辑变更\n"
+            "    location: src/login.py\n"
+            "    impact: 可能影响登录\n"
+            "    evidence: [src/login.py]\n"
+            "affectedCases: []\n"
+            "coverageGaps:\n"
+            "  - gap: 缺少失败路径\n"
+            "    suggestion: 增加失败用例\n"
         )
 
 
@@ -143,6 +145,16 @@ class _AsyncPromptRunner:
         return self.output
 
 
+class _RepairingPromptRunner:
+    def __init__(self, outputs: list[str]) -> None:
+        self.outputs = outputs
+        self.calls: list[dict[str, Any]] = []
+
+    def __call__(self, **kwargs):
+        self.calls.append(kwargs)
+        return self.outputs[min(len(self.calls) - 1, len(self.outputs) - 1)]
+
+
 class CodeRiskAnalysisExecutorTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
@@ -156,6 +168,8 @@ class CodeRiskAnalysisExecutorTests(unittest.TestCase):
         code_root = self.run_root / "code"
         repo_path = code_root / "repos" / "team-repo-one-12345678"
         repo_path.mkdir(parents=True)
+        (repo_path / "src").mkdir()
+        (repo_path / "src" / "login.py").write_text("def login(): pass", encoding="utf-8")
         (self.run_root / ".active").write_text("1", encoding="utf-8")
         binding = self.task.bindings[0]
         repo = RepoWorkspace(
@@ -212,29 +226,21 @@ class CodeRiskAnalysisExecutorTests(unittest.TestCase):
         result = executor.execute(self.task, datetime.now().astimezone(), progresses.append)
 
         self.assertEqual(TaskStatus.SUCCESS, result.status)
-        self.assertEqual(["fetching_diff", "analyzing"], [p.current_stage for p in progresses])
+        self.assertIn("fetching_diff", [p.current_stage for p in progresses])
         call = runner.calls[0]
         self.assertEqual(READ_ONLY_TOOLS, call["tools"])
         self.assertEqual(str(self.workspace.code_root), call["workspace"])
         self.assertIn("需求理解记录正文", call["input_text"])
         self.assertNotIn("secret-token-1", call["input_text"])
         data = yaml.safe_load(result.output_yaml)
-        self.assertIn("contextReceipt", data)
-        self.assertEqual("context_preview", data["contextReceipt"]["mode"])
-        self.assertEqual(1, data["contextReceipt"]["counts"]["repositories"])
-        self.assertEqual(1, data["contextReceipt"]["counts"]["changedFiles"])
-        self.assertEqual(["src/big.py"], data["contextReceipt"]["truncatedFiles"])
-        self.assertEqual("已读取仓库上下文", data["contextReceipt"]["summary"])
+        self.assertEqual("def456", data["repositories"][0]["headCommit"])
+        self.assertEqual("high", data["risks"][0]["level"])
         self.assertIn('"repositoryCount": 1', result.result_summary_json)
         self.assertFalse(self.run_root.exists())
 
     def test_execute_accepts_awaitable_prompt_result(self) -> None:
         runner = _AsyncPromptRunner(
-            "contextReceipt:\n"
-            "  receivedRepositories:\n"
-            "    - repositoryId: repo-1\n"
-            "      headCommit: def456\n"
-            "  summary: ok\n"
+            "changeOverview: {}\nrisks: []\naffectedCases: []\ncoverageGaps: []\n"
         )
         executor = self._executor(prompt_runner=runner)
 
@@ -242,6 +248,21 @@ class CodeRiskAnalysisExecutorTests(unittest.TestCase):
 
         self.assertEqual(TaskStatus.SUCCESS, result.status)
         self.assertEqual(1, len(runner.calls))
+
+    def test_execute_repairs_invalid_report_at_most_twice(self) -> None:
+        runner = _RepairingPromptRunner(
+            [
+                "changeOverview: {}\nrisks: []\naffectedCases:\n  - caseId: bad\n    impact: bad\ncoverageGaps: []\n",
+                "changeOverview: {}\nrisks: []\naffectedCases: []\ncoverageGaps: []\n",
+            ]
+        )
+        executor = self._executor(prompt_runner=runner)
+
+        result = executor.execute(self.task, datetime.now().astimezone(), lambda _p: None)
+
+        self.assertEqual(TaskStatus.SUCCESS, result.status)
+        self.assertEqual(2, len(runner.calls))
+        self.assertIn("校验问题", runner.calls[1]["input_text"])
 
     def test_execute_requires_requirement_understanding(self) -> None:
         runner = _RecordingPromptRunner()
@@ -298,13 +319,17 @@ class CodeRiskAnalysisExecutorTests(unittest.TestCase):
     def test_execute_rejects_incomplete_receipt_and_retains_workspace(self) -> None:
         runner = _RecordingPromptRunner(
             output=(
-                "contextReceipt:\n"
-                "  receivedRepositories:\n"
-                "    - repositoryId: other-repo\n"
-                "      headCommit: def456\n"
-                "  summary: partial\n"
-                "  filesRead: []\n"
-                "  toolsUsed: []\n"
+                "changeOverview: {}\n"
+                "risks:\n"
+                "  - level: high\n"
+                "    reason: bad\n"
+                "    location: src/login.py\n"
+                "    impact: bad\n"
+                "    evidence: [src/login.py]\n"
+                "affectedCases:\n"
+                "  - caseId: unknown\n"
+                "    impact: bad\n"
+                "coverageGaps: []\n"
             )
         )
         executor = self._executor(prompt_runner=runner)
@@ -312,7 +337,7 @@ class CodeRiskAnalysisExecutorTests(unittest.TestCase):
         result = executor.execute(self.task, datetime.now().astimezone(), lambda _p: None)
 
         self.assertEqual(TaskStatus.FAILED, result.status)
-        self.assertIn("未收到完整仓库上下文", result.error_message or "")
+        self.assertIn("unknown_case_id", result.error_message or "")
         self.assertTrue(self.run_root.exists())
         self.assertTrue((self.run_root / ".retain-until").is_file())
         self.assertFalse((self.run_root / ".active").exists())

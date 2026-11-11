@@ -100,7 +100,7 @@ async def test_worker_callbacks_persist_execution_and_attempts_in_mysql(mysql, m
             from testing_agent.services.ai_task_queries import GenerationQueries
 
             access = SimpleNamespace(owned_task=AsyncMock())
-            queries = GenerationQueries(AiGenerateTaskRepository(session), None, access)
+            queries = GenerationQueries(AiGenerateTaskRepository(session), access)
             detail = await queries.get_run("function", execution_id, "reader")
             assert detail["runId"] == execution_id and detail["resultYaml"] == cases_output()
             access.owned_task.assert_awaited_once_with(
@@ -130,9 +130,7 @@ async def test_worker_callbacks_persist_execution_and_attempts_in_mysql(mysql, m
             assert (
                 approved["reviewStatus"] == "approved" and approved["reviewerUserId"] == "reviewer"
             )
-            history = await GenerationQueries(
-                repository, None, generation_access
-            ).list_run_summaries(
+            history = await GenerationQueries(repository, generation_access).list_run_summaries(
                 "function",
                 task_row["task_id"],
                 "reviewer",

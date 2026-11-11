@@ -11,6 +11,7 @@ from testing_agent.core.errors import ErrNotFound
 from testing_agent.domain.ai_execution_format import FIELDS
 from testing_agent.repositories.direct_attempt_view import direct_attempt_rows
 from testing_agent.services.stage_storage.views import attempt_source
+from testing_agent.services.ui_generation_sources import public_ui_source_snapshot
 
 
 async def direct_attempt_view(
@@ -47,6 +48,9 @@ async def direct_attempt_view(
         duration = max(0, int((end - start).total_seconds() * 1000))
     state = attempt.status
     stage_status = ("completed" if version else "waiting_review") if state == "success" else state
+    public_source = attempt_source(attempt)
+    if task.task_type == "ui_case_generate":
+        public_source = public_ui_source_snapshot(public_source)
     return {
         "runId": attempt.id,
         "taskId": task.task_id,
@@ -61,7 +65,7 @@ async def direct_attempt_view(
         "generationChainManaged": True,
         "currentStage": stage.stage,
         "stageStatus": stage_status,
-        "snapshotJson": attempt_source(attempt),
+        "snapshotJson": public_source,
         "configJson": config,
         "resultYaml": result,
         "resultSummaryJson": deepcopy(attempt.output_context_json or {}),

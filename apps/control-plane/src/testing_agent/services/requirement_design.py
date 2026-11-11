@@ -8,9 +8,6 @@ import yaml
 from testing_agent.core.errors import AppError, ErrBadRequest, ErrNotFound
 from testing_agent.models.requirement import Requirement
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-from testing_agent.repositories.ai_generate_task_source_archive import (
-    AiGenerateTaskSourceArchiveRepository,
-)
 from testing_agent.repositories.requirement_design import RequirementDesignRepository
 from testing_agent.schemas.requirement_design import (
     DesignKind,
@@ -49,13 +46,11 @@ class RequirementDesignService:
         self,
         repository: RequirementDesignRepository,
         task_repository: AiGenerateTaskRepository,
-        source_archive_repository: AiGenerateTaskSourceArchiveRepository,
         access: GenerationAccess,
         commands: GenerationTaskCommands,
     ) -> None:
         self.repository = repository
         self.task_repository = task_repository
-        self.source_archive_repository = source_archive_repository
         self.access = access
         self.commands = commands
 
@@ -145,12 +140,7 @@ class RequirementDesignService:
                 return await self.commands.update(
                     kind, task_id, changes, user_id, current_read=True
                 )
-            archive = (
-                await self.source_archive_repository.get_source_archive(task_id)
-                if kind == "ui"
-                else None
-            )
-            return dump_task(task, archive)
+            return dump_task(task)
         if kind == "api" and not (body.source_content or "").strip():
             raise AppError(400, "请提供 OpenAPI/Swagger 文档", 400)
         return await self.commands.create(

@@ -1,10 +1,10 @@
 # 统一 S3 文件存储
 
-平台采用私有桶：前端通过短期签名 POST 直传，Worker 在下载时申请短期 GET URL 后直接读取。控制面保管凭证、核验对象、管理项目权限和文件关联。已接入需求文档、UI 源码包、项目上传技能包及 UI 截图/Trace。Bug 附件可复用通用上传能力；继续优化图片复用 `attachment` 用途并关联 `ai_generate_run`。报告目前在内存中按需导出，未依赖本地文件持久化。
+平台采用私有桶：前端通过短期签名 POST 直传，Worker 在下载时申请短期 GET URL 后直接读取。控制面保管凭证、核验对象、管理项目权限和文件关联。已接入需求文档、项目上传技能包及 UI 截图/Trace；UI 生成源码已改为仓库画像版本 pin，不再上传源码包。Bug 附件可复用通用上传能力；继续优化图片复用 `attachment` 用途并关联 `ai_generate_run`。报告目前在内存中按需导出，未依赖本地文件持久化。
 
 ## 配置和部署
 
-在本地忽略的 `config/platform.toml` 中配置 `[control_plane.storage.s3]`，字段见 `config/platform.example.toml`。默认 `enabled = false`，未启用时需求文件和源码包上传不可用，前端提示管理员配置 S3。启用后需要支持 Signature V4、POST policy、CopyObject、GetObject、HeadObject 和 DeleteObject 的服务；后端账号只授权指定桶的应用前缀。
+在本地忽略的 `config/platform.toml` 中配置 `[control_plane.storage.s3]`，字段见 `config/platform.example.toml`。默认 `enabled = false`，未启用时需求文件、项目技能和 UI 产物上传不可用，前端提示管理员配置 S3。启用后需要支持 Signature V4、POST policy、CopyObject、GetObject、HeadObject 和 DeleteObject 的服务；后端账号只授权指定桶的应用前缀。
 
 - `endpoint`：浏览器、控制面和 Worker 都可达的地址。签名生成后不能替换域名。
 - `region`、`bucket`、`access_key`、`secret_key`：目标存储配置，不把密钥复制到前端或 Worker。
@@ -41,12 +41,12 @@ apps/control-plane/.venv/bin/python .scratch/debug/s3_upload_cors.py http://loca
 
 不启用公共读写。CORS 不授予业务权限。所有实例使用同一存储配置；修改已有桶或前缀前先制定迁移方案，不能仅改配置让历史记录失效。
 
-生成运行配置后，在控制面环境升级数据库至 Alembic head，再部署控制面、Worker 和前端。此次新增 `stored_files` 表、`requirements.document_file_id` 和 `ai_generate_task_source_archives.file_id`，不会自动迁移业务文件。部署前备份数据库与本地文件。
+生成运行配置后，在控制面环境升级数据库至 Alembic head，再部署控制面、Worker 和前端。当前基线包含 `stored_files` 表和 `requirements.document_file_id`；历史上的 `ai_generate_task_source_archives.file_id` 已随 UI 源码包退役删除，不会自动迁移业务文件。部署前备份数据库与本地文件。
 
 ## 接口与生命周期
 
 - `GET /v1/files/capabilities`：登录用户获取启用状态与大小限制。
-- `POST /v1/files/uploads`：提交 `projectId`、`filename`、`size`、十六进制 `sha256` 和 `purpose`（`requirement`、`attachment` 、`ui_source_archive`、`project_skill` 或 `ui_artifact`），返回 `fileId`、签名 POST 的 `upload.url` / `upload.fields` 及有效期。
+- `POST /v1/files/uploads`：提交 `projectId`、`filename`、`size`、十六进制 `sha256` 和 `purpose`（`requirement`、`attachment`、`project_skill` 或 `ui_artifact`），返回 `fileId`、签名 POST 的 `upload.url` / `upload.fields` 及有效期。`ui_source_archive` 用途已随 UI 源码包退役删除，仅接受上述四种用途。
 - 浏览器按返回字段构造 FormData，最后加入 `file`，直接 POST 到存储；不携带平台 Authorization。
 - `POST /v1/files/{fileId}/complete`：仅上传者且仍有项目写权限时可完成；核验大小、SHA-256 和基本文件内容格式，重复调用幂等。
 - `GET /v1/files/{fileId}`：读取可访问文件的元信息及核验完成时间，不返回对象 Key 或凭证。
@@ -72,7 +72,7 @@ Worker 使用原任务需求下载入口，通过原有任务执行者授权后�
 
 2026-09-27 决定仅保留 S3 需求文件链路，移除本地 multipart 上传、磁盘写入/读取回退和 `migrate` 命令。数据库旧 `document_storage_path` 列仅保留历史信息，不参与运行时文件读取；不删除历史需求记录和磁盘文件。需求增强文本仍保存在数据库，与原文件分开。
 
-没有 S3 原文件的历史需求需要重新上传。切换时本地数据库有 20 条此类需求，其中 19 份源文件在当前机器无法找到，另 1 份文件哈希与历史记录不一致，未自动绑定。升级时需同步更新前端和 Worker；UI 源码 ZIP 也已切换到 S3；Worker 任务临时工作目录用于下载、解压和执行，继续保留。
+没有 S3 原文件的历史需求需要重新上传。切换时本地数据库有 20 条此类需求，其中 19 份源文件在当前机器无法找到，另 1 份文件哈希与历史记录不一致，未自动绑定。升级时需同步更新前端和 Worker；UI 源码 ZIP 也曾切换到 S3，该链路已于 2026-11-09 删除，见下文“UI 源码包（已删除）”；Worker 任务临时工作目录用于下载、解压和执行，继续保留。
 
 在控制面目录执行临时 S3 对象清理：
 
@@ -100,24 +100,18 @@ uv run python -m testing_agent.cli.storage repair-names --apply
 默认只列出候选；apply 复制已核验的旧对象到含原文件名的新 Key，核对原大小与 SHA-256 后更新文件记录，文件 ID 和业务关联保持不变。旧 `content` 对象保留，兼容已签发链接，命令可重复执行。控制台下载时选择带扩展名的新对象；旧对象不自动删除。
 
 
-## UI 源码包
+## UI 源码包（已删除）
 
-前端先以 `purpose=ui_source_archive` 申请统一上传授权，直传 ZIP 后调用 complete，再通过 `PUT /v1/ui-case-generate-tasks/{taskId}/source-archive` 提交 JSON `{"fileId":"..."}`。该接口不再接受 multipart 文件，控制面不保存源码包到持久本地目录。文件用途、项目权限和上传人必须匹配，绑定与源码包引用在同一事务提交，失败时旧引用保留。
+2026-11-09 起，UI 生成运行只使用仓库画像成功版本冻结的前端仓库和 commit，不再上传或接受 ZIP。`ui_source_archive` 用途、`PUT /v1/ui-case-generate-tasks/{taskId}/source-archive`、`GET /internal/ai-worker/tasks/{taskId}/source-archive`、`ai_generate_task_source_archives` 表及 S3 中的历史源码包对象均已删除；控制面、Worker 和 Studio 不再保留归档只读兼容路径。
 
-源码包上限为全局限制与 100 MiB 的较小值，只允许 ZIP。complete 对已封存对象执行完整 ZIP 核验，拒绝路径越界、绝对路径、符号链接、重复条目和 CRC 损坏，限制条目数 50,000、解压大小 1 GiB。验证使用临时流，不作为业务文件持久存储。
-
-发起运行时把 `sourceArchiveFileId` 固定到运行快照。Worker 访问原 source-archive 入口时，控制面先校验运行归属与执行权限，再为快照对应文件签发票据。Worker 直接从 S3 拉取、检查大小/哈希后解压到任务临时目录。替换源码包只影响后续运行；旧对象保留，避免正在执行的任务失去输入。
-
-升级至数据库版本 `20260927_0018`，前端、控制面和 Worker 同步升级。本机现有 1 个历史本地源码包需要重新上传；没有 S3 文件 ID 的旧运行应重新发起，控制面明确报错，不回退本地文件。旧路径列和磁盘文件保留但不再用于上传、下载或删除。
-
-2026-09-27 在 RustFS 完成签名 ZIP POST（204）、封存和 ZIP 核验、Worker 下载器通过真实 S3 GET 校验并解压的冒烟验证，测试对象已删除。平台票据响应在该冒烟中模拟；完整真实 AI 生成任务验收仍未完成。
+清理按任务事务删除 ZIP 来源的生成记录和源码包对象，保留正式 `ui_test_suites` / `ui_test_cases` 和 `ai_generate_tasks` 的 UI 任务壳；`effective_import_id` 允许悬空并按现有正式资产规则展示。执行前已保留数据库备份和对象存储清单；回滚只能依赖该备份恢复。历史 ZIP 的校验与下载细节不再是当前契约。
 
 
 ## 平台业务文件全面接入（2026-09-27）
 
 | 文件类别 | 存储与访问方式 |
 | --- | --- |
-| 需求原文件、UI 源码包 | 前端签名直传、业务记录保存 fileId、Worker 按任务取票据直读 S3 |
+| 需求原文件 | 前端签名直传、业务记录保存 fileId、Worker 按任务取票据直读 S3 |
 | 技能文件夹 | 各文件直传 S3，原子替换当前文件清单；系统默认技能全局共享且项目只读，详见 [Skill 管理](skills.md) |
 | UI 步骤截图、Trace ZIP | Worker 使用所属执行的授权申请签名直传，校验后关联 Worker 任务；结果仅保存稳定文件引用；Trace 引用已纳入运行记录持久化 |
 | 导入 YAML/JSON、报告 PDF 等按需导出 | 输入解析后存数据库，输出在内存中生成；当前没有本地持久文件，未增加无业务需求的归档副本 |
@@ -144,7 +138,6 @@ UI 文件授权路由挂在 `/internal/ui-worker/tasks/{taskId}/files` 下。申
 | `attachments` | 通用附件、富文本图片及继续优化图片 | 存储分类已实现，`purpose=attachment`；继续优化图片关联 AI 运行 |
 | `bugs` | Bug 图片和附件 | 预留，随 Bug 文件功能接入 |
 | `reports` | 持久化测试报告 | 预留，当前报告在内存中导出 |
-| `source-archives` | UI 源码包 | 已实现，`purpose=ui_source_archive` |
 | `skills` | 项目技能文件 | 已实现，`purpose=project_skill` |
 | `ui-artifacts` | UI 执行截图、Trace、录像 | 已实现，`purpose=ui_artifact` |
 
@@ -167,7 +160,6 @@ UI 文件授权路由挂在 `/internal/ui-worker/tasks/{taskId}/files` 下。申
 | --- | --- |
 | 需求原文件 | 需求及所属迭代存在，迭代项目与文件一致。需求替换后的旧文件保守保留访问；需求或迭代被删除后停止签发 |
 | Bug 图片与附件 | Bug 存在且项目一致。归档图片保持历史可读；Bug 引用的旧迭代或需求删除不影响 Bug 证据 |
-| UI 源码包 | 所属 UI 生成任务存在且项目一致。替换前源码包保持历史可读；任务删除后停止签发 |
 | 项目/系统技能 | 技能存在、项目归属匹配，文件 ID 仍在当前发布清单中；不提供已移除文件的历史读取 |
 | UI 截图/Trace | UI 队列任务及对应调试/套件运行存在，沿套件 → 需求 → 迭代验证所属项目；调试运行还核验用例及套件归属 |
 

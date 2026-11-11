@@ -251,3 +251,16 @@ it('UI 控件和操作详情默认折叠，点击标题可展开再收起', asyn
   fireEvent.click(groups[0].querySelector('summary')!)
   expect(groups[0]).not.toHaveAttribute('open')
 })
+
+it.each(['', '   ', null, undefined])('没有产物内容时保持空白，不显示解析错误：%s', content => {
+  render(<TestThemeProvider><RequirementUnderstandingComparison content={content} /></TestThemeProvider>)
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: '需求理解结果' })).not.toBeInTheDocument()
+})
+
+it('有内容但结构不完整时仍提示修正原始 JSON', () => {
+  const incomplete = structuredClone(understanding)
+  delete incomplete.functionalOverview
+  render(<TestThemeProvider><RequirementUnderstandingComparison content={incomplete} /></TestThemeProvider>)
+  expect(screen.getByRole('alert')).toHaveTextContent('当前内容不是完整的需求理解 JSON，请在原始 JSON 中修正')
+})

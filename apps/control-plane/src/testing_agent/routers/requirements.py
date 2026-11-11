@@ -4,11 +4,13 @@ from fastapi import APIRouter
 from fastapi.responses import Response
 
 from testing_agent.handlers.generation_chain import (
+    check_ui_generation_source,
     delete_generation_chain_version,
     get_generation_chain_import_options,
     get_generation_chain_version,
     get_generation_chain_view,
     get_generation_chains,
+    get_ui_generation_source_options,
     import_generation_chain_version,
     review_generation_chain_stage,
     revise_generation_chain_stage,
@@ -46,6 +48,8 @@ from testing_agent.schemas.generation_chain import (
     GenerationChainOverview,
     GenerationChainVersionDetail,
     GenerationChainView,
+    UiGenerationSourceCheck,
+    UiGenerationSourceOptions,
 )
 from testing_agent.schemas.requirement import (
     RequirementListItemResponse,
@@ -112,6 +116,14 @@ router.get(
     "/requirements/{requirement_id}/generation",
     response_model=ApiResponse[GenerationChainOverview],
 )(get_generation_chains)
+router.get(
+    "/requirements/{requirement_id}/generation/ui/source-options",
+    response_model=ApiResponse[UiGenerationSourceOptions],
+)(get_ui_generation_source_options)
+router.post(
+    "/requirements/{requirement_id}/generation/ui/source-check",
+    response_model=ApiResponse[UiGenerationSourceCheck],
+)(check_ui_generation_source)
 router.get(
     "/requirements/{requirement_id}/generation/{kind}",
     response_model=ApiResponse[GenerationChainView],

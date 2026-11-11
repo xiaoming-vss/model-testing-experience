@@ -4,9 +4,9 @@
 
 ## Language
 
-**源码归档**：
-`ui_case_generate` 任务携带的 ZIP 格式前端源码文件，通过 `sourceArchiveDownloadUrl` 获取；其解压后的根目录是 UI 用例生成技能的源码输入。
-_Avoid_: 源码文件、下载包
+**仓库源码**：
+`ui_case_generate` 任务首阶段快照携带的单个前端仓库 pin（仓库、分支、冻结 commit）和 `gitlabCredentialsUrl`。Worker 使用本次 UI 发起人的个人 GitLab 凭据克隆该 commit，检出后的整个仓库目录是三阶段共用的源码根，`.git` 在交给模型前删除。
+_Avoid_: 源码归档、源码 ZIP、源码包
 
 **UI 测试用例**：
 由 `ui_case_generate` 生成的可执行 UI 自动化用例；任务产物是 YAML 顶层列表，每一项均包含 `name`、`enabled`、`stepsJson` 和 `orderNo`。
@@ -33,7 +33,7 @@ _Avoid_: 需求绑定
 _Avoid_: 共享代码目录、全局缓存
 
 **仓库画像**：
-人工运行的独立辅助任务，读取所选已审核需求理解版本和全部激活代码绑定，只 checkout 各仓库工作分支 HEAD，用只读工具判断仓库角色并输出固定 JSON。画像不进入生成链、不传给下游；工作区成功删除、失败保留 24 小时。
+人工运行的独立辅助任务，读取所选已审核需求理解版本和全部激活代码绑定，只 checkout 各仓库工作分支 HEAD，用只读工具判断仓库角色并输出固定 JSON。画像不进入生成链；UI 生成只消费其中的前端仓库角色、分支和 HEAD commit 作为源码选择依据，画像正文不注入任何下游 prompt。工作区成功删除、失败保留 24 小时。
 _Avoid_: 代码风险画像、仓库分析报告
 
 **不可分析仓库**：

@@ -80,6 +80,16 @@ class RepositoryProfileConfig(BaseModel):
     max_output_chars: int = Field(default=100_000, gt=0)
 
 
+class UiGenerationConfig(BaseModel):
+    """UI 生成仓库源码准备:单仓库 checkout 的超时、保留和大小限制。"""
+
+    git_timeout_seconds: float = Field(default=300.0, gt=0, allow_inf_nan=False)
+    workspace_retention_hours: float = Field(default=24.0, gt=0, allow_inf_nan=False)
+    # 只统计 checkout 后的工作树(不含 .git);超限直接失败,避免把异常大仓库交给模型。
+    max_repo_size_mb: float = Field(default=500.0, gt=0, allow_inf_nan=False)
+    max_repo_files: int = Field(default=200_000, gt=0)
+
+
 class LoggingConfig(BaseModel):
     level: str = "INFO"
     console: bool = True
@@ -94,4 +104,5 @@ class Settings(BaseModel):
     agent: AgentConfig = AgentConfig()
     code_risk_analysis: CodeRiskAnalysisConfig = CodeRiskAnalysisConfig()
     repository_profile: RepositoryProfileConfig = RepositoryProfileConfig()
+    ui_generation: UiGenerationConfig = UiGenerationConfig()
     logging: LoggingConfig = LoggingConfig()

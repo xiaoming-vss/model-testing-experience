@@ -35,6 +35,7 @@ COPY --from=builder --chown=app:app /app/.venv /app/.venv
 COPY --chown=app:app alembic ./alembic
 COPY --chown=app:app alembic.ini ./
 COPY --chown=app:app docker/entrypoint.sh ./docker-entrypoint.sh
+COPY --chown=app:app default-skills ./default-skills
 
 RUN mkdir -p /app/config /app/storage/ai-generate-task-sources /app/storage/skills \
     && chmod 755 /app/docker-entrypoint.sh \

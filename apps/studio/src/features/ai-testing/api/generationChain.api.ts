@@ -26,9 +26,74 @@ export type GenerationChainVersion = {
   imported?: boolean
 }
 
+export type UiGenerationSourceCommitMode = 'profile' | 'latest'
+
+export type UiGenerationSourceCaseInput = {
+  caseId: string
+  title: string
+  suiteName?: string
+  module?: string
+  content?: unknown
+}
+
+/** Frozen source projection returned with a UI generation version. No credentials or clone URL. */
 export type UiGenerationSourceInputs = {
-  archive: { fileId?: string; filename?: string; sha256?: string; sizeBytes?: number }
-  cases: { caseId: string; title: string; suiteName?: string; module?: string; content?: unknown }[]
+  sourceKind: 'repository'
+  repository: {
+    repositoryId: string
+    pathWithNamespace: string
+    branch: string
+    commit: string
+    commitMode: UiGenerationSourceCommitMode
+    profileVersionId: string
+    profileVersionNo: number
+    resolvedAt: string
+  }
+  cases: UiGenerationSourceCaseInput[]
+}
+
+/** One repository candidate from a successful repository profile version. */
+export type UiGenerationSourceRepository = {
+  repositoryId: string
+  pathWithNamespace: string
+  role: string
+  confidence: number
+  responsibilitySummary: string
+  keyPaths: string[]
+  branch: string
+  commit: string
+  isFrontend: boolean
+  available: boolean
+  profileError: string
+}
+
+export type UiGenerationSourceProfileVersion = {
+  versionId: string
+  versionNo: number
+  label: string
+  createdAt: string
+  requirementUnderstandingVersion?: { versionId: string; versionNo: number } | null
+  repositories: UiGenerationSourceRepository[]
+}
+
+export type UiGenerationSourceOptions = {
+  profileVersions: UiGenerationSourceProfileVersion[]
+  defaultProfileVersionId: string
+}
+
+export type UiGenerationSourceCheck = {
+  pinnedCommit: string
+  currentCommit: string
+  branch: string
+  changed: boolean
+}
+
+export type UiGenerationRunInputs = {
+  refreshInputs?: boolean
+  functionCaseIds?: string[]
+  sourceProfileVersionId: string
+  sourceRepositoryId: string
+  sourceCommitMode: UiGenerationSourceCommitMode
 }
 
 export type GenerationChainDraft = {
@@ -119,6 +184,9 @@ export type GenerationChainRunBody = {
   requestId?: string
   instruction?: string
   upstreamVersions?: Record<string, string>
+  sourceProfileVersionId?: string
+  sourceRepositoryId?: string
+  sourceCommitMode?: UiGenerationSourceCommitMode
 }
 
 export type GenerationChainImportRecord = {
@@ -186,6 +254,20 @@ export const generationChainApi = {
     request<GenerationChainOverview>(`/v1/requirements/${requirementId}/generation`),
   chain: (requirementId: string, kind: GenerationChainKind) =>
     request<GenerationChain>(`/v1/requirements/${requirementId}/generation/${kind}`),
+  uiSourceOptions: (requirementId: string) =>
+    request<UiGenerationSourceOptions>(
+      `/v1/requirements/${requirementId}/generation/ui/source-options`,
+    ),
+  uiSourceCheck: (requirementId: string, body: {
+    profileVersionId: string
+    repositoryId: string
+    pinnedCommit: string
+    gitlabConnectionId?: string
+  }) =>
+    request<UiGenerationSourceCheck>(
+      `/v1/requirements/${requirementId}/generation/ui/source-check`,
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
   version: (requirementId: string, kind: GenerationChainKind, versionId: string) =>
     request<GenerationChainVersionDetail>(
       `/v1/requirements/${requirementId}/generation/${kind}/versions/${versionId}`,

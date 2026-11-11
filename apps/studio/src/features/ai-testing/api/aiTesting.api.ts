@@ -1,5 +1,4 @@
 import { skillsApi } from './skills.api'
-import { storageCapabilities, uploadStoredFile } from '@/shared/api/files'
 import { buildQuery, request, type ListResponse } from '@/shared/api/request'
 import type {
   RunHistoryResponse,
@@ -203,19 +202,6 @@ export const aiTestingApi = {
     }),
   deleteUiCaseGenerateTask: (taskId: string) =>
     request<Record<string, never>>(`/v1/ui-case-generate-tasks/${taskId}`, { method: 'DELETE' }),
-  uploadUiCaseGenerateTaskSourceArchive: async (taskId: string, file: File, onUploadProgress?: (percent: number) => void) => {
-    const capabilities = await storageCapabilities()
-    if (!capabilities.enabled) throw new Error('S3 文件存储未启用，请联系管理员配置')
-    if (!file.name.toLowerCase().endsWith('.zip')) throw new Error('只支持 .zip 源码包')
-    if (file.size > Math.min(capabilities.maxBytes, 100 * 1024 * 1024)) throw new Error('源码包超过大小限制')
-    const task = await request<UiCaseGenerateTask>(`/v1/ui-case-generate-tasks/${taskId}`)
-    const projectId = task.projectId
-    if (!projectId) throw new Error('任务缺少所属项目，无法上传源码包')
-    const fileId = await uploadStoredFile(projectId, file, 'ui_source_archive', onUploadProgress)
-    return request<UiCaseGenerateTask>(`/v1/ui-case-generate-tasks/${taskId}/source-archive`, {
-      method: 'PUT', body: JSON.stringify({ fileId }),
-    })
-  },
   runUiCaseGenerateTask: (taskId: string, body: RunUiCaseGenerateTaskPayload) =>
     request<UiCaseGenerateTaskRun>(`/v1/ui-case-generate-tasks/${taskId}/run`, {
       method: 'POST',

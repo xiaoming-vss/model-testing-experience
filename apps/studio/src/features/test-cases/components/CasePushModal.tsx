@@ -5,6 +5,7 @@ import { ProjectActionModal } from '@/features/projects/components/ProjectAction
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
+import { randomId } from '@/shared/utils/crypto'
 import { getErrorMessage } from '@/utils/format'
 import { functionTestingApi } from '../api/functionTesting.api'
 import type { CasePushPreviewItem, CasePushReconcilePayload, FunctionTestCaseZentaoImportItem, ImportFunctionTestCasesToZentaoPayload } from '../types'
@@ -32,7 +33,7 @@ export function CasePushModal({ suiteId, caseIds, count, projectId, onClose }: {
   const [mayConfirm, setMayConfirm] = useState(false)
   const owner = mayConfirm && project?.role === 'owner'
   const [restoreConfirmed, setRestoreConfirmed] = useState(false)
-  const [requestId, setRequestId] = useState(() => crypto.randomUUID())
+  const [requestId, setRequestId] = useState(() => randomId())
   const submitted = useRef<ImportFunctionTestCasesToZentaoPayload | null>(null)
   const alive = useRef(true)
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
@@ -86,7 +87,7 @@ export function CasePushModal({ suiteId, caseIds, count, projectId, onClose }: {
     setFeedback('')
     setAttempted(false)
     setRestoreConfirmed(false)
-    setRequestId(crypto.randomUUID())
+    setRequestId(randomId())
     submitted.current = null
     preview.mutate(target)
   }

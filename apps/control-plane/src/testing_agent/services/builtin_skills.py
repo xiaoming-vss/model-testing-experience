@@ -1,5 +1,6 @@
 """Publish trusted on-disk default skills through the shared S3 file lifecycle."""
 
+import hashlib
 from pathlib import Path
 
 from sqlalchemy import select
@@ -9,6 +10,24 @@ from testing_agent.models.project_skill_space import ProjectSkillSpace
 from testing_agent.schemas.project_skill_space import ProjectSkillUploadRequest, SkillFileInput
 from testing_agent.services.skill_storage import SkillPublisher
 from testing_agent.services.stored_file import StoredFileService
+
+
+def _content_signature(entries: list[tuple[str, bytes]]) -> str:
+    digest = hashlib.sha256()
+    for path, data in sorted(entries):
+        digest.update(path.encode())
+        digest.update(b"\0")
+        digest.update(hashlib.sha256(data).digest())
+    return digest.hexdigest()
+
+
+def _manifest_signature(skill: ProjectSkillSpace) -> str:
+    digest = hashlib.sha256()
+    for entry in sorted(skill.manifest or [], key=lambda item: item["path"]):
+        digest.update(entry["path"].encode())
+        digest.update(b"\0")
+        digest.update(bytes.fromhex(entry.get("sha256", "")))
+    return digest.hexdigest()
 
 
 def inspect_folder(folder: Path, maximum: int) -> list[tuple[str, bytes]]:
@@ -47,9 +66,24 @@ async def sync_builtin_skills(files: StoredFileService, source: Path) -> list[di
     if collision:
         raise AppError(409, f"项目自定义技能已占用默认技能名称: {collision.filename}", 409)
     await session.commit()
+    existing = {
+        row.filename: row
+        for row in (
+            await session.scalars(
+                select(ProjectSkillSpace).where(
+                    ProjectSkillSpace.is_default.is_(True),
+                    ProjectSkillSpace.filename.in_(names),
+                )
+            )
+        ).all()
+    }
     results: list[dict[str, str | int]] = []
     publisher = SkillPublisher(files)
     for name, entries in content:
+        current = existing.get(name)
+        if current is not None and _manifest_signature(current) == _content_signature(entries):
+            results.append({"name": name, "files": len(entries)})
+            continue
         await publisher.builtin(name, entries)
         results.append({"name": name, "files": len(entries)})
     return results

@@ -55,7 +55,9 @@ class Factor(Contract):
     clarificationNeeded: str | None
 
 
-class Rule(Contract):
+class CompactRule(Contract):
+    """保留独立业务判断和来源的精简规则格式。"""
+
     ruleId: Annotated[str, StringConstraints(pattern=r"^R[0-9]{2,}$")]
     category: Text
     name: Text
@@ -64,10 +66,15 @@ class Rule(Contract):
     preconditions: list[str]
     trigger: str | None
     expectedBehavior: list[str]
-    prohibitedOrSkippedBehavior: list[str]
-    observableOutcome: str | None
     sourceReferences: list[str]
     relatedQuestionIds: list[str]
+
+
+class Rule(CompactRule):
+    """历史规则格式；保留旧产物的独立禁止行为和可观察结果。"""
+
+    prohibitedOrSkippedBehavior: list[str]
+    observableOutcome: str | None
 
 
 class Scenario(Contract):
@@ -113,7 +120,7 @@ class Question(Contract):
 class RequirementAnalysisOutput(Contract):
     functionalOverview: Overview
     scenarioFactors: list[Factor]
-    businessRules: list[Rule]
+    businessRules: list[CompactRule | Rule]
     scenarioBreakdown: list[Scenario]
     openQuestions: list[Question]
 
@@ -150,6 +157,15 @@ class RequirementAnalysisOutput(Contract):
 
 class Point(Contract):
     case_name: Text
+
+
+class TestPointAuditIssue(Contract):
+    case_name: str | None
+    problem: Text
+
+
+class TestPointAudit(Contract):
+    issues: list[TestPointAuditIssue]
 
 
 class Dimension(Contract):
@@ -312,6 +328,7 @@ class RelationAnalysisOutput(Contract):
 CONTRACTS = {
     "requirement_analysis": RequirementAnalysisOutput,
     "case_names": TestPointsOutput,
+    "case_names_audit": TestPointAudit,
     "detailed_cases": DetailedCasesOutput,
     "relation_analysis": RelationAnalysisOutput,
 }

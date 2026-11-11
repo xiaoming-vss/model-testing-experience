@@ -49,12 +49,12 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Resolve the image reference from global or local values.
+Resolve the image reference.
 */}}
 {{- define "control-plane.image" -}}
-{{- $registry := .Values.global.imageRegistry | default .Values.image.registry -}}
+{{- $registry := .Values.image.registry -}}
 {{- $repository := .Values.image.repository -}}
-{{- $tag := .Values.global.imageTag | default .Values.image.tag -}}
+{{- $tag := .Values.image.tag -}}
 {{- if $registry -}}
 {{- printf "%s/%s:%s" $registry $repository $tag -}}
 {{- else -}}

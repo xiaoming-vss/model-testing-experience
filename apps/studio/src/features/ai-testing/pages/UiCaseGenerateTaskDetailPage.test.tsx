@@ -19,14 +19,7 @@ const task = {
   projectId: 'project-1',
   sprintId: 'sprint-1',
   requirementId: 'requirement-1',
-  sourceType: 'source_archive',
-  sourceArchive: {
-    archiveId: 'archive-1',
-    filename: 'source.zip',
-    sizeBytes: 2048,
-    sha256: 'abc123',
-    uploadedAt: '2026-08-02T08:00:00.000Z',
-  },
+  sourceType: 'repository',
   instruction: '覆盖表单校验',
 }
 
@@ -675,15 +668,15 @@ describe('UI 用例生成任务详情', () => {
     expect(queryVisibleMenuItems('导入正式 UI 套件')).toHaveLength(0)
   })
 
-  it('展示源码包、运行状态和结构化候选步骤，不访问内部 Worker 接口', async () => {
+  it('展示仓库源码来源、运行状态和结构化候选步骤，不访问内部 Worker 接口', async () => {
     const fetchSpy = installFetchHandler()
     const user = userEvent.setup()
     renderPage()
 
-    expect(await screen.findByText('source.zip')).toBeInTheDocument()
+    expect(await screen.findByText('仓库画像')).toBeInTheDocument()
     expect(document.querySelector('.ai-task-detail-split')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /^源码包/ }))
-    expect(screen.getByText('2 KiB')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /^源码来源/ }))
+    expect(screen.getByText('源码由仓库画像提供')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /^运行记录/ }))
     await user.click(await findRunInlineAction('审核结果'))
     await user.click(await screen.findByRole('button', { name: '登录成功，展开' }))
@@ -724,17 +717,17 @@ describe('UI 用例生成任务详情', () => {
     }))
   })
 
-  it('未上传源码包时禁用运行并解释前置条件', async () => {
+  it('未关联需求时禁用生成入口并解释仓库画像前置条件', async () => {
     installFetchHandler((url) => {
-      if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-1') return jsonResponse({ ...task, requirementId: '', sourceArchive: null })
+      if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-1') return jsonResponse({ ...task, requirementId: '' })
     })
     const user = userEvent.setup()
     renderPage()
 
-    const runButton = await screen.findByRole('button', { name: /运行任务/ })
+    const runButton = await screen.findByRole('button', { name: /前往需求生成链/ })
     expect(runButton).toBeDisabled()
-    await user.click(screen.getByRole('button', { name: /^源码包/ }))
-    expect(screen.getAllByText('请先上传源码 ZIP').length).toBeGreaterThan(0)
+    await user.click(screen.getByRole('button', { name: /^源码来源/ }))
+    expect(screen.getByText('任务尚未关联需求')).toBeInTheDocument()
   })
 
   it('需求关联任务从运行入口进入生成链', async () => {
@@ -759,10 +752,10 @@ describe('UI 用例生成任务详情', () => {
     client.setQueryData(['projectAccess', 'project-1'], { projectId: 'project-1', role: 'viewer', permissions: ['read'] })
 
     expect(await screen.findByRole('button', { name: /前往需求生成链/ })).toBeDisabled()
-    expect(screen.getByText('source.zip')).toBeInTheDocument()
+    expect(await screen.findByText('仓库画像')).toBeInTheDocument()
   })
 
-  it('展示五种运行状态，并在存在活动运行时禁用源码包替换', async () => {
+  it('展示五种运行状态，并说明源码来自仓库画像', async () => {
     const statusRuns = ['pending', 'claimed', 'running', 'success', 'failed'].map((status, index) => ({
       ...run,
       runId: `run-${status}`,
@@ -780,8 +773,8 @@ describe('UI 用例生成任务详情', () => {
     for (const label of ['执行中', '待审核', '失败']) {
       expect((await screen.findAllByText(label)).length).toBeGreaterThan(0)
     }
-    await user.click(screen.getByRole('button', { name: /^源码包/ }))
-    expect(screen.getByRole('button', { name: /替换源码包/ })).toBeDisabled()
+    await user.click(await screen.findByRole('button', { name: /^源码来源/ }))
+    expect(screen.getByText('源码由仓库画像提供')).toBeInTheDocument()
   })
 
   it('保存完整 YAML 后可以批准并立即冻结编辑', async () => {
@@ -965,67 +958,6 @@ describe('UI 用例生成任务详情', () => {
     expect(screen.getByRole('button', { name: '拒绝候选' })).toBeDisabled()
   })
 
-  it('替换源码包要求确认，并使用 S3 文件 ID 更新当前包', async () => {
-    let uploadBody: BodyInit | null | undefined
-    installFetchHandler((url, init) => {
-      if (url.pathname.endsWith('/source-archive') && init?.method === 'PUT') {
-        uploadBody = init.body
-        return jsonResponse({ ...task, sourceArchive: { ...task.sourceArchive, filename: 'next.zip' } })
-      }
-    })
-    const user = userEvent.setup()
-    renderPage()
-
-    await user.click(await screen.findByRole('button', { name: /^源码包/ }))
-    await user.click(await screen.findByRole('button', { name: /替换源码包/ }))
-    await user.upload(screen.getByLabelText('新的源码 ZIP'), new File(['next'], 'next.zip', { type: 'application/zip' }))
-    expect(screen.getAllByText(/source.zip/).length).toBeGreaterThan(0)
-    expect(screen.getAllByText(/next.zip/).length).toBeGreaterThan(0)
-    await user.click(screen.getByRole('button', { name: /确认替换/ }))
-
-    await waitFor(() => expect(uploadBody).toBe(JSON.stringify({ fileId: 'source-file-1' })))
-    expect((await screen.findAllByText('next.zip')).length).toBeGreaterThan(0)
-  })
-
-  it('替换失败时保留原源码包，并展示 413 后端错误', async () => {
-    installFetchHandler((url, init) => {
-      if (url.pathname.endsWith('/source-archive') && init?.method === 'PUT') {
-        return jsonResponse({}, 413, '文件超过网关大小限制')
-      }
-    })
-    const user = userEvent.setup()
-    renderPage()
-
-    await user.click(await screen.findByRole('button', { name: /^源码包/ }))
-    await user.click(await screen.findByRole('button', { name: /替换源码包/ }))
-    await user.upload(screen.getByLabelText('新的源码 ZIP'), new File(['next'], 'next.zip', { type: 'application/zip' }))
-    await user.click(screen.getByRole('button', { name: /确认替换/ }))
-
-    expect(await screen.findByText(/源码包超过上传大小限制.*文件超过网关大小限制/)).toBeInTheDocument()
-    expect(screen.getAllByText(/source.zip/).length).toBeGreaterThan(0)
-  })
-
-  it.each([
-    [400, 'ZIP 内容不合法'],
-    [404, '任务不存在'],
-  ])('上传返回 %s 时展示后端错误并保留旧包', async (status, errorMessage) => {
-    installFetchHandler((url, init) => {
-      if (url.pathname.endsWith('/source-archive') && init?.method === 'PUT') {
-        return jsonResponse({}, status, errorMessage)
-      }
-    })
-    const user = userEvent.setup()
-    renderPage()
-
-    await user.click(await screen.findByRole('button', { name: /^源码包/ }))
-    await user.click(await screen.findByRole('button', { name: /替换源码包/ }))
-    await user.upload(screen.getByLabelText('新的源码 ZIP'), new File(['next'], 'next.zip', { type: 'application/zip' }))
-    await user.click(screen.getByRole('button', { name: /确认替换/ }))
-
-    expect(await screen.findByText(errorMessage)).toBeInTheDocument()
-    expect(screen.getAllByText(/source.zip/).length).toBeGreaterThan(0)
-  })
-
   it('任务详情返回 403 时显示阻断权限状态，不渲染任务内容', async () => {
     installFetchHandler((url) => {
       if (url.pathname === '/v1/ui-case-generate-tasks/ui-task-1') return jsonResponse({}, 403, '无权查看该任务')
@@ -1033,7 +965,7 @@ describe('UI 用例生成任务详情', () => {
     renderPage()
 
     expect(await screen.findByText('无权查看该任务')).toBeInTheDocument()
-    expect(screen.queryByText('source.zip')).not.toBeInTheDocument()
+    expect(screen.queryByText('源码来源')).not.toBeInTheDocument()
   })
 
   it('运行详情返回 403 时隐藏候选内容并显示阻断权限状态', async () => {

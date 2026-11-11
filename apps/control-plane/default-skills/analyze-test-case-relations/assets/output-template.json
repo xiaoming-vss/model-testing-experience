@@ -1,0 +1,21 @@
+{
+  "schema_version": "2.0",
+  "main_paths": [
+    {
+      "path_id": "P01",
+      "case_ids": [
+        "C001",
+        "C002"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "edge_id": "E01",
+      "from_case_id": "C001",
+      "to_case_id": "C002",
+      "relation_type": "next",
+      "order": 1
+    }
+  ]
+}

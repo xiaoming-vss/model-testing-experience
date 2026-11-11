@@ -44,7 +44,6 @@ PULL_EXTENSIONS = ALLOWED_EXTENSIONS | {"gif", "bmp", "webm", "7z", "gz"}
 PURPOSE_FOLDERS = {
     "requirement": "requirements",
     "attachment": "attachments",
-    "ui_source_archive": "source-archives",
     "project_skill": "skills",
     "ui_artifact": "ui-artifacts",
 }
@@ -90,11 +89,6 @@ class StoredFileService:
         maximum = self.settings.max_bytes
         if body.purpose == "requirement" and ext == "html":
             maximum = min(maximum, 1024 * 1024)
-        if body.purpose == "ui_source_archive":
-            from testing_agent.services.ai_source_archive import MAX_SOURCE_ARCHIVE_BYTES
-
-            allowed = {"zip"}
-            maximum = min(maximum, MAX_SOURCE_ARCHIVE_BYTES)
         if body.purpose == "project_skill":
             allowed = None
             await require_project_id(self.session, user_id, body.project_id, "manage")

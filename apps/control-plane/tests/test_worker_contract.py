@@ -1069,8 +1069,10 @@ def test_ui_case_generate_ai_worker_http_lifecycle_and_token_contract():
             events.append("snapshot")
             return {
                 "taskType": "ui_case_generate",
-                "sourceArchiveDownloadUrl": (
-                    "/internal/ai-worker/tasks/worker-task-1/source-archive"
+                "sourceKind": "repository",
+                "sourceRepository": {"repositoryId": "repo-1", "commit": "a1b2c3d"},
+                "gitlabCredentialsUrl": (
+                    "/internal/ai-worker/tasks/worker-task-1/gitlab-credentials"
                 ),
             }
 

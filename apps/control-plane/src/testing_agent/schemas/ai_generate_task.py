@@ -218,23 +218,6 @@ class UiGenerateTaskImportRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class SourceArchiveAttachRequest(BaseModel):
-    file_id: str = Field(min_length=1, max_length=64)
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class SourceArchiveResponse(BaseModel):
-    file_id: str = Field(default="")
-    archive_id: str = Field()
-    filename: str
-    size_bytes: int = Field()
-    sha256: str
-    uploaded_at: datetime = Field()
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
 class AiGenerateTaskResponse(BaseModel):
     task_id: str = Field()
     task_type: str = Field()
@@ -245,7 +228,6 @@ class AiGenerateTaskResponse(BaseModel):
     creator_user_id: str = Field()
     source_type: str = Field()
     source_content: str = Field()
-    source_archive: SourceArchiveResponse | None = Field(default=None)
     instruction: str = ""
     created_at: datetime | str | None = Field(default="")
     updated_at: datetime | str | None = Field(default="")

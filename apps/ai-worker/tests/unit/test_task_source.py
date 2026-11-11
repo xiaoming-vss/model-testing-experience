@@ -347,8 +347,8 @@ class TaskSourceTests(unittest.TestCase):
         self.assertEqual("text", task.payload.source_type)
         self.assertEqual("功能测试需求文本", task.payload.source_content)
 
-    def test_poll_ui_task_maps_source_archive_download_url(self) -> None:
-        class UiTaskClient(FakePlatformHttpClient):
+    def test_poll_ui_repository_task_maps_source_identity(self) -> None:
+        class UiRepositoryTaskClient(FakePlatformHttpClient):
             def post(self, path: str, json_body: dict[str, Any]) -> dict[str, Any] | None:
                 payload = super().post(path, json_body)
                 assert payload is not None
@@ -358,12 +358,40 @@ class TaskSourceTests(unittest.TestCase):
             def get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
                 payload = super().get(path, params)
                 assert payload is not None
-                payload["run"]["taskType"] = "ui_case_generate"
-                payload["run"]["sourceArchiveDownloadUrl"] = "/internal/tasks/source.zip"
+                payload["run"].update(
+                    {
+                        "taskType": "ui_case_generate",
+                        "sourceKind": "repository",
+                        "sourceRepository": {
+                            "bindingId": "binding-1",
+                            "repositoryId": "repo-1",
+                            "pathWithNamespace": "team/web-admin",
+                            "branch": "main",
+                            "commit": "a1b2c3d",
+                            "commitMode": "profile",
+                        },
+                        "sourceCommit": "a1b2c3d",
+                        "bindings": [
+                            {
+                                "bindingId": "binding-1",
+                                "repositoryId": "repo-1",
+                                "instanceUrl": "https://gitlab.example.com",
+                                "pathWithNamespace": "team/web-admin",
+                                "branch": "main",
+                                "headCommit": "a1b2c3d",
+                                "cloneUrl": "https://gitlab.example.com/team/web-admin.git",
+                                "connectionId": "conn-1",
+                            }
+                        ],
+                        "gitlabCredentialsUrl": (
+                            "/internal/ai-worker/tasks/worker-task-1/gitlab-credentials"
+                        ),
+                    }
+                )
                 return payload
 
         task = HttpClaimTaskSource(
-            client=UiTaskClient(),
+            client=UiRepositoryTaskClient(),
             claim_path="/claim",
             snapshot_path_template="/snapshot/{task_id}",
             llm_credentials_path_template="/credentials/{task_id}",
@@ -372,8 +400,15 @@ class TaskSourceTests(unittest.TestCase):
 
         self.assertIsNotNone(task)
         assert task is not None
-        self.assertEqual("ui_case_generate", task.task_type)
-        self.assertEqual("/internal/tasks/source.zip", task.payload.source_archive_download_url)
+        self.assertEqual("repository", task.payload.metadata["sourceKind"])
+        self.assertEqual("repo-1", task.payload.metadata["sourceRepository"]["repositoryId"])
+        self.assertEqual("a1b2c3d", task.payload.metadata["sourceCommit"])
+        self.assertEqual(
+            "/internal/ai-worker/tasks/worker-task-1/gitlab-credentials",
+            task.gitlab_credentials_url,
+        )
+        self.assertEqual(1, len(task.bindings))
+        self.assertEqual("a1b2c3d", task.bindings[0].head_commit)
 
     def test_poll_functional_task_infers_source_type_from_document_type(self) -> None:
         class FunctionalDocumentTaskClient(FakePlatformHttpClient):

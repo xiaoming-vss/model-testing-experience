@@ -16,7 +16,6 @@ from testing_agent.handlers.ai_worker import (
     requirement_document,
     requirement_image,
     revision_attachment,
-    source_archive,
 )
 from testing_agent.handlers.worker_skills import skill_file, skill_manifest
 from testing_agent.schemas.stored_file import FileDownloadTicket
@@ -55,11 +54,6 @@ router.get(
     response_class=Response,
     responses={200: {"content": {"application/json": {}}}},
 )(requirement_document)
-router.get(
-    "/tasks/{task_id}/source-archive",
-    response_class=Response,
-    responses={200: {"content": {"application/json": {}}}},
-)(source_archive)
 router.patch("/tasks/{task_id}/progress", status_code=204)(report_progress)
 
 

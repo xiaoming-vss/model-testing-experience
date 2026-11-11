@@ -9,17 +9,39 @@ from unittest.mock import Mock
 from testing_agent_ai_worker.config.models import PiConfig
 from testing_agent_ai_worker.models.execution import TaskStatus
 from testing_agent_ai_worker.tasks.ui_case_generate.executor import UiCaseExecutor
+from testing_agent_ai_worker.tasks.ui_case_generate.repository_source import RepositorySource
 from tests.unit.tasks.ui_case_generate import test_executor as fixtures
 
 VALID_YAML = fixtures.VALID_YAML
 
 
+class _Preparer:
+    def __init__(self, root, *, error: Exception | None = None) -> None:
+        self.root = Path(root)
+        self.error = error
+        self.calls = 0
+
+    def prepare(self, *, task, credentials) -> RepositorySource:
+        self.calls += 1
+        if self.error is not None:
+            raise self.error
+        source_root = self.root / "source"
+        source_root.mkdir(exist_ok=True)
+        return RepositorySource(
+            binding=task.bindings[0],
+            run_root=self.root / "run",
+            source_root=source_root,
+            commit="a1b2c3d",
+        )
+
+
 class UiRepairTests(unittest.TestCase):
-    def execute(self, root, runner, progress, downloader=None):
-        downloader = downloader or Mock(return_value=Path(root) / "source")
+    def execute(self, root, runner, progress, preparer=None):
+        preparer = preparer or _Preparer(root)
         executor = UiCaseExecutor(
             agent_config=PiConfig(runtime_root=root),
-            source_downloader=SimpleNamespace(download_and_extract=downloader),
+            repository_source_preparer=preparer,
+            credentials_fetcher=lambda task: ["credential"],
             skill_runner=runner,
         )
         return executor.execute(
@@ -34,15 +56,15 @@ class UiRepairTests(unittest.TestCase):
                 VALID_YAML,
             ]
         )
-        progress, downloader = [], Mock()
+        progress = []
         with tempfile.TemporaryDirectory() as root:
-            downloader.return_value = Path(root) / "source"
-            result = self.execute(root, runner, progress, downloader)
+            preparer = _Preparer(root)
+            result = self.execute(root, runner, progress, preparer)
             self.assertEqual(len(list(Path(root).rglob("attempt-*.json"))), 3)
         self.assertEqual(result.status, TaskStatus.SUCCESS)
         self.assertEqual(result.output_yaml, VALID_YAML)
         self.assertEqual(runner.call_count, 3)
-        downloader.assert_called_once()
+        self.assertEqual(preparer.calls, 1)
         first, *repairs = [call.kwargs for call in runner.call_args_list]
         self.assertTrue(all(call["input_text"].startswith(first["input_text"]) for call in repairs))
         self.assertEqual(
@@ -65,10 +87,10 @@ class UiRepairTests(unittest.TestCase):
         self.assertEqual(result.output_yaml, "")
         self.assertEqual(runner.call_count, 3)
 
-    def test_download_and_model_failures_do_not_trigger_repair(self):
+    def test_source_and_model_failures_do_not_trigger_repair(self):
         with tempfile.TemporaryDirectory() as root:
             runner = Mock()
-            result = self.execute(root, runner, [], Mock(side_effect=ValueError("download")))
+            result = self.execute(root, runner, [], _Preparer(root, error=ValueError("repository")))
             self.assertEqual(result.status, TaskStatus.FAILED)
             runner.assert_not_called()
             for failure in [RuntimeError("network"), SimpleNamespace(content="", error="auth")]:

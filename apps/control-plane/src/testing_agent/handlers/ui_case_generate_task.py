@@ -4,7 +4,6 @@ from fastapi import Depends, Query
 
 from testing_agent.api.deps import (
     get_current_user_id,
-    get_generation_archives,
     get_generation_import_context,
     get_generation_launcher,
     get_generation_queries,
@@ -19,12 +18,10 @@ from testing_agent.schemas.ai_generate_task import (
     AiGenerateTaskResultRequest,
     AiGenerateTaskReviewRequest,
     AiGenerateTaskRunRequest,
-    SourceArchiveAttachRequest,
     UiGenerateTaskImportRequest,
 )
 from testing_agent.services.ai_candidate_review import GenerationCandidateReview
 from testing_agent.services.ai_run_launcher import GenerationRunLauncher
-from testing_agent.services.ai_source_archive import SourceArchiveManager
 from testing_agent.services.ai_task_access import CandidateImportContext
 from testing_agent.services.ai_task_commands import GenerationTaskCommands
 from testing_agent.services.ai_task_queries import GenerationQueries
@@ -80,15 +77,6 @@ async def delete_ui_case_generate_task(
     service: GenerationTaskCommands = Depends(get_generation_task_commands),
 ):
     return success_payload(await service.delete("ui", task_id, user_id))
-
-
-async def upload_ui_case_source_archive(
-    task_id: str,
-    body: SourceArchiveAttachRequest,
-    user_id: str = Depends(get_current_user_id),
-    service: SourceArchiveManager = Depends(get_generation_archives),
-):
-    return success_payload(await service.upload_source_archive(task_id, body.file_id, user_id))
 
 
 async def run_ui_case_generate_task(

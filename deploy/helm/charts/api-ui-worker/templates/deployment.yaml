@@ -16,14 +16,14 @@ spec:
       labels:
         {{- include "api-ui-worker.selectorLabels" . | nindent 8 }}
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
-      {{- with .Values.imagePullSecrets | default .Values.global.imagePullSecrets }}
+      {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
@@ -80,8 +80,8 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
       volumes:
         - name: config
-          secret:
-            secretName: {{ include "api-ui-worker.fullname" . }}-config
+          configMap:
+            name: {{ include "api-ui-worker.fullname" . }}-config
             defaultMode: 0440
         - name: artifacts
           emptyDir:

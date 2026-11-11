@@ -1,6 +1,6 @@
-# 代码分析代码工作区与上下文回执
+# 代码风险分析工作区与报告
 
-代码风险分析不再只消费 GitLab compare 返回的 diff。控制面在创建 run 时解析并固化每个仓库的 `cloneUrl`、`baseCommit`、`headCommit`，Worker 为本次 run 准备独立代码工作区，模型通过只读工具读取仓库文件。正式的代码风险分析 skill 尚未发布，当前执行的是内置上下文预览：模型只回传 `contextReceipt`，不产出风险结论。
+代码风险分析不再只消费 GitLab compare 返回的 diff。控制面在创建 run 时解析并固化每个仓库的 `cloneUrl`、`baseCommit`、`headCommit`，Worker 为本次 run 准备独立代码工作区，模型通过只读工具读取仓库文件。正式的 `code-risk-analysis` skill 已接入本地 Worker：模型输出四个风险分析区块，Worker 负责三次有界校验修正并注入确定性的仓库版本事实。
 
 ## 快照与固定版本
 
@@ -32,8 +32,9 @@
 
 - Pi 调用参数固定为 `--tools read,grep,find,ls`，不启用 bash、write 或 edit；不加载技能包。
 - `max_diff_chars` 是预置 diff 的总字符预算。超出预算时按整文件跳过并记录 `truncatedFiles`，不静默截断。
-- 占位 prompt 要求模型输出 YAML `contextReceipt`；Worker 校验 `receivedRepositories` 必须覆盖每个仓库的 `repositoryId` 与 `headCommit`，否则任务失败并保留工作区。
-- 成功结果由 Worker 合并确定性事实与模型回执，写入 `output_yaml`；控制面 `parse_risk_report` 识别 `contextReceipt`，前端显示“上下文预览（分析 skill 未启用）”。
+- `code-risk-analysis` skill 要求模型只输出 `changeOverview`、`risks`、`affectedCases`、`coverageGaps` 四个区块；Worker 校验 YAML/Schema、用例 ID、风险证据路径和仓库事实。
+- 输出校验失败时最多追加两次调用，将上一次完整输出和最多 20 条校验问题交回模型；模型服务、凭据、工作区准备和截断错误不进入输出修正。
+- 成功结果由 Worker 注入 `analyzedAt` 和固定仓库 manifest，写入 `output_yaml`；校验耗尽时任务失败并保留工作区。
 
 ## 配置
 
@@ -56,4 +57,4 @@
 - 大仓库依赖 partial clone 与 diff 预算；`git diff` 完整输出当前先读入内存再由预算裁剪，尚无 git 输出字节上限或流式裁剪。
 - 本期未限制 agent 工具调用次数，只有模型运行总时限、空闲超时与 diff 字符预算。
 - 多仓库 fail-fast：任一仓库准备失败会阻断整次分析。
-- 本期结果是上下文回执，不是正式风险报告；分析 skill 就绪后替换 prompt，代码工作区与凭据边界保持不变。
+- 代码风险分析的正式报告由 `code-risk-analysis` skill 生成；代码工作区、凭据和只读工具边界保持不变。

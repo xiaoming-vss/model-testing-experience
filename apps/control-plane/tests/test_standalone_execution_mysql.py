@@ -57,7 +57,7 @@ async def test_task_delete_sees_active_execution_after_stale_snapshot(mysql):  #
             )
             deletion = AsyncMock()
             service = GenerationTaskCommands(
-                AiGenerateTaskRepository(stale), None, access, deletion=deletion
+                AiGenerateTaskRepository(stale), access, deletion=deletion
             )
             with pytest.raises(AppError):
                 await service.delete("function", task_row["task_id"], "user")

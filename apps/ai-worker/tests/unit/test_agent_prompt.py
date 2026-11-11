@@ -46,6 +46,10 @@ class PiPromptTests(unittest.TestCase):
         self.assertIn("JSON.parse", FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION)
         self.assertIn("第二个 JSON 对象", FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION)
 
+    def test_structured_input_instruction_closes_answered_questions(self) -> None:
+        self.assertIn("用户已回答的问题必须先回写", FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION)
+        self.assertIn("questions/openQuestions 删除", FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION)
+
     def test_functional_detailed_cases_instruction_requires_single_cases_json_object(self) -> None:
         self.assertIn("cases 数组", FUNCTIONAL_DETAILED_CASES_JSON_ONLY_INSTRUCTION)
         self.assertIn("且只能是一个", FUNCTIONAL_DETAILED_CASES_JSON_ONLY_INSTRUCTION)

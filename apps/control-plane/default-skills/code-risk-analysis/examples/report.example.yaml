@@ -1,0 +1,18 @@
+changeOverview:
+  summary: "鉴权校验和登录失败分支发生变化"
+  affectedAreas: ["src/auth.py", "tests/test_login.py"]
+risks:
+  - level: high
+    reason: "鉴权逻辑在失败分支中提前返回，可能绕过权限校验"
+    location: "src/auth.py"
+    impact: "未授权用户可能访问受保护接口"
+    evidence: ["src/auth.py"]
+affectedCases:
+  - caseType: api
+    caseId: "ac-1"
+    title: "登录接口"
+    impact: "参数校验和失败响应可能变化"
+    reason: "调用路径使用了修改后的鉴权函数"
+coverageGaps:
+  - gap: "未覆盖权限不足时的失败路径"
+    suggestion: "增加权限不足和过期凭据的 API 用例"

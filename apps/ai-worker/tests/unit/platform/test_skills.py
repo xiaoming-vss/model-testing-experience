@@ -45,9 +45,14 @@ class SkillTests(unittest.TestCase):
         )
         self.assertEqual(required_skills(task), ["analyze-test-case-relations"])
         names.update(required_skills(task))
-        self.assertEqual(11, len(names))
-        # 代码上下文预览使用内置 prompt,不再依赖尚未发布的 code-risk-analysis skill。
-        self.assertEqual([], required_skills(self.task(task_type="code_risk_analysis")))
+        self.assertEqual(12, len(names))
+        self.assertEqual(
+            ["code-risk-analysis"], required_skills(self.task(task_type="code_risk_analysis"))
+        )
+        self.assertEqual(
+            ["repository-profile-analysis"],
+            required_skills(self.task(task_type="repository_profile")),
+        )
 
     def test_fresh_download_replaces_removed_files_and_preserves_other_task(self):
         with tempfile.TemporaryDirectory() as temp:

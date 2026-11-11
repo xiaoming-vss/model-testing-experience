@@ -54,6 +54,5 @@ ORDER BY TABLE_NAME, ORDINAL_POSITION;
 - `ai_generation_attempts`：阶段内的生成、修订或人工编辑尝试，保存冻结输入、输出、错误和可选执行关联；人工编辑可以没有 Worker 队列。
 - `ai_generate_stage_versions`：审核通过后产生的不可变正文及来源快照，版本号在任务阶段内不复用。
 - `ai_generate_version_imports`：正式资产导入来源，只引用一个已审核版本或一个独立候选尝试，并记录目标、变更用例和上游快照。
-- `ai_generate_task_source_archives`：UI 源码压缩包与 `stored_files` 的引用。
 
 阶段尝试不保存 `progress_json` 或 `remediation`；阶段不保存可推导的执行状态和审核副本。公开 AI 接口的 `runId` 是执行 ID，AI Worker 队列和回传的标识是 `attemptId`。执行身份与阶段模型的完整决策见 [ADR 0010](adr/0010-unified-ai-execution.md)，历史删除规则见[生成链文档](generation-chain.md#历史与删除)。

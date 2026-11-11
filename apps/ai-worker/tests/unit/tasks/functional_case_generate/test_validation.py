@@ -21,6 +21,35 @@ from tests.unit.tasks.functional_case_generate.fixtures import analysis, case, p
 
 
 class ContractsTests(unittest.TestCase):
+    def test_analysis_supports_compact_and_historical_rules_without_changing_content(self):
+        compact = {
+            "ruleId": "R01",
+            "category": "规则",
+            "name": "生成产物",
+            "confirmationStatus": "需求明确",
+            "applicableObject": "记录",
+            "preconditions": [],
+            "trigger": "开始处理",
+            "expectedBehavior": ["生成报告", "不覆盖历史报告"],
+            "sourceReferences": ["EV01"],
+            "relatedQuestionIds": [],
+        }
+        historical = {
+            **compact,
+            "prohibitedOrSkippedBehavior": ["不覆盖历史报告"],
+            "observableOutcome": "报告存在",
+        }
+        for rule in (compact, historical):
+            with self.subTest(rule=rule):
+                data = analysis()
+                data["businessRules"] = [rule]
+                result = json.loads(validate_output("requirement_analysis", json.dumps(data)))
+                self.assertEqual(result, data)
+
+        data["businessRules"] = [{**compact, "unknownField": "不允许"}]
+        with self.assertRaises(ValueError):
+            validate_output("requirement_analysis", json.dumps(data))
+
     def test_all_three_valid_and_required_nullable(self):
         for stage, output in [
             ("requirement_analysis", analysis()),
@@ -215,6 +244,8 @@ class RepairTests(unittest.IsolatedAsyncioTestCase):
             "bad",
             json.dumps(analysis()),
             json.dumps(points()),
+            json.dumps({"issues": []}),
+            json.dumps({"issues": []}),
             json.dumps({"cases": [case()]}),
         ]
 
@@ -239,7 +270,7 @@ class RepairTests(unittest.IsolatedAsyncioTestCase):
             on_requirement_analysis_result=outputs.append,
             on_case_names_result=outputs.append,
         )
-        self.assertEqual(len(calls), 4)
+        self.assertEqual(len(calls), 6)
         self.assertEqual(len(outputs), 2)
         self.assertEqual(json.loads(outputs[0]), analysis())
         self.assertEqual(len(json.loads(result.detailed_cases_output)["cases"]), 1)
@@ -313,6 +344,8 @@ class CheckpointValidationTests(unittest.TestCase):
 
                 async def run(self, prompt, **kwargs):
                     calls.append(prompt)
+                    if "【待核对测试点】" in prompt:
+                        return SimpleNamespace(content=json.dumps({"issues": []}))
                     return SimpleNamespace(
                         content="invalid" if len(calls) == 1 else json.dumps(valid)
                     )
@@ -353,9 +386,21 @@ class CheckpointValidationTests(unittest.TestCase):
                     task, datetime.now().astimezone(), progress.append
                 )
                 self.assertIsNone(result)
-                self.assertEqual(len(calls), 2)
+                self.assertEqual(len(calls), 4 if stage == "case_names" else 2)
                 self.assertIn("补充异常", calls[1])
                 self.assertEqual(progress[-1].stage_status, "waiting_review")
                 self.assertEqual(json.loads(progress[-1].intermediate_json_text)[field], valid)
                 self.assertTrue(all(not p.intermediate_json_text for p in progress[:-1]))
                 self.assertNotIn("revisionInstruction", progress[-1].intermediate_json_text)
+                if stage == "case_names":
+                    audit_events = [
+                        p
+                        for p in progress
+                        if p.result_summary_json
+                        and json.loads(p.result_summary_json)
+                        .get("outputValidation", {})
+                        .get("stage")
+                        == "case_names_audit"
+                    ]
+                    self.assertTrue(audit_events)
+                    self.assertTrue(all(p.current_stage == "case_names" for p in audit_events))

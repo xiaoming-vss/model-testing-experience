@@ -6,7 +6,6 @@ import {
   DownOutlined,
   ExclamationCircleOutlined,
   HistoryOutlined,
-  ReloadOutlined,
   RightOutlined,
 } from '@ant-design/icons'
 import { Alert, Button, Popconfirm, Popover, Select, Spin, Tag, Tooltip } from 'antd'
@@ -30,12 +29,12 @@ import { UiStageVisual } from './uiStageVisual/UiStageVisual'
 import { ChainVisualArtifact } from './ChainVisualArtifact'
 import { UiGenerationInputsModal } from './UiGenerationInputsModal'
 import { UiGenerationSourceTrace } from './UiGenerationSourceTrace'
+import type { UiGenerationSourceOptionsState } from './UiGenerationSourceConfig'
 import type { GenerationChainWorkspace } from '../hooks/useRequirementGenerationChain'
 import type { GenerationChainKind, GenerationChainStage, GenerationChainVersion } from '../api/generationChain.api'
 import type { UiGenerationStage } from '../utils/uiGenerationStage'
 import { generationChainApi } from '../api/generationChain.api'
 import { diffArtifact, diffStats } from '../utils/chainArtifact'
-import { generationFailureMeta } from '../utils/generationStageDisplay'
 import { GenerationArtifactFrame } from './GenerationArtifactFrame'
 import { GenerationArtifactDiff } from './GenerationArtifactDiff'
 
@@ -161,14 +160,14 @@ function ChainHeaderControls({ workspace, canWrite, inline = false }: {
   const upstreamMissing = upstreamFields.some(field => field.missing)
 
   const controls = <div className="gc-title-tools">
-    {!inline ? <div className="gc-version-buttons" role="group" aria-label="选择版本">
-      {versionOptions.length ? versionOptions.map(option => <button key={option.key} type="button"
+    {!inline && versionOptions.length ? <div className="gc-version-buttons" role="group" aria-label="选择版本">
+      {versionOptions.map(option => <button key={option.key} type="button"
         className={`gc-version-button${versionKey === option.key ? ' is-active' : ''}`}
         aria-pressed={versionKey === option.key}
         onClick={() => { setVersionKey(option.key); setDiffOpen(false) }}>
         {option.label}
         {option.key === latestId ? <span className="gc-latest-dot" aria-label="最新版本" /> : null}
-      </button>) : <span className="gc-version-empty">还没有产物版本</span>}
+      </button>)}
     </div> : null}
     {upstreamFields.length ? <Popover trigger="click" placement="bottomLeft" content={
       <div className="gc-upstream-panel">
@@ -188,30 +187,32 @@ function ChainHeaderControls({ workspace, canWrite, inline = false }: {
         <DownOutlined className="gc-upstream-caret" />
       </Button>
     </Popover> : null}
-    <Button size="small" type={isDiff ? 'primary' : 'default'} ghost={!isDiff} icon={<DiffOutlined />}
-      aria-pressed={isDiff} disabled={!comparisonId}
+    {comparisonId ? <Button size="small" type={isDiff ? 'primary' : 'default'} ghost={!isDiff} icon={<DiffOutlined />}
+      aria-pressed={isDiff}
       onClick={() => { setDiffOpen(!diffOpen); if (!diffOpen) setMode('raw') }}>
       对比 {comparisonContent ? (versionKey === 'draft' ? stage.draft?.baseVersionLabel : '上一版') : ''}
       {isDiff ? <span className="gc-diff-count"><b>+{diffCounts.add}</b><i>−{diffCounts.remove}</i></span> : null}
-    </Button>
-    <Popover open={historyOpen} onOpenChange={setHistoryOpen} trigger="click" placement="bottomRight"
+    </Button> : null}
+    {stage.versions.length ? <Popover open={historyOpen} onOpenChange={setHistoryOpen} trigger="click" placement="bottomRight"
       content={<VersionHistory stage={stage} versions={stage.versions} latestId={latestId}
         activeVersion={versionKey} canWrite={canWrite}
         onPick={id => { setVersionKey(id); setDiffOpen(false); setHistoryOpen(false) }}
         onDelete={id => deleteVersion.mutate(id)} />}>
       <Button size="small" icon={<HistoryOutlined />}>版本 {stage.versions.length}</Button>
-    </Popover>
+    </Popover> : null}
   </div>
 
   return inline ? controls : <><span ref={anchor} hidden />{target ? createPortal(controls, target) : null}</>
 }
 
-export function GenerationChainModal({ workspace, requirementId, projectId, open, onClose, onOpenLegacy, embedded = false, inspectorContainer, inspectorActionContainer, readingActionsContainer, showApiRunInInspector = false }: {
+export function GenerationChainModal({ workspace, requirementId, projectId, open, onClose, onOpenLegacy, embedded = false, inspectorContainer, inspectorActionContainer, readingActionsContainer, showApiRunInInspector = false, uiSourceOptions, onOpenProfile }: {
   embedded?: boolean
   showApiRunInInspector?: boolean
   inspectorContainer?: HTMLElement | null
   inspectorActionContainer?: HTMLElement | null
   readingActionsContainer?: HTMLElement | null
+  uiSourceOptions?: UiGenerationSourceOptionsState
+  onOpenProfile?: () => void
   workspace: GenerationChainWorkspace
   requirementId: string
   projectId: string
@@ -227,6 +228,8 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
     runStage, review, revise, importOpen, importVersion,
     importableVersionId, openImport, closeImport, busy, operationPending, detail,
   } = workspace
+  const stageHasContent = workingContent.trim().length > 0
+  const stageHasArtifact = Boolean(stage?.draft || stage?.versions.length) || stageHasContent
   const modePanelRef = useViewMotion(mode === 'visual' ? 0 : 1)
   const [inputsOpen, setInputsOpen] = useState(false)
   const access = useProjectAccess(projectId)
@@ -314,7 +317,7 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
       </div>
       {revisionOpen ? null : <div className="gc-modal-actions">
         {!embedded ? <Button onClick={onClose}>关闭</Button> : null}
-        {uiSurface && chain.runId ? <ProjectActionButton action="execute" disabled={busy || chain.busy} onClick={() => setInputsOpen(true)}>更换输入并重新生成</ProjectActionButton> : null}
+        {uiSurface && chain.runId ? <ProjectActionButton action="execute" disabled={busy} onClick={() => setInputsOpen(true)}>更换输入并重新生成</ProjectActionButton> : null}
         {canImport ? <ProjectActionButton action="execute" type="primary" ghost onClick={openImport}>导入此版本</ProjectActionButton> : null}
         {draftActions && canWrite && workspace.editingDirty ? <>
           <Button disabled={workspace.saveDraft.isPending} onClick={workspace.resetEditing}>撤销修改</Button>
@@ -324,11 +327,11 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
         {draftActions && !rejected ? <ProjectActionButton action="review" danger ghost disabled={!canReject} onClick={() => review.mutate({ action: 'reject' })}>审核不通过</ProjectActionButton> : null}
         {draftActions && !rejected ? <ProjectActionButton action="review" type={finalStage ? 'primary' : 'default'} disabled={!canApprove} title={workspace.editingDirty ? '请先保存修改' : undefined} onClick={() => review.mutate({ action: 'approve' })}>审核通过</ProjectActionButton> : null}
         {draftActions && !rejected && !finalStage ? <ProjectActionButton action="review" type="primary" disabled={!canApprove || busy} title={workspace.editingDirty ? '请先保存修改' : undefined} onClick={() => review.mutate({ action: 'approve', continueAfter: true })}>审核通过并继续 <RightOutlined /></ProjectActionButton> : null}
-        {!hasDraft && (!viewingDraft || invalidDraft) ? <Tooltip title={stage.blockedReason || (chain.active ? '当前链路正在执行' : undefined)}>
+        {!hasDraft && (!viewingDraft || invalidDraft) ? <Tooltip title={stage.blockedReason || (stage.state === 'running' ? '当前阶段正在执行' : undefined)}>
           <span tabIndex={stage.blockedReason ? 0 : undefined} aria-label={stage.blockedReason}>
             <ProjectActionButton action="execute" operation={stage.latestVersion ? 'run' : 'create'} type="primary"
               disabled={!canRun} loading={runStage.isPending} onClick={() => { if (uiSurface && !chain.runId) setInputsOpen(true); else runStage.mutate() }}>
-              {invalidDraft ? '重新生成此阶段' : stage.latestVersion ? uiSurface ? '使用原输入重新生成' : '按所选上游重新生成' : '运行此阶段'}
+              {invalidDraft ? '重新生成此阶段' : stage.latestVersion ? uiSurface ? '使用原输入重新生成' : '按所选上游重新生成' : stage.state === 'failed' ? '重新运行' : '运行此阶段'}
             </ProjectActionButton>
           </span>
         </Tooltip> : null}
@@ -348,7 +351,7 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
   />
   const readingControls = <>
     <ChainHeaderControls inline={embedded} workspace={workspace} canWrite={canWrite} />
-    {!embedded ? <ArtifactModeSwitch
+    {!embedded && stageHasArtifact ? <ArtifactModeSwitch
       value={mode}
       onChange={value => { setMode(value as 'visual' | 'raw'); setDiffOpen(false) }}
       options={modeOptions}
@@ -357,7 +360,7 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
     /> : null}
   </>
   // 画布内阅读时，视图切换与复制放进页面标题栏；阅读正文不再保留工具行。
-  const readingHeaderActions = embedded && open && readingActionsContainer
+  const readingHeaderActions = embedded && open && readingActionsContainer && stageHasArtifact
     ? createPortal(readingModeControls, readingActionsContainer)
     : null
   const revisionPanel = <>
@@ -369,7 +372,7 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
         onSubmit={connectionId => revise.mutate(connectionId)}
         onCancel={() => setRevisionOpen(false)} /> : null}
   </>
-  const inspector = embedded && open && inspectorContainer ? createPortal(<div className="gc-inspector-reading-tools">
+  const inspector = embedded && open && inspectorContainer && (stageHasArtifact || stage.upstreamStages.length) ? createPortal(<div className="gc-inspector-reading-tools">
     <section className="gc-inspector-section"><h3>阅读工具</h3>{readingControls}</section>
   </div>, inspectorContainer) : null
   const inspectorActions = embedded && (open || (showApiRunInInspector && chain.kind === 'api' && !hasDraft)) && inspectorActionContainer && !revisionOpen ? createPortal(
@@ -401,12 +404,11 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
     {!embedded ? readingControls : null}
     <div className={`gc-workspace revision-workspace${revisionOpen ? ' is-revising' : ''}`}>
       <div className={`${embedded ? "gc-reading-body" : "gc-source"}${revisionOpen ? " revision-source" : ""}`}>
-        {chain.sourceChanged ? <Alert showIcon type="warning" title={chain.kind === 'ui' ? '源码包或功能用例已更新。请在元素控件清单更换输入后重新生成；旧版本保留输入快照。' : '需求材料已更新，旧版本保留生成时的材料快照。'} /> : null}
+        {chain.sourceChanged ? <Alert showIcon type="warning" title={chain.kind === 'ui' ? '来源仓库或功能用例已更新。请在元素控件清单更换输入后重新生成；旧版本保留输入快照。' : '需求材料已更新，旧版本保留生成时的材料快照。'} /> : null}
         {invalidDraft ? <Alert showIcon type="warning" title="产物已作废"
           description={stage.draft?.invalidatedReason || '该产物依赖的上游版本已被删除，不能继续审核或优化，请重新生成。'} /> : null}
         {stage.state === 'failed' ? <Alert showIcon type="error"
-          title={stage.errorMessage || '阶段执行失败，Worker 未返回具体原因'}
-          description={generationFailureMeta(stage) || '请重新执行；若持续失败，请查看 Worker 日志。'} /> : null}
+          title={stage.errorMessage || '阶段执行失败，Worker 未返回具体原因'} /> : null}
         {stage.blockedReason ? <Alert showIcon type="info" title={stage.blockedReason} /> : null}
 
         {!embedded ? <div className="gc-artifact-head">
@@ -418,7 +420,9 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
         </div> : null}
 
         <div ref={modePanelRef} className={artifactScrollClass}>
-          {isDiff ? <GenerationArtifactDiff before={comparisonContent} after={displayedContent}
+          {!stageHasContent ? (stage.state === 'running' ? <div className="gc-stage-loading" role="status" aria-live="polite">
+            <Spin /><span>正在生成{stage.label}</span>
+          </div> : null) : isDiff ? <GenerationArtifactDiff before={comparisonContent} after={displayedContent}
             beforeLabel={stage.versions.find(version => version.versionId === comparisonId)?.label ?? '旧版本'}
             afterLabel={versionKey === 'draft' ? '待审核产物' : selectedVersion?.label ?? '当前内容'} /> : mode === 'raw'
             ? <div className="gc-raw-editor">
@@ -454,10 +458,11 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
       {revisionOpen ? <><RevisionDivider />{revisionPanel}</> : null}
     </div>
 
-    {stage.state === 'failed' ? <div className="gc-modal-meta is-danger"><ReloadOutlined /> 阶段执行失败，可在继续优化中重新生成。</div> : null}
     {open && inputsOpen && chain.kind === 'ui' ? <UiGenerationInputsModal key={chain.taskId}
-      requirementId={requirementId} projectId={projectId} taskId={chain.taskId!}
+      requirementId={requirementId}
       refreshInputs={Boolean(chain.runId)} source={chain.sourceInputs}
+      sourceOptions={uiSourceOptions ?? { loading: false }}
+      onOpenProfile={onOpenProfile}
       onClose={() => setInputsOpen(false)} onSubmit={inputs => runStage.mutateAsync(inputs)} /> : null}
     <GenerationChainImportModal workspace={workspace} open={importOpen} onClose={closeImport} />
   </GenerationArtifactFrame>{inspector}{inspectorActions}{readingHeaderActions}</>

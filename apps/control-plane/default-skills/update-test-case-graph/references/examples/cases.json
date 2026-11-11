@@ -1,0 +1,134 @@
+{
+  "cases": [
+    {
+      "case_id": "C01",
+      "case_module": "任务处理",
+      "case_title": "验证提交有效任务后生成待处理任务",
+      "case_type": "功能测试",
+      "priority": "2",
+      "precondition": [
+        "用户有提交权限，输入数据有效"
+      ],
+      "test_steps": [
+        "填写有效输入并提交任务"
+      ],
+      "expected_results": [
+        "生成唯一任务，状态为待处理"
+      ]
+    },
+    {
+      "case_id": "C02",
+      "case_module": "任务处理",
+      "case_title": "验证待处理任务执行成功后生成结果",
+      "case_type": "功能测试",
+      "priority": "2",
+      "precondition": [
+        "存在 C01 所描述业务状态的待处理任务，执行环境正常；无需先执行该测试"
+      ],
+      "test_steps": [
+        "启动处理并等待完成"
+      ],
+      "expected_results": [
+        "任务变为处理完成并生成结果"
+      ]
+    },
+    {
+      "case_id": "C03",
+      "case_module": "任务处理",
+      "case_title": "验证处理完成任务的详情展示结果",
+      "case_type": "功能测试",
+      "priority": "2",
+      "precondition": [
+        "任务已完成，可能来自正常处理或失败后重试成功"
+      ],
+      "test_steps": [
+        "打开该任务详情"
+      ],
+      "expected_results": [
+        "展示对应任务的结果和下载操作"
+      ]
+    },
+    {
+      "case_id": "C04",
+      "case_module": "任务处理",
+      "case_title": "验证任务处理失败后保留失败信息与重试操作",
+      "case_type": "功能测试",
+      "priority": "2",
+      "precondition": [
+        "存在待处理任务，可控制处理故障"
+      ],
+      "test_steps": [
+        "注入处理故障并启动处理",
+        "查看失败任务详情"
+      ],
+      "expected_results": [
+        "任务变为处理失败",
+        "保留任务，显示失败原因和重试操作"
+      ]
+    },
+    {
+      "case_id": "C05",
+      "case_module": "任务处理",
+      "case_title": "验证失败任务重试成功后恢复为处理完成",
+      "case_type": "功能测试",
+      "priority": "2",
+      "precondition": [
+        "任务处理失败，故障已解除，用户有重试权限"
+      ],
+      "test_steps": [
+        "对失败任务发起重试并等待完成"
+      ],
+      "expected_results": [
+        "原任务处理完成，生成可查看的结果"
+      ]
+    },
+    {
+      "case_id": "C06",
+      "case_module": "任务处理",
+      "case_title": "验证任务详情下载对应处理结果",
+      "case_type": "功能测试",
+      "priority": "2",
+      "precondition": [
+        "任务已完成，详情已展示结果，用户有下载权限"
+      ],
+      "test_steps": [
+        "在任务详情下载结果"
+      ],
+      "expected_results": [
+        "下载内容属于当前任务且与处理结果一致"
+      ]
+    },
+    {
+      "case_id": "C07",
+      "case_module": "账号资料",
+      "case_title": "验证账号资料展示已设置的头像",
+      "case_type": "功能测试",
+      "priority": "2",
+      "precondition": [
+        "账号已设置头像"
+      ],
+      "test_steps": [
+        "打开账号资料"
+      ],
+      "expected_results": [
+        "展示已设置的头像"
+      ]
+    },
+    {
+      "case_id": "C08",
+      "case_module": "任务处理",
+      "case_title": "验证无重试权限用户不能重试失败任务",
+      "case_type": "功能测试",
+      "priority": "2",
+      "precondition": [
+        "任务处理失败，当前用户有查看权限但没有重试权限"
+      ],
+      "test_steps": [
+        "打开失败任务详情并尝试重试"
+      ],
+      "expected_results": [
+        "不能发起重试，任务仍为失败"
+      ]
+    }
+  ]
+}

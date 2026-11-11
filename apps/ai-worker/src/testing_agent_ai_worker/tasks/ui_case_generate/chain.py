@@ -55,6 +55,7 @@ def execute_stage(
     skill_runner: Callable,
     validate_yaml: Callable[[str], int],
     yaml_instruction: str = "",
+    source_metadata: dict[str, Any] | None = None,
 ) -> TaskResult | None:
     if not task.checkpoint_enabled:
         raise ValueError("三阶段 UI 生成必须启用人工审核")
@@ -123,13 +124,16 @@ def execute_stage(
         artifact = validate_surface(parsed, cases)
 
     def report(event: dict) -> None:
+        intermediate = dict(config)
+        if source_metadata:
+            intermediate.update(source_metadata)
         progress_callback(
             TaskProgress(
                 task_id=task.task_id,
                 attempt_id=task.attempt_id,
                 current_stage=stage,
                 stage_status="running",
-                intermediate_json_text=json.dumps(config, ensure_ascii=False),
+                intermediate_json_text=json.dumps(intermediate, ensure_ascii=False),
                 result_summary_json=json.dumps(
                     {"uiWorkflowVersion": UI_WORKFLOW_VERSION, "outputValidation": event}
                 ),
@@ -203,6 +207,8 @@ def execute_stage(
             )
         )
     effective = {k: v for k, v in config.items() if k not in {"revisionInstruction", "resultYaml"}}
+    if source_metadata:
+        effective.update(source_metadata)
     if stage in UI_FIELDS:
         effective[UI_FIELDS[stage]] = artifact
         progress_callback(

@@ -25,18 +25,32 @@ it('展示全部事实，保留表格、示例和待确认含义，缺失值可�
   expect(within(facts).getByRole('button', { name: /转换类型的实际选项及各选项业务含义/ })).toBeVisible()
 })
 
-it('事实在结果内展开依据摘录，不再切换或显示原始材料', async () => {
+it('分类导航显示计数，选择分类后仅保留该类事实并同步详情', async () => {
+  const { user } = setup()
+  const rail = screen.getByRole('complementary', { name: '事实分类' })
+  expect(within(rail).getByRole('heading', { name: '来源文件' })).toBeVisible()
+  expect(within(rail).getByRole('button', { name: /全部事实/ })).toHaveAttribute('aria-pressed', 'true')
+  expect(within(rail).getByRole('button', { name: /入口/ })).toBeVisible()
+  expect(within(rail).getByRole('button', { name: /控件/ })).toBeVisible()
+  await user.click(within(rail).getByRole('button', { name: /入口/ }))
+  const facts = screen.getByRole('region', { name: '提取事实' })
+  expect(within(facts).getAllByRole('button', { name: /^查看依据：/ })).toHaveLength(1)
+  const detail = screen.getByRole('complementary', { name: '事实详情' })
+  expect(within(detail).getByText('数据管理 → 转换数据')).toBeVisible()
+})
+
+it('选中事实后在详情面板展示依据摘录，不再切换或显示原始材料', async () => {
   const artifact = structuredClone(extraction)
   artifact.extractedFacts[1].fact.sourceReferences[0].excerpt = '保留的依据摘录'
   const { user, facts } = setup(artifact)
+  const detail = screen.getByRole('complementary', { name: '事实详情' })
   const toggle = within(facts).getAllByRole('button', { name: /^查看依据：/ })[1]
   await user.click(toggle)
-  expect(toggle).toHaveAttribute('aria-expanded', 'true')
-  expect(within(facts).getByText('依据来源与摘录')).toBeVisible()
-  expect(facts.querySelector('blockquote')).not.toBeNull()
+  expect(toggle).toHaveAttribute('aria-pressed', 'true')
+  expect(within(detail).getByText('依据与摘录')).toBeVisible()
+  expect(detail.querySelector('blockquote')).not.toBeNull()
+  expect(within(detail).getByText('保留的依据摘录')).toBeVisible()
   expect(screen.queryByRole('region', { name: '材料内容' })).not.toBeInTheDocument()
-  await user.click(toggle)
-  expect(toggle).toHaveAttribute('aria-expanded', 'false')
 })
 
 it('问题保留影响说明，不显示材料对照', async () => {
@@ -76,8 +90,9 @@ it('待确认分类仅显示剩余缺口，全部解决后自动回到事实并�
   artifact.extractedFacts[0].fact.value = '上游算子为 hoi_tool'
   rerender(<TestThemeProvider><RequirementMaterialComparison content={structuredClone(artifact)} /></TestThemeProvider>)
   expect(screen.queryByText('待确认问题', { exact: true })).toBeNull()
-  expect(screen.getByRole('region', { name: '提取事实' })).toBeVisible()
-  expect(screen.getByText('上游算子为 hoi_tool')).toBeVisible()
+  const facts = screen.getByRole('region', { name: '提取事实' })
+  expect(facts).toBeVisible()
+  expect(within(facts).getByText('上游算子为 hoi_tool')).toBeVisible()
   expect(screen.queryByText('已答复')).toBeNull()
 })
 

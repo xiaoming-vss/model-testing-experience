@@ -117,6 +117,40 @@ class RepairTests(unittest.TestCase):
             self.assertIn('"const": "2.0"', instruction)
             self.assertIn("conditionRuleIds", instruction)
 
+    def test_confirmed_answer_repairs_stale_open_question_reference(self):
+        with tempfile.TemporaryDirectory() as root:
+            good = example("requirement-understanding")
+            bad = deepcopy(good)
+            fact = bad["businessRules"][0]["expectedBehavior"][0]
+            fact["confirmationStatus"] = "confirmed"
+            fact["relatedQuestionIds"] = [bad["questions"][0]["id"]]
+            repaired = deepcopy(good)
+
+            def remove_question_references(value):
+                if isinstance(value, dict):
+                    if "relatedQuestionIds" in value:
+                        value["relatedQuestionIds"] = [
+                            question_id
+                            for question_id in value["relatedQuestionIds"]
+                            if question_id != good["questions"][0]["id"]
+                        ]
+                    for child in value.values():
+                        remove_question_references(child)
+                elif isinstance(value, list):
+                    for child in value:
+                        remove_question_references(child)
+
+            remove_question_references(repaired)
+            repaired["questions"] = repaired["questions"][1:]
+            runner = Mock(side_effect=[json.dumps(bad), json.dumps(repaired)])
+            result = self.execute(root, "feature_understanding", runner, [])
+            self.assertEqual(runner.call_count, 2)
+            self.assertEqual(json.loads(result.output_yaml), repaired)
+            self.assertIn(
+                "已确认内容不能继续引用未解决问题",
+                runner.call_args_list[1].kwargs["extra_instruction"],
+            )
+
     def test_old_version_requires_model_correction_instead_of_automatic_conversion(self):
         with tempfile.TemporaryDirectory() as root:
             current = example("requirement-understanding")

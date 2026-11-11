@@ -1,31 +1,10 @@
 import { Alert, Card, Empty, Space, Table, Tag, Typography } from 'antd'
 import type { TableProps } from 'antd'
-import type {
-  RepositoryProfile,
-  RepositoryProfileRepository,
-  RepositoryProfileRole,
-} from '../types'
+import type { RepositoryProfile, RepositoryProfileRepository } from '../types'
+import { formatProfileConfidence, repositoryRoleMeta } from '../utils/repositoryProfileDisplay'
 import '../styles/repository-profile.css'
 
 const { Text, Paragraph } = Typography
-
-const roleMeta: Record<RepositoryProfileRole, { label: string; color: string }> = {
-  frontend: { label: '前端', color: 'blue' },
-  backend: { label: '后端', color: 'green' },
-  fullstack: { label: '全栈', color: 'purple' },
-  infra: { label: '基础设施', color: 'orange' },
-  test: { label: '测试', color: 'cyan' },
-  unknown: { label: '未知', color: 'default' },
-}
-
-function roleLabel(role: string) {
-  return roleMeta[role as RepositoryProfileRole] ?? { label: role || '未知', color: 'default' }
-}
-
-function confidenceText(value: number) {
-  if (!Number.isFinite(value)) return '-'
-  return `${Math.round(value * 100)}%`
-}
 
 export function RepositoryProfileReportView({
   profile,
@@ -53,7 +32,7 @@ export function RepositoryProfileReportView({
       key: 'role',
       width: 112,
       render: (_, repository) => {
-        const meta = roleLabel(repository.role)
+        const meta = repositoryRoleMeta(repository.role)
         return <Tag color={meta.color}>{meta.label}</Tag>
       },
     },
@@ -124,7 +103,7 @@ function DescriptionsGrid({ repository }: { repository: RepositoryProfileReposit
       </div>
       <div>
         <dt>置信度</dt>
-        <dd>{confidenceText(repository.confidence)}</dd>
+        <dd>{formatProfileConfidence(repository.confidence)}</dd>
       </div>
       <div>
         <dt>技术栈</dt>

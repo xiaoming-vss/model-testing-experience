@@ -73,7 +73,6 @@ async def test_legacy_ai_queue_is_rejected_without_mutation(mysql, monkeypatch):
                 service.llm_credentials(queue["task_id"]),
                 service.gitlab_credentials(queue["task_id"]),
                 service.requirement_document(queue["task_id"]),
-                service.source_archive(queue["task_id"]),
             ):
                 with pytest.raises(AppError) as rejected:
                     await action

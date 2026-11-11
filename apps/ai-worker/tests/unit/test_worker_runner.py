@@ -195,16 +195,12 @@ class WorkerRunnerTests(unittest.TestCase):
             ),
         )
 
-        with self.assertLogs(
-            "testing_agent_ai_worker.worker.runner", level="ERROR"
-        ) as logs:
+        with self.assertLogs("testing_agent_ai_worker.worker.runner", level="ERROR") as logs:
             result = runner.process_task(self._make_task())
 
         self.assertEqual(TaskStatus.SUCCESS, result.status)
         self.assertEqual([], sink.result_calls)
-        self.assertIn(
-            "task=task-1 attempt=run-1 error=RuntimeError", "\n".join(logs.output)
-        )
+        self.assertIn("task=task-1 attempt=run-1 error=RuntimeError", "\n".join(logs.output))
 
     def test_process_task_sends_heartbeat_while_executor_is_running(self) -> None:
         sink = _RecordingSink()

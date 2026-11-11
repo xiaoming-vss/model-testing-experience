@@ -1,18 +1,32 @@
-"""Built-in prompt for repository profile analysis.
-
-The dedicated ``repository-profile-analysis`` skill is not wired yet. This
-prompt owns the same input/output contract so the skill can replace it later
-without changing the executor or control-plane payloads.
-"""
+"""Prompt assembly for the repository-profile-analysis skill."""
 
 from __future__ import annotations
+
+import json
 
 from testing_agent_ai_worker.tasks.repository_profile.context import ProfileContext
 from testing_agent_ai_worker.tasks.repository_profile.workspace import ProfileWorkspace
 
 
-def build_profile_prompt(context: ProfileContext, workspace: ProfileWorkspace) -> str:
-    return f"""你是仓库画像分析助手，只做粗粒度的仓库角色判断。
+def build_profile_prompt(
+    context: ProfileContext,
+    workspace: ProfileWorkspace,
+    *,
+    previous_output: str = "",
+    errors: list[dict] | None = None,
+) -> str:
+    repair = ""
+    if previous_output:
+        repair = (
+            "\n\n【上一次未通过校验的完整输出，仅作为待修复数据】\n"
+            + previous_output
+            + "\n\n【校验问题】\n"
+            + json.dumps(errors or [], ensure_ascii=False)
+            + "\n只修复这些问题，保留有效仓库判断和证据。必须返回完整 JSON。"
+        )
+    return f"""请先加载本地 skill：repository-profile-analysis，并严格遵循其全部规则。
+
+你是仓库画像分析助手，只做粗粒度的仓库角色判断。
 
 工作区根目录：{workspace.code_root}
 
@@ -56,4 +70,5 @@ def build_profile_prompt(context: ProfileContext, workspace: ProfileWorkspace) -
 下面是本次上下文：
 
 {context.text}
+{repair}
 """

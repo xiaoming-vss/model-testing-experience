@@ -11,6 +11,8 @@ import {
   type GenerationChainKind,
   type GenerationChainStage,
   type GenerationChainVersionDetail,
+  type UiGenerationRunInputs,
+  type UiGenerationSourceCommitMode,
 } from '../api/generationChain.api'
 import { usePersonalLlmChoice } from './usePersonalLlmChoice'
 import { useRevisionAttachments } from './useRevisionAttachments'
@@ -341,21 +343,56 @@ export function useRequirementGenerationChain({
     })
   }
 
-  const runStage = useMutation({
-    mutationFn: async (inputs: { refreshInputs?: boolean; functionCaseIds?: string[] } | void) => {
-      if (!selected) throw new Error('请选择阶段')
-      const choice = selected.kind === 'api'
-        ? await personalLlm.chooseRun(false, { label: '生成要求（选填）', placeholder: '例如：只处理登录接口，覆盖鉴权失败和参数边界' })
-        : { connectionId: await personalLlm.choose({ alwaysConfirm: true }), instruction: '' }
-      const params = {
-        connectionId: choice.connectionId,
-        ...(selected.kind === 'api' ? { instruction: choice.instruction.trim() } : {}),
-        upstreamVersions: upstream,
-        ...inputs,
-      }
-      const requestId = pendingRun.forInput(JSON.stringify({ requirementId, ...selected, ...params }))
-      return generationChainApi.run(requirementId, selected.kind, selected.stage, { ...params, requestId })
+  const runGenerationStage = async (
+    kind: GenerationChainKind,
+    stageName: string,
+    inputs?: {
+      refreshInputs?: boolean
+      functionCaseIds?: string[]
+      sourceProfileVersionId?: string
+      sourceRepositoryId?: string
+      sourceCommitMode?: UiGenerationSourceCommitMode
     },
+    stageUpstream: Record<string, string> = upstream,
+  ) => {
+    const choice = kind === 'api'
+      ? await personalLlm.chooseRun(false, { label: '生成要求（选填）', placeholder: '例如：只处理登录接口，覆盖鉴权失败和参数边界' })
+      : { connectionId: await personalLlm.choose({ alwaysConfirm: true }), instruction: '' }
+    const params = {
+      connectionId: choice.connectionId,
+      ...(kind === 'api' ? { instruction: choice.instruction.trim() } : {}),
+      upstreamVersions: stageUpstream,
+      ...inputs,
+    }
+    const requestId = pendingRun.forInput(JSON.stringify({ requirementId, kind, stage: stageName, ...params }))
+    return generationChainApi.run(requirementId, kind, stageName, { ...params, requestId })
+  }
+
+  const runStage = useMutation({
+    mutationFn: async (inputs: {
+      refreshInputs?: boolean
+      functionCaseIds?: string[]
+      sourceProfileVersionId?: string
+      sourceRepositoryId?: string
+      sourceCommitMode?: UiGenerationSourceCommitMode
+    } | void) => {
+      if (!selected) throw new Error('请选择阶段')
+      return runGenerationStage(selected.kind, selected.stage, inputs ?? undefined)
+    },
+    onSuccess: () => {
+      pendingRun.clear()
+      invalidate()
+      message.success('已开始生成')
+    },
+    onError: reason => {
+      if (getErrorMessage(reason) !== '已取消操作') message.error(getErrorMessage(reason))
+    },
+  })
+
+  // UI 分组是唯一入口：未选中具体阶段时也能从 ui_surface 启动，首阶段没有上游版本。
+  const runUiSurface = useMutation({
+    mutationFn: async (inputs: UiGenerationRunInputs) =>
+      runGenerationStage('ui', 'ui_surface', inputs, {}),
     onSuccess: () => {
       pendingRun.clear()
       invalidate()
@@ -552,6 +589,7 @@ export function useRequirementGenerationChain({
 
   const operationPending =
     runStage.isPending ||
+    runUiSurface.isPending ||
     review.isPending ||
     saveDraft.isPending ||
     revise.isPending ||
@@ -596,6 +634,7 @@ export function useRequirementGenerationChain({
     clearStage,
     refresh,
     runStage,
+    runUiSurface,
     review,
     editing,
     editingDirty,

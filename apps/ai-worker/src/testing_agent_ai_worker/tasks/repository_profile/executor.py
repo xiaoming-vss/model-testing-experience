@@ -141,22 +141,55 @@ class RepositoryProfileExecutor(TaskExecutor):
                     stage_status="running",
                 )
             )
-            prompt = self.prompt_builder(context, prepared)
             with task_config_path(agent_config=self.agent_config, task=task) as config_path:
-                raw_output = self._resolve_runner_result(
-                    self.prompt_runner(
-                        input_text=prompt,
-                        session_key=task.session_key,
-                        config_path=config_path,
-                        workspace=str(prepared.code_root),
-                        tools=READ_ONLY_TOOLS,
+                raw_output = ""
+                errors = None
+                profile = None
+                for attempt in range(3):
+                    if attempt:
+                        progress_callback(
+                            TaskProgress(
+                                task_id=task.task_id,
+                                attempt_id=task.attempt_id,
+                                current_stage="profiling",
+                                stage_status="repairing",
+                                result_summary_json=canonical_profile_json(
+                                    {
+                                        "outputValidation": {
+                                            "repairAttempt": attempt,
+                                            "maxRepairs": 2,
+                                        }
+                                    }
+                                ),
+                            )
+                        )
+                    raw_output = self._resolve_runner_result(
+                        self.prompt_runner(
+                            input_text=self.prompt_builder(
+                                context,
+                                prepared,
+                                previous_output=raw_output if errors else "",
+                                errors=errors,
+                            ),
+                            session_key=task.session_key,
+                            config_path=config_path,
+                            workspace=str(prepared.code_root),
+                            tools=READ_ONLY_TOOLS,
+                        )
                     )
-                )
-            profile = validate_profile_output(
-                raw_output,
-                prepared,
-                max_output_chars=self.profile_config.max_output_chars,
-            )
+                    try:
+                        profile = validate_profile_output(
+                            raw_output,
+                            prepared,
+                            max_output_chars=self.profile_config.max_output_chars,
+                        )
+                        break
+                    except ProfileContractError as exc:
+                        errors = [{"path": "$", "code": "profile_contract", "message": str(exc)}]
+                        if attempt == 2:
+                            raise
+                if profile is None:
+                    raise ProfileContractError("仓库画像输出校验失败")
             result_summary = build_task_result_summary(
                 task=task,
                 status=TaskStatus.SUCCESS,

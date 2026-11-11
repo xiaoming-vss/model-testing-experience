@@ -89,7 +89,6 @@ async def test_standalone_api_end_to_end(mysql, monkeypatch, two_stage):  # noqa
             ids = iter(("api-e2e-run", "api-e2e-worker"))
             launcher = GenerationRunLauncher(
                 repository=repository,
-                source_archive_repository=None,
                 access=access,
                 id_factory=lambda: next(ids),
             )
@@ -108,7 +107,7 @@ async def test_standalone_api_end_to_end(mysql, monkeypatch, two_stage):  # noqa
                 sa.select(WorkerTask).where(WorkerTask.task_id == "api-e2e-worker")
             )
             assert queue.run_id != launched["runId"]
-            commands = GenerationTaskCommands(repository, None, access)
+            commands = GenerationTaskCommands(repository, access)
             with pytest.raises(AppError):
                 await commands.delete("api", task["task_id"], "actor")
             await session.rollback()
@@ -213,7 +212,7 @@ async def test_standalone_api_end_to_end(mysql, monkeypatch, two_stage):  # noqa
                 "api-e2e-run", target["collection_id"], True, "actor"
             )
             assert result["run"]["importStatus"] == "imported"
-            history = await GenerationQueries(repository, None, access).list_run_summaries(
+            history = await GenerationQueries(repository, access).list_run_summaries(
                 "api", task["task_id"], "actor"
             )
             assert history["total"] == 1 and history["items"][0]["importStatus"] == "imported"

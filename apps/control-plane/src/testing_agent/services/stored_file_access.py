@@ -88,12 +88,6 @@ async def require_file_resource(session: AsyncSession, row: StoredFile) -> None:
             ):
                 return
         raise ErrNotFound()
-    elif row.resource_type == "ui_source_archive" and row.purpose == "ui_source_archive":
-        query = select(AiGenerateTask.task_id).where(
-            AiGenerateTask.task_id == row.resource_id,
-            AiGenerateTask.project_id == row.project_id,
-            AiGenerateTask.task_type == "ui_case_generate",
-        )
     elif row.resource_type == "project_skill" and row.purpose == "project_skill":
         skill = await session.scalar(
             select(ProjectSkillSpace)

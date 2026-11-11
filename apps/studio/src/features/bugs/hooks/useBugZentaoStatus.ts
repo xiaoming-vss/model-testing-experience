@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { message } from '@/shared/utils/feedback'
+import { randomId } from '@/shared/utils/crypto'
 import { getAuthenticatedUserId } from '@/features/auth/api/auth.api'
 import { bugsApi } from '../api/bugs.api'
 import { getErrorMessage } from '@/utils/format'
@@ -23,7 +24,7 @@ export function useBugZentaoStatus(bugId: string) {
     seen.current.set(result.jobId, result.jobStatus)
     const actor = getAuthenticatedUserId()
     followUp.current = syncAfterFields
-      ? { actor, jobId: result.jobId, requestId: crypto.randomUUID(), started: false } : null
+      ? { actor, jobId: result.jobId, requestId: randomId(), started: false } : null
     saveFollowUp(actor, bugId, followUp.current)
     client.setQueryData<BugZentaoPush>(['bugZentaoPush', bugId], (current) => current && ({
       ...current, ready: false, activeJob: result, latestJob: result,
@@ -76,7 +77,7 @@ export function useBugZentaoStatus(bugId: string) {
 
   function requestId(type: string, body: object) {
     const input = JSON.stringify({ bugId, type, body })
-    if (request.current?.input !== input) request.current = { input, id: crypto.randomUUID() }
+    if (request.current?.input !== input) request.current = { input, id: randomId() }
     return request.current.id
   }
 

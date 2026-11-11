@@ -1,8 +1,6 @@
-import io
 import sys
 import tempfile
 import unittest
-import zipfile
 from datetime import datetime
 from pathlib import Path
 
@@ -13,14 +11,15 @@ if str(SRC_DIR) not in sys.path:
 
 from testing_agent_ai_worker.config.models import PiConfig
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskStatus
-from testing_agent_ai_worker.models.task import Task, TaskPayload
+from testing_agent_ai_worker.models.task import RepositoryBinding, Task, TaskPayload
 from testing_agent_ai_worker.tasks.ui_case_generate.executor import (
     UiCaseExecutor,
     _validate_ui_cases_yaml,
     _validate_ui_stage_yaml,
 )
-from testing_agent_ai_worker.tasks.ui_case_generate.source_archive import (
-    PlatformSourceArchiveDownloader,
+from testing_agent_ai_worker.tasks.ui_case_generate.repository_source import (
+    RepositorySource,
+    RepositorySourceError,
 )
 
 VALID_YAML = """- name: 登录成功
@@ -64,16 +63,29 @@ ALL_KEYWORDS_YAML = """- name: 所有关键字字段规则
 """
 
 
-def _zip_bytes(files: dict[str, str]) -> bytes:
-    buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w") as archive:
-        for name, content in files.items():
-            archive.writestr(name, content)
-    return buffer.getvalue()
+class FakeRepositoryPreparer:
+    def __init__(self, run_root: Path, *, error: Exception | None = None) -> None:
+        self.run_root = run_root
+        self.error = error
+        self.credentials: list[object] = []
+
+    def prepare(self, *, task: Task, credentials) -> RepositorySource:
+        self.credentials.extend(credentials)
+        if self.error is not None:
+            raise self.error
+        source_root = self.run_root / "source"
+        source_root.mkdir(parents=True, exist_ok=True)
+        (source_root / "Login.tsx").write_text("export const Login = () => null", encoding="utf-8")
+        return RepositorySource(
+            binding=task.bindings[0],
+            run_root=self.run_root,
+            source_root=source_root,
+            commit="a1b2c3d",
+        )
 
 
 class UiCaseExecutorTests(unittest.TestCase):
-    def _task(self, *, source_archive_download_url: str = "/source.zip") -> Task:
+    def _task(self) -> Task:
         return Task(
             task_id="ui-task-1",
             attempt_id="run-1",
@@ -84,37 +96,62 @@ class UiCaseExecutorTests(unittest.TestCase):
             requirement_id="requirement-1",
             payload=TaskPayload(
                 openapi_content="",
-                source_archive_download_url=source_archive_download_url,
                 source_content="不得传入技能",
                 extra_instruction="覆盖登录流程",
+                metadata={
+                    "sourceKind": "repository",
+                    "sourceRepository": {
+                        "bindingId": "binding-1",
+                        "repositoryId": "repo-1",
+                        "pathWithNamespace": "team/web-admin",
+                        "branch": "main",
+                        "commit": "a1b2c3d",
+                    },
+                    "sourceCommit": "a1b2c3d",
+                },
             ),
+            bindings=[
+                RepositoryBinding(
+                    bindingId="binding-1",
+                    repositoryId="repo-1",
+                    pathWithNamespace="team/web-admin",
+                    branch="main",
+                    headCommit="a1b2c3d",
+                    cloneUrl="https://gitlab.example.com/team/web-admin.git",
+                )
+            ],
+            gitlab_credentials_url="/internal/ai-worker/tasks/worker-task-1/gitlab-credentials",
         )
 
-    def test_execute_downloads_extracts_and_returns_skill_yaml(self) -> None:
+    def _executor(
+        self, temp_dir: str, *, preparer=None, skill_runner, error=None
+    ) -> UiCaseExecutor:
+        run_root = Path(temp_dir) / "run"
+        return UiCaseExecutor(
+            agent_config=PiConfig(runtime_root=temp_dir),
+            repository_source_preparer=preparer or FakeRepositoryPreparer(run_root, error=error),
+            credentials_fetcher=lambda task: ["credential"],
+            skill_runner=skill_runner,
+        )
+
+    def test_execute_prepares_repository_and_returns_skill_yaml(self) -> None:
         captured: dict[str, object] = {}
         progress: list[TaskProgress] = []
-
-        class Client:
-            def get_signed_file_bytes(self, url: str) -> bytes:
-                self.url = url
-                return _zip_bytes({"src/Login.tsx": "export const Login = () => null"})
 
         def fake_skill_runner(**kwargs):
             captured.update(kwargs)
             return VALID_YAML
 
         temp_dir = self.enterContext(tempfile.TemporaryDirectory())
-        executor = UiCaseExecutor(
-            agent_config=PiConfig(runtime_root=temp_dir),
-            source_downloader=PlatformSourceArchiveDownloader(Client()),
-            skill_runner=fake_skill_runner,
-        )
+        executor = self._executor(temp_dir, skill_runner=fake_skill_runner)
         result = executor.execute(self._task(), datetime.now().astimezone(), progress.append)
 
         self.assertEqual(TaskStatus.SUCCESS, result.status)
         self.assertEqual(VALID_YAML, result.output_yaml)
         self.assertEqual("generate-ui-test-case", captured["skill_name"])
         self.assertIn("sourceRoot", result.intermediate_json_text)
+        self.assertIn('"sourceKind": "repository"', result.intermediate_json_text)
+        self.assertIn('"repositoryId": "repo-1"', result.intermediate_json_text)
         self.assertIn("登录流程", captured["input_text"])
         self.assertIn("始终返回 YAML list", captured["input_text"])
         self.assertNotIn(
@@ -123,50 +160,32 @@ class UiCaseExecutorTests(unittest.TestCase):
         self.assertNotIn("不得传入技能", captured["input_text"])
         self.assertEqual(1, len(progress))
         self.assertEqual("ui_case_generating", progress[0].current_stage)
+        self.assertFalse((Path(temp_dir) / "run").exists())
 
-    def test_execute_fails_when_archive_is_missing(self) -> None:
-        class Downloader:
-            def download_and_extract(self, **kwargs):
-                raise ValueError("ui_case_generate 缺少 sourceArchiveDownloadUrl")
-
-        executor = UiCaseExecutor(
-            agent_config=PiConfig(),
-            source_downloader=Downloader(),
+    def test_execute_fails_when_repository_source_cannot_be_prepared(self) -> None:
+        temp_dir = self.enterContext(tempfile.TemporaryDirectory())
+        executor = self._executor(
+            temp_dir,
+            error=RepositorySourceError("UI 用例生成缺少仓库来源绑定"),
             skill_runner=lambda **kwargs: VALID_YAML,
         )
-        result = executor.execute(
-            self._task(source_archive_download_url=""), datetime.now().astimezone(), lambda _: None
-        )
+        result = executor.execute(self._task(), datetime.now().astimezone(), lambda _: None)
         self.assertEqual(TaskStatus.FAILED, result.status)
-        self.assertIn("sourceArchiveDownloadUrl", result.error_message or "")
+        self.assertIn("缺少仓库来源绑定", result.error_message or "")
 
     def test_execute_never_returns_blank_failure_reason_for_timeout(self) -> None:
-        class Downloader:
-            def download_and_extract(self, **kwargs):
-                return Path("D:/tmp/source")
-
         def timed_out(**kwargs):
             raise TimeoutError()
 
-        executor = UiCaseExecutor(
-            agent_config=PiConfig(),
-            source_downloader=Downloader(),
-            skill_runner=timed_out,
-        )
+        temp_dir = self.enterContext(tempfile.TemporaryDirectory())
+        executor = self._executor(temp_dir, skill_runner=timed_out)
         result = executor.execute(self._task(), datetime.now().astimezone(), lambda _: None)
         self.assertEqual(TaskStatus.FAILED, result.status)
         self.assertEqual("UI 用例生成执行失败，未返回错误信息", result.error_message)
 
     def test_execute_fails_when_skill_output_is_not_a_complete_yaml_case(self) -> None:
-        class Downloader:
-            def download_and_extract(self, **kwargs):
-                return Path("D:/tmp/source")
-
-        executor = UiCaseExecutor(
-            agent_config=PiConfig(),
-            source_downloader=Downloader(),
-            skill_runner=lambda **kwargs: "- name: incomplete",
-        )
+        temp_dir = self.enterContext(tempfile.TemporaryDirectory())
+        executor = self._executor(temp_dir, skill_runner=lambda **kwargs: "- name: incomplete")
         result = executor.execute(self._task(), datetime.now().astimezone(), lambda _: None)
         self.assertEqual(TaskStatus.FAILED, result.status)
         self.assertIn("缺少必填字段", result.error_message or "")
@@ -244,19 +263,6 @@ class UiCaseExecutorTests(unittest.TestCase):
             _validate_ui_cases_yaml(VALID_YAML.replace("      continueOnFailure: false\n", "", 1))
         with self.assertRaisesRegex(ValueError, "缺少必填字段"):
             _validate_ui_cases_yaml(VALID_YAML.replace("      enabled: true\n", "", 1))
-
-    def test_downloader_rejects_path_traversal(self) -> None:
-        class Client:
-            def get_signed_file_bytes(self, url: str) -> bytes:
-                return _zip_bytes({"../escape.ts": "export {}"})
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            with self.assertRaisesRegex(ValueError, "unsafe path"):
-                PlatformSourceArchiveDownloader(Client()).download_and_extract(
-                    source_archive_download_url="/source.zip",
-                    task=self._task(),
-                    workspace=Path(temp_dir),
-                )
 
 
 if __name__ == "__main__":

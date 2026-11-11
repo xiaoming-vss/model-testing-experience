@@ -20,17 +20,69 @@ class ChainModel(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
 
 
-class ChainSourceArchiveView(ChainModel):
-    file_id: str = ""
-    filename: str = ""
-    sha256: str = ""
-    size_bytes: int | None = None
+class ChainSourceRepositoryView(ChainModel):
+    repository_id: str = ""
+    path_with_namespace: str = ""
+    branch: str = ""
+    commit: str = ""
+    commit_mode: str = ""
+    profile_version_id: str = ""
+    profile_version_no: int = 0
+    resolved_at: datetime | str | None = None
 
 
 class ChainSourceInputsView(ChainModel):
+    source_kind: Literal["repository"] = "repository"
+    repository: ChainSourceRepositoryView
     # Formal functional cases are free-form imported content and stay untyped here.
-    archive: ChainSourceArchiveView = Field(default_factory=ChainSourceArchiveView)
     cases: list[Any] = Field(default_factory=list)
+
+
+class UiSourceRepositoryOption(ChainModel):
+    repository_id: str
+    path_with_namespace: str = ""
+    role: str = "unknown"
+    confidence: float | None = None
+    responsibility_summary: str = ""
+    tech_stack: list[str] = Field(default_factory=list)
+    key_paths: list[str] = Field(default_factory=list)
+    branch: str = ""
+    commit: str = ""
+    is_frontend: bool = False
+    available: bool = False
+    profile_error: str = ""
+
+
+class UiSourceProfileVersion(ChainModel):
+    version_id: str
+    version_no: int
+    label: str = ""
+    source_run_id: str = ""
+    created_at: datetime | str | None = None
+    overall_summary: str = ""
+    repositories: list[UiSourceRepositoryOption] = Field(default_factory=list)
+    default_repository_id: str = ""
+
+
+class UiGenerationSourceOptions(ChainModel):
+    profile_versions: list[UiSourceProfileVersion] = Field(default_factory=list)
+    default_profile_version_id: str = ""
+    default_repository_id: str = ""
+
+
+class UiGenerationSourceCheckRequest(ChainModel):
+    profile_version_id: str = Field(min_length=1, max_length=64)
+    repository_id: str = Field(min_length=1, max_length=64)
+    pinned_commit: str = Field(min_length=1, max_length=128)
+    gitlab_connection_id: str = Field(default="", max_length=64)
+
+
+class UiGenerationSourceCheck(ChainModel):
+    repository_id: str
+    branch: str
+    pinned_commit: str
+    current_commit: str
+    changed: bool
 
 
 class ChainStageVersionSummary(ChainModel):
@@ -140,6 +192,11 @@ class GenerationChainRunRequest(ChainModel):
     instruction: str | None = None
     config_json: Any | None = None
     upstream_versions: dict[str, str] = Field(default_factory=dict)
+    # UI surface only: the selected profile pin. Other stages and kinds reject them.
+    source_profile_version_id: str | None = Field(default=None, max_length=64)
+    source_repository_id: str | None = Field(default=None, max_length=64)
+    source_commit_mode: Literal["profile", "latest"] = "profile"
+    gitlab_connection_id: str = Field(default="", max_length=64)
 
 
 class GenerationChainRevisionRequest(ChainModel):

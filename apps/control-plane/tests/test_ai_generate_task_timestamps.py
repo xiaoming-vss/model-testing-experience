@@ -61,12 +61,6 @@ class TaskQueryRepository:
             return [self.task]
         return []
 
-    async def get_source_archive(self, _task_id):
-        return None
-
-    async def list_source_archives(self, _task_ids):
-        return {}
-
 
 @pytest.mark.parametrize(
     ("kind", "task_type"),
@@ -80,7 +74,7 @@ class TaskQueryRepository:
 async def test_task_list_and_detail_queries_include_timestamps(kind, task_type):
     task = make_task(task_type)
     repository = TaskQueryRepository(task)
-    service = GenerationQueries(repository, repository, GenerationAccess(repository))
+    service = GenerationQueries(repository, GenerationAccess(repository))
 
     listed = await service.list(kind, "project-1", "user-1")
     detail = await service.get(kind, "task-1", "user-1")

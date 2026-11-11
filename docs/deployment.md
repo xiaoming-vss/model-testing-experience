@@ -28,7 +28,7 @@ python3 scripts/manage.py upgrade-config
 
 ## Kubernetes
 
-平台提供 chart-per-service + umbrella 的 Helm 部署方式，见 [Kubernetes 部署](deployment-k8s.md)。当前只覆盖平台本身，不包含 CI Worker；MySQL、Redis、S3 使用外部地址。
+平台提供 chart-per-service 的 Helm 部署方式，每个服务一个独立 chart 和独立 values，见 [Kubernetes 部署](deployment-k8s.md)。当前只覆盖平台本身，不包含 CI Worker；MySQL、Redis、S3 使用外部地址。
 
 ## Docker 整体启动
 
@@ -83,7 +83,7 @@ uv run alembic stamp --purge 20261103_0001
 
 `--purge` 用于移除旧 revision 行后写入 v1 baseline；stamp 只更新 `alembic_version`，不修改业务表。随后重新核对行数并访问 `/v1/health` 完成启动 smoke。该操作不适用于生产或任何需要升级的数据库。
 
-AI 任务需要先配置平台中的模型服务及个人授权，并通过控制面的 [默认技能同步命令](control-plane/skills.md) 将技能源文件上传到 S3。Worker 按任务／阶段拉取当前默认技能到任务独立目录，不再按项目手工预置技能。代码部署不等于默认技能源文件及业务数据迁移。
+AI 任务需要先配置平台中的模型服务及个人授权，并完成默认技能同步：本地使用 [默认技能同步命令](control-plane/skills.md)，Kubernetes 由 control-plane chart 的 `skillsSync` Job 自动完成。Worker 按任务／阶段拉取当前默认技能到任务独立目录，不再按项目手工预置技能。代码部署不等于默认技能源文件及业务数据迁移。
 
 停止服务并保留数据：
 

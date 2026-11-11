@@ -10,9 +10,6 @@ from testing_agent.domain.ai_tasks import (
     task_type_for,
 )
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-from testing_agent.repositories.ai_generate_task_source_archive import (
-    AiGenerateTaskSourceArchiveRepository,
-)
 from testing_agent.services.ai_task_output import (
     dump_run,
     dump_task,
@@ -27,11 +24,9 @@ class GenerationQueries:
     def __init__(
         self,
         repository: AiGenerateTaskRepository,
-        source_archive_repository: AiGenerateTaskSourceArchiveRepository,
         access: GenerationAccess,
     ) -> None:
         self.repository = repository
-        self.source_archive_repository = source_archive_repository
         self.access = access
 
     async def list(self, kind: str, project_id: str, user_id: str) -> dict[str, Any]:
@@ -39,25 +34,15 @@ class GenerationQueries:
         rows = await self.repository.list_tasks(project_id, task_type_for(kind))
         scope_loader = getattr(self.repository, "task_scope_resources", None)
         scopes = await scope_loader(rows) if scope_loader is not None else None
-        archives = (
-            await self.source_archive_repository.list_source_archives([row.task_id for row in rows])
-            if kind == "ui"
-            else {}
-        )
         payloads = []
         for row in rows:
             await self.access.validate_task_scope(row, scopes)
-            payloads.append(dump_task(row, archives.get(row.task_id)))
+            payloads.append(dump_task(row))
         return list_payload(payloads)
 
     async def get(self, kind: str, task_id: str, user_id: str) -> dict:
         task = await self.access.owned_task(user_id, task_id, kind, action="read")
-        archive = (
-            await self.source_archive_repository.get_source_archive(task.task_id)
-            if kind == "ui"
-            else None
-        )
-        return dump_task(task, archive)
+        return dump_task(task)
 
     async def list_run_summaries(
         self,

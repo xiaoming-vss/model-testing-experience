@@ -43,9 +43,6 @@ from testing_agent_ai_worker.tasks.requirement_analysis.source_downloader import
 from testing_agent_ai_worker.tasks.test_order_graph.executor import TestOrderGraphExecutor
 from testing_agent_ai_worker.tasks.test_report_generate.executor import TestReportExecutor
 from testing_agent_ai_worker.tasks.ui_case_generate.executor import UiCaseExecutor
-from testing_agent_ai_worker.tasks.ui_case_generate.source_archive import (
-    PlatformSourceArchiveDownloader,
-)
 from testing_agent_ai_worker.worker.dispatcher import WorkerTaskDispatcherExecutor
 from testing_agent_ai_worker.worker.lifecycle import WorkerLifecycle
 from testing_agent_ai_worker.worker.loop import run_worker_loop
@@ -125,7 +122,8 @@ def build_task_runner(
             ),
             ui_executor=UiCaseExecutor(
                 agent_config=settings.agent.active,
-                source_downloader=PlatformSourceArchiveDownloader(resolved_client),
+                ui_generation_config=settings.ui_generation,
+                client=resolved_client,
             ),
             code_risk_executor=CodeRiskAnalysisExecutor(
                 agent_config=settings.agent.active,

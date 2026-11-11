@@ -26,9 +26,6 @@ from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.api_case_run import ApiCaseRun
 from testing_agent.models.ui_test_case_run import UiTestCaseRun
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-from testing_agent.repositories.ai_generate_task_source_archive import (
-    AiGenerateTaskSourceArchiveRepository,
-)
 from testing_agent.repositories.api_collection_run import ApiCollectionRunRepository
 from testing_agent.repositories.resource_binding import ResourceBindingRepository
 from testing_agent.repositories.sprint_daily_metrics import SprintDailyMetricsRepository
@@ -55,30 +52,6 @@ async def test_api_report_related_reads_are_batched(database, size):
     assert await repository.report_cases([]) == {}
     assert await repository.report_case_runs([]) == {}
     assert not sql
-
-
-async def test_source_archives_are_batched_and_missing_ids_are_omitted(database):
-    from testing_agent.models.ai_generate_task_source_archive import AiGenerateTaskSourceArchive
-
-    sync, session, sql = database
-    sync.add(
-        AiGenerateTaskSourceArchive(
-            archive_id="archive",
-            task_id="task",
-            filename="source.zip",
-            size_bytes=3,
-            sha256="a" * 64,
-            uploaded_at=NOW,
-        )
-    )
-    sync.commit()
-    sql.clear()
-    archives = await AiGenerateTaskSourceArchiveRepository(session).list_source_archives(
-        ["task", "missing"]
-    )
-    assert list(archives) == ["task"]
-    assert archives["task"].filename == "source.zip"
-    assert len(sql) == 1
 
 
 @pytest.mark.parametrize("repository", [AiGenerateTaskRepository, ResourceBindingRepository])

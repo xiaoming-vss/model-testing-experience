@@ -1295,7 +1295,7 @@ async def test_requirement_analysis_run_snapshot_uses_requirement_document():
 
 @pytest.mark.asyncio
 async def test_ui_snapshot_does_not_read_requirement_document_content():
-    """UI 三阶段只消费源码包与正式用例，历史需求正文不再参与快照组装。"""
+    """UI 三阶段只消费仓库来源与正式用例，历史需求正文不再参与快照组装。"""
 
     class FakeRepository:
         async def get_requirement(self, requirement_id):
@@ -1308,7 +1308,7 @@ async def test_ui_snapshot_does_not_read_requirement_document_content():
         project_id="project-1",
         sprint_id="sprint-1",
         requirement_id="requirement-1",
-        source_type="source_archive",
+        source_type="repository",
         source_content="",
         instruction="",
     )

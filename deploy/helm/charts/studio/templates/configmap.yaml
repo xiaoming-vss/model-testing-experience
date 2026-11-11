@@ -1,3 +1,4 @@
+# 前端运行配置；由 values.config 渲染，通过 envFrom 注入容器。
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -5,4 +6,4 @@ metadata:
   labels:
     {{- include "studio.labels" . | nindent 4 }}
 data:
-  API_UPSTREAM: {{ .Values.apiUpstream | quote }}
+  API_UPSTREAM: {{ .Values.config.apiUpstream | quote }}

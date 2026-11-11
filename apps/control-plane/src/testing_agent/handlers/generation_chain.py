@@ -10,6 +10,9 @@ from testing_agent.schemas.generation_chain import (
     GenerationChainRevisionRequest,
     GenerationChainRunRequest,
     GenerationChainSaveDraftRequest,
+    UiGenerationSourceCheck,
+    UiGenerationSourceCheckRequest,
+    UiGenerationSourceOptions,
 )
 from testing_agent.schemas.requirement_design import DesignKind
 from testing_agent.services.generation_chain import GenerationChainService
@@ -56,6 +59,45 @@ async def get_generation_chain_view(
     return success_payload(
         await build_chain_view(service.tasks.session, requirement_id, kind, task, detail=True)
     )
+
+
+async def get_ui_generation_source_options(
+    requirement_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: GenerationChainService = Depends(get_generation_chain),
+):
+    await service.scope(requirement_id, user_id)
+    if service.ui_sources is None:
+        raise dynamic_error(ErrBadRequest, "UI 仓库源码解析未配置")
+    options = await service.ui_sources.options(requirement_id)
+    return success_payload(UiGenerationSourceOptions.model_validate(options))
+
+
+async def check_ui_generation_source(
+    requirement_id: str,
+    body: UiGenerationSourceCheckRequest,
+    user_id: str = Depends(get_current_user_id),
+    service: GenerationChainService = Depends(get_generation_chain),
+):
+    await service.scope(requirement_id, user_id)
+    if service.ui_sources is None:
+        raise dynamic_error(ErrBadRequest, "UI 仓库源码解析未配置")
+    task = await service.tasks.get_requirement(requirement_id)
+    if task is None:
+        raise ErrBadRequest()
+    sprint = await service.tasks.get_sprint(task.sprint_id)
+    if sprint is None:
+        raise ErrBadRequest()
+    result = await service.ui_sources.check(
+        requirement_id=requirement_id,
+        project_id=sprint.project_id,
+        user_id=user_id,
+        profile_version_id=body.profile_version_id,
+        repository_id=body.repository_id,
+        pinned_commit=body.pinned_commit,
+        gitlab_connection_id=body.gitlab_connection_id,
+    )
+    return success_payload(UiGenerationSourceCheck.model_validate(result))
 
 
 async def get_generation_chain_version(

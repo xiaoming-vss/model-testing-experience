@@ -4,14 +4,18 @@
 
 ## 初始化与覆盖更新
 
-在控制面目录使用其既有配置（`config/local.toml` 或 `APP_CONF`）：
+默认技能源随代码维护在 `apps/control-plane/default-skills/`，构建镜像时复制到 `/app/default-skills`。
+
+本地在控制面目录使用其既有配置（`config/local.toml` 或 `APP_CONF`）：
 
 ```sh
 uv run alembic upgrade head
-uv run python -m testing_agent.cli.skills /home/xiaoming/下载/skills/default-skill
+uv run python -m testing_agent.cli.skills default-skills
 ```
 
-其他环境将源文件夹复制到可访问目录，传入对应绝对路径即可；源技能文件不写入代码仓库，脚本不读取 Worker 私有目录。首批源有 12 个技能，缺少 `code-risk-analysis` 时其任务明确报错。后续维护源目录后重新执行脚本：同名技能整体替换，不递增版本，不提供回滚。删除源目录中的文件后再次同步，该文件不再出现在技能清单中；删除整个源技能文件夹不会自动删除系统技能。
+Kubernetes 由 control-plane chart 的 `skillsSync` Job 在 post-install/post-upgrade 自动执行同一命令；需要 `config.storage.s3.enabled=true`，设为 `false` 时跳过。同步按内容签名跳过未变化的技能，重复升级不会产生新的 S3 批次。也可以在 Pod 内手工执行 `/app/default-skills` 重试。
+
+更新技能时修改 `apps/control-plane/default-skills/`，重建控制面镜像并 `helm upgrade`。脚本不读取 Worker 私有目录。同名技能整体替换，不递增版本，不提供回滚；源目录中删除的文件再次同步后不再出现在清单中，删除整个源技能文件夹不会自动删除系统技能。
 
 迁移 `20260927_0021` 按已确认需求丢弃旧压缩包技能记录，将其关联文件交给 S3 清理流程，不做压缩包数据迁移；迁移不可逆恢复旧数据。默认技能是 `project_id=NULL`、`scope_key=system` 的资源，自定义技能使用项目 ID 作为 scope。唯一约束为 scope + 文件夹名。
 
@@ -134,3 +138,7 @@ uv run python -m testing_agent.cli.skills /home/xiaoming/下载/skills/default-s
 从当前默认库回读 `generate-ui-test-case` 的 35 个文件，以其为基线修改 `SKILL.md`、`references/semantic-review.md` 和 `references/handoff.md`。复核模式优先于生成和导出流程，只提交当前候选的证据和建议，不创建生成审计账本、不触发 YAML 重写；用户明确修订时才修改候选。保留已有动态取值、控件源码证据、业务目标和导入完整性规则。
 
 同一变更已同步本地来源 `/home/xiaoming/下载/skills/default-skill-10-28/generate-ui-test-case`，通过默认技能发布服务更新；35 个文件逐项从真实 S3 回读，字节、大小和 SHA-256 一致，其他技能清单与摘要不变。skill 结构验证及 70 项脚本回归通过。两个 Worker 的辅助复核编排同步调整，本地空队列时重启 Pi Worker，已恢复轮询。生成/复核行为使用模型替身验证，本轮没有发起新的真实模型业务生成；证据在 `.scratch/ui-advisory-review/`。
+
+## 2026-11-09 代码风险分析技能发布
+
+从 `/home/xiaoming/下载/skills/default-skill-11-8/code-risk-analysis` 同步 `code-risk-analysis` 到系统默认技能库，共 6 个文件、6407 字节。发布后读取远端 manifest 和对象内容，6 个文件的内容、大小及 SHA-256 均与本地源一致。

@@ -14,7 +14,6 @@ from testing_agent.core.errors import (
 )
 from testing_agent.domain.ai_tasks import DEFAULT_FUNCTION_CASE_MODULE
 from testing_agent.models.ai_generate_task import AiGenerateTask
-from testing_agent.models.ai_generate_task_source_archive import AiGenerateTaskSourceArchive
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.generation_chain import GenerationChainRepository
 from testing_agent.schemas.requirement import normalize_document_type
@@ -24,22 +23,7 @@ from testing_agent.services.standalone_run import StandaloneRun
 from testing_agent.services.ui_test_case import ui_import_cases
 
 
-def dump_source_archive(archive: AiGenerateTaskSourceArchive | Any | None) -> dict[str, Any] | None:
-    if archive is None:
-        return None
-    return {
-        "archiveId": archive.archive_id,
-        "fileId": getattr(archive, "file_id", "") or "",
-        "filename": archive.filename,
-        "sizeBytes": archive.size_bytes,
-        "sha256": archive.sha256,
-        "uploadedAt": archive.uploaded_at,
-    }
-
-
-def dump_task(
-    task: AiGenerateTask, source_archive: AiGenerateTaskSourceArchive | Any | None = None
-) -> dict[str, Any]:
+def dump_task(task: AiGenerateTask) -> dict[str, Any]:
     return {
         "taskId": task.task_id,
         "taskType": task.task_type,
@@ -50,7 +34,6 @@ def dump_task(
         "creatorUserId": task.creator_user_id,
         "sourceType": task.source_type,
         "sourceContent": task.source_content,
-        "sourceArchive": dump_source_archive(source_archive),
         "instruction": task.instruction,
         "createdAt": task.created_at,
         "updatedAt": task.updated_at,
@@ -129,10 +112,6 @@ def worker_requirement_document_download_url(worker_task_id: str) -> str:
     return f"/internal/ai-worker/tasks/{worker_task_id}/requirement-document"
 
 
-def worker_source_archive_download_url(worker_task_id: str) -> str:
-    return f"/internal/ai-worker/tasks/{worker_task_id}/source-archive"
-
-
 async def build_generate_run_snapshot(
     repository: AiGenerateTaskRepository,
     kind: str,
@@ -188,8 +167,6 @@ async def build_generate_run_snapshot(
         snapshot["documentHash"] = str(getattr(requirement, "document_hash", "") or "")
     else:
         snapshot["sourceType"] = task.source_type
-    if kind == "ui" and worker_task_id:
-        snapshot["sourceArchiveDownloadUrl"] = worker_source_archive_download_url(worker_task_id)
     snapshot.update(functional_source)
     return snapshot
 

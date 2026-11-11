@@ -51,7 +51,6 @@ async def test_concurrent_code_risk_launch_creates_one_run(mysql, monkeypatch): 
             )
             launcher = GenerationRunLauncher(
                 repository=repository,
-                source_archive_repository=None,
                 access=access,
                 code_risk_analysis_service=SimpleNamespace(
                     build_snapshot=AsyncMock(return_value={})
@@ -136,7 +135,6 @@ async def test_code_risk_same_request_replays_after_concurrent_dispatch(mysql, m
             )
             launcher = GenerationRunLauncher(
                 repository=repository,
-                source_archive_repository=None,
                 access=access,
                 code_risk_analysis_service=SimpleNamespace(build_snapshot=snapshot),
             )
@@ -246,7 +244,6 @@ async def test_distinct_risks_dispatch_in_parallel_without_queue_gap_deadlock(
             )
             launcher = GenerationRunLauncher(
                 repository=repository,
-                source_archive_repository=None,
                 access=access,
                 code_risk_analysis_service=SimpleNamespace(
                     build_snapshot=AsyncMock(return_value={})

@@ -19,6 +19,8 @@
 
 [统一 AI 执行模型与切换前历史清理 ADR](adr/0010-unified-ai-execution.md)
 
+[UI 生成仓库画像源码 ADR](adr/0011-ui-generation-repository-source.md)
+
 ## 运行时与依赖
 
 - Python 3.12（`.python-version`），包管理使用 uv（`uv.lock`）
@@ -59,7 +61,6 @@ AI 生成任务按能力装配，HTTP handler 直接获取所需的查询、管�
 | `ai_candidate_review.py` / GenerationCandidateReview | 整次候选运行的内容编辑与审核，不创建正式资产 |
 | `generation_chain.py` / GenerationChainService | 需求生成链全景、阶段草稿/版本、单步运行、审核、版本删除与版本级正式资产导入 |
 | `ai_report.py` / TestReportWorkflow | 报告任务、运行及 PDF 导出 |
-| `ai_source_archive.py` / SourceArchiveManager | 源码归档校验、替换和失败清理 |
 | `api_generate_import.py` / ApiCandidateImporter | API 候选冲突预览、确认覆盖及正式资产事务 |
 | `function_generate_import.py`、`ui_generate_import.py`、`requirement_generate_import.py` | 功能/UI 候选正式导入、需求增强文本采纳；各入口负责原有提交与回滚语义 |
 | `ai_task_access.py` / GenerationImportContext | 仅向正式导入提供仓储、执行写入器、运行访问与需求权限能力；不承担任务管理 |
@@ -97,7 +98,7 @@ API 导入的专用校验与实体转换继续由 `api_import_payload.py` 和 `a
 | `services/auth_session.py` 的 SessionService、本地/LDAP 登录模块 | 验证当前账号和会话；项目授权仍使用 `project_access` 与 `domain/project_policy.py`，资源归属不能由角色替代 |
 | `services/ai_execution/writer.py` 的 ExecutionWriter | 显式接收 ExecutionIntent；查询投影在 `repositories/ai_execution.py`，普通 repository.commit 不推进执行状态 |
 | `repositories/worker_task.py` 的 execution_context | 返回 `domain/worker_context.py` 的明确上下文；不向 WorkerTask ORM 临时附加业务字段 |
-| `services/worker_task.py` 的 ai_worker_task | 查找任务并检查当前执行授权；文档、源码包及技能入口复用它，调用方仍检查所需租约/资源条件 |
+| `services/worker_task.py` 的 ai_worker_task | 查找任务并检查当前执行授权；文档及技能入口复用它，调用方仍检查所需租约/资源条件 |
 | `services/worker_domains/` | AI、API、UI 各自维护快照和结果规则；公共协调层管理领取、租约与事件身份，集成写入使用独立协议 |
 | `services/personal_credentials.py` 的 PersonalCredentialAccess | 先检查本人归属、供应方、范围和状态，再解密；供应方查询与绑定不依赖连接管理的私有方法 |
 | `services/bug_import/` | 远端读取、准备、本地写入和文件处理分开；事务提交由导入编排负责，提交后的附件失败不回滚已创建 Bug |

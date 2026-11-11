@@ -1,6 +1,6 @@
 # 仓库画像分析
 
-仓库画像是需求分析阶段旁的**人工运行**辅助任务，不属于生成链阶段。每次成功运行形成一个不可变画像版本（失败/运行中不占版本号），本期在生成全景中作为需求分析分组内第二行右对齐的仓库画像卡片展示，尺寸、状态样式和运行态动画与其他阶段卡片一致：单击进入阶段侧栏查看画像版本和上游追溯，双击进入画布内阅读区；进入阅读区后运行或重新生成位于侧栏，主阅读区只展示画像内容；结果不传给功能、API、UI、代码风险或测试单图谱。
+仓库画像是需求分析阶段旁的**人工运行**辅助任务，不属于生成链阶段。每次成功运行形成一个不可变画像版本（失败/运行中不占版本号），本期在生成全景中作为需求分析分组内第二行右对齐的仓库画像卡片展示，尺寸、状态样式和运行态动画与其他阶段卡片一致：单击进入阶段侧栏查看画像版本和上游追溯，双击进入画布内阅读区；进入阅读区后运行或重新生成位于侧栏，主阅读区只展示画像内容；结果不传给功能、API、代码风险或测试单图谱。UI 生成只消费画像中的仓库角色、分支和 HEAD commit 作为源码仓库选择依据，画像正文不进入 UI prompt，详见下文“UI 生成消费方式”。
 
 ## 输入
 
@@ -9,6 +9,16 @@
 - 每个仓库工作分支的 HEAD commit。
 
 控制面建 run 时冻结需求理解正文、版本引用、仓库 `cloneUrl`/`headCommit`/`connectionId`。单仓库解析失败写入 `profileError`，其余仓库继续；没有仓库绑定时拒绝运行。
+
+## UI 生成消费方式
+
+- UI 生成读取成功画像版本中的仓库角色和冻结 `headCommit`，用户确认一个 `frontend/fullstack` 仓库后，控制面把仓库 pin 复制进 `ui_surface` 首阶段快照，不引用画像运行记录。
+- `profile` commit 模式使用画像冻结的 `headCommit`；`latest` 模式在启动时解析分支最新 HEAD 并冻结为具体 SHA。
+- Worker 通过 `gitlabCredentialsUrl` 获取**本次 UI 发起人**的个人 GitLab 凭据，只 clone 这一个仓库的冻结 commit，整个仓库作为三阶段共用的源码根；检出后删除 `.git`，不把 token 写入 remote URL、`.git/config`、日志或 prompt。
+- 仓库 checkout 使用 `[ui_generation]` 的 `git_timeout_seconds`、`workspace_retention_hours`、`max_repo_size_mb` 和 `max_repo_files`；成功后清理工作区，失败保留诊断窗口。
+- 画像的职责摘要、技术栈、证据和整体总结只用于选择仓库和来源追溯，不注入 UI 生成 prompt。
+
+UI 生成只使用仓库 pin；历史 ZIP 来源的归档下载路径已随旧数据清理删除。
 
 ## 工作区
 
@@ -21,7 +31,7 @@
 ## 模型调用
 
 - 本期只支持 Pi；使用 `read/grep/find/ls` 只读工具。
-- 使用内置 prompt，不注册 `repository-profile-analysis` skill；skill 就绪后替换 `prompt_builder` 注入点。
+- 使用 `repository-profile-analysis` 默认 skill；Worker 通过 `prompt_builder` 注入技能规则，并对模型输出执行三次有界校验修正。
 - 上下文包含需求理解正文、可分析仓库 manifest、顶层目录/文件清单，以及不可分析仓库原因。
 - 模型必须只返回一个 JSON 对象，不含 Markdown fence、解释或额外元数据。
 

@@ -3,7 +3,7 @@ import type { ListResponse } from '@/shared/api/request'
 export type RunHistoryResponse<T> = ListResponse<T> & { statusCounts?: Record<string, number>; reviewPendingCount?: number; latestRun?: T }
 
 export type ApiCaseGenerateTaskSourceType = 'openapi' | 'swagger'
-export type UiCaseGenerateTaskSourceType = 'source_archive'
+export type UiCaseGenerateTaskSourceType = 'repository'
 export type FunctionalCaseGenerateTaskSourceType = 'text' | 'docx'
 export type RequirementAnalysisTaskSourceType = 'text' | 'word' | 'docx' | string
 export type ApiCaseGenerateTaskRunStatus =
@@ -101,15 +101,6 @@ export type ApiCaseGenerateTask = {
   updatedAt?: string
 }
 
-export type UiCaseSourceArchive = {
-  fileId?: string
-  archiveId: string
-  filename: string
-  sizeBytes: number
-  sha256: string
-  uploadedAt: string
-}
-
 export type UiCaseGenerateTask = {
   taskId?: string
   taskType?: 'ui_case_generate' | string
@@ -119,7 +110,6 @@ export type UiCaseGenerateTask = {
   requirementId?: string
   creatorUserId?: string
   sourceType: UiCaseGenerateTaskSourceType
-  sourceArchive: UiCaseSourceArchive | null
   instruction: string
   createdAt?: string
   updatedAt?: string
@@ -135,7 +125,6 @@ export type UiCaseGenerateTaskRunSnapshot = {
   sprintId?: string
   taskId?: string
   taskType?: string
-  sourceArchive?: UiCaseSourceArchive | null
   [key: string]: unknown
 }
 

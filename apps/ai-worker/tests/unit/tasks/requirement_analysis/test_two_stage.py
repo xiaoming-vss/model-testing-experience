@@ -91,6 +91,10 @@ class TwoStageTests(unittest.TestCase):
                 if revision:
                     self.assertEqual(body["currentArtifact"], understanding)
                     self.assertEqual(body["currentArtifact"]["questions"][0]["status"], "open")
+                self.assertIn(
+                    "用户答复已经明确的行为不得再次拆成同义或更细粒度的 open question",
+                    captured[0]["extra_instruction"],
+                )
 
     def test_revision_attachments_are_downloaded_and_sent_as_media(self):
         extraction, understanding = (

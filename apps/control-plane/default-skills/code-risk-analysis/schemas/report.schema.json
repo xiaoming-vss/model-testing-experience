@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Code risk analysis report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["changeOverview", "risks", "affectedCases", "coverageGaps"],
+  "properties": {
+    "changeOverview": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["level", "reason"],
+        "properties": {
+          "level": {"enum": ["high", "medium", "low", "info"]},
+          "reason": {"type": "string", "minLength": 1},
+          "location": {"type": "string", "minLength": 1},
+          "impact": {"type": "string", "minLength": 1},
+          "evidence": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "affectedCases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["caseId", "impact"],
+        "properties": {
+          "caseId": {"type": "string", "minLength": 1},
+          "caseType": {"type": "string", "minLength": 1},
+          "title": {"type": "string", "minLength": 1},
+          "impact": {"type": "string", "minLength": 1},
+          "reason": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "coverageGaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["gap", "suggestion"],
+        "properties": {
+          "gap": {"type": "string", "minLength": 1},
+          "suggestion": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

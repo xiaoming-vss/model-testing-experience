@@ -1,5 +1,6 @@
 import io
 import zipfile
+from pathlib import Path
 from uuid import UUID
 
 import pytest
@@ -12,7 +13,7 @@ from testing_agent.app import create_app
 from testing_agent.core.errors import AppError
 from testing_agent.repositories.project_skill_space import ProjectSkillSpaceRepository
 from testing_agent.schemas.project_skill_space import ProjectSkillUploadRequest
-from testing_agent.services.builtin_skills import sync_builtin_skills
+from testing_agent.services.builtin_skills import inspect_folder, sync_builtin_skills
 from testing_agent.services.project_skill_space import ProjectSkillSpaceService
 
 
@@ -36,6 +37,17 @@ async def folder(files, name="custom", entries=None):
         await files.complete("owner", row.file_id)
         manifest.append({"path": path, "fileId": row.file_id})
     return ProjectSkillUploadRequest(name=name, files=manifest)
+
+
+def test_bundled_default_skills_are_publishable():
+    root = Path(__file__).resolve().parents[1] / "default-skills"
+    folders = sorted(path for path in root.iterdir() if path.is_dir())
+    names = {folder.name for folder in folders}
+    assert {"code-risk-analysis", "prd-feature-understanding-skill"} <= names
+    for folder in folders:
+        entries = inspect_folder(folder, 100 * 1024 * 1024)
+        assert any(path == "SKILL.md" for path, _ in entries), folder.name
+        assert not any("__pycache__" in path or path.endswith(".pyc") for path, _ in entries)
 
 
 @pytest.mark.asyncio
@@ -81,6 +93,21 @@ async def test_defaults_global_read_only_and_can_be_overwritten_by_sync(files, t
     assert changed["fileCount"] == 1
     _, data = await svc.download_zip("p", default["skillSpaceId"], "viewer")
     assert zipfile.ZipFile(io.BytesIO(data)).read("builtin/SKILL.md") == b"updated"
+
+
+@pytest.mark.asyncio
+async def test_unchanged_default_skill_is_not_republished(files, tmp_path):
+    folder_path = tmp_path / "builtin"
+    folder_path.mkdir()
+    (folder_path / "SKILL.md").write_text("default")
+    await sync_builtin_skills(files, tmp_path)
+    skill = (await ProjectSkillSpaceRepository(files.session).list("p"))[0]
+    file_ids = [entry["fileId"] for entry in skill.manifest]
+
+    await sync_builtin_skills(files, tmp_path)
+    files.session.expire_all()
+    skill = (await ProjectSkillSpaceRepository(files.session).list("p"))[0]
+    assert [entry["fileId"] for entry in skill.manifest] == file_ids
 
 
 @pytest.mark.asyncio

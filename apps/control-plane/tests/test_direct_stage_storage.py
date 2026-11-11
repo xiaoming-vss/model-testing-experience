@@ -1099,8 +1099,16 @@ async def test_new_ui_version_freezes_source_without_old_run_lookup(db):  # noqa
     ).task_type = "ui_case_generate"
     stage.stage = "ui_yaml"
     source = {
-        "sourceArchiveFileId": "archive-id",
-        "sourceArchive": {"filename": "ui.zip", "sha256": "hash"},
+        "sourceKind": "repository",
+        "sourceProfileVersionId": "profile-attempt-1",
+        "sourceProfileVersionNo": 1,
+        "sourceRepository": {
+            "repositoryId": "repo-front",
+            "pathWithNamespace": "team/repo-front",
+            "branch": "main",
+            "commit": "sha-profile",
+            "commitMode": "profile",
+        },
         "functionalCases": [{"caseId": "case-1", "content": "approved"}],
         "uiSourceBatchId": "batch-1",
     }
@@ -1120,49 +1128,8 @@ async def test_new_ui_version_freezes_source_without_old_run_lookup(db):  # noqa
     )
     source["functionalCases"][0]["content"] = "later change"
     assert version.artifact_context_json["uiSourceBatchId"] == "batch-1"
-    assert version.artifact_context_json["uiSourceInputs"]["archive"]["fileId"] == "archive-id"
+    assert version.artifact_context_json["uiSourceInputs"]["repository"]["commit"] == "sha-profile"
     assert version.artifact_context_json["uiSourceInputs"]["cases"][0]["content"] == "approved"
-
-
-async def test_direct_ui_worker_source_archive_comes_from_frozen_snapshot(db, monkeypatch):  # noqa: F811
-    from unittest.mock import AsyncMock
-
-    from testing_agent.models.ai_generate_task import AiGenerateTask
-    from testing_agent.models.worker_task import WorkerTask
-    from testing_agent.repositories.worker_task import WorkerTaskRepository
-    from testing_agent.services.stage_storage import authorization
-    from testing_agent.services.worker_task import WorkerTaskService
-
-    stage, storage = setup_stage(db)
-    task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == stage.task_id))
-    task.task_type = "ui_case_generate"
-    stage.stage = "ui_surface"
-    attempt = await storage.prepare(
-        stage.id,
-        worker_task_id="ui-worker",
-        requested_by="u",
-        input_snapshot={
-            "source": {"sourceArchiveFileId": "frozen-file"},
-            "config": {},
-            "llmConnectionId": "llm",
-        },
-    )
-    queue = WorkerTask(
-        domain="ai",
-        task_id="ui-worker",
-        task_type="ui_case_generate",
-        run_id=attempt.id,
-        status="claimed",
-    )
-    db.add(queue)
-    db.commit()
-    monkeypatch.setattr(authorization, "require_project_id", AsyncMock())
-    monkeypatch.setattr(authorization, "require_personal_connection", AsyncMock())
-    service = WorkerTaskService(WorkerTaskRepository(AsyncSessionAdapter(db)))
-    assert await service.source_archive(queue.task_id) == "frozen-file"
-    queue.status = "failed"
-    with pytest.raises(AppError):
-        await service.source_archive(queue.task_id)
 
 
 async def test_direct_requirement_worker_refuses_changed_source_document(db, monkeypatch):  # noqa: F811
@@ -1357,7 +1324,19 @@ async def test_version_detail_reads_frozen_source_and_allows_missing_parent(db):
     task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == stage.task_id))
     task.task_type = "ui_case_generate"
     stage.stage = "ui_yaml"
-    source = {"sourceArchiveFileId": "archive", "functionalCases": [{"caseId": "case"}]}
+    source = {
+        "sourceKind": "repository",
+        "sourceProfileVersionId": "profile-attempt-1",
+        "sourceProfileVersionNo": 1,
+        "sourceRepository": {
+            "repositoryId": "repo-front",
+            "pathWithNamespace": "team/repo-front",
+            "branch": "main",
+            "commit": "sha-profile",
+            "commitMode": "profile",
+        },
+        "functionalCases": [{"caseId": "case"}],
+    }
     attempt = await storage.prepare(
         stage.id,
         worker_task_id="ui-worker",
@@ -1381,7 +1360,7 @@ async def test_version_detail_reads_frozen_source_and_allows_missing_parent(db):
     detail = await version_detail(AsyncSessionAdapter(db), task, "ui", version.version_id)
     assert detail.content == "- name: case"
     assert detail.upstream_versions == {"ui_surface": "missing-parent"} and detail.upstream == []
-    assert detail.source_inputs.archive.file_id == "archive"
+    assert detail.source_inputs.repository.commit == "sha-profile"
 
 
 async def test_ui_source_batch_survives_without_any_attempt(db):  # noqa: F811
@@ -1393,12 +1372,24 @@ async def test_ui_source_batch_survives_without_any_attempt(db):  # noqa: F811
     task.task_type = "ui_case_generate"
     stage.stage = "ui_surface"
     stage.source_batch_id = "batch-1"
-    stage.source_snapshot_json = {"sourceArchiveFileId": "archive-1", "functionalCases": []}
+    stage.source_snapshot_json = {
+        "sourceKind": "repository",
+        "sourceProfileVersionId": "profile-attempt-1",
+        "sourceProfileVersionNo": 1,
+        "sourceRepository": {
+            "repositoryId": "repo-front",
+            "pathWithNamespace": "team/repo-front",
+            "branch": "main",
+            "commit": "sha-profile",
+            "commitMode": "profile",
+        },
+        "functionalCases": [],
+    }
     db.flush()
     view = await build_chain_view(AsyncSessionAdapter(db), "r", "ui", task, detail=True)
     assert view.source_batch_id == "batch-1"
-    assert view.source_inputs.archive.file_id == "archive-1"
-    assert view.source_changed  # The current archive is absent from the task.
+    assert view.source_inputs.repository.commit == "sha-profile"
+    assert not view.source_changed
     assert view.stages[0].state == "not_started" and view.draft_count == 0
 
 
@@ -2114,41 +2105,64 @@ async def test_approval_can_continue_to_next_direct_stage(db, monkeypatch):  # n
 
 
 async def test_ui_refresh_changes_batch_and_rejects_old_late_worker(db, monkeypatch):  # noqa: F811
-    from datetime import UTC, datetime
     from unittest.mock import AsyncMock
 
     from support.generation import generation_services
 
     from testing_agent.models.ai_generate_task import AiGenerateTask
-    from testing_agent.models.ai_generate_task_source_archive import AiGenerateTaskSourceArchive
     from testing_agent.models.worker_task import WorkerTask
     from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
     from testing_agent.schemas.generation_chain import GenerationChainRunRequest
     from testing_agent.services.stage_storage import run_command
     from testing_agent.services.stage_storage.worker import StageWorkerTransitions
+    from testing_agent.services.ui_generation_source import ResolvedUiSource
 
     stage, _ = setup_stage(db)
     task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == stage.task_id))
     task.task_type = "ui_case_generate"
     stage.stage = "ui_surface"
-    archive = AiGenerateTaskSourceArchive(
-        archive_id="archive",
-        task_id=task.task_id,
-        filename="one.zip",
-        size_bytes=42,
-        sha256="old",
-        file_id="old-file",
-        uploaded_at=datetime.now(UTC),
-    )
-    db.add(archive)
+
+    def resolved(commit: str) -> ResolvedUiSource:
+        return ResolvedUiSource(
+            profile_version_id="profile-attempt-1",
+            profile_version_no=1,
+            repository={
+                "bindingId": "binding-1",
+                "repositoryId": "repo-front",
+                "instanceUrl": "https://gitlab.example.com",
+                "pathWithNamespace": "team/repo-front",
+                "branch": "main",
+                "commit": commit,
+                "commitMode": "profile",
+                "resolvedAt": "2026-11-09T00:00:00+00:00",
+            },
+            binding={
+                "bindingId": "binding-1",
+                "repositoryId": "repo-front",
+                "instanceUrl": "https://gitlab.example.com",
+                "pathWithNamespace": "team/repo-front",
+                "branch": "main",
+                "headCommit": commit,
+                "cloneUrl": "https://gitlab.example.com/team/repo-front.git",
+                "connectionId": "ui-conn",
+                "profileError": "",
+            },
+        )
+
     db.commit()
     adapter = AsyncSessionAdapter(db)
     bundle = generation_services(AiGenerateTaskRepository(adapter))
+    bundle.chain.ui_sources.resolve = AsyncMock(return_value=resolved("sha-one"))
     monkeypatch.setattr(run_command, "require_personal_connection", AsyncMock())
     monkeypatch.setattr(
         bundle.chain.tasks, "list_ui_source_cases", AsyncMock(return_value=[{"caseId": "case-1"}])
     )
-    body = GenerationChainRunRequest(connectionId="llm", functionCaseIds=["case-1"])
+    body = GenerationChainRunRequest(
+        connectionId="llm",
+        functionCaseIds=["case-1"],
+        sourceProfileVersionId="profile-attempt-1",
+        sourceRepositoryId="repo-front",
+    )
     first = await run_command.start_stage(bundle.chain, task, "ui", "ui_surface", body, "u")
     old_batch = stage.source_batch_id
     with pytest.raises(AppError):
@@ -2158,7 +2172,11 @@ async def test_ui_refresh_changes_batch_and_rejects_old_late_worker(db, monkeypa
             "ui",
             "ui_surface",
             GenerationChainRunRequest(
-                connectionId="llm", refreshInputs=True, functionCaseIds=["case-1"]
+                connectionId="llm",
+                refreshInputs=True,
+                functionCaseIds=["case-1"],
+                sourceProfileVersionId="profile-attempt-1",
+                sourceRepositoryId="repo-front",
             ),
             "u",
         )
@@ -2183,7 +2201,7 @@ async def test_ui_refresh_changes_batch_and_rejects_old_late_worker(db, monkeypa
         bundle.chain, task, "ui", "ui_design", GenerationChainRunRequest(connectionId="llm"), "u"
     )
     old_queue = db.scalar(select(WorkerTask).where(WorkerTask.task_id == design.worker_task_id))
-    archive.file_id = "new-file"
+    bundle.chain.ui_sources.resolve = AsyncMock(return_value=resolved("sha-two"))
     db.commit()
     with monkeypatch.context() as patcher:
         patcher.setattr(
@@ -2198,7 +2216,11 @@ async def test_ui_refresh_changes_batch_and_rejects_old_late_worker(db, monkeypa
                 "ui",
                 "ui_surface",
                 GenerationChainRunRequest(
-                    connectionId="llm", refreshInputs=True, functionCaseIds=["case-1"]
+                    connectionId="llm",
+                    refreshInputs=True,
+                    functionCaseIds=["case-1"],
+                    sourceProfileVersionId="profile-attempt-1",
+                    sourceRepositoryId="repo-front",
                 ),
                 "u",
             )
@@ -2213,13 +2235,17 @@ async def test_ui_refresh_changes_batch_and_rejects_old_late_worker(db, monkeypa
         "ui",
         "ui_surface",
         GenerationChainRunRequest(
-            connectionId="llm", refreshInputs=True, functionCaseIds=["case-1"]
+            connectionId="llm",
+            refreshInputs=True,
+            functionCaseIds=["case-1"],
+            sourceProfileVersionId="profile-attempt-1",
+            sourceRepositoryId="repo-front",
         ),
         "u",
     )
     assert (
         stage.source_batch_id != old_batch
-        and stage.source_snapshot_json["sourceArchiveFileId"] == "new-file"
+        and stage.source_snapshot_json["sourceRepository"]["commit"] == "sha-two"
     )
     assert design.status == "canceled" and old_queue.status == "canceled"
     assert approved.artifact_content == '{"page":"one"}' and refreshed.status == "pending"
@@ -2538,14 +2564,12 @@ async def test_graph_without_explicit_version_is_not_assigned(db):  # noqa: F811
 
 async def test_direct_ui_three_stages_keep_frozen_inputs(db, monkeypatch):  # noqa: F811
     import json
-    from datetime import UTC, datetime
     from unittest.mock import AsyncMock
 
     from support.generation import generation_services
     from support.ui_generation_fixtures import FIXTURES, read
 
     from testing_agent.models.ai_generate_task import AiGenerateTask
-    from testing_agent.models.ai_generate_task_source_archive import AiGenerateTaskSourceArchive
     from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
     from testing_agent.models.function_test_case import FunctionTestCase
     from testing_agent.models.function_test_suite import FunctionTestSuite
@@ -2563,28 +2587,16 @@ async def test_direct_ui_three_stages_keep_frozen_inputs(db, monkeypatch):  # no
         apply_stage_completion,
         apply_stage_progress,
     )
+    from testing_agent.services.ui_generation_source import ResolvedUiSource
 
     stage, _ = setup_stage(db)
     task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == "task"))
     task.task_type, task.source_type, stage.stage = (
         "ui_case_generate",
-        "source_archive",
+        "repository",
         "ui_surface",
     )
-    db.add_all(
-        [
-            AiGenerateTaskSourceArchive(
-                archive_id="archive",
-                task_id="task",
-                file_id="file",
-                filename="x.zip",
-                size_bytes=20,
-                sha256="a" * 64,
-                uploaded_at=datetime.now(UTC),
-            ),
-            FunctionTestSuite(suite_id="suite", requirement_id="r", name="功能"),
-        ]
-    )
+    db.add(FunctionTestSuite(suite_id="suite", requirement_id="r", name="功能"))
     db.flush()
     db.add(
         FunctionTestCase(
@@ -2598,12 +2610,46 @@ async def test_direct_ui_three_stages_keep_frozen_inputs(db, monkeypatch):  # no
     monkeypatch.setattr(run_command, "require_personal_connection", AsyncMock())
     session = AsyncSessionAdapter(db)
     chain = generation_services(AiGenerateTaskRepository(session)).chain
+    chain.ui_sources.resolve = AsyncMock(
+        return_value=ResolvedUiSource(
+            profile_version_id="profile-attempt-1",
+            profile_version_no=1,
+            repository={
+                "bindingId": "binding-1",
+                "repositoryId": "repo-front",
+                "instanceUrl": "https://gitlab.example.com",
+                "pathWithNamespace": "team/repo-front",
+                "branch": "main",
+                "commit": "sha-profile",
+                "commitMode": "profile",
+                "resolvedAt": "2026-11-09T00:00:00+00:00",
+            },
+            binding={
+                "bindingId": "binding-1",
+                "repositoryId": "repo-front",
+                "instanceUrl": "https://gitlab.example.com",
+                "pathWithNamespace": "team/repo-front",
+                "branch": "main",
+                "headCommit": "sha-profile",
+                "cloneUrl": "https://gitlab.example.com/team/repo-front.git",
+                "connectionId": "ui-conn",
+                "profileError": "",
+            },
+        )
+    )
     commands = DirectStageCommands(chain)
     for name, field, fixture in (
         ("ui_surface", "uiSurface", "surface"),
         ("ui_design", "uiDesign", "design"),
     ):
-        await commands.run("r", "ui", name, GenerationChainRunRequest(connectionId="llm"), "u")
+        run_body = GenerationChainRunRequest(
+            connectionId="llm",
+            sourceProfileVersionId="profile-attempt-1",
+            sourceRepositoryId="repo-front",
+        )
+        if name != "ui_surface":
+            run_body = GenerationChainRunRequest(connectionId="llm")
+        await commands.run("r", "ui", name, run_body, "u")
         row = db.scalar(
             select(AiGenerationStage).where(
                 AiGenerationStage.task_id == "task", AiGenerationStage.stage == name

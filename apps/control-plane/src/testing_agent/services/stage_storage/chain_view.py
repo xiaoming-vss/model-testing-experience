@@ -13,7 +13,6 @@ from testing_agent.domain.generation_chain import (
 )
 from testing_agent.models.ai_generate_stage_version import AiGenerateStageVersion
 from testing_agent.models.ai_generate_task import AiGenerateTask
-from testing_agent.models.ai_generate_task_source_archive import AiGenerateTaskSourceArchive
 from testing_agent.models.ai_generate_version_import import AiGenerateVersionImport
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
@@ -110,11 +109,6 @@ async def build_chain_view(
         and source.get("documentHash") != requirement.document_hash
     )
     if kind == "ui" and first and (first.source_batch_id or first_attempt):
-        archive = await session.scalar(
-            select(AiGenerateTaskSourceArchive).where(
-                AiGenerateTaskSourceArchive.task_id == task.task_id
-            )
-        )
         cases = source.get("functionalCases") or []
         ids = [case["caseId"] for case in cases if isinstance(case, dict) and "caseId" in case]
         current = (
@@ -122,11 +116,9 @@ async def build_chain_view(
             if ids
             else []
         )
-        source_changed = bool(
-            archive is None
-            or archive.file_id != source.get("sourceArchiveFileId")
-            or current != cases
-        )
+        # Repository drift needs an explicit source-check; chain reads only
+        # verify the frozen formal case content.
+        source_changed = current != cases
     leaf_stage = direct.stages[-1]
     leaf_version_id = leaf_stage.latest_version.version_id if leaf_stage.latest_version else ""
     imports = (

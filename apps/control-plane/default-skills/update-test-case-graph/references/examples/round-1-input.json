@@ -1,0 +1,30 @@
+{
+  "requirements": [
+    {
+      "requirement_id": "R01",
+      "requirement_title": "任务处理与失败重试",
+      "requirement_content": "有效输入提交后生成待处理任务。正常执行完成后生成结果，详情展示结果并支持有权限用户下载。处理失败时保留任务和失败原因，有重试权限的用户可以在故障消除后重试原任务；重试成功同样生成可在详情查看并下载的结果。无重试权限的用户可以查看失败信息，但不能重试。"
+    }
+  ],
+  "case_requirement_links": [
+    {
+      "requirement_id": "R01",
+      "case_ids": [
+        "C01",
+        "C02"
+      ]
+    },
+    {
+      "requirement_id": null,
+      "case_ids": [
+        "C07"
+      ]
+    }
+  ],
+  "case_file_path": "/tmp/test-case-graph-demo/cases.json",
+  "existing_graph": {
+    "schema_version": "2.0",
+    "main_paths": [],
+    "edges": []
+  }
+}

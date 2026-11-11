@@ -526,7 +526,11 @@ class WorkerTaskService:
         direct = DirectStageWorkerService(self.repository.session)
         if await direct.is_direct(task):
             stage_authority = await direct.authorize(task)
-            if task.task_type not in {"code_risk_analysis", "repository_profile"}:
+            if task.task_type not in {
+                "code_risk_analysis",
+                "repository_profile",
+                "ui_case_generate",
+            }:
                 raise ErrNotFound()
             source = stage_authority.input_snapshot.get("source") or {}
             bindings = source.get("bindings") or []
@@ -577,35 +581,6 @@ class WorkerTaskService:
 
                 raise ErrRequirementFileMissing()
             return requirement
-        raise ErrNotFound()
-
-    async def source_archive(self, task_id: str):
-        task = await self.ai_worker_task(task_id)
-        session = getattr(self.repository, "session", None)
-        standalone = StandaloneWorkerService(session) if session is not None else None
-        if standalone is not None and await standalone.is_standalone(task):
-            authority = await standalone.authorize(task)
-            if task.task_type != "ui_case_generate":
-                raise ErrNotFound()
-            snapshot = authority.dispatched_attempt.input_snapshot_json or {}
-            source = snapshot.get("source") or {}
-            file_id = source.get("sourceArchiveFileId") if isinstance(source, dict) else None
-            if not file_id:
-                from testing_agent.core.errors import AppError
-
-                raise AppError(409, "运行未关联 S3 源码包，请重新上传源码包并发起新运行", 409)
-            return file_id
-        direct = DirectStageWorkerService(session) if session is not None else None
-        if direct is not None and await direct.is_direct(task):
-            authority = await direct.authorize(task)
-            if task.task_type != "ui_case_generate":
-                raise ErrNotFound()
-            file_id = (authority.input_snapshot.get("source") or {}).get("sourceArchiveFileId")
-            if not file_id:
-                from testing_agent.core.errors import AppError
-
-                raise AppError(409, "运行未关联 S3 源码包，请重新上传源码包并发起新运行", 409)
-            return file_id
         raise ErrNotFound()
 
     async def progress(self, task_id: str, body: WorkerProgressRequest) -> dict:

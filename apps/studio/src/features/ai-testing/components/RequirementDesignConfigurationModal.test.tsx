@@ -16,32 +16,25 @@ function mount(kind: 'ui' | 'api', onSaved = vi.fn(), initialTaskId?: string) {
     onClose={vi.fn()} onSaved={onSaved} /></QueryClientProvider></TestThemeProvider>)
   return { ...rendered, onSaved }
 }
-it('配置已保存但上传失败后保留文件和任务 ID，再次保存复用配置', async () => {
+it('UI 生成设置不再接受源码 ZIP，保存后直接完成配置', async () => {
   const configurations: Record<string, unknown>[] = []
-  let uploads = 0
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
     const path = new URL(String(input), 'http://localhost').pathname
     if (path.endsWith('/configuration')) {
       configurations.push(JSON.parse(String(init?.body)))
       return response({ taskId: 'saved-task', name: 'UI 测试', projectId: 'project', instruction: '覆盖失败状态' })
     }
-    if (path.endsWith('/source-archive')) { uploads++; return response({}, uploads === 1 ? 500 : 200) }
     return response({ taskId: 'saved-task', projectId: 'project' })
   })
   const user = userEvent.setup()
   const { onSaved } = mount('ui')
-  const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
-  await user.upload(fileInput, new File(['zip'], 'source.zip', { type: 'application/zip' }))
-  await user.click(screen.getByRole('button', { name: '保存设置' }))
-  await screen.findByText('上传失败')
-  expect(screen.queryByRole('textbox', { name: '补充指令' })).not.toBeInTheDocument()
-  expect(onSaved).not.toHaveBeenCalled()
+  expect(document.querySelector('input[type="file"]')).toBeNull()
+  expect(screen.queryByText(/源码 ZIP/)).not.toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: '保存设置' }))
   await waitFor(() => expect(onSaved).toHaveBeenCalledWith('saved-task'))
-  expect(configurations).toHaveLength(2)
-  expect(configurations[1]).toMatchObject({ taskId: 'saved-task', newConfiguration: false })
-  expect(configurations[1].requestId).toBe(configurations[0].requestId)
-  expect(uploads).toBe(2)
+  expect(configurations).toHaveLength(1)
+  expect(configurations[0]).toMatchObject({ newConfiguration: false })
+  expect(configurations[0].requestId).toEqual(expect.any(String))
 })
 it('首次 API 配置直接保存文档，自动使用当前需求', async () => {
   const submitted = vi.fn()

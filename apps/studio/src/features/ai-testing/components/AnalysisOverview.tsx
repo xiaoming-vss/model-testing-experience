@@ -32,7 +32,7 @@ export function AnalysisOverview({ overview }: {
           onClick={() => setSelectedIndex(selectedIndex === index ? undefined : index)}
         >
           <strong>{toDisplayText(entry.function) || `入口 ${index + 1}`}</strong>
-          <span>{selectedIndex === index ? '收起模块详情' : '查看模块详情'} <ArrowRightOutlined aria-hidden /></span>
+          <span className="ai-analysis-module-action"><span className="ai-analysis-module-action-label">{selectedIndex === index ? '收起模块详情' : '查看模块详情'}</span><ArrowRightOutlined aria-hidden /></span>
         </button>)}
       </div> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无业务模块" />}
       <div id={detailId}>

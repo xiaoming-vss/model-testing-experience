@@ -112,17 +112,6 @@ async def requirement_document(
     return JSONResponse(ticket, headers={"Cache-Control": "no-store"})
 
 
-async def source_archive(
-    task_id: str,
-    service: WorkerTaskService = Depends(get_worker_task_service),
-    files=Depends(get_file_service),
-):
-    file_id = await service.source_archive(task_id)
-    row = await files.get(file_id)
-    ticket = await files.ticket(row)
-    return JSONResponse(ticket, headers={"Cache-Control": "no-store"})
-
-
 async def report_progress(
     task_id: str,
     body: AiWorkerProgressRequest,

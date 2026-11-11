@@ -1,55 +1,161 @@
-global: {}
+# control-plane chart 的默认 values。
+# 部署时复制本文件到 Git 外（例如 .runtime/k8s/control-plane-values.yaml），
+# 只覆盖需要修改的字段即可；Helm 会与这里的默认值合并。
 
+# 控制面副本数。
 replicaCount: 2
 
+# 容器镜像。registry 为空时直接使用 repository。
 image:
   registry: ""
   repository: mtx/control-plane
   tag: local
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
+# 拉取私有镜像使用的 Secret，例如：
+# imagePullSecrets:
+#   - name: mtx-registry
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-# Complete control-plane TOML. Contains secrets; provide it through a
-# user-managed values file, not the committed defaults.
-configToml: ""
+# 结构化控制面配置。chart 会把它渲染成 ConfigMap 的 local.toml，
+# 结构与控制面 TOML 一一对应。
+#
+# 生产环境至少需要设置：
+# - config.data.db.user.dsn
+# - config.security.jwt.key
+# - config.security.super_admin.username / email
+config:
+  # 运行环境；K8s 部署使用 production。
+  env: production
 
+  # 实时测试运行通知使用的 Redis；留空时实时功能降级为轮询。
+  test_run_notifications:
+    redis_url: ""
+
+  # HTTP 监听地址和端口。容器内必须监听 0.0.0.0，
+  # 否则探针和 Studio 反向代理访问不到。
+  http:
+    host: 0.0.0.0
+    port: 9000
+
+  security:
+    # JWT 签名密钥和有效期。key 生产环境必须显式设置，且所有控制面副本一致。
+    jwt:
+      key: ""
+      expire_hours: 72
+      user_expire_hours: 72
+      super_admin_expire_hours: 24
+
+    # 首次启动时 seed 的超级管理员。username/email 必须填写。
+    # initial_password 留空时使用服务内置初始密码，并强制首次登录改密。
+    super_admin:
+      username: ""
+      email: ""
+      initial_password: ""
+
+    # 登录失败锁定和限流。
+    login:
+      max_failures: 5
+      lock_minutes: 15
+      rate_limit_window_minutes: 15
+
+    # 集成接口密钥。
+    integration:
+      key: ""
+
+    # AI Worker、API/UI Worker 共用的 Worker 令牌。
+    worker:
+      key: ""
+
+    # 独立集成 Worker 的专属令牌，不能与 worker.key 相同。
+    integration_worker:
+      key: ""
+
+  # 独立集成 Worker 的执行开关。
+  # enabled=true 时必须同时设置 runtime_generation 和
+  # security.integration_worker.key。
+  integration_execution:
+    enabled: false
+    project_ids: []
+    all_projects: false
+    accept_submissions: true
+    claim_enabled: true
+    lease_seconds: 60
+    runtime_generation: ""
+    succeeded_retention_days: 30
+    failed_retention_days: 90
+    claim_receipt_retention_days: 14
+    maintenance_batch_size: 100
+    restore_review_max_age_seconds: 3600
+    worker_presence_ttl_seconds: 120
+
+  # MySQL 连接。dsn 必须是 K8s 集群内可达的地址，驱动使用 mysql+asyncmy。
+  # 每个控制面进程最多 pool_size + max_overflow 条连接。
+  data:
+    db:
+      user:
+        driver: mysql
+        pool_size: 20
+        max_overflow: 10
+        dsn: ""
+
+  # 私有 S3 存储。enabled=true 时必须设置 bucket、access_key、secret_key。
+  # endpoint 必须同时被浏览器和 Worker 访问到，否则预签名上传/下载失败。
+  storage:
+    s3:
+      enabled: false
+      endpoint: ""
+      region: us-east-1
+      bucket: ""
+      access_key: ""
+      secret_key: ""
+      prefix: mtx
+      addressing_style: path
+      signature_seconds: 900
+      temporary_hours: 24
+      max_bytes: 104857600
+
+  # 代码概览缓存时间（秒）。
+  code_overview:
+    cache_ttl_seconds: 300
+
+  # 用户资产导入的资源预算；超限请求会被拒绝。
+  asset_import:
+    max_bytes: 8388608
+    max_items: 10000
+    max_field_chars: 262144
+    max_depth: 32
+    max_nodes: 200000
+    max_concurrent: 2
+
+# control-plane Service。默认只创建 ClusterIP，由 Studio 反向代理 /v1/。
 service:
   type: ClusterIP
   port: 9000
 
-podDisruptionBudget:
-  enabled: true
-  minAvailable: 1
-
+# 数据库迁移 Job。pre-install/pre-upgrade hook 会先执行 alembic upgrade head。
 migration:
   enabled: true
   backoffLimit: 3
   activeDeadlineSeconds: 600
   resources: {}
 
+# 默认技能同步 Job。post-install/post-upgrade hook 会把镜像内 /app/default-skills
+# 发布到 S3 和数据库；需要 config.storage.s3.enabled=true，内容未变化时自动跳过。
+skillsSync:
+  enabled: true
+  backoffLimit: 1
+  activeDeadlineSeconds: 600
+  resources: {}
+
+# 控制面容器的资源限制和调度配置。
 resources: {}
 podAnnotations: {}
 nodeSelector: {}
 tolerations: []
 affinity: {}
 
+# 收到 SIGTERM 后等待退出的时间。
 terminationGracePeriodSeconds: 60
-
-podSecurityContext:
-  runAsNonRoot: true
-  runAsUser: 10001
-  runAsGroup: 10001
-  fsGroup: 10001
-  fsGroupChangePolicy: OnRootMismatch
-
-securityContext:
-  allowPrivilegeEscalation: false
-  readOnlyRootFilesystem: true
-  capabilities:
-    drop:
-      - ALL
-  seccompProfile:
-    type: RuntimeDefault

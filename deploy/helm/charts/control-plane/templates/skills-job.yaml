@@ -1,0 +1,60 @@
+{{- if and .Values.skillsSync.enabled .Values.config.storage.s3.enabled }}
+# 把镜像内置的默认技能同步到 S3 与数据库。
+# 放在 post-install/post-upgrade：此时迁移 Job 已完成、运行配置 ConfigMap 已创建。
+# 同步按内容签名跳过未变化的技能，重复升级不会产生新的 S3 批次。
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "control-plane.fullname" . }}-skills-sync
+  labels:
+    {{- include "control-plane.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.skillsSync.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.skillsSync.activeDeadlineSeconds }}
+  template:
+    metadata:
+      # 不要复用 Deployment 的 selectorLabels，避免 Service 把本 Job 的 Pod 当成后端。
+      labels:
+        app.kubernetes.io/name: {{ include "control-plane.name" . }}-skills-sync
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 60
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: skills-sync
+          image: {{ include "control-plane.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - -m
+            - testing_agent.cli.skills
+            - /app/default-skills
+          env:
+            - name: APP_CONF
+              value: /app/config/local.toml
+          volumeMounts:
+            - name: config
+              mountPath: /app/config/local.toml
+              subPath: local.toml
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            {{- toYaml .Values.skillsSync.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "control-plane.fullname" . }}-config
+            defaultMode: 0444
+        - name: tmp
+          emptyDir: {}
+{{- end }}

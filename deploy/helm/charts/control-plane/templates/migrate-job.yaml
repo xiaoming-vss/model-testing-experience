@@ -20,12 +20,10 @@ spec:
       restartPolicy: Never
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: 60
-      {{- with .Values.imagePullSecrets | default .Values.global.imagePullSecrets }}
+      {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
         - name: migrate
           image: {{ include "control-plane.image" . | quote }}
@@ -46,13 +44,13 @@ spec:
               mountPath: /tmp
           resources:
             {{- toYaml .Values.migration.resources | nindent 12 }}
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
       volumes:
         - name: config
-          secret:
-            secretName: {{ include "control-plane.fullname" . }}-migrate-config
-            defaultMode: 0440
+          configMap:
+            name: {{ include "control-plane.fullname" . }}-migrate-config
+            # 迁移 Job 以非 root UID 运行，且不再设置 fsGroup，
+            # 需要 0444 才能读取 ConfigMap 文件。
+            defaultMode: 0444
         - name: tmp
           emptyDir: {}
 {{- end }}

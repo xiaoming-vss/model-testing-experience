@@ -1,0 +1,11 @@
+# 控制面运行配置；由 values.config 渲染成 TOML，
+# 挂载到容器的 /app/config/local.toml。
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "control-plane.fullname" . }}-config
+  labels:
+    {{- include "control-plane.labels" . | nindent 4 }}
+data:
+  local.toml: |
+{{ include "control-plane.configToml" . | indent 4 }}

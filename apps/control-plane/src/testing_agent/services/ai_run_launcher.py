@@ -17,9 +17,6 @@ from testing_agent.core.errors import (
 )
 from testing_agent.core.sid import new_id
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-from testing_agent.repositories.ai_generate_task_source_archive import (
-    AiGenerateTaskSourceArchiveRepository,
-)
 from testing_agent.services.ai_task_access import RunLaunchAccess
 from testing_agent.services.ai_task_output import (
     build_generate_run_snapshot,
@@ -40,7 +37,6 @@ class GenerationRunLauncher:
         self,
         *,
         repository: AiGenerateTaskRepository,
-        source_archive_repository: AiGenerateTaskSourceArchiveRepository,
         access: RunLaunchAccess,
         execution: object | None = None,
         sprint_daily_metrics_service: SprintDailyMetricsService | None = None,
@@ -49,7 +45,6 @@ class GenerationRunLauncher:
         id_factory: Callable[[], str] = new_id,
     ) -> None:
         self.repository = repository
-        self.source_archive_repository = source_archive_repository
         self.access = access
         self.sprint_daily_metrics_service = sprint_daily_metrics_service
         self.code_risk_analysis_service = code_risk_analysis_service

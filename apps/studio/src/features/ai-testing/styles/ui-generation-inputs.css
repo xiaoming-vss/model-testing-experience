@@ -9,10 +9,6 @@
   overflow: auto;
 }
 
-.gc-ui-source-upload {
-  margin-block: 16px;
-}
-
 .gc-ui-input-cases {
   min-width: 0;
   margin: 0;
@@ -40,6 +36,34 @@
   cursor: pointer;
 }
 
+.gc-ui-source-repository {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 12px;
+}
+
+.gc-ui-source-repository > div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.gc-ui-source-repository dt {
+  color: var(--app-surface-text-muted);
+  font-size: 12px;
+}
+
+.gc-ui-source-repository dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.gc-ui-source-repository code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
 .gc-ui-source-trigger.ant-btn {
   height: auto;
   max-width: 100%;
@@ -47,3 +71,22 @@
   overflow-wrap: anywhere;
   text-align: start;
 }
+
+.gc-ui-input-steps { margin: 0 0 20px; }
+.gc-ui-input-step-panel { min-width: 0; margin-top: 16px; padding: 0; border: 0; }
+.gc-ui-input-confirm { display: grid; gap: 16px; margin-top: 16px; }
+.gc-ui-input-summary { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 0; border: 1px solid var(--app-surface-divider); border-radius: 8px; overflow: hidden; }
+.gc-ui-input-summary > * { padding: 10px 12px; border-bottom: 1px solid var(--app-surface-divider); }
+.gc-ui-input-summary > :nth-last-child(-n+2) { border-bottom: 0; }
+.gc-ui-input-summary span { color: var(--app-surface-text-muted); background: var(--app-surface-subtle); }
+.gc-ui-input-summary strong { min-width: 0; overflow-wrap: anywhere; font-weight: 500; }
+.gc-ui-input-summary .is-warning { color: var(--app-status-warning-text); }
+.gc-ui-input-impact { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--app-surface-divider); }
+.gc-ui-input-impact li { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--app-surface-divider); }
+.gc-ui-input-impact span { color: var(--app-surface-text-muted); }
+.gc-ui-input-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--app-surface-divider); }
+@media (max-width: 640px) { .gc-ui-input-impact li { grid-template-columns: 1fr; gap: 2px; } .gc-ui-input-summary { grid-template-columns: 96px minmax(0, 1fr); } }
+
+
+.gc-ui-input-step-panel .ui-generation-case-selector { margin-bottom: 0; }
+.gc-ui-input-step-panel .ui-generation-case-pagination { min-height: 42px; padding: 6px 12px; }

@@ -4,13 +4,12 @@ import {
   uiStageHasContent,
   type UiGenerationStage,
 } from '../utils/uiGenerationStage'
-import { UiGenerationCaseSelector } from '../components/UiGenerationCaseSelector'
 import { ArtifactViewTabs } from '../components/ArtifactViewTabs'
 import { useTaskRunDialog, type TaskRunDialogRequest } from '../hooks/useTaskRunDialog'
 import { listTotal } from '@/shared/api/request'
 import { getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
 import { useTaskRunHistorySync } from '@/features/ai-testing/hooks/useTaskRunHistorySync'
-import { useDeleteTaskRun, useStartTaskRun } from '@/features/ai-testing/hooks/useTaskRunActions'
+import { useDeleteTaskRun } from '@/features/ai-testing/hooks/useTaskRunActions'
 import '@/shared/styles/surface-tokens.css'
 import '@/features/ai-testing/styles/index.css'
 import '@/features/ai-testing/styles/task-review.css'
@@ -25,18 +24,16 @@ import { useProjectRequirementOptions } from '@/features/projects/hooks/useProje
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
-import { ArrowLeftOutlined, CodeOutlined, DownOutlined, EditOutlined, FileZipOutlined, HistoryOutlined, RightOutlined, UploadOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, CodeOutlined, DownOutlined, FolderOpenOutlined, HistoryOutlined, RightOutlined } from '@ant-design/icons'
 import { Alert, Button, Card, Descriptions, Empty, Input, Modal, Popconfirm, Select, Space, Spin, Table, Tag, Tooltip, Typography } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { LlmConnectionSelectModal } from '../components/LlmConnectionSelectModal'
+import { useNavigate, useParams } from 'react-router-dom'
 import { UiImportConflictModal } from '../components/UiImportConflictModal'
 import { RunHistoryTable, RunRowActions, type RunMenuAction } from '../components/RunHistoryTable'
 import { TaskDetailInstructionEditor, TaskDetailNavItem, TaskDetailNavPanel, TaskDetailRunMetrics, TaskDetailToolbar } from '../components/TaskDetailShell'
 import { confirmDeleteRun, isRunDeletable } from '../utils/runDeletion'
 import { RunArtifacts, RunPipelineStatus } from '../components/RunPipelineStatus'
-import { validateUiSourceArchive } from '../utils/uiSourceArchive'
 import type { UiCaseGenerateTaskRun, UiCaseGenerateTaskRunImportConflict } from '../types'
 import { parseUiCaseCandidate } from '../utils/uiCaseCandidate'
 import { isGenerateTaskRunImportable, renderApiCaseGenerateTaskRunStatusTag, summarizeRunStatuses } from '../utils/taskStatus'
@@ -47,22 +44,7 @@ import { goBackOrFallback } from '@/shared/utils/backNavigation'
 import { formatTime, getErrorMessage, normalizeRequirementId, normalizeSprintId } from '@/utils/format'
 
 const { Text } = Typography
-const activeRunStatuses = new Set(['pending', 'claimed', 'running'])
 
-function formatBytes(value?: number) {
-  if (value === undefined || !Number.isFinite(value)) return '-'
-  if (value < 1024) return `${value} B`
-  if (value < 1024 * 1024) return `${Number((value / 1024).toFixed(1))} KiB`
-  return `${Number((value / 1024 / 1024).toFixed(1))} MiB`
-}
-
-
-function archiveErrorMessage(error: unknown) {
-  const messageText = getErrorMessage(error)
-  return error instanceof ApiError && error.status === 413
-    ? `源码包超过上传大小限制：${messageText}`
-    : messageText
-}
 
 function uiImportErrorMessage(error: unknown) {
   const messageText = getErrorMessage(error)
@@ -150,8 +132,6 @@ function CandidatePreview({ yaml }: { yaml: string }) {
   )
 }
 
-type DetailLocationState = { pendingSourceArchive?: File; pendingSourceArchiveError?: string } | null
-
 /** 需求页产物列用 configJson 字段名寻址，阶段面板用阶段名寻址。 */
 function stageForArtifact(artifact?: string): UiGenerationStage | undefined {
   if (artifact === 'uiSurface') return 'ui_surface'
@@ -177,21 +157,13 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
   const [runPageSize, setRunPageSize] = useState(20)
   useEffect(() => { setRunPage(1) }, [taskId])
   const navigate = useNavigate()
-  const location = useLocation()
   const queryClient = useQueryClient()
-  const pendingNavigationFile = (location.state as DetailLocationState)?.pendingSourceArchive
-  const pendingNavigationError = (location.state as DetailLocationState)?.pendingSourceArchiveError
   const [selectedRunId, setSelectedRunId] = useState<string | undefined>(dialogRequest?.runId)
   const [modalStage, setModalStage] = useState<UiGenerationStage | undefined>(() => stageForArtifact(dialogRequest?.artifact))
-  const [selectedFunctionCaseIds, setSelectedFunctionCaseIds] = useState<string[] | undefined>(undefined)
-  const [sourceCasesReady, setSourceCasesReady] = useState(false)
   const [stageDirty, setStageDirty] = useState(false)
   const [draftYaml, setDraftYaml] = useState('')
   const [savedYaml, setSavedYaml] = useState('')
   const [reviewComment, setReviewComment] = useState('')
-  const [llmModalOpen, setLlmModalOpen] = useState(false)
-  const [archiveModalOpen, setArchiveModalOpen] = useState(Boolean(pendingNavigationFile))
-  const [archiveFile, setArchiveFile] = useState<File | undefined>(pendingNavigationFile)
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [editName, setEditName] = useState('')
   const [editInstruction, setEditInstruction] = useState('')
@@ -206,7 +178,7 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
     conflicts: UiCaseGenerateTaskRunImportConflict[]
   } | null>(null)
   const [importConflictsChanged, setImportConflictsChanged] = useState(false)
-  const [expandedSection, setExpandedSection] = useState<'sourceArchive' | 'instruction' | 'runHistory'>('runHistory')
+  const [expandedSection, setExpandedSection] = useState<'source' | 'instruction' | 'runHistory'>('runHistory')
   const [candidateModalOpen, setCandidateModalOpen] = useState(false)
   const [candidateCloseConfirmOpen, setCandidateCloseConfirmOpen] = useState(false)
   const [candidateEditorVersion, setCandidateEditorVersion] = useState(0)
@@ -295,9 +267,6 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
     setReviewComment('')
   }, [selectedRun?.resultYaml, selectedRun?.runId])
 
-  const hasActiveRun = runsQuery.data?.statusCounts
-    ? Object.entries(runsQuery.data.statusCounts).some(([status, count]) => count > 0 && activeRunStatuses.has(status))
-    : runs.some((run) => activeRunStatuses.has(run.status ?? ''))
   const resolveRunRecord = (record: UiCaseGenerateTaskRun) =>
     record.runId === selectedRunId && selectedRun ? selectedRun : record
   const { can } = useProjectAccess(taskQuery.data?.projectId ?? '')
@@ -396,17 +365,6 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
     setCandidateCloseConfirmOpen(true)
   }
 
-  const uploadMutation = useMutation({
-    mutationFn: (file: File) => api.uploadUiCaseGenerateTaskSourceArchive(taskId, file),
-    onSuccess: (updatedTask) => {
-      queryClient.setQueryData(['uiCaseGenerateTask', taskId], updatedTask)
-      queryClient.invalidateQueries({ queryKey: ['uiCaseGenerateTasks', updatedTask.projectId] })
-      message.success(taskQuery.data?.sourceArchive ? '源码包已替换' : '源码包已上传')
-      setArchiveModalOpen(false)
-      setArchiveFile(undefined)
-      navigate(location.pathname, { replace: true, state: null })
-    },
-  })
   const updateTaskMutation = useMutation({
     mutationFn: () => api.updateUiCaseGenerateTask(taskId, {
       name: editName.trim(),
@@ -422,7 +380,6 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
     },
   })
   // 内联指令保存单独一条：编辑弹窗那条读的是弹窗自己的 state，不能复用。
-  useEffect(() => { setSelectedFunctionCaseIds(undefined) }, [taskQuery.data?.requirementId])
   const taskInstruction = taskQuery.data?.instruction
   useEffect(() => {
     setInstructionDraft(taskInstruction ?? '')
@@ -444,15 +401,6 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
     onError: (error) => message.error(getErrorMessage(error)),
   })
 
-  const runMutation = useStartTaskRun({
-    kind: 'ui',
-    taskId,
-    startRun: (connectionId: string) => api.runUiCaseGenerateTask(taskId, { connectionId, functionCaseIds: selectedFunctionCaseIds, checkpointEnabled: true }),
-    onStarted: (createdRun) => {
-      setLlmModalOpen(false)
-      setSelectedRunId(createdRun.runId)
-    },
-  })
   const deleteTaskMutation = useMutation({
     mutationFn: () => api.deleteUiCaseGenerateTask(taskId),
       onSuccess: () => {
@@ -569,13 +517,10 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
   const task = taskQuery.data
   if (!task) return <div className="workbench-page"><Empty description="任务不存在" /></div>
 
-  const archiveValidationError = validateUiSourceArchive(archiveFile)
-  const replacementBlocked = hasActiveRun
   return (<ProjectAccessScope resourceError={taskQuery.error} projectId={task?.projectId ?? ''}>{(
     <div className="workbench-page ai-testing-page tp-list-surface ai-task-detail-page tp-surface">
       {!dialogRequest && (
       <div className="workbench-tabs">
-        {runMutation.error ? <Alert showIcon type="error" title={getErrorMessage(runMutation.error)} /> : null}
         {selectedRunQuery.error ? (
           <Alert
             showIcon
@@ -593,13 +538,13 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
               { label: '任务名称', value: task.name || '未命名任务', kind: 'name', separator: 'line' },
               { label: '迭代', value: task.sprintId || '-', kind: 'chip-accent' },
               { label: '需求', value: 'UI 用例生成' },
-              { label: '来源类型', value: '源码包', kind: 'chip-muted' },
+              { label: '来源类型', value: '仓库画像', kind: 'chip-muted' },
               { label: '创建人', value: <UserReference projectId={task.projectId ?? undefined} userId={task.creatorUserId ?? undefined} /> },
               { label: '更新时间', value: formatTime(task.updatedAt), kind: 'time', separator: 'dot' },
             ]}
             actions={(
               <>
-                <Tooltip title={task.requirementId ? '前往需求生成链' : !task.sourceArchive ? '请先上传源码 ZIP' : hasActiveRun ? '任务执行中，暂时不能重复运行' : '运行任务'}><span><ProjectActionButton action="execute" aria-label={task.requirementId ? '前往需求生成链' : '运行任务'} className="action-btn-run" operation="run" disabled={!task.requirementId && (!task.sourceArchive || hasActiveRun)} onClick={() => { if (task.requirementId) navigate(`/requirements/${encodeURIComponent(task.requirementId)}`); else setLlmModalOpen(true) }}>{task.requirementId ? '生成链' : '运行'}</ProjectActionButton></span></Tooltip>
+                <Tooltip title={task.requirementId ? '前往需求生成链' : '请先关联需求，再从需求生成链的 UI 分组运行'}><span><ProjectActionButton action="execute" aria-label="前往需求生成链" className="action-btn-run" operation="run" disabled={!task.requirementId} onClick={() => { if (task.requirementId) navigate(`/requirements/${encodeURIComponent(task.requirementId)}`) }}>生成链</ProjectActionButton></span></Tooltip>
                 <ProjectActionButton action="write" aria-label="编辑任务" className="action-btn-update" operation="edit" onClick={() => { setEditName(task.name); setEditInstruction(task.instruction); setEditSprintId(task.sprintId); setEditRequirementId(task.requirementId); setEditModalOpen(true) }}>编辑</ProjectActionButton>
                 <Popconfirm title="确认删除该任务？" onConfirm={() => deleteTaskMutation.mutate()}><ProjectActionButton operation="delete" action="write" danger className="action-btn-delete" loading={deleteTaskMutation.isPending}>删除</ProjectActionButton></Popconfirm>
               </>
@@ -610,11 +555,11 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
             <TaskDetailNavPanel tip="点击左侧条目在右侧查看内容，运行时记录自动刷新。">
               <div className="ai-task-detail-nav-label">输入</div>
               <TaskDetailNavItem
-                title="源码包"
-                sub={task.sourceArchive?.filename || '尚未上传源码包'}
-                icon={<FileZipOutlined />}
-                active={expandedSection === 'sourceArchive'}
-                onClick={() => setExpandedSection('sourceArchive')}
+                title="源码来源"
+                sub="仓库画像 · 需求生成链"
+                icon={<FolderOpenOutlined />}
+                active={expandedSection === 'source'}
+                onClick={() => setExpandedSection('source')}
               />
               <TaskDetailNavItem
                 title="生成指令"
@@ -635,18 +580,34 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
             </TaskDetailNavPanel>
 
             <section className="ai-task-detail-main-panel">
-              {expandedSection === 'sourceArchive' ? (
+              {expandedSection === 'source' ? (
                 <>
                   <div className="ai-task-detail-main-head">
-                    <span className="ai-task-detail-main-head-title">源码包</span>
-                    <div className="ai-task-detail-main-head-extra">
-                      <Tooltip title={replacementBlocked ? '存在执行中的运行，完成后才能替换源码包' : undefined}>
-                        <span><ProjectActionButton action="write" size="small" icon={task.sourceArchive ? <EditOutlined /> : <UploadOutlined />} disabled={replacementBlocked} onClick={() => setArchiveModalOpen(true)}>{task.sourceArchive ? '替换源码包' : '上传源码包'}</ProjectActionButton></span>
-                      </Tooltip>
-                    </div>
+                    <span className="ai-task-detail-main-head-title">源码来源</span>
                   </div>
                   <div className="ai-task-detail-main-body">
-                    {task.sourceArchive ? <Descriptions column={2} items={[{ key: 'filename', label: '文件名', children: task.sourceArchive.filename }, { key: 'size', label: '大小', children: formatBytes(task.sourceArchive.sizeBytes) }, { key: 'uploadedAt', label: '上传时间', children: formatTime(task.sourceArchive.uploadedAt) }, { key: 'sha256', label: 'SHA256', children: <Text code copyable>{task.sourceArchive.sha256}</Text> }]} /> : <Alert showIcon type="info" title="请先上传源码 ZIP" description="没有有效源码包时不能运行任务。" />}
+                    <Alert
+                      showIcon
+                      type="info"
+                      title="源码由仓库画像提供"
+                      description="UI 生成在需求生成链中使用仓库画像识别的前端仓库和冻结 commit，不再接受源码 ZIP。请在需求生成链的 UI 分组中选择画像版本、前端仓库和 commit 模式。"
+                    />
+                    {task.requirementId ? (
+                      <Button
+                        style={{ marginTop: 12 }}
+                        onClick={() => navigate(`/requirements/${encodeURIComponent(task.requirementId ?? '')}`)}
+                      >
+                        前往需求生成链
+                      </Button>
+                    ) : (
+                      <Alert
+                        showIcon
+                        type="warning"
+                        style={{ marginTop: 12 }}
+                        title="任务尚未关联需求"
+                        description="关联需求并完成仓库画像后，才能从需求生成链启动 UI 生成。"
+                      />
+                    )}
                   </div>
                 </>
               ) : expandedSection === 'instruction' ? (
@@ -1035,36 +996,6 @@ export function UiCaseGenerateTaskDetailPage({ dialogRequest }: { dialogRequest?
           <label>生成指令<Input.TextArea aria-label="编辑生成指令" value={editInstruction} maxLength={1000} onChange={(event) => setEditInstruction(event.target.value)} /></label>
         </Space>
       </ProjectActionModal>
-
-      <ProjectActionModal action="write"
-        mask={{ closable: false }}
-        title={task.sourceArchive ? '确认替换源码包' : '上传源码包'}
-        open={archiveModalOpen}
-        onCancel={() => { if (!uploadMutation.isPending) { setArchiveModalOpen(false); setArchiveFile(undefined) } }}
-        okText={task.sourceArchive ? '确认替换' : '确认上传'}
-        okButtonProps={{ disabled: Boolean(archiveValidationError), loading: uploadMutation.isPending }}
-        cancelButtonProps={{ disabled: uploadMutation.isPending }}
-        onOk={() => archiveFile && uploadMutation.mutate(archiveFile)}
-      >
-        {pendingNavigationError && !uploadMutation.error ? <Alert showIcon type="error" title={pendingNavigationError} style={{ marginBottom: 12 }} /> : null}
-        {uploadMutation.error ? <Alert showIcon type="error" title={archiveErrorMessage(uploadMutation.error)} style={{ marginBottom: 12 }} /> : null}
-        {task.sourceArchive ? <Alert showIcon type="warning" title={`当前：${task.sourceArchive.filename}`} description="替换只影响后续运行；替换失败时当前源码包仍然有效。" style={{ marginBottom: 12 }} /> : null}
-        <input aria-label="新的源码 ZIP" type="file" accept=".zip,application/zip" disabled={uploadMutation.isPending} onChange={(event) => setArchiveFile(event.target.files?.[0])} />
-        {archiveFile ? <Text style={{ display: 'block', marginTop: 8 }}>新文件：{archiveFile.name}</Text> : null}
-        {archiveFile && archiveValidationError ? <Alert showIcon type="error" title={archiveValidationError} style={{ marginTop: 12 }} /> : null}
-      </ProjectActionModal>
-
-      <LlmConnectionSelectModal
-        open={llmModalOpen}
-        projectId={task.projectId}
-        loading={runMutation.isPending}
-        onClose={() => setLlmModalOpen(false)}
-        onConfirm={(connectionId) => runMutation.mutate(connectionId)}
-        confirmDisabled={!sourceCasesReady}
-      >
-        <UiGenerationCaseSelector requirementId={task.requirementId} open={llmModalOpen} value={selectedFunctionCaseIds}
-          onChange={setSelectedFunctionCaseIds} onReady={setSourceCasesReady} />
-      </LlmConnectionSelectModal>
     </div>
   )}</ProjectAccessScope>)
 }

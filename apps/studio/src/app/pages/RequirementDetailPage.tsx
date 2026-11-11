@@ -36,7 +36,7 @@ export function RequirementDetailPage() {
     leaveReadingRef.current = next?.leave ?? null
     setReadingNode(current => {
       if (!next) return current === null ? current : null
-      return current?.label === next.label && current.status === next.status && current.tone === next.tone ? current : { label: next.label, status: next.status, tone: next.tone, kind: next.kind }
+      return current?.label === next.label && current.kind === next.kind ? current : { label: next.label, kind: next.kind }
     })
   }, [])
   const handleLeaveReading = useCallback(() => { leaveReadingRef.current?.() }, [])

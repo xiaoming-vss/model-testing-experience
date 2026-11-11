@@ -65,7 +65,6 @@ export type {
   UiCaseGenerateTaskRunImportResult,
   UiCaseGenerateTaskRunSnapshot,
   UiCaseGenerateTaskSourceType,
-  UiCaseSourceArchive,
   UpdateUiCaseGenerateTaskPayload,
   UpdateUiCaseGenerateTaskRunResultPayload,
   ReviewUiCaseGenerateTaskRunPayload,

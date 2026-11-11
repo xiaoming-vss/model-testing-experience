@@ -124,6 +124,13 @@ workspace_retention_hours = 24
 max_repos = 20
 max_output_chars = 100000
 
+# UI 生成从仓库画像冻结的前端仓库 commit 拉取源码；限制应用于 checkout 后的工作树。
+[ai_worker.ui_generation]
+git_timeout_seconds = 300
+workspace_retention_hours = 24
+max_repo_size_mb = 500
+max_repo_files = 200000
+
 [ai_worker.worker]
 max_concurrent_tasks = 2
 poll_interval_seconds = 5

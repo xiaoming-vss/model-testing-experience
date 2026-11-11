@@ -7,6 +7,7 @@ import { aiTestingApi } from '../api/aiTesting.api'
 import { generationChainApi } from '../api/generationChain.api'
 import { baseServicesApi } from '@/features/base-services/api/baseServices.api'
 import { message } from '@/shared/utils/feedback'
+import { randomId } from '@/shared/utils/crypto'
 import { getErrorMessage } from '@/utils/format'
 import { RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
 import { usePersonalLlmChoice } from './usePersonalLlmChoice'
@@ -130,7 +131,7 @@ export function useRequirementCodeRiskWorkspace(requirementId: string, projectId
         gitlabConnectionIds: Object.entries(gitlabConnectionIds).sort(([a], [b]) => a.localeCompare(b)),
         requirementUnderstandingVersionId: understandingVersionId,
       })
-      if (requestId.current?.taskId !== taskId || requestId.current.options !== options) requestId.current = { taskId, options, id: crypto.randomUUID() }
+      if (requestId.current?.taskId !== taskId || requestId.current.options !== options) requestId.current = { taskId, options, id: randomId() }
       return aiTestingApi.runCodeRiskTask(taskId, {
         llmConnectionId: connectionId,
         instruction: instruction || undefined,

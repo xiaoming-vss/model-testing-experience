@@ -6,7 +6,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.domain.worker_context import WorkerExecutionContext
-from testing_agent.models.ai_generate_task_source_archive import AiGenerateTaskSourceArchive
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.api_case_run import ApiCaseRun
 from testing_agent.models.api_collection_run import ApiCollectionRun, ApiCollectionRunItem
@@ -169,13 +168,6 @@ class WorkerTaskRepository(BaseRepository):
             select(IntegrationConnection).where(
                 IntegrationConnection.connection_id == connection_id,
                 IntegrationConnection.provider == "llm",
-            )
-        )
-
-    async def get_source_archive(self, task_id: str) -> AiGenerateTaskSourceArchive | None:
-        return await self.session.scalar(
-            select(AiGenerateTaskSourceArchive).where(
-                AiGenerateTaskSourceArchive.task_id == task_id
             )
         )
 

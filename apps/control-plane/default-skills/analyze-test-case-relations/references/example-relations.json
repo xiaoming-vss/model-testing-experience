@@ -1,0 +1,65 @@
+{
+  "schema_version": "2.0",
+  "main_paths": [
+    {
+      "path_id": "P01",
+      "case_ids": [
+        "C001",
+        "C002",
+        "C003",
+        "C007"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "edge_id": "E01",
+      "from_case_id": "C001",
+      "to_case_id": "C002",
+      "relation_type": "next",
+      "order": 1
+    },
+    {
+      "edge_id": "E02",
+      "from_case_id": "C002",
+      "to_case_id": "C003",
+      "relation_type": "next",
+      "order": 1
+    },
+    {
+      "edge_id": "E03",
+      "from_case_id": "C003",
+      "to_case_id": "C007",
+      "relation_type": "next",
+      "order": 1
+    },
+    {
+      "edge_id": "E04",
+      "from_case_id": "C002",
+      "to_case_id": "C004",
+      "relation_type": "branch",
+      "order": 2
+    },
+    {
+      "edge_id": "E05",
+      "from_case_id": "C004",
+      "to_case_id": "C005",
+      "relation_type": "next",
+      "order": 1
+    },
+    {
+      "edge_id": "E06",
+      "from_case_id": "C004",
+      "to_case_id": "C006",
+      "relation_type": "branch",
+      "order": 2
+    },
+    {
+      "edge_id": "E07",
+      "from_case_id": "C005",
+      "to_case_id": "C007",
+      "relation_type": "next",
+      "order": 1
+    }
+  ]
+}

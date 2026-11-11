@@ -27,7 +27,7 @@ type CanvasProps = {
   sourceSelected: 'ui' | 'api' | null
   onSelectSource: (kind: 'ui' | 'api') => void
   chains: GenerationChain[]; filter: ChainFilter; selected?: { kind: GenerationChainKind; stage: string }; special: 'content' | 'codeRisk' | 'repositoryProfile' | 'relations' | null
-  /** 仓库画像作为需求分析分组内第二行右对齐的卡片渲染，复用阶段卡片尺寸与状态动画。 */
+  /** 仓库画像位于需求分析分组第二行，复用阶段卡片尺寸与状态动画。 */
   profile?: Omit<ProfileCardData, 'index'>
   /** 功能测试「完整用例」派生出的用例图谱入口；没有可用运行记录时不渲染。 */
   relations?: { active: boolean } & CardActions
@@ -86,6 +86,7 @@ function ProfileCard({ data }: NodeProps<ProfileNode>) {
   return <div className="gc-flow-stage">
     <Handle type="target" position={Position.Left} className="gc-flow-handle" />
     <Handle type="target" position={Position.Top} id="top" className="gc-flow-handle" />
+    <Handle type="source" position={Position.Right} id="right" className="gc-flow-handle" />
     <button type="button" className={`gc-node ${data.statusClass}${data.active ? ' is-selected' : ''}`} {...cardActions(data)}
       aria-label={`仓库画像 · ${data.statusLabel}`} aria-pressed={data.active} aria-busy={data.running}>
       <span className="gc-node-top"><span className="gc-node-index">{data.index}</span><span className="gc-node-state">{data.running ? <LoadingOutlined className="gc-running-indicator" aria-hidden /> : null}{data.statusLabel}</span></span>
@@ -95,14 +96,18 @@ function ProfileCard({ data }: NodeProps<ProfileNode>) {
   </div>
 }
 const nodeTypes = { chainGroup: ChainGroup, stage: StageCard, special: SpecialCard, profile: ProfileCard, relations: RelationsCard }
-type GenerationFlowEdge = Edge<{ running: boolean }, 'generationFlow'>
+type GenerationFlowEdge = Edge<{ running: boolean; profileRoute?: boolean }, 'generationFlow'>
 // 320 单位/秒，每秒一束；12 段透明度渐变组成 87 单位的拖尾，沿实际曲线行进。
 const beamSegments = Array.from({ length: 12 }, (_, index) => ({
   '--gc-beam-offset': `${(11 - index) * 7.25}px`,
   opacity: (index / 11) ** 2.2,
 } as CSSProperties))
+// 画像入线从需求理解右侧绕至画像上方，再接入画像左侧，避免穿过卡片。
+function getProfilePath({ sourceX, sourceY, targetX, targetY }: EdgeProps) {
+  return `M ${sourceX} ${sourceY} C ${sourceX + 54} ${sourceY + 11} ${sourceX + 34} ${targetY - 85} ${targetX + 138} ${targetY - 80} C ${targetX + 65} ${targetY - 74} ${targetX - 65} ${targetY - 88} ${targetX - 65} ${targetY - 35} C ${targetX - 65} ${targetY - 15} ${targetX - 39} ${targetY} ${targetX} ${targetY}`
+}
 function FlowEdge(props: EdgeProps<GenerationFlowEdge>) {
-  const [path] = getBezierPath(props)
+  const path = props.data?.profileRoute ? getProfilePath(props) : getBezierPath(props)[0]
   return <>
     <BaseEdge id={props.id} path={path} markerEnd={props.markerEnd} style={props.style} className="gc-flow-edge-track" />
     {props.data?.running ? <g className="gc-flow-edge-output" aria-hidden="true">
@@ -113,14 +118,16 @@ function FlowEdge(props: EdgeProps<GenerationFlowEdge>) {
 }
 const edgeTypes = { generationFlow: FlowEdge }
 const positions: Record<GenerationChainKind, { x: number; y: number; width: number }> = {
-  requirement_analysis: { x: 434, y: 273, width: 292 }, function: { x: 1024, y: -172, width: 455 },
-  api: { x: 1027, y: 286, width: 455 }, ui: { x: 1044, y: 630, width: 455 },
+  requirement_analysis: { x: 375, y: 211, width: 292 }, function: { x: 905, y: -228, width: 455 },
+  api: { x: 1026, y: 286, width: 455 }, ui: { x: 1019, y: 652, width: 455 },
 }
 const stageInset = 20
 const stageGap = 40
 const stageTop = 44
 const stageBottom = 176
 const itemWidth = 126
+// 画像位于第二行，留出空间供需求理解的右侧出线绕行。
+const profileTop = 220
 // 三阶段链路（功能测试、UI 测试）外框向右加宽、向下加高，阶段卡片交错排布。
 const staggeredKinds = new Set<GenerationChainKind>(['function', 'ui'])
 const staggeredExtraWidth = 96
@@ -131,7 +138,7 @@ const isStaggeredGroup = (node: CanvasNode) => node.type === 'chainGroup' && isS
 function buildCanvas({ chains, filter, selected, special, profile, relations, canWrite, sourceSelected, onSelectSource, onSelectStage, onOpenStage, onSelectSpecial, onOpenSpecial, onOpenTab }: CanvasProps) {
   const nodes: CanvasNode[] = [
     { id: 'document', type: 'special', position: { x: 35, y: 275 }, style: { width: 184 }, data: { kind: 'content', active: special === 'content', onSelect: () => onSelectSpecial('content'), onOpen: (origin) => onOpenSpecial('content', origin) } },
-    { id: 'risk', type: 'special', position: { x: 198, y: 643 }, style: { width: 300 }, data: { kind: 'codeRisk', active: special === 'codeRisk', onSelect: () => onSelectSpecial('codeRisk'), onOpen: (origin) => onOpenSpecial('codeRisk', origin) } },
+    { id: 'risk', type: 'special', position: { x: 198, y: 674 }, style: { width: 300 }, data: { kind: 'codeRisk', active: special === 'codeRisk', onSelect: () => onSelectSpecial('codeRisk'), onOpen: (origin) => onOpenSpecial('codeRisk', origin) } },
   ]
   const edges: Edge[] = []
   for (const chain of chains) {
@@ -143,16 +150,17 @@ function buildCanvas({ chains, filter, selected, special, profile, relations, ca
     const hasProfileRow = Boolean(profileCard && chain.stages.length)
     const count = chain.stages.length
     const staggered = isStaggered(chain.kind)
-    const groupWidth = Math.max(layout.width, stageInset * 2 + count * itemWidth + Math.max(0, count - 1) * stageGap)
-      + (staggered ? staggeredExtraWidth : 0)
-    const groupHeight = staggered || hasProfileRow ? staggeredGroupHeight : compactGroupHeight
+    const groupScale = chain.kind === 'requirement_analysis' ? 1.2 : 1
+    const groupWidth = (Math.max(layout.width, stageInset * 2 + count * itemWidth + Math.max(0, count - 1) * stageGap)
+      + (staggered ? staggeredExtraWidth : 0)) * groupScale
+    const groupHeight = (staggered || hasProfileRow ? staggeredGroupHeight : compactGroupHeight) * groupScale
     nodes.push({ id: groupId, type: 'chainGroup', position: { x: layout.x, y: layout.y }, style: { width: groupWidth, height: groupHeight }, data: { kind: chain.kind, label: chain.label, status, dim, active: chain.kind === sourceSelected, onSelect: chain.kind === 'ui' || chain.kind === 'api' ? () => onSelectSource(chain.kind as 'ui' | 'api') : undefined, unconfigured: !chain.configured, readOnlyUnconfigured: !canWrite && (chain.kind === 'requirement_analysis' || chain.kind === 'function'), onConfigure: () => chain.kind === 'ui' || chain.kind === 'api' ? onSelectSource(chain.kind) : onOpenTab(chain.kind) } })
     if (!chain.configured) continue
     chain.stages.forEach((entry, index) => {
       const id = `${chain.kind}:${entry.stage}`
-      const position = staggered ? {
+      const position = staggered || chain.kind === 'requirement_analysis' ? {
         x: stageInset + index * (groupWidth - stageInset * 2 - itemWidth) / Math.max(1, count - 1),
-        y: index % 2 === 1 ? stageBottom : stageTop,
+        y: staggered && index % 2 === 1 ? stageBottom : stageTop,
       } : { x: stageInset + index * (itemWidth + stageGap), y: stageTop }
       nodes.push({ id, type: 'stage', parentId: groupId, extent: 'parent', position, style: { width: itemWidth }, data: { stage: entry, active: !special && selected?.kind === chain.kind && selected.stage === entry.stage, dim, onSelect: () => onSelectStage(chain.kind, entry), onOpen: (origin) => onOpenStage(chain.kind, entry, origin) } })
       if (index > 0) edges.push({ id: `${chain.kind}:${index}`, source: `${chain.kind}:${chain.stages[index - 1].stage}`, target: id })
@@ -161,8 +169,8 @@ function buildCanvas({ chains, filter, selected, special, profile, relations, ca
       const profileIndex = chain.stages.length
       nodes.push({
         id: 'profile', type: 'profile', parentId: groupId, extent: 'parent',
-        // 仓库画像在分组第二行右对齐，避免看起来像需求理解之后的第三个链上阶段。
-        position: { x: groupWidth - stageInset - itemWidth, y: stageBottom },
+        // 第二行略偏左，避免看起来像需求理解之后的第三个链上阶段。
+        position: { x: (groupWidth - itemWidth) / 2 - 16, y: profileTop },
         style: { width: itemWidth },
         data: {
           ...profileCard, index: String(profileIndex + 1).padStart(2, '0'),
@@ -171,7 +179,7 @@ function buildCanvas({ chains, filter, selected, special, profile, relations, ca
           onOpen: (origin) => onOpenSpecial('repositoryProfile', origin),
         },
       })
-      edges.push({ id: 'analysis-to-profile', source: `requirement_analysis:${chain.stages[profileIndex - 1].stage}`, target: 'profile', sourceHandle: 'bottom', targetHandle: 'top' })
+      edges.push({ id: 'analysis-to-profile', source: `requirement_analysis:${chain.stages[profileIndex - 1].stage}`, target: 'profile', data: { profileRoute: true } })
     }
   }
   const analysis = chains.find(item => item.kind === 'requirement_analysis' && item.configured)
@@ -189,17 +197,23 @@ function buildCanvas({ chains, filter, selected, special, profile, relations, ca
   }
   if (analysis?.stages[0]) edges.push({ id: 'document-to-analysis', source: 'document', target: `requirement_analysis:${analysis.stages[0].stage}` })
   if (analysis?.stages.length && functional?.stages[0]) edges.push({ id: 'analysis-to-function', source: `requirement_analysis:${analysis.stages.at(-1)!.stage}`, target: `function:${functional.stages[0].stage}` })
+  const profileNode = nodes.some(node => node.id === 'profile')
   if (analysis?.stages.length) {
     for (const kind of ['api', 'ui'] as const) {
       const targetChain = chains.find(item => item.kind === kind)
       if (!targetChain) continue
       const target = targetChain.configured && targetChain.stages[0] ? `${kind}:${targetChain.stages[0].stage}` : `group:${kind}`
+      // UI 生成的源码前置是仓库画像版本，画板入线从画像卡片出发；其他下游仍接需求理解。
+      if (kind === 'ui' && profileNode) {
+        edges.push({ id: 'profile-to-ui', source: 'profile', sourceHandle: 'right', target })
+        continue
+      }
       edges.push({ id: `analysis-to-${kind}`, source: `requirement_analysis:${analysis.stages.at(-1)!.stage}`, target })
     }
   }
   const runningStages = new Set(chains.filter(item => item.configured).flatMap(item => item.stages
     .filter(entry => entry.state === 'running').map(entry => `${item.kind}:${entry.stage}`)))
-  return { nodes, edges: edges.map((edge): GenerationFlowEdge => ({ ...edge, type: 'generationFlow', data: { running: runningStages.has(edge.source) }, markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: 'var(--app-accent)', strokeWidth: 1.5 } })) }
+  return { nodes, edges: edges.map((edge): GenerationFlowEdge => ({ ...edge, type: 'generationFlow', data: { running: runningStages.has(edge.source), profileRoute: Boolean((edge.data as { profileRoute?: boolean } | undefined)?.profileRoute) }, markerEnd: { type: MarkerType.ArrowClosed }, style: { stroke: 'var(--app-accent)', strokeWidth: 1.5 } })) }
 }
 function CanvasInner(props: CanvasProps) {
   const { chains, filter, selected, special, profile, relations, canWrite, sourceSelected, onSelectSource, onSelectStage, onOpenStage, onSelectSpecial, onOpenSpecial, onOpenTab } = props

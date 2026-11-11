@@ -7,9 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.domain.ai_tasks import task_type_for
 from testing_agent.models.ai_generate_task import AiGenerateTask as Task
-from testing_agent.models.ai_generate_task_source_archive import (
-    AiGenerateTaskSourceArchive as Archive,
-)
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt as Attempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage as Stage
 from testing_agent.models.requirement import Requirement
@@ -65,10 +62,7 @@ class RequirementDesignRepository:
                 (func.length(Task.source_content) > 0).label("has_source"),
                 Task.created_at,
                 Task.updated_at,
-                Archive.filename,
-                Archive.file_id,
             )
-            .outerjoin(Archive, Archive.task_id == Task.task_id)
             .where(*requirement_scope(requirement_id), Task.task_type.in_(TYPE_KINDS))
             .order_by(Task.created_at.desc(), Task.id.desc())
         )
@@ -78,10 +72,8 @@ class RequirementDesignRepository:
                 "kind": TYPE_KINDS[row.task_type],
                 "name": row.name,
                 "sourceType": row.source_type,
-                "hasSource": bool(row.file_id)
-                if row.task_type == "ui_case_generate"
-                else bool(row.has_source),
-                "sourceFilename": row.filename or "",
+                "hasSource": bool(row.has_source),
+                "sourceFilename": "",
                 "createdAt": row.created_at,
                 "updatedAt": row.updated_at,
             }

@@ -1,0 +1,7 @@
+interface:
+  display_name: "需求理解与确认"
+  short_description: "统一整理业务流程、模块操作和 UI 交互，输出需求理解 JSON"
+  default_prompt: "使用 $prd-feature-understanding-skill，按固定契约返回一个完整 JSON 对象，保留来源、确认状态和待确认问题。"
+
+policy:
+  allow_implicit_invocation: true

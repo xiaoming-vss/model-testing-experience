@@ -2,6 +2,8 @@
 
 [UI 用例三阶段执行协议](../control-plane/ui-three-stage-generation.md)
 
+[UI 生成仓库来源 ADR](../control-plane/adr/0011-ui-generation-repository-source.md)
+
 开发与审查先阅读[通用后端规则](../agents/backend-development.md)和[AI Worker 开发规则](development-rules.md)，保留本项目的运行模型、产物契约和验证入口。
 
 接收平台派发的 AI 测试任务，调用 LLM 生成测试产物并回传。领取需求分析、功能/API/UI 用例生成、代码风险分析、仓库画像、测试报告生成、用例执行顺序图谱八类任务。
@@ -122,7 +124,7 @@ uv run ruff check .                               # Lint
 
 Worker 每次执行前按任务类型／阶段从控制面获取默认技能清单，直读 S3 并验证文件大小和 SHA-256。技能恢复到任务独立 workspace 中，不再手工向项目目录放置技能；本期每次重新获取当前内容，不做历史版本或跨运行缓存。项目自定义技能不自动加入任务。
 
-平台初始化与更新方式见 [Skill 库维护](../control-plane/skills.md)。缺少默认技能或下载失败时任务报错，不回退旧目录。`code_risk_analysis` 当前使用内置上下文预览 prompt，不下载技能；正式分析 skill 发布后再接入，代码工作区与只读工具边界不变。`repository_profile` 同样使用内置 prompt，不注册默认 skill，后续由 `repository-profile-analysis` 替换 prompt 构建入口。
+平台初始化与更新方式见 [Skill 库维护](../control-plane/skills.md)。缺少默认技能或下载失败时任务报错，不回退旧目录。`code_risk_analysis` 使用 `code-risk-analysis` 默认技能，并在 Worker 内执行三次有界输出修正；`repository_profile` 同样使用内置 prompt，不注册默认 skill，后续由 `repository-profile-analysis` 替换 prompt 构建入口。
 
 - [代码分析代码工作区与上下文回执](code-analysis-context.md)
 - [仓库画像分析](repository-profile.md)
@@ -131,7 +133,7 @@ Worker 每次执行前按任务类型／阶段从控制面获取默认技能清�
 
 ## API / UI 用例输出自动修正（2026-10-09）
 
-API 的 OpenAPI 配置提取、API 用例 YAML 生成，以及 UI 用例 YAML 生成均支持输出校验失败后的自动修正。每个阶段最多追加 2 次模型调用（含首次最多 3 次），只有验证通过才发布本阶段结果。API 提取结果先校验再传给生成阶段；生成阶段的修正不重复执行已成功的提取。UI 修正复用本次已下载的源码根目录，不重复下载源码归档。
+API 的 OpenAPI 配置提取、API 用例 YAML 生成，以及 UI 用例 YAML 生成均支持输出校验失败后的自动修正。每个阶段最多追加 2 次模型调用（含首次最多 3 次），只有验证通过才发布本阶段结果。API 提取结果先校验再传给生成阶段；生成阶段的修正不重复执行已成功的提取。UI 修正复用本次准备好的源码根目录，不重复克隆仓库或下载历史归档。
 
 API 提取校验非空接口映射、snake_case 名称、path/method 与已定义的参数分区；API 用例校验 `cases` 结构、字段类型、排序、名称唯一、方法、请求体、提取及断言规则，按平台导入契约和技能输出约定执行。生成端不查询目标集合已有名称，导入时的数据库冲突仍由控制面处理。UI 沿用既有步骤、关键字、定位器、操作值、比较符和顺序校验。YAML 重复键、非法结构、非 JSON 兼容值不作为有效产物接受。
 

@@ -70,7 +70,7 @@ async def test_direct_detail_resolves_stage_attempt_without_old_run_table(mysql)
             repository = AiGenerateTaskRepository(session)
             access = GenerationAccess(repository)
             access.owned_task = AsyncMock(return_value=await repository.get_task(task["task_id"]))
-            queries = GenerationQueries(repository, None, access)
+            queries = GenerationQueries(repository, access)
             result = await queries.get_run("api", attempt["id"], "user")
             AiGenerateTaskRunResponse.model_validate(result)
             assert result["runId"] == attempt["id"] and result["generationChainManaged"]

@@ -1,0 +1,305 @@
+.ui-source-config {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.ui-source-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--app-surface-text-muted);
+  font-size: 12px;
+}
+
+.ui-source-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ui-source-block h4 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ui-source-version-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ui-source-version-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  padding: 2px 10px;
+  border: 1px solid var(--app-surface-border);
+  border-radius: 999px;
+  background: var(--app-surface);
+  color: var(--app-surface-text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ui-source-version-button:hover {
+  border-color: var(--app-accent-border);
+  color: var(--app-accent);
+}
+
+.ui-source-version-button.is-active {
+  border-color: var(--app-accent-border);
+  background: var(--app-accent-surface);
+  color: var(--app-accent);
+  font-weight: 600;
+}
+
+.ui-source-version-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.ui-source-version-latest {
+  color: var(--app-surface-text-muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.ui-source-repo-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.ui-source-repo-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--app-surface-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+  cursor: pointer;
+}
+
+.ui-source-repo-card:hover {
+  border-color: var(--app-accent-border);
+  background: var(--app-surface-hover);
+}
+
+.ui-source-repo-card.is-selected {
+  border-color: var(--app-accent-border);
+  background: var(--app-accent-surface);
+}
+
+.ui-source-repo-card.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.ui-source-repo-card input {
+  flex: 0 0 auto;
+  margin-top: 3px;
+}
+
+.ui-source-repo-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ui-source-repo-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ui-source-repo-title strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.ui-source-repo-title .ant-tag {
+  margin-inline-end: 0;
+}
+
+.ui-source-repo-meta,
+.ui-source-repo-paths {
+  color: var(--app-surface-text-muted);
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.ui-source-repo-summary {
+  color: var(--app-surface-text);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.ui-source-repo-error {
+  color: var(--app-profile-danger-text);
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.ui-source-repo-all {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ui-source-repo-all li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.ui-source-repo-all .ant-tag {
+  margin-inline-end: 0;
+}
+
+.ui-source-note {
+  margin: 0;
+  color: var(--app-surface-text-muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.ui-source-commit-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.ui-source-commit-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--app-surface-text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ui-source-commit-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--app-surface-border);
+  border-radius: 8px;
+  background: var(--app-surface-hover);
+}
+
+.ui-source-commit-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  font-size: 11px;
+}
+
+.ui-source-commit-line > span {
+  color: var(--app-surface-text-muted);
+}
+
+.ui-source-commit-line code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+
+.ui-source-check {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.ui-source-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.ui-source-cases-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ui-source-start {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ui-source-existing {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--app-surface-divider);
+}
+
+.ui-source-existing h4 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ui-source-existing-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+
+.ui-source-existing-list > div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.ui-source-existing-list dt {
+  color: var(--app-surface-text-muted);
+  font-size: 11px;
+}
+
+.ui-source-existing-list dd {
+  margin: 0;
+  min-width: 0;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 420px) {
+  .ui-source-repo-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

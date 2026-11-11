@@ -19,6 +19,8 @@ COPY --from=ghcr.io/astral-sh/uv:0.11.28 /uv /uvx /bin/
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=never \
+    UV_HTTP_TIMEOUT=300 \
+    UV_HTTP_RETRIES=5 \
     NANOBOT_SKIP_WEBUI_BUILD=1
 
 WORKDIR /app

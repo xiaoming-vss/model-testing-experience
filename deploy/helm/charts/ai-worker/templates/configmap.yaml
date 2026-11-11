@@ -1,0 +1,11 @@
+# ai-worker 运行配置；由 values.config 渲染成 TOML，
+# 挂载到容器的 /app/config/worker.toml。
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ai-worker.fullname" . }}-config
+  labels:
+    {{- include "ai-worker.labels" . | nindent 4 }}
+data:
+  worker.toml: |
+{{ include "ai-worker.configToml" . | indent 4 }}

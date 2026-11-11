@@ -1,3 +1,4 @@
+import { sha256Hex } from '@/shared/utils/crypto'
 import { request } from './request'
 import { fetchSignedFile, fileAuthorization, FileTransferError, retryFileTransfer, storageFailure } from './fileTransfer'
 
@@ -27,10 +28,8 @@ function sendFile(ticket: UploadTicket, file: File, progress?: (percent: number)
 }
 
 export async function uploadStoredFile(projectId: string, file: File,
-  purpose: 'requirement' | 'attachment' | 'ui_source_archive' | 'project_skill', progress?: (percent: number) => void) {
-  const bytes = await file.arrayBuffer()
-  const sha256 = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)),
-    (byte) => byte.toString(16).padStart(2, '0')).join('')
+  purpose: 'requirement' | 'attachment' | 'project_skill', progress?: (percent: number) => void) {
+  const sha256 = await sha256Hex(await file.arrayBuffer())
   return retryFileTransfer(async () => {
     const ticket = await fileAuthorization(() => request<UploadTicket>('/v1/files/uploads', {
       method: 'POST', body: JSON.stringify({ projectId, filename: file.name, size: file.size, sha256, purpose }),

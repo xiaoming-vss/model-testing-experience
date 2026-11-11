@@ -1,0 +1,7 @@
+interface:
+  display_name: "OpenAPI Test Config Extractor"
+  short_description: "Convert OpenAPI JSON into API test config"
+  default_prompt: "Use $openapi-test-config-extractor to convert this OpenAPI or Swagger JSON into the custom API test configuration dictionary."
+
+policy:
+  allow_implicit_invocation: true

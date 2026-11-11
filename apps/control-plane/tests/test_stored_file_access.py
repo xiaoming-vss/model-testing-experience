@@ -1,9 +1,7 @@
 """Business deletion must close both metadata and fresh download authorization."""
 
 from datetime import timedelta
-from io import BytesIO
 from unittest.mock import Mock
-from zipfile import ZipFile
 
 import httpx
 import pytest
@@ -17,7 +15,6 @@ from testing_agent.api.deps import (
 )
 from testing_agent.app import create_app
 from testing_agent.core.errors import AppError
-from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.bug import Bug
 from testing_agent.models.project_member import ProjectMember
 from testing_agent.models.project_skill_space import ProjectSkillSpace
@@ -63,19 +60,6 @@ async def linked_file(files, kind, *, suite_run=False):
         resource_id, purpose = "access-b", "attachment"
     elif kind == "requirement":
         resource_id, purpose = "access-r", "requirement"
-    elif kind == "ui_source_archive":
-        entities["task"] = AiGenerateTask(
-            task_id="access-task",
-            project_id="p",
-            task_type="ui_case_generate",
-            sprint_id="s",
-            requirement_id="r",
-            name="access",
-            creator_user_id="owner",
-            source_type="source_archive",
-            source_content="",
-        )
-        resource_id, purpose = "access-task", kind
     elif kind == "project_skill":
         entities["skill"] = ProjectSkillSpace(
             skill_space_id="access-skill",
@@ -122,19 +106,14 @@ async def linked_file(files, kind, *, suite_run=False):
             status="success",
         )
         resource_id, purpose = "access-queue", "ui_artifact"
-    files.session.add_all(entities.values())
-    await files.session.commit()
-    if purpose == "ui_source_archive":
-        buffer = BytesIO()
-        with ZipFile(buffer, "w") as archive:
-            archive.writestr("source.js", "test")
-        content, filename = buffer.getvalue(), "source.zip"
-    elif purpose == "ui_artifact":
+    if purpose == "ui_artifact":
         content, filename = b"\x89PNG\r\n\x1a\nimage", "evidence.png"
     elif purpose == "requirement":
         content, filename = b"<p>evidence</p>", "evidence.html"
     else:
         content, filename = b"evidence", "evidence.txt"
+    files.session.add_all(entities.values())
+    await files.session.commit()
     row, _ = await upload(files, content, filename, purpose)
     await files.complete("owner", row.file_id)
     await files.attach("owner", row.file_id, "p", kind, resource_id, purpose=purpose)
@@ -152,7 +131,6 @@ async def linked_file(files, kind, *, suite_run=False):
         ("requirement", "requirement"),
         ("requirement", "sprint"),
         ("bug", "bug"),
-        ("ui_source_archive", "task"),
         ("project_skill", "skill"),
         ("ui_worker_task", "queue"),
         ("ui_worker_task", "run"),
@@ -211,9 +189,7 @@ async def test_requirement_delete_api_closes_both_download_routes(files):
             ).status_code == 404
 
 
-@pytest.mark.parametrize(
-    "kind", ["requirement", "bug", "ui_source_archive", "project_skill", "ui_worker_task"]
-)
+@pytest.mark.parametrize("kind", ["requirement", "bug", "project_skill", "ui_worker_task"])
 async def test_mismatched_business_project_is_not_readable(files, kind):
     row, entities = await linked_file(files, kind)
     entity = (
@@ -226,7 +202,7 @@ async def test_mismatched_business_project_is_not_readable(files, kind):
     assert rejected.value.http_code == 404
 
 
-@pytest.mark.parametrize("kind", ["requirement", "bug", "ui_source_archive"])
+@pytest.mark.parametrize("kind", ["requirement", "bug"])
 async def test_retained_history_remains_readable(files, kind):
     row, entities = await linked_file(files, kind)
     if kind == "requirement":

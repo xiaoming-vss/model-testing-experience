@@ -1,0 +1,270 @@
+{
+  "schemaVersion": "1.0",
+  "artifactType": "document_extraction",
+  "documentTitle": "转换任务列表筛选示例",
+  "sources": [
+    {
+      "id": "SRC01",
+      "name": "转换任务列表：合成演示输入，非产品已确认事实",
+      "type": "example",
+      "location": null,
+      "version": null
+    }
+  ],
+  "contentBlocks": [
+    {
+      "id": "B01",
+      "parentId": null,
+      "kind": "section",
+      "title": "转换任务列表",
+      "text": null,
+      "items": [],
+      "table": null,
+      "image": null,
+      "parseStatus": "complete",
+      "sourceReferences": [
+        {
+          "sourceId": "SRC01",
+          "locator": "示例输入约定",
+          "excerpt": null
+        }
+      ],
+      "relatedQuestionIds": []
+    },
+    {
+      "id": "B02",
+      "parentId": "B01",
+      "kind": "paragraph",
+      "title": null,
+      "text": "示例入口：数据管理 → 转换数据。设置条件并刷新；列表展示转换任务 ID、转换类型、状态等字段。",
+      "items": [],
+      "table": null,
+      "image": null,
+      "parseStatus": "complete",
+      "sourceReferences": [
+        {
+          "sourceId": "SRC01",
+          "locator": "示例输入约定",
+          "excerpt": null
+        }
+      ],
+      "relatedQuestionIds": []
+    },
+    {
+      "id": "B03",
+      "parentId": "B01",
+      "kind": "table",
+      "title": "筛选信息",
+      "text": null,
+      "items": [],
+      "table": {
+        "rowCount": 4,
+        "columnCount": 2,
+        "cells": [
+          {
+            "row": 0,
+            "column": 0,
+            "rowSpan": 1,
+            "columnSpan": 1,
+            "text": "控件或操作"
+          },
+          {
+            "row": 0,
+            "column": 1,
+            "rowSpan": 1,
+            "columnSpan": 1,
+            "text": "提供的信息"
+          },
+          {
+            "row": 1,
+            "column": 0,
+            "rowSpan": 1,
+            "columnSpan": 1,
+            "text": "转换类型"
+          },
+          {
+            "row": 1,
+            "column": 1,
+            "rowSpan": 1,
+            "columnSpan": 1,
+            "text": "实际选项、业务含义及默认值未提供"
+          },
+          {
+            "row": 2,
+            "column": 0,
+            "rowSpan": 1,
+            "columnSpan": 1,
+            "text": "状态"
+          },
+          {
+            "row": 2,
+            "column": 1,
+            "rowSpan": 1,
+            "columnSpan": 1,
+            "text": "选项与默认值未提供"
+          },
+          {
+            "row": 3,
+            "column": 0,
+            "rowSpan": 1,
+            "columnSpan": 1,
+            "text": "刷新"
+          },
+          {
+            "row": 3,
+            "column": 1,
+            "rowSpan": 1,
+            "columnSpan": 1,
+            "text": "设置条件并刷新；选择后是否也自动生效未明确"
+          }
+        ]
+      },
+      "image": null,
+      "parseStatus": "complete",
+      "sourceReferences": [
+        {
+          "sourceId": "SRC01",
+          "locator": "示例输入约定",
+          "excerpt": null
+        }
+      ],
+      "relatedQuestionIds": [
+        "Q01",
+        "Q02"
+      ]
+    }
+  ],
+  "extractedFacts": [
+    {
+      "id": "EF01",
+      "category": "entry",
+      "fact": {
+        "value": "数据管理 → 转换数据",
+        "confirmationStatus": "example",
+        "sourceReferences": [
+          {
+            "sourceId": "SRC01",
+            "locator": "示例输入约定",
+            "excerpt": null
+          }
+        ],
+        "relatedQuestionIds": []
+      },
+      "relatedBlockIds": [
+        "B02"
+      ]
+    },
+    {
+      "id": "EF02",
+      "category": "control",
+      "fact": {
+        "value": "转换类型",
+        "confirmationStatus": "example",
+        "sourceReferences": [
+          {
+            "sourceId": "SRC01",
+            "locator": "示例输入约定",
+            "excerpt": null
+          }
+        ],
+        "relatedQuestionIds": []
+      },
+      "relatedBlockIds": [
+        "B03"
+      ]
+    },
+    {
+      "id": "EF03",
+      "category": "trigger",
+      "fact": {
+        "value": "设置条件并刷新",
+        "confirmationStatus": "example",
+        "sourceReferences": [
+          {
+            "sourceId": "SRC01",
+            "locator": "示例输入约定",
+            "excerpt": null
+          }
+        ],
+        "relatedQuestionIds": []
+      },
+      "relatedBlockIds": [
+        "B03"
+      ]
+    },
+    {
+      "id": "EF04",
+      "category": "option",
+      "fact": {
+        "value": null,
+        "confirmationStatus": "unconfirmed",
+        "sourceReferences": [],
+        "relatedQuestionIds": [
+          "Q01"
+        ]
+      },
+      "relatedBlockIds": [
+        "B03"
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q01",
+      "question": "转换类型的实际选项及各选项业务含义是什么？",
+      "status": "open",
+      "affectedRefs": [
+        {
+          "kind": "extracted_fact",
+          "id": "EF04"
+        }
+      ],
+      "impacts": [
+        {
+          "stage": "understanding",
+          "description": "影响筛选操作交互说明",
+          "blocking": false
+        },
+        {
+          "stage": "test_cases",
+          "description": "影响选择条件和判断命中/排除记录",
+          "blocking": true
+        }
+      ],
+      "sourceReferences": [
+        {
+          "sourceId": "SRC01",
+          "locator": "示例输入约定",
+          "excerpt": null
+        }
+      ],
+      "answer": null
+    },
+    {
+      "id": "Q02",
+      "question": "选择筛选条件后是否自动更新，还是仅点击刷新后更新？",
+      "status": "open",
+      "affectedRefs": [
+        {
+          "kind": "block",
+          "id": "B03"
+        }
+      ],
+      "impacts": [
+        {
+          "stage": "test_cases",
+          "description": "影响条件生效时机的判定",
+          "blocking": true
+        }
+      ],
+      "sourceReferences": [
+        {
+          "sourceId": "SRC01",
+          "locator": "示例输入约定",
+          "excerpt": null
+        }
+      ],
+      "answer": null
+    }
+  ]
+}

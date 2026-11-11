@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, Input, Modal, Select, Space, Steps, Table, Tag, Typography } from 'antd'
 import { getErrorMessage } from '@/utils/format'
 import { message } from '@/shared/utils/feedback'
+import { randomId } from '@/shared/utils/crypto'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { BugImportConfiguration, type ImportChoice } from './BugImportConfiguration'
 import '../styles/bug-import.css'
@@ -139,7 +140,7 @@ export function BugZentaoImportModal({ open, projectId, defaultSprintId, onClose
     setImporting(true)
     try {
       const response = await bugsApi.importZentaoBugs(projectId, {
-        requestId: crypto.randomUUID(),
+        requestId: randomId(),
         items: readyToImport.map((remoteBugId) => ({
           remoteBugId,
           assigneeUserId: choices[remoteBugId].assigneeUserId,

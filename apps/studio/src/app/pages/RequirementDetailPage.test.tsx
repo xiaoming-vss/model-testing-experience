@@ -61,6 +61,9 @@ it('进入需求直接展示生成全景，文档交给工作区在画布内打�
   await waitFor(() => expect(useWorkbenchStore.getState()).toMatchObject({ activeProjectId: 'canonical-project', activeSprintId: 'sprint' }))
   await userEvent.setup().click(screen.getByRole('button', { name: '查看需求文档' }))
   expect(await screen.findByRole('dialog', { name: '需求文档' })).toBeInTheDocument()
+  const crumbs = document.querySelector('.requirement-detail-crumbs')
+  expect(crumbs).toHaveTextContent('需求文档')
+  expect(crumbs).not.toHaveTextContent('只读来源')
 })
 it.each(['design', 'requirement_analysis', 'function', 'api', 'ui', 'codeRisk', 'content'])('旧 tab=%s 链接仍直接展示生成全景', async tab => {
   mount(false, `/requirements/req?tab=${tab}`)

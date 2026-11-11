@@ -1,0 +1,14 @@
+{
+  "edge_changes": [],
+  "path_changes": [
+    {
+      "path_id": "P01",
+      "reason": "C02 处理成功后可由 C03 查看结果，再由 C06 下载，延伸同一主骨；保留未变化的 C01→C02。",
+      "checked_case_ids": [
+        "C02",
+        "C03",
+        "C06"
+      ]
+    }
+  ]
+}
