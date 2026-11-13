@@ -1,148 +1,85 @@
-import { Alert } from 'antd'
+import { Button } from 'antd'
 import { useState } from 'react'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
-import { getErrorMessage } from '@/utils/format'
-import type {
-  UiGenerationRunInputs,
-  UiGenerationSourceInputs,
-} from '../api/generationChain.api'
+import type { UiGenerationRunInputs, UiGenerationSourceInputs } from '../api/generationChain.api'
 import { useUiGenerationSourceSelection } from '../hooks/useUiGenerationSourceSelection'
-import { UiGenerationCaseSelector } from './UiGenerationCaseSelector'
-import {
-  UiGenerationSourceConfig,
-  type UiGenerationSourceOptionsState,
-} from './UiGenerationSourceConfig'
+import { UiGenerationInputsModal } from './UiGenerationInputsModal'
+import type { UiGenerationSourceOptionsState } from './UiGenerationSourceConfig'
+import '../styles/ui-generation-source.css'
 
-/** UI 分组侧栏：确认仓库画像来源并启动首阶段；历史版本只展示冻结的来源信息。 */
 export function UiGenerationSourcePanel({
   requirementId,
+  projectId,
   sourceOptions,
   canWrite,
   busy,
   refreshInputs,
   configured,
   existingSource,
+  snapshotLoading = false,
   onConfigure,
   onOpenProfile,
   onStart,
 }: {
   requirementId: string
+  projectId?: string
   sourceOptions: UiGenerationSourceOptionsState
   canWrite: boolean
   busy: boolean
   refreshInputs: boolean
   configured: boolean
   existingSource?: UiGenerationSourceInputs | null
+  snapshotLoading?: boolean
   onConfigure: () => Promise<unknown>
   onOpenProfile?: () => void
   onStart: (inputs: UiGenerationRunInputs) => Promise<unknown>
 }) {
-  const [ids, setIds] = useState<string[] | undefined>()
-  const [ready, setReady] = useState(false)
-  const [starting, setStarting] = useState(false)
-  const [error, setError] = useState<unknown>()
-  const { selection, resolved, setProfileVersionId, setRepositoryId, setCommitMode } =
-    useUiGenerationSourceSelection(sourceOptions.data)
-  const disabled = busy || starting
-  const canStart = canWrite && !disabled && ready && Boolean(ids?.length) && resolved.ready
+  const [inputsOpen, setInputsOpen] = useState(false)
+  const { resolved } = useUiGenerationSourceSelection(sourceOptions.data)
+  const frozen = existingSource?.repository
+  const repository = frozen ?? resolved.repository
+  const profile = frozen
+    ? (frozen.profileVersionNo ? `v${frozen.profileVersionNo}` : frozen.profileVersionId)
+    : resolved.version?.label
+  const needsProfile = !sourceOptions.loading && !sourceOptions.error
+    && (resolved.blocker?.kind === 'no_profile_version' || resolved.blocker?.kind === 'no_frontend_repository')
 
-  async function start() {
-    if (!canStart || !resolved.version || !resolved.repository || !ids?.length) return
-    setStarting(true)
-    setError(undefined)
-    try {
-      // 首次从 UI 分组启动时还没有任务壳，先按既有设置入口创建再运行。
-      if (!configured) await onConfigure()
-      await onStart({
-        refreshInputs,
-        functionCaseIds: ids,
-        sourceProfileVersionId: resolved.version.versionId,
-        sourceRepositoryId: resolved.repository.repositoryId,
-        sourceCommitMode: selection.commitMode,
-      })
-    } catch (reason) {
-      setError(reason)
-    } finally {
-      setStarting(false)
-    }
+  async function start(inputs: UiGenerationRunInputs) {
+    if (!configured) await onConfigure()
+    await onStart(inputs)
   }
 
-  const repository = existingSource?.repository
-
   return (
-    <section className="gc-inspector-section gc-inspector-source" aria-label="UI 测试源码配置">
-      <h3>源码仓库</h3>
-      <p className="gc-inspector-hint">
-        UI 生成使用仓库画像识别出的前端仓库，启动时冻结画像版本、分支和 commit。
-      </p>
-      <UiGenerationSourceConfig
-        requirementId={requirementId}
-        optionsState={sourceOptions}
-        selection={selection}
-        resolved={resolved}
-        disabled={disabled}
-        readOnly={!canWrite}
-        caseSummary={
-          <p className="ui-source-note">
-            {resolved.ready
-              ? '默认选中当前需求全部正式功能用例，可筛选调整。'
-              : '选择画像版本与前端仓库后读取当前需求的正式功能用例。'}
-          </p>
-        }
-        caseSelector={
-          resolved.ready ? (
-            <fieldset disabled={!canWrite || disabled} className="ui-source-cases-fieldset">
-              <UiGenerationCaseSelector
-                requirementId={requirementId}
-                open
-                value={ids}
-                onChange={setIds}
-                onReady={setReady}
-              />
-            </fieldset>
-          ) : undefined
-        }
-        footer={
-          canWrite ? (
-            <div className="ui-source-start">
-              <ProjectActionButton
-                action="execute"
-                operation="run"
-                type="primary"
-                loading={starting}
-                disabled={!canStart}
-                onClick={() => void start()}
-              >
-                开始生成
-              </ProjectActionButton>
-              {!resolved.ready ? null : !ids?.length ? (
-                <p className="ui-source-note">请选择至少一条正式功能用例。</p>
-              ) : null}
-            </div>
-          ) : (
-            <p className="ui-source-note">只读成员可查看源码配置，不能启动生成。</p>
-          )
-        }
-        onProfileVersionChange={setProfileVersionId}
-        onRepositoryChange={setRepositoryId}
-        onCommitModeChange={setCommitMode}
-        onOpenProfile={onOpenProfile}
-      />
-      {error ? <Alert showIcon type="error" title={getErrorMessage(error)} /> : null}
-      {existingSource ? (
-        <div className="ui-source-existing">
-          <h4>当前生成来源</h4>
-          {repository ? (
-            <dl className="ui-source-existing-list">
-              <div><dt>仓库</dt><dd>{repository.pathWithNamespace}</dd></div>
-              <div><dt>分支</dt><dd>{repository.branch || '未记录'}</dd></div>
-              <div><dt>Commit</dt><dd>{repository.commit || '未记录'}</dd></div>
-              <div><dt>画像版本</dt><dd>{repository.profileVersionNo ? `v${repository.profileVersionNo}` : repository.profileVersionId || '未记录'}</dd></div>
-            </dl>
-          ) : (
-            <p className="ui-source-note">历史来源未记录仓库信息。</p>
-          )}
+    <section className="gc-inspector-section gc-inspector-source" aria-label="UI 测试生成摘要">
+      <h3>{existingSource ? '当前生成来源' : '默认生成来源'}</h3>
+      {snapshotLoading ? <p className="ui-source-note" role="status">正在读取本次生成来源</p> : <dl className="ui-source-existing-list">
+        <div><dt>画像版本</dt><dd>{profile || '未选择'}</dd></div>
+        <div><dt>前端仓库</dt><dd>{repository?.pathWithNamespace || '未选择'}</dd></div>
+        <div><dt>Commit</dt><dd title={repository?.commit}>{repository?.commit?.slice(0, 12) || '未选择'}</dd></div>
+        <div><dt>功能用例</dt><dd>{existingSource ? `${existingSource.cases.length} 条` : '默认全选正式用例'}</dd></div>
+      </dl>}
+      {!existingSource && !snapshotLoading && sourceOptions.loading ? <p className="ui-source-note">正在读取仓库画像版本</p> : null}
+      {!existingSource && sourceOptions.error ? <p className="ui-source-note">仓库画像读取失败，可在配置中重试。</p> : null}
+      {needsProfile ? <p className="ui-source-note">{resolved.blocker?.title}</p> : null}
+      {busy ? <p className="ui-source-note">UI 测试运行中</p> : null}
+      {canWrite ? (
+        <div className="ui-source-summary-actions">
+          <ProjectActionButton projectId={projectId} action="execute" type="primary" disabled={busy} onClick={() => setInputsOpen(true)}>
+            配置并生成
+          </ProjectActionButton>
+          {needsProfile && onOpenProfile ? <Button type="link" size="small" onClick={onOpenProfile}>去生成仓库画像</Button> : null}
         </div>
+      ) : null}
+      {inputsOpen && canWrite ? (
+        <UiGenerationInputsModal
+          requirementId={requirementId}
+          refreshInputs={refreshInputs}
+          sourceOptions={sourceOptions}
+          busy={busy}
+          onClose={() => setInputsOpen(false)}
+          onOpenProfile={onOpenProfile}
+          onSubmit={start}
+        />
       ) : null}
     </section>
   )

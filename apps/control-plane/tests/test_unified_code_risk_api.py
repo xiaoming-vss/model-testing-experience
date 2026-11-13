@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 
 from support.project_api import account, project, requirement
 from support.project_api import api as api
+from support.requirement_versions import approve_material
 
 from testing_agent.api.deps import verify_worker_token
 from testing_agent.services.code_risk_analysis import CodeRiskAnalysisService
@@ -22,6 +23,7 @@ def test_code_risk_worker_result_history_and_delete(api, monkeypatch):
         == 200
     )
     requirement_id = requirement(api, owner, pid)
+    material_id = approve_material(api, requirement_id)
     connection = api.post(
         f"/v1/projects/{pid}/integrations/llm/connections",
         headers=owner,
@@ -49,6 +51,7 @@ def test_code_risk_worker_result_history_and_delete(api, monkeypatch):
             "taskId": task.task_id,
             "runId": run_id,
             "requirement": {"name": "需求"},
+            "requirementMaterialVersion": {"versionId": material_id, "versionNo": 1},
             "bindings": [],
             "existingTests": {},
         }

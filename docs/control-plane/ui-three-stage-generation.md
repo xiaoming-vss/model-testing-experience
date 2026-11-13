@@ -24,9 +24,11 @@
 
 | 阶段 | 默认技能 | 产物 | 停止位置 |
 | --- | --- | --- | --- |
-| `ui_surface` | `extract-ui-test-surface` | `configJson.uiSurface`，`ui_test_surface/1.0` | `waiting_review` |
-| `ui_design` | `map-functional-cases-to-ui-scenarios` | `configJson.uiDesign`，`ui_test_scenarios/2.0` | `waiting_review` |
-| `ui_yaml` | `generate-ui-test-case` | `resultYaml`，UI 用例列表 | 生成成功，整体审核仍为 `pending` |
+| `ui_surface` | `mtx-extract-ui-test-surface` | `configJson.uiSurface`，`ui_test_surface/1.0` | `waiting_review` |
+| `ui_design` | `mtx-map-functional-cases-to-ui-scenarios` | `configJson.uiDesign`，`ui_test_scenarios/2.0` | `waiting_review` |
+| `ui_yaml` | `mtx-generate-ui-test-case` | `resultYaml`，UI 用例列表 | 生成成功，整体审核仍为 `pending` |
+
+部署时先同步表中的三个默认技能，再切换 AI Worker。独立 UI 用例生成也使用 `mtx-generate-ui-test-case`。
 
 首阶段启动时校验画像版本属于当前需求且为成功版本，所选仓库存在于该版本且角色为 `frontend/fullstack`，来源 binding 有分支、`headCommit`、`cloneUrl` 且没有 `profileError`；随后使用 UI 发起人的个人 GitLab 连接重新解析仓库访问权限。`profile` 模式冻结画像的 `headCommit`，`latest` 模式解析分支最新 HEAD，二者都写入具体 commit SHA。新运行快照包含 `sourceKind: repository`、`sourceProfileVersionId`、`sourceProfileVersionNo`、`sourceRepository`（仓库、分支、commit 模式、实际冻结 commit、解析时间）、仅含所选仓库的 `bindings`、`functionalCases`、`uiWorkflowVersion: ui_three_stage/1.0` 和新的 `uiSourceBatchId`。`bindings` 中的 `cloneUrl`、`connectionId` 只用于 Worker 凭据和回传授权，不进入浏览器响应；`gitlabCredentialsUrl` 由派发载荷按本次 Worker 任务注入，不落库。
 

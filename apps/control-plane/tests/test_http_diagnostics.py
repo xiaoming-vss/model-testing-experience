@@ -16,8 +16,12 @@ from testing_agent.core.http_diagnostics import (
     LOGGER_NAME,
     RequestDiagnosticsMiddleware,
     ResponseAborted,
-    current_request_id,
+    _request_id,
 )
+
+
+def current_request_id():
+    return _request_id.get()
 
 
 @pytest.fixture(autouse=True)

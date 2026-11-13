@@ -30,9 +30,6 @@ TERMINAL = {"success", "failed", "error", "canceled"}
 NO_REVIEW_STAGES = {"relation_analysis"}
 
 
-NO_REVIEW_KINDS = {"test_order_graph"}
-
-
 # Revision inputs live in the attempt snapshot, never in the effective artifact config.
 RESERVED_CONFIG_KEYS = {
     *FIELDS.values(),
@@ -57,10 +54,6 @@ def content(value: Any) -> str | None:
     return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
 
 
-def extra_config(config: Any) -> dict[str, Any]:
-    return {k: deepcopy(v) for k, v in mapping(config).items() if k not in RESERVED_CONFIG_KEYS}
-
-
 def output_format(value: str | None) -> str:
     if value is None:
         return "text"
@@ -80,7 +73,7 @@ def layout(kind: str) -> list[str]:
             "relation_analysis",
         ]
     if kind == "requirement_analysis":
-        return ["extracting_text", "feature_understanding"]
+        return ["extracting_text"]
     return ["generate"]
 
 

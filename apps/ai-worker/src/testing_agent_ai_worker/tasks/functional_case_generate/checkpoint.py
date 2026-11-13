@@ -11,18 +11,24 @@ from testing_agent_ai_worker.models.task import Task
 from testing_agent_ai_worker.platform.revision_attachments import (
     parse_revision_attachments,
 )
+from testing_agent_ai_worker.skill_names import (
+    CASE_RELATIONS_SKILL,
+    DETAILED_CASES_SKILL,
+    SCOPE_SKILL,
+    TEST_POINTS_SKILL,
+)
 from testing_agent_ai_worker.tasks.functional_case_generate.chain import (
     _build_functional_analysis_instruction,
     _build_functional_case_names_body,
     _build_functional_case_names_instruction,
     _build_functional_relation_body,
-    _build_functional_relation_instruction,
 )
 from testing_agent_ai_worker.tasks.functional_case_generate.summary import (
     build_config_json,
     build_progress,
     build_result_summary_json,
 )
+from testing_agent_ai_worker.tasks.functional_case_generate.validation import validate_output
 
 EMPTY_CASES_JSON = '{"cases":[]}'
 
@@ -48,7 +54,9 @@ def execute_checkpoint_task(
             raise
         # Initial analysis historically ignores malformed legacy config.
         config = {}
-    revision = _optional_config_json_text(config, "revisionInstruction").strip()
+    revision = ""
+    if stage != "relation_analysis":
+        revision = _optional_config_json_text(config, "revisionInstruction").strip()
     media: list[str] = []
     attachment_note = ""
     if revision:
@@ -78,7 +86,7 @@ def execute_checkpoint_task(
             skill_runner(
                 input_text=revision_input(task.payload.source_content, "requirementAnalysis"),
                 session_key=task.session_key,
-                skill_name="analyze-functional-requirements",
+                skill_name=SCOPE_SKILL,
                 config_path=config_path,
                 workspace=str(workspace),
                 extra_instruction=_build_functional_analysis_instruction(
@@ -99,7 +107,9 @@ def execute_checkpoint_task(
         )
         return None
 
-    requirement_analysis_json = _require_config_json_text(config, "requirementAnalysis", stage)
+    if stage != "relation_analysis":
+        requirement_analysis_json = _require_config_json_text(config, "requirementAnalysis", stage)
+        validate_output("requirement_analysis", requirement_analysis_json)
     if stage == "case_names":
         case_names_json = _resolve_text_result(
             skill_runner(
@@ -111,13 +121,14 @@ def execute_checkpoint_task(
                     "caseNames",
                 ),
                 session_key=task.session_key,
-                skill_name="generate-solution-test-points",
+                skill_name=TEST_POINTS_SKILL,
                 config_path=config_path,
                 workspace=str(workspace),
                 extra_instruction=_build_functional_case_names_instruction(
                     task.payload.extra_instruction
                 ),
                 **({"media": media} if media else {}),
+                **({"is_revision": True} if revision else {}),
             )
         )
         progress_callback(
@@ -140,7 +151,7 @@ def execute_checkpoint_task(
                 requirement_analysis_json=requirement_analysis_json,
                 case_names_json=case_names_json,
                 session_key=task.session_key,
-                skill_name="generate-solution-test-cases",
+                skill_name=DETAILED_CASES_SKILL,
                 config_path=config_path,
                 workspace=str(workspace),
                 extra_instruction=task.payload.extra_instruction,
@@ -192,29 +203,24 @@ def execute_checkpoint_task(
         )
 
     if stage == "relation_analysis":
-        requirement_analysis_json = _require_config_json_text(config, "requirementAnalysis", stage)
         cases_json = _require_config_json_text(config, "resultYaml", stage)
         case_ids = _relation_case_ids(cases_json)
         relation_json = _resolve_text_result(
             skill_runner(
                 input_text=_build_functional_relation_body(
-                    source_text=task.payload.source_content,
-                    requirement_analysis_json=requirement_analysis_json,
+                    material_json=task.payload.source_content,
                     cases_json=cases_json,
-                    prior_relations_json=_optional_config_json_text(config, "caseRelations"),
                 ),
                 session_key=task.session_key,
-                skill_name="analyze-test-case-relations",
+                skill_name=CASE_RELATIONS_SKILL,
                 config_path=config_path,
                 workspace=str(workspace),
-                extra_instruction=_build_functional_relation_instruction(
-                    task.payload.extra_instruction
-                ),
                 expected_case_ids=case_ids,
             )
         )
+        # 已派发的旧图谱尝试仍需原样回传冻结字段，模型输入只读取材料与用例。
         config_json = build_config_json(
-            requirement_analysis_json=requirement_analysis_json,
+            requirement_analysis_json=_optional_config_json_text(config, "requirementAnalysis"),
             case_names_json=_optional_config_json_text(config, "caseNames"),
             relations_json=relation_json,
         )

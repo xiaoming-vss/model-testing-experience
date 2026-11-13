@@ -1,0 +1,135 @@
+[
+  {
+    "name": "查看帮助内容",
+    "enabled": true,
+    "orderNo": 1,
+    "stepsJson": [
+      {
+        "orderNo": 1,
+        "stepName": "打开示例页面",
+        "keyword": "open",
+        "operationValue": "{{baseUrl}}/demo",
+        "continueOnFailure": false,
+        "enabled": true
+      },
+      {
+        "orderNo": 2,
+        "stepName": "打开帮助",
+        "keyword": "click",
+        "locatorType": "test_id",
+        "locatorValue": "help-button",
+        "continueOnFailure": false,
+        "enabled": true
+      },
+      {
+        "orderNo": 3,
+        "stepName": "确认帮助区域可见",
+        "keyword": "assert_visible",
+        "locatorType": "test_id",
+        "locatorValue": "help-text",
+        "operationValue": "5000",
+        "continueOnFailure": false,
+        "enabled": true
+      },
+      {
+        "orderNo": 4,
+        "stepName": "核对帮助文字",
+        "keyword": "assert_text",
+        "locatorType": "test_id",
+        "locatorValue": "help-text",
+        "operationValue": "帮助内容",
+        "comparator": "contains",
+        "continueOnFailure": false,
+        "enabled": true
+      }
+    ]
+  },
+  {
+    "name": "查看外部报表状态",
+    "enabled": true,
+    "orderNo": 2,
+    "stepsJson": [
+      {
+        "orderNo": 1,
+        "stepName": "打开示例页面",
+        "keyword": "open",
+        "operationValue": "{{baseUrl}}/demo",
+        "continueOnFailure": false,
+        "enabled": true
+      },
+      {
+        "orderNo": 2,
+        "stepName": "打开外部报表",
+        "keyword": "click",
+        "locatorType": "test_id",
+        "locatorValue": "report-button",
+        "continueOnFailure": false,
+        "enabled": true
+      },
+      {
+        "orderNo": 3,
+        "stepName": "核对报表状态",
+        "keyword": "assert_text",
+        "locatorType": null,
+        "locatorValue": null,
+        "operationValue": "已完成",
+        "comparator": "eq",
+        "missingFields": [
+          {
+            "fields": [
+              "locatorType",
+              "locatorValue"
+            ],
+            "operation": "核对状态文字",
+            "target": "外部报表状态节点",
+            "value": "已完成",
+            "reason": "请提供外部组件实际状态节点的定位类型和表达式；预期文字已确认，不能改成当前页面默认值。"
+          }
+        ],
+        "continueOnFailure": false,
+        "enabled": true
+      }
+    ]
+  },
+  {
+    "name": "修改备注后显示提交的新值",
+    "enabled": true,
+    "orderNo": 3,
+    "stepsJson": [
+      {
+        "orderNo": 1,
+        "stepName": "打开示例页面",
+        "keyword": "open",
+        "operationValue": "{{baseUrl}}/demo",
+        "continueOnFailure": false,
+        "enabled": true
+      },
+      {
+        "orderNo": 2,
+        "stepName": "输入新备注并读取实时值",
+        "keyword": "input",
+        "locatorType": "test_id",
+        "locatorValue": "note",
+        "operationValue": "更新后的备注",
+        "saveTo": [
+          {
+            "name": "actualNote",
+            "source": "value"
+          }
+        ],
+        "continueOnFailure": false,
+        "enabled": true
+      },
+      {
+        "orderNo": 3,
+        "stepName": "核对实时值与提交值一致",
+        "keyword": "assert_visible",
+        "locatorType": "xpath",
+        "locatorValue": "//input[@id='note'][{{actualNote|xpath}}='更新后的备注']",
+        "operationValue": "5000",
+        "continueOnFailure": false,
+        "enabled": true
+      }
+    ]
+  }
+]

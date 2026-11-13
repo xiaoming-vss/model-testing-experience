@@ -15,12 +15,6 @@ class OwnedRun(Protocol):
     ) -> StandaloneRun: ...
 
 
-class OwnedTask(Protocol):
-    async def __call__(
-        self, user_id: str, task_id: str, kind: str | None = None, *, action: ProjectAction = "read"
-    ) -> AiGenerateTask: ...
-
-
 class RequireProjectAccess(Protocol):
     async def __call__(
         self, user_id: str, project_id: str, *, action: ProjectAction = "read"

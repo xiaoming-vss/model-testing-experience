@@ -133,6 +133,9 @@ max_repo_files = 200000
 
 [ai_worker.worker]
 max_concurrent_tasks = 2
+# 单次测试点审查及本 Worker 进程的并发上限
+traceable_review_concurrency = 4
+traceable_review_global_concurrency = 4
 poll_interval_seconds = 5
 
 [api_ui_worker.ui]

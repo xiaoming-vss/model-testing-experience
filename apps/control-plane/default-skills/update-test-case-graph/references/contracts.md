@@ -6,14 +6,14 @@
 
 | 字段 | 类型与内容 |
 | --- | --- |
-| `requirements` | 需求对象数组；每项 `requirement_id`、`requirement_title`、`requirement_content` 均为非空字符串；ID 唯一。每轮提供相关完整需求，正文可为普通文本或序列化的需求理解 2.0 JSON。 |
+| `requirements` | 需求对象数组；每项 `requirement_id`、`requirement_title`、`requirement_content` 均为非空字符串；ID 唯一。每轮提供相关完整需求，正文可为普通文本或材料整理 0.2 JSON。 |
 | `case_requirement_links` | 本轮用例清单及需求映射数组；每项只有 `requirement_id` 和非空字符串数组 `case_ids`。需求 ID 为非空字符串或 `null`；所有用例 ID 必须存在于临时文件。汇总所有项并去重，就是本轮待分析范围。空数组表示空批次。 |
 | `case_file_path` | 可访问的本任务临时 JSON 文件绝对路径；内容见下文。 |
 | `existing_graph` | 上次完整累计图谱；首轮传空的 2.0 图谱对象。 |
 
 ### 结构化需求正文
 
-requirement_content 仍是字符串；若内容为 requirement_understanding JSON，解析后仅接受 schemaVersion="2.0"。以 businessFlows 的 moduleId/operationId 读取实际操作，以 conditionRuleIds 和 operation.ruleIds 读取业务规则，再按 evidenceIds → evidence → sources 追溯依据；多个条件规则表示同时满足。
+requirement_content 仍是字符串；若为 readable_requirement_material 0.2，读取 functions/sections/items 和 questions，按 materialBlockIds → materialBlocks → sources 追溯依据；确认状态为 example、unconfirmed 或 conflicting 的内容不能当作已确认规则。
 
 事实的缺省确认状态为有证据的 confirmed；示例、未知和冲突不能形成确定关系，概述字符串及省略字段不补出未确认的条件。questions 的剩余影响仍有效。遇到失效引用或不支持的结构化版本，说明输入缺口，不将字段名、ID 或转义内容当作业务事实。
 

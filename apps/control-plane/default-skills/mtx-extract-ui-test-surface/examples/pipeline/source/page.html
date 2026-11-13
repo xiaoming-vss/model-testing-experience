@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="zh"><body>
+<button data-testid="help-button" onclick="document.getElementById('help').hidden=false">帮助</button>
+<div id="help" data-testid="help-text" hidden>帮助内容</div>
+<button data-testid="report-button" onclick="document.querySelector('external-report-widget').dispatchEvent(new Event('open'))">打开外部报表</button>
+<!-- 外部组件在运行时加载；其内部源码和DOM证据未提供。 -->
+<external-report-widget></external-report-widget>
+<label for="note">备注</label><input id="note" data-testid="note" value="原备注">
+</body></html>

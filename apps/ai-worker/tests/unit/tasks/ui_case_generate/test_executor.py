@@ -148,7 +148,7 @@ class UiCaseExecutorTests(unittest.TestCase):
 
         self.assertEqual(TaskStatus.SUCCESS, result.status)
         self.assertEqual(VALID_YAML, result.output_yaml)
-        self.assertEqual("generate-ui-test-case", captured["skill_name"])
+        self.assertEqual("mtx-generate-ui-test-case", captured["skill_name"])
         self.assertIn("sourceRoot", result.intermediate_json_text)
         self.assertIn('"sourceKind": "repository"', result.intermediate_json_text)
         self.assertIn('"repositoryId": "repo-1"', result.intermediate_json_text)

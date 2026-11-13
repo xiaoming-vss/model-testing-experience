@@ -21,6 +21,7 @@ from testing_agent_ai_worker.config.models import AgentBackendConfig, UiGenerati
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import GitlabCredentials, Task
 from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
+from testing_agent_ai_worker.skill_names import UI_YAML_SKILL
 from testing_agent_ai_worker.tasks.git_workspace import (
     GitWorkspaceError,
     retain_failed_workspace,
@@ -42,7 +43,6 @@ from testing_agent_ai_worker.worker.runner import TaskExecutor
 from .ui_step_extract import normalize_save_to
 from .ui_variable_template import TOKEN_PATTERN, validate_step_variables
 
-UI_CASE_SKILL_NAME = "generate-ui-test-case"
 UI_CASE_YAML_ONLY_INSTRUCTION = """请分析指定的前端源码目录并生成 UI 自动化测试用例。
 源码根目录：{source_root}
 始终返回 YAML list，即使只有一条用例。每条用例必须包含 name、enabled、stepsJson、orderNo；每个步骤必须包含 orderNo、stepName、keyword、continueOnFailure、enabled。operationValue、locatorType、locatorValue、comparator 必须严格按照 keyword 规则提供。缺失内容保留步骤并使用 missingFields 数组：每项含 fields、operation、target、value、reason，fields列出的字段显式为null，其他已知字段保留。前置准备缺口使用空fields。不要返回阻塞字符串。全部目标明确排除时可返回空列表[]。不要输出 Markdown 代码块、解释文字或 JSON。"""
@@ -108,7 +108,7 @@ class UiCaseExecutor(TaskExecutor):
         ui_generation_config: UiGenerationConfig | None = None,
         client: PlatformHttpClient | None = None,
         skill_runner=run_skill_step,
-        skill_name: str = UI_CASE_SKILL_NAME,
+        skill_name: str = UI_YAML_SKILL,
     ) -> None:
         self.agent_config = agent_config
         self.runtime_paths = resolve_runtime_paths(agent_config)

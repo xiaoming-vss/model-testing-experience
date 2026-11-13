@@ -24,7 +24,12 @@ class AiGenerateTaskRequest(BaseModel):
 
 
 class AiGenerateTaskRunRequest(BaseModel):
-    requirement_understanding_version_id: str | None = Field(default=None, max_length=64)
+    requirement_material_version_id: str | None = Field(default=None, max_length=64)
+    requirement_understanding_version_id: str | None = Field(
+        default=None,
+        max_length=64,
+        description="兼容旧客户端的字段，等同 requirementMaterialVersionId",
+    )
     stage: str | None = None
     current_stage: str | None = None
     function_case_ids: list[str] | None = Field(default=None)
@@ -95,7 +100,12 @@ class CodeRiskAnalysisRunRequest(BaseModel):
     trigger_type: str | None = Field(default=None)
     config_json: Any | None = Field(default=None)
     result_yaml: str | None = Field(default=None)
-    requirement_understanding_version_id: str | None = Field(default=None, max_length=64)
+    requirement_material_version_id: str | None = Field(default=None, max_length=64)
+    requirement_understanding_version_id: str | None = Field(
+        default=None,
+        max_length=64,
+        description="兼容旧客户端的字段，等同 requirementMaterialVersionId",
+    )
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -126,7 +136,12 @@ class RepositoryProfileRunRequest(BaseModel):
     instruction: str | None = None
     trigger_type: str | None = Field(default=None)
     config_json: Any | None = Field(default=None)
-    requirement_understanding_version_id: str | None = Field(default=None, max_length=64)
+    requirement_material_version_id: str | None = Field(default=None, max_length=64)
+    requirement_understanding_version_id: str | None = Field(
+        default=None,
+        max_length=64,
+        description="兼容旧客户端的字段，等同 requirementMaterialVersionId",
+    )
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -345,8 +360,8 @@ class RepositoryProfileRunResponse(AiGenerateTaskRunResponse):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class RepositoryProfileUnderstandingVersionResponse(BaseModel):
-    """画像运行冻结的需求理解版本引用。"""
+class RepositoryProfileMaterialVersionResponse(BaseModel):
+    """画像运行冻结的材料整理版本引用。"""
 
     version_id: str
     version_no: int
@@ -365,7 +380,7 @@ class RepositoryProfileVersionResponse(BaseModel):
     profile: RepositoryProfileResponse | None = None
     result_yaml: str
     source_run_id: str
-    requirement_understanding_version: RepositoryProfileUnderstandingVersionResponse | None = None
+    requirement_material_version: RepositoryProfileMaterialVersionResponse | None = None
     created_at: datetime
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)

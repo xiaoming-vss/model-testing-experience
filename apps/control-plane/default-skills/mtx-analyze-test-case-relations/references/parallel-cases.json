@@ -1,0 +1,36 @@
+{
+  "cases": [
+    {
+      "case_id": "H01",
+      "case_module": "任务处理",
+      "case_title": "解析故障持续时重试仍失败",
+      "case_type": "异常测试",
+      "priority": "2",
+      "precondition": [
+        "1. 准备因解析失败而终止的任务，解析故障持续存在。"
+      ],
+      "test_steps": [
+        "1. 重试该失败任务并等待结束。"
+      ],
+      "expected_results": [
+        "1. 任务再次在解析阶段失败，未进入写入。"
+      ]
+    },
+    {
+      "case_id": "H02",
+      "case_module": "任务处理",
+      "case_title": "写入故障持续时重试仍失败",
+      "case_type": "异常测试",
+      "priority": "2",
+      "precondition": [
+        "1. 准备因写入失败而终止的任务，写入故障持续存在。"
+      ],
+      "test_steps": [
+        "1. 重试该失败任务并等待结束。"
+      ],
+      "expected_results": [
+        "1. 任务再次在写入阶段失败。"
+      ]
+    }
+  ]
+}

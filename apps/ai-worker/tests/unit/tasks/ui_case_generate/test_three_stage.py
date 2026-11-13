@@ -55,7 +55,7 @@ class ThreeStageTests(unittest.TestCase):
                 root, "ui_surface", {}, json.dumps(read("surface"))
             )
         self.assertIsNone(result)
-        self.assertEqual(required_skills(task), ["extract-ui-test-surface"])
+        self.assertEqual(required_skills(task), ["mtx-extract-ui-test-surface"])
         runner.assert_called_once()
         self.assertEqual(progress[-1].stage_status, "waiting_review")
         self.assertEqual(
@@ -68,9 +68,9 @@ class ThreeStageTests(unittest.TestCase):
                 root, "ui_design", {"uiSurface": read("surface")}, json.dumps(read("design"))
             )
         self.assertIsNone(result)
-        self.assertEqual(required_skills(task), ["map-functional-cases-to-ui-scenarios"])
+        self.assertEqual(required_skills(task), ["mtx-map-functional-cases-to-ui-scenarios"])
         self.assertEqual(
-            runner.call_args.kwargs["skill_name"], "map-functional-cases-to-ui-scenarios"
+            runner.call_args.kwargs["skill_name"], "mtx-map-functional-cases-to-ui-scenarios"
         )
         body = json.loads(runner.call_args.kwargs["input_text"].split("\n用户生成指令：")[0])
         self.assertEqual(body["functionalCases"], read("cases"))
@@ -94,7 +94,7 @@ class ThreeStageTests(unittest.TestCase):
         self.assertEqual(intermediate.pop("sourceCommit"), "a1b2c3d")
         self.assertEqual(intermediate.pop("sourceRepository")["repositoryId"], "repo-1")
         self.assertEqual(intermediate, config)
-        self.assertEqual(required_skills(task), ["generate-ui-test-case"])
+        self.assertEqual(required_skills(task), ["mtx-generate-ui-test-case"])
         self.assertEqual(runner.call_count, 2)
         self.assertIn(":ui-yaml-review:", runner.call_args.kwargs["session_key"])
 

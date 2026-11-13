@@ -1,0 +1,4 @@
+interface:
+  display_name: "仓库画像分析"
+  short_description: "依据已审核材料和仓库证据识别角色与需求职责"
+  default_prompt: "使用 $mtx-repository-profile-analysis，结合已审核的材料整理 JSON 和本次固定版本的仓库清单，按只读证据判断各仓库的角色和职责，输出符合技能契约的画像 JSON。"

@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
-from support.execution_writer import MemoryExecutionWriter
 from support.worker_contract import (
     FakeWorkerRepository as FakeWorkerRepository,
 )
@@ -28,6 +27,7 @@ from testing_agent.schemas.workers import (
 )
 from testing_agent.services import worker as worker_service_module
 from testing_agent.services import worker_task as worker_task_service_module
+from testing_agent.services.worker_domains.ui import ui_case_payload, ui_suite_payload
 from testing_agent.services.worker_task import WorkerTaskService
 
 
@@ -59,9 +59,7 @@ async def test_worker_claim_service_returns_go_style_task_payload(monkeypatch):
 
     monkeypatch.setattr(worker_task_service_module, "build_snapshot", fake_snapshot)
 
-    service = WorkerTaskService(
-        FakeWorkerRepository(task), execution_writer=MemoryExecutionWriter()
-    )
+    service = WorkerTaskService(FakeWorkerRepository(task))
 
     payload = await service.claim("ui", WorkerClaimRequest(workerId="worker-1"))
 
@@ -307,9 +305,7 @@ async def test_functional_case_worker_can_download_requirement_document(monkeypa
         worker_task_service_module, "DirectStageWorkerService", lambda session: direct
     )
 
-    requirement = await WorkerTaskService(
-        FakeRepository(), execution_writer=MemoryExecutionWriter()
-    ).requirement_document("worker-task-1")
+    requirement = await WorkerTaskService(FakeRepository()).requirement_document("worker-task-1")
 
     assert requirement.document_file_id == "file-1"
 
@@ -351,9 +347,7 @@ async def test_ai_worker_claim_rejects_legacy_run_without_changing_it():
             assert run_id == "run-1"
             return run
 
-    service = WorkerTaskService(
-        FakeAiWorkerRepository(task), execution_writer=MemoryExecutionWriter()
-    )
+    service = WorkerTaskService(FakeAiWorkerRepository(task))
 
     with pytest.raises(AppError, match="AI 队列未关联有效的阶段尝试") as exc:
         await service.claim("ai", WorkerClaimRequest(workerId="worker-1"))
@@ -395,9 +389,7 @@ async def test_ai_worker_started_updates_run_status_to_running_rejects_legacy_qu
         return task
 
     monkeypatch.setattr(worker_task_service_module, "find_task", fake_find_task)
-    service = WorkerTaskService(
-        FakeAiWorkerRepository(task), execution_writer=MemoryExecutionWriter()
-    )
+    service = WorkerTaskService(FakeAiWorkerRepository(task))
 
     with pytest.raises(AppError) as rejected:
         await service.started(
@@ -622,7 +614,7 @@ async def test_legacy_checkpoint_progress_is_rejected(
         return task
 
     monkeypatch.setattr(worker_task_service_module, "find_task", fake_find_task)
-    service = WorkerTaskService(FakeRepository(task), execution_writer=MemoryExecutionWriter())
+    service = WorkerTaskService(FakeRepository(task))
 
     with pytest.raises(AppError) as rejected:
         await service.progress(
@@ -684,7 +676,7 @@ async def test_ai_worker_claim_rejects_legacy_requirement_queue():
             assert run_id == "run-1"
             return run
 
-    service = WorkerTaskService(FakeRepository(task), execution_writer=MemoryExecutionWriter())
+    service = WorkerTaskService(FakeRepository(task))
 
     with pytest.raises(AppError, match="AI 队列未关联有效的阶段尝试"):
         await service.claim("ai", WorkerClaimRequest(workerId="worker-1"))
@@ -736,7 +728,7 @@ async def test_legacy_extraction_progress_is_rejected(
         return task
 
     monkeypatch.setattr(worker_task_service_module, "find_task", fake_find_task)
-    service = WorkerTaskService(FakeRepository(task), execution_writer=MemoryExecutionWriter())
+    service = WorkerTaskService(FakeRepository(task))
 
     with pytest.raises(AppError) as rejected:
         await service.progress(
@@ -858,7 +850,7 @@ async def test_api_collection_item_complete_creates_case_run_and_binds_item(monk
         fake_save_extracted_environment_vars,
     )
     monkeypatch.setattr(worker_task_service_module, "new_id", lambda: "case-run-1", raising=False)
-    service = WorkerTaskService(repository, execution_writer=MemoryExecutionWriter())
+    service = WorkerTaskService(repository)
     body = WorkerTaskEventRequest(
         workerId="worker-1",
         runId="",
@@ -955,9 +947,7 @@ async def test_api_worker_claim_queues_owner_run_and_uses_go_lease_seconds():
             assert run_id == "run-1"
             return run
 
-    service = WorkerTaskService(
-        FakeApiWorkerRepository(task), execution_writer=MemoryExecutionWriter()
-    )
+    service = WorkerTaskService(FakeApiWorkerRepository(task))
 
     payload = await service.claim("api", WorkerClaimRequest(workerId="worker-1"))
 
@@ -1002,13 +992,13 @@ async def test_ui_case_payload_keeps_steps_json_array_for_worker():
                 steps_json=[{"keyword": "goto", "url": "https://example.test"}],
             )
 
-    payload = await worker_service_module.ui_case_payload(FakeSession(), "case-1")
+    payload = await ui_case_payload(FakeSession(), "case-1")
 
     assert payload["stepsJson"] == [{"keyword": "goto", "url": "https://example.test"}]
 
 
 def test_ui_suite_payload_includes_screenshot_policy_for_worker():
-    payload = worker_service_module.ui_suite_payload(
+    payload = ui_suite_payload(
         SimpleNamespace(
             suite_id="suite-1",
             name="Login Suite",
@@ -1034,7 +1024,7 @@ def test_ui_suite_payload_includes_screenshot_policy_for_worker():
 
 
 def test_ui_suite_payload_defaults_screenshot_policy_for_worker():
-    payload = worker_service_module.ui_suite_payload(
+    payload = ui_suite_payload(
         SimpleNamespace(
             suite_id="suite-1",
             name="Login Suite",

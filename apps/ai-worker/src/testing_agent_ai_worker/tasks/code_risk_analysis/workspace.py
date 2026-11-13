@@ -238,8 +238,3 @@ def _changed_files(diff_files: Sequence[dict[str, Any]]) -> list[str]:
         if path and path not in paths:
             paths.append(path)
     return paths
-
-
-def _truncate(value: str, limit: int = 500) -> str:
-    text = " ".join(str(value or "").split())
-    return text if len(text) <= limit else f"{text[:limit]}…"

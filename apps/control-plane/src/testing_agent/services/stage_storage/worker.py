@@ -14,6 +14,7 @@ from testing_agent.core.errors import ErrBadRequest
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
 from testing_agent.services.stage_storage import DirectStageStorage
+from testing_agent.services.stage_storage.module_progress import accept_module_progress
 
 
 class StageWorkerTransitions:
@@ -49,11 +50,11 @@ class StageWorkerTransitions:
     async def progress(
         self, stage_id: str, attempt_id: str, worker_task_id: str, progress: dict[str, Any]
     ) -> None:
-        _, attempt = await self.current(stage_id, attempt_id, worker_task_id)
+        stage, attempt = await self.current(stage_id, attempt_id, worker_task_id)
         if attempt.status != "running":
             raise ErrBadRequest()
-        # Progress payload remains accepted for Worker protocol compatibility.
-        # Detailed progress is intentionally not retained.
+        accept_module_progress(attempt, stage.stage, progress.get("summary"))
+        await self.session.flush()
 
     async def completed(
         self,
@@ -65,6 +66,10 @@ class StageWorkerTransitions:
         output_format: str,
         output_context: dict[str, Any] | None,
     ) -> AiGenerationAttempt:
+        _, attempt = await self.current(stage_id, attempt_id, worker_task_id)
+        previous = (attempt.output_context_json or {}).get("moduleGeneration")
+        if previous is not None:
+            output_context = {**(output_context or {}), "moduleGeneration": previous}
         return await self.storage.publish(
             stage_id,
             attempt_id=attempt_id,

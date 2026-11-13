@@ -1,0 +1,11 @@
+"""Canonical names for MTX platform skills."""
+
+MATERIAL_SKILL = "mtx-organize-requirement-material"
+SCOPE_SKILL = "mtx-analyze-functional-requirements"
+TEST_POINTS_SKILL = "mtx-generate-traceable-test-points"
+DETAILED_CASES_SKILL = "mtx-generate-solution-test-cases"
+CASE_RELATIONS_SKILL = "mtx-analyze-test-case-relations"
+REPOSITORY_PROFILE_SKILL = "mtx-repository-profile-analysis"
+UI_SURFACE_SKILL = "mtx-extract-ui-test-surface"
+UI_DESIGN_SKILL = "mtx-map-functional-cases-to-ui-scenarios"
+UI_YAML_SKILL = "mtx-generate-ui-test-case"

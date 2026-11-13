@@ -16,7 +16,8 @@ import {
 } from '../api/generationChain.api'
 import { usePersonalLlmChoice } from './usePersonalLlmChoice'
 import { useRevisionAttachments } from './useRevisionAttachments'
-import { buildRevisionTemplate, getRevisionQuestions } from '../utils/functionalRevision'
+import { buildRevisionTemplate, createQuestionRevisionDraft, getRevisionQuestions, revisionInstructionText } from '../utils/functionalRevision'
+import { formatJsonArtifact } from '../utils/artifactFormat'
 
 export type ChainFilter = 'all' | 'draft' | 'empty'
 export type ChainArtifactMode = 'visual' | 'raw'
@@ -38,7 +39,7 @@ export function useRequirementGenerationChain({
   const [selected, setSelected] = useState<SelectedChainStage>()
   const [filter, setFilter] = useState<ChainFilter>('all')
   const [mode, setMode] = useState<ChainArtifactMode>('visual')
-  const [versionKey, setVersionKey] = useState('')
+  const [pickedVersionKey, setVersionKey] = useState('')
   const [editing, setEditing] = useState<{ content: string; original: string; attemptId: string }>()
   const [diffOpen, setDiffOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -136,9 +137,10 @@ export function useRequirementGenerationChain({
     () => chain?.stages.find(item => item.stage === selected?.stage),
     [chain, selected?.stage],
   )
+  const stageRunning = stage?.state === 'running'
 
   const versionOptions = useMemo(() => {
-    if (!stage) return []
+    if (!stage || stage.state === 'running') return []
     return [
       ...(stage.draft
         ? [{ key: 'draft', label: stage.draft.invalidated ? '已作废' : '待审核' }]
@@ -150,41 +152,45 @@ export function useRequirementGenerationChain({
     ]
   }, [stage])
 
+  const defaultVersionKey = stage?.draft && !stage.draft.invalidated
+    ? 'draft'
+    : stage?.latestVersion?.versionId ?? (stage?.draft ? 'draft' : '')
+  const versionKey = stageRunning ? '' : versionOptions.some(option => option.key === pickedVersionKey) ? pickedVersionKey : defaultVersionKey
+
+  // 运行中退出旧版本视图，结束后默认打开新草稿或最新已通过版本。
   useEffect(() => {
-    if (!stage || editing) return
-    const valid =
-      versionKey === 'draft'
-        ? Boolean(stage.draft)
-        : stage.versions.some(version => version.versionId === versionKey)
-    if (!valid) {
-      setVersionKey(
-        stage.draft && !stage.draft.invalidated
-          ? 'draft'
-          : stage.latestVersion?.versionId ?? (stage.draft ? 'draft' : ''),
-      )
-    }
-  }, [stage, versionKey, editing])
+    if (!stageRunning) return
+    setVersionKey('')
+    setDiffOpen(false)
+    setHistoryOpen(false)
+    setMode('visual')
+    setRevisionOpen(false)
+    setImportOpen(false)
+  }, [stageRunning])
 
   // 待审核产物默认就是编辑态：打开草稿即建立工作副本，可视化与 JSON 共用同一份内容。
   const autoEditAttemptId = stage?.draft?.attemptId
   const autoEditContent = stage?.draft?.content
   const autoEditInvalidated = stage?.draft?.invalidated
   useEffect(() => {
+    if (stageRunning) return
     if (!autoEditAttemptId || !autoEditContent || autoEditInvalidated || versionKey !== 'draft') {
       setEditing(undefined)
       return
     }
+    // 草稿原文可能是单行压缩 JSON；原文视图与可视化共用展开后的内容，避免编辑时面对一整行。
+    const nextContent = formatJsonArtifact(autoEditContent)
     setEditing(current => {
       if (current?.attemptId === autoEditAttemptId) {
         // 其他人保存或轮询更新了草稿时，未修改的副本跟随最新内容；本地未保存的修改不覆盖。
-        if (current.content === current.original && current.original !== autoEditContent) {
-          return { ...current, content: autoEditContent, original: autoEditContent }
+        if (current.content === current.original && current.original !== nextContent) {
+          return { ...current, content: nextContent, original: nextContent }
         }
         return current
       }
-      return { content: autoEditContent, original: autoEditContent, attemptId: autoEditAttemptId }
+      return { content: nextContent, original: nextContent, attemptId: autoEditAttemptId }
     })
-  }, [autoEditAttemptId, autoEditContent, autoEditInvalidated, versionKey, editing?.attemptId])
+  }, [autoEditAttemptId, autoEditContent, autoEditInvalidated, versionKey, editing?.attemptId, stageRunning])
 
   const selectedVersion = useMemo(
     () =>
@@ -199,11 +205,11 @@ export function useRequirementGenerationChain({
     const key = `${requirementId}:${selected.kind}:${selected.stage}:${stage.draft.attemptId}`
     if (revisionDraftKey.current !== key) {
       const label = selected.kind === 'requirement_analysis'
-        ? selected.stage === 'extracting_text' ? '材料提取结果' : '需求理解记录'
+        ? '材料整理结果（全部待确认问题）'
         : stage.label
       const template = buildRevisionTemplate(getRevisionQuestions(stage.draft.content), label, '答复')
       setRevisionTemplate(template)
-      setRevisionInstruction(template)
+      setRevisionInstruction(selected.kind === 'requirement_analysis' ? createQuestionRevisionDraft(getRevisionQuestions(stage.draft.content)) : template)
       revisionAttachments.clearAttachments()
       revisionDraftKey.current = key
     }
@@ -379,8 +385,9 @@ export function useRequirementGenerationChain({
       if (!selected) throw new Error('请选择阶段')
       return runGenerationStage(selected.kind, selected.stage, inputs ?? undefined)
     },
-    onSuccess: () => {
+    onSuccess: result => {
       pendingRun.clear()
+      client.setQueryData(['generationChain', requirementId, result.kind, 'detail'], result)
       invalidate()
       message.success('已开始生成')
     },
@@ -463,12 +470,13 @@ export function useRequirementGenerationChain({
   const revise = useMutation({
     mutationFn: async (connectionId: string) => {
       if (!selected) throw new Error('请选择阶段')
-      if (!revisionInstruction.trim()) throw new Error('请输入优化指令')
+      const instruction = revisionInstructionText(revisionInstruction)
+      if (!instruction) throw new Error('请补充已确认的信息，或填写其他优化要求')
       if (revisionTemplate && revisionInstruction.trim() === revisionTemplate.trim()) {
         throw new Error('请补充已确认的信息，或填写其他优化要求')
       }
       const params = {
-        connectionId, instruction: revisionInstruction.trim(),
+        connectionId, instruction,
         ...(revisionAttachments.attachments.length ? {
           attachmentFileIds: revisionAttachments.attachments.map(item => item.fileId),
         } : {}),
@@ -481,8 +489,9 @@ export function useRequirementGenerationChain({
         { ...params, requestId },
       )
     },
-    onSuccess: () => {
+    onSuccess: result => {
       pendingRevision.clear()
+      client.setQueryData(['generationChain', requirementId, result.kind, 'detail'], result)
       invalidate()
       setRevisionOpen(false)
       setRevisionInstruction('')
@@ -580,7 +589,9 @@ export function useRequirementGenerationChain({
       ? stage?.draft?.content ?? ''
       : versionDetail.data?.content ?? ''
 
-  const workingContent = editing?.content ?? displayedContent
+  const workingContent = versionKey === 'draft' && editing?.attemptId === stage?.draft?.attemptId
+    ? editing?.content ?? displayedContent
+    : displayedContent
 
   const comparisonContent =
     versionKey === 'draft'

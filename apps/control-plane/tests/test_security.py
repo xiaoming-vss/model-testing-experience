@@ -34,5 +34,5 @@ def test_logins_at_the_same_time_get_distinct_tokens(monkeypatch):
     first = security.create_access_token("same-user")
     second = security.create_access_token("same-user")
     assert first != second
-    assert security.parse_access_token(first) == "same-user"
-    assert security.parse_access_token(second) == "same-user"
+    assert security.parse_access_token_claims(first).user_id == "same-user"
+    assert security.parse_access_token_claims(second).user_id == "same-user"

@@ -51,7 +51,7 @@ function chainWithVersions(versions: { versionId: string; versionNo: number; lab
   return {
     stages: [
       {
-        stage: 'feature_understanding',
+        stage: 'extracting_text',
         versions,
         latestVersion: versions.at(-1),
       },
@@ -59,7 +59,7 @@ function chainWithVersions(versions: { versionId: string; versionNo: number; lab
   } as never
 }
 
-it('默认携带最新已审核需求理解版本，并独立于阶段版本选择', async () => {
+it('默认携带最新已审核材料整理版本，并独立于阶段版本选择', async () => {
   vi.spyOn(generationChainApi, 'chain').mockResolvedValue(
     chainWithVersions([
       { versionId: 'sv-1', versionNo: 1, label: 'V1' },
@@ -72,10 +72,10 @@ it('默认携带最新已审核需求理解版本，并独立于阶段版本选�
   const chainRun = vi.spyOn(generationChainApi, 'run')
   const { result, unmount, client } = renderWorkspace()
 
-  await waitFor(() => expect(result.current.understandingVersionId).toBe('sv-2'))
+  await waitFor(() => expect(result.current.materialVersionId).toBe('sv-2'))
   expect(result.current.runDisabledReason).toBeUndefined()
 
-  act(() => result.current.setUnderstandingVersionId('sv-1'))
+  act(() => result.current.setMaterialVersionId('sv-1'))
   await act(async () => {
     await result.current.start.mutateAsync()
   })
@@ -83,7 +83,7 @@ it('默认携带最新已审核需求理解版本，并独立于阶段版本选�
   expect(launch).toHaveBeenCalledWith(
     'task',
     expect.objectContaining({
-      requirementUnderstandingVersionId: 'sv-1',
+      requirementMaterialVersionId: 'sv-1',
       llmConnectionId: 'llm',
       gitlabConnectionIds: { repo: 'gitlab' },
     }),
@@ -121,12 +121,12 @@ it('默认选择最新画像版本，也可以切换历史版本', async () => {
   client.clear()
 })
 
-it('没有已审核需求理解版本时禁用运行', async () => {
+it('没有已审核材料整理版本时禁用运行', async () => {
   vi.spyOn(generationChainApi, 'chain').mockResolvedValue(chainWithVersions([]))
   const { result, unmount, client } = renderWorkspace()
 
   await waitFor(() => {
-    expect(result.current.runDisabledReason).toContain('审核通过需求理解')
+    expect(result.current.runDisabledReason).toContain('审核通过材料整理')
   })
   unmount()
   client.clear()

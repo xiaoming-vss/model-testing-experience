@@ -8,7 +8,7 @@
 
 接收平台派发的 AI 测试任务，调用 LLM 生成测试产物并回传。领取需求分析、功能/API/UI 用例生成、代码风险分析、仓库画像、测试报告生成、用例执行顺序图谱八类任务。
 
-领域术语与任务类型见 [CONTEXT](CONTEXT.md)。任务执行遵循两条设计约定：技能包由部署侧预置，worker 不下载技能；轮询无锁并行，收到 SIGTERM 立即退出。
+领域术语与任务类型见 [CONTEXT](CONTEXT.md)。任务执行遵循两条设计约定：默认技能按任务从控制面技能库获取并校验；轮询无锁并行，收到 SIGTERM 立即退出。
 
 ## 运行时与依赖
 
@@ -124,10 +124,14 @@ uv run ruff check .                               # Lint
 
 Worker 每次执行前按任务类型／阶段从控制面获取默认技能清单，直读 S3 并验证文件大小和 SHA-256。技能恢复到任务独立 workspace 中，不再手工向项目目录放置技能；本期每次重新获取当前内容，不做历史版本或跨运行缓存。项目自定义技能不自动加入任务。
 
-平台初始化与更新方式见 [Skill 库维护](../control-plane/skills.md)。缺少默认技能或下载失败时任务报错，不回退旧目录。`code_risk_analysis` 使用 `code-risk-analysis` 默认技能，并在 Worker 内执行三次有界输出修正；`repository_profile` 同样使用内置 prompt，不注册默认 skill，后续由 `repository-profile-analysis` 替换 prompt 构建入口。
+功能测试链路依次使用 `mtx-organize-requirement-material`、`mtx-analyze-functional-requirements`、`mtx-generate-traceable-test-points` 和 `mtx-generate-solution-test-cases`。测试点审查与子任务读取同一技能目录中的规则。旧的非 `mtx-` 同名技能及兼容映射已清理，Worker 只加载上述 `mtx-` 内置技能。
+
+平台初始化与更新方式见 [Skill 库维护](../control-plane/skills.md)。缺少默认技能或下载失败时任务报错，不回退旧目录。`code_risk_analysis` 使用 `code-risk-analysis` 默认技能，`repository_profile` 使用 `mtx-repository-profile-analysis` 默认技能。Worker 对模型输出执行有界校验修正。
 
 - [代码分析代码工作区与上下文回执](code-analysis-context.md)
 - [仓库画像分析](repository-profile.md)
+- [功能测试范围分析](test-scope-analysis.md)
+- [按模块并发生成完整用例](module-case-generation.md)
 - [S3 任务文件读取](file-storage.md)
 - [需求分析两阶段与 JSON 产物设计](requirement-analysis-two-stage-design.md)（实施前设计）
 
@@ -158,3 +162,5 @@ UI 候选生成接受步骤级 `missingFields` 结构化待补项，明确字段
 每次第三阶段生成/修复及内部复核均使用新会话。调用输入包含完整的当前模块材料、候选或错误反馈，避免重复会话历史叠加大型 YAML 导致上下文溢出；不依赖历史聊天恢复任务。
 
 需求生成链的新 API 两阶段运行使用快照标记 `apiWorkflowVersion: api_two_stage/1.0`。`openapi_extract` 只调用 `openapi-test-config-extractor` 并在结果校验通过后等待审核；`generate` 读取已选审核版本调用 `api-cases-yaml-generator`。每次只获取当前阶段的 Skill；旧运行保持原先自动串联两个 Skill 的协议。
+
+测试点阶段契约与审查见 [可追溯测试点生成](traceable-test-points.md)。

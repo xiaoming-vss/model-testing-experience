@@ -15,6 +15,7 @@ from testing_agent.domain.generation_chain import (
     upstream_stages,
 )
 from testing_agent.domain.request_identity import request_signature
+from testing_agent.domain.test_scope_analysis import parse_test_scope
 from testing_agent.models.ai_generate_stage_version import AiGenerateStageVersion
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
@@ -117,24 +118,33 @@ async def _start_stage(
         )
     selected = await select_upstream_versions(session, task, kind, stage, body.upstream_versions)
     stages = await _stages(chain, task, kind)
+    if kind == "function" and "requirement_analysis" in selected:
+        try:
+            parse_test_scope(selected["requirement_analysis"].artifact_content)
+        except ValueError as exc:
+            raise dynamic_error(ErrBadRequest, str(exc)) from exc
     source: dict[str, Any] = {}
     if selected:
         # Preserve exact existing input of an approved upstream attempt. If the
         # input is genuinely unavailable, construct new inputs and never infer
         # or write fictitious history into the selected version.
         parent_stage = upstream_stages(kind, stage)[0]
-        source = await _known_source(chain, selected[parent_stage])
+        if selected[parent_stage].task_id == task.task_id:
+            source = await _known_source(chain, selected[parent_stage])
         if kind == "function" and parent_stage == "requirement_analysis":
             context = selected[parent_stage].artifact_context_json or {}
             stored_source = context.get("functionalSource") if isinstance(context, dict) else None
             if (
                 isinstance(stored_source, dict)
-                and stored_source.get("requirementUnderstandingVersion")
+                and stored_source.get("requirementMaterialVersion")
                 and "sourceContent" in stored_source
             ):
                 source = {**source, **deepcopy(stored_source)}
-            elif not source.get("requirementUnderstandingVersion"):
-                source = {}
+            elif not source.get("requirementMaterialVersion"):
+                raise dynamic_error(
+                    ErrBadRequest,
+                    "历史测试范围风险分析未绑定材料整理版本，请重新生成测试范围风险分析",
+                )
     if kind == "ui":
         first = stages["ui_surface"]
         if stage != "ui_surface" and first.source_snapshot_json:
@@ -154,8 +164,8 @@ async def _start_stage(
             attempt_id,
             body.instruction or "",
             worker_task_id=worker_id,
-            understanding_version_id=selected["feature_understanding"].version_id
-            if "feature_understanding" in selected
+            material_version_id=selected["extracting_text"].version_id
+            if kind == "function" and "extracting_text" in selected
             else "",
         )
     source["instruction"] = body.instruction or ""

@@ -1,28 +1,24 @@
 """Shared prompt helpers for every execution backend."""
 
 STRUCTURED_REQUIREMENT_INPUT_INSTRUCTION = (
-    "上游若为 requirement_understanding JSON，请读取模块、操作、交互、规则和问题的业务内容，"
-    "保留来源与确认状态；用户已回答的问题必须先回写到对应事实、规则、操作或交互，"
-    "再从 questions/openQuestions 删除并清理相关引用；只保留答复未覆盖的独立业务缺口。"
-    "示例不作为产品事实，未答复问题继续有效。"
-    "需求理解仅支持精简契约 2.0；evidenceIds 必须解析到 evidence 的来源定位与摘录，"
-    "operation.ruleIds 和流程 conditionRuleIds 解析到 businessRules，多条件为同时满足。"
-    "2.0 事实对象省略 confirmationStatus 时为有证据的 confirmed；明确标记的未知、冲突、"
-    "示例和不适用不得升级为已确认。概述字符串不单独构成已确认规则；可选字段省略为未记录。"
-    "同一规则经多个入口引用只是一条规则，不重复生成测试点；不要把证据索引展开复制到输出。"
-    "需求理解与五字段分析是不同产物，不把字段名或转义符当业务名称。"
+    "上游若为 readable_requirement_material 0.2 JSON，请读取 functions 中各章节及待确认问题，"
+    "通过 materialBlockIds 查找 materialBlocks 的来源及定位；区分已确认、未确认、冲突和示例，"
+    "不得将示例、历史规则或未经确认的内容当成产品事实。"
+    "用户已回答的问题必须先回写相关业务内容，再从 questions/openQuestions 删除已解决问题；保留尚未答复的问题。"
+    "同一规则经多个入口引用仍是一条规则，不重复生成测试点。"
 )
 
-JSON_ONLY_INSTRUCTION = "请直接返回 JSON 内容，不要返回 Markdown 代码块、解释文字或其他说明。"
-FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION = STRUCTURED_REQUIREMENT_INPUT_INSTRUCTION + (
-    "请直接返回符合 analyze-functional-requirements skill 要求的测试点分析 JSON，"
+FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION = (
+    "以审核通过的材料整理 JSON 为唯一事实依据，读取 functions、materialBlocks 和 questions；"
+    "区分已确认、未确认、冲突及示例。新增业务答复需先纳入材料整理并审核。"
+    "请直接返回符合 测试范围风险分析 skill 要求的测试范围风险分析 JSON，"
     "不要返回详细测试用例、cases/testCases、meta/config 包装结构，"
     "输出必须是且只能是一个可由 JSON.parse 直接解析的合法 JSON 对象："
     "第一个字符必须是 {，最后一个字符必须是 }；"
     "不得在对象前后输出空行、解释、标题、注释、Markdown 代码块或第二个 JSON 对象。"
 )
 FUNCTIONAL_CASE_NAMES_JSON_ONLY_INSTRUCTION = STRUCTURED_REQUIREMENT_INPUT_INSTRUCTION + (
-    "请直接返回符合 generate-solution-test-points skill 要求的测试用例名称 JSON，"
+    "请直接返回符合 测试点生成 skill 要求的测试用例名称 JSON，"
     "不要返回详细测试步骤、cases/testCases、meta/config 包装结构，"
     "不要返回 Markdown 代码块、解释文字或其他说明。"
 )
@@ -36,7 +32,7 @@ FUNCTIONAL_DETAILED_CASES_JSON_ONLY_INSTRUCTION = STRUCTURED_REQUIREMENT_INPUT_I
     "不得在对象前后输出空行、解释、标题、注释、Markdown 代码块或第二个 JSON 对象。"
 )
 FUNCTIONAL_RELATION_JSON_ONLY_INSTRUCTION = (
-    "请直接返回符合 analyze-test-case-relations skill 要求的用例关系 JSON（关系输出协议 2.0）。"
+    "请直接返回符合 mtx-analyze-test-case-relations skill 要求的用例关系 JSON（关系输出协议 2.0）。"
     "顶层只包含 schema_version、main_paths、edges；"
     "输出必须是且只能是一个可由 JSON.parse 直接解析的合法 JSON 对象："
     "第一个字符必须是 {，最后一个字符必须是 }；"

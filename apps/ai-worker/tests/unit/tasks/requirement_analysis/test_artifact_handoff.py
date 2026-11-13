@@ -13,7 +13,7 @@ from testing_agent_ai_worker.tasks.requirement_analysis.validation import genera
 
 FIXTURE = (
     Path(__file__).resolve().parents[4]
-    / "tests/fixtures/requirement_artifacts/document-extraction.example.json"
+    / "tests/fixtures/requirement_artifacts/readable-material.example.json"
 )
 RECEIPT = {"artifactFile": "document-extraction.json"}
 

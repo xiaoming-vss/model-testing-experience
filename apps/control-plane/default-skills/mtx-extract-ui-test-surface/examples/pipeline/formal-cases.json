@@ -1,0 +1,49 @@
+{
+  "cases": [
+    {
+      "caseId": "U1",
+      "title": "查看帮助内容",
+      "content": {
+        "preconditions": [
+          "当前页面可访问。"
+        ],
+        "steps": [
+          {
+            "action": "点击帮助按钮。",
+            "expected": "显示帮助内容。"
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "U2",
+      "title": "查看外部报表状态",
+      "content": {
+        "preconditions": [
+          "外部报表已经完成，预期状态文字为“已完成”。"
+        ],
+        "steps": [
+          {
+            "action": "打开外部报表。",
+            "expected": "报表状态文字为“已完成”。"
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "U3",
+      "title": "修改备注后显示提交的新值",
+      "content": {
+        "preconditions": [
+          "准备新备注“更新后的备注”。"
+        ],
+        "steps": [
+          {
+            "action": "将备注改为“更新后的备注”。",
+            "expected": "备注输入框的当前值为“更新后的备注”。"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -5,7 +5,12 @@ import unittest
 from pathlib import Path
 from uuid import UUID
 
-from tests.unit.tasks.functional_case_generate.fixtures import analysis, case
+from tests.unit.tasks.functional_case_generate.fixtures import (
+    analysis,
+    case,
+    material,
+    traceable_points,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_DIR = PROJECT_ROOT / "src"
@@ -109,120 +114,49 @@ class PiChainRunnerTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("不要返回 JSON、meta/config/testCases 结构", factory.bot.calls[1]["message"])
         self.assertNotIn("请直接返回 JSON 内容", factory.bot.calls[1]["message"])
 
-    async def test_run_functional_chain_uses_independent_audit_session(
-        self,
-    ) -> None:
-        case_names_json = (
-            '{"categories":['
-            '{"model":"登录","data":[{"test_model":"功能场景","test_points":[{"case_name":"验证登录成功"}]}]},'
-            '{"model":"项目管理","data":[{"test_model":"功能场景","test_points":[{"case_name":"验证项目新增成功"}]}]}'
-            "]}"
-        )
+    async def test_run_functional_chain_uses_independent_audit_session(self) -> None:
+        workspace = self.enterContext(tempfile.TemporaryDirectory())
+        ref = Path(workspace) / "skills/mtx-generate-traceable-test-points/references"
+        ref.mkdir(parents=True)
+        (ref / "design-audit.md").write_text("审查")
+        (ref / "independent-review.md").write_text("审查协议")
+        value = traceable_points()
         factory = _FakeFactory(
             [
-                json.dumps(analysis(), ensure_ascii=False, separators=(",", ":")),
-                case_names_json,
+                json.dumps(analysis()),
+                json.dumps(value),
                 json.dumps({"issues": []}),
                 json.dumps({"issues": []}),
-                json.dumps({"cases": [{**case("验证登录成功"), "case_id": "MODEL-99"}]}),
-                json.dumps(
-                    {"cases": [{**case("验证项目新增成功", "项目管理"), "case_id": "MODEL-99"}]}
-                ),
+                json.dumps({"issues": []}),
+                json.dumps({"cases": [{**case("【登录】验证登录"), "case_id": "MODEL-99"}]}),
             ]
         )
         stage_outputs: list[str] = []
-        batch_progress: list[tuple[str, str, int, int]] = []
-
         result = await run_functional_chain(
-            source_text="请基于登录和项目管理需求生成功能测试用例",
+            source_text=json.dumps(material()),
             session_key="demo:functional",
-            config_path="D:/tmp/config.json",
-            workspace="D:/tmp/workspace",
-            analysis_skill_name="analyze-functional-requirements",
-            case_name_skill_name="generate-solution-test-points",
-            detailed_case_skill_name="generate-solution-test-cases",
-            extra_instruction="只保留核心业务场景",
+            workspace=workspace,
+            analysis_skill_name="mtx-analyze-functional-requirements",
+            case_name_skill_name="mtx-generate-traceable-test-points",
+            detailed_case_skill_name="mtx-generate-solution-test-cases",
             on_requirement_analysis_result=stage_outputs.append,
             on_case_names_result=stage_outputs.append,
-            on_detailed_cases_progress=lambda accumulated_result, model_name, index, total: (
-                batch_progress.append((accumulated_result, model_name, index, total))
-            ),
             from_config=factory,
         )
-
-        self.assertEqual(
-            result.requirement_analysis_output,
-            json.dumps(analysis(), ensure_ascii=False, separators=(",", ":")),
-        )
-        self.assertEqual(json.loads(result.case_names_output), json.loads(case_names_json))
+        points_output = json.loads(result.case_names_output)
+        self.assertEqual(points_output["reviewStatus"], "independent_reviewed")
+        self.assertEqual(len(stage_outputs), 2)
         generated_cases = json.loads(result.detailed_cases_output)["cases"]
-        self.assertEqual(
-            [
-                {key: value for key, value in item.items() if key != "case_id"}
-                for item in generated_cases
-            ],
-            [case("验证登录成功"), case("验证项目新增成功", "项目管理")],
-        )
-        identifiers = [item["case_id"] for item in generated_cases]
-        self.assertEqual(len(set(identifiers)), len(identifiers))
-        for identifier in identifiers:
-            self.assertEqual(UUID(identifier).version, 4)
-        self.assertTrue(all(identifier != "MODEL-99" for identifier in identifiers))
-        self.assertEqual(
-            [json.loads(value) for value in stage_outputs],
-            [analysis(), json.loads(case_names_json)],
-        )
-        self.assertEqual(len(batch_progress), 2)
-        self.assertEqual(batch_progress[0][1:], ("登录", 1, 2))
-        self.assertEqual(batch_progress[1][1:], ("项目管理", 2, 2))
-        self.assertEqual(
-            [call["session_key"] for call in factory.bot.calls],
-            [
-                "demo:functional",
-                "demo:functional",
-                "demo:functional:audit-conditions-0",
-                "demo:functional:audit-coverage-0",
-                "demo:functional",
-                "demo:functional",
-            ],
-        )
-        self.assertIn(
-            "请先加载本地 skill：analyze-functional-requirements", factory.bot.calls[0]["message"]
-        )
-        self.assertIn("请基于登录和项目管理需求生成功能测试用例", factory.bot.calls[0]["message"])
-        self.assertIn(
-            "请先加载本地 skill：generate-solution-test-points", factory.bot.calls[1]["message"]
-        )
-        self.assertIn(
-            json.dumps(analysis(), ensure_ascii=False, separators=(",", ":")),
-            factory.bot.calls[1]["message"],
-        )
-        self.assertIn(
-            "请先加载本地 skill：generate-solution-test-cases", factory.bot.calls[4]["message"]
-        )
-        self.assertIn(
-            json.dumps(analysis(), ensure_ascii=False, separators=(",", ":")),
-            factory.bot.calls[4]["message"],
-        )
-        self.assertIn('"model": "登录"', factory.bot.calls[4]["message"])
-        self.assertIn(
-            "请直接返回包含 cases 数组的详细测试用例 JSON", factory.bot.calls[4]["message"]
-        )
-        self.assertIn(
-            "请先加载本地 skill：generate-solution-test-cases", factory.bot.calls[5]["message"]
-        )
-        self.assertIn('"model": "项目管理"', factory.bot.calls[5]["message"])
-        self.assertIn(
-            "请直接返回包含 cases 数组的详细测试用例 JSON", factory.bot.calls[5]["message"]
-        )
-        self.assertIn("只保留核心业务场景", factory.bot.calls[5]["message"])
+        self.assertEqual(UUID(generated_cases[0]["case_id"]).version, 4)
+        sessions = [call["session_key"] for call in factory.bot.calls]
+        self.assertEqual(sessions[:2], ["demo:functional", "demo:functional"])
+        self.assertEqual(len(set(sessions[2:5])), 3)
+        self.assertTrue(all(":audit-" in session for session in sessions[2:5]))
+        self.assertTrue(sessions[5].startswith("demo:functional:module:"))
+        self.assertNotEqual(sessions[5], sessions[0])
+        self.assertIn("mtx-generate-traceable-test-points", factory.bot.calls[1]["message"])
+        self.assertIn('"module": "登录"', factory.bot.calls[5]["message"])
 
-
-if __name__ == "__main__":
-    unittest.main()
-
-
-class ApiSingleStageRunnerTests(unittest.IsolatedAsyncioTestCase):
     async def test_each_stage_invokes_only_its_own_skill(self):
         from testing_agent_ai_worker.models.task import Task, TaskPayload
         from testing_agent_ai_worker.platform.skills import required_skills

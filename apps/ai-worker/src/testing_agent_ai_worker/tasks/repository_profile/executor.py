@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import shutil
 from datetime import datetime
 from typing import Any, Callable
 
 from testing_agent_ai_worker.agent.config_builder import task_config_path
+from testing_agent_ai_worker.agent.paths import resolve_task_workspace
 from testing_agent_ai_worker.agent.prompt_step import run_agent_prompt
 from testing_agent_ai_worker.config.models import (
     AgentBackendConfig,
@@ -18,6 +20,7 @@ from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, T
 from testing_agent_ai_worker.models.task import GitlabCredentials, Task
 from testing_agent_ai_worker.platform.http_client import PlatformHttpClient
 from testing_agent_ai_worker.platform.task_source import parse_gitlab_credentials
+from testing_agent_ai_worker.skill_names import REPOSITORY_PROFILE_SKILL
 from testing_agent_ai_worker.tasks.git_workspace import retain_failed_workspace, task_run_root
 from testing_agent_ai_worker.tasks.repository_profile.context import (
     ProfileContext,
@@ -89,7 +92,7 @@ class RepositoryProfileExecutor(TaskExecutor):
             return self._failed_result(
                 task,
                 started_at,
-                "该需求尚未完成需求分析(快照缺少已审核需求理解记录)",
+                "该需求尚未完成需求分析(快照缺少已审核材料整理结果)",
             )
         if not task.bindings:
             return self._failed_result(task, started_at, "需求未绑定代码仓库，无法生成仓库画像")
@@ -132,6 +135,15 @@ class RepositoryProfileExecutor(TaskExecutor):
                 agent_config=self.agent_config,
                 config=self.profile_config,
             )
+            skill = (
+                resolve_task_workspace(self.agent_config, task)
+                / "skills"
+                / REPOSITORY_PROFILE_SKILL
+            )
+            if not (skill / "SKILL.md").is_file():
+                raise ProfileWorkspaceError(f"仓库画像缺少默认技能：{REPOSITORY_PROFILE_SKILL}")
+            # Pi discovers skills under the code workspace used for this call.
+            shutil.copytree(skill, prepared.code_root / "skills" / skill.name)
             context = self.context_builder(task, prepared)
             progress_callback(
                 TaskProgress(

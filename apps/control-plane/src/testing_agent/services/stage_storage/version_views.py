@@ -45,7 +45,7 @@ async def version_detail(
     summaries = []
     for parent_stage, parent_id in recorded.items():
         parent_task_id = task.task_id
-        if kind == "function" and parent_stage == "feature_understanding":
+        if kind == "function" and parent_stage == "extracting_text":
             parent_task = await session.scalar(
                 select(AiGenerateTask)
                 .where(

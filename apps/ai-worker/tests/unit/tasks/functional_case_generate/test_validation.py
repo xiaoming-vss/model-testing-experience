@@ -17,48 +17,29 @@ from testing_agent_ai_worker.tasks.functional_case_generate.validation import (
     generate_validated,
     validate_output,
 )
-from tests.unit.tasks.functional_case_generate.fixtures import analysis, case, points
+from tests.unit.tasks.functional_case_generate.fixtures import (
+    analysis,
+    case,
+    material,
+    traceable_modules,
+    traceable_points,
+)
 
 
 class ContractsTests(unittest.TestCase):
-    def test_analysis_supports_compact_and_historical_rules_without_changing_content(self):
-        compact = {
-            "ruleId": "R01",
-            "category": "规则",
-            "name": "生成产物",
-            "confirmationStatus": "需求明确",
-            "applicableObject": "记录",
-            "preconditions": [],
-            "trigger": "开始处理",
-            "expectedBehavior": ["生成报告", "不覆盖历史报告"],
-            "sourceReferences": ["EV01"],
-            "relatedQuestionIds": [],
-        }
-        historical = {
-            **compact,
-            "prohibitedOrSkippedBehavior": ["不覆盖历史报告"],
-            "observableOutcome": "报告存在",
-        }
-        for rule in (compact, historical):
-            with self.subTest(rule=rule):
-                data = analysis()
-                data["businessRules"] = [rule]
-                result = json.loads(validate_output("requirement_analysis", json.dumps(data)))
-                self.assertEqual(result, data)
-
-        data["businessRules"] = [{**compact, "unknownField": "不允许"}]
+    def test_old_analysis_format_is_rejected(self):
         with self.assertRaises(ValueError):
-            validate_output("requirement_analysis", json.dumps(data))
+            validate_output("requirement_analysis", json.dumps({"functionalOverview": {}}))
 
     def test_all_three_valid_and_required_nullable(self):
         for stage, output in [
             ("requirement_analysis", analysis()),
-            ("case_names", points()),
+            ("traceable_case_names", traceable_points()),
             ("detailed_cases", {"cases": [case()]}),
         ]:
             self.assertEqual(json.loads(validate_output(stage, json.dumps(output))), output)
         data = analysis()
-        del data["functionalOverview"]["purpose"]
+        del data["testObjects"]
         with self.assertRaises(ValueError):
             validate_output("requirement_analysis", json.dumps(data))
 
@@ -103,31 +84,44 @@ class ContractsTests(unittest.TestCase):
 
     def test_ids_and_references(self):
         data = analysis()
-        q = {
-            "questionId": "Q01",
-            "question": "何时生效？",
-            "affectedScope": None,
-            "blockedWork": None,
+        obj = {
+            "id": "TO1",
+            "name": "记录",
+            "type": "数据",
+            "description": "关注记录",
+            "sourceBlockIds": ["b1"],
+            "basisStatus": "confirmed",
         }
-        data["openQuestions"] = [q, q]
+        data["testObjects"] = [obj, obj]
         with self.assertRaises(ValueError):
             validate_output("requirement_analysis", json.dumps(data))
-        data["openQuestions"] = []
-        data["scenarioBreakdown"] = [
+        data["testObjects"] = [obj]
+        data["impactAreas"] = [
             {
-                "scenarioId": "S01",
-                "relatedRuleIds": ["R99"],
-                "derivationType": "需求直接描述",
-                "conditions": [],
-                "trigger": None,
-                "verificationObjective": "检查入口",
-                "readyForTestPointGeneration": True,
-                "blockingReason": None,
-                "relatedQuestionIds": [],
+                "id": "I1",
+                "area": "记录",
+                "impact": "影响",
+                "testObjectIds": ["missing"],
+                "sourceBlockIds": ["b1"],
+                "basisStatus": "inferred",
             }
         ]
-        with self.assertRaisesRegex(ValueError, "relatedRuleIds"):
+        with self.assertRaisesRegex(ValueError, "testObjectIds"):
             validate_output("requirement_analysis", json.dumps(data))
+        data["impactAreas"][0]["testObjectIds"] = ["TO1"]
+        with self.assertRaisesRegex(ValueError, "material block"):
+            validate_output(
+                "requirement_analysis",
+                json.dumps(data),
+                material={"materialBlocks": [], "questions": []},
+            )
+        material = {"materialBlocks": [{"id": "b1"}], "questions": []}
+        self.assertEqual(
+            json.loads(
+                validate_output("requirement_analysis", json.dumps(data), material=material)
+            ),
+            data,
+        )
 
 
 class RepairTests(unittest.IsolatedAsyncioTestCase):
@@ -155,7 +149,7 @@ class RepairTests(unittest.IsolatedAsyncioTestCase):
     async def test_repairs_each_stage_and_records_full_diagnostics(self):
         for stage, valid in [
             ("requirement_analysis", analysis()),
-            ("case_names", points()),
+            ("traceable_case_names", traceable_points()),
             ("detailed_cases", {"cases": [case()]}),
         ]:
             calls, events = [], []
@@ -193,7 +187,9 @@ class RepairTests(unittest.IsolatedAsyncioTestCase):
                 )
 
             with self.assertRaises((OutputValidationError, ConnectionError)):
-                await generate_validated(stage="case_names", inputs="input", generate=generate)
+                await generate_validated(
+                    stage="traceable_case_names", inputs="input", generate=generate
+                )
             self.assertEqual(len(calls), count)
 
     async def test_error_feedback_caps_and_specific_path(self):
@@ -227,9 +223,9 @@ class RepairTests(unittest.IsolatedAsyncioTestCase):
 
         result = await run_functional_detailed_case_batches(
             requirement_analysis_json="{}",
-            case_names_json=json.dumps({"categories": [{"model": "A"}, {"model": "B"}]}),
+            case_names_json=json.dumps(traceable_modules("A", "B")),
             session_key="test",
-            skill_name="generate-solution-test-cases",
+            skill_name="mtx-generate-solution-test-cases",
             from_config=lambda **kw: Bot(),
             on_progress=lambda *args: progress.append(args),
         )
@@ -240,14 +236,6 @@ class RepairTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_full_chain_validates_before_stage_callback(self):
         calls, outputs = [], []
-        responses = [
-            "bad",
-            json.dumps(analysis()),
-            json.dumps(points()),
-            json.dumps({"issues": []}),
-            json.dumps({"issues": []}),
-            json.dumps({"cases": [case()]}),
-        ]
 
         class Bot:
             async def __aenter__(self):
@@ -258,21 +246,34 @@ class RepairTests(unittest.IsolatedAsyncioTestCase):
 
             async def run(self, prompt, **kwargs):
                 calls.append(prompt)
-                return responses.pop(0)
+                if "本次审查类型" in prompt:
+                    return json.dumps({"issues": []})
+                if "mtx-analyze-functional-requirements" in prompt:
+                    return "bad" if len(calls) == 1 else json.dumps(analysis())
+                if "mtx-generate-traceable-test-points" in prompt:
+                    return json.dumps(traceable_points())
+                return json.dumps({"cases": [case()]})
 
-        result = await run_functional_chain(
-            source_text="原始需求",
-            session_key="test",
-            analysis_skill_name="analyze-functional-requirements",
-            case_name_skill_name="generate-solution-test-points",
-            detailed_case_skill_name="generate-solution-test-cases",
-            from_config=lambda **kw: Bot(),
-            on_requirement_analysis_result=outputs.append,
-            on_case_names_result=outputs.append,
-        )
-        self.assertEqual(len(calls), 6)
+        with tempfile.TemporaryDirectory() as tmp:
+            ref = Path(tmp) / "skills/mtx-generate-traceable-test-points/references"
+            ref.mkdir(parents=True)
+            (ref / "design-audit.md").write_text("审查")
+            (ref / "independent-review.md").write_text("审查协议")
+            result = await run_functional_chain(
+                source_text=json.dumps(material()),
+                session_key="test",
+                analysis_skill_name="mtx-analyze-functional-requirements",
+                case_name_skill_name="mtx-generate-traceable-test-points",
+                detailed_case_skill_name="mtx-generate-solution-test-cases",
+                workspace=tmp,
+                from_config=lambda **kw: Bot(),
+                on_requirement_analysis_result=outputs.append,
+                on_case_names_result=outputs.append,
+            )
+        self.assertEqual(len(calls), 7)
         self.assertEqual(len(outputs), 2)
         self.assertEqual(json.loads(outputs[0]), analysis())
+        self.assertEqual(json.loads(outputs[1])["reviewStatus"], "independent_reviewed")
         self.assertEqual(len(json.loads(result.detailed_cases_output)["cases"]), 1)
 
     async def test_noncheckpoint_resume_skips_confirmed_upstream(self):
@@ -292,13 +293,13 @@ class RepairTests(unittest.IsolatedAsyncioTestCase):
         result = await run_functional_chain(
             source_text="需求",
             session_key="retry",
-            analysis_skill_name="analyze-functional-requirements",
-            case_name_skill_name="generate-solution-test-points",
-            detailed_case_skill_name="generate-solution-test-cases",
+            analysis_skill_name="mtx-analyze-functional-requirements",
+            case_name_skill_name="mtx-generate-traceable-test-points",
+            detailed_case_skill_name="mtx-generate-solution-test-cases",
             from_config=lambda **kw: Bot(),
             resume_stage="detailed_cases",
             prior_analysis=json.dumps(analysis()),
-            prior_case_names=json.dumps(points()),
+            prior_case_names=json.dumps(traceable_points()),
             on_requirement_analysis_result=outputs.append,
             on_case_names_result=outputs.append,
         )
@@ -314,7 +315,9 @@ class RepairTests(unittest.IsolatedAsyncioTestCase):
             return SimpleNamespace(content="auth failed", error="auth failed")
 
         with self.assertRaisesRegex(RuntimeError, "模型调用失败"):
-            await generate_validated(stage="case_names", inputs="input", generate=generate)
+            await generate_validated(
+                stage="traceable_case_names", inputs="input", generate=generate
+            )
         self.assertEqual(len(calls), 1)
 
 
@@ -331,7 +334,7 @@ class CheckpointValidationTests(unittest.TestCase):
 
         for stage, valid, field in [
             ("requirement_analysis", analysis(), "requirementAnalysis"),
-            ("case_names", points(), "caseNames"),
+            ("case_names", traceable_points(), "caseNames"),
         ]:
             calls, progress = [], []
 
@@ -344,7 +347,7 @@ class CheckpointValidationTests(unittest.TestCase):
 
                 async def run(self, prompt, **kwargs):
                     calls.append(prompt)
-                    if "【待核对测试点】" in prompt:
+                    if "本次审查类型" in prompt:
                         return SimpleNamespace(content=json.dumps({"issues": []}))
                     return SimpleNamespace(
                         content="invalid" if len(calls) == 1 else json.dumps(valid)
@@ -371,25 +374,37 @@ class CheckpointValidationTests(unittest.TestCase):
                     config_json=json.dumps(
                         {
                             "requirementAnalysis": analysis(),
-                            "caseNames": points(),
+                            "caseNames": traceable_points(),
                             "revisionInstruction": "补充异常",
                         }
                     ),
                     payload=TaskPayload(
                         source_type="text",
                         document_type="text",
-                        source_content="需求",
+                        source_content=json.dumps(material()),
                         openapi_content="",
                     ),
                 )
+                from testing_agent_ai_worker.agent.paths import resolve_task_workspace
+
+                ref = (
+                    resolve_task_workspace(PiConfig(runtime_root=tmp), task)
+                    / "skills/mtx-generate-traceable-test-points/references"
+                )
+                ref.mkdir(parents=True)
+                (ref / "design-audit.md").write_text("审查")
+                (ref / "independent-review.md").write_text("审查协议")
                 result = FunctionalCaseExecutor(agent_config=PiConfig(runtime_root=tmp)).execute(
                     task, datetime.now().astimezone(), progress.append
                 )
                 self.assertIsNone(result)
-                self.assertEqual(len(calls), 4 if stage == "case_names" else 2)
+                self.assertEqual(len(calls), 5 if stage == "case_names" else 2)
                 self.assertIn("补充异常", calls[1])
                 self.assertEqual(progress[-1].stage_status, "waiting_review")
-                self.assertEqual(json.loads(progress[-1].intermediate_json_text)[field], valid)
+                expected = dict(valid)
+                if stage == "case_names":
+                    expected["reviewStatus"] = "independent_reviewed"
+                self.assertEqual(json.loads(progress[-1].intermediate_json_text)[field], expected)
                 self.assertTrue(all(not p.intermediate_json_text for p in progress[:-1]))
                 self.assertNotIn("revisionInstruction", progress[-1].intermediate_json_text)
                 if stage == "case_names":
@@ -400,7 +415,7 @@ class CheckpointValidationTests(unittest.TestCase):
                         and json.loads(p.result_summary_json)
                         .get("outputValidation", {})
                         .get("stage")
-                        == "case_names_audit"
+                        == "case_names"
                     ]
                     self.assertTrue(audit_events)
                     self.assertTrue(all(p.current_stage == "case_names" for p in audit_events))

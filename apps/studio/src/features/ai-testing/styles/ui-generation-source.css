@@ -238,45 +238,17 @@
   align-items: flex-start;
 }
 
-.ui-source-footer {
+.ui-source-summary-actions {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding-top: 4px;
-}
-
-.ui-source-cases-fieldset {
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.ui-source-start {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.ui-source-existing {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--app-surface-divider);
-}
-
-.ui-source-existing h4 {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 600;
+  margin-top: 12px;
 }
 
 .ui-source-existing-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   margin: 0;
 }
 

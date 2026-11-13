@@ -1,0 +1,125 @@
+{
+  "schemaVersion": "0.2",
+  "artifactType": "readable_requirement_material",
+  "title": "任务处理关联示例",
+  "sources": [
+    {
+      "id": "S1",
+      "name": "虚构示例需求",
+      "type": "document",
+      "location": null
+    }
+  ],
+  "materialBlocks": [
+    {
+      "id": "B1",
+      "sourceId": "S1",
+      "parentId": null,
+      "kind": "paragraph",
+      "locator": "第1条",
+      "content": {
+        "text": "有效任务提交后进入待处理，提交本身不启动处理；正常处理是代表路径，满足数据与资源条件的任务处理完成后生成完整结果。"
+      }
+    },
+    {
+      "id": "B2",
+      "sourceId": "S1",
+      "parentId": null,
+      "kind": "paragraph",
+      "locator": "第2条",
+      "content": {
+        "text": "处理完成后可打开结果详情查看任务结果；正常处理与重试成功均支持，失败记录不展示成功结果。"
+      }
+    },
+    {
+      "id": "B3",
+      "sourceId": "S1",
+      "parentId": null,
+      "kind": "paragraph",
+      "locator": "第3条",
+      "content": {
+        "text": "处理失败时允许重试。故障解除后的成功恢复是代表重试场景；故障持续时重试仍失败，不产生成功结果。"
+      }
+    },
+    {
+      "id": "B4",
+      "sourceId": "S1",
+      "parentId": null,
+      "kind": "paragraph",
+      "locator": "第4条",
+      "content": {
+        "text": "已打开的成功结果详情支持导出报告，内容与当前任务结果一致；正常处理及重试成功的结果均适用。"
+      }
+    },
+    {
+      "id": "B5",
+      "sourceId": "S1",
+      "parentId": null,
+      "kind": "paragraph",
+      "locator": "第5条",
+      "content": {
+        "text": "个人资料支持修改合法显示名称，保存后重新打开显示新名称；与任务处理没有业务衔接。"
+      }
+    }
+  ],
+  "functions": [
+    {
+      "id": "F1",
+      "name": "任务处理",
+      "sections": [
+        {
+          "title": "功能使用与业务规则",
+          "items": [
+            {
+              "text": "有效任务提交后进入待处理，提交本身不启动处理；正常处理是代表路径，满足数据与资源条件的任务处理完成后生成完整结果。",
+              "status": "confirmed",
+              "materialBlockIds": [
+                "B1"
+              ]
+            },
+            {
+              "text": "处理完成后可打开结果详情查看任务结果；正常处理与重试成功均支持，失败记录不展示成功结果。",
+              "status": "confirmed",
+              "materialBlockIds": [
+                "B2"
+              ]
+            },
+            {
+              "text": "处理失败时允许重试。故障解除后的成功恢复是代表重试场景；故障持续时重试仍失败，不产生成功结果。",
+              "status": "confirmed",
+              "materialBlockIds": [
+                "B3"
+              ]
+            },
+            {
+              "text": "已打开的成功结果详情支持导出报告，内容与当前任务结果一致；正常处理及重试成功的结果均适用。",
+              "status": "confirmed",
+              "materialBlockIds": [
+                "B4"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "name": "个人资料",
+      "sections": [
+        {
+          "title": "功能使用与业务规则",
+          "items": [
+            {
+              "text": "个人资料支持修改合法显示名称，保存后重新打开显示新名称；与任务处理没有业务衔接。",
+              "status": "confirmed",
+              "materialBlockIds": [
+                "B5"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "questions": []
+}

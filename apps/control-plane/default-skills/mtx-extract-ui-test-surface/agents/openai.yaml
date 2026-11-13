@@ -1,0 +1,4 @@
+interface:
+  display_name: "UI Test Surface Extractor"
+  short_description: "Extract pages, controls, locators, and unknowns from frontend source"
+  default_prompt: "Use $mtx-extract-ui-test-surface to extract a source-grounded UI test surface for UI scenario mapping."

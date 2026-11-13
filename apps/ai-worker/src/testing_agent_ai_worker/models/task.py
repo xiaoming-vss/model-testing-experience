@@ -24,7 +24,7 @@ class GitlabCredentials:
 
 
 class RequirementInput(BaseModel):
-    """代码风险分析的需求输入:需求分析任务产出的需求理解记录。"""
+    """代码风险及仓库画像消费的已审核材料整理结果。"""
 
     model_config = ConfigDict(extra="allow")
 

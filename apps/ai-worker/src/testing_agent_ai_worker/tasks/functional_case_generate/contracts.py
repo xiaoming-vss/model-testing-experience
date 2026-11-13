@@ -33,153 +33,101 @@ def reject(loc, message, value):
     )
 
 
-class EntryPoint(Contract):
-    function: str | None
-    path: str | None
-    action: str | None
-
-
-class Overview(Contract):
-    purpose: str | None
-    applicableObjects: list[str]
-    actors: list[str]
-    entryPoints: list[EntryPoint]
-    explicitExclusions: list[str]
-
-
-class Factor(Contract):
-    factorId: Annotated[str, StringConstraints(pattern=r"^F[0-9]{2,}$")]
-    name: Text
-    confirmedValues: list[str]
-    defaultValue: str | int | float | bool | None
-    clarificationNeeded: str | None
-
-
-class CompactRule(Contract):
-    """保留独立业务判断和来源的精简规则格式。"""
-
-    ruleId: Annotated[str, StringConstraints(pattern=r"^R[0-9]{2,}$")]
-    category: Text
-    name: Text
-    confirmationStatus: Literal["需求明确", "基于规则推导", "待确认"]
-    applicableObject: str | None
-    preconditions: list[str]
-    trigger: str | None
-    expectedBehavior: list[str]
-    sourceReferences: list[str]
-    relatedQuestionIds: list[str]
-
-
-class Rule(CompactRule):
-    """历史规则格式；保留旧产物的独立禁止行为和可观察结果。"""
-
-    prohibitedOrSkippedBehavior: list[str]
-    observableOutcome: str | None
-
-
-class Scenario(Contract):
-    scenarioId: Annotated[str, StringConstraints(pattern=r"^S[0-9]{2,}$")]
-    relatedRuleIds: Annotated[list[str], Field(min_length=1)]
-    derivationType: Literal["需求直接描述", "基于规则推导"]
-    conditions: list[str]
-    trigger: str | None
-    verificationObjective: str | None
-    readyForTestPointGeneration: bool
-    blockingReason: str | None
-    relatedQuestionIds: list[str]
+class ScopeEntry(Contract):
+    id: Text
+    sourceBlockIds: list[Text]
+    basisStatus: Literal["confirmed", "inferred", "unconfirmed"]
 
     @model_validator(mode="after")
-    def readiness(self):
-        if self.readyForTestPointGeneration:
-            if (
-                not self.verificationObjective
-                or not self.verificationObjective.strip()
-                or self.blockingReason is not None
-            ):
-                raise ValueError(
-                    "readyForTestPointGeneration=true requires verificationObjective and blockingReason=null"
-                )
-        elif (
-            not self.blockingReason
-            or not self.blockingReason.strip()
-            or not self.relatedQuestionIds
-        ):
-            raise ValueError(
-                "readyForTestPointGeneration=false requires blockingReason and relatedQuestionIds"
-            )
+    def source_required(self):
+        if len(self.sourceBlockIds) != len(set(self.sourceBlockIds)):
+            raise ValueError("duplicate sourceBlockIds")
+        if self.basisStatus != "unconfirmed" and not self.sourceBlockIds:
+            raise ValueError("confirmed and inferred entries require sourceBlockIds")
         return self
 
 
-class Question(Contract):
-    questionId: Annotated[str, StringConstraints(pattern=r"^Q[0-9]{2,}$")]
+class ScopeObject(ScopeEntry):
+    name: Text
+    type: Text
+    description: Text
+
+
+class ScopeImpact(ScopeEntry):
+    testObjectIds: list[Text]
+    area: Text
+    impact: Text
+
+
+class ScopeRisk(ScopeEntry):
+    testObjectIds: list[Text]
+    impactAreaIds: list[Text]
+    description: Text
+
+
+class ScopeQuestion(Contract):
+    id: Text
     question: Text
-    affectedScope: str | None
-    blockedWork: str | None
+    testObjectIds: list[Text]
+    impactAreaIds: list[Text]
+    riskIds: list[Text]
+    sourceBlockIds: list[Text]
+    sourceQuestionIds: list[Text]
 
 
-class RequirementAnalysisOutput(Contract):
-    functionalOverview: Overview
-    scenarioFactors: list[Factor]
-    businessRules: list[CompactRule | Rule]
-    scenarioBreakdown: list[Scenario]
-    openQuestions: list[Question]
+class TestScopeAnalysisOutput(Contract):
+    schemaVersion: Literal["1.0"]
+    artifactType: Literal["test_scope_impact_risk"]
+    testObjects: list[ScopeObject]
+    impactAreas: list[ScopeImpact]
+    risks: list[ScopeRisk]
+    openQuestions: list[ScopeQuestion]
 
     @model_validator(mode="after")
     def references(self):
-        for field, id_field in [
-            ("scenarioFactors", "factorId"),
-            ("businessRules", "ruleId"),
-            ("scenarioBreakdown", "scenarioId"),
-            ("openQuestions", "questionId"),
-        ]:
-            ids = [getattr(item, id_field) for item in getattr(self, field)]
-            if len(ids) != len(set(ids)):
-                reject((field,), f"{id_field}: duplicate IDs", ids)
-        rules = {r.ruleId for r in self.businessRules}
-        questions = {q.questionId for q in self.openQuestions}
-        for field in ("businessRules", "scenarioBreakdown"):
-            for i, item in enumerate(getattr(self, field)):
-                if not set(item.relatedQuestionIds) <= questions:
-                    reject(
-                        (field, i, "relatedQuestionIds"),
-                        "unknown question ID",
-                        item.relatedQuestionIds,
-                    )
-        for i, item in enumerate(self.scenarioBreakdown):
-            if not set(item.relatedRuleIds) <= rules:
-                reject(
-                    ("scenarioBreakdown", i, "relatedRuleIds"),
-                    "unknown rule ID",
-                    item.relatedRuleIds,
-                )
+        groups = {
+            name: getattr(self, name)
+            for name in ("testObjects", "impactAreas", "risks", "openQuestions")
+        }
+        ids = {}
+        for name, entries in groups.items():
+            values = [entry.id for entry in entries]
+            if len(values) != len(set(values)):
+                raise ValueError(f"{name}: duplicate IDs")
+            ids[name] = set(values)
+        for name, entries in groups.items():
+            for entry in entries:
+                for field, target in (
+                    ("testObjectIds", "testObjects"),
+                    ("impactAreaIds", "impactAreas"),
+                    ("riskIds", "risks"),
+                ):
+                    refs = getattr(entry, field, [])
+                    if len(refs) != len(set(refs)) or not set(refs) <= ids[target]:
+                        raise ValueError(f"{name}/{entry.id}: invalid {field}")
+                for field in ("sourceBlockIds", "sourceQuestionIds"):
+                    refs = getattr(entry, field, [])
+                    if len(refs) != len(set(refs)):
+                        raise ValueError(f"{name}/{entry.id}: duplicate {field}")
         return self
 
 
-class Point(Contract):
-    case_name: Text
+class TraceableReviewIssue(Contract):
+    kind: Literal["unsupported", "missing", "granularity", "classification"]
+    targetType: Literal["testPoint", "coverageGap", "missing"]
+    targetId: str | None
+    issue: Text
+    suggestion: Text
+    materialBlockIds: list[Text]
+    testObjectIds: list[Text]
+    impactAreaIds: list[Text]
+    riskIds: list[Text]
+    materialQuestionIds: list[Text]
+    scopeQuestionIds: list[Text]
 
 
-class TestPointAuditIssue(Contract):
-    case_name: str | None
-    problem: Text
-
-
-class TestPointAudit(Contract):
-    issues: list[TestPointAuditIssue]
-
-
-class Dimension(Contract):
-    test_model: Text
-    test_points: Annotated[list[Point], Field(min_length=1)]
-
-
-class Category(Contract):
-    data: Annotated[list[Dimension], Field(min_length=1)]
-    model: Text
-
-
-class TestPointsOutput(Contract):
-    categories: list[Category]
+class TraceableReview(Contract):
+    issues: list[TraceableReviewIssue]
 
 
 class GeneratedCase(Contract):
@@ -326,9 +274,8 @@ class RelationAnalysisOutput(Contract):
 
 
 CONTRACTS = {
-    "requirement_analysis": RequirementAnalysisOutput,
-    "case_names": TestPointsOutput,
-    "case_names_audit": TestPointAudit,
+    "requirement_analysis": TestScopeAnalysisOutput,
+    "traceable_case_audit": TraceableReview,
     "detailed_cases": DetailedCasesOutput,
     "relation_analysis": RelationAnalysisOutput,
 }

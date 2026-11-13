@@ -72,7 +72,7 @@ export type UiGenerationSourceProfileVersion = {
   versionNo: number
   label: string
   createdAt: string
-  requirementUnderstandingVersion?: { versionId: string; versionNo: number } | null
+  requirementMaterialVersion?: { versionId: string; versionNo: number } | null
   repositories: UiGenerationSourceRepository[]
 }
 
@@ -114,6 +114,27 @@ export type GenerationChainDraft = {
   createdAt?: string | null
 }
 
+export type ModuleAgentProgress = {
+  id: string
+  module: string
+  status: 'queued' | 'running' | 'repairing' | 'completed' | 'failed' | 'canceled'
+  elapsedMs: number
+  caseCount: number
+  pointCount?: number
+  repairAttempt: number
+}
+
+export type ModuleGenerationProgress = {
+  stage?: 'detailed_cases' | 'case_names'
+  reviewRound?: number
+  issueCount?: number
+  attemptId: string
+  sequence: number
+  concurrency: number
+  status: 'running' | 'merging' | 'reviewing' | 'revising' | 'review_failed' | 'completed' | 'failed' | 'canceled'
+  modules: ModuleAgentProgress[]
+}
+
 export type GenerationChainStage = {
   stage: string
   label: string
@@ -128,6 +149,7 @@ export type GenerationChainStage = {
   failureRunId?: string
   failedAt?: string | null
   activeRunId?: string
+  moduleGeneration?: ModuleGenerationProgress | null
 }
 
 export type GenerationChainLeaf = {

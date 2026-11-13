@@ -1,3 +1,4 @@
+import { TraceablePointsView } from '../components/TraceablePointsView'
 import { ArtifactModeSwitch, ArtifactViewTabs } from '../components/ArtifactViewTabs'
 import { useTaskRunDialog, type TaskRunDialogRequest } from '../hooks/useTaskRunDialog'
 import { listTotal } from '@/shared/api/request'
@@ -61,7 +62,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 const runResultSectionDefinitions = [
   { key: 'enhancedText', label: '增强文本' },
-  { key: 'requirementAnalysis', label: '测试需求分析' },
+  { key: 'requirementAnalysis', label: '测试范围风险分析' },
   { key: 'caseNames', label: '测试点' },
   { key: 'caseRelations', label: '图谱分析' },
   { key: 'errorMessage', label: '错误信息' },
@@ -76,7 +77,7 @@ type RunResultModalState = {
 
 const functionalStageMetaMap: Record<string, { label: string; color: string }> = {
   enhanced_text: { label: '增强文档输出', color: 'cyan' },
-  requirement_analysis: { label: '测试需求分析输出', color: 'blue' },
+  requirement_analysis: { label: '测试范围风险分析输出', color: 'blue' },
   case_names: { label: '测试用例名称/测试点输出', color: 'geekblue' },
   detailed_cases: { label: '详细测试用例输出', color: 'purple' },
   relation_analysis: { label: '图谱分析', color: 'volcano' },
@@ -85,7 +86,7 @@ const functionalStageMetaMap: Record<string, { label: string; color: string }> =
 
 const stageConfigFieldMap: Record<string, { key: string; label: string }> = {
   enhanced_text: { key: 'enhancedText', label: '增强文本 enhancedText' },
-  requirement_analysis: { key: 'requirementAnalysis', label: '测试需求分析 requirementAnalysis' },
+  requirement_analysis: { key: 'requirementAnalysis', label: '测试范围风险分析 requirementAnalysis' },
   case_names: { key: 'caseNames', label: '测试点 caseNames' },
 }
 
@@ -121,7 +122,7 @@ const runStageFilterOptions: Array<{ label: string; value: 'all' | RunPipelineFi
 ]
 
 const runArtifactDefinitions = [
-  { key: 'requirementAnalysis', label: '测试需求分析' },
+  { key: 'requirementAnalysis', label: '测试范围风险分析' },
   { key: 'caseNames', label: '测试点' },
   { key: 'caseRelations', label: '图谱分析' },
 ] as const
@@ -730,7 +731,7 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
   function openRevisionModal(target: 'stage' | 'final') {
     if (!selectedRun?.runId) return
     const stage = target === 'final' ? 'detailed_cases' : selectedStage
-    const label = stage === 'detailed_cases' ? '详细测试用例' : stage === 'case_names' ? '测试点' : '测试需求分析'
+    const label = stage === 'detailed_cases' ? '详细测试用例' : stage === 'case_names' ? '测试点' : '测试范围风险分析'
     const key = `${selectedRun.runId}:${stage}`
     // Initialize once per run/stage; closing, retrying and polling must preserve the draft.
     if (key !== revisionDraftKey) {
@@ -1393,12 +1394,10 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
                           key: 'tree',
                           label: '可视化',
                           children: (
-                            <CaseNameTreeView
+                            <TraceablePointsView
                               content={stageOutputDraft}
-                              rootTitle={task?.name || '功能测试用例生成'}
-                              expanded
-                              editable
-                              onTreeChange={(value) => {
+                              tree={<CaseNameTreeView content={stageOutputDraft} rootTitle={task?.name || '功能测试用例生成'} expanded />}
+                              onChange={(value) => {
                                 setStageOutputDraft(value)
                                 setStageOutputDirty(true)
                               }}
@@ -1583,7 +1582,7 @@ export function FunctionalCaseGenerateTaskDetailPage({ dialogRequest }: { dialog
                   {selectedRunQuery.isLoading ? (
                     <div className="ai-task-run-result-popover-loading"><Spin /></div>
                   ) : candidateYaml ? (
-                    <GeneratedCasesReviewView onChange={canEditCandidate ? setCandidateYaml : undefined} content={candidateYaml} pointsContent={getConfigStageFieldContent(selectedRun?.configJson, 'caseNames')} rootTitle={importTargetRequirementName || task?.name || '功能测试用例'} selectedCaseKey={candidateSelectedCase} onCaseSelect={setCandidateSelectedCase} />
+                    <GeneratedCasesReviewView allowDelete onChange={canEditCandidate ? setCandidateYaml : undefined} content={candidateYaml} rootTitle={importTargetRequirementName || task?.name || '功能测试用例'} selectedCaseKey={candidateSelectedCase} onCaseSelect={setCandidateSelectedCase} />
                   ) : (
                     <div className="ai-task-run-result-popover-empty">当前记录暂无结果</div>
                   )}

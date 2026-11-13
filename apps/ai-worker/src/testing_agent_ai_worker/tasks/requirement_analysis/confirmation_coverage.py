@@ -3,7 +3,6 @@
 This checks provenance coverage, not whether prose correctly implements a decision.
 """
 
-from collections.abc import Iterator
 from typing import Any, NotRequired, TypedDict
 
 
@@ -13,16 +12,6 @@ class ConfirmationReference(TypedDict):
     inputStatements: NotRequired[list[str]]
 
 
-def _walk(value: Any) -> Iterator[dict[str, Any]]:
-    if isinstance(value, dict):
-        yield value
-        for child in value.values():
-            yield from _walk(child)
-    elif isinstance(value, list):
-        for child in value:
-            yield from _walk(child)
-
-
 def collect_confirmation_references(
     *artifacts: dict[str, Any],
 ) -> list[ConfirmationReference]:
@@ -30,24 +19,27 @@ def collect_confirmation_references(
     collected: dict[tuple[str, str], ConfirmationReference] = {}
     for artifact in artifacts:
         sources = {s["id"] for s in artifact["sources"] if s["type"] == "user_confirmation"}
-        evidence = {e["id"]: e for e in artifact.get("evidence", [])}
-        for item in _walk(artifact):
-            references = item.get("sourceReferences", [])
-            if artifact["artifactType"] == "requirement_understanding":
-                references = [
-                    evidence[eid] for eid in item.get("evidenceIds", []) if eid in evidence
-                ]
-            for ref in references:
-                if ref["sourceId"] in sources:
-                    source_id, locator = ref["sourceId"], ref["locator"]
-                    entry = collected.setdefault(
-                        (source_id, locator), {"sourceId": source_id, "locator": locator}
-                    )
-                    statement = ref.get("excerpt") or item.get("value")
+        if artifact["artifactType"] == "readable_requirement_material":
+            blocks = {b["id"]: b for b in artifact["materialBlocks"]}
+            business_items = [
+                item
+                for function in artifact["functions"]
+                for section in function["sections"]
+                for item in section["items"]
+            ] + artifact["questions"]
+            for item in business_items:
+                for block_id in item["materialBlockIds"]:
+                    block = blocks.get(block_id)
+                    if block is None or block["sourceId"] not in sources:
+                        continue
+                    key = (block["sourceId"], block["locator"])
+                    entry = collected.setdefault(key, {"sourceId": key[0], "locator": key[1]})
+                    statement = block["content"].get("text")
                     if isinstance(statement, str) and statement:
                         statements = entry.setdefault("inputStatements", [])
                         if statement not in statements:
                             statements.append(statement)
+            continue
     return list(collected.values())
 
 

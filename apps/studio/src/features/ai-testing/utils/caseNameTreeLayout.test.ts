@@ -8,7 +8,7 @@ const tree: CaseNameTreeNode = { id: 'root', title: '需求', kind: 'root', chil
 describe('caseNameTreeLayout', () => {
   it('keeps artifact order and separates nodes with different measured heights', () => {
     const callback = vi.fn()
-    const graph = buildTreeFlow(tree, 'second', false, callback, callback, callback, callback)
+    const graph = buildTreeFlow(tree, 'second', callback, callback)
     const nodes = graph.nodes.map(node => ({ ...node, measured: { width: node.id === 'first' ? 240 : 300, height: node.id === 'first' ? 90 : 38 } }))
     const result = layoutTreeFlow(nodes, graph.edges)
     const find = (id: string) => result.find(node => node.id === id)!
@@ -17,5 +17,14 @@ describe('caseNameTreeLayout', () => {
     expect(find('first').position.x).toBe(find('second').position.x)
     expect(find('second').data.selected).toBe(true)
     expect(graph.edges).toHaveLength(5)
+  })
+
+  it('attaches the delete callback only to test points', () => {
+    const graph = buildTreeFlow(tree, undefined, undefined, undefined, vi.fn())
+    const data = (id: string) => graph.nodes.find(node => node.id === id)!.data
+    expect(data('first').onDelete).toBeTypeOf('function')
+    expect(data('root').onDelete).toBeUndefined()
+    expect(data('model').onDelete).toBeUndefined()
+    expect(data('scene').onDelete).toBeUndefined()
   })
 })

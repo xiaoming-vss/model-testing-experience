@@ -1,4 +1,4 @@
-"""Versioned UI stage artifacts. Identical protocol validation ships in each independent app."""
+"""Versioned UI stage artifacts. Protocol validation ships in each independent app."""
 
 from __future__ import annotations
 
@@ -8,13 +8,15 @@ import unicodedata
 from copy import deepcopy
 from typing import Any
 
+from testing_agent_ai_worker.skill_names import UI_DESIGN_SKILL, UI_SURFACE_SKILL, UI_YAML_SKILL
+
 UI_STAGES = ("ui_surface", "ui_design", "ui_yaml")
 UI_FIELDS = {"ui_surface": "uiSurface", "ui_design": "uiDesign"}
 UI_WORKFLOW_VERSION = "ui_three_stage/1.0"
 UI_SKILLS = {
-    "ui_surface": "extract-ui-test-surface",
-    "ui_design": "map-functional-cases-to-ui-scenarios",
-    "ui_yaml": "generate-ui-test-case",
+    "ui_surface": UI_SURFACE_SKILL,
+    "ui_design": UI_DESIGN_SKILL,
+    "ui_yaml": UI_YAML_SKILL,
 }
 
 

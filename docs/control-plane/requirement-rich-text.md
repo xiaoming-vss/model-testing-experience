@@ -17,7 +17,7 @@ Studio 使用统一上传管线提交 HTML：申请上传、直传 S3、完成�
 
 HTML 支持标题、段落、列表、引用、代码、基本表格与 PNG/JPEG 图片。图片只保存 `data-file-id`，不保存临时 URL。需求关联正文时，把其中图片按 attachment 用途关联到同一需求；统一文件服务验证项目、上传者、状态及归属。同一需求已关联图片允许其他有写权限的项目成员继续引用。正文和图片关联与需求更新同一数据库事务提交；关联失败时必须回滚。图片下载验证项目读取权限及需求仍然存在，需求删除后不能申请新下载授权。
 
-AI 分析第一阶段按文档类型选择提取技能：Word/DOCX 使用 `extract-docx-enhanced-text`，richtext 使用 `extract-richtext-enhanced-text`。富文本以原始 HTML 与关联图片输入模型，保留原有 `document_extraction` 1.0 输出及两阶段审核流程。历史 TXT 需先执行上述迁移转换为富文本，才能重新提取；已审核的提取产物仍可继续用于第二阶段理解。
+AI 分析第一阶段统一使用 `mtx-organize-requirement-material` 整理 Word/DOCX 或富文本材料；旧的 `extract-docx-enhanced-text`、`extract-richtext-enhanced-text` 已不再被 Worker 选择并从默认技能源目录移除。富文本以原始 HTML 与关联图片输入模型，保留原有 `document_extraction` 1.0 输出及两阶段审核流程。历史 TXT 需先执行上述迁移转换为富文本，才能重新提取；已审核的提取产物仍可继续用于第二阶段理解。
 
 图片通过 `GET /internal/ai-worker/tasks/{task_id}/requirement-images/{file_id}?workerId=...` 获取短期下载票据。接口复用当前运行授权与原始文档身份检查，校验 Worker、有效租约、项目与需求归属，以及图片仍在正文中被引用；票据响应 no-store。任务快照不新增签名 URL。Worker 下载时沿用大小与 SHA-256 校验，图片引用重复时仅下载一次，正文保留所有出现位置。下载失败中止本次准备，不静默丢图。
 

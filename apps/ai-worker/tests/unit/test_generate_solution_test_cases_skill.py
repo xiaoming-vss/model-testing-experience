@@ -8,17 +8,17 @@ SKILL_ROOT = Path(
         Path(__file__).resolve().parents[3] / "control-plane" / "default-skills",
     )
 )
-SKILL_PATH = SKILL_ROOT / "generate-solution-test-cases" / "SKILL.md"
+SKILL_PATH = SKILL_ROOT / "mtx-generate-solution-test-cases" / "SKILL.md"
 
 
 @unittest.skipUnless(SKILL_PATH.is_file(), "默认 Skill 源目录未挂载")
 class GenerateSolutionTestCasesSkillTests(unittest.TestCase):
-    def test_skill_requires_confirmation_answers_to_update_and_close_questions(self):
+    def test_skill_keeps_the_case_output_contract_and_clarification_protocol(self):
         content = SKILL_PATH.read_text(encoding="utf-8")
-        self.assertIn("确认承接必须闭环", content)
-        self.assertIn("从 `questions`/`openQuestions` 删除已解决问题", content)
-        self.assertIn("清理所有 `relatedQuestionIds`", content)
-        self.assertIn("已确认的行为不能再次拆成同义或更细粒度的问题", content)
+        self.assertIn("name: mtx-generate-solution-test-cases", content)
+        self.assertIn("顶层只有 `cases`", content)
+        self.assertIn("恰好七字段", content)
+        self.assertIn("CLARIFICATION_REQUIRED:", content)
 
 
 if __name__ == "__main__":

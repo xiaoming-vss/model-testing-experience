@@ -1,9 +1,10 @@
-"""Prompt assembly for the repository-profile-analysis skill."""
+"""Prompt assembly for the repository profile skill."""
 
 from __future__ import annotations
 
 import json
 
+from testing_agent_ai_worker.skill_names import REPOSITORY_PROFILE_SKILL
 from testing_agent_ai_worker.tasks.repository_profile.context import ProfileContext
 from testing_agent_ai_worker.tasks.repository_profile.workspace import ProfileWorkspace
 
@@ -24,7 +25,7 @@ def build_profile_prompt(
             + json.dumps(errors or [], ensure_ascii=False)
             + "\n只修复这些问题，保留有效仓库判断和证据。必须返回完整 JSON。"
         )
-    return f"""请先加载本地 skill：repository-profile-analysis，并严格遵循其全部规则。
+    return f"""请先加载本地 skill：{REPOSITORY_PROFILE_SKILL}，并严格遵循其全部规则。
 
 你是仓库画像分析助手，只做粗粒度的仓库角色判断。
 

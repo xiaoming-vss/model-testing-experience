@@ -10,6 +10,7 @@ import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import type { RevisionAttachment } from '../hooks/useRevisionAttachments'
+import { parseQuestionRevisionDraft, revisionInstructionText, updateQuestionRevisionDraft } from '../utils/functionalRevision'
 import './RevisionSidePanel.css'
 
 const MAX_ATTACHMENTS = 6
@@ -34,6 +35,10 @@ type Props = {
 export function RevisionSidePanel({ footerContainer, projectId, value, sourceEditable = true, onChange, attachments, onAddAttachment, onRemoveAttachment, onSubmit, onCancel, loading }: Props) {
   const [selectedId, setSelectedId] = useState<string>()
   const [uploading, setUploading] = useState(0)
+  const [questionIndex, setQuestionIndex] = useState(0)
+  const draft = parseQuestionRevisionDraft(value)
+  const currentIndex = Math.min(questionIndex, Math.max(0, (draft?.questions.length ?? 0) - 1))
+  const answered = draft?.answers.filter(answer => answer.trim()).length ?? 0
   const fileInputRef = useRef<HTMLInputElement>(null)
   const connections = useQuery({ queryKey: ['llmConnections', projectId, 'select'], queryFn: () => api.getLlmConnections(projectId!), enabled: Boolean(projectId) })
   const choices = listItems(connections.data).filter(item => item.status === 'active')
@@ -43,7 +48,7 @@ export function RevisionSidePanel({ footerContainer, projectId, value, sourceEdi
   const attachmentsEnabled = Boolean(onAddAttachment && onRemoveAttachment)
   const sourceHint = sourceEditable ? '包含左侧尚未保存的修改，优化完成后仍需审核确认。' : '基于当前待审核产物重新生成，优化完成后仍需审核确认。'
   const canAdd = attachmentsEnabled && Boolean(projectId) && !loading && imageAttachments.length + uploading < MAX_ATTACHMENTS
-  const actions = <div className="revision-footer-actions"><Button disabled={loading} onClick={onCancel}>取消优化</Button><ProjectActionButton action="execute" type="primary" loading={loading} disabled={busy || !connectionId || !value.trim()} onClick={() => connectionId && onSubmit(connectionId)}>提交优化</ProjectActionButton></div>
+  const actions = <div className="revision-footer-actions"><Button disabled={loading} onClick={onCancel}>取消优化</Button><ProjectActionButton action="execute" type="primary" loading={loading} disabled={busy || !connectionId || !revisionInstructionText(value)} onClick={() => connectionId && onSubmit(connectionId)}>提交优化</ProjectActionButton></div>
 
   async function uploadImages(files: File[]) {
     if (loading || !onAddAttachment) return
@@ -85,16 +90,26 @@ export function RevisionSidePanel({ footerContainer, projectId, value, sourceEdi
     }
   }
 
-  return <aside className="revision-side-panel" aria-label="继续优化">
+  return <aside className="revision-side-panel" aria-label="继续优化" onPaste={event => {
+    if (!attachmentsEnabled) return
+    const files = Array.from(event.clipboardData?.files ?? []).filter(file => file.type.startsWith('image/'))
+    if (!files.length || loading || !projectId || imageAttachments.length + uploading >= MAX_ATTACHMENTS) return
+    event.preventDefault()
+    void uploadImages(files)
+  }}>
     <header><strong>继续优化</strong><span>对照左侧当前内容，补充修改要求</span></header>
+    {draft && draft.questions.length > 0 ? <div className="revision-questions">
+      <div className="revision-question-progress"><span>已填写 {answered} / {draft.questions.length}</span><span>未填写 {draft.questions.length - answered}</span></div>
+      <div className="revision-question-track" aria-hidden="true"><span style={{ width: `${answered / draft.questions.length * 100}%` }} /></div>
+      <div className="revision-question-nav" aria-label="问题列表">{draft.questions.map((question, index) => <button type="button" key={`${question.id}-${index}`} className={`${index === currentIndex ? 'is-current' : ''} ${draft.answers[index]?.trim() ? 'is-answered' : ''}`} aria-label={`问题 ${question.id}${draft.answers[index]?.trim() ? '，已填写' : ''}`} aria-current={index === currentIndex ? 'step' : undefined} onClick={() => setQuestionIndex(index)}>{index + 1}</button>)}</div>
+      <div className="revision-question-content"><span className="revision-question-id">{draft.questions[currentIndex].id} · {draft.answers[currentIndex]?.trim() ? '已填写' : '待填写'}</span><p>{draft.questions[currentIndex].question}</p>
+        <label htmlFor="revision-question-answer">补充答复</label><Input.TextArea id="revision-question-answer" aria-label="补充答复" rows={4} disabled={loading} value={draft.answers[currentIndex] ?? ''} placeholder="填写已确认的信息；暂时不清楚可留空" onChange={event => { const answers = [...draft.answers]; answers[currentIndex] = event.target.value; onChange(updateQuestionRevisionDraft({ ...draft, answers })) }} />
+        <div className="revision-question-pagination"><Button disabled={currentIndex === 0} onClick={() => setQuestionIndex(currentIndex - 1)}>上一题</Button><Button disabled={currentIndex === draft.questions.length - 1} onClick={() => setQuestionIndex(currentIndex + 1)}>下一题</Button><span>{currentIndex + 1} / {draft.questions.length}</span></div></div>
+      <details className="revision-question-extra"><summary>补充其他优化要求（可选）</summary><Input.TextArea aria-label="优化指令" rows={3} disabled={loading} value={draft.instruction} placeholder="填写其他优化要求" onChange={event => onChange(updateQuestionRevisionDraft({ ...draft, instruction: event.target.value }))} /></details>
+    </div> : <>
     <label htmlFor="revision-side-instruction">优化指令</label>
-    <Input.TextArea id="revision-side-instruction" aria-label="优化指令" value={value} disabled={loading} onChange={event => onChange(event.target.value)} onPaste={event => {
-      if (!attachmentsEnabled) return
-      const files = Array.from(event.clipboardData?.files ?? []).filter(file => file.type.startsWith('image/'))
-      if (!files.length || loading || !projectId || imageAttachments.length + uploading >= MAX_ATTACHMENTS) return
-      event.preventDefault()
-      void uploadImages(files)
-    }} placeholder={sourceEditable ? '请输入优化要求，将基于左侧当前编辑内容重新生成' : '请填写待确认问题的答复，或补充其他优化要求'} />
+    <Input.TextArea id="revision-side-instruction" aria-label="优化指令" value={draft?.instruction ?? value} disabled={loading} onChange={event => onChange(draft ? updateQuestionRevisionDraft({ ...draft, instruction: event.target.value }) : event.target.value)} placeholder={sourceEditable ? '请输入优化要求，将基于左侧当前编辑内容重新生成' : '请填写待确认问题的答复，或补充其他优化要求'} />
+    </>}
     {attachmentsEnabled ? <>
       <div className="revision-attachments" role="group" aria-label="优化图片">
         {imageAttachments.map(attachment => <div className="revision-attachment" key={attachment.fileId} title={attachment.name}>

@@ -97,7 +97,11 @@ async def _validated(
     if not isinstance(raw, str):
         raise ErrBadRequest()
     return await validate_generation_artifact(
-        service.repository, "function", stage, raw, run.snapshot_json
+        service.repository,
+        "function",
+        stage,
+        raw,
+        {"source": run.snapshot_json, "config": run.config_json},
     )
 
 

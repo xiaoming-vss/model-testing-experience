@@ -271,9 +271,8 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 测试集流程另带就绪结论、上次运行、运行记录、导入用例与运行测试集，步骤流程改为当前用例信息（启用状态、步骤数）与调试运行）+ 两栏（左：测试集流程画布，或步骤流程画布 + 用例信息条与步骤编辑器；
 右：执行回放 / 执行日志 / 运行变量）。样式按职责拆三个文件，都由 `UiTestSuiteCasePage` 引入，选择器互不重叠：
 `detail-workbench-v2.css` 是板面、顶栏、流程工具栏与画布外壳，`detail-pipeline-v2.css` 是用例信息条与步骤卡片皮肤，
-`detail-inspector-v2.css` 是右栏三张卡片。页面结构同样按职责切：`UiSuiteDetailToolbar`、`UiCaseControlRibbon`
-（返回测试集流程 + 当前用例路径）、`UiCaseMetaBar`、`UiExecutionFlow`、`UiRunInspector`（内含 `UiRunReplayStage` /
-`UiRunSnapshotStrip` / `UiRunConsoleCard`）各自负责一段，页面只留编排、查询与变更。
+`detail-inspector-v2.css` 是右栏三张卡片。页面结构同样按职责切：`UiSuiteDetailToolbar`、`UiExecutionFlow`、
+`UiRunInspector`（内含 `UiRunReplayStage` / `UiRunConsoleCard`）各自负责一段，页面只留编排、查询与变更。
 右栏的纯展示数据在 `utils/detailRunView.ts`。
 
 - **板面必须显式压平**：这条路由不在 `.testing-page` 里（实测 `document.querySelector('.testing-page')` 为 null），
@@ -324,7 +323,7 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 | 设计稿元素 | 原因 |
 | --- | --- |
 | 自动化录屏回放（视频播放器、进度时间、倍速、下载） | 平台只产出逐步截图，没有录屏文件。同一块位置放的是「执行回放」：浏览器外壳显示运行时 URL，舞台显示当前步骤截图，滑轨按步骤打点，可点打点或前后按钮切换 |
-| 关键帧快照的「Visual Diff: 0.00%」与「基线一致」 | 没有视觉基线比对，改为「N / M 步有截图」与截图策略，脚注写明没有录屏文件。缩略图角标 `#序号 0.3s` 保留，耗时是**真实**的：相对本次运行第一步开始时间的偏移（`formatUiElapsedTime`）。这一条是**单行横向滚动**（一屏 4 张，与设计稿一致）：截图多时它不能长高，否则会把下面的执行控制台顶出视口；当前帧由回放舞台（上/下一步、滑轨打点）切换时，`UiRunSnapshotStrip` 直接改 `scrollLeft` 把它滚进视野，不用 `scrollIntoView`，免得连带把页面纵向滚走 |
+| 关键帧快照的「Visual Diff: 0.00%」与「基线一致」 | 没有视觉基线比对，改为「N / M 步有截图」与截图策略，脚注写明没有录屏文件。缩略图角标 `#序号 0.3s` 保留，耗时是**真实**的：相对本次运行第一步开始时间的偏移（`formatUiElapsedTime`）。这一条是**单行横向滚动**（一屏 4 张，与设计稿一致）：截图多时它不能长高，否则会把下面的执行控制台顶出视口。 |
 | 控制台右下角的 FCP / 网络请求数 / 内存占用 | 运行记录里没有这些指标，换成真实存在的运行耗时、通过步骤数、失败步骤数 |
 | 控制台的 Filter | 按设计稿做主了，但范围就是日志里真实存在的 `info` / `wait` / `assert` / `error` 四种级别（外加「全部」）；汇总行不受过滤影响，过滤后看不到结论会让控制台读起来少一截 |
 | 回放舞台死守 16:9 | 舞台按 16:9 定高（设计稿的主视觉），但上限是 `min(40vh, 480px)`：又矮又宽的窗口下它会先收一点，把空间让给日志，而不是把控制台整块挤出视野 |

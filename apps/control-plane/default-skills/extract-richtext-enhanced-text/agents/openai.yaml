@@ -1,7 +1,0 @@
-interface:
-  display_name: "富文本需求材料提取"
-  short_description: "提取富文本正文、表格和关联图片事实，输出含来源与问题的结构化 JSON"
-  default_prompt: "使用 $extract-richtext-enhanced-text，按固定契约返回一个完整 JSON 对象，保留来源、确认状态和待确认问题。"
-
-policy:
-  allow_implicit_invocation: true

@@ -119,7 +119,7 @@ async def build_generate_run_snapshot(
     run_id: str,
     instruction: str | None = None,
     worker_task_id: str | None = None,
-    understanding_version_id: str = "",
+    material_version_id: str = "",
 ) -> dict[str, Any]:
     source_content = task.source_content
     document_type = ""
@@ -130,7 +130,7 @@ async def build_generate_run_snapshot(
         functional_source = await functional_requirement_source(
             GenerationChainRepository(repository.session),
             task.requirement_id,
-            understanding_version_id,
+            material_version_id,
         )
         source_content = functional_source["sourceContent"]
     elif kind == "requirement_analysis":
@@ -275,10 +275,6 @@ def validate_function_candidate_cases(
         names.add(key)
         normalized_cases.append(case)
     return normalized_cases
-
-
-def is_ai_run_reviewable(status: str) -> bool:
-    return status in {"success", "failed", "error", "canceled"}
 
 
 def normalize_config_json(value: Any) -> dict[str, Any]:

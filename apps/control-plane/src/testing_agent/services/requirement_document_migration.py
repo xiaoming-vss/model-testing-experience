@@ -43,7 +43,7 @@ def _looks_like_artifact(content: str) -> bool:
     return (
         stripped.startswith("{")
         and '"artifactType"' in content
-        and ("requirement_understanding" in content)
+        and ("readable_requirement_material" in content)
     )
 
 

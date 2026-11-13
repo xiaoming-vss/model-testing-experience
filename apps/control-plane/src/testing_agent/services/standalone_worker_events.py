@@ -61,14 +61,23 @@ def _check_upstream(
 
 
 async def _validate(
-    session: AsyncSession, task: AiGenerateTask, stage: str, source: dict[str, Any], value: Any
+    session: AsyncSession,
+    task: AiGenerateTask,
+    stage: str,
+    source: dict[str, Any],
+    value: Any,
+    config: dict[str, Any] | None = None,
 ) -> tuple[str, str]:
     if isinstance(value, (dict, list)):
         value = json.dumps(value, ensure_ascii=False)
     if not isinstance(value, str):
         raise ErrBadRequest()
     return await validate_generation_artifact(
-        AiGenerateTaskRepository(session), _kind(task), stage, value, source
+        AiGenerateTaskRepository(session),
+        _kind(task),
+        stage,
+        value,
+        {"source": source, "config": config or {}},
     )
 
 
@@ -95,7 +104,9 @@ async def _move_to(
         _check_upstream(names, stage.stage, frozen, supplied)
         candidate = supplied.get(field) if field else None
         if candidate is not None:
-            content, output_format = await _validate(session, task, stage.stage, source, candidate)
+            content, output_format = await _validate(
+                session, task, stage.stage, source, candidate, frozen
+            )
             if attempt.output_content:
                 if output_format == attempt.output_format == "json":
                     if json.loads(attempt.output_content) != json.loads(content):
@@ -165,11 +176,14 @@ async def apply_standalone_progress(
         )
         if prior is None or body.stage_status == "waiting_review":
             raise ErrBadRequest()
-        _check_upstream(names, reported, _frozen(prior), supplied)
+        prior_frozen = _frozen(prior)
+        _check_upstream(names, reported, prior_frozen, supplied)
         field = FIELDS.get(reported)
         candidate = supplied.get(field) if field else None
         if candidate is not None:
-            content, output_format = await _validate(session, task, reported, source, candidate)
+            content, output_format = await _validate(
+                session, task, reported, source, candidate, prior_frozen
+            )
             if output_format == prior.output_format == "json":
                 if json.loads(content) != json.loads(prior.output_content or "null"):
                     raise ErrBadRequest()
@@ -187,11 +201,15 @@ async def apply_standalone_progress(
     if body.stage_status == "waiting_review":
         if not execution.checkpoint_enabled or stage.stage == final or candidate is None:
             raise ErrBadRequest()
-        content, output_format = await _validate(session, task, stage.stage, source, candidate)
+        content, output_format = await _validate(
+            session, task, stage.stage, source, candidate, frozen
+        )
         await transitions.completed(task, queue, content=content, output_format=output_format)
         return True
     if candidate is not None and not execution.checkpoint_enabled:
-        content, output_format = await _validate(session, task, stage.stage, source, candidate)
+        content, output_format = await _validate(
+            session, task, stage.stage, source, candidate, frozen
+        )
         attempt.output_content, attempt.output_format = content, output_format
         await session.flush()
     return False
@@ -245,7 +263,7 @@ async def apply_standalone_completion(
             or snapshot.get("resultYaml")
             or snapshot.get("outputYaml")
         )
-        content, output_format = await _validate(session, task, stage.stage, source, result)
+        content, output_format = await _validate(session, task, stage.stage, source, result, frozen)
     context = body.result_summary_json if isinstance(body.result_summary_json, dict) else None
     await transitions.completed(
         task, queue, content=content, output_format=output_format, output_context=context

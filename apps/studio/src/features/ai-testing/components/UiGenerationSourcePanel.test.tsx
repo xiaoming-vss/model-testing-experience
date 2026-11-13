@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { TestThemeProvider } from '@/test/TestThemeProvider'
@@ -56,7 +56,7 @@ function options(repositories = [repository()]): UiGenerationSourceOptions {
       versionNo: 1,
       label: 'v1',
       createdAt: '2026-11-09T10:00:00Z',
-      requirementUnderstandingVersion: { versionId: 'understand-1', versionNo: 1 },
+      requirementMaterialVersion: { versionId: 'understand-1', versionNo: 1 },
       repositories,
     }],
   }
@@ -121,15 +121,28 @@ function mount({
   return { onConfigure, onStart, onOpenProfile }
 }
 
-it('侧栏展示画像版本、仓库与 commit，并用仓库来源启动生成', async () => {
+async function advanceToReview(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: '配置并生成' }))
+  const dialog = await screen.findByRole('dialog')
+  await user.click(within(dialog).getByRole('button', { name: '下一步：选择用例' }))
+  const review = within(dialog).getByRole('button', { name: '核对配置' })
+  await waitFor(() => expect(review).toBeEnabled())
+  await user.click(review)
+  return within(dialog)
+}
+
+it('侧栏展示冻结来源摘要，向导默认选择当前正式用例并提交新的来源', async () => {
   const { onStart } = mount({ refreshInputs: true, existing: existingSource })
   const user = userEvent.setup()
-  await waitFor(() => expect(screen.getByRole('button', { name: '开始生成' })).toBeEnabled())
-  expect(screen.getByText('管理端前端')).toBeInTheDocument()
-  expect(screen.getByText('a1b2c3d4')).toBeInTheDocument()
-  expect(screen.getByText('当前生成来源')).toBeInTheDocument()
-  expect(screen.getByText('frozen123')).toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: '开始生成' }))
+  const summary = within(screen.getByRole('region', { name: 'UI 测试生成摘要' }))
+  expect(summary.getByText('当前生成来源')).toBeInTheDocument()
+  expect(summary.getByText('frozen123')).toBeInTheDocument()
+  expect(summary.getByText('1 条')).toBeInTheDocument()
+  expect(summary.queryByRole('table')).not.toBeInTheDocument()
+  expect(globalThis.fetch).not.toHaveBeenCalled()
+  const review = await advanceToReview(user)
+  expect(review.getByText('2 条')).toBeInTheDocument()
+  await user.click(review.getByRole('button', { name: '从元素控件清单重新生成' }))
   await waitFor(() => expect(onStart).toHaveBeenCalledWith({
     refreshInputs: true,
     functionCaseIds: ['c1', 'c2'],
@@ -139,35 +152,31 @@ it('侧栏展示画像版本、仓库与 commit，并用仓库来源启动生成
   }))
 })
 
-it('没有前端仓库时解释原因并阻止生成', async () => {
+it('没有前端仓库时解释原因并阻止进入用例步骤', async () => {
   const { onOpenProfile } = mount({
-    sourceOptions: options([
-      repository({
-        repositoryId: 'repo-api',
-        pathWithNamespace: 'team/api',
-        role: 'backend',
-        isFrontend: false,
-        responsibilitySummary: '后端服务',
-      }),
-    ]),
+    sourceOptions: options([repository({
+      repositoryId: 'repo-api', pathWithNamespace: 'team/api', role: 'backend', isFrontend: false,
+    })]),
   })
   const user = userEvent.setup()
-  expect(await screen.findByText('画像未识别出前端仓库')).toBeInTheDocument()
-  expect(screen.getByText('team/api')).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '开始生成' })).toBeDisabled()
-  await user.click(screen.getByRole('button', { name: '去生成仓库画像' }))
+  expect(screen.getByText('画像未识别出前端仓库')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: '配置并生成' }))
+  const wizard = within(await screen.findByRole('dialog'))
+  expect(wizard.getByText('team/api')).toBeInTheDocument()
+  expect(wizard.getByRole('button', { name: '下一步：选择用例' })).toBeDisabled()
+  await user.click(wizard.getByRole('button', { name: '去生成仓库画像' }))
   expect(onOpenProfile).toHaveBeenCalled()
 })
 
-it('只读成员可查看源码配置但没有生成入口', async () => {
+it('只读成员可以查看生成摘要', () => {
   mount({ canWrite: false })
-  expect(await screen.findByText('只读成员可查看源码配置，不能启动生成。')).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: '开始生成' })).not.toBeInTheDocument()
+  expect(screen.getByText('team/web')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '配置并生成' })).not.toBeInTheDocument()
 })
 
-it('运行期间禁用开始生成', async () => {
+it('运行期间禁用配置并生成', () => {
   mount({ busy: true })
-  await waitFor(() => expect(screen.getByRole('button', { name: '开始生成' })).toBeDisabled())
+  expect(screen.getByRole('button', { name: '配置并生成' })).toBeDisabled()
 })
 
 it('未配置 UI 生成时先创建设置再启动首阶段', async () => {
@@ -179,8 +188,9 @@ it('未配置 UI 生成时先创建设置再启动首阶段', async () => {
     onStart: async inputs => { order.push('start'); startInputs = inputs },
   })
   const user = userEvent.setup()
-  await waitFor(() => expect(screen.getByRole('button', { name: '开始生成' })).toBeEnabled())
-  await user.click(screen.getByRole('button', { name: '开始生成' }))
+  const review = await advanceToReview(user)
+  expect(order).toEqual([])
+  await user.click(review.getByRole('button', { name: '开始生成' }))
   await waitFor(() => expect(order).toEqual(['configure', 'start']))
   expect(startInputs).toEqual(expect.objectContaining({
     sourceProfileVersionId: 'pv1',

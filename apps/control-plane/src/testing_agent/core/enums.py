@@ -152,23 +152,6 @@ class BindingStatus(StrEnum):
     UNBOUND = "unbound"
 
 
-class ReviewStatus(StrEnum):
-    """AI 生成结果审查状态。"""
-
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-
-
-class ImportStatus(StrEnum):
-    """AI 生成结果导入状态。"""
-
-    PENDING = "pending"
-    IMPORTED = "imported"
-    SAVED = "saved"
-    RETRYING = "retrying"
-
-
 class StageStatus(StrEnum):
     """AI 生成任务阶段状态。"""
 

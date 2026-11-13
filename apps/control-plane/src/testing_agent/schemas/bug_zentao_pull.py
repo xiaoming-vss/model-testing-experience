@@ -7,16 +7,6 @@ from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator
 from pydantic.alias_generators import to_camel
 
 FIELD_GROUPS = ("profile", "description", "status", "assignee")
-GROUP_STATES = (
-    "synced",
-    "remote_changed",
-    "local_changed",
-    "conflict",
-    "confirm_baseline",
-    "pending_files",
-    "pending_map",
-    "manual",
-)
 
 
 class ZentaoGroupValues(TypedDict, total=False):

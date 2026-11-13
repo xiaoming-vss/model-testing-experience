@@ -40,12 +40,12 @@ it('renders skills with the shared service card structure and metadata', async (
 
 it('keeps system skills in the same card and marks them as default', async () => {
   vi.spyOn(api, 'getAiSkillLibraryItems').mockResolvedValue(listResponse<AiSkillLibraryItem>([
-    { skillSpaceId: 'skill-2', filename: 'generate-solution-test-cases', isDefault: true, fileCount: 14, size: 132100 },
+    { skillSpaceId: 'skill-2', filename: 'mtx-generate-solution-test-cases', isDefault: true, fileCount: 14, size: 132100 },
   ]))
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(<QueryClientProvider client={client}><AiSkillLibraryPage embedded /></QueryClientProvider>)
 
-  expect(await screen.findByText('generate-solution-test-cases')).toBeInTheDocument()
+  expect(await screen.findByText('mtx-generate-solution-test-cases')).toBeInTheDocument()
   expect(screen.getByText('系统默认')).toBeInTheDocument()
   expect(screen.getByText('129.0 KB')).toBeInTheDocument()
 })

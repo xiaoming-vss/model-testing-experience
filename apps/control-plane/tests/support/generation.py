@@ -44,7 +44,6 @@ def generation_services(
     files=None,
     code_risk_analysis_service=None,
     repository_profile_service=None,
-    execution_writer=None,
     *,
     deletion=None,
     id_factory=None,

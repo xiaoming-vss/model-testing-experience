@@ -10,12 +10,16 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+from sqlalchemy import select
+
 from testing_agent.core.errors import (
     ErrBadRequest,
     ErrNotFound,
     dynamic_error,
 )
 from testing_agent.core.sid import new_id
+from testing_agent.models.ai_generate_stage_version import AiGenerateStageVersion
+from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.services.ai_task_access import RunLaunchAccess
 from testing_agent.services.ai_task_output import (
@@ -90,6 +94,11 @@ class GenerationRunLauncher:
         run_instruction = body.get("instruction")
         config = normalize_config_json(body.get("configJson")) or {}
         trigger_type = str(body.get("triggerType") or "manual")
+        material_version_id = str(
+            body.get("requirementMaterialVersionId")
+            or body.get("requirementUnderstandingVersionId")
+            or ""
+        )
         auxiliary_request_id = worker_task_id
         auxiliary_signature = ""
         if kind in {"code_risk_analysis", "repository_profile"}:
@@ -111,9 +120,7 @@ class GenerationRunLauncher:
                     "instruction": run_instruction,
                     "config": config,
                     "triggerType": trigger_type,
-                    "requirementUnderstandingVersionId": str(
-                        body.get("requirementUnderstandingVersionId") or ""
-                    ),
+                    "requirementMaterialVersionId": material_version_id,
                 },
             )
             if body.get("requestId") is not None:
@@ -139,9 +146,7 @@ class GenerationRunLauncher:
                     None if run_instruction is None else str(run_instruction),
                     user_id=user_id,
                     connection_ids=body.get("gitlabConnectionIds") or {},
-                    understanding_version_id=str(
-                        body.get("requirementUnderstandingVersionId") or ""
-                    ),
+                    material_version_id=material_version_id,
                 )
             else:
                 if self.repository_profile_service is None:
@@ -153,9 +158,7 @@ class GenerationRunLauncher:
                     None if run_instruction is None else str(run_instruction),
                     user_id=user_id,
                     connection_ids=body.get("gitlabConnectionIds") or {},
-                    understanding_version_id=str(
-                        body.get("requirementUnderstandingVersionId") or ""
-                    ),
+                    material_version_id=material_version_id,
                 )
         else:
             snapshot = await build_generate_run_snapshot(
@@ -165,7 +168,7 @@ class GenerationRunLauncher:
                 run_id,
                 None if run_instruction is None else str(run_instruction),
                 worker_task_id=worker_task_id,
-                understanding_version_id=str(body.get("requirementUnderstandingVersionId") or ""),
+                material_version_id=material_version_id,
             )
         if kind == "api" and body.get("apiWorkflowVersion") == "api_two_stage/1.0":
             snapshot["apiWorkflowVersion"] = "api_two_stage/1.0"
@@ -205,6 +208,22 @@ class GenerationRunLauncher:
             from testing_agent.services.auxiliary_execution import dispatch_auxiliary_execution
             from testing_agent.services.auxiliary_execution_view import auxiliary_detail
 
+            material = snapshot.get("requirementMaterialVersion") or {}
+            material_id = material.get("versionId") if isinstance(material, dict) else None
+            locked_material = await self.repository.session.scalar(
+                select(AiGenerateStageVersion)
+                .join(AiGenerateTask, AiGenerateTask.task_id == AiGenerateStageVersion.task_id)
+                .where(
+                    AiGenerateStageVersion.version_id == material_id,
+                    AiGenerateStageVersion.stage == "extracting_text",
+                    AiGenerateTask.task_type == "requirement_analysis",
+                    AiGenerateTask.requirement_id == task.requirement_id,
+                )
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            )
+            if locked_material is None:
+                raise dynamic_error(ErrBadRequest, "材料整理版本已删除，请重新选择")
             stage = await lock_or_create_stage(self.repository.session, current_task.task_id)
             if body.get("requestId") is not None:
                 replay = await find_replay(

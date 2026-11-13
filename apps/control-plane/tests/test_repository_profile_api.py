@@ -44,6 +44,9 @@ def test_repository_profile_run_lifecycle_and_isolation(api, monkeypatch):
         == 200
     )
     requirement_id = requirement(api, owner, pid)
+    from support.requirement_versions import approve_material
+
+    material_id = approve_material(api, requirement_id)
     connection = api.post(
         f"/v1/projects/{pid}/integrations/llm/connections",
         headers=owner,
@@ -74,8 +77,8 @@ def test_repository_profile_run_lifecycle_and_isolation(api, monkeypatch):
             "runId": run_id,
             "taskType": "repository_profile",
             "requirement": {"name": "需求"},
-            "requirementUnderstandingVersion": {
-                "versionId": "understanding-v1",
+            "requirementMaterialVersion": {
+                "versionId": material_id,
                 "versionNo": 1,
                 "taskId": "understanding-task",
                 "runId": "understanding-run",
@@ -106,10 +109,11 @@ def test_repository_profile_run_lifecycle_and_isolation(api, monkeypatch):
             json={
                 "connectionId": connection_id,
                 "requestId": "profile-request",
-                "requirementUnderstandingVersionId": "understanding-v1",
+                "requirementUnderstandingVersionId": material_id,
             },
         )
         assert run.status_code == 200, run.text
+        assert build_snapshot.await_args.kwargs["material_version_id"] == material_id
         run_id = run.json()["data"]["runId"]
         assert run.json()["data"]["status"] == "pending"
 
@@ -119,7 +123,7 @@ def test_repository_profile_run_lifecycle_and_isolation(api, monkeypatch):
             json={
                 "connectionId": connection_id,
                 "requestId": "profile-request-2",
-                "requirementUnderstandingVersionId": "understanding-v1",
+                "requirementMaterialVersionId": material_id,
             },
         )
         assert active.status_code == 400
@@ -179,8 +183,8 @@ def test_repository_profile_run_lifecycle_and_isolation(api, monkeypatch):
         assert detail.json()["data"]["profile"]["overallSummary"] == "当前需求主要涉及后端仓库"
         assert detail.json()["data"]["profile"]["repositories"][0]["role"] == "backend"
         assert (
-            detail.json()["data"]["snapshotJson"]["requirementUnderstandingVersion"]["versionId"]
-            == "understanding-v1"
+            detail.json()["data"]["snapshotJson"]["requirementMaterialVersion"]["versionId"]
+            == material_id
         )
         assert api.get(f"/v1/repository-profile-runs/{run_id}", headers=viewer).status_code == 200
 
@@ -197,9 +201,7 @@ def test_repository_profile_run_lifecycle_and_isolation(api, monkeypatch):
         assert version_items[0]["label"] == "v1"
         assert version_items[0]["sourceRunId"] == run_id
         assert version_items[0]["profile"]["overallSummary"] == "当前需求主要涉及后端仓库"
-        assert (
-            version_items[0]["requirementUnderstandingVersion"]["versionId"] == "understanding-v1"
-        )
+        assert version_items[0]["requirementMaterialVersion"]["versionId"] == material_id
         assert (
             api.get(f"/v1/repository-profile-tasks/{task_id}/versions", headers=viewer).status_code
             == 200
@@ -211,7 +213,7 @@ def test_repository_profile_run_lifecycle_and_isolation(api, monkeypatch):
             json={
                 "connectionId": connection_id,
                 "requestId": "profile-request-failed",
-                "requirementUnderstandingVersionId": "understanding-v1",
+                "requirementMaterialVersionId": material_id,
             },
         )
         assert failed_run.status_code == 200, failed_run.text

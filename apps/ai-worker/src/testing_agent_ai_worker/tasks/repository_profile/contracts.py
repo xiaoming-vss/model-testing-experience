@@ -27,7 +27,6 @@ PROFILE_REPOSITORY_FIELDS = frozenset(
 PROFILE_ROLES = frozenset({"frontend", "backend", "fullstack", "infra", "test", "unknown"})
 MAX_RESPONSIBILITY_CHARS = 120
 MAX_OVERALL_SUMMARY_CHARS = 200
-MAX_LIST_ITEMS = 5
 
 
 class ProfileContractError(RuntimeError):

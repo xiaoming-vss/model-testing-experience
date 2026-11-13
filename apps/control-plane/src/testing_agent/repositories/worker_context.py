@@ -68,11 +68,3 @@ def read_worker_context(session: Session, task: WorkerTask) -> WorkerExecutionCo
             ui_case_run.suite_id if ui_case_run else None,
         )
     raise ErrBadRequest()
-
-
-def connection_for_attempt(session: Session, worker: WorkerTask | None) -> str | None:
-    """Read the frozen connection for an existing dispatch; new choices live in commands."""
-    if worker is None:
-        return None
-    context = read_worker_context(session, worker)
-    return context.llm_connection_id if isinstance(context, AiWorkerContext) else None

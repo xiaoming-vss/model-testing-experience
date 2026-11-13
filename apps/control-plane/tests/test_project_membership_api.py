@@ -2,7 +2,6 @@
 
 import asyncio
 import json
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -30,6 +29,7 @@ from support.project_api import (
 from support.project_api import (
     sqlite_longtext as sqlite_longtext,
 )
+from support.requirement_versions import material_artifact, scope_artifact
 
 
 def seed_approved_understanding(api, rid, pid, user_id):
@@ -61,11 +61,11 @@ def seed_approved_understanding(api, rid, pid, user_id):
                 AiGenerateStageVersion(
                     version_id=f"understanding-{rid}-v1",
                     task_id=task.task_id,
-                    stage="feature_understanding",
+                    stage="extracting_text",
                     version_no=1,
                     attempt_id=f"understanding-attempt-{rid}-1",
-                    artifact_content="已确认的需求分析：登录成功后进入首页。",
-                    artifact_format="text",
+                    artifact_content=json.dumps(material_artifact(), ensure_ascii=False),
+                    artifact_format="json",
                     upstream_versions_json={},
                     reviewer_user_id=user_id,
                 )
@@ -585,101 +585,6 @@ def test_worker_credentials_check_current_membership_and_connection_status(api):
     assert response.json()["data"]["stages"][0]["state"] == "failed"
 
 
-def test_stage_approval_records_new_actor_and_uses_their_llm(api):
-    from testing_agent.api.deps import verify_worker_token
-
-    api.app.dependency_overrides[verify_worker_token] = lambda: None
-    _, owner = account(api, "owner")
-    member_user, member = account(api, "member")
-    pid = project(api, owner)
-    rid = requirement(api, owner, pid)
-
-    async def provide_source_reference():
-        from sqlalchemy import select
-
-        from testing_agent.models.requirement import Requirement
-
-        async with api.app.state.test_sessions() as session:
-            document = await session.scalar(
-                select(Requirement).where(Requirement.requirement_id == rid)
-            )
-            document.document_file_id = "source-file-for-review-test"
-            await session.commit()
-
-    asyncio.run(provide_source_reference())
-    api.post(
-        f"/v1/projects/{pid}/members", headers=owner, json={"name": "member", "role": "member"}
-    )
-    connections = []
-    for headers, key in ((owner, "owner-key"), (member, "member-key")):
-        response = api.post(
-            f"/v1/projects/{pid}/integrations/llm/connections",
-            headers=headers,
-            json={
-                "name": "llm",
-                "apiKey": key,
-                "modelId": "model",
-                "baseUrl": "https://llm.example",
-            },
-        )
-        connections.append(response.json()["data"]["connectionId"])
-    task_created = api.post(
-        f"/v1/projects/{pid}/requirement-analysis-tasks",
-        headers=owner,
-        json={"name": "analysis", "requirementId": rid},
-    )
-    assert task_created.status_code == 200
-    response = api.post(
-        f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text/run",
-        headers=owner,
-        json={"connectionId": connections[0]},
-    )
-    assert response.status_code == 200, response.text
-    extraction = json.loads(
-        (
-            Path(__file__).parent
-            / "fixtures/requirement_artifacts/document-extraction.example.json"
-        ).read_text()
-    )
-    wid = api.post("/internal/ai-worker/tasks/claim", json={"workerId": "worker"}).json()["taskId"]
-    response = api.patch(
-        f"/internal/ai-worker/tasks/{wid}/progress",
-        json={
-            "workerId": "worker",
-            "currentStage": "extracting_text",
-            "stageStatus": "waiting_review",
-            "configJson": {"firstStepOutput": extraction},
-        },
-    )
-    assert response.status_code == 204, response.text
-
-    url = f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text/review"
-    view = api.get(f"/v1/requirements/{rid}/generation/requirement_analysis", headers=member)
-    assert view.status_code == 200, view.text
-    draft = view.json()["data"]["stages"][0]["draft"]
-    response = api.post(
-        url,
-        headers=member,
-        json={
-            "action": "approve",
-            "expectedAttemptId": draft["attemptId"],
-            "continueAfter": True,
-            "connectionId": connections[1],
-        },
-    )
-    assert response.status_code == 200, response.text
-    assert response.json()["data"]["continuationError"] == ""
-    assert response.json()["data"]["stages"][1]["state"] == "running"
-    response = api.post("/internal/ai-worker/tasks/claim", json={"workerId": "worker"})
-    assert response.status_code == 200, response.text
-    next_wid = response.json()["taskId"]
-    credentials = api.get(f"/internal/ai-worker/tasks/{next_wid}/llm-credentials")
-    assert credentials.status_code == 200, credentials.text
-    assert credentials.json()["apiKey"] == "member-key"
-    api.delete(f"/v1/projects/{pid}/members/{member_user['userId']}", headers=owner)
-    assert api.get(f"/internal/ai-worker/tasks/{next_wid}/llm-credentials").status_code == 403
-
-
 def test_code_risk_keeps_same_repository_ids_on_different_instances_separate(
     api, gitlab_remote, monkeypatch
 ):
@@ -845,7 +750,7 @@ def test_function_stage_reexecution_uses_current_actor(api, operation, creator_r
                 "workerId": "worker",
                 "currentStage": "requirement_analysis",
                 "stageStatus": "waiting_review",
-                "configJson": {"requirementAnalysis": {"summary": "test"}},
+                "configJson": {"requirementAnalysis": scope_artifact()},
             },
         )
     assert response.status_code == 204, response.text

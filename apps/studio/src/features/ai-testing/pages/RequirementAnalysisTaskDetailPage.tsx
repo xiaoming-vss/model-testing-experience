@@ -1,7 +1,6 @@
 import { ArtifactViewTabs } from '../components/ArtifactViewTabs'
 import { useTaskRunDialog, type TaskRunDialogRequest } from '../hooks/useTaskRunDialog'
 import { RequirementMaterialComparison } from '../components/RequirementMaterialComparison'
-import { RequirementUnderstandingComparison } from '../components/RequirementUnderstandingComparison'
 import { listTotal } from '@/shared/api/request'
 import { getRunPollingInterval, RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
 import { useTaskRunHistorySync } from '@/features/ai-testing/hooks/useTaskRunHistorySync'
@@ -13,7 +12,7 @@ import { TaskDetailInstructionEditor, TaskDetailNavItem, TaskDetailNavPanel, Tas
 import { RunArtifacts, RunPipelineStatus } from '../components/RunPipelineStatus'
 import { RunHistoryTable, RunRowActions } from '../components/RunHistoryTable'
 import { confirmDeleteRun, isRunDeletable } from '../utils/runDeletion'
-import { buildRevisionTemplate, getRevisionQuestions } from '../utils/functionalRevision'
+import { buildRevisionTemplate, createQuestionRevisionDraft, getRevisionQuestions, revisionInstructionText } from '../utils/functionalRevision'
 import { parseRequirementArtifact } from '@/domain/requirements/requirementArtifact'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { usePersonalLlmChoice } from '../hooks/usePersonalLlmChoice'
@@ -57,8 +56,7 @@ import { message } from '@/shared/utils/feedback'
 import { formatTime, getErrorMessage, normalizeRequirementId, normalizeSprintId, pickUpdatedAt } from '@/utils/format'
 
 const runResultSectionDefinitions = [
-  { key: 'firstStepOutput', label: '材料提取结果' },
-  { key: 'resultYaml', label: '需求理解记录' },
+  { key: 'firstStepOutput', label: '材料整理结果' },
   { key: 'errorMessage', label: '错误信息' },
 ] as const
 
@@ -72,15 +70,13 @@ type RunResultModalState = {
 } | null
 
 const requirementAnalysisStageMetaMap: Record<string, { label: string; color: string }> = {
-  extracting_text: { label: '材料提取与整理', color: 'cyan' },
-  feature_understanding: { label: '需求理解与确认', color: 'purple' },
-  completed: { label: '需求理解与确认', color: 'purple' },
+  extracting_text: { label: '材料整理', color: 'cyan' },
+  completed: { label: '材料整理', color: 'cyan' },
 }
 
-const requirementAnalysisFinalStages = ['feature_understanding', 'completed']
 
 const requirementAnalysisStageFieldMap: Record<string, { key: 'firstStepOutput'; label: string }> = {
-  extracting_text: { key: 'firstStepOutput', label: '材料提取结果' },
+  extracting_text: { key: 'firstStepOutput', label: '材料整理结果' },
 }
 
 function getRunSortTime(run: RequirementAnalysisTaskRun) {
@@ -245,7 +241,6 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
   const selectedRunConfigJson = useMemo(() => parseConfigJsonRecord(selectedRun?.configJson), [selectedRun?.configJson])
   const selectedStage = selectedRun?.currentStage
   const selectedStageField = getRequirementAnalysisStageField(selectedStage)
-  const selectedRunStatus = String(selectedRun?.status ?? '').toLowerCase()
   const selectedRunReviewStatus = String(selectedRun?.reviewStatus ?? '').toLowerCase()
   const chainManagedRun = Boolean(selectedRun?.generationChainManaged || selectedRun?.snapshotJson?.generationChainManaged)
   useEffect(() => { if (selectedRunReviewStatus === 'rejected') setReviseModalOpen(false) }, [selectedRunReviewStatus])
@@ -264,26 +259,9 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
     runResultModal?.mode === 'review' &&
       runResultModal.key === selectedStageField?.key && checkpointStageWaitingReview,
   )
-  const finalResultEditable = Boolean(
-    !chainManagedRun && selectedRun?.runId &&
-      runResultModal?.key === 'resultYaml' &&
-      ['success', 'waiting_review'].includes(selectedRunStatus) &&
-      requirementAnalysisFinalStages.includes(selectedStage ?? '') &&
-      selectedRunReviewStatus === 'pending' &&
-      selectedRun?.importStatus !== 'imported',
-  )
-  const finalResultApproved = Boolean(
-    !chainManagedRun && selectedRun?.runId &&
-      runResultModal?.key === 'resultYaml' &&
-      selectedRunStatus === 'success' &&
-      requirementAnalysisFinalStages.includes(selectedStage ?? '') &&
-      selectedRunReviewStatus === 'approved',
-  )
-  const editableRunResultModal = showStageReviewInRunResultModal || finalResultEditable || finalResultApproved
-  const editableRunResultStage = finalResultEditable || finalResultApproved ? 'feature_understanding' : selectedStage
-  const editableRunResultContent = finalResultEditable || finalResultApproved
-    ? formatStructuredContent(selectedRun?.resultYaml)
-    : selectedStageOutputContent
+  const editableRunResultModal = showStageReviewInRunResultModal
+  const editableRunResultStage = selectedStage
+  const editableRunResultContent = selectedStageOutputContent
 
   const selectedRunResultSections = useMemo(() => {
     if (!selectedRun) return []
@@ -300,17 +278,11 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
       .filter((item) => item.value)
   }, [selectedRun, selectedRunConfigJson])
   const selectedRunResultSectionMap = useMemo(
-    () => new Map(selectedRunResultSections.map((section) => [section.key, section.value])),
+    () => new Map<string, string>(selectedRunResultSections.map((section) => [section.key, section.value])),
     [selectedRunResultSections],
   )
   const runResultModalContent = runResultModal ? selectedRunResultSectionMap.get(runResultModal.key) : undefined
-  const understandingModalTitle = useMemo(() => {
-    if (runResultModal?.key !== 'resultYaml') return undefined
-    try {
-      const artifact = parseRequirementArtifact(editableRunResultModal ? stageOutputDraft : runResultModalContent)
-      return typeof artifact?.title === 'string' && artifact.title.trim() ? artifact.title : undefined
-    } catch { return undefined }
-  }, [runResultModal?.key, editableRunResultModal, stageOutputDraft, runResultModalContent])
+
 
   const runHistoryRefreshing = runsQuery.isFetching || selectedRunQuery.isFetching
   const runnableTask = isRunnableApiCaseGenerateTaskRun(latestRunRecord?.status)
@@ -462,11 +434,10 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
 
 
   const saveStageOutputMutation = useMutation({
-    mutationFn: (payload: { runId: string; stage: string; configJson: Record<string, unknown>; resultYaml?: string; silent?: boolean }) =>
+    mutationFn: (payload: { runId: string; stage: string; configJson: Record<string, unknown>; silent?: boolean }) =>
       api.updateRequirementAnalysisRunStageOutput(payload.runId, {
         stage: payload.stage,
         configJson: payload.configJson,
-        resultYaml: payload.resultYaml,
       }),
     onSuccess: (updatedRun, payload) => {
       if (!payload.silent) {
@@ -489,12 +460,12 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
     }) => api.reviewRequirementAnalysisRunStage(payload.runId, {
       ...payload.body,
       // 最终结果只是确认审核，不会继续派发下一阶段，因此不需要选择模型。
-      llmConnectionId: requirementAnalysisFinalStages.includes(payload.body.stage) || payload.body.action === 'reject'
+      llmConnectionId: payload.body.action === 'reject'
         ? undefined
         : payload.body.action === 'approve' ? await personalLlm.choose() : undefined,
     }),
     onSuccess: (updatedRun, payload) => {
-      message.success(payload.body.action === 'reject' ? '最终结果审核不通过' : requirementAnalysisFinalStages.includes(payload.body.stage) ? '最终结果审核已通过' : '阶段审核已通过，继续执行')
+      message.success(payload.body.action === 'reject' ? '审核不通过' : '阶段审核已通过，继续执行')
       setStageReviewAction(null)
       setSelectedRunRecordId(updatedRun.runId ?? payload.runId)
       queryClient.setQueryData(['requirementAnalysisRun', payload.runId], updatedRun)
@@ -525,7 +496,7 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
   const reviseStageMutation = useMutation({
     mutationFn: async (payload: {
       runId: string
-      body: { llmConnectionId: string; stage: string; revisionInstruction: string; configJson: Record<string, unknown>; resultYaml?: string }
+      body: { llmConnectionId: string; stage: string; revisionInstruction: string; configJson: Record<string, unknown> }
     }) => api.reviseRequirementAnalysisRunStage(payload.runId, payload.body),
     onSuccess: (updatedRun, payload) => {
       message.success('已提交 AI 修改，等待当前阶段重新执行')
@@ -619,15 +590,6 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
     if (!selectedRun?.runId || !stage) return null
 
     const configJson = buildStageConfigJson()
-    if (stage === 'feature_understanding') {
-      return {
-        runId: selectedRun.runId,
-        stage,
-        configJson,
-        resultYaml: stageOutputDraft,
-      }
-    }
-
     return {
       runId: selectedRun.runId,
       stage,
@@ -647,8 +609,7 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
   }
 
   async function handleApproveStageReview() {
-    const finalReview = finalResultEditable && requirementAnalysisFinalStages.includes(selectedStage ?? '')
-    if (!selectedRun?.runId || !selectedStage || (!checkpointStageWaitingReview && !finalReview)) return
+    if (!selectedRun?.runId || !selectedStage || !checkpointStageWaitingReview) return
     if (!stageOutputDraft.trim()) {
       message.warning('阶段产物不能为空')
       return
@@ -661,7 +622,6 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
         runId: selectedRun.runId,
         stage: selectedStage,
         configJson,
-        ...(finalReview ? { resultYaml: stageOutputDraft } : {}),
         silent: true,
       })
       await reviewStageMutation.mutateAsync({
@@ -671,19 +631,6 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
           action: 'approve',
           configJson,
         },
-      })
-    } catch {
-      setStageReviewAction(null)
-    }
-  }
-
-  async function handleRejectFinalReview() {
-    if (!selectedRun?.runId || !finalResultEditable || !requirementAnalysisFinalStages.includes(selectedStage ?? '')) return
-    setStageReviewAction('reject')
-    try {
-      await reviewStageMutation.mutateAsync({
-        runId: selectedRun.runId,
-        body: { stage: selectedStage!, action: 'reject', configJson: buildStageConfigJson() },
       })
     } catch {
       setStageReviewAction(null)
@@ -700,10 +647,10 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
     if (key !== revisionDraftKey) {
       try {
         const artifact = parseRequirementArtifact(stageOutputDraft) ?? stageOutputDraft
-        const label = editableRunResultStage === 'extracting_text' ? '材料提取结果' : '需求理解记录'
+        const label = '材料整理结果'
         const template = buildRevisionTemplate(getRevisionQuestions(artifact), label, '答复')
         setRevisionTemplate(template)
-        setRevisionInstruction(template)
+        setRevisionInstruction(createQuestionRevisionDraft(getRevisionQuestions(artifact)))
         setRevisionDraftKey(key)
         revisionAttachments.clearAttachments()
       } catch (error) {
@@ -717,7 +664,7 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
   function handleReviseStage(connectionId: string) {
     const payload = buildStageOutputPayload()
     if (!selectedRun?.runId || !payload) return
-    const trimmedInstruction = revisionInstruction.trim()
+    const trimmedInstruction = revisionInstructionText(revisionInstruction)
     if (!trimmedInstruction) {
       message.warning('请输入 AI 修改要求')
       return
@@ -739,7 +686,6 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
         revisionInstruction: trimmedInstruction,
         llmConnectionId: connectionId,
         configJson: payload.configJson,
-        resultYaml: payload.resultYaml,
         ...(revisionAttachments.attachments.length ? {
           attachmentFileIds: revisionAttachments.attachments.map(item => item.fileId),
         } : {}),
@@ -898,24 +844,18 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
                           renderArtifacts={(row) => {
                             const data = resolveRunRecord(row)
                             const recordStatus = String(data.status ?? '').toLowerCase()
-                            const reviewStatus = String(data.reviewStatus ?? '').toLowerCase()
-                            const stageKeys = ['extracting_text', 'feature_understanding', 'completed']
+                            const stageKeys = ['extracting_text', 'completed']
                             const reachedStageIndex = stageKeys.indexOf(data.currentStage ?? '')
                             const availableArtifacts = data.availableArtifacts
                             return (
                               <RunArtifacts
                                 artifacts={runResultSectionDefinitions
                                   .filter((section) => section.key !== 'errorMessage')
-                                  .filter((section) => !(section.key === 'resultYaml' && reviewStatus === 'approved'))
                                   .map((section, index) => ({
                                     key: section.key,
                                     label: section.label,
-                                    // 摘要行没有 configJson：有可用产物清单时以真实发布结果为准，
-                                    // 否则第二阶段执行中也会把尚未生成的理解记录显示成可打开。
                                     available: availableArtifacts
-                                      ? section.key === 'resultYaml'
-                                        ? Boolean(data.hasResult)
-                                        : availableArtifacts.includes(section.key)
+                                      ? availableArtifacts.includes(section.key)
                                       : recordStatus === 'success' || index <= reachedStageIndex,
                                   }))}
                                 onOpen={(key) => {
@@ -938,19 +878,12 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
                             const showStageReview = Boolean(
                               !chainManaged && reviewField && data.checkpointEnabled && recordStatus === 'waiting_review' && data.stageStatus === 'waiting_review' && recordReviewStatus === 'pending' && data.importStatus !== 'imported',
                             )
-                            const showFinalReview = Boolean(
-                              !chainManaged && data.checkpointEnabled &&
-                                ['success', 'waiting_review'].includes(recordStatus) &&
-                                requirementAnalysisFinalStages.includes(data.currentStage ?? '') &&
-                                recordReviewStatus === 'pending' &&
-                                data.importStatus !== 'imported',
-                            )
                             const canViewApprovedRecord = Boolean(
                               data.reviewStatus?.toLowerCase() === 'approved' &&
                                 ['success', 'waiting_review'].includes(recordStatus),
                             )
                             const canRetry = !chainManaged && recordFailed && row.runId &&
-                              ['extracting_text', 'feature_understanding'].includes(data.currentStage ?? '') &&
+                              data.currentStage === 'extracting_text' &&
                               ['failed', 'retrying'].includes(data.stageStatus ?? '') &&
                               recordReviewStatus === 'pending' && data.importStatus !== 'imported'
                             return (
@@ -977,19 +910,6 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
                                         审核
                                       </Button>
                                     ) : null}
-                                    {showFinalReview ? (
-                                      <Button
-                                        size="small"
-                                        type="primary"
-                                        onClick={(event) => {
-                                          event.stopPropagation()
-                                          setSelectedRunRecordId(row.runId ?? null)
-                                          setRunResultModal({ runId: row.runId, key: 'resultYaml', label: '需求理解记录（审核）', mode: 'review' })
-                                        }}
-                                      >
-                                        审核
-                                      </Button>
-                                    ) : null}
                                     {canViewApprovedRecord ? (
                                       <Button
                                         size="small"
@@ -997,7 +917,7 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
                                         onClick={(event) => {
                                           event.stopPropagation()
                                           setSelectedRunRecordId(row.runId ?? null)
-                                          setRunResultModal({ runId: row.runId, key: 'resultYaml', label: '需求理解记录', mode: 'view' })
+                                          setRunResultModal({ runId: row.runId, key: 'firstStepOutput', label: '材料整理结果', mode: 'view' })
                                         }}
                                       >
                                         查看结果
@@ -1152,7 +1072,7 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
         mask={{ closable: false }}
         title={
           <div className="ai-task-run-result-expanded-title">
-            <span>{understandingModalTitle ?? (runResultModal?.key === 'firstStepOutput' ? '材料提取结果' : showStageReviewInRunResultModal ? '审核' : runResultModal?.label || '运行结果')}</span>
+            <span>{(runResultModal?.key === 'firstStepOutput' ? '材料整理结果' : showStageReviewInRunResultModal ? '审核' : runResultModal?.label || '运行结果')}</span>
           </div>
         }
         open={Boolean(runResultModal)}
@@ -1171,17 +1091,6 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
                 >
                   保存修改
                 </ProjectActionButton>,
-                ...(finalResultEditable ? [
-                  <Button
-                    key="reject"
-                    danger
-                    onClick={handleRejectFinalReview}
-                    loading={stageActionPending && stageReviewAction === 'reject'}
-                    disabled={reviseModalOpen || (stageActionPending && stageReviewAction !== 'reject')}
-                  >
-                    审核不通过
-                  </Button>,
-                ] : []),
                 <ProjectActionButton action="execute"
                   key="revise"
                   onClick={openReviseStageModal}
@@ -1190,7 +1099,6 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
                 >
                   继续优化
                 </ProjectActionButton>,
-                ...(finalResultApproved && !finalResultEditable ? [] : [
                   <ProjectActionButton action="execute"
                     key="approve"
                     type="primary"
@@ -1198,14 +1106,13 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
                     loading={stageActionPending && stageReviewAction === 'approve'}
                     disabled={reviseModalOpen || (stageActionPending && stageReviewAction !== 'approve')}
                   >
-                    {finalResultEditable ? '审核通过' : '审核通过并继续'}
+                    审核通过并继续
                   </ProjectActionButton>,
-                ]),
               ]
             : null
         }
         width={runResultModal?.key === 'errorMessage' ? "min(1180px, calc(100vw - 56px))" : "min(2000px, calc(100vw - 56px))"}
-        className={`ai-task-run-result-modal api-task-run-result-modal${editableRunResultModal ? ' review' : ' requirement-analysis-text-modal'} functional-stage-review-modal requirement-analysis-result-modal${runResultModal?.key !== 'errorMessage' ? ' functional-artifact-modal' : ''}${runResultModal?.key === 'resultYaml' ? ' requirement-understanding-modal' : ''}`}
+        className={`ai-task-run-result-modal api-task-run-result-modal${editableRunResultModal ? ' review' : ' requirement-analysis-text-modal'} functional-stage-review-modal requirement-analysis-result-modal${runResultModal?.key !== 'errorMessage' ? ' functional-artifact-modal' : ''}`}
         centered
         destroyOnHidden
       >
@@ -1218,14 +1125,14 @@ export function RequirementAnalysisTaskDetailPage({ dialogRequest }: { dialogReq
           ) : editableRunResultModal ? (
             <div className="ai-task-stage-review-popover">
               <ArtifactViewTabs jsonCopyText={stageOutputDraft} className="requirement-analysis-artifact-tabs" defaultActiveKey="business" items={[
-                { key: 'business', label: '业务内容', children: <div className="requirement-analysis-artifact-scroll is-material-comparison" role="region" aria-label="业务内容" tabIndex={0}>{runResultModal?.key === 'firstStepOutput' ? <RequirementMaterialComparison content={stageOutputDraft} /> : <RequirementUnderstandingComparison hideTitle content={stageOutputDraft} />}</div> },
+                { key: 'business', label: '业务内容', children: <div className="requirement-analysis-artifact-scroll is-material-comparison" role="region" aria-label="业务内容" tabIndex={0}><RequirementMaterialComparison content={stageOutputDraft} /></div> },
                 { key: 'json', label: '原始 JSON', children: <TextCodeEditor language="json" ariaLabel="阶段产物 JSON" value={stageOutputDraft} minHeight={360} onChange={value => { setStageOutputDraft(value); setStageOutputDirty(true) }} /> },
               ]} />
             </div>
           ) : runResultModalContent ? (
             runResultModal?.key !== 'errorMessage'
               ? <ArtifactViewTabs jsonCopyText={runResultModalContent} className="requirement-analysis-artifact-tabs" items={[
-                { key: 'business', label: '业务内容', children: <div className="requirement-analysis-artifact-scroll is-material-comparison" role="region" aria-label="业务内容" tabIndex={0}>{runResultModal?.key === 'firstStepOutput' ? <RequirementMaterialComparison content={runResultModalContent} /> : <RequirementUnderstandingComparison hideTitle content={runResultModalContent} />}</div> },
+                { key: 'business', label: '业务内容', children: <div className="requirement-analysis-artifact-scroll is-material-comparison" role="region" aria-label="业务内容" tabIndex={0}><RequirementMaterialComparison content={runResultModalContent} /></div> },
                 { key: 'json', label: '原始 JSON', children: <TextCodeEditor language="json" ariaLabel="阶段产物 JSON" readOnly value={runResultModalContent} /> },
               ]} />
               : <pre className="ai-task-code-block">{runResultModalContent}</pre>

@@ -30,7 +30,6 @@ vi.mock('@/features/ai-testing/components/RequirementDesignWorkspace', () => ({
 }))
 vi.mock('@/features/requirements/components/RequirementDocumentPreviewModal', () => ({
   RequirementDocumentPreviewContent: () => <div>需求正文内容</div>,
-  RequirementDocumentPreviewModal: ({ open }: { open: boolean }) => open ? <div role="dialog" aria-label="需求文档">需求正文内容</div> : null,
 }))
 const clients: QueryClient[] = []
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.restoreAllMocks(); useWorkbenchStore.setState({ activeProjectId: undefined, activeSprintId: undefined }) })

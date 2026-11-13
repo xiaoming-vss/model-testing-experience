@@ -1,4 +1,0 @@
-interface:
-  display_name: "测试用例关联分析"
-  short_description: "分析用例之间的主线、后续与多层分支，输出供鱼骨图解析的独立关系 JSON"
-  default_prompt: "使用 $analyze-test-case-relations，根据需求、需求分析和带 case_id 的完整用例，直接分析用例之间的主线、后续、多层分叉及汇合；无明确关系不连接，仅输出协议 2.0 的 main_paths 与 edges，不修改原用例。"

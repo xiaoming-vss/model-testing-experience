@@ -9,23 +9,31 @@ from urllib.parse import quote
 import httpx
 
 from testing_agent_ai_worker.agent.paths import resolve_task_workspace
+from testing_agent_ai_worker.skill_names import (
+    CASE_RELATIONS_SKILL,
+    DETAILED_CASES_SKILL,
+    MATERIAL_SKILL,
+    REPOSITORY_PROFILE_SKILL,
+    SCOPE_SKILL,
+    TEST_POINTS_SKILL,
+    UI_YAML_SKILL,
+)
 from testing_agent_ai_worker.tasks.requirement_analysis.document_type import extraction_skill
 
 REQUIREMENT_SKILLS = {
-    "extracting_text": "extract-docx-enhanced-text",
-    "feature_understanding": "prd-feature-understanding-skill",
+    "extracting_text": MATERIAL_SKILL,
 }
 FUNCTIONAL_SKILLS = {
-    "requirement_analysis": "analyze-functional-requirements",
-    "case_names": "generate-solution-test-points",
-    "detailed_cases": "generate-solution-test-cases",
-    "relation_analysis": "analyze-test-case-relations",
+    "requirement_analysis": SCOPE_SKILL,
+    "case_names": TEST_POINTS_SKILL,
+    "detailed_cases": DETAILED_CASES_SKILL,
+    "relation_analysis": CASE_RELATIONS_SKILL,
 }
 TASK_SKILLS = {
     "api_case_generate": ["openapi-test-config-extractor", "api-cases-yaml-generator"],
-    "ui_case_generate": ["generate-ui-test-case"],
+    "ui_case_generate": [UI_YAML_SKILL],
     "code_risk_analysis": ["code-risk-analysis"],
-    "repository_profile": ["repository-profile-analysis"],
+    "repository_profile": [REPOSITORY_PROFILE_SKILL],
     "test_report_generate": ["advanced-test-report-generator"],
     "test_order_graph": ["update-test-case-graph"],
 }

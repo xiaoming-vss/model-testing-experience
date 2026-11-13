@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from testing_agent.api.deps import get_auth_service, get_current_user_id, get_effective_settings
 from testing_agent.app import create_app
-from testing_agent.core.security import hash_password, parse_access_token
+from testing_agent.core.security import hash_password, parse_access_token_claims
 from testing_agent.models.user import User
 from testing_agent.schemas.auth import (
     LoginRequest,
@@ -119,7 +119,7 @@ def test_registered_user_can_log_in_with_existing_password_format():
 
     assert response.status_code == 200
     assert (
-        parse_access_token(response.json()["data"]["accessToken"])
+        parse_access_token_claims(response.json()["data"]["accessToken"]).user_id
         == (registered.json()["data"]["userId"])
     )
     assert repository.user is not None

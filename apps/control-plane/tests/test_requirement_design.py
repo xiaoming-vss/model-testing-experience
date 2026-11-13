@@ -1,5 +1,6 @@
 """Requirement-scoped history/configuration and execution reuse the real database paths."""
 
+import json
 from datetime import timedelta
 from types import SimpleNamespace
 from uuid import uuid4
@@ -224,7 +225,7 @@ def test_openapi_configuration_accepts_json_yaml_and_legacy_urls(source):
 
 
 async def test_workspace_starts_function_stage_from_approved_version_without_binding(database):  # noqa: F811
-    from support.requirement_versions import understanding_version
+    from support.requirement_versions import material_version
 
     from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
     from testing_agent.schemas.generation_chain import GenerationChainRunRequest
@@ -234,7 +235,7 @@ async def test_workspace_starts_function_stage_from_approved_version_without_bin
     requirement = sync.query(Requirement).filter_by(requirement_id="req").one()
     requirement.document_content = ""
     sync.commit()
-    version = understanding_version(sync, "req")
+    version = material_version(sync, "req")
     bundle = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(sync)))
     result = await DirectStageCommands(bundle.chain).run(
         "req",
@@ -245,5 +246,5 @@ async def test_workspace_starts_function_stage_from_approved_version_without_bin
     )
     attempt = sync.get(AiGenerationAttempt, result.stages[0].active_run_id)
     source = attempt.input_snapshot_json["source"]
-    assert source["sourceContent"] == version.artifact_content
-    assert source["requirementUnderstandingVersion"]["versionId"] == version.version_id
+    assert json.loads(source["sourceContent"]) == json.loads(version.artifact_content)
+    assert source["requirementMaterialVersion"]["versionId"] == version.version_id

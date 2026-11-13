@@ -32,4 +32,11 @@ describe('候选用例表单', () => {
     })
     expect(screen.queryByRole('textbox', { name: '用例编号' })).not.toBeInTheDocument()
   })
+
+  it('首行完整展示用例 ID，不显示草稿同步提示', () => {
+    const caseId = '0a8f76e9-5f2c-4b1e-9a3d-0123456789ab'
+    render(<GeneratedCasesReviewView content={JSON.stringify({ cases: [{ case_id: caseId, case_title: '用例' }] })} onChange={() => {}} />)
+    expect(screen.getByText(caseId)).toBeInTheDocument()
+    expect(screen.queryByText(/修改同步到当前草稿/)).not.toBeInTheDocument()
+  })
 })

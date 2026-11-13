@@ -391,9 +391,6 @@
   overflow-wrap: anywhere;
 }
 
-.requirement-document-understanding {
-  flex: 0 0 auto;
-}
 
 .requirement-document-preview-shell {
   display: flex;
@@ -478,11 +475,6 @@
   word-break: break-word;
 }
 
-.requirement-document-understanding-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
 .requirement-analysis-drawer {
   display: flex;
@@ -1329,90 +1321,15 @@
   padding: 24px;
 }
 
-.requirement-document-understanding {
-  box-sizing: border-box;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  /* 结构化理解产物与左侧 Word/文本/富文本分支保持同一 24px 阅读边距。 */
-  padding: 24px;
-  overflow: auto;
-  border: 0;
-  border-radius: 0;
-  background: var(--app-surface);
-}
 
-.requirement-document-understanding-content {
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 100%;
-  max-height: none;
-  margin: 0;
-  padding: 24px;
-  overflow: visible;
-  border: 0;
-  background: var(--app-surface);
-  color: var(--description-text);
-  font-family: var(--description-font);
-  font-size: 14px;
-  line-height: 1.78;
-  white-space: normal;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  box-shadow: none;
-}
 
-.requirement-document-understanding-content h1 {
-  margin: 0 0 28px;
-  color: var(--app-testing-editor-text);
-  font-size: 22px;
-  line-height: 1.4;
-  font-weight: 700;
-}
 
-.requirement-document-understanding-content h2 {
-  margin: 28px 0 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--app-list-row-border);
-  color: var(--app-testing-editor-label);
-  font-size: 16px;
-  line-height: 1.5;
-  font-weight: 650;
-}
 
-.requirement-document-understanding-content h3 {
-  margin: 18px 0 6px;
-  color: var(--app-testing-editor-description);
-  font-size: 14px;
-  line-height: 1.6;
-  font-weight: 650;
-}
 
-.requirement-document-understanding-content p {
-  margin: 0 0 8px;
-}
 
-.requirement-document-understanding-content ul {
-  margin: 0 0 5px;
-  padding-left: 22px;
-}
 
-.requirement-document-understanding-content li {
-  padding-left: 2px;
-}
 
-.requirement-document-understanding-spacer {
-  display: block;
-  height: 4px;
-}
 
-.requirement-document-understanding-empty {
-  width: 100%;
-  height: 100%;
-  min-height: 280px;
-  background: var(--app-surface);
-}
 
 @media (max-width: 980px) {
   .requirement-document-workspace.is-compare {
@@ -1460,16 +1377,12 @@
 
   .requirement-document-docx-host .requirement-docx,
   .requirement-document-text-article,
-  .requirement-document-text-host .rich-text-viewer,
-  .requirement-document-understanding-content {
+  .requirement-document-text-host .rich-text-viewer {
     width: 100%;
     margin: 0;
     padding: 20px;
   }
 
-  .requirement-document-understanding {
-    padding: 20px;
-  }
 }
 
 /* Unified flat list treatment for API, UI, and functional testing suites. */

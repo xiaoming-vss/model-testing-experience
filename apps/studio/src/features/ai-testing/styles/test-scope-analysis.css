@@ -1,0 +1,41 @@
+.ai-test-scope { display: grid; grid-template-columns: 210px minmax(0, 1fr); height: 100%; min-height: 0; color: var(--ai-text); }
+.ai-test-scope.has-evidence { grid-template-columns: 200px minmax(0, 1fr) minmax(260px, 29%); }
+.ai-test-scope-nav, .ai-test-scope-content, .ai-test-scope-evidence { min-width: 0; overflow: auto; }
+.ai-test-scope-nav { padding: 16px 10px; border-right: 1px solid var(--app-review-divider); background: var(--app-terminal-result-bg); }
+.ai-test-scope-nav-title { padding: 0 10px 10px; color: var(--ai-text-secondary); font-size: 12px; }
+.ai-test-scope-nav button { display: flex; width: 100%; justify-content: space-between; gap: 12px; padding: 10px; border: 0; border-radius: 7px; background: transparent; color: var(--ai-text-secondary); cursor: pointer; text-align: left; }
+.ai-test-scope-nav button.is-active { color: var(--ai-active-text); background: var(--app-terminal-result-bg); font-weight: 600; outline: 1px solid var(--app-review-divider); }
+.ai-test-scope-nav button:focus-visible, .ai-test-scope-meta button:focus-visible { outline: 2px solid var(--app-terminal-focus-ring); outline-offset: 2px; }
+.ai-test-scope-content { min-width: 0; padding: 16px 24px 24px; }
+.ai-test-scope-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--app-review-divider); }
+.ai-test-scope-header strong { font-size: 15px; }
+.ai-test-scope-header p, .ai-test-scope-header > span { margin: 4px 0 0; color: var(--ai-text-secondary); font-size: 12px; }
+.ai-test-scope-item { padding: 16px 0; border-bottom: 1px solid var(--app-review-divider); }
+.ai-test-scope-item-title { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+.ai-test-scope-item-title > span:first-child { color: var(--ai-text-secondary); font-size: 12px; }
+.ai-test-scope-item-title .ant-tag { margin-inline-end: 0; }
+.ai-test-scope-item p { margin: 8px 0; line-height: 1.7; white-space: pre-wrap; }
+.ai-test-scope-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--ai-text-secondary); font-size: 12px; white-space: pre-line; }
+.ai-test-scope-meta button { padding: 0; border: 0; color: var(--ai-active-text); background: none; cursor: pointer; }
+.ai-test-scope-evidence { padding: 24px; border-left: 1px solid var(--app-surface-border); }
+.ai-test-scope-evidence-head { display: flex; justify-content: space-between; align-items: center; }
+.ai-test-scope-evidence-head h3 { margin: 0; color: inherit; font-size: 15px; }
+.ai-test-scope-evidence-head button { padding: 0; border: 0; color: var(--app-reading-muted); background: transparent; font-size: 22px; cursor: pointer; }
+.ai-test-scope-evidence-head button:focus-visible { outline: 2px solid var(--app-terminal-focus-ring); outline-offset: 2px; }
+.ai-test-scope-evidence article { padding: 16px 0; border-bottom: 1px solid var(--app-surface-border); }
+.ai-test-scope-evidence article small { display: block; margin-top: 8px; color: var(--app-reading-muted); font-size: 12px; }
+.ai-test-scope-evidence article p { margin: 8px 0 0; line-height: 1.85; white-space: pre-wrap; }
+.gc-artifact-scroll.is-requirement-analysis:has(> .ai-test-scope) { overflow: hidden; padding: 0; }
+@media (max-width: 760px) {
+  .ai-test-scope, .ai-test-scope.has-evidence { display: flex; flex-direction: column; height: auto; }
+  .ai-test-scope-nav, .ai-test-scope-content, .ai-test-scope-evidence { overflow: visible; padding: 16px; }
+  .ai-test-scope-nav { display: flex; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--app-review-divider); }
+  .ai-test-scope-nav-title { display: none; }
+  .ai-test-scope-nav button { width: auto; white-space: nowrap; }
+  .ai-test-scope-evidence { border-left: 0; border-top: 1px solid var(--app-surface-border); }
+  .gc-artifact-scroll.is-requirement-analysis:has(> .ai-test-scope) { overflow: auto; }
+}
+
+.ai-test-scope-item-action { display: block; width: 100%; padding: 0; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
+.ai-test-scope-item-action:hover .ai-test-scope-item-title strong { color: var(--app-control-link); }
+.ai-test-scope-item-action:focus-visible { outline: 2px solid var(--app-terminal-focus-ring); outline-offset: 3px; }

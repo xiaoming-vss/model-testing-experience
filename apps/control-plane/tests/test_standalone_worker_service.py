@@ -1,11 +1,13 @@
 """Independent Worker leases and authority remain bound to one execution."""
 
+import json
 from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy import select
 from support.ai_execution import AsyncSessionAdapter, seed_task  # noqa: F401
 from support.ai_execution import db as db
+from support.requirement_versions import material_artifact, points_artifact, scope_artifact
 
 from testing_agent.core.errors import AppError, ErrForbidden
 from testing_agent.models.ai_generate_task import AiGenerateTask
@@ -14,6 +16,10 @@ from testing_agent.schemas.workers import WorkerClaimRequest, WorkerTaskEventReq
 from testing_agent.services import standalone_worker_authorization as auth
 from testing_agent.services.standalone_execution import start_standalone_execution
 from testing_agent.services.standalone_worker_service import StandaloneWorkerService
+
+SOURCE = {"sourceContent": json.dumps(material_artifact(), ensure_ascii=False)}
+SCOPE = scope_artifact()
+POINTS = points_artifact()
 
 
 async def test_worker_lease_and_revocation_update_only_active_execution(db, monkeypatch):  # noqa: F811
@@ -72,7 +78,7 @@ async def test_continuous_callbacks_save_stage_artifacts_and_final_result(db, mo
         request_id="worker",
         actor_id="user",
         connection_id="llm",
-        source={},
+        source=SOURCE,
         config={},
         checkpoint_enabled=False,
     )
@@ -97,7 +103,7 @@ async def test_continuous_callbacks_save_stage_artifacts_and_final_result(db, mo
         progress(
             "requirement_analysis",
             {
-                "requirementAnalysis": {"purpose": "login"},
+                "requirementAnalysis": SCOPE,
                 "caseNames": None,
             },
         ),
@@ -107,15 +113,13 @@ async def test_continuous_callbacks_save_stage_artifacts_and_final_result(db, mo
         progress(
             "case_names",
             {
-                "requirementAnalysis": {"purpose": "login"},
-                "caseNames": {"points": ["login"]},
+                "requirementAnalysis": SCOPE,
+                "caseNames": POINTS,
             },
         ),
     )
     # Lost acknowledgements may replay an earlier event, without moving backward.
-    await service.progress(
-        queue, progress("requirement_analysis", {"requirementAnalysis": {"purpose": "login"}})
-    )
+    await service.progress(queue, progress("requirement_analysis", {"requirementAnalysis": SCOPE}))
     assert execution.current_stage == "case_names"
     with pytest.raises(AppError):
         await service.progress(
@@ -129,7 +133,7 @@ async def test_continuous_callbacks_save_stage_artifacts_and_final_result(db, mo
                 "case_names",
                 {
                     "requirementAnalysis": {"purpose": "tampered"},
-                    "caseNames": {"points": ["login"]},
+                    "caseNames": POINTS,
                 },
             ),
         )
@@ -140,16 +144,16 @@ async def test_continuous_callbacks_save_stage_artifacts_and_final_result(db, mo
         status="success",
         result_yaml=cases_output(),
         config_json={
-            "requirementAnalysis": {"purpose": "login"},
-            "caseNames": {"points": ["login"]},
+            "requirementAnalysis": SCOPE,
+            "caseNames": POINTS,
         },
     )
     await service.complete(queue, body)
     projection = await project_standalone_execution(session, execution.execution_id)
     assert queue.status == execution.workflow_status == "success"
     assert projection.result_yaml == cases_output()
-    assert projection.config_json["requirementAnalysis"] == {"purpose": "login"}
-    assert projection.config_json["caseNames"] == {"points": ["login"]}
+    assert projection.config_json["requirementAnalysis"] == SCOPE
+    assert projection.config_json["caseNames"] == POINTS
     attempts = db.scalars(
         select(AiGenerationAttempt).where(
             AiGenerationAttempt.execution_id == execution.execution_id
@@ -204,8 +208,8 @@ async def test_continuous_callbacks_save_stage_artifacts_and_final_result(db, mo
             run_id=graph.id,
             status="success",
             config_json={
-                "requirementAnalysis": {"purpose": "login"},
-                "caseNames": {"points": ["login"]},
+                "requirementAnalysis": SCOPE,
+                "caseNames": POINTS,
                 "caseRelations": relations_output(),
             },
         ),
@@ -232,7 +236,7 @@ async def test_checkpoint_requires_current_stage_and_stops_for_review(db, monkey
         request_id="worker",
         actor_id="user",
         connection_id="llm",
-        source={},
+        source=SOURCE,
         config={},
         checkpoint_enabled=True,
     )
@@ -258,7 +262,7 @@ async def test_checkpoint_requires_current_stage_and_stops_for_review(db, monkey
             worker_id="agent",
             current_stage="requirement_analysis",
             stage_status="waiting_review",
-            config_json={"requirementAnalysis": {"purpose": "login"}},
+            config_json={"requirementAnalysis": SCOPE},
         ),
     )
     assert queue.status == "success" and execution.workflow_status == "waiting_review"
@@ -347,7 +351,7 @@ async def test_worker_service_routes_independent_run_through_current_protocol(db
         request_id="worker",
         actor_id="user",
         connection_id="llm",
-        source={},
+        source=SOURCE,
         config={},
         checkpoint_enabled=False,
     )
@@ -367,7 +371,7 @@ async def test_worker_service_routes_independent_run_through_current_protocol(db
             run_id=attempt.id,
             current_stage="case_names",
             stage_status="running",
-            config_json={"requirementAnalysis": {"scope": "login"}, "caseNames": {"case": "login"}},
+            config_json={"requirementAnalysis": SCOPE, "caseNames": POINTS},
         ),
     )
     result = await service.complete(
@@ -378,7 +382,7 @@ async def test_worker_service_routes_independent_run_through_current_protocol(db
             run_id=attempt.id,
             status="success",
             result_yaml=cases_output(),
-            config_json={"requirementAnalysis": {"scope": "login"}, "caseNames": {"case": "login"}},
+            config_json={"requirementAnalysis": SCOPE, "caseNames": POINTS},
         ),
     )
     assert result["status"] == "success"

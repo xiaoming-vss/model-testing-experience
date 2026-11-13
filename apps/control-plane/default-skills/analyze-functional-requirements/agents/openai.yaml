@@ -1,4 +1,0 @@
-interface:
-  display_name: "功能需求分析"
-  short_description: "将功能理解记录拆解为业务规则和场景，输出供测试点编写使用的结构化分析"
-  default_prompt: "使用 $analyze-functional-requirements 分析以下功能理解记录，严格按固定模板输出英文 key、中文内容的标准 JSON，不改动任何 key，不输出注释、代码围栏或额外文字。"

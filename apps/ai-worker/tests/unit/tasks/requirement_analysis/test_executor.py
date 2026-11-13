@@ -56,47 +56,37 @@ class RequirementAnalysisExecutorTests(unittest.TestCase):
 
         def runner(**kwargs):
             calls.append(kwargs)
-            return json.dumps(artifact("document-extraction"))
+            return json.dumps(artifact("readable-material"))
 
         with tempfile.TemporaryDirectory() as root:
             executor = self.executor(root, runner, downloads)
             task = self.task(document_type="docx")
             result = executor.execute(task, datetime.now().astimezone(), progress.append)
-        self.assertIsNone(result)
+        self.assertEqual(result.status.value, "success")
         self.assertEqual(task.payload.document_type, "word")
         self.assertEqual(len(calls), 1)
-        self.assertEqual(calls[0]["skill_name"], "extract-docx-enhanced-text")
+        self.assertEqual(calls[0]["skill_name"], "mtx-organize-requirement-material")
         self.assertEqual(downloads[0]["document_download_url"], task.payload.document_download_url)
-        self.assertEqual(progress[0].stage_status, "waiting_review")
         self.assertEqual(
-            json.loads(progress[0].intermediate_json_text)["firstStepOutput"],
-            artifact("document-extraction"),
+            json.loads(result.output_yaml),
+            artifact("readable-material"),
         )
 
-    def test_understanding_reads_approved_json_without_redownloading(self):
+    def test_new_material_cannot_run_unadapted_understanding(self):
         calls, downloads = [], []
-
-        def runner(**kwargs):
-            calls.append(kwargs)
-            return json.dumps(artifact("requirement-understanding"))
-
         with tempfile.TemporaryDirectory() as root:
-            executor = self.executor(root, runner, downloads)
-            result = executor.execute(
-                self.task(
-                    current_stage="feature_understanding",
-                    config={"firstStepOutput": artifact("document-extraction")},
-                ),
-                datetime.now().astimezone(),
-                lambda _: None,
-            )
-        self.assertEqual(result.status, TaskStatus.SUCCESS)
+            executor = self.executor(root, lambda **kwargs: calls.append(kwargs), downloads)
+            with self.assertRaisesRegex(ValueError, "不支持阶段"):
+                executor.execute(
+                    self.task(
+                        current_stage="feature_understanding",
+                        config={"firstStepOutput": artifact("readable-material")},
+                    ),
+                    datetime.now().astimezone(),
+                    lambda _: None,
+                )
+        self.assertEqual(calls, [])
         self.assertEqual(downloads, [])
-        self.assertEqual(calls[0]["skill_name"], "prd-feature-understanding-skill")
-        self.assertEqual(
-            json.loads(calls[0]["input_text"])["documentExtraction"],
-            artifact("document-extraction"),
-        )
 
     def test_wrong_task_and_unsupported_document_fail_before_model(self):
         def runner(**kwargs):

@@ -36,9 +36,9 @@ class RichtextTests(unittest.TestCase):
 
     def test_routing_and_retired_txt(self):
         for kind, skill in (
-            ("docx", "extract-docx-enhanced-text"),
-            ("word", "extract-docx-enhanced-text"),
-            ("richtext", "extract-richtext-enhanced-text"),
+            ("docx", "mtx-organize-requirement-material"),
+            ("word", "mtx-organize-requirement-material"),
+            ("richtext", "mtx-organize-requirement-material"),
         ):
             self.assertEqual(required_skills(self.task(kind)), [skill])
         for kind in ("txt", "text"):
@@ -62,7 +62,7 @@ class RichtextTests(unittest.TestCase):
             self.assertEqual(len(body["images"]), 1)
             self.assertEqual(body["images"][0]["fileId"], "img-1")
             self.assertEqual(Path(kwargs["media"][0]).read_bytes(), png)
-            return (FIXTURE / "document-extraction.example.json").read_text()
+            return (FIXTURE / "readable-material.example.json").read_text()
 
         with tempfile.TemporaryDirectory() as root:
             executor = RequirementAnalysisExecutor(
@@ -72,11 +72,9 @@ class RichtextTests(unittest.TestCase):
                     SimpleNamespace(get_signed_file_bytes=get), "worker"
                 ),
             )
-            self.assertIsNone(
-                executor.execute(self.task(), datetime.now().astimezone(), progress.append)
-            )
-        self.assertEqual(calls[0]["skill_name"], "extract-richtext-enhanced-text")
-        self.assertEqual(progress[0].stage_status, "waiting_review")
+            result = executor.execute(self.task(), datetime.now().astimezone(), progress.append)
+        self.assertEqual(calls[0]["skill_name"], "mtx-organize-requirement-material")
+        self.assertEqual(result.status.value, "success")
         self.assertEqual(
             paths[-1], "/internal/ai-worker/tasks/task/requirement-images/img-1?workerId=worker"
         )
@@ -112,7 +110,7 @@ class MediaTests(unittest.IsolatedAsyncioTestCase):
         await run_skill_step(
             input_text="{}",
             session_key="run",
-            skill_name="extract-richtext-enhanced-text",
+            skill_name="mtx-organize-requirement-material",
             media=["/tmp/image.png"],
             from_config=lambda **kwargs: Bot(),
         )

@@ -118,6 +118,8 @@ def test_new_requirement_has_default_generation_chains(api):  # noqa: F811
     assert response.status_code == 200, response.text
     chains = {chain["kind"]: chain for chain in response.json()["data"]["chains"]}
     assert chains["requirement_analysis"]["configured"]
+    assert chains["requirement_analysis"]["stages"][0]["stage"] == "extracting_text"
+    assert chains["requirement_analysis"]["stages"][0]["label"] == "材料整理"
     assert chains["function"]["configured"]
     assert not chains["api"]["configured"]
     assert not chains["ui"]["configured"]

@@ -2,15 +2,25 @@
 
 from __future__ import annotations
 
+import asyncio
+import inspect
 import json
 import re
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
+from threading import BoundedSemaphore
 from uuid import uuid4
 
 from pydantic import ValidationError
+
+from testing_agent_ai_worker.traceable_test_points import (
+    _validator as traceable_validator,
+)
+from testing_agent_ai_worker.traceable_test_points import (
+    validate_traceable_test_points,
+)
 
 from .contracts import CONTRACTS, DetailedCasesOutput
 
@@ -20,7 +30,11 @@ CLARIFICATION_PREFIX = "CLARIFICATION_REQUIRED:"
 @dataclass
 class ValidationContext:
     diagnostic_dir: Path
-    report: Callable[[dict], None]
+    report: Callable[[dict], None | Awaitable[None]]
+    task_id: str = ""
+    run_id: str = ""
+    review_concurrency: int = 4
+    review_limiter: BoundedSemaphore | None = None
 
 
 context: ContextVar[ValidationContext | None] = ContextVar("functional_validation", default=None)
@@ -49,9 +63,23 @@ def _constant(value):
     raise ValueError(f"non-standard JSON value: {value}")
 
 
-def validate_output(stage: str, raw: str, previous_cases=(), expected_case_ids=None):
+def validate_output(
+    stage: str, raw: str, previous_cases=(), expected_case_ids=None, material=None, analysis=None
+):
     parsed = json.loads(normalize_json(raw), object_pairs_hook=_pairs, parse_constant=_constant)
+    if stage == "traceable_case_names":
+        validate_traceable_test_points(parsed, material, analysis)
+        return json.dumps(parsed, ensure_ascii=False)
     model = CONTRACTS[stage].model_validate(parsed)
+    if stage == "requirement_analysis" and material is not None:
+        blocks = {item["id"] for item in material.get("materialBlocks", [])}
+        questions = {item["id"] for item in material.get("questions", [])}
+        for group in (model.testObjects, model.impactAreas, model.risks, model.openQuestions):
+            for entry in group:
+                if not set(entry.sourceBlockIds) <= blocks:
+                    raise ValueError(f"{entry.id}: unknown material block ID")
+                if not set(getattr(entry, "sourceQuestionIds", [])) <= questions:
+                    raise ValueError(f"{entry.id}: unknown source question ID")
     if stage == "detailed_cases" and previous_cases:
         DetailedCasesOutput.model_validate(
             {"cases": [*previous_cases, *model.model_dump()["cases"]]}
@@ -89,28 +117,52 @@ def issues_for(exc):
 
 
 async def generate_validated(
-    *, stage, inputs, generate, previous_cases=(), module="", batch=0, expected_case_ids=None
+    *,
+    stage,
+    inputs,
+    generate,
+    previous_cases=(),
+    module="",
+    batch=0,
+    expected_case_ids=None,
+    material=None,
+    analysis=None,
+    initial_response: str | None = None,
+    post_validate: Callable[[dict], None] | None = None,
 ):
     """Return canonical JSON, or raise without publishing any invalid artifact."""
-    schema = json.dumps(CONTRACTS[stage].model_json_schema(by_alias=True), ensure_ascii=False)
+    schema_data = (
+        traceable_validator().schema
+        if stage == "traceable_case_names"
+        else CONTRACTS[stage].model_json_schema(by_alias=True)
+    )
+    schema = json.dumps(schema_data, ensure_ascii=False)
     original = inputs + "\n\n【输出 JSON Schema】\n" + schema
     prompt = original
     ctx = context.get()
     call_id = uuid4().hex
     for attempt in range(3):
         if ctx:
-            ctx.report(
-                {
-                    "stage": stage,
-                    "module": module,
-                    "batch": batch,
-                    "repairAttempt": attempt,
-                    "maxRepairs": 2,
-                    "status": "repairing" if attempt else "generating",
-                }
-            )
+            event = {
+                "stage": stage,
+                "module": module,
+                "batch": batch,
+                "repairAttempt": attempt,
+                "maxRepairs": 2,
+                "status": "repairing" if attempt else "generating",
+            }
+            if inspect.iscoroutinefunction(ctx.report):
+                await ctx.report(event)
+            else:
+                reported = await asyncio.to_thread(ctx.report, event)
+                if inspect.isawaitable(reported):
+                    await reported
         # Transport/auth failures intentionally bypass format repair.
-        response = await generate(prompt)
+        response = (
+            initial_response
+            if attempt == 0 and initial_response is not None
+            else await generate(prompt)
+        )
         if getattr(response, "error", None):
             raise RuntimeError(f"模型调用失败：{response.error}")
         raw = response if isinstance(response, str) else response.content
@@ -145,9 +197,17 @@ async def generate_validated(
         else:
             try:
                 normalized = validate_output(
-                    stage, raw, previous_cases, expected_case_ids=expected_case_ids
+                    stage,
+                    raw,
+                    previous_cases,
+                    expected_case_ids=expected_case_ids,
+                    material=material,
+                    analysis=analysis,
                 )
+                if post_validate is not None:
+                    post_validate(json.loads(normalized))
             except (ValueError, TypeError) as exc:
+                normalized = None
                 errors = issues_for(exc)
         if ctx:
             directory = ctx.diagnostic_dir / stage / f"batch-{batch}-{call_id}"

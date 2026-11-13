@@ -13,7 +13,11 @@ from testing_agent.app import create_app
 from testing_agent.core.errors import AppError
 from testing_agent.repositories.project_skill_space import ProjectSkillSpaceRepository
 from testing_agent.schemas.project_skill_space import ProjectSkillUploadRequest
-from testing_agent.services.builtin_skills import inspect_folder, sync_builtin_skills
+from testing_agent.services.builtin_skills import (
+    inspect_folder,
+    prune_builtin_skills,
+    sync_builtin_skills,
+)
 from testing_agent.services.project_skill_space import ProjectSkillSpaceService
 
 
@@ -43,7 +47,13 @@ def test_bundled_default_skills_are_publishable():
     root = Path(__file__).resolve().parents[1] / "default-skills"
     folders = sorted(path for path in root.iterdir() if path.is_dir())
     names = {folder.name for folder in folders}
-    assert {"code-risk-analysis", "prd-feature-understanding-skill"} <= names
+    assert {"code-risk-analysis", "mtx-organize-requirement-material"} <= names
+    assert {
+        "organize-requirement-material",
+        "analyze-functional-requirements",
+        "generate-traceable-test-points",
+        "generate-solution-test-cases",
+    }.isdisjoint(names)
     for folder in folders:
         entries = inspect_folder(folder, 100 * 1024 * 1024)
         assert any(path == "SKILL.md" for path, _ in entries), folder.name
@@ -108,6 +118,56 @@ async def test_unchanged_default_skill_is_not_republished(files, tmp_path):
     files.session.expire_all()
     skill = (await ProjectSkillSpaceRepository(files.session).list("p"))[0]
     assert [entry["fileId"] for entry in skill.manifest] == file_ids
+
+
+@pytest.mark.asyncio
+async def test_sync_keeps_missing_defaults_until_prune_removes_them(files, tmp_path):
+    keep, removed = tmp_path / "keep", tmp_path / "removed"
+    for path in (keep, removed):
+        path.mkdir()
+        (path / "SKILL.md").write_text(path.name)
+    await sync_builtin_skills(files, tmp_path)
+    repository = ProjectSkillSpaceRepository(files.session)
+    removed_skill = next(row for row in await repository.list("p") if row.filename == "removed")
+    old_file_ids = [entry["fileId"] for entry in removed_skill.manifest]
+    (removed / "SKILL.md").unlink()
+    removed.rmdir()
+
+    await sync_builtin_skills(files, tmp_path)
+    files.session.expire_all()
+    assert {row.filename for row in await repository.list("p")} == {"keep", "removed"}
+
+    assert await prune_builtin_skills(files, tmp_path) == [
+        {"name": "removed", "files": 1, "deleted": True}
+    ]
+    files.session.expire_all()
+    assert {row.filename for row in await repository.list("p")} == {"keep"}
+    for file_id in old_file_ids:
+        assert (await files.get(file_id)).status == "deleting"
+
+
+@pytest.mark.asyncio
+async def test_prune_keeps_project_skills_and_requires_a_valid_source(files, tmp_path):
+    builtin = tmp_path / "builtin"
+    builtin.mkdir()
+    (builtin / "SKILL.md").write_text("default")
+    await sync_builtin_skills(files, tmp_path)
+    svc = service(files)
+    custom = await svc.upload("p", await folder(files, "custom"), "owner")
+
+    with pytest.raises(ValueError, match="不存在"):
+        await prune_builtin_skills(files, tmp_path / "missing")
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    with pytest.raises(ValueError, match="为空"):
+        await prune_builtin_skills(files, empty)
+    assert await prune_builtin_skills(files, tmp_path) == []
+    items = (await svc.list("p", "owner"))["items"]
+    assert len(items) == 2
+    assert any(
+        item["skillSpaceId"] == custom["skillSpaceId"] and not item["isDefault"] for item in items
+    )
+    assert any(item["filename"] == "builtin" and item["isDefault"] for item in items)
 
 
 @pytest.mark.asyncio

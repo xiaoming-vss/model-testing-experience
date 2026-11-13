@@ -1,0 +1,199 @@
+{
+  "schemaVersion": "ui_test_surface/1.0",
+  "app": {
+    "framework": "native-html",
+    "entryRoute": "/demo",
+    "loginRoute": null,
+    "authGuard": false,
+    "sourceRoot": "source"
+  },
+  "pages": [
+    {
+      "pageId": "page",
+      "route": "/demo",
+      "componentFile": "page.html",
+      "title": "示例页",
+      "sourceRef": "page.html:2"
+    }
+  ],
+  "containers": [],
+  "controls": [
+    {
+      "controlId": "help-button",
+      "pageId": "page",
+      "containerId": "",
+      "semanticName": "帮助按钮",
+      "controlType": "button",
+      "role": "button",
+      "visibleText": "帮助",
+      "i18nKey": "",
+      "sourceRef": "page.html:3",
+      "uniqueness": "unknown",
+      "locatorCandidates": [
+        {
+          "locatorType": "test_id",
+          "locatorValue": "help-button",
+          "reason": "当前源码中该 data-testid 只声明一次。",
+          "evidenceType": "source",
+          "sourceRef": "page.html:3",
+          "runtimeEvidenceRef": null,
+          "confirmed": false,
+          "stability": "stable",
+          "context": {
+            "object": null,
+            "state": "当前页面",
+            "scope": "page"
+          }
+        }
+      ]
+    },
+    {
+      "controlId": "help-text",
+      "pageId": "page",
+      "containerId": "",
+      "semanticName": "帮助内容",
+      "controlType": "staticText",
+      "role": "",
+      "visibleText": "帮助内容",
+      "i18nKey": "",
+      "sourceRef": "page.html:4",
+      "uniqueness": "unknown",
+      "locatorCandidates": [
+        {
+          "locatorType": "test_id",
+          "locatorValue": "help-text",
+          "reason": "当前源码中该 data-testid 只声明一次。",
+          "evidenceType": "source",
+          "sourceRef": "page.html:4",
+          "runtimeEvidenceRef": null,
+          "confirmed": false,
+          "stability": "stable",
+          "context": {
+            "object": null,
+            "state": "当前页面",
+            "scope": "page"
+          }
+        }
+      ]
+    },
+    {
+      "controlId": "report-button",
+      "pageId": "page",
+      "containerId": "",
+      "semanticName": "外部报表入口",
+      "controlType": "button",
+      "role": "button",
+      "visibleText": "打开外部报表",
+      "i18nKey": "",
+      "sourceRef": "page.html:5",
+      "uniqueness": "unknown",
+      "locatorCandidates": [
+        {
+          "locatorType": "test_id",
+          "locatorValue": "report-button",
+          "reason": "当前源码中该 data-testid 只声明一次。",
+          "evidenceType": "source",
+          "sourceRef": "page.html:5",
+          "runtimeEvidenceRef": null,
+          "confirmed": false,
+          "stability": "stable",
+          "context": {
+            "object": null,
+            "state": "当前页面",
+            "scope": "page"
+          }
+        }
+      ]
+    },
+    {
+      "controlId": "report-status",
+      "pageId": "page",
+      "containerId": "",
+      "semanticName": "外部报表状态",
+      "controlType": "readOnlyText",
+      "role": "",
+      "visibleText": "",
+      "i18nKey": "",
+      "sourceRef": "page.html:7",
+      "uniqueness": "unknown",
+      "locatorCandidates": []
+    },
+    {
+      "controlId": "note",
+      "pageId": "page",
+      "containerId": "",
+      "semanticName": "备注",
+      "controlType": "input",
+      "role": "textbox",
+      "visibleText": "",
+      "i18nKey": "",
+      "sourceRef": "page.html:8",
+      "uniqueness": "unknown",
+      "locatorCandidates": [
+        {
+          "locatorType": "test_id",
+          "locatorValue": "note",
+          "reason": "当前源码中该 data-testid 只声明一次。",
+          "evidenceType": "source",
+          "sourceRef": "page.html:8",
+          "runtimeEvidenceRef": null,
+          "confirmed": false,
+          "stability": "stable",
+          "context": {
+            "object": null,
+            "state": "当前页面",
+            "scope": "page"
+          }
+        }
+      ]
+    }
+  ],
+  "feedback": [],
+  "interactions": [
+    {
+      "interactionId": "open-help",
+      "pageId": "page",
+      "controlId": "help-button",
+      "effect": "show_help",
+      "targetId": "help-text",
+      "sourceRef": "page.html:3"
+    },
+    {
+      "interactionId": "open-report",
+      "pageId": "page",
+      "controlId": "report-button",
+      "effect": "open_external_report",
+      "targetId": "report-status",
+      "sourceRef": "page.html:5"
+    }
+  ],
+  "unknowns": [
+    {
+      "topic": "外部报表状态节点",
+      "reason": "外部组件的内部源码和运行时 DOM 尚未提供，保留状态观察目标。",
+      "sourceRef": "page.html:7",
+      "affectedIds": [
+        "report-status"
+      ]
+    }
+  ],
+  "inspectionCoverage": [
+    {
+      "area": "所选页面场景",
+      "caseIds": [
+        "U1",
+        "U2",
+        "U3"
+      ],
+      "pageIds": [
+        "page"
+      ],
+      "componentFiles": [
+        "page.html"
+      ],
+      "status": "inspected",
+      "reason": ""
+    }
+  ],
+  "evidenceIssues": []
+}

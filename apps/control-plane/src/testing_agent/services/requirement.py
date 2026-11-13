@@ -151,21 +151,10 @@ class RequirementService:
         if body.document_file_id:
             await self._attach_file(user_id, requirement, body.document_file_id)
         elif body.document_content is not None:
-            from testing_agent.domain.requirement_artifacts import (
-                requirement_content,
-                serialize_artifact,
-            )
+            from testing_agent.domain.requirement_artifacts import requirement_content
 
             try:
-                if (requirement.document_content or "").lstrip().startswith("{") and (
-                    '"artifactType"' in requirement.document_content
-                    and "requirement_understanding" in requirement.document_content
-                ):
-                    requirement.document_content = serialize_artifact(
-                        body.document_content, "requirement_understanding"
-                    )
-                else:
-                    requirement.document_content = requirement_content(body.document_content)
+                requirement.document_content = requirement_content(body.document_content)
             except ValueError as exc:
                 raise AppError(400, str(exc), 400) from exc
         await self.requirements.commit()

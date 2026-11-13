@@ -97,8 +97,13 @@ async def _artifact(
         field = STAGE_CONFIG_FIELDS.get(stage)
         value = config.get(field) if field else None
         content = json.dumps(value, ensure_ascii=False) if isinstance(value, (dict, list)) else ""
+    validation_source = (
+        {"source": source, "config": config}
+        if kind == "function" and stage == "case_names"
+        else source
+    )
     return await validate_generation_artifact(
-        AiGenerateTaskRepository(session), kind, stage, content, source
+        AiGenerateTaskRepository(session), kind, stage, content, validation_source
     )
 
 

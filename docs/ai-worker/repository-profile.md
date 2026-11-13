@@ -4,11 +4,11 @@
 
 ## 输入
 
-- 用户选择的已审核 `feature_understanding` 版本；
+- 用户选择的已审核材料整理版本，格式为 `readable_requirement_material` 0.2；
 - 该需求全部激活的代码仓库绑定；
 - 每个仓库工作分支的 HEAD commit。
 
-控制面建 run 时冻结需求理解正文、版本引用、仓库 `cloneUrl`/`headCommit`/`connectionId`。单仓库解析失败写入 `profileError`，其余仓库继续；没有仓库绑定时拒绝运行。
+控制面建 run 时冻结材料整理正文、版本引用、仓库 `cloneUrl`/`headCommit`/`connectionId`。单仓库解析失败写入 `profileError`，其余仓库继续；没有仓库绑定时拒绝运行。
 
 ## UI 生成消费方式
 
@@ -31,8 +31,8 @@ UI 生成只使用仓库 pin；历史 ZIP 来源的归档下载路径已随旧�
 ## 模型调用
 
 - 本期只支持 Pi；使用 `read/grep/find/ls` 只读工具。
-- 使用 `repository-profile-analysis` 默认 skill；Worker 通过 `prompt_builder` 注入技能规则，并对模型输出执行三次有界校验修正。
-- 上下文包含需求理解正文、可分析仓库 manifest、顶层目录/文件清单，以及不可分析仓库原因。
+- 使用 `mtx-repository-profile-analysis` 默认技能。Worker 下载该技能，在提示词中指定加载，并对模型输出最多执行两次校验修正。部署时先同步新技能，再切换 Worker。
+- 上下文包含已审核的材料整理正文、可分析仓库 manifest、顶层目录/文件清单，以及不可分析仓库原因。
 - 模型必须只返回一个 JSON 对象，不含 Markdown fence、解释或额外元数据。
 
 ## 输出契约

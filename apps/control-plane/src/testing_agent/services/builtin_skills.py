@@ -8,7 +8,8 @@ from sqlalchemy import select
 from testing_agent.core.errors import AppError
 from testing_agent.models.project_skill_space import ProjectSkillSpace
 from testing_agent.schemas.project_skill_space import ProjectSkillUploadRequest, SkillFileInput
-from testing_agent.services.skill_storage import SkillPublisher
+from testing_agent.services.resource_deletion import SqlResourceDeletion
+from testing_agent.services.skill_storage import SkillPublisher, replace_manifest
 from testing_agent.services.stored_file import StoredFileService
 
 
@@ -46,13 +47,18 @@ def inspect_folder(folder: Path, maximum: int) -> list[tuple[str, bytes]]:
     return entries
 
 
-async def sync_builtin_skills(files: StoredFileService, source: Path) -> list[dict[str, str | int]]:
+def _source_folders(source: Path) -> list[Path]:
+    """Validate the whole source before publishing or pruning any skill."""
     if not source.is_dir():
         raise ValueError("默认技能源目录不存在")
-    # Validate the whole source before publishing any skill.
     folders = [p for p in sorted(source.iterdir()) if p.is_dir()]
     if not folders or any(p.is_symlink() for p in folders):
         raise ValueError("默认技能源目录为空或包含目录链接")
+    return folders
+
+
+async def sync_builtin_skills(files: StoredFileService, source: Path) -> list[dict[str, str | int]]:
+    folders = _source_folders(source)
     content = [
         (folder.name, inspect_folder(folder, files.settings.max_bytes)) for folder in folders
     ]
@@ -86,4 +92,33 @@ async def sync_builtin_skills(files: StoredFileService, source: Path) -> list[di
             continue
         await publisher.builtin(name, entries)
         results.append({"name": name, "files": len(entries)})
+    return results
+
+
+async def prune_builtin_skills(
+    files: StoredFileService, source: Path
+) -> list[dict[str, str | int]]:
+    """Remove system default skills that no longer exist in the source directory.
+
+    Project custom skills are never touched. Files of removed skills follow the
+    normal deletion lifecycle and are reclaimed after their download window.
+    """
+    names = {folder.name for folder in _source_folders(source)}
+    session = files.session
+    rows = list(
+        await session.scalars(
+            select(ProjectSkillSpace)
+            .where(ProjectSkillSpace.is_default.is_(True))
+            .order_by(ProjectSkillSpace.filename)
+        )
+    )
+    results: list[dict[str, str | int]] = []
+    for skill in rows:
+        if skill.filename in names:
+            continue
+        name, file_count = skill.filename, len(skill.manifest or [])
+        await replace_manifest(session, skill, [], files.settings.signature_seconds)
+        await SqlResourceDeletion().delete(session, skill)
+        await session.commit()
+        results.append({"name": name, "files": file_count, "deleted": True})
     return results

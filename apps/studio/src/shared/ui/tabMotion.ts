@@ -67,7 +67,7 @@ export function installTabMotion(root: HTMLElement) {
     if (initial || !animate) { void indicator.offsetWidth; indicator.style.removeProperty('transition') }
 
     if (!changed || !animate) return
-    const usesScope = list.hasAttribute('data-tab-motion-scoped') || Boolean(list.closest('.requirement-understanding-nav'))
+    const usesScope = list.hasAttribute('data-tab-motion-scoped')
     const scoped = usesScope ? list.closest<HTMLElement>('[data-tab-motion-scope]')?.querySelector<HTMLElement>('[data-tab-motion-panel]') : null
     const panelId = selected.getAttribute('aria-controls')
     const panel = scoped ?? (panelId ? document.getElementById(panelId) : null)

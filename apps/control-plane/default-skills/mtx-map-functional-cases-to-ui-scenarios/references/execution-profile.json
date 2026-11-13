@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "ui_execution_profile/1.0",
+  "profileId": "mtx-ui-baseline/1.0",
+  "capabilities": {
+    "operations": [
+      "navigate",
+      "click",
+      "dblclick",
+      "input",
+      "clear",
+      "press",
+      "wait",
+      "observe",
+      "reload",
+      "screenshot",
+      "sleep"
+    ],
+    "assertions": [
+      "visible",
+      "text_eq",
+      "text_contains",
+      "url_eq",
+      "url_contains"
+    ]
+  },
+  "features": {
+    "xpathPredicates": true,
+    "scalarCapture": true,
+    "variableSubstitution": true,
+    "conditionalFlow": false,
+    "runtimeIteration": false,
+    "crossCasePreflight": false
+  },
+  "captureSources": [
+    "text",
+    "value",
+    "attribute",
+    "url"
+  ]
+}

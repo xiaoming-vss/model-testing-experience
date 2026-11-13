@@ -1,7 +1,7 @@
 """Repository profile snapshot assembly and result parsing.
 
 Profiles are an optional, manually started analysis beside the requirement
-generation chain. The run freezes the selected approved requirement-understanding
+generation chain. The run freezes the selected approved requirement-material
 version plus each active repository's working-branch HEAD. Unlike code risk it
 does not need a baseline branch, diff, or existing test cases.
 """
@@ -27,10 +27,10 @@ from testing_agent.schemas.requirement import normalize_document_type
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.repo_gitlab_access import resolve_repo_gitlab_access
-from testing_agent.services.requirement_understanding_source import (
-    approved_understanding,
-    understanding_source,
-    understanding_version_ref,
+from testing_agent.services.requirement_material_source import (
+    approved_material,
+    material_source,
+    material_version_ref,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -70,20 +70,20 @@ class RepositoryProfileService:
         *,
         user_id: str,
         connection_ids: dict[str, str] | None = None,
-        understanding_version_id: str = "",
+        material_version_id: str = "",
     ) -> dict[str, Any]:
-        """Freeze the approved understanding source and working-branch repository pins."""
+        """Freeze the approved material source and working-branch repository pins."""
         requirement = await self.task_repository.get_requirement(task.requirement_id)
         if requirement is None:
             raise ErrNotFound()
 
-        understanding = await approved_understanding(
+        material = await approved_material(
             GenerationChainRepository(self.task_repository.session),
             task.requirement_id,
-            understanding_version_id,
+            material_version_id,
         )
-        if understanding is None:
-            raise dynamic_error(ErrBadRequest, "请先审核通过需求理解，再进行仓库画像分析")
+        if material is None:
+            raise dynamic_error(ErrBadRequest, "请先审核通过材料整理，再进行仓库画像分析")
 
         bindings = list(
             await self.binding_repository.list_active_repo_bindings_for_requirement(
@@ -117,9 +117,9 @@ class RepositoryProfileService:
                 "requirementId": requirement.requirement_id,
                 "name": requirement.name,
                 "documentType": document_type,
-                "documentContent": understanding_source(understanding),
+                "documentContent": material_source(material),
             },
-            "requirementUnderstandingVersion": understanding_version_ref(understanding),
+            "requirementMaterialVersion": material_version_ref(material),
             "bindings": entries,
             "gitlabCredentialsUrl": (
                 f"/internal/ai-worker/tasks/{worker_task_id}/gitlab-credentials"

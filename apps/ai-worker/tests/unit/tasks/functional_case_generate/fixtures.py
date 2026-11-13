@@ -1,15 +1,10 @@
 def analysis():
     return {
-        "functionalOverview": {
-            "purpose": "登录",
-            "applicableObjects": [],
-            "actors": [],
-            "entryPoints": [],
-            "explicitExclusions": [],
-        },
-        "scenarioFactors": [],
-        "businessRules": [],
-        "scenarioBreakdown": [],
+        "schemaVersion": "1.0",
+        "artifactType": "test_scope_impact_risk",
+        "testObjects": [],
+        "impactAreas": [],
+        "risks": [],
         "openQuestions": [],
     }
 
@@ -40,3 +35,46 @@ def points():
             }
         ]
     }
+
+
+def material():
+    return {
+        "artifactType": "readable_requirement_material",
+        "schemaVersion": "0.2",
+        "materialBlocks": [{"id": "B1"}],
+        "questions": [],
+    }
+
+
+def traceable_points():
+    return {
+        "schemaVersion": "1.0",
+        "artifactType": "traceable_test_points",
+        "reviewStatus": "self_review_only",
+        "testPoints": [
+            {
+                "id": "P1",
+                "module": "登录",
+                "dimension": "功能场景",
+                "name": "【登录】验证登录",
+                "basis": "direct",
+                "materialBlockIds": ["B1"],
+                "testObjectIds": [],
+                "impactAreaIds": [],
+                "riskIds": [],
+                "materialQuestionIds": [],
+                "scopeQuestionIds": [],
+            }
+        ],
+        "coverageGaps": [],
+    }
+
+
+def traceable_modules(*modules):
+    value = traceable_points()
+    template = value["testPoints"][0]
+    value["testPoints"] = [
+        {**template, "id": f"P{index}", "module": module, "name": f"【{module}】验证登录"}
+        for index, module in enumerate(modules, 1)
+    ]
+    return value

@@ -8,28 +8,21 @@ export function parseRequirementArtifact(content: unknown): RecordValue | null {
   let parsed = content
   if (typeof content === 'string') {
     try { parsed = JSON.parse(content) } catch {
-      if (content.trimStart().startsWith('{') && content.includes('"artifactType"') && /document_extraction|requirement_understanding/.test(content)) {
+      if (content.trimStart().startsWith('{') && content.includes('"artifactType"') && /document_extraction|readable_requirement_material/.test(content)) {
         throw new Error('结构化需求无法解析，请在原始 JSON 中修正后保存')
       }
       return null
     }
   }
   if (!record(parsed) || !('artifactType' in parsed)) return null
-  const versions: Record<string, string> = { document_extraction: '1.0', requirement_understanding: '2.0' }
+  const versions: Record<string, string> = { readable_requirement_material: '0.2', document_extraction: '1.0' }
   if (!versions[String(parsed.artifactType)] || parsed.schemaVersion !== versions[String(parsed.artifactType)]) {
     throw new Error('当前产物版本或类型不受支持')
   }
-  if (parsed.schemaVersion === '2.0' && !Array.isArray(parsed.evidence)) throw new Error('需求理解缺少集中证据表')
   if (!Array.isArray(parsed.sources) || !Array.isArray(parsed.questions) ||
-    (parsed.artifactType === 'requirement_understanding' && !Array.isArray(parsed.modules)) ||
-    (parsed.artifactType === 'document_extraction' && !Array.isArray(parsed.contentBlocks))) {
+    (parsed.artifactType === 'document_extraction' && !Array.isArray(parsed.contentBlocks)) ||
+    (parsed.artifactType === 'readable_requirement_material' && (!Array.isArray(parsed.materialBlocks) || !Array.isArray(parsed.functions)))) {
     throw new Error('结构化需求缺少必要业务内容，请修正后保存')
   }
   return parsed
-}
-
-
-/** Resolved entries in earlier artifacts are not pending work. JSON editing remains lossless. */
-export function pendingRequirementQuestions<T extends Record<string, unknown>>(questions: T[]): T[] {
-  return questions.filter(question => question.status !== 'resolved')
 }

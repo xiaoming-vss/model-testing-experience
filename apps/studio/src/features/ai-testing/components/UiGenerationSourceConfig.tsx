@@ -1,5 +1,5 @@
 import { Alert, Button, Spin, Tag } from 'antd'
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { getErrorMessage } from '@/utils/format'
 import {
   generationChainApi,
@@ -27,10 +27,6 @@ export function UiGenerationSourceConfig({
   selection,
   resolved,
   disabled = false,
-  readOnly = false,
-  caseSummary,
-  caseSelector,
-  footer,
   onProfileVersionChange,
   onRepositoryChange,
   onCommitModeChange,
@@ -41,10 +37,6 @@ export function UiGenerationSourceConfig({
   selection: UiGenerationSourceSelection
   resolved: ResolvedUiGenerationSource
   disabled?: boolean
-  readOnly?: boolean
-  caseSummary?: ReactNode
-  caseSelector?: ReactNode
-  footer?: ReactNode
   onProfileVersionChange: (versionId: string) => void
   onRepositoryChange: (repositoryId: string) => void
   onCommitModeChange: (mode: UiGenerationSourceCommitMode) => void
@@ -60,10 +52,9 @@ export function UiGenerationSourceConfig({
   const checkKey = `${versionId}:${repositoryId}`
   const activeCheck = checkedKey === checkKey ? checkResult : undefined
   const activeCheckError = checkedKey === checkKey ? checkError : undefined
-  const controlsDisabled = disabled || readOnly
 
   async function runSourceCheck() {
-    if (!versionId || !repositoryId || !resolved.repository?.commit || controlsDisabled) return
+    if (!versionId || !repositoryId || !resolved.repository?.commit || disabled) return
     setCheckedKey(checkKey)
     setChecking(true)
     setCheckResult(undefined)
@@ -129,7 +120,7 @@ export function UiGenerationSourceConfig({
                   key={version.versionId}
                   className={`ui-source-version-button${active ? ' is-active' : ''}`}
                   aria-pressed={active}
-                  disabled={controlsDisabled}
+                  disabled={disabled}
                   onClick={() => onProfileVersionChange(version.versionId)}
                 >
                   {version.label}
@@ -140,10 +131,10 @@ export function UiGenerationSourceConfig({
               )
             })}
           </div>
-          {resolved.version?.requirementUnderstandingVersion?.versionNo ? (
+          {resolved.version?.requirementMaterialVersion?.versionNo ? (
             <p className="ui-source-note">
-              该画像使用需求理解 v
-              {resolved.version.requirementUnderstandingVersion.versionNo}
+              该画像使用材料整理 v
+              {resolved.version.requirementMaterialVersion.versionNo}
             </p>
           ) : null}
         </section>
@@ -156,8 +147,8 @@ export function UiGenerationSourceConfig({
           title={resolved.blocker.title}
           description={resolved.blocker.description}
           action={
-            onOpenProfile && !readOnly ? (
-              <Button size="small" disabled={controlsDisabled} onClick={onOpenProfile}>
+            onOpenProfile ? (
+              <Button size="small" disabled={disabled} onClick={onOpenProfile}>
                 去生成仓库画像
               </Button>
             ) : undefined
@@ -175,8 +166,8 @@ export function UiGenerationSourceConfig({
               title={resolved.blocker.title}
               description={resolved.blocker.description}
               action={
-                onOpenProfile && !readOnly && resolved.blocker.kind === 'no_frontend_repository' ? (
-                  <Button size="small" disabled={controlsDisabled} onClick={onOpenProfile}>
+                onOpenProfile && resolved.blocker.kind === 'no_frontend_repository' ? (
+                  <Button size="small" disabled={disabled} onClick={onOpenProfile}>
                     去生成仓库画像
                   </Button>
                 ) : undefined
@@ -199,7 +190,7 @@ export function UiGenerationSourceConfig({
                       name={`ui-source-repository-${requirementId}`}
                       value={repository.repositoryId}
                       checked={checked}
-                      disabled={controlsDisabled || unavailable}
+                      disabled={disabled || unavailable}
                       aria-label={`选择仓库 ${repository.pathWithNamespace}`}
                       onChange={() => onRepositoryChange(repository.repositoryId)}
                     />
@@ -261,7 +252,7 @@ export function UiGenerationSourceConfig({
                 name={`ui-source-commit-mode-${requirementId}`}
                 value="profile"
                 checked={selection.commitMode === 'profile'}
-                disabled={controlsDisabled}
+                disabled={disabled}
                 aria-label="使用画像 commit"
                 onChange={() => onCommitModeChange('profile')}
               />
@@ -273,7 +264,7 @@ export function UiGenerationSourceConfig({
                 name={`ui-source-commit-mode-${requirementId}`}
                 value="latest"
                 checked={selection.commitMode === 'latest'}
-                disabled={controlsDisabled}
+                disabled={disabled}
                 aria-label="使用分支最新 HEAD"
                 onChange={() => onCommitModeChange('latest')}
               />
@@ -315,7 +306,7 @@ export function UiGenerationSourceConfig({
                 <Button
                   size="small"
                   loading={checking}
-                  disabled={controlsDisabled || !resolved.ready || !resolved.repository.commit}
+                  disabled={disabled || !resolved.ready || !resolved.repository.commit}
                   onClick={() => void runSourceCheck()}
                 >
                   检查更新
@@ -344,13 +335,6 @@ export function UiGenerationSourceConfig({
         </section>
       ) : null}
 
-      <section className="ui-source-block" aria-label="来源功能用例">
-        <h4>来源功能用例</h4>
-        {caseSummary}
-        {caseSelector}
-      </section>
-
-      {footer ? <div className="ui-source-footer">{footer}</div> : null}
     </div>
   )
 }

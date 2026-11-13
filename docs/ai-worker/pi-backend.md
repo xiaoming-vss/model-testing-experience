@@ -38,7 +38,15 @@ Python 每次模型调用启动 Pi RPC 子进程，在当前任务工作目录�
 
 运行到 `agent_settled` 后返回最终 assistant 文本、stop reason 和调用用量；模型长度截断直接报错，不能发布为完成结果。空闲超时、总时限、取消或异常退出均回收进程组；主 Worker 收到 SIGTERM 时立即终止子进程，保持原 Worker 的立即停止语义。退出后的正常重领由既有控制面机制负责。
 
-实现边界：`agent/pi.py` 只管理 RPC、会话、图片输入、超时和进程回收；任务模块只消费归一化后的 `AgentResult`，不解析 RPC 事件。
+实现边界：`agent/pi.py` 管理 RPC、会话、图片输入、受控扩展、超时和进程回收；任务模块只消费归一化后的 `AgentResult`，不解析 RPC 事件。
+
+### 功能测试任务的自主委派
+
+测试点可分组初稿已改为[程序分组并发生成](traceable-test-points.md#初稿按测试对象并发生成)，组内直接执行，不加载自主委派扩展。Pi 后端在未分组的测试点初稿和独立审查中仍显式加载内置 `subagent` 扩展。各 Agent 根据 Skill 的 `references/subagent.md` 自行判断是否委派、决定拆分方式并汇总；测试点修订及其他任务不启用该扩展。完整用例已改为[程序按模块分派并发生成](module-case-generation.md)：每个模块使用独立 Agent、会话和工作目录，最多同时生成 2 个，不再加载自主委派扩展。该调度同样适用于阶段恢复、继续优化和 Nanobot 后端。测试点仍须经过原有格式、引用及独立审查，完整用例沿用原有格式校验和编号规则，人工审核流程不变。
+
+每次模型调用最多委派 8 个子任务，同一调用最多并发 2 个；子任务最长 180 秒（也不超过父调用总超时）。子任务复用任务的模型配置和冻结输入，使用独立 Pi 进程及无持久会话，只开放 `read/grep/find/ls`，不加载扩展，不能再次委派。它们共享任务工作区且工具白名单不构成文件系统沙箱。图片只传给主 Agent，子 Agent 不直接接收图片。任一子任务失败会使该次生成失败，不发布部分结果；子任务明确返回 `CLARIFICATION_REQUIRED:` 时，完整用例阶段按现有澄清流程失败。取消或超时由父进程组统一回收。日志记录子任务数量和可用 token 用量，不记录提示词或产物。并发限制按每次模型调用计算，不是跨 Worker 的全局配额。部署代码前须先发布同一版本的两个 Skill，包含各自的 `references/subagent.md`。
+
+本地切换期间保留旧的 `agent/subagent.mjs` 给已运行的旧 Worker；新代码加载 `agent/subagent_skill.mjs`。确认所有 Worker 均已切换、没有旧进程后再移除旧扩展。
 
 [Pi RPC 官方协议](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/rpc.md)
 

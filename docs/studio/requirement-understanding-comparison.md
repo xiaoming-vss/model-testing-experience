@@ -31,7 +31,6 @@ UI 交互为独立阅读页签，直接读取已有操作的 interaction，不�
 - features/ai-testing/components/RequirementUiInteractionView.tsx：UI 交互的模块/操作选择与直接阅读。
 - features/ai-testing/components/RequirementSourcePanel.tsx：两个阶段共用的来源、材料与提取事实面板。
 - features/ai-testing/utils/understandingComparison.ts：产物读取与证据匹配。
-- domain/requirements/RequirementArtifactView.tsx：保留原有领域阅读语义，并为单个内容节点提供依据点击回调。
 - features/ai-testing/styles/understanding-comparison.css：理解内容布局，复用材料对照的主题和容器响应规则。
 
 组件、依据匹配、第一阶段、领域阅读器、页面及弹窗布局共42项测试覆盖默认分类、来源切换、图片文字、未知与示例状态、上游缺失、重复摘录、段号区间的来源隔离。ESLint、TypeScript、主题检查及生产构建通过。

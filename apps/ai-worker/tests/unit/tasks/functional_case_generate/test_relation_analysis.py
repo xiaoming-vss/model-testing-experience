@@ -13,6 +13,7 @@ from testing_agent_ai_worker.tasks.functional_case_generate.validation import (
     generate_validated,
     validate_output,
 )
+from tests.unit.tasks.functional_case_generate.fixtures import analysis, material
 
 
 def relation_output():
@@ -246,6 +247,18 @@ class RelationValidationLoopTests(unittest.IsolatedAsyncioTestCase):
 
 class RelationCheckpointTests(unittest.TestCase):
     def test_relation_stage_runs_skill_and_publishes_case_relations_only(self):
+        for legacy_config in (
+            {},
+            {
+                "requirementAnalysis": analysis(),
+                "caseNames": {"categories": []},
+                "caseRelations": {"schema_version": "2.0", "main_paths": [], "edges": []},
+            },
+        ):
+            with self.subTest(legacy_config=bool(legacy_config)):
+                self._assert_relation_stage_inputs(legacy_config)
+
+    def _assert_relation_stage_inputs(self, legacy_config):
         calls, progress = [], []
 
         def skill_runner(**kwargs):
@@ -267,7 +280,8 @@ class RelationCheckpointTests(unittest.TestCase):
                 for i, case_id in enumerate(CASE_IDS, 1)
             ]
         }
-        prior = {"schema_version": "2.0", "main_paths": [], "edges": []}
+        material_json = json.dumps(material(), ensure_ascii=False)
+        cases_json = json.dumps(cases, ensure_ascii=False)
         with tempfile.TemporaryDirectory() as tmp:
             task = Task(
                 claim_id="c",
@@ -280,19 +294,13 @@ class RelationCheckpointTests(unittest.TestCase):
                 requirement_id="req",
                 checkpoint_enabled=False,
                 current_stage="relation_analysis",
-                config_json=json.dumps(
-                    {
-                        "requirementAnalysis": {"functionalOverview": {}},
-                        "caseNames": {"categories": []},
-                        "resultYaml": json.dumps(cases, ensure_ascii=False),
-                        "caseRelations": prior,
-                    }
-                ),
+                config_json=json.dumps({**legacy_config, "resultYaml": cases_json}),
                 payload=TaskPayload(
                     source_type="text",
                     document_type="text",
-                    source_content="原始需求",
+                    source_content=material_json,
                     openapi_content="",
+                    extra_instruction="完整用例生成阶段的指令",
                 ),
             )
             result = FunctionalCaseExecutor(
@@ -301,17 +309,18 @@ class RelationCheckpointTests(unittest.TestCase):
 
         self.assertEqual(result.status, TaskStatus.SUCCESS)
         self.assertEqual(len(calls), 1)
-        self.assertEqual(calls[0]["skill_name"], "analyze-test-case-relations")
+        self.assertEqual(calls[0]["skill_name"], "mtx-analyze-test-case-relations")
         self.assertEqual(calls[0]["expected_case_ids"], CASE_IDS)
-        body = calls[0]["input_text"]
-        self.assertIn("【原始需求】", body)
-        self.assertIn("【需求分析结果 JSON】", body)
-        self.assertIn("【完整测试用例 JSON】", body)
-        self.assertIn("【已有关系 JSON】", body)
+        self.assertEqual(
+            calls[0]["input_text"],
+            f"【材料整理结果 JSON】\n\n{material_json}\n\n【完整测试用例 JSON】\n\n{cases_json}",
+        )
+        self.assertFalse(calls[0].get("extra_instruction"))
         self.assertEqual(result.output_yaml, "")  # resultYaml 不被图谱产物覆盖
         config = json.loads(result.intermediate_json_text)
         self.assertEqual(config["caseRelations"], relation_output())
-        self.assertEqual(config["requirementAnalysis"], {"functionalOverview": {}})
+        self.assertEqual(config["requirementAnalysis"], legacy_config.get("requirementAnalysis"))
+        self.assertEqual(config["caseNames"], legacy_config.get("caseNames"))
         summary = json.loads(result.result_summary_json)
         self.assertEqual(summary["caseCount"], 7)
         self.assertEqual(summary["mainPathCount"], 1)
@@ -336,7 +345,7 @@ class RelationCheckpointTests(unittest.TestCase):
                 current_stage="relation_analysis",
                 config_json=json.dumps(
                     {
-                        "requirementAnalysis": {"functionalOverview": {}},
+                        "requirementAnalysis": analysis(),
                         "resultYaml": json.dumps({"cases": [{"case_module": "任务管理"}]}),
                     }
                 ),

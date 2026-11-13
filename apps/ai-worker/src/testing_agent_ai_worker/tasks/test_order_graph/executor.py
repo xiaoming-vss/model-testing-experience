@@ -73,14 +73,6 @@ def parse_graph_input(config_json: str) -> dict[str, Any]:
     return payload
 
 
-def graph_input_counts(payload: dict[str, Any]) -> dict[str, int]:
-    return {
-        "requirementCount": len(payload["requirements"]),
-        "caseCount": len(payload["cases"]),
-        "linkCount": len(payload["case_requirement_links"]),
-    }
-
-
 def _default_skill_dir_checker(workspace: Path, skill_name: str) -> bool:
     return (workspace / "skills" / skill_name).exists()
 

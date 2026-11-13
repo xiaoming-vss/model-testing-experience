@@ -19,11 +19,11 @@ class ProfileContext:
 
 
 def build_profile_context(task: Task, workspace: ProfileWorkspace) -> ProfileContext:
-    """Describe the selected understanding and the readable repository roots."""
+    """Describe the selected material and the readable repository roots."""
 
-    parts: list[str] = ["# 需求理解记录"]
+    parts: list[str] = ["# 已审核材料整理"]
     if task.requirement_input is None or not task.requirement_input.document_content.strip():
-        raise ValueError("任务快照缺少已审核需求理解记录")
+        raise ValueError("任务快照缺少已审核材料整理")
     parts.append(STRUCTURED_REQUIREMENT_INPUT_INSTRUCTION)
     parts.append(requirement_content(task.requirement_input.document_content))
 

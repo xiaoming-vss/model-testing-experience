@@ -50,9 +50,7 @@ async def list_profile_version_records(
         content = attempt.output_content or ""
         snapshot = attempt.input_snapshot_json or {}
         source = snapshot.get("source") if isinstance(snapshot, dict) else {}
-        understanding = (
-            source.get("requirementUnderstandingVersion") if isinstance(source, dict) else None
-        )
+        material = source.get("requirementMaterialVersion") if isinstance(source, dict) else None
         source_run_id = attempt.execution_id or attempt.id
         record = {
             "versionId": source_run_id,
@@ -61,9 +59,7 @@ async def list_profile_version_records(
             "profile": parse_repository_profile(content),
             "resultYaml": content,
             "sourceRunId": source_run_id,
-            "requirementUnderstandingVersion": (
-                understanding if isinstance(understanding, dict) else None
-            ),
+            "requirementMaterialVersion": (material if isinstance(material, dict) else None),
             "createdAt": attempt.finished_at or attempt.created_at,
         }
         if include_bindings:

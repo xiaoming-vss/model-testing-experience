@@ -20,10 +20,6 @@ _UUID = re.compile(rb"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 _METHODS = {"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT", "TRACE"}
 
 
-def current_request_id() -> str | None:
-    return _request_id.get()
-
-
 class ResponseAborted(RuntimeError):
     """The response has started and cannot be replaced with an error envelope."""
 

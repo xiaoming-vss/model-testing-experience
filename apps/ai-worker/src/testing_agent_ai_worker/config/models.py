@@ -12,6 +12,8 @@ class WorkerConfig(BaseModel):
     poll_interval_seconds: int = 10
     heartbeat_interval_seconds: int = 15
     max_concurrent_tasks: int = 2
+    traceable_review_concurrency: int = Field(default=4, ge=1, le=32)
+    traceable_review_global_concurrency: int = Field(default=4, ge=1, le=32)
     run_once: bool = False
 
 

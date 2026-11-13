@@ -47,3 +47,20 @@
   margin-bottom: 12px;
   text-align: left;
 }
+.revision-questions { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.revision-question-progress { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--ai-text-secondary, var(--app-list-label)); }
+.revision-question-track { height: 4px; overflow: hidden; border-radius: 4px; background: var(--ai-border, var(--app-revision-border)); }
+.revision-question-track span { display: block; height: 100%; background: var(--ant-color-primary); }
+.revision-question-nav { display: flex; flex-wrap: wrap; gap: 6px; }
+.revision-question-nav button { min-width: 32px; height: 30px; border: 1px solid var(--ai-border, var(--app-revision-border)); border-radius: 6px; color: inherit; background: transparent; cursor: pointer; }
+.revision-question-nav button.is-current { border-color: var(--ant-color-primary); color: var(--ant-color-primary); }
+.revision-question-nav button.is-answered { font-weight: 700; }
+.revision-question-content { border-top: 1px solid var(--ai-border, var(--app-revision-border)); padding-top: 14px; }
+.revision-question-content p { margin: 8px 0 14px; line-height: 1.7; overflow-wrap: anywhere; }
+.revision-question-content label { display: block; margin-bottom: 6px; }
+.revision-question-id { font-size: 12px; color: var(--ant-color-primary); }
+.revision-question-pagination { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.revision-question-pagination span { margin-left: auto; color: var(--ai-text-secondary, var(--app-list-label)); font-size: 12px; }
+.revision-question-extra { border-top: 1px solid var(--ai-border, var(--app-revision-border)); padding-top: 12px; }
+.revision-question-extra summary { cursor: pointer; }
+.revision-question-extra textarea { margin-top: 10px; }

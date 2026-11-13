@@ -1,16 +1,11 @@
 import { RichTextViewer } from '@/shared/components/RichTextEditor'
-import { RequirementArtifactView } from '@/domain/requirements/RequirementArtifactView'
-import { parseRequirementArtifact } from '@/domain/requirements/requirementArtifact'
 import { readSignedFileResponse } from '@/shared/api/files'
 import { saveBlob } from '@/shared/utils/download'
 import {
-  CheckCircleFilled,
-  ColumnWidthOutlined,
   DownloadOutlined,
-  FileTextOutlined,
   FileWordOutlined,
 } from '@ant-design/icons'
-import { Alert, Button, Empty, Modal, Spin } from 'antd'
+import { Alert, Button, Spin } from 'antd'
 import { useMutation } from '@tanstack/react-query'
 import { renderAsync } from 'docx-preview'
 import {
@@ -18,8 +13,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent,
-  type PointerEvent,
   type ReactNode,
 } from 'react'
 import { useAuthStore } from '@/features/auth/store/auth.store'
@@ -254,57 +247,14 @@ function RequirementTextPreview({ previewUrl, richText = false }: { previewUrl: 
   )
 }
 
-function RequirementUnderstandingArticle({ content }: { content: string }) {
-  let structured = false
-  let parseError = ''
-  try {
-    structured = !!parseRequirementArtifact(content)
-  } catch (error) {
-    parseError = error instanceof Error ? error.message : '结构化需求无法读取'
-  }
-  if (parseError) return <Alert type="error" title={parseError} />
-  if (structured) return <RequirementArtifactView content={content} />
-  const lines = content.split(/\r?\n/)
-  const firstContentIndex = lines.findIndex((line) => line.trim())
-
-  return (
-    <article className="requirement-document-understanding-content">
-      {lines.map((line, index) => {
-        const value = line.trim()
-        if (!value) return <span className="requirement-document-understanding-spacer" key={`space-${index}`} />
-        if (index === firstContentIndex) return <h1 key={`title-${index}`}>{value.replace(/^#\s+/, '')}</h1>
-        if (/^#{2,3}\s+/.test(value) || /^[一二三四五六七八九十]+[、.]/.test(value)) {
-          return <h2 key={`section-${index}`}>{value.replace(/^#{2,3}\s+/, '')}</h2>
-        }
-        if (/^\d+[.、]\s*/.test(value)) return <h3 key={`item-${index}`}>{value}</h3>
-        if (/^[-*•]\s*/.test(value)) {
-          return (
-            <ul key={`bullet-${index}`}>
-              <li>{value.replace(/^[-*•]\s*/, '')}</li>
-            </ul>
-          )
-        }
-        return <p key={`paragraph-${index}`}>{value}</p>
-      })}
-    </article>
-  )
-}
-
-type RequirementDocumentPreviewModalProps = {
-  open: boolean
-  onClose: () => void
+type RequirementDocumentPreviewContentProps = {
+  embedded?: boolean
   requirementId?: string
   requirementName?: string
   documentType?: Requirement['documentType']
   documentContent?: string
   documentFilename?: string
   documentDownloadUrl?: string
-}
-
-type RequirementDocumentPreviewContentProps = Omit<RequirementDocumentPreviewModalProps, 'open' | 'onClose'> & {
-  embedded?: boolean
-  /** 旧流程把需求理解导入需求正文；新需求生成链直接读审核版本，不再展示这块历史内容。 */
-  showEnhancedText?: boolean
 }
 
 function RequirementPreviewPane({
@@ -340,9 +290,7 @@ export function RequirementDocumentPreviewContent({
   documentFilename,
   documentDownloadUrl,
   embedded = false,
-  showEnhancedText = true,
 }: RequirementDocumentPreviewContentProps) {
-  const [splitPercent, setSplitPercent] = useState(50)
   const isWord = isWordDocument(documentType)
   const sourceDocumentPath = documentDownloadUrl || (requirementId ? `/v1/requirements/${requirementId}/download` : undefined)
   const documentUrl = useMemo(() => resolveRequirementDocumentUrl(sourceDocumentPath), [sourceDocumentPath])
@@ -357,7 +305,7 @@ export function RequirementDocumentPreviewContent({
   )
   const previewUrl = useMemo(() => resolveRequirementDocumentPreviewUrl(documentUrl), [documentUrl])
   const documentTypeLabel = isWord ? 'Word 文档' : documentType === 'richtext' ? '富文本需求' : '未配置需求文档'
-  const understandingResult = documentContent?.trim() ?? ''
+  const documentText = documentContent?.trim() ?? ''
   const downloadMutation = useMutation({
     mutationFn: () => api.downloadRequirementDocument(requirementId!),
     onSuccess: (response) => {
@@ -379,21 +327,6 @@ export function RequirementDocumentPreviewContent({
     }
   }
 
-  function handleSplitPointerMove(event: PointerEvent<HTMLDivElement>) {
-    if (!event.currentTarget.hasPointerCapture(event.pointerId)) return
-    const workspace = event.currentTarget.parentElement
-    if (!workspace) return
-    const bounds = workspace.getBoundingClientRect()
-    const nextPercent = ((event.clientX - bounds.left) / bounds.width) * 100
-    setSplitPercent(Math.min(68, Math.max(32, nextPercent)))
-  }
-
-  function handleSplitKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
-    event.preventDefault()
-    setSplitPercent((current) => Math.min(68, Math.max(32, current + (event.key === 'ArrowLeft' ? -2 : 2))))
-  }
-
   const documentPreviewContent = (
     <div className={`requirement-document-modal-stage${isWord ? ' docx-mode' : ' text-mode'}`}>
       {isWord && (documentUrl || requirementId) ? (
@@ -405,25 +338,15 @@ export function RequirementDocumentPreviewContent({
         />
       ) : !isWord && documentUrl ? (
         <RequirementTextPreview key={previewUrl} previewUrl={previewUrl} richText={documentType === 'richtext'} />
-      ) : !isWord && understandingResult ? (
+      ) : !isWord && documentText ? (
         <div className="requirement-document-text-host">
-          <article className="requirement-document-text-article">{understandingResult}</article>
+          <article className="requirement-document-text-article">{documentText}</article>
         </div>
       ) : (
         <div className="requirement-document-text-host">
           <div className="requirement-document-text-article">暂无源文件</div>
         </div>
       )}
-    </div>
-  )
-
-  const analysisResultContent = understandingResult ? (
-    <div className="requirement-document-understanding">
-      <RequirementUnderstandingArticle content={understandingResult} />
-    </div>
-  ) : (
-    <div className="requirement-document-understanding-empty">
-      <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无增强文本。需求理解在需求生成链中生成并审核，下游阶段直接引用审核通过的版本，无需导入需求。" />
     </div>
   )
 
@@ -455,10 +378,7 @@ export function RequirementDocumentPreviewContent({
         ) : null}
       </header> : null}
       {downloadMutation.error ? <Alert showIcon type="error" title={getErrorMessage(downloadMutation.error)} /> : null}
-      <div
-        className={`requirement-document-workspace${showEnhancedText ? ' is-compare' : ''}`}
-        style={showEnhancedText ? { gridTemplateColumns: `${splitPercent}fr 1px ${100 - splitPercent}fr` } : undefined}
-      >
+      <div className="requirement-document-workspace">
         <RequirementPreviewPane
           title="需求文档"
           icon={<FileWordOutlined />}
@@ -466,74 +386,8 @@ export function RequirementDocumentPreviewContent({
         >
           {documentPreviewContent}
         </RequirementPreviewPane>
-        {showEnhancedText ? <>
-          <div
-            className="requirement-document-pane-divider"
-            role="separator"
-            aria-label="调整原文与增强文本宽度"
-            aria-orientation="vertical"
-            aria-valuemin={32}
-            aria-valuemax={68}
-            aria-valuenow={Math.round(splitPercent)}
-            tabIndex={0}
-            onPointerDown={(event) => event.currentTarget.setPointerCapture(event.pointerId)}
-            onPointerMove={handleSplitPointerMove}
-            onPointerUp={(event) => event.currentTarget.releasePointerCapture(event.pointerId)}
-            onKeyDown={handleSplitKeyDown}
-          >
-            <ColumnWidthOutlined />
-          </div>
-          <RequirementPreviewPane
-            title="增强文本"
-            icon={<FileTextOutlined />}
-            meta={
-              understandingResult ? (
-                <span className="requirement-document-analysis-status">
-                  <CheckCircleFilled />
-                  已有内容
-                </span>
-              ) : (
-                <span className="requirement-document-pane-meta">暂无内容</span>
-              )
-              }
-          >
-            {analysisResultContent}
-          </RequirementPreviewPane>
-        </> : null}
+
       </div>
     </div>
-  )
-}
-
-export function RequirementDocumentPreviewModal({
-  open,
-  onClose,
-  requirementId,
-  requirementName,
-  documentType,
-  documentContent,
-  documentFilename,
-  documentDownloadUrl,
-}: RequirementDocumentPreviewModalProps) {
-  return (
-    <Modal
-      title={null}
-      open={open}
-      onCancel={onClose}
-      footer={null}
-      width="min(2000px, calc(100vw - 56px))"
-      centered
-      destroyOnHidden
-      className="requirement-document-dialog"
-    >
-      <RequirementDocumentPreviewContent
-        requirementId={requirementId}
-        requirementName={requirementName}
-        documentType={documentType}
-        documentContent={documentContent}
-        documentFilename={documentFilename}
-        documentDownloadUrl={documentDownloadUrl}
-      />
-    </Modal>
   )
 }

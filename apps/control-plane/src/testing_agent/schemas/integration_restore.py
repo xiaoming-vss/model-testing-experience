@@ -13,9 +13,3 @@ class IntegrationRestoreAudit(IntegrationProtocolModel):
     files: dict[Identifier, Annotated[int, Field(gt=0, le=2_147_483_647, strict=True)]] = Field(
         default_factory=dict, max_length=1000
     )
-
-
-class IntegrationRestoreIsolation(IntegrationProtocolModel):
-    restore_id: Identifier
-    bug_id: Identifier | None = None
-    job_id: Identifier | None = None

@@ -72,7 +72,6 @@ export type FunctionalCaseGenerateTaskStage =
 
 export type RequirementAnalysisTaskStage =
   | 'extracting_text'
-  | 'feature_understanding'
   | string
 
 export type FunctionalCaseGenerateTaskStageStatus =
@@ -458,7 +457,7 @@ export type UpdateFunctionalCaseGenerateTaskPayload = Partial<CreateFunctionalCa
 export type RunFunctionalCaseGenerateTaskPayload = {
   connectionId: string
   checkpointEnabled?: boolean
-  requirementUnderstandingVersionId?: string
+  requirementMaterialVersionId?: string
 }
 
 export type CreateRequirementAnalysisTaskPayload = {
@@ -702,7 +701,7 @@ export type RunCodeRiskTaskPayload = {
   llmConnectionId?: string
   instruction?: string
   triggerType?: 'manual' | string
-  requirementUnderstandingVersionId?: string
+  requirementMaterialVersionId?: string
 }
 
 export type RepositoryProfileRole = 'frontend' | 'backend' | 'fullstack' | 'infra' | 'test' | 'unknown'
@@ -767,7 +766,7 @@ export type RepositoryProfileTaskRun = {
   stageStatus?: string
   reviewStatus?: string
   snapshotJson?: {
-    requirementUnderstandingVersion?: {
+    requirementMaterialVersion?: {
       versionId?: string
       versionNo?: number
       taskId?: string
@@ -793,7 +792,7 @@ export type RepositoryProfileVersion = {
   profile?: RepositoryProfile | null
   resultYaml: string
   sourceRunId: string
-  requirementUnderstandingVersion?: {
+  requirementMaterialVersion?: {
     versionId?: string
     versionNo?: number
     taskId?: string
@@ -815,5 +814,5 @@ export type RunRepositoryProfileTaskPayload = {
   llmConnectionId?: string
   instruction?: string
   triggerType?: 'manual' | string
-  requirementUnderstandingVersionId?: string
+  requirementMaterialVersionId?: string
 }

@@ -21,7 +21,7 @@ from testing_agent.services.auxiliary_execution_view import auxiliary_detail
 from testing_agent.services.worker_task import WorkerTaskService
 
 
-def report_service(db, writer=None):
+def report_service(db):
     db.add(
         Sprint(
             sprint_id="s",
@@ -34,7 +34,7 @@ def report_service(db, writer=None):
     db.commit()
     repository = AiGenerateTaskRepository(AsyncSessionAdapter(db))
     metrics = SimpleNamespace(get=AsyncMock(return_value={"function": {"total": 1}}))
-    return generation_services(repository, metrics, execution_writer=writer)
+    return generation_services(repository, metrics)
 
 
 BODY = {"sprintId": "s", "connectionId": "llm", "snapshotDate": "2026-01-15"}

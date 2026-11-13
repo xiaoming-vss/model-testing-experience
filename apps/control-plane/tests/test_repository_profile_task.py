@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+from support.requirement_versions import material_artifact
 
 from testing_agent.core.errors import AppError
 from testing_agent.services.repository_profile import (
@@ -75,7 +76,7 @@ def understanding_version() -> SimpleNamespace:
         task_id="understanding-task",
         attempt_id="understanding-attempt",
         stage="feature_understanding",
-        artifact_content="已审核需求理解正文",
+        artifact_content=json.dumps(material_artifact(), ensure_ascii=False),
     )
 
 
@@ -162,7 +163,7 @@ def approved_version(monkeypatch):
         requested["version_id"] = version_id
         return version
 
-    monkeypatch.setattr(module, "approved_understanding", resolve)
+    monkeypatch.setattr(module, "approved_material", resolve)
     return version, requested
 
 
@@ -177,8 +178,8 @@ async def test_snapshot_freezes_understanding_and_working_branch_head():
     snapshot = await service.build_snapshot(make_task(), "run-1", "worker-task-1", user_id="user-1")
 
     assert snapshot["taskType"] == "repository_profile"
-    assert snapshot["requirement"]["documentContent"] == "已审核需求理解正文"
-    assert snapshot["requirementUnderstandingVersion"] == {
+    assert json.loads(snapshot["requirement"]["documentContent"]) == material_artifact()
+    assert snapshot["requirementMaterialVersion"] == {
         "versionId": "sv-understanding-1",
         "versionNo": 1,
         "taskId": "understanding-task",
@@ -216,7 +217,7 @@ async def test_explicit_understanding_version_is_forwarded(approved_version):
         "run-1",
         "worker-task-1",
         user_id="user-1",
-        understanding_version_id="sv-old",
+        material_version_id="sv-old",
     )
 
     assert requested["version_id"] == "sv-old"
@@ -239,7 +240,7 @@ async def test_missing_approved_understanding_rejects_run(monkeypatch):
     async def missing(repository, requirement_id, version_id=""):
         return None
 
-    monkeypatch.setattr(module, "approved_understanding", missing)
+    monkeypatch.setattr(module, "approved_material", missing)
     service, _ = make_service(
         bindings=[make_binding("binding-1", "repo-1", "group-1")],
         groups={"group-1": SimpleNamespace(connection_id="conn-1")},
@@ -249,7 +250,7 @@ async def test_missing_approved_understanding_rejects_run(monkeypatch):
     with pytest.raises(AppError) as error:
         await service.build_snapshot(make_task(), "run-1", "worker-task-1", user_id="user-1")
 
-    assert "先审核通过需求理解" in str(error.value)
+    assert "先审核通过材料整理" in str(error.value)
 
 
 @pytest.mark.asyncio

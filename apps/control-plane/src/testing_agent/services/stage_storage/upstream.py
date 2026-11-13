@@ -37,7 +37,7 @@ async def select_upstream_versions(
     chosen = {}
     for parent in sorted(expected):
         parent_task_id = task.task_id
-        if kind == "function" and parent == "feature_understanding":
+        if kind == "function" and parent == "extracting_text":
             parent_task = await session.scalar(
                 select(AiGenerateTask)
                 .where(

@@ -77,10 +77,6 @@ def generate_validated(
         )
     else:
         original += "\n\n正式响应只返回本阶段完整 JSON 对象。"
-    saved_config = json.loads(task.config_json or "{}")
-    saved_output = saved_config.get("resultYaml") or saved_config.get("finalOutput") or ""
-    if not isinstance(saved_output, str):
-        saved_output = json.dumps(saved_output, ensure_ascii=False)
     instruction = original
     for attempt in range(3):
         if attempt:
@@ -91,7 +87,7 @@ def generate_validated(
                     current_stage=stage,
                     stage_status="running",
                     intermediate_json_text=task.config_json or "{}",
-                    output_yaml=saved_output,
+                    output_yaml="",
                     result_summary_json=json.dumps(
                         {
                             "outputValidation": {

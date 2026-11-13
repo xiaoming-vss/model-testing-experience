@@ -1,0 +1,3 @@
+interface:
+  display_name: "生成可追溯测试点"
+  short_description: "基于材料和范围分析设计测试点"

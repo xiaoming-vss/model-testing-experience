@@ -59,45 +59,9 @@ async def test_api_first_dispatch_creates_two_stage_run(db):  # noqa: F811
     assert view.stages[1].blocked_reason
 
 
-def test_legacy_api_checkpoint_progress_remains_single_stage():
-    from testing_agent.schemas.workers import WorkerProgressRequest
-    from testing_agent.services.worker_domains.ai import apply_progress
-
-    run = SimpleNamespace(
-        run_id="legacy",
-        checkpoint_enabled=True,
-        current_stage="",
-        stage_status="pending",
-        status="running",
-        config_json={},
-        result_yaml="",
-        result_summary_json={},
-        error_message="",
-        snapshot_json={},
-    )
-    worker = SimpleNamespace(
-        task_type="api_case_generate",
-        status="running",
-        heartbeat_at=None,
-        lease_expires_at=None,
-        finished_at=None,
-        error_message="",
-    )
-    for stage in ("openapi_extract", "api_case_generating"):
-        apply_progress(
-            run,
-            worker,
-            WorkerProgressRequest(
-                worker_id="w", run_id="legacy", current_stage=stage, stage_status="running"
-            ),
-            lease_seconds=30,
-        )
-        assert run.current_stage == "generate"
-
-
 def test_api_two_stage_rejects_wrong_stage_and_modified_upstream():
-    from testing_agent.schemas.workers import WorkerProgressRequest, WorkerTaskEventRequest
-    from testing_agent.services.worker_domains.ai import apply_ai_completion_to_run, apply_progress
+    from testing_agent.schemas.workers import WorkerTaskEventRequest
+    from testing_agent.services.worker_domains.ai import apply_ai_completion_to_run
 
     run = SimpleNamespace(
         run_id="r",
@@ -111,32 +75,12 @@ def test_api_two_stage_rejects_wrong_stage_and_modified_upstream():
         error_message="",
         snapshot_json={"apiWorkflowVersion": "api_two_stage/1.0"},
     )
-    worker = SimpleNamespace(
-        task_type="api_case_generate",
-        status="running",
-        heartbeat_at=None,
-        lease_expires_at=None,
-        finished_at=None,
-        error_message="",
-    )
     with pytest.raises(AppError):
         apply_ai_completion_to_run(
             run,
             WorkerTaskEventRequest(
                 worker_id="w", status="success", output_yaml="cases: []", config_json={}
             ),
-        )
-    with pytest.raises(AppError):
-        apply_progress(
-            run,
-            worker,
-            WorkerProgressRequest(
-                worker_id="w",
-                current_stage="openapi_extract",
-                stage_status="waiting_review",
-                config_json={},
-            ),
-            lease_seconds=30,
         )
     run.current_stage = "generate"
     run.config_json = {"apiExtraction": {"a": {"path": "/a", "method": "GET"}}}

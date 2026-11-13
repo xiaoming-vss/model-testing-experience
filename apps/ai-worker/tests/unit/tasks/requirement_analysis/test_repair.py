@@ -8,25 +8,23 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 from testing_agent_ai_worker.models.task import Task, TaskPayload
-from testing_agent_ai_worker.tasks.requirement_analysis.two_stage import execute_two_stage
+from testing_agent_ai_worker.skill_names import MATERIAL_SKILL
+from testing_agent_ai_worker.tasks.requirement_analysis.material_stage import execute_material_stage
 
 FIXTURES = Path(__file__).resolve().parents[4] / "tests/fixtures/requirement_artifacts"
 
 
 def example(kind):
-    return json.loads((FIXTURES / f"{kind}.example.json").read_text())
+    name = "readable-material" if kind == "document-extraction" else kind
+    return json.loads((FIXTURES / f"{name}.example.json").read_text())
 
 
 class RepairTests(unittest.TestCase):
     def execute(self, root, stage, runner, progress, *, revision=False, richtext=False):
         config = {}
-        if stage == "feature_understanding":
-            config["firstStepOutput"] = example("document-extraction")
         if revision:
             config["revisionInstruction"] = "只修订已确认的入口说明"
-            config["firstStepOutput" if stage == "extracting_text" else "resultYaml"] = example(
-                "document-extraction" if stage == "extracting_text" else "requirement-understanding"
-            )
+            config["firstStepOutput"] = example("document-extraction")
         task = Task(
             task_id="task",
             attempt_id="run",
@@ -38,7 +36,7 @@ class RepairTests(unittest.TestCase):
                 openapi_content="", document_type="richtext" if richtext else "word"
             ),
         )
-        return execute_two_stage(
+        return execute_material_stage(
             task=task,
             started_at=datetime.now().astimezone(),
             progress_callback=progress.append,
@@ -51,17 +49,11 @@ class RepairTests(unittest.TestCase):
                     {"fileId": "img", "sourcePath": str(Path(root) / "img.png")}
                 ],
             ),
-            first_skill_name="extract-richtext-enhanced-text"
-            if richtext
-            else "extract-docx-enhanced-text",
-            second_skill_name="prd-feature-understanding-skill",
+            first_skill_name=MATERIAL_SKILL,
         )
 
     def test_both_stages_repair_and_preserve_materials_and_revision(self):
-        for stage, kind in (
-            ("extracting_text", "document-extraction"),
-            ("feature_understanding", "requirement-understanding"),
-        ):
+        for stage, kind in (("extracting_text", "document-extraction"),):
             for revision in (False, True):
                 with (
                     self.subTest(stage=stage, revision=revision),
@@ -69,7 +61,10 @@ class RepairTests(unittest.TestCase):
                 ):
                     good = example(kind)
                     bad = deepcopy(good)
-                    bad["questions"][0]["affectedRefs"][0]["id"] = "missing"
+                    if stage == "extracting_text":
+                        bad["functions"][0]["sections"][0]["items"][0]["materialBlockIds"] = [
+                            "missing"
+                        ]
                     runner = Mock(side_effect=[json.dumps(bad), json.dumps(good)])
                     progress = []
                     result = self.execute(
@@ -79,7 +74,10 @@ class RepairTests(unittest.TestCase):
                     first, second = [call.kwargs for call in runner.call_args_list]
                     self.assertEqual(first["input_text"], second["input_text"])
                     self.assertEqual(first.get("media"), second.get("media"))
-                    self.assertIn("affectedRefs", second["extra_instruction"])
+                    self.assertIn(
+                        "materialBlockIds",
+                        second["extra_instruction"],
+                    )
                     self.assertIn("missing", second["extra_instruction"])
                     events = [
                         json.loads(p.result_summary_json)["outputValidation"]
@@ -89,77 +87,12 @@ class RepairTests(unittest.TestCase):
                     self.assertEqual(events[-1]["repairAttempt"], 1)
                     repairing = next(p for p in progress if p.stage_status == "running")
                     saved = json.loads(repairing.intermediate_json_text)
-                    if stage == "feature_understanding":
-                        self.assertEqual(saved["firstStepOutput"], example("document-extraction"))
                     if revision:
                         self.assertEqual(saved["revisionInstruction"], "只修订已确认的入口说明")
-                        if stage == "feature_understanding":
-                            self.assertEqual(json.loads(repairing.output_yaml), good)
 
-                    if stage == "extracting_text":
-                        self.assertIsNone(result)
-                        self.assertEqual(progress[-1].stage_status, "waiting_review")
-                    else:
-                        self.assertEqual(json.loads(result.output_yaml), good)
+                    self.assertEqual(json.loads(result.output_yaml), good)
                     records = list(Path(root).rglob("attempt-*.json"))
                     self.assertEqual(len(records), 2)
-
-    def test_native_compact_output_repairs_evidence_without_expanding_storage(self):
-        with tempfile.TemporaryDirectory() as root:
-            good = example("requirement-understanding")
-            bad = deepcopy(good)
-            bad["modules"][0]["purpose"]["evidenceIds"] = ["missing"]
-            runner = Mock(side_effect=[json.dumps(bad), json.dumps(good)])
-            result = self.execute(root, "feature_understanding", runner, [])
-            self.assertEqual(json.loads(result.output_yaml), good)
-            self.assertEqual(runner.call_count, 2)
-            instruction = runner.call_args_list[0].kwargs["extra_instruction"]
-            self.assertIn('"const": "2.0"', instruction)
-            self.assertIn("conditionRuleIds", instruction)
-
-    def test_confirmed_answer_repairs_stale_open_question_reference(self):
-        with tempfile.TemporaryDirectory() as root:
-            good = example("requirement-understanding")
-            bad = deepcopy(good)
-            fact = bad["businessRules"][0]["expectedBehavior"][0]
-            fact["confirmationStatus"] = "confirmed"
-            fact["relatedQuestionIds"] = [bad["questions"][0]["id"]]
-            repaired = deepcopy(good)
-
-            def remove_question_references(value):
-                if isinstance(value, dict):
-                    if "relatedQuestionIds" in value:
-                        value["relatedQuestionIds"] = [
-                            question_id
-                            for question_id in value["relatedQuestionIds"]
-                            if question_id != good["questions"][0]["id"]
-                        ]
-                    for child in value.values():
-                        remove_question_references(child)
-                elif isinstance(value, list):
-                    for child in value:
-                        remove_question_references(child)
-
-            remove_question_references(repaired)
-            repaired["questions"] = repaired["questions"][1:]
-            runner = Mock(side_effect=[json.dumps(bad), json.dumps(repaired)])
-            result = self.execute(root, "feature_understanding", runner, [])
-            self.assertEqual(runner.call_count, 2)
-            self.assertEqual(json.loads(result.output_yaml), repaired)
-            self.assertIn(
-                "已确认内容不能继续引用未解决问题",
-                runner.call_args_list[1].kwargs["extra_instruction"],
-            )
-
-    def test_old_version_requires_model_correction_instead_of_automatic_conversion(self):
-        with tempfile.TemporaryDirectory() as root:
-            current = example("requirement-understanding")
-            old = {**current, "schemaVersion": "1.0"}
-            runner = Mock(side_effect=[json.dumps(old), json.dumps(current)])
-            result = self.execute(root, "feature_understanding", runner, [])
-            self.assertEqual(runner.call_count, 2)
-            self.assertIn("schemaVersion", runner.call_args_list[1].kwargs["extra_instruction"])
-            self.assertEqual(json.loads(result.output_yaml), current)
 
     def test_exhaustion_never_publishes_invalid_output(self):
         with tempfile.TemporaryDirectory() as root:
@@ -207,20 +140,10 @@ class RepairTests(unittest.TestCase):
         runner = Mock(side_effect=["not json", "{}", json.dumps(good)])
         progress = []
         with tempfile.TemporaryDirectory() as root:
-            self.execute(root, "extracting_text", runner, progress)
+            result = self.execute(root, "extracting_text", runner, progress)
             records = list(Path(root).rglob("attempt-*.json"))
             self.assertEqual(len(records), 3)
             self.assertTrue(all(p.stat().st_mode & 0o777 == 0o600 for p in records))
         self.assertEqual(runner.call_count, 3)
-        actual = json.loads(progress[-1].intermediate_json_text)["firstStepOutput"]
+        actual = json.loads(result.output_yaml)
         self.assertEqual(actual["questions"], good["questions"])
-
-    def test_invalid_upstream_is_not_sent_to_model_for_repair(self):
-        from unittest.mock import patch
-
-        runner = Mock()
-        with tempfile.TemporaryDirectory() as root:
-            with patch(__name__ + ".example", return_value={}):
-                with self.assertRaises(ValueError):
-                    self.execute(root, "feature_understanding", runner, [])
-        runner.assert_not_called()

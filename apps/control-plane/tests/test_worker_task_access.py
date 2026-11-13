@@ -2,7 +2,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-from support.execution_writer import MemoryExecutionWriter
 
 from testing_agent.core.errors import AppError, ErrBadRequest, ErrForbidden
 from testing_agent.schemas.workers import WorkerClaimRequest
@@ -21,7 +20,7 @@ async def test_ai_task_access_always_checks_current_authority(monkeypatch, outco
     authorize = AsyncMock(side_effect=ErrForbidden() if outcome == "revoked" else None)
     direct = SimpleNamespace(is_direct=AsyncMock(return_value=True), authorize=authorize)
     monkeypatch.setattr(module, "DirectStageWorkerService", lambda session: direct)
-    service = WorkerTaskService(repository, execution_writer=MemoryExecutionWriter())
+    service = WorkerTaskService(repository)
 
     if outcome == "allowed":
         assert await service.ai_worker_task("task") is task

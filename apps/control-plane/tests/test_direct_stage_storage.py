@@ -1,5 +1,7 @@
 """Direct-stage transaction prototype."""
 
+import json
+
 import pytest
 from sqlalchemy import select
 from support.ai_execution import AsyncSessionAdapter, seed_task  # noqa: F401
@@ -8,6 +10,25 @@ from support.ai_execution import db as db
 from testing_agent.core.errors import AppError
 from testing_agent.models.ai_generation_stage import AiGenerationStage
 from testing_agent.services.stage_storage import DirectStageStorage
+
+SCOPE_ANALYSIS = {
+    "schemaVersion": "1.0",
+    "artifactType": "test_scope_impact_risk",
+    "testObjects": [],
+    "impactAreas": [],
+    "risks": [],
+    "openQuestions": [],
+}
+
+TRACEABLE_POINTS = {
+    "schemaVersion": "1.0",
+    "artifactType": "traceable_test_points",
+    "reviewStatus": "independent_reviewed",
+    "testPoints": [],
+    "coverageGaps": [],
+}
+TRACEABLE_SOURCE = {"sourceContent": json.dumps({"materialBlocks": [], "questions": []})}
+TRACEABLE_CONFIG = {"requirementAnalysis": SCOPE_ANALYSIS}
 
 
 def setup_stage(session):
@@ -31,7 +52,7 @@ async def test_unconfigured_chain_view_does_not_create_stages(db):  # noqa: F811
     assert len(db.scalars(select(AiGenerationStage)).all()) == before
 
 
-async def test_requirement_document_runs_and_reviews_as_two_independent_stages(db):  # noqa: F811
+async def test_requirement_document_runs_and_reviews_as_single_material_stage(db):  # noqa: F811
     import json
 
     from support.generation import generation_services
@@ -40,12 +61,15 @@ async def test_requirement_document_runs_and_reviews_as_two_independent_stages(d
     from testing_agent.models.ai_generate_task import AiGenerateTask
     from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
     from testing_agent.models.requirement import Requirement
+    from testing_agent.models.worker_task import WorkerTask
     from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
     from testing_agent.schemas.generation_chain import (
         GenerationChainReviewRequest,
         GenerationChainRunRequest,
     )
+    from testing_agent.schemas.workers import WorkerTaskEventRequest
     from testing_agent.services.stage_storage.commands import DirectStageCommands
+    from testing_agent.services.stage_storage.worker_events import apply_stage_completion
 
     stage, storage = setup_stage(db)
     task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == "task"))
@@ -76,49 +100,35 @@ async def test_requirement_document_runs_and_reviews_as_two_independent_stages(d
     extracting = db.get(AiGenerationAttempt, first.stages[0].active_run_id)
     assert extracting.input_snapshot_json["source"]["documentFileId"] == "document-file"
     assert extracting.input_snapshot_json["source"]["workflowVersion"] == 2
-    await storage.publish(
-        stage.id,
+    queue = db.scalar(select(WorkerTask).where(WorkerTask.task_id == extracting.worker_task_id))
+    frozen = extracting.input_snapshot_json
+    await apply_stage_completion(
+        session,
+        queue,
+        stage_id=stage.id,
         attempt_id=extracting.id,
-        worker_task_id=extracting.worker_task_id,
-        content=json.dumps(example("document-extraction"), ensure_ascii=False),
-        output_format="json",
-        output_context=None,
+        kind="requirement_analysis",
+        stage="extracting_text",
+        source=frozen["source"],
+        frozen_config=frozen["config"],
+        body=WorkerTaskEventRequest(
+            worker_id="worker",
+            status="success",
+            config_json=frozen["config"],
+            output_yaml=json.dumps(example("readable-material"), ensure_ascii=False),
+        ),
     )
     db.commit()
     approved = await commands.review(
         "r",
         "requirement_analysis",
         "extracting_text",
-        GenerationChainReviewRequest(
-            action="approve",
-            expectedAttemptId=extracting.id,
-            continueAfter=True,
-            connectionId="llm",
-        ),
+        GenerationChainReviewRequest(action="approve", expectedAttemptId=extracting.id),
         "u",
     )
-    first_version = approved.stages[0].latest_version.version_id
-    understanding = db.get(AiGenerationAttempt, approved.stages[1].active_run_id)
-    assert understanding.input_snapshot_json["versioning"]["upstreamVersions"] == {
-        "extracting_text": first_version
-    }
-    await storage.publish(
-        understanding.stage_id,
-        attempt_id=understanding.id,
-        worker_task_id=understanding.worker_task_id,
-        content=json.dumps(example("requirement-understanding"), ensure_ascii=False),
-        output_format="json",
-        output_context=None,
-    )
-    db.commit()
-    final = await commands.review(
-        "r",
-        "requirement_analysis",
-        "feature_understanding",
-        GenerationChainReviewRequest(action="approve", expectedAttemptId=understanding.id),
-        "u",
-    )
-    assert final.stages[1].state == "approved"
+    assert len(approved.stages) == 1
+    assert approved.stages[0].state == "approved"
+    assert approved.stages[0].latest_version.version_id
 
 
 async def test_direct_attempt_isolated_edit_then_immutable_version(db):  # noqa: F811
@@ -385,7 +395,7 @@ async def test_import_records_approved_parent_versions_and_formal_target(db):  #
             stage.id, expected_attempt_id=attempt.id, reviewer_user_id="u", comment="ok"
         )
 
-    first = await approve(analysis, "first", '{"purpose":"login"}', "json", {})
+    first = await approve(analysis, "first", json.dumps(SCOPE_ANALYSIS), "json", {})
     second = await approve(
         points, "second", '{"points":["login"]}', "json", {"requirement_analysis": first.version_id}
     )
@@ -721,7 +731,7 @@ async def test_stage_worker_progress_validates_frozen_inputs_and_waits_for_revie
     from testing_agent.services.stage_storage.worker_events import apply_stage_progress
 
     stage, storage = setup_stage(db)
-    frozen = {"requirementAnalysis": {"scope": "approved"}}
+    frozen = TRACEABLE_CONFIG.copy()
     attempt = await storage.prepare(
         stage.id, worker_task_id="worker-1", requested_by="u", input_snapshot={"config": frozen}
     )
@@ -745,7 +755,7 @@ async def test_stage_worker_progress_validates_frozen_inputs_and_waits_for_revie
             attempt_id=attempt.id,
             kind="function",
             stage="case_names",
-            source={},
+            source=TRACEABLE_SOURCE,
             frozen_config=frozen,
             body=WorkerProgressRequest(
                 worker_id="node",
@@ -758,9 +768,9 @@ async def test_stage_worker_progress_validates_frozen_inputs_and_waits_for_revie
     with pytest.raises(AppError):
         await progress({"requirementAnalysis": {"scope": "tampered"}, "caseNames": {"name": "x"}})
     assert stage.active_attempt_id == attempt.id and stage.current_attempt_id is None
-    await progress({"requirementAnalysis": {"scope": "approved"}, "caseNames": {"name": "x"}})
+    await progress({**frozen, "caseNames": TRACEABLE_POINTS})
     assert stage.active_attempt_id is None and stage.current_attempt_id == attempt.id
-    assert attempt.output_content == '{"name": "x"}' and queue.status == "success"
+    assert json.loads(attempt.output_content) == TRACEABLE_POINTS and queue.status == "success"
 
 
 async def test_stage_worker_running_progress_accepts_empty_config(db):  # noqa: F811
@@ -826,12 +836,12 @@ async def test_direct_worker_claim_snapshot_start_and_review_handoff(db, monkeyp
     from testing_agent.services.stage_storage.worker_service import DirectStageWorkerService
 
     stage, storage = setup_stage(db)
-    frozen = {"requirementAnalysis": {"scope": "approved"}}
+    frozen = TRACEABLE_CONFIG.copy()
     attempt = await storage.prepare(
         stage.id,
         worker_task_id="worker-direct",
         requested_by="u",
-        input_snapshot={"source": {}, "config": frozen, "llmConnectionId": "llm"},
+        input_snapshot={"source": TRACEABLE_SOURCE, "config": frozen, "llmConnectionId": "llm"},
     )
     queue = WorkerTask(
         domain="ai",
@@ -860,11 +870,13 @@ async def test_direct_worker_claim_snapshot_start_and_review_handoff(db, monkeyp
             run_id=attempt.id,
             current_stage="case_names",
             stage_status="waiting_review",
-            config_json={**frozen, "caseNames": {"name": "point"}},
+            config_json={**frozen, "caseNames": TRACEABLE_POINTS},
         ),
     )
     assert queue.status == "success" and stage.current_attempt_id == attempt.id
-    assert stage.review_status == "pending" and attempt.output_content == '{"name": "point"}'
+    assert (
+        stage.review_status == "pending" and json.loads(attempt.output_content) == TRACEABLE_POINTS
+    )
 
 
 async def test_worker_api_service_routes_direct_tasks_without_old_run_rows(db, monkeypatch):  # noqa: F811
@@ -881,12 +893,12 @@ async def test_worker_api_service_routes_direct_tasks_without_old_run_rows(db, m
     from testing_agent.services.worker_task import WorkerTaskService
 
     stage, storage = setup_stage(db)
-    frozen = {"requirementAnalysis": {"scope": "approved"}}
+    frozen = TRACEABLE_CONFIG.copy()
     attempt = await storage.prepare(
         stage.id,
         worker_task_id="worker-direct",
         requested_by="u",
-        input_snapshot={"source": {}, "config": frozen, "llmConnectionId": "llm"},
+        input_snapshot={"source": TRACEABLE_SOURCE, "config": frozen, "llmConnectionId": "llm"},
     )
     queue = WorkerTask(
         domain="ai",
@@ -913,7 +925,7 @@ async def test_worker_api_service_routes_direct_tasks_without_old_run_rows(db, m
             run_id=attempt.id,
             current_stage="case_names",
             stage_status="waiting_review",
-            config_json={**frozen, "caseNames": {"name": "point"}},
+            config_json={**frozen, "caseNames": TRACEABLE_POINTS},
         ),
     )
     assert queue.status == "success" and stage.current_attempt_id == attempt.id
@@ -1316,6 +1328,25 @@ async def test_stage_view_exposes_failed_attempt_reason_and_time(db):  # noqa: F
     assert point.failed_at is not None
 
 
+async def test_stage_view_preserves_review_findings_for_user(db):  # noqa: F811
+    from testing_agent.models.ai_generate_task import AiGenerateTask
+    from testing_agent.services.stage_storage.views import build_stage_views
+    from testing_agent.services.stage_storage.worker import StageWorkerTransitions
+
+    stage, storage = setup_stage(db)
+    task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == stage.task_id))
+    attempt = await storage.prepare(
+        stage.id, worker_task_id="review-run", requested_by="u", input_snapshot={}
+    )
+    detail = "复核未通过（2 项问题）\n1. 报告生成：缺少成功条件\n2. 语义切片：缺少前置条件"
+    await StageWorkerTransitions(AsyncSessionAdapter(db)).failed(
+        stage.id, attempt.id, "review-run", error_message=detail
+    )
+    result = await build_stage_views(AsyncSessionAdapter(db), task, "function", detail=True)
+    point = next(row for row in result.stages if row.stage == "case_names")
+    assert point.error_message == detail
+
+
 async def test_version_detail_reads_frozen_source_and_allows_missing_parent(db):  # noqa: F811
     from testing_agent.models.ai_generate_task import AiGenerateTask
     from testing_agent.services.stage_storage.version_views import version_detail
@@ -1564,7 +1595,7 @@ async def test_cross_chain_requirement_version_delete_preserves_approved_functio
     version = AiGenerateStageVersion(
         version_id="understanding",
         task_id=source_task.task_id,
-        stage="feature_understanding",
+        stage="extracting_text",
         version_no=1,
         attempt_id="old-attempt",
         artifact_content='{"name":"requirement"}',
@@ -1576,7 +1607,7 @@ async def test_cross_chain_requirement_version_delete_preserves_approved_functio
     )
     db.add(version)
     db.commit()
-    frozen = {"source": {"requirementUnderstandingVersion": {"versionId": "understanding"}}}
+    frozen = {"source": {"requirementMaterialVersion": {"versionId": "understanding"}}}
     first = await storage.prepare(
         stage.id, worker_task_id="first", requested_by="u", input_snapshot=frozen
     )
@@ -1661,13 +1692,16 @@ async def test_direct_commands_validate_save_and_review_candidate(db):  # noqa: 
 
     stage, storage = setup_stage(db)
     attempt = await storage.prepare(
-        stage.id, worker_task_id="first", requested_by="u", input_snapshot={"source": {}}
+        stage.id,
+        worker_task_id="first",
+        requested_by="u",
+        input_snapshot={"source": TRACEABLE_SOURCE, "config": TRACEABLE_CONFIG},
     )
     await storage.publish(
         stage.id,
         attempt_id=attempt.id,
         worker_task_id="first",
-        content='{"x":1}',
+        content=json.dumps(TRACEABLE_POINTS),
         output_format="json",
         output_context=None,
     )
@@ -1687,11 +1721,16 @@ async def test_direct_commands_validate_save_and_review_candidate(db):  # noqa: 
         "r",
         "function",
         "case_names",
-        GenerationChainSaveDraftRequest(expectedAttemptId=attempt.id, content='{"point":2}'),
+        GenerationChainSaveDraftRequest(
+            expectedAttemptId=attempt.id, content=json.dumps(TRACEABLE_POINTS)
+        ),
         "u",
     )
     point = next(item for item in saved.stages if item.stage == "case_names")
-    assert point.draft.content == '{"point": 2}'
+    assert json.loads(point.draft.content) == {
+        **TRACEABLE_POINTS,
+        "reviewStatus": "self_review_only",
+    }
     with pytest.raises(AppError):
         await commands.review(
             "r",
@@ -1870,11 +1909,12 @@ async def test_rejection_removes_candidate_and_unshared_queue_error(db):  # noqa
 
 
 async def test_function_two_stage_flow_does_not_create_old_run(db, monkeypatch):  # noqa: F811
+    import json
     from unittest.mock import AsyncMock
     from uuid import uuid4
 
     from support.generation import generation_services
-    from support.requirement_versions import understanding_version
+    from support.requirement_versions import material_version
 
     from testing_agent.models.ai_generate_task import AiGenerateTask
     from testing_agent.models.worker_task import WorkerTask
@@ -1895,7 +1935,7 @@ async def test_function_two_stage_flow_does_not_create_old_run(db, monkeypatch):
 
     stage, _ = setup_stage(db)
     task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == stage.task_id))
-    understanding = understanding_version(db)
+    understanding = material_version(db)
     adapter = AsyncSessionAdapter(db)
     bundle = generation_services(AiGenerateTaskRepository(adapter))
     connection_check = AsyncMock()
@@ -1908,7 +1948,7 @@ async def test_function_two_stage_flow_does_not_create_old_run(db, monkeypatch):
         bundle.chain, task, "function", "requirement_analysis", body, "u"
     )
     assert attempt.input_snapshot_json["versioning"]["upstreamVersions"] == {
-        "feature_understanding": understanding.version_id
+        "extracting_text": understanding.version_id
     }
     await adapter.commit()
     same = await run_command.start_stage(
@@ -1928,7 +1968,7 @@ async def test_function_two_stage_flow_does_not_create_old_run(db, monkeypatch):
         body.model_copy(update={"connection_id": "other"}),
         body.model_copy(update={"instruction": "different"}),
         body.model_copy(update={"config_json": {"custom": "different"}}),
-        body.model_copy(update={"upstream_versions": {"feature_understanding": "different"}}),
+        body.model_copy(update={"upstream_versions": {"extracting_text": "different"}}),
     ):
         with pytest.raises(AppError):
             await run_command.start_stage(
@@ -1944,7 +1984,7 @@ async def test_function_two_stage_flow_does_not_create_old_run(db, monkeypatch):
             worker_id="node",
             current_stage="requirement_analysis",
             stage_status="waiting_review",
-            config_json={"requirementAnalysis": {"purpose": "login"}},
+            config_json={"requirementAnalysis": SCOPE_ANALYSIS},
         ),
     )
     await DirectStageCommands(bundle.chain).review(
@@ -1962,8 +2002,10 @@ async def test_function_two_stage_flow_does_not_create_old_run(db, monkeypatch):
         GenerationChainRunRequest(connectionId="llm"),
         "u",
     )
-    assert second.input_snapshot_json["config"]["requirementAnalysis"] == {"purpose": "login"}
-    assert second.input_snapshot_json["source"]["sourceContent"] == "versioned source"
+    assert second.input_snapshot_json["config"]["requirementAnalysis"] == SCOPE_ANALYSIS
+    assert json.loads(second.input_snapshot_json["source"]["sourceContent"]) == json.loads(
+        understanding.artifact_content
+    )
 
 
 async def test_approval_remains_if_next_dispatch_fails(db, monkeypatch):  # noqa: F811
@@ -1981,13 +2023,17 @@ async def test_approval_remains_if_next_dispatch_fails(db, monkeypatch):  # noqa
         stage.id,
         worker_task_id="first",
         requested_by="u",
-        input_snapshot={"source": {}, "llmConnectionId": "llm"},
+        input_snapshot={
+            "source": TRACEABLE_SOURCE,
+            "config": TRACEABLE_CONFIG,
+            "llmConnectionId": "llm",
+        },
     )
     await storage.publish(
         stage.id,
         attempt_id=attempt.id,
         worker_task_id="first",
-        content='{"point":1}',
+        content=json.dumps(TRACEABLE_POINTS),
         output_format="json",
         output_context=None,
     )
@@ -2007,7 +2053,7 @@ async def test_approval_remains_if_next_dispatch_fails(db, monkeypatch):  # noqa
     )
     point = next(item for item in result.stages if item.stage == "case_names")
     assert point.state == "approved" and point.latest_version is not None
-    assert "测试需求分析" in result.continuation_error
+    assert "测试范围风险分析" in result.continuation_error
 
 
 async def test_approval_can_continue_to_next_direct_stage(db, monkeypatch):  # noqa: F811
@@ -2016,7 +2062,7 @@ async def test_approval_can_continue_to_next_direct_stage(db, monkeypatch):  # n
     from uuid import uuid4
 
     from support.generation import generation_services
-    from support.requirement_versions import understanding_version
+    from support.requirement_versions import material_version
 
     from testing_agent.models.ai_generate_stage_version import AiGenerateStageVersion
     from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
@@ -2026,7 +2072,7 @@ async def test_approval_can_continue_to_next_direct_stage(db, monkeypatch):  # n
     from testing_agent.services.stage_storage.commands import DirectStageCommands
 
     stage, storage = setup_stage(db)
-    understanding_version(db)
+    material = material_version(db)
     db.add(
         AiGenerateStageVersion(
             version_id="analysis",
@@ -2034,8 +2080,15 @@ async def test_approval_can_continue_to_next_direct_stage(db, monkeypatch):  # n
             stage="requirement_analysis",
             version_no=1,
             attempt_id="old",
-            artifact_content='{"purpose":"login"}',
+            artifact_content=json.dumps(SCOPE_ANALYSIS),
             artifact_format="json",
+            artifact_context_json={
+                "functionalSource": {
+                    "sourceContent": material.artifact_content,
+                    "documentType": "text",
+                    "requirementMaterialVersion": {"versionId": material.version_id},
+                }
+            },
             reviewer_user_id="u",
             reviewed_at=datetime.now(UTC),
             review_comment="",
@@ -2048,7 +2101,8 @@ async def test_approval_can_continue_to_next_direct_stage(db, monkeypatch):  # n
         worker_task_id="first",
         requested_by="u",
         input_snapshot={
-            "source": {},
+            "source": TRACEABLE_SOURCE,
+            "config": TRACEABLE_CONFIG,
             "llmConnectionId": "llm",
             "versioning": {"upstreamVersions": {"requirement_analysis": "analysis"}},
         },
@@ -2057,7 +2111,7 @@ async def test_approval_can_continue_to_next_direct_stage(db, monkeypatch):  # n
         stage.id,
         attempt_id=attempt.id,
         worker_task_id="first",
-        content='{"point":1}',
+        content=json.dumps(TRACEABLE_POINTS),
         output_format="json",
         output_context=None,
     )
@@ -2264,6 +2318,7 @@ async def test_graph_result_is_bound_to_approved_case_version(db, monkeypatch): 
     from unittest.mock import AsyncMock
 
     from support.direct_graph import cases_output, relations_output
+    from support.requirement_analysis import example
 
     from testing_agent.models.ai_generate_task import AiGenerateTask
     from testing_agent.models.worker_task import WorkerTask
@@ -2275,13 +2330,19 @@ async def test_graph_result_is_bound_to_approved_case_version(db, monkeypatch): 
 
     stage, storage = setup_stage(db)
     stage.stage = "detailed_cases"
+    material = example("readable-material")
+    material_version = {"versionId": "frozen-material-version"}
     first = await storage.prepare(
         stage.id,
         worker_task_id="leaf",
         requested_by="u",
         input_snapshot={
-            "source": {"sourceContent": "source"},
-            "config": {"requirementAnalysis": {"purpose": "login"}},
+            "source": {
+                "sourceContent": json.dumps(material),
+                "requirementMaterialVersion": material_version,
+                "instruction": "用例生成指令",
+            },
+            "config": {"requirementAnalysis": SCOPE_ANALYSIS},
         },
     )
     await storage.publish(
@@ -2299,6 +2360,13 @@ async def test_graph_result_is_bound_to_approved_case_version(db, monkeypatch): 
     task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == "task"))
     monkeypatch.setattr(relations, "require_personal_connection", AsyncMock())
     graph = await relations.launch_graph(AsyncSessionAdapter(db), task, first.id, "u", "llm")
+    graph_source = graph.input_snapshot_json["source"]
+    assert set(graph_source) == {"sourceContent", "documentType", "requirementMaterialVersion"}
+    assert json.loads(graph_source["sourceContent"]) == material
+    assert graph_source["requirementMaterialVersion"] == material_version
+    graph_config = graph.input_snapshot_json["config"]
+    assert set(graph_config) == {"resultYaml"}
+    assert json.loads(graph_config["resultYaml"]) == json.loads(cases_output())
     with pytest.raises(AppError):
         await delete_stage_version(AsyncSessionAdapter(db), task, version.version_id)
     queue = db.scalar(select(WorkerTask).where(WorkerTask.task_id == graph.worker_task_id))
@@ -2315,8 +2383,6 @@ async def test_graph_result_is_bound_to_approved_case_version(db, monkeypatch): 
             worker_id="worker",
             status="success",
             config_json={
-                "requirementAnalysis": {"purpose": "login"},
-                "caseNames": None,
                 "caseRelations": relations_output(),
             },
         ),
@@ -2330,6 +2396,11 @@ async def test_graph_result_is_bound_to_approved_case_version(db, monkeypatch): 
     assert response.config_json["caseRelations"] == relations_output()
     assert db.get(AiGenerationStage, graph.stage_id).review_status == "not_required"
     assert first.output_content == cases_output()
+    rerun = await relations.launch_graph(AsyncSessionAdapter(db), task, first.id, "u", "llm")
+    assert rerun.input_snapshot_json["config"] == graph_config
+    assert (await relations.graph_view(AsyncSessionAdapter(db), task, first))["configJson"][
+        "caseRelations"
+    ] == relations_output()
 
 
 @pytest.mark.parametrize("kind", ["api", "ui"])
@@ -2394,13 +2465,16 @@ async def test_stage_http_edit_and_review_use_direct_attempt(db):  # noqa: F811
 
     stage, storage = setup_stage(db)
     candidate = await storage.prepare(
-        stage.id, worker_task_id="worker", requested_by="u", input_snapshot={"source": {}}
+        stage.id,
+        worker_task_id="worker",
+        requested_by="u",
+        input_snapshot={"source": TRACEABLE_SOURCE, "config": TRACEABLE_CONFIG},
     )
     await storage.publish(
         stage.id,
         attempt_id=candidate.id,
         worker_task_id="worker",
-        content='{"point": 1}',
+        content=json.dumps(TRACEABLE_POINTS),
         output_format="json",
         output_context=None,
     )
@@ -2419,7 +2493,7 @@ async def test_stage_http_edit_and_review_use_direct_attempt(db):  # noqa: F811
         assert detail.status_code == 200, detail.text
         saved = await client.put(
             "/v1/requirements/r/generation/function/stages/case_names/draft",
-            json={"expectedAttemptId": candidate.id, "content": '{"point": 2}'},
+            json={"expectedAttemptId": candidate.id, "content": json.dumps(TRACEABLE_POINTS)},
         )
         assert saved.status_code == 200, saved.text
         point = next(
@@ -2462,12 +2536,14 @@ async def test_direct_revision_attachment_owner_requires_frozen_file_reference(d
         await require_file_resource(AsyncSessionAdapter(db), row)
 
 
-async def test_graph_http_uses_version_attempt_identity(db, monkeypatch):  # noqa: F811
+@pytest.mark.parametrize("has_material", [True, False])
+async def test_graph_http_uses_version_attempt_identity(db, monkeypatch, has_material):  # noqa: F811
     from unittest.mock import AsyncMock
 
     import httpx
     from support.direct_graph import cases_output
     from support.generation import generation_services, install_generation_services
+    from support.requirement_analysis import example
 
     from testing_agent.api.deps import get_current_user_id
     from testing_agent.app import create_app
@@ -2481,8 +2557,11 @@ async def test_graph_http_uses_version_attempt_identity(db, monkeypatch):  # noq
         worker_task_id="leaf",
         requested_by="u",
         input_snapshot={
-            "source": {"sourceContent": "source"},
-            "config": {"requirementAnalysis": {"purpose": "login"}},
+            "source": {
+                "sourceContent": json.dumps(example("readable-material"))
+                if has_material
+                else "旧需求正文"
+            },
             "llmConnectionId": "llm",
         },
     )
@@ -2510,6 +2589,10 @@ async def test_graph_http_uses_version_attempt_identity(db, monkeypatch):  # noq
         assert ready.status_code == 200, ready.text
         assert ready.json()["data"]["reviewStatus"] == "approved"
         started = await client.post(url + "/relation-analysis", json={"connectionId": "llm"})
+        if not has_material:
+            assert started.status_code == 400
+            assert "缺少有效的材料整理结果" in started.json()["message"]
+            return
         assert started.status_code == 200, started.text
         assert started.json()["data"]["currentStage"] == "relation_analysis"
         repeated = await client.post(url + "/relation-analysis", json={"connectionId": "llm"})

@@ -1,0 +1,602 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "app",
+    "pages",
+    "containers",
+    "controls",
+    "feedback",
+    "interactions",
+    "unknowns",
+    "inspectionCoverage",
+    "evidenceIssues"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "ui_test_surface/1.0"
+    },
+    "app": {
+      "type": "object"
+    },
+    "runtimeEvidence": {},
+    "pages": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/page"
+      }
+    },
+    "containers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/container"
+      }
+    },
+    "controls": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/control"
+      }
+    },
+    "feedback": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/feedback"
+      }
+    },
+    "interactions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/interaction"
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/unknown"
+      }
+    },
+    "inspectionCoverage": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/inspection"
+      }
+    },
+    "evidenceIssues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/issue"
+      }
+    },
+    "observedStates": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/state"
+      }
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "locator": {
+      "type": "object",
+      "required": [
+        "locatorType",
+        "locatorValue",
+        "evidenceType",
+        "confirmed",
+        "context"
+      ],
+      "properties": {
+        "locatorType": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "locatorValue": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "evidenceType": {
+          "enum": [
+            "source",
+            "runtime"
+          ]
+        },
+        "confirmed": {
+          "type": "boolean"
+        },
+        "sourceRef": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "runtimeEvidenceRef": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "stability": {
+          "enum": [
+            "stable",
+            "runtime_only"
+          ]
+        },
+        "context": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "evidenceType": {
+                "const": "source"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "sourceRef",
+              "reason"
+            ],
+            "properties": {
+              "sourceRef": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              },
+              "confirmed": {
+                "const": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "evidenceType": {
+                "const": "runtime"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "runtimeEvidenceRef"
+            ],
+            "properties": {
+              "runtimeEvidenceRef": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "page": {
+      "type": "object",
+      "required": [
+        "pageId",
+        "route",
+        "componentFile",
+        "sourceRef"
+      ],
+      "properties": {
+        "pageId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "route": {
+          "type": "string"
+        },
+        "componentFile": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "sourceRef": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "title": {
+          "type": "string"
+        },
+        "locatorCandidates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/locator"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "container": {
+      "type": "object",
+      "required": [
+        "containerId",
+        "pageId",
+        "sourceRef"
+      ],
+      "properties": {
+        "containerId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "pageId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "sourceRef": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "locatorCandidates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/locator"
+          }
+        },
+        "rowLocator": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "control": {
+      "type": "object",
+      "required": [
+        "controlId",
+        "pageId",
+        "sourceRef",
+        "controlType",
+        "uniqueness",
+        "locatorCandidates"
+      ],
+      "properties": {
+        "controlId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "pageId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "sourceRef": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "locatorCandidates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/locator"
+          }
+        },
+        "containerId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "controlType": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "role": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "visibleText": {
+          "type": "string"
+        },
+        "uniqueness": {
+          "enum": [
+            "confirmed",
+            "unknown"
+          ]
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/option"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "option": {
+      "type": "object",
+      "required": [
+        "label",
+        "value",
+        "controlId",
+        "availability"
+      ],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "value": {},
+        "controlId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "availability": {
+          "enum": [
+            "declared",
+            "addressable",
+            "unknown"
+          ]
+        }
+      },
+      "additionalProperties": true
+    },
+    "feedback": {
+      "type": "object",
+      "required": [
+        "feedbackId",
+        "pageId",
+        "sourceRef",
+        "text"
+      ],
+      "properties": {
+        "feedbackId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "pageId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "sourceRef": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "locatorCandidates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/locator"
+          }
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        }
+      },
+      "additionalProperties": true
+    },
+    "state": {
+      "type": "object",
+      "required": [
+        "stateId",
+        "pageId",
+        "sourceRef"
+      ],
+      "properties": {
+        "stateId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "pageId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "sourceRef": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "locatorCandidates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/locator"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "interaction": {
+      "type": "object",
+      "required": [
+        "interactionId",
+        "pageId",
+        "sourceRef",
+        "controlId",
+        "effect",
+        "targetId"
+      ],
+      "properties": {
+        "interactionId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "pageId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "sourceRef": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "locatorCandidates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/locator"
+          }
+        },
+        "controlId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "effect": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "targetId": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "unknown": {
+      "type": "object",
+      "required": [
+        "topic",
+        "reason"
+      ],
+      "properties": {
+        "topic": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "sourceRef": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "affectedIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "issue": {
+      "type": "object",
+      "required": [
+        "topic",
+        "reason",
+        "refs"
+      ],
+      "properties": {
+        "topic": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "inspection": {
+      "type": "object",
+      "required": [
+        "area",
+        "caseIds",
+        "pageIds",
+        "componentFiles",
+        "status"
+      ],
+      "properties": {
+        "area": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S"
+        },
+        "caseIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        },
+        "pageIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        },
+        "componentFiles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          }
+        },
+        "status": {
+          "enum": [
+            "inspected",
+            "unavailable",
+            "non_ui"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

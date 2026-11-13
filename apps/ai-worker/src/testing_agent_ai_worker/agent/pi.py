@@ -13,7 +13,7 @@ import subprocess
 import threading
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
 from testing_agent_ai_worker.agent.base import AgentResult
@@ -85,7 +85,33 @@ class Pi:
         async with self._lock:
             return await self._run(message, session_key, media or [])
 
-    async def _run(self, message: str, session_key: str, media: list[str]) -> AgentResult:
+    async def run_with_subagents(
+        self,
+        message: str,
+        *,
+        session_key: str,
+        media: list[str] | None = None,
+        delegation_kind: Literal[
+            "test_points", "detailed_cases", "test_point_review"
+        ] = "test_points",
+    ) -> AgentResult:
+        """Enable the bundled delegation tool for this call only."""
+        if delegation_kind not in {"test_points", "detailed_cases", "test_point_review"}:
+            raise ValueError("Unsupported subagent task")
+        async with self._lock:
+            return await self._run(
+                message, session_key, media or [], delegation_kind=delegation_kind
+            )
+
+    async def _run(
+        self,
+        message: str,
+        session_key: str,
+        media: list[str],
+        *,
+        delegation_kind: Literal["test_points", "detailed_cases", "test_point_review"]
+        | None = None,
+    ) -> AgentResult:
         c = self.config
         runtime = Path(c["runtime_root"]).resolve()
         sessions = runtime / "sessions"
@@ -143,6 +169,17 @@ class Pi:
                 "--model",
                 c["model"],
             ]
+            if delegation_kind:
+                context_file = agent_dir / "subagent-input.txt"
+                context_file.write_text(message, encoding="utf-8")
+                env.update(
+                    MTX_SUBAGENT_INPUT=str(context_file),
+                    MTX_SUBAGENT_EXECUTABLE=c["executable"],
+                    MTX_SUBAGENT_TIMEOUT=str(min(180, c["run_timeout_seconds"])),
+                    MTX_SUBAGENT_PULSE=str(min(20, c["stream_idle_timeout_seconds"] / 2)),
+                    MTX_SUBAGENT_KIND=delegation_kind,
+                )
+                command.extend(["--extension", str(Path(__file__).with_name("subagent_skill.mjs"))])
             if self.tools is not None:
                 if self.tools:
                     command.extend(["--tools", ",".join(self.tools)])
@@ -232,6 +269,30 @@ class Pi:
                         usage[key] = usage.get(key, 0) + value
             elif kind == "agent_settled":
                 settled = True
+            elif kind == "tool_execution_end" and event.get("toolName") == "subagent":
+                if event.get("isError"):
+                    raise RuntimeError("功能测试子任务执行失败，未生成完整产物")
+                details = event.get("result", {}).get("details", {})
+                count = details.get("count", 0)
+                if isinstance(count, int):
+                    usage["subagent_count"] = usage.get("subagent_count", 0) + count
+                for key, value in details.get("usage", {}).items():
+                    if isinstance(value, (int, float)):
+                        child_key = f"subagent_{key}"
+                        usage[child_key] = usage.get(child_key, 0) + value
+                clarifications = details.get("clarifications", [])
+                if clarifications:
+                    questions = [
+                        item.removeprefix("CLARIFICATION_REQUIRED:").strip()[:2000]
+                        for item in clarifications
+                        if isinstance(item, str) and item.startswith("CLARIFICATION_REQUIRED:")
+                    ]
+                    if questions:
+                        return AgentResult(
+                            content="CLARIFICATION_REQUIRED: " + "\n".join(questions),
+                            finish_reason="stop",
+                            usage=usage,
+                        )
         if last is None:
             raise RuntimeError("Pi completed without an assistant result")
         reason = last.get("stopReason", "")

@@ -1,5 +1,6 @@
 """Independent functional checkpoint commands preserve one execution and its history."""
 
+import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -8,6 +9,7 @@ from sqlalchemy import select
 from support.ai_execution import AsyncSessionAdapter, seed_task  # noqa: F401
 from support.ai_execution import db as db
 from support.direct_graph import cases_output, relations_output
+from support.requirement_versions import material_artifact, points_artifact, scope_artifact
 
 from testing_agent.core.errors import AppError, ErrForbidden
 from testing_agent.models.ai_generate_task import AiGenerateTask
@@ -25,6 +27,11 @@ from testing_agent.services.ai_stage_workflow import GenerationStageWorkflow
 from testing_agent.services.standalone_execution import start_standalone_execution
 from testing_agent.services.standalone_execution_view import project_standalone_execution
 from testing_agent.services.standalone_worker_service import StandaloneWorkerService
+
+SCOPE_INITIAL = scope_artifact()
+SCOPE_EDITED = scope_artifact(description="已编辑的保存结果")
+POINTS = points_artifact()
+SOURCE_CONTENT = json.dumps(material_artifact(), ensure_ascii=False)
 
 
 async def test_candidate_review_rejects_legacy_run_without_writing():
@@ -72,7 +79,7 @@ async def test_checkpoint_edit_review_retry_and_graph_keep_execution_identity(db
         request_id="initial",
         actor_id="user",
         connection_id="llm",
-        source={"sourceContent": "frozen"},
+        source={"sourceContent": SOURCE_CONTENT},
         config={},
         checkpoint_enabled=True,
     )
@@ -103,18 +110,18 @@ async def test_checkpoint_edit_review_retry_and_graph_keep_execution_identity(db
             worker_id="agent",
             current_stage="requirement_analysis",
             stage_status="waiting_review",
-            config_json={"requirementAnalysis": {"purpose": "initial"}},
+            config_json={"requirementAnalysis": SCOPE_INITIAL},
         ),
     )
     edited = await stages.save_stage_output(
         "run",
         {
             "stage": "requirement_analysis",
-            "configJson": {"requirementAnalysis": {"purpose": "edited"}},
+            "configJson": {"requirementAnalysis": SCOPE_EDITED},
         },
         "user",
     )
-    assert edited["configJson"]["requirementAnalysis"] == {"purpose": "edited"}
+    assert edited["configJson"]["requirementAnalysis"] == SCOPE_EDITED
     before = len(db.scalars(select(WorkerTask)).all())
     stages.stage_connection = AsyncMock(side_effect=ErrForbidden())
     with pytest.raises(AppError):
@@ -151,8 +158,8 @@ async def test_checkpoint_edit_review_retry_and_graph_keep_execution_identity(db
             current_stage="case_names",
             stage_status="waiting_review",
             config_json={
-                "requirementAnalysis": {"purpose": "edited"},
-                "caseNames": {"points": ["login"]},
+                "requirementAnalysis": SCOPE_EDITED,
+                "caseNames": POINTS,
             },
         ),
     )
@@ -165,8 +172,8 @@ async def test_checkpoint_edit_review_retry_and_graph_keep_execution_identity(db
             status="success",
             result_yaml=cases_output(),
             config_json={
-                "requirementAnalysis": {"purpose": "edited"},
-                "caseNames": {"points": ["login"]},
+                "requirementAnalysis": SCOPE_EDITED,
+                "caseNames": POINTS,
             },
         ),
     )
@@ -185,8 +192,8 @@ async def test_checkpoint_edit_review_retry_and_graph_keep_execution_identity(db
             worker_id="agent",
             status="success",
             config_json={
-                "requirementAnalysis": {"purpose": "edited"},
-                "caseNames": {"points": ["login"]},
+                "requirementAnalysis": SCOPE_EDITED,
+                "caseNames": POINTS,
                 "caseRelations": relations_output(),
             },
         ),
@@ -200,7 +207,7 @@ async def test_checkpoint_edit_review_retry_and_graph_keep_execution_identity(db
         select(AiGenerationAttempt).where(AiGenerationAttempt.execution_id == "run")
     ).all()
     assert len(attempts) == 6 and all(attempt.execution_id == "run" for attempt in attempts)
-    assert initial.input_snapshot_json["source"]["sourceContent"] == "frozen"
+    assert initial.input_snapshot_json["source"]["sourceContent"] == SOURCE_CONTENT
     from testing_agent.services.stage_storage.relations import find_leaf
 
     final_attempt = next(row for row in attempts if row.output_content == cases_output())
@@ -227,7 +234,7 @@ async def test_revision_request_replay_does_not_enqueue_again_or_change_inputs(d
     execution.workflow_status, execution.current_stage = "waiting_review", "requirement_analysis"
     attempt.status, attempt.output_content, attempt.output_format = (
         "success",
-        '{"scope":"old"}',
+        json.dumps(SCOPE_INITIAL, ensure_ascii=False),
         "json",
     )
     attempt.review_status = "pending"
@@ -245,7 +252,7 @@ async def test_revision_request_replay_does_not_enqueue_again_or_change_inputs(d
         "stage": "requirement_analysis",
         "revisionInstruction": "补全条件",
         "requestId": "revise",
-        "configJson": {"requirementAnalysis": {"scope": "edited"}},
+        "configJson": {"requirementAnalysis": SCOPE_EDITED},
     }
     first = await service.revise_function_case_stage("run", body, "user")
     replay = await service.revise_function_case_stage("run", body, "user")
@@ -258,4 +265,6 @@ async def test_revision_request_replay_does_not_enqueue_again_or_change_inputs(d
     assert len(queues) == 1
     revision = db.get(AiGenerationAttempt, queues[0].run_id)
     assert revision.revision_instruction == "补全条件"
-    assert revision.input_snapshot_json["currentOutput"] == '{"scope": "edited"}'
+    assert revision.input_snapshot_json["currentOutput"] == json.dumps(
+        SCOPE_EDITED, ensure_ascii=False
+    )

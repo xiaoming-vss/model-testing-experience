@@ -252,6 +252,41 @@
   display: none;
 }
 
+/* 可编辑候选用例的测试点：末尾悬停显示删除操作。 */
+.ai-case-flow-node-shell {
+  position: relative;
+  display: inline-flex;
+  max-width: 360px;
+}
+
+.ai-case-flow-node-shell.has-delete .ai-case-name-tree-node.point {
+  padding-right: 38px;
+}
+
+.ai-case-name-tree-node-delete.ant-btn {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0;
+  color: var(--ai-text-secondary);
+  opacity: 0;
+  transform: translateY(-50%);
+  transition: opacity 0.16s ease, color 0.16s ease, background 0.16s ease;
+}
+
+.ai-case-flow-node-shell:hover .ai-case-name-tree-node-delete.ant-btn,
+.ai-case-flow-node-shell:focus-within .ai-case-name-tree-node-delete.ant-btn {
+  opacity: 1;
+}
+
+.ai-case-flow-node-shell .ai-case-name-tree-node-delete.ant-btn:hover {
+  color: var(--app-request-error-text);
+  background: var(--ant-color-error-bg);
+}
+
 .ai-case-name-tree-children.point-list {
   gap: 10px;
 }
@@ -268,3 +303,39 @@
 .ai-case-flow-canvas .ai-case-name-tree-node { width: max-content; }
 .ai-case-flow-canvas .ai-case-flow-handle { width: 1px; height: 1px; border: 0; opacity: 0; pointer-events: none; }
 .ai-case-flow-canvas .react-flow__edge-path { stroke-linecap: round; vector-effect: non-scaling-stroke; }
+
+/* 选中测试点时轻微回弹浮起，并在停留态保持放大和强调边框。
+   同一节点重复点选也要重播：用两个等价动画名按点选次数交替切换。 */
+@keyframes ai-case-point-select-a {
+  0% { transform: scale(1); }
+  38% { transform: scale(1.045); }
+  62% { transform: scale(0.995); }
+  82% { transform: scale(1.025); }
+  100% { transform: scale(1.02); }
+}
+
+@keyframes ai-case-point-select-b {
+  0% { transform: scale(1); }
+  38% { transform: scale(1.045); }
+  62% { transform: scale(0.995); }
+  82% { transform: scale(1.025); }
+  100% { transform: scale(1.02); }
+}
+
+.ai-case-flow-canvas .ai-case-name-tree-node.point.is-selected {
+  border-color: var(--app-graph-node-selected-border);
+  background: var(--ai-accent-soft);
+  box-shadow: 0 12px 30px var(--app-graph-node-selected-shadow);
+  transform-origin: center;
+  animation: ai-case-point-select-a 380ms cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}
+
+.ai-case-flow-canvas .ai-case-name-tree-node.point.is-selected.motion-1 {
+  animation-name: ai-case-point-select-b;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-case-flow-canvas .ai-case-name-tree-node.point.is-selected {
+    animation: none;
+  }
+}

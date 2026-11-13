@@ -60,7 +60,6 @@ class WorkerTaskService:
         self,
         repository: WorkerTaskRepository,
         credential_cipher: IntegrationCredentialCipher | None = None,
-        execution_writer: object | None = None,
     ):
         self.repository = repository
         self.credential_cipher = credential_cipher

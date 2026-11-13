@@ -4,7 +4,7 @@ import '@/features/ai-testing/styles/generated-cases-review.css'
 import '../styles/generated-case-browser.css'
 import { CaseNameTreeView } from './CaseNamesResultView'
 import { buildGeneratedCaseTree } from '../utils/generatedCaseTree'
-import { CASE_ID_FIELDS, formatCaseIdTag, getGeneratedCaseEditableFields, isJsonText, toDisplayText } from '@/features/ai-testing/utils/functionalOutput'
+import { CASE_ID_FIELDS, getGeneratedCaseEditableFields, isJsonText, toDisplayText } from '@/features/ai-testing/utils/functionalOutput'
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
 import { CheckCircleFilled, FileTextOutlined, PlayCircleOutlined, SnippetsOutlined } from '@ant-design/icons'
 import { Empty, Input, Tag } from 'antd'
@@ -50,36 +50,73 @@ function isExpectedResultField(key: string) {
 type GeneratedCasesReviewViewProps = {
   content: string
   onChange?: (content: string) => void
-  pointsContent?: string
+  /** 删除测试点只在候选草稿工作台开启；版本阅读弹窗只读展示。 */
+  allowDelete?: boolean
   rootTitle?: string
   selectedCaseKey?: string
   onCaseSelect?: (key: string, raw: Record<string, unknown>) => void
 }
 
-export function GeneratedCasesReviewView({ content, pointsContent = '', rootTitle = '功能测试用例', selectedCaseKey, onCaseSelect, onChange }: GeneratedCasesReviewViewProps) {
+export function GeneratedCasesReviewView({ content, rootTitle = '功能测试用例', allowDelete = false, selectedCaseKey, onCaseSelect, onChange }: GeneratedCasesReviewViewProps) {
   const [localKey, setLocalKey] = useState('')
-  const model = useMemo(() => buildGeneratedCaseTree(content, pointsContent, rootTitle), [content, pointsContent, rootTitle])
+  const [selectionTick, setSelectionTick] = useState(0)
+  const model = useMemo(() => buildGeneratedCaseTree(content, rootTitle), [content, rootTitle])
   const active = model.visible.find((entry) => entry.key === (selectedCaseKey || localKey)) ?? model.visible[0]
   const activeIndex = model.visible.findIndex((entry) => entry.key === active?.key)
   const testCase = active?.testCase
   const select = useCallback((key: string) => {
     const entry = model.entries.find((item) => item.key === key)
     if (!entry) return
+    setSelectionTick((tick) => tick + 1)
     setLocalKey(key)
     onCaseSelect?.(key, entry.testCase.raw)
   }, [model.entries, onCaseSelect])
+  const removeCase = useCallback((key: string) => {
+    if (!onChange) return
+    const entry = model.entries.find((item) => item.key === key)
+    if (!entry) return
+    const deletedIndex = entry.testCase.sourceIndex
+    const parsed: unknown = JSON.parse(content)
+    const cases = Array.isArray(parsed) ? parsed : (parsed as { cases?: unknown[] } | null)?.cases
+    if (!Array.isArray(cases)) return
+    const nextCases = cases.filter((_, index) => index !== entry.testCase.sourceIndex)
+    const next = Array.isArray(parsed) ? nextCases : { ...(parsed as Record<string, unknown>), cases: nextCases }
+    // 删除后用例位置会前移，选中项也可能换 key；按删除前的源位置重算，避免回落到第一条。
+    const remap = (item: (typeof model.entries)[number]) => {
+      const index = item.testCase.sourceIndex > deletedIndex ? item.testCase.sourceIndex - 1 : item.testCase.sourceIndex
+      return `${item.testCase.moduleName}:${index}`
+    }
+    const current = model.entries.find((item) => item.key === (selectedCaseKey || localKey) && item.key !== key)
+    if (current) {
+      if (current.testCase.sourceIndex > deletedIndex) {
+        const nextKey = remap(current)
+        setLocalKey(nextKey)
+        onCaseSelect?.(nextKey, current.testCase.raw)
+      }
+    } else {
+      const visibleIndex = Math.max(0, model.visible.findIndex((item) => item.key === key))
+      const nextVisible = model.visible.filter((item) => item.key !== key)
+      const nextActive = nextVisible[Math.min(visibleIndex, nextVisible.length - 1)]
+      if (nextActive) {
+        const nextKey = remap(nextActive)
+        setLocalKey(nextKey)
+        onCaseSelect?.(nextKey, nextActive.testCase.raw)
+      }
+    }
+    onChange(JSON.stringify(next, null, 2))
+  }, [content, localKey, model.entries, model.visible, onCaseSelect, onChange, selectedCaseKey])
   if (!model.entries.length) return isJsonText(content)
     ? <JsonEditor value={content} readOnly foldable minHeight={0} />
     : <pre className="ai-task-code-block">{content}</pre>
   return <div className="ai-generated-case-browser">
     <section className="ai-generated-case-map" aria-label="用例树图">
-      {model.visible.length ? <CaseNameTreeView content={content} rootTitle={rootTitle} treeData={model.tree} selectedNodeId={active?.key} onNodeSelect={select} />
+      {model.visible.length ? <CaseNameTreeView content={content} rootTitle={rootTitle} treeData={model.tree} selectedNodeId={active?.key} selectionTick={selectionTick} onNodeSelect={select} onDeleteNode={onChange && allowDelete ? removeCase : undefined} />
         : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="没有匹配的用例" />}
     </section>
     <aside className="ai-generated-case-reading" aria-label="选中用例详情">
       {testCase ? <>
         <div className="ai-generated-case-reading-scroll">
-          <p className="ai-generated-case-breadcrumb">{testCase.moduleName} / {active.scene}</p>
+          <p className="ai-generated-case-breadcrumb">{testCase.moduleName} / {active.caseType}</p>
           {onChange ? <GeneratedCaseEditor key={testCase.sourceIndex} testCase={testCase} onChange={(patch) => {
             const parsed = JSON.parse(content)
             const cases = Array.isArray(parsed) ? parsed : parsed.cases
@@ -100,7 +137,7 @@ export function GeneratedCasesReviewView({ content, pointsContent = '', rootTitl
                         className={`ai-generated-cases-review-tag is-${kind}`}
                         title={isCaseId ? tag.value : undefined}
                       >
-                        {isCaseId ? formatCaseIdTag(tag.value) : kind === 'priority' && /^\d+$/.test(tag.value) ? `P${tag.value}` : tag.value}
+                        {kind === 'priority' && /^\d+$/.test(tag.value) ? `P${tag.value}` : tag.value}
                       </Tag>
                     )
                   })}
@@ -138,9 +175,8 @@ function GeneratedCaseEditor({ testCase, onChange }: { testCase: GeneratedTestCa
   const fields = getGeneratedCaseEditableFields(testCase)
   return <div className="ai-generated-case-editor">
     {testCase.tagFields.some(({ key }) => CASE_ID_FIELDS.includes(key)) && <div className="ai-generated-case-meta">
-      {testCase.tagFields.filter(({ key }) => CASE_ID_FIELDS.includes(key)).map(({ key, value }) => <Tag key={key} title={value}>{formatCaseIdTag(value)}</Tag>)}
+      {testCase.tagFields.filter(({ key }) => CASE_ID_FIELDS.includes(key)).map(({ key, value }) => <Tag key={key}>{value}</Tag>)}
     </div>}
-    <p>修改同步到当前草稿，点击底部“保存当前修改”后保存。</p>
     {fields.map(({ key, label }) => {
       const value = testCase.raw[key]
       const array = Array.isArray(value)

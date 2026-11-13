@@ -80,12 +80,23 @@ class RepositoryProfilePromptTests(unittest.TestCase):
     def test_prompt_contains_exact_contract_and_read_only_rules(self) -> None:
         context = build_profile_context(self.task, self.workspace)
         prompt = build_profile_prompt(context, self.workspace)
+        self.assertIn("请先加载本地 skill：mtx-repository-profile-analysis", prompt)
         self.assertIn(str(self.root), prompt)
         self.assertIn("read/grep/find/ls", prompt)
         self.assertIn("只输出一个 JSON 对象", prompt)
         self.assertIn("responsibilitySummary", prompt)
         self.assertIn("unknown", prompt)
         self.assertIn("不得增加任何字段", prompt)
+
+    def test_context_accepts_full_approved_material(self) -> None:
+        fixture = (
+            Path(__file__).resolve().parents[4]
+            / "tests/fixtures/requirement_artifacts/readable-material.example.json"
+        )
+        self.task.requirement_input.document_content = fixture.read_text()
+        context = build_profile_context(self.task, self.workspace)
+        self.assertIn('"artifactType":"readable_requirement_material"', context.text)
+        self.assertIn("保存后展示结果", context.text)
 
 
 if __name__ == "__main__":

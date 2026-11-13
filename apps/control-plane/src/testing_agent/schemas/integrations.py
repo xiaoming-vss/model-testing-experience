@@ -80,16 +80,6 @@ class IntegrationConnectionResponse(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class RemoteResourceListResponse(BaseModel):
-    connection_id: str = Field()
-    remote_project_id: str | None = Field(default=None)
-    remote_execution_id: str | None = Field(default=None)
-    items: list[Any]
-    total: int = 0
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
 class GitLabResourceListResponse(BaseModel):
     connection_id: str = Field()
     group_id: str | None = Field(default=None)

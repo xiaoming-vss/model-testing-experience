@@ -1,0 +1,199 @@
+<!doctype html>
+<!-- Prototype: compare three placements for UI generation configuration using the existing requirement canvas as context. -->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UI 测试生成配置 · 交互原型</title>
+<style>
+:root{color-scheme:light;--page:#f2f5fa;--white:#fff;--text:#1c2b43;--muted:#526580;--line:#d7e1ef;--blue:#205bd1;--blue-soft:#edf4ff;--green:#1d7046;--green-soft:#eff8f2;--amber:#865212;--amber-soft:#fff6e6;--radius:12px}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--text);font:14px/1.5 "Inter","PingFang SC","Microsoft YaHei",system-ui,sans-serif}button,input,select{font:inherit}button{cursor:pointer;color:inherit}button:disabled{cursor:default;opacity:.45}a{color:var(--blue)}button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--blue);outline-offset:3px}button,input,select{border-radius:7px}input[type=checkbox],input[type=radio]{accent-color:var(--blue);width:16px;height:16px;margin:0;flex:none}.btn{border:1px solid var(--line);background:var(--white);padding:8px 13px;white-space:nowrap}.btn:hover:not(:disabled){background:var(--blue-soft);border-color:#a7c0ec}.primary{background:var(--blue);color:white;border-color:var(--blue);font-weight:650}.primary:hover:not(:disabled){background:#174ab2;border-color:#174ab2}.textbtn{border:0;background:transparent;color:var(--blue);padding:4px 0}.quiet{color:var(--muted)}.small{font-size:12px}.mono{font:12px ui-monospace,monospace;overflow-wrap:anywhere}.chip{display:inline-flex;align-items:center;padding:2px 7px;border-radius:5px;background:var(--blue-soft);color:var(--blue);font-size:11px;font-weight:600;white-space:nowrap}.chip.good{color:var(--green);background:var(--green-soft)}.chip.warn{color:var(--amber);background:var(--amber-soft)}
+header.top{height:55px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:22px;padding:0 22px;background:#f8faff;white-space:nowrap}.brand{display:flex;align-items:center;gap:8px;font-weight:750}.brand i{width:23px;height:23px;display:grid;place-items:center;border-radius:6px;background:var(--blue);color:#fff;font-style:normal;font-size:13px}.scope{font-size:12px;color:var(--muted)}.nav{display:flex;gap:20px;font-size:13px;color:var(--muted)}.nav strong{color:var(--blue)}.demo-mark{margin-left:auto;font-size:12px;color:var(--muted)}
+.app{margin:12px 16px 68px;display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:12px;min-height:calc(100dvh - 135px)}.app:has(.inspector[hidden]){grid-template-columns:minmax(0,1fr)}.main,.inspector{min-width:0;border:1px solid var(--line);border-radius:var(--radius);background:var(--white);overflow:hidden}.main{display:flex;flex-direction:column}.crumb{min-height:46px;padding:12px 16px;border-bottom:1px solid var(--line);background:#f8faff;font-size:13px;display:flex;align-items:center;gap:9px}.crumb span:first-child{color:var(--blue)}.crumb strong{min-width:0}
+.canvas{position:relative;flex:1;min-height:500px;overflow:hidden;background:radial-gradient(circle,#ccd9ea 1px,transparent 1.2px) 0 0/20px 20px,#f7faff}.graph{position:absolute;inset:7% 4%;max-width:1220px;margin:auto}.graph svg{position:absolute;width:100%;height:100%;pointer-events:none}.graph path{stroke:#90aee0;stroke-width:1.6;fill:none}.node,.lane{position:absolute;border-radius:10px}.lane{border:1px dashed #9fb2cd;background:#fffdfd;padding:11px}.lane h3{margin:0;font-size:12px}.node{background:white;border:1px solid #bbcee9;padding:8px 10px;font-size:12px;min-width:82px;line-height:1.35}.node strong,.node small{display:block}.node small{color:var(--muted);margin-top:4px}.node.done{background:#f8fcf9;border-color:#a6d2b5}.node.pending{background:var(--amber-soft);border-color:#e1c290}.lane.doc{left:0;top:43%;width:18%;border-style:solid}.lane.analysis{left:24%;top:34%;width:24%;height:39%}.analysis .node:nth-of-type(1){top:19%;left:32%}.analysis .node:nth-of-type(2){top:62%;left:23%}.lane.function{left:58%;top:1%;width:39%;height:35%}.function .node:nth-of-type(1){top:25%;left:3%}.function .node:nth-of-type(2){top:62%;left:37%}.function .node:nth-of-type(3){top:25%;right:3%}.lane.api{left:65%;top:46%;width:32%}.lane.risk{left:6%;top:80%;width:18%;border-style:solid}.lane.ui{left:63%;top:69%;width:36%;padding:0;text-align:left;border:2px dashed #9fb2cd;background:#fff}.lane.ui:hover,.lane.ui[aria-pressed=true]{border-color:var(--blue);background:#f8fbff}.lanehead{display:flex;justify-content:space-between;gap:8px;padding:12px}.laneaction{display:block;margin:0 10px 10px;padding:10px;border:1px dashed var(--line);border-radius:7px}.laneaction strong,.laneaction small{display:block}.laneaction small{margin-top:3px;color:var(--muted)}
+.inspector{display:flex;flex-direction:column;align-self:start}.inspector[hidden],.canvas[hidden],#work[hidden]{display:none}.inspector-head{padding:16px;background:#f8faff;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.inspector-head h2,h1,h2{margin:0;font-size:18px;line-height:1.35}.inspector-head h2{font-size:15px}.close{border:0;background:transparent;color:var(--muted);font-size:22px;line-height:1;padding:4px 7px}.close:hover{background:var(--blue-soft);color:var(--blue)}.inspector-body{padding:16px}.inspector-body dl{margin:12px 0 16px}.facts{display:grid;gap:11px;margin:0}.facts>div{display:grid;grid-template-columns:68px minmax(0,1fr);gap:8px}.facts dt{color:var(--muted);font-size:12px}.facts dd{margin:0;overflow-wrap:anywhere;font-size:13px}.inspector-body .primary{width:100%;margin-top:6px}.action-summary{display:flex;align-items:center;gap:8px}
+.surface{width:min(940px,calc(100vw - 32px));padding:0;border:1px solid var(--line);border-radius:14px;background:var(--white);color:var(--text);max-height:calc(100dvh - 94px);overflow:auto;box-shadow:0 10px 24px #0002}.surface::backdrop{background:#16284967}.surface[open]{animation:enter .2s ease-out}@keyframes enter{from{opacity:.6;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}.flow-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:19px 23px;border-bottom:1px solid var(--line);background:#f8faff}.flow-head p{margin:5px 0 0;color:var(--muted);font-size:13px}.editor{display:grid;grid-template-columns:minmax(250px,.8fr) minmax(350px,1.2fr);padding:0}.editor.single{grid-template-columns:1fr}.source,.cases{min-width:0;padding:20px 23px}.editor:not(.single) .source{border-right:1px solid var(--line)}h3{margin:0 0 13px;font-size:14px}.field{display:grid;gap:6px;margin-bottom:15px;font-size:13px;font-weight:600}select,input[type=search]{width:100%;min-width:0;border:1px solid var(--line);background:white;padding:8px 9px;color:var(--text);font-weight:400}.choices{border:0;padding:0;margin:14px 0 9px}.choices legend{font-size:13px;font-weight:600;margin-bottom:6px}.choice{display:flex;align-items:center;gap:7px;margin:7px 0;font-size:13px}.commit{background:var(--blue-soft);border-radius:7px;padding:8px 10px;margin-top:10px}.commit p{margin:4px 0 0}.repo-info{margin-top:10px;color:var(--muted);font-size:12px}.repo-info summary{cursor:pointer;color:var(--blue)}.repo-info p{margin:5px 0}.case-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.filters{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}.batch{display:flex;gap:13px;margin:7px 0;font-size:12px}.table-wrap{border:1px solid var(--line);border-radius:7px;overflow:auto;max-height:246px;scrollbar-color:#b6c8e5 #f5f8fd}table{width:100%;border-collapse:collapse;text-align:left;font-size:13px}th,td{padding:9px;border-bottom:1px solid var(--line)}th{position:sticky;top:0;background:#f4f7fc;color:var(--muted);font-weight:600;font-size:12px}tr:last-child td{border:0}th:first-child,td:first-child{width:34px}td:last-child{white-space:nowrap;color:var(--muted);font-size:12px}.footer{position:sticky;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--line);background:white;padding:12px 23px}.footer .actions{display:flex;gap:8px;margin-left:auto}.review{padding:24px}.review .facts{max-width:520px}.stepper{display:flex;gap:12px;padding:12px 23px;border-bottom:1px solid var(--line);color:var(--muted);font-size:13px}.stepper b{color:var(--blue)}.workspace .flow-head{background:white}.main:has(.workspace:not([hidden])){max-height:calc(100dvh - 135px)}.workspace{overflow:auto;min-height:0}.workspace .footer{box-shadow:0 -2px 8px #0001}.workspace .editor{grid-template-columns:1fr}.workspace .editor .source{border-right:0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:0 18px}.workspace .source h3{grid-column:1/-1}.workspace .table-wrap{max-height:280px}.wizard{width:min(670px,calc(100vw - 32px))}
+.switcher{position:fixed;z-index:4;bottom:13px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:4px;padding:4px;border-radius:10px;background:#172b48;color:white;box-shadow:0 3px 12px #0003;white-space:nowrap}.switcher button{border:0;background:transparent;color:inherit;padding:5px 9px;font-size:12px}.switcher button[aria-pressed=true]{background:#36547d;font-weight:700}.switcher button:hover{background:#30496d}.switcher span{padding:0 6px;color:#dbe6f5;font-size:11px}.toast{position:fixed;z-index:5;top:65px;left:50%;transform:translateX(-50%);background:#eaf7ed;color:#145b36;border:1px solid #9ccbad;border-radius:8px;padding:10px 14px;max-width:90vw;width:max-content}
+@media(max-width:900px){.app{grid-template-columns:minmax(0,1fr) 250px}.nav{display:none}.graph{inset:5% 3%}.node{min-width:0;padding:6px}.function .node:nth-of-type(2){left:25%}.function .node:nth-of-type(3){right:1%}.canvas{min-height:450px}}
+@media(max-width:720px){.app,.app:has(.inspector[hidden]){grid-template-columns:1fr;margin:8px 8px 64px}.inspector{grid-row:2}.app:has(.inspector:not([hidden])) .canvas{min-height:300px}.main:has(.workspace:not([hidden])){max-height:calc(100dvh - 80px)}.inspector-body{padding:12px}.canvas{min-height:340px}.graph{inset:4% 2%}.lane.function{display:none}.lane.analysis{top:12%;width:37%;left:40%;height:50%}.lane.doc{top:17%;width:34%}.lane.api{top:46%;left:2%;width:34%}.lane.risk{display:none}.lane.ui{left:40%;top:66%;width:58%}.graph svg{display:none}.editor,.workspace .editor .source{grid-template-columns:1fr}.editor:not(.single) .source{border-right:0;border-bottom:1px solid var(--line)}.source,.cases,.flow-head,.footer{padding:12px}.surface{max-height:calc(100dvh - 26px)}.top .scope{overflow:hidden;text-overflow:ellipsis}.top .demo-mark{display:none}.switcher span{display:none}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<header class="top"><div class="brand"><i>Ｍ</i> MTX</div><div class="scope">Zata-Platform　/　1.2.1</div><div class="nav"><span>迭代</span><strong>需求</strong><span>测试</span><span>Bug 列表</span><span>基础服务</span></div><span class="demo-mark">交互原型 · 模拟数据</span></header>
+<main class="app">
+<section class="main" aria-label="需求生成全景">
+  <div class="crumb"><span>需求列表</span><span aria-hidden="true">›</span><strong>视频处理语义切片与深度开关调整</strong></div>
+  <div class="canvas" id="canvas">
+    <div class="graph">
+      <svg viewBox="0 0 1000 500" preserveAspectRatio="none" aria-hidden="true"><path d="M 175 239 C 230 239 243 215 319 215 M 354 216 C 510 216 481 68 610 68 M 354 223 C 470 250 271 270 304 302 M 361 307 C 494 310 526 382 647 382"/></svg>
+      <div class="lane doc"><h3>查看需求文档</h3><span class="small quiet">需求材料</span></div>
+      <div class="lane analysis"><h3>需求分析</h3><div class="node done"><strong>材料整理</strong><small>v8 · 已通过</small></div><div class="node done"><strong>仓库画像</strong><small>v1 · 已生成</small></div></div>
+      <div class="lane function"><h3>功能测试</h3><div class="node done"><strong>测试范围</strong><small>v7 · 已通过</small></div><div class="node done"><strong>测试点</strong><small>57 个测试点</small></div><div class="node pending"><strong>完整用例</strong><small>待审核</small></div></div>
+      <div class="lane api"><h3>API 测试</h3><span class="small quiet">未开始</span></div>
+      <div class="lane risk"><h3>代码风险分析</h3><span class="small quiet">独立分析</span></div>
+      <button class="lane ui" id="ui-card" aria-pressed="false"><span class="lanehead"><strong>UI 测试</strong><span class="chip" id="card-status">未开始</span></span><span class="laneaction"><strong id="card-action">开始 UI 测试</strong><small>配置生成来源，再运行元素控件清单</small></span></button>
+    </div>
+  </div>
+  <section class="workspace" id="work" hidden></section>
+</section>
+<aside class="inspector" id="inspector" aria-label="UI 测试摘要" hidden></aside>
+</main>
+<dialog class="surface" id="modal" aria-labelledby="flow-title"></dialog>
+<nav class="switcher" aria-label="原型方案"><button type="button" data-cycle="-1" aria-label="上一个方案">←</button><span>方案</span><button type="button" data-variant="A">A · 配置弹窗</button><button type="button" data-variant="B">B · 画布内工作区</button><button type="button" data-variant="C">C · 分步引导</button><button type="button" data-cycle="1" aria-label="下一个方案">→</button></nav>
+<div class="toast" role="status" id="toast" hidden></div>
+<script>
+const $ = id => document.getElementById(id)
+const keys = ['A','B','C']
+const initial = new URL(location.href).searchParams.get('variant')
+let variant = keys.includes(initial) ? initial : 'A'
+const repos = ['zata-platform/zata-console','zata-platform/ops-console']
+const names = {
+  '任务管理':['任务深度生成配置入口','等待语义分析状态下的任务操作','保留深度预览设置','查看历史任务分析报告','任务深度生成失败后重试','下载任务产物','配置变化后刷新任务详情','无权限时隐藏任务操作','取消任务操作保留设置','核对任务产物状态','查看深度信息','返回任务列表','任务状态筛选','确认深度预览提示'],
+  '清洗核验':['保存清洗核验操作','保存并切片','选择保留时保留有效区间','标注异常段后生成切片','编辑切除区间','查看单条 Episode 报告','无效片段不生成产物','切换任务时提示未保存','读取清洗核验面板','取消异常段标注','切片失败后重试','校验有效区间时长','下载 CEU 文件'],
+  '语义分析':['查看语义分析报告','语义分析失败后重试','查看语义切片产物','查询待语义分析任务','核对语义切片状态','查看 Prepared Episodes','查看深度预览','切换分析视图','无效结果提示','上传云端后刷新','查看经验元数据','下载分析报告']
+}
+const cases = Object.entries(names).flatMap(([suite, list]) => list.map(title => ({suite,title}))).map((item,i)=>({...item,id:i+1}))
+const defaults = () => ({profile:'v1',repo:repos[0],mode:'pin',ids:new Set(cases.map(c=>c.id))})
+let saved = defaults(), draft, selected = false, running = false, step = 0, suite = '', search = ''
+const variantNames = {A:'配置弹窗',B:'画布内工作区',C:'分步引导'}
+const hash = state => state.profile === 'v1' ? (state.repo === repos[0] ? 'feb4294' : 'eb61a01') : '9e37a2b'
+const facts = state => `<dl class="facts"><div><dt>画像版本</dt><dd>${state.profile}</dd></div><div><dt>前端仓库</dt><dd>${state.repo}</dd></div><div><dt>Commit</dt><dd>${state.mode==='pin' ? `<code class="mono">${hash(state)}</code> · 画像版本` : '启动时读取分支 HEAD'}</dd></div><div><dt>来源用例</dt><dd>已选 ${state.ids.size} / ${cases.length} 条</dd></div></dl>`
+function renderInspector(){
+  $('inspector').hidden = !selected
+  $('ui-card').setAttribute('aria-pressed', String(selected))
+  $('card-status').textContent = running ? '运行中' : '未开始'
+  if(!selected) return
+  $('inspector').innerHTML = `<div class="inspector-head"><h2>UI 测试</h2><button class="close" data-action="deselect" aria-label="关闭侧栏">×</button></div>
+    <div class="inspector-body"><div class="action-summary"><span class="chip ${running?'good':''}">${running?'运行中':'未开始'}</span><span class="small quiet">${running?'正在生成元素控件清单':'生成来源'}</span></div>
+    ${facts(saved)}<button class="btn primary" data-action="open" ${running||!$('work').hidden?'disabled':''}>${variant==='B'?'打开配置工作区':'配置并生成'}</button>
+    ${running?'<button class="textbtn" data-action="reset">重置演示</button>':''}</div>`
+}
+const sourceFields = () => `<section class="source" aria-label="源码来源"><h3>源码来源</h3>
+  <label class="field">仓库画像版本<select data-field="profile"><option value="v1" ${draft.profile==='v1'?'selected':''}>v1 · 最新</option><option value="v0" ${draft.profile==='v0'?'selected':''}>v0 · 历史版本</option></select></label>
+  <label class="field">前端仓库<select data-field="repo">${repos.map(repo=>`<option ${repo===draft.repo?'selected':''}>${repo}</option>`).join('')}</select></label>
+  <fieldset class="choices"><legend>Commit 模式</legend><label class="choice"><input type="radio" name="mode" value="pin" data-field="mode" ${draft.mode==='pin'?'checked':''}>使用画像 Commit</label><label class="choice"><input type="radio" name="mode" value="head" data-field="mode" ${draft.mode==='head'?'checked':''}>使用分支最新 HEAD</label></fieldset>
+  <div class="commit" id="commit"></div><details class="repo-info"><summary>查看仓库画像详情</summary><p>前端管理台，负责清洗核验、语义分析任务和深度预览。</p><code class="mono">packages/frontend/src/views/data-acquisition</code></details>
+  </section>`
+const caseFields = () => `<section class="cases" aria-label="来源功能用例"><div class="case-head"><h3>来源功能用例</h3><strong class="small" id="selected-count"></strong></div>
+  <div class="filters"><select aria-label="筛选用例集" data-field="suite"><option value="">全部用例集</option>${Object.keys(names).map(s=>`<option ${suite===s?'selected':''}>${s}</option>`).join('')}</select><input type="search" id="case-search" aria-label="搜索用例" placeholder="搜索用例名称"></div>
+  <div class="batch"><button class="textbtn" data-action="select">全选筛选结果</button><button class="textbtn" data-action="unselect">取消筛选结果</button></div>
+  <div class="table-wrap"><table><thead><tr><th><input type="checkbox" id="all" data-action="all" aria-label="选择筛选结果"></th><th scope="col">用例名称</th><th scope="col">用例集</th></tr></thead><tbody id="rows"></tbody></table></div></section>`
+function renderEditor(){
+  const target = variant==='B' ? $('work') : $('modal')
+  const sub = {A:'确认源码和功能用例后，从元素控件清单开始生成。',B:'在画布内调整本次使用的源码和用例。',C:['选择生成时使用的前端源码。','筛选并选择本次生成参考的用例。','确认本次生成使用的输入。'][step]}[variant]
+  const head = `<div class="flow-head"><div><h1 id="flow-title">配置 UI 测试生成</h1><p>${sub}</p></div><button class="${variant==='B'?'btn':'close'}" aria-label="${variant==='B'?'返回流程':'关闭配置'}" data-action="close">${variant==='B'?'返回流程':'×'}</button></div>`
+  const footer = `<div class="footer"><span class="small quiet" id="foot-note"></span><div class="actions">${variant==='C'&&step>0?'<button class="btn" data-action="back">上一步</button>':'<button class="btn" data-action="close">取消</button>'}<button class="btn primary" id="submit" data-action="next">${variant==='C'&&step<2?(step===0?'下一步':'核对配置'):'开始生成'}</button></div></div>`
+  const stepper = `<div class="stepper" aria-label="配置步骤">${['源码来源','选择用例','核对配置'].map((name,i)=>i===step?`<b aria-current="step">${i+1}. ${name}</b>`:`<span>${i+1}. ${name}</span>`).join('')}</div>`
+  target.innerHTML = variant==='C'
+    ? head + stepper + `<div class="editor single">${step===0 ? sourceFields() : step===1 ? caseFields() : `<div class="review">${facts(draft)}</div>`}</div>` + footer
+    : head + `<div class="editor">${sourceFields()}${caseFields()}</div>` + footer
+  if($('case-search')) $('case-search').value = search
+  updateCommit()
+  updateCases()
+}
+function updateCommit(){
+  if(!$('commit')) return
+  $('commit').innerHTML = `<div class="mono">test-v1.2.1 · ${draft.mode==='pin'?hash(draft):'HEAD'}</div><p class="small quiet">${draft.mode==='pin'?'使用画像中记录的固定版本。':'开始生成时读取分支最新版本。'}</p>`
+}
+const matching = () => cases.filter(c=>(!suite || c.suite===suite) && c.title.includes(search.trim()))
+function updateCases(){
+  const visible = matching(), count = visible.filter(c=>draft.ids.has(c.id)).length
+  if($('rows')){
+    $('rows').innerHTML = visible.map(c=>`<tr><td><input type="checkbox" aria-label="${c.title}" data-id="${c.id}" ${draft.ids.has(c.id)?'checked':''}></td><td>${c.title}</td><td>${c.suite}</td></tr>`).join('') || '<tr><td colspan="3" class="quiet">没有符合条件的用例</td></tr>'
+    $('all').checked = visible.length>0 && count===visible.length
+    $('all').indeterminate = count>0 && count<visible.length
+    $('all').disabled = !visible.length
+    $('selected-count').textContent = `已选 ${draft.ids.size} / ${cases.length} 条`
+  }
+  $('foot-note').textContent = draft.ids.size ? `已选 ${draft.ids.size} 条用例` : '至少选择 1 条功能用例'
+  $('submit').disabled = !draft.ids.size && !(variant==='C' && step===0)
+}
+function openEditor(){
+  draft = {...saved,ids:new Set(saved.ids)}
+  step = 0; suite = ''; search = ''
+  $('modal').classList.toggle('wizard',variant==='C')
+  renderEditor()
+  if(variant==='B'){
+    $('canvas').hidden=true
+    $('work').hidden=false
+    $('work').querySelector('button').focus()
+  }else $('modal').showModal()
+}
+function closeEditor(){
+  const wasWorkspace = !$('work').hidden
+  if($('modal').open) $('modal').close()
+  $('modal').replaceChildren()
+  $('work').hidden = true
+  $('work').replaceChildren()
+  $('canvas').hidden = false
+  if(wasWorkspace) $('inspector').querySelector('[data-action=open]')?.focus()
+}
+function changeVariant(next){
+  if(next===variant) return
+  closeEditor()
+  variant=next
+  const url = new URL(location.href)
+  url.searchParams.set('variant',variant)
+  try{history.replaceState(null,'',url)}catch{}
+  running=false; saved=defaults(); $('toast').hidden=true
+  renderVariant()
+}
+function renderVariant(){
+  document.querySelectorAll('[data-variant]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.variant===variant)))
+  renderInspector()
+}
+$('ui-card').addEventListener('click',()=>{
+  selected=true
+  renderInspector()
+  if(variant==='B'&&!running) openEditor()
+})
+$('modal').addEventListener('cancel',e=>{e.preventDefault();closeEditor()})
+document.addEventListener('click',event=>{
+  const button=event.target.closest('button')
+  if(!button) return
+  if(button.dataset.variant) changeVariant(button.dataset.variant)
+  if(button.dataset.cycle) changeVariant(keys[(keys.indexOf(variant)+Number(button.dataset.cycle)+keys.length)%keys.length])
+  const action=button.dataset.action
+  if(action==='open' && $('work').hidden) openEditor()
+  if(action==='close') closeEditor()
+  if(action==='deselect'){closeEditor();selected=false;renderInspector();$('ui-card').focus()}
+  if(action==='reset'){running=false;$('toast').hidden=true;renderInspector()}
+  if(action==='back'){step--;renderEditor();$('modal').querySelector('[data-action=next]').focus()}
+  if(action==='select'||action==='unselect'){
+    for(const c of matching()) action==='select'?draft.ids.add(c.id):draft.ids.delete(c.id)
+    updateCases()
+  }
+  if(action==='next'){
+    if(variant==='C'&&step<2){step++;renderEditor();$('modal').querySelector(step===1?'input[type=search]':'[data-action=next]').focus();return}
+    saved=draft;running=true;closeEditor();renderInspector()
+    $('toast').textContent=`已模拟启动元素控件清单 · 已选 ${saved.ids.size} 条用例`
+    $('toast').hidden=false
+    setTimeout(()=>$('toast').hidden=true,3500)
+  }
+})
+document.addEventListener('change',event=>{
+  const input=event.target
+  if(input.dataset.field==='suite'){suite=input.value;updateCases()}
+  if(['profile','repo','mode'].includes(input.dataset.field)){draft[input.dataset.field]=input.value;updateCommit()}
+  if(input.id==='all'){for(const c of matching()) input.checked?draft.ids.add(c.id):draft.ids.delete(c.id);updateCases()}
+  if(input.dataset.id){
+    const id=Number(input.dataset.id)
+    input.checked?draft.ids.add(id):draft.ids.delete(id)
+    updateCases()
+    document.querySelector(`[data-id="${id}"]`)?.focus()
+  }
+})
+document.addEventListener('input',event=>{if(event.target.id==='case-search'){search=event.target.value;updateCases()}})
+document.addEventListener('keydown',event=>{
+  if($('modal').open||event.target.matches('input,textarea,select,[contenteditable]')) return
+  if(event.key==='ArrowLeft'||event.key==='ArrowRight'){
+    event.preventDefault()
+    changeVariant(keys[(keys.indexOf(variant)+(event.key==='ArrowRight'?1:-1)+keys.length)%keys.length])
+  }
+})
+document.querySelector('.switcher').setAttribute('title',Object.values(variantNames).join(' / '))
+renderVariant()
+</script>
+</body>
+</html>

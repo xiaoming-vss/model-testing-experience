@@ -1,4 +1,3 @@
-import { Tag } from 'antd'
 import type {
   ApiAssertRule,
   ApiEnvironment,
@@ -97,15 +96,4 @@ export function formatTime(value?: string) {
 
 export function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : '操作失败'
-}
-
-export function statusTag(value?: string) {
-  const colorMap: Record<string, string> = {
-    planned: 'default',
-    running: 'processing',
-    completed: 'success',
-    draft: 'default',
-    in_progress: 'processing',
-  }
-  return <Tag color={value ? colorMap[value] : 'default'}>{value ?? '-'}</Tag>
 }

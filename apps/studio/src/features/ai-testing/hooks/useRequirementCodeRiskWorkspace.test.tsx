@@ -39,7 +39,7 @@ function renderWorkspace(active = false) {
 function chainWithVersions(versions: { versionId: string; versionNo: number; label: string }[]) {
   return {
     stages: [{
-      stage: 'feature_understanding',
+      stage: 'extracting_text',
       versions,
       latestVersion: versions.at(-1),
     }],
@@ -65,7 +65,7 @@ it('网络失败后复用请求标识，成功后下一次生成使用新标识'
   client.clear()
 })
 
-it('默认携带最新已审核的需求理解版本', async () => {
+it('默认携带最新已审核的材料整理版本', async () => {
   vi.spyOn(generationChainApi, 'chain').mockResolvedValue(chainWithVersions([
     { versionId: 'sv-1', versionNo: 1, label: 'V1' },
     { versionId: 'sv-2', versionNo: 2, label: 'V2' },
@@ -78,13 +78,13 @@ it('默认携带最新已审核的需求理解版本', async () => {
   await act(async () => { await result.current.start.mutateAsync() })
 
   expect(launch).toHaveBeenCalledWith('task', expect.objectContaining({
-    requirementUnderstandingVersionId: 'sv-2',
+    requirementMaterialVersionId: 'sv-2',
   }))
   unmount()
   client.clear()
 })
 
-it('没有已审核需求理解版本时禁用确认运行', async () => {
+it('没有已审核材料整理版本时禁用确认运行', async () => {
   vi.spyOn(generationChainApi, 'chain').mockResolvedValue(chainWithVersions([]))
   const { unmount, client } = renderWorkspace(true)
 

@@ -1,0 +1,319 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Action": {
+      "additionalProperties": true,
+      "properties": {
+        "actionId": {
+          "minLength": 1,
+          "title": "Actionid",
+          "type": "string"
+        },
+        "sourceQuote": {
+          "minLength": 1,
+          "title": "Sourcequote",
+          "type": "string"
+        },
+        "action": {
+          "minLength": 1,
+          "title": "Action",
+          "type": "string"
+        },
+        "operation": {
+          "minLength": 1,
+          "title": "Operation",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "status": {
+          "enum": [
+            "included",
+            "excluded"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "reason": {
+          "default": "",
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "actionId",
+        "sourceQuote",
+        "action",
+        "operation",
+        "target",
+        "value",
+        "status"
+      ],
+      "title": "Action",
+      "type": "object",
+      "propertyNames": {
+        "not": {
+          "enum": [
+            "actionBindings",
+            "observationBindings",
+            "locatorType",
+            "locatorValue",
+            "dataPlan"
+          ]
+        }
+      }
+    },
+    "Capabilities": {
+      "additionalProperties": true,
+      "properties": {
+        "operations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Operations",
+          "type": "array"
+        },
+        "assertions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Assertions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "operations",
+        "assertions"
+      ],
+      "title": "Capabilities",
+      "type": "object"
+    },
+    "Case": {
+      "additionalProperties": true,
+      "properties": {
+        "caseId": {
+          "minLength": 1,
+          "title": "Caseid",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "sourceTitle": {
+          "title": "Sourcetitle",
+          "type": "string"
+        },
+        "preconditions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Preconditions",
+          "type": "array"
+        },
+        "goal": {
+          "minLength": 1,
+          "title": "Goal",
+          "type": "string"
+        },
+        "coreExpectationIds": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Coreexpectationids",
+          "type": "array"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/Step"
+          },
+          "title": "Steps",
+          "type": "array"
+        },
+        "coverage": {
+          "enum": [
+            "full",
+            "partial",
+            "excluded"
+          ],
+          "title": "Coverage",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "caseId",
+        "name",
+        "sourceTitle",
+        "preconditions",
+        "goal",
+        "coreExpectationIds",
+        "steps",
+        "coverage",
+        "limitations"
+      ],
+      "title": "Case",
+      "type": "object",
+      "propertyNames": {
+        "not": {
+          "enum": [
+            "actionBindings",
+            "observationBindings",
+            "locatorType",
+            "locatorValue",
+            "dataPlan"
+          ]
+        }
+      }
+    },
+    "Expectation": {
+      "additionalProperties": true,
+      "properties": {
+        "expectationId": {
+          "minLength": 1,
+          "title": "Expectationid",
+          "type": "string"
+        },
+        "sourceQuote": {
+          "minLength": 1,
+          "title": "Sourcequote",
+          "type": "string"
+        },
+        "assertion": {
+          "minLength": 1,
+          "title": "Assertion",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "status": {
+          "enum": [
+            "included",
+            "excluded",
+            "bookkeeping"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "reason": {
+          "default": "",
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expectationId",
+        "sourceQuote",
+        "assertion",
+        "target",
+        "value",
+        "status"
+      ],
+      "title": "Expectation",
+      "type": "object",
+      "propertyNames": {
+        "not": {
+          "enum": [
+            "actionBindings",
+            "observationBindings",
+            "locatorType",
+            "locatorValue",
+            "dataPlan"
+          ]
+        }
+      }
+    },
+    "JsonValue": {},
+    "Step": {
+      "additionalProperties": true,
+      "properties": {
+        "sourceStepNo": {
+          "minimum": 1,
+          "title": "Sourcestepno",
+          "type": "integer"
+        },
+        "sourceAction": {
+          "title": "Sourceaction",
+          "type": "string"
+        },
+        "actions": {
+          "items": {
+            "$ref": "#/$defs/Action"
+          },
+          "title": "Actions",
+          "type": "array"
+        },
+        "expectations": {
+          "items": {
+            "$ref": "#/$defs/Expectation"
+          },
+          "title": "Expectations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "sourceStepNo",
+        "sourceAction",
+        "actions",
+        "expectations"
+      ],
+      "title": "Step",
+      "type": "object",
+      "propertyNames": {
+        "not": {
+          "enum": [
+            "actionBindings",
+            "observationBindings",
+            "locatorType",
+            "locatorValue",
+            "dataPlan"
+          ]
+        }
+      }
+    }
+  },
+  "additionalProperties": true,
+  "properties": {
+    "schemaVersion": {
+      "const": "ui_test_scenarios/2.0",
+      "title": "Schemaversion",
+      "type": "string"
+    },
+    "capabilities": {
+      "$ref": "#/$defs/Capabilities"
+    },
+    "cases": {
+      "items": {
+        "$ref": "#/$defs/Case"
+      },
+      "minItems": 1,
+      "title": "Cases",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "capabilities",
+    "cases"
+  ],
+  "title": "Design",
+  "type": "object"
+}

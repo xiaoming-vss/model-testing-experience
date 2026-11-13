@@ -1,4 +1,4 @@
-"""Requirement analysis executor: extraction review, then understanding."""
+"""Requirement analysis executor: material organization and review."""
 
 from datetime import datetime
 
@@ -10,16 +10,18 @@ from testing_agent_ai_worker.agent.paths import (
 from testing_agent_ai_worker.config.models import AgentBackendConfig
 from testing_agent_ai_worker.models.execution import TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
+from testing_agent_ai_worker.skill_names import (
+    MATERIAL_SKILL,
+)
 from testing_agent_ai_worker.tasks.requirement_analysis.document_type import extraction_skill
+from testing_agent_ai_worker.tasks.requirement_analysis.material_stage import execute_material_stage
 from testing_agent_ai_worker.tasks.requirement_analysis.skill import run_skill_step
 from testing_agent_ai_worker.tasks.requirement_analysis.source_downloader import (
     RequirementSourceDownloader,
 )
-from testing_agent_ai_worker.tasks.requirement_analysis.two_stage import execute_two_stage
 from testing_agent_ai_worker.worker.runner import TaskExecutor
 
-REQUIREMENT_ANALYSIS_FIRST_SKILL_NAME = "extract-docx-enhanced-text"
-REQUIREMENT_ANALYSIS_SECOND_SKILL_NAME = "prd-feature-understanding-skill"
+REQUIREMENT_ANALYSIS_FIRST_SKILL_NAME = MATERIAL_SKILL
 SUPPORTED_REQUIREMENT_ANALYSIS_DOCUMENT_TYPES = {"word", "richtext"}
 
 
@@ -35,7 +37,6 @@ class RequirementAnalysisExecutor(TaskExecutor):
         agent_config: AgentBackendConfig,
         skill_runner=run_skill_step,
         first_skill_name: str = REQUIREMENT_ANALYSIS_FIRST_SKILL_NAME,
-        second_skill_name: str = REQUIREMENT_ANALYSIS_SECOND_SKILL_NAME,
         source_downloader: RequirementSourceDownloader | None = None,
         attachment_downloader=None,
     ) -> None:
@@ -43,7 +44,6 @@ class RequirementAnalysisExecutor(TaskExecutor):
         self.runtime_paths = resolve_runtime_paths(agent_config)
         self.skill_runner = skill_runner
         self.first_skill_name = first_skill_name
-        self.second_skill_name = second_skill_name
         self.source_downloader = source_downloader
         self.attachment_downloader = attachment_downloader
 
@@ -73,7 +73,7 @@ class RequirementAnalysisExecutor(TaskExecutor):
             )
         workspace = resolve_task_workspace(self.agent_config, task)
         with task_config_path(agent_config=self.agent_config, task=task) as config_path:
-            return execute_two_stage(
+            return execute_material_stage(
                 task=task,
                 started_at=started_at,
                 progress_callback=progress_callback,
@@ -87,5 +87,4 @@ class RequirementAnalysisExecutor(TaskExecutor):
                     if (task.current_stage or "extracting_text") == "extracting_text"
                     else self.first_skill_name
                 ),
-                second_skill_name=self.second_skill_name,
             )

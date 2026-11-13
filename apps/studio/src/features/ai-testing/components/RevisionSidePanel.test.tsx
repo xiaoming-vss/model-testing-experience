@@ -7,6 +7,7 @@ import { seedOwnerProject } from '@/test/projectAccess'
 import { downloadStoredFile, uploadStoredFile } from '@/shared/api/files'
 import { RevisionSidePanel } from './RevisionSidePanel'
 import { useRevisionAttachments } from '../hooks/useRevisionAttachments'
+import { createQuestionRevisionDraft } from '../utils/functionalRevision'
 
 vi.mock('@/shared/api/files', () => ({
   uploadStoredFile: vi.fn(async () => 'image-1'),
@@ -21,9 +22,9 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-function Harness({ onSubmit }: { onSubmit: (connectionId: string) => void }) {
+function Harness({ onSubmit, initial = '' }: { onSubmit: (connectionId: string) => void; initial?: string }) {
   const revision = useRevisionAttachments()
-  const [value, setValue] = useState('')
+  const [value, setValue] = useState(initial)
   return <RevisionSidePanel
     projectId="project-1"
     value={value}
@@ -37,7 +38,7 @@ function Harness({ onSubmit }: { onSubmit: (connectionId: string) => void }) {
   />
 }
 
-function setup() {
+function setup(initial = '') {
   vi.clearAllMocks()
   const onSubmit = vi.fn()
   URL.createObjectURL = vi.fn(() => 'blob:attachment-1')
@@ -54,7 +55,7 @@ function setup() {
   })
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   seedOwnerProject(client)
-  render(<QueryClientProvider client={client}><Harness onSubmit={onSubmit} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><Harness onSubmit={onSubmit} initial={initial} /></QueryClientProvider>)
   return onSubmit
 }
 
@@ -95,4 +96,13 @@ it('非 PNG/JPEG 文件不会上传', async () => {
   const input = document.querySelector('input[type="file"]') as HTMLInputElement
   await user.upload(input, new File(['pdf'], 'requirement.pdf', { type: 'application/pdf' }))
   expect(vi.mocked(uploadStoredFile)).not.toHaveBeenCalled()
+})
+
+
+it('逐题答复支持粘贴截图', async () => {
+  setup(createQuestionRevisionDraft([{ id: 'Q1', question: '如何处理？' }]))
+  fireEvent.paste(screen.getByLabelText('补充答复'), {
+    clipboardData: { files: [new File(['png'], 'answer.png', { type: 'image/png' })], getData: () => '' },
+  })
+  expect(await screen.findByAltText('answer.png')).toBeInTheDocument()
 })

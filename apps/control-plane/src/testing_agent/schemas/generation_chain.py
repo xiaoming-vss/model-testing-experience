@@ -9,6 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
+from testing_agent.schemas.module_generation import ModuleGenerationView
 from testing_agent.schemas.requirement_design import DesignKind
 
 ChainStageState = Literal[
@@ -132,6 +133,7 @@ class ChainStageView(ChainModel):
     failure_run_id: str = ""
     failed_at: datetime | str | None = None
     active_run_id: str = ""
+    module_generation: ModuleGenerationView | None = None
 
 
 class ChainLeafView(ChainModel):

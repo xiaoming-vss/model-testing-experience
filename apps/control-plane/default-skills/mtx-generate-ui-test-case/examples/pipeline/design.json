@@ -1,0 +1,159 @@
+{
+  "schemaVersion": "ui_test_scenarios/2.0",
+  "capabilities": {
+    "operations": [
+      "navigate",
+      "click",
+      "dblclick",
+      "input",
+      "clear",
+      "press",
+      "wait",
+      "observe",
+      "reload",
+      "screenshot",
+      "sleep"
+    ],
+    "assertions": [
+      "visible",
+      "text_eq",
+      "text_contains",
+      "url_eq",
+      "url_contains"
+    ]
+  },
+  "cases": [
+    {
+      "caseId": "U1",
+      "name": "查看帮助内容",
+      "sourceTitle": "查看帮助内容",
+      "preconditions": [
+        "当前页面可访问。"
+      ],
+      "goal": "显示帮助内容。",
+      "coreExpectationIds": [
+        "E1",
+        "E2"
+      ],
+      "steps": [
+        {
+          "sourceStepNo": 1,
+          "sourceAction": "点击帮助按钮。",
+          "actions": [
+            {
+              "actionId": "A1",
+              "sourceQuote": "点击帮助按钮。",
+              "action": "点击帮助按钮。",
+              "operation": "click",
+              "target": "帮助按钮",
+              "value": null,
+              "status": "included"
+            }
+          ],
+          "expectations": [
+            {
+              "expectationId": "E1",
+              "sourceQuote": "显示",
+              "assertion": "visible",
+              "target": "帮助内容区域",
+              "value": null,
+              "status": "included"
+            },
+            {
+              "expectationId": "E2",
+              "sourceQuote": "帮助内容。",
+              "assertion": "text_contains",
+              "target": "帮助内容区域",
+              "value": "帮助内容",
+              "status": "included"
+            }
+          ]
+        }
+      ],
+      "coverage": "full",
+      "limitations": []
+    },
+    {
+      "caseId": "U2",
+      "name": "查看外部报表状态",
+      "sourceTitle": "查看外部报表状态",
+      "preconditions": [
+        "外部报表已经完成，预期状态文字为“已完成”。"
+      ],
+      "goal": "报表状态文字为“已完成”。",
+      "coreExpectationIds": [
+        "E1"
+      ],
+      "steps": [
+        {
+          "sourceStepNo": 1,
+          "sourceAction": "打开外部报表。",
+          "actions": [
+            {
+              "actionId": "A1",
+              "sourceQuote": "打开外部报表。",
+              "action": "打开外部报表。",
+              "operation": "click",
+              "target": "外部报表入口",
+              "value": null,
+              "status": "included"
+            }
+          ],
+          "expectations": [
+            {
+              "expectationId": "E1",
+              "sourceQuote": "报表状态文字为“已完成”。",
+              "assertion": "text_eq",
+              "target": "外部报表状态文字",
+              "value": "已完成",
+              "status": "included"
+            }
+          ]
+        }
+      ],
+      "coverage": "full",
+      "limitations": []
+    },
+    {
+      "caseId": "U3",
+      "name": "修改备注后显示提交的新值",
+      "sourceTitle": "修改备注后显示提交的新值",
+      "preconditions": [
+        "准备新备注“更新后的备注”。"
+      ],
+      "goal": "备注输入框的当前值为“更新后的备注”。",
+      "coreExpectationIds": [
+        "E1"
+      ],
+      "steps": [
+        {
+          "sourceStepNo": 1,
+          "sourceAction": "将备注改为“更新后的备注”。",
+          "actions": [
+            {
+              "actionId": "A1",
+              "sourceQuote": "将备注改为“更新后的备注”。",
+              "action": "将备注改为“更新后的备注”。",
+              "operation": "input",
+              "target": "备注输入框；输入后读取实时值 actualNote",
+              "value": "更新后的备注",
+              "status": "included"
+            }
+          ],
+          "expectations": [
+            {
+              "expectationId": "E1",
+              "sourceQuote": "备注输入框的当前值为“更新后的备注”。",
+              "assertion": "visible",
+              "target": "备注输入框的实时值等于独立的提交值",
+              "value": "更新后的备注",
+              "status": "included"
+            }
+          ]
+        }
+      ],
+      "coverage": "full",
+      "limitations": []
+    }
+  ]
+}

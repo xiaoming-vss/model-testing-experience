@@ -149,7 +149,18 @@ class BuildCodeContextTests(unittest.TestCase):
     def test_missing_requirement_is_marked_in_context(self) -> None:
         context = build_code_context(_task(requirement=False), self.workspace, max_diff_chars=1000)
 
-        self.assertIn("任务快照缺少需求理解记录", context.text)
+        self.assertIn("任务快照缺少材料整理结果", context.text)
+
+    def test_context_accepts_full_approved_material(self) -> None:
+        task = _task()
+        fixture = (
+            Path(__file__).resolve().parents[4]
+            / "tests/fixtures/requirement_artifacts/readable-material.example.json"
+        )
+        task.requirement_input.document_content = fixture.read_text()
+        context = build_code_context(task, self.workspace, max_diff_chars=10_000)
+        self.assertIn('"artifactType":"readable_requirement_material"', context.text)
+        self.assertIn("保存后展示结果", context.text)
 
     def test_diff_over_budget_truncates_whole_files_and_records_them(self) -> None:
         context = build_code_context(_task(), self.workspace, max_diff_chars=40)

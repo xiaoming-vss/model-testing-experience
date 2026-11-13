@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>测试点树 · 删除与选中动效 Demo</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#eef3f9;color:#263b57;font:14px/1.5 -apple-system,BlinkMacSystemFont,'Microsoft YaHei',sans-serif}
+button{font:inherit;cursor:pointer}
+button:focus-visible,[role=button]:focus-visible{outline:3px solid #578ce0;outline-offset:2px}
+.demo{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.demo-head{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:16px 24px 12px;background:#f8fafd;border-bottom:1px solid #e2eaf4}
+.demo-head h1{margin:0;font-size:15px;font-weight:650}
+.demo-head .sub{font-size:12px;color:#7b8da3}
+.demo-head .spacer{flex:1}
+.demo-head .count{font-size:12px;color:#4c6c92;background:#e9f3ff;border:1px solid #d8e8fb;border-radius:999px;padding:4px 10px}
+.canvas{position:relative;flex:1 1 auto;min-height:0;overflow:auto;background:
+  radial-gradient(circle at 18px 18px,rgba(121,157,199,.18) 1px,transparent 1.6px) 0 0/24px 24px,
+  linear-gradient(180deg,#f6f9fd,#f2f6fb)}
+.canvas-inner{position:relative;min-width:1080px;min-height:100%}
+#edges{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+#edges path{fill:none;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;transition:stroke .2s ease,stroke-width .2s ease,opacity .2s ease}
+#edges path.from-root{stroke:#9db7cf;stroke-width:2}
+#edges path.from-model{stroke:#8bb0d6;stroke-width:2}
+#edges path.from-testModel{stroke:#a4b8cc;stroke-width:1.8}
+#edges path.is-active{stroke:#4b8bef;stroke-width:2.6;filter:drop-shadow(0 0 4px rgba(75,139,239,.45))}
+.tree-node{position:absolute;left:0;top:0;will-change:left,top}
+.node-card{position:relative;display:flex;align-items:center;gap:8px;width:100%;border:1px solid #e1e9f3;border-radius:11px;background:#fff;color:#2b405c;font-size:12px;line-height:1.55;font-weight:600;padding:8px 11px;box-shadow:0 6px 16px rgba(45,73,103,.06);transition:border-color .2s ease,background .2s ease,box-shadow .25s ease,transform .25s ease}
+.node-card.root{justify-content:center;text-align:center;color:#2f6b4f;border-color:#b9dcc8;background:linear-gradient(135deg,#e9f7ee,#dcf0e5);box-shadow:0 10px 24px rgba(63,132,94,.14)}
+.node-card.model{justify-content:center;text-align:center;color:#3d6588;border-color:#c9ddec;background:linear-gradient(135deg,#f2f8fd,#e8f2fb)}
+.node-card.testModel{justify-content:center;text-align:center;color:#3d6a92;border-color:#cfE2f5;background:#eef6ff}
+.node-card.point{align-items:flex-start;font-weight:500;padding:9px 9px 9px 12px;background:#f9fbfe}
+.node-label{flex:1;min-width:0;overflow-wrap:anywhere}
+.node-card.point .node-label{flex:1}
+.node-card.root .node-label,.node-card.model .node-label,.node-card.testModel .node-label{flex:0 1 auto}
+.node-card.point[role=button]{cursor:pointer}
+.node-card.point:hover{border-color:#b9cfeb;background:#fff;box-shadow:0 9px 22px rgba(58,99,148,.12)}
+/* 叶子卡片：删除操作固定在文字末尾，始终可见。 */
+.delete-btn{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:0;border-radius:7px;background:transparent;color:#9aacbf;opacity:1;transition:background .16s ease,color .16s ease}
+.delete-btn:hover{color:#c0392b;background:#fdecea}
+.delete-btn svg{width:14px;height:14px;pointer-events:none}
+body.del-hover .node-card.point .delete-btn{opacity:0}
+body.del-hover .node-card.point:hover .delete-btn,body.del-hover .node-card.point:focus-within .delete-btn{opacity:1}
+/* 选中态 */
+.node-card.point.is-selected{border-color:#6ea4ef;background:linear-gradient(180deg,#f2f8ff,#e8f2ff);box-shadow:0 12px 30px rgba(56,113,196,.2),0 0 0 1px rgba(110,164,239,.35) inset}
+.node-card.point.is-selected .node-label{color:#17457e}
+/* A 弹性浮起 */
+@keyframes sel-a{0%{transform:scale(1)}38%{transform:scale(1.045)}62%{transform:scale(.995)}82%{transform:scale(1.025)}100%{transform:scale(1.02)}}
+.node-card.point.motion-a{animation:sel-a 380ms cubic-bezier(.22,1.2,.36,1) both}
+/* B 光圈扩散 */
+@keyframes sel-b{0%{transform:scale(1);box-shadow:0 0 0 0 rgba(86,144,235,.42),0 6px 16px rgba(45,73,103,.06)}55%{transform:scale(1.03);box-shadow:0 0 0 10px rgba(86,144,235,.14),0 14px 30px rgba(45,73,103,.16)}100%{transform:scale(1.02);box-shadow:0 0 0 16px rgba(86,144,235,0),0 12px 30px rgba(56,113,196,.2)}}
+.node-card.point.motion-b{animation:sel-b 460ms cubic-bezier(.22,1,.36,1) both}
+/* C 落点涟漪 */
+@keyframes sel-c{0%{transform:scale(.985)}55%{transform:scale(1.035)}100%{transform:scale(1.02)}}
+.node-card.point.motion-c{animation:sel-c 340ms cubic-bezier(.22,1.2,.36,1) both}
+.ripple{position:absolute;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;background:rgba(86,144,235,.32);pointer-events:none;animation:ripple 560ms ease-out forwards}
+@keyframes ripple{0%{transform:scale(.2);opacity:.9}100%{transform:scale(16);opacity:0}}
+/* 删除退场 */
+@keyframes leave{0%{opacity:1;transform:scale(1);filter:blur(0)}100%{opacity:0;transform:scale(.92) translateX(-10px);filter:blur(1px)}}
+.tree-node.is-leaving{z-index:0;pointer-events:none}
+.tree-node.is-leaving .node-card{animation:leave 220ms ease-in both}
+/* 删除后的短暂高亮 */
+@keyframes flash{0%{box-shadow:0 0 0 0 rgba(86,144,235,.4)}100%{box-shadow:0 0 0 10px rgba(86,144,235,0)}}
+.tree-node.is-flashing .node-card{animation:flash 500ms ease-out}
+/* 底部控制条 */
+.switch{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:4px;background:#293f5e;color:#d9e4f2;border-radius:11px;padding:6px;box-shadow:0 8px 26px rgba(28,49,77,.28)}
+.switch>span{padding:0 7px;font-size:12px;white-space:nowrap;color:#a9bdd6}
+.switch .sep{width:1px;height:20px;background:#44618a;margin:0 4px;padding:0}
+.switch button{border:0;border-radius:7px;background:transparent;color:#d9e4f2;padding:7px 10px;white-space:nowrap;font-size:12px;transition:background .16s ease}
+.switch button:hover{background:#354f73}
+.switch button.active{background:#fff;color:#2f517c;font-weight:600}
+/* 说明与提示 */
+.description{position:fixed;right:18px;bottom:16px;z-index:20;width:280px;background:#fff;border:1px solid #dbe6f3;border-radius:11px;padding:12px 14px;box-shadow:0 7px 22px rgba(42,64,91,.14)}
+.description b{display:block;color:#294462;font-size:13px;margin-bottom:3px}
+.description span{font-size:12px;color:#6c819a;line-height:1.7}
+.toast{position:fixed;left:50%;bottom:78px;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:12px;background:#1f3149;color:#e6eef9;border-radius:9px;padding:10px 14px;font-size:13px;box-shadow:0 10px 28px rgba(20,35,55,.3);animation:toast-in .2s ease-out}
+.toast[hidden]{display:none}
+.toast button{border:0;background:transparent;color:#8fc0ff;font-weight:600;padding:2px 4px;border-radius:5px}
+.toast button:hover{text-decoration:underline}
+@keyframes toast-in{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+@media (max-width:900px){.description{display:none}.switch{max-width:calc(100vw - 24px);overflow-x:auto}.switch>span{display:none}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+</style>
+</head>
+<body class="del-hover">
+<div class="demo">
+  <header class="demo-head">
+    <h1>完整用例 · 测试点树</h1>
+    <span class="sub">删除操作 + 选中动效 Demo</span>
+    <span class="spacer"></span>
+    <span class="count" id="count">10 个测试点</span>
+  </header>
+  <main class="canvas" id="canvas" aria-label="测试点树 Demo">
+    <div class="canvas-inner" id="inner">
+      <svg id="edges" aria-hidden="true"></svg>
+      <div id="nodes"></div>
+    </div>
+  </main>
+</div>
+
+<aside class="description" id="description">
+  <b>怎么体验</b>
+  <span>点击任意测试点查看选中动效；点卡片右侧的删除按钮移除测试点，整棵树会自动重排，删除后可撤销。底部可切换动效方案与删除按钮的显示方式。</span>
+</aside>
+
+<nav class="switch" aria-label="Demo 选项">
+  <span>选中动效</span>
+  <button type="button" data-motion="a" class="active">A 弹性浮起</button>
+  <button type="button" data-motion="b">B 光圈扩散</button>
+  <button type="button" data-motion="c">C 落点涟漪</button>
+  <span class="sep" aria-hidden="true"></span>
+  <span>删除按钮</span>
+  <button type="button" data-del="always">常显</button>
+  <button type="button" data-del="hover" class="active">悬停显示</button>
+</nav>
+
+<div class="toast" id="toast" hidden>
+  <span id="toast-text"></span>
+  <button type="button" id="undo">撤销</button>
+</div>
+
+<script>
+const POINT_WIDTH = 340
+const NODE_WIDTH = { root: 150, model: 140, testModel: 130 }
+const COLUMN_GAP = 78
+const ROW_GAP = 12
+const DELETE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>'
+
+const data = {
+  id: 'root', title: '完整用例', kind: 'root', children: [
+    { id: 'module-1', title: '清洗核验', kind: 'model', children: [
+      { id: 'type-1', title: '功能测试', kind: 'testModel', children: [
+        { id: 'point-1', title: '【清洗核验】验证从采集记录列表打开对应记录的“清洗核验”可进入页面并显示“等待清洗核验”状态', kind: 'point' },
+        { id: 'point-2', title: '【清洗核验】验证检查项面板按项展示时间、帧、时长区间信息且“处理动作”下拉只提供“切片”和“保留”', kind: 'point' },
+        { id: 'point-3', title: '【清洗核验】验证点击“保存”只保存当前标注而未启动数据切片', kind: 'point' },
+        { id: 'point-4', title: '【清洗核验】验证点击“保存并切片”在保存标注的同时启动数据切片', kind: 'point' },
+        { id: 'point-5', title: '【清洗核验】验证通过“添加切片”标注的异常段与无效片段均在数据切片前从有效区间中扣除', kind: 'point' },
+      ]},
+      { id: 'type-2', title: '异常测试', kind: 'testModel', children: [
+        { id: 'point-6', title: '【清洗核验】验证不存在任何连续有效片段时“保存并切片”被阻断并提示作废数据', kind: 'point' },
+      ]},
+      { id: 'type-3', title: '易用性体验测试', kind: 'testModel', children: [
+        { id: 'point-7', title: '【清洗核验】验证页面不提供异常段、无效片段独立新增控件且删除区间只能通过“添加切片”标注', kind: 'point' },
+        { id: 'point-8', title: '【清洗核验】验证通过“添加切片”标记的切除区间在页面上没有额外呈现', kind: 'point' },
+      ]},
+      { id: 'type-4', title: '安全测试', kind: 'testModel', children: [
+        { id: 'point-9', title: '【清洗核验】验证视频数据审核与处理人员可进入清洗核验完成切除与保留标注并确定有效 Episode 边界', kind: 'point' },
+        { id: 'point-10', title: '【数据切片】验证按最终切除区间执行“保存并切片”后，每个保留连续有效区间生成一个 Episode', kind: 'point' },
+      ]},
+    ]},
+  ],
+}
+
+const nodesHost = document.getElementById('nodes')
+const edgesSvg = document.getElementById('edges')
+const canvas = document.getElementById('canvas')
+const inner = document.getElementById('inner')
+const countEl = document.getElementById('count')
+const toast = document.getElementById('toast')
+const toastText = document.getElementById('toast-text')
+const undoBtn = document.getElementById('undo')
+let selectedId = null
+let selectedElement = null
+let motion = 'a'
+let lastDeleted = null
+let toastTimer = null
+
+function findParent(node, id, parent = null) {
+  if (!node) return null
+  if (node.id === id) return { parent, node }
+  for (const child of node.children || []) {
+    const hit = findParent(child, id, node)
+    if (hit) return hit
+  }
+  return null
+}
+
+function collectPoints(node, out = []) {
+  if (node.kind === 'point') out.push(node)
+  else (node.children || []).forEach(child => collectPoints(child, out))
+  return out
+}
+
+function cardClass(kind) {
+  return `node-card ${kind}`
+}
+
+function buildNodeElement(node) {
+  const wrap = document.createElement('div')
+  wrap.className = 'tree-node'
+  wrap.dataset.id = node.id
+  wrap.style.width = `${node.kind === 'point' ? POINT_WIDTH : NODE_WIDTH[node.kind]}px`
+  const card = document.createElement('div')
+  card.className = cardClass(node.kind)
+  card.dataset.id = node.id
+  const label = document.createElement('span')
+  label.className = 'node-label'
+  label.textContent = node.title
+  card.appendChild(label)
+  if (node.kind === 'point') {
+    card.setAttribute('role', 'button')
+    card.tabIndex = 0
+    card.setAttribute('aria-pressed', 'false')
+    card.setAttribute('aria-label', `选择测试点：${node.title}`)
+    const remove = document.createElement('button')
+    remove.type = 'button'
+    remove.className = 'delete-btn'
+    remove.title = '删除该测试点'
+    remove.setAttribute('aria-label', `删除测试点：${node.title}`)
+    remove.innerHTML = DELETE_ICON
+    remove.addEventListener('click', event => {
+      event.stopPropagation()
+      deletePoint(node.id)
+    })
+    card.appendChild(remove)
+    card.addEventListener('click', event => selectPoint(node.id, card, event))
+    card.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectPoint(node.id, card) }
+    })
+  }
+  wrap.appendChild(card)
+  return wrap
+}
+
+function flatten(node, out = []) {
+  out.push(node)
+  ;(node.children || []).forEach(child => flatten(child, out))
+  return out
+}
+
+function expand(tree) {
+  return flatten(tree).filter(node => node.kind === 'point').length
+}
+
+function render() {
+  const previous = new Map()
+  nodesHost.querySelectorAll('.tree-node').forEach(el => previous.set(el.dataset.id, el.getBoundingClientRect()))
+  nodesHost.innerHTML = ''
+  flatten(data).forEach(node => {
+    const el = buildNodeElement(node)
+    if (node.id === selectedId) {
+      el.querySelector('.node-card').classList.add('is-selected')
+      el.querySelector('.node-card').setAttribute('aria-pressed', 'true')
+    }
+    nodesHost.appendChild(el)
+  })
+  countEl.textContent = `${expand(data)} 个测试点`
+  layout()
+  flip(previous)
+  drawEdges()
+  syncSelectedVisual()
+}
+
+function measureHeights() {
+  const heights = new Map()
+  nodesHost.querySelectorAll('.tree-node').forEach(el => heights.set(el.dataset.id, el.querySelector('.node-card').offsetHeight))
+  return heights
+}
+
+function subtreeHeight(node, heights) {
+  if (!node.children || !node.children.length) return heights.get(node.id) || 40
+  const childrenHeight = node.children.reduce((sum, child) => sum + subtreeHeight(child, heights), 0) + (node.children.length - 1) * ROW_GAP
+  return Math.max(heights.get(node.id) || 40, childrenHeight)
+}
+
+function layout() {
+  const heights = measureHeights()
+  const treeHeight = subtreeHeight(data, heights)
+  const canvasHeight = Math.max(canvas.clientHeight, treeHeight + 96)
+  inner.style.height = `${canvasHeight}px`
+  const columnX = { root: 28, model: 28 + NODE_WIDTH.root + COLUMN_GAP, testModel: 28 + NODE_WIDTH.root + NODE_WIDTH.model + COLUMN_GAP * 2, point: 28 + NODE_WIDTH.root + NODE_WIDTH.model + NODE_WIDTH.testModel + COLUMN_GAP * 3 }
+  const top = Math.max(32, (canvasHeight - treeHeight) / 2)
+  const place = (node, y) => {
+    const el = nodesHost.querySelector(`.tree-node[data-id="${CSS.escape(node.id)}"]`)
+    if (!el) return
+    el.style.left = `${columnX[node.kind]}px`
+    el.style.top = `${y + (subtreeHeight(node, heights) - (heights.get(node.id) || 40)) / 2}px`
+    if (!node.children || !node.children.length) return
+    const childrenHeight = node.children.reduce((sum, child) => sum + subtreeHeight(child, heights), 0) + (node.children.length - 1) * ROW_GAP
+    let cursor = y + (subtreeHeight(node, heights) - childrenHeight) / 2
+    node.children.forEach(child => {
+      place(child, cursor)
+      cursor += subtreeHeight(child, heights) + ROW_GAP
+    })
+  }
+  place(data, top)
+}
+
+function nodeRect(id) {
+  const el = nodesHost.querySelector(`.tree-node[data-id="${CSS.escape(id)}"]`)
+  if (!el) return null
+  const card = el.querySelector('.node-card')
+  return { left: parseFloat(el.style.left), top: parseFloat(el.style.top), width: card.offsetWidth, height: card.offsetHeight }
+}
+
+function drawEdges() {
+  edgesSvg.innerHTML = ''
+  const width = inner.clientWidth
+  const height = inner.clientHeight
+  edgesSvg.setAttribute('width', width)
+  edgesSvg.setAttribute('height', height)
+  edgesSvg.setAttribute('viewBox', `0 0 ${width} ${height}`)
+  const visit = node => {
+    (node.children || []).forEach(child => {
+      const from = nodeRect(node.id)
+      const to = nodeRect(child.id)
+      if (from && to) {
+        const x1 = from.left + from.width
+        const y1 = from.top + from.height / 2
+        const x2 = to.left
+        const y2 = to.top + to.height / 2
+        const dx = Math.max(34, (x2 - x1) * 0.55)
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+        path.setAttribute('d', `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`)
+        path.setAttribute('class', `from-${node.kind}`)
+        path.dataset.source = node.id
+        path.dataset.target = child.id
+        edgesSvg.appendChild(path)
+      }
+      visit(child)
+    })
+  }
+  visit(data)
+}
+
+function syncSelectedVisual() {
+  edgesSvg.querySelectorAll('path').forEach(path => path.classList.toggle('is-active', Boolean(selectedId) && path.dataset.target === selectedId))
+}
+
+function selectPoint(id, card, event) {
+  selectedId = id
+  nodesHost.querySelectorAll('.node-card.point.is-selected').forEach(el => {
+    if (el !== card) { el.classList.remove('is-selected'); el.setAttribute('aria-pressed', 'false') }
+  })
+  card.classList.remove('motion-a', 'motion-b', 'motion-c')
+  void card.offsetWidth
+  card.classList.add('is-selected', `motion-${motion}`)
+  card.setAttribute('aria-pressed', 'true')
+  if (motion === 'c') {
+    const rect = card.getBoundingClientRect()
+    const ripple = document.createElement('span')
+    ripple.className = 'ripple'
+    ripple.style.left = `${(event ? event.clientX : rect.left + rect.width / 2) - rect.left}px`
+    ripple.style.top = `${(event ? event.clientY : rect.top + rect.height / 2) - rect.top}px`
+    card.appendChild(ripple)
+    ripple.addEventListener('animationend', () => ripple.remove())
+  }
+  syncSelectedVisual()
+  selectedElement = card
+}
+
+function deletePoint(id) {
+  const found = findParent(data, id)
+  if (!found || !found.parent) return
+  lastDeleted = { parentId: found.parent.id, index: found.parent.children.indexOf(found.node), node: found.node }
+  const el = nodesHost.querySelector(`.tree-node[data-id="${CSS.escape(id)}"]`)
+  if (el) el.classList.add('is-leaving')
+  if (selectedId === id) selectedId = null
+  const finish = () => {
+    found.parent.children.splice(found.parent.children.indexOf(found.node), 1)
+    render()
+    showToast(`已删除「${found.node.title.slice(0, 18)}${found.node.title.length > 18 ? '…' : ''}」`)
+  }
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  window.setTimeout(finish, reduced ? 0 : 220)
+}
+
+function showToast(text) {
+  toastText.textContent = text
+  toast.hidden = false
+  window.clearTimeout(toastTimer)
+  toastTimer = window.setTimeout(() => { toast.hidden = true; lastDeleted = null }, 6000)
+}
+
+function undoDelete() {
+  if (!lastDeleted) return
+  const found = findParent(data, lastDeleted.parentId)
+  if (!found) return
+  found.node.children.splice(lastDeleted.index, 0, lastDeleted.node)
+  const restoreId = lastDeleted.node.id
+  lastDeleted = null
+  toast.hidden = true
+  render()
+  const el = nodesHost.querySelector(`.tree-node[data-id="${CSS.escape(restoreId)}"]`)
+  if (el) {
+    el.classList.add('is-flashing')
+    el.addEventListener('animationend', () => el.classList.remove('is-flashing'), { once: true })
+  }
+}
+
+function flip(previous) {
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (reduced) return
+  nodesHost.querySelectorAll('.tree-node').forEach(el => {
+    const before = previous.get(el.dataset.id)
+    if (!before) return
+    const after = el.getBoundingClientRect()
+    const dx = before.left - after.left
+    const dy = before.top - after.top
+    if (!dx && !dy) return
+    el.animate([{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'translate(0,0)' }], { duration: 320, easing: 'cubic-bezier(.22,1,.36,1)' })
+  })
+}
+
+document.querySelectorAll('[data-motion]').forEach(button => {
+  button.addEventListener('click', () => {
+    motion = button.dataset.motion
+    document.querySelectorAll('[data-motion]').forEach(item => item.classList.toggle('active', item === button))
+  })
+})
+document.querySelectorAll('[data-del]').forEach(button => {
+  button.addEventListener('click', () => {
+    document.body.classList.toggle('del-hover', button.dataset.del === 'hover')
+    document.querySelectorAll('[data-del]').forEach(item => item.classList.toggle('active', item === button))
+  })
+})
+undoBtn.addEventListener('click', undoDelete)
+window.addEventListener('resize', () => { layout(); drawEdges() })
+
+render()
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "environment": {
+    "baseUrl": "https://ui-example.test"
+  },
+  "authentication": "not_required",
+  "entryRoute": "/demo",
+  "executionProfile": "mtx-ui-baseline/1.0",
+  "note": "虚构示例；实际运行时选择托管本示例页面的环境。未宣称业务执行已通过。"
+}

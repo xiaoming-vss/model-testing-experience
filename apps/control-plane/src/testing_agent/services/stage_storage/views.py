@@ -26,6 +26,7 @@ from testing_agent.schemas.generation_chain import (
     ChainStageView,
 )
 from testing_agent.schemas.requirement_design import DesignKind
+from testing_agent.services.stage_storage.module_progress import module_progress_view
 from testing_agent.services.ui_generation_sources import ui_source_inputs
 
 
@@ -138,13 +139,13 @@ async def build_stage_views(
                 select(AiGenerateStageVersion)
                 .where(
                     AiGenerateStageVersion.task_id == upstream_task.task_id,
-                    AiGenerateStageVersion.stage == "feature_understanding",
+                    AiGenerateStageVersion.stage == "extracting_text",
                 )
                 .order_by(AiGenerateStageVersion.version_no.desc())
                 .limit(1)
             )
             if upstream is not None:
-                current_latest["feature_understanding"] = upstream
+                current_latest["extracting_text"] = upstream
     views: list[ChainStageView] = []
     draft_count = 0
     busy = False
@@ -268,6 +269,9 @@ async def build_stage_views(
                 failure_run_id=failed.id if failed else "",
                 failed_at=(failed.finished_at or failed.created_at) if failed else None,
                 active_run_id=active.id if active and state == "running" else "",
+                module_generation=module_progress_view(active or last)
+                if name in {"detailed_cases", "case_names"}
+                else None,
             )
         )
     return DirectStageViews(views, draft_count, busy, source_batch)

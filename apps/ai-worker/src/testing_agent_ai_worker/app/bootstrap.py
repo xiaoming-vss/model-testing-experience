@@ -104,6 +104,10 @@ def build_task_runner(
             ),
             functional_executor=FunctionalCaseExecutor(
                 agent_config=settings.agent.active,
+                review_concurrency=settings.worker.traceable_review_concurrency,
+                review_limiter=threading.BoundedSemaphore(
+                    settings.worker.traceable_review_global_concurrency
+                ),
                 attachment_downloader=PlatformRevisionAttachmentDownloader(
                     resolved_client, settings.worker.worker_id
                 ),

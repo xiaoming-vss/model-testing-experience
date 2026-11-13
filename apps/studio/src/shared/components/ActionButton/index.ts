@@ -1,1 +1,1 @@
-export { ActionButton, type ActionButtonProps } from './ActionButton'
+export { ActionButton } from './ActionButton'

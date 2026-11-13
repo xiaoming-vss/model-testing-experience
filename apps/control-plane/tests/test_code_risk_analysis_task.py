@@ -21,9 +21,8 @@ import pytest
 from fastapi.testclient import TestClient
 from support.ai_execution import AsyncSessionAdapter, seed_task  # noqa: F401
 from support.ai_execution import db as db
-from support.execution_writer import MemoryExecutionWriter
 from support.generation import generation_services
-from support.requirement_versions import understanding_artifact
+from support.requirement_versions import material_artifact
 
 from testing_agent.api.deps import (
     get_current_user_id,
@@ -42,7 +41,6 @@ from testing_agent.services.ai_task_output import dump_run
 from testing_agent.services.code_risk_analysis import (
     FUNCTION_CASE_NO_RUN_NOTE,
     CodeRiskAnalysisService,
-    dump_code_risk_analysis_run,
     dump_last_run,
     gitlab_credentials_payload,
     parse_risk_report,
@@ -78,6 +76,12 @@ coverageGaps:
 """
 
 
+def dump_code_risk_analysis_run(run):
+    payload = dump_run(run)
+    payload["report"] = parse_risk_report(str(run.result_yaml or ""))
+    return payload
+
+
 def make_task(**overrides) -> SimpleNamespace:
     fields = {
         "task_id": "task-1",
@@ -94,7 +98,7 @@ def make_task(**overrides) -> SimpleNamespace:
 
 
 def understanding_version(content: str | None = None) -> SimpleNamespace:
-    from support.requirement_versions import understanding_artifact
+    from support.requirement_versions import material_artifact
 
     return SimpleNamespace(
         version_id="sv-understanding-1",
@@ -104,7 +108,7 @@ def understanding_version(content: str | None = None) -> SimpleNamespace:
         stage="feature_understanding",
         artifact_content=content
         if content is not None
-        else json.dumps(understanding_artifact(), ensure_ascii=False),
+        else json.dumps(material_artifact(), ensure_ascii=False),
     )
 
 
@@ -118,7 +122,7 @@ def approved_understanding(monkeypatch):
     async def resolve(repository, requirement_id, version_id=""):
         return version
 
-    monkeypatch.setattr(module, "approved_understanding", resolve)
+    monkeypatch.setattr(module, "approved_material", resolve)
     return version
 
 
@@ -453,8 +457,8 @@ async def test_build_snapshot_contains_requirement_bindings_and_existing_tests()
     assert snapshot["requirement"]["name"] == "登录改造"
     assert snapshot["requirement"]["documentType"] == "richtext"
     # 需求内容来自已审核的需求理解版本，不读取需求正文。
-    assert json.loads(snapshot["requirement"]["documentContent"]) == understanding_artifact()
-    assert snapshot["requirementUnderstandingVersion"] == {
+    assert json.loads(snapshot["requirement"]["documentContent"]) == material_artifact()
+    assert snapshot["requirementMaterialVersion"] == {
         "versionId": "sv-understanding-1",
         "versionNo": 1,
         "taskId": "understanding-task",
@@ -511,7 +515,7 @@ async def test_docx_requirement_still_uses_approved_understanding():
     snapshot = await service.build_snapshot(make_task(), "run-1", "worker-task-1", user_id="user-1")
 
     assert snapshot["requirement"]["documentType"] == "docx"
-    assert json.loads(snapshot["requirement"]["documentContent"]) == understanding_artifact()
+    assert json.loads(snapshot["requirement"]["documentContent"]) == material_artifact()
 
 
 @pytest.mark.asyncio
@@ -531,13 +535,13 @@ async def test_missing_approved_understanding_rejects_the_run(monkeypatch):
     async def missing(repository, requirement_id, version_id=""):
         return None
 
-    monkeypatch.setattr(module, "approved_understanding", missing)
+    monkeypatch.setattr(module, "approved_material", missing)
     service, _ = make_service()
 
     with pytest.raises(AppError) as error:
         await service.build_snapshot(make_task(), "run-1", "worker-task-1", user_id="user-1")
 
-    assert "请先审核通过需求理解" in str(error.value)
+    assert "请先审核通过材料整理" in str(error.value)
 
 
 @pytest.mark.asyncio
@@ -550,11 +554,11 @@ async def test_explicit_understanding_version_is_forwarded(monkeypatch):
         requested["version_id"] = version_id
         return understanding_version()
 
-    monkeypatch.setattr(module, "approved_understanding", resolve)
+    monkeypatch.setattr(module, "approved_material", resolve)
     service, _ = make_ready_service()
 
     await service.build_snapshot(
-        make_task(), "run-1", "worker-task-1", user_id="user-1", understanding_version_id="sv-old"
+        make_task(), "run-1", "worker-task-1", user_id="user-1", material_version_id="sv-old"
     )
 
     assert requested["version_id"] == "sv-old"
@@ -731,9 +735,7 @@ async def test_worker_task_service_gitlab_credentials_rejects_other_task_types(m
     monkeypatch.setattr(worker_task_service_module, "find_task", fake_find_task)
 
     with pytest.raises(AppError) as excinfo:
-        await WorkerTaskService(
-            SimpleNamespace(session=object()), execution_writer=MemoryExecutionWriter()
-        ).gitlab_credentials("task-1")
+        await WorkerTaskService(SimpleNamespace(session=object())).gitlab_credentials("task-1")
     assert excinfo.value.code == 404
 
 
@@ -777,9 +779,7 @@ async def test_worker_task_service_gitlab_credentials_reads_run_snapshot(monkeyp
     )
     monkeypatch.setattr(worker_task_service_module, "DirectStageWorkerService", lambda _: direct)
 
-    payload = await WorkerTaskService(
-        FakeRepository(), execution_writer=MemoryExecutionWriter()
-    ).gitlab_credentials("worker-task-1")
+    payload = await WorkerTaskService(FakeRepository()).gitlab_credentials("worker-task-1")
     assert payload["taskId"] == "worker-task-1"
 
 
@@ -817,9 +817,7 @@ async def test_worker_requirement_document_allows_code_risk_analysis(monkeypatch
         ),
     )
     monkeypatch.setattr(worker_task_service_module, "DirectStageWorkerService", lambda _: direct)
-    requirement = await WorkerTaskService(
-        FakeRepository(), execution_writer=MemoryExecutionWriter()
-    ).requirement_document("worker-task-1")
+    requirement = await WorkerTaskService(FakeRepository()).requirement_document("worker-task-1")
     assert requirement.document_content == "需求正文"
 
 
@@ -1080,9 +1078,7 @@ async def test_worker_rejects_legacy_code_risk_completion(monkeypatch):
         resultYaml=RISK_REPORT_YAML,
     )
     with pytest.raises(AppError) as rejected:
-        await WorkerTaskService(
-            FakeRepository(), execution_writer=MemoryExecutionWriter()
-        ).complete("ai", "worker-task-1", body)
+        await WorkerTaskService(FakeRepository()).complete("ai", "worker-task-1", body)
     assert rejected.value.http_code == 404
     assert run.result_yaml == ""
 
@@ -1097,9 +1093,13 @@ class StubCodeRiskAnalysisService:
         *,
         user_id,
         connection_ids=None,
-        understanding_version_id="",
+        material_version_id="",
     ):
-        return {"taskId": task.task_id, "runId": run_id}
+        return {
+            "taskId": task.task_id,
+            "runId": run_id,
+            "requirementMaterialVersion": {"versionId": "understanding-r-v1"},
+        }
 
 
 def real_risk_service(session_db):
@@ -1109,6 +1109,9 @@ def real_risk_service(session_db):
     from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 
     seed_task(session_db)
+    from support.requirement_versions import material_version
+
+    material_version(session_db)
     task = session_db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == "task"))
     task.task_type = "code_risk_analysis"
     session_db.commit()

@@ -18,6 +18,32 @@ class SkillTests(unittest.TestCase):
             **kwargs,
         )
 
+    def test_functional_stages_fetch_only_the_matching_mtx_skill(self):
+        stages = (
+            ("requirement_analysis", "extracting_text", "mtx-organize-requirement-material"),
+            (
+                "functional_case_generate",
+                "requirement_analysis",
+                "mtx-analyze-functional-requirements",
+            ),
+            ("functional_case_generate", "case_names", "mtx-generate-traceable-test-points"),
+            ("functional_case_generate", "detailed_cases", "mtx-generate-solution-test-cases"),
+        )
+        for kind, stage, expected in stages:
+            with self.subTest(stage=stage):
+                task = self.task(task_type=kind, checkpoint_enabled=True, current_stage=stage)
+                self.assertEqual(required_skills(task), [expected])
+
+        task = self.task(task_type="functional_case_generate")
+        self.assertEqual(
+            required_skills(task),
+            [
+                "mtx-analyze-functional-requirements",
+                "mtx-generate-traceable-test-points",
+                "mtx-generate-solution-test-cases",
+            ],
+        )
+
     def test_maps_active_skills_and_checkpoint_only_fetches_needed_one(self):
         names = set()
         for kind in [
@@ -30,7 +56,7 @@ class SkillTests(unittest.TestCase):
             "test_order_graph",
         ]:
             if kind == "requirement_analysis":
-                for stage in ["extracting_text", "feature_understanding"]:
+                for stage in ["extracting_text"]:
                     names.update(
                         required_skills(
                             self.task(task_type=kind, checkpoint_enabled=True, current_stage=stage)
@@ -43,14 +69,24 @@ class SkillTests(unittest.TestCase):
             checkpoint_enabled=True,
             current_stage="relation_analysis",
         )
-        self.assertEqual(required_skills(task), ["analyze-test-case-relations"])
+        self.assertEqual(required_skills(task), ["mtx-analyze-test-case-relations"])
         names.update(required_skills(task))
-        self.assertEqual(12, len(names))
+        self.assertEqual(11, len(names))
+        self.assertEqual(
+            ["mtx-generate-traceable-test-points"],
+            required_skills(
+                self.task(
+                    task_type="functional_case_generate",
+                    checkpoint_enabled=True,
+                    current_stage="case_names",
+                )
+            ),
+        )
         self.assertEqual(
             ["code-risk-analysis"], required_skills(self.task(task_type="code_risk_analysis"))
         )
         self.assertEqual(
-            ["repository-profile-analysis"],
+            ["mtx-repository-profile-analysis"],
             required_skills(self.task(task_type="repository_profile")),
         )
 
@@ -70,7 +106,7 @@ class SkillTests(unittest.TestCase):
             client.get_signed_file_bytes.return_value = data
             prepare = SkillPreparer(client, config, "worker")
             prepare(task)
-            skill = resolve_task_workspace(config, task) / "skills" / "generate-ui-test-case"
+            skill = resolve_task_workspace(config, task) / "skills" / "mtx-generate-ui-test-case"
             self.assertEqual((skill / "SKILL.md").read_bytes(), data)
             (skill / "old.txt").write_text("old")
             other = task.model_copy(update={"task_id": "other"})

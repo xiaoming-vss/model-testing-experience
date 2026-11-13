@@ -1,0 +1,360 @@
+{
+  "designHash": "970c28953115e8b4ac05bd8df7077ae9722e889bb0e5f57d0f405d2d2079a286",
+  "cases": [
+    {
+      "caseId": "U1",
+      "candidateHash": "7a175831e4f41f617fd16031ee70e880f6c142892e8f1dbdc3e3a138ab43b416",
+      "targets": [
+        {
+          "id": "A1",
+          "kind": "actions",
+          "source": {
+            "actionId": "A1",
+            "sourceQuote": "点击帮助按钮。",
+            "action": "点击帮助按钮。",
+            "operation": "click",
+            "target": "帮助按钮",
+            "value": null,
+            "status": "included"
+          },
+          "verdict": "supported",
+          "clauses": [
+            {
+              "claim": "点击源码中的 help-button 触发帮助显示。",
+              "refs": [
+                {
+                  "orderNo": 2,
+                  "field": "keyword",
+                  "value": "click",
+                  "stepHash": "a2d264c4cf9fd5efd62192c4dad71cfe59a8c7482ae8bee0c6b7d40931b95611"
+                },
+                {
+                  "orderNo": 2,
+                  "field": "locatorValue",
+                  "value": "help-button",
+                  "stepHash": "a2d264c4cf9fd5efd62192c4dad71cfe59a8c7482ae8bee0c6b7d40931b95611"
+                }
+              ]
+            }
+          ],
+          "reason": "",
+          "reviewDepth": "basic"
+        },
+        {
+          "id": "E1",
+          "kind": "expectations",
+          "source": {
+            "expectationId": "E1",
+            "sourceQuote": "显示",
+            "assertion": "visible",
+            "target": "帮助内容区域",
+            "value": null,
+            "status": "included"
+          },
+          "verdict": "supported",
+          "clauses": [
+            {
+              "claim": "assert_visible 对 help-text 等待可见，拒绝仍然隐藏的区域。",
+              "refs": [
+                {
+                  "orderNo": 3,
+                  "field": "keyword",
+                  "value": "assert_visible",
+                  "stepHash": "5d650207fd11ea76440ccd8e4cdae4f72e8789f0b57bb8b71e0077cff5021ad3"
+                },
+                {
+                  "orderNo": 3,
+                  "field": "locatorValue",
+                  "value": "help-text",
+                  "stepHash": "5d650207fd11ea76440ccd8e4cdae4f72e8789f0b57bb8b71e0077cff5021ad3"
+                },
+                {
+                  "orderNo": 3,
+                  "field": "operationValue",
+                  "value": "5000",
+                  "stepHash": "5d650207fd11ea76440ccd8e4cdae4f72e8789f0b57bb8b71e0077cff5021ad3"
+                }
+              ]
+            }
+          ],
+          "reason": "",
+          "reviewDepth": "basic"
+        },
+        {
+          "id": "E2",
+          "kind": "expectations",
+          "source": {
+            "expectationId": "E2",
+            "sourceQuote": "帮助内容。",
+            "assertion": "text_contains",
+            "target": "帮助内容区域",
+            "value": "帮助内容",
+            "status": "included"
+          },
+          "verdict": "supported",
+          "clauses": [
+            {
+              "claim": "assert_text 在 help-text 比较已确认的“帮助内容”，不以可见性代替文案。",
+              "refs": [
+                {
+                  "orderNo": 4,
+                  "field": "keyword",
+                  "value": "assert_text",
+                  "stepHash": "14bed6a7bf7d7ad20092d3acbc1245da69578d86edd1df1e38dbbc941c33df75"
+                },
+                {
+                  "orderNo": 4,
+                  "field": "locatorValue",
+                  "value": "help-text",
+                  "stepHash": "14bed6a7bf7d7ad20092d3acbc1245da69578d86edd1df1e38dbbc941c33df75"
+                },
+                {
+                  "orderNo": 4,
+                  "field": "operationValue",
+                  "value": "帮助内容",
+                  "stepHash": "14bed6a7bf7d7ad20092d3acbc1245da69578d86edd1df1e38dbbc941c33df75"
+                },
+                {
+                  "orderNo": 4,
+                  "field": "comparator",
+                  "value": "contains",
+                  "stepHash": "14bed6a7bf7d7ad20092d3acbc1245da69578d86edd1df1e38dbbc941c33df75"
+                }
+              ]
+            }
+          ],
+          "reason": "",
+          "reviewDepth": "basic"
+        }
+      ]
+    },
+    {
+      "caseId": "U2",
+      "candidateHash": "a6ac8aacc83cf3515c09cd592f343efdfc3c598cc4a69297d3a7faa16d85e092",
+      "targets": [
+        {
+          "id": "A1",
+          "kind": "actions",
+          "source": {
+            "actionId": "A1",
+            "sourceQuote": "打开外部报表。",
+            "action": "打开外部报表。",
+            "operation": "click",
+            "target": "外部报表入口",
+            "value": null,
+            "status": "included"
+          },
+          "verdict": "supported",
+          "clauses": [
+            {
+              "claim": "点击 report-button 触发外部组件打开事件。",
+              "refs": [
+                {
+                  "orderNo": 2,
+                  "field": "keyword",
+                  "value": "click",
+                  "stepHash": "ccf5d7648fcd2e72d60a219836f224a0b686df9a8b6c8aa907057119cfca4624"
+                },
+                {
+                  "orderNo": 2,
+                  "field": "locatorValue",
+                  "value": "report-button",
+                  "stepHash": "ccf5d7648fcd2e72d60a219836f224a0b686df9a8b6c8aa907057119cfca4624"
+                }
+              ]
+            }
+          ],
+          "reason": "",
+          "reviewDepth": "basic"
+        },
+        {
+          "id": "E1",
+          "kind": "expectations",
+          "source": {
+            "expectationId": "E1",
+            "sourceQuote": "报表状态文字为“已完成”。",
+            "assertion": "text_eq",
+            "target": "外部报表状态文字",
+            "value": "已完成",
+            "status": "included"
+          },
+          "verdict": "fillable_gap",
+          "clauses": [
+            {
+              "claim": "为真实外部报表状态节点补齐定位后比较“已完成”。",
+              "object": "外部报表的状态文字",
+              "valueSource": "设计已确认的字面量“已完成”",
+              "scope": "本次打开的外部报表",
+              "timing": "打开后读取",
+              "refs": [
+                {
+                  "orderNo": 3,
+                  "field": "keyword",
+                  "value": "assert_text",
+                  "stepHash": "7feb3c25d3b12a458e0c32e9d3767c1c95f2a5ff694dcade4248ff8331986241"
+                },
+                {
+                  "orderNo": 3,
+                  "field": "locatorValue",
+                  "value": null,
+                  "stepHash": "7feb3c25d3b12a458e0c32e9d3767c1c95f2a5ff694dcade4248ff8331986241"
+                },
+                {
+                  "orderNo": 3,
+                  "field": "operationValue",
+                  "value": "已完成",
+                  "stepHash": "7feb3c25d3b12a458e0c32e9d3767c1c95f2a5ff694dcade4248ff8331986241"
+                },
+                {
+                  "orderNo": 3,
+                  "field": "comparator",
+                  "value": "eq",
+                  "stepHash": "7feb3c25d3b12a458e0c32e9d3767c1c95f2a5ff694dcade4248ff8331986241"
+                },
+                {
+                  "orderNo": 3,
+                  "field": "missingFields",
+                  "value": [
+                    {
+                      "fields": [
+                        "locatorType",
+                        "locatorValue"
+                      ],
+                      "operation": "核对状态文字",
+                      "target": "外部报表状态节点",
+                      "value": "已完成",
+                      "reason": "请提供外部组件实际状态节点的定位类型和表达式；预期文字已确认，不能改成当前页面默认值。"
+                    }
+                  ],
+                  "stepHash": "7feb3c25d3b12a458e0c32e9d3767c1c95f2a5ff694dcade4248ff8331986241"
+                }
+              ],
+              "counterexample": "外部报表状态文字为“失败”",
+              "rejection": "补齐真实节点定位后 assert_text eq 已完成拒绝失败文字；补值不能改写预期。"
+            }
+          ],
+          "reason": ""
+        }
+      ]
+    },
+    {
+      "caseId": "U3",
+      "candidateHash": "072d1105bf614beb5aeea59d16dcc2dc1ea9da4bb09865153823a735d0749f6f",
+      "targets": [
+        {
+          "id": "A1",
+          "kind": "actions",
+          "source": {
+            "actionId": "A1",
+            "sourceQuote": "将备注改为“更新后的备注”。",
+            "action": "将备注改为“更新后的备注”。",
+            "operation": "input",
+            "target": "备注输入框；输入后读取实时值 actualNote",
+            "value": "更新后的备注",
+            "status": "included"
+          },
+          "verdict": "supported",
+          "clauses": [
+            {
+              "claim": "输入独立的新备注并读取实时值。",
+              "object": "同一个 note 输入框",
+              "valueSource": "提交值为固定“更新后的备注”；实际值由 saveTo.source=value 读取",
+              "scope": "当前页面的 note 控件",
+              "timing": "输入后立即读取，再比较该次读取值",
+              "refs": [
+                {
+                  "orderNo": 2,
+                  "field": "keyword",
+                  "value": "input",
+                  "stepHash": "2be85d234a1d80a6873e7622500ef08e8bff37927078e73914ba8065f06acb23"
+                },
+                {
+                  "orderNo": 2,
+                  "field": "locatorValue",
+                  "value": "note",
+                  "stepHash": "2be85d234a1d80a6873e7622500ef08e8bff37927078e73914ba8065f06acb23"
+                },
+                {
+                  "orderNo": 2,
+                  "field": "operationValue",
+                  "value": "更新后的备注",
+                  "stepHash": "2be85d234a1d80a6873e7622500ef08e8bff37927078e73914ba8065f06acb23"
+                },
+                {
+                  "orderNo": 2,
+                  "field": "saveTo",
+                  "value": [
+                    {
+                      "name": "actualNote",
+                      "source": "value"
+                    }
+                  ],
+                  "stepHash": "2be85d234a1d80a6873e7622500ef08e8bff37927078e73914ba8065f06acb23"
+                }
+              ],
+              "counterexample": "实际值仍为“原备注”",
+              "rejection": "比较步骤把 actualNote 与独立字面量比较；原备注使等式为假。"
+            }
+          ],
+          "reason": ""
+        },
+        {
+          "id": "E1",
+          "kind": "expectations",
+          "source": {
+            "expectationId": "E1",
+            "sourceQuote": "备注输入框的当前值为“更新后的备注”。",
+            "assertion": "visible",
+            "target": "备注输入框的实时值等于独立的提交值",
+            "value": "更新后的备注",
+            "status": "included"
+          },
+          "verdict": "supported",
+          "clauses": [
+            {
+              "claim": "比较捕获的实时值与独立提交的新备注。",
+              "object": "同一个 note 输入框",
+              "valueSource": "提交值为固定“更新后的备注”；实际值由 saveTo.source=value 读取",
+              "scope": "当前页面的 note 控件",
+              "timing": "输入后立即读取，再比较该次读取值",
+              "refs": [
+                {
+                  "orderNo": 3,
+                  "field": "keyword",
+                  "value": "assert_visible",
+                  "stepHash": "64cd0253ce09b4920f7d6ebe7d2f9d183790a49b4b1ea6e364b161d06eca7543"
+                },
+                {
+                  "orderNo": 3,
+                  "field": "locatorValue",
+                  "value": "//input[@id='note'][{{actualNote|xpath}}='更新后的备注']",
+                  "stepHash": "64cd0253ce09b4920f7d6ebe7d2f9d183790a49b4b1ea6e364b161d06eca7543"
+                },
+                {
+                  "orderNo": 3,
+                  "field": "operationValue",
+                  "value": "5000",
+                  "stepHash": "64cd0253ce09b4920f7d6ebe7d2f9d183790a49b4b1ea6e364b161d06eca7543"
+                },
+                {
+                  "orderNo": 2,
+                  "field": "saveTo",
+                  "value": [
+                    {
+                      "name": "actualNote",
+                      "source": "value"
+                    }
+                  ],
+                  "stepHash": "2be85d234a1d80a6873e7622500ef08e8bff37927078e73914ba8065f06acb23"
+                }
+              ],
+              "counterexample": "实际值仍为“原备注”",
+              "rejection": "比较步骤把 actualNote 与独立字面量比较；原备注使等式为假。"
+            }
+          ],
+          "reason": ""
+        }
+      ]
+    }
+  ]
+}

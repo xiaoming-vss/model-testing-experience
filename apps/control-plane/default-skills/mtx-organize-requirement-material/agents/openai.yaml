@@ -1,0 +1,4 @@
+interface:
+  display_name: "需求材料可读整理"
+  short_description: "将需求材料整理成可追溯的可读说明 JSON"
+  default_prompt: "使用 $mtx-organize-requirement-material 整理需求材料，输出可读说明及来源 JSON。"

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "0.2",
+  "artifactType": "readable_requirement_material",
+  "title": "示例材料",
+  "sources": [
+    {
+      "id": "S1",
+      "name": "文档",
+      "type": "document",
+      "location": null
+    }
+  ],
+  "materialBlocks": [
+    {
+      "id": "B1",
+      "sourceId": "S1",
+      "parentId": null,
+      "kind": "paragraph",
+      "locator": "第1段",
+      "content": {
+        "text": "保存后展示结果"
+      }
+    }
+  ],
+  "functions": [
+    {
+      "id": "F1",
+      "name": "保存",
+      "sections": [
+        {
+          "title": "功能使用与业务规则",
+          "items": [
+            {
+              "text": "保存后展示结果",
+              "status": "confirmed",
+              "materialBlockIds": [
+                "B1"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "questions": []
+}

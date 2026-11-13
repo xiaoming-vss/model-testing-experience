@@ -34,13 +34,6 @@ function CopyButton({ copyText, copyLabel = '复制 JSON' }: { copyText?: string
   }}>复制</Button>
 }
 
-/** 只有复制动作、没有视图切换的产物标题栏。 */
-export function ArtifactCopyAction({ copyText, copyLabel = '复制 JSON' }: { copyText?: string; copyLabel?: string }) {
-  const { anchor, target } = useArtifactHeaderSlot()
-  const control = <div className="ai-artifact-mode-controls"><CopyButton copyText={copyText} copyLabel={copyLabel} /></div>
-  return <><span ref={anchor} hidden />{target ? createPortal(control, target) : <div className="ai-artifact-mode-toolbar">{control}</div>}</>
-}
-
 /** 视图切换与复制本体，供标题栏或正文内工具条直接摆放。 */
 export function ArtifactModeControls({ value, onChange, options, extra, copyText, copyLabel = '复制 JSON' }: {
   copyText?: string

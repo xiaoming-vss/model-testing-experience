@@ -55,7 +55,7 @@ function sourceOptions(): UiGenerationSourceOptions {
         versionNo: 2,
         label: 'v2',
         createdAt: '2026-11-09T10:00:00Z',
-        requirementUnderstandingVersion: { versionId: 'understand-2', versionNo: 2 },
+        requirementMaterialVersion: { versionId: 'understand-2', versionNo: 2 },
         repositories: [repository()],
       },
       {
@@ -63,7 +63,7 @@ function sourceOptions(): UiGenerationSourceOptions {
         versionNo: 1,
         label: 'v1',
         createdAt: '2026-11-08T10:00:00Z',
-        requirementUnderstandingVersion: { versionId: 'understand-1', versionNo: 1 },
+        requirementMaterialVersion: { versionId: 'understand-1', versionNo: 1 },
         repositories: [repository({
           repositoryId: 'repo-old',
           pathWithNamespace: 'team/old-web',
@@ -123,7 +123,10 @@ it('默认使用最新画像版本和唯一前端仓库，提交仓库来源与�
   await user.click(screen.getByRole('button', { name: '下一步：选择用例' }))
   await screen.findByRole('checkbox', { name: '选择用例：转换成功' })
   await user.click(screen.getByRole('checkbox', { name: '选择用例：转换失败' }))
-  await user.click(screen.getByRole('button', { name: '预览变更' }))
+  await user.click(screen.getByRole('button', { name: '核对配置' }))
+  await user.click(screen.getByRole('button', { name: '上一步' }))
+  expect(await screen.findByRole('checkbox', { name: '选择用例：转换失败' })).not.toBeChecked()
+  await user.click(screen.getByRole('button', { name: '核对配置' }))
   await user.click(await screen.findByRole('button', { name: '开始生成' }))
   await waitFor(() => expect(onSubmit).toHaveBeenCalledWith({
     refreshInputs: false,
@@ -144,7 +147,7 @@ it('可以切换历史画像版本并同步仓库候选', async () => {
   expect(screen.getByRole('radio', { name: '选择仓库 team/old-web' })).toBeChecked()
   await user.click(screen.getByRole('button', { name: '下一步：选择用例' }))
   await screen.findByRole('checkbox', { name: '选择用例：转换成功' })
-  await user.click(screen.getByRole('button', { name: '预览变更' }))
+  await user.click(screen.getByRole('button', { name: '核对配置' }))
   await user.click(await screen.findByRole('button', { name: '开始生成' }))
   await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
     sourceProfileVersionId: 'pv1',
@@ -172,7 +175,7 @@ it('多个前端仓库时必须先选择一个才能开始生成', async () => {
   await waitFor(() => expect(screen.getByRole('button', { name: '下一步：选择用例' })).toBeEnabled())
   await user.click(screen.getByRole('button', { name: '下一步：选择用例' }))
   await screen.findByRole('checkbox', { name: '选择用例：转换成功' })
-  await user.click(screen.getByRole('button', { name: '预览变更' }))
+  await user.click(screen.getByRole('button', { name: '核对配置' }))
   await user.click(await screen.findByRole('button', { name: '开始生成' }))
   await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
     sourceRepositoryId: 'repo-admin',
@@ -211,7 +214,7 @@ it('可以切换最新 HEAD 并检查分支更新', async () => {
   })
   await user.click(screen.getByRole('button', { name: '下一步：选择用例' }))
   await screen.findByRole('checkbox', { name: '选择用例：转换成功' })
-  await user.click(screen.getByRole('button', { name: '预览变更' }))
+  await user.click(screen.getByRole('button', { name: '核对配置' }))
   await user.click(await screen.findByRole('button', { name: '开始生成' }))
   await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
     sourceCommitMode: 'latest',
@@ -253,7 +256,7 @@ it('更换输入保留原功能用例选择并提交 refreshInputs', async () =>
   await waitFor(() => expect(screen.getByRole('button', { name: '下一步：选择用例' })).toBeEnabled())
   await user.click(screen.getByRole('button', { name: '下一步：选择用例' }))
   expect(await screen.findByRole('checkbox', { name: '选择用例：转换成功' })).not.toBeChecked()
-  await user.click(screen.getByRole('button', { name: '预览变更' }))
+  await user.click(screen.getByRole('button', { name: '核对配置' }))
   await user.click(await screen.findByRole('button', { name: '从元素控件清单重新生成' }))
   await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
     refreshInputs: true,

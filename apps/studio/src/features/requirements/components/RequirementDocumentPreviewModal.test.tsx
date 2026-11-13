@@ -1,8 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
-import understandingSource from '@/domain/requirements/fixtures/requirement-understanding.example.json?raw'
 import { RequirementDocumentPreviewContent } from './RequirementDocumentPreviewModal'
 
 afterEach(cleanup)
@@ -28,73 +26,11 @@ function renderPreview() {
 }
 
 describe('RequirementDocumentPreviewContent', () => {
-  it('renders comparison mode without focused-reading tabs', () => {
+  it('展示需求原文，不显示旧的增强文本面板', () => {
     const { container } = renderPreview()
-
-    expect(screen.queryByText('左右内容可独立滚动')).not.toBeInTheDocument()
-    expect(screen.queryByText('对照阅读')).not.toBeInTheDocument()
-    expect(container.querySelectorAll('.requirement-document-pane')).toHaveLength(2)
+    expect(container.querySelectorAll('.requirement-document-pane')).toHaveLength(1)
     expect(container.querySelector('.requirement-document-text-article')).toHaveTextContent('管理员账号登录')
-    expect(screen.queryByText('仅看原文')).not.toBeInTheDocument()
-    expect(screen.queryByText('仅看增强文本')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '放大预览' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '需求文档全屏阅读' })).not.toBeInTheDocument()
-    expect(screen.getByText('已有内容')).toBeInTheDocument()
-  })
-
-  it('supports keyboard resizing of the comparison split', () => {
-    renderPreview()
-
-    const separator = screen.getByRole('separator', { name: '调整原文与增强文本宽度' })
-    expect(separator).toHaveAttribute('aria-valuenow', '50')
-
-    fireEvent.keyDown(separator, { key: 'ArrowRight' })
-
-    expect(separator).toHaveAttribute('aria-valuenow', '52')
-  })
-
-  it('新需求生成页只展示原文，不再渲染历史增强文本', () => {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    try {
-      const { container } = render(
-        <QueryClientProvider client={queryClient}>
-          <RequirementDocumentPreviewContent
-            requirementName="转换数据（Export）"
-            documentType="richtext"
-            documentContent={understandingSource}
-            documentFilename="understanding.json"
-            showEnhancedText={false}
-          />
-        </QueryClientProvider>,
-      )
-
-      expect(container.querySelectorAll('.requirement-document-pane')).toHaveLength(1)
-      expect(screen.queryByRole('separator', { name: '调整原文与增强文本宽度' })).not.toBeInTheDocument()
-      expect(screen.queryByText('增强文本')).not.toBeInTheDocument()
-    } finally {
-      queryClient.clear()
-    }
-  })
-
-  it('结构化需求理解产物在增强文本面板折叠展示 UI 交互章节', async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    try {
-      render(
-        <QueryClientProvider client={client}>
-          <RequirementDocumentPreviewContent requirementName="EGO 配套本地 Server 端" documentType="richtext" documentContent={understandingSource} documentFilename="understanding.json" />
-        </QueryClientProvider>,
-      )
-
-      expect(screen.getByRole('heading', { name: 'UI 交互' })).toBeInTheDocument()
-      const entry = screen.getByRole('button', { name: /转换数据 \/ 筛选任务列表$/ })
-      expect(entry).toHaveAttribute('aria-expanded', 'false')
-      await userEvent.setup().click(entry)
-      expect(entry).toHaveAttribute('aria-expanded', 'true')
-      expect(screen.getByRole('button', { name: /转换类型$/ })).toBeInTheDocument()
-      expect(screen.queryByText('交互说明')).not.toBeInTheDocument()
-    } finally {
-      client.clear()
-    }
+    expect(screen.queryByText('增强文本')).not.toBeInTheDocument()
   })
 })
 

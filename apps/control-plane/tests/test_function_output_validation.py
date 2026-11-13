@@ -1,7 +1,6 @@
 from types import SimpleNamespace
 
 import pytest
-from support.execution_writer import MemoryExecutionWriter
 from support.worker_contract import FakeWorkerRepository
 
 from testing_agent.core.errors import AppError
@@ -86,9 +85,7 @@ async def test_legacy_repair_progress_cannot_change_output(monkeypatch):
     monkeypatch.setattr(module, "find_task", find_task)
     old = run.config_json.copy(), run.result_yaml
     with pytest.raises(AppError) as rejected:
-        await WorkerTaskService(
-            Repository(task), execution_writer=MemoryExecutionWriter()
-        ).progress(
+        await WorkerTaskService(Repository(task)).progress(
             "worker-task",
             WorkerProgressRequest(
                 workerId="w",

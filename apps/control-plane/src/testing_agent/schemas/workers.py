@@ -38,20 +38,6 @@ class WorkerClaimRequest(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class WorkerTaskData(BaseModel):
-    task_id: str = Field()
-    task_type: str = Field()
-    run_id: str = Field()
-    status: str
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class WorkerClaimResponse(BaseModel):
-    task: dict[str, Any] | None = None
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
 class WorkerClaimPayload(BaseModel):
     task_id: str = Field()
     task_type: str = Field()

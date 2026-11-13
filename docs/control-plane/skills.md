@@ -15,7 +15,7 @@ uv run python -m testing_agent.cli.skills default-skills
 
 Kubernetes 由 control-plane chart 的 `skillsSync` Job 在 post-install/post-upgrade 自动执行同一命令；需要 `config.storage.s3.enabled=true`，设为 `false` 时跳过。同步按内容签名跳过未变化的技能，重复升级不会产生新的 S3 批次。也可以在 Pod 内手工执行 `/app/default-skills` 重试。
 
-更新技能时修改 `apps/control-plane/default-skills/`，重建控制面镜像并 `helm upgrade`。脚本不读取 Worker 私有目录。同名技能整体替换，不递增版本，不提供回滚；源目录中删除的文件再次同步后不再出现在清单中，删除整个源技能文件夹不会自动删除系统技能。
+更新技能时修改 `apps/control-plane/default-skills/`，重建控制面镜像并 `helm upgrade`。脚本不读取 Worker 私有目录。同名技能整体替换，不递增版本，不提供回滚；源目录中删除的文件再次同步后不再出现在清单中。删除整个源技能文件夹不会在普通同步时自动删除系统技能；需要显式追加 `--prune`，同步完成后删除源目录中已不存在的系统默认技能（项目自定义技能不受影响），命令为 `uv run python -m testing_agent.cli.skills /app/default-skills --prune`。
 
 迁移 `20260927_0021` 按已确认需求丢弃旧压缩包技能记录，将其关联文件交给 S3 清理流程，不做压缩包数据迁移；迁移不可逆恢复旧数据。默认技能是 `project_id=NULL`、`scope_key=system` 的资源，自定义技能使用项目 ID 作为 scope。唯一约束为 scope + 文件夹名。
 
@@ -142,3 +142,45 @@ Kubernetes 由 control-plane chart 的 `skillsSync` Job 在 post-install/post-up
 ## 2026-11-09 代码风险分析技能发布
 
 从 `/home/xiaoming/下载/skills/default-skill-11-8/code-risk-analysis` 同步 `code-risk-analysis` 到系统默认技能库，共 6 个文件、6407 字节。发布后读取远端 manifest 和对象内容，6 个文件的内容、大小及 SHA-256 均与本地源一致。
+
+## 可追溯测试点技能
+
+功能测试的测试点阶段使用 `generate-traceable-test-points`，输入冻结的材料整理和测试范围风险分析，保存带来源、覆盖缺口和独立审查状态的 `traceable_test_points` 1.0 JSON；详细用例阶段按功能项与场景分批。旧 `categories` 阶段产物不再支持。输入、审查及下游交接见 [AI Worker 契约](../ai-worker/traceable-test-points.md)。
+
+本地切换记录（2026-11-12）：已通过默认技能发布服务同步 `generate-traceable-test-points`（12 个文件）及受影响的 `generate-solution-test-cases`（6 个文件），从对象存储逐文件回读并核对内容。按用户确认清理包含旧格式测试点的 1 条功能生成链及其历史，并移除旧默认测试点 Skill；清理前后正式功能测试用例均为 827 条。AI Worker 已重启并恢复轮询。专项自动化测试通过；未创建真实模型业务运行，浏览器登录后的视觉效果尚未验收。
+
+## 2026-11-13 清理旧技能并统一 mtx 名称
+
+功能链路的四个阶段统一使用 `mtx-organize-requirement-material`、`mtx-analyze-functional-requirements`、`mtx-generate-traceable-test-points`、`mtx-generate-solution-test-cases`。已删除四个对应的非 `mtx-` 默认技能源目录，并清理 Worker 中按旧名称选择阶段和输出约束的兼容分支；测试与文档同步改为新名称。`extract-docx-enhanced-text`、`extract-richtext-enhanced-text` 等其他默认技能不在本次清理范围。
+
+后续（2026-11-13）：确认 `extract-docx-enhanced-text`、`extract-richtext-enhanced-text` 已不在 Worker 选择路径上（材料阶段统一使用 `mtx-organize-requirement-material`），两个默认技能源目录已删除，测试与设计文档已改为新名称。部署后执行 `uv run python -m testing_agent.cli.skills /app/default-skills --prune` 从系统默认技能库移除历史记录；项目自定义技能不受影响。
+
+`testing_agent.cli.skills` 新增 `--prune`：普通同步只发布/更新源目录中的技能，`--prune` 在同步完成后删除源目录中已不存在的系统默认技能，项目自定义技能不受影响。本地已执行一次带 `--prune` 的同步，四个旧技能从默认库移除，文件按既有删除协议进入 S3 清理流程；四项 `mtx-` 技能的清单文件数与源目录一致。`tests/test_project_skill_space.py` 21 项、AI Worker 单元测试 468 项、`AiSkillLibraryPage.test.tsx` 2 项通过。未创建真实模型业务运行。
+
+需求画布的用例图谱技能源已改名为 `mtx-analyze-test-case-relations`。Worker 按新名称下载，部署时需先将该技能同步至默认库，再切换 Worker。
+
+本地已完成该技能切换（2026-11-13）：同步 `mtx-analyze-test-case-relations` 共 19 个文件，逐文件回读 S3 内容、大小及 SHA-256 一致；随后以 `--prune` 删除旧 `analyze-test-case-relations`（7 个文件），旧文件进入 S3 删除生命周期。Worker 代码中已无旧名称分支；运行中的 Worker 进程启动于改名之前，需在任务结束后重启才会按新名称取用技能。图谱专项 18 项单元测试通过，未执行真实模型生成。
+
+## 2026-11-13 测试点增量复核规则同步
+
+`mtx-generate-traceable-test-points` 的入口、独立审查协议、委派规则、设计审查和输出前自查共 5 处说明已对齐 Worker 的增量复核：初稿完整审查一次，修订后只核验变更、直接相关内容及未解决意见；保留删除前信息以检查覆盖丢失；整份候选继续做结构和引用校验；无实际修改时停止循环并保留意见。已移除修订后反复全量重审、不断累积历次意见的旧要求，输出 Schema 和校验脚本未改。
+
+已同步 `/home/xiaoming/下载/skills/default-skill-new-11-13/mtx-generate-traceable-test-points`，并通过默认技能发布服务仅更新这一项。包内 18 个文件从真实 S3 回读，与仓库和下载目录的字节及 SHA-256 一致；其他默认技能摘要未变化。技能结构和引用路径检查、17 项增量复核及测试点回归通过；未发起新的真实模型业务生成。新任务按需获取更新后的技能，已下载技能的在途任务保持原快照。本次发布未推送 Git 远程分支。
+
+## 2026-11-13 测试点程序分组生成
+
+测试点初稿新增程序分派协议，直接使用已审核测试对象划分最多 3 个对象组和 1 个跨组公共组，最多同时执行 2 个；对象不足 2 个时保留单 Agent。各组读取完整冻结材料、按真实对象引用归属生成，越界结果只修复本组；汇总后统一编号并保留全局独立审查，后续继续增量复核，已有候选的人工“继续优化”保留原 ID 和单 Agent 修订路径。
+
+`mtx-generate-traceable-test-points` 新增 `references/parallel-generation.md` 并更新相应入口和设计、自查、委派及审查说明，共 19 个文件。已通过默认技能发布服务仅更新这一项，逐文件从真实 S3 回读内容与 SHA-256，并同步 `/home/xiaoming/下载/skills/default-skill-new-11-13/mtx-generate-traceable-test-points`；其他默认技能摘要未变。Worker 全量 494 项（489 通过、5 项外部集成跳过）、控制面 142 项相关回归、前端状态和画布接入测试、类型检查及构建通过。深浅色和窄面板以开发预览验证，未额外发起真实模型业务生成；实际提速和生成质量仍需下一次真实任务验收。Git 远程分支未推送。
+
+发布后确认 AI 队列无在途或排队任务，已重启本地 AI Worker 并验证恢复轮询；本地控制面已热加载新增进度状态。新任务使用分组生成代码及上述远端技能。
+
+## 2026-11-13 UI 三阶段技能优化发布与名称切换
+
+经用户确认，将已部署默认库的 `extract-ui-test-surface`、`map-functional-cases-to-ui-scenarios`、`generate-ui-test-case` 切换为对应的 `mtx-` 名称，发布下载目录 `default-skill-new-11-13` 中的更新版。三个技能分别为 13、21、50 个文件，共 84 个文件；同步更新仓库默认技能源，未推送 Git 远程分支。
+
+发布修复了元素整理的信息覆盖、无 UI 范围与证据状态校验，场景设计的顺序、目标 ID 和定位字段约束；统一只读复核与单一 audit，默认导出可读 YAML，并以显式失败分支处理不可实现的设计目标。新增版本化执行能力说明及完整链路示例，现有 UI 产物版本与 YAML 业务字段保持不变。
+
+发布前确认五个需求/功能测试技能与远端完全一致，本次未重复写入；已回读备份三个旧 UI 技能的 48 个文件。先发布新名称并校验，再于 AI 队列为空时按原启动命令和原环境重启本地 Worker；已验证新进程连续正常轮询，随后仅通过现有资源删除及文件延迟清理服务移除三个旧名称。其他默认技能与项目自定义技能清单未变化。
+
+最终从真实对象存储回读八个目标技能的全部 156 个文件，内容、大小与 SHA-256 均与冻结源一致。UI 技能 101 项回归在本轮优化时通过；发布前 Worker 技能下载和 UI 三阶段专项 33 项通过，使用原 Worker 环境的启动依赖检查通过。未新增真实模型业务生成或浏览器业务执行。发布快照、旧版备份、清单差异、重启及回读记录位于 `.scratch/skill-refresh-20261113-0fuyh7if/`。

@@ -2,7 +2,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from support.execution_writer import MemoryExecutionWriter
 from support.generation import generation_services
 
 from testing_agent.core.errors import AppError
@@ -23,7 +22,7 @@ async def test_legacy_linked_function_launch_is_rejected_without_creating_tasks(
         add_all=Mock(),
         commit=AsyncMock(),
     )
-    service = generation_services(repository, execution_writer=MemoryExecutionWriter())
+    service = generation_services(repository)
     service.access.owned_task = AsyncMock(
         return_value=SimpleNamespace(
             requirement_id="requirement-1", project_id="project-1", source_content="original text"
@@ -49,7 +48,7 @@ async def test_requirement_generation_cannot_bypass_independent_stages(kind, mon
         add_all=Mock(),
         commit=AsyncMock(),
     )
-    bundle = generation_services(repository, execution_writer=MemoryExecutionWriter())
+    bundle = generation_services(repository)
     bundle.access.owned_task = AsyncMock(
         return_value=SimpleNamespace(requirement_id="requirement-1", project_id="project-1")
     )
@@ -66,5 +65,5 @@ async def test_requirement_generation_cannot_bypass_independent_stages(kind, mon
 async def test_function_snapshot_rejects_missing_requirement_understanding():
     repository = SimpleNamespace(session=AsyncMock())
     task = SimpleNamespace(requirement_id="requirement-1", source_content="legacy task source")
-    with pytest.raises(AppError, match="请先审核通过需求理解，再生成功能用例"):
+    with pytest.raises(AppError, match="请先审核通过材料整理，再生成功能用例"):
         await _generation_build_generate_run_snapshot(repository, "function", task, "run-1")

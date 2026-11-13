@@ -38,39 +38,39 @@ export function useRequirementRepositoryProfileWorkspace(
   active: boolean,
 ) {
   const client = useQueryClient()
-  const [understandingVersionId, setUnderstandingVersionId] = useState('')
+  const [materialVersionId, setMaterialVersionId] = useState('')
   const [selectedVersionId, setSelectedVersionId] = useState<string>()
   const requestId = useRef<{ taskId: string; options: string; id: string } | undefined>(undefined)
   const selectAfterRunFromVersionId = useRef<string | undefined>(undefined)
 
-  const understandingQuery = useQuery({
+  const materialQuery = useQuery({
     queryKey: ['generationChain', requirementId, 'requirement_analysis', 'detail'],
     queryFn: () => generationChainApi.chain(requirementId, 'requirement_analysis'),
     enabled: active && Boolean(requirementId),
   })
-  const understandingStage = understandingQuery.data?.stages.find(
-    item => item.stage === 'feature_understanding',
+  const materialStage = materialQuery.data?.stages.find(
+    item => item.stage === 'extracting_text',
   )
-  const understandingVersions = useMemo(
-    () => understandingStage?.versions ?? [],
-    [understandingStage],
+  const materialVersions = useMemo(
+    () => materialStage?.versions ?? [],
+    [materialStage],
   )
-  const latestUnderstandingVersionId =
-    understandingStage?.latestVersion?.versionId ?? understandingVersions[0]?.versionId
+  const latestMaterialVersionId =
+    materialStage?.latestVersion?.versionId ?? materialVersions[0]?.versionId
 
   useEffect(() => {
     if (!active) return
-    if (!understandingVersions.length) {
-      if (understandingVersionId) setUnderstandingVersionId('')
+    if (!materialVersions.length) {
+      if (materialVersionId) setMaterialVersionId('')
       return
     }
-    if (understandingVersions.some(item => item.versionId === understandingVersionId)) return
-    setUnderstandingVersionId(latestUnderstandingVersionId ?? understandingVersions[0].versionId)
+    if (materialVersions.some(item => item.versionId === materialVersionId)) return
+    setMaterialVersionId(latestMaterialVersionId ?? materialVersions[0].versionId)
   }, [
     active,
-    understandingVersionId,
-    understandingVersions,
-    latestUnderstandingVersionId,
+    materialVersionId,
+    materialVersions,
+    latestMaterialVersionId,
   ])
 
   const personalLlm = usePersonalLlmChoice(projectId)
@@ -206,7 +206,7 @@ export function useRequirementRepositoryProfileWorkspace(
         gitlabConnectionIds: Object.entries(gitlabConnectionIds).sort(([a], [b]) =>
           a.localeCompare(b),
         ),
-        requirementUnderstandingVersionId: understandingVersionId,
+        requirementMaterialVersionId: materialVersionId,
       })
       if (requestId.current?.taskId !== taskId || requestId.current.options !== options) {
         requestId.current = { taskId, options, id: randomId() }
@@ -216,7 +216,7 @@ export function useRequirementRepositoryProfileWorkspace(
         instruction: instruction || undefined,
         triggerType: 'manual',
         gitlabConnectionIds,
-        requirementUnderstandingVersionId: understandingVersionId || undefined,
+        requirementMaterialVersionId: materialVersionId || undefined,
         requestId: requestId.current.id,
       })
     },
@@ -233,10 +233,10 @@ export function useRequirementRepositoryProfileWorkspace(
 
   const busy = start.isPending
   const runDisabledReason =
-    understandingQuery.isPending || bindingsQuery.isPending || tasksQuery.isPending || versionsLoading
+    materialQuery.isPending || bindingsQuery.isPending || tasksQuery.isPending || versionsLoading
       ? '正在读取运行信息，请稍候。'
-      : !understandingVersions.length
-        ? '请先审核通过需求理解，再进行仓库画像分析。'
+      : !materialVersions.length
+        ? '请先审核通过材料整理，再进行仓库画像分析。'
         : !hasRepoBindings
           ? '该需求未绑定代码仓库，请先在需求列表完成「代码绑定」。'
           : busy
@@ -260,11 +260,11 @@ export function useRequirementRepositoryProfileWorkspace(
     runsError,
     runInProgress,
     runDisabledReason,
-    understandingVersions,
-    latestUnderstandingVersionId,
-    understandingVersionId,
-    setUnderstandingVersionId,
-    understandingLoading: understandingQuery.isPending,
+    materialVersions,
+    latestMaterialVersionId,
+    materialVersionId,
+    setMaterialVersionId,
+    materialLoading: materialQuery.isPending,
     hasRepoBindings,
     bindings,
     bindingsLoading: bindingsQuery.isPending,

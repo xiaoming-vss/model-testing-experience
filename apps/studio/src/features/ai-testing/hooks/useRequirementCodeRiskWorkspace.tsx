@@ -35,34 +35,34 @@ export function useRequirementCodeRiskWorkspace(requirementId: string, projectId
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [selectedRunId, setSelectedRunId] = useState<string>()
-  const [understandingVersionId, setUnderstandingVersionId] = useState('')
+  const [materialVersionId, setMaterialVersionId] = useState('')
   const requestId = useRef<{ taskId: string; options: string; id: string } | undefined>(undefined)
-  const understandingQuery = useQuery({
+  const materialQuery = useQuery({
     queryKey: ['generationChain', requirementId, 'requirement_analysis', 'detail'],
     queryFn: () => generationChainApi.chain(requirementId, 'requirement_analysis'),
     enabled: active && Boolean(requirementId),
   })
-  const understandingStage = understandingQuery.data?.stages.find(item => item.stage === 'feature_understanding')
-  const understandingVersions = understandingStage?.versions ?? []
-  const latestUnderstandingVersionId = understandingStage?.latestVersion?.versionId ?? understandingVersions[0]?.versionId
+  const materialStage = materialQuery.data?.stages.find(item => item.stage === 'extracting_text')
+  const materialVersions = materialStage?.versions ?? []
+  const latestMaterialVersionId = materialStage?.latestVersion?.versionId ?? materialVersions[0]?.versionId
   useEffect(() => {
-    if (understandingVersionId || !latestUnderstandingVersionId) return
-    setUnderstandingVersionId(latestUnderstandingVersionId)
-  }, [understandingVersionId, latestUnderstandingVersionId])
+    if (materialVersionId || !latestMaterialVersionId) return
+    setMaterialVersionId(latestMaterialVersionId)
+  }, [materialVersionId, latestMaterialVersionId])
   const understandingRunOptions = {
     // 没有已审核版本时服务端会拒绝运行，这里提前禁用确认并说明原因。
-    confirmDisabled: understandingQuery.isSuccess && !understandingVersions.length,
+    confirmDisabled: materialQuery.isSuccess && !materialVersions.length,
     render: () => <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <Text strong>需求理解版本</Text>
-      <Text type="secondary">代码风险分析读取已审核的需求理解版本，默认使用最新版本。</Text>
-      {understandingVersions.length ? <Select aria-label="需求理解版本" value={understandingVersionId || undefined}
-        onChange={setUnderstandingVersionId}
-        options={understandingVersions.map(version => ({
+      <Text strong>材料整理版本</Text>
+      <Text type="secondary">代码风险分析读取已审核的材料整理版本，默认使用最新版本。</Text>
+      {materialVersions.length ? <Select aria-label="材料整理版本" value={materialVersionId || undefined}
+        onChange={setMaterialVersionId}
+        options={materialVersions.map(version => ({
           value: version.versionId,
-          label: version.versionId === latestUnderstandingVersionId ? `${version.label}（最新）` : version.label,
-        }))} /> : understandingQuery.isPending
-        ? <Text type="secondary">正在读取需求理解版本…</Text>
-        : <Alert showIcon type="info" title="当前需求还没有审核通过的需求理解，请先完成需求分析并审核通过。" />}
+          label: version.versionId === latestMaterialVersionId ? `${version.label}（最新）` : version.label,
+        }))} /> : materialQuery.isPending
+        ? <Text type="secondary">正在读取材料整理版本…</Text>
+        : <Alert showIcon type="info" title="当前需求还没有审核通过的材料整理，请先完成需求分析并审核通过。" />}
     </div>,
   }
   const personalLlm = usePersonalLlmChoice(projectId, understandingRunOptions)
@@ -129,7 +129,7 @@ export function useRequirementCodeRiskWorkspace(requirementId: string, projectId
         connectionId,
         instruction,
         gitlabConnectionIds: Object.entries(gitlabConnectionIds).sort(([a], [b]) => a.localeCompare(b)),
-        requirementUnderstandingVersionId: understandingVersionId,
+        requirementMaterialVersionId: materialVersionId,
       })
       if (requestId.current?.taskId !== taskId || requestId.current.options !== options) requestId.current = { taskId, options, id: randomId() }
       return aiTestingApi.runCodeRiskTask(taskId, {
@@ -137,7 +137,7 @@ export function useRequirementCodeRiskWorkspace(requirementId: string, projectId
         instruction: instruction || undefined,
         triggerType: 'manual',
         gitlabConnectionIds,
-        requirementUnderstandingVersionId: understandingVersionId || undefined,
+        requirementMaterialVersionId: materialVersionId || undefined,
         requestId: requestId.current.id,
       })
     },

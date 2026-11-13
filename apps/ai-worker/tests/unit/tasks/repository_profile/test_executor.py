@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from testing_agent_ai_worker.agent.paths import resolve_task_workspace
 from testing_agent_ai_worker.config.models import NanobotConfig, PiConfig
 from testing_agent_ai_worker.models.execution import TaskStatus
 from testing_agent_ai_worker.models.task import (
@@ -108,6 +109,9 @@ class _PromptRunner:
 
     def __call__(self, **kwargs):
         self.calls.append(kwargs)
+        skill = Path(kwargs["workspace"]) / "skills/mtx-repository-profile-analysis/SKILL.md"
+        if not skill.is_file():
+            raise AssertionError("Pi workspace is missing the downloaded repository profile skill")
         if self.fail:
             raise RuntimeError("model failed")
         return self.output
@@ -128,6 +132,10 @@ class RepositoryProfileExecutorTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.agent_config = PiConfig(runtime_root=self.temp.name)
+        workspace = resolve_task_workspace(self.agent_config, _task())
+        skill = workspace / "skills/mtx-repository-profile-analysis/SKILL.md"
+        skill.parent.mkdir(parents=True)
+        skill.write_text("# Repository profile", encoding="utf-8")
         self.run_root = Path(self.temp.name) / "run"
         self.code_root = self.run_root / "code"
         repo_path = self.code_root / "repos" / "team-repo-1"
@@ -222,7 +230,7 @@ class RepositoryProfileExecutorTests(unittest.TestCase):
             task, datetime.now().astimezone(), lambda _item: None
         )
         self.assertEqual(TaskStatus.FAILED, result.status)
-        self.assertIn("需求理解", result.error_message or "")
+        self.assertIn("材料整理", result.error_message or "")
 
     def test_all_bindings_unavailable_fails_before_credentials(self) -> None:
         task = _task()

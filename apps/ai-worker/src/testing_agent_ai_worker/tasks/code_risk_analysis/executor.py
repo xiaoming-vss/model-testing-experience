@@ -25,7 +25,6 @@ from testing_agent_ai_worker.tasks.code_risk_analysis.context import (
     ContextPackage,
     build_code_context,
 )
-from testing_agent_ai_worker.tasks.code_risk_analysis.preview_prompt import ContextReceiptError
 from testing_agent_ai_worker.tasks.code_risk_analysis.report_prompt import build_report_prompt
 from testing_agent_ai_worker.tasks.code_risk_analysis.report_validation import (
     RiskReportValidationError,
@@ -97,7 +96,7 @@ class CodeRiskAnalysisExecutor(TaskExecutor):
             return self._failed_result(
                 task,
                 started_at,
-                "该需求尚未完成需求分析(快照缺少需求理解记录)",
+                "该需求尚未完成需求分析(快照缺少材料整理结果)",
             )
         if self.credentials_fetcher is None:
             return self._failed_result(task, started_at, "worker 未配置 GitLab 凭据获取")
@@ -223,9 +222,7 @@ class CodeRiskAnalysisExecutor(TaskExecutor):
                 finished_at=datetime.now().astimezone(),
             )
         except Exception as exc:
-            if isinstance(
-                exc, (CodeWorkspaceError, ContextReceiptError, RiskReportValidationError)
-            ):
+            if isinstance(exc, (CodeWorkspaceError, RiskReportValidationError)):
                 LOGGER.warning(
                     "code risk context failed: task_id=%s attempt_id=%s error=%s",
                     task.task_id,
@@ -270,7 +267,7 @@ class CodeRiskAnalysisExecutor(TaskExecutor):
 
     @staticmethod
     def _safe_error(exc: Exception) -> str:
-        if isinstance(exc, (CodeWorkspaceError, ContextReceiptError, RiskReportValidationError)):
+        if isinstance(exc, (CodeWorkspaceError, RiskReportValidationError)):
             return str(exc)
         return "代码上下文准备或模型调用失败"
 

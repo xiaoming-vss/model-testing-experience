@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from testing_agent.core.enums import RunStatus
 from testing_agent.core.errors import ErrBadRequest, ErrNotFound, dynamic_error
 from testing_agent.core.sid import new_id
 from testing_agent.domain.ai_tasks import task_type_for
@@ -25,21 +24,15 @@ from testing_agent.services.auxiliary_execution import dispatch_auxiliary_execut
 from testing_agent.services.auxiliary_execution_view import auxiliary_detail, auxiliary_history
 from testing_agent.services.common import dump
 from testing_agent.services.personal_authorization import require_personal_connection
-from testing_agent.services.requirement_understanding_source import (
-    approved_understanding,
-    understanding_source,
+from testing_agent.services.requirement_material_source import (
+    approved_material,
+    material_source,
 )
 from testing_agent.services.test_order import TestOrderService
 
 TEST_ORDER_GRAPH_TASK_TYPE = task_type_for("test_order_graph")
 # 新 kind 走 layout 的默认分支：单阶段 generate，且不在 FIELDS 里，产物因此落进 resultYaml。
 TEST_ORDER_GRAPH_STAGE = "generate"
-TEST_ORDER_GRAPH_DISPATCH_STATUSES = {
-    RunStatus.PENDING.value,
-    RunStatus.QUEUED.value,
-    RunStatus.CLAIMED.value,
-    RunStatus.RUNNING.value,
-}
 GRAPH_INPUT_LISTS = ("requirements", "cases", "case_requirement_links")
 
 
@@ -64,11 +57,11 @@ def graph_input_counts(graph_input: dict[str, Any]) -> dict[str, int]:
     }
 
 
-def _missing_understanding_message(names: list[str]) -> str:
+def _missing_material_message(names: list[str]) -> str:
     shown = "、".join(names[:5])
     if len(names) > 5:
         shown = f"{shown} 等 {len(names)} 条"
-    return f"以下需求还没有审核通过的需求理解：{shown}"
+    return f"以下需求还没有审核通过的材料整理：{shown}"
 
 
 def build_graph_run_snapshot(
@@ -187,7 +180,7 @@ class TestOrderGraphService:
                 by_group[group_id] = link
                 links.append(link)
             link["case_ids"].append(case.case_id)
-        await self._fill_understanding(pending)
+        await self._fill_material(pending)
         return dump(
             TestOrderGraphInputResponse,
             {
@@ -197,18 +190,18 @@ class TestOrderGraphService:
             },
         )
 
-    async def _fill_understanding(self, pending: list[tuple[dict[str, Any], str, str]]) -> None:
-        """Fill each requirement's latest approved understanding; reject if any is missing."""
+    async def _fill_material(self, pending: list[tuple[dict[str, Any], str, str]]) -> None:
+        """Fill each requirement's latest approved material; reject if any is missing."""
         chain = GenerationChainRepository(self.repository.session)
         missing: list[str] = []
         for item, requirement_id, name in pending:
-            version = await approved_understanding(chain, requirement_id)
+            version = await approved_material(chain, requirement_id)
             if version is None:
                 missing.append(name)
                 continue
-            item["requirement_content"] = understanding_source(version)
+            item["requirement_content"] = material_source(version)
         if missing:
-            raise dynamic_error(ErrBadRequest, _missing_understanding_message(missing))
+            raise dynamic_error(ErrBadRequest, _missing_material_message(missing))
 
     async def dispatch(self, user_id: str, order_id: str, body: dict[str, Any]) -> dict[str, Any]:
         """派发一次图谱分析；一次生成完成前重复点击返回 400。"""

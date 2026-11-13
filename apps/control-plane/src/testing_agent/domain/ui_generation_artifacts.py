@@ -11,11 +11,6 @@ from typing import Any
 UI_STAGES = ("ui_surface", "ui_design", "ui_yaml")
 UI_FIELDS = {"ui_surface": "uiSurface", "ui_design": "uiDesign"}
 UI_WORKFLOW_VERSION = "ui_three_stage/1.0"
-UI_SKILLS = {
-    "ui_surface": "extract-ui-test-surface",
-    "ui_design": "map-functional-cases-to-ui-scenarios",
-    "ui_yaml": "generate-ui-test-case",
-}
 
 
 def normalize(text: Any) -> str:

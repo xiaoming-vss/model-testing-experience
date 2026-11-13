@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime
+from threading import BoundedSemaphore
 from uuid import uuid4
 
 from testing_agent_ai_worker.agent.config_builder import task_config_path
@@ -16,6 +17,11 @@ from testing_agent_ai_worker.agent.paths import (
 from testing_agent_ai_worker.config.models import AgentBackendConfig
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
+from testing_agent_ai_worker.skill_names import (
+    DETAILED_CASES_SKILL,
+    SCOPE_SKILL,
+    TEST_POINTS_SKILL,
+)
 from testing_agent_ai_worker.tasks.functional_case_generate.chain import (
     FunctionalChainRunResult,
     run_functional_chain,
@@ -37,8 +43,7 @@ from testing_agent_ai_worker.worker.runner import TaskExecutor
 
 from .validation import ValidationContext, context
 
-# source_content 已由控制面提供需求理解正文，document_type 描述实际下发的正文格式。
-# 旧平台会用 sourceType="requirement" 标记“输入来自需求理解”，这里按纯文本处理。
+# source_content 是控制面冻结的已审核材料整理 JSON，以文本传递给技能。
 SUPPORTED_FUNCTIONAL_SOURCE_TYPES = {"text", "word", "richtext"}
 LOGGER = logging.getLogger("testing_agent_ai_worker")
 
@@ -80,8 +85,12 @@ class FunctionalCaseExecutor(TaskExecutor):
         skill_runner=run_skill_step,
         detailed_batch_runner=run_functional_detailed_case_batches,
         attachment_downloader=None,
+        review_concurrency: int = 4,
+        review_limiter: BoundedSemaphore | None = None,
     ) -> None:
         self.agent_config = agent_config
+        self.review_concurrency = review_concurrency
+        self.review_limiter = review_limiter or BoundedSemaphore(4)
         self.runtime_paths = resolve_runtime_paths(agent_config)
         self.chain_runner = chain_runner
         self.skill_runner = skill_runner
@@ -97,10 +106,28 @@ class FunctionalCaseExecutor(TaskExecutor):
                     task_id=task.task_id,
                     attempt_id=task.attempt_id,
                     current_stage=(
-                        "case_names" if event["stage"] == "case_names_audit" else event["stage"]
+                        "case_names"
+                        if event["stage"] in {"traceable_case_names", "traceable_case_audit"}
+                        else event["stage"]
                     ),
                     stage_status="running",
-                    result_summary_json=json.dumps({"outputValidation": event}, ensure_ascii=False),
+                    result_summary_json=json.dumps(
+                        {"moduleGeneration": event["moduleGeneration"]}
+                        if "moduleGeneration" in event
+                        else {
+                            "outputValidation": {
+                                **event,
+                                "stage": "case_names"
+                                if event["stage"]
+                                in {
+                                    "traceable_case_names",
+                                    "traceable_case_audit",
+                                }
+                                else event["stage"],
+                            }
+                        },
+                        ensure_ascii=False,
+                    ),
                 )
             )
 
@@ -112,6 +139,10 @@ class FunctionalCaseExecutor(TaskExecutor):
                 / str(task.attempt_id)
                 / uuid4().hex,
                 report=report,
+                task_id=str(task.task_id),
+                run_id=str(task.attempt_id),
+                review_concurrency=self.review_concurrency,
+                review_limiter=self.review_limiter,
             )
         )
         try:
@@ -203,9 +234,9 @@ class FunctionalCaseExecutor(TaskExecutor):
                 **resume,
                 source_text=source_text,
                 session_key=task.session_key,
-                analysis_skill_name="analyze-functional-requirements",
-                case_name_skill_name="generate-solution-test-points",
-                detailed_case_skill_name="generate-solution-test-cases",
+                analysis_skill_name=SCOPE_SKILL,
+                case_name_skill_name=TEST_POINTS_SKILL,
+                detailed_case_skill_name=DETAILED_CASES_SKILL,
                 config_path=config_path,
                 workspace=str(workspace),
                 extra_instruction=task.payload.extra_instruction,

@@ -3,7 +3,6 @@ from types import SimpleNamespace
 import pytest
 from authorization_database import AuthorizationDatabase, AuthorizedRepositoryFixture
 from support import generation as ai_tasks
-from support.execution_writer import MemoryExecutionWriter
 from support.generation import generation_services
 
 from testing_agent.core.errors import (
@@ -38,6 +37,7 @@ from testing_agent.services.import_payload import read_import_payload
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.resource_binding import ResourceBindingService
+from testing_agent.services.worker_domains.api import save_extracted_environment_vars
 from testing_agent.services.zentao_auth import ZentaoAuthProvider
 
 
@@ -1017,7 +1017,7 @@ async def test_ai_review_rejects_non_terminal_runs_like_go():
         async def commit(self):
             raise AssertionError("non-terminal runs should be rejected before commit")
 
-    service = generation_services(FakeRepository(), execution_writer=MemoryExecutionWriter())
+    service = generation_services(FakeRepository())
 
     with pytest.raises(type(ErrBadRequest)):
         await service.review.review("api", "run-1", {"action": "reject"}, "user-1")
@@ -1056,7 +1056,7 @@ async def test_requirement_analysis_create_requires_requirement_id():
         async def refresh(self, row):
             raise AssertionError("task should not refresh without requirementId")
 
-    service = generation_services(FakeRepository(), execution_writer=MemoryExecutionWriter())
+    service = generation_services(FakeRepository())
 
     with pytest.raises(type(ErrBadRequest)):
         await service.commands.create(
@@ -1142,7 +1142,7 @@ async def test_ai_generate_run_uses_go_connection_id_for_worker_task(monkeypatch
     ids = iter(["run-1", "worker-task-1"])
     monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
     repository = FakeRepository()
-    service = generation_services(repository, execution_writer=MemoryExecutionWriter())
+    service = generation_services(repository)
     dispatch = AsyncMock(return_value=(SimpleNamespace(execution_id="run-1"), None, None))
     monkeypatch.setattr(standalone_execution, "start_standalone_execution", dispatch)
     monkeypatch.setattr(standalone_execution_view, "project_standalone_execution", AsyncMock())
@@ -1179,7 +1179,7 @@ async def test_ai_generate_run_requires_go_connection_id():
         async def commit(self):
             raise AssertionError("run should reject missing connectionId before committing")
 
-    service = generation_services(FakeRepository(), execution_writer=MemoryExecutionWriter())
+    service = generation_services(FakeRepository())
 
     with pytest.raises(type(ErrBadRequest)):
         await service.launcher.launch("api", "task-1", {}, "user-1")
@@ -1366,7 +1366,7 @@ async def test_requirement_analysis_run_enqueues_requirement_analysis_worker_tas
     ids = iter(["run-1", "worker-task-1"])
     monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
     repository = FakeRepository()
-    service = generation_services(repository, execution_writer=MemoryExecutionWriter())
+    service = generation_services(repository)
 
     with pytest.raises(AppError, match="请在需求生成链"):
         await service.launcher.launch(
@@ -1418,7 +1418,7 @@ async def test_requirement_analysis_task_create_persists_task_without_running(mo
     ids = iter(["task-1"])
     monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
     repository = FakeRepository()
-    service = generation_services(repository, execution_writer=MemoryExecutionWriter())
+    service = generation_services(repository)
 
     payload = await service.commands.create(
         "requirement_analysis",
@@ -1465,7 +1465,7 @@ async def test_requirement_analysis_run_requires_connection_id():
         async def commit(self):
             raise AssertionError("run should reject missing connectionId before committing")
 
-    service = generation_services(FakeRepository(), execution_writer=MemoryExecutionWriter())
+    service = generation_services(FakeRepository())
 
     with pytest.raises(type(ErrBadRequest)):
         await service.launcher.launch("requirement_analysis", "task-1", {}, "user-1")
@@ -1498,7 +1498,7 @@ async def test_requirement_analysis_list_runs_uses_task_scope(monkeypatch):
             assert project_id == "project-1"
             return SimpleNamespace(project_id="project-1", user_id="user-1")
 
-    service = generation_services(FakeRepository(), execution_writer=MemoryExecutionWriter())
+    service = generation_services(FakeRepository())
     payload = await service.queries.list_run_summaries("requirement_analysis", "task-1", "user-1")
     assert payload == expected
     history.assert_awaited_once_with(service.queries.repository.session, "task-1", 1, 20, "all")
@@ -1582,7 +1582,7 @@ async def test_save_extracted_environment_vars_upserts_successful_results(monkey
     session = FakeSession()
     monkeypatch.setattr("testing_agent.services.worker_domains.api.new_id", lambda: "env-var-1")
 
-    await worker.save_extracted_environment_vars(
+    await save_extracted_environment_vars(
         session,
         "env-1",
         [

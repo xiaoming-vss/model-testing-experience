@@ -1,0 +1,132 @@
+{
+  "cases": [
+    {
+      "case_id": "C001",
+      "case_module": "任务处理",
+      "case_title": "提交有效任务后进入待处理",
+      "case_type": "功能测试",
+      "priority": "2",
+      "precondition": [
+        "1. 已登录有提交权限的账号，准备有效任务数据。"
+      ],
+      "test_steps": [
+        "1. 提交任务，读取提交结果和任务状态。"
+      ],
+      "expected_results": [
+        "1. 创建任务，状态为待处理；本用例不启动后续处理。"
+      ]
+    },
+    {
+      "case_id": "C002",
+      "case_module": "任务处理",
+      "case_title": "正常处理待处理任务后生成完整结果",
+      "case_type": "功能测试",
+      "priority": "2",
+      "precondition": [
+        "1. 准备一条待处理任务，处理资源及数据均满足成功条件。"
+      ],
+      "test_steps": [
+        "1. 启动该任务处理，等待结束，检查状态及生成结果。"
+      ],
+      "expected_results": [
+        "1. 任务处理完成，生成完整结果；本用例不打开结果详情。"
+      ]
+    },
+    {
+      "case_id": "C003",
+      "case_module": "任务处理",
+      "case_title": "查看正常处理完成的结果详情",
+      "case_type": "功能测试",
+      "priority": "2",
+      "precondition": [
+        "1. 准备一条正常处理完成的任务及其已知结果内容。"
+      ],
+      "test_steps": [
+        "1. 打开该任务的结果详情，核对展示内容。"
+      ],
+      "expected_results": [
+        "1. 结果详情展示该任务的正确内容，任务仍为处理完成。"
+      ]
+    },
+    {
+      "case_id": "C004",
+      "case_module": "任务处理",
+      "case_title": "故障解除后重试处理成功",
+      "case_type": "异常测试",
+      "priority": "2",
+      "precondition": [
+        "1. 准备一条处理失败的任务，故障可以解除。"
+      ],
+      "test_steps": [
+        "1. 解除该任务的处理故障，发起重试，等待结束并检查状态及产物。"
+      ],
+      "expected_results": [
+        "1. 重试成功，任务处理完成并生成完整结果；本用例不打开结果详情。"
+      ]
+    },
+    {
+      "case_id": "C005",
+      "case_module": "任务处理",
+      "case_title": "查看重试成功后的结果详情",
+      "case_type": "功能测试",
+      "priority": "2",
+      "precondition": [
+        "1. 准备一条故障解除后重试成功的任务及其已知结果内容。"
+      ],
+      "test_steps": [
+        "1. 打开该任务的结果详情，核对展示内容。"
+      ],
+      "expected_results": [
+        "1. 结果详情展示本次重试生成的正确内容，任务仍为处理完成。"
+      ]
+    },
+    {
+      "case_id": "C006",
+      "case_module": "任务处理",
+      "case_title": "故障持续时重试仍失败",
+      "case_type": "异常测试",
+      "priority": "2",
+      "precondition": [
+        "1. 准备一条处理失败的任务，故障持续且本次不解除。"
+      ],
+      "test_steps": [
+        "1. 发起重试，等待结束后查看状态。"
+      ],
+      "expected_results": [
+        "1. 本次重试失败，任务保持处理失败状态，不形成成功结果。"
+      ]
+    },
+    {
+      "case_id": "C007",
+      "case_module": "任务处理",
+      "case_title": "从已完成任务的结果详情导出报告",
+      "case_type": "功能测试",
+      "priority": "2",
+      "precondition": [
+        "1. 已打开一条处理完成任务的结果详情，可使用正常处理或重试成功的数据。"
+      ],
+      "test_steps": [
+        "1. 在该详情执行导出，打开导出报告并与当前任务结果比较。"
+      ],
+      "expected_results": [
+        "1. 成功导出报告，报告内容与当前任务结果一致。"
+      ]
+    },
+    {
+      "case_id": "C008",
+      "case_module": "个人资料",
+      "case_title": "修改个人显示名称并保存",
+      "case_type": "功能测试",
+      "priority": "2",
+      "precondition": [
+        "1. 已登录，准备一个合法且不同于当前值的显示名称。"
+      ],
+      "test_steps": [
+        "1. 打开个人资料，修改显示名称并保存，再重新打开。"
+      ],
+      "expected_results": [
+        "1. 个人显示名称为本次保存的新名称。"
+      ]
+    }
+  ]
+}

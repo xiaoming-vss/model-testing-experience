@@ -24,26 +24,11 @@ from testing_agent.services.worker_domains import api, ui
 from testing_agent.services.worker_domains.ai import (
     apply_ai_completion_to_run as apply_ai_completion_to_run,
 )
-from testing_agent.services.worker_domains.api import (
-    api_case_worker_snapshot as api_case_worker_snapshot,
-)
-from testing_agent.services.worker_domains.api import (
-    extracted_environment_values as extracted_environment_values,
-)
-from testing_agent.services.worker_domains.api import (
-    save_extracted_environment_vars as save_extracted_environment_vars,
-)
-from testing_agent.services.worker_domains.api import update_item_counts as update_item_counts
 from testing_agent.services.worker_domains.events import LEASE_SECONDS as LEASE_SECONDS
 from testing_agent.services.worker_domains.events import apply_event_to_task as apply_event_to_task
-from testing_agent.services.worker_domains.events import final_run_status as final_run_status
-from testing_agent.services.worker_domains.events import json_text as json_text
 from testing_agent.services.worker_domains.events import parse_event_time as parse_event_time
 from testing_agent.services.worker_domains.events import task_payload as task_payload
 from testing_agent.services.worker_domains.events import update_task_claimed as update_task_claimed
-from testing_agent.services.worker_domains.ui import ui_case_payload as ui_case_payload
-from testing_agent.services.worker_domains.ui import ui_suite_payload as ui_suite_payload
-from testing_agent.services.worker_domains.ui import update_ui_item_counts as update_ui_item_counts
 
 
 def llm_credentials_payload(

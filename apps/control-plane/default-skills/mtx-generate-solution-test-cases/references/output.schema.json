@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Solution test cases",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "cases"
+  ],
+  "properties": {
+    "cases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/case"
+      }
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "case_module",
+        "case_title",
+        "case_type",
+        "priority",
+        "precondition",
+        "test_steps",
+        "expected_results"
+      ],
+      "properties": {
+        "case_module": {
+          "$ref": "#/$defs/text"
+        },
+        "case_title": {
+          "$ref": "#/$defs/text"
+        },
+        "case_type": {
+          "enum": [
+            "功能测试",
+            "性能测试",
+            "配置相关",
+            "安装部署",
+            "安全测试",
+            "接口测试",
+            "单元测试",
+            "其他",
+            "异常测试",
+            "兼容性测试",
+            "升级测试",
+            "资料测试",
+            "可靠性测试",
+            "易用性/体验测试",
+            "规格一致性测试",
+            "长稳测试",
+            "可维/可服测试"
+          ]
+        },
+        "priority": {
+          "enum": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ]
+        },
+        "precondition": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          }
+        },
+        "test_steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "minItems": 1
+        },
+        "expected_results": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "minItems": 1
+        }
+      }
+    }
+  }
+}

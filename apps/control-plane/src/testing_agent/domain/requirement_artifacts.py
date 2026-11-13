@@ -14,7 +14,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
-TYPES = {"document_extraction", "requirement_understanding"}
+TYPES = {"document_extraction"}
 
 
 def _pairs(pairs):
@@ -34,9 +34,6 @@ def _constant(value):
 def _validator(kind, allow_resolved_questions=False):
     filename = kind.replace("_", "-") + ".schema.json"
     schema = json.loads((Path(__file__).with_name("requirement_schemas") / filename).read_text())
-    if allow_resolved_questions:
-        # Historical input is read for AI revision; newly written artifacts use open only.
-        schema["$defs"]["question"]["properties"]["status"] = {"enum": ["open", "resolved"]}
     Draft202012Validator.check_schema(schema)
     return Draft202012Validator(schema)
 
@@ -71,16 +68,15 @@ def _subset(values, available, label, errors=None):
         _problem(f"{label}: 引用了不存在的条目 {missing}", errors)
 
 
-def _walk(value):
+def _check_finite(value):
     if isinstance(value, float) and not math.isfinite(value):
         raise ValueError("JSON 数值必须是有限数值")
     if isinstance(value, dict):
-        yield value
         for child in value.values():
-            yield from _walk(child)
+            _check_finite(child)
     elif isinstance(value, list):
         for child in value:
-            yield from _walk(child)
+            _check_finite(child)
 
 
 def validate_artifact(
@@ -96,6 +92,7 @@ def validate_artifact(
             raise ValueError(f"需求产物不是合法 JSON: {exc}") from exc
     if not isinstance(value, dict):
         raise ValueError("需求产物必须是 JSON 对象")
+    _check_finite(value)
     questions_input = value.get("questions")
     if (
         not allow_resolved_questions
@@ -113,183 +110,48 @@ def validate_artifact(
     if error:
         path = ".".join(str(part) for part in error.absolute_path) or "$"
         raise ValueError(f"需求产物字段不符合契约 ({path}): {error.message}")
+    return _check_readable_material(value)
+
+
+def _check_readable_material(value: dict[str, Any]) -> dict[str, Any]:
+    """Validate the readable material's IDs, hierarchy and evidence links."""
     errors: list[str] = []
     sources = _index(value["sources"], "sources", errors)
-    evidence = _index(value.get("evidence", []), "evidence", errors)
-    _subset([item["sourceId"] for item in evidence.values()], sources, "evidence.sourceId", errors)
-    questions = _index(value["questions"], "questions", errors)
-    for item in _walk(value):
-        if kind == "requirement_understanding":
-            ids = item.get("evidenceIds", [])
-            _subset(ids, evidence, "evidenceIds", errors)
-            references = [evidence[eid] for eid in ids if eid in evidence]
-        else:
-            references = item.get("sourceReferences", [])
-        _subset(
-            [r["sourceId"] for r in references],
-            sources,
-            "evidence.sourceId" if kind == "requirement_understanding" else "sourceReferences",
-            errors,
-        )
-        _subset(item.get("relatedQuestionIds", []), questions, "relatedQuestionIds", errors)
-        is_fact = "value" in item and not isinstance(item["value"], dict)
-        status = item.get("confirmationStatus", "confirmed" if is_fact else None)
-        if (
-            status == "confirmed"
-            and references
-            and all(sources.get(r["sourceId"], {}).get("type") == "example" for r in references)
-        ):
-            _problem("示例来源不能单独支撑已确认事实", errors)
-        if status == "conflicting" and any(
-            questions[q]["status"] != "open" for q in item["relatedQuestionIds"] if q in questions
-        ):
-            _problem("冲突事实必须关联未解决问题", errors)
-        if status == "confirmed":
-            for question_id in item.get("relatedQuestionIds", []):
-                if question_id in questions and questions[question_id]["status"] == "open":
-                    _problem(
-                        f"已确认内容不能继续引用未解决问题: {question_id}；"
-                        "请将用户答复补入业务内容并从 questions 删除该问题",
-                        errors,
-                    )
-    if kind == "document_extraction":
-        try:
-            targets = _check_extraction(value)
-        except ValueError as exc:
-            errors.append(str(exc))
-            raise ArtifactReferenceError(value, errors) from exc
-    else:
-        targets = _check_understanding(value, errors)
-    for question in questions.values():
-        if question["status"] == "resolved" and (
-            not isinstance(question.get("answer"), dict)
-            or question["answer"].get("confirmationStatus", "confirmed") != "confirmed"
-        ):
-            _problem("历史已解决问题必须有带来源的明确答复", errors)
-        for target in question["affectedRefs"]:
-            if target["id"] not in targets.get(target["kind"], {}):
-                _problem("questions.affectedRefs: 引用了不存在的条目", errors)
-    if errors:
-        raise ArtifactReferenceError(value, errors)
-    return value
-
-
-def _check_extraction(value):
-    blocks = _index(value["contentBlocks"], "contentBlocks")
-    facts = _index(value["extractedFacts"], "extractedFacts")
+    blocks = _index(value["materialBlocks"], "materialBlocks", errors)
+    functions = _index(value["functions"], "functions", errors)
+    _index(value["questions"], "questions", errors)
     for block in blocks.values():
+        _subset([block["sourceId"]], sources, "materialBlocks.sourceId", errors)
+        if block["kind"] == "table":
+            rows = block["content"]["rows"]
+            covered: set[tuple[int, int]] = set()
+            for span in block["content"].get("spans", []):
+                for row in range(span["row"], span["row"] + span["rowSpan"]):
+                    for column in range(span["column"], span["column"] + span["columnSpan"]):
+                        if row >= len(rows) or column >= len(rows[row]) or (row, column) in covered:
+                            errors.append(f"materialBlocks: {block['id']} 的表格合并区域越界或重叠")
+                        covered.add((row, column))
         seen = {block["id"]}
         parent = block["parentId"]
         while parent is not None:
             if parent not in blocks or parent in seen:
-                raise ValueError("contentBlocks.parentId: 父块不存在或层级成环")
+                errors.append(f"materialBlocks.parentId: {block['id']} 的父块不存在或层级成环")
+                break
             seen.add(parent)
             parent = blocks[parent]["parentId"]
-        if block["kind"] != "table":
-            continue
-        table, occupied = block["table"], set()
-        for cell in table["cells"]:
-            for row in range(cell["row"], cell["row"] + cell["rowSpan"]):
-                for column in range(cell["column"], cell["column"] + cell["columnSpan"]):
-                    if (
-                        (table["rowCount"] is not None and row >= table["rowCount"])
-                        or (table["columnCount"] is not None and column >= table["columnCount"])
-                        or (row, column) in occupied
-                    ):
-                        raise ValueError("table.cells: 单元格超出范围或合并区域重叠")
-                    occupied.add((row, column))
-        if block["parseStatus"] == "complete" and (
-            table["rowCount"] is None
-            or table["columnCount"] is None
-            or len(occupied) != table["rowCount"] * table["columnCount"]
-            or any(c["text"] is None for c in table["cells"])
-        ):
-            raise ValueError("完整表格必须有完整行列和已识别单元格")
-    for fact in facts.values():
-        _subset(fact["relatedBlockIds"], blocks, "extractedFacts.relatedBlockIds")
-    return {"block": blocks, "extracted_fact": facts}
-
-
-def _check_understanding(value, errors):
-    modules = _index(value["modules"], "modules", errors=errors)
-    if not modules and not any(
-        q["status"] == "open" and {"kind": "requirement", "id": "requirement"} in q["affectedRefs"]
-        for q in value["questions"]
-    ):
-        _problem("尚未识别模块时需保留整体需求范围问题，不能填占位模块", errors)
-    operations = _index(
-        [o for m in modules.values() for o in m["operations"]], "operations", errors=errors
-    )
-    controls = _index(
-        [c for o in operations.values() for c in o["interaction"]["controls"]],
-        "controls",
-        errors=errors,
-    )
-    entries = _index(
-        [e for m in modules.values() for e in m.get("entryPoints", [])],
-        "entryPoints",
-        errors=errors,
-    )
-    rules = _index(value["businessRules"], "businessRules", errors=errors)
-    flows = _index(value["businessFlows"], "businessFlows", errors=errors)
-    owners = {o["id"]: m["id"] for m in modules.values() for o in m["operations"]}
-    for module in modules.values():
-        local = {o["id"] for o in module["operations"]}
-        _subset(
-            [s["operationId"] for s in module.get("userVisibleFlow", [])],
-            local,
-            "userVisibleFlow",
-            errors=errors,
-        )
-    for operation in operations.values():
-        _index(operation["steps"], "operation.steps", errors=errors)
-        _subset(operation.get("ruleIds", []), rules, "operation.ruleIds", errors=errors)
-        for rid in operation.get("ruleIds", []):
-            if rid in rules and operation["id"] not in rules[rid]["operationIds"]:
-                _problem(f"操作与规则引用不一致: {operation['id']} → {rid}.operationIds", errors)
-    for control in controls.values():
-        _index(control["options"]["items"], "control.options", errors=errors)
-        completeness = control["options"]["completeness"]
-        if completeness["value"] == "unknown" and completeness.get(
-            "confirmationStatus", "confirmed"
-        ) not in {
-            "unconfirmed",
-            "conflicting",
-        }:
-            _problem("未知选项完整性不能标记为已确认", errors)
-    for rule in rules.values():
-        _subset(rule["moduleIds"], modules, "rule.moduleIds", errors=errors)
-        _subset(rule["operationIds"], operations, "rule.operationIds", errors=errors)
-        if any(owners.get(oid) not in rule["moduleIds"] for oid in rule["operationIds"]):
-            _problem("规则关联操作不属于关联模块", errors)
-    for flow in flows.values():
-        _subset(flow["moduleIds"], modules, "flow.moduleIds", errors=errors)
-        steps = _index(flow["steps"], "flow.steps", errors=errors)
-        for step in steps.values():
-            if (
-                step["moduleId"] not in flow["moduleIds"]
-                or owners.get(step["operationId"]) != step["moduleId"]
-            ):
-                _problem("流程引用的模块和操作不一致", errors)
-            for branch in step["nextSteps"]:
-                _subset(
-                    branch.get("conditionRuleIds", []), rules, "conditionRuleIds", errors=errors
-                )
-            _subset(
-                [s["stepId"] for s in step["nextSteps"] if s["stepId"] is not None],
-                steps,
-                "flow.nextSteps",
-                errors=errors,
-            )
-    return {
-        "requirement": {"requirement": value},
-        "module": modules,
-        "operation": operations,
-        "control": controls,
-        "entry": entries,
-        "rule": rules,
-        "flow": flows,
-    }
+    for function in value["functions"]:
+        titles = [section["title"] for section in function["sections"]]
+        if len(titles) != len(set(titles)):
+            errors.append(f"functions: {function['id']} 的分类重复")
+        for section in function["sections"]:
+            for item in section["items"]:
+                _subset(item["materialBlockIds"], blocks, "functions.materialBlockIds", errors)
+    for question in value["questions"]:
+        _subset(question["materialBlockIds"], blocks, "questions.materialBlockIds", errors)
+        _subset(question["functionIds"], functions, "questions.functionIds", errors)
+    if errors:
+        raise ArtifactReferenceError(value, errors)
+    return value
 
 
 def serialize_artifact(value, kind):
@@ -297,21 +159,20 @@ def serialize_artifact(value, kind):
 
 
 def requirement_content(value):
-    """Validate new imported requirements while preserving existing text inputs."""
+    """Validate structured material and retain plain-text requirement input."""
     if isinstance(value, dict):
-        return serialize_artifact(value, "requirement_understanding")
+        return serialize_artifact(value, "document_extraction")
     content = str(value or "")
     try:
         parsed = json.loads(content, object_pairs_hook=_pairs, parse_constant=_constant)
     except ValueError:
-        # Recognizable new artifact syntax must not fall back after a malformed edit.
         if (
             content.lstrip().startswith("{")
             and '"artifactType"' in content
-            and "requirement_understanding" in content
+            and "readable_requirement_material" in content
         ):
-            raise ValueError("需求理解 JSON 无法解析") from None
+            raise ValueError("需求材料 JSON 无法解析") from None
         return content
     if isinstance(parsed, dict) and ("artifactType" in parsed or "schemaVersion" in parsed):
-        return serialize_artifact(parsed, "requirement_understanding")
+        return serialize_artifact(parsed, "document_extraction")
     return content

@@ -82,7 +82,3 @@ def parse_access_token_claims(token: str, settings: Settings | None = None) -> A
     if type(token_version) is not int or token_version < 0:
         raise ErrUnauthorized()
     return AccessTokenClaims(user_id=user_id, expires_at=expires_at, token_version=token_version)
-
-
-def parse_access_token(token: str, settings: Settings | None = None) -> str:
-    return parse_access_token_claims(token, settings).user_id

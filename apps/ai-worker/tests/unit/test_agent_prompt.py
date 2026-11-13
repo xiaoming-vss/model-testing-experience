@@ -28,13 +28,13 @@ class PiPromptTests(unittest.TestCase):
     def test_build_skill_message_asks_pi_to_load_local_skill_first(self) -> None:
         self.assertEqual(
             build_skill_message(
-                skill_name="analyze-functional-requirements",
+                skill_name="mtx-analyze-functional-requirements",
                 body_text="需求正文",
                 extra_instruction="只返回 JSON",
             ),
             "\n\n".join(
                 [
-                    "请先加载本地 skill：analyze-functional-requirements，并严格遵循该 SKILL.md 的全部规则。",
+                    "请先加载本地 skill：mtx-analyze-functional-requirements，并严格遵循该 SKILL.md 的全部规则。",
                     "需求正文",
                     "只返回 JSON",
                 ]
@@ -46,9 +46,11 @@ class PiPromptTests(unittest.TestCase):
         self.assertIn("JSON.parse", FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION)
         self.assertIn("第二个 JSON 对象", FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION)
 
-    def test_structured_input_instruction_closes_answered_questions(self) -> None:
-        self.assertIn("用户已回答的问题必须先回写", FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION)
-        self.assertIn("questions/openQuestions 删除", FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION)
+    def test_analysis_requires_reviewed_material_for_new_answers(self) -> None:
+        self.assertIn("材料整理 JSON 为唯一事实依据", FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION)
+        self.assertIn(
+            "新增业务答复需先纳入材料整理并审核", FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION
+        )
 
     def test_functional_detailed_cases_instruction_requires_single_cases_json_object(self) -> None:
         self.assertIn("cases 数组", FUNCTIONAL_DETAILED_CASES_JSON_ONLY_INSTRUCTION)

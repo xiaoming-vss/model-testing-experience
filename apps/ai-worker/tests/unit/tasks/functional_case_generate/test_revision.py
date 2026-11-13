@@ -12,7 +12,7 @@ from testing_agent_ai_worker.tasks.functional_case_generate.detailed_batches imp
 from testing_agent_ai_worker.tasks.functional_case_generate.executor import (
     FunctionalCaseExecutor,
 )
-from tests.unit.tasks.functional_case_generate.fixtures import case
+from tests.unit.tasks.functional_case_generate.fixtures import analysis, case, traceable_modules
 
 
 class FunctionalRevisionTests(unittest.TestCase):
@@ -30,7 +30,7 @@ class FunctionalRevisionTests(unittest.TestCase):
             current_stage=stage,
             config_json=json.dumps(
                 {
-                    "requirementAnalysis": {"purpose": "existing analysis"},
+                    "requirementAnalysis": analysis(),
                     "caseNames": {"categories": [{"model": "login", "data": []}]},
                     "resultYaml": '{"cases":[{"case_module":"login","name":"existing case"}]}',
                     "revisionInstruction": "add error boundaries",
@@ -113,7 +113,7 @@ class FunctionalRevisionTests(unittest.TestCase):
 
     def test_checkpoint_revision_uses_current_output_and_clears_instruction(self):
         for stage, expected in [
-            ("requirement_analysis", "existing analysis"),
+            ("requirement_analysis", "test_scope_impact_risk"),
             ("case_names", "login"),
         ]:
             with self.subTest(stage=stage):
@@ -133,6 +133,8 @@ class FunctionalRevisionTests(unittest.TestCase):
                 )
                 self.assertIsNone(result)
                 self.assertIn(expected, calls[0]["input_text"])
+                if stage == "case_names":
+                    self.assertTrue(calls[0]["is_revision"])
                 self.assertIn("original requirement", calls[0]["input_text"])
                 self.assertIn("add error boundaries", calls[0]["input_text"])
                 self.assertEqual(progress[0].stage_status, "waiting_review")
@@ -187,11 +189,9 @@ class FunctionalRevisionTests(unittest.TestCase):
         result = asyncio.run(
             run_functional_detailed_case_batches(
                 requirement_analysis_json='{"purpose":"original"}',
-                case_names_json=json.dumps(
-                    {"categories": [{"model": "login"}, {"model": "checkout"}]}
-                ),
+                case_names_json=json.dumps(traceable_modules("login", "checkout")),
                 session_key="session",
-                skill_name="generate-solution-test-cases",
+                skill_name="mtx-generate-solution-test-cases",
                 current_cases_json=json.dumps(
                     {
                         "cases": [

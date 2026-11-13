@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "MainPath": {
+      "additionalProperties": false,
+      "properties": {
+        "path_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Path Id",
+          "type": "string"
+        },
+        "case_ids": {
+          "items": {
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          "minItems": 2,
+          "title": "Case Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "path_id",
+        "case_ids"
+      ],
+      "title": "MainPath",
+      "type": "object"
+    },
+    "RelationEdge": {
+      "additionalProperties": false,
+      "properties": {
+        "edge_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Edge Id",
+          "type": "string"
+        },
+        "from_case_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "From Case Id",
+          "type": "string"
+        },
+        "to_case_id": {
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "To Case Id",
+          "type": "string"
+        },
+        "relation_type": {
+          "enum": [
+            "next",
+            "branch"
+          ],
+          "title": "Relation Type",
+          "type": "string"
+        },
+        "order": {
+          "exclusiveMinimum": 0,
+          "title": "Order",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "edge_id",
+        "from_case_id",
+        "to_case_id",
+        "relation_type",
+        "order"
+      ],
+      "title": "RelationEdge",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "2.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "main_paths": {
+      "items": {
+        "$ref": "#/$defs/MainPath"
+      },
+      "title": "Main Paths",
+      "type": "array"
+    },
+    "edges": {
+      "items": {
+        "$ref": "#/$defs/RelationEdge"
+      },
+      "title": "Edges",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "main_paths",
+    "edges"
+  ],
+  "title": "RelationAnalysisOutput",
+  "type": "object"
+}

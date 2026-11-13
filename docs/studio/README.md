@@ -8,6 +8,8 @@ React 单页应用，提供项目、迭代、需求、功能/API/UI 测试资产
 
 [需求详情测试设计工作区](requirement-design-workspace.md)
 
+完整用例阶段的模块子 Agent 进度及兼容规则见[按模块并发生成完整用例](../ai-worker/module-case-generation.md)；测试点阶段复用该面板，区分分组初稿、全局审查和增量复核，见[测试点生成进度](../ai-worker/traceable-test-points.md#测试点生成进度)。
+
 ## 运行时与依赖
 
 - Node 22.23.1（`.nvmrc`），包管理使用 npm（`package-lock.json`），包名 `@mtx/studio`
@@ -138,3 +140,5 @@ npm run verify        # type-check + lint + build
 - 编辑 API 测试集时可调整同一项目内的所属迭代和需求；保存会刷新原需求和目标需求的生成链导入目标。运行历史显示的需求和迭代跟随测试集当前归属。
 
 API/UI 运行的实时更新、断线及临时调试结果见 [实时执行](../control-plane/realtime-test-execution.md)。
+
+功能测试点阶段展示可追溯测试点、关联材料、覆盖缺口及独立审查状态；可切换树图，手工编辑名称后审查状态重置为自审。契约见 [AI Worker 文档](../ai-worker/traceable-test-points.md)。

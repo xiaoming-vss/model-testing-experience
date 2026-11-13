@@ -218,7 +218,7 @@ describe('功能候选结果审核与正式资产导入', () => {
     await waitFor(() => expect(importedRun).toBe('/v1/function-case-generate-task-runs/run-2/import'))
   })
 
-  it('用例编号标签展示 UUID 前缀并保留完整值，缺失时不产生空标签', async () => {
+  it('用例编号标签完整展示 UUID，缺失时不产生空标签', async () => {
     const caseId = '9f1c2e4a-5b6d-4c7e-8f90-1a2b3c4d5e6f'
     installFetchHandler(() => ({ ...pendingRun, resultYaml: JSON.stringify({ cases: [
       { case_id: caseId, case_module: '登录', 'Case Title': '正常流程', case_type: '功能' },
@@ -228,9 +228,9 @@ describe('功能候选结果审核与正式资产导入', () => {
     renderPage()
     await clickRunInlineAction(user, 'run-1', '审核结果')
     const details = screen.getByRole('complementary', { name: '选中用例详情' })
-    expect(within(details).getByText('9f1c2e4a…')).toHaveAttribute('title', caseId)
+    expect(within(details).getByText(caseId)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '异常流程' }))
-    expect(within(details).queryByText('9f1c2e4a…')).not.toBeInTheDocument()
+    expect(within(details).queryByText(caseId)).not.toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: '用例名称' })).toHaveValue('异常流程')
   })
 
@@ -268,13 +268,10 @@ describe('功能候选结果审核与正式资产导入', () => {
     expect(screen.getByRole('button', { name: '账号密码登录失败提示' })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it.each([false, true])('展示新版需求分析结构（直接返回：%s）', async (direct) => {
+  it.each([false, true])('展示测试范围风险分析结构（直接返回：%s）', async (direct) => {
     const currentRun: FunctionalCaseGenerateTaskRun = {
-      ...pendingRun,
-      status: 'waiting_review',
-      checkpointEnabled: true,
-      currentStage: 'requirement_analysis',
-      stageStatus: 'waiting_review',
+      ...pendingRun, status: 'waiting_review', checkpointEnabled: true,
+      currentStage: 'requirement_analysis', stageStatus: 'waiting_review',
       configJson: JSON.stringify(direct ? analysisFixture : { requirementAnalysis: analysisFixture }),
     }
     installFetchHandler(() => currentRun)
@@ -282,124 +279,15 @@ describe('功能候选结果审核与正式资产导入', () => {
     renderPage()
     await clickRunInlineAction(user, 'run-1', '审核')
     await user.click(screen.getByRole('radio', { name: '可视化' }).closest('label')!)
-    const sections = [
-      ['功能概览', analysisFixture.functionalOverview.purpose],
-      ['业务规则', analysisFixture.businessRules[0].name],
-      ['场景因素', analysisFixture.scenarioFactors[0].clarificationNeeded],
-      ['场景拆解', analysisFixture.scenarioBreakdown[0].verificationObjective],
-      ['待确认项', analysisFixture.openQuestions[0].question],
-    ]
-    for (const [title, content] of sections) {
-      const tab = screen.getByRole('tab', { name: new RegExp(title) })
-      await user.click(tab)
-      expect(tab).toHaveAttribute('aria-selected', 'true')
-      expect(screen.getAllByText(content).some((element) => element.closest('[aria-hidden="true"]') === null)).toBe(true)
-      if (title === '场景拆解') expect(within(screen.getByRole('article', { name: '场景拆解详情' })).getByText('可生成测试点')).toBeVisible()
+    for (const [title, text] of [
+      ['测试对象', '数据导出'], ['业务影响范围', '设置影响导出结果'],
+      ['风险', '导出结果可能与设置不一致'], ['待确认问题', '失败后如何恢复？'],
+    ]) {
+      const nav = screen.getByRole('navigation', { name: '测试范围风险分析分类' })
+      await user.click(within(nav).getByRole('button', { name: new RegExp(title) }))
+      expect(screen.getByText(text)).toBeInTheDocument()
     }
-    expect(screen.queryByText('[object Object]')).not.toBeInTheDocument()
   })
-
-  it('历史预览展示阻塞场景及未明确字段', async () => {
-    installFetchHandler(() => ({
-      ...pendingRun,
-      configJson: JSON.stringify({ requirementAnalysis: {
-        scenarioBreakdown: [{
-          scenarioId: 'S01', conditions: [], verificationObjective: '验证解绑失败处理',
-          readyForTestPointGeneration: false, blockingReason: '失败反馈未明确',
-          relatedRuleIds: ['R01'], relatedQuestionIds: ['Q01'],
-        }],
-      } }),
-    }))
-    const user = userEvent.setup()
-    renderPage()
-    await user.click(await screen.findByRole('button', { name: '测试需求分析' }))
-    await user.click(screen.getByRole('radio', { name: 'JSON' }).closest('label')!)
-    expect(screen.getByRole('radio', { name: 'JSON' })).toBeChecked()
-    await user.click(screen.getByRole('radio', { name: '可视化' }).closest('label')!)
-    await user.click(screen.getByRole('tab', { name: /场景拆解/ }))
-    expect(screen.getByText('暂不可生成测试点')).toBeInTheDocument()
-    expect(screen.getByText('失败反馈未明确')).toBeInTheDocument()
-    expect(screen.getByText('R01')).toBeInTheDocument()
-    expect(screen.getByText('Q01')).toBeInTheDocument()
-    expect(screen.getByText('无')).toBeInTheDocument()
-    expect(screen.getAllByText('未明确').length).toBeGreaterThan(0)
-  })
-
-  it('按方案测试点分析返回格式展示功能流程和场景设计', async () => {
-    const requirementAnalysis = {
-      Platform_core_functions: [
-        {
-          function: 'EGO 设备接入',
-          description: '发现、配网并接入本地化 Server',
-          business_value: '降低设备接入成本',
-        },
-      ],
-      Target_understanding: [
-        {
-          target: '验证部署可用性',
-          description: '确保本地化 Server 可以稳定接入设备',
-        },
-      ],
-      Risk_point_prediction: [
-        {
-          risk_area: '设备发现',
-          risk_description: '局域网广播可能被网络策略拦截',
-          impact: '设备无法自动接入',
-        },
-      ],
-      function_flow: [
-        {
-          flow_name: 'EGO 首次接入流程',
-          description: '手机 App 配网 -> 自动发现本地化 Server -> 自动上报',
-        },
-      ],
-      Scene_Design: [
-        {
-          scene_type: '功能场景',
-          sub_category: [
-            {
-              scene_type: 'EGO 配网与首次接入',
-              description: '覆盖首次接入全流程，关注自动发现、自动上报与状态可观测性',
-            },
-          ],
-        },
-      ],
-    }
-    const currentRun: FunctionalCaseGenerateTaskRun = {
-      ...pendingRun,
-      status: 'waiting_review',
-      checkpointEnabled: true,
-      currentStage: 'requirement_analysis',
-      stageStatus: 'waiting_review',
-      configJson: JSON.stringify({ requirementAnalysis }),
-    }
-    installFetchHandler(() => currentRun)
-    const user = userEvent.setup()
-    renderPage()
-
-    await clickRunInlineAction(user, 'run-1', '审核')
-    await user.click(screen.getByRole('radio', { name: '可视化' }).closest('label')!)
-
-    for (const sectionName of ['平台核心功能', '目标理解', '风险点预测', '功能流程', '场景设计']) {
-      expect(screen.getByRole('button', { name: new RegExp(sectionName) })).toHaveAttribute('aria-expanded', 'false')
-    }
-    expect(screen.queryByText(requirementAnalysis.Platform_core_functions[0].description)).not.toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: /平台核心功能/ }))
-    expect(screen.getByRole('button', { name: /平台核心功能/ })).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByText(requirementAnalysis.Platform_core_functions[0].description)).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: /功能流程/ }))
-    expect(await screen.findByText('流程和依赖链')).toBeInTheDocument()
-    expect(screen.getByText(requirementAnalysis.function_flow[0].description)).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: /场景设计/ }))
-    expect(screen.getByText('场景说明')).toBeInTheDocument()
-    expect(screen.getByText(requirementAnalysis.Scene_Design[0].sub_category[0].description)).toBeInTheDocument()
-    expect(screen.queryByText('来源依据')).not.toBeInTheDocument()
-    expect(screen.queryByText('验证重点')).not.toBeInTheDocument()
-    expect(screen.queryByText('保护价值/风险')).not.toBeInTheDocument()
-  }, 60_000)
 
   // jsdom 下 antd Table 的整页重渲染明显慢于旧列表，放宽该用例超时。
   it('待审核成功运行可编辑保存，批准不导入并冻结候选', async () => {
@@ -688,7 +576,7 @@ describe('功能测试继续优化', () => {
       currentStage: stage,
       stageStatus: stage === 'case_names' ? 'waiting_review' : 'success',
       configJson: JSON.stringify({
-        requirementAnalysis: { openQuestions: [{ questionId: 'Q01', question: '上游需求分析问题' }] },
+        requirementAnalysis: { openQuestions: [{ id: 'Q01', question: '上游需求分析问题' }] },
         caseNames: { categories: [] },
       }),
     }
@@ -864,7 +752,7 @@ it('优化侧栏预填当前编辑中的待确认项，并保留补充内容', a
   const currentRun: FunctionalCaseGenerateTaskRun = {
     ...pendingRun, status: 'waiting_review', checkpointEnabled: true,
     currentStage: 'requirement_analysis', stageStatus: 'waiting_review',
-    configJson: JSON.stringify({ requirementAnalysis: { openQuestions: [{ questionId: 'Q01', question: '旧问题' }] } }),
+    configJson: JSON.stringify({ requirementAnalysis: { ...analysisFixture, openQuestions: [{ ...analysisFixture.openQuestions[0], id: 'Q01', question: '旧问题' }] } }),
   }
   let body: Record<string, unknown> | undefined
   installFetchHandler(() => currentRun, (url, init) => {
@@ -880,8 +768,9 @@ it('优化侧栏预填当前编辑中的待确认项，并保留补充内容', a
   const stageEditor = document.querySelector('.cm-content') as HTMLElement
   await user.click(stageEditor)
   await user.keyboard('{Control>}a{/Control}')
-  await user.paste(JSON.stringify({ openQuestions: [
-    { questionId: 'Q01', question: '离线如何提示？' }, { questionId: 'Q02', question: '解绑入口在哪里？' },
+  await user.paste(JSON.stringify({ ...analysisFixture, openQuestions: [
+    { ...analysisFixture.openQuestions[0], id: 'Q01', question: '离线如何提示？' },
+    { ...analysisFixture.openQuestions[0], id: 'Q02', question: '解绑入口在哪里？' },
   ] }))
   await user.click(screen.getByRole('button', { name: '继续优化' }))
   const input = screen.getByRole('textbox', { name: '优化指令' }) as HTMLTextAreaElement
@@ -890,15 +779,11 @@ it('优化侧栏预填当前编辑中的待确认项，并保留补充内容', a
   expect(input.value).not.toContain('旧问题')
   await user.click(screen.getByRole('button', { name: '提交优化' }))
   expect(body).toBeUndefined()
-  // Inspect the current visualization, whose heading renders title and count separately.
   await user.click(screen.getByRole('radio', { name: '可视化' }).closest('label')!)
-  const questions = screen.getByRole('tab', { name: /^待确认项\s*2$/ })
-  await user.click(questions)
-  const questionSection = document.getElementById(questions.getAttribute('aria-controls')!)!
-  await waitFor(() => expect(within(questionSection).getByRole('button', { name: /离线如何提示/ })).toBeVisible())
-  await user.click(within(questionSection).getByRole('button', { name: /解绑入口在哪里/ }))
-  expect(within(screen.getByRole('article', { name: '待确认项详情' })).getAllByText('解绑入口在哪里？')[0]).toBeVisible()
-  expect(within(questionSection).queryByText('旧问题')).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /待确认问题/ }))
+  expect(screen.getByText('离线如何提示？')).toBeVisible()
+  expect(screen.getByText('解绑入口在哪里？')).toBeVisible()
+  expect(screen.queryByText('旧问题')).not.toBeInTheDocument()
   await user.clear(input)
   await user.type(input, '补充：解绑入口在设备管理页。离线提示仍待确认。')
   await user.click(screen.getByRole('button', { name: '取消优化' }))
@@ -931,14 +816,14 @@ it.each(['save', 'approve'])('需求分析 %s 后重新加载应显示修改内�
   let currentRun: FunctionalCaseGenerateTaskRun = {
     ...pendingRun, status: 'waiting_review', checkpointEnabled: true,
     currentStage: 'requirement_analysis', stageStatus: 'waiting_review',
-    configJson: JSON.stringify({ requirementAnalysis: { functionalOverview: { purpose: 'old' } } }),
+    configJson: JSON.stringify({ requirementAnalysis: analysisFixture }),
   }
   let reviewRequested = false
   let requestBody: { stage: string; configJson: string } | undefined
   installFetchHandler(() => currentRun, (url, init) => {
     if (url.pathname.endsWith('/stage-review')) {
       reviewRequested = true
-      expect(JSON.parse(String(currentRun.configJson)).requirementAnalysis.functionalOverview.purpose).toBe('edited')
+      expect(JSON.parse(String(currentRun.configJson)).requirementAnalysis.testObjects[0].name).toBe('edited')
       return jsonResponse(currentRun)
     }
     if (url.pathname.endsWith('/stage-output')) {
@@ -957,11 +842,11 @@ it.each(['save', 'approve'])('需求分析 %s 后重新加载应显示修改内�
   const editor = document.querySelector('.cm-content') as HTMLElement
   await user.click(editor)
   await user.keyboard('{Control>}a{/Control}')
-  await user.paste('{"functionalOverview":{"purpose":"edited"}}')
+  await user.paste(JSON.stringify({ ...analysisFixture, testObjects: [{ ...analysisFixture.testObjects[0], name: 'edited' }] }))
   await user.click(screen.getByRole('button', { name: action === 'save' ? /^保\s*存$/ : '审核通过并继续' }))
   await waitFor(() => expect(requestBody).toBeDefined())
   expect(requestBody?.stage).toBe('requirement_analysis')
-  expect(JSON.parse(requestBody!.configJson)).toEqual({ requirementAnalysis: { functionalOverview: { purpose: 'edited' } } })
+  expect(JSON.parse(requestBody!.configJson)).toEqual({ requirementAnalysis: { ...analysisFixture, testObjects: [{ ...analysisFixture.testObjects[0], name: 'edited' }] } })
   if (action === 'save') await screen.findByText('阶段产物已保存')
   else await waitFor(() => expect(reviewRequested).toBe(true))
   cleanup()

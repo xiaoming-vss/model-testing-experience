@@ -1,5 +1,6 @@
 """editable draft and review commands for direct stage storage."""
 
+import json
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -91,8 +92,27 @@ class DirectStageCommands:
         )
         if current is None or row.current_attempt_id != current.id:
             raise dynamic_error(ErrBadRequest, "阶段产物已变化，请刷新后重新编辑")
+        draft_content = body.content
+        if kind == "function" and stage == "case_names":
+            try:
+                edited = json.loads(draft_content)
+                if (
+                    isinstance(edited, dict)
+                    and edited.get("artifactType") == "traceable_test_points"
+                ):
+                    edited["reviewStatus"] = "self_review_only"
+                    edited.pop("reviewIssues", None)
+                    draft_content = json.dumps(edited, ensure_ascii=False)
+            except ValueError:
+                pass  # The shared validator returns the standard invalid JSON error.
         content, output_format = await validate_generation_artifact(
-            self.chain.tasks, kind, stage, body.content, attempt_source(current)
+            self.chain.tasks,
+            kind,
+            stage,
+            draft_content,
+            (current.input_snapshot_json or {})
+            if kind == "function" and stage == "case_names"
+            else attempt_source(current),
         )
         await self.storage.save_draft(
             row.id,
@@ -161,7 +181,7 @@ class DirectStageCommands:
         if not isinstance(upstream, dict):
             raise ErrBadRequest()
         ids = {value for value in upstream.values() if isinstance(value, str) and value}
-        source_version = source.get("requirementUnderstandingVersion")
+        source_version = source.get("requirementMaterialVersion")
         if (
             isinstance(source_version, dict)
             and isinstance(source_version.get("versionId"), str)
@@ -289,14 +309,20 @@ class DirectStageCommands:
             await self.storage.reject(row.id, expected_attempt_id=attempt.id)
         elif body.action == "approve":
             await validate_generation_artifact(
-                self.chain.tasks, kind, stage, attempt.output_content or "", attempt_source(attempt)
+                self.chain.tasks,
+                kind,
+                stage,
+                attempt.output_content or "",
+                snapshot
+                if kind == "function" and stage == "case_names"
+                else attempt_source(attempt),
             )
             versioning = snapshot.get("versioning") or {}
             source = snapshot.get("source") or {}
             if not isinstance(versioning, dict) or not isinstance(source, dict):
                 raise ErrBadRequest()
             upstream = versioning.get("upstreamVersions") or {}
-            source_version = source.get("requirementUnderstandingVersion") or {}
+            source_version = source.get("requirementMaterialVersion") or {}
             if not isinstance(upstream, dict):
                 raise ErrBadRequest()
             ids = {value for value in upstream.values() if isinstance(value, str) and value}

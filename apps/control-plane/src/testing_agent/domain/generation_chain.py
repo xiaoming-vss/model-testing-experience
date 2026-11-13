@@ -20,12 +20,9 @@ CHAIN_LABELS = {
 }
 
 STAGE_DEFINITIONS: dict[str, tuple[tuple[str, str], ...]] = {
-    "requirement_analysis": (
-        ("extracting_text", "提取与整理"),
-        ("feature_understanding", "需求理解"),
-    ),
+    "requirement_analysis": (("extracting_text", "材料整理"),),
     "function": (
-        ("requirement_analysis", "测试需求分析"),
+        ("requirement_analysis", "测试范围风险分析"),
         ("case_names", "测试点"),
         ("detailed_cases", "完整用例"),
     ),
@@ -37,11 +34,10 @@ STAGE_DEFINITIONS: dict[str, tuple[tuple[str, str], ...]] = {
     ),
 }
 
-# Functional generation starts from the approved requirement-understanding chain.
+# Functional generation consumes the approved material version.
 STAGE_UPSTREAMS: dict[str, tuple[str, ...]] = {
     "extracting_text": (),
-    "feature_understanding": ("extracting_text",),
-    "requirement_analysis": ("feature_understanding",),
+    "requirement_analysis": ("extracting_text",),
     "case_names": ("requirement_analysis",),
     "detailed_cases": ("requirement_analysis", "case_names"),
     "ui_surface": (),
@@ -58,7 +54,6 @@ STAGE_CONFIG_FIELDS = {
     "case_names": "caseNames",
     "ui_surface": "uiSurface",
     "ui_design": "uiDesign",
-    "feature_understanding": "resultYaml",
     "detailed_cases": "resultYaml",
     "ui_yaml": "resultYaml",
     "openapi_extract": "apiExtraction",
@@ -93,17 +88,8 @@ def kind_for_stage(stage: str) -> str:
     return ""
 
 
-def stage_order(kind: str, stage: str) -> int:
-    names = stage_names(kind)
-    return names.index(stage) if stage in names else -1
-
-
 def is_final_stage(kind: str, stage: str) -> bool:
     return stage == stage_names(kind)[-1]
-
-
-def first_stage(kind: str) -> str:
-    return stage_names(kind)[0]
 
 
 def upstream_stages(kind: str, stage: str) -> tuple[str, ...]:
@@ -136,6 +122,7 @@ def artifact_summary(stage: str, content: str, artifact_format: str | None = Non
             return f"{len(content)} 字符"
         if isinstance(data, dict):
             for key, unit in (
+                ("testPoints", "个测试点"),
                 ("cases", "条用例"),
                 ("pages", "个页面"),
                 ("modules", "个模块"),

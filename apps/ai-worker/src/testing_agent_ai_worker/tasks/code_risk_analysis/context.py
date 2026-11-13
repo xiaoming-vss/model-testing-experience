@@ -36,12 +36,12 @@ def build_code_context(
     through the read-only agent tools.
     """
 
-    parts: list[str] = ["# 需求理解记录"]
+    parts: list[str] = ["# 材料整理结果"]
     if task.requirement_input is not None:
         parts.append(STRUCTURED_REQUIREMENT_INPUT_INSTRUCTION)
         parts.append(requirement_content(task.requirement_input.document_content))
     else:
-        parts.append("（任务快照缺少需求理解记录）")
+        parts.append("（任务快照缺少材料整理结果）")
 
     parts.append("# 代码工作区说明")
     parts.append(

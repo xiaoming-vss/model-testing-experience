@@ -1,3 +1,4 @@
+import { TraceablePointsView } from './TraceablePointsView'
 import { ReactFlow, Handle, Position, applyNodeChanges, getNodesBounds, getViewportForBounds, type ReactFlowInstance, type NodeProps } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { buildTreeFlow, layoutTreeFlow, type TreeFlowNode } from '../utils/caseNameTreeLayout'
@@ -6,109 +7,25 @@ import '@/features/ai-testing/styles/functional-import-confirm.css'
 import '@/features/ai-testing/styles/index.css'
 import '@/features/ai-testing/styles/case-name-tree.css'
 import type { CaseNameTreeNode } from '@/features/ai-testing/utils/caseNameTree'
-import { buildCaseNameTree, countCaseNameTree, deleteCaseNameTreeNode, renameCaseNameTreeNode, serializeCaseNameTree, updateCategoryCaseNamesContent } from '@/features/ai-testing/utils/caseNameTree'
+import { buildCaseNameTree, countCaseNameTree } from '@/features/ai-testing/utils/caseNameTree'
 import { isJsonText } from '@/features/ai-testing/utils/functionalOutput'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
 import { message } from '@/shared/utils/feedback'
-import { PictureOutlined } from '@ant-design/icons'
+import { DeleteOutlined, PictureOutlined } from '@ant-design/icons'
 import { ArtifactViewTabs } from './ArtifactViewTabs'
-import { Input, Popconfirm, Tag } from 'antd'
+import { Button, Tag } from 'antd'
 import { toBlob } from 'html-to-image'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 export type CaseNamesViewMode = 'json' | 'tree'
 
-function CaseNameTreeNodeView({
-  node,
-  className,
-  editable,
-  onRename,
-  onDelete,
-  onSelect,
-  selected,
-}: {
-  node: CaseNameTreeNode
-  className: string
-  editable?: boolean
-  onRename?: (nodeId: string, title: string) => void
-  onDelete?: (nodeId: string) => void
-  onSelect?: (nodeId: string) => void
-  selected?: boolean
+function CaseNameTreeNodeView({ node, className, onSelect, selected, selectionTick = 0 }: {
+  node: CaseNameTreeNode; className: string; onSelect?: (nodeId: string) => void; selected?: boolean; selectionTick?: number
 }) {
-  const [editing, setEditing] = useState(false)
-  const [draftTitle, setDraftTitle] = useState(node.title)
-  const canEdit = Boolean(editable && node.kind !== 'root')
-
-  useEffect(() => {
-    setDraftTitle(node.title)
-  }, [node.title])
-
-  function commitEdit() {
-    const nextTitle = draftTitle.trim()
-    if (!nextTitle) {
-      message.warning('节点名称不能为空')
-      setDraftTitle(node.title)
-      setEditing(false)
-      return
-    }
-
-    if (nextTitle !== node.title) {
-      onRename?.(node.id, nextTitle)
-    }
-    setEditing(false)
-  }
-
-  return (
-    <div role={onSelect ? 'button' : undefined} tabIndex={onSelect ? 0 : undefined} aria-pressed={onSelect ? Boolean(selected) : undefined} onClick={() => onSelect?.(node.id)} onKeyDown={(event) => { if (onSelect && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onSelect(node.id) } }} className={`${className}${selected ? ' is-selected' : ''}${canEdit ? ' editable' : ''}`} title={node.title}>
-      {editing ? (
-        <Input
-          className="ai-case-name-tree-node-input"
-          size="small"
-          value={draftTitle}
-          autoFocus
-          onChange={(event) => setDraftTitle(event.target.value)}
-          onBlur={commitEdit}
-          onPressEnter={commitEdit}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              setDraftTitle(node.title)
-              setEditing(false)
-            }
-          }}
-        />
-      ) : (
-        <span className="ai-case-name-tree-node-label">{node.title}</span>
-      )}
-      {canEdit && !editing ? (
-        <span className="ai-case-name-tree-node-actions">
-          <ProjectActionButton action="write"
-            type="text"
-            size="small"
-            operation="edit" iconOnly
-            aria-label="编辑节点"
-            onClick={(event) => {
-              event.stopPropagation()
-              setEditing(true)
-            }}
-          />
-          <Popconfirm
-            title="确认删除该节点？"
-            onConfirm={() => onDelete?.(node.id)}
-          >
-            <ProjectActionButton action="write"
-              danger
-              type="text"
-              size="small"
-              operation="delete" iconOnly
-              aria-label="删除节点"
-              onClick={(event) => event.stopPropagation()}
-            />
-          </Popconfirm>
-        </span>
-      ) : null}
-    </div>
-  )
+  return <div role={onSelect ? 'button' : undefined} tabIndex={onSelect ? 0 : undefined} aria-pressed={onSelect ? Boolean(selected) : undefined} onClick={() => onSelect?.(node.id)} onKeyDown={event => { if (onSelect && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onSelect(node.id) } }} className={`${className}${selected ? ` is-selected motion-${selectionTick % 2}` : ''}`} title={node.title}>
+    <span className="ai-case-name-tree-node-label">{node.title}</span>
+  </div>
 }
 
 function pruneTree(node: CaseNameTreeNode, collapsed: Set<string>): CaseNameTreeNode {
@@ -120,7 +37,10 @@ function FlowTreeNode({ data }: NodeProps<TreeFlowNode>) {
   const className = node.kind === 'root' ? 'ai-case-name-tree-root' : `ai-case-name-tree-node ${node.kind === 'testModel' ? 'test-model' : node.kind}`
   return <>
     {node.kind !== 'root' && <Handle type="target" position={Position.Left} className="ai-case-flow-handle" />}
-    <CaseNameTreeNodeView node={node} className={className} editable={data.editable} selected={data.selected} onSelect={data.onSelect} onRename={data.onRename} onDelete={data.onDelete} />
+    <div className={`ai-case-flow-node-shell${data.onDelete ? ' has-delete' : ''}`}>
+      <CaseNameTreeNodeView node={node} className={className} selected={data.selected} selectionTick={data.selectionTick} onSelect={data.onSelect} />
+      {data.onDelete ? <Button type="text" size="small" className="ai-case-name-tree-node-delete nodrag" icon={<DeleteOutlined aria-hidden />} title="删除测试点" aria-label={`删除测试点：${node.title}`} onClick={() => data.onDelete?.(node.id)} /> : null}
+    </div>
     {node.kind !== 'point' && <Handle type="source" position={Position.Right} className="ai-case-flow-handle" />}
   </>
 }
@@ -130,20 +50,22 @@ export function CaseNameTreeView({
   content,
   rootTitle,
   expanded = false,
-  editable = false,
-  onTreeChange,
   treeData,
   selectedNodeId,
+  selectionTick = 0,
   onNodeSelect,
+  onDeleteNode,
 }: {
   content: string
   rootTitle: string
   expanded?: boolean
-  editable?: boolean
-  onTreeChange?: (content: string) => void
   treeData?: CaseNameTreeNode
   selectedNodeId?: string
+  /** 每次点选测试点递增，用于重播同一节点的选中动效。 */
+  selectionTick?: number
   onNodeSelect?: (id: string) => void
+  /** 仅在可编辑候选中提供；传入后每个测试点末尾显示删除操作。 */
+  onDeleteNode?: (id: string) => void
 }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   // 树构建、折叠裁剪、计数和布局都按输入 memo：每次父级重渲染都重跑一遍 dagre 会明显拖慢大树。
@@ -187,15 +109,6 @@ export function CaseNameTreeView({
     }
   }
 
-  const handleRename = useCallback((nodeId: string, title: string) => {
-    if (!tree) return
-    onTreeChange?.(updateCategoryCaseNamesContent(content, nodeId, 'rename', title) ?? serializeCaseNameTree(renameCaseNameTreeNode(tree, nodeId, title)))
-  }, [content, onTreeChange, tree])
-  const handleDelete = useCallback((nodeId: string) => {
-    if (!tree) return
-    onTreeChange?.(updateCategoryCaseNamesContent(content, nodeId, 'delete') ?? serializeCaseNameTree(deleteCaseNameTreeNode(tree, nodeId)))
-  }, [content, onTreeChange, tree])
-
   if (!tree) {
     return <JsonEditor value={content} showCopy={false} readOnly foldable minHeight={expanded ? 560 : 260} />
   }
@@ -203,24 +116,24 @@ export function CaseNameTreeView({
   return (
     <div className={treeData ? 'ai-case-tree-shell' : 'ai-case-tree-passthrough'}>
 
-      <div title={treeData ? '滚轮上下浏览，Ctrl + 滚轮缩放图谱，点击节点查看用例' : '滚轮上下浏览，Ctrl + 滚轮缩放图谱'} className={`ai-case-name-tree${expanded ? ' expanded' : ''}${editable ? ' editable' : ''}`}>
+      <div title={treeData ? '滚轮上下浏览，Ctrl + 滚轮缩放图谱，点击节点查看用例' : '滚轮上下浏览，Ctrl + 滚轮缩放图谱'} className={`ai-case-name-tree${expanded ? ' expanded' : ''}`}>
       {treeData ? null : <div className="ai-case-name-tree-stats">
         <Tag color="green">model {counts?.models ?? 0}</Tag><Tag color="cyan">test_model {counts?.testModels ?? 0}</Tag><Tag color="blue">test_points {counts?.testPoints ?? 0}</Tag>
         <ProjectActionButton action="write" className="ai-case-name-tree-export" size="small" icon={<PictureOutlined />} loading={exportingImage} onClick={handleSaveTreeImage}>保存图片</ProjectActionButton>
       </div>}
-      <CaseTreeFlow tree={tree} selectedNodeId={selectedNodeId} editable={editable} onSelect={onNodeSelect} onToggle={toggle} onRename={handleRename} onDelete={handleDelete} canvasRef={canvasRef} flowRef={flowRef} />
+      <CaseTreeFlow tree={tree} selectedNodeId={selectedNodeId} selectionTick={selectionTick} onSelect={onNodeSelect} onToggle={toggle} onDelete={onDeleteNode} canvasRef={canvasRef} flowRef={flowRef} />
       </div>
 
     </div>
   )
 }
 
-function CaseTreeFlow({ tree, selectedNodeId, editable, onSelect, onToggle, onRename, onDelete, canvasRef, flowRef }: {
-  tree: CaseNameTreeNode; selectedNodeId?: string; editable: boolean; onSelect?: (id: string) => void; onToggle?: (id: string) => void
-  onRename: (id: string, title: string) => void; onDelete: (id: string) => void
+function CaseTreeFlow({ tree, selectedNodeId, selectionTick, onSelect, onToggle, onDelete, canvasRef, flowRef }: {
+  tree: CaseNameTreeNode; selectedNodeId?: string; selectionTick?: number; onSelect?: (id: string) => void; onToggle?: (id: string) => void
+  onDelete?: (id: string) => void
   canvasRef: React.RefObject<HTMLDivElement | null>; flowRef: React.RefObject<ReactFlowInstance<TreeFlowNode> | null>
 }) {
-  const graph = useMemo(() => buildTreeFlow(tree, selectedNodeId, editable, onSelect, onRename, onDelete, onToggle), [tree, selectedNodeId, editable, onSelect, onRename, onDelete, onToggle])
+  const graph = useMemo(() => buildTreeFlow(tree, selectedNodeId, onSelect, onToggle, onDelete, selectionTick), [tree, selectedNodeId, selectionTick, onSelect, onToggle, onDelete])
   const [nodes, setNodes] = useState(() => layoutTreeFlow(graph.nodes, graph.edges))
   useEffect(() => {
     setNodes(current => {
@@ -234,14 +147,19 @@ function CaseTreeFlow({ tree, selectedNodeId, editable, onSelect, onToggle, onRe
       return changes.some(change => change.type === 'dimensions' && change.dimensions) ? layoutTreeFlow(updated, graph.edges) : updated
     })
   }, [graph.edges])
+  const positioned = useRef(false)
+  const positionRoot = useCallback((currentNodes: TreeFlowNode[], flow: ReactFlowInstance<TreeFlowNode> | null) => {
+    const root = currentNodes.find(node => node.data.treeNode.kind === 'root')
+    const canvas = canvasRef.current
+    if (positioned.current || !root || !canvas || !flow || !currentNodes.every(node => node.measured?.width && node.measured?.height)) return
+    positioned.current = true
+    void flow.setViewport({ x: 24 - root.position.x, y: canvas.clientHeight / 2 - root.position.y - (root.measured?.height ?? 0) / 2, zoom: 1 })
+  }, [canvasRef])
+  useEffect(() => { positionRoot(nodes, flowRef.current) }, [nodes, flowRef, positionRoot])
   return <div ref={canvasRef} className="ai-case-flow-canvas">
     <ReactFlow nodes={nodes} edges={graph.edges} nodeTypes={treeNodeTypes} onNodesChange={onNodesChange} onInit={instance => {
       flowRef.current = instance
-      const firstPoint = instance.getNodes().find(node => node.data.treeNode.kind === 'point')
-      if (firstPoint && canvasRef.current) {
-        const x = Math.min(0, canvasRef.current.clientWidth - firstPoint.position.x - (firstPoint.measured?.width ?? 360) - 24)
-        void instance.setViewport({ x, y: 0, zoom: 1 })
-      }
+      positionRoot(instance.getNodes(), instance)
     }}
       nodesDraggable={false} nodesConnectable={false} elementsSelectable={false} deleteKeyCode={null} minZoom={0.5} maxZoom={1.5}
       panOnScroll zoomOnScroll={false} zoomActivationKeyCode="Control" proOptions={{ hideAttribution: true }} />
@@ -271,7 +189,7 @@ export function CaseNamesResultView({
         {
           key: 'tree',
           label: '可视化',
-          children: <CaseNameTreeView content={content} rootTitle={rootTitle} expanded={expanded} />,
+          children: <TraceablePointsView content={content} tree={<CaseNameTreeView content={content} rootTitle={rootTitle} expanded={expanded} />} />,
         },
         {
           key: 'json',

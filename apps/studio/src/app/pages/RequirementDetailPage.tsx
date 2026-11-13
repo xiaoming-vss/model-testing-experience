@@ -92,8 +92,7 @@ export function RequirementDetailPage() {
   if (query.error || sprint.error) return <Alert type="error" title={getErrorMessage(query.error ?? sprint.error)} action={<Space wrap><Button loading={query.isFetching || sprint.isFetching} onClick={retryRead}>重试读取</Button><Button onClick={back}>返回需求列表</Button></Space>} />
   if (!requirement) return <Alert type="warning" title="需求不存在" action={<Button onClick={back}>返回需求列表</Button>} />
   const documentProps = { requirementId, requirementName: requirement.name, documentType: requirement.documentType,
-    documentContent: requirement.documentContent, documentFilename: requirement.documentFilename, documentDownloadUrl: requirement.documentDownloadUrl,
-    showEnhancedText: false }
+    documentContent: requirement.documentContent, documentFilename: requirement.documentFilename, documentDownloadUrl: requirement.documentDownloadUrl }
   // 下载与编辑只服务需求正文，打开需求文档时才出现在标题栏。
   const readingDocument = readingNode?.kind === 'document'
   return <ProjectAccessScope projectId={sprint.data?.projectId ?? ''} resourceError={query.error}>

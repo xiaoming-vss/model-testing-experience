@@ -13,12 +13,12 @@ export function RequirementRepositoryProfileInspector({
   showRun?: boolean
 }) {
   const selectedVersion = workspace.selectedVersion
-  const selectedInputVersion = workspace.understandingVersions.find(
-    version => version.versionId === workspace.understandingVersionId,
+  const selectedInputVersion = workspace.materialVersions.find(
+    version => version.versionId === workspace.materialVersionId,
   )
-  const frozenUnderstanding = selectedVersion?.requirementUnderstandingVersion
-  const understandingLabel = frozenUnderstanding?.versionNo
-    ? `v${frozenUnderstanding.versionNo}`
+  const frozenMaterial = selectedVersion?.requirementMaterialVersion
+  const materialLabel = frozenMaterial?.versionNo
+    ? `v${frozenMaterial.versionNo}`
     : selectedInputVersion?.label ?? '未记录'
 
   return (
@@ -60,7 +60,7 @@ export function RequirementRepositoryProfileInspector({
       <section className="gc-inspector-section">
         <h3>上游追溯</h3>
         <div className="gc-inspector-trace">
-          <span className="gc-trace-chip">需求理解<b>{understandingLabel}</b></span>
+          <span className="gc-trace-chip">材料整理<b>{materialLabel}</b></span>
           <span className="gc-trace-chip">绑定仓库<b>{workspace.bindings.length} 个</b></span>
         </div>
         {workspace.bindings.length ? (

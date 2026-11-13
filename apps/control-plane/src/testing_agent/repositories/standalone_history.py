@@ -222,14 +222,3 @@ async def standalone_history_rows(
         else []
     )
     return list(rows), counts, int(review_pending or 0), latest, list(artifacts), list(imports)
-
-
-async def has_standalone_history(session: AsyncSession, task_id: str) -> bool:
-    """Choose the new ledger once this independent task has executions."""
-    return bool(
-        await session.scalar(
-            select(Execution.execution_id)
-            .where(Execution.task_id == task_id, Execution.workflow_status.is_not(None))
-            .limit(1)
-        )
-    )

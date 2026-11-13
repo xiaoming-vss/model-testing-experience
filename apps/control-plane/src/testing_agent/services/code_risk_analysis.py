@@ -44,19 +44,17 @@ from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.generation_chain import GenerationChainRepository
 from testing_agent.repositories.resource_binding import ResourceBindingRepository
 from testing_agent.schemas.requirement import normalize_document_type
-from testing_agent.services.ai_task_output import dump_run
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.repo_gitlab_access import (
     RepoGitlabAccess,
     resolve_repo_gitlab_access,
 )
-from testing_agent.services.requirement_understanding_source import (
-    approved_understanding,
-    understanding_source,
-    understanding_version_ref,
+from testing_agent.services.requirement_material_source import (
+    approved_material,
+    material_source,
+    material_version_ref,
 )
-from testing_agent.services.standalone_run import StandaloneRun
 
 FUNCTION_CASE_NO_RUN_NOTE = "功能用例暂无执行记录"
 CONNECTION_UNRESOLVED_NOTE = "未解析到该仓库的 GitLab 凭据连接(群组绑定缺失或连接不可用)"
@@ -186,13 +184,6 @@ def parse_risk_report(result_yaml: str | None) -> dict[str, Any] | None:
     }
 
 
-def dump_code_risk_analysis_run(run: StandaloneRun) -> dict[str, Any]:
-    """run 详情负载(任务详情接口口径):通用字段 + 解析后的 `report` 结构。"""
-    payload = dump_run(run)
-    payload["report"] = parse_risk_report(str(run.result_yaml or ""))
-    return payload
-
-
 class CodeRiskAnalysisService:
     def __init__(
         self,
@@ -215,21 +206,21 @@ class CodeRiskAnalysisService:
         *,
         user_id: str,
         connection_ids: dict[str, str] | None = None,
-        understanding_version_id: str = "",
+        material_version_id: str = "",
     ) -> dict[str, Any]:
         """组装 code_risk_analysis 任务的 run 快照(创建时固化)。"""
         requirement = await self.task_repository.get_requirement(task.requirement_id)
         if requirement is None:
             raise ErrNotFound()
 
-        understanding = await approved_understanding(
+        material = await approved_material(
             GenerationChainRepository(self.task_repository.session),
             task.requirement_id,
-            understanding_version_id,
+            material_version_id,
         )
-        if understanding is None:
-            raise dynamic_error(ErrBadRequest, "请先审核通过需求理解，再进行代码风险分析")
-        document_content = understanding_source(understanding)
+        if material is None:
+            raise dynamic_error(ErrBadRequest, "请先审核通过材料整理，再进行代码风险分析")
+        document_content = material_source(material)
 
         bindings = list(
             await self.binding_repository.list_active_repo_bindings_for_requirement(
@@ -258,7 +249,7 @@ class CodeRiskAnalysisService:
                 "documentType": document_type,
                 "documentContent": document_content,
             },
-            "requirementUnderstandingVersion": understanding_version_ref(understanding),
+            "requirementMaterialVersion": material_version_ref(material),
             "bindings": [
                 self._binding_entry(binding, pins[binding.binding_id], repo_access)
                 for binding in bindings

@@ -1,3 +1,5 @@
+import { CaseNameTreeView } from './CaseNamesResultView'
+import { TraceablePointsView } from './TraceablePointsView'
 import {
   CheckCircleFilled,
   ClockCircleOutlined,
@@ -16,12 +18,10 @@ import { ProjectActionButton } from '@/features/projects/components/ProjectActio
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
 import { ApiCandidateResultView, ApiConfigDiagramView } from './ApiConfigDiagramView'
-import { CaseNameTreeView } from './CaseNamesResultView'
 import { GeneratedCasesReviewView } from './GeneratedCasesReviewView'
 import { GenerationChainImportModal } from './GenerationChainImportModal'
 import { RequirementAnalysisDiagramView } from './RequirementAnalysisView'
 import { RequirementMaterialComparison } from './RequirementMaterialComparison'
-import { RequirementUnderstandingComparison } from './RequirementUnderstandingComparison'
 import { RevisionDivider, RevisionSidePanel } from './RevisionSidePanel'
 import { ArtifactModeControls, ArtifactModeSwitch } from './ArtifactViewTabs'
 import { useViewMotion } from '@/shared/ui/useViewMotion'
@@ -35,8 +35,10 @@ import type { GenerationChainKind, GenerationChainStage, GenerationChainVersion 
 import type { UiGenerationStage } from '../utils/uiGenerationStage'
 import { generationChainApi } from '../api/generationChain.api'
 import { diffArtifact, diffStats } from '../utils/chainArtifact'
+import { formatRawArtifact } from '../utils/artifactFormat'
 import { GenerationArtifactFrame } from './GenerationArtifactFrame'
 import { GenerationArtifactDiff } from './GenerationArtifactDiff'
+import { ModuleGenerationProgressPanel } from './ModuleGenerationProgressPanel'
 
 function formatTime(value?: string | null) {
   if (!value) return ''
@@ -48,15 +50,6 @@ function formatTime(value?: string | null) {
     hour: '2-digit',
     minute: '2-digit',
   })
-}
-
-function formatRawArtifact(content: string, label: string) {
-  if (label !== 'JSON' || !content.trim()) return content
-  try {
-    return JSON.stringify(JSON.parse(content), null, 2)
-  } catch {
-    return content
-  }
 }
 
 const stateCopy: Record<string, string> = {
@@ -136,6 +129,7 @@ function ChainHeaderControls({ workspace, canWrite, inline = false }: {
   if (!stage || !chain) return <span ref={anchor} hidden />
 
   const latestId = stage.latestVersion?.versionId
+  const stageRunning = stage.state === 'running'
   const hasDraft = Boolean(stage.draft && !stage.draft.invalidated)
   const isDiff = diffOpen && Boolean(comparisonId)
   const upstreamFields = stage.upstreamStages.map(name => {
@@ -193,7 +187,7 @@ function ChainHeaderControls({ workspace, canWrite, inline = false }: {
       对比 {comparisonContent ? (versionKey === 'draft' ? stage.draft?.baseVersionLabel : '上一版') : ''}
       {isDiff ? <span className="gc-diff-count"><b>+{diffCounts.add}</b><i>−{diffCounts.remove}</i></span> : null}
     </Button> : null}
-    {stage.versions.length ? <Popover open={historyOpen} onOpenChange={setHistoryOpen} trigger="click" placement="bottomRight"
+    {!stageRunning && stage.versions.length ? <Popover open={historyOpen} onOpenChange={setHistoryOpen} trigger="click" placement="bottomRight"
       content={<VersionHistory stage={stage} versions={stage.versions} latestId={latestId}
         activeVersion={versionKey} canWrite={canWrite}
         onPick={id => { setVersionKey(id); setDiffOpen(false); setHistoryOpen(false) }}
@@ -223,25 +217,27 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
   const {
     chain, stage, selected, versionKey, selectedVersion,
     versionDetail, displayedContent, workingContent, comparisonContent, comparisonId, diffOpen, setDiffOpen,
-    mode, setMode, revisionOpen, setRevisionOpen,
+    mode, setMode, revisionOpen: workspaceRevisionOpen, setRevisionOpen,
     revisionInstruction, setRevisionInstruction, upstream,
     runStage, review, revise, importOpen, importVersion,
     importableVersionId, openImport, closeImport, busy, operationPending, detail,
   } = workspace
-  const stageHasContent = workingContent.trim().length > 0
-  const stageHasArtifact = Boolean(stage?.draft || stage?.versions.length) || stageHasContent
+  const stageRunning = stage?.state === 'running'
+  const revisionOpen = workspaceRevisionOpen && !stageRunning
+  const stageHasContent = !stageRunning && workingContent.trim().length > 0
+  const stageHasArtifact = !stageRunning && Boolean(stage?.draft || stage?.versions.length || stageHasContent)
   const modePanelRef = useViewMotion(mode === 'visual' ? 0 : 1)
   const [inputsOpen, setInputsOpen] = useState(false)
   const access = useProjectAccess(projectId)
   const canWrite = access.can('write')
   const finalStage = Boolean(stage && chain && stage.order === chain.stages.length - 1)
-  const invalidDraft = Boolean(stage?.draft?.invalidated)
-  const hasDraft = Boolean(stage?.draft && !invalidDraft)
+  const invalidDraft = !stageRunning && Boolean(stage?.draft?.invalidated)
+  const hasDraft = !stageRunning && Boolean(stage?.draft && !invalidDraft)
   const viewingDraft = versionKey === 'draft'
   const draftActions = hasDraft && viewingDraft
   // 只要有待审核草稿且有写权限就可输入；工作副本在首次输入时建立，不依赖编辑态初始化时序。
   const draftEditable = Boolean(draftActions && canWrite)
-  const rejected = stage?.draft?.status === 'rejected'
+  const rejected = !stageRunning && stage?.draft?.status === 'rejected'
   const upstreamVersions = versionKey === 'draft' ? stage?.draft?.upstreamVersions : versionDetail.data?.upstreamVersions
   const sourceInputs = versionKey === 'draft' ? stage?.draft?.sourceInputs : selectedVersion ? versionDetail.data?.sourceInputs : chain?.sourceInputs
   const uiSurface = chain?.kind === 'ui' && stage?.stage === 'ui_surface'
@@ -257,15 +253,21 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
     && !importVersion.isPending,
   )
   const isDiff = diffOpen && Boolean(comparisonId)
-  // 阶段产物沿用对应页签的阅读容器：材料/理解对照、测试需求分析、测试点、完整用例、API 链路与 UI 三阶段。
+  // 阶段产物沿用对应页签的阅读容器：材料/理解对照、测试范围风险分析、测试点、完整用例、API 链路与 UI 三阶段。
   const stageKind = chain?.kind
   const stageName = stage?.stage
-  const materialExtraction = stageName === 'extracting_text' && stageKind === 'requirement_analysis'
-  const pointsVersionId = stageKind === 'function' && stageName === 'detailed_cases' ? upstreamVersions?.case_names : undefined
-  const pointsUpstream = useQuery({
-    queryKey: ['generationChain', requirementId, 'function', 'version', pointsVersionId],
-    queryFn: () => generationChainApi.version(requirementId, 'function', pointsVersionId!),
-    enabled: Boolean(requirementId && pointsVersionId),
+  const analysisVersionId = stageKind === 'function' && stageName === 'case_names' ? upstreamVersions?.requirement_analysis : undefined
+  const analysisUpstream = useQuery({
+    queryKey: ['generationChain', requirementId, 'function', 'version', analysisVersionId],
+    queryFn: () => generationChainApi.version(requirementId, 'function', analysisVersionId!),
+    enabled: Boolean(requirementId && analysisVersionId),
+  })
+  const materialVersionId = stageKind === 'function' && stageName === 'requirement_analysis'
+    ? upstreamVersions?.extracting_text : analysisUpstream.data?.upstreamVersions?.extracting_text
+  const materialUpstream = useQuery({
+    queryKey: ['generationChain', requirementId, 'requirement_analysis', 'version', materialVersionId],
+    queryFn: () => generationChainApi.version(requirementId, 'requirement_analysis', materialVersionId!),
+    enabled: Boolean(requirementId && materialVersionId),
   })
   const stageArtifactClass = stageKind === 'requirement_analysis'
     ? 'is-material-comparison'
@@ -302,14 +304,14 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
       </span>
     }) : chain.kind !== 'ui' ? <span className="gc-trace-chip">{chain.kind === 'api' ? 'OpenAPI 文档' : '需求材料'} <b>只读来源</b></span> : null}
     {chain.kind === 'ui' ? <UiGenerationSourceTrace source={sourceInputs} loading={Boolean(selectedVersion && versionDetail.isFetching)} /> : null}
-    {stage.latestVersion?.imported ? <span className="gc-trace-chip is-ok"><CheckCircleFilled /> 已导入正式资产</span> : null}
+    {!stageRunning && stage.latestVersion?.imported ? <span className="gc-trace-chip is-ok"><CheckCircleFilled /> 已导入正式资产</span> : null}
   </div>
 
   const footer = <div className="gc-modal-footer">
     <div className="gc-footer-row">
       <div className="gc-footer-status">
         {!embedded ? trace : null}
-        {workspace.editingDirty ? <div className="gc-modal-meta is-warn">修改尚未保存，保存后才能审核。</div> : null}
+        {!stageRunning && workspace.editingDirty ? <div className="gc-modal-meta is-warn">修改尚未保存，保存后才能审核。</div> : null}
         {versionKey !== 'draft' && selectedVersion?.createdAt ? <div className="gc-modal-meta">
           <ClockCircleOutlined /> {selectedVersion.label} · {formatTime(selectedVersion.createdAt)} · {selectedVersion.reviewerUserId || '系统'}
           {selectedVersion.imported ? ' · 已导入' : ''}
@@ -407,11 +409,11 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
         {chain.sourceChanged ? <Alert showIcon type="warning" title={chain.kind === 'ui' ? '来源仓库或功能用例已更新。请在元素控件清单更换输入后重新生成；旧版本保留输入快照。' : '需求材料已更新，旧版本保留生成时的材料快照。'} /> : null}
         {invalidDraft ? <Alert showIcon type="warning" title="产物已作废"
           description={stage.draft?.invalidatedReason || '该产物依赖的上游版本已被删除，不能继续审核或优化，请重新生成。'} /> : null}
-        {stage.state === 'failed' ? <Alert showIcon type="error"
+        {stage.state === 'failed' ? <Alert showIcon type="error" style={{ whiteSpace: 'pre-line' }}
           title={stage.errorMessage || '阶段执行失败，Worker 未返回具体原因'} /> : null}
         {stage.blockedReason ? <Alert showIcon type="info" title={stage.blockedReason} /> : null}
 
-        {!embedded ? <div className="gc-artifact-head">
+        {!embedded && !stageRunning ? <div className="gc-artifact-head">
           <div>
             <strong>{versionKey === 'draft' ? '待审核产物' : selectedVersion ? `${selectedVersion.label} 已通过版本` : '阶段产物'}</strong>
             <span>{versionKey === 'draft' ? stage.draft?.summary : selectedVersion?.summary ?? stage.latestVersion?.summary}</span>
@@ -419,8 +421,11 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
           {versionDetail.isFetching ? <Spin size="small" /> : null}
         </div> : null}
 
+        {stage.moduleGeneration && (stage.state === 'running' || stage.state === 'failed' || !stageHasContent ||
+          (versionKey === 'draft' && stage.draft?.attemptId === stage.moduleGeneration.attemptId)) ?
+          <ModuleGenerationProgressPanel key={stage.moduleGeneration.attemptId} progress={stage.moduleGeneration} /> : null}
         <div ref={modePanelRef} className={artifactScrollClass}>
-          {!stageHasContent ? (stage.state === 'running' ? <div className="gc-stage-loading" role="status" aria-live="polite">
+          {!stageHasContent ? (stage.state === 'running' && !stage.moduleGeneration ? <div className="gc-stage-loading" role="status" aria-live="polite">
             <Spin /><span>正在生成{stage.label}</span>
           </div> : null) : isDiff ? <GenerationArtifactDiff before={comparisonContent} after={displayedContent}
             beforeLabel={stage.versions.find(version => version.versionId === comparisonId)?.label ?? '旧版本'}
@@ -430,15 +435,13 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
                 value={workspace.editing?.content ?? (rawContent || '暂无内容')} onChange={workspace.setEditingContent} />
             </div>
             : stageKind === 'requirement_analysis'
-              ? materialExtraction
-                ? <RequirementMaterialComparison content={workingContent} editable={draftEditable} onChange={workspace.setEditingContent} />
-                : <RequirementUnderstandingComparison hideTitle content={workingContent} />
+              ? <RequirementMaterialComparison content={workingContent} editable={draftEditable} onChange={workspace.setEditingContent} />
               : stageKind === 'function'
                 ? stageName === 'requirement_analysis'
-                  ? <RequirementAnalysisDiagramView content={workingContent} />
+                  ? <RequirementAnalysisDiagramView content={workingContent} materialContent={materialUpstream.data?.content} />
                   : stageName === 'case_names'
-                    ? <CaseNameTreeView content={workingContent} rootTitle={stage.label} expanded editable={draftEditable} onTreeChange={workspace.setEditingContent} />
-                    : <GeneratedCasesReviewView content={workingContent} pointsContent={pointsUpstream.data?.content ?? ''} rootTitle={stage.label}
+                    ? <TraceablePointsView content={workingContent} materialContent={materialUpstream.data?.content} onChange={draftEditable ? workspace.setEditingContent : undefined} tree={<CaseNameTreeView content={workingContent} rootTitle={stage.label} expanded />} />
+                    : <GeneratedCasesReviewView content={workingContent} rootTitle={stage.label}
                       onChange={draftEditable ? workspace.setEditingContent : undefined} />
                 : stageKind === 'api'
                   ? stageName === 'openapi_extract' ? <ApiConfigDiagramView content={workingContent} /> : <ApiCandidateResultView content={workingContent} />
@@ -460,10 +463,10 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
 
     {open && inputsOpen && chain.kind === 'ui' ? <UiGenerationInputsModal key={chain.taskId}
       requirementId={requirementId}
-      refreshInputs={Boolean(chain.runId)} source={chain.sourceInputs}
+      refreshInputs={Boolean(chain.runId)} source={chain.sourceInputs} busy={stageRunning}
       sourceOptions={uiSourceOptions ?? { loading: false }}
       onOpenProfile={onOpenProfile}
       onClose={() => setInputsOpen(false)} onSubmit={inputs => runStage.mutateAsync(inputs)} /> : null}
-    <GenerationChainImportModal workspace={workspace} open={importOpen} onClose={closeImport} />
+    <GenerationChainImportModal workspace={workspace} open={importOpen && !stageRunning} onClose={closeImport} />
   </GenerationArtifactFrame>{inspector}{inspectorActions}{readingHeaderActions}</>
 }

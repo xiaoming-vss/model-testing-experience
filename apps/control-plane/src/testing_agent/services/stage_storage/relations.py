@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import ErrBadRequest, ErrNotFound, dynamic_error
+from testing_agent.domain.requirement_artifacts import validate_artifact
 from testing_agent.models.ai_generate_stage_version import AiGenerateStageVersion
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
@@ -154,17 +155,19 @@ async def launch_graph(
     if not ids or any(not value for value in ids) or len(set(ids)) != len(ids):
         raise dynamic_error(ErrBadRequest, "用例缺少唯一的 case_id，请重新生成并审核用例")
     await require_personal_connection(session, actor, "llm", connection_id, task.project_id)
-    previous = await graph_for_version(session, task, version, success_only=True)
-    snapshot = leaf.input_snapshot_json or {}
-    config = deepcopy(snapshot.get("config") or {}) if isinstance(snapshot, dict) else {}
-    if not isinstance(config, dict) or not isinstance(config.get("requirementAnalysis"), dict):
-        raise dynamic_error(ErrBadRequest, "该版本缺少图谱所需的测试需求分析，请重新生成并审核")
-    config.pop("revisionInstruction", None)
-    config["resultYaml"] = json.dumps({"cases": cases}, ensure_ascii=False)
-    if previous and previous.status == "success" and previous.output_content:
-        config["caseRelations"] = json.loads(previous.output_content)
-    else:
-        config.pop("caseRelations", None)
+    leaf_source = attempt_source(leaf)
+    try:
+        material = validate_artifact(leaf_source.get("sourceContent", ""), "document_extraction")
+    except ValueError as exc:
+        raise dynamic_error(
+            ErrBadRequest, "该版本缺少有效的材料整理结果，请基于已审核的材料重新生成并审核用例"
+        ) from exc
+    source = {
+        "sourceContent": json.dumps(material, ensure_ascii=False, separators=(",", ":")),
+        "documentType": "text",
+    }
+    if "requirementMaterialVersion" in leaf_source:
+        source["requirementMaterialVersion"] = leaf_source["requirementMaterialVersion"]
     stage = await session.scalar(
         select(AiGenerationStage).where(
             AiGenerationStage.task_id == task.task_id,
@@ -184,8 +187,8 @@ async def launch_graph(
         request_id=str(uuid4()),
         actor_id=actor,
         input_snapshot={
-            "source": deepcopy(attempt_source(leaf)),
-            "config": config,
+            "source": source,
+            "config": {"resultYaml": json.dumps({"cases": cases}, ensure_ascii=False)},
             "llmConnectionId": connection_id,
             "versioning": {"baseVersionId": version.version_id},
         },

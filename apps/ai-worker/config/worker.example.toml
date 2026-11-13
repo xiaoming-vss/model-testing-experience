@@ -3,6 +3,9 @@ worker_id = "ai-worker-01"
 poll_interval_seconds = 5
 heartbeat_interval_seconds = 15
 max_concurrent_tasks = 2
+# 单次测试点审查及本 Worker 进程的并发上限
+traceable_review_concurrency = 4
+traceable_review_global_concurrency = 4
 run_once = false
 
 [platform]

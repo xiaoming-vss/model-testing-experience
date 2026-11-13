@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
 
 from testing_agent.core.enums import RunStatus, StageStatus
 from testing_agent.core.errors import ErrBadRequest
-from testing_agent.models.worker_task import WorkerTask
-from testing_agent.schemas.workers import (
-    WorkerProgressRequest,
-    WorkerTaskEventRequest,
-)
+from testing_agent.schemas.workers import WorkerTaskEventRequest
 from testing_agent.services.ui_generation_contracts import is_ui_workflow, validate_ui_worker_output
 from testing_agent.services.worker_domains.events import (
     final_run_status,
@@ -93,113 +89,3 @@ def apply_ai_completion_to_run(
     run.finished_at = parse_event_time(body.finished_at) or datetime.now(UTC)
     if body.duration_ms is not None:
         run.duration_ms = body.duration_ms
-
-
-AI_WAITING_REVIEW_STAGES = {
-    "requirement_analysis",
-    "case_names",
-    "extracting_text",
-    "openapi_extract",
-    "ui_surface",
-    "ui_design",
-}
-
-
-def apply_progress(
-    run: Any, task: WorkerTask, body: WorkerProgressRequest, *, lease_seconds: int
-) -> None:
-    if body.run_id and body.run_id != run.run_id:
-        raise ErrBadRequest()
-    api_workflow = (getattr(run, "snapshot_json", None) or {}).get(
-        "apiWorkflowVersion"
-    ) == "api_two_stage/1.0"
-    if api_workflow:
-        if task.task_type != "api_case_generate" or body.current_stage != run.current_stage:
-            raise ErrBadRequest()
-        if body.result_yaml:
-            raise ErrBadRequest()
-        if body.stage_status == "waiting_review":
-            config = body.config_json
-            extraction = config.get("apiExtraction") if isinstance(config, dict) else None
-            if (
-                run.current_stage != "openapi_extract"
-                or not isinstance(extraction, dict)
-                or not extraction
-            ):
-                raise ErrBadRequest()
-        elif body.config_json and (
-            not isinstance(body.config_json, dict)
-            or body.config_json.get("apiExtraction") != (run.config_json or {}).get("apiExtraction")
-        ):
-            raise ErrBadRequest()
-    elif task.task_type == "api_case_generate" and run.checkpoint_enabled:
-        # Legacy API runs executed both skills under the single generate stage.
-        if body.current_stage in {"openapi_extract", "api_case_generating"}:
-            body.current_stage = "generate"
-            run.current_stage = "generate"
-    if task.task_type == "requirement_analysis" and body.stage_status == "waiting_review":
-        from testing_agent.services.requirement_analysis_contracts import (
-            validate_run_output,
-        )
-
-        validate_run_output(run, config=body.config_json)
-    if is_ui_workflow(run):
-        if body.current_stage != run.current_stage:
-            raise ErrBadRequest()
-        if body.result_yaml:
-            raise ErrBadRequest()  # Final YAML is published by completion, never progress.
-        if body.stage_status == "waiting_review":
-            if run.current_stage not in {"ui_surface", "ui_design"}:
-                raise ErrBadRequest()
-            validate_ui_worker_output(run, run.current_stage, body.config_json, body.result_yaml)
-        elif body.config_json:
-            current = run.config_json or {}
-            supplied = body.config_json
-            if not isinstance(supplied, dict) or any(
-                supplied.get(key) != current.get(key) for key in ("uiSurface", "uiDesign")
-            ):
-                raise ErrBadRequest()
-    now = datetime.now(UTC)
-    next_task_status = RunStatus.RUNNING.value
-    next_run_status = RunStatus.RUNNING.value
-    next_stage_status = run.stage_status
-    if run.checkpoint_enabled and body.stage_status == StageStatus.WAITING_REVIEW.value:
-        if not body.current_stage or body.current_stage != run.current_stage:
-            raise ErrBadRequest()
-        if run.current_stage not in AI_WAITING_REVIEW_STAGES:
-            raise ErrBadRequest()
-        next_task_status = RunStatus.SUCCESS.value
-        next_run_status = "waiting_review"
-        next_stage_status = StageStatus.WAITING_REVIEW.value
-    elif run.checkpoint_enabled and body.stage_status:
-        if not body.current_stage or body.current_stage != run.current_stage:
-            raise ErrBadRequest()
-        next_stage_status = body.stage_status
-
-    task.status = next_task_status
-    task.heartbeat_at = now
-    task.lease_expires_at = now + timedelta(seconds=lease_seconds)
-    if next_task_status == RunStatus.SUCCESS.value:
-        task.finished_at = now
-        task.lease_expires_at = now
-    run.status = next_run_status
-    if body.current_stage is not None:
-        run.current_stage = body.current_stage
-    if run.checkpoint_enabled:
-        run.stage_status = next_stage_status
-    elif body.stage_status is not None:
-        run.stage_status = body.stage_status
-    functional = task.task_type == "functional_case_generate"
-    if (
-        body.config_json is not None
-        and (not functional or body.config_json)
-        and (not is_ui_workflow(run) or body.stage_status == "waiting_review")
-    ):
-        run.config_json = body.config_json
-    if body.result_yaml is not None and not functional and not is_ui_workflow(run):
-        run.result_yaml = body.result_yaml
-    if body.result_summary_json is not None:
-        run.result_summary_json = body.result_summary_json
-    if body.error_message is not None:
-        task.error_message = body.error_message
-        run.error_message = body.error_message

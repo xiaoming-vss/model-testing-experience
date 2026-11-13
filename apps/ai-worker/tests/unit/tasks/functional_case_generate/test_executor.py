@@ -5,6 +5,8 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
+from tests.unit.tasks.functional_case_generate.fixtures import analysis
+
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
@@ -68,16 +70,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         captured: dict[str, object] = {}
         events: list[str] = []
 
-        requirement_analysis_json = json.dumps(
-            {
-                "Platform_core_functions": ["登录", "项目管理"],
-                "Target_understanding": ["覆盖核心业务"],
-                "Risk_point_prediction": ["权限错误"],
-                "function_flow": ["登录", "进入项目列表", "新增项目"],
-                "Scene_Design": [{"scene_type": "功能场景"}],
-            },
-            ensure_ascii=False,
-        )
+        requirement_analysis_json = json.dumps(analysis(), ensure_ascii=False)
         case_names_json = json.dumps(
             {
                 "categories": [
@@ -197,9 +190,9 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
             Path("D:/tmp/pi-runtime").resolve(),
         )
         self.assertFalse(Path(str(captured["config_path"])).exists())
-        self.assertEqual(captured["analysis_skill_name"], "analyze-functional-requirements")
-        self.assertEqual(captured["case_name_skill_name"], "generate-solution-test-points")
-        self.assertEqual(captured["detailed_case_skill_name"], "generate-solution-test-cases")
+        self.assertEqual(captured["analysis_skill_name"], "mtx-analyze-functional-requirements")
+        self.assertEqual(captured["case_name_skill_name"], "mtx-generate-traceable-test-points")
+        self.assertEqual(captured["detailed_case_skill_name"], "mtx-generate-solution-test-cases")
 
         first_config = json.loads(progress_events[0].intermediate_json_text)
         second_config = json.loads(progress_events[1].intermediate_json_text)
@@ -254,14 +247,14 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
                 def chain_runner(**kwargs):
                     captured.update(kwargs)
                     return FunctionalChainRunResult(
-                        requirement_analysis_output='{"Platform_core_functions": []}',
+                        requirement_analysis_output=json.dumps(analysis()),
                         case_names_output='{"categories": []}',
                         detailed_cases_output='{"cases": []}',
                     )
 
                 def skill_runner(**kwargs):
                     captured.update(kwargs)
-                    return '{"Platform_core_functions": []}'
+                    return json.dumps(analysis())
 
                 executor = executor_module.FunctionalCaseExecutor(
                     agent_config=PiConfig(runtime_root=runtime),
@@ -272,7 +265,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
                 if checkpoint:
                     self.assertIsNone(result)
                     self.assertEqual(progress_events[-1].stage_status, "waiting_review")
-                    self.assertEqual(captured["skill_name"], "analyze-functional-requirements")
+                    self.assertEqual(captured["skill_name"], "mtx-analyze-functional-requirements")
                     self.assertEqual(captured["input_text"], task.payload.source_content)
                 else:
                     self.assertEqual(result.status, TaskStatus.SUCCESS, result.error_message)
@@ -364,16 +357,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
 
         progress_events: list[TaskProgress] = []
         captured: dict[str, object] = {}
-        requirement_analysis_json = json.dumps(
-            {
-                "Platform_core_functions": ["登录"],
-                "Target_understanding": ["覆盖登录链路"],
-                "Risk_point_prediction": ["认证失败"],
-                "function_flow": ["输入账号密码", "登录成功"],
-                "Scene_Design": [{"scene_type": "功能场景"}],
-            },
-            ensure_ascii=False,
-        )
+        requirement_analysis_json = json.dumps(analysis(), ensure_ascii=False)
 
         def fake_skill_runner(**kwargs) -> str:
             captured.update(kwargs)
@@ -403,11 +387,11 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         self.assertEqual(progress_events[0].stage_status, "waiting_review")
         config = json.loads(progress_events[0].intermediate_json_text)
         self.assertEqual(captured["input_text"], task.payload.source_content)
-        self.assertEqual(captured["skill_name"], "analyze-functional-requirements")
+        self.assertEqual(captured["skill_name"], "mtx-analyze-functional-requirements")
         self.assertIn(task.payload.extra_instruction, captured["extra_instruction"])
         self.assertIn(FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION, captured["extra_instruction"])
         self.assertNotIn("enhancedText", config)
-        self.assertEqual(config["requirementAnalysis"]["Platform_core_functions"], ["登录"])
+        self.assertEqual(config["requirementAnalysis"], analysis())
         self.assertIsNone(config["caseNames"])
 
     def test_execute_checkpoint_requirement_analysis_ignores_legacy_enhanced_text_and_returns_none(
@@ -420,16 +404,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
 
         progress_events: list[TaskProgress] = []
         captured: dict[str, object] = {}
-        requirement_analysis_json = json.dumps(
-            {
-                "Platform_core_functions": ["登录"],
-                "Target_understanding": ["覆盖登录链路"],
-                "Risk_point_prediction": ["认证失败"],
-                "function_flow": ["输入账号密码", "登录成功"],
-                "Scene_Design": [{"scene_type": "功能场景"}],
-            },
-            ensure_ascii=False,
-        )
+        requirement_analysis_json = json.dumps(analysis(), ensure_ascii=False)
 
         def fake_skill_runner(**kwargs) -> str:
             captured.update(kwargs)
@@ -463,7 +438,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
 
         self.assertIsNone(result)
         self.assertEqual(captured["input_text"], task.payload.source_content)
-        self.assertEqual(captured["skill_name"], "analyze-functional-requirements")
+        self.assertEqual(captured["skill_name"], "mtx-analyze-functional-requirements")
         self.assertIn(task.payload.extra_instruction, captured["extra_instruction"])
         self.assertIn(FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION, captured["extra_instruction"])
         self.assertEqual(captured["session_key"], "run-functional-1")
@@ -499,7 +474,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         executor = executor_cls(
             agent_config=PiConfig(),
             chain_runner=lambda **kwargs: None,
-            skill_runner=lambda **kwargs: '{"Platform_core_functions": []}',
+            skill_runner=lambda **kwargs: json.dumps(analysis()),
         )
 
         result = executor.execute(
@@ -522,13 +497,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
 
         progress_events: list[TaskProgress] = []
         captured: dict[str, object] = {}
-        requirement_analysis = {
-            "Platform_core_functions": ["登录"],
-            "Target_understanding": ["覆盖登录链路"],
-            "Risk_point_prediction": ["认证失败"],
-            "function_flow": ["输入账号密码", "登录成功"],
-            "Scene_Design": [{"scene_type": "功能场景"}],
-        }
+        requirement_analysis = analysis()
         case_names_json = json.dumps(
             {
                 "categories": [
@@ -574,7 +543,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         )
 
         self.assertIsNone(result)
-        self.assertEqual(captured["skill_name"], "generate-solution-test-points")
+        self.assertEqual(captured["skill_name"], "mtx-generate-traceable-test-points")
         self.assertIn(task.payload.extra_instruction, captured["extra_instruction"])
         self.assertIn(FUNCTIONAL_CASE_NAMES_JSON_ONLY_INSTRUCTION, captured["extra_instruction"])
         self.assertIn(task.payload.source_content, captured["input_text"])
@@ -596,13 +565,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
 
         progress_events: list[TaskProgress] = []
         captured: dict[str, object] = {}
-        requirement_analysis = {
-            "Platform_core_functions": ["登录", "项目管理"],
-            "Target_understanding": ["覆盖核心业务"],
-            "Risk_point_prediction": ["权限错误"],
-            "function_flow": ["登录", "进入项目列表", "新增项目"],
-            "Scene_Design": [{"scene_type": "功能场景"}],
-        }
+        requirement_analysis = analysis()
         case_names = {
             "categories": [
                 {
@@ -696,7 +659,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
             progress_events.append,
         )
 
-        self.assertEqual(captured["skill_name"], "generate-solution-test-cases")
+        self.assertEqual(captured["skill_name"], "mtx-generate-solution-test-cases")
         self.assertEqual(captured["source_text"], task.payload.source_content)
         self.assertEqual(
             captured["requirement_analysis_json"],
@@ -726,16 +689,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
             base_url="https://example.test/v1",
         )
         captured: dict[str, object] = {}
-        requirement_analysis_json = json.dumps(
-            {
-                "Platform_core_functions": ["登录"],
-                "Target_understanding": ["覆盖核心业务"],
-                "Risk_point_prediction": ["权限错误"],
-                "function_flow": ["登录", "进入项目列表"],
-                "Scene_Design": [{"scene_type": "功能场景"}],
-            },
-            ensure_ascii=False,
-        )
+        requirement_analysis_json = json.dumps(analysis(), ensure_ascii=False)
         case_names_json = json.dumps(
             {
                 "categories": [

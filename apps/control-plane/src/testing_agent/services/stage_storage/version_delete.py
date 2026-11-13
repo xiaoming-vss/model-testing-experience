@@ -21,9 +21,7 @@ def _depends(snapshot: Any, version_id: str) -> bool:
     versioning = snapshot.get("versioning")
     upstream = versioning.get("upstreamVersions") if isinstance(versioning, dict) else None
     source = snapshot.get("source")
-    source_version = (
-        source.get("requirementUnderstandingVersion") if isinstance(source, dict) else None
-    )
+    source_version = source.get("requirementMaterialVersion") if isinstance(source, dict) else None
     return (
         (isinstance(versioning, dict) and versioning.get("baseVersionId") == version_id)
         or (isinstance(upstream, dict) and version_id in upstream.values())
@@ -49,18 +47,18 @@ async def delete_stage_version(session: AsyncSession, task: AiGenerateTask, vers
     if version is None:
         raise ErrNotFound()
     task_ids = {task.task_id}
-    if task.task_type == "requirement_analysis" and version.stage == "feature_understanding":
-        related = await session.scalar(
+    if task.task_type == "requirement_analysis" and version.stage == "extracting_text":
+        related = await session.scalars(
             select(AiGenerateTask.task_id)
             .where(
                 AiGenerateTask.requirement_id == task.requirement_id,
-                AiGenerateTask.task_type == "functional_case_generate",
+                AiGenerateTask.task_type.in_(
+                    ("functional_case_generate", "code_risk_analysis", "repository_profile")
+                ),
             )
             .order_by(AiGenerateTask.created_at.desc(), AiGenerateTask.id.desc())
-            .limit(1)
         )
-        if related:
-            task_ids.add(related)
+        task_ids.update(related.all())
     try:
         # Nonblocking current reads avoid waiting behind a Worker which already
         # holds a stage/attempt while this transaction holds the version lock.

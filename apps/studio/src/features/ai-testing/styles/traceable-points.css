@@ -1,0 +1,22 @@
+.ai-traceable-points { height: 100%; overflow: auto; padding: 16px; }
+.ai-traceable-points-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--app-surface-border); }
+.ai-traceable-points-module { margin-top: 20px; }
+.ai-traceable-points-module h3 { margin: 0 0 12px; font-size: 15px; }
+.ai-traceable-points-scene { margin-top: 14px; }
+.ai-traceable-points-scene h4 { margin: 0; padding: 8px 0; font-size: 13px; }
+.ai-traceable-points-scene h4 span { margin-left: 8px; color: var(--app-text-subtle); }
+.ai-traceable-points-item { padding: 10px 0; border-top: 1px solid var(--app-surface-border); }
+.ai-traceable-points-item > div:first-child { display: flex; align-items: baseline; gap: 8px; }
+.ai-traceable-points-id { color: var(--app-text-subtle); white-space: nowrap; }
+.ai-traceable-points-item button { margin-top: 6px; padding: 0; color: var(--app-accent); background: none; border: 0; cursor: pointer; }
+.ai-traceable-points-item dl { margin: 8px 0 0; }
+.ai-traceable-points-item dl > div { display: flex; gap: 8px; }
+.ai-traceable-points-item dd { margin: 0; overflow-wrap: anywhere; }
+
+/* 仅树图模式占满可用高度；详情模式保留自身滚动。 */
+.ai-traceable-points.is-tree-active { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.ai-traceable-points.is-tree-active > .ant-tabs { display: flex; flex: 1 1 0%; flex-direction: column; min-height: 0; }
+.ai-traceable-points.is-tree-active > .ant-tabs > .ant-tabs-content-holder,
+.ai-traceable-points.is-tree-active > .ant-tabs > .ant-tabs-content-holder > .ant-tabs-content,
+.ai-traceable-points.is-tree-active > .ant-tabs > .ant-tabs-content-holder > .ant-tabs-content > .ant-tabs-tabpane-active { display: flex; flex: 1 1 0%; flex-direction: column; min-height: 0; }
+.ai-traceable-points.is-tree-active .ai-case-name-tree { flex: 1 1 0%; min-height: 0; }

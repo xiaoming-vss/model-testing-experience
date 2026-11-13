@@ -1,4 +1,0 @@
-interface:
-  display_name: "解决方案测试点生成"
-  short_description: "结合原始需求和需求分析结果，按业务模块及测试维度生成固定格式的测试点"
-  default_prompt: "使用 $generate-solution-test-points 根据原始需求和需求分析结果生成解决方案测试点，只输出符合固定模板的标准 JSON。"

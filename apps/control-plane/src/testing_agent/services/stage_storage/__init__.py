@@ -123,7 +123,13 @@ class DirectStageStorage:
             source = deepcopy(snapshot.get("source") or {})
             if not isinstance(config, dict) or not isinstance(source, dict):
                 raise ErrBadRequest()
-            config.update(deepcopy(current.output_context_json or {}))
+            config.update(
+                {
+                    k: deepcopy(v)
+                    for k, v in (current.output_context_json or {}).items()
+                    if k != "moduleGeneration"
+                }
+            )
             config.pop("revisionAttachments", None)
             config.pop("revisionInstruction", None)
             field = STAGE_CONFIG_FIELDS.get(stage.stage)
@@ -253,7 +259,13 @@ class DirectStageStorage:
             input_snapshot_json=deepcopy(current.input_snapshot_json),
             output_content=content,
             output_format=output_format,
-            output_context_json=deepcopy(current.output_context_json),
+            output_context_json={
+                key: deepcopy(value)
+                for key, value in (current.output_context_json or {}).items()
+                if key != "moduleGeneration"
+            }
+            if current.output_context_json is not None
+            else None,
             status="success",
             invalidated_reason="",
             created_at=datetime.now(UTC),
@@ -308,14 +320,15 @@ class DirectStageStorage:
             and task_type == "functional_case_generate"
             and stage.stage == "requirement_analysis"
         ):
-            source_version = source.get("requirementUnderstandingVersion")
+            source_version = source.get("requirementMaterialVersion")
             if (
                 isinstance(source_version, dict)
                 and isinstance(source_version.get("versionId"), str)
                 and source_version["versionId"]
             ):
-                upstream = {"feature_understanding": source_version["versionId"]}
+                upstream = {"extracting_text": source_version["versionId"]}
         context = deepcopy(current.output_context_json or {})
+        context.pop("moduleGeneration", None)
         if task_type == "ui_case_generate":
             context["uiSourceBatchId"] = source.get("uiSourceBatchId") or current.id
             context["uiSourceInputs"] = ui_source_inputs(source)
@@ -323,7 +336,7 @@ class DirectStageStorage:
             context["functionalSource"] = {
                 key: deepcopy(value)
                 for key, value in source.items()
-                if key in {"sourceContent", "requirementUnderstandingVersion", "documentType"}
+                if key in {"sourceContent", "requirementMaterialVersion", "documentType"}
             }
         elif (
             task_type == "api_case_generate"

@@ -1,4 +1,4 @@
-import { formatStructuredContent, toRecordArray } from '@/shared/utils/value'
+import { formatStructuredContent } from '@/shared/utils/value'
 
 type GeneratedCaseImportStats = {
   moduleCount: number
@@ -14,15 +14,6 @@ function parseJsonLikeContent(value?: unknown) {
   } catch {
     return undefined
   }
-}
-
-export function getOutputRepairProgress(summary: unknown): string | null {
-  const parsed = parseJsonLikeContent(summary)
-  const progress = parsed && typeof parsed === 'object' ? parsed.outputValidation : undefined
-  if (!progress || progress.status !== 'repairing' || !Number.isInteger(progress.repairAttempt) || progress.repairAttempt < 1) return null
-  const stage = { requirement_analysis: '测试需求分析', case_names: '测试点', detailed_cases: '详细用例', relation_analysis: '图谱分析' }[progress.stage as 'requirement_analysis' | 'case_names' | 'detailed_cases' | 'relation_analysis']
-  if (!stage) return null
-  return `${stage}${typeof progress.module === 'string' && progress.module ? ` / ${progress.module}` : ''}：输出校验未通过，正在进行第 ${progress.repairAttempt}/2 次自动修复`
 }
 
 export function getGeneratedCaseImportStats(content?: unknown): GeneratedCaseImportStats {
@@ -69,22 +60,11 @@ export function getConfigStageFieldContent(configJson?: unknown, fieldKey?: stri
 
 function isDirectStageConfigContent(record: Record<string, unknown>, fieldKey: string) {
   if (fieldKey === 'caseNames') {
-    return Array.isArray(record.categories)
+    return record.artifactType === 'traceable_test_points' && Array.isArray(record.testPoints)
   }
 
   if (fieldKey === 'requirementAnalysis') {
-    return Boolean(
-      record.Platform_core_functions ||
-      record.Target_understanding ||
-      record.Risk_point_prediction ||
-      record.function_flow ||
-      record.Scene_Design ||
-      record.functionalOverview ||
-      record.businessRules ||
-      record.scenarioFactors ||
-      record.scenarioBreakdown ||
-      record.openQuestions,
-    )
+    return record.artifactType === 'test_scope_impact_risk' && record.schemaVersion === '1.0'
   }
 
   return false
@@ -116,51 +96,6 @@ export function toDisplayText(value: unknown) {
   }
 }
 
-function toTextList(value: unknown): string[] {
-  if (Array.isArray(value)) {
-    return value.map(toDisplayText).filter(Boolean)
-  }
-  const text = toDisplayText(value)
-  return text ? [text] : []
-}
-
-export function toCaseNamePointList(value: unknown): string[] {
-  if (Array.isArray(value)) {
-    return value.map(toDisplayText).filter(Boolean)
-  }
-  const text = toDisplayText(value)
-  return text ? [text] : []
-}
-
-export type RequirementAnalysisSection = {
-  functionalOverview?: unknown
-  businessRules?: unknown
-  scenarioFactors?: unknown
-  scenarioBreakdown?: unknown
-  openQuestions?: unknown
-  Platform_core_functions?: unknown
-  Target_understanding?: unknown
-  Risk_point_prediction?: unknown
-  function_flow?: unknown
-  Scene_Design?: unknown
-}
-
-export function formatTextList(value: unknown) {
-  return toTextList(value).join('\n')
-}
-
-export function formatRoleConcerns(value: unknown) {
-  return toRecordArray(value)
-    .map((item) => {
-      const role = toDisplayText(item.role)
-      const concern = toDisplayText(item.concern)
-      if (role && concern) return `${role}：${concern}`
-      return role || concern || toDisplayText(item)
-    })
-    .filter(Boolean)
-    .join('\n')
-}
-
 export type GeneratedTestCase = {
   sourceIndex: number
   raw: Record<string, unknown>
@@ -182,10 +117,6 @@ const NAME_FIELD_CANDIDATES = ['Case Title', 'case_title', 'case_name', 'name', 
 const TAG_FIELD_CANDIDATES = ['case_id', 'caseId', 'priority', 'case_type', 'caseType', 'type', 'level', 'severity']
 
 export const CASE_ID_FIELDS = ['case_id', 'caseId']
-
-export function formatCaseIdTag(value: string) {
-  return value.length > 8 ? `${value.slice(0, 8)}…` : value
-}
 
 const FIELD_LABEL_MAP: Record<string, string> = {
   case_id: '用例编号',
@@ -307,13 +238,15 @@ export function parseGeneratedCases(content?: string): GeneratedCaseModuleGroup[
   }
 }
 
-export function parseRequirementAnalysisContent(content: string): RequirementAnalysisSection | null {
+export function parseRequirementAnalysisContent(content: string): Record<string, unknown> | null {
   if (!content.trim()) return null
 
   try {
     const parsed = JSON.parse(content)
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null
-    return parsed as RequirementAnalysisSection
+    if (parsed.artifactType !== 'test_scope_impact_risk' || parsed.schemaVersion !== '1.0') return null
+    if (!['testObjects', 'impactAreas', 'risks', 'openQuestions'].every((key) => Array.isArray(parsed[key]))) return null
+    return parsed as Record<string, unknown>
   } catch {
     return null
   }
