@@ -52,7 +52,7 @@
 /* ===== 两栏布局 ===== */
 
 .case-library-page .case-library-layout {
-  grid-template-columns: 256px minmax(0, 1fr);
+  grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr);
   gap: 16px;
   overflow: hidden;
 }

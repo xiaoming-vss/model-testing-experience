@@ -1,7 +1,9 @@
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ListPagination } from './ListPagination'
+
+afterEach(cleanup)
 
 describe('ListPagination', () => {
   it('shows Chinese totals and returns to page one when page size changes', async () => {
@@ -30,5 +32,12 @@ describe('ListPagination', () => {
     render(<ListPagination current={1} pageSize={20} total={0} onChange={onChange} />)
     expect(screen.getByText('显示第 0 条 - 第 0 条，共 0 条')).toBeInTheDocument()
     expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('compact mode renders only the pager for a narrow toolbar', () => {
+    render(<ListPagination compact current={2} pageSize={20} total={55} onChange={vi.fn()} />)
+    expect(screen.queryByText(/显示第/)).not.toBeInTheDocument()
+    expect(screen.getByTitle('1')).toBeInTheDocument()
+    expect(screen.getByRole('combobox')).toBeInTheDocument()
   })
 })

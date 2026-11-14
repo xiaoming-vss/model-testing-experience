@@ -39,3 +39,49 @@
 }
 
 :root:root:not([data-theme='dark']) .app-shell .table-footer { background: var(--app-list-toolbar-bg) !important; }
+
+/* 窄侧栏/工具栏使用的紧凑分页：仍由公共样式维护尺寸，feature 只负责放置。 */
+.list-pagination-compact.ant-pagination {
+  flex: 0 0 auto;
+  margin: 0 0 0 auto;
+  padding: 0;
+}
+.list-pagination-compact .ant-pagination-item,
+.list-pagination-compact .ant-pagination-prev,
+.list-pagination-compact .ant-pagination-next {
+  min-width: 18px;
+  height: 20px;
+  margin-inline-end: 0;
+  line-height: 18px;
+  border-radius: 5px;
+}
+.list-pagination-compact .ant-pagination-item a {
+  padding: 0 2px;
+  font-size: 9.5px;
+}
+.list-pagination-compact .ant-pagination-prev .ant-pagination-item-link,
+.list-pagination-compact .ant-pagination-next .ant-pagination-item-link {
+  font-size: 10px;
+}
+.list-pagination-compact .ant-pagination-options {
+  margin-inline-start: 2px;
+}
+.list-pagination-compact .ant-select {
+  width: 78px;
+  height: 20px;
+  font-size: 9.5px;
+}
+.list-pagination-compact .ant-select-content {
+  height: 18px;
+  padding-inline: 4px;
+  font-size: 9.5px;
+  line-height: 18px;
+}
+.list-pagination-compact .ant-select-input {
+  height: 18px;
+  font-size: 9.5px;
+}
+.list-pagination-compact .ant-select-suffix {
+  padding-inline-end: 4px;
+  font-size: 8px;
+}

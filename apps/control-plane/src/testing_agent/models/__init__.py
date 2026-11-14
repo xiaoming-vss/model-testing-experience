@@ -5,6 +5,7 @@ from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generate_version_import import AiGenerateVersionImport
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
+from testing_agent.models.api_app import ApiApp
 from testing_agent.models.api_assert_rule import ApiAssertRule
 from testing_agent.models.api_case import ApiCase
 from testing_agent.models.api_case_run import ApiCaseRun
@@ -13,12 +14,18 @@ from testing_agent.models.api_collection_run import ApiCollectionRun, ApiCollect
 from testing_agent.models.api_environment import ApiEnvironment
 from testing_agent.models.api_environment_var import ApiEnvironmentVar
 from testing_agent.models.api_extract_rule import ApiExtractRule
+from testing_agent.models.api_interface import ApiInterface
+from testing_agent.models.api_interface_requirement import ApiInterfaceRequirement
 from testing_agent.models.auth_runtime import AuthRuntime
 from testing_agent.models.bug import Bug
 from testing_agent.models.bug_activity import BugActivity
 from testing_agent.models.bug_zentao_attachment import BugZentaoAttachment
 from testing_agent.models.bug_zentao_push import BugZentaoPush
 from testing_agent.models.bug_zentao_sync_baseline import BugZentaoSyncBaseline
+from testing_agent.models.case_visualization import (
+    TestOrderEntryVisualization,
+    TestOrderVisualizationBatch,
+)
 from testing_agent.models.file_verification import FileVerification
 from testing_agent.models.function_case_push import (
     FunctionCasePushOperation,
@@ -57,6 +64,8 @@ from testing_agent.models.user import User
 from testing_agent.models.worker_task import WorkerTask
 
 __all__ = [
+    "TestOrderEntryVisualization",
+    "TestOrderVisualizationBatch",
     "FunctionCasePushOperation",
     "FunctionCasePushRequest",
     "FunctionCaseRemoteIdentity",
@@ -70,6 +79,7 @@ __all__ = [
     "AiGenerationStage",
     "AiGenerateTask",
     "ApiAssertRule",
+    "ApiApp",
     "ApiCase",
     "ApiCaseRun",
     "ApiCollection",
@@ -78,6 +88,8 @@ __all__ = [
     "ApiEnvironment",
     "ApiEnvironmentVar",
     "ApiExtractRule",
+    "ApiInterface",
+    "ApiInterfaceRequirement",
     "Base",
     "FileVerification",
     "Bug",

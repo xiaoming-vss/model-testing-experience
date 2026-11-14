@@ -6,11 +6,14 @@ AUXILIARY_EXECUTION_TYPES = frozenset(
         "repository_profile",
         "test_report_generate",
         "test_order_graph",
+        "test_order_case_visualization",
     }
 )
 
 
 def task_type_for(kind: str) -> str:
+    if kind == "test_order_case_visualization":
+        return kind
     if kind == "ui":
         return "ui_case_generate"
     if kind == "function":

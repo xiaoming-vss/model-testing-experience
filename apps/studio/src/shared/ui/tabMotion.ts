@@ -1,10 +1,12 @@
-/** Play the shared directional transition without affecting unrelated animations. */
-export function animateTabPanel(panel: HTMLElement, direction: number) {
+import { APP_MOTION } from '@/shared/ui/motion'
+
+/** Play the shared panel transition without affecting unrelated animations. */
+export function animateTabPanel(panel: HTMLElement) {
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || typeof panel.animate !== 'function') return
   panel.getAnimations?.().filter(animation => animation.id === 'shared-tab-motion').forEach(animation => animation.cancel())
   const motion = panel.animate(
-    [{ opacity: 0, transform: `translateX(${direction > 0 ? 22 : -22}px)` }, { opacity: 1, transform: 'translateX(0)' }],
-    { duration: 340, easing: 'cubic-bezier(.22, 1, .36, 1)' },
+    [{ opacity: 0, transform: `translateY(${APP_MOTION.offset}px)` }, { opacity: 1, transform: 'translateY(0)' }],
+    { duration: APP_MOTION.duration, easing: APP_MOTION.easing },
   )
   motion.id = 'shared-tab-motion'
 }
@@ -46,7 +48,6 @@ export function installTabMotion(root: HTMLElement) {
     const selected = tabs.find(tab => tab.getAttribute('aria-selected') === 'true') ?? null
     const index = selected ? tabs.indexOf(selected) : -1
     const changed = state.selected !== selected && state.index !== index && state.index >= 0 && index >= 0
-    const previousIndex = state.index
     if (state.selected && state.selected !== selected) resizeObserver?.unobserve(state.selected.closest<HTMLElement>('.ant-tabs-tab') ?? state.selected)
     state.selected = selected
     state.index = index
@@ -71,7 +72,7 @@ export function installTabMotion(root: HTMLElement) {
     const scoped = usesScope ? list.closest<HTMLElement>('[data-tab-motion-scope]')?.querySelector<HTMLElement>('[data-tab-motion-panel]') : null
     const panelId = selected.getAttribute('aria-controls')
     const panel = scoped ?? (panelId ? document.getElementById(panelId) : null)
-    if (panel) animateTabPanel(panel, index - previousIndex)
+    if (panel) animateTabPanel(panel)
   }
 
   function scan(node: ParentNode) {

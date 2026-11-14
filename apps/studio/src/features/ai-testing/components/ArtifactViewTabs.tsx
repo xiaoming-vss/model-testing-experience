@@ -87,7 +87,7 @@ export function ArtifactViewTabs({ activeKey, defaultActiveKey, onChange, items,
     previousIndex.current = selectedIndex
     if (previous < 0 || selectedIndex < 0 || previous === selectedIndex) return
     const panel = tabsRef.current?.nativeElement?.querySelector<HTMLElement>('.ant-tabs-content-holder')
-    if (panel) animateTabPanel(panel, selectedIndex - previous)
+    if (panel) animateTabPanel(panel)
   }, [selectedIndex])
   const change = (key: string) => { setLocalKey(key); onChange?.(key) }
   return <>

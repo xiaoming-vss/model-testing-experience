@@ -835,8 +835,8 @@ button.ai-task-run-artifact:hover {
 }
 
 .ai-task-detail-page .ai-task-detail-nav-panel {
-  width: 270px;
-  flex: 0 0 270px;
+  width: var(--app-sidebar-width);
+  flex: 0 0 var(--app-sidebar-width);
 }
 
 .ai-task-detail-page .ai-task-detail-nav-head,
@@ -890,12 +890,11 @@ button.ai-task-run-artifact:hover {
   margin-top: 0;
 }
 
-/* 导航条目：标题与图标一行，摘要在下一行；选中态用左侧主色条而不是整块描边。 */
+/* 导航条目：标题、摘要和图标压成一行；摘要过长省略，完整内容见 title。 */
 .ai-task-detail-page .ai-task-detail-nav-item {
   position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  align-items: center;
   width: 100%;
   margin-bottom: 4px;
   padding: 8px 10px;
@@ -931,18 +930,24 @@ button.ai-task-run-artifact:hover {
 .ai-task-detail-page .ai-task-detail-nav-item-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
 }
 
 .ai-task-detail-page .ai-task-detail-nav-item-title {
   display: inline-flex;
   align-items: center;
+  flex: 0 1 auto;
+  min-width: 0;
   gap: 6px;
+  overflow: hidden;
   color: var(--srf-text, var(--app-surface-text));
   font-size: 12px;
   font-weight: 600;
   line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ai-task-detail-page .ai-task-detail-nav-item.active .ai-task-detail-nav-item-title {
@@ -962,6 +967,7 @@ button.ai-task-run-artifact:hover {
 /* 运行条数徽标：选中态实底主色。 */
 .ai-task-detail-page .ai-task-detail-nav-badge {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   min-width: 18px;
@@ -982,11 +988,17 @@ button.ai-task-run-artifact:hover {
 }
 
 .ai-task-detail-page .ai-task-detail-nav-item-sub {
+  flex: 1 1 auto;
+  min-width: 0;
   margin-top: 0;
+  overflow: hidden;
   color: var(--srf-text-secondary, var(--app-text-subtle));
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 11px;
   line-height: 16px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ai-task-detail-page .ai-task-detail-nav-tip {

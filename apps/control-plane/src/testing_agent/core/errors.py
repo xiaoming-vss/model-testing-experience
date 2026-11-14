@@ -143,7 +143,7 @@ ErrResourceBindingAlreadyExists = AppError(3502, "该本地资源已存在有效
 ErrRemoteResourceAlreadyBound = AppError(3503, "该远端资源已被绑定", HTTPStatus.CONFLICT)
 ErrResourceBindingInvalid = AppError(3504, "资源绑定关系不合法", HTTPStatus.BAD_REQUEST)
 ErrZentaoRemoteResourceUnavailable = AppError(3505, "禅道远端资源不可用", HTTPStatus.BAD_REQUEST)
-ErrGroupBindingInUse = AppError(3506, "仍有需求代码绑定引用该群组", HTTPStatus.CONFLICT)
+ErrGroupBindingInUse = AppError(3506, "仍有需求代码绑定或接口应用引用该群组", HTTPStatus.CONFLICT)
 ErrTestOrderNotFound = AppError(3601, "测试单不存在", HTTPStatus.NOT_FOUND)
 ErrTestOrderNameAlreadyUse = AppError(3602, "该迭代下已存在同名测试单", HTTPStatus.CONFLICT)
 ErrTestOrderEntryNotFound = AppError(3603, "执行条目不存在", HTTPStatus.NOT_FOUND)
@@ -167,6 +167,38 @@ ErrBugSourceMismatch = AppError(3708, "执行记录与 Bug 不属于同一项目
 ErrBugSeverityInvalid = AppError(3709, "严重程度不合法", HTTPStatus.BAD_REQUEST)
 ErrBugPriorityInvalid = AppError(3710, "优先级不合法", HTTPStatus.BAD_REQUEST)
 ErrBugFileUnavailable = AppError(3711, "附件尚未上传完成，请重新上传后再提交", HTTPStatus.CONFLICT)
+ErrApiAppNotFound = AppError(3801, "接口应用不存在", HTTPStatus.NOT_FOUND)
+ErrApiAppNameAlreadyUse = AppError(3802, "该接口应用名称已存在", HTTPStatus.CONFLICT)
+ErrApiAppHasInterfaces = AppError(3803, "该应用下仍有接口，不能删除", HTTPStatus.CONFLICT)
+ErrApiInterfaceNotFound = AppError(3804, "接口定义不存在", HTTPStatus.NOT_FOUND)
+ErrApiInterfaceIdentityAlreadyUse = AppError(
+    3805, "同一应用下已存在相同方法和路径的接口", HTTPStatus.CONFLICT
+)
+ErrApiInterfaceImportInvalid = AppError(3806, "接口文档内容不合法", HTTPStatus.BAD_REQUEST)
+ErrApiInterfaceImportFileRequired = AppError(
+    3807, "请上传 OpenAPI/Swagger 文件", HTTPStatus.BAD_REQUEST
+)
+ErrApiInterfaceImportSourceChanged = AppError(
+    3808, "导入文档已变化，请重新预览", HTTPStatus.CONFLICT
+)
+ErrApiInterfaceImportConflict = AppError(
+    3809, "接口在预览后已被修改，请重新预览", HTTPStatus.CONFLICT
+)
+ErrApiInterfaceRequirementMismatch = AppError(
+    3810, "关联需求与接口不属于同一项目", HTTPStatus.BAD_REQUEST
+)
+ErrApiAppRepositoryInvalid = AppError(
+    3811, "代码仓库不在项目已绑定的 GitLab 群组内或当前操作人无权访问", HTTPStatus.BAD_REQUEST
+)
+ErrApiInterfaceImportBasePathForbidden = AppError(
+    3812, "文档 base path 与应用不一致，请由项目所有者更新应用后重试", HTTPStatus.CONFLICT
+)
+ErrApiInterfacePathParamsMismatch = AppError(
+    3813, "Path 参数与路径占位符不一致", HTTPStatus.BAD_REQUEST
+)
+ErrApiInterfaceImportTooLarge = AppError(
+    3814, "接口文档超过大小或结构限制", HTTPStatus.REQUEST_ENTITY_TOO_LARGE
+)
 
 
 def app_error_payload(error: AppError, data: Any | None = None) -> dict[str, Any]:

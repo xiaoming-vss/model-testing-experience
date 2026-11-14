@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react'
+import { APP_MOTION } from '@/shared/ui/motion'
 
 type Scope = 'project' | 'sprint'
-type PendingTransition = { scope: Scope; target: string; direction: number }
+type PendingTransition = { scope: Scope; target: string }
 
 /** Animate only explicit changes in the project/sprint selectors. */
 export function useScopeTransition(contentRef: RefObject<HTMLElement | null>, projectId: string | undefined, sprintId: string | undefined) {
@@ -20,18 +21,17 @@ export function useScopeTransition(contentRef: RefObject<HTMLElement | null>, pr
     running.current?.cancel()
     element.getAnimations?.().filter(animation => animation.id === 'app-page-transition').forEach(animation => animation.cancel())
     const animation = element.animate(
-      [{ opacity: 0, transform: `translateY(${change.direction > 0 ? 22 : -22}px)` }, { opacity: 1, transform: 'translateY(0)' }],
-      { duration: 340, easing: 'cubic-bezier(.22, 1, .36, 1)' },
+      [{ opacity: 0, transform: `translateY(${APP_MOTION.offset}px)` }, { opacity: 1, transform: 'translateY(0)' }],
+      { duration: APP_MOTION.duration, easing: APP_MOTION.easing },
     )
     animation.id = 'app-page-transition'
     running.current = animation
   }, [contentRef, projectId, sprintId])
 
-  function prepare(scope: Scope, current: string | undefined, target: string, orderedValues: string[]) {
-    const previousIndex = orderedValues.indexOf(current ?? (scope === 'sprint' ? 'all' : ''))
-    const nextIndex = orderedValues.indexOf(target)
-    pending.current = previousIndex < 0 || nextIndex < 0 || previousIndex === nextIndex
-      ? null : { scope, target, direction: nextIndex - previousIndex }
+  function prepare(scope: Scope, current: string | undefined, target: string, validValues: string[]) {
+    const currentValue = current ?? (scope === 'sprint' ? 'all' : '')
+    const isValid = validValues.includes(currentValue) && validValues.includes(target)
+    pending.current = isValid && currentValue !== target ? { scope, target } : null
   }
 
   return prepare

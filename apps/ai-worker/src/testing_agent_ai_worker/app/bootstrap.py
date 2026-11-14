@@ -22,6 +22,7 @@ from testing_agent_ai_worker.platform.task_source import HttpClaimTaskSource
 from testing_agent_ai_worker.services.result_service import ResultService
 from testing_agent_ai_worker.services.task_service import TaskService
 from testing_agent_ai_worker.tasks.api_case_generate.executor import ApiCaseExecutor
+from testing_agent_ai_worker.tasks.case_visualization.executor import CaseVisualizationExecutor
 from testing_agent_ai_worker.tasks.code_risk_analysis.executor import (
     CodeRiskAnalysisExecutor,
 )
@@ -139,6 +140,9 @@ def build_task_runner(
                 agent_config=settings.agent.active,
                 profile_config=settings.repository_profile,
                 client=resolved_client,
+            ),
+            case_visualization_executor=CaseVisualizationExecutor(
+                agent_config=settings.agent.active
             ),
             test_order_graph_executor=TestOrderGraphExecutor(
                 agent_config=settings.agent.active,

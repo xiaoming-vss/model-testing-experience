@@ -76,7 +76,7 @@ export function TaskDetailNavPanel({ tip, children }: { tip?: ReactNode; childre
   )
 }
 
-/** 导航条目：标题行（标题 + 可选计数徽标 + 类型图标）加一行摘要。 */
+/** 导航条目：标题、摘要和图标压成一行；摘要过长省略，完整内容见 title。 */
 export function TaskDetailNavItem({ title, sub, icon, active, badge, onClick }: {
   title: ReactNode
   sub: ReactNode
@@ -89,6 +89,7 @@ export function TaskDetailNavItem({ title, sub, icon, active, badge, onClick }: 
     <button
       type="button"
       className={`ai-task-detail-nav-item${active ? ' active' : ''}`}
+      title={typeof sub === 'string' ? sub : undefined}
       onClick={onClick}
     >
       <span className="ai-task-detail-nav-item-head">
@@ -96,9 +97,9 @@ export function TaskDetailNavItem({ title, sub, icon, active, badge, onClick }: 
           {title}
           {badge == null ? null : <span className="ai-task-detail-nav-badge">{badge}</span>}
         </span>
+        {badge == null && sub ? <span className="ai-task-detail-nav-item-sub">{sub}</span> : null}
         <span className="ai-task-detail-nav-item-icon">{icon}</span>
       </span>
-      <span className="ai-task-detail-nav-item-sub">{sub}</span>
     </button>
   )
 }

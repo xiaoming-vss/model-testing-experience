@@ -1,0 +1,352 @@
+/* 测试单执行工作台左侧清单：结果概览、筛选浮层、执行结论分组与勾选操作条。
+ * 布局与详情容器在 workspace-v2.css；这里只放清单自身的控件与状态展示。
+ * 颜色消费 surface-tokens.css。 */
+
+/* 结果分布：细条只做概览，悬停分段查看数量。 */
+.test-order-workspace-page .test-order-result-strip {
+  flex: 0 0 auto;
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid var(--srf-divider);
+}
+.test-order-workspace-page .test-order-result-bar {
+  display: flex;
+  height: 6px;
+  border-radius: 4px;
+  background: var(--srf-track);
+}
+.test-order-workspace-page .test-order-result-seg {
+  position: relative;
+  display: block;
+  height: 100%;
+}
+.test-order-workspace-page .test-order-result-seg:first-child { border-radius: 4px 0 0 4px; }
+.test-order-workspace-page .test-order-result-seg:last-child { border-radius: 0 4px 4px 0; }
+.test-order-workspace-page .test-order-result-seg:only-child { border-radius: 4px; }
+/* 6px 的细条加一圈透明命中区，悬停更容易。 */
+.test-order-workspace-page .test-order-result-seg::before {
+  content: "";
+  position: absolute;
+  inset: -7px 0;
+}
+.test-order-workspace-page .test-order-result-seg::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 9px);
+  transform: translateX(-50%);
+  z-index: 12;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: var(--srf-terminal-bg);
+  color: var(--srf-on-accent);
+  font-size: 10px;
+  line-height: 14px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+.test-order-workspace-page .test-order-result-seg:hover::after { opacity: 1; }
+.test-order-workspace-page .test-order-result-seg:first-child::after { left: 0; transform: none; }
+.test-order-workspace-page .test-order-result-seg:last-child::after { left: auto; right: 0; transform: none; }
+.test-order-workspace-page .test-order-result-seg.is-passed { background: var(--srf-result-passed); }
+.test-order-workspace-page .test-order-result-seg.is-failed { background: var(--srf-result-failed); }
+.test-order-workspace-page .test-order-result-seg.is-blocked { background: var(--srf-result-blocked); }
+.test-order-workspace-page .test-order-result-seg.is-skipped { background: var(--srf-result-skipped); }
+.test-order-workspace-page .test-order-result-seg.is-pending { background: var(--srf-track-pending); }
+
+/* 搜索 + 浮层筛选；命中条件时才出现可移除标签。 */
+.test-order-workspace-page .test-order-filter-row {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--srf-divider);
+}
+.test-order-workspace-page .test-order-filter-row .ant-input-affix-wrapper {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.test-order-workspace-page .test-order-filter-button {
+  flex: 0 0 auto;
+}
+.test-order-workspace-page .test-order-filter-button.is-active {
+  border-color: var(--srf-accent-border);
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent-strong);
+}
+.test-order-workspace-page .test-order-filter-active-dot {
+  width: 5px;
+  height: 5px;
+  margin-inline-start: 4px;
+  border-radius: 50%;
+  background: var(--srf-accent);
+}
+.test-order-workspace-page .test-order-active-filters {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px 8px;
+  margin-top: -2px;
+}
+.test-order-workspace-page .test-order-active-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  padding: 0 4px 0 7px;
+  border: 1px solid var(--srf-accent-border);
+  border-radius: 6px;
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent-strong);
+  font-size: 10px;
+}
+.test-order-workspace-page .test-order-active-filter button {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--srf-accent);
+  font-size: 11px;
+  cursor: pointer;
+}
+.test-order-workspace-page .test-order-clear-filters {
+  padding: 2px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--srf-text-muted);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+.test-order-workspace-page .test-order-clear-filters:hover {
+  color: var(--srf-text-secondary);
+  text-decoration: underline;
+}
+.test-order-workspace-page .test-order-list-head {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-height: 30px;
+  padding: 4px 12px;
+  color: var(--srf-text-muted);
+  font-size: 11px;
+}
+.test-order-workspace-page .test-order-list-head .ant-checkbox-wrapper {
+  flex: 0 0 auto;
+  color: var(--srf-text-muted);
+  font-size: 11px;
+}
+.test-order-filter-menu {
+  min-width: 190px;
+  padding: 2px;
+}
+.test-order-filter-menu-title {
+  padding: 6px 8px 4px;
+  color: var(--srf-text-muted);
+  font-size: 10px;
+}
+.test-order-filter-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--srf-text-secondary);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.test-order-filter-option:hover { background: var(--srf-hover); }
+.test-order-filter-option.is-active {
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent-strong);
+  font-weight: 600;
+}
+.test-order-filter-option-label {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.test-order-filter-option-count {
+  color: var(--srf-text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.test-order-filter-option.is-active .test-order-filter-option-count {
+  color: var(--srf-accent);
+}
+.test-order-filter-check {
+  color: var(--srf-accent);
+  font-size: 12px;
+}
+.test-order-filter-sep {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--srf-divider);
+}
+.test-order-filter-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--srf-result-skipped);
+}
+.test-order-filter-dot.is-passed { background: var(--srf-result-passed); }
+.test-order-filter-dot.is-failed { background: var(--srf-result-failed); }
+.test-order-filter-dot.is-blocked { background: var(--srf-result-blocked); }
+.test-order-filter-dot.is-skipped { background: var(--srf-result-skipped); }
+.test-order-filter-dot.is-pending { background: var(--srf-track-pending); }
+
+.test-order-workspace-page .test-order-group-list { gap: 2px; }
+.test-order-workspace-page .test-order-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.test-order-workspace-page .test-order-group + .test-order-group { margin-top: 2px; }
+.test-order-workspace-page .test-order-group-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  background: var(--srf-card);
+  color: var(--srf-text-secondary);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.test-order-workspace-page .test-order-group-head:hover { color: var(--srf-text); }
+.test-order-workspace-page .test-order-group-chevron {
+  color: var(--srf-text-muted);
+  font-size: 10px;
+  transition: transform 0.15s ease;
+}
+.test-order-workspace-page .test-order-group.is-collapsed .test-order-group-chevron {
+  transform: rotate(-90deg);
+}
+.test-order-workspace-page .test-order-group-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--srf-track-pending);
+}
+.test-order-workspace-page .test-order-group-dot.is-passed { background: var(--srf-result-passed); }
+.test-order-workspace-page .test-order-group-dot.is-failed { background: var(--srf-result-failed); }
+.test-order-workspace-page .test-order-group-dot.is-blocked { background: var(--srf-result-blocked); }
+.test-order-workspace-page .test-order-group-dot.is-skipped { background: var(--srf-result-skipped); }
+.test-order-workspace-page .test-order-group-dot.is-pending { background: var(--srf-track-pending); }
+.test-order-workspace-page .test-order-group-count {
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--srf-chip);
+  color: var(--srf-text-muted);
+  font-size: 10px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.test-order-workspace-page .test-order-group-line {
+  flex: 1 1 auto;
+  height: 1px;
+  margin-inline-start: 2px;
+  background: var(--srf-divider);
+}
+.test-order-workspace-page .test-order-group-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.test-order-workspace-page .test-order-selection-bar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  min-height: 40px;
+  padding: 6px 12px;
+  border-top: 1px solid var(--srf-divider);
+  background: var(--srf-card);
+}
+.test-order-workspace-page .test-order-selection-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.test-order-workspace-page .test-order-selection-count {
+  color: var(--srf-accent-strong);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.test-order-workspace-page .test-order-selection-clear {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--srf-text-muted);
+  font: inherit;
+  font-size: 10px;
+  line-height: 18px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.test-order-workspace-page .test-order-selection-clear:hover {
+  color: var(--srf-text-secondary);
+  text-decoration: underline;
+}
+.test-order-workspace-page .test-order-selection-clear:focus-visible {
+  outline: 2px solid var(--srf-accent);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+.test-order-workspace-page .test-order-selection-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-inline-start: auto;
+  min-width: 0;
+}
+.test-order-workspace-page .test-order-selection-actions .ant-btn {
+  height: 26px;
+  padding: 0 6px;
+  font-size: 10.5px;
+}
+.test-order-workspace-page .test-order-selection-actions .ant-btn .anticon {
+  font-size: 11px;
+}
+.test-order-workspace-page .test-order-selection-actions > .ant-btn,
+.test-order-workspace-page .test-order-selection-actions > span {
+  flex: 0 0 auto;
+}
+/* 批量图解组件在操作条里铺平：按钮参与同一行，批量详情占满下一行。 */
+.test-order-workspace-page .test-order-selection-actions .test-order-viz-batch {
+  display: contents;
+}
+.test-order-workspace-page .test-order-selection-actions .test-order-viz-batch > :not(.ant-btn) {
+  flex: 1 0 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .test-order-workspace-page .test-order-result-seg::after,
+  .test-order-workspace-page .test-order-group-chevron { transition: none; }
+}

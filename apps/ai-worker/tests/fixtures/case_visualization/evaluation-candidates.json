@@ -1,0 +1,997 @@
+[
+  {
+    "id": "eval-001",
+    "category": "options",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "打开处理动作",
+          "expected": "仅允许切片、保留。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "仅允许切片、保留。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-002",
+    "category": "options",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "打开导出格式",
+          "expected": "仅支持 CSV 和 JSON。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "仅支持 CSV 和 JSON。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-003",
+    "category": "options",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "查看通知渠道",
+          "expected": "仅允许邮件和站内信。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "仅允许邮件和站内信。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-004",
+    "category": "options",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "选择重试策略",
+          "expected": "可选不重试、固定间隔、指数退避。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "可选不重试、固定间隔、指数退避。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-005",
+    "category": "options",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "查看排序方式",
+          "expected": "仅支持按名称或创建时间排序。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "仅支持按名称或创建时间排序。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-006",
+    "category": "options",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "查看只读成员菜单",
+          "expected": "只读成员禁止选择删除和编辑。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "只读成员禁止选择删除和编辑。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-007",
+    "category": "options",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "查看上传文件类型",
+          "expected": "允许 PNG、JPEG；这只是示例，不代表全部类型。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "允许 PNG、JPEG；这只是示例，不代表全部类型。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-008",
+    "category": "options",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "关闭高级模式后查看压缩选项",
+          "expected": "高级模式关闭时仅允许无压缩。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "高级模式关闭时仅允许无压缩。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-009",
+    "category": "options",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "打开任务优先级选择",
+          "expected": "仅有低、中、高三级。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "仅有低、中、高三级。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-010",
+    "category": "options",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "查看匿名用户登录方式",
+          "expected": "匿名用户仅可选择密码登录，不允许单点登录。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "匿名用户仅可选择密码登录，不允许单点登录。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-011",
+    "category": "interval",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "保留前段，剔除中段，再保留后段",
+          "expected": "三个区间按前、中、后顺序排列，中段被剔除。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "三个区间按前、中、后顺序排列，中段被剔除。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-012",
+    "category": "interval",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "设置两个相邻有效区间",
+          "expected": "两个区间相邻，不重叠，具体时间未给出。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "两个区间相邻，不重叠，具体时间未给出。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-013",
+    "category": "interval",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "设置有效期从第 1 天至第 5 天",
+          "expected": "第 1 天和第 5 天均包含在有效期中。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "第 1 天和第 5 天均包含在有效期中。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-014",
+    "category": "interval",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "移除有效区间中的异常段",
+          "expected": "异常段不属于保留结果；异常段的位置和长度未给出。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "异常段不属于保留结果；异常段的位置和长度未给出。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-015",
+    "category": "interval",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "切开连续内容",
+          "expected": "切开后的两段各不少于 3 秒，不表示实际时长等于 3 秒。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "切开后的两段各不少于 3 秒，不表示实际时长等于 3 秒。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-016",
+    "category": "interval",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "保留 0 秒到 10 秒，剔除 10 秒到 12 秒",
+          "expected": "按顺序展示保留段及剔除段，边界包含性未明确。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "按顺序展示保留段及剔除段，边界包含性未明确。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-017",
+    "category": "interval",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "组合两个片段",
+          "expected": "片段 A 在 B 之前，中间有未指定长度的间隔。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "片段 A 在 B 之前，中间有未指定长度的间隔。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-018",
+    "category": "interval",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "设置一个包含子区间的时间段",
+          "expected": "子区间完全包含于父区间，具体端点未知。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "子区间完全包含于父区间，具体端点未知。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-019",
+    "category": "interval",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "去掉首尾无效片段",
+          "expected": "时间顺序为首部剔除、有效内容保留、尾部剔除。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "时间顺序为首部剔除、有效内容保留、尾部剔除。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-020",
+    "category": "interval",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "读取窗口 [0, 5) 的有效数据",
+          "expected": "包含 0，不包含 5；不得把右边界画成包含。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "包含 0，不包含 5；不得把右边界画成包含。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-021",
+    "category": "state",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "待处理时保存配置",
+          "expected": "状态保持待处理，不启动切片。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "状态保持待处理，不启动切片。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-022",
+    "category": "state",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "草稿提交审核",
+          "expected": "状态从草稿变为待审核。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "状态从草稿变为待审核。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-023",
+    "category": "state",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "禁用已启用的功能",
+          "expected": "状态从启用变为禁用。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "状态从启用变为禁用。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-024",
+    "category": "state",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "对已取消任务点击保存",
+          "expected": "任务仍为已取消，不重启。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "任务仍为已取消，不重启。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-025",
+    "category": "state",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "打开配置页面",
+          "expected": "打开页面不修改当前状态，原文没有给出具体状态值。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "打开页面不修改当前状态，原文没有给出具体状态值。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-026",
+    "category": "state",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "存在有效内容时点击开始",
+          "expected": "有有效内容时状态变为处理中，无有效内容的行为未说明。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "有有效内容时状态变为处理中，无有效内容的行为未说明。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-027",
+    "category": "state",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "任务执行失败后点击重试",
+          "expected": "由失败变为排队中，不代表已经执行成功。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "由失败变为排队中，不代表已经执行成功。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-028",
+    "category": "state",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "管理员批准待审核记录",
+          "expected": "由待审核变为已批准。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "由待审核变为已批准。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-029",
+    "category": "state",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "网络断开时提交保存",
+          "expected": "保存失败，原配置状态保持启用。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "保存失败，原配置状态保持启用。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-030",
+    "category": "state",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "读取任务状态",
+          "expected": "只知道最终应为完成，操作前状态未知。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "只知道最终应为完成，操作前状态未知。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-031",
+    "category": "quantity",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "对两个独立片段切片",
+          "expected": "各产生一条 Episode，共 2 条，不合并。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "各产生一条 Episode，共 2 条，不合并。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-032",
+    "category": "quantity",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "对连续区间的三个动作分组",
+          "expected": "三个动作归属同一个 Episode。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "三个动作归属同一个 Episode。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-033",
+    "category": "quantity",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "保存配置但不执行",
+          "expected": "不产生新的 Segment，新增数量为 0。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "不产生新的 Segment，新增数量为 0。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-034",
+    "category": "quantity",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "处理一个输入文件",
+          "expected": "产生两条独立记录。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "产生两条独立记录。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-035",
+    "category": "quantity",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "处理三个有效区间",
+          "expected": "各产生一条 Segment，共 3 条。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "各产生一条 Segment，共 3 条。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-036",
+    "category": "quantity",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "处理数据行",
+          "expected": "输出数量至少 1 条，没有给出确切数量。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "输出数量至少 1 条，没有给出确切数量。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-037",
+    "category": "quantity",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "批量导入 10 条重复记录",
+          "expected": "去重后仅新增 1 条记录。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "去重后仅新增 1 条记录。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-038",
+    "category": "quantity",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "合并两个来源",
+          "expected": "两个来源共享同一产物，不能显示两个独立产物。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "两个来源共享同一产物，不能显示两个独立产物。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-039",
+    "category": "quantity",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "执行拆分",
+          "expected": "每个来源最多产生 2 条结果，来源总数未知。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "每个来源最多产生 2 条结果，来源总数未知。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-040",
+    "category": "quantity",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "输出处理结果",
+          "expected": "一个 Segment 归属一个 Episode；不允许将两种对象合为一个实体。"
+        }
+      ]
+    },
+    "suggestedSuitable": true,
+    "keyFactsDraft": "一个 Segment 归属一个 Episode；不允许将两种对象合为一个实体。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-041",
+    "category": "fallback",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": []
+    },
+    "suggestedSuitable": false,
+    "keyFactsDraft": "预期缺失，不得补写",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-042",
+    "category": "fallback",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "检查页面",
+          "expected": "页面正常。"
+        }
+      ]
+    },
+    "suggestedSuitable": false,
+    "keyFactsDraft": "页面正常。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-043",
+    "category": "fallback",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "执行操作",
+          "expected": "结果符合要求。"
+        }
+      ]
+    },
+    "suggestedSuitable": false,
+    "keyFactsDraft": "结果符合要求。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-044",
+    "category": "fallback",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "按情况选择分支",
+          "expected": "分支条件和各分支结果未提供。"
+        }
+      ]
+    },
+    "suggestedSuitable": false,
+    "keyFactsDraft": "分支条件和各分支结果未提供。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-045",
+    "category": "fallback",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "循环直到条件成立",
+          "expected": "循环条件未明确。"
+        }
+      ]
+    },
+    "suggestedSuitable": false,
+    "keyFactsDraft": "循环条件未明确。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-046",
+    "category": "fallback",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "两个用户同时修改",
+          "expected": "冲突处理规则未明确。"
+        }
+      ]
+    },
+    "suggestedSuitable": false,
+    "keyFactsDraft": "冲突处理规则未明确。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-047",
+    "category": "fallback",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "按权限执行",
+          "expected": "角色、资源、权限矩阵未提供。"
+        }
+      ]
+    },
+    "suggestedSuitable": false,
+    "keyFactsDraft": "角色、资源、权限矩阵未提供。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-048",
+    "category": "fallback",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "映射输入字段到输出",
+          "expected": "映射关系未提供。"
+        }
+      ]
+    },
+    "suggestedSuitable": false,
+    "keyFactsDraft": "映射关系未提供。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-049",
+    "category": "fallback",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "检查是否没有新增任务",
+          "expected": ""
+        }
+      ]
+    },
+    "suggestedSuitable": false,
+    "keyFactsDraft": "预期缺失，不得补写",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  },
+  {
+    "id": "eval-050",
+    "category": "fallback",
+    "reviewStatus": "draft",
+    "content": {
+      "preconditions": [],
+      "steps": [
+        {
+          "action": "重试失败任务",
+          "expected": "可能成功，也可能继续失败，条件未说明。"
+        }
+      ]
+    },
+    "suggestedSuitable": false,
+    "keyFactsDraft": "可能成功，也可能继续失败，条件未说明。",
+    "forbiddenInferences": [
+      "不得新增原文未给出的数值、状态或条件",
+      "不得把预期展示为已执行结果"
+    ]
+  }
+]

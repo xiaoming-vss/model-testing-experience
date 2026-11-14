@@ -9,3 +9,5 @@ REPOSITORY_PROFILE_SKILL = "mtx-repository-profile-analysis"
 UI_SURFACE_SKILL = "mtx-extract-ui-test-surface"
 UI_DESIGN_SKILL = "mtx-map-functional-cases-to-ui-scenarios"
 UI_YAML_SKILL = "mtx-generate-ui-test-case"
+
+CASE_VISUALIZATION_SKILL = "mtx-analyze-case-visualization"

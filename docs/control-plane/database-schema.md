@@ -44,6 +44,14 @@ ORDER BY TABLE_NAME, ORDINAL_POSITION;
 
 表名保留 `api_` 前缀，因为改名会牵动 API 自动化的全部代码。运行协议与隐私规则见 [UI 环境变量与后置提取](ui-environment-variables.md)。
 
+## 接口库与应用
+
+- `api_apps`：项目级接口应用，保存名称、说明、应用级 `base_path`、启用状态和 `version`。可选 GitLab 仓库以 `repository_project_id`、`repository_path`、`repository_name`、`repository_instance_url` 快照保存；`(project_id, name)` 唯一，删除应用前必须没有接口。
+- `api_interfaces`：接口定义，保存方法、规范化相对路径、`path_key`（路径 SHA-256）、请求头与 Path/Query 参数 JSON、请求体、单个默认成功响应、标签、说明、启用状态、版本和来源快照。接口身份由 `(app_id, method, path_key)` 唯一约束确定，避免 utf8mb4 长路径索引限制；应用外键为 `RESTRICT`。
+- `api_interface_requirements`：接口与需求的关联表，接口外键和需求外键均 `CASCADE`，`(interface_id, requirement_id)` 唯一；迭代通过需求归属推导，不在关联表冗余保存。
+
+接口删除为业务硬删除，使用统一的 `ResourceDeletion`；导入提交在单一事务内锁定应用与接口行、校验来源摘要和逐项版本，并保留仅库中存在的接口。接口应用引用 GitLab 群组时阻止该群组解绑，直到引用被清除或替换。结构决策见 [ADR 0012](adr/0012-project-interface-library.md)。
+
 ## AI 执行、阶段尝试与历史
 
 统一 AI 执行模型使用以下表：

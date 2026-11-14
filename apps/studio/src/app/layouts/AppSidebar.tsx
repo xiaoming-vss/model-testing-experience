@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef } from 'react'
 import { MtxLogo } from '@/shared/components/MtxLogo/MtxLogo'
 import { Link, useLocation } from 'react-router-dom'
 import { SidebarIcon, type SidebarIconName } from './SidebarIcon'
-import { testingTabForLocation } from './navigation'
+import { assetTabForLocation, testingTabForLocation } from './navigation'
 import '../styles/sidebar.css'
 
 export function AppNavigationBrand({ bugOnly = false }: { bugOnly?: boolean }) {
@@ -52,6 +52,10 @@ export function AppSidebar({ bugOnly = false }: { bugOnly?: boolean }) {
   const inProjects = pathname.startsWith('/projects') || inRequirements
   const projectBoard = inRequirements || new URLSearchParams(search).get('board') === 'requirements' ? 'requirements' : 'sprints'
   const testingTab = testingTabForLocation(pathname, search)
+  const assetTab = assetTabForLocation(pathname, search)
+  const assetHref = pathname.startsWith('/asset-library/interfaces')
+    ? `${pathname}${search}`
+    : `/asset-library?tab=${assetTab ?? 'cases'}`
   function testingHref(tab: string) {
     const params = new URLSearchParams(pathname === '/testing' ? search : '')
     params.set('tab', tab)
@@ -80,6 +84,7 @@ export function AppSidebar({ bugOnly = false }: { bugOnly?: boolean }) {
               board === 'sprints' ? 'navSprint' : 'navRequirement', inProjects && projectBoard === board)
           })}
           {navLink(testingHref(testingTab && testingTab !== 'bugs' ? testingTab : 'orders'), '测试', 'testing', Boolean(testingTab && testingTab !== 'bugs'))}
+          {navLink(assetHref, '资产库', 'assets', Boolean(assetTab))}
           {navLink(testingHref('bugs'), 'Bug列表', 'navBug', testingTab === 'bugs')}
           {navLink('/base-services', '基础服务', 'services', pathname.startsWith('/base-services'))}
         </>}

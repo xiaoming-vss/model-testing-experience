@@ -8,7 +8,7 @@
   pointer-events: none;
   opacity: 0;
   z-index: 1;
-  transition: transform 420ms cubic-bezier(.2, .8, .2, 1), width 420ms cubic-bezier(.2, .8, .2, 1), height 420ms cubic-bezier(.2, .8, .2, 1), opacity 150ms ease;
+  transition: transform 220ms cubic-bezier(.2, .8, .2, 1), width 220ms cubic-bezier(.2, .8, .2, 1), height 220ms cubic-bezier(.2, .8, .2, 1), opacity 150ms ease;
 }
 .has-shared-tab-motion > [role='tab'],
 .has-shared-tab-motion .ant-tabs-tab { position: relative; z-index: 2; }
@@ -26,7 +26,7 @@
   box-shadow: none;
 }
 :root :is(.tab-view-switch, .ai-artifact-mode-controls .ant-segmented, .api-case-run-result-segmented) .ant-segmented-thumb-motion-appear-active {
-  transition: transform 420ms cubic-bezier(.2, .8, .2, 1), width 420ms cubic-bezier(.2, .8, .2, 1);
+  transition: transform 220ms cubic-bezier(.2, .8, .2, 1), width 220ms cubic-bezier(.2, .8, .2, 1);
 }
 @media (prefers-reduced-motion: reduce) {
   :root :is(.tab-view-switch, .ai-artifact-mode-controls .ant-segmented, .api-case-run-result-segmented) .ant-segmented-thumb-motion-appear-active { transition: none; }

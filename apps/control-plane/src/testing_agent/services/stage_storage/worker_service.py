@@ -207,6 +207,16 @@ class DirectStageWorkerService:
     async def complete(self, task: WorkerTask, body: WorkerTaskEventRequest) -> dict[str, Any]:
         from testing_agent.services.worker_domains.guard import ensure_task_id, ensure_worker_match
 
+        if (
+            task.task_type == "test_order_case_visualization"
+            and task.status in RUN_TERMINAL_STATUSES
+        ):
+            if not body.worker_id or body.worker_id != task.worker_id:
+                raise ErrForbidden()
+            ensure_task_id(task, body)
+            if body.run_id and body.run_id != task.run_id:
+                raise ErrBadRequest()
+            return {"taskId": task.task_id, "workerId": body.worker_id, "status": task.status}
         ensure_worker_match(task, body.worker_id)
         ensure_task_id(task, body)
         authority = await self.authorize(task)
@@ -215,7 +225,19 @@ class DirectStageWorkerService:
         source, config = snapshot.get("source") or {}, snapshot.get("config") or {}
         if not isinstance(source, dict) or not isinstance(config, dict):
             raise ErrBadRequest()
-        if task.task_type in AUXILIARY_EXECUTION_TYPES:
+        if task.task_type == "test_order_case_visualization":
+            from testing_agent.services.case_visualization_completion import complete_visualization
+
+            await complete_visualization(
+                self.session,
+                task,
+                stage_id=stage.id,
+                attempt_id=authority.attempt_id,
+                source=source,
+                frozen_config=config,
+                body=body,
+            )
+        elif task.task_type in AUXILIARY_EXECUTION_TYPES:
             await apply_auxiliary_completion(
                 self.session, task, stage_id=stage.id, attempt_id=authority.attempt_id, body=body
             )

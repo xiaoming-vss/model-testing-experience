@@ -1,8 +1,11 @@
-export type TestingTab = 'library' | 'orders' | 'bugs' | 'api' | 'ui'
+export type TestingTab = 'orders' | 'bugs' | 'api' | 'ui'
 
 export function resolveTestingTab(tab?: string | null): TestingTab {
-  // 旧的 ?tab=functional 继续可用：功能测试已并入用例库。
-  if (tab === 'functional' || tab === 'library') return 'library'
   if (tab === 'orders' || tab === 'bugs' || tab === 'ui' || tab === 'api') return tab
   return 'orders'
+}
+
+/** 旧用例库入口已迁到资产库，由路由层统一跳转。 */
+export function isLegacyLibraryTab(tab?: string | null) {
+  return tab === 'library' || tab === 'functional'
 }

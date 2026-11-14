@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { useRef } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { APP_MOTION } from '@/shared/ui/motion'
 import { useScopeTransition } from './useScopeTransition'
 
 function TestScope({ project = 'p1', sprint = 's1' }: { project?: string; sprint?: string }) {
@@ -12,8 +13,14 @@ function TestScope({ project = 'p1', sprint = 's1' }: { project?: string; sprint
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
+const expectedFrames = [
+  { opacity: 0, transform: `translateY(${APP_MOTION.offset}px)` },
+  { opacity: 1, transform: 'translateY(0)' },
+]
+const expectedOptions = { duration: APP_MOTION.duration, easing: APP_MOTION.easing }
+
 describe('scope selection transition', () => {
-  it('animates only explicit selections in dropdown order', () => {
+  it('animates only explicit selections', () => {
     vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false })))
     const animate = vi.fn(() => ({ id: '', cancel: vi.fn() }))
     const view = render(<TestScope />)
@@ -22,16 +29,10 @@ describe('scope selection transition', () => {
     expect(animate).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: '选择下方迭代' }))
     view.rerender(<TestScope project="p2" sprint="s2" />)
-    expect(animate).toHaveBeenLastCalledWith(
-      [{ opacity: 0, transform: 'translateY(22px)' }, { opacity: 1, transform: 'translateY(0)' }],
-      { duration: 340, easing: 'cubic-bezier(.22, 1, .36, 1)' },
-    )
+    expect(animate).toHaveBeenLastCalledWith(expectedFrames, expectedOptions)
     fireEvent.click(screen.getByRole('button', { name: '选择上方项目' }))
     view.rerender(<TestScope project="p1" sprint="s2" />)
-    expect(animate).toHaveBeenLastCalledWith(
-      [{ opacity: 0, transform: 'translateY(-22px)' }, { opacity: 1, transform: 'translateY(0)' }],
-      { duration: 340, easing: 'cubic-bezier(.22, 1, .36, 1)' },
-    )
+    expect(animate).toHaveBeenLastCalledWith(expectedFrames, expectedOptions)
   })
 
   it('keeps the project transition running when its sprint updates automatically', () => {

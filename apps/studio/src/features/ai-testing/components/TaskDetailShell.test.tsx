@@ -69,6 +69,9 @@ describe('详情页共用外壳零件', () => {
     expect(container.querySelectorAll('.ai-task-detail-nav-item.active')).toHaveLength(1)
     expect(container.querySelectorAll('.ai-task-detail-nav-badge')).toHaveLength(1)
     expect(screen.getByText('3')).toHaveClass('ai-task-detail-nav-badge')
+    // 单行条目：无徽标时摘要同行显示；有徽标时摘要只留在 title 提示里。
+    expect(container.querySelectorAll('.ai-task-detail-nav-item-sub')).toHaveLength(1)
+    expect(screen.getByRole('button', { name: /来源内容/ })).toHaveAttribute('title', 'docx · 0 字符')
   })
 
   it('指令编辑器只在草稿变动后允许保存', () => {

@@ -113,7 +113,10 @@ async def delete_owned_data(session: AsyncSession, obj: Base) -> None:
         await _erase(session, m.UiTestCaseRun, m.UiTestCaseRun.case_id == obj.case_id)
     elif isinstance(obj, m.UiTestSuite):
         await _ui_suite_runs(session, m.UiTestSuiteRun.suite_id == obj.suite_id)
+    elif isinstance(obj, m.TestOrderEntry):
+        await _entry_visualizations(session, m.TestOrderEntry.entry_id == obj.entry_id)
     elif isinstance(obj, m.TestOrder):
+        await _entry_visualizations(session, m.TestOrderEntry.order_id == obj.order_id)
         await _erase(session, m.TestOrderEntry, m.TestOrderEntry.order_id == obj.order_id)
         graph_tasks = list(
             await session.scalars(
@@ -126,6 +129,7 @@ async def delete_owned_data(session: AsyncSession, obj: Base) -> None:
         for graph_task in graph_tasks:
             await _delete_owned_child(session, graph_task)
     elif isinstance(obj, m.FunctionTestCase):
+        await _entry_visualizations(session, m.TestOrderEntry.case_id == obj.case_id)
         # 引用了该用例的执行条目随用例一起删除（条目只按业务键引用用例，没有外键）。
         await _erase(session, m.TestOrderEntry, m.TestOrderEntry.case_id == obj.case_id)
     elif isinstance(obj, m.AiGenerateTask):
@@ -250,3 +254,40 @@ async def _delete_owned_child(session: AsyncSession, obj: Base) -> None:
     if not await lock_resource_for_deletion(session, obj):
         raise ErrNotFound()
     await delete_owned_data(session, obj)
+
+
+async def _entry_visualizations(session: AsyncSession, condition) -> None:
+    # Serialize new bindings with dispatch and use a current read under MySQL RR.
+    entries = list(
+        await session.scalars(
+            select(m.TestOrderEntry.entry_id)
+            .where(condition)
+            .order_by(m.TestOrderEntry.entry_id)
+            .with_for_update()
+        )
+    )
+    tasks = list(
+        await session.scalars(
+            select(m.AiGenerateTask)
+            .where(
+                m.AiGenerateTask.task_type == "test_order_case_visualization",
+                m.AiGenerateTask.execution_entry_id.in_(entries),
+            )
+            .order_by(m.AiGenerateTask.task_id)
+            .with_for_update()
+        )
+    )
+    for task in tasks:
+        attempt_ids = list(
+            await session.scalars(
+                select(m.AiGenerationAttempt.id)
+                .join(
+                    m.AiGenerationStage,
+                    m.AiGenerationStage.id == m.AiGenerationAttempt.stage_id,
+                )
+                .where(m.AiGenerationStage.task_id == task.task_id)
+            )
+        )
+        # Lock queue before attempts, matching completion instead of generic cleanup order.
+        await _workers(session, "ai", attempt_ids)
+        await _delete_owned_child(session, task)

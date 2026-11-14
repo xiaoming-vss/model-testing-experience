@@ -43,6 +43,14 @@ class AiGenerateTask(Base):
         default="",
         comment="测试单图谱任务的锚点测试单标识；其他任务通常为空字符串",
     )
+    execution_entry_id: Mapped[str] = mapped_column(
+        String(64),
+        index=True,
+        nullable=False,
+        default="",
+        server_default="",
+        comment="单用例图解所属执行条目业务标识；其他任务为空字符串",
+    )
     creator_user_id: Mapped[str] = mapped_column(
         String(64), nullable=False, comment="任务创建者用户业务标识"
     )

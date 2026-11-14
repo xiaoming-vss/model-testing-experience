@@ -19,6 +19,8 @@
   --app-scrollbar-size: 8px;
   --app-scrollbar-radius: 4px;
   --app-shell-bg: #faf9ff;
+  /* 接口库、用例库、API 测试集、测试单和 AI 任务详情共用同一个侧栏宽度。 */
+  --app-sidebar-width: 256px;
   --app-shell-divider: #d8d9e5;
   --app-shell-text-muted: #727786;
   --app-shell-text: #181b23;

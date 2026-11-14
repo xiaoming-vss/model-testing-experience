@@ -134,7 +134,9 @@ it('左栏按请求方式列出用例，点击切换当前用例', async () => {
   const items = [...container.querySelectorAll('.api-wb-case-item')]
   expect(items[0].querySelector('.api-wb-case-method')).toHaveTextContent('POST')
   expect(items[1].querySelector('.api-wb-case-method')).toHaveTextContent('GET')
-  expect(items[0].querySelector('.api-wb-case-item-path')).toHaveTextContent('/v1/login')
+  expect(items[0]).toHaveAttribute('title', '/v1/login')
+  expect(items[0]).toHaveAttribute('aria-label', 'POST login /v1/login')
+  expect(items[0].querySelector('.api-wb-case-item-path')).toBeNull()
   expect(items[0]).toHaveAttribute('aria-current', 'true')
 
   await userEvent.setup().click(items[1])

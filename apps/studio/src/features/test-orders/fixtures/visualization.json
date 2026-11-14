@@ -1,0 +1,590 @@
+[
+  {
+    "name": "options",
+    "input": {
+      "executionEntryId": "entry-example",
+      "schemaVersion": "1.0",
+      "snapshotHash": "43773b178dffe41373a182482e0694ec4f2b498d411dc832b4ed15337828c883",
+      "content": {
+        "preconditions": [],
+        "steps": [
+          {
+            "action": "打开处理动作选择框",
+            "expected": "处理动作仅允许切片、保留。"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "a0",
+          "field": "action",
+          "index": 0
+        },
+        {
+          "id": "e0",
+          "field": "expected",
+          "index": 0
+        }
+      ]
+    },
+    "output": {
+      "schemaVersion": "1.0",
+      "executionEntryId": "entry-example",
+      "status": "ready",
+      "summary": {
+        "text": "处理动作仅允许切片、保留。",
+        "sourceIds": [
+          "e0"
+        ]
+      },
+      "sources": [
+        {
+          "id": "a0",
+          "field": "action",
+          "index": 0
+        },
+        {
+          "id": "e0",
+          "field": "expected",
+          "index": 0
+        }
+      ],
+      "entities": [
+        {
+          "id": "field",
+          "kind": "object",
+          "label": "处理动作",
+          "sourceIds": [
+            "e0"
+          ]
+        },
+        {
+          "id": "slice",
+          "kind": "value",
+          "label": "切片",
+          "sourceIds": [
+            "e0"
+          ]
+        },
+        {
+          "id": "keep",
+          "kind": "value",
+          "label": "保留",
+          "sourceIds": [
+            "e0"
+          ]
+        }
+      ],
+      "relations": [],
+      "assertions": [
+        {
+          "id": "q",
+          "text": "处理动作仅允许切片、保留。",
+          "sourceIds": [
+            "e0"
+          ],
+          "entityIds": [
+            "field",
+            "slice",
+            "keep"
+          ]
+        }
+      ],
+      "visuals": [
+        {
+          "id": "v",
+          "kind": "options",
+          "title": "可选范围",
+          "sourceIds": [
+            "a0",
+            "e0"
+          ],
+          "entityIds": [
+            "field",
+            "slice",
+            "keep"
+          ],
+          "relationIds": [],
+          "assertionIds": [
+            "q"
+          ],
+          "isSchematic": true,
+          "notes": [],
+          "data": {
+            "ownerEntityId": "field",
+            "optionEntityIds": [
+              "slice",
+              "keep"
+            ],
+            "completeness": "exhaustive",
+            "availability": "allowed",
+            "sourceIds": [
+              "e0"
+            ]
+          }
+        }
+      ],
+      "limitations": []
+    },
+    "reviewStatus": "draft"
+  },
+  {
+    "name": "interval",
+    "input": {
+      "executionEntryId": "entry-example",
+      "schemaVersion": "1.0",
+      "snapshotHash": "e8e1ea30e7560185b9d13ffffb1563e10b0f8f19524902b40e142bb9b58e8c87",
+      "content": {
+        "preconditions": [],
+        "steps": [
+          {
+            "action": "设置按时间先后排列的保留区间 1、切除区间、保留区间 2",
+            "expected": "时间顺序为保留区间 1、切除区间、保留区间 2，剔除中间区间。"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "a0",
+          "field": "action",
+          "index": 0
+        },
+        {
+          "id": "e0",
+          "field": "expected",
+          "index": 0
+        }
+      ]
+    },
+    "output": {
+      "schemaVersion": "1.0",
+      "executionEntryId": "entry-example",
+      "status": "ready",
+      "summary": {
+        "text": "时间顺序为保留区间 1、切除区间、保留区间 2，剔除中间区间。",
+        "sourceIds": [
+          "e0"
+        ]
+      },
+      "sources": [
+        {
+          "id": "a0",
+          "field": "action",
+          "index": 0
+        },
+        {
+          "id": "e0",
+          "field": "expected",
+          "index": 0
+        }
+      ],
+      "entities": [
+        {
+          "id": "left",
+          "kind": "interval",
+          "label": "保留区间 1",
+          "sourceIds": [
+            "e0"
+          ]
+        },
+        {
+          "id": "cut",
+          "kind": "interval",
+          "label": "切除区间",
+          "sourceIds": [
+            "e0"
+          ]
+        },
+        {
+          "id": "right",
+          "kind": "interval",
+          "label": "保留区间 2",
+          "sourceIds": [
+            "e0"
+          ]
+        }
+      ],
+      "relations": [],
+      "assertions": [
+        {
+          "id": "q",
+          "text": "时间顺序为保留区间 1、切除区间、保留区间 2，剔除中间区间。",
+          "sourceIds": [
+            "e0"
+          ],
+          "entityIds": [
+            "left",
+            "cut",
+            "right"
+          ]
+        }
+      ],
+      "visuals": [
+        {
+          "id": "v",
+          "kind": "interval",
+          "title": "保留与剔除区间",
+          "sourceIds": [
+            "a0",
+            "e0"
+          ],
+          "entityIds": [
+            "left",
+            "cut",
+            "right"
+          ],
+          "relationIds": [],
+          "assertionIds": [
+            "q"
+          ],
+          "isSchematic": true,
+          "notes": [],
+          "data": {
+            "orderedSegments": [
+              {
+                "entityId": "left",
+                "role": "keep",
+                "sourceIds": [
+                  "e0"
+                ]
+              },
+              {
+                "entityId": "cut",
+                "role": "remove",
+                "sourceIds": [
+                  "e0"
+                ]
+              },
+              {
+                "entityId": "right",
+                "role": "keep",
+                "sourceIds": [
+                  "e0"
+                ]
+              }
+            ],
+            "orderSourceIds": [
+              "e0"
+            ],
+            "distinctOutputEntityIds": [],
+            "distinctOutputSourceIds": []
+          }
+        }
+      ],
+      "limitations": []
+    },
+    "reviewStatus": "draft"
+  },
+  {
+    "name": "state",
+    "input": {
+      "executionEntryId": "entry-example",
+      "schemaVersion": "1.0",
+      "snapshotHash": "10d84906f46c92b8e2102c4331ce61b20238e118a19ec771ecd52f5ca0893929",
+      "content": {
+        "preconditions": [],
+        "steps": [
+          {
+            "action": "在待处理状态点击保存",
+            "expected": "点击保存后状态仍为待处理，不启动切片。"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "a0",
+          "field": "action",
+          "index": 0
+        },
+        {
+          "id": "e0",
+          "field": "expected",
+          "index": 0
+        }
+      ]
+    },
+    "output": {
+      "schemaVersion": "1.0",
+      "executionEntryId": "entry-example",
+      "status": "ready",
+      "summary": {
+        "text": "点击保存后状态仍为待处理，不启动切片。",
+        "sourceIds": [
+          "e0"
+        ]
+      },
+      "sources": [
+        {
+          "id": "a0",
+          "field": "action",
+          "index": 0
+        },
+        {
+          "id": "e0",
+          "field": "expected",
+          "index": 0
+        }
+      ],
+      "entities": [
+        {
+          "id": "save",
+          "kind": "action",
+          "label": "保存",
+          "sourceIds": [
+            "e0"
+          ]
+        },
+        {
+          "id": "pending",
+          "kind": "state",
+          "label": "待处理",
+          "sourceIds": [
+            "e0"
+          ]
+        },
+        {
+          "id": "slice",
+          "kind": "event",
+          "label": "切片",
+          "sourceIds": [
+            "e0"
+          ]
+        }
+      ],
+      "relations": [
+        {
+          "id": "r",
+          "kind": "triggers",
+          "from": "save",
+          "to": "slice",
+          "polarity": "negative",
+          "sourceIds": [
+            "e0"
+          ]
+        }
+      ],
+      "assertions": [
+        {
+          "id": "q",
+          "text": "点击保存后状态仍为待处理，不启动切片。",
+          "sourceIds": [
+            "e0"
+          ],
+          "entityIds": [
+            "save",
+            "pending",
+            "slice"
+          ]
+        }
+      ],
+      "visuals": [
+        {
+          "id": "v",
+          "kind": "state",
+          "title": "保存后的状态",
+          "sourceIds": [
+            "a0",
+            "e0"
+          ],
+          "entityIds": [
+            "save",
+            "pending",
+            "slice"
+          ],
+          "relationIds": [
+            "r"
+          ],
+          "assertionIds": [
+            "q"
+          ],
+          "isSchematic": true,
+          "notes": [],
+          "data": {
+            "actionEntityId": "save",
+            "beforeEntityId": "pending",
+            "afterEntityId": "pending",
+            "change": "unchanged",
+            "sourceIds": [
+              "e0"
+            ]
+          }
+        }
+      ],
+      "limitations": []
+    },
+    "reviewStatus": "draft"
+  },
+  {
+    "name": "quantity",
+    "input": {
+      "executionEntryId": "entry-example",
+      "schemaVersion": "1.0",
+      "snapshotHash": "5a550fa0cc430f17a4110d351bccc4005d917c8dfee6c09e335457866261e70f",
+      "content": {
+        "preconditions": [],
+        "steps": [
+          {
+            "action": "对两个独立区间执行切片",
+            "expected": "两个区间分别产生一条独立 Episode，共 2 条，不能合并。"
+          }
+        ]
+      },
+      "sources": [
+        {
+          "id": "a0",
+          "field": "action",
+          "index": 0
+        },
+        {
+          "id": "e0",
+          "field": "expected",
+          "index": 0
+        }
+      ]
+    },
+    "output": {
+      "schemaVersion": "1.0",
+      "executionEntryId": "entry-example",
+      "status": "ready",
+      "summary": {
+        "text": "两个区间分别产生一条独立 Episode，共 2 条，不能合并。",
+        "sourceIds": [
+          "e0"
+        ]
+      },
+      "sources": [
+        {
+          "id": "a0",
+          "field": "action",
+          "index": 0
+        },
+        {
+          "id": "e0",
+          "field": "expected",
+          "index": 0
+        }
+      ],
+      "entities": [
+        {
+          "id": "one",
+          "kind": "interval",
+          "label": "区间 1",
+          "sourceIds": [
+            "e0"
+          ]
+        },
+        {
+          "id": "two",
+          "kind": "interval",
+          "label": "区间 2",
+          "sourceIds": [
+            "e0"
+          ]
+        },
+        {
+          "id": "ep1",
+          "kind": "object",
+          "label": "Episode 1",
+          "sourceIds": [
+            "e0"
+          ]
+        },
+        {
+          "id": "ep2",
+          "kind": "object",
+          "label": "Episode 2",
+          "sourceIds": [
+            "e0"
+          ]
+        }
+      ],
+      "relations": [
+        {
+          "id": "r1",
+          "kind": "produces",
+          "from": "one",
+          "to": "ep1",
+          "polarity": "positive",
+          "sourceIds": [
+            "e0"
+          ]
+        },
+        {
+          "id": "r2",
+          "kind": "produces",
+          "from": "two",
+          "to": "ep2",
+          "polarity": "positive",
+          "sourceIds": [
+            "e0"
+          ]
+        }
+      ],
+      "assertions": [
+        {
+          "id": "q",
+          "text": "两个区间分别产生一条独立 Episode，共 2 条，不能合并。",
+          "sourceIds": [
+            "e0"
+          ],
+          "entityIds": [
+            "one",
+            "two",
+            "ep1",
+            "ep2"
+          ]
+        }
+      ],
+      "visuals": [
+        {
+          "id": "v",
+          "kind": "quantity",
+          "title": "产物归属",
+          "sourceIds": [
+            "a0",
+            "e0"
+          ],
+          "entityIds": [
+            "one",
+            "two",
+            "ep1",
+            "ep2"
+          ],
+          "relationIds": [
+            "r1",
+            "r2"
+          ],
+          "assertionIds": [
+            "q"
+          ],
+          "isSchematic": true,
+          "notes": [],
+          "data": {
+            "sourceEntityIds": [
+              "one",
+              "two"
+            ],
+            "outputEntityIds": [
+              "ep1",
+              "ep2"
+            ],
+            "ownership": "distinct",
+            "totalConstraint": {
+              "operator": "eq",
+              "value": 2,
+              "unit": "条",
+              "sourceIds": [
+                "e0"
+              ]
+            },
+            "sourceIds": [
+              "e0"
+            ]
+          }
+        }
+      ],
+      "limitations": []
+    },
+    "reviewStatus": "draft"
+  }
+]

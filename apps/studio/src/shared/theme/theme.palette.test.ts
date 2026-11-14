@@ -86,7 +86,7 @@ describe('dark palette contract', () => {
   it('provides a dark value for every foundation, editor, chart and legacy role except brand artwork', () => {
     const brand = new Set(['--app-logo-primary', '--app-logo-shadow', '--app-logo-border', '--app-logo-model-text', '--app-logo-secondary'])
     // Geometry is shared by both themes and does not need a dark color mapping.
-    const geometry = new Set(['--app-scrollbar-size', '--app-scrollbar-radius'])
+    const geometry = new Set(['--app-scrollbar-size', '--app-scrollbar-radius', '--app-sidebar-width'])
     for (const name of declarations(foundation + editor + charts + legacy).keys()) {
       if (!brand.has(name) && !geometry.has(name)) expect(colors.has(name), name).toBe(true)
     }

@@ -21,6 +21,8 @@
 
 [UI 生成仓库画像源码 ADR](adr/0011-ui-generation-repository-source.md)
 
+[项目级接口库 ADR](adr/0012-project-interface-library.md)
+
 ## 运行时与依赖
 
 - Python 3.12（`.python-version`），包管理使用 uv（`uv.lock`）
@@ -309,3 +311,5 @@ AI旧attempt不能终止新attempt。集成任务沿用原领取代次和未知�
 
 升级保留应用 lifespan 后台任务；停掉全部控制面进程期间不回收，重启后继续处理数据库中
 的过期状态。回退应用时可保留0049索引；降级0049只删除索引，不修改任务、回执或业务状态。
+
+- [单用例执行图解实现](test-order-case-visualization-design.md)。

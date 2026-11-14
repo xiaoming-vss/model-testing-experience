@@ -23,8 +23,10 @@ class WorkerTaskDispatcherExecutor(TaskExecutor):
         code_risk_executor: TaskExecutor | None = None,
         repository_profile_executor: TaskExecutor | None = None,
         test_order_graph_executor: TaskExecutor | None = None,
+        case_visualization_executor: TaskExecutor | None = None,
         skill_preparer=None,
     ) -> None:
+        self.case_visualization_executor = case_visualization_executor
         self.skill_preparer = skill_preparer
         self.api_executor = api_executor
         self.functional_executor = functional_executor
@@ -41,6 +43,11 @@ class WorkerTaskDispatcherExecutor(TaskExecutor):
         if self.skill_preparer is not None:
             self.skill_preparer(task)
 
+        if (
+            task.task_type == "test_order_case_visualization"
+            and self.case_visualization_executor is not None
+        ):
+            return self.case_visualization_executor.execute(task, started_at, progress_callback)
         if task.task_type == "api_case_generate":
             return self.api_executor.execute(task, started_at, progress_callback)
         if task.task_type == "functional_case_generate":

@@ -20,12 +20,14 @@ from testing_agent.core.import_http import ImportEnvelopeMiddleware
 from testing_agent.routers.admin_users import router as admin_users_router
 from testing_agent.routers.ai_worker import router as ai_worker_router
 from testing_agent.routers.api_ai_tasks import router as api_ai_tasks_router
+from testing_agent.routers.api_assets import router as api_assets_router
 from testing_agent.routers.api_case import router as api_case_router
 from testing_agent.routers.api_runs import router as api_runs_router
 from testing_agent.routers.api_tests import router as api_tests_router
 from testing_agent.routers.api_worker import router as api_worker_router
 from testing_agent.routers.auth import router as auth_router
 from testing_agent.routers.bugs import router as bugs_router
+from testing_agent.routers.case_visualization import router as case_visualization_router
 from testing_agent.routers.code_risk_analysis_tasks import router as code_risk_analysis_tasks_router
 from testing_agent.routers.files import router as files_router
 from testing_agent.routers.function_ai_tasks import router as function_ai_tasks_router
@@ -155,9 +157,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(sprints_router, tags=["Sprints"])
     v1.include_router(requirements_router, tags=["Requirements"])
     v1.include_router(function_tests_router, tags=["Function Tests"])
+    v1.include_router(case_visualization_router, tags=["Case Visualization"])
     v1.include_router(test_orders_router, tags=["Test Orders"])
     v1.include_router(bugs_router, tags=["Bugs"])
     v1.include_router(api_tests_router, tags=["API Tests"])
+    v1.include_router(api_assets_router, tags=["API Assets"])
     v1.include_router(api_case_router, tags=["API Tests"])
     v1.include_router(ui_tests_router, tags=["UI Tests"])
     v1.include_router(ui_ai_tasks_router, tags=["UI AI Tasks"])

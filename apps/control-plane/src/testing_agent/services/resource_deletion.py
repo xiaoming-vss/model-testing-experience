@@ -58,6 +58,7 @@ async def _blockers(session, obj):
             (m.ApiEnvironment, m.ApiEnvironment.project_id == obj.project_id, "测试环境"),
             (m.ProjectSkillSpace, m.ProjectSkillSpace.project_id == obj.project_id, "项目技能"),
             (m.SharedService, m.SharedService.project_id == obj.project_id, "项目共享服务"),
+            (m.ApiApp, m.ApiApp.project_id == obj.project_id, "接口应用"),
         ]
     elif isinstance(obj, m.Sprint):
         checks += [

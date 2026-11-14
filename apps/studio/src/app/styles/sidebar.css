@@ -33,7 +33,7 @@
   background: var(--app-accent-surface);
   opacity: 0;
   pointer-events: none;
-  transition: transform 420ms cubic-bezier(.2, .8, .2, 1), width 420ms cubic-bezier(.2, .8, .2, 1), opacity 150ms ease;
+  transition: transform 220ms cubic-bezier(.2, .8, .2, 1), width 220ms cubic-bezier(.2, .8, .2, 1), opacity 150ms ease;
 }
 .sidebar-link {
   position: relative;

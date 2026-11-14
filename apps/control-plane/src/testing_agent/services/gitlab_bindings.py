@@ -17,6 +17,7 @@ from testing_agent.core.errors import (
 )
 from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.models.resource_binding import ResourceBinding
+from testing_agent.repositories.api_app import ApiAppRepository
 from testing_agent.repositories.resource_binding import ResourceBindingRepository
 from testing_agent.services.binding_support import LocalBindingAccess, commit_binding, dump_binding
 from testing_agent.services.integration_connection import IntegrationConnectionService
@@ -337,11 +338,29 @@ class GitLabBindings:
             affected = await self.repository.list_active_requirement_repo_bindings_for_group(
                 resource_id, binding.remote_resource_id, instance=binding.instance_key
             )
-            if affected:
+            apps = await ApiAppRepository(self.repository.session).list_repository_references(
+                binding.instance_url,
+                binding.remote_name_snapshot,
+                project_id=resource_id,
+            )
+            if affected or apps:
+                data: dict[str, Any] = {
+                    "bindings": [dump_binding(row) for row in affected],
+                }
+                if apps:
+                    # Keep the existing response shape when only requirement bindings block.
+                    data["apps"] = [
+                        {
+                            "appId": app.app_id,
+                            "name": app.name,
+                            "repositoryPath": app.repository_path,
+                        }
+                        for app in apps
+                    ]
                 raise AppError(
                     ErrGroupBindingInUse.code,
                     ErrGroupBindingInUse.message,
                     ErrGroupBindingInUse.http_code,
-                    {"bindings": [dump_binding(row) for row in affected]},
+                    data,
                 )
         return binding

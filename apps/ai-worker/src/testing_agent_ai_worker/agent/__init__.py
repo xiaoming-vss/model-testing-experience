@@ -63,7 +63,11 @@ def create_agent(
 
     from testing_agent_ai_worker.agent.nanobot import NanobotAgent
 
-    return NanobotAgent.from_config(config_path=config_path, workspace=workspace)
+    return NanobotAgent.from_config(
+        config_path=config_path,
+        workspace=workspace,
+        no_tools=tools is not None and not tools,
+    )
 
 
 def _configured_backend(config_path: str | None) -> str:

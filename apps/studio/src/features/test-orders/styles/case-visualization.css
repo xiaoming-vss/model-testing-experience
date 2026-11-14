@@ -1,0 +1,118 @@
+.test-order-visualization { min-width: 0; color: var(--srf-text); container-type: inline-size; }
+.test-order-viz-toolbar, .test-order-viz-toolbar > div { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.test-order-viz-toolbar { justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--srf-card-border); }
+.test-order-viz-status, .test-order-viz-disclaimer { display: flex; gap: 8px; padding: 12px 16px; color: var(--srf-text-secondary); font-size: 12px; }
+.test-order-viz-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; padding: 0 16px 20px; }
+.test-order-viz-main, .test-order-viz-detail, .test-order-viz-flow, .test-order-viz-diagrams { min-width: 0; }
+.test-order-viz-main h3, .test-order-viz-detail h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.test-order-viz-main h4, .test-order-viz-detail h4 { margin: 16px 0 8px; font-size: 13px; }
+.test-order-viz-preconditions { padding: 16px 20px; background: var(--srf-hover); border: 1px solid var(--srf-card-border); border-radius: 8px; margin-bottom: 18px; }
+.test-order-viz-preconditions summary { cursor: pointer; font-weight: 600; }
+.test-order-viz-preconditions ol { margin: 12px 0 0; padding-left: 20px; }
+.test-order-viz-preconditions li { line-height: 1.8; color: var(--srf-text-secondary); }
+.test-order-viz-preconditions li, .test-order-viz-detail p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.test-order-viz-flow { border: 1px solid var(--srf-card-border); border-radius: 8px; overflow: hidden; margin-bottom: 24px; }
+.test-order-viz-flow header { display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 18px 20px; }
+.test-order-viz-flow header p { margin: 6px 0 0; color: var(--srf-text-secondary); font-size: 12px; }
+.test-order-viz-flow header > span { white-space: nowrap; color: var(--srf-text-secondary); font-size: 12px; }
+.test-order-viz-steps { display: flex; gap: 0; padding: 22px 18px; margin: 0; list-style: none; overflow-x: auto; background: var(--srf-hover); border-block: 1px solid var(--srf-card-border); }
+.test-order-viz-steps li { display: flex; align-items: stretch; flex: 1 0 180px; min-width: 0; }
+.test-order-viz-steps button { display: flex; flex-direction: column; gap: 12px; width: 100%; padding: 14px; border: 1px solid var(--srf-card-border); background: var(--srf-card); border-radius: 8px; color: var(--srf-text); cursor: pointer; text-align: left; font: inherit; }
+.test-order-viz-steps button:hover { border-color: var(--srf-accent); }
+.test-order-viz-steps button[aria-pressed="true"] { border-color: var(--srf-accent); background: var(--srf-accent-soft); }
+.test-order-viz-step-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; font-size: 11px; color: var(--srf-text-secondary); }
+.test-order-viz-step-number { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 6px; background: var(--srf-chip); color: var(--srf-text-secondary); font-variant-numeric: tabular-nums; }
+.test-order-viz-steps button[aria-pressed="true"] .test-order-viz-step-number { color: var(--srf-accent); background: var(--srf-count-badge); }
+.test-order-viz-steps strong { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.6; font-size: 13px; overflow-wrap: anywhere; }
+.test-order-viz-steps small { margin-top: auto; color: var(--srf-text-secondary); }
+.test-order-viz-steps button[aria-pressed="true"] small { color: var(--srf-accent); }
+.test-order-viz-step-arrow { align-self: center; padding: 0 8px; color: var(--srf-text-secondary); }
+.test-order-viz-flow footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 12px 18px; color: var(--srf-text-secondary); font-size: 12px; }
+.test-order-viz-flow footer > div { display: flex; gap: 8px; }
+.test-order-viz-detail { position: sticky; top: 16px; border: 1px solid var(--srf-card-border); border-radius: 8px; padding: 20px; background: var(--srf-hover); }
+.test-order-viz-detail-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.test-order-viz-detail-heading > span { color: var(--srf-text-secondary); font-size: 12px; }
+.test-order-viz-position { display: flex; gap: 4px; margin: 18px 0 24px; }
+.test-order-viz-position i { flex: 1; height: 3px; background: var(--srf-track); border-radius: 2px; }
+.test-order-viz-position i.is-active { background: var(--srf-accent); }
+.test-order-viz-detail .test-order-viz-detail-step { color: var(--srf-text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
+.test-order-viz-detail p { line-height: 1.8; margin: 8px 0; }
+.test-order-viz-expected { border-block: 1px solid var(--srf-card-border); margin-top: 24px; padding: 6px 0 16px; }
+.test-order-viz-expected h4 { color: var(--srf-accent); }
+.test-order-viz-diagrams { padding: 20px; border: 1px solid var(--srf-card-border); border-radius: 8px; }
+.test-order-viz-block { padding: 20px 0; }
+.test-order-viz-block + .test-order-viz-block { border-top: 1px solid var(--srf-card-border); }
+.test-order-viz-block:last-child { padding-bottom: 0; }
+.test-order-viz-main .test-order-viz-focus-title { margin: 0; font-size: 14px; line-height: 1.6; }
+.test-order-viz-block.is-current .test-order-viz-focus-title { color: var(--srf-accent); }
+.test-order-viz-focus { margin: 14px 0 20px; color: var(--srf-text-secondary); }
+.test-order-viz-focus h4 { font-size: 12px; margin: 0 0 6px; color: var(--srf-accent); }
+.test-order-viz-focus p { margin: 0; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+.test-order-viz-entity { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 14px; border: 1px solid var(--srf-card-border); border-radius: 6px; background: var(--srf-hover); color: var(--srf-text); min-width: 0; max-width: 100%; overflow-wrap: anywhere; text-align: left; font: inherit; line-height: 1.65; }
+.test-order-viz-entity strong { font-weight: 500; }
+.test-order-viz-measure { font-size: 12px; }
+.test-order-viz-entity.is-related { border-color: var(--srf-accent-border); }
+.test-order-viz-steps button:focus-visible { outline: 2px solid var(--srf-accent); outline-offset: 2px; }
+.test-order-viz-options { display: flex; flex-wrap: wrap; gap: 12px; }
+.test-order-viz-options > .test-order-viz-entity { flex: 1 1 150px; }
+.test-order-viz-option-owner { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; color: var(--srf-text-secondary); }
+.test-order-viz-option-owner .test-order-viz-entity { border: 0; padding-left: 0; background: transparent; }
+.test-order-viz-option { display: flex; align-items: center; gap: 8px; padding: 0 12px; background: var(--srf-tone-bg); color: var(--srf-text); border: 1px solid var(--srf-tone-border); border-radius: 6px; }
+.test-order-viz-option .test-order-viz-entity { border: 0; background: transparent; color: inherit; }
+.test-order-viz-caption, .test-order-viz-unknown { color: var(--srf-text-secondary); font-size: 12px; line-height: 1.7; }
+.test-order-viz-track-scroll { overflow-x: auto; padding: 4px; }
+.test-order-viz-interval { display: flex; padding: 0; margin: 0; list-style: none; min-width: 440px; border-radius: 6px; overflow: hidden; }
+.test-order-viz-interval li { flex: 1 0 105px; min-width: 0; display: flex; flex-direction: column; gap: 6px; padding: 12px 8px; background: var(--srf-tone-bg); color: var(--srf-tone-text); border: 1px solid var(--srf-tone-border); }
+.test-order-viz-interval .role-remove { border-style: dashed; color: var(--srf-text); }
+.test-order-viz-segment-role { display: flex; gap: 6px; align-items: center; font-size: 12px; }
+.test-order-viz-interval .test-order-viz-entity { flex: 1; width: 100%; padding: 4px 0 18px; border: 0; background: transparent; color: inherit; }
+.test-order-viz-interval .test-order-viz-entity strong { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 12px; }
+.test-order-viz-output { margin-top: 20px; }
+.test-order-viz-state { display: grid; grid-template-columns: minmax(0, 1fr) 90px minmax(0, 1fr); gap: 12px; align-items: center; }
+.test-order-viz-state > div { display: flex; flex-direction: column; gap: 10px; }
+.test-order-viz-state > div > span { color: var(--srf-text-secondary); font-size: 12px; }
+.test-order-viz-transition { align-items: center; color: var(--srf-accent); }
+.test-order-viz-quantity { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.test-order-viz-quantity .test-order-viz-entity { margin-bottom: 8px; width: 100%; }
+.test-order-viz-total { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 16px; margin-bottom: 16px; background: var(--srf-accent-soft); border-radius: 6px; color: var(--srf-accent); }
+.test-order-viz-total span { font-size: 12px; }
+.test-order-viz-relations { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+.test-order-viz-relation { display: grid; grid-template-columns: minmax(0, 1fr) minmax(78px, 100px) minmax(0, 1fr); gap: 10px; align-items: stretch; }
+.test-order-viz-connector { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 6px; border: 0; background: transparent; padding: 6px 0; font: inherit; font-size: 12px; color: var(--srf-accent); overflow-wrap: anywhere; }
+.test-order-viz-connector small { color: var(--srf-text-secondary); text-align: center; }
+.test-order-viz-edge { display: flex; align-items: center; width: 100%; }
+.test-order-viz-edge::before { content: ''; flex: 1; border-top: 1px solid currentColor; }
+.test-order-viz-edge .anticon { margin-left: -2px; }
+.test-order-viz-relation.is-negative .test-order-viz-connector { color: var(--srf-tone-text); }
+.test-order-viz-relation.is-negative .test-order-viz-edge::before { border-top-style: dashed; }
+.test-order-viz-batch { padding: 10px 0; min-width: 0; }
+.test-order-viz-batch summary { cursor: pointer; margin-top: 10px; }
+.test-order-viz-batch ul { padding: 0; list-style: none; max-height: 260px; overflow: auto; }
+.test-order-viz-batch li { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px 0; border-bottom: 1px solid var(--srf-card-border); overflow-wrap: anywhere; }
+.test-order-viz-batch .ant-btn-link { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.test-order-viz-batch-counts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+@container (max-width: 850px) {
+  .test-order-viz-layout { grid-template-columns: minmax(0, 1fr); }
+  .test-order-viz-main { display: contents; }
+  .test-order-viz-preconditions { grid-row: 1; margin-bottom: 0; }
+  .test-order-viz-flow { grid-row: 2; margin-bottom: 0; }
+  .test-order-viz-detail { position: static; grid-row: 3; }
+  .test-order-viz-diagrams { grid-row: 4; }
+}
+@container (max-width: 480px) {
+  .test-order-viz-layout { padding: 0 10px 12px; }
+  .test-order-viz-preconditions, .test-order-viz-diagrams, .test-order-viz-detail { padding: 14px; }
+  .test-order-viz-flow header { padding: 14px; }
+  .test-order-viz-state { grid-template-columns: 1fr; }
+  .test-order-viz-transition .anticon { transform: rotate(90deg); }
+  .test-order-viz-quantity { grid-template-columns: 1fr; gap: 8px; }
+  .test-order-viz-relation { grid-template-columns: minmax(0, 1fr) 54px minmax(0, 1fr); gap: 6px; }
+  .test-order-viz-relation .test-order-viz-entity { padding: 10px 16px 20px 10px; font-size: 12px; }
+}
+.test-order-visualization > .test-order-viz-preconditions { margin: 0 16px 18px; }
+.test-order-viz-detail .test-order-viz-case-title { margin: 0 0 20px; line-height: 1.6; overflow-wrap: anywhere; }
+.test-order-viz-mapped { display: grid; min-width: 440px; gap: 0; }
+.test-order-viz-mapped-item { min-width: 0; display: flex; flex-direction: column; align-items: stretch; padding: 0 4px; }
+.test-order-viz-mapped-arrow { align-self: center; transform: rotate(90deg); color: var(--srf-text-secondary); margin: 14px 0; }
+.test-order-viz-mapped-item .test-order-viz-entity { flex: 1; text-align: center; align-items: center; }
+@container (max-width: 850px) { .test-order-viz-layout .test-order-viz-flow { grid-row: 1; } .test-order-viz-layout .test-order-viz-detail { grid-row: 2; } .test-order-viz-layout .test-order-viz-diagrams { grid-row: 3; } }

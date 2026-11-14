@@ -229,12 +229,11 @@
   }
 }
 
-/* 用例库：左栏测试集 + 右栏用例列表 */
+/* 用例库：左栏测试集 + 右栏用例列表。侧栏宽度由 case-library-v2.css 统一。 */
 .case-library-layout {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 264px minmax(0, 1fr);
 }
 
 .case-library-main {
@@ -281,10 +280,4 @@
 
 .case-library-sidebar-foot .ant-btn-circle {
   flex: 0 0 auto;
-}
-
-@media (max-width: 1180px) {
-  .case-library-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }

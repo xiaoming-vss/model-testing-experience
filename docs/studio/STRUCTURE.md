@@ -69,7 +69,7 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 - 文件下载 —— `shared/utils/download.ts`
 - 值格式化与载荷构造 —— `shared/utils/value.ts`、`shared/utils/payload.ts`
 - 操作按钮与权限门控 —— `shared/components/ActionButton`
-- 列表分页 —— `shared/components/ListPagination`（数量文案、中文控件、条数切换与越界校正）；默认条数和可选值集中在 `shared/utils/pagination.ts`
+- 列表分页 —— `shared/components/ListPagination`（数量文案、中文控件、条数切换与越界校正；`compact` 模式供窄侧栏把分页放进表头，只渲染控件不渲染范围句）；默认条数和可选值集中在 `shared/utils/pagination.ts`
 - 远端选项搜索和分页 —— `shared/components/PagedSelect`；查询键、读取函数和业务选项由调用方注入，测试单重测来源与 Bug 关联表单共用。默认每页 20 项，支持 PageUp/PageDown、加载失败重试，不预取完整集合。
 
 ## 三、样式归属与主题
@@ -80,7 +80,7 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 | S7 | 样式归属：feature 只写自家前缀。**全局层（`app/styles/`、`shared/styles/`）不得出现 feature 内部类名** | `app/styles/workbench.css` 引用 87 个 feature 内部类名、`layout.css` 12 个；`features/api-automation/styles/detail.css` 有 30 处 `.ui-*`（API 自动化给 UI 自动化写样式） | 扫描脚本前缀统计（**存量豁免**） |
 | S8 | token 单一来源：token 定义集中在**已登记的 token 文件**里（清单见下）。feature **只能消费，不得定义全局 token** | `--tp-text` 被 `app/styles/workbench.css` 与 `features/api-automation/styles/detail.css` 两处定义；`shared/styles/page-frame.css` 消费了 8 处 token（`:64,118,272,349,547,961,979,1072`，其中 `--tp-border`×3、`--tp-border-soft`×5），而这两个 token 的定义同样散在 `workbench.css` 与 `detail.css` 两处——**shared 反向依赖 feature 定义的 token** | CSS 裸色值：`npm run check:theme`（**已实现**，接入 `verify`）；定义重名与依赖方向扫描仍待实现，存量定义保留 |
 | S9 | 样式引入必须显式自持：每个入口自行 import 自己依赖的样式。**禁止依赖「别的页面恰好 import 了」而生效** | `functional-test-page` 被 4 个 feature 使用（test-cases、api-automation、test-orders、ui-automation 的页面），但唯一定义在 `features/testing/styles/index.css`，而这 4 个页面都不 import 它——只靠被 `TestingPage` 包着渲染才拿到样式 | 评审 + import 图核对（**待强制**） |
-| S14 | 列表页表面层：用例库 / 测试单 / API 测试 / UI 测试四页共用 `shared/styles/surface-tokens.css`。页面根节点必须同时带页面类与 `tp-surface`，列表／卡片页板面 section 带 `tp-board tp-list-panel`，内容使用 `tp-list-body` / `tp-list-scroll`，Tab 位于外框外；样式写在各自 `features/<f>/styles/*-v2.css`，颜色只能引用 `--srf-*` / `.tone-*` | 四页共用同一套卡片 + 胶囊 + 色盘，缺 `tp-surface` 时页面里所有 `var(--srf-*)` 解析成空值，表现为「样式莫名消失」；`testing/styles/index.css` 与 `app/styles/workbench.css` 都用 `!important` 抢过这些容器，覆盖规则必须写成 `.app-shell.app-shell-macos .testing-page .<页面类> ...` 再加 `!important`，删掉前缀或 `!important` 会静默失效。**同权重同样会失效**：`workbench.css` 的玻璃规则是 (0,6,0)，与 `.tp-board` 覆盖同分，只靠 import 顺序决胜 | 评审 + 扫描脚本（**待强制**） |
+| S14 | 列表页表面层：用例库 / 应用 / 测试单 / API 测试 / UI 测试五页共用 `shared/styles/surface-tokens.css`。页面根节点必须同时带页面类与 `tp-surface`，列表／卡片页板面 section 带 `tp-board tp-list-panel`，内容使用 `tp-list-body` / `tp-list-scroll`，Tab 位于外框外；样式写在各自 `features/<f>/styles/*-v2.css`，颜色只能引用 `--srf-*` / `.tone-*` | 五页共用同一套卡片 + 胶囊 + 色盘，缺 `tp-surface` 时页面里所有 `var(--srf-*)` 解析成空值，表现为「样式莫名消失」；`testing/styles/index.css` 与 `app/styles/workbench.css` 都用 `!important` 抢过这些容器，覆盖规则必须写成 `.app-shell.app-shell-macos .testing-page .<页面类> ...` 再加 `!important`，删掉前缀或 `!important` 会静默失效。**同权重同样会失效**：`workbench.css` 的玻璃规则是 (0,6,0)，与 `.tp-board` 覆盖同分，只靠 import 顺序决胜 | 评审 + 扫描脚本（**待强制**） |
 
 数据表行分隔由 `shared/styles/table-row-dividers.css` 全局提供，公共列表皮肤消费相同的 `--app-list-row-border`。变量值只在下列 token 文件定义，feature 不另设分隔色或移除横线；`tableRowDividers.test.ts` 检查入口、数据行覆盖及变量归属。
 
@@ -116,25 +116,26 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 
 **主题支持浅色、深色和跟随系统**（[ADR 0002](adr/0002-token-based-github-dark.md) 取代 ADR 0001 的仅浅色决定）。默认跟随系统；登录页和页头提供同一切换器，偏好保存到 `mtx-theme-preference`。HTML 启动脚本在首屏绘制前设置 `data-theme` 和 `color-scheme`；store 处理系统变化及跨标签页同步。暗色参考 GitHub Primer Dark，颜色变化集中在登记的 token 文件和 Ant Design 配置。新增业务样式消费语义 token，并核对两种主题，不得恢复按 feature 类名堆叠的暗色补丁层。独立 HTML 报告与品牌图形保留自身配色。
 
-### 列表页表面层（用例库 / 测试单 / API 测试 / UI 测试）
+### 列表页表面层（用例库 / 应用 / 测试单 / API 测试 / UI 测试）
 
-这四页按各自的外部设计稿（Stitch 导出的静态 HTML，配套一份含色板 / 字阶 / 组件规格的 `DESIGN.md`）重做了表面层，
+这五页按各自的外部设计稿（Stitch 导出的静态 HTML，配套一份含色板 / 字阶 / 组件规格的 `DESIGN.md`）重做了表面层，
 视觉语言是同一套：主题卡片 + 描边 + 胶囊筛选条 + 代码体编号 / 时间 + 色调色块。布局保留等宽编号、时间和 4px 网格；浅色配色以用户最新反馈后的 C 版为准（工具栏、内容面板、数据行和分页 `#e8edf6`，表头与状态栏 `#e3e9f3`，描边 `#dce0ef`、链接及选中强调 `#4e59b8`、主操作 `#f6e6bf`），由浅色 token 文件覆盖既有角色。旧玻璃表面变量与项目卡片变量也接入公共面板色，避免透明白色叠层重新抬高亮度；`theme.palette.test.ts` 验证这些角色的解析值一致，并验证浅色规则不匹配深色节点。深色仍沿用 GitHub Dark。
 
 | 页面 | 页面样式文件 |
 | --- | --- |
 | 用例库 | `features/test-cases/styles/case-library-v2.css` |
+| 应用 / 接口库工作区 | `features/interface-library/styles/index.css` |
 | 测试单 | `features/test-orders/styles/test-orders-v2.css` |
 | API 测试 | `features/api-automation/styles/list-v2.css` |
 | UI 测试 | `features/ui-automation/styles/list-v2.css` |
 
 `shared/styles/surface-tokens.css` 除 token 与九色盘外，还承载板面（`.tp-board`）与快速过滤条组件（`.tp-quickbar`、
-`.tp-chip`、`.tp-selection`）——四页的这几个部件必须完全一致，所以放在共用层而不是各写一份。
+`.tp-chip`、`.tp-selection`）——五页的这几个部件必须完全一致，所以放在共用层而不是各写一份。
 
 设计稿与既有约定冲突时以既有约定为准：设计稿的表格规格是表头 32px / 行高 36–40px，与 §7.5 锁定的列表指纹冲突，
-四页的表头与行高仍是 42 / 48px。设计稿把测试集名称画成蓝色链接，这一条也不行——`app/styles/listNameConsistency.test.ts`
+五页的表头与行高仍是 42 / 48px。设计稿把测试集名称画成蓝色链接，这一条也不行——`app/styles/listNameConsistency.test.ts`
 断言「API 测试集 / UI 测试集 / 功能测试集 / 需求」的名称样式与 AI 任务名称逐项相等，改一页就会红。
-设计稿中的旧布局以 [UI-GUIDELINES.md](UI-GUIDELINES.md) 为准：四页工具栏统一白色卡片；导航已移到侧栏，API 测试与测试单已去掉快速过滤整行。
+设计稿中的旧布局以 [UI-GUIDELINES.md](UI-GUIDELINES.md) 为准：五页工具栏统一白色卡片；导航已移到侧栏，API 测试与测试单已去掉快速过滤整行。
 
 **「多出来的容器」都出在同一处：覆盖了外壳玻璃面，但权重没压过它。** 三处踩过的坑，改这一层时逐条对：
 
@@ -158,7 +159,7 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 顺带记两处**浅色下早已存在**的名称样式分歧，此前被深色规则（统一写了 `line-height: 22px`）掩盖，
 深色退役后由 `listNameConsistency.test.ts` 的注释记录、未纳入断言：AI 任务列表名称行高 22px，其余三页 20px
 （`ai-testing/styles/index.css` 里同一选择器有 20px 与 22px 两条规则，后者胜出）；名称颜色在 jsdom 下不稳定
-（两条 `!important` 规则相争时 jsdom 按出现顺序而非优先级裁决，浏览器按优先级，四页都是 `#3f6fc6`）。
+（两条 `!important` 规则相争时 jsdom 按出现顺序而非优先级裁决，浏览器按优先级，五页都是 `#3f6fc6`）。
 
 **设计稿里没有对应数据或动作的元素一律不做**，避免为了像设计稿而编造字段：
 
@@ -367,9 +368,13 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 | 底部「提交当前用例记录」 | 判定是即时保存的（保存状态就在同一栏底部显示），再加提交按钮会误导 |
 | 耗时预估 | 条目没有这个字段 |
 
-`TestOrderWorkspacePage.test.tsx` 依赖的钩子必须保留：判定按钮的 `aria-label="判定该用例为通过"` 及其禁用态、状态筛选胶囊的
-无障碍名形如 `未执行 1`（标签与计数之间要有空格）、勾选框 `选择第 N 条执行条目` / `移除第 N 条执行条目` / `判定后自动前进`、
-`快捷键说明` 图标按钮（默认隐藏说明，悬停或聚焦后展示）、键盘 ↑／↓ 切换条目，以及「加入用例」按钮**恰好两个**（顶栏与空态各一个）。底部不显示 `上一条` / `下一条` 按钮。
+`TestOrderWorkspacePage.test.tsx` 依赖的钩子必须保留：判定按钮的 `aria-label="判定该用例为通过"` 及其禁用态、执行结论分组的
+无障碍名形如 `未执行 1`（标签与计数之间要有空格）、筛选按钮 `筛选执行条目` 与浮层选项 `失败 2`、清除条件 `清除状态筛选`、
+勾选框 `选择第 N 条执行条目` / `移除第 N 条执行条目` / `判定后自动前进`、`快捷键说明` 图标按钮（默认隐藏说明，悬停或聚焦后展示）、
+勾选后的批量操作 `批量标记通过（N）` / `分配执行人（N）` / `生成所选图解（N）`（可见文字为“图解／分配／标记通过”，无障碍名保留全称和数量）、
+已选数量文本 `已选 N 条`（跨页说明在 title 中）、分页位于 `.test-order-list-head` 的 `ListPagination compact`（侧栏内不应出现 `.table-footer`，页码保留
+`title="1"` 等供跨页测试点击）、勾选操作条是 `.test-order-side-panel` 的最后一个子元素；键盘 ↑／↓ 按分组展示顺序切换（折叠分组不参与），
+以及「加入用例」按钮**恰好两个**（顶栏与空态各一个）。底部不显示 `上一条` / `下一条` 按钮，也不再有底部分页。
 
 `priorityTone`（优先级 → 色盘色调）被用例库与工作台同时使用，按 S4 上提到 `shared/utils/priorityTone.ts`；`caseTone.ts` 只剩用例类型那部分。
 

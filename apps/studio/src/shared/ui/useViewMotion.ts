@@ -8,7 +8,7 @@ export function useViewMotion(index: number) {
   useLayoutEffect(() => {
     const previous = previousIndex.current
     previousIndex.current = index
-    if (previous >= 0 && index >= 0 && previous !== index && panelRef.current) animateTabPanel(panelRef.current, index - previous)
+    if (previous >= 0 && index >= 0 && previous !== index && panelRef.current) animateTabPanel(panelRef.current)
   }, [index])
   return panelRef
 }

@@ -24,7 +24,7 @@ async def delete_auxiliary_execution(
     task_type = await session.scalar(
         select(AiGenerateTask.task_type).where(AiGenerateTask.task_id == task_id).with_for_update()
     )
-    if task_type not in AUXILIARY_EXECUTION_TYPES:
+    if task_type not in AUXILIARY_EXECUTION_TYPES or task_type == "test_order_case_visualization":
         raise ErrNotFound()
     references = (
         await session.execute(

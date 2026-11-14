@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api, listItems } from '@/services/api'
-import type { TestOrderEntryFilters } from '../types'
+import type { TestOrderEntryFilters, TestOrderEntrySummary } from '../types'
 
 type Filters = { keyword: string; status: string; onlyMine: boolean; actor?: string }
 
@@ -76,10 +76,11 @@ export function useTestOrderWindow(orderId: string | undefined, initialEntryId: 
     setPage(size === pageSize ? next : 1); setPageSize(size)
     setFocus(''); setResume(false); setSelectedEntryId(null); setEdge(nextEdge)
   }
-  function moveSelection(offset: number) {
-    const index = entries.findIndex((entry) => entry.entryId === selectedEntryId)
+  /** 默认按接口返回顺序移动；分组视图传入展示顺序，保证 ↑/↓ 与用户看到的顺序一致。 */
+  function moveSelection(offset: number, ordered: TestOrderEntrySummary[] = entries) {
+    const index = ordered.findIndex((entry) => entry.entryId === selectedEntryId)
     if (index < 0) return
-    const next = entries[index + offset]
+    const next = ordered[index + offset]
     if (next) selectEntry(next.entryId ?? null)
     else if (offset > 0 && currentPage * pageSize < total) changePage(currentPage + 1)
     else if (offset < 0 && currentPage > 1) changePage(currentPage - 1, pageSize, 'last')

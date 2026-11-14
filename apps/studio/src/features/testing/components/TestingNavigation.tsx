@@ -5,7 +5,6 @@ import '../styles/navigation.css'
 
 const tabs = [
   { key: 'orders', label: '测试单' },
-  { key: 'library', label: '用例库' },
   { key: 'api', label: 'API测试' },
   { key: 'ui', label: 'UI测试' },
 ] as const

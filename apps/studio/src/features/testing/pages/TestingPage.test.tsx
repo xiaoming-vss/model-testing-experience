@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { TestingPage } from './TestingPage'
 
@@ -17,6 +17,18 @@ function LocationControls() {
 }
 function setup(path: string) {
   render(<MemoryRouter initialEntries={[path]}><TestingPage /><LocationControls /></MemoryRouter>)
+}
+
+function setupWithAssetRoute(path: string) {
+  render(
+    <MemoryRouter initialEntries={[path]}>
+      <Routes>
+        <Route path="/testing" element={<TestingPage />} />
+        <Route path="/asset-library" element={<p>资产库内容</p>} />
+      </Routes>
+      <LocationControls />
+    </MemoryRouter>,
+  )
 }
 
 // jsdom 的 getComputedStyle 会滞后于 hidden 属性切换，role 查询对刚切换过的面板不可靠；
@@ -40,16 +52,24 @@ describe('Testing workspace navigation', () => {
     expectPaneState('orders', { visible: true, text: '测试单内容' })
     expectPaneState('api', { visible: false, text: 'API内容' })
   })
-  it('supports keyboard navigation and legacy library links', () => {
-    setup('/testing?tab=functional')
-    const tab = screen.getByRole('tab', { name: '用例库' })
+  it('supports keyboard navigation between the three testing tabs', () => {
+    setup('/testing?tab=api')
+    const tab = screen.getByRole('tab', { name: 'API测试' })
     expect(tab).toHaveAttribute('aria-selected', 'true')
     fireEvent.keyDown(tab, { key: 'ArrowRight' })
-    expect(screen.getByRole('tab', { name: 'API测试' })).toHaveFocus()
-    expectPaneState('api', { visible: true, text: 'API内容' })
-    fireEvent.keyDown(document.activeElement!, { key: 'End' })
+    expect(screen.getByRole('tab', { name: 'UI测试' })).toHaveFocus()
     expectPaneState('ui', { visible: true, text: 'UI内容' })
-    expectPaneState('api', { visible: false, text: 'API内容' })
+    fireEvent.keyDown(document.activeElement!, { key: 'Home' })
+    expectPaneState('orders', { visible: true, text: '测试单内容' })
+    expectPaneState('ui', { visible: false, text: 'UI内容' })
+    expect(screen.queryByRole('tab', { name: '用例库' })).not.toBeInTheDocument()
+  })
+
+  it('redirects legacy library tabs to the asset library', () => {
+    setupWithAssetRoute('/testing?tab=functional')
+    expect(screen.getByText('资产库内容')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('?tab=cases')
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument()
   })
   it('keeps the Bug route independent without exposing testing tabs', () => {
     setup('/testing?tab=bugs')

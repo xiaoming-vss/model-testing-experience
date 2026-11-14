@@ -1,12 +1,10 @@
 import { useTestOrderWindow } from '../hooks/useTestOrderWindow'
-import { ListPagination } from '@/shared/components/ListPagination'
 import { TestOrderGraphViewer } from '../components/TestOrderGraphViewer'
-import { ActionButton } from '@/shared/components/ActionButton'
+import { TestOrderEntrySidebar, type TestOrderStatusFilter } from '../components/TestOrderEntrySidebar'
 import { useViewMotion } from '@/shared/ui/useViewMotion'
 import {
   ArrowLeftOutlined,
   QuestionCircleOutlined,
-  SearchOutlined,
 } from '@ant-design/icons'
 import {
   Alert,
@@ -15,7 +13,6 @@ import {
   Empty,
   Input,
   Modal,
-  Popconfirm,
   Select,
   Segmented,
   Space,
@@ -26,29 +23,30 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { DELETED_ACCOUNT_LABEL, UserDisplayName } from '@/shared/components/UserReference/UserReference'
+import { DELETED_ACCOUNT_LABEL } from '@/shared/components/UserReference/UserReference'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { AddCasesFromLibraryModal } from '../components/AddCasesFromLibraryModal'
-import { TestOrderCaseContent } from '../components/TestOrderCaseContent'
+import { CaseVisualizationPanel } from '../components/visualization/CaseVisualizationPanel'
+import type { VisualizationMode } from '../visualizationTypes'
 import { TestOrderCaseSummary } from '../components/TestOrderCaseSummary'
 import { TestOrderVerdictButtons } from '../components/TestOrderVerdictButtons'
 import { useTestOrderEntrySave } from '../hooks/useTestOrderEntrySave'
 import { TEST_ORDER_VERDICTS, isTestOrderEntryLocked } from '../utils/testOrderExecution'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
-import { priorityTone } from '@/shared/utils/priorityTone'
 import { api, listItems } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
 import {
-  getTestOrderEntryStatusMeta,
-  getTestOrderEntryStatusTone,
   getTestOrderStatusMeta,
   getTestOrderStatusTone,
+  groupTestOrderEntriesByStatus,
+  type TestOrderResultStatus,
 } from '../utils/testOrderStatus'
 import '@/shared/styles/surface-tokens.css'
 import '@/features/test-orders/styles/index.css'
 import '@/features/test-orders/styles/workspace-v2.css'
+import '@/features/test-orders/styles/workspace-sidebar-v3.css'
 import '@/features/test-orders/styles/workspace-verdict-v2.css'
 
 const { Text } = Typography
@@ -76,13 +74,6 @@ function TestOrderReasonInput({ label, value, disabled, onCommit }: {
   />
 }
 
-const STATUS_FILTERS: Array<{ value: string; label: string }> = [
-  { value: 'all', label: '全部' },
-  { value: 'pending', label: '未执行' },
-  { value: 'failed', label: '失败' },
-  { value: 'blocked', label: '阻塞' },
-]
-
 export function TestOrderWorkspacePage() {
   const { orderId } = useParams<{ orderId: string }>()
   const navigate = useNavigate()
@@ -98,13 +89,46 @@ export function TestOrderWorkspacePage() {
     if (workspaceView === 'graph' && !graphVisited) setGraphVisited(true)
   }, [graphVisited, workspaceView])
   const workspaceViewRef = useViewMotion(workspaceView === 'execution' ? 0 : 1)
-  const entryListRef = useRef<HTMLDivElement>(null)
   const keyboardNavigation = useRef(false)
   const [keyword, setKeyword] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState<TestOrderStatusFilter>('all')
   const [onlyMine, setOnlyMine] = useState(false)
+  const [collapsedGroups, setCollapsedGroups] = useState<TestOrderResultStatus[]>([])
   const [autoAdvance, setAutoAdvance] = useState(false)
   const [checkedEntryIds, setCheckedEntryIds] = useState<string[]>([])
+  const [visualizationPreference, setVisualizationPreference] = useState<{ orderId?: string; mode: VisualizationMode }>({ mode: 'text' })
+  const visualizationMode = visualizationPreference.orderId === orderId ? visualizationPreference.mode : 'text'
+  const setVisualizationMode = (mode: VisualizationMode) => setVisualizationPreference({ orderId, mode })
+  function clearCheckedOnFilter() {
+    if (checkedEntryIds.length) message.info('筛选条件已变化，已清空勾选')
+    setCheckedEntryIds([])
+  }
+  function changeKeyword(next: string) {
+    clearCheckedOnFilter()
+    setKeyword(next)
+  }
+  function changeStatusFilter(next: TestOrderStatusFilter) {
+    if (next === statusFilter) return
+    clearCheckedOnFilter()
+    setStatusFilter(next)
+  }
+  function changeOnlyMine(next: boolean) {
+    if (next === onlyMine) return
+    clearCheckedOnFilter()
+    setOnlyMine(next)
+  }
+  function toggleGroup(status: TestOrderResultStatus) {
+    setCollapsedGroups((previous) => previous.includes(status)
+      ? previous.filter((item) => item !== status)
+      : [...previous, status])
+  }
+  function toggleAllEntries(checked: boolean) {
+    const pageIds = entries.flatMap((entry) => entry.entryId ? [entry.entryId] : [])
+    setCheckedEntryIds((previous) => checked
+      ? [...new Set([...previous, ...pageIds])]
+      : previous.filter((id) => !pageIds.includes(id)))
+  }
+  useEffect(() => { setCollapsedGroups([]) }, [orderId, statusFilter, onlyMine, keyword])
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [savedAt, setSavedAt] = useState<string>('')
   const [assignOpen, setAssignOpen] = useState(false)
@@ -168,6 +192,23 @@ export function TestOrderWorkspacePage() {
   const visibleEntries = entries
   const mineCount = entriesQuery.data?.mineCount ?? 0
   const allEntryCount = entriesQuery.data?.orderTotal ?? order?.entriesTotal ?? 0
+  // 分组只作用于当前页；↑/↓ 按用户看到的顺序移动，折叠的分组不参与。
+  const groupedEntries = useMemo(() => groupTestOrderEntriesByStatus(visibleEntries), [visibleEntries])
+  const groupedFlatEntries = useMemo(() => groupedEntries.flatMap((group) => group.entries), [groupedEntries])
+  const navigationEntries = useMemo(() => groupedEntries
+    .filter((group) => !collapsedGroups.includes(group.status))
+    .flatMap((group) => group.entries), [groupedEntries, collapsedGroups])
+
+  function moveInDisplayOrder(offset: number) {
+    if (!selectedEntryId) return
+    const index = navigationEntries.findIndex((entry) => entry.entryId === selectedEntryId)
+    if (index < 0) {
+      const fallback = offset > 0 ? navigationEntries[0] : navigationEntries[navigationEntries.length - 1]
+      if (fallback?.entryId) selectEntry(fallback.entryId)
+      return
+    }
+    moveSelection(offset, navigationEntries)
+  }
 
   const selectedReason = selected?.status === 'blocked' ? selected?.blockReason : selected?.failureReason
   useEffect(() => {
@@ -245,13 +286,17 @@ export function TestOrderWorkspacePage() {
 
   // 在清单内使用键盘切换时，焦点跟随选中项，避免旧条目残留焦点框和移除按钮。
   useEffect(() => {
-    const list = entryListRef.current
     const focused = document.activeElement
     if (keyboardNavigation.current && focused !== document.body && !focused?.matches('.test-order-nav-item')) {
       keyboardNavigation.current = false
     }
-    if (keyboardNavigation.current || (focused?.matches('.test-order-nav-item') && list?.contains(focused))) {
-      const button = list?.querySelector<HTMLButtonElement>('.test-order-nav-item[aria-current="true"]')
+    const focusedInList = focused instanceof Element
+      && focused.matches('.test-order-nav-item')
+      && Boolean(focused.closest('.test-order-side-panel'))
+    if (keyboardNavigation.current || focusedInList) {
+      const button = document.querySelector<HTMLButtonElement>(
+        '.test-order-side-panel .test-order-nav-item[aria-current="true"]',
+      )
       if (button && selectedEntryId) { button.focus(); keyboardNavigation.current = false }
     }
   }, [selectedEntryId, entriesQuery.data])
@@ -267,13 +312,13 @@ export function TestOrderWorkspacePage() {
       if (event.key === 'ArrowDown') {
         keyboardNavigation.current = Boolean(target?.closest('.test-order-nav-item'))
         event.preventDefault()
-        moveSelection(1)
+        moveInDisplayOrder(1)
         return
       }
       if (event.key === 'ArrowUp') {
         keyboardNavigation.current = Boolean(target?.closest('.test-order-nav-item'))
         event.preventDefault()
-        moveSelection(-1)
+        moveInDisplayOrder(-1)
         return
       }
       const status = TEST_ORDER_VERDICTS.find((option) => option.key === event.key)?.value
@@ -291,7 +336,7 @@ export function TestOrderWorkspacePage() {
   const orderTotal = order?.entriesTotal ?? 0
   const orderExecuted = order?.entriesExecuted ?? 0
   const orderProgressPercent = orderTotal > 0 ? Math.round((orderExecuted / orderTotal) * 100) : 0
-  const selectedVisibleIndex = visibleEntries.findIndex((entry) => entry.entryId === selectedEntryId)
+  const selectedGroupedIndex = groupedFlatEntries.findIndex((entry) => entry.entryId === selectedEntryId)
   const isSaving = saveMutation.isPending
   const saveStateText = isSaving ? '保存中…' : savedAt ? `已保存 ${savedAt}` : ''
   const orderStatusMeta = order ? getTestOrderStatusMeta(order.status) : null
@@ -353,182 +398,48 @@ export function TestOrderWorkspacePage() {
 
           {graphMounted && orderId && <div ref={workspaceView === 'graph' ? workspaceViewRef : undefined} className="test-order-inline-graph" style={workspaceView === 'graph' ? undefined : { display: 'none' }}><TestOrderGraphViewer orderId={orderId} projectId={order?.projectId} canExecute={can('execute')} currentUserId={currentUserId} isProjectOwner={isOwner} /></div>}
           <div ref={workspaceView === 'execution' ? workspaceViewRef : undefined} className="test-order-workspace-cols" style={workspaceView === 'graph' ? { display: 'none' } : undefined}>
-            <section className="workbench-panel test-order-side-panel">
-              <div className="test-order-side-head">
-                <span className="test-order-side-title">
-                  执行用例清单
-                  <span className="test-order-side-count">{allEntryCount}</span>
-                </span>
-                <Tooltip title="刷新执行条目">
-                  <ActionButton
-                    operation="refresh"
-                    className="test-order-side-refresh"
-                    aria-label="刷新执行条目"
-                    loading={entriesQuery.isFetching}
-                    onClick={() => entriesQuery.refetch()}
-                  />
-                </Tooltip>
-              </div>
-
-              <div className="test-order-side-progress">
-                <div className="test-order-side-progress-row">
-                  <span>执行进度</span>
-                  <span>
-                    {orderProgressPercent}%（{order?.entriesExecuted ?? 0}/{order?.entriesTotal ?? 0}）
-                  </span>
-                </div>
-                <span className="test-order-side-progress-track">
-                  <span
-                    className="test-order-side-progress-fill"
-                    style={{ width: `${orderProgressPercent}%` }}
-                  />
-                </span>
-              </div>
-
-              <div className="test-order-side-toolbar">
-                <Input
-                  allowClear
-                  prefix={<SearchOutlined />}
-                  placeholder="搜索用例 ID 或关键字"
-                  value={keyword}
-                  onChange={(event) => setKeyword(event.target.value)}
-                />
-                <div className="test-order-status-filters">
-                  {STATUS_FILTERS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={`tp-chip${statusFilter === option.value ? ' active' : ''}`}
-                      aria-pressed={statusFilter === option.value}
-                      onClick={() => setStatusFilter(option.value)}
-                    >
-                      {option.label}{' '}
-                      <span className="tp-chip-count">
-                        {option.value === 'all' ? entriesQuery.data?.matchedTotal ?? 0 : entriesQuery.data?.statusCounts[option.value] ?? 0}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-                <div className="test-order-owner-filter">
-                  <Checkbox checked={onlyMine} onChange={(event) => setOnlyMine(event.target.checked)}>
-                    只看我负责的
-                  </Checkbox>
-                  <span>
-                    {mineCount}/{allEntryCount} 指派给我
-                  </span>
-                </div>
-              </div>
-
-              <div className="test-order-side-scroll">
-                {entriesQuery.isLoading ? (
-                  <Empty description="执行条目加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                ) : visibleEntries.length === 0 ? (
-                  <Empty description="没有符合筛选条件的条目" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                ) : (
-                  <div className="api-case-nav-list" ref={entryListRef}>
-                    {visibleEntries.map((entry) => {
-                      const meta = getTestOrderEntryStatusMeta(entry.status)
-                      const active = entry.entryId === selectedEntryId
-                      const entryStepCount = entry.stepCount ?? 0
-                      return (
-                        <div
-                          key={entry.entryId ?? entry.orderNo}
-                          className={`test-order-nav-row${active ? ' active' : ''}`}
-                        >
-                          <Checkbox
-                            aria-label={`选择第 ${entry.orderNo ?? ''} 条执行条目`}
-                            checked={checkedEntryIds.includes(entry.entryId ?? '')}
-                            disabled={entriesQuery.isPlaceholderData}
-                            onChange={(event) => toggleEntry(entry.entryId, event.target.checked)}
-                          />
-                          <button
-                            type="button"
-                            className="test-order-nav-item"
-                            disabled={entriesQuery.isPlaceholderData}
-                            aria-current={active}
-                            onClick={() => selectEntry(entry.entryId ?? null)}
-                          >
-                            <span className="test-order-nav-head">
-                              {entry.casePriority ? (
-                                <span
-                                  className={`test-order-nav-prio tp-tone-tag tone-${priorityTone(entry.casePriority)}`}
-                                >
-                                  {entry.casePriority}
-                                </span>
-                              ) : null}
-                              <span
-                                className={`test-order-nav-status tp-tone-tag tone-${getTestOrderEntryStatusTone(entry.status)}`}
-                              >
-                                {meta.label}
-                              </span>
-                            </span>
-                            <Tooltip title={entry.caseTitle || entry.caseId}>
-                              <span className="test-order-nav-title">
-                                {entry.caseTitle || entry.caseId}
-                              </span>
-                            </Tooltip>
-                            <span className="test-order-nav-meta">
-                              {entry.caseModule ? <span>{entry.caseModule}</span> : null}
-                              <span>{entryStepCount} 步</span>
-                              <span>{personName(entry.assigneeUserId) ? <UserDisplayName name={personName(entry.assigneeUserId)} /> : '未分配'}</span>
-                            </span>
-                          </button>
-                          <Popconfirm
-                            title="确认移除该执行条目？"
-                            description="移除后条目及其结果不再保留，用例本身不受影响。"
-                            okText="确认移除"
-                            okButtonProps={{ danger: true }}
-                            onConfirm={() => entry.entryId && removeMutation.mutate(entry.entryId)}
-                          >
-                            <button
-                              type="button"
-                              className="test-order-nav-remove"
-                              aria-label={`移除第 ${entry.orderNo ?? ''} 条执行条目`}
-                            >
-                              ✕
-                            </button>
-                          </Popconfirm>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-              <div className="table-footer">
-                <ListPagination current={currentPage} pageSize={pageSize} total={entryTotal}
-                  loading={entriesQuery.isFetching || entriesQuery.isError} onChange={changePage} />
-              </div>
-              {checkedEntryIds.length > 0 ? <div className="test-order-sidebar-foot">
-                <Text type="secondary" className="test-order-selection-count">已选 {checkedEntryIds.length} 条（跨页）</Text>
-                <Button type="link" onClick={() => setCheckedEntryIds([])}>清空选择</Button>
-      <Popconfirm
-        title={`确认将选中的 ${checkedEntryIds.length} 条标记为通过？`}
-        okText="确认标记"
-        onConfirm={() => batchMutation.mutate()}
-        disabled={checkedEntryIds.length === 0}
-      >
-        <Button
-          className="action-btn-save"
-          disabled={checkedEntryIds.length === 0}
-          loading={batchMutation.isPending}
-        >
-          批量标记通过{checkedEntryIds.length > 0 ? `（${checkedEntryIds.length}）` : ''}
-        </Button>
-      </Popconfirm>
-      <ProjectActionButton
-        action="manage"
-        className="action-btn-update"
-        operation="edit"
-        disabled={checkedEntryIds.length === 0}
-        onClick={() => {
-          setAssignee('')
-          setAssignOpen(true)
-        }}
-      >
-        分配执行人{checkedEntryIds.length > 0 ? `（${checkedEntryIds.length}）` : ''}
-      </ProjectActionButton>
-              </div> : null}
-            </section>
+            <TestOrderEntrySidebar
+              orderId={orderId}
+              projectId={order?.projectId}
+              entries={visibleEntries}
+              statusCounts={entriesQuery.data?.statusCounts}
+              matchedTotal={entriesQuery.data?.matchedTotal ?? 0}
+              mineCount={mineCount}
+              orderTotal={allEntryCount}
+              progressPercent={orderProgressPercent}
+              entryTotal={entryTotal}
+              currentPage={currentPage}
+              pageSize={pageSize}
+              keyword={keyword}
+              statusFilter={statusFilter}
+              onlyMine={onlyMine}
+              checkedEntryIds={checkedEntryIds}
+              selectedEntryId={selectedEntryId}
+              collapsedGroups={collapsedGroups}
+              loading={entriesQuery.isLoading}
+              fetching={entriesQuery.isFetching}
+              placeholder={Boolean(entriesQuery.isPlaceholderData)}
+              canExecute={can('execute')}
+              canWrite={can('write')}
+              batchPending={batchMutation.isPending}
+              assigneeName={personName}
+              onKeywordChange={changeKeyword}
+              onStatusFilterChange={changeStatusFilter}
+              onOnlyMineChange={changeOnlyMine}
+              onToggleGroup={toggleGroup}
+              onRefresh={() => void entriesQuery.refetch()}
+              onSelectEntry={selectEntry}
+              onToggleEntry={toggleEntry}
+              onToggleAll={toggleAllEntries}
+              onClearChecked={() => setCheckedEntryIds([])}
+              onRemoveEntry={(entryId) => removeMutation.mutate(entryId)}
+              onBatchPass={() => batchMutation.mutate()}
+              onAssign={() => {
+                setAssignee('')
+                setAssignOpen(true)
+              }}
+              onPageChange={changePage}
+            />
 
             <section className="test-order-panel">
               {entriesQuery.isLoading ? <Spin description="加载执行详情…" />
@@ -557,7 +468,7 @@ export function TestOrderWorkspacePage() {
                       executorName={personName(entryView.executorUserId)}
                       lockedByAssignee={lockedByAssignee}
                     /> : null}
-                    {detailReady && selected ? <TestOrderCaseContent snapshot={selected.snapshot} />
+                    {detailReady && selected ? <CaseVisualizationPanel key={`${orderId}:${selected.entryId}`} orderId={orderId!} entryId={selected.entryId!} projectId={order?.projectId} snapshot={selected.snapshot} caseTitle={selected.caseTitle} canGenerate={can('execute')} preferredMode={visualizationMode} onMode={setVisualizationMode} />
                       : detailQuery.error ? <div className="test-order-case-content-status">
                         <Alert showIcon type="error" title={getErrorMessage(detailQuery.error)} action={<Button onClick={() => void detailQuery.refetch()}>重试</Button>} />
                       </div>
@@ -666,7 +577,9 @@ export function TestOrderWorkspacePage() {
                       ) : null}
                     </footer>
                     <Text className="test-order-entry-position" type="secondary">
-                      {selectedVisibleIndex >= 0 ? `第 ${(currentPage - 1) * pageSize + selectedVisibleIndex + 1} / ${entryTotal} 条` : '当前条目不在筛选结果中'}
+                      {selectedGroupedIndex >= 0
+                        ? `本页第 ${selectedGroupedIndex + 1} / ${groupedFlatEntries.length} 条 · 筛选共 ${entryTotal} 条`
+                        : '当前条目不在筛选结果中'}
                     </Text>
                   </section>
                 </>

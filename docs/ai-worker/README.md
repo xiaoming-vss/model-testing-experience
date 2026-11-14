@@ -164,3 +164,5 @@ UI 候选生成接受步骤级 `missingFields` 结构化待补项，明确字段
 需求生成链的新 API 两阶段运行使用快照标记 `apiWorkflowVersion: api_two_stage/1.0`。`openapi_extract` 只调用 `openapi-test-config-extractor` 并在结果校验通过后等待审核；`generate` 读取已选审核版本调用 `api-cases-yaml-generator`。每次只获取当前阶段的 Skill；旧运行保持原先自动串联两个 Skill 的协议。
 
 测试点阶段契约与审查见 [可追溯测试点生成](traceable-test-points.md)。
+
+- [单用例图解任务及质量验收](case-visualization.md)。

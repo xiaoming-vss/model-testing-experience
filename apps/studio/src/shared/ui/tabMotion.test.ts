@@ -1,11 +1,18 @@
 import { waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { APP_MOTION } from './motion'
 import { installTabMotion } from './tabMotion'
 
 afterEach(() => { document.body.innerHTML = ''; vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
+const expectedFrames = [
+  { opacity: 0, transform: `translateY(${APP_MOTION.offset}px)` },
+  { opacity: 1, transform: 'translateY(0)' },
+]
+const expectedOptions = { duration: APP_MOTION.duration, easing: APP_MOTION.easing }
+
 describe('tab motion', () => {
-  it('moves the indicator and animates the corresponding panel in both directions', async () => {
+  it('moves the indicator and animates the corresponding panel', async () => {
     vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: false })))
     document.body.innerHTML = `<div data-tab-motion-scope><div role="tablist" data-tab-motion-scoped>
       <button role="tab" aria-selected="true">A</button><button role="tab" aria-selected="false">B</button>
@@ -20,17 +27,11 @@ describe('tab motion', () => {
     tabs[0].setAttribute('aria-selected', 'false')
     tabs[1].setAttribute('aria-selected', 'true')
     await waitFor(() => expect(animate).toHaveBeenCalledTimes(1))
-    expect(animate).toHaveBeenLastCalledWith(
-      [{ opacity: 0, transform: 'translateX(22px)' }, { opacity: 1, transform: 'translateX(0)' }],
-      { duration: 340, easing: 'cubic-bezier(.22, 1, .36, 1)' },
-    )
+    expect(animate).toHaveBeenLastCalledWith(expectedFrames, expectedOptions)
     tabs[1].setAttribute('aria-selected', 'false')
     tabs[0].setAttribute('aria-selected', 'true')
     await waitFor(() => expect(animate).toHaveBeenCalledTimes(2))
-    expect(animate).toHaveBeenLastCalledWith(
-      [{ opacity: 0, transform: 'translateX(-22px)' }, { opacity: 1, transform: 'translateX(0)' }],
-      { duration: 340, easing: 'cubic-bezier(.22, 1, .36, 1)' },
-    )
+    expect(animate).toHaveBeenLastCalledWith(expectedFrames, expectedOptions)
     stop()
     expect(list.querySelector('.shared-tab-motion-indicator')).toBeNull()
   })

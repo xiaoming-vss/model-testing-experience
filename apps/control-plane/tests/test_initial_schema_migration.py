@@ -21,15 +21,18 @@ from support.initial_schema_migration import (
 from alembic import command
 
 
-def test_single_frozen_initial_revision():
+def test_frozen_baseline_and_additive_revisions():
     script = ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini")))
     revisions = list(script.walk_revisions())
-    assert len(revisions) == 1
-    initial = revisions[0]
-    assert initial.down_revision is None
-    source = Path(initial.path).read_text()
+    baseline = next(revision for revision in revisions if revision.down_revision is None)
+    assert baseline.revision == "20261103_0001"
+    source = Path(baseline.path).read_text()
     assert "testing_agent.models" not in source
     assert "create_all" not in source
+    # The baseline stays frozen; later schema changes are additive revisions.
+    assert all(
+        revision.down_revision for revision in revisions if revision.revision != baseline.revision
+    )
 
 
 def test_empty_database_initialization_and_roundtrip():

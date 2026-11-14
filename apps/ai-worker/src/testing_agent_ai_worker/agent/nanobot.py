@@ -38,20 +38,51 @@ _USAGE_FIELDS = (
 class NanobotAgent:
     """Adapt the Nanobot SDK to the shared agent contract."""
 
-    def __init__(self, sdk: Any) -> None:
+    def __init__(self, sdk: Any, *, no_tools: bool = False) -> None:
         self._sdk = sdk
+        self._no_tools = no_tools
 
     @classmethod
     def from_config(
-        cls, *, config_path: str | None = None, workspace: str | None = None
+        cls, *, config_path: str | None = None, workspace: str | None = None, no_tools: bool = False
     ) -> NanobotAgent:
         from nanobot import Nanobot
 
-        return cls(Nanobot.from_config(config_path=config_path, workspace=workspace))
+        return cls(
+            Nanobot.from_config(config_path=config_path, workspace=workspace), no_tools=no_tools
+        )
 
     async def __aenter__(self) -> NanobotAgent:
+        if self._no_tools:
+            # Prevent lazy MCP connections in SDK.run, not just tool invocation.
+            if not hasattr(self._sdk, "_mcp_provider"):
+                raise RuntimeError("Nanobot SDK MCP provider is unavailable; refusing to run")
+            self._sdk._mcp_provider = None
         await self._sdk.__aenter__()
+        if self._no_tools:
+            # Pinned SDK 0.3.5 has no per-call allowlist. Remove all tools after MCP startup.
+            # Keep this SDK-specific access in the adapter and fail closed on drift.
+            try:
+                registry = self._tool_registry()
+                for name in tuple(registry.tool_names):
+                    registry.unregister(name)
+                if registry.tool_names:
+                    raise RuntimeError("Unable to disable agent tools")
+            except Exception:
+                await self._sdk.__aexit__(None, None, None)
+                raise
         return self
+
+    def _tool_registry(self) -> Any:
+        loop = getattr(self._sdk, "_loop", None)
+        registry = getattr(loop, "tools", None)
+        if (
+            registry is None
+            or not hasattr(registry, "tool_names")
+            or not hasattr(registry, "unregister")
+        ):
+            raise RuntimeError("Nanobot SDK tool registry is unavailable")
+        return registry
 
     async def __aexit__(self, *exc_info: Any) -> bool:
         return bool(await self._sdk.__aexit__(*exc_info))
@@ -59,7 +90,14 @@ class NanobotAgent:
     async def run(
         self, message: str, *, session_key: str, media: list[str] | None = None
     ) -> AgentResult:
-        result = await self._sdk.run(message, session_key=session_key, media=media)
+        result = await self._sdk.run(
+            message,
+            session_key=session_key,
+            media=media,
+            **({"ephemeral": True} if self._no_tools else {}),
+        )
+        if self._no_tools and self._tool_registry().tool_names:
+            raise RuntimeError("Agent tools were registered during a no-tools run")
         reason = result.stop_reason or str(result.metadata.get("finish_reason") or "")
         return AgentResult(
             content=result.content,

@@ -22,7 +22,7 @@
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr);
   gap: 12px;
   align-items: stretch;
 }
@@ -245,15 +245,9 @@
   opacity: 0.5;
 }
 
-.api-collection-workbench-page .api-wb-case-item-main {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-/* 方法徽标与用例名同一行，路径在下一行——设计稿是两行一条。 */
+/* 方法徽标与用例名同一行；路径不再占第二行，完整路径见 title / aria-label。 */
 .api-collection-workbench-page .api-wb-case-item-head {
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -287,20 +281,12 @@
 }
 
 .api-collection-workbench-page .api-wb-case-item-name {
+  flex: 1 1 auto;
+  min-width: 0;
   color: var(--srf-text);
   font-size: 13px;
   font-weight: 600;
   line-height: 18px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.api-collection-workbench-page .api-wb-case-item-path {
-  color: var(--srf-text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 11px;
-  line-height: 16px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

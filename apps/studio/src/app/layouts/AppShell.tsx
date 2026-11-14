@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { AssetLibraryPage } from '../pages/AssetLibraryPage'
 import { RequirementDetailPage } from '../pages/RequirementDetailPage'
 import { ThemeSelect } from '@/shared/components/ThemeSelect'
 import { ActionButton } from '@/shared/components/ActionButton'
@@ -27,6 +28,7 @@ import { RequirementAnalysisTaskDetailPage } from '@/features/ai-testing/pages/R
 import { CodeRiskTaskDetailPage } from '@/features/ai-testing/pages/CodeRiskTaskDetailPage'
 import { BaseServicesPage } from '@/features/base-services/pages/BaseServicesPage'
 import { TestingPage } from '@/features/testing/pages/TestingPage'
+import { InterfaceDetailPage } from '@/features/interface-library/pages/InterfaceDetailPage'
 import { TestOrderWorkspacePage } from '@/features/test-orders/pages/TestOrderWorkspacePage'
 import { BugDetailPage } from '@/features/bugs/pages/BugDetailPage'
 import { BugSubmitPage } from '@/features/bugs/pages/BugSubmitPage'
@@ -58,7 +60,10 @@ export function AppShell() {
   const { activeProjectId, projects, projectsQuery, setActiveProjectId } = useActiveProject()
   const access = useProjectAccess(activeProjectId)
   const bugOnly = isBugOnlyProject(access.project)
-  const contentRef = useNavigationTransition(navigationIndex(location.pathname, location.search, bugOnly))
+  const contentRef = useNavigationTransition(
+    navigationIndex(location.pathname, location.search, bugOnly),
+    location.pathname,
+  )
   const sprintScope = useActiveSprint(access.can('read'))
   const bugScope = useBugScope(activeProjectId, bugOnly)
   const { activeSprintId, sprintsQuery, selectSprint, sprintSelectorOptions } = bugOnly ? bugScope : sprintScope
@@ -209,7 +214,10 @@ export function AppShell() {
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/:projectId/sprints/:sprintId" element={<SprintDetailPage />} />
             <Route path="/testing" element={<TestingPage />} />
-            <Route path="/test-cases" element={<Navigate to="/testing?tab=library" replace />} />
+            <Route path="/asset-library" element={<AssetLibraryPage />} />
+            <Route path="/asset-library/interfaces/new" element={<InterfaceDetailPage />} />
+            <Route path="/asset-library/interfaces/:interfaceId" element={<InterfaceDetailPage />} />
+            <Route path="/test-cases" element={<Navigate to="/asset-library?tab=cases" replace />} />
             <Route path="/test-orders/:orderId" element={<TestOrderWorkspacePage />} />
             <Route path="/requirements/:requirementId" element={<RequirementDetailPage />} />
             <Route path="/bugs/new" element={<BugSubmitPage />} />

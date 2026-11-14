@@ -11,6 +11,7 @@ import httpx
 from testing_agent_ai_worker.agent.paths import resolve_task_workspace
 from testing_agent_ai_worker.skill_names import (
     CASE_RELATIONS_SKILL,
+    CASE_VISUALIZATION_SKILL,
     DETAILED_CASES_SKILL,
     MATERIAL_SKILL,
     REPOSITORY_PROFILE_SKILL,
@@ -30,6 +31,7 @@ FUNCTIONAL_SKILLS = {
     "relation_analysis": CASE_RELATIONS_SKILL,
 }
 TASK_SKILLS = {
+    "test_order_case_visualization": [CASE_VISUALIZATION_SKILL],
     "api_case_generate": ["openapi-test-config-extractor", "api-cases-yaml-generator"],
     "ui_case_generate": [UI_YAML_SKILL],
     "code_risk_analysis": ["code-risk-analysis"],

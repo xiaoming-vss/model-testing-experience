@@ -18,6 +18,7 @@ from testing_agent.core.ldap_directory import LdapDirectory
 from testing_agent.db.session import get_session
 from testing_agent.models.user import User
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+from testing_agent.repositories.api_app import ApiAppRepository
 from testing_agent.repositories.api_assert_rule import ApiAssertRuleRepository
 from testing_agent.repositories.api_case import ApiCaseRepository
 from testing_agent.repositories.api_collection import ApiCollectionRepository
@@ -25,6 +26,7 @@ from testing_agent.repositories.api_collection_run import ApiCollectionRunReposi
 from testing_agent.repositories.api_environment import ApiEnvironmentRepository
 from testing_agent.repositories.api_environment_var import ApiEnvironmentVarRepository
 from testing_agent.repositories.api_extract_rule import ApiExtractRuleRepository
+from testing_agent.repositories.api_interface import ApiInterfaceRepository
 from testing_agent.repositories.auth_runtime import AuthRuntimeRepository
 from testing_agent.repositories.auth_session import AuthSessionRepository
 from testing_agent.repositories.bug import BugRepository
@@ -55,6 +57,7 @@ from testing_agent.services.ai_task_access import GenerationImportContext
 from testing_agent.services.ai_task_commands import GenerationTaskCommands
 from testing_agent.services.ai_task_queries import GenerationQueries
 from testing_agent.services.ai_task_scope import GenerationAccess
+from testing_agent.services.api_app import ApiAppService
 from testing_agent.services.api_assert_rule import ApiAssertRuleService
 from testing_agent.services.api_case import ApiCaseService
 from testing_agent.services.api_collection import ApiCollectionService
@@ -63,6 +66,8 @@ from testing_agent.services.api_environment import ApiEnvironmentService
 from testing_agent.services.api_environment_var import ApiEnvironmentVarService
 from testing_agent.services.api_extract_rule import ApiExtractRuleService
 from testing_agent.services.api_generate_import import ApiCandidateImporter
+from testing_agent.services.api_interface import ApiInterfaceService
+from testing_agent.services.api_interface_import import ApiInterfaceImportService
 from testing_agent.services.auth import AuthService
 from testing_agent.services.auth_mode import AuthModeService
 from testing_agent.services.auth_session import SessionService
@@ -90,6 +95,7 @@ from testing_agent.services.sprint_code_overview import (
 )
 from testing_agent.services.sprint_daily_metrics import SprintDailyMetricsService
 from testing_agent.services.test_order import TestOrderService
+from testing_agent.services.test_order_case_visualization import TestOrderCaseVisualizationService
 from testing_agent.services.test_order_entry import TestOrderEntryService
 from testing_agent.services.test_order_graph import TestOrderGraphService
 from testing_agent.services.ui_generation_source import UiGenerationSourceService
@@ -345,6 +351,35 @@ def get_integration_connection_service(
     return IntegrationConnectionService(
         IntegrationConnectionRepository(session),
         credential_cipher=IntegrationCredentialCipher(settings.integration_key),
+    )
+
+
+def get_api_app_service(
+    session: AsyncSession = Depends(get_session),
+    connections: IntegrationConnectionService = Depends(get_integration_connection_service),
+) -> ApiAppService:
+    return ApiAppService(
+        ApiAppRepository(session),
+        connections,
+        ResourceBindingRepository(session),
+    )
+
+
+def get_api_interface_service(
+    session: AsyncSession = Depends(get_session),
+) -> ApiInterfaceService:
+    return ApiInterfaceService(
+        ApiInterfaceRepository(session),
+        ApiAppRepository(session),
+    )
+
+
+def get_api_interface_import_service(
+    session: AsyncSession = Depends(get_session),
+) -> ApiInterfaceImportService:
+    return ApiInterfaceImportService(
+        ApiInterfaceRepository(session),
+        ApiAppRepository(session),
     )
 
 
@@ -634,4 +669,18 @@ def get_generation_chain(
         imports=imports,
         api_importer=api_importer,
         ui_sources=ui_sources,
+    )
+
+
+def get_case_visualization_service(
+    session: AsyncSession = Depends(get_session),
+) -> TestOrderCaseVisualizationService:
+    from testing_agent.repositories.case_visualization import CaseVisualizationRepository
+    from testing_agent.services.test_order_case_visualization import (
+        TestOrderCaseVisualizationService,
+    )
+
+    return TestOrderCaseVisualizationService(
+        CaseVisualizationRepository(session),
+        build_test_order_service(session),
     )

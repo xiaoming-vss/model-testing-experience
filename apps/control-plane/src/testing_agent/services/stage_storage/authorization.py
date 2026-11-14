@@ -110,7 +110,30 @@ async def authorize_worker_actor(
         raise ErrForbidden()
     if not await session.scalar(select(User.user_id).where(User.user_id == actor)):
         raise ErrForbidden()
-    await require_project_id(session, actor, task.project_id)
+    await require_project_id(
+        session,
+        actor,
+        task.project_id,
+        action="execute" if task.task_type == "test_order_case_visualization" else "read",
+    )
+    if task.task_type == "test_order_case_visualization":
+        from testing_agent.models.case_visualization import TestOrderEntryVisualization
+        from testing_agent.models.test_order_entry import TestOrderEntry
+
+        entry = await session.scalar(
+            select(TestOrderEntry)
+            .join(
+                TestOrderEntryVisualization,
+                TestOrderEntryVisualization.entry_id == TestOrderEntry.entry_id,
+            )
+            .where(
+                TestOrderEntryVisualization.task_id == task.task_id,
+                TestOrderEntry.entry_id == source.get("entryId"),
+                TestOrderEntry.order_id == task.order_id,
+            )
+        )
+        if entry is None:
+            raise ErrForbidden()
     from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
     from testing_agent.services.ai_task_scope import GenerationAccess
 

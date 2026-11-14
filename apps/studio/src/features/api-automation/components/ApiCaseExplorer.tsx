@@ -139,6 +139,8 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
                   className={`api-wb-case-item tone-${tone}${selected ? ' selected' : ''}${draggingCaseId === caseId ? ' dragging' : ''}${canReorder ? ' can-drag' : ''}`}
                   role="button"
                   tabIndex={0}
+                  title={path}
+                  aria-label={`${item.method} ${item.name} ${path}`}
                   aria-current={selected ? 'true' : undefined}
                   draggable={canReorder && !isDraft}
                   onDragStart={(event) => onDragStart(event, caseId)}
@@ -159,13 +161,10 @@ export const ApiCaseExplorer = memo(function ApiCaseExplorer({
                     }
                   }}
                 >
-                  <span className="api-wb-case-item-main">
-                    <span className="api-wb-case-item-head">
-                      <span className="api-wb-case-method">{item.method}</span>
-                      <span className="api-wb-case-item-name">{item.name}</span>
-                      {isDraft ? <span className="api-wb-case-draft">草稿</span> : null}
-                    </span>
-                    <span className="api-wb-case-item-path">{path}</span>
+                  <span className="api-wb-case-item-head">
+                    <span className="api-wb-case-method">{item.method}</span>
+                    <span className="api-wb-case-item-name">{item.name}</span>
+                    {isDraft ? <span className="api-wb-case-draft">草稿</span> : null}
                   </span>
                   <span className="api-wb-case-item-actions">
                     <Popconfirm

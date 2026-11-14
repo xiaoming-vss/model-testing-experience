@@ -48,7 +48,9 @@ class AgentSelectionTests(unittest.TestCase):
                 config_path="task.json", workspace="work", tools=None
             )
             self.assertIs(create_agent(config_path="task.json", workspace="work"), sentinel)
-            nanobot_factory.assert_called_once_with(config_path="task.json", workspace="work")
+            nanobot_factory.assert_called_once_with(
+                config_path="task.json", workspace="work", no_tools=False
+            )
 
     def test_explicit_backend_overrides_plain_config_path(self) -> None:
         sentinel = object()

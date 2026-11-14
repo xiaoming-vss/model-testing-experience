@@ -1230,9 +1230,10 @@ body,
   color: var(--mac-glass-muted) !important;
 }
 
-.app-shell.app-shell-macos .sprint-card-status .ant-tag,
-.app-shell.app-shell-macos .zentao-binding-summary-tag,
-.app-shell.app-shell-macos .ant-tag {
+/* 接口方法签使用接口库自己的 --app-http-method-* 色板，不能继承 mac 玻璃标签的通用 !important 样式。 */
+.app-shell.app-shell-macos .sprint-card-status .ant-tag:not(.if-method),
+.app-shell.app-shell-macos .zentao-binding-summary-tag:not(.if-method),
+.app-shell.app-shell-macos .ant-tag:not(.if-method) {
   border-radius: 999px;
   border-color: var(--app-glass-tag-border) !important;
   background: var(--app-glass-selected) !important;

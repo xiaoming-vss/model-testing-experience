@@ -30,7 +30,7 @@ React 单页应用，提供项目、迭代、需求、功能/API/UI 测试资产
 | `app/layouts/AppShell.tsx` | 登录后的整体框架，业务页面在内部二次分发 |
 | `app/providers/` | Query 与主题 Provider |
 | `app/styles/` | 主题与设计断言测试 |
-| `features/` | 按业务划分：`auth`、`projects`、`requirements`、`test-cases`、`testing`、`ai-testing`、`api-automation`、`ui-automation`、`base-services`、`profile` |
+| `features/` | 按业务划分：`auth`、`projects`、`requirements`、`test-cases`、`interface-library`、`testing`、`ai-testing`、`api-automation`、`ui-automation`、`base-services`、`profile` |
 | `domain/runs/` | API/UI/AI 共用的运行轮询策略与最终报告刷新；仅依赖 shared 和通用库 |
 | `services/api.ts` | 各 feature API 的聚合出口 |
 | `shared/` | `api/request.ts` 请求封装、通用组件、图标、主题 store |
@@ -142,3 +142,5 @@ npm run verify        # type-check + lint + build
 API/UI 运行的实时更新、断线及临时调试结果见 [实时执行](../control-plane/realtime-test-execution.md)。
 
 功能测试点阶段展示可追溯测试点、关联材料、覆盖缺口及独立审查状态；可切换树图，手工编辑名称后审查状态重置为自审。契约见 [AI Worker 文档](../ai-worker/traceable-test-points.md)。
+
+- [单用例图解界面与验证](case-visualization.md)。
