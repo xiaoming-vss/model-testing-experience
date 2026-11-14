@@ -8,4 +8,6 @@ For orchestration changes run `python3 -m unittest discover -s tests -v` and `py
 
 Shared development conventions: [domain docs](docs/agents/domain.md), [issue tracker](docs/agents/issue-tracker.md), [triage labels](docs/agents/triage-labels.md). New issue files live under the repository-root .scratch/ directory.
 
+Design prototypes are disposable working artifacts. Keep them out of app source directories; while options are still being compared keep them under the repository-root .scratch/ directory (ignored by git). Once an option is selected, delete the prototype files instead of archiving or committing them.
+
 For backend development or review in control-plane, ai-worker, api-ui-worker or integration-worker, read and follow the [shared backend rules](docs/agents/backend-development.md) and the target project's linked development rules before editing code or protocols.
