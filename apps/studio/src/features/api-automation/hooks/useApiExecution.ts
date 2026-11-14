@@ -20,8 +20,11 @@ import { message } from '@/shared/utils/feedback'
 import {
   getErrorMessage
 } from '@/utils/format'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState } from 'react'
+import { listItems, listTotal } from '@/shared/api/request'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useMemo, useRef, useState } from 'react'
+
+const RUN_HISTORY_PAGE_SIZE = 20
 
 type Options = {
   collectionId: string
@@ -86,13 +89,26 @@ export function useApiExecution({ collectionId }: Options) {
     },
   })
 
-  const collectionRunHistoryQuery = useQuery({
+  const collectionRunHistoryQuery = useInfiniteQuery({
     queryKey: ['apiCollectionRuns', collectionId],
-    queryFn: () => api.getApiCollectionRuns(collectionId),
+    queryFn: ({ pageParam }) =>
+      api.getApiCollectionRuns(collectionId, { page: pageParam, pageSize: RUN_HISTORY_PAGE_SIZE }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((sum, page) => sum + listItems(page).length, 0)
+      return loaded < listTotal(lastPage) ? allPages.length + 1 : undefined
+    },
     enabled: Boolean(collectionId),
     refetchOnWindowFocus: false,
     refetchInterval: collectionRunHistoryOpen ? RUN_HISTORY_POLL_INTERVAL : false,
   })
+  const collectionRunHistory = useMemo(
+    () => collectionRunHistoryQuery.data?.pages.flatMap((page) => listItems(page)) ?? [],
+    [collectionRunHistoryQuery.data],
+  )
+  const collectionRunHistoryTotal = collectionRunHistoryQuery.data?.pages[0]
+    ? listTotal(collectionRunHistoryQuery.data.pages[0])
+    : 0
 
   const refetchHistory = collectionRunHistoryQuery.refetch
   useEffect(() => {
@@ -122,7 +138,8 @@ export function useApiExecution({ collectionId }: Options) {
 
   const selectedRunSummary = activeCollectionRunQuery.data?.collectionRunId === selectedCollectionRunId
     ? activeCollectionRunQuery.data
-    : collectionRunHistoryQuery.data?.find((run) => run.collectionRunId === selectedCollectionRunId)
+    : collectionRunHistory.find((run) => run.collectionRunId === selectedCollectionRunId)
+      ?? collectionRunReportQuery.data
   useRunReportRefresh({
     queryKey: 'apiCollectionRunReport', runId: selectedCollectionRunId, open: collectionRunReportOpen,
     status: selectedRunSummary?.status, reportStatus: collectionRunReportQuery.data?.status,
@@ -131,16 +148,6 @@ export function useApiExecution({ collectionId }: Options) {
   useEffect(() => {
     const currentRun = activeCollectionRunQuery.data
     if (!currentRun?.collectionRunId) return
-
-    queryClient.setQueryData<ApiCollectionRunSummary[]>(['apiCollectionRuns', collectionId], (current) => {
-      const currentItems = current ?? []
-      const nextItems = [currentRun, ...currentItems.filter((item) => item.collectionRunId !== currentRun.collectionRunId)]
-      return nextItems.sort((left, right) => {
-        const leftTime = new Date(left.startedAt || left.createdAt || left.updatedAt || '').getTime()
-        const rightTime = new Date(right.startedAt || right.createdAt || right.updatedAt || '').getTime()
-        return (Number.isNaN(rightTime) ? 0 : rightTime) - (Number.isNaN(leftTime) ? 0 : leftTime)
-      })
-    })
 
     const previousStatus = previousActiveRunStatusRef.current
     previousActiveRunStatusRef.current = currentRun.status ?? ''
@@ -338,10 +345,8 @@ export function useApiExecution({ collectionId }: Options) {
       previousActiveRunStatusRef.current = summary.status ?? ''
       setActivePollingCollectionRunId(summary.collectionRunId)
       setCollectionRunHistoryOpen(true)
-      queryClient.setQueryData<ApiCollectionRunSummary[]>(['apiCollectionRuns', collectionId], (current) => {
-        const currentItems = current ?? []
-        return [summary, ...currentItems.filter((item) => item.collectionRunId !== summary.collectionRunId)]
-      })
+      queryClient.invalidateQueries({ queryKey: ['apiCollectionRuns', collectionId] })
+      void refetchHistory()
       message.success(isApiRunPollingStatus(summary.status) ? '已开始运行测试' : '已创建运行记录')
     },
     onSettled: (_result, _error, variables) => {
@@ -376,6 +381,8 @@ export function useApiExecution({ collectionId }: Options) {
     previousApiCaseRunStatusRef,
     previousActiveRunStatusRef,
     collectionRunHistoryQuery,
+    collectionRunHistory,
+    collectionRunHistoryTotal,
     activeCollectionRunQuery,
     collectionRunReportQuery,
     runApiCaseMutation,

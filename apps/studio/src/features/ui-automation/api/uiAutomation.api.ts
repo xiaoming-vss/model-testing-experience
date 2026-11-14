@@ -1,4 +1,4 @@
-import { request, type ListResponse } from '@/shared/api/request'
+import { buildQuery, request, type ListResponse } from '@/shared/api/request'
 import type {
   CreateUiTestCasePayload,
   CreateUiTestSuitePayload,
@@ -35,7 +35,10 @@ export const uiAutomationApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  getUiTestSuiteRuns: (suiteId: string) => request<ListResponse<UiTestSuiteRunSummary>>(`/v1/ui-test-suites/${suiteId}/runs`),
+  getUiTestSuiteRuns: (suiteId: string, params: { page?: number; pageSize?: number } = {}) =>
+    request<ListResponse<UiTestSuiteRunSummary>>(
+      `/v1/ui-test-suites/${suiteId}/runs${buildQuery(params)}`,
+    ),
   getUiTestSuiteRun: (suiteRunId: string, signal?: AbortSignal) => request<UiTestSuiteRunSummary>(`/v1/ui-test-suite-runs/${suiteRunId}`, { signal }),
   getUiTestSuiteRunReport: (suiteRunId: string, signal?: AbortSignal) =>
     request<UiTestSuiteRunReport>(

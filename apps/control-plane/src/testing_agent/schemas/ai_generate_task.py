@@ -250,6 +250,33 @@ class AiGenerateTaskResponse(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
+class AiGenerateTaskListItem(BaseModel):
+    """Task list summary; source content stays on the detail endpoint."""
+
+    task_id: str = Field()
+    task_type: str = Field()
+    name: str
+    project_id: str = Field()
+    sprint_id: str = Field()
+    requirement_id: str = Field()
+    creator_user_id: str = Field()
+    source_type: str = Field()
+    instruction: str = ""
+    latest_run_status: str = ""
+    created_at: datetime | str | None = Field(default="")
+    updated_at: datetime | str | None = Field(default="")
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class AiGenerateTaskListResponse(BaseModel):
+    items: list[AiGenerateTaskListItem]
+    total: int = 0
+    status_counts: dict[str, int] = Field(default_factory=dict)
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
 class ImportedTarget(BaseModel):
     target_type: Literal["api_collection", "function_suite", "ui_suite"] = Field()
     target_id: str = Field()

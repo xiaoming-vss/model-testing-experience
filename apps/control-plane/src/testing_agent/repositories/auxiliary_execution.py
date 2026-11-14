@@ -144,6 +144,16 @@ def _ranked_project_attempts(project_id: str, task_type: str):
     )
 
 
+def latest_task_status_subquery(project_id: str, task_type: str):
+    """One latest attempt status per auxiliary task, for list filtering/counts."""
+    ranked = _ranked_project_attempts(project_id, task_type)
+    return (
+        select(ranked.c.task_id, ranked.c.status.label("latest_run_status"))
+        .where(ranked.c.attempt_rank == 1, ranked.c.task_rank == 1)
+        .subquery()
+    )
+
+
 async def latest_rows_for_project(
     session: AsyncSession, project_id: str, task_type: str
 ) -> list[RowMapping]:

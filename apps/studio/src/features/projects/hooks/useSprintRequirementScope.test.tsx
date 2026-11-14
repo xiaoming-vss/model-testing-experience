@@ -21,7 +21,9 @@ it('顶部迭代变化时不沿用旧需求筛选，并查询新迭代', async (
   rerender({ sprintId: 'second' })
   expect(result.current.resolvedSelectedRequirementId).toBeUndefined()
   expect(result.current.resolvedSelectedSprintId).toBe('second')
-  await waitFor(() => expect(requirements).toHaveBeenCalledWith('second'))
+  await waitFor(() =>
+    expect(requirements).toHaveBeenCalledWith('second', { page: 1, pageSize: 100 }),
+  )
   act(() => result.current.selectRequirement('second-requirement'))
   rerender({ sprintId: undefined })
   expect(result.current.resolvedSelectedRequirementId).toBeUndefined()

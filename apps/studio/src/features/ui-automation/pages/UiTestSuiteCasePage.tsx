@@ -28,6 +28,7 @@ import {
   type UiTestCaseRun,
   type UiTestSuiteRunSummary
 } from '@/services/api'
+import { listTotal } from '@/shared/api/request'
 import { uiBuiltinTemplateFunctions } from '@/shared/constants/templateFunctions'
 import { message } from '@/shared/utils/feedback'
 import {
@@ -36,7 +37,7 @@ import {
 } from '@/utils/format'
 import { buildUiTestCaseUpdatePayload } from '@/utils/updatePayload'
 import { CodeOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { InputRef } from 'antd'
 import { Alert, Button, Empty, Form, Input, Modal, Switch } from 'antd'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent } from 'react'
@@ -71,6 +72,8 @@ import '@/shared/styles/surface-tokens.css'
 import '@/features/ui-automation/styles/detail-workbench-v2.css'
 import '@/features/ui-automation/styles/detail-pipeline-v2.css'
 import '@/features/ui-automation/styles/detail-inspector-v2.css'
+
+const RUN_HISTORY_PAGE_SIZE = 20
 
 function UiFlowLoading({ label }: { label: string }) {
   return <div className="ui-wb-pipeline ui-flow-loading" role="status" aria-live="polite">
@@ -263,9 +266,15 @@ export function UiTestSuiteCasePage() {
   }, [selectedRunId, liveUiRunId, queryClient, uiTestCaseRunQuery.error])
 
   // 顶栏的「上次运行」与运行记录条数都要用这份历史，所以它不再等抽屉打开才启用。
-  const suiteRunHistoryQuery = useQuery({
+  const suiteRunHistoryQuery = useInfiniteQuery({
     queryKey: ['uiTestSuiteRuns', suiteId],
-    queryFn: () => api.getUiTestSuiteRuns(suiteId),
+    queryFn: ({ pageParam }) =>
+      api.getUiTestSuiteRuns(suiteId, { page: pageParam, pageSize: RUN_HISTORY_PAGE_SIZE }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((sum, page) => sum + listItems(page).length, 0)
+      return loaded < listTotal(lastPage) ? allPages.length + 1 : undefined
+    },
     enabled: Boolean(suiteId),
     refetchOnWindowFocus: false,
     refetchInterval: suiteRunHistoryOpen ? RUN_HISTORY_POLL_INTERVAL : false,
@@ -304,7 +313,9 @@ export function UiTestSuiteCasePage() {
 
   const polledSuiteRunSummary = activeSuiteRunQuery.data?.suiteRunId === selectedSuiteRunId
     ? activeSuiteRunQuery.data
-    : suiteRunHistoryQuery.data?.find((run) => run.suiteRunId === selectedSuiteRunId)
+    : suiteRunHistoryQuery.data?.pages
+        .flatMap((page) => listItems(page))
+        .find((run) => run.suiteRunId === selectedSuiteRunId)
   useRunReportRefresh({
     queryKey: 'uiTestSuiteRunReport', runId: selectedSuiteRunId, open: suiteRunReportOpen,
     status: polledSuiteRunSummary?.status, reportStatus: suiteRunReportQuery.data?.status,
@@ -597,10 +608,8 @@ export function UiTestSuiteCasePage() {
         return
       }
 
-      queryClient.setQueryData<UiTestSuiteRunSummary[]>(['uiTestSuiteRuns', suiteId], (current) => {
-        const currentItems = current ?? []
-        return [runRecord, ...currentItems.filter((item) => item.suiteRunId !== suiteRunId)]
-      })
+      queryClient.invalidateQueries({ queryKey: ['uiTestSuiteRuns', suiteId] })
+      void refetchSuiteHistory()
 
       setSelectedSuiteRunId(suiteRunId)
       setActivePollingSuiteRunId(suiteRunId)
@@ -717,13 +726,16 @@ export function UiTestSuiteCasePage() {
 
   const suiteRunHistory = useMemo(
     () =>
-      [...listItems(suiteRunHistoryQuery.data)].sort((left, right) => {
+      (suiteRunHistoryQuery.data?.pages.flatMap((page) => listItems(page)) ?? []).sort((left, right) => {
         const leftTime = new Date(left.startedAt || left.createdAt || left.updatedAt || '').getTime()
         const rightTime = new Date(right.startedAt || right.createdAt || right.updatedAt || '').getTime()
         return (Number.isNaN(rightTime) ? 0 : rightTime) - (Number.isNaN(leftTime) ? 0 : leftTime)
       }),
     [suiteRunHistoryQuery.data],
   )
+  const suiteRunHistoryTotal = suiteRunHistoryQuery.data?.pages[0]
+    ? listTotal(suiteRunHistoryQuery.data.pages[0])
+    : 0
   const latestSuiteRun = useMemo(
     () =>
       (activeSuiteRunQuery.data?.suiteRunId === selectedSuiteRunId ? activeSuiteRunQuery.data : undefined) ??
@@ -804,13 +816,9 @@ export function UiTestSuiteCasePage() {
     const currentSuiteRun = activeSuiteRunQuery.data
     if (!currentSuiteRun?.suiteRunId) return
 
-    queryClient.setQueryData<UiTestSuiteRunSummary[]>(['uiTestSuiteRuns', suiteId], (current) => {
-      const currentItems = current ?? []
-      return [currentSuiteRun, ...currentItems.filter((item) => item.suiteRunId !== currentSuiteRun.suiteRunId)]
-    })
-
     if (!isUiRunPollingStatus(currentSuiteRun.status)) {
       setActivePollingSuiteRunId((current) => (current === currentSuiteRun.suiteRunId ? '' : current))
+      queryClient.invalidateQueries({ queryKey: ['uiTestSuiteRuns', suiteId] })
     }
   }, [activeSuiteRunQuery.data, queryClient, suiteId])
 
@@ -1264,7 +1272,7 @@ export function UiTestSuiteCasePage() {
               sprintName={sprintQuery.data?.name ?? sprintId ?? '-'}
               readiness={readiness}
               lastRunText={lastRunText}
-              runHistoryCount={suiteRunHistory.length}
+              runHistoryCount={suiteRunHistoryTotal}
               runningSuite={runSuiteMutation.isPending}
               debugging={debugRunMutation.isPending}
               saving={createCaseMutation.isPending || updateCaseMutation.isPending || reorderCasesMutation.isPending}
@@ -1395,7 +1403,7 @@ export function UiTestSuiteCasePage() {
 
       <UiCaseImportModal caseImportModalOpen={caseImportModalOpen} closeCaseImportModal={closeCaseImportModal} importUiCasesMutation={importUiCasesMutation} handleImportUiCases={handleImportUiCases} caseImportMode={caseImportMode} setCaseImportMode={setCaseImportMode} setImportYamlFile={setImportYamlFile} importYamlText={importYamlText} setImportYamlText={setImportYamlText} />
 
-      <UiSuiteRunHistory suiteRunHistoryOpen={suiteRunHistoryOpen} setSuiteRunHistoryOpen={setSuiteRunHistoryOpen} suiteRunHistoryQuery={suiteRunHistoryQuery} suiteRunHistory={suiteRunHistory} loadingSuiteRunHistoryId={loadingSuiteRunHistoryId} handleOpenSuiteRunHistoryItem={handleOpenSuiteRunHistoryItem} />
+      <UiSuiteRunHistory suiteRunHistoryOpen={suiteRunHistoryOpen} setSuiteRunHistoryOpen={setSuiteRunHistoryOpen} suiteRunHistoryQuery={suiteRunHistoryQuery} suiteRunHistory={suiteRunHistory} suiteRunHistoryTotal={suiteRunHistoryTotal} loadingSuiteRunHistoryId={loadingSuiteRunHistoryId} handleOpenSuiteRunHistoryItem={handleOpenSuiteRunHistoryItem} />
 
       <UiSuiteRunReport canStop={can('execute')} suiteRunReportOpen={suiteRunReportOpen} closeSuiteRunReport={closeSuiteRunReport} suiteRunReportQuery={suiteRunReportQuery} suiteRunReport={suiteRunReport} handleRefreshSuiteRunReport={handleRefreshSuiteRunReport} refreshingSuiteRunReport={refreshingSuiteRunReport} selectedSuiteRunId={selectedSuiteRunId} suiteRunReportView={suiteRunReportView} setSuiteRunReportView={setSuiteRunReportView} orderedSuiteRunItems={orderedSuiteRunItems} selectedSuiteRunSummary={selectedSuiteRunSummary} expandedSuiteRunItemIds={expandedSuiteRunItemIds} toggleSuiteRunItem={toggleSuiteRunItem} />
 

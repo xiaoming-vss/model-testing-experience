@@ -1,6 +1,7 @@
 import { skillsApi } from './skills.api'
 import { buildQuery, request, type ListResponse } from '@/shared/api/request'
 import type {
+  AiTaskListResponse,
   RunHistoryResponse,
   ApiCaseGenerateTask,
   ApiCaseGenerateTaskRun,
@@ -292,8 +293,20 @@ export const aiTestingApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  getCodeRiskTasks: (projectId: string) =>
-    request<ListResponse<CodeRiskTask>>(`/v1/projects/${projectId}/code-risk-analysis-tasks`),
+  getCodeRiskTasks: (
+    projectId: string,
+    params: {
+      page?: number
+      pageSize?: number
+      sprintId?: string
+      requirementId?: string
+      keyword?: string
+      status?: string
+    } = {},
+  ) =>
+    request<AiTaskListResponse<CodeRiskTask>>(
+      `/v1/projects/${projectId}/code-risk-analysis-tasks${buildQuery(params)}`,
+    ),
   getCodeRiskLatestRuns: (projectId: string) =>
     request<ListResponse<CodeRiskTaskRun>>(
       `/v1/projects/${projectId}/code-risk-analysis-tasks/latest-runs`,

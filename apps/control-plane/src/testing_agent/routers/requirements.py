@@ -53,6 +53,7 @@ from testing_agent.schemas.generation_chain import (
 )
 from testing_agent.schemas.requirement import (
     RequirementListItemResponse,
+    RequirementMetadataResponse,
     RequirementOptionResponse,
     RequirementResponse,
 )
@@ -75,7 +76,7 @@ router.post(
 )(create_requirement)
 router.get(
     "/sprints/{sprint_id}/requirements",
-    response_model=ApiResponse[ListResponse[RequirementResponse]],
+    response_model=ApiResponse[ListResponse[RequirementMetadataResponse]],
 )(list_requirements)
 router.get(
     "/requirements/{requirement_id}",

@@ -8,21 +8,26 @@ import {
   formatTime,
   getErrorMessage
 } from '@/utils/format'
-import type { UseQueryResult } from '@tanstack/react-query'
-import { Alert, Empty, Modal, Tag } from 'antd'
+import type { InfiniteData, UseInfiniteQueryResult } from '@tanstack/react-query'
+import { Alert, Button, Empty, Modal, Tag } from 'antd'
 
 import type { ListResponse } from '@/shared/api/request'
 
 type Props = {
   suiteRunHistoryOpen: boolean
   setSuiteRunHistoryOpen: React.Dispatch<React.SetStateAction<boolean>>
-  suiteRunHistoryQuery: UseQueryResult<ListResponse<UiTestSuiteRunSummary>, Error>
+  suiteRunHistoryQuery: UseInfiniteQueryResult<
+    InfiniteData<ListResponse<UiTestSuiteRunSummary>>,
+    Error
+  >
   suiteRunHistory: UiTestSuiteRunSummary[]
+  suiteRunHistoryTotal: number
   loadingSuiteRunHistoryId: string
   handleOpenSuiteRunHistoryItem: (runSummary: UiTestSuiteRunSummary) => void
 }
 
-export function UiSuiteRunHistory({ suiteRunHistoryOpen, setSuiteRunHistoryOpen, suiteRunHistoryQuery, suiteRunHistory, loadingSuiteRunHistoryId, handleOpenSuiteRunHistoryItem }: Props) {
+export function UiSuiteRunHistory({ suiteRunHistoryOpen, setSuiteRunHistoryOpen, suiteRunHistoryQuery, suiteRunHistory, suiteRunHistoryTotal, loadingSuiteRunHistoryId, handleOpenSuiteRunHistoryItem }: Props) {
+  const remainingCount = Math.max(0, suiteRunHistoryTotal - suiteRunHistory.length)
   return (
     <Modal
       mask={{ closable: false }}
@@ -78,6 +83,17 @@ export function UiSuiteRunHistory({ suiteRunHistoryOpen, setSuiteRunHistoryOpen,
                 </button>
               )
             })}
+            {remainingCount > 0 ? (
+              <div className="api-collection-run-history-more">
+                <Button
+                  size="small"
+                  loading={suiteRunHistoryQuery.isFetchingNextPage}
+                  onClick={() => void suiteRunHistoryQuery.fetchNextPage()}
+                >
+                  显示更多（还剩 {remainingCount} 条）
+                </Button>
+              </div>
+            ) : null}
           </div>
         )}
       </div>

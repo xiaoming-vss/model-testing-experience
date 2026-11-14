@@ -1,4 +1,4 @@
-import { request, type ListResponse } from '@/shared/api/request'
+import { buildQuery, request, type ListResponse } from '@/shared/api/request'
 import type {
   ApiAssertRule,
   ApiCase,
@@ -144,8 +144,10 @@ export const apiAutomationApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  getApiCollectionRuns: (collectionId: string) =>
-    request<ListResponse<ApiCollectionRunSummary>>(`/v1/api-collections/${collectionId}/runs`),
+  getApiCollectionRuns: (collectionId: string, params: { page?: number; pageSize?: number } = {}) =>
+    request<ListResponse<ApiCollectionRunSummary>>(
+      `/v1/api-collections/${collectionId}/runs${buildQuery(params)}`,
+    ),
   getApiCollectionRun: (collectionRunId: string, signal?: AbortSignal) =>
     request<ApiCollectionRunSummary>(`/v1/api-collection-runs/${collectionRunId}`, { signal }),
   getApiCollectionRunReport: (collectionRunId: string, signal?: AbortSignal) =>

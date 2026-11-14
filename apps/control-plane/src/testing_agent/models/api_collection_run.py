@@ -12,7 +12,10 @@ from testing_agent.db.base import Base, CreatedAt, IdPk, UpdatedAt
 
 class ApiCollectionRun(Base):
     __tablename__ = "api_collection_runs"
-    __table_args__ = {"comment": "API 集合单次运行及结果汇总"}
+    __table_args__ = (
+        Index("idx_api_collection_run_latest", "collection_id", "created_at", "id"),
+        {"comment": "API 集合单次运行及结果汇总"},
+    )
     id: Mapped[IdPk] = mapped_column(comment="数据库内部主键")
     collection_run_id: Mapped[str] = mapped_column(
         String(64), unique=True, nullable=False, comment="API 集合运行业务标识"

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import Depends
+from fastapi import Depends, Query
 
 from testing_agent.api.deps import (
     get_api_collection_run_service,
@@ -22,10 +22,12 @@ async def run_api_collection(
 
 async def list_api_collection_runs(
     collection_id: str,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100, alias="pageSize"),
     user_id: str = Depends(get_current_user_id),
     service: ApiCollectionRunService = Depends(get_api_collection_run_service),
 ):
-    return success_payload(await service.list(user_id, collection_id))
+    return success_payload(await service.list(user_id, collection_id, page, page_size))
 
 
 async def get_api_collection_run(

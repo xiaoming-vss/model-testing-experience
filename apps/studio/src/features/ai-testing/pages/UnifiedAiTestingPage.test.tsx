@@ -85,11 +85,13 @@ describe('代码风险分析列表', () => {
     const user = userEvent.setup()
     renderPage()
     const endpoint = '/v1/projects/project-1/code-risk-analysis-tasks'
-    await waitFor(() => expect(requests.filter(path => path === endpoint)).toHaveLength(1))
+    const listRequests = () => requests.filter(path => path === endpoint)
+    await waitFor(() => expect(listRequests().length).toBeGreaterThan(0))
     const refreshButton = screen.getByRole('button', { name: '刷新当前任务列表' })
     await waitFor(() => expect(refreshButton).not.toHaveClass('ant-btn-loading'))
+    const beforeRefresh = listRequests().length
     await user.click(refreshButton)
-    await waitFor(() => expect(requests.filter(path => path === endpoint)).toHaveLength(2))
+    await waitFor(() => expect(listRequests()).toHaveLength(beforeRefresh + 1))
     expect(requests.some(path => /case-generate-tasks|requirement-analysis-tasks/.test(path))).toBe(false)
   })
 
@@ -147,23 +149,20 @@ describe('代码风险分析列表', () => {
   })
 
   it('状态筛选按最新运行状态过滤，并给出各档计数', async () => {
+    const allTasks = [
+      { taskId: 'api-success', name: '成功的任务', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'openapi', instruction: '', latestRunStatus: 'success' },
+      { taskId: 'api-review', name: '待审核的任务', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'openapi', instruction: '', latestRunStatus: 'waiting_review' },
+    ]
     installFetchHandler((url) => {
       if (url.pathname === '/v1/projects/project-1/code-risk-analysis-tasks') {
+        const status = url.searchParams.get('status')
+        const items = status === 'waiting_review'
+          ? allTasks.filter(task => task.latestRunStatus === status)
+          : allTasks
         return jsonResponse({
-          items: [
-            { taskId: 'api-success', name: '成功的任务', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'openapi', sourceContent: '{}', instruction: '' },
-            { taskId: 'api-review', name: '待审核的任务', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'openapi', sourceContent: '{}', instruction: '' },
-          ],
-          total: 2,
-        })
-      }
-      if (url.pathname === '/v1/projects/project-1/code-risk-analysis-tasks/latest-runs') {
-        return jsonResponse({
-          items: [
-            { runId: 'run-1', taskId: 'api-success', status: 'success', createdAt: '2026-08-01T03:00:00.000Z' },
-            { runId: 'run-2', taskId: 'api-review', status: 'waiting_review', createdAt: '2026-08-01T03:00:00.000Z' },
-          ],
-          total: 2,
+          items,
+          total: items.length,
+          statusCounts: { success: 1, waiting_review: 1 },
         })
       }
     })
@@ -171,7 +170,6 @@ describe('代码风险分析列表', () => {
 
     renderPage()
 
-    // 计数来自「本类型全部任务的运行记录」，不是当前页
     expect(await screen.findByRole('button', { name: /全部 \(2\)/ })).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: /成功 \(1\)/ })).toBeInTheDocument()
     const reviewChip = await screen.findByRole('button', { name: /待审核 \(1\)/ })
@@ -179,20 +177,22 @@ describe('代码风险分析列表', () => {
 
     await user.click(reviewChip)
 
+    await waitFor(() => expect(screen.queryByText('成功的任务')).not.toBeInTheDocument())
     expect(screen.getByText('待审核的任务')).toBeInTheDocument()
-    expect(screen.queryByText('成功的任务')).not.toBeInTheDocument()
   })
 
   it('关键词搜索按任务名称与所属需求过滤', async () => {
+    const allTasks = [
+      { taskId: 'api-task-1', name: '登录接口用例', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'openapi', instruction: '' },
+      { taskId: 'api-task-2', name: '订单接口用例', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'openapi', instruction: '' },
+    ]
     installFetchHandler((url) => {
       if (url.pathname === '/v1/projects/project-1/code-risk-analysis-tasks') {
-        return jsonResponse({
-          items: [
-            { taskId: 'api-task-1', name: '登录接口用例', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'openapi', sourceContent: '{}', instruction: '' },
-            { taskId: 'api-task-2', name: '订单接口用例', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'openapi', sourceContent: '{}', instruction: '' },
-          ],
-          total: 2,
-        })
+        const keyword = url.searchParams.get('keyword') ?? ''
+        const items = keyword
+          ? allTasks.filter(task => task.name.includes(keyword))
+          : allTasks
+        return jsonResponse({ items, total: items.length, statusCounts: {} })
       }
     })
     const user = userEvent.setup()

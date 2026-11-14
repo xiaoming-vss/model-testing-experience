@@ -31,7 +31,8 @@ export const requirementsApi = {
     request<ListResponse<RequirementOption>>(`/v1/projects/${projectId}/requirements/options`),
   getProjectRequirements: (projectId: string, params: { page: number; pageSize: number; sprintId?: string }) =>
     request<ListResponse<RequirementListItem>>(`/v1/projects/${projectId}/requirements${buildQuery(params)}`),
-  getRequirements: (sprintId: string) => request<ListResponse<Requirement>>(`/v1/sprints/${sprintId}/requirements`),
+  getRequirements: (sprintId: string, params: { page?: number; pageSize?: number } = {}) =>
+    request<ListResponse<Requirement>>(`/v1/sprints/${sprintId}/requirements${buildQuery(params)}`),
   createRequirement: async (sprintId: string, body: RequirementCreatePayload) => {
     const capabilities = await storageCapabilities()
     if (!capabilities.enabled) throw new Error('S3 文件存储未启用，请联系管理员配置')

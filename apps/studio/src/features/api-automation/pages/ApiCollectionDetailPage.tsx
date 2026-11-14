@@ -18,7 +18,6 @@ import { ProjectAccessScope } from '@/features/projects/components/ProjectAccess
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import {
   api,
-  listItems,
   type ApiCase,
   type ApiCollectionRunSummary
 } from '@/services/api'
@@ -116,7 +115,7 @@ export function ApiCollectionDetailPage() {
   const cases = casesQuery.data ?? EMPTY_API_CASES
   const { assertRuleModalOpen, setAssertRuleModalOpen, extractRuleModalOpen, setExtractRuleModalOpen, editingAssertRule, setEditingAssertRule, editingExtractRule, setEditingExtractRule, assertRuleForm, extractRuleForm, watchedAssertSource, watchedAssertComparator, watchedExtractSource, saveAssertRuleMutation, deleteAssertRuleMutation, toggleAssertRuleMutation, saveExtractRuleMutation, deleteExtractRuleMutation, toggleExtractRuleMutation, openCreateAssertRule, openEditAssertRule, openCreateExtractRule, openEditExtractRule, assertRulesQuery, extractRulesQuery, assertRules, extractRules } = useApiRuleEditing({ activeCaseId })
 
-  const { runResult, setRunResult, setActiveApiCaseRunId, runResultView, setRunResultView, collectionRunReportOpen, setCollectionRunReportOpen, collectionRunHistoryOpen, setCollectionRunHistoryOpen, selectedCollectionRunId, setSelectedCollectionRunId, setActivePollingCollectionRunId, loadingCollectionRunHistoryId, setLoadingCollectionRunHistoryId, refreshingCollectionRunReport, setRefreshingCollectionRunReport, collectionRunReportView, setCollectionRunReportView, expandedCollectionRunItemIds, setExpandedCollectionRunItemIds, collectionRunItemViews, setCollectionRunItemViews, previousApiCaseRunStatusRef, previousActiveRunStatusRef, collectionRunHistoryQuery, activeCollectionRunQuery, collectionRunReportQuery, runApiCaseMutation, runApiCollectionMutation } = useApiExecution({ collectionId })
+  const { runResult, setRunResult, setActiveApiCaseRunId, runResultView, setRunResultView, collectionRunReportOpen, setCollectionRunReportOpen, collectionRunHistoryOpen, setCollectionRunHistoryOpen, selectedCollectionRunId, setSelectedCollectionRunId, setActivePollingCollectionRunId, loadingCollectionRunHistoryId, setLoadingCollectionRunHistoryId, refreshingCollectionRunReport, setRefreshingCollectionRunReport, collectionRunReportView, setCollectionRunReportView, expandedCollectionRunItemIds, setExpandedCollectionRunItemIds, collectionRunItemViews, setCollectionRunItemViews, previousApiCaseRunStatusRef, previousActiveRunStatusRef, collectionRunHistoryQuery, collectionRunHistory, collectionRunHistoryTotal, activeCollectionRunQuery, collectionRunReportQuery, runApiCaseMutation, runApiCollectionMutation } = useApiExecution({ collectionId })
 
   const isSelectedCaseReady = isCreatingCase || (Boolean(activeCaseId) && (editingCase ? getCaseId(editingCase) === activeCaseId : false))
   const filteredEnvironmentVars = useMemo(() => {
@@ -779,15 +778,6 @@ export function ApiCollectionDetailPage() {
     switchDefaultEnvironmentMutation.mutate(nextEnvironmentId)
   }
 
-  const collectionRunHistory = useMemo(
-    () =>
-      [...listItems(collectionRunHistoryQuery.data)].sort((left, right) => {
-        const leftTime = new Date(left.startedAt || left.createdAt || left.updatedAt || '').getTime()
-        const rightTime = new Date(right.startedAt || right.createdAt || right.updatedAt || '').getTime()
-        return (Number.isNaN(rightTime) ? 0 : rightTime) - (Number.isNaN(leftTime) ? 0 : leftTime)
-      }),
-    [collectionRunHistoryQuery.data],
-  )
   const selectedCollectionRunSummary =
     (selectedCollectionRunId && activeCollectionRunQuery.data?.collectionRunId === selectedCollectionRunId ? activeCollectionRunQuery.data : undefined) ??
     collectionRunHistory.find((item) => item.collectionRunId === selectedCollectionRunId)
@@ -961,7 +951,7 @@ export function ApiCollectionDetailPage() {
             sprintName={sprintQuery.data?.name ?? sprintId ?? '-'}
             updatedAt={collectionQuery.data ? formatTime(pickUpdatedAt(collectionQuery.data)) : '-'}
             environmentBaseUrl={selectedEnvironment?.baseUrl ?? ''}
-            runHistoryCount={collectionRunHistory.length}
+            runHistoryCount={collectionRunHistoryTotal}
             runningCollection={runApiCollectionMutation.isPending}
             runDisabled={!resolvedEnvironmentId || cases.length === 0}
             onBack={() => goBackOrFallback(navigate, '/testing?tab=api')}
@@ -1029,7 +1019,7 @@ export function ApiCollectionDetailPage() {
 
       <ApiCaseImportModal caseImportModalOpen={caseImportModalOpen} closeCaseImportModal={closeCaseImportModal} importApiCasesMutation={importApiCasesMutation} handleImportApiCases={handleImportApiCases} caseImportMode={caseImportMode} setCaseImportMode={setCaseImportMode} setImportYamlFile={setImportYamlFile} importYamlText={importYamlText} setImportYamlText={setImportYamlText} />
 
-      <ApiCollectionRunHistory collectionRunHistoryOpen={collectionRunHistoryOpen} setCollectionRunHistoryOpen={setCollectionRunHistoryOpen} collectionRunHistoryQuery={collectionRunHistoryQuery} collectionRunHistory={collectionRunHistory} loadingCollectionRunHistoryId={loadingCollectionRunHistoryId} environments={environments} handleOpenCollectionRunHistoryItem={handleOpenCollectionRunHistoryItem} />
+      <ApiCollectionRunHistory collectionRunHistoryOpen={collectionRunHistoryOpen} setCollectionRunHistoryOpen={setCollectionRunHistoryOpen} collectionRunHistoryQuery={collectionRunHistoryQuery} collectionRunHistory={collectionRunHistory} collectionRunHistoryTotal={collectionRunHistoryTotal} loadingCollectionRunHistoryId={loadingCollectionRunHistoryId} environments={environments} handleOpenCollectionRunHistoryItem={handleOpenCollectionRunHistoryItem} />
 
       <ApiCollectionRunReportModal canStop={can('execute')} collectionRunReportOpen={collectionRunReportOpen} setCollectionRunReportOpen={setCollectionRunReportOpen} setSelectedCollectionRunId={setSelectedCollectionRunId} collectionRunReportQuery={collectionRunReportQuery} collectionRunReport={collectionRunReport} environments={environments} handleExportCollectionRunReportHtml={handleExportCollectionRunReportHtml} handleRefreshCollectionRunReport={handleRefreshCollectionRunReport} refreshingCollectionRunReport={refreshingCollectionRunReport} selectedCollectionRunId={selectedCollectionRunId} collectionRunReportView={collectionRunReportView} setCollectionRunReportView={setCollectionRunReportView} orderedCollectionRunItems={orderedCollectionRunItems} expandedCollectionRunItemIds={expandedCollectionRunItemIds} collectionRunItemViews={collectionRunItemViews} toggleCollectionRunItem={toggleCollectionRunItem} handleCollectionRunItemViewChange={handleCollectionRunItemViewChange} selectedCollectionRunSummary={selectedCollectionRunSummary} />
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import load_only
 
 from testing_agent.models.api_case import ApiCase
@@ -76,10 +76,30 @@ class ApiCollectionRunRepository(ApiRunScopeRepositoryMixin, BaseRepository):
                 await self.session.scalars(
                     select(ApiCollectionRun)
                     .where(ApiCollectionRun.collection_id == collection_id)
-                    .order_by(ApiCollectionRun.created_at.desc())
+                    .order_by(ApiCollectionRun.created_at.desc(), ApiCollectionRun.id.desc())
                 )
             ).all()
         )
+
+    async def page_runs(
+        self, collection_id: str, page: int, page_size: int
+    ) -> tuple[list[ApiCollectionRun], int]:
+        criteria = ApiCollectionRun.collection_id == collection_id
+        total = await self.session.scalar(
+            select(func.count()).select_from(ApiCollectionRun).where(criteria)
+        )
+        rows = list(
+            (
+                await self.session.scalars(
+                    select(ApiCollectionRun)
+                    .where(criteria)
+                    .order_by(ApiCollectionRun.created_at.desc(), ApiCollectionRun.id.desc())
+                    .offset((page - 1) * page_size)
+                    .limit(page_size)
+                )
+            ).all()
+        )
+        return rows, total or 0
 
     async def get_run(self, collection_run_id: str) -> ApiCollectionRun | None:
         return await self.session.scalar(

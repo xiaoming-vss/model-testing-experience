@@ -19,10 +19,11 @@ from testing_agent.handlers.requirement_analysis_run import (
 )
 from testing_agent.schemas.ai_generate_task import (
     AiGenerateRunHistoryResponse,
+    AiGenerateTaskListResponse,
     AiGenerateTaskResponse,
     AiGenerateTaskRunResponse,
 )
-from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
+from testing_agent.schemas.common import ApiResponse, EmptyData
 
 router = APIRouter()
 
@@ -32,7 +33,7 @@ router.post(
 )(create_requirement_analysis_task)
 router.get(
     "/projects/{project_id}/requirement-analysis-tasks",
-    response_model=ApiResponse[ListResponse[AiGenerateTaskResponse]],
+    response_model=ApiResponse[AiGenerateTaskListResponse],
 )(list_requirement_analysis_tasks)
 router.get(
     "/requirement-analysis-tasks/{task_id}",

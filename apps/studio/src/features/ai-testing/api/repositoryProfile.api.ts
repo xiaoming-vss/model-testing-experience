@@ -10,9 +10,12 @@ import type {
 
 /** Manual repository profile runs are requirement-scoped; they never enter the generation chain. */
 export const repositoryProfileApi = {
-  getRepositoryProfileTasks: (projectId: string) =>
+  getRepositoryProfileTasks: (
+    projectId: string,
+    params: { page?: number; pageSize?: number; requirementId?: string; keyword?: string } = {},
+  ) =>
     request<ListResponse<RepositoryProfileTask>>(
-      `/v1/projects/${projectId}/repository-profile-tasks`,
+      `/v1/projects/${projectId}/repository-profile-tasks${buildQuery(params)}`,
     ),
   createRepositoryProfileTask: (
     projectId: string,

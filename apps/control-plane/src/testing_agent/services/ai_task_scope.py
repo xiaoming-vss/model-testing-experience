@@ -26,12 +26,24 @@ class SprintScope(Protocol):
     def project_id(self) -> str: ...
 
 
+class OrderScope(Protocol):
+    @property
+    def project_id(self) -> str: ...
+
+    @property
+    def sprint_id(self) -> str: ...
+
+
 class TaskScope(RequirementScope, SprintScope, Protocol):
     @property
     def requirement_id(self) -> str: ...
 
 
-ScopeResources = tuple[Mapping[str, RequirementScope], Mapping[str, SprintScope]]
+ScopeResources = tuple[
+    Mapping[str, RequirementScope],
+    Mapping[str, SprintScope],
+    Mapping[str, OrderScope],
+]
 
 
 class GenerationAccess:
@@ -117,7 +129,14 @@ class GenerationAccess:
                 raise ErrBadRequest()
         order_id = getattr(task, "order_id", "") or ""
         if order_id:
-            order = await self.repository.get_test_order(order_id)
+            # Older callers and test doubles may still pass a two-item scope tuple;
+            # fall back to the single-row lookup only in that case.
+            orders = resources[2] if resources is not None and len(resources) > 2 else None
+            order = (
+                orders.get(order_id)
+                if orders is not None
+                else await self.repository.get_test_order(order_id)
+            )
             if order is None or order.project_id != task.project_id or order.sprint_id != sprint_id:
                 raise ErrNotFound()
 

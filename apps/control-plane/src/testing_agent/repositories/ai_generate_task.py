@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.api_assert_rule import ApiAssertRule
@@ -19,6 +19,7 @@ from testing_agent.models.test_order import TestOrder
 from testing_agent.models.ui_test_case import UiTestCase
 from testing_agent.models.ui_test_case_run import UiTestCaseRun
 from testing_agent.models.ui_test_suite import UiTestSuite
+from testing_agent.repositories.auxiliary_execution import latest_task_status_subquery
 from testing_agent.repositories.base import ResourceRepository
 
 
@@ -159,7 +160,7 @@ class AiGenerateTaskRepository(ResourceRepository):
         )
 
     async def task_scope_resources(self, tasks):
-        """Load scope references in two queries instead of querying each list item."""
+        """Load scope references in batches instead of querying each list item."""
         requirement_ids = {task.requirement_id for task in tasks if task.requirement_id}
         requirements = (
             {
@@ -187,7 +188,23 @@ class AiGenerateTaskRepository(ResourceRepository):
             if sprint_ids
             else {}
         )
-        return requirements, sprints
+        # ``order_id`` is only present on test-order anchored tasks; other callers
+        # pass lightweight namespaces without that attribute.
+        order_ids = {getattr(task, "order_id", "") or "" for task in tasks}
+        order_ids.discard("")
+        orders = (
+            {
+                row.order_id: row
+                for row in await self.session.execute(
+                    select(TestOrder.order_id, TestOrder.project_id, TestOrder.sprint_id).where(
+                        TestOrder.order_id.in_(order_ids)
+                    )
+                )
+            }
+            if order_ids
+            else {}
+        )
+        return requirements, sprints, orders
 
     async def list_tasks(self, project_id: str, task_type: str) -> list[AiGenerateTask]:
         return list(
@@ -202,6 +219,139 @@ class AiGenerateTaskRepository(ResourceRepository):
                 )
             ).all()
         )
+
+    @staticmethod
+    def _keyword_pattern(keyword: str) -> str:
+        escaped = keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        return f"%{escaped}%"
+
+    def _task_conditions(
+        self,
+        project_id: str,
+        task_type: str,
+        *,
+        sprint_id: str,
+        requirement_id: str,
+        keyword: str,
+    ):
+        conditions = [
+            AiGenerateTask.project_id == project_id,
+            AiGenerateTask.task_type == task_type,
+        ]
+        if sprint_id:
+            conditions.append(AiGenerateTask.sprint_id == sprint_id)
+        if requirement_id:
+            conditions.append(AiGenerateTask.requirement_id == requirement_id)
+        joins = []
+        keyword = keyword.strip()
+        if keyword:
+            pattern = self._keyword_pattern(keyword)
+            joins = [
+                (Sprint, Sprint.sprint_id == AiGenerateTask.sprint_id),
+                (Requirement, Requirement.requirement_id == AiGenerateTask.requirement_id),
+            ]
+            conditions.append(
+                or_(
+                    AiGenerateTask.name.like(pattern, escape="\\"),
+                    Sprint.name.like(pattern, escape="\\"),
+                    Requirement.name.like(pattern, escape="\\"),
+                )
+            )
+        return conditions, joins
+
+    @staticmethod
+    def _apply_joins(statement, joins):
+        for target, onclause in joins:
+            statement = statement.outerjoin(target, onclause)
+        return statement
+
+    async def count_tasks(
+        self,
+        project_id: str,
+        task_type: str,
+        *,
+        sprint_id: str = "",
+        requirement_id: str = "",
+        keyword: str = "",
+        status_values: tuple[str, ...] | None = None,
+    ) -> int:
+        conditions, joins = self._task_conditions(
+            project_id,
+            task_type,
+            sprint_id=sprint_id,
+            requirement_id=requirement_id,
+            keyword=keyword,
+        )
+        statement = select(func.count(AiGenerateTask.id)).select_from(AiGenerateTask)
+        statement = self._apply_joins(statement, joins)
+        if status_values is not None:
+            latest = latest_task_status_subquery(project_id, task_type)
+            statement = statement.outerjoin(
+                latest, latest.c.task_id == AiGenerateTask.task_id
+            ).where(latest.c.latest_run_status.in_(status_values))
+        statement = statement.where(*conditions)
+        return int(await self.session.scalar(statement) or 0)
+
+    async def list_tasks_page(
+        self,
+        project_id: str,
+        task_type: str,
+        *,
+        sprint_id: str = "",
+        requirement_id: str = "",
+        keyword: str = "",
+        status_values: tuple[str, ...] | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> list[tuple[AiGenerateTask, str]]:
+        conditions, joins = self._task_conditions(
+            project_id,
+            task_type,
+            sprint_id=sprint_id,
+            requirement_id=requirement_id,
+            keyword=keyword,
+        )
+        latest = latest_task_status_subquery(project_id, task_type)
+        statement = select(AiGenerateTask, latest.c.latest_run_status).select_from(AiGenerateTask)
+        statement = statement.outerjoin(latest, latest.c.task_id == AiGenerateTask.task_id)
+        statement = self._apply_joins(statement, joins)
+        statement = statement.where(*conditions)
+        if status_values is not None:
+            statement = statement.where(latest.c.latest_run_status.in_(status_values))
+        statement = (
+            statement.order_by(AiGenerateTask.created_at.desc(), AiGenerateTask.id.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        rows = (await self.session.execute(statement)).all()
+        return [(row[0], row[1] or "") for row in rows]
+
+    async def task_status_counts(
+        self,
+        project_id: str,
+        task_type: str,
+        *,
+        sprint_id: str = "",
+        requirement_id: str = "",
+        keyword: str = "",
+    ) -> dict[str, int]:
+        conditions, joins = self._task_conditions(
+            project_id,
+            task_type,
+            sprint_id=sprint_id,
+            requirement_id=requirement_id,
+            keyword=keyword,
+        )
+        latest = latest_task_status_subquery(project_id, task_type)
+        statement = (
+            select(latest.c.latest_run_status, func.count(AiGenerateTask.id))
+            .select_from(AiGenerateTask)
+            .outerjoin(latest, latest.c.task_id == AiGenerateTask.task_id)
+        )
+        statement = self._apply_joins(statement, joins)
+        statement = statement.where(*conditions).group_by(latest.c.latest_run_status)
+        rows = (await self.session.execute(statement)).all()
+        return {("" if status is None else str(status)): int(count) for status, count in rows}
 
     async def get_active_task_by_project_sprint_type(
         self, project_id: str, sprint_id: str, task_type: str

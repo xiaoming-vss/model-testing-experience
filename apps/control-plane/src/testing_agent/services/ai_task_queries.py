@@ -13,9 +13,18 @@ from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.services.ai_task_output import (
     dump_run,
     dump_task,
+    dump_task_summary,
 )
 from testing_agent.services.ai_task_scope import GenerationAccess
 from testing_agent.services.common import list_payload
+
+# The Studio's AI task list uses these buckets; raw statuses stay in statusCounts.
+_CODE_RISK_STATUS_BUCKETS: dict[str, tuple[str, ...]] = {
+    "in_progress": ("pending", "queued", "claimed", "running"),
+    "success": ("success",),
+    "waiting_review": ("waiting_review",),
+    "failed": ("failed", "error"),
+}
 
 
 class GenerationQueries:
@@ -29,16 +38,68 @@ class GenerationQueries:
         self.repository = repository
         self.access = access
 
-    async def list(self, kind: str, project_id: str, user_id: str) -> dict[str, Any]:
+    async def list(
+        self,
+        kind: str,
+        project_id: str,
+        user_id: str,
+        *,
+        page: int = 1,
+        page_size: int = 20,
+        sprint_id: str = "",
+        requirement_id: str = "",
+        keyword: str = "",
+        status: str = "",
+    ) -> dict[str, Any]:
+        if page < 1 or not 1 <= page_size <= 100:
+            raise ErrBadRequest()
+        status = status.strip()
+        if status and kind != "code_risk_analysis":
+            raise ErrBadRequest()
+        status_values = _CODE_RISK_STATUS_BUCKETS.get(status) if status else None
+        if status and status_values is None:
+            raise ErrBadRequest()
+
         await self.access.ensure_project_access(user_id, project_id, action="read")
-        rows = await self.repository.list_tasks(project_id, task_type_for(kind))
+        task_type = task_type_for(kind)
+        total = await self.repository.count_tasks(
+            project_id,
+            task_type,
+            sprint_id=sprint_id,
+            requirement_id=requirement_id,
+            keyword=keyword,
+            status_values=status_values,
+        )
+        rows = await self.repository.list_tasks_page(
+            project_id,
+            task_type,
+            sprint_id=sprint_id,
+            requirement_id=requirement_id,
+            keyword=keyword,
+            status_values=status_values,
+            page=page,
+            page_size=page_size,
+        )
         scope_loader = getattr(self.repository, "task_scope_resources", None)
-        scopes = await scope_loader(rows) if scope_loader is not None else None
+        scopes = (
+            await scope_loader([task for task, _ in rows]) if scope_loader is not None else None
+        )
         payloads = []
-        for row in rows:
-            await self.access.validate_task_scope(row, scopes)
-            payloads.append(dump_task(row))
-        return list_payload(payloads)
+        for task, latest_run_status in rows:
+            await self.access.validate_task_scope(task, scopes)
+            payloads.append(dump_task_summary(task, latest_run_status))
+        status_counts = (
+            await self.repository.task_status_counts(
+                project_id,
+                task_type,
+                sprint_id=sprint_id,
+                requirement_id=requirement_id,
+                keyword=keyword,
+            )
+            if kind == "code_risk_analysis"
+            else {}
+        )
+        return {"items": payloads, "total": total, "statusCounts": status_counts}
 
     async def get(self, kind: str, task_id: str, user_id: str) -> dict:
         task = await self.access.owned_task(user_id, task_id, kind, action="read")

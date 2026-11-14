@@ -23,10 +23,11 @@ from testing_agent.handlers.api_case_generate_task import (
 from testing_agent.schemas.ai_generate_task import (
     AiGenerateRunHistoryResponse,
     AiGenerateTaskImportResponse,
+    AiGenerateTaskListResponse,
     AiGenerateTaskResponse,
     AiGenerateTaskRunResponse,
 )
-from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse
+from testing_agent.schemas.common import ApiResponse, EmptyData
 
 router = APIRouter()
 
@@ -36,7 +37,7 @@ router.post(
 )(create_api_case_generate_task)
 router.get(
     "/projects/{project_id}/api-case-generate-tasks",
-    response_model=ApiResponse[ListResponse[AiGenerateTaskResponse]],
+    response_model=ApiResponse[AiGenerateTaskListResponse],
 )(list_api_case_generate_tasks)
 router.get(
     "/api-case-generate-tasks/{task_id}",

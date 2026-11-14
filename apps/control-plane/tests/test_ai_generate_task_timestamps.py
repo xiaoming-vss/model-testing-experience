@@ -61,6 +61,19 @@ class TaskQueryRepository:
             return [self.task]
         return []
 
+    async def count_tasks(self, project_id, task_type, **kwargs):
+        if project_id == self.task.project_id and task_type == self.task.task_type:
+            return 1
+        return 0
+
+    async def list_tasks_page(self, project_id, task_type, *, page=1, page_size=20, **kwargs):
+        if project_id == self.task.project_id and task_type == self.task.task_type:
+            return [(self.task, "")]
+        return []
+
+    async def task_status_counts(self, project_id, task_type, **kwargs):
+        return {}
+
 
 @pytest.mark.parametrize(
     ("kind", "task_type"),

@@ -69,12 +69,17 @@ export function useRequirementCodeRiskWorkspace(requirementId: string, projectId
   const personalGitlab = usePersonalConnectionChoice('gitlab')
 
   const tasksQuery = useQuery({
-    queryKey: ['codeRiskTasks', projectId],
-    queryFn: () => aiTestingApi.getCodeRiskTasks(projectId),
+    queryKey: ['codeRiskTasks', projectId, requirementId],
+    queryFn: () =>
+      aiTestingApi.getCodeRiskTasks(projectId, {
+        requirementId,
+        page: 1,
+        pageSize: 100,
+      }),
     enabled: Boolean(projectId),
   })
+  // Requirement-scoped task counts are small; the server filter avoids project-wide reads.
   const requirementTasks = listItems(tasksQuery.data)
-    .filter(task => task.requirementId === requirementId)
     .sort((left, right) => new Date(left.createdAt ?? 0).getTime() - new Date(right.createdAt ?? 0).getTime())
     .reverse()
   const bindingsQuery = useQuery({

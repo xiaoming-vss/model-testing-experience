@@ -1,6 +1,7 @@
 """SQL/result contracts for bounded histories and batched snapshot reads."""
 
 import json
+from datetime import timedelta
 
 import pytest
 from sqlalchemy import select
@@ -24,6 +25,10 @@ from support.database_read_paths import (
 from testing_agent.core.errors import AppError
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.api_case_run import ApiCaseRun
+from testing_agent.models.project import Project
+from testing_agent.models.requirement import Requirement
+from testing_agent.models.sprint import Sprint
+from testing_agent.models.test_order import TestOrder as OrderModel
 from testing_agent.models.ui_test_case_run import UiTestCaseRun
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.api_collection_run import ApiCollectionRunRepository
@@ -149,6 +154,189 @@ async def test_ai_task_scope_checks_are_batched_without_loading_requirement_docu
         await service.validate_task_scope(row, scopes)
     assert len(sql) == 2
     assert all("document_content" not in query and "FOR UPDATE" not in query for query in sql)
+
+
+@pytest.mark.parametrize("size", [1, 100])
+async def test_ai_task_list_reads_are_batched(database, size):
+    sync, session, sql = database
+    sync.add_all(
+        [
+            AiGenerateTask(
+                task_id=f"code-risk-task-{index}",
+                task_type="code_risk_analysis",
+                name=f"code-risk-task-{index}",
+                project_id="p",
+                sprint_id="s",
+                requirement_id="req",
+                creator_user_id="u",
+                source_type="text",
+                source_content="secret-body",
+                created_at=NOW,
+            )
+            for index in range(size)
+        ]
+    )
+    sync.commit()
+    sql.clear()
+    repo = AiGenerateTaskRepository(session)
+    total = await repo.count_tasks("p", "code_risk_analysis")
+    rows = await repo.list_tasks_page("p", "code_risk_analysis", page=1, page_size=20)
+    counts = await repo.task_status_counts("p", "code_risk_analysis")
+
+    assert total == size
+    assert len(rows) == min(size, 20)
+    assert sum(counts.values()) == size
+    assert len(sql) == 3
+    assert all("test_orders" not in query and "document_content" not in query for query in sql)
+
+
+async def test_ai_task_scope_batches_test_order_lookups(database):
+    sync, session, sql = database
+    sync.add_all(
+        [
+            OrderModel(
+                order_id=f"order-{index}",
+                project_id="p",
+                sprint_id="s",
+                name=f"order-{index}",
+            )
+            for index in range(40)
+        ]
+    )
+    sync.add_all(
+        [
+            AiGenerateTask(
+                task_id=f"order-task-{index}",
+                task_type="test_order_graph",
+                name=f"order-task-{index}",
+                project_id="p",
+                sprint_id="s",
+                requirement_id="req",
+                order_id=f"order-{index}",
+                creator_user_id="u",
+                source_type="text",
+                source_content="input",
+            )
+            for index in range(40)
+        ]
+    )
+    sync.commit()
+    tasks = list(
+        sync.scalars(select(AiGenerateTask).where(AiGenerateTask.task_type == "test_order_graph"))
+    )
+    sql.clear()
+    repo = AiGenerateTaskRepository(session)
+    scopes = await repo.task_scope_resources(tasks)
+    service = GenerationAccess(repo)
+    for task in tasks:
+        await service.validate_task_scope(task, scopes)
+
+    assert len(sql) == 3
+    assert sum("FROM test_orders" in query for query in sql) == 1
+    assert not any("test_orders.order_id = ?" in query for query in sql)
+    assert all("FOR UPDATE" not in query for query in sql)
+
+
+async def test_ai_task_scope_rejects_invalid_order_bindings(database):
+    sync, session, _ = database
+    sync.add_all(
+        [
+            Project(project_id="other", user_id="u", name="other"),
+            Sprint(
+                sprint_id="s2",
+                project_id="p",
+                name="s2",
+                start_time=NOW,
+                end_time=NOW + timedelta(days=1),
+            ),
+        ]
+    )
+    sync.flush()
+    sync.add_all(
+        [
+            Requirement(requirement_id="req2", sprint_id="s2", name="req2"),
+            OrderModel(
+                order_id="foreign-project",
+                project_id="other",
+                sprint_id="s",
+                name="foreign-project",
+            ),
+            OrderModel(
+                order_id="foreign-sprint",
+                project_id="p",
+                sprint_id="s2",
+                name="foreign-sprint",
+            ),
+        ]
+    )
+    sync.flush()
+    tasks = [
+        AiGenerateTask(
+            task_id="missing-order-task",
+            task_type="test_order_graph",
+            name="missing-order-task",
+            project_id="p",
+            sprint_id="s",
+            requirement_id="req",
+            order_id="missing-order",
+            creator_user_id="u",
+            source_type="text",
+            source_content="input",
+        ),
+        AiGenerateTask(
+            task_id="foreign-project-task",
+            task_type="test_order_graph",
+            name="foreign-project-task",
+            project_id="p",
+            sprint_id="s",
+            requirement_id="req",
+            order_id="foreign-project",
+            creator_user_id="u",
+            source_type="text",
+            source_content="input",
+        ),
+        AiGenerateTask(
+            task_id="foreign-sprint-task",
+            task_type="test_order_graph",
+            name="foreign-sprint-task",
+            project_id="p",
+            sprint_id="s",
+            requirement_id="req",
+            order_id="foreign-sprint",
+            creator_user_id="u",
+            source_type="text",
+            source_content="input",
+        ),
+        AiGenerateTask(
+            task_id="requirement-sprint-mismatch-task",
+            task_type="test_order_graph",
+            name="requirement-sprint-mismatch-task",
+            project_id="p",
+            sprint_id="s",
+            requirement_id="req2",
+            creator_user_id="u",
+            source_type="text",
+            source_content="input",
+        ),
+    ]
+    sync.add_all(tasks)
+    sync.commit()
+    repo = AiGenerateTaskRepository(session)
+    service = GenerationAccess(repo)
+    scopes = await repo.task_scope_resources(tasks)
+
+    with pytest.raises(AppError) as missing:
+        await service.validate_task_scope(tasks[0], scopes)
+    assert missing.value.code == 404
+    with pytest.raises(AppError) as foreign_project:
+        await service.validate_task_scope(tasks[1], scopes)
+    assert foreign_project.value.code == 404
+    with pytest.raises(AppError) as foreign_sprint:
+        await service.validate_task_scope(tasks[2], scopes)
+    assert foreign_sprint.value.code == 404
+    with pytest.raises(AppError) as mismatch:
+        await service.validate_task_scope(tasks[3], scopes)
+    assert mismatch.value.code == 400
 
 
 @pytest.mark.asyncio

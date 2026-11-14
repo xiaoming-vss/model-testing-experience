@@ -12,6 +12,7 @@ from testing_agent.handlers.repository_profile_task import (
 )
 from testing_agent.schemas.ai_generate_task import (
     AiGenerateRunHistoryResponse,
+    AiGenerateTaskListResponse,
     AiGenerateTaskResponse,
     RepositoryProfileRunResponse,
     RepositoryProfileVersionResponse,
@@ -26,7 +27,7 @@ router.post(
 )(create_repository_profile_task)
 router.get(
     "/projects/{project_id}/repository-profile-tasks",
-    response_model=ApiResponse[ListResponse[AiGenerateTaskResponse]],
+    response_model=ApiResponse[AiGenerateTaskListResponse],
 )(list_repository_profile_tasks)
 router.post(
     "/repository-profile-tasks/{task_id}/run",

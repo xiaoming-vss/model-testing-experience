@@ -84,6 +84,33 @@ class RequirementRepository(ResourceRepository):
             )
         )
 
+    async def list_sprint_page(
+        self, sprint_id: str, page: int, page_size: int
+    ) -> tuple[int, list[RowMapping]]:
+        criteria = Requirement.sprint_id == sprint_id
+        total = await self.session.scalar(
+            select(func.count()).select_from(Requirement).where(criteria)
+        )
+        result = await self.session.execute(
+            select(
+                Requirement.requirement_id,
+                Requirement.sprint_id,
+                Requirement.name,
+                Requirement.document_type,
+                Requirement.document_file_id,
+                Requirement.document_filename,
+                Requirement.document_hash,
+                Requirement.document_download_url,
+                Requirement.created_at,
+                Requirement.updated_at,
+            )
+            .where(criteria)
+            .order_by(Requirement.created_at.desc(), Requirement.id.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        return total or 0, list(result.mappings().all())
+
     async def list_active_by_sprint(self, sprint_id: str) -> list[Requirement]:
         return list(
             (

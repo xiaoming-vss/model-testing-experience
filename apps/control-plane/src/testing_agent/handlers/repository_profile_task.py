@@ -36,10 +36,28 @@ async def create_repository_profile_task(
 
 async def list_repository_profile_tasks(
     project_id: str,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100, alias="pageSize"),
+    sprint_id: str = Query(default="", alias="sprintId"),
+    requirement_id: str = Query(default="", alias="requirementId"),
+    keyword: str = Query(default=""),
+    status: str = Query(default=""),
     user_id: str = Depends(get_current_user_id),
     service: GenerationQueries = Depends(get_generation_queries),
 ):
-    return success_payload(await service.list("repository_profile", project_id, user_id))
+    return success_payload(
+        await service.list(
+            "repository_profile",
+            project_id,
+            user_id,
+            page=page,
+            page_size=page_size,
+            sprint_id=sprint_id,
+            requirement_id=requirement_id,
+            keyword=keyword,
+            status=status,
+        )
+    )
 
 
 async def run_repository_profile_task(

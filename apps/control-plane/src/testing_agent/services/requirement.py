@@ -6,6 +6,7 @@ from typing import Any
 
 from testing_agent.core.errors import (
     AppError,
+    ErrBadRequest,
     ErrNotFound,
     ErrRequirementFileMissing,
     ErrRequirementNameAlreadyUse,
@@ -16,6 +17,7 @@ from testing_agent.repositories.requirement import RequirementRepository
 from testing_agent.schemas.requirement import (
     CreateRequirementRequest,
     RequirementListItemResponse,
+    RequirementMetadataResponse,
     RequirementOptionResponse,
     RequirementResponse,
     UpdateRequirementRequest,
@@ -25,7 +27,7 @@ from testing_agent.services.binding_summary import (
     load_code_binding_summaries,
     load_zentao_binding_summaries,
 )
-from testing_agent.services.common import list_payload
+from testing_agent.services.common import list_payload, paged_payload
 from testing_agent.services.project_access import ProjectAction
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 from testing_agent.services.sprint import SprintService
@@ -88,10 +90,20 @@ class RequirementService:
         await self.requirements.refresh(requirement)
         return dump_requirement(requirement)
 
-    async def list(self, user_id: str, sprint_id: str) -> dict[str, Any]:
+    async def list(
+        self, user_id: str, sprint_id: str, page: int = 1, page_size: int = 20
+    ) -> dict[str, Any]:
+        if page < 1 or not 1 <= page_size <= 100:
+            raise ErrBadRequest()
         await self.sprints.get_accessible_entity(user_id, sprint_id, action="read")
-        rows = await self.requirements.list_active_by_sprint(sprint_id)
-        return list_payload([dump_requirement(row) for row in rows])
+        total, rows = await self.requirements.list_sprint_page(sprint_id, page, page_size)
+        items = [
+            RequirementMetadataResponse.model_validate(dict(row)).model_dump(
+                by_alias=True, mode="json"
+            )
+            for row in rows
+        ]
+        return paged_payload(items, total)
 
     async def list_project(
         self, user_id: str, project_id: str, sprint_id: str | None, page: int, page_size: int

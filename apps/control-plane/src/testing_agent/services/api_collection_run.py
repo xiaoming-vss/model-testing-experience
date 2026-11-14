@@ -8,6 +8,7 @@ from testing_agent.core.enums import RunStatus
 from testing_agent.core.errors import (
     ErrApiCaseRunEnvironmentMismatch,
     ErrApiEnvironmentKindMismatch,
+    ErrBadRequest,
     ErrNotFound,
 )
 from testing_agent.core.sid import new_id
@@ -20,7 +21,7 @@ from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.api_collection_run import ApiCollectionRunRepository
 from testing_agent.schemas.api_run import ApiCollectionRunResponse, RunApiCollectionRequest
 from testing_agent.services.api_run_scope import apply_run_scope, authorize_run
-from testing_agent.services.common import dump, list_payload
+from testing_agent.services.common import dump, paged_payload
 from testing_agent.services.environment_access import authorized_environment_vars
 from testing_agent.services.execution_secrets import protect_run
 from testing_agent.services.project_access import ProjectAction, require_project_access
@@ -149,12 +150,16 @@ class ApiCollectionRunService:
         apply_run_scope(run, context)
         return dump_run(run)
 
-    async def list(self, user_id: str, collection_id: str) -> dict[str, Any]:
+    async def list(
+        self, user_id: str, collection_id: str, page: int = 1, page_size: int = 20
+    ) -> dict[str, Any]:
+        if page < 1 or not 1 <= page_size <= 100:
+            raise ErrBadRequest()
         context = await self.get_accessible_context(user_id, collection_id, action="read")
-        rows = await self.repository.list_runs(collection_id)
+        rows, total = await self.repository.page_runs(collection_id, page, page_size)
         for row in rows:
             apply_run_scope(row, context)
-        return list_payload([dump_run(row) for row in rows])
+        return paged_payload([dump_run(row) for row in rows], total)
 
     async def get(self, user_id: str, collection_run_id: str) -> dict:
         return dump_run(await self.ensure_owned_run(user_id, collection_run_id))

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from testing_agent.models.project import Project
 from testing_agent.models.requirement import Requirement
@@ -69,10 +69,30 @@ class UiTestCaseRunRepository(BaseRepository):
                 await self.session.scalars(
                     select(UiTestSuiteRun)
                     .where(UiTestSuiteRun.suite_id == suite_id)
-                    .order_by(UiTestSuiteRun.created_at.desc())
+                    .order_by(UiTestSuiteRun.created_at.desc(), UiTestSuiteRun.id.desc())
                 )
             ).all()
         )
+
+    async def page_suite_runs(
+        self, suite_id: str, page: int, page_size: int
+    ) -> tuple[list[UiTestSuiteRun], int]:
+        criteria = UiTestSuiteRun.suite_id == suite_id
+        total = await self.session.scalar(
+            select(func.count()).select_from(UiTestSuiteRun).where(criteria)
+        )
+        rows = list(
+            (
+                await self.session.scalars(
+                    select(UiTestSuiteRun)
+                    .where(criteria)
+                    .order_by(UiTestSuiteRun.created_at.desc(), UiTestSuiteRun.id.desc())
+                    .offset((page - 1) * page_size)
+                    .limit(page_size)
+                )
+            ).all()
+        )
+        return rows, total or 0
 
     async def list_suite_items(self, suite_run_id: str) -> list[UiTestSuiteRunItem]:
         return list(

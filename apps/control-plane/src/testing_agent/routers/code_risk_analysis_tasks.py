@@ -16,6 +16,7 @@ from testing_agent.handlers.code_risk_analysis_task import (
 from testing_agent.schemas.ai_generate_task import (
     AiGenerateRunHistoryResponse,
     AiGenerateRunSummary,
+    AiGenerateTaskListResponse,
     AiGenerateTaskResponse,
     CodeRiskAnalysisRunResponse,
 )
@@ -29,7 +30,7 @@ router.post(
 )(create_code_risk_analysis_task)
 router.get(
     "/projects/{project_id}/code-risk-analysis-tasks",
-    response_model=ApiResponse[ListResponse[AiGenerateTaskResponse]],
+    response_model=ApiResponse[AiGenerateTaskListResponse],
 )(list_code_risk_analysis_tasks)
 router.get(
     "/projects/{project_id}/code-risk-analysis-tasks/latest-runs",

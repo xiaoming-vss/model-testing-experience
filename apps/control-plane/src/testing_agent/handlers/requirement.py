@@ -20,10 +20,12 @@ async def create_requirement(
 
 async def list_requirements(
     sprint_id: str,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100, alias="pageSize"),
     user_id: str = Depends(get_current_user_id),
     service: RequirementService = Depends(get_requirement_service),
 ):
-    return success_payload(await service.list(user_id, sprint_id))
+    return success_payload(await service.list(user_id, sprint_id, page, page_size))
 
 
 async def get_requirement(

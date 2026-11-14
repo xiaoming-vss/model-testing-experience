@@ -1251,8 +1251,8 @@ def test_code_risk_analysis_task_endpoints_dispatch_to_service():
             assert kind == "code_risk_analysis"
             return dump_code_risk_analysis_run(make_run(result_yaml=RISK_REPORT_YAML))
 
-        async def list(self, kind, project_id, user_id):
-            return {"items": [], "total": 0}
+        async def list(self, kind, project_id, user_id, **kwargs):
+            return {"items": [], "total": 0, "statusCounts": {}}
 
         async def get(self, kind, task_id, user_id):
             return {

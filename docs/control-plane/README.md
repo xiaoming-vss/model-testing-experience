@@ -141,9 +141,15 @@ API 导入的专用校验与实体转换继续由 `api_import_payload.py` 和 `a
 
 迭代列表 `GET /v1/projects/{project_id}/sprints` 同批返回每个迭代的 `zentaoBinding` 摘要（未绑定为 `null`）。需求列表使用 `GET /v1/projects/{project_id}/requirements`，支持可选 `sprintId` 筛选及 `page` / `pageSize` 分页（默认 1 / 20，最大每页 100 条），按创建时间和数据库 ID 倒序返回 `items` 与筛选后的 `total`。每项包含 `sprintName`、文档元数据和 `zentaoBinding`，不查询或返回 `documentContent`。两类列表都在项目读取授权后批量查询本地禅道绑定，不访问外部服务；单条需求详情与绑定管理接口保留原有契约。`test_project_list_queries.py` 验证分页、权限隔离、大字段排除和固定的绑定批量查询数。
 
+`GET /v1/sprints/{sprint_id}/requirements` 同样支持 `page` / `pageSize`（默认 1 / 20，最大 100），返回不含 `documentContent` 的需求元数据摘要；单条需求详情继续返回正文。`test_sprint_requirement_pagination.py` 验证分页、边界、权限和大字段排除。
+
 AI 任务与资源绑定的普通读取不使用 `FOR UPDATE`；修改时通过明确的 `get_*_for_update` 查询锁定父资源和运行，避免与删除或导入并发。代码风险运行在准备 GitLab 快照时不持有这些写锁，落库前重新检查父资源、任务归属和执行权限。Worker 领取及写回、覆盖导入和删除仍保留原有锁保护。
 
 六类 AI 运行历史 HTTP 接口返回分页摘要：`page` 从 1 开始，`pageSize` 默认 20、最大 100，按创建时间和数据库 ID 倒序。响应包含 `items`、匹配条件的 `total`、`statusCounts` 和任务范围内的 `latestRun`。摘要保留阶段、审核、导入、错误和时间信息，使用 `availableArtifacts` / `hasResult` 表示产物是否存在，不返回 `snapshotJson`、`configJson`、`resultYaml` 或解析后的报告。完整内容仍从单次运行详情接口读取。功能用例运行支持 `pipelineFilter`，先在数据库筛选，再分页；`latestRun` 不受筛选或页码影响。
+
+六类 AI 任务列表同样分页：`page` / `pageSize` 默认 1 / 20、最大 100，支持 `sprintId`、`requirementId`、`keyword` 筛选。列表返回任务元数据、`statusCounts` 和每个任务的 `latestRunStatus`，不再返回可能较大的 `sourceContent`；正文仍从任务详情接口读取。`status` 筛选仅用于 `code_risk_analysis`，取值为 `in_progress` / `success` / `waiting_review` / `failed`，其他任务类型传入时返回 400。`statusCounts` 不含当前状态筛选，因此各状态档计数在翻页时保持稳定。`test_ai_task_list_pagination.py` 覆盖分页、筛选、计数、权限和列表大字段排除。
+
+UI 套件运行历史 `GET /v1/ui-test-suites/{suite_id}/runs` 与 API 集合运行历史 `GET /v1/api-collections/{collection_id}/runs` 支持 `page` / `pageSize`（默认 1 / 20，最大 100），返回 `items` 和筛选后的 `total`，按 `created_at`、数据库 ID 倒序。`api_collection_runs` 由迁移 `20261114_0004` 增加 `(collection_id, created_at, id)` 复合索引；`ui_test_suite_runs` 复用已有的 `(suite_id, created_at, id)` 索引。
 
 `repositories/ai_run_history.py` 只查询本页及最新运行的轻量记录，不把大字段加载到 ORM；`repositories/latest.py` 通过窗口函数按创建时间、ID 筛选每个资源最近一次运行。代码风险快照批量读取功能/API/UI 用例、API 断言及最近执行摘要，每日统计只读取最新状态与计数，不传输执行日志、请求快照或全部历史。
 

@@ -57,7 +57,7 @@ it('详情与打开的报告都负责轮询，终态后停止，历史关闭时�
   const history = vi.spyOn(api, 'getApiCollectionRuns').mockImplementation(async () => list([summary]))
   const detail = vi.spyOn(api, 'getApiCollectionRun').mockImplementation(async () => ({ ...summary }))
   const report = vi.spyOn(api, 'getApiCollectionRunReport').mockImplementation(async () => ({ ...summary, items: [] }))
-  const { result, client } = setup()
+  const { result } = setup()
   await tick()
   act(() => {
     result.current.setActivePollingCollectionRunId('run-1')
@@ -75,7 +75,7 @@ it('详情与打开的报告都负责轮询，终态后停止，历史关闭时�
   await tick(30_000)
   expect(report.mock.calls.length).toBeGreaterThanOrEqual(3)
   expect(result.current.collectionRunReportQuery.data?.successCount).toBe(2)
-  expect(client.getQueryData<ApiCollectionRunSummary[]>(['apiCollectionRuns', 'collection-1'])?.[0].status).toBe('success')
+  expect(result.current.collectionRunHistory[0]?.status).toBe('success')
   const calls = { detail: detail.mock.calls.length, history: history.mock.calls.length, report: report.mock.calls.length }
   await tick(60_000)
   expect(detail).toHaveBeenCalledTimes(calls.detail)
@@ -97,7 +97,7 @@ it('历史每三十秒发现他人新运行，关闭后停止，重新打开立�
   expect(history).toHaveBeenCalledTimes(2)
   await tick(1000)
   expect(history).toHaveBeenCalledTimes(3)
-  expect(result.current.collectionRunHistoryQuery.data?.[0].collectionRunId).toBe('other-users-run')
+  expect(result.current.collectionRunHistory[0]?.collectionRunId).toBe('other-users-run')
   act(() => { result.current.setCollectionRunHistoryOpen(false) })
   await tick(60_000)
   expect(history).toHaveBeenCalledTimes(3)

@@ -34,7 +34,7 @@ from testing_agent.schemas.ui_run import (
     UiCaseRunResponse,
     UiSuiteRunResponse,
 )
-from testing_agent.services.common import dump, list_payload
+from testing_agent.services.common import dump, paged_payload
 from testing_agent.services.project_access import ProjectAction, require_project_access
 from testing_agent.services.ui_execution_payload import (
     ui_case_payload,
@@ -306,12 +306,16 @@ class UiTestCaseRunService:
         apply_run_scope(run, context)
         return dump_suite_run(run)
 
-    async def list_suite_runs(self, user_id: str, suite_id: str) -> dict[str, Any]:
+    async def list_suite_runs(
+        self, user_id: str, suite_id: str, page: int = 1, page_size: int = 20
+    ) -> dict[str, Any]:
+        if page < 1 or not 1 <= page_size <= 100:
+            raise ErrBadRequest()
         context = await self.get_accessible_suite(user_id, suite_id, action="read")
-        rows = await self.repository.list_suite_runs(suite_id)
+        rows, total = await self.repository.page_suite_runs(suite_id, page, page_size)
         for row in rows:
             apply_run_scope(row, context)
-        return list_payload([dump_suite_run(row) for row in rows])
+        return paged_payload([dump_suite_run(row) for row in rows], total)
 
     async def get_suite_run(self, user_id: str, suite_run_id: str) -> dict:
         run = await self.repository.get_suite_run(suite_run_id)

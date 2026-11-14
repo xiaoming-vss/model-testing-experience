@@ -1,6 +1,7 @@
 import type { ListResponse } from '@/shared/api/request'
 
 export type RunHistoryResponse<T> = ListResponse<T> & { statusCounts?: Record<string, number>; reviewPendingCount?: number; latestRun?: T }
+export type AiTaskListResponse<T> = ListResponse<T> & { statusCounts?: Record<string, number> }
 
 export type ApiCaseGenerateTaskSourceType = 'openapi' | 'swagger'
 export type UiCaseGenerateTaskSourceType = 'repository'
@@ -583,6 +584,7 @@ export type CodeRiskTask = {
   sourceType?: string
   sourceContent?: string
   instruction: string
+  latestRunStatus?: ApiCaseGenerateTaskRunStatus
   createdAt?: string
   updatedAt?: string
 }

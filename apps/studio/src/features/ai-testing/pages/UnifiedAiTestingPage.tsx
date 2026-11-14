@@ -24,18 +24,19 @@ import {
 } from 'antd'
 import type { InputRef, TableProps } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { LlmConnectionSelectModal } from '../components/LlmConnectionSelectModal'
 import { CodeRiskTaskDrawer, type CodeRiskTaskFormValues } from '../components/CodeRiskTaskDrawer'
 import type { CodeRiskTask, CodeRiskTaskRun, CreateCodeRiskTaskPayload } from '../types'
-import { getApiCaseGenerateTaskRunStatusMeta, isApiCaseGenerateTaskRunInProgress, isRunnableApiCaseGenerateTaskRun } from '../utils/taskStatus'
+import { getApiCaseGenerateTaskRunStatusMeta, isRunnableApiCaseGenerateTaskRun } from '../utils/taskStatus'
 import '@/features/ai-testing/styles/index.css'
 import '@/features/ai-testing/styles/task-list-v2.css'
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
 import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
 import { useProjectRequirementOptions } from '@/features/projects/hooks/useProjectRequirementOptions'
 import { api, listItems } from '@/services/api'
+import { listTotal } from '@/shared/api/request'
 import { message } from '@/shared/utils/feedback'
 import { formatTime, getErrorMessage, normalizeRequirementId, normalizeSprintId, pickCreatedAt, pickUpdatedAt } from '@/utils/format'
 
@@ -43,11 +44,6 @@ const { Text } = Typography
 
 function getCodeRiskTaskId(task: CodeRiskTask) {
   return task.taskId ?? ''
-}
-
-function getTaskTime(item: CodeRiskTask) {
-  const time = new Date(item.updatedAt || item.createdAt || '').getTime()
-  return Number.isNaN(time) ? 0 : time
 }
 
 /**
@@ -76,15 +72,6 @@ const runStatusTones: Record<string, string> = {
   failed: 'tone-red',
   error: 'tone-red',
   canceled: 'tone-slate',
-}
-
-/** 一条任务落到哪个筛选档；未跑过（含已取消 / 草稿）不属于任何语义档，只在「全部」里出现。 */
-function statusFilterBucket(status?: CodeRiskTaskRun['status']): AiTaskStatusFilter | null {
-  if (status === 'success') return 'success'
-  if (status === 'failed' || status === 'error') return 'failed'
-  if (status === 'waiting_review') return 'waiting_review'
-  if (isApiCaseGenerateTaskRunInProgress(status)) return 'in_progress'
-  return null
 }
 
 function renderLatestRunStatus(status?: CodeRiskTaskRun['status']) {
@@ -117,8 +104,14 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
   const [codeRiskForm] = Form.useForm<CodeRiskTaskFormValues>()
 
   const codeRiskTasksQuery = useQuery({
-    queryKey: ['codeRiskTasks', activeProjectId],
-    queryFn: () => api.getCodeRiskTasks(activeProjectId!),
+    queryKey: ['codeRiskTasks', activeProjectId, page, pageSize, globalSprintId, keyword, statusFilter],
+    queryFn: () => api.getCodeRiskTasks(activeProjectId!, {
+      page,
+      pageSize,
+      sprintId: globalSprintId,
+      keyword,
+      status: statusFilter === 'all' ? undefined : statusFilter,
+    }),
     enabled: Boolean(activeProjectId),
   })
   const sprintsQuery = useQuery({
@@ -151,82 +144,23 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
     [allRequirements],
   )
 
-  const tasks = useMemo(
-    () => listItems(codeRiskTasksQuery.data)
-      .filter((task) => !globalSprintId || task.sprintId === globalSprintId)
-      .sort((left, right) => getTaskTime(right) - getTaskTime(left)),
-    [codeRiskTasksQuery.data, globalSprintId],
-  )
-  const keywordTasks = useMemo(() => {
-    const text = keyword.trim().toLowerCase()
-    if (!text) return tasks
-    return tasks.filter((item) => {
-      const { requirementId, sprintId, name } = item
-      const fields = [
-        name,
-        sprintId ? sprintNameMap.get(sprintId) : undefined,
-        requirementId ? requirementNameMap.get(requirementId) : undefined,
-        '需求代码',
-      ]
-      return fields.some((field) => (field ?? '').toLowerCase().includes(text))
-    })
-  }, [keyword, tasks, requirementNameMap, sprintNameMap])
-  // 项目级批量取每个任务的最新运行，替代按任务逐个请求（100 个任务原来会打出 100 个并行请求）。
-  const codeRiskLatestRunsQuery = useQuery({
-    queryKey: ['codeRiskTaskLatestRuns', activeProjectId],
-    queryFn: () => api.getCodeRiskLatestRuns(activeProjectId!),
-    enabled: Boolean(activeProjectId),
-    staleTime: 15_000,
-  })
-  const latestCodeRiskRunMap = useMemo(() => {
-    const latestByTask = new Map<string, CodeRiskTaskRun>()
-    for (const run of listItems(codeRiskLatestRunsQuery.data)) {
-      const taskId = run.taskId ?? ''
-      if (taskId) latestByTask.set(taskId, run)
-    }
-    const entries = keywordTasks.map((task) => [
-      getCodeRiskTaskId(task),
-      {
-        isLoading: codeRiskLatestRunsQuery.isLoading,
-        latestRun: latestByTask.get(getCodeRiskTaskId(task)),
-      },
-    ] as const)
-    return new Map(entries)
-  }, [codeRiskLatestRunsQuery.data, codeRiskLatestRunsQuery.isLoading, keywordTasks])
-
-  /** 一条任务的最新运行状态，供状态档位计数与过滤共用。 */
-  const latestRunStatusOf = useCallback(
-    (task: CodeRiskTask) => latestCodeRiskRunMap.get(getCodeRiskTaskId(task))?.latestRun?.status,
-    [latestCodeRiskRunMap],
-  )
-
-  /** 状态档位的计数与下面的过滤都基于同一份「当前迭代 + 关键词」集合。 */
-  const statusFilterCounts = useMemo(() => {
-    const counts = new Map<AiTaskStatusFilter, number>([['all', keywordTasks.length]])
-    keywordTasks.forEach((item) => {
-      const bucket = statusFilterBucket(latestRunStatusOf(item))
-      if (bucket) counts.set(bucket, (counts.get(bucket) ?? 0) + 1)
-    })
-    return counts
-  }, [keywordTasks, latestRunStatusOf])
-
-  const filteredTasks = useMemo(
-    () =>
-      statusFilter === 'all'
-        ? keywordTasks
-        : keywordTasks.filter((item) => statusFilterBucket(latestRunStatusOf(item)) === statusFilter),
-    [keywordTasks, latestRunStatusOf, statusFilter],
-  )
-  const pagedTasks = useMemo(
-    () => filteredTasks.slice((page - 1) * pageSize, page * pageSize),
-    [filteredTasks, page, pageSize],
-  )
+  const codeRiskTaskRows = listItems(codeRiskTasksQuery.data)
+  const statusCounts = codeRiskTasksQuery.data?.statusCounts ?? {}
+  // Server counts exclude the active status filter, so each chip stays stable across pages.
+  const statusFilterCounts = new Map<AiTaskStatusFilter, number>([
+    ['all', Object.values(statusCounts).reduce((sum, count) => sum + count, 0)],
+    ['in_progress',
+      (statusCounts.pending ?? 0) +
+      (statusCounts.queued ?? 0) +
+      (statusCounts.claimed ?? 0) +
+      (statusCounts.running ?? 0)],
+    ['success', statusCounts.success ?? 0],
+    ['waiting_review', statusCounts.waiting_review ?? 0],
+    ['failed', (statusCounts.failed ?? 0) + (statusCounts.error ?? 0)],
+  ])
   const hasListFilters = Boolean(keyword) || statusFilter !== 'all'
   async function refreshActiveTaskList() {
-    await Promise.all([
-      codeRiskTasksQuery.refetch(),
-      queryClient.refetchQueries({ queryKey: ['codeRiskTaskLatestRuns'], type: 'active' }),
-    ])
+    await codeRiskTasksQuery.refetch()
   }
 
   useEffect(() => {
@@ -288,15 +222,13 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
       pendingRiskRequest.clear()
       message.success('任务已加入执行队列')
       setCodeRiskLlmSelectTaskId(null)
-      queryClient.invalidateQueries({ queryKey: ['codeRiskTaskLatestRuns', activeProjectId] })
-      queryClient.invalidateQueries({ queryKey: ['codeRiskTasks', activeProjectId] })
+      queryClient.invalidateQueries({ queryKey: ['codeRiskTasks'] })
     },
   })
 
   function handleRunCodeRiskTask(task: CodeRiskTask) {
     const taskId = getCodeRiskTaskId(task)
-    const latestRun = latestCodeRiskRunMap.get(taskId)?.latestRun
-    if (!isRunnableApiCaseGenerateTaskRun(latestRun?.status)) {
+    if (!isRunnableApiCaseGenerateTaskRun(task.latestRunStatus)) {
       message.warning('任务执行中，暂时不能重复运行')
       return
     }
@@ -305,15 +237,11 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
 
   function getTaskContext(task: CodeRiskTask) {
     const taskId = getCodeRiskTaskId(task)
-    const runState = latestCodeRiskRunMap.get(taskId)
     return {
       requirement: task.requirementId ? requirementMap.get(task.requirementId) : undefined,
       requirementName: requirementNameMap.get(task.requirementId ?? '') ?? task.requirementId ?? '-',
       sprintName: sprintNameMap.get(task.sprintId ?? '') ?? task.sprintId ?? '-',
       detailPath: `/ai-testing/code-risk-tasks/${taskId}`,
-      latestRun: runState?.latestRun,
-      runState,
-      runnableTask: !runState?.isLoading && isRunnableApiCaseGenerateTaskRun(runState?.latestRun?.status),
     }
   }
 
@@ -338,7 +266,7 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
       key: 'status',
       width: 112,
       render: (_, item) => (
-        <div className="ai-task-list-tags">{renderLatestRunStatus(getTaskContext(item).latestRun?.status)}</div>
+        <div className="ai-task-list-tags">{renderLatestRunStatus(item.latestRunStatus)}</div>
       ),
     },
     {
@@ -395,7 +323,8 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
       width: 138,
       align: 'right',
       render: (_, item) => {
-        const { detailPath, runState, runnableTask } = getTaskContext(item)
+        const { detailPath } = getTaskContext(item)
+        const runnableTask = isRunnableApiCaseGenerateTaskRun(item.latestRunStatus)
         return (
           <Space
             size={6}
@@ -403,7 +332,7 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
             onClick={(event) => event.stopPropagation()}
             onMouseDown={(event) => event.stopPropagation()}
           >
-            <Tooltip title={runState?.isLoading ? '运行记录加载中' : undefined}>
+            <Tooltip title={codeRiskTasksQuery.isFetching ? '任务列表加载中' : undefined}>
               <span>
                 <ProjectActionButton operation="run" iconOnly type="text" action="execute"
                   size="small"
@@ -514,7 +443,7 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
               <div className="sprint-card-loading ai-testing-empty-shell">
                 <Empty description="任务加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
               </div>
-            ) : filteredTasks.length === 0 ? (
+            ) : codeRiskTaskRows.length === 0 ? (
               <div className="ai-testing-empty-shell">
                 <Empty description={hasListFilters ? '没有符合筛选条件的任务' : '暂无代码风险分析任务'}>
                   {hasListFilters ? (
@@ -539,7 +468,7 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
               <Table<CodeRiskTask>
                 className="ai-task-list-table tp-list-table"
                 columns={columns}
-                dataSource={pagedTasks}
+                dataSource={codeRiskTaskRows}
                 rowKey={getCodeRiskTaskId}
                 pagination={false}
                 onRow={(item) => ({
@@ -555,7 +484,7 @@ export function UnifiedAiTestingPage({ embedded = false }: { embedded?: boolean 
             <ListPagination loading={codeRiskTasksQuery.isFetching || codeRiskTasksQuery.isError}
               current={page}
               pageSize={pageSize}
-              total={filteredTasks.length}
+              total={listTotal(codeRiskTasksQuery.data)}
               onChange={(nextPage, nextPageSize) => {
                 setPage(nextPage)
                 setPageSize(nextPageSize)

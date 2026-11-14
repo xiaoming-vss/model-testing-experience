@@ -88,21 +88,26 @@ export function useRequirementRepositoryProfileWorkspace(
   const hasRepoBindings = bindingsQuery.data ? bindings.length > 0 : true
 
   const tasksQuery = useQuery({
-    queryKey: ['repositoryProfileTasks', projectId],
-    queryFn: () => repositoryProfileApi.getRepositoryProfileTasks(projectId),
+    queryKey: ['repositoryProfileTasks', projectId, requirementId],
+    queryFn: () =>
+      repositoryProfileApi.getRepositoryProfileTasks(projectId, {
+        requirementId,
+        page: 1,
+        pageSize: 100,
+      }),
     enabled: active && Boolean(projectId),
   })
+  // Requirement-scoped task counts are small; the server filter avoids project-wide reads.
   const requirementTasks = useMemo(
     () =>
       listItems(tasksQuery.data)
-        .filter(task => task.requirementId === requirementId)
         .sort(
           (left, right) =>
             new Date(left.createdAt ?? 0).getTime() -
             new Date(right.createdAt ?? 0).getTime(),
         )
         .reverse(),
-    [requirementId, tasksQuery.data],
+    [tasksQuery.data],
   )
 
   const runsQueries = useQueries({

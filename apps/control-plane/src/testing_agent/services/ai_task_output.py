@@ -40,6 +40,14 @@ def dump_task(task: AiGenerateTask) -> dict[str, Any]:
     }
 
 
+def dump_task_summary(task: AiGenerateTask, latest_run_status: str = "") -> dict[str, Any]:
+    """List payload without the potentially large source body."""
+    payload = dump_task(task)
+    payload.pop("sourceContent", None)
+    payload["latestRunStatus"] = latest_run_status
+    return payload
+
+
 def dump_run(run: StandaloneRun) -> dict[str, Any]:
     summary = run.result_summary_json or {}
     if isinstance(summary, dict) and isinstance(summary.get("uiSemanticReview"), dict):

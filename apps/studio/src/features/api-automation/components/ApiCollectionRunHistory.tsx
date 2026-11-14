@@ -7,9 +7,8 @@ import {
   getErrorMessage,
   normalizeEnvironmentId
 } from '@/utils/format'
-import type { UseQueryResult } from '@tanstack/react-query'
+import type { InfiniteData, UseInfiniteQueryResult } from '@tanstack/react-query'
 import { Alert, Button, Empty, Modal, Tag } from 'antd'
-import { useEffect, useState } from 'react'
 
 import type { ApiEnvironment } from '@/features/api-automation/types'
 import type { ListResponse } from '@/shared/api/request'
@@ -17,21 +16,19 @@ import type { ListResponse } from '@/shared/api/request'
 type Props = {
   collectionRunHistoryOpen: boolean
   setCollectionRunHistoryOpen: React.Dispatch<React.SetStateAction<boolean>>
-  collectionRunHistoryQuery: UseQueryResult<ListResponse<ApiCollectionRunSummary>, Error>
+  collectionRunHistoryQuery: UseInfiniteQueryResult<
+    InfiniteData<ListResponse<ApiCollectionRunSummary>>,
+    Error
+  >
   collectionRunHistory: ApiCollectionRunSummary[]
+  collectionRunHistoryTotal: number
   loadingCollectionRunHistoryId: string
   environments: ApiEnvironment[]
   handleOpenCollectionRunHistoryItem: (historyItem: ApiCollectionRunSummary) => void
 }
 
-export function ApiCollectionRunHistory({ collectionRunHistoryOpen, setCollectionRunHistoryOpen, collectionRunHistoryQuery, collectionRunHistory, loadingCollectionRunHistoryId, environments, handleOpenCollectionRunHistoryItem }: Props) {
-  // 运行记录没有分页且会一直增长；弹窗里先渲染最近一段，其余按需展开。
-  const [visibleCount, setVisibleCount] = useState(20)
-  useEffect(() => {
-    if (collectionRunHistoryOpen) setVisibleCount(20)
-  }, [collectionRunHistoryOpen])
-  const visibleHistory = collectionRunHistory.slice(0, visibleCount)
-  const remainingCount = collectionRunHistory.length - visibleHistory.length
+export function ApiCollectionRunHistory({ collectionRunHistoryOpen, setCollectionRunHistoryOpen, collectionRunHistoryQuery, collectionRunHistory, collectionRunHistoryTotal, loadingCollectionRunHistoryId, environments, handleOpenCollectionRunHistoryItem }: Props) {
+  const remainingCount = Math.max(0, collectionRunHistoryTotal - collectionRunHistory.length)
   return (
     <Modal
       mask={{ closable: false }}
@@ -52,7 +49,7 @@ export function ApiCollectionRunHistory({ collectionRunHistoryOpen, setCollectio
           <Empty description="暂无运行记录" image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
           <div className="api-collection-run-history-list">
-            {visibleHistory.map((item, index) => {
+            {collectionRunHistory.map((item, index) => {
               const statusMeta = getExecutionStatusMeta(item.status)
               const isLoading = loadingCollectionRunHistoryId === item.collectionRunId
               const environmentName =
@@ -92,7 +89,11 @@ export function ApiCollectionRunHistory({ collectionRunHistoryOpen, setCollectio
             })}
             {remainingCount > 0 ? (
               <div className="api-collection-run-history-more">
-                <Button size="small" onClick={() => setVisibleCount(count => count + 20)}>
+                <Button
+                  size="small"
+                  loading={collectionRunHistoryQuery.isFetchingNextPage}
+                  onClick={() => void collectionRunHistoryQuery.fetchNextPage()}
+                >
                   显示更多（还剩 {remainingCount} 条）
                 </Button>
               </div>
