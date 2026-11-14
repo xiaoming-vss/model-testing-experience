@@ -7,39 +7,6 @@
   overflow: hidden;
 }
 
-.api-config-result-tablist {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 28px;
-  min-height: 38px;
-  border-bottom: 1px solid var(--ai-border);
-}
-
-.api-config-result-tablist button {
-  position: relative;
-  padding: 0 0 10px;
-  border: 0;
-  color: var(--ai-muted);
-  background: transparent;
-  font: inherit;
-  cursor: pointer;
-}
-
-.api-config-result-tablist button.is-active {
-  color: var(--ai-active-text);
-}
-
-.api-config-result-tablist button.is-active::after {
-  position: absolute;
-  right: 0;
-  bottom: -1px;
-  left: 0;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--ai-active-text);
-  content: '';
-}
-
 .api-config-result-panel {
   min-height: 0;
   flex-grow: 1;

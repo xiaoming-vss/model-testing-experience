@@ -13,6 +13,7 @@
 :root {
   --app-panel-radius: 12px;
   --app-font-sans: -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --app-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-family: var(--app-font-sans);
   font-size: 13px;
   color: var(--app-text);
@@ -28,7 +29,7 @@
   --app-link: #1677ff;
   --description-text: #596579;
   --description-text-muted: #738096;
-  --description-bg: rgba(89, 101, 121, 0.045);
+
   --description-border: rgba(148, 163, 184, 0.18);
   --description-font: var(--app-font-sans);
 }
@@ -98,8 +99,4 @@ textarea[id='summary']::placeholder,
 textarea[id$='_summary']::placeholder {
   color: var(--description-text-muted);
   font-family: var(--description-font);
-}
-
-.requirement-document-type .ant-tag {
-  margin-inline-end: 0;
 }

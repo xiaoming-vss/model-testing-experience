@@ -243,18 +243,6 @@
   overflow-y: auto;
 }
 
-.ai-task-run-result-popover .ant-popover-inner {
-  padding: 12px;
-  background: var(--ai-popover-surface);
-  border: 1px solid var(--app-frame-divider-soft);
-  box-shadow: 0 24px 48px var(--app-review-card-shadow);
-}
-
-.ai-task-run-result-popover .ant-popover-arrow::before,
-.ai-task-run-result-popover .ant-popover-arrow::after {
-  background: var(--ai-popover-arrow) !important;
-}
-
 .ai-task-run-result-popover-loading,
 .ai-task-run-result-popover-empty {
   min-height: 120px;

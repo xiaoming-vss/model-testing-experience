@@ -98,14 +98,6 @@
   flex-wrap: wrap;
 }
 
-.bug-detail-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--srf-text);
-  min-width: 0;
-  flex: 1;
-}
-
 .bug-detail-actions {
   white-space: nowrap;
 }
@@ -160,25 +152,6 @@
   color: var(--srf-accent);
 }
 
-
-.bug-attachment-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.bug-attachment-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 2px 0;
-}
-
-.bug-attachment-size {
-  font-size: 12px;
-  white-space: nowrap;
-}
 
 /* —— 动态流 —— */
 .bug-activity-list {
@@ -295,7 +268,6 @@
 .bug-activity-changes summary { cursor: pointer; color: var(--srf-accent); }
 @media (max-width: 720px) {
   .bugs-search-field { width: 100%; }
-  .bug-detail-title { flex-basis: 60%; }
   .bug-detail-actions { flex-basis: 100%; }
   .bug-history-diff { grid-template-columns: minmax(0, 1fr); }
   .bugs-detail-page .bug-detail-main .bug-detail-panel { padding: 16px; }

@@ -29,28 +29,6 @@
   max-height: calc(100vh - 244px);
 }
 
-.functional-candidate-review-tabs,
-.functional-candidate-review-tabs > .ant-tabs-content-holder,
-.functional-candidate-review-tabs > .ant-tabs-content-holder > .ant-tabs-content,
-.functional-candidate-review-tabs > .ant-tabs-content-holder > .ant-tabs-content > .ant-tabs-tabpane {
-  min-height: 0;
-}
-
-.functional-candidate-review-tabs {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-}
-
-.functional-candidate-review-tabs > .ant-tabs-nav {
-  flex: 0 0 auto;
-  margin-bottom: 0;
-}
-
-.functional-candidate-review-tabs > .ant-tabs-content-holder {
-  flex: 1 1 auto;
-}
-
 .functional-candidate-review-tabs > .ant-tabs-content-holder > .ant-tabs-content,
 .functional-candidate-review-tabs > .ant-tabs-content-holder > .ant-tabs-content > .ant-tabs-tabpane,
 .functional-candidate-review-tabs .ai-task-import-result-preview-content,
@@ -71,12 +49,6 @@
 
 /* The modal and tab pane already provide the surface. Keep the result views
    flush with that surface instead of rendering a second card around them. */
-.functional-candidate-review-tabs .ai-generated-cases-review {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
 .functional-candidate-edit-pane .json-editor-shell {
   border: 0;
   border-radius: 0;

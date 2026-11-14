@@ -10,16 +10,6 @@
   min-height: 0;
 }
 
-.functional-case-zentao-import-modal {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.functional-case-zentao-import-modal .ant-input-number {
-  width: 100%;
-}
-
 .functional-suite-card .api-collection-meta-inline {
   align-items: center;
   justify-content: space-between;
@@ -40,10 +30,6 @@
 
 .functional-suite-card .sprint-card-actions {
   gap: 6px;
-}
-
-.functional-case-brief {
-  color: var(--tp-text-secondary, var(--app-control-text));
 }
 
 /* macOS compact functional suite cards */
@@ -156,15 +142,6 @@
   }
 }
 
-.functional-suite-card-title {
-  display: -webkit-box;
-  min-width: 0;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-height: 20px;
-}
-
 .app-shell-macos .functional-test-page .functional-suite-scroll {
   padding: 18px !important;
   background: var(--app-glass-surface-18) !important;
@@ -240,7 +217,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-left: 1px solid var(--divider);
+  border-left: 1px solid var(--srf-divider);
 }
 
 .case-library-nav-item {
@@ -269,7 +246,7 @@
   align-items: center;
   gap: 4px;
   padding: 6px 10px;
-  border-top: 1px solid var(--divider);
+  border-top: 1px solid var(--srf-divider);
 }
 
 /* 「新建测试集」按内容宽度，剩下的空隙留给自己和右侧图标之间。 */

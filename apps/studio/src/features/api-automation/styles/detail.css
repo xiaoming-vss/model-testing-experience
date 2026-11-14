@@ -47,54 +47,6 @@
   cursor: grabbing;
 }
 
-.api-case-nav-item-main,
-.api-case-nav-item-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.api-case-nav-item-main {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.api-case-nav-item-tags {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 0 0 auto;
-}
-
-.api-case-nav-item-name {
-  min-width: 0;
-  color: var(--tp-text);
-  font-size: 13px;
-  line-height: 18px;
-  font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.api-case-nav-delete.ant-btn {
-  width: 24px;
-  min-width: 24px;
-  height: 24px;
-  padding-inline: 0;
-}
-
-.api-case-nav-item-path {
-  color: var(--tp-text-secondary);
-  font-size: 11px;
-  line-height: 14px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
 .api-case-back-button.ant-btn {
   width: 32px;
   min-width: 32px;
@@ -112,146 +64,7 @@
   min-width: 0;
 }
 
-.api-case-import-trigger.ant-btn {
-  flex: 0 0 auto;
-  border-radius: 10px;
-}
-
-.api-case-workspace {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.api-collection-detail-panel .api-detail-hover-body {
-  display: block;
-  max-height: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-  overflow: hidden;
-  opacity: 0;
-  border-top-width: 0;
-  transition:
-    max-height 0.24s ease,
-    padding 0.24s ease,
-    opacity 0.18s ease,
-    border-top-width 0.18s ease;
-}
-
-.api-collection-detail-panel:hover .api-detail-hover-body {
-  max-height: 320px;
-  padding-top: 16px;
-  padding-bottom: 16px;
-  opacity: 1;
-  border-top-width: 1px;
-}
-
-.api-collection-detail-panel .api-detail-hover-body .api-summary-item > .ant-typography {
-  color: var(--tp-text-secondary) !important;
-  font-weight: 600;
-}
-
-.api-collection-detail-panel .api-detail-hover-body .api-summary-item > strong {
-  color: var(--tp-text) !important;
-  text-shadow: none;
-}
-
-.api-case-editor-panel {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.api-case-editor-shell {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.api-case-editor-main {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.api-case-editor-main-scroll {
-  height: 100%;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.api-case-editor-result-pane {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.api-case-editor-result-scroll {
-  height: 100%;
-  min-height: 0;
-  padding: 0 24px 24px;
-  display: flex;
-  flex-direction: column;
-  overflow: auto;
-}
-
-.api-case-editor-splitter {
-  position: relative;
-  flex: 0 0 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: row-resize;
-  user-select: none;
-  touch-action: none;
-}
-
-.api-case-editor-splitter-line {
-  width: calc(100% - 32px);
-  height: 1px;
-  background: var(--tp-border-soft);
-  transition: background-color 0.2s ease;
-}
-
-.api-case-editor-splitter-grip {
-  position: absolute;
-  padding: 0 8px;
-  background: var(--tp-bg-elevated, var(--app-surface));
-  color: var(--app-request-splitter-text);
-  font-size: 18px;
-  line-height: 1;
-  letter-spacing: 2px;
-}
-
-.api-case-editor-splitter:hover .api-case-editor-splitter-line,
-.api-case-editor-splitter.resizing .api-case-editor-splitter-line {
-  background: var(--app-request-splitter-active);
-}
-
-.api-case-editor-splitter:hover .api-case-editor-splitter-grip,
-.api-case-editor-splitter.resizing .api-case-editor-splitter-grip {
-  color: var(--app-request-splitter-text-hover);
-}
-
-.api-case-preview-description {
-  margin: 0;
-  color: var(--tp-text-secondary);
-  font-size: 14px;
-  line-height: 22px;
-}
-
 /* Keep HTTP method tags semantic while retaining a restrained tinted surface. */
-
-.api-case-table-description {
-  margin-top: 4px;
-  color: var(--app-surface-text-muted);
-  font-size: 12px;
-  line-height: 18px;
-}
 
 .api-case-environment-popover-overlay .ant-popover-inner {
   padding: 0;
@@ -815,7 +628,7 @@
 }
 
 .api-env-var-picker-item-example {
-  color: var(--tp-accent, var(--app-picker-accent-fallback));
+  color: var(--app-accent, var(--app-picker-accent-fallback));
 }
 
 .api-env-var-picker-item-type {
@@ -1023,46 +836,6 @@
 .api-body-placeholder-card {
   border-radius: 10px;
   background: var(--app-request-section-bg);
-}
-
-.api-case-run-result-card {
-  flex: 0 0 auto;
-  height: auto;
-  min-height: 0;
-  margin-top: 0;
-  border-radius: 12px;
-}
-
-.api-case-run-result-card .ant-card-body {
-  height: auto;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: visible;
-}
-
-.api-case-run-result-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 14px;
-}
-
-.api-case-run-result-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.api-case-run-result-meta {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 10px 16px;
-  color: var(--app-control-text);
-  font-size: 12px;
-  line-height: 18px;
 }
 
 .api-case-run-result-alert {
@@ -1542,27 +1315,6 @@
   padding-top: 14px;
 }
 
-.api-rule-card {
-  border-radius: 10px;
-}
-
-.api-rule-card .ant-card-body {
-  padding: 12px 14px;
-}
-
-.api-rule-card-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.api-rule-card-desc {
-  color: var(--app-shell-text-muted);
-  font-size: 12px;
-  line-height: 18px;
-}
-
 .api-rule-empty-card {
   border-radius: 10px;
 }
@@ -1929,10 +1681,6 @@
 
 
 @media (max-width: 1180px) {
-  .api-collection-detail-layout {
-    grid-template-columns: 1fr;
-  }
-
   .api-case-sidebar-scroll {
     max-height: 420px;
   }
@@ -1985,25 +1733,11 @@
     gap: 8px;
   }
 
-  .api-case-summary-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .api-case-summary-grid.compact {
-    grid-template-columns: 1fr 1fr;
-  }
-
   .api-case-settings-grid {
     padding: 12px 0 0;
     justify-content: flex-end;
     border-left: 0;
     border-top: 1px solid var(--tp-border-soft);
-  }
-
-  .api-case-run-result-head,
-  .api-case-run-result-meta {
-    align-items: flex-start;
-    flex-direction: column;
   }
 
   .api-rule-form-grid {
@@ -2025,20 +1759,6 @@
 
   .api-collection-run-report-summary-grid {
     grid-template-columns: 1fr 1fr;
-  }
-
-  .api-detail-hover-bar,
-  .api-detail-hover-bar-main {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .api-detail-hover-bar-actions {
-    width: 100%;
-  }
-
-  .api-detail-hover-bar-actions .ant-btn {
-    width: 100%;
   }
 
   .api-post-ops-item {

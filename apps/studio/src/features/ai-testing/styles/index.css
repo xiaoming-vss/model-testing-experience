@@ -14,9 +14,7 @@
   --ai-text-muted: var(--app-task-text-muted);
   --ai-hover-text: var(--app-task-link-hover);
   --ai-active-text: var(--app-task-link-active);
-  --ai-toolbar-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-72),
-    0 14px 32px var(--app-task-panel-shadow);
+
   --ai-surface:
     linear-gradient(180deg, var(--app-glass-surface-96), var(--app-task-surface-gradient-end)),
     var(--app-glass-surface-96);
@@ -128,9 +126,7 @@
 /* macOS frosted white trial for AI testing task pages */
 
 .ai-testing-page {
-  --ai-toolbar-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-86),
-    0 18px 48px var(--app-glass-shadow-toolbar);
+
 }
 
 .ai-testing-page::before {
@@ -184,7 +180,6 @@
   border: 0;
   border-radius: 10px;
 }
-
 
 @media (max-width: 680px) {
 
@@ -249,7 +244,6 @@
   background: var(--app-glass-surface-54);
 }
 
-
 /* Global macOS palette alignment */
 
 .app-shell-macos .ai-testing-page {
@@ -287,25 +281,6 @@
 
 .ai-task-refresh-button.ant-btn {
   padding-inline: 8px;
-}
-
-.ai-task-sprint-filter {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.ai-task-sprint-filter-label {
-  flex: 0 0 auto;
-  color: var(--ai-text-secondary);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.ai-task-sprint-filter-select {
-  min-width: 150px;
-  max-width: 220px;
-  text-align: left;
 }
 
 @media (max-width: 980px) {

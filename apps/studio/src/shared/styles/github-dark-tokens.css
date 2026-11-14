@@ -45,7 +45,7 @@
   --app-link: var(--gh-blue);
   --description-text: var(--gh-muted);
   --description-text-muted: var(--gh-muted);
-  --description-bg: var(--gh-surface);
+
   --description-border: var(--gh-border);
   --srf-list-header-text: var(--gh-muted);
   --srf-list-header-bg: var(--gh-surface);

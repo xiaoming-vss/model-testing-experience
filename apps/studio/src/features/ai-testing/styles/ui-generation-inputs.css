@@ -86,7 +86,7 @@
 }
 .gc-ui-input-summary > * { margin: 0; padding: 10px 12px; border-bottom: 1px solid var(--app-surface-divider); }
 .gc-ui-input-summary > :nth-last-child(-n+2) { border-bottom: 0; }
-.gc-ui-input-summary dt { color: var(--app-surface-text-muted); background: var(--app-surface-subtle); }
+.gc-ui-input-summary dt { color: var(--app-surface-text-muted); background: var(--app-surface-hover); }
 .gc-ui-input-summary dd { min-width: 0; overflow-wrap: anywhere; }
 .gc-ui-input-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding-top: 12px; border-top: 1px solid var(--app-surface-divider); }
 @media (max-width: 640px) {

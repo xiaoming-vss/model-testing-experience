@@ -18,7 +18,7 @@
 | **待强制** | 规则已定，自动检查**尚未实现**；当前只能靠评审 |
 | **存量豁免** | 规则只对**新**代码生效；既有违规记入基线不修，只许减不许增 |
 
-> **当前状态：S8 的 CSS 裸色值检查已接入 `npm run verify`，其余自动检查仍待实现。** 仓库没有 CI，也没有 git hook，`npm run verify` 与 `npm test` 依赖人工执行。CSS 配色可通过 `npm run check:theme` 单独检查；其它规则的自动化见各条「检查」列。
+> **当前状态：S8 的 CSS 裸色值检查与 S15 的 CSS 预算检查已接入 `npm run verify`，其余自动检查仍待实现。** 仓库没有 CI，也没有 git hook，`npm run verify` 与 `npm test` 依赖人工执行。CSS 配色可通过 `npm run check:theme` 单独检查，CSS 预算可通过 `npm run check:css` 单独检查；其它规则的自动化见各条「检查」列。
 
 每条规则都从实际违规反推得到，附「拦住的问题」与文件行号，便于核对。行号为 2026-09-22 审计时刻的值，会随改造漂移。
 
@@ -81,6 +81,7 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 | S8 | token 单一来源：token 定义集中在**已登记的 token 文件**里（清单见下）。feature **只能消费，不得定义全局 token** | `--tp-text` 被 `app/styles/workbench.css` 与 `features/api-automation/styles/detail.css` 两处定义；`shared/styles/page-frame.css` 消费了 8 处 token（`:64,118,272,349,547,961,979,1072`，其中 `--tp-border`×3、`--tp-border-soft`×5），而这两个 token 的定义同样散在 `workbench.css` 与 `detail.css` 两处——**shared 反向依赖 feature 定义的 token** | CSS 裸色值：`npm run check:theme`（**已实现**，接入 `verify`）；定义重名与依赖方向扫描仍待实现，存量定义保留 |
 | S9 | 样式引入必须显式自持：每个入口自行 import 自己依赖的样式。**禁止依赖「别的页面恰好 import 了」而生效** | `functional-test-page` 被 4 个 feature 使用（test-cases、api-automation、test-orders、ui-automation 的页面），但唯一定义在 `features/testing/styles/index.css`，而这 4 个页面都不 import 它——只靠被 `TestingPage` 包着渲染才拿到样式 | 评审 + import 图核对（**待强制**） |
 | S14 | 列表页表面层：用例库 / 应用 / 测试单 / API 测试 / UI 测试五页共用 `shared/styles/surface-tokens.css`。页面根节点必须同时带页面类与 `tp-surface`，列表／卡片页板面 section 带 `tp-board tp-list-panel`，内容使用 `tp-list-body` / `tp-list-scroll`，Tab 位于外框外；样式写在各自 `features/<f>/styles/*-v2.css`，颜色只能引用 `--srf-*` / `.tone-*` | 五页共用同一套卡片 + 胶囊 + 色盘，缺 `tp-surface` 时页面里所有 `var(--srf-*)` 解析成空值，表现为「样式莫名消失」；`testing/styles/index.css` 与 `app/styles/workbench.css` 都用 `!important` 抢过这些容器，覆盖规则必须写成 `.app-shell.app-shell-macos .testing-page .<页面类> ...` 再加 `!important`，删掉前缀或 `!important` 会静默失效。**同权重同样会失效**：`workbench.css` 的玻璃规则是 (0,6,0)，与 `.tp-board` 覆盖同分，只靠 import 顺序决胜 | 评审 + 扫描脚本（**待强制**） |
+| S15 | CSS 预算只减不增：`!important` 与 `.app-shell.app-shell-macos` 长前缀按文件记录在 `scripts/css-budget.json`，未定义 CSS 变量不得新增 | 样式权重军备竞赛与 token 拼写错误会随新页面重新增长；已有 0 个无回退未定义变量，2 个有回退的遗留变量登记在基线 | `npm run check:css`（**已实现**，接入 `verify`）；有意增加时运行 `node scripts/check-css-budget.mjs --update` 并评审 |
 
 数据表行分隔由 `shared/styles/table-row-dividers.css` 全局提供，公共列表皮肤消费相同的 `--app-list-row-border`。变量值只在下列 token 文件定义，feature 不另设分隔色或移除横线；`tableRowDividers.test.ts` 检查入口、数据行覆盖及变量归属。
 

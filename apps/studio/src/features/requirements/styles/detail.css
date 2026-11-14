@@ -35,12 +35,7 @@
   .requirement-detail-main, .requirement-detail-side { flex: 0 0 auto; }
 }
 
-.requirement-detail-tabs { flex: 0 0 auto; min-width: 0; max-width: 100%; }
-.requirement-detail-tabs:empty { display: none; }
-
 .requirement-detail-workspace-actions:empty, .requirement-detail-workspace-actions:has(> [hidden]) { display: none; }
-
-/* 质量档案：正式测试资产按 effective_import_id 展示来源。 */
 
 /* 需求详情中的原文与增强文本随画布阅读容器分配高度，分别在列内滚动。 */
 .requirement-detail-main .requirement-document-inline .requirement-document-workspace {

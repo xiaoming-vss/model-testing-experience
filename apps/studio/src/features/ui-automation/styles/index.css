@@ -82,191 +82,11 @@
   margin-top: 6px;
 }
 
-.api-case-summary-card .ant-card-body {
-  padding: 12px 16px;
-}
-
-.api-detail-hover-panel {
-  border: 1px solid var(--tp-border-soft);
-  border-radius: 12px;
-  background: var(--app-surface);
-  transition:
-    box-shadow 0.28s ease,
-    border-color 0.28s ease;
-}
-
-.api-detail-hover-panel:hover {
-  border-color: var(--tp-border);
-  box-shadow: 0 8px 24px var(--app-card-shadow-medium);
-}
-
-.api-detail-hover-bar {
-  min-height: 56px;
-  padding: 0 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  background: var(--app-surface-raised);
-}
-
-.api-detail-hover-bar-main {
-  min-width: 0;
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.api-detail-hover-bar-actions {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.api-detail-hover-title {
-  color: var(--app-shell-text);
-  font-size: 14px;
-  line-height: 22px;
-  font-weight: 600;
-}
-
-.api-detail-hover-preview {
-  min-width: 0;
-  color: var(--app-shell-text-muted);
-  font-size: 13px;
-  line-height: 20px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.api-detail-hover-body {
-  display: none;
-  padding: 16px;
-  border-top: 1px solid var(--tp-border-soft);
-}
-
-.api-detail-hover-panel:hover .api-detail-hover-body {
-  display: block;
-}
-
-.api-detail-description {
-  margin: 0 0 12px;
-  color: var(--app-shell-text-muted);
-  font-size: 14px;
-  line-height: 22px;
-}
-
-.api-case-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.api-case-summary-grid .ant-typography {
-  display: block;
-  margin-bottom: 2px;
-}
-
-.api-case-summary-grid.compact {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  align-items: start;
-}
-
-.api-summary-item {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.api-summary-item strong {
-  display: block;
-  color: var(--app-shell-text);
-  font-size: 15px;
-  line-height: 22px;
-  font-weight: 700;
-  word-break: break-word;
-}
-
-.api-detail-hover-body .api-summary-item > .ant-typography {
-  color: var(--app-accent-border) !important;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 18px;
-  letter-spacing: 0;
-  opacity: 1;
-}
-
-.api-detail-hover-body .api-summary-item > strong {
-  color: var(--app-terminal-text-bright) !important;
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 22px;
-  opacity: 1;
-  text-shadow: 0 0 1px var(--app-terminal-text-glow);
-}
-
-.api-collection-detail-frame {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.api-collection-detail-layout {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
-  gap: 16px;
-  align-items: stretch;
-}
-
 .api-case-sidebar {
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-.api-case-sidebar-header {
-  gap: 12px;
-}
-
-.api-case-sidebar-title {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.api-case-sidebar-title-copy {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.api-case-sidebar-title-copy .ant-typography {
-  margin: 0;
-}
-
-.api-case-sidebar-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 0 0 auto;
-}
-
-.api-case-sidebar-count.ant-typography {
-  margin: 0;
-  font-size: 12px;
-  line-height: 18px;
-  white-space: nowrap;
 }
 
 .api-case-sidebar-toolbar {
@@ -285,10 +105,6 @@
   display: grid;
   place-items: center;
   padding: 0 24px 24px;
-}
-
-.ui-test-case-name-item {
-  margin-bottom: 0;
 }
 
 .ui-test-case-step-empty {
@@ -357,7 +173,7 @@
   flex: 0 0 auto;
   padding: 2px 8px;
   border-radius: 999px;
-  background: var(--tp-bg-softest);
+  background: var(--app-surface-chip);
   color: var(--tp-text-secondary);
   font-size: 12px;
   line-height: 18px;
@@ -385,12 +201,12 @@
 }
 
 .ui-test-case-step-toggle.expanded {
-  color: var(--tp-accent);
+  color: var(--app-accent);
   transform: rotate(180deg);
 }
 
 .ui-test-case-step-toggle:hover {
-  color: var(--tp-accent);
+  color: var(--app-accent);
   border-color: var(--app-review-border-hover);
   background: var(--app-request-card-shadow-hover);
 }
@@ -439,7 +255,7 @@
 
 .ui-test-case-step-title-input.ant-input:hover,
 .ui-test-case-step-title-input.ant-input:focus {
-  background: var(--tp-bg-soft);
+  background: var(--app-surface-hover);
   border-color: var(--tp-border-soft);
   box-shadow: none;
 }
@@ -728,4 +544,3 @@
   border: 1px solid var(--tp-border-soft);
   border-radius: 8px;
 }
-

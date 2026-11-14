@@ -2,59 +2,6 @@
   width: 100%;
 }
 
-.page-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-}
-
-.page-head h2,
-.section-head h4 {
-  margin: 0;
-}
-
-.page-head .ant-typography,
-.section-head .ant-typography {
-  margin-bottom: 0;
-}
-
-.detail-block,
-.capability-card,
-.profile-card {
-  background: var(--app-surface);
-}
-
-.section-head {
-  margin-top: 4px;
-}
-
-.capability-card .ant-empty {
-  padding: 32px 0 40px;
-}
-
-.capability-card .ant-empty-image {
-  height: auto;
-  margin-bottom: 16px;
-  color: var(--app-accent);
-  font-size: 42px;
-}
-
-.profile-card {
-  max-width: 560px;
-}
-
-.sprint-card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-}
-
-.sprint-card-link {
-  color: inherit;
-  text-decoration: none;
-}
-
 .sprint-card {
   height: 100%;
   border: 1px solid var(--tp-border);
@@ -82,29 +29,6 @@
   gap: 14px;
 }
 
-.sprint-card-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.sprint-card-title {
-  color: var(--app-shell-text);
-  font-size: 18px;
-  line-height: 26px;
-  font-weight: 700;
-}
-
-.sprint-card-title-wrap {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.sprint-card-status {
-  flex: 0 0 auto;
-}
-
 .sprint-card-meta {
   display: flex;
   align-items: center;
@@ -118,24 +42,6 @@
   color: var(--app-shell-text-muted);
   font-size: 13px;
   line-height: 20px;
-}
-
-.sprint-card-value {
-  color: var(--app-shell-text);
-  font-size: 14px;
-  line-height: 22px;
-  font-weight: 500;
-  text-align: right;
-}
-
-.sprint-card-description {
-  color: var(--app-shell-text-secondary);
-  font-size: 14px;
-  line-height: 22px;
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
 }
 
 .sprint-card-actions {
@@ -154,17 +60,6 @@
   padding: 16px;
 }
 
-.sprint-card-grid-workbench {
-  flex: 0 0 auto;
-  min-height: 0;
-  height: auto;
-  box-sizing: border-box;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  grid-auto-rows: minmax(248px, auto);
-  align-content: start;
-  align-items: stretch;
-}
-
 .sprint-card-grid-workbench .sprint-card {
   min-width: 0;
   height: 100%;
@@ -174,28 +69,6 @@
 .sprint-card-grid-workbench .sprint-card .ant-card-body {
   min-height: 0;
   gap: 10px;
-}
-
-.sprint-card-grid-workbench .sprint-card-head {
-  min-height: 28px;
-}
-
-.sprint-card-grid-workbench .sprint-card-title-wrap .ant-space {
-  min-width: 0;
-  max-width: 100%;
-}
-
-.sprint-card-grid-workbench .sprint-card-title-wrap .ant-space-item:last-child {
-  min-width: 0;
-}
-
-.sprint-card-grid-workbench .sprint-card-title {
-  min-width: 0;
-  overflow: hidden;
-  font-size: 15px;
-  line-height: 22px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .sprint-card-grid-workbench .sprint-card-meta {
@@ -208,30 +81,6 @@
   flex: 0 0 auto;
   font-size: 12px;
   line-height: 18px;
-}
-
-.sprint-card-grid-workbench .sprint-card-value,
-.sprint-card-grid-workbench .project-time-text,
-.sprint-card-grid-workbench .requirement-sprint {
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-  font-size: 12px;
-  line-height: 20px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sprint-card-grid-workbench .sprint-card-binding-line {
-  overflow: hidden;
-}
-
-.sprint-card-grid-workbench .sprint-card-description {
-  min-height: 48px;
-  font-size: 12px;
-  line-height: 20px;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
 }
 
 .sprint-card-grid-workbench .sprint-card-actions {
@@ -256,50 +105,6 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
-}
-
-.requirement-filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  padding: 2px 6px 2px 8px;
-  background: var(--app-section-bg);
-  border: 1px solid var(--tp-border-soft);
-  border-radius: 999px;
-}
-
-.requirement-filter-label {
-  color: var(--app-shell-text-muted);
-  font-size: 11px;
-  line-height: 16px;
-  white-space: nowrap;
-}
-
-.requirement-filter-control {
-  min-width: 0;
-}
-
-.requirement-filter-select {
-  min-width: 116px;
-}
-
-.requirement-filter-select .ant-select-selector {
-  min-height: 20px !important;
-  padding-inline: 0 !important;
-}
-
-.requirement-filter-select .ant-select-selection-item,
-.requirement-filter-select .ant-select-selection-placeholder {
-  color: var(--app-shell-text);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 20px !important;
-}
-
-.requirement-filter-select .ant-select-arrow,
-.requirement-filter-select .ant-select-clear {
-  font-size: 10px;
 }
 
 .sprint-overview-panel-body {
@@ -985,10 +790,6 @@
 }
 
 @media (max-width: 1200px) {
-  .sprint-card-grid-workbench {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
   .sprint-overview-toolbar-summary-row {
     align-items: flex-start;
   }
@@ -1042,48 +843,12 @@
     padding: 24px 16px;
   }
 
-  .auth-card .ant-card-body {
-    padding: 32px 24px;
-  }
-
-  .app-sider {
-    display: none;
-  }
-
   .app-header {
     padding: 0 16px;
   }
 
-  .app-search {
-    display: none;
-  }
-
-  .project-context-bar {
-    align-items: flex-start;
-    flex-direction: column;
-    padding: 12px 16px;
-  }
-
-  .project-actions {
-    width: 100%;
-  }
-
   .workbench-tabs {
     padding: 16px var(--app-page-gutter) 16px;
-  }
-
-  .page-head {
-    flex-direction: column;
-  }
-
-  .sprint-card-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .sprint-card-grid-workbench {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-auto-rows: auto;
-    height: auto;
   }
 
   .sprint-card-grid-workbench .sprint-card {
@@ -1097,10 +862,6 @@
     gap: 4px;
   }
 
-  .sprint-card-value {
-    text-align: left;
-  }
-
   .requirement-panel-head,
   .requirement-filter-bar,
   .sprint-overview-hero-title-row {
@@ -1110,20 +871,9 @@
     gap: 10px;
   }
 
-  .requirement-filter-bar {
-    border-radius: 16px;
-  }
-
-  .requirement-filter-select {
-    min-width: 108px;
-  }
 }
 
 @media (max-width: 768px) {
-  .sprint-card-grid-workbench {
-    grid-template-columns: 1fr;
-  }
-
   .sprint-overview-hero-summary {
     width: 100%;
     margin-left: 0;
@@ -1255,67 +1005,4 @@
   background: var(--app-document-table-heading-bg);
   color: var(--app-text-strong);
   font-weight: 700;
-}
-
-/* ===== 迭代代码变更概览 ===== */
-.sprint-code-overview-card {
-  width: 100%;
-}
-.sprint-code-overview-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.sprint-code-overview-item {
-  padding: 10px 12px;
-  border: 1px solid var(--app-document-rule);
-  border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.sprint-code-overview-item-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.sprint-code-overview-item-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  max-width: 55%;
-}
-.sprint-code-overview-item-title .ant-typography {
-  max-width: 320px;
-}
-.sprint-code-overview-item-metrics {
-  flex: none;
-}
-.sprint-code-overview-metric {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 4px;
-}
-.sprint-code-overview-metric-value {
-  font-weight: 600;
-  font-size: 16px;
-}
-.sprint-code-overview-metric-label {
-  color: var(--app-result-empty);
-  font-size: 12px;
-}
-.sprint-code-overview-metric.metric-additions .sprint-code-overview-metric-value {
-  color: var(--app-result-success);
-}
-.sprint-code-overview-metric.metric-deletions .sprint-code-overview-metric-value {
-  color: var(--app-result-failed);
-}
-.sprint-code-overview-item-meta {
-  font-size: 12px;
-}
-.sprint-code-overview-item-error {
-  margin-top: 2px;
 }

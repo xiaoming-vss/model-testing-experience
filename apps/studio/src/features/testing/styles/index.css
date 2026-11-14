@@ -1,11 +1,9 @@
 .testing-page {
-  --testing-panel:
-    linear-gradient(180deg, var(--app-glass-surface-96) 0%, var(--app-task-panel-gradient-end) 100%);
+
   --testing-border: var(--app-frame-divider);
   --testing-text: var(--app-glass-text);
   --testing-text-muted: var(--app-testing-text-muted);
-  --testing-hover-text: var(--app-task-link-hover);
-  --testing-accent: var(--app-accent);
+
 }
 
 .testing-tab-panel {
@@ -205,15 +203,6 @@
   }
 }
 
-.requirement-testing-description {
-  flex: 1 1 220px;
-  min-width: 120px;
-  margin-top: 0;
-  margin-bottom: 0;
-  max-width: none;
-  line-height: 20px;
-}
-
 .requirement-document-dialog .ant-modal-content {
   display: flex;
   flex-direction: column;
@@ -391,7 +380,6 @@
   overflow-wrap: anywhere;
 }
 
-
 .requirement-document-preview-shell {
   display: flex;
   flex: 1 1 auto;
@@ -475,52 +463,6 @@
   word-break: break-word;
 }
 
-
-.requirement-analysis-drawer {
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-}
-
-.requirement-analysis-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-}
-
-.requirement-analysis-run-row-selected > td {
-  background: var(--app-editor-focus-ring) !important;
-}
-
-.requirement-analysis-drawer .ant-table-row {
-  cursor: pointer;
-}
-
-.requirement-analysis-detail-title {
-  color: var(--testing-text-muted);
-  font-size: 12px;
-  line-height: 18px;
-  font-weight: 700;
-}
-
-.requirement-analysis-code-block {
-  min-height: 120px;
-  max-height: 360px;
-  margin: 0;
-  padding: 14px 16px;
-  overflow: auto;
-  border: 1px solid var(--testing-border);
-  border-radius: 8px;
-  background: var(--app-testing-card-muted-bg);
-  color: var(--testing-text);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
-  font-size: 12px;
-  line-height: 1.72;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
 .functional-test-page {
   height: 100%;
 }
@@ -531,11 +473,6 @@
 
 .functional-suite-scroll {
   padding: 16px;
-}
-
-.functional-suite-grid {
-  width: 100%;
-  align-content: start;
 }
 
 .functional-suite-card .sprint-card-actions .ant-btn {
@@ -600,12 +537,11 @@
 
 /* Global macOS palette alignment */
 .app-shell-macos .testing-page {
-  --testing-panel: var(--app-glass-surface-68);
+
   --testing-border: var(--app-glass-divider);
   --testing-text: var(--app-glass-text);
   --testing-text-muted: var(--app-glass-text-hint);
-  --testing-hover-text: var(--app-glass-link);
-  --testing-accent: var(--app-glass-link);
+
 }
 
 /* API testing page aligned to base-services macOS glass style */
@@ -706,7 +642,6 @@
   border-bottom-color: var(--api-test-border-soft) !important;
 }
 
-
 .app-shell-macos .testing-page .api-automation-content > .workbench-panel .ant-empty {
   color: var(--api-test-muted);
 }
@@ -771,8 +706,6 @@
 .app-shell-macos .testing-page .api-automation-content > .workbench-panel .ant-empty-description {
   color: var(--app-glass-text-caption) !important;
 }
-
-
 
 /* Functional test suites: override shared testing grid for readable macOS cards */
 .app-shell-macos .testing-page .functional-test-page .api-automation-content > .workbench-panel .functional-suite-scroll {
@@ -1177,38 +1110,6 @@
   border-radius: 8px;
 }
 
-.requirement-document-pane-divider {
-  position: relative;
-  z-index: 1;
-  width: 1px;
-  background: var(--app-testing-control-border);
-  cursor: col-resize;
-  outline: none;
-}
-
-.requirement-document-pane-divider > .anticon {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 2;
-  display: inline-flex;
-  width: 24px;
-  height: 42px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--app-testing-control-border);
-  border-radius: 12px;
-  background: var(--app-surface);
-  color: var(--app-testing-control-disabled-text);
-  box-shadow: 0 2px 8px var(--app-task-overlay-border);
-  transform: translate(-50%, -50%);
-}
-
-.requirement-document-pane-divider:focus-visible > .anticon {
-  border-color: var(--app-testing-control-focus-border);
-  box-shadow: 0 0 0 3px var(--app-testing-control-focus-ring);
-}
-
 .requirement-document-pane-header {
   display: flex;
   flex: 0 0 48px;
@@ -1246,11 +1147,6 @@
   color: var(--app-list-label);
   font-size: 11px;
   font-weight: 500;
-}
-
-.requirement-document-analysis-status {
-  background: var(--app-testing-success-tag-bg);
-  color: var(--app-testing-success-tag-text);
 }
 
 .requirement-document-pane-body {
@@ -1321,31 +1217,10 @@
   padding: 24px;
 }
 
-
-
-
-
-
-
-
-
-
-
 @media (max-width: 980px) {
   .requirement-document-workspace.is-compare {
     grid-template-columns: minmax(0, 1fr) !important;
     grid-template-rows: minmax(0, 1fr) 1px minmax(0, 1fr);
-  }
-
-  .requirement-document-pane-divider {
-    width: 100%;
-    height: 1px;
-    cursor: row-resize;
-  }
-
-  .requirement-document-pane-divider > .anticon {
-    width: 44px;
-    height: 20px;
   }
 
   .requirement-document-workspace.is-compare .requirement-document-pane:first-child,
@@ -1445,8 +1320,6 @@
 .functional-suite-list-description.ant-typography {
   color: var(--app-list-label) !important;
 }
-
-/* Keep every test-suite name aligned with the task-list clickable-name treatment. */
 
 /* Embedded document columns share the detail page frame. */
 .requirement-document-inline .requirement-document-workspace.is-compare > .requirement-document-pane {

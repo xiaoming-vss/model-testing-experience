@@ -12,8 +12,9 @@
     "lint:fix": "eslint . --fix",
     "format": "npm run lint:fix",
     "test": "vitest run",
-    "verify": "npm run type-check && npm run lint && npm run check:theme && npm run build",
-    "preview": "vite preview"
+    "verify": "npm run type-check && npm run lint && npm run check:theme && npm run check:css && npm run build",
+    "preview": "vite preview",
+    "check:css": "node scripts/check-css-budget.mjs"
   },
   "dependencies": {
     "@ant-design/icons": "^6.2.2",

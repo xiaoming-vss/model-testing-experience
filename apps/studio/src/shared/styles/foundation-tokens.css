@@ -7,14 +7,9 @@
  */
 :root {
   /* Focused document comparison surface (approved A comp). */
-  --app-reading-bg: #ffffff;
-  --app-reading-ink: #142441;
+
   --app-reading-muted: #53647e;
-  --app-reading-border: #dce7f6;
-  --app-reading-subtle: #f7faff;
-  --app-reading-accent: #1260df;
-  --app-reading-accent-hover: #0b4cbd;
-  --app-reading-selection: #eaf3ff;
+
   --app-reading-on-accent: #ffffff;
   --app-scrollbar-size: 8px;
   --app-scrollbar-radius: 4px;
@@ -83,7 +78,7 @@
   --app-glass-shadow-card: rgba(31, 41, 55, 0.045);
   --app-glass-surface-48: rgba(255, 255, 255, 0.48);
   --app-glass-selected: rgba(10, 132, 255, 0.075);
-  --app-glass-shadow-soft: rgba(31, 41, 55, 0.03);
+
   --app-glass-page-glow: rgba(10, 132, 255, 0.05);
   --app-glass-highlight-84: rgba(255, 255, 255, 0.84);
   --app-glass-surface-50: rgba(255, 255, 255, 0.5);
@@ -91,11 +86,10 @@
   --app-glass-highlight-90: rgba(255, 255, 255, 0.9);
   --app-glass-shadow-floating: rgba(31, 41, 55, 0.065);
   --app-glass-action-border-hover: rgba(10, 132, 255, 0.26);
-  --app-glass-action-border-active: rgba(10, 132, 255, 0.36);
-  --app-glass-surface-84: rgba(255, 255, 255, 0.84);
+
   --app-glass-shadow-control: rgba(31, 41, 55, 0.05);
   --app-glass-surface-56: rgba(255, 255, 255, 0.56);
-  --app-glass-shadow-inset: rgba(31, 41, 55, 0.04);
+
   --app-glass-surface-92: rgba(255, 255, 255, 0.92);
   --app-glass-tag-border: rgba(10, 132, 255, 0.12);
   --app-glass-tag-text: rgba(10, 96, 190, 0.86);
@@ -238,25 +232,16 @@
   --app-glass-accent-soft: rgba(10, 132, 255, 0.1);
   --app-glass-link-hover: #006edb;
   --app-glass-surface-18: rgba(255, 255, 255, 0.18);
-  --app-glass-shadow-popover: rgba(15, 23, 42, 0.18);
+
   --app-glass-text-hint: rgba(23, 32, 51, 0.52);
   --app-glass-surface-86: rgba(255, 255, 255, 0.86);
-  --app-glass-shadow-option: rgba(15, 23, 42, 0.035);
-  --app-option-border-selected: rgba(10, 132, 255, 0.52);
-  --app-option-selected-gradient-start: rgba(240, 247, 255, 0.96);
-  --app-option-selected-gradient-end: rgba(247, 251, 255, 0.92);
+
   --app-glass-accent-ring: rgba(10, 132, 255, 0.08);
-  --app-option-border-hover: rgba(10, 132, 255, 0.34);
-  --app-option-text-disabled: rgba(23, 32, 51, 0.34);
+
   --app-glass-border-faint: rgba(15, 23, 42, 0.045);
-  --app-option-bg-disabled: rgba(248, 250, 252, 0.58);
-  --app-option-icon-selected: #0a66d9;
-  --app-option-text: rgba(23, 32, 51, 0.78);
-  --app-option-icon-bg: rgba(15, 23, 42, 0.045);
-  --app-option-icon-disabled: rgba(23, 32, 51, 0.3);
+
   --app-option-icon-bg-disabled: rgba(15, 23, 42, 0.04);
-  --app-accent-action-shadow: rgba(22, 119, 255, 0.22);
-  --app-option-icon-bg-active: rgba(15, 23, 42, 0.055);
+
   --app-glass-border-70: rgba(255, 255, 255, 0.7);
   --app-task-tag-border: rgba(126, 148, 224, 0.14);
   --app-task-tag-bg: rgba(126, 148, 224, 0.075);
@@ -266,7 +251,7 @@
   --app-list-label: #7b8494;
   --app-task-drop-border: #8bb3ff;
   --app-task-overlay-border: rgba(23, 32, 51, 0.08);
-  --app-task-overlay-shadow: rgba(23, 32, 51, 0.14);
+
   --app-surface-hover: #f8fafc;
   --app-surface-border: #e2e8f0;
   --app-surface-shadow: rgba(15, 23, 42, 0.04);
@@ -284,10 +269,9 @@
   --app-surface-accent: #2563eb;
   --app-surface-accent-border: #bfdbfe;
   --app-surface-accent-soft: #eff6ff;
-  --app-terminal-scrollbar: rgba(124, 195, 163, 0.42);
+
   --app-terminal-scrollbar-track: rgba(255, 255, 255, 0.04);
-  --app-terminal-scrollbar-thumb: rgba(124, 195, 163, 0.3);
-  --app-terminal-scrollbar-hover: rgba(124, 195, 163, 0.46);
+
   --app-terminal-link: #b8d9ff;
   --app-result-warning-text: #d46b08;
   --app-pipeline-done: #95de64;
@@ -384,10 +368,7 @@
   --app-review-arrow-active: rgba(59, 130, 246, 0.95);
   --app-review-arrow: rgba(71, 85, 105, 0.95);
   --app-graph-control-shadow: rgba(15, 23, 42, 0.08);
-  --app-terminal-scrollbar-neutral: rgba(148, 163, 184, 0.42);
-  --app-terminal-scrollbar-neutral-track: rgba(15, 20, 32, 0.92);
-  --app-terminal-scrollbar-edge: rgba(15, 20, 32, 0.92);
-  --app-terminal-scrollbar-neutral-hover: rgba(148, 163, 184, 0.56);
+
   --app-terminal-result-surface: rgba(255, 255, 255, 0.03);
   --app-terminal-result-border: rgba(124, 195, 163, 0.22);
   --app-terminal-result-bg: rgba(124, 195, 163, 0.08);
@@ -410,13 +391,9 @@
   --app-terminal-scrollbar-active: rgba(124, 195, 163, 0.56);
   --app-review-divider: rgba(148, 163, 184, 0.1);
   --app-terminal-focus-ring: rgba(124, 195, 163, 0.55);
-  --app-review-panel-shadow: rgba(36, 49, 78, 0.06);
+
   --app-glass-highlight-74: rgba(255, 255, 255, 0.74);
-  --app-review-gradient-start: rgba(246, 250, 255, 0.98);
-  --app-review-gradient-end: rgba(242, 247, 253, 0.98);
-  --app-review-code-surface: #f8fbff;
-  --app-review-warning-soft: rgba(249, 115, 22, 0.08);
-  --app-review-info-soft: rgba(96, 165, 250, 0.12);
+
   --app-graph-reference-soft: rgba(70, 166, 210, 0.08);
   --app-graph-node-border: rgba(124, 195, 163, 0.2);
   --app-graph-canvas-glow: rgba(124, 195, 163, 0.08);
@@ -435,17 +412,13 @@
   --app-graph-legend-reference-text: #1f5d80;
   --app-graph-legend-reference-border: rgba(70, 166, 210, 0.24);
   --app-graph-legend-reference-bg: rgba(70, 166, 210, 0.1);
-  --app-skill-running-bg: rgba(41, 190, 163, 0.08);
-  --app-skill-running-border: rgba(41, 190, 163, 0.14);
-  --app-skill-running-text: #2fba9f;
+
   --app-skill-card-border: rgba(15, 23, 42, 0.052);
   --app-skill-card-shadow: rgba(31, 41, 55, 0.042);
   --app-skill-card-border-hover: rgba(10, 132, 255, 0.16);
   --app-glass-surface-64: rgba(255, 255, 255, 0.64);
   --app-glass-highlight-94: rgba(255, 255, 255, 0.94);
-  --app-skill-tag-border: rgba(10, 132, 255, 0.11);
-  --app-skill-tag-bg: rgba(10, 132, 255, 0.07);
-  --app-skill-tag-text: rgba(10, 96, 190, 0.82);
+
   --app-testing-text-muted: #6c7892;
   --app-testing-panel-gradient-end: rgba(250, 252, 255, 0.98);
   --app-testing-panel-shadow: rgba(42, 55, 92, 0.07);
@@ -474,14 +447,7 @@
   --app-testing-neutral-tag-bg: #f3f5f8;
   --app-testing-success-tag-bg: #edf8f2;
   --app-testing-success-tag-text: #3b8f65;
-  --app-testing-editor-text: #263247;
-  --app-testing-editor-label: #354158;
-  --app-testing-editor-description: #45516a;
-  --app-service-toolbar-glow: rgba(131, 213, 200, 0.1);
-  --app-service-tab-border: rgba(132, 185, 255, 0.24);
-  --app-service-tab-bg: rgba(132, 185, 255, 0.1);
-  --app-service-tag-border: rgba(132, 185, 255, 0.18);
-  --app-service-tag-bg: rgba(132, 185, 255, 0.08);
+
   --app-service-tab-selected-bg: rgba(132, 185, 255, 0.18);
   --app-service-card-shadow: rgba(42, 55, 92, 0.12);
   --app-service-text-label: #8a91a3;
@@ -499,7 +465,7 @@
   --app-service-tab-gradient-start: rgba(238, 244, 255, 0.74);
   --app-glass-surface-88: rgba(255, 255, 255, 0.88);
   --app-service-tab-gradient-end: rgba(241, 247, 255, 0.7);
-  --app-glass-border-62: rgba(255, 255, 255, 0.62);
+
   --app-glass-surface-52: rgba(255, 255, 255, 0.52);
   --app-glass-surface-36: rgba(255, 255, 255, 0.36);
   --app-service-card-border-hover: rgba(52, 120, 246, 0.24);

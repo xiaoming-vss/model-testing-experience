@@ -70,7 +70,7 @@
   /* The old glass outlines and inset highlights are white even when their
    * panel fill is themed. Neutral outlines and no inner gloss keep cards matte.
    */
-  --app-glass-border-62: var(--app-surface-border);
+
   --app-glass-border-64: var(--app-surface-border);
   --app-glass-border-68: var(--app-surface-border);
   --app-glass-border-70: var(--app-surface-border);
@@ -105,7 +105,7 @@
   --app-glass-surface-74: var(--app-surface);
   --app-glass-surface-78: var(--app-surface);
   --app-glass-surface-82: var(--app-surface);
-  --app-glass-surface-84: var(--app-surface);
+
   --app-glass-surface-86: var(--app-surface);
   --app-glass-surface-88: var(--app-surface);
   --app-glass-surface-90: var(--app-surface);
@@ -151,7 +151,7 @@
   --app-glass-accent-ring: rgba(37, 99, 201, 0.08);
   --app-glass-action-border: rgba(37, 99, 201, 0.18);
   --app-glass-action-border-hover: rgba(37, 99, 201, 0.26);
-  --app-glass-action-border-active: rgba(37, 99, 201, 0.36);
+
   --app-glass-selection-border: rgba(37, 99, 201, 0.1);
   --app-glass-card-border-hover: rgba(37, 99, 201, 0.2);
   --app-glass-editor-border-focus: rgba(37, 99, 201, 0.32);
@@ -162,11 +162,7 @@
   --app-task-link-active: #193f83;
   --app-task-glass-link-hover: #1d4fa5;
   --app-task-drop-border: #6c9ee3;
-  --app-option-border-selected: rgba(37, 99, 201, 0.52);
-  --app-option-border-hover: rgba(37, 99, 201, 0.34);
-  --app-option-icon-selected: var(--app-accent);
-  --app-option-selected-gradient-start: #e8f1ff;
-  --app-option-selected-gradient-end: var(--app-surface);
+
   --app-action-read: #2563c9;
   --app-action-read-strong: #1d4fa5;
   --app-action-read-soft: rgba(37, 99, 201, 0.12);
@@ -220,7 +216,7 @@
   --app-text-label: #46566e;
   --description-text: #59677c;
   --description-text-muted: #59677c;
-  --description-bg: rgba(37, 99, 201, 0.045);
+
   --description-border: #d7dfe9;
   --legacy-tp-border: #d7dfe9;
   --legacy-tp-border-soft: #e5eaf1;

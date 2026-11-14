@@ -43,19 +43,6 @@
   font-size: 14px;
 }
 
-.base-services-panel {
-  flex: 1 1 auto;
-  overflow: hidden;
-  min-height: 0;
-  margin: 12px var(--app-page-gutter) 16px;
-  background: var(--base-surface);
-  border-color: var(--base-border);
-  border-radius: 18px;
-  box-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-45),
-    0 20px 40px var(--app-task-panel-shadow);
-}
-
 .base-services-panel-body {
   min-height: 0;
   height: 100%;
@@ -366,10 +353,6 @@
   min-width: 0;
 }
 @media (max-width: 900px){
-.base-services-panel {
-    margin: 12px var(--app-page-gutter) 16px;
-  }
-
 .base-services-panel-body {
     padding: 16px 16px 20px;
   }
@@ -408,7 +391,7 @@
 .base-services-page {
   --base-border: var(--app-service-panel-border);
   --base-panel: var(--app-glass-surface-58);
-  --base-panel-soft: var(--app-glass-surface-42);
+
   --base-accent: var(--app-glass-accent);
   --base-text: var(--app-service-text);
   --base-text-secondary: var(--app-service-text-secondary);
@@ -466,18 +449,6 @@
   box-shadow:
     inset 0 1px 0 var(--app-glass-highlight-90),
     0 8px 18px var(--app-service-glass-card-shadow);
-}
-
-.base-services-panel.workbench-panel {
-  position: relative;
-  z-index: 1;
-  margin-top: 12px;
-  border: 1px solid var(--app-glass-border-70);
-  border-radius: 18px;
-  background: var(--app-glass-surface-58);
-  box-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-84),
-    0 22px 54px var(--app-service-glass-card-shadow);
 }
 
 .base-services-page .panel-header.api-panel-header {
@@ -566,7 +537,7 @@
 .app-shell-base-services .base-services-page {
   --base-border: var(--app-glass-divider);
   --base-panel: var(--app-glass-surface-68);
-  --base-panel-soft: var(--app-glass-surface-56);
+
   --base-accent: var(--app-glass-link);
   --base-text: var(--app-glass-text);
   --base-text-secondary: var(--app-glass-text-description);
@@ -647,7 +618,7 @@
 .app-shell-macos .base-services-page {
   --base-border: var(--app-glass-divider);
   --base-panel: var(--app-glass-surface-68);
-  --base-panel-soft: var(--app-glass-surface-56);
+
   --base-accent: var(--app-glass-link);
   --base-text: var(--app-glass-text);
   --base-text-secondary: var(--app-glass-text-description);
@@ -1013,6 +984,5 @@ green stays reserved for status only. */
     grid-template-columns: minmax(0, 1fr);
   }
 }
-
 
 .base-services-motion-panel { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }

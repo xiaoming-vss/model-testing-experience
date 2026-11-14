@@ -173,13 +173,6 @@
   font-weight: 650;
 }
 
-.auth-password-label {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
 .auth-forgot.ant-btn-link,
 .auth-switch .ant-btn-link {
   height: auto;
@@ -235,25 +228,6 @@
 .auth-form .ant-input-prefix,
 .auth-form .ant-input-suffix {
   color: var(--app-auth-caption);
-}
-
-.auth-remember {
-  min-height: 22px;
-  margin: 2px 0 28px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--app-auth-text-secondary);
-  font-size: 12px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.auth-remember input {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  accent-color: var(--app-glass-link);
 }
 
 .auth-submit.ant-btn {

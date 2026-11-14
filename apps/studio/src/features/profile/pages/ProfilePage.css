@@ -42,13 +42,6 @@
 .profile-settings-actions { display: flex; justify-content: flex-end; gap: 12px; padding: 20px 32px; background: var(--profile-tint); }
 .profile-settings .ant-btn { height: 40px; padding-inline: 22px; border-radius: 10px; }
 .profile-settings-error { margin: 20px 32px 0; }
-.profile-settings-danger { grid-column: 2; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px 28px; border: 1px solid var(--app-profile-danger-border); border-radius: 18px; background: var(--app-profile-danger-bg); }
-.profile-settings-danger > div { min-width: 0; }
-.profile-settings-danger h5.ant-typography { color: var(--app-profile-danger-text); margin: 0 0 8px; font-size: 16px; }
-.profile-settings-danger .ant-typography-secondary { margin: 0; font-size: 13px; line-height: 1.8; }
-.profile-settings-danger > .ant-btn { flex-shrink: 0; }
-.profile-settings-danger .ant-alert { margin-top: 12px; }
-
 @media (max-width: 1000px) {
   .profile-settings { padding: 32px var(--app-page-gutter) 32px; }
   .profile-settings-grid { grid-template-columns: 260px minmax(0, 1fr); gap: 20px; }
@@ -61,7 +54,6 @@
   .profile-settings-heading h2.ant-typography { font-size: 26px; }
   .profile-settings-identity { padding: 28px 24px; }
   .profile-settings-identity-footer { margin-top: 24px; padding-top: 18px; justify-content: center; }
-  .profile-settings-danger { grid-column: 1; flex-wrap: wrap; padding: 24px; }
   .profile-settings-password-panel { grid-column: 1; }
   .profile-settings-actions { flex-wrap: wrap; }
 }

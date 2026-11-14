@@ -1,14 +1,9 @@
 /* GitHub Dark adaptation of the existing semantic roles. No component overrides.
  * Brand artwork retains its own palette; all other foundation colors are covered. */
 :root[data-theme="dark"] {
-  --app-reading-bg: var(--gh-surface);
-  --app-reading-ink: var(--gh-fg);
+
   --app-reading-muted: var(--gh-muted);
-  --app-reading-border: var(--gh-border);
-  --app-reading-subtle: var(--gh-raised);
-  --app-reading-accent: var(--gh-blue);
-  --app-reading-accent-hover: var(--gh-blue-hover);
-  --app-reading-selection: var(--gh-blue-soft);
+
   --app-reading-on-accent: var(--gh-bg);
   --app-shell-bg: var(--gh-bg);
   --app-shell-divider: var(--gh-border);
@@ -73,7 +68,7 @@
   --app-glass-shadow-card: var(--gh-shadow);
   --app-glass-surface-48: var(--gh-surface);
   --app-glass-selected: var(--gh-blue-soft);
-  --app-glass-shadow-soft: var(--gh-shadow);
+
   --app-glass-page-glow: transparent;
   --app-glass-highlight-84: transparent;
   --app-glass-surface-50: var(--gh-surface);
@@ -81,11 +76,10 @@
   --app-glass-highlight-90: transparent;
   --app-glass-shadow-floating: var(--gh-shadow);
   --app-glass-action-border-hover: var(--gh-blue-border);
-  --app-glass-action-border-active: var(--gh-blue-border);
-  --app-glass-surface-84: var(--gh-surface);
+
   --app-glass-shadow-control: var(--gh-shadow);
   --app-glass-surface-56: var(--gh-surface);
-  --app-glass-shadow-inset: var(--gh-shadow);
+
   --app-glass-surface-92: var(--gh-surface);
   --app-glass-tag-border: var(--gh-blue-border);
   --app-glass-tag-text: var(--gh-blue);
@@ -221,25 +215,16 @@
   --app-glass-accent-soft: var(--gh-blue-soft);
   --app-glass-link-hover: var(--gh-blue-hover);
   --app-glass-surface-18: var(--gh-surface);
-  --app-glass-shadow-popover: var(--gh-shadow);
+
   --app-glass-text-hint: var(--gh-muted);
   --app-glass-surface-86: var(--gh-surface);
-  --app-glass-shadow-option: var(--gh-shadow);
-  --app-option-border-selected: var(--gh-blue-border);
-  --app-option-selected-gradient-start: var(--gh-blue-soft);
-  --app-option-selected-gradient-end: var(--gh-subtle);
+
   --app-glass-accent-ring: var(--gh-blue-border);
-  --app-option-border-hover: var(--gh-border);
-  --app-option-text-disabled: var(--gh-disabled);
+
   --app-glass-border-faint: var(--gh-border);
-  --app-option-bg-disabled: var(--gh-subtle);
-  --app-option-icon-selected: var(--gh-blue);
-  --app-option-text: var(--gh-fg);
-  --app-option-icon-bg: var(--gh-subtle);
-  --app-option-icon-disabled: var(--gh-disabled);
+
   --app-option-icon-bg-disabled: var(--gh-surface);
-  --app-accent-action-shadow: var(--gh-shadow);
-  --app-option-icon-bg-active: var(--gh-blue-soft);
+
   --app-glass-border-70: var(--gh-border);
   --app-task-tag-border: var(--gh-blue-border);
   --app-task-tag-bg: var(--gh-blue-soft);
@@ -249,7 +234,7 @@
   --app-list-label: var(--gh-muted);
   --app-task-drop-border: var(--gh-border);
   --app-task-overlay-border: var(--gh-border);
-  --app-task-overlay-shadow: var(--gh-shadow);
+
   --app-surface-hover: var(--gh-subtle);
   --app-surface-border: var(--gh-border);
   --app-surface-shadow: var(--gh-shadow);
@@ -267,10 +252,9 @@
   --app-surface-accent: var(--gh-blue);
   --app-surface-accent-border: var(--gh-blue-border);
   --app-surface-accent-soft: var(--gh-blue-soft);
-  --app-terminal-scrollbar: var(--gh-muted);
+
   --app-terminal-scrollbar-track: var(--gh-surface);
-  --app-terminal-scrollbar-thumb: var(--gh-muted);
-  --app-terminal-scrollbar-hover: var(--gh-muted);
+
   --app-terminal-link: var(--gh-blue);
   --app-result-warning-text: var(--gh-orange);
   --app-pipeline-done: var(--gh-green);
@@ -365,10 +349,7 @@
   --app-review-arrow-active: var(--gh-blue);
   --app-review-arrow: var(--gh-fg);
   --app-graph-control-shadow: var(--gh-shadow);
-  --app-terminal-scrollbar-neutral: var(--gh-muted);
-  --app-terminal-scrollbar-neutral-track: var(--gh-inset);
-  --app-terminal-scrollbar-edge: var(--gh-border);
-  --app-terminal-scrollbar-neutral-hover: var(--gh-muted);
+
   --app-terminal-result-surface: var(--gh-surface);
   --app-terminal-result-border: var(--gh-border);
   --app-terminal-result-bg: var(--gh-surface);
@@ -391,13 +372,9 @@
   --app-terminal-scrollbar-active: var(--gh-muted);
   --app-review-divider: var(--gh-border);
   --app-terminal-focus-ring: var(--gh-green);
-  --app-review-panel-shadow: var(--gh-shadow);
+
   --app-glass-highlight-74: transparent;
-  --app-review-gradient-start: var(--gh-surface);
-  --app-review-gradient-end: var(--gh-surface);
-  --app-review-code-surface: var(--gh-surface);
-  --app-review-warning-soft: var(--gh-orange-soft);
-  --app-review-info-soft: var(--gh-blue-soft);
+
   --app-graph-reference-soft: var(--gh-blue-soft);
   --app-graph-node-border: var(--gh-green-border);
   --app-graph-canvas-glow: transparent;
@@ -416,17 +393,13 @@
   --app-graph-legend-reference-text: var(--gh-blue);
   --app-graph-legend-reference-border: var(--gh-blue-border);
   --app-graph-legend-reference-bg: var(--gh-blue-soft);
-  --app-skill-running-bg: var(--gh-cyan-soft);
-  --app-skill-running-border: var(--gh-cyan-border);
-  --app-skill-running-text: var(--gh-cyan);
+
   --app-skill-card-border: var(--gh-border);
   --app-skill-card-shadow: var(--gh-shadow);
   --app-skill-card-border-hover: var(--gh-border);
   --app-glass-surface-64: var(--gh-surface);
   --app-glass-highlight-94: transparent;
-  --app-skill-tag-border: var(--gh-blue-border);
-  --app-skill-tag-bg: var(--gh-blue-soft);
-  --app-skill-tag-text: var(--gh-blue);
+
   --app-testing-text-muted: var(--gh-muted);
   --app-testing-panel-gradient-end: var(--gh-surface);
   --app-testing-panel-shadow: var(--gh-shadow);
@@ -455,14 +428,7 @@
   --app-testing-neutral-tag-bg: var(--gh-surface);
   --app-testing-success-tag-bg: var(--gh-green-soft);
   --app-testing-success-tag-text: var(--gh-green);
-  --app-testing-editor-text: var(--gh-fg);
-  --app-testing-editor-label: var(--gh-muted);
-  --app-testing-editor-description: var(--gh-fg);
-  --app-service-toolbar-glow: transparent;
-  --app-service-tab-border: var(--gh-border);
-  --app-service-tab-bg: var(--gh-surface);
-  --app-service-tag-border: var(--gh-blue-border);
-  --app-service-tag-bg: var(--gh-blue-soft);
+
   --app-service-tab-selected-bg: var(--gh-blue-soft);
   --app-service-card-shadow: var(--gh-shadow);
   --app-service-text-label: var(--gh-muted);
@@ -480,7 +446,7 @@
   --app-service-tab-gradient-start: var(--gh-surface);
   --app-glass-surface-88: var(--gh-surface);
   --app-service-tab-gradient-end: var(--gh-surface);
-  --app-glass-border-62: var(--gh-border);
+
   --app-glass-surface-52: var(--gh-surface);
   --app-glass-surface-36: var(--gh-surface);
   --app-service-card-border-hover: var(--gh-border);

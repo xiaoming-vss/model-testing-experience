@@ -526,7 +526,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--srf-font-mono, monospace);
+  font-family: var(--app-font-mono);
   font-size: 12px;
 }
 
