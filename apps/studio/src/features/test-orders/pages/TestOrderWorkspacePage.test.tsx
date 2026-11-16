@@ -1,17 +1,21 @@
 import type { TestOrderEntry } from '../types'
+import type { ReactNode } from 'react'
 import { ConfigProvider } from 'antd'
 import { useAuthStore } from '@/features/auth/store/auth.store'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { api, type User } from '@/services/api'
 import { TestOrderWorkspacePage } from './TestOrderWorkspacePage'
 
-vi.mock('../components/TestOrderGraphViewer', () => ({ TestOrderGraphViewer: ({ orderId }: { orderId: string }) => <div data-testid="inline-graph">内嵌用例图谱 {orderId}</div> }))
+vi.mock('../components/TestOrderGraphViewer', () => ({
+  TestOrderGraphViewer: ({ orderId, toolbar }: { orderId: string; toolbar?: ReactNode }) =>
+    <div data-testid="inline-graph">{toolbar}内嵌用例图谱 {orderId}</div>,
+}))
 
-vi.mock('@/shared/utils/feedback', () => ({ message: { success: vi.fn(), error: vi.fn() } }))
+vi.mock('@/shared/utils/feedback', () => ({ message: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() } }))
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
   return { ...actual, useParams: () => ({ orderId: 'order-1' }) }
@@ -77,6 +81,25 @@ function seedAccess(client: QueryClient, role: 'owner' | 'member') {
   })
 }
 
+function entryList() {
+  return document.querySelector('.test-order-entry-list-panel') as HTMLElement
+}
+
+function detailPanel() {
+  return document.querySelector('.test-order-detail-panel') as HTMLElement
+}
+
+async function openEntry(user: ReturnType<typeof userEvent.setup>, title: string) {
+  const titleNode = within(entryList()).getByText(title, { exact: true })
+  await user.click(titleNode)
+  await waitFor(() => expect(detailPanel()).not.toBeNull())
+}
+
+async function openEntryFilters(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: /筛选执行用例/ }))
+  return screen.getByPlaceholderText('搜索用例 ID 或关键字')
+}
+
 beforeEach(() => {
   vi.spyOn(api, 'getTestOrderEntry').mockImplementation(async (_, id) => {
     const response = await vi.mocked(api.getTestOrderEntries).mock.results.at(-1)?.value
@@ -89,12 +112,63 @@ afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
   vi.clearAllMocks()
+  Reflect.deleteProperty(navigator, 'clipboard')
 })
 
-it('判定整条用例即时保存并显示已保存', async () => {
+it('进入测试单先展示执行条目列表，点击条目才进入详情', async () => {
   useAuthStore.setState({ user: { userId: 'user-1', nickname: '张三' } as User })
-  vi.spyOn(api, 'getTestOrder').mockImplementation(async () => order)
-  vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async () => listResponse([entry]))
+  vi.spyOn(api, 'getTestOrder').mockResolvedValue(order)
+  vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(listResponse([entry]))
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedAccess(client, 'owner')
+  renderWorkspace(client)
+
+  expect(await within(entryList()).findByText('验证码错误 5 次锁定账号')).toBeInTheDocument()
+  expect(screen.queryByText('阅读方式')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /返回用例列表/ })).not.toBeInTheDocument()
+
+  const user = userEvent.setup()
+  await openEntry(user, '验证码错误 5 次锁定账号')
+
+  expect(await screen.findByText('阅读方式')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /返回用例列表/ })).toBeInTheDocument()
+  const breadcrumb = screen.getByRole('navigation', { name: '面包屑' })
+  expect(within(breadcrumb).getByText('验证码错误 5 次锁定账号')).toBeInTheDocument()
+  expect(screen.queryByText('用例详情')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /筛选执行用例/ })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '用例图谱' })).not.toBeInTheDocument()
+  client.clear()
+})
+
+it('列表以单行展示用例 ID 和标题，点击 ID 复制且不进入详情', async () => {
+  useAuthStore.setState({ user: { userId: 'user-1', nickname: '张三' } as User })
+  vi.spyOn(api, 'getTestOrder').mockResolvedValue(order)
+  vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(listResponse([entry]))
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedAccess(client, 'owner')
+  renderWorkspace(client)
+
+  const idButton = await screen.findByRole('button', { name: `复制用例 ID ${entry.caseId}` })
+  const headers = screen.getAllByRole('columnheader').map((header) => header.textContent?.trim())
+  expect(headers.indexOf('用例 ID')).toBeGreaterThan(-1)
+  expect(headers.indexOf('用例 ID')).toBeLessThan(headers.indexOf('用例名称'))
+  expect(idButton.closest('td')?.nextElementSibling).toHaveTextContent('验证码错误 5 次锁定账号')
+
+  const user = userEvent.setup()
+  // user-event 会安装自己的 clipboard stub，必须在 setup 之后再替换。
+  const writeText = vi.fn().mockResolvedValue(undefined)
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+  await user.click(idButton)
+
+  expect(writeText).toHaveBeenCalledWith(entry.caseId)
+  expect(screen.queryByRole('button', { name: /返回用例列表/ })).not.toBeInTheDocument()
+  client.clear()
+})
+
+it('列表可批量勾选，判定整条用例即时保存并显示已保存', async () => {
+  useAuthStore.setState({ user: { userId: 'user-1', nickname: '张三' } as User })
+  vi.spyOn(api, 'getTestOrder').mockResolvedValue(order)
+  vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(listResponse([entry]))
   const update = vi
     .spyOn(api, 'updateTestOrderEntry')
     .mockImplementation(async () => ({ ...entry, status: 'pending' }))
@@ -102,30 +176,25 @@ it('判定整条用例即时保存并显示已保存', async () => {
   seedAccess(client, 'owner')
   renderWorkspace(client)
 
-  expect(await screen.findByText('账号锁定')).toBeInTheDocument()
-  expect(screen.getByText('已注册手机号')).toBeInTheDocument()
-  // 步骤只是只读说明，没有逐步判定按钮
-  expect(screen.queryByRole('button', { name: /步骤 \d 判定/ })).toBeNull()
-
+  await within(entryList()).findByText('验证码错误 5 次锁定账号')
   const user = userEvent.setup()
-  const panel = document.querySelector('.test-order-side-panel')
-  expect(panel).not.toBeNull()
   expect(screen.getByRole('button', { name: '未执行 1' })).toBeInTheDocument()
-  expect(panel?.querySelector('.test-order-list-head')).toContainElement(screen.getByTitle('1'))
-  expect(panel?.querySelector('.table-footer')).toBeNull()
-  expect(screen.queryByRole('button', { name: /批量标记通过/ })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /生成所选图解/ })).not.toBeInTheDocument()
+
   await user.click(screen.getByRole('checkbox', { name: '选择第 1 条执行条目' }))
   expect(screen.getByText('已选 1 条')).toBeInTheDocument()
-  const selectionBar = panel?.querySelector('.test-order-selection-bar')
-  expect(selectionBar).not.toBeNull()
-  expect(panel?.lastElementChild).toBe(selectionBar)
   expect(screen.getByRole('button', { name: /批量标记通过/ })).toBeEnabled()
   expect(screen.getByRole('button', { name: '生成所选图解（1）' })).toHaveTextContent('图解')
   expect(screen.getByRole('button', { name: '分配执行人（1）' })).toBeInTheDocument()
   await user.click(screen.getByRole('checkbox', { name: '选择第 1 条执行条目' }))
   expect(screen.queryByRole('button', { name: /批量标记通过/ })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /生成所选图解/ })).not.toBeInTheDocument()
+
+  await openEntry(user, '验证码错误 5 次锁定账号')
+  expect(await screen.findByText('账号锁定')).toBeInTheDocument()
+  expect(screen.getByText('已注册手机号')).toBeInTheDocument()
+  // 步骤只是只读说明，没有逐步判定按钮
+  expect(screen.queryByRole('button', { name: /步骤 \d 判定/ })).toBeNull()
+
   await user.click(screen.getByRole('button', { name: '判定该用例为通过' }))
 
   await waitFor(() => expect(update).toHaveBeenCalledTimes(1))
@@ -138,14 +207,18 @@ it('判定整条用例即时保存并显示已保存', async () => {
 
 it('条目已分配给其他执行人时，非所有者不能判定', async () => {
   useAuthStore.setState({ user: { userId: 'user-1', nickname: '张三' } as User })
-  vi.spyOn(api, 'getTestOrder').mockImplementation(async () => order)
-  vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async () =>
+  vi.spyOn(api, 'getTestOrder').mockResolvedValue(order)
+  vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(
     listResponse([{ ...entry, assigneeUserId: 'user-9' }]),
   )
   const update = vi.spyOn(api, 'updateTestOrderEntry').mockImplementation(async () => entry)
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   seedAccess(client, 'member')
   renderWorkspace(client)
+
+  const user = userEvent.setup()
+  await within(entryList()).findByText('验证码错误 5 次锁定账号')
+  await openEntry(user, '验证码错误 5 次锁定账号')
 
   expect(await screen.findByText('该条已分配给其他执行人')).toBeInTheDocument()
   expect(screen.getByRole('button', { name: '判定该用例为通过' })).toBeDisabled()
@@ -155,8 +228,8 @@ it('条目已分配给其他执行人时，非所有者不能判定', async () =
 
 it('项目所有者不受分配限制', async () => {
   useAuthStore.setState({ user: { userId: 'user-1', nickname: '张三' } as User })
-  vi.spyOn(api, 'getTestOrder').mockImplementation(async () => order)
-  vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async () =>
+  vi.spyOn(api, 'getTestOrder').mockResolvedValue(order)
+  vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(
     listResponse([{ ...entry, assigneeUserId: 'user-9' }]),
   )
   vi.spyOn(api, 'updateTestOrderEntry').mockImplementation(async () => entry)
@@ -164,15 +237,18 @@ it('项目所有者不受分配限制', async () => {
   seedAccess(client, 'owner')
   renderWorkspace(client)
 
+  const user = userEvent.setup()
+  await within(entryList()).findByText('验证码错误 5 次锁定账号')
+  await openEntry(user, '验证码错误 5 次锁定账号')
   await screen.findByText('账号锁定')
   expect(screen.getByRole('button', { name: '判定该用例为通过' })).toBeEnabled()
   client.clear()
 })
 
-it('可以在工作台里移除执行条目', async () => {
+it('可以在列表里移除执行条目', async () => {
   useAuthStore.setState({ user: { userId: 'user-1', nickname: '张三' } as User })
-  vi.spyOn(api, 'getTestOrder').mockImplementation(async () => order)
-  vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async () => listResponse([entry]))
+  vi.spyOn(api, 'getTestOrder').mockResolvedValue(order)
+  vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(listResponse([entry]))
   const remove = vi.spyOn(api, 'deleteTestOrderEntry').mockImplementation(async () => ({}))
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   seedAccess(client, 'owner')
@@ -187,10 +263,10 @@ it('可以在工作台里移除执行条目', async () => {
   client.clear()
 })
 
-it('可以在工作台里从用例库挑用例加入测试单', async () => {
+it('可以从用例库挑用例加入测试单', async () => {
   useAuthStore.setState({ user: { userId: 'user-1', nickname: '张三' } as User })
-  vi.spyOn(api, 'getTestOrder').mockImplementation(async () => order)
-  vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async () => listResponse([]))
+  vi.spyOn(api, 'getTestOrder').mockResolvedValue(order)
+  vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(listResponse([]))
   vi.spyOn(api, 'getProjectFunctionTestCases').mockImplementation(async () =>
     listResponse([
       {
@@ -231,7 +307,6 @@ it('可以在工作台里从用例库挑用例加入测试单', async () => {
   client.clear()
 })
 
-
 it('在当前页面切换图谱并保留执行页筛选', async () => {
   useAuthStore.setState({ user: { userId: 'user-1' } as User })
   vi.spyOn(api, 'getTestOrder').mockResolvedValue(order)
@@ -241,20 +316,26 @@ it('在当前页面切换图谱并保留执行页筛选', async () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   seedAccess(client, 'owner')
   renderWorkspace(client)
-  await screen.findByText('账号锁定')
+  await within(entryList()).findByText('验证码错误 5 次锁定账号')
   const user = userEvent.setup()
-  await user.type(screen.getByPlaceholderText('搜索用例 ID 或关键字'), '锁定')
+  const searchInput = await openEntryFilters(user)
+  await user.type(searchInput, '锁定')
   await waitFor(() => expect(api.getTestOrderEntries).toHaveBeenLastCalledWith(
     'order-1', expect.objectContaining({ keyword: '锁定' }),
   ))
-  await waitFor(() => expect(screen.getByText('账号锁定')).toBeVisible())
-  await user.click(screen.getByText('用例图谱', { exact: true }))
+  await waitFor(() => expect(screen.getByText('验证码错误 5 次锁定账号')).toBeVisible())
+  const graphToggle = screen.getByRole('button', { name: '用例图谱' })
+  expect(graphToggle).toHaveAttribute('aria-pressed', 'false')
+  await user.click(graphToggle)
   expect(open).not.toHaveBeenCalled()
+  const graphViewToggle = screen.getByRole('button', { name: '用例图谱' })
+  expect(graphViewToggle).toHaveAttribute('aria-pressed', 'true')
   expect(screen.getByTestId('inline-graph')).toHaveTextContent('order-1')
-  expect(screen.getByText('账号锁定')).not.toBeVisible()
-  await user.click(screen.getByText('用例执行', { exact: true }))
-  expect(screen.getByPlaceholderText('搜索用例 ID 或关键字')).toHaveValue('锁定')
-  await waitFor(() => expect(screen.getByText('账号锁定')).toBeVisible())
+  expect(screen.getByText('验证码错误 5 次锁定账号')).not.toBeVisible()
+  await user.click(graphViewToggle)
+  await waitFor(() => expect(screen.getByRole('button', { name: '用例图谱' })).toHaveAttribute('aria-pressed', 'false'))
+  await waitFor(() => expect(screen.getByRole('button', { name: /筛选执行用例，已启用 1 项/ })).toBeInTheDocument())
+  await waitFor(() => expect(screen.getByText('验证码错误 5 次锁定账号')).toBeVisible())
   // 图谱首次打开后保持挂载，切回来只是隐藏，不会重新请求和全量布局。
   expect(screen.getByTestId('inline-graph')).not.toBeVisible()
   expect(screen.queryByRole('dialog', { name: '用例图谱' })).not.toBeInTheDocument()
@@ -263,9 +344,9 @@ it('在当前页面切换图谱并保留执行页筛选', async () => {
 })
 
 it('快捷键说明按需显示，键盘切换详情时步骤与预期保持对应', async () => {
-  useAuthStore.setState({ user: { userId: 'user-1' } as User })
-  vi.spyOn(api, 'getTestOrder').mockImplementation(async () => order)
-  vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async () => listResponse([
+  useAuthStore.setState({ user: { userId: 'user-1', nickname: '张三' } as User })
+  vi.spyOn(api, 'getTestOrder').mockResolvedValue(order)
+  vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(listResponse([
     entry,
     { ...entry, entryId: 'entry-2', orderNo: 2, caseTitle: '第二条用例', snapshot: { preconditions: [], steps: [{ action: '第二条操作', expected: '第二条预期' }] } },
   ]))
@@ -273,36 +354,35 @@ it('快捷键说明按需显示，键盘切换详情时步骤与预期保持对�
   seedAccess(client, 'owner')
   renderWorkspace(client)
   const user = userEvent.setup()
+  await within(entryList()).findByText('验证码错误 5 次锁定账号')
+  await openEntry(user, '验证码错误 5 次锁定账号')
   await screen.findByText('账号锁定')
-  expect(screen.queryByRole('button', { name: '上一条' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: '下一条' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+
+  expect(screen.getByRole('button', { name: '上一条' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '下一条' })).toBeEnabled()
+  expect(screen.queryByText(/快捷键：1 通过/)).not.toBeInTheDocument()
   const help = screen.getByRole('button', { name: '快捷键说明' })
   await user.hover(help)
-  expect(await screen.findByRole('tooltip')).toHaveTextContent('1 通过 · 2 失败 · 3 阻塞 · 4 跳过；↑ 上一条，↓ 下一条')
+  expect(await screen.findByText('快捷键：1 通过 · 2 失败 · 3 阻塞 · 4 跳过；↑ 上一条，↓ 下一条')).toBeInTheDocument()
   await user.unhover(help)
   expect(screen.getAllByRole('checkbox', { name: '判定后自动前进' })).toHaveLength(1)
   expect(screen.getByRole('checkbox', { name: '判定后自动前进' })).not.toBeChecked()
-  const firstItem = screen.getByRole('button', { name: /验证码错误 5 次锁定账号/ })
-  const secondItem = screen.getByRole('button', { name: /第二条用例/ })
-  await user.click(firstItem)
+
   await user.keyboard('{ArrowDown}')
-  expect(secondItem).toHaveFocus()
   expect(await screen.findByText('第二条操作')).toBeInTheDocument()
   expect(screen.getByText('第二条预期')).toBeInTheDocument()
-  expect(screen.getByText(/本页第 2 \/ 2 条/)).toBeInTheDocument()
+  expect(screen.getByText(/全单第 2 条 · 筛选共 2 条/)).toBeInTheDocument()
   await user.keyboard('{ArrowDown}')
   expect(screen.getByText('第二条操作')).toBeInTheDocument()
   await user.keyboard('{ArrowUp}')
-  expect(firstItem).toHaveFocus()
   expect(await screen.findByText('账号锁定')).toBeInTheDocument()
   client.clear()
 })
 
 it('切换条目时详情面板常驻，pending 条目不查关联 Bug', async () => {
   useAuthStore.setState({ user: { userId: 'user-1' } as User })
-  vi.spyOn(api, 'getTestOrder').mockImplementation(async () => order)
-  vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async () => listResponse([
+  vi.spyOn(api, 'getTestOrder').mockResolvedValue(order)
+  vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(listResponse([
     entry,
     { ...entry, entryId: 'entry-2', orderNo: 2, caseTitle: '第二条用例' },
   ]))
@@ -316,12 +396,14 @@ it('切换条目时详情面板常驻，pending 条目不查关联 Bug', async (
   seedAccess(client, 'owner')
   const { container } = renderWorkspace(client)
 
+  const user = userEvent.setup()
+  await within(entryList()).findByText('验证码错误 5 次锁定账号')
+  await openEntry(user, '验证码错误 5 次锁定账号')
   await screen.findByText('账号锁定')
   // pending 条目不会有关联 Bug，键盘逐条审查时不再逐条发请求。
   expect(bugs).not.toHaveBeenCalled()
 
-  const user = userEvent.setup()
-  await user.click(screen.getByRole('button', { name: /第二条用例/ }))
+  await user.click(screen.getByRole('button', { name: '下一条' }))
 
   // 摘要和判定条用列表里的数据先撑住，只有步骤内容区等待详情。
   expect(container.querySelector('.test-order-case-summary')).toHaveTextContent('第二条用例')
@@ -341,17 +423,17 @@ it('图谱视图停用隐藏执行页快捷键，切回后恢复', async () => {
   seedAccess(client, 'owner')
   renderWorkspace(client)
   const user = userEvent.setup()
-  await screen.findByText('账号锁定')
-  await user.click(screen.getByText('用例图谱', { exact: true }))
+  await within(entryList()).findByText('验证码错误 5 次锁定账号')
+  const graphToggle = screen.getByRole('button', { name: '用例图谱' })
+  await user.click(graphToggle)
   await user.keyboard('1')
   expect(update).not.toHaveBeenCalled()
-  await user.click(screen.getByText('用例执行', { exact: true }))
-  await user.click(screen.getByText('账号锁定'))
+  await user.click(screen.getByRole('button', { name: '用例图谱' }))
+  await openEntry(user, '验证码错误 5 次锁定账号')
   await user.keyboard('1')
   await waitFor(() => expect(update).toHaveBeenCalledWith('order-1', 'entry-1', { status: 'passed' }))
   client.clear()
 })
-
 
 it('从 Bug 详情跳转时选中指定执行条目', async () => {
   useAuthStore.setState({ user: { userId: 'user-1', name: '小明' } })
@@ -370,7 +452,7 @@ it('从 Bug 详情跳转时选中指定执行条目', async () => {
   client.clear()
 })
 
-it('定位第二页详情，保留跨页选择，并支持键盘跨页', async () => {
+it('深链定位第二页详情，详情上下条支持跨页并保留列表筛选', async () => {
   useAuthStore.setState({ user: { userId: 'user-1', nickname: '张三' } as User })
   const all = Array.from({ length: 25 }, (_, index) => ({ ...entry, entryId: `entry-${index + 1}`, caseId: `case-${index + 1}`, caseTitle: `page case ${index + 1}`, orderNo: index + 1 }))
   vi.spyOn(api, 'getTestOrder').mockResolvedValue({ ...order, entriesTotal: 25 })
@@ -384,23 +466,36 @@ it('定位第二页详情，保留跨页选择，并支持键盘跨页', async (
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   seedAccess(client, 'owner')
   renderWorkspace(client, '/?entryId=entry-24')
-  await screen.findByText(/本页第 4 \/ 5 条/)
+  expect(await screen.findByText(/全单第 24 条 · 筛选共 25 条/)).toBeInTheDocument()
   expect(details).toHaveBeenCalledWith('order-1', 'entry-24')
   expect(lists).toHaveBeenCalledWith('order-1', expect.objectContaining({ focusEntryId: 'entry-24' }))
+
   const user = userEvent.setup()
-  await user.click(screen.getByRole('checkbox', { name: '选择第 24 条执行条目' }))
-  await user.click(screen.getByTitle('1'))
-  await user.click(await screen.findByRole('checkbox', { name: '选择第 1 条执行条目' }))
+  await user.click(screen.getByRole('button', { name: '下一条' }))
+  expect(await screen.findByText(/全单第 25 条 · 筛选共 25 条/)).toBeInTheDocument()
+  expect(details).toHaveBeenCalledWith('order-1', 'entry-25')
+  expect(screen.getByRole('button', { name: '下一条' })).toBeDisabled()
+
+  await user.click(screen.getByRole('button', { name: '上一条' }))
+  await user.click(screen.getByRole('button', { name: '上一条' }))
+  await user.click(screen.getByRole('button', { name: '上一条' }))
+  await user.click(screen.getByRole('button', { name: '上一条' }))
+  expect(await screen.findByText(/全单第 21 条 · 筛选共 25 条/)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: '上一条' }))
+  expect(await screen.findByText(/全单第 20 条 · 筛选共 25 条/)).toBeInTheDocument()
+  expect(details).toHaveBeenCalledWith('order-1', 'entry-20')
+  expect(lists).toHaveBeenLastCalledWith('order-1', expect.objectContaining({ page: 1 }))
+
+  await user.click(screen.getByRole('button', { name: /返回用例列表/ }))
+  expect(await screen.findByText('page case 20')).toBeVisible()
+  await user.click(screen.getByRole('checkbox', { name: '选择第 20 条执行条目' }))
+  await user.click(screen.getByTitle('2'))
+  await user.click(await screen.findByRole('checkbox', { name: '选择第 24 条执行条目' }))
   expect(screen.getByText('已选 2 条')).toBeVisible()
-  await user.click(screen.getByRole('button', { name: /page case 20/ }))
-  await user.keyboard('{ArrowDown}')
-  const next = await screen.findByRole('button', { name: /page case 21/ })
-  await waitFor(() => expect(next).toHaveFocus())
-  expect(details).toHaveBeenCalledWith('order-1', 'entry-21')
   client.clear()
 })
 
-it('清单按通过、失败、未执行分组，键盘按分组顺序切换', async () => {
+it('列表按接口顺序展示，键盘按同一顺序切换详情', async () => {
   useAuthStore.setState({ user: { userId: 'user-1', nickname: '张三' } as User })
   vi.spyOn(api, 'getTestOrder').mockResolvedValue({ ...order, entriesTotal: 3, entriesExecuted: 2 })
   const passed = {
@@ -415,79 +510,101 @@ it('清单按通过、失败、未执行分组，键盘按分组顺序切换', a
     ...entry, entryId: 'entry-pending', orderNo: 3, caseTitle: '未执行用例', status: 'pending',
     snapshot: { preconditions: ['未执行用例前置'], steps: [{ action: '未执行操作', expected: '未执行预期' }] },
   }
-  // API order differs from the grouped order, so the assertion proves keyboard navigation
-  // follows the visible grouped list rather than the raw response.
-  vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(listResponse([pending, failed, passed]))
+  vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(listResponse([passed, failed, pending]))
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   seedAccess(client, 'owner')
-  const { container } = renderWorkspace(client)
+  renderWorkspace(client)
 
-  await screen.findByRole('button', { name: /已通过用例/ })
-  expect(screen.getByRole('img', { name: /执行结果分布/ })).toHaveAccessibleName(
-    '执行结果分布：通过 1 条，失败 1 条，未执行 1 条',
-  )
-  expect([...container.querySelectorAll('.test-order-group-head')]
-    .map((node) => node.getAttribute('aria-label'))).toEqual(['通过 1', '失败 1', '未执行 1'])
-
+  await within(entryList()).findByText('已通过用例')
   const user = userEvent.setup()
-  await user.click(screen.getByRole('button', { name: /已通过用例/ }))
+  await openEntry(user, '已通过用例')
+  await screen.findByText('通过预期')
   await user.keyboard('{ArrowDown}')
-  const failedItem = screen.getByRole('button', { name: /失败用例/ })
-  await waitFor(() => expect(failedItem).toHaveFocus())
-  expect(await screen.findByText('失败用例前置')).toBeInTheDocument()
+  expect(await screen.findByText('失败预期')).toBeInTheDocument()
+  await user.keyboard('{ArrowDown}')
+  expect(await screen.findByText('未执行预期')).toBeInTheDocument()
   client.clear()
 })
 
-it('筛选浮层选择执行结论后按状态查询，并显示可移除条件', async () => {
+it('状态进度条按执行结论查询，清除筛选恢复列表', async () => {
   useAuthStore.setState({ user: { userId: 'user-1', nickname: '张三' } as User })
   vi.spyOn(api, 'getTestOrder').mockResolvedValue({ ...order, entriesTotal: 3, entriesExecuted: 1 })
   const pending = { ...entry, entryId: 'entry-pending', orderNo: 1, caseTitle: '待执行筛选用例' }
   const failed = { ...entry, entryId: 'entry-failed', orderNo: 2, caseTitle: '失败筛选用例', status: 'failed' }
   const passed = { ...entry, entryId: 'entry-passed', orderNo: 3, caseTitle: '通过筛选用例', status: 'passed' }
   const all = [pending, failed, passed]
+  const allCounts = { pending: 1, passed: 1, failed: 1, blocked: 0, skipped: 0 }
   const lists = vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async (_, filters = {}) => {
     const items = filters.status ? all.filter((item) => item.status === filters.status) : all
+    // 与后端一致：statusCounts / matchedTotal 是状态筛选前的口径，total 才是当前结果数。
+    return { ...listResponse(items), total: items.length, matchedTotal: all.length, statusCounts: allCounts }
+  })
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedAccess(client, 'owner')
+  renderWorkspace(client)
+
+  await within(entryList()).findByText('待执行筛选用例')
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: '失败 1' }))
+
+  await waitFor(() => expect(lists).toHaveBeenLastCalledWith(
+    'order-1', expect.objectContaining({ status: 'failed' }),
+  ))
+  expect(screen.getByRole('button', { name: '失败 1' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: '通过 1' })).toHaveClass('is-dim')
+  expect(await within(entryList()).findByText('失败筛选用例')).toBeInTheDocument()
+  expect(within(entryList()).queryByText('待执行筛选用例')).not.toBeInTheDocument()
+
+  await user.click(screen.getByRole('button', { name: '失败 1' }))
+  await waitFor(() => expect(lists).toHaveBeenLastCalledWith(
+    'order-1', expect.objectContaining({ status: '' }),
+  ))
+  expect(await within(entryList()).findByText('待执行筛选用例')).toBeInTheDocument()
+  client.clear()
+})
+
+it('筛选无结果时提供清除筛选并恢复列表', async () => {
+  useAuthStore.setState({ user: { userId: 'user-1', nickname: '张三' } as User })
+  vi.spyOn(api, 'getTestOrder').mockResolvedValue({ ...order, entriesTotal: 1, entriesExecuted: 0 })
+  const pending = { ...entry, entryId: 'entry-pending', orderNo: 1, caseTitle: '待执行筛选用例' }
+  vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async (_, filters = {}) => {
+    return listResponse(filters.keyword === '不存在' ? [] : [pending])
+  })
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  seedAccess(client, 'owner')
+  renderWorkspace(client)
+
+  await within(entryList()).findByText('待执行筛选用例')
+  const user = userEvent.setup()
+  const searchInput = await openEntryFilters(user)
+  await user.type(searchInput, '不存在')
+  expect(await screen.findByText('没有符合筛选条件的执行条目')).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: '清除筛选' }))
+  expect(await within(entryList()).findByText('待执行筛选用例')).toBeInTheDocument()
+  client.clear()
+})
+
+it('返回用例列表保留筛选条件', async () => {
+  useAuthStore.setState({ user: { userId: 'user-1', nickname: '张三' } as User })
+  vi.spyOn(api, 'getTestOrder').mockResolvedValue({ ...order, entriesTotal: 2, entriesExecuted: 1 })
+  const pending = { ...entry, entryId: 'entry-pending', orderNo: 1, caseTitle: '待执行筛选用例' }
+  const failed = { ...entry, entryId: 'entry-failed', orderNo: 2, caseTitle: '失败筛选用例', status: 'failed' }
+  vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async (_, filters = {}) => {
+    const items = filters.status ? [pending, failed].filter((item) => item.status === filters.status) : [pending, failed]
     return listResponse(items)
   })
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   seedAccess(client, 'owner')
   renderWorkspace(client)
 
-  await screen.findByRole('button', { name: /待执行筛选用例/ })
+  await within(entryList()).findByText('待执行筛选用例')
   const user = userEvent.setup()
-  await user.click(screen.getByRole('button', { name: '筛选执行条目' }))
-  await user.click(await screen.findByRole('menuitemradio', { name: '失败 1' }))
-
-  await waitFor(() => expect(lists).toHaveBeenLastCalledWith(
-    'order-1', expect.objectContaining({ status: 'failed' }),
-  ))
-  expect(await screen.findByRole('button', { name: '清除状态筛选' })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /失败筛选用例/ })).toBeInTheDocument()
-
-  await user.click(screen.getByRole('button', { name: '清除状态筛选' }))
-  await waitFor(() => expect(lists).toHaveBeenLastCalledWith(
-    'order-1', expect.objectContaining({ status: '' }),
-  ))
-  await waitFor(() => expect(screen.queryByRole('button', { name: '清除状态筛选' })).not.toBeInTheDocument())
-  client.clear()
-})
-
-it('分组可以折叠，折叠后条目从清单中移除', async () => {
-  useAuthStore.setState({ user: { userId: 'user-1', nickname: '张三' } as User })
-  vi.spyOn(api, 'getTestOrder').mockResolvedValue({ ...order, entriesTotal: 2, entriesExecuted: 1 })
-  const passed = { ...entry, entryId: 'entry-passed', orderNo: 1, caseTitle: '已通过可折叠用例', status: 'passed' }
-  const pending = { ...entry, entryId: 'entry-pending', orderNo: 2, caseTitle: '待执行可折叠用例' }
-  vi.spyOn(api, 'getTestOrderEntries').mockResolvedValue(listResponse([passed, pending]))
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  seedAccess(client, 'owner')
-  renderWorkspace(client)
-
-  await screen.findByRole('button', { name: /待执行可折叠用例/ })
-  const user = userEvent.setup()
-  await user.click(screen.getByRole('button', { name: '未执行 1' }))
-
-  expect(screen.getByRole('button', { name: '未执行 1' })).toHaveAttribute('aria-expanded', 'false')
-  expect(screen.queryByRole('button', { name: /待执行可折叠用例/ })).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /已通过可折叠用例/ })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: '失败 1' }))
+  await within(entryList()).findByText('失败筛选用例')
+  await openEntry(user, '失败筛选用例')
+  await user.click(screen.getByRole('button', { name: /返回用例列表/ }))
+  expect(screen.getByRole('button', { name: '失败 1' })).toHaveAttribute('aria-pressed', 'true')
+  expect(within(entryList()).getByText('失败筛选用例')).toBeVisible()
+  expect(within(entryList()).queryByText('待执行筛选用例')).not.toBeInTheDocument()
   client.clear()
 })

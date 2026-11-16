@@ -9,6 +9,9 @@ type StatusMeta = {
 export const TEST_ORDER_RESULT_ORDER = ['passed', 'failed', 'blocked', 'skipped', 'pending'] as const
 export type TestOrderResultStatus = (typeof TEST_ORDER_RESULT_ORDER)[number]
 
+/** 执行条目列表的状态筛选：全部或某一种执行结论。 */
+export type TestOrderStatusFilter = 'all' | TestOrderResultStatus
+
 /** 按执行结论分组；空分组也保留，调用方自行决定是否渲染。 */
 export function groupTestOrderEntriesByStatus(entries: TestOrderEntrySummary[]) {
   return TEST_ORDER_RESULT_ORDER.map((status) => ({

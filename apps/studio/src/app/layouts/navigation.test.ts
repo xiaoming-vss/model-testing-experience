@@ -24,14 +24,14 @@ describe('top-level navigation resolution', () => {
     expect(navigationIndex('/projects', '?board=sprints', false)).toBe(0)
     expect(navigationIndex('/requirements/req-1', '', false)).toBe(1)
     expect(navigationIndex('/testing', '?tab=api', false)).toBe(2)
-    expect(navigationIndex('/asset-library?tab=interfaces', '?tab=interfaces', false)).toBe(3)
-    expect(navigationIndex('/testing', '?tab=bugs', false)).toBe(4)
+    expect(navigationIndex('/testing', '?tab=bugs', false)).toBe(3)
+    expect(navigationIndex('/asset-library?tab=interfaces', '?tab=interfaces', false)).toBe(4)
     expect(navigationIndex('/base-services', '', false)).toBe(5)
     expect(navigationIndex('/test-cases/12', '', false)).toBeNull()
   })
 
   it('keeps bug-only projects restricted to the bug navigation index', () => {
-    expect(navigationIndex('/testing', '?tab=bugs', true)).toBe(4)
+    expect(navigationIndex('/testing', '?tab=bugs', true)).toBe(3)
     expect(navigationIndex('/testing', '?tab=api', true)).toBeNull()
     expect(navigationIndex('/asset-library?tab=interfaces', '?tab=interfaces', true)).toBeNull()
   })

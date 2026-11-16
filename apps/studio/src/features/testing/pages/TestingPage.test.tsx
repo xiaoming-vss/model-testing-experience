@@ -6,14 +6,23 @@ import { TestingPage } from './TestingPage'
 vi.mock('@/features/api-automation/pages/ApiAutomationPage', () => ({ ApiAutomationPage: () => <p>API内容</p> }))
 vi.mock('@/features/ui-automation/pages/UiAutomationPage', () => ({ UiAutomationPage: () => <p>UI内容</p> }))
 vi.mock('@/features/bugs/pages/BugListPage', () => ({ BugListPage: () => <p>Bug内容</p> }))
-vi.mock('@/features/test-cases/pages/CaseLibraryPage', () => ({ CaseLibraryPage: () => <p>用例内容</p> }))
 vi.mock('@/features/test-orders/pages/TestOrderPage', () => ({ TestOrderPage: () => <p>测试单内容</p> }))
 afterEach(cleanup)
 
 function LocationControls() {
   const location = useLocation()
   const navigate = useNavigate()
-  return <><output>{location.search}</output><button onClick={() => navigate(-1)}>返回</button></>
+  function goToTab(tab: string) {
+    const params = new URLSearchParams(location.search)
+    params.set('tab', tab)
+    navigate(`?${params}`)
+  }
+  return <>
+    <output>{location.search}</output>
+    <button onClick={() => goToTab('api')}>去API</button>
+    <button onClick={() => goToTab('ui')}>去UI</button>
+    <button onClick={() => navigate(-1)}>返回</button>
+  </>
 }
 function setup(path: string) {
   render(<MemoryRouter initialEntries={[path]}><TestingPage /><LocationControls /></MemoryRouter>)
@@ -31,8 +40,7 @@ function setupWithAssetRoute(path: string) {
   )
 }
 
-// jsdom 的 getComputedStyle 会滞后于 hidden 属性切换，role 查询对刚切换过的面板不可靠；
-// 标签页的可见性契约直接按 hidden 属性断言（与实现一致，浏览器行为相同）。
+// jsdom 的 getComputedStyle 会滞后于 hidden 属性切换，可见性契约直接按 hidden 属性断言。
 function expectPaneState(tab: string, options: { visible: boolean; text: string }) {
   const pane = document.getElementById(`testing-panel-${tab}`)
   expect(pane, `pane for ${tab}`).not.toBeNull()
@@ -41,28 +49,30 @@ function expectPaneState(tab: string, options: { visible: boolean; text: string 
 }
 
 describe('Testing workspace navigation', () => {
-  it('defaults to orders and preserves scope when switching and navigating back', () => {
+  it('defaults to orders and keeps the page free of a duplicate tab bar', () => {
     setup('/testing?requirementId=42&sprintId=7')
-    expect(screen.getByRole('tab', { name: '测试单' })).toHaveAttribute('aria-selected', 'true')
-    fireEvent.click(screen.getByRole('tab', { name: 'API测试' }))
+    expectPaneState('orders', { visible: true, text: '测试单内容' })
+    expect(document.getElementById('testing-panel-api')).toBeNull()
+    expect(document.getElementById('testing-panel-ui')).toBeNull()
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: '测试单' })).not.toBeInTheDocument()
+  })
+
+  it('switches panes from the URL, preserves scope and keeps visited panes mounted', () => {
+    setup('/testing?requirementId=42&sprintId=7')
+    fireEvent.click(screen.getByRole('button', { name: '去API' }))
     expectPaneState('api', { visible: true, text: 'API内容' })
     expectPaneState('orders', { visible: false, text: '测试单内容' })
     expect(screen.getByRole('status')).toHaveTextContent('?requirementId=42&sprintId=7&tab=api')
-    fireEvent.click(screen.getByRole('button', { name: '返回' }))
-    expectPaneState('orders', { visible: true, text: '测试单内容' })
-    expectPaneState('api', { visible: false, text: 'API内容' })
-  })
-  it('supports keyboard navigation between the three testing tabs', () => {
-    setup('/testing?tab=api')
-    const tab = screen.getByRole('tab', { name: 'API测试' })
-    expect(tab).toHaveAttribute('aria-selected', 'true')
-    fireEvent.keyDown(tab, { key: 'ArrowRight' })
-    expect(screen.getByRole('tab', { name: 'UI测试' })).toHaveFocus()
+
+    fireEvent.click(screen.getByRole('button', { name: '去UI' }))
     expectPaneState('ui', { visible: true, text: 'UI内容' })
-    fireEvent.keyDown(document.activeElement!, { key: 'Home' })
-    expectPaneState('orders', { visible: true, text: '测试单内容' })
+    expectPaneState('api', { visible: false, text: 'API内容' })
+
+    fireEvent.click(screen.getByRole('button', { name: '返回' }))
+    expectPaneState('api', { visible: true, text: 'API内容' })
     expectPaneState('ui', { visible: false, text: 'UI内容' })
-    expect(screen.queryByRole('tab', { name: '用例库' })).not.toBeInTheDocument()
+    expectPaneState('orders', { visible: false, text: '测试单内容' })
   })
 
   it('redirects legacy library tabs to the asset library', () => {
@@ -71,6 +81,7 @@ describe('Testing workspace navigation', () => {
     expect(screen.getByRole('status')).toHaveTextContent('?tab=cases')
     expect(screen.queryByRole('tab')).not.toBeInTheDocument()
   })
+
   it('keeps the Bug route independent without exposing testing tabs', () => {
     setup('/testing?tab=bugs')
     expect(screen.getByText('Bug内容')).toBeVisible()

@@ -1,20 +1,19 @@
-import '@/shared/styles/list-table.css'
-import { AppstoreOutlined, FileTextOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import {
   Alert,
   Button,
   Empty,
   Popconfirm,
   Space,
-  Table,
   Tooltip,
   Typography,
 } from 'antd'
-import type { InputRef, TableProps } from 'antd'
+import type { InputRef } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { DebouncedSearchInput } from '@/shared/components/DebouncedSearchInput'
-import { useNavigate } from 'react-router-dom'
+import { EntityCard } from '@/shared/components/EntityCard'
 import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
@@ -110,164 +109,125 @@ export function TestOrderPage() {
     onError: (error) => message.error(getErrorMessage(error)),
   })
 
-  const columns: TableProps<TestOrder>['columns'] = [
-    {
-      title: '测试单名称',
-      key: 'name',
-      width: 145,
-      render: (_, order) => (
-        <Space size={8} className="tp-list-name functional-suite-list-name test-order-name-cell">
-          <span className="test-order-name-icon" aria-hidden="true"><FileTextOutlined /></span>
-          <Tooltip title={order.name}>
-            <Text ellipsis>{order.name}</Text>
-          </Tooltip>
-        </Space>
-      ),
-    },
-    {
-      title: '所属迭代',
-      key: 'sprint',
-      width: 125,
-      ellipsis: true,
-      render: (_, order) => (
-        <Text type="secondary" className="test-order-muted-cell">
-          {(order.sprintId && sprintNameMap.get(order.sprintId)) || '-'}
-        </Text>
-      ),
-    },
-    {
-      title: '被测版本',
-      key: 'testedVersion',
-      width: 125,
-      ellipsis: true,
-      render: (_, order) => (
-        <Text className="test-order-version-cell" type="secondary">
-          {order.testedVersion || '-'}
-        </Text>
-      ),
-    },
-    {
-      title: '进度与指标',
-      key: 'progress',
-      width: 460,
-      render: (_, order) => {
-        const progress = buildTestOrderProgress(order)
-        return (
-          <div className="test-order-progress-cell">
-            <div className="test-order-progress-line">
-              <span className="test-order-progress-executed">
-                已执行{' '}
-                <strong>
-                  {progress.executed}/{progress.total}
-                </strong>
-                {progress.metrics.map((metric) => (
-                  <span
-                    key={metric.key}
-                    className={`test-order-progress-metric tone-${METRIC_TONES[metric.key]}`}
-                  >
-                    {metric.label} {metric.count}
-                  </span>
-                ))}
-              </span>
-              <span className={`test-order-progress-percent tone-${getTestOrderStatusTone(order.status)}`}>
-                {progress.percent}%
-              </span>
-            </div>
-            {/* 分段进度条是图形，无障碍名用完整的进度文案，和抽屉 / 工作台里的说法一致。 */}
-            <div
-              className="test-order-progress-track"
-              role="img"
-              aria-label={formatEntryProgress(order)}
-            >
-              {progress.segments.map((segment) => (
-                <span
-                  key={segment.key}
-                  className={`test-order-progress-segment segment-${segment.key}`}
-                  style={{ width: `${segment.percent}%` }}
-                  title={`${segment.label}: ${segment.count}`}
-                />
-              ))}
-            </div>
-          </div>
-        )
-      },
-    },
-    {
-      title: '状态',
-      key: 'status',
-      width: 150,
-      render: (_, order) => {
-        const meta = getTestOrderStatusMeta(order.status)
-        return (
+  function renderOrderCard(order: TestOrder) {
+    const progress = buildTestOrderProgress(order)
+    const statusMeta = getTestOrderStatusMeta(order.status)
+    const orderId = order.orderId
+
+    const title = orderId ? (
+      <Link
+        to={`/test-orders/${orderId}`}
+        title={order.name}
+        onClick={() => queryClient.setQueryData(['testOrder', orderId], order)}
+      >
+        {order.name}
+      </Link>
+    ) : order.name
+
+    return (
+      <EntityCard
+        key={orderId ?? order.name}
+        title={title}
+        status={
           <span className={`test-order-status-pill tone-${getTestOrderStatusTone(order.status)}`}>
             <span className="test-order-status-dot" />
-            {meta.label}
+            {statusMeta.label}
           </span>
-        )
-      },
-    },
-    {
-      title: '最近更新',
-      key: 'updatedAt',
-      width: 250,
-      render: (_, order) => (
-        <Text className="functional-suite-list-time test-order-time-cell" type="secondary">
-          {formatTime(pickUpdatedAt(order))}
-        </Text>
-      ),
-    },
-    {
-      title: <span className="tp-actions-col-title" style={{ width: 64 }}>操作</span>,
-      key: 'actions',
-      width: 102,
-      align: 'right',
-      render: (_, order) => (
-        <Space
-          size={8}
-          className="functional-suite-list-actions test-order-row-actions"
-          onClick={(event) => event.stopPropagation()}
-          onMouseDown={(event) => event.stopPropagation()}
-        >
-          <Tooltip title="编辑测试单">
-            <ProjectActionButton
-              action="write"
-              type="text"
-              shape="circle"
-              className="action-btn-update"
-              operation="edit"
-              iconOnly
-              aria-label="编辑测试单"
-              onClick={() => {
-                setEditingOrder(order)
-                setDrawerOpen(true)
-              }}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="确认删除该测试单？"
-            description="删除后不可恢复，其中的执行条目一并删除，用例本身不受影响。"
-            okText="确认删除"
-            okButtonProps={{ danger: true }}
-            onConfirm={() => order.orderId && deleteMutation.mutate(order.orderId)}
-          >
-            <Tooltip title="删除测试单">
+        }
+        meta={[
+          {
+            label: '所属迭代',
+            value: (order.sprintId && sprintNameMap.get(order.sprintId)) || '-',
+          },
+          { label: '被测版本', value: order.testedVersion || '-' },
+        ]}
+        footerNote={<>最近更新 {formatTime(pickUpdatedAt(order))}</>}
+        actions={
+          <>
+            <Tooltip title="编辑测试单">
               <ProjectActionButton
                 action="write"
                 type="text"
                 shape="circle"
-                danger
-                className="action-btn-delete"
-                operation="delete"
+                className="action-btn-update"
+                operation="edit"
                 iconOnly
-                aria-label="删除测试单"
-                loading={deleteMutation.isPending && deleteMutation.variables === order.orderId}
+                aria-label="编辑测试单"
+                onClick={() => {
+                  setEditingOrder(order)
+                  setDrawerOpen(true)
+                }}
               />
             </Tooltip>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ]
+            <Popconfirm
+              title="确认删除该测试单？"
+              description="删除后不可恢复，其中的执行条目一并删除，用例本身不受影响。"
+              okText="确认删除"
+              okButtonProps={{ danger: true }}
+              onConfirm={() => order.orderId && deleteMutation.mutate(order.orderId)}
+            >
+              <Tooltip title="删除测试单">
+                <ProjectActionButton
+                  action="write"
+                  type="text"
+                  shape="circle"
+                  danger
+                  className="action-btn-delete"
+                  operation="delete"
+                  iconOnly
+                  aria-label="删除测试单"
+                  loading={deleteMutation.isPending && deleteMutation.variables === order.orderId}
+                />
+              </Tooltip>
+            </Popconfirm>
+          </>
+        }
+        onOpen={() => {
+          if (!orderId) return
+          // 列表行本身就是完整测试单，先写缓存，工作台不必再取一次详情。
+          queryClient.setQueryData(['testOrder', orderId], order)
+          navigate(`/test-orders/${orderId}`)
+        }}
+      >
+        <div className="test-order-progress-cell">
+          <div className="test-order-progress-line">
+            <span className="test-order-progress-executed">
+              已执行{' '}
+              <strong>
+                {progress.executed}/{progress.total}
+              </strong>
+              {progress.metrics.map((metric) => (
+                <span
+                  key={metric.key}
+                  className={`test-order-progress-metric tone-${METRIC_TONES[metric.key]}`}
+                >
+                  {metric.label} {metric.count}
+                </span>
+              ))}
+            </span>
+            <span className={`test-order-progress-percent tone-${getTestOrderStatusTone(order.status)}`}>
+              {progress.percent}%
+            </span>
+          </div>
+          {/* 分段进度条是图形，无障碍名用完整的进度文案，和抽屉 / 工作台里的说法一致。 */}
+          <div
+            className="test-order-progress-track"
+            role="img"
+            aria-label={formatEntryProgress(order)}
+          >
+            {progress.segments.map((segment) => (
+              <span
+                key={segment.key}
+                className={`test-order-progress-segment segment-${segment.key}`}
+                style={{ width: `${segment.percent}%` }}
+                title={`${segment.label}: ${segment.count}`}
+              />
+            ))}
+          </div>
+        </div>
+      </EntityCard>
+    )
+  }
 
   function openCreateDrawer() {
     setEditingOrder(null)
@@ -341,87 +301,64 @@ export function TestOrderPage() {
               <Empty description="当前项目下暂无迭代" />
             </div>
           ) : (
-            <>
-              <div className="test-orders-table-card tp-list-body">
-                <div className="table-body-scroll sprint-card-scroll functional-suite-scroll test-orders-table-scroll tp-list-scroll">
-                  {ordersQuery.isLoading ? (
-                    <div className="sprint-card-loading">
-                      <Empty description="测试单加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                    </div>
-                  ) : total === 0 ? (
-                    <div className="sprint-card-loading">
-                      <Empty
-                        image={<AppstoreOutlined />}
-                        description={
-                          <Space orientation="vertical" size={4}>
-                            <Text strong>
-                              {hasLocalFilters ? '没有符合筛选条件的测试单' : '当前迭代下还没有测试单'}
-                            </Text>
-                            <Text type="secondary">
-                              {hasLocalFilters
-                                ? '调整或清空筛选条件后再看。'
-                                : '新建测试单后，从用例库挑选用例加入即可开始执行。'}
-                            </Text>
-                          </Space>
-                        }
-                      >
-                        {hasLocalFilters ? (
-                          <Button
-                            onClick={() => {
-                              setSearchResetKey((current) => current + 1)
-                              setSearchKeyword('')
-                              setPage(1)
-                            }}
-                          >
-                            清空筛选
-                          </Button>
-                        ) : (
-                          <ProjectActionButton
-                            action="write"
-                            type="primary"
-                            className="action-btn-create"
-                            operation="create"
-                            disabled={!activeProjectId || sprints.length === 0}
-                            onClick={openCreateDrawer}
-                          >
-                            新建测试单
-                          </ProjectActionButton>
-                        )}
-                      </Empty>
-                    </div>
-                  ) : (
-                    <Table<TestOrder>
-                      className="functional-suite-list-table tp-list-table"
-                      columns={columns}
-                      dataSource={pageOrders}
-                      rowKey={(order) => order.orderId ?? order.name}
-                      pagination={false}
-                      scroll={{ x: 1200 }}
-                      onRow={(order) => ({
-                        onClick: (event) => {
-                          if (
-                            (event.target as HTMLElement).closest(
-                              '.ant-table-selection-column, .functional-suite-list-actions',
-                            )
-                          ) {
-                            return
-                          }
-                          if (order.orderId) {
-                            // 列表行本身就是完整测试单，先写缓存，工作台不必再取一次详情。
-                            queryClient.setQueryData(['testOrder', order.orderId], order)
-                            navigate(`/test-orders/${order.orderId}`)
-                          }
-                        },
-                      })}
-                    />
-                  )}
-                </div>
-                <div className="table-footer test-orders-footer">
-                  <ListPagination current={currentPage} pageSize={pageSize} total={total}
-                    loading={ordersQuery.isFetching} onChange={(next, size) => { setPage(next); setPageSize(size) }} />
-                </div>
+            <div className="test-orders-card-body tp-list-body">
+              <div className="sprint-card-scroll test-orders-card-scroll tp-list-scroll">
+                {ordersQuery.isLoading ? (
+                  <div className="sprint-card-loading">
+                    <Empty description="测试单加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                  </div>
+                ) : total === 0 ? (
+                  <div className="sprint-card-loading">
+                    <Empty
+                      image={<AppstoreOutlined />}
+                      description={
+                        <Space orientation="vertical" size={4}>
+                          <Text strong>
+                            {hasLocalFilters ? '没有符合筛选条件的测试单' : '当前迭代下还没有测试单'}
+                          </Text>
+                          <Text type="secondary">
+                            {hasLocalFilters
+                              ? '调整或清空筛选条件后再看。'
+                              : '新建测试单后，从用例库挑选用例加入即可开始执行。'}
+                          </Text>
+                        </Space>
+                      }
+                    >
+                      {hasLocalFilters ? (
+                        <Button
+                          onClick={() => {
+                            setSearchResetKey((current) => current + 1)
+                            setSearchKeyword('')
+                            setPage(1)
+                          }}
+                        >
+                          清空筛选
+                        </Button>
+                      ) : (
+                        <ProjectActionButton
+                          action="write"
+                          type="primary"
+                          className="action-btn-create"
+                          operation="create"
+                          disabled={!activeProjectId || sprints.length === 0}
+                          onClick={openCreateDrawer}
+                        >
+                          新建测试单
+                        </ProjectActionButton>
+                      )}
+                    </Empty>
+                  </div>
+                ) : (
+                  <div className="entity-card-grid">
+                    {pageOrders.map(renderOrderCard)}
+                  </div>
+                )}
               </div>
-            </>
+              <div className="table-footer test-orders-footer">
+                <ListPagination current={currentPage} pageSize={pageSize} total={total}
+                  loading={ordersQuery.isFetching} onChange={(next, size) => { setPage(next); setPageSize(size) }} />
+              </div>
+            </div>
           )}
         </section>
       </div>

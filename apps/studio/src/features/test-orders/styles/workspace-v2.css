@@ -1,5 +1,6 @@
-/* 测试单执行工作台：连续清单 / 卡片详情；两栏独立滚动。
- * 颜色消费 surface-tokens.css，判定与导航样式在 workspace-verdict-v2.css。 */
+/* 测试单执行工作台：页面高度链、单条详情卡片与全宽详情内容。
+ * 列表优先的工具栏、表格与详情外壳在 workspace-list-v2.css；
+ * 判定与底部操作条在 workspace-verdict-v2.css。颜色消费 surface-tokens.css。 */
 .app-shell:has(.test-order-workspace-page) {
   height: 100dvh;
   min-height: 0;
@@ -28,184 +29,9 @@
   overflow: hidden;
 }
 
-/* 沿用平台工作台外边距，参考稿只用于清单／详情／底栏排布。 */
+/* 沿用平台工作台外边距，详情与列表共用同一内容区。 */
 .app-shell.app-shell-macos .test-order-workspace-page .api-automation-content {
   padding: 12px var(--app-page-gutter) 16px;
-}
-.test-order-workspace-page .test-order-orderbar {
-  flex-direction: row;
-  height: auto;
-  justify-content: flex-start;
-}
-.test-order-workspace-page .test-order-orderbar-id,
-.test-order-workspace-page .test-order-orderbar-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-.test-order-workspace-page .test-order-orderbar-actions {
-  margin-inline-start: auto;
-}
-.test-order-workspace-page .test-order-orderbar-name {
-  color: var(--srf-text);
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 24px;
-  overflow-wrap: anywhere;
-}
-.test-order-workspace-page .test-order-orderbar-progress {
-  color: var(--srf-text-muted);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
-.test-order-workspace-page .test-order-workspace-cols {
-  display: grid;
-  grid-template-columns: var(--app-sidebar-width) minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
-  flex: 1 1 auto;
-  min-height: 0;
-  gap: 12px;
-}
-.test-order-workspace-page .test-order-side-panel {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-card);
-  background: var(--srf-card);
-  overflow: hidden;
-}
-.test-order-workspace-page .test-order-side-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--srf-divider);
-}
-.test-order-workspace-page .test-order-side-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--srf-text);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 18px;
-}
-.test-order-workspace-page .test-order-side-count {
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--srf-count-badge);
-  color: var(--srf-accent-strong);
-  font-size: 11px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-}
-.test-order-workspace-page .test-order-side-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-inline-start: auto;
-}
-.test-order-workspace-page .test-order-side-percent {
-  color: var(--srf-text-muted);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.test-order-workspace-page .test-order-side-scroll {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: scroll;
-  padding: 0 0 8px 8px;
-}
-.test-order-workspace-page .test-order-side-scroll .api-case-nav-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding-top: 8px;
-}
-.test-order-workspace-page .test-order-nav-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px;
-  border: 1px solid transparent;
-  border-radius: var(--srf-radius-control);
-}
-.test-order-workspace-page .test-order-nav-row:hover {
-  background: var(--srf-hover);
-}
-.test-order-workspace-page .test-order-nav-row.active,
-.test-order-workspace-page .test-order-nav-row:has(> .test-order-nav-item:focus-visible) {
-  border-color: var(--srf-accent-border);
-  background: var(--srf-accent-soft);
-}
-.test-order-workspace-page .test-order-nav-row > .ant-checkbox-wrapper {
-  margin-top: 0;
-}
-.test-order-workspace-page .test-order-nav-item {
-  display: flex;
-  flex: 1 1 auto;
-  min-width: 0;
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  padding: 0 2px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.test-order-workspace-page .test-order-nav-prio {
-  flex: 0 0 auto;
-}
-.test-order-workspace-page .test-order-nav-title {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--srf-text);
-  font-size: 12px;
-  line-height: 18px;
-  font-weight: 500;
-}
-.test-order-workspace-page .test-order-nav-remove {
-  flex: 0 0 auto;
-  padding: 0 4px;
-  border: 0;
-  background: transparent;
-  color: var(--srf-text-muted);
-  font: inherit;
-  line-height: 20px;
-  cursor: pointer;
-  opacity: 0;
-}
-.test-order-workspace-page .test-order-nav-row:hover .test-order-nav-remove,
-.test-order-workspace-page .test-order-nav-row:focus-within .test-order-nav-remove {
-  opacity: 1;
-}
-.test-order-workspace-page .test-order-nav-remove:hover {
-  color: var(--srf-danger);
-}
-.test-order-workspace-page .test-order-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  min-height: 0;
-  min-width: 0;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-card);
-  background: var(--srf-card);
-  overflow: hidden;
 }
 .test-order-workspace-page .test-order-editor-body {
   display: flex;
@@ -273,29 +99,16 @@
   background: transparent;
   color: var(--srf-text-secondary);
 }
-.test-order-workspace-page .test-order-nav-item:focus-visible {
-  outline: none;
-}
-.test-order-workspace-page :is(.test-order-nav-remove, .test-order-case-no):focus-visible {
+.test-order-workspace-page .test-order-case-no:focus-visible {
   outline: 2px solid var(--srf-accent);
   outline-offset: -2px;
 }
 
 @media (max-width: 900px) {
-  .test-order-workspace-page .test-order-workspace-cols {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 35%) minmax(0, 1fr);
-  }
-
   .test-order-workspace-page .test-order-case-summary {
     padding: 12px;
   }
 }
-
-@media (hover: none) {
-  .test-order-workspace-page .test-order-nav-remove { opacity: 1; }
-}
-
 
 .test-order-inline-graph { flex: 1; min-width: 0; min-height: 0; display: flex; overflow: hidden; }
 .test-order-inline-graph > .test-order-graph-viewer { flex: 1; min-width: 0; min-height: 0; }

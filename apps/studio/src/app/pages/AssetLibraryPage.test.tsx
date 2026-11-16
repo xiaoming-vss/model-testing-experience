@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter, useLocation } from 'react-router-dom'
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AssetLibraryPage } from './AssetLibraryPage'
 
@@ -13,56 +13,61 @@ vi.mock('@/features/interface-library/pages/SoftwareRepositoriesPage', () => ({
   SoftwareRepositoriesPage: () => <p>软件仓库内容</p>,
 }))
 
-function LocationOutput() {
+function LocationControls() {
   const location = useLocation()
-  return <output>{`${location.pathname}${location.search}`}</output>
+  const navigate = useNavigate()
+  function goToTab(tab: string) {
+    const params = new URLSearchParams(location.search)
+    params.set('tab', tab)
+    navigate(`/asset-library?${params}`)
+  }
+  return <>
+    <output>{`${location.pathname}${location.search}`}</output>
+    <button onClick={() => goToTab('interfaces')}>去接口库</button>
+    <button onClick={() => goToTab('repositories')}>去软件仓库</button>
+  </>
 }
 
 function renderPage(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <AssetLibraryPage />
-      <LocationOutput />
+      <LocationControls />
     </MemoryRouter>,
   )
 }
 
 afterEach(cleanup)
 
+function expectPaneState(tab: string, options: { visible: boolean; text: string }) {
+  const pane = document.getElementById(`asset-panel-${tab}`)
+  expect(pane, `pane for ${tab}`).not.toBeNull()
+  expect(pane!.hidden).toBe(!options.visible)
+  expect(pane).toHaveTextContent(options.text)
+}
+
 describe('AssetLibraryPage', () => {
-  it('defaults to the case library and keeps visited panes mounted', () => {
+  it('defaults to the case library and keeps the page free of a duplicate tab bar', () => {
     renderPage('/asset-library')
 
     expect(screen.getByRole('status')).toHaveTextContent('/asset-library?tab=cases')
-    expect(screen.getByRole('tab', { name: '用例库' })).toHaveAttribute('aria-selected', 'true')
-    expect(document.getElementById('asset-panel-cases')).not.toHaveAttribute('hidden')
-
-    fireEvent.click(screen.getByRole('tab', { name: '接口库' }))
-    expect(screen.getByRole('status')).toHaveTextContent('/asset-library?tab=interfaces')
-    expect(document.getElementById('asset-panel-interfaces')).not.toHaveAttribute('hidden')
-    expect(document.getElementById('asset-panel-cases')).toHaveAttribute('hidden')
-    expect(screen.getByText('用例库内容')).toBeInTheDocument()
-    expect(screen.getByText('接口库内容')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('tab', { name: '软件仓库' }))
-    expect(screen.getByRole('status')).toHaveTextContent('/asset-library?tab=repositories')
-    expect(document.getElementById('asset-panel-repositories')).not.toHaveAttribute('hidden')
-    expect(screen.getByText('软件仓库内容')).toBeInTheDocument()
+    expectPaneState('cases', { visible: true, text: '用例库内容' })
+    expect(document.getElementById('asset-panel-interfaces')).toBeNull()
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: '用例库' })).not.toBeInTheDocument()
   })
 
-  it('supports arrow, home and end keys across the three asset tabs', () => {
+  it('switches panes from the URL and keeps visited panes mounted', () => {
     renderPage('/asset-library?tab=cases')
 
-    const cases = screen.getByRole('tab', { name: '用例库' })
-    fireEvent.keyDown(cases, { key: 'ArrowRight' })
-    expect(screen.getByRole('tab', { name: '接口库' })).toHaveFocus()
+    fireEvent.click(screen.getByRole('button', { name: '去接口库' }))
     expect(screen.getByRole('status')).toHaveTextContent('/asset-library?tab=interfaces')
+    expectPaneState('interfaces', { visible: true, text: '接口库内容' })
+    expectPaneState('cases', { visible: false, text: '用例库内容' })
 
-    fireEvent.keyDown(document.activeElement!, { key: 'End' })
-    expect(screen.getByRole('tab', { name: '软件仓库' })).toHaveFocus()
+    fireEvent.click(screen.getByRole('button', { name: '去软件仓库' }))
     expect(screen.getByRole('status')).toHaveTextContent('/asset-library?tab=repositories')
-
-    fireEvent.keyDown(document.activeElement!, { key: 'Home' })
-    expect(screen.getByRole('status')).toHaveTextContent('/asset-library?tab=cases')
+    expectPaneState('repositories', { visible: true, text: '软件仓库内容' })
+    expectPaneState('interfaces', { visible: false, text: '接口库内容' })
   })
 })

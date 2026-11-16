@@ -1,15 +1,14 @@
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
-import '@/shared/styles/list-table.css'
+import { EntityCard } from '@/shared/components/EntityCard'
 import '@/shared/styles/surface-tokens.css'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { AppstoreOutlined } from '@ant-design/icons'
-import { Alert, Button, Empty, Form, Space, Table, Tooltip, Typography } from 'antd'
-import type { TableProps } from 'antd'
+import { Alert, Button, Empty, Form, Space, Typography } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { UiSuiteNameCell, UiSuiteRowActions, UiSuiteScopeCell } from './UiSuiteListCells'
+import { Link, useNavigate } from 'react-router-dom'
+import { UiSuiteCardActions } from './UiSuiteCardActions'
 import { UiSuiteRunConfigCell } from './UiSuiteRunConfigCell'
 import { UiTestSuiteDrawer, type UiTestSuiteFormValues } from './UiTestSuiteDrawer'
 import { DEFAULT_UI_TEST_SUITE_RUN_CONFIG } from '../constants/defaultRunConfig'
@@ -259,83 +258,28 @@ export const UiTestSuiteSection = forwardRef<
     const suiteSprintName = sprintNameResolver?.(suite) ?? resolvedSprintName
     const suiteRequirementName = requirementNameResolver?.(suite) ?? resolvedRequirementName
 
-    return { suiteDescription, suiteId, suiteSprintName, suiteRequirementName }
+    return { suiteDescription, suiteId, suiteRequirementName, suiteSprintName }
   }
 
-  const columns: TableProps<UiTestSuite>['columns'] = [
-    {
-      title: '测试集名称',
-      dataIndex: 'name',
-      key: 'name',
-      width: '19%',
-      render: (name: UiTestSuite['name']) => <UiSuiteNameCell name={name} />,
-    },
-    {
-      title: '运行配置',
-      key: 'runConfig',
-      // 23% 在 1600px 最小表宽下约 368px，配合 nowrap 保证三个徽标单行。
-      width: '23%',
-      render: (_, suite) => <UiSuiteRunConfigCell suite={suite} />,
-    },
-    {
-      title: '所属迭代/需求',
-      key: 'scope',
-      width: '14%',
-      render: (_, suite) => {
-        const { suiteRequirementName, suiteSprintName } = getSuiteRowContext(suite)
-        return <UiSuiteScopeCell sprintName={suiteSprintName} requirementName={suiteRequirementName} />
-      },
-    },
-    {
-      title: '创建时间',
-      key: 'createdAt',
-      width: '10%',
-      render: (_, suite) => (
-        <Text className="ui-suite-list-time-cell" type="secondary">
-          {formatTime(pickCreatedAt(suite))}
-        </Text>
-      ),
-    },
-    {
-      title: '最近更新',
-      key: 'updatedAt',
-      width: '10%',
-      render: (_, suite) => (
-        <Text className="ui-suite-list-time-cell" type="secondary">
-          {formatTime(pickUpdatedAt(suite))}
-        </Text>
-      ),
-    },
-    {
-      title: '描述',
-      key: 'description',
-      width: '16%',
-      ellipsis: true,
-      render: (_, suite) => {
-        const { suiteDescription } = getSuiteRowContext(suite)
-        return (
-          <Tooltip title={suiteDescription}>
-            <Text
-              className={`ui-suite-list-desc-cell${suite.description ? '' : ' is-empty'}`}
-              type="secondary"
-              ellipsis
-            >
-              {suiteDescription}
-            </Text>
-          </Tooltip>
-        )
-      },
-    },
-    {
-      title: <span className="tp-actions-col-title" style={{ width: 92 }}>操作</span>,
-      key: 'actions',
-      width: '8%',
-      align: 'right',
-      fixed: 'right',
-      render: (_, suite) => {
-        const { suiteId } = getSuiteRowContext(suite)
-        return (
-          <UiSuiteRowActions
+  function renderSuiteCard(suite: UiTestSuite) {
+    const { suiteDescription, suiteId, suiteRequirementName, suiteSprintName } = getSuiteRowContext(suite)
+    const title = suiteId ? (
+      <Link to={`/ui-automation/suites/${suiteId}`} title={suite.name}>
+        {suite.name}
+      </Link>
+    ) : suite.name
+
+    return (
+      <EntityCard
+        key={suiteId || suite.name}
+        title={title}
+        meta={[
+          { label: '所属迭代', value: suiteSprintName },
+          { label: '所属需求', value: suiteRequirementName },
+        ]}
+        footerNote={<>最近更新 {formatTime(pickUpdatedAt(suite))}</>}
+        actions={
+          <UiSuiteCardActions
             running={runSuiteMutation.isPending && runSuiteMutation.variables === suite}
             runDisabled={!environmentId}
             deleting={deleteSuiteMutation.isPending && deleteSuiteMutation.variables === suiteId}
@@ -343,10 +287,18 @@ export const UiTestSuiteSection = forwardRef<
             onEdit={() => openEditDrawer(suite)}
             onDelete={() => deleteSuiteMutation.mutate(suiteId)}
           />
-        )
-      },
-    },
-  ]
+        }
+        onOpen={() => openSuiteCasePage(suiteId)}
+      >
+        <div className="entity-card-badges">
+          <UiSuiteRunConfigCell suite={suite} />
+        </div>
+        <p className={`entity-card-desc${suite.description ? '' : ' is-empty'}`} title={suiteDescription}>
+          {suiteDescription}
+        </p>
+      </EntityCard>
+    )
+  }
 
   // 只把「用户点了刷新」这一种情况报给工具栏，首屏加载不点亮刷新按钮的转圈。
   const refresh = useCallback(() => {
@@ -366,8 +318,8 @@ export const UiTestSuiteSection = forwardRef<
     <div className="ui-test-suite-section">
       {suitesQuery.error ? <Alert showIcon type="error" title={getErrorMessage(suitesQuery.error)} /> : null}
 
-      <div className="ui-suite-list-table-card tp-list-body">
-        <div className="table-body-scroll sprint-card-scroll ui-suite-list-table-scroll tp-list-scroll">
+      <div className="ui-suite-card-body tp-list-body">
+        <div className="sprint-card-scroll ui-suite-card-scroll tp-list-scroll">
           {suitesQuery.isLoading ? (
             <div className="sprint-card-loading">
               <Empty description="UI测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
@@ -397,19 +349,9 @@ export const UiTestSuiteSection = forwardRef<
               </Empty>
             </div>
           ) : (
-            <Table<UiTestSuite>
-              className="functional-suite-list-table tp-list-table ui-suite-list-table"
-              columns={columns}
-              dataSource={pagedSuites}
-              rowKey={(suite) => getSuiteRowContext(suite).suiteId || suite.name}
-              pagination={false}
-              // 列宽按百分比分配；容器不足 1600px 时改为表格内部横向滚动，避免名称和描述被压成 0 宽。
-              tableLayout="fixed"
-              scroll={{ x: 1600 }}
-              onRow={(suite) => ({
-                onClick: () => openSuiteCasePage(getSuiteRowContext(suite).suiteId),
-              })}
-            />
+            <div className="entity-card-grid">
+              {pagedSuites.map(renderSuiteCard)}
+            </div>
           )}
         </div>
 

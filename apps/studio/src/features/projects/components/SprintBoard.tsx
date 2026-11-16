@@ -7,7 +7,7 @@ import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { formatTime, getErrorMessage, normalizeSprintId, pickEndTime, pickStartTime } from '@/utils/format'
 import type { Sprint } from '../types'
 import { ProjectActionButton } from './ProjectActionButton'
-import { isInteractiveCardTarget } from '../utils/cardNavigation'
+import { isInteractiveCardTarget } from '@/shared/utils/cardNavigation'
 import '../styles/sprint-board.css'
 
 const groups = [

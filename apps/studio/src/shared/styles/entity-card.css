@@ -1,0 +1,166 @@
+/*
+ * 实体卡片：按「标题 + 主体 + meta 块 + footer 操作」浏览容器型对象的列表。
+ *
+ * 需求、迭代已使用同一套骨架；测试单、API 测试集、UI 测试集改为卡片后共用这里，
+ * 不再各写一份尺寸与表面。页面只提供主体内容（进度 / 描述 / 运行配置）与操作按钮。
+ * 颜色只消费 --srf-* 与公共语义 token，卡片变量由祖先 .tp-surface 提供。
+ */
+
+.entity-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 328px), 1fr));
+  align-content: start;
+  gap: 16px;
+}
+
+.entity-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 218px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: 12px;
+  background: var(--srf-card);
+  color: var(--srf-text);
+  box-shadow: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  cursor: pointer;
+}
+
+.entity-card:hover {
+  border-color: var(--app-glass-action-border-hover);
+  box-shadow: 0 12px 28px var(--app-service-card-shadow-hover);
+  transform: translateY(-2px);
+}
+
+.entity-card-main {
+  flex: 1;
+  padding: 15px 16px 12px;
+}
+
+.entity-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin: 0 0 6px;
+}
+
+.entity-card-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  color: var(--srf-text);
+  font-size: 14.5px;
+  line-height: 22px;
+  font-weight: 650;
+}
+
+.entity-card-title a {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: inherit;
+}
+
+.entity-card-title a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.entity-card-title a:focus-visible {
+  outline: 2px solid var(--srf-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* 主体区：卡片自带的文本、徽标行等公共形态。 */
+.entity-card-desc {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  min-height: 36px;
+  margin: 0 0 12px;
+  overflow: hidden;
+  color: var(--srf-text-secondary);
+  font-size: 11.5px;
+  line-height: 18px;
+}
+
+.entity-card-desc.is-empty {
+  color: var(--srf-text-muted);
+  font-style: italic;
+}
+
+.entity-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.entity-card-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--srf-hover);
+}
+
+.entity-card-meta > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.entity-card-meta dt {
+  color: var(--srf-text-secondary);
+  font-size: 9.5px;
+  line-height: 14px;
+  font-weight: 400;
+}
+
+.entity-card-meta dd {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--srf-text);
+  font-size: 11.5px;
+  line-height: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.entity-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 43px;
+  margin-top: auto;
+  padding: 9px 16px 10px;
+}
+
+.entity-card-note {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--srf-text-secondary);
+  font-size: 10.5px;
+  line-height: 18px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.entity-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex: 0 0 auto;
+}

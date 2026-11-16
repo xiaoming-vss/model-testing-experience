@@ -134,8 +134,10 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 `.tp-chip`、`.tp-selection`）——五页的这几个部件必须完全一致，所以放在共用层而不是各写一份。
 
 设计稿与既有约定冲突时以既有约定为准：设计稿的表格规格是表头 32px / 行高 36–40px，与 §7.5 锁定的列表指纹冲突，
-五页的表头与行高仍是 42 / 48px。设计稿把测试集名称画成蓝色链接，这一条也不行——`app/styles/listNameConsistency.test.ts`
-断言「API 测试集 / UI 测试集 / 功能测试集 / 需求」的名称样式与 AI 任务名称逐项相等，改一页就会红。
+用例库 / 应用仍保持 42 / 48px；测试单 / API / UI 测试已改为卡片，不再有表头与行高。卡片共用
+`shared/components/EntityCard.tsx` 与 `shared/styles/entity-card.css`，页面样式只保留工具栏排布和主体特有内容。
+设计稿把测试集名称画成蓝色链接，这条只继续约束表格——`app/styles/listNameConsistency.test.ts`
+现在断言「功能测试集 / 需求」与 AI 任务名称一致；测试单 / API / UI 测试的卡片标题按 `entity-card.css` 的 14.5px / 650 规则。
 设计稿中的旧布局以 [UI-GUIDELINES.md](UI-GUIDELINES.md) 为准：五页工具栏统一白色卡片；导航已移到侧栏，API 测试与测试单已去掉快速过滤整行。
 
 **「多出来的容器」都出在同一处：覆盖了外壳玻璃面，但权重没压过它。** 三处踩过的坑，改这一层时逐条对：
@@ -175,12 +177,12 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 
 各页的测试依赖这些钩子，改动页面结构时要一并保留：`CaseLibraryPage.test.tsx` 用 `.api-case-sidebar`、
 `.case-library-sidebar-foot`、`.case-library-main-actions`、「批量删除（N）」；`TestOrderPage.test.tsx` 用进度条的
-`role="img"` 无障碍名；`ApiAutomationPage.test.tsx` 用 `.api-test-time-cell`、
-`.api-test-table-card`、`aria-label="运行API测试集"`；`UiAutomationPage.test.tsx` 用 `.ui-suite-list-time-cell`、`.ui-suite-list-table-card`、「搜索UI测试集名称 / 描述」、「清空搜索」、
+`role="img"` 无障碍名、`.test-orders-card-scroll` 与卡片标题链接；`ApiAutomationPage.test.tsx` 用 `.entity-card`、
+`.api-test-card-body`、`aria-label="运行API测试集"`；`UiAutomationPage.test.tsx` 用 `.entity-card`、`.ui-suite-card-body`、「搜索UI测试集名称 / 描述」、「清空搜索」、
 `aria-label="刷新测试集列表"`。
 
 UI 测试页在 `page`/`components` 之间还多了一刀：筛选工具栏（`UiSuiteListToolbar`）、
-运行配置徽标（`UiSuiteRunConfigCell`）、三个单元格（`UiSuiteListCells.tsx`）各自成组件，页面只做编排与作用域解析；
+运行配置徽标（`UiSuiteRunConfigCell`）、卡片操作（`UiSuiteCardActions`）各自成组件，页面只做编排与作用域解析；
 搜索词由页面持有（工具栏在页面上），实际过滤在 `UiTestSuiteSection`（它持有 suites 查询），刷新按钮的加载态由
 section 经 `onRefreshingChange` 回传。`features/ui-automation/styles/index.css` 只留进入测试集详情后的编辑区与抽屉，
 列表部分的规则随重做删除（1019 → 933 行，其中 `.ui-test-suite-card` 一族已无任何使用者，连带从

@@ -7,7 +7,7 @@ import { useTestOrderWindow } from './useTestOrderWindow'
 
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 
-it('删除末页唯一条目后回到有效页，后续新增不会跳回旧页', async () => {
+it('列表优先不自动选中条目，翻页、删除末页条目后保持有效页', async () => {
   let count = 21
   const list = vi.spyOn(api, 'getTestOrderEntries').mockImplementation(async (_, filters = {}) => {
     const page = Math.min(filters.page ?? 1, Math.ceil(count / 20))
@@ -18,20 +18,30 @@ it('删除末页唯一条目后回到有效页，后续新增不会跳回旧页'
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const wrapper = ({ children }: PropsWithChildren) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
   const { result } = renderHook(() => useTestOrderWindow('order', null, { keyword: '', status: '', onlyMine: false }), { wrapper })
-  await waitFor(() => expect(result.current.selectedEntryId).toBe('e1'))
+
+  await waitFor(() => expect(result.current.entries).toHaveLength(20))
+  expect(result.current.selectedEntryId).toBeNull()
+
   act(() => result.current.changePage(2))
-  await waitFor(() => expect(result.current.selectedEntryId).toBe('e21'))
+  await waitFor(() => expect(result.current.currentPage).toBe(2))
+  expect(result.current.selectedEntryId).toBeNull()
+  expect(list.mock.lastCall?.[1]?.page).toBe(2)
+
+  act(() => result.current.selectEntry('e21'))
+  expect(result.current.selectedEntryId).toBe('e21')
+
   count = 20
   await act(async () => { await client.invalidateQueries({ queryKey: ['testOrderEntries', 'order'] }) })
   act(() => result.current.clearDeletedSelection('e21'))
-  await waitFor(() => expect(result.current.selectedEntryId).toBe('e1'))
+  await waitFor(() => expect(result.current.currentPage).toBe(1))
+  expect(result.current.selectedEntryId).toBeNull()
   await waitFor(() => expect(list.mock.lastCall?.[1]?.page).toBe(1))
+
   count = 21
   await act(async () => { await client.invalidateQueries({ queryKey: ['testOrderEntries', 'order'] }) })
   expect(result.current.currentPage).toBe(1)
+  act(() => result.current.selectEntry('e1'))
+  act(() => result.current.clearDeletedSelection('e2'))
   expect(result.current.selectedEntryId).toBe('e1')
-  act(() => result.current.selectEntry('e2'))
-  act(() => result.current.clearDeletedSelection('e1'))
-  expect(result.current.selectedEntryId).toBe('e2')
   client.clear()
 })

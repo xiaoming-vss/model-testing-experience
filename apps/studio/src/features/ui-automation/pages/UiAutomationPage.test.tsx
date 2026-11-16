@@ -95,25 +95,20 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-it('列出测试集，行内徽标展示运行配置', async () => {
+it('列出测试集，卡片徽标展示运行配置', async () => {
   vi.spyOn(api, 'getUiTestSuites').mockImplementation(async () => listResponse([suite]))
   const client = buildClient()
   renderPage(client)
 
   await screen.findByText('xiaoming')
 
-  // 列顺序：名称、运行配置、归属、时间在前，描述固定在操作列左侧。
-  expect(screen.getAllByRole('columnheader').map((header) => header.textContent?.trim())).toEqual([
-    '测试集名称',
-    '运行配置',
-    '所属迭代/需求',
-    '创建时间',
-    '最近更新',
-    '描述',
-    '操作',
-  ])
+  expect(document.querySelectorAll('.entity-card')).toHaveLength(1)
+  expect(screen.getByRole('link', { name: 'xiaoming' })).toHaveAttribute(
+    'href',
+    '/ui-automation/suites/suite-1',
+  )
 
-  // 所属迭代 / 需求：迭代是等宽色块，需求是普通文字
+  // 所属迭代 / 需求是卡片 meta 的两列。
   expect(screen.getByText('V1.0.0 迭代')).toBeInTheDocument()
   expect(screen.getByText('安装部署')).toBeInTheDocument()
 
@@ -123,11 +118,8 @@ it('列出测试集，行内徽标展示运行配置', async () => {
 
   expect(screen.getByText('登录链路回放')).toBeInTheDocument()
 
-  // 创建时间与最近更新都是等宽时间格，文案走共用的 formatTime（会换算到时区）
-  const timeCells = document.querySelectorAll('.ui-suite-list-time-cell')
-  expect(timeCells).toHaveLength(2)
-  expect(timeCells[0]).toHaveTextContent(formatTime(suite.createdAt))
-  expect(timeCells[1]).toHaveTextContent(formatTime(suite.updatedAt))
+  // 卡片 footer 保留最近更新；创建时间不再占用列表。
+  expect(screen.getByText(`最近更新 ${formatTime(suite.updatedAt)}`)).toBeInTheDocument()
 
   client.clear()
 })
@@ -162,7 +154,7 @@ it('搜索无结果时空态给出清空入口，而不是新建入口', async (
 
   expect(await screen.findByText('没有符合搜索条件的 UI测试集')).toBeInTheDocument()
   // 空态里给的是清空搜索，不是新建入口（工具栏上的新建按钮仍在，这里只看表格卡片内）
-  const card = within(document.querySelector('.ui-suite-list-table-card') as HTMLElement)
+  const card = within(document.querySelector('.ui-suite-card-body') as HTMLElement)
   expect(card.queryByText('新建测试集')).toBeNull()
 
   await userEvent.setup().click(screen.getByText('清空搜索'))

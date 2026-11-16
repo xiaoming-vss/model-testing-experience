@@ -58,6 +58,49 @@
 .sidebar-link .sidebar-icon-duotone { width: 18px; height: 18px; flex-shrink: 0; color: var(--app-accent); }
 .sidebar-link .sidebar-icon-fill { fill: var(--app-accent-emphasis); }
 .sidebar-link:focus-visible, .top-navigation-brand:focus-visible { outline: 2px solid var(--mac-glass-blue); outline-offset: -2px; }
+
+/* 顶部一级入口的二级页签浮层：默认隐藏，悬停展开。 */
+.top-nav-menu-trigger { gap: 6px; padding-right: 8px; }
+.top-nav-menu-active-dot {
+  width: 5px;
+  height: 5px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--app-accent);
+}
+.top-nav-menu-caret {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  color: var(--app-shell-text-muted);
+  font-size: 10px;
+  transition: transform 150ms ease;
+}
+.top-nav-menu-trigger[aria-expanded='true'] .top-nav-menu-caret { transform: rotate(180deg); }
+
+.top-nav-menu { display: flex; align-items: center; gap: 4px; }
+.top-nav-menu-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--srf-text-secondary);
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+.top-nav-menu-link:hover { color: var(--srf-text); background: var(--srf-list-row-hover); }
+.top-nav-menu-link[aria-current='page'] {
+  border-color: var(--app-accent-border);
+  color: var(--app-accent);
+  background: var(--app-accent-surface);
+  font-weight: 600;
+}
+.top-nav-menu-link:focus-visible { outline: 2px solid var(--app-accent); outline-offset: 1px; }
 @media (max-width: 540px) {
   .top-navigation-brand span { display: none; }
   .sidebar-link { padding: 0 9px; }

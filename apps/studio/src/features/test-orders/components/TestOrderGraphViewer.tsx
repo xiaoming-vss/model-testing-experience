@@ -5,7 +5,7 @@ import { useViewMotion } from '@/shared/ui/useViewMotion'
 import { toRecord } from '@/shared/utils/value'
 import { Alert, Button, Empty, Segmented, Spin, Tag, Typography } from 'antd'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   FunctionalCaseRelationsGraph,
   type FunctionalCaseRelationsGraphHandle,
@@ -61,6 +61,8 @@ type TestOrderGraphViewerProps = {
   canExecute: boolean
   currentUserId?: string
   isProjectOwner?: boolean
+  /** 工作台把单行工具栏嵌进图谱卡片；独立图谱页不传。 */
+  toolbar?: ReactNode
 }
 
 /** 测试单图谱：取图谱输入 → 选个人 LLM 连接 → 派发，并用可视化 / json 展示累计图谱。 */
@@ -70,6 +72,7 @@ export function TestOrderGraphViewer({
   canExecute,
   currentUserId,
   isProjectOwner = false,
+  toolbar,
 }: TestOrderGraphViewerProps) {
   const personalLlm = usePersonalLlmChoice(projectId)
   const [activeTab, setActiveTab] = useState<'graph' | 'json'>('graph')
@@ -223,6 +226,7 @@ export function TestOrderGraphViewer({
   return (
     <>
       <div className="test-order-graph-viewer ai-relations-page">
+        {toolbar}
         <div className="ai-relations-page-bar">
           <div className="test-order-graph-status">
             {run ? <Tag color={statusMeta.color}>{statusMeta.label}</Tag> : null}

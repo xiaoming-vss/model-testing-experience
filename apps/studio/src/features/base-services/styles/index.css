@@ -3,46 +3,6 @@
   min-height: calc(100vh - 64px);
 }
 
-.base-services-tab-switcher {
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.base-services-tab {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  transition: color 0.18s ease;
-}
-
-.base-services-tab::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 3px;
-  border-radius: 999px;
-  background: transparent;
-  transition: background-color 0.18s ease;
-}
-
-.base-services-tab.active::after {
-  background: var(--base-accent);
-}
-
-.base-services-tab-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-}
-
 .base-services-panel-body {
   min-height: 0;
   height: 100%;
@@ -362,12 +322,6 @@
   }
 
 }@media (max-width: 680px){
-.base-services-tab-switcher {
-    gap: 18px;
-    width: 100%;
-    overflow-x: auto;
-  }
-
 .base-services-empty-card {
     min-height: 260px;
   }
@@ -414,41 +368,6 @@
 .base-services-empty-card {
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
-}
-
-.base-services-tab-switcher {
-  gap: 8px;
-  padding: 4px;
-  border: 1px solid var(--app-task-panel-divider);
-  border-radius: 12px;
-  background: var(--app-glass-surface-42);
-}
-
-.base-services-tab {
-  min-height: 34px;
-  padding: 0 14px;
-  border-radius: 9px;
-  color: var(--base-text-muted);
-  font-size: 13px;
-  line-height: 20px;
-  font-weight: 650;
-}
-
-.base-services-tab:hover {
-  background: var(--app-glass-surface-52);
-  color: var(--base-hover-text);
-}
-
-.base-services-tab::after {
-  display: none;
-}
-
-.base-services-tab.active {
-  color: var(--base-text);
-  background: var(--app-glass-surface-82);
-  box-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-90),
-    0 8px 18px var(--app-service-glass-card-shadow);
 }
 
 .base-services-page .panel-header.api-panel-header {
@@ -562,29 +481,6 @@
   box-shadow:
     inset 0 1px 0 var(--app-glass-highlight-86),
     0 10px 24px var(--app-glass-shadow-card) !important;
-}
-
-.app-shell-base-services .base-services-tab-switcher {
-  border-color: var(--app-glass-request-shadow) !important;
-  background: var(--app-glass-table-bg) !important;
-  box-shadow: inset 0 1px 0 var(--app-glass-highlight-76) !important;
-}
-
-.app-shell-base-services .base-services-tab {
-  color: var(--base-text-muted) !important;
-}
-
-.app-shell-base-services .base-services-tab:hover {
-  color: var(--base-blue) !important;
-  background: var(--app-glass-surface-72) !important;
-}
-
-.app-shell-base-services .base-services-tab.active {
-  color: var(--base-text) !important;
-  background: var(--app-glass-surface-94) !important;
-  box-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-92),
-    0 6px 14px var(--app-glass-shadow-raised) !important;
 }
 
 .app-shell-base-services .base-services-panel.workbench-panel {
@@ -747,22 +643,7 @@ green stays reserved for status only. */
 
 .project-settings-binding-line .ant-tag { flex-shrink: 0; margin-inline-end: 0; }
 
-.app-shell.app-shell-macos .base-services-page .base-services-tab-switcher {
-  gap: 4px;
-  padding: 1px;
-}
-
-.app-shell.app-shell-macos .base-services-page .base-services-tab {
-  min-height: 28px;
-  padding: 0 12px;
-  font-size: 12px;
-}
-
-/* 分类导航独立，当前分类的工具栏、卡片及分页共用一个表面。 */
-.base-services-navigation { flex: 0 0 auto; min-width: 0; margin: 12px var(--app-page-gutter) 0; }
-
-.base-services-navigation .base-services-tab-switcher { flex-wrap: wrap; width: fit-content; max-width: 100%; }
-
+/* 分类工具栏、卡片及分页共用一个表面。 */
 .base-services-unified-panel { margin: 12px var(--app-page-gutter) 16px; }
 
 .base-services-unified-panel > .base-services-panel-body { flex: 1; height: auto; min-width: 0; }

@@ -1,20 +1,21 @@
 import { useTestOrderWindow } from '../hooks/useTestOrderWindow'
 import { TestOrderGraphViewer } from '../components/TestOrderGraphViewer'
-import { TestOrderEntrySidebar, type TestOrderStatusFilter } from '../components/TestOrderEntrySidebar'
+import { TestOrderEntryList } from '../components/TestOrderEntryList'
+import { TestOrderWorkspaceToolbar } from '../components/TestOrderWorkspaceToolbar'
+import { TestOrderDetailHeader } from '../components/TestOrderDetailHeader'
 import { useViewMotion } from '@/shared/ui/useViewMotion'
 import {
-  ArrowLeftOutlined,
+  LeftOutlined,
   QuestionCircleOutlined,
+  RightOutlined,
 } from '@ant-design/icons'
 import {
   Alert,
   Button,
   Checkbox,
-  Empty,
   Input,
   Modal,
   Select,
-  Segmented,
   Space,
   Spin,
   Tooltip,
@@ -37,23 +38,36 @@ import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { api, listItems } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
-import {
-  getTestOrderStatusMeta,
-  getTestOrderStatusTone,
-  groupTestOrderEntriesByStatus,
-  type TestOrderResultStatus,
-} from '../utils/testOrderStatus'
+import type { TestOrderStatusFilter } from '../utils/testOrderStatus'
 import '@/shared/styles/surface-tokens.css'
 import '@/features/test-orders/styles/index.css'
 import '@/features/test-orders/styles/workspace-v2.css'
-import '@/features/test-orders/styles/workspace-sidebar-v3.css'
+import '@/features/test-orders/styles/workspace-list-v2.css'
 import '@/features/test-orders/styles/workspace-verdict-v2.css'
 
 const { Text } = Typography
 
+/** 详情宽屏把切换放到两侧；窄屏收进面包屑右侧，避免箭头压住正文。 */
+function useDetailNarrowNav() {
+  const query = '(max-width: 1320px)'
+  const read = () => typeof window !== 'undefined'
+    && Boolean(window.matchMedia?.(query).matches ?? window.innerWidth <= 1320)
+  const [narrow, setNarrow] = useState(read)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const media = window.matchMedia?.(query)
+    if (!media) return
+    const update = () => setNarrow(media.matches)
+    update()
+    media.addEventListener?.('change', update)
+    return () => media.removeEventListener?.('change', update)
+  }, [])
+  return narrow
+}
+
 /**
  * 原因输入框自己保存输入态，失焦时才提交。
- * 这样逐字输入不会重渲染左侧清单和当前条目的步骤表。
+ * 这样逐字输入不会重渲染详情区域和当前条目的步骤表。
  */
 function TestOrderReasonInput({ label, value, disabled, onCommit }: {
   label: string
@@ -82,6 +96,7 @@ export function TestOrderWorkspacePage() {
   const currentUserId = useAuthStore((state) => state.user?.userId)
 
   const [workspaceView, setWorkspaceView] = useState<'execution' | 'graph'>('execution')
+  const detailNarrowNav = useDetailNarrowNav()
   // 图谱首次打开后保持挂载：布局、选中节点和缩放都留在原地，来回切视图不再重新请求和全量布局。
   const [graphVisited, setGraphVisited] = useState(false)
   const graphMounted = graphVisited || workspaceView === 'graph'
@@ -89,11 +104,9 @@ export function TestOrderWorkspacePage() {
     if (workspaceView === 'graph' && !graphVisited) setGraphVisited(true)
   }, [graphVisited, workspaceView])
   const workspaceViewRef = useViewMotion(workspaceView === 'execution' ? 0 : 1)
-  const keyboardNavigation = useRef(false)
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<TestOrderStatusFilter>('all')
   const [onlyMine, setOnlyMine] = useState(false)
-  const [collapsedGroups, setCollapsedGroups] = useState<TestOrderResultStatus[]>([])
   const [autoAdvance, setAutoAdvance] = useState(false)
   const [checkedEntryIds, setCheckedEntryIds] = useState<string[]>([])
   const [visualizationPreference, setVisualizationPreference] = useState<{ orderId?: string; mode: VisualizationMode }>({ mode: 'text' })
@@ -117,10 +130,11 @@ export function TestOrderWorkspacePage() {
     clearCheckedOnFilter()
     setOnlyMine(next)
   }
-  function toggleGroup(status: TestOrderResultStatus) {
-    setCollapsedGroups((previous) => previous.includes(status)
-      ? previous.filter((item) => item !== status)
-      : [...previous, status])
+  function clearFilters() {
+    clearCheckedOnFilter()
+    setKeyword('')
+    setStatusFilter('all')
+    setOnlyMine(false)
   }
   function toggleAllEntries(checked: boolean) {
     const pageIds = entries.flatMap((entry) => entry.entryId ? [entry.entryId] : [])
@@ -128,7 +142,6 @@ export function TestOrderWorkspacePage() {
       ? [...new Set([...previous, ...pageIds])]
       : previous.filter((id) => !pageIds.includes(id)))
   }
-  useEffect(() => { setCollapsedGroups([]) }, [orderId, statusFilter, onlyMine, keyword])
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [savedAt, setSavedAt] = useState<string>('')
   const [assignOpen, setAssignOpen] = useState(false)
@@ -141,7 +154,8 @@ export function TestOrderWorkspacePage() {
     return () => clearTimeout(timer)
   }, [keyword])
   const { entriesQuery, detailQuery, entries, selectedEntryId, selected, currentPage, pageSize,
-    total: entryTotal, selectEntry, clearDeletedSelection, changePage, moveSelection, advance } = useTestOrderWindow(
+    total: entryTotal, selectEntry, clearDeletedSelection, changePage,
+    moveToPageEntry, advance } = useTestOrderWindow(
     orderId, searchParams.get('entryId'), { keyword: searchKeyword, status: statusFilter === 'all' ? '' : statusFilter, onlyMine, actor: currentUserId },
   )
   useEffect(() => { setCheckedEntryIds([]) }, [orderId])
@@ -189,27 +203,6 @@ export function TestOrderWorkspacePage() {
   }, [membersQuery.data])
   const personName = (userId?: string) =>
     userId ? memberNameMap.get(userId) ?? (membersQuery.data ? DELETED_ACCOUNT_LABEL : userId) : ''
-  const visibleEntries = entries
-  const mineCount = entriesQuery.data?.mineCount ?? 0
-  const allEntryCount = entriesQuery.data?.orderTotal ?? order?.entriesTotal ?? 0
-  // 分组只作用于当前页；↑/↓ 按用户看到的顺序移动，折叠的分组不参与。
-  const groupedEntries = useMemo(() => groupTestOrderEntriesByStatus(visibleEntries), [visibleEntries])
-  const groupedFlatEntries = useMemo(() => groupedEntries.flatMap((group) => group.entries), [groupedEntries])
-  const navigationEntries = useMemo(() => groupedEntries
-    .filter((group) => !collapsedGroups.includes(group.status))
-    .flatMap((group) => group.entries), [groupedEntries, collapsedGroups])
-
-  function moveInDisplayOrder(offset: number) {
-    if (!selectedEntryId) return
-    const index = navigationEntries.findIndex((entry) => entry.entryId === selectedEntryId)
-    if (index < 0) {
-      const fallback = offset > 0 ? navigationEntries[0] : navigationEntries[navigationEntries.length - 1]
-      if (fallback?.entryId) selectEntry(fallback.entryId)
-      return
-    }
-    moveSelection(offset, navigationEntries)
-  }
-
   const selectedReason = selected?.status === 'blocked' ? selected?.blockReason : selected?.failureReason
   useEffect(() => {
     if (selectedEntryId) setDrafts({ reason: selectedReason ?? '' })
@@ -269,6 +262,30 @@ export function TestOrderWorkspacePage() {
     setCheckedEntryIds((previous) => checked ? [...new Set([...previous, id])] : previous.filter((item) => item !== id))
   }
 
+  const selectedIndex = entryView?.entryId
+    ? entries.findIndex((entry) => entry.entryId === entryView.entryId)
+    : -1
+  const hasPrev = selectedIndex > 0 || (selectedIndex === 0 && currentPage > 1)
+  const hasNext = selectedIndex >= 0
+    && (selectedIndex < entries.length - 1 || currentPage * pageSize < entryTotal)
+
+  async function moveDetail(offset: 1 | -1) {
+    if (!selectedEntryId) return
+    const index = entries.findIndex((entry) => entry.entryId === selectedEntryId)
+    if (index < 0) return
+    const adjacent = entries[index + offset]
+    if (adjacent?.entryId) {
+      selectEntry(adjacent.entryId)
+      return
+    }
+    try {
+      const moved = await moveToPageEntry(offset)
+      if (!moved) message.info(offset > 0 ? '已经是最后一条' : '已经是第一条')
+    } catch (error) {
+      message.warning(getErrorMessage(error))
+    }
+  }
+
   function save(payload: Record<string, unknown>) {
     if (!selected?.entryId) return
     saveMutation.mutate({ entryId: selected.entryId, payload }, {
@@ -284,41 +301,23 @@ export function TestOrderWorkspacePage() {
     isTestOrderEntryLocked(entryView?.assigneeUserId, currentUserId, isOwner)
   const canJudge = detailReady && can('execute') && !lockedByAssignee
 
-  // 在清单内使用键盘切换时，焦点跟随选中项，避免旧条目残留焦点框和移除按钮。
-  useEffect(() => {
-    const focused = document.activeElement
-    if (keyboardNavigation.current && focused !== document.body && !focused?.matches('.test-order-nav-item')) {
-      keyboardNavigation.current = false
-    }
-    const focusedInList = focused instanceof Element
-      && focused.matches('.test-order-nav-item')
-      && Boolean(focused.closest('.test-order-side-panel'))
-    if (keyboardNavigation.current || focusedInList) {
-      const button = document.querySelector<HTMLButtonElement>(
-        '.test-order-side-panel .test-order-nav-item[aria-current="true"]',
-      )
-      if (button && selectedEntryId) { button.focus(); keyboardNavigation.current = false }
-    }
-  }, [selectedEntryId, entriesQuery.data])
-
-  // 键盘：1/2/3/4 判定整条用例，上下切换条目。
+  // 键盘：1/2/3/4 判定整条用例，上下切换条目。只在详情打开时接管方向键，
+  // 列表页仍可用方向键滚动。
   // 监听器只注册一次，处理函数通过 ref 取最新状态，避免每次渲染重挂监听。
   const keyDownHandlerRef = useRef<(event: KeyboardEvent) => void>(() => {})
   useEffect(() => {
     keyDownHandlerRef.current = (event: KeyboardEvent) => {
-      if (workspaceView !== 'execution' || saveMutation.isPending) return
+      if (workspaceView !== 'execution' || saveMutation.isPending || !selectedEntryId) return
       const target = event.target as HTMLElement | null
       if (target && ['INPUT', 'TEXTAREA'].includes(target.tagName)) return
       if (event.key === 'ArrowDown') {
-        keyboardNavigation.current = Boolean(target?.closest('.test-order-nav-item'))
         event.preventDefault()
-        moveInDisplayOrder(1)
+        void moveDetail(1)
         return
       }
       if (event.key === 'ArrowUp') {
-        keyboardNavigation.current = Boolean(target?.closest('.test-order-nav-item'))
         event.preventDefault()
-        moveInDisplayOrder(-1)
+        void moveDetail(-1)
         return
       }
       const status = TEST_ORDER_VERDICTS.find((option) => option.key === event.key)?.value
@@ -333,62 +332,40 @@ export function TestOrderWorkspacePage() {
     return () => window.removeEventListener('keydown', listener)
   }, [])
 
-  const orderTotal = order?.entriesTotal ?? 0
-  const orderExecuted = order?.entriesExecuted ?? 0
-  const orderProgressPercent = orderTotal > 0 ? Math.round((orderExecuted / orderTotal) * 100) : 0
-  const selectedGroupedIndex = groupedFlatEntries.findIndex((entry) => entry.entryId === selectedEntryId)
   const isSaving = saveMutation.isPending
   const saveStateText = isSaving ? '保存中…' : savedAt ? `已保存 ${savedAt}` : ''
-  const orderStatusMeta = order ? getTestOrderStatusMeta(order.status) : null
+  const hasFilters = Boolean(keyword.trim()) || statusFilter !== 'all' || onlyMine
+  const detailPosition = entryView?.orderNo
+    ? `全单第 ${entryView.orderNo} 条 · 筛选共 ${entryTotal} 条`
+    : '当前条目不在筛选结果中'
+
+  function returnToEntryList() {
+    selectEntry(null)
+  }
+
+  const workspaceToolbar = <TestOrderWorkspaceToolbar
+    order={order}
+    statusCounts={entriesQuery.data?.statusCounts}
+    statusFilter={statusFilter}
+    onStatusFilterChange={changeStatusFilter}
+    keyword={keyword}
+    onKeywordChange={changeKeyword}
+    onlyMine={onlyMine}
+    onOnlyMineChange={changeOnlyMine}
+    hasFilters={hasFilters}
+    onClearFilters={clearFilters}
+    onRefresh={() => void entriesQuery.refetch()}
+    refreshing={entriesQuery.isFetching}
+    graphActive={workspaceView === 'graph'}
+    onToggleGraph={() => setWorkspaceView((view) => view === 'graph' ? 'execution' : 'graph')}
+    onBack={() => navigate('/testing?tab=orders')}
+    onAddCases={() => setAddCasesOpen(true)}
+  />
 
   return (
-    <div className="workbench-page api-automation-page functional-suite-detail-page test-order-workspace-page tp-surface">
+    <div className="workbench-page api-automation-page functional-suite-detail-page test-order-workspace-page tp-list-surface tp-surface">
       <div className="api-automation-content">
         <div className="page-frame test-order-workspace tp-board">
-          <section className="workbench-panel test-order-orderbar tp-list-toolbar">
-            <Button
-              type="text"
-              className="api-case-back-button"
-              aria-label="返回测试单列表"
-              icon={<ArrowLeftOutlined />}
-              onClick={() => navigate('/testing?tab=orders')}
-            />
-            <span className="test-order-orderbar-id">
-              <Text strong className="test-order-orderbar-name">
-                {order?.name ?? '测试单'}
-              </Text>
-              {order?.testedVersion ? (
-                <span className="test-order-orderbar-chip tp-tone-tag">被测版本 {order.testedVersion}</span>
-              ) : null}
-              {orderStatusMeta ? (
-                <span
-                  className={`test-order-orderbar-chip tp-tone-tag tone-${getTestOrderStatusTone(order?.status)}`}
-                >
-                  {orderStatusMeta.label}
-                </span>
-              ) : null}
-            </span>
-            <span className="test-order-orderbar-progress">
-              已执行 {order?.entriesExecuted ?? 0}/{order?.entriesTotal ?? 0}
-            </span>
-            <div className="test-order-orderbar-actions">
-              <Segmented className="tab-view-switch" aria-label="测试单视图" value={workspaceView} disabled={!order?.orderId}
-                options={[{ label: '用例执行', value: 'execution' }, { label: '用例图谱', value: 'graph' }]}
-                onChange={value => setWorkspaceView(value as 'execution' | 'graph')} />
-              <ProjectActionButton
-                action="write"
-                projectId={order?.projectId}
-                type="primary"
-                className="action-btn-create"
-                operation="create"
-                disabled={!order?.orderId}
-                onClick={() => setAddCasesOpen(true)}
-              >
-                加入用例
-              </ProjectActionButton>
-            </div>
-          </section>
-
           {orderQuery.error ? (
             <Alert showIcon type="error" title={getErrorMessage(orderQuery.error)} />
           ) : null}
@@ -396,72 +373,80 @@ export function TestOrderWorkspacePage() {
             <Alert showIcon type="error" title={getErrorMessage(entriesQuery.error)} />
           ) : null}
 
-          {graphMounted && orderId && <div ref={workspaceView === 'graph' ? workspaceViewRef : undefined} className="test-order-inline-graph" style={workspaceView === 'graph' ? undefined : { display: 'none' }}><TestOrderGraphViewer orderId={orderId} projectId={order?.projectId} canExecute={can('execute')} currentUserId={currentUserId} isProjectOwner={isOwner} /></div>}
-          <div ref={workspaceView === 'execution' ? workspaceViewRef : undefined} className="test-order-workspace-cols" style={workspaceView === 'graph' ? { display: 'none' } : undefined}>
-            <TestOrderEntrySidebar
-              orderId={orderId}
-              projectId={order?.projectId}
-              entries={visibleEntries}
-              statusCounts={entriesQuery.data?.statusCounts}
-              matchedTotal={entriesQuery.data?.matchedTotal ?? 0}
-              mineCount={mineCount}
-              orderTotal={allEntryCount}
-              progressPercent={orderProgressPercent}
-              entryTotal={entryTotal}
-              currentPage={currentPage}
-              pageSize={pageSize}
-              keyword={keyword}
-              statusFilter={statusFilter}
-              onlyMine={onlyMine}
-              checkedEntryIds={checkedEntryIds}
-              selectedEntryId={selectedEntryId}
-              collapsedGroups={collapsedGroups}
-              loading={entriesQuery.isLoading}
-              fetching={entriesQuery.isFetching}
-              placeholder={Boolean(entriesQuery.isPlaceholderData)}
-              canExecute={can('execute')}
-              canWrite={can('write')}
-              batchPending={batchMutation.isPending}
-              assigneeName={personName}
-              onKeywordChange={changeKeyword}
-              onStatusFilterChange={changeStatusFilter}
-              onOnlyMineChange={changeOnlyMine}
-              onToggleGroup={toggleGroup}
-              onRefresh={() => void entriesQuery.refetch()}
-              onSelectEntry={selectEntry}
-              onToggleEntry={toggleEntry}
-              onToggleAll={toggleAllEntries}
-              onClearChecked={() => setCheckedEntryIds([])}
-              onRemoveEntry={(entryId) => removeMutation.mutate(entryId)}
-              onBatchPass={() => batchMutation.mutate()}
-              onAssign={() => {
-                setAssignee('')
-                setAssignOpen(true)
-              }}
-              onPageChange={changePage}
-            />
+          {graphMounted && orderId && <div ref={workspaceView === 'graph' ? workspaceViewRef : undefined} className="test-order-inline-graph" style={workspaceView === 'graph' ? undefined : { display: 'none' }}><TestOrderGraphViewer orderId={orderId} projectId={order?.projectId} canExecute={can('execute')} currentUserId={currentUserId} isProjectOwner={isOwner} toolbar={workspaceView === 'graph' ? workspaceToolbar : undefined} /></div>}
+          <div ref={workspaceView === 'execution' ? workspaceViewRef : undefined} className="test-order-execution-view" style={workspaceView === 'graph' ? { display: 'none' } : undefined}>
+            <div className="test-order-list-view" hidden={Boolean(selectedEntryId)}>
+              <TestOrderEntryList
+                toolbar={workspaceView === 'execution' && !selectedEntryId ? workspaceToolbar : null}
+                orderId={orderId}
+                projectId={order?.projectId}
+                entries={entries}
+                entryTotal={entryTotal}
+                currentPage={currentPage}
+                pageSize={pageSize}
+                checkedEntryIds={checkedEntryIds}
+                loading={entriesQuery.isLoading}
+                fetching={entriesQuery.isFetching}
+                placeholder={Boolean(entriesQuery.isPlaceholderData)}
+                canExecute={can('execute')}
+                canWrite={can('write')}
+                batchPending={batchMutation.isPending}
+                hasFilters={hasFilters}
+                assigneeName={personName}
+                onSelectEntry={(id) => selectEntry(id)}
+                onToggleEntry={toggleEntry}
+                onToggleAll={toggleAllEntries}
+                onClearChecked={() => setCheckedEntryIds([])}
+                onRemoveEntry={(entryId) => removeMutation.mutate(entryId)}
+                onBatchPass={() => batchMutation.mutate()}
+                onAssign={() => {
+                  setAssignee('')
+                  setAssignOpen(true)
+                }}
+                onPageChange={changePage}
+                onAddCases={() => setAddCasesOpen(true)}
+                onClearFilters={clearFilters}
+              />
+            </div>
 
-            <section className="test-order-panel">
-              {entriesQuery.isLoading ? <Spin description="加载执行详情…" />
-                : !selectedEntryId ? (
-                <div className="sprint-card-loading">
-                  <Empty description={order?.entriesTotal ? '当前筛选没有执行条目' : '请先加入执行条目'}>
-                    <ProjectActionButton
-                      action="write"
-                      projectId={order?.projectId}
-                      type="primary"
-                      className="action-btn-create"
-                      operation="create"
-                      disabled={!order?.orderId}
-                      onClick={() => setAddCasesOpen(true)}
-                    >
-                      加入用例
-                    </ProjectActionButton>
-                  </Empty>
-                </div>
-              ) : (
-                <>
-                  <div className="test-order-editor-body">
+            {selectedEntryId ? <section className="test-order-detail-panel">
+              <TestOrderDetailHeader
+                order={order}
+                caseTitle={entryView?.caseTitle}
+                narrowNav={detailNarrowNav}
+                hasPrev={hasPrev}
+                hasNext={hasNext}
+                onBackToOrders={() => navigate('/testing?tab=orders')}
+                onBackToCases={returnToEntryList}
+                onPrev={() => void moveDetail(-1)}
+                onNext={() => void moveDetail(1)}
+              />
+
+              <div className="test-order-detail-stage">
+                {!detailNarrowNav ? <>
+                  <Tooltip title="上一条（↑）" placement="right">
+                    <Button
+                      className="test-order-detail-side-nav is-prev"
+                      shape="circle"
+                      aria-label="上一条"
+                      icon={<LeftOutlined />}
+                      disabled={!hasPrev}
+                      onClick={() => void moveDetail(-1)}
+                    />
+                  </Tooltip>
+                  <Tooltip title="下一条（↓）" placement="left">
+                    <Button
+                      className="test-order-detail-side-nav is-next"
+                      shape="circle"
+                      aria-label="下一条"
+                      icon={<RightOutlined />}
+                      disabled={!hasNext}
+                      onClick={() => void moveDetail(1)}
+                    />
+                  </Tooltip>
+                </> : null}
+                <div className="test-order-editor-body test-order-detail-body">
+                  <div className="test-order-detail-inner">
                     {entryView ? <TestOrderCaseSummary
                       entry={entryView}
                       assigneeName={personName(entryView.assigneeUserId)}
@@ -476,115 +461,114 @@ export function TestOrderWorkspacePage() {
                         <Spin size="small" /><span>加载执行详情…</span>
                       </div>}
                   </div>
-                  <section className="test-order-execution-bar" aria-label="执行判定与缺陷关联">
-                    <div className="test-order-execution-actions">
-                      <span className="test-order-verdict-title">执行判定结果</span>
-                      <TestOrderVerdictButtons
-                        status={entryView?.status}
-                        disabled={!canJudge || saveMutation.isPending}
-                        showShortcuts
-                        reverseOrder
-                        onJudge={(status) => save({ status })}
-                      />
-                      {detailReady && selected?.status === 'failed' ? (
-                        <div className="test-order-defect-controls">
-                          <ProjectActionButton
-                            action="write"
-                            size="small"
-                            className="action-btn-create"
-                            operation="create"
-                            aria-label="提交 Bug"
-                            onClick={() => {
-                              const reason = drafts.reason ?? selected.failureReason ?? ''
-                              const params = new URLSearchParams({
-                                projectId: order?.projectId ?? '',
-                                orderId: order?.orderId ?? '',
-                                entryId: selected.entryId ?? '',
-                                caseId: selected.caseId ?? '',
-                                requirementId: selected.requirementId ?? '',
-                                sprintId: order?.sprintId ?? '',
-                                title: `${selected.caseTitle ?? '执行失败'} 执行失败`,
-                                description: reason ? `<p>${reason}</p>` : '',
-                              })
-                              navigate(`/bugs/new?${params.toString()}`)
+                </div>
+              </div>
+
+              <section className="test-order-execution-bar" aria-label="执行判定与缺陷关联">
+                <div className="test-order-execution-actions">
+                  <span className="test-order-verdict-title">执行判定结果</span>
+                  <TestOrderVerdictButtons
+                    status={entryView?.status}
+                    disabled={!canJudge || saveMutation.isPending}
+                    showShortcuts
+                    reverseOrder
+                    onJudge={(status) => save({ status })}
+                  />
+                  {detailReady && selected?.status === 'failed' ? (
+                    <div className="test-order-defect-controls">
+                      <ProjectActionButton
+                        action="write"
+                        size="small"
+                        className="action-btn-create"
+                        operation="create"
+                        aria-label="提交 Bug"
+                        onClick={() => {
+                          const reason = drafts.reason ?? selected.failureReason ?? ''
+                          const params = new URLSearchParams({
+                            projectId: order?.projectId ?? '',
+                            orderId: order?.orderId ?? '',
+                            entryId: selected.entryId ?? '',
+                            caseId: selected.caseId ?? '',
+                            requirementId: selected.requirementId ?? '',
+                            sprintId: order?.sprintId ?? '',
+                            title: `${selected.caseTitle ?? '执行失败'} 执行失败`,
+                            description: reason ? `<p>${reason}</p>` : '',
+                          })
+                          navigate(`/bugs/new?${params.toString()}`)
+                        }}
+                      >
+                        提交 Bug
+                      </ProjectActionButton>
+                    </div>
+                  ) : null}
+                </div>
+                {detailReady && selected && (selected.status === 'failed' || selected.status === 'blocked' || listItems(linkedBugsQuery.data).length > 0) ? (
+                  <div className="test-order-defect-section">
+                    {linkedBugsQuery.data && listItems(linkedBugsQuery.data).length > 0 ? (
+                      <div className="test-order-linked-bugs">
+                        {listItems(linkedBugsQuery.data).map((bug) => (
+                          <a
+                            key={bug.bugId}
+                            className="test-order-linked-bug-chip"
+                            href={`/bugs/${bug.bugId}`}
+                            onClick={(event) => {
+                              event.preventDefault()
+                              navigate(`/bugs/${bug.bugId}`)
                             }}
                           >
-                            提交 Bug
-                          </ProjectActionButton>
-                        </div>
-                      ) : null}
-                    </div>
-                    {detailReady && selected && (selected.status === 'failed' || selected.status === 'blocked' || listItems(linkedBugsQuery.data).length > 0) ? (
-                      <div className="test-order-defect-section">
-                        {linkedBugsQuery.data && listItems(linkedBugsQuery.data).length > 0 ? (
-                          <div className="test-order-linked-bugs">
-                            {listItems(linkedBugsQuery.data).map((bug) => (
-                              <a
-                                key={bug.bugId}
-                                className="test-order-linked-bug-chip"
-                                href={`/bugs/${bug.bugId}`}
-                                onClick={(event) => {
-                                  event.preventDefault()
-                                  navigate(`/bugs/${bug.bugId}`)
-                                }}
-                              >
-                                BUG-{bug.bugNo} {bug.title}
-                              </a>
-                            ))}
-                          </div>
-                        ) : null}
-                        {selected.status === 'failed' || selected.status === 'blocked' ? (
-                          <>
-                            <Text type="secondary">
-                              {selected.status === 'failed' ? '失败原因' : '阻塞原因'}
-                            </Text>
-                            <TestOrderReasonInput
-                              label={selected.status === 'failed' ? '失败原因' : '阻塞原因'}
-                              value={drafts.reason ?? ''}
-                              disabled={!canJudge}
-                              onCommit={(reason) => {
-                                setDrafts((prev) => ({ ...prev, reason }))
-                                save(selected.status === 'failed' ? { failureReason: reason } : { blockReason: reason })
-                              }}
-                            />
-                          </>
-                        ) : null}
+                            BUG-{bug.bugNo} {bug.title}
+                          </a>
+                        ))}
                       </div>
                     ) : null}
-                    <footer className="test-order-execution-footer" aria-label="用例执行操作">
-                      <Tooltip
-                        title={`快捷键：${TEST_ORDER_VERDICTS.map(({ key, label }) => `${key} ${label}`).join(' · ')}；↑ 上一条，↓ 下一条`}
-                        trigger={['hover', 'focus']}
-                      >
-                        <Button type="text" size="small" shape="circle"
-                          className="test-order-shortcut-help" aria-label="快捷键说明"
-                          icon={<QuestionCircleOutlined />} />
-                      </Tooltip>
-                      <Checkbox
-                        className="test-order-autoadvance"
-                        checked={autoAdvance}
-                        onChange={(event) => setAutoAdvance(event.target.checked)}
-                      >
-                        判定后自动前进
-                      </Checkbox>
-                      {saveStateText ? (
-                        <Text
-                          className="test-order-save-state"
-                          type={saveMutation.isError ? 'danger' : 'secondary'}
-                        >
-                          {saveStateText}
+                    {selected.status === 'failed' || selected.status === 'blocked' ? (
+                      <>
+                        <Text type="secondary">
+                          {selected.status === 'failed' ? '失败原因' : '阻塞原因'}
                         </Text>
-                      ) : null}
-                    </footer>
-                    <Text className="test-order-entry-position" type="secondary">
-                      {selectedGroupedIndex >= 0
-                        ? `本页第 ${selectedGroupedIndex + 1} / ${groupedFlatEntries.length} 条 · 筛选共 ${entryTotal} 条`
-                        : '当前条目不在筛选结果中'}
+                        <TestOrderReasonInput
+                          label={selected.status === 'failed' ? '失败原因' : '阻塞原因'}
+                          value={drafts.reason ?? ''}
+                          disabled={!canJudge}
+                          onCommit={(reason) => {
+                            setDrafts((prev) => ({ ...prev, reason }))
+                            save(selected.status === 'failed' ? { failureReason: reason } : { blockReason: reason })
+                          }}
+                        />
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
+                <footer className="test-order-execution-footer" aria-label="用例执行操作">
+                  <Tooltip
+                    title={`快捷键：${TEST_ORDER_VERDICTS.map(({ key, label }) => `${key} ${label}`).join(' · ')}；↑ 上一条，↓ 下一条`}
+                    trigger={['hover', 'focus']}
+                  >
+                    <Button type="text" size="small" shape="circle"
+                      className="test-order-shortcut-help" aria-label="快捷键说明"
+                      icon={<QuestionCircleOutlined />} />
+                  </Tooltip>
+                  <Checkbox
+                    className="test-order-autoadvance"
+                    checked={autoAdvance}
+                    onChange={(event) => setAutoAdvance(event.target.checked)}
+                  >
+                    判定后自动前进
+                  </Checkbox>
+                  {saveStateText ? (
+                    <Text
+                      className="test-order-save-state"
+                      type={saveMutation.isError ? 'danger' : 'secondary'}
+                    >
+                      {saveStateText}
                     </Text>
-                  </section>
-                </>
-              )}
-            </section>
+                  ) : null}
+                </footer>
+                <Text className="test-order-entry-position" type="secondary">
+                  {detailPosition}
+                </Text>
+              </section>
+            </section> : null}
           </div>
         </div>
       </div>

@@ -1,8 +1,8 @@
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
-import '@/shared/styles/list-table.css'
+import { EntityCard } from '@/shared/components/EntityCard'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
-import { ApiOutlined, SearchOutlined, SettingOutlined } from '@ant-design/icons'
+import { SearchOutlined, SettingOutlined } from '@ant-design/icons'
 import {
   Alert,
   Button,
@@ -12,14 +12,12 @@ import {
   Popconfirm,
   Select,
   Space,
-  Table,
   Tooltip,
-  Typography,
 } from 'antd'
-import type { InputRef, TableProps } from 'antd'
+import type { InputRef } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { EnvironmentDrawer } from '@/features/projects/components/EnvironmentDrawer'
 import { CollectionDrawer, type CollectionFormValues } from '@/features/api-automation/components/CollectionDrawer'
 import { useProjectRequirementOptions } from '@/features/projects/hooks/useProjectRequirementOptions'
@@ -33,15 +31,12 @@ import {
   normalizeEnvironmentId,
   normalizeRequirementId,
   normalizeSprintId,
-  pickCreatedAt,
   pickUpdatedAt,
 } from '@/utils/format'
 import { buildApiCollectionUpdatePayload } from '@/utils/updatePayload'
 import { message } from '@/shared/utils/feedback'
 import '@/shared/styles/surface-tokens.css'
 import '@/features/api-automation/styles/list-v2.css'
-
-const { Text } = Typography
 
 type ApiAutomationPageScope = {
   projectId?: string
@@ -288,98 +283,38 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
     const sprintName =
       scope?.sprintName || (sprintIdForCollection ? sprintNameMap.get(sprintIdForCollection) ?? sprintIdForCollection : '-')
     const collectionDescription = collection.description || '暂无API测试集描述'
-    const collectionScopeText = `${sprintName} / ${requirementName}`
 
-    return { collectionDescription, collectionId, collectionScopeText }
+    return { collectionDescription, collectionId, requirementName, sprintName }
   }
 
-  const columns: TableProps<ApiCollection>['columns'] = [
-    {
-      title: '测试集名称',
-      dataIndex: 'name',
-      key: 'name',
-      width: '30%',
-      render: (name: ApiCollection['name']) => (
-        <Space size={8} className="tp-list-name functional-suite-list-name api-test-name-cell">
-          <span className="api-test-name-icon">
-            <ApiOutlined />
-          </span>
-          <Tooltip title={name}>
-            <Text ellipsis>{name}</Text>
-          </Tooltip>
-        </Space>
-      ),
-    },
-    {
-      title: '所属迭代/需求',
-      key: 'scope',
-      ellipsis: true,
-      render: (_, collection) => {
-        const { collectionScopeText } = getCollectionRowContext(collection)
-        return (
-          <Tooltip title={collectionScopeText}>
-            <Text className="functional-suite-list-scope" ellipsis>
-              {collectionScopeText}
-            </Text>
-          </Tooltip>
-        )
-      },
-    },
-    {
-      title: '创建时间',
-      key: 'createdAt',
-      width: 180,
-      render: (_, collection) => (
-        <Text className="api-test-time-cell" type="secondary">
-          {formatTime(pickCreatedAt(collection))}
-        </Text>
-      ),
-    },
-    {
-      title: '最近更新',
-      key: 'updatedAt',
-      width: 180,
-      render: (_, collection) => (
-        <Text className="api-test-time-cell" type="secondary">
-          {formatTime(pickUpdatedAt(collection))}
-        </Text>
-      ),
-    },
-    {
-      title: '描述',
-      key: 'description',
-      ellipsis: true,
-      render: (_, collection) => {
-        const { collectionDescription } = getCollectionRowContext(collection)
-        return (
-          <Tooltip title={collectionDescription}>
-            <Text className="functional-suite-list-description" type="secondary" ellipsis>
-              {collectionDescription}
-            </Text>
-          </Tooltip>
-        )
-      },
-    },
-    {
-      title: <span className="tp-actions-col-title" style={{ width: 92 }}>操作</span>,
-      key: 'actions',
-      width: 138,
-      align: 'right',
-      render: (_, collection) => {
-        const { collectionId } = getCollectionRowContext(collection)
-        return (
-          <Space
-            size={8}
-            className="functional-suite-list-actions"
-            onClick={(event) => event.stopPropagation()}
-            onMouseDown={(event) => event.stopPropagation()}
-          >
+  function renderCollectionCard(collection: ApiCollection) {
+    const { collectionDescription, collectionId, requirementName, sprintName } =
+      getCollectionRowContext(collection)
+    const title = collectionId ? (
+      <Link to={`/api-automation/collections/${collectionId}`} title={collection.name}>
+        {collection.name}
+      </Link>
+    ) : collection.name
+
+    return (
+      <EntityCard
+        key={collectionId || collection.name}
+        title={title}
+        meta={[
+          { label: '所属迭代', value: sprintName },
+          { label: '所属需求', value: requirementName },
+        ]}
+        footerNote={<>最近更新 {formatTime(pickUpdatedAt(collection))}</>}
+        actions={
+          <>
             <Tooltip title={resolvedEnvironmentId ? '运行API测试集' : '请先选择环境'}>
-              <ProjectActionButton action="execute"
+              <ProjectActionButton
+                action="execute"
                 type="text"
                 shape="circle"
                 className="action-btn-read"
-                operation="run" iconOnly
+                operation="run"
+                iconOnly
                 aria-label="运行API测试集"
                 disabled={!resolvedEnvironmentId}
                 loading={runningCollectionId === collectionId && runCollectionMutation.isPending}
@@ -387,33 +322,45 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
               />
             </Tooltip>
             <Tooltip title="编辑测试集">
-              <ProjectActionButton action="write"
+              <ProjectActionButton
+                action="write"
                 type="text"
                 shape="circle"
                 className="action-btn-update"
-                operation="edit" iconOnly
+                operation="edit"
+                iconOnly
                 aria-label="编辑API测试集"
                 onClick={() => openEditDrawer(collection)}
               />
             </Tooltip>
             <Popconfirm title="确认删除该API测试集？" onConfirm={() => deleteCollectionMutation.mutate(collectionId)}>
               <Tooltip title="删除测试集">
-                <ProjectActionButton action="write"
+                <ProjectActionButton
+                  action="write"
                   danger
                   type="text"
                   shape="circle"
                   className="action-btn-delete"
-                  operation="delete" iconOnly
+                  operation="delete"
+                  iconOnly
                   aria-label="删除API测试集"
                   loading={deleteCollectionMutation.isPending && deleteCollectionMutation.variables === collectionId}
                 />
               </Tooltip>
             </Popconfirm>
-          </Space>
-        )
-      },
-    },
-  ]
+          </>
+        }
+        onOpen={() => openCollectionDetail(collectionId)}
+      >
+        <p
+          className={`entity-card-desc${collection.description ? '' : ' is-empty'}`}
+          title={collectionDescription}
+        >
+          {collectionDescription}
+        </p>
+      </EntityCard>
+    )
+  }
 
   return (
     <div className="workbench-page api-automation-page functional-test-page tp-list-surface api-test-page tp-surface">
@@ -506,8 +453,8 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
           {environmentsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(environmentsQuery.error)} /> : null}
 
 
-          <div className="api-test-table-card tp-list-body">
-            <div className="table-body-scroll sprint-card-scroll api-test-table-scroll tp-list-scroll">
+          <div className="api-test-card-body tp-list-body">
+            <div className="sprint-card-scroll api-test-card-scroll tp-list-scroll">
               {sprintsQuery.isLoading ? (
                 <div className="sprint-card-loading">
                   <Empty description="迭代加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
@@ -545,16 +492,9 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
                   </Empty>
                 </div>
               ) : (
-                <Table<ApiCollection>
-                  className="functional-suite-list-table tp-list-table api-suite-list-table"
-                  columns={columns}
-                  dataSource={pagedCollections}
-                  rowKey={(collection) => getCollectionRowContext(collection).collectionId || collection.name}
-                  pagination={false}
-                  onRow={(collection) => ({
-                    onClick: () => openCollectionDetail(getCollectionRowContext(collection).collectionId),
-                  })}
-                />
+                <div className="entity-card-grid">
+                  {pagedCollections.map(renderCollectionCard)}
+                </div>
               )}
             </div>
 

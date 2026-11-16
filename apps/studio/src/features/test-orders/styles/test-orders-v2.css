@@ -7,11 +7,6 @@
   gap: 8px;
 }
 
-.test-orders-page .test-orders-filters .api-filter-field-label {
-  color: var(--srf-text-muted);
-  font-weight: 500;
-}
-
 .test-orders-page .test-orders-search-field {
   min-width: 0;
   width: 300px;
@@ -22,39 +17,13 @@
   flex: 0 0 auto;
 }
 
-/* ===== 表格卡片 ===== */
-
-.test-orders-page .test-orders-table-card {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
-  border: 1px solid var(--srf-card-border);
-  border-radius: var(--srf-radius-card);
-  background: var(--srf-card);
-  box-shadow: 0 1px 2px var(--srf-shadow-color);
-  overflow: hidden;
-}
-
-/* ===== 表格内部 ===== */
-
-.test-orders-page .test-order-muted-cell {
-  color: var(--srf-text-secondary);
-}
-
-.test-orders-page .test-order-version-cell,
-.test-orders-page .test-order-time-cell {
-  color: var(--srf-text-muted);
-  font-family: var(--app-font-sans);
-  font-size: 12px;
-}
-
 /* ===== 进度与指标 ===== */
 
 .test-orders-page .test-order-progress-cell {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  margin: 2px 0 12px;
   min-width: 0;
   font-variant-numeric: tabular-nums;
 }
@@ -93,7 +62,7 @@
 
 .test-orders-page .test-order-progress-percent {
   flex: 0 0 auto;
-  color: var(--srf-tone-text);
+  color: var(--srf-text-secondary);
   font-size: 12px;
   font-weight: 500;
 }
@@ -187,25 +156,6 @@
   }
 }
 
-.test-orders-page .test-order-name-cell {
-  min-width: 0;
-  width: 100%;
-}
-
-.test-orders-page .test-order-name-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-  border: 1px solid color-mix(in srgb, var(--srf-result-passed) 20%, transparent);
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--srf-result-passed) 12%, transparent);
-  color: var(--srf-result-passed);
-  font-size: 10px;
-}
-
 .test-orders-search-submit {
   border: 0;
   padding: 0 2px;
@@ -216,19 +166,6 @@
   cursor: pointer;
 }
 .test-orders-search-submit:focus-visible { outline: 2px solid var(--app-accent); }
-:root:root .app-shell.app-shell-macos .test-orders-page .functional-suite-list-table .test-order-name-cell .ant-typography {
-  color: var(--srf-text) !important;
-  font-size: 12px !important;
-  font-weight: 400 !important;
-}
-:root:root .app-shell.app-shell-macos .test-orders-page .functional-suite-list-table .test-order-time-cell,
-:root:root .app-shell.app-shell-macos .test-orders-page .functional-suite-list-table .test-order-version-cell {
-  font-family: var(--app-font-sans) !important;
-  font-size: 12px !important;
-  color: var(--app-shell-text-secondary) !important;
-}
-.test-orders-page .test-order-progress-executed strong { color: inherit; font-weight: 400; }
-.test-orders-page .test-order-progress-percent { color: var(--app-shell-text-secondary); font-weight: 400; }
 :root:root .app-shell.app-shell-macos .test-orders-page .test-orders-search-input {
   background: var(--app-control-surface) !important;
   border-color: var(--button-border) !important;

@@ -1,0 +1,518 @@
+/* 测试单执行工作台（列表优先）：整单进度、全宽执行条目列表与全宽详情。
+ * 列表外框、工具栏与分页沿用 surface-tokens 的 tp-list-* 契约；
+ * 颜色消费 --srf-* token，不另建色盘。 */
+
+/* ===== 单行工作台工具栏 ===== */
+
+.test-order-workspace-page .test-order-workspace-toolbar {
+  gap: 8px;
+  justify-content: flex-start;
+}
+
+/* 列表卡片、详情卡片和图谱容器都把工具栏作为第一行，不再单独成卡。 */
+.test-order-workspace-page .test-order-entry-list-panel > .test-order-workspace-toolbar,
+.test-order-workspace-page .test-order-detail-panel > .test-order-workspace-toolbar,
+.test-order-workspace-page .test-order-graph-viewer > .test-order-workspace-toolbar {
+  border: 0;
+  border-bottom: 1px solid var(--srf-card-border);
+  border-radius: 0;
+}
+
+/* 面包屑与需求详情共用一套视觉：主色可点层级、箭头分隔、当前项正文加粗。 */
+.test-order-workspace-page .test-order-workspace-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.test-order-workspace-page .test-order-workspace-crumb-link {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--srf-accent);
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.test-order-workspace-page .test-order-workspace-crumb-link:first-child {
+  margin-inline-start: -5px;
+}
+
+.test-order-workspace-page .test-order-workspace-crumb-link:hover {
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.test-order-workspace-page .test-order-workspace-crumb-link:focus-visible {
+  outline: 2px solid var(--srf-accent);
+  outline-offset: 2px;
+}
+
+.test-order-workspace-page .test-order-workspace-crumb-sep {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  color: var(--srf-text-muted);
+  font-size: 10px;
+}
+
+.test-order-workspace-page .test-order-workspace-crumb-current {
+  margin: 0;
+  min-width: 0;
+  max-width: 360px;
+  overflow: hidden;
+  color: var(--srf-text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.test-order-workspace-page .test-order-workspace-chip {
+  flex: 0 0 auto;
+}
+
+.test-order-workspace-page .test-order-workspace-toolbar-spacer {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.test-order-workspace-page .test-order-workspace-filter-btn {
+  flex: 0 0 auto;
+}
+
+.test-order-workspace-page .test-order-workspace-filter-btn.is-active {
+  border-color: var(--srf-accent-border);
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent-strong);
+}
+
+.test-order-workspace-page .test-order-workspace-filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--srf-count-badge);
+  color: var(--srf-accent-strong);
+  font-size: 10px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.test-order-workspace-filter-popover {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 300px;
+  max-width: 76vw;
+}
+
+.test-order-workspace-filter-popover .ant-input-affix-wrapper {
+  width: 100%;
+}
+
+.test-order-workspace-filter-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--srf-divider);
+  color: var(--srf-text-muted);
+  font-size: 11px;
+}
+
+/* ===== 状态进度条筛选：视觉 8px，点击热区 18px ===== */
+
+.test-order-workspace-page .test-order-progress-filter {
+  display: flex;
+  align-items: center;
+  flex: 1 1 320px;
+  min-width: 170px;
+  max-width: 560px;
+}
+
+.test-order-workspace-page .test-order-progress-track {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 2px;
+  min-width: 140px;
+  height: 18px;
+}
+
+.test-order-workspace-page .test-order-progress-track::before {
+  content: '';
+  position: absolute;
+  top: 5px;
+  right: 0;
+  left: 0;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--srf-track);
+  pointer-events: none;
+}
+
+.test-order-workspace-page .test-order-progress-seg {
+  position: relative;
+  z-index: 1;
+  flex-basis: 0;
+  flex-shrink: 1;
+  min-width: 8px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: opacity 0.16s ease, filter 0.16s ease;
+}
+
+.test-order-workspace-page .test-order-progress-seg::before {
+  content: '';
+  position: absolute;
+  top: 5px;
+  right: 0;
+  left: 0;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--seg-color);
+  transition: filter 0.16s ease, box-shadow 0.16s ease;
+}
+
+.test-order-workspace-page .test-order-progress-seg:hover {
+  filter: brightness(1.12);
+}
+
+.test-order-workspace-page .test-order-progress-seg:focus-visible {
+  outline: 2px solid var(--srf-accent);
+  outline-offset: 2px;
+}
+
+.test-order-workspace-page .test-order-progress-seg.is-dim {
+  opacity: 0.36;
+  filter: saturate(0.45);
+}
+
+.test-order-workspace-page .test-order-progress-seg.is-active {
+  z-index: 2;
+}
+
+.test-order-workspace-page .test-order-progress-seg.is-active::before {
+  /* 待执行/跳过的段色很浅，环上混入一级文字色，保证选中态在浅色主题也看得出来。 */
+  box-shadow:
+    0 0 0 1px var(--app-list-toolbar-bg, var(--srf-card)),
+    0 0 0 3px color-mix(in srgb, var(--seg-color) 65%, var(--srf-text-secondary) 35%);
+  filter: saturate(1.15) brightness(1.08);
+}
+
+.test-order-workspace-page .test-order-progress-seg.is-passed {
+  --seg-color: var(--srf-result-passed);
+}
+
+.test-order-workspace-page .test-order-progress-seg.is-failed {
+  --seg-color: var(--srf-result-failed);
+}
+
+.test-order-workspace-page .test-order-progress-seg.is-blocked {
+  --seg-color: var(--srf-result-blocked);
+}
+
+.test-order-workspace-page .test-order-progress-seg.is-skipped {
+  --seg-color: var(--srf-result-skipped);
+}
+
+.test-order-workspace-page .test-order-progress-seg.is-pending {
+  --seg-color: var(--srf-track-pending);
+}
+
+/* ===== 执行条目表格 ===== */
+
+.test-order-workspace-page .test-order-entry-table .ant-table-tbody > tr {
+  cursor: pointer;
+}
+
+.test-order-workspace-page .test-order-entry-selection,
+.test-order-workspace-page .test-order-entry-actions {
+  display: inline-flex;
+  align-items: center;
+}
+
+.test-order-workspace-page .test-order-entry-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.test-order-workspace-page .test-order-entry-name-cell .ant-typography {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* 与用例库的编号 chip 一致：固定宽度，超出省略；点击复制完整 UUID。 */
+.test-order-workspace-page .test-order-entry-id {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 96px;
+  max-width: 100%;
+  vertical-align: middle;
+  padding: 2px 6px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 4px;
+  background: var(--srf-chip);
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: copy;
+}
+
+.test-order-workspace-page .test-order-entry-id:hover {
+  color: var(--srf-accent);
+}
+
+.test-order-workspace-page .test-order-entry-id:focus-visible {
+  outline: 2px solid var(--srf-accent);
+  outline-offset: 2px;
+}
+
+.test-order-workspace-page .test-order-entry-module {
+  display: inline-block;
+  max-width: 100%;
+  padding: 2px 7px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--srf-chip);
+  color: var(--srf-chip-text);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.test-order-workspace-page .test-order-entry-status {
+  gap: 6px;
+  font-size: 11.5px;
+}
+
+.test-order-workspace-page .test-order-entry-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.test-order-workspace-page .test-order-entry-person,
+.test-order-workspace-page .test-order-entry-unassigned {
+  color: var(--srf-text-secondary);
+}
+
+.test-order-workspace-page .test-order-entry-time {
+  color: var(--srf-text-secondary);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.test-order-workspace-page .test-order-entry-muted {
+  color: var(--srf-text-muted);
+}
+
+.test-order-workspace-page .test-order-entry-actions-cell {
+  text-align: right;
+}
+
+.test-order-workspace-page .test-order-entry-actions {
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.test-order-workspace-page .test-order-entry-actions .ant-btn {
+  opacity: 0;
+}
+
+.test-order-workspace-page .test-order-entry-table .ant-table-row:hover .test-order-entry-actions .ant-btn,
+.test-order-workspace-page .test-order-entry-actions .ant-btn:focus-visible {
+  opacity: 1;
+}
+
+/* ===== 批量操作条 ===== */
+
+.test-order-workspace-page .test-order-entry-batch {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 16px;
+  border-top: 1px solid var(--srf-accent-border);
+  background: var(--srf-accent-soft);
+  color: var(--srf-accent-strong);
+  font-size: 12px;
+}
+
+.test-order-workspace-page .test-order-entry-batch-count {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.test-order-workspace-page .test-order-entry-batch-note {
+  color: var(--srf-text-secondary);
+  font-size: 11px;
+}
+
+.test-order-workspace-page .test-order-entry-batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-inline-start: auto;
+}
+
+/* ===== 全宽详情 ===== */
+
+.test-order-workspace-page .test-order-execution-view {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.test-order-workspace-page .test-order-list-view {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.test-order-workspace-page .test-order-list-view[hidden] {
+  display: none;
+}
+
+.test-order-workspace-page .test-order-detail-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+  overflow: hidden;
+}
+
+/* 详情页头部只有面包屑；宽屏切换箭头放到正文两侧，窄屏回到头部。 */
+.test-order-workspace-page .test-order-detail-header {
+  flex: 0 0 auto;
+}
+
+.test-order-workspace-page .test-order-detail-header .test-order-workspace-crumb-current {
+  max-width: min(720px, 56vw);
+}
+
+.test-order-workspace-page .test-order-detail-inline-nav {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  margin-inline-start: auto;
+}
+
+.test-order-workspace-page .test-order-detail-stage {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.test-order-workspace-page .test-order-detail-side-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 4;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--srf-card-border);
+  background: var(--srf-card);
+  color: var(--srf-text-secondary);
+  box-shadow: 0 2px 8px var(--srf-shadow-color);
+  transform: translateY(-50%);
+}
+
+.test-order-workspace-page .test-order-detail-side-nav.is-prev {
+  left: 20px;
+}
+
+.test-order-workspace-page .test-order-detail-side-nav.is-next {
+  right: 20px;
+}
+
+.test-order-workspace-page .test-order-detail-side-nav:hover:not(:disabled) {
+  border-color: var(--srf-accent);
+  color: var(--srf-accent);
+}
+
+.test-order-workspace-page .test-order-detail-side-nav:disabled {
+  opacity: 0.35;
+}
+
+.test-order-workspace-page .test-order-detail-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.test-order-workspace-page .test-order-detail-inner {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-bottom: 24px;
+}
+
+/* ===== 响应式 ===== */
+
+@media (max-width: 1100px) {
+  .test-order-workspace-page .test-order-progress-filter {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .test-order-workspace-page .test-order-workspace-crumb-current {
+    max-width: 220px;
+  }
+
+  .test-order-workspace-page .test-order-entry-batch-actions {
+    width: 100%;
+    margin-inline-start: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .test-order-workspace-page .test-order-detail-inner {
+    max-width: none;
+  }
+}

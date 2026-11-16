@@ -173,8 +173,8 @@ describe('InterfaceDetailPage', () => {
     expect(nameInput).toHaveValue('查询订单')
     expect(screen.getByLabelText('接口路径')).toHaveValue('/orders/{orderId}')
     expect(screen.getByText('/api/orders')).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: '接口库' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByRole('tab', { name: '软件仓库' })).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: '接口库' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: '软件仓库' })).not.toBeInTheDocument()
     expect(screen.getByRole('tab', { name: /参数/ })).toHaveAttribute('aria-selected', 'true')
     expect(await screen.findByRole('button', { name: /^订单服务/ })).toBeInTheDocument()
     expect(

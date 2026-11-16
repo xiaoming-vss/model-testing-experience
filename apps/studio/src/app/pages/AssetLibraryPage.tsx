@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import '@/shared/styles/page-navigation-tabs.css'
 import '@/app/styles/asset-library.css'
-import { AssetLibraryTabs } from './AssetLibraryTabs'
 import { PaneActivityProvider } from '@/shared/ui/PaneActivityProvider'
 import { CaseLibraryPage } from '@/features/test-cases/pages/CaseLibraryPage'
 import { SoftwareRepositoriesPage } from '@/features/interface-library/pages/SoftwareRepositoriesPage'
@@ -21,7 +19,7 @@ function resolveAssetTab(value: string | null): AssetLibraryTab {
 }
 
 export function AssetLibraryPage() {
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
   const activeTab = resolveAssetTab(searchParams.get('tab'))
   const [visitedTabs, setVisitedTabs] = useState(() => new Set<AssetLibraryTab>([activeTab]))
 
@@ -38,27 +36,13 @@ export function AssetLibraryPage() {
     return <Navigate to="/asset-library?tab=cases" replace />
   }
 
-  function changeTab(tab: AssetLibraryTab) {
-    const params = new URLSearchParams(searchParams)
-    params.set('tab', tab)
-    setSearchParams(params)
-  }
-
   return (
-    <div className="workbench-page asset-library-page" data-tab-motion-scope>
-      <AssetLibraryTabs activeTab={activeTab} onSelect={changeTab} />
-      <div className="asset-library-tab-panel" data-tab-motion-panel>
+    <div className="workbench-page asset-library-page">
+      <div className="asset-library-tab-panel">
         {ASSET_TAB_PAGES.map(({ key, Page }) => {
           if (!visitedTabs.has(key)) return null
           return (
-            <div
-              key={key}
-              className="asset-library-tab-pane"
-              role="tabpanel"
-              id={`asset-panel-${key}`}
-              aria-labelledby={`asset-tab-${key}`}
-              hidden={activeTab !== key}
-            >
+            <div key={key} className="asset-library-tab-pane" id={`asset-panel-${key}`} hidden={activeTab !== key}>
               <PaneActivityProvider active={activeTab === key}>
                 <Page />
               </PaneActivityProvider>

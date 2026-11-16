@@ -21,7 +21,6 @@ import {
 } from 'antd'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { AssetLibraryTabs } from '@/app/pages/AssetLibraryTabs'
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { useProjectRequirementOptions } from '@/features/projects/hooks/useProjectRequirementOptions'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
@@ -921,15 +920,8 @@ function InterfaceWorkspaceShell({
   children: ReactNode
   className?: string
 }) {
-  const navigate = useNavigate()
   return (
     <div className="workbench-page asset-library-page">
-      <AssetLibraryTabs
-        activeTab="interfaces"
-        onSelect={tab => {
-          if (tab !== 'interfaces') navigate(`/asset-library?tab=${tab}`)
-        }}
-      />
       <div className="asset-library-tab-panel">
         <div className="asset-library-tab-pane">
           <div className={`workbench-page interface-library-page tp-surface${className ? ` ${className}` : ''}`}>

@@ -43,8 +43,8 @@ describe('列表名称样式统一', () => {
     </main>
   `
 
-  const suiteNameMarkup = (pageClass: string) => `
-    <main class="functional-test-page ${pageClass}">
+  const suiteNameMarkup = `
+    <main class="functional-test-page">
       <div class="functional-suite-list-table">
         <div class="tp-list-name functional-suite-list-name"><span id="list-name" class="ant-typography">测试集名称</span></div>
       </div>
@@ -60,9 +60,7 @@ describe('列表名称样式统一', () => {
   `
 
   it.each([
-    ['API 测试集', testingCss, suiteNameMarkup('api-test-page')],
-    ['UI 测试集', testingCss, suiteNameMarkup('ui-test-page')],
-    ['功能测试集', testingCss, suiteNameMarkup('')],
+    ['功能测试集', testingCss, suiteNameMarkup],
     ['需求', `${workbenchCss}\n${requirementListCss}`, requirementNameMarkup],
   ])('%s名称与任务名称使用相同的列表样式', (_, css, markup) => {
     const taskNameStyle = computedNameStyle(aiTestingCss, taskNameMarkup)

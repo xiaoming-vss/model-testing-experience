@@ -3,7 +3,6 @@ import { Navigate, useSearchParams } from 'react-router-dom'
 import { ApiAutomationPage } from '@/features/api-automation/pages/ApiAutomationPage'
 import { BugListPage } from '@/features/bugs/pages/BugListPage'
 import { TestOrderPage } from '@/features/test-orders/pages/TestOrderPage'
-import { TestingNavigation } from '../components/TestingNavigation'
 import {
   isLegacyLibraryTab,
   resolveTestingTab,
@@ -21,7 +20,7 @@ const TESTING_TAB_PAGES = [
 ] as const
 
 export function TestingPage() {
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
   const rawTab = searchParams.get('tab')
   const activeTab = resolveTestingTab(rawTab)
   // 访问过的标签页保持挂载、用 hidden 切换显示：卸载重挂会让每次切标签
@@ -41,21 +40,12 @@ export function TestingPage() {
   }
 
   return (
-    <div className="workbench-page testing-page" data-tab-motion-scope>
-      {activeTab !== 'bugs' && <TestingNavigation activeTab={activeTab} onChange={tab => {
-        const params = new URLSearchParams(searchParams)
-        params.set('tab', tab)
-        setSearchParams(params)
-      }} />}
-      <div className="testing-tab-panel" data-tab-motion-panel>
+    <div className="workbench-page testing-page">
+      <div className="testing-tab-panel">
         {TESTING_TAB_PAGES.map(({ key, Page }) => {
           if (!visitedTabs.has(key)) return null
           return (
-            <div key={key} className="testing-tab-pane"
-              role={key === 'bugs' ? undefined : 'tabpanel'}
-              id={`testing-panel-${key}`}
-              aria-labelledby={key === 'bugs' ? undefined : `testing-tab-${key}`}
-              hidden={activeTab !== key}>
+            <div key={key} className="testing-tab-pane" id={`testing-panel-${key}`} hidden={activeTab !== key}>
               <PaneActivityProvider active={activeTab === key}>
                 <Page />
               </PaneActivityProvider>

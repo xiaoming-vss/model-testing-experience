@@ -125,13 +125,16 @@ it('列出测试集，并在头部卡片里展示当前环境信息', async () =
   renderPage(client)
 
   await screen.findByText('dev-a')
-  expect(screen.getByText('V1.0.0 迭代 / 安装部署')).toBeInTheDocument()
+  expect(screen.getByText('V1.0.0 迭代')).toBeInTheDocument()
+  expect(screen.getByText('安装部署')).toBeInTheDocument()
   expect(screen.getByText('转换链路接口集')).toBeInTheDocument()
-  // 创建时间与最近更新都是等宽时间格，文案走共用的 formatTime（会换算到时区）
-  const timeCells = document.querySelectorAll('.api-test-time-cell')
-  expect(timeCells).toHaveLength(2)
-  expect(timeCells[0]).toHaveTextContent(formatTime(collection.createdAt))
-  expect(timeCells[1]).toHaveTextContent(formatTime(collection.updatedAt))
+  // 卡片 footer 保留最近更新；描述与归属不再占用表格列。
+  expect(screen.getByText(`最近更新 ${formatTime(collection.updatedAt)}`)).toBeInTheDocument()
+  expect(document.querySelectorAll('.entity-card')).toHaveLength(1)
+  expect(screen.getByRole('link', { name: 'dev-a' })).toHaveAttribute(
+    'href',
+    '/api-automation/collections/collection-1',
+  )
 
   expect(environments.mock.calls[0][0]).toBe('project-1')
   expect(vars).not.toHaveBeenCalled()
@@ -174,7 +177,7 @@ it('搜索无结果时空态给出清空入口，而不是新建入口', async (
 
   expect(await screen.findByText('没有符合搜索条件的API测试集')).toBeInTheDocument()
   // 空态里给的是清空搜索，不是新建入口（工具栏上的新建按钮仍在，这里只看表格卡片内）
-  const card = within(document.querySelector('.api-test-table-card') as HTMLElement)
+  const card = within(document.querySelector('.api-test-card-body') as HTMLElement)
   expect(card.queryByText('新建API测试集')).toBeNull()
 
   await userEvent.setup().click(screen.getByText('清空搜索'))

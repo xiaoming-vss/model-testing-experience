@@ -1,6 +1,6 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { MemoryRouter, useLocation } from 'react-router-dom'
-import { afterEach, expect, it, vi } from 'vitest'
+import { cleanup, render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { BaseServicesPage } from './BaseServicesPage'
 
 vi.mock('@/features/projects/hooks/useActiveProject', () => ({
@@ -10,17 +10,31 @@ vi.mock('../components/SharedServicesPanel', () => ({
   SharedServicesPanel: ({ provider }: { provider: string }) => <div>服务目录：{provider}</div>,
 }))
 afterEach(cleanup)
-function Route() {
-  return <><BaseServicesPage skillLibrary={<div>项目技能列表</div>} /><output>{useLocation().search}</output></>
+
+function renderPage(path: string) {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <BaseServicesPage skillLibrary={<div>项目技能列表</div>} />
+    </MemoryRouter>,
+  )
 }
-it('renders the MCP tab from its URL and preserves the Skill library entry', () => {
-  render(<MemoryRouter initialEntries={['/base-services?tab=mcp']}><Route /></MemoryRouter>)
-  expect(screen.getByRole('tab', { name: 'MCP' })).toHaveAttribute('aria-selected', 'true')
-  expect(screen.getByText('服务目录：mcp')).toBeInTheDocument()
-  fireEvent.click(screen.getByRole('tab', { name: 'Skill库' }))
-  expect(screen.getByText('项目技能列表')).toBeInTheDocument()
-  expect(screen.getByRole('status')).toHaveTextContent('?tab=skills')
-  fireEvent.click(screen.getByRole('tab', { name: 'MCP' }))
-  expect(screen.getByText('服务目录：mcp')).toBeInTheDocument()
-  expect(screen.getByRole('status')).toHaveTextContent('?tab=mcp')
+
+describe('BaseServicesPage', () => {
+  it.each([
+    ['/base-services?tab=mcp', '服务目录：mcp'],
+    ['/base-services?tab=llm', '服务目录：llm'],
+    ['/base-services?tab=gitlab', '服务目录：gitlab'],
+    ['/base-services?tab=zentao', '服务目录：mcp'],
+    ['/base-services', '服务目录：llm'],
+  ])('renders %s from its URL without an in-page tab bar', (path, content) => {
+    renderPage(path)
+    expect(screen.getByText(content)).toBeInTheDocument()
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument()
+  })
+
+  it('renders the project skill library for the skills tab', () => {
+    renderPage('/base-services?tab=skills')
+    expect(screen.getByText('项目技能列表')).toBeInTheDocument()
+  })
 })

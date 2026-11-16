@@ -5,7 +5,7 @@ import type { Requirement } from '@/features/requirements/types'
 import { getRequirementDocumentSummary, getRequirementDocumentTypeLabel, hasRequirementDocument } from '@/features/requirements/utils/requirementDocument'
 import { normalizeRequirementId } from '@/utils/format'
 import { RequirementCodeSummary, RequirementCreatedTime } from './RequirementMetadata'
-import { isInteractiveCardTarget } from '../utils/cardNavigation'
+import { isInteractiveCardTarget } from '@/shared/utils/cardNavigation'
 import '../styles/requirements-list.css'
 
 export function RequirementCards<T extends Requirement & { sprintName: string }>({ requirements, renderActions, renderBinding }: {
