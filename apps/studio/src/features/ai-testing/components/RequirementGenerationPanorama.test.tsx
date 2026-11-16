@@ -203,8 +203,10 @@ beforeEach(() => {
   })
   vi.spyOn(globalThis, 'fetch').mockImplementation(async input => {
     const path = new URL(String(input), 'http://localhost').pathname
-    const rows = path.endsWith('/function-test-suites') ? [{ suiteId: 'suite', name: '功能' }]
-      : [{ caseId: 'c1', title: '转换成功' }, { caseId: 'c2', title: '转换失败' }]
+    // 需求级软件仓库绑定必须返回仓库绑定结构；落到默认用例行会让 branch 读取崩溃。
+    const rows = path.endsWith('/software-repositories') ? []
+      : path.endsWith('/function-test-suites') ? [{ suiteId: 'suite', name: '功能' }]
+        : [{ caseId: 'c1', title: '转换成功' }, { caseId: 'c2', title: '转换失败' }]
     return new Response(JSON.stringify({ code: 0, data: { items: rows, total: rows.length } }), { headers: { 'Content-Type': 'application/json' } })
   })
   vi.mocked(requirementDesignApi.overview).mockResolvedValue({
