@@ -2,8 +2,6 @@ import { request, type ListResponse } from '@/shared/api/request'
 import type {
   CreateLlmConnectionPayload,
   CreateGitlabConnectionPayload,
-  CreateGitlabGroupBindingPayload,
-  CreateGitlabRequirementBindingPayload,
   CreateZentaoBindingPayload,
   CreateZentaoConnectionPayload,
   GitlabBranch,
@@ -13,9 +11,7 @@ import type {
   GitlabResourceListResponse,
   LlmConnection,
   ReauthGitlabConnectionPayload,
-  ResourceBinding,
   UpdateGitlabConnectionPayload,
-  UpdateGitlabRequirementBindingPayload,
   UpdateLlmConnectionPayload,
   UpdateZentaoConnectionPayload,
   ZentaoBinding,
@@ -137,36 +133,4 @@ export const baseServicesApi = {
     request<GitlabResourceListResponse<GitlabBranch>>(
       `${integrationConnectionPath(projectId, 'gitlab', connectionId)}/repositories/${encodeURIComponent(repositoryId)}/branches?search=${encodeURIComponent(search)}&page=${page}&pageSize=${pageSize}`,
     ),
-  createGitlabGroupBinding: (projectId: string, body: CreateGitlabGroupBindingPayload) =>
-    request<ResourceBinding>(`/v1/projects/${projectId}/bindings`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  getGitlabProjectBindings: (projectId: string) =>
-    request<ListResponse<ResourceBinding>>(`/v1/projects/${projectId}/bindings`),
-  revalidateGitlabGroupBinding: (projectId: string, bindingId: string, connectionId: string) =>
-    request<ResourceBinding>(`/v1/projects/${projectId}/bindings/${bindingId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ connectionId }),
-    }),
-  deleteGitlabGroupBinding: (projectId: string, bindingId: string) =>
-    request<Record<string, never>>(`/v1/projects/${projectId}/bindings/${bindingId}`, {
-      method: 'DELETE',
-    }),
-  getGitlabRequirementBindings: (requirementId: string) =>
-    request<ListResponse<ResourceBinding>>(`/v1/requirements/${requirementId}/bindings`),
-  createGitlabRequirementBinding: (requirementId: string, body: CreateGitlabRequirementBindingPayload) =>
-    request<ResourceBinding>(`/v1/requirements/${requirementId}/bindings`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  updateGitlabRequirementBinding: (requirementId: string, bindingId: string, body: UpdateGitlabRequirementBindingPayload) =>
-    request<ResourceBinding>(`/v1/requirements/${requirementId}/bindings/${bindingId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(body),
-    }),
-  deleteGitlabRequirementBinding: (requirementId: string, bindingId: string) =>
-    request<Record<string, never>>(`/v1/requirements/${requirementId}/bindings/${bindingId}`, {
-      method: 'DELETE',
-    }),
 }

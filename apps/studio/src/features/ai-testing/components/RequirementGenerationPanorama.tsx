@@ -25,6 +25,11 @@ import '../styles/requirement-generation-chain.css'
 import '../styles/requirement-generation-canvas.css'
 
 const laneOrder: GenerationChainKind[] = ['requirement_analysis', 'function', 'api', 'ui']
+const API_STAGE_DESCRIPTIONS: Record<string, string> = {
+  interface_extract: '提取接口库中的接口配置，审核通过后可用于设计 API 用例。',
+  api_design: '基于已审核的接口配置设计正向、反向和边界用例，审核通过后用于生成 YAML。',
+  generate: '使用已审核的接口配置和用例设计生成 API 用例 YAML。',
+}
 /** 侧栏可交给页面级容器渲染，避免被画布大容器包裹；未提供 host 时保持内嵌。 */
 function InspectorPortal({ host, children }: { host?: HTMLElement | null; children: ReactNode }) {
   return host ? createPortal(children, host) : <>{children}</>
@@ -50,7 +55,7 @@ function UpstreamTrace({ stage, chain, upstreamStages, versionKey, upstream, ver
       return <span className={`gc-trace-chip${missing ? ' is-danger' : ''}`} key={name}>
         {upstreamStage?.label ?? name}<b>{version?.label ?? (missing ? '上游已删除' : '未选择')}</b>
       </span>
-    }) : chain.kind !== 'ui' ? <span className="gc-trace-chip">{chain.kind === 'api' ? 'OpenAPI 文档' : '需求材料'}<b>只读来源</b></span> : null}
+    }) : chain.kind !== 'ui' ? <span className="gc-trace-chip">{chain.kind === 'api' ? '接口库接口' : '需求材料'}<b>只读来源</b></span> : null}
     {chain.kind === 'ui' ? <UiGenerationSourceTrace source={source} loading={loading} /> : null}
   </div></section>
 }
@@ -328,10 +333,11 @@ export function RequirementGenerationPanorama({ requirementId, projectId, canWri
               requestId: uiConfigurationRequestId, newConfiguration: false,
             })}
             onOpenProfile={openProfileGuide} onStart={inputs => workspace.runUiSurface.mutateAsync(inputs)} /> : null}
-          {sourceSelected === 'api' ? <ApiGenerationSourcePanel key={sourceChain?.taskId ?? 'new-api-source'} requirementId={requirementId} taskId={sourceChain?.taskId} canWrite={canWrite}
-            busy={Boolean(sourceChain?.busy || sourceChain?.stages.some(item => item.state === 'running'))} onSaved={refresh} /> : null}
+          {sourceSelected === 'api' ? <ApiGenerationSourcePanel key={sourceChain?.taskId ?? 'new-api-source'} requirementId={requirementId} projectId={projectId} taskId={sourceChain?.taskId} canWrite={canWrite}
+            busy={Boolean(sourceChain?.busy || sourceChain?.stages.some(item => item.state === 'running'))}
+            profileVersion={profileLatestVersion} profileLoading={profileWorkspace.versionsLoading} onOpenProfile={openProfileGuide} onSaved={refresh} /> : null}
           {activeChain?.kind === 'api' && activeStage ? <section className="gc-inspector-section">
-            <h3>生成流程</h3><p>{activeStage.stage === 'openapi_extract' ? '提取 OpenAPI 接口配置，审核通过后可用于生成 API 用例。' : '使用已审核的接口配置生成 API 用例 YAML。'}</p>
+            <h3>生成流程</h3><p>{API_STAGE_DESCRIPTIONS[activeStage.stage] ?? '按阶段完成接口配置提取、用例设计和 YAML 生成，每一步审核通过后进入下一阶段。'}</p>
             {activeStage.blockedReason ? <Alert showIcon type="info" title={activeStage.blockedReason} /> : null}
           </section> : null}
           {workspace.detail.error && !special && !sourceSelected ? <Alert type="error" showIcon title={getErrorMessage(workspace.detail.error)} action={<Button onClick={() => void workspace.detail.refetch()}>重试</Button>} /> : null}

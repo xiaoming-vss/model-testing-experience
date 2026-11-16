@@ -1,8 +1,8 @@
-"""工单 01:资源绑定服务双提供商改造。
+"""资源绑定服务 provider 分发。
 
 覆盖两个接缝:
 - 请求 schema:provider 必填,显式取 zentao/gitlab 二选一;
-- 服务层:按 provider 分发,gitlab 路径不触发禅道专属校验。
+- 服务层:只保留禅道路径,GitLab 项目群组绑定已移除。
 """
 
 from __future__ import annotations
@@ -49,27 +49,6 @@ def test_request_schema_accepts_gitlab_provider():
 
 
 @pytest.mark.asyncio
-async def test_gitlab_project_binding_dispatches_without_touching_zentao_path():
-    repository = FakeRepository()
-    zentao_client = RecordingZentaoClient()
-    connections = RecordingConnectionService()
-    service = ResourceBindingService(repository, connections, zentao_client)
-
-    result = await service.create(
-        "project",
-        "project-1",
-        _request(provider="gitlab", remoteResourceId="group-1"),
-        "user-1",
-    )
-
-    assert result["provider"] == "gitlab"
-    assert result["remoteResourceType"] == "group"
-    assert zentao_client.calls == []
-    assert ("user-1", "gitlab", "conn-1", "project-1") in connections.calls
-    assert repository.rows[0].provider == "gitlab"
-
-
-@pytest.mark.asyncio
 async def test_gitlab_sprint_binding_raises_placeholder():
     repository = FakeRepository()
     service = ResourceBindingService(
@@ -88,6 +67,29 @@ async def test_gitlab_sprint_binding_raises_placeholder():
         )
 
     assert exc_info.value.code == ErrBadRequest.code
+    assert repository.rows == []
+
+
+@pytest.mark.asyncio
+async def test_gitlab_project_group_binding_is_rejected():
+    repository = FakeRepository()
+    service = ResourceBindingService(
+        repository,
+        RecordingConnectionService(),
+        RecordingZentaoClient(),
+        zentao_access=FakeMcpAccess(),
+    )
+
+    with pytest.raises(type(ErrBadRequest)) as exc_info:
+        await service.create(
+            "requirement",
+            "requirement-1",
+            _request(provider="gitlab", remoteResourceId="repository-1"),
+            "user-1",
+        )
+
+    assert exc_info.value.code == ErrBadRequest.code
+    assert "项目级 GitLab 群组绑定已移除" in exc_info.value.message
     assert repository.rows == []
 
 

@@ -7,13 +7,14 @@ import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEdito
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
 import { interfaceLibraryApi } from '../api/interfaceLibrary.api'
-import type { ApiApp, ImportCommitResult, ImportItem, ImportPreview } from '../types'
+import type { SoftwareRepository, ImportCommitResult, ImportItem, ImportPreview } from '../types'
 import { parseJsonText } from '../utils/interfaceForm'
+import { UNTAGGED_GROUP, firstTag, groupLabel } from '../utils/interfaceGroups'
 
 type Props = {
   open: boolean
-  apps: ApiApp[]
-  defaultAppId?: string
+  repositories: SoftwareRepository[]
+  defaultSoftwareRepositoryId?: string
   onClose: () => void
   onImported: () => void
 }
@@ -39,14 +40,14 @@ const CHANGE_COLORS: Record<ImportItem['changeType'], string> = {
 
 export function OpenApiImportModal({
   open,
-  apps,
-  defaultAppId = '',
+  repositories,
+  defaultSoftwareRepositoryId = '',
   onClose,
   onImported,
 }: Props) {
   const [step, setStep] = useState(0)
   const [mode, setMode] = useState<ImportMode>('upload')
-  const [appId, setAppId] = useState(defaultAppId)
+  const [softwareRepositoryId, setSoftwareRepositoryId] = useState(defaultSoftwareRepositoryId)
   const [file, setFile] = useState<File | null>(null)
   const [jsonText, setJsonText] = useState('')
   const [preview, setPreview] = useState<ImportPreview | null>(null)
@@ -61,7 +62,11 @@ export function OpenApiImportModal({
     if (!open) return
     setStep(0)
     setMode('upload')
-    setAppId(defaultAppId || apps.find(app => app.enabled)?.appId || apps[0]?.appId || '')
+    setSoftwareRepositoryId(
+      defaultSoftwareRepositoryId ||
+        repositories[0]?.softwareRepositoryId ||
+        '',
+    )
     setFile(null)
     setJsonText('')
     setPreview(null)
@@ -71,15 +76,49 @@ export function OpenApiImportModal({
     setSubmitting(false)
     setPreviewing(false)
     setError('')
-  }, [apps, defaultAppId, open])
+  }, [repositories, defaultSoftwareRepositoryId, open])
 
-  const selectedApp = apps.find(app => app.appId === appId)
+  const selectedRepository = repositories.find(
+    repository => repository.softwareRepositoryId === softwareRepositoryId,
+  )
   const actionableItems = useMemo(
     () => preview?.items.filter(item => item.changeType === 'new' || item.changeType === 'modified') ?? [],
     [preview],
   )
   const selectedItems = actionableItems.filter(item => selectedKeys.has(item.key))
   const basePathBlocked = Boolean(preview?.basePathChange && !preview.basePathChange.canApply)
+  const libraryGroupNames = useMemo(() => {
+    const names = new Set<string>(selectedRepository?.interfaceGroups ?? [])
+    for (const item of preview?.items ?? []) {
+      if (item.changeType === 'new') continue
+      const group = targetGroupLabel(item)
+      if (group !== UNTAGGED_GROUP) names.add(group)
+    }
+    return names
+  }, [preview, selectedRepository])
+  const selectedGroups = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const item of selectedItems) {
+      const group = targetGroupLabel(item)
+      counts.set(group, (counts.get(group) ?? 0) + 1)
+    }
+    return [...counts.entries()].sort(([left], [right]) => {
+      if (left === UNTAGGED_GROUP) return 1
+      if (right === UNTAGGED_GROUP) return -1
+      return left.localeCompare(right, 'zh-CN')
+    })
+  }, [selectedItems])
+  const createdGroups = useMemo(() => {
+    if (!result || !preview) return []
+    const names = new Set<string>()
+    for (const entry of result.interfaces) {
+      if (entry.changeType !== 'new') continue
+      const item = preview.items.find(candidate => candidate.key === entry.key)
+      const group = item ? targetGroupLabel(item) : UNTAGGED_GROUP
+      if (isNewGroup(group, libraryGroupNames)) names.add(group)
+    }
+    return [...names].sort((left, right) => left.localeCompare(right, 'zh-CN'))
+  }, [libraryGroupNames, preview, result])
   const inlineJsonState = parseJsonText(jsonText)
   const sourceLabel = preview?.source.name || (mode === 'editor' ? '直接输入 JSON' : file?.name) || 'OpenAPI 文档'
 
@@ -122,8 +161,8 @@ export function OpenApiImportModal({
   }
 
   async function loadPreview() {
-    if (!appId) {
-      message.error('请选择接口应用')
+    if (!softwareRepositoryId) {
+      message.error('请选择软件仓库')
       return
     }
     const validationError = mode === 'editor' ? inlineJsonError() : ''
@@ -139,7 +178,7 @@ export function OpenApiImportModal({
     setPreviewing(true)
     setError('')
     try {
-      const data = await interfaceLibraryApi.previewOpenApiImport(appId, source)
+      const data = await interfaceLibraryApi.previewOpenApiImport(softwareRepositoryId, source)
       setPreview(data)
       setSelectedKeys(
         new Set(
@@ -158,7 +197,7 @@ export function OpenApiImportModal({
   }
 
   async function commit() {
-    if (!preview || !appId) return
+    if (!preview || !softwareRepositoryId) return
     if (!selectedItems.length) {
       message.error('请选择要导入的接口')
       return
@@ -177,14 +216,14 @@ export function OpenApiImportModal({
           expectedItems[item.key] = item.existingVersion
         }
       })
-      const data = await interfaceLibraryApi.commitOpenApiImport(appId, {
+      const data = await interfaceLibraryApi.commitOpenApiImport(softwareRepositoryId, {
         file: source,
         sourceDigest: preview.source.digest,
         selectedKeys: selectedItems.map(item => item.key),
         expectedItems,
         applyBasePath: basePathBlocked ? false : applyBasePath,
-        expectedAppVersion:
-          applyBasePath && !basePathBlocked ? selectedApp?.version : undefined,
+        expectedSoftwareRepositoryVersion:
+          applyBasePath && !basePathBlocked ? selectedRepository?.version : undefined,
       })
       setResult(data)
       setStep(2)
@@ -230,16 +269,16 @@ export function OpenApiImportModal({
       {step === 0 ? (
         <div className="if-import-step">
           <label className="if-import-field">
-            <span>接口应用</span>
+            <span>软件仓库</span>
             <Select
-              aria-label="选择导入的接口应用"
-              value={appId || undefined}
-              placeholder="请选择接口应用"
-              options={apps.map(app => ({
-                label: `${app.name}${app.enabled ? '' : '（已停用）'}`,
-                value: app.appId,
+              aria-label="选择导入的软件仓库"
+              value={softwareRepositoryId || undefined}
+              placeholder="请选择软件仓库"
+              options={repositories.map(repository => ({
+                label: repository.name,
+                value: repository.softwareRepositoryId,
               }))}
-              onChange={setAppId}
+              onChange={setSoftwareRepositoryId}
             />
           </label>
           <Segmented
@@ -323,21 +362,39 @@ export function OpenApiImportModal({
               </Tag>
             ))}
           </div>
+          {selectedGroups.length ? (
+            <div className="if-import-groups" aria-label="导入分组预览">
+              <span className="if-import-groups-title">分组预览</span>
+              {selectedGroups.map(([group, count]) => {
+                const newGroup = isNewGroup(group, libraryGroupNames)
+                return (
+                  <Tag
+                    key={group}
+                    color={newGroup ? 'green' : undefined}
+                    className="if-import-group-tag"
+                  >
+                    {group} · {count}
+                    {newGroup ? ' · 新建' : ''}
+                  </Tag>
+                )
+              })}
+            </div>
+          ) : null}
           {preview.basePathChange ? (
             <Alert
               type={preview.basePathChange.canApply ? 'warning' : 'error'}
               showIcon
-              title={`文档 base path 为 ${preview.basePathChange.document || '空'}，应用当前为 ${preview.basePathChange.current || '空'}`}
+              title={`文档 base path 为 ${preview.basePathChange.document || '空'}，软件仓库当前为 ${preview.basePathChange.current || '空'}`}
               description={
                 preview.basePathChange.canApply ? (
                   <Checkbox
                     checked={applyBasePath}
                     onChange={event => setApplyBasePath(event.target.checked)}
                   >
-                    同时更新应用 base path
+                    同时更新软件仓库 base path
                   </Checkbox>
                 ) : (
-                  '普通成员不能修改应用 base path，请联系项目所有者更新应用后再导入。'
+                  '普通成员不能修改软件仓库 base path，请联系项目所有者更新软件仓库后再导入。'
                 )
               }
             />
@@ -364,6 +421,8 @@ export function OpenApiImportModal({
           <div className="if-import-list">
             {preview.items.map(item => {
               const selectable = item.changeType === 'new' || item.changeType === 'modified'
+              const group = targetGroupLabel(item)
+              const rowNewGroup = isNewGroup(group, libraryGroupNames)
               return (
                 <label
                   key={item.key}
@@ -375,7 +434,15 @@ export function OpenApiImportModal({
                     onChange={event => toggleKey(item.key, event.target.checked)}
                   />
                   <Tag className={`if-method if-method-${item.method.toLowerCase()}`}>{item.method}</Tag>
-                  <span className="if-import-item-name">{item.name}</span>
+                  <span className="if-import-item-title">
+                    <span className="if-import-item-name">{item.name}</span>
+                    <span className="if-import-item-group">
+                      分组：{group}
+                      {rowNewGroup ? (
+                        <span className="if-import-group-new">新建</span>
+                      ) : null}
+                    </span>
+                  </span>
                   <code>{item.path}</code>
                   <Tag color={CHANGE_COLORS[item.changeType]}>{CHANGE_LABELS[item.changeType]}</Tag>
                   {item.changedFields.length ? (
@@ -387,7 +454,7 @@ export function OpenApiImportModal({
             {preview.items.length === 0 ? <Empty description="文档中没有接口" /> : null}
           </div>
           <div className="if-import-note">
-            文档字段会覆盖同名接口；启用状态和关联需求保留。文档中已移除的接口保持原样，不自动停用或删除。
+            按方法与路径匹配：已有接口只更新接口内容，保留库内标签和分组；新接口使用文档标签并创建分组。文档中已移除的接口保持原样，不自动停用或删除。
           </div>
           <div className="if-import-actions">
             <Button onClick={() => setStep(0)} disabled={submitting}>上一步</Button>
@@ -413,8 +480,18 @@ export function OpenApiImportModal({
           />
           <div className="if-import-result">
             <Space wrap>
-              <Tag color="green">应用 base path：{result.appBasePath || '无前缀'}</Tag>
+              <Tag color="green">软件仓库 base path：{result.softwareRepositoryBasePath || '无前缀'}</Tag>
             </Space>
+            {createdGroups.length ? (
+              <div className="if-import-result-groups">
+                <span>本次新建分组</span>
+                <Space wrap>
+                  {createdGroups.map(group => (
+                    <Tag key={group} color="green">{group}</Tag>
+                  ))}
+                </Space>
+              </div>
+            ) : null}
           </div>
           <div className="if-import-actions">
             <Button type="primary" onClick={onImported}>查看接口库</Button>
@@ -423,6 +500,16 @@ export function OpenApiImportModal({
       ) : null}
     </Modal>
   )
+}
+
+function targetGroupLabel(item: ImportItem) {
+  return groupLabel(
+    item.changeType === 'new' ? firstTag(item.tags) : firstTag(item.existingTags),
+  )
+}
+
+function isNewGroup(group: string, libraryGroups: Set<string>) {
+  return group !== UNTAGGED_GROUP && !libraryGroups.has(group)
 }
 
 function errorMessage(error: unknown) {

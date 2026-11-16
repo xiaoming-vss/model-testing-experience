@@ -18,28 +18,29 @@ from testing_agent_ai_worker.tasks.api_case_generate.chain import ChainRunResult
 from testing_agent_ai_worker.tasks.api_case_generate.executor import ApiCaseExecutor
 
 
-class ApiCaseExecutorTests(unittest.TestCase):
-    def _make_task(self, *, task_type: str = "api_case_generate") -> Task:
-        return Task(
-            claim_id="claim-api-1",
-            task_id="task-1",
-            attempt_id="run-1",
-            generate_task_id="generate-1",
-            task_type=task_type,
-            project_id="project-1",
-            sprint_id="sprint-1",
-            requirement_id="requirement-1",
-            payload=TaskPayload(
-                openapi_content='{"openapi":"3.0.0"}',
-                source_content='{"openapi":"3.0.0"}',
-                source_type="openapi",
-                target_scope="只处理登录与鉴权接口",
-                extra_instruction="帮我生成登录、项目增删改查的用例",
-            ),
-        )
+def make_api_case_task(*, task_type: str = "api_case_generate") -> Task:
+    return Task(
+        claim_id="claim-api-1",
+        task_id="task-1",
+        attempt_id="run-1",
+        generate_task_id="generate-1",
+        task_type=task_type,
+        project_id="project-1",
+        sprint_id="sprint-1",
+        requirement_id="requirement-1",
+        payload=TaskPayload(
+            openapi_content='{"openapi":"3.0.0"}',
+            source_content='{"openapi":"3.0.0"}',
+            source_type="openapi",
+            target_scope="只处理登录与鉴权接口",
+            extra_instruction="帮我生成登录、项目增删改查的用例",
+        ),
+    )
 
+
+class ApiCaseExecutorTests(unittest.TestCase):
     def test_execute_runs_chain_submits_progress_and_returns_success_result(self) -> None:
-        task = self._make_task()
+        task = make_api_case_task()
         progress_events: list[TaskProgress] = []
         captured: dict[str, object] = {}
         events: list[str] = []
@@ -82,7 +83,7 @@ class ApiCaseExecutorTests(unittest.TestCase):
         self.assertEqual(
             progress_events[0].intermediate_json_text, '{"login":{"path":"/login","method":"POST"}}'
         )
-        self.assertEqual(progress_events[0].current_stage, "openapi_extract")
+        self.assertEqual(progress_events[0].current_stage, "interface_extract")
         self.assertEqual(progress_events[0].stage_status, "running")
         self.assertEqual(captured["session_key"], "run-1")
         self.assertEqual(
@@ -95,8 +96,8 @@ class ApiCaseExecutorTests(unittest.TestCase):
             Path("D:/tmp/pi-runtime").resolve(),
         )
         self.assertFalse(Path(str(captured["config_path"])).exists())
-        self.assertEqual(captured["extractor_skill_name"], "openapi-test-config-extractor")
-        self.assertEqual(captured["generator_skill_name"], "api-cases-yaml-generator")
+        self.assertEqual(captured["extractor_skill_name"], "mtx-extract-interface-test-config")
+        self.assertEqual(captured["generator_skill_name"], "mtx-generate-api-test-case")
         self.assertIn("只处理登录与鉴权接口", captured["extra_instruction"])
         self.assertIn("帮我生成登录、项目增删改查的用例", captured["extra_instruction"])
 
@@ -105,7 +106,7 @@ class ApiCaseExecutorTests(unittest.TestCase):
         self.assertEqual(summary["taskType"], "api_case_generate")
 
     def test_execute_returns_failed_result_for_unsupported_task_type(self) -> None:
-        task = self._make_task(task_type="functional_case_generate")
+        task = make_api_case_task(task_type="functional_case_generate")
         executor = ApiCaseExecutor(
             agent_config=PiConfig(),
             chain_runner=lambda **kwargs: ChainRunResult("", ""),
@@ -121,7 +122,7 @@ class ApiCaseExecutorTests(unittest.TestCase):
         self.assertIn("functional_case_generate", result.error_message or "")
 
     def test_execute_uses_task_scoped_agent_config_when_llm_credentials_exist(self) -> None:
-        task = self._make_task()
+        task = make_api_case_task()
         task.payload.llm_credentials = LlmCredentials(
             model="gpt-5.4-mini",
             api_key="platform-key",
@@ -179,15 +180,35 @@ if __name__ == "__main__":
     unittest.main()
 
 
-class ApiStageExecutionTests(ApiCaseExecutorTests):
-    def test_extract_stops_for_review_and_generate_uses_approved_input(self):
-        task = self._make_task()
+class ApiStageExecutionTests(unittest.TestCase):
+    def test_extract_design_and_generate_use_approved_inputs(self):
+        from tests.unit.tasks.api_case_generate.test_api_stages import design_for
+
+        task = make_api_case_task()
         task.checkpoint_enabled = True
-        task.current_stage = "openapi_extract"
-        task.payload.metadata["apiWorkflowVersion"] = "api_two_stage/1.0"
+        task.current_stage = "interface_extract"
+        task.payload.metadata["apiWorkflowVersion"] = "api_three_stage/1.0"
+        extraction = (
+            '{"read_one":{"path":"/api/read_one","method":"GET",'
+            '"query":{"q":"string (必传) # 关键字"},"response":{"id":"string"}}}'
+        )
         outputs = [
-            '{"login":{"path":"/login","method":"POST"}}',
-            "cases:\n  - {name: login, orderNo: 1, method: POST, urlTemplate: /login}",
+            extraction,
+            json.dumps(design_for(["read_one"])),
+            (
+                "cases:\n"
+                "  - {name: read_one-正向-全参数, description: 验证完整参数查询成功, "
+                "orderNo: 1, method: GET, urlTemplate: /api/read_one, query: {q: value}, "
+                "bodyType: none, assertRules: ["
+                "{name: a, orderNo: 1, assertSource: status_code, comparator: gte, expectedValue: '200'}, "
+                "{name: b, orderNo: 2, assertSource: status_code, comparator: lt, expectedValue: '300'}, "
+                "{name: c, orderNo: 3, assertSource: body_jsonpath, targetExpr: $.id, comparator: exists, expectedValue: ''}]}\n"
+                "  - {name: read_one-反向-缺少查询参数, description: 验证缺少必填查询参数时请求被拒绝, "
+                "orderNo: 2, method: GET, urlTemplate: /api/read_one, query: {}, "
+                "bodyType: none, assertRules: ["
+                "{name: a, orderNo: 1, assertSource: status_code, comparator: gte, expectedValue: '400'}, "
+                "{name: b, orderNo: 2, assertSource: status_code, comparator: lt, expectedValue: '500'}]}\n"
+            ),
         ]
         calls = []
 
@@ -200,19 +221,35 @@ class ApiStageExecutionTests(ApiCaseExecutorTests):
         start = datetime.fromisoformat("2026-06-23T10:00:00+08:00")
         self.assertIsNone(executor.execute(task, start, events.append))
         self.assertEqual(events[-1].stage_status, "waiting_review")
-        self.assertEqual(calls[0]["stage"], "openapi_extract")
+        self.assertEqual(calls[0]["stage"], "interface_extract")
+        extracted_config = json.loads(events[-1].intermediate_json_text)
+        self.assertIn("apiExtraction", extracted_config)
+        self.assertNotIn("apiDesign", extracted_config)
+
+        task.current_stage = "api_design"
+        task.config_json = events[-1].intermediate_json_text
+        self.assertIsNone(executor.execute(task, start, events.append))
+        self.assertEqual(events[-1].stage_status, "waiting_review")
+        self.assertEqual(calls[1]["stage"], "api_design")
+        design_config = json.loads(events[-1].intermediate_json_text)
+        self.assertIn("apiExtraction", design_config)
+        self.assertIn("apiDesign", design_config)
+        self.assertIn("read_one", calls[1]["input_text"])
+
         task.current_stage = "generate"
         task.config_json = events[-1].intermediate_json_text
         result = executor.execute(task, start, events.append)
         self.assertEqual(result.status, TaskStatus.SUCCESS)
-        self.assertEqual(calls[1]["stage"], "generate")
-        self.assertIn("/login", calls[1]["input_text"])
+        self.assertEqual(calls[2]["stage"], "generate")
+        self.assertIn("/api/read_one", calls[2]["input_text"])
+        generated_config = json.loads(result.intermediate_json_text)
+        self.assertEqual(generated_config["apiDesign"], design_config["apiDesign"])
 
     def test_stage_revision_supplies_attachments_to_skill(self):
-        task = self._make_task()
+        task = make_api_case_task()
         task.checkpoint_enabled = True
-        task.current_stage = "openapi_extract"
-        task.payload.metadata["apiWorkflowVersion"] = "api_two_stage/1.0"
+        task.current_stage = "interface_extract"
+        task.payload.metadata["apiWorkflowVersion"] = "api_three_stage/1.0"
         task.config_json = json.dumps(
             {
                 "apiExtraction": {"login": {"path": "/login", "method": "POST"}},

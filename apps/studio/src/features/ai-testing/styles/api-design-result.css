@@ -1,0 +1,281 @@
+/* API 用例设计：接口分组、用例依据、参数变异与未覆盖清单。 */
+.api-design-visual-view {
+  min-height: 0;
+  color: var(--ai-text);
+}
+
+.api-design-visual-stats {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 0 12px;
+  background: var(--ai-popover-surface);
+}
+
+.api-design-visual-toggle-all {
+  margin-left: auto;
+  color: var(--ai-text-secondary);
+  font-size: 11px;
+}
+
+.api-design-visual-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 4px;
+}
+
+.api-design-visual-interface {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--app-review-outline);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, var(--app-glass-surface-92), var(--app-review-muted-bg)),
+    var(--ai-card);
+  box-shadow: 0 10px 24px var(--app-glass-request-shadow-selected);
+}
+
+.api-design-visual-interface-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--app-frame-divider-soft);
+  background: var(--app-picker-header-bg);
+}
+
+.api-design-visual-interface-head > div {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.api-design-visual-interface-head strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.api-design-visual-interface-head span {
+  overflow: hidden;
+  color: var(--ai-text-secondary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.api-design-visual-count {
+  flex: 0 1 auto;
+  max-width: 50%;
+  overflow: hidden;
+  color: var(--ai-text-secondary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.api-design-visual-cases {
+  display: flex;
+  flex-direction: column;
+}
+
+.api-design-visual-case {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--app-frame-divider-soft);
+}
+
+.api-design-visual-case:last-child {
+  border-bottom: 0;
+}
+
+.api-design-visual-case-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.api-design-visual-case-head:hover strong,
+.api-design-visual-case-head:focus-visible strong {
+  color: var(--ai-accent);
+}
+
+.api-design-visual-case-head:focus-visible {
+  outline: 2px solid var(--app-review-focus-ring);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.api-design-visual-case-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  color: var(--ai-text-secondary);
+  font-size: 10px;
+}
+
+.api-design-visual-case-head strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.api-design-visual-case-head > :last-child {
+  margin-left: auto;
+}
+
+.api-design-visual-case.is-collapsed .api-design-visual-intent {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.api-design-visual-case-body {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.api-design-visual-intent {
+  margin: 0;
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.api-design-visual-basis,
+.api-design-visual-assertions {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.api-design-visual-basis > span,
+.api-design-visual-assertions > span {
+  flex: 0 0 auto;
+  color: var(--ai-text-secondary);
+}
+
+.api-design-visual-basis code,
+.api-design-visual-assertions code,
+.api-design-visual-uncovered-row code {
+  padding: 1px 6px;
+  border: 1px solid var(--app-review-outline);
+  border-radius: 5px;
+  background: var(--app-glass-surface-68);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+.api-design-visual-patches {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--app-review-outline);
+  border-radius: 7px;
+  background: var(--app-glass-surface-68);
+  list-style: none;
+}
+
+.api-design-visual-patches li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.api-design-visual-patches li .ant-tag {
+  margin-inline-end: 0;
+}
+
+.api-design-visual-patch-value {
+  color: var(--ai-text-secondary);
+}
+
+.api-design-visual-patch-empty,
+.api-design-visual-assertions.is-empty em {
+  color: var(--ai-text-secondary);
+  font-size: 11px;
+  font-style: normal;
+}
+
+.api-design-visual-uncovered {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-top: 1px dashed var(--app-review-outline);
+  background: var(--app-glass-surface-68);
+}
+
+.api-design-visual-uncovered > strong {
+  color: var(--ai-text-secondary);
+  font-size: 11px;
+}
+
+.api-design-visual-uncovered-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.api-design-visual-uncovered-row em {
+  color: var(--ai-text-secondary);
+  font-style: normal;
+}
+
+.api-design-visual-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 240px;
+  padding: 24px;
+}
+
+.api-design-visual-state-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.api-design-visual-state-copy strong {
+  color: var(--ai-text);
+  font-size: 13px;
+}
+
+.api-design-visual-state-copy span {
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+}

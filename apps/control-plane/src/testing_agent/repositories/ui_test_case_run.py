@@ -63,17 +63,6 @@ class UiTestCaseRunRepository(BaseRepository):
             select(UiTestSuiteRun).where(UiTestSuiteRun.suite_run_id == suite_run_id)
         )
 
-    async def list_suite_runs(self, suite_id: str) -> list[UiTestSuiteRun]:
-        return list(
-            (
-                await self.session.scalars(
-                    select(UiTestSuiteRun)
-                    .where(UiTestSuiteRun.suite_id == suite_id)
-                    .order_by(UiTestSuiteRun.created_at.desc(), UiTestSuiteRun.id.desc())
-                )
-            ).all()
-        )
-
     async def page_suite_runs(
         self, suite_id: str, page: int, page_size: int
     ) -> tuple[list[UiTestSuiteRun], int]:

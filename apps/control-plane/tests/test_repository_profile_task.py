@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import json
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
 
 import pytest
 from support.requirement_versions import material_artifact
 
 from testing_agent.core.errors import AppError
+from testing_agent.repositories.requirement_software_repository import (
+    RequirementRepositoryBinding,
+)
 from testing_agent.services.repository_profile import (
     RepositoryProfileService,
     parse_repository_profile,
@@ -43,19 +45,28 @@ def make_requirement() -> SimpleNamespace:
 def make_binding(
     binding_id: str,
     repository_id: str,
-    group_id: str,
     *,
     branch: str = "develop",
     path: str = "",
-) -> SimpleNamespace:
-    return SimpleNamespace(
-        binding_id=binding_id,
-        instance_url="https://gitlab.example.com",
-        instance_key="gitlab-example",
-        remote_resource_id=repository_id,
-        remote_parent_id=group_id,
-        remote_name_snapshot=path or f"team/{repository_id}",
-        extra_json={"branch": branch},
+    instance_url: str = "https://gitlab.example.com",
+) -> RequirementRepositoryBinding:
+    return RequirementRepositoryBinding(
+        association=SimpleNamespace(
+            requirement_id="req-1",
+            software_repository_id=binding_id,
+            branch=branch,
+            baseline_branch="main",
+        ),
+        software_repository=SimpleNamespace(
+            software_repository_id=binding_id,
+            name=f"仓库 {repository_id}",
+            repository_project_id=repository_id,
+            repository_group_id="",
+            repository_instance_key="gitlab-example",
+            repository_instance_url=instance_url,
+            repository_path=path or f"team/{repository_id}",
+            repository_name=repository_id,
+        ),
     )
 
 
@@ -75,7 +86,7 @@ def understanding_version() -> SimpleNamespace:
         version_no=1,
         task_id="understanding-task",
         attempt_id="understanding-attempt",
-        stage="feature_understanding",
+        stage="extracting_text",
         artifact_content=json.dumps(material_artifact(), ensure_ascii=False),
     )
 
@@ -94,16 +105,12 @@ class FakeTaskRepository:
         return self.requirement
 
 
-class FakeBindingRepository:
-    def __init__(self, bindings: list, groups: dict[str, object] | None = None):
+class FakeRequirementRepository:
+    def __init__(self, bindings: list):
         self.bindings = bindings
-        self.groups = groups or {}
 
-    async def list_active_repo_bindings_for_requirement(self, requirement_id: str):
+    async def list_for_requirement_with_repository(self, requirement_id: str):
         return self.bindings
-
-    async def get_active_project_group_binding(self, provider, project_id, group_id, instance=""):
-        return self.groups.get(group_id)
 
 
 class FakeIntegrationConnectionService:
@@ -137,7 +144,6 @@ class FakeIntegrationConnectionService:
 def make_service(
     *,
     bindings: list | None = None,
-    groups: dict[str, object] | None = None,
     connections: list | None = None,
     project_error: str = "",
     requirement: SimpleNamespace | None = None,
@@ -145,7 +151,7 @@ def make_service(
     integration = FakeIntegrationConnectionService(connections or [], project_error=project_error)
     service = RepositoryProfileService(
         FakeTaskRepository(requirement),
-        FakeBindingRepository(bindings or [], groups),
+        FakeRequirementRepository(bindings or []),
         integration,
         FakeCipher(),
     )
@@ -170,8 +176,7 @@ def approved_version(monkeypatch):
 @pytest.mark.asyncio
 async def test_snapshot_freezes_understanding_and_working_branch_head():
     service, integration = make_service(
-        bindings=[make_binding("binding-1", "repo-1", "group-1")],
-        groups={"group-1": SimpleNamespace(connection_id="conn-1")},
+        bindings=[make_binding("binding-1", "repo-1")],
         connections=[make_connection("conn-1")],
     )
 
@@ -207,8 +212,7 @@ async def test_snapshot_freezes_understanding_and_working_branch_head():
 async def test_explicit_understanding_version_is_forwarded(approved_version):
     _, requested = approved_version
     service, _ = make_service(
-        bindings=[make_binding("binding-1", "repo-1", "group-1")],
-        groups={"group-1": SimpleNamespace(connection_id="conn-1")},
+        bindings=[make_binding("binding-1", "repo-1")],
         connections=[make_connection("conn-1")],
     )
 
@@ -230,7 +234,7 @@ async def test_no_binding_rejects_run():
     with pytest.raises(AppError) as error:
         await service.build_snapshot(make_task(), "run-1", "worker-task-1", user_id="user-1")
 
-    assert "尚未绑定代码仓库" in str(error.value)
+    assert "尚未关联软件仓库" in str(error.value)
 
 
 @pytest.mark.asyncio
@@ -242,8 +246,7 @@ async def test_missing_approved_understanding_rejects_run(monkeypatch):
 
     monkeypatch.setattr(module, "approved_material", missing)
     service, _ = make_service(
-        bindings=[make_binding("binding-1", "repo-1", "group-1")],
-        groups={"group-1": SimpleNamespace(connection_id="conn-1")},
+        bindings=[make_binding("binding-1", "repo-1")],
         connections=[make_connection("conn-1")],
     )
 
@@ -257,10 +260,9 @@ async def test_missing_approved_understanding_rejects_run(monkeypatch):
 async def test_one_unreadable_repository_does_not_fail_the_others():
     service, _ = make_service(
         bindings=[
-            make_binding("binding-1", "repo-1", "group-missing"),
-            make_binding("binding-2", "repo-2", "group-1"),
+            make_binding("binding-1", "repo-1", instance_url="https://missing.example.com"),
+            make_binding("binding-2", "repo-2"),
         ],
-        groups={"group-1": SimpleNamespace(connection_id="conn-1")},
         connections=[make_connection("conn-1")],
     )
 
@@ -279,14 +281,13 @@ async def test_one_unreadable_repository_does_not_fail_the_others():
 @pytest.mark.asyncio
 async def test_missing_work_branch_marks_binding_unavailable():
     service, _ = make_service(
-        bindings=[make_binding("binding-1", "repo-1", "group-1", branch="")],
-        groups={"group-1": SimpleNamespace(connection_id="conn-1")},
+        bindings=[make_binding("binding-1", "repo-1", branch="")],
         connections=[make_connection("conn-1")],
     )
 
     snapshot = await service.build_snapshot(make_task(), "run-1", "worker-task-1", user_id="user-1")
 
-    assert snapshot["bindings"][0]["profileError"] == "仓库绑定缺少工作分支"
+    assert snapshot["bindings"][0]["profileError"] == "软件仓库关联缺少工作分支"
 
 
 def test_parse_repository_profile_accepts_exact_contract_and_rejects_extras():
@@ -311,43 +312,3 @@ def test_parse_repository_profile_accepts_exact_contract_and_rejects_extras():
     with_extra = {**valid, "analyzedAt": "now"}
     assert parse_repository_profile(json.dumps(with_extra)) is None
     assert parse_repository_profile("{not json") is None
-
-
-@pytest.mark.asyncio
-async def test_credentials_payload_groups_only_resolved_profile_bindings():
-    from testing_agent.services.code_risk_analysis import gitlab_credentials_payload
-
-    connections = [
-        SimpleNamespace(
-            connection_id="conn-1",
-            provider="gitlab",
-            project_id="project-1",
-            user_id="user-1",
-            status="active",
-            base_url="https://gitlab.example.com",
-            access_token="enc:token",
-        )
-    ]
-    session = SimpleNamespace()
-    session.scalar = AsyncMock(return_value=connections[0])
-
-    payload = await gitlab_credentials_payload(
-        session,
-        "task-1",
-        "project-1",
-        [
-            {"repositoryId": "repo-1", "connectionId": "conn-1"},
-            {"repositoryId": "repo-2", "connectionId": "", "profileError": "无权限"},
-        ],
-        FakeCipher(),
-        user_id="user-1",
-    )
-
-    assert payload["credentials"] == [
-        {
-            "connectionId": "conn-1",
-            "baseUrl": "https://gitlab.example.com",
-            "accessToken": "token",
-            "repositoryIds": ["repo-1"],
-        }
-    ]

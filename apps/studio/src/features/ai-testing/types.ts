@@ -3,9 +3,10 @@ import type { ListResponse } from '@/shared/api/request'
 export type RunHistoryResponse<T> = ListResponse<T> & { statusCounts?: Record<string, number>; reviewPendingCount?: number; latestRun?: T }
 export type AiTaskListResponse<T> = ListResponse<T> & { statusCounts?: Record<string, number> }
 
-export type ApiCaseGenerateTaskSourceType = 'openapi' | 'swagger'
+export type ApiCaseGenerateTaskSourceType = 'interface_library'
 export type UiCaseGenerateTaskSourceType = 'repository'
-export type FunctionalCaseGenerateTaskSourceType = 'text' | 'docx'
+export type FunctionalCaseGenerateTaskSourceType = 'requirement' | string
+export type FunctionalCaseGenerateTaskSourceFormat = 'requirement_understanding_json' | string
 export type RequirementAnalysisTaskSourceType = 'text' | 'word' | 'docx' | string
 export type ApiCaseGenerateTaskRunStatus =
   | 'draft'
@@ -37,13 +38,8 @@ export type GenerateTaskRunImportLifecycle = {
 }
 
 export type ApiCaseGenerateTaskRunReviewStatus = GenerateTaskRunReviewStatus
-export type ApiCaseGenerateTaskRunImportStatus = GenerateTaskRunImportStatus
-export type ApiCaseGenerateTaskRunImportedTarget = ImportedTarget
 
 export type CaseGenerateTaskRunStatus = ApiCaseGenerateTaskRunStatus
-export type CaseGenerateTaskRunReviewStatus = ApiCaseGenerateTaskRunReviewStatus
-export type CaseGenerateTaskRunImportStatus = ApiCaseGenerateTaskRunImportStatus
-export type CaseGenerateTaskRunImportedTarget = ApiCaseGenerateTaskRunImportedTarget
 
 export type AiSkillLibraryItem = {
   skillSpaceId: string
@@ -94,8 +90,9 @@ export type ApiCaseGenerateTask = {
   sprintId?: string
   requirementId?: string
   creatorUserId?: string
-  sourceType: ApiCaseGenerateTaskSourceType
-  sourceContent: string
+  sourceType?: ApiCaseGenerateTaskSourceType
+  interfaceIds: string[]
+  interfaceCount?: number
   instruction: string
   createdAt?: string
   updatedAt?: string
@@ -162,8 +159,25 @@ export type ApiCaseGenerateTaskRunSnapshot = {
   projectId?: string
   requirementId?: string
   runId?: string
-  sourceContent?: string
   sourceType?: ApiCaseGenerateTaskSourceType | string
+  interfaceIds?: string[]
+  interfaces?: Array<{
+    interfaceId?: string
+    softwareRepositoryId?: string
+    softwareRepositoryName?: string
+    name?: string
+    method?: string
+    path?: string
+    fullPath?: string
+    [key: string]: unknown
+  }>
+  softwareRepositories?: Array<{
+    softwareRepositoryId?: string
+    name?: string
+    basePath?: string
+    [key: string]: unknown
+  }>
+  requirement?: Record<string, unknown>
   sprintId?: string
   taskId?: string
   taskType?: string
@@ -200,8 +214,7 @@ export type CreateApiCaseGenerateTaskPayload = {
   name: string
   sprintId: string
   requirementId: string
-  sourceType: ApiCaseGenerateTaskSourceType
-  sourceContent: string
+  interfaceIds: string[]
   instruction: string
 }
 
@@ -231,18 +244,6 @@ export type ReviewUiCaseGenerateTaskRunPayload =
 export type ImportUiCaseGenerateTaskRunPayload = {
   suiteId: string
   confirmOverwrite: boolean
-}
-
-export type UiCaseGenerateTaskRunImportStep = {
-  orderNo?: unknown
-  stepName?: unknown
-  keyword?: unknown
-  locatorType?: unknown
-  locatorValue?: unknown
-  operationValue?: unknown
-  continueOnFailure?: unknown
-  enabled?: unknown
-  [key: string]: unknown
 }
 
 export type UiCaseGenerateTaskRunImportCase = {
@@ -361,6 +362,8 @@ export type FunctionalCaseGenerateTaskRunSnapshot = {
   requirementId?: string
   runId?: string
   sourceContent?: string
+  sourceFormat?: FunctionalCaseGenerateTaskSourceFormat | string
+  sourceFormatVersion?: string
   sourceType?: FunctionalCaseGenerateTaskSourceType | string
   sprintId?: string
   taskId?: string

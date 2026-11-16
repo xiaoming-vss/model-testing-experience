@@ -153,7 +153,7 @@ async def apply_standalone_progress(
     final = final_review_stage(task.task_type, names)
     reported = body.current_stage or stage.stage
     legacy_api = task.task_type == "api_case_generate" and names == ["generate"]
-    if legacy_api and reported in {"openapi_extract", "api_case_generating"}:
+    if legacy_api and reported in {"interface_extract", "api_case_generating"}:
         reported = "generate"
     if (
         not execution.checkpoint_enabled

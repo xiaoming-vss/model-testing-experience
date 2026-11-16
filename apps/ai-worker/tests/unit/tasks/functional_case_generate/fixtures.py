@@ -21,22 +21,6 @@ def case(title="验证登录", module="登录"):
     }
 
 
-def points():
-    return {
-        "categories": [
-            {
-                "model": "登录",
-                "data": [
-                    {
-                        "test_model": "功能场景",
-                        "test_points": [{"case_name": "验证登录"}],
-                    }
-                ],
-            }
-        ]
-    }
-
-
 def material():
     return {
         "artifactType": "readable_requirement_material",

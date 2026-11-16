@@ -84,6 +84,7 @@ export function UiRunConsoleCard({ run, refreshing, onRefresh, canStop }: Props)
           <RunWaitingReason status={run?.status} />
         </div>
         <div className="ui-wb-card-head-side">
+          <ActionButton operation="refresh" type="text" size="small" className="ui-wb-console-action" loading={refreshing} disabled={!run} onClick={onRefresh}>刷新</ActionButton>
           {canStop ? <StopRunButton kind="ui-case" runId={run?.runId ?? run?.uiTestCaseRunId} status={run?.status} /> : null}
           <span className="ui-wb-console-meta">
             {run ? `运行 ID ${run.runId ?? run.uiTestCaseRunId ?? '-'}` : '暂无运行记录'}
@@ -104,7 +105,6 @@ export function UiRunConsoleCard({ run, refreshing, onRefresh, canStop }: Props)
           <Tooltip title="复制控制台内容">
             <Button type="text" size="small" className="ui-wb-console-action" icon={<CopyOutlined />} disabled={logLines.length === 0} onClick={handleCopy} />
           </Tooltip>
-          <ActionButton operation="refresh" type="text" size="small" className="ui-wb-console-action" loading={refreshing} disabled={!run} onClick={onRefresh}>刷新</ActionButton>
         </div>
       </header>
 

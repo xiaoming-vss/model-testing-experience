@@ -2,15 +2,51 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any
+from uuid import uuid4
 
 
-def make_app(api, headers, project_id, name="支付网关", **overrides):
-    body = {"name": name, **overrides}
-    response = api.post(f"/v1/projects/{project_id}/api-apps", headers=headers, json=body)
-    assert response.status_code == 200, response.text
-    return response.json()["data"]["appId"]
+def make_software_repository(
+    api,
+    headers,
+    project_id,
+    name="支付网关",
+    *,
+    base_path="",
+    description="",
+    software_repository_id=None,
+):
+    """Seed a software repository directly; interface tests do not exercise GitLab lookup."""
+
+    from testing_agent.models.software_repository import SoftwareRepository
+
+    repository_id = software_repository_id or f"software-repository-{uuid4().hex[:12]}"
+
+    async def seed():
+        async with api.app.state.test_sessions() as session:
+            session.add(
+                SoftwareRepository(
+                    software_repository_id=repository_id,
+                    project_id=project_id,
+                    name=name,
+                    description=description,
+                    base_path=base_path,
+                    repository_project_id=f"gitlab-project-{repository_id}",
+                    repository_group_id="group-1",
+                    repository_instance_key="",
+                    repository_path=f"commerce/{name}",
+                    repository_name=name,
+                    repository_instance_url="https://gitlab.example.com",
+                    version=1,
+                    created_by_user_id="test-owner",
+                )
+            )
+            await session.commit()
+
+    asyncio.run(seed())
+    return repository_id
 
 
 def interface_body(**overrides) -> dict[str, Any]:
@@ -40,16 +76,15 @@ def interface_body(**overrides) -> dict[str, Any]:
         "responseDescription": "成功",
         "responseSchema": {"type": "object"},
         "responseExample": {"orderId": "1"},
-        "enabled": True,
         "requirementIds": [],
     }
     body.update(overrides)
     return body
 
 
-def make_interface(api, headers, app_id, **overrides):
+def make_interface(api, headers, software_repository_id, **overrides):
     response = api.post(
-        f"/v1/api-apps/{app_id}/interfaces",
+        f"/v1/software-repositories/{software_repository_id}/interfaces",
         headers=headers,
         json=interface_body(**overrides),
     )
@@ -103,9 +138,9 @@ def openapi_document(**overrides) -> dict[str, Any]:
     return document
 
 
-def upload_preview(api, headers, app_id, document, filename="openapi.json"):
+def upload_preview(api, headers, software_repository_id, document, filename="openapi.json"):
     response = api.post(
-        f"/v1/api-apps/{app_id}/interfaces/import/preview",
+        f"/v1/software-repositories/{software_repository_id}/interfaces/import/preview",
         headers=headers,
         files={"file": (filename, json.dumps(document).encode(), "application/json")},
     )
@@ -116,14 +151,14 @@ def upload_preview(api, headers, app_id, document, filename="openapi.json"):
 def upload_commit(
     api,
     headers,
-    app_id,
+    software_repository_id,
     document,
     *,
     digest,
     selected_keys,
     expected_items=None,
     apply_base_path=False,
-    expected_app_version=None,
+    expected_software_repository_version=None,
     filename="openapi.json",
 ):
     data = {
@@ -132,10 +167,10 @@ def upload_commit(
         "expectedItems": json.dumps(expected_items or {}),
         "applyBasePath": "true" if apply_base_path else "false",
     }
-    if expected_app_version is not None:
-        data["expectedAppVersion"] = str(expected_app_version)
+    if expected_software_repository_version is not None:
+        data["expectedSoftwareRepositoryVersion"] = str(expected_software_repository_version)
     response = api.post(
-        f"/v1/api-apps/{app_id}/interfaces/import",
+        f"/v1/software-repositories/{software_repository_id}/interfaces/import",
         headers=headers,
         data=data,
         files={"file": (filename, json.dumps(document).encode(), "application/json")},

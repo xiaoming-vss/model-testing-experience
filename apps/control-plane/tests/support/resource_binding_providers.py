@@ -20,7 +20,7 @@ def _request(**overrides: object) -> dict[str, object]:
 class RecordingZentaoClient:
     session = AuthorizationDatabase()
 
-    """gitlab 路径不得触碰禅道客户端;一旦被调用即留下记录。"""
+    """GitLab 绑定在分发前被拒绝,不得触碰禅道客户端。"""
 
     def __init__(self) -> None:
         self.calls: list[tuple] = []
@@ -34,9 +34,6 @@ class RecordingZentaoClient:
 
 
 class RecordingConnectionService:
-    async def resolve_gitlab_group_id(self, connection_id, project_id, group_id, *, user_id):
-        return group_id
-
     def __init__(self) -> None:
         self.calls: list[tuple] = []
 
@@ -89,23 +86,6 @@ class FakeRepository:
         )
 
     async def exists_active_by_remote_resource(self, *args, **kwargs):
-        return False
-
-    async def get_active_project_group_binding(
-        self, provider, project_id, group_id, *, for_update=False
-    ):
-        return next(
-            (
-                r
-                for r in self.rows
-                if r.remote_resource_type == "group" and r.remote_resource_id == group_id
-            ),
-            None,
-        )
-
-    async def exists_active_project_group_binding(
-        self, provider, project_id, group_id, instance=""
-    ):
         return False
 
     def add(self, binding) -> None:

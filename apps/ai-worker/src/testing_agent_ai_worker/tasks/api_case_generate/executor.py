@@ -15,14 +15,26 @@ from testing_agent_ai_worker.config.models import AgentBackendConfig
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
 from testing_agent_ai_worker.platform.revision_attachments import parse_revision_attachments
+from testing_agent_ai_worker.skill_names import API_EXTRACT_SKILL, API_GENERATE_SKILL
 from testing_agent_ai_worker.tasks.api_case_generate.chain import (
     ChainRunResult,
     run_api_stage,
     run_chain,
 )
 from testing_agent_ai_worker.tasks.api_case_generate.contracts import (
+    API_WORKFLOW_VERSION,
+    parse_extraction,
     validate_cases,
     validate_extraction,
+    validate_extraction_object,
+)
+from testing_agent_ai_worker.tasks.api_case_generate.design_contract import (
+    parse_design_json,
+    validate_design_json,
+    validate_design_object,
+)
+from testing_agent_ai_worker.tasks.api_case_generate.generation_contract import (
+    validate_generated_cases_json,
 )
 from testing_agent_ai_worker.tasks.result_summary import build_task_result_summary
 from testing_agent_ai_worker.worker.runner import TaskExecutor
@@ -68,15 +80,15 @@ class ApiCaseExecutor(TaskExecutor):
             )
 
         workspace = resolve_task_workspace(self.agent_config, task)
-        if task.payload.metadata.get("apiWorkflowVersion") == "api_two_stage/1.0":
+        if task.payload.metadata.get("apiWorkflowVersion") == API_WORKFLOW_VERSION:
             return self._execute_stage(task, started_at, progress_callback, workspace)
 
         with task_config_path(agent_config=self.agent_config, task=task) as config_path:
             result = self.chain_runner(
-                openapi_text=task.payload.openapi_content,
+                source_text=self._source_text(task),
                 session_key=task.session_key,
-                extractor_skill_name="openapi-test-config-extractor",
-                generator_skill_name="api-cases-yaml-generator",
+                extractor_skill_name=API_EXTRACT_SKILL,
+                generator_skill_name=API_GENERATE_SKILL,
                 config_path=config_path,
                 workspace=str(workspace),
                 extra_instruction=self._build_api_instruction(task),
@@ -119,35 +131,82 @@ class ApiCaseExecutor(TaskExecutor):
             finished_at=datetime.now().astimezone(),
         )
 
+    def _source_text(self, task: Task) -> str:
+        """Build the extractor input from selected interfaces or the legacy OpenAPI body."""
+        if task.payload.interfaces:
+            return json.dumps(
+                {
+                    "softwareRepositories": task.payload.software_repositories,
+                    "interfaces": task.payload.interfaces,
+                    "requirement": {
+                        "requirementId": task.requirement_id,
+                        "name": task.name,
+                        "instruction": task.payload.extra_instruction,
+                    },
+                },
+                ensure_ascii=False,
+            )
+        return task.payload.openapi_content
+
     def _execute_stage(self, task: Task, started_at: datetime, progress_callback, workspace):
-        if not task.checkpoint_enabled or task.current_stage not in {"openapi_extract", "generate"}:
-            raise ValueError("API 两阶段生成需要有效阶段及人工审核")
+        if not task.checkpoint_enabled or task.current_stage not in {
+            "interface_extract",
+            "api_design",
+            "generate",
+        }:
+            raise ValueError("API 三阶段生成需要有效阶段及人工审核")
         config = json.loads(task.config_json or "{}")
         if not isinstance(config, dict):
             raise ValueError("configJson 必须是对象")
         stage = task.current_stage
-        if stage == "openapi_extract":
-            source = task.payload.openapi_content
-        else:
-            extracted = config.get("apiExtraction")
-            if extracted is None:
-                raise ValueError("缺少已审核的接口配置")
-            source = (
-                extracted
-                if isinstance(extracted, str)
-                else json.dumps(extracted, ensure_ascii=False)
-            )
-            validate_extraction(source)
-        instruction = self._build_api_instruction(task)
         revision = str(config.get("revisionInstruction") or "").strip()
-        if revision:
-            current = config.get("apiExtraction" if stage == "openapi_extract" else "resultYaml")
-            if current is None:
-                raise ValueError("继续优化缺少当前阶段产物")
-            current_text = (
-                current if isinstance(current, str) else json.dumps(current, ensure_ascii=False)
+        instruction = self._build_api_instruction(task)
+        extraction = None
+        design = None
+        if stage == "interface_extract":
+            source = self._source_text(task)
+            if revision:
+                current = config.get("apiExtraction")
+                if current is None:
+                    raise ValueError("继续优化缺少当前阶段产物")
+                current_text = (
+                    current if isinstance(current, str) else json.dumps(current, ensure_ascii=False)
+                )
+                instruction += f"\n当前阶段产物：\n{current_text}\n优化要求：\n{revision}"
+        elif stage == "api_design":
+            extraction = self._extraction(config)
+            source = json.dumps(
+                {
+                    "apiExtraction": extraction,
+                    "requirement": self._requirement_context(task, instruction),
+                },
+                ensure_ascii=False,
             )
-            instruction += f"\n当前阶段产物：\n{current_text}\n优化要求：\n{revision}"
+            if revision:
+                current = config.get("apiDesign")
+                if current is None:
+                    raise ValueError("继续优化缺少当前阶段产物")
+                current_design = parse_design_json(
+                    current if isinstance(current, str) else json.dumps(current, ensure_ascii=False)
+                )
+                payload = json.loads(source)
+                payload["currentDesign"] = current_design
+                payload["revisionInstruction"] = revision
+                source = json.dumps(payload, ensure_ascii=False)
+        else:
+            extraction = self._extraction(config)
+            design = self._design(config, extraction)
+            payload = {
+                "apiExtraction": extraction,
+                "apiDesign": design,
+                "requirement": self._requirement_context(task, instruction),
+            }
+            if revision:
+                payload["currentYaml"] = str(
+                    config.get("resultYaml") or config.get("currentOutput") or ""
+                )
+                payload["revisionInstruction"] = revision
+            source = json.dumps(payload, ensure_ascii=False)
         media = []
         attachments = parse_revision_attachments(config) if revision else []
         if attachments:
@@ -179,7 +238,7 @@ class ApiCaseExecutor(TaskExecutor):
                     ),
                 )
             )
-        if stage == "openapi_extract":
+        if stage == "interface_extract":
             validate_extraction(output)
             progress_callback(
                 TaskProgress(
@@ -193,13 +252,32 @@ class ApiCaseExecutor(TaskExecutor):
                 )
             )
             return None
-        validate_cases(output)
+        assert extraction is not None
+        if stage == "api_design":
+            design = validate_design_json(output, extraction)
+            progress_callback(
+                TaskProgress(
+                    task_id=task.task_id,
+                    attempt_id=task.attempt_id,
+                    current_stage=stage,
+                    stage_status="waiting_review",
+                    intermediate_json_text=json.dumps(
+                        {"apiExtraction": extraction, "apiDesign": design},
+                        ensure_ascii=False,
+                    ),
+                )
+            )
+            return None
+        assert design is not None
+        validate_generated_cases_json(output, extraction, design)
         return TaskResult(
             task_id=task.task_id,
             attempt_id=task.attempt_id,
             generate_task_id=task.generate_task_id,
             status=TaskStatus.SUCCESS,
-            intermediate_json_text=json.dumps({"apiExtraction": extracted}, ensure_ascii=False),
+            intermediate_json_text=json.dumps(
+                {"apiExtraction": extraction, "apiDesign": design}, ensure_ascii=False
+            ),
             output_yaml=output,
             result_summary_json=self._build_result_summary_json(
                 task, TaskStatus.SUCCESS, source, output, None
@@ -208,12 +286,38 @@ class ApiCaseExecutor(TaskExecutor):
             finished_at=datetime.now().astimezone(),
         )
 
+    @staticmethod
+    def _extraction(config: dict) -> dict:
+        value = config.get("apiExtraction")
+        if value is None:
+            raise ValueError("缺少已审核的接口配置")
+        if isinstance(value, str):
+            value = parse_extraction(value)
+        return validate_extraction_object(value)
+
+    @staticmethod
+    def _design(config: dict, extraction: dict) -> dict:
+        value = config.get("apiDesign")
+        if value is None:
+            raise ValueError("缺少已审核的接口用例设计")
+        if isinstance(value, str):
+            value = parse_design_json(value)
+        return validate_design_object(value, extraction)
+
+    @staticmethod
+    def _requirement_context(task: Task, instruction: str) -> dict:
+        return {
+            "requirementId": task.requirement_id,
+            "name": task.name,
+            "instruction": instruction,
+        }
+
     def _build_progress(self, task: Task, extractor_output: str) -> TaskProgress:
         validate_extraction(extractor_output)
         return TaskProgress(
             task_id=task.task_id,
             attempt_id=task.attempt_id,
-            current_stage="openapi_extract",
+            current_stage="interface_extract",
             stage_status="running",
             intermediate_json_text=extractor_output,
             result_summary_json=self._build_result_summary_json(

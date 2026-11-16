@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.mysql import JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,11 +14,23 @@ class ApiInterface(Base):
     if TYPE_CHECKING:
         # 列表与详情响应附带的需求引用；由 repository 批量装配，不对应表字段。
         requirements: list[dict[str, str]]
+        # 列表响应附带的软件仓库名称；由 repository 批量装配。
+        software_repository_name: str
 
     __tablename__ = "api_interfaces"
     __table_args__ = (
-        UniqueConstraint("app_id", "method", "path_key", name="uk_api_interface_app_method_path"),
-        Index("idx_api_interface_app_updated", "app_id", "updated_at", "id"),
+        UniqueConstraint(
+            "software_repository_id",
+            "method",
+            "path_key",
+            name="uk_api_interface_repository_method_path",
+        ),
+        Index(
+            "idx_api_interface_repository_updated",
+            "software_repository_id",
+            "updated_at",
+            "id",
+        ),
         Index("idx_api_interface_updated", "updated_at", "id"),
         Index("idx_api_interface_method", "method"),
         {"comment": "项目接口定义及请求、响应结构"},
@@ -27,18 +39,22 @@ class ApiInterface(Base):
     interface_id: Mapped[str] = mapped_column(
         String(64), unique=True, nullable=False, comment="接口定义业务标识"
     )
-    app_id: Mapped[str] = mapped_column(
+    software_repository_id: Mapped[str] = mapped_column(
         String(64),
-        ForeignKey("api_apps.app_id", name="fk_api_interfaces_app", ondelete="RESTRICT"),
+        ForeignKey(
+            "software_repositories.software_repository_id",
+            name="fk_api_interfaces_software_repository",
+            ondelete="RESTRICT",
+        ),
         nullable=False,
-        comment="所属接口应用业务标识",
+        comment="所属软件仓库业务标识",
     )
     name: Mapped[str] = mapped_column(
-        String(120), nullable=False, comment="接口名称，同一应用内不要求唯一"
+        String(120), nullable=False, comment="接口名称，同一软件仓库内不要求唯一"
     )
     method: Mapped[str] = mapped_column(String(10), nullable=False, comment="规范化大写 HTTP 方法")
     path: Mapped[str] = mapped_column(
-        String(1024), nullable=False, comment="规范化相对路径，不包含应用 base path"
+        String(1024), nullable=False, comment="规范化相对路径，不包含软件仓库 base path"
     )
     path_key: Mapped[str] = mapped_column(
         String(64),
@@ -84,8 +100,15 @@ class ApiInterface(Base):
     response_example_json: Mapped[Any | None] = mapped_column(
         JSON, nullable=True, comment="响应示例 JSON 值；无示例时为空"
     )
-    enabled: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True, comment="接口是否启用；与应用状态独立"
+    security_json: Mapped[Any | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="接口级 OpenAPI/Swagger security 要求；无认证要求时为空",
+    )
+    security_schemes_json: Mapped[Any | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="来源文档的 securitySchemes/securityDefinitions 快照",
     )
     version: Mapped[int] = mapped_column(
         Integer,

@@ -1,5 +1,3 @@
-import json
-from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -461,8 +459,10 @@ async def test_ai_worker_snapshot_returns_go_style_run_payload():
             "projectId": "project-1",
             "sprintId": "sprint-1",
             "requirementId": "requirement-1",
-            "sourceType": "text",
-            "sourceContent": "requirement doc",
+            "sourceType": "requirement",
+            "sourceFormat": "requirement_understanding_json",
+            "sourceFormatVersion": "0.2",
+            "sourceContent": '{"artifactType":"readable_requirement_material"}',
             "instruction": "cover edge cases",
         },
     )
@@ -482,16 +482,17 @@ async def test_ai_worker_snapshot_returns_go_style_run_payload():
             "projectId": "project-1",
             "sprintId": "sprint-1",
             "requirementId": "requirement-1",
-            "sourceType": "text",
-            "sourceContent": "requirement doc",
-            "documentDownloadUrl": ("/internal/ai-worker/tasks/worker-task-1/requirement-document"),
+            "sourceType": "requirement",
+            "sourceFormat": "requirement_understanding_json",
+            "sourceFormatVersion": "0.2",
+            "sourceContent": '{"artifactType":"readable_requirement_material"}',
             "instruction": "cover edge cases",
         },
     }
 
 
 @pytest.mark.asyncio
-async def test_functional_case_worker_snapshot_exposes_requirement_document_url():
+async def test_functional_case_worker_snapshot_does_not_expose_requirement_document_url():
     task = SimpleNamespace(
         task_id="worker-task-1",
         task_type="functional_case_generate",
@@ -508,20 +509,17 @@ async def test_functional_case_worker_snapshot_exposes_requirement_document_url(
             "taskId": "generate-task-1",
             "runId": "run-1",
             "taskType": "functional_case_generate",
-            "documentType": "docx",
-            "documentDownloadUrl": "/v1/requirements/requirement-1/download",
-            "sourceContent": "",
+            "sourceType": "requirement",
+            "sourceFormat": "requirement_understanding_json",
+            "sourceFormatVersion": "0.2",
+            "sourceContent": '{"artifactType":"readable_requirement_material"}',
         },
     )
 
     payload = direct_stage_snapshot(run, task, "requirement_analysis")
 
-    assert payload["run"]["documentDownloadUrl"] == (
-        "/internal/ai-worker/tasks/worker-task-1/requirement-document"
-    )
-    assert payload["run"]["sourceContent"] == (
-        "/internal/ai-worker/tasks/worker-task-1/requirement-document"
-    )
+    assert "documentDownloadUrl" not in payload["run"]
+    assert payload["run"]["sourceContent"] == ('{"artifactType":"readable_requirement_material"}')
 
 
 @pytest.mark.asyncio
@@ -635,123 +633,11 @@ async def test_legacy_checkpoint_progress_is_rejected(
     assert run.status == "running"
 
 
-@pytest.mark.asyncio
-async def test_ai_worker_claim_rejects_legacy_requirement_queue():
-    extraction = json.loads(
-        (
-            Path(__file__).parent
-            / "fixtures/requirement_artifacts/document-extraction.example.json"
-        ).read_text()
-    )
-    task = SimpleNamespace(
-        domain="ai",
-        task_id="worker-task-1",
-        task_type="requirement_analysis",
-        worker_id="",
-        status="pending",
-        run_id="run-1",
-        generate_task_id="task-1",
-        llm_connection_id="connection-1",
-        heartbeat_at=None,
-        lease_expires_at=None,
-    )
-    run = SimpleNamespace(
-        run_id="run-1",
-        project_id="project-1",
-        sprint_id="sprint-1",
-        requirement_id="requirement-1",
-        checkpoint_enabled=True,
-        current_stage="feature_understanding",
-        stage_status="pending",
-        status="pending",
-        config_json={"firstStepOutput": extraction},
-    )
-
-    class FakeRepository(FakeWorkerRepository):
-        async def claim_pending(self, domain: str):
-            assert domain == "ai"
-            return task
-
-        async def get_ai_run(self, run_id: str):
-            assert run_id == "run-1"
-            return run
-
-    service = WorkerTaskService(FakeRepository(task))
-
-    with pytest.raises(AppError, match="AI 队列未关联有效的阶段尝试"):
-        await service.claim("ai", WorkerClaimRequest(workerId="worker-1"))
-    assert task.status == "pending"
-    assert run.status == "pending"
-
-
-@pytest.mark.asyncio
-async def test_legacy_extraction_progress_is_rejected(
-    monkeypatch,
-):
-    extraction = json.loads(
-        (
-            Path(__file__).parent
-            / "fixtures/requirement_artifacts/document-extraction.example.json"
-        ).read_text()
-    )
-    task = SimpleNamespace(
-        task_id="worker-task-1",
-        task_type="requirement_analysis",
-        worker_id="worker-1",
-        status="running",
-        run_id="run-1",
-        heartbeat_at=None,
-        lease_expires_at=None,
-        finished_at=None,
-        error_message="",
-    )
-    run = SimpleNamespace(
-        run_id="run-1",
-        checkpoint_enabled=True,
-        current_stage="extracting_text",
-        stage_status="running",
-        status="running",
-        config_json={},
-        result_yaml="",
-        result_summary_json={},
-        error_message="",
-    )
-
-    class FakeRepository(FakeWorkerRepository):
-        async def get_ai_run(self, run_id: str):
-            assert run_id == "run-1"
-            return run
-
-    async def fake_find_task(session, domain, task_id):
-        assert domain == "ai"
-        assert task_id == "worker-task-1"
-        return task
-
-    monkeypatch.setattr(worker_task_service_module, "find_task", fake_find_task)
-    service = WorkerTaskService(FakeRepository(task))
-
-    with pytest.raises(AppError) as rejected:
-        await service.progress(
-            "worker-task-1",
-            WorkerProgressRequest(
-                workerId="worker-1",
-                taskId="worker-task-1",
-                runId="run-1",
-                currentStage="extracting_text",
-                stageStatus="waiting_review",
-                configJson=json.dumps({"firstStepOutput": extraction}),
-            ),
-        )
-    assert rejected.value.http_code == 404
-    assert task.status == "running"
-    assert run.status == "running"
-
-
 def test_ai_worker_completion_accepts_output_yaml_alias_for_requirement_analysis():
     run = SimpleNamespace(
         status="running",
         snapshot_json={},
-        current_stage="feature_understanding",
+        current_stage="extracting_text",
         stage_status="running",
         error_message="",
         config_json={},

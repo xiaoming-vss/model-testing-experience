@@ -34,12 +34,14 @@ class _FakeFactory:
 
 
 class RunDemoTests(unittest.IsolatedAsyncioTestCase):
-    async def test_run_demo_passes_message_and_session_key(self) -> None:
+    async def test_run_demo_passes_message_session_and_config(self) -> None:
         factory = _FakeFactory()
 
         result = await run_demo(
             message="hello",
             session_key="demo:session",
+            config_path="D:/tmp/config.json",
+            workspace="D:/tmp/workspace",
             from_config=factory,
         )
 
@@ -48,18 +50,6 @@ class RunDemoTests(unittest.IsolatedAsyncioTestCase):
             factory.bot.calls,
             [{"message": "hello", "session_key": "demo:session"}],
         )
-
-    async def test_run_demo_passes_config_path_and_workspace(self) -> None:
-        factory = _FakeFactory()
-
-        await run_demo(
-            message="hello",
-            session_key="demo:session",
-            config_path="D:/tmp/config.json",
-            workspace="D:/tmp/workspace",
-            from_config=factory,
-        )
-
         self.assertEqual(
             factory.last_kwargs,
             {

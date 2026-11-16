@@ -1,4 +1,4 @@
-/* 接口库：列表、应用管理、导入与接口编辑器共用一套资产库视觉。 */
+/* 接口库：列表、软件仓库管理、导入与接口编辑器共用一套资产库视觉。 */
 
 .interface-library-page {
   box-sizing: border-box;
@@ -206,26 +206,6 @@
   color: var(--srf-text-muted);
 }
 
-.if-app-actions {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 1px;
-  opacity: 0;
-  transition: opacity 120ms ease;
-}
-
-.if-app-row:hover .if-app-actions,
-.if-app-row:focus-within .if-app-actions {
-  opacity: 1;
-}
-
-.if-app-actions .ant-btn {
-  width: 22px;
-  min-width: 22px;
-  height: 22px;
-}
-
 .if-app-children {
   display: flex;
   flex-direction: column;
@@ -234,6 +214,147 @@
   margin: 1px 0 5px 20px;
   padding-left: 7px;
   border-left: 1px solid var(--srf-divider);
+}
+
+.if-app-tag-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.if-app-tag-group + .if-app-tag-group {
+  margin-top: 5px;
+}
+
+.if-app-tag-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 4px 6px 2px;
+  color: var(--srf-text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.if-app-tag-chevron {
+  flex-basis: 16px;
+  width: 16px;
+  height: 18px;
+  font-size: 8px;
+}
+
+.if-app-tag-chevron.is-expanded {
+  transform: rotate(0deg);
+}
+
+.if-app-tag-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.if-app-tag-count {
+  flex: 0 0 auto;
+  font-weight: 400;
+}
+
+.if-app-tag-meta {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.if-app-tag-action {
+  opacity: 0;
+}
+
+.if-app-tag-head:hover .if-app-tag-action,
+.if-app-tag-head:focus-within .if-app-tag-action {
+  opacity: 1;
+}
+
+.if-app-child-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 2px;
+}
+
+.if-app-child-row .if-app-child {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+
+.if-app-child-action {
+  flex: 0 0 auto;
+  opacity: 0;
+}
+
+.if-app-child-row:hover .if-app-child-action,
+.if-app-child-row:focus-within .if-app-child-action {
+  opacity: 1;
+}
+
+.if-app-add-group {
+  display: flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  min-height: 26px;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: var(--srf-radius-control);
+  background: transparent;
+  color: var(--srf-text-muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.if-app-add-group:hover,
+.if-app-add-group:focus-visible {
+  background: var(--srf-hover);
+  color: var(--srf-accent-strong);
+}
+
+.if-group-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.if-group-modal-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+}
+
+.if-group-modal-interface {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--srf-text);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.if-group-move-select {
+  width: 100%;
+}
+
+.if-group-modal-hint {
+  margin: 0;
+  color: var(--srf-text-muted);
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .if-app-child {
@@ -697,6 +818,27 @@
   font-weight: 600;
 }
 
+.if-import-groups {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px dashed var(--srf-accent-border);
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-accent-soft);
+}
+
+.if-import-groups-title {
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.if-import-groups .ant-tag {
+  margin: 0;
+}
+
 .if-import-warnings {
   max-height: 130px;
   margin: 0;
@@ -756,6 +898,28 @@
   white-space: nowrap;
 }
 
+.if-import-item-title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.if-import-item-group {
+  overflow: hidden;
+  color: var(--srf-text-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.if-import-group-new {
+  margin-left: 5px;
+  color: var(--srf-result-passed);
+  font-size: 10px;
+  font-weight: 700;
+}
+
 .if-import-item code {
   overflow: hidden;
   color: var(--srf-text-secondary);
@@ -789,6 +953,18 @@
   padding: 12px;
   border: 1px solid var(--srf-card-border);
   border-radius: var(--srf-radius-control);
+}
+
+.if-import-result-groups {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--srf-divider);
+  color: var(--srf-text-secondary);
+  font-size: 12px;
 }
 
 /* ---------- 接口详情 ---------- */
@@ -1371,6 +1547,21 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.if-security-json {
+  max-height: 220px;
+  margin: 0;
+  padding: 10px 12px;
+  overflow: auto;
+  border: 1px solid var(--srf-card-border);
+  border-radius: 8px;
+  background: var(--srf-chip);
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .if-switch-line {

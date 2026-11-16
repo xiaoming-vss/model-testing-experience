@@ -1,11 +1,10 @@
-import { Input, Select, Switch, Tag } from 'antd'
+import { Input, Select } from 'antd'
 import type { RequirementOption } from '@/features/requirements/types'
-import type { ApiApp, ApiInterface } from '../types'
+import type { ApiInterface } from '../types'
 import { formatTime } from '@/utils/format'
 
 type Props = {
   draft: ApiInterface
-  app?: ApiApp
   readOnly: boolean
   tagsText: string
   onTagsText: (value: string) => void
@@ -22,7 +21,6 @@ const SOURCE_LABELS: Record<string, string> = {
 
 export function InterfaceSettingsPanel({
   draft,
-  app,
   readOnly,
   tagsText,
   onTagsText,
@@ -108,22 +106,7 @@ export function InterfaceSettingsPanel({
         <span className="if-field-hint">只关联需求；迭代通过需求归属自动推导。</span>
       </div>
       <div className="if-settings-field">
-        <span className="if-field-label">启用状态</span>
-        <div className="if-switch-line">
-          <Switch
-            checked={draft.enabled}
-            disabled={readOnly}
-            aria-label="启用接口"
-            onChange={enabled => onChange({ enabled })}
-          />
-          <span>{draft.enabled ? '启用' : '停用'}</span>
-          {app && !app.enabled ? (
-            <Tag color="orange">所属应用已停用，不会进入用例生成候选</Tag>
-          ) : null}
-        </div>
-      </div>
-      <div className="if-source-block">
-        <div className="if-field-label">来源信息</div>
+        <span className="if-field-label">来源信息</span>
         <dl>
           <div><dt>来源</dt><dd>{SOURCE_LABELS[source.type] ?? source.type ?? '手工创建'}</dd></div>
           {source.name ? <div><dt>文档</dt><dd>{source.name}</dd></div> : null}
@@ -133,6 +116,21 @@ export function InterfaceSettingsPanel({
           <div><dt>最近更新</dt><dd>{formatTime(draft.updatedAt)}</dd></div>
         </dl>
       </div>
+      {draft.security || draft.securitySchemes ? (
+        <div className="if-settings-field">
+          <span className="if-field-label">认证要求</span>
+          <pre className="if-security-json">
+            {JSON.stringify(
+              { security: draft.security, securitySchemes: draft.securitySchemes },
+              null,
+              2,
+            )}
+          </pre>
+          <span className="if-field-hint">
+            来自 OpenAPI/Swagger 导入，生成 API 用例时用于生成认证头；本期只读。
+          </span>
+        </div>
+      ) : null}
     </div>
   )
 }

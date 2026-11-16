@@ -15,7 +15,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from testing_agent.core.errors import AppError, ErrBadRequest, dynamic_error
 from testing_agent.repositories.generation_chain import GenerationChainRepository
-from testing_agent.repositories.resource_binding import ResourceBindingRepository
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.repo_gitlab_access import (
@@ -76,12 +75,10 @@ class UiGenerationSourceService:
         self,
         session: AsyncSession,
         *,
-        binding_repository: ResourceBindingRepository,
         integration_connection_service: IntegrationConnectionService,
         credential_cipher: IntegrationCredentialCipher,
     ) -> None:
         self.session = session
-        self.binding_repository = binding_repository
         self.integration_connection_service = integration_connection_service
         self.credential_cipher = credential_cipher
 
@@ -322,22 +319,22 @@ class UiGenerationSourceService:
     ) -> RepoGitlabAccess:
         from sqlalchemy import select
 
-        from testing_agent.models.resource_binding import ResourceBinding
+        from testing_agent.models.software_repository import SoftwareRepository
 
         row = await self.session.scalar(
-            select(ResourceBinding).where(
-                ResourceBinding.binding_id == str(binding.get("bindingId") or "")
+            select(SoftwareRepository).where(
+                SoftwareRepository.software_repository_id
+                == str(binding.get("softwareRepositoryId") or binding.get("bindingId") or "")
             )
         )
         if row is None:
             raise dynamic_error(
                 ErrBadRequest,
-                "仓库绑定已失效，请重新绑定或重新生成画像",
+                "软件仓库已失效，请重新关联或重新生成画像",
                 {"reason": "repository_unavailable"},
             )
         try:
             return await resolve_repo_gitlab_access(
-                self.binding_repository,
                 self.integration_connection_service,
                 self.credential_cipher,
                 project_id,

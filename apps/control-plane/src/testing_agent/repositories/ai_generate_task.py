@@ -206,20 +206,6 @@ class AiGenerateTaskRepository(ResourceRepository):
         )
         return requirements, sprints, orders
 
-    async def list_tasks(self, project_id: str, task_type: str) -> list[AiGenerateTask]:
-        return list(
-            (
-                await self.session.scalars(
-                    select(AiGenerateTask)
-                    .where(
-                        AiGenerateTask.project_id == project_id,
-                        AiGenerateTask.task_type == task_type,
-                    )
-                    .order_by(AiGenerateTask.created_at.desc(), AiGenerateTask.id.desc())
-                )
-            ).all()
-        )
-
     @staticmethod
     def _keyword_pattern(keyword: str) -> str:
         escaped = keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")

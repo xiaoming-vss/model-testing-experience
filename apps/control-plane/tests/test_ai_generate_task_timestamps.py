@@ -56,11 +56,6 @@ class TaskQueryRepository:
     async def get_task(self, task_id):
         return self.task if task_id == self.task.task_id else None
 
-    async def list_tasks(self, project_id, task_type):
-        if project_id == self.task.project_id and task_type == self.task.task_type:
-            return [self.task]
-        return []
-
     async def count_tasks(self, project_id, task_type, **kwargs):
         if project_id == self.task.project_id and task_type == self.task.task_type:
             return 1

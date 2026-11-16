@@ -9,13 +9,14 @@ export function testingTabForLocation(pathname: string, search: string) {
             ? resolveTestingTab(new URLSearchParams(search).get('tab')) : null
 }
 
-export type AssetLibraryTab = 'cases' | 'interfaces' | 'apps'
+export type AssetLibraryTab = 'cases' | 'interfaces' | 'repositories'
 
 export function assetTabForLocation(pathname: string, search: string): AssetLibraryTab | null {
   if (!pathname.startsWith('/asset-library')) return null
   if (pathname.startsWith('/asset-library/interfaces')) return 'interfaces'
   const tab = new URLSearchParams(search).get('tab')
-  return tab === 'interfaces' || tab === 'apps' ? tab : 'cases'
+  if (tab === 'apps') return 'repositories'
+  return tab === 'interfaces' || tab === 'repositories' ? tab : 'cases'
 }
 
 // Order follows the visible top-level navigation; null denotes an unrelated page.

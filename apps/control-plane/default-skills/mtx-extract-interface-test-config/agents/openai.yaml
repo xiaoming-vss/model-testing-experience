@@ -1,0 +1,7 @@
+interface:
+  display_name: "Interface Test Config Extractor"
+  short_description: "Convert selected interface definitions into API test config"
+  default_prompt: "Use $mtx-extract-interface-test-config to convert these interface-library interfaces into the custom API test configuration dictionary."
+
+policy:
+  allow_implicit_invocation: true

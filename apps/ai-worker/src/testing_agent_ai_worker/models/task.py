@@ -187,11 +187,15 @@ class ExistingTestCases(BaseModel):
 
 
 class TaskPayload(BaseModel):
-    openapi_content: str
+    openapi_content: str = ""
     source_content: str = ""
+    interfaces: list[dict[str, Any]] = Field(default_factory=list)
+    software_repositories: list[dict[str, Any]] = Field(default_factory=list)
     document_download_url: str = ""
     document_type: str = ""
     source_type: str = ""
+    source_format: str = ""
+    source_format_version: str = ""
     target_scope: str = ""
     extra_instruction: str = ""
     daily_metrics: dict[str, Any] = Field(default_factory=dict)

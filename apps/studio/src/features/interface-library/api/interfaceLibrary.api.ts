@@ -1,24 +1,31 @@
 import { buildQuery, request, type ListResponse } from '@/shared/api/request'
 import type {
-  ApiApp,
   ApiInterface,
   ApiInterfaceFilters,
+  ApiInterfaceGroupMutation,
   ApiInterfaceListItem,
-  CreateApiAppPayload,
+  CreateApiInterfaceGroupPayload,
   CreateApiInterfacePayload,
+  CreateRequirementSoftwareRepositoryPayload,
+  CreateSoftwareRepositoryPayload,
+  DeleteApiInterfaceGroupPayload,
   ImportCommitResult,
   ImportPreview,
-  UpdateApiAppPayload,
+  MoveApiInterfaceGroupPayload,
+  RenameApiInterfaceGroupPayload,
+  RequirementSoftwareRepository,
+  SoftwareRepository,
   UpdateApiInterfacePayload,
+  UpdateRequirementSoftwareRepositoryPayload,
+  UpdateSoftwareRepositoryPayload,
 } from '../types'
 
 function interfaceQuery(filters: ApiInterfaceFilters) {
   return buildQuery({
-    appId: filters.appId,
+    softwareRepositoryId: filters.softwareRepositoryId,
     method: filters.method,
     requirementId: filters.requirementId,
     sprintId: filters.sprintId,
-    enabled: filters.enabled === undefined ? undefined : String(filters.enabled),
     keyword: filters.keyword,
     page: filters.page,
     pageSize: filters.pageSize,
@@ -26,35 +33,58 @@ function interfaceQuery(filters: ApiInterfaceFilters) {
 }
 
 export const interfaceLibraryApi = {
-  getApiApps: (projectId: string) =>
-    request<ListResponse<ApiApp>>(`/v1/projects/${projectId}/api-apps`),
-  createApiApp: (projectId: string, body: CreateApiAppPayload) =>
-    request<ApiApp>(`/v1/projects/${projectId}/api-apps`, {
+  getSoftwareRepositories: (projectId: string) =>
+    request<ListResponse<SoftwareRepository>>(
+      `/v1/projects/${projectId}/software-repositories`,
+    ),
+  createSoftwareRepository: (projectId: string, body: CreateSoftwareRepositoryPayload) =>
+    request<SoftwareRepository>(`/v1/projects/${projectId}/software-repositories`, {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  getApiApp: (appId: string) => request<ApiApp>(`/v1/api-apps/${appId}`),
-  updateApiApp: (appId: string, body: UpdateApiAppPayload) =>
-    request<ApiApp>(`/v1/api-apps/${appId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(body),
-    }),
-  deleteApiApp: (appId: string) =>
-    request<Record<string, never>>(`/v1/api-apps/${appId}`, { method: 'DELETE' }),
+  getSoftwareRepository: (softwareRepositoryId: string) =>
+    request<SoftwareRepository>(
+      `/v1/software-repositories/${softwareRepositoryId}`,
+    ),
+  updateSoftwareRepository: (
+    softwareRepositoryId: string,
+    body: UpdateSoftwareRepositoryPayload,
+  ) =>
+    request<SoftwareRepository>(
+      `/v1/software-repositories/${softwareRepositoryId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      },
+    ),
+  deleteSoftwareRepository: (softwareRepositoryId: string) =>
+    request<Record<string, never>>(
+      `/v1/software-repositories/${softwareRepositoryId}`,
+      { method: 'DELETE' },
+    ),
 
   getProjectApiInterfaces: (projectId: string, filters: ApiInterfaceFilters = {}) =>
     request<ListResponse<ApiInterfaceListItem>>(
       `/v1/projects/${projectId}/api-interfaces${interfaceQuery(filters)}`,
     ),
-  getAppApiInterfaces: (appId: string, filters: ApiInterfaceFilters = {}) =>
+  getSoftwareRepositoryApiInterfaces: (
+    softwareRepositoryId: string,
+    filters: ApiInterfaceFilters = {},
+  ) =>
     request<ListResponse<ApiInterfaceListItem>>(
-      `/v1/api-apps/${appId}/interfaces${interfaceQuery(filters)}`,
+      `/v1/software-repositories/${softwareRepositoryId}/interfaces${interfaceQuery(filters)}`,
     ),
-  createApiInterface: (appId: string, body: CreateApiInterfacePayload) =>
-    request<ApiInterface>(`/v1/api-apps/${appId}/interfaces`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
+  createApiInterface: (
+    softwareRepositoryId: string,
+    body: CreateApiInterfacePayload,
+  ) =>
+    request<ApiInterface>(
+      `/v1/software-repositories/${softwareRepositoryId}/interfaces`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+    ),
   getApiInterface: (interfaceId: string) =>
     request<ApiInterface>(`/v1/api-interfaces/${interfaceId}`),
   updateApiInterface: (interfaceId: string, body: UpdateApiInterfacePayload) =>
@@ -66,24 +96,71 @@ export const interfaceLibraryApi = {
     request<Record<string, never>>(`/v1/api-interfaces/${interfaceId}`, {
       method: 'DELETE',
     }),
+  createApiInterfaceGroup: (
+    softwareRepositoryId: string,
+    body: CreateApiInterfaceGroupPayload,
+  ) =>
+    request<ApiInterfaceGroupMutation>(
+      `/v1/software-repositories/${softwareRepositoryId}/interface-groups`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+    ),
+  renameApiInterfaceGroup: (
+    softwareRepositoryId: string,
+    body: RenameApiInterfaceGroupPayload,
+  ) =>
+    request<ApiInterfaceGroupMutation>(
+      `/v1/software-repositories/${softwareRepositoryId}/interface-groups/rename`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+    ),
+  deleteApiInterfaceGroup: (
+    softwareRepositoryId: string,
+    body: DeleteApiInterfaceGroupPayload,
+  ) =>
+    request<ApiInterfaceGroupMutation>(
+      `/v1/software-repositories/${softwareRepositoryId}/interface-groups/delete`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+    ),
+  moveApiInterfaceToGroup: (
+    interfaceId: string,
+    body: MoveApiInterfaceGroupPayload,
+  ) =>
+    request<ApiInterface>(
+      `/v1/api-interfaces/${interfaceId}/group`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      },
+    ),
 
-  previewOpenApiImport: (appId: string, file: File) => {
+  previewOpenApiImport: (softwareRepositoryId: string, file: File) => {
     const formData = new FormData()
     formData.append('file', file, file.name)
-    return request<ImportPreview>(`/v1/api-apps/${appId}/interfaces/import/preview`, {
-      method: 'POST',
-      body: formData,
-    })
+    return request<ImportPreview>(
+      `/v1/software-repositories/${softwareRepositoryId}/interfaces/import/preview`,
+      {
+        method: 'POST',
+        body: formData,
+      },
+    )
   },
   commitOpenApiImport: (
-    appId: string,
+    softwareRepositoryId: string,
     payload: {
       file: File
       sourceDigest: string
       selectedKeys: string[]
       expectedItems: Record<string, number>
       applyBasePath: boolean
-      expectedAppVersion?: number
+      expectedSoftwareRepositoryVersion?: number
     },
   ) => {
     const formData = new FormData()
@@ -92,12 +169,54 @@ export const interfaceLibraryApi = {
     formData.append('selectedKeys', JSON.stringify(payload.selectedKeys))
     formData.append('expectedItems', JSON.stringify(payload.expectedItems))
     formData.append('applyBasePath', String(payload.applyBasePath))
-    if (payload.expectedAppVersion !== undefined) {
-      formData.append('expectedAppVersion', String(payload.expectedAppVersion))
+    if (payload.expectedSoftwareRepositoryVersion !== undefined) {
+      formData.append(
+        'expectedSoftwareRepositoryVersion',
+        String(payload.expectedSoftwareRepositoryVersion),
+      )
     }
-    return request<ImportCommitResult>(`/v1/api-apps/${appId}/interfaces/import`, {
-      method: 'POST',
-      body: formData,
-    })
+    return request<ImportCommitResult>(
+      `/v1/software-repositories/${softwareRepositoryId}/interfaces/import`,
+      {
+        method: 'POST',
+        body: formData,
+      },
+    )
   },
+
+  getRequirementSoftwareRepositories: (requirementId: string) =>
+    request<ListResponse<RequirementSoftwareRepository>>(
+      `/v1/requirements/${requirementId}/software-repositories`,
+    ),
+  createRequirementSoftwareRepository: (
+    requirementId: string,
+    body: CreateRequirementSoftwareRepositoryPayload,
+  ) =>
+    request<RequirementSoftwareRepository>(
+      `/v1/requirements/${requirementId}/software-repositories`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+    ),
+  updateRequirementSoftwareRepository: (
+    requirementId: string,
+    softwareRepositoryId: string,
+    body: UpdateRequirementSoftwareRepositoryPayload,
+  ) =>
+    request<RequirementSoftwareRepository>(
+      `/v1/requirements/${requirementId}/software-repositories/${softwareRepositoryId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      },
+    ),
+  deleteRequirementSoftwareRepository: (
+    requirementId: string,
+    softwareRepositoryId: string,
+  ) =>
+    request<Record<string, never>>(
+      `/v1/requirements/${requirementId}/software-repositories/${softwareRepositoryId}`,
+      { method: 'DELETE' },
+    ),
 }

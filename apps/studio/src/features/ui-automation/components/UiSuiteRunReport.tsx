@@ -85,8 +85,8 @@ export function UiSuiteRunReport({ canStop, suiteRunReportOpen, closeSuiteRunRep
                 </div>
               </div>
               <div className="api-collection-run-report-head-actions">
-                {canStop ? <StopRunButton kind="ui-suite" runId={selectedSuiteRunId} status={suiteRunReport.status} /> : null}
                 <ActionButton operation="refresh" onClick={handleRefreshSuiteRunReport} loading={refreshingSuiteRunReport} disabled={!selectedSuiteRunId}>刷新报告</ActionButton>
+                {canStop ? <StopRunButton kind="ui-suite" runId={selectedSuiteRunId} status={suiteRunReport.status} /> : null}
               </div>
             </div>
 

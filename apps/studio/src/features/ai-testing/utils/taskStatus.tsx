@@ -1,4 +1,3 @@
-import { Tag } from 'antd'
 import type { ApiCaseGenerateTaskRunStatus } from '../types'
 
 const statusMetaMap: Record<string, { label: string; color: string }> = {
@@ -37,39 +36,5 @@ export function getApiCaseGenerateTaskRunStatusMeta(status?: ApiCaseGenerateTask
   return {
     ...meta,
     value: normalizedStatus,
-  }
-}
-
-export function renderApiCaseGenerateTaskRunStatusTag(status?: ApiCaseGenerateTaskRunStatus) {
-  const meta = getApiCaseGenerateTaskRunStatusMeta(status)
-  return <Tag color={meta.color}>{meta.label}</Tag>
-}
-
-export function normalizeGenerateTaskReviewStatus(status?: string) {
-  return status ?? 'unknown'
-}
-
-export function isGenerateTaskRunImportable(run?: {
-  status?: string
-  reviewStatus?: string
-  importStatus?: string
-}) {
-  return run?.status === 'success'
-    && run.reviewStatus === 'approved'
-    && run.importStatus === 'pending'
-}
-
-/**
- * 运行记录的档位统计。传入按时间倒序排列的记录，第一条即最新。
- * 抽在这里而不是详情页壳组件里：壳文件只应导出组件，否则破坏 react-refresh。
- */
-export function summarizeRunStatuses(records: Array<{ status?: string }>, counts?: Record<string, number>) {
-  const countOf = (statuses: string[]) =>
-    counts ? statuses.reduce((total, status) => total + (counts[status] ?? 0), 0) : records.filter((record) => statuses.includes(String(record.status ?? '').toLowerCase())).length
-  return {
-    latestStatus: records[0]?.status,
-    waiting: countOf(['waiting_review']),
-    success: countOf(['success']),
-    failed: countOf(['failed', 'error']),
   }
 }

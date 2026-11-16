@@ -18,6 +18,7 @@ import { ProjectActionButton } from '@/features/projects/components/ProjectActio
 import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
 import { ApiCandidateResultView, ApiConfigDiagramView } from './ApiConfigDiagramView'
+import { ApiDesignDiagramView } from './ApiDesignDiagramView'
 import { GeneratedCasesReviewView } from './GeneratedCasesReviewView'
 import { GenerationChainImportModal } from './GenerationChainImportModal'
 import { RequirementAnalysisDiagramView } from './RequirementAnalysisView'
@@ -273,7 +274,7 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
     ? 'is-material-comparison'
     : stageKind === 'function'
       ? stageName === 'case_names' ? 'is-case-names' : stageName === 'detailed_cases' ? 'is-detailed-cases' : 'is-requirement-analysis'
-      : stageKind === 'api' ? 'is-api-cases' : stageKind === 'ui' ? 'is-ui-stage' : ''
+      : stageKind === 'api' ? stageName === 'api_design' ? 'is-api-design' : 'is-api-cases' : stageKind === 'ui' ? 'is-ui-stage' : ''
   const rawLabel = workingContent.trim().startsWith('{') || workingContent.trim().startsWith('[') ? 'JSON' : 'YAML'
   const rawContent = useMemo(() => formatRawArtifact(workingContent, rawLabel), [workingContent, rawLabel])
   const copyText = mode === 'raw' ? rawContent : undefined
@@ -302,7 +303,7 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
         {upstreamStage?.label ?? name}
         <b>{version?.label ?? (missing ? '上游已删除' : '未选择')}</b>
       </span>
-    }) : chain.kind !== 'ui' ? <span className="gc-trace-chip">{chain.kind === 'api' ? 'OpenAPI 文档' : '需求材料'} <b>只读来源</b></span> : null}
+    }) : chain.kind !== 'ui' ? <span className="gc-trace-chip">{chain.kind === 'api' ? '接口库接口' : '需求材料'} <b>只读来源</b></span> : null}
     {chain.kind === 'ui' ? <UiGenerationSourceTrace source={sourceInputs} loading={Boolean(selectedVersion && versionDetail.isFetching)} /> : null}
     {!stageRunning && stage.latestVersion?.imported ? <span className="gc-trace-chip is-ok"><CheckCircleFilled /> 已导入正式资产</span> : null}
   </div>
@@ -444,7 +445,11 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
                     : <GeneratedCasesReviewView content={workingContent} rootTitle={stage.label}
                       onChange={draftEditable ? workspace.setEditingContent : undefined} />
                 : stageKind === 'api'
-                  ? stageName === 'openapi_extract' ? <ApiConfigDiagramView content={workingContent} /> : <ApiCandidateResultView content={workingContent} />
+                  ? stageName === 'interface_extract'
+                    ? <ApiConfigDiagramView content={workingContent} />
+                    : stageName === 'api_design'
+                      ? <ApiDesignDiagramView content={workingContent} onShowRaw={() => setMode('raw')} />
+                      : <ApiCandidateResultView content={workingContent} />
                   : stageKind === 'ui'
                     ? <div className="ui-generation-stage-visual"><UiStageVisual stage={stageName as UiGenerationStage} content={workingContent} onShowRaw={() => setMode('raw')} /></div>
                     : <ChainVisualArtifact content={workingContent} />}

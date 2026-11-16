@@ -1,5 +1,5 @@
 import { skillsApi } from './skills.api'
-import { buildQuery, request, type ListResponse } from '@/shared/api/request'
+import { buildQuery, request } from '@/shared/api/request'
 import type {
   AiTaskListResponse,
   RunHistoryResponse,
@@ -63,7 +63,7 @@ export const aiTestingApi = {
   runApiCaseGenerateTask: (taskId: string, connectionId: string, checkpointEnabled = false) =>
     request<ApiCaseGenerateTaskRun>(`/v1/api-case-generate-tasks/${taskId}/run`, {
       method: 'POST',
-      body: JSON.stringify({ connectionId, ...(checkpointEnabled ? { checkpointEnabled: true, apiWorkflowVersion: 'api_two_stage/1.0' } : {}) }),
+      body: JSON.stringify({ connectionId, ...(checkpointEnabled ? { checkpointEnabled: true, apiWorkflowVersion: 'api_three_stage/1.0' } : {}) }),
     }),
   getApiCaseGenerateTaskRuns: (taskId: string, params: { page?: number; pageSize?: number; pipelineFilter?: string } = {}) =>
     request<RunHistoryResponse<ApiCaseGenerateTaskRun>>(`/v1/api-case-generate-tasks/${taskId}/runs${buildQuery(params)}`),
@@ -81,9 +81,9 @@ export const aiTestingApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  saveApiCaseStageOutput: (runId: string, configJson: Record<string, unknown>) =>
+  saveApiCaseStageOutput: (runId: string, configJson: Record<string, unknown>, stage = 'interface_extract') =>
     request<ApiCaseGenerateTaskRun>(`/v1/api-case-generate-task-runs/${runId}/stage-output`, {
-      method: 'PATCH', body: JSON.stringify({ stage: 'openapi_extract', configJson }),
+      method: 'PATCH', body: JSON.stringify({ stage, configJson }),
     }),
   reviewApiCaseStage: (runId: string, body: { stage: string; action: 'approve' | 'reject'; llmConnectionId?: string; requestId?: string }) =>
     request<ApiCaseGenerateTaskRun>(`/v1/api-case-generate-task-runs/${runId}/stage-review`, {
@@ -306,10 +306,6 @@ export const aiTestingApi = {
   ) =>
     request<AiTaskListResponse<CodeRiskTask>>(
       `/v1/projects/${projectId}/code-risk-analysis-tasks${buildQuery(params)}`,
-    ),
-  getCodeRiskLatestRuns: (projectId: string) =>
-    request<ListResponse<CodeRiskTaskRun>>(
-      `/v1/projects/${projectId}/code-risk-analysis-tasks/latest-runs`,
     ),
   createCodeRiskTask: (projectId: string, body: CreateCodeRiskTaskPayload) =>
     request<CodeRiskTask>(`/v1/projects/${projectId}/code-risk-analysis-tasks`, {

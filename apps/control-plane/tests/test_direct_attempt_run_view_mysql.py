@@ -41,7 +41,7 @@ async def test_direct_detail_resolves_stage_attempt_without_old_run_table(mysql)
         stage = seed_row(
             connection,
             AiGenerationStage.__table__,
-            {"task_id": task["task_id"], "stage": "openapi_extract"},
+            {"task_id": task["task_id"], "stage": "interface_extract"},
         )
         attempt = seed_row(
             connection,

@@ -35,6 +35,10 @@ from testing_agent.app import create_app
 from testing_agent.core.config import Settings, get_settings
 from testing_agent.core.errors import AppError
 from testing_agent.models.worker_task import WorkerTask
+from testing_agent.repositories.requirement_software_repository import (
+    RequirementRepositoryBinding,
+    unique_by_git_repository,
+)
 from testing_agent.schemas.workers import WorkerTaskEventRequest
 from testing_agent.services import worker_task as worker_task_service_module
 from testing_agent.services.ai_task_output import dump_run
@@ -105,7 +109,7 @@ def understanding_version(content: str | None = None) -> SimpleNamespace:
         version_no=1,
         task_id="understanding-task",
         attempt_id="understanding-attempt",
-        stage="feature_understanding",
+        stage="extracting_text",
         artifact_content=content
         if content is not None
         else json.dumps(material_artifact(), ensure_ascii=False),
@@ -143,15 +147,32 @@ def make_binding(
     group_id: str,
     branch: str = "develop",
     baseline_branch: str = "release-1.0",
-) -> SimpleNamespace:
-    return SimpleNamespace(
-        binding_id=binding_id,
-        instance_url="https://gitlab.example.com",
-        instance_key="gitlab-example",
-        remote_resource_id=repository_id,
-        remote_parent_id=group_id,
-        extra_json={"branch": branch, "baseline_branch": baseline_branch},
+) -> RequirementRepositoryBinding:
+    return RequirementRepositoryBinding(
+        association=SimpleNamespace(
+            requirement_id="req-1",
+            software_repository_id=binding_id,
+            branch=branch,
+            baseline_branch=baseline_branch,
+        ),
+        software_repository=SimpleNamespace(
+            software_repository_id=binding_id,
+            name=f"仓库 {repository_id}",
+            repository_project_id=repository_id,
+            repository_group_id=group_id,
+            repository_instance_key="gitlab-example",
+            repository_instance_url="https://gitlab.example.com",
+            repository_path=f"team/{repository_id}",
+        ),
     )
+
+
+def test_bindings_to_the_same_git_repository_are_deduplicated():
+    first = make_binding("binding-1", "repo-1", "group-1")
+    duplicate = make_binding("binding-2", "repo-1", "group-1", branch="other")
+    second = make_binding("binding-3", "repo-2", "group-1")
+
+    assert unique_by_git_repository([first, duplicate, second]) == [first, second]
 
 
 def make_connection(connection_id: str, base_url: str, encrypted_token: str) -> SimpleNamespace:
@@ -219,16 +240,12 @@ class FakeTaskRepository:
         }
 
 
-class FakeBindingRepository:
-    def __init__(self, bindings: list, group_bindings: dict[str, SimpleNamespace] | None = None):
+class FakeRequirementRepository:
+    def __init__(self, bindings: list):
         self.bindings = bindings
-        self.group_bindings = group_bindings or {}
 
-    async def list_active_repo_bindings_for_requirement(self, requirement_id: str):
+    async def list_for_requirement_with_repository(self, requirement_id: str):
         return self.bindings
-
-    async def get_active_project_group_binding(self, provider, project_id, group_id, instance=""):
-        return self.group_bindings.get(group_id)
 
 
 class FakeIntegrationConnectionService:
@@ -306,7 +323,6 @@ class FakeIntegrationConnectionService:
 def make_service(
     *,
     bindings: list | None = None,
-    group_bindings: dict | None = None,
     connections: list | None = None,
     branches: list | None = None,
     tokens: dict | None = None,
@@ -317,7 +333,7 @@ def make_service(
     integration = FakeIntegrationConnectionService(connections or [], branches)
     service = CodeRiskAnalysisService(
         task_repository or FakeTaskRepository(requirement or make_requirement()),
-        FakeBindingRepository(bindings, group_bindings or {}),
+        FakeRequirementRepository(bindings),
         integration,
         FakeCipher(tokens or {}),
     )
@@ -330,7 +346,6 @@ def make_ready_service(
     """Service with one bound repository and a resolvable personal connection."""
     return make_service(
         bindings=[make_binding("binding-1", "repo-1", "group-1")],
-        group_bindings={"group-1": SimpleNamespace(connection_id="conn-1")},
         connections=[make_connection("conn-1", "https://gitlab.example.com", "enc:token-1")],
         tokens={"enc:token-1": "plain-token-1"},
         requirement=requirement,
@@ -439,7 +454,6 @@ async def test_build_snapshot_contains_requirement_bindings_and_existing_tests()
     connection = make_connection("conn-1", "https://gitlab.example.com", "enc:token-1")
     service, _ = make_service(
         bindings=[binding],
-        group_bindings={"group-1": SimpleNamespace(connection_id="conn-1")},
         connections=[connection],
         tokens={"enc:token-1": "plain-token-1"},
         task_repository=task_repository,
@@ -466,6 +480,8 @@ async def test_build_snapshot_contains_requirement_bindings_and_existing_tests()
     }
     entry = snapshot["bindings"][0]
     assert entry["bindingId"] == "binding-1"
+    assert entry["softwareRepositoryId"] == "binding-1"
+    assert entry["softwareRepositoryName"] == "仓库 repo-1"
     assert entry["repositoryId"] == "repo-1"
     assert entry["groupId"] == "group-1"
     assert entry["branch"] == "develop"
@@ -525,7 +541,7 @@ async def test_snapshot_rejects_when_requirement_has_no_repository_binding():
     with pytest.raises(AppError) as error:
         await service.build_snapshot(make_task(), "run-1", "worker-task-1", user_id="user-1")
 
-    assert "尚未绑定代码仓库" in str(error.value)
+    assert "尚未关联软件仓库" in str(error.value)
 
 
 @pytest.mark.asyncio
@@ -570,7 +586,6 @@ async def test_build_snapshot_freezes_clone_url_and_pinned_commits():
     connection = make_connection("conn-1", "https://gitlab.example.com", "enc:token-1")
     service, integration = make_service(
         bindings=[binding],
-        group_bindings={"group-1": SimpleNamespace(connection_id="conn-1")},
         connections=[connection],
         tokens={"enc:token-1": "plain-token-1"},
     )
@@ -595,7 +610,6 @@ async def test_missing_baseline_branch_rejects_snapshot():
     connection = make_connection("conn-1", "https://gitlab.example.com", "enc:token-1")
     service, _ = make_service(
         bindings=[binding],
-        group_bindings={"group-1": SimpleNamespace(connection_id="conn-1")},
         connections=[connection],
         tokens={"enc:token-1": "plain-token-1"},
     )
@@ -607,18 +621,8 @@ async def test_missing_baseline_branch_rejects_snapshot():
 
 
 @pytest.mark.asyncio
-async def test_branch_checker_raises_when_repo_has_no_resolved_connection():
-    service, _ = make_service(
-        bindings=[make_binding("binding-1", "repo-1", "group-1")],
-    )
-
-    with pytest.raises((AppError, ValueError)):
-        await service.build_snapshot(make_task(), "run-1", "worker-task-1", user_id="user-1")
-
-
-@pytest.mark.asyncio
-async def test_missing_group_binding_marks_binding_connection_unresolved():
-    binding = make_binding("binding-1", "repo-1", "group-missing")
+async def test_missing_personal_connection_marks_binding_connection_unresolved():
+    binding = make_binding("binding-1", "repo-1", "group-1")
     service, _ = make_service(bindings=[binding])
 
     with pytest.raises((AppError, ValueError)):
@@ -630,7 +634,6 @@ async def test_decrypt_failure_treats_binding_as_connection_unresolved():
     connection = make_connection("conn-1", "https://gitlab.example.com", "enc:broken")
     service, _ = make_service(
         bindings=[make_binding("binding-1", "repo-1", "group-1")],
-        group_bindings={"group-1": SimpleNamespace(connection_id="conn-1")},
         connections=[connection],
         tokens={},
     )
@@ -737,50 +740,6 @@ async def test_worker_task_service_gitlab_credentials_rejects_other_task_types(m
     with pytest.raises(AppError) as excinfo:
         await WorkerTaskService(SimpleNamespace(session=object())).gitlab_credentials("task-1")
     assert excinfo.value.code == 404
-
-
-@pytest.mark.asyncio
-async def test_worker_task_service_gitlab_credentials_reads_run_snapshot(monkeypatch):
-    class FakeRepository:
-        session = object()
-
-        async def get_ai_run(self, run_id):
-            assert run_id == "run-1"
-            return SimpleNamespace(
-                run_id="run-1",
-                project_id="project-1",
-                snapshot_json={
-                    "bindings": [
-                        {"bindingId": "b1", "repositoryId": "repo-1", "connectionId": "conn-1"}
-                    ]
-                },
-            )
-
-    async def fake_find_task(session, domain, task_id):
-        return SimpleNamespace(task_id=task_id, task_type="code_risk_analysis", run_id="run-1")
-
-    async def fake_payload(session, task_id, project_id, bindings, cipher, *, user_id):
-        assert task_id == "worker-task-1"
-        assert project_id == "project-1"
-        assert bindings[0]["repositoryId"] == "repo-1"
-        return {"taskId": task_id, "credentials": []}
-
-    monkeypatch.setattr(worker_task_service_module, "find_task", fake_find_task)
-    monkeypatch.setattr(worker_task_service_module, "gitlab_credentials_payload", fake_payload)
-    direct = SimpleNamespace(
-        is_direct=AsyncMock(return_value=True),
-        authorize=AsyncMock(
-            return_value=SimpleNamespace(
-                actor_id="actor",
-                task=SimpleNamespace(project_id="project-1"),
-                input_snapshot={"source": {"bindings": [{"repositoryId": "repo-1"}]}},
-            )
-        ),
-    )
-    monkeypatch.setattr(worker_task_service_module, "DirectStageWorkerService", lambda _: direct)
-
-    payload = await WorkerTaskService(FakeRepository()).gitlab_credentials("worker-task-1")
-    assert payload["taskId"] == "worker-task-1"
 
 
 @pytest.mark.asyncio

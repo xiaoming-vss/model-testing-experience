@@ -39,10 +39,13 @@ from testing_agent.core.errors import (
 )
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.integration_connection import IntegrationConnection
-from testing_agent.models.resource_binding import ResourceBinding
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.generation_chain import GenerationChainRepository
-from testing_agent.repositories.resource_binding import ResourceBindingRepository
+from testing_agent.repositories.requirement_software_repository import (
+    RequirementRepositoryBinding,
+    RequirementSoftwareRepositoryRepository,
+    unique_by_git_repository,
+)
 from testing_agent.schemas.requirement import normalize_document_type
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
@@ -57,7 +60,7 @@ from testing_agent.services.requirement_material_source import (
 )
 
 FUNCTION_CASE_NO_RUN_NOTE = "功能用例暂无执行记录"
-CONNECTION_UNRESOLVED_NOTE = "未解析到该仓库的 GitLab 凭据连接(群组绑定缺失或连接不可用)"
+CONNECTION_UNRESOLVED_NOTE = "未解析到该仓库的 GitLab 凭据连接(个人连接缺失或不可用)"
 
 
 @dataclass(frozen=True, slots=True)
@@ -188,12 +191,12 @@ class CodeRiskAnalysisService:
     def __init__(
         self,
         task_repository: AiGenerateTaskRepository,
-        binding_repository: ResourceBindingRepository,
+        requirement_repository: RequirementSoftwareRepositoryRepository,
         integration_connection_service: IntegrationConnectionService,
         credential_cipher: IntegrationCredentialCipher,
     ):
         self.task_repository = task_repository
-        self.binding_repository = binding_repository
+        self.requirement_repository = requirement_repository
         self.integration_connection_service = integration_connection_service
         self.credential_cipher = credential_cipher
 
@@ -222,8 +225,8 @@ class CodeRiskAnalysisService:
             raise dynamic_error(ErrBadRequest, "请先审核通过材料整理，再进行代码风险分析")
         document_content = material_source(material)
 
-        bindings = list(
-            await self.binding_repository.list_active_repo_bindings_for_requirement(
+        bindings = unique_by_git_repository(
+            await self.requirement_repository.list_for_requirement_with_repository(
                 task.requirement_id
             )
         )
@@ -251,7 +254,9 @@ class CodeRiskAnalysisService:
             },
             "requirementMaterialVersion": material_version_ref(material),
             "bindings": [
-                self._binding_entry(binding, pins[binding.binding_id], repo_access)
+                self._binding_entry(
+                    binding, pins[binding.association.software_repository_id], repo_access
+                )
                 for binding in bindings
             ],
             "existingTests": {
@@ -267,57 +272,54 @@ class CodeRiskAnalysisService:
     async def _resolve_repo_access(
         self,
         project_id: str,
-        bindings: Sequence[ResourceBinding],
+        bindings: Sequence[RequirementRepositoryBinding],
         user_id: str,
         connection_ids: dict[str, str],
     ) -> dict[str, RepoGitlabAccess]:
-        """按 ADR-0007 解析每个仓库的凭据(共用口径见 repo_gitlab_access)。"""
+        """按软件仓库实例解析每个仓库的凭据(共用口径见 repo_gitlab_access)。"""
         access: dict[str, RepoGitlabAccess] = {}
         for binding in bindings:
+            repository = binding.software_repository
             resolved = await resolve_repo_gitlab_access(
-                self.binding_repository,
                 self.integration_connection_service,
                 self.credential_cipher,
                 project_id,
-                binding,
+                repository,
                 user_id=user_id,
-                connection_id=connection_ids.get(binding.instance_url, ""),
+                connection_id=connection_ids.get(repository.repository_instance_url, ""),
             )
             if resolved is not None:
-                access[binding.binding_id] = resolved
+                access[repository.software_repository_id] = resolved
         return access
 
     async def _resolve_repo_pins(
         self,
         project_id: str,
-        bindings: Sequence[ResourceBinding],
+        bindings: Sequence[RequirementRepositoryBinding],
         repo_access: dict[str, RepoGitlabAccess],
         user_id: str,
     ) -> dict[str, RepoPin]:
-        """按绑定的工作分支和基线分支解析固定 commit 与克隆地址。
-
-        代码风险不再使用历史绑定推断基线；缺少基线分支直接拒绝建 run。
-        """
+        """按需求关联的工作分支和基线分支解析固定 commit 与克隆地址。"""
         if not bindings:
-            raise dynamic_error(ErrResourceBindingInvalid, "需求尚未绑定代码仓库，无法分析")
+            raise dynamic_error(ErrResourceBindingInvalid, "需求尚未关联软件仓库，无法分析")
         pins: dict[str, RepoPin] = {}
         for binding in bindings:
-            extra = binding.extra_json or {}
-            branch = str(extra.get("branch") or "").strip()
-            baseline_branch = str(
-                extra.get("baseline_branch") or extra.get("baselineBranch") or ""
-            ).strip()
+            repository = binding.software_repository
+            branch = binding.association.branch.strip()
+            baseline_branch = binding.association.baseline_branch.strip()
             if not branch:
-                raise dynamic_error(ErrResourceBindingInvalid, "仓库绑定缺少工作分支，请重新绑定")
+                raise dynamic_error(
+                    ErrResourceBindingInvalid, "软件仓库关联缺少工作分支，请重新关联"
+                )
             if not baseline_branch:
-                raise dynamic_error(ErrResourceBindingInvalid, "请先为仓库绑定选择基线分支")
-            access = repo_access.get(binding.binding_id)
+                raise dynamic_error(ErrResourceBindingInvalid, "请先为软件仓库关联选择基线分支")
+            access = repo_access.get(repository.software_repository_id)
             if access is None:
                 raise dynamic_error(ErrResourceBindingInvalid, "未解析到该仓库的 GitLab 凭据连接")
             project = await self.integration_connection_service.get_gitlab_project(
                 access.connection_id,
                 project_id,
-                binding.remote_resource_id,
+                repository.repository_project_id,
                 user_id=user_id,
             )
             clone_url = str(project.get("cloneUrl") or "").strip()
@@ -326,18 +328,18 @@ class CodeRiskAnalysisService:
             base_commit = await self.integration_connection_service.resolve_gitlab_commit(
                 access.connection_id,
                 project_id,
-                binding.remote_resource_id,
+                repository.repository_project_id,
                 baseline_branch,
                 user_id=user_id,
             )
             head_commit = await self.integration_connection_service.resolve_gitlab_commit(
                 access.connection_id,
                 project_id,
-                binding.remote_resource_id,
+                repository.repository_project_id,
                 branch,
                 user_id=user_id,
             )
-            pins[binding.binding_id] = RepoPin(
+            pins[repository.software_repository_id] = RepoPin(
                 clone_url=clone_url,
                 path_with_namespace=str(project.get("pathWithNamespace") or ""),
                 base_commit=base_commit,
@@ -347,26 +349,27 @@ class CodeRiskAnalysisService:
 
     @staticmethod
     def _binding_entry(
-        binding: ResourceBinding,
+        binding: RequirementRepositoryBinding,
         pin: RepoPin,
         repo_access: dict[str, RepoGitlabAccess],
     ) -> dict[str, Any]:
-        extra = binding.extra_json or {}
-        access = repo_access.get(binding.binding_id)
+        repository = binding.software_repository
+        association = binding.association
+        access = repo_access.get(repository.software_repository_id)
         notes = []
         if access is None:
             notes.append(CONNECTION_UNRESOLVED_NOTE)
         return {
-            "bindingId": binding.binding_id,
-            "instanceUrl": binding.instance_url,
-            "repositoryId": binding.remote_resource_id,
-            "groupId": binding.remote_parent_id or "",
-            "pathWithNamespace": pin.path_with_namespace,
+            "bindingId": repository.software_repository_id,
+            "softwareRepositoryId": repository.software_repository_id,
+            "softwareRepositoryName": repository.name,
+            "instanceUrl": repository.repository_instance_url,
+            "repositoryId": repository.repository_project_id,
+            "groupId": repository.repository_group_id,
+            "pathWithNamespace": pin.path_with_namespace or repository.repository_path,
             "cloneUrl": pin.clone_url,
-            "branch": str(extra.get("branch") or "").strip(),
-            "baselineBranch": str(
-                extra.get("baseline_branch") or extra.get("baselineBranch") or ""
-            ).strip(),
+            "branch": association.branch,
+            "baselineBranch": association.baseline_branch,
             "baseCommit": pin.base_commit,
             "headCommit": pin.head_commit,
             "baselineRef": pin.base_commit,

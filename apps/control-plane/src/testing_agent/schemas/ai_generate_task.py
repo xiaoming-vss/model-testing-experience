@@ -13,6 +13,7 @@ class AiGenerateTaskRequest(BaseModel):
     requirement_id: str | None = Field(default=None)
     source_type: str | None = Field(default=None)
     source_content: str | None = Field(default=None)
+    interface_ids: list[str] | None = Field(default=None)
     instruction: str | None = None
 
     model_config = ConfigDict(
@@ -151,19 +152,6 @@ class RepositoryProfileRunRequest(BaseModel):
     )
 
 
-class TestReportGenerateTaskRequest(BaseModel):
-    name: str | None = None
-    sprint_id: str | None = Field(default=None)
-    instruction: str | None = None
-
-    model_config = ConfigDict(
-        populate_by_name=True,
-        extra="allow",
-        json_schema_extra={"additionalProperties": False},
-        alias_generator=to_camel,
-    )
-
-
 class TestReportGenerateTaskRunRequest(BaseModel):
     request_id: str | None = Field(default=None, min_length=1, max_length=64)
     sprint_id: str | None = Field(default=None)
@@ -243,6 +231,7 @@ class AiGenerateTaskResponse(BaseModel):
     creator_user_id: str = Field()
     source_type: str = Field()
     source_content: str = Field()
+    interface_ids: list[str] = Field(default_factory=list)
     instruction: str = ""
     created_at: datetime | str | None = Field(default="")
     updated_at: datetime | str | None = Field(default="")
@@ -261,6 +250,7 @@ class AiGenerateTaskListItem(BaseModel):
     requirement_id: str = Field()
     creator_user_id: str = Field()
     source_type: str = Field()
+    interface_count: int = 0
     instruction: str = ""
     latest_run_status: str = ""
     created_at: datetime | str | None = Field(default="")

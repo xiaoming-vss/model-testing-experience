@@ -98,19 +98,6 @@ export function UiSuiteListToolbar({
       </div>
 
       <Space size={8} className="ui-suite-list-toolbar-actions tp-refresh-actions">
-        <Select
-          className="ui-suite-list-environment-select"
-          size="small"
-          placeholder="选择 UI 环境"
-          value={environmentId || undefined}
-          options={environmentOptions}
-          loading={environmentsLoading}
-          onChange={onEnvironmentChange}
-          popupMatchSelectWidth={false}
-        />
-        <Button size="small" onClick={onOpenEnvironments}>
-          环境
-        </Button>
         <Tooltip title="刷新测试集列表">
           <ProjectActionButton
             action="read"
@@ -124,6 +111,19 @@ export function UiSuiteListToolbar({
             onClick={onRefresh}
           />
         </Tooltip>
+        <Select
+          className="ui-suite-list-environment-select"
+          size="small"
+          placeholder="选择 UI 环境"
+          value={environmentId || undefined}
+          options={environmentOptions}
+          loading={environmentsLoading}
+          onChange={onEnvironmentChange}
+          popupMatchSelectWidth={false}
+        />
+        <Button size="small" onClick={onOpenEnvironments}>
+          环境
+        </Button>
         <ProjectActionButton
           action="write"
           type="primary"

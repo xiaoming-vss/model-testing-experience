@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
 from testing_agent.app import create_app
-from testing_agent.core.errors import ErrBadRequest, ErrSuccess, app_error_payload
+from testing_agent.core.errors import ErrSuccess, app_error_payload
 
 
 def test_success_error_payload_matches_go_contract():
@@ -10,10 +10,6 @@ def test_success_error_payload_matches_go_contract():
         "message": "ok",
         "data": {"message": "ok"},
     }
-
-
-def test_app_error_allows_traceback_assignment_for_asgi_cleanup():
-    ErrBadRequest.__traceback__ = None
 
 
 def test_root_returns_go_style_response():

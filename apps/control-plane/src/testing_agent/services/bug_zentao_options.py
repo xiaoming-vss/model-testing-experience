@@ -74,14 +74,3 @@ async def user_options(client):
             continue
         options[account] = {"account": account, "name": str(item.get("realname") or account)}
     return sorted(options.values(), key=lambda item: (item["name"], item["account"]))
-
-
-async def validate_choices(client, target, product_id, request):
-    if request.opened_build != ["trunk"]:
-        allowed = {item["id"] for item in await build_options(client, target, product_id)}
-        if not set(request.opened_build).issubset(allowed):
-            raise AppError(400, "所选影响版本已删除或不属于当前禅道执行及产品，请重新选择", 400)
-    if request.assigned_to:
-        allowed = {item["account"] for item in await user_options(client)}
-        if request.assigned_to not in allowed:
-            raise AppError(400, "所选禅道指派人不存在或不可用，请重新选择", 400)

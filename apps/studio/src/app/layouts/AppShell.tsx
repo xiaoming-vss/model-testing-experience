@@ -20,11 +20,6 @@ import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
 import { UnifiedAiTestingPage } from '@/features/ai-testing/pages/UnifiedAiTestingPage'
 import { AiSkillLibraryPage } from '@/features/ai-testing/pages/AiSkillLibraryPage'
 import { AiTestingOverviewPage } from '@/features/ai-testing/pages/AiTestingOverviewPage'
-import { ApiCaseGenerateTaskDetailPage } from '@/features/ai-testing/pages/ApiCaseGenerateTaskDetailPage'
-import { FunctionalCaseGenerateTaskDetailPage } from '@/features/ai-testing/pages/FunctionalCaseGenerateTaskDetailPage'
-import { FunctionalCaseRelationsPage } from '@/features/ai-testing/pages/FunctionalCaseRelationsPage'
-import { UiCaseGenerateTaskDetailPage } from '@/features/ai-testing/pages/UiCaseGenerateTaskDetailPage'
-import { RequirementAnalysisTaskDetailPage } from '@/features/ai-testing/pages/RequirementAnalysisTaskDetailPage'
 import { CodeRiskTaskDetailPage } from '@/features/ai-testing/pages/CodeRiskTaskDetailPage'
 import { BaseServicesPage } from '@/features/base-services/pages/BaseServicesPage'
 import { TestingPage } from '@/features/testing/pages/TestingPage'
@@ -225,11 +220,6 @@ export function AppShell() {
             <Route path="/ai-testing" element={<AiTestingOverviewPage />} />
             <Route path="/ai-testing/skills" element={<Navigate to="/base-services?tab=skills" replace />} />
             <Route path="/ai-testing/tasks" element={<UnifiedAiTestingPage />} />
-            <Route path="/ai-testing/tasks/:taskId" element={<ApiCaseGenerateTaskDetailPage />} />
-            <Route path="/ai-testing/function-tasks/:taskId" element={<FunctionalCaseGenerateTaskDetailPage />} />
-            <Route path="/ai-testing/function-tasks/:taskId/runs/:runId/graph" element={<FunctionalCaseRelationsPage />} />
-            <Route path="/ai-testing/ui-tasks/:taskId" element={<UiCaseGenerateTaskDetailPage />} />
-            <Route path="/ai-testing/requirement-analysis-tasks/:taskId" element={<RequirementAnalysisTaskDetailPage />} />
             <Route path="/ai-testing/code-risk-tasks/:taskId" element={<CodeRiskTaskDetailPage />} />
             <Route path="/base-services" element={<BaseServicesPage skillLibrary={<div className="ai-testing-page tp-list-surface ai-skill-library-page tp-surface"><AiSkillLibraryPage embedded /></div>} />} />
             <Route path="/api-automation" element={<Navigate to="/testing?tab=api" replace />} />

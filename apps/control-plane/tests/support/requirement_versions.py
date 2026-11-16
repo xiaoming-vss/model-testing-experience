@@ -9,18 +9,11 @@ from sqlalchemy import select
 from testing_agent.models.ai_generate_stage_version import AiGenerateStageVersion
 from testing_agent.models.ai_generate_task import AiGenerateTask
 
-UNDERSTANDING_FIXTURE = (
-    Path(__file__).resolve().parent.parent
-    / "fixtures/requirement_artifacts/requirement-understanding.example.json"
-)
-
-
-def understanding_artifact() -> dict:
-    return json.loads(UNDERSTANDING_FIXTURE.read_text())
+ARTIFACT_FIXTURES = Path(__file__).resolve().parent.parent / "fixtures/requirement_artifacts"
 
 
 def material_artifact() -> dict:
-    fixture = UNDERSTANDING_FIXTURE.parent / "readable-material.example.json"
+    fixture = ARTIFACT_FIXTURES / "readable-material.example.json"
     return json.loads(fixture.read_text())
 
 
@@ -111,7 +104,7 @@ def material_version(session, requirement_id="r", version_no=1, content=None):
     return version
 
 
-def approve_understanding(
+def approve_material_version(
     client,
     requirement_id,
     *,
@@ -119,20 +112,14 @@ def approve_understanding(
     sprint_id=None,
     content=None,
     version_no=1,
-    stage="feature_understanding",
 ):
-    """Insert an approved feature_understanding version for API-level tests."""
+    """Insert an approved material-extraction version for API-level tests."""
     from testing_agent.models.requirement import Requirement
     from testing_agent.models.sprint import Sprint
 
     task_id = f"understanding-{requirement_id}"
     artifact = (
-        content
-        if content is not None
-        else json.dumps(
-            material_artifact() if stage == "extracting_text" else understanding_artifact(),
-            ensure_ascii=False,
-        )
+        content if content is not None else json.dumps(material_artifact(), ensure_ascii=False)
     )
 
     async def insert():
@@ -166,7 +153,7 @@ def approve_understanding(
                 AiGenerateStageVersion(
                     version_id=f"understanding-{requirement_id}-v{version_no}",
                     task_id=task_id,
-                    stage=stage,
+                    stage="extracting_text",
                     version_no=version_no,
                     attempt_id=f"understanding-attempt-{requirement_id}-{version_no}",
                     artifact_content=artifact,
@@ -182,4 +169,4 @@ def approve_understanding(
 
 
 def approve_material(client, requirement_id, **kwargs):
-    return approve_understanding(client, requirement_id, stage="extracting_text", **kwargs)
+    return approve_material_version(client, requirement_id, **kwargs)

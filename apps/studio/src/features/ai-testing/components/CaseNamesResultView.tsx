@@ -1,4 +1,3 @@
-import { TraceablePointsView } from './TraceablePointsView'
 import { ReactFlow, Handle, Position, applyNodeChanges, getNodesBounds, getViewportForBounds, type ReactFlowInstance, type NodeProps } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { buildTreeFlow, layoutTreeFlow, type TreeFlowNode } from '../utils/caseNameTreeLayout'
@@ -8,17 +7,13 @@ import '@/features/ai-testing/styles/index.css'
 import '@/features/ai-testing/styles/case-name-tree.css'
 import type { CaseNameTreeNode } from '@/features/ai-testing/utils/caseNameTree'
 import { buildCaseNameTree, countCaseNameTree } from '@/features/ai-testing/utils/caseNameTree'
-import { isJsonText } from '@/features/ai-testing/utils/functionalOutput'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
 import { message } from '@/shared/utils/feedback'
 import { DeleteOutlined, PictureOutlined } from '@ant-design/icons'
-import { ArtifactViewTabs } from './ArtifactViewTabs'
 import { Button, Tag } from 'antd'
 import { toBlob } from 'html-to-image'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-
-export type CaseNamesViewMode = 'json' | 'tree'
 
 function CaseNameTreeNodeView({ node, className, onSelect, selected, selectionTick = 0 }: {
   node: CaseNameTreeNode; className: string; onSelect?: (nodeId: string) => void; selected?: boolean; selectionTick?: number
@@ -164,43 +159,4 @@ function CaseTreeFlow({ tree, selectedNodeId, selectionTick, onSelect, onToggle,
       nodesDraggable={false} nodesConnectable={false} elementsSelectable={false} deleteKeyCode={null} minZoom={0.5} maxZoom={1.5}
       panOnScroll zoomOnScroll={false} zoomActivationKeyCode="Control" proOptions={{ hideAttribution: true }} />
   </div>
-}
-
-export function CaseNamesResultView({
-  content,
-  rootTitle,
-  expanded = false,
-  activeView,
-  onViewChange,
-}: {
-  content: string
-  rootTitle: string
-  expanded?: boolean
-  activeView?: CaseNamesViewMode
-  onViewChange?: (view: CaseNamesViewMode) => void
-}) {
-  return (
-    <ArtifactViewTabs jsonCopyText={content}
-      className={`ai-case-names-inner-tabs${expanded ? ' expanded' : ''}`}
-      size="small"
-      activeKey={activeView}
-      onChange={(key) => onViewChange?.(key as CaseNamesViewMode)}
-      items={[
-        {
-          key: 'tree',
-          label: '可视化',
-          children: <TraceablePointsView content={content} tree={<CaseNameTreeView content={content} rootTitle={rootTitle} expanded={expanded} />} />,
-        },
-        {
-          key: 'json',
-          label: 'json',
-          children: isJsonText(content) ? (
-            <JsonEditor value={content} showCopy={false} readOnly foldable minHeight={expanded ? 520 : 240} />
-          ) : (
-            <pre className="ai-task-code-block">{content}</pre>
-          ),
-        },
-      ]}
-    />
-  )
 }

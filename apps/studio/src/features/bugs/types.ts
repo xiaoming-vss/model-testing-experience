@@ -5,7 +5,6 @@ export type BugResolution = 'fixed' | 'bydesign' | 'duplicate' | 'external' | 'n
 export type BugSeverity = 'fatal' | 'serious' | 'normal' | 'minor'
 export type BugPriority = 'urgent' | 'high' | 'medium' | 'low'
 export type BugAction = 'confirm' | 'resolve' | 'close' | 'activate'
-export type BugRejectReason = 'by_design' | 'not_reproducible' | 'deferred'
 export type BugActivityKind = 'status_change' | 'transfer' | 'comment' | 'edit' | 'attachment'
 
 export type BugAttachment = {

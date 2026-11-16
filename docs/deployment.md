@@ -48,7 +48,7 @@ python3 scripts/manage.py compose logs -f
 
 ### v1 数据库初始化
 
-v1 只支持空数据库初始化。控制面只有一个冻结基线迁移 `20261103_0001_v1_baseline`，在空库执行 `alembic upgrade head` 创建全部业务表和 `alembic_version`；不提供从任何旧 revision 升级或迁移历史数据的路径。外部 MySQL 同样必须是空库，或只包含可丢弃的测试表。
+v1 只支持空数据库初始化。控制面只有一个基线迁移 `20261103_0001_v1_baseline`，在空库执行 `alembic upgrade head` 创建全部业务表和 `alembic_version`；不提供从旧 revision 升级或迁移历史数据的路径。第一版正式发布前，baseline 随模型变更直接更新，迁移链保持单一 revision；发布后冻结 baseline，之后的变更改为新增迁移。外部 MySQL 同样必须是空库，或只包含可丢弃的测试表。
 
 数据库结构与模型的一致性由控制面测试验证；部署后如启动失败，先检查 `alembic_version` 是否为 `20261103_0001`，不要把已有旧库直接接到 v1 控制面。
 
@@ -74,6 +74,8 @@ engine.dispose()
 PY
 ```
 
+仓库已移除 0002–0005 等旧 revision。如果本地库的 `alembic_version` 仍指向旧 revision，直接执行 `alembic upgrade head` 会报找不到 revision，需要按本节 stamp 到当前基线，或重建空库后重新初始化。
+
 确认 `compare_metadata` 为零差异、关键表行数与备份前一致后，执行：
 
 ```sh
@@ -81,7 +83,7 @@ cd apps/control-plane
 uv run alembic stamp --purge 20261103_0001
 ```
 
-`--purge` 用于移除旧 revision 行后写入 v1 baseline；stamp 只更新 `alembic_version`，不修改业务表。随后重新核对行数并访问 `/v1/health` 完成启动 smoke。该操作不适用于生产或任何需要升级的数据库。
+`--purge` 用于移除旧 revision 行后写入预发布阶段的唯一 baseline；stamp 只更新 `alembic_version`，不修改业务表。随后重新核对行数并访问 `/v1/health` 完成启动 smoke。该操作不适用于生产或任何需要升级的数据库。
 
 AI 任务需要先配置平台中的模型服务及个人授权，并完成默认技能同步：本地使用 [默认技能同步命令](control-plane/skills.md)，Kubernetes 由 control-plane chart 的 `skillsSync` Job 自动完成。Worker 按任务／阶段拉取当前默认技能到任务独立目录，不再按项目手工预置技能。代码部署不等于默认技能源文件及业务数据迁移。
 

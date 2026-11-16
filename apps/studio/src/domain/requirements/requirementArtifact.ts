@@ -1,5 +1,4 @@
 type RecordValue = Record<string, unknown>
-export type RequirementSourceReference = { sourceId: string; locator: string; excerpt: string | null }
 function record(value: unknown): value is RecordValue {
   return !!value && typeof value === 'object' && !Array.isArray(value)
 }

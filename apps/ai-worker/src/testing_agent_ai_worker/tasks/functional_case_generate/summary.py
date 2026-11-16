@@ -75,14 +75,14 @@ def build_result_summary_json(
 ) -> str:
     """构造平台展示用摘要 JSON。"""
 
-    document_type = (task.payload.document_type or task.payload.source_type or "").strip().lower()
     return build_task_result_summary(
         task=task,
         status=status,
         error_message=error_message,
         details={
-            "documentType": document_type,
-            "sourceType": document_type,
+            "sourceFormat": (task.payload.source_format or "").strip().lower(),
+            "sourceFormatVersion": (task.payload.source_format_version or "").strip(),
+            "sourceType": (task.payload.source_type or "").strip().lower(),
             "caseCount": count_cases(detailed_cases_json),
             "configJsonLength": len(config_json),
             "resultLength": len(detailed_cases_json),

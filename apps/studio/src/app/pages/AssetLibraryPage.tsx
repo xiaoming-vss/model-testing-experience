@@ -5,18 +5,19 @@ import '@/app/styles/asset-library.css'
 import { AssetLibraryTabs } from './AssetLibraryTabs'
 import { PaneActivityProvider } from '@/shared/ui/PaneActivityProvider'
 import { CaseLibraryPage } from '@/features/test-cases/pages/CaseLibraryPage'
-import { ApiAppsPage } from '@/features/interface-library/pages/ApiAppsPage'
+import { SoftwareRepositoriesPage } from '@/features/interface-library/pages/SoftwareRepositoriesPage'
 import { InterfaceLibraryPage } from '@/features/interface-library/pages/InterfaceLibraryPage'
 import type { AssetLibraryTab } from '@/app/layouts/navigation'
 
 const ASSET_TAB_PAGES = [
   { key: 'cases', Page: CaseLibraryPage },
   { key: 'interfaces', Page: InterfaceLibraryPage },
-  { key: 'apps', Page: ApiAppsPage },
+  { key: 'repositories', Page: SoftwareRepositoriesPage },
 ] as const
 
 function resolveAssetTab(value: string | null): AssetLibraryTab {
-  return value === 'interfaces' || value === 'apps' ? value : 'cases'
+  if (value === 'apps') return 'repositories'
+  return value === 'interfaces' || value === 'repositories' ? value : 'cases'
 }
 
 export function AssetLibraryPage() {

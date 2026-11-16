@@ -30,12 +30,6 @@ function mount() {
   </QueryClientProvider></TestThemeProvider>)
 }
 
-it('未生成图谱时显示明确空状态，不交给图谱解析器报错', async () => {
-  mount()
-  expect(await screen.findByText('当前运行尚未生成用例图谱')).toBeInTheDocument()
-  expect(screen.queryByTestId('relations-content')).not.toBeInTheDocument()
-})
-
 it('入队后持续刷新，等待真实产物出现再显示图谱', async () => {
   let submitted = false
   let reads = 0

@@ -14,7 +14,7 @@ import { requirementDesignApi } from '../api/requirementDesign.api'
 import { aiTestingApi } from '../api/aiTesting.api'
 import { generationChainApi } from '../api/generationChain.api'
 import { repositoryProfileApi } from '../api/repositoryProfile.api'
-import { baseServicesApi } from '@/features/base-services/api/baseServices.api'
+import { interfaceLibraryApi } from '@/features/interface-library/api/interfaceLibrary.api'
 import type { GenerationChain, GenerationChainStage, UiGenerationSourceOptions } from '../api/generationChain.api'
 import { RequirementDesignWorkspace } from './RequirementDesignWorkspace'
 
@@ -117,7 +117,7 @@ function chain(): GenerationChain {
 
 const emptyChain = (kind: 'requirement_analysis' | 'function' | 'api', label: string): GenerationChain => ({
   kind, label, configured: false, draftCount: 0,
-  stages: [{ stage: kind === 'function' ? 'requirement_analysis' : kind === 'api' ? 'generate' : 'extracting_text', label: '首阶段', order: 0, state: 'not_started', versions: [], upstreamStages: [] }],
+  stages: [{ stage: kind === 'function' ? 'requirement_analysis' : kind === 'api' ? 'interface_extract' : 'extracting_text', label: '首阶段', order: 0, state: 'not_started', versions: [], upstreamStages: [] }],
   leaf: {},
 })
 
@@ -577,40 +577,43 @@ it('UI 测试分组与功能测试使用相同大小', async () => {
   const functionalGroup = node('group:function')
   expect(ui.style.width).toBe(functionalGroup.style.width)
   expect(ui.style.height).toBe(functionalGroup.style.height)
-  expect(ui.style.width).toBe('594px')
-  expect(ui.style.height).toBe('280px')
 })
 
-it('单击 API 阶段可在侧栏运行两步生成', async () => {
+it('单击 API 阶段可在侧栏运行三步生成', async () => {
   const apiChain = { ...emptyChain('api', 'API 测试'), configured: true, taskId: 'api-task' }
-  apiChain.stages[0] = { ...apiChain.stages[0], stage: 'openapi_extract', label: '接口配置提取' }
-  apiChain.stages.push({ stage: 'generate', label: 'API 用例生成', order: 1, state: 'not_started', versions: [], upstreamStages: ['openapi_extract'], blockedReason: '请先审核通过「接口配置提取」' })
+  apiChain.stages[0] = { ...apiChain.stages[0], stage: 'interface_extract', label: '接口配置提取' }
+  apiChain.stages.push({ stage: 'api_design', label: '接口用例设计', order: 1, state: 'not_started', versions: [], upstreamStages: ['interface_extract'], blockedReason: '请先审核通过「接口配置提取」' })
+  apiChain.stages.push({ stage: 'generate', label: 'API 用例生成', order: 2, state: 'not_started', versions: [], upstreamStages: ['interface_extract', 'api_design'], blockedReason: '请先审核通过「接口用例设计」' })
   vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [apiChain] })
   vi.mocked(generationChainApi.chain).mockResolvedValue(apiChain)
   vi.mocked(generationChainApi.run).mockResolvedValue(apiChain)
   mount()
   const user = userEvent.setup()
-  expect(await screen.findByRole('button', { name: 'API 用例生成 · 未开始' })).toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: '接口用例设计 · 未开始' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'API 用例生成 · 未开始' })).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: '接口配置提取 · 未开始' }))
   const inspector = screen.getByRole('complementary', { name: '阶段详情' })
-  expect(within(inspector).getByText(/提取 OpenAPI 接口配置/)).toBeInTheDocument()
-  expect(within(inspector).getByText('OpenAPI 文档')).toBeInTheDocument()
+  expect(within(inspector).getByText(/提取接口库中的接口配置/)).toBeInTheDocument()
+  expect(within(inspector).getByText(/接口库接口/)).toBeInTheDocument()
   expect(within(inspector).queryByText('需求材料')).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: '接口用例设计 · 未开始' }))
+  expect(within(inspector).getByText(/设计正向、反向和边界用例/)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: '接口配置提取 · 未开始' }))
   await user.click(await within(inspector).findByRole('button', { name: '运行此阶段' }))
-  await waitFor(() => expect(generationChainApi.run).toHaveBeenCalledWith('req', 'api', 'openapi_extract', expect.objectContaining({ instruction: '只覆盖登录接口' })))
+  await waitFor(() => expect(generationChainApi.run).toHaveBeenCalledWith('req', 'api', 'interface_extract', expect.objectContaining({ instruction: '只覆盖登录接口' })))
 })
 
 it('API 阶段阻塞时侧栏展示原因并禁止运行', async () => {
   const apiChain = { ...emptyChain('api', 'API 测试'), configured: true, taskId: 'api-task' }
-  apiChain.stages[0].label = 'API 用例生成'
-  apiChain.stages[0].blockedReason = '请先配置文档'
+  apiChain.stages[0] = { ...apiChain.stages[0], stage: 'api_design', label: '接口用例设计' }
+  apiChain.stages[0].blockedReason = '请先审核通过「接口配置提取」'
   vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [apiChain] })
   vi.mocked(generationChainApi.chain).mockResolvedValue(apiChain)
   mount()
   const user = userEvent.setup()
-  await user.click(await screen.findByRole('button', { name: 'API 用例生成 · 未开始' }))
+  await user.click(await screen.findByRole('button', { name: '接口用例设计 · 未开始' }))
   const inspector = screen.getByRole('complementary', { name: '阶段详情' })
-  expect(await within(inspector).findByText('请先配置文档')).toBeInTheDocument()
+  expect(await within(inspector).findByText('请先审核通过「接口配置提取」')).toBeInTheDocument()
   expect(within(inspector).getByRole('button', { name: '运行此阶段' })).toBeDisabled()
 })
 
@@ -646,20 +649,63 @@ it('未配置 UI 测试时单击入口显示仓库源码配置，启动前先创
   })))
 })
 
-it('API 测试从分组侧栏打开文档编辑弹框并保存', async () => {
+it('API 测试从分组侧栏打开接口选择弹框并保存', async () => {
   vi.mocked(requirementDesignApi.configure).mockResolvedValue({ taskId: 'api-task' } as never)
   vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [{ ...emptyChain('api', 'API 测试'), taskId: '' }] })
+  vi.spyOn(interfaceLibraryApi, 'getRequirementSoftwareRepositories').mockResolvedValue([] as never)
+  vi.spyOn(interfaceLibraryApi, 'getProjectApiInterfaces').mockResolvedValue(
+    Object.assign(
+      [
+        {
+          interfaceId: 'interface-1',
+          softwareRepositoryId: 'repository-1',
+          softwareRepositoryName: '订单服务',
+          name: '创建订单',
+          method: 'POST',
+          path: '/orders',
+          description: '',
+          tags: [],
+          requirements: [],
+          sourceType: 'manual',
+        },
+      ],
+      {
+        items: [
+          {
+            interfaceId: 'interface-1',
+            softwareRepositoryId: 'repository-1',
+            softwareRepositoryName: '订单服务',
+            name: '创建订单',
+            method: 'POST',
+            path: '/orders',
+            description: '',
+            tags: [],
+            requirements: [],
+            sourceType: 'manual',
+          },
+        ],
+        total: 1,
+      },
+    ) as never,
+  )
   mount()
   const user = userEvent.setup()
   await user.click(await screen.findByRole('button', { name: /开始API 测试/ }))
   const inspector = screen.getByRole('complementary', { name: '阶段详情' })
-  expect(within(inspector).getByText('尚未配置文档')).toBeInTheDocument()
+  expect(within(inspector).getByText('尚未选择接口')).toBeInTheDocument()
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  await user.click(within(inspector).getByRole('button', { name: '添加文档' }))
+  await user.click(within(inspector).getByRole('button', { name: '选择接口' }))
   const dialog = await screen.findByRole('dialog')
-  await user.type(within(dialog).getByRole('textbox', { name: 'OpenAPI / Swagger 文档' }), 'openapi: 3.0.0')
+  await user.click(within(dialog).getByLabelText('选择接口'))
+  await user.click(await screen.findByText('POST /orders · 订单服务'))
   await user.click(within(dialog).getByRole('button', { name: '保存设置' }))
-  await waitFor(() => expect(requirementDesignApi.configure).toHaveBeenCalledWith('req', 'api', expect.objectContaining({ sourceContent: 'openapi: 3.0.0' })))
+  await waitFor(() =>
+    expect(requirementDesignApi.configure).toHaveBeenCalledWith(
+      'req',
+      'api',
+      expect.objectContaining({ interfaceIds: ['interface-1'] }),
+    ),
+  )
 })
 
 it('阅读工具和审核操作在侧栏，视图切换与复制在页面标题栏', async () => {
@@ -966,6 +1012,35 @@ function draftStage(stage: string, label: string, order: number, content: string
   }
 }
 
+function apiDesignContent() {
+  return JSON.stringify({
+    schemaVersion: 'api_test_design/1.0',
+    interfaces: {
+      read_task: {
+        method: 'GET',
+        path: '/api/tasks',
+        cases: [
+          {
+            id: 'read_task_positive_full', title: '查询任务-正向-全参数', category: 'positive',
+            priority: 'P0', intent: '验证完整参数查询任务成功',
+            basis: { kind: 'positive', section: '', field: '', constraint: '' },
+            patch: {},
+            expected: { statusClass: '2xx', assertions: [{ assertSource: 'body_jsonpath', targetExpr: '$.id', comparator: 'exists', expectedValue: '' }] },
+          },
+          {
+            id: 'read_task_missing_query', title: '查询任务-反向-缺少必填参数', category: 'negative',
+            priority: 'P1', intent: '验证缺少必填查询参数时请求被拒绝',
+            basis: { kind: 'required', section: 'query', field: '/q', constraint: 'required' },
+            patch: { query: [{ op: 'remove', path: '/q' }] },
+            expected: { statusClass: '4xx', assertions: [] },
+          },
+        ],
+        uncovered: [{ kind: 'constraint', section: 'query', field: '/page', constraint: 'maximum:100', reason: 'soft_cap' }],
+      },
+    },
+  })
+}
+
 function chainWith(kind: GenerationChain['kind'], label: string, stages: GenerationChainStage[]): GenerationChain {
   return {
     kind, label, configured: true, taskId: `task-${kind}`, runId: `run-${kind}`,
@@ -1010,7 +1085,9 @@ it('需求分析分组内提供仓库画像卡片，进入阅读区后在侧栏�
       upstreamStages: [],
     },
   ])
-  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [data, chain()] })
+  vi.mocked(generationChainApi.overview).mockResolvedValue({
+    chains: [data, emptyChain('api', 'API 测试'), chain()],
+  })
   vi.mocked(generationChainApi.chain).mockResolvedValue(data)
   vi.mocked(repositoryProfileApi.getRepositoryProfileTasks).mockResolvedValue([
     { taskId: 'profile-task', requirementId: 'req', name: '画像', instruction: '' },
@@ -1039,10 +1116,10 @@ it('需求分析分组内提供仓库画像卡片，进入阅读区后在侧栏�
       },
     },
   ] as never)
-  vi.spyOn(baseServicesApi, 'getGitlabRequirementBindings').mockResolvedValue([
+  vi.spyOn(interfaceLibraryApi, 'getRequirementSoftwareRepositories').mockResolvedValue([
     {
-      bindingId: 'binding-1', provider: 'gitlab', remoteResourceType: 'repository',
-      remoteResourceId: 'repo-1', remoteNameSnapshot: 'team/repo-1', branch: 'main',
+      softwareRepositoryId: 'repo-1', softwareRepositoryName: 'team/repo-1',
+      branch: 'main', baselineBranch: 'main',
     },
   ] as never)
 
@@ -1054,8 +1131,15 @@ it('需求分析分组内提供仓库画像卡片，进入阅读区后在侧栏�
   await waitFor(() => {
     expect(document.querySelector('[data-testid="rf__edge-analysis-to-profile"]')).not.toBeNull()
     expect(document.querySelector('[data-testid="rf__edge-profile-to-ui"]')).not.toBeNull()
+    expect(document.querySelector('[data-testid="rf__edge-profile-to-api"]')).not.toBeNull()
     expect(document.querySelector('[data-testid="rf__edge-analysis-to-ui"]')).toBeNull()
   })
+
+  await user.click(screen.getByRole('button', { name: '选择API 测试分组' }))
+  const apiSource = await screen.findByRole('region', { name: 'API 测试建议后端仓库' })
+  expect(await within(apiSource).findByText('team/repo-1')).toBeInTheDocument()
+  expect(within(apiSource).getByText(/来自仓库画像 v1/)).toBeInTheDocument()
+  expect(screen.getByRole('region', { name: 'API 测试接口' })).toBeInTheDocument()
 
   await user.click(card)
   const inspector = screen.getByRole('complementary', { name: '阶段详情' })
@@ -1210,10 +1294,11 @@ it('完整用例还没有运行记录时不显示用例图谱节点', async () =
   expect(screen.queryByRole('button', { name: '用例图谱 · 派生' })).not.toBeInTheDocument()
 })
 
-it('API 提取审核通过并继续时向下一阶段传递生成要求', async () => {
+it('API 提取审核通过并继续时向设计阶段传递生成要求', async () => {
   const apiData = chainWith('api', 'API 测试', [
-    draftStage('openapi_extract', '接口配置提取', 0, '{"login":{"path":"/login","method":"POST"}}'),
-    { stage: 'generate', label: 'API 用例生成', order: 1, state: 'not_started', versions: [], upstreamStages: ['openapi_extract'] },
+    draftStage('interface_extract', '接口配置提取', 0, '{"login":{"path":"/login","method":"POST"}}'),
+    { stage: 'api_design', label: '接口用例设计', order: 1, state: 'not_started', versions: [], upstreamStages: ['interface_extract'] },
+    { stage: 'generate', label: 'API 用例生成', order: 2, state: 'not_started', versions: [], upstreamStages: ['interface_extract', 'api_design'] },
   ])
   vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [apiData] })
   vi.mocked(generationChainApi.chain).mockResolvedValue(apiData)
@@ -1222,12 +1307,32 @@ it('API 提取审核通过并继续时向下一阶段传递生成要求', async 
   const user = userEvent.setup()
   await user.click(await screen.findByRole('button', { name: '接口配置提取 · 待审核' }))
   await user.click(await screen.findByRole('button', { name: /审核通过并继续/ }))
-  await waitFor(() => expect(generationChainApi.review).toHaveBeenCalledWith('req', 'api', 'openapi_extract', expect.objectContaining({ continueAfter: true, instruction: '只覆盖登录接口' })))
+  await waitFor(() => expect(generationChainApi.review).toHaveBeenCalledWith('req', 'api', 'interface_extract', expect.objectContaining({ continueAfter: true, instruction: '只覆盖登录接口' })))
 })
 
-it('API 与 UI 阶段沿用页签的接口链路和 UI 三阶段工作台', async () => {
+it('API 设计审核通过并继续时进入生成阶段', async () => {
   const apiData = chainWith('api', 'API 测试', [
-    draftStage('generate', 'API 用例生成', 0, '- name: 查询任务\n  method: GET\n  path: /api/tasks\n'),
+    {
+      stage: 'interface_extract', label: '接口配置提取', order: 0, state: 'approved',
+      latestVersion: version('sv-api', 1), draft: null, versions: [version('sv-api', 1)], upstreamStages: [],
+    },
+    draftStage('api_design', '接口用例设计', 1, apiDesignContent(), { interface_extract: 'sv-api' }, ['interface_extract']),
+    { stage: 'generate', label: 'API 用例生成', order: 2, state: 'not_started', versions: [], upstreamStages: ['interface_extract', 'api_design'] },
+  ])
+  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [apiData] })
+  vi.mocked(generationChainApi.chain).mockResolvedValue(apiData)
+  vi.mocked(generationChainApi.review).mockResolvedValue(apiData)
+  mount()
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: '接口用例设计 · 待审核' }))
+  await user.click(await screen.findByRole('button', { name: /审核通过并继续/ }))
+  await waitFor(() => expect(generationChainApi.review).toHaveBeenCalledWith('req', 'api', 'api_design', expect.objectContaining({ continueAfter: true, instruction: '只覆盖登录接口' })))
+})
+
+it('API 与 UI 阶段沿用页签的接口链路、设计查看器和 UI 三阶段工作台', async () => {
+  const apiData = chainWith('api', 'API 测试', [
+    draftStage('api_design', '接口用例设计', 1, apiDesignContent(), { interface_extract: 'sv-api' }, ['interface_extract']),
+    draftStage('generate', 'API 用例生成', 2, '- name: 查询任务\n  method: GET\n  path: /api/tasks\n'),
   ])
   const uiData = chainWith('ui', 'UI 测试', [
     draftStage('ui_surface', '元素控件清单', 0, JSON.stringify({ schemaVersion: 'ui_test_surface/1.0', pages: [] })),
@@ -1236,6 +1341,12 @@ it('API 与 UI 阶段沿用页签的接口链路和 UI 三阶段工作台', asyn
     chains: [emptyChain('requirement_analysis', '需求分析'), emptyChain('function', '功能测试'), apiData, uiData],
   })
   vi.mocked(generationChainApi.chain).mockImplementation(async (_requirementId, kind) => kind === 'api' ? apiData : kind === 'ui' ? uiData : chain())
+
+  const designView = await openStage('接口用例设计')
+  expect(designView.dialog.querySelector('.api-design-visual-view')).not.toBeNull()
+  expect(within(designView.dialog).getByText('用例 2')).toBeInTheDocument()
+  expect(within(designView.dialog).getByText('删除')).toBeInTheDocument()
+  expect(within(designView.dialog).getByText('查询参数.q')).toBeInTheDocument()
 
   const apiView = await openStage('API 用例生成')
   expect(apiView.dialog.querySelector('.api-config-visual-view')).not.toBeNull()
@@ -1285,7 +1396,29 @@ it('画布不再显示缩放按钮、比例和适应画布入口', async () => {
   expect(screen.queryByRole('group', { name: '筛选生成链' })).not.toBeInTheDocument()
 })
 
-it('API 独立输入，仓库画像连接 UI，初始分组不重叠', async () => {
+it('API 三阶段与功能、UI 测试共用交错布局', async () => {
+  const apiChain: GenerationChain = {
+    ...emptyChain('api', 'API 测试'),
+    configured: true,
+    draftCount: 1,
+    stages: [
+      { stage: 'interface_extract', label: '接口配置提取', order: 0, state: 'approved', versions: [], upstreamStages: [] },
+      draftStage('api_design', '接口用例设计', 1, apiDesignContent(), { interface_extract: 'sv-api' }, ['interface_extract']),
+      { stage: 'generate', label: 'API 用例生成', order: 2, state: 'not_started', versions: [], upstreamStages: ['interface_extract', 'api_design'] },
+    ],
+  }
+  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [apiChain] })
+  vi.mocked(generationChainApi.chain).mockResolvedValue(apiChain)
+  mount()
+  await screen.findByRole('button', { name: '接口用例设计 · 待审核' })
+  const group = document.querySelector<HTMLElement>('[data-id="group:api"]')!
+  expect(Number.parseFloat(group.style.width)).toBeCloseTo(594)
+  expect(Number.parseFloat(group.style.height)).toBeCloseTo(280)
+  expect(document.querySelector('[aria-label="Edge from api:interface_extract to api:api_design"]')).toBeInTheDocument()
+  expect(document.querySelector('[aria-label="Edge from api:api_design to api:generate"]')).toBeInTheDocument()
+})
+
+it('API 与 UI 都从仓库画像出线，初始分组不重叠', async () => {
   const analysis = { ...emptyChain('requirement_analysis', '需求分析'), configured: true }
   vi.mocked(generationChainApi.overview).mockResolvedValue({
     chains: [analysis, emptyChain('function', '功能测试'), emptyChain('api', 'API 测试'), chain()],
@@ -1294,6 +1427,7 @@ it('API 独立输入，仓库画像连接 UI，初始分组不重叠', async () 
   await screen.findByRole('button', { name: 'UI 用例设计 · 待审核' })
   await waitFor(() => {
     expect(document.querySelector('[aria-label="Edge from requirement_analysis:extracting_text to group:api"]')).not.toBeInTheDocument()
+    expect(document.querySelector('[aria-label="Edge from profile to group:api"]')).toBeInTheDocument()
     expect(document.querySelector('[aria-label="Edge from profile to ui:ui_surface"]')).toBeInTheDocument()
   })
   const api = document.querySelector<HTMLElement>('[data-id="group:api"]')!

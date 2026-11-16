@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import mysql, seed_api_interface, seed_row  # noqa: F401
 
 from testing_agent.core.errors import AppError, ErrForbidden
 from testing_agent.models.ai_generate_task import AiGenerateTask
@@ -36,6 +36,7 @@ async def test_review_continuation_replays_from_stale_snapshot(mysql, monkeypatc
             .mappings()
             .one()
         )
+        interface = seed_api_interface(connection, sprint["project_id"])
         task = seed_row(
             connection,
             AiGenerateTask.__table__,
@@ -44,8 +45,9 @@ async def test_review_continuation_replays_from_stale_snapshot(mysql, monkeypatc
                 "project_id": sprint["project_id"],
                 "sprint_id": sprint["sprint_id"],
                 "requirement_id": requirement["requirement_id"],
-                "source_type": "openapi",
-                "source_content": '{"openapi":"3.0","paths":{}}',
+                "source_type": "interface_library",
+                "source_content": "",
+                "interface_ids_json": [interface["interface_id"]],
             },
         )
     monkeypatch.setattr(run_command, "require_personal_connection", AsyncMock())
@@ -79,7 +81,7 @@ async def test_review_continuation_replays_from_stale_snapshot(mysql, monkeypatc
                 writer_chain,
                 task_row,
                 "api",
-                "openapi_extract",
+                "interface_extract",
                 GenerationChainRunRequest(connectionId="llm"),
                 "actor",
             )
@@ -111,13 +113,13 @@ async def test_review_continuation_replays_from_stale_snapshot(mysql, monkeypatc
             )
             assert (
                 await first.review(
-                    requirement["requirement_id"], "api", "openapi_extract", body, "actor"
+                    requirement["requirement_id"], "api", "interface_extract", body, "actor"
                 )
                 == "continued"
             )
             assert (
                 await second.review(
-                    requirement["requirement_id"], "api", "openapi_extract", body, "actor"
+                    requirement["requirement_id"], "api", "interface_extract", body, "actor"
                 )
                 == "continued"
             )
@@ -125,7 +127,7 @@ async def test_review_continuation_replays_from_stale_snapshot(mysql, monkeypatc
             replay_request = second.run.await_args.args[3]
             assert first_request.request_id == replay_request.request_id == body.request_id
             assert first_request.upstream_versions == replay_request.upstream_versions
-            assert first_request.upstream_versions["openapi_extract"]
+            assert first_request.upstream_versions["interface_extract"]
     finally:
         await engine.dispose()
         with mysql.begin() as connection:
@@ -146,6 +148,7 @@ async def test_stage_run_and_revision_replay_ignore_stale_snapshot(mysql, monkey
             .mappings()
             .one()
         )
+        interface = seed_api_interface(connection, sprint["project_id"])
         task = seed_row(
             connection,
             AiGenerateTask.__table__,
@@ -154,8 +157,9 @@ async def test_stage_run_and_revision_replay_ignore_stale_snapshot(mysql, monkey
                 "project_id": sprint["project_id"],
                 "sprint_id": sprint["sprint_id"],
                 "requirement_id": requirement["requirement_id"],
-                "source_type": "openapi",
-                "source_content": '{"openapi":"3.0","paths":{}}',
+                "source_type": "interface_library",
+                "source_content": "",
+                "interface_ids_json": [interface["interface_id"]],
             },
         )
     auth = AsyncMock()
@@ -201,13 +205,13 @@ async def test_stage_run_and_revision_replay_ignore_stale_snapshot(mysql, monkey
             await stale.scalar(sa.select(sa.func.count()).select_from(WorkerTask))
             task_row = await locked_task(writer)
             initial = await run_command.start_stage(
-                chain(writer), task_row, "api", "openapi_extract", run_body, "actor"
+                chain(writer), task_row, "api", "interface_extract", run_body, "actor"
             )
             attempt_id = initial.id
             await writer.commit()
             stale_task = await locked_task(stale)
             replay = await run_command.start_stage(
-                chain(stale), stale_task, "api", "openapi_extract", run_body, "actor"
+                chain(stale), stale_task, "api", "interface_extract", run_body, "actor"
             )
             assert replay.id == attempt_id
             with pytest.raises(AppError):
@@ -215,7 +219,7 @@ async def test_stage_run_and_revision_replay_ignore_stale_snapshot(mysql, monkey
                     chain(stale),
                     stale_task,
                     "api",
-                    "openapi_extract",
+                    "interface_extract",
                     run_body.model_copy(update={"instruction": "changed"}),
                     "actor",
                 )
@@ -235,13 +239,21 @@ async def test_stage_run_and_revision_replay_ignore_stale_snapshot(mysql, monkey
             second = commands.DirectStageCommands(chain(stale))
             assert (
                 await first.revise(
-                    requirement["requirement_id"], "api", "openapi_extract", revision_body, "actor"
+                    requirement["requirement_id"],
+                    "api",
+                    "interface_extract",
+                    revision_body,
+                    "actor",
                 )
                 == "view"
             )
             assert (
                 await second.revise(
-                    requirement["requirement_id"], "api", "openapi_extract", revision_body, "actor"
+                    requirement["requirement_id"],
+                    "api",
+                    "interface_extract",
+                    revision_body,
+                    "actor",
                 )
                 == "view"
             )
@@ -257,7 +269,7 @@ async def test_stage_run_and_revision_replay_ignore_stale_snapshot(mysql, monkey
                 await second.revise(
                     requirement["requirement_id"],
                     "api",
-                    "openapi_extract",
+                    "interface_extract",
                     revision_body.model_copy(update={"instruction": "changed"}),
                     "actor",
                 )
@@ -265,7 +277,11 @@ async def test_stage_run_and_revision_replay_ignore_stale_snapshot(mysql, monkey
             auth.side_effect = ErrForbidden()
             with pytest.raises(AppError) as revoked:
                 await second.revise(
-                    requirement["requirement_id"], "api", "openapi_extract", revision_body, "actor"
+                    requirement["requirement_id"],
+                    "api",
+                    "interface_extract",
+                    revision_body,
+                    "actor",
                 )
             assert revoked.value.http_code == 403
             await stale.rollback()
@@ -290,7 +306,11 @@ async def test_stage_run_and_revision_replay_ignore_stale_snapshot(mysql, monkey
             assert set(revised.input_snapshot_json) == {"requestSignature"}
             assert (
                 await second.revise(
-                    requirement["requirement_id"], "api", "openapi_extract", revision_body, "actor"
+                    requirement["requirement_id"],
+                    "api",
+                    "interface_extract",
+                    revision_body,
+                    "actor",
                 )
                 == "view"
             )
@@ -317,6 +337,7 @@ async def test_different_generation_tasks_start_in_parallel(mysql, monkeypatch):
             .mappings()
             .one()
         )
+        interface = seed_api_interface(connection, sprint["project_id"])
         tasks = [
             seed_row(
                 connection,
@@ -326,8 +347,9 @@ async def test_different_generation_tasks_start_in_parallel(mysql, monkeypatch):
                     "project_id": sprint["project_id"],
                     "sprint_id": sprint["sprint_id"],
                     "requirement_id": requirement["requirement_id"],
-                    "source_type": "openapi",
-                    "source_content": '{"openapi":"3.0","paths":{}}',
+                    "source_type": "interface_library",
+                    "source_content": "",
+                    "interface_ids_json": [interface["interface_id"]],
                 },
             )
             for _ in range(2)
@@ -362,7 +384,7 @@ async def test_different_generation_tasks_start_in_parallel(mysql, monkeypatch):
                 chain,
                 row,
                 "api",
-                "openapi_extract",
+                "interface_extract",
                 GenerationChainRunRequest(connectionId="llm", requestId=request_id),
                 "actor",
             )

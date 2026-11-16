@@ -76,6 +76,9 @@ class RequirementResponse(RequirementMetadataResponse):
 class RequirementCodeSummaryResponse(BaseModel):
     repository: str
     branch: str
+    baseline_branch: str = ""
+
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
 
 
 class RequirementOptionResponse(BaseModel):

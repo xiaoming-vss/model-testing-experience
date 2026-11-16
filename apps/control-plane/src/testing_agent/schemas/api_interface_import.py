@@ -24,8 +24,8 @@ class ApiInterfaceImportSource(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-class ApiInterfaceImportApp(BaseModel):
-    app_id: str
+class ApiInterfaceImportSoftwareRepository(BaseModel):
+    software_repository_id: str
     name: str
     base_path: str = ""
 
@@ -58,13 +58,15 @@ class ApiInterfaceImportItem(BaseModel):
     existing_interface_id: str | None = None
     existing_version: int | None = None
     changed_fields: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    existing_tags: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
 class ApiInterfaceImportPreviewResponse(BaseModel):
     source: ApiInterfaceImportSource
-    app: ApiInterfaceImportApp
+    software_repository: ApiInterfaceImportSoftwareRepository
     summary: ApiInterfaceImportSummary
     base_path_change: ApiInterfaceImportBasePathChange | None = None
     warnings: list[ApiInterfaceImportWarning] = Field(default_factory=list)
@@ -86,7 +88,7 @@ class ApiInterfaceImportCommitResponse(BaseModel):
     updated: int = 0
     skipped: int = 0
     library_only: int = 0
-    app_base_path: str = ""
+    software_repository_base_path: str = ""
     interfaces: list[ApiInterfaceImportResultItem] = Field(default_factory=list)
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)

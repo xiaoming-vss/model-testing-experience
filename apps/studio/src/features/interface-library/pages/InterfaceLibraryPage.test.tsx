@@ -4,50 +4,58 @@ import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-route
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { interfaceLibraryApi } from '../api/interfaceLibrary.api'
-import type { ApiApp, ApiInterfaceListItem } from '../types'
+import type { SoftwareRepository, ApiInterfaceListItem } from '../types'
 import { InterfaceLibraryPage } from './InterfaceLibraryPage'
 
 vi.mock('../api/interfaceLibrary.api', () => ({
   interfaceLibraryApi: {
-    getApiApps: vi.fn(),
+    getSoftwareRepositories: vi.fn(),
     getProjectApiInterfaces: vi.fn(),
   },
 }))
 
-const orderApp: ApiApp = {
-  appId: 'app-1',
+const orderApp: SoftwareRepository = {
+  softwareRepositoryId: 'app-1',
   projectId: 'project-1',
   name: '订单服务',
   description: '',
   basePath: '/api/orders',
-  repository: null,
-  enabled: false,
+  repository: {
+    projectId: '41',
+    path: 'commerce/order-service',
+    name: 'order-service',
+    instanceUrl: 'https://gitlab.example.com',
+  },
+  interfaceGroups: [],
   interfaceCount: 2,
-  enabledInterfaceCount: 1,
   version: 1,
 }
 
-const userApp: ApiApp = {
+const userApp: SoftwareRepository = {
   ...orderApp,
-  appId: 'app-2',
+  softwareRepositoryId: 'app-2',
   name: '用户服务',
   basePath: '/api/users',
-  enabled: true,
+  repository: {
+    projectId: '42',
+    path: 'commerce/user-service',
+    name: 'user-service',
+    instanceUrl: 'https://gitlab.example.com',
+  },
+  interfaceGroups: [],
   interfaceCount: 1,
-  enabledInterfaceCount: 1,
 }
 
 const interfaceItem: ApiInterfaceListItem = {
   interfaceId: 'api-9',
-  appId: 'app-2',
-  appName: '用户服务',
+  softwareRepositoryId: 'app-2',
+  softwareRepositoryName: '用户服务',
   name: '查询用户',
   method: 'GET',
   path: '/users/{userId}',
   description: '',
   tags: [],
   requirements: [],
-  enabled: true,
   sourceType: 'manual',
   updatedAt: '2026-11-12T10:00:00',
 }
@@ -85,7 +93,7 @@ function renderPage(path: string) {
 
 describe('InterfaceLibraryPage', () => {
   beforeEach(() => {
-    vi.mocked(interfaceLibraryApi.getApiApps).mockResolvedValue(
+    vi.mocked(interfaceLibraryApi.getSoftwareRepositories).mockResolvedValue(
       listResponse([orderApp, userApp]),
     )
     vi.mocked(interfaceLibraryApi.getProjectApiInterfaces).mockResolvedValue(
@@ -105,37 +113,37 @@ describe('InterfaceLibraryPage', () => {
     expect(screen.getByRole('status')).toHaveTextContent('/asset-library/interfaces/api-9')
     expect(interfaceLibraryApi.getProjectApiInterfaces).toHaveBeenCalledWith(
       'project-1',
-      { appId: '', page: 1, pageSize: 1 },
+      { softwareRepositoryId: '', page: 1, pageSize: 1 },
     )
   })
 
-  it('opens the requested app interface when appId is present', async () => {
-    renderPage('/asset-library?tab=interfaces&appId=app-2')
+  it('opens the requested software repository interface when softwareRepositoryId is present', async () => {
+    renderPage('/asset-library?tab=interfaces&softwareRepositoryId=app-2')
 
     expect(await screen.findByText('接口详情 api-9')).toBeInTheDocument()
     expect(interfaceLibraryApi.getProjectApiInterfaces).toHaveBeenCalledWith(
       'project-1',
-      { appId: 'app-2', page: 1, pageSize: 1 },
+      { softwareRepositoryId: 'app-2', page: 1, pageSize: 1 },
     )
   })
 
-  it('falls back to creating an interface in the first enabled app', async () => {
+  it('falls back to creating an interface in the first software repository', async () => {
     vi.mocked(interfaceLibraryApi.getProjectApiInterfaces).mockResolvedValue(listResponse([]))
     renderPage('/asset-library?tab=interfaces')
 
     expect(await screen.findByText('新建接口页')).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent(
-      '/asset-library/interfaces/new?appId=app-2',
+      '/asset-library/interfaces/new?softwareRepositoryId=app-1',
     )
   })
 
-  it('keeps the requested app when creating the first interface', async () => {
+  it('keeps the requested repository when creating the first interface', async () => {
     vi.mocked(interfaceLibraryApi.getProjectApiInterfaces).mockResolvedValue(listResponse([]))
-    renderPage('/asset-library?tab=interfaces&appId=app-1')
+    renderPage('/asset-library?tab=interfaces&softwareRepositoryId=app-1')
 
     expect(await screen.findByText('新建接口页')).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent(
-      '/asset-library/interfaces/new?appId=app-1',
+      '/asset-library/interfaces/new?softwareRepositoryId=app-1',
     )
   })
 })

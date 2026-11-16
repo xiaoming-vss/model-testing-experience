@@ -222,6 +222,8 @@ it('新建用例先落成草稿，左栏标出草稿并可从草稿丢弃回到�
 
   await waitFor(() => expect(container.querySelector('.api-wb-case-draft')).toBeTruthy())
   expect(screen.getByLabelText('用例名称')).toHaveValue('')
+  fireEvent.change(screen.getByLabelText('用例名称'), { target: { value: '未保存的 API 用例' } })
+  expect(screen.getByLabelText('用例名称')).toHaveValue('未保存的 API 用例')
   expect(create).not.toHaveBeenCalled()
   client.clear()
 })

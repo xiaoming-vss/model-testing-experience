@@ -773,6 +773,23 @@ export function CaseLibraryPage() {
             </div>
 
             <Space size={8} className="case-library-toolbar-actions tp-refresh-actions">
+              <Tooltip title="刷新用例列表">
+                <ProjectActionButton
+                  action="read"
+                  type="text"
+                  shape="circle"
+                  className="action-btn-read case-library-refresh"
+                  operation="refresh"
+                  icon={<ReloadOutlined />}
+                  iconOnly
+                  aria-label="刷新用例列表"
+                  loading={casesQuery.isFetching || suitesQuery.isFetching}
+                  onClick={() => {
+                    casesQuery.refetch()
+                    suitesQuery.refetch()
+                  }}
+                />
+              </Tooltip>
               {selectedSuite ? (
                 <Space size={8} className="case-library-main-actions">
 
@@ -821,23 +838,6 @@ export function CaseLibraryPage() {
                   </ProjectActionButton>
                 </Tooltip>
               </Popconfirm>
-              <Tooltip title="刷新用例列表">
-                <ProjectActionButton
-                  action="read"
-                  type="text"
-                  shape="circle"
-                  className="action-btn-read case-library-refresh"
-                  operation="refresh"
-                  icon={<ReloadOutlined />}
-                  iconOnly
-                  aria-label="刷新用例列表"
-                  loading={casesQuery.isFetching || suitesQuery.isFetching}
-                  onClick={() => {
-                    casesQuery.refetch()
-                    suitesQuery.refetch()
-                  }}
-                />
-              </Tooltip>
               {selectedSuite ? (
                   <ProjectActionButton
                     action="write"

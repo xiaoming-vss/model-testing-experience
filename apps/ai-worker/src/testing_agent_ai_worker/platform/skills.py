@@ -10,6 +10,9 @@ import httpx
 
 from testing_agent_ai_worker.agent.paths import resolve_task_workspace
 from testing_agent_ai_worker.skill_names import (
+    API_DESIGN_SKILL,
+    API_EXTRACT_SKILL,
+    API_GENERATE_SKILL,
     CASE_RELATIONS_SKILL,
     CASE_VISUALIZATION_SKILL,
     DETAILED_CASES_SKILL,
@@ -32,7 +35,7 @@ FUNCTIONAL_SKILLS = {
 }
 TASK_SKILLS = {
     "test_order_case_visualization": [CASE_VISUALIZATION_SKILL],
-    "api_case_generate": ["openapi-test-config-extractor", "api-cases-yaml-generator"],
+    "api_case_generate": [API_EXTRACT_SKILL, API_GENERATE_SKILL],
     "ui_case_generate": [UI_YAML_SKILL],
     "code_risk_analysis": ["code-risk-analysis"],
     "repository_profile": [REPOSITORY_PROFILE_SKILL],
@@ -44,14 +47,15 @@ TASK_SKILLS = {
 def required_skills(task):
     if (
         task.task_type == "api_case_generate"
-        and task.payload.metadata.get("apiWorkflowVersion") == "api_two_stage/1.0"
+        and task.payload.metadata.get("apiWorkflowVersion") == "api_three_stage/1.0"
     ):
         names = {
-            "openapi_extract": "openapi-test-config-extractor",
-            "generate": "api-cases-yaml-generator",
+            "interface_extract": API_EXTRACT_SKILL,
+            "api_design": API_DESIGN_SKILL,
+            "generate": API_GENERATE_SKILL,
         }
         if not task.checkpoint_enabled or task.current_stage not in names:
-            raise ValueError("API 两阶段生成需要有效阶段及人工审核")
+            raise ValueError("API 三阶段生成需要有效阶段及人工审核")
         return [names[task.current_stage]]
     if (
         task.task_type == "ui_case_generate"

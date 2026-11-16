@@ -60,11 +60,9 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 | `task-list-v2.css` | 任务列表、模块导航的布局与外观，由列表和概览页引入 |
 | `task-detail-v2.css` | 详情骨架、运行记录与代码风险报告，由详情页引入 |
 | `task-form.css` | 创建任务抽屉的字段、来源输入、上传与模型连接选择，由各 Drawer / 选择弹窗引入 |
-| `task-review.css` | 审核和导入共用容器、备注、预览与冲突对比，由使用它们的详情页及冲突组件引入 |
-| `candidate-review.css` | 功能、UI 候选结果审核弹窗，由对应详情页引入 |
 | `generated-cases-review.css` | 候选用例分组、筛选、卡片与分页，由 `GeneratedCasesReviewView` 引入 |
-| `requirement-analysis.css` | 需求分析章节、规则、流程、场景，由 `RequirementAnalysisView` 及使用其布局的详情页引入 |
-| `case-name-tree.css` | 测试点树标签页、节点、连线与编辑状态，由 `CaseNamesResultView` 及使用其布局的详情页引入 |
+| `requirement-analysis.css` | 需求分析章节、规则、流程、场景，由 `RequirementAnalysisDiagramView` 及使用其布局的详情页引入 |
+| `case-name-tree.css` | 测试点树标签页、节点、连线与编辑状态，由 `CaseNameTreeView` 及使用其布局的详情页引入 |
 | `api-config-result.css` | API 配置结果标签页、请求链、变量与规则，由 API 任务详情页引入 |
 | `run-result.css` | 运行结果弹窗、Popover 与编辑器高度适配（包括功能阶段审核模式），由使用它们的详情页及结果组件引入 |
 | `skill-library.css` | Skill 面板、卡片、空状态与响应式网格，由 `AiSkillLibraryPage` 引入 |

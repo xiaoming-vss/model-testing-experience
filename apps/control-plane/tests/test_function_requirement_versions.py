@@ -52,7 +52,9 @@ async def test_snapshot_defaults_latest_and_allows_explicit_older_version(db):  
         )
         assert json.loads(snapshot["sourceContent"]) == json.loads(expected.artifact_content)
         assert snapshot["requirementMaterialVersion"]["versionId"] == expected.version_id
-        assert snapshot["documentType"] == "text"
+        assert snapshot["sourceFormat"] == "requirement_understanding_json"
+        assert snapshot["sourceFormatVersion"] == "0.2"
+        assert "documentType" not in snapshot
         assert not snapshot.get("documentDownloadUrl")
     db.add(Requirement(requirement_id="foreign", sprint_id="s", name="other"))
     db.commit()
@@ -134,7 +136,10 @@ async def test_first_launch_freezes_explicit_version_and_records_upstream(db):  
     )
     version_id = approved.stages[0].latest_version.version_id
     frozen = db.query(AiGenerateStageVersion).filter_by(version_id=version_id).one()
-    assert frozen.artifact_context_json["functionalSource"]["documentType"] == "text"
+    functional_source = frozen.artifact_context_json["functionalSource"]
+    assert functional_source["sourceFormat"] == "requirement_understanding_json"
+    assert functional_source["sourceFormatVersion"] == "0.2"
+    assert "documentType" not in functional_source
     detail = await version_detail(AsyncSessionAdapter(db), task, "function", version_id)
     assert detail.upstream_versions == {"extracting_text": old.version_id}
     assert detail.upstream[0].label == "v1"

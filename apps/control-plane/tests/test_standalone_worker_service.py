@@ -282,7 +282,7 @@ async def test_api_and_ui_checkpoints_validate_worker_artifact(db, monkeypatch, 
     db.commit()
     session = AsyncSessionAdapter(db)
     source = (
-        {"apiWorkflowVersion": "api_two_stage/1.0"}
+        {"apiWorkflowVersion": "api_three_stage/1.0"}
         if kind == "api"
         else {"uiWorkflowVersion": "ui_three_stage/1.0", "functionalCases": read("cases")}
     )
@@ -302,7 +302,7 @@ async def test_api_and_ui_checkpoints_validate_worker_artifact(db, monkeypatch, 
     service = StandaloneWorkerService(session)
     claim = await service.claim(queue, WorkerClaimRequest(worker_id="agent"))
     stage, field, artifact = (
-        ("openapi_extract", "apiExtraction", {"test": {"path": "/x", "method": "GET"}})
+        ("interface_extract", "apiExtraction", {"test": {"path": "/x", "method": "GET"}})
         if kind == "api"
         else ("ui_surface", "uiSurface", read("surface"))
     )

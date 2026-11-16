@@ -90,6 +90,21 @@ def seed_row(connection, table, overrides=None):
     )
 
 
+def seed_api_interface(connection, project_id):
+    """Seed a software repository and one interface for API task fixtures."""
+    from testing_agent.models.api_interface import ApiInterface
+    from testing_agent.models.software_repository import SoftwareRepository
+
+    software_repository = seed_row(
+        connection, SoftwareRepository.__table__, {"project_id": project_id}
+    )
+    return seed_row(
+        connection,
+        ApiInterface.__table__,
+        {"software_repository_id": software_repository["software_repository_id"]},
+    )
+
+
 UNIQUE_TABLES = [
     table.name
     for table in Base.metadata.tables.values()

@@ -15,6 +15,10 @@ from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
 from testing_agent.services.ai_task_output import generated_function_cases
+from testing_agent.services.functional_requirement_source import (
+    FUNCTIONAL_SOURCE_FORMAT,
+    FUNCTIONAL_SOURCE_FORMAT_VERSION,
+)
 from testing_agent.services.personal_authorization import require_personal_connection
 from testing_agent.services.stage_storage.dispatch import dispatch_stage_attempt
 from testing_agent.services.stage_storage.views import attempt_source
@@ -164,7 +168,8 @@ async def launch_graph(
         ) from exc
     source = {
         "sourceContent": json.dumps(material, ensure_ascii=False, separators=(",", ":")),
-        "documentType": "text",
+        "sourceFormat": FUNCTIONAL_SOURCE_FORMAT,
+        "sourceFormatVersion": FUNCTIONAL_SOURCE_FORMAT_VERSION,
     }
     if "requirementMaterialVersion" in leaf_source:
         source["requirementMaterialVersion"] = leaf_source["requirementMaterialVersion"]

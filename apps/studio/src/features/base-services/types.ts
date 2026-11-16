@@ -95,73 +95,7 @@ export type GitlabResourceListResponse<T> = {
   total: number
 }
 
-export type ResourceBinding = {
-  instanceUrl?: string
-  bindingId?: string
-  binding_id?: string
-  provider: string
-  connectionId?: string
-  connection_id?: string
-  localResourceType?: string
-  local_resource_type?: string
-  localResourceId?: string
-  local_resource_id?: string
-  remoteResourceType?: string
-  remote_resource_type?: string
-  remoteResourceId?: string
-  remote_resource_id?: string
-  remoteParentId?: string
-  remote_parent_id?: string
-  remoteNameSnapshot?: string
-  remote_name_snapshot?: string
-  status?: string
-  boundAt?: string
-  bound_at?: string
-  lastVerifiedAt?: string
-  last_verified_at?: string
-  lastSyncError?: string
-  last_sync_error?: string
-  branch?: string
-  baselineBranch?: string
-  baseline_branch?: string
-  createdAt?: string
-  created_at?: string
-  updatedAt?: string
-  updated_at?: string
-}
 
-export type CreateGitlabGroupBindingPayload = {
-  provider: 'gitlab'
-  connectionId: string
-  remoteResourceType: 'group'
-  remoteResourceId: string
-  remoteNameSnapshot: string
-}
-
-export type CreateGitlabRequirementBindingPayload = {
-  connectionId?: string
-  instanceUrl?: string
-  provider: 'gitlab'
-  remoteResourceType: 'repository'
-  remoteResourceId: string
-  remoteParentId: string
-  remoteNameSnapshot: string
-  extraJson: {
-    branch: string
-    baselineBranch?: string
-  }
-}
-
-export type UpdateGitlabRequirementBindingPayload = {
-  connectionId?: string
-  branch?: string
-  baselineBranch?: string
-}
-
-export type ZentaoRemoteListResponse<T> = {
-  items: T[]
-  total: number
-}
 
 export type ZentaoRemoteOption = {
   id?: string | number

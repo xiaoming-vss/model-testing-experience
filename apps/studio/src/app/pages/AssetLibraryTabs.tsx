@@ -6,7 +6,7 @@ import '@/app/styles/asset-library.css'
 const tabs: { key: AssetLibraryTab; label: string }[] = [
   { key: 'cases', label: '用例库' },
   { key: 'interfaces', label: '接口库' },
-  { key: 'apps', label: '应用' },
+  { key: 'repositories', label: '软件仓库' },
 ]
 
 type Props = {

@@ -9,8 +9,8 @@ vi.mock('@/features/test-cases/pages/CaseLibraryPage', () => ({
 vi.mock('@/features/interface-library/pages/InterfaceLibraryPage', () => ({
   InterfaceLibraryPage: () => <p>接口库内容</p>,
 }))
-vi.mock('@/features/interface-library/pages/ApiAppsPage', () => ({
-  ApiAppsPage: () => <p>应用内容</p>,
+vi.mock('@/features/interface-library/pages/SoftwareRepositoriesPage', () => ({
+  SoftwareRepositoriesPage: () => <p>软件仓库内容</p>,
 }))
 
 function LocationOutput() {
@@ -44,10 +44,10 @@ describe('AssetLibraryPage', () => {
     expect(screen.getByText('用例库内容')).toBeInTheDocument()
     expect(screen.getByText('接口库内容')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('tab', { name: '应用' }))
-    expect(screen.getByRole('status')).toHaveTextContent('/asset-library?tab=apps')
-    expect(document.getElementById('asset-panel-apps')).not.toHaveAttribute('hidden')
-    expect(screen.getByText('应用内容')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: '软件仓库' }))
+    expect(screen.getByRole('status')).toHaveTextContent('/asset-library?tab=repositories')
+    expect(document.getElementById('asset-panel-repositories')).not.toHaveAttribute('hidden')
+    expect(screen.getByText('软件仓库内容')).toBeInTheDocument()
   })
 
   it('supports arrow, home and end keys across the three asset tabs', () => {
@@ -59,8 +59,8 @@ describe('AssetLibraryPage', () => {
     expect(screen.getByRole('status')).toHaveTextContent('/asset-library?tab=interfaces')
 
     fireEvent.keyDown(document.activeElement!, { key: 'End' })
-    expect(screen.getByRole('tab', { name: '应用' })).toHaveFocus()
-    expect(screen.getByRole('status')).toHaveTextContent('/asset-library?tab=apps')
+    expect(screen.getByRole('tab', { name: '软件仓库' })).toHaveFocus()
+    expect(screen.getByRole('status')).toHaveTextContent('/asset-library?tab=repositories')
 
     fireEvent.keyDown(document.activeElement!, { key: 'Home' })
     expect(screen.getByRole('status')).toHaveTextContent('/asset-library?tab=cases')

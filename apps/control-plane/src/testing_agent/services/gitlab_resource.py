@@ -139,17 +139,6 @@ class GitLabResourceClient:
     def __init__(self, transport: httpx.AsyncBaseTransport | None = None):
         self._transport = transport
 
-    async def get_group(self, base_url: str, access_token: str, group_id: str) -> dict[str, Any]:
-        group, _ = await self._request_json(
-            base_url,
-            access_token,
-            f"/api/v4/groups/{encode_gitlab_id(group_id)}",
-            {"with_projects": "false"},
-        )
-        if not isinstance(group, dict):
-            raise GitLabResourceError("GitLab 群组信息格式不合法")
-        return {**group_payload(group), "id": canonical_resource_id(group.get("id"))}
-
     async def get_project(
         self, base_url: str, access_token: str, repository_id: str
     ) -> dict[str, Any]:

@@ -18,19 +18,23 @@ def apply_ai_completion_to_run(
 ) -> None:
     snapshot = body.snapshot_json or {}
     status = final_run_status(body.status)
-    if (getattr(run, "snapshot_json", None) or {}).get("apiWorkflowVersion") == "api_two_stage/1.0":
+    if (getattr(run, "snapshot_json", None) or {}).get(
+        "apiWorkflowVersion"
+    ) == "api_three_stage/1.0":
         if status == RunStatus.SUCCESS.value:
             reported_stage = snapshot.get("currentStage") or snapshot.get("stage")
             config = (
                 body.config_json if body.config_json is not None else snapshot.get("configJson", {})
             )
             result = body.result_yaml if body.result_yaml is not None else body.output_yaml
+            current = run.config_json or {}
             if (
                 run.current_stage != "generate"
                 or reported_stage not in {None, "generate", "completed"}
                 or not result
                 or not isinstance(config, dict)
-                or config.get("apiExtraction") != (run.config_json or {}).get("apiExtraction")
+                or config.get("apiExtraction") != current.get("apiExtraction")
+                or config.get("apiDesign") != current.get("apiDesign")
             ):
                 raise ErrBadRequest()
         else:

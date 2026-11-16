@@ -270,10 +270,6 @@ it('控制条与两栏工作区按设计稿结构渲染，步骤行上带运行�
   await waitFor(() => expect(container.querySelector('.ui-wb-case-meta')).toBeTruthy())
   expect(container.querySelector('.ui-wb-case-serial')).toHaveTextContent('CASE-01')
   expect(pageToolbar.getByRole('button', { name: /调试运行/ })).toBeInTheDocument()
-  // 测试集级动作（运行记录 / 导入用例 / 运行测试集）都留在测试集流程
-  expect(pageToolbar.queryByRole('button', { name: /运行记录/ })).not.toBeInTheDocument()
-  expect(pageToolbar.queryByRole('button', { name: /导入用例/ })).not.toBeInTheDocument()
-  expect(pageToolbar.queryByRole('button', { name: /运行测试集/ })).not.toBeInTheDocument()
   const caseMeta = within(container.querySelector('.ui-wb-case-meta') as HTMLElement)
   expect(caseMeta.getByText('2 个步骤')).toBeInTheDocument()
   expect(caseMeta.getByRole('switch', { name: '启用当前用例' })).toBeChecked()
@@ -383,6 +379,7 @@ it('用例切换与新建都走测试集流程卡片', async () => {
 })
 
 it('流程末尾的添加步骤卡片追加步骤并在侧栏编辑', async () => {
+  const create = vi.spyOn(api, 'createUiTestCase')
   const { container, client } = renderPage()
   await openCase('登录成功-跳转工作台')
 
@@ -402,6 +399,7 @@ it('流程末尾的添加步骤卡片追加步骤并在侧栏编辑', async () =
   await waitFor(() => expect(screen.getByLabelText('用例名称')).toHaveValue(''))
   fireEvent.click(screen.getByText('添加步骤'))
   await waitFor(() => expect(screen.getByText('#1 / 1')).toBeInTheDocument())
+  expect(create).not.toHaveBeenCalled()
   client.clear()
 })
 

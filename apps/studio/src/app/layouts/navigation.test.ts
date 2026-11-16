@@ -13,7 +13,8 @@ describe('top-level navigation resolution', () => {
   it('treats every asset-library route as asset navigation', () => {
     expect(assetTabForLocation('/asset-library', '')).toBe('cases')
     expect(assetTabForLocation('/asset-library', '?tab=interfaces')).toBe('interfaces')
-    expect(assetTabForLocation('/asset-library', '?tab=apps')).toBe('apps')
+    expect(assetTabForLocation('/asset-library', '?tab=repositories')).toBe('repositories')
+    expect(assetTabForLocation('/asset-library', '?tab=apps')).toBe('repositories')
     expect(assetTabForLocation('/asset-library/interfaces/new', '')).toBe('interfaces')
     expect(assetTabForLocation('/asset-library/interfaces/api-1', '')).toBe('interfaces')
     expect(assetTabForLocation('/testing', '?tab=cases')).toBeNull()

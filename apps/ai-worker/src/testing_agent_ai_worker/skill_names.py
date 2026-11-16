@@ -11,3 +11,7 @@ UI_DESIGN_SKILL = "mtx-map-functional-cases-to-ui-scenarios"
 UI_YAML_SKILL = "mtx-generate-ui-test-case"
 
 CASE_VISUALIZATION_SKILL = "mtx-analyze-case-visualization"
+
+API_EXTRACT_SKILL = "mtx-extract-interface-test-config"
+API_DESIGN_SKILL = "api-case-designer"
+API_GENERATE_SKILL = "mtx-generate-api-test-case"

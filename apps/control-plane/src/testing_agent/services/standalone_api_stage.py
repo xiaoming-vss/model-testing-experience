@@ -1,4 +1,4 @@
-"""Checkpoint commands for independent two-stage API generation.
+"""Checkpoint commands for independent three-stage API generation.
 
 The caller authorizes and locks the execution before invoking these commands.
 Each continuation retains the execution ID and creates its own Worker attempt.
@@ -21,9 +21,13 @@ from testing_agent.services.standalone_candidate import (
     save_standalone_draft,
 )
 from testing_agent.services.standalone_dispatch import enqueue_standalone_attempt
+from testing_agent.services.standalone_execution import workflow_stage_names
 from testing_agent.services.standalone_execution_view import project_standalone_execution
 from testing_agent.services.standalone_run import StandaloneRun
 from testing_agent.services.standalone_stage_context import StandaloneStageContext
+
+API_STAGES = ("interface_extract", "api_design", "generate")
+API_JSON_FIELDS = {"interface_extract": "apiExtraction", "api_design": "apiDesign"}
 
 
 def _request(service: StandaloneStageContext, body: dict[str, Any]) -> str:
@@ -76,9 +80,12 @@ async def _replay(
         action = str(
             body.get("action") or body.get("reviewStatus") or body.get("status") or "approve"
         )
+        stages = workflow_stage_names("api_case_generate", run.snapshot_json)
+        if stage.stage not in stages or stages.index(stage.stage) == 0:
+            raise ErrBadRequest()
+        expected_prior = stages[stages.index(stage.stage) - 1]
         if (
-            prior_stage.stage != "openapi_extract"
-            or stage.stage != "generate"
+            prior_stage.stage != expected_prior
             or prior.review_status != "approved"
             or prior.reviewer_user_id != user_id
             or (prior.review_comment or "")
@@ -124,54 +131,79 @@ def _revision_signature(body: dict[str, Any]) -> str:
 async def _candidate_content(
     service: StandaloneStageContext, run: StandaloneRun, stage: str, body: dict[str, Any]
 ) -> tuple[str, str] | None:
-    if (stage == "openapi_extract" and "resultYaml" in body) or (
-        stage == "generate" and "configJson" in body
-    ):
-        raise ErrBadRequest()
-    if stage == "openapi_extract" and "configJson" in body:
-        edits = normalize_config_json(body["configJson"])
-        if set(edits) != {"apiExtraction"}:
+    if stage in API_JSON_FIELDS:
+        if "resultYaml" in body:
             raise ErrBadRequest()
-        raw = edits["apiExtraction"]
+        if "configJson" not in body:
+            return None
+        edits = normalize_config_json(body["configJson"])
+        if set(edits) != {API_JSON_FIELDS[stage]}:
+            raise ErrBadRequest()
+        raw = edits[API_JSON_FIELDS[stage]]
         raw = json.dumps(raw, ensure_ascii=False) if isinstance(raw, dict) else raw
-    elif stage == "generate" and "resultYaml" in body:
+        if not isinstance(raw, str):
+            raise ErrBadRequest()
+        projected = await project_standalone_execution(service.repository.session, run.run_id)
+        return await validate_generation_artifact(
+            service.repository,
+            "api",
+            stage,
+            raw,
+            {"source": run.snapshot_json, "config": projected.config_json},
+        )
+    if stage == "generate":
+        if "configJson" in body:
+            raise ErrBadRequest()
+        if "resultYaml" not in body:
+            return None
         raw = body["resultYaml"]
-    else:
-        return None
-    if not isinstance(raw, str):
-        raise ErrBadRequest()
-    return await validate_generation_artifact(
-        service.repository, "api", stage, raw, run.snapshot_json
-    )
+        if not isinstance(raw, str):
+            raise ErrBadRequest()
+        return await validate_generation_artifact(
+            service.repository, "api", stage, raw, run.snapshot_json
+        )
+    raise ErrBadRequest()
 
 
 async def save_api_checkpoint(
     service: StandaloneStageContext, run: StandaloneRun, body: dict[str, Any], user_id: str
 ) -> dict[str, Any]:
+    current = run.current_stage
+    if current == "completed":
+        current = "generate"
+    if current not in API_STAGES:
+        raise ErrBadRequest()
+    allowed_keys = (
+        {"stage", "currentStage", "configJson"}
+        if current in API_JSON_FIELDS
+        else {"stage", "currentStage", "resultYaml"}
+    )
+    expected_status = "waiting_review" if current in API_JSON_FIELDS else "success"
     if (
         not run.checkpoint_enabled
-        or run.status != "waiting_review"
-        or run.current_stage != "openapi_extract"
-        or str(body.get("stage") or body.get("currentStage") or "openapi_extract")
-        != "openapi_extract"
-        or set(body) - {"stage", "currentStage", "configJson"}
-        or run.snapshot_json.get("apiWorkflowVersion") != "api_two_stage/1.0"
+        or run.status != expected_status
+        or str(body.get("stage") or body.get("currentStage") or current) != current
+        or set(body) - allowed_keys
+        or run.snapshot_json.get("apiWorkflowVersion") != "api_three_stage/1.0"
     ):
         raise ErrBadRequest()
-    content = await _candidate_content(service, run, "openapi_extract", body)
+    content = await _candidate_content(service, run, current, body)
     if content is None:
         raise ErrBadRequest()
     task = await service.repository.get_task_for_update(run.task_id)
     if task is None or task.requirement_id or task.task_type != "api_case_generate":
         raise ErrNotFound()
     _, _, candidate = await lock_standalone_candidate(
-        service.repository.session, task=task, execution_id=run.run_id, stage_name="openapi_extract"
+        service.repository.session,
+        task=task,
+        execution_id=run.run_id,
+        stage_name=current,
     )
     await save_standalone_draft(
         service.repository.session,
         task=task,
         execution_id=run.run_id,
-        stage_name="openapi_extract",
+        stage_name=current,
         expected_attempt_id=candidate.id,
         actor_id=user_id,
         content=content[0],
@@ -189,15 +221,15 @@ async def revise_api_stage(
     stage = "generate" if run.current_stage == "completed" else run.current_stage
     if (
         not run.checkpoint_enabled
-        or stage not in {"openapi_extract", "generate"}
+        or stage not in API_STAGES
         or str(body.get("stage") or body.get("currentStage") or stage) != stage
         or not (
-            (stage == "openapi_extract" and run.status == "waiting_review")
+            (stage in API_JSON_FIELDS and run.status == "waiting_review")
             or (stage == "generate" and run.status == "success")
         )
         or run.review_status != "pending"
         or run.import_status == "imported"
-        or run.snapshot_json.get("apiWorkflowVersion") != "api_two_stage/1.0"
+        or run.snapshot_json.get("apiWorkflowVersion") != "api_three_stage/1.0"
     ):
         raise ErrBadRequest()
     instruction = str(body.get("revisionInstruction") or "").strip()
@@ -249,13 +281,14 @@ async def review_api_checkpoint(
     replay = await _replay(service, run, body, user_id, "advance")
     if replay is not None:
         return replay
+    current = run.current_stage
+    if current not in API_JSON_FIELDS:
+        raise ErrBadRequest()
     if (
         not run.checkpoint_enabled
         or run.status != "waiting_review"
-        or run.current_stage != "openapi_extract"
-        or str(body.get("stage") or body.get("currentStage") or "openapi_extract")
-        != "openapi_extract"
-        or run.snapshot_json.get("apiWorkflowVersion") != "api_two_stage/1.0"
+        or str(body.get("stage") or body.get("currentStage") or current) != current
+        or run.snapshot_json.get("apiWorkflowVersion") != "api_three_stage/1.0"
     ):
         raise ErrBadRequest()
     action = str(body.get("action") or body.get("reviewStatus") or body.get("status") or "approve")
@@ -266,24 +299,30 @@ async def review_api_checkpoint(
     if task is None or task.requirement_id or task.task_type != "api_case_generate":
         raise ErrNotFound()
     _, _, candidate = await lock_standalone_candidate(
-        service.repository.session, task=task, execution_id=run.run_id, stage_name="openapi_extract"
+        service.repository.session,
+        task=task,
+        execution_id=run.run_id,
+        stage_name=current,
     )
     if approved:
+        projected = await project_standalone_execution(service.repository.session, run.run_id)
         await validate_generation_artifact(
             service.repository,
             "api",
-            "openapi_extract",
+            current,
             candidate.output_content or "",
-            run.snapshot_json,
+            {"source": run.snapshot_json, "config": projected.config_json},
         )
         previous = str((candidate.input_snapshot_json or {}).get("llmConnectionId") or "")
         connection = str(await service.stage_connection(run, body, user_id, previous))
+    stages = workflow_stage_names("api_case_generate", run.snapshot_json)
+    next_stage = stages[stages.index(current) + 1]
     async with service.repository.session.begin_nested():
         await review_standalone_candidate(
             service.repository.session,
             task=task,
             execution_id=run.run_id,
-            stage_name="openapi_extract",
+            stage_name=current,
             expected_attempt_id=candidate.id,
             actor_id=user_id,
             approved=approved,
@@ -297,7 +336,7 @@ async def review_api_checkpoint(
                 request_id=_request(service, body),
                 actor_id=user_id,
                 connection_id=connection,
-                stage_name="generate",
+                stage_name=next_stage,
                 operation="advance",
                 expected_attempt_id=candidate.id,
                 config={},
@@ -316,8 +355,8 @@ async def retry_api_stage(
         not run.checkpoint_enabled
         or run.status not in {"failed", "error"}
         or stage != run.current_stage
-        or stage not in {"openapi_extract", "generate"}
-        or run.snapshot_json.get("apiWorkflowVersion") != "api_two_stage/1.0"
+        or stage not in API_STAGES
+        or run.snapshot_json.get("apiWorkflowVersion") != "api_three_stage/1.0"
     ):
         raise ErrBadRequest()
     task = await service.repository.get_task_for_update(run.task_id)

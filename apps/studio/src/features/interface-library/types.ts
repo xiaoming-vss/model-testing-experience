@@ -1,40 +1,62 @@
-export type ApiAppRepository = {
+export type SoftwareRepositoryGitRepository = {
   projectId: string
   path: string
   name: string
   instanceUrl: string
 }
 
-export type ApiAppRepositoryPayload = {
+export type SoftwareRepositoryGitRepositoryPayload = {
   connectionId: string
   groupId: string
   repositoryId: string
 }
 
-export type ApiApp = {
-  appId: string
+export type SoftwareRepository = {
+  softwareRepositoryId: string
   projectId: string
   name: string
   description: string
   basePath: string
-  repository: ApiAppRepository | null
-  enabled: boolean
+  repository: SoftwareRepositoryGitRepository | null
+  interfaceGroups: string[]
   interfaceCount: number
-  enabledInterfaceCount: number
   version: number
   createdAt?: string
   updatedAt?: string
 }
 
-export type CreateApiAppPayload = {
+export type CreateSoftwareRepositoryPayload = {
   name: string
   description?: string
   basePath?: string
-  repository?: ApiAppRepositoryPayload | null
-  enabled?: boolean
+  repository: SoftwareRepositoryGitRepositoryPayload
 }
 
-export type UpdateApiAppPayload = Partial<CreateApiAppPayload>
+export type UpdateSoftwareRepositoryPayload = Partial<CreateSoftwareRepositoryPayload>
+
+export type RequirementSoftwareRepository = {
+  requirementId: string
+  softwareRepositoryId: string
+  softwareRepositoryName: string
+  basePath: string
+  repository: SoftwareRepositoryGitRepository | null
+  branch: string
+  baselineBranch: string
+  createdByUserId?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type CreateRequirementSoftwareRepositoryPayload = {
+  softwareRepositoryId: string
+  branch: string
+  baselineBranch: string
+}
+
+export type UpdateRequirementSoftwareRepositoryPayload = {
+  branch?: string
+  baselineBranch?: string
+}
 
 export type InterfaceRow = {
   enabled: boolean
@@ -62,15 +84,14 @@ export type ApiInterfaceSource = {
 
 export type ApiInterfaceListItem = {
   interfaceId: string
-  appId: string
-  appName: string
+  softwareRepositoryId: string
+  softwareRepositoryName: string
   name: string
   method: string
   path: string
   description: string
   tags: string[]
   requirements: ApiInterfaceRequirement[]
-  enabled: boolean
   sourceType: string
   updatedAt?: string
 }
@@ -89,6 +110,8 @@ export type ApiInterface = Omit<ApiInterfaceListItem, 'sourceType'> & {
   responseDescription: string
   responseSchema: unknown
   responseExample: unknown
+  security: unknown
+  securitySchemes: unknown
   version: number
   source: ApiInterfaceSource
   createdAt?: string
@@ -111,18 +134,16 @@ export type CreateApiInterfacePayload = {
   responseDescription?: string
   responseSchema?: unknown
   responseExample?: unknown
-  enabled?: boolean
   requirementIds?: string[]
 }
 
 export type UpdateApiInterfacePayload = Partial<CreateApiInterfacePayload>
 
 export type ApiInterfaceFilters = {
-  appId?: string
+  softwareRepositoryId?: string
   method?: string
   requirementId?: string
   sprintId?: string
-  enabled?: boolean
   keyword?: string
   page?: number
   pageSize?: number
@@ -144,6 +165,32 @@ export type ImportItem = {
   existingInterfaceId?: string | null
   existingVersion?: number | null
   changedFields: string[]
+  /** 导入后的分组标签：新接口用文档标签，已有接口用库内标签。 */
+  tags: string[]
+  existingTags: string[]
+}
+
+export type ApiInterfaceGroupMutation = {
+  groupName: string
+  newGroupName: string
+  updatedCount: number
+}
+
+export type RenameApiInterfaceGroupPayload = {
+  currentGroupName: string
+  newGroupName: string
+}
+
+export type CreateApiInterfaceGroupPayload = {
+  groupName: string
+}
+
+export type DeleteApiInterfaceGroupPayload = {
+  groupName: string
+}
+
+export type MoveApiInterfaceGroupPayload = {
+  groupName: string
 }
 
 export type ImportPreview = {
@@ -155,7 +202,11 @@ export type ImportPreview = {
     digest: string
     basePath: string
   }
-  app: { appId: string; name: string; basePath: string }
+  softwareRepository: {
+    softwareRepositoryId: string
+    name: string
+    basePath: string
+  }
   summary: { new: number; modified: number; unchanged: number; libraryOnly: number }
   basePathChange: { current: string; document: string; canApply: boolean } | null
   warnings: ImportWarning[]
@@ -167,6 +218,6 @@ export type ImportCommitResult = {
   updated: number
   skipped: number
   libraryOnly: number
-  appBasePath: string
+  softwareRepositoryBasePath: string
   interfaces: { key: string; interfaceId: string; changeType: string }[]
 }

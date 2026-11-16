@@ -296,8 +296,9 @@ class RelationCheckpointTests(unittest.TestCase):
                 current_stage="relation_analysis",
                 config_json=json.dumps({**legacy_config, "resultYaml": cases_json}),
                 payload=TaskPayload(
-                    source_type="text",
-                    document_type="text",
+                    source_type="requirement",
+                    source_format="requirement_understanding_json",
+                    source_format_version="0.2",
                     source_content=material_json,
                     openapi_content="",
                     extra_instruction="完整用例生成阶段的指令",
@@ -350,9 +351,10 @@ class RelationCheckpointTests(unittest.TestCase):
                     }
                 ),
                 payload=TaskPayload(
-                    source_type="text",
-                    document_type="text",
-                    source_content="原始需求",
+                    source_type="requirement",
+                    source_format="requirement_understanding_json",
+                    source_format_version="0.2",
+                    source_content=json.dumps(material(), ensure_ascii=False),
                     openapi_content="",
                 ),
             )

@@ -8,7 +8,11 @@ from sqlalchemy import event
 from support.project_api import account, api, project  # noqa: F401
 
 from testing_agent.models.requirement import Requirement
+from testing_agent.models.requirement_software_repository import (
+    RequirementSoftwareRepository,
+)
 from testing_agent.models.resource_binding import ResourceBinding
+from testing_agent.models.software_repository import SoftwareRepository
 from testing_agent.models.sprint import Sprint
 
 NOW = datetime(2026, 10, 4, tzinfo=UTC)
@@ -53,12 +57,36 @@ def lists(api):  # noqa: F811
                 Requirement(requirement_id="foreign-r", sprint_id="foreign", name="其他项目")
             )
             await session.flush()
+            for name in ("gitlab", "gitlab2"):
+                session.add(
+                    SoftwareRepository(
+                        software_repository_id=f"repository-{name}",
+                        project_id=pid,
+                        name=f"软件仓库-{name}",
+                        base_path="",
+                        repository_project_id=name,
+                        repository_path=f"team/{name}",
+                        repository_instance_url="https://gitlab.example.com",
+                        created_by_user_id=user["userId"],
+                    )
+                )
+            await session.flush()
+            session.add_all(
+                [
+                    RequirementSoftwareRepository(
+                        requirement_id="r22",
+                        software_repository_id=f"repository-{name}",
+                        branch="dev",
+                        baseline_branch="main",
+                        created_by_user_id=user["userId"],
+                    )
+                    for name in ("gitlab", "gitlab2")
+                ]
+            )
             for bid, kind, local, provider, status, remote in [
                 ("sprint-binding", "sprint", "s1", "zentao", "active", "201"),
                 ("req-binding", "requirement", "r24", "zentao", "active", "301"),
                 ("disabled", "requirement", "r23", "zentao", "disabled", "302"),
-                ("gitlab", "requirement", "r22", "gitlab", "active", "303"),
-                ("gitlab2", "requirement", "r22", "gitlab", "active", "305"),
                 ("gitlab-off", "requirement", "r23", "gitlab", "unbound", "306"),
                 ("gitlab-foreign", "requirement", "foreign-r", "gitlab", "active", "307"),
                 ("foreign-binding", "requirement", "foreign-r", "zentao", "active", "304"),
@@ -120,14 +148,15 @@ def test_requirement_pages_batch_bindings_and_do_not_load_document_bodies(lists)
     }
     assert all(row["zentaoBinding"] is None for row in data["items"][1:])
     assert data["items"][2]["codeBindings"] == [
-        {"repository": "gitlab", "branch": "dev"},
-        {"repository": "gitlab2", "branch": "dev"},
+        {"repository": "team/gitlab", "branch": "dev", "baselineBranch": "main"},
+        {"repository": "team/gitlab2", "branch": "dev", "baselineBranch": "main"},
     ]
     assert all(row["codeBindings"] == [] for row in data["items"] if row["requirementId"] != "r22")
     assert "must-not-leak" not in first.text
     assert data["items"][0]["createdAt"]
     assert all("documentContent" not in row for row in data["items"])
-    assert len([s for s in sql if "FROM resource_bindings" in s]) == 2
+    assert len([s for s in sql if "FROM resource_bindings" in s]) == 1
+    assert len([s for s in sql if "FROM requirement_software_repositories" in s]) == 1
     assert not any("requirements.document_content" in s for s in sql)
     second = read(f"/v1/projects/{pid}/requirements?page=2&pageSize=20").json()["data"]
     assert second["total"] == 25

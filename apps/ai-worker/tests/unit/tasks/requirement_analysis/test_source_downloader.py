@@ -84,26 +84,6 @@ class PlatformRequirementSourceDownloaderTests(unittest.TestCase):
                     workspace=Path(temp_dir),
                 )
 
-    def test_download_source_treats_word_document_type_as_docx(self) -> None:
-        client = FakeClient(b"word bytes")
-        downloader = PlatformRequirementSourceDownloader(client)
-        task = Task(
-            task_id="worker-task-3", project_id="project-1", payload=TaskPayload(openapi_content="")
-        )
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            saved_path = downloader.download_source(
-                document_download_url="/internal/ai-worker/tasks/worker-task-3/requirement-document",
-                document_type="word",
-                task=task,
-                workspace=Path(temp_dir),
-            )
-
-            self.assertEqual(
-                saved_path, Path(temp_dir) / "inputs" / "worker-task-3" / "source.docx"
-            )
-            self.assertEqual(saved_path.read_bytes(), b"word bytes")
-
 
 if __name__ == "__main__":
     unittest.main()

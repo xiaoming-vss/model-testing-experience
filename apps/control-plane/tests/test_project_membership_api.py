@@ -75,6 +75,64 @@ def seed_approved_understanding(api, rid, pid, user_id):
     asyncio.run(seed())
 
 
+def seed_software_repository(
+    api,
+    pid,
+    repository_id,
+    *,
+    name,
+    group_id="7",
+    instance_url="https://gitlab.example",
+    remote_project_id="9",
+):
+    async def seed():
+        from testing_agent.models.software_repository import SoftwareRepository
+        from testing_agent.services.service_instance import instance_key
+
+        async with api.app.state.test_sessions() as session:
+            session.add(
+                SoftwareRepository(
+                    software_repository_id=repository_id,
+                    project_id=pid,
+                    name=name,
+                    base_path="",
+                    repository_project_id=remote_project_id,
+                    repository_group_id=group_id,
+                    repository_instance_key=instance_key(instance_url),
+                    repository_path="team/repo",
+                    repository_name="repo",
+                    repository_instance_url=instance_url,
+                    created_by_user_id="owner",
+                )
+            )
+            await session.commit()
+
+    asyncio.run(seed())
+
+
+def seed_requirement_software_repository(
+    api, rid, repository_id, *, branch="main", baseline_branch="base"
+):
+    async def seed():
+        from testing_agent.models.requirement_software_repository import (
+            RequirementSoftwareRepository,
+        )
+
+        async with api.app.state.test_sessions() as session:
+            session.add(
+                RequirementSoftwareRepository(
+                    requirement_id=rid,
+                    software_repository_id=repository_id,
+                    branch=branch,
+                    baseline_branch=baseline_branch,
+                    created_by_user_id="owner",
+                )
+            )
+            await session.commit()
+
+    asyncio.run(seed())
+
+
 def test_owner_adds_member_who_can_read_shared_project_but_not_manage_it(api):
     _, owner = account(api, "owner")
     member_user, member = account(api, "member")
@@ -344,7 +402,7 @@ def test_viewer_manages_own_llm_connection_but_owner_cannot_read_it(api):
     assert api.delete(f"{base}/{cid}", headers=owner).status_code == 404
 
 
-def test_only_owner_binds_gitlab_and_binding_does_not_share_remote_access(api, gitlab_remote):
+def test_only_owner_binds_gitlab_and_group_listing_uses_personal_access(api, gitlab_remote):
     _, owner = account(api, "owner")
     _, member = account(api, "member")
     pid = project(api, owner)
@@ -353,29 +411,26 @@ def test_only_owner_binds_gitlab_and_binding_does_not_share_remote_access(api, g
     )
     own = gitlab_connection(api, owner, pid, "owner")
     other = gitlab_connection(api, member, pid, "member")
-    body = {"provider": "gitlab", "connectionId": other, "remoteResourceId": "7"}
-    assert api.post(f"/v1/projects/{pid}/bindings", headers=member, json=body).status_code == 403
-    body["connectionId"] = own
-    created = api.post(f"/v1/projects/{pid}/bindings", headers=owner, json=body)
-    assert created.status_code == 200, created.text
-    assert created.json()["data"]["instanceUrl"] == "https://gitlab.example"
-    assert api.get(f"/v1/projects/{pid}/bindings", headers=member).status_code == 200
+    body = {
+        "name": "订单服务",
+        "repository": {
+            "connectionId": other,
+            "groupId": "7",
+            "repositoryId": "101",
+        },
+    }
+    denied = api.post(f"/v1/projects/{pid}/software-repositories", headers=member, json=body)
+    assert denied.status_code == 403, denied.text
     remote = f"/v1/projects/{pid}/integrations/gitlab/connections"
     assert api.get(f"{remote}/{own}/groups", headers=member).status_code == 404
     assert api.get(f"{remote}/{other}/groups", headers=member).status_code == 200
     assert gitlab_remote[-1] == ("groups", "https://gitlab.example", "member-token")
-    second = gitlab_connection(api, owner, pid, "second", "https://second.example")
-    body["connectionId"] = second
-    assert api.post(f"/v1/projects/{pid}/bindings", headers=owner, json=body).status_code == 200
 
 
 def test_gitlab_overview_does_not_reuse_another_members_authorization(
     api, gitlab_remote, monkeypatch
 ):
     from testing_agent.services.gitlab_resource import GitLabResourceClient
-
-    async def scope(self, base_url, token, group_id, repository_id):
-        return {"withinGroup": True, "repositoryId": "9"}
 
     async def branch(self, base_url, token, repository_id, branch_name):
         return {"name": branch_name, "commitId": "sha"}
@@ -384,7 +439,6 @@ def test_gitlab_overview_does_not_reuse_another_members_authorization(
         gitlab_remote.append(("compare", base_url, token))
         return {"commitsCount": 1, "additions": 3, "deletions": 0}
 
-    monkeypatch.setattr(GitLabResourceClient, "get_repository_group_scope", scope)
     monkeypatch.setattr(GitLabResourceClient, "get_branch", branch)
     monkeypatch.setattr(GitLabResourceClient, "compare_repository_branches", compare)
     _, owner = account(api, "owner")
@@ -395,25 +449,10 @@ def test_gitlab_overview_does_not_reuse_another_members_authorization(
     api.post(
         f"/v1/projects/{pid}/members", headers=owner, json={"name": "member", "role": "member"}
     )
-    cid = gitlab_connection(api, owner, pid, "owner")
-    group = api.post(
-        f"/v1/projects/{pid}/bindings",
-        headers=owner,
-        json={"provider": "gitlab", "connectionId": cid, "remoteResourceId": "7"},
-    )
-    assert group.status_code == 200, group.text
-    bound = api.post(
-        f"/v1/requirements/{rid}/bindings",
-        headers=owner,
-        json={
-            "provider": "gitlab",
-            "connectionId": cid,
-            "remoteResourceId": "9",
-            "remoteParentId": "7",
-            "extraJson": {"branch": "main", "baselineBranch": "base"},
-        },
-    )
-    assert bound.status_code == 200, bound.text
+    gitlab_connection(api, owner, pid, "owner")
+    repository_id = f"repository-{pid}"
+    seed_software_repository(api, pid, repository_id, name="订单服务")
+    seed_requirement_software_repository(api, rid, repository_id)
     url = f"/v1/sprints/{sid}/code-overview"
     own = api.get(url, headers=owner)
     assert own.status_code == 200, own.text
@@ -593,9 +632,6 @@ def test_code_risk_keeps_same_repository_ids_on_different_instances_separate(
 
     api.app.dependency_overrides[verify_worker_token] = lambda: None
 
-    async def scope(self, base_url, token, group_id, repository_id):
-        return {"withinGroup": True, "repositoryId": "9"}
-
     async def branch(self, base_url, token, repository_id, branch_name):
         return {"name": branch_name, "commitId": "sha"}
 
@@ -610,7 +646,6 @@ def test_code_risk_keeps_same_repository_ids_on_different_instances_separate(
     async def commit(self, base_url, token, repository_id, ref):
         return "base-sha" if ref == "base" else "head-sha"
 
-    monkeypatch.setattr(GitLabResourceClient, "get_repository_group_scope", scope)
     monkeypatch.setattr(GitLabResourceClient, "get_branch", branch)
     monkeypatch.setattr(GitLabResourceClient, "get_project", gitlab_project)
     monkeypatch.setattr(GitLabResourceClient, "resolve_commit", commit)
@@ -624,25 +659,9 @@ def test_code_risk_keeps_same_repository_ids_on_different_instances_separate(
     )
     personal = []
     for index, url in enumerate(("https://first.example", "https://second.example")):
-        cid = gitlab_connection(api, owner, pid, f"owner-{index}", url)
-        response = api.post(
-            f"/v1/projects/{pid}/bindings",
-            headers=owner,
-            json={"provider": "gitlab", "connectionId": cid, "remoteResourceId": "7"},
-        )
-        assert response.status_code == 200, response.text
-        response = api.post(
-            f"/v1/requirements/{rid}/bindings",
-            headers=owner,
-            json={
-                "provider": "gitlab",
-                "connectionId": cid,
-                "remoteResourceId": "9",
-                "remoteParentId": "7",
-                "extraJson": {"branch": "main", "baselineBranch": "base"},
-            },
-        )
-        assert response.status_code == 200, response.text
+        repository_id = f"repository-{index}"
+        seed_software_repository(api, pid, repository_id, name=f"订单服务{index}", instance_url=url)
+        seed_requirement_software_repository(api, rid, repository_id)
         personal.append(gitlab_connection(api, member, pid, f"member-{index}", url))
     cid = api.post(
         f"/v1/projects/{pid}/integrations/llm/connections",

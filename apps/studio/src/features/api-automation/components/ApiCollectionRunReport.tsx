@@ -111,15 +111,15 @@ export function ApiCollectionRunReportModal({ canStop, collectionRunReportOpen, 
                 </div>
               </div>
               <div className="api-collection-run-report-head-actions">
-                {canStop ? <StopRunButton kind="api-collection" runId={selectedCollectionRunId} status={collectionRunReport.status} /> : null}
-                <ActionButton operation="download" onClick={handleExportCollectionRunReportHtml} disabled={!collectionRunReport}>
-                  导出 HTML
-                </ActionButton>
                 <ActionButton operation="refresh"
                   onClick={handleRefreshCollectionRunReport}
                   loading={refreshingCollectionRunReport}
                   disabled={!selectedCollectionRunId}
                 >刷新报告</ActionButton>
+                {canStop ? <StopRunButton kind="api-collection" runId={selectedCollectionRunId} status={collectionRunReport.status} /> : null}
+                <ActionButton operation="download" onClick={handleExportCollectionRunReportHtml} disabled={!collectionRunReport}>
+                  导出 HTML
+                </ActionButton>
               </div>
             </div>
 

@@ -3,7 +3,7 @@ import type { ZentaoBinding } from '@/features/base-services/types'
 export type RequirementDocumentType = 'word' | 'docx' | 'richtext'
 
 export type Requirement = {
-  codeBindings?: { repository: string; branch: string }[]
+  codeBindings?: { repository: string; branch: string; baselineBranch?: string }[]
   zentaoBinding?: ZentaoBinding | null
   requirementId?: string
   requirement_id?: string

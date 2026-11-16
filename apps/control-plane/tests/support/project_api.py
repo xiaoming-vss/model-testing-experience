@@ -120,16 +120,11 @@ def gitlab_remote(monkeypatch):
     async def validate(self, base_url, access_token):
         calls.append(("auth", base_url, access_token))
 
-    async def group(self, base_url, token, group_id):
-        calls.append(("group", base_url, token))
-        return {"id": 7, "name": "group"}
-
     async def groups(self, base_url, token, **kwargs):
         calls.append(("groups", base_url, token))
         return {"items": [{"id": 7, "name": "group"}], "total": 1}
 
     monkeypatch.setattr(GitLabAuthProvider, "validate", validate)
-    monkeypatch.setattr(GitLabResourceClient, "get_group", group)
     monkeypatch.setattr(GitLabResourceClient, "list_groups", groups)
     return calls
 

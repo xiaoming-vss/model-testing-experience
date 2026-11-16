@@ -17,6 +17,10 @@ from testing_agent_ai_worker.agent.paths import (
 from testing_agent_ai_worker.config.models import AgentBackendConfig
 from testing_agent_ai_worker.models.execution import TaskProgress, TaskResult, TaskStatus
 from testing_agent_ai_worker.models.task import Task
+from testing_agent_ai_worker.platform.schemas import (
+    FUNCTIONAL_SOURCE_FORMAT,
+    FUNCTIONAL_SOURCE_FORMAT_VERSION,
+)
 from testing_agent_ai_worker.skill_names import (
     DETAILED_CASES_SKILL,
     SCOPE_SKILL,
@@ -44,21 +48,40 @@ from testing_agent_ai_worker.worker.runner import TaskExecutor
 from .validation import ValidationContext, context
 
 # source_content 是控制面冻结的已审核材料整理 JSON，以文本传递给技能。
-SUPPORTED_FUNCTIONAL_SOURCE_TYPES = {"text", "word", "richtext"}
 LOGGER = logging.getLogger("testing_agent_ai_worker")
 
 
-def _resolve_functional_document_type(task: Task) -> str:
-    document_type = (task.payload.document_type or "").strip().lower()
-    if not document_type:
-        document_type = (task.payload.source_type or "").strip().lower()
-    if document_type == "requirement":
-        return "text"
-    if document_type in {"docx", "word"}:
-        return "word"
-    if document_type in {"txt", "text"}:
-        return "text"
-    return document_type
+def _resolve_functional_source_format(task: Task) -> str:
+    return (task.payload.source_format or "").strip().lower()
+
+
+def _validate_functional_source(task: Task) -> str:
+    """在调用模型前确认功能输入契约；返回空字符串表示通过。"""
+
+    source_format = _resolve_functional_source_format(task)
+    if not source_format:
+        return f"功能用例输入缺少 source_format（期望 {FUNCTIONAL_SOURCE_FORMAT}）"
+    if source_format != FUNCTIONAL_SOURCE_FORMAT:
+        return f"不支持的 source_format: {source_format}（期望 {FUNCTIONAL_SOURCE_FORMAT}）"
+    source_format_version = (task.payload.source_format_version or "").strip()
+    if source_format_version != FUNCTIONAL_SOURCE_FORMAT_VERSION:
+        return (
+            f"不支持的 source_format_version: {source_format_version or '空'}"
+            f"（期望 {FUNCTIONAL_SOURCE_FORMAT_VERSION}）"
+        )
+    raw = (task.payload.source_content or "").strip()
+    if not raw:
+        return "功能用例输入缺少 sourceContent"
+    try:
+        material = json.loads(raw)
+    except (TypeError, ValueError) as exc:
+        return f"功能用例输入不是合法 JSON: {exc}"
+    if not isinstance(material, dict):
+        return "功能用例输入必须是 JSON 对象"
+    artifact_type = material.get("artifactType")
+    if artifact_type != "readable_requirement_material":
+        return f"功能用例输入不是需求理解产物: artifactType={artifact_type or '空'}"
+    return ""
 
 
 def _resolve_runner_result(result):
@@ -163,19 +186,17 @@ class FunctionalCaseExecutor(TaskExecutor):
                 started_at=started_at,
                 finished_at=datetime.now().astimezone(),
             )
-        document_type = _resolve_functional_document_type(task)
-        if document_type not in SUPPORTED_FUNCTIONAL_SOURCE_TYPES:
+        source_error = _validate_functional_source(task)
+        if source_error:
             return TaskResult(
                 task_id=task.task_id,
                 attempt_id=task.attempt_id,
                 generate_task_id=task.generate_task_id,
                 status=TaskStatus.FAILED,
-                error_message=f"不支持的 document_type: {document_type}",
+                error_message=source_error,
                 started_at=started_at,
                 finished_at=datetime.now().astimezone(),
             )
-        # 摘要与日志统一使用归一化后的类型，避免把内部来源标记 requirement 透出。
-        task.payload.document_type = document_type
 
         workspace = resolve_task_workspace(self.agent_config, task)
 
@@ -337,12 +358,13 @@ class FunctionalCaseExecutor(TaskExecutor):
     def _log_execution_context(self, task: Task, *, config_path: str, workspace) -> None:
         credentials = task.payload.llm_credentials
         LOGGER.info(
-            "functional task nanobot context: task_id=%s checkpoint=%s document_type=%s "
-            "source_chars=%s extra_instruction_chars=%s has_credentials=%s model=%s base_url=%s "
-            "workspace=%s config_path=%s",
+            "functional task nanobot context: task_id=%s checkpoint=%s source_format=%s "
+            "source_format_version=%s source_chars=%s extra_instruction_chars=%s "
+            "has_credentials=%s model=%s base_url=%s workspace=%s config_path=%s",
             task.task_id,
             task.checkpoint_enabled,
-            _resolve_functional_document_type(task),
+            _resolve_functional_source_format(task),
+            task.payload.source_format_version,
             len(task.payload.source_content or ""),
             len(task.payload.extra_instruction or ""),
             credentials is not None,

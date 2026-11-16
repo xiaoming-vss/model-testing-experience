@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Alert, Modal, Select } from 'antd'
+import { interfaceLibraryApi } from '@/features/interface-library/api/interfaceLibrary.api'
 import { api, listItems } from '@/services/api'
 import { normalizeInstanceUrl } from '../utils/personalConnections'
 
@@ -35,10 +36,14 @@ export function usePersonalConnectionChoice(provider: 'gitlab' | 'zentao') {
     return new Promise<string>((resolve, reject) => { pending.current = { resolve, reject } })
   }
   async function forRequirement(projectId: string, requirementId: string) {
-    const bindings = listItems(await api.getGitlabRequirementBindings(requirementId)).filter(b => b.provider === 'gitlab' && b.status === 'active')
+    const bindings = listItems(
+      await interfaceLibraryApi.getRequirementSoftwareRepositories(requirementId),
+    )
     const result: Record<string, string> = {}
-    for (const url of new Set(bindings.map(b => b.instanceUrl))) {
-      if (!url) throw new Error('绑定缺少实例信息，请由项目所有者重新绑定')
+    for (const url of new Set(
+      bindings.map(binding => binding.repository?.instanceUrl ?? ''),
+    )) {
+      if (!url) throw new Error('关联软件仓库缺少 GitLab 实例信息，请重新选择代码仓库')
       result[url] = await choose(projectId, url)
     }
     return result

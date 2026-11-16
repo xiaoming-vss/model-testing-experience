@@ -31,7 +31,6 @@ import dayjs from 'dayjs'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { type BindingDepth, ZentaoBindingModal, ZentaoBindingSummary } from '@/features/base-services/components/ZentaoBindingPanel'
-import { GitlabBindingModal, GitlabBindingSummary } from '@/features/base-services/components/GitlabBindingPanel'
 import { RequirementCodeBindingModal } from '@/features/base-services/components/RequirementCodeBindingModal'
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
 import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
@@ -105,7 +104,6 @@ export function ProjectsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const activeBoard = searchParams.get('board') === 'requirements' ? 'requirements' : 'sprints'
   const [zentaoBindingTarget, setZentaoBindingTarget] = useState<ZentaoBindingTargetState | null>(null)
-  const [gitlabBindingOpen, setGitlabBindingOpen] = useState(false)
   const [codeBindingRequirement, setCodeBindingRequirement] = useState<RequirementPoolItem | null>(null)
   const [requirementView, setRequirementView] = useState<RequirementViewState>({ page: 1 })
   const [requirementPageSize, setRequirementPageSize] = useState(DEFAULT_PAGE_SIZE)
@@ -531,12 +529,6 @@ export function ProjectsPage() {
               <ProjectActionButton action="manage" icon={<LinkOutlined />} onClick={() => { closeProjectPanel(); if (activeProjectId) openZentaoBinding({ targetType: 'project', resourceId: activeProjectId, depth: 'project', title: `绑定禅道项目 · ${activeProject.name}` }) }}>配置</ProjectActionButton>
             </div>
             {activeProjectId ? <ZentaoBindingSummary targetType="project" resourceId={activeProjectId} variant="settings" /> : null}
-            <Divider style={{ margin: '16px 0' }} />
-            <div className="project-settings-row">
-              <Space size={10}><AppIcon name="gitlab" size={32} /><Text strong>GitLab</Text></Space>
-              <ProjectActionButton action="manage" icon={<LinkOutlined />} onClick={() => { closeProjectPanel(); setGitlabBindingOpen(true) }}>配置</ProjectActionButton>
-            </div>
-            {activeProjectId ? <GitlabBindingSummary projectId={activeProjectId} variant="settings" /> : null}
           </Card>
           <Divider style={{ margin: '32px 0 20px' }} />
           <div className="project-settings-row">
@@ -598,19 +590,6 @@ export function ProjectsPage() {
         onClose={closeRequirementDrawer}
         onFinish={(values) => saveRequirementMutation.mutate(values)}
       />
-
-      {gitlabBindingOpen && activeProjectId ? (
-        <GitlabBindingModal
-          open
-          onClose={() => setGitlabBindingOpen(false)}
-          projectId={activeProjectId}
-          projectName={activeProject?.name}
-          requirementNameResolver={(requirementId) => {
-            const requirement = requirements.find((item) => normalizeRequirementId(item) === requirementId)
-            return requirement?.name
-          }}
-        />
-      ) : null}
 
       {codeBindingRequirement && activeProjectId ? (
         <RequirementCodeBindingModal

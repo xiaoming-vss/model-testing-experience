@@ -3,12 +3,21 @@ from types import SimpleNamespace
 
 from testing_agent.models.requirement import Requirement
 from testing_agent.schemas.api_case import ApiCaseRequest, ApiCaseResponse
+from testing_agent.schemas.api_interface import (
+    ApiInterfaceGroupCreateRequest,
+    ApiInterfaceGroupDeleteRequest,
+    ApiInterfaceGroupMutationResponse,
+    ApiInterfaceGroupRenameRequest,
+    ApiInterfaceMoveGroupRequest,
+)
+from testing_agent.schemas.api_interface_import import ApiInterfaceImportItem
 from testing_agent.schemas.api_run import ApiCaseRunResponse, ApiCollectionRunResponse
 from testing_agent.schemas.project import ProjectResponse
 from testing_agent.schemas.requirement import (
     CreateRequirementRequest,
     RequirementResponse,
 )
+from testing_agent.schemas.software_repository import SoftwareRepositoryResponse
 from testing_agent.schemas.sprint import (
     CreateSprintRequest,
     SprintResponse,
@@ -388,3 +397,47 @@ def test_integration_binding_and_metric_dump_match_go_contract():
     assert dumped_metric["bug"]["closed"] == 18
     assert dumped_metric["bug"]["suggestion"] == 23
     assert "functionCaseTotal" not in dumped_metric
+
+
+def test_interface_group_and_import_tag_fields_use_go_contract():
+    rename = ApiInterfaceGroupRenameRequest.model_validate(
+        {"currentGroupName": "订单", "newGroupName": "订单管理"}
+    )
+    assert rename.current_group_name == "订单"
+    assert rename.new_group_name == "订单管理"
+    assert ApiInterfaceGroupDeleteRequest.model_validate({"groupName": "订单"}).group_name == "订单"
+    assert ApiInterfaceMoveGroupRequest.model_validate({"groupName": ""}).group_name == ""
+    assert ApiInterfaceGroupMutationResponse(
+        group_name="订单",
+        new_group_name="订单管理",
+        updated_count=2,
+    ).model_dump(by_alias=True) == {
+        "groupName": "订单",
+        "newGroupName": "订单管理",
+        "updatedCount": 2,
+    }
+
+    assert (
+        ApiInterfaceGroupCreateRequest.model_validate({"groupName": "空分组"}).group_name
+        == "空分组"
+    )
+    assert SoftwareRepositoryResponse(
+        softwareRepositoryId="repository-1",
+        projectId="project-1",
+        name="订单服务",
+        interfaceGroups=["空分组"],
+    ).model_dump(by_alias=True)["interfaceGroups"] == ["空分组"]
+
+    item = ApiInterfaceImportItem(
+        key="GET /orders",
+        change_type="new",
+        method="GET",
+        path="/orders",
+        name="查询订单",
+        tags=["订单"],
+        existing_tags=[],
+    )
+    dumped_item = item.model_dump(by_alias=True)
+    assert dumped_item["tags"] == ["订单"]
+    assert dumped_item["existingTags"] == []
+    assert "existing_tags" not in dumped_item

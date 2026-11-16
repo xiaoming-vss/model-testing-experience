@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from support.mysql_initialization import mysql, seed_row  # noqa: F401
+from support.mysql_initialization import mysql, seed_api_interface, seed_row  # noqa: F401
 
 from testing_agent.core.errors import AppError
 from testing_agent.models.ai_generate_task import AiGenerateTask
@@ -33,8 +33,8 @@ from testing_agent.services.api_generate_import import ApiCandidateImporter
 from testing_agent.services.worker_task import WorkerTaskService
 
 
-@pytest.mark.parametrize("two_stage", [False, True])
-async def test_standalone_api_end_to_end(mysql, monkeypatch, two_stage):  # noqa: F811
+@pytest.mark.parametrize("checkpointed", [False, True])
+async def test_standalone_api_end_to_end(mysql, monkeypatch, checkpointed):  # noqa: F811
     with mysql.begin() as connection:
         target = seed_row(connection, ApiCollection.__table__)
         project_id = connection.scalar(
@@ -52,6 +52,7 @@ async def test_standalone_api_end_to_end(mysql, monkeypatch, two_stage):  # noqa
                 "url_template": "/old",
             },
         )
+        interface = seed_api_interface(connection, project_id)
         task = seed_row(
             connection,
             AiGenerateTask.__table__,
@@ -60,8 +61,9 @@ async def test_standalone_api_end_to_end(mysql, monkeypatch, two_stage):  # noqa
                 "sprint_id": "",
                 "requirement_id": "",
                 "project_id": project_id,
-                "source_type": "text",
-                "source_content": "OpenAPI input",
+                "source_type": "interface_library",
+                "source_content": "",
+                "interface_ids_json": [interface["interface_id"]],
             },
         )
     engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
@@ -93,8 +95,8 @@ async def test_standalone_api_end_to_end(mysql, monkeypatch, two_stage):  # noqa
                 id_factory=lambda: next(ids),
             )
             body = {"connectionId": "llm"}
-            if two_stage:
-                body["apiWorkflowVersion"] = "api_two_stage/1.0"
+            if checkpointed:
+                body["apiWorkflowVersion"] = "api_three_stage/1.0"
             launched = await launcher.launch("api", task["task_id"], body, "actor")
             assert launched["runId"] == "api-e2e-run" and launched["status"] == "pending"
             assert not any("ai_generate_task_runs" in sql for sql in statements)
@@ -115,14 +117,14 @@ async def test_standalone_api_end_to_end(mysql, monkeypatch, two_stage):  # noqa
             claim = await worker.claim("ai", WorkerClaimRequest(worker_id="agent"))
             assert claim["taskId"] == "api-e2e-worker" and claim["attemptId"] != launched["runId"]
             await worker.started("ai", "api-e2e-worker", WorkerTaskEventRequest(worker_id="agent"))
-            if two_stage:
+            if checkpointed:
                 extraction = {"login": {"method": "GET", "path": "/login"}}
                 await worker.progress(
                     "api-e2e-worker",
                     WorkerProgressRequest(
                         worker_id="agent",
                         run_id=claim["attemptId"],
-                        current_stage="openapi_extract",
+                        current_stage="interface_extract",
                         stage_status="waiting_review",
                         config_json={"apiExtraction": extraction},
                     ),
@@ -132,11 +134,11 @@ async def test_standalone_api_end_to_end(mysql, monkeypatch, two_stage):  # noqa
                 extraction = {"login": {"method": "POST", "path": "/edited"}}
                 await stages.save_api_checkpoint(
                     "api-e2e-run",
-                    {"stage": "openapi_extract", "configJson": {"apiExtraction": extraction}},
+                    {"stage": "interface_extract", "configJson": {"apiExtraction": extraction}},
                     "actor",
                 )
                 revision = {
-                    "stage": "openapi_extract",
+                    "stage": "interface_extract",
                     "revisionInstruction": "补充边界",
                     "requestId": "api-revision",
                 }
@@ -154,18 +156,18 @@ async def test_standalone_api_end_to_end(mysql, monkeypatch, two_stage):  # noqa
                     WorkerProgressRequest(
                         worker_id="agent",
                         run_id=claim["attemptId"],
-                        current_stage="openapi_extract",
+                        current_stage="interface_extract",
                         stage_status="waiting_review",
                         config_json={"apiExtraction": extraction},
                     ),
                 )
                 request = {
-                    "stage": "openapi_extract",
+                    "stage": "interface_extract",
                     "action": "approve",
                     "requestId": "api-next-worker",
                 }
                 continued = await stages.review_api_checkpoint("api-e2e-run", request, "actor")
-                assert continued["currentStage"] == "generate"
+                assert continued["currentStage"] == "api_design"
                 assert (await stages.review_api_checkpoint("api-e2e-run", request, "actor"))[
                     "runId"
                 ] == "api-e2e-run"
@@ -174,13 +176,66 @@ async def test_standalone_api_end_to_end(mysql, monkeypatch, two_stage):  # noqa
                 await worker.started(
                     "ai", "api-next-worker", WorkerTaskEventRequest(worker_id="agent")
                 )
-            worker_id = "api-next-worker" if two_stage else "api-e2e-worker"
+                design = {
+                    "schemaVersion": "api_test_design/1.0",
+                    "interfaces": {
+                        "login": {
+                            "method": "POST",
+                            "path": "/edited",
+                            "cases": [
+                                {
+                                    "id": "login_positive",
+                                    "title": "登录-正向",
+                                    "basis": {
+                                        "kind": "positive",
+                                        "section": "",
+                                        "field": "",
+                                        "constraint": "",
+                                    },
+                                    "expected": {
+                                        "statusClass": "2xx",
+                                        "assertions": [],
+                                    },
+                                }
+                            ],
+                            "uncovered": [],
+                        }
+                    },
+                }
+                await worker.progress(
+                    "api-next-worker",
+                    WorkerProgressRequest(
+                        worker_id="agent",
+                        run_id=claim["attemptId"],
+                        current_stage="api_design",
+                        stage_status="waiting_review",
+                        config_json={
+                            "apiExtraction": extraction,
+                            "apiDesign": design,
+                        },
+                    ),
+                )
+                design_request = {
+                    "stage": "api_design",
+                    "action": "approve",
+                    "requestId": "api-design-next",
+                }
+                continued = await stages.review_api_checkpoint(
+                    "api-e2e-run", design_request, "actor"
+                )
+                assert continued["currentStage"] == "generate"
+                claim = await worker.claim("ai", WorkerClaimRequest(worker_id="agent"))
+                assert claim["taskId"] == "api-design-next"
+                await worker.started(
+                    "ai", "api-design-next", WorkerTaskEventRequest(worker_id="agent")
+                )
+            worker_id = "api-design-next" if checkpointed else "api-e2e-worker"
             await worker.progress(
                 worker_id,
                 WorkerProgressRequest(
                     worker_id="agent",
                     run_id=claim["attemptId"],
-                    current_stage="generate" if two_stage else "openapi_extract",
+                    current_stage="generate" if checkpointed else "interface_extract",
                     stage_status="running",
                     config_json={},
                 ),
@@ -193,7 +248,9 @@ async def test_standalone_api_end_to_end(mysql, monkeypatch, two_stage):  # noqa
                     run_id=claim["attemptId"],
                     status="success",
                     result_yaml="cases:\n  - name: Login\n    method: GET\n    urlTemplate: /new\n",
-                    config_json={"apiExtraction": extraction} if two_stage else {},
+                    config_json=(
+                        {"apiExtraction": extraction, "apiDesign": design} if checkpointed else {}
+                    ),
                 ),
             )
             review = GenerationCandidateReview(repository, access.owned_run)
@@ -251,7 +308,14 @@ async def test_standalone_api_end_to_end(mysql, monkeypatch, two_stage):  # noqa
         with mysql.begin() as connection:
             connection.execute(
                 sa.delete(WorkerTask).where(
-                    WorkerTask.task_id.in_(["api-e2e-worker", "api-next-worker", "api-revision"])
+                    WorkerTask.task_id.in_(
+                        [
+                            "api-e2e-worker",
+                            "api-next-worker",
+                            "api-design-next",
+                            "api-revision",
+                        ]
+                    )
                 )
             )
             connection.execute(sa.delete(AiGenerateTask))

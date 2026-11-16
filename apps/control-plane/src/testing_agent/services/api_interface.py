@@ -5,34 +5,45 @@ from typing import Any
 from sqlalchemy.exc import IntegrityError
 
 from testing_agent.core.errors import (
-    ErrApiAppNotFound,
+    ErrApiInterfaceGroupNameAlreadyUse,
+    ErrApiInterfaceGroupNotFound,
     ErrApiInterfaceIdentityAlreadyUse,
     ErrApiInterfaceNotFound,
     ErrApiInterfacePathParamsMismatch,
     ErrApiInterfaceRequirementMismatch,
     ErrBadRequest,
+    ErrSoftwareRepositoryNotFound,
     dynamic_error,
 )
 from testing_agent.core.sid import new_id
 from testing_agent.domain.api_interface import (
+    UNTAGGED_GROUP_NAME,
+    group_name,
     normalize_method,
     normalize_path,
     normalize_rows,
     normalize_tags,
     parse_json_value,
     path_key,
+    replace_group_tag,
+    set_group_tag,
     validate_path_parameters,
 )
 from testing_agent.domain.api_interface_query import ApiInterfaceQuery
-from testing_agent.models.api_app import ApiApp
 from testing_agent.models.api_interface import ApiInterface
 from testing_agent.models.requirement import Requirement
+from testing_agent.models.software_repository import SoftwareRepository
 from testing_agent.models.sprint import Sprint
-from testing_agent.repositories.api_app import ApiAppRepository
 from testing_agent.repositories.api_interface import ApiInterfaceRepository
+from testing_agent.repositories.software_repository import SoftwareRepositoryRepository
 from testing_agent.schemas.api_interface import (
     ApiInterfaceCreateRequest,
+    ApiInterfaceGroupCreateRequest,
+    ApiInterfaceGroupDeleteRequest,
+    ApiInterfaceGroupMutationResponse,
+    ApiInterfaceGroupRenameRequest,
     ApiInterfaceListItem,
+    ApiInterfaceMoveGroupRequest,
     ApiInterfaceResponse,
     ApiInterfaceRow,
     ApiInterfaceUpdateRequest,
@@ -45,11 +56,14 @@ def _requirement_rows(interface: ApiInterface) -> list[dict[str, str]]:
     return list(getattr(interface, "requirements", []) or [])
 
 
-def dump_interface(interface: ApiInterface, *, app_name: str = "") -> dict[str, Any]:
+def dump_interface(
+    interface: ApiInterface, *, software_repository_name: str = ""
+) -> dict[str, Any]:
     data = {
         "interface_id": interface.interface_id,
-        "app_id": interface.app_id,
-        "app_name": app_name or getattr(interface, "app_name", ""),
+        "software_repository_id": interface.software_repository_id,
+        "software_repository_name": software_repository_name
+        or getattr(interface, "software_repository_name", ""),
         "name": interface.name,
         "method": interface.method,
         "path": interface.path,
@@ -66,7 +80,8 @@ def dump_interface(interface: ApiInterface, *, app_name: str = "") -> dict[str, 
         "response_description": interface.response_description,
         "response_schema": interface.response_schema_json,
         "response_example": interface.response_example_json,
-        "enabled": interface.enabled,
+        "security": interface.security_json,
+        "security_schemes": interface.security_schemes_json,
         "version": interface.version,
         "requirements": _requirement_rows(interface),
         "source": {
@@ -85,15 +100,14 @@ def dump_interface(interface: ApiInterface, *, app_name: str = "") -> dict[str, 
 def dump_list_item(interface: ApiInterface) -> dict[str, Any]:
     data = {
         "interface_id": interface.interface_id,
-        "app_id": interface.app_id,
-        "app_name": getattr(interface, "app_name", ""),
+        "software_repository_id": interface.software_repository_id,
+        "software_repository_name": getattr(interface, "software_repository_name", ""),
         "name": interface.name,
         "method": interface.method,
         "path": interface.path,
         "description": interface.description,
         "tags": interface.tags_json or [],
         "requirements": _requirement_rows(interface),
-        "enabled": interface.enabled,
         "source_type": interface.source_type,
         "updated_at": interface.updated_at,
     }
@@ -104,12 +118,12 @@ class ApiInterfaceService:
     def __init__(
         self,
         repository: ApiInterfaceRepository,
-        apps: ApiAppRepository,
+        software_repositories: SoftwareRepositoryRepository,
         *,
         deletion: ResourceDeletion | None = None,
     ) -> None:
         self.repository = repository
-        self.apps = apps
+        self.software_repositories = software_repositories
         self.deletion = deletion or SqlResourceDeletion()
 
     async def list_project(self, user_id: str, query: ApiInterfaceQuery) -> dict[str, Any]:
@@ -120,42 +134,192 @@ class ApiInterfaceService:
             "total": total,
         }
 
-    async def list_app(self, user_id: str, app_id: str, query: ApiInterfaceQuery) -> dict[str, Any]:
-        app = await self._accessible_app(user_id, app_id, action="read")
-        interfaces, total = await self.repository.list_by_app(app.app_id, query)
+    async def list_software_repository(
+        self, user_id: str, software_repository_id: str, query: ApiInterfaceQuery
+    ) -> dict[str, Any]:
+        software_repository = await self._accessible_software_repository(
+            user_id, software_repository_id, action="read"
+        )
+        interfaces, total = await self.repository.list_by_software_repository(
+            software_repository.software_repository_id, query
+        )
         return {
             "items": [dump_list_item(interface) for interface in interfaces],
             "total": total,
         }
 
     async def get(self, user_id: str, interface_id: str) -> dict[str, Any]:
-        interface, app = await self._accessible_interface(user_id, interface_id, action="read")
+        interface, software_repository = await self._accessible_interface(
+            user_id, interface_id, action="read"
+        )
         await self.repository.attach_requirements([interface])
-        return dump_interface(interface, app_name=app.name)
+        return dump_interface(interface, software_repository_name=software_repository.name)
+
+    async def create_group(
+        self,
+        user_id: str,
+        software_repository_id: str,
+        body: ApiInterfaceGroupCreateRequest,
+    ) -> dict[str, Any]:
+        repository = await self._accessible_software_repository(
+            user_id, software_repository_id, action="write", for_update=True
+        )
+        target = self._group_name(body.group_name)
+        interfaces = await self.repository.list_all_by_software_repository_for_update(
+            software_repository_id
+        )
+        groups = {group_name(interface.tags_json) for interface in interfaces}
+        groups.update(self._persisted_groups(repository))
+        if target in groups:
+            raise ErrApiInterfaceGroupNameAlreadyUse()
+        repository.interface_groups_json = [*self._persisted_groups(repository), target]
+        await self.repository.commit()
+        return self._group_mutation(target, target, 0)
+
+    async def rename_group(
+        self,
+        user_id: str,
+        software_repository_id: str,
+        body: ApiInterfaceGroupRenameRequest,
+    ) -> dict[str, Any]:
+        repository = await self._accessible_software_repository(
+            user_id, software_repository_id, action="write", for_update=True
+        )
+        current = self._group_name(body.current_group_name)
+        target = self._group_name(body.new_group_name)
+        interfaces = await self.repository.list_all_by_software_repository_for_update(
+            software_repository_id
+        )
+        persisted = self._persisted_groups(repository)
+        groups = {group_name(interface.tags_json) for interface in interfaces}
+        groups.update(persisted)
+        if current not in groups:
+            raise ErrApiInterfaceGroupNotFound()
+        if current == target:
+            return self._group_mutation(current, target, 0)
+        if target in groups:
+            raise ErrApiInterfaceGroupNameAlreadyUse()
+        changed = False
+        if current in persisted:
+            repository.interface_groups_json = [
+                target if name == current else name for name in persisted
+            ]
+            changed = True
+        updated = 0
+        for interface in interfaces:
+            if group_name(interface.tags_json) != current:
+                continue
+            new_tags = replace_group_tag(interface.tags_json, target)
+            if new_tags != (interface.tags_json or []):
+                interface.tags_json = new_tags
+                interface.version += 1
+                updated += 1
+        if updated or changed:
+            await self.repository.commit()
+        return self._group_mutation(current, target, updated)
+
+    async def delete_group(
+        self,
+        user_id: str,
+        software_repository_id: str,
+        body: ApiInterfaceGroupDeleteRequest,
+    ) -> dict[str, Any]:
+        repository = await self._accessible_software_repository(
+            user_id, software_repository_id, action="write", for_update=True
+        )
+        current = self._group_name(body.group_name)
+        interfaces = await self.repository.list_all_by_software_repository_for_update(
+            software_repository_id
+        )
+        persisted = self._persisted_groups(repository)
+        groups = {group_name(interface.tags_json) for interface in interfaces}
+        groups.update(persisted)
+        if current not in groups:
+            raise ErrApiInterfaceGroupNotFound()
+        changed = False
+        if current in persisted:
+            repository.interface_groups_json = [name for name in persisted if name != current]
+            changed = True
+        updated = 0
+        for interface in interfaces:
+            if group_name(interface.tags_json) != current:
+                continue
+            # Removing a group puts its interfaces into 未分类; secondary tags are cleared too.
+            interface.tags_json = []
+            interface.version += 1
+            updated += 1
+        if updated or changed:
+            await self.repository.commit()
+        return self._group_mutation(current, "", updated)
+
+    async def move_to_group(
+        self, user_id: str, interface_id: str, body: ApiInterfaceMoveGroupRequest
+    ) -> dict[str, Any]:
+        interface, software_repository = await self._accessible_interface(
+            user_id, interface_id, action="write", for_update=True
+        )
+        target = "" if body.group_name is None else str(body.group_name).strip()
+        if target:
+            target = self._group_name(target)
+            new_tags = set_group_tag(interface.tags_json, target)
+        else:
+            new_tags = []
+        if new_tags != (interface.tags_json or []):
+            interface.tags_json = new_tags
+            interface.version += 1
+            await self.repository.commit()
+            await self.repository.refresh(interface)
+        await self.repository.attach_requirements([interface])
+        return dump_interface(interface, software_repository_name=software_repository.name)
+
+    @staticmethod
+    def _persisted_groups(repository: SoftwareRepository) -> list[str]:
+        names: list[str] = []
+        for raw in repository.interface_groups_json or []:
+            name = str(raw or "").strip()
+            if not name or name == UNTAGGED_GROUP_NAME or name in names:
+                continue
+            names.append(name)
+        return names
+
+    @staticmethod
+    def _group_mutation(current: str, target: str, updated: int) -> dict[str, Any]:
+        return ApiInterfaceGroupMutationResponse(
+            group_name=current,
+            new_group_name=target,
+            updated_count=updated,
+        ).model_dump(by_alias=True, mode="json")
 
     async def create(
-        self, user_id: str, app_id: str, body: ApiInterfaceCreateRequest
+        self, user_id: str, software_repository_id: str, body: ApiInterfaceCreateRequest
     ) -> dict[str, Any]:
-        # Lock the app so a concurrent app deletion cannot pass its interface count check
-        # between the ownership check and the insert below.
-        app = await self._accessible_app(user_id, app_id, action="write", for_update=True)
+        # Lock the software repository so a concurrent deletion cannot pass its
+        # interface count check between the ownership check and the insert below.
+        software_repository = await self._accessible_software_repository(
+            user_id, software_repository_id, action="write", for_update=True
+        )
         payload = self._create_payload(body)
         if (
-            await self.repository.get_by_identity(app_id, payload["method"], payload["path_key"])
+            await self.repository.get_by_identity(
+                software_repository_id, payload["method"], payload["path_key"]
+            )
             is not None
         ):
             raise ErrApiInterfaceIdentityAlreadyUse()
-        requirements = await self._requirements(app.project_id, body.requirement_ids)
+        requirements = await self._requirements(
+            software_repository.project_id, body.requirement_ids
+        )
         interface = ApiInterface(
             interface_id=new_id(),
-            app_id=app_id,
-            enabled=body.enabled,
+            software_repository_id=software_repository_id,
             version=1,
             source_type="manual",
             source_name="",
             source_url="",
             source_version="",
             source_imported_at=None,
+            security_json=None,
+            security_schemes_json=None,
             **payload,
         )
         self.repository.add(interface)
@@ -168,12 +332,12 @@ class ApiInterfaceService:
             raise ErrApiInterfaceIdentityAlreadyUse() from exc
         await self.repository.refresh(interface)
         await self.repository.attach_requirements([interface])
-        return dump_interface(interface, app_name=app.name)
+        return dump_interface(interface, software_repository_name=software_repository.name)
 
     async def update(
         self, user_id: str, interface_id: str, body: ApiInterfaceUpdateRequest
     ) -> dict[str, Any]:
-        interface, app = await self._accessible_interface(
+        interface, software_repository = await self._accessible_interface(
             user_id, interface_id, action="write", for_update=True
         )
         await self.repository.attach_requirements([interface])
@@ -209,7 +373,9 @@ class ApiInterfaceService:
                 raise dynamic_error(ErrApiInterfacePathParamsMismatch, str(exc)) from exc
         if method != interface.method or path != interface.path:
             new_path_key = path_key(path)
-            exists = await self.repository.get_by_identity(interface.app_id, method, new_path_key)
+            exists = await self.repository.get_by_identity(
+                interface.software_repository_id, method, new_path_key
+            )
             if exists is not None and exists.interface_id != interface.interface_id:
                 raise ErrApiInterfaceIdentityAlreadyUse()
             interface.method = method
@@ -295,16 +461,12 @@ class ApiInterfaceService:
             if value != interface.response_example_json:
                 interface.response_example_json = value
                 changed = True
-        if "enabled" in fields:
-            if body.enabled is None:
-                raise ErrBadRequest()
-            if body.enabled != interface.enabled:
-                interface.enabled = body.enabled
-                changed = True
         if "requirement_ids" in fields:
             if body.requirement_ids is None:
                 raise ErrBadRequest()
-            requirements = await self._requirements(app.project_id, body.requirement_ids)
+            requirements = await self._requirements(
+                software_repository.project_id, body.requirement_ids
+            )
             current_ids = [row["requirement_id"] for row in _requirement_rows(interface)]
             next_ids = [requirement.requirement_id for requirement, _sprint in requirements]
             if set(current_ids) != set(next_ids):
@@ -319,10 +481,10 @@ class ApiInterfaceService:
                 raise ErrApiInterfaceIdentityAlreadyUse() from exc
             await self.repository.refresh(interface)
         await self.repository.attach_requirements([interface])
-        return dump_interface(interface, app_name=app.name)
+        return dump_interface(interface, software_repository_name=software_repository.name)
 
     async def delete(self, user_id: str, interface_id: str) -> dict[str, Any]:
-        interface, _app = await self._accessible_interface(
+        interface, _software_repository = await self._accessible_interface(
             user_id, interface_id, action="write", for_update=True
         )
         await self.repository.delete_requirements(interface_id)
@@ -330,19 +492,25 @@ class ApiInterfaceService:
         await self.repository.commit()
         return {}
 
-    async def _accessible_app(
+    async def _accessible_software_repository(
         self,
         user_id: str,
-        app_id: str,
+        software_repository_id: str,
         *,
         action: ProjectAction,
         for_update: bool = False,
-    ) -> ApiApp:
-        app = await self.apps.get_for_update(app_id) if for_update else await self.apps.get(app_id)
-        if app is None:
-            raise ErrApiAppNotFound()
-        await require_project_id(self.repository.session, user_id, app.project_id, action=action)
-        return app
+    ) -> SoftwareRepository:
+        software_repository = (
+            await self.software_repositories.get_for_update(software_repository_id)
+            if for_update
+            else await self.software_repositories.get(software_repository_id)
+        )
+        if software_repository is None:
+            raise ErrSoftwareRepositoryNotFound()
+        await require_project_id(
+            self.repository.session, user_id, software_repository.project_id, action=action
+        )
+        return software_repository
 
     async def _accessible_interface(
         self,
@@ -351,7 +519,7 @@ class ApiInterfaceService:
         *,
         action: ProjectAction,
         for_update: bool = False,
-    ) -> tuple[ApiInterface, ApiApp]:
+    ) -> tuple[ApiInterface, SoftwareRepository]:
         interface = (
             await self.repository.get_for_update(interface_id)
             if for_update
@@ -359,11 +527,13 @@ class ApiInterfaceService:
         )
         if interface is None:
             raise ErrApiInterfaceNotFound()
-        app = await self.apps.get(interface.app_id)
-        if app is None:
+        software_repository = await self.software_repositories.get(interface.software_repository_id)
+        if software_repository is None:
             raise ErrApiInterfaceNotFound()
-        await require_project_id(self.repository.session, user_id, app.project_id, action=action)
-        return interface, app
+        await require_project_id(
+            self.repository.session, user_id, software_repository.project_id, action=action
+        )
+        return interface, software_repository
 
     async def _requirements(
         self, project_id: str, requirement_ids: list[str]
@@ -417,6 +587,17 @@ class ApiInterfaceService:
     def _tags(self, values: list[str]) -> list[str]:
         try:
             return normalize_tags(values)
+        except ValueError as exc:
+            raise dynamic_error(ErrBadRequest, str(exc)) from exc
+
+    def _group_name(self, value: str) -> str:
+        text = str(value or "").strip()
+        if not text:
+            raise dynamic_error(ErrBadRequest, "分组名称不能为空")
+        if text == UNTAGGED_GROUP_NAME:
+            raise dynamic_error(ErrBadRequest, "分组名称不能为「未分类」")
+        try:
+            return normalize_tags([text])[0]
         except ValueError as exc:
             raise dynamic_error(ErrBadRequest, str(exc)) from exc
 

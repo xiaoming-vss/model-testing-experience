@@ -327,8 +327,10 @@ class TaskSourceTests(unittest.TestCase):
                 payload = super().get(path, params)
                 assert payload is not None
                 payload["run"]["taskType"] = "functional_case_generate"
-                payload["run"]["sourceType"] = "text"
-                payload["run"]["sourceContent"] = "功能测试需求文本"
+                payload["run"]["sourceType"] = "requirement"
+                payload["run"]["sourceFormat"] = "requirement_understanding_json"
+                payload["run"]["sourceFormatVersion"] = "0.2"
+                payload["run"]["sourceContent"] = '{"artifactType":"readable_requirement_material"}'
                 return payload
 
         task_source = HttpClaimTaskSource(
@@ -344,8 +346,13 @@ class TaskSourceTests(unittest.TestCase):
         self.assertIsNotNone(task)
         assert task is not None
         self.assertEqual("functional_case_generate", task.task_type)
-        self.assertEqual("text", task.payload.source_type)
-        self.assertEqual("功能测试需求文本", task.payload.source_content)
+        self.assertEqual("requirement", task.payload.source_type)
+        self.assertEqual("requirement_understanding_json", task.payload.source_format)
+        self.assertEqual("0.2", task.payload.source_format_version)
+        self.assertEqual("", task.payload.document_type)
+        self.assertEqual(
+            '{"artifactType":"readable_requirement_material"}', task.payload.source_content
+        )
 
     def test_poll_ui_repository_task_maps_source_identity(self) -> None:
         class UiRepositoryTaskClient(FakePlatformHttpClient):
@@ -410,7 +417,43 @@ class TaskSourceTests(unittest.TestCase):
         self.assertEqual(1, len(task.bindings))
         self.assertEqual("a1b2c3d", task.bindings[0].head_commit)
 
-    def test_poll_functional_task_infers_source_type_from_document_type(self) -> None:
+    def test_poll_functional_task_reads_source_format(self) -> None:
+        class FunctionalFormatTaskClient(FakePlatformHttpClient):
+            def post(self, path: str, json_body: dict[str, Any]) -> dict[str, Any] | None:
+                payload = super().post(path, json_body)
+                assert payload is not None
+                payload["taskType"] = "functional_case_generate"
+                return payload
+
+            def get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
+                payload = super().get(path, params)
+                assert payload is not None
+                payload["run"]["taskType"] = "functional_case_generate"
+                payload["run"]["sourceType"] = "requirement"
+                payload["run"]["sourceFormat"] = "requirement_understanding_json"
+                payload["run"]["sourceFormatVersion"] = "0.2"
+                payload["run"]["sourceContent"] = '{"artifactType":"readable_requirement_material"}'
+                return payload
+
+        task_source = HttpClaimTaskSource(
+            client=FunctionalFormatTaskClient(),
+            claim_path="/internal/ai-worker/tasks/claim",
+            snapshot_path_template="/internal/ai-worker/tasks/{task_id}/snapshot",
+            llm_credentials_path_template="/internal/ai-worker/tasks/{task_id}/llm-credentials",
+            worker_id="worker-local",
+        )
+
+        task = task_source.poll_task()
+
+        self.assertIsNotNone(task)
+        assert task is not None
+        self.assertEqual("functional_case_generate", task.task_type)
+        self.assertEqual("requirement", task.payload.source_type)
+        self.assertEqual("requirement_understanding_json", task.payload.source_format)
+        self.assertEqual("0.2", task.payload.source_format_version)
+        self.assertEqual("", task.payload.document_type)
+
+    def test_poll_functional_task_does_not_infer_format_from_document_type(self) -> None:
         class FunctionalDocumentTaskClient(FakePlatformHttpClient):
             def post(self, path: str, json_body: dict[str, Any]) -> dict[str, Any] | None:
                 payload = super().post(path, json_body)
@@ -440,9 +483,9 @@ class TaskSourceTests(unittest.TestCase):
         self.assertIsNotNone(task)
         assert task is not None
         self.assertEqual("functional_case_generate", task.task_type)
-        self.assertEqual("text", task.payload.source_type)
-        self.assertEqual("text", task.payload.document_type)
-        self.assertEqual("功能测试需求文本", task.payload.source_content)
+        self.assertEqual("requirement", task.payload.source_type)
+        self.assertEqual("", task.payload.source_format)
+        self.assertEqual("", task.payload.document_type)
 
     def test_poll_task_maps_requirement_analysis_snapshot(self) -> None:
         class RequirementAnalysisTaskClient(FakePlatformHttpClient):
@@ -572,16 +615,16 @@ class TaskSourceTests(unittest.TestCase):
             def post(self, path: str, json_body: dict[str, Any]) -> dict[str, Any] | None:
                 payload = super().post(path, json_body)
                 assert payload is not None
-                payload["taskType"] = "functional_case_generate"
+                payload["taskType"] = "requirement_analysis"
                 return payload
 
             def get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
                 payload = super().get(path, params)
                 assert payload is not None
-                payload["run"]["taskType"] = "functional_case_generate"
+                payload["run"]["taskType"] = "requirement_analysis"
                 payload["run"]["sourceType"] = "openapi"
                 payload["run"]["documentType"] = "docx"
-                payload["run"]["sourceContent"] = "功能测试需求文本"
+                payload["run"]["sourceContent"] = "需求文档正文"
                 return payload
 
         task_source = HttpClaimTaskSource(
@@ -596,7 +639,7 @@ class TaskSourceTests(unittest.TestCase):
 
         self.assertIsNotNone(task)
         assert task is not None
-        self.assertEqual("functional_case_generate", task.task_type)
+        self.assertEqual("requirement_analysis", task.task_type)
         self.assertEqual("word", task.payload.document_type)
         self.assertEqual("word", task.payload.source_type)
 

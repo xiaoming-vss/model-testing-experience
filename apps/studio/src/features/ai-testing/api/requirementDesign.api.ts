@@ -29,6 +29,7 @@ export type RequirementDesignConfiguration = {
   newConfiguration?: boolean
   requestId?: string
   sourceContent?: string
+  interfaceIds?: string[]
   instruction?: string
 }
 export const requirementDesignApi = {

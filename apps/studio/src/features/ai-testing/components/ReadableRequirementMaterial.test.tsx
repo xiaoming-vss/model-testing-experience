@@ -32,6 +32,12 @@ describe('可读需求材料', () => {
     const result = JSON.parse(onChange.mock.lastCall![0])
     expect(result.functions[0].sections[0].items[0].text).toBe('修改后说明')
     expect(result.materialBlocks).toEqual(artifact.materialBlocks)
+
+    fireEvent.click(within(screen.getByRole('navigation', { name: '功能和章节导航' })).getByRole('button', { name: /待确认问题/ }))
+    fireEvent.change(screen.getByRole('textbox', { name: '待确认问题 1' }), { target: { value: '入口在哪里？' } })
+    const edited = JSON.parse(onChange.mock.lastCall![0])
+    expect(edited.questions[0].question).toBe('入口在哪里？')
+    expect(edited.materialBlocks).toEqual(artifact.materialBlocks)
   })
 })
 

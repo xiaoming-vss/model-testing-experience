@@ -9,6 +9,7 @@ from testing_agent.core.errors import (
     ErrAiGenerateTaskRunRunning,
     ErrBadRequest,
     ErrNotFound,
+    dynamic_error,
 )
 from testing_agent.core.sid import new_id
 from testing_agent.domain.ai_tasks import (
@@ -16,6 +17,7 @@ from testing_agent.domain.ai_tasks import (
 )
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+from testing_agent.repositories.api_interface import ApiInterfaceRepository
 from testing_agent.services.ai_task_output import (
     dump_task,
 )
@@ -31,11 +33,13 @@ class GenerationTaskCommands:
         repository: AiGenerateTaskRepository,
         access: GenerationAccess,
         *,
+        interfaces: ApiInterfaceRepository | None = None,
         deletion: ResourceDeletion | None = None,
         id_factory: Callable[[], str] = new_id,
     ) -> None:
         self.repository = repository
         self.access = access
+        self.interfaces = interfaces or ApiInterfaceRepository(repository.session)
         self.deletion = deletion or SqlResourceDeletion()
         self.id_factory = id_factory
 
@@ -49,6 +53,7 @@ class GenerationTaskCommands:
         task_id: str | None = None,
     ) -> dict:
         await self.access.ensure_project_access(user_id, project_id, action="write")
+        self._reject_document_source(kind, body)
         sprint_id = str(body.get("sprintId") or body.get("sprint_id") or "")
         requirement_id = str(body.get("requirementId") or body.get("requirement_id") or "")
         requirement = None
@@ -82,6 +87,7 @@ class GenerationTaskCommands:
                 project_id=project_id, sprint_id=sprint_id, requirement_id=requirement_id
             )
         )
+        interface_ids = await self._interface_ids(project_id, body) if kind == "api" else None
         task = AiGenerateTask(
             task_id=task_id or self.id_factory(),
             task_type=task_type_for(kind),
@@ -110,7 +116,9 @@ class GenerationTaskCommands:
             requirement_id=requirement_id,
             creator_user_id=user_id,
             source_type=str(
-                "repository"
+                "interface_library"
+                if kind == "api"
+                else "repository"
                 if kind == "ui"
                 else requirement.document_type
                 if kind in {"requirement_analysis", "code_risk_analysis", "repository_profile"}
@@ -123,12 +131,13 @@ class GenerationTaskCommands:
             ),
             source_content=str(
                 ""
-                if kind == "ui"
+                if kind in {"api", "ui"}
                 else requirement.document_content
                 if kind in {"requirement_analysis", "code_risk_analysis", "repository_profile"}
                 and requirement is not None
                 else body.get("sourceContent") or body.get("source_content") or ""
             ),
+            interface_ids_json=interface_ids,
             instruction=str(body.get("instruction") or ""),
         )
         self.repository.add(task)
@@ -166,6 +175,11 @@ class GenerationTaskCommands:
             field_map = {"name": "name", "instruction": "instruction"}
             task.source_type = "repository"
             task.source_content = ""
+        elif kind == "api":
+            self._reject_document_source(kind, body)
+            field_map = {"name": "name", "instruction": "instruction"}
+            if "interfaceIds" in body or "interface_ids" in body:
+                task.interface_ids_json = await self._interface_ids(task.project_id, body)
         else:
             field_map = {
                 "name": "name",
@@ -181,6 +195,34 @@ class GenerationTaskCommands:
         await self.repository.commit()
         await self.repository.refresh(task)
         return dump_task(task)
+
+    @staticmethod
+    def _reject_document_source(kind: str, body: dict[str, Any]) -> None:
+        if kind != "api":
+            return
+        if any(
+            key in body for key in ("sourceType", "source_type", "sourceContent", "source_content")
+        ):
+            raise dynamic_error(ErrBadRequest, "API 用例生成任务不再接受 OpenAPI/Swagger 文档来源")
+
+    async def _interface_ids(self, project_id: str, body: dict[str, Any]) -> list[str]:
+        raw = body.get("interfaceIds")
+        if raw is None:
+            raw = body.get("interface_ids")
+        if not isinstance(raw, list) or not raw:
+            raise dynamic_error(ErrBadRequest, "请至少选择一个接口")
+        ids = list(dict.fromkeys(str(value).strip() for value in raw if str(value).strip()))
+        if not ids:
+            raise dynamic_error(ErrBadRequest, "请至少选择一个接口")
+        rows = await self.interfaces.list_by_ids_for_project(project_id, ids)
+        found = {row.interface_id for row in rows}
+        missing = [interface_id for interface_id in ids if interface_id not in found]
+        if missing:
+            raise dynamic_error(
+                ErrBadRequest,
+                f"接口不存在或不属于当前项目：{', '.join(missing)}",
+            )
+        return ids
 
     async def delete(self, kind: str, task_id: str, user_id: str) -> dict:
         task = await self.access.owned_task(user_id, task_id, kind, action="write")

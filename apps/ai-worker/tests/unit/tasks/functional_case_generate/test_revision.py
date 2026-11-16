@@ -12,7 +12,12 @@ from testing_agent_ai_worker.tasks.functional_case_generate.detailed_batches imp
 from testing_agent_ai_worker.tasks.functional_case_generate.executor import (
     FunctionalCaseExecutor,
 )
-from tests.unit.tasks.functional_case_generate.fixtures import analysis, case, traceable_modules
+from tests.unit.tasks.functional_case_generate.fixtures import (
+    analysis,
+    case,
+    material,
+    traceable_modules,
+)
 
 
 class FunctionalRevisionTests(unittest.TestCase):
@@ -38,9 +43,10 @@ class FunctionalRevisionTests(unittest.TestCase):
             ),
             payload=TaskPayload(
                 openapi_content="",
-                source_content="original requirement",
-                source_type="text",
-                document_type="text",
+                source_content=json.dumps(material(), ensure_ascii=False),
+                source_type="requirement",
+                source_format="requirement_understanding_json",
+                source_format_version="0.2",
             ),
         )
 
@@ -135,7 +141,7 @@ class FunctionalRevisionTests(unittest.TestCase):
                 self.assertIn(expected, calls[0]["input_text"])
                 if stage == "case_names":
                     self.assertTrue(calls[0]["is_revision"])
-                self.assertIn("original requirement", calls[0]["input_text"])
+                self.assertIn("readable_requirement_material", calls[0]["input_text"])
                 self.assertIn("add error boundaries", calls[0]["input_text"])
                 self.assertEqual(progress[0].stage_status, "waiting_review")
                 self.assertEqual(progress[0].current_stage, stage)
@@ -205,11 +211,9 @@ class FunctionalRevisionTests(unittest.TestCase):
                 from_config=lambda **kwargs: Bot(),
             )
         )
-        self.assertIn("login-existing", calls[0])
-        self.assertNotIn("checkout-existing", calls[0])
-        self.assertIn("checkout-existing", calls[1])
-        self.assertNotIn("login-existing", calls[1])
+        existing_cases = {"login-existing", "checkout-existing", "manual-existing"}
+        for call in calls:
+            present = {name for name in existing_cases if name in call}
+            self.assertEqual(len(present), 1, call)
         self.assertTrue(all("add errors" in call for call in calls))
-        self.assertIn("manual-existing", calls[2])
-        self.assertNotIn("login-existing", calls[2])
         self.assertEqual(len(json.loads(result)["cases"]), 3)

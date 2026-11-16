@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { baseServicesApi } from '@/features/base-services/api/baseServices.api'
+import { interfaceLibraryApi } from '@/features/interface-library/api/interfaceLibrary.api'
 import { generationChainApi } from '../api/generationChain.api'
 import { repositoryProfileApi } from '../api/repositoryProfile.api'
 import { useRequirementRepositoryProfileWorkspace } from './useRequirementRepositoryProfileWorkspace'
@@ -21,8 +21,8 @@ beforeEach(() => {
   vi.mocked(usePersonalLlmChoice).mockReturnValue({
     chooseRun: async () => ({ connectionId: 'llm', instruction: '' }),
   } as never)
-  vi.spyOn(baseServicesApi, 'getGitlabRequirementBindings').mockResolvedValue([
-    { provider: 'gitlab', remoteResourceType: 'repository' },
+  vi.spyOn(interfaceLibraryApi, 'getRequirementSoftwareRepositories').mockResolvedValue([
+    { softwareRepositoryId: 'repo-1', softwareRepositoryName: 'repo-1', branch: 'main', baselineBranch: 'main' },
   ] as never)
   vi.spyOn(repositoryProfileApi, 'getRepositoryProfileTasks').mockResolvedValue([
     { taskId: 'task', requirementId: 'req' },
@@ -132,15 +132,15 @@ it('没有已审核材料整理版本时禁用运行', async () => {
   client.clear()
 })
 
-it('没有绑定仓库时禁用运行', async () => {
+it('没有关联软件仓库时禁用运行', async () => {
   vi.spyOn(generationChainApi, 'chain').mockResolvedValue(
     chainWithVersions([{ versionId: 'sv-1', versionNo: 1, label: 'V1' }]),
   )
-  vi.spyOn(baseServicesApi, 'getGitlabRequirementBindings').mockResolvedValue([] as never)
+  vi.spyOn(interfaceLibraryApi, 'getRequirementSoftwareRepositories').mockResolvedValue([] as never)
   const { result, unmount, client } = renderWorkspace()
 
   await waitFor(() => {
-    expect(result.current.runDisabledReason).toContain('未绑定代码仓库')
+    expect(result.current.runDisabledReason).toContain('未关联软件仓库')
   })
   unmount()
   client.clear()

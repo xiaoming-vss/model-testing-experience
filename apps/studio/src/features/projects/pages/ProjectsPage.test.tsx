@@ -41,7 +41,12 @@ it.each(['sprints', 'requirements'])('进入 %s 列表不逐条查询绑定，�
   await waitFor(() => expect(document.querySelectorAll(board === 'sprints' ? '.sprint-board-card' : '.requirements-card').length).toBe(board === 'sprints' ? 3 : 8))
   await waitFor(() => expect(client.isFetching()).toBe(0))
   expect(paths.filter(path => new URL(path, 'http://localhost').pathname.endsWith('/requirements'))).toEqual(board === 'sprints' ? [] : ['/v1/projects/p1/requirements?page=1&pageSize=20&sprintId=s1'])
-  expect(paths.filter(path => path.endsWith('/bindings'))).toEqual([])
+  expect(
+    paths.filter(path => {
+      const { pathname } = new URL(path, 'http://localhost')
+      return pathname.endsWith('/bindings') || pathname.endsWith('/software-repositories')
+    }),
+  ).toEqual([])
   if (board === 'sprints') {
     expect(screen.getByText('禅道 已绑定')).toBeInTheDocument()
     expect(screen.getByText('绑定对象')).toBeInTheDocument()
@@ -59,7 +64,12 @@ it('全部迭代使用项目级分页，翻页后只展示服务器返回的本�
   await screen.findByText('需求2-0')
   expect(screen.queryByText('需求1-0')).not.toBeInTheDocument()
   expect(paths).toContain('/v1/projects/p1/requirements?page=2&pageSize=20')
-  expect(paths.filter(path => path.endsWith('/bindings'))).toEqual([])
+  expect(
+    paths.filter(path => {
+      const { pathname } = new URL(path, 'http://localhost')
+      return pathname.endsWith('/bindings') || pathname.endsWith('/software-repositories')
+    }),
+  ).toEqual([])
   act(() => useWorkbenchStore.getState().setActiveSprintId('s2'))
   await waitFor(() => expect(paths).toContain('/v1/projects/p1/requirements?page=1&pageSize=20&sprintId=s2'))
   expect(paths).not.toContain('/v1/projects/p1/requirements?page=2&pageSize=20&sprintId=s2')
@@ -100,7 +110,7 @@ it('需求列表使用卡片和全局迭代范围，不重复显示局部迭代�
   expect(screen.getByRole('link', { name: '需求1-0' })).toHaveAttribute('href', '/requirements/s1-r1-0')
   expect(screen.queryByRole('table')).not.toBeInTheDocument()
   expect(screen.queryByText('筛选迭代')).not.toBeInTheDocument()
-  expect(screen.getByText('代码 已绑定（2）')).toBeInTheDocument()
+  expect(screen.getByText('软件仓库 已关联（2）')).toBeInTheDocument()
   expect(screen.getAllByText('2026/10/13 13:21')).toHaveLength(8)
   expect(screen.queryByText('迭代1 · 8 条需求')).not.toBeInTheDocument()
   expect(screen.getAllByText('未提供文档')).toHaveLength(7)

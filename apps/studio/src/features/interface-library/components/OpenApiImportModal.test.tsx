@@ -1,8 +1,8 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { interfaceLibraryApi } from '../api/interfaceLibrary.api'
-import type { ApiApp, ImportPreview } from '../types'
+import type { ImportCommitResult, SoftwareRepository, ImportPreview } from '../types'
 import { OpenApiImportModal } from './OpenApiImportModal'
 
 vi.mock('@/shared/utils/feedback', () => ({ message: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }))
@@ -13,16 +13,20 @@ vi.mock('../api/interfaceLibrary.api', () => ({
   },
 }))
 
-const app: ApiApp = {
-  appId: 'app-1',
+const app: SoftwareRepository = {
+  softwareRepositoryId: 'app-1',
   projectId: 'project-1',
   name: '订单服务',
   description: '',
   basePath: '/api/v1',
-  repository: null,
-  enabled: true,
+  repository: {
+    projectId: '41',
+    path: 'commerce/order-service',
+    name: 'order-service',
+    instanceUrl: 'https://gitlab.example.com',
+  },
+  interfaceGroups: [],
   interfaceCount: 1,
-  enabledInterfaceCount: 1,
   version: 4,
 }
 
@@ -36,7 +40,11 @@ function preview(canApply: boolean): ImportPreview {
       digest: 'digest-1',
       basePath: '/api/v2',
     },
-    app: { appId: 'app-1', name: '订单服务', basePath: '/api/v1' },
+    softwareRepository: {
+      softwareRepositoryId: 'app-1',
+      name: '订单服务',
+      basePath: '/api/v1',
+    },
     summary: { new: 1, modified: 1, unchanged: 1, libraryOnly: 1 },
     basePathChange: { current: '/api/v1', document: '/api/v2', canApply },
     warnings: [{ code: 'external_ref', message: '保留外部引用', method: 'GET', path: '/orders' }],
@@ -50,6 +58,8 @@ function preview(canApply: boolean): ImportPreview {
         existingInterfaceId: null,
         existingVersion: null,
         changedFields: [],
+        tags: ['Orders'],
+        existingTags: [],
       },
       {
         key: 'POST:/orders',
@@ -60,6 +70,8 @@ function preview(canApply: boolean): ImportPreview {
         existingInterfaceId: 'api-2',
         existingVersion: 2,
         changedFields: ['请求体 Schema'],
+        tags: ['Orders'],
+        existingTags: ['Orders'],
       },
       {
         key: 'GET:/orders/{orderId}',
@@ -70,6 +82,8 @@ function preview(canApply: boolean): ImportPreview {
         existingInterfaceId: 'api-1',
         existingVersion: 1,
         changedFields: [],
+        tags: ['Orders'],
+        existingTags: ['Orders'],
       },
       {
         key: 'DELETE:/orders/{orderId}',
@@ -80,26 +94,33 @@ function preview(canApply: boolean): ImportPreview {
         existingInterfaceId: 'api-3',
         existingVersion: 1,
         changedFields: [],
+        tags: ['Admin'],
+        existingTags: ['Admin'],
       },
     ],
   }
 }
 
-function renderModal(previewData = preview(true)) {
+const DEFAULT_COMMIT_RESULT: ImportCommitResult = {
+  created: 1,
+  updated: 1,
+  skipped: 0,
+  libraryOnly: 1,
+  softwareRepositoryBasePath: '/api/v2',
+  interfaces: [],
+}
+
+function renderModal(
+  previewData = preview(true),
+  commitResult: ImportCommitResult = DEFAULT_COMMIT_RESULT,
+) {
   vi.mocked(interfaceLibraryApi.previewOpenApiImport).mockResolvedValue(previewData)
-  vi.mocked(interfaceLibraryApi.commitOpenApiImport).mockResolvedValue({
-    created: 1,
-    updated: 1,
-    skipped: 0,
-    libraryOnly: 1,
-    appBasePath: '/api/v2',
-    interfaces: [],
-  })
+  vi.mocked(interfaceLibraryApi.commitOpenApiImport).mockResolvedValue(commitResult)
   return render(
     <OpenApiImportModal
       open
-      apps={[app]}
-      defaultAppId="app-1"
+      repositories={[app]}
+      defaultSoftwareRepositoryId="app-1"
       onClose={vi.fn()}
       onImported={vi.fn()}
     />,
@@ -132,8 +153,12 @@ describe('OpenApiImportModal', () => {
     expect(screen.getByText('查询订单')).toBeInTheDocument()
     expect(screen.getByText('删除订单')).toBeInTheDocument()
     expect(interfaceLibraryApi.previewOpenApiImport).toHaveBeenCalledWith('app-1', file)
+    const groupPreview = screen.getByLabelText('导入分组预览')
+    expect(groupPreview).toHaveTextContent('Orders · 2')
+    expect(groupPreview).not.toHaveTextContent('新建')
+    expect(screen.getByText(/保留库内标签和分组/)).toBeInTheDocument()
 
-    await user.click(screen.getByRole('checkbox', { name: /同时更新应用 base path/ }))
+    await user.click(screen.getByRole('checkbox', { name: /同时更新软件仓库 base path/ }))
     await user.click(screen.getByRole('button', { name: '导入选中 2 项' }))
 
     await waitFor(() => expect(interfaceLibraryApi.commitOpenApiImport).toHaveBeenCalled())
@@ -145,10 +170,43 @@ describe('OpenApiImportModal', () => {
         selectedKeys: ['GET:/orders', 'POST:/orders'],
         expectedItems: { 'POST:/orders': 2 },
         applyBasePath: true,
-        expectedAppVersion: 4,
+        expectedSoftwareRepositoryVersion: 4,
       }),
     )
     expect(await screen.findByText('导入完成')).toBeInTheDocument()
+  })
+
+  it('marks groups created by new interfaces and updates the preview with selection', async () => {
+    const user = userEvent.setup()
+    const data = preview(true)
+    data.items[0] = { ...data.items[0], tags: ['Payments'] }
+    renderModal(data, {
+      ...DEFAULT_COMMIT_RESULT,
+      interfaces: [{ key: 'GET:/orders', interfaceId: 'api-9', changeType: 'new' }],
+    })
+    await chooseFile(user)
+
+    await user.click(screen.getByRole('button', { name: '预览差异' }))
+    await screen.findByText('查询订单列表')
+    const groupPreview = screen.getByLabelText('导入分组预览')
+    expect(groupPreview).toHaveTextContent('Payments · 1 · 新建')
+    expect(groupPreview).toHaveTextContent('Orders · 1')
+
+    const newRow = screen
+      .getByText('查询订单列表')
+      .closest('.if-import-item') as HTMLElement
+    expect(newRow).toHaveTextContent('分组：Payments')
+    expect(newRow).toHaveTextContent('新建')
+
+    await user.click(within(newRow).getByRole('checkbox'))
+    expect(screen.getByLabelText('导入分组预览')).not.toHaveTextContent('Payments')
+    expect(screen.getByLabelText('导入分组预览')).toHaveTextContent('Orders · 1')
+
+    await user.click(within(newRow).getByRole('checkbox'))
+    await user.click(screen.getByRole('button', { name: '导入选中 2 项' }))
+    await screen.findByText('导入完成')
+    expect(screen.getByText('本次新建分组')).toBeInTheDocument()
+    expect(screen.getByText('Payments')).toBeInTheDocument()
   })
 
   it('accepts a directly pasted JSON document through the shared editor', async () => {
@@ -194,13 +252,13 @@ describe('OpenApiImportModal', () => {
     expect(interfaceLibraryApi.previewOpenApiImport).not.toHaveBeenCalled()
   })
 
-  it('blocks a member commit when the document changes the app base path', async () => {
+  it('blocks a member commit when the document changes the software repository base path', async () => {
     const user = userEvent.setup()
     renderModal(preview(false))
     await chooseFile(user)
 
     await user.click(screen.getByRole('button', { name: '预览差异' }))
-    expect(await screen.findByText(/普通成员不能修改应用 base path/)).toBeInTheDocument()
+    expect(await screen.findByText(/普通成员不能修改软件仓库 base path/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '导入选中 2 项' })).toBeDisabled()
   })
 })

@@ -20,8 +20,9 @@ from datetime import UTC, datetime
 from typing import Any
 
 from testing_agent.core.errors import AppError
-from testing_agent.models.resource_binding import ResourceBinding
-from testing_agent.repositories.resource_binding import ResourceBindingRepository
+from testing_agent.repositories.requirement_software_repository import (
+    RequirementRepositoryBinding,
+)
 from testing_agent.services.baseline_resolution import (
     BaselineResolutionService,
     RepoBaselineResolution,
@@ -38,19 +39,19 @@ EMPTY_TREE_SHA = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 
 COMPARE_ERROR_REMEDIATION = "请检查 GitLab 连接有效性、分支是否存在,或手工指定基线分支后重试"
 RESOLUTION_ERROR_REMEDIATION = "请修正绑定或手工指定基线分支后重试"
-CONNECTION_UNRESOLVED_ERROR = "未解析到该仓库的 GitLab 凭据连接(群组绑定缺失或连接不可用)"
+CONNECTION_UNRESOLVED_ERROR = "未解析到该仓库的 GitLab 凭据连接(个人连接缺失或连接不可用)"
 CONNECTION_UNRESOLVED_REMEDIATION = "请配置本人同实例 GitLab 授权；若有多个连接，请明确选择"
 
 
 def dump_repository_entry(
-    binding: ResourceBinding, resolution: RepoBaselineResolution
+    binding: RequirementRepositoryBinding, resolution: RepoBaselineResolution
 ) -> dict[str, Any]:
     """绑定 + 基线解析 → 概览仓库条目骨架(统计字段由 compare 填充)。"""
     return {
-        "repositoryId": str(binding.remote_resource_id or ""),
-        "instanceUrl": binding.instance_url,
-        "name": str(getattr(binding, "remote_name_snapshot", "") or ""),
-        "groupId": str(binding.remote_parent_id or ""),
+        "repositoryId": str(binding.software_repository.repository_project_id or ""),
+        "instanceUrl": binding.software_repository.repository_instance_url,
+        "name": str(binding.software_repository.repository_name or ""),
+        "groupId": str(binding.software_repository.repository_group_id or ""),
         "branch": resolution.branch,
         "baselineRef": resolution.baseline_ref,
         "baselineNote": resolution.note,
@@ -67,13 +68,11 @@ class SprintCodeOverviewService:
     def __init__(
         self,
         sprint_service: SprintService,
-        binding_repository: ResourceBindingRepository,
         baseline_resolution_service: BaselineResolutionService,
         integration_connection_service: IntegrationConnectionService,
         credential_cipher: IntegrationCredentialCipher,
     ):
         self.sprint_service = sprint_service
-        self.binding_repository = binding_repository
         self.baseline_resolution_service = baseline_resolution_service
         self.integration_connection_service = integration_connection_service
         self.credential_cipher = credential_cipher
@@ -88,7 +87,12 @@ class SprintCodeOverviewService:
         for binding, resolution in await self.baseline_resolution_service.resolve_for_sprint(
             sprint_id
         ):
-            key = (binding.instance_key, str(binding.remote_resource_id or ""), resolution.branch)
+            repository = binding.software_repository
+            key = (
+                repository.repository_instance_key,
+                str(repository.repository_project_id or ""),
+                resolution.branch,
+            )
             if key in seen:
                 continue
             seen.add(key)
@@ -98,7 +102,9 @@ class SprintCodeOverviewService:
                     binding,
                     resolution,
                     user_id,
-                    (connection_ids or {}).get(binding.instance_url, ""),
+                    (connection_ids or {}).get(
+                        binding.software_repository.repository_instance_url, ""
+                    ),
                 )
             )
         payload: dict[str, Any] = {
@@ -112,7 +118,7 @@ class SprintCodeOverviewService:
     async def _entry(
         self,
         project_id: str,
-        binding: ResourceBinding,
+        binding: RequirementRepositoryBinding,
         resolution: RepoBaselineResolution,
         user_id: str,
         connection_id: str = "",
@@ -124,11 +130,10 @@ class SprintCodeOverviewService:
             return entry
         try:
             access = await resolve_repo_gitlab_access(
-                self.binding_repository,
                 self.integration_connection_service,
                 self.credential_cipher,
                 project_id,
-                binding,
+                binding.software_repository,
                 user_id=user_id,
                 connection_id=connection_id,
             )

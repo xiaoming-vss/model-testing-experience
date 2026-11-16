@@ -13,17 +13,49 @@ from support.database_read_paths import NOW, database  # noqa: F401
 from support.generation import generation_services
 
 from testing_agent.core.errors import AppError
+from testing_agent.domain.api_interface import path_key
 from testing_agent.models.ai_generate_task import AiGenerateTask as Task
+from testing_agent.models.api_interface import ApiInterface
 from testing_agent.models.requirement import Requirement
+from testing_agent.models.software_repository import SoftwareRepository
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.requirement_design import RequirementDesignRepository
 from testing_agent.schemas.requirement_design import (
     RequirementDesignConfigurationRequest as Configuration,
 )
 from testing_agent.schemas.requirement_design import RequirementDesignRunRequest as Start
-from testing_agent.services.requirement_design import (
-    validate_openapi_source,
-)
+
+
+def seed_api_interface(sync):
+    sync.add(
+        SoftwareRepository(
+            software_repository_id="software-repository-1",
+            project_id="p",
+            name="订单服务",
+            description="",
+            base_path="/api/v2",
+            repository_project_id="repo-1",
+            repository_group_id="group-1",
+            repository_instance_key="",
+            repository_path="commerce/order-service",
+            repository_name="order-service",
+            repository_instance_url="https://gitlab.example.com",
+            version=1,
+            created_by_user_id="u",
+        )
+    )
+    sync.flush()
+    sync.add(
+        ApiInterface(
+            interface_id="interface-1",
+            software_repository_id="software-repository-1",
+            name="创建订单",
+            method="POST",
+            path="/orders",
+            path_key=path_key("/orders"),
+        )
+    )
+    sync.flush()
 
 
 def seed_direct_history(sync, size):
@@ -90,7 +122,7 @@ async def test_api_and_requirement_final_review_filters_use_their_own_stage(data
     sync.flush()
     for task_type, kind, final_stage in [
         ("api_case_generate", "api", "generate"),
-        ("requirement_analysis", "requirement_analysis", "feature_understanding"),
+        ("requirement_analysis", "requirement_analysis", "extracting_text"),
     ]:
         task.task_type = task_type
         sync.query(AiGenerationStage).update({"stage": final_stage})
@@ -166,21 +198,22 @@ async def test_stage_response_loss_retry_creates_one_attempt_and_one_worker(data
     sync, _, _ = database
     task = sync.query(Task).filter_by(task_id="task").one()
     task.task_type = "api_case_generate"
-    task.source_content = '{"openapi":"3.0.0","paths":{}}'
+    task.interface_ids_json = ["interface-1"]
+    seed_api_interface(sync)
     sync.commit()
     bundle = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(sync)))
     commands = DirectStageCommands(bundle.chain)
     request_id = uuid4()
     body = GenerationChainRunRequest(connectionId="llm", requestId=request_id)
-    first = await commands.run("req", "api", "openapi_extract", body, "u")
-    second = await commands.run("req", "api", "openapi_extract", body, "u")
+    first = await commands.run("req", "api", "interface_extract", body, "u")
+    second = await commands.run("req", "api", "interface_extract", body, "u")
     assert first.stages[0].active_run_id == second.stages[0].active_run_id
     assert sync.query(AiGenerationAttempt).count() == sync.query(WorkerTask).count() == 1
     with pytest.raises(AppError):
         await commands.run(
             "req",
             "api",
-            "openapi_extract",
+            "interface_extract",
             GenerationChainRunRequest(connectionId="llm", requestId=uuid4()),
             "u",
         )
@@ -191,7 +224,8 @@ async def test_first_configuration_is_durable_and_reused_on_request_retry(databa
     sync, _, _ = database
 
     service = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(sync))).design
-    body = Configuration(sourceContent='{"openapi":"3.0.0","paths":{}}')
+    seed_api_interface(sync)
+    body = Configuration(interfaceIds=["interface-1"])
     first = await service.configure("req", "api", body, "u")
     second = await service.configure("req", "api", body, "u")
     assert first["taskId"] == second["taskId"]
@@ -199,29 +233,29 @@ async def test_first_configuration_is_durable_and_reused_on_request_retry(databa
     different = await service.configure(
         "req",
         "api",
-        Configuration(newConfiguration=True, sourceContent='{"swagger":"2.0","paths":{}}'),
+        Configuration(newConfiguration=True, interfaceIds=["interface-1"]),
         "u",
     )
     assert different["taskId"] != first["taskId"]
     assert sync.query(Task).filter_by(task_type="api_case_generate").count() == 2
 
 
-@pytest.mark.parametrize("source", ["", "随便一段文字", '{"openapi":"3.0.0"}', "[:invalid"])
-def test_openapi_configuration_rejects_missing_or_invalid_spec(source):
+async def test_api_configuration_requires_interfaces(database):  # noqa: F811
+    sync, _, _ = database
+    service = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(sync))).design
     with pytest.raises(AppError):
-        validate_openapi_source(source)
+        await service.configure("req", "api", Configuration(), "u")
+    with pytest.raises(AppError):
+        await service.configure("req", "api", Configuration(interfaceIds=[]), "u")
 
 
-@pytest.mark.parametrize(
-    "source",
-    [
-        '{"openapi":"3.0.0","paths":{}}',
-        "swagger: '2.0'\npaths: {}",
-        "https://example.test/openapi.json",
-    ],
-)
-def test_openapi_configuration_accepts_json_yaml_and_legacy_urls(source):
-    validate_openapi_source(source)
+async def test_api_configuration_rejects_document_source(database):  # noqa: F811
+    sync, _, _ = database
+    service = generation_services(AiGenerateTaskRepository(AsyncSessionAdapter(sync))).design
+    with pytest.raises(AppError, match="不再接受 OpenAPI/Swagger 文档来源"):
+        await service.configure(
+            "req", "api", Configuration(sourceContent='{"openapi":"3.0.0"}'), "u"
+        )
 
 
 async def test_workspace_starts_function_stage_from_approved_version_without_binding(database):  # noqa: F811

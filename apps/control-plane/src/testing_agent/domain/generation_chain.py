@@ -26,7 +26,11 @@ STAGE_DEFINITIONS: dict[str, tuple[tuple[str, str], ...]] = {
         ("case_names", "测试点"),
         ("detailed_cases", "完整用例"),
     ),
-    "api": (("openapi_extract", "接口配置提取"), ("generate", "API 用例生成")),
+    "api": (
+        ("interface_extract", "接口配置提取"),
+        ("api_design", "接口用例设计"),
+        ("generate", "API 用例生成"),
+    ),
     "ui": (
         ("ui_surface", "元素控件清单"),
         ("ui_design", "UI 用例设计"),
@@ -43,8 +47,9 @@ STAGE_UPSTREAMS: dict[str, tuple[str, ...]] = {
     "ui_surface": (),
     "ui_design": ("ui_surface",),
     "ui_yaml": ("ui_surface", "ui_design"),
-    "openapi_extract": (),
-    "generate": ("openapi_extract",),
+    "interface_extract": (),
+    "api_design": ("interface_extract",),
+    "generate": ("interface_extract", "api_design"),
 }
 
 # JSON artifacts are stored as a single config field; final artifacts use resultYaml.
@@ -56,13 +61,15 @@ STAGE_CONFIG_FIELDS = {
     "ui_design": "uiDesign",
     "detailed_cases": "resultYaml",
     "ui_yaml": "resultYaml",
-    "openapi_extract": "apiExtraction",
+    "interface_extract": "apiExtraction",
+    "api_design": "apiDesign",
     "generate": "resultYaml",
 }
 
 JSON_ARTIFACT_STAGES = {
     "extracting_text",
-    "openapi_extract",
+    "interface_extract",
+    "api_design",
     "requirement_analysis",
     "case_names",
     "ui_surface",
@@ -121,6 +128,14 @@ def artifact_summary(stage: str, content: str, artifact_format: str | None = Non
         except (TypeError, ValueError):
             return f"{len(content)} 字符"
         if isinstance(data, dict):
+            interfaces = data.get("interfaces")
+            if isinstance(interfaces, dict):
+                cases = sum(
+                    len(item.get("cases") or [])
+                    for item in interfaces.values()
+                    if isinstance(item, dict)
+                )
+                return f"{len(interfaces)} 个接口 · {cases} 条用例"
             for key, unit in (
                 ("testPoints", "个测试点"),
                 ("cases", "条用例"),

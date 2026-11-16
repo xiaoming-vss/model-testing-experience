@@ -5,7 +5,6 @@ from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generate_version_import import AiGenerateVersionImport
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
-from testing_agent.models.api_app import ApiApp
 from testing_agent.models.api_assert_rule import ApiAssertRule
 from testing_agent.models.api_case import ApiCase
 from testing_agent.models.api_case_run import ApiCaseRun
@@ -48,9 +47,13 @@ from testing_agent.models.project import Project
 from testing_agent.models.project_member import ProjectMember
 from testing_agent.models.project_skill_space import ProjectSkillSpace
 from testing_agent.models.requirement import Requirement
+from testing_agent.models.requirement_software_repository import (
+    RequirementSoftwareRepository,
+)
 from testing_agent.models.resource_binding import ResourceBinding
 from testing_agent.models.revoked_access_token import RevokedAccessToken
 from testing_agent.models.shared_service import ServiceAuthorization, SharedService
+from testing_agent.models.software_repository import SoftwareRepository
 from testing_agent.models.sprint import Sprint
 from testing_agent.models.sprint_daily_metrics import SprintDailyMetrics
 from testing_agent.models.stored_file import StoredFile
@@ -79,7 +82,7 @@ __all__ = [
     "AiGenerationStage",
     "AiGenerateTask",
     "ApiAssertRule",
-    "ApiApp",
+    "SoftwareRepository",
     "ApiCase",
     "ApiCaseRun",
     "ApiCollection",
@@ -111,6 +114,7 @@ __all__ = [
     "ProjectMember",
     "ProjectSkillSpace",
     "Requirement",
+    "RequirementSoftwareRepository",
     "ResourceBinding",
     "RevokedAccessToken",
     "Sprint",

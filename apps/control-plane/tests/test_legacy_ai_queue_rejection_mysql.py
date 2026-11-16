@@ -84,7 +84,7 @@ async def test_legacy_ai_queue_is_rejected_without_mutation(mysql, monkeypatch):
             stage = AiGenerationStage(
                 id="unified-stage",
                 task_id=task["task_id"],
-                stage="openapi_extract",
+                stage="interface_extract",
                 active_attempt_id="unified-attempt",
             )
             session.add(stage)

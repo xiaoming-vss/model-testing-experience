@@ -47,8 +47,7 @@ async def test_inaccessible_repository_does_not_pass_validation():
         await client.get_repository_group_scope("https://gitlab.example", "token", "7", "11")
 
 
-@pytest.mark.parametrize("identifier", ["7", "team/sub"])
-async def test_connection_service_returns_canonical_group_and_repository_ids(identifier):
+async def test_connection_service_returns_canonical_repository_ids():
     from support.gitlab_resource_proxy import (
         FakeCipher,
         FakeIntegrationConnectionRepository,
@@ -68,10 +67,6 @@ async def test_connection_service_returns_canonical_group_and_repository_ids(ide
         FakeIntegrationConnectionRepository([connection_row()]),
         credential_cipher=FakeCipher(),
         gitlab_resource_client=GitLabResourceClient(httpx.MockTransport(respond)),
-    )
-    assert (
-        await service.resolve_gitlab_group_id("conn-1", "project-1", identifier, user_id="user-1")
-        == "7"
     )
     assert (
         await service.ensure_gitlab_repository_scope(

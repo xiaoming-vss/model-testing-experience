@@ -1,8 +1,7 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { listItems } from '@/services/api'
-import { baseServicesApi } from '@/features/base-services/api/baseServices.api'
-import { isGitlabRepositoryBinding } from '@/features/base-services/utils/resourceBinding'
+import { interfaceLibraryApi } from '@/features/interface-library/api/interfaceLibrary.api'
 import { RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
 import { getErrorMessage } from '@/utils/format'
 import { message } from '@/shared/utils/feedback'
@@ -77,15 +76,17 @@ export function useRequirementRepositoryProfileWorkspace(
   const personalGitlab = usePersonalConnectionChoice('gitlab')
 
   const bindingsQuery = useQuery({
-    queryKey: ['requirementCodeBindings', requirementId],
-    queryFn: () => baseServicesApi.getGitlabRequirementBindings(requirementId),
+    queryKey: ['requirementSoftwareRepositories', requirementId],
+    queryFn: () => interfaceLibraryApi.getRequirementSoftwareRepositories(requirementId),
     enabled: active && Boolean(requirementId),
   })
   const bindings = useMemo(
-    () => listItems(bindingsQuery.data).filter(isGitlabRepositoryBinding),
+    () => listItems(bindingsQuery.data),
     [bindingsQuery.data],
   )
-  const hasRepoBindings = bindingsQuery.data ? bindings.length > 0 : true
+  const hasRunnableBindings = bindingsQuery.data
+    ? bindings.some(binding => binding.branch.trim() && binding.baselineBranch.trim())
+    : true
 
   const tasksQuery = useQuery({
     queryKey: ['repositoryProfileTasks', projectId, requirementId],
@@ -189,7 +190,7 @@ export function useRequirementRepositoryProfileWorkspace(
     void client.invalidateQueries({ queryKey: ['repositoryProfileTasks', projectId] })
     void client.invalidateQueries({ queryKey: ['repositoryProfileTaskRuns'] })
     void client.invalidateQueries({ queryKey: ['repositoryProfileVersions'] })
-    void client.invalidateQueries({ queryKey: ['requirementCodeBindings', requirementId] })
+    void client.invalidateQueries({ queryKey: ['requirementSoftwareRepositories', requirementId] })
   }, [client, projectId, requirementId])
 
   const start = useMutation({
@@ -242,8 +243,10 @@ export function useRequirementRepositoryProfileWorkspace(
       ? '正在读取运行信息，请稍候。'
       : !materialVersions.length
         ? '请先审核通过材料整理，再进行仓库画像分析。'
-        : !hasRepoBindings
-          ? '该需求未绑定代码仓库，请先在需求列表完成「代码绑定」。'
+        : !hasRunnableBindings
+          ? bindings.length > 0
+            ? '需求关联的软件仓库缺少工作分支或基线分支，请重新设置分支后再运行。'
+            : '该需求未关联软件仓库，请先在需求列表完成「关联软件仓库」。'
           : busy
             ? '正在处理当前操作，请完成后再运行。'
             : runInProgress
@@ -270,7 +273,6 @@ export function useRequirementRepositoryProfileWorkspace(
     materialVersionId,
     setMaterialVersionId,
     materialLoading: materialQuery.isPending,
-    hasRepoBindings,
     bindings,
     bindingsLoading: bindingsQuery.isPending,
     start,

@@ -70,17 +70,6 @@ class ApiCollectionRunRepository(ApiRunScopeRepositoryMixin, BaseRepository):
             ).all()
         )
 
-    async def list_runs(self, collection_id: str) -> list[ApiCollectionRun]:
-        return list(
-            (
-                await self.session.scalars(
-                    select(ApiCollectionRun)
-                    .where(ApiCollectionRun.collection_id == collection_id)
-                    .order_by(ApiCollectionRun.created_at.desc(), ApiCollectionRun.id.desc())
-                )
-            ).all()
-        )
-
     async def page_runs(
         self, collection_id: str, page: int, page_size: int
     ) -> tuple[list[ApiCollectionRun], int]:

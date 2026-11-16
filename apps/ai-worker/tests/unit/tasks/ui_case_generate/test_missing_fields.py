@@ -89,35 +89,25 @@ class MissingFieldsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             _validate_ui_cases_yaml(yaml.safe_dump(data))
 
-    def test_timeout_is_not_a_missing_business_expectation(self):
-        data = draft()
-        step = data[0]["stepsJson"][0]
-        step.update(
-            keyword="assert_visible",
-            locatorType="xpath",
-            locatorValue="//table",
-            operationValue=None,
-        )
-        step["missingFields"][0].update(fields=["operationValue"], reason="缺少基线清单")
-        with self.assertRaisesRegex(ValueError, "第 1 条.*第 1 个步骤.*milliseconds"):
-            _validate_ui_cases_yaml(yaml.safe_dump(data))
-        step.update(operationValue="5000", missingFields=[])
-        self.assertEqual(_validate_ui_cases_yaml(yaml.safe_dump(data)), 1)
-
-    def test_negative_assertion_timeout_is_not_a_missing_business_expectation(self):
-        data = draft()
-        step = data[0]["stepsJson"][0]
-        step.update(
-            keyword="assert_hidden",
-            locatorType="xpath",
-            locatorValue="//div[contains(text(),'转换格式必填')]",
-            operationValue=None,
-        )
-        step["missingFields"][0].update(fields=["operationValue"], reason="缺少基线清单")
-        with self.assertRaisesRegex(ValueError, "第 1 条.*第 1 个步骤.*milliseconds"):
-            _validate_ui_cases_yaml(yaml.safe_dump(data))
-        step.update(operationValue="5000", missingFields=[])
-        self.assertEqual(_validate_ui_cases_yaml(yaml.safe_dump(data)), 1)
+    def test_assert_timeout_is_not_a_missing_business_expectation(self):
+        for keyword, locator_value in [
+            ("assert_visible", "//table"),
+            ("assert_hidden", "//div[contains(text(),'转换格式必填')]"),
+        ]:
+            with self.subTest(keyword=keyword):
+                data = draft()
+                step = data[0]["stepsJson"][0]
+                step.update(
+                    keyword=keyword,
+                    locatorType="xpath",
+                    locatorValue=locator_value,
+                    operationValue=None,
+                )
+                step["missingFields"][0].update(fields=["operationValue"], reason="缺少基线清单")
+                with self.assertRaisesRegex(ValueError, "第 1 条.*第 1 个步骤.*milliseconds"):
+                    _validate_ui_cases_yaml(yaml.safe_dump(data))
+                step.update(operationValue="5000", missingFields=[])
+                self.assertEqual(_validate_ui_cases_yaml(yaml.safe_dump(data)), 1)
 
     def test_no_candidates_is_an_empty_result_not_fabricated_test(self):
         self.assertEqual(_validate_ui_cases_yaml("[]"), 0)

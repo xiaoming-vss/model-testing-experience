@@ -5,14 +5,13 @@ import { listTotal } from '@/shared/api/request'
 import { listItems } from '@/services/api'
 import { aiTestingApi } from '../api/aiTesting.api'
 import { generationChainApi } from '../api/generationChain.api'
-import { baseServicesApi } from '@/features/base-services/api/baseServices.api'
+import { interfaceLibraryApi } from '@/features/interface-library/api/interfaceLibrary.api'
 import { message } from '@/shared/utils/feedback'
 import { randomId } from '@/shared/utils/crypto'
 import { getErrorMessage } from '@/utils/format'
 import { RUN_HISTORY_POLL_INTERVAL } from '@/domain/runs/polling'
 import { usePersonalLlmChoice } from './usePersonalLlmChoice'
 import { usePersonalConnectionChoice } from '@/features/base-services/components/usePersonalConnectionChoice'
-import { isGitlabRepositoryBinding } from '@/features/base-services/utils/resourceBinding'
 import { isApiCaseGenerateTaskRunInProgress } from '../utils/taskStatus'
 import type { CodeRiskTaskRun } from '../types'
 
@@ -83,11 +82,15 @@ export function useRequirementCodeRiskWorkspace(requirementId: string, projectId
     .sort((left, right) => new Date(left.createdAt ?? 0).getTime() - new Date(right.createdAt ?? 0).getTime())
     .reverse()
   const bindingsQuery = useQuery({
-    queryKey: ['requirementCodeBindings', requirementId],
-    queryFn: () => baseServicesApi.getGitlabRequirementBindings(requirementId),
+    queryKey: ['requirementSoftwareRepositories', requirementId],
+    queryFn: () => interfaceLibraryApi.getRequirementSoftwareRepositories(requirementId),
     enabled: Boolean(requirementId),
   })
-  const hasRepoBindings = bindingsQuery.data ? listItems(bindingsQuery.data).filter(isGitlabRepositoryBinding).length > 0 : true
+  const hasRunnableBindings = bindingsQuery.data
+    ? listItems(bindingsQuery.data).some(
+        binding => binding.branch.trim() && binding.baselineBranch.trim(),
+      )
+    : true
 
   const runsQueries = useQueries({
     queries: requirementTasks.map(task => ({
@@ -113,7 +116,7 @@ export function useRequirementCodeRiskWorkspace(requirementId: string, projectId
   const pagedRows = runs.slice((page - 1) * pageSize, page * pageSize)
   const refresh = useCallback(() => {
     void client.invalidateQueries({ queryKey: ['codeRiskTasks', projectId] })
-    void client.invalidateQueries({ queryKey: ['requirementCodeBindings', requirementId] })
+    void client.invalidateQueries({ queryKey: ['requirementSoftwareRepositories', requirementId] })
     void client.invalidateQueries({ queryKey: ['codeRiskTaskRuns'] })
     // 统一 AI 测试列表用的是项目级最新运行摘要，发起或刷新后一并失效。
     void client.invalidateQueries({ queryKey: ['codeRiskTaskLatestRuns'] })
@@ -168,7 +171,10 @@ export function useRequirementCodeRiskWorkspace(requirementId: string, projectId
 
   const busy = start.isPending || remove.isPending
   const runDisabledReason = tasksQuery.isPending || bindingsQuery.isPending ? '正在读取运行信息，请稍候。'
-    : !hasRepoBindings ? '该需求未绑定代码仓库，请先在需求列表完成「代码绑定」。'
+    : !hasRunnableBindings
+      ? bindingsQuery.data && listItems(bindingsQuery.data).length > 0
+        ? '需求关联的软件仓库缺少工作分支或基线分支，请重新设置分支后再运行。'
+        : '该需求未关联软件仓库，请先在需求列表完成「关联软件仓库」。'
     : busy ? '正在处理当前操作，请完成后再运行。'
     : runInProgress ? '当前任务尚未结束，请完成当前运行后再试。'
     : undefined

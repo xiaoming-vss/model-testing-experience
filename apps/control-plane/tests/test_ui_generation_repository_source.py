@@ -18,12 +18,12 @@ from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
 from testing_agent.models.function_test_case import FunctionTestCase
 from testing_agent.models.function_test_suite import FunctionTestSuite
-from testing_agent.models.resource_binding import ResourceBinding
+from testing_agent.models.software_repository import SoftwareRepository
 from testing_agent.models.worker_task import WorkerTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-from testing_agent.repositories.resource_binding import ResourceBindingRepository
 from testing_agent.schemas.generation_chain import GenerationChainRunRequest
 from testing_agent.services.repo_gitlab_access import RepoGitlabAccess
+from testing_agent.services.service_instance import instance_key
 from testing_agent.services.stage_storage.authorization import DirectWorkerAuthority
 from testing_agent.services.stage_storage.payload import worker_payloads
 from testing_agent.services.ui_generation_source import (
@@ -84,24 +84,30 @@ def seed_profile(
                 finished_at=datetime(2026, 1, index, tzinfo=UTC),
             )
         )
-    session.add(
-        ResourceBinding(
-            binding_id="binding-1",
-            user_id="u",
-            provider="gitlab",
-            instance_url="https://gitlab.example.com",
-            instance_key="gitlab",
-            connection_id="profile-conn",
-            local_resource_type="requirement",
-            local_resource_id="r",
-            remote_resource_type="repository",
-            remote_resource_id="repo-front",
-            remote_parent_id="group-1",
-            remote_name_snapshot="team/repo-front",
-            status="active",
-            extra_json={"branch": branch},
+    repository_ids = {
+        binding["repositoryId"]
+        for _, bindings in profiles
+        for binding in bindings
+        if binding.get("repositoryId")
+    }
+    for repository_id in repository_ids:
+        session.add(
+            SoftwareRepository(
+                software_repository_id=repository_id,
+                project_id="p",
+                name=repository_id,
+                description="",
+                base_path="",
+                repository_project_id=repository_id,
+                repository_group_id="group-1",
+                repository_instance_key=instance_key("https://gitlab.example.com"),
+                repository_path=f"team/{repository_id}",
+                repository_name=repository_id,
+                repository_instance_url="https://gitlab.example.com",
+                version=1,
+                created_by_user_id="u",
+            )
         )
-    )
     session.commit()
     return task, branch, head_commit
 
@@ -109,6 +115,7 @@ def seed_profile(
 def profile_binding(repository_id: str = "repo-front", *, commit: str = "sha-profile") -> dict:
     return {
         "bindingId": "binding-1",
+        "softwareRepositoryId": repository_id,
         "repositoryId": repository_id,
         "instanceUrl": "https://gitlab.example.com",
         "pathWithNamespace": f"team/{repository_id}",
@@ -138,7 +145,6 @@ def source_service(
     )
     service = UiGenerationSourceService(
         AsyncSessionAdapter(session),
-        binding_repository=ResourceBindingRepository(AsyncSessionAdapter(session)),
         integration_connection_service=connections,
         credential_cipher=None,
     )

@@ -22,7 +22,7 @@ async def test_direct_detail_keeps_immutable_version_and_import_provenance(db): 
     seed_task(db)
     task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == "task"))
     task.task_type, task.requirement_id = "api_case_generate", "requirement"
-    stage = AiGenerationStage(id="stage", task_id="task", stage="openapi_extract")
+    stage = AiGenerationStage(id="stage", task_id="task", stage="interface_extract")
     db.add(stage)
     db.flush()
     attempt = AiGenerationAttempt(
@@ -42,7 +42,7 @@ async def test_direct_detail_keeps_immutable_version_and_import_provenance(db): 
     version = AiGenerateStageVersion(
         version_id="version",
         task_id="task",
-        stage="openapi_extract",
+        stage="interface_extract",
         version_no=1,
         attempt_id="attempt",
         artifact_content='{"path":"approved"}',
@@ -57,7 +57,7 @@ async def test_direct_detail_keeps_immutable_version_and_import_provenance(db): 
             import_id="source",
             task_id="task",
             version_id="version",
-            leaf_stage="openapi_extract",
+            leaf_stage="interface_extract",
             target_type="api_collection",
             target_id="target",
             imported_by="user",

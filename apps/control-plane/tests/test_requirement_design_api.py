@@ -6,8 +6,11 @@ from uuid import uuid4
 
 from support.project_api import account, api, project  # noqa: F401
 
+from testing_agent.domain.api_interface import path_key
+from testing_agent.models.api_interface import ApiInterface
 from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.models.requirement import Requirement
+from testing_agent.models.software_repository import SoftwareRepository
 from testing_agent.models.sprint import Sprint
 
 
@@ -25,6 +28,29 @@ def seed_requirement(client, project_id, user_id):
                 )
             )
             await session.flush()
+            session.add(
+                SoftwareRepository(
+                    software_repository_id="repository-1",
+                    project_id=project_id,
+                    name="订单服务",
+                    base_path="/api",
+                    repository_project_id="42",
+                    repository_path="commerce/order-service",
+                    repository_instance_url="https://gitlab.example.com",
+                    created_by_user_id=user_id,
+                )
+            )
+            await session.flush()
+            session.add(
+                ApiInterface(
+                    interface_id="interface-1",
+                    software_repository_id="repository-1",
+                    name="登录",
+                    method="POST",
+                    path="/login",
+                    path_key=path_key("/login"),
+                )
+            )
             session.add_all(
                 [
                     Requirement(requirement_id="req", sprint_id="s", name="登录需求"),
@@ -64,7 +90,7 @@ def test_requirement_workspace_scope_roles_and_idempotent_run(api):  # noqa: F81
     for headers, expected in [(owner, 200), (viewer, 200), (developer, 403), (stranger, 403)]:
         assert api.get(base, headers=headers).status_code == expected
         assert api.get(base + "/api/runs", headers=headers).status_code == expected
-    configuration = {"sourceContent": '{"openapi":"3.0.0","paths":{}}', "requestId": str(uuid4())}
+    configuration = {"interfaceIds": ["interface-1"], "requestId": str(uuid4())}
     assert (
         api.post(base + "/api/configuration", headers=viewer, json=configuration).status_code == 403
     )
@@ -81,7 +107,7 @@ def test_requirement_workspace_scope_roles_and_idempotent_run(api):  # noqa: F81
         == 404
     )
     assert api.post(base + "/api/run", headers=owner, json=run).status_code == 400
-    stage_url = "/v1/requirements/req/generation/api/stages/openapi_extract/run"
+    stage_url = "/v1/requirements/req/generation/api/stages/interface_extract/run"
     stage_request = {"requestId": run["requestId"], "connectionId": "mine"}
     assert api.post(stage_url, headers=viewer, json=stage_request).status_code == 403
     assert api.post(stage_url, headers=member, json=stage_request).status_code == 404

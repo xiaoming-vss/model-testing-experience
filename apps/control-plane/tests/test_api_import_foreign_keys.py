@@ -48,6 +48,8 @@ async def test_file_import_with_rules_respects_foreign_keys(db):  # noqa: F811
         None,
     )
     assert result["importedCaseCount"] == 1
+    assert result["importedExtractRuleCount"] == 1
+    assert result["importedAssertRuleCount"] == 1
     case = db.scalar(select(ApiCase).where(ApiCase.collection_id == "target"))
     assert db.scalar(select(ApiExtractRule).where(ApiExtractRule.case_id == case.case_id))
     assert db.scalar(select(ApiAssertRule).where(ApiAssertRule.case_id == case.case_id))

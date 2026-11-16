@@ -137,7 +137,7 @@ API 导入的专用校验与实体转换继续由 `api_import_payload.py` 和 `a
 
 ## 数据库读取与历史列表
 
-表与字段的业务说明使用 MySQL 原生 `COMMENT`，在 SQLAlchemy 模型中随结构定义维护。迁移 `20261007_0034` 补齐既有表和字段注释；库的用途、查询方法及后续维护约定见[数据库结构描述](database-schema.md)。
+表与字段的业务说明使用 MySQL 原生 `COMMENT`，在 SQLAlchemy 模型中随结构定义维护，并随唯一基线写入数据库；库的用途、查询方法及后续维护约定见[数据库结构描述](database-schema.md)。
 
 迭代列表 `GET /v1/projects/{project_id}/sprints` 同批返回每个迭代的 `zentaoBinding` 摘要（未绑定为 `null`）。需求列表使用 `GET /v1/projects/{project_id}/requirements`，支持可选 `sprintId` 筛选及 `page` / `pageSize` 分页（默认 1 / 20，最大每页 100 条），按创建时间和数据库 ID 倒序返回 `items` 与筛选后的 `total`。每项包含 `sprintName`、文档元数据和 `zentaoBinding`，不查询或返回 `documentContent`。两类列表都在项目读取授权后批量查询本地禅道绑定，不访问外部服务；单条需求详情与绑定管理接口保留原有契约。`test_project_list_queries.py` 验证分页、权限隔离、大字段排除和固定的绑定批量查询数。
 
@@ -149,13 +149,13 @@ AI 任务与资源绑定的普通读取不使用 `FOR UPDATE`；修改时通过�
 
 六类 AI 任务列表同样分页：`page` / `pageSize` 默认 1 / 20、最大 100，支持 `sprintId`、`requirementId`、`keyword` 筛选。列表返回任务元数据、`statusCounts` 和每个任务的 `latestRunStatus`，不再返回可能较大的 `sourceContent`；正文仍从任务详情接口读取。`status` 筛选仅用于 `code_risk_analysis`，取值为 `in_progress` / `success` / `waiting_review` / `failed`，其他任务类型传入时返回 400。`statusCounts` 不含当前状态筛选，因此各状态档计数在翻页时保持稳定。`test_ai_task_list_pagination.py` 覆盖分页、筛选、计数、权限和列表大字段排除。
 
-UI 套件运行历史 `GET /v1/ui-test-suites/{suite_id}/runs` 与 API 集合运行历史 `GET /v1/api-collections/{collection_id}/runs` 支持 `page` / `pageSize`（默认 1 / 20，最大 100），返回 `items` 和筛选后的 `total`，按 `created_at`、数据库 ID 倒序。`api_collection_runs` 由迁移 `20261114_0004` 增加 `(collection_id, created_at, id)` 复合索引；`ui_test_suite_runs` 复用已有的 `(suite_id, created_at, id)` 索引。
+UI 套件运行历史 `GET /v1/ui-test-suites/{suite_id}/runs` 与 API 集合运行历史 `GET /v1/api-collections/{collection_id}/runs` 支持 `page` / `pageSize`（默认 1 / 20，最大 100），返回 `items` 和筛选后的 `total`，按 `created_at`、数据库 ID 倒序。唯一基线已包含 `api_collection_runs` 的 `(collection_id, created_at, id)` 复合索引；`ui_test_suite_runs` 复用已有的 `(suite_id, created_at, id)` 索引。
 
 `repositories/ai_run_history.py` 只查询本页及最新运行的轻量记录，不把大字段加载到 ORM；`repositories/latest.py` 通过窗口函数按创建时间、ID 筛选每个资源最近一次运行。代码风险快照批量读取功能/API/UI 用例、API 断言及最近执行摘要，每日统计只读取最新状态与计数，不传输执行日志、请求快照或全部历史。
 
-代码风险建 run 时按需求仓库绑定的基线与工作分支，通过当前执行人的个人连接解析仓库克隆地址和两侧 commit；解析结果固化进快照，任一仓库失败整次 run 创建失败。绑定缺基线或基线与工作分支相同时直接拒绝，不在运行期回退历史推断。
+代码风险建 run 时按需求关联软件仓库上的基线与工作分支，通过当前执行人的个人连接解析仓库克隆地址和两侧 commit；解析结果固化进快照，任一仓库失败整次 run 创建失败。需求没有关联软件仓库，或关联缺少分支/基线、基线与工作分支相同时直接拒绝，不在运行期回退历史推断。
 
-迁移 `20261004_0025` 增加 AI 任务列表、AI 运行历史、共享绑定、Bug 列表以及 API/UI 最近运行的七个联合索引，保留既有唯一约束与外键索引。空库初始化及升级、回退由 `test_initial_schema_migration.py` 验证；`test_database_read_paths.py` 覆盖权限、分页、大字段排除、相同创建时间的 ID 排序，以及 1 / 100 条用例下固定的批量查询数。
+唯一基线包含 AI 任务列表、AI 运行历史、共享绑定、Bug 列表以及 API/UI 最近运行的七个联合索引，保留既有唯一约束与外键索引。空库初始化和回退由 `test_initial_schema_migration.py` 验证；`test_database_read_paths.py` 覆盖权限、分页、大字段排除、相同创建时间的 ID 排序，以及 1 / 100 条用例下固定的批量查询数。
 
 ## 配置
 

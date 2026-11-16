@@ -5,6 +5,8 @@ import unittest
 from pathlib import Path
 from uuid import UUID
 
+import yaml
+
 from tests.unit.tasks.functional_case_generate.fixtures import (
     analysis,
     case,
@@ -63,12 +65,12 @@ class PiChainRunnerTests(unittest.IsolatedAsyncioTestCase):
         )
 
         result = await run_chain(
-            openapi_text='{"openapi":"3.0.0"}',
+            source_text='{"interfaces":[{"interfaceId":"interface-1","method":"POST","path":"/login"}]}',
             session_key="demo:chain",
             config_path="D:/tmp/config.json",
             workspace=workspace,
-            extractor_skill_name="openapi-test-config-extractor",
-            generator_skill_name="api-cases-yaml-generator",
+            extractor_skill_name="mtx-extract-interface-test-config",
+            generator_skill_name="mtx-generate-api-test-case",
             extra_instruction="帮我生成登录、项目增删改查的用例",
             from_config=factory,
         )
@@ -90,26 +92,30 @@ class PiChainRunnerTests(unittest.IsolatedAsyncioTestCase):
             ["demo:chain", "demo:chain"],
         )
         self.assertIn(
-            "请先加载本地 skill：openapi-test-config-extractor", factory.bot.calls[0]["message"]
+            "请先加载本地 skill：mtx-extract-interface-test-config", factory.bot.calls[0]["message"]
         )
-        self.assertIn('{"openapi":"3.0.0"}', factory.bot.calls[0]["message"])
+        self.assertIn(
+            '{"interfaces":[{"interfaceId":"interface-1","method":"POST","path":"/login"}]}',
+            factory.bot.calls[0]["message"],
+        )
         self.assertIn("帮我生成登录、项目增删改查的用例", factory.bot.calls[0]["message"])
         self.assertIn(
-            "符合 openapi-test-config-extractor skill 要求的接口配置 JSON",
+            "符合 mtx-extract-interface-test-config skill 要求的接口配置 JSON",
             factory.bot.calls[0]["message"],
         )
         self.assertIn(
             "不要返回测试用例、meta/config/testCases 结构", factory.bot.calls[0]["message"]
         )
         self.assertIn(
-            "请先加载本地 skill：api-cases-yaml-generator", factory.bot.calls[1]["message"]
+            "请先加载本地 skill：mtx-generate-api-test-case", factory.bot.calls[1]["message"]
         )
         self.assertIn(
             '{"login":{"path":"/login","method":"POST"}}', factory.bot.calls[1]["message"]
         )
         self.assertIn("帮我生成登录、项目增删改查的用例", factory.bot.calls[1]["message"])
         self.assertIn(
-            "符合 api-cases-yaml-generator skill 要求的 YAML 内容", factory.bot.calls[1]["message"]
+            "符合 mtx-generate-api-test-case skill 要求的 YAML 内容",
+            factory.bot.calls[1]["message"],
         )
         self.assertIn("不要返回 JSON、meta/config/testCases 结构", factory.bot.calls[1]["message"])
         self.assertNotIn("请直接返回 JSON 内容", factory.bot.calls[1]["message"])
@@ -161,12 +167,42 @@ class PiChainRunnerTests(unittest.IsolatedAsyncioTestCase):
         from testing_agent_ai_worker.models.task import Task, TaskPayload
         from testing_agent_ai_worker.platform.skills import required_skills
         from testing_agent_ai_worker.tasks.api_case_generate.chain import run_api_stage
+        from tests.unit.tasks.api_case_generate.test_api_stages import design_for
 
-        extraction = '{"login":{"path":"/login","method":"POST"}}'
-        yaml = "cases:\n  - {name: login, orderNo: 1, method: POST, urlTemplate: /login}"
+        extraction = (
+            '{"read_one":{"path":"/api/read_one","method":"GET",'
+            '"query":{"q":"string (必传) # 关键字"},"response":{"id":"string"}}}'
+        )
+        design = json.dumps(design_for(["read_one"]), ensure_ascii=False)
+        yaml_text = (
+            "cases:\n"
+            "  - {name: read_one-正向-全参数, description: 验证完整参数查询成功, "
+            "orderNo: 1, method: GET, urlTemplate: /api/read_one, query: {q: value}, "
+            "bodyType: none, assertRules: ["
+            "{name: a, orderNo: 1, assertSource: status_code, comparator: gte, expectedValue: '200'}, "
+            "{name: b, orderNo: 2, assertSource: status_code, comparator: lt, expectedValue: '300'}, "
+            "{name: c, orderNo: 3, assertSource: body_jsonpath, targetExpr: $.id, comparator: exists, expectedValue: ''}]}\n"
+            "  - {name: read_one-反向-缺少查询参数, description: 验证缺少必填查询参数时请求被拒绝, "
+            "orderNo: 2, method: GET, urlTemplate: /api/read_one, query: {}, "
+            "bodyType: none, assertRules: ["
+            "{name: a, orderNo: 1, assertSource: status_code, comparator: gte, expectedValue: '400'}, "
+            "{name: b, orderNo: 2, assertSource: status_code, comparator: lt, expectedValue: '500'}]}\n"
+        )
+        payload = {
+            "apiExtraction": json.loads(extraction),
+            "requirement": {"requirementId": "r1"},
+        }
+        design_input = json.dumps(payload, ensure_ascii=False)
+        payload["apiDesign"] = json.loads(design)
         for stage, name, source, result in [
-            ("openapi_extract", "openapi-test-config-extractor", "{}", extraction),
-            ("generate", "api-cases-yaml-generator", extraction, yaml),
+            ("interface_extract", "mtx-extract-interface-test-config", "{}", extraction),
+            ("api_design", "api-case-designer", design_input, design),
+            (
+                "generate",
+                "mtx-generate-api-test-case",
+                json.dumps(payload, ensure_ascii=False),
+                yaml_text,
+            ),
         ]:
             task = Task(
                 task_id="t",
@@ -174,7 +210,7 @@ class PiChainRunnerTests(unittest.IsolatedAsyncioTestCase):
                 checkpoint_enabled=True,
                 current_stage=stage,
                 payload=TaskPayload(
-                    openapi_content="{}", metadata={"apiWorkflowVersion": "api_two_stage/1.0"}
+                    openapi_content="{}", metadata={"apiWorkflowVersion": "api_three_stage/1.0"}
                 ),
             )
             self.assertEqual(required_skills(task), [name])
@@ -182,6 +218,14 @@ class PiChainRunnerTests(unittest.IsolatedAsyncioTestCase):
             output = await run_api_stage(
                 stage=stage, input_text=source, session_key="run", from_config=factory
             )
-            self.assertEqual(output, result)
+            if stage == "generate":
+                generated = yaml.safe_load(output)["cases"]
+                self.assertEqual(
+                    [case["name"] for case in generated],
+                    ["read_one-正向-全参数", "read_one-反向-缺少查询参数"],
+                )
+                self.assertEqual([case["orderNo"] for case in generated], [1, 2])
+            else:
+                self.assertEqual(output, result)
             self.assertEqual(len(factory.bot.calls), 1)
             self.assertIn(name, factory.bot.calls[0]["message"])

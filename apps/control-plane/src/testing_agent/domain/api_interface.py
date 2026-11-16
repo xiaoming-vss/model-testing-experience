@@ -103,6 +103,9 @@ def path_parameter_names(path: str) -> list[str]:
     return _path_parameter_names(path)
 
 
+UNTAGGED_GROUP_NAME = "未分类"
+
+
 def normalize_tags(values: Iterable[str] | None) -> list[str]:
     tags: list[str] = []
     for raw in values or []:
@@ -111,12 +114,42 @@ def normalize_tags(values: Iterable[str] | None) -> list[str]:
             continue
         if len(tag) > 50:
             raise ValueError("单个标签不能超过 50 个字符")
+        if tag == UNTAGGED_GROUP_NAME:
+            raise ValueError("标签不能为「未分类」")
         if tag in tags:
             continue
         tags.append(tag)
     if len(tags) > 20:
         raise ValueError("标签不能超过 20 个")
     return tags
+
+
+def group_name(tags: Iterable[str] | None) -> str:
+    """Return the first non-empty tag; interface groups are derived from it."""
+    for raw in tags or []:
+        tag = str(raw or "").strip()
+        if tag:
+            return tag
+    return ""
+
+
+def replace_group_tag(tags: Iterable[str] | None, new_tag: str) -> list[str]:
+    """Replace the first tag, preserving the remaining tags and deduplicating."""
+    values = normalize_tags(tags)
+    target = str(new_tag or "").strip()
+    if not target:
+        return []
+    if not values:
+        return normalize_tags([target])
+    return normalize_tags([target, *values[1:]])
+
+
+def set_group_tag(tags: Iterable[str] | None, target: str) -> list[str]:
+    """Move the target tag to the front; an empty target clears all tags."""
+    text = str(target or "").strip()
+    if not text:
+        return []
+    return normalize_tags([text, *normalize_tags(tags)])
 
 
 def normalize_rows(

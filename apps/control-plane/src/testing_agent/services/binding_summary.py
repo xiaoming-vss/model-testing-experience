@@ -5,6 +5,9 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from testing_agent.repositories.requirement_software_repository import (
+    RequirementSoftwareRepositoryRepository,
+)
 from testing_agent.repositories.resource_binding import ResourceBindingRepository
 from testing_agent.schemas.resource_binding import ZentaoBindingSummaryResponse
 
@@ -28,13 +31,14 @@ async def load_zentao_binding_summaries(
 async def load_code_binding_summaries(
     session: AsyncSession, resource_ids: Sequence[str]
 ) -> dict[str, list[dict[str, str]]]:
-    rows = await ResourceBindingRepository(session).list_code_summaries(resource_ids)
+    rows = await RequirementSoftwareRepositoryRepository(session).list_code_summaries(resource_ids)
     summaries: dict[str, list[dict[str, str]]] = {}
     for row in rows:
-        summaries.setdefault(row["local_resource_id"], []).append(
+        summaries.setdefault(str(row["requirement_id"]), []).append(
             {
-                "repository": row["remote_name_snapshot"] or row["remote_resource_id"],
-                "branch": str((row["extra_json"] or {}).get("branch") or ""),
+                "repository": str(row["repository"]),
+                "branch": str(row["branch"] or ""),
+                "baseline_branch": str(row["baseline_branch"] or ""),
             }
         )
     return summaries

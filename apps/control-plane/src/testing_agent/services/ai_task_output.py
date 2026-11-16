@@ -11,11 +11,14 @@ import yaml
 from testing_agent.core.errors import (
     AppError,
     ErrBadRequest,
+    dynamic_error,
 )
 from testing_agent.domain.ai_tasks import DEFAULT_FUNCTION_CASE_MODULE
 from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+from testing_agent.repositories.api_interface import ApiInterfaceRepository
 from testing_agent.repositories.generation_chain import GenerationChainRepository
+from testing_agent.repositories.software_repository import SoftwareRepositoryRepository
 from testing_agent.schemas.requirement import normalize_document_type
 from testing_agent.services.functional_requirement_source import functional_requirement_source
 from testing_agent.services.import_payload import import_items, parse_import_payload
@@ -34,6 +37,7 @@ def dump_task(task: AiGenerateTask) -> dict[str, Any]:
         "creatorUserId": task.creator_user_id,
         "sourceType": task.source_type,
         "sourceContent": task.source_content,
+        "interfaceIds": list(getattr(task, "interface_ids_json", None) or []),
         "instruction": task.instruction,
         "createdAt": task.created_at,
         "updatedAt": task.updated_at,
@@ -44,6 +48,7 @@ def dump_task_summary(task: AiGenerateTask, latest_run_status: str = "") -> dict
     """List payload without the potentially large source body."""
     payload = dump_task(task)
     payload.pop("sourceContent", None)
+    payload["interfaceCount"] = len(getattr(task, "interface_ids_json", None) or [])
     payload["latestRunStatus"] = latest_run_status
     return payload
 
@@ -69,6 +74,8 @@ def dump_run(run: StandaloneRun) -> dict[str, Any]:
                 "caseNames",
                 "caseRelations",
                 "firstStepOutput",
+                "apiExtraction",
+                "apiDesign",
                 "uiSurface",
                 "uiDesign",
             )
@@ -120,6 +127,88 @@ def worker_requirement_document_download_url(worker_task_id: str) -> str:
     return f"/internal/ai-worker/tasks/{worker_task_id}/requirement-document"
 
 
+def _full_path(base_path: str, path: str) -> str:
+    base = str(base_path or "").rstrip("/")
+    normalized = path if path.startswith("/") else f"/{path}"
+    return f"{base}{normalized}" if base else normalized
+
+
+async def _api_interface_snapshot(
+    repository: AiGenerateTaskRepository, task: AiGenerateTask
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    interface_ids = list(task.interface_ids_json or [])
+    if not interface_ids:
+        raise dynamic_error(ErrBadRequest, "API 用例生成任务尚未选择接口")
+    interfaces = await ApiInterfaceRepository(repository.session).list_by_ids(interface_ids)
+    by_id = {interface.interface_id: interface for interface in interfaces}
+    missing = [interface_id for interface_id in interface_ids if interface_id not in by_id]
+    if missing:
+        raise dynamic_error(ErrBadRequest, f"选中的接口已删除：{', '.join(missing)}")
+    software_repository_ids = sorted({interface.software_repository_id for interface in interfaces})
+    repositories = await SoftwareRepositoryRepository(repository.session).get_many(
+        software_repository_ids
+    )
+    repository_by_id = {
+        software_repository.software_repository_id: software_repository
+        for software_repository in repositories
+    }
+    missing_repositories = [
+        software_repository_id
+        for software_repository_id in software_repository_ids
+        if software_repository_id not in repository_by_id
+    ]
+    if missing_repositories:
+        raise dynamic_error(
+            ErrBadRequest,
+            f"接口所属软件仓库已删除：{', '.join(missing_repositories)}",
+        )
+    return (
+        [
+            {
+                "softwareRepositoryId": software_repository.software_repository_id,
+                "name": software_repository.name,
+                "basePath": software_repository.base_path,
+                "gitRepository": {
+                    "instanceUrl": software_repository.repository_instance_url,
+                    "pathWithNamespace": software_repository.repository_path,
+                },
+            }
+            for software_repository in repositories
+        ],
+        [
+            {
+                "interfaceId": interface.interface_id,
+                "softwareRepositoryId": interface.software_repository_id,
+                "softwareRepositoryName": repository_by_id[interface.software_repository_id].name,
+                "name": interface.name,
+                "method": interface.method,
+                "path": interface.path,
+                "fullPath": _full_path(
+                    repository_by_id[interface.software_repository_id].base_path,
+                    interface.path,
+                ),
+                "description": interface.description,
+                "tags": interface.tags_json or [],
+                "headers": interface.headers_json or [],
+                "pathParams": interface.path_params_json or [],
+                "query": interface.query_params_json or [],
+                "bodyType": interface.body_type,
+                "bodySchema": interface.body_schema_json,
+                "bodyExample": interface.body_example_json,
+                "bodyText": interface.body_text,
+                "responseStatus": interface.response_status,
+                "responseDescription": interface.response_description,
+                "responseSchema": interface.response_schema_json,
+                "responseExample": interface.response_example_json,
+                "security": interface.security_json,
+                "securitySchemes": interface.security_schemes_json,
+            }
+            for interface_id in interface_ids
+            for interface in [by_id[interface_id]]
+        ],
+    )
+
+
 async def build_generate_run_snapshot(
     repository: AiGenerateTaskRepository,
     kind: str,
@@ -156,7 +245,7 @@ async def build_generate_run_snapshot(
                 document_type == "docx" or bool(getattr(requirement, "document_file_id", ""))
             ):
                 source_content = document_download_url
-    snapshot = {
+    snapshot: dict[str, Any] = {
         "taskId": task.task_id,
         "runId": run_id,
         "taskType": task.task_type,
@@ -176,6 +265,22 @@ async def build_generate_run_snapshot(
     else:
         snapshot["sourceType"] = task.source_type
     snapshot.update(functional_source)
+    if kind == "api":
+        software_repositories, interfaces = await _api_interface_snapshot(repository, task)
+        # API runs read the selected interfaces; no OpenAPI/Swagger body is frozen.
+        snapshot.pop("sourceContent", None)
+        snapshot["sourceType"] = "interface_library"
+        snapshot["interfaces"] = interfaces
+        snapshot["softwareRepositories"] = software_repositories
+        requirement = (
+            await repository.get_requirement(task.requirement_id) if task.requirement_id else None
+        )
+        if requirement is not None:
+            snapshot["requirement"] = {
+                "requirementId": requirement.requirement_id,
+                "name": requirement.name,
+                "instruction": snapshot["instruction"],
+            }
     return snapshot
 
 

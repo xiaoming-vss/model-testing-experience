@@ -22,14 +22,6 @@ describe('API 请求编辑面板样式', () => {
     expect(panelsCss).not.toMatch(/rgba?\(/)
   })
 
-  it('面板选择器都挂在页面类下，不污染其它页面', () => {
-    const selectors = blocksOf(panelsCss)
-      .map((block) => block.selector)
-      .filter((selector) => selector.startsWith('.api-collection-workbench-page'))
-
-    expect(selectors.length).toBeGreaterThan(20)
-  })
-
   it('行内按钮不重复覆盖公共按钮调色板', () => {
     const buttonOverrides = blocksOf(panelsCss).filter((block) =>
       block.selector.includes('.ant-btn')

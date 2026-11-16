@@ -1,10 +1,7 @@
 import { DownOutlined, RightOutlined } from '@ant-design/icons'
 import { Tag } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
-import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
 import { normalizeApiConfigCases, stringifyCompact, type ApiConfigRule } from '../utils/apiConfigDiagram'
-import { ArtifactModeSwitch } from './ArtifactViewTabs'
-import { useViewMotion } from '@/shared/ui/useViewMotion'
 import '../styles/api-config-result.css'
 
 function getMethodTagColor(method: string) {
@@ -135,44 +132,6 @@ export function ApiConfigDiagramView({ content, defaultCollapsed = false }: { co
           </div>
           )
         })}
-      </div>
-    </div>
-  )
-}
-
-/** 查看中间配置：图预览与 JSON 原文切换。 */
-export function ApiConfigResultView({ content }: { content: string }) {
-  const canRenderDiagram = Boolean(normalizeApiConfigCases(content))
-  const [activeView, setActiveView] = useState<'diagram' | 'json'>('diagram')
-  const panelRef = useViewMotion(activeView === 'diagram' ? 0 : 1)
-
-  return (
-    <div className="api-config-result-tabs">
-      <ArtifactModeSwitch copyText={activeView === 'json' ? content : undefined} value={activeView} onChange={(value) => setActiveView(value as 'diagram' | 'json')}
-        options={[{ label: '预览', value: 'diagram' }, { label: 'JSON', value: 'json' }]} />
-      <div
-        ref={panelRef}
-        id="api-config-result-panel"
-        className="api-config-result-panel"
-        role="region"
-        aria-label="中间配置内容"
-      >
-        {activeView === 'diagram' ? (
-          canRenderDiagram ? (
-            <ApiConfigDiagramView content={content} />
-          ) : (
-            <div className="ai-task-run-result-popover-empty">当前中间配置无法解析为 API 链路</div>
-          )
-        ) : (
-          <TextCodeEditor
-            ariaLabel="中间配置 JSON"
-            value={content}
-            readOnly
-            language="json"
-            height="100%"
-            minHeight={0}
-          />
-        )}
       </div>
     </div>
   )

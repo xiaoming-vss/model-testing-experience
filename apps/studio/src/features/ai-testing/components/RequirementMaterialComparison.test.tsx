@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, expect, it } from 'vitest'
 import { RequirementMaterialComparison } from './RequirementMaterialComparison'
 
 afterEach(cleanup)
@@ -13,22 +13,10 @@ const artifact = {
 }
 
 it('新版材料按功能展示，能按需查看原文依据', () => {
-  render(<RequirementMaterialComparison content={artifact} />)
+  render(<RequirementMaterialComparison content={JSON.stringify(artifact)} />)
   expect(screen.getByText('开启后执行处理')).toBeVisible()
   fireEvent.click(screen.getByRole('button', { name: '开启后执行处理' }))
   expect(within(screen.getByRole('complementary', { name: '材料依据' })).getByText('材料原文')).toBeVisible()
-})
-
-it('新版正文和问题可编辑，其他字段保留', () => {
-  const onChange = vi.fn()
-  render(<RequirementMaterialComparison content={artifact} editable onChange={onChange} />)
-  fireEvent.change(screen.getByRole('textbox', { name: '开关 功能使用与业务规则 内容 1' }), { target: { value: '修改后正文' } })
-  expect(JSON.parse(onChange.mock.lastCall![0]).functions[0].sections[0].items[0].text).toBe('修改后正文')
-  fireEvent.click(within(screen.getByRole('navigation', { name: '功能和章节导航' })).getByRole('button', { name: /待确认问题/ }))
-  fireEvent.change(screen.getByRole('textbox', { name: '待确认问题 1' }), { target: { value: '入口在哪里？' } })
-  const result = JSON.parse(onChange.mock.lastCall![0])
-  expect(result.questions[0].question).toBe('入口在哪里？')
-  expect(result.materialBlocks).toEqual(artifact.materialBlocks)
 })
 
 it('错误格式给出可修正提示', () => {

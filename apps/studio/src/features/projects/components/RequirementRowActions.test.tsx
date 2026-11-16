@@ -33,11 +33,14 @@ it('删除需二次确认，取消不提交；禅道绑定仍调用原入口', a
   await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: /删\s*除/ }))
   expect(callbacks.onDelete).toHaveBeenCalledOnce()
 })
-it('普通成员不能从菜单绕过绑定权限', async () => {
+it('普通成员不能绑定禅道，但可以关联软件仓库', async () => {
   const callbacks = mount(false)
-  await userEvent.setup().click(screen.getByRole('button', { name: /更多/ }))
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: /更多/ }))
   expect(screen.getByRole('menuitem', { name: '禅道绑定' })).toHaveAttribute('aria-disabled', 'true')
-  expect(screen.getByRole('menuitem', { name: '代码绑定' })).toHaveAttribute('aria-disabled', 'true')
+  expect(screen.getByRole('menuitem', { name: '关联软件仓库' })).not.toHaveAttribute('aria-disabled', 'true')
+  await user.click(screen.getByRole('menuitem', { name: '关联软件仓库' }))
+  expect(callbacks.onCodeBind).toHaveBeenCalledOnce()
   expect(callbacks.onBind).not.toHaveBeenCalled()
 })
 it('只读成员不可编辑或打开写操作菜单', () => {

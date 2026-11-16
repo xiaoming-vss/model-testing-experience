@@ -5,9 +5,9 @@ import { Alert, Drawer, Form, Input, Select } from 'antd'
 import type { FormInstance } from 'antd'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
-import { isGitlabRepositoryBinding } from '@/features/base-services/utils/resourceBinding'
 import type { CreateCodeRiskTaskPayload } from '../types'
-import { api, listItems } from '@/services/api'
+import { listItems } from '@/services/api'
+import { interfaceLibraryApi } from '@/features/interface-library/api/interfaceLibrary.api'
 import { getErrorMessage } from '@/utils/format'
 
 export type CodeRiskTaskFormValues = CreateCodeRiskTaskPayload & {
@@ -39,16 +39,20 @@ export function CodeRiskTaskDrawer({
 }) {
   const requirementId = Form.useWatch('requirementId', form)
   const bindingsQuery = useQuery({
-    queryKey: ['requirementCodeBindings', requirementId],
-    queryFn: () => api.getGitlabRequirementBindings(requirementId!),
+    queryKey: ['requirementSoftwareRepositories', requirementId],
+    queryFn: () => interfaceLibraryApi.getRequirementSoftwareRepositories(requirementId!),
     enabled: open && Boolean(requirementId),
   })
-  const hasCodeBindings = useMemo(
-    () => bindingsQuery.data ? listItems(bindingsQuery.data).filter(isGitlabRepositoryBinding).length > 0 : true,
+  const bindings = useMemo(
+    () => (bindingsQuery.data ? listItems(bindingsQuery.data) : []),
     [bindingsQuery.data],
   )
+  const hasCodeBindings = bindingsQuery.data ? bindings.length > 0 : true
+  const hasRunnableBindings = bindingsQuery.data
+    ? bindings.some(binding => binding.branch.trim() && binding.baselineBranch.trim())
+    : true
   const bindingsLoading = bindingsQuery.isLoading
-  const saveDisabled = Boolean(requirementId) && (bindingsLoading || !hasCodeBindings)
+  const saveDisabled = Boolean(requirementId) && (bindingsLoading || !hasRunnableBindings)
 
   return (
     <Drawer
@@ -102,8 +106,16 @@ export function CodeRiskTaskDrawer({
           <Alert
             showIcon
             type="warning"
-            title="该需求未绑定任何仓库"
-            description="请先在需求列表对该需求进行「代码绑定」，再创建代码风险分析任务。"
+            title="该需求未关联任何软件仓库"
+            description="请先在需求列表对该需求进行「软件仓库」关联，再创建代码风险分析任务。"
+          />
+        ) : null}
+        {requirementId && !bindingsLoading && hasCodeBindings && !hasRunnableBindings ? (
+          <Alert
+            showIcon
+            type="warning"
+            title="软件仓库关联缺少分支"
+            description="请先为需求关联的软件仓库重新设置工作分支和基线分支，再创建代码风险分析任务。"
           />
         ) : null}
       </Form>

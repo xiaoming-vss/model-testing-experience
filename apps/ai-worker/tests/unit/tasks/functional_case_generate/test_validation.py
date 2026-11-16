@@ -379,8 +379,9 @@ class CheckpointValidationTests(unittest.TestCase):
                         }
                     ),
                     payload=TaskPayload(
-                        source_type="text",
-                        document_type="text",
+                        source_type="requirement",
+                        source_format="requirement_understanding_json",
+                        source_format_version="0.2",
                         source_content=json.dumps(material()),
                         openapi_content="",
                     ),

@@ -38,10 +38,10 @@ class Bot:
 class ApiRepairTests(unittest.IsolatedAsyncioTestCase):
     async def run_chain(self, bot, root, progress, extracted):
         return await run_chain(
-            openapi_text='{"openapi":"3.0.0","paths":{}}',
+            source_text='{"interfaces":[{"interfaceId":"interface-1","method":"POST","path":"/login"}]}',
             session_key="run",
-            extractor_skill_name="openapi-test-config-extractor",
-            generator_skill_name="api-cases-yaml-generator",
+            extractor_skill_name="mtx-extract-interface-test-config",
+            generator_skill_name="mtx-generate-api-test-case",
             workspace=root,
             extra_instruction="只处理登录",
             from_config=lambda **kw: bot,
@@ -58,7 +58,7 @@ class ApiRepairTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.generator_output, CASES)
         self.assertEqual(extracted, [EXTRACTED])
         self.assertEqual(
-            [p[0]["stage"] for p in progress], ["openapi_extract", "api_case_generating"]
+            [p[0]["stage"] for p in progress], ["interface_extract", "api_case_generating"]
         )
         self.assertEqual(progress[1][1], EXTRACTED)
         self.assertTrue(bot.calls[1][0].startswith(bot.calls[0][0]))

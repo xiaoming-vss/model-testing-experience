@@ -19,6 +19,7 @@ class RequirementDesignConfigurationRequest(DesignModel):
     new_configuration: bool = False
     request_id: UUID | None = None
     source_content: str | None = None
+    interface_ids: list[str] | None = None
     instruction: str | None = None
 
 

@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from testing_agent_ai_worker.tasks.output_repair import parse_yaml
 
 METHODS = {"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "TRACE"}
+API_WORKFLOW_VERSION = "api_three_stage/1.0"
 
 
 def unique_pairs(pairs: list[tuple[Any, Any]]) -> dict:
@@ -24,8 +25,9 @@ def invalid_constant(value: str) -> None:
     raise ValueError(f"非法 JSON 数值: {value}")
 
 
-def validate_extraction(raw: str) -> None:
-    data = json.loads(raw, object_pairs_hook=unique_pairs, parse_constant=invalid_constant)
+def validate_extraction_object(data: object) -> dict:
+    """校验已解析的接口配置提取产物，返回对象。"""
+
     if not isinstance(data, dict) or not data:
         raise ValueError("接口配置必须是以 snake_case 接口名称为键的非空 JSON 对象")
     for name, endpoint in data.items():
@@ -45,6 +47,19 @@ def validate_extraction(raw: str) -> None:
                 raise ValueError(f"{name}.{section} 必须是对象")
         if "json" in endpoint and "data" in endpoint:
             raise ValueError(f"{name} 不可同时包含 json 和 data 请求体")
+    return data
+
+
+def parse_extraction(raw: str) -> dict:
+    """严格解析并校验接口配置提取产物，返回对象。"""
+
+    return validate_extraction_object(
+        json.loads(raw, object_pairs_hook=unique_pairs, parse_constant=invalid_constant)
+    )
+
+
+def validate_extraction(raw: str) -> None:
+    parse_extraction(raw)
 
 
 class StrictModel(BaseModel):

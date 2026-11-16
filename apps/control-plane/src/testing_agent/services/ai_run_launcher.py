@@ -170,16 +170,18 @@ class GenerationRunLauncher:
                 worker_task_id=worker_task_id,
                 material_version_id=material_version_id,
             )
-        if kind == "api" and body.get("apiWorkflowVersion") == "api_two_stage/1.0":
-            snapshot["apiWorkflowVersion"] = "api_two_stage/1.0"
+        if kind == "api" and body.get("apiWorkflowVersion") == "api_three_stage/1.0":
+            snapshot["apiWorkflowVersion"] = "api_three_stage/1.0"
         # End the preparation snapshot before rechecking permissions. Under
         # REPEATABLE READ, a normal membership/connection read would otherwise
         # keep seeing credentials or roles revoked during a remote request.
         await self.repository.commit()
-        api_two_stage = kind == "api" and snapshot.get("apiWorkflowVersion") == "api_two_stage/1.0"
-        if api_two_stage and body.get("checkpointEnabled") is False:
-            raise dynamic_error(ErrBadRequest, "API 两阶段生成需要人工审核")
-        checkpoint_enabled = True if api_two_stage else bool(body.get("checkpointEnabled", False))
+        api_three_stage = (
+            kind == "api" and snapshot.get("apiWorkflowVersion") == "api_three_stage/1.0"
+        )
+        if api_three_stage and body.get("checkpointEnabled") is False:
+            raise dynamic_error(ErrBadRequest, "API 三阶段生成需要人工审核")
+        checkpoint_enabled = True if api_three_stage else bool(body.get("checkpointEnabled", False))
         # Lock and revalidate immediately before inserting the child records.
         await self.access.ensure_project_access(user_id, task.project_id, action="execute")
         if task.sprint_id:

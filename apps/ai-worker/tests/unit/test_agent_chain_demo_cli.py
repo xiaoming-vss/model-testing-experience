@@ -26,7 +26,7 @@ class PiChainDemoCliTests(unittest.IsolatedAsyncioTestCase):
     def test_command_line_parses_input_and_options(self) -> None:
         argv = [
             "testing-agent-ai-chain-demo",
-            "--openapi-json-path",
+            "--source-json-path",
             "spec.json",
             "--session-key",
             "demo:cli",
@@ -43,7 +43,7 @@ class PiChainDemoCliTests(unittest.IsolatedAsyncioTestCase):
             ) as runner,
         ):
             self.assertEqual(main(), 0)
-        self.assertEqual(runner.await_args.kwargs["openapi_json_path"], "spec.json")
+        self.assertEqual(runner.await_args.kwargs["source_json_path"], "spec.json")
         self.assertEqual(runner.await_args.kwargs["session_key"], "demo:cli")
         self.assertEqual(runner.await_args.kwargs["extra_instruction"], "覆盖登录")
 
@@ -58,16 +58,18 @@ class PiChainDemoCliTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(error.exception.code, 2)
         runner.assert_not_called()
 
-    async def test_run_chain_demo_reads_openapi_file_and_prints_two_outputs(self) -> None:
+    async def test_run_chain_demo_reads_interface_file_and_prints_two_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            openapi_path = Path(temp_dir) / "openapi.json"
-            openapi_path.write_text('{"openapi":"3.0.0"}', encoding="utf-8")
+            source_path = Path(temp_dir) / "interfaces.json"
+            source_path.write_text(
+                '{"interfaces":[{"interfaceId":"interface-1"}]}', encoding="utf-8"
+            )
             printer = _Printer()
             captured: dict[str, str | None] = {}
 
             async def fake_chain_runner(
                 *,
-                openapi_text: str,
+                source_text: str,
                 session_key: str,
                 extractor_skill_name: str,
                 generator_skill_name: str,
@@ -77,7 +79,7 @@ class PiChainDemoCliTests(unittest.IsolatedAsyncioTestCase):
             ) -> ChainRunResult:
                 captured.update(
                     {
-                        "openapi_text": openapi_text,
+                        "source_text": source_text,
                         "session_key": session_key,
                         "extractor_skill_name": extractor_skill_name,
                         "generator_skill_name": generator_skill_name,
@@ -92,10 +94,10 @@ class PiChainDemoCliTests(unittest.IsolatedAsyncioTestCase):
                 )
 
             exit_code = await run_chain_demo(
-                openapi_json_path=str(openapi_path),
+                source_json_path=str(source_path),
                 session_key="demo:chain",
-                extractor_skill_name="openapi-test-config-extractor",
-                generator_skill_name="api-cases-yaml-generator",
+                extractor_skill_name="mtx-extract-interface-test-config",
+                generator_skill_name="mtx-generate-api-test-case",
                 config_path="D:/tmp/config.json",
                 workspace="D:/tmp/workspace",
                 extra_instruction="帮我生成登录、项目增删改查的用例",
@@ -107,10 +109,10 @@ class PiChainDemoCliTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             captured,
             {
-                "openapi_text": '{"openapi":"3.0.0"}',
+                "source_text": '{"interfaces":[{"interfaceId":"interface-1"}]}',
                 "session_key": "demo:chain",
-                "extractor_skill_name": "openapi-test-config-extractor",
-                "generator_skill_name": "api-cases-yaml-generator",
+                "extractor_skill_name": "mtx-extract-interface-test-config",
+                "generator_skill_name": "mtx-generate-api-test-case",
                 "config_path": "D:/tmp/config.json",
                 "workspace": "D:/tmp/workspace",
                 "extra_instruction": "帮我生成登录、项目增删改查的用例",
@@ -128,8 +130,10 @@ class PiChainDemoCliTests(unittest.IsolatedAsyncioTestCase):
 
     def test_main_uses_explicit_path_and_returns_runner_exit_code(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            openapi_path = Path(temp_dir) / "openapi.json"
-            openapi_path.write_text('{"openapi":"3.0.0"}', encoding="utf-8")
+            source_path = Path(temp_dir) / "interfaces.json"
+            source_path.write_text(
+                '{"interfaces":[{"interfaceId":"interface-1"}]}', encoding="utf-8"
+            )
             original_runner = chain_demo_module.run_chain_demo
             captured: dict[str, str | None] = {}
 
@@ -140,19 +144,19 @@ class PiChainDemoCliTests(unittest.IsolatedAsyncioTestCase):
             chain_demo_module.run_chain_demo = fake_run_chain_demo
             try:
                 exit_code = main(
-                    openapi_json_path=str(openapi_path),
+                    source_json_path=str(source_path),
                     session_key="demo:chain",
-                    extractor_skill_name="openapi-test-config-extractor",
-                    generator_skill_name="api-cases-yaml-generator",
+                    extractor_skill_name="mtx-extract-interface-test-config",
+                    generator_skill_name="mtx-generate-api-test-case",
                 )
             finally:
                 chain_demo_module.run_chain_demo = original_runner
 
         self.assertEqual(exit_code, 0)
-        self.assertEqual(captured["openapi_json_path"], str(openapi_path))
+        self.assertEqual(captured["source_json_path"], str(source_path))
         self.assertEqual(captured["session_key"], "demo:chain")
-        self.assertEqual(captured["extractor_skill_name"], "openapi-test-config-extractor")
-        self.assertEqual(captured["generator_skill_name"], "api-cases-yaml-generator")
+        self.assertEqual(captured["extractor_skill_name"], "mtx-extract-interface-test-config")
+        self.assertEqual(captured["generator_skill_name"], "mtx-generate-api-test-case")
 
 
 if __name__ == "__main__":

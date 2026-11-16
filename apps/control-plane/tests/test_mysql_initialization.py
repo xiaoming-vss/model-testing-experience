@@ -55,13 +55,11 @@ def test_mysql_business_uniqueness_requires_hard_delete(mysql, name):
         connection.rollback()
 
 
-@pytest.mark.parametrize(
-    ("local_kind", "remote_kind"), [("project", "group"), ("requirement", "repository")]
-)
-def test_mysql_concurrent_gitlab_binding_conflict(mysql, local_kind, remote_kind):
+@pytest.mark.parametrize(("local_kind", "remote_kind"), [("project", "project")])
+def test_mysql_concurrent_binding_conflict(mysql, local_kind, remote_kind):
     table = Base.metadata.tables["resource_bindings"]
     key = dict(
-        provider="gitlab",
+        provider="zentao",
         local_resource_type=local_kind,
         local_resource_id="local",
         remote_resource_type=remote_kind,
@@ -80,143 +78,6 @@ def test_mysql_concurrent_gitlab_binding_conflict(mysql, local_kind, remote_kind
         second.rollback()
         first.execute(table.delete().where(table.c.id == row["id"]))
         first.commit()
-
-
-async def test_group_delete_waits_for_requirement_binding_and_then_rejects(mysql):
-    import asyncio
-    import time
-
-    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-
-    from testing_agent.core.errors import AppError, ErrGroupBindingInUse
-    from testing_agent.repositories.resource_binding import ResourceBindingRepository
-    from testing_agent.services.resource_binding import ResourceBindingService
-
-    with mysql.begin() as connection:
-        seed_row(connection, Base.metadata.tables["users"], {"user_id": "user"})
-        seed_row(
-            connection,
-            Base.metadata.tables["projects"],
-            {"project_id": "race-project", "user_id": "user"},
-        )
-        seed_row(
-            connection,
-            Base.metadata.tables["sprints"],
-            {"sprint_id": "race-sprint", "project_id": "race-project"},
-        )
-        seed_row(
-            connection,
-            Base.metadata.tables["requirements"],
-            {"requirement_id": "race-req", "sprint_id": "race-sprint"},
-        )
-        seed_row(
-            connection,
-            Base.metadata.tables["resource_bindings"],
-            {
-                "binding_id": "race-group",
-                "instance_url": "https://gitlab.example",
-                "instance_key": __import__("hashlib").sha256(b"https://gitlab.example").hexdigest(),
-                "provider": "gitlab",
-                "local_resource_type": "project",
-                "local_resource_id": "race-project",
-                "remote_resource_type": "group",
-                "remote_resource_id": "7",
-                "connection_id": "connection",
-                "status": "active",
-            },
-        )
-
-    validating, release, deleting = asyncio.Event(), asyncio.Event(), asyncio.Event()
-
-    class Connections:
-        async def resolve_personal_connection(
-            self, user_id, provider, project_id, instance_url, connection_id=""
-        ):
-            from types import SimpleNamespace
-
-            assert user_id == "user"
-            return SimpleNamespace(connection_id="connection", base_url=instance_url)
-
-        async def ensure_gitlab_repository_scope(self, *args, **kwargs):
-            validating.set()
-            await release.wait()
-            return "11"
-
-    engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
-    deletion_connection_id = None
-
-    async def create():
-        async with sessions() as session:
-            return await ResourceBindingService(
-                ResourceBindingRepository(session), Connections()
-            ).create(
-                "requirement",
-                "race-req",
-                {
-                    "provider": "gitlab",
-                    "remoteResourceId": "11",
-                    "remoteParentId": "7",
-                    "extraJson": {"branch": "main"},
-                },
-                "user",
-            )
-
-    async def delete():
-        nonlocal deletion_connection_id
-        async with sessions() as session:
-            deletion_connection_id = await session.scalar(sa.text("SELECT CONNECTION_ID()"))
-            deleting.set()
-            return await ResourceBindingService(ResourceBindingRepository(session)).delete(
-                "project",
-                "race-project",
-                "race-group",
-                "user",
-            )
-
-    creating = asyncio.create_task(create())
-    deletion = None
-    try:
-        await asyncio.wait_for(validating.wait(), timeout=5)
-        deletion = asyncio.create_task(delete())
-        await asyncio.wait_for(deleting.wait(), timeout=5)
-        deadline = time.monotonic() + 5
-        with mysql.connect() as connection:
-            while True:
-                assert not deletion.done(), "Group deletion escaped the shared group lock"
-                waiting = connection.scalar(
-                    sa.text(
-                        "SELECT COUNT(*) FROM performance_schema.data_lock_waits w "
-                        "JOIN performance_schema.threads t ON t.THREAD_ID = w.REQUESTING_THREAD_ID "
-                        "WHERE t.PROCESSLIST_ID = :id"
-                    ),
-                    {"id": deletion_connection_id},
-                )
-                if waiting:
-                    break
-                assert time.monotonic() < deadline, "Group deletion did not wait on the group lock"
-                await asyncio.sleep(0.02)
-        release.set()
-        await asyncio.wait_for(creating, timeout=5)
-        with pytest.raises(AppError) as error:
-            await asyncio.wait_for(deletion, timeout=5)
-        assert error.value.code == ErrGroupBindingInUse.code
-        with mysql.connect() as connection:
-            table = Base.metadata.tables["resource_bindings"]
-            assert (
-                connection.scalar(
-                    sa.select(table.c.status).where(table.c.binding_id == "race-group")
-                )
-                == "active"
-            )
-    finally:
-        release.set()
-        pending = [task for task in (creating, deletion) if task is not None]
-        for task in pending:
-            if not task.done():
-                task.cancel()
-        await asyncio.gather(*pending, return_exceptions=True)
-        await engine.dispose()
 
 
 @pytest.mark.asyncio
@@ -296,10 +157,10 @@ def test_mysql_member_unique_per_project_and_bindings_unique_per_instance(mysql)
             )
         seed_row(connection, members, {"user_id": member["user_id"], "role": "viewer"})
         key = {
-            "provider": "gitlab",
+            "provider": "zentao",
             "local_resource_type": "project",
             "local_resource_id": "same-project",
-            "remote_resource_type": "group",
+            "remote_resource_type": "project",
             "remote_resource_id": "9",
             "instance_key": "first",
         }

@@ -209,7 +209,15 @@ class HttpClaimTaskSource:
         config_json = snapshot_config_json or claimed_task.config_json
         # 任务类型也保持和老平台一致的回退顺序，避免后端字段来源切换时取错值。
         task_type = snapshot_response.task_type or snapshot_task.task_type or claimed_task.task_type
-        document_type = self._resolve_document_type(snapshot_task)
+        if task_type.strip().lower() == "functional_case_generate":
+            # 功能用例消费的是需求理解 JSON，不是原始需求文档；documentType 不参与格式判断。
+            document_type = ""
+            source_format, source_format_version = self._resolve_functional_source_format(
+                snapshot_task
+            )
+        else:
+            document_type = self._resolve_document_type(snapshot_task)
+            source_format, source_format_version = "", ""
         source_type = self._resolve_source_type(task_type, snapshot_task, document_type)
         daily_metrics = snapshot_response.daily_metrics or snapshot_task.daily_metrics
 
@@ -244,9 +252,13 @@ class HttpClaimTaskSource:
             payload=TaskPayload(
                 openapi_content=snapshot_task.source_content,
                 source_content=snapshot_task.source_content,
+                interfaces=snapshot_task.interfaces,
+                software_repositories=snapshot_task.software_repositories,
                 document_download_url=snapshot_task.document_download_url,
                 document_type=document_type,
                 source_type=source_type,
+                source_format=source_format,
+                source_format_version=source_format_version,
                 target_scope=snapshot_task.target_scope,
                 extra_instruction=snapshot_task.instruction,
                 daily_metrics=daily_metrics,
@@ -267,6 +279,8 @@ class HttpClaimTaskSource:
                     "targetScope": snapshot_task.target_scope,
                     "documentDownloadUrl": snapshot_task.document_download_url,
                     "documentType": document_type,
+                    "sourceFormat": source_format,
+                    "sourceFormatVersion": source_format_version,
                     "dailyMetrics": daily_metrics,
                     "checkpointEnabled": checkpoint_enabled,
                     "currentStage": current_stage,
@@ -280,6 +294,14 @@ class HttpClaimTaskSource:
                 "snapshot": raw_snapshot,
             },
         )
+
+    @staticmethod
+    def _resolve_functional_source_format(snapshot_task: object) -> tuple[str, str]:
+        source_format = getattr(snapshot_task, "source_format", "").strip().lower()
+        source_format_version = str(
+            getattr(snapshot_task, "source_format_version", "") or ""
+        ).strip()
+        return source_format, source_format_version
 
     @staticmethod
     def _resolve_document_type(snapshot_task: object) -> str:
@@ -296,7 +318,10 @@ class HttpClaimTaskSource:
         source_type = getattr(snapshot_task, "source_type", "").strip().lower()
         if normalized_task_type == "api_case_generate":
             return source_type or "openapi"
-        if normalized_task_type in {"functional_case_generate", "requirement_analysis"}:
+        if normalized_task_type == "functional_case_generate":
+            # 功能链路的 sourceType 是任务来源标记，不是正文格式。
+            return source_type or "requirement"
+        if normalized_task_type == "requirement_analysis":
             return document_type
         return source_type
 

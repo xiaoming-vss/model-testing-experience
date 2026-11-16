@@ -71,7 +71,7 @@
 
 历史产物随现有执行记录保留，不新增按时间自动清理和历史管理 UI；首期通过当前图解与最新运行查询满足需求。绑定和任务随所属条目生命周期清理，不影响原始用例及人工判定。已有通用删除接口若能访问该新类型，必须接入专用清理/指针维护或明确拒绝，不能允许删除当前有效尝试后留下悬空指针。[ADR 0009](adr/0009-auxiliary-ai-history-deletion.md) 的旧图谱/报告接口行为不变。
 
-新增迁移 `20261114_0003_case_visualization.py` 接在 `20261113_0002` 后，不修改 v1 baseline。本工作区已有未提交接口库迁移，不能预先复用其 revision 或覆盖它；实现时检查是否单 head。
+原设计新增迁移 `20261114_0003_case_visualization.py` 接在 `20261113_0002` 后；预发布阶段该变更已并入唯一 baseline `20261103_0001`，迁移文件和更新链不再单独存在。
 
 ## 5. 浏览器接口约定
 
@@ -182,7 +182,7 @@
 
 - [机器协议](../../apps/control-plane/default-skills/mtx-analyze-case-visualization/references/output.schema.json)、[纯校验规则](../../apps/control-plane/src/testing_agent/domain/case_visualization/contract.py)。
 - [浏览器请求/响应模型](../../apps/control-plane/src/testing_agent/schemas/case_visualization.py)、[路由](../../apps/control-plane/src/testing_agent/routers/case_visualization.py)、[业务编排](../../apps/control-plane/src/testing_agent/services/test_order_case_visualization.py)。
-- [Worker 完成事件](../../apps/control-plane/src/testing_agent/services/case_visualization_completion.py)、[数据库模型](../../apps/control-plane/src/testing_agent/models/case_visualization.py)、[迁移](../../apps/control-plane/alembic/versions/20261114_0003_case_visualization.py)。
+- [Worker 完成事件](../../apps/control-plane/src/testing_agent/services/case_visualization_completion.py)、[数据库模型](../../apps/control-plane/src/testing_agent/models/case_visualization.py)、[唯一基线](../../apps/control-plane/alembic/versions/20261103_0001_v1_baseline.py)。
 - [Worker 运行及质量验收说明](../ai-worker/case-visualization.md)、[Studio 交互说明](../studio/case-visualization.md)。
 
 协议资源以机器文件为准：首期区间绘制均为非比例示意，已明确的端点、单位和开闭边界可用实体 `range` 显示；未知项为 null，不推算。模型 `summary` 不代替原始标题或预期。

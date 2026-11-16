@@ -64,11 +64,6 @@ it('进入需求直接展示生成全景，文档交给工作区在画布内打�
   expect(crumbs).toHaveTextContent('需求文档')
   expect(crumbs).not.toHaveTextContent('只读来源')
 })
-it.each(['design', 'requirement_analysis', 'function', 'api', 'ui', 'codeRisk', 'content'])('旧 tab=%s 链接仍直接展示生成全景', async tab => {
-  mount(false, `/requirements/req?tab=${tab}`)
-  expect(await screen.findByTestId('generation-workspace')).toHaveTextContent('req · canonical-project')
-  expect(screen.queryByRole('tab')).not.toBeInTheDocument()
-})
 it('下载与编辑只在打开需求文档时出现，生成链刷新始终可用', async () => {
   mount()
   expect(await screen.findByRole('heading', { name: '登录需求' })).toBeInTheDocument()

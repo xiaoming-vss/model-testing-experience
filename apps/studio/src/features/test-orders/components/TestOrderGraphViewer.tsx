@@ -232,6 +232,7 @@ export function TestOrderGraphViewer({
             </Text>
           </div>
           <span className="ai-relations-page-spacer" />
+          <ActionButton operation="refresh" size="small" onClick={() => void graphQuery.refetch()}>刷新</ActionButton>
           <Segmented
             className="tab-view-switch"
             size="small"
@@ -267,7 +268,6 @@ export function TestOrderGraphViewer({
           ) : null}
           {selectedRunId ? <Button size="small" onClick={() => setSelectedRunId('')}>查看最新</Button> : null}
           <Button size="small" onClick={() => setHistoryOpen(true)}>生成历史</Button>
-          <ActionButton operation="refresh" size="small" onClick={() => void graphQuery.refetch()}>刷新</ActionButton>
           {canExecute ? (
             <Button
               type="primary"

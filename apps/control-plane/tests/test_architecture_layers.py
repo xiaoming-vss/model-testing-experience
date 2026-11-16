@@ -180,12 +180,11 @@ def test_bug_import_stages_do_not_depend_on_coordinator_or_mix_remote_and_local_
 
 def test_provider_bindings_do_not_depend_on_the_binding_facade_or_each_other():
     root = PROJECT_ROOT / "src/testing_agent/services"
-    for name in ("gitlab_bindings.py", "zentao_bindings.py"):
+    for name in ("zentao_bindings.py",):
         for node in ast.walk(ast.parse((root / name).read_text())):
             if isinstance(node, ast.ImportFrom):
                 assert node.module not in {
                     "testing_agent.services.resource_binding",
-                    "testing_agent.services.gitlab_bindings",
                     "testing_agent.services.zentao_bindings",
                 }, f"{name}: provider commands use the common access contract"
 
@@ -512,22 +511,6 @@ def test_app_does_not_include_aggregate_routers_directly():
     )
     for forbidden in forbidden_imports:
         assert forbidden not in source
-
-
-def test_migrated_routers_do_not_import_persistence_details():
-    forbidden = (
-        "from sqlalchemy",
-        "import sqlalchemy",
-        "from testing_agent.models",
-        "from testing_agent.db.session",
-    )
-
-    for router_name in ("auth.py", "projects.py", "sprints.py", "requirements.py"):
-        source = (PROJECT_ROOT / "src" / "testing_agent" / "routers" / router_name).read_text(
-            encoding="utf-8"
-        )
-        for pattern in forbidden:
-            assert pattern not in source, f"{router_name} still imports {pattern}"
 
 
 def test_routers_do_not_import_persistence_details():

@@ -2,7 +2,7 @@
 
 from urllib.parse import urlencode
 
-from support.api_assets import add_member, interface_body, make_app, make_interface
+from support.api_assets import add_member, interface_body, make_interface, make_software_repository
 from support.function_case_library import make_requirement, make_sprint
 from support.project_api import account, project
 from support.project_api import api as api
@@ -16,10 +16,12 @@ def _list(api, headers, project_id, **params):
     return response.json()["data"]
 
 
-def _list_app(api, headers, app_id, **params):
+def _list_software_repository(api, headers, software_repository_id, **params):
     query = urlencode({key: value for key, value in params.items() if value not in ("", None)})
     suffix = f"?{query}" if query else ""
-    response = api.get(f"/v1/api-apps/{app_id}/interfaces{suffix}", headers=headers)
+    response = api.get(
+        f"/v1/software-repositories/{software_repository_id}/interfaces{suffix}", headers=headers
+    )
     assert response.status_code == 200, response.text
     return response.json()["data"]
 
@@ -29,21 +31,28 @@ def test_developer_cannot_access_interface_library(api):
     _, developer = account(api, "developer")
     pid = project(api, owner)
     add_member(api, owner, pid, "developer", "developer")
-    app_id = make_app(api, owner, pid)
+    software_repository_id = make_software_repository(api, owner, pid)
 
-    assert api.get(f"/v1/projects/{pid}/api-apps", headers=developer).status_code == 403
-    assert api.get(f"/v1/api-apps/{app_id}", headers=developer).status_code == 403
+    assert (
+        api.get(f"/v1/projects/{pid}/software-repositories", headers=developer).status_code == 403
+    )
+    assert (
+        api.get(
+            f"/v1/software-repositories/{software_repository_id}", headers=developer
+        ).status_code
+        == 403
+    )
     assert api.get(f"/v1/projects/{pid}/api-interfaces", headers=developer).status_code == 403
 
 
 def test_create_and_get_interface_round_trip(api):
     _, owner = account(api, "owner")
     pid = project(api, owner)
-    app_id = make_app(api, owner, pid, basePath="/api/v2")
+    software_repository_id = make_software_repository(api, owner, pid, base_path="/api/v2")
     interface_id = make_interface(
         api,
         owner,
-        app_id,
+        software_repository_id,
         path="/orders/{orderId}",
         pathParams=[
             {
@@ -68,8 +77,8 @@ def test_create_and_get_interface_round_trip(api):
     )
 
     data = api.get(f"/v1/api-interfaces/{interface_id}", headers=owner).json()["data"]
-    assert data["appId"] == app_id
-    assert data["appName"] == "支付网关"
+    assert data["softwareRepositoryId"] == software_repository_id
+    assert data["softwareRepositoryName"] == "支付网关"
     assert data["path"] == "/orders/{orderId}"
     assert data["pathParams"][0]["name"] == "orderId"
     assert data["queryParams"][0]["example"] == "items"
@@ -84,11 +93,11 @@ def test_create_and_get_interface_round_trip(api):
 def test_identity_normalizes_method_and_trailing_slash(api):
     _, owner = account(api, "owner")
     pid = project(api, owner)
-    app_id = make_app(api, owner, pid)
-    make_interface(api, owner, app_id, method="post", path="/orders/")
+    software_repository_id = make_software_repository(api, owner, pid)
+    make_interface(api, owner, software_repository_id, method="post", path="/orders/")
 
     response = api.post(
-        f"/v1/api-apps/{app_id}/interfaces",
+        f"/v1/software-repositories/{software_repository_id}/interfaces",
         headers=owner,
         json=interface_body(method="POST", path="/orders"),
     )
@@ -99,10 +108,10 @@ def test_identity_normalizes_method_and_trailing_slash(api):
 def test_path_parameters_must_match_path_placeholders(api):
     _, owner = account(api, "owner")
     pid = project(api, owner)
-    app_id = make_app(api, owner, pid)
+    software_repository_id = make_software_repository(api, owner, pid)
 
     response = api.post(
-        f"/v1/api-apps/{app_id}/interfaces",
+        f"/v1/software-repositories/{software_repository_id}/interfaces",
         headers=owner,
         json=interface_body(path="/orders/{orderId}"),
     )
@@ -112,7 +121,7 @@ def test_path_parameters_must_match_path_placeholders(api):
     interface_id = make_interface(
         api,
         owner,
-        app_id,
+        software_repository_id,
         path="/orders/{orderId}",
         pathParams=[
             {
@@ -141,11 +150,11 @@ def test_requirements_are_optional_and_sprint_filter_uses_requirement(api):
     sprint_b = make_sprint(api, owner, pid, "迭代B")
     req_a = make_requirement(api, owner, sprint_a, "需求A")
     req_b = make_requirement(api, owner, sprint_b, "需求B")
-    app_id = make_app(api, owner, pid)
+    software_repository_id = make_software_repository(api, owner, pid)
 
-    first = make_interface(api, owner, app_id, requirementIds=[req_a], path="/a")
-    second = make_interface(api, owner, app_id, requirementIds=[req_b], path="/b")
-    make_interface(api, owner, app_id, path="/c")
+    first = make_interface(api, owner, software_repository_id, requirementIds=[req_a], path="/a")
+    second = make_interface(api, owner, software_repository_id, requirementIds=[req_b], path="/b")
+    make_interface(api, owner, software_repository_id, path="/c")
 
     assert _list(api, owner, pid, sprintId=sprint_a)["total"] == 1
     assert _list(api, owner, pid, sprintId=sprint_b)["total"] == 1
@@ -169,10 +178,10 @@ def test_requirement_from_another_project_is_rejected(api):
     pid = project(api, owner, "项目一")
     other = project(api, owner, "项目二")
     other_req = make_requirement(api, owner, make_sprint(api, owner, other))
-    app_id = make_app(api, owner, pid)
+    software_repository_id = make_software_repository(api, owner, pid)
 
     response = api.post(
-        f"/v1/api-apps/{app_id}/interfaces",
+        f"/v1/software-repositories/{software_repository_id}/interfaces",
         headers=owner,
         json=interface_body(requirementIds=[other_req]),
     )
@@ -187,12 +196,12 @@ def test_member_can_write_and_viewer_can_only_read(api):
     pid = project(api, owner)
     add_member(api, owner, pid, "member", "member")
     add_member(api, owner, pid, "viewer", "viewer")
-    app_id = make_app(api, owner, pid)
+    software_repository_id = make_software_repository(api, owner, pid)
 
-    interface_id = make_interface(api, member, app_id)
+    interface_id = make_interface(api, member, software_repository_id)
     assert api.get(f"/v1/api-interfaces/{interface_id}", headers=viewer).status_code == 200
     response = api.post(
-        f"/v1/api-apps/{app_id}/interfaces",
+        f"/v1/software-repositories/{software_repository_id}/interfaces",
         headers=viewer,
         json=interface_body(path="/viewer"),
     )
@@ -211,9 +220,11 @@ def test_member_can_write_and_viewer_can_only_read(api):
 def test_list_filters_pagination_and_stable_total(api):
     _, owner = account(api, "owner")
     pid = project(api, owner)
-    app_id = make_app(api, owner, pid)
+    software_repository_id = make_software_repository(api, owner, pid)
     for index in range(5):
-        make_interface(api, owner, app_id, name=f"接口{index}", path=f"/items/{index}")
+        make_interface(
+            api, owner, software_repository_id, name=f"接口{index}", path=f"/items/{index}"
+        )
 
     first = _list(api, owner, pid, page=1, pageSize=2)
     second = _list(api, owner, pid, page=2, pageSize=2)
@@ -225,21 +236,25 @@ def test_list_filters_pagination_and_stable_total(api):
     assert _list(api, owner, pid, method="POST")["total"] == 5
     assert _list(api, owner, pid, method="GET")["total"] == 0
 
-    app_list = _list_app(api, owner, app_id, page=1, pageSize=2)
-    assert app_list["total"] == 5
-    assert len(app_list["items"]) == 2
+    repository_list = _list_software_repository(
+        api, owner, software_repository_id, page=1, pageSize=2
+    )
+    assert repository_list["total"] == 5
+    assert len(repository_list["items"]) == 2
 
 
-def test_quick_toggle_and_update_bump_version(api):
+def test_update_bumps_version_only_when_content_changes(api):
     _, owner = account(api, "owner")
     pid = project(api, owner)
-    app_id = make_app(api, owner, pid)
-    interface_id = make_interface(api, owner, app_id)
+    software_repository_id = make_software_repository(api, owner, pid)
+    interface_id = make_interface(api, owner, software_repository_id)
 
     data = api.patch(
-        f"/v1/api-interfaces/{interface_id}", headers=owner, json={"enabled": False}
+        f"/v1/api-interfaces/{interface_id}",
+        headers=owner,
+        json={"description": "新的接口说明"},
     ).json()["data"]
-    assert data["enabled"] is False
+    assert data["description"] == "新的接口说明"
     assert data["version"] == 2
 
     data = api.patch(
@@ -262,24 +277,24 @@ def test_quick_toggle_and_update_bump_version(api):
 def test_delete_is_hard_and_releases_identity(api):
     _, owner = account(api, "owner")
     pid = project(api, owner)
-    app_id = make_app(api, owner, pid)
-    interface_id = make_interface(api, owner, app_id)
+    software_repository_id = make_software_repository(api, owner, pid)
+    interface_id = make_interface(api, owner, software_repository_id)
 
     assert api.delete(f"/v1/api-interfaces/{interface_id}", headers=owner).status_code == 200
     assert api.get(f"/v1/api-interfaces/{interface_id}", headers=owner).status_code == 404
-    make_interface(api, owner, app_id)
+    make_interface(api, owner, software_repository_id)
 
 
-def test_app_id_is_immutable_on_patch(api):
+def test_software_repository_id_is_immutable_on_patch(api):
     _, owner = account(api, "owner")
     pid = project(api, owner)
-    app_id = make_app(api, owner, pid)
-    other_app = make_app(api, owner, pid, "另一个应用")
-    interface_id = make_interface(api, owner, app_id)
+    software_repository_id = make_software_repository(api, owner, pid)
+    other_repository = make_software_repository(api, owner, pid, "另一个应用")
+    interface_id = make_interface(api, owner, software_repository_id)
 
     response = api.patch(
         f"/v1/api-interfaces/{interface_id}",
         headers=owner,
-        json={"appId": other_app},
+        json={"softwareRepositoryId": other_repository},
     )
     assert response.status_code == 400

@@ -143,7 +143,7 @@ API 提取校验非空接口映射、snake_case 名称、path/method 与已定�
 
 修正输入包含原始输入和用户要求、上一版输出及校验错误，保持相同任务会话；不通过编造接口、字段、定位器或预期来修复输出。网络、模型服务、鉴权、源码准备、回传错误不触发此循环；模型明确报告长度截断时直接失败。业务执行和真实页面行为仍需后续验收，格式校验不能证明用例业务正确。
 
-修正期间复用 `outputValidation` 摘要上报 `repairAttempt/maxRepairs/status`。API 生成阶段进度保留已验证的提取 JSON；UI 进度保留源码位置，修正失败不发布非法用例。每轮输出和校验错误保存在任务 workspace 的 `diagnostics/api-output` 或 `diagnostics/ui-output`，文件权限 0600，不保存模型连接设置或完整提示词。
+修正期间复用 `outputValidation` 摘要上报 `repairAttempt/maxRepairs/status`。API 生成阶段进度保留已验证的提取 JSON；UI 进度保留源码位置，修正失败不发布非法用例。每轮输出和校验错误保存在任务 workspace 的 `diagnostics/api-design`、`diagnostics/api-cases` 或 `diagnostics/ui-output`（旧两阶段链路为 `diagnostics/api-output`），文件权限 0600，不保存模型连接设置或完整提示词。
 
 验证：Worker 全量 232 项测试、控制面 API/UI 导入与 Worker 契约 40 项回归通过；API 标准技能样例（含提取和断言规则）、UI 全部支持关键字样例同时通过 Worker 验证器与控制面导入验证。Worker Ruff 与修改范围格式检查通过。未调用真实模型生成或执行 API/UI 用例。
 
@@ -161,7 +161,7 @@ UI 候选生成接受步骤级 `missingFields` 结构化待补项，明确字段
 
 每次第三阶段生成/修复及内部复核均使用新会话。调用输入包含完整的当前模块材料、候选或错误反馈，避免重复会话历史叠加大型 YAML 导致上下文溢出；不依赖历史聊天恢复任务。
 
-需求生成链的新 API 两阶段运行使用快照标记 `apiWorkflowVersion: api_two_stage/1.0`。`openapi_extract` 只调用 `openapi-test-config-extractor` 并在结果校验通过后等待审核；`generate` 读取已选审核版本调用 `api-cases-yaml-generator`。每次只获取当前阶段的 Skill；旧运行保持原先自动串联两个 Skill 的协议。
+需求生成链的新 API 三阶段运行使用快照标记 `apiWorkflowVersion: api_three_stage/1.0`。任务只保存所选接口 ID，运行开始时读取接口库最新定义并校验接口存在；快照向 Worker 提供 `softwareRepositories`、`interfaces` 和需求上下文，不冻结 OpenAPI/Swagger 原文。`interface_extract` 只调用 `mtx-extract-interface-test-config`，输入为选中接口的结构化 JSON（含 base path 拼接后的 `fullPath`、security 和 securitySchemes），结果校验通过后等待审核；`api_design` 读取已审核提取版本调用 `api-case-designer`，每 5 个接口一批，产出 `api_test_design/1.0` 设计 JSON 后等待审核；`generate` 同时读取已审核提取和设计版本调用 `mtx-generate-api-test-case`，每 10 条设计用例一批，逐条落实设计并校验名称、顺序、请求、状态区间断言、设计断言和 patch 效果。每次只获取当前阶段的 Skill；任一批失败则阶段失败，不发布部分结果；历史 API 任务已清理。需求生成链统一使用三阶段协议，旧的非 checkpoint 独立 API 运行链路保持不变。
 
 测试点阶段契约与审查见 [可追溯测试点生成](traceable-test-points.md)。
 

@@ -5,7 +5,7 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-from tests.unit.tasks.functional_case_generate.fixtures import analysis
+from tests.unit.tasks.functional_case_generate.fixtures import analysis, material
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 SRC_DIR = PROJECT_ROOT / "src"
@@ -28,8 +28,11 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
     def _make_task(
         self,
         *,
-        source_type: str = "text",
-        document_type: str = "text",
+        source_type: str = "requirement",
+        document_type: str = "",
+        source_format: str = "requirement_understanding_json",
+        source_format_version: str = "0.2",
+        source_content: str | None = None,
         checkpoint_enabled: bool = False,
         current_stage: str = "",
         config_json: str = "",
@@ -48,9 +51,15 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
             config_json=config_json,
             payload=TaskPayload(
                 openapi_content="",
-                source_content="登录后可以新增、编辑、删除项目，并查看项目详情",
+                source_content=(
+                    source_content
+                    if source_content is not None
+                    else json.dumps(material(), ensure_ascii=False)
+                ),
                 source_type=source_type,
                 document_type=document_type,
+                source_format=source_format,
+                source_format_version=source_format_version,
                 extra_instruction="优先覆盖核心业务链路和异常场景",
             ),
         )
@@ -208,17 +217,18 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         summary = json.loads(result.result_summary_json)
         self.assertEqual(summary["status"], "success")
         self.assertEqual(summary["taskType"], "functional_case_generate")
-        self.assertEqual(summary["documentType"], "text")
-        self.assertEqual(summary["sourceType"], "text")
+        self.assertEqual(summary["sourceFormat"], "requirement_understanding_json")
+        self.assertEqual(summary["sourceFormatVersion"], "0.2")
+        self.assertEqual(summary["sourceType"], "requirement")
         self.assertEqual(summary["caseCount"], 2)
 
-    def test_execute_returns_failed_result_for_unsupported_functional_document_type(self) -> None:
+    def test_execute_fails_before_chain_when_source_format_is_missing(self) -> None:
         executor_cls = getattr(executor_module, "FunctionalCaseExecutor", None)
         self.assertIsNotNone(executor_cls)
         if executor_cls is None:
             return
 
-        task = self._make_task(source_type="text", document_type="pdf")
+        task = self._make_task(source_format="", source_format_version="")
         executor = executor_cls(
             agent_config=PiConfig(),
             chain_runner=lambda **kwargs: None,
@@ -231,13 +241,54 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         )
 
         self.assertEqual(result.status, TaskStatus.FAILED)
-        self.assertIn("pdf", result.error_message or "")
+        self.assertIn("source_format", result.error_message or "")
 
-    def test_execute_accepts_richtext_and_uses_analyzed_source_content(self) -> None:
+    def test_execute_fails_before_chain_when_source_format_is_unsupported(self) -> None:
+        executor_cls = getattr(executor_module, "FunctionalCaseExecutor", None)
+        self.assertIsNotNone(executor_cls)
+        if executor_cls is None:
+            return
+
+        task = self._make_task(source_format="requirement_understanding_markdown")
+        executor = executor_cls(
+            agent_config=PiConfig(),
+            chain_runner=lambda **kwargs: None,
+        )
+
+        result = executor.execute(
+            task,
+            datetime.fromisoformat("2026-06-23T10:00:00+08:00"),
+            lambda progress: None,
+        )
+
+        self.assertEqual(result.status, TaskStatus.FAILED)
+        self.assertIn("requirement_understanding_markdown", result.error_message or "")
+
+    def test_execute_fails_before_chain_when_source_format_version_is_unsupported(self) -> None:
+        executor_cls = getattr(executor_module, "FunctionalCaseExecutor", None)
+        self.assertIsNotNone(executor_cls)
+        if executor_cls is None:
+            return
+
+        task = self._make_task(source_format_version="1.0")
+        executor = executor_cls(
+            agent_config=PiConfig(),
+            chain_runner=lambda **kwargs: None,
+        )
+
+        result = executor.execute(
+            task,
+            datetime.fromisoformat("2026-06-23T10:00:00+08:00"),
+            lambda progress: None,
+        )
+
+        self.assertEqual(result.status, TaskStatus.FAILED)
+        self.assertIn("source_format_version", result.error_message or "")
+
+    def test_execute_accepts_requirement_understanding_json_and_uses_source_content(self) -> None:
         for checkpoint in (False, True):
             with self.subTest(checkpoint=checkpoint), tempfile.TemporaryDirectory() as runtime:
                 task = self._make_task(
-                    document_type="richtext",
                     checkpoint_enabled=checkpoint,
                     current_stage="requirement_analysis",
                 )
@@ -270,32 +321,21 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
                 else:
                     self.assertEqual(result.status, TaskStatus.SUCCESS, result.error_message)
                     self.assertEqual(captured["source_text"], task.payload.source_content)
-                    self.assertEqual(
-                        json.loads(result.result_summary_json)["documentType"], "richtext"
-                    )
+                    summary = json.loads(result.result_summary_json)
+                    self.assertEqual(summary["sourceFormat"], "requirement_understanding_json")
+                    self.assertEqual(summary["sourceFormatVersion"], "0.2")
+                    self.assertEqual(summary["sourceType"], "requirement")
 
-    def test_execute_accepts_word_document_type_and_uses_source_content(self) -> None:
+    def test_execute_fails_before_chain_when_source_content_is_not_json(self) -> None:
         executor_cls = getattr(executor_module, "FunctionalCaseExecutor", None)
         self.assertIsNotNone(executor_cls)
         if executor_cls is None:
             return
 
-        task = self._make_task(source_type="openapi", document_type="word")
-        captured: dict[str, object] = {}
-
-        def fake_chain_runner(**kwargs):
-            captured.update(kwargs)
-            kwargs["on_requirement_analysis_result"]("{}")
-            kwargs["on_case_names_result"]('{"categories":[]}')
-            return FunctionalChainRunResult(
-                requirement_analysis_output="{}",
-                case_names_output='{"categories":[]}',
-                detailed_cases_output='{"cases":[]}',
-            )
-
+        task = self._make_task(source_content="登录后可以新增、编辑、删除项目")
         executor = executor_cls(
-            agent_config=PiConfig(runtime_root="D:/tmp/pi-runtime"),
-            chain_runner=fake_chain_runner,
+            agent_config=PiConfig(),
+            chain_runner=lambda **kwargs: None,
         )
 
         result = executor.execute(
@@ -304,50 +344,10 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
             lambda progress: None,
         )
 
-        self.assertEqual(result.status, TaskStatus.SUCCESS)
-        self.assertEqual(captured["source_text"], task.payload.source_content)
-        summary = json.loads(result.result_summary_json)
-        self.assertEqual(summary["documentType"], "word")
-        self.assertEqual(summary["sourceType"], "word")
+        self.assertEqual(result.status, TaskStatus.FAILED)
+        self.assertIn("不是合法 JSON", result.error_message or "")
 
-    def test_execute_accepts_requirement_source_type_as_text(self) -> None:
-        executor_cls = getattr(executor_module, "FunctionalCaseExecutor", None)
-        self.assertIsNotNone(executor_cls)
-        if executor_cls is None:
-            return
-
-        task = self._make_task(source_type="requirement", document_type="")
-        captured: dict[str, object] = {}
-
-        def fake_chain_runner(**kwargs):
-            captured.update(kwargs)
-            kwargs["on_requirement_analysis_result"]("{}")
-            kwargs["on_case_names_result"]('{"categories":[]}')
-            return FunctionalChainRunResult(
-                requirement_analysis_output="{}",
-                case_names_output='{"categories":[]}',
-                detailed_cases_output='{"cases":[]}',
-            )
-
-        with tempfile.TemporaryDirectory() as runtime:
-            executor = executor_cls(
-                agent_config=PiConfig(runtime_root=runtime),
-                chain_runner=fake_chain_runner,
-            )
-
-            result = executor.execute(
-                task,
-                datetime.fromisoformat("2026-06-23T10:00:00+08:00"),
-                lambda progress: None,
-            )
-
-        self.assertEqual(result.status, TaskStatus.SUCCESS, result.error_message)
-        self.assertEqual(captured["source_text"], task.payload.source_content)
-        summary = json.loads(result.result_summary_json)
-        self.assertEqual(summary["documentType"], "text")
-        self.assertEqual(summary["sourceType"], "text")
-
-    def test_execute_checkpoint_requirement_analysis_uses_source_content_without_enhanced_stage(
+    def test_execute_fails_before_chain_when_source_content_is_not_requirement_material(
         self,
     ) -> None:
         executor_cls = getattr(executor_module, "FunctionalCaseExecutor", None)
@@ -355,44 +355,20 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         if executor_cls is None:
             return
 
-        progress_events: list[TaskProgress] = []
-        captured: dict[str, object] = {}
-        requirement_analysis_json = json.dumps(analysis(), ensure_ascii=False)
-
-        def fake_skill_runner(**kwargs) -> str:
-            captured.update(kwargs)
-            return requirement_analysis_json
-
-        task = self._make_task(
-            checkpoint_enabled=True,
-            current_stage="requirement_analysis",
-            config_json="{}",
-        )
-
+        task = self._make_task(source_content=json.dumps({"artifactType": "other"}))
         executor = executor_cls(
             agent_config=PiConfig(),
             chain_runner=lambda **kwargs: None,
-            skill_runner=fake_skill_runner,
         )
 
         result = executor.execute(
             task,
             datetime.fromisoformat("2026-06-23T10:00:00+08:00"),
-            progress_events.append,
+            lambda progress: None,
         )
 
-        self.assertIsNone(result)
-        self.assertEqual(len(progress_events), 1)
-        self.assertEqual(progress_events[0].current_stage, "requirement_analysis")
-        self.assertEqual(progress_events[0].stage_status, "waiting_review")
-        config = json.loads(progress_events[0].intermediate_json_text)
-        self.assertEqual(captured["input_text"], task.payload.source_content)
-        self.assertEqual(captured["skill_name"], "mtx-analyze-functional-requirements")
-        self.assertIn(task.payload.extra_instruction, captured["extra_instruction"])
-        self.assertIn(FUNCTIONAL_ANALYSIS_JSON_ONLY_INSTRUCTION, captured["extra_instruction"])
-        self.assertNotIn("enhancedText", config)
-        self.assertEqual(config["requirementAnalysis"], analysis())
-        self.assertIsNone(config["caseNames"])
+        self.assertEqual(result.status, TaskStatus.FAILED)
+        self.assertIn("artifactType", result.error_message or "")
 
     def test_execute_checkpoint_requirement_analysis_ignores_legacy_enhanced_text_and_returns_none(
         self,
@@ -456,7 +432,7 @@ class FunctionalCaseExecutorTests(unittest.TestCase):
         self.assertEqual(progress_events[0].stage_status, "waiting_review")
         config = json.loads(progress_events[0].intermediate_json_text)
         self.assertNotIn("enhancedText", config)
-        self.assertIsNotNone(config["requirementAnalysis"])
+        self.assertEqual(config["requirementAnalysis"], analysis())
         self.assertIsNone(config["caseNames"])
 
     def test_execute_checkpoint_requirement_analysis_ignores_invalid_old_config(self) -> None:

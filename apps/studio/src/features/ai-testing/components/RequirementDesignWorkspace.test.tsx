@@ -1,11 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { TestThemeProvider } from '@/test/TestThemeProvider'
 import { aiTestingApi } from '../api/aiTesting.api'
-import { baseServicesApi } from '@/features/base-services/api/baseServices.api'
+import { interfaceLibraryApi } from '@/features/interface-library/api/interfaceLibrary.api'
 import { generationChainApi } from '../api/generationChain.api'
 import { requirementDesignApi } from '../api/requirementDesign.api'
 import type { GenerationChain } from '../api/generationChain.api'
@@ -67,7 +67,7 @@ beforeEach(() => {
   vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(100)
   vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ code: 0, message: 'ok', data: { items: [], total: 0 } }), { headers: { 'Content-Type': 'application/json' } }))
   vi.spyOn(aiTestingApi, 'getCodeRiskTasks').mockResolvedValue(listPayload([]))
-  vi.spyOn(baseServicesApi, 'getGitlabRequirementBindings').mockResolvedValue(listPayload([]))
+  vi.spyOn(interfaceLibraryApi, 'getRequirementSoftwareRepositories').mockResolvedValue(listPayload([]))
   vi.mocked(generationChainApi.overview).mockResolvedValue({
     chains: [chainWith('requirement_analysis', '需求分析', true), chainWith('function', '功能测试', false), chainWith('api', 'API 测试', false), chainWith('ui', 'UI 测试', false)],
   })
@@ -108,7 +108,8 @@ it('文档与代码风险从泳道入口打开，未配置链打开生成设置'
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
 
   await user.click(screen.getByRole('button', { name: /开始\s*API 测试/ }))
-  expect(await screen.findByRole('region', { name: 'API 测试文档' })).toBeInTheDocument()
+  const sourcePanel = await screen.findByRole('region', { name: 'API 测试接口' })
+  expect(within(sourcePanel).getByText('尚未选择接口')).toBeInTheDocument()
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
 

@@ -50,7 +50,7 @@ def worker_payloads(
         }
     )
     document_type = run.get("documentType") or run.get("sourceType")
-    if task.task_type in {"requirement_analysis", "functional_case_generate"} and document_type in {
+    if task.task_type == "requirement_analysis" and document_type in {
         "text",
         "word",
         "docx",

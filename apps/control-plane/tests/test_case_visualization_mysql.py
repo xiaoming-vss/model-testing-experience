@@ -158,7 +158,7 @@ async def test_concurrent_dispatch_and_completion_delete(mysql, monkeypatch, rac
         await engine.dispose()
 
 
-def test_visualization_migration_roundtrip(mysql):  # noqa: F811
+def test_visualization_baseline_roundtrip(mysql):  # noqa: F811
     from support.initial_schema_migration import assert_current_schema, migration_config
 
     from alembic import command
@@ -166,8 +166,10 @@ def test_visualization_migration_roundtrip(mysql):  # noqa: F811
     with mysql.connect() as connection:
         config = migration_config(connection)
         assert_current_schema(connection)
-        command.downgrade(config, "20261113_0002")
-        assert "test_order_entry_visualizations" not in sa.inspect(connection).get_table_names()
+        command.downgrade(config, "base")
+        tables = sa.inspect(connection).get_table_names()
+        assert "test_order_entry_visualizations" not in tables
+        assert "test_order_visualization_batches" not in tables
         command.upgrade(config, "head")
         assert_current_schema(connection)
         connection.commit()

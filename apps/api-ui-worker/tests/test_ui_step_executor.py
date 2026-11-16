@@ -42,7 +42,16 @@ def test_assert_text_uses_operation_value_and_ignores_expect_value(monkeypatch) 
     assert result.actual_value == "操作成功"
 
 
-def test_assert_visible_uses_operation_value_as_timeout(monkeypatch) -> None:
+@pytest.mark.parametrize(
+    ("keyword", "locator_value", "expected_state"),
+    [
+        ("assert_visible", "#submit", "visible"),
+        ("assert_hidden", "text=转换格式必填", "hidden"),
+    ],
+)
+def test_assert_visibility_uses_operation_value_as_timeout(
+    monkeypatch, keyword: str, locator_value: str, expected_state: str
+) -> None:
     captured: dict[str, object] = {}
 
     class FakeLocator:
@@ -56,8 +65,8 @@ def test_assert_visible_uses_operation_value_as_timeout(monkeypatch) -> None:
     )
 
     step = UiStepDefinition(
-        keyword="assert_visible",
-        locator_value="#submit",
+        keyword=keyword,
+        locator_value=locator_value,
         operation_value="2500",
         timeout_ms=9000,
     )
@@ -70,38 +79,7 @@ def test_assert_visible_uses_operation_value_as_timeout(monkeypatch) -> None:
     result = asyncio.run(StepExecutor().execute(step, 1, context))
 
     assert result.success is True
-    assert captured == {"state": "visible", "timeout": 2500}
-
-
-def test_assert_hidden_uses_operation_value_as_timeout(monkeypatch) -> None:
-    captured: dict[str, object] = {}
-
-    class FakeLocator:
-        async def wait_for(self, *, state: str, timeout: int) -> None:
-            captured["state"] = state
-            captured["timeout"] = timeout
-
-    monkeypatch.setattr(
-        "test_worker.ui.step_executor.resolve_locator",
-        lambda page, step: FakeLocator(),
-    )
-
-    step = UiStepDefinition(
-        keyword="assert_hidden",
-        locator_value="text=转换格式必填",
-        operation_value="2500",
-        timeout_ms=9000,
-    )
-    context = StepExecutionContext(
-        page=object(),
-        artifact_dir="",
-        default_step_timeout_ms=5000,
-    )
-
-    result = asyncio.run(StepExecutor().execute(step, 1, context))
-
-    assert result.success is True
-    assert captured == {"state": "hidden", "timeout": 2500}
+    assert captured == {"state": expected_state, "timeout": 2500}
 
 
 def test_assert_url_uses_operation_value_and_ignores_expect_value() -> None:
@@ -150,28 +128,20 @@ def test_assertion_rejects_missing_operation_value(keyword, monkeypatch) -> None
         asyncio.run(StepExecutor().execute(step, 1, context))
 
 
+@pytest.mark.parametrize(
+    ("keyword", "locator_value"),
+    [
+        ("assert_visible", "#submit"),
+        ("assert_hidden", "text=转换格式必填"),
+    ],
+)
 @pytest.mark.parametrize("operation_value", ["0", "-1"])
-def test_assert_visible_rejects_non_positive_timeout(operation_value) -> None:
+def test_assert_visibility_rejects_non_positive_timeout(
+    keyword: str, locator_value: str, operation_value: str
+) -> None:
     step = UiStepDefinition(
-        keyword="assert_visible",
-        locator_value="#submit",
-        operation_value=operation_value,
-    )
-    context = StepExecutionContext(
-        page=object(),
-        artifact_dir="",
-        default_step_timeout_ms=5000,
-    )
-
-    with pytest.raises(Exception, match="必须为正整数"):
-        asyncio.run(StepExecutor().execute(step, 1, context))
-
-
-@pytest.mark.parametrize("operation_value", ["0", "-1"])
-def test_assert_hidden_rejects_non_positive_timeout(operation_value) -> None:
-    step = UiStepDefinition(
-        keyword="assert_hidden",
-        locator_value="text=转换格式必填",
+        keyword=keyword,
+        locator_value=locator_value,
         operation_value=operation_value,
     )
     context = StepExecutionContext(

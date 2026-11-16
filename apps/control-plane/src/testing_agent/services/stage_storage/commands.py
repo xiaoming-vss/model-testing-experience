@@ -111,7 +111,8 @@ class DirectStageCommands:
             stage,
             draft_content,
             (current.input_snapshot_json or {})
-            if kind == "function" and stage == "case_names"
+            if (kind == "function" and stage == "case_names")
+            or (kind == "api" and stage == "api_design")
             else attempt_source(current),
         )
         await self.storage.save_draft(

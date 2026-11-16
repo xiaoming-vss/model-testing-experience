@@ -51,6 +51,7 @@ class ParsedEndpoint:
     response_description: str
     response_schema: Any | None
     response_example: Any | None
+    security: Any | None = None
 
 
 @dataclass(slots=True)
@@ -60,6 +61,7 @@ class ParsedOpenApiDocument:
     base_path: str
     endpoints: list[ParsedEndpoint] = field(default_factory=list)
     warnings: list[dict[str, str]] = field(default_factory=list)
+    security_schemes: dict[str, Any] = field(default_factory=dict)
 
 
 class _Resolver:
@@ -140,6 +142,14 @@ def parse_openapi_document(
         source_version = source_version[:_SOURCE_VERSION_MAX]
     base_path = _document_base_path(document, resolver, warnings)
     version = _document_version(document)
+    raw_security_schemes = (
+        (document.get("components") or {}).get("securitySchemes")
+        if version == 3 and isinstance(document.get("components"), dict)
+        else document.get("securityDefinitions")
+    )
+    security_schemes = resolver.resolve(raw_security_schemes)
+    if not isinstance(security_schemes, dict):
+        security_schemes = {}
 
     endpoints: list[ParsedEndpoint] = []
     seen: set[str] = set()
@@ -208,6 +218,7 @@ def parse_openapi_document(
         base_path=base_path,
         endpoints=endpoints,
         warnings=warnings,
+        security_schemes=security_schemes,
     )
 
 
@@ -277,15 +288,6 @@ def _parse_operation(
             method=method,
             path=normalized_path,
         )
-    if operation.get("security"):
-        _warn(
-            warnings,
-            "security_not_imported",
-            "安全方案未自动转换为 Authorization 请求头",
-            method=method,
-            path=normalized_path,
-        )
-
     parameters = _merged_parameters(
         resolver,
         warnings,
@@ -369,6 +371,11 @@ def _parse_operation(
         response_description=response["description"],
         response_schema=response["schema"],
         response_example=response["example"],
+        security=(
+            resolver.resolve(operation.get("security"))
+            if "security" in operation
+            else resolver.resolve(document.get("security"))
+        ),
     )
 
 

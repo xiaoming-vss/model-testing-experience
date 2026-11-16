@@ -1,4 +1,4 @@
-import { ApartmentOutlined, AppstoreOutlined, FileTextOutlined, LoadingOutlined, ProfileOutlined, UnorderedListOutlined } from '@ant-design/icons'
+import { ApartmentOutlined, AppstoreOutlined, BranchesOutlined, FileTextOutlined, LoadingOutlined, ProfileOutlined, UnorderedListOutlined } from '@ant-design/icons'
 import { Background, BackgroundVariant, BaseEdge, getBezierPath, Handle, MarkerType, Position, ReactFlow, ReactFlowProvider, useEdgesState, useNodesState, type Edge, type EdgeProps, type Node, type NodeProps } from '@xyflow/react'
 import { useEffect, useMemo, useRef, type CSSProperties } from 'react'
 import { useThemeStore } from '@/shared/theme/theme.store'
@@ -52,7 +52,7 @@ function ChainGroup({ data }: NodeProps<GroupNode>) {
 }
 function StageCard({ data }: NodeProps<StageNode>) {
   const { stage } = data
-  const Icon = stage.stage === 'ui_surface' ? AppstoreOutlined : stage.stage === 'ui_design' ? ProfileOutlined : stage.stage === 'case_names' ? UnorderedListOutlined : FileTextOutlined
+  const Icon = stage.stage === 'ui_surface' ? AppstoreOutlined : stage.stage === 'ui_design' ? ProfileOutlined : stage.stage === 'api_design' ? BranchesOutlined : stage.stage === 'case_names' ? UnorderedListOutlined : FileTextOutlined
   const running = stage.state === 'running'
   const summary = running && stage.moduleGeneration
     ? stage.moduleGeneration.status === 'reviewing' ? '正在独立复核测试点'
@@ -130,8 +130,8 @@ const stageBottom = 176
 const itemWidth = 126
 // 画像位于第二行，留出空间供材料整理的右侧出线绕行。
 const profileTop = 220
-// 三阶段链路（功能测试、UI 测试）外框向右加宽、向下加高，阶段卡片交错排布。
-const staggeredKinds = new Set<GenerationChainKind>(['function', 'ui'])
+// 三阶段链路（功能测试、API 测试、UI 测试）外框向右加宽、向下加高，阶段卡片交错排布。
+const staggeredKinds = new Set<GenerationChainKind>(['function', 'api', 'ui'])
 const staggeredExtraWidth = 96
 const staggeredGroupHeight = 280
 const compactGroupHeight = 144
@@ -200,13 +200,13 @@ function buildCanvas({ chains, filter, selected, special, profile, relations, ca
   if (analysis?.stages.length && functional?.stages[0]) edges.push({ id: 'analysis-to-function', source: `requirement_analysis:${analysis.stages.at(-1)!.stage}`, target: `function:${functional.stages[0].stage}` })
   const profileNode = nodes.some(node => node.id === 'profile')
   if (analysis?.stages.length) {
-    for (const kind of ['ui'] as const) {
+    for (const kind of ['api', 'ui'] as const) {
       const targetChain = chains.find(item => item.kind === kind)
       if (!targetChain) continue
       const target = targetChain.configured && targetChain.stages[0] ? `${kind}:${targetChain.stages[0].stage}` : `group:${kind}`
-      // UI 生成的源码前置是仓库画像版本。
-      if (kind === 'ui' && profileNode) {
-        edges.push({ id: 'profile-to-ui', source: 'profile', sourceHandle: 'right', target })
+      // API 与 UI 共用仓库画像提供的软件仓库上下文，两条下游都从画像卡片出线。
+      if (profileNode) {
+        edges.push({ id: `profile-to-${kind}`, source: 'profile', sourceHandle: 'right', target })
         continue
       }
       edges.push({ id: `analysis-to-${kind}`, source: `requirement_analysis:${analysis.stages.at(-1)!.stage}`, target })

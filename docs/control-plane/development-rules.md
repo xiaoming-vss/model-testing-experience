@@ -1,6 +1,6 @@
 # 控制面开发规则
 
-适用范围为 `apps/control-plane/`，以及修改控制面与 AI、API/UI、集成 Worker 接口时涉及的协作边界。本文补充本项目的 Web、数据库、权限和业务事务要求；开发与审查同时遵循[通用后端规则](../agents/backend-development.md)。版本日期为 2026 年 10 月 7 日。
+适用范围为 `apps/control-plane/`，以及修改控制面与 AI、API/UI、集成 Worker 接口时涉及的协作边界。本文补充本项目的 Web、数据库、权限和业务事务要求；开发与审查同时遵循[通用后端规则](../agents/backend-development.md)。版本日期为 2026 年 11 月 15 日。
 
 源码路径和应用内命令默认相对 `apps/control-plane/`；明确带有 `apps/`、`docs/`、`scripts/`、`.scratch/` 的路径相对仓库根目录。
 
@@ -96,7 +96,7 @@ Ruff 配置以应用 `pyproject.toml` 为准，当前行宽为 100，检查规�
 
 - 新增表和字段填写中文 `COMMENT`。表注释说明用途，字段注释说明业务含义，并在必要时标明单位、状态值、关联身份、空值含义和历史兼容用途。
 - 注释在 ORM 模型中随结构维护，并通过 Alembic 迁移写入数据库。`description` 等业务字段不能替代结构注释。具体方式见[数据库结构描述](database-schema.md)。
-- 表、字段、约束、索引、默认值和注释变更均增加迁移，不改写已经应用的历史迁移。迁移使用固定结构和数据规则，不导入会随应用版本变化的 ORM 模型来重建历史结构。
+- 第一版正式发布前，表、字段、约束、索引、默认值和注释变更直接修改唯一 baseline `alembic/versions/20261103_0001_v1_baseline.py` 并同步模型，不新增 update 迁移，迁移链保持单一 revision。第一版发布后冻结 baseline，之后的变更才新增迁移，不改写已发布的基线。迁移使用固定结构和数据规则，不导入会随应用版本变化的 ORM 模型来重建历史结构。
 - 业务唯一性由数据库唯一约束兜底。并发写入发生唯一冲突时，服务层返回对应业务错误；写前查重本身不能保证并发唯一性。
 - 外键与删除行为依据业务生命周期选择。Bug 的历史来源引用、集成执行账本等已有保留规则，不套用普通资产的级联删除规则。
 - 持久化 JSON 明确结构、版本与兼容策略，优先复用已有领域结构；稳定的查询字段按实际筛选和索引需求设计。
@@ -116,7 +116,7 @@ Ruff 配置以应用 `pyproject.toml` 为准，当前行宽为 100，检查规�
 | 空值或哨兵值 | `null`、空字符串、0 等实际含义 | `assignee_user_id`：分配的执行人用户业务标识；空字符串表示未分配 |
 | JSON、凭据或历史字段 | 内容结构、来源和用途；敏感材料的实际存储方式 | 输入快照说明冻结时点；历史路径说明是否仍用于交付 |
 
-审查时必须核对注释与类型、默认值、枚举及实际读写逻辑一致。`test_schema_comments.py` 负责非空和数据库对应关系等机械检查；业务语义质量由开发与审查核对。注释变更同样通过新迁移落库，既有注释的完善按实际修改范围进行。
+审查时必须核对注释与类型、默认值、枚举及实际读写逻辑一致。`test_schema_comments.py` 负责非空和数据库对应关系等机械检查；业务语义质量由开发与审查核对。注释变更随结构变更写入唯一基线落库，既有注释的完善按实际修改范围进行。
 
 SQLite 可用于常规逻辑测试；MySQL 的字符集、排序规则、注释、默认值及并发锁行为必须由真实 MySQL 验证。
 
@@ -182,7 +182,7 @@ Worker 领取、心跳、执行结果和取消操作遵循各自状态机、领�
 | 权限与关联 | `test_auth_contract.py`、`test_project_membership_api.py`、`test_developer_access.py`；外部授权变化加 `test_integration_authorization.py`，覆盖跨项目和撤销 |
 | 业务状态 | 对应业务域专项，例如 `test_bug_lifecycle.py`、`test_generic_import_state.py`；改动删除行为加 `test_hard_deletion.py`，覆盖合法、非法及重复操作 |
 | 查询与分页 | `test_database_read_paths.py`；项目列表变化加 `test_project_list_queries.py`，检查筛选总数、稳定排序、大字段排除及批量查询 |
-| 模型与迁移 | `test_initial_schema_migration.py`、`test_schema_comments.py`，加对应迁移专项；MySQL 属性或锁行为变化必须运行真实 MySQL 的 `test_mysql_initialization.py` 或对应专项 |
+| 模型与迁移 | `test_initial_schema_migration.py`、`test_schema_comments.py`；MySQL 属性或锁行为变化必须运行真实 MySQL 的 `test_mysql_initialization.py` 或对应专项 |
 | 队列与集成写入 | AI/API/UI 队列使用 `test_worker_queue_storage.py`、`test_worker_contract.py`；集成队列使用 `test_integration_jobs.py`、`test_integration_bug_api.py`，并按影响追加恢复、失租、授权及 `test_integration_jobs_mysql.py` |
 | 文件与凭据 | `test_stored_files.py`、`test_stored_file_access.py`，加受影响授权和交付路径测试；真实存储行为变化追加显式存储验收 |
 | 错误与日志 | `test_error_definitions.py`、`test_app_contract.py`，加本次修改的异常记录、脱敏与追踪专项 |

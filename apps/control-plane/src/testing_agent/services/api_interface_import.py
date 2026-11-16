@@ -14,7 +14,6 @@ from sqlalchemy.exc import IntegrityError
 from testing_agent.core.config import get_settings
 from testing_agent.core.errors import (
     AppError,
-    ErrApiAppNotFound,
     ErrApiInterfaceIdentityAlreadyUse,
     ErrApiInterfaceImportBasePathForbidden,
     ErrApiInterfaceImportConflict,
@@ -23,6 +22,7 @@ from testing_agent.core.errors import (
     ErrApiInterfaceImportSourceChanged,
     ErrApiInterfaceImportTooLarge,
     ErrBadRequest,
+    ErrSoftwareRepositoryNotFound,
     dynamic_error,
 )
 from testing_agent.core.import_limits import ImportLimits
@@ -34,18 +34,18 @@ from testing_agent.domain.openapi_import import (
     parse_openapi_document,
 )
 from testing_agent.domain.project_policy import allows_project_action
-from testing_agent.models.api_app import ApiApp
 from testing_agent.models.api_interface import ApiInterface
 from testing_agent.models.project import Project
-from testing_agent.repositories.api_app import ApiAppRepository
+from testing_agent.models.software_repository import SoftwareRepository
 from testing_agent.repositories.api_interface import ApiInterfaceRepository
+from testing_agent.repositories.software_repository import SoftwareRepositoryRepository
 from testing_agent.schemas.api_interface_import import (
-    ApiInterfaceImportApp,
     ApiInterfaceImportBasePathChange,
     ApiInterfaceImportCommitResponse,
     ApiInterfaceImportItem,
     ApiInterfaceImportPreviewResponse,
     ApiInterfaceImportResultItem,
+    ApiInterfaceImportSoftwareRepository,
     ApiInterfaceImportSource,
     ApiInterfaceImportSummary,
     ApiInterfaceImportWarning,
@@ -61,7 +61,6 @@ _CHANGE_ORDER = {"new": 0, "modified": 1, "unchanged": 2, "library_only": 3}
 _DOC_FIELDS = (
     ("name", "name"),
     ("description", "description"),
-    ("tags", "tags"),
     ("headers", "headers"),
     ("path_params", "pathParams"),
     ("query_params", "queryParams"),
@@ -73,6 +72,8 @@ _DOC_FIELDS = (
     ("response_description", "responseDescription"),
     ("response_schema", "responseSchema"),
     ("response_example", "responseExample"),
+    ("security", "security"),
+    ("security_schemes", "securitySchemes"),
 )
 
 
@@ -103,7 +104,9 @@ def _canonical_rows(rows: list[dict[str, Any]] | None, location: str) -> list[tu
     )
 
 
-def _changed_fields(endpoint: ParsedEndpoint, interface: ApiInterface) -> list[str]:
+def _changed_fields(
+    endpoint: ParsedEndpoint, interface: ApiInterface, security_schemes: dict[str, Any]
+) -> list[str]:
     changed: list[str] = []
     row_locations = {
         "headers": "header",
@@ -116,14 +119,22 @@ def _changed_fields(endpoint: ParsedEndpoint, interface: ApiInterface) -> list[s
             actual = _canonical_rows(getattr(interface, f"{attr}_json"), row_locations[attr])
             if expected != actual:
                 changed.append(api_name)
-        elif attr == "tags":
-            if sorted(getattr(endpoint, attr) or []) != sorted(interface.tags_json or []):
+        elif attr == "security_schemes":
+            if (interface.security_schemes_json or {}) != security_schemes:
                 changed.append(api_name)
         else:
             expected = getattr(endpoint, attr)
             actual = (
                 getattr(interface, f"{attr}_json")
-                if attr in {"body_schema", "body_example", "response_schema", "response_example"}
+                if attr
+                in {
+                    "body_schema",
+                    "body_example",
+                    "response_schema",
+                    "response_example",
+                    "security",
+                    "security_schemes",
+                }
                 else getattr(interface, attr)
             )
             if expected != actual:
@@ -136,10 +147,13 @@ def _apply_endpoint(
     endpoint: ParsedEndpoint,
     parsed: ParsedOpenApiDocument,
     imported_at: datetime,
+    *,
+    update_tags: bool,
 ) -> None:
     interface.name = endpoint.name
     interface.description = endpoint.description
-    interface.tags_json = endpoint.tags
+    if update_tags:
+        interface.tags_json = endpoint.tags
     interface.headers_json = endpoint.headers
     interface.path_params_json = endpoint.path_params
     interface.query_params_json = endpoint.query_params
@@ -151,6 +165,8 @@ def _apply_endpoint(
     interface.response_description = endpoint.response_description
     interface.response_schema_json = endpoint.response_schema
     interface.response_example_json = endpoint.response_example
+    interface.security_json = endpoint.security
+    interface.security_schemes_json = parsed.security_schemes
     interface.source_type = "openapi_file"
     interface.source_name = parsed.source_name
     interface.source_url = ""
@@ -162,25 +178,29 @@ class ApiInterfaceImportService:
     def __init__(
         self,
         interfaces: ApiInterfaceRepository,
-        apps: ApiAppRepository,
+        software_repositories: SoftwareRepositoryRepository,
         *,
         limits: ImportLimits | None = None,
     ) -> None:
         self.interfaces = interfaces
-        self.apps = apps
+        self.software_repositories = software_repositories
         self.limits = limits or get_settings().asset_import
 
-    async def preview(self, user_id: str, app_id: str, file: UploadFile | None) -> dict[str, Any]:
-        app, project = await self._accessible_app(user_id, app_id, action="write")
+    async def preview(
+        self, user_id: str, software_repository_id: str, file: UploadFile | None
+    ) -> dict[str, Any]:
+        software_repository, project = await self._accessible_software_repository(
+            user_id, software_repository_id, action="write"
+        )
         digest, parsed, _fallback = await self._parse_upload(file)
-        current = await self.interfaces.list_all_by_app(app_id)
+        current = await self.interfaces.list_all_by_software_repository(software_repository_id)
         items, summary = self._diff(parsed, current)
         role = await project_role(self.interfaces.session, user_id, project)
         can_apply = allows_project_action(role, "manage")
         base_path_change = None
-        if parsed.base_path and parsed.base_path != app.base_path:
+        if parsed.base_path and parsed.base_path != software_repository.base_path:
             base_path_change = ApiInterfaceImportBasePathChange(
-                current=app.base_path,
+                current=software_repository.base_path,
                 document=parsed.base_path,
                 can_apply=can_apply,
             )
@@ -193,7 +213,11 @@ class ApiInterfaceImportService:
                 digest=digest,
                 base_path=parsed.base_path,
             ),
-            app=ApiInterfaceImportApp(app_id=app.app_id, name=app.name, base_path=app.base_path),
+            software_repository=ApiInterfaceImportSoftwareRepository(
+                software_repository_id=software_repository.software_repository_id,
+                name=software_repository.name,
+                base_path=software_repository.base_path,
+            ),
             summary=ApiInterfaceImportSummary(**summary),
             base_path_change=base_path_change,
             warnings=[ApiInterfaceImportWarning(**warning) for warning in parsed.warnings],
@@ -207,6 +231,12 @@ class ApiInterfaceImportService:
                     existing_interface_id=(item.existing.interface_id if item.existing else None),
                     existing_version=item.existing.version if item.existing else None,
                     changed_fields=item.changed_fields,
+                    tags=(
+                        (item.existing.tags_json or [])
+                        if item.existing
+                        else (item.endpoint.tags if item.endpoint else [])
+                    ),
+                    existing_tags=(item.existing.tags_json or []) if item.existing else [],
                 )
                 for item in items
             ],
@@ -216,21 +246,23 @@ class ApiInterfaceImportService:
     async def commit(
         self,
         user_id: str,
-        app_id: str,
+        software_repository_id: str,
         *,
         file: UploadFile | None,
         source_digest: str,
         selected_keys: str,
         expected_items: str,
         apply_base_path: bool,
-        expected_app_version: int | None,
+        expected_software_repository_version: int | None,
     ) -> dict[str, Any]:
         selected = self._selected_keys(selected_keys)
         expected = self._expected_items(expected_items)
-        app = await self.apps.get(app_id)
-        if app is None:
-            raise ErrApiAppNotFound()
-        await require_project_id(self.interfaces.session, user_id, app.project_id, action="write")
+        software_repository = await self.software_repositories.get(software_repository_id)
+        if software_repository is None:
+            raise ErrSoftwareRepositoryNotFound()
+        await require_project_id(
+            self.interfaces.session, user_id, software_repository.project_id, action="write"
+        )
         # End the pre-check snapshot before parsing the upload. The write transaction below
         # must observe membership and interface rows committed while parsing.
         await self.interfaces.rollback()
@@ -238,14 +270,18 @@ class ApiInterfaceImportService:
         if not source_digest or digest != source_digest:
             raise ErrApiInterfaceImportSourceChanged()
 
-        app = await self.apps.get_for_update(app_id)
-        if app is None:
-            raise ErrApiAppNotFound()
+        software_repository = await self.software_repositories.get_for_update(
+            software_repository_id
+        )
+        if software_repository is None:
+            raise ErrSoftwareRepositoryNotFound()
         project = await require_project_id(
-            self.interfaces.session, user_id, app.project_id, action="write"
+            self.interfaces.session, user_id, software_repository.project_id, action="write"
         )
         role = await project_role(self.interfaces.session, user_id, project)
-        base_path_changed = bool(parsed.base_path and parsed.base_path != app.base_path)
+        base_path_changed = bool(
+            parsed.base_path and parsed.base_path != software_repository.base_path
+        )
         if base_path_changed and not allows_project_action(role, "manage"):
             raise ErrApiInterfaceImportBasePathForbidden()
         if apply_base_path:
@@ -253,10 +289,13 @@ class ApiInterfaceImportService:
                 raise ErrApiInterfaceImportBasePathForbidden()
             if not parsed.base_path:
                 raise dynamic_error(ErrBadRequest, "文档没有可应用的 base path")
-            if expected_app_version is None or expected_app_version != app.version:
+            if (
+                expected_software_repository_version is None
+                or expected_software_repository_version != software_repository.version
+            ):
                 raise ErrApiInterfaceImportConflict()
 
-        current = await self.interfaces.list_all_by_app(app_id)
+        current = await self.interfaces.list_all_by_software_repository(software_repository_id)
         diff_items, summary = self._diff(parsed, current)
         by_key = {str(item.key): item for item in diff_items}
         selected_set = set(selected)
@@ -276,7 +315,7 @@ class ApiInterfaceImportService:
         result_items: list[ApiInterfaceImportResultItem] = []
         for item in sorted(
             (by_key[key] for key in selected_set),
-            key=lambda value: (value.method, value.path),
+            key=lambda value: (value.path, value.method),
         ):
             endpoint = item.endpoint
             if endpoint is None or item.change_type in {"unchanged", "library_only"}:
@@ -287,11 +326,11 @@ class ApiInterfaceImportService:
                 if expected_version is None or expected_version != item.existing.version:
                     raise ErrApiInterfaceImportConflict()
                 locked = await self.interfaces.get_by_identity_for_update(
-                    app_id, endpoint.method, path_key(endpoint.path)
+                    software_repository_id, endpoint.method, path_key(endpoint.path)
                 )
                 if locked is None or locked.version != expected_version:
                     raise ErrApiInterfaceImportConflict()
-                _apply_endpoint(locked, endpoint, parsed, now)
+                _apply_endpoint(locked, endpoint, parsed, now, update_tags=False)
                 locked.version += 1
                 updated += 1
                 result_items.append(
@@ -303,20 +342,19 @@ class ApiInterfaceImportService:
                 )
             else:
                 existing = await self.interfaces.get_by_identity_for_update(
-                    app_id, endpoint.method, path_key(endpoint.path)
+                    software_repository_id, endpoint.method, path_key(endpoint.path)
                 )
                 if existing is not None:
                     raise ErrApiInterfaceImportConflict()
                 interface = ApiInterface(
                     interface_id=new_id(),
-                    app_id=app_id,
+                    software_repository_id=software_repository_id,
                     method=endpoint.method,
                     path=endpoint.path,
                     path_key=path_key(endpoint.path),
-                    enabled=True,
                     version=1,
                 )
-                _apply_endpoint(interface, endpoint, parsed, now)
+                _apply_endpoint(interface, endpoint, parsed, now, update_tags=True)
                 self.interfaces.add(interface)
                 created += 1
                 result_items.append(
@@ -327,9 +365,9 @@ class ApiInterfaceImportService:
                     )
                 )
 
-        if apply_base_path and parsed.base_path != app.base_path:
-            app.base_path = parsed.base_path
-            app.version += 1
+        if apply_base_path and parsed.base_path != software_repository.base_path:
+            software_repository.base_path = parsed.base_path
+            software_repository.version += 1
         try:
             await self.interfaces.commit()
         except IntegrityError as exc:
@@ -340,21 +378,21 @@ class ApiInterfaceImportService:
             updated=updated,
             skipped=skipped,
             library_only=summary["library_only"],
-            app_base_path=app.base_path,
+            software_repository_base_path=software_repository.base_path,
             interfaces=result_items,
         )
         return response.model_dump(by_alias=True, mode="json")
 
-    async def _accessible_app(
-        self, user_id: str, app_id: str, *, action: ProjectAction
-    ) -> tuple[ApiApp, Project]:
-        app = await self.apps.get(app_id)
-        if app is None:
-            raise ErrApiAppNotFound()
+    async def _accessible_software_repository(
+        self, user_id: str, software_repository_id: str, *, action: ProjectAction
+    ) -> tuple[SoftwareRepository, Project]:
+        software_repository = await self.software_repositories.get(software_repository_id)
+        if software_repository is None:
+            raise ErrSoftwareRepositoryNotFound()
         project = await require_project_id(
-            self.interfaces.session, user_id, app.project_id, action=action
+            self.interfaces.session, user_id, software_repository.project_id, action=action
         )
-        return app, project
+        return software_repository, project
 
     async def _parse_upload(
         self, file: UploadFile | None
@@ -410,7 +448,7 @@ class ApiInterfaceImportService:
                 change_type = "new"
                 changed_fields: list[str] = []
             else:
-                changed_fields = _changed_fields(endpoint, existing)
+                changed_fields = _changed_fields(endpoint, existing, parsed.security_schemes)
                 change_type = "modified" if changed_fields else "unchanged"
             summary[change_type] += 1
             items.append(

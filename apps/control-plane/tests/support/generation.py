@@ -9,7 +9,6 @@ from types import SimpleNamespace
 from testing_agent.core.sid import new_id
 from testing_agent.repositories.generation_chain import GenerationChainRepository
 from testing_agent.repositories.requirement_design import RequirementDesignRepository
-from testing_agent.repositories.resource_binding import ResourceBindingRepository
 from testing_agent.repositories.sprint_daily_metrics import SprintDailyMetricsRepository
 from testing_agent.services.ai_candidate_review import GenerationCandidateReview
 from testing_agent.services.ai_report import TestReportWorkflow
@@ -104,7 +103,6 @@ def generation_services(
     if hasattr(repository, "session"):
         ui_sources = UiGenerationSourceService(
             repository.session,
-            binding_repository=ResourceBindingRepository(repository.session),
             integration_connection_service=SimpleNamespace(),
             credential_cipher=None,
         )

@@ -27,6 +27,9 @@ from testing_agent.api.deps import (
 from testing_agent.app import create_app
 from testing_agent.core.config import get_settings
 from testing_agent.core.errors import AppError, ErrNotFound
+from testing_agent.repositories.requirement_software_repository import (
+    RequirementRepositoryBinding,
+)
 from testing_agent.services.baseline_resolution import BindingResolution
 from testing_agent.services.gitlab_resource import GitLabResourceError
 from testing_agent.services.service_instance import instance_key
@@ -52,30 +55,31 @@ def _sprint(**overrides: object) -> SimpleNamespace:
     return SimpleNamespace(**fields)
 
 
-def _binding(**overrides: object) -> SimpleNamespace:
-    fields: dict[str, object] = {
-        "binding_id": "binding-1",
-        "instance_url": "https://gitlab.example.com",
-        "instance_key": instance_key("https://gitlab.example.com"),
-        "user_id": "user-1",
-        "provider": "gitlab",
-        "connection_id": "",
-        "local_resource_type": "requirement",
-        "local_resource_id": "req-1",
-        "remote_resource_type": "repository",
-        "remote_resource_id": "repo-1",
-        "remote_parent_id": "group-1",
-        "remote_name_snapshot": "repo-one",
-        "status": "active",
-        "bound_at": None,
-        "last_verified_at": None,
-        "extra_json": {"branch": "develop"},
-        "created_at": NOW,
-        "updated_at": None,
-        "id": 1,
-    }
-    fields.update(overrides)
-    return SimpleNamespace(**fields)
+def _binding(**overrides: object) -> RequirementRepositoryBinding:
+    binding_id = str(overrides.get("binding_id", "binding-1"))
+    repository_id = str(overrides.get("remote_resource_id", "repo-1"))
+    group_id = str(overrides.get("remote_parent_id", "group-1"))
+    instance_url = str(overrides.get("instance_url", "https://gitlab.example.com"))
+    name = str(overrides.get("remote_name_snapshot", "repo-one"))
+    extra = overrides.get("extra_json")
+    branch = str(extra.get("branch", "develop")) if isinstance(extra, dict) else "develop"
+    return RequirementRepositoryBinding(
+        association=SimpleNamespace(
+            requirement_id=str(overrides.get("local_resource_id", "req-1")),
+            software_repository_id=binding_id,
+            branch=branch,
+            baseline_branch="",
+        ),
+        software_repository=SimpleNamespace(
+            software_repository_id=binding_id,
+            name=name,
+            repository_project_id=repository_id,
+            repository_group_id=group_id,
+            repository_instance_url=instance_url,
+            repository_instance_key=str(overrides.get("instance_key", instance_key(instance_url))),
+            repository_name=name,
+        ),
+    )
 
 
 def _resolution(**overrides: object) -> SimpleNamespace:
@@ -90,7 +94,7 @@ def _resolution(**overrides: object) -> SimpleNamespace:
     return SimpleNamespace(**fields)
 
 
-def _row(binding: SimpleNamespace, resolution: SimpleNamespace) -> BindingResolution:
+def _row(binding: RequirementRepositoryBinding, resolution: SimpleNamespace) -> BindingResolution:
     return BindingResolution(binding, resolution)
 
 
@@ -133,18 +137,6 @@ class FakeBaselineResolutionService:
     async def resolve_for_sprint(self, sprint_id: str):
         self.calls.append(sprint_id)
         return list(self.rows)
-
-
-class FakeBindingRepository:
-    def __init__(self, group_bindings: dict[str, SimpleNamespace] | None = None) -> None:
-        self.group_bindings = group_bindings or {}
-        self.calls: list[tuple[str, str, str]] = []
-
-    async def get_active_project_group_binding(
-        self, provider, project_id, group_id, *, for_update=False, instance=""
-    ):
-        self.calls.append((provider, project_id, group_id))
-        return self.group_bindings.get(group_id)
 
 
 class FakeGitlabClient:
@@ -200,7 +192,6 @@ def make_service(
     sprint: SimpleNamespace | None = None,
     sprint_service: FakeSprintService | None = None,
     rows: list[BindingResolution] | None = None,
-    group_bindings: dict[str, SimpleNamespace] | None = None,
     connections: list | None = None,
     tokens: dict[str, str] | None = None,
     client: FakeGitlabClient | None = None,
@@ -213,15 +204,12 @@ def make_service(
     sprint_service = sprint_service or FakeSprintService(sprint)
     baseline = FakeBaselineResolutionService(rows)
     client = client or FakeGitlabClient()
-    if group_bindings is None:
-        group_bindings = {"group-1": SimpleNamespace(connection_id="conn-1")}
     if connections is None:
         connections = [_connection()]
     if tokens is None:
         tokens = {"enc:token-1": "plain-token-1"}
     service = SprintCodeOverviewService(
         sprint_service,
-        FakeBindingRepository(group_bindings),
         baseline,
         FakeIntegrationConnectionService(connections, client=client),
         FakeCipher(tokens),
@@ -431,7 +419,6 @@ async def test_compare_failure_marks_only_that_repo():
 async def test_connection_unresolved_marks_error_with_remediation():
     service, _, _, client = make_service(
         rows=[_row(_binding(), _resolution())],
-        group_bindings={},
         connections=[],
     )
 

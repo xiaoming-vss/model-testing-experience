@@ -18,7 +18,6 @@ from testing_agent.core.ldap_directory import LdapDirectory
 from testing_agent.db.session import get_session
 from testing_agent.models.user import User
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
-from testing_agent.repositories.api_app import ApiAppRepository
 from testing_agent.repositories.api_assert_rule import ApiAssertRuleRepository
 from testing_agent.repositories.api_case import ApiCaseRepository
 from testing_agent.repositories.api_collection import ApiCollectionRepository
@@ -39,7 +38,11 @@ from testing_agent.repositories.project import ProjectRepository
 from testing_agent.repositories.project_skill_space import ProjectSkillSpaceRepository
 from testing_agent.repositories.requirement import RequirementRepository
 from testing_agent.repositories.requirement_design import RequirementDesignRepository
+from testing_agent.repositories.requirement_software_repository import (
+    RequirementSoftwareRepositoryRepository,
+)
 from testing_agent.repositories.resource_binding import ResourceBindingRepository
+from testing_agent.repositories.software_repository import SoftwareRepositoryRepository
 from testing_agent.repositories.sprint import SprintRepository
 from testing_agent.repositories.sprint_daily_metrics import SprintDailyMetricsRepository
 from testing_agent.repositories.test_order import TestOrderRepository
@@ -57,7 +60,6 @@ from testing_agent.services.ai_task_access import GenerationImportContext
 from testing_agent.services.ai_task_commands import GenerationTaskCommands
 from testing_agent.services.ai_task_queries import GenerationQueries
 from testing_agent.services.ai_task_scope import GenerationAccess
-from testing_agent.services.api_app import ApiAppService
 from testing_agent.services.api_assert_rule import ApiAssertRuleService
 from testing_agent.services.api_case import ApiCaseService
 from testing_agent.services.api_collection import ApiCollectionService
@@ -88,7 +90,11 @@ from testing_agent.services.project_skill_space import ProjectSkillSpaceService
 from testing_agent.services.repository_profile import RepositoryProfileService
 from testing_agent.services.requirement import RequirementService
 from testing_agent.services.requirement_design import RequirementDesignService
+from testing_agent.services.requirement_software_repository import (
+    RequirementSoftwareRepositoryService,
+)
 from testing_agent.services.resource_binding import ResourceBindingService
+from testing_agent.services.software_repository import SoftwareRepositoryService
 from testing_agent.services.sprint import SprintService
 from testing_agent.services.sprint_code_overview import (
     SprintCodeOverviewService,
@@ -354,14 +360,24 @@ def get_integration_connection_service(
     )
 
 
-def get_api_app_service(
+def get_software_repository_service(
     session: AsyncSession = Depends(get_session),
     connections: IntegrationConnectionService = Depends(get_integration_connection_service),
-) -> ApiAppService:
-    return ApiAppService(
-        ApiAppRepository(session),
+) -> SoftwareRepositoryService:
+    return SoftwareRepositoryService(
+        SoftwareRepositoryRepository(session),
         connections,
-        ResourceBindingRepository(session),
+    )
+
+
+def get_requirement_software_repository_service(
+    session: AsyncSession = Depends(get_session),
+    connections: IntegrationConnectionService = Depends(get_integration_connection_service),
+) -> RequirementSoftwareRepositoryService:
+    return RequirementSoftwareRepositoryService(
+        RequirementSoftwareRepositoryRepository(session),
+        SoftwareRepositoryRepository(session),
+        connections,
     )
 
 
@@ -370,7 +386,7 @@ def get_api_interface_service(
 ) -> ApiInterfaceService:
     return ApiInterfaceService(
         ApiInterfaceRepository(session),
-        ApiAppRepository(session),
+        SoftwareRepositoryRepository(session),
     )
 
 
@@ -379,7 +395,7 @@ def get_api_interface_import_service(
 ) -> ApiInterfaceImportService:
     return ApiInterfaceImportService(
         ApiInterfaceRepository(session),
-        ApiAppRepository(session),
+        SoftwareRepositoryRepository(session),
     )
 
 
@@ -403,15 +419,13 @@ def get_sprint_code_overview_service(
     settings: Settings = Depends(get_settings),
 ) -> SprintCodeOverviewService:
     credential_cipher = IntegrationCredentialCipher(settings.integration_key)
-    binding_repository = ResourceBindingRepository(session)
     integration_connection_service = IntegrationConnectionService(
         IntegrationConnectionRepository(session),
         credential_cipher=credential_cipher,
     )
     return SprintCodeOverviewService(
         build_sprint_service(session),
-        binding_repository,
-        BaselineResolutionService(binding_repository, SprintRepository(session)),
+        BaselineResolutionService(RequirementSoftwareRepositoryRepository(session)),
         integration_connection_service,
         credential_cipher,
     )
@@ -467,20 +481,20 @@ def get_generation_launcher(
     connections = IntegrationConnectionService(
         IntegrationConnectionRepository(session), credential_cipher=cipher
     )
-    bindings = ResourceBindingRepository(session)
+    requirements = RequirementSoftwareRepositoryRepository(session)
     return GenerationRunLauncher(
         repository=access.repository,
         access=access,
         sprint_daily_metrics_service=metrics,
         code_risk_analysis_service=CodeRiskAnalysisService(
             access.repository,
-            bindings,
+            requirements,
             connections,
             cipher,
         ),
         repository_profile_service=RepositoryProfileService(
             access.repository,
-            bindings,
+            requirements,
             connections,
             cipher,
         ),
@@ -646,7 +660,6 @@ def get_ui_generation_sources(
     cipher = IntegrationCredentialCipher(settings.integration_key)
     return UiGenerationSourceService(
         session,
-        binding_repository=ResourceBindingRepository(session),
         integration_connection_service=IntegrationConnectionService(
             IntegrationConnectionRepository(session), credential_cipher=cipher
         ),

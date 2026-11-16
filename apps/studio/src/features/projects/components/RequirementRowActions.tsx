@@ -22,12 +22,12 @@ export function RequirementRowActions({ name, canWrite, canManage, deleting, sho
     {showBinding ? <ProjectActionButton action="manage" operation="bind" iconOnly aria-label="禅道绑定" type="text" onClick={onBind} /> : null}
     <Dropdown trigger={['click']} menu={{ items: [
       { key: 'zentao', label: '禅道绑定', disabled: !canManage },
-      { key: 'code', label: '代码绑定', disabled: !canManage },
+      { key: 'code', label: '关联软件仓库', disabled: !canWrite },
       { type: 'divider' },
       { key: 'delete', label: '删除需求', danger: true, disabled: !canWrite || deleting },
     ], onClick: ({ key }) => {
       if (key === 'zentao' && canManage) onBind()
-      if (key === 'code' && canManage) onCodeBind()
+      if (key === 'code' && canWrite) onCodeBind()
       if (key === 'delete' && canWrite && !deleting) confirmDelete()
     } }}>
       <Tooltip title="更多操作"><Button type="text" className="project-requirement-more-action" aria-label="更多操作" icon={<MoreOutlined />} disabled={!canManage && !canWrite} loading={deleting} /></Tooltip>

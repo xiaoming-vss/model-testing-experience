@@ -235,18 +235,18 @@
 @media (max-width: 640px), (max-height: 700px) {
   .generation-chain-modal :is(.ant-modal-container, .ant-modal-content) { height: calc(100dvh - 32px); }
 }
-/* API 用例弹窗在对应页签里按内容自适应高度，这里保持一致。 */
-.generation-chain-modal:has(.gc-artifact-scroll.is-api-cases) :is(.ant-modal-container, .ant-modal-content) {
+/* API 用例和设计弹窗在对应页签里按内容自适应高度，这里保持一致。 */
+.generation-chain-modal:has(.gc-artifact-scroll:is(.is-api-cases, .is-api-design)) :is(.ant-modal-container, .ant-modal-content) {
   height: auto;
   max-height: min(94dvh, 1200px);
 }
-.gc-artifact-scroll:is(.is-material-comparison, .is-requirement-analysis, .is-case-names, .is-detailed-cases, .is-api-cases, .is-ui-stage) {
+.gc-artifact-scroll:is(.is-material-comparison, .is-requirement-analysis, .is-case-names, .is-detailed-cases, .is-api-cases, .is-api-design, .is-ui-stage) {
   margin: 0 -24px;
   padding: 0;
   border-top: 0;
 }
 .gc-artifact-scroll:is(.is-material-comparison, .is-detailed-cases, .is-ui-stage) { overflow: hidden; }
-.gc-artifact-scroll:is(.is-requirement-analysis, .is-case-names, .is-api-cases) { overflow: auto; padding: 12px 24px; }
+.gc-artifact-scroll:is(.is-requirement-analysis, .is-case-names, .is-api-cases, .is-api-design) { overflow: auto; padding: 12px 24px; }
 .gc-artifact-scroll.is-case-names { display: flex; flex-direction: column; overflow: hidden; }
 .gc-artifact-scroll.is-case-names .ai-case-name-tree { flex: 1 1 0%; min-height: 0; }
 .gc-artifact-scroll.is-material-comparison > .requirement-material-host { height: 100%; }
@@ -346,7 +346,7 @@
   .generation-chain-modal .ant-modal-header { padding: 12px 56px 12px 16px; }
   .generation-chain-modal .ant-modal-footer { padding: 10px 16px; }
   .gc-source { padding: 10px 16px 0; }
-  .gc-artifact-scroll:is(.is-material-comparison, .is-requirement-analysis, .is-case-names, .is-detailed-cases, .is-api-cases, .is-ui-stage) { margin: 0 -16px; }
+  .gc-artifact-scroll:is(.is-material-comparison, .is-requirement-analysis, .is-case-names, .is-detailed-cases, .is-api-cases, .is-api-design, .is-ui-stage) { margin: 0 -16px; }
   .gc-workspace.is-revising { flex-direction: column; overflow: auto; }
   .gc-workspace.is-revising > .gc-source { flex: 0 0 auto; width: auto; min-height: 320px; }
   .gc-workspace.is-revising > .revision-side-panel { margin: 10px 16px 16px; }

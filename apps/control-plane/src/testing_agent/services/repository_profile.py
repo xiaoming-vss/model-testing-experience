@@ -19,10 +19,13 @@ from testing_agent.core.errors import (
     dynamic_error,
 )
 from testing_agent.models.ai_generate_task import AiGenerateTask
-from testing_agent.models.resource_binding import ResourceBinding
 from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
 from testing_agent.repositories.generation_chain import GenerationChainRepository
-from testing_agent.repositories.resource_binding import ResourceBindingRepository
+from testing_agent.repositories.requirement_software_repository import (
+    RequirementRepositoryBinding,
+    RequirementSoftwareRepositoryRepository,
+    unique_by_git_repository,
+)
 from testing_agent.schemas.requirement import normalize_document_type
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
@@ -52,12 +55,12 @@ class RepositoryProfileService:
     def __init__(
         self,
         task_repository: AiGenerateTaskRepository,
-        binding_repository: ResourceBindingRepository,
+        requirement_repository: RequirementSoftwareRepositoryRepository,
         integration_connection_service: IntegrationConnectionService,
         credential_cipher: IntegrationCredentialCipher,
     ):
         self.task_repository = task_repository
-        self.binding_repository = binding_repository
+        self.requirement_repository = requirement_repository
         self.integration_connection_service = integration_connection_service
         self.credential_cipher = credential_cipher
 
@@ -85,13 +88,13 @@ class RepositoryProfileService:
         if material is None:
             raise dynamic_error(ErrBadRequest, "请先审核通过材料整理，再进行仓库画像分析")
 
-        bindings = list(
-            await self.binding_repository.list_active_repo_bindings_for_requirement(
+        bindings = unique_by_git_repository(
+            await self.requirement_repository.list_for_requirement_with_repository(
                 task.requirement_id
             )
         )
         if not bindings:
-            raise dynamic_error(ErrResourceBindingInvalid, "需求尚未绑定代码仓库，无法分析")
+            raise dynamic_error(ErrResourceBindingInvalid, "需求尚未关联软件仓库，无法分析")
 
         entries = [
             await self._binding_entry(
@@ -129,19 +132,22 @@ class RepositoryProfileService:
     async def _binding_entry(
         self,
         task: AiGenerateTask,
-        binding: ResourceBinding,
+        binding: RequirementRepositoryBinding,
         *,
         user_id: str,
         connection_ids: dict[str, str],
     ) -> dict[str, Any]:
-        extra = binding.extra_json or {}
-        branch = str(extra.get("branch") or "").strip()
-        fallback_path = binding.remote_name_snapshot or binding.remote_resource_id
+        repository = binding.software_repository
+        association = binding.association
+        branch = association.branch.strip()
+        fallback_path = repository.repository_path or repository.repository_name
         entry = {
-            "bindingId": binding.binding_id,
-            "instanceUrl": binding.instance_url,
-            "repositoryId": binding.remote_resource_id,
-            "groupId": binding.remote_parent_id or "",
+            "bindingId": repository.software_repository_id,
+            "softwareRepositoryId": repository.software_repository_id,
+            "softwareRepositoryName": repository.name,
+            "instanceUrl": repository.repository_instance_url,
+            "repositoryId": repository.repository_project_id,
+            "groupId": repository.repository_group_id,
             "pathWithNamespace": fallback_path,
             "branch": branch,
             "cloneUrl": "",
@@ -150,21 +156,20 @@ class RepositoryProfileService:
             "profileError": "",
         }
         if not branch:
-            entry["profileError"] = "仓库绑定缺少工作分支"
+            entry["profileError"] = "软件仓库关联缺少工作分支"
             return entry
 
         try:
             access = await resolve_repo_gitlab_access(
-                self.binding_repository,
                 self.integration_connection_service,
                 self.credential_cipher,
                 task.project_id,
-                binding,
+                repository,
                 user_id=user_id,
-                connection_id=connection_ids.get(binding.instance_url, ""),
+                connection_id=connection_ids.get(repository.repository_instance_url, ""),
             )
         except Exception as exc:
-            _log_unavailable(task, binding, "access", exc)
+            _log_unavailable(task, repository.software_repository_id, "access", exc)
             entry["profileError"] = "未找到该仓库可用的 GitLab 个人授权"
             return entry
 
@@ -172,11 +177,11 @@ class RepositoryProfileService:
             project = await self.integration_connection_service.get_gitlab_project(
                 access.connection_id,
                 task.project_id,
-                binding.remote_resource_id,
+                repository.repository_project_id,
                 user_id=user_id,
             )
         except Exception as exc:
-            _log_unavailable(task, binding, "project", exc)
+            _log_unavailable(task, repository.software_repository_id, "project", exc)
             entry["profileError"] = "GitLab 仓库不可访问"
             return entry
 
@@ -192,12 +197,12 @@ class RepositoryProfileService:
             head_commit = await self.integration_connection_service.resolve_gitlab_commit(
                 access.connection_id,
                 task.project_id,
-                binding.remote_resource_id,
+                repository.repository_project_id,
                 branch,
                 user_id=user_id,
             )
         except Exception as exc:
-            _log_unavailable(task, binding, "commit", exc)
+            _log_unavailable(task, repository.software_repository_id, "commit", exc)
             entry["profileError"] = "工作分支不存在或无权限"
             return entry
         if not head_commit:
@@ -215,13 +220,14 @@ class RepositoryProfileService:
 
 
 def _log_unavailable(
-    task: AiGenerateTask, binding: ResourceBinding, stage: str, exc: Exception
+    task: AiGenerateTask, software_repository_id: str, stage: str, exc: Exception
 ) -> None:
     # Exception messages from remote clients can contain URLs or tokens; keep only the type.
     LOGGER.warning(
-        "repository profile binding unavailable: task_id=%s binding_id=%s stage=%s error=%s",
+        "repository profile binding unavailable: task_id=%s "
+        "software_repository_id=%s stage=%s error=%s",
         task.task_id,
-        binding.binding_id,
+        software_repository_id,
         stage,
         type(exc).__name__,
     )

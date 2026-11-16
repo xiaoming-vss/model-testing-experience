@@ -333,16 +333,22 @@ class DirectStageStorage:
             context["uiSourceBatchId"] = source.get("uiSourceBatchId") or current.id
             context["uiSourceInputs"] = ui_source_inputs(source)
         elif task_type == "functional_case_generate":
+            functional_source_keys = {
+                "sourceContent",
+                "sourceFormat",
+                "sourceFormatVersion",
+                "requirementMaterialVersion",
+            }
             context["functionalSource"] = {
                 key: deepcopy(value)
                 for key, value in source.items()
-                if key in {"sourceContent", "requirementMaterialVersion", "documentType"}
+                if key in functional_source_keys
             }
         elif (
             task_type == "api_case_generate"
-            and source.get("apiWorkflowVersion") == "api_two_stage/1.0"
+            and source.get("apiWorkflowVersion") == "api_three_stage/1.0"
         ):
-            context["apiWorkflowVersion"] = "api_two_stage/1.0"
+            context["apiWorkflowVersion"] = "api_three_stage/1.0"
         now = datetime.now(UTC)
         version = AiGenerateStageVersion(
             version_id=f"sv-{uuid4()}",

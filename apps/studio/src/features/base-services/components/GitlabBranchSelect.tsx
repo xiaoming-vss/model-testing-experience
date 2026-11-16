@@ -9,6 +9,7 @@ export function GitlabBranchSelect({
   repositoryId,
   value,
   placeholder,
+  ariaLabel,
   onChange = () => {},
   allowClear = true,
   autoSearch = '',
@@ -19,6 +20,7 @@ export function GitlabBranchSelect({
   repositoryId: string
   value?: string
   placeholder: string
+  ariaLabel?: string
   onChange?: (branchName?: string) => void
   allowClear?: boolean
   autoSearch?: string
@@ -54,6 +56,7 @@ export function GitlabBranchSelect({
   return (
     <Select
       className="requirement-code-binding-select"
+      aria-label={ariaLabel ?? placeholder}
       showSearch
       searchValue={search}
       filterOption={false}

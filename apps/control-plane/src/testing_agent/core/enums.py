@@ -48,10 +48,6 @@ class BugStatus(StrEnum):
         return {item.value for item in cls}
 
 
-# 已解决（包括延期处理）仍未关闭。
-BUG_UNCLOSED_STATUSES = frozenset({BugStatus.ACTIVE.value, BugStatus.RESOLVED.value})
-
-
 class BugResolution(StrEnum):
     BY_DESIGN = "bydesign"
     DUPLICATE = "duplicate"
@@ -188,9 +184,6 @@ class TestOrderEntryStatus(StrEnum):
     def values(cls) -> set[str]:
         return {item.value for item in cls}
 
-
-# 成功语义兼容集合:历史/Go 侧可能传 passed/completed,统一视为成功。
-SUCCESS_STATUSES = {RunStatus.SUCCESS.value, "passed", "completed"}
 
 # 仍在推进中的运行记录:worker 可能还会写回结果,不允许删除。
 RUN_ACTIVE_STATUSES = {

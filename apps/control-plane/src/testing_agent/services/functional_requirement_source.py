@@ -10,6 +10,9 @@ from testing_agent.services.requirement_material_source import (
     material_version_ref,
 )
 
+FUNCTIONAL_SOURCE_FORMAT = "requirement_understanding_json"
+FUNCTIONAL_SOURCE_FORMAT_VERSION = "0.2"
+
 
 async def functional_requirement_source(
     repository: GenerationChainRepository, requirement_id: str, version_id: str = ""
@@ -22,8 +25,7 @@ async def functional_requirement_source(
         raise dynamic_error(ErrBadRequest, "材料整理版本内容为空，请重新生成并审核")
     return {
         "sourceContent": content,
+        "sourceFormat": FUNCTIONAL_SOURCE_FORMAT,
+        "sourceFormatVersion": FUNCTIONAL_SOURCE_FORMAT_VERSION,
         "requirementMaterialVersion": material_version_ref(version),
-        # 功能用例消费的是材料整理结果，不是原始材料文件；显式声明类型，
-        # 避免 Worker 回退使用 sourceType="requirement" 作为文档类型。
-        "documentType": "text",
     }

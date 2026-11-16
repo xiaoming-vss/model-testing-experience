@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, Index, String, Text
+from sqlalchemy import JSON, ForeignKey, Index, String, Text
 from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -59,6 +59,11 @@ class AiGenerateTask(Base):
     )
     source_content: Mapped[str] = mapped_column(
         LONGTEXT, nullable=False, comment="AI 任务源输入内容"
+    )
+    interface_ids_json: Mapped[list[str] | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="API 用例生成任务选中的接口业务标识有序列表；其他任务为空",
     )
     instruction: Mapped[str] = mapped_column(
         Text, nullable=False, default="", comment="AI 任务补充生成指令"

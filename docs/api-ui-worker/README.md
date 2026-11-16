@@ -76,6 +76,10 @@ Worker 不再监听文件下载端口，9010 截图服务已移除。截图和 T
 
 设置 `TEST_WORKER_HEALTH_PORT` 时启动 `GET /healthz`（默认端口 8080，未设置时不监听，便于本地开发）；Kubernetes chart 用它提供存活/就绪探针。Dockerfile 仍不声明 `HEALTHCHECK`，Compose 不设置健康检查条件。
 
+## API 断言比较符
+
+`api/rule_runtime.py` 按 `orderNo` 执行启用的断言规则，先把来源值字符串化再比较。`exists` 表示来源值存在且非空：缺失字段、`null` 和空字符串不通过，数字 `0` 与布尔 `false` 视为存在；规则中的期望值可留空。`regex` 使用 Python `re.search` 在实际值中匹配，非法表达式记为断言失败并返回 `invalid regex: <表达式>`。其他比较符沿用既有行为。
+
 ## UI 环境变量与后置提取
 
 步骤执行前收集 `locatorValue` / `operationValue` 中的 `{{名字}}`，通过

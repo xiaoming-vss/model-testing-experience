@@ -179,7 +179,7 @@ async def _start_stage(
             raise ErrRequirementFileMissing()
         source["workflowVersion"] = 2
     if kind == "api":
-        source["apiWorkflowVersion"] = "api_two_stage/1.0"
+        source["apiWorkflowVersion"] = "api_three_stage/1.0"
     if kind == "ui" and stage == "ui_surface":
         first = stages[stage]
         if not first.source_batch_id or body.refresh_inputs:

@@ -63,11 +63,6 @@ class TwoStageTests(unittest.TestCase):
             example("readable-material"),
         )
 
-    def test_new_material_cannot_run_unadapted_understanding(self):
-        task = self.task("feature_understanding", {"firstStepOutput": example("readable-material")})
-        with self.assertRaisesRegex(ValueError, "不支持阶段"):
-            self.run_stage(task, lambda **kwargs: self.fail("unexpected model call"), [])
-
     def test_revision_attachments_are_downloaded_and_sent_as_media(self):
         extraction = example("readable-material")
         downloads, captured = [], []

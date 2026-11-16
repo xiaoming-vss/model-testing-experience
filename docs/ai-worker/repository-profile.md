@@ -5,10 +5,10 @@
 ## 输入
 
 - 用户选择的已审核材料整理版本，格式为 `readable_requirement_material` 0.2；
-- 该需求全部激活的代码仓库绑定；
-- 每个仓库工作分支的 HEAD commit。
+- 该需求全部关联的软件仓库及关联上的工作分支；
+- 每个软件仓库绑定 Git 仓库工作分支的 HEAD commit。
 
-控制面建 run 时冻结材料整理正文、版本引用、仓库 `cloneUrl`/`headCommit`/`connectionId`。单仓库解析失败写入 `profileError`，其余仓库继续；没有仓库绑定时拒绝运行。
+控制面建 run 时冻结材料整理正文、版本引用、软件仓库身份、Git 仓库 `cloneUrl`/`headCommit`/`connectionId`。单仓库解析失败写入 `profileError`，其余仓库继续；需求没有关联软件仓库或关联缺少工作分支时拒绝运行。
 
 ## UI 生成消费方式
 

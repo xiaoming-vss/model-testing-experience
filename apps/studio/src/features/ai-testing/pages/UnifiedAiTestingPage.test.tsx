@@ -150,8 +150,8 @@ describe('代码风险分析列表', () => {
 
   it('状态筛选按最新运行状态过滤，并给出各档计数', async () => {
     const allTasks = [
-      { taskId: 'api-success', name: '成功的任务', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'openapi', instruction: '', latestRunStatus: 'success' },
-      { taskId: 'api-review', name: '待审核的任务', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'openapi', instruction: '', latestRunStatus: 'waiting_review' },
+      { taskId: 'api-success', name: '成功的任务', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'interface_library', instruction: '', latestRunStatus: 'success' },
+      { taskId: 'api-review', name: '待审核的任务', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'interface_library', instruction: '', latestRunStatus: 'waiting_review' },
     ]
     installFetchHandler((url) => {
       if (url.pathname === '/v1/projects/project-1/code-risk-analysis-tasks') {
@@ -183,8 +183,8 @@ describe('代码风险分析列表', () => {
 
   it('关键词搜索按任务名称与所属需求过滤', async () => {
     const allTasks = [
-      { taskId: 'api-task-1', name: '登录接口用例', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'openapi', instruction: '' },
-      { taskId: 'api-task-2', name: '订单接口用例', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'openapi', instruction: '' },
+      { taskId: 'api-task-1', name: '登录接口用例', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'interface_library', instruction: '' },
+      { taskId: 'api-task-2', name: '订单接口用例', projectId: 'project-1', sprintId: 'sprint-1', requirementId: 'requirement-1', sourceType: 'interface_library', instruction: '' },
     ]
     installFetchHandler((url) => {
       if (url.pathname === '/v1/projects/project-1/code-risk-analysis-tasks') {

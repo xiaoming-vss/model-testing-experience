@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from pydantic import AliasChoices, BaseModel, Field
 
+FUNCTIONAL_SOURCE_FORMAT = "requirement_understanding_json"
+FUNCTIONAL_SOURCE_FORMAT_VERSION = "0.2"
+
 
 class PlatformClaimTask(BaseModel):
     claim_id: str = Field(
@@ -81,6 +84,14 @@ class PlatformSnapshotRun(BaseModel):
         default="",
         validation_alias=AliasChoices("sourceType", "source_type"),
     )
+    source_format: str = Field(
+        default="",
+        validation_alias=AliasChoices("sourceFormat", "source_format"),
+    )
+    source_format_version: str = Field(
+        default="",
+        validation_alias=AliasChoices("sourceFormatVersion", "source_format_version"),
+    )
     source_content: str = Field(
         default="", validation_alias=AliasChoices("sourceContent", "source_content")
     )
@@ -108,6 +119,11 @@ class PlatformSnapshotRun(BaseModel):
     config_json: str = Field(
         default="",
         validation_alias=AliasChoices("configJson", "config_json"),
+    )
+    interfaces: list[dict[str, object]] = Field(default_factory=list)
+    software_repositories: list[dict[str, object]] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("softwareRepositories", "software_repositories"),
     )
     daily_metrics: dict[str, object] = Field(
         default_factory=dict,

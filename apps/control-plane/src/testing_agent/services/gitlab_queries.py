@@ -31,18 +31,6 @@ class GitLabResources:
         self.credentials = credentials
         self.client = client
 
-    async def resolve_group_id(
-        self, connection_id: str, project_id: str, group_id: str, *, user_id: str
-    ) -> str:
-        connection = await self.authorize(user_id, "gitlab", connection_id, project_id)
-        group = await self._call(
-            self.client.get_group,
-            connection.base_url,
-            self.credentials.gitlab_token(connection, user_id=user_id, project_id=project_id),
-            group_id,
-        )
-        return str(group["id"])
-
     async def ensure_repository_scope(
         self,
         connection_id: str,
@@ -61,7 +49,7 @@ class GitLabResources:
             repository_id,
         )
         if not result["withinGroup"]:
-            raise dynamic_error(ErrResourceBindingInvalid, "仓库不在项目已绑群组范围内")
+            raise dynamic_error(ErrResourceBindingInvalid, "仓库不在所选 GitLab 群组范围内")
         return str(result["repositoryId"])
 
     async def get_project(

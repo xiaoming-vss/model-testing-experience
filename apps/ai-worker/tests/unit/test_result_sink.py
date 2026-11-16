@@ -79,7 +79,7 @@ class ResultSinkTests(unittest.TestCase):
             TaskProgress(
                 task_id="task-1",
                 attempt_id="run-1",
-                current_stage="openapi_extract",
+                current_stage="interface_extract",
                 stage_status="running",
                 intermediate_json_text='{"cases":[]}',
                 output_yaml="",
@@ -95,7 +95,7 @@ class ResultSinkTests(unittest.TestCase):
                 "workerId": "worker-1",
                 "taskId": "task-1",
                 "attemptId": "run-1",
-                "currentStage": "openapi_extract",
+                "currentStage": "interface_extract",
                 "stageStatus": "running",
                 "configJson": '{"cases":[]}',
                 "resultSummaryJson": summary,

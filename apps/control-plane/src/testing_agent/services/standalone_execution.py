@@ -31,8 +31,11 @@ def workflow_stage_names(task_type: str, source: dict[str, Any]) -> list[str]:
     """Return the existing stage order for an independent generation contract."""
     if task_type == "ui_case_generate":
         return list(UI_STAGES)
-    if task_type == "api_case_generate" and source.get("apiWorkflowVersion") == "api_two_stage/1.0":
-        return ["openapi_extract", "generate"]
+    if (
+        task_type == "api_case_generate"
+        and source.get("apiWorkflowVersion") == "api_three_stage/1.0"
+    ):
+        return ["interface_extract", "api_design", "generate"]
     if task_type in _STANDALONE_TYPES:
         return layout(task_type)
     raise ErrBadRequest()

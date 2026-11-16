@@ -60,6 +60,7 @@ class RequirementDesignRepository:
                 Task.name,
                 Task.source_type,
                 (func.length(Task.source_content) > 0).label("has_source"),
+                Task.interface_ids_json,
                 Task.created_at,
                 Task.updated_at,
             )
@@ -72,7 +73,7 @@ class RequirementDesignRepository:
                 "kind": TYPE_KINDS[row.task_type],
                 "name": row.name,
                 "sourceType": row.source_type,
-                "hasSource": bool(row.has_source),
+                "hasSource": bool(row.has_source or row.interface_ids_json),
                 "sourceFilename": "",
                 "createdAt": row.created_at,
                 "updatedAt": row.updated_at,

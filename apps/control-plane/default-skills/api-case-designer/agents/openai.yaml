@@ -1,0 +1,7 @@
+interface:
+  display_name: "API Test Case Designer"
+  short_description: "Design positive, negative and boundary API cases from approved interface extraction"
+  default_prompt: "Use $api-case-designer to design API test cases from this approved interface extraction JSON."
+
+policy:
+  allow_implicit_invocation: true

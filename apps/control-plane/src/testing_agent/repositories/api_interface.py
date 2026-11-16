@@ -5,10 +5,10 @@ from typing import Any
 from sqlalchemy import delete, exists, func, or_, select
 
 from testing_agent.domain.api_interface_query import ApiInterfaceQuery
-from testing_agent.models.api_app import ApiApp
 from testing_agent.models.api_interface import ApiInterface
 from testing_agent.models.api_interface_requirement import ApiInterfaceRequirement
 from testing_agent.models.requirement import Requirement
+from testing_agent.models.software_repository import SoftwareRepository
 from testing_agent.models.sprint import Sprint
 from testing_agent.repositories.base import BaseRepository
 
@@ -33,22 +33,24 @@ class ApiInterfaceRepository(BaseRepository):
         )
         return await self.session.scalar(statement)
 
-    async def get_by_identity(self, app_id: str, method: str, path_key: str) -> ApiInterface | None:
+    async def get_by_identity(
+        self, software_repository_id: str, method: str, path_key: str
+    ) -> ApiInterface | None:
         return await self.session.scalar(
             select(ApiInterface).where(
-                ApiInterface.app_id == app_id,
+                ApiInterface.software_repository_id == software_repository_id,
                 ApiInterface.method == method,
                 ApiInterface.path_key == path_key,
             )
         )
 
     async def get_by_identity_for_update(
-        self, app_id: str, method: str, path_key: str
+        self, software_repository_id: str, method: str, path_key: str
     ) -> ApiInterface | None:
         statement = (
             select(ApiInterface)
             .where(
-                ApiInterface.app_id == app_id,
+                ApiInterface.software_repository_id == software_repository_id,
                 ApiInterface.method == method,
                 ApiInterface.path_key == path_key,
             )
@@ -61,23 +63,25 @@ class ApiInterfaceRepository(BaseRepository):
         conditions = self._conditions(query)
         return await self._list(conditions, query)
 
-    async def list_by_app(
-        self, app_id: str, query: ApiInterfaceQuery
+    async def list_by_software_repository(
+        self, software_repository_id: str, query: ApiInterfaceQuery
     ) -> tuple[list[ApiInterface], int]:
-        conditions = self._conditions(query, app_id=app_id)
+        conditions = self._conditions(query, software_repository_id=software_repository_id)
         return await self._list(conditions, query)
 
-    def _conditions(self, query: ApiInterfaceQuery, *, app_id: str = "") -> list[Any]:
+    def _conditions(
+        self, query: ApiInterfaceQuery, *, software_repository_id: str = ""
+    ) -> list[Any]:
         conditions: list[Any] = []
         if query.project_id:
-            conditions.append(ApiApp.project_id == query.project_id)
-        resolved_app_id = app_id or query.app_id
-        if resolved_app_id:
-            conditions.append(ApiInterface.app_id == resolved_app_id)
+            conditions.append(SoftwareRepository.project_id == query.project_id)
+        resolved_software_repository_id = software_repository_id or query.software_repository_id
+        if resolved_software_repository_id:
+            conditions.append(
+                ApiInterface.software_repository_id == resolved_software_repository_id
+            )
         if query.method:
             conditions.append(ApiInterface.method == query.method)
-        if query.enabled is not None:
-            conditions.append(ApiInterface.enabled.is_(query.enabled))
         if query.keyword:
             pattern = _like_pattern(query.keyword)
             conditions.append(
@@ -118,33 +122,99 @@ class ApiInterfaceRepository(BaseRepository):
         total = int(
             await self.session.scalar(
                 select(func.count(ApiInterface.id))
-                .join(ApiApp, ApiApp.app_id == ApiInterface.app_id)
+                .join(
+                    SoftwareRepository,
+                    SoftwareRepository.software_repository_id
+                    == ApiInterface.software_repository_id,
+                )
                 .where(*conditions)
             )
             or 0
         )
         statement = (
-            select(ApiInterface, ApiApp.name.label("app_name"))
-            .join(ApiApp, ApiApp.app_id == ApiInterface.app_id)
+            select(
+                ApiInterface,
+                SoftwareRepository.name.label("software_repository_name"),
+            )
+            .join(
+                SoftwareRepository,
+                SoftwareRepository.software_repository_id == ApiInterface.software_repository_id,
+            )
             .where(*conditions)
-            .order_by(ApiInterface.updated_at.desc(), ApiInterface.id.desc())
+            .order_by(
+                ApiInterface.updated_at.desc(),
+                ApiInterface.path.asc(),
+                ApiInterface.method.asc(),
+                ApiInterface.id.asc(),
+            )
             .limit(query.limit)
             .offset(query.offset)
         )
         rows = (await self.session.execute(statement)).all()
         interfaces: list[ApiInterface] = []
-        for interface, app_name in rows:
-            interface.app_name = app_name
+        for interface, software_repository_name in rows:
+            interface.software_repository_name = software_repository_name
             interfaces.append(interface)
         await self.attach_requirements(interfaces)
         return interfaces, total
 
-    async def list_all_by_app(self, app_id: str) -> list[ApiInterface]:
+    async def list_all_by_software_repository(
+        self, software_repository_id: str
+    ) -> list[ApiInterface]:
         return list(
             (
                 await self.session.scalars(
                     select(ApiInterface)
-                    .where(ApiInterface.app_id == app_id)
+                    .where(ApiInterface.software_repository_id == software_repository_id)
+                    .order_by(ApiInterface.id.asc())
+                )
+            ).all()
+        )
+
+    async def list_all_by_software_repository_for_update(
+        self, software_repository_id: str
+    ) -> list[ApiInterface]:
+        """Lock all repository interfaces in id order for bulk group operations."""
+        statement = (
+            select(ApiInterface)
+            .where(ApiInterface.software_repository_id == software_repository_id)
+            .order_by(ApiInterface.id.asc())
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        return list((await self.session.scalars(statement)).all())
+
+    async def list_by_ids(self, interface_ids: list[str]) -> list[ApiInterface]:
+        if not interface_ids:
+            return []
+        return list(
+            (
+                await self.session.scalars(
+                    select(ApiInterface)
+                    .where(ApiInterface.interface_id.in_(interface_ids))
+                    .order_by(ApiInterface.id.asc())
+                )
+            ).all()
+        )
+
+    async def list_by_ids_for_project(
+        self, project_id: str, interface_ids: list[str]
+    ) -> list[ApiInterface]:
+        if not interface_ids:
+            return []
+        return list(
+            (
+                await self.session.scalars(
+                    select(ApiInterface)
+                    .join(
+                        SoftwareRepository,
+                        SoftwareRepository.software_repository_id
+                        == ApiInterface.software_repository_id,
+                    )
+                    .where(
+                        ApiInterface.interface_id.in_(interface_ids),
+                        SoftwareRepository.project_id == project_id,
+                    )
                     .order_by(ApiInterface.id.asc())
                 )
             ).all()

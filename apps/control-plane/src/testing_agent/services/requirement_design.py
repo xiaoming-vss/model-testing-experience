@@ -1,9 +1,6 @@
 """Requirement workspace orchestration over the existing generation lifecycle."""
 
 from typing import Any
-from urllib.parse import urlsplit
-
-import yaml
 
 from testing_agent.core.errors import AppError, ErrBadRequest, ErrNotFound
 from testing_agent.models.requirement import Requirement
@@ -24,21 +21,6 @@ LABELS = {
     "api": "API 测试",
     "ui": "UI 测试",
 }
-
-
-def validate_openapi_source(source: str) -> None:
-    parsed_url = urlsplit(source.strip())
-    if parsed_url.scheme in {"http", "https"} and parsed_url.hostname:
-        return  # Existing URL configurations remain supported by the API worker.
-    try:
-        document = yaml.safe_load(source)
-    except yaml.YAMLError as exc:
-        raise AppError(400, "OpenAPI/Swagger 文档不是合法 JSON 或 YAML", 400) from exc
-    if not isinstance(document, dict) or not (
-        isinstance(document.get("openapi") or document.get("swagger"), str)
-        and isinstance(document.get("paths"), dict)
-    ):
-        raise AppError(400, "请提供包含 openapi/swagger 版本和 paths 的接口文档", 400)
 
 
 class RequirementDesignService:
@@ -90,10 +72,10 @@ class RequirementDesignService:
         body: RequirementDesignConfigurationRequest,
         user_id: str,
     ) -> dict[str, Any]:
-        if kind == "api" and body.source_content is not None:
-            validate_openapi_source(body.source_content)
         if body.task_id and body.new_configuration:
             raise ErrBadRequest()
+        if kind == "api" and body.source_content:
+            raise AppError(400, "API 用例生成任务不再接受 OpenAPI/Swagger 文档来源", 400)
         requirement = await self.scope(requirement_id, user_id)
         sprint = await self.task_repository.get_sprint(requirement.sprint_id)
         if sprint is None:
@@ -132,17 +114,17 @@ class RequirementDesignService:
             changes: dict[str, Any] = {}
             if body.instruction is not None:
                 changes["instruction"] = body.instruction
-            if kind == "api" and body.source_content is not None:
-                if not body.source_content.strip():
-                    raise AppError(400, "请提供 OpenAPI/Swagger 文档", 400)
-                changes.update(sourceContent=body.source_content, sourceType="openapi")
+            if kind == "api" and body.interface_ids is not None:
+                if not body.interface_ids:
+                    raise AppError(400, "请至少选择一个接口", 400)
+                changes["interfaceIds"] = body.interface_ids
             if changes:
                 return await self.commands.update(
                     kind, task_id, changes, user_id, current_read=True
                 )
             return dump_task(task)
-        if kind == "api" and not (body.source_content or "").strip():
-            raise AppError(400, "请提供 OpenAPI/Swagger 文档", 400)
+        if kind == "api" and not body.interface_ids:
+            raise AppError(400, "请至少选择一个接口", 400)
         return await self.commands.create(
             kind,
             sprint.project_id,
@@ -150,8 +132,11 @@ class RequirementDesignService:
                 "name": f"{requirement.name} · {LABELS[kind]}",
                 "requirementId": requirement_id,
                 "sprintId": requirement.sprint_id,
-                "sourceType": "openapi" if kind == "api" else "requirement",
-                "sourceContent": body.source_content or "",
+                **(
+                    {"interfaceIds": body.interface_ids}
+                    if kind == "api"
+                    else {"sourceType": "requirement", "sourceContent": ""}
+                ),
                 "instruction": body.instruction or "",
             },
             user_id,

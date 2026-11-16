@@ -9,10 +9,13 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from support.generation import generation_services
 from support.mysql_initialization import mysql  # noqa: F401
 
+from testing_agent.domain.api_interface import path_key
 from testing_agent.models.ai_generate_task import AiGenerateTask as Task
+from testing_agent.models.api_interface import ApiInterface
 from testing_agent.models.integration_connection import IntegrationConnection
 from testing_agent.models.project import Project
 from testing_agent.models.requirement import Requirement
+from testing_agent.models.software_repository import SoftwareRepository
 from testing_agent.models.sprint import Sprint
 from testing_agent.models.user import User
 from testing_agent.models.worker_task import WorkerTask
@@ -27,7 +30,7 @@ from testing_agent.services.stage_storage.commands import DirectStageCommands
 async def test_concurrent_default_configuration_and_same_request_run(mysql):  # noqa: F811
     engine = create_async_engine(mysql.url.set(drivername="mysql+asyncmy"))
     sessions = async_sessionmaker(engine, expire_on_commit=False)
-    uid, pid, sid, rid, llm = [str(uuid4()) for _ in range(5)]
+    uid, pid, sid, rid, llm, repository_id, interface_id = [str(uuid4()) for _ in range(7)]
     request_id = uuid4()
     try:
         async with sessions() as session:
@@ -35,6 +38,35 @@ async def test_concurrent_default_configuration_and_same_request_run(mysql):  # 
             session.add(User(user_id=uid, nickname="isolated-design"))
             await session.flush()
             session.add(Project(project_id=pid, user_id=uid, name="isolated-design"))
+            await session.flush()
+            session.add(
+                SoftwareRepository(
+                    software_repository_id=repository_id,
+                    project_id=pid,
+                    name="订单服务",
+                    description="",
+                    base_path="/api/v2",
+                    repository_project_id="repo-1",
+                    repository_group_id="group-1",
+                    repository_instance_key="",
+                    repository_path="commerce/order-service",
+                    repository_name="order-service",
+                    repository_instance_url="https://gitlab.example.com",
+                    version=1,
+                    created_by_user_id=uid,
+                )
+            )
+            await session.flush()
+            session.add(
+                ApiInterface(
+                    interface_id=interface_id,
+                    software_repository_id=repository_id,
+                    name="创建订单",
+                    method="POST",
+                    path="/orders",
+                    path_key=path_key("/orders"),
+                )
+            )
             await session.flush()
             session.add(
                 Sprint(
@@ -66,9 +98,7 @@ async def test_concurrent_default_configuration_and_same_request_run(mysql):  # 
             async with sessions() as session:
                 return await generation_services(
                     AiGenerateTaskRepository(session)
-                ).design.configure(
-                    rid, "api", Configuration(sourceContent='{"openapi":"3.0.0","paths":{}}'), uid
-                )
+                ).design.configure(rid, "api", Configuration(interfaceIds=[interface_id]), uid)
 
         configured = await asyncio.gather(
             configure(), configure(), configure(), return_exceptions=True
@@ -82,7 +112,7 @@ async def test_concurrent_default_configuration_and_same_request_run(mysql):  # 
                 return await DirectStageCommands(bundle.chain).run(
                     rid,
                     "api",
-                    "openapi_extract",
+                    "interface_extract",
                     GenerationChainRunRequest(requestId=request_id, connectionId=llm),
                     uid,
                 )
@@ -111,6 +141,14 @@ async def test_concurrent_default_configuration_and_same_request_run(mysql):  # 
         async with sessions() as session:
             await session.execute(delete(WorkerTask).where(WorkerTask.task_id == str(request_id)))
             await session.execute(delete(Task).where(Task.requirement_id == rid))
+            await session.execute(
+                delete(ApiInterface).where(ApiInterface.interface_id == interface_id)
+            )
+            await session.execute(
+                delete(SoftwareRepository).where(
+                    SoftwareRepository.software_repository_id == repository_id
+                )
+            )
             await session.execute(delete(Requirement).where(Requirement.requirement_id == rid))
             await session.execute(delete(Sprint).where(Sprint.sprint_id == sid))
             await session.execute(
@@ -167,7 +205,7 @@ async def test_member_revoked_after_initial_read_cannot_save_configuration(mysql
             monkeypatch.setattr(tasks.access, "ensure_project_access", pause_before_lock)
             operation = asyncio.create_task(
                 tasks.design.configure(
-                    rid, "api", Configuration(sourceContent='{"openapi":"3.0.0","paths":{}}'), actor
+                    rid, "api", Configuration(interfaceIds=["interface-missing"]), actor
                 )
             )
             await asyncio.wait_for(entered.wait(), 10)

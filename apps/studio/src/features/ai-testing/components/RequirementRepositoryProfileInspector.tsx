@@ -1,6 +1,5 @@
 import { Alert, Button, Spin, Tag, Tooltip } from 'antd'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
-import { getBindingRemoteName } from '@/features/base-services/utils/resourceBinding'
 import { getErrorMessage } from '@/utils/format'
 import type { RequirementRepositoryProfileWorkspace } from '../hooks/useRequirementRepositoryProfileWorkspace'
 
@@ -61,16 +60,20 @@ export function RequirementRepositoryProfileInspector({
         <h3>上游追溯</h3>
         <div className="gc-inspector-trace">
           <span className="gc-trace-chip">材料整理<b>{materialLabel}</b></span>
-          <span className="gc-trace-chip">绑定仓库<b>{workspace.bindings.length} 个</b></span>
+          <span className="gc-trace-chip">关联软件仓库<b>{workspace.bindings.length} 个</b></span>
         </div>
         {workspace.bindings.length ? (
           <div className="gc-profile-binding-list">
             {workspace.bindings.map(binding => (
-              <Tag key={binding.bindingId}>{getBindingRemoteName(binding)}</Tag>
+              <Tag key={binding.softwareRepositoryId}>
+                {binding.softwareRepositoryName}
+              </Tag>
             ))}
           </div>
         ) : !workspace.bindingsLoading ? (
-          <p className="gc-inspector-hint">该需求未绑定代码仓库，请先在需求列表完成「代码绑定」。</p>
+          <p className="gc-inspector-hint">
+            该需求未关联软件仓库，请先在需求列表完成「软件仓库」关联。
+          </p>
         ) : null}
       </section>
 

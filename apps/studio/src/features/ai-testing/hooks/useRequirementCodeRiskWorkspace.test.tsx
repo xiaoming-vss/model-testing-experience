@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { baseServicesApi } from '@/features/base-services/api/baseServices.api'
+import { interfaceLibraryApi } from '@/features/interface-library/api/interfaceLibrary.api'
 import { aiTestingApi } from '../api/aiTesting.api'
 import { generationChainApi } from '../api/generationChain.api'
 import { useRequirementCodeRiskWorkspace } from './useRequirementCodeRiskWorkspace'
@@ -27,8 +27,8 @@ function renderWorkspace(active = false) {
     { taskId: 'task', requirementId: 'req' },
   ] as never)
   vi.spyOn(aiTestingApi, 'getCodeRiskTaskRuns').mockResolvedValue([] as never)
-  vi.spyOn(baseServicesApi, 'getGitlabRequirementBindings').mockResolvedValue([
-    { provider: 'gitlab', remoteResourceType: 'repository' },
+  vi.spyOn(interfaceLibraryApi, 'getRequirementSoftwareRepositories').mockResolvedValue([
+    { softwareRepositoryId: 'repo-1', softwareRepositoryName: 'repo-1', branch: 'main', baselineBranch: 'main' },
   ] as never)
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>

@@ -18,15 +18,15 @@ WHERE TABLE_SCHEMA = DATABASE()
 ORDER BY TABLE_NAME, ORDINAL_POSITION;
 ```
 
-## v1 冻结基线
+## 预发布阶段单一基线
 
-`Base.metadata` 是 v1 的唯一结构来源，`alembic/versions/20261103_0001_v1_baseline.py` 是从该模型生成的唯一冻结迁移，创建全部业务表和 `alembic_version`。v1 只支持空库初始化：`alembic upgrade head` 建立完整结构，downgrade 仅用于空库测试往返，按依赖逆序删除全部表。
+`Base.metadata` 是唯一结构来源，`alembic/versions/20261103_0001_v1_baseline.py` 是当前唯一迁移，创建全部业务表和 `alembic_version`。第一版正式发布前，表、字段、约束、索引、默认值和注释变更直接修改该 baseline 并同步模型，不新增 update 迁移；迁移链始终保持单一 revision。v1 只支持空库初始化：`alembic upgrade head` 建立完整结构，downgrade 仅用于空库测试往返，按依赖逆序删除全部表。
 
-后续表、字段或注释变更必须新增迁移，不能改写 baseline。新增表或字段时，在模型定义旁填写业务含义，并随新迁移一起落库；说明应包含必要的单位、状态值、标识归属、快照用途和历史兼容约定，个人凭据的说明必须与实际存储方式一致。`description` 等业务列保存业务内容，其列注释解释该列本身的用途。
+第一版正式发布时冻结 baseline；发布之后的结构变更才改为新增迁移，不能改写已发布的基线。新增表或字段时，在模型定义旁填写业务含义，并随结构变更一起落库；说明应包含必要的单位、状态值、标识归属、快照用途和历史兼容约定，个人凭据的说明必须与实际存储方式一致。`description` 等业务列保存业务内容，其列注释解释该列本身的用途。
 
-`tests/test_initial_schema_migration.py` 验证唯一 baseline、空库升级、降级与再次升级；`tests/test_schema_comments.py` 验证模型注释完整性及真实 MySQL 注释与模型一致；`tests/test_mysql_initialization.py` 在明确指定的空、可丢弃测试库（库名必须以 `_test` 结尾）验证 MySQL 初始化和结构与模型一致。SQLite 不支持持久化表和字段注释，结构断言只覆盖表和字段。
+`tests/test_initial_schema_migration.py` 验证预发布阶段只有唯一 baseline，以及空库升级、降级与再次升级；`tests/test_schema_comments.py` 验证模型注释完整性及真实 MySQL 注释与模型一致；`tests/test_mysql_initialization.py` 在明确指定的空、可丢弃测试库（库名必须以 `_test` 结尾）验证 MySQL 初始化和结构与模型一致。SQLite 不支持持久化表和字段注释，结构断言只覆盖表和字段。
 
-本地开发库 `testing-agent-control-plane-b` 是唯一保留数据的例外：确认结构与 baseline 零差异且行数不变后，使用一次性 `alembic stamp --purge 20261103_0001` 写入版本号，不执行 DDL。详见[部署说明](../deployment.md#本地已有库的一次性-stamp)。
+本地开发库 `testing-agent-control-plane-b` 是唯一保留数据的例外：确认结构与当前 baseline 零差异且行数不变后，使用一次性 `alembic stamp --purge 20261103_0001` 写入版本号，不执行 DDL。旧 revision 已从代码库移除，原版本号无法直接 `alembic upgrade head`；也可以重建空库后重新初始化。详见[部署说明](../deployment.md#本地已有库的一次性-stamp)。
 
 ## LDAP 身份与认证切换
 
@@ -44,13 +44,14 @@ ORDER BY TABLE_NAME, ORDINAL_POSITION;
 
 表名保留 `api_` 前缀，因为改名会牵动 API 自动化的全部代码。运行协议与隐私规则见 [UI 环境变量与后置提取](ui-environment-variables.md)。
 
-## 接口库与应用
+## 接口库与软件仓库
 
-- `api_apps`：项目级接口应用，保存名称、说明、应用级 `base_path`、启用状态和 `version`。可选 GitLab 仓库以 `repository_project_id`、`repository_path`、`repository_name`、`repository_instance_url` 快照保存；`(project_id, name)` 唯一，删除应用前必须没有接口。
-- `api_interfaces`：接口定义，保存方法、规范化相对路径、`path_key`（路径 SHA-256）、请求头与 Path/Query 参数 JSON、请求体、单个默认成功响应、标签、说明、启用状态、版本和来源快照。接口身份由 `(app_id, method, path_key)` 唯一约束确定，避免 utf8mb4 长路径索引限制；应用外键为 `RESTRICT`。
+- `software_repositories`：项目级软件仓库，保存名称、说明、仓库级 `base_path`、手工接口分组列表 `interface_groups_json` 和 `version`。Git 仓库以 `repository_project_id`、`repository_group_id`（所选群组来源快照）、`repository_instance_key`（匹配操作者同实例个人授权）、`repository_path`、`repository_name`、`repository_instance_url` 快照保存，创建与换绑均必选；`(project_id, name)` 唯一，删除前必须没有接口和需求关联。
+- `api_interfaces`：接口定义，保存方法、规范化相对路径、`path_key`（路径 SHA-256）、请求头与 Path/Query 参数 JSON、请求体、单个默认成功响应、接口级 `security_json` 与文档级 `security_schemes_json`、标签、说明、版本和来源快照。接口身份由 `(software_repository_id, method, path_key)` 唯一约束确定，避免 utf8mb4 长路径索引限制；软件仓库外键为 `RESTRICT`。
 - `api_interface_requirements`：接口与需求的关联表，接口外键和需求外键均 `CASCADE`，`(interface_id, requirement_id)` 唯一；迭代通过需求归属推导，不在关联表冗余保存。
+- `requirement_software_repositories`：需求与软件仓库的多对多关联，保存需求级工作分支 `branch`、基线分支 `baseline_branch` 和关联人；`(requirement_id, software_repository_id)` 唯一，需求外键 `CASCADE`、软件仓库外键 `RESTRICT`。
 
-接口删除为业务硬删除，使用统一的 `ResourceDeletion`；导入提交在单一事务内锁定应用与接口行、校验来源摘要和逐项版本，并保留仅库中存在的接口。接口应用引用 GitLab 群组时阻止该群组解绑，直到引用被清除或替换。结构决策见 [ADR 0012](adr/0012-project-interface-library.md)。
+接口删除为业务硬删除，使用统一的 `ResourceDeletion`；导入提交在单一事务内锁定软件仓库与接口行、校验来源摘要和逐项版本，并保留仅库中存在的接口。接口分组没有独立表：展示集合由 `software_repositories.interface_groups_json` 中手工创建的分组名与 `api_interfaces.tags_json` 的首个非空标签合并而成；手工分组允许为空，重命名、移除和移动同时维护分组列表与批量标签。软件仓库直接绑定 GitLab 仓库，群组仅作为个人连接下的选择范围与来源快照。结构决策见 [ADR 0013](adr/0013-software-repository-and-interface-library-api-generation.md)、[ADR 0015](adr/0015-software-repository-direct-gitlab-binding.md) 与 [ADR 0016](adr/0016-interface-library-tag-groups.md)。
 
 ## AI 执行、阶段尝试与历史
 

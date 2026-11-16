@@ -2,6 +2,7 @@
 
 import json
 from types import SimpleNamespace
+from typing import Any
 
 from testing_agent.core.errors import ErrBadRequest, dynamic_error
 from testing_agent.domain.test_scope_analysis import validate_test_scope
@@ -29,6 +30,84 @@ def _json_object(value: object) -> dict | None:
     except ValueError:
         return None
     return parsed if isinstance(parsed, dict) else None
+
+
+def _strict_json_object(content: str) -> dict[str, Any]:
+    """复平面只做浅层严格解析：拒绝重复键、NaN 与 Infinity。"""
+
+    def unique_pairs(pairs: list[tuple[Any, Any]]) -> dict:
+        result: dict[Any, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"重复字段: {key}")
+            result[key] = value
+        return result
+
+    def invalid_constant(value: str) -> None:
+        raise ValueError(f"非法 JSON 数值: {value}")
+
+    try:
+        value = json.loads(content, object_pairs_hook=unique_pairs, parse_constant=invalid_constant)
+    except ValueError as exc:
+        raise dynamic_error(ErrBadRequest, "阶段产物必须是合法 JSON") from exc
+    if not isinstance(value, dict) or not value:
+        raise dynamic_error(ErrBadRequest, "阶段产物必须是非空 JSON 对象")
+    return value
+
+
+def _validate_api_design_shallow(value: dict[str, Any], extraction: Any) -> None:
+    """控制面只校验设计产物的结构和接口归属；覆盖规则由 Worker 完整校验。"""
+
+    if value.get("schemaVersion") != "api_test_design/1.0":
+        raise dynamic_error(ErrBadRequest, "设计产物 schemaVersion 必须是 api_test_design/1.0")
+    interfaces = value.get("interfaces")
+    if not isinstance(interfaces, dict) or not interfaces:
+        raise dynamic_error(ErrBadRequest, "设计产物必须包含非空 interfaces 对象")
+    seen_ids: set[str] = set()
+    seen_titles: set[str] = set()
+    for name, item in interfaces.items():
+        if not isinstance(name, str) or not name or not isinstance(item, dict):
+            raise dynamic_error(ErrBadRequest, "设计产物接口项必须是对象")
+        method, path = item.get("method"), item.get("path")
+        cases = item.get("cases")
+        if not isinstance(method, str) or not method or not isinstance(path, str) or not path:
+            raise dynamic_error(ErrBadRequest, f"设计产物接口 {name} 缺少 method/path")
+        if not isinstance(cases, list) or not cases:
+            raise dynamic_error(ErrBadRequest, f"设计产物接口 {name} 的 cases 不能为空")
+        for case in cases:
+            if not isinstance(case, dict):
+                raise dynamic_error(ErrBadRequest, f"设计产物接口 {name} 的用例必须是对象")
+            case_id, title = case.get("id"), case.get("title")
+            if (
+                not isinstance(case_id, str)
+                or not case_id
+                or not isinstance(title, str)
+                or not title
+            ):
+                raise dynamic_error(ErrBadRequest, f"设计产物接口 {name} 的用例缺少 id/title")
+            if case_id in seen_ids or title.casefold() in seen_titles:
+                raise dynamic_error(ErrBadRequest, "设计产物用例 id/title 必须全局唯一")
+            seen_ids.add(case_id)
+            seen_titles.add(title.casefold())
+            if not isinstance(case.get("basis"), dict) or not isinstance(
+                case.get("expected"), dict
+            ):
+                raise dynamic_error(ErrBadRequest, "设计产物用例必须包含 basis 和 expected")
+            expected = case["expected"]
+            if expected.get("statusClass") not in {"2xx", "4xx"}:
+                raise dynamic_error(ErrBadRequest, "设计产物 statusClass 必须是 2xx 或 4xx")
+    if isinstance(extraction, dict):
+        if set(interfaces) != set(extraction):
+            raise dynamic_error(ErrBadRequest, "设计产物接口集合必须与提取产物完全一致")
+        for name, item in interfaces.items():
+            baseline = extraction[name]
+            if not isinstance(baseline, dict) or (
+                item.get("method") != baseline.get("method")
+                or item.get("path") != baseline.get("path")
+            ):
+                raise dynamic_error(
+                    ErrBadRequest, f"设计产物接口 {name} 的 method/path 与提取产物不一致"
+                )
 
 
 def _frozen_inputs(source_snapshot: dict) -> tuple[dict, dict]:
@@ -67,10 +146,18 @@ async def validate_generation_artifact(
         if stage == "ui_yaml":
             return str(value), "yaml"
         return json.dumps(value, ensure_ascii=False), "json"
+    if (kind, stage) == ("api", "api_design"):
+        value = _strict_json_object(content)
+        source, config = _frozen_inputs(source_snapshot)
+        extraction = config.get("apiExtraction")
+        if extraction is None:
+            extraction = source.get("apiExtraction")
+        _validate_api_design_shallow(value, extraction)
+        return json.dumps(value, ensure_ascii=False), "json"
     if (kind, stage) in {
         ("function", "requirement_analysis"),
         ("function", "case_names"),
-        ("api", "openapi_extract"),
+        ("api", "interface_extract"),
     }:
         try:
             value = json.loads(content)

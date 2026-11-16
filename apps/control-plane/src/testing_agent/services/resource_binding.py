@@ -12,13 +12,12 @@ from testing_agent.core.sid import new_id
 from testing_agent.repositories.resource_binding import ResourceBindingRepository
 from testing_agent.services.binding_support import dump_binding as dump_binding
 from testing_agent.services.common import list_payload
-from testing_agent.services.gitlab_bindings import GitLabBindings
 from testing_agent.services.integration_connection import IntegrationConnectionService
 from testing_agent.services.project_access import ProjectAction, require_project_access
 from testing_agent.services.resource_deletion import ResourceDeletion, SqlResourceDeletion
 from testing_agent.services.zentao_bindings import ZentaoBindings
 
-SUPPORTED_PROVIDERS = ("zentao", "gitlab")
+SUPPORTED_PROVIDERS = ("zentao",)
 
 
 class ResourceBindingService:
@@ -36,14 +35,6 @@ class ResourceBindingService:
         self.integration_connection_service = integration_connection_service
         self.zentao_resource_client = zentao_resource_client
         self.zentao_access = zentao_access
-
-    def gitlab_bindings(self) -> GitLabBindings:
-        return GitLabBindings(
-            self.repository,
-            self.integration_connection_service,
-            authorize=self.ensure_local_access,
-            id_factory=new_id,
-        )
 
     def zentao_bindings(self) -> ZentaoBindings:
         return ZentaoBindings(
@@ -102,11 +93,14 @@ class ResourceBindingService:
     ) -> dict:
         await self.ensure_local_access(user_id, resource_type, resource_id)
         provider = str(body.get("provider") or "").strip()
+        if provider == "gitlab":
+            raise dynamic_error(
+                ErrBadRequest,
+                "项目级 GitLab 群组绑定已移除，请直接在软件仓库中绑定代码仓库",
+            )
         if provider not in SUPPORTED_PROVIDERS:
-            raise dynamic_error(ErrBadRequest, "provider 仅支持 zentao 或 gitlab")
-        if provider == "zentao":
-            return await self.zentao_bindings().create(resource_type, resource_id, body, user_id)
-        return await self.gitlab_bindings().create(resource_type, resource_id, body, user_id)
+            raise dynamic_error(ErrBadRequest, "provider 仅支持 zentao")
+        return await self.zentao_bindings().create(resource_type, resource_id, body, user_id)
 
     async def list(self, resource_type: str, resource_id: str, user_id: str) -> dict[str, Any]:
         await self.ensure_local_access(user_id, resource_type, resource_id, action="read")
@@ -148,13 +142,10 @@ class ResourceBindingService:
             raise ErrNotFound()
         if binding.provider == "zentao":
             return await self.zentao_bindings().update(binding, body, user_id)
-        if binding.provider != "gitlab":
-            raise dynamic_error(ErrBadRequest, "仅 GitLab 绑定支持更新")
-        if binding.remote_resource_type == "group":
-            return await self.gitlab_bindings().verify_group(binding, resource_id, body, user_id)
-        if binding.remote_resource_type == "repository" and resource_type == "requirement":
-            return await self.gitlab_bindings().update_requirement(binding, body, user_id)
-        raise dynamic_error(ErrBadRequest, "仅 GitLab 绑定支持更新")
+        raise dynamic_error(
+            ErrBadRequest,
+            "项目级 GitLab 群组绑定已移除，请直接在软件仓库中绑定代码仓库",
+        )
 
     async def delete(
         self, resource_type: str, resource_id: str, binding_id: str, user_id: str
@@ -163,14 +154,6 @@ class ResourceBindingService:
         binding = await self.repository.get(resource_type, resource_id, binding_id)
         if binding is None:
             raise ErrNotFound()
-        if binding.provider == "gitlab":
-            binding = await self.gitlab_bindings().guard_delete(binding, resource_id)
-            # Only project owners reach binding mutations.
-            binding.status = BindingStatus.UNBOUND.value
-            await self.deletion.delete(self.repository.session, binding)
-            await self.repository.commit()
-            return {}
-        await self.ensure_local_access(user_id, resource_type, resource_id)
         binding.status = BindingStatus.UNBOUND.value
         await self.deletion.delete(self.repository.session, binding)
         await self.repository.commit()

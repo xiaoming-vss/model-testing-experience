@@ -7,15 +7,16 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 from testing_agent_ai_worker.agent.base import AgentConfigPath
+from testing_agent_ai_worker.skill_names import API_EXTRACT_SKILL, API_GENERATE_SKILL
 from testing_agent_ai_worker.tasks.api_case_generate.chain import ChainRunResult, run_chain
 
-DEFAULT_EXTRACTOR_SKILL_NAME = "openapi-test-config-extractor"
-DEFAULT_GENERATOR_SKILL_NAME = "api-cases-yaml-generator"
+DEFAULT_EXTRACTOR_SKILL_NAME = API_EXTRACT_SKILL
+DEFAULT_GENERATOR_SKILL_NAME = API_GENERATE_SKILL
 
 
 async def run_chain_demo(
     *,
-    openapi_json_path: str,
+    source_json_path: str,
     session_key: str = "demo:agent-chain",
     extractor_skill_name: str = DEFAULT_EXTRACTOR_SKILL_NAME,
     generator_skill_name: str = DEFAULT_GENERATOR_SKILL_NAME,
@@ -26,11 +27,11 @@ async def run_chain_demo(
     runner: Callable[..., Awaitable[ChainRunResult]] = run_chain,
     printer: Callable[[str], None] = print,
 ) -> int:
-    openapi_text = Path(openapi_json_path).read_text(encoding="utf-8")
+    source_text = Path(source_json_path).read_text(encoding="utf-8")
     if backend and config_path:
         config_path = AgentConfigPath(config_path, backend)
     result = await runner(
-        openapi_text=openapi_text,
+        source_text=source_text,
         session_key=session_key,
         extractor_skill_name=extractor_skill_name,
         generator_skill_name=generator_skill_name,
@@ -47,7 +48,7 @@ async def run_chain_demo(
 
 def main(
     *,
-    openapi_json_path: str | None = None,
+    source_json_path: str | None = None,
     session_key: str = "demo:agent-chain",
     extractor_skill_name: str = DEFAULT_EXTRACTOR_SKILL_NAME,
     generator_skill_name: str = DEFAULT_GENERATOR_SKILL_NAME,
@@ -56,11 +57,11 @@ def main(
     backend: str | None = None,
     extra_instruction: str = "",
 ) -> int:
-    if openapi_json_path is None:
+    if source_json_path is None:
         parser = argparse.ArgumentParser(
-            description="Generate API cases from an OpenAPI JSON file."
+            description="Generate API cases from an interface JSON or legacy OpenAPI JSON file."
         )
-        parser.add_argument("--openapi-json-path", required=True)
+        parser.add_argument("--source-json-path", required=True)
         parser.add_argument("--session-key", default=session_key)
         parser.add_argument("--extractor-skill-name", default=extractor_skill_name)
         parser.add_argument("--generator-skill-name", default=generator_skill_name)
@@ -72,7 +73,7 @@ def main(
         return main(**vars(args))
     return asyncio.run(
         run_chain_demo(
-            openapi_json_path=openapi_json_path,
+            source_json_path=source_json_path,
             session_key=session_key,
             extractor_skill_name=extractor_skill_name,
             generator_skill_name=generator_skill_name,

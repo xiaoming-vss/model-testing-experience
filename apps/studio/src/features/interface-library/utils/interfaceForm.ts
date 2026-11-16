@@ -26,11 +26,11 @@ export function blankRow(): InterfaceRow {
   }
 }
 
-export function blankInterface(appId: string): ApiInterface {
+export function blankInterface(softwareRepositoryId: string): ApiInterface {
   return {
     interfaceId: '',
-    appId,
-    appName: '',
+    softwareRepositoryId,
+    softwareRepositoryName: '',
     name: '',
     method: 'GET',
     path: '',
@@ -47,7 +47,8 @@ export function blankInterface(appId: string): ApiInterface {
     responseDescription: '',
     responseSchema: null,
     responseExample: null,
-    enabled: true,
+    security: null,
+    securitySchemes: null,
     sourceType: 'manual',
     version: 1,
     requirements: [],
@@ -100,8 +101,4 @@ export function splitTags(value: string) {
     .split(/[,，]/)
     .map(tag => tag.trim())
     .filter(Boolean)
-}
-
-export function sameRows(left: InterfaceRow[], right: InterfaceRow[]) {
-  return JSON.stringify(left) === JSON.stringify(right)
 }

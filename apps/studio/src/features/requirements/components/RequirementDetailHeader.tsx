@@ -37,10 +37,10 @@ export function RequirementDetailHeader({ requirement, requirementId, canWrite, 
       </>}
     </nav>
     <div className="requirement-detail-actions">
+      {onRefresh ? <ActionButton operation="refresh" loading={refreshing} onClick={onRefresh}>刷新</ActionButton> : null}
       {showDownload ? <ActionButton operation="download" loading={download.isPending} onClick={() => download.mutate()}>下载原文件</ActionButton> : null}
       {canWrite && showEdit ? <ActionButton operation="edit" onClick={onEdit}>编辑需求</ActionButton> : null}
       <div className="requirement-detail-workspace-actions" ref={readingActionsRef} />
-      {onRefresh ? <ActionButton operation="refresh" loading={refreshing} onClick={onRefresh}>刷新</ActionButton> : null}
     </div>
   </header>
 }

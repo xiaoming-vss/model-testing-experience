@@ -21,7 +21,7 @@
 以下为部署说明，本次没有操作业务库或发布默认技能：
 
 1. 从仓库运行同步资源检查，构建控制面与 Worker。两个 wheel 均须包含 `output.schema.json`。
-2. 在目标环境按既有流程应用 Alembic `20261114_0003` 迁移。它接在接口库 `20261113_0002` 后；不得覆盖 baseline。
+2. 在目标环境按既有流程执行 `alembic upgrade head`。预发布阶段的相关结构已并入唯一 baseline `20261103_0001`，不再单独应用 `20261114_0003`。
 3. 在 `apps/control-plane` 使用目标环境已有配置执行 `uv run --locked python -m testing_agent.cli.skills default-skills` 发布系统默认技能（不使用 `--prune`）。前置是现有 S3 文件存储与技能发布授权环境可用。
 4. 更新 Worker 后再开放控制面与 Studio 的生成入口，避免旧 Worker 领取新任务。回退到旧前端仍可文字执行；回退迁移会丢失图解绑定和批次回执，应先停止接收新图解任务并处理在途任务。
 5. 不改变五个应用的依赖文件、锁文件、Dockerfile 或启动入口。本功能没有新增部署配置项。

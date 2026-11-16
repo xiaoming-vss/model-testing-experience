@@ -5,8 +5,6 @@ from collections.abc import Sequence
 from copy import deepcopy
 from typing import Any, Protocol
 
-from testing_agent.domain.ai_tasks import REVISION_ATTACHMENTS_FIELD
-
 
 class StageLike(Protocol):
     @property
@@ -17,7 +15,8 @@ FIELDS = {
     "requirement_analysis": "requirementAnalysis",
     "case_names": "caseNames",
     "extracting_text": "firstStepOutput",
-    "openapi_extract": "apiExtraction",
+    "interface_extract": "apiExtraction",
+    "api_design": "apiDesign",
     "relation_analysis": "caseRelations",
     "ui_surface": "uiSurface",
     "ui_design": "uiDesign",
@@ -31,12 +30,6 @@ NO_REVIEW_STAGES = {"relation_analysis"}
 
 
 # Revision inputs live in the attempt snapshot, never in the effective artifact config.
-RESERVED_CONFIG_KEYS = {
-    *FIELDS.values(),
-    "revisionInstruction",
-    "resultYaml",
-    REVISION_ATTACHMENTS_FIELD,
-}
 
 
 def mapping(value: Any) -> dict[str, Any]:

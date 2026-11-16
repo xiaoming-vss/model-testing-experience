@@ -55,7 +55,6 @@ export type {
 export type {
   GitlabGroup,
   GitlabRepository,
-  ResourceBinding,
   ZentaoBindingTargetType,
   ZentaoBinding,
   ZentaoRemoteOption,

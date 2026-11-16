@@ -6,7 +6,6 @@ from support import generation as ai_tasks
 from support.generation import generation_services
 
 from testing_agent.core.errors import (
-    AppError,
     ErrApiCollectionImportInvalid,
     ErrBadRequest,
     ErrRemoteResourceAlreadyBound,
@@ -14,9 +13,6 @@ from testing_agent.core.errors import (
     ErrZentaoRemoteResourceUnavailable,
 )
 from testing_agent.domain.ai_tasks import task_type_for as _generation_task_type_for
-from testing_agent.models.api_assert_rule import ApiAssertRule
-from testing_agent.models.api_case import ApiCase
-from testing_agent.models.api_extract_rule import ApiExtractRule
 from testing_agent.schemas.ai_generate_task import (
     AiGenerateTaskReviewRequest,
     RequirementAnalysisRunRequest,
@@ -658,91 +654,6 @@ async def test_read_import_payload_accepts_uploaded_yaml_file():
 
 
 @pytest.mark.asyncio
-async def test_api_collection_import_creates_go_extract_and_assert_rules(monkeypatch):
-    class FakeApiCollectionRepository:
-        session = AuthorizationDatabase()
-
-        def __init__(self):
-            self.rows = []
-
-        async def get_collection(self, collection_id):
-            assert collection_id == "collection-1"
-            return SimpleNamespace(collection_id="collection-1", requirement_id="requirement-1")
-
-        async def get_requirement(self, requirement_id):
-            assert requirement_id == "requirement-1"
-            return SimpleNamespace(sprint_id="sprint-1")
-
-        async def get_sprint(self, sprint_id):
-            assert sprint_id == "sprint-1"
-            return SimpleNamespace(project_id="project-1")
-
-        async def get_project(self, project_id):
-            assert project_id == "project-1"
-            return SimpleNamespace(user_id="user-1", project_id="project-1")
-
-        async def exists_case_by_collection_and_name(self, collection_id, name):
-            return False
-
-        def add(self, row):
-            self.rows.append(row)
-
-        async def flush(self):
-            return None
-
-        async def commit(self):
-            return None
-
-    ids = iter(["case-1", "extract-1", "assert-1"])
-    monkeypatch.setattr(api_collection, "new_id", lambda: next(ids))
-    monkeypatch.setattr("testing_agent.services.api_import_entities.new_id", lambda: next(ids))
-    repository = FakeApiCollectionRepository()
-    service = api_collection.ApiCollectionService(repository)
-    payload = {
-        "cases": [
-            {
-                "name": "imported",
-                "method": "GET",
-                "urlTemplate": "/ping",
-                "extractRules": [
-                    {
-                        "name": "token",
-                        "source": "body_jsonpath",
-                        "sourceExpr": "$.token",
-                        "varKey": "token",
-                    }
-                ],
-                "assertRules": [
-                    {
-                        "name": "ok",
-                        "assertSource": "status_code",
-                        "comparator": "eq",
-                        "expectedValue": "200",
-                    }
-                ],
-            }
-        ]
-    }
-
-    result = await service.import_cases("user-1", "collection-1", payload, None)
-
-    api_case = next(row for row in repository.rows if isinstance(row, ApiCase))
-    extract_rule = next(row for row in repository.rows if isinstance(row, ApiExtractRule))
-    assert_rule = next(row for row in repository.rows if isinstance(row, ApiAssertRule))
-    assert result == {
-        "collectionId": "collection-1",
-        "importedCaseCount": 1,
-        "importedExtractRuleCount": 1,
-        "importedAssertRuleCount": 1,
-    }
-    assert api_case.case_id == "case-1"
-    assert extract_rule.extract_rule_id == "extract-1"
-    assert extract_rule.case_id == "case-1"
-    assert assert_rule.assert_rule_id == "assert-1"
-    assert assert_rule.case_id == "case-1"
-
-
-@pytest.mark.asyncio
 async def test_api_collection_import_accepts_go_generated_yaml_sample(monkeypatch):
     class FakeApiCollectionRepository:
         session = AuthorizationDatabase()
@@ -1068,11 +979,32 @@ async def test_requirement_analysis_create_requires_requirement_id():
 
 
 @pytest.mark.asyncio
-async def test_api_generate_run_snapshot_uses_task_source():
+async def test_api_generate_run_snapshot_uses_selected_interfaces(monkeypatch):
+    from testing_agent.services import ai_task_output
+
     class FakeRepository:
         async def get_requirement(self, requirement_id):
-            raise AssertionError("API generation should not load requirement document")
+            assert requirement_id == "requirement-1"
+            return None
 
+    async def fake_interface_snapshot(repository, task):
+        assert task.interface_ids_json == ["interface-1"]
+        return (
+            [
+                {
+                    "softwareRepositoryId": "repository-1",
+                    "name": "订单服务",
+                    "basePath": "/api",
+                    "gitRepository": {
+                        "instanceUrl": "https://gitlab.example.com",
+                        "pathWithNamespace": "commerce/order-service",
+                    },
+                }
+            ],
+            [{"interfaceId": "interface-1", "name": "创建订单"}],
+        )
+
+    monkeypatch.setattr(ai_task_output, "_api_interface_snapshot", fake_interface_snapshot)
     task = SimpleNamespace(
         task_id="task-1",
         task_type="api_case_generate",
@@ -1080,8 +1012,9 @@ async def test_api_generate_run_snapshot_uses_task_source():
         project_id="project-1",
         sprint_id="sprint-1",
         requirement_id="requirement-1",
-        source_type="text",
-        source_content="api source",
+        source_type="interface_library",
+        source_content="",
+        interface_ids_json=["interface-1"],
         instruction="cover APIs",
     )
 
@@ -1095,9 +1028,20 @@ async def test_api_generate_run_snapshot_uses_task_source():
         "projectId": "project-1",
         "sprintId": "sprint-1",
         "requirementId": "requirement-1",
-        "sourceType": "text",
-        "sourceContent": "api source",
+        "sourceType": "interface_library",
         "instruction": "cover APIs",
+        "interfaces": [{"interfaceId": "interface-1", "name": "创建订单"}],
+        "softwareRepositories": [
+            {
+                "softwareRepositoryId": "repository-1",
+                "name": "订单服务",
+                "basePath": "/api",
+                "gitRepository": {
+                    "instanceUrl": "https://gitlab.example.com",
+                    "pathWithNamespace": "commerce/order-service",
+                },
+            }
+        ],
     }
 
 
@@ -1107,9 +1051,15 @@ async def test_ai_generate_run_uses_go_connection_id_for_worker_task(monkeypatch
 
     from testing_agent.services import (
         ai_run_launcher,
+        ai_task_output,
         standalone_execution,
         standalone_execution_view,
     )
+
+    async def fake_interface_snapshot(repository, task):
+        return [], []
+
+    monkeypatch.setattr(ai_task_output, "_api_interface_snapshot", fake_interface_snapshot)
 
     class FakeRepository(TaskScopeFixture):
         def __init__(self):
@@ -1125,8 +1075,9 @@ async def test_ai_generate_run_uses_go_connection_id_for_worker_task(monkeypatch
                 sprint_id="sprint-1",
                 requirement_id="",
                 creator_user_id="user-1",
-                source_type="text",
-                source_content="api source",
+                source_type="interface_library",
+                source_content="",
+                interface_ids_json=[],
                 instruction="cover APIs",
             )
 
@@ -1320,62 +1271,6 @@ async def test_ui_snapshot_does_not_read_requirement_document_content():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("document_file_id", ["file-1", ""])
-async def test_requirement_analysis_run_enqueues_requirement_analysis_worker_task(
-    monkeypatch, document_file_id
-):
-    class FakeRepository(TaskScopeFixture):
-        def __init__(self):
-            self.rows = []
-
-        async def get_task(self, task_id):
-            assert task_id == "task-1"
-            return SimpleNamespace(
-                task_id="task-1",
-                task_type="requirement_analysis",
-                name="Analyze requirement",
-                project_id="project-1",
-                sprint_id="sprint-1",
-                requirement_id="requirement-1",
-                creator_user_id="user-1",
-                source_type="manual",
-                source_content="task source should not be used",
-                instruction="find ambiguities",
-            )
-
-        async def get_requirement(self, requirement_id):
-            assert requirement_id == "requirement-1"
-            return SimpleNamespace(
-                requirement_id="requirement-1",
-                sprint_id="sprint-1",
-                document_type="richtext",
-                document_content="saved requirement text",
-                document_file_id=document_file_id,
-                document_download_url="/v1/requirements/requirement-1/download",
-            )
-
-        def add_all(self, rows):
-            self.rows.extend(rows)
-
-        async def commit(self):
-            return None
-
-        async def refresh(self, row):
-            return None
-
-    ids = iter(["run-1", "worker-task-1"])
-    monkeypatch.setattr(ai_tasks, "new_id", lambda: next(ids))
-    repository = FakeRepository()
-    service = generation_services(repository)
-
-    with pytest.raises(AppError, match="请在需求生成链"):
-        await service.launcher.launch(
-            "requirement_analysis", "task-1", {"connectionId": "conn-1"}, "user-1"
-        )
-    assert repository.rows == []
-
-
-@pytest.mark.asyncio
 async def test_requirement_analysis_task_create_persists_task_without_running(monkeypatch):
     class FakeRepository:
         session = AuthorizationDatabase()
@@ -1434,41 +1329,6 @@ async def test_requirement_analysis_task_create_persists_task_without_running(mo
     assert repository.task.source_content == "saved requirement text"
     assert repository.task.instruction == "find ambiguity"
     assert len(repository.rows) == 1
-
-
-@pytest.mark.asyncio
-async def test_requirement_analysis_run_requires_connection_id():
-    class FakeRepository(TaskScopeFixture):
-        session = AuthorizationDatabase()
-
-        async def get_task(self, task_id):
-            assert task_id == "task-1"
-            return SimpleNamespace(
-                task_id="task-1",
-                task_type="requirement_analysis",
-                name="Analyze requirement",
-                project_id="project-1",
-                sprint_id="sprint-1",
-                requirement_id="requirement-1",
-                creator_user_id="user-1",
-                source_type="manual",
-                source_content="task source should not be used",
-                instruction="find ambiguity",
-            )
-
-        async def get_project(self, project_id):
-            return SimpleNamespace(project_id="project-1", user_id="user-1")
-
-        def add_all(self, rows):
-            raise AssertionError("run should reject missing connectionId before creating rows")
-
-        async def commit(self):
-            raise AssertionError("run should reject missing connectionId before committing")
-
-    service = generation_services(FakeRepository())
-
-    with pytest.raises(type(ErrBadRequest)):
-        await service.launcher.launch("requirement_analysis", "task-1", {}, "user-1")
 
 
 @pytest.mark.asyncio

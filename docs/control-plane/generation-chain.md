@@ -83,19 +83,23 @@ UI 生成以仓库画像成功版本冻结的前端仓库源码和当前需求�
 - 服务：`apps/control-plane/src/testing_agent/services/generation_chain.py`
 - 查询：`repositories/generation_chain.py`
 - 模型：`models/ai_generate_stage_version.py`、`models/ai_generate_version_import.py`
-- 迁移：唯一冻结基线 `alembic/versions/20261103_0001_v1_baseline.py`
+- 迁移：预发布阶段唯一基线 `alembic/versions/20261103_0001_v1_baseline.py`
 - 测试：`tests/test_generation_chain.py`、`tests/test_generation_chain_api.py`、`tests/test_unified_ai_execution.py`，以及功能/API/UI 导入回归
 - Studio：`RequirementGenerationPanorama.tsx`、`GenerationChainModal.tsx`、`GenerationChainImportModal.tsx`、`useRequirementGenerationChain.ts`
 
-功能测试首阶段的上游为需求分析链的 `feature_understanding`，沿用 `upstreamVersions` 选择规则：缺省选最新已审核版本，也可手动指定历史版本。首阶段运行及重跑冻结 `sourceContent` 与 `requirementUnderstandingVersion`；后续测试点、完整用例跟随所选测试需求分析版本的输入快照，图谱跟随完整用例运行的冻结输入。版本行保存 `functionalSource`，防止原运行/尝试删除后丢失来源。阶段运行统一经过版本解析，不再要求绑定增强文本。历史来源未知时不推测；有已审核最终内容时仍可按目标与权限规则导入。
+功能测试首阶段的上游为需求分析链的 `feature_understanding`，沿用 `upstreamVersions` 选择规则：缺省选最新已审核版本，也可手动指定历史版本。首阶段运行及重跑冻结 `sourceContent`、`sourceFormat=requirement_understanding_json`、`sourceFormatVersion=0.2` 与 `requirementMaterialVersion`；后续测试点、完整用例跟随所选测试需求分析版本的输入快照，图谱跟随完整用例运行的冻结输入。`sourceType` 仅表示任务来源，功能链路不再使用 `documentType`；`documentType` 只用于需求分析消费原始文档。版本行保存 `functionalSource`，防止原运行/尝试删除后丢失来源。阶段运行统一经过版本解析，不再要求绑定增强文本。开发阶段不兼容缺少 `sourceFormat` 的旧功能快照，Worker 在调用模型前直接拒绝。历史来源未知时不推测；有已审核最终内容时仍可按目标与权限规则导入。
 
 需求理解只以生成链中的已审核版本为准。需求分析导入写回 `requirements.document_content` 的旧入口已退役，`document_content` 仅保留为需求原文/增强文本载体，不再作为需求理解的权威存储。代码风险分析读取该需求最新已审核版本，可通过 `requirementUnderstandingVersionId` 指定历史版本；测试单图谱为每条本迭代需求读取各自最新已审核版本；两者都没有已审核版本时返回 400 并说明原因，不回退需求正文。UI 三阶段不读取需求理解内容或画像正文，只使用画像版本 pin 的前端仓库源码与正式功能用例。
 
 生成链继续优化请求支持可选 `attachmentFileIds`（默认空列表，最多 6 个）。沿用既有优化附件的项目、上传者、用途、图片格式和大小校验，附件绑定当前尝试，元信息只冻结到本轮尝试的 `revisionAttachments`，通过既有 Worker 图片票据获取；下一轮未选择的图片不自动沿用。
 
-## API 测试两阶段生成
+## API 测试三阶段生成
 
-需求画布中的新 API 生成运行依次执行「接口配置提取」和「API 用例生成」。前者生成 JSON，审核通过后形成版本；后者选择已审核的提取版本作为冻结输入，生成 YAML，审核通过后可导入。首阶段支持审核通过并继续、重新生成与优化；删除上游版本时沿用依赖草稿作废规则。阶段输入快照包含 `apiWorkflowVersion: api_two_stage/1.0`。重跑提取会创建该阶段的新尝试，保留已审核版本。
+需求画布中的新 API 生成运行依次执行「接口配置提取」「接口用例设计」和「API 用例生成」。任务保存从接口库选中的接口 ID；运行开始时读取接口最新定义并校验存在，再把接口 JSON、所属软件仓库和 base path 写入输入快照，不冻结 OpenAPI/Swagger 原文。提取阶段生成 `apiExtraction` JSON，审核通过后形成版本；设计阶段读取已审核提取版本，生成 `api_test_design/1.0` 用例设计 JSON，审核通过后形成设计版本；生成阶段同时读取已审核提取版本和设计版本，逐条落成 YAML，审核通过后可导入。生成版本的导入溯源同时记录提取和设计两个父版本。
+
+设计每 5 个接口一批、生成每 10 条设计用例一批；每批独立校验和自动修复，合并后再用完整提取产物和完整设计校验一次。任一批失败则整个阶段失败，不发布部分结果。设计产物要求每条用例引用提取产物中实际存在的字段、必传标记、类型或约束，参数变异使用按请求分区的 JSON Patch；生成阶段严格按设计逐条产出，不增加设计之外的用例、断言或提取规则。
+
+各阶段支持审核通过并继续、重新生成与优化；删除上游版本时沿用依赖草稿作废规则。阶段输入快照包含 `apiWorkflowVersion: api_three_stage/1.0`；需求无关的独立 API 检查点流程也使用三阶段，`generate` 仍是叶子阶段。接口被删除时拒绝运行并列出缺失项；接口被编辑后下一次运行使用最新定义。重跑提取会创建该阶段的新尝试，保留已审核版本。旧的非 checkpoint 独立 API 运行链路保持不变。设计与生成产物契约、分批和切换决策见 [ADR 0017](adr/0017-api-design-before-generation.md)。
 
 API 阶段运行的补充指令写入本次派发的输入快照；审核通过并继续时，可在审核请求中通过可选 `instruction` 为下一阶段提供指令。省略时沿用现有空指令行为，不改变旧客户端契约。
 

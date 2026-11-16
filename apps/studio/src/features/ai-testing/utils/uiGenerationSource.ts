@@ -82,7 +82,7 @@ export function resolveUiGenerationSource(
         kind: 'no_frontend_repository' as const,
         title: '画像未识别出前端仓库',
         description:
-          '该画像版本没有 frontend/fullstack 仓库。请检查需求代码绑定，或重新生成仓库画像。',
+          '该画像版本没有 frontend/fullstack 仓库。请检查需求关联的软件仓库，或重新生成仓库画像。',
         repositories,
       }
     }

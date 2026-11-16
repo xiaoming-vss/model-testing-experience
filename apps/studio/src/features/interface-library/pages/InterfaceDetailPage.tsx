@@ -6,7 +6,19 @@ import {
   UploadOutlined,
 } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, Button, Empty, Input, Modal, Select, Spin, Tag, Tooltip } from 'antd'
+import {
+  Alert,
+  AutoComplete,
+  Button,
+  Empty,
+  Input,
+  Modal,
+  Radio,
+  Select,
+  Spin,
+  Tag,
+  Tooltip,
+} from 'antd'
 import { useEffect, useState, type ReactNode } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AssetLibraryTabs } from '@/app/pages/AssetLibraryTabs'
@@ -17,16 +29,21 @@ import { ApiError } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { formatTime, getErrorMessage } from '@/utils/format'
 import { interfaceLibraryApi } from '../api/interfaceLibrary.api'
-import { ApiAppEditorDrawer } from '../components/ApiAppEditorDrawer'
-import { InterfaceAppTree } from '../components/InterfaceAppTree'
+import { SoftwareRepositoryTree } from '../components/SoftwareRepositoryTree'
 import { InterfaceBodyPanel } from '../components/InterfaceBodyPanel'
 import { InterfaceHeadersPanel } from '../components/InterfaceHeadersPanel'
 import { InterfaceParamsPanel } from '../components/InterfaceParamsPanel'
 import { InterfaceResponsePanel } from '../components/InterfaceResponsePanel'
 import { InterfaceSettingsPanel } from '../components/InterfaceSettingsPanel'
 import { OpenApiImportModal } from '../components/OpenApiImportModal'
-import { useApiAppManager } from '../hooks/useApiAppManager'
-import type { ApiInterface, CreateApiInterfacePayload, InterfaceRow } from '../types'
+import { useSoftwareRepositoryList } from '../hooks/useSoftwareRepositoryManager'
+import type {
+  ApiInterface,
+  ApiInterfaceListItem,
+  CreateApiInterfacePayload,
+  InterfaceRow,
+  SoftwareRepository,
+} from '../types'
 import {
   blankInterface,
   INTERFACE_METHODS,
@@ -37,6 +54,11 @@ import {
   splitTags,
   syncPathParams,
 } from '../utils/interfaceForm'
+import {
+  firstTag,
+  replaceFirstTag,
+  type InterfaceGroup,
+} from '../utils/interfaceGroups'
 import '@/shared/styles/surface-tokens.css'
 import '../styles/index.css'
 
@@ -56,6 +78,17 @@ const EMPTY_JSON_TEXTS: JsonTexts = {
   responseExample: '',
 }
 
+type GroupTarget = {
+  repository: SoftwareRepository
+  group: InterfaceGroup
+}
+
+type MoveTarget = {
+  repository: SoftwareRepository
+  item: ApiInterfaceListItem
+  groups: string[]
+}
+
 export function InterfaceDetailPage() {
   const { interfaceId } = useParams<{ interfaceId: string }>()
   const isCreate = !interfaceId
@@ -65,25 +98,22 @@ export function InterfaceDetailPage() {
   const projectId = useWorkbenchStore(state => state.activeProjectId) ?? ''
   const { can } = useProjectAccess(projectId)
   const canWrite = can('write')
-  const canManage = can('manage')
   const { allRequirements } = useProjectRequirementOptions({ activeProjectId: projectId })
-  const {
-    apps,
-    appsQuery,
-    editorOpen,
-    editingApp,
-    openCreate,
-    openEdit,
-    closeEditor,
-    toggleApp,
-    deleteApp,
-  } = useApiAppManager(projectId)
+  const { repositories, repositoriesQuery } = useSoftwareRepositoryList(projectId)
 
   const [draft, setDraft] = useState<ApiInterface | null>(null)
   const [tagsText, setTagsText] = useState('')
   const [jsonTexts, setJsonTexts] = useState<JsonTexts>(EMPTY_JSON_TEXTS)
   const [activeTab, setActiveTab] = useState<TabKey>('params')
   const [importOpen, setImportOpen] = useState(false)
+  const [groupRenameTarget, setGroupRenameTarget] = useState<GroupTarget | null>(null)
+  const [groupRenameValue, setGroupRenameValue] = useState('')
+  const [moveTarget, setMoveTarget] = useState<MoveTarget | null>(null)
+  const [moveMode, setMoveMode] = useState<'group' | 'clear'>('group')
+  const [moveGroupName, setMoveGroupName] = useState('')
+  const [createGroupRepository, setCreateGroupRepository] =
+    useState<SoftwareRepository | null>(null)
+  const [createGroupName, setCreateGroupName] = useState('')
 
   const interfaceQuery = useQuery({
     queryKey: ['apiInterface', projectId, interfaceId],
@@ -108,21 +138,26 @@ export function InterfaceDetailPage() {
   }, [interfaceQuery.data])
 
   useEffect(() => {
-    if (!isCreate || draft || appsQuery.isLoading) return
-    const requestedAppId = searchParams.get('appId') ?? ''
-    const app =
-      apps.find(item => item.appId === requestedAppId) ??
-      apps.find(item => item.enabled) ??
-      apps[0]
-    if (!app) return
-    const next = blankInterface(app.appId)
-    next.appName = app.name
+    if (!isCreate || draft || repositoriesQuery.isLoading) return
+    const requestedRepositoryId = searchParams.get('softwareRepositoryId') ?? ''
+    const repository =
+      repositories.find(
+        item => item.softwareRepositoryId === requestedRepositoryId,
+      ) ?? repositories[0]
+    if (!repository) return
+    const next = blankInterface(repository.softwareRepositoryId)
+    next.softwareRepositoryName = repository.name
     setDraft(next)
-  }, [apps, appsQuery.isLoading, draft, isCreate, searchParams])
+  }, [repositories, repositoriesQuery.isLoading, draft, isCreate, searchParams])
 
-  const selectedApp = apps.find(app => app.appId === draft?.appId)
+  const selectedRepository = repositories.find(
+    repository => repository.softwareRepositoryId === draft?.softwareRepositoryId,
+  )
   const interfaceInActiveProject =
-    isCreate || apps.some(app => app.appId === draft?.appId)
+    isCreate ||
+    repositories.some(
+      repository => repository.softwareRepositoryId === draft?.softwareRepositoryId,
+    )
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -133,8 +168,8 @@ export function InterfaceDetailPage() {
       if (!interfaceInActiveProject) throw new Error('接口不属于当前项目')
       const payload = buildPayload(draft, tagsText, jsonTexts)
       if (isCreate) {
-        if (!draft.appId) throw new Error('请选择所属应用')
-        return interfaceLibraryApi.createApiInterface(draft.appId, payload)
+        if (!draft.softwareRepositoryId) throw new Error('请选择所属软件仓库')
+        return interfaceLibraryApi.createApiInterface(draft.softwareRepositoryId, payload)
       }
       return interfaceLibraryApi.updateApiInterface(draft.interfaceId, payload)
     },
@@ -145,7 +180,7 @@ export function InterfaceDetailPage() {
       message.success(isCreate ? '接口已创建' : '接口已保存')
       queryClient.invalidateQueries({ queryKey: ['apiInterfaces'] })
       queryClient.invalidateQueries({ queryKey: ['apiInterface', projectId, data.interfaceId] })
-      queryClient.invalidateQueries({ queryKey: ['apiApps', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['softwareRepositories', projectId] })
       if (isCreate) {
         navigate(`/asset-library/interfaces/${data.interfaceId}`, { replace: true })
       }
@@ -157,11 +192,225 @@ export function InterfaceDetailPage() {
     onSuccess: () => {
       message.success('接口已删除')
       queryClient.invalidateQueries({ queryKey: ['apiInterfaces'] })
-      queryClient.invalidateQueries({ queryKey: ['apiApps', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['softwareRepositories', projectId] })
       navigate('/asset-library?tab=interfaces')
     },
     onError: error => message.error(errorMessage(error)),
   })
+  const renameGroupMutation = useMutation({
+    mutationFn: ({
+      target,
+      newGroupName,
+    }: {
+      target: GroupTarget
+      newGroupName: string
+    }) =>
+      interfaceLibraryApi.renameApiInterfaceGroup(
+        target.repository.softwareRepositoryId,
+        {
+          currentGroupName: target.group.tag,
+          newGroupName,
+        },
+      ),
+    onSuccess: (data, variables) => {
+      syncDraftAfterGroupRename(
+        variables.target.repository.softwareRepositoryId,
+        variables.target.group.tag,
+        data.newGroupName,
+      )
+      message.success(
+        data.updatedCount
+          ? `已将分组「${data.groupName}」重命名为「${data.newGroupName}」，更新 ${data.updatedCount} 个接口`
+          : `已将分组「${data.groupName}」重命名为「${data.newGroupName}」`,
+      )
+      setGroupRenameTarget(null)
+      void queryClient.invalidateQueries({ queryKey: ['apiInterfaces'] })
+      void queryClient.invalidateQueries({
+        queryKey: ['softwareRepositories', projectId],
+      })
+    },
+    onError: error => message.error(errorMessage(error)),
+  })
+  const deleteGroupMutation = useMutation({
+    mutationFn: (target: GroupTarget) =>
+      interfaceLibraryApi.deleteApiInterfaceGroup(
+        target.repository.softwareRepositoryId,
+        { groupName: target.group.tag },
+      ),
+    onSuccess: (data, target) => {
+      syncDraftAfterGroupRemoval(target.repository.softwareRepositoryId, target.group.tag)
+      message.success(
+        data.updatedCount
+          ? `已移除分组「${data.groupName}」，${data.updatedCount} 个接口归入「未分类」`
+          : `已移除分组「${data.groupName}」`,
+      )
+      void queryClient.invalidateQueries({ queryKey: ['apiInterfaces'] })
+      void queryClient.invalidateQueries({
+        queryKey: ['softwareRepositories', projectId],
+      })
+    },
+    onError: error => message.error(errorMessage(error)),
+  })
+  const moveMutation = useMutation({
+    mutationFn: ({
+      item,
+      groupName,
+    }: {
+      item: ApiInterfaceListItem
+      groupName: string
+    }) => interfaceLibraryApi.moveApiInterfaceToGroup(item.interfaceId, { groupName }),
+    onSuccess: (data, variables) => {
+      if (draft?.interfaceId && draft.interfaceId === data.interfaceId) {
+        setDraft(previous =>
+          previous && previous.interfaceId === data.interfaceId
+            ? {
+                ...previous,
+                tags: data.tags,
+                version: data.version,
+                updatedAt: data.updatedAt,
+              }
+            : previous,
+        )
+        setTagsText(data.tags.join(', '))
+      }
+      message.success(
+        variables.groupName
+          ? `已将「${data.name}」移动到分组「${variables.groupName}」`
+          : `已清除「${data.name}」的标签并归入「未分类」`,
+      )
+      setMoveTarget(null)
+      void queryClient.invalidateQueries({ queryKey: ['apiInterfaces'] })
+    },
+    onError: error => message.error(errorMessage(error)),
+  })
+  const createGroupMutation = useMutation({
+    mutationFn: ({
+      repository,
+      groupName,
+    }: {
+      repository: SoftwareRepository
+      groupName: string
+    }) =>
+      interfaceLibraryApi.createApiInterfaceGroup(repository.softwareRepositoryId, {
+        groupName,
+      }),
+    onSuccess: data => {
+      message.success(`已创建分组「${data.newGroupName}」`)
+      setCreateGroupRepository(null)
+      void queryClient.invalidateQueries({
+        queryKey: ['softwareRepositories', projectId],
+      })
+    },
+    onError: error => message.error(errorMessage(error)),
+  })
+
+  function syncDraftAfterGroupRename(
+    softwareRepositoryId: string,
+    currentGroup: string,
+    newGroup: string,
+  ) {
+    if (draft?.softwareRepositoryId !== softwareRepositoryId) return
+    setDraft(previous => {
+      if (
+        !previous?.interfaceId ||
+        previous.softwareRepositoryId !== softwareRepositoryId ||
+        firstTag(previous.tags) !== currentGroup
+      ) {
+        return previous
+      }
+      return { ...previous, tags: replaceFirstTag(previous.tags, newGroup) }
+    })
+    setTagsText(previous => {
+      const parsed = splitTags(previous)
+      if (firstTag(parsed) !== currentGroup) return previous
+      return replaceFirstTag(parsed, newGroup).join(', ')
+    })
+  }
+
+  function syncDraftAfterGroupRemoval(
+    softwareRepositoryId: string,
+    groupName: string,
+  ) {
+    if (draft?.softwareRepositoryId !== softwareRepositoryId) return
+    setDraft(previous => {
+      if (
+        !previous?.interfaceId ||
+        previous.softwareRepositoryId !== softwareRepositoryId ||
+        firstTag(previous.tags) !== groupName
+      ) {
+        return previous
+      }
+      return { ...previous, tags: [] }
+    })
+    setTagsText(previous =>
+      firstTag(splitTags(previous)) === groupName ? '' : previous,
+    )
+  }
+
+  function openCreateGroup(repository: SoftwareRepository) {
+    setCreateGroupRepository(repository)
+    setCreateGroupName('')
+  }
+
+  function submitCreateGroup() {
+    if (!createGroupRepository) return
+    const groupName = createGroupName.trim()
+    if (!groupName) {
+      message.warning('请输入分组名称')
+      return
+    }
+    createGroupMutation.mutate({ repository: createGroupRepository, groupName })
+  }
+
+  function openRenameGroup(repository: SoftwareRepository, group: InterfaceGroup) {
+    setGroupRenameTarget({ repository, group })
+    setGroupRenameValue(group.tag)
+  }
+
+  function submitRenameGroup() {
+    if (!groupRenameTarget) return
+    const newGroupName = groupRenameValue.trim()
+    if (!newGroupName) {
+      message.warning('请输入分组名称')
+      return
+    }
+    if (newGroupName === groupRenameTarget.group.tag) {
+      setGroupRenameTarget(null)
+      return
+    }
+    renameGroupMutation.mutate({ target: groupRenameTarget, newGroupName })
+  }
+
+  function openRemoveGroup(repository: SoftwareRepository, group: InterfaceGroup) {
+    Modal.confirm({
+      title: '移除分组',
+      content: `该组 ${group.items.length} 个接口将清除全部标签并归入「未分类」，接口不会被删除，次要标签也会被清除。`,
+      okText: '移除分组',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: () => deleteGroupMutation.mutateAsync({ repository, group }),
+    })
+  }
+
+  function openMoveInterface(
+    repository: SoftwareRepository,
+    item: ApiInterfaceListItem,
+    groups: string[],
+  ) {
+    setMoveTarget({ repository, item, groups })
+    setMoveMode('group')
+    setMoveGroupName('')
+  }
+
+  function submitMoveInterface() {
+    if (!moveTarget) return
+    const groupName = moveMode === 'clear' ? '' : moveGroupName.trim()
+    if (moveMode === 'group' && !groupName) {
+      message.warning('请选择或输入目标分组')
+      return
+    }
+    moveMutation.mutate({ item: moveTarget.item, groupName })
+  }
 
   function patch(patchValue: Partial<ApiInterface>) {
     setDraft(previous => (previous ? { ...previous, ...patchValue } : previous))
@@ -175,10 +424,18 @@ export function InterfaceDetailPage() {
     )
   }
 
-  function changeApp(appId: string) {
-    const app = apps.find(item => item.appId === appId)
+  function changeRepository(softwareRepositoryId: string) {
+    const repository = repositories.find(
+      item => item.softwareRepositoryId === softwareRepositoryId,
+    )
     setDraft(previous =>
-      previous ? { ...previous, appId, appName: app?.name ?? '' } : previous,
+      previous
+        ? {
+            ...previous,
+            softwareRepositoryId,
+            softwareRepositoryName: repository?.name ?? '',
+          }
+        : previous,
     )
   }
 
@@ -230,42 +487,23 @@ export function InterfaceDetailPage() {
         </InterfaceWorkspaceShell>
       )
     }
-    if (isCreate && appsQuery.isError) {
+    if (isCreate && repositoriesQuery.isError) {
       return (
         <InterfaceWorkspaceShell>
           <Alert
             type="error"
             showIcon
-            title="接口应用加载失败"
+            title="软件仓库加载失败"
             description="请检查当前项目权限后重试。"
-            action={<Button onClick={() => void appsQuery.refetch()}>重试</Button>}
+            action={<Button onClick={() => void repositoriesQuery.refetch()}>重试</Button>}
           />
         </InterfaceWorkspaceShell>
       )
     }
-    if (isCreate && !appsQuery.isLoading && !apps.length) {
+    if (isCreate && !repositoriesQuery.isLoading && !repositories.length) {
       return (
         <InterfaceWorkspaceShell>
-          <Empty
-            description={
-              canManage ? '还没有接口应用，请先创建应用' : '当前项目还没有接口应用，请联系项目所有者创建'
-            }
-          >
-            {canManage ? (
-              <Button type="primary" onClick={openCreate}>
-                新建应用
-              </Button>
-            ) : null}
-          </Empty>
-          {canManage ? (
-            <ApiAppEditorDrawer
-              open={editorOpen}
-              projectId={projectId}
-              app={editingApp}
-              onClose={closeEditor}
-              onSaved={closeEditor}
-            />
-          ) : null}
+          <Empty description="当前项目还没有软件仓库，请先在「软件仓库」页创建。" />
         </InterfaceWorkspaceShell>
       )
     }
@@ -276,7 +514,7 @@ export function InterfaceDetailPage() {
     )
   }
 
-  if (!isCreate && !appsQuery.isLoading && !interfaceInActiveProject) {
+  if (!isCreate && !repositoriesQuery.isLoading && !interfaceInActiveProject) {
     return (
       <InterfaceWorkspaceShell>
         <Alert
@@ -290,7 +528,7 @@ export function InterfaceDetailPage() {
     )
   }
 
-  const appBasePath = selectedApp?.basePath || ''
+  const repositoryBasePath = selectedRepository?.basePath || ''
   const methodToneClass = methodTone(draft.method)
 
   return (
@@ -308,9 +546,6 @@ export function InterfaceDetailPage() {
           <div className="if-detail-heading">
             <div className="if-detail-title-row">
               <h1>{draft.name.trim() || (isCreate ? '新建接口' : '未命名接口')}</h1>
-              <span className={`if-status ${draft.enabled ? 'is-enabled' : 'is-disabled'}`}>
-                {draft.enabled ? '启用' : '停用'}
-              </span>
               {isCreate ? <Tag>草稿</Tag> : null}
               {!canWrite ? <Tag>只读成员 · 不可编辑</Tag> : null}
             </div>
@@ -318,32 +553,13 @@ export function InterfaceDetailPage() {
               <Tag className={`if-method if-method-${methodToneClass}`}>{draft.method}</Tag>
               <code>{draft.path || '未填写路径'}</code>
               <span className="if-meta-dot">·</span>
-              <span>{draft.appName || selectedApp?.name || '未选择应用'}</span>
+              <span>{draft.softwareRepositoryName || selectedRepository?.name || '未选择软件仓库'}</span>
               <span className="if-meta-dot">·</span>
               <span>{draft.updatedAt ? `更新于 ${formatTime(draft.updatedAt)}` : '尚未保存'}</span>
             </div>
           </div>
         </div>
         <div className="if-detail-topbar-actions">
-          {canWrite && !isCreate ? (
-            <Button
-              icon={<PlusOutlined />}
-              onClick={() =>
-                navigate(`/asset-library/interfaces/new?appId=${encodeURIComponent(draft.appId)}`)
-              }
-            >
-              新建接口
-            </Button>
-          ) : null}
-          {canWrite && !isCreate ? (
-            <Button
-              icon={<UploadOutlined />}
-              disabled={!apps.length}
-              onClick={() => setImportOpen(true)}
-            >
-              导入 OpenAPI
-            </Button>
-          ) : null}
           <Tooltip title="刷新">
             <Button
               aria-label="刷新接口"
@@ -354,6 +570,25 @@ export function InterfaceDetailPage() {
               }}
             />
           </Tooltip>
+          {canWrite && !isCreate ? (
+            <Button
+              icon={<PlusOutlined />}
+              onClick={() =>
+                navigate(`/asset-library/interfaces/new?softwareRepositoryId=${encodeURIComponent(draft.softwareRepositoryId)}`)
+              }
+            >
+              新建接口
+            </Button>
+          ) : null}
+          {canWrite ? (
+            <Button
+              icon={<UploadOutlined />}
+              disabled={!repositories.length}
+              onClick={() => setImportOpen(true)}
+            >
+              导入 OpenAPI
+            </Button>
+          ) : null}
           {canWrite && !isCreate ? (
             <Button
               danger
@@ -368,20 +603,20 @@ export function InterfaceDetailPage() {
       </header>
 
       <div className="if-detail-shell">
-        <InterfaceAppTree
-          apps={apps}
-          loading={appsQuery.isLoading}
-          selectedAppId={draft.appId}
+        <SoftwareRepositoryTree
+          repositories={repositories}
+          loading={repositoriesQuery.isLoading}
+          selectedSoftwareRepositoryId={draft.softwareRepositoryId}
           selectedInterfaceId={draft.interfaceId}
           mode="detail"
-          canManageApps={canManage}
-          onSelectApp={() => undefined}
+          canManageInterfaces={canWrite}
+          onSelectRepository={() => undefined}
           onShowAll={() => navigate('/asset-library?tab=interfaces')}
           onOpenInterface={id => navigate(`/asset-library/interfaces/${id}`)}
-          onCreateApp={openCreate}
-          onEditApp={openEdit}
-          onToggleApp={toggleApp}
-          onDeleteApp={deleteApp}
+          onCreateGroup={openCreateGroup}
+          onRenameGroup={openRenameGroup}
+          onRemoveGroup={openRemoveGroup}
+          onMoveInterface={openMoveInterface}
         />
 
         <main className="if-detail-main">
@@ -397,28 +632,25 @@ export function InterfaceDetailPage() {
                 onChange={event => patch({ name: event.target.value })}
               />
               <div className="if-editor-meta">
-                <span>所属应用</span>
+                <span>所属软件仓库</span>
                 {isCreate ? (
                   <Select
                     className="if-app-select"
-                    aria-label="所属应用"
-                    value={draft.appId || undefined}
-                    placeholder="选择应用"
+                    aria-label="所属软件仓库"
+                    value={draft.softwareRepositoryId || undefined}
+                    placeholder="选择软件仓库"
                     disabled={!canWrite}
-                    options={apps.map(app => ({
-                      label: `${app.name}${app.enabled ? '' : '（已停用）'}`,
-                      value: app.appId,
+                    options={repositories.map(repository => ({
+                      label: repository.name,
+                      value: repository.softwareRepositoryId,
                     }))}
-                    onChange={changeApp}
+                    onChange={changeRepository}
                   />
                 ) : (
-                  <span className="if-editor-app">{draft.appName || selectedApp?.name || '—'}</span>
+                  <span className="if-editor-app">{draft.softwareRepositoryName || selectedRepository?.name || '—'}</span>
                 )}
                 <span className="if-meta-dot">·</span>
                 <span>{draft.updatedAt ? formatTime(draft.updatedAt) : '新建'}</span>
-                <span className={`if-status ${draft.enabled ? 'is-enabled' : 'is-disabled'}`}>
-                  {draft.enabled ? '启用' : '停用'}
-                </span>
               </div>
             </div>
 
@@ -432,8 +664,8 @@ export function InterfaceDetailPage() {
                 onChange={method => patch({ method })}
               />
               <div className="if-path-input-wrap">
-                <span className="if-base-prefix" title={appBasePath || '应用未设置 base path'}>
-                  {appBasePath || '/…'}
+                <span className="if-base-prefix" title={repositoryBasePath || '软件仓库未设置 base path'}>
+                  {repositoryBasePath || '/…'}
                 </span>
                 <Input
                   className="if-path-input"
@@ -453,7 +685,7 @@ export function InterfaceDetailPage() {
                   disabled={
                     !draft.name.trim() ||
                     !draft.path.trim() ||
-                    !draft.appId ||
+                    !draft.softwareRepositoryId ||
                     !interfaceInActiveProject ||
                     (!isCreate && draft.interfaceId !== interfaceId)
                   }
@@ -548,7 +780,6 @@ export function InterfaceDetailPage() {
               {activeTab === 'settings' ? (
                 <InterfaceSettingsPanel
                   draft={draft}
-                  app={selectedApp}
                   readOnly={!canWrite}
                   tagsText={tagsText}
                   onTagsText={setTagsText}
@@ -562,23 +793,123 @@ export function InterfaceDetailPage() {
       </div>
       <OpenApiImportModal
         open={importOpen}
-        apps={apps}
-        defaultAppId={draft.appId}
+        repositories={repositories}
+        defaultSoftwareRepositoryId={draft.softwareRepositoryId}
         onClose={() => setImportOpen(false)}
         onImported={() => {
           setImportOpen(false)
           queryClient.invalidateQueries({ queryKey: ['apiInterfaces'] })
-          queryClient.invalidateQueries({ queryKey: ['apiApps', projectId] })
+          queryClient.invalidateQueries({ queryKey: ['softwareRepositories', projectId] })
+          if (isCreate) {
+            const target = draft.softwareRepositoryId
+              ? `?tab=interfaces&softwareRepositoryId=${encodeURIComponent(draft.softwareRepositoryId)}`
+              : '?tab=interfaces'
+            navigate(`/asset-library${target}`)
+            return
+          }
           if (interfaceId) void interfaceQuery.refetch()
         }}
       />
-      <ApiAppEditorDrawer
-        open={editorOpen}
-        projectId={projectId}
-        app={editingApp}
-        onClose={closeEditor}
-        onSaved={closeEditor}
-      />
+      <Modal
+        open={Boolean(createGroupRepository)}
+        title="新建分组"
+        okText="创建"
+        cancelText="取消"
+        confirmLoading={createGroupMutation.isPending}
+        destroyOnHidden
+        onOk={submitCreateGroup}
+        onCancel={() => setCreateGroupRepository(null)}
+      >
+        <div className="if-group-modal">
+          <div className="if-group-modal-label">
+            <span>软件仓库</span>
+            <Tag>{createGroupRepository?.name}</Tag>
+          </div>
+          <Input
+            aria-label="分组名称"
+            value={createGroupName}
+            maxLength={50}
+            showCount
+            placeholder="输入分组名称"
+            onChange={event => setCreateGroupName(event.target.value)}
+            onPressEnter={submitCreateGroup}
+          />
+          <p className="if-group-modal-hint">
+            分组会保存在软件仓库中，即使暂时没有接口也会保留；可在接口的「更多操作」中移动接口进来。
+          </p>
+        </div>
+      </Modal>
+      <Modal
+        open={Boolean(groupRenameTarget)}
+        title="重命名分组"
+        okText="保存"
+        cancelText="取消"
+        confirmLoading={renameGroupMutation.isPending}
+        destroyOnHidden
+        onOk={submitRenameGroup}
+        onCancel={() => setGroupRenameTarget(null)}
+      >
+        <div className="if-group-modal">
+          <div className="if-group-modal-label">
+            <span>当前分组</span>
+            <Tag>{groupRenameTarget?.group.tag}</Tag>
+          </div>
+          <Input
+            aria-label="新分组名称"
+            value={groupRenameValue}
+            maxLength={50}
+            showCount
+            placeholder="输入新的分组名称"
+            onChange={event => setGroupRenameValue(event.target.value)}
+            onPressEnter={submitRenameGroup}
+          />
+          <p className="if-group-modal-hint">
+            将修改该分组下接口的首个标签；若目标分组已存在，操作会被拒绝，不会自动合并。
+          </p>
+        </div>
+      </Modal>
+      <Modal
+        open={Boolean(moveTarget)}
+        title="移动到分组"
+        okText="移动"
+        cancelText="取消"
+        confirmLoading={moveMutation.isPending}
+        destroyOnHidden
+        onOk={submitMoveInterface}
+        onCancel={() => setMoveTarget(null)}
+      >
+        <div className="if-group-modal">
+          <div className="if-group-modal-label">
+            <span>接口</span>
+            <span className="if-group-modal-interface">
+              {moveTarget?.item.name || moveTarget?.item.path}
+            </span>
+          </div>
+          <Radio.Group
+            value={moveMode}
+            onChange={event => setMoveMode(event.target.value)}
+          >
+            <Radio value="group">移动到分组</Radio>
+            <Radio value="clear">清除全部标签（归入「未分类」）</Radio>
+          </Radio.Group>
+          {moveMode === 'group' ? (
+            <AutoComplete
+              className="if-group-move-select"
+              aria-label="目标分组"
+              value={moveGroupName}
+              options={(moveTarget?.groups ?? []).map(name => ({
+                value: name,
+                label: name,
+              }))}
+              placeholder="选择已有分组，或输入新分组名称"
+              onChange={value => setMoveGroupName(value)}
+            />
+          ) : null}
+          <p className="if-group-modal-hint">
+            移动到已有或新分组会将该标签置顶；清除标签后接口归入「未分类」，次要标签也会被清除。
+          </p>
+        </div>
+      </Modal>
     </InterfaceWorkspaceShell>
   )
 }
@@ -677,7 +1008,6 @@ function buildPayload(
     responseDescription,
     responseSchema,
     responseExample,
-    enabled: draft.enabled,
     requirementIds: draft.requirements.map(requirement => requirement.requirementId),
   }
 }

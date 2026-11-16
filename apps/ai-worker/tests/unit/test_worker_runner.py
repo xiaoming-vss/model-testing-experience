@@ -55,7 +55,7 @@ class _SuccessfulExecutor(TaskExecutor):
             TaskProgress(
                 task_id=task.task_id,
                 attempt_id=task.attempt_id,
-                current_stage="openapi_extract",
+                current_stage="interface_extract",
                 stage_status="running",
                 intermediate_json_text='{"cases":[]}',
                 result_summary_json='{"status":"running"}',
@@ -163,7 +163,7 @@ class WorkerRunnerTests(unittest.TestCase):
         self.assertEqual(len(sink.progress_calls), 1)
         self.assertEqual(len(sink.result_calls), 1)
         self.assertEqual(result.status, TaskStatus.SUCCESS)
-        self.assertEqual(sink.progress_calls[0].current_stage, "openapi_extract")
+        self.assertEqual(sink.progress_calls[0].current_stage, "interface_extract")
 
     def test_process_task_continues_when_progress_submission_fails(self) -> None:
         sink = _FailingProgressSink()

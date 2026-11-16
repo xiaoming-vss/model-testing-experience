@@ -45,8 +45,9 @@ def assert_current_schema(connection):
         "api_cases": "fk_api_cases_collection",
         "api_case_runs": "fk_api_case_runs_case",
         "api_collection_run_items": "fk_api_collection_run_items_case_run",
-        "api_apps": "fk_api_apps_project",
-        "api_interfaces": "fk_api_interfaces_app",
+        "software_repositories": "fk_software_repositories_project",
+        "requirement_software_repositories": ("fk_requirement_software_repositories_repository"),
+        "api_interfaces": "fk_api_interfaces_software_repository",
         "api_interface_requirements": "fk_api_interface_requirements_interface",
     }
     for table, name in expected.items():

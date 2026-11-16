@@ -47,7 +47,11 @@ async def test_unconfigured_chain_view_does_not_create_stages(db):  # noqa: F811
     seed_task(db)
     before = len(db.scalars(select(AiGenerationStage)).all())
     view = await build_chain_view(AsyncSessionAdapter(db), "r", "api", None, detail=True)
-    assert [stage.stage for stage in view.stages] == ["openapi_extract", "generate"]
+    assert [stage.stage for stage in view.stages] == [
+        "interface_extract",
+        "api_design",
+        "generate",
+    ]
     assert not view.configured
     assert len(db.scalars(select(AiGenerationStage)).all()) == before
 
@@ -429,12 +433,15 @@ async def test_import_records_approved_parent_versions_and_formal_target(db):  #
 async def test_api_stages_preserve_selection_and_import_after_parent_deletion(db, continue_after):  # noqa: F811
     from support.generation import generation_services
 
+    from testing_agent.domain.api_interface import path_key
     from testing_agent.models.ai_generate_task import AiGenerateTask
     from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
     from testing_agent.models.api_assert_rule import ApiAssertRule
     from testing_agent.models.api_case import ApiCase
     from testing_agent.models.api_collection import ApiCollection
     from testing_agent.models.api_extract_rule import ApiExtractRule
+    from testing_agent.models.api_interface import ApiInterface
+    from testing_agent.models.software_repository import SoftwareRepository
     from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
     from testing_agent.schemas.generation_chain import (
         GenerationChainImportRequest,
@@ -448,10 +455,34 @@ async def test_api_stages_preserve_selection_and_import_after_parent_deletion(db
     task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == "task"))
     task.task_type, task.source_type, task.source_content = (
         "api_case_generate",
-        "openapi",
-        '{"openapi":"3.0.0","paths":{}}',
+        "interface_library",
+        "",
     )
-    stage.stage = "openapi_extract"
+    task.interface_ids_json = ["interface-1"]
+    db.add(
+        SoftwareRepository(
+            software_repository_id="repository-1",
+            project_id="p",
+            name="订单服务",
+            base_path="/api",
+            repository_project_id="42",
+            repository_path="commerce/order-service",
+            repository_instance_url="https://gitlab.example.com",
+            created_by_user_id="u",
+        )
+    )
+    db.flush()
+    db.add(
+        ApiInterface(
+            interface_id="interface-1",
+            software_repository_id="repository-1",
+            name="登录",
+            method="POST",
+            path="/login",
+            path_key=path_key("/login"),
+        )
+    )
+    stage.stage = "interface_extract"
     db.add_all(
         [
             ApiCollection(collection_id="target", requirement_id="r", name="目标"),
@@ -463,7 +494,7 @@ async def test_api_stages_preserve_selection_and_import_after_parent_deletion(db
     chain = generation_services(AiGenerateTaskRepository(session)).chain
     commands = DirectStageCommands(chain)
     first = await commands.run(
-        "r", "api", "openapi_extract", GenerationChainRunRequest(connectionId="llm"), "u"
+        "r", "api", "interface_extract", GenerationChainRunRequest(connectionId="llm"), "u"
     )
     first_attempt = db.get(AiGenerationAttempt, first.stages[0].active_run_id)
     await storage.publish(
@@ -478,7 +509,7 @@ async def test_api_stages_preserve_selection_and_import_after_parent_deletion(db
     first_review = await commands.review(
         "r",
         "api",
-        "openapi_extract",
+        "interface_extract",
         GenerationChainReviewRequest(
             action="approve",
             expectedAttemptId=first_attempt.id,
@@ -490,22 +521,83 @@ async def test_api_stages_preserve_selection_and_import_after_parent_deletion(db
     )
     parent_id = first_review.stages[0].latest_version.version_id
     if continue_after:
-        second = first_review
+        design_view = first_review
     else:
-        second = await commands.run(
+        design_view = await commands.run(
             "r",
             "api",
-            "generate",
+            "api_design",
             GenerationChainRunRequest(
                 connectionId="llm",
-                instruction="覆盖鉴权异常",
-                upstreamVersions={"openapi_extract": parent_id},
+                upstreamVersions={"interface_extract": parent_id},
             ),
             "u",
         )
-    candidate = db.get(AiGenerationAttempt, second.stages[1].active_run_id)
+    design_attempt = db.get(AiGenerationAttempt, design_view.stages[1].active_run_id)
+    assert (
+        design_attempt.input_snapshot_json["config"]["apiExtraction"]["login"]["path"] == "/login"
+    )
+    design_content = json.dumps(
+        {
+            "schemaVersion": "api_test_design/1.0",
+            "interfaces": {
+                "login": {
+                    "method": "POST",
+                    "path": "/login",
+                    "cases": [
+                        {
+                            "id": "login_positive",
+                            "title": "登录-正向",
+                            "category": "positive",
+                            "priority": "P0",
+                            "intent": "验证登录成功",
+                            "basis": {
+                                "kind": "positive",
+                                "section": "",
+                                "field": "",
+                                "constraint": "",
+                            },
+                            "patch": {},
+                            "expected": {"statusClass": "2xx", "assertions": []},
+                        }
+                    ],
+                    "uncovered": [],
+                }
+            },
+        }
+    )
+    await storage.publish(
+        design_attempt.stage_id,
+        attempt_id=design_attempt.id,
+        worker_task_id=design_attempt.worker_task_id,
+        content=design_content,
+        output_format="json",
+        output_context=None,
+    )
+    db.commit()
+    design_review = await commands.review(
+        "r",
+        "api",
+        "api_design",
+        GenerationChainReviewRequest(action="approve", expectedAttemptId=design_attempt.id),
+        "u",
+    )
+    design_id = design_review.stages[1].latest_version.version_id
+    generate_view = await commands.run(
+        "r",
+        "api",
+        "generate",
+        GenerationChainRunRequest(
+            connectionId="llm",
+            instruction="覆盖鉴权异常",
+            upstreamVersions={"interface_extract": parent_id, "api_design": design_id},
+        ),
+        "u",
+    )
+    candidate = db.get(AiGenerationAttempt, generate_view.stages[2].active_run_id)
     assert candidate.input_snapshot_json["source"]["instruction"] == "覆盖鉴权异常"
     assert candidate.input_snapshot_json["config"]["apiExtraction"]["login"]["path"] == "/login"
+    assert candidate.input_snapshot_json["config"]["apiDesign"] == json.loads(design_content)
     await storage.publish(
         candidate.stage_id,
         attempt_id=candidate.id,
@@ -529,9 +621,12 @@ async def test_api_stages_preserve_selection_and_import_after_parent_deletion(db
         GenerationChainReviewRequest(action="approve", expectedAttemptId=candidate.id),
         "u",
     )
-    leaf_id = approved.stages[1].latest_version.version_id
+    leaf_id = approved.stages[2].latest_version.version_id
     options = await chain.import_options("r", "api", leaf_id, "u")
-    assert options.parent_versions == {"openapi_extract": parent_id}
+    assert options.parent_versions == {
+        "interface_extract": parent_id,
+        "api_design": design_id,
+    }
     imported = await chain.import_version(
         "r", "api", leaf_id, GenerationChainImportRequest(targetId="target"), "u"
     )
@@ -541,7 +636,8 @@ async def test_api_stages_preserve_selection_and_import_after_parent_deletion(db
     assert db.scalar(select(ApiAssertRule).where(ApiAssertRule.case_id == case.case_id))
     await delete_stage_version(session, task, parent_id)
     db.commit()
-    assert (await chain.import_options("r", "api", leaf_id, "u")).parents == []
+    remaining = await chain.import_options("r", "api", leaf_id, "u")
+    assert {item.version_id for item in remaining.parents} == {design_id}
     imported_again = await chain.import_version(
         "r", "api", leaf_id, GenerationChainImportRequest(targetId="missing-parent"), "u"
     )
@@ -1328,25 +1424,6 @@ async def test_stage_view_exposes_failed_attempt_reason_and_time(db):  # noqa: F
     assert point.failed_at is not None
 
 
-async def test_stage_view_preserves_review_findings_for_user(db):  # noqa: F811
-    from testing_agent.models.ai_generate_task import AiGenerateTask
-    from testing_agent.services.stage_storage.views import build_stage_views
-    from testing_agent.services.stage_storage.worker import StageWorkerTransitions
-
-    stage, storage = setup_stage(db)
-    task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == stage.task_id))
-    attempt = await storage.prepare(
-        stage.id, worker_task_id="review-run", requested_by="u", input_snapshot={}
-    )
-    detail = "复核未通过（2 项问题）\n1. 报告生成：缺少成功条件\n2. 语义切片：缺少前置条件"
-    await StageWorkerTransitions(AsyncSessionAdapter(db)).failed(
-        stage.id, attempt.id, "review-run", error_message=detail
-    )
-    result = await build_stage_views(AsyncSessionAdapter(db), task, "function", detail=True)
-    point = next(row for row in result.stages if row.stage == "case_names")
-    assert point.error_message == detail
-
-
 async def test_version_detail_reads_frozen_source_and_allows_missing_parent(db):  # noqa: F811
     from testing_agent.models.ai_generate_task import AiGenerateTask
     from testing_agent.services.stage_storage.version_views import version_detail
@@ -2085,7 +2162,8 @@ async def test_approval_can_continue_to_next_direct_stage(db, monkeypatch):  # n
             artifact_context_json={
                 "functionalSource": {
                     "sourceContent": material.artifact_content,
-                    "documentType": "text",
+                    "sourceFormat": "requirement_understanding_json",
+                    "sourceFormatVersion": "0.2",
                     "requirementMaterialVersion": {"versionId": material.version_id},
                 }
             },
@@ -2361,7 +2439,12 @@ async def test_graph_result_is_bound_to_approved_case_version(db, monkeypatch): 
     monkeypatch.setattr(relations, "require_personal_connection", AsyncMock())
     graph = await relations.launch_graph(AsyncSessionAdapter(db), task, first.id, "u", "llm")
     graph_source = graph.input_snapshot_json["source"]
-    assert set(graph_source) == {"sourceContent", "documentType", "requirementMaterialVersion"}
+    assert set(graph_source) == {
+        "sourceContent",
+        "sourceFormat",
+        "sourceFormatVersion",
+        "requirementMaterialVersion",
+    }
     assert json.loads(graph_source["sourceContent"]) == material
     assert graph_source["requirementMaterialVersion"] == material_version
     graph_config = graph.input_snapshot_json["config"]

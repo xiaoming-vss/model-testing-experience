@@ -44,6 +44,9 @@ from testing_agent.routers.repository_profile_tasks import (
 from testing_agent.routers.requirement_analysis_runs import (
     router as requirement_analysis_runs_router,
 )
+from testing_agent.routers.requirement_software_repositories import (
+    router as requirement_software_repositories_router,
+)
 from testing_agent.routers.requirements import router as requirements_router
 from testing_agent.routers.resource_bindings import router as resource_bindings_router
 from testing_agent.routers.shared_services import router as shared_services_router
@@ -170,6 +173,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(llm_integrations_router, tags=["LLM Integrations"])
     v1.include_router(shared_services_router, tags=["Shared Services"])
     v1.include_router(resource_bindings_router, tags=["Resource Bindings"])
+    v1.include_router(requirement_software_repositories_router, tags=["Software Repositories"])
     v1.include_router(project_skills_router, tags=["Project Skills"])
     v1.include_router(sprint_metrics_router, tags=["Sprint Metrics"])
     v1.include_router(sprint_code_overview_router, tags=["Sprint Metrics"])

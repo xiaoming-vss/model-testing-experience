@@ -111,17 +111,6 @@ class RequirementRepository(ResourceRepository):
         )
         return total or 0, list(result.mappings().all())
 
-    async def list_active_by_sprint(self, sprint_id: str) -> list[Requirement]:
-        return list(
-            (
-                await self.session.scalars(
-                    select(Requirement)
-                    .where(Requirement.sprint_id == sprint_id)
-                    .order_by(Requirement.created_at.desc())
-                )
-            ).all()
-        )
-
     def add(self, requirement: Requirement) -> None:
         self.session.add(requirement)
 

@@ -411,13 +411,6 @@ class IntegrationConnectionService:
             connection_id, user_id, project_id=project_id, page=page, page_size=page_size
         )
 
-    async def resolve_gitlab_group_id(
-        self, connection_id: str, project_id: str, group_id: str, *, user_id: str
-    ) -> str:
-        return await self.gitlab_resources.resolve_group_id(
-            connection_id, project_id, group_id, user_id=user_id
-        )
-
     async def ensure_gitlab_repository_scope(
         self,
         connection_id: str,

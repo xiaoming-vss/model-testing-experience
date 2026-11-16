@@ -244,7 +244,8 @@ def test_parser_records_non_blocking_warnings():
     assert "base_path_variable" in codes
     assert "cookie_parameter_skipped" in codes
     assert "deprecated" in codes
-    assert "security_not_imported" in codes
+    assert "security_not_imported" not in codes
+    assert parsed.endpoints[0].security == [{"bearer": []}]
     assert "parameter_ref_unresolved" in codes
 
 

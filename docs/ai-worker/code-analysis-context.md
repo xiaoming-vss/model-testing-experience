@@ -4,9 +4,9 @@
 
 ## 快照与固定版本
 
-- 需求仓库绑定时必须选择基线分支；基线不能与工作分支相同，两个分支都按当前操作人的个人 PAT 校验存在且可访问。
-- `CodeRiskAnalysisService.build_snapshot` 不再从历史迭代推断基线。缺少基线、缺少连接或任一仓库的 commit/克隆地址解析失败时，整次 run 创建失败。
-- 快照中的每个 binding 包含 `repositoryId`、`instanceUrl`、`pathWithNamespace`、`cloneUrl`、`branch`、`baselineBranch`、`baseCommit`、`headCommit` 与 `connectionId`。
+- 需求关联软件仓库时必须选择基线分支；基线不能与工作分支相同，两个分支都按当前操作人的个人 PAT 校验存在且可访问。
+- `CodeRiskAnalysisService.build_snapshot` 不再从历史迭代推断基线。需求没有关联软件仓库、关联缺少分支/基线、缺少连接或任一仓库的 commit/克隆地址解析失败时，整次 run 创建失败。
+- 快照中的每个 binding 包含 `softwareRepositoryId`、`softwareRepositoryName`、`repositoryId`、`instanceUrl`、`pathWithNamespace`、`cloneUrl`、`branch`、`baselineBranch`、`baseCommit`、`headCommit` 与 `connectionId`。
 - 凭据接口只下发当前执行人的个人连接 token；token 不进入任务快照。
 
 ## 每次 run 的工作区

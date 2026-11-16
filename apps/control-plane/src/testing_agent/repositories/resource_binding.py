@@ -5,7 +5,6 @@ from typing import NamedTuple
 
 from sqlalchemy import RowMapping, select
 
-from testing_agent.core.errors import ErrResourceBindingInvalid
 from testing_agent.models.project import Project
 from testing_agent.models.requirement import Requirement
 from testing_agent.models.resource_binding import ResourceBinding
@@ -168,66 +167,10 @@ class ResourceBindingRepository(ResourceRepository):
             ).all()
         )
 
-    async def exists_active_project_group_binding(
-        self,
-        provider: str,
-        project_id: str,
-        group_id: str,
-        *,
-        instance: str | None = None,
-    ) -> bool:
-        row = await self.session.scalar(
-            select(ResourceBinding.binding_id)
-            .where(
-                ResourceBinding.provider == provider,
-                ResourceBinding.local_resource_type == "project",
-                ResourceBinding.local_resource_id == project_id,
-                ResourceBinding.remote_resource_type == "group",
-                ResourceBinding.remote_resource_id == group_id,
-                *((ResourceBinding.instance_key == instance,) if instance is not None else ()),
-                ResourceBinding.status == "active",
-            )
-            .limit(1)
-        )
-        return row is not None
-
-    async def get_active_project_group_binding(
-        self,
-        provider: str,
-        project_id: str,
-        group_id: str,
-        *,
-        for_update: bool = False,
-        instance: str | None = None,
-    ) -> ResourceBinding | None:
-        """项目级激活群组绑定(ADR-0007 凭据解析:需求仓库绑定经由
-        remote_parent_id 指向的群组绑定验证项目关联，不提供凭据)。"""
-        statement = (
-            select(ResourceBinding)
-            .where(
-                ResourceBinding.provider == provider,
-                ResourceBinding.local_resource_type == "project",
-                ResourceBinding.local_resource_id == project_id,
-                ResourceBinding.remote_resource_type == "group",
-                ResourceBinding.remote_resource_id == group_id,
-                *((ResourceBinding.instance_key == instance,) if instance is not None else ()),
-                ResourceBinding.status == "active",
-            )
-            .order_by(ResourceBinding.id.asc())
-            .limit(2)
-        )
-        if for_update:
-            statement = statement.with_for_update().execution_options(populate_existing=True)
-        rows = list((await self.session.scalars(statement)).all())
-        if len(rows) > 1:
-            raise ErrResourceBindingInvalid()
-        return rows[0] if rows else None
-
     async def list_project_bindings(
         self, user_id: str, project_id: str
     ) -> Sequence[ResourceBinding]:
-        """项目绑定列表:gitlab 群组绑定是项目级共享资产,不过滤 user_id(ADR-0007);
-        禅道绑定遵循相同项目权限。"""
+        """项目绑定列表:仅返回禅道绑定;GitLab 群组绑定已移除。"""
         return list(
             (
                 await self.session.scalars(
@@ -235,6 +178,7 @@ class ResourceBindingRepository(ResourceRepository):
                     .where(
                         ResourceBinding.local_resource_type == "project",
                         ResourceBinding.local_resource_id == project_id,
+                        ResourceBinding.provider == "zentao",
                     )
                     .order_by(ResourceBinding.created_at.desc())
                 )
@@ -278,46 +222,6 @@ class ResourceBindingRepository(ResourceRepository):
             .limit(1)
         )
         return row is not None
-
-    async def list_active_requirement_repo_bindings_for_group(
-        self,
-        project_id: str,
-        group_id: str,
-        *,
-        instance: str | None = None,
-    ) -> Sequence[ResourceBinding]:
-        """该群组下仍被需求代码绑定引用的仓库绑定(删除群组绑定前的保护检查)。
-
-        remote_parent_id 记录资源所属群组(ADR-0007),因此受影响集合即
-        remote_parent_id == group_id 且需求归属该项目的激活绑定。
-        """
-        return list(
-            (
-                await self.session.scalars(
-                    select(ResourceBinding)
-                    .join(
-                        Requirement,
-                        Requirement.requirement_id == ResourceBinding.local_resource_id,
-                    )
-                    .join(Sprint, Sprint.sprint_id == Requirement.sprint_id)
-                    .where(
-                        *_GITLAB_ACTIVE_REPO_BINDING_CRITERIA,
-                        ResourceBinding.local_resource_type == "requirement",
-                        ResourceBinding.remote_parent_id == group_id,
-                        *(
-                            (ResourceBinding.instance_key == instance,)
-                            if instance is not None
-                            else ()
-                        ),
-                        Sprint.project_id == project_id,
-                    )
-                    .order_by(ResourceBinding.created_at.desc())
-                    # A locking read sees commits made before the group lock was acquired,
-                    # even under MySQL REPEATABLE READ with an older transaction snapshot.
-                    .with_for_update()
-                )
-            ).all()
-        )
 
     async def list_active_repo_bindings_for_requirement(
         self, requirement_id: str

@@ -1,5 +1,11 @@
 """Shared prompt helpers for every execution backend."""
 
+from testing_agent_ai_worker.skill_names import (
+    API_DESIGN_SKILL,
+    API_EXTRACT_SKILL,
+    API_GENERATE_SKILL,
+)
+
 STRUCTURED_REQUIREMENT_INPUT_INSTRUCTION = (
     "上游若为 readable_requirement_material 0.2 JSON，请读取 functions 中各章节及待确认问题，"
     "通过 materialBlockIds 查找 materialBlocks 的来源及定位；区分已确认、未确认、冲突和示例，"
@@ -46,12 +52,25 @@ TEST_ORDER_GRAPH_JSON_ONLY_INSTRUCTION = STRUCTURED_REQUIREMENT_INPUT_INSTRUCTIO
     "不得在对象前后输出空行、解释、澄清提问、标题、注释、Markdown 代码块或第二个 JSON 对象。"
 )
 API_EXTRACTOR_JSON_ONLY_INSTRUCTION = (
-    "请直接返回符合 openapi-test-config-extractor skill 要求的接口配置 JSON，"
+    f"请直接返回符合 {API_EXTRACT_SKILL} skill 要求的接口配置 JSON，"
     "不要返回测试用例、meta/config/testCases 结构，"
     "不要返回 Markdown 代码块、解释文字或其他说明。"
 )
+API_DESIGNER_JSON_ONLY_INSTRUCTION = (
+    f"请直接返回符合 {API_DESIGN_SKILL} skill 要求的 API 用例设计 JSON"
+    "（schemaVersion 固定为 api_test_design/1.0），"
+    "不要返回 YAML、测试步骤、meta/config 包装结构，"
+    "不要返回 Markdown 代码块、解释文字或其他说明。"
+)
 API_GENERATOR_YAML_ONLY_INSTRUCTION = (
-    "请直接返回符合 api-cases-yaml-generator skill 要求的 YAML 内容，"
+    f"请直接返回符合 {API_GENERATE_SKILL} skill 要求的 YAML 内容，"
+    "严格按已审核 API 用例设计逐条落地，不增加设计之外的用例、断言或提取规则，"
+    "不要返回 JSON、meta/config/testCases 结构，"
+    "不要返回 Markdown 代码块、解释文字或其他说明。"
+)
+API_GENERATOR_LEGACY_YAML_ONLY_INSTRUCTION = (
+    f"请直接返回符合 {API_GENERATE_SKILL} skill 要求的 YAML 内容，"
+    "严格按接口配置提取产物生成，不增加提取产物之外的用例或断言，"
     "不要返回 JSON、meta/config/testCases 结构，"
     "不要返回 Markdown 代码块、解释文字或其他说明。"
 )

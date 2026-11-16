@@ -184,3 +184,25 @@ Kubernetes 由 control-plane chart 的 `skillsSync` Job 在 post-install/post-up
 发布前确认五个需求/功能测试技能与远端完全一致，本次未重复写入；已回读备份三个旧 UI 技能的 48 个文件。先发布新名称并校验，再于 AI 队列为空时按原启动命令和原环境重启本地 Worker；已验证新进程连续正常轮询，随后仅通过现有资源删除及文件延迟清理服务移除三个旧名称。其他默认技能与项目自定义技能清单未变化。
 
 最终从真实对象存储回读八个目标技能的全部 156 个文件，内容、大小与 SHA-256 均与冻结源一致。UI 技能 101 项回归在本轮优化时通过；发布前 Worker 技能下载和 UI 三阶段专项 33 项通过，使用原 Worker 环境的启动依赖检查通过。未新增真实模型业务生成或浏览器业务执行。发布快照、旧版备份、清单差异、重启及回读记录位于 `.scratch/skill-refresh-20261113-0fuyh7if/`。
+
+## 2026-11-15 API 技能整改与 mtx 名称切换
+
+两个 API 默认技能源目录已按 mtx 技能结构整理并切换名称：`openapi-test-config-extractor` → `mtx-extract-interface-test-config`，`api-cases-yaml-generator` → `mtx-generate-api-test-case`。两个技能均改为中文 `SKILL.md`（输入／执行／输出与校验）并新增 `prompts/`（生成与输出前自查），规则和格式拆分到 `references/input-format.md`、`references/field-rules.md`、`references/output-format.md`；同时移除原 `SKILL.md` 中指向作者本机 Windows 目录的绝对路径引用。业务规则与平台校验边界保持不变；输出示例中的认证占位符统一为双花括号模板。
+
+AI Worker 的阶段选择、技能常量、提示词、CLI 默认值和单元测试已同步切换为新名称，不保留旧名兼容分支。部署时先同步新技能，再切换 Worker；本地或集群发布后执行 `uv run python -m testing_agent.cli.skills /app/default-skills --prune`，将旧名称从系统默认技能库移除（项目自定义技能不受影响）。本次仅完成仓库源与代码整理，未执行真实 S3／数据库发布、Worker 重启或模型生成验收。
+
+## 2026-11-15 API 用例设计技能
+
+新增系统默认技能 `api-case-designer`，源目录为 `apps/control-plane/default-skills/api-case-designer/`，包含 `SKILL.md`、`agents/openai.yaml`、`prompts/design-cases.md`、`prompts/design-self-review.md` 以及输入、输出和覆盖规则参考。技能只消费已审核的接口配置提取子集和需求上下文，输出 `api_test_design/1.0` JSON；平台在 Worker 内完成完整设计契约校验和生成对齐校验。
+
+部署时沿用既有默认技能同步命令发布（本地 `uv run python -m testing_agent.cli.skills default-skills`，集群由 Helm `skillsSync` Job 执行）。本次仅提交仓库源，未执行真实 S3 发布、Worker 重启或模型生成验收。
+
+同时更新 `mtx-generate-api-test-case`：输入包含 `apiDesign` 时进入设计驱动模式，严格按设计逐条生成 YAML、落实 `statusClass` 状态区间断言和 `patch` 效果，不增加设计之外的用例、断言或提取规则；输入只有提取配置时保留原正向用例生成行为。
+
+## 2026-11-16 API 三阶段技能发布到本地运行环境
+
+从仓库 `apps/control-plane/default-skills/` 发布到本地运行中的控制面（MySQL + S3）：新增 `api-case-designer`（7 个文件，11698 字节），发布 `mtx-extract-interface-test-config`（7 个文件，10378 字节）和设计驱动版 `mtx-generate-api-test-case`（7 个文件，16083 字节）。仓库源中 `mtx-analyze-case-visualization` 的内容也与运行库不同，随本次同步更新（4 个文件，67140 字节）。
+
+发布后对全部 16 个默认技能、213 个文件执行真实 S3 回读：文件集合、内容、大小及 SHA-256 与仓库源逐项一致，清单摘要校验通过，共 946194 字节。随后执行 `python -m testing_agent.cli.skills default-skills --prune`，删除旧名称 `api-cases-yaml-generator`（3 个文件）和 `openapi-test-config-extractor`（4 个文件），项目自定义技能未受影响；旧文件按既有删除生命周期回收。
+
+发布与重启前确认 AI 队列无排队或执行中任务。本地控制面处于 `env=local` 自动重载模式并已加载三阶段代码；已重启 `mtx-ai-worker-codex.service`（PID 2274431），日志确认恢复 5 秒轮询。未发起真实模型三阶段生成，也未进行登录后的浏览器视觉验收，技能发布不代表三阶段实际生成质量已验收。

@@ -42,10 +42,6 @@ export function getRequirementDocumentDisplayName({
   return documentFileName || documentFilename || requirementName || '需求正文'
 }
 
-export function hasRequirementEnhancedText(requirement?: Pick<Requirement, 'documentContent'>) {
-  return Boolean(requirement?.documentContent?.trim())
-}
-
 export function hasRequirementDocument(
   document?: Pick<Requirement, 'documentType' | 'documentFileId' | 'documentDownloadUrl' | 'documentFilename'>,
 ) {

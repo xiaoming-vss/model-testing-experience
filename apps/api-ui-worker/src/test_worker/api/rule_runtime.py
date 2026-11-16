@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from .template_runtime import render_template
@@ -132,6 +133,13 @@ def _compare(actual: str, expected: str, comparator: str) -> bool:
         return actual == ""
     if cmp == "not_empty":
         return actual != ""
+    if cmp == "exists":
+        return actual != ""
+    if cmp == "regex":
+        try:
+            return re.search(expected, actual) is not None
+        except re.error as exc:
+            raise ValueError(f"invalid regex: {expected}") from exc
     if cmp in ("gt", "gte", "lt", "lte"):
         actual_number = float(actual)
         expected_number = float(expected)
