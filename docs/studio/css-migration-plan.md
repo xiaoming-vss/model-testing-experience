@@ -1,20 +1,20 @@
 # CSS 整改与迁移计划
 
-2026-11-17。本文是 Studio CSS 存量整改与 Tailwind CSS v4 / CSS Modules 迁移的执行顺序、阶段目标和验收口径。策略约束见 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md)，日常编码规则见 [STRUCTURE S16](STRUCTURE.md#四目录与样式契约)。
+2026-11-17（2026-11-18 更新阶段 14）。本文是 Studio CSS 存量整改与 Tailwind CSS v4 / CSS Modules 迁移的执行顺序、阶段目标和验收口径。策略约束见 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md)，日常编码规则见 [STRUCTURE S16](STRUCTURE.md#四目录与样式契约)。
 
-**执行状态（2026-11-17）**：阶段 0–9 已完成。阶段 8 迁完 AI 测试/生成链的页面壳、生成链弹窗、画布、产物视图、关系图谱与 UI 生成可视化，删除 25 个旧 CSS（含 3 个组件内 CSS），新增 12 个根作用域 Module。阶段 9 删除 `App.css` 聚合，把 4 个超 600 行文件拆成 10 个 Module/样式文件（C1 归零），结构门禁新增单文件行数与 `App.css` 回归检查；`!important` 307 / 长前缀 121 / 重复规则体 110 保持不变，未达到归零目标，残余项与后续路径见阶段 9。
+**执行状态（2026-11-18）**：阶段 0–14 已完成。阶段 8 迁完 AI 测试/生成链的页面壳、生成链弹窗、画布、产物视图、关系图谱与 UI 生成可视化，删除 25 个旧 CSS（含 3 个组件内 CSS），新增 12 个根作用域 Module。阶段 9 删除 `App.css` 聚合，把 4 个超 600 行文件拆成 10 个 Module/样式文件（C1 归零），结构门禁新增单文件行数与 `App.css` 回归检查；`!important` 307 / 长前缀 121 / 重复规则体 110 保持不变。阶段 10 把 Test Orders 工作台、图谱、可视化与加入用例弹窗迁为 7 个根作用域 Module，删除 9 个旧 CSS。阶段 11 把用例编辑弹窗、用例库页面骨架与导入禅道弹窗迁为 Module，删除 3 个旧 CSS。阶段 12 把 Projects 看板与 Sprint 详情迁为 3 个 Module，删除 5 个旧 CSS。阶段 13 删除外壳、旧侧栏、项目头和按钮层的零引用规则，`!important` 307 → 262、长前缀 121 → 101、重复规则体 110 → 109。阶段 14 把最后 4 个非 Module feature CSS 迁为根作用域 Module，feature 内非 Module CSS 归零；`--legacy-*` 审计确认 28 个别名全部仍被消费，未删除。
 
 ## 当前基线
 
-| 指标 | 整改前（2026-11-17） | 阶段 3 前 | 阶段 3 完成后 | 阶段 4 第一批后 | 阶段 4 完成后 | 阶段 5 第一批后 | 阶段 5 第二批后 | 阶段 5 完成后 | 阶段 6 完成后 | 阶段 7 完成后 | 阶段 8 完成后 | 阶段 9 完成后 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| CSS 文件 | 101 个 | 102 个 | 109 个（新增 7 个 CSS Modules，含运行结果/导入/基础服务连接/项目设置） | 109 个（`page-frame.css` 拆为 `legacy-surface.css` + Sprint feature 样式，文件数不变） | 112 个（新增 shell/antd-overrides/action-buttons/project-overview，删除 workbench/page-frame） | 112 个（删除 Admin 与 Base Services 页面 CSS，新增 3 个 Module） | 112 个（删除 Test Orders 列表 CSS，新增 1 个 Module） | 112 个（删除 Bugs/Test Cases/TestingPage 共 6 个旧 CSS，新增 6 个 Module，净持平） | 112 个（接口库 index.css 替换为 1 个 Module） | 109 个（删除 API 6 个 + UI 8 个旧 CSS，新增 5 + 6 个 Module） | 96 个（删除 AI 22 个 + 组件内 3 个旧 CSS，新增 12 个 Module） | 102 个（+7 拆分文件，-1 `App.css`） |
-| CSS 总行数 | 23,658 行 | 22,732 行 | 22,770 行（作用域化根类前缀增加少量字符） | 22,782 行 | 22,348 行 | 22,039 行 | 22,029 行 | 21,449 行 | 21,427 行 | 21,488 行（Module 作用域与多选择器换行增加 61 行） | 21,673 行（作用域声明与选择器换行增加 185 行） | 21,696 行（拆分文件头增加 23 行） |
-| `!important` | 582 处 | 500 处 | 493 处 | 493 处 | 420 处 | 402 处 | 402 处 | 307 处 | 307 处 | 307 处 | 307 处 | 307 处（不变） |
-| `.app-shell.app-shell-macos` 长前缀 | 164 处 | 165 处 | 163 处 | 163 处 | 125 处 | 125 处 | 125 处 | 121 处 | 121 处 | 121 处 | 121 处 | 121 处（不变） |
-| 重复规则体 | 约 446 组（历史审计口径） | 134 组（结构门禁口径：≥3 条声明且规则体 ≥40 字符） | 134 组 | 123 组 | 116 组 | 115 组 | 115 组 | 111 组 | 110 组 | 110 组 | 110 组 | 110 组（不变） |
-| 超过 C1 上限（600 行）的文件 | 7 个，合计 9,008 行，占 38% | 7 个 | 5 个，合计 6,048 行，占 26.6% | 5 个，合计 6,019 行，占 26.4% | 5 个，合计 5,288 行，占 23.6% | 5 个，合计 5,289 行，占 24.0% | 5 个，合计 5,289 行，占 24.0% | 4 个，合计 4,232 行，占 19.7% | 4 个，合计 4,201 行，占 19.6% | 4 个，合计 4,203 行，占 19.6% | 4 个，合计 4,203 行，占 19.4% | 0 个 |
-| `App.css` feature 导入 | 5 个 | 4 个 | 0 个 | 0 个 | 0 个 | 0 个 | 0 个 | 0 个 | 0 个 | 0 个 | 0 个 | 0 个（`App.css` 已删除） |
+| 指标 | 整改前（2026-11-17） | 阶段 3 前 | 阶段 3 完成后 | 阶段 4 第一批后 | 阶段 4 完成后 | 阶段 5 第一批后 | 阶段 5 第二批后 | 阶段 5 完成后 | 阶段 6 完成后 | 阶段 7 完成后 | 阶段 8 完成后 | 阶段 9 完成后 | 阶段 10 完成后 | 阶段 11 完成后 | 阶段 12 完成后 | 阶段 13 完成后 | 阶段 14 完成后 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| CSS 文件 | 101 个 | 102 个 | 109 个（新增 7 个 CSS Modules，含运行结果/导入/基础服务连接/项目设置） | 109 个（`page-frame.css` 拆为 `legacy-surface.css` + Sprint feature 样式，文件数不变） | 112 个（新增 shell/antd-overrides/action-buttons/project-overview，删除 workbench/page-frame） | 112 个（删除 Admin 与 Base Services 页面 CSS，新增 3 个 Module） | 112 个（删除 Test Orders 列表 CSS，新增 1 个 Module） | 112 个（删除 Bugs/Test Cases/TestingPage 共 6 个旧 CSS，新增 6 个 Module，净持平） | 112 个（接口库 index.css 替换为 1 个 Module） | 109 个（删除 API 6 个 + UI 8 个旧 CSS，新增 5 + 6 个 Module） | 96 个（删除 AI 22 个 + 组件内 3 个旧 CSS，新增 12 个 Module） | 102 个（+7 拆分文件，-1 `App.css`） | 100 个（删除 Test Orders 9 个旧 CSS，新增 7 个 Module） | 99 个（删除 Test Cases 3 个旧 CSS，新增 2 个 Module） | 97 个（删除 Projects/Sprint 5 个旧 CSS，新增 3 个 Module） | 97 个（不变） | 97 个（4 个旧 CSS 换为 4 个 Module，净持平） |
+| CSS 总行数 | 23,658 行 | 22,732 行 | 22,770 行（作用域化根类前缀增加少量字符） | 22,782 行 | 22,348 行 | 22,039 行 | 22,029 行 | 21,449 行 | 21,427 行 | 21,488 行（Module 作用域与多选择器换行增加 61 行） | 21,673 行（作用域声明与选择器换行增加 185 行） | 21,696 行（拆分文件头增加 23 行） | 21,702 行（Module 头与作用域换行增加 6 行） | 21,706 行（Module 头与合并换行增加 4 行） | 21,714 行（Module 头与合并换行增加 8 行） | 21,423 行（删除外壳/侧栏死规则与重复块） | 21,725 行（4 个 Module 根作用域展开 +302） |
+| `!important` | 582 处 | 500 处 | 493 处 | 493 处 | 420 处 | 402 处 | 402 处 | 307 处 | 307 处 | 307 处 | 307 处 | 307 处（不变） | 307 处（不变） | 307 处（不变） | 307 处（不变） | 262 处（删除死规则 45 处） | 262 处（不变） |
+| `.app-shell.app-shell-macos` 长前缀 | 164 处 | 165 处 | 163 处 | 163 处 | 125 处 | 125 处 | 125 处 | 121 处 | 121 处 | 121 处 | 121 处 | 121 处（不变） | 121 处（不变） | 121 处（不变） | 121 处（不变） | 101 处（删除死规则 20 处） | 101 处（不变） |
+| 重复规则体 | 约 446 组（历史审计口径） | 134 组（结构门禁口径：≥3 条声明且规则体 ≥40 字符） | 134 组 | 123 组 | 116 组 | 115 组 | 115 组 | 111 组 | 110 组 | 110 组 | 110 组 | 110 组（不变） | 110 组（不变） | 110 组（不变） | 110 组（不变） | 109 组（删除重复外壳块 1 组） | 109 组（不变） |
+| 超过 C1 上限（600 行）的文件 | 7 个，合计 9,008 行，占 38% | 7 个 | 5 个，合计 6,048 行，占 26.6% | 5 个，合计 6,019 行，占 26.4% | 5 个，合计 5,288 行，占 23.6% | 5 个，合计 5,289 行，占 24.0% | 5 个，合计 5,289 行，占 24.0% | 4 个，合计 4,232 行，占 19.7% | 4 个，合计 4,201 行，占 19.6% | 4 个，合计 4,203 行，占 19.6% | 4 个，合计 4,203 行，占 19.4% | 0 个 | 0 个 | 0 个 | 0 个 | 0 个 | 0 个 |
+| `App.css` feature 导入 | 5 个 | 4 个 | 0 个 | 0 个 | 0 个 | 0 个 | 0 个 | 0 个 | 0 个 | 0 个 | 0 个 | 0 个（`App.css` 已删除） | 0 个（`App.css` 已删除） | 0 个（`App.css` 已删除） | 0 个（`App.css` 已删除） | 0 个（`App.css` 已删除） | 0 个（`App.css` 已删除） |
 
 历史审计的重复规则体口径更宽，不与结构门禁计数直接比较；后续 ratchet 只使用结构门禁口径。
 
@@ -197,22 +197,82 @@ Tailwind utilities 位于 `@layer utilities`，旧 CSS 未分层。未分层的�
   - `shell.css` 980 行按「基础结构 / 共享色板与顶栏」拆为 `shell.css`（591）+ `shell-header.css`（391），`theme.css` 按原顺序导入。
   - `sprint-overview.css` 975 行按「页面骨架 / 看板指标、图表、报告与响应式」拆为 `sprint-overview.css`（456）+ `sprint-dashboard.css`（521），`SprintDetailPage` 顺序导入。
   - `ui-detail-shell.module.css` 694 行把顶栏抽为 `ui-detail-topbar.module.css`（393），壳保留板面/控制条/窄屏（304）；`UiTestSuiteCasePage` 根节点挂新作用域。
-- `legacy-tokens.css` 的 27 个 `--legacy-*` 全部仍被 `shell.css` / `shell-header.css`、`project-overview.css`、`action-buttons.css` 消费，没有死 token；本阶段不删除仍被引用的别名，等对应外壳/项目概览迁移时再一并替换。
+- `legacy-tokens.css` 的 28 个 `--legacy-*` 全部仍被 `shell.css` / `shell-header.css`、`projects-overview.module.css`、`action-buttons.css` 消费，没有死 token；本阶段不删除仍被引用的别名，等对应外壳/项目概览迁移时再一并替换。
 - 指标：CSS 文件 96 → 102（+7 拆分，-1 `App.css`），总行数 21,673 → 21,696（新文件头 +23），全局 CSS 52 → 53；C1 4 → 0；`!important` 307、长前缀 121、重复规则体 110 保持不变。
 - 未完成的目标：文件 ≤45、行数 ≤9,000、`!important` ≤100、长前缀 0、重复规则体 ≤60。剩余 `!important` 主要集中在 `shell-header.css`、`buttons.css`、`antd-overrides.css`、`action-buttons.css` 等外壳与 AntD 覆盖层；121 处长前缀中 104 处在 `app/styles/`。这些规则用于压过 AntD/旧全局层，直接去前缀或去 `!important` 会改变同权重级联顺序，必须随剩余页面族（Test Orders 工作区、Test Cases 编辑器、Projects/Sprint 看板、shared 表格/按钮层）继续迁到 Tailwind/Module 时逐页浏览器对照，不能在本阶段靠机械替换清零。重复规则体的 110 组也以 flex/gap/ellipsis 微布局为主，需要在页面迁移时改成 Tailwind utility 才会自然消失。
 - 验证：接口库/UI 自动化/Sprint 详情定向 18 个测试文件 / 118 个用例通过；全量 188 个测试文件 / 942 个用例、`npm run verify`、CSS 双门禁与主题检查通过；1280/760 浅色与深色浏览器冒烟覆盖接口库、UI 测试集详情、Sprint 详情和全局外壳。
 
+### 阶段 10：Test Orders 工作区
+
+已完成（2026-11-18）：
+
+- 旧 9 个 CSS 全部迁为根作用域 Module：`test-order-workspace.module.css`（页面高度链、详情外壳、摘要、前置条件与步骤）、`test-order-workspace-list.module.css`（工具栏、执行条目表格、筛选弹层与批量条）、`test-order-verdict.module.css`（判定、缺陷与底栏）、`add-cases-modal.module.css`（加入用例弹窗）、`test-order-graph.module.css`（图谱页壳与查看器）、`test-order-graph-execution.module.css`（图谱执行面板）、`test-order-visualization.module.css`（可视化与批量图解）。
+- 删除 `workspace-v2.css`、`workspace-list-v2.css`、`workspace-verdict-v2.css`、`workspace-content-v3.css`、`index.css`、`graph-page.css`、`graph-viewer.css`、`graph-execution.css`、`case-visualization.css`；`features/test-orders` 下不再有非 Module CSS，组件不再直接引入全局 CSS。
+- 作用域接线：工作台页面根同时挂 workspace / workspace-list / verdict 三个 `.root`；加入用例 Modal 与外层详情 Modal 通过 `rootClassName` 挂弹窗 Module 的 `.root`；图谱页壳、查看器与执行面板分别挂各自 Module 的根类；可视化面板与批量按钮分别挂 `.panel` / `.batch`。旧类名全部保留为 `:global()` 测试与兼容钩子；高度链用 `:global(.app-shell):has(.root)` 与 `:global(.app-content):has(.root)` 保持原选择器作用。
+- 级联顺序：图谱执行面板单独成文件，保持“执行面板 → `relations.module.css` → 查看器”的原加载顺序，避免查看器规则被关系图谱 Module 反向覆盖。
+- 删除 `TestOrderPage.tsx` 对 `styles/index.css` 的死导入；`TestOrderEntryList`、`TestOrderCaseContent`、`TestOrderVerdictButtons` 不再直接引入旧样式。
+- 指标：CSS 文件 102 → 100，全局 CSS 53 → 44，总行数 21,696 → 21,702（Module 头与作用域换行 +6）；`!important` 307、长前缀 121、重复规则体 110 保持不变；C1 超标文件保持 0。
+- 验证：test-orders 10 个测试文件 / 71 个用例、全量 188 个测试文件 / 944 个用例、`npm run verify`、CSS 双门禁、主题检查与 `git diff --check` 通过；浏览器覆盖 1280/900/760 与浅色/深色下的工作台列表、详情、筛选弹层、加入用例弹窗、内嵌图谱、独立图谱页和可视化面板，关键计算样式与迁移前一致。
+- 未覆盖：当前测试单没有已生成图谱，图谱执行面板的实际渲染未做视觉核对；其样式与工作台判定控件共用 `test-order-verdict.module.css`，执行面板自身的布局规则已由计算样式与类名接线确认。
+
+### 阶段 11：Test Cases 编辑弹窗与推送
+
+已完成（2026-11-18）：
+
+- `case-editor-v2.css` 迁为 `case-editor.module.css`；弹窗 `className` 同时带 `case-library-case-modal tp-surface` 与 Module `.root`，24 处压 AntD 输入/选择控件的 `!important` 暂时原样保留，等阶段 13 统一审计。
+- `index.css` 合并进 `case-library.module.css`：页面骨架、测试集侧栏与 `api-case-*` 规则改为 `.root :global(...)`；合并块放在原 Module 规则之前，保持原来“index.css 先、case-library.module.css 后”的同权重级联顺序，并核对了 `case-library-main`、`case-library-nav-*`、`case-library-sidebar-foot` 的 5 处冲突属性。
+- `case-push.css` 迁为 `case-push.module.css`；`ProjectActionModal` 通过 `rootClassName` 挂 `.root`，`CasePushModal` 不再直接引入全局 CSS。
+- 删除 `features/test-cases/styles/index.css`、`case-editor-v2.css`、`case-push.css`；`features/test-cases` 只保留 `case-library.module.css`、`case-editor.module.css`、`case-push.module.css`。
+- 指标：CSS 文件 100 → 99，全局 CSS 44 → 41，总行数 21,702 → 21,706；`!important` 307、长前缀 121、重复规则体 110 保持不变；C1 超标文件保持 0。
+- 验证：test-cases 6 个测试文件 / 45 个用例、全量 188 个测试文件 / 944 个用例、`npm run verify`、CSS 双门禁、主题检查通过；浏览器覆盖 1280/900/760 与浅色/深色下的用例库列表、测试集侧栏、编辑弹窗和导入禅道弹窗，900px 以下编辑表单收为单列，页面无横向溢出。
+- 未覆盖：导入禅道弹窗只核对了目标表单初始态与 Module 作用域，未执行真实预览/推送；未决核对区由现有组件测试与后端协议覆盖。
+
+### 阶段 12：Projects / Sprint 看板
+
+已完成（2026-11-18）：
+
+- `sprint-overview.css` → `sprint-overview.module.css`（456 行），`sprint-dashboard.css` → `sprint-dashboard.module.css`（522 行），保持原导入顺序；Sprint 详情页根节点同时挂两个 Module 的 `.root`。
+- `requirements-list.css`、`sprint-board.css`、`project-overview.css` 合并为 `projects-overview.module.css`（171 行），规则顺序保持 requirements-list → sprint-board → project-overview；Projects 页面根节点挂 `.root`，RequirementCards / SprintBoard 不再直接引入全局 CSS。
+- 报告 Modal 的 `className` 追加 dashboard Module `.root`，报告 Drawer 通过 `rootClassName` 挂同一作用域；`:root:root` 长链与 `#root .requirements-page` 规则按原权重改写。
+- 删除 5 个旧 CSS；`features/projects` 只保留 `projects-overview.module.css`、`sprint-overview.module.css`、`sprint-dashboard.module.css` 及既有表单/抽屉 Module。
+- 指标：CSS 文件 99 → 97，全局 CSS 41 → 36，总行数 21,706 → 21,714；`!important` 307、长前缀 121、重复规则体 110 保持不变；C1 超标文件保持 0。
+- 验证：projects 16 个测试文件 / 46 个用例、全量 188 个测试文件 / 944 个用例、`npm run verify`、CSS 双门禁与主题检查通过；浏览器覆盖 1280/900/760 与浅色/深色下的迭代看板、需求卡片、Sprint 详情健康带/执行概览/趋势区，760px 单列且无横向溢出。
+- 未覆盖：报告 Modal 与 Drawer 因当前迭代没有快照/报告数据未实际打开；作用域接线由类型检查、构建与组件测试覆盖，后续有报告数据时补一次视觉核对。
+
+### 阶段 13：App Shell / AntD / 按钮层冗余清理
+
+已完成（2026-11-18）：
+
+- 删除旧侧栏与项目头死层：`shell.css` / `shell-header.css` 中 `.app-sider`、`.brand-row`、`.project-actions`、`.project-selector-label` / `.project-separator`、`.project-selector-divider`、`.settings-page`、`.app-header-feedback` 及重复的 base-services / macOS 侧栏块；`.app-sider` / `.brand-row` 在 TS/TSX 中已零引用。
+- 删除已无消费方的按钮/标签分支：`action-buttons.css` 的 `.ai-testing-overview-page`、`.ai-testing-hero-action`、`.api-case-import-trigger`、`.json-editor-toolbar-link`、`.action-btn-run`；`buttons.css` 的 `.service-card-actions`；`antd-overrides.css` 的 `.sprint-card-status` / `.zentao-binding-summary-tag` 入口；`theme.css` 的 `.app-search-field`。
+- 保留承重规则：`.json-editor-toolbar-btn.ant-btn`、`.sprint-card-actions`、`.app-action-run`（由 `ActionButton operation="run"` 动态生成）等仍在消费的选择器不删；`!important` 与 `.app-shell.app-shell-macos` 前缀只随死规则消失，不做机械替换。
+- 指标：CSS 文件 97（不变），全局 CSS 36（不变），总行数 21,714 → 21,423（-291）；`!important` 307 → 262（-45），长前缀 121 → 101（-20），重复规则体 110 → 109；C1 超标文件保持 0。
+- 验证：全量 188 个测试文件 / 944 个用例、`npm run verify`、CSS 双门禁（基线已收紧）、主题检查与 `git diff --check` 通过；浏览器覆盖 1280/900/760 与浅色/深色下的顶栏、项目/迭代选择、按钮层、项目下拉、新建迭代 Drawer、新建项目 Modal、删除 Popconfirm，760px 无横向溢出。
+
+### 阶段 14：Shared / Token 清理与最后 4 个小文件
+
+已完成（2026-11-18）：
+
+- `requirements/styles/detail.css` → `requirement-detail.module.css`（需求详情页根挂 `.root`，面包屑/主画布/阶段侧栏/文档工作区规则改为 `.root :global(...)`；`RequirementDetailHeader` 不再直接 import 页面 CSS）。
+- `profile/pages/ProfilePage.css` → `profile/styles/profile-settings.module.css`（个人设置与独立修改密码页共用；两页根节点都挂 `.root`，`auth` 保留对 profile Module 的跨 feature 导入这一项显式豁免）。
+- `base-services/styles/zentao-mcp-service.css` → `zentao-mcp-service.module.css`（MCP 卡片根挂 `.root`，标题/状态/实例省略规则改为作用域选择器）。
+- `auth/styles/change-password.css` → `change-password.module.css`（独立修改密码页同时挂 profile 与 change-password 两个 `.root`，保留 720px 单栏与单列网格）。
+- 删除 4 个旧 CSS；`src/features` 下不再有非 Module CSS，非 Module CSS 只剩 `app/styles`、`shared/styles`、`shared/components/RichTextEditor` 与入口 `index.css`，共 32 个文件。
+- `--legacy-*` 审计：28 个别名全部有且仅有一处消费（`shell.css` 5、`shell-header.css` 13、`projects-overview.module.css` 9、`action-buttons.css` 1），没有死 token，全部保留；此前文档记作 27 个，已按实际定义更正。
+- 指标：CSS 文件 97（4 删 4 增），全局 CSS 36 → 32，总行数 21,423 → 21,725（Module 根作用域展开 +302）；`!important` 262、长前缀 101、重复规则体 109 保持不变；C1 超标文件保持 0；跨 feature CSS 导入保持 2。
+- 验证：requirements/base-services/auth 定向 10 个测试文件 / 47 个用例、全量 188 个测试文件 / 944 个用例、`npm run verify`、CSS 双门禁、主题检查与 `git diff --check` 通过；浏览器覆盖需求详情（1280 浅色、900 浅色、760 深色）、个人设置（1280 浅色、900、760 深色）、修改密码（1280 浅色、760 深色）与禅道 MCP 卡片（1280 浅色、760 深色），根作用域、栅格、输入/按钮尺寸与卡片省略均生效，无横向溢出。
+
 ## 目标指标
 
-| 指标 | 阶段 4 完成后 | 阶段 5 第一批后 | 阶段 5 第二批后 | 阶段 5 完成后 | 阶段 6 完成后 | 阶段 7 完成后 | 阶段 8 完成后 | 阶段 9 完成后 | 结束目标 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| CSS 文件 | 112 | 112 | 112 | 112 | 112 | 109 | 96 | 102 | ≤ 45 |
-| CSS 行数 | 22,348 | 22,039 | 22,029 | 21,449 | 21,427 | 21,488 | 21,673 | 21,696 | ≤ 9,000 |
-| `!important` | 420 | 402 | 402 | 307 | 307 | 307 | 307 | 307 | ≤ 100（仅 AntD Module） |
-| 长前缀 | 125 | 125 | 125 | 121 | 121 | 121 | 121 | 121 | 0 |
-| C1 超标文件 | 5 | 5 | 5 | 4 | 4 | 4 | 4 | 0 | 0 |
-| `App.css` feature 导入 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0（文件删除） | 0 |
-| 重复规则体（结构门禁口径） | 116 | 115 | 115 | 111 | 110 | 110 | 110 | 110 | ≤ 60 |
+| 指标 | 阶段 4 完成后 | 阶段 5 第一批后 | 阶段 5 第二批后 | 阶段 5 完成后 | 阶段 6 完成后 | 阶段 7 完成后 | 阶段 8 完成后 | 阶段 9 完成后 | 阶段 10 完成后 | 阶段 11 完成后 | 阶段 12 完成后 | 阶段 13 完成后 | 阶段 14 完成后 | 结束目标 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| CSS 文件 | 112 | 112 | 112 | 112 | 112 | 109 | 96 | 102 | 100 | 99 | 97 | 97 | 97 | ≤ 45 |
+| CSS 行数 | 22,348 | 22,039 | 22,029 | 21,449 | 21,427 | 21,488 | 21,673 | 21,696 | 21,702 | 21,706 | 21,714 | 21,423 | 21,725 | ≤ 9,000 |
+| `!important` | 420 | 402 | 402 | 307 | 307 | 307 | 307 | 307 | 307 | 307 | 307 | 262 | 262 | ≤ 100（仅 AntD Module） |
+| 长前缀 | 125 | 125 | 125 | 121 | 121 | 121 | 121 | 121 | 121 | 121 | 121 | 101 | 101 | 0 |
+| C1 超标文件 | 5 | 5 | 5 | 4 | 4 | 4 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| `App.css` feature 导入 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0（文件删除） | 0（文件删除） | 0（文件删除） | 0（文件删除） | 0（文件删除） | 0（文件删除） | 0 |
+| 重复规则体（结构门禁口径） | 116 | 115 | 115 | 111 | 110 | 110 | 110 | 110 | 110 | 110 | 110 | 109 | 109 | ≤ 60 |
 
 ## 迁移单元
 

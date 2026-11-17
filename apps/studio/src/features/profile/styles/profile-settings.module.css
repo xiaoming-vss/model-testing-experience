@@ -1,0 +1,188 @@
+.root {
+  --profile-surface: var(--app-glass-surface-94);
+  --profile-border: var(--app-profile-border);
+  --profile-muted: var(--app-profile-text-muted);
+  --profile-tint: var(--app-profile-tint);
+  min-height: calc(100dvh - 64px);
+  padding: 48px var(--app-page-gutter) 64px;
+  background: radial-gradient(ellipse at 20% 10%, var(--app-profile-accent-bg), transparent 55%), var(--app-profile-surface);
+}
+
+.root :global(.profile-settings-container) {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.root :global(.profile-settings-heading) {
+  margin-bottom: 28px;
+}
+
+.root :global(.profile-settings-heading) :global(h2.ant-typography) {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 650;
+}
+
+.root :global(.profile-settings-grid) {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 24px 28px;
+  align-items: stretch;
+}
+
+.root :global(.profile-settings-identity),
+.root :global(.profile-settings-panel) {
+  min-width: 0;
+  border: 1px solid var(--profile-border);
+  border-radius: 20px;
+  background: var(--profile-surface);
+  box-shadow: 0 10px 30px var(--app-profile-card-shadow);
+}
+
+.root :global(.profile-settings-identity) {
+  padding: 48px 28px 32px;
+  text-align: center;
+  background: linear-gradient(150deg, var(--profile-tint), var(--profile-surface) 70%);
+}
+
+.root :global(.profile-settings-avatar) {
+  background: linear-gradient(135deg, var(--app-profile-avatar-gradient-start), var(--app-profile-avatar-gradient-end));
+  color: var(--app-on-accent);
+  margin-bottom: 24px;
+}
+
+.root :global(.profile-settings-identity) :global(h3.ant-typography) {
+  margin: 0 0 10px;
+  font-size: 26px;
+  overflow-wrap: anywhere;
+}
+
+.root :global(.profile-settings-identity) > :global(.ant-typography-secondary) {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+}
+
+.root :global(.profile-settings-identity-footer) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 36px;
+  padding-top: 24px;
+  border-top: 1px solid var(--profile-border);
+  color: var(--profile-muted);
+  text-align: left;
+}
+
+.root :global(.profile-settings-panel) {
+  overflow: hidden;
+}
+
+/* 身份卡只占首行，修改密码等副面板与账号信息同列纵向排列，避免落入 320px 侧栏列 */
+.root :global(.profile-settings-password-panel) {
+  grid-column: 2;
+}
+
+.root :global(.profile-settings-panel-heading) {
+  margin: 0 32px;
+  padding: 28px 0 24px;
+  border-bottom: 1px solid var(--profile-border);
+}
+
+.root :global(.profile-settings-panel-heading) :global(h3.ant-typography) {
+  margin: 0 0 10px;
+  font-size: 24px;
+}
+
+.root :global(.profile-settings-panel-heading) :global(.ant-typography-secondary) {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.root :global(.profile-settings-fields) {
+  padding: 26px 32px 8px;
+}
+
+.root :global(.profile-settings-fields) :global(.ant-form-item) {
+  margin-bottom: 24px;
+}
+
+.root :global(.profile-settings-fields) :global(.ant-form-item-label) > :global(label) {
+  font-weight: 600;
+}
+
+.root :global(.profile-settings-fields) :global(.ant-input) {
+  min-height: 44px;
+  border-radius: 10px;
+  padding-inline: 14px;
+}
+
+.root :global(.profile-settings-actions) {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 32px;
+  background: var(--profile-tint);
+}
+
+.root :global(.ant-btn) {
+  height: 40px;
+  padding-inline: 22px;
+  border-radius: 10px;
+}
+
+.root :global(.profile-settings-error) {
+  margin: 20px 32px 0;
+}
+
+@media (max-width: 1000px) {
+  .root {
+    padding: 32px var(--app-page-gutter) 32px;
+  }
+
+  .root :global(.profile-settings-grid) {
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .root :global(.profile-settings-panel-heading) {
+    margin-inline: 24px;
+  }
+
+  .root :global(.profile-settings-fields),
+  .root :global(.profile-settings-actions) {
+    padding-inline: 24px;
+  }
+}
+
+@media (max-width: 760px) {
+  .root {
+    padding: 24px var(--app-page-gutter) 40px;
+  }
+
+  .root :global(.profile-settings-grid) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .root :global(.profile-settings-heading) :global(h2.ant-typography) {
+    font-size: 26px;
+  }
+
+  .root :global(.profile-settings-identity) {
+    padding: 28px 24px;
+  }
+
+  .root :global(.profile-settings-identity-footer) {
+    margin-top: 24px;
+    padding-top: 18px;
+    justify-content: center;
+  }
+
+  .root :global(.profile-settings-password-panel) {
+    grid-column: 1;
+  }
+
+  .root :global(.profile-settings-actions) {
+    flex-wrap: wrap;
+  }
+}

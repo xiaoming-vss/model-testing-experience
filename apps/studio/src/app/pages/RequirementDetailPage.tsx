@@ -16,7 +16,7 @@ import { message } from '@/shared/utils/feedback'
 import { canNavigateAway } from '@/shared/utils/unsavedChanges'
 import { getErrorMessage } from '@/utils/format'
 import '@/shared/styles/surface-tokens.css'
-import '@/features/requirements/styles/detail.css'
+import detailStyles from '@/features/requirements/styles/requirement-detail.module.css'
 import designStyles from '@/features/ai-testing/styles/requirement-design.module.css'
 import chainStyles from '@/features/ai-testing/styles/generation-chain.module.css'
 import canvasStyles from '@/features/ai-testing/styles/generation-canvas.module.css'
@@ -106,7 +106,7 @@ export function RequirementDetailPage() {
   // 下载与编辑只服务需求正文，打开需求文档时才出现在标题栏。
   const readingDocument = readingNode?.kind === 'document'
   return <ProjectAccessScope projectId={sprint.data?.projectId ?? ''} resourceError={query.error}>
-    <div className={`requirement-detail-page tp-surface ${designStyles.scope} ${chainStyles.scope} ${canvasStyles.scope} ${caseArtifactStyles.scope} ${apiArtifactStyles.scope} ${miscArtifactStyles.scope} ${relationsStyles.scope} ${uiGenerationStyles.scope} ${uiStageStyles.scope} ${viewSwitchStyles.scope}`}>
+    <div className={`requirement-detail-page tp-surface ${detailStyles.root} ${designStyles.scope} ${chainStyles.scope} ${canvasStyles.scope} ${caseArtifactStyles.scope} ${apiArtifactStyles.scope} ${miscArtifactStyles.scope} ${relationsStyles.scope} ${uiGenerationStyles.scope} ${uiStageStyles.scope} ${viewSwitchStyles.scope}`}>
       <div className="requirement-detail-layout">
         {/* 标题栏与画布共用左侧容器：标题栏是容器内的工具栏，画布紧贴其下。 */}
         <section className="requirement-detail-main">

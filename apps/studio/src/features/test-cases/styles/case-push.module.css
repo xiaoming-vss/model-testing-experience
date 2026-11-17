@@ -1,0 +1,26 @@
+/* 导入到禅道弹窗：目标表单、预览表格与未决核对区（阶段 11 迁移）。 */
+.root :global(.case-push-body) {
+  max-height: 62vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.root :global(.case-push-toolbar) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.root :global(.case-push-choice) { width: 100%; }
+.root :global(.case-push-review) {
+  padding-block: 16px;
+  border-block-start: 1px solid var(--app-list-row-border);
+}
+.root :global(.case-push-review) :global(.ant-form) { margin-block-start: 16px; }
+.root :global(.case-push-review) :global(.ant-checkbox-wrapper) { margin-block: 12px; }
+
+.root :global(.case-push-title) { display: block; max-width: 100%; }
+.root :global(.case-push-review) :global(.ant-space) { margin-block-end: 16px; }
+.root :global(.case-push-review) :global(.ant-btn-dangerous) { display: block; margin-block-start: 8px; }

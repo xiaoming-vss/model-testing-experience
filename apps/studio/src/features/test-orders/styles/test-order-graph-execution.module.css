@@ -1,4 +1,7 @@
-.test-order-graph-execution {
+/* 测试单图谱执行面板（阶段 10 迁移）。
+ * 独立文件以保持原有加载顺序：执行面板先于关系图谱 Module 求值，查看器规则随后加载。 */
+
+.execution {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -7,47 +10,47 @@
   color: var(--ant-color-text);
 }
 
-.test-order-graph-execution-meta,
-.test-order-graph-save-actions {
+.execution :global(.test-order-graph-execution-meta),
+.execution :global(.test-order-graph-save-actions) {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.test-order-graph-execution h3,
-.test-order-graph-execution p {
+.execution h3,
+.execution p {
   margin: 0;
 }
 
-.test-order-graph-execution h3 {
+.execution h3 {
   font-size: 14px;
   line-height: 1.6;
 }
 
-.test-order-graph-execution label {
+.execution label {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.test-order-graph-execution ol {
+.execution ol {
   padding-left: 22px;
   margin: 8px 0 0;
 }
 
-.test-order-graph-execution li {
+.execution li {
   margin-bottom: 10px;
   overflow-wrap: anywhere;
   line-height: 1.6;
 }
 
-.test-order-graph-expected,
-.test-order-graph-save-actions [role='status'] {
+.execution :global(.test-order-graph-expected),
+.execution :global(.test-order-graph-save-actions) [role='status'] {
   color: var(--ant-color-text-secondary);
 }
 
-.test-order-graph-execution-divider {
+.execution :global(.test-order-graph-execution-divider) {
   width: 100%;
   margin: 0;
   border: 0;

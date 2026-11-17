@@ -6,8 +6,8 @@ import { useAuthStore } from '@/features/auth/store/auth.store'
 import { api } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
-import '@/features/profile/pages/ProfilePage.css'
-import '@/features/auth/styles/change-password.css'
+import profileStyles from '@/features/profile/styles/profile-settings.module.css'
+import changePasswordStyles from '../styles/change-password.module.css'
 
 const { Title, Paragraph } = Typography
 
@@ -32,7 +32,7 @@ export function ChangePasswordPage() {
   }
 
   return (
-    <main className="profile-settings profile-settings-change-password">
+    <main className={`profile-settings profile-settings-change-password ${profileStyles.root} ${changePasswordStyles.root}`}>
       <div className="profile-settings-container">
         <header className="profile-settings-heading">
           <Title level={2}>{forced ? '首次登录请修改密码' : '修改密码'}</Title>

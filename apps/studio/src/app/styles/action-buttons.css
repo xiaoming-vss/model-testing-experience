@@ -6,7 +6,6 @@
   .project-overview-page,
   .testing-page,
   .ai-testing-page,
-  .ai-testing-overview-page,
   .base-services-page
 ) {
   --mac-action-blue-border: var(--legacy-mac-action-blue-border);
@@ -16,21 +15,18 @@
   .project-overview-page,
   .testing-page,
   .ai-testing-page,
-  .ai-testing-overview-page,
   .base-services-page
-) :is(.action-btn-create, .action-btn-save, .action-btn-run).ant-btn-primary,
+) :is(.action-btn-create, .action-btn-save).ant-btn-primary,
 .app-shell.app-shell-macos :is(
   .project-overview-page,
   .testing-page,
   .ai-testing-page,
-  .ai-testing-overview-page,
   .base-services-page
 ) .panel-header .ant-btn-primary,
 .app-shell.app-shell-macos :is(
   .project-overview-page,
   .testing-page,
   .ai-testing-page,
-  .ai-testing-overview-page,
   .base-services-page
 ) .ant-empty .ant-btn-primary {
   border: 1px solid var(--mac-action-blue-border) !important;
@@ -41,21 +37,18 @@
   .project-overview-page,
   .testing-page,
   .ai-testing-page,
-  .ai-testing-overview-page,
   .base-services-page
-) :is(.action-btn-create, .action-btn-save, .action-btn-run).ant-btn:not(.ant-btn-primary),
+) :is(.action-btn-create, .action-btn-save).ant-btn:not(.ant-btn-primary),
 .app-shell.app-shell-macos :is(
   .project-overview-page,
   .testing-page,
   .ai-testing-page,
-  .ai-testing-overview-page,
   .base-services-page
 ) :is(.action-btn-read, .action-btn-update).ant-btn,
 .app-shell.app-shell-macos :is(
   .project-overview-page,
   .testing-page,
   .ai-testing-page,
-  .ai-testing-overview-page,
   .base-services-page
 ) .panel-header .ant-btn:not(.ant-btn-primary) {
   border: 1px solid transparent !important;
@@ -66,14 +59,12 @@
   .project-overview-page,
   .testing-page,
   .ai-testing-page,
-  .ai-testing-overview-page,
   .base-services-page
 ) .action-btn-delete.ant-btn,
 .app-shell.app-shell-macos :is(
   .project-overview-page,
   .testing-page,
   .ai-testing-page,
-  .ai-testing-overview-page,
   .base-services-page
 ) .ant-btn-dangerous {
   border: 1px solid transparent !important;
@@ -89,18 +80,13 @@
   border-radius: 10px !important;
 }
 
-.app-shell.app-shell-macos :is(.ai-testing-page, .ai-testing-overview-page) :is(.ai-testing-hero-action).ant-btn-primary {
-  border: 1px solid var(--app-glass-action-border) !important;
-  border-radius: 10px !important;
-}
-
 /* Extend the same button system to sub-pages under Project Overview and Testing. */
 .app-shell.app-shell-macos :is(
   .sprint-overview-page,
   .api-automation-page,
   .api-collection-detail-page,
   .functional-suite-detail-page
-) :is(.action-btn-create, .action-btn-save, .action-btn-run).ant-btn-primary,
+) :is(.action-btn-create, .action-btn-save).ant-btn-primary,
 .app-shell.app-shell-macos :is(
   .sprint-overview-page,
   .api-automation-page,
@@ -122,7 +108,7 @@
   .api-automation-page,
   .api-collection-detail-page,
   .functional-suite-detail-page
-) :is(.action-btn-create, .action-btn-save, .action-btn-run).ant-btn:not(.ant-btn-primary),
+) :is(.action-btn-create, .action-btn-save).ant-btn:not(.ant-btn-primary),
 .app-shell.app-shell-macos :is(
   .sprint-overview-page,
   .api-automation-page,
@@ -166,15 +152,12 @@
   .functional-suite-detail-page,
   .functional-test-page,
   .ai-testing-page,
-  .ai-testing-overview-page,
   .ai-skill-library-page,
   .base-services-page
 ) :is(
   .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous),
-  .api-case-import-trigger.ant-btn,
   .api-env-var-picker-trigger.ant-btn,
   .json-editor-toolbar-btn.ant-btn,
-  .json-editor-toolbar-link.ant-btn,
   .ui-template-picker-trigger.ant-btn
 ) {
   -webkit-backdrop-filter: saturate(180%) blur(14px);
@@ -191,11 +174,10 @@
   .functional-suite-detail-page,
   .functional-test-page,
   .ai-testing-page,
-  .ai-testing-overview-page,
   .ai-skill-library-page,
   .base-services-page,
   .app-header-actions
-) :is(.action-btn-create, .action-btn-save, .action-btn-run).ant-btn-primary:not(:disabled),
+) :is(.action-btn-create, .action-btn-save).ant-btn-primary:not(:disabled),
 .app-shell.app-shell-macos :is(
   .project-overview-page,
   .sprint-overview-page,
@@ -205,7 +187,6 @@
   .functional-suite-detail-page,
   .functional-test-page,
   .ai-testing-page,
-  .ai-testing-overview-page,
   .ai-skill-library-page,
   .base-services-page,
   .app-header-actions

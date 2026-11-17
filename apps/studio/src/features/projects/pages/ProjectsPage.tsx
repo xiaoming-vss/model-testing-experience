@@ -3,8 +3,7 @@ import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { ListSurface } from '@/shared/components/ListSurface'
 import { PageToolbar } from '@/shared/components/PageToolbar'
-import '../styles/requirements-list.css'
-import '../styles/project-overview.css'
+import projectsOverviewStyles from '../styles/projects-overview.module.css'
 import { RequirementRowActions } from '../components/RequirementRowActions'
 import '@/shared/styles/list-table.css'
 import '@/shared/styles/surface-tokens.css'
@@ -384,7 +383,7 @@ export function ProjectsPage() {
   const refreshRequirements = () => { void sprintsQuery.refetch(); void requirementsQuery.refetch() }
 
   return (
-    <div className={`workbench-page project-overview-page tp-list-surface tp-surface${activeBoard === 'requirements' ? ' requirements-page' : ''}`}>
+    <div className={`workbench-page project-overview-page tp-list-surface tp-surface${activeBoard === 'requirements' ? ' requirements-page' : ''} ${projectsOverviewStyles.root}`}>
       {projectsQuery.error ? <Alert showIcon type="error" title={getErrorMessage(projectsQuery.error)} /> : null}
 
       {!projectsQuery.isLoading && projects.length === 0 ? (

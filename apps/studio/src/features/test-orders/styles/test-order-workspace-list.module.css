@@ -1,25 +1,25 @@
-/* 测试单执行工作台（列表优先）：整单进度、全宽执行条目列表与全宽详情。
+/* 测试单执行工作台列表（列表优先）：整单进度、工具栏、全宽执行条目表格与批量条（阶段 10 迁移）。
  * 列表外框、工具栏与分页沿用 surface-tokens 的 tp-list-* 契约；
  * 颜色消费 --srf-* token，不另建色盘。 */
 
 /* ===== 单行工作台工具栏 ===== */
 
-.test-order-workspace-page .test-order-workspace-toolbar {
+.root :global(.test-order-workspace-toolbar) {
   gap: 8px;
   justify-content: flex-start;
 }
 
 /* 列表卡片、详情卡片和图谱容器都把工具栏作为第一行，不再单独成卡。 */
-.test-order-workspace-page .test-order-entry-list-panel > .test-order-workspace-toolbar,
-.test-order-workspace-page .test-order-detail-panel > .test-order-workspace-toolbar,
-.test-order-workspace-page .test-order-graph-viewer > .test-order-workspace-toolbar {
+.root :global(.test-order-entry-list-panel) > :global(.test-order-workspace-toolbar),
+.root :global(.test-order-detail-panel) > :global(.test-order-workspace-toolbar),
+.root :global(.test-order-graph-viewer) > :global(.test-order-workspace-toolbar) {
   border: 0;
   border-bottom: 1px solid var(--srf-card-border);
   border-radius: 0;
 }
 
 /* 面包屑与需求详情共用一套视觉：主色可点层级、箭头分隔、当前项正文加粗。 */
-.test-order-workspace-page .test-order-workspace-breadcrumb {
+.root :global(.test-order-workspace-breadcrumb) {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -27,7 +27,7 @@
   min-width: 0;
 }
 
-.test-order-workspace-page .test-order-workspace-crumb-link {
+.root :global(.test-order-workspace-crumb-link) {
   display: inline-flex;
   align-items: center;
   height: 24px;
@@ -42,23 +42,23 @@
   cursor: pointer;
 }
 
-.test-order-workspace-page .test-order-workspace-crumb-link:first-child {
+.root :global(.test-order-workspace-crumb-link):first-child {
   margin-inline-start: -5px;
 }
 
-.test-order-workspace-page .test-order-workspace-crumb-link:hover {
+.root :global(.test-order-workspace-crumb-link):hover {
   background: var(--srf-accent-soft);
   color: var(--srf-accent-strong);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-.test-order-workspace-page .test-order-workspace-crumb-link:focus-visible {
+.root :global(.test-order-workspace-crumb-link):focus-visible {
   outline: 2px solid var(--srf-accent);
   outline-offset: 2px;
 }
 
-.test-order-workspace-page .test-order-workspace-crumb-sep {
+.root :global(.test-order-workspace-crumb-sep) {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
@@ -66,7 +66,7 @@
   font-size: 10px;
 }
 
-.test-order-workspace-page .test-order-workspace-crumb-current {
+.root :global(.test-order-workspace-crumb-current) {
   margin: 0;
   min-width: 0;
   max-width: 360px;
@@ -79,26 +79,26 @@
   white-space: nowrap;
 }
 
-.test-order-workspace-page .test-order-workspace-chip {
+.root :global(.test-order-workspace-chip) {
   flex: 0 0 auto;
 }
 
-.test-order-workspace-page .test-order-workspace-toolbar-spacer {
+.root :global(.test-order-workspace-toolbar-spacer) {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.test-order-workspace-page .test-order-workspace-filter-btn {
+.root :global(.test-order-workspace-filter-btn) {
   flex: 0 0 auto;
 }
 
-.test-order-workspace-page .test-order-workspace-filter-btn.is-active {
+.root :global(.test-order-workspace-filter-btn):global(.is-active) {
   border-color: var(--srf-accent-border);
   background: var(--srf-accent-soft);
   color: var(--srf-accent-strong);
 }
 
-.test-order-workspace-page .test-order-workspace-filter-count {
+.root :global(.test-order-workspace-filter-count) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -113,7 +113,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.test-order-workspace-filter-popover {
+.root :global(.test-order-workspace-filter-popover) {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -121,11 +121,11 @@
   max-width: 76vw;
 }
 
-.test-order-workspace-filter-popover .ant-input-affix-wrapper {
+.root :global(.test-order-workspace-filter-popover) :global(.ant-input-affix-wrapper) {
   width: 100%;
 }
 
-.test-order-workspace-filter-footer {
+.root :global(.test-order-workspace-filter-footer) {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -138,7 +138,7 @@
 
 /* ===== 状态进度条筛选：视觉 8px，点击热区 18px ===== */
 
-.test-order-workspace-page .test-order-progress-filter {
+.root :global(.test-order-progress-filter) {
   display: flex;
   align-items: center;
   flex: 1 1 320px;
@@ -146,7 +146,7 @@
   max-width: 560px;
 }
 
-.test-order-workspace-page .test-order-progress-track {
+.root :global(.test-order-progress-track) {
   position: relative;
   display: flex;
   flex: 1 1 auto;
@@ -156,7 +156,7 @@
   height: 18px;
 }
 
-.test-order-workspace-page .test-order-progress-track::before {
+.root :global(.test-order-progress-track)::before {
   content: '';
   position: absolute;
   top: 5px;
@@ -168,7 +168,7 @@
   pointer-events: none;
 }
 
-.test-order-workspace-page .test-order-progress-seg {
+.root :global(.test-order-progress-seg) {
   position: relative;
   z-index: 1;
   flex-basis: 0;
@@ -183,7 +183,7 @@
   transition: opacity 0.16s ease, filter 0.16s ease;
 }
 
-.test-order-workspace-page .test-order-progress-seg::before {
+.root :global(.test-order-progress-seg)::before {
   content: '';
   position: absolute;
   top: 5px;
@@ -195,25 +195,25 @@
   transition: filter 0.16s ease, box-shadow 0.16s ease;
 }
 
-.test-order-workspace-page .test-order-progress-seg:hover {
+.root :global(.test-order-progress-seg):hover {
   filter: brightness(1.12);
 }
 
-.test-order-workspace-page .test-order-progress-seg:focus-visible {
+.root :global(.test-order-progress-seg):focus-visible {
   outline: 2px solid var(--srf-accent);
   outline-offset: 2px;
 }
 
-.test-order-workspace-page .test-order-progress-seg.is-dim {
+.root :global(.test-order-progress-seg):global(.is-dim) {
   opacity: 0.36;
   filter: saturate(0.45);
 }
 
-.test-order-workspace-page .test-order-progress-seg.is-active {
+.root :global(.test-order-progress-seg):global(.is-active) {
   z-index: 2;
 }
 
-.test-order-workspace-page .test-order-progress-seg.is-active::before {
+.root :global(.test-order-progress-seg):global(.is-active)::before {
   /* 待执行/跳过的段色很浅，环上混入一级文字色，保证选中态在浅色主题也看得出来。 */
   box-shadow:
     0 0 0 1px var(--app-list-toolbar-bg, var(--srf-card)),
@@ -221,46 +221,46 @@
   filter: saturate(1.15) brightness(1.08);
 }
 
-.test-order-workspace-page .test-order-progress-seg.is-passed {
+.root :global(.test-order-progress-seg):global(.is-passed) {
   --seg-color: var(--srf-result-passed);
 }
 
-.test-order-workspace-page .test-order-progress-seg.is-failed {
+.root :global(.test-order-progress-seg):global(.is-failed) {
   --seg-color: var(--srf-result-failed);
 }
 
-.test-order-workspace-page .test-order-progress-seg.is-blocked {
+.root :global(.test-order-progress-seg):global(.is-blocked) {
   --seg-color: var(--srf-result-blocked);
 }
 
-.test-order-workspace-page .test-order-progress-seg.is-skipped {
+.root :global(.test-order-progress-seg):global(.is-skipped) {
   --seg-color: var(--srf-result-skipped);
 }
 
-.test-order-workspace-page .test-order-progress-seg.is-pending {
+.root :global(.test-order-progress-seg):global(.is-pending) {
   --seg-color: var(--srf-track-pending);
 }
 
 /* ===== 执行条目表格 ===== */
 
-.test-order-workspace-page .test-order-entry-table .ant-table-tbody > tr {
+.root :global(.test-order-entry-table) :global(.ant-table-tbody) > tr {
   cursor: pointer;
 }
 
-.test-order-workspace-page .test-order-entry-selection,
-.test-order-workspace-page .test-order-entry-actions {
+.root :global(.test-order-entry-selection),
+.root :global(.test-order-entry-actions) {
   display: inline-flex;
   align-items: center;
 }
 
-.test-order-workspace-page .test-order-entry-name-cell {
+.root :global(.test-order-entry-name-cell) {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
 }
 
-.test-order-workspace-page .test-order-entry-name-cell .ant-typography {
+.root :global(.test-order-entry-name-cell) :global(.ant-typography) {
   display: block;
   flex: 1 1 auto;
   min-width: 0;
@@ -268,7 +268,7 @@
 }
 
 /* 与用例库的编号 chip 一致：固定宽度，超出省略；点击复制完整 UUID。 */
-.test-order-workspace-page .test-order-entry-id {
+.root :global(.test-order-entry-id) {
   display: inline-block;
   box-sizing: border-box;
   width: 96px;
@@ -289,16 +289,16 @@
   cursor: copy;
 }
 
-.test-order-workspace-page .test-order-entry-id:hover {
+.root :global(.test-order-entry-id):hover {
   color: var(--srf-accent);
 }
 
-.test-order-workspace-page .test-order-entry-id:focus-visible {
+.root :global(.test-order-entry-id):focus-visible {
   outline: 2px solid var(--srf-accent);
   outline-offset: 2px;
 }
 
-.test-order-workspace-page .test-order-entry-module {
+.root :global(.test-order-entry-module) {
   display: inline-block;
   max-width: 100%;
   padding: 2px 7px;
@@ -311,55 +311,55 @@
   white-space: nowrap;
 }
 
-.test-order-workspace-page .test-order-entry-status {
+.root :global(.test-order-entry-status) {
   gap: 6px;
   font-size: 11.5px;
 }
 
-.test-order-workspace-page .test-order-entry-status-dot {
+.root :global(.test-order-entry-status-dot) {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: currentColor;
 }
 
-.test-order-workspace-page .test-order-entry-person,
-.test-order-workspace-page .test-order-entry-unassigned {
+.root :global(.test-order-entry-person),
+.root :global(.test-order-entry-unassigned) {
   color: var(--srf-text-secondary);
 }
 
-.test-order-workspace-page .test-order-entry-time {
+.root :global(.test-order-entry-time) {
   color: var(--srf-text-secondary);
   font-size: 11.5px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.test-order-workspace-page .test-order-entry-muted {
+.root :global(.test-order-entry-muted) {
   color: var(--srf-text-muted);
 }
 
-.test-order-workspace-page .test-order-entry-actions-cell {
+.root :global(.test-order-entry-actions-cell) {
   text-align: right;
 }
 
-.test-order-workspace-page .test-order-entry-actions {
+.root :global(.test-order-entry-actions) {
   justify-content: flex-end;
   width: 100%;
 }
 
-.test-order-workspace-page .test-order-entry-actions .ant-btn {
+.root :global(.test-order-entry-actions) :global(.ant-btn) {
   opacity: 0;
 }
 
-.test-order-workspace-page .test-order-entry-table .ant-table-row:hover .test-order-entry-actions .ant-btn,
-.test-order-workspace-page .test-order-entry-actions .ant-btn:focus-visible {
+.root :global(.test-order-entry-table) :global(.ant-table-row):hover :global(.test-order-entry-actions) :global(.ant-btn),
+.root :global(.test-order-entry-actions) :global(.ant-btn):focus-visible {
   opacity: 1;
 }
 
 /* ===== 批量操作条 ===== */
 
-.test-order-workspace-page .test-order-entry-batch {
+.root :global(.test-order-entry-batch) {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
@@ -372,17 +372,17 @@
   font-size: 12px;
 }
 
-.test-order-workspace-page .test-order-entry-batch-count {
+.root :global(.test-order-entry-batch-count) {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-.test-order-workspace-page .test-order-entry-batch-note {
+.root :global(.test-order-entry-batch-note) {
   color: var(--srf-text-secondary);
   font-size: 11px;
 }
 
-.test-order-workspace-page .test-order-entry-batch-actions {
+.root :global(.test-order-entry-batch-actions) {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -392,7 +392,7 @@
 
 /* ===== 全宽详情 ===== */
 
-.test-order-workspace-page .test-order-execution-view {
+.root :global(.test-order-execution-view) {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -400,7 +400,7 @@
   min-width: 0;
 }
 
-.test-order-workspace-page .test-order-list-view {
+.root :global(.test-order-list-view) {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -408,11 +408,11 @@
   min-width: 0;
 }
 
-.test-order-workspace-page .test-order-list-view[hidden] {
+.root :global(.test-order-list-view)[hidden] {
   display: none;
 }
 
-.test-order-workspace-page .test-order-detail-panel {
+.root :global(.test-order-detail-panel) {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -425,15 +425,15 @@
 }
 
 /* 详情页头部只有面包屑；宽屏切换箭头放到正文两侧，窄屏回到头部。 */
-.test-order-workspace-page .test-order-detail-header {
+.root :global(.test-order-detail-header) {
   flex: 0 0 auto;
 }
 
-.test-order-workspace-page .test-order-detail-header .test-order-workspace-crumb-current {
+.root :global(.test-order-detail-header) :global(.test-order-workspace-crumb-current) {
   max-width: min(720px, 56vw);
 }
 
-.test-order-workspace-page .test-order-detail-inline-nav {
+.root :global(.test-order-detail-inline-nav) {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
@@ -441,7 +441,7 @@
   margin-inline-start: auto;
 }
 
-.test-order-workspace-page .test-order-detail-stage {
+.root :global(.test-order-detail-stage) {
   position: relative;
   display: flex;
   flex: 1 1 auto;
@@ -450,7 +450,7 @@
   min-width: 0;
 }
 
-.test-order-workspace-page .test-order-detail-side-nav {
+.root :global(.test-order-detail-side-nav) {
   position: absolute;
   top: 50%;
   z-index: 4;
@@ -463,30 +463,30 @@
   transform: translateY(-50%);
 }
 
-.test-order-workspace-page .test-order-detail-side-nav.is-prev {
+.root :global(.test-order-detail-side-nav):global(.is-prev) {
   left: 20px;
 }
 
-.test-order-workspace-page .test-order-detail-side-nav.is-next {
+.root :global(.test-order-detail-side-nav):global(.is-next) {
   right: 20px;
 }
 
-.test-order-workspace-page .test-order-detail-side-nav:hover:not(:disabled) {
+.root :global(.test-order-detail-side-nav):hover:not(:disabled) {
   border-color: var(--srf-accent);
   color: var(--srf-accent);
 }
 
-.test-order-workspace-page .test-order-detail-side-nav:disabled {
+.root :global(.test-order-detail-side-nav):disabled {
   opacity: 0.35;
 }
 
-.test-order-workspace-page .test-order-detail-body {
+.root :global(.test-order-detail-body) {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
 }
 
-.test-order-workspace-page .test-order-detail-inner {
+.root :global(.test-order-detail-inner) {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
@@ -496,23 +496,23 @@
 /* ===== 响应式 ===== */
 
 @media (max-width: 1100px) {
-  .test-order-workspace-page .test-order-progress-filter {
+  .root :global(.test-order-progress-filter) {
     flex: 1 1 100%;
     max-width: none;
   }
 
-  .test-order-workspace-page .test-order-workspace-crumb-current {
+  .root :global(.test-order-workspace-crumb-current) {
     max-width: 220px;
   }
 
-  .test-order-workspace-page .test-order-entry-batch-actions {
+  .root :global(.test-order-entry-batch-actions) {
     width: 100%;
     margin-inline-start: 0;
   }
 }
 
 @media (max-width: 900px) {
-  .test-order-workspace-page .test-order-detail-inner {
+  .root :global(.test-order-detail-inner) {
     max-width: none;
   }
 }

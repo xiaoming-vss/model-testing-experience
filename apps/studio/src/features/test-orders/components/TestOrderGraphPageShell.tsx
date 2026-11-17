@@ -4,7 +4,7 @@ import { ThemeSelect } from '@/shared/components/ThemeSelect'
 import { getTestOrderEntryStatusMeta, getTestOrderEntryStatusTone } from '../utils/testOrderStatus'
 import type { TestOrder } from '../types'
 import '@/shared/styles/surface-tokens.css'
-import '../styles/graph-page.css'
+import graphStyles from '../styles/test-order-graph.module.css'
 
 type Props = {
   order?: TestOrder
@@ -16,7 +16,7 @@ type Props = {
 export function TestOrderGraphPageShell({ order, projectName, sprintName, children }: Props) {
   const pending = Math.max(0, (order?.entriesTotal ?? 0) - (order?.entriesExecuted ?? 0))
   return (
-    <div className="test-order-graph-page tp-surface">
+    <div className={`test-order-graph-page tp-surface ${graphStyles.root}`}>
       <header className="test-order-graph-page-brandbar">
         <div className="test-order-graph-page-brand"><MtxLogo size={30} /><strong>MTX</strong></div>
         <nav className="test-order-graph-page-context" aria-label="图谱所属范围">

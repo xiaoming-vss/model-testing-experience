@@ -17,6 +17,144 @@
  * 页面根节点的 `tp-surface` 类负责挂上它们，缺了这里所有 var() 都会解析成空值。
  */
 
+/* ===== 页面骨架与测试集侧栏（阶段 11 从 index.css 合并） ===== */
+.root {
+  height: 100%;
+}
+
+.root :global(.api-automation-content) {
+  height: 100%;
+}
+
+.root :global(.page-frame) {
+  min-height: 0;
+}
+
+/* 用例库：左栏测试集 + 右栏用例列表。侧栏宽度由 case-library-v2.css 统一。 */
+.root :global(.case-library-layout) {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+}
+
+.root :global(.case-library-main) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid var(--srf-divider);
+}
+
+.root :global(.case-library-nav-item) {
+  justify-content: space-between;
+}
+
+.root :global(.case-library-nav-name) {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12.5px;
+}
+
+.root :global(.case-library-nav-count) {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--tp-text-muted, var(--app-shell-text-muted));
+}
+
+/* 测试集自身的三个动作：一行放下——「新建」带文字常驻，编辑 / 删除靠选中测试集，
+   收成图标按钮，才不会像一排菜单压在列表底部。 */
+.root :global(.case-library-sidebar-foot) {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-top: 1px solid var(--srf-divider);
+}
+
+/* 「新建测试集」按内容宽度，剩下的空隙留给自己和右侧图标之间。 */
+.root :global(.case-library-sidebar-foot) :global(.case-library-foot-create) {
+  flex: 0 0 auto;
+  margin-right: auto;
+}
+
+.root :global(.case-library-sidebar-foot) :global(.ant-btn-circle) {
+  flex: 0 0 auto;
+}
+
+/* 用例库左侧测试集栏；原在 ui-automation/styles/index.css，
+   实际唯一消费方是 CaseLibraryPage。 */
+.root :global(.api-case-sidebar) {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.root :global(.api-case-sidebar-toolbar) {
+  padding: 16px 20px 0;
+}
+
+.root :global(.api-case-sidebar-scroll) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 12px 12px;
+}
+
+.root :global(.api-case-nav-list) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.root :global(.api-case-nav-item) {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--tp-border-soft);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, var(--app-task-fold-body) 0%, var(--app-card-gradient-end) 100%),
+    var(--app-surface);
+  appearance: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.root :global(.api-case-nav-item):hover {
+  transform: translateY(-1px);
+  border-color: var(--app-request-nav-border-hover);
+  box-shadow: 0 10px 22px var(--app-card-shadow-floating);
+}
+
+.root :global(.api-case-sidebar-toolbar) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.root :global(.api-case-sidebar-toolbar) > :global(.ant-input-affix-wrapper) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 1180px) {
+  .root :global(.api-case-sidebar-scroll) {
+    max-height: 420px;
+  }
+}
+
 /* ===== 外壳：工具栏与卡片 ===== */
 
 /* 筛选栏外观与尺寸由共享 tp-list-toolbar 统一。 */
@@ -310,4 +448,3 @@
   }
 
 }
-

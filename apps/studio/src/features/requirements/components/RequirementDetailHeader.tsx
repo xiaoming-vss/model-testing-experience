@@ -8,7 +8,6 @@ import { RightOutlined } from '@ant-design/icons'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { getErrorMessage } from '@/utils/format'
 import type { Requirement } from '../types'
-import '../styles/detail.css'
 
 export function RequirementDetailHeader({ requirement, requirementId, canWrite, onBack, onEdit, onRefresh, refreshing, readingActionsRef, showDownload, showEdit = true, readingNode, onLeaveReading }: {
   requirement: Requirement; requirementId: string; canWrite: boolean; showDownload: boolean; showEdit?: boolean;

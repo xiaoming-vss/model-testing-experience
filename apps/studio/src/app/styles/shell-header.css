@@ -23,49 +23,6 @@
     var(--mac-glass-page) !important;
 }
 
-.app-shell.app-shell-base-services .app-sider {
-  border-right-color: var(--mac-glass-border) !important;
-  background: var(--mac-glass-sidebar) !important;
-  -webkit-backdrop-filter: saturate(180%) blur(24px);
-  backdrop-filter: saturate(180%) blur(24px);
-  box-shadow: inset -1px 0 0 var(--app-glass-highlight-72) !important;
-}
-
-.app-shell.app-shell-base-services .app-sider::before {
-  background: linear-gradient(180deg, var(--app-glass-surface-46), var(--app-glass-surface-10)) !important;
-}
-
-.app-shell.app-shell-base-services .brand-row {
-  border-bottom-color: var(--mac-glass-border-soft);
-}
-
-.app-shell.app-shell-base-services .brand-row .brand {
-  background: var(--mac-glass-panel) !important;
-  box-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-86),
-    0 6px 14px var(--app-glass-shadow-card) !important;
-}
-
-.app-shell.app-shell-base-services .app-sider .ant-menu-item {
-  color: var(--mac-glass-muted) !important;
-  background: transparent !important;
-}
-
-.app-shell.app-shell-base-services .app-sider .ant-menu-item:hover {
-  color: var(--mac-glass-blue) !important;
-  background: var(--app-glass-surface-48) !important;
-}
-
-.app-shell.app-shell-base-services .app-sider .ant-menu-item-selected {
-  color: var(--mac-glass-blue) !important;
-  background: var(--app-glass-selected) !important;
-}
-
-.app-shell.app-shell-base-services .app-sider .ant-menu-item-selected .anticon,
-.app-shell.app-shell-base-services .app-sider .ant-menu-item-selected .ant-menu-title-content {
-  color: var(--mac-glass-blue) !important;
-}
-
 .app-shell.app-shell-base-services .app-header.compact-header {
   border-bottom-color: var(--mac-glass-border) !important;
   background: var(--mac-glass-header) !important;
@@ -80,8 +37,6 @@
   box-shadow: inset 0 1px 0 var(--app-glass-highlight-78) !important;
 }
 
-.app-shell.app-shell-base-services .project-selector-label,
-.app-shell.app-shell-base-services .project-separator,
 .app-shell.app-shell-base-services .app-header-actions .ant-btn-circle {
   color: var(--mac-glass-muted) !important;
 }
@@ -105,24 +60,11 @@
     var(--mac-glass-page) !important;
 }
 
-.app-shell.app-shell-macos .app-sider {
-  border-right-color: var(--mac-glass-border) !important;
-  background: var(--mac-glass-sidebar) !important;
-  -webkit-backdrop-filter: saturate(180%) blur(24px);
-  backdrop-filter: saturate(180%) blur(24px);
-  box-shadow: inset -1px 0 0 var(--app-glass-highlight-72) !important;
-}
-
-.app-shell.app-shell-macos .app-sider::before {
-  background: linear-gradient(180deg, var(--app-glass-surface-46), var(--app-glass-surface-10)) !important;
-}
-.app-shell.app-shell-macos .brand-row,
 .app-shell.app-shell-macos .compact-header,
 .app-shell.app-shell-macos .panel-header:not(:where(.tp-list-toolbar)) {
   border-color: var(--mac-glass-border-soft) !important;
 }
 
-.app-shell.app-shell-macos .brand-row .brand,
 .app-shell.app-shell-macos .project-selector-wrap,
 .app-shell.app-shell-macos .workbench-panel,
 .app-shell.app-shell-macos .api-collection-card,
@@ -130,33 +72,6 @@
 .app-shell.app-shell-macos .ant-card {
   -webkit-backdrop-filter: saturate(180%) blur(22px);
   backdrop-filter: saturate(180%) blur(22px);
-}
-
-.app-shell.app-shell-macos .brand-row .brand {
-  background: var(--mac-glass-panel) !important;
-  box-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-86),
-    0 6px 14px var(--app-glass-shadow-card) !important;
-}
-
-.app-shell.app-shell-macos .app-sider .ant-menu-item {
-  color: var(--mac-glass-muted) !important;
-  background: transparent !important;
-}
-
-.app-shell.app-shell-macos .app-sider .ant-menu-item:hover {
-  color: var(--mac-glass-blue) !important;
-  background: var(--app-glass-surface-48) !important;
-}
-
-.app-shell.app-shell-macos .app-sider .ant-menu-item-selected,
-.app-shell.app-shell-macos .app-sider .ant-menu-item-selected .anticon,
-.app-shell.app-shell-macos .app-sider .ant-menu-item-selected .ant-menu-title-content {
-  color: var(--mac-glass-blue) !important;
-}
-
-.app-shell.app-shell-macos .app-sider .ant-menu-item-selected {
-  background: var(--app-glass-selected) !important;
 }
 
 .app-shell.app-shell-macos .app-header.compact-header {
@@ -177,8 +92,6 @@
   box-shadow: none !important;
 }
 
-.app-shell.app-shell-macos .project-selector-label,
-.app-shell.app-shell-macos .project-separator,
 .app-shell.app-shell-macos .app-header-actions .ant-btn-circle {
   color: var(--mac-glass-muted) !important;
 }
@@ -255,16 +168,12 @@
 .app-shell.app-shell-macos .sprint-card-meta {
   border-bottom-color: var(--mac-glass-border-soft) !important;
 }
-.app-shell.app-shell-macos .sprint-card-actions .ant-btn,
-.app-shell.app-shell-macos .project-actions .ant-btn-text,
-.app-shell.app-shell-macos .project-actions .action-btn-read {
+.app-shell.app-shell-macos .sprint-card-actions .ant-btn {
   border-radius: 10px !important;
   color: var(--mac-glass-muted) !important;
 }
 
-.app-shell.app-shell-macos .sprint-card-actions .ant-btn:hover,
-.app-shell.app-shell-macos .project-actions .ant-btn-text:hover,
-.app-shell.app-shell-macos .project-actions .action-btn-read:hover {
+.app-shell.app-shell-macos .sprint-card-actions .ant-btn:hover {
   color: var(--mac-glass-blue) !important;
   background: var(--app-glass-surface-68) !important;
 }
@@ -321,21 +230,9 @@
     padding: 4px 12px;
     border-radius: 12px;
   }
-
-  .app-shell .app-header-feedback {
-    order: 1;
-    justify-content: flex-start;
-    text-align: left;
-  }
 }
 
 @media (max-width: 540px) {
-  .app-shell .project-selector-divider {
-    width: 100%;
-    height: 0;
-    margin: 0;
-  }
-
   .app-shell .project-select,
   .app-shell .sprint-select {
     flex: 1 1 80px;

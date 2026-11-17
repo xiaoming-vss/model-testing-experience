@@ -1,8 +1,6 @@
 /* AntD 组件级覆盖：标签状态色板。页面/外壳只消费，不重复定义。 */
 
 /* 接口方法签使用接口库自己的 --app-http-method-* 色板，不能继承 mac 玻璃标签的通用 !important 样式。 */
-.app-shell.app-shell-macos .sprint-card-status .ant-tag:not(.if-method),
-.app-shell.app-shell-macos .zentao-binding-summary-tag:not(.if-method),
 .app-shell.app-shell-macos .ant-tag:not(.if-method) {
   border-radius: 999px;
   border-color: var(--app-glass-tag-border) !important;

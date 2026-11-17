@@ -6,7 +6,7 @@ import { usePersonalLlmChoice } from '@/features/ai-testing/hooks/usePersonalLlm
 import { usePendingRequestId } from '@/shared/hooks/usePendingRequestId'
 import { getErrorMessage } from '@/utils/format'
 import { caseVisualizationApi, isVisualizationRunning, visualizationStatus } from '../../api/caseVisualization.api'
-import '../../styles/case-visualization.css'
+import vizStyles from '../../styles/test-order-visualization.module.css'
 
 type Props = { orderId: string; projectId?: string; entryIds: string[]; onSelect: (id: string) => void; compact?: boolean }
 export function VisualizationBatchButton({ orderId, projectId, entryIds, onSelect, compact = false }: Props) {
@@ -30,7 +30,7 @@ export function VisualizationBatchButton({ orderId, projectId, entryIds, onSelec
       void client.invalidateQueries({ queryKey: ['caseVisualization', orderId] })
     },
   })
-  return <div className={`test-order-viz-batch${compact ? ' is-compact' : ''}`}>
+  return <div className={`test-order-viz-batch ${vizStyles.batch}${compact ? ' is-compact' : ''}`}>
     <Button
       size="small"
       icon={compact ? <ExperimentOutlined aria-hidden="true" /> : undefined}

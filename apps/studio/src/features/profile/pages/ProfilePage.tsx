@@ -8,7 +8,7 @@ import { api } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage, normalizeUserName } from '@/utils/format'
 
-import './ProfilePage.css'
+import profileStyles from '../styles/profile-settings.module.css'
 
 const { Text, Title, Paragraph } = Typography
 
@@ -46,7 +46,7 @@ export function ProfilePage() {
   })
 
   return (
-    <main className="profile-settings">
+    <main className={`profile-settings ${profileStyles.root}`}>
       <div className="profile-settings-container">
         <header className="profile-settings-heading">
           <Title level={2}>个人设置</Title>

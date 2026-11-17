@@ -1,6 +1,5 @@
 import { FlagOutlined, OrderedListOutlined, ProfileOutlined } from '@ant-design/icons'
 import type { TestOrderEntry } from '../types'
-import '../styles/workspace-content-v3.css'
 
 type Props = { snapshot?: TestOrderEntry['snapshot'] }
 

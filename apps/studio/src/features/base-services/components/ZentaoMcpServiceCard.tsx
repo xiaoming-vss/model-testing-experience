@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { AppIcon } from '@/shared/icons'
 import { formatTime } from '@/utils/format'
 import type { SharedService } from '../api/sharedServices.api'
-import '../styles/zentao-mcp-service.css'
+import mcpStyles from '../styles/zentao-mcp-service.module.css'
 
 export function ZentaoMcpServiceCard({ resource, checking, onRefresh, actions }: {
   resource: SharedService
@@ -17,7 +17,7 @@ export function ZentaoMcpServiceCard({ resource, checking, onRefresh, actions }:
   const status = checking ? '检查中' : pending ? '需更新配置' : resource.connectionStatus === 'available' ? '连接正常' : resource.connectionStatus === 'error' ? '连接异常' : '未检查'
   const authorization = authorized ? '已配置授权' : resource.authorization.status === 'invalid' ? '授权已失效' : '本人未授权'
   const instance = pending ? resource.pendingInstanceUrl : resource.zentaoInstanceUrl
-  return <Card className="sprint-card api-collection-card base-services-connection-card base-services-mcp-card">
+  return <Card className={`sprint-card api-collection-card base-services-connection-card base-services-mcp-card ${mcpStyles.root}`}>
     <div className="api-collection-card-top base-services-connection-head">
       <div className="base-services-connection-title-wrap base-services-mcp-title">
         <AppIcon name="zentao" size={24} />

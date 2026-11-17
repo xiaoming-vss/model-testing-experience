@@ -10,7 +10,7 @@ import type { VisualizationMode } from '../../visualizationTypes'
 import { TestOrderCaseContent } from '../TestOrderCaseContent'
 import { BusinessDiagram } from './BusinessDiagram'
 import { VisualizationSteps } from './VisualizationSteps'
-import '../../styles/case-visualization.css'
+import vizStyles from '../../styles/test-order-visualization.module.css'
 
 type Props = { orderId: string; entryId: string; projectId?: string; snapshot: TestOrderEntry['snapshot']; caseTitle?: string; canGenerate: boolean; preferredMode: VisualizationMode; onMode: (mode: VisualizationMode) => void }
 
@@ -47,7 +47,7 @@ export function CaseVisualizationPanel({ orderId, entryId, projectId, snapshot, 
   })
   const steps = snapshot?.steps ?? []
   const visibleMode = usable ? mode : 'text'
-  return <div className="test-order-visualization">
+  return <div className={`test-order-visualization ${vizStyles.panel}`}>
     <div className="test-order-viz-toolbar">
       <div><span>阅读方式</span><Segmented aria-label="用例阅读方式" value={visibleMode} options={[{ label: '文字', value: 'text' }, { label: '可视化', value: 'visual', disabled: !usable }]} onChange={value => { const next = value as VisualizationMode; setMode(next); onMode(next) }} /></div>
       <div><Tag>本次生成：{visualizationStatus(query.data?.latestRun?.status, query.data?.latestRun?.artifactStatus)}</Tag>{canGenerate && <Button size="small" loading={generation.isPending} disabled={running || query.isLoading} onClick={() => generation.mutate()}>{usable ? '重新生成' : query.data?.latestRun?.status === 'failed' ? '重试生成' : '生成可视化'}</Button>}</div>

@@ -63,12 +63,7 @@
   min-width: 0;
 }
 
-.project-header-bar .project-actions {
-  flex: 0 0 auto;
-}
-
-.workbench-page,
-.settings-page {
+.workbench-page {
   min-height: calc(100vh - 56px);
 }
 
@@ -86,8 +81,7 @@
   }
 
   .app-header-main,
-  .project-header-bar,
-  .project-actions {
+  .project-header-bar {
     width: 100%;
   }
 
@@ -114,16 +108,6 @@
   color: var(--app-context-text);
   font-size: 13px;
   line-height: 20px;
-}
-
-.compact-header .project-selector-label {
-  color: var(--app-context-label);
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.compact-header .project-separator {
-  color: var(--app-context-separator);
 }
 
 .compact-header .project-select {
@@ -269,13 +253,6 @@ body,
   --tp-card-radius: 8px;
 }
 
-.brand-row .brand {
-  width: 100%;
-  justify-content: center;
-  padding: 0;
-  border-bottom: 0;
-}
-
 /* 侧边栏宽度由 sidebar.css 管理:176px 展开 / 76px 折叠。 */
 
 .compact-header {
@@ -374,74 +351,6 @@ body,
   border-bottom: 0;
 }
 
-/* macOS simple white sidebar refinement */
-.app-shell .app-sider {
-  position: relative;
-  z-index: 5;
-  overflow: hidden;
-  border-right: 1px solid var(--app-glass-border-strong) !important;
-  -webkit-backdrop-filter: saturate(180%) blur(22px);
-  backdrop-filter: saturate(180%) blur(22px);
-}
-
-.app-shell .app-sider::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.app-shell .brand-row {
-  position: relative;
-  z-index: 1;
-  height: 64px;
-  border-bottom: 1px solid var(--app-glass-border);
-}
-
-.app-shell .brand-row .brand {
-  position: relative;
-  width: 44px;
-  height: 44px;
-  margin: 10px auto;
-  border-radius: 14px;
-}
-
-.app-shell .app-sider .ant-menu {
-  position: relative;
-  z-index: 1;
-  padding: 12px 0;
-  background: transparent !important;
-}
-
-.app-shell .app-sider .ant-menu-item {
-  margin: 0 auto;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.app-shell .app-sider .ant-menu-item .anticon {
-  font-size: 17px;
-}
-
-.app-shell .app-sider .ant-menu-item:hover {
-  border-color: var(--app-glass-selection-border);
-}
-
-.app-shell .app-sider .ant-menu-item-selected {
-  border-color: var(--app-glass-border-82);
-}
-
-.app-shell .app-sider .ant-menu-item-selected::before {
-  content: '';
-  position: absolute;
-  left: 7px;
-  top: 18px;
-  width: 3px;
-  height: 28px;
-  border-radius: 999px;
-  background: var(--app-glass-accent);
-}
-
 /* macOS simple white global header refinement */
 .app-shell .app-header.compact-header {
   position: sticky;
@@ -483,16 +392,6 @@ body,
   box-shadow: inset 0 1px 0 var(--app-glass-highlight-76);
 }
 
-.app-shell .project-selector-label {
-  color: var(--app-glass-text-muted);
-  font-size: 12px;
-  font-weight: 400;
-}
-
-.app-shell .project-separator {
-  color: var(--app-glass-text-disabled);
-}
-
 .app-shell .project-select {
   min-width: 140px;
   width: 140px;
@@ -522,69 +421,4 @@ body,
   height: 34px;
   font-size: 17px;
   border: 1px solid transparent;
-}
-
-/* Lighter macOS sidebar selected state */
-.app-shell .app-sider {
-  border-right-color: var(--app-glass-border-soft) !important;
-  background: var(--app-glass-input) !important;
-  box-shadow: inset -1px 0 0 var(--app-glass-highlight-68);
-}
-
-.app-shell .app-sider::before {
-  background: linear-gradient(180deg, var(--app-glass-surface-42), var(--app-glass-surface-12));
-}
-
-.app-shell .app-sider .ant-menu {
-  gap: 4px;
-  padding-top: 12px;
-}
-
-.app-shell .app-sider .ant-menu-item {
-  width: 58px;
-  height: 58px;
-  border: 0;
-  border-radius: 12px;
-  color: var(--app-glass-text-placeholder) !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  transform: none !important;
-}
-
-.app-shell .app-sider .ant-menu-item .anticon,
-.app-shell .app-sider .ant-menu-item .ant-menu-title-content {
-  color: inherit !important;
-}
-
-.app-shell .app-sider .ant-menu-item:hover {
-  color: var(--app-glass-link) !important;
-  border: 0;
-  background: var(--app-glass-surface-54) !important;
-  box-shadow: none !important;
-  transform: none !important;
-}
-
-.app-shell .app-sider .ant-menu-item-selected {
-  color: var(--app-glass-link) !important;
-  border: 0;
-  background: var(--app-glass-hover) !important;
-  box-shadow: none !important;
-  transform: none !important;
-  font-weight: 400;
-}
-
-.app-shell .app-sider .ant-menu-item-selected::before {
-  display: none;
-}
-
-.app-shell .app-sider .ant-menu-item-selected .anticon,
-.app-shell .app-sider .ant-menu-item-selected .ant-menu-title-content {
-  color: var(--app-glass-link) !important;
-}
-
-.app-shell .brand-row .brand {
-  background: var(--app-glass-surface-62);
-  box-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-82),
-    0 6px 14px var(--app-glass-shadow-raised);
 }

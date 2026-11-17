@@ -70,9 +70,8 @@ import {
   pickUpdatedAt,
 } from '@/utils/format'
 import '@/shared/styles/surface-tokens.css'
-import '@/features/test-cases/styles/index.css'
 import caseLibraryStyles from '@/features/test-cases/styles/case-library.module.css'
-import '@/features/test-cases/styles/case-editor-v2.css'
+import caseEditorStyles from '@/features/test-cases/styles/case-editor.module.css'
 
 const { Text } = Typography
 
@@ -1159,7 +1158,7 @@ export function CaseLibraryPage() {
           centered
           width={1040}
           maskClosable={false}
-          className="case-library-case-modal tp-surface"
+          className={`case-library-case-modal tp-surface ${caseEditorStyles.root}`}
           title={caseEditorHeader}
           onCancel={closeCaseEditor}
           footer={

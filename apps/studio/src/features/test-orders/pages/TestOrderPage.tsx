@@ -31,7 +31,6 @@ import {
 } from '../utils/testOrderStatus'
 import { buildTestOrderProgress, type TestOrderProgressKey, type TestOrderProgressSegmentKey } from '../utils/testOrderProgress'
 import '@/shared/styles/surface-tokens.css'
-import '@/features/test-orders/styles/index.css'
 import styles from '../styles/test-orders-list.module.css'
 
 const { Text } = Typography

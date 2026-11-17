@@ -22,7 +22,6 @@ import {
 import { VisualizationBatchButton } from './visualization/VisualizationBatchButton'
 import '@/shared/styles/surface-tokens.css'
 import '@/shared/styles/list-table.css'
-import '@/features/test-orders/styles/workspace-list-v2.css'
 
 const { Text } = Typography
 

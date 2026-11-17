@@ -1,5 +1,4 @@
 import { TEST_ORDER_VERDICTS } from '../utils/testOrderExecution'
-import '../styles/workspace-verdict-v2.css'
 
 type Props = {
   status?: string

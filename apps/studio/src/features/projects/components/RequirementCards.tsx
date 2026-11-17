@@ -6,7 +6,6 @@ import { getRequirementDocumentSummary, getRequirementDocumentTypeLabel, hasRequ
 import { normalizeRequirementId } from '@/utils/format'
 import { RequirementCodeSummary, RequirementCreatedTime } from './RequirementMetadata'
 import { EntityCard } from '@/shared/components/EntityCard'
-import '../styles/requirements-list.css'
 
 export function RequirementCards<T extends Requirement & { sprintName: string }>({ requirements, renderActions, renderBinding }: {
   requirements: T[]

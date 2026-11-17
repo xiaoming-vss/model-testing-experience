@@ -77,6 +77,35 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 
 需求评审、测试点、测试范围分析和材料整理已改用 `shared/components/ArtifactView` + Tailwind；原 `requirement-review.css`、`traceable-points.css`、`test-scope-analysis.css`、`readable-requirement-material.css` 已删除。公共原语的复杂皮肤只在 `shared/styles/artifact-view.module.css`，与滚动容器耦合的宿主适配在 `features/ai-testing/styles/` 下的 `*.module.css`；页面不再新增同构布局 CSS。
 
+### 测试单样式归属
+
+文件统一放在 `src/features/test-orders/styles/`。阶段 10 已把原 9 个全局 CSS 全部迁为根作用域 Module，`features/test-orders` 下不再有非 Module CSS。工作台页面根同时挂 `test-order-workspace` / `test-order-workspace-list` / `test-order-verdict` 三个 Module 的 `.root`；加入用例 Modal 通过 `rootClassName` 挂 `add-cases-modal` 的 `.root`；图谱执行面板根挂判定 Module 的 `.root`。旧类名保留为 `:global()` 测试与兼容钩子，组件不再直接引入全局 CSS。
+
+| 文件 | 职责 / 使用入口 |
+| --- | --- |
+| `test-orders-list.module.css` | 测试单列表页进度条、状态胶囊与搜索按钮皮肤 |
+| `test-order-workspace.module.css` | 工作台高度链、详情外壳、摘要、前置条件与步骤内容 |
+| `test-order-workspace-list.module.css` | 工作台工具栏、执行条目表格、筛选弹层与批量条 |
+| `test-order-verdict.module.css` | 执行判定、缺陷关联与底部操作条；工作台与图谱执行面板共用 |
+| `add-cases-modal.module.css` | 加入用例弹窗的筛选行、用例预览与步骤快照 |
+| `test-order-graph.module.css` | 测试单图谱页壳与查看器 |
+| `test-order-graph-execution.module.css` | 图谱分栏里的用例执行面板；独立文件保持原有级联顺序 |
+| `test-order-visualization.module.css` | 用例可视化面板与批量图解按钮 |
+
+### 测试用例样式归属
+
+- `case-library.module.css` 承载用例库页面骨架、测试集侧栏与列表皮肤；原 `index.css` 已合并进该文件。
+- `case-editor.module.css` 承载用例编辑弹窗；Modal 的 `className` 同时带 `case-library-case-modal tp-surface` 与 Module `.root`。
+- `case-push.module.css` 承载导入禅道弹窗；`ProjectActionModal` 通过 `rootClassName` 挂 Module `.root`。
+- 原 `case-editor-v2.css`、`index.css`、`case-push.css` 已删除，`features/test-cases` 下不再有非 Module CSS。
+
+### 需求详情、个人设置与基础服务样式归属
+
+- 需求详情页的页面骨架、面包屑、主画布与阶段侧栏在 `requirements/styles/requirement-detail.module.css`，根节点挂 `.root`；`RequirementDetailHeader` 不再直接引入页面 CSS。
+- 个人设置页与独立修改密码页共用 `profile/styles/profile-settings.module.css`，两页根节点都挂 `.root`；修改密码页的单栏覆盖在 `auth/styles/change-password.module.css`。`ChangePasswordPage` 对 profile Module 的跨 feature 导入是结构门禁的显式豁免。
+- 禅道 MCP 卡片的标题、状态与实例省略规则在 `base-services/styles/zentao-mcp-service.module.css`，卡片根挂 `.root`。
+- 阶段 14 后 `src/features` 下不再有非 Module CSS；非 Module CSS 只剩 `app/styles`、`shared/styles`、`shared/components/RichTextEditor` 与入口 `index.css`。
+
 ### 公共表格与按钮
 
 - `shared/styles/list-table.css` 是表头和数据行尺寸、底色、悬停背景的共用实现，颜色取自 `surface-tokens.css` 的 `--srf-list-*`。页面保留业务类名并声明 `tp-list-surface`，表格保留业务类名并声明 `tp-list-table`；使用表格的入口显式引入这两个样式文件。列内容、边框及圆角的现有优先级仍由 feature 维护。
@@ -85,7 +114,7 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 - 全局层样式入口是 `app/styles/theme.css`，按顺序导入 `layout.css`、`legacy-surface.css`、`shell.css`、`shell-header.css`、`antd-overrides.css`、`action-buttons.css`、`shell-boundary.css`；聚合文件 `src/App.css` 已删除，结构门禁会拦截其重新出现。
 - 接口库列表与软件仓库管理在 `interface-library.module.css`；方法签、OpenAPI 导入、详情顶栏/编辑器壳、编辑器内容区分别在同目录 `interface-method` / `interface-openapi` / `interface-detail` / `interface-editor` Module。页面根与 Modal/Drawer 根同时挂五个 `.scope`，保持原单文件内的规则顺序。
 - UI 测试集详情顶栏归 `ui-detail-topbar.module.css`，板面/控制条/窄屏归 `ui-detail-shell.module.css`；页面根同时挂五个详情 Module 的作用域。步骤编辑器和测试集抽屉的窄屏规则仍归 `ui-suite.module.css`，阶段 7 后不再借用 API 模块的 `detail.css`（该文件已删除）。
-- Sprint 详情页的页面骨架在 `sprint-overview.css`，看板指标、图表、报告与响应式在 `sprint-dashboard.css`，两者按顺序导入。
+- Sprint 详情页的页面骨架在 `sprint-overview.module.css`，看板指标、图表、报告与响应式在 `sprint-dashboard.module.css`，两者按顺序导入；报告 Modal/Drawer 通过 `rootClassName` 或 `className` 挂作用域。Projects 页的需求卡片、迭代看板与项目概览在 `projects-overview.module.css`。
 
 列表规格由 `app/styles/listSurfaceConsistency.test.ts` 验证，运行操作的缓存与草稿保护由 `ai-testing/hooks/useTaskRunActions.test.tsx` 验证。涉及按钮层优先级的变更需用浏览器核对，jsdom 尚不能模拟 CSS layer 的完整级联。
 

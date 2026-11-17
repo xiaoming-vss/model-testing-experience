@@ -148,8 +148,7 @@
   /* Shared row/card actions override legacy per-page dimensions. */
   .ant-btn.app-action-icon,
   .ant-table .ant-btn.ant-btn-icon-only:is(.ant-btn-text, .ant-btn-link),
-  .sprint-card-actions .ant-btn.ant-btn-icon-only,
-  .service-card-actions .ant-btn.ant-btn-icon-only {
+  .sprint-card-actions .ant-btn.ant-btn-icon-only {
     width: 28px !important;
     min-width: 28px !important;
     height: 28px !important;

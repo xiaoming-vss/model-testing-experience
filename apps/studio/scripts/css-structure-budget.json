@@ -13,27 +13,6 @@
     "src/app/styles/shell.css",
     "src/app/styles/sidebar.css",
     "src/app/styles/theme.css",
-    "src/features/auth/styles/change-password.css",
-    "src/features/base-services/styles/zentao-mcp-service.css",
-    "src/features/profile/pages/ProfilePage.css",
-    "src/features/projects/styles/project-overview.css",
-    "src/features/projects/styles/requirements-list.css",
-    "src/features/projects/styles/sprint-board.css",
-    "src/features/projects/styles/sprint-dashboard.css",
-    "src/features/projects/styles/sprint-overview.css",
-    "src/features/requirements/styles/detail.css",
-    "src/features/test-cases/styles/case-editor-v2.css",
-    "src/features/test-cases/styles/case-push.css",
-    "src/features/test-cases/styles/index.css",
-    "src/features/test-orders/styles/case-visualization.css",
-    "src/features/test-orders/styles/graph-execution.css",
-    "src/features/test-orders/styles/graph-page.css",
-    "src/features/test-orders/styles/graph-viewer.css",
-    "src/features/test-orders/styles/index.css",
-    "src/features/test-orders/styles/workspace-content-v3.css",
-    "src/features/test-orders/styles/workspace-list-v2.css",
-    "src/features/test-orders/styles/workspace-v2.css",
-    "src/features/test-orders/styles/workspace-verdict-v2.css",
     "src/index.css",
     "src/shared/components/RichTextEditor/rich-text-editor.css",
     "src/shared/styles/chart-tokens.css",
@@ -56,21 +35,21 @@
     "src/shared/styles/ui-stage-visual-tokens.css"
   ],
   "crossFeatureCssImports": [
-    "src/features/auth/pages/ChangePasswordPage.tsx -> src/features/profile/pages/ProfilePage.css",
+    "src/features/auth/pages/ChangePasswordPage.tsx -> src/features/profile/styles/profile-settings.module.css",
     "src/features/test-orders/components/TestOrderGraphViewer.tsx -> src/features/ai-testing/styles/relations.module.css"
   ],
   "orphanCss": [],
   "sharedModuleViolations": [],
   "files": {
     "src/app/styles/action-buttons.css": {
-      "rules": 11,
-      "declarations": 20,
-      "selectors": 25
+      "rules": 10,
+      "declarations": 18,
+      "selectors": 24
     },
     "src/app/styles/antd-overrides.css": {
       "rules": 9,
       "declarations": 28,
-      "selectors": 13
+      "selectors": 11
     },
     "src/app/styles/asset-library.css": {
       "rules": 5,
@@ -80,7 +59,7 @@
     "src/app/styles/buttons.css": {
       "rules": 27,
       "declarations": 113,
-      "selectors": 39
+      "selectors": 38
     },
     "src/app/styles/error-boundary.css": {
       "rules": 1,
@@ -103,14 +82,14 @@
       "selectors": 4
     },
     "src/app/styles/shell-header.css": {
-      "rules": 71,
-      "declarations": 170,
-      "selectors": 104
+      "rules": 54,
+      "declarations": 134,
+      "selectors": 74
     },
     "src/app/styles/shell.css": {
-      "rules": 97,
-      "declarations": 251,
-      "selectors": 117
+      "rules": 71,
+      "declarations": 171,
+      "selectors": 87
     },
     "src/app/styles/sidebar.css": {
       "rules": 21,
@@ -222,7 +201,7 @@
       "declarations": 66,
       "selectors": 35
     },
-    "src/features/auth/styles/change-password.css": {
+    "src/features/auth/styles/change-password.module.css": {
       "rules": 2,
       "declarations": 2,
       "selectors": 2
@@ -237,7 +216,7 @@
       "declarations": 104,
       "selectors": 36
     },
-    "src/features/base-services/styles/zentao-mcp-service.css": {
+    "src/features/base-services/styles/zentao-mcp-service.module.css": {
       "rules": 5,
       "declarations": 16,
       "selectors": 5
@@ -282,7 +261,7 @@
       "declarations": 116,
       "selectors": 33
     },
-    "src/features/profile/pages/ProfilePage.css": {
+    "src/features/profile/styles/profile-settings.module.css": {
       "rules": 34,
       "declarations": 80,
       "selectors": 36
@@ -297,115 +276,90 @@
       "declarations": 118,
       "selectors": 34
     },
-    "src/features/projects/styles/project-overview.css": {
-      "rules": 10,
-      "declarations": 31,
-      "selectors": 10
-    },
     "src/features/projects/styles/project-settings.module.css": {
       "rules": 4,
       "declarations": 8,
       "selectors": 4
     },
-    "src/features/projects/styles/requirements-list.css": {
-      "rules": 43,
-      "declarations": 135,
-      "selectors": 45
+    "src/features/projects/styles/projects-overview.module.css": {
+      "rules": 84,
+      "declarations": 277,
+      "selectors": 87
     },
-    "src/features/projects/styles/sprint-board.css": {
-      "rules": 31,
-      "declarations": 111,
-      "selectors": 32
-    },
-    "src/features/projects/styles/sprint-dashboard.css": {
+    "src/features/projects/styles/sprint-dashboard.module.css": {
       "rules": 112,
       "declarations": 302,
       "selectors": 125
     },
-    "src/features/projects/styles/sprint-overview.css": {
+    "src/features/projects/styles/sprint-overview.module.css": {
       "rules": 65,
       "declarations": 257,
       "selectors": 65
-    },
-    "src/features/requirements/styles/detail.css": {
-      "rules": 29,
-      "declarations": 116,
-      "selectors": 31
     },
     "src/features/requirements/styles/document-preview.module.css": {
       "rules": 43,
       "declarations": 220,
       "selectors": 54
     },
-    "src/features/test-cases/styles/case-editor-v2.css": {
+    "src/features/requirements/styles/requirement-detail.module.css": {
+      "rules": 29,
+      "declarations": 116,
+      "selectors": 31
+    },
+    "src/features/test-cases/styles/case-editor.module.css": {
       "rules": 44,
       "declarations": 155,
       "selectors": 48
     },
     "src/features/test-cases/styles/case-library.module.css": {
-      "rules": 42,
-      "declarations": 140,
-      "selectors": 44
+      "rules": 62,
+      "declarations": 204,
+      "selectors": 64
     },
-    "src/features/test-cases/styles/case-push.css": {
+    "src/features/test-cases/styles/case-push.module.css": {
       "rules": 9,
       "declarations": 20,
       "selectors": 9
     },
-    "src/features/test-cases/styles/index.css": {
-      "rules": 20,
-      "declarations": 64,
-      "selectors": 20
+    "src/features/test-orders/styles/add-cases-modal.module.css": {
+      "rules": 10,
+      "declarations": 35,
+      "selectors": 10
     },
-    "src/features/test-orders/styles/case-visualization.css": {
-      "rules": 116,
-      "declarations": 375,
-      "selectors": 127
-    },
-    "src/features/test-orders/styles/graph-execution.css": {
+    "src/features/test-orders/styles/test-order-graph-execution.module.css": {
       "rules": 9,
       "declarations": 26,
       "selectors": 12
     },
-    "src/features/test-orders/styles/graph-page.css": {
-      "rules": 17,
-      "declarations": 68,
-      "selectors": 18
+    "src/features/test-orders/styles/test-order-graph.module.css": {
+      "rules": 22,
+      "declarations": 80,
+      "selectors": 23
     },
-    "src/features/test-orders/styles/graph-viewer.css": {
-      "rules": 5,
-      "declarations": 12,
-      "selectors": 5
+    "src/features/test-orders/styles/test-order-verdict.module.css": {
+      "rules": 38,
+      "declarations": 160,
+      "selectors": 38
     },
-    "src/features/test-orders/styles/index.css": {
-      "rules": 10,
-      "declarations": 35,
-      "selectors": 10
+    "src/features/test-orders/styles/test-order-visualization.module.css": {
+      "rules": 116,
+      "declarations": 375,
+      "selectors": 127
+    },
+    "src/features/test-orders/styles/test-order-workspace-list.module.css": {
+      "rules": 72,
+      "declarations": 271,
+      "selectors": 77
+    },
+    "src/features/test-orders/styles/test-order-workspace.module.css": {
+      "rules": 53,
+      "declarations": 210,
+      "selectors": 59
     },
     "src/features/test-orders/styles/test-orders-list.module.css": {
       "rules": 24,
       "declarations": 71,
       "selectors": 25
-    },
-    "src/features/test-orders/styles/workspace-content-v3.css": {
-      "rules": 34,
-      "declarations": 135,
-      "selectors": 39
-    },
-    "src/features/test-orders/styles/workspace-list-v2.css": {
-      "rules": 72,
-      "declarations": 271,
-      "selectors": 77
-    },
-    "src/features/test-orders/styles/workspace-v2.css": {
-      "rules": 19,
-      "declarations": 75,
-      "selectors": 20
-    },
-    "src/features/test-orders/styles/workspace-verdict-v2.css": {
-      "rules": 38,
-      "declarations": 160,
-      "selectors": 38
     },
     "src/features/testing/styles/testing-page.module.css": {
       "rules": 6,
@@ -969,10 +923,6 @@
     "e5b6bf9b5b1696ce": {
       "count": 3,
       "sample": "margin: 0;font-size: 12px;font-weight: 600"
-    },
-    "e638bcecdc40eaa6": {
-      "count": 2,
-      "sample": "border-right-color: var(--mac-glass-border) !important;background: var(--mac-glass-sidebar) !important;-webkit-backdrop-filter: saturate(180%) blur(24px);backdrop-filter: saturate("
     },
     "e6fb3a7f8f65fc87": {
       "count": 2,

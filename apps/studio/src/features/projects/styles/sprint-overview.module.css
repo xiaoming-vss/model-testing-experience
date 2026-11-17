@@ -1,44 +1,45 @@
+/* Sprint 详情页看板骨架：页面高度链、健康带、指标卡片与区块布局（阶段 12 迁移）。 */
 /* SprintDetailPage 专用看板样式；基础布局来自 page-frame，阶段 4 起归 feature 所有。 */
 
-.sprint-overview-panel-body {
+.root :global(.sprint-overview-panel-body) {
   padding: 14px 18px 16px;
 }
 
-.sprint-overview-page {
+.root {
   overflow: hidden;
 }
 
-.sprint-overview-page .workbench-tabs {
+.root :global(.workbench-tabs) {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
 }
 
-.sprint-overview-page .workbench-panel {
+.root :global(.workbench-panel) {
   height: 100%;
   min-height: 0;
   overflow: hidden;
 }
 
-.sprint-overview-page .sprint-overview-panel-body {
+.root :global(.sprint-overview-panel-body) {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: hidden;
   overflow-x: hidden;
 }
 
-.sprint-overview-layout {
+.root :global(.sprint-overview-layout) {
   min-height: 100%;
   display: grid;
   grid-template-rows: minmax(92px, 0.42fr) minmax(260px, 0.9fr) minmax(0, 1.18fr);
   gap: 12px;
 }
 
-.sprint-overview-panel-unified {
+.root :global(.sprint-overview-panel-unified) {
   overflow: hidden;
 }
 
-.sprint-overview-card-rich {
+.root :global(.sprint-overview-card-rich) {
   border: 1px solid var(--tp-border);
   border-radius: 18px;
   background:
@@ -47,7 +48,7 @@
   box-shadow: 0 10px 28px var(--app-card-shadow);
 }
 
-.sprint-overview-card-rich .ant-card-body {
+.root :global(.sprint-overview-card-rich) :global(.ant-card-body) {
   padding: 16px 18px;
   height: 100%;
   min-height: 0;
@@ -55,7 +56,7 @@
   flex-direction: column;
 }
 
-.sprint-overview-toolbar-summary-row {
+.root :global(.sprint-overview-toolbar-summary-row) {
   width: 100%;
   display: flex;
   align-items: center;
@@ -64,7 +65,7 @@
   flex-wrap: wrap;
 }
 
-.sprint-overview-toolbar-main {
+.root :global(.sprint-overview-toolbar-main) {
   min-width: 0;
   flex: 0 1 auto;
   display: flex;
@@ -73,7 +74,7 @@
   gap: 8px;
 }
 
-.sprint-overview-hero-title-row {
+.root :global(.sprint-overview-hero-title-row) {
   display: flex;
   width: auto;
   align-items: center;
@@ -81,18 +82,18 @@
   gap: 16px;
 }
 
-.sprint-overview-hero-title-row > .ant-space {
+.root :global(.sprint-overview-hero-title-row) > :global(.ant-space) {
   display: flex;
   width: auto;
   justify-content: flex-start;
 }
 
-.sprint-overview-hero-status {
+.root :global(.sprint-overview-hero-status) {
   display: inline-flex;
   align-items: center;
 }
 
-.sprint-overview-hero-summary {
+.root :global(.sprint-overview-hero-summary) {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -101,7 +102,7 @@
   justify-content: flex-end;
 }
 
-.sprint-overview-summary-metric {
+.root :global(.sprint-overview-summary-metric) {
   min-width: 0;
   min-height: 32px;
   padding: 0 8px;
@@ -113,7 +114,7 @@
   gap: 10px;
 }
 
-.sprint-overview-summary-icon {
+.root :global(.sprint-overview-summary-icon) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -125,7 +126,7 @@
   background: var(--app-accent-soft);
 }
 
-.sprint-overview-summary-copy {
+.root :global(.sprint-overview-summary-copy) {
   min-width: 0;
   display: flex;
   align-items: baseline;
@@ -133,68 +134,68 @@
   white-space: nowrap;
 }
 
-.sprint-overview-summary-label {
+.root :global(.sprint-overview-summary-label) {
   color: var(--app-text-caption);
   font-size: 12px;
   line-height: 18px;
 }
 
-.sprint-overview-summary-value {
+.root :global(.sprint-overview-summary-value) {
   color: var(--app-shell-text);
   font-size: 14px;
   line-height: 18px;
   font-weight: 700;
 }
 
-.sprint-overview-section {
+.root :global(.sprint-overview-section) {
   display: flex;
   flex-direction: column;
   gap: 8px;
   min-height: 0;
 }
 
-.sprint-overview-section .section-head {
+.root :global(.sprint-overview-section) :global(.section-head) {
   gap: 2px;
 }
 
-.sprint-overview-section .section-head .ant-typography {
+.root :global(.sprint-overview-section) :global(.section-head) :global(.ant-typography) {
   margin-bottom: 0;
 }
 
-.sprint-overview-section .section-head h4.ant-typography {
+.root :global(.sprint-overview-section) :global(.section-head) h4:global(.ant-typography) {
   margin: 0 !important;
   font-size: 17px;
   line-height: 24px;
 }
 
-.sprint-overview-section .section-head span.ant-typography {
+.root :global(.sprint-overview-section) :global(.section-head) span:global(.ant-typography) {
   font-size: 12px;
   line-height: 18px;
 }
 
-.sprint-overview-card {
+.root :global(.sprint-overview-card) {
   height: 100%;
 }
 
-.sprint-overview-card-label {
+.root :global(.sprint-overview-card-label) {
   color: var(--app-text-axis);
   font-size: 13px;
   line-height: 20px;
 }
 
-.sprint-overview-card-value {
+.root :global(.sprint-overview-card-value) {
   margin: 3px 0 0 !important;
   font-size: 22px !important;
   line-height: 28px !important;
 }
 
-.sprint-overview-card-subtitle {
+.root :global(.sprint-overview-card-subtitle) {
   margin: 4px 0 0 !important;
   font-size: 18px !important;
   line-height: 24px !important;
 }
 
-.sprint-overview-accent-tag {
+.root :global(.sprint-overview-accent-tag) {
   margin-inline-end: 0;
   border: none;
   border-radius: 999px;
@@ -203,7 +204,7 @@
   background: var(--app-badge-bg);
 }
 
-.sprint-dashboard-health-band {
+.root :global(.sprint-dashboard-health-band) {
   min-width: 0;
   border: 1px solid var(--tp-border);
   border-radius: 14px;
@@ -216,7 +217,7 @@
   gap: 24px;
 }
 
-.sprint-dashboard-health-title {
+.root :global(.sprint-dashboard-health-title) {
   min-width: 0;
   min-height: 72px;
   display: flex;
@@ -224,14 +225,14 @@
   gap: 18px;
 }
 
-.sprint-dashboard-health-copy {
+.root :global(.sprint-dashboard-health-copy) {
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 7px;
 }
 
-.sprint-dashboard-health-title-row {
+.root :global(.sprint-dashboard-health-title-row) {
   min-width: 0;
   display: flex;
   align-items: center;
@@ -239,7 +240,7 @@
   flex-wrap: wrap;
 }
 
-.sprint-dashboard-health-icon {
+.root :global(.sprint-dashboard-health-icon) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -252,19 +253,19 @@
   font-size: 28px;
 }
 
-.sprint-dashboard-health-title h4.ant-typography {
+.root :global(.sprint-dashboard-health-title) h4:global(.ant-typography) {
   margin: 0 !important;
   font-size: 19px;
   line-height: 26px;
 }
 
-.sprint-dashboard-health-caption {
+.root :global(.sprint-dashboard-health-caption) {
   display: block;
   font-size: 14px;
   line-height: 22px;
 }
 
-.sprint-dashboard-health-progress {
+.root :global(.sprint-dashboard-health-progress) {
   min-width: 0;
   border-left: 1px solid var(--app-frame-divider);
   border-right: 1px solid var(--app-frame-divider);
@@ -274,20 +275,20 @@
   gap: 8px;
 }
 
-.sprint-dashboard-health-progress-head {
+.root :global(.sprint-dashboard-health-progress-head) {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
 }
 
-.sprint-dashboard-health-progress-head strong {
+.root :global(.sprint-dashboard-health-progress-head) strong {
   color: var(--app-shell-text);
   font-size: 17px;
   line-height: 24px;
 }
 
-.sprint-dashboard-health-track {
+.root :global(.sprint-dashboard-health-track) {
   display: flex;
   width: 100%;
   height: 8px;
@@ -296,19 +297,19 @@
   background: var(--app-progress-track);
 }
 
-.sprint-dashboard-health-fill {
+.root :global(.sprint-dashboard-health-fill) {
   height: 100%;
 }
 
-.sprint-dashboard-health-fill-executed {
+.root :global(.sprint-dashboard-health-fill-executed) {
   background: var(--app-result-success);
 }
 
-.sprint-dashboard-health-fill-pending {
+.root :global(.sprint-dashboard-health-fill-pending) {
   background: var(--app-result-pending);
 }
 
-.sprint-dashboard-health-legend {
+.root :global(.sprint-dashboard-health-legend) {
   display: flex;
   align-items: center;
   gap: 18px;
@@ -318,13 +319,13 @@
   line-height: 18px;
 }
 
-.sprint-dashboard-health-legend span {
+.root :global(.sprint-dashboard-health-legend) span {
   display: inline-flex;
   align-items: center;
   gap: 5px;
 }
 
-.sprint-dashboard-health-legend span::before {
+.root :global(.sprint-dashboard-health-legend) span::before {
   content: '';
   width: 7px;
   height: 7px;
@@ -332,18 +333,18 @@
   background: var(--legend-color);
 }
 
-.sprint-dashboard-health-legend strong {
+.root :global(.sprint-dashboard-health-legend) strong {
   color: var(--app-shell-text);
 }
 
-.sprint-dashboard-health-defects {
+.root :global(.sprint-dashboard-health-defects) {
   min-width: 0;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
 }
 
-.sprint-dashboard-health-defects span {
+.root :global(.sprint-dashboard-health-defects) span {
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -353,36 +354,36 @@
   line-height: 18px;
 }
 
-.sprint-dashboard-health-defects strong {
+.root :global(.sprint-dashboard-health-defects) strong {
   color: var(--app-shell-text);
   font-size: 24px;
   line-height: 30px;
 }
 
-.sprint-dashboard-health-green {
+.root :global(.sprint-dashboard-health-green) {
   color: var(--app-result-success) !important;
 }
 
-.sprint-dashboard-health-blue {
+.root :global(.sprint-dashboard-health-blue) {
   color: var(--app-accent) !important;
 }
 
-.sprint-dashboard-health-red {
+.root :global(.sprint-dashboard-health-red) {
   color: var(--app-result-failed) !important;
 }
 
-.sprint-dashboard-main-grid {
+.root :global(.sprint-dashboard-main-grid) {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1.18fr) minmax(0, 1fr);
   gap: 12px;
 }
 
-.sprint-dashboard-panel {
+.root :global(.sprint-dashboard-panel) {
   min-height: 0;
 }
 
-.sprint-dashboard-card-head {
+.root :global(.sprint-dashboard-card-head) {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -390,13 +391,13 @@
   margin-bottom: 6px;
 }
 
-.sprint-dashboard-card-head h4.ant-typography {
+.root :global(.sprint-dashboard-card-head) h4:global(.ant-typography) {
   margin: 0 !important;
   font-size: 17px;
   line-height: 24px;
 }
 
-.sprint-dashboard-test-table {
+.root :global(.sprint-dashboard-test-table) {
   min-height: 0;
   flex: 1 1 auto;
   display: grid;
@@ -405,7 +406,7 @@
   border-top: 1px solid var(--app-frame-divider-soft);
 }
 
-.sprint-dashboard-test-row {
+.root :global(.sprint-dashboard-test-row) {
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(120px, 1.2fr) 72px repeat(4, minmax(92px, 1fr));
@@ -415,11 +416,11 @@
   padding: 6px 0;
 }
 
-.sprint-dashboard-test-row:last-child {
+.root :global(.sprint-dashboard-test-row):last-child {
   border-bottom: none;
 }
 
-.sprint-dashboard-test-row-head {
+.root :global(.sprint-dashboard-test-row-head) {
   color: var(--app-text-label);
   font-size: 12px;
   line-height: 18px;
@@ -427,7 +428,7 @@
   background: var(--app-frame-row-hover);
 }
 
-.sprint-dashboard-test-name {
+.root :global(.sprint-dashboard-test-name) {
   min-width: 0;
   display: flex;
   align-items: center;
@@ -435,7 +436,7 @@
   color: var(--app-shell-text);
 }
 
-.sprint-dashboard-test-icon {
+.root :global(.sprint-dashboard-test-icon) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -448,7 +449,7 @@
   font-size: 18px;
 }
 
-.sprint-dashboard-test-total {
+.root :global(.sprint-dashboard-test-total) {
   color: var(--app-shell-text);
   font-size: 18px;
   line-height: 24px;

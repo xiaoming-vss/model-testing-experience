@@ -1,13 +1,10 @@
-/*
- * 测试单执行工作台的底部操作条，以及图谱共用的判定控件。
- *
- * 与左中栏分开一个文件，只是因为合起来超过 STRUCTURE.md C1 的 600 行上限；两者同属一个页面，
- * 一起被 TestOrderWorkspacePage 引入。token 见 shared/styles/surface-tokens.css。
- */
+/* 测试单执行判定、缺陷关联与底部操作条；工作台与图谱执行面板共用（阶段 10 迁移）。
+ * 两个入口根节点都挂本 Module 的 `.root`，判定按钮与缺陷区块在两侧保持一致。
+ * token 见 shared/styles/surface-tokens.css。 */
 
 /* ===== 执行判定与缺陷 ===== */
 
-:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-verdict-panel {
+.root :global(.test-order-verdict-panel) {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -20,7 +17,7 @@
   padding: 12px;
 }
 
-:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-verdict-title {
+.root :global(.test-order-verdict-title) {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -31,18 +28,18 @@
   font-weight: 700;
 }
 
-.test-order-workspace-page .test-order-shortcut-help {
+.root :global(.test-order-shortcut-help) {
   color: var(--srf-text-muted);
 }
 
 /* 四个判定按钮：两列表格，各自带色调。 */
-:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-verdict-grid {
+.root :global(.test-order-verdict-grid) {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-judge-btn {
+.root :global(.test-order-judge-btn) {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -62,22 +59,22 @@
     box-shadow 0.16s ease;
 }
 
-:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-judge-btn:hover:not(:disabled) {
+.root :global(.test-order-judge-btn):hover:not(:disabled) {
   border-color: var(--srf-tone-text, var(--srf-accent));
 }
 
 /* 当前结论：加强边框，保留语义浅色底。 */
-:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-judge-btn.active {
+.root :global(.test-order-judge-btn):global(.active) {
   border-color: var(--srf-tone-text, var(--srf-accent));
   box-shadow: inset 0 0 0 1px var(--srf-tone-text, var(--srf-accent));
 }
 
-:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-judge-btn:disabled {
+.root :global(.test-order-judge-btn):disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-judge-key {
+.root :global(.test-order-judge-key) {
   flex: 0 0 auto;
   min-width: 18px;
   padding: 0 5px;
@@ -90,13 +87,13 @@
   text-align: center;
 }
 
-:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-defect-section {
+.root :global(.test-order-defect-section) {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-defect-head {
+.root :global(.test-order-defect-head) {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -107,7 +104,7 @@
   font-weight: 700;
 }
 
-:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-defect-card {
+.root :global(.test-order-defect-card) {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -117,7 +114,7 @@
   background: var(--srf-hover);
 }
 
-:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-defect-id {
+.root :global(.test-order-defect-id) {
   flex: 0 0 auto;
   padding: 2px 6px;
   border-radius: 4px;
@@ -128,21 +125,21 @@
   line-height: 16px;
 }
 
-:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-defect-untie.ant-btn {
+.root :global(.test-order-defect-untie):global(.ant-btn) {
   flex: 0 0 auto;
   margin-left: auto;
   padding-inline: 4px;
   font-size: 11px;
 }
 
-:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-defect-hint {
+.root :global(.test-order-defect-hint) {
   color: var(--srf-text-muted);
   font-size: 11px;
   line-height: 16px;
 }
 
 /* 条目位置与保存状态贴底。 */
-:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-execution-footer {
+.root :global(.test-order-execution-footer) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -152,25 +149,25 @@
   border-top: 1px solid var(--srf-divider);
 }
 
-.test-order-workspace-page .test-order-entry-position {
+.root :global(.test-order-entry-position) {
   color: var(--srf-text-secondary);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 
-:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-autoadvance {
+.root :global(.test-order-autoadvance) {
   width: 100%;
   color: var(--srf-text-secondary);
   font-size: 11px;
 }
 
-:is(.test-order-workspace-page, .test-order-graph-execution) .test-order-save-state {
+.root :global(.test-order-save-state) {
   color: var(--srf-text-muted);
   font-size: 11px;
 }
 
 /* 工作台底部操作条：在详情滚动区域之外，不影响图谱的两列判定按钮。 */
-.test-order-workspace-page .test-order-execution-bar {
+.root :global(.test-order-execution-bar) {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   grid-template-areas: "footer actions position";
@@ -183,7 +180,7 @@
   background: var(--srf-card);
 }
 
-.test-order-workspace-page .test-order-execution-actions {
+.root :global(.test-order-execution-actions) {
   grid-area: actions;
   display: flex;
   flex-wrap: wrap;
@@ -192,53 +189,53 @@
   gap: 12px;
 }
 
-.test-order-workspace-page .test-order-execution-actions .test-order-verdict-title {
+.root :global(.test-order-execution-actions) :global(.test-order-verdict-title) {
   flex: 0 0 auto;
 }
 
-.test-order-workspace-page .test-order-execution-actions .test-order-verdict-grid {
+.root :global(.test-order-execution-actions) :global(.test-order-verdict-grid) {
   display: flex;
   flex: 0 1 auto;
   flex-wrap: wrap;
   max-width: 100%;
 }
 
-.test-order-workspace-page .test-order-execution-actions .test-order-judge-btn {
+.root :global(.test-order-execution-actions) :global(.test-order-judge-btn) {
   flex: 0 0 112px;
   min-height: 36px;
   padding: 6px 12px;
   border-radius: var(--srf-radius-control);
 }
 
-.test-order-workspace-page .test-order-defect-controls {
+.root :global(.test-order-defect-controls) {
   display: flex;
   align-items: center;
   flex: 0 0 auto;
   min-width: 0;
 }
 
-.test-order-workspace-page .test-order-defect-controls .ant-btn {
+.root :global(.test-order-defect-controls) :global(.ant-btn) {
   flex: 0 0 auto;
 }
 
-.test-order-workspace-page .test-order-linked-bugs {
+.root :global(.test-order-linked-bugs) {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.test-order-workspace-page .test-order-execution-bar .test-order-defect-section {
+.root :global(.test-order-execution-bar) :global(.test-order-defect-section) {
   grid-column: 1 / -1;
   max-height: min(20vh, 180px);
   overflow: auto;
 }
 
-.test-order-workspace-page .test-order-linked-bug-chip {
+.root :global(.test-order-linked-bug-chip) {
   color: var(--srf-accent);
   overflow-wrap: anywhere;
 }
 
-.test-order-workspace-page .test-order-execution-bar .test-order-execution-footer {
+.root :global(.test-order-execution-bar) :global(.test-order-execution-footer) {
   grid-area: footer;
   margin-top: 0;
   padding-top: 0;
@@ -246,29 +243,29 @@
   font-size: 11px;
 }
 
-.test-order-workspace-page .test-order-execution-bar .test-order-autoadvance {
+.root :global(.test-order-execution-bar) :global(.test-order-autoadvance) {
   width: auto;
 }
 
-.test-order-workspace-page .test-order-execution-bar .test-order-entry-position {
+.root :global(.test-order-execution-bar) :global(.test-order-entry-position) {
   grid-area: position;
   text-align: right;
   padding-inline-start: 20px;
   border-inline-start: 1px solid var(--srf-card-border);
 }
 
-.test-order-workspace-page .test-order-execution-bar .test-order-autoadvance > span:last-child {
+.root :global(.test-order-execution-bar) :global(.test-order-autoadvance) > span:last-child {
   font-size: 11px;
 }
 
 
-.test-order-workspace-page .test-order-judge-btn:focus-visible {
+.root :global(.test-order-judge-btn):focus-visible {
   outline: 2px solid var(--srf-tone-text, var(--srf-accent));
   outline-offset: 2px;
 }
 
 @media (max-width: 1600px) {
-  .test-order-workspace-page .test-order-execution-bar {
+  .root :global(.test-order-execution-bar) {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas: "actions actions" "footer position";
     gap: 10px 16px;
@@ -277,16 +274,16 @@
 }
 
 @media (max-width: 1100px) {
-  .test-order-workspace-page .test-order-execution-bar {
+  .root :global(.test-order-execution-bar) {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "actions" "position" "footer";
   }
 
-  .test-order-workspace-page .test-order-execution-actions {
+  .root :global(.test-order-execution-actions) {
     gap: 8px;
   }
 
-  .test-order-workspace-page .test-order-execution-bar .test-order-entry-position {
+  .root :global(.test-order-execution-bar) :global(.test-order-entry-position) {
     border: 0;
     padding-inline-start: 0;
   }
