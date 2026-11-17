@@ -12,6 +12,7 @@ import { Form, Input, InputNumber, Select, Switch } from 'antd'
 import type { ApiExtractRuleSource } from '@/features/api-automation/types'
 import type { UseMutationResult } from '@tanstack/react-query'
 import type { FormInstance } from 'antd'
+import styles from '../styles/api-detail-rules.module.css'
 
 type Props = {
   extractRuleModalOpen: boolean
@@ -26,6 +27,7 @@ type Props = {
 export function ApiExtractRuleEditor({ extractRuleModalOpen, editingExtractRule, setExtractRuleModalOpen, setEditingExtractRule, extractRuleForm, saveExtractRuleMutation, watchedExtractSource }: Props) {
   return (
     <ProjectActionModal action="write"
+      rootClassName={styles.scope}
       mask={{ closable: false }}
       open={extractRuleModalOpen}
       title={editingExtractRule ? '编辑提取规则' : '新增提取规则'}

@@ -105,7 +105,6 @@ function MonitoringCatalog({ projectId, toolbarActions }: {
             {paged.map((connection) => <Card
               key={connection.connectionId}
               className="sprint-card api-collection-card base-services-connection-card"
-              styles={{ body: { padding: 20 } }}
             >
               <div className="api-collection-card-top base-services-connection-head">
                 <Space size={10} className="base-services-connection-title-wrap">
@@ -116,30 +115,17 @@ function MonitoringCatalog({ projectId, toolbarActions }: {
                 </Space>
                 <Tag color={connection.enabled ? 'success' : 'default'}>{connection.enabled ? '已启用' : '已停用'}</Tag>
               </div>
-              <Paragraph className="api-collection-description base-services-connection-url" title={connection.queryUrl} ellipsis>
-                {connection.queryUrl}
+              <Paragraph className="api-collection-description base-services-connection-url" title={connection.remoteWriteUrl} ellipsis>
+                {connection.remoteWriteUrl}
               </Paragraph>
-              <div className="sprint-card-meta">
-                <span className="sprint-card-label">Remote Write</span>
-                <span className="api-collection-inline-value" title={connection.remoteWriteUrl}>{connection.remoteWriteUrl}</span>
-              </div>
               <div className="sprint-card-meta">
                 <span className="sprint-card-label">认证</span>
                 <Space size={4} wrap>
-                  <Tag>查询 {authLabels[connection.queryAuthType]}</Tag>
                   <Tag>写入 {authLabels[connection.remoteWriteAuthType]}</Tag>
-                  {connection.hasQueryCredentials || connection.hasRemoteWriteCredentials
+                  {connection.hasRemoteWriteCredentials
                     ? <Tag color="blue">凭据已配置</Tag>
                     : <Tag>无凭据</Tag>}
                 </Space>
-              </div>
-              <div className="sprint-card-meta">
-                <span className="sprint-card-label">Grafana</span>
-                <span className="api-collection-inline-value">
-                  {connection.grafanaUrl && connection.grafanaDashboardUid
-                    ? `${connection.grafanaUrl} / ${connection.grafanaDashboardUid}`
-                    : '未配置'}
-                </span>
               </div>
               <div className="sprint-card-meta">
                 <span className="sprint-card-label">最近更新</span>

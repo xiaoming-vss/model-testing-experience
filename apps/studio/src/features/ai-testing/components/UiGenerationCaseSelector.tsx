@@ -5,7 +5,6 @@ import { api, listItems } from '@/services/api'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { getErrorMessage } from '@/utils/format'
-import '../styles/ui-generation-case-selector.css'
 
 type SourceCase = { caseId: string; title: string; suiteId: string; suiteName: string }
 

@@ -6,7 +6,7 @@ import { getErrorMessage } from '@/utils/format'
 import { message } from '@/shared/utils/feedback'
 import { ldapApi, type LdapConfig, type LdapTest } from '../api/ldap.api'
 import '@/shared/styles/surface-tokens.css'
-import '../styles/ldap-settings.css'
+import styles from '../styles/ldap-settings.module.css'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -55,18 +55,18 @@ export function LdapSettingsPage() {
   if (settings.isPending) return <Spin aria-label="LDAP 配置加载中" />
   if (!settings.data) return <Alert type="error" title={getErrorMessage(settings.error)} action={<Button onClick={() => { void settings.refetch() }}>重试</Button>} />
   const busy = save.isPending || test.isPending
-  return <main className="ldap-settings-page tp-surface">
+  return <main className="ldap-settings-page tp-surface flex h-full min-h-0 min-w-0 flex-1 p-[var(--app-page-gutter)]">
     <div className="tp-board tp-list-panel">
-    <header className="tp-list-toolbar">
+    <header className="tp-list-toolbar flex-wrap gap-2">
       <h1 className="tp-list-title">LDAP 认证</h1>
       <Text type="secondary">管理目录连接、访问范围和登录方式</Text>
     </header>
     <div className="tp-list-body"><div className="tp-list-scroll">
-    <Form id="ldap-settings-form" form={form} layout="vertical" onFinish={submit} disabled={busy} onValuesChange={() => { setDirty(true); setTestResult(null); test.reset(); save.reset() }}>
-      <section className="ldap-settings-section">
+    <Form id="ldap-settings-form" form={form} layout="vertical" className={styles.form} onFinish={submit} disabled={busy} onValuesChange={() => { setDirty(true); setTestResult(null); test.reset(); save.reset() }}>
+      <section className="py-5">
         <Title level={5}>连接与访问范围</Title>
         <Form.Item name="enabled" label="启用 LDAP" valuePropName="checked"><Switch /></Form.Item>
-        <div className="ldap-settings-grid">
+        <div className="grid grid-cols-2 gap-x-6 max-[720px]:grid-cols-1">
           <Form.Item name="server_url" label="LDAP 地址" extra="例如 ldap://目录主机:389 或 ldaps://目录主机:636" rules={[{ required: enabled, message: '请输入 LDAP 地址' }]}><Input placeholder="ldap://" /></Form.Item>
           <Form.Item name="bind_dn" label="查询账号 DN" rules={[{ required: enabled, message: '请输入查询账号 DN' }]}><Input placeholder="uid=reader,cn=users,dc=example,dc=com" /></Form.Item>
           <Form.Item name="bind_password" label="查询密码" extra={settings.data.passwordConfigured ? '已保存密码；留空保持原密码，无法查看原文。' : '尚未配置查询密码。'}><Input.Password autoComplete="new-password" placeholder={settings.data.passwordConfigured ? '留空保持已保存密码' : '输入查询账号密码'} /></Form.Item>
@@ -80,7 +80,7 @@ export function LdapSettingsPage() {
         <Form.Item name="tls_ca_pem" label="私有 CA 证书（PEM）" extra="粘贴 CA 公钥证书即可，不能包含私钥；留空使用原部署 CA 或系统信任库。"><Input.TextArea rows={4} placeholder="-----BEGIN CERTIFICATE-----" /></Form.Item>
       </section>
       <Collapse items={[{ key: 'advanced', label: '高级设置与目录状态规则', children: <div>
-        <div className="ldap-settings-grid">
+        <div className="grid grid-cols-2 gap-x-6 max-[720px]:grid-cols-1">
           <Form.Item name="username_attribute" label="用户名属性"><Input /></Form.Item>
           <Form.Item name="email_attribute" label="邮箱属性"><Input /></Form.Item>
           <Form.Item name="external_id_attribute" label="稳定身份属性"><Input /></Form.Item>
@@ -95,10 +95,10 @@ export function LdapSettingsPage() {
         <Form.Item name="auto_link_by_username" valuePropName="checked" extra="仅迁移窗口内开启；关联成功会清空旧本地密码，保留原账号和项目。"><Checkbox>允许同名待关联账号首次登录时关联</Checkbox></Form.Item>
         <Form.Item name="clearPassword" valuePropName="checked"><Checkbox>清除已保存的查询密码（只能在关闭 LDAP 时保存）</Checkbox></Form.Item>
       </div> }]} />
-      <section className="ldap-settings-section">
+      <section className="py-5 last:pb-0">
         <Title level={5}>保存前检查</Title>
         <Text type="secondary">只读检查查询连接和访问组；可填写目录用户名检查访问资格。不验证用户密码，也不会保存配置。</Text>
-        <Space wrap className="ldap-settings-test">
+        <Space wrap className="my-3">
           <Input aria-label="检查用户名" placeholder="可选：目录用户名" value={testUsername} onChange={(event) => { setTestUsername(event.target.value); setTestResult(null) }} maxLength={50} />
           <Button loading={test.isPending} onClick={async () => { try { const values = await form.validateFields(); test.mutate(configuration(values)) } catch { /* validation shown by form */ } }}>检查连接</Button>
         </Space>
@@ -108,9 +108,9 @@ export function LdapSettingsPage() {
       </section>
     </Form>
     </div></div>
-    <footer className="ldap-settings-actions">
+    <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[var(--app-surface-border)] bg-[var(--app-list-toolbar-bg)] px-4 py-3">
       <Text type="secondary">{dirty ? '有未保存的修改' : '保存后即时生效，系统管理员始终保留本地登录'}</Text>
-      <Space wrap><Button disabled={busy} onClick={() => { void settings.refetch() }}>重新加载</Button><Button type="primary" htmlType="submit" form="ldap-settings-form" loading={save.isPending} disabled={!dirty || busy}>保存并生效</Button></Space>
+      <Space wrap className="ml-auto"><Button disabled={busy} onClick={() => { void settings.refetch() }}>重新加载</Button><Button type="primary" htmlType="submit" form="ldap-settings-form" loading={save.isPending} disabled={!dirty || busy}>保存并生效</Button></Space>
     </footer>
     </div>
     <Modal title={pendingSave?.enabled ? '确认启用 LDAP' : '确认关闭 LDAP'} open={Boolean(pendingSave)} okText="确认并保存" cancelText="取消" confirmLoading={save.isPending} onCancel={() => setPendingSave(null)} onOk={() => pendingSave && save.mutate(pendingSave)}>

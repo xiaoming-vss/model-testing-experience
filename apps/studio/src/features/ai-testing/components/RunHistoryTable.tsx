@@ -4,7 +4,6 @@ import type { MenuProps, TableProps } from 'antd'
 import type { ReactNode } from 'react'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { formatTime } from '@/utils/format'
-import '../styles/run-history-list.css'
 
 export type RunMenuAction = { key: string; label: string; disabled?: boolean; danger?: boolean }
 

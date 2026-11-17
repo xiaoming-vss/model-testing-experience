@@ -5,7 +5,7 @@ import type { UiGenerationRunInputs, UiGenerationSourceInputs } from '../api/gen
 import { useUiGenerationSourceSelection } from '../hooks/useUiGenerationSourceSelection'
 import { UiGenerationCaseSelector } from './UiGenerationCaseSelector'
 import { UiGenerationSourceConfig, type UiGenerationSourceOptionsState } from './UiGenerationSourceConfig'
-import '../styles/ui-generation-inputs.css'
+import uiGenerationStyles from '../styles/ui-generation.module.css'
 
 const steps = [{ title: '选择源码' }, { title: '选择用例' }, { title: '核对配置' }]
 
@@ -74,7 +74,7 @@ export function UiGenerationInputsModal({
   </div>
 
   return <Modal open centered destroyOnHidden title={refreshInputs ? '更换输入并重新生成' : '配置 UI 测试生成'}
-    width={880} className="gc-ui-input-modal" mask={{ closable: false }} closable={!saving}
+    width={880} className="gc-ui-input-modal" rootClassName={uiGenerationStyles.scope} mask={{ closable: false }} closable={!saving}
     onCancel={() => { if (!saving) onClose() }} footer={footer}>
     <div ref={stepTop}><Steps className="gc-ui-input-steps" size="small" responsive={false} current={step} items={steps} /></div>
     {error ? <Alert showIcon type="error" title={getErrorMessage(error)} /> : null}

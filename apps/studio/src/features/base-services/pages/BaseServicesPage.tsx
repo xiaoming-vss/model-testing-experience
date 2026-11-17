@@ -1,5 +1,4 @@
 import '@/shared/styles/surface-tokens.css'
-import '../styles/index.css'
 import { SharedServicesPanel } from '../components/SharedServicesPanel'
 import { PerfMonitoringPanel } from '@/features/performance/components/PerfMonitoringPanel'
 import { useState } from 'react'
@@ -16,13 +15,13 @@ export function BaseServicesPage({ skillLibrary }: { skillLibrary: ReactNode }) 
 
   return (
     <div className="workbench-page base-services-page tp-surface">
-      <div className="base-services-motion-panel">
-      {activeTab === 'skills' ? skillLibrary : <section className="base-services-unified-panel tp-board tp-list-panel">
+      <div className="flex min-h-0 flex-1 flex-col">
+      {activeTab === 'skills' ? skillLibrary : <section className="tp-board tp-list-panel mx-[var(--app-page-gutter)] mt-3 mb-4">
         <div className="tp-list-toolbar">
           <h1 className="tp-list-title">{BASE_SERVICE_TABS.find(option => option.key === activeTab)?.label}</h1>
           <div ref={setToolbarActions} />
         </div>
-        <div className="base-services-panel-body base-services-panel-body-immersive">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {activeTab === 'monitoring'
             ? <PerfMonitoringPanel projectId={activeProjectId} toolbarActions={toolbarActions} />
             : <SharedServicesPanel projectId={activeProjectId} provider={activeTab} toolbarActions={toolbarActions} />}

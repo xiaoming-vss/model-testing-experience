@@ -1,0 +1,19 @@
+/* 禅道 Bug 导入弹窗；根类由弹窗 className 提供。 */
+
+.root :global(.ant-modal-body) {
+  height: min(680px, calc(100dvh - 180px));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+}
+.root :global(.ant-steps) { flex: 0 0 auto; }
+.root :global(.bug-import-step) { display: flex; flex: 1; flex-direction: column; gap: 12px; min-height: 0; }
+.root :global(.bug-import-scroll) { flex: 1; min-height: 0; overflow: auto; }
+.root :global(.bug-import-bulk) { flex: 0 0 auto; }
+.root :global(.bug-import-bulk) :global(.ant-select) { width: 160px; }
+.root :global(.bug-import-scroll) :global(.ant-table-cell) :global(.ant-select) { width: 100%; }
+.root :global(.bug-import-title) { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.root :global(.bug-import-check) { width: 100%; }
+.root :global(.bug-import-footer) { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+

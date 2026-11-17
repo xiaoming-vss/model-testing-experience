@@ -6,10 +6,9 @@ import { RequirementDesignConfigurationModal } from './RequirementDesignConfigur
 import { RequirementCodeRiskPanel } from './RequirementCodeRiskPanel'
 import { RequirementGenerationPanorama, type RequirementReadingNode } from './RequirementGenerationPanorama'
 import { useRequirementCodeRiskWorkspace } from '../hooks/useRequirementCodeRiskWorkspace'
-import '../styles/index.css'
-import '../styles/task-detail-v2.css'
 import '@/shared/styles/list-table.css'
-import '../styles/requirement-design.css'
+import taskStyles from '../styles/ai-task-detail.module.css'
+import designStyles from '../styles/requirement-design.module.css'
 
 /** 需求详情正文：生成全景是唯一入口，文档、代码风险和生成设置从泳道入口打开。 */
 export function RequirementDesignWorkspace({ requirementId, projectId, canWrite, onOpenDocument, documentPreview, onReadingNodeChange, inspectorHost, readingActionsHost }: {
@@ -36,6 +35,7 @@ export function RequirementDesignWorkspace({ requirementId, projectId, canWrite,
       <RequirementGenerationPanorama requirementId={requirementId} projectId={projectId} canWrite={canWrite} onOpenTab={openPanoramaTab} documentPreview={documentPreview} onReadingNodeChange={onReadingNodeChange} inspectorHost={inspectorHost} readingActionsHost={readingActionsHost} />
     </div>
     <Modal open={riskOpen} onCancel={() => setRiskOpen(false)} footer={null} width="min(2000px, calc(100vw - 56px))" centered destroyOnHidden
+      rootClassName={`${taskStyles.scope} ${designStyles.scope}`}
       className="requirement-code-risk-dialog" title="代码风险分析">
       <RequirementCodeRiskPanel workspace={codeRisk} canWrite={canWrite} />
     </Modal>

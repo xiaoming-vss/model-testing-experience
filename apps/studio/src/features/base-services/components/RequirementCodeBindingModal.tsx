@@ -10,7 +10,7 @@ import { interfaceLibraryApi } from '@/features/interface-library/api/interfaceL
 import { listItems } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
-import '@/features/base-services/styles/index.css'
+import styles from '../styles/requirement-code-binding.module.css'
 
 const { Text, Title } = Typography
 
@@ -164,7 +164,6 @@ export function RequirementCodeBindingModal({
       width={760}
       mask={{ closable: false }}
       centered
-      className="requirement-code-binding-modal"
       title={
         <Space size={8}>
           <LinkOutlined />
@@ -191,14 +190,14 @@ export function RequirementCodeBindingModal({
       ) : null}
 
       {canWrite ? (
-        <div className="requirement-code-binding-create">
-          <div className="requirement-code-binding-head">
+        <div>
+          <div className={styles.head}>
             <Title level={5}>关联软件仓库</Title>
             <Text type="secondary">每个关联分别维护工作分支和基线分支</Text>
           </div>
-          <div className="requirement-code-binding-create-row">
+          <div>
             <Select
-              className="requirement-code-binding-select"
+              className={styles.select}
               aria-label="选择软件仓库"
               placeholder="选择软件仓库"
               value={selectedRepositoryId}
@@ -252,7 +251,7 @@ export function RequirementCodeBindingModal({
         </div>
       ) : null}
 
-      <div className="requirement-code-binding-head">
+      <div className={styles.head}>
         <Title level={5}>已关联软件仓库</Title>
         <Text type="secondary">{bindings.length} 个软件仓库</Text>
       </div>
@@ -262,7 +261,7 @@ export function RequirementCodeBindingModal({
       ) : bindings.length === 0 ? (
         <Empty description="当前需求未关联软件仓库" image={Empty.PRESENTED_IMAGE_SIMPLE} />
       ) : (
-        <div className="requirement-code-binding-list">
+        <div className={styles.list}>
           {bindings.map(binding => {
             const connectionId = personal.resolve(
               binding.repository?.instanceUrl ?? '',
@@ -270,11 +269,12 @@ export function RequirementCodeBindingModal({
             return (
               <div
                 key={binding.softwareRepositoryId}
-                className="requirement-code-binding-row"
+                className={styles.row}
+                data-testid="requirement-code-binding-row"
               >
-                <div className="requirement-code-binding-row-main">
+                <div className={styles.rowMain}>
                   <Tag
-                    className="requirement-code-binding-repo-tag"
+                    className={styles.repoTag}
                     color="geekblue"
                     title={binding.repository?.path ?? binding.softwareRepositoryName}
                   >
@@ -284,7 +284,7 @@ export function RequirementCodeBindingModal({
                   <Tag color="blue">{binding.branch}</Tag>
                   <Tag color="orange">基线：{binding.baselineBranch}</Tag>
                 </div>
-                <div className="requirement-code-binding-row-actions">
+                <div className={styles.rowActions}>
                   <GitlabBranchSelect
                     projectId={projectId}
                     connectionId={connectionId}

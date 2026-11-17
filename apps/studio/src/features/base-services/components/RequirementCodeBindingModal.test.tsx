@@ -76,7 +76,7 @@ it('只读权限下禁用已关联软件仓库的分支与基线修改', async (
     />,
   )
   await screen.findByText('订单服务')
-  const row = screen.getByText('订单服务').closest('.requirement-code-binding-row')!
+  const row = screen.getByText('订单服务').closest('[data-testid="requirement-code-binding-row"]')!
   const selectors = row.querySelectorAll('input[role="combobox"]')
   expect(selectors).toHaveLength(2)
   expect(selectors[0]).toBeEnabled()

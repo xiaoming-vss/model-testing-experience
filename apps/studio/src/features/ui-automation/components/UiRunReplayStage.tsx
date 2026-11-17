@@ -12,7 +12,7 @@ import { isUiRunPollingStatus } from '../utils/runHelpers'
  * 平台只产出逐步截图，没有视频文件，于是同一块地方放的是「按步骤截图回放」：
  * 浏览器外壳显示运行时的当前 URL，舞台显示当前步骤的截图，下面的滑轨按步骤打点，
  * 点击打点或前后按钮切换步骤。没有截图的步骤显示占位而不是伪造画面。
- * 样式见 styles/detail-inspector-v2.css。
+ * 样式见 styles/ui-detail-inspector.module.css。
  */
 
 type Props = {

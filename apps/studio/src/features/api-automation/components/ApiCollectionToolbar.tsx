@@ -4,7 +4,7 @@ import { Button } from 'antd'
 /*
  * API 测试集详情页顶栏：返回 / 测试集名 + 需求 + 迭代 / 当前环境 / 运行记录 / 运行测试集。
  * 设计稿把这几项画在同一行；测试集与需求的层级信息原来在侧栏头部和「Collection 详情」卡片里，
- * 这里合到顶栏后那两块就不再需要。样式见 styles/detail-workbench-v2.css。
+ * 这里合到顶栏后那两块就不再需要。样式见 styles/api-detail-shell.module.css。
  */
 
 type Props = {

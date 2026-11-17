@@ -7,7 +7,7 @@ import { LinkOutlined } from '@ant-design/icons'
 import { Alert, Checkbox, Modal, Popconfirm, Select, Space, Tag, Typography } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
-import '@/features/base-services/styles/index.css'
+import styles from '../styles/zentao-binding.module.css'
 import { api, listItems, type ZentaoBinding, type ZentaoBindingTargetType, type ZentaoRemoteOption } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { formatTime, getErrorMessage } from '@/utils/format'
@@ -105,10 +105,10 @@ function getBindingStatusText(status?: string) {
   return status
 }
 
-function getBindingStatusClassName(status?: string) {
-  if (status === 'active') return 'is-active'
-  if (status === 'disabled') return 'is-disabled'
-  return 'is-neutral'
+function getBindingStatusTone(status?: string) {
+  if (status === 'active') return 'active'
+  if (status === 'disabled') return 'disabled'
+  return 'neutral'
 }
 
 function getBindingEntityLabel(targetType: ZentaoBindingTargetType) {
@@ -149,9 +149,9 @@ export function ZentaoBindingBadge({ targetType, binding: currentBinding, varian
 }) {
   if (variant === 'settings') {
     if (!currentBinding) return <Text type="secondary">未绑定项目</Text>
-    return <div className="project-settings-binding-details">
-      <div className="project-settings-binding-line">
-        <Text className="project-settings-binding-name">{getBindingRemoteName(currentBinding) || getBindingRemoteResourceId(currentBinding)}</Text>
+    return <div className={styles.settingsDetails}>
+      <div className={styles.settingsLine}>
+        <Text className={styles.settingsName}>{getBindingRemoteName(currentBinding) || getBindingRemoteResourceId(currentBinding)}</Text>
         <Tag color={currentBinding.status === 'active' ? 'success' : 'default'}>{getBindingStatusText(currentBinding.status)}</Tag>
       </div>
       <Text type="secondary">项目 ID：{getBindingRemoteResourceId(currentBinding) || '-'}</Text>
@@ -166,16 +166,16 @@ export function ZentaoBindingBadge({ targetType, binding: currentBinding, varian
   const summaryTitle = `禅道已绑定 ${entityLabel} ${remoteName} | ID ${remoteId} | ${statusText}`
 
   return (
-    <div className={`zentao-binding-summary zentao-binding-summary-${variant}`} title={summaryTitle}>
-      <div className="zentao-binding-summary-main">
+    <div className={styles.summary} title={summaryTitle}>
+      <div className={styles.summaryMain}>
         <Tag color="blue">禅道</Tag>
-        <span className="zentao-binding-summary-key">{entityLabel}</span>
-        <span className="zentao-binding-summary-name">{remoteName}</span>
-        <span className="zentao-binding-summary-separator">/</span>
-        <span className="zentao-binding-summary-key">ID</span>
-        <span className="zentao-binding-summary-meta">{remoteId}</span>
+        <span className={styles.summaryKey}>{entityLabel}</span>
+        <span className={styles.summaryName}>{remoteName}</span>
+        <span className={styles.summarySeparator}>/</span>
+        <span className={styles.summaryKey}>ID</span>
+        <span className={styles.summaryMeta}>{remoteId}</span>
       </div>
-      <span className={`zentao-binding-summary-status ${getBindingStatusClassName(currentBinding.status)}`}>{statusText}</span>
+      <span className={`${styles.summaryStatus} ${styles[getBindingStatusTone(currentBinding.status)]}`}>{statusText}</span>
     </div>
   )
 }
@@ -424,7 +424,7 @@ export function ZentaoBindingModal({
       width={760}
       mask={{ closable: false }}
       centered
-      className="zentao-binding-modal"
+      className={styles.modal}
       title={
         <Space size={8}>
           <LinkOutlined />
@@ -436,10 +436,10 @@ export function ZentaoBindingModal({
       footer={null}
       destroyOnHidden
     >
-      <div className="zentao-binding-head">
+      <div className={styles.head}>
         <Title level={5}>当前绑定</Title>
         {currentBinding ? (
-          <Space size={8} wrap className="zentao-binding-current">
+          <Space size={8} wrap className={styles.current}>
             <Tag color="blue">{getBindingRemoteName(currentBinding) || getBindingRemoteResourceId(currentBinding) || '-'}</Tag>
             <Text type="secondary">ID：{getBindingRemoteResourceId(currentBinding) || '-'}</Text>
             <Text type="secondary">状态：{getBindingStatusText(currentBinding.status)}</Text>
@@ -465,7 +465,7 @@ export function ZentaoBindingModal({
       {storiesQuery.error ? <Alert showIcon type="error" title={getErrorMessage(storiesQuery.error)} /> : null}
       {((targetType === 'sprint' || targetType === 'requirement') && inheritedProjectBinding) ||
       (targetType === 'requirement' && inheritedSprintBinding) ? (
-        <div className="zentao-binding-inherit-note">
+        <div className={styles.inheritNote}>
           <Text type="secondary">已使用上级绑定；修改上级目标请到对应项目或迭代的绑定配置</Text>
           {(targetType === 'sprint' || targetType === 'requirement') && inheritedProjectBinding ? (
             <Tag color="blue">
@@ -481,9 +481,9 @@ export function ZentaoBindingModal({
       ) : null}
 
       {targetType === 'project' && (
-        <div className="zentao-binding-form-row">
+        <div className={styles.formRow}>
           <Text>项目 MCP 服务</Text>
-          <Select className="zentao-binding-select zentao-binding-mcp-select" aria-label="项目 MCP 服务" value={effectiveMcpId}
+          <Select className={`${styles.select} ${styles.mcpSelect}`} aria-label="项目 MCP 服务" value={effectiveMcpId}
             loading={mcpQuery.isLoading} placeholder="选择项目使用的禅道 MCP"
             disabled={!can('manage')} showSearch optionFilterProp="label"
             options={mcps.map(service => ({ value: service.serviceId, label: `${service.name} · ${service.zentaoInstanceUrl || service.baseUrl}` }))}
@@ -506,9 +506,9 @@ export function ZentaoBindingModal({
       {!parentReady && <Alert showIcon type="info" title="请先完成上级项目和迭代的禅道绑定" />}
       {mcp && <Text type="secondary">当前服务：{mcp.name} · {mcp.zentaoInstanceUrl || '实例地址未确认'} · 使用本人授权</Text>}
       {mcpReady && parentReady && (
-        <div className="zentao-binding-form-row">
+        <div className={styles.formRow}>
           <Select
-            className="zentao-binding-select"
+            className={styles.select}
             aria-label="禅道项目"
             loading={projectsQuery.isLoading}
             value={remoteProjectId}
@@ -521,7 +521,7 @@ export function ZentaoBindingModal({
           />
           {depth !== 'project' ? (
             <Select
-              className="zentao-binding-select"
+              className={styles.select}
               aria-label="禅道执行"
               loading={executionsQuery.isLoading}
               value={remoteExecutionId}
@@ -535,7 +535,7 @@ export function ZentaoBindingModal({
           ) : null}
           {depth === 'story' ? (
             <Select
-              className="zentao-binding-select"
+              className={styles.select}
               aria-label="禅道需求"
               loading={storiesQuery.isLoading}
               value={remoteLeafResourceId}

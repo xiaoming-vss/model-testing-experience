@@ -3,7 +3,6 @@ import { message } from '@/shared/utils/feedback'
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Button, Segmented } from 'antd'
-import '@/features/ai-testing/styles/artifact-view-switch.css'
 
 /** 把产物操作放进弹窗标题栏右侧，标题左侧保留原有标题。 */
 function useArtifactHeaderSlot() {

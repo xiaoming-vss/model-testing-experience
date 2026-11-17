@@ -40,6 +40,23 @@ import { formatRawArtifact } from '../utils/artifactFormat'
 import { GenerationArtifactFrame } from './GenerationArtifactFrame'
 import { GenerationArtifactDiff } from './GenerationArtifactDiff'
 import { ModuleGenerationProgressPanel } from './ModuleGenerationProgressPanel'
+import chainStyles from '../styles/generation-chain.module.css'
+import canvasStyles from '../styles/generation-canvas.module.css'
+import caseArtifactStyles from '../styles/artifact-cases.module.css'
+import apiArtifactStyles from '../styles/artifact-api.module.css'
+import miscArtifactStyles from '../styles/artifact-misc.module.css'
+import uiStageStyles from '../styles/ui-stage-visual.module.css'
+import viewSwitchStyles from '../styles/artifact-view-switch.module.css'
+
+const artifactScopes = [
+  chainStyles.scope,
+  canvasStyles.scope,
+  caseArtifactStyles.scope,
+  apiArtifactStyles.scope,
+  miscArtifactStyles.scope,
+  uiStageStyles.scope,
+  viewSwitchStyles.scope,
+].join(' ')
 
 function formatTime(value?: string | null) {
   if (!value) return ''
@@ -397,6 +414,7 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
     width={stageKind === 'api' ? 'min(1620px, calc(100vw - 72px))' : 'min(2000px, calc(100vw - 56px))'}
     centered
     destroyOnHidden
+    rootClassName={artifactScopes}
     className={`generation-chain-modal${revisionOpen ? ' is-revising' : ''}${embedded ? ' gc-inspector-reading' : ''}`}
     title={embedded ? stage.label : <div className="gc-modal-title">
       <div className="gc-title-main">

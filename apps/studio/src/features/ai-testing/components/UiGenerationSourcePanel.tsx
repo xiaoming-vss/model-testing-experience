@@ -5,7 +5,6 @@ import type { UiGenerationRunInputs, UiGenerationSourceInputs } from '../api/gen
 import { useUiGenerationSourceSelection } from '../hooks/useUiGenerationSourceSelection'
 import { UiGenerationInputsModal } from './UiGenerationInputsModal'
 import type { UiGenerationSourceOptionsState } from './UiGenerationSourceConfig'
-import '../styles/ui-generation-source.css'
 
 export function UiGenerationSourcePanel({
   requirementId,

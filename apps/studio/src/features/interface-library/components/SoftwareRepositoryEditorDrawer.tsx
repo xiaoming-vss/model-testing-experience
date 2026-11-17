@@ -7,6 +7,13 @@ import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
 import { interfaceLibraryApi } from '../api/interfaceLibrary.api'
 import type { SoftwareRepository } from '../types'
+import styles from '../styles/interface-library.module.css'
+import methodStyles from '../styles/interface-method.module.css'
+import openapiStyles from '../styles/interface-openapi.module.css'
+import detailStyles from '../styles/interface-detail.module.css'
+import editorStyles from '../styles/interface-editor.module.css'
+
+const interfaceScopes = `${styles.scope} ${methodStyles.scope} ${openapiStyles.scope} ${detailStyles.scope} ${editorStyles.scope}`
 
 type Props = {
   open: boolean
@@ -140,6 +147,7 @@ export function SoftwareRepositoryEditorDrawer({
 
   return (
     <Drawer
+      rootClassName={interfaceScopes}
       open={open}
       title={repository ? '编辑软件仓库' : '新建软件仓库'}
       size={520}

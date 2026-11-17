@@ -1,0 +1,574 @@
+/* UI 测试集与步骤编辑器共享皮肤：测试集区块/抽屉、步骤卡片、运行步骤摘要及窄屏布局。 */
+
+.scope { --ui-suite-scope: 1; }
+
+.scope :global(.ui-test-suite-section) {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+}
+
+.scope:global(.ui-test-suite-drawer) :global(.ant-drawer-body) {
+  padding: 18px 20px 20px;
+}
+
+.scope :global(.ui-test-suite-drawer-shell) {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.scope :global(.ui-test-suite-drawer-section) {
+  padding: 2px 0 16px;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--tp-border-soft);
+}
+
+.scope :global(.ui-test-suite-drawer-section + .ui-test-suite-drawer-section) {
+  padding-top: 16px;
+}
+
+.scope :global(.ui-test-suite-drawer-section-last) {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.scope :global(.ui-test-suite-drawer-grid) {
+  display: grid;
+  gap: 0 12px;
+}
+
+.scope :global(.ui-test-suite-drawer-grid-1) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.scope :global(.ui-test-suite-drawer-grid-2) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.scope :global(.ui-test-suite-drawer-config-grid) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.scope :global(.ui-test-suite-drawer-grid .ant-form-item) {
+  margin-bottom: 12px;
+}
+
+.scope :global(.ui-test-suite-drawer-grid .ant-form-item:last-child) {
+  margin-bottom: 0;
+}
+
+.scope :global(.ui-test-suite-drawer-grid .ant-form-item-label > label) {
+  color: var(--tp-text);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+}
+
+.scope :global(.ui-test-suite-drawer-config-grid .ant-form-item-control-input) {
+  min-height: auto;
+}
+
+.scope :global(.ui-test-suite-drawer-config-grid .ant-input-number),
+.scope :global(.ui-test-suite-drawer-config-grid .ant-select) {
+  width: 100%;
+}
+
+.scope :global(.ui-test-suite-drawer-config-grid .ant-form-item-explain-error) {
+  margin-top: 6px;
+}
+
+.scope :global(.ui-test-suite-drawer-config-grid .ant-form-item-extra) {
+  margin-top: 6px;
+}
+
+.scope :global(.ui-test-case-empty-editor) {
+  min-height: 360px;
+  display: grid;
+  place-items: center;
+  padding: 0 24px 24px;
+}
+
+.scope :global(.ui-test-case-step-empty) {
+  border: 1px dashed var(--tp-border-soft);
+  border-radius: 12px;
+  background: var(--app-review-surface);
+  padding: 18px;
+}
+
+.scope :global(.ui-test-case-step-list) {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scope :global(.ui-test-case-step-card) {
+  border: 1px solid var(--tp-border-soft);
+  border-radius: 12px;
+  background: var(--app-surface);
+  padding: 0;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  overflow: hidden;
+}
+
+.scope :global(.ui-test-case-step-card.expanded) {
+  border-color: var(--app-review-border-hover);
+  box-shadow: 0 8px 18px var(--app-card-shadow-soft);
+}
+
+.scope :global(.ui-test-case-step-card.dragging) {
+  opacity: 0.72;
+}
+
+.scope :global(.ui-test-case-step-card-top) {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: grab;
+  padding: 14px 16px;
+}
+
+.scope :global(.ui-test-case-step-card-top:active) {
+  cursor: grabbing;
+}
+
+.scope :global(.ui-test-case-step-card-main) {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.scope :global(.ui-test-case-step-card-leading) {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.scope :global(.ui-test-case-step-order) {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--app-surface-chip);
+  color: var(--tp-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+}
+
+.scope :global(.ui-test-case-step-toggle) {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--tp-text-secondary);
+  background: var(--app-review-code-bg);
+  border: 1px solid var(--tp-border-soft);
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.scope :global(.ui-test-case-step-toggle.expanded) {
+  color: var(--app-accent);
+  transform: rotate(180deg);
+}
+
+.scope :global(.ui-test-case-step-toggle:hover) {
+  color: var(--app-accent);
+  border-color: var(--app-review-border-hover);
+  background: var(--app-request-card-shadow-hover);
+}
+
+.scope :global(.ui-test-case-step-card-title) {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.scope :global(.ui-test-case-step-title-head) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.scope :global(.ui-test-case-step-title-item) {
+  margin-bottom: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.scope :global(.ui-test-case-step-title-item .ant-form-item-control-input) {
+  min-height: auto;
+}
+
+.scope :global(.ui-test-case-step-title-input.ant-input) {
+  min-height: 32px;
+  padding: 4px 10px;
+  color: var(--tp-text);
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 700;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: text;
+  box-shadow: none;
+}
+
+.scope :global(.ui-test-case-step-title-input.ant-input::placeholder) {
+  color: var(--tp-text-muted);
+}
+
+.scope :global(.ui-test-case-step-title-input.ant-input:hover),
+.scope :global(.ui-test-case-step-title-input.ant-input:focus) {
+  background: var(--app-surface-hover);
+  border-color: var(--tp-border-soft);
+  box-shadow: none;
+}
+
+.scope :global(.ui-test-case-step-title-edit-icon) {
+  color: var(--tp-text-muted);
+  font-size: 12px;
+}
+
+.scope :global(.ui-test-case-step-delete-action.ant-btn) {
+  padding: 0;
+  height: auto;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.scope :global(.ui-test-case-step-card-title span) {
+  color: var(--tp-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.scope :global(.ui-test-case-step-actions) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+  padding-top: 6px;
+}
+
+.scope :global(.ui-test-case-step-body) {
+  margin-top: 0;
+  padding: 16px;
+  border-top: 1px solid var(--tp-border-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.scope :global(.ui-test-case-step-grid) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+  align-items: start;
+}
+
+.scope :global(.ui-test-case-step-core-grid) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.scope :global(.ui-test-case-step-grid > .ant-form-item),
+.scope :global(.ui-test-case-step-detail-grid > .ant-form-item),
+.scope :global(.ui-test-case-step-footer-grid > .ant-form-item) {
+  margin-bottom: 0;
+  align-self: start;
+}
+
+.scope :global(.ui-test-case-step-grid .ant-form-item-label),
+.scope :global(.ui-test-case-step-detail-grid .ant-form-item-label),
+.scope :global(.ui-test-case-step-footer-grid .ant-form-item-label) {
+  padding-bottom: 6px;
+}
+
+.scope :global(.ui-test-case-step-grid .ant-form-item-label > label),
+.scope :global(.ui-test-case-step-detail-grid .ant-form-item-label > label),
+.scope :global(.ui-test-case-step-footer-grid .ant-form-item-label > label) {
+  min-height: 20px;
+  color: var(--tp-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.scope :global(.ui-test-case-step-grid .ant-form-item-control-input),
+.scope :global(.ui-test-case-step-detail-grid .ant-form-item-control-input),
+.scope :global(.ui-test-case-step-footer-grid .ant-form-item-control-input) {
+  min-height: 36px;
+}
+
+.scope :global(.ui-test-case-step-grid .ant-input),
+.scope :global(.ui-test-case-step-detail-grid .ant-input),
+.scope :global(.ui-test-case-step-footer-grid .ant-input) {
+  min-height: 36px;
+  padding-block: 6px;
+}
+
+.scope :global(.ui-test-case-step-grid .ant-select-single:not(.ant-select-customize-input) .ant-select-selector),
+.scope :global(.ui-test-case-step-detail-grid .ant-select-single:not(.ant-select-customize-input) .ant-select-selector),
+.scope :global(.ui-test-case-step-footer-grid .ant-select-single:not(.ant-select-customize-input) .ant-select-selector) {
+  height: 36px;
+  padding: 0 11px;
+}
+
+.scope :global(.ui-test-case-step-grid .ant-select-single .ant-select-selection-item),
+.scope :global(.ui-test-case-step-grid .ant-select-single .ant-select-selection-placeholder),
+.scope :global(.ui-test-case-step-detail-grid .ant-select-single .ant-select-selection-item),
+.scope :global(.ui-test-case-step-detail-grid .ant-select-single .ant-select-selection-placeholder),
+.scope :global(.ui-test-case-step-footer-grid .ant-select-single .ant-select-selection-item),
+.scope :global(.ui-test-case-step-footer-grid .ant-select-single .ant-select-selection-placeholder) {
+  line-height: 34px;
+}
+
+.scope :global(.ui-test-case-step-detail-grid) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+  align-items: start;
+}
+
+.scope :global(.ui-test-case-step-field) {
+  margin-bottom: 0;
+}
+
+.scope :global(.ui-test-case-step-field-wide) {
+  grid-column: span 2;
+}
+
+.scope :global(.ui-test-case-step-field-half) {
+  grid-column: span 1;
+}
+
+.scope :global(.ui-test-case-step-field-third) {
+  grid-column: span 1;
+}
+
+.scope :global(.ui-test-case-step-field-note) {
+  margin-top: -4px;
+  color: var(--tp-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.scope :global(.ui-template-picker-label) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scope :global(.ui-template-picker-trigger.ant-btn) {
+  height: auto;
+  padding: 0;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.scope :global(.ui-test-case-step-footer) {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 2px;
+}
+
+/* 后置提取：步骤卡片内的独立小节，一行一条规则。 */
+.scope :global(.ui-test-case-step-extract) {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--tp-border);
+}
+
+.scope :global(.ui-test-case-step-extract-head) {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.scope :global(.ui-test-case-step-extract-title) {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.scope :global(.ui-test-case-step-extract-hint),
+.scope :global(.ui-test-case-step-extract-empty) {
+  color: var(--tp-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.scope :global(.ui-test-case-step-extract-row) {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 100px 120px minmax(150px, 1.4fr) minmax(110px, 1fr) minmax(110px, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.scope :global(.ui-test-case-step-extract-row .ant-form-item) {
+  margin-bottom: 0;
+}
+
+.scope :global(.ui-test-case-step-extract-warning) {
+  color: var(--app-status-warning-text);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+@media (max-width: 1180px) {
+  .scope :global(.ui-test-case-step-extract-row) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.scope :global(.ui-test-case-step-footer-grid) {
+  display: grid;
+  grid-template-columns: minmax(120px, 160px) repeat(2, max-content);
+  gap: 12px 22px;
+  align-items: end;
+}
+
+.scope :global(.ui-test-case-step-status-row) {
+  display: contents;
+}
+
+.scope :global(.ui-test-case-step-inline-switch-item) {
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+}
+
+.scope :global(.ui-test-case-step-inline-switch-item .ant-form-item-row) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.scope :global(.ui-test-case-step-inline-switch-item .ant-form-item-label) {
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.scope :global(.ui-test-case-step-inline-switch-item .ant-form-item-label > label) {
+  color: var(--tp-text);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.scope :global(.ui-test-case-step-inline-switch-item .ant-form-item-control) {
+  flex: 0 0 auto;
+  min-width: auto;
+}
+
+.scope :global(.ui-test-case-step-inline-switch-item .ant-form-item-control-input) {
+  min-height: auto;
+}
+
+.scope :global(.ui-test-run-step-screenshot) {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  margin-top: 10px;
+}
+
+.scope :global(.ui-test-run-step-variables) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.scope :global(.ui-test-run-step-tags) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.scope :global(.ui-test-run-step-tags .ant-tag) {
+  margin-inline-end: 0;
+}
+
+.scope :global(.ui-test-run-step-screenshot .ant-image) {
+  max-width: min(480px, 100%);
+}
+
+.scope :global(.ui-test-run-step-screenshot .ant-image-img) {
+  display: block;
+  max-height: 320px;
+  object-fit: contain;
+  border: 1px solid var(--tp-border-soft);
+  border-radius: 8px;
+}
+
+
+/* UI 步骤编辑器的面板滚动与窄屏布局，由编辑器自行引入。 */
+.scope :global(.ui-suite-case-editor-panel .api-case-editor-main-scroll) {
+  overflow: hidden;
+}
+
+@media (max-width: 1180px) {
+  .scope :global(.ui-test-case-step-core-grid),
+  .scope :global(.ui-test-case-step-detail-grid),
+  .scope :global(.ui-test-case-step-footer-grid) {
+    grid-template-columns: 1fr;
+  }
+  .scope :global(.ui-test-case-step-field-half),
+  .scope :global(.ui-test-case-step-field-third),
+  .scope :global(.ui-test-case-step-field-wide) {
+    grid-column: span 1;
+  }
+  .scope :global(.ui-test-case-step-card-top),
+  .scope :global(.ui-test-case-step-title-head) {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .scope :global(.ui-test-case-step-actions) {
+    padding-top: 0;
+  }
+  .scope :global(.ui-test-case-step-inline-switch-item .ant-form-item-row) {
+    justify-content: space-between;
+  }
+}
+
+
+/* 测试集抽屉的响应式字段网格。 */
+@media (max-width: 900px) {
+
+  .scope :global(.ui-test-suite-drawer-grid),
+  .scope :global(.ui-test-suite-drawer-config-grid) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .scope :global(.ui-test-suite-drawer-grid),
+  .scope :global(.ui-test-suite-drawer-config-grid) {
+    grid-template-columns: 1fr;
+  }
+}

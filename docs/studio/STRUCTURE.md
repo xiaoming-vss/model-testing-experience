@@ -77,13 +77,13 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 
 | # | 规则 | 拦住的问题 | 检查 |
 | --- | --- | --- | --- |
-| S6 | CSS 位置唯一：`features/<f>/styles/`。**禁止**在 `components/`、`pages/` 下放 CSS；全局层只允许 `app/styles/`、`shared/styles/` | 审计时 25 个 CSS 散在 6 类位置：`src/` 根 2、`app/styles/` 6、`shared/styles/` 1、`features/*/styles/` 10、`features/*/components/` 3、`features/*/pages/` 3。其中 6 个放错位置：`ai-testing/components/` 下的 `RevisionSidePanel.css`、`FunctionalCaseRelationsViewer.css`、`FunctionalCaseRelationsGraph.css`，以及 `ai-testing/pages/RequirementAnalysisTaskDetailPage.css`、`projects/pages/SprintDetailPage.css`、`profile/pages/ProfilePage.css`；`profile`、`projects`、`requirements` 连 `styles/` 目录都没有 | 扫描脚本路径检查（**存量豁免**：上述 6 个文件；其中 `ai-testing/pages/RequirementAnalysisTaskDetailPage.css` 已于 2026-11-15 删除） |
-| S7 | 样式归属：feature 只写自家前缀。**全局层（`app/styles/`、`shared/styles/`）不得出现 feature 内部类名** | `app/styles/shell.css` 仍引用需求、迭代、测试等 feature 内部类名（拆分前审计 87 个，死规则删除后下降）、`layout.css` 12 个；`features/api-automation/styles/detail.css` 有 30 处 `.ui-*`（API 自动化给 UI 自动化写样式） | 扫描脚本前缀统计（**存量豁免**） |
-| S8 | token 单一来源：token 定义集中在**已登记的 token 文件**里（清单见下）。feature **只能消费，不得定义全局 token** | `--tp-text` 被 `app/styles/shell.css` 与 `features/api-automation/styles/detail.css` 两处定义；`shared/styles/legacy-surface.css` 与 `features/projects/styles/sprint-overview.css` 消费 `--tp-border` / `--tp-border-soft`，而定义散在 `shell.css` 与 `detail.css` 两处——**shared/feature 反向依赖其他 feature 定义的 token** | CSS 裸色值：`npm run check:theme`（**已实现**，接入 `verify`）；定义重名与依赖方向扫描仍待实现，存量定义保留 |
-| S9 | 样式引入必须显式自持：每个入口自行 import 自己依赖的样式。**禁止依赖「别的页面恰好 import 了」而生效** | `functional-test-page` 被 4 个 feature 使用（test-cases、api-automation、test-orders、ui-automation 的页面），但唯一定义在 `features/testing/styles/index.css`，而这 4 个页面都不 import 它——只靠被 `TestingPage` 包着渲染才拿到样式 | 评审 + import 图核对（**待强制**） |
-| S14 | 列表页表面层：用例库 / 应用 / 测试单 / API 测试 / UI 测试 / 性能测试六页共用 `shared/styles/surface-tokens.css`。页面根节点必须同时带页面类与 `tp-surface`，列表／卡片页板面 section 带 `tp-board tp-list-panel`，内容使用 `tp-list-body` / `tp-list-scroll`，Tab 位于外框外；样式写在各自 `features/<f>/styles/*-v2.css`，颜色只能引用 `--srf-*` / `.tone-*` | 五页共用同一套卡片 + 胶囊 + 色盘，缺 `tp-surface` 时页面里所有 `var(--srf-*)` 解析成空值，表现为「样式莫名消失」；`testing/styles/index.css` 与 `app/styles/shell.css` 都用 `!important` 抢过这些容器，覆盖规则必须写成 `.app-shell.app-shell-macos .testing-page .<页面类> ...` 再加 `!important`，删掉前缀或 `!important` 会静默失效。**同权重同样会失效**：`shell.css` 的玻璃规则是 (0,6,0)，与 `.tp-board` 覆盖同分，只靠 import 顺序决胜 | 评审 + 扫描脚本（**待强制**） |
+| S6 | CSS 位置唯一：`features/<f>/styles/`。**禁止**在 `components/`、`pages/` 下放 CSS；全局层只允许 `app/styles/`、`shared/styles/` | 审计时 25 个 CSS 散在 6 类位置：`src/` 根 2、`app/styles/` 6、`shared/styles/` 1、`features/*/styles/` 10、`features/*/components/` 3、`features/*/pages/` 3。阶段 8 已删除 `ai-testing/components/` 下 `RevisionSidePanel.css`、`FunctionalCaseRelationsViewer.css`、`FunctionalCaseRelationsGraph.css`，并把样式并入 `styles/` Module；`ai-testing/pages/RequirementAnalysisTaskDetailPage.css` 已于 2026-11-15 删除；目前只剩 `profile/pages/ProfilePage.css` 为存量豁免 | 扫描脚本路径检查（**存量豁免**：`profile/pages/ProfilePage.css`） |
+| S7 | 样式归属：feature 只写自家前缀。**全局层（`app/styles/`、`shared/styles/`）不得出现 feature 内部类名** | `app/styles/shell.css` / `shell-header.css` 仍引用需求、迭代、测试等 feature 内部类名（拆分前审计 87 个，死规则删除后下降）、`layout.css` 仍有存量引用；阶段 7 已删除 `features/api-automation/styles/detail.css`（其中 30 处 `.ui-*` 随旧样式清理），全局层剩余引用仍按存量豁免 | 扫描脚本前缀统计（**存量豁免**） |
+| S8 | token 单一来源：token 定义集中在**已登记的 token 文件**里（清单见下）。feature **只能消费，不得定义全局 token** | 阶段 7 后 `--tp-text` / `--tp-border` / `--tp-border-soft` 只由 `app/styles/shell.css` 定义，`shared/styles/legacy-surface.css` 与 `features/projects/styles/sprint-overview.css` 的消费方向已单向 | CSS 裸色值：`npm run check:theme`（**已实现**，接入 `verify`）；定义重名与依赖方向扫描仍待实现，存量定义保留 |
+| S9 | 样式引入必须显式自持：每个入口自行 import 自己依赖的样式。**禁止依赖「别的页面恰好 import 了」而生效** | `functional-test-page` 被 API/UI/测试单/Bug/用例库页面共同使用，但它的共用表格样式已收敛到 `shared/styles/list-table.css`；页面自身仍需声明所需 Module，不能依赖 `TestingPage` 恰好加载某个外壳样式 | 评审 + import 图核对（**待强制**） |
+| S14 | 列表页表面层：用例库 / 应用 / 测试单 / API 测试 / UI 测试 / 性能测试六页共用 `shared/styles/surface-tokens.css`。页面根节点必须同时带页面类与 `tp-surface`，列表／卡片页板面 section 带 `tp-board tp-list-panel`，内容使用 `tp-list-body` / `tp-list-scroll`，Tab 位于外框外；页面私有皮肤写在各自 `features/<f>/styles/*.module.css`，颜色只能引用 `--srf-*` / `.tone-*` | 六页共用同一套卡片 + 胶囊 + 色盘，缺 `tp-surface` 时页面里所有 `var(--srf-*)` 解析成空值，表现为「样式莫名消失」；`app/styles/shell.css` 仍用 `!important` 给 `.workbench-panel` 铺玻璃表面，列表页靠 `surface-tokens.css` 中带 `.app-shell-macos .testing-page` 前缀的板面覆盖压住，删掉前缀或 `!important` 会静默失效。**同权重同样会失效**：`shell.css` 的玻璃规则是 (0,6,0)，与 `.tp-board` 覆盖同分，只靠 import 顺序决胜 | 评审 + 扫描脚本（**待强制**） |
 | S15 | CSS 预算只减不增：`!important` 与 `.app-shell.app-shell-macos` 长前缀按文件记录在 `scripts/css-budget.json`，未定义 CSS 变量不得新增 | 样式权重军备竞赛与 token 拼写错误会随新页面重新增长；已有 0 个无回退未定义变量，2 个有回退的遗留变量登记在基线 | `npm run check:css`（**已实现**，接入 `verify`）；有意增加时运行 `node scripts/check-css-budget.mjs --update` 并评审 |
-| S16 | **新代码样式只允许 Tailwind CSS v4 utility（布局/间距/排版）与 CSS Modules（复杂皮肤）**；禁止新增非 `*.module.css` 的全局/feature 级 CSS、`!important` 和 `.app-shell.app-shell-macos` 长前缀；重复结构必须抽到 `shared/`。存量 CSS 冻结，改到哪页迁哪页 | 新增页面持续复制 toolbar/card/tab/split 布局：布局声明占 48.7%，约 1,025 条规则体重复；旧工作台与 18 个 v2/v3 文件（7,209 行）并存，靠 737 处 `!important`、194 处长前缀维持级联；新页面仍在新增页面级 CSS | `npm run check:css:structure`（**已实现**，接入 `verify`）：新增全局文件/导入、跨 feature 导入、孤儿 CSS、每文件规则体预算、重复规则体、共享 Module 私有选择器；className 任意色值归 `check:theme`。策略见 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md)；迁移顺序见 [CSS 整改与迁移计划](css-migration-plan.md)，验收见[迁移执行清单](#迁移执行清单2026-11-17-试点补充) |
+| S16 | **新代码样式只允许 Tailwind CSS v4 utility（布局/间距/排版）与 CSS Modules（复杂皮肤）**；禁止新增非 `*.module.css` 的全局/feature 级 CSS、`!important` 和 `.app-shell.app-shell-macos` 长前缀；重复结构必须抽到 `shared/`。存量 CSS 冻结，改到哪页迁哪页 | 新增页面持续复制 toolbar/card/tab/split 布局：布局声明占 48.7%，约 1,025 条规则体重复；旧工作台与 18 个 v2/v3 文件（7,209 行）并存，靠 737 处 `!important`、194 处长前缀维持级联；新页面仍在新增页面级 CSS | `npm run check:css:structure`（**已实现**，接入 `verify`）：新增全局文件/导入、跨 feature 导入、孤儿 CSS、每文件规则体预算（单文件 ≤600 行）、重复规则体、共享 Module 私有选择器、`App.css` 回归；className 任意色值归 `check:theme`。策略见 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md)；迁移顺序见 [CSS 整改与迁移计划](css-migration-plan.md)，验收见[迁移执行清单](#迁移执行清单2026-11-17-试点补充) |
 
 数据表行分隔由 `shared/styles/table-row-dividers.css` 全局提供，公共列表皮肤消费相同的 `--app-list-row-border`。变量值只在下列 token 文件定义，feature 不另设分隔色或移除横线；`tableRowDividers.test.ts` 检查入口、数据行覆盖及变量归属。
 
@@ -102,14 +102,15 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 | `src/app/styles/shell.css` 的 `:root` 块 | `--tp-*`、`--mac-*` | 工作台基础与 macOS 外壳 |
 | `src/app/styles/buttons.css` | `--button-*` | 按钮调色板（全站唯一按钮皮肤） |
 | `src/shared/styles/surface-tokens.css` | `--srf-*` | 列表页共用的表面与色盘 |
+| `src/shared/styles/base-services-connection.module.css` | `--base-*` | 基础服务、性能监控与 AI Skill 库共用的连接卡片/空态皮肤，只定义语义别名 |
 
 **裸色值（`#rrggbb`）只允许出现在上表已登记的 token 文件里。** 其它任何 CSS 文件出现裸色值都应当改为引用 token。注意此规则必须带 token 文件白名单，否则会把合法的 token 定义本身判为违规（例如 `surface-tokens.css` 中的颜色定义）。
 
 全站原生滚动条样式仅在 `shared/styles/scrollbars.css` 定义，从 `index.css` 加载；尺寸 token 位于 `foundation-tokens.css`，颜色沿用已有主题 token。feature 保留自身滚动容器布局，不再定义滚动条皮肤或隐藏规则。`scrollbarConsistency.test.ts` 检查该归属。
 
-基础层颜色整理：`layout.css`、`legacy-surface.css`、`features/projects/styles/sprint-overview.css` 与 `shell.css` 的普通声明消费 `foundation-tokens.css`；后者已有的 `--tp-*` / `--mac-*` 等定义保持原作用域。浅色取值、渐变位置、阴影几何和选择器权重保持不变。玻璃层 token 的数值后缀标识原有透明层，后续主题可以分别赋值，不应把它们当成全站透明度工具。终端背景与正文、强调色上的文字与卡片底色分开定义。新列表/详情页继续使用 `--srf-*`，不要迁回旧工作台配色。Ant Design 的算法输入和组件 token 仍集中在 `app/providers/ThemeProvider.tsx`，切换主题时需单独配置，不能把需要参与颜色运算的 seed token 直接替换为 CSS `var()`。
+基础层颜色整理：`layout.css`、`legacy-surface.css`、`features/projects/styles/sprint-overview.css` / `sprint-dashboard.css` 与 `shell.css` / `shell-header.css` 的普通声明消费 `foundation-tokens.css`；后者已有的 `--tp-*` / `--mac-*` 等定义保持原作用域。浅色取值、渐变位置、阴影几何和选择器权重保持不变。玻璃层 token 的数值后缀标识原有透明层，后续主题可以分别赋值，不应把它们当成全站透明度工具。终端背景与正文、强调色上的文字与卡片底色分开定义。新列表/详情页继续使用 `--srf-*`，不要迁回旧工作台配色。Ant Design 的算法输入和组件 token 仍集中在 `app/providers/ThemeProvider.tsx`，切换主题时需单独配置，不能把需要参与颜色运算的 seed token 直接替换为 CSS `var()`。
 
-AI 的 `index.css`、`task-detail-v2.css` 与 API 的 `detail.css` 同样从基础色盘取值。现有 `--ai-*`、`--detail-glass-*`、`--run-pipeline-*` 保留局部作用域，作为全局语义颜色的组合或别名；`--srf-*` 的消费优先级不变，原有备用颜色改为嵌套的基础 token 引用，以保留未挂载 `tp-surface` 时的渲染行为。终端滚动条、流水线状态、HTTP 方法颜色独立命名；暗色通过集中 token 赋值接入。
+AI 的 `ai-page.module.css`、`ai-task-detail.module.css` 与 API/UI 自动化的详情 Module 同样从基础色盘取值。现有 `--ai-*`、`--detail-glass-*`、`--run-pipeline-*` 保留局部作用域，作为全局语义颜色的组合或别名；`--srf-*` 的消费优先级不变，原有备用颜色改为嵌套的基础 token 引用，以保留未挂载 `tp-surface` 时的渲染行为。终端滚动条、流水线状态、HTTP 方法颜色独立命名；暗色通过集中 token 赋值接入。
 
 其余页面 CSS（基础服务、测试、登录、个人设置及 AI 审核等）也只消费颜色变量；局部变量继续保持原来的选择器和作用域。四个新版列表的阴影颜色通过 `--srf-shadow-color` 引用基础色盘。`scripts/check-theme-colors.mjs` 扫描所有源码 CSS 的声明，禁止在登记文件的自定义属性以外新增十六进制、颜色函数或具名颜色，包括 `var()` 的裸色备用值；忽略注释、字符串和变量名，允许 `transparent` / `currentColor`。CSS 检查不验证语义去重、变量可达性或浏览器视觉效果。
 
@@ -121,20 +122,21 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 
 ### 列表页表面层（用例库 / 应用 / 测试单 / API 测试 / UI 测试）
 
-这五页按各自的外部设计稿（Stitch 导出的静态 HTML，配套一份含色板 / 字阶 / 组件规格的 `DESIGN.md`）重做了表面层，
+这些页面按各自的外部设计稿（Stitch 导出的静态 HTML，配套一份含色板 / 字阶 / 组件规格的 `DESIGN.md`）重做了表面层，
 视觉语言是同一套：主题卡片 + 描边 + 胶囊筛选条 + 代码体编号 / 时间 + 色调色块。布局保留等宽编号、时间和 4px 网格；浅色配色以用户最新反馈后的 C 版为准（工具栏、内容面板、数据行和分页 `#e8edf6`，表头与状态栏 `#e3e9f3`，描边 `#dce0ef`、链接及选中强调 `#4e59b8`、主操作 `#f6e6bf`），由浅色 token 文件覆盖既有角色。旧玻璃表面变量与项目卡片变量也接入公共面板色，避免透明白色叠层重新抬高亮度；`theme.palette.test.ts` 验证这些角色的解析值一致，并验证浅色规则不匹配深色节点。深色仍沿用 GitHub Dark。
 
 | 页面 | 页面样式文件 |
 | --- | --- |
-| 用例库 | `features/test-cases/styles/case-library-v2.css` |
-| 应用 / 接口库工作区 | `features/interface-library/styles/index.css` |
-| 测试单 | `features/test-orders/styles/test-orders-v2.css` |
-| API 测试 | `features/api-automation/styles/list-v2.css` |
-| UI 测试 | `features/ui-automation/styles/list-v2.css` |
+| 用例库 | `features/test-cases/styles/case-library.module.css` |
+| 应用 / 接口库工作区 | `features/interface-library/styles/interface-library.module.css` + `interface-method.module.css` / `interface-openapi.module.css` / `interface-detail.module.css` / `interface-editor.module.css` |
+| 测试单 | `features/test-orders/styles/test-orders-list.module.css` |
+| API 测试 | `features/api-automation/styles/api-list.module.css` + `api-detail-shell.module.css` / `api-detail-editor.module.css` / `api-detail-request.module.css` / `api-detail-rules.module.css` |
+| UI 测试 | `features/ui-automation/styles/ui-list.module.css` + `ui-suite.module.css` / `ui-detail-topbar.module.css` / `ui-detail-shell.module.css` / `ui-detail-pipeline.module.css` / `ui-detail-inspector.module.css` / `ui-execution-flow.module.css` |
 | 性能测试 | 复用 `tp-*` 与 `shared/styles/entity-card.css`；新样式使用 Tailwind utility，不新增页面级全局 CSS |
+| TestingPage 外壳 | `features/testing/styles/testing-page.module.css` |
 
 `shared/styles/surface-tokens.css` 除 token 与九色盘外，还承载板面（`.tp-board`）与快速过滤条组件（`.tp-quickbar`、
-`.tp-chip`、`.tp-selection`）——五页的这几个部件必须完全一致，所以放在共用层而不是各写一份。
+`.tp-chip`、`.tp-selection`）——这些页面的这几个部件必须完全一致，所以放在共用层而不是各写一份。
 
 设计稿与既有约定冲突时以既有约定为准：设计稿的表格规格是表头 32px / 行高 36–40px，与 §7.5 锁定的列表指纹冲突，
 用例库 / 应用仍保持 42 / 48px；测试单 / API / UI 测试已改为卡片，不再有表头与行高。卡片共用
@@ -164,7 +166,7 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 
 顺带记两处**浅色下早已存在**的名称样式分歧，此前被深色规则（统一写了 `line-height: 22px`）掩盖，
 深色退役后由 `listNameConsistency.test.ts` 的注释记录、未纳入断言：AI 任务列表名称行高 22px，其余三页 20px
-（`ai-testing/styles/index.css` 里同一选择器有 20px 与 22px 两条规则，后者胜出）；名称颜色在 jsdom 下不稳定
+（原 `ai-testing/styles/index.css`，阶段 8 后由 `ai-page.module.css` 持有，同一选择器有 20px 与 22px 两条规则，后者胜出）；名称颜色在 jsdom 下不稳定
 （两条 `!important` 规则相争时 jsdom 按出现顺序而非优先级裁决，浏览器按优先级，五页都是 `#3f6fc6`）。
 
 **设计稿里没有对应数据或动作的元素一律不做**，避免为了像设计稿而编造字段：
@@ -187,7 +189,7 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 UI 测试页在 `page`/`components` 之间还多了一刀：筛选工具栏（`UiSuiteListToolbar`）、
 运行配置徽标（`UiSuiteRunConfigCell`）、卡片操作（`UiSuiteCardActions`）各自成组件，页面只做编排与作用域解析；
 搜索词由页面持有（工具栏在页面上），实际过滤在 `UiTestSuiteSection`（它持有 suites 查询），刷新按钮的加载态由
-section 经 `onRefreshingChange` 回传。`features/ui-automation/styles/index.css` 只留进入测试集详情后的编辑区与抽屉，
+section 经 `onRefreshingChange` 回传。`features/ui-automation/styles/ui-suite.module.css` 只留进入测试集详情后的编辑区与抽屉，
 列表部分的规则随重做删除（1019 → 933 行，其中 `.ui-test-suite-card` 一族已无任何使用者，连带从
 `shell.css` 的 `:is()` 列表里摘掉；详情页重做时又摘掉一层旧结构规则，见下面「UI 测试集详情页」）。
 
@@ -223,9 +225,9 @@ API 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 
 - **左栏与右栏的类名换成 `api-wb-*`，但页面根节点仍保留 `api-collection-detail-page`**：`.api-case-sidebar`、
   `.api-case-nav-item`、`.api-case-editor-shell` 这一族类名同时被 UI 测试详情页与用例库使用，它们的规则
-  （`detail.css`、`ui-automation/styles/index.css`、`shell.css` 的 `:is()` 列表）
-  必须原地留着；只把 API 详情页自己不再使用、且全仓库再无引用的规则从 `detail.css` 删掉（4111 → 3110 行）。
-- 板面这一层要自己压平：`app/styles/shell.css` 给 `.app-shell.app-shell-macos .workbench-panel` 铺了玻璃底
+  （`test-cases/styles/index.css`、`ui-suite.module.css`、`shell.css` / `shell-header.css` 的兼容选择器）
+  必须原地留着；API 详情页自己不再使用、且全仓库再无引用的旧规则已在阶段 7 随旧 CSS 删除。
+- 板面这一层要自己压平：`app/styles/shell-header.css` 给 `.app-shell.app-shell-macos .workbench-panel` 铺了玻璃底
   + 内高光 + 投影，列表页靠 `.tp-board` 那条带 `.testing-page` 前缀的规则压住，详情页不在 `.testing-page` 里，
   所以要自己写一条带页面类的高权重覆盖。其余颜色全部走 `--srf-*` / `.tone-*`。
 - **`Form.useWatch` 对没挂载的 `Form.Item` 返回 `undefined`**：请求体与设置两个页签只有被打开时才挂载，
@@ -238,8 +240,8 @@ API 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
   两处都补会让表格里多出一行既有输入框、又什么都没填的空行。
 - **请求体状态条的光标位置由编辑器回传**：`JsonEditor` 新增 `onCursorChange`（行 / 列，1 基）与 ref 上的
   `compressDocument()`；`toolbar={null}` 表示外壳不自带工具条，动作条由请求体面板画在编辑器之外。旧的
-  `api-body-type-segmented` 与 `json-editor-toolbar-row/-side/-type/-link` 规则随旧实现从 `detail.css`
-  删除（全仓库再无引用）。
+  `api-body-type-segmented` 与 `json-editor-toolbar-row/-side/-type/-link` 规则随旧实现从 API 详情样式
+  删除（全仓库再无引用；阶段 7 后该层由 `api-detail-editor.module.css` 等 Module 持有）。
 - 覆盖全局按钮皮肤与输入框皮肤的规则必须按 S14 的写法带 `.app-shell.app-shell-macos` +
   `.api-collection-workbench-page` 前缀与 `!important`，否则与全局皮肤同权重、只靠 import 顺序决胜。
   `styles/detailRequestPanels.test.ts` 锁住这条。
@@ -272,20 +274,21 @@ API 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 `ApiCaseBodyPanel.test.tsx` 依赖类型胶囊的 `role="tab"`，以及状态条文案「无语法错误 / 存在语法错误 /
 大小: N B / 格式: JSON / 编码: UTF-8」。
 
-### UI 测试集详情页（`detail-workbench-v2.css` / `detail-pipeline-v2.css` / `detail-inspector-v2.css`）
+### UI 测试集详情页（`ui-detail-topbar.module.css` / `ui-detail-shell.module.css` / `ui-detail-pipeline.module.css` / `ui-detail-inspector.module.css` / `ui-execution-flow.module.css`）
 
 UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（返回 / 面包屑 + 测试集 / 需求 / 迭代 + 环境选择 + 保存；
 测试集流程另带就绪结论、上次运行、运行记录、导入用例与运行测试集，步骤流程改为当前用例信息（启用状态、步骤数）与调试运行）+ 两栏（左：测试集流程画布，或步骤流程画布 + 用例信息条与步骤编辑器；
-右：执行回放 / 执行日志 / 运行变量）。样式按职责拆三个文件，都由 `UiTestSuiteCasePage` 引入，选择器互不重叠：
-`detail-workbench-v2.css` 是板面、顶栏、流程工具栏与画布外壳，`detail-pipeline-v2.css` 是用例信息条与步骤卡片皮肤，
-`detail-inspector-v2.css` 是右栏三张卡片。页面结构同样按职责切：`UiSuiteDetailToolbar`、`UiExecutionFlow`、
-`UiRunInspector`（内含 `UiRunReplayStage` / `UiRunConsoleCard`）各自负责一段，页面只留编排、查询与变更。
-右栏的纯展示数据在 `utils/detailRunView.ts`。
+右：执行回放 / 执行日志 / 运行变量）。样式按职责拆入 `ui-detail-topbar.module.css`（顶栏面包屑、就绪结论与动作区）、
+`ui-detail-shell.module.css`（板面、控制条与窄屏高度分配）、`ui-detail-pipeline.module.css`（用例信息条与步骤卡片皮肤）、
+`ui-detail-inspector.module.css`（右栏三张卡片）、`ui-execution-flow.module.css`（React Flow 节点、连线、光束与编辑区布局），共享的测试集区块、抽屉与步骤编辑器
+基础皮肤在 `ui-suite.module.css`；五个详情 Module 的 `.scope` 都挂在 `UiTestSuiteCasePage` 根节点。页面结构同样按职责切：
+`UiSuiteDetailToolbar`、`UiExecutionFlow`、`UiRunInspector`（内含 `UiRunReplayStage` / `UiRunConsoleCard`）各自负责一段，
+页面只留编排、查询与变更。右栏的纯展示数据在 `utils/detailRunView.ts`。
 
 - **板面必须显式压平**：这条路由不在 `.testing-page` 里（实测 `document.querySelector('.testing-page')` 为 null），
-  所以 `shell.css` 的 `.app-shell.app-shell-macos .workbench-panel`（(0,3,0) + `!important`，玻璃底 + 内高光 +
+  所以 `shell-header.css` 的 `.app-shell.app-shell-macos .workbench-panel`（(0,3,0) + `!important`，玻璃底 + 内高光 +
   10px/24px 投影）不会被 `surface-tokens.css` 里 `.tp-board` 那条 (0,2,0) 覆盖拦住，`shared` 那条带 `.testing-page` 的
-  (0,6,0) 规则也匹配不到。详情页因此自己写了一条带 `.ui-suite-detail-page` 的 (0,6,0)。
+  (0,6,0) 规则也匹配不到。详情页因此自己写了一条带页面 Module `.scope` 的 (0,6,0)。
   判据：板面应是 `background: rgba(0,0,0,0)`、`box-shadow: none`、`border-width: 0`
   （它本来是半透明白 + 投影，肉眼不容易发现）。
 - **用例管理收进流程画布**：不再有「用例管理」下拉/顺序弹层。测试集流程画布始终显示用例卡片，点击卡片进入步骤画布，
@@ -294,8 +297,8 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
   保存后才创建；添加步骤直接追加步骤并选中，内容在右侧「步骤配置」填写，侧栏不再提供添加按钮。
 - **设计稿控制条上的三个工作区页签（步骤编排 / 回放快照 / 执行控制台）已按用户要求去掉**：工作区只有一种排布
   （左步骤编排 + 右回放与控制台），三张卡片恒定显示，`UiStudioView` / `uiStudioViewOptions` / `ui-wb-cols--*` /
-  `ui-wb-ribbon-view*` 一并删除。`detail-workbench-v2.css` 里那条 `.ui-suite-detail-page [hidden] { display: none !important }`
-  留着，但服务对象换成了步骤卡片的展开/收起：`.ui-test-case-step-body` 在 index.css 里是 flex 容器，作者样式压得过
+  `ui-wb-ribbon-view*` 一并删除。`ui-detail-shell.module.css` 里那条 `.scope [hidden] { display: none !important }`
+  留着，但服务对象换成了步骤卡片的展开/收起：`.ui-test-case-step-body` 在 `ui-suite.module.css` 里是 flex 容器，作者样式压得过
   UA 的 `[hidden]`（antd 的 reset 也带同效规则，这条让折叠不依赖三方 reset）。
 - **工作区在一个屏内，两栏齐高**：`.ui-wb-cols` 是 `align-items: stretch` 的网格，行高取板上剩余高度（板面本身是
   有高度的滚动容器），两栏因此等高、整页不随内容变长。内容超出这一屏时由各面板内部滚动消化：左栏是步骤列表
@@ -307,10 +310,10 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
   指标区是 `flex: 0 0 auto` 的页脚，任何高度下都留在卡片里——用户报的「底部指标区被压」就是右栏比一屏高、
   页脚被顶到视口外；三张卡片都到下限后仍放不下（矮屏）时右栏整体滚动，卡片保持完整。
 - 首版写成 `align-items: start` 时左栏只有内容那么高，下面留一大片空白。
-- **`.ui-test-case-form` 的旧规则已删**（`features/ui-automation/styles/index.css`）：它带着 `padding: 16px 24px 0`
+- **`.ui-test-case-form` 的旧规则已删**（现由 `ui-suite.module.css` / `ui-detail-pipeline.module.css` 分持）：它带着 `padding: 16px 24px 0`
   与 `height: 100%; overflow: hidden`，那是「表单本身是编辑器面板里的滚动容器」时代的产物。留着会让左栏两张卡片
   被内推 24px、比右栏窄，两栏的卡片边缘对不齐（实测左卡 x=124 / 右卡 x=779，删掉后左卡 x=100、栏间距正好 12px）。
-  现在表单只是左栏的排布容器，规则写在 `detail-pipeline-v2.css`（拉伸 + 卡片间距 12px）。
+  现在表单只是左栏的排布容器，规则写在 `ui-detail-pipeline.module.css`（拉伸 + 卡片间距 12px）。
 - 控制条左侧那一组的子项（下拉 / 计数 / 前后切换 / 顺序 / 新建）加起来接近 560px，所以它的 `flex-basis` 也取 560px：
   空间不够时让右侧那组换行，而不是让左组子项溢出画到右边那组上面（实测过：`flex: 1 1 420px` 时右组的内容被
   「新建用例」整块盖住，`elementFromPoint` 命中的是按钮，而这类遮挡在 jsdom 的布局盲区里看不见）。
@@ -318,12 +321,12 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
   建，重复序号保留第一条），文案由 `formatUiStepResultBadge` 统一给出；没有运行记录时不编造结论，未设置关键字的步骤显示
   「草稿」。行首的拖拽手柄只是把「整行可拖」画出来，不是新的交互。步骤行的字段显隐与折叠摘要由
   `utils/stepRowView.ts` 推导（`UiStepEditor` 只渲染），这份推导有 `stepRowView.test.ts` 单独钉住。
-- 左栏根节点上的 `ui-suite-case-editor-panel` 必须保留，`detail-workbench-v2.css` 与
-  `detail-pipeline-v2.css` 的选择器都挂在它上面。随之删除的是分栏拖拽（`UiTestPanelSplitter`、
+- 左栏根节点上的 `ui-suite-case-editor-panel` 必须保留，`ui-detail-shell.module.css` 与
+  `ui-detail-pipeline.module.css` 的选择器都挂在它上面。随之删除的是分栏拖拽（`UiTestPanelSplitter`、
   `utils/uiTestPanelResize.ts`）与 `detailView.ts` 里三个编辑器高度常量，
   以及 `ui-test-case-toolbar` / `ui-test-case-secondary-meta` / `ui-suite-case-empty-list` 等只属于旧结构的规则
-  （`ui-automation/styles/index.css` 917 → 790 行，另从 `src/index.css`、`api-automation/styles/detail.css`
-  摘掉同名引用）。
+  （旧 `ui-automation/styles/index.css` 已迁入 `ui-suite.module.css`，旧 `api-automation/styles/detail.css`
+  已删除）。
 
 **设计稿里没实现的部分**：
 
@@ -362,7 +365,7 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 
 - `app/styles/shell.css` 的 `.workbench-panel { display: flex; flex-direction: column }`：工作台顶栏是 `workbench-panel`，
   要显式写回 `flex-direction: row`，否则整条栏变竖排。
-- 同处还有 `.workbench-panel { height: 100% }`（在 `features/testing/styles/index.css` 里）：顶栏这类不该撑满的条必须显式
+- 同处还有 `.workbench-panel { height: 100% }`（在 `app/styles/shell.css` 里）：顶栏这类不该撑满的条必须显式
   `height: auto`，否则它会把同一个 flex 容器里的兄弟节点全挤到底部。
 
 **设计稿里没实现的部分**：

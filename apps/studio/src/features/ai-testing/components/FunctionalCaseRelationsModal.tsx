@@ -7,6 +7,8 @@ import { aiTestingApi } from '../api/aiTesting.api'
 import { GenerationArtifactFrame } from './GenerationArtifactFrame'
 import { FunctionalCaseRelationsViewer } from './FunctionalCaseRelationsViewer'
 import { relationFailed, relationGenerating, useFunctionalCaseRelationsRun } from '../hooks/useFunctionalCaseRelationsRun'
+import chainStyles from '../styles/generation-chain.module.css'
+import relationsStyles from '../styles/relations.module.css'
 
 /** 用例图谱弹窗：从功能测试「完整用例」的派生节点打开，图谱绑定该运行的 caseRelations。 */
 export function FunctionalCaseRelationsModal({ open, onClose, taskId, runId, disabled, chooseConnection, embedded = false, inspectorContainer, inspectorActionContainer }: {
@@ -52,6 +54,7 @@ export function FunctionalCaseRelationsModal({ open, onClose, taskId, runId, dis
   ) : null
   return <><GenerationArtifactFrame embedded={embedded} hideHeader={sidebarMode} open={open} onCancel={onClose} footer={null}
     width="min(2000px, calc(100vw - 56px))" centered mask={{ closable: false }} destroyOnHidden
+    rootClassName={`${chainStyles.scope} ${relationsStyles.scope}`}
     className={`ai-relations-modal generation-chain-relations-modal${sidebarMode ? ' gc-relations-inspector' : ''}`} title="用例图谱">
     {!sidebarMode ? <div className="gc-relations-toolbar">{action}</div> : null}
     {runId ? <div className="gc-relations-body">

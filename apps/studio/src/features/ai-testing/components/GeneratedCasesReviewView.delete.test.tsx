@@ -2,8 +2,35 @@ import { useState } from 'react'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { GeneratedCasesReviewView } from './GeneratedCasesReviewView'
+import caseArtifactsCss from '../styles/artifact-cases.module.css?raw'
 
-afterEach(cleanup)
+/** jsdom 不认 CSS Modules 的 `:global(...)`；注入测试前剥掉外壳。 */
+function unglobal(css: string) {
+  let result = ''
+  let index = 0
+  while (true) {
+    const start = css.indexOf(':global(', index)
+    if (start < 0) {
+      result += css.slice(index)
+      break
+    }
+    result += css.slice(index, start)
+    let depth = 1
+    let cursor = start + 8
+    for (; cursor < css.length && depth > 0; cursor += 1) {
+      if (css[cursor] === '(') depth += 1
+      else if (css[cursor] === ')') depth -= 1
+    }
+    result += css.slice(start + 8, cursor - 1)
+    index = cursor
+  }
+  return result
+}
+
+afterEach(() => {
+  cleanup()
+  document.head.innerHTML = ''
+})
 
 describe('候选用例删除测试点', () => {
   it('删除按钮把测试点移出当前草稿并顺延选中下一条', async () => {
@@ -65,10 +92,11 @@ describe('候选用例删除测试点', () => {
   })
 
   it('只读查看时点选测试点仍重播选中动效且不显示删除', async () => {
-    render(<GeneratedCasesReviewView content={JSON.stringify({ cases: [
+    document.head.innerHTML = `<style>${unglobal(caseArtifactsCss)}</style>`
+    render(<div className="scope"><GeneratedCasesReviewView content={JSON.stringify({ cases: [
       { case_id: 'case-a', case_module: '模块A', case_title: '用例甲', case_type: '功能测试' },
       { case_id: 'case-b', case_module: '模块A', case_title: '用例乙', case_type: '功能测试' },
-    ] })} />)
+    ] })} /></div>)
     expect(document.querySelector('.ai-case-name-tree-node.point.is-selected')).toHaveClass('motion-0')
     expect(getComputedStyle(document.querySelector<HTMLElement>('.ai-case-name-tree-node.point.is-selected')!).animation).toContain('ai-case-point-select-a')
     fireEvent.click(document.querySelector<HTMLElement>('.ai-case-name-tree-node.point.is-selected')!)

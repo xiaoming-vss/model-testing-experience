@@ -2,50 +2,74 @@
 
 性能测试复用现有测试工作区与基础服务的页面骨架。代码位于 `apps/studio/src/features/performance/`。
 
+## 领域结构
+
+- 项目级资产是**性能测试集**（suite）。一个测试集按顺序组织多条性能用例，运行时逐条串行执行：前一条用例结束后才启动下一条，类似 JMeter Thread Group 的顺序执行。
+- 每条性能用例包含一个 k6 负载模型（固定并发 / 固定到达率 / 固定请求速率 / 阶段负载）和多个按顺序执行的 API 步骤。
+- 提取变量只在同一条用例的当前 VU / 当前迭代内共享，供后续步骤使用；不同用例之间不共享，测试集只负责排序。
+- 平台本期不做验收判定：运行与用例统一展示执行事实，结果记为「未判定」。
+
 ## 导航与路由
 
 - 顶部「测试」悬停浮层：测试单 → API 测试 → UI 测试 → 性能测试；选中性能测试落在 `/testing?tab=perf`。
-- 性能用例详情：`/performance/cases/:caseId`。
-- 运行记录：`/performance/runs`，支持 `?caseId=` 过滤。
+- 性能测试集详情（工作台）：`/performance/suites/:suiteId`，支持 `?case=<caseId>` 定位当前用例、`?step=<stepIndex>` 定位该用例内的接口。
+- 运行记录：`/performance/runs`，支持 `?suiteId=` 过滤。
 - 运行详情：`/performance/runs/:runId`。
 - 顶部「基础服务」悬停浮层新增「性能监控」，落在 `/base-services?tab=monitoring`。
 
-性能监控属于项目级共享基础服务，不放在性能用例页面内。发起运行时在对话框中同时选择性能环境和监控接入。
+性能监控属于项目级共享基础服务，不放在测试集页面内。发起测试集运行时在对话框中同时选择性能环境和监控接入，所有用例共用本次选择并冻结快照。
 
-## 性能用例列表
+## 测试集列表
 
 - 使用公共 `tp-list-panel`、`tp-list-toolbar`、`tp-list-body`、`tp-list-scroll` 与 `EntityCard`。
-- 工具栏包含性能环境、状态筛选、名称/描述搜索、环境管理、运行记录和新建性能用例。
-- 卡片展示名称、启用状态、版本、数据文件数、最近更新；操作与 API/UI 测试一致：运行、编辑信息、删除。
-- 新建/编辑基础信息使用右侧 Drawer。新建后进入 YAML 详情编辑器；用例是项目级资产，不绑定需求或迭代。
+- 工具栏包含性能环境、状态筛选、名称/描述搜索、环境管理、运行记录和新建测试集。
+- 卡片展示名称、启用状态、启用/全部用例数、API 步骤数、数据文件数、负载模型、最近更新和最近一次运行状态；操作包括运行、编辑信息和删除。
+- 新建/编辑基础信息使用右侧 Drawer。新建后进入测试集工作台；删除测试集会连同测试集内的用例、运行记录和关联数据文件一起删除。
+
+## 测试集工作台（默认视图）
+
+- 工具栏展示名称、启用状态、「串行执行」标签、用例数、描述与最近更新时间，以及运行记录、编辑信息和运行测试集。
+- 三栏布局：
+  - 左栏「用例与接口」：按 `orderNo` 列出用例分组，组内按顺序列出接口（方法、名称、路径），支持折叠；点击用例进入用例级配置，点击接口进入接口级编辑。
+  - 中栏按选中层级切换：选中用例时展示用例名称、启用状态、负载模型和数据文件；选中接口时只展示该接口的请求设置、请求头、请求体、响应校验和提取变量。
+  - 右栏展示串行运行顺序、运行入口、当前用例概览、跨用例提取变量摘要和当前用例数据文件。
+- 切换用例或接口时，未保存修改暂存为前端草稿；切回后草稿仍在。「取消」才丢弃草稿并恢复服务端保存状态。保存后清空草稿并刷新测试集摘要。
+- 用例视图的「添加接口」把新接口追加到当前用例末尾并自动进入接口编辑；接口视图支持上移、下移和删除接口。
+- 空态提供新增用例入口；新增用例自动排在测试集末尾，创建后直接进入该用例的编辑。
 
 ## 用例编辑
 
-- YAML 使用公共 `TextCodeEditor`，它是唯一可编辑来源；前端只做语法和顶层结构提示，完整校验由控制面完成。
-- 工具栏显示版本、启用状态、未保存标记、环境选择、运行记录、编辑信息、保存和发起运行。
-- 保存会提交 YAML 与启用状态；有未保存修改时禁止发起运行。
-- 数据文件通过 `uploadStoredFile(..., 'perf_case_data')` 直传 S3，再由 `PATCH /v1/perf-cases/{caseId}` 关联。上传前必须先在 YAML 的 `case.data` 声明 `source`，控制面会校验引用与文件元数据；上传/移除会连同当前 YAML 一起提交。
-- 侧栏展示用例信息、数据文件和最近运行；数据文件可从 S3 下载，移除前需要先在 YAML 中删除对应 `source`。
+- 用例名称和启用状态在用例视图顶部卡片直接编辑，保存时一并提交。
+- 负载模型结构化编辑 `case.load`：固定并发 / 固定到达率 / 固定请求速率 / 阶段负载四种模型。前三种编辑 VUs、速率、持续时间、爬坡/下降时间和预分配/最大 VUs；阶段负载使用「阶梯 / 尖峰 / 自定义」模板生成可编辑阶段表，每行配置目标 VUs、爬坡和保持时间，并单独配置结束下降。
+- 阶段负载的 `profile`（`step` / `spike` / `custom`）只表示模板来源，执行语义完全由 `stages` 决定；`finalDown` 控制测试结束后是否回落到 0，填 0 表示停留在最后阶段。爬坡填 0 时由 k6 按瞬时切换处理。YAML 结构为 `model: staged_vus`、`stages[{target, ramp, hold}]` 和 `finalDown`。
+- 接口在接口视图编辑名称、方法、路径、失败策略、思考时间、请求头、请求体、响应校验和提取变量；后续步骤可点击前序提取变量插入请求路径。新增、删除和调整顺序在用例视图与接口视图中完成。
+- 固定请求速率只支持单步骤迭代；选择该模型但用例含多个步骤时，页面直接提示并禁用保存。
+- 数据文件区分「数据引用」和「已上传文件」：上传 CSV / JSON 后为文件添加引用，并配置取值策略与用尽策略；仍被引用的文件不能移除。
+- 表单会生成内部 YAML 运行契约；YAML 不再作为普通用户编辑入口，只通过「内部数据」弹窗只读查看。`acceptance`、`specVersion` 等表单未覆盖的字段在保存时保持不变。
+- 表单校验覆盖必填名称、步骤唯一性、JSON 请求体、校验/提取字段、数据引用和负载参数；有问题时顶部汇总，并禁用保存。
+- 数据文件通过 `uploadStoredFile(..., 'perf_case_data')` 直传 S3，再由 `PATCH /v1/perf-cases/{caseId}` 关联。上传/移除会连同当前 YAML 一起提交。
 
 ## 运行
 
-- 发起运行对话框必须选择 `kind="perf"` 的环境和已启用的监控接入。没有环境或接入时给出跳转入口。
-- 运行记录使用服务端分页与筛选，列包括用例、环境、监控接入、状态、结果、开始时间、耗时和 k6 版本。
-- 运行详情轮询排队/运行/停止中的状态；展示 k6 摘要指标、阈值结果、日志尾部、运行事实和数据文件。
-- 平台不在页面内查询 Prometheus 或绘制时序图。Grafana 链接由运行冻结的接入快照生成，带 `var-run_id`、运行时间范围和默认筛选；未配置看板时按钮禁用。
-- 监控快照由控制面在创建运行时写入 `perf_runs.monitoring_snapshot_json`，不包含凭据；之后修改或删除接入不影响历史运行。
+- 发起测试集运行必须选择 `kind="perf"` 的环境和已启用的监控接入；没有环境或接入时给出跳转入口。测试集停用或没有启用用例时禁止运行。
+- 控制面为本次测试集运行创建父运行和有序运行条目，并为每条启用用例预创建冻结的单用例运行。Worker 同一时间只领取一个子运行任务，从而保证串行执行。
+- 单条用例失败不会中断后续用例；用户停止测试集时，当前用例收到停止请求，剩余用例标记为已跳过，父运行最终记为已取消 / 已停止。
+- 运行记录使用服务端分页与筛选，列包括测试集、环境、进度、状态、结果、开始时间和耗时。
+- 运行详情轮询排队/运行/停止中的状态；展示用例进度、总请求数、总迭代数、总耗时、平均请求速率、最高 P95、加权失败率、逐用例执行顺序与指标表、运行信息和按用例筛选的 k6 日志。
+- 平台不在页面内查询 Prometheus、绘制时序图或提供外部看板入口；本期只展示执行事实和 k6 摘要。父运行结果统一为「未判定」，不做达标判定。
+- 监控快照由控制面在创建子运行时写入 `perf_runs.monitoring_snapshot_json`，冻结接入名称和 Remote Write 地址，不包含凭据；之后修改或删除接入不影响历史运行。
 
 ## 监控接入管理
 
 - 性能监控面板沿用基础服务卡片、工具栏和分页结构。
-- 查询认证与 Remote Write 认证分别配置，支持 none/basic/bearer/headers。
+- 接入只配置 Remote Write 地址、写入认证和启用状态；本期不保存查询地址或外部看板配置。
+- 写入认证支持 none/basic/bearer/headers。
 - 编辑时凭据不会回显；认证方式不变且凭据留空表示保持原凭据，修改认证方式时必须重新填写。
-- 默认筛选使用 JSON 对象，运行时转换为 Grafana 的 `var-<key>` 参数。
 - 仅项目所有者可以新建、编辑和删除接入；成员发起运行时只能选择已启用接入。
 
 ## 相关代码
 
-- 页面：`pages/PerformancePage.tsx`、`PerformanceCaseDetailPage.tsx`、`PerformanceRunsPage.tsx`、`PerformanceRunDetailPage.tsx`。
-- 组件：`components/PerfCaseDrawer.tsx`、`StartPerfRunModal.tsx`、`PerfMonitoringPanel.tsx`、`PerfMonitoringDrawer.tsx`。
-- API 与工具：`api/performance.api.ts`、`utils/perf.ts`、`utils/monitoringConnection.ts`。
-- 控制面：`apps/control-plane/src/testing_agent/services/perf_run.py`、`schemas/perf_run.py`。
+- 页面：`pages/PerformancePage.tsx`、`PerformanceSuiteDetailPage.tsx`、`PerformanceRunsPage.tsx`、`PerformanceRunDetailPage.tsx`。
+- 组件：`components/PerfSuiteDrawer.tsx`、`StartPerfSuiteRunModal.tsx`、`PerfLoadModelForm.tsx`、`PerfStagedLoadFields.tsx`、`PerfLoadCurve.tsx`、`PerfNumericField.tsx`、`PerfStepsEditor.tsx`、`PerfCaseWorkbench.tsx`、`PerfMonitoringPanel.tsx`、`PerfMonitoringDrawer.tsx`。
+- API 与工具：`api/performance.api.ts`、`utils/perf.ts`、`utils/perfLoadModel.ts`、`utils/perfCaseForm.ts`、`utils/perfDraftStore.ts`、`utils/monitoringConnection.ts`。
+- 控制面：`services/perf_suite.py`、`services/perf_suite_run.py`、`services/perf_run.py`、`schemas/perf_suite.py`、`schemas/perf_suite_run.py`。

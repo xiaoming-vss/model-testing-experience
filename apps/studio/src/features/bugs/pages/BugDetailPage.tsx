@@ -16,8 +16,7 @@ import { BugDetailHeader } from '../components/BugDetailHeader'
 import { BugZentaoPushPanel } from '../components/BugZentaoPushPanel'
 import { useBugDetail } from '../hooks/useBugDetail'
 import '@/shared/styles/surface-tokens.css'
-import '../styles/bugs-v2.css'
-import '../styles/bug-detail.css'
+import styles from '../styles/bugs.module.css'
 
 export function BugDetailPage() {
   const { navigate, bugQuery, bug, activitiesQuery, statusChanges, dynamics, resolveUserName,
@@ -26,7 +25,7 @@ export function BugDetailPage() {
 
   if (bugQuery.isLoading) {
     return (
-      <div className="workbench-page bugs-detail-page tp-surface">
+      <div className={`workbench-page bugs-detail-page tp-surface ${styles.root}`}>
         <div className="api-automation-content">
           <Alert type="info" showIcon title="Bug 加载中..." />
         </div>
@@ -35,7 +34,7 @@ export function BugDetailPage() {
   }
   if (bugQuery.error || !bug) {
     return (
-      <div className="workbench-page bugs-detail-page tp-surface">
+      <div className={`workbench-page bugs-detail-page tp-surface ${styles.root}`}>
         <div className="api-automation-content">
           <Alert
             showIcon
@@ -87,7 +86,7 @@ export function BugDetailPage() {
               <BugActivityFeed items={dynamics} resolveUserName={resolveUserName} emptyText="还没有评论与动态" />
             </section>
   </>
-  if (editOpen && canWrite) return <div className="workbench-page bugs-detail-page tp-surface"><div className="api-automation-content">
+  if (editOpen && canWrite) return <div className={`workbench-page bugs-detail-page tp-surface ${styles.root}`}><div className="api-automation-content">
     <BugInlineEditor key={bug.bugId} bug={bug} projectName={projectQuery.data?.name} sprintNames={sprintNames}
       resolveUserName={resolveUserName} onClose={() => setEditOpen(false)} onBack={() => goBackOrFallback(navigate, '/testing?tab=bugs')}>
       {activityPanels}
@@ -96,7 +95,7 @@ export function BugDetailPage() {
 
 
   return (
-    <div className="workbench-page bugs-detail-page tp-surface">
+    <div className={`workbench-page bugs-detail-page tp-surface ${styles.root}`}>
       <div className="api-automation-content">
         <BugDetailHeader bug={bug} onBack={() => goBackOrFallback(navigate, '/testing?tab=bugs')}
           onTransition={setTransitionAction} onEdit={() => setEditOpen(true)} onTransfer={() => setTransferOpen(true)} />

@@ -1,4 +1,5 @@
 import '../styles/sprint-overview.css'
+import '../styles/sprint-dashboard.css'
 import { useLocalDate } from '../hooks/useLocalDate'
 import { saveBlob } from '@/shared/utils/download'
 import { ActionButton } from '@/shared/components/ActionButton'

@@ -19,7 +19,6 @@ import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { api } from '@/services/api'
 import { relationFailed, relationGenerating, useFunctionalCaseRelationsRun } from '../hooks/useFunctionalCaseRelationsRun'
-import './FunctionalCaseRelationsViewer.css'
 
 // relation_analysis 产物只存在 configJson.caseRelations 里，是已通过校验的 JSON 对象。
 function getCaseRelationsContent(run?: FunctionalCaseGenerateTaskRun) {

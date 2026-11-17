@@ -1,6 +1,5 @@
 import { Button, Popover } from 'antd'
 import type { UiGenerationSourceInputs } from '../api/generationChain.api'
-import '../styles/ui-generation-inputs.css'
 
 export function UiGenerationSourceTrace({ source, loading = false }: {
   source?: UiGenerationSourceInputs | null

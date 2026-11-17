@@ -11,7 +11,6 @@ import { getErrorMessage } from '@/utils/format'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import type { RevisionAttachment } from '../hooks/useRevisionAttachments'
 import { parseQuestionRevisionDraft, revisionInstructionText, updateQuestionRevisionDraft } from '../utils/functionalRevision'
-import './RevisionSidePanel.css'
 
 const MAX_ATTACHMENTS = 6
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024

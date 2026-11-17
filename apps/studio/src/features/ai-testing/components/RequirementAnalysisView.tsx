@@ -1,6 +1,5 @@
 import { Empty } from 'antd'
 import { useMemo } from 'react'
-import '@/features/ai-testing/styles/index.css'
 import { parseRequirementAnalysisContent } from '../utils/functionalOutput'
 import { TestScopeAnalysisView } from './TestScopeAnalysisView'
 

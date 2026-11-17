@@ -14,6 +14,7 @@ import { Form, Input, InputNumber, Select, Switch } from 'antd'
 
 import type { UseMutationResult } from '@tanstack/react-query'
 import type { FormInstance } from 'antd'
+import styles from '../styles/api-detail-rules.module.css'
 
 type Props = {
   assertRuleModalOpen: boolean
@@ -29,6 +30,7 @@ type Props = {
 export function ApiAssertRuleEditor({ assertRuleModalOpen, editingAssertRule, setAssertRuleModalOpen, setEditingAssertRule, assertRuleForm, saveAssertRuleMutation, watchedAssertSource, watchedAssertComparator }: Props) {
   return (
     <ProjectActionModal action="write"
+      rootClassName={styles.scope}
       mask={{ closable: false }}
       open={assertRuleModalOpen}
       title={editingAssertRule ? '编辑断言规则' : '新增断言规则'}

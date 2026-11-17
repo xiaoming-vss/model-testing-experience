@@ -7,7 +7,8 @@ import type { UiTestCaseRunStepResult } from '@/services/api'
 import { getFlowOrder } from '../utils/flowOrder'
 import { computeFlowLayout, oppositeFlowSide, FLOW_NODE_WIDTH, FLOW_NODE_HEIGHT, FLOW_COLUMN_PITCH, FLOW_ROW_PITCH, LEGACY_COLUMN_PITCH, LEGACY_ROW_OFFSETS, type FlowHandleSide } from '../utils/flowLayout'
 import { UiStepResultBadge } from './UiStepResultBadge'
-import '../styles/execution-flow.css'
+
+// 画布样式由详情页引入的 ui-execution-flow.module.css 作用域提供。
 
 export type FlowItemAction = { key: string; label: string; danger?: boolean; onSelect: () => void }
 export type FlowItem = { id: string; title: string; caption: string; serial: string; enabled: boolean; result?: UiTestCaseRunStepResult; actions?: FlowItemAction[] }

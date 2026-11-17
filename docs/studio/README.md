@@ -49,25 +49,31 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 - AI 测试样式按页面和组件职责维护，文件与引用约定见下表。
 - API 集合页面的查询、用例编辑、规则编辑和运行轮询分别在 `api-automation/hooks/useApiCollectionData.ts`、`useApiCaseEditing.ts`、`useApiRuleEditing.ts`、`useApiExecution.ts`。组件目录维护用例编辑器、规则弹窗、导入弹窗及运行历史/报告；查询键和缓存失效由对应 hook 管理。
 - UI 套件页面保留草稿与执行编排，步骤编辑器、导入弹窗、运行历史和报告位于 `ui-automation/components/`；单用例和套件报告共用步骤结果渲染。
-- 性能测试复用同一 EnvironmentDrawer 管理 `kind=perf` 的环境；用例列表、Drawer、EntityCard、运行记录和监控接入面板沿用测试工作区与基础服务的公共骨架，详见[性能测试](performance-testing.md)。
+- 性能测试复用同一 EnvironmentDrawer 管理 `kind=perf` 的环境；测试集列表、工作台、EntityCard、串行运行记录和监控接入面板沿用测试工作区与基础服务的公共骨架，详见[性能测试](performance-testing.md)。
 - UI 自动化复用 `features/projects/components/EnvironmentDrawer` 管理 `kind=ui` 的环境：列表工具栏、详情顶栏和调试运行都从项目 UI 环境中选择，缺变量时弹窗内联补齐后重新提交。步骤编辑器的「插入变量」弹窗复用 API 自动化的动态值选择交互，列出当前 UI 环境变量、`baseUrl` 和 UI 内置函数；XPath 定位自动插入 `{{名字|xpath}}`。步骤编辑器也可配置后置提取（`saveTo`），执行控制台汇总实际引用与写回。协议见 [UI 环境变量与后置提取](../control-plane/ui-environment-variables.md)。
 - `shared/utils/` 集中下载、分页文案与值格式化。任务产物使用 `formatStructuredContent` 保留 JSON 字符串表示；一般展示使用 `prettyPrintValue`，两者空值和字符串行为不同。
 
 ### AI 测试样式归属
 
-文件统一放在 `src/features/ai-testing/styles/`。页面或组件显式引入自身使用的样式，先引入 `index.css` 公共基础；`index.css` 不聚合导入其它文件。新拆出的组件样式各自不超过 600 行，保留原有选择器、媒体查询及样式取值。
+文件统一放在 `src/features/ai-testing/styles/`。阶段 8 已把原全局 CSS 全部迁为根作用域 Module：需求详情页根节点挂生成链/画布/产物/图谱/UI 生成/阶段可视化的 `.scope`，Skill 库与各弹窗根分别挂对应 Module 的 `.scope`；组件不再直接引入全局 CSS。原 `index.css` 只保留为 `ai-page.module.css` 中的 Skill 页页面层。
 
-> 2026-11-17 起，新增或改版样式按 [STRUCTURE.md 的 S16](STRUCTURE.md#新代码样式策略2026-11-17) 与 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md) 执行；本节只描述存量文件，不再作为新增样式的默认做法。存量整改顺序、阶段目标与验收口径见 [CSS 整改与迁移计划](css-migration-plan.md)。
+> 2026-11-17 起，新增或改版样式按 [STRUCTURE.md 的 S16](STRUCTURE.md#新代码样式策略2026-11-17) 与 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md) 执行；存量整改顺序、阶段目标与验收口径见 [CSS 整改与迁移计划](css-migration-plan.md)。
 
 | 文件 | 职责 / 使用入口 |
 | --- | --- |
-| `index.css` | 公共变量、页面表面、共用面板与编辑器适配 |
-| `task-detail-v2.css` | 运行记录与代码风险报告，由需求详情的代码风险工作区引入 |
-| `task-form.css` | 创建任务抽屉的字段、来源输入、上传与模型连接选择，由各 Drawer / 选择弹窗引入 |
-| `generated-cases-review.css` | 候选用例分组、筛选、卡片与分页，由 `GeneratedCasesReviewView` 引入 |
-| `case-name-tree.css` | 测试点树标签页、节点、连线与编辑状态，由 `CaseNameTreeView` 及使用其布局的详情页引入 |
-| `api-config-result.css` | API 配置结果标签页、请求链、变量与规则，由 API 任务详情页引入 |
-| `skill-library.css` | Skill 面板、卡片、空状态与响应式网格，由 `AiSkillLibraryPage` 引入 |
+| `ai-page.module.css` | Skill 页 token、页面表面、工作台间距与面板皮肤 |
+| `requirement-design.module.css` | 需求详情里的生成工作区布局 |
+| `ai-task-detail.module.css` | 运行记录与代码风险报告，代码风险弹窗根挂作用域 |
+| `generation-chain.module.css` | 生成链弹窗、版本标题、审核页脚与继续优化侧栏 |
+| `generation-canvas.module.css` | 生成画布、阶段卡片、阅读态与阶段检查器 |
+| `artifact-cases.module.css` | 用例名称树、用例浏览器与生成用例审核字段 |
+| `artifact-api.module.css` | API 配置结果与 API 用例设计产物 |
+| `artifact-misc.module.css` | 仓库画像、模块生成进度与 YAML 问题列表 |
+| `relations.module.css` | 用例关系图谱、节点与查看器；需求详情与测试单图谱共用 |
+| `ui-generation.module.css` | UI 生成来源、输入弹窗、用例选择器与模型连接弹窗 |
+| `ui-stage-visual.module.css` | UI 三阶段可视化（Surface / Design / YAML）及深色覆盖 |
+| `artifact-view-switch.module.css` | 产物视图切换与复制控制条 |
+| `artifact-view-host.module.css` | 产物滚动宿主适配（既有 Module） |
 
 需求评审、测试点、测试范围分析和材料整理已改用 `shared/components/ArtifactView` + Tailwind；原 `requirement-review.css`、`traceable-points.css`、`test-scope-analysis.css`、`readable-requirement-material.css` 已删除。公共原语的复杂皮肤只在 `shared/styles/artifact-view.module.css`，与滚动容器耦合的宿主适配在 `features/ai-testing/styles/` 下的 `*.module.css`；页面不再新增同构布局 CSS。
 
@@ -76,7 +82,10 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 - `shared/styles/list-table.css` 是表头和数据行尺寸、底色、悬停背景的共用实现，颜色取自 `surface-tokens.css` 的 `--srf-list-*`。页面保留业务类名并声明 `tp-list-surface`，表格保留业务类名并声明 `tp-list-table`；使用表格的入口显式引入这两个样式文件。列内容、边框及圆角的现有优先级仍由 feature 维护。
 - 按钮外观由 `app/styles/buttons.css` 的 `app-buttons` 层统一负责。页面保留尺寸、排布与边框结构，不再重复声明已经被该层覆盖的文字色、背景、阴影和字重。
 - 筛选工具栏的尺寸与表面只在 `surface-tokens.css` 的 `.tp-surface .tp-list-toolbar` 定义。旧面板样式显式排除这个类，API / UI / 测试单页面只保留内部排布；已删除旧 UI 横幅、API 环境摘要、快速过滤空栏及 AI 页内导航的失效样式。
-- UI 步骤编辑器和测试集抽屉的窄屏规则分别归 `ui-automation/styles/step-editor-layout.css`、`suite-drawer-layout.css`，由对应组件引入；不再借用 API 模块的 `detail.css`。
+- 全局层样式入口是 `app/styles/theme.css`，按顺序导入 `layout.css`、`legacy-surface.css`、`shell.css`、`shell-header.css`、`antd-overrides.css`、`action-buttons.css`、`shell-boundary.css`；聚合文件 `src/App.css` 已删除，结构门禁会拦截其重新出现。
+- 接口库列表与软件仓库管理在 `interface-library.module.css`；方法签、OpenAPI 导入、详情顶栏/编辑器壳、编辑器内容区分别在同目录 `interface-method` / `interface-openapi` / `interface-detail` / `interface-editor` Module。页面根与 Modal/Drawer 根同时挂五个 `.scope`，保持原单文件内的规则顺序。
+- UI 测试集详情顶栏归 `ui-detail-topbar.module.css`，板面/控制条/窄屏归 `ui-detail-shell.module.css`；页面根同时挂五个详情 Module 的作用域。步骤编辑器和测试集抽屉的窄屏规则仍归 `ui-suite.module.css`，阶段 7 后不再借用 API 模块的 `detail.css`（该文件已删除）。
+- Sprint 详情页的页面骨架在 `sprint-overview.css`，看板指标、图表、报告与响应式在 `sprint-dashboard.css`，两者按顺序导入。
 
 列表规格由 `app/styles/listSurfaceConsistency.test.ts` 验证，运行操作的缓存与草稿保护由 `ai-testing/hooks/useTaskRunActions.test.tsx` 验证。涉及按钮层优先级的变更需用浏览器核对，jsdom 尚不能模拟 CSS layer 的完整级联。
 

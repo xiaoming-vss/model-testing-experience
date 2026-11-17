@@ -1,0 +1,391 @@
+/* 应用外壳的共享色板与顶栏细化；基础结构在 shell.css，按主题导入顺序叠加。 */
+
+/* Shared scoped shell palette; both shells use the same color roles. */
+.app-shell.app-shell-base-services,
+.app-shell.app-shell-macos {
+  --mac-glass-page: var(--legacy-mac-glass-page);
+  --mac-glass-sidebar: var(--legacy-mac-glass-sidebar);
+  --mac-glass-header: var(--legacy-mac-glass-header);
+  --mac-glass-panel: var(--legacy-mac-glass-panel);
+  --mac-glass-panel-strong: var(--legacy-mac-glass-panel-strong);
+  --mac-glass-border: var(--legacy-mac-glass-border);
+  --mac-glass-border-soft: var(--legacy-mac-glass-border-soft);
+  --mac-glass-text: var(--legacy-mac-glass-text);
+  --mac-glass-muted: var(--legacy-mac-glass-muted);
+  --mac-glass-blue: var(--legacy-mac-glass-blue);
+}
+
+.app-shell.app-shell-base-services,
+.app-shell.app-shell-base-services > .ant-layout,
+.app-shell.app-shell-base-services .app-content {
+  background:
+    radial-gradient(circle at 18% 0%, var(--app-glass-glow), transparent 26%),
+    var(--mac-glass-page) !important;
+}
+
+.app-shell.app-shell-base-services .app-sider {
+  border-right-color: var(--mac-glass-border) !important;
+  background: var(--mac-glass-sidebar) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow: inset -1px 0 0 var(--app-glass-highlight-72) !important;
+}
+
+.app-shell.app-shell-base-services .app-sider::before {
+  background: linear-gradient(180deg, var(--app-glass-surface-46), var(--app-glass-surface-10)) !important;
+}
+
+.app-shell.app-shell-base-services .brand-row {
+  border-bottom-color: var(--mac-glass-border-soft);
+}
+
+.app-shell.app-shell-base-services .brand-row .brand {
+  background: var(--mac-glass-panel) !important;
+  box-shadow:
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 6px 14px var(--app-glass-shadow-card) !important;
+}
+
+.app-shell.app-shell-base-services .app-sider .ant-menu-item {
+  color: var(--mac-glass-muted) !important;
+  background: transparent !important;
+}
+
+.app-shell.app-shell-base-services .app-sider .ant-menu-item:hover {
+  color: var(--mac-glass-blue) !important;
+  background: var(--app-glass-surface-48) !important;
+}
+
+.app-shell.app-shell-base-services .app-sider .ant-menu-item-selected {
+  color: var(--mac-glass-blue) !important;
+  background: var(--app-glass-selected) !important;
+}
+
+.app-shell.app-shell-base-services .app-sider .ant-menu-item-selected .anticon,
+.app-shell.app-shell-base-services .app-sider .ant-menu-item-selected .ant-menu-title-content {
+  color: var(--mac-glass-blue) !important;
+}
+
+.app-shell.app-shell-base-services .app-header.compact-header {
+  border-bottom-color: var(--mac-glass-border) !important;
+  background: var(--mac-glass-header) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell-base-services .project-selector-wrap {
+  border-color: var(--mac-glass-border);
+  background: var(--mac-glass-panel) !important;
+  box-shadow: inset 0 1px 0 var(--app-glass-highlight-78) !important;
+}
+
+.app-shell.app-shell-base-services .project-selector-label,
+.app-shell.app-shell-base-services .project-separator,
+.app-shell.app-shell-base-services .app-header-actions .ant-btn-circle {
+  color: var(--mac-glass-muted) !important;
+}
+
+.app-shell.app-shell-base-services .project-select .ant-select-selector {
+  color: var(--mac-glass-text) !important;
+}
+
+/* Additional roles used by the global shell. */
+.app-shell.app-shell-macos {
+  --mac-glass-card: var(--legacy-mac-glass-card);
+  --mac-glass-subtle: var(--legacy-mac-glass-subtle);
+  --mac-glass-green: var(--legacy-mac-glass-green);
+}
+
+.app-shell.app-shell-macos,
+.app-shell.app-shell-macos > .ant-layout,
+.app-shell.app-shell-macos .app-content {
+  background:
+    radial-gradient(circle at 18% 0%, var(--app-glass-page-glow), transparent 26%),
+    var(--mac-glass-page) !important;
+}
+
+.app-shell.app-shell-macos .app-sider {
+  border-right-color: var(--mac-glass-border) !important;
+  background: var(--mac-glass-sidebar) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow: inset -1px 0 0 var(--app-glass-highlight-72) !important;
+}
+
+.app-shell.app-shell-macos .app-sider::before {
+  background: linear-gradient(180deg, var(--app-glass-surface-46), var(--app-glass-surface-10)) !important;
+}
+.app-shell.app-shell-macos .brand-row,
+.app-shell.app-shell-macos .compact-header,
+.app-shell.app-shell-macos .panel-header:not(:where(.tp-list-toolbar)) {
+  border-color: var(--mac-glass-border-soft) !important;
+}
+
+.app-shell.app-shell-macos .brand-row .brand,
+.app-shell.app-shell-macos .project-selector-wrap,
+.app-shell.app-shell-macos .workbench-panel,
+.app-shell.app-shell-macos .api-collection-card,
+.app-shell.app-shell-macos .sprint-card,
+.app-shell.app-shell-macos .ant-card {
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  backdrop-filter: saturate(180%) blur(22px);
+}
+
+.app-shell.app-shell-macos .brand-row .brand {
+  background: var(--mac-glass-panel) !important;
+  box-shadow:
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 6px 14px var(--app-glass-shadow-card) !important;
+}
+
+.app-shell.app-shell-macos .app-sider .ant-menu-item {
+  color: var(--mac-glass-muted) !important;
+  background: transparent !important;
+}
+
+.app-shell.app-shell-macos .app-sider .ant-menu-item:hover {
+  color: var(--mac-glass-blue) !important;
+  background: var(--app-glass-surface-48) !important;
+}
+
+.app-shell.app-shell-macos .app-sider .ant-menu-item-selected,
+.app-shell.app-shell-macos .app-sider .ant-menu-item-selected .anticon,
+.app-shell.app-shell-macos .app-sider .ant-menu-item-selected .ant-menu-title-content {
+  color: var(--mac-glass-blue) !important;
+}
+
+.app-shell.app-shell-macos .app-sider .ant-menu-item-selected {
+  background: var(--app-glass-selected) !important;
+}
+
+.app-shell.app-shell-macos .app-header.compact-header {
+  height: 56px;
+  padding-inline: var(--app-page-gutter);
+  border-bottom-color: var(--mac-glass-border) !important;
+  background: var(--mac-glass-header) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell-macos .project-selector-wrap {
+  padding: 0 12px;
+  border: 1px solid var(--mac-glass-border);
+  border-radius: 10px;
+  background: var(--app-surface) !important;
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell-macos .project-selector-label,
+.app-shell.app-shell-macos .project-separator,
+.app-shell.app-shell-macos .app-header-actions .ant-btn-circle {
+  color: var(--mac-glass-muted) !important;
+}
+
+.app-shell.app-shell-macos .project-select .ant-select-selector,
+.app-shell.app-shell-macos .panel-header .ant-typography,
+.app-shell.app-shell-macos .workbench-panel .ant-typography,
+.app-shell.app-shell-macos .api-collection-inline-value {
+  color: var(--mac-glass-text) !important;
+}
+
+.app-shell.app-shell-macos .workbench-panel {
+  border-color: var(--mac-glass-border) !important;
+  background: var(--mac-glass-panel) !important;
+  box-shadow:
+    inset 0 1px 0 var(--app-glass-highlight-84),
+    0 10px 24px var(--app-glass-shadow-card) !important;
+}
+.app-shell.app-shell-macos .panel-header:not(:where(.tp-list-toolbar)) {
+  background: var(--app-glass-surface-50) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+}
+
+.app-shell.app-shell-macos .api-collection-card,
+.app-shell.app-shell-macos .sprint-card,
+.app-shell.app-shell-macos .ant-card {
+  border-color: var(--mac-glass-border) !important;
+  background: var(--mac-glass-card) !important;
+  box-shadow:
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 10px 24px var(--app-glass-shadow-card) !important;
+}
+
+.app-shell.app-shell-macos .api-collection-card:hover,
+.app-shell.app-shell-macos .sprint-card:hover,
+.app-shell.app-shell-macos .ant-card-hoverable:hover {
+  border-color: var(--app-glass-action-border) !important;
+  background: var(--mac-glass-panel-strong) !important;
+  box-shadow:
+    inset 0 1px 0 var(--app-glass-highlight-90),
+    0 14px 30px var(--app-glass-shadow-floating) !important;
+}
+.app-shell.app-shell-macos .sprint-card-label,
+.app-shell.app-shell-macos .api-collection-description {
+  color: var(--mac-glass-muted) !important;
+}
+
+.app-shell.app-shell-macos .action-btn-create.ant-btn-primary,
+.app-shell.app-shell-macos .panel-header .ant-btn-primary {
+  border: 1px solid var(--app-glass-action-border-hover) !important;
+  border-radius: 10px !important;
+}
+
+
+
+/* Project overview macOS glass alignment */
+.app-shell.app-shell-macos .workbench-page {
+  color: var(--mac-glass-text);
+}
+.app-shell.app-shell-macos .workbench-tabs {
+  gap: 12px;
+}
+.app-shell.app-shell-macos .workbench-board-panel {
+  overflow: hidden;
+  min-height: calc(100vh - 214px);
+}
+.app-shell.app-shell-macos .sprint-card-scroll {
+  background: transparent !important;
+}
+.app-shell.app-shell-macos .sprint-card .ant-card-body {
+  height: 100%;
+}
+.app-shell.app-shell-macos .sprint-card-meta {
+  border-bottom-color: var(--mac-glass-border-soft) !important;
+}
+.app-shell.app-shell-macos .sprint-card-actions .ant-btn,
+.app-shell.app-shell-macos .project-actions .ant-btn-text,
+.app-shell.app-shell-macos .project-actions .action-btn-read {
+  border-radius: 10px !important;
+  color: var(--mac-glass-muted) !important;
+}
+
+.app-shell.app-shell-macos .sprint-card-actions .ant-btn:hover,
+.app-shell.app-shell-macos .project-actions .ant-btn-text:hover,
+.app-shell.app-shell-macos .project-actions .action-btn-read:hover {
+  color: var(--mac-glass-blue) !important;
+  background: var(--app-glass-surface-68) !important;
+}
+.app-shell.app-shell-macos .workbench-empty {
+  border-color: var(--mac-glass-border) !important;
+  background: var(--mac-glass-panel) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  backdrop-filter: saturate(180%) blur(22px);
+}
+/* Text actions must not inherit the fixed square sizing of header icons. */
+.app-shell .app-header-actions { flex-shrink: 0; }
+.app-shell .app-header-actions .app-header-create-project {
+  width: auto;
+  height: 32px;
+  flex-shrink: 0;
+  padding-inline: 14px;
+  margin-inline-end: 8px;
+  border-radius: 8px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* Persistent feedback contact in the center of the shared navigation bar. */
+.app-shell .app-header.compact-header .app-header-main {
+  flex: 0 1 auto;
+}
+
+@media (max-width: 1400px) {
+  .app-shell.app-shell-macos .app-header.compact-header {
+    height: auto;
+    min-height: 56px;
+    padding-block: 8px;
+  }
+}
+
+/* Keep the scope controls together; wrap whole groups when space is limited. */
+@media (max-width: 900px) {
+  .app-shell.app-shell-macos .app-header.compact-header {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+  }
+
+  .app-shell .app-header.compact-header .app-header-main {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .app-shell.app-shell-macos .project-selector-wrap {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    padding: 4px 12px;
+    border-radius: 12px;
+  }
+
+  .app-shell .app-header-feedback {
+    order: 1;
+    justify-content: flex-start;
+    text-align: left;
+  }
+}
+
+@media (max-width: 540px) {
+  .app-shell .project-selector-divider {
+    width: 100%;
+    height: 0;
+    margin: 0;
+  }
+
+  .app-shell .project-select,
+  .app-shell .sprint-select {
+    flex: 1 1 80px;
+    min-width: 0;
+    max-width: none;
+  }
+}
+
+/* One shared header: navigation, project scope, and actions. */
+.app-shell.app-shell-macos .app-header.compact-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  height: auto;
+  min-height: 56px;
+}
+.app-shell .app-header.compact-header .app-header-main { flex: 0 1 auto; }
+.app-feedback-trigger { color: var(--app-accent) !important; font-size: 12px; white-space: nowrap; }
+.app-feedback-content { max-width: 280px; color: var(--app-shell-text); }
+.app-feedback-content a { color: var(--app-accent); overflow-wrap: anywhere; }
+@media (max-width: 1200px) {
+  .app-shell.app-shell-macos .app-header.compact-header { flex-wrap: wrap; padding-block: 8px; }
+  .app-top-navigation { flex-basis: 100%; }
+}
+@media (max-width: 900px) {
+  .app-shell .app-header.compact-header .app-header-main { flex: 1 1 auto; width: auto; }
+  .app-shell.app-shell-macos .project-selector-wrap { width: auto; }
+}
+
+/* Project and sprint form a compact path before global navigation. */
+.app-shell.app-shell-macos .project-selector-wrap {
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent !important;
+}
+.project-scope-separator { color: var(--mac-glass-muted); }
+.app-shell .project-select .ant-select-selector { font-weight: 600; }
+.app-top-navigation { padding-left: 5px; }
+@media (max-width: 1200px) {
+  .app-top-navigation { order: 3; padding-left: 0; }
+  .app-header-actions { margin-left: auto; }
+}
+
+/* Size the scope controls to their labels instead of reserving fixed columns. */
+.app-shell.app-shell-macos .project-selector-wrap .project-select {
+  flex: 0 1 auto;
+  width: max-content;
+  min-width: 0;
+  max-width: 200px;
+}
+.app-shell.app-shell-macos .project-selector-wrap .sprint-select { max-width: 140px; }

@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import testingCss from '@/features/testing/styles/index.css?raw'
 import surfaceTokens from '@/shared/styles/surface-tokens.css?raw'
 import listTableCss from '@/shared/styles/list-table.css?raw'
 
-function computedListSurface(css: string, pageClass: string, tableClass: string) {
-  document.head.innerHTML = `<style>${surfaceTokens}\n${listTableCss}\n${css}</style>`
+function computedListSurface(pageClass: string, tableClass: string) {
+  document.head.innerHTML = `<style>${surfaceTokens}\n${listTableCss}</style>`
   document.body.innerHTML = `
     <div class="app-shell app-shell-macos">
       <main class="${pageClass} tp-list-surface">
@@ -46,7 +45,7 @@ afterEach(() => {
 
 describe('列表表面样式统一', () => {
   it('功能测试基准列表保留统一行高、内距与表头圆角', () => {
-    const functional = computedListSurface(testingCss, 'functional-test-page', 'functional-suite-list-table')
+    const functional = computedListSurface('functional-test-page', 'functional-suite-list-table')
 
     expect(functional.headerRadii).toEqual(['8px', '8px', '8px', '8px'])
     expect(functional).toMatchObject({

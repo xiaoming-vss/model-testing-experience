@@ -21,8 +21,6 @@ import { RequirementGenerationCanvas } from './RequirementGenerationCanvas'
 import { animateInspectorContents, animateReadingExit, setReadingOrigin } from './readingTransition'
 import { generationStageLabel, generationStageClass, generationFailureMeta } from '../utils/generationStageDisplay'
 import { getRunPipelineModel } from '../utils/runPipeline'
-import '../styles/requirement-generation-chain.css'
-import '../styles/requirement-generation-canvas.css'
 
 const laneOrder: GenerationChainKind[] = ['requirement_analysis', 'function', 'api', 'ui']
 const API_STAGE_DESCRIPTIONS: Record<string, string> = {

@@ -1,0 +1,66 @@
+/* API 测试列表：环境选择器与头部控件补充。根节点挂 .scope。 */
+
+.scope {
+  --api-list-scope: 1;
+}
+
+/* API 自动化页的环境选择器。
+   共享页面骨架、筛选控件与卡片皮肤已迁至 shared/styles/surface-tokens.css。 */
+
+.scope :global(.api-inline-environment) {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding-left: 6px;
+}
+
+.scope :global(.api-environment-selector) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.scope :global(.api-environment-label) {
+  color: var(--app-shell-text-muted);
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+@media (max-width: 1200px) {
+  .scope :global(.api-inline-environment) {
+    width: 100%;
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .scope :global(.api-inline-environment) {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .scope :global(.api-environment-selector) {
+    width: 100%;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+/* API 测试列表：共享 tp-list-toolbar 与 surface-tokens 管理筛选卡片和头部排布，
+   页面只补筛选控件的文字色与快捷键提示。 */
+
+.scope :global(.api-test-header .api-filter-field-label) {
+  color: var(--srf-text-muted);
+  font-weight: 500;
+}
+
+.scope :global(.api-test-search-hint) {
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+}

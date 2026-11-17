@@ -1,6 +1,5 @@
 import listNameCss from '@/shared/styles/list-name.css?raw'
 import { afterEach, describe, expect, it } from 'vitest'
-import testingCss from '@/features/testing/styles/index.css?raw'
 
 // Shared typography must win over legacy feature styles in every list.
 type NameStyle = {
@@ -10,8 +9,8 @@ type NameStyle = {
   textUnderlineOffset: string
 }
 
-function computedNameStyle(css: string, markup: string): NameStyle {
-  document.head.innerHTML = `<style>${css}\n${listNameCss}</style>`
+function computedNameStyle(markup: string): NameStyle {
+  document.head.innerHTML = `<style>${listNameCss}</style>`
   document.body.innerHTML = `<div class="app-shell app-shell-macos"><div class="ant-table-wrapper"><div class="ant-table"><div class="ant-table-tbody">${markup}</div></div></div></div>`
 
   const style = getComputedStyle(document.querySelector('#list-name') as HTMLElement)
@@ -38,7 +37,7 @@ describe('列表名称样式统一', () => {
   `
 
   it('表格列表名称使用共享字阶与交互色', () => {
-    const style = computedNameStyle(testingCss, suiteNameMarkup)
+    const style = computedNameStyle(suiteNameMarkup)
 
     expect(style).toEqual({
       cursor: 'pointer',

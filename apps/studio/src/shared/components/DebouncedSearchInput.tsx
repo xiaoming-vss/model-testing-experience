@@ -24,9 +24,15 @@ export function DebouncedSearchInput({ ariaLabel, placeholder, className, inputR
   const ref = inputRef ?? ownRef
   const [value, setValue] = useState('')
   const commitRef = useRef(onCommit)
+  const mountedRef = useRef(false)
   useEffect(() => { commitRef.current = onCommit })
 
   useEffect(() => {
+    // 首次挂载不提交空值；否则列表会在用户立即翻页时被重置回第一页。
+    if (!mountedRef.current) {
+      mountedRef.current = true
+      return
+    }
     const timer = setTimeout(() => commitRef.current(value.trim()), delayMs)
     return () => clearTimeout(timer)
   }, [delayMs, value])

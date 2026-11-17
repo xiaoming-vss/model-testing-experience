@@ -1,5 +1,4 @@
 import { useMemo } from 'react'
-import '../../styles/ui-stage-visual.css'
 import { DesignVisual } from './DesignVisual'
 import { SurfaceVisual } from './SurfaceVisual'
 import { YamlVisual } from './YamlVisual'

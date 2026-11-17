@@ -2,6 +2,7 @@ import { Alert, Button, Modal, Select, Spin, Tag } from 'antd'
 import { CheckCircleFilled, ImportOutlined, LinkOutlined } from '@ant-design/icons'
 import type { GenerationChainWorkspace } from '../hooks/useRequirementGenerationChain'
 import type { GenerationChainImportRecord, GenerationChainImportTarget } from '../api/generationChain.api'
+import chainStyles from '../styles/generation-chain.module.css'
 
 function formatTime(value?: string | null) {
   if (!value) return ''
@@ -79,6 +80,7 @@ export function GenerationChainImportModal({ workspace, open, onClose }: {
     width={760}
     centered
     destroyOnHidden
+    rootClassName={chainStyles.scope}
     className="generation-chain-import-modal"
     title={<div className="gc-import-title">
       <div>

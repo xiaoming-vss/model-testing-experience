@@ -1,0 +1,417 @@
+/* 用例关系图谱：层级图、React Flow 节点与关系查看器。 */
+
+.scope { --ai-relations-scope: 1; }
+
+.scope :global(.ai-relations-hierarchy) { display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100%; background: var(--ant-color-bg-container); }
+.scope :global(.ai-hierarchy-toolbar) { position: absolute; top: 12px; right: 12px; z-index: 5; }
+.scope :global(.ai-hierarchy-body) { display: flex; flex: 1; min-height: 0; min-width: 0; }
+.scope :global(.ai-relations-graph.ai-hierarchy-canvas) { flex: 1; min-height: 0; min-width: 0; height: auto; }
+.scope :global(.ai-hierarchy-node.ai-relations-node) { box-sizing: border-box; height: 144px; gap: 6px; }
+.scope :global(.ai-hierarchy-node.ai-relations-node.main) { border-left: 1px solid var(--ant-color-border-secondary); border-top: 3px solid var(--ant-color-primary); }
+.scope :global(.ai-hierarchy-node.ai-relations-node .node-title) { flex: 1; font-size: 13px; line-height: 18px; max-height: 54px; }
+.scope :global(.ai-hierarchy-node-footer) { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 24px; flex: 0 0 auto; }
+.scope :global(.ai-hierarchy-node-footer .ant-tag) { margin: 0; font-size: 11px; }
+.scope :global(.ai-hierarchy-node-footer .ant-btn) { padding: 0 4px; font-size: 12px; }
+.scope :global(.ai-hierarchy-node-id) { font-size: 11px; color: var(--ant-color-text-secondary); }
+.scope :global(.ai-hierarchy-routing) { max-width: calc(100% - 28px); border-radius: 6px; pointer-events: auto; white-space: normal; }
+.scope :global(.ai-hierarchy-details.ai-relations-panel) { position: static; flex: 0 1 auto; max-width: 52%; margin: 0; padding: 16px 18px 20px; gap: 12px; border: 0; border-left: 1px solid var(--ant-color-border-secondary); border-radius: 0; box-shadow: none; min-height: 0; }
+/* 用例详情放宽栏宽与行距，长文本按词换行，步骤用序号圆点分条。 */
+.scope :global(.ai-hierarchy-details.ai-relations-panel .panel-tags) { gap: 6px; }
+.scope :global(.ai-hierarchy-details.ai-relations-panel .panel-title) { font-size: 15px; line-height: 1.55; word-break: break-word; }
+.scope :global(.ai-hierarchy-details.ai-relations-panel .panel-uuid) { font-size: 11px; }
+.scope :global(.ai-hierarchy-details.ai-relations-panel .panel-section) { gap: 10px; margin-top: 6px; }
+.scope :global(.ai-hierarchy-details.ai-relations-panel .panel-section > strong) { font-size: 12.5px; }
+.scope :global(.ai-hierarchy-details.ai-relations-panel .panel-list) { counter-reset: hierarchy-detail; padding-left: 0; gap: 10px; font-size: 13px; line-height: 1.72; list-style: none; }
+.scope :global(.ai-hierarchy-details.ai-relations-panel .panel-list li) { position: relative; padding-left: 26px; word-break: break-word; }
+.scope :global(.ai-hierarchy-details.ai-relations-panel .panel-list li::before) { counter-increment: hierarchy-detail; content: counter(hierarchy-detail); position: absolute; left: 0; top: 1px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--ant-color-fill-secondary); color: var(--ant-color-text-secondary); font-size: 10px; line-height: 1; }
+.scope :global(.ai-hierarchy-associations) { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1px solid var(--ant-color-border-secondary); border-radius: 10px; background: var(--ant-color-fill-quaternary); }
+.scope :global(.ai-hierarchy-association-title) { color: var(--ant-color-text-secondary); font-size: 11.5px; }
+.scope :global(.ai-hierarchy-associations .ant-btn) { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; width: 100%; height: auto; min-height: 0; padding: 0; font-size: 12.5px; line-height: 1.6; text-align: left; white-space: normal; }
+.scope :global(.ai-hierarchy-associations .ant-btn > span:first-child) { min-width: 0; overflow: visible; text-overflow: clip; white-space: normal; }
+.scope :global(.ai-hierarchy-associations .ant-btn > span:last-child) { flex-shrink: 0; color: var(--ant-color-text-secondary); font-size: 11px; }
+.scope :global(.ai-hierarchy-footer) { display: flex; flex: 0 0 auto; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--ant-color-border-secondary); color: var(--ant-color-text-secondary); font-size: 12px; }
+@media (max-width: 768px) {
+  .scope :global(.ai-hierarchy-body) { flex-direction: column; }
+  .scope :global(.ai-hierarchy-details.ai-relations-panel) { width: 100% !important; max-width: 100%; max-height: 55%; border-left: 0; border-top: 1px solid var(--ant-color-border-secondary); }
+  .scope :global(.ai-hierarchy-canvas .react-flow__minimap) { display: none; }
+}
+
+/* 用例图谱画布：整块铺满父容器，控件以浮层形式覆盖在画布上。 */
+.scope :global(.ai-relations-graph) {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--ant-color-bg-container);
+}
+
+.scope :global(.ai-relations-graph .react-flow) {
+  flex: 1;
+  min-width: 0;
+}
+
+.scope :global(.ai-relations-hint) {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  z-index: 5;
+  padding: 5px 12px;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 999px;
+  background: var(--ant-color-bg-container);
+  box-shadow: 0 1px 3px var(--app-glass-request-shadow-selected);
+  color: var(--ant-color-text-secondary);
+  font-size: 11.5px;
+  pointer-events: none;
+}
+
+.scope :global(.ai-relations-zoom) {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 3px 5px;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 999px;
+  background: var(--ant-color-bg-container);
+  box-shadow: 0 1px 3px var(--app-glass-request-shadow-selected);
+}
+
+.scope :global(.ai-relations-zoom .ai-relations-zoom-value) {
+  min-width: 42px;
+  color: var(--ant-color-text-secondary);
+  font-size: 12px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 小地图：与其它浮动控件统一观感，尺寸由组件的 style props 控制 */
+.scope :global(.ai-relations-graph .react-flow__minimap) {
+  margin: 0;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 10px;
+  box-shadow: 0 1px 3px var(--app-glass-request-shadow-selected);
+  overflow: hidden;
+}
+
+.scope :global(.ai-relations-node) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 236px;
+  height: 96px;
+  padding: 10px 12px;
+  overflow: hidden;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 10px;
+  background: var(--ant-color-bg-container);
+  box-shadow: 0 2px 8px var(--app-graph-control-shadow);
+  color: var(--ant-color-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.scope :global(.react-flow__node:hover .ai-relations-node) {
+  border-color: var(--ant-color-primary);
+}
+
+.scope :global(.react-flow__node.selected .ai-relations-node) {
+  border-color: var(--ant-color-primary);
+  box-shadow: 0 0 0 2px var(--ant-color-primary-border, var(--ant-color-primary));
+}
+
+.scope :global(.ai-relations-node.main) {
+  border-left: 3px solid var(--ant-color-primary);
+}
+
+.scope :global(.ai-relations-node.dimmed) {
+  opacity: 0.12;
+}
+
+.scope :global(.ai-relations-node .node-head) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 11px;
+}
+
+.scope :global(.ai-relations-node .node-no) {
+  color: var(--ant-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.scope :global(.ai-relations-node .node-kind) {
+  flex-shrink: 0;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--ant-color-fill-tertiary);
+  color: var(--ant-color-text-secondary);
+  line-height: 18px;
+}
+
+.scope :global(.ai-relations-node.main .node-kind) {
+  background: var(--ant-color-primary-bg);
+  color: var(--ant-color-primary);
+}
+
+.scope :global(.ai-relations-node .node-module) {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ant-color-text-tertiary);
+}
+
+.scope :global(.ai-relations-node .node-title) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+/* 选中用例详情：浮在画布右侧，图形会自动避让这块宽度 */
+.scope :global(.ai-relations-panel) {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 6;
+  width: 296px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  overflow-y: auto;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 12px;
+  background: var(--ant-color-bg-container);
+  box-shadow: 0 6px 22px var(--app-editor-popover-shadow);
+}
+
+.scope :global(.ai-relations-panel .panel-head) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--ant-color-text-secondary);
+  font-size: 12px;
+}
+
+.scope :global(.ai-relations-panel .panel-tags) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.scope :global(.ai-relations-panel .panel-title) {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.scope :global(.ai-relations-panel .panel-uuid) {
+  margin: 0;
+  color: var(--ant-color-text-tertiary);
+  font-size: 11px;
+  font-family: var(--ant-font-family-code, monospace);
+  word-break: break-all;
+}
+
+.scope :global(.ai-relations-panel .panel-meta) {
+  margin: 0;
+  color: var(--ant-color-text-secondary);
+  font-size: 12px;
+}
+
+.scope :global(.ai-relations-panel .panel-section) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.scope :global(.ai-relations-panel .panel-section > strong) {
+  font-size: 12px;
+}
+
+.scope :global(.ai-relations-panel .panel-empty) {
+  margin: 0;
+  color: var(--ant-color-text-tertiary);
+  font-size: 12px;
+}
+
+.scope :global(.ai-relations-panel .panel-list) {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--ant-color-text);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.scope :global(.ai-relations-panel .panel-list li) {
+  word-break: break-all;
+}
+
+/* 撑满 app-content 的可见高度：用 100% 跟随内容区，避免固定 vh 超出被外壳裁掉底部控件 */
+.scope :global(.ai-relations-page) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--ant-color-bg-layout);
+}
+
+/* 工具栏在窄窗口内换行，画布占据剩余高度。 */
+.scope :global(.ai-relations-page-bar) {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 9px 16px;
+  background: var(--ant-color-bg-container);
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+}
+
+.scope :global(.ai-relations-page-heading) {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.scope :global(.ai-relations-page-heading .t1) {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scope :global(.ai-relations-page-heading .t2) {
+  color: var(--ant-color-text-secondary);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.scope :global(.ai-relations-page-spacer) {
+  flex: 1;
+  min-width: 8px;
+}
+
+.scope :global(.ai-relations-page-legend) {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  margin-left: 4px;
+  color: var(--ant-color-text-secondary);
+  font-size: 12px;
+}
+
+.scope :global(.ai-relations-page-legend .legend-item) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scope :global(.ai-relations-page-legend .legend-line) {
+  display: inline-block;
+  width: 20px;
+  height: 0;
+}
+
+.scope :global(.ai-relations-page-legend .legend-line.solid) {
+  border-top: 2px solid var(--app-review-arrow-active);
+}
+
+.scope :global(.ai-relations-page-legend .legend-line.dashed) {
+  border-top: 2px dashed var(--app-review-arrow);
+}
+
+.scope :global(.ai-relations-page-body) {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.scope :global(.ai-relations-page-body > *) {
+  flex: 1;
+  min-width: 0;
+}
+
+.scope :global(.ai-relations-page-loading) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scope :global(.ai-relations-page-json) {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.scope :global(.ai-relations-page-json .json-editor-wrap),
+.scope :global(.ai-relations-page-json .json-editor-shell),
+.scope :global(.ai-relations-page-json .json-editor-codemirror),
+.scope :global(.ai-relations-page-json .cm-editor) {
+  height: 100%;
+  min-height: 0;
+}
+
+.scope :global(.ai-relations-page-json .json-editor-shell) {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.scope :global(.ai-relations-page-json .json-editor-codemirror .cm-scroller) {
+  min-height: 0;
+  overflow: auto;
+}
+
+.scope :global(.ai-relations-json-actions .json-editor-toolbar) {
+  padding: 0;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+}
+
+
+.scope :global(.ai-relations-modal .ai-relations-page) {
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: var(--ant-border-radius-lg, 8px);
+}
+
+.scope :global(.ai-relations-modal .ai-relations-page-heading) {
+  flex: 1 1 260px;
+}
+
+.scope :global(.ai-relations-modal .ai-relations-page-legend) {
+  flex-wrap: wrap;
+}
+
+/* 嵌入生成全景时只保留外层阅读区，工具和运行操作由检查栏承接。 */
+.scope :global(.gc-relations-inspector .gc-relations-body) { display: flex; flex: 1 1 0%; height: auto; min-height: 0; overflow: hidden; }
+.scope :global(.gc-relations-inspector .ai-relations-page) { flex: 1 1 0%; min-width: 0; border: 0; border-radius: 0; background: var(--app-surface); }
+.scope :global(.ai-relations-page-body > .ant-empty) { display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0; }
+.scope :global(.gc-relations-controls) { display: flex; flex-direction: column; gap: 10px; }
+.scope :global(.gc-relations-controls .ai-artifact-mode-toolbar) { margin: 0; }
+.scope :global(.gc-relations-controls .ai-relations-page-legend) { flex-wrap: wrap; gap: 8px 14px; margin: 0; }
+.scope :global(.gc-relations-meta) { margin: 0; color: var(--app-surface-text-muted); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }

@@ -1,5 +1,4 @@
-import '@/features/ui-automation/styles/index.css'
-import '@/features/ui-automation/styles/suite-drawer-layout.css'
+import suiteStyles from '@/features/ui-automation/styles/ui-suite.module.css'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { Alert, Drawer, Form, Input, InputNumber, Select } from 'antd'
 import type { FormInstance } from 'antd'
@@ -53,7 +52,7 @@ export function UiTestSuiteDrawer({
       open={open}
       onClose={onClose}
       size={780}
-      className="ui-test-suite-drawer"
+      className={`ui-test-suite-drawer ${suiteStyles.scope}`}
       extra={
         <ProjectActionButton operation="save" action="write" type="primary" className="action-btn-save" loading={loading} onClick={() => form.submit()}>
           保存

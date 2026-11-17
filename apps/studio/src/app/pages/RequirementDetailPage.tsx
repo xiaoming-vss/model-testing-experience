@@ -17,6 +17,16 @@ import { canNavigateAway } from '@/shared/utils/unsavedChanges'
 import { getErrorMessage } from '@/utils/format'
 import '@/shared/styles/surface-tokens.css'
 import '@/features/requirements/styles/detail.css'
+import designStyles from '@/features/ai-testing/styles/requirement-design.module.css'
+import chainStyles from '@/features/ai-testing/styles/generation-chain.module.css'
+import canvasStyles from '@/features/ai-testing/styles/generation-canvas.module.css'
+import caseArtifactStyles from '@/features/ai-testing/styles/artifact-cases.module.css'
+import apiArtifactStyles from '@/features/ai-testing/styles/artifact-api.module.css'
+import miscArtifactStyles from '@/features/ai-testing/styles/artifact-misc.module.css'
+import relationsStyles from '@/features/ai-testing/styles/relations.module.css'
+import uiGenerationStyles from '@/features/ai-testing/styles/ui-generation.module.css'
+import uiStageStyles from '@/features/ai-testing/styles/ui-stage-visual.module.css'
+import viewSwitchStyles from '@/features/ai-testing/styles/artifact-view-switch.module.css'
 
 export function RequirementDetailPage() {
   const { requirementId = '' } = useParams()
@@ -96,7 +106,7 @@ export function RequirementDetailPage() {
   // 下载与编辑只服务需求正文，打开需求文档时才出现在标题栏。
   const readingDocument = readingNode?.kind === 'document'
   return <ProjectAccessScope projectId={sprint.data?.projectId ?? ''} resourceError={query.error}>
-    <div className="requirement-detail-page tp-surface">
+    <div className={`requirement-detail-page tp-surface ${designStyles.scope} ${chainStyles.scope} ${canvasStyles.scope} ${caseArtifactStyles.scope} ${apiArtifactStyles.scope} ${miscArtifactStyles.scope} ${relationsStyles.scope} ${uiGenerationStyles.scope} ${uiStageStyles.scope} ${viewSwitchStyles.scope}`}>
       <div className="requirement-detail-layout">
         {/* 标题栏与画布共用左侧容器：标题栏是容器内的工具栏，画布紧贴其下。 */}
         <section className="requirement-detail-main">

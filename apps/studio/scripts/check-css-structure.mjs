@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * CSS 结构门禁：约束新增全局样式、跨 feature 导入、文件体量和重复规则体。
+ * CSS 结构门禁：约束新增全局样式、跨 feature 导入、文件体量（单文件 ≤600 行）、重复规则体与 App.css 回归。
  *
  * 用法：
  *   node scripts/check-css-structure.mjs            # 检查
@@ -162,7 +162,6 @@ const sourceText = new Map()
 for (const file of sourceFiles) sourceText.set(file, await readFile(file, 'utf8'))
 
 const importers = new Map()
-const appCssImports = []
 const crossFeatureImports = []
 for (const file of [...cssFiles, ...sourceFiles]) {
   const text = cssText.get(file) ?? sourceText.get(file) ?? ''
@@ -173,9 +172,6 @@ for (const file of [...cssFiles, ...sourceFiles]) {
     const entry = importers.get(target) ?? new Set()
     entry.add(file)
     importers.set(target, entry)
-    if (file.endsWith('.css') && rel(file) === 'src/App.css' && target.endsWith('.css')) {
-      appCssImports.push(rel(target))
-    }
     const fromFeature = featureOf(file)
     const toFeature = featureOf(target)
     if (fromFeature && toFeature && fromFeature !== toFeature) {
@@ -183,7 +179,6 @@ for (const file of [...cssFiles, ...sourceFiles]) {
     }
   }
 }
-appCssImports.sort()
 const uniqueCrossFeature = [...new Set(crossFeatureImports)].sort()
 
 const counts = {}
@@ -224,7 +219,6 @@ const layerOk = /@layer\s+theme,\s*base,\s*antd,\s*components,\s*utilities;/.tes
 const current = {
   version: 1,
   allowedGlobalCss: globalCss,
-  appCssImports,
   crossFeatureCssImports: uniqueCrossFeature,
   orphanCss,
   sharedModuleViolations: sharedViolations,
@@ -250,14 +244,18 @@ const errors = []
 if (!layerOk) {
   errors.push('shared/styles/tailwind.css 缺少 layer 声明或 utilities 层级导入')
 }
+const MAX_CSS_LINES = 600
+for (const file of cssFiles) {
+  const lines = (cssText.get(file).match(/\n/g) ?? []).length
+  if (lines > MAX_CSS_LINES) errors.push(`${rel(file)}: ${lines} 行，超过单文件 ${MAX_CSS_LINES} 行上限`)
+}
+if (cssFiles.some(file => rel(file) === 'src/App.css')) {
+  errors.push('src/App.css 已删除；全局层导入直接写在 src/app/styles/theme.css')
+}
 if (!init && !update) {
   const allowedGlobal = new Set(baseline.allowedGlobalCss ?? [])
   for (const file of globalCss) {
     if (!allowedGlobal.has(file)) errors.push(`新增全局/feature CSS：${file}（需手工加入 allowedGlobalCss 并评审）`)
-  }
-  const allowedApp = new Set(baseline.appCssImports ?? [])
-  for (const file of appCssImports) {
-    if (!allowedApp.has(file)) errors.push(`App.css 新增 feature CSS 导入：${file}`)
   }
   const allowedCross = new Set(baseline.crossFeatureCssImports ?? [])
   for (const entry of uniqueCrossFeature) {
@@ -296,7 +294,6 @@ if (update) {
     allowedGlobalCss: (baseline.allowedGlobalCss ?? []).filter(file => globalCss.includes(file)),
     crossFeatureCssImports: (baseline.crossFeatureCssImports ?? []).filter(entry => uniqueCrossFeature.includes(entry)),
     sharedModuleViolations: (baseline.sharedModuleViolations ?? []).filter(entry => sharedViolations.includes(entry)),
-    appCssImports: (baseline.appCssImports ?? []).filter(entry => appCssImports.includes(entry)),
     orphanCss: (baseline.orphanCss ?? []).filter(entry => orphanCss.includes(entry)),
   }
   await writeFile(baselinePath, `${JSON.stringify(next, null, 2)}\n`)

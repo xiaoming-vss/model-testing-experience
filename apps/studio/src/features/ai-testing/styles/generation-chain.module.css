@@ -1,0 +1,435 @@
+/* 需求生成链：阶段弹窗、版本标题、审核页脚与继续优化侧栏。 */
+
+.scope { --ai-generation-chain-scope: 1; }
+
+/* Requirement generation panorama: blueprint map + stage version modal. */
+
+.scope :global(.gc-panorama) {
+  --gc-blue: var(--app-accent);
+  --gc-blue-soft: var(--app-accent-surface);
+  --gc-line: var(--app-surface-border);
+  --gc-line-soft: var(--app-surface-divider);
+  --gc-surface: var(--app-surface);
+  --gc-panel: var(--app-surface-raised);
+  --gc-text: var(--app-surface-text);
+  --gc-muted: var(--app-surface-text-muted);
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  padding: 16px;
+  color: var(--gc-text);
+  background-color: var(--app-surface);
+  background-image:
+    linear-gradient(var(--app-accent-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--app-accent-soft) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.scope :global(.gc-panorama.gc-loading) { align-items: center; justify-content: center; }
+
+.scope :global(.gc-kicker) {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--gc-muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.scope :global(.gc-node) {
+  position: relative;
+  display: flex;
+  flex: 0 0 196px;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 96px;
+  padding: 10px 11px;
+  border: 1px solid var(--gc-line);
+  border-radius: 10px;
+  background: var(--gc-surface);
+  color: var(--gc-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.scope :global(.gc-node:hover) { border-color: var(--gc-blue); box-shadow: 0 5px 16px var(--app-accent-soft); transform: translateY(-1px); }
+.scope :global(.gc-node:focus-visible) { outline: 2px solid var(--gc-blue); outline-offset: 2px; }
+.scope :global(.gc-node-top) { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.scope :global(.gc-node-index) { color: var(--gc-muted); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.06em; }
+.scope :global(.gc-node-state) { color: var(--gc-muted); font-size: 10px; }
+.scope :global(.gc-node > strong) { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.scope :global(.gc-node-meta) { display: flex; align-items: center; gap: 5px; min-width: 0; color: var(--gc-muted); font-size: 11px; }
+.scope :global(.gc-node-meta > span:last-child) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scope :global(.gc-node-version) { flex: 0 0 auto; padding: 0 5px; border-radius: 5px; background: var(--app-surface-chip); color: var(--gc-muted); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.scope :global(.gc-node-version.is-muted) { opacity: 0.7; }
+
+.scope :global(.gc-node.is-approved) { border-color: color-mix(in srgb, var(--app-result-success) 28%, var(--gc-line)); background: linear-gradient(180deg, var(--app-testing-success-tag-bg), transparent 68%), var(--gc-surface); }
+.scope :global(.gc-node.is-approved .gc-node-state) { color: var(--app-result-success-text); }
+.scope :global(.gc-node.is-imported) { border-color: color-mix(in srgb, var(--app-result-success-text) 42%, var(--gc-line)); background: linear-gradient(180deg, var(--app-testing-success-tag-bg), transparent 70%), var(--gc-surface); }
+.scope :global(.gc-node.is-imported .gc-node-state) { color: var(--app-result-success-text); }
+.scope :global(.gc-node.is-draft) { border-color: color-mix(in srgb, var(--app-task-status-warning) 42%, var(--gc-line)); background: linear-gradient(180deg, var(--app-status-warning-bg), transparent 70%), var(--gc-surface); }
+.scope :global(.gc-node.is-draft .gc-node-state) { color: var(--app-status-warning-text); font-weight: 600; }
+.scope :global(.gc-node.is-rejected) { border-color: color-mix(in srgb, var(--app-task-status-danger) 34%, var(--gc-line)); background: linear-gradient(180deg, var(--app-danger-surface-soft), transparent 70%), var(--gc-surface); }
+.scope :global(.gc-node.is-rejected .gc-node-state) { color: var(--app-profile-danger-text); }
+.scope :global(.gc-node.is-running) {
+  border-color: var(--app-surface-accent-strong);
+  background: var(--app-surface-accent-strong);
+  color: var(--app-reading-on-accent);
+}
+.scope :global(.gc-node.is-running :is(.gc-node-state, .gc-node-index, .gc-node-meta)) { color: inherit; }
+.scope :global(.gc-node.is-running .gc-node-state) { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
+.scope :global(.gc-node.is-running .gc-node-version) { color: inherit; background: transparent; }
+.scope :global(.gc-running-indicator) { animation: gc-running-spin 1s linear infinite; }
+@keyframes gc-running-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .scope :global(.gc-running-indicator) { animation: none; } }
+.scope :global(.gc-node.is-failed) { border-color: color-mix(in srgb, var(--app-task-status-danger) 32%, var(--gc-line)); }
+.scope :global(.gc-node.is-failed .gc-node-state) { color: var(--app-profile-danger-text); }
+.scope :global(.gc-node.is-empty) { border-style: dashed; background: transparent; }
+.scope :global(.gc-node.is-empty > strong) { color: var(--gc-muted); font-weight: 500; }
+.scope :global(.gc-node.is-empty:hover) { border-style: solid; }
+
+.scope :global(.gc-document-node),
+.scope :global(.gc-lane-empty) {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 76px;
+  padding: 10px 12px;
+  border: 1px dashed var(--gc-line);
+  border-radius: 10px;
+  background: var(--gc-surface);
+  color: var(--gc-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.scope :global(.gc-document-node) { border-style: solid; border-color: var(--gc-line); }
+.scope :global(.gc-document-node:hover),
+.scope :global(.gc-lane-empty:hover) { border-color: var(--gc-blue); background: var(--gc-blue-soft); }
+.scope :global(.gc-document-node > span),
+.scope :global(.gc-lane-empty > span) { color: var(--gc-blue); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.06em; }
+.scope :global(.gc-document-node strong),
+.scope :global(.gc-lane-empty strong) { font-size: 12px; }
+.scope :global(.gc-document-node small),
+.scope :global(.gc-lane-empty small) { color: var(--gc-muted); font-size: 11px; }
+
+/* Modal */
+.scope :global(.generation-chain-modal .ant-modal-content) { display: flex; flex-direction: column; height: min(820px, calc(100dvh - 32px)); padding: 0; overflow: hidden; }
+.scope :global(.generation-chain-modal .ant-modal-header) { flex: 0 0 auto; margin: 0; padding: 16px 64px 16px 24px; border-bottom: 1px solid var(--app-surface-border); background: var(--app-list-toolbar-bg); }
+.scope :global(.generation-chain-modal .ant-modal-body) { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; padding: 0; }
+.scope :global(.generation-chain-modal .ant-modal-footer) { flex: 0 0 auto; margin: 0; padding: 12px 24px; border-top: 1px solid var(--app-surface-border); background: var(--app-list-toolbar-bg); }
+.scope :global(.generation-chain-modal .ant-modal-close) { top: 16px; right: 20px; }
+
+.scope :global(.gc-modal-title) { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0; }
+.scope :global(.gc-title-main) { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.scope :global(.gc-title-name) { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.scope :global(.gc-modal-title strong) { font-size: 16px; line-height: 1.35; }
+.scope :global(.gc-modal-title .gc-kicker) { margin: 0; }
+/* 阶段操作挂在标题栏：标题保持原样，版本/上游/对比/历史和显示模式开关同排。 */
+.scope :global(.generation-chain-modal .ant-modal-header.ai-artifact-mode-heading) { flex-wrap: wrap; gap: 8px 16px; }
+.scope :global(.gc-header-tools-slot) { display: flex; align-items: center; min-width: 0; order: 1; }
+.scope :global(.generation-chain-modal .ant-modal-header > .ai-artifact-mode-slot) { order: 2; }
+.scope :global(.gc-title-tools) { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+
+.scope :global(.gc-state) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 21px;
+  padding: 0 8px;
+  border: 1px solid var(--app-surface-border);
+  border-radius: 999px;
+  color: var(--gc-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.scope :global(.gc-state.is-ok) { border-color: color-mix(in srgb, var(--app-result-success) 32%, var(--app-surface-border)); background: var(--app-testing-success-tag-bg); color: var(--app-result-success-text); }
+.scope :global(.gc-state.is-warn) { border-color: var(--app-review-warning-border); background: var(--app-status-warning-bg); color: var(--app-status-warning-text); }
+.scope :global(.gc-state.is-danger) { border-color: var(--app-danger-border); background: var(--app-danger-surface-soft); color: var(--app-profile-danger-text); }
+.scope :global(.gc-state.is-muted) { background: var(--app-surface-chip); }
+
+.scope :global(.gc-workspace) { display: flex; flex: 1 1 auto; min-height: 0; min-width: 0; }
+.scope :global(.gc-source) { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; min-width: 0; padding: 12px 24px 0; }
+.scope :global(.gc-workspace.is-revising > .gc-source) { flex: 0 0 auto; width: var(--revision-source-width, 60%); overflow: hidden; }
+.scope :global(.gc-workspace.is-revising > .revision-side-panel) { flex: 1 1 auto; margin: 12px 16px 12px 0; }
+
+.scope :global(.gc-version-buttons) { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; min-width: 0; }
+.scope :global(.gc-version-button) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 27px;
+  padding: 0 9px;
+  border: 1px solid var(--app-surface-border);
+  border-radius: 7px;
+  background: var(--app-surface);
+  color: var(--app-surface-text-muted);
+  font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+  cursor: pointer;
+}
+.scope :global(.gc-version-button:hover) { border-color: var(--app-accent-border); color: var(--app-accent); }
+.scope :global(.gc-version-button.is-active) { border-color: var(--app-accent-border); background: var(--app-accent-surface); color: var(--app-accent); font-weight: 600; }
+.scope :global(.gc-latest-dot) { width: 5px; height: 5px; border-radius: 50%; background: var(--app-result-success); }
+.scope :global(.gc-diff-count) { display: inline-flex; gap: 4px; margin-left: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; }
+.scope :global(.gc-diff-count b) { color: var(--app-result-success-text); font-weight: 600; }
+.scope :global(.gc-diff-count i) { color: var(--app-profile-danger-text); font-style: normal; font-weight: 600; }
+
+.scope :global(.gc-upstream-trigger) { display: inline-flex; align-items: center; gap: 6px; max-width: min(460px, 40vw); }
+.scope :global(.gc-upstream-trigger-text) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scope :global(.gc-upstream-trigger.has-missing) { border-color: var(--app-danger-border); color: var(--app-profile-danger-text); }
+.scope :global(.gc-upstream-caret) { font-size: 10px; }
+.scope :global(.gc-upstream-panel) { display: flex; flex-direction: column; gap: 10px; width: min(380px, 80vw); }
+.scope :global(.gc-upstream-field) { display: flex; flex-direction: column; gap: 4px; color: var(--app-surface-text-muted); font-size: 11px; }
+.scope :global(.gc-upstream-field .ant-select) { width: 100%; }
+.scope :global(.gc-artifact-head) { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 0 0 auto; padding: 9px 0 7px; }
+.scope :global(.gc-artifact-head > div) { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.scope :global(.gc-artifact-head strong) { font-size: 12px; }
+.scope :global(.gc-artifact-head span) { overflow: hidden; color: var(--app-surface-text-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.scope :global(.gc-artifact-scroll) { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 2px 0 10px; border-top: 1px solid var(--app-surface-divider); }
+/* 首次运行尚无产物时只显示加载状态，不进入内容解析。 */
+.scope :global(.gc-stage-loading) { display: flex; flex: 1 1 auto; flex-direction: column; align-items: center; justify-content: center; gap: 10px; height: 100%; min-height: 240px; padding: 24px; color: var(--app-surface-text-muted); font-size: 12px; }
+.scope :global(.gc-stage-loading .ant-spin-dot-item) { background-color: var(--app-generation-running-accent); }
+/* 原文视图沿用阶段产物弹框的 CodeMirror：带行号，由编辑器自己滚动。 */
+.scope :global(.gc-artifact-scroll.is-raw) { overflow: hidden; padding: 0; }
+.scope :global(.gc-raw-editor) { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.scope :global(.gc-raw-editor :is(.json-editor-wrap, .json-editor-shell, .json-editor-codemirror, .cm-editor)) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0%;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none;
+  min-width: 0;
+  overflow: hidden;
+}
+.scope :global(.gc-raw-editor .cm-scroller) { flex: 1 1 0%; min-height: 0; overflow: auto; }
+/* 阶段弹框沿用对应页签产物弹窗的尺寸与内部滚动规则。 */
+.scope :global(.generation-chain-modal :is(.ant-modal-container, .ant-modal-content)) {
+  display: flex;
+  flex-direction: column;
+  height: min(94dvh, 1200px);
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  overflow: hidden;
+}
+@media (max-width: 640px), (max-height: 700px) {
+  .scope :global(.generation-chain-modal :is(.ant-modal-container, .ant-modal-content)) { height: calc(100dvh - 32px); }
+}
+/* API 用例和设计弹窗在对应页签里按内容自适应高度，这里保持一致。 */
+.scope :global(.generation-chain-modal:has(.gc-artifact-scroll:is(.is-api-cases, .is-api-design)) :is(.ant-modal-container, .ant-modal-content)) {
+  height: auto;
+  max-height: min(94dvh, 1200px);
+}
+.scope :global(.gc-artifact-scroll:is(.is-material-comparison, .is-requirement-analysis, .is-case-names, .is-detailed-cases, .is-api-cases, .is-api-design, .is-ui-stage)) {
+  margin: 0 -24px;
+  padding: 0;
+  border-top: 0;
+}
+.scope :global(.gc-artifact-scroll:is(.is-material-comparison, .is-detailed-cases, .is-ui-stage)) { overflow: hidden; }
+.scope :global(.gc-artifact-scroll:is(.is-requirement-analysis, .is-case-names, .is-api-cases, .is-api-design)) { overflow: auto; padding: 12px 24px; }
+.scope :global(.gc-artifact-scroll.is-case-names) { display: flex; flex-direction: column; overflow: hidden; }
+.scope :global(.gc-artifact-scroll.is-case-names .ai-case-name-tree) { flex: 1 1 0%; min-height: 0; }
+.scope :global(.gc-artifact-scroll.is-detailed-cases > .ai-generated-case-browser) { height: 100%; }
+.scope :global(.gc-artifact-scroll.is-ui-stage) { display: flex; flex-direction: column; padding: 12px 24px; }
+/* UI 阶段视觉工作台在页签弹窗里由 ui-generation.css 提供高度链，这里补齐同样的伸缩规则。 */
+.scope :global(.gc-artifact-scroll.is-ui-stage > .ui-generation-stage-visual) {
+  flex: 1 1 0%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.scope :global(.gc-artifact-scroll.is-ui-stage > .ui-generation-stage-visual > *) { min-height: 0; }
+.scope :global(.gc-visual-groups) { display: flex; flex-direction: column; gap: 8px; padding-top: 9px; }
+.scope :global(.gc-visual-group) { border: 1px solid var(--app-surface-border); border-radius: 10px; background: var(--app-surface); overflow: hidden; }
+.scope :global(.gc-visual-group > header) { display: flex; align-items: baseline; gap: 8px; padding: 8px 11px; border-bottom: 1px solid var(--app-surface-divider); background: var(--app-list-toolbar-bg); }
+.scope :global(.gc-visual-group > header strong) { min-width: 0; overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.scope :global(.gc-visual-group > header small) { margin-left: auto; color: var(--app-surface-text-muted); font-size: 11px; }
+.scope :global(.gc-visual-kind) { flex: 0 0 auto; padding: 0 5px; border-radius: 4px; background: var(--app-accent-surface); color: var(--app-accent); font-size: 10px; }
+.scope :global(.gc-visual-rows) { display: flex; flex-direction: column; }
+.scope :global(.gc-visual-row) { display: grid; grid-template-columns: minmax(86px, 24%) minmax(0, 1fr); gap: 10px; padding: 6px 11px; border-top: 1px solid var(--app-surface-divider); font-size: 12px; }
+.scope :global(.gc-visual-row:first-child) { border-top: 0; }
+.scope :global(.gc-visual-row > span) { color: var(--app-surface-text-muted); }
+.scope :global(.gc-visual-row > p) { margin: 0; color: var(--app-surface-text); line-height: 1.55; word-break: break-word; }
+.scope :global(.gc-visual-empty) { padding: 28px 12px; color: var(--app-surface-text-muted); font-size: 12px; text-align: center; }
+
+/* One shared scroll area and aligned rows keep both versions at the same position. */
+.scope :global(.gc-diff) { width: 100%; min-width: 640px; table-layout: fixed; border-spacing: 0; font: 12px/1.65 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.scope :global(.gc-diff th) { position: sticky; top: 0; z-index: 1; padding: 10px 12px; border-bottom: 1px solid var(--app-surface-border); background: var(--app-surface); color: var(--app-surface-text); text-align: left; font-family: var(--app-font-sans); font-weight: 600; }
+.scope :global(.gc-diff th span) { margin-left: 8px; color: var(--app-surface-text-muted); font-size: 11px; font-weight: 400; }
+.scope :global(.gc-diff th + th),
+.scope :global(.gc-diff-cell + .gc-diff-cell) { border-left: 1px solid var(--app-surface-border); }
+.scope :global(.gc-diff-cell) { padding: 0; vertical-align: top; color: var(--app-surface-text); }
+.scope :global(.gc-diff-cell.is-add) { background: var(--app-testing-success-tag-bg); color: var(--app-result-success-text); }
+.scope :global(.gc-diff-cell.is-remove) { background: var(--app-danger-surface-soft); color: var(--app-profile-danger-text); }
+.scope :global(.gc-diff-cell.is-empty) { background: var(--app-shell-bg); }
+.scope :global(.gc-diff-line) { display: flex; gap: 8px; min-height: 20px; padding: 0 8px; }
+.scope :global(.gc-diff-number) { flex: 0 0 4ch; color: var(--app-surface-text-muted); text-align: right; user-select: none; font-variant-numeric: tabular-nums; }
+.scope :global(.gc-diff-sign) { flex: 0 0 10px; text-align: center; user-select: none; }
+.scope :global(.gc-diff-line code) { min-width: 0; color: inherit; font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; }
+.scope :global(.gc-diff-empty) { padding: 24px; color: var(--app-surface-text-muted); text-align: center; }
+
+.scope :global(.gc-trace) { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.scope :global(.gc-trace > span:first-child) { color: var(--app-surface-text-muted); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; }
+.scope :global(.gc-trace-chip) { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border: 1px solid var(--app-surface-border); border-radius: 999px; background: var(--app-surface); color: var(--app-surface-text-muted); font-size: 10px; }
+.scope :global(.gc-trace-chip b) { color: var(--app-surface-text); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; }
+.scope :global(.gc-trace-chip.is-danger) { border-color: var(--app-danger-border); background: var(--app-danger-surface-soft); color: var(--app-profile-danger-text); }
+.scope :global(.gc-trace-chip.is-ok) { border-color: color-mix(in srgb, var(--app-result-success) 32%, var(--app-surface-border)); background: var(--app-testing-success-tag-bg); color: var(--app-result-success-text); }
+
+.scope :global(.gc-empty-panel) { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 12px; padding: 18px; border: 1px dashed var(--app-surface-border); border-radius: 10px; color: var(--app-surface-text-muted); }
+.scope :global(.gc-empty-panel strong) { color: var(--app-surface-text); font-size: 13px; }
+.scope :global(.gc-empty-panel span) { font-size: 12px; }
+
+.scope :global(.gc-modal-footer) { display: flex; flex-direction: column; gap: 8px; }
+.scope :global(.gc-footer-row) { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; }
+.scope :global(.gc-footer-status) { display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap; flex: 1 1 auto; min-width: 0; }
+.scope :global(.gc-footer-status .gc-modal-meta) { padding: 0; }
+.scope :global(.gc-modal-actions) { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+.scope :global(.gc-modal-meta) { display: flex; align-items: center; gap: 5px; padding: 0 24px 10px; color: var(--app-surface-text-muted); font-size: 11px; }
+.scope :global(.gc-modal-meta.is-danger) { color: var(--app-profile-danger-text); }
+.scope :global(.gc-modal-meta.is-warn) { color: var(--app-status-warning-text); }
+
+.scope :global(.gc-history) { width: min(380px, 82vw); max-height: 360px; overflow: auto; }
+.scope :global(.gc-history-head) { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 2px 4px 8px; }
+.scope :global(.gc-history-head strong) { font-size: 12px; }
+.scope :global(.gc-history-head span) { color: var(--app-surface-text-muted); font-size: 11px; }
+.scope :global(.gc-history-row) { display: flex; align-items: center; gap: 6px; padding: 4px; border-top: 1px solid var(--app-surface-divider); }
+.scope :global(.gc-history-row.is-active) { background: var(--app-accent-surface); }
+.scope :global(.gc-history-main) { display: flex; flex: 1 1 auto; align-items: center; gap: 7px; min-width: 0; padding: 4px; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.scope :global(.gc-history-main:hover) { background: var(--app-surface-hover); }
+.scope :global(.gc-history-copy) { display: flex; flex: 1 1 auto; flex-direction: column; gap: 1px; min-width: 0; }
+.scope :global(.gc-history-copy strong) { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.scope :global(.gc-history-copy small) { color: var(--app-surface-text-muted); font-size: 10px; }
+.scope :global(.gc-version-chip) { flex: 0 0 auto; padding: 0 5px; border-radius: 5px; background: var(--app-surface-chip); color: var(--app-accent); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.scope :global(.gc-history-empty) { padding: 18px 8px; color: var(--app-surface-text-muted); font-size: 12px; text-align: center; }
+
+@media (max-width: 1024px) {
+  /* 标题栏放不下时阶段操作独占一行，标题与显示模式开关留在第一行。 */
+  .scope :global(.generation-chain-modal .gc-header-tools-slot) { flex: 1 1 100%; order: 2; }
+  .scope :global(.generation-chain-modal .ant-modal-header > .ai-artifact-mode-slot) { order: 1; }
+}
+
+@media (max-width: 760px) {
+  .scope :global(.gc-panorama) { padding: 12px; }
+  .scope :global(.gc-node) { flex-basis: 176px; }
+  .scope :global(.generation-chain-modal) { max-width: calc(100vw - 16px); margin: 8px auto; }
+  .scope :global(.generation-chain-modal .ant-modal-content) { height: calc(100dvh - 16px); }
+  .scope :global(.generation-chain-modal .ant-modal-body) { padding: 0; }
+  .scope :global(.generation-chain-modal .ant-modal-header) { padding: 12px 56px 12px 16px; }
+  .scope :global(.generation-chain-modal .ant-modal-footer) { padding: 10px 16px; }
+  .scope :global(.gc-source) { padding: 10px 16px 0; }
+  .scope :global(.gc-artifact-scroll:is(.is-material-comparison, .is-requirement-analysis, .is-case-names, .is-detailed-cases, .is-api-cases, .is-api-design, .is-ui-stage)) { margin: 0 -16px; }
+  .scope :global(.gc-workspace.is-revising) { flex-direction: column; overflow: auto; }
+  .scope :global(.gc-workspace.is-revising > .gc-source) { flex: 0 0 auto; width: auto; min-height: 320px; }
+  .scope :global(.gc-workspace.is-revising > .revision-side-panel) { margin: 10px 16px 16px; }
+  .scope :global(.gc-upstream-trigger) { max-width: 100%; }
+  .scope :global(.gc-modal-actions) { justify-content: stretch; }
+  .scope :global(.gc-modal-actions > *) { flex: 1 1 auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scope :global(.gc-node) { transition: none; }
+}
+
+/* Version import provenance */
+.scope :global(.generation-chain-import-modal .ant-modal-content) { background: var(--app-surface); }
+.scope :global(.gc-import-title) { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.scope :global(.gc-import-title > div) { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.scope :global(.gc-import-title strong) { color: var(--app-surface-text); font-size: 16px; }
+.scope :global(.gc-import-loading) { display: grid; place-items: center; min-height: 180px; }
+.scope :global(.gc-import-version) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 10px 12px; border: 1px solid var(--app-surface-border); border-radius: 10px; background: var(--app-surface-hover); }
+.scope :global(.gc-import-version > div) { display: flex; flex-direction: column; gap: 2px; }
+.scope :global(.gc-import-version span) { color: var(--app-surface-text-muted); font-size: 11px; }
+.scope :global(.gc-import-version b) { color: var(--app-surface-text); font-size: 13px; }
+.scope :global(.gc-import-section) { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.scope :global(.gc-import-section h4) { display: flex; align-items: center; gap: 5px; margin: 0; color: var(--app-surface-text); font-size: 12px; }
+.scope :global(.gc-import-parents) { display: flex; flex-wrap: wrap; gap: 6px; }
+.scope :global(.gc-import-parent) { display: grid; grid-template-columns: auto auto; gap: 1px 6px; min-width: 140px; padding: 7px 9px; border: 1px solid var(--app-surface-border); border-radius: 8px; background: var(--app-surface-hover); }
+.scope :global(.gc-import-parent small) { color: var(--app-surface-text-muted); font-size: 10px; }
+.scope :global(.gc-import-parent b) { color: var(--app-accent); font: 600 11px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.scope :global(.gc-import-parent em) { grid-column: 1 / -1; overflow: hidden; color: var(--app-surface-text-muted); font-size: 10px; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
+.scope :global(.gc-import-target-select) { width: min(420px, 100%); }
+.scope :global(.gc-import-target-card) { display: flex; flex-direction: column; gap: 7px; padding: 10px 12px; border: 1px solid var(--app-surface-border); border-radius: 10px; background: var(--app-surface-hover); }
+.scope :global(.gc-import-target-card > div:first-child) { display: flex; align-items: baseline; gap: 8px; }
+.scope :global(.gc-import-target-card strong) { color: var(--app-surface-text); font-size: 12px; }
+.scope :global(.gc-import-target-card > div:first-child span) { color: var(--app-surface-text-muted); font-size: 11px; }
+.scope :global(.gc-import-source) { display: inline-flex; align-items: center; gap: 5px; color: var(--app-result-success-text); font-size: 11px; }
+.scope :global(.gc-import-source small) { color: var(--app-surface-text-muted); }
+.scope :global(.gc-import-source.is-muted) { color: var(--app-surface-text-muted); }
+.scope :global(.gc-import-source.is-danger) { color: var(--app-profile-danger-text); }
+.scope :global(.gc-import-record) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding-top: 7px; border-top: 1px solid var(--app-surface-divider); }
+.scope :global(.gc-import-record > div) { display: flex; flex-direction: column; gap: 1px; }
+.scope :global(.gc-import-record span) { color: var(--app-surface-text-muted); font-size: 10px; }
+.scope :global(.gc-import-record b) { color: var(--app-surface-text); font-size: 11px; }
+.scope :global(.gc-import-record > .ant-alert) { grid-column: 1 / -1; }
+.scope :global(.gc-import-record > .gc-import-case-ids) { grid-column: 1 / -1; display: flex; flex-direction: row; align-items: center; gap: 4px; flex-wrap: wrap; }
+.scope :global(.gc-import-case-ids code) { padding: 1px 5px; border-radius: 4px; background: var(--app-surface-chip); color: var(--app-surface-text); font-size: 10px; }
+.scope :global(.gc-import-case-ids small) { color: var(--app-surface-text-muted); font-size: 10px; }
+.scope :global(.gc-import-function-targets) { display: flex; flex-direction: column; gap: 5px; }
+.scope :global(.gc-import-function-targets > div) { display: flex; align-items: center; gap: 7px; padding-top: 5px; border-top: 1px solid var(--app-surface-divider); }
+.scope :global(.gc-import-function-targets b) { color: var(--app-surface-text); font-size: 11px; }
+.scope :global(.gc-import-function-targets small) { color: var(--app-surface-text-muted); font-size: 10px; }
+.scope :global(.gc-import-function-targets .gc-import-source) { margin-left: auto; }
+.scope :global(.gc-import-hint) { margin: 0; color: var(--app-surface-text-muted); font-size: 11px; }
+.scope :global(.gc-import-conflicts) { display: flex; flex-direction: column; gap: 5px; max-height: 140px; overflow: auto; }
+.scope :global(.gc-import-conflicts > div) { display: flex; align-items: center; gap: 6px; color: var(--app-surface-text-muted); font-size: 11px; }
+.scope :global(.gc-import-footer) { display: flex; justify-content: flex-end; gap: 8px; }
+.scope :global(.gc-import-footer > *) { min-width: 92px; }
+
+/* 功能测试「完整用例」的用例图谱弹窗 */
+.scope :global(.gc-relations-toolbar) { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding-bottom: 10px; }
+.scope :global(.gc-relations-body) { height: min(76dvh, 900px); min-height: 360px; }
+
+.scope :global(.revision-workspace) { display: flex; height: 100%; min-height: 0; min-width: 0; gap: 0; }
+.scope :global(.revision-source) { min-width: 0; width: 100%; height: 100%; min-height: 0; }
+.scope :global(.revision-workspace.is-revising > .revision-source) { width: var(--revision-source-width, 60%); min-width: 35%; max-width: 75%; overflow: auto; flex-shrink: 0; }
+.scope :global(.revision-side-panel) { min-width: 240px; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--ai-border, var(--app-revision-border)); border-radius: 12px; background: var(--ai-panel-soft, var(--app-revision-bg)); overflow: auto; }
+.scope :global(.revision-side-panel header) { display: flex; flex-direction: column; gap: 6px; }
+.scope :global(.revision-side-panel header strong) { font-size: 17px; }
+.scope :global(.revision-side-panel header span),
+.scope :global(.revision-side-hint) { font-size: 12px; color: var(--ai-text-secondary, var(--app-list-label)); }
+.scope :global(.revision-side-panel > textarea.ant-input) { flex: 1; min-height: 160px; resize: none; line-height: 1.8; }
+.scope :global(.revision-attachments) { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.scope :global(.revision-attachment) { position: relative; display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; overflow: hidden; border: 1px solid var(--ai-border, var(--app-revision-border)); border-radius: 8px; background: var(--ai-panel, var(--app-revision-bg)); color: var(--ai-text-secondary, var(--app-list-label)); }
+.scope :global(.revision-attachment img) { width: 100%; height: 100%; object-fit: cover; }
+.scope :global(.revision-attachment button) { position: absolute; top: 2px; right: 2px; display: flex; align-items: center; justify-content: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: var(--app-revision-attachment-scrim); color: var(--app-revision-attachment-on-scrim); font-size: 13px; line-height: 1; cursor: pointer; }
+.scope :global(.revision-attachment button:disabled) { cursor: not-allowed; opacity: 0.5; }
+.scope :global(.revision-footer-actions) { display: flex; justify-content: flex-end; gap: 8px; }
+@media (max-width: 800px) {
+ .scope :global(.revision-workspace.is-revising) { flex-direction: column; overflow: auto; }
+ .scope :global(.revision-workspace.is-revising > .revision-source) { width: 100%; max-width: none; min-height: 320px; height: 50%; resize: none; }
+ .scope :global(.revision-side-panel) { flex-shrink: 0; min-height: 400px; }
+}
+.scope :global(.revision-workspace.is-revising) { gap: 0; }
+.scope :global(.revision-workspace.is-revising > .revision-source) { resize: none; }
+.scope :global(.revision-divider) { flex: 0 0 20px; cursor: col-resize; touch-action: none; position: relative; }
+.scope :global(.revision-divider::after) { content: ''; position: absolute; top: 40%; bottom: 40%; left: 8px; width: 4px; border-radius: 4px; background: var(--ai-border, var(--app-revision-divider)); }
+.scope :global(.revision-divider:hover::after),
+.scope :global(.revision-divider:focus-visible::after) { background: var(--app-revision-divider-hover); }
+@media (max-width: 800px) { .scope :global(.revision-divider) { display: none; } .scope :global(.revision-workspace.is-revising) { gap: 16px; } }
+
+.scope :global(.revision-questions) { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.scope :global(.revision-question-progress) { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--ai-text-secondary, var(--app-list-label)); }
+.scope :global(.revision-question-track) { height: 4px; overflow: hidden; border-radius: 4px; background: var(--ai-border, var(--app-revision-border)); }
+.scope :global(.revision-question-track span) { display: block; height: 100%; background: var(--ant-color-primary); }
+.scope :global(.revision-question-nav) { display: flex; flex-wrap: wrap; gap: 6px; }
+.scope :global(.revision-question-nav button) { min-width: 32px; height: 30px; border: 1px solid var(--ai-border, var(--app-revision-border)); border-radius: 6px; color: inherit; background: transparent; cursor: pointer; }
+.scope :global(.revision-question-nav button.is-current) { border-color: var(--ant-color-primary); color: var(--ant-color-primary); }
+.scope :global(.revision-question-nav button.is-answered) { font-weight: 700; }
+.scope :global(.revision-question-content) { border-top: 1px solid var(--ai-border, var(--app-revision-border)); padding-top: 14px; }
+.scope :global(.revision-question-content p) { margin: 8px 0 14px; line-height: 1.7; overflow-wrap: anywhere; }
+.scope :global(.revision-question-content label) { display: block; margin-bottom: 6px; }
+.scope :global(.revision-question-id) { font-size: 12px; color: var(--ant-color-primary); }
+.scope :global(.revision-question-pagination) { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.scope :global(.revision-question-pagination span) { margin-left: auto; color: var(--ai-text-secondary, var(--app-list-label)); font-size: 12px; }
+.scope :global(.revision-question-extra) { border-top: 1px solid var(--ai-border, var(--app-revision-border)); padding-top: 12px; }
+.scope :global(.revision-question-extra summary) { cursor: pointer; }
+.scope :global(.revision-question-extra textarea) { margin-top: 10px; }

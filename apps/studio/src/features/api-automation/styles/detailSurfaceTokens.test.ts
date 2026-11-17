@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import inspectorCss from './detail-inspector-v2.css?raw'
+import inspectorCss from './api-detail-editor.module.css?raw'
 
 /** 取出 `selector { ... }` 的声明块；选择器里的 `.` `:` 只是字面量，不参与正则。 */
 function declarationsOf(css: string, selector: string) {
@@ -9,7 +9,7 @@ function declarationsOf(css: string, selector: string) {
 
 describe('API 用例请求地址条样式', () => {
   it('地址条只用表面 token，不继承亮色主题的白色内阴影', () => {
-    const declarations = declarationsOf(inspectorCss, '.api-collection-workbench-page .api-wb-url-group')
+    const declarations = declarationsOf(inspectorCss, '.scope :global(.api-wb-url-group)')
 
     expect(declarations).toBeTruthy()
     expect(declarations).not.toContain('rgba(255, 255, 255')
@@ -17,7 +17,7 @@ describe('API 用例请求地址条样式', () => {
   })
 
   it('聚焦环用色盘 token', () => {
-    const declarations = declarationsOf(inspectorCss, '.api-collection-workbench-page .api-wb-url-group:focus-within')
+    const declarations = declarationsOf(inspectorCss, '.scope :global(.api-wb-url-group:focus-within)')
 
     expect(declarations).toContain('var(--srf-accent-soft)')
   })

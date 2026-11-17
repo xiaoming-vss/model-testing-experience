@@ -4,13 +4,8 @@ import type { MonitoringConnection } from '../types'
 
 const baseValues: MonitoringConnectionFormValues = {
   name: 'K8s Prometheus',
-  queryUrl: 'http://prom:9090',
   remoteWriteUrl: 'http://prom:9090/api/v1/write',
-  queryAuthType: 'none',
   remoteWriteAuthType: 'none',
-  grafanaUrl: '',
-  grafanaDashboardUid: '',
-  defaultFiltersJson: '',
   enabled: true,
 }
 
@@ -18,15 +13,9 @@ const existing: MonitoringConnection = {
   connectionId: 'prom-1',
   projectId: 'project-1',
   name: 'K8s Prometheus',
-  queryUrl: 'http://prom:9090',
   remoteWriteUrl: 'http://prom:9090/api/v1/write',
-  queryAuthType: 'none',
   remoteWriteAuthType: 'basic',
-  hasQueryCredentials: false,
   hasRemoteWriteCredentials: true,
-  grafanaUrl: '',
-  grafanaDashboardUid: '',
-  defaultFilters: {},
   enabled: true,
 }
 
@@ -39,7 +28,6 @@ describe('monitoring connection payload', () => {
       remoteWritePassword: '',
     }, existing)
     expect(payload.remoteWriteAuth).toBeUndefined()
-    expect(payload.defaultFilters).toEqual({})
   })
 
   it('sends new credentials when the auth type changes', () => {
@@ -54,24 +42,18 @@ describe('monitoring connection payload', () => {
   it('requires complete basic credentials for a new connection', () => {
     expect(() => buildMonitoringConnectionPayload({
       ...baseValues,
-      queryAuthType: 'basic',
-      queryUsername: 'reader',
+      remoteWriteAuthType: 'basic',
+      remoteWriteUsername: 'writer',
     }, null)).toThrow('Basic 认证必须填写密码')
   })
 
-  it('parses default filters as a JSON object', () => {
-    const payload = buildMonitoringConnectionPayload({
-      ...baseValues,
-      defaultFiltersJson: '{"namespace":"perf"}',
-    }, null)
-    expect(payload.defaultFilters).toEqual({ namespace: 'perf' })
-  })
-
-  it('rejects a non-object default filter payload', () => {
-    expect(() => buildMonitoringConnectionPayload({
-      ...baseValues,
-      defaultFiltersJson: '["perf"]',
-    }, null)).toThrow('默认筛选必须是 JSON 对象')
+  it('only sends the remote write connection fields', () => {
+    expect(buildMonitoringConnectionPayload(baseValues, null)).toEqual({
+      name: 'K8s Prometheus',
+      remoteWriteUrl: 'http://prom:9090/api/v1/write',
+      remoteWriteAuth: { type: 'none' },
+      enabled: true,
+    })
   })
 
   it('turns malformed JSON into a readable validation error', () => {

@@ -28,7 +28,7 @@ import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
 import { message } from '@/shared/utils/feedback'
 import { formatStructuredContent } from '@/shared/utils/value'
 import { getErrorMessage } from '@/utils/format'
-import '@/features/ai-testing/components/FunctionalCaseRelationsViewer.css'
+import relationsStyles from '@/features/ai-testing/styles/relations.module.css'
 import '../styles/graph-viewer.css'
 
 const { Text } = Typography
@@ -225,7 +225,7 @@ export function TestOrderGraphViewer({
 
   return (
     <>
-      <div className="test-order-graph-viewer ai-relations-page">
+      <div className={`test-order-graph-viewer ai-relations-page ${relationsStyles.scope}`}>
         {toolbar}
         <div className="ai-relations-page-bar">
           <div className="test-order-graph-status">

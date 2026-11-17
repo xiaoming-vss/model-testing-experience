@@ -55,8 +55,7 @@
   background: transparent;
   font-weight: 600;
 }
-.sidebar-link .sidebar-icon-duotone { width: 18px; height: 18px; flex-shrink: 0; color: var(--app-accent); }
-.sidebar-link .sidebar-icon-fill { fill: var(--app-accent-emphasis); }
+.sidebar-link .sidebar-icon { width: 18px; height: 18px; flex-shrink: 0; color: currentColor; }
 .sidebar-link:focus-visible, .top-navigation-brand:focus-visible { outline: 2px solid var(--mac-glass-blue); outline-offset: -2px; }
 
 /* 顶部一级入口的二级页签浮层：默认隐藏，悬停展开。 */

@@ -7,8 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { skillFolder } from '../api/skills.api'
 import '@/shared/styles/surface-tokens.css'
-import '@/features/ai-testing/styles/index.css'
-import '@/features/ai-testing/styles/skill-library.css'
+import aiPageStyles from '../styles/ai-page.module.css'
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
 import { api, listItems, type AiSkillLibraryItem, type UploadAiSkillPayload } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
@@ -250,10 +249,10 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
     </>
   )
 
-  if (embedded) return content
+  if (embedded) return <div className={`ai-testing-page tp-list-surface ai-skill-library-page tp-surface ${aiPageStyles.scope}`}>{content}</div>
 
   return (
-    <div className="workbench-page ai-testing-page tp-list-surface ai-skill-library-page">
+    <div className={`workbench-page ai-testing-page tp-list-surface ai-skill-library-page ${aiPageStyles.scope}`}>
       {content}
     </div>
   )

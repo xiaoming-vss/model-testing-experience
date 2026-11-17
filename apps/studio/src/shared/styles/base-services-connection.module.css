@@ -1,23 +1,15 @@
 /* 基础服务连接卡片与空态的共享皮肤；
-   基础服务、性能监控和 AI Skill 库共用，根类由各消费方提供。 */
+   基础服务、性能监控和 AI Skill 库共用，根类由各消费方提供。
+   阶段 5 起 token 与卡片皮肤只在这里定义，页面级 base-services 覆盖已删除。 */
 
-.root :global(.base-services-empty-card) {
-  border: 1px solid var(--app-picker-option-disabled);
-  border-radius: 16px;
-  background: var(--base-card);
-  box-shadow: var(--base-card-shadow);
-}
-
-.root :global(.base-services-empty-card) {
-  flex: 1 1 auto;
-  min-height: 320px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background:
-    radial-gradient(circle at top right, var(--app-service-tab-selected-bg), transparent 28%),
-    var(--base-card);
+.root {
+  --base-card: var(--app-glass-surface-72);
+  --base-card-shadow:
+    inset 0 1px 0 var(--app-glass-highlight-86),
+    0 10px 24px var(--app-glass-shadow-card);
+  --base-text: var(--app-glass-text);
+  --base-text-secondary: var(--app-glass-text-description);
+  --base-text-muted: var(--app-glass-text-caption);
 }
 
 .root :global(.base-services-connection-shell) {
@@ -30,6 +22,24 @@
 
 .root :global(.base-services-card-scroll) {
   flex: 1 1 auto;
+  padding: 16px 18px;
+}
+
+.root :global(.base-services-empty-card) {
+  flex: 1 1 auto;
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  border: 1px solid var(--app-glass-request-shadow-selected);
+  border-radius: 16px;
+  background: var(--base-card);
+  box-shadow: var(--base-card-shadow);
+}
+
+.root :global(.base-services-empty-card-list) {
+  min-height: 260px;
 }
 
 .root :global(.base-services-connection-grid) {
@@ -38,20 +48,36 @@
   width: 100%;
   align-content: start;
   align-items: stretch;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  grid-auto-rows: auto;
+  gap: 18px;
 }
 
 .root :global(.base-services-connection-card) {
   min-width: 0;
-  height: 100%;
-  min-height: 176px;
-  border-color: var(--base-border);
+  min-height: 172px;
+  border: 1px solid var(--app-glass-border-68);
+  border-radius: 14px;
   background: var(--base-card);
   box-shadow: var(--base-card-shadow);
+}
+
+.root :global(.base-services-connection-card.ant-card:hover) {
+  border-color: var(--app-glass-action-border);
+  background: var(--app-glass-surface-82);
+  box-shadow:
+    inset 0 1px 0 var(--app-glass-highlight-90),
+    0 14px 30px var(--app-glass-shadow-floating);
+  transform: translateY(-2px);
 }
 
 .root :global(.base-services-connection-card .ant-card-body) {
   display: flex;
   flex-direction: column;
+  height: auto;
+  min-height: 172px;
+  gap: 10px;
+  padding: 16px;
 }
 
 .root :global(.base-services-connection-head) {
@@ -78,6 +104,9 @@
   display: block;
   min-width: 0;
   max-width: 100%;
+  color: var(--base-text);
+  font-size: 14px;
+  font-weight: 700;
   line-height: 22px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -85,9 +114,13 @@
 }
 
 .root :global(.base-services-connection-url.ant-typography) {
-  margin-bottom: 0 !important;
   display: -webkit-box;
+  min-height: 32px;
+  margin-bottom: 0;
   overflow: hidden;
+  color: var(--base-text-secondary);
+  font-size: 12px;
+  line-height: 16px;
   text-overflow: ellipsis;
   word-break: break-all;
   -webkit-box-orient: vertical;
@@ -106,61 +139,6 @@
   height: 28px;
 }
 
-.root :global(.base-services-empty-card-list) {
-  min-height: 260px;
-}
-
-.root :global(.base-services-card-scroll) {
-  padding: 16px 18px;
-}
-
-.root :global(.base-services-connection-grid) {
-  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
-  grid-auto-rows: auto;
-  gap: 18px;
-}
-
-.root :global(.base-services-connection-card.ant-card) {
-  height: auto;
-  min-height: 172px;
-  border: 1px solid var(--app-glass-border-68);
-  border-radius: 14px;
-  background:
-    linear-gradient(180deg, var(--app-glass-surface-70), var(--app-glass-surface-48)),
-    var(--app-glass-surface-50);
-  box-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-90),
-    0 16px 38px var(--app-glass-shadow-toolbar);
-}
-
-.root :global(.base-services-connection-card.ant-card:hover) {
-  border-color: var(--app-service-card-border-hover);
-  box-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-92),
-    0 22px 48px var(--app-service-card-shadow-hover);
-  transform: translateY(-2px);
-}
-
-.root :global(.base-services-connection-card .ant-card-body) {
-  height: auto;
-  min-height: 172px;
-  gap: 10px;
-  padding: 16px !important;
-}
-
-.root :global(.base-services-connection-title) {
-  color: var(--base-text);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.root :global(.base-services-connection-url.ant-typography) {
-  min-height: 32px;
-  color: var(--base-text-secondary);
-  font-size: 12px;
-  line-height: 16px;
-}
-
 .root :global(.base-services-connection-card .sprint-card-label) {
   color: var(--base-text-muted);
   font-size: 12px;
@@ -170,6 +148,10 @@
   color: var(--base-text);
   font-size: 12px;
   font-weight: 650;
+}
+
+.root :global(.base-services-connection-card .sprint-card-meta) {
+  border-bottom-color: var(--app-glass-request-shadow) !important;
 }
 
 @media (max-width: 1880px) {

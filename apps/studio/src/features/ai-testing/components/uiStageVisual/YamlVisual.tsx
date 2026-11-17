@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import '../../styles/ui-yaml-issues.css'
 import { Alert, Empty, Progress, Tag } from 'antd'
 import {
   CheckCircleFilled,

@@ -2,7 +2,6 @@ import { DownOutlined, RightOutlined } from '@ant-design/icons'
 import { Button, Empty, Tag } from 'antd'
 import { useMemo, useState } from 'react'
 import { normalizeApiDesign } from '../utils/apiDesignDiagram'
-import '../styles/api-design-result.css'
 
 function methodColor(method: string) {
   if (method === 'GET') return 'blue'

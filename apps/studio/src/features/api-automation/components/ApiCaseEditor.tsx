@@ -25,6 +25,7 @@ import {
 import { CodeOutlined, DownOutlined, InfoCircleOutlined, PlusOutlined, SendOutlined } from '@ant-design/icons'
 import { Button, Card, Checkbox, Dropdown, Empty, Form, Input, InputNumber, Popconfirm, Popover, Select, Space, Switch, Tabs, Tag, Tooltip } from 'antd'
 import { useEffect, useState } from 'react'
+import styles from '../styles/api-detail-rules.module.css'
 
 /** 顶部一行只读元信息与页签计数都要看当前表单值，草稿态下这些值还没落库。 */
 function countFilledRows(rows?: Array<{ key?: string; value?: string }>) {
@@ -124,7 +125,7 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
         <div className={`api-wb-request tone-${methodTone(watchedMethod ?? editingCase?.method ?? 'GET')}`}>
           <div className="api-wb-request-bar">
             <Form.Item name="method" className="api-wb-method" rules={[{ required: true, message: '请选择请求方式' }]}>
-              <Select options={methodOptions} classNames={{ popup: { root: 'api-method-dropdown' } }} />
+              <Select options={methodOptions} classNames={{ popup: { root: `api-method-dropdown ${styles.scope}` } }} />
             </Form.Item>
             <div className="api-wb-url-group">
               <Popover
@@ -132,7 +133,7 @@ export function ApiCaseEditor({ caseForm, isCreatingCase, setDraftCaseValues, ge
                 placement="bottomLeft"
                 open={environmentPopoverOpen}
                 onOpenChange={setEnvironmentPopoverOpen}
-                overlayClassName="api-case-environment-popover-overlay"
+                overlayClassName={`api-case-environment-popover-overlay ${styles.scope}`}
                 content={
                   <div className="api-case-environment-popover">
                     <div className="api-case-environment-popover-head">

@@ -2,8 +2,6 @@ import { ReactFlow, Handle, Position, applyNodeChanges, getNodesBounds, getViewp
 import '@xyflow/react/dist/style.css'
 import { buildTreeFlow, layoutTreeFlow, type TreeFlowNode } from '../utils/caseNameTreeLayout'
 import { saveBlob } from '@/shared/utils/download'
-import '@/features/ai-testing/styles/index.css'
-import '@/features/ai-testing/styles/case-name-tree.css'
 import type { CaseNameTreeNode } from '@/features/ai-testing/utils/caseNameTree'
 import { buildCaseNameTree, countCaseNameTree } from '@/features/ai-testing/utils/caseNameTree'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'

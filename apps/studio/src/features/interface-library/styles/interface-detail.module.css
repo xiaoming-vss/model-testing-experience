@@ -1,0 +1,248 @@
+/* 接口详情：顶栏、元信息、编辑器壳与请求地址条。 */
+
+.scope { --if-detail-scope: 1; }
+
+/* ---------- 接口详情 ---------- */
+
+.scope :global(.if-detail-loading) {
+  display: grid;
+  place-items: center;
+}
+
+.scope :global(.if-detail-topbar) {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 60px;
+  padding: 8px 14px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+}
+
+.scope :global(.if-detail-topbar-main) {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+}
+
+.scope :global(.if-detail-heading) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.scope :global(.if-detail-title-row) {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+}
+
+.scope :global(.if-detail-title-row h1) {
+  max-width: 520px;
+  margin: 0;
+  overflow: hidden;
+  color: var(--srf-text);
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scope :global(.if-detail-title-row .ant-tag) {
+  margin: 0;
+}
+
+.scope :global(.if-detail-meta) {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+  color: var(--srf-text-muted);
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.scope :global(.if-detail-meta code) {
+  color: var(--srf-text-secondary);
+  font-size: 11px;
+}
+
+.scope :global(.if-meta-dot) {
+  color: var(--srf-text-muted);
+}
+
+.scope :global(.if-detail-topbar-actions) {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.scope :global(.if-detail-shell) {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  gap: 12px;
+}
+
+.scope :global(.if-detail-app-tree) {
+  flex: 0 0 var(--app-sidebar-width);
+  width: var(--app-sidebar-width);
+  max-width: var(--app-sidebar-width);
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+}
+
+.scope :global(.if-detail-main) {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.scope :global(.if-editor-card) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+  overflow: hidden;
+}
+
+.scope :global(.if-editor-head) {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 5px;
+  padding: 13px 16px 9px;
+}
+
+.scope :global(.if-name-input.ant-input) {
+  height: 34px;
+  padding: 2px 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--srf-text);
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.scope :global(.if-name-input.ant-input:hover),
+.scope :global(.if-name-input.ant-input:focus) {
+  border-bottom-color: var(--srf-card-border);
+  background: transparent;
+  box-shadow: none;
+}
+
+.scope :global(.if-editor-meta) {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 7px;
+  color: var(--srf-text-muted);
+  font-size: 11px;
+  line-height: 20px;
+}
+
+.scope :global(.if-app-select) {
+  min-width: 160px;
+}
+
+.scope :global(.if-editor-app) {
+  color: var(--srf-text);
+  font-weight: 600;
+}
+
+.scope :global(.if-request-bar) {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 13px;
+  border-bottom: 1px solid var(--srf-divider);
+}
+
+.scope :global(.if-method-select) {
+  flex: 0 0 104px;
+}
+
+.scope :global(.if-method-select .ant-select-selector) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 700;
+}
+
+.scope :global(.if-path-input-wrap) {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: stretch;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-card);
+}
+
+.scope :global(.if-path-input-wrap:focus-within) {
+  border-color: var(--srf-accent-border);
+  box-shadow: 0 0 0 3px var(--srf-accent-soft);
+}
+
+.scope :global(.if-base-prefix) {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  max-width: 170px;
+  padding: 0 10px;
+  border-right: 1px solid var(--srf-divider);
+  background: var(--srf-chip);
+  color: var(--srf-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scope :global(.if-path-input.ant-input) {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+
+.scope :global(.if-path-input.ant-input:hover),
+.scope :global(.if-path-input.ant-input:focus) {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.scope :global(.if-save-button) {
+  flex: 0 0 auto;
+  min-width: 86px;
+}
+
+.scope :global(.if-readonly-tag) {
+  flex: 0 0 auto;
+  margin: 0;
+}
+

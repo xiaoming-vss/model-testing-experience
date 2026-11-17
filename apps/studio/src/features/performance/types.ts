@@ -8,13 +8,18 @@ export type PerfDataFile = {
 export type PerfCaseSummary = {
   caseId: string
   projectId: string
+  suiteId: string
+  orderNo: number
   name: string
-  description: string
   version: number
   enabled: boolean
   dataFiles: PerfDataFile[]
   createdAt?: string
   updatedAt?: string
+}
+
+export type PerfSuiteCase = PerfCaseSummary & {
+  yaml: string
 }
 
 export type PerfCase = PerfCaseSummary & {
@@ -24,14 +29,14 @@ export type PerfCase = PerfCaseSummary & {
 
 export type CreatePerfCasePayload = {
   name: string
-  description?: string
   yaml: string
   dataFileIds?: string[]
+  suiteId?: string
+  orderNo?: number
 }
 
 export type UpdatePerfCasePayload = {
   name?: string
-  description?: string
   yaml?: string
   dataFileIds?: string[]
   enabled?: boolean
@@ -56,11 +61,7 @@ export type PerfRunOutcome =
 export type PerfMonitoringSnapshot = {
   connectionId: string
   name: string
-  queryUrl: string
   remoteWriteUrl: string
-  grafanaUrl: string
-  grafanaDashboardUid: string
-  defaultFilters: Record<string, unknown>
 }
 
 export type PerfRunSummary = {
@@ -101,6 +102,95 @@ export type StartPerfRunPayload = {
   monitoringConnectionId: string
 }
 
+export type PerfSuiteSummary = {
+  suiteId: string
+  projectId: string
+  name: string
+  description: string
+  enabled: boolean
+  caseCount: number
+  enabledCaseCount: number
+  stepCount: number
+  dataFileCount: number
+  loadModels: string[]
+  lastRunStatus: PerfRunStatus | ''
+  lastRunOutcome: PerfRunOutcome | ''
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type PerfSuite = PerfSuiteSummary & {
+  cases: PerfSuiteCase[]
+  createdBy: string
+}
+
+export type CreatePerfSuitePayload = {
+  name: string
+  description?: string
+  enabled?: boolean
+}
+
+export type UpdatePerfSuitePayload = Partial<CreatePerfSuitePayload>
+
+export type PerfSuiteRunItemStatus =
+  | 'pending'
+  | 'queued'
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'stopped'
+  | 'canceled'
+  | 'skipped'
+
+export type PerfSuiteRunSummary = {
+  suiteRunId: string
+  suiteId: string
+  projectId: string
+  suiteName: string
+  environmentId: string
+  environmentName: string
+  monitoringConnectionId: string
+  monitoringConnectionName: string
+  triggerUserId: string
+  triggerType: string
+  status: PerfRunStatus
+  outcome?: PerfRunOutcome | ''
+  totalCount: number
+  completedCount: number
+  failedCount: number
+  skippedCount: number
+  errorMessage: string
+  startedAt?: string
+  finishedAt?: string
+  durationMs: number
+  createdAt?: string
+}
+
+export type PerfSuiteRunItem = {
+  itemId: string
+  caseId: string
+  caseName: string
+  orderNo: number
+  status: PerfSuiteRunItemStatus
+  outcome?: PerfRunOutcome | ''
+  childRunId: string
+  errorMessage: string
+  startedAt?: string
+  finishedAt?: string
+  durationMs: number
+  summary?: Record<string, unknown> | null
+  load?: Record<string, unknown> | null
+  logTail: string
+  flags: string[]
+  k6Version: string
+}
+
+export type PerfSuiteRun = PerfSuiteRunSummary & {
+  items: PerfSuiteRunItem[]
+}
+
+export type StartPerfSuiteRunPayload = StartPerfRunPayload
+
 export type MonitoringAuthType = 'none' | 'basic' | 'bearer' | 'headers'
 
 export type MonitoringAuthPayload = {
@@ -115,15 +205,9 @@ export type MonitoringConnection = {
   connectionId: string
   projectId: string
   name: string
-  queryUrl: string
   remoteWriteUrl: string
-  queryAuthType: MonitoringAuthType
   remoteWriteAuthType: MonitoringAuthType
-  hasQueryCredentials: boolean
   hasRemoteWriteCredentials: boolean
-  grafanaUrl: string
-  grafanaDashboardUid: string
-  defaultFilters: Record<string, unknown>
   enabled: boolean
   createdAt?: string
   updatedAt?: string
@@ -131,13 +215,8 @@ export type MonitoringConnection = {
 
 export type CreateMonitoringConnectionPayload = {
   name: string
-  queryUrl: string
   remoteWriteUrl: string
-  queryAuth?: MonitoringAuthPayload
   remoteWriteAuth?: MonitoringAuthPayload
-  grafanaUrl?: string
-  grafanaDashboardUid?: string
-  defaultFilters?: Record<string, unknown>
   enabled?: boolean
 }
 

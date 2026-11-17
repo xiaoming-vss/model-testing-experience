@@ -1,7 +1,7 @@
 import { ListPagination } from '@/shared/components/ListPagination'
 import '@/shared/styles/list-table.css'
 import '@/shared/styles/surface-tokens.css'
-import '../styles/bugs-v2.css'
+import styles from '../styles/bugs.module.css'
 import { Alert, Empty, Table } from 'antd'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { getErrorMessage } from '@/utils/format'
@@ -31,7 +31,7 @@ export function BugListPage() {
     setPage(1)
   }
   return (
-    <div className="workbench-page api-automation-page functional-test-page tp-list-surface bugs-page tp-surface">
+    <div className={`workbench-page api-automation-page functional-test-page tp-list-surface bugs-page tp-surface ${styles.root}`}>
       <div className="api-automation-content">
         <section className="workbench-panel workbench-board-panel tp-board tp-list-panel">
           <BugListToolbar model={model} />

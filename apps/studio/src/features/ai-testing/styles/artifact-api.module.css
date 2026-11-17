@@ -1,0 +1,528 @@
+/* API 产物可视化：接口配置与用例设计。 */
+
+.scope { --ai-artifact-api-scope: 1; }
+
+/* API 配置结果：请求链、变量和规则可视化。 */
+.scope :global(.api-config-visual-view) {
+  min-height: 0;
+  color: var(--ai-text);
+}
+
+.scope :global(.api-config-visual-stats) {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 0 12px;
+  background: var(--ai-popover-surface);
+}
+
+.scope :global(.api-config-visual-chain) {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-bottom: 4px;
+}
+
+.scope :global(.api-config-visual-step) {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.scope :global(.api-config-visual-card) {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--app-review-outline);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, var(--app-glass-surface-92), var(--app-review-muted-bg)),
+    var(--ai-card);
+  box-shadow: 0 10px 24px var(--app-glass-request-shadow-selected);
+}
+
+.scope :global(.api-config-visual-card-head) {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.16s ease;
+}
+
+.scope :global(.api-config-visual-card-head:hover) {
+  background: var(--app-review-accent-bg);
+}
+
+.scope :global(.api-config-visual-card-head:focus-visible) {
+  outline: 2px solid var(--app-review-focus-ring);
+  outline-offset: -2px;
+}
+
+.scope :global(.api-config-visual-card-body) {
+  padding: 0 16px 14px;
+}
+
+.scope :global(.api-config-visual-method-line) {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scope :global(.api-config-visual-method-line strong) {
+  min-width: 0;
+  color: var(--ai-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.scope :global(.api-config-visual-order),
+.scope :global(.api-config-visual-muted) {
+  flex: none;
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.scope :global(.api-config-visual-path) {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--app-request-card-shadow-hover);
+  color: var(--ai-text);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 12px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.scope :global(.api-config-visual-variable-row) {
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.scope :global(.api-config-visual-variable-row .ant-tag),
+.scope :global(.api-config-visual-method-line .ant-tag),
+.scope :global(.api-config-visual-rule-title .ant-tag) {
+  margin-inline-end: 0;
+}
+
+.scope :global(.api-config-visual-grid) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.scope :global(.api-config-visual-field) {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--app-frame-divider-soft);
+  border-radius: 8px;
+  background: var(--app-glass-surface-68);
+}
+
+.scope :global(.api-config-visual-field span),
+.scope :global(.api-config-visual-rule-title span) {
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+.scope :global(.api-config-visual-field pre) {
+  max-height: 132px;
+  margin: 6px 0 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--ai-text);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.scope :global(.api-config-visual-rules) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.scope :global(.api-config-visual-rule-group) {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--app-frame-divider-soft);
+  border-radius: 8px;
+  background: var(--app-picker-header-bg);
+}
+
+.scope :global(.api-config-visual-rule-title) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.scope :global(.api-config-visual-rule-list) {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.scope :global(.api-config-visual-rule) {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-left: 8px;
+  border-left: 2px solid var(--app-frame-card-border-hover);
+}
+
+.scope :global(.api-config-visual-rule strong) {
+  color: var(--ai-text);
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.scope :global(.api-config-visual-rule span),
+.scope :global(.api-config-visual-empty) {
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.scope :global(.api-config-visual-empty) {
+  margin-top: 8px;
+}
+
+/* 无法解析为 API 链路或候选用例时的居中空态。 */
+.scope :global(.ai-task-run-result-popover-empty) {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ai-text-secondary);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.scope :global(.api-config-visual-connector) {
+  width: 2px;
+  height: 22px;
+  margin: 0 0 0 28px;
+  background: linear-gradient(180deg, var(--app-review-scrollbar), var(--app-terminal-scrollbar-active));
+}
+
+.scope :global(.api-config-visual-collapse-icon) {
+  width: 14px;
+  flex: 0 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ai-text-secondary);
+  font-size: 11px;
+}
+
+/* API 用例设计：接口分组、用例依据、参数变异与未覆盖清单。 */
+.scope :global(.api-design-visual-view) {
+  min-height: 0;
+  color: var(--ai-text);
+}
+
+.scope :global(.api-design-visual-stats) {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 0 12px;
+  background: var(--ai-popover-surface);
+}
+
+.scope :global(.api-design-visual-toggle-all) {
+  margin-left: auto;
+  color: var(--ai-text-secondary);
+  font-size: 11px;
+}
+
+.scope :global(.api-design-visual-list) {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 4px;
+}
+
+.scope :global(.api-design-visual-interface) {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--app-review-outline);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, var(--app-glass-surface-92), var(--app-review-muted-bg)),
+    var(--ai-card);
+  box-shadow: 0 10px 24px var(--app-glass-request-shadow-selected);
+}
+
+.scope :global(.api-design-visual-interface-head) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--app-frame-divider-soft);
+  background: var(--app-picker-header-bg);
+}
+
+.scope :global(.api-design-visual-interface-head > div) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.scope :global(.api-design-visual-interface-head strong) {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scope :global(.api-design-visual-interface-head span) {
+  overflow: hidden;
+  color: var(--ai-text-secondary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scope :global(.api-design-visual-count) {
+  flex: 0 1 auto;
+  max-width: 50%;
+  overflow: hidden;
+  color: var(--ai-text-secondary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scope :global(.api-design-visual-cases) {
+  display: flex;
+  flex-direction: column;
+}
+
+.scope :global(.api-design-visual-case) {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--app-frame-divider-soft);
+}
+
+.scope :global(.api-design-visual-case:last-child) {
+  border-bottom: 0;
+}
+
+.scope :global(.api-design-visual-case-head) {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.scope :global(.api-design-visual-case-head:hover strong),
+.scope :global(.api-design-visual-case-head:focus-visible strong) {
+  color: var(--ai-accent);
+}
+
+.scope :global(.api-design-visual-case-head:focus-visible) {
+  outline: 2px solid var(--app-review-focus-ring);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.scope :global(.api-design-visual-case-toggle) {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  color: var(--ai-text-secondary);
+  font-size: 10px;
+}
+
+.scope :global(.api-design-visual-case-head strong) {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scope :global(.api-design-visual-case-head > :last-child) {
+  margin-left: auto;
+}
+
+.scope :global(.api-design-visual-case.is-collapsed .api-design-visual-intent) {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.scope :global(.api-design-visual-case-body) {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.scope :global(.api-design-visual-intent) {
+  margin: 0;
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.scope :global(.api-design-visual-basis),
+.scope :global(.api-design-visual-assertions) {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.scope :global(.api-design-visual-basis > span),
+.scope :global(.api-design-visual-assertions > span) {
+  flex: 0 0 auto;
+  color: var(--ai-text-secondary);
+}
+
+.scope :global(.api-design-visual-basis code),
+.scope :global(.api-design-visual-assertions code),
+.scope :global(.api-design-visual-uncovered-row code) {
+  padding: 1px 6px;
+  border: 1px solid var(--app-review-outline);
+  border-radius: 5px;
+  background: var(--app-glass-surface-68);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+.scope :global(.api-design-visual-patches) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--app-review-outline);
+  border-radius: 7px;
+  background: var(--app-glass-surface-68);
+  list-style: none;
+}
+
+.scope :global(.api-design-visual-patches li) {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.scope :global(.api-design-visual-patches li .ant-tag) {
+  margin-inline-end: 0;
+}
+
+.scope :global(.api-design-visual-patch-value) {
+  color: var(--ai-text-secondary);
+}
+
+.scope :global(.api-design-visual-patch-empty),
+.scope :global(.api-design-visual-assertions.is-empty em) {
+  color: var(--ai-text-secondary);
+  font-size: 11px;
+  font-style: normal;
+}
+
+.scope :global(.api-design-visual-uncovered) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-top: 1px dashed var(--app-review-outline);
+  background: var(--app-glass-surface-68);
+}
+
+.scope :global(.api-design-visual-uncovered > strong) {
+  color: var(--ai-text-secondary);
+  font-size: 11px;
+}
+
+.scope :global(.api-design-visual-uncovered-row) {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.scope :global(.api-design-visual-uncovered-row em) {
+  color: var(--ai-text-secondary);
+  font-style: normal;
+}
+
+.scope :global(.api-design-visual-state) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 240px;
+  padding: 24px;
+}
+
+.scope :global(.api-design-visual-state-copy) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.scope :global(.api-design-visual-state-copy strong) {
+  color: var(--ai-text);
+  font-size: 13px;
+}
+
+.scope :global(.api-design-visual-state-copy span) {
+  color: var(--ai-text-secondary);
+  font-size: 12px;
+}

@@ -1,6 +1,3 @@
-import '@/features/ai-testing/styles/index.css'
-import '@/features/ai-testing/styles/generated-cases-review.css'
-import '../styles/generated-case-browser.css'
 import { CaseNameTreeView } from './CaseNamesResultView'
 import { buildGeneratedCaseTree } from '../utils/generatedCaseTree'
 import { CASE_ID_FIELDS, getGeneratedCaseEditableFields, isJsonText, toDisplayText } from '@/features/ai-testing/utils/functionalOutput'

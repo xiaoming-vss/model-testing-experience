@@ -17,7 +17,6 @@ import {
 import { useRelationsEdgePaths } from '../hooks/useRelationsEdgePaths'
 import { HierarchicalCaseRelationsGraph } from './HierarchicalCaseRelationsGraph'
 import '@xyflow/react/dist/style.css'
-import './FunctionalCaseRelationsGraph.css'
 
 // 选中详情面板浮在画布右侧，全图/定位需要把这块宽度让出来，避免节点被压住。
 const DEFAULT_PANEL_WIDTH = 296

@@ -17,7 +17,13 @@ import { SoftwareRepositoryEditorDrawer } from '../components/SoftwareRepository
 import { useSoftwareRepositoryManager } from '../hooks/useSoftwareRepositoryManager'
 import type { SoftwareRepository } from '../types'
 import '@/shared/styles/surface-tokens.css'
-import '../styles/index.css'
+import styles from '../styles/interface-library.module.css'
+import methodStyles from '../styles/interface-method.module.css'
+import openapiStyles from '../styles/interface-openapi.module.css'
+import detailStyles from '../styles/interface-detail.module.css'
+import editorStyles from '../styles/interface-editor.module.css'
+
+const interfaceScopes = `${styles.scope} ${methodStyles.scope} ${openapiStyles.scope} ${detailStyles.scope} ${editorStyles.scope}`
 
 /** 项目级软件仓库管理；接口库左侧软件仓库树提供同一批仓库的快捷入口。 */
 export function SoftwareRepositoriesPage() {
@@ -146,7 +152,7 @@ export function SoftwareRepositoriesPage() {
   ]
 
   return (
-    <div className="workbench-page interface-library-page tp-surface tp-list-surface">
+    <div className={`workbench-page interface-library-page tp-surface tp-list-surface ${styles.pageRoot} ${interfaceScopes}`}>
       <section className="tp-board tp-list-panel if-library-board">
         <div className="if-library-toolbar tp-list-toolbar">
           <div className="if-toolbar-filters">

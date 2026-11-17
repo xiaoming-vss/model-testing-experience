@@ -1,0 +1,304 @@
+/* UI 测试集详情壳：板面、控制条、两栏高度分配、缺失变量弹窗；顶栏在 ui-detail-topbar.module.css。 */
+
+.scope { --ui-detail-shell-scope: 1; }
+
+/*
+ * UI测试集详情页（UI 测试列表点测试集名称进来的页面）按设计稿重做的表面层：板面、顶栏、控制条、用例顺序弹层。
+ *
+ * 结构：顶栏（返回 / 标题 + 测试集 / 需求 / 迭代 / 就绪结论 / 上次运行 / 四个动作）
+ * + 控制条（选用例 + 工作区视图 + 运行环境）+ 两栏（左步骤编排、右执行回放与控制台）。
+ * 设计稿的副标题栏里还有「当前项目 / 当前迭代 / 测试阶段」三段面包屑，那是工作台外壳顶栏的内容，
+ * 页面里不再重复。
+ *
+ * token 与色盘来自 shared/styles/surface-tokens.css：页面根节点带 `tp-surface`、板面带 `tp-board`，
+ * 颜色只引用 `--srf-*` / `.tone-*`。顶栏在 ui-detail-topbar.module.css，用例信息条与步骤编辑器在
+ * ui-detail-pipeline.module.css，右栏三张卡片在 ui-detail-inspector.module.css。
+ */
+
+/* ===== 板面与两栏 ===== */
+
+/*
+ * 板面必须是裸画布：`app/styles/shell-header.css` 给 `.app-shell.app-shell-macos .workbench-panel`
+ * 铺了玻璃底 + 内高光 + 10px/24px 投影（(0,3,0) + !important），shared/styles/surface-tokens.css 里
+ * `.tp-board` 那条覆盖（(0,2,0)）压不住它——列表页靠的是带 `.testing-page` 前缀的 (0,6,0) 规则，
+ * 而详情页这条路由不在 `.testing-page` 里（实测 `.testing-page` 为 null），所以这里必须自己写一条：
+ * 带上 `.ui-suite-detail-page` 把权重抬到 (0,6,0)。
+ * 去掉这层的判据：板面应无底色 / 无投影（否则内容区会凭空多出一个容器）。
+ */
+:global(.app-shell.app-shell-macos) .scope :global(.api-automation-content > .workbench-panel.ui-suite-detail-board) {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* 折叠状态由 `hidden` 属性表达（步骤卡片展开/收起就是这一条），而 `.ui-test-case-step-body` 在
+   ui-suite.module.css 里是 flex 容器——作者样式压得过 UA 的 `[hidden]`，这里补一条 !important 兜住。
+   antd 的 reset 也带同效规则，这条是让折叠不依赖三方 reset。 */
+.scope [hidden] {
+  display: none !important;
+}
+
+/* 工作区高度：取板上剩余高度（板面本身是有高度的滚动容器），所以整页不再随内容变长。
+   多出来的高度由左栏步骤列表与右栏控制台日志各自内部滚动消化，底部指标区固定可见。
+   矮屏下保留下限，回落到「整页滚动」的旧行为，避免面板被压到不可用。 */
+.scope :global(.ui-wb-cols) {
+  flex: 1 1 auto;
+  min-height: min(520px, calc(100vh - 320px));
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: 12px;
+  /* 两栏整体齐高：行高取两栏内容较高者，另一栏拉伸到同一高度，底边因此对齐。
+     高度由左栏的步骤编辑器卡片吃掉（见 ui-detail-pipeline.module.css），右栏保持自然高度。 */
+  align-items: stretch;
+}
+
+.scope :global(.ui-wb-main) {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scope :global(.ui-wb-inspector) {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* 空间不够时右栏自己滚（而不是把卡片压扁），指标区始终能滚到。 */
+  overflow-y: auto;
+}
+
+.scope :global(.ui-wb-inspector-slot) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/*
+ * 三个槽的弹性分配（右栏要在一屏内放下三张卡片）：
+ * 1. 回放：空间不足时主要压它（shrink 权重 4）——舞台本来就是自适应区域；空间富余时它先长到上限。
+ * 2. 关键帧：定高（单行横滚），不参与伸缩。
+ * 3. 执行控制台：只吸收剩余空间（shrink 权重 1），卡片内部的日志是弹性区，
+ *    底部的指标区是 flex: 0 0 auto，任何情况下都不会被压或看不见。
+ * 三个卡片各自有 min-height，压到极限时右栏整体滚动，而不是把卡片压扁。
+ */
+/*
+ * 右栏三张卡片的高度分配：
+ * 1. 回放：舞台是 16:9（设计稿的主视觉），空间富余时不长，不够时先收它（收到下限为止）。
+ * 2. 关键帧：单行定高，不参与伸缩。
+ * 3. 执行控制台：吃掉剩余高度；空间不够时先压它的日志（日志本来就是滚动区）。
+ *    卡片下限写在槽上——槽才是右栏的 flex 项，写在卡片上会被槽压过去、内容外溢——所以
+ *    底部的指标区在任何高度下都留在卡片里，既不会被压扁，也不会被挤出卡片。
+ * 4. 三张卡片都到下限后仍放不下（矮屏）时，右栏整体滚动，卡片保持完整。
+ */
+.scope :global(.ui-wb-inspector > .ui-wb-inspector-slot:nth-child(2)) {
+  flex: 0 0 auto;
+}
+
+/* 中等屏幕（不够放下全部、但也不至于要滚动）时，先让舞台收一点，
+   别把控制台整块挤出视野；落到卡片下限后右栏才整体滚动。 */
+.scope :global(.ui-wb-inspector > .ui-wb-inspector-slot:nth-child(1)) {
+  flex: 0 1 auto;
+  min-height: 256px;
+}
+
+.scope :global(.ui-wb-inspector > .ui-wb-inspector-slot:nth-child(3)) {
+  flex: 1 1 auto;
+  /* 卡片下限：内距 + 头 + 日志 60 + 指标区 + 快照开关 */
+  min-height: 226px;
+}
+
+.scope :global(.ui-wb-inspector-slot > .ui-wb-card) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* 缺失变量补齐弹窗：变量名与输入框逐行对齐，缺失位置清单只读展示。 */
+.scope :global(.ui-missing-variables) {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.scope :global(.ui-missing-variable-row) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.scope :global(.ui-missing-variable-name) {
+  flex: 0 0 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--app-font-mono);
+  font-size: 12px;
+}
+
+.scope :global(.ui-missing-variable-row .ant-input) {
+  flex: 1 1 auto;
+}
+
+.scope :global(.ui-missing-variable-locations) {
+  margin-top: 16px;
+  font-size: 12px;
+}
+
+.scope :global(.ui-missing-variable-locations ul) {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--srf-text-muted);
+}
+
+/* 测试集描述：设计稿没有这一块，但它是测试集自身的说明，保留为板面末尾一行弱化文字。 */
+.scope :global(.ui-wb-board-note.ant-typography) {
+  margin: 0;
+  color: var(--srf-text-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* ===== 控制条 ===== */
+
+.scope :global(.ui-wb-ribbon) {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+}
+
+/* 用例的新建、切换、排序、删除都在流程画布卡片上完成，这里只保留运行环境。 */
+.scope :global(.ui-wb-ribbon-workspace) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.scope :global(.ui-wb-ribbon-env) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 320px;
+  padding: 3px 8px;
+  border-radius: var(--srf-radius-control);
+  color: var(--srf-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===== 窄屏 ===== */
+
+/* 断点与 API 详情页一致（1180px）：再窄就把 7:5 双栏改成上下堆叠。 */
+@media (max-width: 1180px) {
+  .scope :global(.ui-wb-cols) {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .scope :global(.ui-wb-crumb-suite) {
+    max-width: 280px;
+  }
+}
+
+@media (max-width: 1439px) {
+  /* 中等宽度只保留测试集名，需求与迭代仍在 title 中；避免截到需求名的一半。 */
+  .scope :global(.ui-wb-crumb-context-rest) {
+    display: none;
+  }
+
+  .scope :global(.ui-wb-crumb-suite) {
+    max-width: 140px;
+  }
+}
+
+/* 顶栏动作留给运行/保存，次级动作在中等宽度收成图标；title/aria-label 保留完整名称。 */
+@media (max-width: 1800px) {
+  .scope :global(.ui-wb-toolbar-actions .ui-wb-toolbar-compact) {
+    width: 28px;
+    padding-inline: 0;
+  }
+
+  .scope :global(.ui-wb-toolbar-actions .ui-wb-toolbar-compact .ui-wb-btn-label) {
+    display: none;
+  }
+
+  .scope :global(.ui-wb-toolbar-actions .ui-wb-toolbar-compact .ant-btn-icon) {
+    margin-inline-end: 0;
+  }
+
+  .scope :global(.ui-wb-toolbar-actions) {
+    gap: 6px;
+  }
+
+  .scope :global(.ui-wb-toolbar-environment) {
+    min-width: 140px;
+  }
+}
+
+@media (max-width: 900px) {
+  .scope :global(.ui-wb-crumb-suite) {
+    max-width: 220px;
+  }
+
+  .scope :global(.ui-wb-crumb-name-item) {
+    flex-basis: 180px;
+  }
+}
+
+@media (max-width: 700px) {
+  .scope :global(.ui-wb-crumb-suite) {
+    max-width: 180px;
+  }
+
+  .scope :global(.ui-wb-crumb-case-name) {
+    max-width: 150px;
+  }
+
+  .scope :global(.ui-wb-crumb-name-item) {
+    flex-basis: 150px;
+    min-width: 96px;
+  }
+
+  .scope :global(.ui-wb-toolbar-actions) {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+/* 测试集流程和当前用例共用一条导航；用例的新建与切换都在流程画布卡片上。 */
+.scope :global(.ui-wb-flow-breadcrumb) { display:flex; align-items:center; flex-wrap:wrap; gap:4px; min-width:0; }
+.scope :global(.ui-wb-flow-breadcrumb-current) { color:var(--srf-text-secondary); overflow-wrap:anywhere; }
+.scope :global(.ui-wb-inspector.ui-wb-inspector-unified) { gap:0; padding:12px; border:1px solid var(--srf-card-border); border-radius:var(--srf-radius-card); background:var(--srf-card); }
+.scope :global(.ui-wb-inspector.ui-wb-inspector-unified > .ui-wb-inspector-slot) { flex:0 0 auto; min-height:0; }
+.scope :global(.ui-wb-inspector-unified > .ui-wb-inspector-slot + .ui-wb-inspector-slot) { margin-top:16px; }
+.scope :global(.ui-wb-inspector-unified .ui-wb-card) { padding:0; border:0; border-radius:0; background:transparent; overflow:visible; }
+.scope :global(.ui-wb-inspector-unified .ui-wb-strip-empty) { padding:0; }
+.scope :global(.ui-wb-inspector-unified .ui-wb-console-log) { min-height:85px; max-height:240px; }
+/* 让回放、快照和日志在一个视口中保持可见；截图与日志仍使用各自的原有控件。 */
+.scope :global(.ui-wb-inspector-unified .ui-wb-replay-stage) { flex:0 0 auto; }
+.scope :global(.ui-wb-inspector-unified .ui-wb-replay-canvas) { flex:0 0 auto; width:100%; height:auto; aspect-ratio:16 / 9; max-height:none; }
+.scope :global(.ui-wb-inspector-unified .ui-wb-replay-placeholder .ant-empty-image),
+.scope :global(.ui-wb-inspector-unified .ui-wb-strip-empty .ant-empty-image),
+.scope :global(.ui-wb-inspector-unified .ui-wb-console-empty .ant-empty-image) { display:none; }
+.scope :global(.ui-wb-inspector-unified .ui-wb-strip-empty .ant-empty),
+.scope :global(.ui-wb-inspector-unified .ui-wb-console-empty.ant-empty) { margin:0; }
+
+.scope :global(.ui-wb-inspector-unified .ui-wb-replay-shot) { width:100%; height:100%; }
+.scope :global(.ui-wb-inspector-unified .ui-wb-replay-shot img) { width:100%; height:100%; object-fit:contain; }

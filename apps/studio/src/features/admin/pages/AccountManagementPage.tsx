@@ -11,7 +11,6 @@ import { adminApi } from '../api/admin.api'
 import type { AdminUser } from '../types'
 import '@/shared/styles/surface-tokens.css'
 import '@/shared/styles/list-table.css'
-import '../styles/account-management.css'
 
 const { Text } = Typography
 
@@ -68,7 +67,7 @@ export function AccountManagementPage() {
       key: 'name',
       width: 200,
       render: (name: string, user: AdminUser) => (
-        <div className="account-management-user-name">
+        <div className="flex min-w-0 items-center gap-2 [&_.ant-typography]:text-[13px]">
           <Text strong>{name}</Text>
           {user.authSource === 'ldap' ? <Tag color="blue">LDAP 用户</Tag> : null}
           {user.isSuperAdmin ? <Tag color="gold">系统管理员</Tag> : null}
@@ -90,7 +89,7 @@ export function AccountManagementPage() {
       width: 190,
       render: (_: unknown, user: AdminUser) =>
         user.status === 'disabled' ? (
-          <div className="account-disabled-reason">
+          <div className="flex flex-col gap-0.5 text-xs">
             {user.disabledReason ? <div>{user.disabledReason}</div> : null}
             <Text type="secondary">{formatTime(user.disabledAt ?? undefined)}</Text>
           </div>
@@ -106,7 +105,7 @@ export function AccountManagementPage() {
         user.isSuperAdmin ? (
           <Text type="secondary">系统保护账号</Text>
         ) : (
-          <Space size={4} wrap className="account-management-actions">
+          <Space size={4} wrap className="justify-end">
             {user.status !== 'active' ? (
               <Button type="link" size="small" onClick={() => run(async () => { const updated = await adminApi.enableUser(user.userId); if (updated.status === 'pending_ldap') message.info('账号待 LDAP 关联，需通过 LDAP 登录完成关联'); return updated }, '账号状态已更新')}>
                 启用
@@ -151,20 +150,20 @@ export function AccountManagementPage() {
 
   return (
     <div className="workbench-page account-management-page tp-list-surface tp-surface">
-      <div className="account-management-content">
-        <section className="account-management-panel tp-board tp-list-panel" aria-labelledby="account-management-title">
-          <div className="account-management-toolbar tp-list-toolbar">
-            <div className="account-management-filters">
+      <div className="flex min-h-0 flex-1 flex-col px-[var(--app-page-gutter)] pt-3 pb-4">
+        <section className="tp-board tp-list-panel" aria-labelledby="account-management-title">
+          <div className="tp-list-toolbar flex-wrap">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <h1 className="tp-list-title" id="account-management-title">账号管理</h1>
               <Input.Search
-                className="account-management-search"
+                className="w-[288px] max-w-full"
                 allowClear
                 aria-label="搜索用户名或邮箱"
                 placeholder="搜索用户名或邮箱"
                 onSearch={(value) => { setSearch(value.trim()); setPage(1) }}
               />
               <Select
-                className="account-management-status"
+                className="w-[180px]"
                 aria-label="账号状态"
                 value={status}
                 onChange={(value) => { setStatus(value); setPage(1) }}
@@ -186,13 +185,13 @@ export function AccountManagementPage() {
           </div>
 
           {usersQuery.error ? (
-            <Alert showIcon type="error" title={getErrorMessage(usersQuery.error)} action={<Button onClick={() => { void usersQuery.refetch() }}>重试</Button>} />
+            <Alert className="mx-4 mt-3" showIcon type="error" title={getErrorMessage(usersQuery.error)} action={<Button onClick={() => { void usersQuery.refetch() }}>重试</Button>} />
           ) : null}
 
           <div className="tp-list-body">
             <div className="tp-list-scroll">
               <Table<AdminUser>
-                className="account-management-table tp-list-table"
+                className="tp-list-table"
                 rowKey="userId"
                 dataSource={listItems(usersQuery.data)}
                 columns={columns}

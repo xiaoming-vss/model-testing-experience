@@ -6,7 +6,7 @@ import { message } from '@/shared/utils/feedback'
 import { randomId } from '@/shared/utils/crypto'
 import { ListPagination } from '@/shared/components/ListPagination'
 import { BugImportConfiguration, type ImportChoice } from './BugImportConfiguration'
-import '../styles/bug-import.css'
+import styles from '../styles/bug-import.module.css'
 import { bugsApi } from '../api/bugs.api'
 import type {
   ZentaoBugCandidate,
@@ -200,7 +200,7 @@ export function BugZentaoImportModal({ open, projectId, defaultSprintId, onClose
       title="从禅道导入 Bug"
       open={open}
       width={1040}
-      className="bug-import-modal"
+      className={`bug-import-modal ${styles.root}`}
       onCancel={close}
       footer={results ? <Button type="primary" onClick={close}>完成</Button> : (
         <div className="bug-import-footer">

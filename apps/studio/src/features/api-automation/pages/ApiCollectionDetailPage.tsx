@@ -37,10 +37,10 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { useNavigate, useParams } from 'react-router-dom'
 import { goBackOrFallback } from '@/shared/utils/backNavigation'
 import '@/shared/styles/surface-tokens.css'
-import '@/features/api-automation/styles/detail-workbench-v2.css'
-import '@/features/api-automation/styles/detail-inspector-v2.css'
-import '@/features/api-automation/styles/detail-request-panels-v2.css'
-import '@/features/api-automation/styles/detail.css'
+import shellStyles from '../styles/api-detail-shell.module.css'
+import editorStyles from '../styles/api-detail-editor.module.css'
+import requestStyles from '../styles/api-detail-request.module.css'
+import rulesStyles from '../styles/api-detail-rules.module.css'
 import {
   DRAFT_CASE_ID,
   ENV_VAR_TOKEN_PREFIX,
@@ -935,7 +935,7 @@ export function ApiCollectionDetailPage() {
   const handleCaseDragEnd = useCallback(() => setDraggingCaseId(null), [])
 
   return (<ProjectAccessScope projectId={projectId ?? ''}>{(
-    <div className="workbench-page api-collection-detail-page api-collection-workbench-page tp-surface">
+    <div className={`workbench-page api-collection-detail-page api-collection-workbench-page tp-surface ${shellStyles.scope} ${editorStyles.scope} ${requestStyles.scope} ${rulesStyles.pageRoot} ${rulesStyles.scope}`}>
       <div className="api-automation-content">
         <div className="page-frame api-collection-workbench tp-board">
           {collectionQuery.error ? <Alert showIcon type="error" title={getErrorMessage(collectionQuery.error)} /> : null}

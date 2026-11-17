@@ -1,0 +1,13 @@
+/* 产物视图切换与复制控制条（可挂到弹窗标题栏）。 */
+
+.scope { --ai-artifact-view-switch-scope: 1; }
+
+.scope :global(.ant-modal .ant-modal-header.ai-artifact-mode-heading) { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-right: 44px; min-height: 28px; }
+.scope :global(.ai-artifact-mode-heading > :first-child:not(.ai-artifact-mode-slot)) { flex: 1; min-width: 0; }
+.scope :global(.ai-artifact-mode-slot) { flex-shrink: 0; font-weight: 400; }
+.scope :global(.ai-artifact-mode-toolbar) { display: flex; justify-content: flex-end; margin-bottom: 12px; flex-shrink: 0; }
+@media (max-width: 640px) {
+  .scope :global(.ant-modal .ant-modal-header.ai-artifact-mode-heading) { flex-wrap: wrap; gap: 8px; }
+}
+
+.scope :global(.ai-artifact-mode-controls) { display: flex; align-items: center; gap: 8px; }

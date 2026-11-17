@@ -36,8 +36,7 @@ import {
 import { buildApiCollectionUpdatePayload } from '@/utils/updatePayload'
 import { message } from '@/shared/utils/feedback'
 import '@/shared/styles/surface-tokens.css'
-import '@/features/api-automation/styles/overview.css'
-import '@/features/api-automation/styles/list-v2.css'
+import apiListStyles from '../styles/api-list.module.css'
 
 type ApiAutomationPageScope = {
   projectId?: string
@@ -364,7 +363,7 @@ export function ApiAutomationPage({ scope }: { scope?: ApiAutomationPageScope })
   }
 
   return (
-    <div className="workbench-page api-automation-page functional-test-page tp-list-surface api-test-page tp-surface">
+    <div className={`workbench-page api-automation-page functional-test-page tp-list-surface api-test-page tp-surface ${apiListStyles.scope}`}>
       <div className="api-automation-content">
         <section className="workbench-panel workbench-board-panel tp-board tp-list-panel">
           {/* 设计稿里筛选行与环境信息条在同一张卡片里，中间一条分隔线。 */}

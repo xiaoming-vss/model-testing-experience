@@ -64,3 +64,93 @@
   display: inline-block;
   text-align: center;
 }
+
+/*
+ * feature 列表的兼容钩子：用例库、Bug 列表、测试单执行条目与「加入用例」弹窗仍声明
+ * functional-suite-list-table。表头、行高、分隔线与四角圆角由上面的 tp-list-table 契约负责；
+ * 这里只补这些页面共用的正文颜色、字阶与名称列布局，避免页面各写一份 !important。
+ */
+.functional-test-page .functional-suite-list-table.ant-table-wrapper {
+  width: 100%;
+}
+
+.functional-test-page .functional-suite-list-table .ant-table {
+  color: var(--app-glass-text);
+  background: transparent;
+  font-family: var(--app-font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+.functional-test-page .functional-suite-list-table .ant-table-container {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.functional-test-page .functional-suite-list-table .ant-table-thead > tr > th.ant-table-cell {
+  white-space: nowrap;
+  letter-spacing: 0;
+}
+
+.functional-test-page .functional-suite-list-table .ant-table-tbody > tr {
+  cursor: pointer;
+}
+
+.functional-test-page .functional-suite-list-table .ant-table-tbody > tr > td {
+  color: var(--app-list-header-text);
+  font-family: var(--app-font-sans);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-shadow: none;
+  -webkit-text-stroke: 0;
+}
+
+.functional-test-page .functional-suite-list-table .ant-table-tbody .ant-typography-secondary {
+  color: var(--app-testing-control-disabled-text);
+  font-weight: 400;
+}
+
+.functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(2),
+.functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(2) .ant-typography,
+.functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(2) span,
+.functional-suite-list-scope.ant-typography {
+  color: var(--app-list-header-text);
+}
+
+.functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(3),
+.functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(3) .ant-typography,
+.functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(4),
+.functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(4) .ant-typography,
+.functional-test-page .functional-suite-list-table .ant-table-tbody .functional-suite-list-time.ant-typography {
+  color: var(--app-list-label);
+}
+
+.functional-suite-list-name {
+  width: 100%;
+  min-width: 0;
+}
+
+.functional-suite-list-name .ant-space-item:last-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.functional-suite-list-name .ant-typography {
+  max-width: 100%;
+  letter-spacing: 0;
+}
+
+.functional-suite-list-scope.ant-typography {
+  max-width: 100%;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+.functional-suite-list-actions {
+  justify-content: flex-end;
+}

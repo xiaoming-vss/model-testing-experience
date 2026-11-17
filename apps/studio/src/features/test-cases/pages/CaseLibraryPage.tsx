@@ -71,7 +71,7 @@ import {
 } from '@/utils/format'
 import '@/shared/styles/surface-tokens.css'
 import '@/features/test-cases/styles/index.css'
-import '@/features/test-cases/styles/case-library-v2.css'
+import caseLibraryStyles from '@/features/test-cases/styles/case-library.module.css'
 import '@/features/test-cases/styles/case-editor-v2.css'
 
 const { Text } = Typography
@@ -722,7 +722,7 @@ export function CaseLibraryPage() {
   const canCreateCase = Boolean(selectedSuite?.suiteId)
 
   return (
-    <div className="workbench-page api-automation-page functional-test-page tp-list-surface case-library-page tp-surface">
+    <div className={`workbench-page api-automation-page functional-test-page tp-list-surface case-library-page tp-surface ${caseLibraryStyles.root}`}>
       <div className="api-automation-content">
         <section className="workbench-panel workbench-board-panel tp-board">
           <div className="panel-header api-panel-header case-library-toolbar tp-list-toolbar">

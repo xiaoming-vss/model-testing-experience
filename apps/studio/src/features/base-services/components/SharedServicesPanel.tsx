@@ -147,7 +147,7 @@ function ServiceCatalog({ projectId, provider, toolbarActions }: { projectId: st
                   </Popconfirm>
                 </div>
               if (provider === 'mcp') return <ZentaoMcpServiceCard key={resource.serviceId} resource={resource} checking={query.isFetching} onRefresh={refresh} actions={actions} />
-              return <Card key={resource.serviceId} className="sprint-card api-collection-card base-services-connection-card" styles={{ body: { padding: 20 } }}>
+              return <Card key={resource.serviceId} className="sprint-card api-collection-card base-services-connection-card">
                 <div className="api-collection-card-top base-services-connection-head">
                   <Space size={10} className="base-services-connection-title-wrap">
                     <AppIcon name={provider} size={24} />

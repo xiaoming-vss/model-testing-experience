@@ -1,7 +1,6 @@
 {
   "version": 1,
   "allowedGlobalCss": [
-    "src/App.css",
     "src/app/styles/action-buttons.css",
     "src/app/styles/antd-overrides.css",
     "src/app/styles/asset-library.css",
@@ -10,58 +9,20 @@
     "src/app/styles/index.css",
     "src/app/styles/layout.css",
     "src/app/styles/shell-boundary.css",
+    "src/app/styles/shell-header.css",
     "src/app/styles/shell.css",
     "src/app/styles/sidebar.css",
     "src/app/styles/theme.css",
-    "src/features/admin/styles/account-management.css",
-    "src/features/admin/styles/ldap-settings.css",
-    "src/features/ai-testing/components/FunctionalCaseRelationsGraph.css",
-    "src/features/ai-testing/components/FunctionalCaseRelationsViewer.css",
-    "src/features/ai-testing/components/RevisionSidePanel.css",
-    "src/features/ai-testing/styles/api-config-result.css",
-    "src/features/ai-testing/styles/api-design-result.css",
-    "src/features/ai-testing/styles/artifact-view-switch.css",
-    "src/features/ai-testing/styles/case-name-tree.css",
-    "src/features/ai-testing/styles/generated-case-browser.css",
-    "src/features/ai-testing/styles/generated-cases-review.css",
-    "src/features/ai-testing/styles/index.css",
-    "src/features/ai-testing/styles/module-generation-progress.css",
-    "src/features/ai-testing/styles/relations-hierarchy.css",
-    "src/features/ai-testing/styles/repository-profile.css",
-    "src/features/ai-testing/styles/requirement-design.css",
-    "src/features/ai-testing/styles/requirement-generation-canvas.css",
-    "src/features/ai-testing/styles/requirement-generation-chain.css",
-    "src/features/ai-testing/styles/run-history-list.css",
-    "src/features/ai-testing/styles/skill-library.css",
-    "src/features/ai-testing/styles/task-detail-v2.css",
-    "src/features/ai-testing/styles/task-form.css",
-    "src/features/ai-testing/styles/ui-generation-case-selector.css",
-    "src/features/ai-testing/styles/ui-generation-inputs.css",
-    "src/features/ai-testing/styles/ui-generation-source.css",
-    "src/features/ai-testing/styles/ui-stage-visual.css",
-    "src/features/ai-testing/styles/ui-yaml-issues.css",
-    "src/features/api-automation/styles/detail-inspector-v2.css",
-    "src/features/api-automation/styles/detail-request-panels-v2.css",
-    "src/features/api-automation/styles/detail-workbench-v2.css",
-    "src/features/api-automation/styles/detail.css",
-    "src/features/api-automation/styles/list-v2.css",
-    "src/features/api-automation/styles/overview.css",
     "src/features/auth/styles/change-password.css",
-    "src/features/base-services/styles/index.css",
     "src/features/base-services/styles/zentao-mcp-service.css",
-    "src/features/bugs/styles/bug-detail.css",
-    "src/features/bugs/styles/bug-form.css",
-    "src/features/bugs/styles/bug-import.css",
-    "src/features/bugs/styles/bugs-v2.css",
-    "src/features/interface-library/styles/index.css",
     "src/features/profile/pages/ProfilePage.css",
     "src/features/projects/styles/project-overview.css",
     "src/features/projects/styles/requirements-list.css",
     "src/features/projects/styles/sprint-board.css",
+    "src/features/projects/styles/sprint-dashboard.css",
     "src/features/projects/styles/sprint-overview.css",
     "src/features/requirements/styles/detail.css",
     "src/features/test-cases/styles/case-editor-v2.css",
-    "src/features/test-cases/styles/case-library-v2.css",
     "src/features/test-cases/styles/case-push.css",
     "src/features/test-cases/styles/index.css",
     "src/features/test-orders/styles/case-visualization.css",
@@ -69,20 +30,10 @@
     "src/features/test-orders/styles/graph-page.css",
     "src/features/test-orders/styles/graph-viewer.css",
     "src/features/test-orders/styles/index.css",
-    "src/features/test-orders/styles/test-orders-v2.css",
     "src/features/test-orders/styles/workspace-content-v3.css",
     "src/features/test-orders/styles/workspace-list-v2.css",
     "src/features/test-orders/styles/workspace-v2.css",
     "src/features/test-orders/styles/workspace-verdict-v2.css",
-    "src/features/testing/styles/index.css",
-    "src/features/ui-automation/styles/detail-inspector-v2.css",
-    "src/features/ui-automation/styles/detail-pipeline-v2.css",
-    "src/features/ui-automation/styles/detail-workbench-v2.css",
-    "src/features/ui-automation/styles/execution-flow.css",
-    "src/features/ui-automation/styles/index.css",
-    "src/features/ui-automation/styles/list-v2.css",
-    "src/features/ui-automation/styles/step-editor-layout.css",
-    "src/features/ui-automation/styles/suite-drawer-layout.css",
     "src/index.css",
     "src/shared/components/RichTextEditor/rich-text-editor.css",
     "src/shared/styles/chart-tokens.css",
@@ -104,27 +55,13 @@
     "src/shared/styles/tailwind.css",
     "src/shared/styles/ui-stage-visual-tokens.css"
   ],
-  "appCssImports": [
-    "src/app/styles/action-buttons.css",
-    "src/app/styles/antd-overrides.css",
-    "src/app/styles/layout.css",
-    "src/app/styles/shell-boundary.css",
-    "src/app/styles/shell.css",
-    "src/shared/styles/legacy-surface.css"
-  ],
   "crossFeatureCssImports": [
     "src/features/auth/pages/ChangePasswordPage.tsx -> src/features/profile/pages/ProfilePage.css",
-    "src/features/requirements/components/RequirementDocumentPreviewModal.tsx -> src/features/testing/styles/index.css",
-    "src/features/test-orders/components/TestOrderGraphViewer.tsx -> src/features/ai-testing/components/FunctionalCaseRelationsViewer.css"
+    "src/features/test-orders/components/TestOrderGraphViewer.tsx -> src/features/ai-testing/styles/relations.module.css"
   ],
   "orphanCss": [],
   "sharedModuleViolations": [],
   "files": {
-    "src/App.css": {
-      "rules": 0,
-      "declarations": 0,
-      "selectors": 0
-    },
     "src/app/styles/action-buttons.css": {
       "rules": 11,
       "declarations": 20,
@@ -165,190 +102,120 @@
       "declarations": 9,
       "selectors": 4
     },
+    "src/app/styles/shell-header.css": {
+      "rules": 71,
+      "declarations": 170,
+      "selectors": 104
+    },
     "src/app/styles/shell.css": {
-      "rules": 168,
-      "declarations": 421,
-      "selectors": 220
+      "rules": 97,
+      "declarations": 251,
+      "selectors": 117
     },
     "src/app/styles/sidebar.css": {
-      "rules": 22,
-      "declarations": 90,
-      "selectors": 23
+      "rules": 21,
+      "declarations": 89,
+      "selectors": 22
     },
     "src/app/styles/theme.css": {
       "rules": 1,
       "declarations": 1,
       "selectors": 1
     },
-    "src/features/admin/styles/account-management.css": {
-      "rules": 10,
-      "declarations": 25,
-      "selectors": 10
+    "src/features/admin/styles/ldap-settings.module.css": {
+      "rules": 1,
+      "declarations": 1,
+      "selectors": 1
     },
-    "src/features/admin/styles/ldap-settings.css": {
-      "rules": 10,
-      "declarations": 28,
-      "selectors": 10
+    "src/features/ai-testing/styles/ai-page.module.css": {
+      "rules": 22,
+      "declarations": 119,
+      "selectors": 22
     },
-    "src/features/ai-testing/components/FunctionalCaseRelationsGraph.css": {
-      "rules": 28,
-      "declarations": 141,
-      "selectors": 28
+    "src/features/ai-testing/styles/ai-task-detail.module.css": {
+      "rules": 65,
+      "declarations": 212,
+      "selectors": 71
     },
-    "src/features/ai-testing/components/FunctionalCaseRelationsViewer.css": {
-      "rules": 29,
-      "declarations": 98,
-      "selectors": 32
+    "src/features/ai-testing/styles/artifact-api.module.css": {
+      "rules": 69,
+      "declarations": 304,
+      "selectors": 80
     },
-    "src/features/ai-testing/components/RevisionSidePanel.css": {
-      "rules": 41,
-      "declarations": 149,
-      "selectors": 43
+    "src/features/ai-testing/styles/artifact-cases.module.css": {
+      "rules": 79,
+      "declarations": 291,
+      "selectors": 89
     },
-    "src/features/ai-testing/styles/api-config-result.css": {
-      "rules": 30,
-      "declarations": 144,
-      "selectors": 35
-    },
-    "src/features/ai-testing/styles/api-design-result.css": {
+    "src/features/ai-testing/styles/artifact-misc.module.css": {
       "rules": 38,
-      "declarations": 159,
-      "selectors": 44
+      "declarations": 92,
+      "selectors": 41
     },
     "src/features/ai-testing/styles/artifact-view-host.module.css": {
       "rules": 3,
       "declarations": 9,
       "selectors": 3
     },
-    "src/features/ai-testing/styles/artifact-view-switch.css": {
-      "rules": 6,
-      "declarations": 19,
-      "selectors": 6
+    "src/features/ai-testing/styles/artifact-view-switch.module.css": {
+      "rules": 7,
+      "declarations": 20,
+      "selectors": 7
     },
-    "src/features/ai-testing/styles/case-name-tree.css": {
-      "rules": 39,
-      "declarations": 150,
-      "selectors": 46
+    "src/features/ai-testing/styles/generation-canvas.module.css": {
+      "rules": 207,
+      "declarations": 642,
+      "selectors": 235
     },
-    "src/features/ai-testing/styles/generated-case-browser.css": {
-      "rules": 28,
-      "declarations": 83,
-      "selectors": 30
+    "src/features/ai-testing/styles/generation-chain.module.css": {
+      "rules": 260,
+      "declarations": 888,
+      "selectors": 268
     },
-    "src/features/ai-testing/styles/generated-cases-review.css": {
-      "rules": 11,
-      "declarations": 57,
+    "src/features/ai-testing/styles/relations.module.css": {
+      "rules": 88,
+      "declarations": 369,
+      "selectors": 91
+    },
+    "src/features/ai-testing/styles/requirement-design.module.css": {
+      "rules": 12,
+      "declarations": 40,
       "selectors": 12
     },
-    "src/features/ai-testing/styles/index.css": {
-      "rules": 17,
-      "declarations": 101,
-      "selectors": 17
+    "src/features/ai-testing/styles/ui-generation.module.css": {
+      "rules": 76,
+      "declarations": 244,
+      "selectors": 79
     },
-    "src/features/ai-testing/styles/module-generation-progress.css": {
-      "rules": 18,
-      "declarations": 40,
-      "selectors": 21
+    "src/features/ai-testing/styles/ui-stage-visual.module.css": {
+      "rules": 435,
+      "declarations": 1060,
+      "selectors": 539
     },
-    "src/features/ai-testing/styles/relations-hierarchy.css": {
-      "rules": 30,
-      "declarations": 129,
-      "selectors": 30
+    "src/features/api-automation/styles/api-detail-editor.module.css": {
+      "rules": 82,
+      "declarations": 312,
+      "selectors": 86
     },
-    "src/features/ai-testing/styles/repository-profile.css": {
-      "rules": 16,
-      "declarations": 45,
-      "selectors": 16
+    "src/features/api-automation/styles/api-detail-request.module.css": {
+      "rules": 62,
+      "declarations": 215,
+      "selectors": 73
     },
-    "src/features/ai-testing/styles/requirement-design.css": {
-      "rules": 11,
-      "declarations": 39,
-      "selectors": 11
-    },
-    "src/features/ai-testing/styles/requirement-generation-canvas.css": {
-      "rules": 206,
-      "declarations": 641,
-      "selectors": 234
-    },
-    "src/features/ai-testing/styles/requirement-generation-chain.css": {
-      "rules": 218,
-      "declarations": 738,
-      "selectors": 224
-    },
-    "src/features/ai-testing/styles/run-history-list.css": {
-      "rules": 10,
-      "declarations": 37,
-      "selectors": 10
-    },
-    "src/features/ai-testing/styles/skill-library.css": {
-      "rules": 4,
-      "declarations": 17,
-      "selectors": 4
-    },
-    "src/features/ai-testing/styles/task-detail-v2.css": {
-      "rules": 54,
-      "declarations": 174,
-      "selectors": 60
-    },
-    "src/features/ai-testing/styles/task-form.css": {
-      "rules": 2,
-      "declarations": 2,
-      "selectors": 3
-    },
-    "src/features/ai-testing/styles/ui-generation-case-selector.css": {
-      "rules": 7,
-      "declarations": 17,
-      "selectors": 8
-    },
-    "src/features/ai-testing/styles/ui-generation-inputs.css": {
-      "rules": 26,
-      "declarations": 69,
-      "selectors": 26
-    },
-    "src/features/ai-testing/styles/ui-generation-source.css": {
-      "rules": 40,
-      "declarations": 155,
-      "selectors": 41
-    },
-    "src/features/ai-testing/styles/ui-stage-visual.css": {
-      "rules": 434,
-      "declarations": 1059,
-      "selectors": 538
-    },
-    "src/features/ai-testing/styles/ui-yaml-issues.css": {
-      "rules": 3,
-      "declarations": 6,
-      "selectors": 3
-    },
-    "src/features/api-automation/styles/detail-inspector-v2.css": {
-      "rules": 81,
-      "declarations": 311,
-      "selectors": 85
-    },
-    "src/features/api-automation/styles/detail-request-panels-v2.css": {
+    "src/features/api-automation/styles/api-detail-rules.module.css": {
       "rules": 61,
-      "declarations": 214,
-      "selectors": 72
+      "declarations": 220,
+      "selectors": 63
     },
-    "src/features/api-automation/styles/detail-workbench-v2.css": {
-      "rules": 39,
-      "declarations": 178,
-      "selectors": 42
+    "src/features/api-automation/styles/api-detail-shell.module.css": {
+      "rules": 40,
+      "declarations": 179,
+      "selectors": 43
     },
-    "src/features/api-automation/styles/detail.css": {
-      "rules": 60,
-      "declarations": 219,
-      "selectors": 62
-    },
-    "src/features/api-automation/styles/list-v2.css": {
-      "rules": 10,
-      "declarations": 31,
-      "selectors": 10
-    },
-    "src/features/api-automation/styles/overview.css": {
-      "rules": 6,
-      "declarations": 22,
-      "selectors": 6
+    "src/features/api-automation/styles/api-list.module.css": {
+      "rules": 9,
+      "declarations": 28,
+      "selectors": 9
     },
     "src/features/auth/styles/auth.module.css": {
       "rules": 28,
@@ -360,40 +227,60 @@
       "declarations": 2,
       "selectors": 2
     },
-    "src/features/base-services/styles/index.css": {
-      "rules": 66,
-      "declarations": 234,
-      "selectors": 77
+    "src/features/base-services/styles/requirement-code-binding.module.css": {
+      "rules": 7,
+      "declarations": 29,
+      "selectors": 7
+    },
+    "src/features/base-services/styles/zentao-binding.module.css": {
+      "rules": 31,
+      "declarations": 104,
+      "selectors": 36
     },
     "src/features/base-services/styles/zentao-mcp-service.css": {
       "rules": 5,
       "declarations": 16,
       "selectors": 5
     },
-    "src/features/bugs/styles/bug-detail.css": {
-      "rules": 63,
-      "declarations": 197,
-      "selectors": 72
+    "src/features/bugs/styles/bug-form.module.css": {
+      "rules": 56,
+      "declarations": 150,
+      "selectors": 63
     },
-    "src/features/bugs/styles/bug-form.css": {
-      "rules": 63,
-      "declarations": 175,
-      "selectors": 70
-    },
-    "src/features/bugs/styles/bug-import.css": {
+    "src/features/bugs/styles/bug-import.module.css": {
       "rules": 10,
       "declarations": 28,
       "selectors": 10
     },
-    "src/features/bugs/styles/bugs-v2.css": {
-      "rules": 65,
-      "declarations": 202,
-      "selectors": 66
+    "src/features/bugs/styles/bugs.module.css": {
+      "rules": 134,
+      "declarations": 423,
+      "selectors": 144
     },
-    "src/features/interface-library/styles/index.css": {
-      "rules": 232,
-      "declarations": 883,
-      "selectors": 247
+    "src/features/interface-library/styles/interface-detail.module.css": {
+      "rules": 32,
+      "declarations": 148,
+      "selectors": 34
+    },
+    "src/features/interface-library/styles/interface-editor.module.css": {
+      "rules": 74,
+      "declarations": 235,
+      "selectors": 79
+    },
+    "src/features/interface-library/styles/interface-library.module.css": {
+      "rules": 71,
+      "declarations": 305,
+      "selectors": 77
+    },
+    "src/features/interface-library/styles/interface-method.module.css": {
+      "rules": 21,
+      "declarations": 64,
+      "selectors": 23
+    },
+    "src/features/interface-library/styles/interface-openapi.module.css": {
+      "rules": 33,
+      "declarations": 116,
+      "selectors": 33
     },
     "src/features/profile/pages/ProfilePage.css": {
       "rules": 34,
@@ -430,25 +317,35 @@
       "declarations": 111,
       "selectors": 32
     },
+    "src/features/projects/styles/sprint-dashboard.css": {
+      "rules": 112,
+      "declarations": 302,
+      "selectors": 125
+    },
     "src/features/projects/styles/sprint-overview.css": {
-      "rules": 177,
-      "declarations": 559,
-      "selectors": 190
+      "rules": 65,
+      "declarations": 257,
+      "selectors": 65
     },
     "src/features/requirements/styles/detail.css": {
       "rules": 29,
       "declarations": 116,
       "selectors": 31
     },
+    "src/features/requirements/styles/document-preview.module.css": {
+      "rules": 43,
+      "declarations": 220,
+      "selectors": 54
+    },
     "src/features/test-cases/styles/case-editor-v2.css": {
       "rules": 44,
       "declarations": 155,
       "selectors": 48
     },
-    "src/features/test-cases/styles/case-library-v2.css": {
-      "rules": 44,
-      "declarations": 142,
-      "selectors": 46
+    "src/features/test-cases/styles/case-library.module.css": {
+      "rules": 42,
+      "declarations": 140,
+      "selectors": 44
     },
     "src/features/test-cases/styles/case-push.css": {
       "rules": 9,
@@ -485,10 +382,10 @@
       "declarations": 35,
       "selectors": 10
     },
-    "src/features/test-orders/styles/test-orders-v2.css": {
-      "rules": 26,
-      "declarations": 79,
-      "selectors": 27
+    "src/features/test-orders/styles/test-orders-list.module.css": {
+      "rules": 24,
+      "declarations": 71,
+      "selectors": 25
     },
     "src/features/test-orders/styles/workspace-content-v3.css": {
       "rules": 34,
@@ -510,50 +407,45 @@
       "declarations": 160,
       "selectors": 38
     },
-    "src/features/testing/styles/index.css": {
-      "rules": 158,
-      "declarations": 493,
-      "selectors": 190
-    },
-    "src/features/ui-automation/styles/detail-inspector-v2.css": {
-      "rules": 71,
-      "declarations": 306,
-      "selectors": 75
-    },
-    "src/features/ui-automation/styles/detail-pipeline-v2.css": {
-      "rules": 50,
-      "declarations": 182,
-      "selectors": 52
-    },
-    "src/features/ui-automation/styles/detail-workbench-v2.css": {
-      "rules": 100,
-      "declarations": 357,
-      "selectors": 108
-    },
-    "src/features/ui-automation/styles/execution-flow.css": {
-      "rules": 143,
-      "declarations": 424,
-      "selectors": 165
-    },
-    "src/features/ui-automation/styles/index.css": {
-      "rules": 83,
-      "declarations": 246,
-      "selectors": 103
-    },
-    "src/features/ui-automation/styles/list-v2.css": {
-      "rules": 13,
-      "declarations": 36,
-      "selectors": 13
-    },
-    "src/features/ui-automation/styles/step-editor-layout.css": {
+    "src/features/testing/styles/testing-page.module.css": {
       "rules": 6,
-      "declarations": 7,
-      "selectors": 11
+      "declarations": 19,
+      "selectors": 6
     },
-    "src/features/ui-automation/styles/suite-drawer-layout.css": {
-      "rules": 2,
-      "declarations": 2,
-      "selectors": 4
+    "src/features/ui-automation/styles/ui-detail-inspector.module.css": {
+      "rules": 72,
+      "declarations": 307,
+      "selectors": 76
+    },
+    "src/features/ui-automation/styles/ui-detail-pipeline.module.css": {
+      "rules": 51,
+      "declarations": 183,
+      "selectors": 53
+    },
+    "src/features/ui-automation/styles/ui-detail-shell.module.css": {
+      "rules": 50,
+      "declarations": 140,
+      "selectors": 53
+    },
+    "src/features/ui-automation/styles/ui-detail-topbar.module.css": {
+      "rules": 52,
+      "declarations": 219,
+      "selectors": 57
+    },
+    "src/features/ui-automation/styles/ui-execution-flow.module.css": {
+      "rules": 144,
+      "declarations": 425,
+      "selectors": 166
+    },
+    "src/features/ui-automation/styles/ui-list.module.css": {
+      "rules": 14,
+      "declarations": 37,
+      "selectors": 14
+    },
+    "src/features/ui-automation/styles/ui-suite.module.css": {
+      "rules": 92,
+      "declarations": 256,
+      "selectors": 119
     },
     "src/index.css": {
       "rules": 9,
@@ -571,9 +463,9 @@
       "selectors": 6
     },
     "src/shared/styles/base-services-connection.module.css": {
-      "rules": 32,
+      "rules": 27,
       "declarations": 96,
-      "selectors": 33
+      "selectors": 28
     },
     "src/shared/styles/case-import.module.css": {
       "rules": 9,
@@ -636,9 +528,9 @@
       "selectors": 3
     },
     "src/shared/styles/list-table.css": {
-      "rules": 9,
-      "declarations": 35,
-      "selectors": 12
+      "rules": 23,
+      "declarations": 71,
+      "selectors": 33
     },
     "src/shared/styles/pagination.css": {
       "rules": 14,
@@ -656,9 +548,9 @@
       "selectors": 6
     },
     "src/shared/styles/surface-tokens.css": {
-      "rules": 62,
-      "declarations": 289,
-      "selectors": 66
+      "rules": 71,
+      "declarations": 313,
+      "selectors": 75
     },
     "src/shared/styles/tab-motion.css": {
       "rules": 11,
@@ -814,14 +706,6 @@
       "count": 3,
       "sample": "overflow: hidden;color: var(--uisv-94a3b8);font-size: 8px;text-overflow: ellipsis;white-space: nowrap"
     },
-    "4f21396fa9b8948f": {
-      "count": 2,
-      "sample": "display: flex;flex-direction: column;flex: 1 1 auto;min-width: 0;min-height: 0"
-    },
-    "50427b8d65854ad0": {
-      "count": 2,
-      "sample": "display: flex;flex: 1 1 auto;flex-direction: column;min-height: 0"
-    },
     "50abdfaf427f4445": {
       "count": 2,
       "sample": "display:flex;flex-flow:row nowrap;align-items:flex-start;gap:10px"
@@ -873,10 +757,6 @@
     "6ca8e0c8c93b0e71": {
       "count": 2,
       "sample": "display: grid;gap: 2px;font-size: 12px;line-height: 18px"
-    },
-    "6e0d69fec531faee": {
-      "count": 2,
-      "sample": "font-family: var(--app-font-sans) !important;font-size: 12px !important;font-weight: 400 !important;letter-spacing: 0 !important;text-shadow: none !important;-webkit-text-stroke: 0"
     },
     "73ddbd769bdeddf9": {
       "count": 2,
@@ -987,7 +867,7 @@
       "sample": "color: var(--srf-text-muted);font-size: 12px;white-space: nowrap"
     },
     "b0a1c71ee6d660d1": {
-      "count": 3,
+      "count": 2,
       "sample": "display: flex;align-items: center;flex-wrap: wrap;gap: 8px;min-width: 0"
     },
     "b36f4265bfbdde0f": {
@@ -1033,10 +913,6 @@
     "c7777c6e868d5ddd": {
       "count": 6,
       "sample": "min-width: 0;overflow: hidden;text-overflow: ellipsis;white-space: nowrap"
-    },
-    "cb8f1317a091e621": {
-      "count": 2,
-      "sample": "display: block;min-width: 0;overflow: hidden;text-overflow: ellipsis;white-space: nowrap"
     },
     "cc6725c9ffdaf533": {
       "count": 2,
@@ -1086,10 +962,6 @@
       "count": 2,
       "sample": "display: grid;grid-template-columns: repeat(2, minmax(0, 1fr));gap: 14px 16px;align-items: start"
     },
-    "e34a9d6e2f35a871": {
-      "count": 2,
-      "sample": "width: 28px;min-width: 28px;height: 28px"
-    },
     "e38e5eb24a0f8a06": {
       "count": 5,
       "sample": "height: 100%;min-height: 0;overflow: hidden"
@@ -1110,10 +982,6 @@
       "count": 2,
       "sample": "min-width: 0;display: flex;align-items: center;flex-wrap: wrap;gap: 8px"
     },
-    "e83dff633a5ab63e": {
-      "count": 2,
-      "sample": "display: flex;align-items: center;gap: 8px;color: var(--srf-text-secondary);font-size: 12px"
-    },
     "ed5e616a7680ffe5": {
       "count": 2,
       "sample": "display: flex;flex-direction: column;max-height: calc(100dvh - 48px)"
@@ -1127,7 +995,7 @@
       "sample": "color: var(--srf-text-secondary);font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;font-weight: 600"
     },
     "fbbb9331ecfd8380": {
-      "count": 12,
+      "count": 11,
       "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 8px"
     },
     "fce376b002f77271": {
@@ -1135,7 +1003,7 @@
       "sample": "display: flex;flex-wrap: wrap;gap: 4px;margin-top: 8px"
     },
     "fce757ec5764ee15": {
-      "count": 4,
+      "count": 3,
       "sample": "display: flex;align-items: center;gap: 8px;min-width: 0"
     },
     "fed5aa45771ec236": {

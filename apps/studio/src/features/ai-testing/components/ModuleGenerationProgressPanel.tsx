@@ -1,6 +1,5 @@
 import { CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined, PauseCircleOutlined } from '@ant-design/icons'
 import type { ModuleAgentProgress, ModuleGenerationProgress } from '../api/generationChain.api'
-import '../styles/module-generation-progress.css'
 
 const labels: Record<ModuleAgentProgress['status'], string> = {
   queued: '排队中', running: '生成中', repairing: '校验修复中', completed: '已完成', failed: '失败', canceled: '已停止',

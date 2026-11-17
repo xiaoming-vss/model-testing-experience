@@ -8,8 +8,15 @@ import { message } from '@/shared/utils/feedback'
 import { getErrorMessage } from '@/utils/format'
 import { interfaceLibraryApi } from '../api/interfaceLibrary.api'
 import type { SoftwareRepository, ImportCommitResult, ImportItem, ImportPreview } from '../types'
+import styles from '../styles/interface-library.module.css'
+import methodStyles from '../styles/interface-method.module.css'
+import openapiStyles from '../styles/interface-openapi.module.css'
+import detailStyles from '../styles/interface-detail.module.css'
+import editorStyles from '../styles/interface-editor.module.css'
 import { parseJsonText } from '../utils/interfaceForm'
 import { UNTAGGED_GROUP, firstTag, groupLabel } from '../utils/interfaceGroups'
+
+const interfaceScopes = `${styles.scope} ${methodStyles.scope} ${openapiStyles.scope} ${detailStyles.scope} ${editorStyles.scope}`
 
 type Props = {
   open: boolean
@@ -250,6 +257,7 @@ export function OpenApiImportModal({
 
   return (
     <Modal
+      rootClassName={interfaceScopes}
       open={open}
       title="导入 OpenAPI / Swagger"
       width={900}

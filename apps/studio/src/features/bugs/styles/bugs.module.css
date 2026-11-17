@@ -1,0 +1,363 @@
+/* Bug 列表、详情与内联编辑皮肤；根类由 BugListPage / BugDetailPage / BugFormModal 提供，旧类名保留为测试与兼容钩子。 */
+
+/* Bug 列表与详情样式：与测试单/用例库同一套视觉语言，颜色全部走 --srf-* token。 */
+
+/* —— 工具栏 —— */
+.root :global(.bugs-search-field) {
+  width: 288px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+
+.root :global(.bugs-table-card) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-card);
+  background: var(--srf-card);
+  box-shadow: 0 1px 2px var(--srf-shadow-color);
+  overflow: hidden;
+}
+
+.root :global(.bugs-table-scroll) {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.root :global(.bug-title-cell) {
+  min-width: 0;
+}
+
+.root :global(.bug-no-chip) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--srf-chip);
+  color: var(--srf-chip-text);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.root :global(.bug-title-text) {
+  color: var(--srf-text);
+  min-width: 0;
+}
+
+.root :global(.bug-status-pill) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--srf-tone-bg, var(--srf-chip));
+  color: var(--srf-tone-text, var(--srf-chip-text));
+  white-space: nowrap;
+}
+
+.root :global(.bug-status-dot) {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentcolor;
+}
+
+.root :global(.bug-priority-chip) {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--srf-tone-bg, var(--srf-chip));
+  color: var(--srf-tone-text, var(--srf-chip-text));
+}
+
+.root :global(.bug-muted-cell) {
+  font-size: 13px;
+}
+
+.root :global(.bug-time-cell) {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+
+
+/* —— 详情页 —— */
+.root:global(.bugs-detail-page) {
+  min-height: 100%;
+}
+
+.root :global(.bugs-detail-topbar) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.root :global(.bug-detail-actions) {
+  white-space: nowrap;
+}
+
+.root :global(.bug-detail-cols) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+@media (max-width: 1100px) {
+  .root :global(.bug-detail-cols) { grid-template-columns: minmax(0, 1fr); }
+}
+
+.root :global(.bug-detail-panel) {
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.root :global(.bug-panel-title) {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--srf-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.root :global(.bug-meta-list) {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  row-gap: 14px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.root :global(.bug-meta-list) dt {
+  color: var(--srf-text-secondary);
+}
+
+.root :global(.bug-meta-list) dd {
+  margin: 0;
+  color: var(--srf-text);
+  min-width: 0;
+  word-break: break-all;
+}
+
+.root :global(.bug-link-text) {
+  color: var(--srf-accent);
+}
+
+
+/* —— 动态流 —— */
+.root :global(.bug-activity-list) {
+  margin: 8px 0 0;
+  padding: 0 0 0 8px;
+  list-style: none;
+}
+
+.root :global(.bug-activity-item) {
+  padding: 0 0 22px 22px;
+  border-top: 0;
+  position: relative;
+  border-left: 1px solid var(--srf-card-border);
+}
+
+
+.root :global(.bug-activity-head) {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.root :global(.bug-activity-actor) {
+  font-weight: 600;
+  color: var(--srf-text);
+}
+
+.root :global(.bug-activity-action) {
+  color: var(--srf-text-secondary);
+}
+
+.root :global(.bug-activity-status) {
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--srf-chip);
+  color: var(--srf-chip-text);
+  font-size: 12px;
+}
+
+.root :global(.bug-activity-time) {
+  margin-left: auto;
+  color: var(--srf-text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.root :global(.bug-activity-content) {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-hover);
+  color: var(--srf-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.root :global(.bug-activity-changes) {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+}
+
+.root :global(.bug-activity-empty) {
+  font-size: 13px;
+}
+
+.root :global(.bug-comment-composer) {
+  margin-bottom: 10px;
+}
+
+/* 列表和详情沿用公共平面卡片与主题。 */
+.root :global(.bugs-toolbar-actions) { margin-left: auto; }
+.root :global(.bugs-filters) { flex: 1; }
+
+.root :global(.bug-title-text) { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.root :global(.bug-list-number), .root :global(.bug-time-cell) {
+  color: var(--srf-text-muted); font-size: 12px;
+  font-family: var(--app-font-sans);
+}
+.root :global(.bug-list-number) { flex: none; white-space: nowrap; line-height: 20px; }
+.root :global(.bug-status-pill) {
+  padding: 2px 8px; border: 1px solid var(--srf-tone-border, var(--srf-card-border));
+  font-size: 11px; font-weight: 500; line-height: 16px;
+}
+.root :global(.bugs-filter-popover) { display: flex; flex-direction: column; gap: 12px; width: 280px; }
+.root :global(.bugs-filter-popover) :global(.api-filter-field) { display: flex; align-items: center; gap: 8px; }
+.root :global(.bugs-filter-popover) :global(.bug-filter-label) { color: var(--srf-text-muted); flex: 0 0 64px; font-size: 12px; }
+.root :global(.bugs-filter-popover) > :global(.bug-filter-label) { flex: none; }
+.root :global(.bugs-filter-popover) :global(.business-filter-select) { flex: 1; min-width: 0; }
+
+.root :global(.bug-row-actions) { white-space: nowrap; }
+.root:global(.bugs-detail-page) :global(.api-automation-content) { min-width: 0; }
+:global(.app-shell):global(.app-shell-macos) .root :global(.bug-detail-panel) { background: var(--srf-card); border: 1px solid var(--srf-card-border); border-radius: var(--srf-radius-card); box-shadow: none; backdrop-filter: none; }
+.root :global(.bug-detail-title) { font-size: 18px; line-height: 1.5; overflow-wrap: anywhere; }
+.root :global(.bug-detail-main) :global(.bug-detail-panel) {
+  padding: 20px 24px;
+}
+
+.root :global(.bug-panel-title)::before { content: ''; width: 3px; height: 14px; border-radius: 2px; background: var(--srf-accent); }
+.root :global(.bug-section-count) { font-size: 12px; font-weight: 400; color: var(--srf-text-muted); }
+.root :global(.bug-detail-panel) :global(.rich-text-viewer) { min-height: 100px; }
+
+
+.root :global(.bug-activity-item)::before { content: ''; position: absolute; left: -4px; top: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--srf-accent); }
+.root :global(.bug-activity-item):last-child { padding-bottom: 0; border-left-color: transparent; }
+.root :global(.bug-history-diff) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.root :global(.bug-activity-changes) summary { cursor: pointer; color: var(--srf-accent); }
+@media (max-width: 720px) {
+  .root :global(.bugs-search-field) { width: 100%; }
+  .root :global(.bug-detail-actions) { flex-basis: 100%; }
+  .root :global(.bug-history-diff) { grid-template-columns: minmax(0, 1fr); }
+  .root :global(.bug-detail-main) :global(.bug-detail-panel) { padding: 16px; }
+}
+.root :global(.bug-column-options) { display: flex; flex-direction: column; gap: 10px; }
+.root :global(.api-filter-field-label) { color: var(--srf-text-secondary); background: transparent; padding: 0; }
+
+/* List presentation pilot: scoped to the Bug page until visual approval. */
+.root :global(.bug-muted-cell) { color: var(--srf-text-secondary); }
+
+.root :global(.bug-name-icon) { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex-shrink: 0; }
+
+
+/* 缺陷详情：操作栏与双栏阅读布局，数据及操作沿用现有业务能力。 */
+.root :global(.bugs-detail-topbar) { gap: 12px; }
+.root :global(.bug-detail-actions) { margin-left: auto; }
+.root :global(.bug-detail-cols) { grid-template-columns: minmax(0, 2.15fr) minmax(300px, 1fr); gap: 20px; margin-top: 20px; align-items: start; }
+.root :global(.bug-detail-main), .root :global(.bug-detail-side) { min-width: 0; }
+.root :global(.bug-detail-panel) { margin-bottom: 20px; }
+.root :global(.bug-detail-main) :global(.bug-detail-panel) { padding: 20px; }
+.root :global(.bug-detail-side) :global(.bug-detail-panel) { padding: 20px; }
+.root :global(.bug-detail-breadcrumb) { display: flex; gap: 10px; align-items: center; color: var(--srf-text-muted); font: 11px ui-monospace, monospace; overflow-wrap: anywhere; }
+.root :global(.bug-detail-summary) h1 { margin: 14px 0 10px; font-size: 22px; line-height: 1.5; font-weight: 600; color: var(--srf-text); overflow-wrap: anywhere; }
+.root :global(.bug-detail-subtitle) { color: var(--srf-text-muted); font-size: 12px; }
+.root :global(.bug-panel-title) { padding-bottom: 12px; margin-bottom: 16px; border-bottom: 1px solid var(--srf-divider); font-size: 14px; }
+.root :global(.bug-panel-title)::before { height: 16px; }
+.root :global(.bug-meta-list) { grid-template-columns: 100px minmax(0, 1fr); row-gap: 18px; font-size: 12px; }
+.root :global(.bug-meta-list) dd { text-align: right; }
+.root :global(.bug-context-list) { display: block; }
+.root :global(.bug-context-list) dt { padding: 12px 12px 4px; background: var(--srf-hover); border: 1px solid var(--srf-card-border); border-bottom: 0; border-radius: 6px 6px 0 0; font-size: 11px; }
+.root :global(.bug-context-list) dd { padding: 0 12px 12px; margin-bottom: 12px; text-align: left; background: var(--srf-hover); border: 1px solid var(--srf-card-border); border-top: 0; border-radius: 0 0 6px 6px; }
+.root :global(.bug-context-list) dd:last-child { margin-bottom: 0; }
+.root :global(.bug-attachment-list) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.root :global(.bug-attachment-item) { min-width: 0; padding: 12px; border: 1px solid var(--srf-card-border); border-radius: 8px; gap: 8px; }
+.root :global(.bug-evidence-icon) { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 36px; height: 36px; border-radius: 6px; color: var(--srf-accent); background: var(--srf-accent-soft); }
+.root :global(.bug-attachment-item) :global(.ant-btn) { min-width: 0; flex: 1; }
+.root :global(.bug-attachment-item) :global(.ant-btn) > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+.root :global(.bug-attachment-size) { font-size: 11px; }
+.root :global(.bug-detail-primary-action) { --button-current-bg: var(--srf-accent); --button-current-border: var(--srf-accent); --button-current-text: var(--srf-on-accent); --button-current-hover: var(--srf-accent-strong); --button-current-hover-border: var(--srf-accent-strong); }
+@media (max-width: 1100px) {
+  .root :global(.bug-detail-cols) { grid-template-columns: minmax(0, 1fr); }
+  .root :global(.bug-detail-side) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+}
+@media (max-width: 720px) {
+  .root :global(.bug-detail-side), .root :global(.bug-attachment-list) { grid-template-columns: minmax(0, 1fr); }
+  .root :global(.bug-detail-actions) { margin-left: 0; }
+  .root :global(.bug-detail-summary) h1 { font-size: 18px; }
+}
+
+.root :global(.bug-detail-cols) { width: 100%; min-width: 0; }
+.root :global(.bug-sidebar-indicator) { display: inline-flex; align-items: center; gap: 6px; color: var(--srf-tone-text); }
+.root :global(.bug-sidebar-indicator)::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.root :global(.bug-sidebar-person) { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.root :global(.bug-person-avatar) { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--srf-accent); color: var(--srf-on-accent); font-size: 11px; }
+.root :global(.bug-attachment-item) :global(.ant-btn) { justify-content: flex-start; }
+/* 应用外壳禁止滚动，详情必须拥有独立且有界的滚动容器。 */
+:global(.app-shell):global(.app-shell-macos) .root:global(.bugs-detail-page) { height: 100%; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+:global(.app-shell):global(.app-shell-macos) .root:global(.bugs-detail-page) > :global(.api-automation-content) { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; display: block; }
+.root :global(.bugs-detail-topbar) { position: sticky; top: 0; z-index: 3; background: var(--srf-card); }
+.root :global(.bug-detail-section-heading) { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--srf-divider); padding-bottom: 12px; margin-bottom: 16px; }
+.root :global(.bug-detail-section-heading) :global(.bug-panel-title) { border: 0; margin: 0; padding: 0; }
+.root :global(.bug-description-raw) { max-height: 480px; overflow: auto; padding: 16px; background: var(--srf-hover); color: var(--srf-text-secondary); white-space: pre-wrap; overflow-wrap: anywhere; }
+.root :global(.bug-evidence-layout) { display: grid; gap: 16px; }
+.root :global(.bug-evidence-layout):global(.has-preview) { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
+.root :global(.bug-evidence-preview) { min-width: 0; padding: 12px; background: var(--srf-hover); border: 1px solid var(--srf-card-border); border-radius: 8px; }
+.root :global(.bug-evidence-preview) img, .root :global(.bug-evidence-preview) video { display: block; width: 100%; max-height: 360px; object-fit: contain; margin-top: 12px; }
+.root :global(.bug-evidence-caption) { font-size: 12px; color: var(--srf-text-secondary); overflow-wrap: anywhere; }
+.root :global(.bug-evidence-files) { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.root :global(.bug-evidence-files) li { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--srf-card-border); border-radius: 6px; min-width: 0; }
+.root :global(.bug-evidence-file-info) { flex: 1; min-width: 0; font-size: 12px; }
+.root :global(.bug-evidence-file-info) > span, .root :global(.bug-evidence-file-info) > button { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.root :global(.bug-evidence-file-info) button { border: 0; padding: 0; background: transparent; color: var(--srf-accent); cursor: pointer; text-align: left; }
+.root :global(.bug-evidence-file-info) small { display: block; color: var(--srf-text-muted); margin-top: 4px; }
+@media (max-width: 720px) {
+  .root :global(.bug-evidence-layout):global(.has-preview) { grid-template-columns: minmax(0, 1fr); }
+  .root :global(.bug-detail-section-heading) { flex-wrap: wrap; }
+}
+
+.root :global(.bug-detail-history), .root :global(.bug-detail-discussion) { grid-column: 1 / -1; }
+.root :global(.bug-detail-history) :global(.bug-activity-head), .root :global(.bug-detail-discussion) :global(.bug-activity-head) { gap: 6px 8px; }
+.root :global(.bug-detail-history) :global(.bug-activity-time), .root :global(.bug-detail-discussion) :global(.bug-activity-time) { flex-basis: 100%; margin-left: 0; font-size: 11px; }
+.root :global(.bug-detail-history) :global(.bug-activity-content), .root :global(.bug-detail-discussion) :global(.bug-activity-content) { overflow-wrap: anywhere; }
+.root :global(.bug-inline-form) :global(.bug-detail-summary) :global(.ant-form-item) { margin: 14px 0; }
+.root :global(.bug-inline-form) :global(.bug-meta-list) :global(.ant-form-item), .root :global(.bug-inline-form) :global(.bug-context-list) :global(.ant-form-item) { margin: 0; }
+.root :global(.bug-inline-form) :global(.bug-detail-side) :global(.ant-select) { width: 100%; text-align: left; }
+.root :global(.bug-inline-form) :global(.rich-text-content) :global(.tiptap) { min-height: 320px; max-height: none; }
+
+
+.root :global(.bug-description-heading) { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+.root :global(.bug-description-label) { color: var(--srf-text); font-size: 13px; }
+.root :global(.bug-description-label) > span { color: var(--srf-danger); }
+.root :global(.bug-description-templates) { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; font-size: 11px; color: var(--srf-text-secondary); }
+.root :global(.bug-description-templates) button { border: 0; border-radius: 4px; padding: 3px 8px; background: var(--srf-accent-soft); color: var(--srf-accent); cursor: pointer; font: inherit; }
+.root :global(.bug-description-templates) button:hover { background: var(--srf-count-badge); }
+.root :global(.bug-description-templates) button:focus-visible { outline: 2px solid var(--srf-accent); outline-offset: 2px; }

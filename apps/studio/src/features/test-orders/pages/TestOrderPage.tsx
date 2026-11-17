@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { DebouncedSearchInput } from '@/shared/components/DebouncedSearchInput'
 import { EntityCard } from '@/shared/components/EntityCard'
+import { ListSurface } from '@/shared/components/ListSurface'
 import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
@@ -28,10 +29,10 @@ import {
   getTestOrderStatusMeta,
   getTestOrderStatusTone,
 } from '../utils/testOrderStatus'
-import { buildTestOrderProgress, type TestOrderProgressKey } from '../utils/testOrderProgress'
+import { buildTestOrderProgress, type TestOrderProgressKey, type TestOrderProgressSegmentKey } from '../utils/testOrderProgress'
 import '@/shared/styles/surface-tokens.css'
 import '@/features/test-orders/styles/index.css'
-import '@/features/test-orders/styles/test-orders-v2.css'
+import styles from '../styles/test-orders-list.module.css'
 
 const { Text } = Typography
 
@@ -41,6 +42,14 @@ const METRIC_TONES: Record<TestOrderProgressKey, string> = {
   failed: 'red',
   blocked: 'amber',
   skipped: 'slate',
+}
+
+const SEGMENT_STYLES: Record<TestOrderProgressSegmentKey, string> = {
+  passed: styles.segmentPassed,
+  failed: styles.segmentFailed,
+  blocked: styles.segmentBlocked,
+  skipped: styles.segmentSkipped,
+  pending: styles.segmentPending,
 }
 
 export function TestOrderPage() {
@@ -129,8 +138,8 @@ export function TestOrderPage() {
         key={orderId ?? order.name}
         title={title}
         status={
-          <span className={`test-order-status-pill tone-${getTestOrderStatusTone(order.status)}`}>
-            <span className="test-order-status-dot" />
+          <span className={`${styles.statusPill} tone-${getTestOrderStatusTone(order.status)}`}>
+            <span className={styles.statusDot} />
             {statusMeta.label}
           </span>
         }
@@ -189,9 +198,9 @@ export function TestOrderPage() {
           navigate(`/test-orders/${orderId}`)
         }}
       >
-        <div className="test-order-progress-cell">
-          <div className="test-order-progress-line">
-            <span className="test-order-progress-executed">
+        <div className={styles.progressCell}>
+          <div className={styles.progressLine}>
+            <span className={styles.progressExecuted}>
               已执行{' '}
               <strong>
                 {progress.executed}/{progress.total}
@@ -199,26 +208,26 @@ export function TestOrderPage() {
               {progress.metrics.map((metric) => (
                 <span
                   key={metric.key}
-                  className={`test-order-progress-metric tone-${METRIC_TONES[metric.key]}`}
+                  className={`${styles.progressMetric} tone-${METRIC_TONES[metric.key]}`}
                 >
                   {metric.label} {metric.count}
                 </span>
               ))}
             </span>
-            <span className={`test-order-progress-percent tone-${getTestOrderStatusTone(order.status)}`}>
+            <span className={`${styles.progressPercent} tone-${getTestOrderStatusTone(order.status)}`}>
               {progress.percent}%
             </span>
           </div>
           {/* 分段进度条是图形，无障碍名用完整的进度文案，和抽屉 / 工作台里的说法一致。 */}
           <div
-            className="test-order-progress-track"
+            className={styles.progressTrack}
             role="img"
             aria-label={formatEntryProgress(order)}
           >
             {progress.segments.map((segment) => (
               <span
                 key={segment.key}
-                className={`test-order-progress-segment segment-${segment.key}`}
+                className={`${styles.progressSegment} ${SEGMENT_STYLES[segment.key]}`}
                 style={{ width: `${segment.percent}%` }}
                 title={`${segment.label}: ${segment.count}`}
               />
@@ -237,61 +246,73 @@ export function TestOrderPage() {
   const hasLocalFilters = Boolean(searchKeyword.trim())
 
   return (
-    <div className="workbench-page api-automation-page functional-test-page tp-list-surface test-orders-page tp-surface">
+    <div className={`workbench-page api-automation-page functional-test-page tp-list-surface test-orders-page tp-surface ${styles.root}`}>
       <div className="api-automation-content">
-        <section className="workbench-panel workbench-board-panel tp-board tp-list-panel">
-          <div className="panel-header api-panel-header test-orders-toolbar tp-list-toolbar">
-            <div className="api-filter-group test-orders-filters">
-              <h1 className="tp-list-title">测试单</h1>
-              <div className="api-filter-field test-orders-search-field">
-                <DebouncedSearchInput
-                  inputRef={keywordInputRef}
-                  className="api-filter-input test-orders-search-input"
-                  prefix={<SearchOutlined />}
-                  suffix={<button type="button" className="test-orders-search-submit" onClick={() => { setPage(1); keywordInputRef.current?.focus() }}>搜索</button>}
-                  placeholder="搜索测试单名称 / 被测版本"
-                  ariaLabel="搜索测试单名称 / 被测版本"
-                  resetKey={searchResetKey}
-                  onCommit={commitSearch}
-                />
+        <ListSurface
+          className="test-orders-list-panel"
+          bodyClassName="test-orders-card-body"
+          scrollClassName="sprint-card-scroll test-orders-card-scroll"
+          toolbar={
+            <div className="panel-header api-panel-header tp-list-toolbar">
+              <div className="api-filter-group flex flex-wrap items-center gap-2">
+                <h1 className="tp-list-title">测试单</h1>
+                <div className={`api-filter-field ${styles.searchField}`}>
+                  <DebouncedSearchInput
+                    inputRef={keywordInputRef}
+                    className="api-filter-input test-orders-search-input"
+                    prefix={<SearchOutlined />}
+                    suffix={<button type="button" className={styles.searchSubmit} onClick={() => { setPage(1); keywordInputRef.current?.focus() }}>搜索</button>}
+                    placeholder="搜索测试单名称 / 被测版本"
+                    ariaLabel="搜索测试单名称 / 被测版本"
+                    resetKey={searchResetKey}
+                    onCommit={commitSearch}
+                  />
+                </div>
               </div>
-            </div>
 
-            <Space size={8} className="test-orders-toolbar-actions tp-refresh-actions">
-              <Tooltip title="刷新测试单列表">
+              <Space size={8} className="flex-none items-center tp-refresh-actions">
+                <Tooltip title="刷新测试单列表">
+                  <ProjectActionButton
+                    action="read"
+                    type="text"
+                    shape="circle"
+                    className="action-btn-read"
+                    operation="refresh"
+                    icon={<ReloadOutlined />}
+                    iconOnly
+                    aria-label="刷新测试单列表"
+                    loading={ordersQuery.isFetching}
+                    onClick={() => ordersQuery.refetch()}
+                  />
+                </Tooltip>
                 <ProjectActionButton
-                  action="read"
-                  type="text"
-                  shape="circle"
-                  className="action-btn-read test-orders-refresh"
-                  operation="refresh"
-                  icon={<ReloadOutlined />}
+                  action="write"
+                  type="primary"
+                  operation="create"
                   iconOnly
-                  aria-label="刷新测试单列表"
-                  loading={ordersQuery.isFetching}
-                  onClick={() => ordersQuery.refetch()}
-                />
-              </Tooltip>
-              <ProjectActionButton
-                action="write"
-                type="primary"
-                operation="create"
-                iconOnly
-                disabled={!activeProjectId || sprints.length === 0}
-                onClick={openCreateDrawer}
-              >
-                新建测试单
-              </ProjectActionButton>
-            </Space>
-          </div>
-
-          {sprintsQuery.error ? (
-            <Alert showIcon type="error" title={getErrorMessage(sprintsQuery.error)} />
-          ) : null}
-          {ordersQuery.error ? (
-            <Alert showIcon type="error" title={getErrorMessage(ordersQuery.error)} />
-          ) : null}
-
+                  disabled={!activeProjectId || sprints.length === 0}
+                  onClick={openCreateDrawer}
+                >
+                  新建测试单
+                </ProjectActionButton>
+              </Space>
+            </div>
+          }
+          notices={
+            <>
+              {sprintsQuery.error ? (
+                <Alert showIcon type="error" title={getErrorMessage(sprintsQuery.error)} />
+              ) : null}
+              {ordersQuery.error ? (
+                <Alert showIcon type="error" title={getErrorMessage(ordersQuery.error)} />
+              ) : null}
+            </>
+          }
+          footer={activeProjectId && (sprintsQuery.isLoading || sprints.length > 0) && ordersQuery.data ? (
+            <ListPagination current={currentPage} pageSize={pageSize} total={total}
+              loading={ordersQuery.isFetching} onChange={(next, size) => { setPage(next); setPageSize(size) }} />
+          ) : undefined}
+        >
           {!activeProjectId ? (
             <div className="sprint-card-loading">
               <Empty description="请先选择项目" />
@@ -300,67 +321,57 @@ export function TestOrderPage() {
             <div className="sprint-card-loading">
               <Empty description="当前项目下暂无迭代" />
             </div>
-          ) : (
-            <div className="test-orders-card-body tp-list-body">
-              <div className="sprint-card-scroll test-orders-card-scroll tp-list-scroll">
-                {ordersQuery.isLoading ? (
-                  <div className="sprint-card-loading">
-                    <Empty description="测试单加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                  </div>
-                ) : total === 0 ? (
-                  <div className="sprint-card-loading">
-                    <Empty
-                      image={<AppstoreOutlined />}
-                      description={
-                        <Space orientation="vertical" size={4}>
-                          <Text strong>
-                            {hasLocalFilters ? '没有符合筛选条件的测试单' : '当前迭代下还没有测试单'}
-                          </Text>
-                          <Text type="secondary">
-                            {hasLocalFilters
-                              ? '调整或清空筛选条件后再看。'
-                              : '新建测试单后，从用例库挑选用例加入即可开始执行。'}
-                          </Text>
-                        </Space>
-                      }
-                    >
-                      {hasLocalFilters ? (
-                        <Button
-                          onClick={() => {
-                            setSearchResetKey((current) => current + 1)
-                            setSearchKeyword('')
-                            setPage(1)
-                          }}
-                        >
-                          清空筛选
-                        </Button>
-                      ) : (
-                        <ProjectActionButton
-                          action="write"
-                          type="primary"
-                          className="action-btn-create"
-                          operation="create"
-                          disabled={!activeProjectId || sprints.length === 0}
-                          onClick={openCreateDrawer}
-                        >
-                          新建测试单
-                        </ProjectActionButton>
-                      )}
-                    </Empty>
-                  </div>
+          ) : ordersQuery.isLoading ? (
+            <div className="sprint-card-loading">
+              <Empty description="测试单加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            </div>
+          ) : total === 0 ? (
+            <div className="sprint-card-loading">
+              <Empty
+                image={<AppstoreOutlined />}
+                description={
+                  <Space orientation="vertical" size={4}>
+                    <Text strong>
+                      {hasLocalFilters ? '没有符合筛选条件的测试单' : '当前迭代下还没有测试单'}
+                    </Text>
+                    <Text type="secondary">
+                      {hasLocalFilters
+                        ? '调整或清空筛选条件后再看。'
+                        : '新建测试单后，从用例库挑选用例加入即可开始执行。'}
+                    </Text>
+                  </Space>
+                }
+              >
+                {hasLocalFilters ? (
+                  <Button
+                    onClick={() => {
+                      setSearchResetKey((current) => current + 1)
+                      setSearchKeyword('')
+                      setPage(1)
+                    }}
+                  >
+                    清空筛选
+                  </Button>
                 ) : (
-                  <div className="entity-card-grid">
-                    {pageOrders.map(renderOrderCard)}
-                  </div>
+                  <ProjectActionButton
+                    action="write"
+                    type="primary"
+                    className="action-btn-create"
+                    operation="create"
+                    disabled={!activeProjectId || sprints.length === 0}
+                    onClick={openCreateDrawer}
+                  >
+                    新建测试单
+                  </ProjectActionButton>
                 )}
-              </div>
-              <div className="table-footer test-orders-footer">
-                <ListPagination current={currentPage} pageSize={pageSize} total={total}
-                  loading={ordersQuery.isFetching} onChange={(next, size) => { setPage(next); setPageSize(size) }} />
-              </div>
+              </Empty>
+            </div>
+          ) : (
+            <div className="entity-card-grid">
+              {pageOrders.map(renderOrderCard)}
             </div>
           )}
-        </section>
+        </ListSurface>
       </div>
 
       <TestOrderDrawer

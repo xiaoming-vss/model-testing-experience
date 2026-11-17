@@ -59,7 +59,13 @@ import {
   type InterfaceGroup,
 } from '../utils/interfaceGroups'
 import '@/shared/styles/surface-tokens.css'
-import '../styles/index.css'
+import styles from '../styles/interface-library.module.css'
+import methodStyles from '../styles/interface-method.module.css'
+import openapiStyles from '../styles/interface-openapi.module.css'
+import detailStyles from '../styles/interface-detail.module.css'
+import editorStyles from '../styles/interface-editor.module.css'
+
+const interfaceScopes = `${styles.scope} ${methodStyles.scope} ${openapiStyles.scope} ${detailStyles.scope} ${editorStyles.scope}`
 
 type TabKey = 'params' | 'headers' | 'body' | 'response' | 'settings'
 
@@ -810,6 +816,7 @@ export function InterfaceDetailPage() {
         }}
       />
       <Modal
+        rootClassName={interfaceScopes}
         open={Boolean(createGroupRepository)}
         title="新建分组"
         okText="创建"
@@ -839,6 +846,7 @@ export function InterfaceDetailPage() {
         </div>
       </Modal>
       <Modal
+        rootClassName={interfaceScopes}
         open={Boolean(groupRenameTarget)}
         title="重命名分组"
         okText="保存"
@@ -868,6 +876,7 @@ export function InterfaceDetailPage() {
         </div>
       </Modal>
       <Modal
+        rootClassName={interfaceScopes}
         open={Boolean(moveTarget)}
         title="移动到分组"
         okText="移动"
@@ -924,7 +933,7 @@ function InterfaceWorkspaceShell({
     <div className="workbench-page asset-library-page">
       <div className="asset-library-tab-panel">
         <div className="asset-library-tab-pane">
-          <div className={`workbench-page interface-library-page tp-surface${className ? ` ${className}` : ''}`}>
+          <div className={`workbench-page interface-library-page tp-surface ${styles.pageRoot} ${interfaceScopes}${className ? ` ${className}` : ''}`}>
             {children}
           </div>
         </div>

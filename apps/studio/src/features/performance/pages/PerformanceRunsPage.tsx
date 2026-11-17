@@ -2,19 +2,20 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeftOutlined, ReloadOutlined } from '@ant-design/icons'
-import { Alert, Button, Card, Select, Space, Table, Tag, Typography } from 'antd'
-import { ListPagination } from '@/shared/components/ListPagination'
+import { Alert, Button, Card, Progress, Select, Space, Table, Tag, Typography } from 'antd'
 import type { TableProps } from 'antd'
+import { ListPagination } from '@/shared/components/ListPagination'
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { api, listItems, listTotal } from '@/services/api'
 import { formatTime, getErrorMessage } from '@/utils/format'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
-import type { PerfRunStatus, PerfRunSummary } from '../types'
+import type { PerfRunStatus, PerfSuiteRunSummary } from '../types'
 import {
   PERF_OUTCOME_LABELS,
   PERF_STATUS_LABELS,
   formatPerfDuration,
+  isPerfRunActive,
   perfOutcomeColor,
   perfStatusColor,
 } from '../utils/perf'
@@ -27,48 +28,62 @@ export function PerformanceRunsPage() {
   const { activeProjectId } = useActiveProject()
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
-  const [caseFilter, setCaseFilter] = useState(searchParams.get('caseId') ?? 'all')
+  const [suiteFilter, setSuiteFilter] = useState(searchParams.get('suiteId') ?? 'all')
   const [statusFilter, setStatusFilter] = useState<'all' | PerfRunStatus>('all')
 
-  const casesQuery = useQuery({
-    queryKey: ['perfCases', activeProjectId],
-    queryFn: () => api.listPerfCases(activeProjectId!),
+  const suitesQuery = useQuery({
+    queryKey: ['perfSuites', activeProjectId],
+    queryFn: () => api.listPerfSuites(activeProjectId!),
     enabled: Boolean(activeProjectId),
   })
   const runsQuery = useQuery({
-    queryKey: ['perfRuns', activeProjectId, caseFilter, statusFilter, page, pageSize],
-    queryFn: () => api.listPerfRuns(activeProjectId!, {
-      caseId: caseFilter === 'all' ? undefined : caseFilter,
+    queryKey: ['perfSuiteRuns', activeProjectId, suiteFilter, statusFilter, page, pageSize],
+    queryFn: () => api.listPerfSuiteRuns(activeProjectId!, {
+      suiteId: suiteFilter === 'all' ? undefined : suiteFilter,
       status: statusFilter === 'all' ? undefined : statusFilter,
       page,
       pageSize,
     }),
     enabled: Boolean(activeProjectId),
+    refetchInterval: (query) => query.state.data?.items?.some((run) => isPerfRunActive(run.status)) ? 3000 : false,
   })
   const runs = listItems(runsQuery.data)
   const total = listTotal(runsQuery.data)
 
   useEffect(() => {
     setPage(1)
-  }, [caseFilter, statusFilter])
+  }, [suiteFilter, statusFilter])
 
   useEffect(() => {
-    const caseId = searchParams.get('caseId')
-    if (caseId) setCaseFilter(caseId)
+    const suiteId = searchParams.get('suiteId')
+    if (suiteId) setSuiteFilter(suiteId)
   }, [searchParams])
 
-  const columns: TableProps<PerfRunSummary>['columns'] = [
+  function progress(run: PerfSuiteRunSummary) {
+    const settled = run.completedCount + run.failedCount + run.skippedCount
+    if (!run.totalCount) return 0
+    return Math.round((settled / run.totalCount) * 100)
+  }
+
+  const columns: TableProps<PerfSuiteRunSummary>['columns'] = [
     {
-      title: '用例 / 运行',
-      dataIndex: 'caseName',
-      width: 260,
+      title: '测试集 / 运行',
+      dataIndex: 'suiteName',
+      width: 280,
       render: (_, run) => <div className="min-w-0">
-        <div className="truncate font-medium text-app-surface-text" title={run.caseName}>{run.caseName}</div>
-        <div className="truncate font-mono text-[11px] text-app-surface-text-muted" title={run.runId}>{run.runId}</div>
+        <div className="truncate font-medium text-app-surface-text" title={run.suiteName}>{run.suiteName}</div>
+        <div className="truncate font-mono text-[11px] text-app-surface-text-muted" title={run.suiteRunId}>{run.suiteRunId}</div>
       </div>,
     },
     { title: '环境', dataIndex: 'environmentName', width: 140, ellipsis: true },
-    { title: '监控接入', dataIndex: 'monitoringConnectionName', width: 160, ellipsis: true },
+    {
+      title: '进度',
+      width: 190,
+      render: (_, run) => <div className="flex min-w-[150px] items-center gap-2">
+        <Progress percent={progress(run)} size="small" showInfo={false} className="!mb-0 flex-1" />
+        <span className="shrink-0 text-[11px] text-app-surface-text-muted">{run.completedCount + run.failedCount + run.skippedCount}/{run.totalCount}</span>
+      </div>,
+    },
     {
       title: '状态',
       dataIndex: 'status',
@@ -79,7 +94,7 @@ export function PerformanceRunsPage() {
       title: '结果',
       dataIndex: 'outcome',
       width: 120,
-      render: (outcome: PerfRunSummary['outcome']) => outcome
+      render: (outcome: PerfSuiteRunSummary['outcome']) => outcome
         ? <Tag color={perfOutcomeColor(outcome)}>{PERF_OUTCOME_LABELS[outcome]}</Tag>
         : <Text type="secondary">未判定</Text>,
     },
@@ -95,7 +110,11 @@ export function PerformanceRunsPage() {
       width: 100,
       render: (durationMs: number) => formatPerfDuration(durationMs),
     },
-    { title: 'k6', dataIndex: 'k6Version', width: 90, render: (value: string) => value || '-' },
+    {
+      title: '',
+      width: 72,
+      render: (_, run) => <Button size="small" onClick={(event) => { event.stopPropagation(); navigate(`/performance/runs/${run.suiteRunId}`) }}>查看</Button>,
+    },
   ]
 
   return <ProjectAccessScope projectId={activeProjectId ?? ''}>
@@ -104,17 +123,17 @@ export function PerformanceRunsPage() {
         <section className="workbench-panel workbench-board-panel tp-board tp-list-panel">
           <div className="tp-list-toolbar flex flex-wrap items-center justify-between gap-3 px-4 py-3">
             <div className="flex min-w-0 flex-wrap items-center gap-2.5">
-              <Button type="text" icon={<ArrowLeftOutlined />} aria-label="返回性能用例" onClick={() => navigate('/testing?tab=perf')} />
+              <Button type="text" icon={<ArrowLeftOutlined />} aria-label="返回性能测试" onClick={() => navigate('/testing?tab=perf')} />
               <h1 className="tp-list-title">运行记录</h1>
               <Select
-                className="min-w-[180px]"
-                value={caseFilter}
+                className="min-w-[190px]"
+                value={suiteFilter}
                 options={[
-                  { value: 'all', label: '全部用例' },
-                  ...listItems(casesQuery.data).map((perfCase) => ({ value: perfCase.caseId, label: perfCase.name })),
+                  { value: 'all', label: '全部测试集' },
+                  ...listItems(suitesQuery.data).map((suite) => ({ value: suite.suiteId, label: suite.name })),
                 ]}
-                onChange={setCaseFilter}
-                loading={casesQuery.isLoading}
+                onChange={setSuiteFilter}
+                loading={suitesQuery.isLoading}
               />
               <Select
                 className="min-w-[130px]"
@@ -127,7 +146,7 @@ export function PerformanceRunsPage() {
               />
             </div>
             <Space size={8}>
-              <Text type="secondary">共 {total} 条运行</Text>
+              <Text type="secondary">共 {total} 条运行 · 结果统一未判定</Text>
               <Button icon={<ReloadOutlined />} loading={runsQuery.isFetching} onClick={() => runsQuery.refetch()}>
                 刷新
               </Button>
@@ -135,14 +154,15 @@ export function PerformanceRunsPage() {
           </div>
           {runsQuery.isError ? <Alert showIcon type="error" title={getErrorMessage(runsQuery.error)} className="m-4" /> : null}
           <Card styles={{ body: { padding: 0 } }} className="m-4 overflow-hidden">
-            <Table<PerfRunSummary>
-              rowKey="runId"
+            <Table<PerfSuiteRunSummary>
+              rowKey="suiteRunId"
               size="middle"
               columns={columns}
               dataSource={runs}
               loading={runsQuery.isLoading}
-              onRow={(run) => ({ onClick: () => navigate(`/performance/runs/${run.runId}`), className: 'cursor-pointer' })}
+              onRow={(run) => ({ onClick: () => navigate(`/performance/runs/${run.suiteRunId}`), className: 'cursor-pointer' })}
               pagination={false}
+              locale={{ emptyText: <div className="py-12 text-center text-xs text-app-surface-text-muted">没有符合条件的运行记录。调整筛选条件或先运行一个测试集。</div> }}
             />
             <div className="table-footer">
               <ListPagination

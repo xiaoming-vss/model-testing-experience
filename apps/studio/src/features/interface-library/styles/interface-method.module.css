@@ -1,0 +1,125 @@
+/* 接口 HTTP 方法签：列表、导入预览与详情共用的浅色底与描边。 */
+
+.scope { --if-method-scope: 1; }
+
+/* 方法签用各自的浅色底和描边区分；颜色仍由 --app-http-method-* 主题 token 提供。 */
+.scope :global(.if-method.if-method-get) {
+  color: var(--app-http-method-get);
+  border-color: color-mix(in srgb, var(--app-http-method-get) 30%, var(--srf-card-border));
+  background: color-mix(in srgb, var(--app-http-method-get) 10%, var(--srf-card));
+}
+.scope :global(.if-method.if-method-post) {
+  color: var(--app-http-method-post);
+  border-color: color-mix(in srgb, var(--app-http-method-post) 30%, var(--srf-card-border));
+  background: color-mix(in srgb, var(--app-http-method-post) 10%, var(--srf-card));
+}
+.scope :global(.if-method.if-method-put) {
+  color: var(--app-http-method-put);
+  border-color: color-mix(in srgb, var(--app-http-method-put) 30%, var(--srf-card-border));
+  background: color-mix(in srgb, var(--app-http-method-put) 10%, var(--srf-card));
+}
+.scope :global(.if-method.if-method-patch) {
+  color: var(--app-http-method-patch);
+  border-color: color-mix(in srgb, var(--app-http-method-patch) 30%, var(--srf-card-border));
+  background: color-mix(in srgb, var(--app-http-method-patch) 10%, var(--srf-card));
+}
+.scope :global(.if-method.if-method-delete) {
+  color: var(--app-http-method-delete);
+  border-color: color-mix(in srgb, var(--app-http-method-delete) 30%, var(--srf-card-border));
+  background: color-mix(in srgb, var(--app-http-method-delete) 10%, var(--srf-card));
+}
+.scope :global(.if-method.if-method-head),
+.scope :global(.if-method.if-method-options),
+.scope :global(.if-method.if-method-other) {
+  color: var(--srf-text-secondary);
+  border-color: var(--srf-card-border);
+  background: var(--srf-chip);
+}
+
+.scope :global(.if-row-actions) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.scope :global(.if-row-actions .ant-btn) {
+  color: var(--srf-text-secondary);
+}
+
+.scope :global(.if-app-name-cell) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.scope :global(.if-apps-body) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.scope :global(.if-drawer-footer) {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.scope :global(.if-app-form) {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.scope :global(.if-app-form > label) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scope :global(.if-app-form > label > span) {
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.scope :global(.if-repository-section) {
+  padding-top: 16px;
+  border-top: 1px solid var(--srf-divider);
+}
+
+.scope :global(.if-repository-head) {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.scope :global(.if-repository-head code) {
+  color: var(--srf-text-muted);
+  font-size: 11px;
+}
+
+.scope :global(.if-repository-selects) {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scope :global(.if-repository-selects .ant-select) {
+  width: 100%;
+}
+
+.scope :global(.if-repository-hint) {
+  margin-top: 8px;
+  color: var(--srf-text-muted);
+  font-size: 12px;
+  line-height: 20px;
+}
+

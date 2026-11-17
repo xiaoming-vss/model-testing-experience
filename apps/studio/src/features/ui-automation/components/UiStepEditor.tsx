@@ -1,5 +1,3 @@
-import '@/features/ui-automation/styles/index.css'
-import '@/features/ui-automation/styles/step-editor-layout.css'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import {
   isValidUiIntegerOrVariable,
@@ -50,6 +48,7 @@ type Props = {
   stepResults?: UiTestCaseRunStepResult[]
 }
 
+// 步骤编辑器样式由宿主页面引入的 ui-suite.module.css 作用域提供。
 export function UiStepEditor({ watchedSteps, selectedStepIndex, activeTab = 'basic', onTabChange, detailActions, expandedStepIndexes, draggingStepIndex, handleStepDrop, can, handleStepDragStart, setDraggingStepIndex, toggleStepPanel, removeStep, renderTemplatePickerLabel, bindTemplateInputRef, stepResults = [] }: Props) {
   const stepResultByOrder = indexUiRunStepResultsByOrder(stepResults)
   const stepListRef = useRef<HTMLDivElement | null>(null)

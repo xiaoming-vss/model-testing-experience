@@ -18,7 +18,7 @@ import { prettyPrintValue } from '../utils/uiTestCaseEditor'
  * 换成运行耗时、通过步骤数、失败步骤数。
  * 运行快照（浏览器信息与运行配置）原来在「运行快照」页签里，现在收进底部的展开区。
  * 日志级别过滤按设计稿的 Filter 做：范围就是真实存在的四种级别，不新增假分类。
- * 样式见 styles/detail-inspector-v2.css。
+ * 样式见 styles/ui-detail-inspector.module.css。
  */
 
 const LOG_LEVEL_FILTERS: Array<{ key: UiRunLogLevel | 'all'; label: string }> = [

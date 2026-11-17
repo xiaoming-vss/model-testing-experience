@@ -14,10 +14,11 @@ import { api, listItems } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { formatTime, getErrorMessage, normalizeEnvironmentId } from '@/utils/format'
-import type { PerfCaseSummary } from '../types'
-import { buildDefaultPerfYaml } from '../utils/perf'
-import { PerfCaseDrawer, type PerfCaseFormValues } from '../components/PerfCaseDrawer'
-import { StartPerfRunModal } from '../components/StartPerfRunModal'
+import type { PerfSuiteSummary } from '../types'
+import { PERF_OUTCOME_LABELS, PERF_STATUS_LABELS, perfOutcomeColor, perfStatusColor } from '../utils/perf'
+import { PERF_LOAD_MODEL_LABELS, type PerfLoadModel } from '../utils/perfLoadModel'
+import { PerfSuiteDrawer, type PerfSuiteFormValues } from '../components/PerfSuiteDrawer'
+import { StartPerfSuiteRunModal } from '../components/StartPerfSuiteRunModal'
 
 const { Text } = Typography
 
@@ -30,15 +31,20 @@ export function PerformancePage() {
   const [keyword, setKeyword] = useState('')
   const [status, setStatus] = useState<'all' | 'enabled' | 'disabled'>('all')
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [editingCase, setEditingCase] = useState<PerfCaseSummary | null>(null)
-  const [runCase, setRunCase] = useState<PerfCaseSummary | null>(null)
+  const [editingSuite, setEditingSuite] = useState<PerfSuiteSummary | null>(null)
+  const [runSuite, setRunSuite] = useState<PerfSuiteSummary | null>(null)
   const [environmentDrawerOpen, setEnvironmentDrawerOpen] = useState(false)
   const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<string | undefined>(undefined)
 
-  const casesQuery = useQuery({
-    queryKey: ['perfCases', activeProjectId],
-    queryFn: () => api.listPerfCases(activeProjectId!),
+  const suitesQuery = useQuery({
+    queryKey: ['perfSuites', activeProjectId],
+    queryFn: () => api.listPerfSuites(activeProjectId!),
     enabled: Boolean(activeProjectId),
+  })
+  const runSuiteQuery = useQuery({
+    queryKey: ['perfSuite', runSuite?.suiteId],
+    queryFn: () => api.getPerfSuite(runSuite!.suiteId),
+    enabled: Boolean(runSuite),
   })
   const environmentsQuery = useQuery({
     queryKey: ['testEnvironments', activeProjectId, 'perf'],
@@ -59,81 +65,81 @@ export function PerformancePage() {
     setPage(1)
   }, [activeProjectId, keyword, status])
 
-  const filteredCases = useMemo(() => {
+  const filteredSuites = useMemo(() => {
     const text = keyword.trim().toLowerCase()
-    return listItems(casesQuery.data).filter((perfCase) => {
-      const matchesKeyword = !text || `${perfCase.name} ${perfCase.description}`.toLowerCase().includes(text)
-      const matchesStatus = status === 'all' || (status === 'enabled' ? perfCase.enabled : !perfCase.enabled)
+    return listItems(suitesQuery.data).filter((suite) => {
+      const matchesKeyword = !text || `${suite.name} ${suite.description}`.toLowerCase().includes(text)
+      const matchesStatus = status === 'all' || (status === 'enabled' ? suite.enabled : !suite.enabled)
       return matchesKeyword && matchesStatus
     })
-  }, [casesQuery.data, keyword, status])
-  const pagedCases = useMemo(
-    () => filteredCases.slice((page - 1) * pageSize, page * pageSize),
-    [filteredCases, page, pageSize],
+  }, [suitesQuery.data, keyword, status])
+  const pagedSuites = useMemo(
+    () => filteredSuites.slice((page - 1) * pageSize, page * pageSize),
+    [filteredSuites, page, pageSize],
   )
 
   useEffect(() => {
-    const maxPage = Math.max(1, Math.ceil(filteredCases.length / pageSize))
+    const maxPage = Math.max(1, Math.ceil(filteredSuites.length / pageSize))
     if (page > maxPage) setPage(maxPage)
-  }, [filteredCases.length, page, pageSize])
+  }, [filteredSuites.length, page, pageSize])
 
-  const saveCaseMutation = useMutation({
-    mutationFn: ({ editing, values }: { editing: PerfCaseSummary | null; values: PerfCaseFormValues }) => {
+  const saveSuiteMutation = useMutation({
+    mutationFn: ({ editing, values }: { editing: PerfSuiteSummary | null; values: PerfSuiteFormValues }) => {
       if (!activeProjectId) throw new Error('请先选择项目')
-      if (editing) {
-        return api.updatePerfCase(editing.caseId, {
-          name: values.name.trim(),
-          description: values.description?.trim() ?? '',
-          enabled: values.enabled,
-        })
-      }
-      const name = values.name.trim()
-      return api.createPerfCase(activeProjectId, {
-        name,
+      const body = {
+        name: values.name.trim(),
         description: values.description?.trim() ?? '',
-        yaml: buildDefaultPerfYaml(name),
-      })
+        enabled: values.enabled,
+      }
+      return editing ? api.updatePerfSuite(editing.suiteId, body) : api.createPerfSuite(activeProjectId, body)
     },
-    onSuccess: async (perfCase, variables) => {
-      message.success(variables.editing ? '性能用例已更新' : '性能用例已创建')
+    onSuccess: async (suite, variables) => {
+      message.success(variables.editing ? '性能测试集已更新' : '性能测试集已创建')
       setDrawerOpen(false)
-      setEditingCase(null)
-      await queryClient.invalidateQueries({ queryKey: ['perfCases', activeProjectId] })
-      if (!variables.editing) navigate(`/performance/cases/${perfCase.caseId}`)
+      setEditingSuite(null)
+      await queryClient.invalidateQueries({ queryKey: ['perfSuites', activeProjectId] })
+      if (!variables.editing) navigate(`/performance/suites/${suite.suiteId}`)
     },
     onError: (error) => message.error(getErrorMessage(error)),
   })
 
-  const deleteCaseMutation = useMutation({
-    mutationFn: (caseId: string) => api.deletePerfCase(caseId),
+  const deleteSuiteMutation = useMutation({
+    mutationFn: (suiteId: string) => api.deletePerfSuite(suiteId),
     onSuccess: () => {
-      message.success('性能用例已删除')
-      queryClient.invalidateQueries({ queryKey: ['perfCases', activeProjectId] })
+      message.success('性能测试集已删除')
+      queryClient.invalidateQueries({ queryKey: ['perfSuites', activeProjectId] })
     },
     onError: (error) => message.error(getErrorMessage(error)),
   })
 
-  async function submitCase(values: PerfCaseFormValues) {
+  async function submitSuite(values: PerfSuiteFormValues) {
     try {
-      await saveCaseMutation.mutateAsync({ editing: editingCase, values })
+      await saveSuiteMutation.mutateAsync({ editing: editingSuite, values })
     } catch {
       // mutation.onError 已经给出反馈；保留 Drawer 让用户修正。
     }
   }
 
-  function renderCaseCard(perfCase: PerfCaseSummary) {
-    const title = <Link to={`/performance/cases/${perfCase.caseId}`} title={perfCase.name}>{perfCase.name}</Link>
+  function renderSuiteCard(suite: PerfSuiteSummary) {
+    const title = <Link to={`/performance/suites/${suite.suiteId}`} title={suite.name}>{suite.name}</Link>
     return <EntityCard
-      key={perfCase.caseId}
+      key={suite.suiteId}
       title={title}
-      status={<Tag color={perfCase.enabled ? 'success' : 'default'}>{perfCase.enabled ? '已启用' : '已停用'}</Tag>}
+      status={<Tag color={suite.enabled ? 'success' : 'default'}>{suite.enabled ? '已启用' : '已停用'}</Tag>}
       meta={[
-        { label: '数据文件', value: `${perfCase.dataFiles.length} 个` },
-        { label: '用例版本', value: `v${perfCase.version}` },
+        { label: '用例', value: `${suite.enabledCaseCount}/${suite.caseCount} 启用` },
+        { label: 'API 步骤', value: `${suite.stepCount} 个` },
       ]}
-      footerNote={<>最近更新 {formatTime(perfCase.updatedAt)}</>}
+      footerNote={<div className="flex flex-wrap items-center gap-2">
+        <span>最近更新 {formatTime(suite.updatedAt)}</span>
+        {suite.lastRunStatus ? <>
+          <span className="text-app-surface-text-muted">·</span>
+          <Tag color={perfStatusColor(suite.lastRunStatus)}>{PERF_STATUS_LABELS[suite.lastRunStatus]}</Tag>
+          {suite.lastRunOutcome ? <Tag color={perfOutcomeColor(suite.lastRunOutcome)}>{PERF_OUTCOME_LABELS[suite.lastRunOutcome]}</Tag> : <Tag>未判定</Tag>}
+        </> : <span className="text-app-surface-text-muted">· 尚未运行</span>}
+      </div>}
       actions={<>
-        <Tooltip title={resolvedEnvironmentId ? '发起运行' : '请先选择性能环境'}>
+        <Tooltip title={suite.enabledCaseCount > 0 ? '运行测试集' : '测试集没有启用的用例'}>
           <ProjectActionButton
             action="execute"
             projectId={activeProjectId}
@@ -142,12 +148,12 @@ export function PerformancePage() {
             className="action-btn-read"
             operation="run"
             iconOnly
-            aria-label="发起运行"
-            disabled={!resolvedEnvironmentId}
-            onClick={() => setRunCase(perfCase)}
+            aria-label="运行测试集"
+            disabled={suite.enabledCaseCount === 0}
+            onClick={() => setRunSuite(suite)}
           />
         </Tooltip>
-        <Tooltip title="编辑用例信息">
+        <Tooltip title="编辑测试集信息">
           <ProjectActionButton
             action="write"
             projectId={activeProjectId}
@@ -156,12 +162,16 @@ export function PerformancePage() {
             className="action-btn-update"
             operation="edit"
             iconOnly
-            aria-label="编辑用例信息"
-            onClick={() => { setEditingCase(perfCase); setDrawerOpen(true) }}
+            aria-label="编辑测试集信息"
+            onClick={() => { setEditingSuite(suite); setDrawerOpen(true) }}
           />
         </Tooltip>
-        <Popconfirm title="确认删除该性能用例？" onConfirm={() => deleteCaseMutation.mutate(perfCase.caseId)}>
-          <Tooltip title="删除用例">
+        <Popconfirm
+          title="确认删除该性能测试集？"
+          description="测试集内的用例、运行记录和关联数据会一起删除。"
+          onConfirm={() => deleteSuiteMutation.mutate(suite.suiteId)}
+        >
+          <Tooltip title="删除测试集">
             <ProjectActionButton
               action="write"
               projectId={activeProjectId}
@@ -171,17 +181,21 @@ export function PerformancePage() {
               operation="delete"
               iconOnly
               danger
-              aria-label="删除用例"
-              loading={deleteCaseMutation.isPending && deleteCaseMutation.variables === perfCase.caseId}
+              aria-label="删除测试集"
+              loading={deleteSuiteMutation.isPending && deleteSuiteMutation.variables === suite.suiteId}
             />
           </Tooltip>
         </Popconfirm>
       </>}
-      onOpen={() => navigate(`/performance/cases/${perfCase.caseId}`)}
+      onOpen={() => navigate(`/performance/suites/${suite.suiteId}`)}
     >
-      <p className={`entity-card-desc${perfCase.description ? '' : ' is-empty'}`} title={perfCase.description}>
-        {perfCase.description || '暂无性能用例描述'}
+      <p className={`entity-card-desc${suite.description ? '' : ' is-empty'}`} title={suite.description}>
+        {suite.description || '暂无测试集描述'}
       </p>
+      {suite.loadModels.length > 0 || suite.dataFileCount > 0 ? <div className="mt-2 flex flex-wrap gap-1">
+        {suite.loadModels.map((model) => <Tag key={model}>{PERF_LOAD_MODEL_LABELS[model as PerfLoadModel] ?? model}</Tag>)}
+        {suite.dataFileCount > 0 ? <Tag>数据文件 {suite.dataFileCount}</Tag> : null}
+      </div> : null}
     </EntityCard>
   }
 
@@ -225,7 +239,7 @@ export function PerformancePage() {
                     className="api-filter-input api-test-search-input"
                     allowClear
                     prefix={<SearchOutlined />}
-                    placeholder="搜索用例名称 / 描述"
+                    placeholder="搜索测试集名称 / 描述"
                     value={keyword}
                     onChange={(event) => setKeyword(event.target.value)}
                   />
@@ -243,49 +257,49 @@ export function PerformancePage() {
                   className="action-btn-create"
                   operation="create"
                   disabled={!activeProjectId}
-                  onClick={() => { setEditingCase(null); setDrawerOpen(true) }}
+                  onClick={() => { setEditingSuite(null); setDrawerOpen(true) }}
                 >
-                  新建性能用例
+                  新建测试集
                 </ProjectActionButton>
               </Space>
             </div>
           </div>
 
           {environmentsQuery.isError ? <Alert showIcon type="error" title={getErrorMessage(environmentsQuery.error)} /> : null}
-          {casesQuery.isError ? <Alert showIcon type="error" title={getErrorMessage(casesQuery.error)} /> : null}
+          {suitesQuery.isError ? <Alert showIcon type="error" title={getErrorMessage(suitesQuery.error)} /> : null}
 
           <div className="api-test-card-body tp-list-body">
             <div className="sprint-card-scroll api-test-card-scroll tp-list-scroll">
-              {casesQuery.isPending ? (
-                <div className="sprint-card-loading"><Empty description="性能用例加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} /></div>
-              ) : filteredCases.length === 0 ? (
+              {suitesQuery.isPending ? (
+                <div className="sprint-card-loading"><Empty description="性能测试集加载中..." image={Empty.PRESENTED_IMAGE_SIMPLE} /></div>
+              ) : filteredSuites.length === 0 ? (
                 <div className="sprint-card-loading">
                   <Empty
                     image={<AppstoreOutlined />}
                     description={<Space orientation="vertical" size={4}>
-                      <Text strong>{keyword.trim() ? '没有符合搜索条件的性能用例' : '当前项目还没有性能用例'}</Text>
+                      <Text strong>{keyword.trim() ? '没有符合搜索条件的性能测试集' : '当前项目还没有性能测试集'}</Text>
                       <Text type="secondary">
-                        {keyword.trim() ? '换个关键词，或者清空搜索看全部用例。' : '创建用例后进入 YAML 编辑器，配置步骤、负载和验收标准。'}
+                        {keyword.trim() ? '换个关键词，或者清空搜索看全部测试集。' : '先创建测试集，再在测试集内添加按顺序串行执行的性能用例。'}
                       </Text>
                     </Space>}
                   >
                     {keyword.trim()
                       ? <Button onClick={() => setKeyword('')}>清空搜索</Button>
-                      : <ProjectActionButton action="write" projectId={activeProjectId} type="primary" className="action-btn-create" operation="create" onClick={() => { setEditingCase(null); setDrawerOpen(true) }}>
-                        新建性能用例
+                      : <ProjectActionButton action="write" projectId={activeProjectId} type="primary" className="action-btn-create" operation="create" onClick={() => { setEditingSuite(null); setDrawerOpen(true) }}>
+                        新建测试集
                       </ProjectActionButton>}
                   </Empty>
                 </div>
               ) : (
-                <div className="entity-card-grid">{pagedCases.map(renderCaseCard)}</div>
+                <div className="entity-card-grid">{pagedSuites.map(renderSuiteCard)}</div>
               )}
             </div>
             <div className="table-footer api-test-footer">
               <ListPagination
-                loading={casesQuery.isFetching || casesQuery.isError}
+                loading={suitesQuery.isFetching || suitesQuery.isError}
                 current={page}
                 pageSize={pageSize}
-                total={filteredCases.length}
+                total={filteredSuites.length}
                 onChange={(nextPage, nextPageSize) => {
                   setPage(nextPage)
                   setPageSize(nextPageSize)
@@ -296,22 +310,22 @@ export function PerformancePage() {
         </section>
       </div>
 
-      <PerfCaseDrawer
+      <PerfSuiteDrawer
         open={drawerOpen}
-        editing={editingCase}
-        saving={saveCaseMutation.isPending}
-        onClose={() => { setDrawerOpen(false); setEditingCase(null) }}
-        onSubmit={submitCase}
+        editing={editingSuite}
+        saving={saveSuiteMutation.isPending}
+        onClose={() => { setDrawerOpen(false); setEditingSuite(null) }}
+        onSubmit={submitSuite}
       />
-      <StartPerfRunModal
-        open={Boolean(runCase)}
+      <StartPerfSuiteRunModal
+        open={Boolean(runSuite)}
         projectId={activeProjectId}
-        perfCase={runCase}
+        suite={runSuiteQuery.data ?? null}
         defaultEnvironmentId={resolvedEnvironmentId}
-        onClose={() => setRunCase(null)}
-        onStarted={(run) => navigate(`/performance/runs/${run.runId}`)}
-        onManageEnvironments={() => { setRunCase(null); setEnvironmentDrawerOpen(true) }}
-        onManageMonitoring={() => { setRunCase(null); navigate('/base-services?tab=monitoring') }}
+        onClose={() => setRunSuite(null)}
+        onStarted={(run) => navigate(`/performance/runs/${run.suiteRunId}`)}
+        onManageEnvironments={() => { setRunSuite(null); setEnvironmentDrawerOpen(true) }}
+        onManageMonitoring={() => { setRunSuite(null); navigate('/base-services?tab=monitoring') }}
       />
       <EnvironmentDrawer
         open={environmentDrawerOpen}

@@ -2,7 +2,6 @@ import { DownOutlined, RightOutlined } from '@ant-design/icons'
 import { Tag } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { normalizeApiConfigCases, stringifyCompact, type ApiConfigRule } from '../utils/apiConfigDiagram'
-import '../styles/api-config-result.css'
 
 function getMethodTagColor(method: string) {
   const normalizedMethod = method.toUpperCase()

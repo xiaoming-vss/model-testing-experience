@@ -56,7 +56,6 @@ describe('AppSidebar', () => {
     ['/bugs/12', 'Bug列表'],
     ['/api-automation/collections/12', '测试'],
     ['/ui-automation/suites/12', '测试'],
-    ['/performance/cases/12', '测试'],
     ['/asset-library/interfaces/12', '资产库'],
     ['/asset-library?tab=apps', '资产库'],
     ['/testing?tab=functional', '测试'],

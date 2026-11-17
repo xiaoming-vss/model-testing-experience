@@ -7,7 +7,13 @@ import { usePaneActive } from '@/shared/ui/paneActivity'
 import { interfaceLibraryApi } from '../api/interfaceLibrary.api'
 import type { ApiInterfaceListItem, SoftwareRepository } from '../types'
 import '@/shared/styles/surface-tokens.css'
-import '../styles/index.css'
+import styles from '../styles/interface-library.module.css'
+import methodStyles from '../styles/interface-method.module.css'
+import openapiStyles from '../styles/interface-openapi.module.css'
+import detailStyles from '../styles/interface-detail.module.css'
+import editorStyles from '../styles/interface-editor.module.css'
+
+const interfaceScopes = `${styles.scope} ${methodStyles.scope} ${openapiStyles.scope} ${detailStyles.scope} ${editorStyles.scope}`
 
 /**
  * 接口库入口：不渲染外层接口表格，直接进入“软件仓库树 + 接口编辑器”工作区。
@@ -43,7 +49,7 @@ export function InterfaceLibraryPage() {
 
   if (!projectId) {
     return (
-      <div className="workbench-page interface-library-page tp-surface">
+      <div className={`workbench-page interface-library-page tp-surface ${styles.pageRoot} ${interfaceScopes}`}>
         <Alert type="info" showIcon title="请先在顶部选择一个项目" />
       </div>
     )
@@ -55,7 +61,7 @@ export function InterfaceLibraryPage() {
     interfacesQuery.isFetching
   ) {
     return (
-      <div className="workbench-page interface-library-page tp-surface if-detail-loading">
+      <div className={`workbench-page interface-library-page tp-surface if-detail-loading ${styles.pageRoot} ${interfaceScopes}`}>
         <Spin />
       </div>
     )
@@ -63,7 +69,7 @@ export function InterfaceLibraryPage() {
 
   if (repositoriesQuery.isError || interfacesQuery.isError) {
     return (
-      <div className="workbench-page interface-library-page tp-surface">
+      <div className={`workbench-page interface-library-page tp-surface ${styles.pageRoot} ${interfaceScopes}`}>
         <Alert
           type="error"
           showIcon

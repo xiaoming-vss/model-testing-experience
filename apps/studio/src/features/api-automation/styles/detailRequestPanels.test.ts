@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import panelsCss from './detail-request-panels-v2.css?raw'
+import panelsCss from './api-detail-request.module.css?raw'
 
 /*
  * 请求头 / 请求体两个面板的样式契约。
@@ -31,9 +31,9 @@ describe('API 请求编辑面板样式', () => {
   })
 
   it('请求头工具条、表头与请求体状态条用表面 token', () => {
-    const toolbar = blocksOf(panelsCss).find((block) => block.selector.endsWith('.api-wb-hdr-toolbar'))
-    const headCell = blocksOf(panelsCss).find((block) => block.selector.endsWith('.api-wb-hdr-table thead th'))
-    const status = blocksOf(panelsCss).find((block) => block.selector.endsWith('.api-wb-body-status'))
+    const toolbar = blocksOf(panelsCss).find((block) => block.selector.includes('(.api-wb-hdr-toolbar)'))
+    const headCell = blocksOf(panelsCss).find((block) => block.selector.includes('(.api-wb-hdr-table thead th)'))
+    const status = blocksOf(panelsCss).find((block) => block.selector.includes('(.api-wb-body-status)'))
 
     expect(toolbar?.declarations).toContain('background: var(--srf-hover)')
     expect(toolbar?.declarations).toContain('border-bottom: 1px solid var(--srf-card-border)')
@@ -42,7 +42,7 @@ describe('API 请求编辑面板样式', () => {
   })
 
   it('合法性徽标走九色盘 tone token', () => {
-    const badge = blocksOf(panelsCss).find((block) => block.selector.endsWith('.api-wb-body-validity'))
+    const badge = blocksOf(panelsCss).find((block) => block.selector.includes('(.api-wb-body-validity)'))
 
     expect(badge?.declarations).toContain('color: var(--srf-tone-text)')
     expect(badge?.declarations).toContain('background: var(--srf-tone-bg)')

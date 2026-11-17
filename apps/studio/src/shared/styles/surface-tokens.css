@@ -202,8 +202,8 @@
 /* 存量分离布局的兼容板面；新列表／卡片页必须追加 tp-list-panel。
    未迁移页面本身不承载表面，让内部卡片承载背景。
    .api-automation-content 已经给了页面内距，面板不再补一层。
-   testing/styles/index.css 里 .app-shell-macos .testing-page .api-automation-content > .workbench-panel
-   用 !important 给了它玻璃渐变表面，所以这里要带 .app-shell-macos .testing-page 前缀把权重压过去。 */
+   shell-header.css 的 macOS 玻璃板面规则带 !important，所以下面还要用
+   .app-shell-macos .testing-page 前缀把权重压过去。 */
 .tp-surface .tp-board,
 .testing-page .tp-surface .api-automation-content > .workbench-panel.tp-board {
   display: flex;
@@ -217,7 +217,7 @@
   overflow: visible;
 }
 
-/* app/styles/shell.css 的玻璃板面规则写成
+/* app/styles/shell-header.css 的玻璃板面规则写成
    `:is(<页面类…>) :is(<面板类…>)`（两个 `:is()` 各算 1 分，合计 0,
 6,
 0），与上面 `.tp-board` 那条同权重——
@@ -443,6 +443,53 @@
   flex-wrap: wrap;
 }
 
+/* API / 性能列表共用同一行工具栏内部排布；页面只保留业务筛选项。 */
+.tp-surface .tp-list-toolbar.api-test-header {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.tp-surface .api-test-header-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0;
+}
+
+.tp-surface .api-test-header-main .api-panel-head-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tp-surface .api-test-header-actions {
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.tp-surface .api-test-search-field {
+  min-width: 240px;
+}
+
+.tp-surface .api-test-header .api-inline-environment {
+  gap: 12px;
+  padding-left: 0;
+}
+
+.tp-surface .api-test-header .api-environment-selector {
+  gap: 8px;
+}
+
+.tp-surface .api-test-header .api-environment-label {
+  color: var(--app-glass-text-caption);
+  font-size: 12px;
+  line-height: 18px;
+}
+
 .api-filter-group {
   display: flex;
   align-items: center;
@@ -544,5 +591,10 @@
 
   .api-collection-grid {
     grid-template-columns: 1fr;
+  }
+
+  .tp-surface .api-test-search-field {
+    min-width: 0;
+    width: 100%;
   }
 }

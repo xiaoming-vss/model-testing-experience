@@ -1,9 +1,0 @@
-.ant-modal .ant-modal-header.ai-artifact-mode-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-right: 44px; min-height: 28px; }
-.ai-artifact-mode-heading > :first-child:not(.ai-artifact-mode-slot) { flex: 1; min-width: 0; }
-.ai-artifact-mode-slot { flex-shrink: 0; font-weight: 400; }
-.ai-artifact-mode-toolbar { display: flex; justify-content: flex-end; margin-bottom: 12px; flex-shrink: 0; }
-@media (max-width: 640px) {
-  .ant-modal .ant-modal-header.ai-artifact-mode-heading { flex-wrap: wrap; gap: 8px; }
-}
-
-.ai-artifact-mode-controls { display: flex; align-items: center; gap: 8px; }

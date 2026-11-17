@@ -12,7 +12,6 @@ import type {
   ResolvedUiGenerationSource,
   UiGenerationSourceSelection,
 } from '../utils/uiGenerationSource'
-import '../styles/ui-generation-source.css'
 
 export type UiGenerationSourceOptionsState = {
   data?: UiGenerationSourceOptions

@@ -1,4 +1,15 @@
-import type { PerfRun, PerfRunOutcome, PerfRunStatus } from '../types'
+import type { PerfRunOutcome, PerfRunStatus } from '../types'
+import type { PerfHttpMethod } from './perfCaseForm'
+
+export const PERF_METHOD_COLORS: Record<PerfHttpMethod, string> = {
+  GET: 'blue',
+  POST: 'green',
+  PUT: 'gold',
+  PATCH: 'orange',
+  DELETE: 'red',
+  HEAD: 'default',
+  OPTIONS: 'default',
+}
 
 export const PERF_STATUS_LABELS: Record<PerfRunStatus, string> = {
   queued: '排队中',
@@ -13,7 +24,7 @@ export const PERF_STATUS_LABELS: Record<PerfRunStatus, string> = {
 export const PERF_OUTCOME_LABELS: Record<PerfRunOutcome, string> = {
   passed: '达标',
   threshold_failed: '阈值未达标',
-  inconclusive: '结果不确定',
+  inconclusive: '未判定',
   execution_error: '执行异常',
   stopped: '已停止',
 }
@@ -41,24 +52,6 @@ case:
   acceptance:
     source: missing
 `
-}
-
-export function buildPerfGrafanaUrl(run: Pick<PerfRun,
-  'runId' | 'monitoring' | 'startedAt' | 'finishedAt' | 'createdAt'>) {
-  const snapshot = run.monitoring
-  if (!snapshot?.grafanaUrl || !snapshot.grafanaDashboardUid) return ''
-  const base = snapshot.grafanaUrl.replace(/\/+$/, '')
-  const params = new URLSearchParams()
-  params.set('var-run_id', run.runId)
-  const started = Date.parse(run.startedAt || run.createdAt || '')
-  if (!Number.isNaN(started)) params.set('from', String(started))
-  const finished = Date.parse(run.finishedAt || '')
-  params.set('to', String(Number.isNaN(finished) ? Date.now() : finished))
-  for (const [key, value] of Object.entries(snapshot.defaultFilters ?? {})) {
-    if (key === 'run_id' || value === null || value === undefined) continue
-    params.set(`var-${key}`, typeof value === 'string' ? value : JSON.stringify(value))
-  }
-  return `${base}/d/${encodeURIComponent(snapshot.grafanaDashboardUid)}?${params.toString()}`
 }
 
 export type PerfMetricSummary = {

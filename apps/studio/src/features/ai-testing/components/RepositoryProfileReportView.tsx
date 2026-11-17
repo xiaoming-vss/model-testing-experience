@@ -2,7 +2,6 @@ import { Alert, Card, Empty, Space, Table, Tag, Typography } from 'antd'
 import type { TableProps } from 'antd'
 import type { RepositoryProfile, RepositoryProfileRepository } from '../types'
 import { formatProfileConfidence, repositoryRoleMeta } from '../utils/repositoryProfileDisplay'
-import '../styles/repository-profile.css'
 
 const { Text, Paragraph } = Typography
 

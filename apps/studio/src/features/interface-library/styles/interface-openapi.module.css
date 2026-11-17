@@ -1,0 +1,217 @@
+/* 接口库 OpenAPI 导入：步骤、错误、预览与仓库选择。 */
+
+.scope { --if-openapi-scope: 1; }
+
+/* ---------- OpenAPI 导入 ---------- */
+
+.scope :global(.if-import-steps) {
+  margin: 4px 0 18px;
+}
+
+.scope :global(.if-import-error) {
+  margin-bottom: 12px;
+}
+
+.scope :global(.if-import-step) {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scope :global(.if-import-field) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scope :global(.if-import-field > span) {
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.scope :global(.if-import-mode) {
+  align-self: flex-start;
+}
+
+.scope :global(.if-import-editor) {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scope :global(.if-import-actions) {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.scope :global(.if-import-summary) {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.scope :global(.if-import-summary .ant-tag) {
+  margin: 0;
+}
+
+.scope :global(.if-import-source) {
+  margin-right: 4px;
+  color: var(--srf-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.scope :global(.if-import-groups) {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px dashed var(--srf-accent-border);
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-accent-soft);
+}
+
+.scope :global(.if-import-groups-title) {
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.scope :global(.if-import-groups .ant-tag) {
+  margin: 0;
+}
+
+.scope :global(.if-import-warnings) {
+  max-height: 130px;
+  margin: 0;
+  padding-left: 16px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 19px;
+}
+
+.scope :global(.if-import-list) {
+  display: flex;
+  flex-direction: column;
+  max-height: 330px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-control);
+  overflow: auto;
+}
+
+.scope :global(.if-import-item) {
+  display: grid;
+  grid-template-columns: 18px 48px minmax(90px, 1fr) minmax(160px, 1.5fr) auto minmax(70px, 0.8fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--srf-divider);
+  cursor: pointer;
+}
+
+.scope :global(.if-import-item:last-child) {
+  border-bottom: 0;
+}
+
+.scope :global(.if-import-item:hover) {
+  background: var(--srf-hover);
+}
+
+.scope :global(.if-import-item.is-selected) {
+  background: var(--srf-accent-soft);
+}
+
+.scope :global(.if-import-item.is-disabled) {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.scope :global(.if-import-item.is-disabled:hover) {
+  background: transparent;
+}
+
+.scope :global(.if-import-item-name) {
+  overflow: hidden;
+  color: var(--srf-text);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scope :global(.if-import-item-title) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.scope :global(.if-import-item-group) {
+  overflow: hidden;
+  color: var(--srf-text-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scope :global(.if-import-group-new) {
+  margin-left: 5px;
+  color: var(--srf-result-passed);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.scope :global(.if-import-item code) {
+  overflow: hidden;
+  color: var(--srf-text-secondary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scope :global(.if-import-item .ant-tag) {
+  margin: 0;
+}
+
+.scope :global(.if-import-changed) {
+  overflow: hidden;
+  color: var(--srf-text-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scope :global(.if-import-note) {
+  padding: 9px 11px;
+  border-radius: var(--srf-radius-control);
+  background: var(--srf-chip);
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+  line-height: 19px;
+}
+
+.scope :global(.if-import-result) {
+  padding: 12px;
+  border: 1px solid var(--srf-card-border);
+  border-radius: var(--srf-radius-control);
+}
+
+.scope :global(.if-import-result-groups) {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--srf-divider);
+  color: var(--srf-text-secondary);
+  font-size: 12px;
+}
+

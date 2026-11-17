@@ -1,0 +1,51 @@
+/* 需求软件仓库关联弹窗；选择器只服务 base-services 的仓库关联组件。 */
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--app-document-rule);
+  border-radius: 8px;
+}
+
+.rowMain {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.rowActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rowActions .select {
+  width: 160px;
+}
+
+.repoTag {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

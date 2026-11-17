@@ -1,9 +1,0 @@
-/* 模型连接选择弹窗。 */
-.llm-connection-select-modal :is(.ant-modal-container, .ant-modal-content) {
-  overflow: hidden;
-}
-
-.llm-connection-select-modal .ant-modal-header,
-.llm-connection-select-modal .ant-modal-footer {
-  background: transparent !important;
-}

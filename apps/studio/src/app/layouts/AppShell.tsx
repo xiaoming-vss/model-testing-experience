@@ -25,9 +25,9 @@ import { TestOrderWorkspacePage } from '@/features/test-orders/pages/TestOrderWo
 import { BugDetailPage } from '@/features/bugs/pages/BugDetailPage'
 import { BugSubmitPage } from '@/features/bugs/pages/BugSubmitPage'
 import { UiTestSuiteCasePage } from '@/features/ui-automation/pages/UiTestSuiteCasePage'
-import { PerformanceCaseDetailPage } from '@/features/performance/pages/PerformanceCaseDetailPage'
 import { PerformanceRunDetailPage } from '@/features/performance/pages/PerformanceRunDetailPage'
 import { PerformanceRunsPage } from '@/features/performance/pages/PerformanceRunsPage'
+import { PerformanceSuiteDetailPage } from '@/features/performance/pages/PerformanceSuiteDetailPage'
 import { AppNavigationBrand, AppSidebar } from './AppSidebar'
 import { navigationIndex } from './navigation'
 import { useNavigationTransition } from './useNavigationTransition'
@@ -221,13 +221,13 @@ export function AppShell() {
             <Route path="/ai-testing/tasks" element={<Navigate to="/projects?board=requirements" replace />} />
             <Route path="/ai-testing/code-risk-tasks/:taskId" element={<Navigate to="/projects?board=requirements" replace />} />
             <Route path="/ai-testing/skills" element={<Navigate to="/base-services?tab=skills" replace />} />
-            <Route path="/base-services" element={<BaseServicesPage skillLibrary={<div className="ai-testing-page tp-list-surface ai-skill-library-page tp-surface"><AiSkillLibraryPage embedded /></div>} />} />
+            <Route path="/base-services" element={<BaseServicesPage skillLibrary={<AiSkillLibraryPage embedded />} />} />
             <Route path="/api-automation" element={<Navigate to="/testing?tab=api" replace />} />
             <Route path="/api-automation/collections/:collectionId" element={<ApiCollectionDetailPage />} />
             <Route path="/ui-automation" element={<Navigate to="/testing?tab=ui" replace />} />
             <Route path="/ui-automation/suites/:suiteId" element={<UiTestSuiteCasePage />} />
             <Route path="/performance" element={<Navigate to="/testing?tab=perf" replace />} />
-            <Route path="/performance/cases/:caseId" element={<PerformanceCaseDetailPage />} />
+            <Route path="/performance/suites/:suiteId" element={<PerformanceSuiteDetailPage />} />
             <Route path="/performance/runs" element={<PerformanceRunsPage />} />
             <Route path="/performance/runs/:runId" element={<PerformanceRunDetailPage />} />
             <Route path="/profile" element={<ProfilePage />} />

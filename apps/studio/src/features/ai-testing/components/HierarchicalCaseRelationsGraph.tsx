@@ -9,7 +9,6 @@ import { HierarchyGraphCanvas } from './HierarchyGraphCanvas'
 import { HierarchyCaseDetails } from './HierarchyCaseDetails'
 import type { HierarchyCaseBadge } from './HierarchyGraphNodes'
 import type { FunctionalCaseRelationsGraphHandle } from './FunctionalCaseRelationsGraph'
-import '../styles/relations-hierarchy.css'
 
 export type HierarchicalGraphProps = {
   content: string

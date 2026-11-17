@@ -2,7 +2,7 @@
  * 编辑用例弹窗（用例库点开用例的那套表单）。
  *
  * 只作用于 `.case-library-case-modal`：弹窗被 antd 传到 body 下，不在 `.app-shell` 里，
- * 所以 `shell.css` 那些带 `.app-shell` 前缀的规则碰不到它。
+ * 所以 `shell.css` / `shell-header.css` 那些带 `.app-shell` 前缀的规则碰不到它。
  *
  * token 与九色盘来自 shared/styles/surface-tokens.css；弹窗根节点带 `tp-surface` 才能取到（见 CaseLibraryPage）。
  * 颜色一律走 token：这个文件是新增的，不在 STRUCTURE.md S8 的存量豁免里。

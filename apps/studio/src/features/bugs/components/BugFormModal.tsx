@@ -10,7 +10,8 @@ import { BUG_PRIORITY_LABELS, BUG_SEVERITY_LABELS, formatBugNo } from '../utils/
 import { BugDescriptionTemplates } from './BugDescriptionTemplates'
 import { BugAttachmentUploader } from './BugAttachmentUploader'
 import { useBugForm } from '../hooks/useBugForm'
-import '../styles/bug-form.css'
+import bugStyles from '../styles/bugs.module.css'
+import styles from '../styles/bug-form.module.css'
 
 const SEVERITY_OPTIONS = Object.entries(BUG_SEVERITY_LABELS).map(([value, label]) => ({ value, label }))
 const PRIORITY_OPTIONS = Object.entries(BUG_PRIORITY_LABELS).map(([value, label]) => ({ value, label }))
@@ -33,7 +34,7 @@ export function BugFormModal(props: BugFormProps) {
 
   return (
     <Modal open={open} onCancel={onClose} width={1024} centered mask={{ closable: false }}
-      rootClassName="tp-surface bug-form-modal"
+      rootClassName={`tp-surface bug-form-modal ${bugStyles.root} ${styles.root}`}
       title={<div className="bug-form-heading">
         <span className="bug-form-heading-icon"><BugOutlined /></span>
         <div><div className="bug-form-title-line"><h2>{isEdit ? `编辑 ${formatBugNo(bug!.bugNo)}` : '新建缺陷 (New Bug)'}</h2>

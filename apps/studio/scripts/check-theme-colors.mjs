@@ -11,6 +11,7 @@ const tokenFiles = new Set([
   'app/styles/buttons.css',
   'shared/styles/foundation-tokens.css',
   'shared/styles/surface-tokens.css',
+  'shared/styles/base-services-connection.module.css',
   'shared/styles/editor-tokens.css',
   'shared/styles/chart-tokens.css',
   'shared/styles/ui-stage-visual-tokens.css',

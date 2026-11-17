@@ -11,7 +11,7 @@ const CASE_PAGE_SIZE = 40
 /*
  * API 测试集详情页左栏：用例列表。
  * 设计稿是一张独立卡片（标题 + 计数 + 新建 / 导入两个图标按钮 + 搜索框 + 用例列表），
- * 返回按钮与测试集信息已移到顶栏（ApiCollectionToolbar）。样式见 styles/detail-workbench-v2.css。
+ * 返回按钮与测试集信息已移到顶栏（ApiCollectionToolbar）。样式见 styles/api-detail-shell.module.css。
  */
 
 type Props = {

@@ -2,14 +2,21 @@ import { buildQuery, request, type ListResponse } from '@/shared/api/request'
 import type {
   CreateMonitoringConnectionPayload,
   CreatePerfCasePayload,
+  CreatePerfSuitePayload,
   MonitoringConnection,
   PerfCase,
   PerfCaseSummary,
   PerfRun,
   PerfRunSummary,
+  PerfSuite,
+  PerfSuiteRun,
+  PerfSuiteRunSummary,
+  PerfSuiteSummary,
   StartPerfRunPayload,
+  StartPerfSuiteRunPayload,
   UpdateMonitoringConnectionPayload,
   UpdatePerfCasePayload,
+  UpdatePerfSuitePayload,
 } from '../types'
 
 export const performanceApi = {
@@ -40,6 +47,42 @@ export const performanceApi = {
   getPerfRun: (runId: string) => request<PerfRun>(`/v1/perf-runs/${runId}`),
   stopPerfRun: (runId: string) =>
     request<Record<string, never>>(`/v1/perf-runs/${runId}/stop`, { method: 'POST' }),
+  listPerfSuites: (projectId: string) =>
+    request<ListResponse<PerfSuiteSummary>>(`/v1/projects/${projectId}/perf-suites`),
+  getPerfSuite: (suiteId: string) => request<PerfSuite>(`/v1/perf-suites/${suiteId}`),
+  createPerfSuite: (projectId: string, body: CreatePerfSuitePayload) =>
+    request<PerfSuite>(`/v1/projects/${projectId}/perf-suites`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updatePerfSuite: (suiteId: string, body: UpdatePerfSuitePayload) =>
+    request<PerfSuite>(`/v1/perf-suites/${suiteId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  reorderPerfSuiteCases: (suiteId: string, caseIds: string[]) =>
+    request<PerfSuite>(`/v1/perf-suites/${suiteId}/case-order`, {
+      method: 'PUT',
+      body: JSON.stringify({ caseIds }),
+    }),
+  deletePerfSuite: (suiteId: string) =>
+    request<Record<string, never>>(`/v1/perf-suites/${suiteId}`, { method: 'DELETE' }),
+  startPerfSuiteRun: (suiteId: string, body: StartPerfSuiteRunPayload) =>
+    request<PerfSuiteRun>(`/v1/perf-suites/${suiteId}/runs`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  listPerfSuiteRuns: (
+    projectId: string,
+    params: { suiteId?: string; status?: string; page?: number; pageSize?: number } = {},
+  ) =>
+    request<ListResponse<PerfSuiteRunSummary>>(
+      `/v1/projects/${projectId}/perf-suite-runs${buildQuery(params)}`,
+    ),
+  getPerfSuiteRun: (suiteRunId: string) =>
+    request<PerfSuiteRun>(`/v1/perf-suite-runs/${suiteRunId}`),
+  stopPerfSuiteRun: (suiteRunId: string) =>
+    request<Record<string, never>>(`/v1/perf-suite-runs/${suiteRunId}/stop`, { method: 'POST' }),
   listMonitoringConnections: (projectId: string) =>
     request<ListResponse<MonitoringConnection>>(`/v1/projects/${projectId}/monitoring-connections`),
   createMonitoringConnection: (projectId: string, body: CreateMonitoringConnectionPayload) =>
