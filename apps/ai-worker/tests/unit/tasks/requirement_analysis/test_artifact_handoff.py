@@ -16,6 +16,11 @@ FIXTURE = (
     / "tests/fixtures/requirement_artifacts/readable-material.example.json"
 )
 RECEIPT = {"artifactFile": "document-extraction.json"}
+REVIEW_RECEIPT = {"artifactFile": "requirement-review.json"}
+REVIEW_FIXTURE = (
+    Path(__file__).resolve().parents[4]
+    / "tests/fixtures/requirement_review/passed.example.json"
+)
 
 
 class ArtifactHandoffTests(unittest.TestCase):
@@ -29,6 +34,26 @@ class ArtifactHandoffTests(unittest.TestCase):
                     read_artifact_response(receipt, kind="document_extraction", output_path=path),
                     raw,
                 )
+
+    def test_review_receipt_reads_requirement_review_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "requirement-review.json"
+            raw = REVIEW_FIXTURE.read_text()
+            path.write_text(raw)
+            for receipt in [REVIEW_RECEIPT, json.dumps(REVIEW_RECEIPT)]:
+                self.assertEqual(
+                    read_artifact_response(
+                        receipt, kind="requirement_review", output_path=path
+                    ),
+                    raw,
+                )
+
+    def test_review_receipt_cannot_read_a_material_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "requirement-review.json"
+            path.write_text("{}")
+            with self.assertRaises(ValueError):
+                read_artifact_response(RECEIPT, kind="requirement_review", output_path=path)
 
     def test_bad_receipts_never_select_another_file(self):
         with tempfile.TemporaryDirectory() as directory:

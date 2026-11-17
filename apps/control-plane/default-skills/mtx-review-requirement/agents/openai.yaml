@@ -1,0 +1,4 @@
+interface:
+  display_name: "需求评审"
+  short_description: "识别需求冲突、歧义、缺失、弱验收标准和输入缺口"
+  default_prompt: "使用 $mtx-review-requirement 评审原始需求材料，输出问题登记表、覆盖度和评审摘要 JSON。"

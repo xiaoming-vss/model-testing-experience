@@ -257,26 +257,9 @@ type RequirementDocumentPreviewContentProps = {
   documentDownloadUrl?: string
 }
 
-function RequirementPreviewPane({
-  title,
-  icon,
-  meta,
-  children,
-}: {
-  title: string
-  icon: ReactNode
-  meta: ReactNode
-  children: ReactNode
-}) {
+function RequirementPreviewPane({ children }: { children: ReactNode }) {
   return (
     <section className="requirement-document-pane">
-      <div className="requirement-document-pane-header">
-        <div className="requirement-document-pane-title">
-          {icon}
-          <span>{title}</span>
-          {meta}
-        </div>
-      </div>
       <div className="requirement-document-pane-body">{children}</div>
     </section>
   )
@@ -379,11 +362,7 @@ export function RequirementDocumentPreviewContent({
       </header> : null}
       {downloadMutation.error ? <Alert showIcon type="error" title={getErrorMessage(downloadMutation.error)} /> : null}
       <div className="requirement-document-workspace">
-        <RequirementPreviewPane
-          title="需求文档"
-          icon={<FileWordOutlined />}
-          meta={<span className="requirement-document-pane-meta">原始版式</span>}
-        >
+        <RequirementPreviewPane>
           {documentPreviewContent}
         </RequirementPreviewPane>
 

@@ -27,4 +27,10 @@ describe('caseNameTreeLayout', () => {
     expect(data('model').onDelete).toBeUndefined()
     expect(data('scene').onDelete).toBeUndefined()
   })
+
+  it('passes the relation renderer to every node', () => {
+    const renderRelations = vi.fn()
+    const graph = buildTreeFlow(tree, undefined, undefined, undefined, undefined, 0, renderRelations)
+    expect(graph.nodes.every(node => node.data.renderRelations === renderRelations)).toBe(true)
+  })
 })

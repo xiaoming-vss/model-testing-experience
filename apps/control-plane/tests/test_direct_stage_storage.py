@@ -56,7 +56,7 @@ async def test_unconfigured_chain_view_does_not_create_stages(db):  # noqa: F811
     assert len(db.scalars(select(AiGenerationStage)).all()) == before
 
 
-async def test_requirement_document_runs_and_reviews_as_single_material_stage(db):  # noqa: F811
+async def test_requirement_material_runs_independently_of_the_review_stage(db):  # noqa: F811
     import json
 
     from support.generation import generation_services
@@ -101,7 +101,8 @@ async def test_requirement_document_runs_and_reviews_as_single_material_stage(db
         GenerationChainRunRequest(connectionId="llm"),
         "u",
     )
-    extracting = db.get(AiGenerationAttempt, first.stages[0].active_run_id)
+    extracting_stage = next(item for item in first.stages if item.stage == "extracting_text")
+    extracting = db.get(AiGenerationAttempt, extracting_stage.active_run_id)
     assert extracting.input_snapshot_json["source"]["documentFileId"] == "document-file"
     assert extracting.input_snapshot_json["source"]["workflowVersion"] == 2
     queue = db.scalar(select(WorkerTask).where(WorkerTask.task_id == extracting.worker_task_id))
@@ -130,9 +131,99 @@ async def test_requirement_document_runs_and_reviews_as_single_material_stage(db
         GenerationChainReviewRequest(action="approve", expectedAttemptId=extracting.id),
         "u",
     )
-    assert len(approved.stages) == 1
-    assert approved.stages[0].state == "approved"
-    assert approved.stages[0].latest_version.version_id
+    assert [item.stage for item in approved.stages] == [
+        "requirement_review",
+        "extracting_text",
+    ]
+    assert approved.stages[0].state == "not_started"
+    material = approved.stages[1]
+    assert material.state == "approved"
+    assert material.latest_version.version_id
+
+
+async def test_requirement_review_is_advisory_and_does_not_block_material(db):  # noqa: F811
+    import json
+    from pathlib import Path
+
+    from support.generation import generation_services
+
+    from testing_agent.models.ai_generate_task import AiGenerateTask
+    from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
+    from testing_agent.models.requirement import Requirement
+    from testing_agent.models.worker_task import WorkerTask
+    from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
+    from testing_agent.schemas.generation_chain import (
+        GenerationChainReviewRequest,
+        GenerationChainRunRequest,
+    )
+    from testing_agent.schemas.workers import WorkerProgressRequest
+    from testing_agent.services.stage_storage.commands import DirectStageCommands
+    from testing_agent.services.stage_storage.worker_events import apply_stage_progress
+
+    review_artifact = json.loads(
+        (Path(__file__).parent / "fixtures/requirement_review/blocked.example.json").read_text()
+    )
+    stage, storage = setup_stage(db)
+    task = db.scalar(select(AiGenerateTask).where(AiGenerateTask.task_id == "task"))
+    requirement = db.scalar(select(Requirement).where(Requirement.requirement_id == "r"))
+    task.task_type, stage.stage = "requirement_analysis", "requirement_review"
+    requirement.document_file_id = "document-file"
+    db.commit()
+    session = AsyncSessionAdapter(db)
+    chain = generation_services(AiGenerateTaskRepository(session)).chain
+    commands = DirectStageCommands(chain)
+    first = await commands.run(
+        "r",
+        "requirement_analysis",
+        "requirement_review",
+        GenerationChainRunRequest(connectionId="llm", instruction="参考接口说明"),
+        "u",
+    )
+    review_stage = next(item for item in first.stages if item.stage == "requirement_review")
+    attempt = db.get(AiGenerationAttempt, review_stage.active_run_id)
+    assert attempt.input_snapshot_json["source"]["instruction"] == "参考接口说明"
+    queue = db.scalar(select(WorkerTask).where(WorkerTask.task_id == attempt.worker_task_id))
+    frozen = attempt.input_snapshot_json
+    await apply_stage_progress(
+        session,
+        queue,
+        stage_id=stage.id,
+        attempt_id=attempt.id,
+        kind="requirement_analysis",
+        stage="requirement_review",
+        source=frozen["source"],
+        frozen_config=frozen["config"],
+        body=WorkerProgressRequest(
+            worker_id="worker",
+            current_stage="requirement_review",
+            stage_status="waiting_review",
+            config_json={"reviewOutput": review_artifact},
+            result_summary_json={"reviewStatus": "blocked", "blockerCount": 1},
+        ),
+    )
+    db.commit()
+    approved = await commands.review(
+        "r",
+        "requirement_analysis",
+        "requirement_review",
+        GenerationChainReviewRequest(action="approve", expectedAttemptId=attempt.id),
+        "u",
+    )
+    review_view = next(item for item in approved.stages if item.stage == "requirement_review")
+    assert review_view.state == "approved"
+    assert review_view.latest_version
+    # A blocked report does not gate the independent material stage.
+    material = await commands.run(
+        "r",
+        "requirement_analysis",
+        "extracting_text",
+        GenerationChainRunRequest(connectionId="llm"),
+        "u",
+    )
+    material_stage = next(item for item in material.stages if item.stage == "extracting_text")
+    extraction_attempt = db.get(AiGenerationAttempt, material_stage.active_run_id)
+    assert "reviewOutput" not in extraction_attempt.input_snapshot_json["config"]
+    assert extraction_attempt.input_snapshot_json["versioning"]["upstreamVersions"] == {}
 
 
 async def test_direct_attempt_isolated_edit_then_immutable_version(db):  # noqa: F811

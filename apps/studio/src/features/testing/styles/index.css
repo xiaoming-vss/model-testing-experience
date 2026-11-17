@@ -1110,45 +1110,6 @@
   border-radius: 8px;
 }
 
-.requirement-document-pane-header {
-  display: flex;
-  flex: 0 0 48px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 12px 0 16px;
-  border-bottom: 1px solid var(--app-list-row-border);
-  background: var(--app-surface);
-}
-
-.requirement-document-pane-title {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 8px;
-  color: var(--app-glass-text);
-  font-size: 14px;
-  font-weight: 650;
-}
-
-.requirement-document-pane-title > .anticon {
-  color: var(--app-testing-control-text);
-}
-
-.requirement-document-pane-meta,
-.requirement-document-analysis-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 22px;
-  padding: 0 8px;
-  border-radius: 5px;
-  background: var(--app-testing-neutral-tag-bg);
-  color: var(--app-list-label);
-  font-size: 11px;
-  font-weight: 500;
-}
-
 .requirement-document-pane-body {
   display: flex;
   flex: 1 1 auto;

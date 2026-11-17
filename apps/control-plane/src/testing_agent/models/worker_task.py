@@ -15,11 +15,11 @@ class WorkerTask(Base):
         Index("idx_worker_domain_status_created", "domain", "status", "created_at"),
         Index("idx_worker_status_created_domain", "status", "created_at", "id", "domain"),
         Index("idx_worker_domain_lease", "domain", "status", "lease_expires_at", "id"),
-        {"comment": "AI/API/UI Worker 执行队列及领取租约；集成任务使用独立队列"},
+        {"comment": "AI/API/UI/PERF Worker 执行队列及领取租约；集成任务使用独立队列"},
     )
     id: Mapped[IdPk] = mapped_column(comment="数据库内部主键")
     domain: Mapped[str] = mapped_column(
-        String(10), nullable=False, comment="Worker 任务域，用于区分 AI/API/UI 队列"
+        String(10), nullable=False, comment="Worker 任务域，用于区分 AI/API/UI/PERF 队列"
     )
     task_id: Mapped[str] = mapped_column(
         String(64), nullable=False, comment="所属任务业务标识；与任务域组成唯一键"

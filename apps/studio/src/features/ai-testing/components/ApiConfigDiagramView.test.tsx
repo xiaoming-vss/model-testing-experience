@@ -1,9 +1,32 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it } from 'vitest'
-import { ApiCandidateResultView } from './ApiConfigDiagramView'
+import { ApiCandidateResultView, ApiConfigDiagramView } from './ApiConfigDiagramView'
 
 afterEach(cleanup)
+
+const extraction = JSON.stringify({
+  login: {
+    method: 'POST',
+    path: '/v1/login',
+    headers: { 'Content-Type': 'application/json' },
+    json: { name: 'string', password: 'string' },
+    response: { code: 'integer', accessToken: 'string' },
+  },
+})
+
+it('接口配置提取只展示接口配置，不展示提取规则和断言规则', () => {
+  render(<ApiConfigDiagramView content={extraction} />)
+
+  expect(screen.getByText('接口 1')).toBeInTheDocument()
+  expect(screen.getByText('/v1/login')).toBeInTheDocument()
+  expect(screen.queryByText('提取规则')).not.toBeInTheDocument()
+  expect(screen.queryByText('断言规则')).not.toBeInTheDocument()
+  expect(screen.queryByText('提取 0')).not.toBeInTheDocument()
+  expect(screen.queryByText('断言 0')).not.toBeInTheDocument()
+  expect(screen.queryByText('暂无提取规则')).not.toBeInTheDocument()
+  expect(screen.queryByText('暂无断言规则')).not.toBeInTheDocument()
+})
 
 const candidate = JSON.stringify({
   cases: [

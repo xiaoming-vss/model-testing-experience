@@ -7,6 +7,7 @@ from testing_agent.core.errors import ErrBadRequest
 from testing_agent.domain.worker_context import (
     AiWorkerContext,
     ApiWorkerContext,
+    PerfWorkerContext,
     UiWorkerContext,
     WorkerExecutionContext,
 )
@@ -14,6 +15,7 @@ from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
 from testing_agent.models.api_case_run import ApiCaseRun
 from testing_agent.models.api_collection_run import ApiCollectionRun
+from testing_agent.models.perf_run import PerfRun
 from testing_agent.models.ui_test_case_run import UiTestCaseRun
 from testing_agent.models.ui_test_suite_run import UiTestSuiteRun
 from testing_agent.models.worker_task import WorkerTask
@@ -54,6 +56,9 @@ def read_worker_context(session: Session, task: WorkerTask) -> WorkerExecutionCo
             case_run.collection_id if case_run else None,
             case_run.collection_run_id if case_run else None,
         )
+    if task.domain == "perf":
+        run = session.scalar(select(PerfRun).where(PerfRun.run_id == task.run_id))
+        return PerfWorkerContext(run.case_id if run else None)
     if task.domain == "ui":
         if task.task_type == "suite_run":
             suite_run = session.scalar(

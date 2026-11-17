@@ -1,5 +1,6 @@
 """Canonical names for MTX platform skills."""
 
+REQUIREMENT_REVIEW_SKILL = "mtx-review-requirement"
 MATERIAL_SKILL = "mtx-organize-requirement-material"
 SCOPE_SKILL = "mtx-analyze-functional-requirements"
 TEST_POINTS_SKILL = "mtx-generate-traceable-test-points"

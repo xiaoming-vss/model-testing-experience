@@ -1,7 +1,7 @@
 import readableSource from '@/domain/requirements/fixtures/readable-material.example.json?raw'
 import extractionSource from '@/domain/requirements/fixtures/document-extraction.example.json?raw'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest'
@@ -1003,6 +1003,85 @@ it('需求分析第一阶段展示新版可读说明并可切换 JSON', async ()
   expect(within(dialog).getByRole('textbox', { name: '阶段产物 JSON' })).toHaveTextContent('"artifactType": "readable_requirement_material"')
 })
 
+function reviewArtifact(reviewStatus = 'blocked') {
+  return {
+    schemaVersion: '1.0',
+    artifactType: 'requirement_review',
+    reviewStatus,
+    summary: {
+      scope: 'PRD v1.2 下单流程',
+      materialsReviewed: ['PRD.docx'],
+      confirmedFacts: ['用户可以在商品详情页点击立即购买'],
+      workingAssumptions: ['库存不足指可用库存为 0'],
+      hypothesesToVerify: ['支付前是否会重新校验库存'],
+      inputGaps: ['缺少库存不足时的接口错误码'],
+    },
+    issues: [
+      {
+        id: 'RR-01', topic: '库存不足时的下单行为', type: 'conflict', severity: 'blocker',
+        evidence: [{ sourceName: 'PRD.docx', locator: '3.2 下单流程', quote: '库存不足时仍可提交订单' }],
+        impact: '实现和测试无法确定库存不足时是创建订单还是拒绝请求。',
+        question: '库存不足时到底能不能提交订单？',
+        suggestedOwner: 'product', nextAction: '产品确认库存不足场景的业务规则。',
+        verifyMethod: 'analysis', failureMode: 'conflict_escape',
+      },
+    ],
+    coverage: {
+      structure: [{ name: 'background', status: 'present' }],
+      qualityCharacteristics: [{ name: 'unambiguous', status: 'fail', issueIds: ['RR-01'] }],
+      smells: [{ type: 'vague', quote: '库存不足时仍可提交订单', issueId: 'RR-01' }],
+      behavioralStates: [{ area: 'state', status: 'gap', note: '未说明订单状态' }],
+      traceability: [{ kind: 'rule_without_ac', status: 'fail', note: '缺少验收标准', issueId: 'RR-01' }],
+      inputAudit: {
+        materials: ['PRD.docx'], missing: ['库存不足时的接口错误码'],
+        recency: 'PRD 为本次上传版本', comparability: '只评审文档内部一致性',
+      },
+    },
+  }
+}
+
+it('需求评审展示问题登记表，且 blocked 不阻断审核', async () => {
+  const data = chainWith('requirement_analysis', '需求分析', [
+    draftStage('requirement_review', '需求评审', 0, JSON.stringify(reviewArtifact())),
+    draftStage('extracting_text', '材料整理', 1, extractionSource),
+  ])
+  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [data] })
+  vi.mocked(generationChainApi.chain).mockResolvedValue(data)
+  mount()
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: '需求评审 · 待审核' }))
+  const dialog = (await screen.findByRole('dialog')).closest('.gc-canvas-workspace') as HTMLElement
+  expect(document.querySelector('.gc-artifact-scroll')).toHaveClass('is-requirement-review')
+  expect(within(dialog).getByText('评审报告仅供人工判断，不阻断材料整理')).toBeInTheDocument()
+  await user.click(within(dialog).getByRole('tab', { name: /问题/ }))
+  expect(within(dialog).getAllByText('RR-01').length).toBeGreaterThan(0)
+  expect(within(dialog).getAllByText(/库存不足时仍可提交订单/).length).toBeGreaterThan(0)
+  expect(within(dialog).getByRole('button', { name: '审核通过' })).toBeEnabled()
+  expect(within(dialog).getByRole('button', { name: /审核通过并继续/ })).toBeEnabled()
+  expect(within(dialog).queryByRole('button', { name: /接受风险/ })).not.toBeInTheDocument()
+})
+
+it('需求评审继续优化使用自由文本，不预填逐条问题', async () => {
+  const data = chainWith('requirement_analysis', '需求分析', [
+    draftStage('requirement_review', '需求评审', 0, JSON.stringify(reviewArtifact())),
+    draftStage('extracting_text', '材料整理', 1, extractionSource),
+  ])
+  vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [data] })
+  vi.mocked(generationChainApi.chain).mockResolvedValue(data)
+  mount()
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: '需求评审 · 待审核' }))
+  await user.click(await screen.findByRole('button', { name: '继续优化' }))
+  expect(screen.queryByRole('textbox', { name: '补充答复' })).not.toBeInTheDocument()
+  const instruction = await screen.findByRole('textbox', { name: '优化指令' })
+  await user.type(instruction, '补充库存不足的接口返回')
+  await user.click(screen.getByRole('button', { name: '提交优化' }))
+  await waitFor(() => expect(generationChainApi.revise).toHaveBeenCalledWith(
+    'req', 'requirement_analysis', 'requirement_review',
+    expect.objectContaining({ instruction: '补充库存不足的接口返回' }),
+  ))
+})
+
 function draftStage(stage: string, label: string, order: number, content: string, upstreamVersions: Record<string, string> = {}, upstreamStages: string[] = []): GenerationChainStage {
   return {
     stage, label, order, state: 'draft', latestVersion: null,
@@ -1210,11 +1289,10 @@ it('功能测试各阶段沿用页签的测试范围风险分析、测试点与�
   }))
 
   const analysisView = await openStage('测试范围风险分析')
-  expect(within(analysisView.dialog).getByText('导出转换数据')).toBeInTheDocument()
+  expect(within(analysisView.dialog).getAllByText('导出转换数据').length).toBeGreaterThan(0)
 
   const pointsView = await openStage('测试点')
   expect(within(pointsView.dialog).getByText('功能场景')).toBeInTheDocument()
-  await pointsView.user.click(within(pointsView.dialog).getByRole('tab', { name: '树图' }))
   expect(within(pointsView.dialog).getByRole('button', { name: /保存图片/ })).toBeInTheDocument()
 
   const casesView = await openStage('完整用例')
@@ -1712,6 +1790,9 @@ it('重新生成测试点时用本次分组进度替换旧结果，完成后打�
   await user.click(await screen.findByRole('button', { name: '测试点 · 已通过' }))
   const reading = await screen.findByRole('dialog', { name: '测试点' })
   const inspector = screen.getByRole('complementary', { name: '阶段详情' })
+  if (!within(reading).queryByText('旧测试点')) {
+    fireEvent.click(await within(reading).findByRole('button', { name: '功能场景' }))
+  }
   expect(await within(reading).findByText('旧测试点')).toBeVisible()
   await user.click(within(screen.getByTestId('reading-actions')).getByTitle('JSON'))
   await user.click(within(inspector).getByRole('button', { name: '按所选上游重新生成' }))
@@ -1732,7 +1813,12 @@ it('重新生成测试点时用本次分组进度替换旧结果，完成后打�
   vi.mocked(generationChainApi.overview).mockResolvedValue({ chains: [completed] })
   vi.mocked(generationChainApi.chain).mockResolvedValue(completed)
   await act(async () => { await clients.at(-1)!.invalidateQueries({ queryKey: ['generationChain', 'req'] }) })
-  expect(await within(reading).findByRole('textbox', { name: '测试点 P1' })).toHaveValue('新测试点')
+  if (!within(reading).queryByRole('button', { name: '查看关联：新测试点' })) {
+    fireEvent.click(await within(reading).findByRole('button', { name: '功能场景' }))
+  }
+  // 关联入口悬停才可点，jsdom 不计算 :hover，直接触发点击以打开气泡。
+  fireEvent.click(await within(reading).findByRole('button', { name: '查看关联：新测试点' }))
+  expect(await screen.findByRole('textbox', { name: '测试点 P1' })).toHaveValue('新测试点')
   expect(within(reading).queryByRole('region', { name: '测试点分组进度' })).not.toBeInTheDocument()
   await user.click(within(inspector).getByRole('button', { name: 'v1' }))
   expect(await within(reading).findByText('旧测试点')).toBeVisible()

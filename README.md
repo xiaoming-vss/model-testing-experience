@@ -1,6 +1,6 @@
 # Model Testing Experience（MTX）
 
-Model Testing Experience（简称 MTX）是面向测试协作的平台，包含前端、控制面、AI Worker、API/UI Worker 和独立集成 Worker，禅道集成通过外部 MCP 服务完成。各项目保留自己的依赖、锁文件、Dockerfile、测试和独立启动入口。
+Model Testing Experience（简称 MTX）是面向测试协作的平台，包含前端、控制面、AI Worker、API/UI Worker、独立集成 Worker 和性能 Worker，禅道集成通过外部 MCP 服务完成。各项目保留自己的依赖、锁文件、Dockerfile、测试和独立启动入口。
 
 | Compose/脚本名称 | 项目目录 | 作用 |
 | --- | --- | --- |
@@ -9,6 +9,7 @@ Model Testing Experience（简称 MTX）是面向测试协作的平台，包含�
 | ai-worker | `apps/ai-worker` | AI 测试生成（Nanobot / Pi，按部署配置选择） |
 | api-ui-worker | `apps/api-ui-worker` | API / Playwright 测试执行 |
 | integration-worker | `apps/integration-worker` | 禅道 Bug、附件、正文图片和字段同步执行 |
+| perf-worker | `apps/perf-worker` | 性能测试执行（k6；控制面 poll 模式，Compose 可部署） |
 | mysql | — | MySQL 8.4 |
 | migrate | `apps/control-plane` | 一次性数据库迁移 |
 
@@ -21,7 +22,8 @@ model-testing-experience/
 │   ├── control-plane/
 │   ├── ai-worker/
 │   ├── api-ui-worker/
-│   └── integration-worker/
+│   ├── integration-worker/
+│   └── perf-worker/
 ├── deploy/         # 可选部署覆盖配置与 MCP 手动部署模板
 ├── config/          # 统一配置与示例
 ├── scripts/         # 配置生成与启动入口

@@ -160,6 +160,18 @@ ErrApiInterfaceImportTooLarge = AppError(
 )
 ErrApiInterfaceGroupNotFound = AppError(3818, "接口分组不存在", HTTPStatus.NOT_FOUND)
 ErrApiInterfaceGroupNameAlreadyUse = AppError(3819, "目标接口分组已存在", HTTPStatus.CONFLICT)
+ErrPerfCaseNotFound = AppError(3901, "性能用例不存在", HTTPStatus.NOT_FOUND)
+ErrPerfCaseNameAlreadyUse = AppError(3902, "该性能用例名称已存在", HTTPStatus.CONFLICT)
+ErrPerfCaseDisabled = AppError(3903, "性能用例已停用", HTTPStatus.CONFLICT)
+ErrPerfRunNotFound = AppError(3904, "性能运行记录不存在", HTTPStatus.NOT_FOUND)
+ErrPerfRunEnvironmentMismatch = AppError(
+    3905, "性能运行与环境不属于同一项目或环境类型不匹配", HTTPStatus.BAD_REQUEST
+)
+ErrMonitoringConnectionNotFound = AppError(3906, "监控接入不存在", HTTPStatus.NOT_FOUND)
+ErrMonitoringConnectionNameAlreadyUse = AppError(3907, "该监控接入名称已存在", HTTPStatus.CONFLICT)
+ErrPerfDataFileMissing = AppError(3908, "性能用例引用的数据文件不存在", HTTPStatus.BAD_REQUEST)
+ErrPerfCaseYamlInvalid = AppError(3909, "性能用例 YAML 内容不合法", HTTPStatus.BAD_REQUEST)
+ErrMonitoringConnectionDisabled = AppError(3910, "监控接入已停用", HTTPStatus.CONFLICT)
 
 
 def app_error_payload(error: AppError, data: Any | None = None) -> dict[str, Any]:

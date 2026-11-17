@@ -13,10 +13,17 @@ from testing_agent_ai_worker.tasks.requirement_analysis.executor import (
 )
 
 FIXTURES = Path(__file__).resolve().parents[4] / "tests/fixtures/requirement_artifacts"
+REVIEW_FIXTURES = (
+    Path(__file__).resolve().parents[4] / "tests/fixtures/requirement_review"
+)
 
 
 def artifact(name):
     return json.loads((FIXTURES / (name + ".example.json")).read_text())
+
+
+def review_artifact(name):
+    return json.loads((REVIEW_FIXTURES / (name + ".example.json")).read_text())
 
 
 class RequirementAnalysisExecutorTests(unittest.TestCase):
@@ -71,6 +78,36 @@ class RequirementAnalysisExecutorTests(unittest.TestCase):
             json.loads(result.output_yaml),
             artifact("readable-material"),
         )
+
+    def test_review_stage_uses_review_skill_and_stops_for_manual_review(self):
+        calls, downloads, progress = [], [], []
+
+        def runner(**kwargs):
+            calls.append(kwargs)
+            return json.dumps(review_artifact("blocked"))
+
+        with tempfile.TemporaryDirectory() as root:
+            executor = self.executor(root, runner, downloads)
+            task = self.task(current_stage="requirement_review", document_type="docx")
+            result = executor.execute(task, datetime.now().astimezone(), progress.append)
+        self.assertIsNone(result)
+        self.assertEqual(task.payload.document_type, "word")
+        self.assertEqual(calls[0]["skill_name"], "mtx-review-requirement")
+        self.assertEqual(downloads[0]["document_download_url"], task.payload.document_download_url)
+        self.assertEqual(len(progress), 1)
+        self.assertEqual(progress[0].stage_status, "waiting_review")
+        self.assertEqual(
+            json.loads(progress[0].intermediate_json_text)["reviewOutput"],
+            review_artifact("blocked"),
+        )
+
+    def test_review_stage_requires_checkpoint_review(self):
+        with tempfile.TemporaryDirectory() as root:
+            executor = self.executor(root, lambda **kw: self.fail("unexpected model call"), [])
+            task = self.task(current_stage="requirement_review")
+            task.checkpoint_enabled = False
+            with self.assertRaisesRegex(ValueError, "人工审核"):
+                executor.execute(task, datetime.now().astimezone(), lambda _: None)
 
     def test_new_material_cannot_run_unadapted_understanding(self):
         calls, downloads = [], []

@@ -2,6 +2,18 @@
 
 一条需求 + 一种生成类型对应一条生成链，链内阶段有草稿和审核通过版本。需求关联的阶段通过需求生成链启动、编辑、审核和导入；不关联需求的独立任务继续使用原入口。公开运行标识 `runId` 是执行 ID，AI Worker 派发和回传使用 `attemptId`。统一执行身份、历史删除与响应结构的决策见 [ADR 0010](adr/0010-unified-ai-execution.md)。
 
+## 需求评审与材料整理
+
+需求分析链包含两个阶段：`requirement_review`（需求评审）和 `extracting_text`（材料整理）。评审在界面上位于材料整理之前，但**只是提示性报告**，不阻断材料整理：
+
+- 评审阶段是非最终阶段，运行后停在待审核；生成 `requirement_review` 1.0 报告，包含 `reviewStatus`、`summary`、`issues` 和 `coverage`。
+- 评审任何 `reviewStatus`（`passed` / `needs_clarification` / `blocked`）都可以审核通过和审核通过并继续；没有风险接受、解释闭环或状态门禁。
+- `extracting_text` 没有上游阶段，不要求评审版本，不读取 `reviewOutput`，不校验需求文档哈希；用户可以直接运行材料整理。
+- 评审版本按普通阶段版本保存和删除；删除评审版本不会作废材料提取版本或草稿。
+- 评审报告不传给材料提取或任何下游任务。后续如果决定接入，需要重新定义上游依赖和消费契约。
+
+详细决策见 [ADR 0018](adr/0018-requirement-review-advisory.md)，审核与拒绝规则见[需求分析审核规则](requirement-analysis-review.md)。
+
 ## 版本与草稿
 
 - `ai_generate_tasks` 是链容器；`ai_generation_stages` 按任务和阶段保存当前候选、审核状态和活动尝试，`ai_generation_attempts` 保存属于阶段的冻结输入、输出及执行状态。需求阶段 Worker 队列通过尝试 ID 精确关联阶段；需求工作区历史接口按尝试分页，概览统计尝试和活动任务。代码风险、测试报告、测试单图谱和独立功能/API 任务的运行也使用统一执行与阶段尝试。

@@ -36,7 +36,6 @@
 .ai-generated-case-map .ai-case-name-tree-node.model { max-width: 180px; }
 .ai-generated-case-map .ai-case-name-tree-node.test-model { max-width: 120px; }
 .ai-generated-case-map .ai-case-name-tree-node.point { width: 280px; max-width: 280px; }
-.ai-generated-case-map .ai-case-name-tree-curves { width: 48px; flex: 0 0 48px; }
 
 /* The tree fills the space previously occupied by the toolbar. */
 .ai-case-tree-shell { display: contents; }

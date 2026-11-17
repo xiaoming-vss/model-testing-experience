@@ -14,6 +14,8 @@ redis_port = 16379
 worker_token = "GENERATE"
 # 独立集成 Worker 专属认证；不得与 AI/API/UI Worker 令牌相同。
 integration_worker_token = "GENERATE"
+# 独立性能 Worker 专属认证；不得与其他 Worker 令牌相同。
+perf_worker_token = "GENERATE"
 # 多个控制面实例共享该代次；隔离恢复时生成新值并更换集成 Worker 令牌。
 integration_runtime_generation = "GENERATE"
 jwt_key = "GENERATE"
@@ -148,7 +150,27 @@ poll_interval_seconds = 2
 heartbeat_interval_seconds = 10
 shutdown_grace_seconds = 210
 
-# S3 私有桶；签名地址必须同时可被浏览器和 Worker 访问。
+# 性能 Worker 从控制面拉取任务；一个实例同时只执行一个 k6 任务。
+[perf_worker.worker]
+health_max_age_seconds = 90
+poll_interval_seconds = 2
+heartbeat_interval_seconds = 10
+lease_margin_seconds = 5
+shutdown_grace_seconds = 60
+
+[perf_worker.k6]
+# 生产部署应与镜像内 k6 版本一致；留空只校验二进制存在。
+expected_version = ""
+
+[perf_worker.runner]
+max_duration_seconds = 3600
+stop_grace_seconds = 30
+keep_failed_workspace_hours = 24
+max_data_file_mb = 50
+max_summary_mb = 5
+
+# S3 私有桶；签名地址必须同时可被浏览器和控制面访问。
+# 数据文件由控制面读取后流式下发给 Worker，Worker 不持有 S3 凭据。
 [control_plane.storage.s3]
 enabled = false
 endpoint = ""

@@ -18,6 +18,7 @@
 | [studio](studio/README.md) | 前端开发、配置与构建 | [apps/studio](../apps/studio/) |
 | [api-ui-worker](api-ui-worker/README.md) | API/UI 执行、S3 产物上传与 Worker 配置 | [apps/api-ui-worker](../apps/api-ui-worker/) |
 | [integration-worker](integration-worker/README.md) | 独立集成执行、步骤许可、租约与证据恢复 | [apps/integration-worker](../apps/integration-worker/) |
+| [perf-worker](perf-worker/README.md) | 性能执行、运行规格、固定 k6 模板与结果契约 | [apps/perf-worker](../apps/perf-worker/) |
 
 ## 公共开发规范
 

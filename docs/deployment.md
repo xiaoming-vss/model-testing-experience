@@ -22,13 +22,13 @@ python3 scripts/manage.py upgrade-config
 
 首次启动控制面前必须完成数据库迁移，并确认 `control_plane.security.super_admin.username`、`email` 已填写。`init`/`upgrade-config` 会为 `initial_password = "GENERATE"` 生成随机值；生产环境应显式设置密码或在首次登录时按强制改密流程修改。超级管理员丢失密码时使用运维 CLI，详见[认证、账号与系统管理员](control-plane/authentication.md)。
 
-`shared` 统一定义服务地址、发布端口及认证密钥；`database.url` 指定已有数据库，留空时使用下方的内置数据库字段。`control_plane`、`ai_worker`、`api_ui_worker`、`integration_worker` 区块递归覆盖各项目示例配置中的同名字段。地址、令牌、监听端口和存储路径最终由管理脚本按运行模式统一设置。
+`shared` 统一定义服务地址、发布端口及认证密钥；`database.url` 指定已有数据库，留空时使用下方的内置数据库字段。`control_plane`、`ai_worker`、`api_ui_worker`、`integration_worker`、`perf_worker` 区块递归覆盖各项目示例配置中的同名字段。地址、令牌、监听端口和存储路径最终由管理脚本按运行模式统一设置。
 
 默认只允许本机访问。服务器部署时将 `shared.public_host` 改为浏览器能访问的服务器 IP/域名，将 `shared.bind_host` 改为 `0.0.0.0`。当前编排提供 HTTP；域名 HTTPS 可由部署环境的反向代理提供。S3 Endpoint 必须能被浏览器和 Worker 访问，并为前端配置 CORS。
 
 ## Kubernetes
 
-平台提供 chart-per-service 的 Helm 部署方式，每个服务一个独立 chart 和独立 values，见 [Kubernetes 部署](deployment-k8s.md)。当前只覆盖平台本身，不包含 CI Worker；MySQL、Redis、S3 使用外部地址。
+平台提供 chart-per-service 的 Helm 部署方式，每个服务一个独立 chart 和独立 values，见 [Kubernetes 部署](deployment-k8s.md)。当前只覆盖平台本身，不包含 CI Worker 和性能 Worker；MySQL、Redis、S3 使用外部地址。
 
 ## Docker 整体启动
 
@@ -110,13 +110,15 @@ python3 scripts/manage.py compose up -d ai-worker
 python3 scripts/manage.py compose up -d --build --no-deps ai-worker
 ```
 
-更改 `shared.worker_token` 后需要重启控制面、AI Worker 和 API/UI Worker；更改 `shared.integration_worker_token` 后需要重启控制面和 integration-worker。更改数据库结构后需要重新执行迁移。每个子目录仍可按自己的 README 单独构建镜像。
+更改 `shared.worker_token` 后需要重启控制面、AI Worker 和 API/UI Worker；更改 `shared.integration_worker_token` 后需要重启控制面和 integration-worker；更改 `shared.perf_worker_token` 后需要重启控制面和 perf-worker。更改数据库结构后需要重新执行迁移。每个子目录仍可按自己的 README 单独构建镜像。
+
+性能 Worker 已加入 Compose，使用独立 `shared.perf_worker_token`、生成配置和匿名 `/app/runtime` 卷。一个容器同时只执行一个 k6 任务；提高压测并发需要增加副本或部署到独立压测主机。K8s/Helm 暂未提供。运行说明见 [性能 Worker](perf-worker/README.md)。
 
 独立集成 Worker 的启动、扩容、排空和结果日志说明见 [integration-worker 运维](integration-worker/README.md)。执行开关默认关闭，启动该进程不会自动切换现有项目。
 
 ## 本地独立启动
 
-先按项目安装依赖：四个 Python 项目在各自目录执行 `uv sync --locked`；前端执行 `npm ci`；API/UI Worker 另执行 `uv run playwright install chromium`（Linux 首次安装可使用 `--with-deps`）。Python 开发测试按项目 README 安装开发依赖。
+先按项目安装依赖：五个 Python 项目在各自目录执行 `uv sync --locked`；前端执行 `npm ci`；API/UI Worker 另执行 `uv run playwright install chromium`（Linux 首次安装可使用 `--with-deps`）。Python 开发测试按项目 README 安装开发依赖。
 
 使用已有数据库时，按下一节填写 `database.url`，跳过内置 MySQL 启动。如果使用内置的空数据库，先执行：
 
@@ -132,10 +134,11 @@ python3 scripts/manage.py run control-plane
 python3 scripts/manage.py run ai-worker
 python3 scripts/manage.py run api-ui-worker
 python3 scripts/manage.py run integration-worker
+python3 scripts/manage.py run perf-worker
 python3 scripts/manage.py run studio
 ```
 
-前端本地开发使用 Vite 默认端口（通常 5173），`studio_port` 是 Docker 对外端口。三个 Worker 可分别启动，但轮询模式需要可用的控制面。
+前端本地开发使用 Vite 默认端口（通常 5173），`studio_port` 是 Docker 对外端口。各 Worker 可分别启动；轮询模式的 Worker 需要可用的控制面。性能 Worker 默认使用生成配置中的 `poll` 模式；本地单次排查可在独立配置中改为 `once` 并设置 `[once].snapshot_file`。
 
 也可先生成配置，再进入各子项目用原命令启动：
 

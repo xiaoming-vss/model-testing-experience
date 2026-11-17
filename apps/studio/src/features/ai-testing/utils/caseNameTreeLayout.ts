@@ -1,15 +1,24 @@
 import dagre from '@dagrejs/dagre'
 import type { Edge, Node } from '@xyflow/react'
+import type { ReactNode } from 'react'
 import type { CaseNameTreeNode } from './caseNameTree'
 
-export type TreeFlowData = { treeNode: CaseNameTreeNode; selected: boolean; selectionTick: number; onSelect?: (id: string) => void; onDelete?: (id: string) => void }
+export type TreeFlowData = {
+  treeNode: CaseNameTreeNode
+  selected: boolean
+  highlighted: boolean
+  selectionTick: number
+  onSelect?: (id: string) => void
+  onDelete?: (id: string) => void
+  renderRelations?: (node: CaseNameTreeNode) => ReactNode
+}
 export type TreeFlowNode = Node<TreeFlowData, 'caseTree'>
 
-export function buildTreeFlow(tree: CaseNameTreeNode, selectedId: string | undefined, onSelect: ((id: string) => void) | undefined, onToggle?: (id: string) => void, onDelete?: (id: string) => void, selectionTick = 0) {
+export function buildTreeFlow(tree: CaseNameTreeNode, selectedId: string | undefined, onSelect: ((id: string) => void) | undefined, onToggle?: (id: string) => void, onDelete?: (id: string) => void, selectionTick = 0, renderRelations?: (node: CaseNameTreeNode) => ReactNode, highlightedIds?: Set<string>) {
   const nodes: TreeFlowNode[] = []
   const edges: Edge[] = []
   function visit(node: CaseNameTreeNode, parent?: CaseNameTreeNode) {
-    nodes.push({ id: node.id, type: 'caseTree', position: { x: 0, y: 0 }, data: { treeNode: node, selected: node.id === selectedId, selectionTick, onSelect: node.kind === 'point' ? onSelect : node.kind === 'root' ? undefined : onToggle, onDelete: node.kind === 'point' ? onDelete : undefined } })
+    nodes.push({ id: node.id, type: 'caseTree', position: { x: 0, y: 0 }, data: { treeNode: node, selected: node.id === selectedId, highlighted: highlightedIds?.has(node.id) ?? false, selectionTick, onSelect: node.kind === 'point' ? onSelect : node.kind === 'root' ? undefined : onToggle, onDelete: node.kind === 'point' ? onDelete : undefined, renderRelations } })
     if (parent) edges.push({ id: `${parent.id}->${node.id}`, source: parent.id, target: node.id, type: 'default', style: { stroke: parent.kind === 'root' ? 'var(--app-graph-edge-primary)' : parent.kind === 'model' ? 'var(--app-graph-edge-reference)' : 'var(--app-graph-edge-muted)', strokeWidth: parent.kind === 'testModel' ? 1.8 : 2 } })
     node.children.forEach(child => visit(child, node))
   }

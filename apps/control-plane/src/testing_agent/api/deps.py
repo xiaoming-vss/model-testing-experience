@@ -34,6 +34,9 @@ from testing_agent.repositories.function_test_suite import FunctionTestSuiteRepo
 from testing_agent.repositories.generation_chain import GenerationChainRepository
 from testing_agent.repositories.integration_connection import IntegrationConnectionRepository
 from testing_agent.repositories.login_rate_limit import LoginRateLimitRepository
+from testing_agent.repositories.monitoring_connection import MonitoringConnectionRepository
+from testing_agent.repositories.perf_case import PerfCaseRepository
+from testing_agent.repositories.perf_run import PerfRunRepository
 from testing_agent.repositories.project import ProjectRepository
 from testing_agent.repositories.project_skill_space import ProjectSkillSpaceRepository
 from testing_agent.repositories.requirement import RequirementRepository
@@ -85,6 +88,10 @@ from testing_agent.services.integration_connection import IntegrationConnectionS
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.ldap_login import LdapLoginService
 from testing_agent.services.ldap_settings import LdapSettingsService, effective_settings
+from testing_agent.services.monitoring_connection import MonitoringConnectionService
+from testing_agent.services.perf_case import PerfCaseService
+from testing_agent.services.perf_run import PerfRunService
+from testing_agent.services.perf_worker import PerfWorkerService
 from testing_agent.services.project import ProjectService
 from testing_agent.services.project_skill_space import ProjectSkillSpaceService
 from testing_agent.services.repository_profile import RepositoryProfileService
@@ -166,6 +173,32 @@ def verify_integration_worker_token(
     ):
         logging.getLogger(__name__).warning("Integration worker authentication rejected status=401")
         raise ErrUnauthorized()
+
+
+def verify_perf_worker_token(
+    x_worker_token: Annotated[str | None, Header()] = None,
+    settings: Settings = Depends(get_settings),
+) -> None:
+    expected = settings.perf_worker_key
+    if (
+        not expected
+        or not x_worker_token
+        or not compare_digest(x_worker_token.encode(), expected.encode())
+    ):
+        raise ErrUnauthorized()
+
+
+def get_perf_worker_service(
+    session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> PerfWorkerService:
+    from testing_agent.services.stored_file import StoredFileService
+
+    return PerfWorkerService(
+        session,
+        files=StoredFileService(session, settings.s3),
+        credential_cipher=IntegrationCredentialCipher(settings.integration_key),
+    )
 
 
 async def get_effective_settings(session: AsyncSession = Depends(get_session)) -> Settings:
@@ -357,6 +390,50 @@ def get_integration_connection_service(
     return IntegrationConnectionService(
         IntegrationConnectionRepository(session),
         credential_cipher=IntegrationCredentialCipher(settings.integration_key),
+    )
+
+
+def get_monitoring_connection_service(
+    session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> MonitoringConnectionService:
+    return MonitoringConnectionService(
+        MonitoringConnectionRepository(session),
+        credential_cipher=IntegrationCredentialCipher(settings.integration_key),
+    )
+
+
+def get_perf_case_service(
+    session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> PerfCaseService:
+    from testing_agent.services.stored_file import StoredFileService
+
+    return PerfCaseService(
+        PerfCaseRepository(session),
+        files=StoredFileService(session, settings.s3),
+    )
+
+
+def get_perf_run_service(
+    session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> PerfRunService:
+    from testing_agent.services.stored_file import StoredFileService
+
+    cipher = IntegrationCredentialCipher(settings.integration_key)
+    monitoring_service = MonitoringConnectionService(
+        MonitoringConnectionRepository(session),
+        credential_cipher=cipher,
+    )
+    return PerfRunService(
+        PerfRunRepository(session),
+        cases=PerfCaseRepository(session),
+        environments=ApiEnvironmentRepository(session),
+        monitoring=MonitoringConnectionRepository(session),
+        monitoring_service=monitoring_service,
+        files=StoredFileService(session, settings.s3),
+        credential_cipher=cipher,
     )
 
 

@@ -17,7 +17,7 @@ async def sweep_once(session_factory=AsyncSessionLocal) -> None:
 
     # Every batch has its own session/transaction. A failed domain cannot prevent another
     # queue from recovering; durable expiry timestamps are retried on the next tick.
-    for domain in ("ai", "api", "ui", "integration"):
+    for domain in ("ai", "api", "ui", "integration", "perf"):
         try:
             for _ in range(5):
                 async with session_factory() as session:

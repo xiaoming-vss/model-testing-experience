@@ -48,6 +48,7 @@ from testing_agent.services.worker import (
 )
 from testing_agent.services.worker_authorization import authorize_execution
 from testing_agent.services.worker_domains import api as api_domain
+from testing_agent.services.worker_domains import perf as perf_domain
 from testing_agent.services.worker_domains import ui as ui_domain
 from testing_agent.services.worker_domains.events import ensure_final_status
 from testing_agent.services.worker_domains.guard import ensure_task_id, ensure_worker_match
@@ -104,6 +105,12 @@ class WorkerTaskService:
                     processed.append(task)
                     continue
                 logger.warning("AI 队列 %s 未关联有效的阶段尝试，租约未处理", task.task_id)
+                continue
+            if domain == "perf":
+                await perf_domain.expire(
+                    self.repository.session, task, "Worker 心跳超时，执行已终止，请重试"
+                )
+                processed.append(task)
                 continue
             final_status = "error" if domain in {"api", "ui"} else "failed"
             body = WorkerTaskEventRequest(

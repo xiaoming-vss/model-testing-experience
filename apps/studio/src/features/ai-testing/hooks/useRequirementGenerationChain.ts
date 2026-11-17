@@ -204,12 +204,20 @@ export function useRequirementGenerationChain({
     if (!selected || !stage?.draft) return
     const key = `${requirementId}:${selected.kind}:${selected.stage}:${stage.draft.attemptId}`
     if (revisionDraftKey.current !== key) {
-      const label = selected.kind === 'requirement_analysis'
-        ? '材料整理结果（全部待确认问题）'
-        : stage.label
-      const template = buildRevisionTemplate(getRevisionQuestions(stage.draft.content), label, '答复')
-      setRevisionTemplate(template)
-      setRevisionInstruction(selected.kind === 'requirement_analysis' ? createQuestionRevisionDraft(getRevisionQuestions(stage.draft.content)) : template)
+      if (selected.kind === 'requirement_analysis' && selected.stage === 'requirement_review') {
+        // Advisory review has no per-question clarification flow; revise freely.
+        setRevisionTemplate('')
+        setRevisionInstruction('')
+      } else if (selected.kind === 'requirement_analysis') {
+        const label = '材料整理结果（全部待确认问题）'
+        const template = buildRevisionTemplate(getRevisionQuestions(stage.draft.content), label, '答复')
+        setRevisionTemplate(template)
+        setRevisionInstruction(createQuestionRevisionDraft(getRevisionQuestions(stage.draft.content)))
+      } else {
+        const template = buildRevisionTemplate(getRevisionQuestions(stage.draft.content), stage.label, '答复')
+        setRevisionTemplate(template)
+        setRevisionInstruction(template)
+      }
       revisionAttachments.clearAttachments()
       revisionDraftKey.current = key
     }
@@ -471,9 +479,12 @@ export function useRequirementGenerationChain({
     mutationFn: async (connectionId: string) => {
       if (!selected) throw new Error('请选择阶段')
       const instruction = revisionInstructionText(revisionInstruction)
-      if (!instruction) throw new Error('请补充已确认的信息，或填写其他优化要求')
+      const emptyMessage = selected.stage === 'requirement_review'
+        ? '请填写优化要求'
+        : '请补充已确认的信息，或填写其他优化要求'
+      if (!instruction) throw new Error(emptyMessage)
       if (revisionTemplate && revisionInstruction.trim() === revisionTemplate.trim()) {
-        throw new Error('请补充已确认的信息，或填写其他优化要求')
+        throw new Error(emptyMessage)
       }
       const params = {
         connectionId, instruction,

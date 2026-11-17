@@ -12,9 +12,10 @@ class StorageConfigurationTests(unittest.TestCase):
     def test_storage_config_only_reaches_control_plane(self):
         config = manage.read(ROOT / 'config/platform.example.toml')
         for key in ('worker_token', 'jwt_key', 'integration_key', 'integration_worker_token',
-                    'integration_runtime_generation'):
+                    'perf_worker_token', 'integration_runtime_generation'):
             config['shared'][key] = 'test-only'
         config['shared']['integration_worker_token'] = 'integration-test-only'
+        config['shared']['perf_worker_token'] = 'perf-test-only'
         for key in ('password', 'root_password'):
             config['database'][key] = 'test-only'
         config['control_plane']['storage']['s3'].update({

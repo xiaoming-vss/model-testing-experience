@@ -17,6 +17,25 @@ def build_config_json(
     return json.dumps(config, ensure_ascii=False, indent=2)
 
 
+def build_review_config_json(*, review_output: dict) -> str:
+    """Keep the review report in the stage-owned config field."""
+    return json.dumps({"reviewOutput": review_output}, ensure_ascii=False, indent=2)
+
+
+def build_review_summary(artifact: dict) -> dict[str, int | str]:
+    """Stable counts for the review stage result summary."""
+    issues = artifact.get("issues") or []
+    return {
+        "reviewStatus": str(artifact.get("reviewStatus") or ""),
+        "issueCount": len(issues),
+        "blockerCount": sum(
+            1 for issue in issues if issue.get("severity") == "blocker"
+        ),
+        "majorCount": sum(1 for issue in issues if issue.get("severity") == "major"),
+        "minorCount": sum(1 for issue in issues if issue.get("severity") == "minor"),
+    }
+
+
 def build_result_summary_json(
     *,
     task: Task,

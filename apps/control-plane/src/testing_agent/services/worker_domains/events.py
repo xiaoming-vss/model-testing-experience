@@ -9,6 +9,7 @@ from testing_agent.core.errors import ErrBadRequest
 from testing_agent.domain.worker_context import (
     AiWorkerContext,
     ApiWorkerContext,
+    PerfWorkerContext,
     UiWorkerContext,
     WorkerExecutionContext,
 )
@@ -19,6 +20,7 @@ from testing_agent.schemas.workers import (
 )
 
 LEASE_SECONDS = 30
+PERF_LEASE_SECONDS = 60
 
 
 def final_run_status(status: str | None) -> str:
@@ -37,7 +39,7 @@ def task_payload(task: WorkerTask, context: WorkerExecutionContext | None) -> di
         "runId": task.run_id,
         "suiteId": context.suite_id if isinstance(context, UiWorkerContext) else None,
         "caseId": context.case_id
-        if isinstance(context, (ApiWorkerContext, UiWorkerContext))
+        if isinstance(context, (ApiWorkerContext, UiWorkerContext, PerfWorkerContext))
         else None,
         "collectionRunId": context.collection_run_id
         if isinstance(context, ApiWorkerContext)
@@ -67,23 +69,32 @@ def parse_event_time(value: str | None) -> datetime | None:
         return None
 
 
-async def update_task_claimed(task: WorkerTask, body: WorkerClaimRequest) -> None:
+async def update_task_claimed(
+    task: WorkerTask,
+    body: WorkerClaimRequest,
+    *,
+    lease_seconds: int = LEASE_SECONDS,
+) -> None:
     now = datetime.now(UTC)
     task.worker_id = body.worker_id
     task.status = RunStatus.CLAIMED.value
     task.heartbeat_at = now
-    task.lease_expires_at = now + timedelta(seconds=LEASE_SECONDS)
+    task.lease_expires_at = now + timedelta(seconds=lease_seconds)
 
 
 async def apply_event_to_task(
-    task: WorkerTask, body: WorkerTaskEventRequest, status: str | None
+    task: WorkerTask,
+    body: WorkerTaskEventRequest,
+    status: str | None,
+    *,
+    lease_seconds: int = LEASE_SECONDS,
 ) -> None:
     now = datetime.now(UTC)
     task.worker_id = body.worker_id
     if status:
         task.status = status
     task.heartbeat_at = now
-    task.lease_expires_at = now + timedelta(seconds=LEASE_SECONDS)
+    task.lease_expires_at = now + timedelta(seconds=lease_seconds)
     if body.started_at:
         task.started_at = parse_event_time(body.started_at)
     if body.finished_at or status in {"success", "failed", "error", "completed"}:

@@ -1,0 +1,36 @@
+{
+  "specVersion": "1.0",
+  "runId": "fixture-json-001",
+  "case": {
+    "name": "JSON 单步骤",
+    "steps": [
+      {
+        "name": "ping",
+        "method": "GET",
+        "path": "/ping",
+        "checks": [{"type": "status", "op": "eq", "value": 200}]
+      }
+    ],
+    "load": {
+      "model": "vus",
+      "vus": 1,
+      "duration": "1s"
+    },
+    "acceptance": {
+      "source": "user_confirmed",
+      "confirmed": true,
+      "criteria": {"http_req_failed": ["rate<0.01"]}
+    }
+  },
+  "environment": {
+    "baseUrl": "http://127.0.0.1:18080",
+    "variables": {}
+  },
+  "remoteWrite": {
+    "url": "http://127.0.0.1:19090/api/v1/write"
+  },
+  "limits": {
+    "maxDurationSeconds": 30,
+    "stopGraceSeconds": 5
+  }
+}

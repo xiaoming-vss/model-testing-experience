@@ -621,7 +621,9 @@ def test_worker_credentials_check_current_membership_and_connection_status(api):
     assert "private-key" not in api.get(url).text
     response = api.get(f"/v1/requirements/{rid}/generation/requirement_analysis", headers=owner)
     assert response.status_code == 200, response.text
-    assert response.json()["data"]["stages"][0]["state"] == "failed"
+    stages = response.json()["data"]["stages"]
+    material = next(stage for stage in stages if stage["stage"] == "extracting_text")
+    assert material["state"] == "failed"
 
 
 def test_code_risk_keeps_same_repository_ids_on_different_instances_separate(

@@ -575,6 +575,45 @@ async def test_ai_worker_snapshot_returns_go_style_requirement_analysis_payload(
 
 
 @pytest.mark.asyncio
+async def test_ai_worker_snapshot_supports_requirement_review_stage():
+    task = SimpleNamespace(
+        task_id="worker-task-1",
+        task_type="requirement_analysis",
+        domain="ai",
+        run_id="run-1",
+        generate_task_id="generate-task-1",
+    )
+    run = SimpleNamespace(
+        run_id="run-1",
+        checkpoint_enabled=False,
+        current_stage="requirement_review",
+        config_json={"temperature": 0.2},
+        snapshot_json={
+            "taskId": "generate-task-1",
+            "attemptId": "run-1",
+            "taskType": "requirement_analysis",
+            "name": "Analyze requirement",
+            "projectId": "project-1",
+            "sprintId": "sprint-1",
+            "requirementId": "requirement-1",
+            "documentType": "richtext",
+            "documentDownloadUrl": "/v1/requirements/requirement-1/download",
+            "sourceContent": "requirement doc",
+            "instruction": "find ambiguities",
+        },
+    )
+
+    payload = direct_stage_snapshot(run, task, "requirement_review")
+
+    assert payload["currentStage"] == "requirement_review"
+    assert payload["checkpointEnabled"] is True
+    assert payload["configJson"] == '{"temperature": 0.2}'
+    assert payload["run"]["documentDownloadUrl"] == (
+        "/internal/ai-worker/tasks/worker-task-1/requirement-document"
+    )
+
+
+@pytest.mark.asyncio
 async def test_legacy_checkpoint_progress_is_rejected(
     monkeypatch,
 ):

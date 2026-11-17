@@ -20,7 +20,10 @@ CHAIN_LABELS = {
 }
 
 STAGE_DEFINITIONS: dict[str, tuple[tuple[str, str], ...]] = {
-    "requirement_analysis": (("extracting_text", "材料整理"),),
+    "requirement_analysis": (
+        ("requirement_review", "需求评审"),
+        ("extracting_text", "材料整理"),
+    ),
     "function": (
         ("requirement_analysis", "测试范围风险分析"),
         ("case_names", "测试点"),
@@ -40,6 +43,8 @@ STAGE_DEFINITIONS: dict[str, tuple[tuple[str, str], ...]] = {
 
 # Functional generation consumes the approved material version.
 STAGE_UPSTREAMS: dict[str, tuple[str, ...]] = {
+    # The review report is advisory: extraction is independent of it.
+    "requirement_review": (),
     "extracting_text": (),
     "requirement_analysis": ("extracting_text",),
     "case_names": ("requirement_analysis",),
@@ -54,6 +59,7 @@ STAGE_UPSTREAMS: dict[str, tuple[str, ...]] = {
 
 # JSON artifacts are stored as a single config field; final artifacts use resultYaml.
 STAGE_CONFIG_FIELDS = {
+    "requirement_review": "reviewOutput",
     "extracting_text": "firstStepOutput",
     "requirement_analysis": "requirementAnalysis",
     "case_names": "caseNames",
@@ -67,6 +73,7 @@ STAGE_CONFIG_FIELDS = {
 }
 
 JSON_ARTIFACT_STAGES = {
+    "requirement_review",
     "extracting_text",
     "interface_extract",
     "api_design",
@@ -128,6 +135,15 @@ def artifact_summary(stage: str, content: str, artifact_format: str | None = Non
         except (TypeError, ValueError):
             return f"{len(content)} 字符"
         if isinstance(data, dict):
+            if data.get("artifactType") == "requirement_review":
+                status = {
+                    "passed": "通过",
+                    "needs_clarification": "待澄清",
+                    "blocked": "阻断",
+                }.get(str(data.get("reviewStatus") or ""), "")
+                issues = data.get("issues")
+                count = len(issues) if isinstance(issues, list) else 0
+                return f"{status} · {count} 个问题" if status else f"{count} 个问题"
             interfaces = data.get("interfaces")
             if isinstance(interfaces, dict):
                 cases = sum(

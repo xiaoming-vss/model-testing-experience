@@ -1,6 +1,6 @@
 # 统一 S3 文件存储
 
-平台采用私有桶：前端通过短期签名 POST 直传，Worker 在下载时申请短期 GET URL 后直接读取。控制面保管凭证、核验对象、管理项目权限和文件关联。已接入需求文档、项目上传技能包及 UI 截图/Trace；UI 生成源码已改为仓库画像版本 pin，不再上传源码包。Bug 附件可复用通用上传能力；继续优化图片复用 `attachment` 用途并关联 `ai_generate_run`。报告目前在内存中按需导出，未依赖本地文件持久化。
+平台采用私有桶：前端通过短期签名 POST 直传，Worker 在下载时申请短期 GET URL 后直接读取；性能 Worker 的数据文件例外，由控制面按运行快照流式返回字节。控制面保管凭证、核验对象、管理项目权限和文件关联。已接入需求文档、项目上传技能包、UI 截图/Trace 及性能用例 CSV/JSON 数据文件；UI 生成源码已改为仓库画像版本 pin，不再上传源码包。Bug 附件可复用通用上传能力；继续优化图片复用 `attachment` 用途并关联 `ai_generate_run`。报告目前在内存中按需导出，未依赖本地文件持久化。
 
 ## 配置和部署
 
@@ -46,7 +46,7 @@ apps/control-plane/.venv/bin/python .scratch/debug/s3_upload_cors.py http://loca
 ## 接口与生命周期
 
 - `GET /v1/files/capabilities`：登录用户获取启用状态与大小限制。
-- `POST /v1/files/uploads`：提交 `projectId`、`filename`、`size`、十六进制 `sha256` 和 `purpose`（`requirement`、`attachment`、`project_skill` 或 `ui_artifact`），返回 `fileId`、签名 POST 的 `upload.url` / `upload.fields` 及有效期。`ui_source_archive` 用途已随 UI 源码包退役删除，仅接受上述四种用途。
+- `POST /v1/files/uploads`：提交 `projectId`、`filename`、`size`、十六进制 `sha256` 和 `purpose`（`requirement`、`attachment`、`project_skill`、`ui_artifact` 或 `perf_case_data`），返回 `fileId`、签名 POST 的 `upload.url` / `upload.fields` 及有效期。`ui_source_archive` 用途已随 UI 源码包退役删除。
 - 浏览器按返回字段构造 FormData，最后加入 `file`，直接 POST 到存储；不携带平台 Authorization。
 - `POST /v1/files/{fileId}/complete`：仅上传者且仍有项目写权限时可完成；核验大小、SHA-256 和基本文件内容格式，重复调用幂等。
 - `GET /v1/files/{fileId}`：读取可访问文件的元信息及核验完成时间，不返回对象 Key 或凭证。
@@ -65,6 +65,8 @@ apps/control-plane/.venv/bin/python .scratch/debug/s3_upload_cors.py http://loca
 
 
 Worker 使用原任务需求下载入口，通过原有任务执行者授权后获取对应文件票据。继续优化图片最多 6 张、单张不超过 10 MiB，使用 `/internal/ai-worker/tasks/{taskId}/revision-attachments/{fileId}`：校验 Worker 租约、任务类型、运行归属、`attachment` 用途及 PNG/JPEG 类型后返回票据，签名不保存进任务，不把 Worker Token 发送到对象存储。移除或取消后未关联的临时上传按现有临时文件清理规则回收；已随修订关联的图片保守保留。下载完成验证大小、SHA-256；网络失败或 403 等临时错误最多尝试三次，每次重新申请票据；404 和内容校验失败直接报告。
+
+性能数据文件使用 `/internal/perf-worker/tasks/{taskId}/data-files/{fileId}`：先校验性能 Worker 专用令牌、任务租约、Worker ID 和运行归属，再核对文件 ID、文件名、大小和 SHA-256 必须与 `perf_runs.data_files_json` 冻结值一致。控制面直接从 S3 流式返回对象，Worker 不持有 S3 凭据，也不把控制面令牌发送给对象存储。用例更新或删除不会使历史运行失效：旧文件保留原 `stored_files` 关联；删除用例时当前及历史数据文件标记 `deleting` 并由统一清理器回收。
 
 前端上传/下载遇到签名过期、网络中断或临时服务故障时最多三次尝试，重新申请票据；上传完成通知的响应丢失也可恢复。平台 401/403、永久存储 AccessDenied、404 不自动重试。富文本图片与截图先鉴权下载，再以 Blob URL 展示，页面停留不依赖签名有效期；失败可手动重新加载，卸载时释放 Blob URL。旧临时对象由清理器回收。签名 URL 不记录日志，后端签名响应使用 no-store。已签发 URL 在有效期内仍可访问，权限撤销不能立即撤销旧签名。
 
@@ -140,6 +142,7 @@ UI 文件授权路由挂在 `/internal/ui-worker/tasks/{taskId}/files` 下。申
 | `reports` | 持久化测试报告 | 预留，当前报告在内存中导出 |
 | `skills` | 项目技能文件 | 已实现，`purpose=project_skill` |
 | `ui-artifacts` | UI 执行截图、Trace、录像 | 已实现，`purpose=ui_artifact` |
+| `perf-case-data` | 性能用例 CSV/JSON 数据文件 | 已实现，`purpose=perf_case_data`；仅 CSV/JSON，单文件上限 50 MiB |
 
 示例：`mtx/<项目ID>/requirements/<文件ID>/登录功能需求.docx`。目录由后端根据用途分配，前端和 Worker 不传自定义对象路径；文件 ID 避免同名覆盖。上传暂存对象位于同一文件 ID 下的 `upload`，完成核验后封存为原始文件名，暂存对象按现有清理策略回收。S3 目录是对象前缀，预留分类不创建空目录对象。
 

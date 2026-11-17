@@ -54,6 +54,8 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 
 文件统一放在 `src/features/ai-testing/styles/`。页面或组件显式引入自身使用的样式，先引入 `index.css` 公共基础；`index.css` 不聚合导入其它文件。新拆出的组件样式各自不超过 600 行，保留原有选择器、媒体查询及样式取值。
 
+> 2026-11-17 起，新增或改版样式按 [STRUCTURE.md 的 S16](STRUCTURE.md#新代码样式策略2026-11-17) 与 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md) 执行；本节只描述存量文件，不再作为新增样式的默认做法。
+
 | 文件 | 职责 / 使用入口 |
 | --- | --- |
 | `index.css` | 公共变量、页面表面、共用面板与编辑器适配 |

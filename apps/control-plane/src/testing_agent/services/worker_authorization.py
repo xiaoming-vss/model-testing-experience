@@ -12,6 +12,7 @@ from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.api_case_run import ApiCaseRun
 from testing_agent.models.api_collection import ApiCollection
 from testing_agent.models.api_collection_run import ApiCollectionRun
+from testing_agent.models.perf_run import PerfRun
 from testing_agent.models.requirement import Requirement
 from testing_agent.models.sprint import Sprint
 from testing_agent.models.ui_test_case_run import UiTestCaseRun
@@ -33,6 +34,15 @@ class ExecutionAuthority:
 
 
 async def execution_authority(session, task) -> ExecutionAuthority:
+    if task.domain == "perf":
+        run = await session.scalar(
+            select(PerfRun)
+            .where(PerfRun.run_id == task.run_id)
+            .execution_options(populate_existing=True)
+        )
+        if run is None or not run.project_id:
+            raise ErrForbidden()
+        return ExecutionAuthority(run.trigger_user_id, run.project_id, run, [])
     if task.domain not in {"api", "ui"}:
         raise ErrForbidden()
     model: Any
@@ -68,7 +78,7 @@ async def execution_authority(session, task) -> ExecutionAuthority:
 
 
 async def fail_authorization(session, task, authority=None):
-    if task.domain not in {"api", "ui"}:
+    if task.domain not in {"api", "ui", "perf"}:
         raise ErrForbidden()
     now = datetime.now(UTC)
     message = "操作人的项目访问或个人授权已失效，请配置本人授权后重新执行"
@@ -85,6 +95,8 @@ async def fail_authorization(session, task, authority=None):
         run.status = RunStatus.FAILED.value
         run.error_message = task.error_message
         run.finished_at = now
+        if isinstance(run, PerfRun):
+            run.outcome = "execution_error"
         if isinstance(run, UiTestCaseRun):
             from testing_agent.services.worker_domains.ui import close_running_steps
 
@@ -92,13 +104,13 @@ async def fail_authorization(session, task, authority=None):
 
 
 async def authorize_execution(session, task, *, pending=False) -> ExecutionAuthority:
-    if task.domain not in {"api", "ui"}:
+    if task.domain not in {"api", "ui", "perf"}:
         raise ErrForbidden()
     if task.status not in (
         {RunStatus.PENDING.value, RunStatus.CLAIMED.value, RunStatus.RUNNING.value}
         if pending
         else {RunStatus.CLAIMED.value, RunStatus.RUNNING.value}
-        | ({RunStatus.STOPPING.value} if task.domain in {"api", "ui"} else set())
+        | ({RunStatus.STOPPING.value} if task.domain in {"api", "ui", "perf"} else set())
     ):
         raise ErrForbidden()
     authority = None
@@ -185,6 +197,13 @@ def _actor_execution_filter(actor: str):
                     UiTestSuiteRun.suite_run_id == WorkerTask.run_id,
                     UiTestSuiteRun.trigger_user_id == actor,
                 ),
+            ),
+        ),
+        and_(
+            WorkerTask.domain == "perf",
+            exists().where(
+                PerfRun.run_id == WorkerTask.run_id,
+                PerfRun.trigger_user_id == actor,
             ),
         ),
     )

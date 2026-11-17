@@ -15,6 +15,9 @@ from testing_agent_ai_worker.skill_names import (
 )
 from testing_agent_ai_worker.tasks.requirement_analysis.document_type import extraction_skill
 from testing_agent_ai_worker.tasks.requirement_analysis.material_stage import execute_material_stage
+from testing_agent_ai_worker.tasks.requirement_analysis.review_stage import (
+    execute_review_stage,
+)
 from testing_agent_ai_worker.tasks.requirement_analysis.skill import run_skill_step
 from testing_agent_ai_worker.tasks.requirement_analysis.source_downloader import (
     RequirementSourceDownloader,
@@ -72,19 +75,29 @@ class RequirementAnalysisExecutor(TaskExecutor):
                 finished_at=datetime.now().astimezone(),
             )
         workspace = resolve_task_workspace(self.agent_config, task)
+        stage = task.current_stage or "extracting_text"
         with task_config_path(agent_config=self.agent_config, task=task) as config_path:
-            return execute_material_stage(
-                task=task,
-                started_at=started_at,
-                progress_callback=progress_callback,
-                config_path=config_path,
-                workspace=workspace,
-                skill_runner=self.skill_runner,
-                source_downloader=self.source_downloader,
-                attachment_downloader=self.attachment_downloader,
-                first_skill_name=(
-                    extraction_skill(task.payload.document_type)
-                    if (task.current_stage or "extracting_text") == "extracting_text"
-                    else self.first_skill_name
-                ),
-            )
+            if stage == "requirement_review":
+                return execute_review_stage(
+                    task=task,
+                    started_at=started_at,
+                    progress_callback=progress_callback,
+                    config_path=config_path,
+                    workspace=workspace,
+                    skill_runner=self.skill_runner,
+                    source_downloader=self.source_downloader,
+                    attachment_downloader=self.attachment_downloader,
+                )
+            if stage == "extracting_text":
+                return execute_material_stage(
+                    task=task,
+                    started_at=started_at,
+                    progress_callback=progress_callback,
+                    config_path=config_path,
+                    workspace=workspace,
+                    skill_runner=self.skill_runner,
+                    source_downloader=self.source_downloader,
+                    attachment_downloader=self.attachment_downloader,
+                    first_skill_name=extraction_skill(task.payload.document_type),
+                )
+            raise ValueError(f"需求分析不支持阶段: {stage}")

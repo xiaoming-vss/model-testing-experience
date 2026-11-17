@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "1.0",
+  "artifactType": "requirement_review",
+  "reviewStatus": "passed",
+  "summary": {
+    "scope": "订单导出需求 v1.0，2026-11-16 评审",
+    "materialsReviewed": ["订单导出 PRD.docx"],
+    "confirmedFacts": [
+      "用户可以在订单列表点击导出",
+      "导出文件为 CSV，包含订单号和下单时间",
+      "单次最多导出 10000 条订单"
+    ],
+    "workingAssumptions": ["导出任务在后台异步执行"],
+    "hypothesesToVerify": ["导出文件下载链接的有效期"],
+    "inputGaps": []
+  },
+  "issues": [
+    {
+      "id": "RR-01",
+      "topic": "导出文件命名格式",
+      "type": "weak_ac",
+      "severity": "minor",
+      "evidence": [
+        {
+          "sourceName": "订单导出 PRD.docx",
+          "locator": "3.1 导出结果 / 第 2 段",
+          "quote": "导出文件按规范命名"
+        }
+      ],
+      "impact": "不影响导出主流程，但自动化校验文件名时缺少固定规则。",
+      "question": "导出文件名的固定格式是什么？",
+      "suggestedOwner": "product",
+      "nextAction": "补充一个文件名示例。",
+      "verifyMethod": "inspection"
+    }
+  ],
+  "coverage": {
+    "structure": [
+      { "name": "background", "status": "present" },
+      { "name": "goal", "status": "present" },
+      { "name": "stories", "status": "present" },
+      { "name": "features", "status": "present" },
+      { "name": "nfr", "status": "thin" },
+      { "name": "boundary", "status": "present" },
+      { "name": "ac", "status": "present" },
+      { "name": "kpi", "status": "thin" },
+      { "name": "dependencies", "status": "present" },
+      { "name": "timeline", "status": "present" },
+      { "name": "prototype", "status": "present" }
+    ],
+    "qualityCharacteristics": [
+      { "name": "unambiguous", "status": "pass", "issueIds": [] },
+      { "name": "singular", "status": "pass", "issueIds": [] },
+      { "name": "complete", "status": "pass", "issueIds": [] },
+      { "name": "verifiable", "status": "pass", "issueIds": [] },
+      { "name": "necessary", "status": "pass", "issueIds": [] },
+      { "name": "consistent", "status": "pass", "issueIds": [] }
+    ],
+    "smells": [
+      { "type": "vague", "quote": "导出文件按规范命名", "issueId": "RR-01" }
+    ],
+    "behavioralStates": [
+      { "area": "state", "status": "covered", "note": "导出任务的成功、失败和进行中状态有描述" },
+      { "area": "decision", "status": "covered", "note": "超过 10000 条时拒绝导出" },
+      { "area": "time", "status": "covered", "note": "导出任务超时和重试有说明" },
+      { "area": "failure", "status": "covered", "note": "导出失败有提示和重试入口" },
+      { "area": "ux", "status": "covered", "note": "导出入口、进度和下载位置有描述" }
+    ],
+    "traceability": [
+      { "kind": "rule_without_ac", "status": "pass", "note": "规则都有对应验收标准" },
+      { "kind": "ac_without_rule", "status": "pass", "note": "验收标准都能追溯到规则" },
+      { "kind": "goal_without_feature", "status": "pass", "note": "目标都有对应功能" },
+      { "kind": "feature_without_goal", "status": "pass", "note": "功能都能追溯到目标" }
+    ],
+    "inputAudit": {
+      "materials": ["订单导出 PRD.docx"],
+      "missing": [],
+      "recency": "PRD 为本次上传版本",
+      "comparability": "只评审文档内部一致性"
+    }
+  }
+}

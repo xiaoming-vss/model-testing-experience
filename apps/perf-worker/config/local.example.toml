@@ -1,0 +1,32 @@
+mode = "once"
+
+[control_plane]
+base_url = "http://127.0.0.1:9000"
+worker_token = "replace-with-worker-token"
+timeout_seconds = 15
+retry_attempts = 3
+
+[worker]
+id = ""
+health_file = "./runtime/health.json"
+health_max_age_seconds = 90
+poll_interval_seconds = 2
+heartbeat_interval_seconds = 10
+lease_margin_seconds = 5
+shutdown_grace_seconds = 60
+
+[k6]
+binary = "k6"
+# 留空表示只校验二进制存在；生产部署应填写与镜像一致的版本。
+expected_version = ""
+
+[runner]
+workspace_root = "./runtime/runs"
+max_duration_seconds = 3600
+stop_grace_seconds = 30
+keep_failed_workspace_hours = 24
+max_data_file_mb = 50
+max_summary_mb = 5
+
+[once]
+snapshot_file = ""

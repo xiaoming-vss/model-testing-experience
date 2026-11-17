@@ -46,7 +46,10 @@ PURPOSE_FOLDERS = {
     "attachment": "attachments",
     "project_skill": "skills",
     "ui_artifact": "ui-artifacts",
+    "perf_case_data": "perf-case-data",
 }
+
+PERF_CASE_DATA_MAX_BYTES = 50 * 1024 * 1024
 
 
 def utcnow():
@@ -94,6 +97,9 @@ class StoredFileService:
             await require_project_id(self.session, user_id, body.project_id, "manage")
         if body.purpose == "ui_artifact":
             allowed = {"png", "zip", "mp4", "webm"}
+        if body.purpose == "perf_case_data":
+            allowed = {"csv", "json"}
+            maximum = min(maximum, PERF_CASE_DATA_MAX_BYTES)
         if (allowed is not None and ext not in allowed) or body.size > maximum:
             raise AppError(400, "文件类型不支持或超过大小限制", 400)
         file_id = new_id()

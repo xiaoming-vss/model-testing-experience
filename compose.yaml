@@ -108,6 +108,18 @@ services:
       control-plane:
         condition: service_healthy
 
+  perf-worker:
+    image: mtx/perf-worker:local
+    build: ./apps/perf-worker
+    restart: unless-stopped
+    stop_grace_period: 90s
+    volumes:
+      - ./.runtime/docker/perf-worker.toml:/app/config/local.toml:ro
+      - /app/runtime # One active k6 run per replica; runtime state stays local.
+    depends_on:
+      control-plane:
+        condition: service_healthy
+
 volumes:
   mysql-data:
   control-plane-storage:

@@ -1,7 +1,7 @@
 # UI 环境变量与后置提取
 
 UI 自动化运行时可读取项目环境变量，并在步骤成功后把页面上的值写回环境。环境与 API
-自动化共用 `api_environments` / `api_environment_vars`，用 `kind` 区分 `api` 与 `ui`。
+自动化共用 `api_environments` / `api_environment_vars`，用 `kind` 区分 `api`、`ui` 与 `perf`。本文的变量替换和写回规则只适用于 UI 运行；性能环境只提供 `baseUrl` 和普通/秘密环境变量，由控制面在创建性能运行时冻结。
 设计决策来源：`.scratch/ui-env-vars/spec.md`；原始需求见
 `~/data/文档/test-agent/需求/已完成/UI自动化环境变量与测试数据复用需求.md`。
 

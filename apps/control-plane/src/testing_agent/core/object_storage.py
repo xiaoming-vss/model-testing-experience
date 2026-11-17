@@ -150,6 +150,9 @@ class ObjectStorage:
             ExpiresIn=self.settings.signature_seconds,
         )
 
+    def get_object(self, key: str):
+        return self.client.get_object(Bucket=self.settings.bucket, Key=key)
+
     def read_text(self, key: str) -> str:
         obj = self.client.get_object(Bucket=self.settings.bucket, Key=key)
         try:

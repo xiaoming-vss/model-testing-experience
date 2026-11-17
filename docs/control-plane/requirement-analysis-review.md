@@ -21,3 +21,14 @@ Studio 的行内审核、产物弹框、原始 JSON、优化及重试入口使�
 原 `POST /v1/requirement-analysis-runs/{runId}/import-to-requirement` 已退役，不再把审核通过的需求理解写回 `requirements.document_content`；该接口与 Studio 导入入口一并移除，需求理解只以生成链中已审核的 `feature_understanding` 版本为准。`document_content` 继续作为需求原文/增强文本载体，供需求分析阶段读取，不再承担需求理解的权威存储。
 
 下游消费方在发起时解析版本：功能测试与代码风险分析默认取最新已审核版本，代码风险分析可用 `requirementUnderstandingVersionId` 指定历史版本；测试单图谱为每条本迭代需求取各自最新已审核版本。三者都没有可用版本时返回 400 并说明原因，不回退旧正文。UI 三阶段不读取需求理解内容。历史需求正文里的旧版需求理解 JSON 因此不再阻塞 UI 生成，也不需要迁移或清空。
+
+## 需求评审提示性首阶段（2026-11-16）
+
+需求分析链新增 `requirement_review`（需求评审）作为首个阶段，`extracting_text`（材料整理）随后展示。评审是**提示性报告**，不是门禁：
+
+- 评审产物为 `requirement_review` 1.0，配置字段 `reviewOutput`，文件回执 `requirement-review.json`；包含 `reviewStatus`、`summary`、`issues`、`coverage`。
+- `reviewStatus` 只由 issue 严重度计算（blocked / needs_clarification / passed），用于报告展示；任何状态都可以审核通过和审核通过并继续。
+- 不实现 `accepted_with_risk`、`riskAcceptance`、`clarifications` 或逐条解释闭环；不把评审结果传给材料提取。
+- `extracting_text` 没有上游阶段，可以直接运行；不要求评审版本，不读取评审产物，不校验文档哈希。删除评审版本不影响材料提取。
+- 评审资格仍要求 `workflowVersion=2`、启用人工审核，并使用默认技能 `mtx-review-requirement`。技能和两份运行时 Schema 必须保持同一份契约。
+- 不新增数据库表、列或迁移；旧材料版本和功能链继续可用。详细决策见 [ADR 0018](adr/0018-requirement-review-advisory.md)。

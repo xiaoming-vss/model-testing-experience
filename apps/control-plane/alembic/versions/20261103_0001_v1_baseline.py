@@ -1114,7 +1114,7 @@ def upgrade() -> None:
             "domain",
             sa.String(length=10),
             nullable=False,
-            comment="Worker 任务域，用于区分 AI/API/UI 队列",
+            comment="Worker 任务域，用于区分 AI/API/UI/PERF 队列",
         ),
         sa.Column(
             "task_id",
@@ -1160,7 +1160,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_worker_tasks")),
         sa.UniqueConstraint("domain", "task_id", name="uk_worker_domain_task"),
-        comment="AI/API/UI Worker 执行队列及领取租约；集成任务使用独立队列",
+        comment="AI/API/UI/PERF Worker 执行队列及领取租约；集成任务使用独立队列",
     )
     op.create_index(
         "idx_worker_domain_lease",
@@ -1282,7 +1282,7 @@ def upgrade() -> None:
             "environment_id", sa.String(length=64), nullable=False, comment="API 环境业务标识"
         ),
         sa.Column("project_id", sa.String(length=64), nullable=False, comment="项目业务标识"),
-        sa.Column("kind", sa.String(length=16), nullable=False, comment="环境用途：api / ui"),
+        sa.Column("kind", sa.String(length=16), nullable=False, comment="环境用途：api / ui / perf"),
         sa.Column("name", sa.String(length=100), nullable=False, comment="名称"),
         sa.Column("base_url", sa.String(length=512), nullable=False, comment="服务或环境基础地址"),
         sa.Column("description", sa.String(length=512), nullable=False, comment="业务描述"),
@@ -4026,6 +4026,279 @@ def upgrade() -> None:
         op.f("ix_api_case_runs_trigger_user_id"), "api_case_runs", ["trigger_user_id"], unique=False
     )
     op.create_table(
+        "perf_cases",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
+        sa.Column("case_id", sa.String(length=64), nullable=False, comment="性能用例业务标识"),
+        sa.Column("project_id", sa.String(length=64), nullable=False, comment="项目业务标识"),
+        sa.Column("name", sa.String(length=120), nullable=False, comment="用例名称"),
+        sa.Column("description", sa.String(length=512), nullable=False, comment="业务描述"),
+        sa.Column(
+            "yaml",
+            sa.Text().with_variant(mysql.LONGTEXT(), "mysql"),
+            nullable=False,
+            comment="YAML 用例正文；平台字段在发起运行时注入",
+        ),
+        sa.Column("version", sa.Integer(), nullable=False, comment="用例版本号，更新时递增"),
+        sa.Column("enabled", sa.Boolean(), nullable=False, comment="是否启用"),
+        sa.Column(
+            "data_files_json",
+            mysql.JSON(),
+            nullable=True,
+            comment="当前数据文件元数据 JSON，不含文件内容",
+        ),
+        sa.Column(
+            "created_by", sa.String(length=64), nullable=False, comment="创建者用户业务标识"
+        ),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, comment="记录创建时间（UTC）"
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            comment="记录最后更新时间（UTC）",
+        ),
+        sa.ForeignKeyConstraint(
+            ["project_id"],
+            ["projects.project_id"],
+            name="fk_perf_cases_project_id",
+            ondelete="RESTRICT",
+        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_perf_cases")),
+        sa.UniqueConstraint("case_id", name=op.f("uq_perf_cases_case_id")),
+        sa.UniqueConstraint("project_id", "name", name="uk_perf_case_project_name"),
+        comment="项目性能测试用例及可执行 YAML",
+    )
+    op.create_index(op.f("ix_perf_cases_project_id"), "perf_cases", ["project_id"], unique=False)
+    op.create_table(
+        "monitoring_connections",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
+        sa.Column(
+            "connection_id", sa.String(length=64), nullable=False, comment="监控接入业务标识"
+        ),
+        sa.Column("project_id", sa.String(length=64), nullable=False, comment="项目业务标识"),
+        sa.Column("name", sa.String(length=120), nullable=False, comment="接入名称"),
+        sa.Column(
+            "query_url", sa.String(length=1024), nullable=False, comment="Prometheus 查询地址"
+        ),
+        sa.Column(
+            "remote_write_url",
+            sa.String(length=1024),
+            nullable=False,
+            comment="Prometheus Remote Write 地址",
+        ),
+        sa.Column(
+            "query_auth_type",
+            sa.String(length=16),
+            nullable=False,
+            comment="查询认证方式：none/basic/bearer/headers",
+        ),
+        sa.Column("query_secret_json", mysql.JSON(), nullable=True, comment="加密后的查询凭据 JSON"),
+        sa.Column(
+            "remote_write_auth_type",
+            sa.String(length=16),
+            nullable=False,
+            comment="Remote Write 认证方式：none/basic/bearer/headers",
+        ),
+        sa.Column(
+            "remote_write_secret_json",
+            mysql.JSON(),
+            nullable=True,
+            comment="加密后的 Remote Write 凭据 JSON",
+        ),
+        sa.Column(
+            "grafana_url",
+            sa.String(length=1024),
+            nullable=False,
+            comment="Grafana 地址；空值表示未配置",
+        ),
+        sa.Column(
+            "grafana_dashboard_uid",
+            sa.String(length=128),
+            nullable=False,
+            comment="Grafana 看板 UID；空值表示未配置",
+        ),
+        sa.Column(
+            "default_filters_json",
+            mysql.JSON(),
+            nullable=True,
+            comment="Grafana/Prometheus 默认筛选参数 JSON",
+        ),
+        sa.Column("enabled", sa.Boolean(), nullable=False, comment="是否允许发起新运行"),
+        sa.Column(
+            "created_by", sa.String(length=64), nullable=False, comment="创建者用户业务标识"
+        ),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, comment="记录创建时间（UTC）"
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            comment="记录最后更新时间（UTC）",
+        ),
+        sa.ForeignKeyConstraint(
+            ["project_id"],
+            ["projects.project_id"],
+            name="fk_monitoring_connections_project_id",
+            ondelete="RESTRICT",
+        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_monitoring_connections")),
+        sa.UniqueConstraint(
+            "connection_id", name=op.f("uq_monitoring_connections_connection_id")
+        ),
+        sa.UniqueConstraint(
+            "project_id", "name", name="uk_monitoring_connection_project_name"
+        ),
+        comment="项目级 Prometheus/Grafana 监控接入及读写凭据",
+    )
+    op.create_index(
+        op.f("ix_monitoring_connections_project_id"),
+        "monitoring_connections",
+        ["project_id"],
+        unique=False,
+    )
+    op.create_table(
+        "perf_runs",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
+        sa.Column("run_id", sa.String(length=64), nullable=False, comment="运行业务标识"),
+        sa.Column("case_id", sa.String(length=64), nullable=False, comment="性能用例业务标识"),
+        sa.Column("project_id", sa.String(length=64), nullable=False, comment="项目业务标识"),
+        sa.Column(
+            "case_version",
+            sa.Integer(),
+            nullable=False,
+            comment="发起运行时冻结的用例版本号",
+        ),
+        sa.Column(
+            "case_name", sa.String(length=120), nullable=False, comment="发起运行时冻结的用例名称"
+        ),
+        sa.Column(
+            "environment_id",
+            sa.String(length=64),
+            nullable=False,
+            comment="性能环境业务标识",
+        ),
+        sa.Column(
+            "environment_name",
+            sa.String(length=100),
+            nullable=False,
+            comment="发起运行时冻结的环境名称",
+        ),
+        sa.Column(
+            "monitoring_connection_id",
+            sa.String(length=64),
+            nullable=False,
+            comment="监控接入业务标识",
+        ),
+        sa.Column(
+            "monitoring_connection_name",
+            sa.String(length=120),
+            nullable=False,
+            comment="发起运行时冻结的监控接入名称",
+        ),
+        sa.Column(
+            "trigger_user_id",
+            sa.String(length=64),
+            nullable=False,
+            comment="本次运行发起者用户业务标识",
+        ),
+        sa.Column("trigger_type", sa.String(length=20), nullable=False, comment="运行触发方式"),
+        sa.Column(
+            "status",
+            sa.String(length=20),
+            nullable=False,
+            comment="queued/running/stopping/completed/failed/stopped/canceled",
+        ),
+        sa.Column(
+            "outcome",
+            sa.String(length=32),
+            nullable=True,
+            comment="passed/threshold_failed/inconclusive/execution_error/stopped",
+        ),
+        sa.Column(
+            "case_yaml",
+            sa.Text().with_variant(mysql.LONGTEXT(), "mysql"),
+            nullable=False,
+            comment="发起运行时冻结的 YAML 用例正文",
+        ),
+        sa.Column(
+            "spec_json", mysql.JSON(), nullable=True, comment="下发 Worker 的脱敏运行规格 JSON"
+        ),
+        sa.Column(
+            "data_files_json",
+            mysql.JSON(),
+            nullable=True,
+            comment="本次运行冻结的数据文件元数据 JSON",
+        ),
+        sa.Column(
+            "private_payload",
+            sa.Text().with_variant(mysql.LONGTEXT(), "mysql"),
+            nullable=True,
+            comment="加密保存的完整运行规格、环境变量和 Remote Write 写凭据",
+        ),
+        sa.Column("summary_json", mysql.JSON(), nullable=True, comment="k6 精简 summary JSON"),
+        sa.Column(
+            "result_json",
+            mysql.JSON(),
+            nullable=True,
+            comment="Worker 回传的执行事实 JSON，不含 summary/logTail",
+        ),
+        sa.Column("flags_json", mysql.JSON(), nullable=True, comment="运行结果标记 JSON"),
+        sa.Column("log_tail", sa.Text(), nullable=False, comment="脱敏后的 k6 日志尾部"),
+        sa.Column("error_message", sa.Text(), nullable=False, comment="执行或同步错误信息"),
+        sa.Column("k6_version", sa.String(length=32), nullable=False, comment="实际使用的 k6 版本"),
+        sa.Column(
+            "template_version", sa.String(length=32), nullable=False, comment="固定 k6 模板版本"
+        ),
+        sa.Column(
+            "script_sha256", sa.String(length=64), nullable=False, comment="生成脚本的 SHA-256"
+        ),
+        sa.Column(
+            "runner_json", mysql.JSON(), nullable=True, comment="执行 Worker 的主机与 CPU 信息 JSON"
+        ),
+        sa.Column(
+            "started_at", sa.DateTime(timezone=True), nullable=True, comment="执行开始时间（UTC）"
+        ),
+        sa.Column(
+            "finished_at", sa.DateTime(timezone=True), nullable=True, comment="执行结束时间（UTC）"
+        ),
+        sa.Column("duration_ms", sa.Integer(), nullable=False, comment="执行耗时，单位毫秒"),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, comment="记录创建时间（UTC）"
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            comment="记录最后更新时间（UTC）",
+        ),
+        sa.ForeignKeyConstraint(
+            ["case_id"], ["perf_cases.case_id"], name="fk_perf_runs_case", ondelete="CASCADE"
+        ),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_perf_runs")),
+        sa.UniqueConstraint("run_id", name=op.f("uq_perf_runs_run_id")),
+        comment="性能测试运行、冻结规格、执行事实与阈值结果",
+    )
+    op.create_index("idx_perf_run_case_latest", "perf_runs", ["case_id", "created_at", "id"])
+    op.create_index("idx_perf_run_project_latest", "perf_runs", ["project_id", "created_at", "id"])
+    op.create_index("idx_perf_run_status_created", "perf_runs", ["status", "created_at"])
+    op.create_index(op.f("ix_perf_runs_case_id"), "perf_runs", ["case_id"], unique=False)
+    op.create_index(
+        op.f("ix_perf_runs_environment_id"), "perf_runs", ["environment_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_perf_runs_monitoring_connection_id"),
+        "perf_runs",
+        ["monitoring_connection_id"],
+        unique=False,
+    )
+    op.create_index(op.f("ix_perf_runs_project_id"), "perf_runs", ["project_id"], unique=False)
+    op.create_index(op.f("ix_perf_runs_status"), "perf_runs", ["status"], unique=False)
+    op.create_index(
+        op.f("ix_perf_runs_trigger_user_id"), "perf_runs", ["trigger_user_id"], unique=False
+    )
+    op.create_table(
         "api_extract_rules",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False, comment="数据库内部主键"),
         sa.Column(
@@ -4364,6 +4637,9 @@ def downgrade() -> None:
     op.drop_table("ui_test_case_runs")
     op.drop_table("api_extract_rules")
     op.drop_table("api_case_runs")
+    op.drop_table("monitoring_connections")
+    op.drop_table("perf_runs")
+    op.drop_table("perf_cases")
     op.drop_table("api_assert_rules")
     op.drop_table("ui_test_suite_runs")
     op.drop_table("ui_test_cases")

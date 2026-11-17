@@ -109,10 +109,12 @@ class TwoStageTests(unittest.TestCase):
         self.assertTrue(all(p.stage_status == "running" for p in progress))
         self.assertTrue(all(json.loads(p.intermediate_json_text) == {} for p in progress))
 
-    def test_skill_selection_uses_only_two_reviewed_stages(self):
+    def test_skill_selection_uses_the_two_requirement_stages(self):
         task = self.task("feature_understanding")
         with self.assertRaises(ValueError):
             required_skills(task)
+        task.current_stage = "requirement_review"
+        self.assertEqual(required_skills(task), ["mtx-review-requirement"])
         task.current_stage = "extracting_text"
         self.assertEqual(required_skills(task), ["mtx-organize-requirement-material"])
         task.current_stage = "writing_requirement"

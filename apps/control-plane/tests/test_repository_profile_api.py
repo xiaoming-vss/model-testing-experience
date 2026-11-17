@@ -269,7 +269,10 @@ def test_repository_profile_run_lifecycle_and_isolation(api, monkeypatch):
             headers=owner,
         )
         assert chain.status_code == 200, chain.text
-        assert all(stage["stage"] == "extracting_text" for stage in chain.json()["data"]["stages"])
+        assert [stage["stage"] for stage in chain.json()["data"]["stages"]] == [
+            "requirement_review",
+            "extracting_text",
+        ]
     finally:
         api.app.dependency_overrides.pop(verify_worker_token, None)
 

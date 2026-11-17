@@ -20,7 +20,7 @@ from testing_agent.repositories.worker_context import read_worker_context
 from testing_agent.schemas.workers import (
     WorkerTaskEventRequest,
 )
-from testing_agent.services.worker_domains import api, ui
+from testing_agent.services.worker_domains import api, perf, ui
 from testing_agent.services.worker_domains.ai import (
     apply_ai_completion_to_run as apply_ai_completion_to_run,
 )
@@ -115,3 +115,5 @@ async def complete_domain_run(
         await api.complete_run(session, task, body)
     elif domain == "ui":
         await ui.complete_run(session, task, body)
+    elif domain == "perf":
+        await perf.complete_run(session, task, body)

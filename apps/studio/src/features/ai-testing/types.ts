@@ -68,6 +68,7 @@ export type FunctionalCaseGenerateTaskStage =
   | string
 
 export type RequirementAnalysisTaskStage =
+  | 'requirement_review'
   | 'extracting_text'
   | string
 

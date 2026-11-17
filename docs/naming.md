@@ -8,13 +8,15 @@
 | 控制面 Python 发行包与启动命令 | `mtx-control-plane` |
 | AI Worker Python 发行包与启动命令 | `mtx-ai-worker` |
 | API/UI Worker Python 发行包与启动命令 | `mtx-api-ui-worker` |
+| 集成 Worker Python 发行包与启动命令 | `mtx-integration-worker` |
+| 性能 Worker Python 发行包与启动命令 | `mtx-perf-worker` |
 | Compose 项目 | `mtx` |
-| Docker 镜像 | `mtx/studio:local`、`mtx/control-plane:local`、`mtx/ai-worker:local`、`mtx/api-ui-worker:local`、`mtx/zentao:local` |
+| Docker 镜像 | `mtx/studio:local`、`mtx/control-plane:local`、`mtx/ai-worker:local`、`mtx/api-ui-worker:local`、`mtx/integration-worker:local`、`mtx/perf-worker:local`、`mtx/zentao:local` |
 | AI 示例命令 | `mtx-ai-demo`、`mtx-ai-chain-demo` |
 
 ## 保持兼容的标识
 
-- `testing_agent`、`testing_agent_ai_worker`、`test_worker` 和禅道的 `app` 是 Python 内部模块名，保持不变。
+- `testing_agent`、`testing_agent_ai_worker`、`testing_agent_integration_worker`、`testing_agent_perf_worker`、`test_worker` 和禅道的 `app` 是 Python 内部模块名，保持不变。
 - 原 `testing-agent-control-plane`、`testing-agent-ai-worker`、`testing-agent-api-ui-worker` 及 AI 示例命令作为别名继续安装。统一脚本和 Docker 使用新命令。
 - `TESTING_AGENT_*`、`APP_CONF` 等环境变量继续有效。
 - 数据库名、数据库账号、平台认证密钥和现有运行配置不因品牌改名而重置。

@@ -14,7 +14,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
-TYPES = {"document_extraction"}
+TYPES = {"document_extraction", "requirement_review"}
 
 
 def _pairs(pairs):
@@ -110,7 +110,9 @@ def validate_artifact(
     if error:
         path = ".".join(str(part) for part in error.absolute_path) or "$"
         raise ValueError(f"需求产物字段不符合契约 ({path}): {error.message}")
-    return _check_readable_material(value)
+    if kind == "document_extraction":
+        return _check_readable_material(value)
+    return _check_requirement_review(value)
 
 
 def _check_readable_material(value: dict[str, Any]) -> dict[str, Any]:
@@ -149,6 +151,54 @@ def _check_readable_material(value: dict[str, Any]) -> dict[str, Any]:
     for question in value["questions"]:
         _subset(question["materialBlockIds"], blocks, "questions.materialBlockIds", errors)
         _subset(question["functionIds"], functions, "questions.functionIds", errors)
+    if errors:
+        raise ArtifactReferenceError(value, errors)
+    return value
+
+
+def _check_requirement_review(value: dict[str, Any]) -> dict[str, Any]:
+    """Validate the review report's IDs, severity evidence and coverage references."""
+    errors: list[str] = []
+    issues = _index(value["issues"], "issues", errors)
+    has_blocker = False
+    has_major = False
+    for issue in value["issues"]:
+        severity = issue["severity"]
+        if severity == "blocker":
+            has_blocker = True
+            if not str(issue.get("failureMode") or "").strip():
+                errors.append(f"issues: {issue['id']} 的 blocker 必须填写 failureMode")
+        elif severity == "major":
+            has_major = True
+        if severity in {"blocker", "major"} and not any(
+            str(item.get("quote") or "").strip() for item in issue["evidence"]
+        ):
+            errors.append(f"issues: {issue['id']} 的 {severity} 至少需要一条带 quote 的证据")
+    expected = "blocked" if has_blocker else "needs_clarification" if has_major else "passed"
+    if value["reviewStatus"] != expected:
+        errors.append(f"reviewStatus 必须是 {expected}，当前为 {value['reviewStatus']}")
+    coverage = value["coverage"]
+    for item in coverage["qualityCharacteristics"]:
+        _subset(item["issueIds"], issues, "coverage.qualityCharacteristics.issueIds", errors)
+        if item["status"] == "fail" and not item["issueIds"]:
+            errors.append(
+                f"coverage.qualityCharacteristics: {item['name']} 为 fail 时必须引用 issue"
+            )
+        if item["status"] == "pass" and item["issueIds"]:
+            errors.append(
+                f"coverage.qualityCharacteristics: {item['name']} 为 pass 时不能引用 issue"
+            )
+    for item in coverage["smells"]:
+        _subset([item["issueId"]], issues, "coverage.smells.issueId", errors)
+    for item in coverage["traceability"]:
+        issue_id = str(item.get("issueId") or "").strip()
+        if item["status"] == "fail":
+            if not issue_id:
+                errors.append("coverage.traceability: fail 时必须引用 issue")
+            else:
+                _subset([issue_id], issues, "coverage.traceability.issueId", errors)
+        elif issue_id:
+            errors.append("coverage.traceability: pass 时不能引用 issue")
     if errors:
         raise ArtifactReferenceError(value, errors)
     return value

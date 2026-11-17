@@ -26,4 +26,12 @@ class UiWorkerContext:
     domain: Literal["ui"] = "ui"
 
 
-type WorkerExecutionContext = AiWorkerContext | ApiWorkerContext | UiWorkerContext
+@dataclass(frozen=True)
+class PerfWorkerContext:
+    case_id: str | None
+    domain: Literal["perf"] = "perf"
+
+
+type WorkerExecutionContext = (
+    AiWorkerContext | ApiWorkerContext | UiWorkerContext | PerfWorkerContext
+)

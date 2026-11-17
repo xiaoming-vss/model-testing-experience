@@ -36,6 +36,46 @@ class SprintStatus(StrEnum):
     COMPLETED = "completed"
 
 
+class PerfRunStatus(StrEnum):
+    """性能运行生命周期；与通用 Worker 任务状态分开。"""
+
+    QUEUED = "queued"
+    RUNNING = "running"
+    STOPPING = "stopping"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    STOPPED = "stopped"
+    CANCELED = "canceled"
+
+    @classmethod
+    def values(cls) -> set[str]:
+        return {item.value for item in cls}
+
+
+class PerfRunOutcome(StrEnum):
+    """Worker 回传的判定事实；控制面后续可增加更细的达标判定。"""
+
+    PASSED = "passed"
+    THRESHOLD_FAILED = "threshold_failed"
+    INCONCLUSIVE = "inconclusive"
+    EXECUTION_ERROR = "execution_error"
+    STOPPED = "stopped"
+
+    @classmethod
+    def values(cls) -> set[str]:
+        return {item.value for item in cls}
+
+
+PERF_RUN_ACTIVE_STATUSES = {PerfRunStatus.QUEUED.value, PerfRunStatus.RUNNING.value}
+PERF_RUN_TERMINAL_STATUSES = {
+    PerfRunStatus.COMPLETED.value,
+    PerfRunStatus.FAILED.value,
+    PerfRunStatus.STOPPED.value,
+    PerfRunStatus.CANCELED.value,
+}
+PERF_RUN_CLOSED_STATUSES = PERF_RUN_TERMINAL_STATUSES | {PerfRunStatus.STOPPING.value}
+
+
 class BugStatus(StrEnum):
     """禅道主状态；确认情况和解决方案独立保存。"""
 

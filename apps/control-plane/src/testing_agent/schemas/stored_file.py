@@ -11,7 +11,9 @@ class FileUploadRequest(BaseModel):
     filename: str = Field(min_length=1, max_length=255, pattern=r"^[^/\\\x00-\x1f]+$")
     size: int = Field(ge=0)
     sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
-    purpose: Literal["requirement", "attachment", "project_skill", "ui_artifact"] = "attachment"
+    purpose: Literal[
+        "requirement", "attachment", "project_skill", "ui_artifact", "perf_case_data"
+    ] = "attachment"
 
 
 class FileData(BaseModel):

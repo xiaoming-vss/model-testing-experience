@@ -36,6 +36,9 @@ from testing_agent.routers.gitlab_integrations import router as gitlab_integrati
 from testing_agent.routers.integration_worker import router as integration_worker_router
 from testing_agent.routers.ldap_settings import router as ldap_settings_router
 from testing_agent.routers.llm_integrations import router as llm_integrations_router
+from testing_agent.routers.monitoring_connections import router as monitoring_connections_router
+from testing_agent.routers.perf_tests import router as perf_tests_router
+from testing_agent.routers.perf_worker import router as perf_worker_router
 from testing_agent.routers.project_skills import router as project_skills_router
 from testing_agent.routers.projects import router as projects_router
 from testing_agent.routers.repository_profile_tasks import (
@@ -171,6 +174,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     v1.include_router(zentao_integrations_router, tags=["Zentao Integrations"])
     v1.include_router(gitlab_integrations_router, tags=["GitLab Integrations"])
     v1.include_router(llm_integrations_router, tags=["LLM Integrations"])
+    v1.include_router(monitoring_connections_router, tags=["Monitoring Connections"])
+    v1.include_router(perf_tests_router, tags=["Performance Tests"])
     v1.include_router(shared_services_router, tags=["Shared Services"])
     v1.include_router(resource_bindings_router, tags=["Resource Bindings"])
     v1.include_router(requirement_software_repositories_router, tags=["Software Repositories"])
@@ -196,6 +201,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     internal.include_router(api_worker_router, tags=["Internal API Worker"])
     internal.include_router(ai_worker_router, tags=["Internal AI Worker"])
     internal.include_router(integration_worker_router, tags=["Internal Integration Worker"])
+    internal.include_router(perf_worker_router, tags=["Internal Perf Worker"])
     app.include_router(internal)
 
     _install_go_contract_openapi(app)

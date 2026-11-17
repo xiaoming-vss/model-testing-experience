@@ -56,7 +56,12 @@ def generate_validated(
     if not directory.resolve().is_relative_to(workspace.resolve()):
         raise ValueError("产物输出目录必须位于当前任务工作区内")
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
-    output_path = directory.resolve() / "document-extraction.json"
+    output_filename = (
+        "requirement-review.json"
+        if kind == "requirement_review"
+        else "document-extraction.json"
+    )
+    output_path = directory.resolve() / output_filename
     schema_path = (
         Path(__file__).resolve().parents[2]
         / "requirement_schemas"
@@ -67,12 +72,12 @@ def generate_validated(
         + "\n\n【输出 JSON Schema】\n"
         + schema_path.read_text()
     )
-    if kind == "document_extraction":
+    if kind in {"document_extraction", "requirement_review"}:
         original += (
             "\n\n【本次产物交接】\n将完整正式产物保存为 UTF-8 JSON 到以下绝对路径：\n"
             + str(output_path.resolve())
-            + '\n完成自查后最终只返回 {"artifactFile":"document-extraction.json"}。'
-            "该回执仅供 Worker 读取文件；页面仍接收完整材料提取 JSON。"
+            + f'\n完成自查后最终只返回 {{"artifactFile":"{output_filename}"}}。'
+            "该回执仅供 Worker 读取文件；页面仍接收完整产物 JSON。"
             "修正时修改同一文件并返回回执，不另写摘要版，不在最终回复重抄长 JSON。"
         )
     else:
@@ -128,7 +133,7 @@ def generate_validated(
                 issues.extend(exc.issues)
             except ValueError as exc:
                 issues.append(str(exc))
-            if candidate is not None:
+            if candidate is not None and kind == "document_extraction":
                 try:
                     validate_confirmation_coverage(candidate, required_confirmations or [])
                 except ConfirmationCoverageError as exc:

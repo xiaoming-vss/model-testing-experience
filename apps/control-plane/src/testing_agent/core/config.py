@@ -103,6 +103,7 @@ class Settings:
     s3: ObjectStorageSettings = ObjectStorageSettings()
     code_overview_cache_ttl_seconds: int = 300
     integration_worker_key: str = ""
+    perf_worker_key: str = ""
     integration_execution: IntegrationExecutionSettings = IntegrationExecutionSettings()
     jwt_user_expire_hours: int = 72
     jwt_super_admin_expire_hours: int = 24
@@ -123,6 +124,11 @@ class Settings:
             raise ValueError(
                 "Integration Worker credentials must differ from existing Worker credentials"
             )
+        if self.perf_worker_key and self.perf_worker_key in {
+            self.worker_key,
+            self.integration_worker_key,
+        }:
+            raise ValueError("Perf Worker credentials must differ from existing Worker credentials")
         if self.integration_execution.enabled and not self.integration_worker_key:
             raise ValueError("Enabled integration execution requires a dedicated Worker key")
         for name in ("jwt_user_expire_hours", "jwt_super_admin_expire_hours"):
@@ -144,6 +150,7 @@ class Settings:
             asset_import=ImportLimits(**data.get("asset_import", {})),
             test_run_redis_url=data.get("test_run_notifications", {}).get("redis_url", ""),
             integration_worker_key=security.get("integration_worker", {}).get("key", ""),
+            perf_worker_key=security.get("perf_worker", {}).get("key", ""),
             integration_execution=IntegrationExecutionSettings(**execution),
             s3=ObjectStorageSettings(**data.get("storage", {}).get("s3", {})),
             env=data.get("env", "local"),

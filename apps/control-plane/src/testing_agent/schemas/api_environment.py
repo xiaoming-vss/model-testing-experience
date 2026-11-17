@@ -11,7 +11,7 @@ from pydantic.alias_generators import to_camel
 
 class ApiEnvironmentRequest(BaseModel):
     name: str
-    kind: Literal["api", "ui"] = Field(default="api")
+    kind: Literal["api", "ui", "perf"] = Field(default="api")
     base_url: str = Field(default="")
     description: str = ""
     is_default: bool = Field(default=False)

@@ -12,6 +12,7 @@ class StageLike(Protocol):
 
 
 FIELDS = {
+    "requirement_review": "reviewOutput",
     "requirement_analysis": "requirementAnalysis",
     "case_names": "caseNames",
     "extracting_text": "firstStepOutput",
@@ -66,7 +67,7 @@ def layout(kind: str) -> list[str]:
             "relation_analysis",
         ]
     if kind == "requirement_analysis":
-        return ["extracting_text"]
+        return ["requirement_review", "extracting_text"]
     return ["generate"]
 
 

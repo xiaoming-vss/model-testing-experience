@@ -63,6 +63,13 @@ async def _ui_suite_runs(session, condition):
         await _erase(session, m.UiTestSuiteRun, m.UiTestSuiteRun.suite_run_id.in_(ids))
 
 
+async def _perf_runs(session, condition):
+    ids = list(await session.scalars(select(m.PerfRun.run_id).where(condition).with_for_update()))
+    if ids:
+        await _workers(session, "perf", ids)
+        await _erase(session, m.PerfRun, m.PerfRun.run_id.in_(ids))
+
+
 async def delete_owned_data(session: AsyncSession, obj: Base) -> None:
     """Erase owned storage after the caller locks and authorizes the root resource.
 
@@ -113,6 +120,11 @@ async def delete_owned_data(session: AsyncSession, obj: Base) -> None:
         await _erase(session, m.UiTestCaseRun, m.UiTestCaseRun.case_id == obj.case_id)
     elif isinstance(obj, m.UiTestSuite):
         await _ui_suite_runs(session, m.UiTestSuiteRun.suite_id == obj.suite_id)
+    elif isinstance(obj, m.PerfCase):
+        await _perf_runs(session, m.PerfRun.case_id == obj.case_id)
+    elif isinstance(obj, m.MonitoringConnection):
+        # 运行记录已冻结接入快照，删除接入不影响历史运行。
+        pass
     elif isinstance(obj, m.TestOrderEntry):
         await _entry_visualizations(session, m.TestOrderEntry.entry_id == obj.entry_id)
     elif isinstance(obj, m.TestOrder):

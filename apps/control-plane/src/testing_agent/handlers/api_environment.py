@@ -21,7 +21,7 @@ async def create_api_environment(
 
 async def list_api_environments(
     project_id: str,
-    kind: Literal["api", "ui"] = "api",
+    kind: Literal["api", "ui", "perf"] = "api",
     user_id: str = Depends(get_current_user_id),
     service: ApiEnvironmentService = Depends(get_api_environment_service),
 ):

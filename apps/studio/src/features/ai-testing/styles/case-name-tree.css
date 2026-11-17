@@ -1,41 +1,4 @@
-/* 测试点树：标签页、节点、连线和编辑状态。 */
-.ai-case-names-inner-tabs {
-  margin-top: 2px;
-}
-
-.ai-case-names-inner-tabs > .ant-tabs-nav {
-  margin-bottom: 8px;
-}
-
-.ai-case-names-inner-tabs > .ant-tabs-nav::before {
-  border-bottom-color: var(--app-review-divider);
-}
-
-.ai-case-names-inner-tabs > .ant-tabs-nav .ant-tabs-tab {
-  padding: 3px 0;
-}
-
-.ai-case-names-inner-tabs > .ant-tabs-nav .ant-tabs-tab-btn {
-  color: var(--ai-text-secondary);
-  font-size: 12px;
-}
-
-.ai-case-names-inner-tabs > .ant-tabs-nav .ant-tabs-tab-active .ant-tabs-tab-btn {
-  color: var(--ai-active-text) !important;
-}
-
-.ai-case-names-inner-tabs.expanded > .ant-tabs-nav {
-  margin-bottom: 12px;
-}
-
-.ai-case-names-inner-tabs.review {
-  min-height: 0;
-}
-
-.ai-case-names-inner-tabs.review > .ant-tabs-nav {
-  margin-bottom: 8px;
-}
-
+/* 测试点树：节点、连线和编辑状态。 */
 .ai-case-name-tree {
   min-height: 260px;
   padding: 12px;
@@ -71,14 +34,6 @@
   flex: 0 0 auto;
 }
 
-.ai-case-name-tree-canvas {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  min-width: max-content;
-  padding: 8px 8px 18px;
-}
-
 .ai-case-name-tree-root,
 .ai-case-name-tree-node {
   position: relative;
@@ -103,48 +58,10 @@
   box-shadow: 0 8px 20px var(--app-glass-request-shadow-selected);
 }
 
-.ai-case-name-tree-root.editable,
-.ai-case-name-tree-node.editable {
-  justify-content: space-between;
-  gap: 6px;
-  padding-right: 6px;
-}
-
 .ai-case-name-tree-node-label {
   min-width: 0;
   white-space: normal;
   overflow-wrap: anywhere;
-}
-
-.ai-case-name-tree-node-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 1px;
-  flex: 0 0 auto;
-  opacity: 0;
-  transition: opacity 0.16s ease;
-}
-
-.ai-case-name-tree-root.editable:hover .ai-case-name-tree-node-actions,
-.ai-case-name-tree-node.editable:hover .ai-case-name-tree-node-actions,
-.ai-case-name-tree-root.editable:focus-within .ai-case-name-tree-node-actions,
-.ai-case-name-tree-node.editable:focus-within .ai-case-name-tree-node-actions {
-  opacity: 1;
-}
-
-.ai-case-name-tree-node-actions .ant-btn {
-  width: 22px;
-  min-width: 22px;
-  height: 22px;
-  padding: 0;
-}
-
-.ai-case-name-tree-node-input.ant-input {
-  width: 100%;
-  min-width: 0;
-  height: 24px;
-  font-size: 12px;
-  font-weight: 600;
 }
 
 .ai-case-name-tree-root {
@@ -153,77 +70,6 @@
   border-color: var(--app-graph-node-selected-border);
   background: linear-gradient(135deg, var(--app-graph-node-selected-gradient-start), var(--app-graph-node-selected-gradient-end));
   box-shadow: 0 12px 28px var(--app-graph-node-selected-shadow);
-}
-
-.ai-case-name-tree-branches,
-.ai-case-name-tree-children {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.ai-case-name-tree-branches::before,
-.ai-case-name-tree-children::before {
-  display: none;
-}
-
-.ai-case-name-tree-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0;
-}
-
-.ai-case-name-tree-row::before {
-  display: none;
-}
-
-.ai-case-name-tree-node::before {
-  display: none;
-}
-
-.ai-case-name-tree-root::after,
-.ai-case-name-tree-node::after {
-  display: none;
-}
-
-.ai-case-name-tree-branches > .ai-case-name-tree-row .ai-case-name-tree-node.model::before,
-.ai-case-name-tree-row .ai-case-name-tree-node.test-model::before {
-  display: none;
-}
-
-.ai-case-name-tree-node.model::after,
-.ai-case-name-tree-node.test-model::after {
-  display: none;
-}
-
-.ai-case-name-tree-row.nested::before {
-  display: none;
-}
-
-.ai-case-name-tree-curves {
-  flex: 0 0 86px;
-  margin: 0 -1px;
-  overflow: visible;
-}
-
-.ai-case-name-tree-curves path {
-  fill: none;
-  stroke: var(--app-graph-edge-primary);
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-}
-
-.ai-case-name-tree-curves.blue path {
-  stroke: var(--app-graph-edge-reference);
-}
-
-.ai-case-name-tree-curves.slate path {
-  stroke: var(--app-graph-edge-muted);
-  stroke-width: 1.8;
 }
 
 .ai-case-name-tree-node.model {
@@ -246,10 +92,6 @@
   border-color: var(--app-frame-divider-soft);
   background: var(--app-glass-surface-72);
   font-weight: 500;
-}
-
-.ai-case-name-tree-node.point::after {
-  display: none;
 }
 
 /* 可编辑候选用例的测试点：末尾悬停显示删除操作。 */
@@ -285,10 +127,6 @@
 .ai-case-flow-node-shell .ai-case-name-tree-node-delete.ant-btn:hover {
   color: var(--app-request-error-text);
   background: var(--ant-color-error-bg);
-}
-
-.ai-case-name-tree-children.point-list {
-  gap: 10px;
 }
 
 .ai-case-tree-passthrough { display: contents; }
@@ -334,8 +172,78 @@
   animation-name: ai-case-point-select-b;
 }
 
+/* 审查页定位到测试点时，用警示色标出关联节点，与普通选中区分。 */
+.ai-case-flow-canvas .ai-case-name-tree-node.is-related {
+  border-color: var(--app-status-warning-border);
+  box-shadow: 0 10px 24px var(--app-graph-node-selected-shadow);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ai-case-flow-canvas .ai-case-name-tree-node.point.is-selected {
     animation: none;
   }
+}
+
+/* 测试点树：隐藏统计标签时保留导出按钮，并给节点关联入口留出位置。 */
+.ai-case-name-tree-stats.is-minimal { align-items: center; gap: 8px; }
+.ai-case-name-tree-hint {
+  color: var(--app-surface-text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.ai-case-flow-node-shell.has-relation .ai-case-name-tree-node.point { padding-right: 88px; }
+.ai-case-flow-node-shell.has-relation .ai-case-name-tree-node.model,
+.ai-case-flow-node-shell.has-relation .ai-case-name-tree-node.test-model,
+.ai-case-flow-node-shell.has-relation .ai-case-name-tree-root { padding-right: 34px; }
+
+.ai-case-flow-relation-trigger {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 2;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 0;
+  border: 1px solid var(--app-surface-border);
+  border-radius: 5px;
+  background: var(--app-surface-hover);
+  color: var(--app-surface-text-muted);
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease, color 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+/* 关联入口默认隐藏，节点悬停或键盘聚焦时出现，避免树图被按钮铺满。 */
+.ai-case-flow-node-shell:hover .ai-case-flow-relation-trigger,
+.ai-case-flow-node-shell:focus-within .ai-case-flow-relation-trigger {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ai-case-flow-relation-trigger:hover,
+.ai-case-flow-relation-trigger:focus-visible {
+  border-color: var(--app-accent);
+  background: var(--app-accent-surface);
+  color: var(--app-accent);
+}
+
+.ai-case-flow-relation-trigger.is-point {
+  width: auto;
+  padding: 0 6px;
+  color: var(--app-accent);
+}
+
+.ai-case-flow-relation-trigger.is-point .anticon { font-size: 9px; }
+
+/* 触屏没有悬停态，关联入口保持常显。 */
+@media (hover: none) {
+  .ai-case-flow-relation-trigger { opacity: 1; pointer-events: auto; }
 }

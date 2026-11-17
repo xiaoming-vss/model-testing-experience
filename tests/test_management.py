@@ -193,9 +193,15 @@ class ManagementTests(unittest.TestCase):
         self.assertEqual(before, (self.root / "config/platform.toml").read_bytes())
         keys = [
             self.data["shared"][k]
-            for k in ("worker_token", "jwt_key", "integration_key")
+            for k in (
+                "worker_token",
+                "jwt_key",
+                "integration_key",
+                "integration_worker_token",
+                "perf_worker_token",
+            )
         ]
-        self.assertEqual(len(set(keys)), 3)
+        self.assertEqual(len(set(keys)), 5)
 
     def test_integration_config_upgrade_preserves_custom_values_permissions_and_secrets(self):
         path = self.root / "config/platform.toml"
@@ -259,6 +265,59 @@ class ManagementTests(unittest.TestCase):
         self.assertEqual(runtime["type"], "volume")
         self.assertNotIn("source", runtime)
 
+    @unittest.skipUnless(shutil.which("docker"), "Docker Compose is required")
+    def test_perf_worker_has_no_listener_and_keeps_runtime_local(self):
+        manage.configure("docker", self.root)
+        rendered = json.loads(subprocess.check_output(
+            manage.compose_command(self.root) + ["config", "--format", "json"], text=True,
+        ))
+        worker = rendered["services"]["perf-worker"]
+        self.assertFalse(worker.get("ports"))
+        self.assertFalse(worker.get("expose"))
+        self.assertFalse(worker.get("container_name"))
+        self.assertEqual(worker["stop_grace_period"], "1m30s")
+        self.assertEqual(set(worker["depends_on"]), {"control-plane"})
+        self.assertEqual(worker["depends_on"]["control-plane"]["condition"], "service_healthy")
+        self.assertEqual(worker["restart"], "unless-stopped")
+        runtime = next(item for item in worker["volumes"] if item["target"] == "/app/runtime")
+        self.assertEqual(runtime["type"], "volume")
+        self.assertNotIn("source", runtime)
+
+    def test_perf_worker_configuration_is_generated_for_both_modes(self):
+        local = manage.configurations(self.data, "local", self.root)
+        docker = manage.configurations(self.data, "docker", self.root)
+        self.assertEqual(local["perf-worker"]["mode"], "poll")
+        self.assertEqual(docker["perf-worker"]["mode"], "poll")
+        self.assertEqual(
+            local["perf-worker"]["control_plane"]["worker_token"],
+            self.data["shared"]["perf_worker_token"],
+        )
+        self.assertEqual(
+            local["perf-worker"]["control_plane"]["worker_token"],
+            local["control-plane"]["security"]["perf_worker"]["key"],
+        )
+        self.assertNotEqual(
+            local["perf-worker"]["control_plane"]["worker_token"],
+            self.data["shared"]["worker_token"],
+        )
+        self.assertNotEqual(
+            local["perf-worker"]["control_plane"]["worker_token"],
+            self.data["shared"]["integration_worker_token"],
+        )
+        self.assertEqual(local["perf-worker"]["worker"]["health_file"], "runtime/health.json")
+        self.assertEqual(local["perf-worker"]["runner"]["workspace_root"], "runtime/runs")
+        self.assertEqual(
+            docker["perf-worker"]["worker"]["health_file"], "/app/runtime/health.json"
+        )
+        self.assertEqual(
+            docker["perf-worker"]["runner"]["workspace_root"], "/app/runtime/runs"
+        )
+        self.assertEqual(docker["perf-worker"]["k6"]["expected_version"], "")
+        self.assertEqual(
+            tomllib.loads(manage.toml_text(local["perf-worker"])),
+            local["perf-worker"],
+        )
+
     def test_routes_credentials_and_overrides(self):
         self.data["shared"]["control_plane_port"] = 19000
         self.data["shared"]["public_host"] = "testing.example.com"
@@ -281,6 +340,11 @@ class ManagementTests(unittest.TestCase):
             )
             self.assertEqual(configs["ai-worker"]["platform"]["base_url"], url)
             self.assertEqual(configs["api-ui-worker"]["control_plane"]["base_url"], url)
+            self.assertEqual(configs["perf-worker"]["control_plane"]["base_url"], url)
+            self.assertEqual(
+                configs["perf-worker"]["control_plane"]["worker_token"],
+                cp["security"]["perf_worker"]["key"],
+            )
             self.assertNotIn("artifacts_base_url", configs["api-ui-worker"]["ui"])
             self.assertEqual(configs["ai-worker"]["worker"]["max_concurrent_tasks"], 7)
             for config in configs.values():

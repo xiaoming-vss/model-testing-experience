@@ -13,6 +13,7 @@ from testing_agent.models.ai_generate_task import AiGenerateTask
 from testing_agent.models.ai_generation_attempt import AiGenerationAttempt
 from testing_agent.models.ai_generation_stage import AiGenerationStage
 from testing_agent.models.bug import Bug
+from testing_agent.models.perf_case import PerfCase
 from testing_agent.models.project_skill_space import ProjectSkillSpace
 from testing_agent.models.requirement import Requirement
 from testing_agent.models.sprint import Sprint
@@ -88,6 +89,11 @@ async def require_file_resource(session: AsyncSession, row: StoredFile) -> None:
             ):
                 return
         raise ErrNotFound()
+    elif row.resource_type == "perf_case" and row.purpose == "perf_case_data":
+        query = select(PerfCase.case_id).where(
+            PerfCase.case_id == row.resource_id,
+            PerfCase.project_id == row.project_id,
+        )
     elif row.resource_type == "project_skill" and row.purpose == "project_skill":
         skill = await session.scalar(
             select(ProjectSkillSpace)

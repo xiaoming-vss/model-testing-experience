@@ -4,7 +4,7 @@
 
 - `deploy/helm/charts/<service>/`：每个服务的完整 chart，包含工作负载、Service、ConfigMap、PVC 等资源，以及该 chart 自己的 `values.yaml`。
 - 每个 chart 都可以单独 `helm install`，不依赖其他 chart 的发布。
-- 当前只覆盖平台本身，不包含 CI Worker。
+- 当前只覆盖平台本身，不包含 CI Worker 和性能 Worker；性能 Worker 已支持 Compose `poll` 模式，Helm 待后续补充。
 
 ## 前置条件
 
@@ -18,6 +18,8 @@
   - `mtx/api-ui-worker`
   - `mtx/integration-worker`
 - 一个可用 namespace；平台服务全部部署在同一 namespace
+
+性能 Worker 当前未提供 Helm chart；已支持控制面 `poll` 模式和 Compose，后续按压测节点池补充镜像、chart 和 values。
 - Studio 使用 NodePort，默认 `30080`；不需要 Ingress
 
 ## 目录结构

@@ -22,6 +22,7 @@ PROJECTS = {
     "ai-worker": "apps/ai-worker",
     "api-ui-worker": "apps/api-ui-worker",
     "integration-worker": "apps/integration-worker",
+    "perf-worker": "apps/perf-worker",
     "studio": "apps/studio",
 }
 
@@ -144,7 +145,7 @@ def upgrade_config(root=ROOT):
     original = copy.deepcopy(data)
     _migrate_agent_config(data)
     shared = data.setdefault("shared", {})
-    for key in ("integration_worker_token", "integration_runtime_generation"):
+    for key in ("integration_worker_token", "perf_worker_token", "integration_runtime_generation"):
         if key not in shared or shared[key] == "GENERATE":
             value = secrets.token_hex(32)
             while value in shared.values():
@@ -229,11 +230,18 @@ def validate(data):
     for key in ("worker_token", "jwt_key", "integration_key"):
         if not shared[key] or shared[key] == "GENERATE":
             raise ValueError(f"Set shared.{key}, or run init first")
-    for key in ("integration_worker_token", "integration_runtime_generation"):
+    for key in ("integration_worker_token", "perf_worker_token", "integration_runtime_generation"):
         if not shared.get(key) or shared[key] == "GENERATE":
             raise ValueError(f"Set shared.{key}, or run upgrade-config for an existing deployment")
     if shared["integration_worker_token"] == shared["worker_token"]:
         raise ValueError("The integration Worker token must differ from shared.worker_token")
+    if shared["perf_worker_token"] in {
+        shared["worker_token"],
+        shared["integration_worker_token"],
+    }:
+        raise ValueError(
+            "The perf Worker token must differ from shared.worker_token and integration token"
+        )
     super_admin = (
         data.get("control_plane", {})
         .get("security", {})
@@ -297,6 +305,7 @@ def configurations(data, mode, root=ROOT):
         "ai-worker": ("config/worker.example.toml", "ai_worker"),
         "api-ui-worker": ("config.example.toml", "api_ui_worker"),
         "integration-worker": ("config/local.example.toml", "integration_worker"),
+        "perf-worker": ("config/local.example.toml", "perf_worker"),
     }
     result = {
         name: merge(read(root / PROJECTS[name] / file), data.get(section, {}))
@@ -315,6 +324,7 @@ def configurations(data, mode, root=ROOT):
                 "integration": {"key": s["integration_key"]},
                 "worker": {"key": s["worker_token"]},
                 "integration_worker": {"key": s["integration_worker_token"]},
+                "perf_worker": {"key": s["perf_worker_token"]},
             },
             "integration_execution": {"runtime_generation": s["integration_runtime_generation"]},
             "data": {"db": {"user": {"dsn": dsn}}},
@@ -363,6 +373,12 @@ def configurations(data, mode, root=ROOT):
         "worker": {"health_file": "/app/runtime/health.json" if docker else "runtime/health.json",
                    "evidence_file": "/app/runtime/evidence.json" if docker else "runtime/evidence.json"},
     })
+    result["perf-worker"] = merge(result["perf-worker"], {
+        "mode": "poll",
+        "control_plane": {"base_url": cp_url, "worker_token": s["perf_worker_token"]},
+        "worker": {"health_file": "/app/runtime/health.json" if docker else "runtime/health.json"},
+        "runner": {"workspace_root": "/app/runtime/runs" if docker else "runtime/runs"},
+    })
     return result
 
 
@@ -385,6 +401,7 @@ def configure(mode, root=ROOT):
         "ai-worker": "config/worker.toml",
         "api-ui-worker": "config.toml",
         "integration-worker": "config/local.toml",
+        "perf-worker": "config/local.toml",
     }
     for name, config in configs.items():
         path = (
@@ -507,6 +524,7 @@ def main():
         "ai-worker": ["uv", "run", "--locked", "mtx-ai-worker"],
         "api-ui-worker": ["uv", "run", "--locked", "mtx-api-ui-worker"],
         "integration-worker": ["uv", "run", "--locked", "mtx-integration-worker"],
+        "perf-worker": ["uv", "run", "--locked", "mtx-perf-worker"],
         "studio": ["npm", "run", "dev"],
     }
     command = (
@@ -521,7 +539,7 @@ def main():
         env["PATH"] = (
             str(ROOT / PROJECTS[name] / "node_modules/.bin") + os.pathsep + env.get("PATH", "")
         )
-    if name in {"control-plane", "integration-worker"}:
+    if name in {"control-plane", "integration-worker", "perf-worker"}:
         env["APP_CONF"] = str(ROOT / PROJECTS[name] / "config/local.toml")
     raise SystemExit(subprocess.call(command, cwd=ROOT / PROJECTS[name], env=env))
 

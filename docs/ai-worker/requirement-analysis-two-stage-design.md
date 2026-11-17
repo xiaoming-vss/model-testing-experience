@@ -270,3 +270,15 @@ confirmationReferences 增加可选 inputStatements，来自本次已验证输�
 按本次范围，旧第一阶段 `document_extraction` 不兼容；第二阶段尚未适配新产物，Worker 在调用模型前明确拒绝继续。既有数据不迁移、不删除，第二阶段及其下游另行整改。发布时需同步 Worker、控制面、Studio 和默认技能，不应仅更新单个服务。
 
 本次发布验证：新增默认技能 4 个文件已通过既有发布服务同步并逐项校验远端内容；发布前队列无活动 Worker 任务，控制面和 AI Worker 已重启，Worker 正常轮询。AI Worker 全量 480 项通过（3 项跳过）；控制面需求阶段与 Worker 契约相关 82 项、Studio 新阅读组件 2 项通过，Studio 类型、主题及生产构建通过。桌面与窄屏使用隔离预览数据检查阅读与依据；尚未代用户执行真实模型的第一阶段生成。控制面和 Studio 的完整测试集本轮未跑完。
+
+## 2026-11-16 需求评审提示性首阶段
+
+需求分析链在材料整理前新增 `requirement_review`（需求评审）阶段。它与材料整理**相互独立**：评审生成报告后停在待审核，但任何 `reviewStatus` 都可以审核通过；材料整理没有上游阶段，可以直接运行，不读取评审产物。
+
+- Worker 在 `tasks/requirement_analysis/review_stage.py` 处理评审阶段：下载原始 Word/富文本和图片，修订时读取当前评审报告和 `revisionInstruction`，调用默认技能 `mtx-review-requirement`。
+- 评审使用 `requirement_review` 1.0 契约和固定文件回执 `requirement-review.json`；输出仍是完整报告 JSON。评审阶段只上报 `waiting_review` progress 并返回 `None`，不提交最终 `TaskResult`。
+- 报告只包含 `reviewStatus`、`summary`、`issues`、`coverage`。没有 `clarifications`、`accepted_with_risk`、`riskAcceptance`，也不把用户解释写入材料。
+- 材料提取阶段不增加 `reviewResult` 输入，不消费评审结论，不做 `src-RC-xx` 覆盖校验；控制面也不在提取前校验评审版本或文档哈希。
+- 评审阶段支持通用“继续优化”：修订只依据当前报告和用户说明更新报告；部分或模糊答复不会被当作已确认事实。
+- Schema 在 AI Worker、控制面和默认技能目录各保留一份，一致性测试防止漂移；运行时校验按 kind 分支，评审报告不执行材料提取的确认承接检查。
+- 发布时需要重建控制面镜像并通过 `python -m testing_agent.cli.skills default-skills` 或 Helm `skillsSync` 同步新技能到 S3；仅提交技能目录不会让 Worker 获取到新技能。详细决策见 [ADR 0018](../control-plane/adr/0018-requirement-review-advisory.md)。

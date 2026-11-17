@@ -200,8 +200,8 @@ uv run --extra dev alembic upgrade head           # 数据库迁移
 默认监听 9000（Dockerfile `EXPOSE 9000`）。注意代码内兜底常量是 8000，与示例配置和镜像不一致。
 
 - `GET /v1/health`：健康检查
-- `/v1/*` 业务接口：24 个路由模块挂在 `/v1` 前缀下，覆盖登录注册、项目与成员、迭代、需求、功能/API/UI 测试资产与运行、各类 AI 任务、禅道与 GitLab 与 LLM 集成、共享服务、资源绑定与项目技能
-- `/internal/ai-worker/*`、`/internal/ui-worker/*`、`/internal/api-worker/*`：3 个 Worker 面路由模块
+- `/v1/*` 业务接口：路由模块挂在 `/v1` 前缀下，覆盖登录注册、项目与成员、迭代、需求、功能/API/UI/性能测试资产与运行、各类 AI 任务、禅道与 GitLab 与 LLM 集成、监控接入、共享服务、资源绑定与项目技能
+- `/internal/ai-worker/*`、`/internal/ui-worker/*`、`/internal/api-worker/*`、`/internal/integration-worker/*`、`/internal/perf-worker/*`：Worker 面路由模块，各自使用独立令牌
 - `GET /swagger/index.html` 返回 `{"url": "/docs"}`，兼容原 Go 契约
 
 ## 鉴权
@@ -252,7 +252,7 @@ Control Plane 启动时注册每日统计任务，每分钟检查一次，在北
 
 - [ZenTao-MCP 手动部署](zentao-mcp-deployment.md)：已发布镜像、配置示例、直接 Compose 启动、多项目端口和网络排查。
 
-需求分析的阶段审核及拒绝后的只读规则见 [需求分析审核规则](requirement-analysis-review.md)。
+需求分析的阶段审核及拒绝后的只读规则见 [需求分析审核规则](requirement-analysis-review.md)。需求评审是提示性首阶段，不阻断材料整理，见 [ADR 0018](adr/0018-requirement-review-advisory.md)。
 
 需求在线图文编辑与正文文件契约见[需求富文本正文](requirement-rich-text.md)。
 

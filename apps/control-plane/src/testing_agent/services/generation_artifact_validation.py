@@ -133,6 +133,7 @@ async def validate_generation_artifact(
         raise dynamic_error(ErrBadRequest, "阶段产物不能为空")
     if kind == "requirement_analysis":
         artifact_kind = {
+            "requirement_review": "requirement_review",
             "extracting_text": "document_extraction",
         }.get(stage)
         if artifact_kind is None:

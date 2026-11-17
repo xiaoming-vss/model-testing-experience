@@ -48,7 +48,15 @@ function ApiConfigRuleList({ title, rules, emptyText }: { title: string; rules: 
   )
 }
 
-export function ApiConfigDiagramView({ content, defaultCollapsed = false }: { content: string; defaultCollapsed?: boolean }) {
+export function ApiConfigDiagramView({
+  content,
+  defaultCollapsed = false,
+  showRules = false,
+}: {
+  content: string
+  defaultCollapsed?: boolean
+  showRules?: boolean
+}) {
   const diagramData = useMemo(() => normalizeApiConfigCases(content), [content])
   const [collapsedCaseKeys, setCollapsedCaseKeys] = useState<Set<string>>(
     () => new Set(defaultCollapsed ? diagramData?.cases.map((apiCase) => apiCase.key) : []),
@@ -66,8 +74,8 @@ export function ApiConfigDiagramView({ content, defaultCollapsed = false }: { co
     <div className="api-config-visual-view">
       <div className="api-config-visual-stats">
         <Tag color="blue">接口 {diagramData.cases.length}</Tag>
-        <Tag color="cyan">提取 {diagramData.totalExtractRules}</Tag>
-        <Tag color="purple">断言 {diagramData.totalAssertRules}</Tag>
+        {showRules ? <Tag color="cyan">提取 {diagramData.totalExtractRules}</Tag> : null}
+        {showRules ? <Tag color="purple">断言 {diagramData.totalAssertRules}</Tag> : null}
         <Tag color="green">认证头 {diagramData.authHeaderCount}</Tag>
       </div>
       <div className="api-config-visual-chain">
@@ -108,9 +116,9 @@ export function ApiConfigDiagramView({ content, defaultCollapsed = false }: { co
                     {apiCase.usedVariables.map((variable) => (
                       <Tag key={`used-${variable}`} color="gold">使用 {variable}</Tag>
                     ))}
-                    {apiCase.extractedVariables.map((variable) => (
+                    {showRules ? apiCase.extractedVariables.map((variable) => (
                       <Tag key={`extract-${variable}`} color="success">提取 {variable}</Tag>
-                    ))}
+                    )) : null}
                     {apiCase.usedVariables.length === 0 && apiCase.extractedVariables.length === 0 ? (
                       <span className="api-config-visual-muted">无变量依赖</span>
                     ) : null}
@@ -121,10 +129,10 @@ export function ApiConfigDiagramView({ content, defaultCollapsed = false }: { co
                     <ApiConfigPreviewField label="Body" value={apiCase.body} />
                     <ApiConfigPreviewField label="Response" value={apiCase.response} />
                   </div>
-                  <div className="api-config-visual-rules">
+                  {showRules ? <div className="api-config-visual-rules">
                     <ApiConfigRuleList title="提取规则" rules={apiCase.extractRules} emptyText="暂无提取规则" />
                     <ApiConfigRuleList title="断言规则" rules={apiCase.assertRules} emptyText="暂无断言规则" />
-                  </div>
+                  </div> : null}
                 </div>
               ) : null}
             </article>
@@ -143,5 +151,5 @@ export function ApiCandidateResultView({ content }: { content: string }) {
     return <div className="ai-task-run-result-popover-empty">当前候选结果无法解析为 API 用例</div>
   }
 
-  return <ApiConfigDiagramView content={content} defaultCollapsed />
+  return <ApiConfigDiagramView content={content} defaultCollapsed showRules />
 }

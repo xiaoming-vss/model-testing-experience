@@ -9,7 +9,8 @@
 | 前端 | [CONTEXT](docs/studio/CONTEXT.md) | `docs/studio/adr/`、[项目说明](docs/studio/README.md) |
 | API/UI Worker | — | [项目说明](docs/api-ui-worker/README.md) |
 | 集成 Worker | [CONTEXT](docs/integration-worker/CONTEXT.md) | [项目说明](docs/integration-worker/README.md)、[控制面 ADR 0006](docs/control-plane/adr/0006-independent-integration-execution.md) |
+| 性能 Worker | [CONTEXT](docs/perf-worker/CONTEXT.md) | [项目说明](docs/perf-worker/README.md)、[ADR 0001](docs/perf-worker/adr/0001-independent-perf-worker.md)、[ADR 0002](docs/perf-worker/adr/0002-control-plane-poll-mode.md) |
 
 ADR 目录按需创建，不预先建立占位文件；各项目的 ADR 编号相互独立。领域术语和决策的记录规则见 [领域文档规范](docs/agents/domain.md)。
 
-四个后端项目共用[通用后端开发规则](docs/agents/backend-development.md)，各项目补充规则与验证入口由该文档导航；控制面的 Web 和数据库要求仅适用于控制面。
+五个后端项目共用[通用后端开发规则](docs/agents/backend-development.md)，各项目补充规则与验证入口由该文档导航；控制面的 Web 和数据库要求仅适用于控制面。

@@ -1,6 +1,7 @@
 """Stage editors validate using the same artifact contracts as generation."""
 
 import json
+from pathlib import Path
 
 import pytest
 from support.ai_execution import AsyncSessionAdapter  # noqa: F401
@@ -26,6 +27,31 @@ async def test_requirement_artifact_requires_its_contract(db):  # noqa: F811
     with pytest.raises(AppError):
         await validate_generation_artifact(
             repository, "requirement_analysis", "extracting_text", "{}", {}
+        )
+
+
+async def test_requirement_review_artifact_is_validated_without_a_gate(db):  # noqa: F811
+    repository = AiGenerateTaskRepository(AsyncSessionAdapter(db))
+    review = json.loads(
+        (Path(__file__).parent / "fixtures/requirement_review/blocked.example.json").read_text()
+    )
+    content, format_ = await validate_generation_artifact(
+        repository,
+        "requirement_analysis",
+        "requirement_review",
+        json.dumps(review),
+        {},
+    )
+    assert format_ == "json"
+    assert json.loads(content)["reviewStatus"] == "blocked"
+    review["reviewStatus"] = "passed"
+    with pytest.raises(AppError):
+        await validate_generation_artifact(
+            repository,
+            "requirement_analysis",
+            "requirement_review",
+            json.dumps(review),
+            {},
         )
 
 

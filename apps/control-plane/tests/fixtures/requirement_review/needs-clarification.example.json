@@ -1,0 +1,103 @@
+{
+  "schemaVersion": "1.0",
+  "artifactType": "requirement_review",
+  "reviewStatus": "needs_clarification",
+  "summary": {
+    "scope": "会员积分兑换需求 v0.3，2026-11-16 评审",
+    "materialsReviewed": ["会员积分兑换 PRD.docx"],
+    "confirmedFacts": ["用户可以使用积分兑换优惠券"],
+    "workingAssumptions": ["积分兑换成功后不可撤销"],
+    "hypothesesToVerify": ["积分不足时是否允许部分兑换"],
+    "inputGaps": ["缺少积分有效期和退款后的积分处理说明"]
+  },
+  "issues": [
+    {
+      "id": "RR-01",
+      "topic": "积分不足时的兑换行为",
+      "type": "ambiguity",
+      "severity": "major",
+      "evidence": [
+        {
+          "sourceName": "会员积分兑换 PRD.docx",
+          "locator": "2.3 兑换规则 / 第 4 段",
+          "quote": "积分不足时按可用积分兑换"
+        }
+      ],
+      "impact": "开发和测试无法确定是部分兑换、拒绝兑换，还是扣除全部积分。",
+      "question": "积分不足时是允许部分兑换，还是整单拒绝？",
+      "suggestedOwner": "product",
+      "nextAction": "产品补充积分不足场景的兑换规则和提示文案。",
+      "verifyMethod": "analysis",
+      "failureMode": "misinterpret"
+    },
+    {
+      "id": "RR-02",
+      "topic": "积分有效期文案",
+      "type": "weak_ac",
+      "severity": "minor",
+      "evidence": [
+        {
+          "sourceName": "会员积分兑换 PRD.docx",
+          "locator": "2.5 积分展示",
+          "quote": "积分有效期展示要友好"
+        }
+      ],
+      "impact": "验收时对“友好”的理解可能不一致，但不影响兑换主流程。",
+      "question": "积分有效期需要展示成什么格式？",
+      "suggestedOwner": "product",
+      "nextAction": "补充积分有效期的展示格式示例。",
+      "verifyMethod": "inspection"
+    }
+  ],
+  "coverage": {
+    "structure": [
+      { "name": "background", "status": "present" },
+      { "name": "goal", "status": "present" },
+      { "name": "stories", "status": "present" },
+      { "name": "features", "status": "present" },
+      { "name": "nfr", "status": "absent" },
+      { "name": "boundary", "status": "thin" },
+      { "name": "ac", "status": "thin" },
+      { "name": "kpi", "status": "thin" },
+      { "name": "dependencies", "status": "present" },
+      { "name": "timeline", "status": "absent" },
+      { "name": "prototype", "status": "present" }
+    ],
+    "qualityCharacteristics": [
+      { "name": "unambiguous", "status": "fail", "issueIds": ["RR-01", "RR-02"] },
+      { "name": "singular", "status": "pass", "issueIds": [] },
+      { "name": "complete", "status": "fail", "issueIds": ["RR-01"] },
+      { "name": "verifiable", "status": "fail", "issueIds": ["RR-02"] },
+      { "name": "necessary", "status": "pass", "issueIds": [] },
+      { "name": "consistent", "status": "pass", "issueIds": [] }
+    ],
+    "smells": [
+      { "type": "vague", "quote": "积分不足时按可用积分兑换", "issueId": "RR-01" },
+      { "type": "subjective", "quote": "积分有效期展示要友好", "issueId": "RR-02" }
+    ],
+    "behavioralStates": [
+      { "area": "state", "status": "covered", "note": "兑换成功和失败状态有描述" },
+      { "area": "decision", "status": "gap", "note": "积分不足时的判定分支未定义" },
+      { "area": "time", "status": "gap", "note": "未说明积分有效期的计算时点" },
+      { "area": "failure", "status": "covered", "note": "兑换接口失败有提示" },
+      { "area": "ux", "status": "covered", "note": "兑换入口和结果页有描述" }
+    ],
+    "traceability": [
+      {
+        "kind": "rule_without_ac",
+        "status": "fail",
+        "note": "积分不足规则没有对应验收标准",
+        "issueId": "RR-01"
+      },
+      { "kind": "ac_without_rule", "status": "pass", "note": "验收标准都能追溯到规则" },
+      { "kind": "goal_without_feature", "status": "pass", "note": "目标都有对应功能" },
+      { "kind": "feature_without_goal", "status": "pass", "note": "功能都能追溯到目标" }
+    ],
+    "inputAudit": {
+      "materials": ["会员积分兑换 PRD.docx"],
+      "missing": ["积分有效期说明", "退款后的积分处理说明"],
+      "recency": "PRD 为本次上传版本",
+      "comparability": "只评审文档内部一致性"
+    }
+  }
+}

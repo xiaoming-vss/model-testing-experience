@@ -18,6 +18,7 @@ from testing_agent_ai_worker.skill_names import (
     DETAILED_CASES_SKILL,
     MATERIAL_SKILL,
     REPOSITORY_PROFILE_SKILL,
+    REQUIREMENT_REVIEW_SKILL,
     SCOPE_SKILL,
     TEST_POINTS_SKILL,
     UI_YAML_SKILL,
@@ -25,6 +26,7 @@ from testing_agent_ai_worker.skill_names import (
 from testing_agent_ai_worker.tasks.requirement_analysis.document_type import extraction_skill
 
 REQUIREMENT_SKILLS = {
+    "requirement_review": REQUIREMENT_REVIEW_SKILL,
     "extracting_text": MATERIAL_SKILL,
 }
 FUNCTIONAL_SKILLS = {

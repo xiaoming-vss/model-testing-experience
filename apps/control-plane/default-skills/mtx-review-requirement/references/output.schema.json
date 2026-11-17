@@ -1,0 +1,416 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:review-requirement:1.0",
+  "title": "Requirement review report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "artifactType",
+    "reviewStatus",
+    "summary",
+    "issues",
+    "coverage"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "artifactType": {
+      "const": "requirement_review"
+    },
+    "reviewStatus": {
+      "enum": [
+        "passed",
+        "needs_clarification",
+        "blocked"
+      ]
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/issue"
+      }
+    },
+    "coverage": {
+      "$ref": "#/$defs/coverage"
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "texts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/text"
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "materialsReviewed",
+        "confirmedFacts",
+        "workingAssumptions",
+        "hypothesesToVerify",
+        "inputGaps"
+      ],
+      "properties": {
+        "scope": {
+          "$ref": "#/$defs/text"
+        },
+        "materialsReviewed": {
+          "$ref": "#/$defs/texts"
+        },
+        "confirmedFacts": {
+          "$ref": "#/$defs/texts"
+        },
+        "workingAssumptions": {
+          "$ref": "#/$defs/texts"
+        },
+        "hypothesesToVerify": {
+          "$ref": "#/$defs/texts"
+        },
+        "inputGaps": {
+          "$ref": "#/$defs/texts"
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceName",
+        "locator",
+        "quote"
+      ],
+      "properties": {
+        "sourceName": {
+          "$ref": "#/$defs/text"
+        },
+        "locator": {
+          "$ref": "#/$defs/text"
+        },
+        "quote": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "topic",
+        "type",
+        "severity",
+        "evidence",
+        "impact",
+        "question",
+        "suggestedOwner",
+        "nextAction",
+        "verifyMethod"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "topic": {
+          "$ref": "#/$defs/text"
+        },
+        "type": {
+          "enum": [
+            "conflict",
+            "ambiguity",
+            "missing",
+            "weak_ac",
+            "untestable",
+            "inconsistency",
+            "input_gap"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "blocker",
+            "major",
+            "minor"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        },
+        "impact": {
+          "$ref": "#/$defs/text"
+        },
+        "question": {
+          "$ref": "#/$defs/text"
+        },
+        "suggestedOwner": {
+          "enum": [
+            "product",
+            "dev",
+            "qa"
+          ]
+        },
+        "nextAction": {
+          "$ref": "#/$defs/text"
+        },
+        "verifyMethod": {
+          "enum": [
+            "test",
+            "analysis",
+            "demonstration",
+            "inspection"
+          ]
+        },
+        "failureMode": {
+          "enum": [
+            "misinterpret",
+            "missed_rule",
+            "no_oracle",
+            "conflict_escape"
+          ]
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "structure",
+        "qualityCharacteristics",
+        "smells",
+        "behavioralStates",
+        "traceability",
+        "inputAudit"
+      ],
+      "properties": {
+        "structure": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/structure"
+          }
+        },
+        "qualityCharacteristics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/quality"
+          }
+        },
+        "smells": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/smell"
+          }
+        },
+        "behavioralStates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/behavioral"
+          }
+        },
+        "traceability": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/traceability"
+          }
+        },
+        "inputAudit": {
+          "$ref": "#/$defs/inputAudit"
+        }
+      }
+    },
+    "structure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "status"
+      ],
+      "properties": {
+        "name": {
+          "enum": [
+            "background",
+            "goal",
+            "stories",
+            "features",
+            "nfr",
+            "boundary",
+            "ac",
+            "kpi",
+            "dependencies",
+            "timeline",
+            "prototype"
+          ]
+        },
+        "status": {
+          "enum": [
+            "present",
+            "thin",
+            "absent"
+          ]
+        }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "status",
+        "issueIds"
+      ],
+      "properties": {
+        "name": {
+          "enum": [
+            "unambiguous",
+            "singular",
+            "complete",
+            "verifiable",
+            "necessary",
+            "consistent"
+          ]
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "issueIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        }
+      }
+    },
+    "smell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "quote",
+        "issueId"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "vague",
+            "optional",
+            "subjective",
+            "loophole",
+            "unbounded",
+            "compound",
+            "tbd"
+          ]
+        },
+        "quote": {
+          "$ref": "#/$defs/text"
+        },
+        "issueId": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "behavioral": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "area",
+        "status",
+        "note"
+      ],
+      "properties": {
+        "area": {
+          "enum": [
+            "state",
+            "decision",
+            "time",
+            "failure",
+            "ux"
+          ]
+        },
+        "status": {
+          "enum": [
+            "covered",
+            "gap"
+          ]
+        },
+        "note": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "traceability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "status",
+        "note"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "rule_without_ac",
+            "ac_without_rule",
+            "goal_without_feature",
+            "feature_without_goal"
+          ]
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "note": {
+          "$ref": "#/$defs/text"
+        },
+        "issueId": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "inputAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "materials",
+        "missing",
+        "recency",
+        "comparability"
+      ],
+      "properties": {
+        "materials": {
+          "$ref": "#/$defs/texts"
+        },
+        "missing": {
+          "$ref": "#/$defs/texts"
+        },
+        "recency": {
+          "$ref": "#/$defs/text"
+        },
+        "comparability": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    }
+  }
+}

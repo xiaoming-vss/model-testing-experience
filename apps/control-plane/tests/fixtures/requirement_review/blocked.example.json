@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "1.0",
+  "artifactType": "requirement_review",
+  "reviewStatus": "blocked",
+  "summary": {
+    "scope": "PRD v1.2 下单流程，2026-11-16 评审，时间盒 1 天",
+    "materialsReviewed": ["PRD.docx"],
+    "confirmedFacts": ["用户可以在商品详情页点击立即购买", "订单金额按商品单价乘以数量计算"],
+    "workingAssumptions": ["库存不足指可用库存为 0"],
+    "hypothesesToVerify": ["支付前是否会重新校验库存"],
+    "inputGaps": ["缺少库存不足时的接口错误码和订单状态说明"]
+  },
+  "issues": [
+    {
+      "id": "RR-01",
+      "topic": "库存不足时的下单行为",
+      "type": "conflict",
+      "severity": "blocker",
+      "evidence": [
+        {
+          "sourceName": "PRD.docx",
+          "locator": "3.2 下单流程 / 第 12 段",
+          "quote": "库存不足时仍可提交订单"
+        },
+        {
+          "sourceName": "PRD.docx",
+          "locator": "4.1 接口约定 / 第 3 段",
+          "quote": "库存不足返回 400，不创建订单"
+        }
+      ],
+      "impact": "实现和测试无法确定库存不足时是创建订单还是拒绝请求，核心流程可能返工。",
+      "question": "库存不足时到底能不能提交订单？提交后订单状态和接口返回是什么？",
+      "suggestedOwner": "product",
+      "nextAction": "产品确认库存不足场景的业务规则，并补充接口返回和订单状态。",
+      "verifyMethod": "analysis",
+      "failureMode": "conflict_escape"
+    }
+  ],
+  "coverage": {
+    "structure": [
+      { "name": "background", "status": "present" },
+      { "name": "goal", "status": "present" },
+      { "name": "stories", "status": "thin" },
+      { "name": "features", "status": "present" },
+      { "name": "nfr", "status": "absent" },
+      { "name": "boundary", "status": "thin" },
+      { "name": "ac", "status": "thin" },
+      { "name": "kpi", "status": "absent" },
+      { "name": "dependencies", "status": "absent" },
+      { "name": "timeline", "status": "absent" },
+      { "name": "prototype", "status": "present" }
+    ],
+    "qualityCharacteristics": [
+      { "name": "unambiguous", "status": "fail", "issueIds": ["RR-01"] },
+      { "name": "singular", "status": "pass", "issueIds": [] },
+      { "name": "complete", "status": "fail", "issueIds": ["RR-01"] },
+      { "name": "verifiable", "status": "pass", "issueIds": [] },
+      { "name": "necessary", "status": "pass", "issueIds": [] },
+      { "name": "consistent", "status": "fail", "issueIds": ["RR-01"] }
+    ],
+    "smells": [
+      { "type": "vague", "quote": "库存不足时仍可提交订单", "issueId": "RR-01" },
+      { "type": "tbd", "quote": "库存处理后续补充", "issueId": "RR-01" }
+    ],
+    "behavioralStates": [
+      { "area": "state", "status": "gap", "note": "未说明库存不足提交后订单处于什么状态" },
+      { "area": "decision", "status": "covered", "note": "是否允许提交由库存状态决定" },
+      { "area": "time", "status": "gap", "note": "未说明库存校验发生在提交前还是支付前" },
+      { "area": "failure", "status": "gap", "note": "缺少库存服务失败时的降级行为" },
+      { "area": "ux", "status": "covered", "note": "提交按钮和错误提示位置有描述" }
+    ],
+    "traceability": [
+      {
+        "kind": "rule_without_ac",
+        "status": "fail",
+        "note": "库存不足规则没有可判定的验收标准",
+        "issueId": "RR-01"
+      },
+      { "kind": "ac_without_rule", "status": "pass", "note": "现有验收标准都能追溯到规则" },
+      { "kind": "goal_without_feature", "status": "pass", "note": "目标都有对应功能" },
+      { "kind": "feature_without_goal", "status": "pass", "note": "功能都能追溯到目标" }
+    ],
+    "inputAudit": {
+      "materials": ["PRD.docx"],
+      "missing": ["库存不足时的接口错误码", "订单状态定义"],
+      "recency": "PRD 为本次上传版本",
+      "comparability": "同一 PRD 内部对库存不足行为的描述不一致"
+    }
+  }
+}

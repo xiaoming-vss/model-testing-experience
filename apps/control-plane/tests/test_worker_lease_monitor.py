@@ -33,11 +33,11 @@ async def test_sweep_bounds_transactions_and_continues_after_domain_failure(monk
     monkeypatch.setattr(worker_lease_monitor.WorkerTaskService, "expire_leases", expire)
     monkeypatch.setattr(integration_lifecycle, "lifecycle", lambda session: integration)
     await worker_lease_monitor.sweep_once(factory)
-    assert calls == ["ai", *(["api"] * 5), "ui"]
-    assert len(sessions) == 8 and all(session.close.await_count == 1 for session in sessions)
+    assert calls == ["ai", *(["api"] * 5), "ui", "perf"]
+    assert len(sessions) == 9 and all(session.close.await_count == 1 for session in sessions)
     integration.expire.assert_awaited_once()
     assert "RuntimeError" in caplog.text and "secret must not be logged" not in caplog.text
-    assert sessions[-1].commit.await_count == 1
+    assert sessions[-2].commit.await_count == 1
     assert len(caplog.records) == 1
     assert "for ai" in caplog.text
     record = caplog.records[0]

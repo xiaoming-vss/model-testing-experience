@@ -1,0 +1,65 @@
+specVersion: "1.0"
+runId: fixture-run-001
+projectId: proj-001
+case:
+  name: 登录并查询个人信息
+  data:
+    - name: users
+      source: users.csv
+      strategy: unique_per_iteration
+      onExhausted: cycle
+  steps:
+    - name: login
+      method: POST
+      path: /v1/login
+      headers:
+        Content-Type: application/json
+        X-Tenant: "{{env.tenant}}"
+      body:
+        username: "{{data.username}}"
+        password: "{{data.password}}"
+      checks:
+        - type: status
+          op: eq
+          value: 200
+        - type: json
+          path: code
+          op: eq
+          value: 0
+      extract:
+        - name: token
+          from: json
+          path: data.token
+    - name: profile
+      method: GET
+      path: /v1/profile
+      headers:
+        Authorization: "Bearer {{var.token}}"
+      checks:
+        - type: status
+          op: eq
+          value: 200
+  load:
+    model: arrival_rate
+    rate: 2
+    timeUnit: "1s"
+    duration: "2s"
+    preAllocatedVUs: 2
+    maxVUs: 5
+  acceptance:
+    source: user_confirmed
+    confirmed: true
+    criteria:
+      http_req_failed: ["rate<0.01"]
+      http_req_duration: ["p(95)<500", "p(99)<1000"]
+environment:
+  baseUrl: "http://127.0.0.1:18080"
+  variables:
+    tenant: perf-tenant
+remoteWrite:
+  url: "http://127.0.0.1:19090/api/v1/write"
+  pushInterval: "1s"
+  trendStats: "p(95),p(99),avg,min,max"
+limits:
+  maxDurationSeconds: 30
+  stopGraceSeconds: 5

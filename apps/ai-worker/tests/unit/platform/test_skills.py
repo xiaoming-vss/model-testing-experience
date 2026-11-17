@@ -20,6 +20,7 @@ class SkillTests(unittest.TestCase):
 
     def test_functional_stages_fetch_only_the_matching_mtx_skill(self):
         stages = (
+            ("requirement_analysis", "requirement_review", "mtx-review-requirement"),
             ("requirement_analysis", "extracting_text", "mtx-organize-requirement-material"),
             (
                 "functional_case_generate",
@@ -56,7 +57,7 @@ class SkillTests(unittest.TestCase):
             "test_order_graph",
         ]:
             if kind == "requirement_analysis":
-                for stage in ["extracting_text"]:
+                for stage in ["requirement_review", "extracting_text"]:
                     names.update(
                         required_skills(
                             self.task(task_type=kind, checkpoint_enabled=True, current_stage=stage)
@@ -71,7 +72,7 @@ class SkillTests(unittest.TestCase):
         )
         self.assertEqual(required_skills(task), ["mtx-analyze-test-case-relations"])
         names.update(required_skills(task))
-        self.assertEqual(11, len(names))
+        self.assertEqual(12, len(names))
         self.assertEqual(
             ["mtx-generate-traceable-test-points"],
             required_skills(
