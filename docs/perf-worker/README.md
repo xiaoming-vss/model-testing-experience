@@ -92,7 +92,8 @@ POST /tasks/{taskId}/completed            回传状态、outcome、summary、日
 参考 [tests/fixtures/case.yaml](../../apps/perf-worker/tests/fixtures/case.yaml) 和 [snapshot.json](../../apps/perf-worker/tests/fixtures/snapshot.json)。要点：
 
 - `specVersion` 当前支持 `"1.0"`，必须显式加引号。
-- `load.model` 只允许 `vus`、`arrival_rate`、`request_rate` 之一；`request_rate` 只支持单步骤迭代。
+- `load.model` 只允许 `vus`、`arrival_rate`、`request_rate`、`staged_vus` 之一；`request_rate` 只支持单步骤迭代。
+- `staged_vus` 使用 `stages` 列表（`target`、`ramp`、`hold`）和可选 `finalDown` 编译为 k6 `ramping-vus`；`profile` 仅为模板标记，不参与执行。
 - `acceptance.source` 为 `user_confirmed | model_suggested | missing`；模型建议不能标记 `confirmed=true`。
 - `data` 支持 `source` 文件或内联 `rows`；列名跨数据集必须唯一。
 - 模板占位符支持 `{{data.x}}`、`{{var.x}}`、`{{env.x}}` 以及 `{{uuid}}`、`{{timestamp}}`、`{{iteration}}`、`{{vu}}`。

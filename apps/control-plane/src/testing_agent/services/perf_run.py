@@ -39,6 +39,7 @@ from testing_agent.schemas.perf_run import (
     PerfRunResponse,
     PerfRunSummaryResponse,
 )
+from testing_agent.schemas.perf_suite_run import PerfSuiteRunCreate
 from testing_agent.services.api_request_render import render_template_string
 from testing_agent.services.environment_access import authorized_environment_vars
 from testing_agent.services.execution_secrets import redact
@@ -144,11 +145,7 @@ class PerfRunService:
         return {
             "connectionId": connection.connection_id,
             "name": connection.name,
-            "queryUrl": connection.query_url,
             "remoteWriteUrl": connection.remote_write_url,
-            "grafanaUrl": connection.grafana_url,
-            "grafanaDashboardUid": connection.grafana_dashboard_uid,
-            "defaultFilters": connection.default_filters_json or {},
         }
 
     async def _data_files(self, case: PerfCase) -> list[dict[str, Any]]:
@@ -180,7 +177,7 @@ class PerfRunService:
         self,
         user_id: str,
         case: PerfCase,
-        body: PerfRunCreate,
+        body: PerfRunCreate | PerfSuiteRunCreate,
         run_id: str,
     ) -> tuple[dict[str, Any], dict[str, Any], str, list[str], list[dict[str, Any]]]:
         if not case.enabled:
@@ -297,14 +294,14 @@ class PerfRunService:
         )
         return response.model_dump(by_alias=True, mode="json")
 
-    async def create(self, user_id: str, case_id: str, body: PerfRunCreate) -> dict[str, Any]:
-        case = await self.cases.get_case(case_id)
-        if case is None:
-            raise ErrPerfCaseNotFound()
-        await require_project_id(
-            self.repository.session, user_id, case.project_id, action="execute"
-        )
-        run_id = new_id()
+    async def prepare(
+        self,
+        user_id: str,
+        case: PerfCase,
+        body: PerfRunCreate | PerfSuiteRunCreate,
+        run_id: str,
+    ) -> PerfRun:
+        """Freeze one case run without queueing its Worker task."""
         public_spec, _spec, private_payload, _secrets, data_files = await self._build_spec(
             user_id, case, body, run_id
         )
@@ -312,7 +309,7 @@ class PerfRunService:
         connection = await self.monitoring.get_connection(body.monitoring_connection_id)
         if environment is None or connection is None:
             raise ErrPerfRunEnvironmentMismatch()
-        run = PerfRun(
+        return PerfRun(
             run_id=run_id,
             case_id=case.case_id,
             project_id=case.project_id,
@@ -331,6 +328,8 @@ class PerfRunService:
             data_files_json=data_files,
             private_payload=private_payload,
         )
+
+    def enqueue(self, run_id: str) -> WorkerTask:
         task = WorkerTask(
             domain="perf",
             task_id=new_id(),
@@ -338,8 +337,19 @@ class PerfRunService:
             run_id=run_id,
             status="pending",
         )
-        self.repository.add(run)
         self.repository.session.add(task)
+        return task
+
+    async def create(self, user_id: str, case_id: str, body: PerfRunCreate) -> dict[str, Any]:
+        case = await self.cases.get_case(case_id)
+        if case is None:
+            raise ErrPerfCaseNotFound()
+        await require_project_id(
+            self.repository.session, user_id, case.project_id, action="execute"
+        )
+        run = await self.prepare(user_id, case, body, new_id())
+        self.repository.add(run)
+        self.enqueue(run.run_id)
         await self.repository.commit()
         await self.repository.refresh(run)
         return self._detail(run)
@@ -373,19 +383,32 @@ class PerfRunService:
         return read_private_spec(run, self.credential_cipher)
 
     async def stop(self, user_id: str, run_id: str) -> dict[str, Any]:
+        from testing_agent.services.perf_suite_run import (
+            on_child_completed_after_commit,
+            stop_suite_for_child,
+        )
+
+        probe = await self.repository.get_run(run_id)
+        if probe is None:
+            raise ErrPerfRunNotFound()
+        await require_project_id(
+            self.repository.session, user_id, probe.project_id, action="execute"
+        )
+        if probe.trigger_user_id != user_id:
+            raise ErrForbidden()
+        if probe.status in PERF_RUN_CLOSED_STATUSES:
+            return {"status": probe.status}
+        # Lock the suite before its child run so suite-level and child-level stops
+        # always acquire parent/child rows in the same order.
+        await stop_suite_for_child(self.repository.session, run_id)
         run = await self.repository.get_run(run_id, for_update=True)
         if run is None:
             raise ErrPerfRunNotFound()
-        await require_project_id(self.repository.session, user_id, run.project_id, action="execute")
-        if run.trigger_user_id != user_id:
-            raise ErrForbidden()
         task = await self.repository.session.scalar(
             select(WorkerTask)
             .where(WorkerTask.domain == "perf", WorkerTask.run_id == run_id)
             .with_for_update()
         )
-        if run.status in PERF_RUN_CLOSED_STATUSES:
-            return {"status": run.status}
         now = datetime.now(UTC)
         if run.status == PerfRunStatus.QUEUED.value and (
             task is None or task.status in {"pending"}
@@ -402,6 +425,8 @@ class PerfRunService:
             if task is not None:
                 task.status = "stopping"
         await self.repository.commit()
+        if run.status == PerfRunStatus.CANCELED.value:
+            await on_child_completed_after_commit(self.repository.session, run_id)
         return {"status": run.status}
 
 

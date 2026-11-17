@@ -258,8 +258,35 @@ class RequestRateLoad(WireModel):
         return self
 
 
+class StagedVusStage(WireModel):
+    target: int = Field(ge=1)
+    ramp: str = "0s"
+    hold: str = "0s"
+
+    @field_validator("ramp", "hold")
+    @classmethod
+    def _non_blank_duration(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("阶段时长不能为空白")
+        return value
+
+
+class StagedVusLoad(WireModel):
+    model: Literal["staged_vus"] = "staged_vus"
+    profile: Literal["step", "spike", "custom"] = "custom"
+    stages: list[StagedVusStage] = Field(min_length=1)
+    final_down: str = "0s"
+
+    @field_validator("final_down")
+    @classmethod
+    def _non_blank_final_down(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("finalDown 不能为空白")
+        return value
+
+
 LoadSpec = Annotated[
-    VusLoad | ArrivalRateLoad | RequestRateLoad,
+    VusLoad | ArrivalRateLoad | RequestRateLoad | StagedVusLoad,
     Field(discriminator="model"),
 ]
 

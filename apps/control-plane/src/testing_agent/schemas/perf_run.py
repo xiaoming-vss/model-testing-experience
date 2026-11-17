@@ -18,11 +18,7 @@ class PerfRunCreate(BaseModel):
 class PerfRunMonitoringSnapshot(BaseModel):
     connection_id: str
     name: str
-    query_url: str
     remote_write_url: str
-    grafana_url: str = ""
-    grafana_dashboard_uid: str = ""
-    default_filters: dict[str, JsonValue] = Field(default_factory=dict)
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 

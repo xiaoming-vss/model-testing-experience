@@ -46,6 +46,14 @@ class PerfRunRepository(ResourceRepository):
         )
         return rows, int(total or 0)
 
+    async def list_by_ids(self, run_ids: list[str]) -> dict[str, PerfRun]:
+        if not run_ids:
+            return {}
+        rows = list(
+            (await self.session.scalars(select(PerfRun).where(PerfRun.run_id.in_(run_ids)))).all()
+        )
+        return {row.run_id: row for row in rows}
+
     def add(self, run: PerfRun) -> None:
         self.session.add(run)
 

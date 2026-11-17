@@ -25,8 +25,8 @@ _Avoid_: 用例 JSON、脚本配置
 _Avoid_: 生成脚本、模板代码（指用户可编辑代码时）
 
 **监控接入**：
-平台保存的 Prometheus/Grafana 连接与凭据；执行时选择一个，k6 指标写入该接入的 Prometheus，平台后端用读凭据查询。
-_Avoid_: 监控配置、Grafana 连接（只指 Grafana 时）
+平台保存的 Prometheus Remote Write 连接与写入凭据；执行时选择一个，k6 指标写入该接入的 Prometheus。本期平台不保存查询凭据，也不提供查询或外部看板入口。
+_Avoid_: 监控配置、监控看板连接
 
 **执行结果**：
 Worker 回传的事实，包含生命周期状态、k6 退出码、阈值结果、summary、数据缺失标记和脱敏日志尾部；达标、目标负载未达和监控数据缺失由平台判定。

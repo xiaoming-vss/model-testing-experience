@@ -14,7 +14,7 @@
 
 - Pydantic 模型使用 `extra="forbid"` 和 camelCase alias；未知字段必须拒绝。
 - `specVersion` 只接受已声明版本；新增版本时同步更新编译器和模板版本。
-- 负载模型只允许 `vus`、`arrival_rate`、`request_rate` 之一；`request_rate` 只支持单步骤迭代。
+- 负载模型只允许 `vus`、`arrival_rate`、`request_rate`、`staged_vus` 之一；`request_rate` 只支持单步骤迭代。`staged_vus` 按 `stages[{target, ramp, hold}]` 编译为 `ramping-vus`，`profile` 仅作展示元数据，不参与执行。
 - 验收标准来源为 `user_confirmed | model_suggested | missing`；模型建议不能 `confirmed=true`，缺少标准时不能携带 criteria。
 - 模板引用在编译期静态校验：数据列、已提取变量、环境变量和内置生成器之外的占位符一律拒绝。
 - 数据文件必须位于运行规格目录内；拒绝路径穿越、重复列名、空数据和超过上限的文件。

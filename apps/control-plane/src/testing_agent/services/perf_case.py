@@ -18,6 +18,7 @@ from testing_agent.core.errors import (
 from testing_agent.core.sid import new_id
 from testing_agent.models.perf_case import PerfCase
 from testing_agent.repositories.perf_case import PerfCaseRepository
+from testing_agent.repositories.perf_suite import PerfSuiteRepository
 from testing_agent.schemas.perf_case import (
     PerfCaseCreate,
     PerfCaseResponse,
@@ -41,10 +42,12 @@ class PerfCaseService:
         *,
         files: StoredFileService,
         deletion: ResourceDeletion | None = None,
+        suites: PerfSuiteRepository | None = None,
     ) -> None:
         self.repository = repository
         self.files = files
         self.deletion = deletion or SqlResourceDeletion()
+        self.suites = suites or PerfSuiteRepository(repository.session)
 
     async def _require_project(self, user_id: str, project_id: str, action: ProjectAction) -> None:
         await require_project_id(self.repository.session, user_id, project_id, action=action)
@@ -113,10 +116,18 @@ class PerfCaseService:
                 f"性能用例引用了未关联的数据文件: {', '.join(missing)}",
             )
 
+    async def _require_suite(self, project_id: str, suite_id: str):
+        suite = await self.suites.get_suite(suite_id)
+        if suite is None or suite.project_id != project_id:
+            raise ErrBadRequest()
+        return suite
+
     def _summary(self, case: PerfCase) -> dict[str, Any]:
         response = PerfCaseSummaryResponse(
             case_id=case.case_id,
             project_id=case.project_id,
+            suite_id=case.suite_id or "",
+            order_no=case.order_no,
             name=case.name,
             description=case.description,
             version=case.version,
@@ -131,6 +142,8 @@ class PerfCaseService:
         response = PerfCaseResponse(
             case_id=case.case_id,
             project_id=case.project_id,
+            suite_id=case.suite_id or "",
+            order_no=case.order_no,
             name=case.name,
             description=case.description,
             yaml=case.yaml,
@@ -148,6 +161,12 @@ class PerfCaseService:
         name = body.name.strip()
         if await self.repository.get_by_project_and_name(project_id, name) is not None:
             raise ErrPerfCaseNameAlreadyUse()
+        suite_id = body.suite_id or None
+        order_no = body.order_no
+        if suite_id is not None:
+            await self._require_suite(project_id, suite_id)
+            if order_no is None:
+                order_no = await self.repository.next_order_no(suite_id)
         parsed = parse_case_yaml(body.yaml)
         case_id = new_id()
         rows = await self._attach_files_async(user_id, project_id, case_id, body.data_file_ids)
@@ -156,6 +175,8 @@ class PerfCaseService:
         case = PerfCase(
             case_id=case_id,
             project_id=project_id,
+            suite_id=suite_id,
+            order_no=order_no or 0,
             name=name,
             description=body.description.strip(),
             yaml=body.yaml,
@@ -222,6 +243,9 @@ class PerfCaseService:
         case.yaml = yaml_text
         if "enabled" in fields and body.enabled is not None:
             case.enabled = body.enabled
+            changed = True
+        if "order_no" in fields and body.order_no is not None:
+            case.order_no = body.order_no
             changed = True
         if changed:
             case.version += 1

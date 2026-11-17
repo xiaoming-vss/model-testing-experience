@@ -20,6 +20,8 @@ class PerfCaseCreate(BaseModel):
     description: str = Field(default="", max_length=512)
     yaml: str = Field(min_length=1)
     data_file_ids: list[str] = Field(default_factory=list, max_length=20)
+    suite_id: str | None = None
+    order_no: int | None = Field(default=None, ge=0)
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
 
@@ -30,6 +32,7 @@ class PerfCaseUpdate(BaseModel):
     yaml: str | None = Field(default=None, min_length=1)
     data_file_ids: list[str] | None = Field(default=None, max_length=20)
     enabled: bool | None = None
+    order_no: int | None = Field(default=None, ge=0)
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
 
@@ -37,6 +40,8 @@ class PerfCaseUpdate(BaseModel):
 class PerfCaseSummaryResponse(BaseModel):
     case_id: str
     project_id: str
+    suite_id: str = ""
+    order_no: int = 0
     name: str
     description: str
     version: int

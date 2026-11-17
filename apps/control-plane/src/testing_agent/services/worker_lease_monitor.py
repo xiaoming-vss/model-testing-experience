@@ -33,6 +33,13 @@ async def sweep_once(session_factory=AsyncSessionLocal) -> None:
                 await asyncio.sleep(0)
         except Exception as exc:
             _log_failure(exc, domain)
+    try:
+        from testing_agent.services.perf_suite_run import suite_run_service
+
+        async with session_factory() as session:
+            await suite_run_service(session).reconcile_active()
+    except Exception as exc:
+        _log_failure(exc, "perf-suite")
 
 
 async def monitor() -> None:

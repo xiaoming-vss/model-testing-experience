@@ -22,6 +22,10 @@ from testing_agent.schemas.workers import WorkerClaimRequest, WorkerTaskEventReq
 from testing_agent.services.execution_secrets import redact
 from testing_agent.services.integration_credentials import IntegrationCredentialCipher
 from testing_agent.services.perf_run import read_private_spec
+from testing_agent.services.perf_suite_run import (
+    on_child_completed_after_commit,
+    on_child_started_after_commit,
+)
 from testing_agent.services.stored_file import StoredFileService
 from testing_agent.services.worker import find_task, parse_event_time
 from testing_agent.services.worker_authorization import authorize_execution
@@ -129,6 +133,7 @@ class PerfWorkerService:
         )
         task.started_at = parsed or now
         await self.repository.commit()
+        await on_child_started_after_commit(self.session, task.run_id)
 
     async def heartbeat(self, task_id: str, worker_id: str) -> dict[str, Any]:
         task = await find_task(self.session, "perf", task_id)
@@ -169,6 +174,7 @@ class PerfWorkerService:
         if task.status in RUN_TERMINAL_STATUSES:
             self._ensure_terminal_worker(task, body.worker_id)
             await self.repository.commit()
+            await on_child_completed_after_commit(self.session, task.run_id)
             return {"taskId": task_id, "status": task.status}
         await authorize_execution(self.session, task)
         ensure_worker_match(task, body.worker_id)
@@ -228,6 +234,7 @@ class PerfWorkerService:
         task.lease_expires_at = now
         task.error_message = error_message
         await self.repository.commit()
+        await on_child_completed_after_commit(self.session, task.run_id)
         return {"taskId": task_id, "status": task_status}
 
     def _map_status(self, body: PerfResultEvent) -> tuple[str, str, str]:

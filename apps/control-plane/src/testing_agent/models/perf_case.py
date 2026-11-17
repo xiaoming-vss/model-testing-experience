@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.mysql import JSON, LONGTEXT
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -13,6 +13,7 @@ class PerfCase(Base):
     __tablename__ = "perf_cases"
     __table_args__ = (
         UniqueConstraint("project_id", "name", name="uk_perf_case_project_name"),
+        Index("idx_perf_cases_suite_order", "suite_id", "order_no"),
         {"comment": "项目性能测试用例及可执行 YAML"},
     )
     id: Mapped[IdPk] = mapped_column(comment="数据库内部主键")
@@ -25,6 +26,16 @@ class PerfCase(Base):
         index=True,
         nullable=False,
         comment="项目业务标识",
+    )
+    suite_id: Mapped[str | None] = mapped_column(
+        String(64),
+        ForeignKey("perf_suites.suite_id", name="fk_perf_cases_suite_id", ondelete="CASCADE"),
+        index=True,
+        nullable=True,
+        comment="所属性能测试集业务标识；空值表示尚未归入测试集",
+    )
+    order_no: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, comment="测试集内串行执行顺序"
     )
     name: Mapped[str] = mapped_column(String(120), nullable=False, comment="用例名称")
     description: Mapped[str] = mapped_column(

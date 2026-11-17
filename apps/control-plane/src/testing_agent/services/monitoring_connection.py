@@ -99,41 +99,14 @@ class MonitoringConnectionService:
             connection.remote_write_auth_type, connection.remote_write_secret_json
         )
 
-    def secret_values(self, connection: MonitoringConnection) -> list[str]:
-        values: list[str] = []
-        for auth_type, secret in (
-            (connection.query_auth_type, connection.query_secret_json),
-            (connection.remote_write_auth_type, connection.remote_write_secret_json),
-        ):
-            if not secret:
-                continue
-            if auth_type == "basic":
-                value = secret.get("password")
-                if value:
-                    values.append(self.credential_cipher.decrypt(str(value)))
-            elif auth_type == "bearer":
-                value = secret.get("token")
-                if value:
-                    values.append(self.credential_cipher.decrypt(str(value)))
-            elif auth_type == "headers":
-                for value in (secret.get("headers") or {}).values():
-                    values.append(self.credential_cipher.decrypt(str(value)))
-        return values
-
     def _response(self, connection: MonitoringConnection) -> dict[str, Any]:
         response = MonitoringConnectionResponse(
             connection_id=connection.connection_id,
             project_id=connection.project_id,
             name=connection.name,
-            query_url=connection.query_url,
             remote_write_url=connection.remote_write_url,
-            query_auth_type=cast(MonitoringAuthType, connection.query_auth_type),
             remote_write_auth_type=cast(MonitoringAuthType, connection.remote_write_auth_type),
-            has_query_credentials=bool(connection.query_secret_json),
             has_remote_write_credentials=bool(connection.remote_write_secret_json),
-            grafana_url=connection.grafana_url,
-            grafana_dashboard_uid=connection.grafana_dashboard_uid,
-            default_filters=connection.default_filters_json or {},
             enabled=connection.enabled,
             created_at=connection.created_at,
             updated_at=connection.updated_at,
@@ -150,15 +123,9 @@ class MonitoringConnectionService:
             connection_id=new_id(),
             project_id=project_id,
             name=body.name,
-            query_url=body.query_url,
             remote_write_url=body.remote_write_url,
-            query_auth_type=body.query_auth.type,
-            query_secret_json=self._encode_auth(body.query_auth),
             remote_write_auth_type=body.remote_write_auth.type,
             remote_write_secret_json=self._encode_auth(body.remote_write_auth),
-            grafana_url=body.grafana_url,
-            grafana_dashboard_uid=body.grafana_dashboard_uid,
-            default_filters_json=body.default_filters,
             enabled=body.enabled,
             created_by=user_id,
         )
@@ -194,24 +161,12 @@ class MonitoringConnectionService:
             ):
                 raise ErrMonitoringConnectionNameAlreadyUse()
             connection.name = name
-        if "query_url" in fields and body.query_url is not None:
-            connection.query_url = body.query_url
         if "remote_write_url" in fields and body.remote_write_url is not None:
             connection.remote_write_url = body.remote_write_url
-        if "query_auth" in fields:
-            auth = body.query_auth or MonitoringAuthRequest()
-            connection.query_auth_type = auth.type
-            connection.query_secret_json = self._encode_auth(auth)
         if "remote_write_auth" in fields:
             auth = body.remote_write_auth or MonitoringAuthRequest()
             connection.remote_write_auth_type = auth.type
             connection.remote_write_secret_json = self._encode_auth(auth)
-        if "grafana_url" in fields and body.grafana_url is not None:
-            connection.grafana_url = body.grafana_url
-        if "grafana_dashboard_uid" in fields and body.grafana_dashboard_uid is not None:
-            connection.grafana_dashboard_uid = body.grafana_dashboard_uid
-        if "default_filters" in fields and body.default_filters is not None:
-            connection.default_filters_json = body.default_filters
         if "enabled" in fields and body.enabled is not None:
             connection.enabled = body.enabled
         connection.updated_at = datetime.now(UTC)

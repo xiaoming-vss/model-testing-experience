@@ -70,6 +70,17 @@ async def _perf_runs(session, condition):
         await _erase(session, m.PerfRun, m.PerfRun.run_id.in_(ids))
 
 
+async def _perf_suite_runs(session, condition):
+    ids = list(
+        await session.scalars(
+            select(m.PerfSuiteRun.suite_run_id).where(condition).with_for_update()
+        )
+    )
+    if ids:
+        await _erase(session, m.PerfSuiteRunItem, m.PerfSuiteRunItem.suite_run_id.in_(ids))
+        await _erase(session, m.PerfSuiteRun, m.PerfSuiteRun.suite_run_id.in_(ids))
+
+
 async def delete_owned_data(session: AsyncSession, obj: Base) -> None:
     """Erase owned storage after the caller locks and authorizes the root resource.
 
@@ -120,7 +131,18 @@ async def delete_owned_data(session: AsyncSession, obj: Base) -> None:
         await _erase(session, m.UiTestCaseRun, m.UiTestCaseRun.case_id == obj.case_id)
     elif isinstance(obj, m.UiTestSuite):
         await _ui_suite_runs(session, m.UiTestSuiteRun.suite_id == obj.suite_id)
+    elif isinstance(obj, m.PerfSuite):
+        case_ids = select(m.PerfCase.case_id).where(m.PerfCase.suite_id == obj.suite_id)
+        await _perf_runs(session, m.PerfRun.case_id.in_(case_ids))
+        await _perf_suite_runs(session, m.PerfSuiteRun.suite_id == obj.suite_id)
+        # Delete cases explicitly instead of relying on the FK cascade so SQLite
+        # test databases and MySQL behave identically.
+        await _erase(session, m.PerfCase, m.PerfCase.suite_id == obj.suite_id)
     elif isinstance(obj, m.PerfCase):
+        containing_runs = select(m.PerfSuiteRunItem.suite_run_id).where(
+            m.PerfSuiteRunItem.case_id == obj.case_id
+        )
+        await _perf_suite_runs(session, m.PerfSuiteRun.suite_run_id.in_(containing_runs))
         await _perf_runs(session, m.PerfRun.case_id == obj.case_id)
     elif isinstance(obj, m.MonitoringConnection):
         # 运行记录已冻结接入快照，删除接入不影响历史运行。

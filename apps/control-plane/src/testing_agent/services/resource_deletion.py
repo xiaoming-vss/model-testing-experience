@@ -59,6 +59,7 @@ async def _blockers(session, obj):
             (m.ProjectSkillSpace, m.ProjectSkillSpace.project_id == obj.project_id, "项目技能"),
             (m.SharedService, m.SharedService.project_id == obj.project_id, "项目共享服务"),
             (m.SoftwareRepository, m.SoftwareRepository.project_id == obj.project_id, "软件仓库"),
+            (m.PerfSuite, m.PerfSuite.project_id == obj.project_id, "性能测试集"),
             (m.PerfCase, m.PerfCase.project_id == obj.project_id, "性能用例"),
             (
                 m.MonitoringConnection,

@@ -93,7 +93,6 @@ def _connection(api, headers, project_id, name="prom"):
         headers=headers,
         json={
             "name": name,
-            "queryUrl": "http://127.0.0.1:19090",
             "remoteWriteUrl": "http://127.0.0.1:19090/api/v1/write",
         },
     )
@@ -134,7 +133,7 @@ def test_perf_case_update_increments_version_and_name_is_unique(api):
     assert duplicate.status_code == 409, duplicate.text
 
 
-def test_monitoring_connection_secrets_are_masked_and_update_keeps_them(api):
+def test_monitoring_connection_write_secrets_are_masked_and_update_keeps_them(api):
     _settings(api)
     _, headers = account(api, "monitor-owner")
     project_id = project(api, headers, "monitor-project")
@@ -144,9 +143,7 @@ def test_monitoring_connection_secrets_are_masked_and_update_keeps_them(api):
         headers=headers,
         json={
             "name": "prom",
-            "queryUrl": "http://127.0.0.1:19090",
             "remoteWriteUrl": "http://127.0.0.1:19090/api/v1/write",
-            "queryAuth": {"type": "bearer", "token": "read-secret"},
             "remoteWriteAuth": {
                 "type": "basic",
                 "username": "writer",
@@ -156,9 +153,7 @@ def test_monitoring_connection_secrets_are_masked_and_update_keeps_them(api):
     )
     assert created.status_code == 200, created.text
     data = created.json()["data"]
-    assert data["hasQueryCredentials"] is True
     assert data["hasRemoteWriteCredentials"] is True
-    assert "read-secret" not in created.text
     assert "write-secret" not in created.text
 
     updated = api.patch(
@@ -188,11 +183,33 @@ def test_monitoring_connection_url_rejects_embedded_credentials(api):
         headers=headers,
         json={
             "name": "bad",
-            "queryUrl": "http://user:pass@127.0.0.1:19090",
-            "remoteWriteUrl": "http://127.0.0.1:19090/api/v1/write",
+            "remoteWriteUrl": "http://user:pass@127.0.0.1:19090/api/v1/write",
         },
     )
     assert response.status_code == 400, response.text
+
+
+def test_monitoring_connection_rejects_removed_query_and_grafana_fields(api):
+    _settings(api)
+    _, headers = account(api, "monitor-removed-owner")
+    project_id = project(api, headers, "monitor-removed-project")
+
+    for extra in (
+        {"queryUrl": "http://127.0.0.1:19090"},
+        {"grafanaUrl": "https://grafana.example.com"},
+        {"grafanaDashboardUid": "perf-overview"},
+        {"defaultFilters": {"namespace": "perf"}},
+    ):
+        response = api.post(
+            f"/v1/projects/{project_id}/monitoring-connections",
+            headers=headers,
+            json={
+                "name": f"removed-{next(iter(extra))}",
+                "remoteWriteUrl": "http://127.0.0.1:19090/api/v1/write",
+                **extra,
+            },
+        )
+        assert response.status_code == 400, response.text
 
 
 def test_viewer_cannot_manage_monitoring_connections(api):
@@ -212,7 +229,6 @@ def test_viewer_cannot_manage_monitoring_connections(api):
         headers=viewer,
         json={
             "name": "prom",
-            "queryUrl": "http://127.0.0.1:19090",
             "remoteWriteUrl": "http://127.0.0.1:19090/api/v1/write",
         },
     )
@@ -233,6 +249,53 @@ def test_perf_case_rejects_duplicate_yaml_keys_and_platform_fields(api):
     response = _case(api, headers, project_id, with_platform)
     assert response.status_code == 400, response.text
     assert "environment" in response.text
+
+
+def test_perf_case_accepts_staged_vus_load(api):
+    _settings(api)
+    _, headers = account(api, "staged-owner")
+    project_id = project(api, headers, "staged-project")
+    yaml_text = _YAML.replace(
+        '  load:\n    model: vus\n    vus: 1\n    duration: "1s"',
+        "  load:\n"
+        "    model: staged_vus\n"
+        "    profile: spike\n"
+        "    stages:\n"
+        '      - target: 5\n        ramp: "0s"\n        hold: "30s"\n'
+        '      - target: 50\n        ramp: "5s"\n        hold: "10s"\n'
+        '      - target: 5\n        ramp: "5s"\n        hold: "30s"\n'
+        '    finalDown: "0s"',
+    )
+
+    response = _case(api, headers, project_id, yaml_text)
+
+    assert response.status_code == 200, response.text
+
+
+def test_perf_case_rejects_staged_vus_with_invalid_stages(api):
+    _settings(api)
+    _, headers = account(api, "staged-invalid-owner")
+    project_id = project(api, headers, "staged-invalid-project")
+
+    empty_stages = _YAML.replace(
+        '  load:\n    model: vus\n    vus: 1\n    duration: "1s"',
+        "  load:\n    model: staged_vus\n    stages: []",
+    )
+    response = _case(api, headers, project_id, empty_stages)
+    assert response.status_code == 400, response.text
+    assert "stages" in response.text
+
+    invalid_profile = _YAML.replace(
+        '  load:\n    model: vus\n    vus: 1\n    duration: "1s"',
+        "  load:\n"
+        "    model: staged_vus\n"
+        "    profile: ramp\n"
+        "    stages:\n"
+        '      - target: 5\n        ramp: "0s"\n        hold: "30s"',
+    )
+    response = _case(api, headers, project_id, invalid_profile)
+    assert response.status_code == 400, response.text
+    assert "profile" in response.text
 
 
 def test_perf_case_data_source_requires_attached_file(api):

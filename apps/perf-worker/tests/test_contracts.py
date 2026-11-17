@@ -137,6 +137,41 @@ def test_preallocated_vus_alias_is_accepted() -> None:
     assert spec.case.load.max_vus == 5
 
 
+def test_staged_vus_load_defaults_profile_and_final_down() -> None:
+    data = base_spec_dict()
+    data["case"]["load"] = {
+        "model": "staged_vus",
+        "stages": [{"target": 10, "ramp": "5s", "hold": "30s"}],
+    }
+
+    spec = RunSpec.model_validate(data)
+
+    assert spec.case.load.model == "staged_vus"
+    assert spec.case.load.profile == "custom"
+    assert spec.case.load.final_down == "0s"
+    assert spec.case.load.stages[0].target == 10
+
+
+def test_staged_vus_rejects_empty_stages() -> None:
+    data = base_spec_dict()
+    data["case"]["load"] = {"model": "staged_vus", "stages": []}
+
+    with pytest.raises(ValidationError):
+        RunSpec.model_validate(data)
+
+
+def test_staged_vus_rejects_unknown_profile() -> None:
+    data = base_spec_dict()
+    data["case"]["load"] = {
+        "model": "staged_vus",
+        "profile": "unknown",
+        "stages": [{"target": 10, "ramp": "1s", "hold": "1s"}],
+    }
+
+    with pytest.raises(ValidationError):
+        RunSpec.model_validate(data)
+
+
 def test_yaml_duplicate_key_is_rejected(tmp_path: Path) -> None:
     path = tmp_path / "duplicate.yaml"
     path.write_text("specVersion: '1.0'\nspecVersion: '1.0'\n", encoding="utf-8")

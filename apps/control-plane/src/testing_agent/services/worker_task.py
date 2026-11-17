@@ -128,6 +128,13 @@ class WorkerTaskService:
         await self.repository.commit()
         for task in processed:
             await notify_run_changed(domain, task.run_id)
+            if domain == "perf":
+                from testing_agent.services.perf_suite_run import (
+                    on_child_completed_after_commit,
+                )
+
+                await on_child_completed_after_commit(self.repository.session, task.run_id)
+                continue
             if domain in {"api", "ui"}:
                 await notify_task_control(task.task_id)
             if domain == "api" and task.task_type == "api_case_debug":

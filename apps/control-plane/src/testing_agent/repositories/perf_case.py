@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from testing_agent.models.perf_case import PerfCase
 from testing_agent.models.project import Project
@@ -35,6 +35,23 @@ class PerfCaseRepository(ResourceRepository):
                 )
             ).all()
         )
+
+    async def list_by_suite(self, suite_id: str) -> list[PerfCase]:
+        return list(
+            (
+                await self.session.scalars(
+                    select(PerfCase)
+                    .where(PerfCase.suite_id == suite_id)
+                    .order_by(PerfCase.order_no.asc(), PerfCase.created_at.asc(), PerfCase.id.asc())
+                )
+            ).all()
+        )
+
+    async def next_order_no(self, suite_id: str) -> int:
+        current = await self.session.scalar(
+            select(func.max(PerfCase.order_no)).where(PerfCase.suite_id == suite_id)
+        )
+        return int(current or 0) + 1
 
     def add(self, case: PerfCase) -> None:
         self.session.add(case)

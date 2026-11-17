@@ -16,6 +16,7 @@ from ..contracts.spec import (
     RemoteWriteSpec,
     RequestRateLoad,
     RunSpec,
+    StagedVusLoad,
     StepSpec,
     VusLoad,
 )
@@ -29,6 +30,7 @@ TEMPLATE_VERSION = "1.0.0"
 
 _TEMPLATE_RE = re.compile(r"\{\{\s*([^{}]+?)\s*\}\}")
 _BUILTINS = frozenset({"uuid", "timestamp", "iteration", "vu"})
+_DURATION_PART_RE = re.compile(r"(\d+(?:\.\d+)?)(ms|s|m|h)")
 
 
 @dataclass(frozen=True)
@@ -295,7 +297,35 @@ def _build_scenario(load: LoadSpec, stop_grace_seconds: int) -> dict[str, Any]:
             "maxVUs": load.max_vus,
             "gracefulStop": graceful_stop,
         }
+    if isinstance(load, StagedVusLoad):
+        stages: list[dict[str, Any]] = []
+        for stage in load.stages:
+            stages.append({"duration": stage.ramp, "target": stage.target})
+            if not _duration_is_zero(stage.hold):
+                stages.append({"duration": stage.hold, "target": stage.target})
+        if not _duration_is_zero(load.final_down):
+            stages.append({"duration": load.final_down, "target": 0})
+        return {
+            "executor": "ramping-vus",
+            "startVUs": 0,
+            "stages": stages,
+            "gracefulStop": graceful_stop,
+        }
     raise CompileError("未知负载模型")
+
+
+def _duration_is_zero(value: str) -> bool:
+    """Return whether a k6 duration string represents zero time."""
+
+    text = value.strip()
+    if text in {"", "0"}:
+        return True
+    parts = _DURATION_PART_RE.findall(text)
+    if not parts:
+        return False
+    if "".join(f"{amount}{unit}" for amount, unit in parts) != text:
+        return False
+    return all(float(amount) == 0 for amount, _ in parts)
 
 
 def _template_path() -> Path:

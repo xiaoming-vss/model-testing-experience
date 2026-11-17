@@ -62,7 +62,6 @@ def _connection(api, headers, project_id):
         headers=headers,
         json={
             "name": "prom",
-            "queryUrl": "http://127.0.0.1:19090",
             "remoteWriteUrl": "http://127.0.0.1:19090/api/v1/write",
             "remoteWriteAuth": {
                 "type": "basic",
@@ -301,10 +300,7 @@ def test_perf_run_freezes_monitoring_snapshot_after_connection_changes(api):
         headers=headers,
         json={
             "name": "prom-before-run",
-            "queryUrl": "http://prom.before:19090",
-            "grafanaUrl": "https://grafana.before",
-            "grafanaDashboardUid": "perf-before",
-            "defaultFilters": {"namespace": "perf-before"},
+            "remoteWriteUrl": "http://prom.before:19090/api/v1/write",
         },
     )
     assert updated.status_code == 200, updated.text
@@ -324,7 +320,10 @@ def test_perf_run_freezes_monitoring_snapshot_after_connection_changes(api):
     renamed = api.patch(
         f"/v1/monitoring-connections/{connection_id}",
         headers=headers,
-        json={"name": "prom-after-run", "queryUrl": "http://prom.after:19090"},
+        json={
+            "name": "prom-after-run",
+            "remoteWriteUrl": "http://prom.after:19090/api/v1/write",
+        },
     )
     assert renamed.status_code == 200, renamed.text
     deleted = api.delete(f"/v1/monitoring-connections/{connection_id}", headers=headers)
@@ -333,11 +332,9 @@ def test_perf_run_freezes_monitoring_snapshot_after_connection_changes(api):
     detail = api.get(f"/v1/perf-runs/{run_id}", headers=headers)
     assert detail.status_code == 200, detail.text
     monitoring = detail.json()["data"]["monitoring"]
-    assert monitoring["connectionId"] == connection_id
-    assert monitoring["name"] == "prom-before-run"
-    assert monitoring["queryUrl"] == "http://prom.before:19090"
-    assert monitoring["remoteWriteUrl"] == "http://127.0.0.1:19090/api/v1/write"
-    assert monitoring["grafanaUrl"] == "https://grafana.before"
-    assert monitoring["grafanaDashboardUid"] == "perf-before"
-    assert monitoring["defaultFilters"] == {"namespace": "perf-before"}
+    assert monitoring == {
+        "connectionId": connection_id,
+        "name": "prom-before-run",
+        "remoteWriteUrl": "http://prom.before:19090/api/v1/write",
+    }
     assert "secret" not in detail.text

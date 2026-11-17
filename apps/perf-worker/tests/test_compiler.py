@@ -105,6 +105,78 @@ def test_request_rate_scenario(tmp_path: Path) -> None:
     assert scenario["rate"] == 10
 
 
+def test_staged_vus_step_scenario(tmp_path: Path) -> None:
+    data = base_spec_dict()
+    data["case"]["load"] = {
+        "model": "staged_vus",
+        "profile": "step",
+        "stages": [
+            {"target": 10, "ramp": "5s", "hold": "30s"},
+            {"target": 30, "ramp": "5s", "hold": "30s"},
+            {"target": 60, "ramp": "5s", "hold": "60s"},
+        ],
+        "finalDown": "10s",
+    }
+
+    compiled, _ = _compile(tmp_path, data)
+
+    scenario = compiled.plan["options"]["scenarios"]["main"]
+    assert scenario["executor"] == "ramping-vus"
+    assert scenario["startVUs"] == 0
+    assert scenario["stages"] == [
+        {"duration": "5s", "target": 10},
+        {"duration": "30s", "target": 10},
+        {"duration": "5s", "target": 30},
+        {"duration": "30s", "target": 30},
+        {"duration": "5s", "target": 60},
+        {"duration": "60s", "target": 60},
+        {"duration": "10s", "target": 0},
+    ]
+
+
+def test_staged_vus_spike_scenario_keeps_baseline_and_zero_hold_is_skipped(
+    tmp_path: Path,
+) -> None:
+    data = base_spec_dict()
+    data["case"]["load"] = {
+        "model": "staged_vus",
+        "profile": "spike",
+        "stages": [
+            {"target": 5, "ramp": "0s", "hold": "30s"},
+            {"target": 50, "ramp": "5s", "hold": "10s"},
+            {"target": 5, "ramp": "5s", "hold": "30s"},
+        ],
+        "finalDown": "0s",
+    }
+
+    compiled, _ = _compile(tmp_path, data)
+
+    scenario = compiled.plan["options"]["scenarios"]["main"]
+    assert scenario["executor"] == "ramping-vus"
+    assert scenario["startVUs"] == 0
+    assert scenario["stages"] == [
+        {"duration": "0s", "target": 5},
+        {"duration": "30s", "target": 5},
+        {"duration": "5s", "target": 50},
+        {"duration": "10s", "target": 50},
+        {"duration": "5s", "target": 5},
+        {"duration": "30s", "target": 5},
+    ]
+
+
+def test_staged_vus_zero_hold_is_skipped(tmp_path: Path) -> None:
+    data = base_spec_dict()
+    data["case"]["load"] = {
+        "model": "staged_vus",
+        "stages": [{"target": 10, "ramp": "1s", "hold": "0s"}],
+    }
+
+    compiled, _ = _compile(tmp_path, data)
+
+    scenario = compiled.plan["options"]["scenarios"]["main"]
+    assert scenario["stages"] == [{"duration": "1s", "target": 10}]
+
+
 def test_future_variable_is_rejected(tmp_path: Path) -> None:
     data = base_spec_dict()
     data["case"]["steps"] = [

@@ -10,6 +10,8 @@ from testing_agent.services import integration_lifecycle, worker_lease_monitor
 
 
 async def test_sweep_bounds_transactions_and_continues_after_domain_failure(monkeypatch, caplog):
+    from testing_agent.services.perf_suite_run import PerfSuiteRunService
+
     sessions = []
     calls = []
 
@@ -28,16 +30,19 @@ async def test_sweep_bounds_transactions_and_continues_after_domain_failure(monk
             raise RuntimeError("secret must not be logged")
         return 100 if domain == "api" else 0
 
+    reconcile = AsyncMock(return_value=0)
     integration = AsyncMock()
     integration.expire.return_value = 0
     monkeypatch.setattr(worker_lease_monitor.WorkerTaskService, "expire_leases", expire)
+    monkeypatch.setattr(PerfSuiteRunService, "reconcile_active", reconcile)
     monkeypatch.setattr(integration_lifecycle, "lifecycle", lambda session: integration)
     await worker_lease_monitor.sweep_once(factory)
     assert calls == ["ai", *(["api"] * 5), "ui", "perf"]
-    assert len(sessions) == 9 and all(session.close.await_count == 1 for session in sessions)
+    assert len(sessions) == 10 and all(session.close.await_count == 1 for session in sessions)
     integration.expire.assert_awaited_once()
+    reconcile.assert_awaited_once()
     assert "RuntimeError" in caplog.text and "secret must not be logged" not in caplog.text
-    assert sessions[-2].commit.await_count == 1
+    assert sessions[-3].commit.await_count == 1
     assert len(caplog.records) == 1
     assert "for ai" in caplog.text
     record = caplog.records[0]
@@ -47,6 +52,30 @@ async def test_sweep_bounds_transactions_and_continues_after_domain_failure(monk
         frame["function"] == "expire" for item in record.stack_trace for frame in item["frames"]
     )
     assert "secret must not be logged" not in str(record.__dict__)
+
+
+async def test_suite_reconcile_failure_does_not_break_sweep(monkeypatch, caplog):
+    from testing_agent.services.perf_suite_run import PerfSuiteRunService
+
+    @asynccontextmanager
+    async def factory():
+        yield AsyncMock()
+
+    async def expire(self, domain):
+        return 0
+
+    reconcile = AsyncMock(side_effect=RuntimeError("secret must not be logged"))
+    integration = AsyncMock()
+    integration.expire.return_value = 0
+    monkeypatch.setattr(worker_lease_monitor.WorkerTaskService, "expire_leases", expire)
+    monkeypatch.setattr(PerfSuiteRunService, "reconcile_active", reconcile)
+    monkeypatch.setattr(integration_lifecycle, "lifecycle", lambda session: integration)
+
+    await worker_lease_monitor.sweep_once(factory)
+
+    reconcile.assert_awaited_once()
+    assert "for perf-suite" in caplog.text
+    assert "secret must not be logged" not in caplog.text
 
 
 async def test_monitor_recovers_on_startup_and_retries_next_interval(monkeypatch):

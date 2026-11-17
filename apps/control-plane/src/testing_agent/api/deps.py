@@ -37,6 +37,8 @@ from testing_agent.repositories.login_rate_limit import LoginRateLimitRepository
 from testing_agent.repositories.monitoring_connection import MonitoringConnectionRepository
 from testing_agent.repositories.perf_case import PerfCaseRepository
 from testing_agent.repositories.perf_run import PerfRunRepository
+from testing_agent.repositories.perf_suite import PerfSuiteRepository
+from testing_agent.repositories.perf_suite_run import PerfSuiteRunRepository
 from testing_agent.repositories.project import ProjectRepository
 from testing_agent.repositories.project_skill_space import ProjectSkillSpaceRepository
 from testing_agent.repositories.requirement import RequirementRepository
@@ -91,6 +93,8 @@ from testing_agent.services.ldap_settings import LdapSettingsService, effective_
 from testing_agent.services.monitoring_connection import MonitoringConnectionService
 from testing_agent.services.perf_case import PerfCaseService
 from testing_agent.services.perf_run import PerfRunService
+from testing_agent.services.perf_suite import PerfSuiteService
+from testing_agent.services.perf_suite_run import PerfSuiteRunService
 from testing_agent.services.perf_worker import PerfWorkerService
 from testing_agent.services.project import ProjectService
 from testing_agent.services.project_skill_space import ProjectSkillSpaceService
@@ -434,6 +438,33 @@ def get_perf_run_service(
         monitoring_service=monitoring_service,
         files=StoredFileService(session, settings.s3),
         credential_cipher=cipher,
+    )
+
+
+def get_perf_suite_service(
+    session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+) -> PerfSuiteService:
+    from testing_agent.services.stored_file import StoredFileService
+
+    return PerfSuiteService(
+        PerfSuiteRepository(session),
+        cases=PerfCaseRepository(session),
+        runs=PerfSuiteRunRepository(session),
+        files=StoredFileService(session, settings.s3),
+    )
+
+
+def get_perf_suite_run_service(
+    session: AsyncSession = Depends(get_session),
+    perf_runs: PerfRunService = Depends(get_perf_run_service),
+) -> PerfSuiteRunService:
+    return PerfSuiteRunService(
+        PerfSuiteRunRepository(session),
+        suites=PerfSuiteRepository(session),
+        cases=PerfCaseRepository(session),
+        runs=PerfRunRepository(session),
+        perf_runs=perf_runs,
     )
 
 

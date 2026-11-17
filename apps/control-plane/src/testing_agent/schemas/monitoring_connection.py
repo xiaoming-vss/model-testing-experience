@@ -8,7 +8,6 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    JsonValue,
     SecretStr,
     field_validator,
     model_validator,
@@ -57,9 +56,7 @@ class MonitoringAuthRequest(BaseModel):
         return self
 
 
-def _validate_http_url(value: str, *, field: str, optional: bool = False) -> str:
-    if optional and not value.strip():
-        return ""
+def _validate_http_url(value: str, *, field: str) -> str:
     parts = urlsplit(value)
     if parts.scheme not in {"http", "https"} or not parts.hostname:
         raise ValueError(f"{field} 必须是 http(s) URL")
@@ -72,13 +69,8 @@ def _validate_http_url(value: str, *, field: str, optional: bool = False) -> str
 
 class MonitoringConnectionCreate(BaseModel):
     name: str
-    query_url: str
     remote_write_url: str
-    query_auth: MonitoringAuthRequest = Field(default_factory=MonitoringAuthRequest)
     remote_write_auth: MonitoringAuthRequest = Field(default_factory=MonitoringAuthRequest)
-    grafana_url: str = ""
-    grafana_dashboard_uid: str = ""
-    default_filters: dict[str, JsonValue] = Field(default_factory=dict)
     enabled: bool = True
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
@@ -91,34 +83,16 @@ class MonitoringConnectionCreate(BaseModel):
             raise ValueError("名称长度必须在 1 到 120 个字符之间")
         return value
 
-    @field_validator("query_url", "remote_write_url")
+    @field_validator("remote_write_url")
     @classmethod
     def _required_url(cls, value: str, info: Any) -> str:
         return _validate_http_url(value, field=info.field_name)
 
-    @field_validator("grafana_url")
-    @classmethod
-    def _grafana_url(cls, value: str) -> str:
-        return _validate_http_url(value, field="grafanaUrl", optional=True)
-
-    @field_validator("grafana_dashboard_uid")
-    @classmethod
-    def _dashboard_uid(cls, value: str) -> str:
-        value = value.strip()
-        if len(value) > 128:
-            raise ValueError("Grafana 看板 UID 不能超过 128 个字符")
-        return value
-
 
 class MonitoringConnectionUpdate(BaseModel):
     name: str | None = None
-    query_url: str | None = None
     remote_write_url: str | None = None
-    query_auth: MonitoringAuthRequest | None = None
     remote_write_auth: MonitoringAuthRequest | None = None
-    grafana_url: str | None = None
-    grafana_dashboard_uid: str | None = None
-    default_filters: dict[str, JsonValue] | None = None
     enabled: bool | None = None
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
@@ -133,44 +107,21 @@ class MonitoringConnectionUpdate(BaseModel):
             raise ValueError("名称长度必须在 1 到 120 个字符之间")
         return value
 
-    @field_validator("query_url", "remote_write_url")
+    @field_validator("remote_write_url")
     @classmethod
     def _required_url(cls, value: str | None, info: Any) -> str | None:
         if value is None:
             return None
         return _validate_http_url(value, field=info.field_name)
 
-    @field_validator("grafana_url")
-    @classmethod
-    def _grafana_url(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        return _validate_http_url(value, field="grafanaUrl", optional=True)
-
-    @field_validator("grafana_dashboard_uid")
-    @classmethod
-    def _dashboard_uid(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        value = value.strip()
-        if len(value) > 128:
-            raise ValueError("Grafana 看板 UID 不能超过 128 个字符")
-        return value
-
 
 class MonitoringConnectionResponse(BaseModel):
     connection_id: str
     project_id: str
     name: str
-    query_url: str
     remote_write_url: str
-    query_auth_type: MonitoringAuthType
     remote_write_auth_type: MonitoringAuthType
-    has_query_credentials: bool
     has_remote_write_credentials: bool
-    grafana_url: str
-    grafana_dashboard_uid: str
-    default_filters: dict[str, JsonValue]
     enabled: bool
     created_at: datetime | str | None = ""
     updated_at: datetime | str | None = ""

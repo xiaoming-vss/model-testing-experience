@@ -46,6 +46,8 @@ from testing_agent.models.login_rate_limit import LoginRateLimit
 from testing_agent.models.monitoring_connection import MonitoringConnection
 from testing_agent.models.perf_case import PerfCase
 from testing_agent.models.perf_run import PerfRun
+from testing_agent.models.perf_suite import PerfSuite
+from testing_agent.models.perf_suite_run import PerfSuiteRun, PerfSuiteRunItem
 from testing_agent.models.project import Project
 from testing_agent.models.project_member import ProjectMember
 from testing_agent.models.project_skill_space import ProjectSkillSpace
@@ -116,6 +118,9 @@ __all__ = [
     "MonitoringConnection",
     "PerfCase",
     "PerfRun",
+    "PerfSuite",
+    "PerfSuiteRun",
+    "PerfSuiteRunItem",
     "Project",
     "ProjectMember",
     "ProjectSkillSpace",

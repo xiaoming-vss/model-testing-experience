@@ -18,7 +18,9 @@ _ALLOWED_TOP_LEVEL = {"specVersion", "case"}
 _ALLOWED_CASE_KEYS = {"name", "steps", "load", "acceptance", "data"}
 _RESERVED_TOP_LEVEL = {"runId", "projectId", "environment", "remoteWrite", "limits"}
 _DATA_SOURCE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.(csv|json)$")
-_LOAD_MODELS = {"vus", "arrival_rate", "request_rate"}
+_LOAD_MODELS = {"vus", "arrival_rate", "request_rate", "staged_vus"}
+_LOAD_MODEL_NAMES = "vus/arrival_rate/request_rate/staged_vus"
+_STAGED_PROFILES = {"step", "spike", "custom"}
 _ACCEPTANCE_SOURCES = {"user_confirmed", "model_suggested", "missing"}
 
 
@@ -123,6 +125,28 @@ def _validate_steps(steps: Any) -> list[dict[str, Any]]:
     return steps
 
 
+def _validate_staged_load(load: dict[str, Any]) -> None:
+    if "profile" in load and load["profile"] not in _STAGED_PROFILES:
+        raise _invalid("case.load.profile 只能是 step/spike/custom")
+    stages = load.get("stages")
+    if not isinstance(stages, list) or not stages:
+        raise _invalid("case.load.stages 必须是非空列表")
+    for index, item in enumerate(stages):
+        stage = _require_mapping(item, f"case.load.stages[{index}]")
+        target = stage.get("target")
+        if not isinstance(target, int) or isinstance(target, bool) or target < 1:
+            raise _invalid(f"case.load.stages[{index}].target 必须是正整数")
+        for key in ("ramp", "hold"):
+            if key in stage:
+                value = stage[key]
+                if not isinstance(value, str) or not value.strip():
+                    raise _invalid(f"case.load.stages[{index}].{key} 必须是非空字符串")
+    if "finalDown" in load:
+        final_down = load["finalDown"]
+        if not isinstance(final_down, str) or not final_down.strip():
+            raise _invalid("case.load.finalDown 必须是非空字符串")
+
+
 def parse_case_yaml(raw: str) -> dict[str, Any]:
     if not isinstance(raw, str) or not raw.strip():
         raise _invalid("内容不能为空")
@@ -152,7 +176,9 @@ def parse_case_yaml(raw: str) -> dict[str, Any]:
     load = _require_mapping(case.get("load"), "case.load")
     model = load.get("model")
     if model not in _LOAD_MODELS:
-        raise _invalid("case.load.model 必须是 vus/arrival_rate/request_rate 之一")
+        raise _invalid(f"case.load.model 必须是 {_LOAD_MODEL_NAMES} 之一")
+    if model == "staged_vus":
+        _validate_staged_load(load)
     if model == "request_rate" and len(steps) != 1:
         raise _invalid("request_rate 只支持单步骤用例")
     acceptance = _require_mapping(case.get("acceptance"), "case.acceptance")

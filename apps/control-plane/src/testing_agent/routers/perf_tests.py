@@ -15,9 +15,28 @@ from testing_agent.handlers.perf_run import (
     list_perf_runs,
     stop_perf_run,
 )
+from testing_agent.handlers.perf_suite import (
+    create_perf_suite,
+    delete_perf_suite,
+    get_perf_suite,
+    list_perf_suites,
+    reorder_perf_suite_cases,
+    update_perf_suite,
+)
+from testing_agent.handlers.perf_suite_run import (
+    create_perf_suite_run,
+    get_perf_suite_run,
+    list_perf_suite_runs,
+    stop_perf_suite_run,
+)
 from testing_agent.schemas.common import ApiResponse, EmptyData, ListResponse, StatusData
 from testing_agent.schemas.perf_case import PerfCaseResponse, PerfCaseSummaryResponse
 from testing_agent.schemas.perf_run import PerfRunResponse, PerfRunSummaryResponse
+from testing_agent.schemas.perf_suite import PerfSuiteResponse, PerfSuiteSummaryResponse
+from testing_agent.schemas.perf_suite_run import (
+    PerfSuiteRunResponse,
+    PerfSuiteRunSummaryResponse,
+)
 
 router = APIRouter()
 
@@ -57,3 +76,44 @@ router.post(
     "/perf-runs/{run_id}/stop",
     response_model=ApiResponse[StatusData],
 )(stop_perf_run)
+
+router.post(
+    "/projects/{project_id}/perf-suites",
+    response_model=ApiResponse[PerfSuiteResponse],
+)(create_perf_suite)
+router.get(
+    "/projects/{project_id}/perf-suites",
+    response_model=ApiResponse[ListResponse[PerfSuiteSummaryResponse]],
+)(list_perf_suites)
+router.get(
+    "/perf-suites/{suite_id}",
+    response_model=ApiResponse[PerfSuiteResponse],
+)(get_perf_suite)
+router.patch(
+    "/perf-suites/{suite_id}",
+    response_model=ApiResponse[PerfSuiteResponse],
+)(update_perf_suite)
+router.put(
+    "/perf-suites/{suite_id}/case-order",
+    response_model=ApiResponse[PerfSuiteResponse],
+)(reorder_perf_suite_cases)
+router.delete(
+    "/perf-suites/{suite_id}",
+    response_model=ApiResponse[EmptyData],
+)(delete_perf_suite)
+router.post(
+    "/perf-suites/{suite_id}/runs",
+    response_model=ApiResponse[PerfSuiteRunResponse],
+)(create_perf_suite_run)
+router.get(
+    "/projects/{project_id}/perf-suite-runs",
+    response_model=ApiResponse[ListResponse[PerfSuiteRunSummaryResponse]],
+)(list_perf_suite_runs)
+router.get(
+    "/perf-suite-runs/{suite_run_id}",
+    response_model=ApiResponse[PerfSuiteRunResponse],
+)(get_perf_suite_run)
+router.post(
+    "/perf-suite-runs/{suite_run_id}/stop",
+    response_model=ApiResponse[StatusData],
+)(stop_perf_suite_run)
