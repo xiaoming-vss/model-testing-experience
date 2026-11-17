@@ -5,6 +5,8 @@ import '../styles/requirements-list.css'
 import { RequirementRowActions } from '../components/RequirementRowActions'
 import '@/shared/styles/list-table.css'
 import '@/shared/styles/surface-tokens.css'
+import { cx } from '@/shared/utils/cx'
+import styles from '../styles/project-settings.module.css'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { AppIcon } from '@/shared/icons'
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
@@ -512,7 +514,7 @@ export function ProjectsPage() {
         </>
       )}
 
-      <Drawer title="项目设置" className="project-settings-drawer" size={480} open={Boolean(settingsProjectId && settingsProjectId === activeProjectId && activeProject && can('manage'))} onClose={() => closeProjectPanel()}>
+      <Drawer title="项目设置" className={cx('project-settings-drawer', styles.root)} size={480} open={Boolean(settingsProjectId && settingsProjectId === activeProjectId && activeProject && can('manage'))} onClose={() => closeProjectPanel()}>
         {activeProject && settingsProjectId === activeProjectId && can('manage') ? <>
           <Title level={5}>基本信息</Title>
           <Card size="small">

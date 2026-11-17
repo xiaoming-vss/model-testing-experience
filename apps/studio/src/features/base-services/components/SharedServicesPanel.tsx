@@ -13,6 +13,8 @@ import { useProjectAccess } from '@/features/projects/hooks/useProjectAccess'
 import { ProjectAccessScope } from '@/features/projects/components/ProjectAccessScope'
 import { listItems } from '@/shared/api/request'
 import { message } from '@/shared/utils/feedback'
+import { cx } from '@/shared/utils/cx'
+import styles from '@/shared/styles/base-services-connection.module.css'
 import { formatTime, getErrorMessage } from '@/utils/format'
 import { sharedServicesApi as api, type PersonalAuthorization, type ServiceConfiguration, type ServiceProvider, type SharedService } from '../api/sharedServices.api'
 
@@ -119,7 +121,7 @@ function ServiceCatalog({ projectId, provider, toolbarActions }: { projectId: st
     {toolbarActions ? createPortal(createButton, toolbarActions) : createButton}
     {provider === 'mcp' && templates.isError && <Alert type="error" showIcon title={getErrorMessage(templates.error)} />}
     {query.isError && <Alert type="error" showIcon title={getErrorMessage(query.error)} />}
-    <div className="base-services-connection-shell">
+    <div className={cx('base-services-connection-shell', styles.root)}>
       <div className="table-body-scroll sprint-card-scroll base-services-card-scroll tp-list-scroll">
         {query.isPending || (provider === 'mcp' && templates.isPending) ? (
           <div className="sprint-card-loading"><Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={`${labels[provider]} 服务加载中...`} /></div>

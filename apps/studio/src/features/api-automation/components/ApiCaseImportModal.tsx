@@ -2,6 +2,8 @@ import { isYamlFileName, type CaseImportMode } from '@/features/api-automation/u
 import { ProjectActionModal } from '@/features/projects/components/ProjectActionModal'
 import { TextCodeEditor } from '@/shared/components/TextCodeEditor/TextCodeEditor'
 import { message } from '@/shared/utils/feedback'
+import { cx } from '@/shared/utils/cx'
+import styles from '@/shared/styles/case-import.module.css'
 import { UploadOutlined } from '@ant-design/icons'
 import { Segmented, Upload } from 'antd'
 
@@ -32,13 +34,13 @@ export function ApiCaseImportModal({ caseImportModalOpen, closeCaseImportModal, 
       confirmLoading={importApiCasesMutation.isPending}
       okButtonProps={{ className: 'action-btn-save' }}
       onOk={handleImportApiCases}
-      rootClassName="api-case-import-modal-root"
+      rootClassName={cx('api-case-import-modal-root', styles.root)}
       className="api-case-import-modal-shell"
       destroyOnHidden
     >
-      <div className="api-case-import-modal">
+      <div className={styles.modal}>
         <Segmented
-          className="api-case-import-mode"
+          className={styles.mode}
           value={caseImportMode}
           options={[
             { label: '上传 YAML', value: 'upload' },
@@ -47,7 +49,7 @@ export function ApiCaseImportModal({ caseImportModalOpen, closeCaseImportModal, 
           onChange={(value) => setCaseImportMode(value as CaseImportMode)}
         />
         {caseImportMode === 'upload' ? (
-          <div className="api-case-import-upload">
+          <div className={styles.upload}>
             <Upload.Dragger
               accept=".yaml,.yml"
               maxCount={1}
@@ -70,11 +72,11 @@ export function ApiCaseImportModal({ caseImportModalOpen, closeCaseImportModal, 
               <p className="ant-upload-text">点击或拖拽 YAML 文件到这里</p>
               <p className="ant-upload-hint">仅支持 .yaml / .yml，导入时会自动绑定到当前 Collection。</p>
             </Upload.Dragger>
-            <div className="api-case-import-hint">后端会直接解析 YAML，前端不做字段预解析。</div>
+            <div className={styles.hint}>后端会直接解析 YAML，前端不做字段预解析。</div>
           </div>
         ) : (
-          <div className="api-case-import-editor">
-            <div className="api-case-import-hint">直接粘贴 YAML 内容，提交时前端会将文本包装成 `.yaml` 文件上传。</div>
+          <div className={styles.editor}>
+            <div className={styles.hint}>直接粘贴 YAML 内容，提交时前端会将文本包装成 `.yaml` 文件上传。</div>
             <TextCodeEditor value={importYamlText} onChange={setImportYamlText} language="yaml" minHeight={280} />
           </div>
         )}

@@ -6,11 +6,14 @@ import { Alert, Card, Drawer, Empty, Popconfirm, Space, Tag, Tooltip, Typography
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { skillFolder } from '../api/skills.api'
+import '@/shared/styles/surface-tokens.css'
 import '@/features/ai-testing/styles/index.css'
 import '@/features/ai-testing/styles/skill-library.css'
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
 import { api, listItems, type AiSkillLibraryItem, type UploadAiSkillPayload } from '@/services/api'
 import { message } from '@/shared/utils/feedback'
+import { cx } from '@/shared/utils/cx'
+import styles from '@/shared/styles/base-services-connection.module.css'
 import { formatTime, getErrorMessage } from '@/utils/format'
 
 const { Text } = Typography
@@ -119,7 +122,7 @@ export function AiSkillLibraryPage({ embedded = false }: { embedded?: boolean })
           {deleteSkillMutation.error ? <Alert showIcon type="error" title={getErrorMessage(deleteSkillMutation.error)} style={{ margin: '12px 18px 0' }} /> : null}
           {downloadSkillMutation.error ? <Alert showIcon type="error" title={getErrorMessage(downloadSkillMutation.error)} style={{ margin: '12px 18px 0' }} /> : null}
 
-          <div className="table-body-scroll sprint-card-scroll base-services-card-scroll tp-list-scroll">
+          <div className={cx('table-body-scroll sprint-card-scroll base-services-card-scroll tp-list-scroll', styles.root)}>
             {!activeProjectId ? (
               <div className="base-services-empty-card base-services-empty-card-list">
                 <Empty description="请先选择项目，再进入 Skill库" />

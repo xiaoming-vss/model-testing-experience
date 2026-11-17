@@ -12,6 +12,7 @@ import { Alert, Button, Empty, Modal, Tag } from 'antd'
 
 import type { ApiEnvironment } from '@/features/api-automation/types'
 import type { ListResponse } from '@/shared/api/request'
+import styles from '@/shared/styles/run-view.module.css'
 
 type Props = {
   collectionRunHistoryOpen: boolean
@@ -39,6 +40,7 @@ export function ApiCollectionRunHistory({ collectionRunHistoryOpen, setCollectio
       onCancel={() => setCollectionRunHistoryOpen(false)}
       destroyOnHidden
       className="api-collection-run-history-modal"
+      rootClassName={styles.root}
     >
       <div className="api-collection-run-history-layout">
         {collectionRunHistoryQuery.error ? (

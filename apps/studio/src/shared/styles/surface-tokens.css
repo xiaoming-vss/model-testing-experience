@@ -364,3 +364,145 @@
   margin-inline-start: auto !important;
   justify-content: flex-end !important;
 }
+
+/*
+ * 阶段 3 从 features/api-automation/styles/overview.css 迁出的共享页面骨架、
+ * 筛选控件与卡片皮肤。实际消费方包括测试、Bug、用例库、测试单、UI/API 自动化、
+ * 基础服务、性能与 AI Skill 库；保留旧类名，等阶段 4 的共享原语替换。
+ */
+.api-automation-page {
+  gap: 0;
+}
+
+.api-automation-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 12px var(--app-page-gutter) 20px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.api-filter-input {
+  width: 280px;
+}
+
+.api-filter-select {
+  width: 160px;
+}
+
+.business-filter-select {
+  width: 180px;
+}
+
+.api-panel-header:not(:where(.tp-list-toolbar)) {
+  gap: 16px;
+}
+
+.api-panel-head-main {
+  flex-wrap: wrap;
+}
+
+.api-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.api-filter-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.api-filter-field-label {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--app-environment-option-selected);
+  color: var(--app-request-summary-text);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.api-collection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.api-collection-card .ant-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.api-collection-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.api-collection-description {
+  margin-bottom: 0 !important;
+  color: var(--app-request-overview-text-muted);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 400;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.api-collection-inline-value {
+  color: var(--tp-text);
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 500;
+  text-align: right;
+  word-break: break-word;
+}
+
+.api-collection-meta-inline .api-collection-inline-value {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.api-collection-card .sprint-card-actions {
+  gap: 6px;
+}
+
+.api-collection-card .sprint-card-actions .ant-btn {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+}
+
+@media (max-width: 900px) {
+  .api-automation-content {
+    padding: 12px var(--app-page-gutter) 16px;
+  }
+
+  .api-filter-input,
+  .api-filter-select {
+    width: 100%;
+  }
+
+  .api-filter-group {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .api-collection-grid {
+    grid-template-columns: 1fr;
+  }
+}

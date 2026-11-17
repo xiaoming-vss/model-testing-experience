@@ -105,10 +105,6 @@
     "src/app/styles/layout.css",
     "src/app/styles/shell-boundary.css",
     "src/app/styles/workbench.css",
-    "src/features/api-automation/styles/detail.css",
-    "src/features/api-automation/styles/overview.css",
-    "src/features/base-services/styles/index.css",
-    "src/features/ui-automation/styles/index.css",
     "src/shared/styles/page-frame.css"
   ],
   "crossFeatureCssImports": [
@@ -130,9 +126,9 @@
       "selectors": 5
     },
     "src/app/styles/buttons.css": {
-      "rules": 26,
-      "declarations": 97,
-      "selectors": 34
+      "rules": 27,
+      "declarations": 113,
+      "selectors": 39
     },
     "src/app/styles/error-boundary.css": {
       "rules": 1,
@@ -325,9 +321,9 @@
       "selectors": 42
     },
     "src/features/api-automation/styles/detail.css": {
-      "rules": 258,
-      "declarations": 970,
-      "selectors": 285
+      "rules": 60,
+      "declarations": 219,
+      "selectors": 62
     },
     "src/features/api-automation/styles/list-v2.css": {
       "rules": 10,
@@ -335,9 +331,9 @@
       "selectors": 10
     },
     "src/features/api-automation/styles/overview.css": {
-      "rules": 25,
-      "declarations": 96,
-      "selectors": 29
+      "rules": 6,
+      "declarations": 22,
+      "selectors": 6
     },
     "src/features/auth/styles/auth.module.css": {
       "rules": 28,
@@ -350,9 +346,9 @@
       "selectors": 2
     },
     "src/features/base-services/styles/index.css": {
-      "rules": 105,
-      "declarations": 340,
-      "selectors": 118
+      "rules": 66,
+      "declarations": 234,
+      "selectors": 77
     },
     "src/features/base-services/styles/zentao-mcp-service.css": {
       "rules": 5,
@@ -388,6 +384,21 @@
       "rules": 34,
       "declarations": 80,
       "selectors": 36
+    },
+    "src/features/projects/styles/dynamic-value-picker.module.css": {
+      "rules": 48,
+      "declarations": 208,
+      "selectors": 52
+    },
+    "src/features/projects/styles/environment-drawer.module.css": {
+      "rules": 34,
+      "declarations": 118,
+      "selectors": 34
+    },
+    "src/features/projects/styles/project-settings.module.css": {
+      "rules": 4,
+      "declarations": 8,
+      "selectors": 4
     },
     "src/features/projects/styles/requirements-list.css": {
       "rules": 67,
@@ -425,9 +436,9 @@
       "selectors": 9
     },
     "src/features/test-cases/styles/index.css": {
-      "rules": 11,
-      "declarations": 28,
-      "selectors": 11
+      "rules": 20,
+      "declarations": 64,
+      "selectors": 20
     },
     "src/features/test-orders/styles/case-visualization.css": {
       "rules": 116,
@@ -505,9 +516,9 @@
       "selectors": 165
     },
     "src/features/ui-automation/styles/index.css": {
-      "rules": 86,
-      "declarations": 255,
-      "selectors": 106
+      "rules": 83,
+      "declarations": 246,
+      "selectors": 103
     },
     "src/features/ui-automation/styles/list-v2.css": {
       "rules": 13,
@@ -538,6 +549,16 @@
       "rules": 5,
       "declarations": 18,
       "selectors": 6
+    },
+    "src/shared/styles/base-services-connection.module.css": {
+      "rules": 32,
+      "declarations": 96,
+      "selectors": 33
+    },
+    "src/shared/styles/case-import.module.css": {
+      "rules": 9,
+      "declarations": 31,
+      "selectors": 13
     },
     "src/shared/styles/chart-tokens.css": {
       "rules": 1,
@@ -574,6 +595,11 @@
       "declarations": 288,
       "selectors": 6
     },
+    "src/shared/styles/json-editor.module.css": {
+      "rules": 21,
+      "declarations": 67,
+      "selectors": 26
+    },
     "src/shared/styles/legacy-tokens.css": {
       "rules": 1,
       "declarations": 28,
@@ -599,15 +625,20 @@
       "declarations": 48,
       "selectors": 20
     },
+    "src/shared/styles/run-view.module.css": {
+      "rules": 75,
+      "declarations": 289,
+      "selectors": 87
+    },
     "src/shared/styles/scrollbars.css": {
       "rules": 5,
       "declarations": 10,
       "selectors": 6
     },
     "src/shared/styles/surface-tokens.css": {
-      "rules": 36,
-      "declarations": 196,
-      "selectors": 39
+      "rules": 58,
+      "declarations": 264,
+      "selectors": 62
     },
     "src/shared/styles/tab-motion.css": {
       "rules": 11,

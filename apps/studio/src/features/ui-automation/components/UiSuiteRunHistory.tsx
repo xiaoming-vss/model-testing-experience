@@ -12,6 +12,7 @@ import type { InfiniteData, UseInfiniteQueryResult } from '@tanstack/react-query
 import { Alert, Button, Empty, Modal, Tag } from 'antd'
 
 import type { ListResponse } from '@/shared/api/request'
+import styles from '@/shared/styles/run-view.module.css'
 
 type Props = {
   suiteRunHistoryOpen: boolean
@@ -38,6 +39,7 @@ export function UiSuiteRunHistory({ suiteRunHistoryOpen, setSuiteRunHistoryOpen,
       onCancel={() => setSuiteRunHistoryOpen(false)}
       destroyOnHidden={false}
       className="api-collection-run-history-modal"
+      rootClassName={styles.root}
     >
       <div className="api-collection-run-history-layout">
         {suiteRunHistoryQuery.error ? (

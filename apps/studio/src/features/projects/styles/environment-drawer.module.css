@@ -1,0 +1,228 @@
+/*
+ * API / 性能环境抽屉的皮肤。根节点仍保留 api-environment-drawer 兼容类，
+ * 规则通过 .root 作用域收敛到当前 Drawer。
+ */
+.root :global(.ant-drawer-body) {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+  padding: 20px 24px 24px;
+  overflow: hidden;
+  background: var(--tp-bg-elevated, var(--app-request-section-bg));
+}
+
+.root :global(.ant-drawer-header) {
+  background: var(--tp-bg-elevated, var(--app-surface));
+  border-bottom: 1px solid var(--tp-border-soft, var(--app-editor-header-border));
+}
+
+.root :global(.api-environment-drawer-shell) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.root :global(.api-environment-split-layout) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.root :global(.api-environment-section-top) {
+  flex: 0 0 320px;
+  min-height: 0;
+}
+
+.root :global(.api-environment-section-bottom) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.root :global(.api-environment-section) {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+}
+
+.root :global(.api-environment-section-head) {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.root :global(.api-environment-section-title-block) {
+  min-width: 0;
+}
+
+.root :global(.api-environment-subtitle.ant-typography) {
+  margin: 4px 0 0;
+}
+
+.root :global(.api-environment-toolbar) {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.root :global(.api-environment-current-pill) {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--app-environment-option-selected);
+  color: var(--app-request-summary-text);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.root :global(.api-environment-var-search) {
+  width: 320px;
+  margin-top: 0;
+}
+
+.root :global(.api-environment-section-body) {
+  flex: 1;
+  min-height: 0;
+}
+
+.root :global(.api-environment-section-scrollable) {
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.root :global(.api-environment-section-bottom) :global(.api-environment-section-body) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.root :global(.api-environment-section-bottom) :global(.api-environment-section-scrollable) {
+  overflow: hidden;
+  padding-right: 0;
+}
+
+.root :global(.api-environment-list) {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.root :global(.api-environment-item) {
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--tp-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.root :global(.api-environment-item:hover) {
+  border-color: var(--app-request-summary-border-hover);
+  box-shadow: 0 8px 20px var(--app-editor-focus-ring);
+}
+
+.root :global(.api-environment-item.active) {
+  border-color: var(--app-request-summary-border-hover);
+  box-shadow: 0 8px 20px var(--app-accent-emphasis);
+  background: var(--app-request-summary-hover);
+}
+
+.root :global(.api-environment-item-main) {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.root :global(.api-environment-item-top) {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.root :global(.api-environment-item-url) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--app-shell-text);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.root :global(.api-environment-var-value-cell) {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.root :global(.api-environment-empty-card) {
+  min-height: 96px;
+}
+
+.root :global(.api-environment-vars-card) :global(.ant-card-body) {
+  padding: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.root :global(.api-environment-vars-card) :global(.ant-table-wrapper) {
+  overflow: auto;
+}
+
+.root :global(.api-environment-vars-card) {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.root :global(.api-environment-vars-scroll) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+@media (max-width: 900px) {
+  .root :global(.api-environment-toolbar) {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .root :global(.api-environment-var-search) {
+    width: 100%;
+  }
+
+  .root :global(.api-environment-section-head) {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .root :global(.api-environment-list) {
+    gap: 8px;
+  }
+}

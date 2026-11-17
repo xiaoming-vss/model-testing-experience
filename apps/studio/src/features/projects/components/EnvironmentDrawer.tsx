@@ -21,7 +21,9 @@ import {
 } from 'antd'
 import type { TableProps } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
+import { cx } from '@/shared/utils/cx'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import styles from '../styles/environment-drawer.module.css'
 import {
   api,
   listItems,
@@ -327,7 +329,7 @@ export function EnvironmentDrawer({
         open={open}
         size={960}
         onClose={onClose}
-        className="api-environment-drawer"
+        className={cx('api-environment-drawer', styles.root)}
       >
         <div className="api-environment-drawer-shell">
           {!projectId ? <Alert showIcon type="info" title="请先选择项目后再管理环境" /> : null}

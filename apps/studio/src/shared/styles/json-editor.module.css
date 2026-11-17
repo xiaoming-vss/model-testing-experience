@@ -1,0 +1,138 @@
+/* JSON / 文本编辑器的公共皮肤。宿主仍可继续用 json-editor-* 兼容类做上下文覆盖。 */
+
+.wrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shell {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  border: 1px solid var(--app-editor-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+  overflow: hidden;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.shell:focus-within {
+  border-color: var(--app-editor-border-focus);
+  box-shadow: 0 0 0 3px var(--app-editor-focus-ring);
+}
+
+.invalid {
+  border-color: var(--app-editor-error-border);
+  box-shadow: 0 0 0 2px var(--app-editor-error-ring);
+}
+
+.toolbar {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--app-editor-header-border);
+  background: var(--app-editor-header-bg);
+}
+
+.toolbarActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbarBtn:global(.ant-btn) {
+  height: 30px;
+  padding-inline: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 8px;
+}
+
+.codemirror :global(.cm-editor) {
+  width: 100%;
+  max-width: 100%;
+  background: var(--app-surface);
+  font-family: 'Consolas', 'Cascadia Mono', 'Courier New', monospace;
+  font-size: 15px;
+  line-height: 24px;
+  font-style: normal;
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'calt' 0;
+  text-rendering: geometricPrecision;
+}
+
+.codemirror :global(.cm-editor.cm-focused) {
+  outline: none;
+}
+
+.codemirror :global(.cm-scroller) {
+  width: 100%;
+  max-width: 100%;
+  overflow: auto;
+  min-height: 260px;
+}
+
+.codemirror :global(.cm-content),
+.codemirror :global(.cm-line) {
+  padding-inline: 0;
+}
+
+.codemirror :global(.cm-content),
+.codemirror :global(.cm-content *),
+.codemirror :global(.cm-line),
+.codemirror :global(.cm-line *) {
+  font-family: 'Consolas', 'Cascadia Mono', 'Courier New', monospace !important;
+  font-style: normal !important;
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'calt' 0;
+}
+
+.codemirror :global(.cm-content) {
+  padding-block: 12px;
+}
+
+.codemirror :global(.cm-line) {
+  padding-left: 14px;
+}
+
+.codemirror :global(.cm-gutters) {
+  min-width: 36px;
+  border-right: 1px solid var(--app-editor-gutter-border);
+  background: var(--app-surface);
+  color: var(--app-surface-text-muted);
+  font-size: 13px;
+}
+
+.codemirror :global(.cm-activeLine),
+.codemirror :global(.cm-activeLineGutter) {
+  background: transparent;
+}
+
+.codemirror :global(.cm-foldGutter) {
+  display: none;
+}
+
+.codemirror :global(.cm-lineNumbers .cm-gutterElement) {
+  padding: 0 10px 0 8px;
+}
+
+.codemirror :global(.cm-matchingBracket) {
+  color: var(--app-surface-text) !important;
+  background: var(--app-editor-selection);
+  border-radius: 4px;
+}
+
+.codemirror :global(.cm-nonmatchingBracket) {
+  color: var(--app-editor-error-text) !important;
+}
+
+.codemirror :global(.cm-tooltip) {
+  border-radius: 10px;
+  border-color: var(--app-editor-border);
+  box-shadow: 0 12px 32px var(--app-editor-popover-shadow);
+}

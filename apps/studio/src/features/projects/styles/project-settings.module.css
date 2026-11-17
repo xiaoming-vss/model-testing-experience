@@ -1,0 +1,21 @@
+/* 项目设置抽屉的布局皮肤；抽屉内的外部绑定明细仍由 base-services 维护。 */
+
+.root :global(.ant-drawer-body) {
+  padding: 24px;
+}
+
+.root :global(.project-settings-row) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.root :global(.project-settings-row) > :global(.ant-btn) {
+  flex-shrink: 0;
+}
+
+.root :global(.project-settings-copy) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

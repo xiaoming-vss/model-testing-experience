@@ -6,6 +6,8 @@ import type { ApiCaseRunResult } from '@/services/api'
 import { Alert } from 'antd'
 import { StopRunButton } from '@/domain/runs/StopRunButton'
 import { getApiCaseRunId } from '../utils/detailView'
+import { cx } from '@/shared/utils/cx'
+import styles from '@/shared/styles/run-view.module.css'
 import { useMemo } from 'react'
 
 /*
@@ -73,7 +75,7 @@ export function ApiCaseRunConsole({ result, environmentName, view, onViewChange,
   }))
 
   return (
-    <div className="api-wb-console" data-tab-motion-scope>
+    <div className={cx('api-wb-console', styles.root)} data-tab-motion-scope>
       <div className="api-wb-console-banner">
         <div className="api-wb-console-banner-main">
           <span className="api-wb-console-title">请求结果</span>

@@ -69,6 +69,7 @@ import {
   type UiTestStepFormValue
 } from '../utils/uiTestCaseEditor'
 import '@/shared/styles/surface-tokens.css'
+import '@/features/ui-automation/styles/index.css'
 import '@/features/ui-automation/styles/detail-workbench-v2.css'
 import '@/features/ui-automation/styles/detail-pipeline-v2.css'
 import '@/features/ui-automation/styles/detail-inspector-v2.css'

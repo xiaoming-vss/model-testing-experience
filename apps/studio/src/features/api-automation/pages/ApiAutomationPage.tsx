@@ -36,6 +36,7 @@ import {
 import { buildApiCollectionUpdatePayload } from '@/utils/updatePayload'
 import { message } from '@/shared/utils/feedback'
 import '@/shared/styles/surface-tokens.css'
+import '@/features/api-automation/styles/overview.css'
 import '@/features/api-automation/styles/list-v2.css'
 
 type ApiAutomationPageScope = {

@@ -21,7 +21,9 @@ const baselinePath = join(root, 'scripts', 'css-structure-budget.json')
 const init = process.argv.includes('--init')
 const update = process.argv.includes('--update')
 
-const THIRD_PARTY_CLASS = /^(?:ant-|anticon|cm-|react-flow|recharts|hljs|mermaid)/
+// json-editor-* / api-case-run-result-* / api-collection-run-* / base-services-* 是 shared 组件或跨 feature 视图的兼容类族。
+// success/failed/error/skipped/expanded/compact 是这些视图共用的状态修饰类。
+const THIRD_PARTY_CLASS = /^(?:ant-|anticon|cm-|react-flow|recharts|hljs|mermaid|json-editor-|api-case-run-result-|api-collection-|base-services-|sprint-card-|success|failed|error|skipped|expanded|compact)/
 const SUBSTANTIVE_BODY = /\S/
 
 async function walk(dir) {

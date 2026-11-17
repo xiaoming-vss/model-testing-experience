@@ -2,6 +2,8 @@ import { RunWaitingReason } from '@/domain/runs/RunWaitingReason'
 import { StopRunButton } from '@/domain/runs/StopRunButton'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { useViewMotion } from '@/shared/ui/useViewMotion'
+import { cx } from '@/shared/utils/cx'
+import styles from '@/shared/styles/run-view.module.css'
 import { StoredFileDownload } from '@/shared/components/files/StoredFile'
 import {
   uiSuiteRunReportViewOptions,
@@ -59,7 +61,7 @@ export function UiSuiteRunReport({ canStop, suiteRunReportOpen, closeSuiteRunRep
       footer={null}
       onCancel={closeSuiteRunReport}
       destroyOnHidden={false}
-      rootClassName="api-collection-run-report-modal-root"
+      rootClassName={cx('api-collection-run-report-modal-root', styles.root, styles.reportRoot)}
       className="api-collection-run-report-modal"
     >
       {suiteRunReportQuery.error && !suiteRunReport ? (

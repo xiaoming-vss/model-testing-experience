@@ -1,65 +1,5 @@
-.api-automation-page {
-  gap: 0;
-}
-
-.api-automation-content {
-  flex: 1 1 auto;
-  min-height: 0;
-  padding: 12px var(--app-page-gutter) 20px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-:root {
-  --tp-action-create: var(--app-action-create);
-  --tp-action-create-strong: var(--app-action-create-strong);
-  --tp-action-create-soft: var(--app-action-create-soft);
-  --tp-action-read: var(--app-action-read);
-  --tp-action-read-strong: var(--app-action-read-strong);
-  --tp-action-read-soft: var(--app-action-read-soft);
-  --tp-action-update: var(--app-action-update);
-  --tp-action-update-strong: var(--app-action-update-strong);
-  --tp-action-update-soft: var(--app-action-update-soft);
-  --tp-action-delete: var(--app-action-delete);
-  --tp-action-delete-strong: var(--app-action-delete-strong);
-  --tp-action-delete-soft: var(--app-action-delete-soft);
-  --tp-action-save: var(--app-action-save);
-  --tp-action-save-strong: var(--app-action-save-strong);
-  --tp-action-save-soft: var(--app-action-save-soft);
-}
-
-.ant-btn.action-btn-create,
-.ant-btn.action-btn-read,
-.ant-btn.action-btn-update,
-.ant-btn.action-btn-delete,
-.ant-btn.action-btn-save {
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.api-filter-input {
-  width: 280px;
-}
-
-.api-filter-select {
-  width: 160px;
-}
-
-.business-filter-select {
-  width: 180px;
-}
-
-.api-panel-header:not(:where(.tp-list-toolbar)) {
-  gap: 16px;
-}
-
-.api-panel-head-main {
-  flex-wrap: wrap;
-}
+/* API 自动化页的环境选择器。
+   共享页面骨架、筛选控件与卡片皮肤已迁至 shared/styles/surface-tokens.css。 */
 
 .api-inline-environment {
   min-width: 0;
@@ -83,89 +23,6 @@
   white-space: nowrap;
 }
 
-.api-filter-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.api-filter-field {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.api-filter-field-label {
-  flex: 0 0 auto;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--app-environment-option-selected);
-  color: var(--app-request-summary-text);
-  font-size: 12px;
-  line-height: 18px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.api-collection-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-}
-
-.api-collection-card .ant-card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.api-collection-card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.api-collection-description {
-  margin-bottom: 0 !important;
-  color: var(--app-request-overview-text-muted);
-  font-size: 12px;
-  line-height: 18px;
-  font-weight: 400;
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.api-collection-inline-value {
-  color: var(--tp-text);
-  font-size: 14px;
-  line-height: 22px;
-  font-weight: 500;
-  text-align: right;
-  word-break: break-word;
-}
-
-.api-collection-meta-inline .api-collection-inline-value {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.api-collection-card .sprint-card-actions {
-  gap: 6px;
-}
-
-.api-collection-card .sprint-card-actions .ant-btn {
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
-}
-
 @media (max-width: 1200px) {
   .api-inline-environment {
     width: 100%;
@@ -175,6 +32,13 @@
 
 @media (max-width: 900px) {
   .api-inline-environment {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .api-environment-selector {
+    width: 100%;
     align-items: flex-start;
     flex-direction: column;
     gap: 10px;

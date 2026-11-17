@@ -16,131 +16,6 @@
   padding: 0;
   gap: 0;
 }
-
-.base-services-empty-card {
-  border: 1px solid var(--app-picker-option-disabled);
-  border-radius: 16px;
-  background: var(--base-card);
-  box-shadow: var(--base-card-shadow);
-}
-
-.base-services-empty-card {
-  flex: 1 1 auto;
-  min-height: 320px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background:
-    radial-gradient(circle at top right, var(--app-service-tab-selected-bg), transparent 28%),
-    var(--base-card);
-}
-
-.base-services-connection-shell {
-  min-height: 0;
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.base-services-card-scroll {
-  flex: 1 1 auto;
-}
-
-.base-services-connection-grid {
-  display: grid;
-  flex: 0 0 auto;
-  width: 100%;
-  align-content: start;
-  align-items: stretch;
-}
-
-.base-services-connection-card {
-  min-width: 0;
-  height: 100%;
-  min-height: 176px;
-  border-color: var(--base-border);
-  background: var(--base-card);
-  box-shadow: var(--base-card-shadow);
-}
-
-.base-services-connection-card .ant-card-body {
-  display: flex;
-  flex-direction: column;
-}
-
-.base-services-connection-head {
-  min-height: 22px;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.base-services-connection-card .base-services-connection-head {
-  flex-wrap: nowrap;
-}
-
-.base-services-connection-title-wrap {
-  min-width: 0;
-  flex: 1 1 auto;
-  max-width: 100%;
-}
-
-.base-services-connection-title-wrap .ant-space-item {
-  min-width: 0;
-}
-
-.base-services-connection-title {
-  display: block;
-  min-width: 0;
-  max-width: 100%;
-  line-height: 22px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.base-services-connection-url.ant-typography {
-  margin-bottom: 0 !important;
-  display: -webkit-box;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  word-break: break-all;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.base-services-connection-actions {
-  min-height: 28px;
-  margin-top: auto;
-  gap: 6px;
-}
-
-.base-services-connection-actions .ant-btn {
-  width: 28px;
-  min-width: 28px;
-  height: 28px;
-}
-
-.base-services-empty-card-list {
-  min-height: 260px;
-}
-@media (max-width: 1880px){
-.base-services-connection-grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-
-}@media (max-width: 1560px){
-.base-services-connection-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-}@media (max-width: 980px){
-.base-services-connection-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-}
 .zentao-binding-modal .ant-modal-content {
   border: 1px solid var(--tp-border-soft);
   border-radius: 16px;
@@ -317,18 +192,7 @@
     padding: 16px 16px 20px;
   }
 
-.base-services-connection-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
 }@media (max-width: 680px){
-.base-services-empty-card {
-    min-height: 260px;
-  }
-
-.base-services-connection-grid {
-    grid-template-columns: 1fr;
-  }
 
 .zentao-binding-form-row,
 .zentao-binding-select,
@@ -363,9 +227,7 @@
     var(--app-section-bg);
 }
 
-.base-services-panel,
-.base-services-connection-card,
-.base-services-empty-card {
+.base-services-panel {
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
 }
@@ -388,68 +250,6 @@
 .base-services-page .action-btn-create.ant-btn-primary {
   border: 0;
   border-radius: 10px;
-}
-
-.base-services-card-scroll {
-  padding: 16px 18px;
-}
-
-.base-services-connection-grid {
-  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
-  grid-auto-rows: auto;
-  gap: 18px;
-}
-
-.base-services-connection-card.ant-card {
-  height: auto;
-  min-height: 172px;
-  border: 1px solid var(--app-glass-border-68);
-  border-radius: 14px;
-  background:
-    linear-gradient(180deg, var(--app-glass-surface-70), var(--app-glass-surface-48)),
-    var(--app-glass-surface-50);
-  box-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-90),
-    0 16px 38px var(--app-glass-shadow-toolbar);
-}
-
-.base-services-connection-card.ant-card:hover {
-  border-color: var(--app-service-card-border-hover);
-  box-shadow:
-    inset 0 1px 0 var(--app-glass-highlight-92),
-    0 22px 48px var(--app-service-card-shadow-hover);
-  transform: translateY(-2px);
-}
-
-.base-services-connection-card .ant-card-body {
-  height: auto;
-  min-height: 172px;
-  gap: 10px;
-  padding: 16px !important;
-}
-
-.base-services-connection-title {
-  color: var(--base-text);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.base-services-connection-url.ant-typography {
-  min-height: 32px;
-  color: var(--base-text-secondary);
-  font-size: 12px;
-  line-height: 16px;
-}
-
-.base-services-connection-card .sprint-card-label {
-  color: var(--base-text-muted);
-  font-size: 12px;
-}
-
-.base-services-connection-card .api-collection-inline-value {
-  color: var(--base-text);
-  font-size: 12px;
-  font-weight: 650;
 }
 
 /* Base services scoped unified macOS white glass palette */
@@ -487,13 +287,6 @@
   background: var(--app-glass-surface-68) !important;
 }
 
-.app-shell-base-services .base-services-page .panel-header.api-panel-header {
-  border-color: var(--app-glass-request-shadow) !important;
-  background: var(--app-glass-surface-50) !important;
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
-}
-
 .app-shell-base-services .base-services-connection-card.ant-card {
   background: var(--app-glass-surface-72) !important;
 }
@@ -508,6 +301,13 @@
 
 .app-shell-base-services .base-services-connection-card .sprint-card-meta {
   border-bottom-color: var(--app-glass-request-shadow) !important;
+}
+
+.app-shell-base-services .base-services-page .panel-header.api-panel-header {
+  border-color: var(--app-glass-request-shadow) !important;
+  background: var(--app-glass-surface-50) !important;
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
 }
 
 /* Global macOS palette alignment */
@@ -626,15 +426,7 @@ green stays reserved for status only. */
   padding: 8px 0 2px;
 }
 
-/* Project settings use stacked details instead of compact toolbar badges. */
-.project-settings-drawer .ant-drawer-body { padding: 24px; }
-
-.project-settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-
-.project-settings-row > .ant-btn { flex-shrink: 0; }
-
-.project-settings-copy { min-width: 0; overflow-wrap: anywhere; }
-
+/* 项目设置外部绑定明细；抽屉布局在 features/projects/styles/project-settings.module.css。 */
 .project-settings-binding-details { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
 
 .project-settings-binding-line { display: flex; align-items: flex-start; gap: 12px; justify-content: space-between; }
@@ -649,28 +441,5 @@ green stays reserved for status only. */
 .base-services-unified-panel > .base-services-panel-body { flex: 1; height: auto; min-width: 0; }
 
 /* 桌面按可用宽度自动填充列；窄屏保留固定列数，避免卡片被压得过窄。 */
-@media (max-width: 1560px) {
-  .base-services-connection-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 1220px) {
-  .base-services-connection-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 980px) {
-  .base-services-connection-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 680px) {
-  .base-services-connection-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
 
 .base-services-motion-panel { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }

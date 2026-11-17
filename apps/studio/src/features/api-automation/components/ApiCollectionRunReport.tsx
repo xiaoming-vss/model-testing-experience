@@ -18,6 +18,8 @@ import {
 } from '@/services/api'
 import { ActionButton } from '@/shared/components/ActionButton'
 import { useViewMotion } from '@/shared/ui/useViewMotion'
+import { cx } from '@/shared/utils/cx'
+import styles from '@/shared/styles/run-view.module.css'
 import {
   formatTime,
   getErrorMessage,
@@ -81,7 +83,7 @@ export function ApiCollectionRunReportModal({ canStop, collectionRunReportOpen, 
         setSelectedCollectionRunId('')
       }}
       destroyOnHidden
-      rootClassName="api-collection-run-report-modal-root"
+      rootClassName={cx('api-collection-run-report-modal-root', styles.root, styles.reportRoot)}
       className="api-collection-run-report-modal"
     >
       {collectionRunReportQuery.error && !collectionRunReport ? (

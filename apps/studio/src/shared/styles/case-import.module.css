@@ -1,0 +1,63 @@
+/* 用例导入弹窗的共享皮肤；API、UI 与用例库三处复用。 */
+
+.root :global(.ant-modal) {
+  max-width: calc(100vw - 32px);
+}
+
+.root :global(.ant-modal-content) {
+  overflow: hidden;
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+}
+
+.root :global(.ant-modal-body) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.modal {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  max-height: calc(100vh - 148px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mode {
+  width: 100%;
+}
+
+.upload,
+.editor {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 10px;
+}
+
+.hint {
+  color: var(--tp-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.editor :global(.json-editor-wrap),
+.editor :global(.json-editor-shell),
+.editor :global(.json-editor-codemirror),
+.editor :global(.json-editor-codemirror) :global(.cm-editor) {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.editor :global(.json-editor-codemirror) :global(.cm-scroller) {
+  min-height: 0;
+  height: clamp(240px, 48vh, 420px);
+}

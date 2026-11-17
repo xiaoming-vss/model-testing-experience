@@ -40,6 +40,7 @@ import '@/shared/styles/surface-tokens.css'
 import '@/features/api-automation/styles/detail-workbench-v2.css'
 import '@/features/api-automation/styles/detail-inspector-v2.css'
 import '@/features/api-automation/styles/detail-request-panels-v2.css'
+import '@/features/api-automation/styles/detail.css'
 import {
   DRAFT_CASE_ID,
   ENV_VAR_TOKEN_PREFIX,

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import '@/shared/styles/surface-tokens.css'
 import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AppstoreOutlined, SearchOutlined, SettingOutlined } from '@ant-design/icons'

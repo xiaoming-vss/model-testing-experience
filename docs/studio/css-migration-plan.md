@@ -2,23 +2,23 @@
 
 2026-11-17。本文是 Studio CSS 存量整改与 Tailwind CSS v4 / CSS Modules 迁移的执行顺序、阶段目标和验收口径。策略约束见 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md)，日常编码规则见 [STRUCTURE S16](STRUCTURE.md#四目录与样式契约)。
 
-**执行状态（2026-11-17）**：阶段 0、1、2 已完成；阶段 3 起待执行。
+**执行状态（2026-11-17）**：阶段 0、1、2、3 已完成；`App.css` 已移除全部 feature CSS 导入，下一步进入阶段 4 共享原语与 Shell/Projects 收口。
 
 ## 当前基线
 
-| 指标 | 整改前（2026-11-17） | 阶段 0-2 后 |
-| --- | --- | --- |
-| CSS 文件 | 101 个 | 101 个（删除 `auth.css`，新增 `auth.module.css`） |
-| CSS 总行数 | 23,658 行 | 22,732 行 |
-| `!important` | 582 处 | 493 处 |
-| `.app-shell.app-shell-macos` 长前缀 | 164 处 | 163 处 |
-| 重复规则体 | 约 446 组（历史审计口径） | 134 组（结构门禁口径：≥3 条声明且规则体 ≥40 字符） |
-| 超过 C1 上限（600 行）的文件 | 7 个，合计 9,008 行，占 38% | 7 个，合计 8,528 行，占 37.5% |
-| `App.css` feature 导入 | 5 个 | 4 个 |
+| 指标 | 整改前（2026-11-17） | 阶段 3 前 | 阶段 3 完成后 |
+| --- | --- | --- | --- |
+| CSS 文件 | 101 个 | 102 个 | 109 个（新增 7 个 CSS Modules，含运行结果/导入/基础服务连接/项目设置） |
+| CSS 总行数 | 23,658 行 | 22,732 行 | 22,770 行（作用域化根类前缀增加少量字符） |
+| `!important` | 582 处 | 500 处 | 493 处 |
+| `.app-shell.app-shell-macos` 长前缀 | 164 处 | 165 处 | 163 处 |
+| 重复规则体 | 约 446 组（历史审计口径） | 134 组（结构门禁口径：≥3 条声明且规则体 ≥40 字符） | 134 组 |
+| 超过 C1 上限（600 行）的文件 | 7 个，合计 9,008 行，占 38% | 7 个 | 5 个，合计 6,048 行，占 26.6% |
+| `App.css` feature 导入 | 5 个 | 4 个 | 0 个 |
 
 历史审计的重复规则体口径更宽，不与结构门禁计数直接比较；后续 ratchet 只使用结构门禁口径。
 
-体量不是唯一问题。`src/App.css` 仍聚合 API `overview.css`、UI `index.css`、API `detail.css`、base-services `index.css`；`auth.css` 已在阶段 2 删除。`overview.css`、`detail.css` 的 `.api-filter-*`、`.api-collection-*`、`json-editor-*`、`api-case-nav-*` 等类被多个 feature 共用。直接把这些文件搬到名义页面会孤儿化真实样式，因此必须先做所有权拆分。
+阶段 3 之前，`src/App.css` 仍聚合 API `overview.css`、UI `index.css`、API `detail.css`、base-services `index.css`；这些文件的 `.api-filter-*`、`.api-collection-*`、`json-editor-*`、`api-case-nav-*` 等类被多个 feature 共用。阶段 3 已按实际消费方拆到共享 Module、共享 surface 层或 owner 组件，`App.css` 只保留 `layout.css`、`page-frame.css`、`workbench.css`、`shell-boundary.css`。
 
 Tailwind utilities 位于 `@layer utilities`，旧 CSS 未分层。未分层的普通声明优先于所有分层规则，迁移页面如果还保留旧全局规则，utility 会被覆盖，最终只能靠 `!important` 对抗。本计划因此按“先切断污染，再迁移页面”的顺序执行。
 
@@ -39,7 +39,7 @@ Tailwind utilities 位于 `@layer utilities`，旧 CSS 未分层。未分层的�
 | 0 | 整改 | 度量与门禁 | CSS 结构检查、预算 ratchet、`verify` 接入 | 已完成 |
 | 1 | 整改 | 死 CSS + 安全所有权 | 删除确认死规则；确认 `auth.css` 无跨 feature 依赖 | 已完成 |
 | 2 | 迁移 | AuthPage 试点 | Tailwind 布局 + `auth.module.css`，删除 `auth.css` | 已完成 |
-| 3 | 整改 | 跨 feature 所有权拆分 | 拆 `overview.css` / `detail.css` / UI/base-services 共享部分；App.css 只剩 shell/tokens | 待执行 |
+| 3 | 整改 | 跨 feature 所有权拆分 | 拆 `overview.css` / `detail.css` / UI/base-services 共享部分；App.css 只剩 shell/tokens | 已完成 |
 | 4 | 迁移 | 共享原语 + Shell/Projects | `EntityCard`、`ListSurface`、`PageToolbar`、`FilterBar`；`workbench.css`、`page-frame.css` 收口 | 待执行 |
 | 5 | 迁移 | 列表/工作台 | Bugs、Base Services、Admin、Test Cases、Test Orders、TestingPage 包装层 | 待执行 |
 | 6 | 迁移 | 接口库 | 树、列表、编辑器、导入弹窗 | 待执行 |
@@ -71,10 +71,20 @@ Tailwind utilities 位于 `@layer utilities`，旧 CSS 未分层。未分层的�
 
 ### 阶段 3：所有权拆分
 
-- `overview.css`：拆出共享 list/toolbar/card 样式与 API 页面专用样式。
-- `detail.css`：拆出 `json-editor-*`、`api-env-var-picker-*`、`api-environment-*`、`api-collection-run-*`、`api-case-run-result-*`、`api-case-nav-*`、`api-case-import-*` 的共享部分。
-- UI/base-services：把 `.api-case-sidebar*`、`.project-settings-*` 等跨 feature 类迁到实际消费方。
-- 完成后从 `App.css` 移除对应导入，App.css 只保留 shell 与共享基础层。
+已完成（2026-11-17）：
+
+- `overview.css`：`:root --tp-action-*` 与 action 按钮过渡移到 `app/styles/buttons.css`；共享页面骨架、筛选控件、卡片皮肤移到 `shared/styles/surface-tokens.css`；仅 API 环境选择器留在 feature 文件，由 `ApiAutomationPage.tsx` 导入。
+- UI/用例库：`.api-case-sidebar*`、`.api-case-nav-*` 移到 `test-cases/styles/index.css`；UI 列表样式由 UI 页面自己导入。
+- `json-editor-*` 基础皮肤移到 `shared/styles/json-editor.module.css`，保留兼容类供宿主覆盖和测试查询。
+- 环境相关：`api-env-var-picker-*` 归 `features/projects/styles/dynamic-value-picker.module.css`，`api-environment-*` 归 `features/projects/styles/environment-drawer.module.css`；项目设置抽屉归 `project-settings.module.css`。
+- 运行结果：`api-case-run-result-*`、`api-collection-run-history/report-*` 归 `shared/styles/run-view.module.css`，由历史/报告弹窗与 API 运行控制台提供根类。
+- 用例导入：`api-case-import-*` 归 `shared/styles/case-import.module.css`，API、UI、用例库三处复用。
+- 基础服务连接卡片：`base-services-connection-*`、`base-services-empty-card`、`base-services-card-scroll` 归 `shared/styles/base-services-connection.module.css`，基础服务、性能监控、AI Skill 库共用。
+- `detail.css` 只保留 API 详情专用规则，1,804 → 415 行，由 `ApiCollectionDetailPage.tsx` 导入；`App.css` feature 导入 0 个，只保留 shell 与共享基础层。
+
+共享层仍保留 `api-filter-*`、`api-collection-*` 等旧类名（S7 存量豁免），这是阶段 4 共享原语落地前的过渡；结构门禁已登记 `json-editor-*`、`api-case-run-result-*`、`api-collection-*`、`base-services-*`、`sprint-card-*` 等 shared 兼容类族，后续不得再新增新的 feature 前缀。
+
+浏览器冒烟（2026-11-17）：在 1280/900/760 与浅色/深色下核对 API 列表、基础服务、Skill 库、性能监控、用例库、环境管理抽屉、项目设置抽屉和接口请求体编辑器；布局、筛选控件、卡片、抽屉与 CodeMirror 均正常，无横向溢出。运行历史/报告、用例导入和动态值选择器因当前项目无对应数据未做视觉核对，根类祖先关系已由 Modal/Drawer 探针和组件测试覆盖。
 
 ### 阶段 4：共享原语与 Shell
 
@@ -98,20 +108,20 @@ Tailwind utilities 位于 `@layer utilities`，旧 CSS 未分层。未分层的�
 
 - `App.css` 不再聚合 feature CSS。
 - feature 级 `!important` 清零，长前缀清零。
-- 7 个 C1 超标文件清零。
+- 5 个 C1 超标文件清零。
 - 重复规则体（结构门禁口径）降到 60 组以内。
 - 更新 ADR、STRUCTURE、UI-GUIDELINES 与本文基线。
 
 ## 目标指标
 
-| 指标 | 阶段 0-2 后 | 阶段 4 后 | 结束目标 |
+| 指标 | 阶段 3 完成后 | 阶段 4 后 | 结束目标 |
 | --- | --- | --- | --- |
-| CSS 文件 | 101 | ≤ 80 | ≤ 45 |
-| CSS 行数 | 22,732 | ≤ 21,000 | ≤ 9,000 |
+| CSS 文件 | 109 | ≤ 80 | ≤ 45 |
+| CSS 行数 | 22,770 | ≤ 21,000 | ≤ 9,000 |
 | `!important` | 493 | ≤ 300 | ≤ 100（仅 AntD Module） |
 | 长前缀 | 163 | ≤ 20 | 0 |
-| C1 超标文件 | 7 | 4 | 0 |
-| `App.css` feature 导入 | 4 | 0 | 0 |
+| C1 超标文件 | 5 | 4 | 0 |
+| `App.css` feature 导入 | 0 | 0 | 0 |
 | 重复规则体（结构门禁口径） | 134 | ≤ 100 | ≤ 60 |
 
 ## 迁移单元
@@ -138,5 +148,6 @@ git diff --check
 - 移动 CSS import 会改变等优先级规则的先后顺序，必须逐页做浏览器对照。
 - AntD 深层选择器优先用 `ConfigProvider` token 解决；仍需要时放 CSS Module，不新增页面级全局 CSS。
 - 死类扫描会把 `segment-${key}`、`is-${state}` 等动态类误判为死类；扫描器只报告，删除必须人工确认。
+- 基础服务卡片在 760–980px 仍为 3 列（历史媒体查询顺序覆盖了 980px 的 2 列规则）；阶段 3 保持原行为，阶段 5 列表迁移时一并修正。
 - 当前没有浏览器 E2E；阶段 4 前建议补核心路由截图基线。
 - 若 CSS WIP 尚未稳定，先确认工作树再 ratchet baseline。

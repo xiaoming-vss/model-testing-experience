@@ -12,6 +12,7 @@ import { useWorkbenchStore } from '@/features/projects/store/workbench.store'
 import { api, listItems } from '@/services/api'
 import { getErrorMessage, normalizeRequirementId, normalizeSprintId } from '@/utils/format'
 import '@/shared/styles/surface-tokens.css'
+import '@/features/ui-automation/styles/index.css'
 import '@/features/ui-automation/styles/list-v2.css'
 
 type UiAutomationPageScope = {

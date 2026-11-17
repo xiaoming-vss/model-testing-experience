@@ -25,6 +25,21 @@
     --button-disabled-bg: #f4f6f8;
     --button-disabled-border: #e4e8ee;
     --button-focus: #8bb2e5;
+    --tp-action-create: var(--app-action-create);
+    --tp-action-create-strong: var(--app-action-create-strong);
+    --tp-action-create-soft: var(--app-action-create-soft);
+    --tp-action-read: var(--app-action-read);
+    --tp-action-read-strong: var(--app-action-read-strong);
+    --tp-action-read-soft: var(--app-action-read-soft);
+    --tp-action-update: var(--app-action-update);
+    --tp-action-update-strong: var(--app-action-update-strong);
+    --tp-action-update-soft: var(--app-action-update-soft);
+    --tp-action-delete: var(--app-action-delete);
+    --tp-action-delete-strong: var(--app-action-delete-strong);
+    --tp-action-delete-soft: var(--app-action-delete-soft);
+    --tp-action-save: var(--app-action-save);
+    --tp-action-save-strong: var(--app-action-save-strong);
+    --tp-action-save-soft: var(--app-action-save-soft);
   }
 
   .ant-btn {
@@ -48,6 +63,18 @@
 
   .ant-btn:not(.ant-btn-circle):not(.ant-btn-round) {
     border-radius: 8px !important;
+  }
+
+  .ant-btn.action-btn-create,
+  .ant-btn.action-btn-read,
+  .ant-btn.action-btn-update,
+  .ant-btn.action-btn-delete,
+  .ant-btn.action-btn-save {
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease,
+      box-shadow 0.2s ease;
   }
 
   .ant-btn-primary {

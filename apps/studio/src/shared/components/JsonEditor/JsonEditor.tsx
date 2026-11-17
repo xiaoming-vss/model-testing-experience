@@ -11,7 +11,9 @@ import { EditorView, keymap } from '@codemirror/view'
 import { Button } from 'antd'
 import { forwardRef, useImperativeHandle, useMemo, useRef, type ReactNode } from 'react'
 import { message } from '@/shared/utils/feedback'
+import { cx } from '@/shared/utils/cx'
 import { codeEditorTheme, darkCodeEditorTheme, jsonEditorHighlightStyle } from '../codeEditorTheme'
+import styles from '@/shared/styles/json-editor.module.css'
 
 function tryFormatJson(value?: string) {
   if (!value?.trim()) {
@@ -174,10 +176,10 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
 
   /* `toolbar` 传 null 表示编辑器外壳不自带工具条——宿主把动作条画在编辑器之外（如请求体面板）。 */
   const editorToolbar = toolbar === undefined ? (
-    <div className="json-editor-toolbar">
-      <div className="json-editor-toolbar-actions">
+    <div className={cx('json-editor-toolbar', styles.toolbar)}>
+      <div className={cx('json-editor-toolbar-actions', styles.toolbarActions)}>
         {showCopy && <Button
-          className="json-editor-toolbar-btn"
+          className={cx('json-editor-toolbar-btn', styles.toolbarBtn)}
           icon={<CopyOutlined />}
           onClick={handleCopy}
           disabled={!value?.trim()}
@@ -185,7 +187,7 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
           复制
         </Button>}
         <Button
-          className="json-editor-toolbar-btn"
+          className={cx('json-editor-toolbar-btn', styles.toolbarBtn)}
           icon={<DownloadOutlined />}
           onClick={handleDownload}
           disabled={!value?.trim()}
@@ -195,12 +197,12 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
       </div>
     </div>
   ) : toolbar === null ? null : (
-    <div className="json-editor-toolbar">{toolbar}</div>
+    <div className={cx('json-editor-toolbar', styles.toolbar)}>{toolbar}</div>
   )
 
   return (
-    <div className={`json-editor-wrap${foldable ? ' foldable' : ''}${readOnly ? ' readonly' : ''}`}>
-      <div className={`json-editor-shell${jsonState.valid ? '' : ' invalid'}`}>
+    <div className={cx('json-editor-wrap', styles.wrap, foldable && 'foldable', readOnly && 'readonly')}>
+      <div className={cx('json-editor-shell', styles.shell, !jsonState.valid && styles.invalid)}>
         {toolbarContainer && editorToolbar ? createPortal(editorToolbar, toolbarContainer) : editorToolbar}
         <CodeMirror
           value={value ?? ''}
@@ -213,7 +215,7 @@ export const JsonEditor = forwardRef<JsonEditorRef, JsonEditorProps>(({
             highlightActiveLineGutter: false,
           }}
           extensions={editorExtensions}
-          className="json-editor-codemirror"
+          className={cx('json-editor-codemirror', styles.codemirror)}
           onCreateEditor={(view) => {
             editorViewRef.current = view
           }}

@@ -1,5 +1,7 @@
 import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
+import { cx } from '@/shared/utils/cx'
+import styles from '@/shared/styles/case-import.module.css'
 import '@/shared/styles/list-table.css'
 import {
   AppstoreOutlined,
@@ -1306,13 +1308,13 @@ export function CaseLibraryPage() {
         confirmLoading={importFunctionCasesMutation.isPending}
         okButtonProps={{ className: 'action-btn-save' }}
         onOk={handleImportFunctionCases}
-        rootClassName="api-case-import-modal-root"
+        rootClassName={cx('api-case-import-modal-root', styles.root)}
         className="api-case-import-modal-shell"
         destroyOnHidden
       >
-        <div className="api-case-import-modal">
+        <div className={styles.modal}>
           <Segmented
-            className="api-case-import-mode"
+            className={styles.mode}
             value={caseImportMode}
             options={[
               { label: '上传 JSON', value: 'upload' },
@@ -1321,7 +1323,7 @@ export function CaseLibraryPage() {
             onChange={(value) => setCaseImportMode(value as CaseImportMode)}
           />
           {caseImportMode === 'upload' ? (
-            <div className="api-case-import-upload">
+            <div className={styles.upload}>
               <Upload.Dragger
                 accept=".json"
                 maxCount={1}
@@ -1348,8 +1350,8 @@ export function CaseLibraryPage() {
               </Upload.Dragger>
             </div>
           ) : (
-            <div className="api-case-import-editor">
-              <div className="api-case-import-hint">
+            <div className={styles.editor}>
+              <div className={styles.hint}>
                 直接粘贴 JSON 内容，提交时前端会将文本包装成 `.json` 文件上传。
               </div>
               <TextCodeEditor

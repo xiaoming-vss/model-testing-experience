@@ -2,6 +2,7 @@ import { DEFAULT_PAGE_SIZE } from '@/shared/utils/pagination'
 import { ListPagination } from '@/shared/components/ListPagination'
 import '@/shared/styles/list-table.css'
 import '@/shared/styles/surface-tokens.css'
+import styles from '@/shared/styles/run-view.module.css'
 import { SearchOutlined } from '@ant-design/icons'
 import {
   Alert,
@@ -376,6 +377,7 @@ export function AddCasesFromLibraryModal({
         title="用例详情"
         width={720}
         centered
+        rootClassName={styles.root}
         footer={<Button onClick={() => setDetailItem(null)}>关闭</Button>}
         onCancel={() => setDetailItem(null)}
         destroyOnHidden
