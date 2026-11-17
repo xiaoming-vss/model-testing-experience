@@ -40,9 +40,6 @@ it('仓库画像任务与运行端点使用需求级任务契约', async () => {
     '/v1/repository-profile-tasks/task/runs?page=2&pageSize=20',
   )
 
-  await repositoryProfileApi.getRepositoryProfileRun('run')
-  expect(request).toHaveBeenLastCalledWith('/v1/repository-profile-runs/run')
-
   await repositoryProfileApi.getRepositoryProfileVersions('task')
   expect(request).toHaveBeenLastCalledWith('/v1/repository-profile-tasks/task/versions')
 })

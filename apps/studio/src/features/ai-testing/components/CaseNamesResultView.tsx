@@ -2,13 +2,14 @@ import { ReactFlow, Handle, Position, applyNodeChanges, getNodesBounds, getViewp
 import '@xyflow/react/dist/style.css'
 import { buildTreeFlow, layoutTreeFlow, type TreeFlowNode } from '../utils/caseNameTreeLayout'
 import { saveBlob } from '@/shared/utils/download'
-import '@/features/ai-testing/styles/functional-import-confirm.css'
 import '@/features/ai-testing/styles/index.css'
 import '@/features/ai-testing/styles/case-name-tree.css'
 import type { CaseNameTreeNode } from '@/features/ai-testing/utils/caseNameTree'
 import { buildCaseNameTree, countCaseNameTree } from '@/features/ai-testing/utils/caseNameTree'
 import { ProjectActionButton } from '@/features/projects/components/ProjectActionButton'
 import { JsonEditor } from '@/shared/components/JsonEditor/JsonEditor'
+import artifactStyles from '@/shared/styles/artifact-view.module.css'
+import { cx } from '@/shared/utils/cx'
 import { message } from '@/shared/utils/feedback'
 import { DeleteOutlined, LinkOutlined, PictureOutlined } from '@ant-design/icons'
 import { Button, Popover, Tag } from 'antd'
@@ -50,7 +51,7 @@ function FlowTreeNode({ data }: NodeProps<TreeFlowNode>) {
         else if (relationOpen) setOpenId(null)
       }}
       content={() => data.renderRelations?.(node)}
-      classNames={{ root: 'ai-case-relations-popover' }}
+      classNames={{ root: cx('ai-case-relations-popover', artifactStyles.relationsPopover) }}
     >
       <button
         type="button"

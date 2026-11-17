@@ -21,7 +21,7 @@ _Avoid_: 压测脚本、k6 脚本
 _Avoid_: Worker 任务、测试报告
 
 **监控接入**：
-项目级的 Prometheus/Grafana 连接配置，包含查询和 Remote Write 地址、加密凭据及可选 Grafana 面板信息；发起运行时选择一个并冻结名称和地址。
+项目级的 Prometheus/Grafana 连接配置，包含查询和 Remote Write 地址、加密凭据及可选 Grafana 面板信息；发起运行时选择一个，并在运行上冻结不含凭据的名称、地址、Grafana 面板和默认筛选快照。
 _Avoid_: 监控配置（指全局配置时）、Grafana 连接（只指 Grafana 时）
 
 **性能数据文件**：

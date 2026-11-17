@@ -1,6 +1,7 @@
 import '@/shared/styles/surface-tokens.css'
 import '../styles/index.css'
 import { SharedServicesPanel } from '../components/SharedServicesPanel'
+import { PerfMonitoringPanel } from '@/features/performance/components/PerfMonitoringPanel'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -22,7 +23,9 @@ export function BaseServicesPage({ skillLibrary }: { skillLibrary: ReactNode }) 
           <div ref={setToolbarActions} />
         </div>
         <div className="base-services-panel-body base-services-panel-body-immersive">
-          <SharedServicesPanel projectId={activeProjectId} provider={activeTab} toolbarActions={toolbarActions} />
+          {activeTab === 'monitoring'
+            ? <PerfMonitoringPanel projectId={activeProjectId} toolbarActions={toolbarActions} />
+            : <SharedServicesPanel projectId={activeProjectId} provider={activeTab} toolbarActions={toolbarActions} />}
         </div>
       </section>}
       </div>

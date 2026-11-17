@@ -42,7 +42,6 @@ vi.mock('../api/repositoryProfile.api', () => ({
     createRepositoryProfileTask: vi.fn(),
     runRepositoryProfileTask: vi.fn(),
     getRepositoryProfileTaskRuns: vi.fn(),
-    getRepositoryProfileRun: vi.fn(),
     getRepositoryProfileVersions: vi.fn(),
   },
 }))

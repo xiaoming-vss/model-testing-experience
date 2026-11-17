@@ -1,12 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import workbenchCss from './workbench.css?raw'
-import aiTestingSharedCss from '@/features/ai-testing/styles/index.css?raw'
-import aiTestingListCss from '@/features/ai-testing/styles/task-list-v2.css?raw'
 import testingCss from '@/features/testing/styles/index.css?raw'
 import surfaceTokens from '@/shared/styles/surface-tokens.css?raw'
 import listTableCss from '@/shared/styles/list-table.css?raw'
-
-const aiTestingCss = `${aiTestingSharedCss}\n${aiTestingListCss}`
 
 function computedListSurface(css: string, pageClass: string, tableClass: string) {
   document.head.innerHTML = `<style>${surfaceTokens}\n${listTableCss}\n${css}</style>`
@@ -72,12 +68,5 @@ describe('列表表面样式统一', () => {
     const requirements = computedListSurface(workbenchCss, 'project-overview-page', 'project-requirement-list-table')
 
     expect(requirements).toEqual(functional)
-  })
-
-  it('测试设计任务列表与功能测试列表使用相同的表头和行样式', () => {
-    const functional = computedListSurface(testingCss, 'functional-test-page', 'functional-suite-list-table')
-    const tasks = computedListSurface(aiTestingCss, 'ai-testing-page', 'ai-task-list-table')
-
-    expect(tasks).toEqual(functional)
   })
 })

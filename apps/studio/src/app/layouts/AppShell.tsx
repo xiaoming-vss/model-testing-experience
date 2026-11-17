@@ -17,10 +17,7 @@ import { ProjectsPage } from '@/features/projects/pages/ProjectsPage'
 import { SprintDetailPage } from '@/features/projects/pages/SprintDetailPage'
 import { useActiveProject } from '@/features/projects/hooks/useActiveProject'
 import { useActiveSprint } from '@/features/projects/hooks/useActiveSprint'
-import { UnifiedAiTestingPage } from '@/features/ai-testing/pages/UnifiedAiTestingPage'
 import { AiSkillLibraryPage } from '@/features/ai-testing/pages/AiSkillLibraryPage'
-import { AiTestingOverviewPage } from '@/features/ai-testing/pages/AiTestingOverviewPage'
-import { CodeRiskTaskDetailPage } from '@/features/ai-testing/pages/CodeRiskTaskDetailPage'
 import { BaseServicesPage } from '@/features/base-services/pages/BaseServicesPage'
 import { TestingPage } from '@/features/testing/pages/TestingPage'
 import { InterfaceDetailPage } from '@/features/interface-library/pages/InterfaceDetailPage'
@@ -28,6 +25,9 @@ import { TestOrderWorkspacePage } from '@/features/test-orders/pages/TestOrderWo
 import { BugDetailPage } from '@/features/bugs/pages/BugDetailPage'
 import { BugSubmitPage } from '@/features/bugs/pages/BugSubmitPage'
 import { UiTestSuiteCasePage } from '@/features/ui-automation/pages/UiTestSuiteCasePage'
+import { PerformanceCaseDetailPage } from '@/features/performance/pages/PerformanceCaseDetailPage'
+import { PerformanceRunDetailPage } from '@/features/performance/pages/PerformanceRunDetailPage'
+import { PerformanceRunsPage } from '@/features/performance/pages/PerformanceRunsPage'
 import { AppNavigationBrand, AppSidebar } from './AppSidebar'
 import { navigationIndex } from './navigation'
 import { useNavigationTransition } from './useNavigationTransition'
@@ -217,15 +217,19 @@ export function AppShell() {
             <Route path="/requirements/:requirementId" element={<RequirementDetailPage />} />
             <Route path="/bugs/new" element={<BugSubmitPage />} />
             <Route path="/bugs/:bugId" element={<BugDetailPage />} />
-            <Route path="/ai-testing" element={<AiTestingOverviewPage />} />
+            <Route path="/ai-testing" element={<Navigate to="/projects?board=requirements" replace />} />
+            <Route path="/ai-testing/tasks" element={<Navigate to="/projects?board=requirements" replace />} />
+            <Route path="/ai-testing/code-risk-tasks/:taskId" element={<Navigate to="/projects?board=requirements" replace />} />
             <Route path="/ai-testing/skills" element={<Navigate to="/base-services?tab=skills" replace />} />
-            <Route path="/ai-testing/tasks" element={<UnifiedAiTestingPage />} />
-            <Route path="/ai-testing/code-risk-tasks/:taskId" element={<CodeRiskTaskDetailPage />} />
             <Route path="/base-services" element={<BaseServicesPage skillLibrary={<div className="ai-testing-page tp-list-surface ai-skill-library-page tp-surface"><AiSkillLibraryPage embedded /></div>} />} />
             <Route path="/api-automation" element={<Navigate to="/testing?tab=api" replace />} />
             <Route path="/api-automation/collections/:collectionId" element={<ApiCollectionDetailPage />} />
             <Route path="/ui-automation" element={<Navigate to="/testing?tab=ui" replace />} />
             <Route path="/ui-automation/suites/:suiteId" element={<UiTestSuiteCasePage />} />
+            <Route path="/performance" element={<Navigate to="/testing?tab=perf" replace />} />
+            <Route path="/performance/cases/:caseId" element={<PerformanceCaseDetailPage />} />
+            <Route path="/performance/runs" element={<PerformanceRunsPage />} />
+            <Route path="/performance/runs/:runId" element={<PerformanceRunDetailPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/change-password" element={<ChangePasswordPage />} />
             <Route path="/admin/ldap" element={<LdapSettingsPage />} />

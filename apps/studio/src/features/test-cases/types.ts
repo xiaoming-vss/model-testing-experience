@@ -44,7 +44,6 @@ export type FunctionTestCase = {
   updated_at?: string
 }
 
-
 export type FunctionTestCaseImportResult = {
   importedCaseCount?: number
   imported_case_count?: number
@@ -88,36 +87,6 @@ export type FunctionTestCaseZentaoImportResult = {
   items?: FunctionTestCaseZentaoImportItem[]
 }
 
-export type ImportFunctionTestSuitesToZentaoPayload = {
-  requestId?: string
-  restoreConfirmed?: boolean
-  choices?: Record<string, number>
-  connectionId?: string
-  productId: number
-  moduleId?: number
-  suiteIds: string[]
-}
-
-export type FunctionTestSuiteZentaoImportStatus = 'success' | 'partial_failure' | 'failed'
-
-export type FunctionTestSuiteZentaoImportItem = {
-  suiteId: string
-  status: 'success' | 'failed'
-  importedCaseCount: number
-  errorCode?: number
-  errorMessage?: string
-}
-
-export type FunctionTestSuitesZentaoImportResult = {
-  requirementId: string
-  status: FunctionTestSuiteZentaoImportStatus
-  totalSuiteCount: number
-  succeededSuiteCount: number
-  failedSuiteCount: number
-  importedCaseCount: number
-  items: FunctionTestSuiteZentaoImportItem[]
-}
-
 export type CreateFunctionTestCasePayload = {
   content?: FunctionCaseContent
   title: string
@@ -152,7 +121,6 @@ export type FunctionCaseLibraryFilters = {
   page?: number
   pageSize?: number
 }
-
 
 export type CasePushPreviewItem = {
   caseId: string

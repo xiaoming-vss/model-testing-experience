@@ -182,26 +182,3 @@ export type TestReportGenerateRun = {
   finishedAt?: string
   finished_at?: string
 }
-
-export type SprintCodeOverviewRepository = {
-  instanceUrl?: string
-  repositoryId: string
-  name: string
-  groupId: string
-  branch: string
-  baselineRef?: string | null
-  baselineNote?: string
-  isNewRepository?: boolean
-  commitsCount?: number
-  additions?: number
-  deletions?: number
-  error?: string
-  remediation?: string
-}
-
-export type SprintCodeOverview = {
-  sprintId: string
-  projectId: string
-  generatedAt: string
-  repositories: SprintCodeOverviewRepository[]
-}

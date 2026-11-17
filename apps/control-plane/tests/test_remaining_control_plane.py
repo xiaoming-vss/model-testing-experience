@@ -13,10 +13,6 @@ from testing_agent.core.errors import (
     ErrZentaoRemoteResourceUnavailable,
 )
 from testing_agent.domain.ai_tasks import task_type_for as _generation_task_type_for
-from testing_agent.schemas.ai_generate_task import (
-    AiGenerateTaskReviewRequest,
-    RequirementAnalysisRunRequest,
-)
 from testing_agent.schemas.api_run import RunApiCaseRequest
 from testing_agent.schemas.workers import WorkerTaskEventRequest
 from testing_agent.services import api_collection, worker
@@ -937,16 +933,6 @@ async def test_ai_review_rejects_non_terminal_runs_like_go():
 def test_requirement_analysis_kind_maps_to_requirement_analysis_task_type():
     assert _generation_task_type_for("function") == "functional_case_generate"
     assert _generation_task_type_for("requirement_analysis") == "requirement_analysis"
-
-
-def test_requirement_analysis_stage_requests_accept_result_yaml_for_openapi_contract():
-    run_request = RequirementAnalysisRunRequest(resultYaml="final yaml")
-    review_request = AiGenerateTaskReviewRequest(resultYaml="final yaml")
-
-    assert run_request.result_yaml == "final yaml"
-    assert run_request.model_dump(by_alias=True, exclude_none=True)["resultYaml"] == "final yaml"
-    assert review_request.result_yaml == "final yaml"
-    assert review_request.model_dump(by_alias=True, exclude_none=True)["resultYaml"] == "final yaml"
 
 
 @pytest.mark.asyncio

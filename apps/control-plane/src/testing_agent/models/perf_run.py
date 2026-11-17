@@ -57,6 +57,11 @@ class PerfRun(Base):
         default="",
         comment="发起运行时冻结的监控接入名称",
     )
+    monitoring_snapshot_json: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="发起运行时冻结的监控接入公开快照 JSON，不含凭据",
+    )
     trigger_user_id: Mapped[str] = mapped_column(
         String(64), index=True, nullable=False, comment="本次运行发起者用户业务标识"
     )

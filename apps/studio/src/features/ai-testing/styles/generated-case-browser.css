@@ -21,9 +21,6 @@
 .ai-generated-case-browser .ai-generated-case-reading .ai-generated-cases-review-fields ol { padding-left: 22px; }
 .ai-generated-case-browser .ai-generated-case-reading .ai-generated-cases-review-fields li,
 .ai-generated-case-browser .ai-generated-case-reading .ai-generated-cases-review-fields p { font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
-.functional-candidate-workbench.is-single-view { display: flex; }
-.functional-candidate-workbench.is-single-view > section { flex: 1; }
-.functional-candidate-workbench.is-single-view > section[hidden] { display: none; }
 @media (max-width: 900px) {
   .ai-generated-case-browser { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(220px, 1fr) minmax(220px, 1fr); }
   .ai-generated-case-reading { border-left: 0; border-top: 1px solid var(--ai-border, var(--app-frame-divider)); }

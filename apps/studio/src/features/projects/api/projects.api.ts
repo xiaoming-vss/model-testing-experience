@@ -5,7 +5,6 @@ import type {
   ProjectMember,
   ProjectUpdatePayload,
   Sprint,
-  SprintCodeOverview,
   SprintCreatePayload,
   SprintDailyMetricsSnapshot,
   SprintUpdatePayload,
@@ -59,5 +58,4 @@ export const projectsApi = {
   getTestReportGenerateRun: (runId: string) => request<TestReportGenerateRun>(`/v1/test-report-generate-runs/${runId}`),
   deleteTestReportGenerateRun: (runId: string) => request<Record<string, never>>(`/v1/test-report-generate-runs/${runId}`, { method: 'DELETE' }),
   downloadTestReportGenerateRunPdf: (runId: string) => requestBlob(`/v1/test-report-generate-runs/${runId}/pdf`),
-  getSprintCodeOverview: (sprintId: string, connectionIds: Record<string, string> = {}) => request<SprintCodeOverview>(`/v1/sprints/${sprintId}/code-overview?${new URLSearchParams({ connectionIds: JSON.stringify(connectionIds) })}`),
 }

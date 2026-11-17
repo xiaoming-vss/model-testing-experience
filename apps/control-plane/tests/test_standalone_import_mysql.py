@@ -143,7 +143,6 @@ async def test_mysql_candidate_provenance_retains_official_case(mysql):  # noqa:
 
 
 async def test_mysql_api_import_endpoint_preserves_source_and_existing_case(mysql):  # noqa: F811
-    from testing_agent.handlers.generation_guards import ensure_legacy_mutation_allowed
     from testing_agent.models.api_case import ApiCase
     from testing_agent.models.api_collection import ApiCollection
     from testing_agent.repositories.ai_generate_task import AiGenerateTaskRepository
@@ -212,9 +211,6 @@ async def test_mysql_api_import_endpoint_preserves_source_and_existing_case(mysq
                 repository=repository,
                 owned_run=access.owned_run,
                 ensure_collection_access=AsyncMock(),
-            )
-            await ensure_legacy_mutation_allowed(
-                access.owned_run, "api", "api-import-run", "actor", action="execute"
             )
             preview = await importer.import_api_run(
                 "api-import-run", collection["collection_id"], False, "actor"

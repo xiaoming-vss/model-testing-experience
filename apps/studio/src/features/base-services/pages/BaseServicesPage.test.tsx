@@ -9,6 +9,9 @@ vi.mock('@/features/projects/hooks/useActiveProject', () => ({
 vi.mock('../components/SharedServicesPanel', () => ({
   SharedServicesPanel: ({ provider }: { provider: string }) => <div>服务目录：{provider}</div>,
 }))
+vi.mock('@/features/performance/components/PerfMonitoringPanel', () => ({
+  PerfMonitoringPanel: ({ projectId }: { projectId?: string }) => <div>性能监控：{projectId}</div>,
+}))
 afterEach(cleanup)
 
 function renderPage(path: string) {
@@ -26,6 +29,7 @@ describe('BaseServicesPage', () => {
     ['/base-services?tab=gitlab', '服务目录：gitlab'],
     ['/base-services?tab=zentao', '服务目录：mcp'],
     ['/base-services', '服务目录：llm'],
+    ['/base-services?tab=monitoring', '性能监控：project-1'],
   ])('renders %s from its URL without an in-page tab bar', (path, content) => {
     renderPage(path)
     expect(screen.getByText(content)).toBeInTheDocument()

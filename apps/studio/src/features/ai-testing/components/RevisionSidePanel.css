@@ -17,21 +17,6 @@
  .revision-workspace.is-revising > .revision-source { width: 100%; max-width: none; min-height: 320px; height: 50%; resize: none; }
  .revision-side-panel { flex-shrink: 0; min-height: 400px; }
 }
-.ai-task-run-result-modal .ant-modal-body > .revision-workspace,
-.functional-candidate-review-modal .ant-modal-body > .revision-workspace {
-  width: 100%;
-  height: calc(100vh - 244px);
-  min-height: 0;
-}
-.revision-source > .ai-task-import-result-form,
-.revision-source > .ai-task-run-result-modal-content.review {
-  height: 100%;
-  min-height: 0;
-  max-height: 100%;
-  overflow: auto;
-}
-.api-task-run-result-modal.review .revision-source { display: flex; flex-direction: column; }
-.api-task-run-result-modal.review .revision-source > .ai-task-run-result-modal-content.review { display: flex; }
 .revision-workspace.is-revising { gap: 0; }
 .revision-workspace.is-revising > .revision-source { resize: none; }
 .revision-divider { flex: 0 0 20px; cursor: col-resize; touch-action: none; position: relative; }
@@ -39,14 +24,6 @@
 .revision-divider:hover::after, .revision-divider:focus-visible::after { background: var(--app-revision-divider-hover); }
 @media (max-width: 800px) { .revision-divider { display: none; } .revision-workspace.is-revising { gap: 16px; } }
 
-.ai-task-run-result-modal.stage-review-with-comment .ant-modal-body > .revision-workspace {
-  height: calc(100vh - 308px);
-}
-.ai-task-stage-review-footer-comment {
-  width: 100%;
-  margin-bottom: 12px;
-  text-align: left;
-}
 .revision-questions { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .revision-question-progress { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--ai-text-secondary, var(--app-list-label)); }
 .revision-question-track { height: 4px; overflow: hidden; border-radius: 4px; background: var(--ai-border, var(--app-revision-border)); }

@@ -10,8 +10,8 @@
 
 截至 2026-11-13，以下页面已完成本次布局调整：
 
-- 测试：测试单、API 测试、UI 测试；资产库：用例库、接口库、应用。
-- 测试设计：需求分析、功能测试、API 测试、UI 测试、代码风险分析，共用 `UnifiedAiTestingPage`。
+- 测试：测试单、API 测试、UI 测试、性能测试；资产库：用例库、接口库、应用。
+- 测试设计：需求分析、功能测试、API 测试、UI 测试、代码风险分析，统一从需求详情的生成全景图谱泳道进入。
 
 “已实现”不等于“已有自动化检查”。本文件末尾分别列出检查覆盖与人工验证要求；其他存量页面尚未完成全面对齐。
 
@@ -41,7 +41,7 @@
 
 全局一级导航与项目选择器位于同一顶栏，使用 36px 高、8px 圆角和 13px 字号；选中项使用强调色文字、600 字重和浅色底板；切换时底板平滑移动，系统要求减少动态效果时关闭过渡。一级导航之间切换时，内容按导航顺序从对应方向轻微滑入并淡入；同一模块内部切换不触发该过渡。 顶栏项目或迭代由用户切换时，内容按下拉选项顺序上下滑入并淡入；初始化和自动恢复选择不播放。窄屏导航可横向滚动。顶部 Tab 使用蓝灰底、细边框，选中项为浅底钢蓝字。系统中文字体缺少粗体时允许合成字重，避免选中态变细。
 
-测试、资产库与基础服务的一级入口统一使用顶部悬停浮层：默认只显示一级入口，悬停（或聚焦后按 ArrowDown）展开各自页签，选中态复用浅底强调 token；页面内不再保留常驻 Tab 栏，内容面板直接铺开，减少重复导航。测试页签为测试单 → API 测试 → UI 测试；资产库为用例库 → 接口库 → 软件仓库；基础服务为 GitLab → LLM 模型 → MCP → Skill 库。浮层通过 Popover 挂载到 body，避免顶部导航横向滚动容器裁剪；触屏首次点按进入默认页并展开页签，Escape 收起并把焦点还给入口。实现为 `app/layouts/TopNavTabMenu.tsx`。
+测试、资产库与基础服务的一级入口统一使用顶部悬停浮层：默认只显示一级入口，悬停（或聚焦后按 ArrowDown）展开各自页签，选中态复用浅底强调 token；页面内不再保留常驻 Tab 栏，内容面板直接铺开，减少重复导航。测试页签为测试单 → API 测试 → UI 测试 → 性能测试；资产库为用例库 → 接口库 → 软件仓库；基础服务为 GitLab → LLM 模型 → MCP → Skill 库 → 性能监控。浮层通过 Popover 挂载到 body，避免顶部导航横向滚动容器裁剪；触屏首次点按进入默认页并展开页签，Escape 收起并把焦点还给入口。实现为 `app/layouts/TopNavTabMenu.tsx`。
 
 顶部导航复用 B 版圆润双色 SVG 图标 `app/layouts/SidebarIcon.tsx`；描边和填充消费主题变量，选中状态和 `aria-current` 随路由同步。
 
@@ -49,12 +49,11 @@
 | --- | --- |
 | 顶部导航使用一级入口，顺序为迭代 → 需求 → 测试 → Bug 列表 → 资产库 → 基础服务；测试、Bug 列表、资产库与基础服务各自独立 | `app/layouts/AppSidebar.tsx`；侧栏测试覆盖直接访问、路由选中、范围参数、资产库选中、一级入口顺序及开发成员权限 |
 | 迭代 → 需求为一级导航，不再嵌套项目总览，页面内不保留重复切换器 | `/projects?board=sprints` 与 `board=requirements`；默认迭代，刷新与前进后退由 URL 保持选中状态 |
-| 测试工作区页签收进顶部「测试」悬停浮层，默认隐藏：测试单 → API 测试 → UI 测试；Bug 列表保持独立一级入口，不在这组页签内；页面内不再渲染重复 Tab 栏 | `TopNavTabMenu.tsx`、`TestingPage.tsx`；组件测试覆盖悬停展开、URL 切换与范围保留、键盘 ArrowDown/Arrow/Escape、已访问面板保持挂载；旧 functional/library 链接跳转资产库 |
+| 测试工作区页签收进顶部「测试」悬停浮层，默认隐藏：测试单 → API 测试 → UI 测试 → 性能测试；Bug 列表保持独立一级入口，不在这组页签内；页面内不再渲染重复 Tab 栏 | `TopNavTabMenu.tsx`、`TestingPage.tsx`；组件测试覆盖悬停展开、URL 切换与范围保留、键盘 ArrowDown/Arrow/Escape、已访问面板保持挂载；旧 functional/library 链接跳转资产库 |
 | 资产库使用独立一级入口和三个页签：用例库 → 接口库 → 软件仓库；页签收进顶部「资产库」悬停浮层，页面内不再渲染重复 Tab 栏；接口库打开后直接进入左侧软件仓库树 + 右侧接口编辑器的工作区，不设外层接口表格；软件仓库页提供统一管理；接口详情页由侧栏高亮资产库 | `TopNavTabMenu.tsx`、`AssetLibraryPage.tsx`、`features/interface-library`；页签首次访问后保持挂载，URL `?tab=` 保持选中；接口详情页继续使用资产库一级入口的选中态，接口库入口解析到具体接口后进入工作区 |
 | 需求详情不设页面级分段 Tab，进入即展示生成画布：顶部保留筛选与刷新，画布分组展示需求文档、需求分析、功能测试、API 测试、UI 测试和独立代码风险；首次进入不显示详情侧栏，选择节点后侧栏从右侧滑入并展示状态、当前版本、版本选择、上游追溯版本，可关闭侧栏回到完整画布，查看入口位于信息区块下方，产物仍在既有窗口中查看，对比、审核通过、审核不通过和继续优化只在该窗口内与正文一起提供。画布保留拖动和手势缩放，不提供左下角缩放按钮、比例显示及适应画布入口，窄屏画布和详情上下排列；需求工具栏、左侧画布／阅读区、右侧信息栏各自保留一个外框，三者之外不叠加公共面板外框，下载原文件与编辑需求位于需求标题栏右侧，未配置链从画布入口打开生成设置，旧 `?tab=` 链接直接落到生成画布 | `RequirementDetailPage.tsx` 与 `RequirementDesignWorkspace`；代码风险运行记录按需求聚合、首次运行自动创建绑定任务，侧栏不设同名独立入口，迭代代码变更区入口保留 |
-| 基础服务四个页签收进顶部「基础服务」悬停浮层，默认隐藏：GitLab → LLM 模型 → MCP → Skill 库；页面内不再渲染重复 Tab 栏 | `TopNavTabMenu.tsx`、`BaseServicesPage.tsx`、`baseServiceTabs.ts`；URL `?tab=` 保持选中，`zentao` 旧参数映射到 MCP |
+| 基础服务五个页签收进顶部「基础服务」悬停浮层，默认隐藏：GitLab → LLM 模型 → MCP → Skill 库 → 性能监控；页面内不再渲染重复 Tab 栏 | `TopNavTabMenu.tsx`、`BaseServicesPage.tsx`、`baseServiceTabs.ts`；URL `?tab=` 保持选中，`zentao` 旧参数映射到 MCP |
 | Skill 库归基础服务 | `/base-services?tab=skills`；旧 `/ai-testing/skills` 和 `?tab=skills` 入口保持跳转兼容，人工验证 |
-| 创建动作跟随当前类型，不再重复选择模板 | `UnifiedAiTestingPage.tsx`；对应页面测试覆盖代码风险分析创建入口 |
 | 数量徽标使用真实查询结果，并说明统计范围 | 需求详情页签数量按当前需求与类型统计运行条数，不随当前历史分页或筛选变化；`requirementDesignApi` |
 
 项目成员与项目设置放在顶部当前项目选择菜单底部，复用既有弹窗及权限；只读成员不可打开项目设置，开发成员不展示这两项。切换项目后不沿用旧项目的弹窗参数。
@@ -117,8 +116,6 @@ Bug 列表。项目选择、顶部全局迭代选择与个人设置保留。Bug 
 | 工具栏内边距 | 上下 10px、左右 16px | 同上 |
 | 外框／内部工具栏圆角 | 12px / 0 | 外框使用 `--srf-radius-card`，内部工具栏仅底部分隔线 |
 | 工具栏表面 | 与分页栏同色，浅色比表头浅一档、底部分隔线、无额外阴影 | `--app-list-toolbar-bg`，深色回退 `--srf-card`；边框 `--srf-card-border` |
-| 测试设计状态栏 | 单行最小高度 37px，内边距 6px 16px | `features/ai-testing/styles/task-list-v2.css` |
-| 状态栏操作按钮 | 高度 24px，左右内边距 8px | 同上；有无批量删除按钮均保持栏高一致 |
 
 全局左右外边距通过 `--app-page-gutter` 管理：项目与迭代工作台、测试、测试设计、基础服务、Skill 库、复用工作台容器的详情页及个人设置均引用此变量，窄屏规则使用同一值。个人设置的居中最大阅读宽度保留；登录页不属于工作台外壳。此变量只用于页面外层，不替换表格单元格、卡片内部、表单、弹窗与抽屉的内边距。56px 工具栏已用于四个测试列表、基础服务和项目总览顶部信息栏；项目总览名称、角色与描述横向排列，长描述省略并可悬停查看，窄屏允许换行；基础服务分类按钮采用 28px 最小高度，以容纳在紧凑工具栏中。
 
@@ -129,17 +126,17 @@ Bug 列表。项目选择、顶部全局迭代选择与个人设置保留。Bug 
 公共标题操作栏和底部分页栏在浅色模式共用 `--app-list-toolbar-bg`（`#F8FAFD`），比表头浅一档；分别保留底部／顶部细分隔线，无额外阴影。应用顶部导航栏继续使用 `#F5F8FC`，分页栏不再复用该颜色。标题栏规则由 `shared/styles/surface-tokens.css` 提供，分页尺寸由 `shared/styles/pagination.css` 提供，当前浅色分页背景映射集中在 `app/styles/theme.css`。深色不使用此浅色覆盖，沿用各自主题表面。
 
 
-## 列表页卡片视图（测试单 / API 测试 / UI 测试）
+## 列表页卡片视图（测试单 / API 测试 / UI 测试 / 性能测试）
 
-2026-11-16 按用户选型，测试单、API 测试集、UI 测试集从表格改为与需求 / 迭代一致的实体卡片。三个页面共用
+2026-11-16 按用户选型，测试单、API 测试集、UI 测试集从表格改为与需求 / 迭代一致的实体卡片；性能测试沿用同一骨架。这些页面共用
 `shared/components/EntityCard.tsx` 与 `shared/styles/entity-card.css`；页面只提供主体内容与操作，不再各写卡片表面。
 
 - 网格：`repeat(auto-fill, minmax(min(100%, 328px), 1fr))`、16px 间距、卡片最小高度 218px、12px 圆角、`--srf-card` 表面与 `--srf-card-border` 描边；悬停只改变描边、阴影与 2px 位移。
 - 结构：标题行（14.5px / 650、单行省略，标题链接进入详情；右侧可放状态胶囊）→ 主体 → 两列 meta 块（标签 9.5px / 值 11.5px，`--srf-hover` 底、8px 圆角）→ 43px footer（左侧最近更新时间，右侧操作）。
 - 整卡可点进入详情；内部链接、按钮和输入不触发卡片进入（`shared/utils/cardNavigation.ts`）。标题链接是键盘入口，卡片本身不重复 `role="button"`。
 - 操作顺序为运行 → 编辑 → 删除；测试单没有列表运行动作，只保留编辑 / 删除。图标按钮沿用 28px 尺寸与现有动作色。
-- 主体内容：测试单为分段进度条 + 已执行 / 各结论计数 + 百分比；API 测试集为两行描述；UI 测试集为运行配置徽标（可视 / 无头、视口、超时 + 截图策略）加两行描述。
-- meta 两列：测试单为「所属迭代 / 被测版本」；API、UI 为「所属迭代 / 所属需求」。创建时间不再出现在这三个列表，最近更新保留在 footer。
+- 主体内容：测试单为分段进度条 + 已执行 / 各结论计数 + 百分比；API 测试集与性能测试为两行描述；UI 测试集为运行配置徽标（可视 / 无头、视口、超时 + 截图策略）加两行描述。
+- meta 两列：测试单为「所属迭代 / 被测版本」；API、UI 为「所属迭代 / 所属需求」；性能测试为「数据文件 / 用例版本」。最近更新保留在 footer。
 - 搜索、筛选、分页、空态、加载和错误态继续复用 `tp-list-*` 外框；空态在卡片滚动区内居中。窄屏由网格自动降为两列 / 单列，卡片高度随内容增长，不裁切正文或操作。
 
 验证：`shared/components/EntityCard.test.tsx`、三个页面测试与浏览器浅色 / 深色检查；卡片悬停与键盘焦点不替代真实布局验收。
@@ -230,7 +227,7 @@ Bug 列表的 ID 列直接显示数据库 `bugs.id`，数字搜索按同一 ID �
 
 详情保留该类条目的完整字段，并以 ID + 名称的标签列出关联测试对象、影响范围、风险和来源问题；材料依据直接展示在详情底部，包含来源、位置和材料原文，不再使用独立的第三栏抽屉。页面只读，不提供逐条处理、删除或翻页操作。空分类显示对应空态，不隐藏页签。
 
-实现位于 `features/ai-testing/components/TestScopeAnalysisView.tsx` 与 `features/ai-testing/styles/test-scope-analysis.css`，`TestScopeAnalysisView.test.tsx` 覆盖四页签切换、详情字段、关联标签和材料依据；窄屏在 900px 以下改为列表在上、详情在下，仍须用浏览器检查横向溢出。
+实现位于 `features/ai-testing/components/TestScopeAnalysisView.tsx`；页签、统计条、分栏、列表行、详情字段与证据复用 `shared/components/ArtifactView`，公共皮肤在 `shared/styles/artifact-view.module.css`，宿主滚动容器适配在 `features/ai-testing/styles/` 下的 `*.module.css`，`TestScopeAnalysisView.test.tsx` 覆盖四页签切换、详情字段、关联标签和材料依据；窄屏在 900px 以下改为列表在上、详情在下，仍须用浏览器检查横向溢出。
 
 ## 材料整理
 
@@ -238,7 +235,7 @@ Bug 列表的 ID 列直接显示数据库 `bugs.id`，数字搜索按同一 ID �
 
 材料整理页不提供独立的「原始材料」页签或第三栏依据抽屉，原始材料只在条目或问题的依据内展开；页面不提供逐条处理、删除或翻页操作。可编辑草稿仍使用文本框编辑说明条目和待确认问题，修改时保留材料块等其他 JSON 内容。
 
-实现位于 `features/ai-testing/components/ReadableRequirementMaterial.tsx` 与 `features/ai-testing/styles/readable-requirement-material.css`，`ReadableRequirementMaterial.test.tsx` 覆盖页签切换、依据展开与编辑保留；窄屏在 900px 以下改为列表在上、详情在下，仍须用浏览器检查横向溢出。
+实现位于 `features/ai-testing/components/ReadableRequirementMaterial.tsx`；页签、统计条、分栏、列表行、详情字段与证据复用 `shared/components/ArtifactView`，公共皮肤在 `shared/styles/artifact-view.module.css`，宿主滚动容器适配在 `features/ai-testing/styles/` 下的 `*.module.css`，`ReadableRequirementMaterial.test.tsx` 覆盖页签切换、依据展开与编辑保留；窄屏在 900px 以下改为列表在上、详情在下，仍须用浏览器检查横向溢出。
 
 ## 需求评审
 
@@ -246,7 +243,11 @@ Bug 列表的 ID 列直接显示数据库 `bugs.id`，数字搜索按同一 ID �
 
 结论页以卡片网格展示评审范围、已读材料、已确认事实、工作假设、待验证假设和输入缺口，评审范围与输入缺口占满整行；未记录的列表显示「未记录」而不是隐藏卡片。问题页按阻断、重要、次要排序，左侧为问题列表，右侧展示问题主题、严重度与类型标签、材料证据原文、影响、待确认问题、建议下一步、验证方式和失败模式，待确认问题使用警示底色突出。覆盖度页按结构盘点、质量特性、需求气味、行为完整性、追溯、输入审计六个维度组织，左侧为维度列表并显示关注项数量，右侧展示该维度明细；输入审计使用已提供材料、缺失材料、时效性、可比性四张卡片。
 
-评审报告解析失败时显示稳定的格式错误空态，无问题时显示「未发现问题」空态。实现位于 `features/ai-testing/components/RequirementReviewView.tsx` 与 `features/ai-testing/styles/requirement-review.css`，`RequirementReviewView.test.tsx` 覆盖三页签、问题证据与覆盖度明细，Panorama 测试验证 blocked 评审仍可审核通过；窄屏在 900px 以下改为列表在上、详情在下，仍须用浏览器检查横向溢出。
+评审报告解析失败时显示稳定的格式错误空态，无问题时显示「未发现问题」空态。实现位于 `features/ai-testing/components/RequirementReviewView.tsx`；页签、统计条、分栏、列表行、详情字段与证据复用 `shared/components/ArtifactView`，公共皮肤在 `shared/styles/artifact-view.module.css`，宿主滚动容器适配在 `features/ai-testing/styles/` 下的 `*.module.css`，`RequirementReviewView.test.tsx` 覆盖三页签、问题证据与覆盖度明细，Panorama 测试验证 blocked 评审仍可审核通过；窄屏在 900px 以下改为列表在上、详情在下，仍须用浏览器检查横向溢出。
+
+## 产物视图共用实现（2026-11-17）
+
+需求评审、测试点、测试范围分析和材料整理共用 `shared/components/ArtifactView` 与 `shared/styles/artifact-view.module.css`。共享 module 只放公共原语皮肤，不得出现 `gc-artifact-scroll`、`is-requirement-*` 等 feature 私有选择器；与 `GenerationChainModal` 滚动容器耦合的宿主适配放在 `features/ai-testing/styles/` 下的 `*.module.css`。迁移一个产物视图时，同时删除原 CSS 文件与 module 中 0 引用的类，并更新本节各视图的“实现位于”说明；重复字号、断点使用 `shared/styles/tailwind.css` 的 `@theme` token。完整验收清单见 [STRUCTURE.md 的迁移执行清单](STRUCTURE.md#迁移执行清单2026-11-17-试点补充)。
 
 ## 实现归属与检查
 
@@ -298,10 +299,10 @@ Bug 列表的 ID 列直接显示数据库 `bugs.id`，数字搜索按同一 ID �
 - `src/app/styles/listNameConsistency.test.ts`：部分列表名称的样式一致性；已知覆盖限制见该测试及 STRUCTURE。
 - `src/app/layouts/AppSidebar.test.tsx`：侧栏交互、选中状态与范围参数。
 - `src/features/testing/pages/TestingPage.test.tsx`：测试工作区 Tab、键盘操作、历史返回、旧链接及 Bug 独立入口。
-- `src/features/ai-testing/pages/UnifiedAiTestingPage.test.tsx`：代码风险分析的旧链接兼容、创建、搜索、运行等行为。
+- `src/features/ai-testing/components/RequirementDesignWorkspace.test.tsx`：生成全景入口、代码风险工作区、空态与只读边界。
 - 测试资产各页面的 `*.test.tsx`：各自搜索、刷新、列表及操作行为。
 
-**尚无自动化几何约束的项目**：12px 外边距、56px 工具栏、37px 状态栏、操作列右侧留白、分页实际位置与窄屏换行。不能把通过现有测试等同于这些尺寸已获验证，也不能用 jsdom 代替浏览器布局检查。
+**尚无自动化几何约束的项目**：12px 外边距、56px 工具栏、操作列右侧留白、分页实际位置与窄屏换行。不能把通过现有测试等同于这些尺寸已获验证，也不能用 jsdom 代替浏览器布局检查。
 
 修改后的验证：
 
@@ -331,7 +332,7 @@ Bug 列表的 ID 列直接显示数据库 `bugs.id`，数字搜索按同一 ID �
 
 同日增加独立“UI 交互”页签，按所属模块和操作直接展开已有控件、选项、默认值、行为及操作步骤，保留依据与确认状态；不按操作名称推导产品 UI。2324px 桌面及760px窄屏保持正文滚动与底部操作可见，详情见 [需求理解对照视图](requirement-understanding-comparison.md)。
 
-测试需求分析预览在标题右侧使用“可视化 / JSON”分段开关，正文保留分类 Tab；业务规则、场景及待确认项采用可搜索的左侧目录与右侧完整详情，场景额外提供就绪状态筛选。场景因素现采用下述目录与详情布局，完整保留原字段，明确区分零值与缺失值。预览头部与底部操作固定，目录和详情独立滚动，640px 及以下上下排列，沿用既有主题配色。实现位于 `features/ai-testing/components/AnalysisContentBrowser.tsx`、`RequirementAnalysisView.tsx` 中的 `RequirementAnalysisDiagramView` 与 `styles/requirement-analysis.css`。2026-10-14 已通过 41 项页面／布局检查、2 项新增交互检查及主题检查、`npm run verify`；实际组件的隔离浏览器截图位于 `.scratch/functional-analysis-tabs/browser-*.png`，不代表真实业务数据的完整端到端验收。
+测试需求分析预览在标题右侧使用“可视化 / JSON”分段开关，正文按测试对象、影响范围、风险、待确认项分类 Tab 展示；每类使用左侧列表与右侧详情，详情保留状态、关联引用与材料依据，待确认项显示风险色角标。预览头部与底部操作固定，列表和详情独立滚动，900px 及以下改为上下排列。实现位于 `features/ai-testing/components/TestScopeAnalysisView.tsx`，公共布局使用 `shared/components/ArtifactView`，复杂皮肤在 `shared/styles/artifact-view.module.css`；原 `styles/requirement-analysis.css` 已删除。
 
 2026-10-15 功能概览按用户选定的方案 3 改为上方横向业务模块导航、下方通栏功能目的与三栏需求边界。模块来自 `functionalOverview.entryPoints`，保留原文顺序和完整标题；标题、模块导航与展开详情合并在同一容器，不提供模块搜索框；支持就地展开入口路径、操作，模块过多时仅导航区横向滚动。功能目的直接展示原始内容，参与角色、适用对象、明确排除范围始终展开，以圆点列表阅读；不把某个需求的数据层级或流程关系硬编码到通用界面。概览不再重复提供详细分析入口，统一通过顶部分类 Tab 切换。业务模块区、通栏功能目的、需求边界各自使用独立容器；需求边界标题置于容器内，三类内容在内部各自分组，统一背景、1px 边框、12px 圆角和24px内边距；边界三类内容在桌面横向三栏排列，窄容器上下排列，沿用全站浅色／深色语义 token。实现为 `AnalysisOverview.tsx` 与 `styles/analysis-overview.css`；交互覆盖见 `AnalysisOverview.test.tsx`。本次 `npm run verify` 与 45 项相关测试通过；真实组件使用隔离数据检查 1680px 浅色／深色、760px 和 390px 窄屏，模块展开与分析跳转正常，未发现页面横向溢出。截图位于 `.scratch/analysis-overview-layout/`，不替代已登录业务数据的端到端验收。
 
@@ -375,7 +376,7 @@ Bug 列表的 ID 列直接显示数据库 `bugs.id`，数字搜索按同一 ID �
 
 2026-10-22 按用户确认的表格参考结构调整需求页：标题栏从卡片板面中拆出，成为独立顶部卡片；下方卡片板面单独成框，移除页面内的搜索／筛选；顶部卡片显示真实总数并保留刷新、新建。实际页面在 1680、1440、760、390 像素宽度及 1680 深色下检查无横向溢出，截图位于 `.scratch/base-panels-preview/requirements-header-*.png` 和 `requirements-header-dark-1680.png`。
 
-测试（测试单、用例库、API 测试、UI 测试）、Bug 列表和代码风险分析列表不再重复展示局部迭代筛选，范围统一跟随顶部“当前迭代”。全局迭代变化后清除旧需求及测试集选择并重置分页；新建和编辑表单、从用例库添加用例弹窗仍保留业务所需的迭代字段。
+测试（测试单、用例库、API 测试、UI 测试、性能测试）、Bug 列表和代码风险分析列表不再重复展示局部迭代筛选，范围统一跟随顶部“当前迭代”。全局迭代变化后清除旧需求及测试集选择并重置分页；新建和编辑表单、从用例库添加用例弹窗仍保留业务所需的迭代字段。
 
 
 ## 用例库状态与选择边界
@@ -388,7 +389,7 @@ Bug 列表的 ID 列直接显示数据库 `bugs.id`，数字搜索按同一 ID �
 
 用例库列表不再并列展示重复的“模块”列，全部用例视图保留所属测试集列，选中测试集后由导航表达归属；模块字段与搜索能力保留。历史数字优先级0–3在列表显示为P0–P3，控制面查询兼容数字与P前缀同档位，筛选与分页总数使用相同条件，不迁移或改写已有用例。
 
-基础服务的 GitLab、LLM 模型、MCP 和 Skill 库沿用合并容器：分类 Tab 独立位于上方，各分类工具栏、内收 16px 的卡片区及分页共用一个外框。四类卡片复用同一服务卡片结构：顶部为图标、名称和状态标签，中部为字段行，底部为对象操作；Skill 卡片展示文件数、大小和最近更新时间，使用相同网格与操作按钮。实现为 `features/base-services/components/SharedServicesPanel.tsx`、`ZentaoMcpServiceCard.tsx` 与 `features/ai-testing/pages/AiSkillLibraryPage.tsx`。
+基础服务的 GitLab、LLM 模型、MCP、Skill 库和性能监控沿用合并容器：分类 Tab 独立位于上方，各分类工具栏、内收 16px 的卡片区及分页共用一个外框。五类卡片复用同一服务卡片结构：顶部为图标、名称和状态标签，中部为字段行，底部为对象操作；Skill 卡片展示文件数、大小和最近更新时间，使用相同网格与操作按钮。实现为 `features/base-services/components/SharedServicesPanel.tsx`、`ZentaoMcpServiceCard.tsx`、`features/ai-testing/pages/AiSkillLibraryPage.tsx` 与 `features/performance/components/PerfMonitoringPanel.tsx`。
 
 2026-10-29 按用户反馈修正宽屏留白：卡片网格原在 1560px 以上固定为 4×310px，15 条 Skill 只占内容区左半部分。现改为 `repeat(auto-fill, minmax(310px, 1fr))`，按可用宽度自动增减列数并贴齐右侧，取代上文 2026-10-04 的 310px 固定列宽记录；1560px 及以下继续使用既有 4/3/2/1 列断点。静态检查为 `features/base-services/styles/baseServicesGrid.test.ts`；已在 2327px 浅色/深色下检查四类 Tab，并在 1680px 检查 Skill 库与 LLM 模型、1440/760/390px 检查 Skill 库，均无横向溢出。
 
@@ -460,7 +461,7 @@ Bug 列表的 ID 列直接显示数据库 `bugs.id`，数字搜索按同一 ID �
 - 标题栏与底栏固定，只有正文内部滚动。无底部操作的只读弹窗也保留58px浅色底栏区域和分隔线，和业务内容、JSON／YAML、审核模式保持一致，不增设重复关闭按钮，也不虚构分页控件。
 - 展示模式开关放在标题右侧，使用 `ArtifactModeSwitch`（非弹窗场景用 `ArtifactModeControls`）。JSON模式必须提供“复制”入口，复制当前可见草稿（包含未保存修改），不得复制旧接口结果。YAML候选编辑也提供复制，并明确无障碍名称为“复制 YAML”。
 - 优先使用标题模式开关旁的公共复制按钮；已有 JSON 编辑器工具栏的图谱保留原工具栏复制，不叠加第二个复制入口。复制须等待剪贴板写入成功再提示成功，失败时提示重试或手动复制。
-- 公共上下栏实现位于 `features/ai-testing/styles/artifact-view-switch.css`，复用 `functional-artifact-modal`、`ai-task-run-result-modal`、`ai-task-import-result-modal` 的公共外壳。尺寸与正文滚动仍由下述尺寸规则及各产物组件管理，不在页面重复定义上下栏样式。
+- 公共模式切换实现位于 `features/ai-testing/styles/artifact-view-switch.css`，只负责把 `ArtifactModeSwitch` 挂到 `.ant-modal-header` 右侧并提供工具条布局；弹窗外壳与上下栏由 `GenerationChainModal` 的 `generation-chain-modal` / `gc-modal-footer` 规则维护。尺寸与正文滚动仍由下述尺寸规则及各产物组件管理，不在页面重复定义上下栏样式。
 
 
 运行产物的大型阅读弹窗使用统一尺寸。当前适用入口：需求文档、材料提取结果、需求理解记录、测试需求分析、测试点、完整用例、用例图谱；同一产物窗口切换业务内容、原始 JSON 或编辑模式时，外框尺寸保持一致。
@@ -468,7 +469,7 @@ Bug 列表的 ID 列直接显示数据库 `bugs.id`，数字搜索按同一 ID �
 - 宽度：`min(2000px, calc(100vw - 56px))`，通过 Modal 的 `width` 设置并启用 `centered`。
 - 桌面高度：`min(94dvh, 1200px)`；最大高度为 `calc(100dvh - 32px)`。
 - 窄屏或低屏：宽度不超过640px或高度不超过700px时，高度使用 `calc(100dvh - 32px)`。
-- 弹窗外框尺寸复用 `features/ai-testing/styles/artifact-view-switch.css` 与 `run-result.css` 中的共享 Modal 规则，并在页面显式引入。后续调整统一修改，避免各入口另设大小。
+- 弹窗外框尺寸由各入口 Modal 的 `width` 与 `requirement-generation-chain.css` 中的容器规则共同维护；模式切换外观在 `artifact-view-switch.css`。后续调整统一修改，避免各入口另设大小。
 - 标题、工具栏、底部操作固定，业务正文、目录、JSON编辑器在分配的剩余空间内滚动，图谱画布使用剩余高度。高度链须保留 `min-height: 0`，不能让长内容撑开弹窗。
 - 测试需求分析和测试点的阶段审核窗口复用同一产物预览尺寸，审核前后及继续优化时外框保持一致；审核备注与操作固定在底栏。错误信息、删除确认、普通表单以及其他独立阶段审核窗口按自身用途布局，不因本规则自动放大。
 

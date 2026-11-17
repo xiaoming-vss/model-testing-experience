@@ -3,7 +3,7 @@ import { goBackOrFallback } from './backNavigation'
 import type { NavigateFunction } from 'react-router-dom'
 
 describe('goBackOrFallback', () => {
-  const fallbackUrl = '/ai-testing?tab=tasks'
+  const fallbackUrl = '/projects'
 
   function setup(historyIdx: number | undefined) {
     const navigate = vi.fn() as unknown as NavigateFunction

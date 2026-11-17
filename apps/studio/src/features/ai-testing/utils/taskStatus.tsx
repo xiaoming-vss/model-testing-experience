@@ -22,10 +22,6 @@ export function isApiCaseGenerateTaskRunInProgress(status?: ApiCaseGenerateTaskR
   return ['pending', 'queued', 'claimed', 'running', 'waiting_review'].includes(normalizedStatus)
 }
 
-export function isRunnableApiCaseGenerateTaskRun(status?: ApiCaseGenerateTaskRunStatus) {
-  return !isApiCaseGenerateTaskRunInProgress(status)
-}
-
 export function getApiCaseGenerateTaskRunStatusMeta(status?: ApiCaseGenerateTaskRunStatus) {
   const normalizedStatus = normalizeApiCaseGenerateTaskRunStatus(status)
   const meta = statusMetaMap[normalizedStatus] ?? {

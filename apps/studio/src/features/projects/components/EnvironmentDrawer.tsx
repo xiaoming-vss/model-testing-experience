@@ -53,14 +53,15 @@ export function EnvironmentDrawer({
 }: {
   open: boolean
   projectId?: string
-  kind?: 'api' | 'ui'
+  kind?: 'api' | 'ui' | 'perf'
   currentEnvironmentId?: string
   onClose: () => void
   onSelectEnvironment: (environmentId?: string) => void
 }) {
   const queryClient = useQueryClient()
   const isUi = kind === 'ui'
-  const kindLabel = isUi ? 'UI' : 'API'
+  const isPerf = kind === 'perf'
+  const kindLabel = isPerf ? '性能' : isUi ? 'UI' : 'API'
   const environmentsQueryKey = ['testEnvironments', projectId, kind] as const
   const [environmentModalOpen, setEnvironmentModalOpen] = useState(false)
   const [environmentVarModalOpen, setEnvironmentVarModalOpen] = useState(false)
@@ -322,7 +323,7 @@ export function EnvironmentDrawer({
   return (
     <>
       <Drawer
-        title={`${kindLabel} 环境管理`}
+        title={isPerf ? '性能环境管理' : `${kindLabel} 环境管理`}
         open={open}
         size={960}
         onClose={onClose}
@@ -339,7 +340,7 @@ export function EnvironmentDrawer({
                 <div>
                   <Text strong>项目环境</Text>
                   <Paragraph type="secondary" className="api-environment-subtitle">
-                    环境绑定当前项目，作为 {kindLabel} 测试时的基础地址和变量上下文。
+                    环境绑定当前项目，作为{isPerf ? '性能测试' : ` ${kindLabel} 测试`}时的基础地址和变量上下文。
                   </Paragraph>
                 </div>
                 <ProjectActionButton action="write" type="primary" className="action-btn-create" operation="create" disabled={!projectId} onClick={openCreateEnvironment}>
@@ -350,7 +351,7 @@ export function EnvironmentDrawer({
               <div className="api-environment-section-body api-environment-section-scrollable">
                 {environments.length === 0 ? (
                   <Card className="api-environment-empty-card">
-                    <Empty description={`当前项目还没有 ${kindLabel} 环境`} />
+                    <Empty description={`当前项目还没有${isPerf ? '性能环境' : ` ${kindLabel} 环境`}`} />
                   </Card>
                 ) : (
                   <div className="api-environment-list">
@@ -421,7 +422,7 @@ export function EnvironmentDrawer({
                 <div className="api-environment-section-title-block">
                   <Text strong>环境变量</Text>
                   <Paragraph type="secondary" className="api-environment-subtitle">
-                    变量会作为 {kindLabel} 测试运行时的取值来源。
+                    变量会作为{isPerf ? '性能测试' : ` ${kindLabel} 测试`}运行时的取值来源。
                   </Paragraph>
                 </div>
                 <div className="api-environment-toolbar">

@@ -37,8 +37,6 @@ export const repositoryProfileApi = {
     request<RunHistoryResponse<RepositoryProfileTaskRun>>(
       `/v1/repository-profile-tasks/${taskId}/runs${buildQuery(params)}`,
     ),
-  getRepositoryProfileRun: (runId: string) =>
-    request<RepositoryProfileTaskRun>(`/v1/repository-profile-runs/${runId}`),
   getRepositoryProfileVersions: (taskId: string) =>
     request<ListResponse<RepositoryProfileVersion>>(
       `/v1/repository-profile-tasks/${taskId}/versions`,

@@ -4,7 +4,7 @@ import '@/app/styles/theme.css'
 
 export default function App() {
   return (
-    <ThemeProvider>
+    <ThemeProvider layer>
       <AppRoutes />
     </ThemeProvider>
   )

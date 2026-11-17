@@ -42,10 +42,6 @@ export const interfaceLibraryApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  getSoftwareRepository: (softwareRepositoryId: string) =>
-    request<SoftwareRepository>(
-      `/v1/software-repositories/${softwareRepositoryId}`,
-    ),
   updateSoftwareRepository: (
     softwareRepositoryId: string,
     body: UpdateSoftwareRepositoryPayload,

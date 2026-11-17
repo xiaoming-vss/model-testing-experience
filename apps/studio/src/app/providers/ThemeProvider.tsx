@@ -1,4 +1,5 @@
 import '@/app/styles/buttons.css'
+import { StyleProvider } from '@ant-design/cssinjs'
 import { App as AntdApp, ConfigProvider, theme as antdTheme, type ThemeConfig } from 'antd'
 import { useEffect, useLayoutEffect, type ReactNode } from 'react'
 import { bindFeedbackMessage } from '@/shared/utils/feedback'
@@ -97,14 +98,16 @@ function FeedbackProvider({ children }: { children: ReactNode }) {
   return children
 }
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
+export function ThemeProvider({ children, layer = false }: { children: ReactNode; layer?: boolean }) {
   const resolvedTheme = useThemeStore((state) => state.resolvedTheme)
   useLayoutEffect(startThemeSync, [])
-  return (
+  const content = (
     <ConfigProvider theme={resolvedTheme === 'dark' ? darkThemeConfig : themeConfig}>
       <AntdApp component="div">
         <FeedbackProvider>{children}</FeedbackProvider>
       </AntdApp>
     </ConfigProvider>
   )
+  // jsdom 无法完整解析 @layer，关闭动画的测试会在关闭态卡住；仅生产入口开启 layer。
+  return layer ? <StyleProvider layer>{content}</StyleProvider> : content
 }

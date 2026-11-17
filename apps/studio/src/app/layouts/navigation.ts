@@ -5,6 +5,7 @@ export function testingTabForLocation(pathname: string, search: string) {
     : pathname.startsWith('/bugs') ? 'bugs'
       : pathname.startsWith('/api-automation') ? 'api'
         : pathname.startsWith('/ui-automation') ? 'ui'
+        : pathname.startsWith('/performance') ? 'perf'
           : pathname === '/testing'
             ? resolveTestingTab(new URLSearchParams(search).get('tab')) : null
 }

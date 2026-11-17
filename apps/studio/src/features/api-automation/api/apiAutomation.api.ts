@@ -44,7 +44,7 @@ export const apiAutomationApi = {
     }),
   deleteApiCollection: (collectionId: string) =>
     request<Record<string, never>>(`/v1/api-collections/${collectionId}`, { method: 'DELETE' }),
-  getApiEnvironments: (projectId: string, kind: 'api' | 'ui' = 'api') =>
+  getApiEnvironments: (projectId: string, kind: 'api' | 'ui' | 'perf' = 'api') =>
     request<ListResponse<ApiEnvironment>>(
       `/v1/projects/${projectId}/api-environments?kind=${kind}`,
     ),
@@ -53,7 +53,6 @@ export const apiAutomationApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  getApiEnvironment: (environmentId: string) => request<ApiEnvironment>(`/v1/api-environments/${environmentId}`),
   updateApiEnvironment: (environmentId: string, body: UpdateApiEnvironmentPayload) =>
     request<ApiEnvironment>(`/v1/api-environments/${environmentId}`, {
       method: 'PATCH',
@@ -68,7 +67,6 @@ export const apiAutomationApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  getApiEnvironmentVar: (envVarId: string) => request<ApiEnvironmentVar>(`/v1/api-environment-vars/${envVarId}`),
   updateApiEnvironmentVar: (envVarId: string, body: UpdateApiEnvironmentVarPayload) =>
     request<ApiEnvironmentVar>(`/v1/api-environment-vars/${envVarId}`, {
       method: 'PATCH',
@@ -110,7 +108,6 @@ export const apiAutomationApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  getApiAssertRule: (assertRuleId: string) => request<ApiAssertRule>(`/v1/api-assert-rules/${assertRuleId}`),
   updateApiAssertRule: (assertRuleId: string, body: UpdateApiAssertRulePayload) =>
     request<ApiAssertRule>(`/v1/api-assert-rules/${assertRuleId}`, {
       method: 'PATCH',
@@ -124,7 +121,6 @@ export const apiAutomationApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  getApiExtractRule: (extractRuleId: string) => request<ApiExtractRule>(`/v1/api-extract-rules/${extractRuleId}`),
   updateApiExtractRule: (extractRuleId: string, body: UpdateApiExtractRulePayload) =>
     request<ApiExtractRule>(`/v1/api-extract-rules/${extractRuleId}`, {
       method: 'PATCH',

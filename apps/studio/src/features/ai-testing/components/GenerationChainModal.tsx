@@ -430,8 +430,8 @@ export function GenerationChainModal({ workspace, requirementId, projectId, open
           (versionKey === 'draft' && stage.draft?.attemptId === stage.moduleGeneration.attemptId)) ?
           <ModuleGenerationProgressPanel key={stage.moduleGeneration.attemptId} progress={stage.moduleGeneration} /> : null}
         <div ref={modePanelRef} className={artifactScrollClass}>
-          {reviewStage && !stageHasContent && !stageRunning ? <div className="gc-review-start">
-            <p>运行需求评审后，这里会显示问题登记表、覆盖度和评审结论。评审仅提示问题，不阻断材料整理。</p>
+          {reviewStage && !stageHasContent && !stageRunning ? <div className="mx-auto flex w-full max-w-[720px] flex-1 flex-col gap-2 p-6">
+            <p className="mb-1 mt-0 text-[13px] leading-[1.7] text-app-surface-text-muted">运行需求评审后，这里会显示问题登记表、覆盖度和评审结论。评审仅提示问题，不阻断材料整理。</p>
           </div> : !stageHasContent ? (stage.state === 'running' && !stage.moduleGeneration ? <div className="gc-stage-loading" role="status" aria-live="polite">
             <Spin /><span>正在生成{stage.label}</span>
           </div> : null) : isDiff ? <GenerationArtifactDiff before={comparisonContent} after={displayedContent}

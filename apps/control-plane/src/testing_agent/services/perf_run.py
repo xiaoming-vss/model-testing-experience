@@ -25,6 +25,7 @@ from testing_agent.core.errors import (
 )
 from testing_agent.core.sid import new_id
 from testing_agent.domain.project_policy import ProjectAction
+from testing_agent.models.monitoring_connection import MonitoringConnection
 from testing_agent.models.perf_case import PerfCase
 from testing_agent.models.perf_run import PerfRun
 from testing_agent.models.worker_task import WorkerTask
@@ -34,6 +35,7 @@ from testing_agent.repositories.perf_case import PerfCaseRepository
 from testing_agent.repositories.perf_run import PerfRunRepository
 from testing_agent.schemas.perf_run import (
     PerfRunCreate,
+    PerfRunMonitoringSnapshot,
     PerfRunResponse,
     PerfRunSummaryResponse,
 )
@@ -137,6 +139,17 @@ class PerfRunService:
                 "headers": {name: "" for name in (auth.get("headers") or {})},
             }
         return {"type": auth_type}
+
+    def _monitoring_snapshot(self, connection: MonitoringConnection) -> dict[str, Any]:
+        return {
+            "connectionId": connection.connection_id,
+            "name": connection.name,
+            "queryUrl": connection.query_url,
+            "remoteWriteUrl": connection.remote_write_url,
+            "grafanaUrl": connection.grafana_url,
+            "grafanaDashboardUid": connection.grafana_dashboard_uid,
+            "defaultFilters": connection.default_filters_json or {},
+        }
 
     async def _data_files(self, case: PerfCase) -> list[dict[str, Any]]:
         metadata = case.data_files_json or []
@@ -276,6 +289,11 @@ class PerfRunService:
             log_tail=run.log_tail,
             runner=run.runner_json,
             data_files=run.data_files_json or [],
+            monitoring=(
+                PerfRunMonitoringSnapshot.model_validate(run.monitoring_snapshot_json)
+                if run.monitoring_snapshot_json is not None
+                else None
+            ),
         )
         return response.model_dump(by_alias=True, mode="json")
 
@@ -304,6 +322,7 @@ class PerfRunService:
             environment_name=environment.name,
             monitoring_connection_id=connection.connection_id,
             monitoring_connection_name=connection.name,
+            monitoring_snapshot_json=self._monitoring_snapshot(connection),
             trigger_user_id=user_id,
             trigger_type="manual",
             status=PerfRunStatus.QUEUED.value,

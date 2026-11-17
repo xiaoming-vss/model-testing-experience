@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { ApiAutomationPage } from '@/features/api-automation/pages/ApiAutomationPage'
 import { BugListPage } from '@/features/bugs/pages/BugListPage'
+import { PerformancePage } from '@/features/performance/pages/PerformancePage'
 import { TestOrderPage } from '@/features/test-orders/pages/TestOrderPage'
 import {
   isLegacyLibraryTab,
@@ -15,6 +16,7 @@ import '@/features/testing/styles/index.css'
 const TESTING_TAB_PAGES = [
   { key: 'api', Page: ApiAutomationPage },
   { key: 'ui', Page: UiAutomationPage },
+  { key: 'perf', Page: PerformancePage },
   { key: 'orders', Page: TestOrderPage },
   { key: 'bugs', Page: BugListPage },
 ] as const

@@ -87,17 +87,12 @@
   gap: 8px;
 }
 
-.testing-page .api-environment-label,
-.testing-page .api-environment-summary-item {
+.testing-page .api-environment-label {
   font-size: 12px;
   line-height: 18px;
 }
 
-.testing-page .api-environment-summary {
-  gap: 10px;
-}
-
-.testing-page .api-automation-content > .workbench-panel .api-collection-grid, .testing-page .api-automation-content > .workbench-panel .functional-suite-grid {
+.testing-page .api-automation-content > .workbench-panel .api-collection-grid {
   flex: 0 0 auto;
   width: 100%;
   min-height: 0;
@@ -180,63 +175,27 @@
 
 @media (max-width: 1880px) {
 
-  .testing-page .api-automation-content > .workbench-panel .api-collection-grid, .testing-page .api-automation-content > .workbench-panel .functional-suite-grid {
+  .testing-page .api-automation-content > .workbench-panel .api-collection-grid {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 1560px) {
-  .testing-page .api-automation-content > .workbench-panel .api-collection-grid, .testing-page .api-automation-content > .workbench-panel .functional-suite-grid {
+  .testing-page .api-automation-content > .workbench-panel .api-collection-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 1280px) {
-  .testing-page .api-automation-content > .workbench-panel .api-collection-grid, .testing-page .api-automation-content > .workbench-panel .functional-suite-grid {
+  .testing-page .api-automation-content > .workbench-panel .api-collection-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 980px) {
-  .testing-page .api-automation-content > .workbench-panel .api-collection-grid, .testing-page .api-automation-content > .workbench-panel .functional-suite-grid {
+  .testing-page .api-automation-content > .workbench-panel .api-collection-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-}
-
-.requirement-document-dialog .ant-modal-content {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 0 !important;
-  border: 1px solid var(--app-testing-panel-border);
-  border-radius: 22px;
-  background:
-    radial-gradient(circle at top left, var(--app-editor-focus-ring), transparent 24%),
-    linear-gradient(180deg, var(--app-glass-surface-98) 0%, var(--app-testing-sidebar-gradient-end) 100%);
-  box-shadow:
-    0 28px 80px var(--app-testing-overlay-shadow),
-    inset 0 1px 0 var(--app-glass-highlight-74);
-}
-
-.requirement-document-dialog .ant-modal-close {
-  border-radius: 999px;
-  color: var(--testing-text-muted);
-  transition:
-    background-color 0.18s ease,
-    color 0.18s ease,
-    transform 0.18s ease;
-}
-
-.requirement-document-dialog .ant-modal-close:hover {
-  color: var(--testing-text);
-}
-
-.requirement-document-dialog .ant-modal-body {
-  display: flex;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-  padding: 0 !important;
 }
 
 .requirement-document-modal-toolbar {
@@ -328,32 +287,6 @@
 .requirement-document-modal-stage.text-mode {
   padding: 0;
   background: transparent;
-}
-
-.requirement-document-modal-content {
-  flex: 1 1 auto;
-  min-height: 0;
-  min-width: 0;
-  max-height: none;
-  width: 100%;
-  margin: 0;
-  padding: 24px 26px;
-  overflow: auto;
-  border: 1px solid var(--testing-border);
-  border-radius: 18px;
-  background:
-    linear-gradient(180deg, var(--app-glass-surface-98) 0%, var(--app-testing-card-gradient-end) 100%),
-    var(--app-surface);
-  color: var(--description-text);
-  font-family: var(--description-font);
-  font-size: 14px;
-  line-height: 1.82;
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  box-shadow:
-    0 18px 42px var(--app-testing-card-shadow),
-    inset 0 1px 0 var(--app-glass-highlight-74);
 }
 
 .requirement-document-text-host {
@@ -471,16 +404,6 @@
   height: 100%;
 }
 
-.functional-suite-scroll {
-  padding: 16px;
-}
-
-.functional-suite-card .sprint-card-actions .ant-btn {
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
-}
-
 @media (max-width: 680px) {
 
   .testing-tab-panel {
@@ -496,7 +419,7 @@
     min-height: 360px;
   }
 
-  .testing-page .api-automation-content > .workbench-panel .api-collection-grid, .testing-page .api-automation-content > .workbench-panel .functional-suite-grid {
+  .testing-page .api-automation-content > .workbench-panel .api-collection-grid {
     grid-template-columns: 1fr;
   }
 
@@ -528,7 +451,6 @@
     padding: 22px 18px 24px;
   }
 
-  .requirement-document-modal-content,
   .requirement-document-docx-host,
   .requirement-document-text-host {
     min-height: 0;
@@ -599,7 +521,6 @@
   box-shadow: inset 0 1px 0 var(--app-glass-highlight-78) !important;
 }
 .app-shell-macos .testing-page .api-environment-label,
-.app-shell-macos .testing-page .api-environment-summary-item,
 .app-shell-macos .testing-page .api-collection-description,
 .app-shell-macos .testing-page .sprint-card-label {
   color: var(--api-test-muted) !important;
@@ -708,86 +629,8 @@
 }
 
 /* Functional test suites: override shared testing grid for readable macOS cards */
-.app-shell-macos .testing-page .functional-test-page .api-automation-content > .workbench-panel .functional-suite-scroll {
-  padding: 16px 18px 18px;
-}
-
-.app-shell-macos .testing-page .functional-test-page .api-automation-content > .workbench-panel .functional-suite-grid {
-  display: grid;
-  width: 100%;
-  gap: 18px !important;
-  align-content: start;
-}
-
-.app-shell-macos .testing-page .functional-test-page .api-automation-content > .workbench-panel .functional-suite-card.ant-card {
-  height: auto !important;
-  min-height: 150px !important;
-}
-
-.app-shell-macos .testing-page .functional-test-page .api-automation-content > .workbench-panel .functional-suite-card.ant-card .ant-card-body {
-  min-height: 0 !important;
-  height: auto !important;
-  padding: 16px !important;
-  gap: 8px;
-}
-
-.app-shell-macos .testing-page .functional-test-page .api-automation-content > .workbench-panel .functional-suite-card .api-collection-description {
-  min-height: 18px !important;
-}
-
-.app-shell-macos .testing-page .functional-test-page .api-automation-content > .workbench-panel .functional-suite-card .sprint-card-meta {
-  min-height: 22px !important;
-  padding-bottom: 0 !important;
-}
-
-.app-shell-macos .testing-page .functional-test-page .api-automation-content > .workbench-panel .functional-suite-card .sprint-card-actions {
-  min-height: 26px !important;
-  justify-content: flex-end;
-}
-
-@media (max-width: 980px) {
-  .app-shell-macos .testing-page .functional-test-page .api-automation-content > .workbench-panel .functional-suite-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    max-width: none;
-  }
-}
-
-@media (max-width: 680px) {
-  .app-shell-macos .testing-page .functional-test-page .api-automation-content > .workbench-panel .functional-suite-scroll {
-    padding: 12px;
-  }
-
-  .app-shell-macos .testing-page .functional-test-page .api-automation-content > .workbench-panel .functional-suite-grid {
-    grid-template-columns: 1fr !important;
-  }
-}
 
 /* Functional suite grid: use the full board width on wide screens. */
-.app-shell-macos .testing-page .functional-test-page .api-automation-content > .workbench-panel .functional-suite-grid {
-  max-width: none !important;
-  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
-  grid-auto-rows: minmax(178px, auto) !important;
-  align-items: stretch !important;
-}
-
-.app-shell-macos .testing-page .functional-test-page .api-automation-content > .workbench-panel .functional-suite-grid-fill-page {
-  flex: 1 1 auto;
-  min-height: 100%;
-}
-
-@media (max-width: 1880px) {
-  .app-shell-macos .testing-page .functional-test-page .api-automation-content > .workbench-panel .functional-suite-grid {
-    max-width: none !important;
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-  }
-}
-
-@media (max-width: 1560px) {
-  .app-shell-macos .testing-page .functional-test-page .api-automation-content > .workbench-panel .functional-suite-grid {
-    max-width: none !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  }
-}
 
 /* API testing overview: keep sparse result cards compact instead of stretching to fill the board. */
 .testing-page .api-automation-page .api-automation-content > .workbench-panel .api-collection-grid {
@@ -929,8 +772,7 @@
 .functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(3) .ant-typography,
 .functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(4),
 .functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(4) .ant-typography,
-.functional-test-page .functional-suite-list-table .ant-table-tbody .functional-suite-list-time.ant-typography,
-.functional-suite-list-description.ant-typography {
+.functional-test-page .functional-suite-list-table .ant-table-tbody .functional-suite-list-time.ant-typography {
   font-family: var(--app-font-sans) !important;
   font-size: 12px !important;
   font-weight: 400 !important;
@@ -955,46 +797,7 @@
   border-bottom-color: var(--app-glass-table-border-hover) !important;
 }
 
-.functional-test-page .functional-suite-list-table .functional-suite-list-description.ant-typography, .app-shell.app-shell-macos .functional-test-page .functional-suite-list-table .functional-suite-list-description.ant-typography {
-  color: var(--app-testing-placeholder) !important;
-  font-size: 12px !important;
-  font-weight: 400 !important;
-  text-shadow: none !important;
-  -webkit-text-stroke: 0 !important;
-}
-
 /* Requirement document comparison workspace. 尺寸与产物弹窗一致。 */
-.requirement-document-dialog :is(.ant-modal-container, .ant-modal-content) {
-  display: flex;
-  flex-direction: column;
-  height: min(94dvh, 1200px);
-  max-height: calc(100dvh - 32px);
-  overflow: hidden;
-  padding: 0 !important;
-  border: 0;
-  border-radius: 12px;
-  background: var(--app-surface);
-  box-shadow: none;
-}
-
-@media (max-width: 640px), (max-height: 700px) {
-  .requirement-document-dialog :is(.ant-modal-container, .ant-modal-content) { height: calc(100dvh - 32px); }
-}
-
-.requirement-document-dialog .ant-modal-close {
-  top: 18px;
-  inset-inline-end: 18px;
-  width: 32px;
-  height: 32px;
-  border: 1px solid transparent;
-  background: transparent;
-}
-
-.requirement-document-dialog .ant-modal-close:hover {
-  border-color: var(--app-testing-control-border);
-  background: var(--app-section-bg);
-  transform: none;
-}
 
 .requirement-document-modal-toolbar {
   min-height: 72px;
@@ -1076,11 +879,6 @@
   background: var(--app-testing-control-disabled-bg);
 }
 
-.requirement-document-workspace.is-compare {
-  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
-  gap: 0;
-}
-
 .requirement-document-pane {
   display: flex;
   min-width: 0;
@@ -1096,14 +894,6 @@
   height: 100vh;
   border: 0;
   border-radius: 0;
-}
-
-.requirement-document-workspace.is-compare .requirement-document-pane:first-child {
-  border-radius: 8px 0 0 8px;
-}
-
-.requirement-document-workspace.is-compare .requirement-document-pane:last-child {
-  border-radius: 0 8px 8px 0;
 }
 
 .requirement-document-workspace:not(.is-compare) .requirement-document-pane {
@@ -1178,24 +968,7 @@
   padding: 24px;
 }
 
-@media (max-width: 980px) {
-  .requirement-document-workspace.is-compare {
-    grid-template-columns: minmax(0, 1fr) !important;
-    grid-template-rows: minmax(0, 1fr) 1px minmax(0, 1fr);
-  }
-
-  .requirement-document-workspace.is-compare .requirement-document-pane:first-child,
-  .requirement-document-workspace.is-compare .requirement-document-pane:last-child {
-    border-radius: 8px;
-  }
-
-}
-
 @media (max-width: 720px) {
-  .requirement-document-dialog {
-    max-width: calc(100vw - 24px);
-    margin: 12px auto;
-  }
 
   .requirement-document-modal-toolbar {
     min-height: 88px;
@@ -1277,13 +1050,8 @@
 .functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(3) .ant-typography,
 .functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(4),
 .functional-test-page .functional-suite-list-table .ant-table-tbody td:nth-child(4) .ant-typography,
-.functional-test-page .functional-suite-list-table .ant-table-tbody .functional-suite-list-time.ant-typography,
-.functional-suite-list-description.ant-typography {
+.functional-test-page .functional-suite-list-table .ant-table-tbody .functional-suite-list-time.ant-typography {
   color: var(--app-list-label) !important;
 }
 
 /* Embedded document columns share the detail page frame. */
-.requirement-document-inline .requirement-document-workspace.is-compare > .requirement-document-pane {
-  border: 0;
-  border-radius: 0;
-}

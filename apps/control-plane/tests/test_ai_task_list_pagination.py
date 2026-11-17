@@ -170,14 +170,6 @@ def test_ai_task_list_bounds_access_and_detail_content(api):  # noqa: F811
     _, outsider = account(api, "outsider")
     assert api.get(common, headers=outsider).status_code == 403
 
-    # status is deliberately unsupported outside code-risk analysis.
-    assert (
-        api.get(
-            f"/v1/projects/{pid}/ui-case-generate-tasks?status=success", headers=owner
-        ).status_code
-        == 400
-    )
-
     detail = api.get("/v1/code-risk-analysis-tasks/task-0", headers=owner)
     assert detail.status_code == 200, detail.text
     assert detail.json()["data"]["sourceContent"] == "secret-body"

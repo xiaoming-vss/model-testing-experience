@@ -49,7 +49,7 @@ ORDER BY TABLE_NAME, ORDINAL_POSITION;
 性能资产和执行账本与功能执行分开：
 
 - `perf_cases`：项目性能用例，保存 YAML 正文、版本、启用状态和当前数据文件元数据 `data_files_json`。`(project_id, name)` 唯一；更新正文时版本递增，运行冻结 `case_version` 与 `case_yaml`。
-- `perf_runs`：一次性能运行。冻结用例、环境、监控接入和数据文件；`spec_json` 是脱敏公开规格，`private_payload` 是加密的完整 RunSpec（含环境秘密和 Remote Write 写凭据），`summary_json`/`result_json`/`log_tail` 保存 Worker 回传事实。状态为 `queued/running/stopping/completed/failed/stopped/canceled`，`outcome` 为 `passed/threshold_failed/inconclusive/execution_error/stopped`。索引覆盖用例最近运行、项目最近运行和按状态回收。
+- `perf_runs`：一次性能运行。冻结用例、环境、监控接入和数据文件；`monitoring_snapshot_json` 保存发起时的接入名称、查询/Remote Write 地址、Grafana 看板和默认筛选，不含凭据，接入后续修改或删除不影响历史运行；`spec_json` 是脱敏公开规格，`private_payload` 是加密的完整 RunSpec（含环境秘密和 Remote Write 写凭据），`summary_json`/`result_json`/`log_tail` 保存 Worker 回传事实。状态为 `queued/running/stopping/completed/failed/stopped/canceled`，`outcome` 为 `passed/threshold_failed/inconclusive/execution_error/stopped`。索引覆盖用例最近运行、项目最近运行和按状态回收。
 - `monitoring_connections`：项目级 Prometheus/Grafana 接入，保存查询/Remote Write 地址、认证类型、加密的查询/写入凭据、Grafana 地址与面板 UID、默认筛选参数和启用状态。`(project_id, name)` 唯一；响应只暴露认证类型和“是否已配置凭据”。
 - `stored_files` 新增代码级用途 `perf_case_data`，对象目录 `perf-case-data`，只允许 CSV/JSON，单文件上限 50 MiB。文件正文只存在 S3；`perf_runs.data_files_json` 与 `perf_cases.data_files_json` 只保存 `fileId/filename/size/sha256`。
 - `worker_tasks.domain` 扩展 `perf`；性能运行使用 `task_type="perf_run"` 和 60 秒租约。通用状态列仍为 `pending/claimed/running/stopping/success/failed/canceled`。

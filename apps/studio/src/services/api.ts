@@ -4,6 +4,7 @@ import { aiTestingApi } from '@/features/ai-testing/api/aiTesting.api'
 import { apiAutomationApi } from '@/features/api-automation/api/apiAutomation.api'
 import { baseServicesApi } from '@/features/base-services/api/baseServices.api'
 import { bugsApi } from '@/features/bugs/api/bugs.api'
+import { performanceApi } from '@/features/performance/api/performance.api'
 import { functionTestingApi } from '@/features/test-cases/api/functionTesting.api'
 import { testOrdersApi } from '@/features/test-orders/api/testOrders.api'
 import { projectsApi } from '@/features/projects/api/projects.api'
@@ -95,6 +96,7 @@ export const api = {
   ...requirementsApi,
   ...apiAutomationApi,
   ...functionTestingApi,
+  ...performanceApi,
   ...testOrdersApi,
   ...bugsApi,
   ...uiAutomationApi,

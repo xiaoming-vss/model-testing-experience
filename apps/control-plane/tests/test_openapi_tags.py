@@ -111,18 +111,18 @@ def test_openapi_does_not_emit_additional_properties_placeholders():
     assert offenders == []
 
 
-def test_requirement_analysis_run_request_exposes_checkpoint_protocol_fields():
+def test_generation_chain_run_request_exposes_shared_protocol_fields():
     schema = openapi_schema()
-    request_schema = schema["paths"]["/v1/requirement-analysis-tasks/{taskId}/run"]["post"][
-        "requestBody"
-    ]["content"]["application/json"]["schema"]
+    request_schema = schema["paths"][
+        "/v1/requirements/{requirementId}/generation/{kind}/stages/{stage}/run"
+    ]["post"]["requestBody"]["content"]["application/json"]["schema"]
     _, _, schema_name = request_schema["$ref"].rpartition("/")
     properties = schema["components"]["schemas"][schema_name]["properties"]
 
     assert "connectionId" in properties
     assert "instruction" in properties
-    assert "checkpointEnabled" in properties
     assert "configJson" in properties
+    assert "requestId" in properties
 
 
 def test_requirement_response_does_not_expose_document_file_metadata_noise():

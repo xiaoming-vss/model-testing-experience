@@ -248,15 +248,11 @@
 .api-source-repo-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
 .api-source-repo-title strong { overflow-wrap: anywhere; }
 .api-source-repo-meta, .api-source-repo-paths { color: var(--app-surface-text-muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
-.api-interface-selection-list { display: grid; gap: 6px; }
-.api-interface-selection-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; }
-.api-interface-selection-repository { color: var(--app-surface-text-muted); }
 .gc-inspector-footer { flex: 0 0 auto; max-height: 60%; overflow: auto; }
 .gc-inspector-footer:empty { display: none; }
 .gc-inspector-review { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-top: 1px solid var(--app-surface-border); background: var(--app-list-toolbar-bg); }
 .gc-inspector-review-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .gc-inspector-review h3 { margin: 0; font-size: 12px; font-weight: 600; }
-.gc-inspector-review .gc-based-chip { flex: none; width: auto; }
 .gc-inspector-reading-tools .gc-title-tools > .ant-btn { min-width: 0; min-height: 32px; font-size: 12px; }
 @media (max-width: 900px) {
   .gc-inspector-content { flex: 0 0 auto; overflow: visible; }

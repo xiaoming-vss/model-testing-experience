@@ -1,0 +1,1171 @@
+{
+  "version": 1,
+  "allowedGlobalCss": [
+    "src/App.css",
+    "src/app/styles/asset-library.css",
+    "src/app/styles/buttons.css",
+    "src/app/styles/error-boundary.css",
+    "src/app/styles/index.css",
+    "src/app/styles/layout.css",
+    "src/app/styles/shell-boundary.css",
+    "src/app/styles/sidebar.css",
+    "src/app/styles/theme.css",
+    "src/app/styles/workbench.css",
+    "src/features/admin/styles/account-management.css",
+    "src/features/admin/styles/ldap-settings.css",
+    "src/features/ai-testing/components/FunctionalCaseRelationsGraph.css",
+    "src/features/ai-testing/components/FunctionalCaseRelationsViewer.css",
+    "src/features/ai-testing/components/RevisionSidePanel.css",
+    "src/features/ai-testing/styles/api-config-result.css",
+    "src/features/ai-testing/styles/api-design-result.css",
+    "src/features/ai-testing/styles/artifact-view-switch.css",
+    "src/features/ai-testing/styles/case-name-tree.css",
+    "src/features/ai-testing/styles/generated-case-browser.css",
+    "src/features/ai-testing/styles/generated-cases-review.css",
+    "src/features/ai-testing/styles/index.css",
+    "src/features/ai-testing/styles/module-generation-progress.css",
+    "src/features/ai-testing/styles/relations-hierarchy.css",
+    "src/features/ai-testing/styles/repository-profile.css",
+    "src/features/ai-testing/styles/requirement-design.css",
+    "src/features/ai-testing/styles/requirement-generation-canvas.css",
+    "src/features/ai-testing/styles/requirement-generation-chain.css",
+    "src/features/ai-testing/styles/run-history-list.css",
+    "src/features/ai-testing/styles/skill-library.css",
+    "src/features/ai-testing/styles/task-detail-v2.css",
+    "src/features/ai-testing/styles/task-form.css",
+    "src/features/ai-testing/styles/ui-generation-case-selector.css",
+    "src/features/ai-testing/styles/ui-generation-inputs.css",
+    "src/features/ai-testing/styles/ui-generation-source.css",
+    "src/features/ai-testing/styles/ui-stage-visual.css",
+    "src/features/ai-testing/styles/ui-yaml-issues.css",
+    "src/features/api-automation/styles/detail-inspector-v2.css",
+    "src/features/api-automation/styles/detail-request-panels-v2.css",
+    "src/features/api-automation/styles/detail-workbench-v2.css",
+    "src/features/api-automation/styles/detail.css",
+    "src/features/api-automation/styles/list-v2.css",
+    "src/features/api-automation/styles/overview.css",
+    "src/features/auth/styles/change-password.css",
+    "src/features/base-services/styles/index.css",
+    "src/features/base-services/styles/zentao-mcp-service.css",
+    "src/features/bugs/styles/bug-detail.css",
+    "src/features/bugs/styles/bug-form.css",
+    "src/features/bugs/styles/bug-import.css",
+    "src/features/bugs/styles/bugs-v2.css",
+    "src/features/interface-library/styles/index.css",
+    "src/features/profile/pages/ProfilePage.css",
+    "src/features/projects/styles/requirements-list.css",
+    "src/features/projects/styles/sprint-board.css",
+    "src/features/projects/styles/sprint-overview.css",
+    "src/features/requirements/styles/detail.css",
+    "src/features/test-cases/styles/case-editor-v2.css",
+    "src/features/test-cases/styles/case-library-v2.css",
+    "src/features/test-cases/styles/case-push.css",
+    "src/features/test-cases/styles/index.css",
+    "src/features/test-orders/styles/case-visualization.css",
+    "src/features/test-orders/styles/graph-execution.css",
+    "src/features/test-orders/styles/graph-page.css",
+    "src/features/test-orders/styles/graph-viewer.css",
+    "src/features/test-orders/styles/index.css",
+    "src/features/test-orders/styles/test-orders-v2.css",
+    "src/features/test-orders/styles/workspace-content-v3.css",
+    "src/features/test-orders/styles/workspace-list-v2.css",
+    "src/features/test-orders/styles/workspace-v2.css",
+    "src/features/test-orders/styles/workspace-verdict-v2.css",
+    "src/features/testing/styles/index.css",
+    "src/features/ui-automation/styles/detail-inspector-v2.css",
+    "src/features/ui-automation/styles/detail-pipeline-v2.css",
+    "src/features/ui-automation/styles/detail-workbench-v2.css",
+    "src/features/ui-automation/styles/execution-flow.css",
+    "src/features/ui-automation/styles/index.css",
+    "src/features/ui-automation/styles/list-v2.css",
+    "src/features/ui-automation/styles/step-editor-layout.css",
+    "src/features/ui-automation/styles/suite-drawer-layout.css",
+    "src/index.css",
+    "src/shared/components/RichTextEditor/rich-text-editor.css",
+    "src/shared/styles/chart-tokens.css",
+    "src/shared/styles/editor-tokens.css",
+    "src/shared/styles/entity-card.css",
+    "src/shared/styles/foundation-tokens.css",
+    "src/shared/styles/github-dark-foundation.css",
+    "src/shared/styles/github-dark-tokens.css",
+    "src/shared/styles/indigo-amber-light-tokens.css",
+    "src/shared/styles/legacy-tokens.css",
+    "src/shared/styles/list-name.css",
+    "src/shared/styles/list-table.css",
+    "src/shared/styles/page-frame.css",
+    "src/shared/styles/pagination.css",
+    "src/shared/styles/scrollbars.css",
+    "src/shared/styles/surface-tokens.css",
+    "src/shared/styles/tab-motion.css",
+    "src/shared/styles/table-row-dividers.css",
+    "src/shared/styles/tailwind.css",
+    "src/shared/styles/ui-stage-visual-tokens.css"
+  ],
+  "appCssImports": [
+    "src/app/styles/layout.css",
+    "src/app/styles/shell-boundary.css",
+    "src/app/styles/workbench.css",
+    "src/features/api-automation/styles/detail.css",
+    "src/features/api-automation/styles/overview.css",
+    "src/features/base-services/styles/index.css",
+    "src/features/ui-automation/styles/index.css",
+    "src/shared/styles/page-frame.css"
+  ],
+  "crossFeatureCssImports": [
+    "src/features/auth/pages/ChangePasswordPage.tsx -> src/features/profile/pages/ProfilePage.css",
+    "src/features/requirements/components/RequirementDocumentPreviewModal.tsx -> src/features/testing/styles/index.css",
+    "src/features/test-orders/components/TestOrderGraphViewer.tsx -> src/features/ai-testing/components/FunctionalCaseRelationsViewer.css"
+  ],
+  "orphanCss": [],
+  "sharedModuleViolations": [],
+  "files": {
+    "src/App.css": {
+      "rules": 0,
+      "declarations": 0,
+      "selectors": 0
+    },
+    "src/app/styles/asset-library.css": {
+      "rules": 5,
+      "declarations": 20,
+      "selectors": 5
+    },
+    "src/app/styles/buttons.css": {
+      "rules": 26,
+      "declarations": 97,
+      "selectors": 34
+    },
+    "src/app/styles/error-boundary.css": {
+      "rules": 1,
+      "declarations": 5,
+      "selectors": 1
+    },
+    "src/app/styles/index.css": {
+      "rules": 0,
+      "declarations": 0,
+      "selectors": 0
+    },
+    "src/app/styles/layout.css": {
+      "rules": 31,
+      "declarations": 106,
+      "selectors": 31
+    },
+    "src/app/styles/shell-boundary.css": {
+      "rules": 4,
+      "declarations": 9,
+      "selectors": 4
+    },
+    "src/app/styles/sidebar.css": {
+      "rules": 22,
+      "declarations": 90,
+      "selectors": 23
+    },
+    "src/app/styles/theme.css": {
+      "rules": 1,
+      "declarations": 1,
+      "selectors": 1
+    },
+    "src/app/styles/workbench.css": {
+      "rules": 260,
+      "declarations": 672,
+      "selectors": 350
+    },
+    "src/features/admin/styles/account-management.css": {
+      "rules": 10,
+      "declarations": 25,
+      "selectors": 10
+    },
+    "src/features/admin/styles/ldap-settings.css": {
+      "rules": 10,
+      "declarations": 28,
+      "selectors": 10
+    },
+    "src/features/ai-testing/components/FunctionalCaseRelationsGraph.css": {
+      "rules": 28,
+      "declarations": 141,
+      "selectors": 28
+    },
+    "src/features/ai-testing/components/FunctionalCaseRelationsViewer.css": {
+      "rules": 29,
+      "declarations": 98,
+      "selectors": 32
+    },
+    "src/features/ai-testing/components/RevisionSidePanel.css": {
+      "rules": 41,
+      "declarations": 149,
+      "selectors": 43
+    },
+    "src/features/ai-testing/styles/api-config-result.css": {
+      "rules": 30,
+      "declarations": 144,
+      "selectors": 35
+    },
+    "src/features/ai-testing/styles/api-design-result.css": {
+      "rules": 38,
+      "declarations": 159,
+      "selectors": 44
+    },
+    "src/features/ai-testing/styles/artifact-view-host.module.css": {
+      "rules": 3,
+      "declarations": 9,
+      "selectors": 3
+    },
+    "src/features/ai-testing/styles/artifact-view-switch.css": {
+      "rules": 6,
+      "declarations": 19,
+      "selectors": 6
+    },
+    "src/features/ai-testing/styles/case-name-tree.css": {
+      "rules": 39,
+      "declarations": 150,
+      "selectors": 46
+    },
+    "src/features/ai-testing/styles/generated-case-browser.css": {
+      "rules": 28,
+      "declarations": 83,
+      "selectors": 30
+    },
+    "src/features/ai-testing/styles/generated-cases-review.css": {
+      "rules": 11,
+      "declarations": 57,
+      "selectors": 12
+    },
+    "src/features/ai-testing/styles/index.css": {
+      "rules": 17,
+      "declarations": 101,
+      "selectors": 17
+    },
+    "src/features/ai-testing/styles/module-generation-progress.css": {
+      "rules": 18,
+      "declarations": 40,
+      "selectors": 21
+    },
+    "src/features/ai-testing/styles/relations-hierarchy.css": {
+      "rules": 30,
+      "declarations": 129,
+      "selectors": 30
+    },
+    "src/features/ai-testing/styles/repository-profile.css": {
+      "rules": 16,
+      "declarations": 45,
+      "selectors": 16
+    },
+    "src/features/ai-testing/styles/requirement-design.css": {
+      "rules": 11,
+      "declarations": 39,
+      "selectors": 11
+    },
+    "src/features/ai-testing/styles/requirement-generation-canvas.css": {
+      "rules": 206,
+      "declarations": 641,
+      "selectors": 234
+    },
+    "src/features/ai-testing/styles/requirement-generation-chain.css": {
+      "rules": 218,
+      "declarations": 738,
+      "selectors": 224
+    },
+    "src/features/ai-testing/styles/run-history-list.css": {
+      "rules": 10,
+      "declarations": 37,
+      "selectors": 10
+    },
+    "src/features/ai-testing/styles/skill-library.css": {
+      "rules": 4,
+      "declarations": 17,
+      "selectors": 4
+    },
+    "src/features/ai-testing/styles/task-detail-v2.css": {
+      "rules": 54,
+      "declarations": 174,
+      "selectors": 60
+    },
+    "src/features/ai-testing/styles/task-form.css": {
+      "rules": 2,
+      "declarations": 2,
+      "selectors": 3
+    },
+    "src/features/ai-testing/styles/ui-generation-case-selector.css": {
+      "rules": 7,
+      "declarations": 17,
+      "selectors": 8
+    },
+    "src/features/ai-testing/styles/ui-generation-inputs.css": {
+      "rules": 26,
+      "declarations": 69,
+      "selectors": 26
+    },
+    "src/features/ai-testing/styles/ui-generation-source.css": {
+      "rules": 40,
+      "declarations": 155,
+      "selectors": 41
+    },
+    "src/features/ai-testing/styles/ui-stage-visual.css": {
+      "rules": 434,
+      "declarations": 1059,
+      "selectors": 538
+    },
+    "src/features/ai-testing/styles/ui-yaml-issues.css": {
+      "rules": 3,
+      "declarations": 6,
+      "selectors": 3
+    },
+    "src/features/api-automation/styles/detail-inspector-v2.css": {
+      "rules": 81,
+      "declarations": 311,
+      "selectors": 85
+    },
+    "src/features/api-automation/styles/detail-request-panels-v2.css": {
+      "rules": 61,
+      "declarations": 214,
+      "selectors": 72
+    },
+    "src/features/api-automation/styles/detail-workbench-v2.css": {
+      "rules": 39,
+      "declarations": 178,
+      "selectors": 42
+    },
+    "src/features/api-automation/styles/detail.css": {
+      "rules": 258,
+      "declarations": 970,
+      "selectors": 285
+    },
+    "src/features/api-automation/styles/list-v2.css": {
+      "rules": 10,
+      "declarations": 31,
+      "selectors": 10
+    },
+    "src/features/api-automation/styles/overview.css": {
+      "rules": 25,
+      "declarations": 96,
+      "selectors": 29
+    },
+    "src/features/auth/styles/auth.module.css": {
+      "rules": 28,
+      "declarations": 66,
+      "selectors": 35
+    },
+    "src/features/auth/styles/change-password.css": {
+      "rules": 2,
+      "declarations": 2,
+      "selectors": 2
+    },
+    "src/features/base-services/styles/index.css": {
+      "rules": 105,
+      "declarations": 340,
+      "selectors": 118
+    },
+    "src/features/base-services/styles/zentao-mcp-service.css": {
+      "rules": 5,
+      "declarations": 16,
+      "selectors": 5
+    },
+    "src/features/bugs/styles/bug-detail.css": {
+      "rules": 63,
+      "declarations": 197,
+      "selectors": 72
+    },
+    "src/features/bugs/styles/bug-form.css": {
+      "rules": 63,
+      "declarations": 175,
+      "selectors": 70
+    },
+    "src/features/bugs/styles/bug-import.css": {
+      "rules": 10,
+      "declarations": 28,
+      "selectors": 10
+    },
+    "src/features/bugs/styles/bugs-v2.css": {
+      "rules": 65,
+      "declarations": 202,
+      "selectors": 66
+    },
+    "src/features/interface-library/styles/index.css": {
+      "rules": 232,
+      "declarations": 883,
+      "selectors": 247
+    },
+    "src/features/profile/pages/ProfilePage.css": {
+      "rules": 34,
+      "declarations": 80,
+      "selectors": 36
+    },
+    "src/features/projects/styles/requirements-list.css": {
+      "rules": 67,
+      "declarations": 252,
+      "selectors": 70
+    },
+    "src/features/projects/styles/sprint-board.css": {
+      "rules": 49,
+      "declarations": 221,
+      "selectors": 50
+    },
+    "src/features/projects/styles/sprint-overview.css": {
+      "rules": 45,
+      "declarations": 87,
+      "selectors": 48
+    },
+    "src/features/requirements/styles/detail.css": {
+      "rules": 29,
+      "declarations": 116,
+      "selectors": 31
+    },
+    "src/features/test-cases/styles/case-editor-v2.css": {
+      "rules": 44,
+      "declarations": 155,
+      "selectors": 48
+    },
+    "src/features/test-cases/styles/case-library-v2.css": {
+      "rules": 44,
+      "declarations": 142,
+      "selectors": 46
+    },
+    "src/features/test-cases/styles/case-push.css": {
+      "rules": 9,
+      "declarations": 20,
+      "selectors": 9
+    },
+    "src/features/test-cases/styles/index.css": {
+      "rules": 11,
+      "declarations": 28,
+      "selectors": 11
+    },
+    "src/features/test-orders/styles/case-visualization.css": {
+      "rules": 116,
+      "declarations": 375,
+      "selectors": 127
+    },
+    "src/features/test-orders/styles/graph-execution.css": {
+      "rules": 9,
+      "declarations": 26,
+      "selectors": 12
+    },
+    "src/features/test-orders/styles/graph-page.css": {
+      "rules": 17,
+      "declarations": 68,
+      "selectors": 18
+    },
+    "src/features/test-orders/styles/graph-viewer.css": {
+      "rules": 5,
+      "declarations": 12,
+      "selectors": 5
+    },
+    "src/features/test-orders/styles/index.css": {
+      "rules": 10,
+      "declarations": 35,
+      "selectors": 10
+    },
+    "src/features/test-orders/styles/test-orders-v2.css": {
+      "rules": 26,
+      "declarations": 79,
+      "selectors": 27
+    },
+    "src/features/test-orders/styles/workspace-content-v3.css": {
+      "rules": 34,
+      "declarations": 135,
+      "selectors": 39
+    },
+    "src/features/test-orders/styles/workspace-list-v2.css": {
+      "rules": 72,
+      "declarations": 271,
+      "selectors": 77
+    },
+    "src/features/test-orders/styles/workspace-v2.css": {
+      "rules": 19,
+      "declarations": 75,
+      "selectors": 20
+    },
+    "src/features/test-orders/styles/workspace-verdict-v2.css": {
+      "rules": 38,
+      "declarations": 160,
+      "selectors": 38
+    },
+    "src/features/testing/styles/index.css": {
+      "rules": 158,
+      "declarations": 493,
+      "selectors": 190
+    },
+    "src/features/ui-automation/styles/detail-inspector-v2.css": {
+      "rules": 71,
+      "declarations": 306,
+      "selectors": 75
+    },
+    "src/features/ui-automation/styles/detail-pipeline-v2.css": {
+      "rules": 50,
+      "declarations": 182,
+      "selectors": 52
+    },
+    "src/features/ui-automation/styles/detail-workbench-v2.css": {
+      "rules": 100,
+      "declarations": 357,
+      "selectors": 108
+    },
+    "src/features/ui-automation/styles/execution-flow.css": {
+      "rules": 143,
+      "declarations": 424,
+      "selectors": 165
+    },
+    "src/features/ui-automation/styles/index.css": {
+      "rules": 86,
+      "declarations": 255,
+      "selectors": 106
+    },
+    "src/features/ui-automation/styles/list-v2.css": {
+      "rules": 13,
+      "declarations": 36,
+      "selectors": 13
+    },
+    "src/features/ui-automation/styles/step-editor-layout.css": {
+      "rules": 6,
+      "declarations": 7,
+      "selectors": 11
+    },
+    "src/features/ui-automation/styles/suite-drawer-layout.css": {
+      "rules": 2,
+      "declarations": 2,
+      "selectors": 4
+    },
+    "src/index.css": {
+      "rules": 9,
+      "declarations": 25,
+      "selectors": 25
+    },
+    "src/shared/components/RichTextEditor/rich-text-editor.css": {
+      "rules": 40,
+      "declarations": 117,
+      "selectors": 47
+    },
+    "src/shared/styles/artifact-view.module.css": {
+      "rules": 5,
+      "declarations": 18,
+      "selectors": 6
+    },
+    "src/shared/styles/chart-tokens.css": {
+      "rules": 1,
+      "declarations": 25,
+      "selectors": 1
+    },
+    "src/shared/styles/editor-tokens.css": {
+      "rules": 1,
+      "declarations": 15,
+      "selectors": 1
+    },
+    "src/shared/styles/entity-card.css": {
+      "rules": 19,
+      "declarations": 101,
+      "selectors": 19
+    },
+    "src/shared/styles/foundation-tokens.css": {
+      "rules": 1,
+      "declarations": 506,
+      "selectors": 1
+    },
+    "src/shared/styles/github-dark-foundation.css": {
+      "rules": 1,
+      "declarations": 498,
+      "selectors": 1
+    },
+    "src/shared/styles/github-dark-tokens.css": {
+      "rules": 11,
+      "declarations": 203,
+      "selectors": 11
+    },
+    "src/shared/styles/indigo-amber-light-tokens.css": {
+      "rules": 6,
+      "declarations": 288,
+      "selectors": 6
+    },
+    "src/shared/styles/legacy-tokens.css": {
+      "rules": 1,
+      "declarations": 28,
+      "selectors": 1
+    },
+    "src/shared/styles/list-name.css": {
+      "rules": 3,
+      "declarations": 12,
+      "selectors": 3
+    },
+    "src/shared/styles/list-table.css": {
+      "rules": 9,
+      "declarations": 35,
+      "selectors": 12
+    },
+    "src/shared/styles/page-frame.css": {
+      "rules": 151,
+      "declarations": 527,
+      "selectors": 163
+    },
+    "src/shared/styles/pagination.css": {
+      "rules": 14,
+      "declarations": 48,
+      "selectors": 20
+    },
+    "src/shared/styles/scrollbars.css": {
+      "rules": 5,
+      "declarations": 10,
+      "selectors": 6
+    },
+    "src/shared/styles/surface-tokens.css": {
+      "rules": 36,
+      "declarations": 196,
+      "selectors": 39
+    },
+    "src/shared/styles/tab-motion.css": {
+      "rules": 11,
+      "declarations": 24,
+      "selectors": 13
+    },
+    "src/shared/styles/table-row-dividers.css": {
+      "rules": 1,
+      "declarations": 1,
+      "selectors": 1
+    },
+    "src/shared/styles/tailwind.css": {
+      "rules": 0,
+      "declarations": 0,
+      "selectors": 0
+    },
+    "src/shared/styles/ui-stage-visual-tokens.css": {
+      "rules": 1,
+      "declarations": 87,
+      "selectors": 1
+    }
+  },
+  "duplicateBodies": {
+    "00c0a148a01d254e": {
+      "count": 2,
+      "sample": "display: flex;flex: 1 1 auto;min-width: 0;min-height: 0"
+    },
+    "018f4cfefc32ecef": {
+      "count": 2,
+      "sample": "display: flex;flex: 1 1 auto;gap: 12px;min-height: 0;min-width: 0"
+    },
+    "07c0f4cdaa7aa123": {
+      "count": 2,
+      "sample": "position: relative;display: flex;flex: 1 1 auto;min-width: 0;min-height: 0"
+    },
+    "098709f4ca244421": {
+      "count": 2,
+      "sample": "height: 100dvh;min-height: 0;overflow: hidden"
+    },
+    "0a3ccf7e73278f6f": {
+      "count": 2,
+      "sample": "min-width: 0;display: flex;flex-direction: column;gap: 8px"
+    },
+    "0b7d6eb7eb05684f": {
+      "count": 2,
+      "sample": "border: 0 !important;background: transparent !important;-webkit-backdrop-filter: none;backdrop-filter: none"
+    },
+    "0e471c16e76148bd": {
+      "count": 2,
+      "sample": "display: grid;grid-template-columns: 72px minmax(0, 1fr);gap: 8px"
+    },
+    "0ea32fc030d2ae37": {
+      "count": 2,
+      "sample": "margin: 6px 0;padding: 8px 10px;border-radius: 6px;background: var(--srf-chip);font-size: 13px;white-space: pre-wrap"
+    },
+    "0f2ff28ad546b399": {
+      "count": 2,
+      "sample": "flex: 0 0 auto;width: 6px;height: 6px;border-radius: 999px;background: var(--srf-result-passed)"
+    },
+    "117380055fe46c65": {
+      "count": 2,
+      "sample": "margin: 6px 0;padding: 2px 10px;border-left: 3px solid var(--srf-card-border);color: var(--srf-text-secondary)"
+    },
+    "134af927e2a224d0": {
+      "count": 2,
+      "sample": "display: flex;flex-direction: column;align-items: stretch"
+    },
+    "168eee1f679a9977": {
+      "count": 6,
+      "sample": "display: flex;flex-direction: column;gap: 8px"
+    },
+    "17f98caa4f0174b9": {
+      "count": 3,
+      "sample": "color: var(--srf-text-secondary);font-size: 12px;font-weight: 600"
+    },
+    "19a5fde8459ab58f": {
+      "count": 2,
+      "sample": "border-left: 0 !important;border-start-start-radius: 8px !important;border-end-start-radius: 8px !important;border-top-left-radius: 8px !important;border-bottom-left-radius: 8px !i"
+    },
+    "1a2d0b3c887a0a79": {
+      "count": 3,
+      "sample": "color: var(--srf-text-muted);font-size: 11px;line-height: 16px"
+    },
+    "1b55041854203af8": {
+      "count": 2,
+      "sample": "display: flex;flex-direction: column;gap: 6px;margin-top: 12px"
+    },
+    "1d49319091b467df": {
+      "count": 2,
+      "sample": "flex: 1;min-width: 0;margin: 0;color: var(--srf-text);font-size: 14.5px;line-height: 22px;font-weight: 650"
+    },
+    "20008b75751a2534": {
+      "count": 2,
+      "sample": "outline: 2px solid var(--srf-accent);outline-offset: 2px;border-radius: 4px"
+    },
+    "2106d9af6ccfaa56": {
+      "count": 2,
+      "sample": "display: flex;align-items: center;gap: 10px;min-width: 0"
+    },
+    "26b9a3ba04ba009d": {
+      "count": 2,
+      "sample": "display: flex;align-items: center;gap: 6px;min-width: 0"
+    },
+    "299d1f386c062b4a": {
+      "count": 2,
+      "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 6px"
+    },
+    "2adc3dcdcc63441e": {
+      "count": 6,
+      "sample": "overflow: hidden;text-overflow: ellipsis;white-space: nowrap"
+    },
+    "2e2e45e2d4ca13fb": {
+      "count": 5,
+      "sample": "display: flex;align-items: center;gap: 10px"
+    },
+    "2ea85dd40793deee": {
+      "count": 3,
+      "sample": "display: inline-flex;align-items: center;gap: 4px"
+    },
+    "300b373f254ffd3c": {
+      "count": 8,
+      "sample": "display: flex;align-items: center;gap: 8px"
+    },
+    "37bf457a62a94b20": {
+      "count": 2,
+      "sample": "margin-left: auto;color: var(--app-surface-text-muted);font-size: 11px"
+    },
+    "38f7a39ef693d07f": {
+      "count": 3,
+      "sample": "display: flex;flex-direction: column;gap: 14px"
+    },
+    "3be4dd54c65b7d06": {
+      "count": 3,
+      "sample": "display: flex;align-items: center;gap: 12px"
+    },
+    "3cb36c6ec7ceb733": {
+      "count": 2,
+      "sample": "overflow: hidden;white-space: nowrap;text-overflow: ellipsis"
+    },
+    "3dc1af6e21ca837c": {
+      "count": 4,
+      "sample": "display: inline-flex;align-items: center;gap: 6px"
+    },
+    "3f9212d108008775": {
+      "count": 2,
+      "sample": "display: flex;align-items: center;justify-content: space-between;gap: 16px"
+    },
+    "41ff9fcb4194ebda": {
+      "count": 5,
+      "sample": "display: flex;flex-direction: column;gap: 10px"
+    },
+    "440644315a04af4d": {
+      "count": 2,
+      "sample": "display: flex;flex-direction: column;flex: 1 1 auto;min-height: 0;min-width: 0;overflow: hidden"
+    },
+    "4598ad2ccae72e7c": {
+      "count": 2,
+      "sample": "overflow: hidden;color: var(--uisv-64748b);font-size: 8px;text-overflow: ellipsis;white-space: nowrap"
+    },
+    "45996232e0d4bfd4": {
+      "count": 2,
+      "sample": "display: inline-flex;align-items: center;gap: 8px"
+    },
+    "4799dff8727ed6f6": {
+      "count": 2,
+      "sample": "--srf-tone-text: var(--gh-purple);--srf-tone-bg: var(--gh-purple-soft);--srf-tone-border: var(--gh-purple-border)"
+    },
+    "49a03652e5dd4df5": {
+      "count": 3,
+      "sample": "overflow: hidden;color: var(--uisv-94a3b8);font-size: 8px;text-overflow: ellipsis;white-space: nowrap"
+    },
+    "4f21396fa9b8948f": {
+      "count": 2,
+      "sample": "display: flex;flex-direction: column;flex: 1 1 auto;min-width: 0;min-height: 0"
+    },
+    "50427b8d65854ad0": {
+      "count": 2,
+      "sample": "display: flex;flex: 1 1 auto;flex-direction: column;min-height: 0"
+    },
+    "50abdfaf427f4445": {
+      "count": 2,
+      "sample": "display:flex;flex-flow:row nowrap;align-items:flex-start;gap:10px"
+    },
+    "528f9ebfeb41bb50": {
+      "count": 2,
+      "sample": "overflow: hidden;font-size: 12px;text-overflow: ellipsis;white-space: nowrap"
+    },
+    "54c1905889b19193": {
+      "count": 2,
+      "sample": "min-width: 0;overflow: hidden;border: 1px solid var(--app-review-outline);border-radius: 10px;background: linear-gradient(180deg, var(--app-glass-surface-92), var(--app-review-mute"
+    },
+    "54e49fe25729e447": {
+      "count": 2,
+      "sample": "display: grid;grid-template-columns: repeat(2, minmax(0, 1fr));gap: 10px;margin: 0;padding: 10px 12px;border-radius: 8px;background: var(--srf-hover)"
+    },
+    "554c6fdf598a8adc": {
+      "count": 2,
+      "sample": "display: flex;align-items: center;justify-content: space-between;gap: 8px;min-height: 43px;margin-top: auto;padding: 9px 16px 10px;background: var(--srf-card)"
+    },
+    "58c9a32dd9adcce7": {
+      "count": 2,
+      "sample": "border-color: color-mix(in srgb, var(--app-result-success) 32%, var(--app-surface-border));background: var(--app-testing-success-tag-bg);color: var(--app-result-success-text)"
+    },
+    "5da36abee4ca0183": {
+      "count": 3,
+      "sample": "display: flex;align-items: center;gap: 10px;flex-wrap: wrap"
+    },
+    "5f375a2bdb1ba064": {
+      "count": 2,
+      "sample": "display: flex;align-items: center;justify-content: space-between;gap: 12px"
+    },
+    "5ffa9328928dba7e": {
+      "count": 3,
+      "sample": "color: var(--srf-text-muted);font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;font-size: 10px"
+    },
+    "6008df5c3dcaa46a": {
+      "count": 2,
+      "sample": "flex: 0 0 auto;display: flex;align-items: center;gap: 8px"
+    },
+    "61021ec007eb9330": {
+      "count": 2,
+      "sample": "padding: 0 5px;border-radius: 999px;background: var(--srf-chip);color: var(--srf-text-secondary);font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;font-"
+    },
+    "612ee0463ea9ba77": {
+      "count": 2,
+      "sample": "border-right: 0 !important;border-start-end-radius: 8px !important;border-end-end-radius: 8px !important;border-top-right-radius: 8px !important;border-bottom-right-radius: 8px !im"
+    },
+    "631f76b8b8be2527": {
+      "count": 3,
+      "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 10px;min-width: 0"
+    },
+    "6747dfd794ecfb61": {
+      "count": 2,
+      "sample": "border-color: var(--app-accent-border);background: var(--app-accent-surface);color: var(--app-accent);font-weight: 600"
+    },
+    "6b7ac171da54aa31": {
+      "count": 2,
+      "sample": "display: flex;flex-direction: column;min-width: 0;gap: 1px"
+    },
+    "6ca8e0c8c93b0e71": {
+      "count": 2,
+      "sample": "display: grid;gap: 2px;font-size: 12px;line-height: 18px"
+    },
+    "6e0d69fec531faee": {
+      "count": 2,
+      "sample": "font-family: var(--app-font-sans) !important;font-size: 12px !important;font-weight: 400 !important;letter-spacing: 0 !important;text-shadow: none !important;-webkit-text-stroke: 0"
+    },
+    "73ddbd769bdeddf9": {
+      "count": 2,
+      "sample": "display: flex;flex-direction: column;gap: 1px"
+    },
+    "78ccff32e9ca739f": {
+      "count": 2,
+      "sample": "display: flex;flex-direction: column;gap: 8px;margin-top: 8px"
+    },
+    "790b1e6d62087b78": {
+      "count": 4,
+      "sample": "display: flex;flex-wrap: wrap;align-items: center;justify-content: space-between;gap: 8px"
+    },
+    "7c586f54a3b7d455": {
+      "count": 2,
+      "sample": "width: 100%;align-items: flex-start;flex-direction: column;gap: 10px"
+    },
+    "7c8cf60185825020": {
+      "count": 2,
+      "sample": "flex: 0 0 auto;min-height: 56px;padding: 10px 16px"
+    },
+    "7d5173b17126857f": {
+      "count": 3,
+      "sample": "display: flex;flex-direction: column;gap: 4px"
+    },
+    "81379a756b80e635": {
+      "count": 2,
+      "sample": "display: flex;flex: 1 1 auto;flex-direction: column;min-height: 0;min-width: 0"
+    },
+    "82273705a9eba3b7": {
+      "count": 2,
+      "sample": "flex: 0 0 auto;display: flex;flex-wrap: wrap;align-items: center;justify-content: space-between;gap: 10px;padding: 10px 16px;border: 1px solid var(--srf-card-border);border-radius:"
+    },
+    "8286808fdc44ffaa": {
+      "count": 4,
+      "sample": "display: flex;align-items: center;gap: 4px"
+    },
+    "83bfbff9a699fecc": {
+      "count": 3,
+      "sample": "display: flex;justify-content: flex-end;gap: 8px"
+    },
+    "8470710580857f2c": {
+      "count": 2,
+      "sample": "width: 13px;height: 13px;opacity: 0.4;filter: grayscale(1)"
+    },
+    "852c7a6815e878d4": {
+      "count": 2,
+      "sample": "overflow: hidden;color: var(--srf-text-muted);font-size: 11px;text-overflow: ellipsis;white-space: nowrap"
+    },
+    "8b7e12d2e5fb1c19": {
+      "count": 5,
+      "sample": "flex: 1 1 auto;min-height: 0;display: flex;flex-direction: column"
+    },
+    "8f1b716dbcdd3971": {
+      "count": 2,
+      "sample": "margin: 0 !important;font-size: 17px;line-height: 24px"
+    },
+    "9222d9fe65fe3f15": {
+      "count": 2,
+      "sample": "border: 0 !important;border-radius: 0 !important;background: transparent !important;box-shadow: none !important;-webkit-backdrop-filter: none !important;backdrop-filter: none !impo"
+    },
+    "9234875d2c1b0502": {
+      "count": 3,
+      "sample": "min-width: 0;margin: 0;overflow: hidden;color: var(--srf-text);font-size: 11.5px;line-height: 17px;font-weight: 600;font-variant-numeric: tabular-nums;white-space: nowrap;text-over"
+    },
+    "937475e67cd60f08": {
+      "count": 2,
+      "sample": "width: 1px;height: 12px;background: var(--srf-card-border)"
+    },
+    "93d2d153e76d7958": {
+      "count": 2,
+      "sample": "display: flex;align-items: center;min-width: 0;gap: 8px"
+    },
+    "95284c78d494f8ff": {
+      "count": 2,
+      "sample": "display: flex;align-items: flex-start;justify-content: space-between;gap: 12px"
+    },
+    "978cb96411ed0663": {
+      "count": 2,
+      "sample": "display: grid;grid-template-columns: repeat(2, minmax(0, 1fr));gap: 10px;margin-top: 12px"
+    },
+    "9b93b41483a7e8a4": {
+      "count": 2,
+      "sample": "display: flex;align-items: center;gap: 8px;flex-wrap: wrap"
+    },
+    "9f60b5ccb8682bf4": {
+      "count": 4,
+      "sample": "display: flex;flex-direction: column;gap: 2px;min-width: 0"
+    },
+    "a01057c7d90be5ca": {
+      "count": 2,
+      "sample": "min-width: 0;flex: 1 1 auto;display: flex;flex-direction: column;gap: 4px"
+    },
+    "a1ba852520d9ad7f": {
+      "count": 2,
+      "sample": "display:flex;align-items:center;flex-wrap:wrap;gap:8px"
+    },
+    "a4a1b7ce873e0af5": {
+      "count": 3,
+      "sample": "display: flex;align-items: center;justify-content: space-between;gap: 8px"
+    },
+    "a628d528c7b902a0": {
+      "count": 2,
+      "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 10px;color: var(--srf-text-muted);font-size: 11px"
+    },
+    "a6c05fa49ade832c": {
+      "count": 3,
+      "sample": "outline: 2px solid var(--srf-accent);outline-offset: 2px;border-radius: 2px"
+    },
+    "a71bc4fe08430bdb": {
+      "count": 3,
+      "sample": "flex: 1 1 auto;min-width: 0;overflow: hidden;text-overflow: ellipsis;white-space: nowrap"
+    },
+    "a8c592ec8463dd98": {
+      "count": 7,
+      "sample": "display: flex;flex-direction: column;gap: 12px"
+    },
+    "ae0bb72e9c16786e": {
+      "count": 2,
+      "sample": "color: var(--srf-text-muted);font-size: 12px;white-space: nowrap"
+    },
+    "b0a1c71ee6d660d1": {
+      "count": 3,
+      "sample": "display: flex;align-items: center;flex-wrap: wrap;gap: 8px;min-width: 0"
+    },
+    "b1ffd8837cba8faf": {
+      "count": 3,
+      "sample": "display: block;overflow: hidden;white-space: nowrap;text-overflow: ellipsis;color: inherit"
+    },
+    "b36f4265bfbdde0f": {
+      "count": 3,
+      "sample": "color: var(--tp-text-secondary);font-size: 12px;line-height: 18px"
+    },
+    "b55a347634ad307b": {
+      "count": 3,
+      "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 8px;min-width: 0"
+    },
+    "b9c0f9c571daf401": {
+      "count": 3,
+      "sample": "flex: 1 1 auto;min-height: 0;overflow: hidden"
+    },
+    "bc6e8b9708a2352a": {
+      "count": 2,
+      "sample": "background: var(--app-accent-surface);color: var(--app-accent-hover);text-decoration: underline"
+    },
+    "bc810d6d2d55ff9e": {
+      "count": 2,
+      "sample": "border: 1px solid var(--tp-border-soft) !important;border-radius: 10px;box-shadow: 0 10px 24px var(--app-card-shadow-floating)"
+    },
+    "bd53bc74855fdf05": {
+      "count": 8,
+      "sample": "display: flex;flex-direction: column;gap: 6px"
+    },
+    "bd5c1070f7065f2f": {
+      "count": 3,
+      "sample": "color: var(--srf-text-secondary);font-size: 9.5px;line-height: 14px;font-weight: 400"
+    },
+    "c14d680043e300a8": {
+      "count": 2,
+      "sample": "display: flex;align-items: center;justify-content: space-between;flex: 0 0 56px;flex-wrap: wrap;gap: 16px;min-width: 0;padding: 0 16px;border: 1px solid var(--srf-card-border);bord"
+    },
+    "c190dc51ee9f0a31": {
+      "count": 2,
+      "sample": "flex: 0 0 auto;font-size: 12px;line-height: 18px"
+    },
+    "c3a767a35bba8500": {
+      "count": 3,
+      "sample": "border-color: var(--app-danger-border);background: var(--app-danger-surface-soft);color: var(--app-profile-danger-text)"
+    },
+    "c59d73221fa11066": {
+      "count": 3,
+      "sample": "display: flex;flex-direction: column;overflow: hidden"
+    },
+    "c6a824ad12b4ba06": {
+      "count": 2,
+      "sample": "overflow: visible;border: 0;border-radius: 0;background: transparent"
+    },
+    "c6fd5c3d31cf4b69": {
+      "count": 2,
+      "sample": "border-color: var(--srf-accent-border);background: var(--srf-accent-soft);color: var(--srf-accent-strong)"
+    },
+    "c7184222151d0ba0": {
+      "count": 2,
+      "sample": "min-width: 0;overflow: hidden;font-size: 12px;text-overflow: ellipsis;white-space: nowrap"
+    },
+    "c7777c6e868d5ddd": {
+      "count": 6,
+      "sample": "min-width: 0;overflow: hidden;text-overflow: ellipsis;white-space: nowrap"
+    },
+    "c8785aba7d8bc59b": {
+      "count": 2,
+      "sample": "display: grid;grid-template-columns: repeat(auto-fill, minmax(min(100%, 328px), 1fr));justify-content: start;gap: 16px"
+    },
+    "cb8f1317a091e621": {
+      "count": 2,
+      "sample": "display: block;min-width: 0;overflow: hidden;text-overflow: ellipsis;white-space: nowrap"
+    },
+    "cc6725c9ffdaf533": {
+      "count": 2,
+      "sample": "flex: 0 0 auto;height: min(60vh, 600px);min-height: 380px"
+    },
+    "d02a09550bfc286f": {
+      "count": 3,
+      "sample": "border-color: var(--app-glass-action-border-hover);box-shadow: 0 12px 28px var(--app-service-card-shadow-hover);transform: translateY(-2px)"
+    },
+    "d0d990f7ff8b760f": {
+      "count": 2,
+      "sample": "display: flex;align-items: center;gap: 6px;flex-wrap: wrap;min-width: 0"
+    },
+    "d13bcc173a94fcdb": {
+      "count": 2,
+      "sample": "color: var(--uisv-94a3b8);font-size: 8px;font-variant-numeric: tabular-nums"
+    },
+    "d1807f6af7a4f790": {
+      "count": 2,
+      "sample": "max-width: 100%;border-radius: 6px;border: 1px solid var(--srf-card-border)"
+    },
+    "d5f707205537bf02": {
+      "count": 2,
+      "sample": "display: flex;align-items: center;justify-content: center"
+    },
+    "df916f8b90e4cac1": {
+      "count": 2,
+      "sample": "padding: 1px 8px;border: 1px solid var(--srf-tone-border);border-radius: 999px;background: var(--srf-tone-bg);color: var(--srf-tone-text);font-size: 11px;font-weight: 600;line-heig"
+    },
+    "e0330ed8f9029dda": {
+      "count": 2,
+      "sample": "display: inline-flex;align-items: center;gap: 5px"
+    },
+    "e03d0e3def70bf87": {
+      "count": 2,
+      "sample": "display: grid;grid-template-columns: repeat(2, minmax(0, 1fr));gap: 12px"
+    },
+    "e0a80c835c3c40a9": {
+      "count": 2,
+      "sample": "border: 0;border-bottom: 1px solid var(--srf-card-border);border-radius: 0"
+    },
+    "e1229d424d265a5e": {
+      "count": 2,
+      "sample": "flex: 1;min-width: 0;display: flex;flex-direction: column;gap: 1px"
+    },
+    "e1de6a40d3b1ed7a": {
+      "count": 2,
+      "sample": "width: 288px;min-width: 0;max-width: 100%"
+    },
+    "e22f970c81eb4724": {
+      "count": 2,
+      "sample": "display: grid;grid-template-columns: repeat(2, minmax(0, 1fr));gap: 14px 16px;align-items: start"
+    },
+    "e34a9d6e2f35a871": {
+      "count": 4,
+      "sample": "width: 28px;min-width: 28px;height: 28px"
+    },
+    "e38e5eb24a0f8a06": {
+      "count": 5,
+      "sample": "height: 100%;min-height: 0;overflow: hidden"
+    },
+    "e5b6bf9b5b1696ce": {
+      "count": 3,
+      "sample": "margin: 0;font-size: 12px;font-weight: 600"
+    },
+    "e638bcecdc40eaa6": {
+      "count": 2,
+      "sample": "border-right-color: var(--mac-glass-border) !important;background: var(--mac-glass-sidebar) !important;-webkit-backdrop-filter: saturate(180%) blur(24px);backdrop-filter: saturate("
+    },
+    "e6fb3a7f8f65fc87": {
+      "count": 2,
+      "sample": "display: flex;flex-direction: column;gap: 16px"
+    },
+    "e7645f9b497487ae": {
+      "count": 2,
+      "sample": "min-width: 0;display: flex;align-items: center;flex-wrap: wrap;gap: 8px"
+    },
+    "e83dff633a5ab63e": {
+      "count": 2,
+      "sample": "display: flex;align-items: center;gap: 8px;color: var(--srf-text-secondary);font-size: 12px"
+    },
+    "ed5e616a7680ffe5": {
+      "count": 2,
+      "sample": "display: flex;flex-direction: column;max-height: calc(100dvh - 48px)"
+    },
+    "ee75574833000445": {
+      "count": 2,
+      "sample": "background: var(--srf-chip);border-radius: 4px;padding: 1px 4px;font-size: 13px"
+    },
+    "f528e07c7b4e6dec": {
+      "count": 2,
+      "sample": "color: var(--srf-text-secondary);font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;font-weight: 600"
+    },
+    "fbbb9331ecfd8380": {
+      "count": 12,
+      "sample": "display: flex;flex-wrap: wrap;align-items: center;gap: 8px"
+    },
+    "fcdeebb66af49795": {
+      "count": 2,
+      "sample": "display: inline-flex;align-items: center;justify-content: center;width: 22px;height: 22px;flex-shrink: 0"
+    },
+    "fce376b002f77271": {
+      "count": 2,
+      "sample": "display: flex;flex-wrap: wrap;gap: 4px;margin-top: 8px"
+    },
+    "fce757ec5764ee15": {
+      "count": 5,
+      "sample": "display: flex;align-items: center;gap: 8px;min-width: 0"
+    },
+    "fed5aa45771ec236": {
+      "count": 2,
+      "sample": "flex: 1 1 auto;min-height: 0;overflow: auto"
+    },
+    "ff490fdf4a422061": {
+      "count": 2,
+      "sample": "display: flex;flex-direction: column;gap: 1px;min-width: 0"
+    }
+  }
+}

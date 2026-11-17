@@ -7,23 +7,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 
-class AiGenerateTaskRequest(BaseModel):
-    name: str | None = None
-    sprint_id: str | None = Field(default=None)
-    requirement_id: str | None = Field(default=None)
-    source_type: str | None = Field(default=None)
-    source_content: str | None = Field(default=None)
-    interface_ids: list[str] | None = Field(default=None)
-    instruction: str | None = None
-
-    model_config = ConfigDict(
-        populate_by_name=True,
-        extra="allow",
-        json_schema_extra={"additionalProperties": False},
-        alias_generator=to_camel,
-    )
-
-
 class AiGenerateTaskRunRequest(BaseModel):
     requirement_material_version_id: str | None = Field(default=None, max_length=64)
     requirement_understanding_version_id: str | None = Field(
@@ -40,36 +23,6 @@ class AiGenerateTaskRunRequest(BaseModel):
     checkpoint_enabled: bool | None = Field(default=None)
     config_json: Any | None = Field(default=None)
     result_yaml: str | None = Field(default=None)
-
-    model_config = ConfigDict(
-        populate_by_name=True,
-        extra="allow",
-        json_schema_extra={"additionalProperties": False},
-        alias_generator=to_camel,
-    )
-
-
-class RequirementAnalysisRunRequest(BaseModel):
-    connection_id: str | None = Field(default=None)
-    llm_connection_id: str | None = Field(default=None)
-    instruction: str | None = None
-    trigger_type: str | None = Field(default=None)
-    checkpoint_enabled: bool | None = Field(default=None)
-    config_json: Any | None = Field(default=None)
-    result_yaml: str | None = Field(default=None)
-
-    model_config = ConfigDict(
-        populate_by_name=True,
-        extra="allow",
-        json_schema_extra={"additionalProperties": False},
-        alias_generator=to_camel,
-    )
-
-
-class RequirementAnalysisTaskRequest(BaseModel):
-    name: str | None = None
-    requirement_id: str | None = Field(default=None)
-    instruction: str | None = None
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -169,56 +122,6 @@ class TestReportGenerateTaskRunRequest(BaseModel):
         json_schema_extra={"additionalProperties": False},
         alias_generator=to_camel,
     )
-
-
-class AiGenerateTaskReviewRequest(BaseModel):
-    llm_connection_id: str | None = None
-    action: str | None = None
-    review_status: str | None = Field(default=None)
-    status: str | None = None
-    current_stage: str | None = Field(default=None)
-    stage: str | None = None
-    review_comment: str | None = Field(default=None)
-    comment: str | None = None
-    collection_id: str | None = Field(default=None)
-    config_json: Any | None = Field(default=None)
-    revision_instruction: str | None = Field(default=None)
-    attachment_file_ids: list[str] | None = Field(default=None, max_length=6)
-    result_yaml: str | None = Field(default=None)
-
-    model_config = ConfigDict(
-        populate_by_name=True,
-        extra="allow",
-        json_schema_extra={"additionalProperties": False},
-        alias_generator=to_camel,
-    )
-
-
-class AiGenerateTaskResultRequest(BaseModel):
-    result_yaml: str = Field()
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class AiGenerateTaskImportRequest(BaseModel):
-    collection_id: str = Field()
-    confirm_overwrite: bool = Field(default=False)
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class FunctionGenerateTaskImportRequest(BaseModel):
-    confirm_overwrite: bool = Field(default=False)
-    requirement_id: str | None = Field(default=None)
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class UiGenerateTaskImportRequest(BaseModel):
-    suite_id: str = Field()
-    confirm_overwrite: bool = Field(default=False)
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
 class AiGenerateTaskResponse(BaseModel):
@@ -399,118 +302,5 @@ class RepositoryProfileVersionResponse(BaseModel):
     source_run_id: str
     requirement_material_version: RepositoryProfileMaterialVersionResponse | None = None
     created_at: datetime
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class ApiCaseExtractRuleComparison(BaseModel):
-    name: str
-    enabled: bool
-    order_no: int = Field()
-    source: str
-    source_expr: str = Field()
-    var_key: str = Field()
-    default_value: str = Field()
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class ApiCaseAssertRuleComparison(BaseModel):
-    name: str
-    enabled: bool
-    order_no: int = Field()
-    assert_source: str = Field()
-    target_expr: str = Field()
-    comparator: str
-    expected_value: str = Field()
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class ApiCaseComparison(BaseModel):
-    name: str
-    description: str
-    enabled: bool
-    order_no: int = Field()
-    method: str
-    url_template: str = Field()
-    headers: Any
-    query: Any
-    body_type: str = Field()
-    body_json: Any = Field()
-    body_text: str = Field()
-    timeout_ms: int = Field()
-    continue_on_failure: bool = Field()
-    extract_rules: list[ApiCaseExtractRuleComparison] = Field()
-    assert_rules: list[ApiCaseAssertRuleComparison] = Field()
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class ApiCaseImportConflict(BaseModel):
-    normalized_name: str = Field()
-    existing_case: ApiCaseComparison = Field()
-    generated_case: ApiCaseComparison = Field()
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class AiGenerateTaskImportResponse(BaseModel):
-    requires_confirmation: bool = Field()
-    conflicts: list[ApiCaseImportConflict] = Field(default_factory=list)
-    run: AiGenerateTaskRunResponse
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class FunctionCaseComparison(BaseModel):
-    module: str
-    title: str
-    preconditions: str
-    steps: str
-    expected_results: str = Field()
-    priority: str
-    case_type: str = Field()
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class FunctionCaseImportConflict(BaseModel):
-    normalized_name: str = Field()
-    existing_case: FunctionCaseComparison = Field()
-    generated_case: FunctionCaseComparison = Field()
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class FunctionGenerateTaskImportResponse(BaseModel):
-    requires_confirmation: bool = Field()
-    conflicts: list[FunctionCaseImportConflict] = Field(default_factory=list)
-    run: AiGenerateTaskRunResponse
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class UiCaseComparison(BaseModel):
-    name: str
-    enabled: bool
-    order_no: int = Field()
-    steps_json: Any = Field()
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class UiCaseImportConflict(BaseModel):
-    normalized_name: str = Field()
-    existing_case: UiCaseComparison = Field()
-    generated_case: UiCaseComparison = Field()
-
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
-
-
-class UiGenerateTaskImportResponse(BaseModel):
-    requires_confirmation: bool = Field()
-    conflicts: list[UiCaseImportConflict] = Field(default_factory=list)
-    run: AiGenerateTaskRunResponse
 
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)

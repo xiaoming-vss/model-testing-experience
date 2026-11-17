@@ -2,10 +2,26 @@ import { useCallback, useMemo, useState } from 'react'
 import { Empty, Input, Tag } from 'antd'
 import { CaseNameTreeView } from './CaseNamesResultView'
 import { MaterialBlockContent, type MaterialBlock } from './ReadableRequirementMaterial'
+import {
+  ArtifactDetailTitle,
+  ArtifactDivider,
+  ArtifactEmpty,
+  ArtifactEvidence,
+  ArtifactEvidenceItem,
+  ArtifactEvidenceMissing,
+  ArtifactHeader,
+  ArtifactKicker,
+  ArtifactListRow,
+  ArtifactRefChips,
+  ArtifactSectionHead,
+  ArtifactSplit,
+  ArtifactStat,
+  ArtifactTabs,
+} from '@/shared/components/ArtifactView'
+import { cx } from '@/shared/utils/cx'
 import { toRecord, toRecordArray } from '@/shared/utils/value'
 import { toDisplayText } from '../utils/functionalOutput'
 import { buildCaseNameTree, type CaseNameTreeNode } from '../utils/caseNameTree'
-import '@/features/ai-testing/styles/traceable-points.css'
 
 type Props = {
   content: string
@@ -52,25 +68,20 @@ function aggregateRefs(entries: PointEntry[]) {
   return result
 }
 
-function EvidenceList({ blockIds, blockById, sourceById }: {
+function EvidenceItems({ blockIds, blockById, sourceById, showMissing = false }: {
   blockIds: string[]
   blockById: Map<string, Record<string, unknown>>
   sourceById: Map<string, Record<string, unknown>>
+  showMissing?: boolean
 }) {
-  return <div className="ai-tp-relations-evidence-list">
-    {blockIds.map((id) => {
-      const block = blockById.get(id)
-      if (!block) return null
-      const source = sourceById.get(toDisplayText(block.sourceId))
-      return <div className="ai-tp-relations-evidence" key={id}>
-        <div className="ai-tp-relations-evidence-head">
-          <strong>{toDisplayText(source?.name) || '来源未找到'}</strong>
-          <span>{toDisplayText(block.locator)}</span>
-        </div>
-        <MaterialBlockContent block={block as MaterialBlock} />
-      </div>
-    })}
-  </div>
+  return <>{blockIds.map((id) => {
+    const block = blockById.get(id)
+    if (!block) return showMissing ? <ArtifactEvidenceMissing key={id}>{id}：未找到对应材料</ArtifactEvidenceMissing> : null
+    const source = sourceById.get(toDisplayText(block.sourceId))
+    return <ArtifactEvidenceItem key={id} source={toDisplayText(source?.name) || '来源未找到'} locator={toDisplayText(block.locator)}>
+      <MaterialBlockContent block={block as MaterialBlock} />
+    </ArtifactEvidenceItem>
+  })}</>
 }
 
 function PointRelations({ entry, blockById, sourceById, onRename }: {
@@ -85,16 +96,13 @@ function PointRelations({ entry, blockById, sourceById, onRename }: {
   const groups = REF_FIELDS.map(item => ({ ...item, values: refValues(point, item.field) }))
   const hasRefs = groups.some(group => group.values.length > 0)
 
-  return <div className="ai-tp-relations">
-    <header className="ai-tp-relations-head">
-      <div className="ai-tp-relations-kicker">
-        <span className="ai-tp-relations-badge">测试点</span>
-        <span>{context || '未分组'}</span>
-      </div>
-      <strong>{id} {name}</strong>
+  return <div className="max-h-[min(70vh,560px)] w-[360px] max-w-[min(420px,calc(100vw-40px))] overflow-auto text-app-surface-text">
+    <header className="border-b border-app-surface-border px-[14px] pb-2.5 pt-3">
+      <ArtifactKicker badge="测试点"><span>{context || '未分组'}</span></ArtifactKicker>
+      <strong className="mt-[7px] block text-[13px] leading-[1.45] text-app-surface-text [overflow-wrap:anywhere]">{id} {name}</strong>
     </header>
-    {onRename ? <label className="ai-tp-relations-rename">
-      <span>名称</span>
+    {onRename ? <label className="flex flex-col gap-1 px-[14px] pt-2.5">
+      <span className="text-[10.5px] text-app-surface-text-muted">名称</span>
       <Input
         key={`${id}-${name}`}
         size="small"
@@ -106,15 +114,18 @@ function PointRelations({ entry, blockById, sourceById, onRename }: {
         }}
         onPressEnter={event => event.currentTarget.blur()}
       />
-      <em>修改后审查状态会重置为自审</em>
+      <em className="text-[10px] not-italic text-app-surface-text-muted">修改后审查状态会重置为自审</em>
     </label> : null}
-    {hasRefs ? groups.map(group => group.values.length > 0 ? <section className="ai-tp-relations-group" key={group.field}>
-      <h4>{group.label}<span>{group.values.length}</span></h4>
-      {group.field === 'materialBlockIds'
-        ? <EvidenceList blockIds={group.values} blockById={blockById} sourceById={sourceById} />
-        : <div className="ai-tp-relations-chips">{group.values.map(value => <span key={value}>{value}</span>)}</div>}
-    </section> : null) : <div className="ai-tp-relations-empty">暂无关联依据</div>}
-    <footer className="ai-tp-relations-foot">引用来自冻结的材料与测试范围分析。</footer>
+    {hasRefs ? <div className="flex flex-col gap-3 px-[14px] pt-2.5">
+      {groups.map(group => group.values.length > 0
+        ? group.field === 'materialBlockIds'
+          ? <ArtifactEvidence key={group.field} title={group.label} count={group.values.length} className="mt-0">
+            <EvidenceItems blockIds={group.values} blockById={blockById} sourceById={sourceById} />
+          </ArtifactEvidence>
+          : <ArtifactRefChips key={group.field} title={group.label} values={group.values} className="mt-0" />
+        : null)}
+    </div> : <div className="px-[14px] py-2.5 text-[10.5px] text-app-surface-text-muted">暂无关联依据</div>}
+    <footer className="mt-2.5 border-t border-app-surface-border px-[14px] pb-2.5 pt-2 text-[10px] leading-[1.5] text-app-surface-text-muted">引用来自冻结的材料与测试范围分析。</footer>
   </div>
 }
 
@@ -125,33 +136,29 @@ function GroupRelations({ node, entries, blockById, sourceById }: {
   sourceById: Map<string, Record<string, unknown>>
 }) {
   const refs = aggregateRefs(entries)
-  return <div className="ai-tp-relations">
-    <header className="ai-tp-relations-head">
-      <div className="ai-tp-relations-kicker">
-        <span className="ai-tp-relations-badge is-group">{node.kind === 'root' ? '全部测试点' : '分组'}</span>
-      </div>
-      <strong>{node.title}</strong>
-      <small>{entries.length} 个测试点 · {refs.materialBlockIds.length} 个材料块 · {refs.riskIds.length} 个风险</small>
+  return <div className="max-h-[min(70vh,560px)] w-[360px] max-w-[min(420px,calc(100vw-40px))] overflow-auto text-app-surface-text">
+    <header className="border-b border-app-surface-border px-[14px] pb-2.5 pt-3">
+      <ArtifactKicker badge={node.kind === 'root' ? '全部测试点' : '分组'} badgeTone="muted" />
+      <strong className="mt-[7px] block text-[13px] leading-[1.45] text-app-surface-text [overflow-wrap:anywhere]">{node.title}</strong>
+      <small className="mt-[5px] block text-[10.5px] leading-[1.5] text-app-surface-text-muted">{entries.length} 个测试点 · {refs.materialBlockIds.length} 个材料块 · {refs.riskIds.length} 个风险</small>
     </header>
-    <section className="ai-tp-relations-group">
-      <h4>包含的测试点<span>{entries.length}</span></h4>
-      {entries.length ? <ul className="ai-tp-relations-points">
-        {entries.map(({ id, point }) => <li key={id}>
-          <span>{id}</span>
-          <span>{toDisplayText(point.name) || id}</span>
-          <em>{totalRefCount(point)} 项</em>
-        </li>)}
-      </ul> : <div className="ai-tp-relations-empty">暂无测试点</div>}
-    </section>
-    {refs.materialBlockIds.length ? <section className="ai-tp-relations-group">
-      <h4>聚合材料块<span>{refs.materialBlockIds.length}</span></h4>
-      <EvidenceList blockIds={refs.materialBlockIds} blockById={blockById} sourceById={sourceById} />
-    </section> : null}
-    {refs.riskIds.length ? <section className="ai-tp-relations-group">
-      <h4>涉及风险<span>{refs.riskIds.length}</span></h4>
-      <div className="ai-tp-relations-chips">{refs.riskIds.map(value => <span key={value}>{value}</span>)}</div>
-    </section> : null}
-    <footer className="ai-tp-relations-foot">分组关联会聚合其下全部测试点的依据。</footer>
+    <div className="flex flex-col gap-3 px-[14px] pt-2.5">
+      <section>
+        <ArtifactSectionHead title="包含的测试点" count={entries.length} />
+        {entries.length ? <ul className="m-0 flex list-none flex-col gap-1 p-0">
+          {entries.map(({ id, point }) => <li key={id} className="flex items-center gap-[7px] rounded-[5px] border border-transparent px-[7px] py-[5px] text-[10.5px]">
+            <span className="flex-none font-mono text-[9.5px] text-app-accent">{id}</span>
+            <span className="min-w-0 flex-1 truncate">{toDisplayText(point.name) || id}</span>
+            <em className="flex-none text-[9.5px] not-italic text-app-surface-text-muted">{totalRefCount(point)} 项</em>
+          </li>)}
+        </ul> : <div className="py-2.5 text-[10.5px] text-app-surface-text-muted">暂无测试点</div>}
+      </section>
+      {refs.materialBlockIds.length ? <ArtifactEvidence title="聚合材料块" count={refs.materialBlockIds.length} className="mt-0">
+        <EvidenceItems blockIds={refs.materialBlockIds} blockById={blockById} sourceById={sourceById} />
+      </ArtifactEvidence> : null}
+      {refs.riskIds.length ? <ArtifactRefChips title="涉及风险" values={refs.riskIds} className="mt-0" /> : null}
+    </div>
+    <footer className="mt-2.5 border-t border-app-surface-border px-[14px] pb-2.5 pt-2 text-[10px] leading-[1.5] text-app-surface-text-muted">分组关联会聚合其下全部测试点的依据。</footer>
   </div>
 }
 
@@ -163,14 +170,13 @@ function GapReferenceGroups({ gap, blockById, sourceById }: {
   const groups = REF_FIELDS
     .map(item => ({ ...item, values: refValues(gap, item.field) }))
     .filter(group => group.values.length > 0)
-  if (!groups.length) return <div className="ai-tp-review-empty-refs">暂无关联依据</div>
-  return <div className="ai-tp-gap-refs">
-    {groups.map(group => <section className="ai-tp-gap-ref-group" key={group.field}>
-      <h4>{group.label}<span>{group.values.length}</span></h4>
-      {group.field === 'materialBlockIds'
-        ? <EvidenceList blockIds={group.values} blockById={blockById} sourceById={sourceById} />
-        : <div className="ai-tp-relations-chips">{group.values.map(value => <span key={value}>{value}</span>)}</div>}
-    </section>)}
+  if (!groups.length) return <p className="mt-3 text-[11px] text-app-surface-text-muted">暂无关联依据</p>
+  return <div className="mt-3.5 flex flex-col gap-3 [&>*+*]:border-t [&>*+*]:border-app-surface-border [&>*+*]:pt-3">
+    {groups.map(group => group.field === 'materialBlockIds'
+      ? <ArtifactEvidence key={group.field} title={group.label} count={group.values.length} className="mt-0">
+        <EvidenceItems blockIds={group.values} blockById={blockById} sourceById={sourceById} showMissing />
+      </ArtifactEvidence>
+      : <ArtifactRefChips key={group.field} title={group.label} values={group.values} className="mt-0" />)}
   </div>
 }
 
@@ -185,38 +191,43 @@ function TraceableIssuesReview({ issues, reviewStatus, reviewLabel }: {
   const targetId = activeIssue ? toDisplayText(activeIssue.targetId) || '遗漏项' : ''
   const issueText = activeIssue ? toDisplayText(activeIssue.issue) || '未记录问题描述' : ''
   const suggestion = activeIssue ? toDisplayText(activeIssue.suggestion) : ''
+  const emptyText = reviewStatus === 'independent_reviewed'
+    ? '独立审查通过，没有未解决的审查问题'
+    : '没有未解决的审查问题'
 
-  return <div className="ai-tp-issues">
-    <header className="ai-tp-review-head">
-      <div className="ai-tp-review-stat">
-        <span>未解决审查问题</span>
-        <strong className={issues.length ? 'is-danger' : 'is-ok'}>{issues.length}</strong>
-        <Tag color={issues.length ? 'orange' : reviewStatus === 'independent_reviewed' ? 'green' : 'orange'}>{reviewLabel}</Tag>
-      </div>
-    </header>
-    {issues.length ? <div className="ai-tp-review-split">
-      <aside className="ai-tp-review-list" aria-label="未解决的审查问题列表">
-        {issues.map((issue, index) => <button
-          key={index}
-          type="button"
-          className={`ai-tp-issue-row${index === safeIndex ? ' is-active' : ''}`}
-          onClick={() => setActiveIndex(index)}
-        >
-          <span className="ai-tp-issue-row-id">{toDisplayText(issue.targetId) || '遗漏项'}</span>
-          <span className="ai-tp-issue-row-title">{toDisplayText(issue.issue) || '未记录问题描述'}</span>
-        </button>)}
-      </aside>
-      <section className="ai-tp-review-detail" aria-label="审查问题详情">
-        <div className="ai-tp-review-detail-kicker">
-          <span className="ai-tp-review-badge is-issue">审查问题</span>
-          <span>{targetId}</span>
-        </div>
-        <h2>{issueText}</h2>
+  return <div className="flex h-full min-h-0 flex-col gap-2.5">
+    <ArtifactHeader>
+      <ArtifactStat
+        label="未解决审查问题"
+        value={issues.length}
+        tone={issues.length ? 'danger' : 'ok'}
+        trailing={<Tag color={issues.length ? 'orange' : reviewStatus === 'independent_reviewed' ? 'green' : 'orange'}>{reviewLabel}</Tag>}
+      />
+    </ArtifactHeader>
+    {issues.length ? <ArtifactSplit
+      listLabel="未解决的审查问题列表"
+      detailLabel="审查问题详情"
+      listMaxHeight="190"
+      list={issues.map((issue, index) => <ArtifactListRow
+        key={index}
+        id={toDisplayText(issue.targetId) || '遗漏项'}
+        title={toDisplayText(issue.issue) || '未记录问题描述'}
+        active={index === safeIndex}
+        activeTone="danger"
+        idTone="danger"
+        onClick={() => setActiveIndex(index)}
+      />)}
+      detail={<>
+        <ArtifactKicker badge="审查问题" badgeTone="danger"><span>{targetId}</span></ArtifactKicker>
+        <ArtifactDetailTitle>{issueText}</ArtifactDetailTitle>
         {suggestion
-          ? <div className="ai-tp-review-suggestion"><strong>建议</strong><span>{suggestion}</span></div>
-          : <div className="ai-tp-review-empty-refs">暂无修改建议</div>}
-      </section>
-    </div> : <div className="ai-tp-review-empty"><Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={reviewStatus === 'independent_reviewed' ? '独立审查通过，没有未解决的审查问题' : '没有未解决的审查问题'} /></div>}
+          ? <div className="mt-3 flex items-start gap-[9px] rounded-[7px] border border-app-surface-border border-l-2 border-l-app-accent bg-app-surface-hover px-[10px] py-[9px]">
+            <strong className="flex-none text-[10px] [font-weight:650] text-app-accent">建议</strong>
+            <span className="text-[11.5px] leading-[1.6] text-app-surface-text [overflow-wrap:anywhere]">{suggestion}</span>
+          </div>
+          : <p className="mt-3 text-[11px] text-app-surface-text-muted">暂无修改建议</p>}
+      </>}
+    /> : <ArtifactEmpty description={emptyText} />}
   </div>
 }
 
@@ -236,54 +247,45 @@ function TraceableGapsReview({ gaps, activeGap, pointById, blockById, sourceById
   const blockedCoverage = activeGap ? toDisplayText(activeGap.gap.blockedCoverage) || '未记录阻塞范围' : ''
   const relatedPointCount = new Set(gaps.flatMap(gap => gap.relatedPointIds)).size
 
-  return <div className="ai-tp-review">
-    <header className="ai-tp-review-head">
-      <div className="ai-tp-review-stat">
-        <span>覆盖缺口</span>
-        <strong className={gaps.length ? 'is-warn' : 'is-ok'}>{gaps.length}</strong>
-      </div>
-      <span className="ai-tp-review-divider" aria-hidden="true" />
-      <div className="ai-tp-review-stat">
-        <span>关联测试点</span>
-        <strong>{relatedPointCount}</strong>
-      </div>
-    </header>
-    {gaps.length ? <div className="ai-tp-review-split">
-      <aside className="ai-tp-review-list" aria-label="覆盖缺口列表">
-        {gaps.map(gap => <button
-          key={gap.id}
-          type="button"
-          className={`ai-tp-gap-row${gap.id === activeGap?.id ? ' is-active' : ''}`}
-          onClick={() => onSelectGap(gap.id)}
-        >
-          <span className="ai-tp-gap-row-id">{gap.id}</span>
-          <span className="ai-tp-gap-row-title">{toDisplayText(gap.gap.description) || '未命名覆盖缺口'}</span>
-        </button>)}
-      </aside>
-      <section className="ai-tp-review-detail" aria-label="覆盖缺口详情">
-        {activeGap ? <>
-          <div className="ai-tp-review-detail-kicker">
-            <span className="ai-tp-review-badge">覆盖缺口</span>
-            <span>{activeGap.id}</span>
+  return <div className="flex h-full min-h-0 flex-col gap-2.5">
+    <ArtifactHeader>
+      <ArtifactStat label="覆盖缺口" value={gaps.length} tone={gaps.length ? 'warn' : 'ok'} />
+      <ArtifactDivider />
+      <ArtifactStat label="关联测试点" value={relatedPointCount} />
+    </ArtifactHeader>
+    {gaps.length ? <ArtifactSplit
+      listLabel="覆盖缺口列表"
+      detailLabel="覆盖缺口详情"
+      listMaxHeight="190"
+      list={gaps.map(gap => <ArtifactListRow
+        key={gap.id}
+        id={gap.id}
+        title={toDisplayText(gap.gap.description) || '未命名覆盖缺口'}
+        active={gap.id === activeGap?.id}
+        activeTone="warn"
+        idTone="warn"
+        onClick={() => onSelectGap(gap.id)}
+      />)}
+      detail={activeGap ? <>
+        <ArtifactKicker badge="覆盖缺口" badgeTone="warn"><span>{activeGap.id}</span></ArtifactKicker>
+        <ArtifactDetailTitle>{activeDescription}</ArtifactDetailTitle>
+        <div className="mt-3 flex items-start gap-[9px] rounded-[7px] border border-app-status-warning-border bg-app-status-warning-bg px-[10px] py-[9px]">
+          <strong className="flex-none text-[10px] [font-weight:650] text-app-status-warning-text">暂缓覆盖</strong>
+          <span className="text-[11.5px] leading-[1.6] text-app-surface-text [overflow-wrap:anywhere]">{blockedCoverage}</span>
+        </div>
+        <GapReferenceGroups gap={activeGap.gap} blockById={blockById} sourceById={sourceById} />
+        {relatedPoints.length ? <section className="mt-[18px] border-t border-app-surface-border pt-[14px]">
+          <ArtifactSectionHead
+            title="关联测试点"
+            count={relatedPoints.length}
+            action={<button type="button" className="rounded-[5px] border border-app-accent-border bg-app-accent-surface px-2 py-1 text-[10px] text-app-accent hover:border-app-accent" onClick={() => onLocate(activeGap)}>在树图中查看</button>}
+          />
+          <div className="mt-2 flex flex-wrap gap-[5px]">
+            {relatedPoints.map(entry => <span key={entry.id} className="rounded-[5px] border border-app-surface-border bg-app-surface-hover px-1.5 py-[3px] text-[10.5px] leading-[1.4] text-app-surface-text [overflow-wrap:anywhere]">{entry.id} {toDisplayText(entry.point.name) || entry.id}</span>)}
           </div>
-          <h2>{activeDescription}</h2>
-          <div className="ai-tp-review-blocked">
-            <strong>暂缓覆盖</strong>
-            <span>{blockedCoverage}</span>
-          </div>
-          <GapReferenceGroups gap={activeGap.gap} blockById={blockById} sourceById={sourceById} />
-          {relatedPoints.length ? <section className="ai-tp-related-points">
-            <div className="ai-tp-related-head">
-              <h4>关联测试点<span>{relatedPoints.length}</span></h4>
-              <button type="button" className="ai-tp-locate" onClick={() => onLocate(activeGap)}>在树图中查看</button>
-            </div>
-            <div className="ai-tp-related-list">
-              {relatedPoints.map(entry => <span key={entry.id}>{entry.id} {toDisplayText(entry.point.name) || entry.id}</span>)}
-            </div>
-          </section> : null}
-        </> : null}
-      </section>
-    </div> : <div className="ai-tp-review-empty"><Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="未记录覆盖缺口" /></div>}
+        </section> : null}
+      </> : null}
+    /> : <ArtifactEmpty description="未记录覆盖缺口" />}
   </div>
 }
 
@@ -355,7 +357,7 @@ export function TraceablePointsView({ content, onChange, materialContent, rootTi
       const entry = entriesById.get(node.id)
       return entry
         ? <PointRelations entry={entry} blockById={blockById} sourceById={sourceById} onRename={onChange ? updateName : undefined} />
-        : <div className="ai-tp-relations-empty">未找到该测试点的关联信息</div>
+        : <div className="px-[14px] py-2.5 text-[10.5px] text-app-surface-text-muted">未找到该测试点的关联信息</div>
     }
     const entries = collectPointIds(node)
       .map(id => entriesById.get(id))
@@ -379,38 +381,19 @@ export function TraceablePointsView({ content, onChange, materialContent, rootTi
   const review = toDisplayText(data.artifact.reviewStatus)
   const reviewLabel = ({ independent_reviewed: '独立审查通过', independent_review_failed: '独立审查未通过', self_review_only: '仅完成自审' } as Record<string, string>)[review] || '审查状态未知'
 
-  return <div className="ai-traceable-points">
-    <div className="ai-tp-page-tabs" role="tablist" aria-label="测试点视图">
-      <button
-        type="button"
-        role="tab"
-        aria-selected={page === 'points'}
-        className={`ai-tp-page-tab${page === 'points' ? ' is-active' : ''}`}
-        onClick={() => setPage('points')}
-      >
-        测试点<span className="ai-tp-page-count">{pointEntries.length}</span>
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={page === 'issues'}
-        className={`ai-tp-page-tab${page === 'issues' ? ' is-active' : ''}`}
-        onClick={() => setPage('issues')}
-      >
-        审查<span className={`ai-tp-page-count${data.issues.length ? ' is-danger' : ''}`}>{data.issues.length}</span>
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={page === 'gaps'}
-        className={`ai-tp-page-tab${page === 'gaps' ? ' is-active' : ''}`}
-        onClick={() => setPage('gaps')}
-      >
-        缺口<span className={`ai-tp-page-count${gapEntries.length ? ' is-warn' : ''}`}>{gapEntries.length}</span>
-      </button>
-    </div>
-    <div className="ai-tp-page-body">
-      <div className="ai-tp-page ai-tp-points-page" hidden={page !== 'points'}>
+  return <div className="flex min-h-0 flex-1 flex-col bg-app-surface">
+    <ArtifactTabs
+      ariaLabel="测试点视图"
+      active={page}
+      onChange={setPage}
+      tabs={[
+        { key: 'points', label: '测试点', count: pointEntries.length },
+        { key: 'issues', label: '审查', count: data.issues.length, tone: data.issues.length ? 'danger' : undefined },
+        { key: 'gaps', label: '缺口', count: gapEntries.length, tone: gapEntries.length ? 'warn' : undefined },
+      ]}
+    />
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div hidden={page !== 'points'} className={cx('h-full min-h-0 flex-col gap-2.5 px-3 pb-3 pt-2.5 [&_.ai-case-name-tree]:min-h-0 [&_.ai-case-name-tree]:flex-1 [&_.ai-case-tree-shell]:min-h-0 [&_.ai-case-tree-shell]:flex-1 max-narrow:min-h-[440px]', page === 'points' && 'flex')}>
         <CaseNameTreeView
           content={content}
           rootTitle={rootTitle}
@@ -425,10 +408,10 @@ export function TraceablePointsView({ content, onChange, materialContent, rootTi
           renderRelations={renderRelations}
         />
       </div>
-      <div className="ai-tp-page ai-tp-issues-page" hidden={page !== 'issues'}>
+      <div hidden={page !== 'issues'} className={cx('h-full min-h-0 flex-col gap-2.5 px-3 pb-3 pt-2.5 max-narrow:overflow-auto', page === 'issues' && 'flex')}>
         <TraceableIssuesReview issues={data.issues} reviewStatus={review} reviewLabel={reviewLabel} />
       </div>
-      <div className="ai-tp-page ai-tp-review-page" hidden={page !== 'gaps'}>
+      <div hidden={page !== 'gaps'} className={cx('h-full min-h-0 flex-col gap-2.5 px-3 pb-3 pt-2.5 max-narrow:overflow-auto', page === 'gaps' && 'flex')}>
         <TraceableGapsReview
           gaps={gapEntries}
           activeGap={activeGap}

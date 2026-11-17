@@ -14,9 +14,13 @@ studio 当前有 106 个 CSS 文件、26,104 行、5,260 条规则、18,728 条�
 - **存量 CSS 冻结**，只允许删除或收缩。改到哪个页面就迁哪个页面，迁完删除原 CSS 文件；不得以“以后统一迁移”为由继续新增旧式 CSS。
 - **Tailwind 工具链接入前**，新增样式只能使用 CSS Modules；不得以等待接入为由恢复页面级全局 CSS。
 
-工具链接入要求：使用 `@tailwindcss/vite`；在 `index.css` 声明 `@layer theme, base, antd, components, utilities;`；Ant Design 用 `<StyleProvider layer>` 包进 `@layer antd`，必要时启用 `cssVar`。初期不引入 preflight，或只作用域化引入，避免改掉 Ant Design 的基础样式。Tailwind 与旧 CSS 并存期间，未分层的旧规则仍可能压过 utility；新页面不得用 `!` 绕过，应按迁移规则把该页面的旧规则迁走或删除。
+工具链接入要求：使用 `@tailwindcss/vite`；在 `src/shared/styles/tailwind.css` 声明 `@layer theme, base, antd, components, utilities;`；Ant Design 用 `<StyleProvider layer>` 包进 `@layer antd`，必要时启用 `cssVar`。初期不引入 preflight，或只作用域化引入，避免改掉 Ant Design 的基础样式。layer 只在生产入口开启；jsdom 无法完整解析 `@layer`，测试入口开启后 AntD 的关闭动画会挂起，因此测试使用普通的 `ThemeProvider`，layer 行为由浏览器验证。Tailwind 与旧 CSS 并存期间，未分层的旧规则仍可能压过 utility；新页面不得用 `!` 绕过，应按迁移规则把该页面的旧规则迁走或删除。
 
-度量改用声明数、规则数、全局选择器数、`!important`/长前缀数、重复规则体，不以行数判断；行数会被压缩与展开格式严重扭曲。检查计划：扩展 `scripts/check-css-budget.mjs` 统计声明与规则预算、新增全局选择器、`!important`/长前缀和重复规则体；扩展 `scripts/check-theme-colors.mjs` 识别 className 中的任意色值。脚本落地前，本规则标记为“待强制”，靠评审执行。
+**实施补充（2026-11-17 首次迁移）**：迁移一个页面时，除删除原 CSS 文件外，还要清理 CSS Modules 中 0 引用的类、页面里重复的 Ant Design 深层规则和重复 utility 串；共享 `*.module.css` 不得包含 feature 私有选择器或 DOM 契约，宿主适配留在 feature 的 `styles/`；重复字号、断点登记到 `tailwind.css` 的 `@theme`；删除或改名样式文件时同步更新 `README.md`、`UI-GUIDELINES.md` 与 STRUCTURE 的实现位置。完整验收清单和检查命令见 [STRUCTURE.md 的迁移执行清单](../STRUCTURE.md#迁移执行清单2026-11-17-试点补充)。
+
+存量整改顺序、阶段目标与预算 ratchet 见 [CSS 整改与迁移计划](../css-migration-plan.md)。
+
+度量改用声明数、规则数、全局选择器数、`!important`/长前缀数、重复规则体，不以行数判断；行数会被压缩与展开格式严重扭曲。检查已落地：`scripts/check-css-structure.mjs` 统计规则体与重复体、约束全局/跨 feature 导入和共享 Module 私有选择器；`scripts/check-css-budget.mjs` 继续约束 `!important`/长前缀/未定义变量；`check-theme-colors.mjs` 识别 className 中的任意色值。三项均接入 `npm run verify`。
 
 **已考虑的其他选项**：
 

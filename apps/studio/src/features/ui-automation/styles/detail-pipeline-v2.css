@@ -315,11 +315,6 @@
   color: var(--srf-text-muted);
 }
 
-.ui-suite-detail-page .ui-test-case-step-add-row .ant-btn {
-  height: 40px;
-  border-radius: var(--srf-radius-control);
-}
-
 /* `.ui-test-case-step-card-title span` 会把步骤行里所有 span 刷成 12px，摘要文字要跟着自己的容器。 */
 .ui-suite-detail-page .ui-wb-step-summary-text {
   color: inherit;

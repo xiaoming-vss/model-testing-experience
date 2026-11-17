@@ -17,15 +17,6 @@ export type ZentaoConnection = {
   updatedAt?: string
 }
 
-export type CreateZentaoConnectionPayload = {
-  name: string
-  baseUrl: string
-  account: string
-  password: string
-}
-
-export type UpdateZentaoConnectionPayload = Partial<CreateZentaoConnectionPayload>
-
 export type GitlabConnection = {
   connectionId: string
   projectId?: string
@@ -42,18 +33,6 @@ export type GitlabConnection = {
   lastAuthError?: string
   createdAt?: string
   updatedAt?: string
-}
-
-export type CreateGitlabConnectionPayload = {
-  name: string
-  baseUrl: string
-  accessToken: string
-}
-
-export type UpdateGitlabConnectionPayload = Partial<CreateGitlabConnectionPayload>
-
-export type ReauthGitlabConnectionPayload = {
-  accessToken?: string
 }
 
 export type GitlabGroup = {
@@ -94,8 +73,6 @@ export type GitlabResourceListResponse<T> = {
   items: T[]
   total: number
 }
-
-
 
 export type ZentaoRemoteOption = {
   id?: string | number
@@ -150,18 +127,4 @@ export type LlmConnection = {
   modelId?: string
   createdAt?: string
   updatedAt?: string
-}
-
-export type CreateLlmConnectionPayload = {
-  name: string
-  baseUrl: string
-  modelId: string
-  apiKey: string
-}
-
-export type UpdateLlmConnectionPayload = {
-  name?: string
-  baseUrl?: string
-  modelId?: string
-  apiKey?: string
 }

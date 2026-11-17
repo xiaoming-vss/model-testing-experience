@@ -1,3 +1,4 @@
+@import './shared/styles/tailwind.css';
 @import './shared/styles/table-row-dividers.css';
 @import './shared/styles/pagination.css';
 @import './shared/styles/foundation-tokens.css';

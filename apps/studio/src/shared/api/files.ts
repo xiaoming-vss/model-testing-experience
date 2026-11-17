@@ -28,7 +28,7 @@ function sendFile(ticket: UploadTicket, file: File, progress?: (percent: number)
 }
 
 export async function uploadStoredFile(projectId: string, file: File,
-  purpose: 'requirement' | 'attachment' | 'project_skill', progress?: (percent: number) => void) {
+  purpose: 'requirement' | 'attachment' | 'project_skill' | 'perf_case_data', progress?: (percent: number) => void) {
   const sha256 = await sha256Hex(await file.arrayBuffer())
   return retryFileTransfer(async () => {
     const ticket = await fileAuthorization(() => request<UploadTicket>('/v1/files/uploads', {

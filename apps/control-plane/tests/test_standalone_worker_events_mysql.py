@@ -106,9 +106,6 @@ async def test_worker_callbacks_persist_execution_and_attempts_in_mysql(mysql, m
             access.owned_task.assert_awaited_once_with(
                 "reader", task_row["task_id"], "function", action="read"
             )
-            from testing_agent.handlers.generation_guards import (
-                ensure_legacy_mutation_allowed,
-            )
             from testing_agent.services.ai_candidate_review import GenerationCandidateReview
             from testing_agent.services.ai_task_scope import GenerationAccess
 
@@ -117,9 +114,6 @@ async def test_worker_callbacks_persist_execution_and_attempts_in_mysql(mysql, m
             owned_task = await repository.get_task(task_row["task_id"])
             generation_access.owned_task = AsyncMock(return_value=owned_task)
             review = GenerationCandidateReview(repository, generation_access.owned_run)
-            await ensure_legacy_mutation_allowed(
-                generation_access.owned_run, "function", execution_id, "reviewer", action="write"
-            )
             edited = await review.update_result(
                 "function", execution_id, cases_output(), "reviewer"
             )

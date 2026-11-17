@@ -10,7 +10,7 @@ function ListPage() {
 
 function DetailPage() {
   const navigate = useNavigate()
-  return <button onClick={() => goBackOrFallback(navigate, '/ai-testing?tab=tasks')}>back</button>
+  return <button onClick={() => goBackOrFallback(navigate, '/projects')}>back</button>
 }
 
 function FallbackPage() {
@@ -24,7 +24,7 @@ describe('goBackOrFallback 与 BrowserRouter 集成', () => {
         <Routes>
           <Route path="/" element={<ListPage />} />
           <Route path="/detail" element={<DetailPage />} />
-          <Route path="/ai-testing" element={<FallbackPage />} />
+          <Route path="/projects" element={<FallbackPage />} />
         </Routes>
       </BrowserRouter>,
     )

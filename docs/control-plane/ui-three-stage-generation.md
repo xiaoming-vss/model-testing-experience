@@ -54,14 +54,15 @@ Worker 对每批执行平台 YAML 草稿校验和用例范围检查，最多修�
 
 ## HTTP 接口
 
-以下接口位于 `/v1/ui-case-generate-task-runs/{runId}`，复用现有项目权限、个人模型授权和响应格式。
+以下接口位于 `/v1/requirements/{requirementId}/generation/ui`，复用现有项目权限、个人模型授权和响应格式。
 
-| 方法与后缀 | 操作 | 关键字段 |
+| 方法与路径 | 操作 | 关键字段 |
 | --- | --- | --- |
-| `PATCH /stage-output` | 保存当前产物 | `stage`；JSON 使用 `configJson` 中唯一当前字段，YAML 使用 `resultYaml` |
-| `POST /review-stage` | 批准或拒绝 | `stage`、`action: approve/reject`、可选 `reviewComment`；推进阶段可选 `llmConnectionId` |
-| `POST /revise-stage` | 当前阶段继续优化 | `stage`、`revisionInstruction`、当前产物、可选 `llmConnectionId` |
-| `POST /retry-stage` | 失败重试 | `stage`、可选 `llmConnectionId` |
+| `POST /stages/{stage}/run` | 生成或失败后重试当前阶段 | `stage`；可指定上游版本、`connectionId`、`requestId` |
+| `PUT /stages/{stage}/draft` | 校验并保存当前阶段草稿 | `stage`、`expectedAttemptId`；JSON 使用 `configJson` 中唯一当前字段，YAML 使用 `resultYaml` |
+| `POST /stages/{stage}/review` | 批准或拒绝 | `stage`、`expectedAttemptId`、`action: approve/reject`、可选 `reviewComment`；推进阶段可选 `llmConnectionId` |
+| `POST /stages/{stage}/revision` | 当前阶段继续优化 | `stage`、`revisionInstruction`、当前产物、可选 `llmConnectionId` |
+| `POST /versions/{versionId}/import` | 导入已通过版本 | `versionId`；冲突预览与覆盖确认沿用原导入器 |
 
 需求关联任务通过 `POST /v1/requirements/{requirementId}/generation/ui/stages/ui_surface/run` 启动，携带画像版本、前端仓库、commit 模式并可选 `functionCaseIds` 冻结选中的正式用例；旧需求关联启动入口引导到阶段链。保存要求写权限，审核要求审核权限，修订和重试要求执行权限；模型连接必须属于本次操作者。
 

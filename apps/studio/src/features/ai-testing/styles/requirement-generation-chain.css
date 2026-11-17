@@ -117,22 +117,6 @@
 .gc-document-node small,
 .gc-lane-empty small { color: var(--gc-muted); font-size: 11px; }
 
-.gc-summary {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0;
-  border: 1px solid var(--gc-line);
-  border-radius: 12px;
-  background: var(--gc-panel);
-}
-
-.gc-summary > div { padding: 11px 14px; border-left: 1px solid var(--gc-line-soft); }
-.gc-summary > div:first-child { border-left: 0; }
-.gc-summary span { display: block; color: var(--gc-muted); font-size: 11px; }
-.gc-summary b { display: block; margin: 2px 0 1px; font: 600 20px ui-monospace, SFMono-Regular, Menlo, monospace; }
-.gc-summary small { color: var(--gc-muted); font-size: 11px; }
-.gc-summary p { grid-column: 1 / -1; margin: 0; padding: 8px 14px; border-top: 1px solid var(--gc-line-soft); color: var(--gc-muted); font-size: 11px; }
-
 /* Modal */
 .generation-chain-modal .ant-modal-content { display: flex; flex-direction: column; height: min(820px, calc(100dvh - 32px)); padding: 0; overflow: hidden; }
 .generation-chain-modal .ant-modal-header { flex: 0 0 auto; margin: 0; padding: 16px 64px 16px 24px; border-bottom: 1px solid var(--app-surface-border); background: var(--app-list-toolbar-bg); }
@@ -249,7 +233,6 @@
 .gc-artifact-scroll:is(.is-requirement-analysis, .is-case-names, .is-api-cases, .is-api-design) { overflow: auto; padding: 12px 24px; }
 .gc-artifact-scroll.is-case-names { display: flex; flex-direction: column; overflow: hidden; }
 .gc-artifact-scroll.is-case-names .ai-case-name-tree { flex: 1 1 0%; min-height: 0; }
-.gc-artifact-scroll.is-material-comparison > .requirement-material-host { height: 100%; }
 .gc-artifact-scroll.is-detailed-cases > .ai-generated-case-browser { height: 100%; }
 .gc-artifact-scroll.is-ui-stage { display: flex; flex-direction: column; padding: 12px 24px; }
 /* UI 阶段视觉工作台在页签弹窗里由 ui-generation.css 提供高度链，这里补齐同样的伸缩规则。 */
@@ -261,8 +244,6 @@
   overflow: hidden;
 }
 .gc-artifact-scroll.is-ui-stage > .ui-generation-stage-visual > * { min-height: 0; }
-.generation-chain-modal .ant-modal-footer:has(.requirement-extraction-footer-slot) { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; }
-.generation-chain-modal .ant-modal-footer:has(.requirement-extraction-footer-slot) > .gc-modal-footer { flex: 1 1 100%; }
 .gc-visual-groups { display: flex; flex-direction: column; gap: 8px; padding-top: 9px; }
 .gc-visual-group { border: 1px solid var(--app-surface-border); border-radius: 10px; background: var(--app-surface); overflow: hidden; }
 .gc-visual-group > header { display: flex; align-items: baseline; gap: 8px; padding: 8px 11px; border-bottom: 1px solid var(--app-surface-divider); background: var(--app-list-toolbar-bg); }
@@ -329,12 +310,6 @@
   /* 标题栏放不下时阶段操作独占一行，标题与显示模式开关留在第一行。 */
   .generation-chain-modal .gc-header-tools-slot { flex: 1 1 100%; order: 2; }
   .generation-chain-modal .ant-modal-header > .ai-artifact-mode-slot { order: 1; }
-}
-
-@media (max-width: 900px) {
-  .gc-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .gc-summary > div:nth-child(3) { border-left: 0; border-top: 1px solid var(--app-surface-divider); }
-  .gc-summary > div:nth-child(4) { border-top: 1px solid var(--app-surface-divider); }
 }
 
 @media (max-width: 760px) {

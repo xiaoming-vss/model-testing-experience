@@ -502,11 +502,6 @@
   min-height: auto;
 }
 
-.ui-test-case-step-add-row {
-  display: flex;
-  justify-content: flex-start;
-}
-
 .ui-test-run-step-screenshot {
   display: grid;
   gap: 8px;

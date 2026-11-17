@@ -15,6 +15,18 @@ class PerfRunCreate(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True, extra="forbid")
 
 
+class PerfRunMonitoringSnapshot(BaseModel):
+    connection_id: str
+    name: str
+    query_url: str
+    remote_write_url: str
+    grafana_url: str = ""
+    grafana_dashboard_uid: str = ""
+    default_filters: dict[str, JsonValue] = Field(default_factory=dict)
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
 class PerfRunSummaryResponse(BaseModel):
     run_id: str
     case_id: str
@@ -47,3 +59,4 @@ class PerfRunResponse(PerfRunSummaryResponse):
     log_tail: str = ""
     runner: dict[str, JsonValue] | None = None
     data_files: list[PerfDataFile] = Field(default_factory=list)
+    monitoring: PerfRunMonitoringSnapshot | None = None

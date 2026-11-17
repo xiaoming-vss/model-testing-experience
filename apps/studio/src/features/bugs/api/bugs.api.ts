@@ -42,8 +42,6 @@ export const bugsApi = {
     request<BugZentaoJob>(`/v1/bugs/${bugId}/zentao-field-update-jobs`, {
       method: 'POST', body: JSON.stringify(body),
     }),
-  getBugZentaoJob: (bugId: string, jobId: string) =>
-    request<BugZentaoJob>(`/v1/bugs/${bugId}/zentao-jobs/${jobId}`),
   reconcileBugZentaoPush: (bugId: string, remoteBugId: number) => request<BugZentaoPush>(`/v1/bugs/${bugId}/zentao-push/reconcile`, {
     method: 'POST', body: JSON.stringify({ remoteBugId }),
   }),

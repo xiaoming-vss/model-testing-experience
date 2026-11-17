@@ -47,6 +47,8 @@
 
 新派发、修订及首次功能生成会锁定所选上游版本；删除版本前也锁定版本并检查活动尝试，发现依赖时拒绝删除。失败信息保存在阶段尝试中，并不改变已通过版本。
 
+旧独立生成任务接口只保留读取任务详情和功能用例关系图谱所需的端点：`GET /v1/api-case-generate-tasks/{taskId}`、`GET /v1/function-case-generate-tasks/{taskId}`、`GET /v1/function-case-generate-task-runs/{runId}`、`POST /v1/function-case-generate-task-runs/{runId}/relation-analysis`、`GET /v1/ui-case-generate-tasks/{taskId}` 和 `GET /v1/requirement-analysis-tasks/{taskId}`。其余任务列表、创建、修改、运行、审核、导入和删除端点已退役，需求阶段的编辑、审核与导入统一使用生成链接口。代码风险、测试报告和测试单图谱的独立任务接口不受影响。
+
 ## 阶段产物与执行输入隔离
 
 有人工检查点的运行中，每次派发只拥有当前阶段的产物写权限。载荷中的其他阶段字段属于已选择的上游输入快照，可能是旧的已通过版本，不能据此创建前序编辑尝试、移动前序产物指针或改变前序待审核正文。审核通过并继续时，显式审核的阶段仍可保存本次人工审核内容；无检查点的自动流水线继续允许同一次派发产出多个阶段。

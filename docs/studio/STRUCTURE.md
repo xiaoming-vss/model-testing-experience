@@ -18,7 +18,7 @@
 | **待强制** | 规则已定，自动检查**尚未实现**；当前只能靠评审 |
 | **存量豁免** | 规则只对**新**代码生效；既有违规记入基线不修，只许减不许增 |
 
-> **当前状态：S8 的 CSS 裸色值检查与 S15 的 CSS 预算检查已接入 `npm run verify`；S16 的新代码样式检查仍待实现，其余自动检查同样待实现。** 仓库没有 CI，也没有 git hook，`npm run verify` 与 `npm test` 依赖人工执行。CSS 配色可通过 `npm run check:theme` 单独检查，CSS 预算可通过 `npm run check:css` 单独检查；其它规则的自动化见各条「检查」列。
+> **当前状态：S8 的 CSS 裸色值检查、S15 的 CSS 预算检查与 S16 的 CSS 结构门禁已接入 `npm run verify`；其余自动检查仍待实现。** 仓库没有 CI，也没有 git hook，`npm run verify` 与 `npm test` 依赖人工执行。CSS 配色可通过 `npm run check:theme` 单独检查，CSS 预算可通过 `npm run check:css` 单独检查，结构门禁可通过 `npm run check:css:structure` 单独检查；其它规则的自动化见各条「检查」列。
 
 每条规则都从实际违规反推得到，附「拦住的问题」与文件行号，便于核对。行号为 2026-09-22 审计时刻的值，会随改造漂移。
 
@@ -71,6 +71,7 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 - 操作按钮与权限门控 —— `shared/components/ActionButton`
 - 列表分页 —— `shared/components/ListPagination`（数量文案、中文控件、条数切换与越界校正；`compact` 模式供窄侧栏把分页放进表头，只渲染控件不渲染范围句）；默认条数和可选值集中在 `shared/utils/pagination.ts`
 - 远端选项搜索和分页 —— `shared/components/PagedSelect`；查询键、读取函数和业务选项由调用方注入，测试单重测来源与 Bug 关联表单共用。默认每页 20 项，支持 PageUp/PageDown、加载失败重试，不预取完整集合。
+- 产物视图布局 —— `shared/components/ArtifactView`（页签、统计条、左右分栏、列表行、详情字段与证据）；需求评审、测试点、测试范围分析、材料整理共用，页面只保留业务特有内容。
 
 ## 三、样式归属与主题
 
@@ -80,9 +81,9 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 | S7 | 样式归属：feature 只写自家前缀。**全局层（`app/styles/`、`shared/styles/`）不得出现 feature 内部类名** | `app/styles/workbench.css` 引用 87 个 feature 内部类名、`layout.css` 12 个；`features/api-automation/styles/detail.css` 有 30 处 `.ui-*`（API 自动化给 UI 自动化写样式） | 扫描脚本前缀统计（**存量豁免**） |
 | S8 | token 单一来源：token 定义集中在**已登记的 token 文件**里（清单见下）。feature **只能消费，不得定义全局 token** | `--tp-text` 被 `app/styles/workbench.css` 与 `features/api-automation/styles/detail.css` 两处定义；`shared/styles/page-frame.css` 消费了 8 处 token（`:64,118,272,349,547,961,979,1072`，其中 `--tp-border`×3、`--tp-border-soft`×5），而这两个 token 的定义同样散在 `workbench.css` 与 `detail.css` 两处——**shared 反向依赖 feature 定义的 token** | CSS 裸色值：`npm run check:theme`（**已实现**，接入 `verify`）；定义重名与依赖方向扫描仍待实现，存量定义保留 |
 | S9 | 样式引入必须显式自持：每个入口自行 import 自己依赖的样式。**禁止依赖「别的页面恰好 import 了」而生效** | `functional-test-page` 被 4 个 feature 使用（test-cases、api-automation、test-orders、ui-automation 的页面），但唯一定义在 `features/testing/styles/index.css`，而这 4 个页面都不 import 它——只靠被 `TestingPage` 包着渲染才拿到样式 | 评审 + import 图核对（**待强制**） |
-| S14 | 列表页表面层：用例库 / 应用 / 测试单 / API 测试 / UI 测试五页共用 `shared/styles/surface-tokens.css`。页面根节点必须同时带页面类与 `tp-surface`，列表／卡片页板面 section 带 `tp-board tp-list-panel`，内容使用 `tp-list-body` / `tp-list-scroll`，Tab 位于外框外；样式写在各自 `features/<f>/styles/*-v2.css`，颜色只能引用 `--srf-*` / `.tone-*` | 五页共用同一套卡片 + 胶囊 + 色盘，缺 `tp-surface` 时页面里所有 `var(--srf-*)` 解析成空值，表现为「样式莫名消失」；`testing/styles/index.css` 与 `app/styles/workbench.css` 都用 `!important` 抢过这些容器，覆盖规则必须写成 `.app-shell.app-shell-macos .testing-page .<页面类> ...` 再加 `!important`，删掉前缀或 `!important` 会静默失效。**同权重同样会失效**：`workbench.css` 的玻璃规则是 (0,6,0)，与 `.tp-board` 覆盖同分，只靠 import 顺序决胜 | 评审 + 扫描脚本（**待强制**） |
+| S14 | 列表页表面层：用例库 / 应用 / 测试单 / API 测试 / UI 测试 / 性能测试六页共用 `shared/styles/surface-tokens.css`。页面根节点必须同时带页面类与 `tp-surface`，列表／卡片页板面 section 带 `tp-board tp-list-panel`，内容使用 `tp-list-body` / `tp-list-scroll`，Tab 位于外框外；样式写在各自 `features/<f>/styles/*-v2.css`，颜色只能引用 `--srf-*` / `.tone-*` | 五页共用同一套卡片 + 胶囊 + 色盘，缺 `tp-surface` 时页面里所有 `var(--srf-*)` 解析成空值，表现为「样式莫名消失」；`testing/styles/index.css` 与 `app/styles/workbench.css` 都用 `!important` 抢过这些容器，覆盖规则必须写成 `.app-shell.app-shell-macos .testing-page .<页面类> ...` 再加 `!important`，删掉前缀或 `!important` 会静默失效。**同权重同样会失效**：`workbench.css` 的玻璃规则是 (0,6,0)，与 `.tp-board` 覆盖同分，只靠 import 顺序决胜 | 评审 + 扫描脚本（**待强制**） |
 | S15 | CSS 预算只减不增：`!important` 与 `.app-shell.app-shell-macos` 长前缀按文件记录在 `scripts/css-budget.json`，未定义 CSS 变量不得新增 | 样式权重军备竞赛与 token 拼写错误会随新页面重新增长；已有 0 个无回退未定义变量，2 个有回退的遗留变量登记在基线 | `npm run check:css`（**已实现**，接入 `verify`）；有意增加时运行 `node scripts/check-css-budget.mjs --update` 并评审 |
-| S16 | **新代码样式只允许 Tailwind CSS v4 utility（布局/间距/排版）与 CSS Modules（复杂皮肤）**；禁止新增非 `*.module.css` 的全局/feature 级 CSS、`!important` 和 `.app-shell.app-shell-macos` 长前缀；重复结构必须抽到 `shared/`。存量 CSS 冻结，改到哪页迁哪页 | 新增页面持续复制 toolbar/card/tab/split 布局：布局声明占 48.7%，约 1,025 条规则体重复；旧工作台与 18 个 v2/v3 文件（7,209 行）并存，靠 737 处 `!important`、194 处长前缀维持级联；新页面仍在新增页面级 CSS | 扫描脚本（**待强制**）：新增全局选择器/文件、声明与规则预算、`!important`/长前缀、重复规则体；className 任意色值归 `check:theme`。策略见 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md) |
+| S16 | **新代码样式只允许 Tailwind CSS v4 utility（布局/间距/排版）与 CSS Modules（复杂皮肤）**；禁止新增非 `*.module.css` 的全局/feature 级 CSS、`!important` 和 `.app-shell.app-shell-macos` 长前缀；重复结构必须抽到 `shared/`。存量 CSS 冻结，改到哪页迁哪页 | 新增页面持续复制 toolbar/card/tab/split 布局：布局声明占 48.7%，约 1,025 条规则体重复；旧工作台与 18 个 v2/v3 文件（7,209 行）并存，靠 737 处 `!important`、194 处长前缀维持级联；新页面仍在新增页面级 CSS | `npm run check:css:structure`（**已实现**，接入 `verify`）：新增全局文件/导入、跨 feature 导入、孤儿 CSS、每文件规则体预算、重复规则体、共享 Module 私有选择器；className 任意色值归 `check:theme`。策略见 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md)；迁移顺序见 [CSS 整改与迁移计划](css-migration-plan.md)，验收见[迁移执行清单](#迁移执行清单2026-11-17-试点补充) |
 
 数据表行分隔由 `shared/styles/table-row-dividers.css` 全局提供，公共列表皮肤消费相同的 `--app-list-row-border`。变量值只在下列 token 文件定义，feature 不另设分隔色或移除横线；`tableRowDividers.test.ts` 检查入口、数据行覆盖及变量归属。
 
@@ -108,7 +109,7 @@ shared/       通用能力：无业务语义的工具、组件、请求封装、
 
 基础层颜色整理：`layout.css`、`page-frame.css` 与 `workbench.css` 的普通声明消费 `foundation-tokens.css`；后者已有的 `--tp-*` / `--mac-*` 等定义保持原作用域。浅色取值、渐变位置、阴影几何和选择器权重保持不变。玻璃层 token 的数值后缀标识原有透明层，后续主题可以分别赋值，不应把它们当成全站透明度工具。终端背景与正文、强调色上的文字与卡片底色分开定义。新列表/详情页继续使用 `--srf-*`，不要迁回旧工作台配色。Ant Design 的算法输入和组件 token 仍集中在 `app/providers/ThemeProvider.tsx`，切换主题时需单独配置，不能把需要参与颜色运算的 seed token 直接替换为 CSS `var()`。
 
-AI 的 `index.css`、`task-list-v2.css`、`task-detail-v2.css` 与 API 的 `detail.css` 同样从基础色盘取值。现有 `--ai-*`、`--detail-glass-*`、`--run-pipeline-*` 保留局部作用域，作为全局语义颜色的组合或别名；`--srf-*` 的消费优先级不变，原有备用颜色改为嵌套的基础 token 引用，以保留未挂载 `tp-surface` 时的渲染行为。终端滚动条、流水线状态、HTTP 方法颜色独立命名；暗色通过集中 token 赋值接入。
+AI 的 `index.css`、`task-detail-v2.css` 与 API 的 `detail.css` 同样从基础色盘取值。现有 `--ai-*`、`--detail-glass-*`、`--run-pipeline-*` 保留局部作用域，作为全局语义颜色的组合或别名；`--srf-*` 的消费优先级不变，原有备用颜色改为嵌套的基础 token 引用，以保留未挂载 `tp-surface` 时的渲染行为。终端滚动条、流水线状态、HTTP 方法颜色独立命名；暗色通过集中 token 赋值接入。
 
 其余页面 CSS（基础服务、测试、登录、个人设置及 AI 审核等）也只消费颜色变量；局部变量继续保持原来的选择器和作用域。四个新版列表的阴影颜色通过 `--srf-shadow-color` 引用基础色盘。`scripts/check-theme-colors.mjs` 扫描所有源码 CSS 的声明，禁止在登记文件的自定义属性以外新增十六进制、颜色函数或具名颜色，包括 `var()` 的裸色备用值；忽略注释、字符串和变量名，允许 `transparent` / `currentColor`。CSS 检查不验证语义去重、变量可达性或浏览器视觉效果。
 
@@ -130,6 +131,7 @@ TS/TSX 的配色检查同样接入 `check:theme`：通过 TypeScript AST 扫描�
 | 测试单 | `features/test-orders/styles/test-orders-v2.css` |
 | API 测试 | `features/api-automation/styles/list-v2.css` |
 | UI 测试 | `features/ui-automation/styles/list-v2.css` |
+| 性能测试 | 复用 `tp-*` 与 `shared/styles/entity-card.css`；新样式使用 Tailwind utility，不新增页面级全局 CSS |
 
 `shared/styles/surface-tokens.css` 除 token 与九色盘外，还承载板面（`.tp-board`）与快速过滤条组件（`.tp-quickbar`、
 `.tp-chip`、`.tp-selection`）——五页的这几个部件必须完全一致，所以放在共用层而不是各写一份。
@@ -392,15 +394,43 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 
 硬约束：
 
-- 不新增全局 CSS 文件：这里指非 `*.module.css`、选择器会进入全局作用域的样式文件；`app/styles/`、`shared/styles/` 只允许 token 文件和既有公共层收缩。
+- 不新增全局 CSS 文件：这里指非 `*.module.css`、选择器会进入全局作用域的样式文件；`app/styles/`、`shared/styles/` 只允许 token 文件和既有公共层收缩。`shared/styles/tailwind.css` 是唯一的 Tailwind 入口，只写 `@layer`、`@theme` token 映射和 `@import`，不写业务规则；公共产物视图的复杂皮肤集中在 `shared/styles/artifact-view.module.css`，与宿主滚动容器耦合的适配放在对应 feature 的 `styles/*.module.css`，不写进共享 module。
 - 不新增 `!important`、`.app-shell.app-shell-macos` 长前缀；需要覆盖时先迁走旧规则或调整 layer 顺序。
 - 颜色只用已登记 token；Tailwind 通过 `@theme` 映射，禁用默认色盘，禁止 `bg-[#...]` 等任意色值。
 - 存量 CSS 冻结，只减不增；改到哪个页面就迁哪个页面，迁完删除原 CSS 文件，不做“先留着”的兼容层。
 - Tailwind 工具链接入前，新增样式只能写 CSS Modules；不得以等待接入为由继续新增页面级全局 CSS。
 
-接入 Tailwind 时使用 `@tailwindcss/vite`，在 `index.css` 声明 `@layer theme, base, antd, components, utilities;`，并用 Ant Design 的 `<StyleProvider layer>` 把组件库样式放进 `@layer antd`；初期不引入或只作用域化引入 preflight。未分层的旧规则仍可能压过 utility，新页面不得用 `!` 绕过，按上面的迁移规则处理。
+接入 Tailwind 时使用 `@tailwindcss/vite`，在 `index.css` 声明 `@layer theme, base, antd, components, utilities;`，并用 Ant Design 的 `<StyleProvider layer>` 把组件库样式放进 `@layer antd`；初期不引入或只作用域化引入 preflight。layer 仅在应用生产入口开启：jsdom 无法完整解析 `@layer`，测试入口开启后关闭动画会挂起；layer 行为必须在浏览器验证。未分层的旧规则仍可能压过 utility，新页面不得用 `!` 绕过，按上面的迁移规则处理。
 
 度量以声明数、规则数、全局选择器数、`!important`/长前缀数、重复规则体为准，不以行数判断，避免压缩/展开格式造成的误判。
+
+### 迁移执行清单（2026-11-17 试点补充）
+
+首次迁移（需求评审 / 测试点 / 测试范围分析 / 材料整理 → `shared/components/ArtifactView`）暴露的收尾要求。迁移一个页面时逐条完成，不能把下面这些问题留在新代码里；示例是本次试点的实际违规，修复后应不再命中，但规则长期有效。
+
+1. **CSS Modules 归属**：`shared/styles/*.module.css` 只放共享原语的皮肤；不得出现 feature 私有类名或 DOM 契约（例如 `gc-artifact-scroll`、`is-requirement-review`）。产物视图与 `GenerationChainModal` 滚动容器的宿主适配放在 `features/<f>/styles/*.module.css`，通过调用方传入的根类名配合，不从共享层用 `:has` 反查 feature 结构。
+2. **死规则与重复内联**：删除原 CSS 文件后，同时删掉 CSS Modules 中 0 引用的类；已抽公共组件后，页面不得再复制同一组 Ant Design 深层规则。示例：`.compactTags` 在共享 module 中 0 引用，而同一组 `.ant-tag` 规则被内联到两个页面，二者只能保留一处。
+3. **重复 utility 与 token**：同一串页面骨架 utility 出现 3 次以上必须抽到 `shared/`（C6）；字号、断点等重复值登记到 `shared/styles/tailwind.css` 的 `@theme`，不得在多个文件重复 `text-[11.5px]`、`max-[900px]`。900px 窄屏断点统一使用 `max-narrow:`（`--breakpoint-narrow: 900.01px`，覆盖旧 CSS 的 `max-width: 900px`）。新增 token 以视觉等值为准，不借迁移合并设计档位。
+4. **文件体积**：迁移后仍按 C1 检查；已超限文件只能减少，不能因为内联 className 变长再增加（本次 `RequirementReviewView.tsx` 434 → 452，属于反例）。
+5. **文档同步**：删除或改名 CSS 文件、改变实现归属时，同一改动内更新 `README.md`、`UI-GUIDELINES.md` 和本文件的引用，不能留下指向已删除文件的说明。
+
+验收方式（以下命令以本次四个产物视图为例；迁移其它页面时把路径替换为当前页面与模块）：
+
+```bash
+# 共享层不得出现 feature 私有选择器（--untracked 覆盖尚未 git add 的新 module）
+git grep --untracked -n -E "gc-artifact-scroll|is-requirement-" -- apps/studio/src/shared/styles
+# 迁移范围不得继续复制任意字号与 900px 断点
+git grep --untracked -n -E "text-\[(9|9\.5|10|10\.5|11|11\.5|13)px\]|max-\[900px\]" -- \
+  apps/studio/src/shared/components/ArtifactView \
+  apps/studio/src/features/ai-testing/components/RequirementReviewView.tsx \
+  apps/studio/src/features/ai-testing/components/TestScopeAnalysisView.tsx \
+  apps/studio/src/features/ai-testing/components/TraceablePointsView.tsx \
+  apps/studio/src/features/ai-testing/components/ReadableRequirementMaterial.tsx
+# 文档不得再引用已删除 CSS 的实现路径（README 中记录“已删除”的句子除外）
+git grep -n -E "styles/(requirement-review|traceable-points|test-scope-analysis|readable-requirement-material)\.css" -- docs
+```
+
+以上检查零命中后，在 `apps/studio` 下运行 `npm run verify` 与 `npm test`；`@layer` 与 `:has` 的最终级联效果必须在浏览器按浅色/深色、900px/760px 断点人工确认，jsdom 结果不能替代。
 
 ## 四、目录契约
 
@@ -415,12 +445,12 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 | # | 规则 | 拦住的问题 | 检查 |
 | --- | --- | --- | --- |
 | C1 | 文件体积上限：新建 `.tsx` ≤ 400 行、非组件 `.ts` ≤ 300 行、`.css` ≤ 600 行。拆分的口径是**按职责**，不是按行数对半切 | 10 个 TS 超 1,000 行（最大 1,602）；10 个 CSS 超 800 行（最大 6,619，占全项目 25,404 行的 26%）；`ai-testing/types.ts` 657 行而其余特征 15–302 行 | ESLint `max-lines`（**存量豁免**：现有违规按当前行数冻结） |
-| C2 | 页面组件只做**编排**：路由参数、数据查询、装配子组件。渲染细节、表单、弹窗、表格列定义一律下沉到 `components/` | `ai-testing` 的 5 个任务详情页合计 5,292 行，是同一套骨架的复制：轮询声明 10 处、`getRunSortTime` 定义 3 处、`resolveRunRecord` 定义 5 处、`selectedRunRecordId ?? runRecords[0]` 4 处 | 评审 + `max-lines`（**待强制**） |
+| C2 | 页面组件只做**编排**：路由参数、数据查询、装配子组件。渲染细节、表单、弹窗、表格列定义一律下沉到 `components/` | 预发布清理前，`ai-testing` 的 5 个任务详情页曾合计 5,292 行，是同一套骨架的复制：轮询声明 10 处、`getRunSortTime` 定义 3 处、`resolveRunRecord` 定义 5 处、`selectedRunRecordId ?? runRecords[0]` 4 处（旧页面已删除） | 评审 + `max-lines`（**待强制**） |
 | C3 | 单函数／单组件 ≤ 150 行；一个组件只做一件事 | 与 C2 同源 | ESLint `max-lines-per-function`（**待强制**） |
-| C4 | API 模块：每 feature 一个 `api/`，≤ 300 行，超了按领域拆；组件**不得**直接调请求层 | `features/ai-testing/api/aiTesting.api.ts` 329 行混了 6 个不相关领域共 47 个方法（AI 技能库、API/功能/UI 用例生成、需求分析、代码风险） | ESLint `max-lines` + 评审（**待强制**） |
+| C4 | API 模块：每 feature 一个 `api/`，≤ 300 行，超了按领域拆；组件**不得**直接调请求层 | `features/ai-testing/api/aiTesting.api.ts` 曾以 329 行混了 6 个不相关领域共 47 个方法（AI 技能库、API/功能/UI 用例生成、需求分析、代码风险）；预发布清理后保留 12 个方法、62 行 | ESLint `max-lines` + 评审（**待强制**） |
 | C5 | **写工具函数前必须先搜 `shared/utils/`**；同语义函数只允许一处实现 | `normalizeText` 两份（`shared/utils/payload.ts:1`、`api-automation/utils/apiCaseEditor.ts:127`）；`orderNo ?? Number.MAX_SAFE_INTEGER` 出现 12 处、构成 8 个排序点（`apiCaseEditor.ts:269`、`UiTestSuiteCasePage.tsx:873,898`、`useApiExecution.ts:180`、`ApiCollectionDetailPage.tsx:802`、`uiTestCaseEditor.ts:74`、`renderUiRunSteps.tsx:69` 等）；`toRecord` / `toRecordArray` 的重复实现已清理，AI 结果展示、任务详情与测试单图谱直接引用 `shared/utils/value.ts` | 评审 + 定期重复扫描（**待强制**） |
-| C6 | 复制阈值：同一段逻辑出现到**第三处**必须抽取。适用于页面骨架、弹窗、Drawer、表格皮肤 | 表格的共用尺寸和底色现已收敛至 `shared/styles/list-table.css`，AI 详情页的执行和运行记录删除收敛至 `hooks/useTaskRunActions.ts`；仍待处理：3 个导入冲突弹窗（84/72/175 行，前两个约 95% 相同）；5 个任务 Drawer 共 527 行，4 个 props 契约完全一致 | 列表样式与运行操作由相应测试覆盖；其余依赖评审（**待强制**） |
-| C7 | 命名契约：导出名的前缀必须与适用范围一致。**跨 feature 使用的东西不得带某个 feature 的前缀** | `features/ai-testing/utils/taskStatus.tsx` 的 9 个导出里 5 个带 `ApiCase*` 前缀，但该模块同时被 functional、requirement、code-risk、ui 等任务页使用，还被**跨 feature** 的 `features/test-orders/components/TestOrderGraphViewer.tsx:15-18` 引用——前缀与适用范围不符 | 评审（**待强制**） |
+| C6 | 复制阈值：同一段逻辑出现到**第三处**必须抽取。适用于页面骨架、弹窗、Drawer、表格皮肤 | 表格的共用尺寸和底色现已收敛至 `shared/styles/list-table.css`，旧 AI 详情页的运行操作与删除逻辑已随页面一并删除；仍待处理：3 个导入冲突弹窗（84/72/175 行，前两个约 95% 相同） | 列表样式与运行操作由相应测试覆盖；其余依赖评审（**待强制**） |
+| C7 | 命名契约：导出名的前缀必须与适用范围一致。**跨 feature 使用的东西不得带某个 feature 的前缀** | `features/ai-testing/utils/taskStatus.tsx` 的 3 个导出全部带 `ApiCase*` 前缀，但该模块仍被**跨 feature** 的 `features/test-orders/components/TestOrderGraphViewer.tsx` 引用——前缀与适用范围不符 | 评审（**待强制**） |
 | C8 | 类型归属：`features/<f>/types.ts` 每 feature 一个。通用类型放 `shared/` | 同 C1 | ESLint `max-lines`（**待强制**） |
 
 ## 六、新增模块检查清单
@@ -440,6 +470,9 @@ UI 测试列表点测试集名称进来的页面按设计稿重做：顶栏（�
 11. 要写的工具函数在 `shared/utils/` 里已经有了吗？（C5）
 12. 有没有第三处重复需要抽取？（C6）
 13. 新样式没有新增全局 CSS、`!important` 或 `.app-shell.app-shell-macos` 长前缀吗？布局用了 Tailwind utility、复杂皮肤用了 CSS Modules 吗？（S16）
+14. 共享 `*.module.css` 里没有 feature 私有选择器或 DOM 契约吗？宿主适配写在自己的 `features/<f>/styles/*.module.css` 吗？（S7、S16）
+15. 迁移完成的页面删掉了原 CSS 和 module 中 0 引用的类吗？页面有没有重新复制 Ant Design 深层规则或重复 utility 串？（S13、S16）
+16. 删除或改名样式文件时，`README.md`、`UI-GUIDELINES.md`、本文件的实现位置同步更新了吗？
 
 ## 已知验证盲区
 

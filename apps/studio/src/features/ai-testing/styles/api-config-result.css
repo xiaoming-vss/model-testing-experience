@@ -1,21 +1,4 @@
 /* API 配置结果：请求链、变量和规则可视化。 */
-.api-config-result-tabs {
-  height: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.api-config-result-panel {
-  min-height: 0;
-  flex-grow: 1;
-  flex-shrink: 1;
-  flex-basis: 0;
-  padding-top: 10px;
-  overflow: auto;
-}
-
 .api-config-visual-view {
   min-height: 0;
   color: var(--ai-text);
@@ -228,6 +211,17 @@
 
 .api-config-visual-empty {
   margin-top: 8px;
+}
+
+/* 无法解析为 API 链路或候选用例时的居中空态。 */
+.ai-task-run-result-popover-empty {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ai-text-secondary);
+  font-size: 13px;
+  line-height: 20px;
 }
 
 .api-config-visual-connector {

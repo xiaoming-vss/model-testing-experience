@@ -3,7 +3,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, describe, expect, it } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { AuthPage } from './AuthPage'
-import '../styles/auth.css'
 import foundationTokens from '@/shared/styles/foundation-tokens.css?raw'
 
 afterEach(() => {

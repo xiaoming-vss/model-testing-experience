@@ -1282,7 +1282,9 @@ def upgrade() -> None:
             "environment_id", sa.String(length=64), nullable=False, comment="API 环境业务标识"
         ),
         sa.Column("project_id", sa.String(length=64), nullable=False, comment="项目业务标识"),
-        sa.Column("kind", sa.String(length=16), nullable=False, comment="环境用途：api / ui / perf"),
+        sa.Column(
+            "kind", sa.String(length=16), nullable=False, comment="环境用途：api / ui / perf"
+        ),
         sa.Column("name", sa.String(length=100), nullable=False, comment="名称"),
         sa.Column("base_url", sa.String(length=512), nullable=False, comment="服务或环境基础地址"),
         sa.Column("description", sa.String(length=512), nullable=False, comment="业务描述"),
@@ -4046,9 +4048,7 @@ def upgrade() -> None:
             nullable=True,
             comment="当前数据文件元数据 JSON，不含文件内容",
         ),
-        sa.Column(
-            "created_by", sa.String(length=64), nullable=False, comment="创建者用户业务标识"
-        ),
+        sa.Column("created_by", sa.String(length=64), nullable=False, comment="创建者用户业务标识"),
         sa.Column(
             "created_at", sa.DateTime(timezone=True), nullable=False, comment="记录创建时间（UTC）"
         ),
@@ -4093,7 +4093,9 @@ def upgrade() -> None:
             nullable=False,
             comment="查询认证方式：none/basic/bearer/headers",
         ),
-        sa.Column("query_secret_json", mysql.JSON(), nullable=True, comment="加密后的查询凭据 JSON"),
+        sa.Column(
+            "query_secret_json", mysql.JSON(), nullable=True, comment="加密后的查询凭据 JSON"
+        ),
         sa.Column(
             "remote_write_auth_type",
             sa.String(length=16),
@@ -4125,9 +4127,7 @@ def upgrade() -> None:
             comment="Grafana/Prometheus 默认筛选参数 JSON",
         ),
         sa.Column("enabled", sa.Boolean(), nullable=False, comment="是否允许发起新运行"),
-        sa.Column(
-            "created_by", sa.String(length=64), nullable=False, comment="创建者用户业务标识"
-        ),
+        sa.Column("created_by", sa.String(length=64), nullable=False, comment="创建者用户业务标识"),
         sa.Column(
             "created_at", sa.DateTime(timezone=True), nullable=False, comment="记录创建时间（UTC）"
         ),
@@ -4144,12 +4144,8 @@ def upgrade() -> None:
             ondelete="RESTRICT",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_monitoring_connections")),
-        sa.UniqueConstraint(
-            "connection_id", name=op.f("uq_monitoring_connections_connection_id")
-        ),
-        sa.UniqueConstraint(
-            "project_id", "name", name="uk_monitoring_connection_project_name"
-        ),
+        sa.UniqueConstraint("connection_id", name=op.f("uq_monitoring_connections_connection_id")),
+        sa.UniqueConstraint("project_id", "name", name="uk_monitoring_connection_project_name"),
         comment="项目级 Prometheus/Grafana 监控接入及读写凭据",
     )
     op.create_index(
@@ -4196,6 +4192,12 @@ def upgrade() -> None:
             sa.String(length=120),
             nullable=False,
             comment="发起运行时冻结的监控接入名称",
+        ),
+        sa.Column(
+            "monitoring_snapshot_json",
+            mysql.JSON(),
+            nullable=True,
+            comment="发起运行时冻结的监控接入公开快照 JSON，不含凭据",
         ),
         sa.Column(
             "trigger_user_id",

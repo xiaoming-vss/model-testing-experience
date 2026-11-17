@@ -1,19 +1,12 @@
 import { request, type ListResponse } from '@/shared/api/request'
 import type {
-  CreateLlmConnectionPayload,
-  CreateGitlabConnectionPayload,
   CreateZentaoBindingPayload,
-  CreateZentaoConnectionPayload,
   GitlabBranch,
   GitlabConnection,
   GitlabGroup,
   GitlabRepository,
   GitlabResourceListResponse,
   LlmConnection,
-  ReauthGitlabConnectionPayload,
-  UpdateGitlabConnectionPayload,
-  UpdateLlmConnectionPayload,
-  UpdateZentaoConnectionPayload,
   ZentaoBinding,
   ZentaoConnection,
 } from '../types'
@@ -30,66 +23,9 @@ export const baseServicesApi = {
   updateZentaoBinding: (target: 'project' | 'sprint' | 'requirement', resourceId: string, bindingId: string, body: { connectionId?: string; remoteResourceId: string; mcpServiceId?: string; confirmInstanceSwitch?: boolean }) =>
     request<ZentaoBinding>(`/v1/${target}s/${resourceId}/bindings/${bindingId}`, { method: 'PATCH', body: JSON.stringify(body) }),
   getLlmConnections: (projectId: string) => request<ListResponse<LlmConnection>>(integrationPath(projectId, 'llm')),
-  getLlmConnection: (projectId: string, connectionId: string) =>
-    request<LlmConnection>(integrationConnectionPath(projectId, 'llm', connectionId)),
-  createLlmConnection: (projectId: string, body: CreateLlmConnectionPayload) =>
-    request<LlmConnection>(integrationPath(projectId, 'llm'), {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  updateLlmConnection: (projectId: string, connectionId: string, body: UpdateLlmConnectionPayload) =>
-    request<LlmConnection>(integrationConnectionPath(projectId, 'llm', connectionId), {
-      method: 'PATCH',
-      body: JSON.stringify(body),
-    }),
-  deleteLlmConnection: (projectId: string, connectionId: string) =>
-    request<Record<string, never>>(integrationConnectionPath(projectId, 'llm', connectionId), {
-      method: 'DELETE',
-    }),
   getGitlabConnections: (projectId: string) =>
     request<ListResponse<GitlabConnection>>(integrationPath(projectId, 'gitlab')),
-  getGitlabConnection: (projectId: string, connectionId: string) =>
-    request<GitlabConnection>(integrationConnectionPath(projectId, 'gitlab', connectionId)),
-  createGitlabConnection: (projectId: string, body: CreateGitlabConnectionPayload) =>
-    request<GitlabConnection>(integrationPath(projectId, 'gitlab'), {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  updateGitlabConnection: (projectId: string, connectionId: string, body: UpdateGitlabConnectionPayload) =>
-    request<GitlabConnection>(integrationConnectionPath(projectId, 'gitlab', connectionId), {
-      method: 'PATCH',
-      body: JSON.stringify(body),
-    }),
-  reauthGitlabConnection: (projectId: string, connectionId: string, body?: ReauthGitlabConnectionPayload) =>
-    request<GitlabConnection>(integrationConnectionPath(projectId, 'gitlab', connectionId) + '/reauth', {
-      method: 'POST',
-      ...(body?.accessToken ? { body: JSON.stringify(body) } : {}),
-    }),
-  deleteGitlabConnection: (projectId: string, connectionId: string) =>
-    request<Record<string, never>>(integrationConnectionPath(projectId, 'gitlab', connectionId), {
-      method: 'DELETE',
-    }),
   getZentaoConnections: (projectId: string) => request<ListResponse<ZentaoConnection>>(integrationPath(projectId, 'zentao')),
-  getZentaoConnection: (projectId: string, connectionId: string) =>
-    request<ZentaoConnection>(integrationConnectionPath(projectId, 'zentao', connectionId)),
-  createZentaoConnection: (projectId: string, body: CreateZentaoConnectionPayload) =>
-    request<ZentaoConnection>(integrationPath(projectId, 'zentao'), {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
-  updateZentaoConnection: (projectId: string, connectionId: string, body: UpdateZentaoConnectionPayload) =>
-    request<ZentaoConnection>(integrationConnectionPath(projectId, 'zentao', connectionId), {
-      method: 'PATCH',
-      body: JSON.stringify(body),
-    }),
-  reauthZentaoConnection: (projectId: string, connectionId: string) =>
-    request<ZentaoConnection>(`${integrationConnectionPath(projectId, 'zentao', connectionId)}/reauth`, {
-      method: 'POST',
-    }),
-  deleteZentaoConnection: (projectId: string, connectionId: string) =>
-    request<Record<string, never>>(integrationConnectionPath(projectId, 'zentao', connectionId), {
-      method: 'DELETE',
-    }),
   getProjectBindings: (projectId: string) => request<ListResponse<ZentaoBinding>>(`/v1/projects/${projectId}/bindings`),
   createProjectBinding: (projectId: string, body: CreateZentaoBindingPayload) =>
     request<ZentaoBinding>(`/v1/projects/${projectId}/bindings`, {

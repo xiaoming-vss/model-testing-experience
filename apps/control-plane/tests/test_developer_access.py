@@ -87,7 +87,6 @@ def test_developer_handles_project_bugs_but_cannot_access_other_modules(api):
         f"/v1/requirements/{rid}/ui-test-suites",
         f"/v1/projects/{pid}/test-orders",
         f"/v1/projects/{pid}/api-environments",
-        f"/v1/projects/{pid}/function-case-generate-tasks",
         f"/v1/projects/{pid}/services/llm",
         f"/v1/projects/{pid}/members",
         f"/v1/projects/{pid}/skills",
@@ -189,12 +188,6 @@ def test_downgrade_to_developer_revokes_worker_access_even_after_repromotion(api
             "modelId": "model",
         },
     ).json()["data"]["connectionId"]
-    task = api.post(
-        f"/v1/projects/{pid}/requirement-analysis-tasks",
-        headers=member,
-        json={"name": "analysis", "requirementId": rid},
-    )
-    assert task.status_code == 200, task.text
     launched = api.post(
         f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text/run",
         headers=member,

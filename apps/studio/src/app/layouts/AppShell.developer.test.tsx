@@ -61,7 +61,7 @@ function renderShell(path: string) {
   return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[path]}><AppShell /></MemoryRouter></QueryClientProvider>)
 }
 
-it.each(['/projects', '/testing?tab=api', '/ai-testing', '/base-services', '/requirements/r', '/bugs/new'])(
+it.each(['/projects', '/testing?tab=api', '/base-services', '/requirements/r', '/bugs/new'])(
   '开发直接访问 %s 时进入 Bug 列表，且不请求其他业务资源', async (path) => {
     renderShell(path)
     await screen.findByText('开发需要修复的问题')

@@ -536,13 +536,6 @@ def test_shared_ai_task_requires_actor_llm_and_creator_loses_access_on_removal(a
     api.post(
         f"/v1/projects/{pid}/members", headers=owner, json={"name": "member", "role": "member"}
     )
-    created = api.post(
-        f"/v1/projects/{pid}/requirement-analysis-tasks",
-        headers=member,
-        json={"name": "analysis", "requirementId": rid},
-    )
-    assert created.status_code == 200, created.text
-    task = created.json()["data"]["taskId"]
     base = f"/v1/projects/{pid}/integrations/llm/connections"
     ids = []
     for headers in (owner, member):
@@ -562,6 +555,9 @@ def test_shared_ai_task_requires_actor_llm_and_creator_loses_access_on_removal(a
     assert api.post(url, headers=member, json={"connectionId": ids[0]}).status_code == 404
     response = api.post(url, headers=member, json={"connectionId": ids[1]})
     assert response.status_code == 200, response.text
+    chains = api.get(f"/v1/requirements/{rid}/generation", headers=member).json()["data"]["chains"]
+    task = next(chain["taskId"] for chain in chains if chain["kind"] == "requirement_analysis")
+    assert task
     api.patch(
         f"/v1/projects/{pid}/members/{user['userId']}", headers=owner, json={"role": "viewer"}
     )
@@ -593,12 +589,6 @@ def test_worker_credentials_check_current_membership_and_connection_status(api):
             "modelId": "model",
         },
     ).json()["data"]["connectionId"]
-    task_created = api.post(
-        f"/v1/projects/{pid}/requirement-analysis-tasks",
-        headers=member,
-        json={"name": "analysis", "requirementId": rid},
-    )
-    assert task_created.status_code == 200
     response = api.post(
         f"/v1/requirements/{rid}/generation/requirement_analysis/stages/extracting_text/run",
         headers=member,
@@ -744,12 +734,6 @@ def test_function_stage_reexecution_uses_current_actor(api, operation, creator_r
     seed_approved_understanding(api, rid, pid, owner_user["userId"])
     actors = {"owner": owner, "member": member}
     operator_role = "member" if creator_role == "owner" else "owner"
-    response = api.post(
-        f"/v1/projects/{pid}/function-case-generate-tasks",
-        headers=actors[creator_role],
-        json={"name": "cases", "requirementId": rid},
-    )
-    assert response.status_code == 200, response.text
     response = api.post(
         f"/v1/requirements/{rid}/generation/function/stages/requirement_analysis/run",
         headers=actors[creator_role],

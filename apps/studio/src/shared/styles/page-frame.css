@@ -839,10 +839,6 @@
 }
 
 @media (max-width: 900px) {
-  .auth-page {
-    padding: 24px 16px;
-  }
-
   .app-header {
     padding: 0 16px;
   }

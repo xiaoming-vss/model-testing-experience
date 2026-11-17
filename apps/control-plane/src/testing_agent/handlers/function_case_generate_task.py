@@ -1,71 +1,16 @@
 from __future__ import annotations
 
-from fastapi import Depends, Query
+from fastapi import Depends
 
 from testing_agent.api.deps import (
     get_current_user_id,
-    get_generation_import_context,
-    get_generation_launcher,
     get_generation_queries,
-    get_generation_review,
     get_generation_stages,
-    get_generation_task_commands,
 )
 from testing_agent.core.errors import success_payload
-from testing_agent.handlers.generation_guards import ensure_legacy_mutation_allowed
-from testing_agent.schemas.ai_generate_task import (
-    AiGenerateTaskRequest,
-    AiGenerateTaskResultRequest,
-    AiGenerateTaskReviewRequest,
-    AiGenerateTaskRunRequest,
-    FunctionGenerateTaskImportRequest,
-)
-from testing_agent.services.ai_candidate_review import GenerationCandidateReview
-from testing_agent.services.ai_run_launcher import GenerationRunLauncher
+from testing_agent.schemas.ai_generate_task import AiGenerateTaskRunRequest
 from testing_agent.services.ai_stage_workflow import GenerationStageWorkflow
-from testing_agent.services.ai_task_access import CandidateImportContext
-from testing_agent.services.ai_task_commands import GenerationTaskCommands
 from testing_agent.services.ai_task_queries import GenerationQueries
-from testing_agent.services.function_generate_import import import_function_run
-
-
-async def create_function_case_generate_task(
-    project_id: str,
-    body: AiGenerateTaskRequest,
-    user_id: str = Depends(get_current_user_id),
-    service: GenerationTaskCommands = Depends(get_generation_task_commands),
-):
-    return success_payload(
-        await service.create(
-            "function", project_id, body.model_dump(by_alias=True, exclude_none=True), user_id
-        )
-    )
-
-
-async def list_function_case_generate_tasks(
-    project_id: str,
-    page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=20, ge=1, le=100, alias="pageSize"),
-    sprint_id: str = Query(default="", alias="sprintId"),
-    requirement_id: str = Query(default="", alias="requirementId"),
-    keyword: str = Query(default=""),
-    status: str = Query(default=""),
-    user_id: str = Depends(get_current_user_id),
-    service: GenerationQueries = Depends(get_generation_queries),
-):
-    return success_payload(
-        await service.list(
-            "function",
-            project_id,
-            user_id,
-            page=page,
-            page_size=page_size,
-            sprint_id=sprint_id,
-            requirement_id=requirement_id,
-            keyword=keyword,
-            status=status,
-        )
-    )
 
 
 async def get_function_case_generate_task(
@@ -76,183 +21,12 @@ async def get_function_case_generate_task(
     return success_payload(await service.get("function", task_id, user_id))
 
 
-async def update_function_case_generate_task(
-    task_id: str,
-    body: AiGenerateTaskRequest,
-    user_id: str = Depends(get_current_user_id),
-    service: GenerationTaskCommands = Depends(get_generation_task_commands),
-):
-    return success_payload(
-        await service.update(
-            "function", task_id, body.model_dump(by_alias=True, exclude_none=True), user_id
-        )
-    )
-
-
-async def delete_function_case_generate_task(
-    task_id: str,
-    user_id: str = Depends(get_current_user_id),
-    service: GenerationTaskCommands = Depends(get_generation_task_commands),
-):
-    return success_payload(await service.delete("function", task_id, user_id))
-
-
-async def run_function_case_generate_task(
-    task_id: str,
-    body: AiGenerateTaskRunRequest | None = None,
-    user_id: str = Depends(get_current_user_id),
-    service: GenerationRunLauncher = Depends(get_generation_launcher),
-):
-    payload = body.model_dump(by_alias=True, exclude_none=True) if body else {}
-    return success_payload(await service.launch("function", task_id, payload, user_id))
-
-
-async def list_function_case_generate_task_runs(
-    task_id: str,
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, alias="pageSize", ge=1, le=100),
-    pipeline_filter: str = Query(
-        "all",
-        alias="pipelineFilter",
-        pattern="^(all|running|review_pending|approved|import_pending|imported|rejected|failed|canceled)$",
-    ),
-    user_id: str = Depends(get_current_user_id),
-    service: GenerationQueries = Depends(get_generation_queries),
-):
-    return success_payload(
-        await service.list_run_summaries(
-            "function", task_id, user_id, page, page_size, pipeline_filter
-        )
-    )
-
-
 async def get_function_case_generate_task_run(
     run_id: str,
     user_id: str = Depends(get_current_user_id),
     service: GenerationQueries = Depends(get_generation_queries),
 ):
     return success_payload(await service.get_run("function", run_id, user_id))
-
-
-async def delete_function_case_generate_task_run(
-    run_id: str,
-    user_id: str = Depends(get_current_user_id),
-    service: GenerationTaskCommands = Depends(get_generation_task_commands),
-):
-    await ensure_legacy_mutation_allowed(
-        service.access.owned_run, "function", run_id, user_id, action="write"
-    )
-    return success_payload(await service.delete_run("function", run_id, user_id))
-
-
-async def save_function_case_stage_output(
-    run_id: str,
-    body: AiGenerateTaskRunRequest,
-    user_id: str = Depends(get_current_user_id),
-    service: GenerationStageWorkflow = Depends(get_generation_stages),
-):
-    await ensure_legacy_mutation_allowed(service.owned_run, "function", run_id, user_id)
-    return success_payload(
-        await service.save_stage_output(
-            run_id, body.model_dump(by_alias=True, exclude_none=True), user_id
-        )
-    )
-
-
-async def review_function_case_stage(
-    run_id: str,
-    body: AiGenerateTaskReviewRequest,
-    user_id: str = Depends(get_current_user_id),
-    service: GenerationStageWorkflow = Depends(get_generation_stages),
-):
-    await ensure_legacy_mutation_allowed(service.owned_run, "function", run_id, user_id)
-    return success_payload(
-        await service.review_stage(
-            run_id,
-            body.model_dump(by_alias=True, exclude_none=True),
-            user_id,
-        )
-    )
-
-
-async def retry_function_case_stage(
-    run_id: str,
-    body: AiGenerateTaskRunRequest | None = None,
-    user_id: str = Depends(get_current_user_id),
-    service: GenerationStageWorkflow = Depends(get_generation_stages),
-):
-    await ensure_legacy_mutation_allowed(
-        service.owned_run, "function", run_id, user_id, action="execute"
-    )
-    await ensure_legacy_mutation_allowed(
-        service.owned_run, "function", run_id, user_id, action="execute"
-    )
-    payload = body.model_dump(by_alias=True, exclude_none=True) if body else None
-    return success_payload(await service.retry_stage(run_id, payload, user_id))
-
-
-async def review_function_case_generate_task_run(
-    run_id: str,
-    body: AiGenerateTaskReviewRequest,
-    user_id: str = Depends(get_current_user_id),
-    service: GenerationCandidateReview = Depends(get_generation_review),
-):
-    await ensure_legacy_mutation_allowed(service.owned_run, "function", run_id, user_id)
-    return success_payload(
-        await service.review(
-            "function", run_id, body.model_dump(by_alias=True, exclude_none=True), user_id
-        )
-    )
-
-
-async def update_function_case_generate_task_run_result(
-    run_id: str,
-    body: AiGenerateTaskResultRequest,
-    user_id: str = Depends(get_current_user_id),
-    service: GenerationCandidateReview = Depends(get_generation_review),
-):
-    await ensure_legacy_mutation_allowed(
-        service.owned_run, "function", run_id, user_id, action="write"
-    )
-    return success_payload(
-        await service.update_result("function", run_id, body.result_yaml, user_id)
-    )
-
-
-async def import_function_case_generate_task_run(
-    run_id: str,
-    body: FunctionGenerateTaskImportRequest | None = None,
-    user_id: str = Depends(get_current_user_id),
-    service: CandidateImportContext = Depends(get_generation_import_context),
-):
-    await ensure_legacy_mutation_allowed(
-        service.owned_run, "function", run_id, user_id, action="execute"
-    )
-    return success_payload(
-        await import_function_run(
-            service,
-            run_id,
-            body.confirm_overwrite if body else False,
-            user_id,
-            target_requirement_id=body.requirement_id if body else None,
-        )
-    )
-
-
-async def revise_function_case_stage(
-    run_id: str,
-    body: AiGenerateTaskReviewRequest,
-    user_id: str = Depends(get_current_user_id),
-    service: GenerationStageWorkflow = Depends(get_generation_stages),
-):
-    await ensure_legacy_mutation_allowed(
-        service.owned_run, "function", run_id, user_id, action="execute"
-    )
-    return success_payload(
-        await service.revise_function_case_stage(
-            run_id, body.model_dump(by_alias=True, exclude_none=True), user_id
-        )
-    )
 
 
 async def generate_function_case_relation_analysis(

@@ -2,11 +2,13 @@
 
 [UI 用例三阶段原文审核](../control-plane/ui-three-stage-generation.md)
 
-React 单页应用，提供项目、迭代、需求、功能/API/UI 测试资产、AI 任务与执行报告的完整工作台。整体设计说明见 [DESIGN](DESIGN.md)，领域术语见 [CONTEXT](CONTEXT.md)，结构与代码规范见 [STRUCTURE](STRUCTURE.md)，界面布局与交互规范见 [UI-GUIDELINES](UI-GUIDELINES.md)。
+React 单页应用，提供项目、迭代、需求、功能/API/UI/性能测试资产、AI 任务与执行报告的完整工作台。整体设计说明见 [DESIGN](DESIGN.md)，领域术语见 [CONTEXT](CONTEXT.md)，结构与代码规范见 [STRUCTURE](STRUCTURE.md)，界面布局与交互规范见 [UI-GUIDELINES](UI-GUIDELINES.md)。
 
 禅道同步的异步提交、轮询与恢复交互见 [集成任务交互](zentao-sync-jobs.md)。需求分析第一阶段的来源与事实核对见 [材料对照视图](requirement-material-comparison.md)，第二阶段的模块、流程和规则核对见 [需求理解对照视图](requirement-understanding-comparison.md)。
 
 [需求详情测试设计工作区](requirement-design-workspace.md)
+
+性能测试用例、运行记录与基础服务中的性能监控接入见[性能测试](performance-testing.md)。
 
 完整用例阶段的模块子 Agent 进度及兼容规则见[按模块并发生成完整用例](../ai-worker/module-case-generation.md)；测试点阶段复用该面板，区分分组初稿、全局审查和增量复核，见[测试点生成进度](../ai-worker/traceable-test-points.md#测试点生成进度)。
 
@@ -30,7 +32,7 @@ React 单页应用，提供项目、迭代、需求、功能/API/UI 测试资产
 | `app/layouts/AppShell.tsx` | 登录后的整体框架，业务页面在内部二次分发 |
 | `app/providers/` | Query 与主题 Provider |
 | `app/styles/` | 主题与设计断言测试 |
-| `features/` | 按业务划分：`auth`、`projects`、`requirements`、`test-cases`、`interface-library`、`testing`、`ai-testing`、`api-automation`、`ui-automation`、`base-services`、`profile` |
+| `features/` | 按业务划分：`auth`、`projects`、`requirements`、`test-cases`、`interface-library`、`testing`、`ai-testing`、`api-automation`、`ui-automation`、`performance`、`base-services`、`profile` |
 | `domain/runs/` | API/UI/AI 共用的运行轮询策略与最终报告刷新；仅依赖 shared 和通用库 |
 | `services/api.ts` | 各 feature API 的聚合出口 |
 | `shared/` | `api/request.ts` 请求封装、通用组件、图标、主题 store |
@@ -47,6 +49,7 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 - AI 测试样式按页面和组件职责维护，文件与引用约定见下表。
 - API 集合页面的查询、用例编辑、规则编辑和运行轮询分别在 `api-automation/hooks/useApiCollectionData.ts`、`useApiCaseEditing.ts`、`useApiRuleEditing.ts`、`useApiExecution.ts`。组件目录维护用例编辑器、规则弹窗、导入弹窗及运行历史/报告；查询键和缓存失效由对应 hook 管理。
 - UI 套件页面保留草稿与执行编排，步骤编辑器、导入弹窗、运行历史和报告位于 `ui-automation/components/`；单用例和套件报告共用步骤结果渲染。
+- 性能测试复用同一 EnvironmentDrawer 管理 `kind=perf` 的环境；用例列表、Drawer、EntityCard、运行记录和监控接入面板沿用测试工作区与基础服务的公共骨架，详见[性能测试](performance-testing.md)。
 - UI 自动化复用 `features/projects/components/EnvironmentDrawer` 管理 `kind=ui` 的环境：列表工具栏、详情顶栏和调试运行都从项目 UI 环境中选择，缺变量时弹窗内联补齐后重新提交。步骤编辑器的「插入变量」弹窗复用 API 自动化的动态值选择交互，列出当前 UI 环境变量、`baseUrl` 和 UI 内置函数；XPath 定位自动插入 `{{名字|xpath}}`。步骤编辑器也可配置后置提取（`saveTo`），执行控制台汇总实际引用与写回。协议见 [UI 环境变量与后置提取](../control-plane/ui-environment-variables.md)。
 - `shared/utils/` 集中下载、分页文案与值格式化。任务产物使用 `formatStructuredContent` 保留 JSON 字符串表示；一般展示使用 `prettyPrintValue`，两者空值和字符串行为不同。
 
@@ -54,22 +57,19 @@ HTML 入口是 `index.html`，它加载 `/src/main.tsx`，再转发到 `src/app/
 
 文件统一放在 `src/features/ai-testing/styles/`。页面或组件显式引入自身使用的样式，先引入 `index.css` 公共基础；`index.css` 不聚合导入其它文件。新拆出的组件样式各自不超过 600 行，保留原有选择器、媒体查询及样式取值。
 
-> 2026-11-17 起，新增或改版样式按 [STRUCTURE.md 的 S16](STRUCTURE.md#新代码样式策略2026-11-17) 与 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md) 执行；本节只描述存量文件，不再作为新增样式的默认做法。
+> 2026-11-17 起，新增或改版样式按 [STRUCTURE.md 的 S16](STRUCTURE.md#新代码样式策略2026-11-17) 与 [ADR 0004](adr/0004-tailwind-v4-new-code-styles.md) 执行；本节只描述存量文件，不再作为新增样式的默认做法。存量整改顺序、阶段目标与验收口径见 [CSS 整改与迁移计划](css-migration-plan.md)。
 
 | 文件 | 职责 / 使用入口 |
 | --- | --- |
 | `index.css` | 公共变量、页面表面、共用面板与编辑器适配 |
-| `task-list-v2.css` | 任务列表、模块导航的布局与外观，由列表和概览页引入 |
-| `task-detail-v2.css` | 详情骨架、运行记录与代码风险报告，由详情页引入 |
+| `task-detail-v2.css` | 运行记录与代码风险报告，由需求详情的代码风险工作区引入 |
 | `task-form.css` | 创建任务抽屉的字段、来源输入、上传与模型连接选择，由各 Drawer / 选择弹窗引入 |
 | `generated-cases-review.css` | 候选用例分组、筛选、卡片与分页，由 `GeneratedCasesReviewView` 引入 |
-| `requirement-analysis.css` | 需求分析章节、规则、流程、场景，由 `RequirementAnalysisDiagramView` 及使用其布局的详情页引入 |
 | `case-name-tree.css` | 测试点树标签页、节点、连线与编辑状态，由 `CaseNameTreeView` 及使用其布局的详情页引入 |
 | `api-config-result.css` | API 配置结果标签页、请求链、变量与规则，由 API 任务详情页引入 |
-| `run-result.css` | 运行结果弹窗、Popover 与编辑器高度适配（包括功能阶段审核模式），由使用它们的详情页及结果组件引入 |
 | `skill-library.css` | Skill 面板、卡片、空状态与响应式网格，由 `AiSkillLibraryPage` 引入 |
 
-`functional-import-confirm.css` 继续维护原有的功能用例导入确认样式。原有配色与覆盖关系未在本次文件拆分中重设计。
+需求评审、测试点、测试范围分析和材料整理已改用 `shared/components/ArtifactView` + Tailwind；原 `requirement-review.css`、`traceable-points.css`、`test-scope-analysis.css`、`readable-requirement-material.css` 已删除。公共原语的复杂皮肤只在 `shared/styles/artifact-view.module.css`，与滚动容器耦合的宿主适配在 `features/ai-testing/styles/` 下的 `*.module.css`；页面不再新增同构布局 CSS。
 
 ### 公共表格与按钮
 
@@ -103,8 +103,13 @@ npm run type-check    # tsc -b --pretty false
 npm run lint          # eslint .
 npm run test          # vitest run
 npm run build         # tsc -b && vite build
-npm run verify        # type-check + lint + build
+npm run check:theme   # 登记色源与任意色值检查
+npm run check:css     # !important / 长前缀 / 未定义变量预算
+npm run check:css:structure  # CSS 文件、导入、规则体与重复体结构门禁
+npm run verify        # type-check + lint + check:theme + check:css + check:css:structure + build
 ```
+
+`npm run verify` 不包含 `npm test`；迁移和发布前仍需单独执行全量测试。
 
 测试配置见 `vite.config.ts`：jsdom 环境，单项超时 30s，`maxWorkers: 4`（最多 4 个测试文件并行）。重型页面测试使用 `src/test/TestThemeProvider.tsx`——保留真实主题与组件，只关闭 jsdom 不执行的 CSS 动画，避免弹窗卡在进入动画的透明状态；并发过高会因 CPU 争用出现超时抖动，排查时用 `--maxWorkers=1` 串行复跑，以区分「超时」与「行为失败」。2026-09-24 全量验证为 62 个文件、396 项，耗时约 2 分钟；数量以后续测试输出为准。历史整改与验证过程见 git 提交 `72164d2`。
 

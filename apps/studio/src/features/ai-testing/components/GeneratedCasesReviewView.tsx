@@ -1,4 +1,3 @@
-import '@/features/ai-testing/styles/functional-import-confirm.css'
 import '@/features/ai-testing/styles/index.css'
 import '@/features/ai-testing/styles/generated-cases-review.css'
 import '../styles/generated-case-browser.css'

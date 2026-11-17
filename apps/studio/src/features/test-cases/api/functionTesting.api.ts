@@ -10,10 +10,8 @@ import type {
   FunctionTestCase,
   FunctionTestCaseImportResult,
   FunctionTestCaseZentaoImportResult,
-  FunctionTestSuitesZentaoImportResult,
   FunctionTestSuite,
   ImportFunctionTestCasesToZentaoPayload,
-  ImportFunctionTestSuitesToZentaoPayload,
   UpdateFunctionTestCasePayload,
   UpdateFunctionTestSuitePayload,
 } from '../types'
@@ -39,7 +37,6 @@ export const functionTestingApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  getFunctionTestSuite: (suiteId: string) => request<FunctionTestSuite>(`/v1/function-test-suites/${suiteId}`),
   updateFunctionTestSuite: (suiteId: string, body: UpdateFunctionTestSuitePayload) =>
     request<FunctionTestSuite>(`/v1/function-test-suites/${suiteId}`, {
       method: 'PATCH',
@@ -61,12 +58,6 @@ export const functionTestingApi = {
     request<{ items: CasePushPreviewItem[]; restoreRequired?: boolean; canConfirmNotApplied?: boolean }>(`/v1/function-test-suites/${suiteId}/zentao/testcases/preview`, {
       method: 'POST', body: JSON.stringify(body),
     }, { normalizeListResponse: false }),
-  previewFunctionSuitePush: (requirementId: string, body: ImportFunctionTestSuitesToZentaoPayload) =>
-    request<{ items: CasePushPreviewItem[]; restoreRequired?: boolean; canConfirmNotApplied?: boolean }>(`/v1/requirements/${requirementId}/zentao/testcases/preview`, {
-      method: 'POST', body: JSON.stringify(body),
-    }, { normalizeListResponse: false }),
-  functionCasePushStatus: (operationId: string) =>
-    request<FunctionTestCaseZentaoImportItem>(`/v1/function-case-push-operations/${operationId}`),
   reconcileFunctionCasePush: (suiteId: string, operationId: string, body: CasePushReconcilePayload) =>
     request<FunctionTestCaseZentaoImportItem>(`/v1/function-test-suites/${suiteId}/zentao/testcases/operations/${operationId}/reconcile`, {
       method: 'POST', body: JSON.stringify(body),
@@ -76,17 +67,11 @@ export const functionTestingApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }, { normalizeListResponse: false }),
-  importFunctionTestSuitesToZentao: (requirementId: string, body: ImportFunctionTestSuitesToZentaoPayload) =>
-    request<FunctionTestSuitesZentaoImportResult>(`/v1/requirements/${requirementId}/zentao/testcases/import`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }, { normalizeListResponse: false }),
   createFunctionTestCase: (suiteId: string, body: CreateFunctionTestCasePayload) =>
     request<FunctionTestCase>(`/v1/function-test-suites/${suiteId}/cases`, {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  getFunctionTestCase: (caseId: string) => request<FunctionTestCase>(`/v1/function-test-cases/${caseId}`),
   updateFunctionTestCase: (caseId: string, body: UpdateFunctionTestCasePayload) =>
     request<FunctionTestCase>(`/v1/function-test-cases/${caseId}`, {
       method: 'PATCH',
